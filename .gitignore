@@ -1,0 +1,66 @@
+ignore# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+electron/dist
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Claude Code
+.claude/
+
+# Code-signing certificates
+*.pfx
+*.p12
+*.pem
+*.key
+*.crt
+*.cer
+
+# Environment variables
+.env
+.env.local
+.env.production
+server/.env
+server/.env.local
+server/.env.production
+
+# OS
+Thumbs.d
+
+# electron-builder output
+release/
+
+# local dev SQLite database
+horizon.db
+horizon.db-shm
+horizon.db-wal
+
+# Understand-Anything — keep only the committed demo snapshot (knowledge-graph.json,
+# meta.json, .understandignore); ignore scratch + regenerable fingerprints
+.understand-anything/.trash-*/
+.understand-anything/intermediate/
+.understand-anything/tmp/
+.understand-anything/fingerprints.json
+
+horizon-handoff-seed.db
+horizon-handoff-seed.db-shm
+horizon-handoff-seed.db-wal
