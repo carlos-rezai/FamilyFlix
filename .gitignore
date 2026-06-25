@@ -1,4 +1,4 @@
-ignore# Logs
+# Logs
 logs
 *.log
 npm-debug.log*
@@ -7,17 +7,31 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Dependencies
 node_modules
+
+# Build output
 dist
 dist-ssr
+tmp
+out-tsc
 electron/dist
 *.local
+
+# Nx
+.nx/cache
+.nx/workspace-data
+.nx/migrate-runs
 
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
 .idea
 .DS_Store
+Thumbs.db
 *.suo
 *.ntvs*
 *.njsproj
@@ -43,24 +57,17 @@ server/.env
 server/.env.local
 server/.env.production
 
-# OS
-Thumbs.d
-
 # electron-builder output
 release/
 
+# Coverage
+/coverage
+
 # local dev SQLite database
-horizon.db
-horizon.db-shm
-horizon.db-wal
+familyflix.db
+familyflix.db-shm
+familyflix.db-wal
 
-# Understand-Anything — keep only the committed demo snapshot (knowledge-graph.json,
-# meta.json, .understandignore); ignore scratch + regenerable fingerprints
-.understand-anything/.trash-*/
-.understand-anything/intermediate/
-.understand-anything/tmp/
-.understand-anything/fingerprints.json
-
-horizon-handoff-seed.db
-horizon-handoff-seed.db-shm
-horizon-handoff-seed.db-wal
+# Vite / Vitest timestamps
+vite.config.*.timestamp*
+vitest.config.*.timestamp*

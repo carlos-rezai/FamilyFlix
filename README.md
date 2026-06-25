@@ -232,7 +232,7 @@ Builds the installer and publishes it to GitHub Releases automatically.
 
 | Feature                                         | Status          |
 | ----------------------------------------------- | --------------- |
-| Nx + Vite + React workspace scaffold            | 🔜 Planned      |
+| Nx + Vite + React workspace scaffold            | ✅ Done         |
 | Claude Design handoff prototype                 | 🔜 Planned      |
 | Library core (movie model, SQLite, repository)  | 🔜 Planned      |
 | Add Movie — manual mode                         | 🔜 Planned      |
