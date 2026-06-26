@@ -245,6 +245,7 @@ Builds the installer and publishes it to GitHub Releases automatically.
 | Export (library → CSV)                          | 🔜 Planned      |
 | Electron desktop shell                          | 🔜 Planned      |
 | Desktop packaging (Windows installer)           | 🔜 Planned      |
+| In-app auto-update (electron-updater)           | 🔜 Planned      |
 | Collections / playlists                         | 🔜 Roadmap      |
 | User accounts / multi-profile                   | 🚫 Out of scope |
 
