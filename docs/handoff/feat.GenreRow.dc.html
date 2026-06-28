@@ -1,0 +1,74 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="tokens.css" />
+      </helmet>
+      <section style="margin-bottom: var(--space-7)">
+        <div
+          style="
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            gap: 16px;
+            padding: 0 var(--space-6);
+            margin: 0 0 var(--space-4);
+          "
+        >
+          <h2
+            style="
+              font-family: var(--font-serif);
+              font-weight: 600;
+              font-size: 22px;
+              color: var(--color-text);
+              margin: 0;
+            "
+          >
+            {{ row.name }}
+          </h2>
+          <button
+            onClick="{{ row.openAll }}"
+            style="
+              display: flex;
+              align-items: center;
+              gap: 5px;
+              background: transparent;
+              border: none;
+              color: var(--color-text-dim);
+              font-family: var(--font-sans);
+              font-size: 14px;
+              font-weight: 600;
+              cursor: pointer;
+              padding: 6px 2px;
+              white-space: nowrap;
+              flex: 0 0 auto;
+            "
+            style-hover="color:var(--color-accent)"
+          >
+            View all {{ row.count }}<span
+              style="font-size: 17px; line-height: 1"
+              >→</span
+            >
+          </button>
+        </div>
+        <dc-import
+          name="feat.CardCarousel"
+          items="{{ row.movies }}"
+          variant="poster"
+          hint-size="100%,360px"
+        ></dc-import>
+      </section>
+    </x-dc>
+    <script
+      type="text/x-dc"
+      data-dc-script
+      data-props='{"$preview":{"width":920,"height":430},"row":{"editor":null,"tsType":"{ name: string; count: number; openAll: () =&gt; void; movies: PosterCardItem[] }"}}'
+    ></script>
+  </body>
+</html>

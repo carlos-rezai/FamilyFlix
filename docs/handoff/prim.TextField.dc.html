@@ -1,0 +1,55 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="tokens.css" />
+      </helmet>
+      <div style="{{ wrapStyle }}">
+        <sc-if value="{{ hasIcon }}" hint-placeholder-val="{{ false }}"
+          ><span style="{{ iconStyle }}">{{ iconEl }}</span></sc-if
+        >
+        <input
+          value="{{ value }}"
+          onInput="{{ onInput }}"
+          placeholder="{{ placeholder }}"
+          style="{{ inputStyle }}"
+        />
+      </div>
+    </x-dc>
+    <script
+      type="text/x-dc"
+      data-dc-script
+      data-props='{"$preview":{"width":420,"height":80},"value":{"editor":"text","default":"","tsType":"string"},"placeholder":{"editor":"text","default":"Search your movies","tsType":"string"},"icon":{"editor":"enum","default":"search","options":["none","search","folder","sheet"],"tsType":"&apos;none&apos;|&apos;search&apos;|&apos;folder&apos;|&apos;sheet&apos;"},"mono":{"editor":"boolean","default":false,"tsType":"boolean"},"rounded":{"editor":"boolean","default":true,"tsType":"boolean"},"height":{"editor":"int","default":46,"min":40,"max":56,"tsType":"number"},"onInput":{"editor":null,"tsType":"(e: InputEvent) =&gt; void"}}'
+    >
+      class Component extends DCLogic {
+        renderVals(){
+          const icon=this.props.icon||'none';
+          const mono=this.props.mono??false;
+          const h=this.props.height||46;
+          const rounded=this.props.rounded??true;
+          const mk=(...c)=>React.createElement('svg',{width:icon==='search'?18:20,height:icon==='search'?18:20,viewBox:'0 0 24 24',fill:'none'},...c);
+          const P=(d,extra={})=>React.createElement('path',{d,stroke:'currentColor',strokeWidth:1.7,strokeLinecap:'round',...extra});
+          const icons={
+            search:mk(React.createElement('circle',{cx:11,cy:11,r:7,stroke:'currentColor',strokeWidth:2}),P('M20 20l-3.5-3.5',{strokeWidth:2})),
+            folder:mk(P('M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z',{strokeWidth:1.6})),
+            sheet:mk(React.createElement('rect',{x:4,y:3,width:16,height:18,rx:2,stroke:'currentColor',strokeWidth:1.6}),P('M9 8h6M9 12h6M9 16h4',{strokeWidth:1.6})),
+          };
+          const hasIcon=icon!=='none';
+          return {
+            value:this.props.value??'', onInput:this.props.onInput, placeholder:this.props.placeholder??'',
+            hasIcon, iconEl:icons[icon]||null,
+            wrapStyle:{position:'relative',display:'flex',alignItems:'center',gap:'10px',width:'100%',height:h+'px',padding:hasIcon?'0 16px':'0 14px',background:'var(--color-surface)',border:'1px solid var(--color-border)',borderRadius:(rounded?'999px':'10px')},
+            iconStyle:{flex:'0 0 auto',display:'grid',placeItems:'center',color:'var(--color-text-faint)'},
+            inputStyle:{flex:1,minWidth:0,height:'100%',background:'transparent',border:'none',outline:'none',color:'var(--color-text)',fontFamily:mono?'var(--font-mono)':'var(--font-sans)',fontSize:mono?'14px':'16px'},
+          };
+        }
+      }
+    </script>
+  </body>
+</html>

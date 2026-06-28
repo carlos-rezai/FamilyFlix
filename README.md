@@ -98,6 +98,10 @@ Category folders (`primitives/`, `components/`) also carry their own `index.ts` 
 
 ---
 
+Every feature is a 1:1 translation of the canonical prototype in docs/handoff/ — the prototype is designed and resolved first, then implemented against, never redesigned mid-build.
+
+---
+
 ## Tech Stack
 
 | Layer    | Choice                                   | Why                                                               |
@@ -230,24 +234,38 @@ Builds the installer and publishes it to GitHub Releases automatically.
 
 ## Build Status
 
-| Feature                                         | Status          |
-| ----------------------------------------------- | --------------- |
-| Nx + Vite + React workspace scaffold            | ✅ Done         |
-| Claude Design handoff prototype                 | 🔜 Planned      |
-| Library core (movie model, SQLite, repository)  | 🔜 Planned      |
-| Add Movie — manual mode                         | 🔜 Planned      |
-| Add Movie — folder-path autofill                | 🔜 Planned      |
-| Browse grid — genre rows                        | 🔜 Planned      |
-| Search + filter                                 | 🔜 Planned      |
-| Built-in video player (playback, subtitles)     | 🔜 Planned      |
-| Watch tracking (watched / in-progress / resume) | 🔜 Planned      |
-| Bulk import (Excel/CSV → library)               | 🔜 Planned      |
-| Export (library → CSV)                          | 🔜 Planned      |
-| Electron desktop shell                          | 🔜 Planned      |
-| Desktop packaging (Windows installer)           | 🔜 Planned      |
-| In-app auto-update (electron-updater)           | 🔜 Planned      |
-| Collections / playlists                         | 🔜 Roadmap      |
-| User accounts / multi-profile                   | 🚫 Out of scope |
+| Feature                                             | Status          |
+| --------------------------------------------------- | --------------- |
+| Nx + Vite + React workspace scaffold                | ✅ Done         |
+| Claude Design handoff prototype                     | ✅ Done         |
+| Library core (movie model, SQLite, repository)      | 🔜 Planned      |
+| Browse grid — genre rows                            | 🔜 Planned      |
+| Card carousel — prev/next arrows, 15-per-row cap    | 🔜 Planned      |
+| Movie detail page (synopsis, director, cast)        | 🔜 Planned      |
+| Search + filter (title, genre, rating)              | 🔜 Planned      |
+| Sort (recent, A–Z, year, rating, unwatched)         | 🔜 Planned      |
+| Ratings — 5-star display + half-star picker         | 🔜 Planned      |
+| Favorites — mark + dedicated row                    | 🔜 Planned      |
+| Continue Watching row                               | 🔜 Planned      |
+| Built-in video player (playback, subtitles)         | 🔜 Planned      |
+| Watch tracking (watched / in-progress / resume)     | 🔜 Planned      |
+| Add Movie — manual file picker                      | 🔜 Planned      |
+| Edit / delete a movie                               | 🔜 Planned      |
+| Bulk import (Excel/CSV → library)                   | 🔜 Planned      |
+| Import progress console (scan/import, live log)     | 🔜 Planned      |
+| Export (library → CSV/Excel)                        | 🔜 Planned      |
+| Settings hub (Library / Playback / Storage / About) | 🔜 Planned      |
+| Codec manager (view + add codec packs)              | 🔜 Planned      |
+| Subtitle preferences (default language)             | 🔜 Planned      |
+| Software update (check / install)                   | 🔜 Planned      |
+| Snackbar system (info / success / warning / error)  | 🔜 Planned      |
+| Back-to-top FAB                                     | 🔜 Planned      |
+| Electron desktop shell                              | 🔜 Planned      |
+| Desktop packaging (Windows installer)               | 🔜 Planned      |
+| Collections / playlists                             | 🔜 Roadmap      |
+| Auto-on subtitles                                   | 🔜 Roadmap      |
+| Backgroundable import                               | 🔜 Roadmap      |
+| User accounts / multi-profile                       | 🚫 Out of scope |
 
 ---
 

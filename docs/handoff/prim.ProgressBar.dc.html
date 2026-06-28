@@ -1,0 +1,35 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="tokens.css" />
+      </helmet>
+      <div style="{{ trackStyle }}"><div style="{{ fillStyle }}"></div></div>
+    </x-dc>
+    <script
+      type="text/x-dc"
+      data-dc-script
+      data-props='{"$preview":{"width":300,"height":40},"percent":{"editor":"int","default":64,"min":0,"max":100,"tsType":"number"},"indeterminate":{"editor":"boolean","default":false,"tsType":"boolean"},"height":{"editor":"int","default":6,"min":2,"max":12,"tsType":"number"},"track":{"editor":"boolean","default":true,"tsType":"boolean"}}'
+    >
+      class Component extends DCLogic {
+        renderVals(){
+          const indeterminate = !!this.props.indeterminate;
+          const pct = Math.max(0, Math.min(100, this.props.percent ?? 0));
+          const h = this.props.height || 5;
+          const track = this.props.track ?? true;
+          const trackStyle = { position:'relative', width:'100%', height:h+'px', background:track?'rgba(0,0,0,.45)':'transparent', borderRadius:h>=6?'999px':'0', overflow:'hidden' };
+          const fillStyle = indeterminate
+            ? { position:'absolute', top:0, bottom:0, left:0, width:'40%', background:'var(--color-accent)', borderRadius:'inherit', animation:'ffIndeterminate 1.25s ease-in-out infinite' }
+            : { height:'100%', width:pct+'%', background:'var(--color-accent)', borderRadius:'inherit', transition:'width .2s ease' };
+          return { trackStyle, fillStyle };
+        }
+      }
+    </script>
+  </body>
+</html>

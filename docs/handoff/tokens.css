@@ -1,0 +1,131 @@
+/* ============================================================
+   FamilyFlix — Design Tokens (single source of truth)
+   Linked by every .dc.html component via <link rel="stylesheet" href="tokens.css">.
+   Translate 1:1 to:
+     src/tokens/colors.ts      → --color-*
+     src/tokens/typography.ts  → --font-*
+     src/tokens/spacing.ts     → --space-*
+     src/tokens/radius.ts      → --radius-*
+   In code these become the styled-components <ThemeProvider> theme object.
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,500;8..60,600;8..60,700&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+:root {
+  /* ---- color — dark, warm, cinematic ---- */
+  --color-bg: #14110d;
+  --color-bg-2: #1b1611;
+  --color-surface: #211b15;
+  --color-surface-2: #2a231b;
+  --color-surface-3: #332a20;
+  --color-border: #3a3024;
+  --color-border-soft: #2c241b;
+  --color-text: #f3ece0;
+  --color-text-dim: #b6a994;
+  --color-text-faint: #857a68;
+  --color-accent: #d97a4e;
+  --color-accent-hover: #e58e63;
+  --color-accent-soft: rgba(217, 122, 78, 0.14);
+  --color-accent-line: rgba(217, 122, 78, 0.32);
+  --color-watched: #8a9a6b;
+  --color-scrim: rgba(10, 8, 5, 0.72);
+
+  /* ---- semantic status (snackbars, alerts) ---- */
+  --color-info: #6b8aa8;
+  --color-success: #8a9a6b;
+  --color-warning: #e0a755;
+  --color-danger: #c97a6a;
+
+  /* ---- typography ---- */
+  --font-serif: 'Source Serif 4', Georgia, serif;
+  --font-sans: 'Hanken Grotesk', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+  /* ---- space scale (4px base) ---- */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+
+  /* ---- radius ---- */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --radius-pill: 999px;
+
+  /* ---- runtime surfaces (overridden inline from props) ---- */
+  --card-w: 210px;
+  --poster-radius: 12px;
+}
+
+* {
+  box-sizing: border-box;
+}
+::-webkit-scrollbar {
+  height: 10px;
+  width: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-surface-3);
+  border-radius: 99px;
+  border: 2px solid var(--color-bg);
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+@keyframes ffFade {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes ffPop {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes ffBar {
+  from {
+    background-position: 0 0;
+  }
+  to {
+    background-position: 32px 0;
+  }
+}
+@keyframes ffSnackIn {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes ffIndeterminate {
+  0% {
+    left: -40%;
+    width: 40%;
+  }
+  50% {
+    width: 58%;
+  }
+  100% {
+    left: 100%;
+    width: 40%;
+  }
+}

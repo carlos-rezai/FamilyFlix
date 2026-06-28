@@ -1,0 +1,48 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="tokens.css" />
+      </helmet>
+      <button
+        onClick="{{ onClick }}"
+        style="{{ rootStyle }}"
+        style-hover="{{ hoverStyle }}"
+      >
+        <sc-if value="{{ hasIcon }}" hint-placeholder-val="{{ false }}"
+          ><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M7 5l12 7-12 7z"></path></svg></sc-if
+        >{{ label }}
+      </button>
+    </x-dc>
+    <script
+      type="text/x-dc"
+      data-dc-script
+      data-props='{"$preview":{"width":220,"height":96},"label":{"editor":"text","default":"Play","tsType":"string"},"variant":{"editor":"enum","default":"primary","options":["primary","secondary","ghost"],"tsType":"&apos;primary&apos;|&apos;secondary&apos;|&apos;ghost&apos;"},"size":{"editor":"enum","default":"lg","options":["md","lg"],"tsType":"&apos;md&apos;|&apos;lg&apos;"},"icon":{"editor":"enum","default":"play","options":["none","play"],"tsType":"&apos;none&apos;|&apos;play&apos;"},"onClick":{"editor":null,"tsType":"() =&gt; void"}}'
+    >
+      class Component extends DCLogic {
+        renderVals(){
+          const v=this.props.variant||'primary';
+          const size=this.props.size||'md';
+          const hasIcon=(this.props.icon||'none')==='play';
+          const dims = size==='lg' ? {height:'58px',padding:'0 32px',fontSize:'18px',radius:'999px'} : {height:'50px',padding:'0 26px',fontSize:'16px',radius:'10px'};
+          let bg,color,border,weight,hoverBg,hoverBorder=null;
+          if(v==='primary'){bg='var(--color-accent)';color='#1a1109';border='none';weight='700';hoverBg='var(--color-accent-hover)';}
+          else if(v==='secondary'){bg='transparent';color='var(--color-text)';border='1px solid var(--color-border)';weight='500';hoverBg='transparent';hoverBorder='var(--color-text-faint)';}
+          else if(v==='danger'){bg='transparent';color='var(--color-danger)';border='1px solid var(--color-border)';weight='600';hoverBg='transparent';hoverBorder='var(--color-danger)';}
+          else {bg='transparent';color='var(--color-text-dim)';border='none';weight='600';hoverBg='var(--color-surface)';}
+          const disabled=!!this.props.disabled;
+          const base={display:'inline-flex',alignItems:'center',justifyContent:'center',gap:'8px',width:this.props.fullWidth?'100%':'auto',height:dims.height,padding:dims.padding,background:disabled?'var(--color-surface-3)':bg,color:disabled?'var(--color-text-faint)':color,border:disabled?'1px solid var(--color-border)':border,borderRadius:dims.radius,fontFamily:'var(--font-sans)',fontSize:dims.fontSize,fontWeight:weight,cursor:disabled?'default':'pointer',whiteSpace:'nowrap',opacity:disabled?0.8:1};
+          const hover=disabled?{}:{background:hoverBg}; if(!disabled&&hoverBorder) hover.borderColor=hoverBorder;
+          return {rootStyle:base, hoverStyle:hover, hasIcon, label:this.props.label??'Button', onClick:disabled?(()=>{}):this.props.onClick};
+        }
+      }
+    </script>
+  </body>
+</html>

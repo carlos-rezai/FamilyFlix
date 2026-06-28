@@ -1,0 +1,40 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="tokens.css" />
+      </helmet>
+      <button
+        onClick="{{ onClick }}"
+        style="{{ rootStyle }}"
+        style-hover="{{ hoverStyle }}"
+      >
+        {{ label }}
+      </button>
+    </x-dc>
+    <script
+      type="text/x-dc"
+      data-dc-script
+      data-props='{"$preview":{"width":160,"height":64},"label":{"editor":"text","default":"Drama","tsType":"string"},"selected":{"editor":"boolean","default":false,"tsType":"boolean"},"size":{"editor":"enum","default":"md","options":["sm","md"],"tsType":"&apos;sm&apos;|&apos;md&apos;"},"onClick":{"editor":null,"tsType":"(() =&gt; void) | undefined"}}'
+    >
+      class Component extends DCLogic {
+        renderVals(){
+          const sel=this.props.selected??false;
+          const pad=this.props.size==='sm'?'6px 14px':'9px 16px';
+          const interactive=!!this.props.onClick;
+          return {
+            label:this.props.label??'Chip', onClick:this.props.onClick,
+            rootStyle:{padding:pad,background:sel?'var(--color-accent-soft)':'var(--color-surface)',border:'1px solid '+(sel?'var(--color-accent-line)':'var(--color-border)'),borderRadius:'999px',color:sel?'var(--color-accent)':'var(--color-text-dim)',fontFamily:'var(--font-sans)',fontSize:'14px',fontWeight:sel?'600':'400',cursor:interactive?'pointer':'default'},
+            hoverStyle: interactive?{borderColor:'var(--color-accent-line)'}:{},
+          };
+        }
+      }
+    </script>
+  </body>
+</html>

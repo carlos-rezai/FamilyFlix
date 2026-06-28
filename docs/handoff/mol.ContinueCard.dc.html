@@ -1,0 +1,63 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="tokens.css" />
+      </helmet>
+      <div
+        onClick="{{ onOpen }}"
+        style="{{ rootStyle }}"
+        style-hover="{{ rootHover }}"
+      >
+        <div style="{{ posterStyle }}">
+          <div style="{{ gradientStyle }}"></div>
+          <div style="{{ scrimStyle }}"></div>
+          <div style="{{ textWrap }}">
+            <div style="{{ titleStyle }}">{{ title }}</div>
+            <div style="{{ resumeStyle }}">{{ resumeLabel }}</div>
+          </div>
+          <div style="{{ trackStyle }}">
+            <div style="{{ fillStyle }}"></div>
+          </div>
+          <div style="{{ playBadge }}">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="#fff">
+              <path d="M7 5l12 7-12 7z"></path>
+            </svg>
+          </div>
+        </div>
+      </div>
+    </x-dc>
+    <script
+      type="text/x-dc"
+      data-dc-script
+      data-props='{"$preview":{"width":330,"height":220},"movie":{"editor":null,"tsType":"ContinueCardMovie"},"onOpen":{"editor":null,"tsType":"() =&gt; void"}}'
+    >
+      class Component extends DCLogic {
+        renderVals(){
+          const m=this.props.movie||{title:'Comet Season',g1:'#1f2a3a',g2:'#3a6a8a',resumeLabel:'Resume · 1:13 of 1:55',progress:64};
+          const progress=Math.max(0,Math.min(100,m.progress??0));
+          return {
+            onOpen:this.props.onOpen, title:m.title, resumeLabel:m.resumeLabel,
+            rootStyle:{width:'100%',cursor:'pointer'},
+            rootHover:{opacity:.94},
+            posterStyle:{position:'relative',width:'100%',aspectRatio:'16 / 10',borderRadius:'var(--poster-radius)',overflow:'hidden',border:'1px solid var(--color-border-soft)'},
+            gradientStyle:{position:'absolute',inset:0,background:`linear-gradient(155deg, ${m.g1||'#1f2a3a'} 0%, ${m.g2||'#3a6a8a'} 100%)`},
+            scrimStyle:{position:'absolute',inset:0,background:'linear-gradient(180deg,rgba(0,0,0,0) 35%,rgba(0,0,0,.78) 100%)'},
+            textWrap:{position:'absolute',left:'16px',right:'16px',bottom:'14px'},
+            titleStyle:{fontFamily:'var(--font-serif)',fontWeight:600,fontSize:'18px',color:'#fff',textShadow:'0 1px 6px rgba(0,0,0,.6)'},
+            resumeStyle:{fontFamily:'var(--font-sans)',fontSize:'13px',color:'rgba(255,255,255,.82)',marginTop:'2px'},
+            trackStyle:{position:'absolute',left:0,right:0,bottom:0,height:'4px',background:'rgba(255,255,255,.18)'},
+            fillStyle:{height:'100%',width:progress+'%',background:'var(--color-accent)'},
+            playBadge:{position:'absolute',top:'12px',right:'12px',width:'40px',height:'40px',borderRadius:'999px',background:'rgba(18,14,10,.55)',backdropFilter:'blur(4px)',display:'grid',placeItems:'center',border:'1px solid rgba(255,255,255,.25)'},
+          };
+        }
+      }
+    </script>
+  </body>
+</html>

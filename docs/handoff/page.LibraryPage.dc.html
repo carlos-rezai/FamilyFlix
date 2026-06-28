@@ -1,0 +1,297 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="tokens.css" />
+      </helmet>
+      <div
+        data-screen-label="Browse / Library"
+        style="
+          position: relative;
+          display: flex;
+          flex-direction: column;
+          height: 100%;
+          background: radial-gradient(
+            140% 90% at 80% -10%,
+            #1d1812 0%,
+            var(--color-bg) 60%
+          );
+        "
+      >
+        <header
+          style="
+            flex: 0 0 auto;
+            display: flex;
+            align-items: center;
+            gap: var(--space-5);
+            padding: var(--space-4) var(--space-6);
+            border-bottom: 1px solid var(--color-border-soft);
+            background: rgba(20, 17, 13, 0.85);
+            backdrop-filter: blur(12px);
+            position: relative;
+            z-index: 40;
+          "
+        >
+          <div
+            onClick="{{ lib.onLogo }}"
+            style="
+              display: flex;
+              align-items: baseline;
+              gap: 2px;
+              cursor: pointer;
+              user-select: none;
+              flex: 0 0 auto;
+            "
+          >
+            <span
+              style="
+                font-family: var(--font-serif);
+                font-weight: 700;
+                font-size: 25px;
+                letter-spacing: 0.3px;
+                color: var(--color-text);
+              "
+              >Family</span
+            >
+            <span
+              style="
+                font-family: var(--font-serif);
+                font-weight: 700;
+                font-size: 25px;
+                letter-spacing: 0.3px;
+                color: var(--color-accent);
+              "
+              >Flix</span
+            >
+          </div>
+
+          <dc-import
+            name="mol.SearchBar"
+            value="{{ lib.search }}"
+            on-input="{{ lib.onSearch }}"
+            placeholder="Search your movies"
+            hint-size="460px,46px"
+          ></dc-import>
+
+          <div style="flex: 1 1 auto"></div>
+
+          <dc-import
+            name="mol.FilterDropdown"
+            label="Genre"
+            value="{{ lib.genreLabel }}"
+            options="{{ lib.genreOptions }}"
+            open="{{ lib.genreOpen }}"
+            on-toggle="{{ lib.onToggleGenre }}"
+            menu-width="200"
+            hint-size="170px,46px"
+          ></dc-import>
+          <dc-import
+            name="mol.FilterDropdown"
+            value="{{ lib.ratingLabel }}"
+            options="{{ lib.ratingOptions }}"
+            open="{{ lib.ratingOpen }}"
+            on-toggle="{{ lib.onToggleRating }}"
+            leading-star="{{ true }}"
+            menu-width="190"
+            hint-size="150px,46px"
+          ></dc-import>
+          <dc-import
+            name="mol.FilterDropdown"
+            label="Sort"
+            value="{{ lib.sortLabel }}"
+            options="{{ lib.sortOptions }}"
+            open="{{ lib.sortOpen }}"
+            on-toggle="{{ lib.onToggleSort }}"
+            menu-width="220"
+            hint-size="190px,46px"
+          ></dc-import>
+
+          <div style="position: relative; flex: 0 0 auto">
+            <button
+              onClick="{{ lib.onSettings }}"
+              title="Settings"
+              style="
+                display: grid;
+                place-items: center;
+                width: 46px;
+                height: 46px;
+                background: transparent;
+                border: 1px solid transparent;
+                border-radius: var(--radius-pill);
+                color: var(--color-text-faint);
+                cursor: pointer;
+              "
+              style-hover="color:var(--color-text-dim);background:var(--color-surface)"
+            >
+              <svg
+                width="22"
+                height="22"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+              >
+                <path
+                  fill-rule="evenodd"
+                  clip-rule="evenodd"
+                  d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"
+                />
+              </svg>
+            </button>
+          </div>
+        </header>
+
+        <div
+          ref="{{ setBody }}"
+          onScroll="{{ onBodyScroll }}"
+          style="
+            flex: 1 1 auto;
+            overflow-y: auto;
+            padding: var(--space-6) 0 var(--space-8);
+          "
+        >
+          <sc-if
+            value="{{ lib.showContinue }}"
+            hint-placeholder-val="{{ false }}"
+          >
+            <section style="margin-bottom: var(--space-7)">
+              <h2
+                style="
+                  font-family: var(--font-serif);
+                  font-weight: 600;
+                  font-size: 24px;
+                  color: var(--color-text);
+                  margin: 0 0 var(--space-4);
+                  padding: 0 var(--space-6);
+                "
+              >
+                Continue Watching
+              </h2>
+              <dc-import
+                name="feat.CardCarousel"
+                items="{{ lib.continueList }}"
+                variant="continue"
+                hint-size="100%,210px"
+              ></dc-import>
+            </section>
+          </sc-if>
+
+          <sc-if
+            value="{{ lib.showFavorites }}"
+            hint-placeholder-val="{{ false }}"
+          >
+            <section style="margin-bottom: var(--space-7)">
+              <h2
+                style="
+                  display: flex;
+                  align-items: center;
+                  gap: 10px;
+                  font-family: var(--font-serif);
+                  font-weight: 600;
+                  font-size: 22px;
+                  color: var(--color-text);
+                  margin: 0 0 var(--space-4);
+                  padding: 0 var(--space-6);
+                "
+              >
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="var(--color-accent)"
+                  style="margin-top: 2px"
+                >
+                  <path
+                    d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"
+                  /></svg
+                >Favorites
+              </h2>
+              <dc-import
+                name="feat.CardCarousel"
+                items="{{ lib.favoritesList }}"
+                variant="poster"
+                hint-size="100%,360px"
+              ></dc-import>
+            </section>
+          </sc-if>
+
+          <sc-for
+            list="{{ lib.genreRows }}"
+            as="row"
+            hint-placeholder-count="4"
+          >
+            <dc-import
+              name="feat.GenreRow"
+              row="{{ row }}"
+              hint-size="100%,430px"
+            ></dc-import>
+          </sc-for>
+
+          <sc-if value="{{ lib.noResults }}" hint-placeholder-val="{{ false }}">
+            <div
+              style="
+                text-align: center;
+                padding: var(--space-8) var(--space-6);
+                color: var(--color-text-faint);
+                font-family: var(--font-sans);
+              "
+            >
+              <div
+                style="
+                  font-family: var(--font-serif);
+                  font-size: 26px;
+                  color: var(--color-text-dim);
+                  margin-bottom: 8px;
+                "
+              >
+                Nothing here
+              </div>
+              <div style="font-size: 16px">
+                No movies match “{{ lib.search }}”. Try a different search or
+                genre.
+              </div>
+            </div>
+          </sc-if>
+        </div>
+
+        <sc-if value="{{ showFab }}" hint-placeholder-val="{{ false }}">
+          <dc-import
+            name="mol.Fab"
+            icon="arrow-up"
+            label="Back to top"
+            on-click="{{ scrollToTop }}"
+            hint-size="52px,52px"
+          ></dc-import>
+        </sc-if>
+      </div>
+    </x-dc>
+    <script
+      type="text/x-dc"
+      data-dc-script
+      data-props='{"$preview":{"width":1280,"height":800},"lib":{"editor":null,"tsType":"LibraryPageModel"}}'
+    >
+      class Component extends DCLogic {
+        state = { showFab:false };
+        setBody = (el) => { this.body = el; };
+        onBodyScroll = () => {
+          const el = this.body; if(!el) return;
+          const show = el.scrollTop > 420;
+          if(show !== this.state.showFab) this.setState({ showFab: show });
+        };
+        scrollToTop(){ const el = this.body; if(el) el.scrollTo({ top:0, behavior:'smooth' }); }
+        renderVals(){
+          return {
+            showFab: this.state.showFab,
+            setBody: this.setBody,
+            onBodyScroll: this.onBodyScroll,
+            scrollToTop: () => this.scrollToTop(),
+          };
+        }
+      }
+    </script>
+  </body>
+</html>

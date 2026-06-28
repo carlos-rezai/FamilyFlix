@@ -1,0 +1,88 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="tokens.css" />
+      </helmet>
+      <div style="{{ wrapStyle }}">
+        <p ref="{{ setEl }}" style="{{ textStyle }}">{{ text }}</p>
+        <sc-if value="{{ showToggle }}" hint-placeholder-val="{{ false }}">
+          <button
+            onClick="{{ onToggle }}"
+            style="{{ toggleStyle }}"
+            style-hover="color:var(--color-accent-hover)"
+          >
+            {{ toggleLabel }}
+          </button>
+        </sc-if>
+      </div>
+    </x-dc>
+    <script
+      type="text/x-dc"
+      data-dc-script
+      data-props='{"$preview":{"width":580,"height":200},"text":{"editor":"text","default":"A lighthouse keeper on a fading coast takes in a runaway girl, and the two slowly rebuild a family out of the wreckage of the season. As winter closes the harbor and the supply boats stop coming, they learn that the light they tend is the only thing keeping either of them from drifting out to sea. A quiet, tender story about the families we choose when the ones we were given have gone dark.","tsType":"string"},"lines":{"editor":"int","default":4,"min":1,"max":12,"tsType":"number"},"fontSize":{"editor":"int","default":17,"min":12,"max":24,"tsType":"number"},"maxWidth":{"editor":"int","default":560,"min":200,"max":900,"tsType":"number"}}'
+    >
+      class Component extends DCLogic {
+        state = { expanded:false, overflowing:false };
+
+        setEl = (el) => { this.el = el; };
+        componentDidMount(){
+          this._measure();
+          this._raf = requestAnimationFrame(()=>this._measure());
+          this._t = setTimeout(()=>this._measure(), 250);
+          window.addEventListener('resize', this._measure);
+        }
+        componentDidUpdate(prev){ if(prev.text !== this.props.text || prev.lines !== this.props.lines) this._measure(); }
+        componentWillUnmount(){ window.removeEventListener('resize', this._measure); if(this._raf) cancelAnimationFrame(this._raf); if(this._t) clearTimeout(this._t); }
+
+        _measure = () => {
+          const el = this.el; if(!el || this.state.expanded) return;        // only measurable while clamped
+          const overflowing = el.scrollHeight > el.clientHeight + 2;
+          if(overflowing !== this.state.overflowing) this.setState({ overflowing });
+        };
+
+        toggle = () => this.setState(s => ({ expanded: !s.expanded }));
+
+        renderVals(){
+          const expanded = this.state.expanded;
+          const lines = this.props.lines || 4;
+          const fontSize = this.props.fontSize || 17;
+          const color = this.props.color || 'var(--color-text-dim)';
+          const maxWidth = this.props.maxWidth || 560;
+
+          const textStyle = {
+            fontFamily:'var(--font-sans)', fontSize:fontSize+'px', lineHeight:1.6,
+            color, maxWidth:maxWidth+'px', margin:0, textWrap:'pretty',
+          };
+          if(!expanded){
+            textStyle.display = '-webkit-box';
+            textStyle.WebkitLineClamp = String(lines);
+            textStyle.WebkitBoxOrient = 'vertical';
+            textStyle.overflow = 'hidden';
+          }
+
+          return {
+            text: this.props.text || '',
+            setEl: this.setEl,
+            wrapStyle: { maxWidth:maxWidth+'px' },
+            textStyle,
+            showToggle: this.state.overflowing,
+            onToggle: this.toggle,
+            toggleLabel: expanded ? 'Show less' : 'Read more',
+            toggleStyle: {
+              marginTop:'8px', padding:0, background:'none', border:'none',
+              color:'var(--color-accent)', fontFamily:'var(--font-sans)',
+              fontSize:'14px', fontWeight:'600', cursor:'pointer',
+            },
+          };
+        }
+      }
+    </script>
+  </body>
+</html>

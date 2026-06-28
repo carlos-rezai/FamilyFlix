@@ -1,0 +1,159 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="tokens.css" />
+      </helmet>
+      <div
+        data-screen-label="Genre"
+        style="
+          display: flex;
+          flex-direction: column;
+          height: 100%;
+          background: radial-gradient(
+            140% 90% at 80% -10%,
+            #1d1812 0%,
+            var(--color-bg) 60%
+          );
+        "
+      >
+        <header
+          style="
+            flex: 0 0 auto;
+            display: flex;
+            align-items: center;
+            gap: 18px;
+            padding: var(--space-4) var(--space-6);
+            border-bottom: 1px solid var(--color-border-soft);
+            background: rgba(20, 17, 13, 0.85);
+            backdrop-filter: blur(12px);
+            position: relative;
+            z-index: 40;
+          "
+        >
+          <button
+            onClick="{{ genre.onBack }}"
+            style="
+              display: flex;
+              align-items: center;
+              gap: 8px;
+              height: 44px;
+              padding: 0 18px 0 14px;
+              background: var(--color-surface);
+              border: 1px solid var(--color-border);
+              border-radius: var(--radius-pill);
+              color: var(--color-text);
+              font-family: var(--font-sans);
+              font-size: 15px;
+              font-weight: 500;
+              cursor: pointer;
+              flex: 0 0 auto;
+            "
+            style-hover="background:var(--color-surface-2)"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+              <path
+                d="M15 5l-7 7 7 7"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              /></svg
+            >Back
+          </button>
+          <div style="flex: 0 1 auto; min-width: 0">
+            <div
+              style="
+                font-family: var(--font-serif);
+                font-weight: 600;
+                font-size: 26px;
+                color: var(--color-text);
+                line-height: 1.05;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+              "
+            >
+              {{ genre.name }}
+            </div>
+            <div
+              style="
+                font-family: var(--font-sans);
+                font-size: 13px;
+                color: var(--color-text-faint);
+                margin-top: 3px;
+              "
+            >
+              {{ genre.countLabel }}
+            </div>
+          </div>
+          <div style="flex: 1 1 auto"></div>
+          <dc-import
+            name="mol.SearchBar"
+            value="{{ genre.search }}"
+            on-input="{{ genre.onSearch }}"
+            placeholder="{{ genre.searchPlaceholder }}"
+            grow="{{ false }}"
+            max-width="250"
+            hint-size="250px,46px"
+          ></dc-import>
+          <dc-import
+            name="mol.FilterDropdown"
+            label="Sort"
+            value="{{ genre.sortValue }}"
+            options="{{ genre.sortOptions }}"
+            open="{{ genre.sortOpen }}"
+            on-toggle="{{ genre.onToggleSort }}"
+            menu-width="220"
+            hint-size="190px,46px"
+          ></dc-import>
+        </header>
+        <div style="flex: 1 1 auto; overflow-y: auto">
+          <dc-import
+            name="feat.LibraryGrid"
+            movies="{{ genre.movies }}"
+            hint-size="100%,600px"
+          ></dc-import>
+          <sc-if
+            value="{{ genre.noResults }}"
+            hint-placeholder-val="{{ false }}"
+          >
+            <div
+              style="
+                text-align: center;
+                padding: var(--space-8) var(--space-6);
+                color: var(--color-text-faint);
+                font-family: var(--font-sans);
+              "
+            >
+              <div
+                style="
+                  font-family: var(--font-serif);
+                  font-size: 24px;
+                  color: var(--color-text-dim);
+                  margin-bottom: 8px;
+                "
+              >
+                No matches
+              </div>
+              <div style="font-size: 16px">
+                Nothing in {{ genre.name }} matches “{{ genre.search }}”.
+              </div>
+            </div>
+          </sc-if>
+        </div>
+      </div>
+    </x-dc>
+    <script
+      type="text/x-dc"
+      data-dc-script
+      data-props='{"$preview":{"width":1100,"height":700},"genre":{"editor":null,"tsType":"GenrePageModel"}}'
+    ></script>
+  </body>
+</html>

@@ -1,0 +1,135 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="tokens.css" />
+      </helmet>
+      <div style="position: relative">
+        <sc-if value="{{ canLeft }}" hint-placeholder-val="{{ false }}">
+          <button
+            onClick="{{ onLeft }}"
+            aria-label="Scroll left"
+            style="{{ leftArrowStyle }}"
+            style-hover="background:var(--color-surface-3);border-color:var(--color-accent-line);color:var(--color-accent)"
+          >
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+              <path
+                d="M15 5l-7 7 7 7"
+                stroke="currentColor"
+                stroke-width="2.2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
+          </button>
+        </sc-if>
+
+        <div
+          ref="{{ setScroller }}"
+          onScroll="{{ onScroll }}"
+          style="
+            display: flex;
+            gap: var(--space-5);
+            overflow-x: auto;
+            padding: 4px var(--space-6) var(--space-5);
+            scroll-padding-left: var(--space-6);
+            scroll-behavior: smooth;
+          "
+        >
+          <sc-for list="{{ items }}" as="m" hint-placeholder-count="5">
+            <sc-if value="{{ isPoster }}" hint-placeholder-val="{{ true }}">
+              <div style="flex: 0 0 auto; width: var(--card-w)">
+                <dc-import
+                  name="mol.PosterCard"
+                  movie="{{ m.card }}"
+                  on-open="{{ m.open }}"
+                  on-toggle-fav="{{ m.toggleFav }}"
+                  style="width: 100%"
+                  hint-size="100%,360px"
+                ></dc-import>
+              </div>
+            </sc-if>
+            <sc-if value="{{ isContinue }}" hint-placeholder-val="{{ false }}">
+              <div style="flex: 0 0 auto; width: calc(var(--card-w) * 1.55)">
+                <dc-import
+                  name="mol.ContinueCard"
+                  movie="{{ m.continueCard }}"
+                  on-open="{{ m.open }}"
+                  style="width: 100%"
+                  hint-size="100%,205px"
+                ></dc-import>
+              </div>
+            </sc-if>
+          </sc-for>
+        </div>
+
+        <sc-if value="{{ canRight }}" hint-placeholder-val="{{ false }}">
+          <button
+            onClick="{{ onRight }}"
+            aria-label="Scroll right"
+            style="{{ rightArrowStyle }}"
+            style-hover="background:var(--color-surface-3);border-color:var(--color-accent-line);color:var(--color-accent)"
+          >
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+              <path
+                d="M9 5l7 7-7 7"
+                stroke="currentColor"
+                stroke-width="2.2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
+          </button>
+        </sc-if>
+      </div>
+    </x-dc>
+    <script
+      type="text/x-dc"
+      data-dc-script
+      data-props='{"$preview":{"width":920,"height":380},"items":{"editor":null,"tsType":"CarouselItem[]"},"variant":{"editor":"enum","default":"poster","options":["poster","continue"],"tsType":"&apos;poster&apos; | &apos;continue&apos;"}}'
+    >
+      class Component extends DCLogic {
+        state = { canLeft:false, canRight:false };
+
+        setScroller = (el) => { this.scroller = el; };
+        componentDidMount(){ this._measure(); this._raf = requestAnimationFrame(()=>this._measure()); window.addEventListener('resize', this._measure); }
+        componentDidUpdate(prev){ if(prev.items !== this.props.items) this._measure(); }
+        componentWillUnmount(){ window.removeEventListener('resize', this._measure); if(this._raf) cancelAnimationFrame(this._raf); }
+
+        _measure = () => {
+          const el = this.scroller; if(!el) return;
+          const max = el.scrollWidth - el.clientWidth;
+          const canLeft = el.scrollLeft > 4;
+          const canRight = el.scrollLeft < max - 4;
+          if(canLeft !== this.state.canLeft || canRight !== this.state.canRight) this.setState({ canLeft, canRight });
+        };
+        page(dir){ const el = this.scroller; if(!el) return; const amt = Math.max(el.clientWidth * 0.8, 240); el.scrollBy({ left: dir*amt, behavior:'smooth' }); }
+
+        renderVals(){
+          const variant = this.props.variant || 'poster';
+          const top = variant === 'continue' ? 'calc(var(--card-w) * 0.48)' : 'calc(var(--card-w) * 0.75)';
+          const base = { position:'absolute', top, transform:'translateY(-50%)', zIndex:6, width:'44px', height:'44px', borderRadius:'50%', background:'rgba(20,17,13,.9)', backdropFilter:'blur(6px)', border:'1px solid var(--color-border)', color:'var(--color-text)', cursor:'pointer', display:'grid', placeItems:'center', boxShadow:'0 4px 16px rgba(0,0,0,.45)' };
+          return {
+            items: this.props.items || [],
+            isPoster: variant === 'poster',
+            isContinue: variant === 'continue',
+            setScroller: this.setScroller,
+            onScroll: this._measure,
+            onLeft: () => this.page(-1),
+            onRight: () => this.page(1),
+            canLeft: this.state.canLeft,
+            canRight: this.state.canRight,
+            leftArrowStyle: { ...base, left:'10px' },
+            rightArrowStyle: { ...base, right:'10px' },
+          };
+        }
+      }
+    </script>
+  </body>
+</html>

@@ -1,0 +1,40 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="tokens.css" />
+      </helmet>
+      <div
+        style="
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(var(--card-w), 1fr));
+          gap: var(--space-6) var(--space-5);
+          padding: var(--space-6);
+          max-width: 1500px;
+          margin: 0 auto;
+        "
+      >
+        <sc-for list="{{ movies }}" as="m" hint-placeholder-count="12">
+          <dc-import
+            name="mol.PosterCard"
+            movie="{{ m.card }}"
+            on-open="{{ m.open }}"
+            on-toggle-fav="{{ m.toggleFav }}"
+            hint-size="100%,360px"
+          ></dc-import>
+        </sc-for>
+      </div>
+    </x-dc>
+    <script
+      type="text/x-dc"
+      data-dc-script
+      data-props='{"$preview":{"width":1100,"height":600},"movies":{"editor":null,"tsType":"PosterCardItem[]"}}'
+    ></script>
+  </body>
+</html>

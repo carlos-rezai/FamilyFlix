@@ -1,0 +1,388 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="tokens.css" />
+      </helmet>
+      <div
+        onClick="{{ data.onClose }}"
+        style="
+          position: absolute;
+          inset: 0;
+          z-index: 90;
+          display: grid;
+          place-items: center;
+          background: var(--color-scrim);
+          backdrop-filter: blur(4px);
+          animation: ffFade 0.18s ease;
+          padding: 24px;
+        "
+      >
+        <div
+          onClick="{{ data.stopProp }}"
+          data-screen-label="Export"
+          style="
+            width: 520px;
+            max-width: 100%;
+            background: var(--color-surface-2);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-lg);
+            box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
+            overflow: hidden;
+            animation: ffPop 0.2s ease;
+          "
+        >
+          <sc-if value="{{ data.idle }}" hint-placeholder-val="{{ true }}">
+            <div style="padding: 28px 28px 0">
+              <div style="display: flex; align-items: flex-start; gap: 14px">
+                <div
+                  style="
+                    flex: 0 0 auto;
+                    width: 44px;
+                    height: 44px;
+                    border-radius: 12px;
+                    background: var(--color-accent-soft);
+                    border: 1px solid var(--color-accent-line);
+                    display: grid;
+                    place-items: center;
+                  "
+                >
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                    <path
+                      d="M12 3v11m0 0l-4-4m4 4l4-4M5 19h14"
+                      stroke="var(--color-accent)"
+                      stroke-width="1.9"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    />
+                  </svg>
+                </div>
+                <div style="flex: 1">
+                  <h2
+                    style="
+                      font-family: var(--font-serif);
+                      font-weight: 600;
+                      font-size: 24px;
+                      color: var(--color-text);
+                      margin: 0;
+                    "
+                  >
+                    Export library
+                  </h2>
+                  <p
+                    style="
+                      font-family: var(--font-sans);
+                      font-size: 14px;
+                      color: var(--color-text-faint);
+                      margin: 4px 0 0;
+                    "
+                  >
+                    Save your whole collection as a spreadsheet.
+                  </p>
+                </div>
+                <button
+                  onClick="{{ data.onClose }}"
+                  style="
+                    flex: 0 0 auto;
+                    display: grid;
+                    place-items: center;
+                    width: 34px;
+                    height: 34px;
+                    background: transparent;
+                    border: none;
+                    border-radius: 8px;
+                    color: var(--color-text-faint);
+                    cursor: pointer;
+                    font-size: 16px;
+                  "
+                  style-hover="background:var(--color-surface-3);color:var(--color-text-dim)"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+
+            <div
+              style="
+                padding: 22px 28px 28px;
+                display: flex;
+                flex-direction: column;
+                gap: 20px;
+              "
+            >
+              <div>
+                <div
+                  style="
+                    font-family: var(--font-sans);
+                    font-size: 13px;
+                    font-weight: 600;
+                    color: var(--color-text-dim);
+                    margin-bottom: 8px;
+                  "
+                >
+                  Format
+                </div>
+                <div style="display: flex; gap: 10px">
+                  <button
+                    onClick="{{ data.chooseCsv }}"
+                    style="{{ data.csvCardStyle }}"
+                  >
+                    <div
+                      style="
+                        display: flex;
+                        align-items: center;
+                        justify-content: space-between;
+                      "
+                    >
+                      <span
+                        style="
+                          font-family: var(--font-sans);
+                          font-size: 16px;
+                          font-weight: 600;
+                          color: var(--color-text);
+                        "
+                        >CSV</span
+                      ><span style="{{ data.csvDotStyle }}"></span>
+                    </div>
+                    <div
+                      style="
+                        font-family: var(--font-sans);
+                        font-size: 12.5px;
+                        color: var(--color-text-faint);
+                        margin-top: 4px;
+                        text-align: left;
+                      "
+                    >
+                      Plain comma-separated. Opens anywhere.
+                    </div>
+                  </button>
+                  <button
+                    onClick="{{ data.chooseXlsx }}"
+                    style="{{ data.xlsxCardStyle }}"
+                  >
+                    <div
+                      style="
+                        display: flex;
+                        align-items: center;
+                        justify-content: space-between;
+                      "
+                    >
+                      <span
+                        style="
+                          font-family: var(--font-sans);
+                          font-size: 16px;
+                          font-weight: 600;
+                          color: var(--color-text);
+                        "
+                        >Excel</span
+                      ><span style="{{ data.xlsxDotStyle }}"></span>
+                    </div>
+                    <div
+                      style="
+                        font-family: var(--font-sans);
+                        font-size: 12.5px;
+                        color: var(--color-text-faint);
+                        margin-top: 4px;
+                        text-align: left;
+                      "
+                    >
+                      .xlsx workbook with a header row.
+                    </div>
+                  </button>
+                </div>
+              </div>
+
+              <div
+                style="
+                  display: flex;
+                  align-items: center;
+                  justify-content: space-between;
+                  padding: 14px 16px;
+                  background: var(--color-bg-2);
+                  border: 1px solid var(--color-border-soft);
+                  border-radius: var(--radius-md);
+                "
+              >
+                <div style="display: flex; align-items: center; gap: 10px">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                    <rect
+                      x="4"
+                      y="3"
+                      width="16"
+                      height="18"
+                      rx="2"
+                      stroke="var(--color-text-faint)"
+                      stroke-width="1.6"
+                    />
+                    <path
+                      d="M9 8h6M9 12h6M9 16h4"
+                      stroke="var(--color-text-faint)"
+                      stroke-width="1.6"
+                      stroke-linecap="round"
+                    />
+                  </svg>
+                  <span
+                    style="
+                      font-family: var(--font-mono);
+                      font-size: 13.5px;
+                      color: var(--color-text-dim);
+                    "
+                    >{{ data.filename }}</span
+                  >
+                </div>
+                <span
+                  style="
+                    font-family: var(--font-sans);
+                    font-size: 13px;
+                    font-weight: 600;
+                    color: var(--color-accent);
+                  "
+                  >{{ data.rowLabel }}</span
+                >
+              </div>
+
+              <div>
+                <div
+                  style="
+                    font-family: var(--font-sans);
+                    font-size: 13px;
+                    font-weight: 600;
+                    color: var(--color-text-dim);
+                    margin-bottom: 8px;
+                  "
+                >
+                  Columns included
+                </div>
+                <div style="display: flex; flex-wrap: wrap; gap: 7px">
+                  <sc-for
+                    list="{{ data.columns }}"
+                    as="c"
+                    hint-placeholder-count="8"
+                  >
+                    <span
+                      style="
+                        font-family: var(--font-sans);
+                        font-size: 12.5px;
+                        color: var(--color-text-dim);
+                        background: var(--color-surface);
+                        border: 1px solid var(--color-border);
+                        padding: 5px 11px;
+                        border-radius: var(--radius-pill);
+                      "
+                      >{{ c }}</span
+                    >
+                  </sc-for>
+                </div>
+              </div>
+
+              <div
+                style="
+                  display: flex;
+                  align-items: center;
+                  gap: 12px;
+                  margin-top: 4px;
+                "
+              >
+                <dc-import
+                  name="prim.Button"
+                  label="Export {{ data.formatLabel }}"
+                  variant="primary"
+                  size="md"
+                  icon="none"
+                  on-click="{{ data.onExport }}"
+                  hint-size="160px,50px"
+                ></dc-import>
+                <dc-import
+                  name="prim.Button"
+                  label="Cancel"
+                  variant="secondary"
+                  size="md"
+                  icon="none"
+                  on-click="{{ data.onClose }}"
+                  hint-size="100px,50px"
+                ></dc-import>
+              </div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ data.done }}" hint-placeholder-val="{{ false }}">
+            <div style="padding: 44px 32px; text-align: center">
+              <div
+                style="
+                  width: 64px;
+                  height: 64px;
+                  margin: 0 auto 18px;
+                  border-radius: 99px;
+                  background: rgba(138, 154, 107, 0.16);
+                  display: grid;
+                  place-items: center;
+                "
+              >
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
+                  <path
+                    d="M5 12.5l4.5 4.5L19 7.5"
+                    stroke="var(--color-watched)"
+                    stroke-width="2.4"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+              </div>
+              <h2
+                style="
+                  font-family: var(--font-serif);
+                  font-weight: 600;
+                  font-size: 24px;
+                  color: var(--color-text);
+                  margin: 0;
+                "
+              >
+                Export ready
+              </h2>
+              <p
+                style="
+                  font-family: var(--font-sans);
+                  font-size: 15px;
+                  color: var(--color-text-dim);
+                  margin: 8px 0 0;
+                "
+              >
+                Saved
+                <span
+                  style="
+                    font-family: var(--font-mono);
+                    font-size: 14px;
+                    color: var(--color-text);
+                  "
+                  >{{ data.filename }}</span
+                ><br />with {{ data.rowLabel }} to your computer.
+              </p>
+              <div style="margin-top: 26px">
+                <dc-import
+                  name="prim.Button"
+                  label="Done"
+                  variant="secondary"
+                  size="md"
+                  icon="none"
+                  on-click="{{ data.onClose }}"
+                  hint-size="120px,48px"
+                ></dc-import>
+              </div>
+            </div>
+          </sc-if>
+        </div>
+      </div>
+    </x-dc>
+    <script
+      type="text/x-dc"
+      data-dc-script
+      data-props='{"$preview":{"width":560,"height":520},"data":{"editor":null,"tsType":"ExportModalModel"}}'
+    ></script>
+  </body>
+</html>

@@ -1,0 +1,40 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="tokens.css" />
+      </helmet>
+      <div style="{{ rootStyle }}">
+        <dc-import
+          name="prim.TextField"
+          value="{{ value }}"
+          placeholder="{{ placeholder }}"
+          icon="search"
+          on-input="{{ onInput }}"
+          hint-size="100%,46px"
+        ></dc-import>
+      </div>
+    </x-dc>
+    <script
+      type="text/x-dc"
+      data-dc-script
+      data-props='{"$preview":{"width":460,"height":80},"value":{"editor":"text","default":"","tsType":"string"},"placeholder":{"editor":"text","default":"Search your movies","tsType":"string"},"grow":{"editor":"boolean","default":true,"tsType":"boolean"},"maxWidth":{"editor":"int","default":460,"min":160,"max":640,"tsType":"number"},"onInput":{"editor":null,"tsType":"(e: InputEvent) =&gt; void"}}'
+    >
+      class Component extends DCLogic {
+        renderVals(){
+          const grow=this.props.grow??true;
+          return {
+            value:this.props.value??'', placeholder:this.props.placeholder??'Search your movies', onInput:this.props.onInput,
+            rootStyle: grow ? {flex:'1 1 auto',maxWidth:(this.props.maxWidth||460)+'px'} : {width:(this.props.maxWidth||250)+'px'},
+          };
+        }
+      }
+    </script>
+  </body>
+</html>

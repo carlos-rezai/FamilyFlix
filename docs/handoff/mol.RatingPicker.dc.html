@@ -1,0 +1,61 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="tokens.css" />
+      </helmet>
+      <div style="display: flex; align-items: center; gap: 14px">
+        <div onMouseLeave="{{ clearHover }}" style="display: flex; gap: 5px">
+          <sc-for list="{{ stars }}" as="st" hint-placeholder-count="5">
+            <div style="{{ st.boxStyle }}">
+              ★<span style="{{ st.fillStyle }}">★</span>
+              <div
+                onClick="{{ st.leftClick }}"
+                onMouseEnter="{{ st.leftHover }}"
+                style="{{ st.leftStyle }}"
+              ></div>
+              <div
+                onClick="{{ st.rightClick }}"
+                onMouseEnter="{{ st.rightHover }}"
+                style="{{ st.rightStyle }}"
+              ></div>
+            </div>
+          </sc-for>
+        </div>
+        <span style="{{ valueStyle }}">{{ valueLabel }}</span>
+      </div>
+    </x-dc>
+    <script
+      type="text/x-dc"
+      data-dc-script
+      data-props='{"$preview":{"width":260,"height":56},"value":{"editor":"int","default":70,"min":0,"max":100,"tsType":"number"},"onChange":{"editor":null,"tsType":"(percent: number) =&gt; void"}}'
+    >
+      class Component extends DCLogic {
+        state={hover:null};
+        set(p){ if(this.props.onChange) this.props.onChange(p); }
+        renderVals(){
+          const val=this.props.value??0;
+          const disp=this.state.hover!=null?this.state.hover:val;
+          const ds=disp/20;
+          const stars=[0,1,2,3,4].map(i=>{const frac=Math.max(0,Math.min(1,ds-i));return{
+            boxStyle:{position:'relative',width:'30px',height:'30px',fontSize:'30px',lineHeight:'30px',color:'rgba(255,255,255,.2)',cursor:'pointer',flex:'0 0 auto'},
+            fillStyle:{position:'absolute',left:0,top:0,height:'100%',width:(frac*100)+'%',overflow:'hidden',color:'var(--color-accent)',pointerEvents:'none'},
+            leftStyle:{position:'absolute',left:0,top:0,width:'50%',height:'100%',zIndex:2,cursor:'pointer'},
+            rightStyle:{position:'absolute',right:0,top:0,width:'50%',height:'100%',zIndex:2,cursor:'pointer'},
+            leftClick:()=>this.set((i+0.5)*20), rightClick:()=>this.set((i+1)*20),
+            leftHover:()=>this.setState({hover:(i+0.5)*20}), rightHover:()=>this.setState({hover:(i+1)*20}),
+          };});
+          return {stars, clearHover:()=>this.setState({hover:null}),
+            valueLabel: val>0 ? (Math.round(val/20*2)/2).toFixed(1)+' / 5' : 'Not rated',
+            valueStyle:{fontFamily:'var(--font-sans)',fontSize:'14px',color:'var(--color-text-dim)'}};
+        }
+      }
+    </script>
+  </body>
+</html>

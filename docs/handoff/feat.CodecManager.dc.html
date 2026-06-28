@@ -1,0 +1,200 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="tokens.css" />
+      </helmet>
+      <div style="display: flex; flex-direction: column; gap: 14px">
+        <div
+          style="
+            font-family: var(--font-sans);
+            font-size: 13px;
+            color: var(--color-text-faint);
+          "
+        >
+          {{ cdc.summaryLabel }}
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 8px">
+          <sc-for list="{{ cdc.codecs }}" as="c" hint-placeholder-count="6">
+            <div
+              style="
+                display: flex;
+                align-items: center;
+                gap: 14px;
+                padding: 13px 14px;
+                background: var(--color-bg-2);
+                border: 1px solid var(--color-border-soft);
+                border-radius: var(--radius-md);
+              "
+            >
+              <div
+                style="
+                  flex: 0 0 auto;
+                  width: 38px;
+                  height: 38px;
+                  border-radius: 9px;
+                  background: var(--color-surface-2);
+                  border: 1px solid var(--color-border);
+                  display: grid;
+                  place-items: center;
+                  color: var(--color-text-faint);
+                "
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                  <rect
+                    x="6"
+                    y="6"
+                    width="12"
+                    height="12"
+                    rx="2.5"
+                    stroke="currentColor"
+                    stroke-width="1.6"
+                  />
+                  <path
+                    d="M10 6V3M14 6V3M10 18v3M14 18v3M6 10H3M6 14H3M18 10h3M18 14h3"
+                    stroke="currentColor"
+                    stroke-width="1.6"
+                    stroke-linecap="round"
+                  />
+                </svg>
+              </div>
+              <div style="flex: 1; min-width: 0">
+                <div
+                  style="
+                    font-family: var(--font-sans);
+                    font-size: 15px;
+                    font-weight: 600;
+                    color: var(--color-text);
+                  "
+                >
+                  {{ c.name }}
+                </div>
+                <div
+                  style="
+                    display: flex;
+                    flex-wrap: wrap;
+                    gap: 6px;
+                    margin-top: 5px;
+                  "
+                >
+                  <sc-for list="{{ c.exts }}" as="e" hint-placeholder-count="2">
+                    <span
+                      style="
+                        font-family: var(--font-mono);
+                        font-size: 11.5px;
+                        color: var(--color-text-dim);
+                        background: var(--color-surface);
+                        border: 1px solid var(--color-border);
+                        padding: 2px 8px;
+                        border-radius: 6px;
+                      "
+                      >{{ e }}</span
+                    >
+                  </sc-for>
+                </div>
+              </div>
+              <span
+                style="
+                  flex: 0 0 auto;
+                  font-family: var(--font-mono);
+                  font-size: 12px;
+                  color: var(--color-text-faint);
+                  min-width: 54px;
+                  text-align: right;
+                "
+                >{{ c.size }}</span
+              >
+              <span style="{{ c.statusStyle }}">{{ c.statusLabel }}</span>
+              <sc-if
+                value="{{ c.notBuiltIn }}"
+                hint-placeholder-val="{{ false }}"
+              >
+                <button
+                  onClick="{{ c.onRemove }}"
+                  title="Remove codec"
+                  style="
+                    display: grid;
+                    place-items: center;
+                    width: 32px;
+                    height: 32px;
+                    flex: 0 0 auto;
+                    background: transparent;
+                    border: none;
+                    border-radius: 7px;
+                    color: var(--color-text-faint);
+                    cursor: pointer;
+                  "
+                  style-hover="color:#c97a6a;background:rgba(201,122,106,.1)"
+                >
+                  ✕
+                </button>
+              </sc-if>
+              <sc-if value="{{ c.builtIn }}" hint-placeholder-val="{{ true }}">
+                <span style="width: 32px; flex: 0 0 auto"></span>
+              </sc-if>
+            </div>
+          </sc-for>
+        </div>
+
+        <button
+          onClick="{{ cdc.onBrowse }}"
+          style="
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            width: 100%;
+            padding: 22px;
+            background: transparent;
+            border: 1.5px dashed var(--color-border);
+            border-radius: var(--radius-md);
+            cursor: pointer;
+          "
+          style-hover="border-color:var(--color-accent-line);background:var(--color-accent-soft)"
+        >
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <path
+              d="M12 16V4m0 0L8 8m4-4l4 4M5 20h14"
+              stroke="var(--color-accent)"
+              stroke-width="1.8"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+          <span
+            style="
+              font-family: var(--font-sans);
+              font-size: 14px;
+              font-weight: 600;
+              color: var(--color-text);
+            "
+            >Add a codec pack</span
+          >
+          <span
+            style="
+              font-family: var(--font-sans);
+              font-size: 12.5px;
+              color: var(--color-text-faint);
+            "
+            >Drop a
+            <span style="font-family: var(--font-mono)">.dll · .so · .pak</span>
+            file here, or browse</span
+          >
+        </button>
+      </div>
+    </x-dc>
+    <script
+      type="text/x-dc"
+      data-dc-script
+      data-props='{"$preview":{"width":680,"height":520},"cdc":{"editor":null,"tsType":"CodecManagerModel"}}'
+    ></script>
+  </body>
+</html>

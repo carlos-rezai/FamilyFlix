@@ -1,0 +1,47 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="tokens.css" />
+      </helmet>
+      <span style="{{ rootStyle }}">
+        <span style="{{ starWrap }}"
+          ><span style="{{ starBase }}">★★★★★</span
+          ><span style="{{ starFill }}">★★★★★</span></span
+        >
+        <sc-if value="{{ showValue }}" hint-placeholder-val="{{ false }}"
+          ><span style="{{ valueStyle }}">{{ valueText }}</span></sc-if
+        >
+      </span>
+    </x-dc>
+    <script
+      type="text/x-dc"
+      data-dc-script
+      data-props='{"$preview":{"width":170,"height":44},"rating":{"editor":"int","default":80,"min":0,"max":100,"tsType":"number"},"size":{"editor":"int","default":18,"min":10,"max":48,"tsType":"number"},"showValue":{"editor":"boolean","default":true,"tsType":"boolean"}}'
+    >
+      class Component extends DCLogic {
+        renderVals(){
+          const rating = Math.max(0, Math.min(100, this.props.rating ?? 0));
+          const size = this.props.size ?? 14;
+          const showValue = this.props.showValue ?? false;
+          const ls = Math.round(size*0.14);
+          return {
+            rootStyle:{display:'inline-flex',alignItems:'center',gap:'6px'},
+            starWrap:{position:'relative',display:'inline-block',fontSize:size+'px',lineHeight:1,letterSpacing:ls+'px',whiteSpace:'nowrap'},
+            starBase:{color:'rgba(255,255,255,.22)'},
+            starFill:{position:'absolute',left:0,top:0,height:'100%',width:rating+'%',overflow:'hidden',color:'var(--color-accent)',whiteSpace:'nowrap'},
+            showValue,
+            valueText:(Math.round(rating/20*2)/2).toFixed(1),
+            valueStyle:{fontFamily:'var(--font-sans)',fontSize:Math.round(size*0.86)+'px',color:'var(--color-text-faint)'},
+          };
+        }
+      }
+    </script>
+  </body>
+</html>

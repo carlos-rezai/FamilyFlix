@@ -1,0 +1,343 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="tokens.css" />
+      </helmet>
+      <div
+        data-screen-label="Player"
+        onMouseMove="{{ p.onMove }}"
+        style="{{ p.wrapStyle }}"
+      >
+        <div style="position: absolute; inset: 0; overflow: hidden">
+          <div
+            style="{{ p.posterStyle }}; filter:blur(28px) brightness(.5);transform:scale(1.2)"
+          ></div>
+          <div
+            style="
+              position: absolute;
+              inset: 0;
+              background: rgba(8, 6, 4, 0.55);
+            "
+          ></div>
+        </div>
+
+        <div
+          onClick="{{ p.togglePlay }}"
+          style="
+            position: absolute;
+            inset: 0;
+            display: grid;
+            place-items: center;
+            cursor: pointer;
+          "
+        >
+          <sc-if value="{{ p.showBigPlay }}" hint-placeholder-val="{{ false }}">
+            <div
+              style="
+                width: 96px;
+                height: 96px;
+                border-radius: 99px;
+                background: rgba(20, 17, 13, 0.55);
+                backdrop-filter: blur(8px);
+                border: 1px solid rgba(255, 255, 255, 0.2);
+                display: grid;
+                place-items: center;
+                animation: ffPop 0.2s ease;
+              "
+            >
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="#fff">
+                <path d="M7 5l12 7-12 7z" />
+              </svg>
+            </div>
+          </sc-if>
+        </div>
+
+        <sc-if value="{{ p.showSubtitle }}" hint-placeholder-val="{{ false }}">
+          <div
+            style="
+              position: absolute;
+              left: 0;
+              right: 0;
+              bottom: 130px;
+              text-align: center;
+              padding: 0 60px;
+              pointer-events: none;
+              transition: bottom 0.25s ease;
+            "
+          >
+            <span
+              style="
+                font-family: var(--font-sans);
+                font-size: 26px;
+                font-weight: 500;
+                color: #fff;
+                background: rgba(0, 0, 0, 0.5);
+                padding: 6px 16px;
+                border-radius: 8px;
+                line-height: 1.5;
+                box-decoration-break: clone;
+              "
+              >{{ p.subtitleLine }}</span
+            >
+          </div>
+        </sc-if>
+
+        <div style="{{ p.chromeTop }}">
+          <button
+            onClick="{{ p.onExit }}"
+            style="
+              display: flex;
+              align-items: center;
+              gap: 8px;
+              height: 48px;
+              padding: 0 20px 0 16px;
+              background: rgba(20, 17, 13, 0.55);
+              backdrop-filter: blur(10px);
+              border: 1px solid rgba(255, 255, 255, 0.14);
+              border-radius: var(--radius-pill);
+              color: #fff;
+              font-family: var(--font-sans);
+              font-size: 16px;
+              font-weight: 500;
+              cursor: pointer;
+            "
+            style-hover="background:rgba(40,34,27,.8)"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+              <path
+                d="M15 5l-7 7 7 7"
+                stroke="#fff"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              /></svg
+            >Back
+          </button>
+          <div
+            style="
+              font-family: var(--font-serif);
+              font-size: 20px;
+              font-weight: 600;
+              color: #fff;
+              text-shadow: 0 1px 8px rgba(0, 0, 0, 0.6);
+            "
+          >
+            {{ p.title }}
+          </div>
+        </div>
+
+        <div style="{{ p.chromeBot }}">
+          <div
+            style="
+              display: flex;
+              align-items: center;
+              gap: 14px;
+              margin-bottom: 10px;
+            "
+          >
+            <span
+              style="
+                font-family: var(--font-mono);
+                font-size: 13px;
+                color: rgba(255, 255, 255, 0.85);
+                min-width: 52px;
+              "
+              >{{ p.curTime }}</span
+            >
+            <div
+              onClick="{{ p.onSeek }}"
+              style="
+                flex: 1;
+                height: 6px;
+                background: rgba(255, 255, 255, 0.2);
+                border-radius: 99px;
+                cursor: pointer;
+                position: relative;
+              "
+            >
+              <div style="{{ p.seekStyle }}"></div>
+              <div style="{{ p.seekKnob }}"></div>
+            </div>
+            <span
+              style="
+                font-family: var(--font-mono);
+                font-size: 13px;
+                color: rgba(255, 255, 255, 0.6);
+                min-width: 52px;
+                text-align: right;
+              "
+              >{{ p.duration }}</span
+            >
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px">
+            <button
+              onClick="{{ p.togglePlay }}"
+              style="
+                display: grid;
+                place-items: center;
+                width: 48px;
+                height: 48px;
+                background: transparent;
+                border: none;
+                border-radius: 99px;
+                color: #fff;
+                cursor: pointer;
+              "
+              style-hover="background:rgba(255,255,255,.12)"
+            >
+              {{ p.playPauseIcon }}
+            </button>
+            <button
+              onClick="{{ p.skipBack }}"
+              title="Back 10s"
+              style="
+                display: grid;
+                place-items: center;
+                width: 44px;
+                height: 44px;
+                background: transparent;
+                border: none;
+                border-radius: 99px;
+                color: #fff;
+                cursor: pointer;
+              "
+              style-hover="background:rgba(255,255,255,.12)"
+            >
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                <path
+                  d="M11 7L6 12l5 5M18 7l-5 5 5 5"
+                  stroke="#fff"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </svg>
+            </button>
+            <button
+              onClick="{{ p.skipFwd }}"
+              title="Forward 10s"
+              style="
+                display: grid;
+                place-items: center;
+                width: 44px;
+                height: 44px;
+                background: transparent;
+                border: none;
+                border-radius: 99px;
+                color: #fff;
+                cursor: pointer;
+              "
+              style-hover="background:rgba(255,255,255,.12)"
+            >
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                <path
+                  d="M13 7l5 5-5 5M6 7l5 5-5 5"
+                  stroke="#fff"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </svg>
+            </button>
+            <div
+              style="
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                margin-left: 6px;
+              "
+            >
+              <button
+                onClick="{{ p.toggleMute }}"
+                style="
+                  display: grid;
+                  place-items: center;
+                  width: 44px;
+                  height: 44px;
+                  background: transparent;
+                  border: none;
+                  border-radius: 99px;
+                  color: #fff;
+                  cursor: pointer;
+                "
+                style-hover="background:rgba(255,255,255,.12)"
+              >
+                {{ p.volumeIcon }}
+              </button>
+              <div
+                onClick="{{ p.onVol }}"
+                style="
+                  width: 90px;
+                  height: 5px;
+                  background: rgba(255, 255, 255, 0.2);
+                  border-radius: 99px;
+                  cursor: pointer;
+                "
+              >
+                <div style="{{ p.volStyle }}"></div>
+              </div>
+            </div>
+            <div style="flex: 1"></div>
+            <sc-if value="{{ p.hasSubs }}" hint-placeholder-val="{{ false }}">
+              <button onClick="{{ p.toggleSubs }}" style="{{ p.subBtnStyle }}">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                  <rect
+                    x="3"
+                    y="6"
+                    width="18"
+                    height="13"
+                    rx="2.5"
+                    stroke="currentColor"
+                    stroke-width="1.8"
+                  />
+                  <path
+                    d="M7 13.5h3M13 13.5h4"
+                    stroke="currentColor"
+                    stroke-width="1.8"
+                    stroke-linecap="round"
+                  /></svg
+                >CC
+              </button>
+            </sc-if>
+            <button
+              title="Fullscreen"
+              style="
+                display: grid;
+                place-items: center;
+                width: 44px;
+                height: 44px;
+                background: transparent;
+                border: none;
+                border-radius: 99px;
+                color: #fff;
+                cursor: pointer;
+              "
+              style-hover="background:rgba(255,255,255,.12)"
+            >
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                <path
+                  d="M4 9V5a1 1 0 011-1h4M20 9V5a1 1 0 00-1-1h-4M4 15v4a1 1 0 001 1h4M20 15v4a1 1 0 01-1 1h-4"
+                  stroke="#fff"
+                  stroke-width="1.8"
+                  stroke-linecap="round"
+                />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </x-dc>
+    <script
+      type="text/x-dc"
+      data-dc-script
+      data-props='{"$preview":{"width":960,"height":540},"p":{"editor":null,"tsType":"PlayerModel"}}'
+    ></script>
+  </body>
+</html>

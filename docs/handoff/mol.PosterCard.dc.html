@@ -1,0 +1,112 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="tokens.css" />
+      </helmet>
+      <div onClick="{{ onOpen }}" style="{{ rootStyle }}">
+        <div style="{{ posterStyle }}" style-hover="{{ posterHover }}">
+          <div style="{{ gradientStyle }}"></div>
+          <div style="{{ innerBorder }}"></div>
+          <button
+            onClick="{{ onFav }}"
+            title="Favorite"
+            style="{{ favBtnStyle }}"
+            style-hover="{{ favHover }}"
+          >
+            <sc-if value="{{ favorite }}" hint-placeholder-val="{{ false }}"
+              ><svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="var(--color-accent)"
+              >
+                <path
+                  d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"
+                ></path></svg
+            ></sc-if>
+            <sc-if value="{{ notFavorite }}" hint-placeholder-val="{{ true }}"
+              ><svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                <path
+                  d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"
+                  stroke="#fff"
+                  stroke-width="1.7"
+                  stroke-linejoin="round"
+                ></path></svg
+            ></sc-if>
+          </button>
+          <div style="{{ titleOverlay }}">{{ title }}</div>
+          <sc-if value="{{ watched }}" hint-placeholder-val="{{ false }}"
+            ><div style="{{ badgeWrap }}">
+              <dc-import
+                name="prim.StatusBadge"
+                size="30"
+                hint-size="30px,30px"
+              ></dc-import></div
+          ></sc-if>
+          <sc-if value="{{ inProgress }}" hint-placeholder-val="{{ false }}"
+            ><div style="{{ progressWrap }}">
+              <dc-import
+                name="prim.ProgressBar"
+                percent="{{ progress }}"
+                height="5"
+                hint-size="100%,5px"
+              ></dc-import></div
+          ></sc-if>
+        </div>
+        <div style="{{ metaWrap }}">
+          <div style="{{ titleBelow }}">{{ title }}</div>
+          <div style="{{ starRow }}">
+            <dc-import
+              name="prim.StarRating"
+              rating="{{ rating }}"
+              size="13"
+              show-value="{{ true }}"
+              hint-size="120px,18px"
+            ></dc-import>
+          </div>
+        </div>
+      </div>
+    </x-dc>
+    <script
+      type="text/x-dc"
+      data-dc-script
+      data-props='{"$preview":{"width":210,"height":360},"movie":{"editor":null,"default":{"title":"Comet Season","g1":"#1f2a3a","g2":"#3a6a8a","rating":80,"watched":false,"progress":64,"favorite":false},"tsType":"PosterCardMovie"},"onOpen":{"editor":null,"tsType":"() =&gt; void"},"onToggleFav":{"editor":null,"tsType":"() =&gt; void"}}'
+    >
+      class Component extends DCLogic {
+        renderVals(){
+          const m=this.props.movie||{title:'Comet Season',g1:'#1f2a3a',g2:'#3a6a8a',rating:80,watched:false,progress:64,favorite:false};
+          const fav=m.favorite??false;
+          const watched=m.watched??false;
+          const progress=Math.max(0,Math.min(100,m.progress??0));
+          const inProgress=!watched && progress>0;
+          return {
+            onOpen:this.props.onOpen,
+            onFav:(e)=>{ if(e&&e.stopPropagation)e.stopPropagation(); this.props.onToggleFav&&this.props.onToggleFav(); },
+            title:m.title??'Untitled', rating:m.rating??0,
+            favorite:fav, notFavorite:!fav, watched, inProgress, progress,
+            rootStyle:{width:'100%',cursor:'pointer'},
+            posterStyle:{position:'relative',width:'100%',aspectRatio:'2 / 3',borderRadius:'var(--poster-radius)',overflow:'hidden',border:'1px solid var(--color-border-soft)',boxShadow:'0 6px 20px rgba(0,0,0,.35)',transition:'transform .18s ease, box-shadow .18s ease'},
+            posterHover:{transform:'translateY(-4px)',boxShadow:'0 14px 34px rgba(0,0,0,.5)'},
+            gradientStyle:{position:'absolute',inset:0,background:`linear-gradient(155deg, ${m.g1||'#2a241f'} 0%, ${m.g2||'#7a5a34'} 100%)`},
+            innerBorder:{position:'absolute',inset:0,border:'1px solid rgba(255,255,255,.08)',borderRadius:'var(--poster-radius)',pointerEvents:'none'},
+            favBtnStyle:{position:'absolute',top:'10px',left:'10px',width:'34px',height:'34px',borderRadius:'999px',border:'1px solid rgba(255,255,255,.22)',background:'rgba(18,14,10,.5)',backdropFilter:'blur(4px)',display:'grid',placeItems:'center',cursor:'pointer',padding:0,zIndex:3},
+            favHover:{background:'rgba(18,14,10,.82)'},
+            titleOverlay:{position:'absolute',left:'14px',right:'14px',bottom:'18px',fontFamily:'var(--font-serif)',fontWeight:600,fontSize:'21px',lineHeight:1.12,color:'#fff',textShadow:'0 1px 8px rgba(0,0,0,.55)'},
+            badgeWrap:{position:'absolute',top:'10px',right:'10px'},
+            progressWrap:{position:'absolute',left:0,right:0,bottom:0},
+            metaWrap:{marginTop:'10px'},
+            titleBelow:{fontFamily:'var(--font-sans)',fontSize:'15px',fontWeight:500,color:'var(--color-text)',lineHeight:1.3,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'},
+            starRow:{marginTop:'5px'},
+          };
+        }
+      }
+    </script>
+  </body>
+</html>

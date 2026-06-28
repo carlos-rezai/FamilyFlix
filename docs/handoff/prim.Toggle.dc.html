@@ -1,0 +1,57 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="tokens.css" />
+      </helmet>
+      <button
+        onClick="{{ onToggle }}"
+        role="switch"
+        aria-checked="{{ checkedStr }}"
+        aria-disabled="{{ disabledStr }}"
+        style="{{ trackStyle }}"
+      >
+        <span style="{{ knobStyle }}"></span>
+      </button>
+    </x-dc>
+    <script
+      type="text/x-dc"
+      data-dc-script
+      data-props='{"$preview":{"width":80,"height":48},"checked":{"editor":"boolean","default":true,"tsType":"boolean"},"disabled":{"editor":"boolean","default":false,"tsType":"boolean"},"onToggle":{"editor":null,"tsType":"() =&gt; void"}}'
+    >
+      class Component extends DCLogic {
+        renderVals(){
+          const checked = !!this.props.checked;
+          const disabled = !!this.props.disabled;
+          const w = 46, h = 26, pad = 3, knob = h - pad*2;
+          return {
+            checkedStr: checked ? 'true' : 'false',
+            disabledStr: disabled ? 'true' : 'false',
+            onToggle: disabled ? (()=>{}) : (this.props.onToggle || (()=>{})),
+            trackStyle:{
+              position:'relative', flex:'0 0 auto', width:w+'px', height:h+'px', padding:0,
+              border:'1px solid '+(checked?'var(--color-accent)':'var(--color-border)'),
+              borderRadius:'var(--radius-pill)', cursor:disabled?'not-allowed':'pointer',
+              background:checked?'var(--color-accent)':'var(--color-surface-3)',
+              opacity:disabled?0.45:1,
+              transition:'background .18s ease, border-color .18s ease',
+            },
+            knobStyle:{
+              position:'absolute', top:pad+'px', left:(checked ? (w - knob - pad - 1) : pad)+'px',
+              width:knob+'px', height:knob+'px', borderRadius:'50%',
+              background:checked?'#1a1109':'var(--color-text-faint)',
+              transition:'left .18s ease, background .18s ease',
+              boxShadow:'0 1px 3px rgba(0,0,0,.4)',
+            },
+          };
+        }
+      }
+    </script>
+  </body>
+</html>

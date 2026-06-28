@@ -1,0 +1,68 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="tokens.css" />
+      </helmet>
+      <button
+        onClick="{{ onClick }}"
+        aria-label="{{ ariaLabel }}"
+        style="{{ style }}"
+        style-hover="background:var(--color-accent-hover);transform:translateY(-2px) scale(1.05)"
+      >
+        <sc-if value="{{ isUp }}" hint-placeholder-val="{{ true }}">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <path
+              d="M12 19V5m0 0l-6 6m6-6l6 6"
+              stroke="currentColor"
+              stroke-width="2.2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+        </sc-if>
+        <sc-if value="{{ isPlus }}" hint-placeholder-val="{{ false }}">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
+            <path
+              d="M12 5v14M5 12h14"
+              stroke="currentColor"
+              stroke-width="2.2"
+              stroke-linecap="round"
+            />
+          </svg>
+        </sc-if>
+      </button>
+    </x-dc>
+    <script
+      type="text/x-dc"
+      data-dc-script
+      data-props='{"$preview":{"width":120,"height":120},"icon":{"editor":"enum","default":"arrow-up","options":["arrow-up","plus"],"tsType":"&apos;arrow-up&apos; | &apos;plus&apos;"},"label":{"editor":"text","default":"Back to top","tsType":"string"},"size":{"editor":"int","default":52,"min":40,"max":72,"tsType":"number"},"onClick":{"editor":null,"tsType":"() =&gt; void"}}'
+    >
+      class Component extends DCLogic {
+        renderVals(){
+          const icon = this.props.icon || 'arrow-up';
+          const size = this.props.size || 52;
+          return {
+            onClick: this.props.onClick || (()=>{}),
+            ariaLabel: this.props.label || 'Back to top',
+            isUp: icon === 'arrow-up',
+            isPlus: icon === 'plus',
+            style: {
+              position:'absolute', right:'28px', bottom:'28px', zIndex:60,
+              width:size+'px', height:size+'px', borderRadius:'50%',
+              background:'var(--color-accent)', color:'#1a1109', border:'none',
+              display:'grid', placeItems:'center', cursor:'pointer',
+              boxShadow:'0 8px 28px rgba(217,122,78,.42)',
+            },
+          };
+        }
+      }
+    </script>
+  </body>
+</html>

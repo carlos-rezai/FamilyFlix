@@ -1,0 +1,594 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="tokens.css" />
+      </helmet>
+      <div
+        data-screen-label="Import"
+        style="height: 100%; overflow-y: auto; background: var(--color-bg-2)"
+      >
+        <div
+          style="
+            max-width: 760px;
+            margin: 0 auto;
+            padding: var(--space-6) var(--space-6) var(--space-8);
+          "
+        >
+          <div
+            style="
+              display: flex;
+              align-items: center;
+              gap: 16px;
+              margin-bottom: 8px;
+            "
+          >
+            <dc-import
+              name="prim.IconButton"
+              icon="back"
+              variant="outline"
+              size="42"
+              title="Back"
+              on-click="{{ imp.onBack }}"
+              hint-size="42px,42px"
+            ></dc-import>
+            <h1
+              style="
+                font-family: var(--font-serif);
+                font-weight: 600;
+                font-size: 30px;
+                color: var(--color-text);
+                margin: 0;
+              "
+            >
+              Import library
+            </h1>
+          </div>
+          <p
+            style="
+              font-family: var(--font-sans);
+              font-size: 15px;
+              color: var(--color-text-faint);
+              margin: 0 0 28px 58px;
+            "
+          >
+            Bulk-migrate your spreadsheet and movie folders in one pass.
+          </p>
+
+          <sc-if value="{{ imp.setup }}" hint-placeholder-val="{{ true }}">
+            <div style="display: flex; flex-direction: column; gap: 18px">
+              <label style="display: block">
+                <span style="{{ imp.labelStyle }}">Spreadsheet</span>
+                <div
+                  style="
+                    display: flex;
+                    align-items: center;
+                    gap: 10px;
+                    height: 50px;
+                    padding: 0 14px;
+                    background: var(--color-surface);
+                    border: 1px solid var(--color-border);
+                    border-radius: 10px;
+                  "
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                    <rect
+                      x="4"
+                      y="3"
+                      width="16"
+                      height="18"
+                      rx="2"
+                      stroke="var(--color-text-faint)"
+                      stroke-width="1.6"
+                    />
+                    <path
+                      d="M9 8h6M9 12h6M9 16h4"
+                      stroke="var(--color-text-faint)"
+                      stroke-width="1.6"
+                      stroke-linecap="round"
+                    />
+                  </svg>
+                  <input
+                    value="{{ imp.sheet }}"
+                    onInput="{{ imp.onSheet }}"
+                    placeholder="C:\Movies\library.xlsx"
+                    style="
+                      flex: 1;
+                      background: transparent;
+                      border: none;
+                      outline: none;
+                      color: var(--color-text);
+                      font-family: var(--font-mono);
+                      font-size: 14px;
+                    "
+                  />
+                </div>
+              </label>
+              <label style="display: block">
+                <span style="{{ imp.labelStyle }}">Movies root folder</span>
+                <div
+                  style="
+                    display: flex;
+                    align-items: center;
+                    gap: 10px;
+                    height: 50px;
+                    padding: 0 14px;
+                    background: var(--color-surface);
+                    border: 1px solid var(--color-border);
+                    border-radius: 10px;
+                  "
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                    <path
+                      d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"
+                      stroke="var(--color-text-faint)"
+                      stroke-width="1.6"
+                    />
+                  </svg>
+                  <input
+                    value="{{ imp.root }}"
+                    onInput="{{ imp.onRoot }}"
+                    placeholder="C:\Movies"
+                    style="
+                      flex: 1;
+                      background: transparent;
+                      border: none;
+                      outline: none;
+                      color: var(--color-text);
+                      font-family: var(--font-mono);
+                      font-size: 14px;
+                    "
+                  />
+                </div>
+              </label>
+              <div style="margin-top: 8px">
+                <dc-import
+                  name="prim.Button"
+                  label="Start import"
+                  variant="primary"
+                  size="md"
+                  icon="none"
+                  on-click="{{ imp.onStart }}"
+                  hint-size="150px,50px"
+                ></dc-import>
+              </div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ imp.running }}" hint-placeholder-val="{{ false }}">
+            <div style="padding: 8px 0 0">
+              <!-- phase stepper -->
+              <div
+                style="
+                  display: flex;
+                  align-items: center;
+                  gap: 10px;
+                  margin-bottom: 26px;
+                "
+              >
+                <div style="display: flex; align-items: center; gap: 8px">
+                  <div
+                    style="
+                      display: grid;
+                      place-items: center;
+                      width: 24px;
+                      height: 24px;
+                      border-radius: 50%;
+                      font-family: var(--font-sans);
+                      font-size: 12px;
+                      font-weight: 700;
+                      background: var(--color-watched);
+                      color: #14110d;
+                    "
+                  >
+                    ✓
+                  </div>
+                  <span
+                    style="
+                      font-family: var(--font-sans);
+                      font-size: 14px;
+                      font-weight: 600;
+                      color: var(--color-text-dim);
+                    "
+                    >Connect</span
+                  >
+                </div>
+                <div
+                  style="
+                    flex: 0 0 28px;
+                    height: 1px;
+                    background: var(--color-border);
+                  "
+                ></div>
+                <div style="display: flex; align-items: center; gap: 8px">
+                  <sc-if
+                    value="{{ imp.stepScanDone }}"
+                    hint-placeholder-val="{{ false }}"
+                    ><div
+                      style="
+                        display: grid;
+                        place-items: center;
+                        width: 24px;
+                        height: 24px;
+                        border-radius: 50%;
+                        font-family: var(--font-sans);
+                        font-size: 12px;
+                        font-weight: 700;
+                        background: var(--color-watched);
+                        color: #14110d;
+                      "
+                    >
+                      ✓
+                    </div></sc-if
+                  >
+                  <sc-if
+                    value="{{ imp.stepScanActive }}"
+                    hint-placeholder-val="{{ true }}"
+                    ><div
+                      style="
+                        display: grid;
+                        place-items: center;
+                        width: 24px;
+                        height: 24px;
+                        border-radius: 50%;
+                        font-family: var(--font-sans);
+                        font-size: 12px;
+                        font-weight: 700;
+                        background: var(--color-accent);
+                        color: #14110d;
+                      "
+                    >
+                      2
+                    </div></sc-if
+                  >
+                  <span
+                    style="
+                      font-family: var(--font-sans);
+                      font-size: 14px;
+                      font-weight: 600;
+                      color: var(--color-text);
+                    "
+                    >Scan</span
+                  >
+                </div>
+                <div
+                  style="
+                    flex: 0 0 28px;
+                    height: 1px;
+                    background: var(--color-border);
+                  "
+                ></div>
+                <div style="display: flex; align-items: center; gap: 8px">
+                  <div style="{{ imp.importStepDotStyle }}">3</div>
+                  <span style="{{ imp.importStepLabelStyle }}">Import</span>
+                </div>
+              </div>
+
+              <div
+                style="
+                  font-family: var(--font-serif);
+                  font-size: 24px;
+                  font-weight: 600;
+                  color: var(--color-text);
+                  margin-bottom: 4px;
+                "
+              >
+                {{ imp.headline }}
+              </div>
+              <div
+                style="
+                  font-family: var(--font-sans);
+                  font-size: 15px;
+                  color: var(--color-text-dim);
+                  margin-bottom: 16px;
+                "
+              >
+                {{ imp.statLine }}
+              </div>
+
+              <dc-import
+                name="prim.ProgressBar"
+                percent="{{ imp.percent }}"
+                indeterminate="{{ imp.indeterminate }}"
+                height="10"
+                hint-size="100%,10px"
+              ></dc-import>
+
+              <div
+                style="
+                  display: flex;
+                  align-items: center;
+                  justify-content: space-between;
+                  gap: 16px;
+                  margin: 12px 0 22px;
+                "
+              >
+                <div
+                  style="
+                    flex: 1;
+                    min-width: 0;
+                    font-family: var(--font-mono);
+                    font-size: 12.5px;
+                    color: var(--color-text-faint);
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    white-space: nowrap;
+                  "
+                >
+                  {{ imp.currentItem }}
+                </div>
+                <div
+                  style="
+                    flex: 0 0 auto;
+                    font-family: var(--font-sans);
+                    font-size: 13px;
+                    color: var(--color-text-faint);
+                  "
+                >
+                  {{ imp.elapsedLabel }}<sc-if
+                    value="{{ imp.hasEta }}"
+                    hint-placeholder-val="{{ false }}"
+                  >
+                    · {{ imp.etaLabel }}</sc-if
+                  >
+                </div>
+              </div>
+
+              <div
+                style="
+                  font-family: var(--font-sans);
+                  font-size: 12px;
+                  font-weight: 600;
+                  letter-spacing: 0.6px;
+                  text-transform: uppercase;
+                  color: var(--color-text-faint);
+                  margin-bottom: 8px;
+                "
+              >
+                Activity log
+              </div>
+              <dc-import
+                name="mol.LogConsole"
+                lines="{{ imp.log }}"
+                max-height="220"
+                hint-size="100%,220px"
+              ></dc-import>
+
+              <div style="margin-top: 22px">
+                <dc-import
+                  name="prim.Button"
+                  label="Cancel import"
+                  variant="danger"
+                  size="md"
+                  icon="none"
+                  on-click="{{ imp.onCancel }}"
+                  hint-size="150px,50px"
+                ></dc-import>
+              </div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ imp.review }}" hint-placeholder-val="{{ false }}">
+            <div style="display: flex; gap: 16px; margin-bottom: 28px">
+              <div
+                style="
+                  flex: 1;
+                  padding: 22px;
+                  background: var(--color-surface);
+                  border: 1px solid var(--color-border-soft);
+                  border-radius: var(--radius-md);
+                "
+              >
+                <div
+                  style="
+                    font-family: var(--font-serif);
+                    font-weight: 700;
+                    font-size: 40px;
+                    color: var(--color-watched);
+                    line-height: 1;
+                  "
+                >
+                  {{ imp.matched }}
+                </div>
+                <div
+                  style="
+                    font-family: var(--font-sans);
+                    font-size: 15px;
+                    color: var(--color-text-dim);
+                    margin-top: 6px;
+                  "
+                >
+                  matched confidently<br />and imported
+                </div>
+              </div>
+              <div
+                style="
+                  flex: 1;
+                  padding: 22px;
+                  background: var(--color-surface);
+                  border: 1px solid var(--color-accent-line);
+                  border-radius: var(--radius-md);
+                "
+              >
+                <div
+                  style="
+                    font-family: var(--font-serif);
+                    font-weight: 700;
+                    font-size: 40px;
+                    color: var(--color-accent);
+                    line-height: 1;
+                  "
+                >
+                  {{ imp.problemCount }}
+                </div>
+                <div
+                  style="
+                    font-family: var(--font-sans);
+                    font-size: 15px;
+                    color: var(--color-text-dim);
+                    margin-top: 6px;
+                  "
+                >
+                  need your<br />attention
+                </div>
+              </div>
+            </div>
+
+            <sc-if
+              value="{{ imp.hasProblems }}"
+              hint-placeholder-val="{{ true }}"
+            >
+              <div
+                style="
+                  font-family: var(--font-sans);
+                  font-size: 13px;
+                  font-weight: 600;
+                  letter-spacing: 0.6px;
+                  text-transform: uppercase;
+                  color: var(--color-text-faint);
+                  margin-bottom: 12px;
+                "
+              >
+                Needs attention
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 10px">
+                <sc-for
+                  list="{{ imp.problems }}"
+                  as="p"
+                  hint-placeholder-count="4"
+                >
+                  <div
+                    style="
+                      display: flex;
+                      align-items: center;
+                      gap: 14px;
+                      padding: 16px;
+                      background: var(--color-surface);
+                      border: 1px solid var(--color-border-soft);
+                      border-radius: var(--radius-md);
+                    "
+                  >
+                    <div style="{{ p.dotStyle }}"></div>
+                    <div style="flex: 1; min-width: 0">
+                      <div
+                        style="
+                          font-family: var(--font-sans);
+                          font-size: 16px;
+                          font-weight: 600;
+                          color: var(--color-text);
+                        "
+                      >
+                        {{ p.title }}
+                      </div>
+                      <div
+                        style="
+                          font-family: var(--font-sans);
+                          font-size: 13px;
+                          color: var(--color-text-faint);
+                          margin-top: 2px;
+                        "
+                      >
+                        {{ p.reason }}
+                      </div>
+                    </div>
+                    <button
+                      onClick="{{ p.resolve }}"
+                      style="
+                        height: 40px;
+                        padding: 0 18px;
+                        background: var(--color-surface-3);
+                        border: 1px solid var(--color-border);
+                        border-radius: 8px;
+                        color: var(--color-text);
+                        font-family: var(--font-sans);
+                        font-size: 14px;
+                        font-weight: 600;
+                        cursor: pointer;
+                      "
+                      style-hover="background:var(--color-border)"
+                    >
+                      Resolve
+                    </button>
+                    <button
+                      onClick="{{ p.skip }}"
+                      style="
+                        height: 40px;
+                        padding: 0 14px;
+                        background: transparent;
+                        border: none;
+                        color: var(--color-text-faint);
+                        font-family: var(--font-sans);
+                        font-size: 14px;
+                        cursor: pointer;
+                      "
+                      style-hover="color:var(--color-text-dim)"
+                    >
+                      Skip
+                    </button>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-if>
+            <sc-if
+              value="{{ imp.allResolved }}"
+              hint-placeholder-val="{{ false }}"
+            >
+              <div
+                style="
+                  text-align: center;
+                  padding: 40px 20px;
+                  background: var(--color-surface);
+                  border: 1px solid var(--color-border-soft);
+                  border-radius: var(--radius-md);
+                "
+              >
+                <div
+                  style="
+                    font-family: var(--font-serif);
+                    font-size: 24px;
+                    color: var(--color-watched);
+                    margin-bottom: 6px;
+                  "
+                >
+                  ✓ All done
+                </div>
+                <div
+                  style="
+                    font-family: var(--font-sans);
+                    font-size: 15px;
+                    color: var(--color-text-dim);
+                  "
+                >
+                  Every flagged movie has been handled.
+                </div>
+              </div>
+            </sc-if>
+
+            <div style="margin-top: 28px">
+              <dc-import
+                name="prim.Button"
+                label="Finish — go to library"
+                variant="primary"
+                size="md"
+                icon="none"
+                on-click="{{ imp.onFinish }}"
+                hint-size="220px,50px"
+              ></dc-import>
+            </div>
+          </sc-if>
+        </div>
+      </div>
+    </x-dc>
+    <script
+      type="text/x-dc"
+      data-dc-script
+      data-props='{"$preview":{"width":820,"height":600},"imp":{"editor":null,"tsType":"ImportFlowModel"}}'
+    ></script>
+  </body>
+</html>

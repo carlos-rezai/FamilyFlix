@@ -1,0 +1,615 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link rel="stylesheet" href="tokens.css" />
+      </helmet>
+      <div style="{{ rootStyle }}">
+        <!-- ============================= BROWSE ============================= -->
+        <sc-if value="{{ isBrowse }}" hint-placeholder-val="{{ true }}">
+          <dc-import
+            name="page.LibraryPage"
+            lib="{{ libModel }}"
+            style="position: absolute; inset: 0"
+            hint-size="100%,100%"
+          ></dc-import>
+        </sc-if>
+
+        <!-- ============================= GENRE OVERVIEW ============================= -->
+        <sc-if value="{{ isGenre }}" hint-placeholder-val="{{ false }}">
+          <dc-import
+            name="page.GenrePage"
+            genre="{{ genreModel }}"
+            style="position: absolute; inset: 0"
+            hint-size="100%,100%"
+          ></dc-import>
+        </sc-if>
+
+        <!-- ============================= DETAIL ============================= -->
+        <sc-if value="{{ isDetail }}" hint-placeholder-val="{{ false }}">
+          <dc-import
+            name="page.MoviePage"
+            detail="{{ detailModel }}"
+            style="position: absolute; inset: 0"
+            hint-size="100%,100%"
+          ></dc-import>
+        </sc-if>
+
+        <!-- ============================= PLAYER ============================= -->
+        <sc-if value="{{ isPlayer }}" hint-placeholder-val="{{ false }}">
+          <dc-import
+            name="feat.PlayerControls"
+            p="{{ playerModel }}"
+            style="position: absolute; inset: 0"
+            hint-size="100%,100%"
+          ></dc-import>
+        </sc-if>
+
+        <!-- ============================= ADD MOVIE ============================= -->
+        <sc-if value="{{ isAdd }}" hint-placeholder-val="{{ false }}">
+          <dc-import
+            name="feat.MovieForm"
+            form="{{ formModel }}"
+            style="position: absolute; inset: 0"
+            hint-size="100%,100%"
+          ></dc-import>
+        </sc-if>
+
+        <!-- ============================= IMPORT ============================= -->
+        <sc-if value="{{ isImport }}" hint-placeholder-val="{{ false }}">
+          <dc-import
+            name="feat.ImportFlow"
+            imp="{{ importModel }}"
+            style="position: absolute; inset: 0"
+            hint-size="100%,100%"
+          ></dc-import>
+        </sc-if>
+
+        <!-- ============================= SETTINGS ============================= -->
+        <sc-if value="{{ isSettings }}" hint-placeholder-val="{{ false }}">
+          <dc-import
+            name="page.SettingsPage"
+            settings="{{ settingsModel }}"
+            style="position: absolute; inset: 0"
+            hint-size="100%,100%"
+          ></dc-import>
+        </sc-if>
+
+        <!-- ============================= EXPORT MODAL (feat.ExportModal) ============================= -->
+        <sc-if value="{{ exportOpen }}" hint-placeholder-val="{{ false }}">
+          <dc-import
+            name="feat.ExportModal"
+            data="{{ exportModel }}"
+            style="position: absolute; inset: 0; z-index: 90"
+            hint-size="100%,100%"
+          ></dc-import>
+        </sc-if>
+
+        <!-- ============================= SNACKBAR HOST ============================= -->
+        <sc-if value="{{ hasSnackbars }}" hint-placeholder-val="{{ false }}">
+          <div
+            style="
+              position: absolute;
+              right: 24px;
+              bottom: 24px;
+              z-index: 200;
+              display: flex;
+              flex-direction: column-reverse;
+              gap: 12px;
+              align-items: flex-end;
+              pointer-events: none;
+            "
+          >
+            <sc-for list="{{ snackbars }}" as="n" hint-placeholder-count="1">
+              <div style="pointer-events: auto">
+                <dc-import
+                  name="mol.Snackbar"
+                  variant="{{ n.variant }}"
+                  title="{{ n.title }}"
+                  message="{{ n.message }}"
+                  action-label="{{ n.actionLabel }}"
+                  on-action="{{ n.action }}"
+                  dismissible="{{ n.dismissible }}"
+                  on-dismiss="{{ n.onDismiss }}"
+                  hint-size="360px,80px"
+                ></dc-import>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+      </div>
+    </x-dc>
+    <script
+      type="text/x-dc"
+      data-dc-script
+      data-props='{"$preview":{"width":1280,"height":820},"accentColor":{"editor":"color","default":"#d97a4e","tsType":"string","options":["#d97a4e","#e0a755","#cf8a52","#c98a6a"]},"posterSize":{"editor":"enum","default":"Large","options":["Large","Medium"],"tsType":"string"},"cornerStyle":{"editor":"enum","default":"Rounded","options":["Rounded","Sharp"],"tsType":"string"}}'
+    >
+      class Component extends DCLogic {
+        rawMovies = [
+          {id:1,title:'The Lantern Keeper',year:2019,genres:['Drama','Family'],runtime:112,st:'watched',prog:0,g1:'#3a2d1f',g2:'#7a5226',syn:'A lighthouse keeper on a fading coast takes in a runaway girl, and the two slowly rebuild a family out of the wreckage of the season. As winter closes the harbor and the supply boats stop coming, they learn that the light they tend is the only thing keeping either of them from drifting out to sea. Told across a single long winter, the film follows their wary, deepening companionship as old griefs surface and the storms outside mirror the ones within. When a wrecked sailor washes ashore with news from the girl\u2019s past, the fragile peace they\u2019ve built is tested, and the keeper must decide whether holding on means letting go. A quiet, tender story about the families we choose when the ones we were given have gone dark.',added:1},
+          {id:2,title:'Salt and Cedar',year:2021,genres:['Drama','Romance'],runtime:124,st:'progress',prog:38,g1:'#243a36',g2:'#5e7a6a',syn:'Two strangers share a long ferry crossing and discover their lives have quietly circled one another for twenty years.',added:6},
+          {id:3,title:'Northwind',year:2018,genres:['Adventure','Drama'],runtime:118,st:'unwatched',prog:0,g1:'#1f3040',g2:'#436a86',syn:'A salvage crew chases a derelict ship through the winter straits, where the weather keeps its own counsel.',added:3},
+          {id:4,title:'Paper Moons',year:2020,genres:['Comedy','Family'],runtime:98,st:'watched',prog:0,g1:'#43321f',g2:'#bd853f',syn:'A retired carnival magician and his granddaughter take one last, gloriously ramshackle show on the road.',added:9},
+          {id:5,title:'The Glasshouse',year:2022,genres:['Thriller','Drama'],runtime:131,st:'progress',prog:12,g1:'#1f2433',g2:'#4a4f6e',syn:'An architect returns to the modernist house she built for a client who has since vanished without a trace.',added:14},
+          {id:6,title:'Orbit of Small Things',year:2023,genres:['Sci-Fi','Drama'],runtime:109,st:'unwatched',prog:0,g1:'#25203f',g2:'#6a55a0',syn:'On a research station at the edge of the system, a botanist measures her loneliness against a garden that refuses to die.',added:16},
+          {id:7,title:'Marigold Avenue',year:2017,genres:['Comedy','Romance'],runtime:101,st:'unwatched',prog:0,g1:'#4a2f2a',g2:'#c06a4a',syn:'Everyone on one sun-drenched street is in love with the wrong neighbor, and the local baker knows all of it.',added:7},
+          {id:8,title:'The Quiet Tide',year:2016,genres:['Drama'],runtime:106,st:'watched',prog:0,g1:'#233033',g2:'#4f7276',syn:'A widowed fisherman teaches his late son\u2019s friend the trade, one cold morning at a time.',added:2},
+          {id:9,title:'Hollow Creek',year:2021,genres:['Thriller','Crime'],runtime:122,st:'unwatched',prog:0,g1:'#2a2620',g2:'#5e4c38',syn:'A small-town deputy reopens a thirty-year-old case and finds half the county would rather it stayed shut.',added:11},
+          {id:10,title:'Comet Season',year:2024,genres:['Sci-Fi','Adventure'],runtime:115,st:'progress',prog:64,g1:'#1f2a3a',g2:'#3a6a8a',syn:'Once a generation a comet grazes the village sky, and this year three teenagers decide to chase where it lands.',added:18},
+          {id:11,title:'Grandfather\u2019s Clock',year:2015,genres:['Family','Drama'],runtime:95,st:'unwatched',prog:0,g1:'#3a2f24',g2:'#84603f',syn:'When the old clock stops, a family realizes none of them remember how it was wound \u2014 or by whom.',added:4},
+          {id:12,title:'The Paper Aviator',year:2019,genres:['Animation','Family'],runtime:89,st:'watched',prog:0,g1:'#2a3540',g2:'#5f93a8',syn:'A shy boy folds a paper plane that carries his messages to a city floating just above the clouds.',added:5},
+          {id:13,title:'Dust & Diamonds',year:2020,genres:['Crime','Thriller'],runtime:127,st:'unwatched',prog:0,g1:'#2a241f',g2:'#7a5a34',syn:'A jewel thief past her prime is pulled back for one desert heist by the only partner she ever trusted.',added:10},
+          {id:14,title:'Tin Can Symphony',year:2018,genres:['Comedy'],runtime:92,st:'unwatched',prog:0,g1:'#3a2a3a',g2:'#8a5a7a',syn:'A failing junkyard becomes an accidental concert hall when the scrap starts, somehow, to sing.',added:8},
+          {id:15,title:'The Far Meridian',year:2022,genres:['Sci-Fi'],runtime:134,st:'unwatched',prog:0,g1:'#1f2333',g2:'#454a7a',syn:'A woman wakes each morning to find her lighthouse has drifted to a different shore on a different ocean.',added:13},
+          {id:16,title:'Almond Blossom',year:2014,genres:['Romance','Drama'],runtime:103,st:'watched',prog:0,g1:'#3f2a2f',g2:'#a05a6a',syn:'Two letter-writers fall in love across a border that will not let them meet, for one long blossoming spring.',added:12},
+          {id:17,title:'Riverkeep',year:2023,genres:['Adventure','Family'],runtime:110,st:'unwatched',prog:0,g1:'#243530',g2:'#4f8060',syn:'The last family to tend a wild river guards it for one final summer before the dam arrives.',added:17},
+          {id:18,title:'Nightjar',year:2019,genres:['Crime','Drama'],runtime:116,st:'unwatched',prog:0,g1:'#23211f',g2:'#544c3e',syn:'A night-shift cab driver becomes the unwilling witness to a city\u2019s small after-dark crimes.',added:15},
+          {id:19,title:'The Cartographer',year:2021,genres:['Documentary'],runtime:88,st:'unwatched',prog:0,g1:'#2f2a20',g2:'#7a6a3a',syn:'A portrait of the last man hand-drawing maps of places that no longer match their own coastlines.',added:19},
+          {id:20,title:'Saturday\u2019s Children',year:2017,genres:['Drama','Comedy'],runtime:99,st:'unwatched',prog:0,g1:'#332a2a',g2:'#7a5a4a',syn:'Five siblings reunite in their childhood home for one chaotic, tender weekend of unfinished arguments.',added:20},
+        ];
+        genrePool = ['Action','Comedy','Drama','Horror','Thriller','Sci-Fi','Romance','Documentary','Animation','Family','Adventure','Crime'];
+        langPool = ['English','Spanish','French','German','Portuguese','Italian','Dutch'];
+        sortDefs = [['recent','Recently Added'],['az','Title (A\u2013Z)'],['year','Year'],['unwatched','Unwatched First'],['rating','Highest Rated']];
+        ratings = {1:90,2:80,3:70,4:60,5:80,6:90,7:50,8:70,9:60,10:80,11:70,12:90,13:50,14:40,15:80,16:70,17:60,18:50,19:70,20:60};
+        ratingDefs = [['0','All ratings'],['80','4+ stars'],['60','3+ stars'],['40','2+ stars']];
+        credits = {
+          1:{dir:'Eleanor Past',cast:['Tomas Hale','Maeve Cole','Iris Bell']},
+          2:{dir:'Júlia Renning',cast:['Andre Sol','Nina Voss','Peter Ahl']},
+          3:{dir:'Magnus Frey',cast:['Karl Stenn','Dora Vik','Olav Reed']},
+          4:{dir:'Sunny Okafor',cast:['Bea Marlowe','Gus Penn','Lottie Rue']},
+          5:{dir:'Clara Devine',cast:['Rhys Calder','Nadia Brandt','Sam Oduya']},
+          6:{dir:'Yuki Tanaka',cast:['Mara Inés','Leo Park','Esther Howe']},
+          7:{dir:'Tony Marsh',cast:['Pia Bloom','Frankie Dale','Rosa Lind']},
+          8:{dir:'Ingrid Sø',cast:['Anders Lund','Mira Holt','Jonas Vea']},
+          9:{dir:'Walt Carrow',cast:['Della Moss','Cole Pruitt','Hank Reyes']},
+          10:{dir:'Priya Nandi',cast:['Theo Lam','Sage Okoro','Ben Aoki']},
+          11:{dir:'Marta Quill',cast:['Henry Boon','Edie Pell','Ron Vasco']},
+          12:{dir:'Felix Aubin',cast:['Noa Kell','Wren Tasso','Milo Frye']},
+          13:{dir:'Gita Roshan',cast:['Vince Carr','Lena Dax','Omar Saied']},
+          14:{dir:'Bram Vault',cast:['Cleo Marsh','Jett Halloran','Posy Vane']},
+          15:{dir:'Aria Belov',cast:['Dane Foss','Vera Lyle','Marco Ruiz']},
+          16:{dir:'Soraya Amir',cast:['Iben Holt','Cyrus Vale','Lila Monn']},
+          17:{dir:'Cormac Dell',cast:['Suki Rao','Eli Brandt','Tara Voss']},
+          18:{dir:'Noor Khalid',cast:['Greta Onn','Dom Vesper','Asa Quinn']},
+          19:{dir:'Pelle Strand',cast:['narrated by Hal Reese']},
+          20:{dir:'Dot Ferreira',cast:['Mae Solis','Rob Ansel','Cara Im','Lou Tate']},
+        };
+
+        state = {
+          screen:'browse', selectedId:null,
+          search:'', genre:'All Genres', sort:'recent', ratingFilter:'0',
+          fRating:0, fRatingHover:null,
+          openDrop:null, gearOpen:false, editMenuOpen:false, overrides:{}, favorites:[4,12,16],
+          genreView:null, genreSearch:'', detailReturn:'browse',
+          playing:true, currentTime:0, subsOn:true, muted:false, volume:0.8, controlsVisible:true,
+          addMode:'folder', folderPath:'', scanned:false,
+          fTitle:'', fYear:'', fDirector:'', fCast:'', fDescription:'', fGenres:[], fVideo:'', fPoster:'', fSubs:[], subLangOpen:null,
+          addContext:null, resolveId:null,
+          impStep:'setup', impSheet:'', impRoot:'', impProgress:0, impMatched:0, impProblems:[],
+          impPhase:'scan', impFound:0, impTotal:0, impDone:0, impCurrent:'', impLog:[], impStartTime:null,
+          exportOpen:false, exportFormat:'csv', exportDone:false,
+          settingsSubAuto:false, settingsSubLang:'English',
+          codecs:[
+            {id:1,name:'H.264 / AVC',exts:['.mp4','.mov','.m4v'],kind:'built-in',size:'—'},
+            {id:2,name:'AAC Audio',exts:['.mp4','.m4a'],kind:'built-in',size:'—'},
+            {id:3,name:'VP9',exts:['.webm'],kind:'built-in',size:'—'},
+            {id:4,name:'H.265 / HEVC',exts:['.mkv','.mp4'],kind:'installed',size:'4.2 MB'},
+            {id:5,name:'AV1',exts:['.mkv','.webm'],kind:'installed',size:'6.8 MB'},
+            {id:6,name:'AC-3 / Dolby Digital',exts:['.mkv','.avi'],kind:'installed',size:'1.1 MB'},
+          ],
+          codecJustAdded:null,
+          snackbars:[], updateAvailable:true, updateVersion:'1.1.0', currentVersion:'1.0.0', updating:false, lastChecked:null,
+        };
+        _snackSeq = 0;
+        lastMove = Date.now();
+
+        componentDidMount(){
+          this._updateTimer = setTimeout(()=>this.offerUpdate(), 1600);
+          this.timer = setInterval(()=>{
+            const s=this.state;
+            if(s.screen==='player'){
+              const dur=this.durationOf(); const patch={};
+              if(s.playing && s.currentTime<dur) patch.currentTime=Math.min(dur,s.currentTime+0.25);
+              if(s.playing && Date.now()-this.lastMove>3000 && s.controlsVisible) patch.controlsVisible=false;
+              if(Object.keys(patch).length) this.setState(patch);
+            } else if(s.screen==='import' && s.impStep==='running'){
+              if(s.impPhase==='scan'){
+                const target=1240;
+                const found=Math.min(target, s.impFound + (40+Math.floor(Math.random()*95)));
+                const path=this.fakePath(s.impRoot, found);
+                const log=this.appendLog(s.impLog, {text:'Scanning   '+path, kind:'scan'});
+                if(found>=target){
+                  this.setState({impFound:target, impTotal:target, impPhase:'import', impCurrent:'',
+                    impLog:this.appendLog(log, {text:'✓ Found '+target.toLocaleString()+' movies across '+s.impFound.toLocaleString()+' folders. Starting import…', kind:'success'})});
+                } else {
+                  this.setState({impFound:found, impCurrent:path, impLog:log});
+                }
+              } else {
+                const done=Math.min(s.impTotal, s.impDone + (28+Math.floor(Math.random()*42)));
+                const item=this.fakeTitle(done);
+                let kind='success', text='✓ Imported   '+item;
+                const r=Math.random();
+                if(r<0.07){ kind='warning'; text='⚠ '+item+' — no subtitle track found'; }
+                else if(r<0.10){ kind='warning'; text='⚠ '+item+' — multiple folder matches'; }
+                const log=this.appendLog(s.impLog, {text, kind});
+                if(done>=s.impTotal){
+                  const probs=this.seedProblems();
+                  this.setState({impDone:s.impTotal, impStep:'review', impMatched:s.impTotal-probs.length, impProblems:probs,
+                    impLog:this.appendLog(log, {text:'✓ Import complete — '+(s.impTotal-probs.length).toLocaleString()+' imported, '+probs.length+' need attention.', kind:'success'})});
+                } else {
+                  this.setState({impDone:done, impCurrent:item, impLog:log});
+                }
+              }
+            }
+          },220);
+        }
+        componentWillUnmount(){ clearInterval(this.timer); }
+
+        // ---- helpers ----
+        eff(m){ return this.state.overrides[m.id]!=null ? this.state.overrides[m.id] : m.st; }
+        durationOf(){ const m=this.cur(); return m? m.runtime*60 : 0; }
+        cur(){ return this.rawMovies.find(m=>m.id===this.state.selectedId)||null; }
+        fmtClock(sec){ sec=Math.max(0,Math.floor(sec)); const h=Math.floor(sec/3600),mm=Math.floor(sec%3600/60),ss=sec%60; const p=n=>String(n).padStart(2,'0'); return h>0?`${h}:${p(mm)}:${p(ss)}`:`${mm}:${p(ss)}`; }
+        posterStyleOf(m){ return {position:'absolute',inset:0,background:`linear-gradient(155deg, ${m.g1} 0%, ${m.g2} 100%)`}; }
+        ratingOf(m){ return this.ratings[m.id]!=null ? this.ratings[m.id] : 0; }
+        starParts(pct,size){ return {
+          wrapStyle:{position:'relative',display:'inline-block',fontSize:size+'px',lineHeight:1,letterSpacing:Math.round(size*0.14)+'px',flex:'0 0 auto',whiteSpace:'nowrap'},
+          fillStyle:{position:'absolute',left:0,top:0,height:'100%',width:Math.max(0,Math.min(100,pct))+'%',overflow:'hidden',color:'var(--color-accent)',whiteSpace:'nowrap'},
+        }; }
+        starText(pct){ return (Math.round(pct/20*2)/2).toFixed(1); }
+        view(m){ const e=this.eff(m); return {
+          id:m.id,title:m.title,year:m.year,genres:m.genres,topTag:m.genres[0]+' · '+m.year,
+          posterStyle:this.posterStyleOf(m), barStyle:{height:'100%',width:m.prog+'%',background:'var(--color-accent)'},
+          isWatched:e==='watched', isProgress:e==='progress',
+          isFav:this.state.favorites.includes(m.id), notFav:!this.state.favorites.includes(m.id), toggleFav:(ev)=>{ if(ev&&ev.stopPropagation)ev.stopPropagation(); this.toggleFavById(m.id); },
+          card:{title:m.title,g1:m.g1,g2:m.g2,rating:this.ratingOf(m),watched:e==='watched',progress:e==='progress'?m.prog:0,favorite:this.state.favorites.includes(m.id)},
+          continueCard:{title:m.title,g1:m.g1,g2:m.g2,progress:m.prog,resumeLabel:'Resume \u00b7 '+this.fmtClock(m.runtime*60*m.prog/100)+' of '+this.fmtClock(m.runtime*60)},
+          starWrap:this.starParts(this.ratingOf(m),13).wrapStyle, starFill:this.starParts(this.ratingOf(m),13).fillStyle, ratingText:this.starText(this.ratingOf(m)),
+          resumeLabel:'Resume \u00b7 '+this.fmtClock(m.runtime*60*m.prog/100)+' of '+this.fmtClock(m.runtime*60),
+          open:()=>this.openDetail(m.id),
+        }; }
+
+        // ---- nav ----
+        openDetail(id){ this.setState(s=>({screen:'detail',selectedId:id,openDrop:null,gearOpen:false,editMenuOpen:false,detailReturn:s.screen==='genre'?'genre':'browse'})); }
+        backFromDetail(){ this.setState(s=>({screen:s.detailReturn==='genre'?'genre':'browse',playing:false,editMenuOpen:false})); }
+        goBrowse(){ this.setState({screen:'browse',playing:false,gearOpen:false,openDrop:null,editMenuOpen:false,impStep:'setup',impProgress:0,addContext:null}); }
+        goAdd(){ this.resetForm(); this.setState({screen:'add',gearOpen:false,addContext:'settings',resolveId:null}); }
+        goImport(){ this.setState({screen:'import',gearOpen:false,impStep:'setup',impProgress:0}); }
+        goSettings(){ this.setState({screen:'settings',gearOpen:false,openDrop:null}); }
+        uploadCodec(){ this.setState(s=>{ const id=Math.max(0,...s.codecs.map(c=>c.id))+1; const packs=[{name:'DTS Audio',exts:['.mkv','.dts'],size:'2.3 MB'},{name:'ProRes',exts:['.mov'],size:'9.4 MB'},{name:'FLAC Audio',exts:['.mkv','.flac'],size:'0.8 MB'},{name:'Theora',exts:['.ogv'],size:'1.6 MB'}]; const p=packs[s.codecs.filter(c=>c.kind==='installed').length % packs.length]; return {codecs:[...s.codecs,{id,name:p.name,exts:p.exts,kind:'installed',size:p.size}],codecJustAdded:id}; }); }
+        removeCodec(id){ this.setState(s=>({codecs:s.codecs.filter(c=>c.id!==id),codecJustAdded:s.codecJustAdded===id?null:s.codecJustAdded})); }
+        setSubLang(v){ this.setState({settingsSubLang:v,openDrop:null}); }
+        toggleSubAuto(){ this.setState(s=>({settingsSubAuto:!s.settingsSubAuto})); }
+
+        // ---- snackbars ----
+        pushSnack(snack){ const id=++this._snackSeq; this.setState(s=>({snackbars:[...s.snackbars, {...snack, id}]})); if(snack.duration){ setTimeout(()=>this.dismissSnack(id), snack.duration); } return id; }
+        dismissSnack(id){ this.setState(s=>({snackbars:s.snackbars.filter(n=>n.id!==id)})); }
+
+        // ---- software update ----
+        offerUpdate(){ if(!this.state.updateAvailable || this._updateOffered) return; this._updateOffered=true; this._updateSnackId = this.pushSnack({variant:'info', title:'Update available', message:'FamilyFlix '+this.state.updateVersion+' is ready to install.', actionLabel:'Update now', action:()=>this.runUpdate(), dismissible:true}); }
+        runUpdate(){ if(this.state.updating) return; if(this._updateSnackId) this.dismissSnack(this._updateSnackId); this.setState({updating:true}); setTimeout(()=>{ const v=this.state.updateVersion; this.setState({currentVersion:v, updateAvailable:false, updating:false, lastChecked:'just now'}); this.pushSnack({variant:'success', message:'FamilyFlix updated to '+v+'.', duration:5000, dismissible:true}); }, 1700); }
+        checkForUpdates(){ this.setState({lastChecked:'just now'}); if(this.state.updateAvailable){ this.offerUpdate(); } else { this.pushSnack({variant:'success', message:'You’re on the latest version.', duration:4000, dismissible:true}); } }
+        openExport(){ this.setState({gearOpen:false,exportOpen:true,exportDone:false,exportFormat:'csv'}); }
+        closeExport(){ this.setState({exportOpen:false,exportDone:false}); }
+        setExportFormat(f){ this.setState({exportFormat:f,exportDone:false}); }
+        runExport(){ this.setState({exportDone:true}); }
+        stopProp(e){ if(e&&e.stopPropagation)e.stopPropagation(); }
+        chooseCsv(){ this.setExportFormat('csv'); }
+        chooseXlsx(){ this.setExportFormat('xlsx'); }
+        openGenre(name){ this.setState({screen:'genre',genreView:name,genreSearch:'',gearOpen:false,openDrop:null}); }
+        onGenreSearch(e){ this.setState({genreSearch:e.target.value}); }
+
+        // ---- browse ----
+        onSearch(e){ this.setState({search:e.target.value}); }
+        toggleGenre(){ this.setState(s=>({openDrop:s.openDrop==='genre'?null:'genre',gearOpen:false})); }
+        toggleSort(){ this.setState(s=>({openDrop:s.openDrop==='sort'?null:'sort',gearOpen:false})); }
+        toggleRating(){ this.setState(s=>({openDrop:s.openDrop==='rating'?null:'rating',gearOpen:false})); }
+        toggleGear(){ this.setState(s=>({gearOpen:!s.gearOpen,openDrop:null})); }
+
+        sortList(list){ const rank=m=>{const e=this.eff(m);return e==='unwatched'?0:e==='progress'?1:2;}; const s=this.state.sort; return [...list].sort((a,b)=> s==='az'?a.title.localeCompare(b.title): s==='year'?b.year-a.year: s==='rating'?(this.ratingOf(b)-this.ratingOf(a)||b.added-a.added): s==='unwatched'?(rank(a)-rank(b)||b.added-a.added): b.added-a.added); }
+        passRating(m){ return this.ratingOf(m) >= Number(this.state.ratingFilter||0); }
+        filteredSorted(){ const q=this.state.search.trim().toLowerCase(); const list=this.rawMovies.filter(m=> this.passRating(m) && (!q || m.title.toLowerCase().includes(q) || m.syn.toLowerCase().includes(q) || m.genres.join(' ').toLowerCase().includes(q))); return this.sortList(list); }
+        genrePageMovies(){ const g=this.state.genreView; if(!g) return []; const q=this.state.genreSearch.trim().toLowerCase(); let list=this.rawMovies.filter(m=>m.genres.includes(g) && this.passRating(m)); if(q) list=list.filter(m=>m.title.toLowerCase().includes(q)||m.syn.toLowerCase().includes(q)); return this.sortList(list); }
+        buildRows(){
+          const list=this.filteredSorted();
+          const gf=this.state.genre;
+          const counts={};
+          this.rawMovies.forEach(m=>m.genres.forEach(g=>counts[g]=(counts[g]||0)+1));
+          let genres=Object.keys(counts);
+          if(gf!=='All Genres') genres=genres.filter(g=>g===gf);
+          genres.sort((a,b)=> counts[b]-counts[a] || a.localeCompare(b));
+          return genres.map(g=>({name:g, count:this.rawMovies.filter(m=>m.genres.includes(g)).length, openAll:()=>this.openGenre(g), movies:list.filter(m=>m.genres.includes(g)).slice(0,15).map(m=>this.view(m))})).filter(r=>r.movies.length>0);
+        }
+
+        // ---- detail ----
+        toggleWatched(){ const m=this.cur(); if(!m)return; const e=this.eff(m); this.setState(s=>({overrides:{...s.overrides,[m.id]: e==='watched'?'unwatched':'watched'}})); }
+        toggleFavById(id){ this.setState(s=>({favorites:s.favorites.includes(id)?s.favorites.filter(x=>x!==id):[...s.favorites,id]})); }
+        toggleFavorite(){ const m=this.cur(); if(m) this.toggleFavById(m.id); }
+        toggleEditMenu(){ this.setState(s=>({editMenuOpen:!s.editMenuOpen})); }
+        editMovie(){ const m=this.cur(); if(!m)return; const cr=this.credits[m.id]||{dir:'',cast:[]}; this.setState({fTitle:m.title,fYear:String(m.year),fDirector:cr.dir,fCast:cr.cast.join(', '),fDescription:m.syn,fGenres:[...m.genres],fVideo:m.title.toLowerCase().replace(/[^a-z0-9]+/g,'-')+'.mp4',fPoster:'poster.jpg',fSubs:[{filename:'subtitles.en.srt',lang:'English'}],fRating:this.ratingOf(m),fRatingHover:null,addMode:'manual',scanned:true,screen:'add',editMenuOpen:false,addContext:'edit',resolveId:null}); }
+        playMovie(){ const m=this.cur(); if(!m)return; const resume=this.eff(m)==='progress'? m.runtime*60*m.prog/100 : 0; this.lastMove=Date.now(); this.setState({screen:'player',currentTime:resume,playing:true,controlsVisible:true,subsOn:true}); }
+
+        // ---- player ----
+        onPlayerMove(){ this.lastMove=Date.now(); if(!this.state.controlsVisible) this.setState({controlsVisible:true}); }
+        togglePlay(){ this.lastMove=Date.now(); this.setState(s=>({playing:!s.playing,controlsVisible:true})); }
+        skipBack(){ this.lastMove=Date.now(); this.setState(s=>({currentTime:Math.max(0,s.currentTime-10),controlsVisible:true})); }
+        skipFwd(){ this.lastMove=Date.now(); this.setState(s=>({currentTime:Math.min(this.durationOf(),s.currentTime+10),controlsVisible:true})); }
+        toggleMute(){ this.setState(s=>({muted:!s.muted})); }
+        toggleSubs(){ this.setState(s=>({subsOn:!s.subsOn})); }
+        exitPlayer(){ this.setState({screen:'detail',playing:false}); }
+        onSeekClick(e){ const r=e.currentTarget.getBoundingClientRect(); const p=(e.clientX-r.left)/r.width; this.lastMove=Date.now(); this.setState({currentTime:Math.max(0,Math.min(1,p))*this.durationOf(),controlsVisible:true}); }
+        onVolClick(e){ const r=e.currentTarget.getBoundingClientRect(); const p=Math.max(0,Math.min(1,(e.clientX-r.left)/r.width)); this.setState({volume:p,muted:p===0}); }
+
+        // ---- add form ----
+        resetForm(){ this.setState({addMode:'folder',folderPath:'',scanned:false,fTitle:'',fYear:'',fDirector:'',fCast:'',fDescription:'',fGenres:[],fVideo:'',fPoster:'',fSubs:[],fRating:0,fRatingHover:null}); }
+        setFRating(pct){ this.setState({fRating:pct}); }
+        hoverFRating(pct){ this.setState({fRatingHover:pct}); }
+        clearFRatingHover(){ this.setState({fRatingHover:null}); }
+        setRatingFilter(v){ this.setState({ratingFilter:v,openDrop:null}); }
+        setModeFolder(){ this.setState({addMode:'folder'}); }
+        setModeManual(){ this.setState({addMode:'manual'}); }
+        onFolderPath(e){ this.setState({folderPath:e.target.value}); }
+        scanFolder(){ this.setState({scanned:true,fTitle:this.state.fTitle||'The Lantern Keeper',fYear:this.state.fYear||'2019',fVideo:'the.lantern.keeper.1080p.mkv',fPoster:'folder.jpg',fSubs:[{filename:'lantern_keeper.en.srt',lang:'English'},{filename:'lantern_keeper.es.srt',lang:'Spanish'}]}); }
+        onFTitle(e){ this.setState({fTitle:e.target.value}); }
+        onFYear(e){ this.setState({fYear:e.target.value}); }
+        onFDirector(e){ this.setState({fDirector:e.target.value}); }
+        onFCast(e){ this.setState({fCast:e.target.value}); }
+        onFDescription(e){ this.setState({fDescription:e.target.value}); }
+        pickVideo(){ this.setState({fVideo:'selected-video.mp4'}); }
+        pickPoster(){ this.setState({fPoster:'selected-poster.jpg'}); }
+        removeVideo(){ this.setState({fVideo:''}); }
+        removePoster(){ this.setState({fPoster:''}); }
+        addSub(){ this.setState(s=>({fSubs:[...s.fSubs,{filename:'subtitle-'+(s.fSubs.length+1)+'.srt',lang:'English'}]})); }
+        removeSub(i){ this.setState(s=>({fSubs:s.fSubs.filter((_,j)=>j!==i)})); }
+        setSubLang(i,v){ this.setState(s=>({fSubs:s.fSubs.map((x,j)=>j===i?{...x,lang:v}:x)})); }
+        chooseLang(i,l){ this.setState(st=>({subLangOpen:null, fSubs:st.fSubs.map((x,j)=>j===i?{...x,lang:l}:x)})); }
+        toggleChip(g){ this.setState(s=>({fGenres:s.fGenres.includes(g)?s.fGenres.filter(x=>x!==g):[...s.fGenres,g]})); }
+        backFromAdd(){ if(this.state.addContext==='import') this.setState({screen:'import',impStep:'review',addContext:null,resolveId:null}); else if(this.state.addContext==='edit') this.setState({screen:'detail',addContext:null}); else if(this.state.addContext==='settings') this.setState({screen:'settings',addContext:null,gearOpen:false,openDrop:null}); else this.goBrowse(); }
+        saveMovie(){ if(this.state.addContext==='import'){ const id=this.state.resolveId; this.setState(s=>({screen:'import',impStep:'review',impProblems:s.impProblems.filter(p=>p.id!==id),impMatched:s.impMatched+1,addContext:null,resolveId:null})); } else if(this.state.addContext==='edit'){ this.setState({screen:'detail',addContext:null}); } else { this.goBrowse(); } }
+
+        // ---- import ----
+        onImpSheet(e){ this.setState({impSheet:e.target.value}); }
+        onImpRoot(e){ this.setState({impRoot:e.target.value}); }
+        startImport(){ this.setState({impStep:'running',impPhase:'scan',impFound:0,impTotal:0,impDone:0,impCurrent:'',impLog:[{text:'Connecting to '+(this.state.impRoot||'E:\\Movies')+' …',kind:'info'}],impStartTime:Date.now()}); }
+        cancelImport(){ this.setState({impStep:'setup',impPhase:'scan',impFound:0,impTotal:0,impDone:0,impCurrent:'',impLog:[]}); }
+        _logPool = ['The Lantern Keeper','Salt and Cedar','Northwind','Paper Moons','The Glasshouse','Orbit of Small Things','Marigold Avenue','The Quiet Tide','Hollow Creek','Comet Season','Grandfather\u2019s Clock','The Paper Aviator','Dust and Diamonds','Tin Can Symphony','The Far Meridian','Almond Blossom','Riverkeep','Nightjar','The Cartographer','Saturday\u2019s Children','Velvet Hour','Harbor Lights','Ironwood','Sundial','Blue Hour','The Tin Forest','Winter Apples','Lighthouse Road','Cedar and Ash','The Long Field'];
+        fakeTitle(n){ const p=this._logPool; return p[n % p.length]+' ('+(1994+(n*7)%31)+')'; }
+        fakePath(root, n){ return (root||'E:\\Movies')+'\\'+this.fakeTitle(n).replace(/[\u2019()]/g,'').replace(/\s+/g,'.')+'\\'; }
+        appendLog(log, entry){ const next=[...log, entry]; return next.length>80 ? next.slice(next.length-80) : next; }
+        seedProblems(){ return [
+          {id:'p1',title:'The Velvet Hour',reason:'No folder found matching this spreadsheet row.',kind:'no-folder'},
+          {id:'p2',title:'Harbor Lights',reason:'Two folders look like plausible matches \u2014 pick one.',kind:'ambiguous'},
+          {id:'p3',title:'Ironwood',reason:'Folder matched, but no subtitle file was found.',kind:'missing-file'},
+          {id:'p4',title:'Sundial',reason:'Spreadsheet row is missing a genre.',kind:'missing-meta'},
+        ]; }
+        resolveProblem(p){ this.setState({screen:'add',addContext:'import',resolveId:p.id,addMode:'folder',scanned:true,folderPath:'C:\\\\Movies\\\\'+p.title,fTitle:p.title,fYear:p.kind==='missing-meta'?'2018':'2020',fGenres:[],fVideo:p.kind==='missing-file'?'matched-video.mkv':'matched-video.mkv',fPoster:'matched-poster.jpg',fSubs:p.kind==='missing-file'?[]:[{filename:'matched.en.srt',lang:'English'}]}); }
+        skipProblem(id){ this.setState(s=>({impProblems:s.impProblems.filter(p=>p.id!==id)})); }
+
+        renderVals(){
+          const s=this.state;
+          const accent=this.props.accentColor||'#d97a4e';
+          const cardW=(this.props.posterSize==='Medium')?176:212;
+          const radius=(this.props.cornerStyle==='Sharp')?'3px':'12px';
+          const rootStyle={position:'relative',width:'100%',height:'100vh',minHeight:'600px',overflow:'hidden',background:'var(--color-bg)',color:'var(--color-text)',fontFamily:'var(--font-sans)','--color-accent':accent,'--color-accent-hover':accent,'--card-w':cardW+'px','--poster-radius':radius};
+
+          // browse
+          const rows=this.buildRows();
+          const continueList=this.filteredSorted().filter(m=>this.eff(m)==='progress').slice(0,15).map(m=>this.view(m));
+          const favoritesList=this.filteredSorted().filter(m=>s.favorites.includes(m.id)).slice(0,15).map(m=>this.view(m));
+          const counts={}; this.rawMovies.forEach(m=>m.genres.forEach(g=>counts[g]=(counts[g]||0)+1));
+          const optStyle=active=>({padding:'9px 12px',borderRadius:'8px',cursor:'pointer',fontFamily:'var(--font-sans)',fontSize:'15px',color:active?accent:'var(--color-text)',fontWeight:active?'600':'400'});
+          const allGenres=['All Genres',...Object.keys(counts).sort((a,b)=>counts[b]-counts[a]||a.localeCompare(b))];
+          const genreOptions=allGenres.map(g=>({label:g,count:g==='All Genres'?this.rawMovies.length:counts[g],selected:g===s.genre,onSelect:()=>this.setState({genre:g,openDrop:null})}));
+          const sortOptions=this.sortDefs.map(([v,l])=>({label:l,selected:v===s.sort,onSelect:()=>this.setState({sort:v,openDrop:null})}));
+          const sortLabel=(this.sortDefs.find(d=>d[0]===s.sort)||['','Recently Added'])[1];
+          const ratingOptions=this.ratingDefs.map(([v,l])=>({label:l,selected:v===s.ratingFilter,onSelect:()=>this.setRatingFilter(v)}));
+          const ratingFilterLabel=(this.ratingDefs.find(d=>d[0]===s.ratingFilter)||['','All ratings'])[1];
+
+          // detail / player
+          const m=this.cur();
+          let detail={posterStyle:{},genres:[]};
+          if(m){ const e=this.eff(m); const isFav=s.favorites.includes(m.id); const cr=this.credits[m.id]||{dir:'\u2014',cast:[]}; detail={
+            title:m.title,year:m.year,genres:m.genres,synopsis:m.syn,topTag:m.genres[0]+' · '+m.year,
+            director:cr.dir, castText:cr.cast.join(', '),
+            ratingPct:this.ratingOf(m), ratingText:this.starText(this.ratingOf(m)),
+            starWrap:this.starParts(this.ratingOf(m),22).wrapStyle, starFill:this.starParts(this.ratingOf(m),22).fillStyle,
+            runtimeLabel:Math.floor(m.runtime/60)+'h '+(m.runtime%60)+'m',
+            posterStyle:this.posterStyleOf(m), isWatched:e==='watched',
+            playLabel: e==='progress' ? 'Resume \u00b7 '+this.fmtClock(m.runtime*60*m.prog/100) : 'Play',
+            checkMark: e==='watched'?'✓':'',
+            watchedBtnStyle:{display:'flex',alignItems:'center',gap:'10px',height:'58px',padding:'0 22px',background:e==='watched'?'var(--color-accent-soft)':'transparent',border:'1px solid '+(e==='watched'?'var(--color-accent-line)':'var(--color-border)'),borderRadius:'999px',color:'var(--color-text)',fontFamily:'var(--font-sans)',fontSize:'16px',fontWeight:'500',cursor:'pointer'},
+            checkBoxStyle:{display:'grid',placeItems:'center',width:'22px',height:'22px',borderRadius:'6px',border:'2px solid '+(e==='watched'?accent:'var(--color-text-faint)'),background:e==='watched'?accent:'transparent',color:'#1a1109',fontSize:'14px',fontWeight:'700'},
+            isFavorite:isFav, notFavorite:!isFav, favLabel:isFav?'In Favorites':'Add to Favorites',
+            favBtnStyle:{display:'flex',alignItems:'center',gap:'10px',height:'58px',padding:'0 22px',background:isFav?'var(--color-accent-soft)':'transparent',border:'1px solid '+(isFav?'var(--color-accent-line)':'var(--color-border)'),borderRadius:'999px',color:'var(--color-text)',fontFamily:'var(--font-sans)',fontSize:'16px',fontWeight:'500',cursor:'pointer'},
+            watchedTip:e==='watched'?'Watched — click to unmark':'Mark as watched',
+            favTip:isFav?'In Favorites — click to remove':'Add to Favorites',
+            watchedIconStyle:{display:'grid',placeItems:'center',width:'58px',height:'58px',flex:'0 0 auto',background:e==='watched'?'var(--color-accent-soft)':'transparent',border:'1px solid '+(e==='watched'?'var(--color-accent-line)':'var(--color-border)'),borderRadius:'50%',color:e==='watched'?accent:'var(--color-text-dim)',cursor:'pointer'},
+            favIconStyle:{display:'grid',placeItems:'center',width:'58px',height:'58px',flex:'0 0 auto',background:isFav?'var(--color-accent-soft)':'transparent',border:'1px solid '+(isFav?'var(--color-accent-line)':'var(--color-border)'),borderRadius:'50%',color:isFav?accent:'var(--color-text-dim)',cursor:'pointer'},
+          }; }
+
+          // player chrome
+          const dur=this.durationOf(); const ct=s.currentTime; const pct=dur?ct/dur*100:0;
+          const vis=s.controlsVisible;
+          const chromeT={position:'absolute',top:0,left:0,right:0,display:'flex',alignItems:'center',gap:'18px',padding:'24px 28px',background:'linear-gradient(180deg,rgba(0,0,0,.55),transparent)',opacity:vis?1:0,transform:vis?'none':'translateY(-12px)',transition:'opacity .3s ease,transform .3s ease',pointerEvents:vis?'auto':'none',zIndex:20};
+          const chromeB={position:'absolute',bottom:0,left:0,right:0,padding:'40px 28px 24px',background:'linear-gradient(0deg,rgba(0,0,0,.72),transparent)',opacity:vis?1:0,transform:vis?'none':'translateY(12px)',transition:'opacity .3s ease,transform .3s ease',pointerEvents:vis?'auto':'none',zIndex:20};
+          const playerWrap={position:'relative',height:'100%',background:'#000',cursor:vis?'default':'none',overflow:'hidden'};
+          const subBtn={display:'flex',alignItems:'center',gap:'7px',height:'40px',padding:'0 14px',background:s.subsOn?'rgba(255,255,255,.16)':'transparent',border:'1px solid '+(s.subsOn?'rgba(255,255,255,.3)':'rgba(255,255,255,.14)'),borderRadius:'8px',color:s.subsOn?'#fff':'rgba(255,255,255,.6)',fontFamily:'var(--font-sans)',fontSize:'14px',fontWeight:'600',cursor:'pointer'};
+          const volPct=s.muted?0:s.volume*100;
+          const playIcon=React.createElement('svg',{width:24,height:24,viewBox:'0 0 24 24',fill:'#fff'},s.playing?React.createElement('path',{d:'M7 4h4v16H7zM13 4h4v16h-4z'}):React.createElement('path',{d:'M7 5l12 7-12 7z'}));
+          const volIcon=React.createElement('svg',{width:22,height:22,viewBox:'0 0 24 24',fill:'none'},React.createElement('path',{d:'M4 9v6h4l5 4V5L8 9H4z',fill:'#fff'}),(s.muted||s.volume<0.05)?React.createElement('path',{d:'M17 9l4 6M21 9l-4 6',stroke:'#fff',strokeWidth:1.8,strokeLinecap:'round'}):React.createElement('path',{d:'M16.5 8.5a5 5 0 010 7',stroke:'#fff',strokeWidth:1.8,strokeLinecap:'round'}));
+          const hasSubs = m ? true : false;
+
+          // add form
+          const labelStyle={display:'block',fontFamily:'var(--font-sans)',fontSize:'13px',fontWeight:'600',color:'var(--color-text-dim)',marginBottom:'8px',letterSpacing:'.2px'};
+          const inputStyle={width:'100%',height:'48px',padding:'0 14px',background:'var(--color-surface)',border:'1px solid var(--color-border)',borderRadius:'10px',color:'var(--color-text)',fontFamily:'var(--font-sans)',fontSize:'16px',outline:'none'};
+          const textareaStyle={...inputStyle,height:'auto',minHeight:'96px',padding:'12px 14px',lineHeight:'1.5',resize:'vertical'};
+          const tab=active=>({padding:'9px 18px',background:active?'var(--color-surface-3)':'transparent',border:'none',borderRadius:'7px',color:active?'var(--color-text)':'var(--color-text-faint)',fontFamily:'var(--font-sans)',fontSize:'15px',fontWeight:active?'600':'500',cursor:'pointer'});
+          const fileField=(val)=>({flex:1,display:'flex',alignItems:'center',height:'42px',padding:'0 14px',background:val?'var(--color-bg-2)':'transparent',border:'1px '+(val?'solid':'dashed')+' var(--color-border'+(val?'':'-soft')+')',borderRadius:'8px',fontFamily:'var(--font-mono)',fontSize:'13px',color:val?'var(--color-text-dim)':'var(--color-text-faint)'});
+          const pickBtn={flex:'0 0 auto',height:'42px',padding:'0 16px',background:'var(--color-surface-2)',border:'1px solid var(--color-border)',borderRadius:'8px',color:'var(--color-text-dim)',fontFamily:'var(--font-sans)',fontSize:'13px',fontWeight:'500',cursor:'pointer'};
+          const chipOn=g=>s.fGenres.includes(g);
+          const genreChips=this.genrePool.map(g=>({label:g,toggle:()=>this.toggleChip(g),style:{padding:'9px 16px',background:chipOn(g)?'var(--color-accent-soft)':'var(--color-surface)',border:'1px solid '+(chipOn(g)?'var(--color-accent-line)':'var(--color-border)'),borderRadius:'999px',color:chipOn(g)?accent:'var(--color-text-dim)',fontFamily:'var(--font-sans)',fontSize:'14px',fontWeight:chipOn(g)?'600':'400',cursor:'pointer'}}));
+          // interactive rating picker
+          const ratingDisp = s.fRatingHover!=null ? s.fRatingHover : s.fRating;
+          const dispStars = ratingDisp/20;
+          const ratingStars = [0,1,2,3,4].map(i=>{ const frac=Math.max(0,Math.min(1,dispStars-i));
+            return {
+              boxStyle:{position:'relative',width:'30px',height:'30px',fontSize:'30px',lineHeight:'30px',color:'rgba(255,255,255,.2)',cursor:'pointer',flex:'0 0 auto'},
+              fillStyle:{position:'absolute',left:0,top:0,height:'100%',width:(frac*100)+'%',overflow:'hidden',color:'var(--color-accent)',pointerEvents:'none'},
+              leftStyle:{position:'absolute',left:0,top:0,width:'50%',height:'100%',zIndex:2,cursor:'pointer'},
+              rightStyle:{position:'absolute',right:0,top:0,width:'50%',height:'100%',zIndex:2,cursor:'pointer'},
+              leftClick:()=>this.setFRating((i+0.5)*20), rightClick:()=>this.setFRating((i+1)*20),
+              leftHover:()=>this.hoverFRating((i+0.5)*20), rightHover:()=>this.hoverFRating((i+1)*20),
+            };
+          });
+          const ratingValueLabel = s.fRating>0 ? this.starText(s.fRating)+' / 5' : 'Not rated';
+          // export modal styles
+          const exCard=sel=>({flex:1,textAlign:'left',padding:'14px 16px',background:sel?'var(--color-accent-soft)':'var(--color-surface)',border:'1px solid '+(sel?'var(--color-accent-line)':'var(--color-border)'),borderRadius:'12px',cursor:'pointer'});
+          const exDot=sel=>({display:'block',width:'18px',height:'18px',borderRadius:'99px',border:'2px solid '+(sel?accent:'var(--color-text-faint)'),background:sel?accent:'transparent',boxShadow:sel?'inset 0 0 0 3px var(--color-surface-2)':'none'});
+          const subRows=s.fSubs.map((sub,i)=>({
+            filename:sub.filename, lang:sub.lang, remove:()=>this.removeSub(i),
+            onLangChange:(l)=>this.setSubLang(i,l),
+          }));
+
+          // import
+          const problems=s.impProblems.map(p=>{ const col=p.kind==='no-folder'?'#c97a6a':p.kind==='ambiguous'?accent:p.kind==='missing-file'?'#c9a86a':'#9a8a6b'; return {id:p.id,title:p.title,reason:p.reason,dotStyle:{flex:'0 0 auto',width:'10px',height:'10px',borderRadius:'99px',background:col},resolve:()=>this.resolveProblem(p),skip:()=>this.skipProblem(p.id)}; });
+
+          return {
+            rootStyle, isBrowse:s.screen==='browse', isDetail:s.screen==='detail', isPlayer:s.screen==='player', isAdd:s.screen==='add', isImport:s.screen==='import', isGenre:s.screen==='genre', isSettings:s.screen==='settings',
+            snackbars: s.snackbars.map(n=>({ ...n, onDismiss:()=>this.dismissSnack(n.id) })), hasSnackbars: s.snackbars.length>0,
+            goBrowse:()=>this.goBrowse(), backFromDetail:()=>this.backFromDetail(),
+            genreView:s.genreView, genrePageList:this.genrePageMovies().map(m=>this.view(m)), genreNoResults:this.genrePageMovies().length===0,
+            genreSearch:s.genreSearch, onGenreSearch:(e)=>this.onGenreSearch(e),
+            genreCountLabel:(function(self){ if(!s.genreView) return ''; const all=self.rawMovies.filter(m=>m.genres.includes(s.genreView)).length; const shown=self.genrePageMovies().length; return shown===all? all+' titles' : shown+' of '+all+' titles'; })(this),
+            genreModel:{
+              onBack:()=>this.goBrowse(), name:s.genreView,
+              countLabel:(function(self){ if(!s.genreView) return ''; const all=self.rawMovies.filter(m=>m.genres.includes(s.genreView)).length; const shown=self.genrePageMovies().length; return shown===all? all+' titles' : shown+' of '+all+' titles'; })(this),
+              search:s.genreSearch, onSearch:(e)=>this.onGenreSearch(e), searchPlaceholder:'Search in '+(s.genreView||''),
+              sortValue:sortLabel, sortOpen:s.openDrop==='sort', onToggleSort:()=>this.toggleSort(), sortOptions,
+              movies:this.genrePageMovies().map(m=>this.view(m)), noResults:this.genrePageMovies().length===0,
+            },
+            // header
+            search:s.search, onSearch:(e)=>this.onSearch(e),
+            genreLabel:s.genre, sortLabel, genreOpen:s.openDrop==='genre', sortOpen:s.openDrop==='sort', gearOpen:s.gearOpen,
+            ratingFilterLabel, ratingOpen:s.openDrop==='rating', toggleRating:()=>this.toggleRating(), ratingOptions,
+            toggleGenre:()=>this.toggleGenre(), toggleSort:()=>this.toggleSort(), toggleGear:()=>this.toggleGear(),
+            genreOptions, sortOptions, goAdd:()=>this.goAdd(), goImport:()=>this.goImport(), openExport:()=>this.openExport(),
+            // body
+            showContinue:continueList.length>0, continueList, showFavorites:favoritesList.length>0, favoritesList, genreRows:rows, noResults:rows.length===0,
+            libModel:{
+              onLogo:()=>this.goBrowse(), search:s.search, onSearch:(e)=>this.onSearch(e),
+              genreLabel:s.genre, genreOptions, genreOpen:s.openDrop==='genre', onToggleGenre:()=>this.toggleGenre(),
+              ratingLabel:ratingFilterLabel, ratingOptions, ratingOpen:s.openDrop==='rating', onToggleRating:()=>this.toggleRating(),
+              sortLabel, sortOptions, sortOpen:s.openDrop==='sort', onToggleSort:()=>this.toggleSort(),
+              gearOpen:s.gearOpen, onToggleGear:()=>this.toggleGear(), onAdd:()=>this.goAdd(), onImport:()=>this.goImport(), onExport:()=>this.openExport(), onSettings:()=>this.goSettings(),
+              showContinue:continueList.length>0, continueList, showFavorites:favoritesList.length>0, favoritesList,
+              genreRows:rows, noResults:rows.length===0,
+            },
+            settingsModel:{
+              onBack:()=>this.goBrowse(), onAddMovie:()=>this.goAdd(),
+              libraryActions:[
+                {key:'add',glyph:'＋',label:'Add a movie',desc:'Pick the video, poster, and subtitle files for one title.',onClick:()=>this.goAdd()},
+                {key:'import',glyph:'⇪',label:'Import from spreadsheet',desc:'Bulk-migrate a spreadsheet + movie folders in one pass.',onClick:()=>this.goImport()},
+                {key:'export',glyph:'⬇',label:'Export to CSV',desc:'Save your whole library out as a spreadsheet backup.',onClick:()=>this.openExport()},
+              ],
+              codec:{
+                summaryLabel:s.codecs.length+' formats enabled · '+s.codecs.filter(c=>c.kind==='installed').length+' added by you',
+                onBrowse:()=>this.uploadCodec(),
+                codecs:s.codecs.map(c=>{ const built=c.kind==='built-in'; return {
+                  id:c.id, name:c.name, exts:c.exts, size:c.size, builtIn:built, notBuiltIn:!built, justAdded:s.codecJustAdded===c.id,
+                  statusLabel:built?'Built-in':'Installed',
+                  statusStyle:{flex:'0 0 auto',fontFamily:'var(--font-sans)',fontSize:'12px',fontWeight:'600',padding:'4px 11px',borderRadius:'var(--radius-pill)',color:built?'var(--color-text-faint)':'var(--color-watched)',background:built?'var(--color-surface-3)':'rgba(138,154,107,.16)',border:'1px solid '+(built?'var(--color-border)':'rgba(138,154,107,.3)')},
+                  onRemove:()=>this.removeCodec(c.id),
+                }; }),
+              },
+              subAutoOn:s.settingsSubAuto, onToggleSubAuto:()=>this.toggleSubAuto(),
+              subLang:s.settingsSubLang, subLangOpen:s.openDrop==='subLang', onToggleSubLang:()=>this.setState(st=>({openDrop:st.openDrop==='subLang'?null:'subLang'})),
+              subLangOptions:['English','Spanish','French','German'].map(l=>({label:l,selected:l===s.settingsSubLang,onSelect:()=>this.setSubLang(l)})),
+              mediaFolder:'C:\\Users\\Family\\FamilyFlix\\Media',
+              spaceUsed:'18.4 GB', titleCount:this.rawMovies.length+' titles', version:s.currentVersion,
+              updateAvailable:s.updateAvailable, updateVersion:s.updateVersion, updating:s.updating,
+              updateOffered:s.updateAvailable && !s.updating, updateIdle:!s.updateAvailable && !s.updating,
+              lastCheckedLabel:s.lastChecked?('Last checked '+s.lastChecked):'',
+              lastChecked:s.lastChecked, onUpdate:()=>this.runUpdate(), onCheckUpdates:()=>this.checkForUpdates(),
+            },
+            // detail
+            detail, toggleWatched:()=>this.toggleWatched(), toggleFavorite:()=>this.toggleFavorite(), playMovie:()=>this.playMovie(), toggleEditMenu:()=>this.toggleEditMenu(), editMenuOpen:s.editMenuOpen, editMovie:()=>this.editMovie(),
+            detailModel:{...detail, editMenuOpen:s.editMenuOpen, onBack:()=>this.backFromDetail(), onPlay:()=>this.playMovie(), onToggleWatched:()=>this.toggleWatched(), onToggleFavorite:()=>this.toggleFavorite(), onToggleEditMenu:()=>this.toggleEditMenu(), onEdit:()=>this.editMovie()},
+            // player
+            playerModel:{
+              posterStyle:detail.posterStyle, title:detail.title,
+              wrapStyle:playerWrap, chromeTop:chromeT, chromeBot:chromeB,
+              onMove:()=>this.onPlayerMove(), togglePlay:()=>this.togglePlay(), onExit:()=>this.exitPlayer(),
+              skipBack:()=>this.skipBack(), skipFwd:()=>this.skipFwd(), toggleMute:()=>this.toggleMute(), toggleSubs:()=>this.toggleSubs(),
+              onSeek:(e)=>this.onSeekClick(e), onVol:(e)=>this.onVolClick(e),
+              curTime:this.fmtClock(ct), duration:this.fmtClock(dur),
+              seekStyle:{position:'absolute',left:0,top:0,bottom:0,width:pct+'%',background:'var(--color-accent)',borderRadius:'99px'},
+              seekKnob:{position:'absolute',top:'50%',left:pct+'%',width:'14px',height:'14px',borderRadius:'99px',background:'#fff',transform:'translate(-50%,-50%)',boxShadow:'0 1px 4px rgba(0,0,0,.5)'},
+              volStyle:{height:'100%',width:volPct+'%',background:'#fff',borderRadius:'99px'},
+              playPauseIcon:playIcon, volumeIcon:volIcon, subBtnStyle:subBtn, hasSubs,
+              showBigPlay:!s.playing, showSubtitle:s.subsOn && hasSubs,
+              subtitleLine:'— You can see the whole coast from up here.',
+            },
+            // add
+            formModel:{
+              inImportContext:s.addContext==='import', resolveLabel:s.fTitle,
+              heading:s.addContext==='edit'?'Edit details':'Add a movie',
+              labelStyle, inputStyle, textareaStyle,
+              title:s.fTitle, year:s.fYear, onTitle:(e)=>this.onFTitle(e), onYear:(e)=>this.onFYear(e),
+              director:s.fDirector, cast:s.fCast, description:s.fDescription, onDirector:(e)=>this.onFDirector(e), onCast:(e)=>this.onFCast(e), onDescription:(e)=>this.onFDescription(e),
+              genreChips,
+              rating:s.fRating, onRating:(p)=>this.setFRating(p),
+              video:s.fVideo, poster:s.fPoster, pickVideo:()=>this.pickVideo(), pickPoster:()=>this.pickPoster(), removeVideo:()=>this.removeVideo(), removePoster:()=>this.removePoster(),
+              addSub:()=>this.addSub(), subtitles:subRows, langOptions:this.langPool,
+              onSave:()=>this.saveMovie(), onBack:()=>this.backFromAdd(),
+              saveLabel:s.addContext==='import'?'Save & continue':s.addContext==='edit'?'Save changes':'Add to library',
+              cancelLabel:s.addContext==='import'?'Skip this one':'Cancel',
+            },
+            // import
+            importModel:(()=>{
+              const elapsed = s.impStartTime ? (Date.now()-s.impStartTime)/1000 : 0;
+              const fmt = (sec)=>{ sec=Math.max(0,Math.round(sec)); return Math.floor(sec/60)+':'+String(sec%60).padStart(2,'0'); };
+              const pct = s.impTotal ? Math.round(s.impDone/s.impTotal*100) : 0;
+              const etaSec = (s.impPhase==='import' && s.impDone>20) ? elapsed*(s.impTotal-s.impDone)/s.impDone : 0;
+              return {
+              labelStyle, setup:s.impStep==='setup', running:s.impStep==='running', review:s.impStep==='review',
+              sheet:s.impSheet, root:s.impRoot, onSheet:(e)=>this.onImpSheet(e), onRoot:(e)=>this.onImpRoot(e), onStart:()=>this.startImport(),
+              onBack:()=>this.goSettings(), onFinish:()=>this.goBrowse(), onCancel:()=>this.cancelImport(),
+              scanning:s.impPhase==='scan', importing:s.impPhase==='import', indeterminate:s.impPhase==='scan', percent:pct,
+              stepScanActive:s.impPhase==='scan', stepScanDone:s.impPhase==='import', stepImportActive:s.impPhase==='import',
+              importStepDotStyle:{display:'grid',placeItems:'center',width:'24px',height:'24px',borderRadius:'50%',fontFamily:'var(--font-sans)',fontSize:'12px',fontWeight:'700',background:s.impPhase==='import'?'var(--color-accent)':'var(--color-surface-3)',color:s.impPhase==='import'?'#14110d':'var(--color-text-faint)'},
+              importStepLabelStyle:{fontFamily:'var(--font-sans)',fontSize:'14px',fontWeight:'600',color:s.impPhase==='import'?'var(--color-text)':'var(--color-text-faint)'},
+              headline: s.impPhase==='scan' ? 'Scanning your library…' : 'Importing movies…',
+              statLine: s.impPhase==='scan' ? ('Found '+s.impFound.toLocaleString()+' movies so far') : (s.impDone.toLocaleString()+' of '+s.impTotal.toLocaleString()+' imported'),
+              currentItem:s.impCurrent, hasCurrent:!!s.impCurrent,
+              elapsedLabel:'Elapsed '+fmt(elapsed), etaLabel: etaSec>0 ? ('About '+fmt(etaSec)+' left') : '', hasEta: etaSec>0,
+              log:s.impLog,
+              matched:s.impMatched, problemCount:s.impProblems.length, problems,
+              hasProblems:s.impProblems.length>0, allResolved:s.impProblems.length===0,
+              };
+            })(),
+            // export
+            exportOpen:s.exportOpen,
+            exportModel:{
+              idle:!s.exportDone, done:s.exportDone,
+              onClose:()=>this.closeExport(), stopProp:(e)=>this.stopProp(e),
+              chooseCsv:()=>this.chooseCsv(), chooseXlsx:()=>this.chooseXlsx(), onExport:()=>this.runExport(),
+              csvCardStyle:exCard(s.exportFormat==='csv'), xlsxCardStyle:exCard(s.exportFormat==='xlsx'),
+              csvDotStyle:exDot(s.exportFormat==='csv'), xlsxDotStyle:exDot(s.exportFormat==='xlsx'),
+              filename:'family-library.'+(s.exportFormat==='csv'?'csv':'xlsx'),
+              rowLabel:this.rawMovies.length+' movies', columns:['Title','Year','Genres','Director','Cast','Rating','Status','Subtitles'],
+              formatLabel:s.exportFormat==='csv'?'as CSV':'as Excel',
+            },
+          };
+        }
+      }
+    </script>
+  </body>
+</html>

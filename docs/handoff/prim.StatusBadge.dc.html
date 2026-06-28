@@ -1,0 +1,46 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="tokens.css" />
+      </helmet>
+      <div style="{{ rootStyle }}">
+        <svg
+          width="{{ iconSize }}"
+          height="{{ iconSize }}"
+          viewBox="0 0 24 24"
+          fill="none"
+        >
+          <path
+            d="M5 12.5l4.5 4.5L19 7.5"
+            stroke="#14110d"
+            stroke-width="2.6"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          ></path>
+        </svg>
+      </div>
+    </x-dc>
+    <script
+      type="text/x-dc"
+      data-dc-script
+      data-props='{"$preview":{"width":80,"height":80},"kind":{"editor":"enum","default":"watched","options":["watched"],"tsType":"&apos;watched&apos;"},"size":{"editor":"int","default":30,"min":20,"max":48,"tsType":"number"}}'
+    >
+      class Component extends DCLogic {
+        renderVals(){
+          const s=this.props.size||30;
+          return {
+            iconSize:Math.round(s*0.53),
+            rootStyle:{width:s+'px',height:s+'px',borderRadius:'999px',background:'var(--color-watched)',display:'grid',placeItems:'center',boxShadow:'0 2px 8px rgba(0,0,0,.4)'},
+          };
+        }
+      }
+    </script>
+  </body>
+</html>

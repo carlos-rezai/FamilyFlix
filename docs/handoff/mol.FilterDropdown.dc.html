@@ -1,0 +1,87 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="tokens.css" />
+      </helmet>
+      <div style="position: relative">
+        <button
+          onClick="{{ onToggle }}"
+          style="{{ btnStyle }}"
+          style-hover="{{ btnHover }}"
+        >
+          <sc-if value="{{ leadingStar }}" hint-placeholder-val="{{ false }}"
+            ><span
+              style="
+                color: var(--color-accent);
+                font-size: 15px;
+                margin-right: -2px;
+              "
+              >★</span
+            ></sc-if
+          >
+          <sc-if value="{{ hasLabel }}" hint-placeholder-val="{{ true }}"
+            ><span style="color: var(--color-text-faint); font-size: 13px"
+              >{{ label }}</span
+            ></sc-if
+          >
+          {{ value }}<span style="color: var(--color-text-faint)">▾</span>
+        </button>
+        <sc-if value="{{ open }}" hint-placeholder-val="{{ false }}">
+          <div style="{{ menuStyle }}">
+            <sc-for list="{{ items }}" as="opt" hint-placeholder-count="5">
+              <div
+                onClick="{{ opt.onSelect }}"
+                style="{{ opt.style }}"
+                style-hover="{{ optHover }}"
+              >
+                {{ opt.label }}<sc-if
+                  value="{{ opt.hasCount }}"
+                  hint-placeholder-val="{{ false }}"
+                  ><span
+                    style="
+                      float: right;
+                      color: var(--color-text-faint);
+                      font-size: 13px;
+                    "
+                    >{{ opt.count }}</span
+                  ></sc-if
+                >
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+      </div>
+    </x-dc>
+    <script
+      type="text/x-dc"
+      data-dc-script
+      data-props='{"$preview":{"width":260,"height":80},"label":{"editor":"text","default":"Genre","tsType":"string"},"value":{"editor":"text","default":"All Genres","tsType":"string"},"options":{"editor":null,"tsType":"FilterOption[]"},"open":{"editor":"boolean","default":false,"tsType":"boolean"},"leadingStar":{"editor":"boolean","default":false,"tsType":"boolean"},"menuWidth":{"editor":"int","default":200,"min":160,"max":260,"tsType":"number"},"onToggle":{"editor":null,"tsType":"() =&gt; void"}}'
+    >
+      class Component extends DCLogic {
+        renderVals(){
+          const optBase={padding:'9px 12px',borderRadius:'8px',cursor:'pointer',fontFamily:'var(--font-sans)',fontSize:'15px'};
+          const items=(this.props.options||[]).map(o=>({
+            label:o.label, count:o.count, hasCount:o.count!=null, onSelect:o.onSelect,
+            style:{...optBase, color:o.selected?'var(--color-accent)':'var(--color-text)', fontWeight:o.selected?'600':'400'},
+          }));
+          const label=this.props.label||'';
+          return {
+            items, label, hasLabel:!!label, value:this.props.value??'', open:this.props.open??false,
+            leadingStar:this.props.leadingStar??false, onToggle:this.props.onToggle,
+            btnStyle:{display:'flex',alignItems:'center',gap:'8px',height:'46px',padding:'0 16px',background:'var(--color-surface)',border:'1px solid var(--color-border)',borderRadius:'999px',color:'var(--color-text)',fontFamily:'var(--font-sans)',fontSize:'15px',fontWeight:500,cursor:'pointer',whiteSpace:'nowrap'},
+            btnHover:{borderColor:'var(--color-accent-line)'},
+            menuStyle:{position:'absolute',top:'54px',right:0,minWidth:(this.props.menuWidth||200)+'px',maxHeight:'340px',overflowY:'auto',background:'var(--color-surface-2)',border:'1px solid var(--color-border)',borderRadius:'var(--radius-md)',padding:'6px',boxShadow:'0 18px 50px rgba(0,0,0,.5)',animation:'ffPop .14s ease',zIndex:50},
+            optHover:{background:'var(--color-surface-3)'},
+          };
+        }
+      }
+    </script>
+  </body>
+</html>

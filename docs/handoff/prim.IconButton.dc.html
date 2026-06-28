@@ -1,0 +1,56 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="tokens.css" />
+      </helmet>
+      <button
+        onClick="{{ onClick }}"
+        title="{{ title }}"
+        style="{{ rootStyle }}"
+        style-hover="{{ hoverStyle }}"
+      >
+        {{ iconEl }}
+      </button>
+    </x-dc>
+    <script
+      type="text/x-dc"
+      data-dc-script
+      data-props='{"$preview":{"width":80,"height":80},"icon":{"editor":"enum","default":"heart","options":["heart","heart-filled","gear","more","back","close","plus"],"tsType":"&apos;heart&apos;|&apos;heart-filled&apos;|&apos;gear&apos;|&apos;more&apos;|&apos;back&apos;|&apos;close&apos;|&apos;plus&apos;"},"size":{"editor":"int","default":46,"min":30,"max":56,"tsType":"number"},"variant":{"editor":"enum","default":"ghost","options":["ghost","outline"],"tsType":"&apos;ghost&apos;|&apos;outline&apos;"},"active":{"editor":"boolean","default":false,"tsType":"boolean"},"title":{"editor":"text","default":"","tsType":"string"},"onClick":{"editor":null,"tsType":"() =&gt; void"}}'
+    >
+      class Component extends DCLogic {
+        renderVals(){
+          const name=this.props.icon||'more';
+          const size=this.props.size||44;
+          const active=this.props.active??false;
+          const variant=this.props.variant||'ghost';
+          const isz=Math.round(size*0.47);
+          const mk=(...c)=>React.createElement('svg',{width:isz,height:isz,viewBox:'0 0 24 24',fill:'none'},...c);
+          const P=(d,e={})=>React.createElement('path',{d,stroke:'currentColor',strokeWidth:1.8,strokeLinecap:'round',strokeLinejoin:'round',...e});
+          const icons={
+            'heart':mk(P('M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z',{strokeWidth:1.7})),
+            'heart-filled':React.createElement('svg',{width:isz,height:isz,viewBox:'0 0 24 24',fill:'var(--color-accent)'},React.createElement('path',{d:'M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z'})),
+            'gear':React.createElement('svg',{width:isz,height:isz,viewBox:'0 0 24 24',fill:'currentColor'},React.createElement('path',{fillRule:'evenodd',clipRule:'evenodd',d:'M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z'})),
+            'more':React.createElement('svg',{width:isz,height:isz,viewBox:'0 0 24 24',fill:'currentColor'},React.createElement('circle',{cx:12,cy:5,r:2}),React.createElement('circle',{cx:12,cy:12,r:2}),React.createElement('circle',{cx:12,cy:19,r:2})),
+            'back':mk(P('M15 5l-7 7 7 7',{strokeWidth:2})),
+            'close':mk(P('M6 6l12 12M18 6L6 18',{strokeWidth:2})),
+            'plus':mk(P('M12 5v14M5 12h14',{strokeWidth:2})),
+          };
+          const chrome={'ghost':{bg:'transparent',col:'var(--color-text-faint)',bd:'transparent',hbg:'var(--color-surface)',hcol:'var(--color-text-dim)'},
+                        'outline':{bg:'transparent',col:'var(--color-text-dim)',bd:'var(--color-border-soft)',hbg:'transparent',hcol:'var(--color-text)'}}[variant];
+          return {
+            iconEl:icons[name]||icons['more'], onClick:this.props.onClick, title:this.props.title||'',
+            rootStyle:{display:'grid',placeItems:'center',width:size+'px',height:size+'px',background:active?'var(--color-surface)':chrome.bg,border:'1px solid '+chrome.bd,borderRadius:'999px',color:active?'var(--color-text-dim)':chrome.col,cursor:'pointer',padding:0},
+            hoverStyle:{background:chrome.hbg,color:chrome.hcol},
+          };
+        }
+      }
+    </script>
+  </body>
+</html>

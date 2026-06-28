@@ -1,0 +1,707 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="tokens.css" />
+      </helmet>
+      <div
+        data-screen-label="Settings"
+        style="height: 100%; overflow-y: auto; background: var(--color-bg-2)"
+      >
+        <div
+          style="
+            max-width: 780px;
+            margin: 0 auto;
+            padding: var(--space-6) var(--space-6) var(--space-8);
+          "
+        >
+          <div
+            style="
+              display: flex;
+              align-items: center;
+              gap: 16px;
+              margin-bottom: 6px;
+            "
+          >
+            <dc-import
+              name="prim.IconButton"
+              icon="back"
+              variant="outline"
+              size="42"
+              title="Back"
+              on-click="{{ settings.onBack }}"
+              hint-size="42px,42px"
+            ></dc-import>
+            <h1
+              style="
+                font-family: var(--font-serif);
+                font-weight: 600;
+                font-size: 30px;
+                color: var(--color-text);
+                margin: 0;
+                flex: 1;
+              "
+            >
+              Settings
+            </h1>
+            <button
+              onClick="{{ settings.onAddMovie }}"
+              style="
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                height: 44px;
+                padding: 0 20px;
+                background: var(--color-accent);
+                border: none;
+                border-radius: 10px;
+                color: #1a1109;
+                font-family: var(--font-sans);
+                font-size: 15px;
+                font-weight: 700;
+                cursor: pointer;
+              "
+              style-hover="background:var(--color-accent-hover)"
+            >
+              <span style="font-size: 17px">＋</span>Add a movie
+            </button>
+          </div>
+          <p
+            style="
+              font-family: var(--font-sans);
+              font-size: 15px;
+              color: var(--color-text-faint);
+              margin: 0 0 30px 58px;
+            "
+          >
+            Manage your library, playback, and storage.
+          </p>
+
+          <!-- LIBRARY -->
+          <div
+            style="
+              font-family: var(--font-sans);
+              font-size: 12px;
+              font-weight: 700;
+              letter-spacing: 0.9px;
+              text-transform: uppercase;
+              color: var(--color-text-faint);
+              margin: 0 0 12px 2px;
+            "
+          >
+            Library
+          </div>
+          <div
+            style="
+              display: flex;
+              flex-direction: column;
+              gap: 8px;
+              margin-bottom: 32px;
+            "
+          >
+            <sc-for
+              list="{{ settings.libraryActions }}"
+              as="a"
+              hint-placeholder-count="3"
+            >
+              <button
+                onClick="{{ a.onClick }}"
+                style="
+                  display: flex;
+                  align-items: center;
+                  gap: 14px;
+                  width: 100%;
+                  text-align: left;
+                  padding: 15px 16px;
+                  background: var(--color-surface);
+                  border: 1px solid var(--color-border-soft);
+                  border-radius: var(--radius-md);
+                  cursor: pointer;
+                "
+                style-hover="border-color:var(--color-accent-line);background:var(--color-surface-2)"
+              >
+                <span
+                  style="
+                    flex: 0 0 auto;
+                    display: grid;
+                    place-items: center;
+                    width: 38px;
+                    height: 38px;
+                    border-radius: 9px;
+                    background: var(--color-accent-soft);
+                    color: var(--color-accent);
+                    font-size: 18px;
+                    font-weight: 700;
+                  "
+                  >{{ a.glyph }}</span
+                >
+                <span style="flex: 1; min-width: 0">
+                  <span
+                    style="
+                      display: block;
+                      font-family: var(--font-sans);
+                      font-size: 16px;
+                      font-weight: 600;
+                      color: var(--color-text);
+                    "
+                    >{{ a.label }}</span
+                  >
+                  <span
+                    style="
+                      display: block;
+                      font-family: var(--font-sans);
+                      font-size: 13px;
+                      color: var(--color-text-faint);
+                      margin-top: 2px;
+                    "
+                    >{{ a.desc }}</span
+                  >
+                </span>
+                <span style="flex: 0 0 auto; color: var(--color-text-faint)"
+                  ><svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                    <path
+                      d="M9 5l7 7-7 7"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    /></svg
+                ></span>
+              </button>
+            </sc-for>
+          </div>
+
+          <!-- PLAYBACK -->
+          <div
+            style="
+              font-family: var(--font-sans);
+              font-size: 12px;
+              font-weight: 700;
+              letter-spacing: 0.9px;
+              text-transform: uppercase;
+              color: var(--color-text-faint);
+              margin: 0 0 12px 2px;
+            "
+          >
+            Playback
+          </div>
+          <div
+            style="
+              background: var(--color-surface);
+              border: 1px solid var(--color-border-soft);
+              border-radius: var(--radius-md);
+              padding: 20px;
+              margin-bottom: 32px;
+            "
+          >
+            <div
+              style="
+                display: flex;
+                align-items: flex-start;
+                justify-content: space-between;
+                gap: 16px;
+                margin-bottom: 16px;
+              "
+            >
+              <div>
+                <div
+                  style="
+                    font-family: var(--font-sans);
+                    font-size: 16px;
+                    font-weight: 600;
+                    color: var(--color-text);
+                  "
+                >
+                  Codecs
+                </div>
+                <div
+                  style="
+                    font-family: var(--font-sans);
+                    font-size: 13px;
+                    color: var(--color-text-faint);
+                    margin-top: 2px;
+                    max-width: 440px;
+                  "
+                >
+                  These decide which video files FamilyFlix can play. Common
+                  formats work out of the box — add a pack only if a movie won’t
+                  play.
+                </div>
+              </div>
+            </div>
+            <dc-import
+              name="feat.CodecManager"
+              cdc="{{ settings.codec }}"
+              hint-size="100%,440px"
+            ></dc-import>
+
+            <div
+              style="
+                height: 1px;
+                background: var(--color-border-soft);
+                margin: 22px 0;
+              "
+            ></div>
+
+            <div style="margin-bottom: 14px">
+              <div
+                style="
+                  font-family: var(--font-sans);
+                  font-size: 16px;
+                  font-weight: 600;
+                  color: var(--color-text);
+                "
+              >
+                Subtitles
+              </div>
+              <div
+                style="
+                  font-family: var(--font-sans);
+                  font-size: 13px;
+                  color: var(--color-text-faint);
+                  margin-top: 2px;
+                "
+              >
+                How subtitles behave when a movie has them.
+              </div>
+            </div>
+
+            <div
+              style="
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 16px;
+                padding: 12px 0;
+              "
+            >
+              <div>
+                <div style="display: flex; align-items: center; gap: 9px">
+                  <div
+                    style="
+                      font-family: var(--font-sans);
+                      font-size: 15px;
+                      font-weight: 500;
+                      color: var(--color-text);
+                    "
+                  >
+                    Turn on automatically
+                  </div>
+                  <span
+                    style="
+                      font-family: var(--font-sans);
+                      font-size: 11px;
+                      font-weight: 600;
+                      letter-spacing: 0.4px;
+                      text-transform: uppercase;
+                      color: var(--color-text-faint);
+                      background: var(--color-surface-3);
+                      border: 1px solid var(--color-border);
+                      padding: 2px 8px;
+                      border-radius: var(--radius-pill);
+                    "
+                    >Coming soon</span
+                  >
+                </div>
+                <div
+                  style="
+                    font-family: var(--font-sans);
+                    font-size: 13px;
+                    color: var(--color-text-faint);
+                    margin-top: 2px;
+                  "
+                >
+                  Show subtitles by default when a movie has them.
+                </div>
+              </div>
+              <dc-import
+                name="prim.Toggle"
+                checked="{{ settings.subAutoOn }}"
+                disabled="{{ true }}"
+                on-toggle="{{ settings.onToggleSubAuto }}"
+                hint-size="46px,26px"
+              ></dc-import>
+            </div>
+
+            <div
+              style="
+                height: 1px;
+                background: var(--color-border-soft);
+                margin: 6px 0;
+              "
+            ></div>
+
+            <div
+              style="
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 16px;
+                padding: 12px 0 2px;
+              "
+            >
+              <div>
+                <div
+                  style="
+                    font-family: var(--font-sans);
+                    font-size: 15px;
+                    font-weight: 500;
+                    color: var(--color-text);
+                  "
+                >
+                  Preferred language
+                </div>
+                <div
+                  style="
+                    font-family: var(--font-sans);
+                    font-size: 13px;
+                    color: var(--color-text-faint);
+                    margin-top: 2px;
+                  "
+                >
+                  Which track to use whenever subtitles are shown.
+                </div>
+              </div>
+              <dc-import
+                name="mol.FilterDropdown"
+                value="{{ settings.subLang }}"
+                options="{{ settings.subLangOptions }}"
+                open="{{ settings.subLangOpen }}"
+                on-toggle="{{ settings.onToggleSubLang }}"
+                menu-width="200"
+                hint-size="160px,46px"
+              ></dc-import>
+            </div>
+          </div>
+
+          <!-- STORAGE -->
+          <div
+            style="
+              font-family: var(--font-sans);
+              font-size: 12px;
+              font-weight: 700;
+              letter-spacing: 0.9px;
+              text-transform: uppercase;
+              color: var(--color-text-faint);
+              margin: 0 0 12px 2px;
+            "
+          >
+            Storage
+          </div>
+          <div
+            style="
+              background: var(--color-surface);
+              border: 1px solid var(--color-border-soft);
+              border-radius: var(--radius-md);
+              padding: 20px;
+              margin-bottom: 32px;
+              display: flex;
+              flex-direction: column;
+              gap: 18px;
+            "
+          >
+            <div
+              style="
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 16px;
+              "
+            >
+              <div style="min-width: 0">
+                <div
+                  style="
+                    font-family: var(--font-sans);
+                    font-size: 16px;
+                    font-weight: 600;
+                    color: var(--color-text);
+                  "
+                >
+                  Managed media folder
+                </div>
+                <div
+                  style="
+                    font-family: var(--font-mono);
+                    font-size: 13px;
+                    color: var(--color-text-faint);
+                    margin-top: 4px;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    white-space: nowrap;
+                  "
+                >
+                  {{ settings.mediaFolder }}
+                </div>
+              </div>
+              <button
+                style="
+                  flex: 0 0 auto;
+                  height: 40px;
+                  padding: 0 18px;
+                  background: var(--color-surface-3);
+                  border: 1px solid var(--color-border);
+                  border-radius: 8px;
+                  color: var(--color-text);
+                  font-family: var(--font-sans);
+                  font-size: 14px;
+                  font-weight: 600;
+                  cursor: pointer;
+                "
+                style-hover="background:var(--color-border)"
+              >
+                Change…
+              </button>
+            </div>
+            <div
+              style="
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                font-family: var(--font-sans);
+                font-size: 14px;
+                color: var(--color-text-dim);
+              "
+            >
+              <span style="font-weight: 700; color: var(--color-text)"
+                >{{ settings.spaceUsed }}</span
+              >of movies<span style="color: var(--color-text-faint)">·</span>{{
+              settings.titleCount }}
+            </div>
+          </div>
+
+          <!-- ABOUT -->
+          <div
+            style="
+              font-family: var(--font-sans);
+              font-size: 12px;
+              font-weight: 700;
+              letter-spacing: 0.9px;
+              text-transform: uppercase;
+              color: var(--color-text-faint);
+              margin: 0 0 12px 2px;
+            "
+          >
+            About
+          </div>
+          <div
+            style="
+              background: var(--color-surface);
+              border: 1px solid var(--color-border-soft);
+              border-radius: var(--radius-md);
+              overflow: hidden;
+            "
+          >
+            <!-- software update row -->
+            <div
+              style="
+                display: flex;
+                align-items: center;
+                gap: 16px;
+                padding: 18px 20px;
+              "
+            >
+              <div
+                style="
+                  flex: 0 0 auto;
+                  display: grid;
+                  place-items: center;
+                  width: 42px;
+                  height: 42px;
+                  border-radius: 10px;
+                  background: var(--color-surface-2);
+                  border: 1px solid var(--color-border);
+                  color: var(--color-text-dim);
+                "
+              >
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                  <path
+                    d="M12 16V4m0 0L8 8m4-4l4 4M5 20h14"
+                    stroke="currentColor"
+                    stroke-width="1.8"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+              </div>
+              <div style="flex: 1; min-width: 0">
+                <div
+                  style="
+                    font-family: var(--font-sans);
+                    font-size: 16px;
+                    font-weight: 600;
+                    color: var(--color-text);
+                  "
+                >
+                  Software update
+                </div>
+                <sc-if
+                  value="{{ settings.updateOffered }}"
+                  hint-placeholder-val="{{ true }}"
+                >
+                  <div
+                    style="
+                      font-family: var(--font-sans);
+                      font-size: 13px;
+                      color: var(--color-accent);
+                      margin-top: 2px;
+                    "
+                  >
+                    Version {{ settings.updateVersion }} is available to
+                    install.
+                  </div>
+                </sc-if>
+                <sc-if
+                  value="{{ settings.updating }}"
+                  hint-placeholder-val="{{ false }}"
+                >
+                  <div
+                    style="
+                      font-family: var(--font-sans);
+                      font-size: 13px;
+                      color: var(--color-text-dim);
+                      margin-top: 2px;
+                    "
+                  >
+                    Downloading and installing…
+                  </div>
+                </sc-if>
+                <sc-if
+                  value="{{ settings.updateIdle }}"
+                  hint-placeholder-val="{{ false }}"
+                >
+                  <div
+                    style="
+                      font-family: var(--font-sans);
+                      font-size: 13px;
+                      color: var(--color-text-faint);
+                      margin-top: 2px;
+                    "
+                  >
+                    You’re up to date. {{ settings.lastCheckedLabel }}
+                  </div>
+                </sc-if>
+              </div>
+              <sc-if
+                value="{{ settings.updateOffered }}"
+                hint-placeholder-val="{{ true }}"
+              >
+                <div style="flex: 0 0 auto">
+                  <dc-import
+                    name="prim.Button"
+                    label="Update now"
+                    variant="primary"
+                    size="md"
+                    icon="none"
+                    on-click="{{ settings.onUpdate }}"
+                    hint-size="120px,44px"
+                  ></dc-import>
+                </div>
+              </sc-if>
+              <sc-if
+                value="{{ settings.updating }}"
+                hint-placeholder-val="{{ false }}"
+              >
+                <button
+                  disabled="disabled"
+                  style="
+                    flex: 0 0 auto;
+                    height: 42px;
+                    padding: 0 22px;
+                    background: var(--color-surface-3);
+                    border: 1px solid var(--color-border);
+                    border-radius: 9px;
+                    color: var(--color-text-faint);
+                    font-family: var(--font-sans);
+                    font-size: 14px;
+                    font-weight: 600;
+                    cursor: default;
+                  "
+                >
+                  Updating…
+                </button>
+              </sc-if>
+              <sc-if
+                value="{{ settings.updateIdle }}"
+                hint-placeholder-val="{{ false }}"
+              >
+                <div style="flex: 0 0 auto">
+                  <dc-import
+                    name="prim.Button"
+                    label="Check for updates"
+                    variant="secondary"
+                    size="md"
+                    icon="none"
+                    on-click="{{ settings.onCheckUpdates }}"
+                    hint-size="150px,44px"
+                  ></dc-import>
+                </div>
+              </sc-if>
+            </div>
+
+            <div
+              style="height: 1px; background: var(--color-border-soft)"
+            ></div>
+
+            <!-- brand / version row -->
+            <div
+              style="
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                padding: 16px 20px;
+              "
+            >
+              <div style="display: flex; align-items: baseline; gap: 1px">
+                <span
+                  style="
+                    font-family: var(--font-serif);
+                    font-weight: 700;
+                    font-size: 18px;
+                    color: var(--color-text);
+                  "
+                  >Family</span
+                ><span
+                  style="
+                    font-family: var(--font-serif);
+                    font-weight: 700;
+                    font-size: 18px;
+                    color: var(--color-accent);
+                  "
+                  >Flix</span
+                >
+              </div>
+              <span
+                style="
+                  font-family: var(--font-mono);
+                  font-size: 13px;
+                  color: var(--color-text-faint);
+                "
+                >{{ settings.version }}</span
+              >
+              <span style="flex: 1"></span>
+              <span
+                style="
+                  font-family: var(--font-sans);
+                  font-size: 13px;
+                  color: var(--color-text-faint);
+                "
+                >Offline · local-only · no account</span
+              >
+            </div>
+          </div>
+        </div>
+      </div>
+    </x-dc>
+    <script
+      type="text/x-dc"
+      data-dc-script
+      data-props='{"$preview":{"width":900,"height":820},"settings":{"editor":null,"tsType":"SettingsModel"}}'
+    ></script>
+  </body>
+</html>
