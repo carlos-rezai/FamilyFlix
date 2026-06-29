@@ -46,6 +46,47 @@ export interface Movie {
   updatedAt: string;
 }
 
+/**
+ * The browse sort orders for `listMovies`. Each maps to one ORDER BY:
+ * - `recently-added` — `created_at DESC` (newest first), `id` tiebreak.
+ * - `a-z` — `title` ascending, case-insensitive.
+ * - `year` — `year DESC` (newest first); unknown year (`null`) sorts last.
+ * - `highest-rated` — `rating DESC`; unrated (`null`) sorts last.
+ * - `unwatched-first` — unwatched, then in-progress, then watched; title A–Z within each.
+ */
+export type MovieSort =
+  | 'recently-added'
+  | 'a-z'
+  | 'year'
+  | 'highest-rated'
+  | 'unwatched-first';
+
+/**
+ * A parameterized browse query: one `sort` plus any combination of filters.
+ * Every filter narrows the result; omitted filters are no-ops. Filters and sort
+ * combine in a single query.
+ */
+export interface MovieQuery {
+  sort: MovieSort;
+  /** Restrict to movies tagged with this genre name (e.g. `'Action'`). */
+  genre?: string;
+  /** Keep only movies with `rating >= minRating`; unrated movies are excluded. */
+  minRating?: number;
+  /** Case-insensitive substring match on the title. */
+  search?: string;
+  /** Keep only favorites. */
+  favoritesOnly?: boolean;
+  /** Keep only in-progress movies (`resumePositionSeconds > 0` and not watched). */
+  inProgressOnly?: boolean;
+}
+
+/** A genre plus how many movies are tagged with it — for the home genre rows. */
+export interface GenreCount {
+  id: string;
+  name: string;
+  count: number;
+}
+
 /** A subtitle track as supplied when adding a movie (ids/positions are assigned). */
 export interface NewSubtitle {
   path: string;

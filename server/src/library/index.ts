@@ -3,7 +3,9 @@ import { randomUUID } from 'node:crypto';
 import { openDatabase } from '../db';
 import type {
   Genre,
+  GenreCount,
   Movie,
+  MovieQuery,
   NewMovie,
   Subtitle,
   WatchStatus,
@@ -26,6 +28,19 @@ export interface LibraryStorage {
   addMovie(input: NewMovie): Movie;
   /** Assemble and return the full movie model, or `null` for an unknown id. */
   getMovie(id: string): Movie | null;
+  /**
+   * Browse the library through one parameterized query: a required sort plus any
+   * combination of genre / minRating / search / favoritesOnly / inProgressOnly
+   * filters. Returns fully-assembled movies, or `[]` when nothing matches.
+   */
+  listMovies(query: MovieQuery): Movie[];
+  /**
+   * Search movies by case-insensitive title substring, returning fully-assembled
+   * movies (or `[]`). Equivalent to a `listMovies` call with the `search` filter.
+   */
+  searchMovies(text: string): Movie[];
+  /** List only genres with at least one movie, each with its movie count. */
+  listGenres(): GenreCount[];
   /** Close the underlying database connection. */
   close(): void;
 }
