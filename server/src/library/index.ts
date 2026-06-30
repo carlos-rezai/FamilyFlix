@@ -42,6 +42,20 @@ export interface LibraryStorage {
   searchMovies(text: string): Movie[];
   /** List only genres with at least one movie, each with its movie count. */
   listGenres(): GenreCount[];
+  /**
+   * Persist the resume position (seconds into the file). Called constantly during
+   * playback, so it stays a cheap single-column write — only
+   * `resume_position_seconds` is touched, not `updated_at`.
+   */
+  setResumePosition(id: string, seconds: number): void;
+  /**
+   * Mark a movie watched. By convention this also zeroes
+   * `resume_position_seconds`, so a finished movie leaves the Continue Watching
+   * row.
+   */
+  markWatched(id: string): void;
+  /** Clear the watched flag, leaving any resume position untouched. */
+  markUnwatched(id: string): void;
   /** Close the underlying database connection. */
   close(): void;
 }
@@ -225,6 +239,16 @@ export function createSqliteStorage(dbPath: string): LibraryStorage {
     WHERE movie_id = ?
     ORDER BY position
   `);
+  const updateResumePosition = db.prepare(
+    'UPDATE movies SET resume_position_seconds = ? WHERE id = ?'
+  );
+  const updateMarkWatched = db.prepare(
+    'UPDATE movies SET watched = 1, resume_position_seconds = 0 WHERE id = ?'
+  );
+  const updateMarkUnwatched = db.prepare(
+    'UPDATE movies SET watched = 0 WHERE id = ?'
+  );
+
   const selectGenreCounts = db.prepare(`
     SELECT g.id AS id, g.name AS name, COUNT(mg.movie_id) AS count
     FROM genres g
@@ -313,12 +337,27 @@ export function createSqliteStorage(dbPath: string): LibraryStorage {
     return selectGenreCounts.all() as GenreCount[];
   }
 
+  function setResumePosition(id: string, seconds: number): void {
+    updateResumePosition.run(seconds, id);
+  }
+
+  function markWatched(id: string): void {
+    updateMarkWatched.run(id);
+  }
+
+  function markUnwatched(id: string): void {
+    updateMarkUnwatched.run(id);
+  }
+
   return {
     addMovie,
     getMovie,
     listMovies,
     searchMovies,
     listGenres,
+    setResumePosition,
+    markWatched,
+    markUnwatched,
     close() {
       db.close();
     },
