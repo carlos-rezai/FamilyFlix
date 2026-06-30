@@ -56,6 +56,17 @@ export interface LibraryStorage {
   markWatched(id: string): void;
   /** Clear the watched flag, leaving any resume position untouched. */
   markUnwatched(id: string): void;
+  /**
+   * Toggle the favorite flag, surfaced through the partial `is_favorite` index
+   * that powers the Favorites row.
+   */
+  setFavorite(id: string, value: boolean): void;
+  /**
+   * Set a 0–10 half-star rating, or clear it to unrated with `null` (distinct
+   * from a stored `0`). An out-of-range value is rejected by the schema CHECK
+   * and never persisted.
+   */
+  setRating(id: string, units: number | null): void;
   /** Close the underlying database connection. */
   close(): void;
 }
@@ -248,6 +259,10 @@ export function createSqliteStorage(dbPath: string): LibraryStorage {
   const updateMarkUnwatched = db.prepare(
     'UPDATE movies SET watched = 0 WHERE id = ?'
   );
+  const updateFavorite = db.prepare(
+    'UPDATE movies SET is_favorite = ? WHERE id = ?'
+  );
+  const updateRating = db.prepare('UPDATE movies SET rating = ? WHERE id = ?');
 
   const selectGenreCounts = db.prepare(`
     SELECT g.id AS id, g.name AS name, COUNT(mg.movie_id) AS count
@@ -349,6 +364,14 @@ export function createSqliteStorage(dbPath: string): LibraryStorage {
     updateMarkUnwatched.run(id);
   }
 
+  function setFavorite(id: string, value: boolean): void {
+    updateFavorite.run(value ? 1 : 0, id);
+  }
+
+  function setRating(id: string, units: number | null): void {
+    updateRating.run(units, id);
+  }
+
   return {
     addMovie,
     getMovie,
@@ -358,6 +381,8 @@ export function createSqliteStorage(dbPath: string): LibraryStorage {
     setResumePosition,
     markWatched,
     markUnwatched,
+    setFavorite,
+    setRating,
     close() {
       db.close();
     },
