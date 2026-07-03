@@ -9,6 +9,7 @@ import type {
 import { createMovieReader } from './read/read';
 import { createBrowse } from './browse/browse';
 import { createWrite } from './write/write';
+import { createWatch } from './watch/watch';
 
 /**
  * The repository seam every consumer (routes, importer, player) reads and writes
@@ -93,32 +94,12 @@ export function createSqliteStorage(dbPath: string): LibraryStorage {
   const reader = createMovieReader(db);
   const browse = createBrowse(db, reader);
   const write = createWrite(db, reader);
+  const watch = createWatch(db);
 
-  const updateResumePosition = db.prepare(
-    'UPDATE movies SET resume_position_seconds = ? WHERE id = ?'
-  );
-  const updateMarkWatched = db.prepare(
-    'UPDATE movies SET watched = 1, resume_position_seconds = 0 WHERE id = ?'
-  );
-  const updateMarkUnwatched = db.prepare(
-    'UPDATE movies SET watched = 0 WHERE id = ?'
-  );
   const updateFavorite = db.prepare(
     'UPDATE movies SET is_favorite = ? WHERE id = ?'
   );
   const updateRating = db.prepare('UPDATE movies SET rating = ? WHERE id = ?');
-
-  function setResumePosition(id: string, seconds: number): void {
-    updateResumePosition.run(seconds, id);
-  }
-
-  function markWatched(id: string): void {
-    updateMarkWatched.run(id);
-  }
-
-  function markUnwatched(id: string): void {
-    updateMarkUnwatched.run(id);
-  }
 
   function setFavorite(id: string, value: boolean): void {
     updateFavorite.run(value ? 1 : 0, id);
@@ -136,9 +117,9 @@ export function createSqliteStorage(dbPath: string): LibraryStorage {
     listMovies: browse.listMovies,
     searchMovies: browse.searchMovies,
     listGenres: browse.listGenres,
-    setResumePosition,
-    markWatched,
-    markUnwatched,
+    setResumePosition: watch.setResumePosition,
+    markWatched: watch.markWatched,
+    markUnwatched: watch.markUnwatched,
     setFavorite,
     setRating,
     close() {
