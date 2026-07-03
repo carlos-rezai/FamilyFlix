@@ -117,3 +117,28 @@ export interface NewMovie {
   genres?: string[];
   subtitles?: NewSubtitle[];
 }
+
+/**
+ * A metadata edit applied by `updateMovie`. Every field is optional — an omitted
+ * key leaves that column/collection untouched; a supplied one overwrites it.
+ *
+ * Scope is metadata only: watched/resume, favorite, and rating are deliberately
+ * absent, so a metadata edit never disturbs state owned by `markWatched`,
+ * `setFavorite`, or `setRating`. Supplying `genres` or `subtitles` REPLACES the
+ * whole collection (ids/positions are reassigned); nullable scalars accept `null`
+ * to clear them. All paths stay relative, exactly as stored.
+ */
+export interface MoviePatch {
+  title?: string;
+  tmdbId?: number | null;
+  year?: number | null;
+  runtimeMinutes?: number | null;
+  synopsis?: string | null;
+  director?: string | null;
+  cast?: string[];
+  videoPath?: string;
+  posterPath?: string | null;
+  backdropPath?: string | null;
+  genres?: string[];
+  subtitles?: NewSubtitle[];
+}

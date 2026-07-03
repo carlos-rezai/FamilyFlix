@@ -5,6 +5,7 @@ import type {
   Genre,
   GenreCount,
   Movie,
+  MoviePatch,
   MovieQuery,
   MovieSort,
   NewMovie,
@@ -27,6 +28,19 @@ export interface LibraryStorage {
    * the transaction commits nothing.
    */
   addMovie(input: NewMovie): Movie;
+  /**
+   * Edit a movie's metadata (scalars, plus genre/subtitle collections) in one
+   * transaction, refresh `updated_at`, and return the persisted full model. A
+   * supplied `genres`/`subtitles` replaces that whole collection; an omitted key
+   * leaves it untouched. Watch state, favorite, and rating are out of scope.
+   * Throws on an unknown id; a failure inside the transaction commits nothing.
+   */
+  updateMovie(id: string, patch: MoviePatch): Movie;
+  /**
+   * Delete a movie, cascading to its `movie_genres` and `subtitles` rows so no
+   * orphans remain. A silent, idempotent no-op for an unknown id.
+   */
+  deleteMovie(id: string): void;
   /** Assemble and return the full movie model, or `null` for an unknown id. */
   getMovie(id: string): Movie | null;
   /**
@@ -207,6 +221,29 @@ function buildListQuery(query: MovieQuery): {
 }
 
 /**
+ * The scalar {@link MoviePatch} keys mapped to their `movies` column and (where
+ * needed) a value coercion. Drives {@link updateMovie}'s dynamic `SET` list: only
+ * keys present on the patch are emitted, so an omitted key leaves its column
+ * untouched. `genres`/`subtitles` are handled separately (they touch other tables).
+ */
+const PATCH_SCALARS: ReadonlyArray<{
+  key: keyof MoviePatch;
+  column: string;
+  toDb?: (value: unknown) => unknown;
+}> = [
+  { key: 'title', column: 'title' },
+  { key: 'tmdbId', column: 'tmdb_id' },
+  { key: 'year', column: 'year' },
+  { key: 'runtimeMinutes', column: 'runtime_minutes' },
+  { key: 'synopsis', column: 'synopsis' },
+  { key: 'director', column: 'director' },
+  { key: 'cast', column: 'cast', toDb: (v) => (v ? JSON.stringify(v) : null) },
+  { key: 'videoPath', column: 'video_path' },
+  { key: 'posterPath', column: 'poster_path' },
+  { key: 'backdropPath', column: 'backdrop_path' },
+];
+
+/**
  * Build a {@link LibraryStorage} backed by a SQLite database at `dbPath`. Opening
  * runs pending migrations, so a fresh database is created and seeded on first use.
  * Statements are prepared once here and reused per call.
@@ -263,6 +300,13 @@ export function createSqliteStorage(dbPath: string): LibraryStorage {
     'UPDATE movies SET is_favorite = ? WHERE id = ?'
   );
   const updateRating = db.prepare('UPDATE movies SET rating = ? WHERE id = ?');
+  const deleteMovieGenres = db.prepare(
+    'DELETE FROM movie_genres WHERE movie_id = ?'
+  );
+  const deleteMovieSubtitles = db.prepare(
+    'DELETE FROM subtitles WHERE movie_id = ?'
+  );
+  const deleteMovieRow = db.prepare('DELETE FROM movies WHERE id = ?');
 
   const selectGenreCounts = db.prepare(`
     SELECT g.id AS id, g.name AS name, COUNT(mg.movie_id) AS count
@@ -334,6 +378,73 @@ export function createSqliteStorage(dbPath: string): LibraryStorage {
     return movie;
   }
 
+  const updateMovieGraph = db.transaction((id: string, patch: MoviePatch) => {
+    const existing = selectMovie.get(id) as MovieRow | undefined;
+    if (!existing) {
+      throw new Error(`Unknown movie: ${id}`);
+    }
+
+    // Emit a `SET` only for the scalar keys actually present on the patch; an
+    // omitted key leaves its column untouched. `updated_at` always refreshes.
+    const assignments: string[] = [];
+    const params: Record<string, unknown> = { id };
+    for (const { key, column, toDb } of PATCH_SCALARS) {
+      const value = patch[key];
+      if (value !== undefined) {
+        assignments.push(`${column} = @${column}`);
+        params[column] = toDb ? toDb(value) : value;
+      }
+    }
+    assignments.push('updated_at = @updated_at');
+    params.updated_at = new Date().toISOString();
+    db.prepare(
+      `UPDATE movies SET ${assignments.join(', ')} WHERE id = @id`
+    ).run(params);
+
+    // A supplied collection replaces the whole set: drop the old links/tracks,
+    // then re-insert in the given order with fresh positions (and subtitle ids).
+    if (patch.genres !== undefined) {
+      deleteMovieGenres.run(id);
+      patch.genres.forEach((name, position) => {
+        const genre = selectGenreIdByName.get(name) as
+          | { id: string }
+          | undefined;
+        if (!genre) {
+          throw new Error(`Unknown genre: ${name}`);
+        }
+        insertMovieGenre.run({ movie_id: id, genre_id: genre.id, position });
+      });
+    }
+
+    if (patch.subtitles !== undefined) {
+      deleteMovieSubtitles.run(id);
+      patch.subtitles.forEach((subtitle, position) => {
+        insertSubtitle.run({
+          id: randomUUID(),
+          movie_id: id,
+          path: subtitle.path,
+          language: subtitle.language,
+          position,
+        });
+      });
+    }
+  });
+
+  function updateMovie(id: string, patch: MoviePatch): Movie {
+    updateMovieGraph(id, patch);
+    const movie = getMovie(id);
+    if (!movie) {
+      throw new Error(`Failed to persist movie ${id}`);
+    }
+    return movie;
+  }
+
+  function deleteMovie(id: string): void {
+    // FK `ON DELETE CASCADE` on movie_genres/subtitles clears the children; an
+    // unknown id simply affects zero rows (idempotent no-op).
+    deleteMovieRow.run(id);
+  }
+
   function listMovies(query: MovieQuery): Movie[] {
     const { sql, params } = buildListQuery(query);
     const rows = db.prepare(sql).all(...params) as MovieRow[];
@@ -374,6 +485,8 @@ export function createSqliteStorage(dbPath: string): LibraryStorage {
 
   return {
     addMovie,
+    updateMovie,
+    deleteMovie,
     getMovie,
     listMovies,
     searchMovies,

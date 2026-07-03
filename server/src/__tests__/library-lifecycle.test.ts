@@ -191,7 +191,8 @@ describe('library: updateMovie', () => {
     // Fresh ids/positions for the replacement track.
     expect(updated.subtitles[0].position).toBe(0);
     expect(
-      typeof updated.subtitles[0].id === 'string' && updated.subtitles[0].id
+      typeof updated.subtitles[0].id === 'string' &&
+        updated.subtitles[0].id.length > 0
     ).toBe(true);
   });
 
