@@ -2,15 +2,16 @@
 
 ## Problem Statement
 
-`server/src/library/index.ts` is a single ~390-line file that holds the
+`server/src/library/index.ts` is a single ~500-line file that holds the
 entire `LibraryStorage` repository: the public interface, every raw row
 type, the row→model mapping, the ORDER BY table, the query builder, all
-~15 prepared statements, the `addMovie` transaction, and every read,
-browse, watch, and curation method. It works, but it's one flat file
-that only grows — `updateMovie`/`deleteMovie`, missing-file detection,
-and more are still coming — and its tests sit apart from it in
+the prepared statements, the `addMovie`/`updateMovie` transactions, the
+`deleteMovie` cascade, and every read, browse, watch, and curation
+method. It works, but it's one flat file that only grows — missing-file
+detection and more are still coming — and its tests sit apart from it in
 `server/src/__tests__/` (`library.test.ts`, `library-browse.test.ts`,
-`library-watch.test.ts`, `library-curation.test.ts`).
+`library-watch.test.ts`, `library-curation.test.ts`,
+`library-lifecycle.test.ts`).
 
 Two things bother the developer:
 
@@ -58,9 +59,11 @@ The work happens in three phases, each commit leaving the suite green:
   net for the risky code-move phase. Behavior-preserving.
 - **Phase B — relocate tests.** Move each test next to the module it
   exercises. No logic change.
-- **Phase C — additive changes.** On top of the clean structure, add
-  `deleteMovie`, add `updateMovie`, and batch the `listMovies` genre/
-  subtitle reads — each as its own isolated commit.
+- **Phase C — additive changes.** On top of the clean structure, widen
+  `updateMovie` to an all-columns patch and batch the `listMovies` genre/
+  subtitle reads — each as its own isolated commit. (`updateMovie` and
+  `deleteMovie` themselves already shipped in issue #7; Phase A moves
+  them, so they are not re-added here.)
 
 ## Commits
 
@@ -93,9 +96,12 @@ Each bullet is one commit that leaves the whole test suite passing
 
 4. **`refactor: [library-core] issue #<n> extract write module`**
    Create `library/write/write.ts` exporting `createWrite(db, reader)`
-   with `addMovie`, its prepared inserts, the `insertMovieGraph`
-   transaction, and the genre-id lookup. Returns `reader.getMovie(id)`.
-   `index.ts` wires it. Green.
+   with `addMovie`, `updateMovie`, and `deleteMovie` — all already
+   implemented in `index.ts` from issue #7. Move their prepared inserts,
+   the `insertMovieGraph`/`updateMovieGraph` transactions, the delete
+   statements, the `PATCH_SCALARS` map, and the shared genre-id lookup
+   (`selectGenreIdByName`). `addMovie`/`updateMovie` return
+   `reader.getMovie(id)`. `index.ts` wires it. Behavior-preserving. Green.
 
 5. **`refactor: [library-core] issue #<n> extract watch module`**
    Create `library/watch/watch.ts` exporting `createWatch(db)` with
@@ -130,28 +136,35 @@ Each bullet is one commit that leaves the whole test suite passing
     insert cases go to `write/write.test.ts`. Both assert through the
     public barrel. Green.
 
-11. **`refactor: [library-core] issue #<n> co-locate db test`**
+11. **`refactor: [library-core] issue #<n> co-locate lifecycle test`**
+    Move `__tests__/library-lifecycle.test.ts` (issue #7's `updateMovie`/
+    `deleteMovie` cases) → `write/write.test.ts`, merging it with the
+    `addMovie` cases already there and updating its import to the barrel
+    (`..`). No logic change. Green.
+
+12. **`refactor: [library-core] issue #<n> co-locate db test`**
     Move `__tests__/db.test.ts` → `db/db.test.ts`. `__tests__/` is now
     empty — remove it. Green.
 
 ### Phase C — additive changes (each isolated, on the clean structure)
 
-12. **`feat: [library-core] issue #<n> add deleteMovie`**
-    Add `deleteMovie(id): void` to the `LibraryStorage` interface and the
-    `write/` module — a single `DELETE FROM movies`, relying on the
-    existing `ON DELETE CASCADE` FKs to remove `movie_genres` and
-    `subtitles` rows. Add `write/write.test.ts` cases asserting the movie
-    is gone and its genres/subtitles cascaded. No schema change. Green.
+> `deleteMovie` and the base (metadata-only) `updateMovie` already shipped
+> in issue #7; Phase A/B relocate them, so they are not re-added here.
+> What remains additive is widening `updateMovie` and the N+1 fix.
 
-13. **`feat: [library-core] issue #<n> add updateMovie`**
-    Add a `MoviePatch` type to `src/types` and `updateMovie(id, patch):
-Movie` to the interface + `write/` module. Transactional: patch every
-    provided column dynamically (including rating/is_favorite/watched/
-    resume — a single general entry point); if `genres` is present,
-    replace `movie_genres`; if `subtitles` is present, replace
-    `subtitles`; bump `updated_at`; return `reader.getMovie(id)`. It
-    carries no side-effect conventions (unlike `markWatched`, it does not
-    auto-zero resume). Add `write/write.test.ts` cases. Green.
+13. **`feat: [library-core] issue #<n> widen updateMovie to all-columns`**
+    Extend `MoviePatch` (in `src/types`) and the `write/` module's
+    `PATCH_SCALARS` map to also cover `rating`, `isFavorite`, `watched`,
+    and `resumePositionSeconds`, so `updateMovie` becomes the single
+    general entry point that can patch any column. Provided fields are
+    written; omitted fields stay untouched; it applies no side-effect
+    conventions (unlike `markWatched` it does not auto-zero resume, and
+    unlike `setResumePosition` it does bump `updated_at`). No schema
+    change — every column already exists; rating still respects its
+    `CHECK`. Update the relocated lifecycle cases in `write/write.test.ts`:
+    drop issue #7's "metadata-only, never disturbs watch/favorite/rating"
+    framing in favor of "omitted fields untouched," and add cases
+    asserting each newly-patchable column round-trips. Green.
 
 14. **`refactor: [library-core] issue #<n> batch listMovies reads`**
     Replace the per-row genre/subtitle fetches in `listMovies` with two
@@ -195,15 +208,31 @@ Movie` to the interface + `write/` module. Transactional: patch every
 - **`LibraryStorage` interface stays the public contract in
   `index.ts`.** Each factory can type its return as its own slice; the
   merged object satisfies `LibraryStorage`.
-- **`updateMovie` semantics — single general entry point.** `MoviePatch`
-  may include any patchable column, including `rating`, `is_favorite`,
-  `watched`, and `resume_position_seconds`. Provided fields are written;
-  omitted fields are untouched. `genres`/`subtitles`, if present, replace
-  the existing rows; if absent, they're left alone. `updated_at` is
-  bumped. It applies **no** implicit conventions. The dedicated mutators
-  remain because they serve different needs: `setResumePosition` is a hot
-  single-column write that deliberately does not bump `updated_at`, and
-  `markWatched` keeps its "flip watched + zero resume" convenience.
+- **`updateMovie` semantics — single general entry point (widened).**
+  Issue #7 shipped `updateMovie` as a **metadata-only** patch —
+  watched/resume, favorite, and rating were deliberately excluded and
+  left to their dedicated mutators. This refactor's Phase C **widens** it:
+  `MoviePatch` gains `rating`, `isFavorite`, `watched`, and
+  `resumePositionSeconds`, making it the single general entry point that
+  may patch any column. Provided fields are written; omitted fields are
+  untouched. `genres`/`subtitles`, if present, replace the existing rows;
+  if absent, they're left alone. `updated_at` is bumped. It applies **no**
+  implicit conventions. The dedicated mutators remain because they serve
+  different needs: `setResumePosition` is a hot single-column write that
+  deliberately does not bump `updated_at`, and `markWatched` keeps its
+  "flip watched + zero resume" convenience. **This widening is an
+  intentional behavior change, not a pure reorg — it reverses issue #7's
+  metadata-only scope** (a deliberate developer decision, confirmed while
+  updating this plan post-#7).
+- **`MoviePatch` already exists.** Issue #7 added it to `src/types` with
+  the metadata-only field set. Phase C **extends** the existing type
+  rather than creating it, and updates its "metadata only" doc-comment.
+- **Behaviors locked by issue #7, preserved through the reorg.** These are
+  now part of the safety net, not open decisions: `updateMovie` on an
+  unknown id **throws** (its return type is non-null `Movie`);
+  `deleteMovie` on an unknown id is a **silent, idempotent no-op**;
+  supplying `genres`/`subtitles` **replaces** the whole collection
+  (ids/positions reassigned), while omitting a key leaves it untouched.
 - **`deleteMovie` relies on existing FK cascade.** `movie_genres.movie_id`
   and `subtitles.movie_id` already declare `ON DELETE CASCADE`, and the
   connection sets `foreign_keys = ON`, so `deleteMovie` is a single
@@ -236,11 +265,17 @@ Movie` to the interface + `write/` module. Transactional: patch every
   is the safety net; keeping it green through every extraction is the
   entire point of a behavior-preserving refactor. Phase B only relocates
   and (for `library.test.ts`) re-partitions existing cases.
-- **Modules that gain new tests (Phase C):** `write/` gets `deleteMovie`
-  (movie removed + genres/subtitles cascaded) and `updateMovie` (each
-  patchable field written; omitted fields unchanged; genres/subtitles
-  replaced when present; `updated_at` bumped; rating CHECK still
-  enforced) cases. `browse/`/`read/` need no new behavioral tests for the
+- **The lifecycle tests move, they aren't re-created.** Issue #7's
+  `updateMovie`/`deleteMovie` cases already live in
+  `__tests__/library-lifecycle.test.ts` (movie removed + genres/subtitles
+  cascaded; each metadata field written; omitted fields unchanged;
+  genres/subtitles replaced when present; `updated_at` bumped; rating
+  CHECK still enforced; transactional rollback; unknown-id semantics).
+  Phase B relocates them into `write/write.test.ts` unchanged. Phase C's
+  widening commit then edits them: drop the "metadata-only never touches
+  watch/favorite/rating" assertions and add cases proving `rating`,
+  `isFavorite`, `watched`, and `resumePositionSeconds` round-trip through
+  `updateMovie`. `browse/`/`read/` need no new behavioral tests for the
   N+1 fix — the existing multi-genre / multi-subtitle assembly and
   ordering assertions are the guard that batching changed nothing; add
   one only if a gap surfaces.
@@ -268,12 +303,13 @@ Movie` to the interface + `write/` module. Transactional: patch every
 
 - Suggested phase gating: land Phase A + B first (pure structural move,
   fully green, easy to review as "no behavior change"), then Phase C. If
-  review pressure mounts, Phase C's three commits (`deleteMovie`,
-  `updateMovie`, N+1) can each be split into their own follow-up PR
-  without affecting the reorg.
+  review pressure mounts, Phase C's two commits (`updateMovie` widening,
+  N+1) can each be split into their own follow-up PR without affecting
+  the reorg.
 - `updateMovie` as an all-columns patcher overlaps the dedicated
-  mutators by design (developer's call). The mitigation against write-
-  path drift is documentation, not code: `updateMovie` writes exactly
-  what it's given with no conventions, while the mutators own the
-  hot-path and side-effect behaviors. Worth a short note in the
-  `LibraryStorage` interface doc-comment when it's added.
+  mutators by design (developer's call — see the Phase C widening
+  commit). The mitigation against write-path drift is documentation, not
+  code: `updateMovie` writes exactly what it's given with no conventions,
+  while the mutators own the hot-path and side-effect behaviors. Update
+  the `MoviePatch` doc-comment (it currently declares "metadata only")
+  and the `LibraryStorage` interface doc as part of that commit.
