@@ -86,18 +86,37 @@ export function mapRowToMovie(
   };
 }
 
+/** A child row tagged with its owning movie id, for the batched set reads. */
+interface GenreRowWithMovie extends GenreRow {
+  movie_id: string;
+}
+interface SubtitleRowWithMovie extends SubtitleRow {
+  movie_id: string;
+}
+
 /**
- * The shared read path: `getMovie` plus the `assemble` step that turns a movie
- * row into a full {@link Movie} by attaching its ordered genres and subtitles.
- * `browse/` reuses `assemble` per listed row and `write/` reuses `getMovie` for
- * its post-write return value, so the movie-row select and the two ordered
- * child selects are prepared once here and never leak past this factory.
+ * The shared read path: `getMovie` (single row), `assemble` (one already-fetched
+ * row), and `assembleMany` (a whole browse result set without the per-row N+1).
+ * `write/` reuses `getMovie` for its post-write return value and `browse/` uses
+ * `assembleMany`, so the movie-row select and the two ordered child selects are
+ * prepared once here and never leak past this factory.
  */
 export interface MovieReader {
   /** Assemble and return the full movie model, or `null` for an unknown id. */
   getMovie(id: string): Movie | null;
   /** Attach a row's ordered genres and subtitles and map it to a full model. */
   assemble(row: MovieRow): Movie;
+  /**
+   * Assemble a whole ordered row set with two set-based child reads instead of
+   * two-per-row. `whereClause`/`params` are `buildListQuery`'s filter, re-run as
+   * a subquery to scope the genre/subtitle reads to exactly `rows`. Output is
+   * identical to mapping {@link assemble} over `rows`, order preserved.
+   */
+  assembleMany(
+    rows: MovieRow[],
+    whereClause: string,
+    params: unknown[]
+  ): Movie[];
 }
 
 export function createMovieReader(db: SqliteDatabase): MovieReader {
@@ -130,5 +149,71 @@ export function createMovieReader(db: SqliteDatabase): MovieReader {
     return assemble(row);
   }
 
-  return { getMovie, assemble };
+  function assembleMany(
+    rows: MovieRow[],
+    whereClause: string,
+    params: unknown[]
+  ): Movie[] {
+    if (rows.length === 0) {
+      return [];
+    }
+
+    // Two set reads scoped to the same filtered movie set the list query used.
+    // `ORDER BY movie_id, position` keeps each movie's children in track order,
+    // so grouping in scan order preserves genres[0]-primary and subtitle order.
+    const genreRows = db
+      .prepare(
+        `SELECT mg.movie_id AS movie_id, g.id AS id, g.name AS name
+         FROM movie_genres mg
+         JOIN genres g ON g.id = mg.genre_id
+         WHERE mg.movie_id IN (SELECT m.id FROM movies m ${whereClause})
+         ORDER BY mg.movie_id, mg.position`
+      )
+      .all(...params) as GenreRowWithMovie[];
+    const subtitleRows = db
+      .prepare(
+        `SELECT movie_id, id, path, language, position
+         FROM subtitles
+         WHERE movie_id IN (SELECT m.id FROM movies m ${whereClause})
+         ORDER BY movie_id, position`
+      )
+      .all(...params) as SubtitleRowWithMovie[];
+
+    const genresByMovie = new Map<string, Genre[]>();
+    for (const gr of genreRows) {
+      const genre: Genre = { id: gr.id, name: gr.name };
+      const list = genresByMovie.get(gr.movie_id);
+      if (list) {
+        list.push(genre);
+      } else {
+        genresByMovie.set(gr.movie_id, [genre]);
+      }
+    }
+
+    const subtitlesByMovie = new Map<string, Subtitle[]>();
+    for (const sr of subtitleRows) {
+      const subtitle: Subtitle = {
+        id: sr.id,
+        path: sr.path,
+        language: sr.language,
+        position: sr.position,
+      };
+      const list = subtitlesByMovie.get(sr.movie_id);
+      if (list) {
+        list.push(subtitle);
+      } else {
+        subtitlesByMovie.set(sr.movie_id, [subtitle]);
+      }
+    }
+
+    return rows.map((row) =>
+      mapRowToMovie(
+        row,
+        genresByMovie.get(row.id) ?? [],
+        subtitlesByMovie.get(row.id) ?? []
+      )
+    );
+  }
+
+  return { getMovie, assemble, assembleMany };
 }

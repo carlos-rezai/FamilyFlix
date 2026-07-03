@@ -30,6 +30,7 @@ const ORDER_BY: Record<MovieSort, string> = {
  */
 function buildListQuery(query: MovieQuery): {
   sql: string;
+  whereClause: string;
   params: unknown[];
 } {
   const where: string[] = [];
@@ -59,7 +60,7 @@ function buildListQuery(query: MovieQuery): {
 
   const whereClause = where.length > 0 ? `WHERE ${where.join(' AND ')}` : '';
   const sql = `SELECT m.* FROM movies m ${whereClause} ORDER BY ${ORDER_BY[query.sort]}`;
-  return { sql, params };
+  return { sql, whereClause, params };
 }
 
 /** The read-only browse slice of the repository: the parameterized `listMovies`
@@ -80,9 +81,9 @@ export function createBrowse(db: SqliteDatabase, reader: MovieReader): Browse {
   `);
 
   function listMovies(query: MovieQuery): Movie[] {
-    const { sql, params } = buildListQuery(query);
+    const { sql, whereClause, params } = buildListQuery(query);
     const rows = db.prepare(sql).all(...params) as MovieRow[];
-    return rows.map((row) => reader.assemble(row));
+    return reader.assembleMany(rows, whereClause, params);
   }
 
   function searchMovies(text: string): Movie[] {
