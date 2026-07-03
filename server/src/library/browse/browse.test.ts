@@ -13,8 +13,8 @@
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { createSqliteStorage } from '../library';
-import type { MovieSort, NewMovie } from '../../../src/types';
+import { createSqliteStorage } from '..';
+import type { MovieSort, NewMovie } from '../../../../src/types';
 
 // --- per-test resource tracking ------------------------------------------------
 
