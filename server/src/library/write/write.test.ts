@@ -359,11 +359,14 @@ describe('library: updateMovie', () => {
     expect(storage.getMovie(added.id)?.updatedAt).toBe(updated.updatedAt);
   });
 
-  it('does not disturb watch state, favorite, or rating (metadata-only patch)', () => {
+  it('leaves omitted watch/favorite/rating fields untouched', () => {
     const storage = freshStorage();
     const added = storage.addMovie(fullMovie({ isFavorite: true, rating: 7 }));
     storage.setResumePosition(added.id, 640);
 
+    // A patch that names none of these leaves them exactly as they were — not
+    // because they are out of scope (they are patchable), but because they were
+    // omitted.
     const updated = storage.updateMovie(added.id, { title: 'Renamed' });
 
     expect(updated.isFavorite).toBe(true);
@@ -371,6 +374,61 @@ describe('library: updateMovie', () => {
     expect(updated.resumePositionSeconds).toBe(640);
     expect(updated.watched).toBe(false);
     expect(updated.status).toBe('in-progress');
+  });
+
+  it('patches the rating, and clears it to unrated with null', () => {
+    const storage = freshStorage();
+    const added = storage.addMovie(fullMovie({ rating: 7 }));
+
+    expect(storage.updateMovie(added.id, { rating: 9 }).rating).toBe(9);
+    // null clears back to unrated (distinct from a stored 0).
+    const cleared = storage.updateMovie(added.id, { rating: null });
+    expect(cleared.rating).toBeNull();
+    expect(storage.getMovie(added.id)?.rating).toBeNull();
+  });
+
+  it('patches the favorite flag', () => {
+    const storage = freshStorage();
+    const added = storage.addMovie(fullMovie());
+    expect(added.isFavorite).toBe(false);
+
+    expect(storage.updateMovie(added.id, { isFavorite: true }).isFavorite).toBe(
+      true
+    );
+    expect(
+      storage.updateMovie(added.id, { isFavorite: false }).isFavorite
+    ).toBe(false);
+  });
+
+  it('patches watched without zeroing the resume position (no markWatched convention)', () => {
+    const storage = freshStorage();
+    const added = storage.addMovie(fullMovie());
+    storage.setResumePosition(added.id, 640);
+
+    // markWatched would zero the resume position; updateMovie applies no such
+    // convention — it writes exactly what it's given.
+    const updated = storage.updateMovie(added.id, { watched: true });
+
+    expect(updated.watched).toBe(true);
+    expect(updated.resumePositionSeconds).toBe(640);
+    expect(updated.status).toBe('watched');
+  });
+
+  it('patches the resume position and bumps updated_at', () => {
+    const storage = freshStorage();
+    const added = storage.addMovie(fullMovie());
+
+    const updated = storage.updateMovie(added.id, {
+      resumePositionSeconds: 900,
+    });
+
+    expect(updated.resumePositionSeconds).toBe(900);
+    expect(updated.status).toBe('in-progress');
+    // Unlike setResumePosition (which leaves updated_at alone), a patch bumps it.
+    expect(Date.parse(updated.updatedAt)).toBeGreaterThanOrEqual(
+      Date.parse(added.updatedAt)
+    );
+    expect(storage.getMovie(added.id)?.resumePositionSeconds).toBe(900);
   });
 
   it('stores edited paths verbatim, keeping them relative', () => {

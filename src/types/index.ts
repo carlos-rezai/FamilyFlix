@@ -119,14 +119,19 @@ export interface NewMovie {
 }
 
 /**
- * A metadata edit applied by `updateMovie`. Every field is optional — an omitted
- * key leaves that column/collection untouched; a supplied one overwrites it.
+ * A general edit applied by `updateMovie` — the single entry point that can patch
+ * any column. Every field is optional: a supplied key overwrites its column, an
+ * omitted key leaves it untouched.
  *
- * Scope is metadata only: watched/resume, favorite, and rating are deliberately
- * absent, so a metadata edit never disturbs state owned by `markWatched`,
- * `setFavorite`, or `setRating`. Supplying `genres` or `subtitles` REPLACES the
- * whole collection (ids/positions are reassigned); nullable scalars accept `null`
- * to clear them. All paths stay relative, exactly as stored.
+ * It applies NO side-effect conventions — it writes exactly what it's given.
+ * Unlike `markWatched`, setting `watched` does not auto-zero the resume position;
+ * unlike `setResumePosition` (a hot single-column write), any edit here bumps
+ * `updated_at`. The dedicated mutators (`markWatched`, `setResumePosition`,
+ * `setFavorite`, `setRating`) still own those hot-path and side-effect behaviors.
+ *
+ * Supplying `genres` or `subtitles` REPLACES the whole collection (ids/positions
+ * are reassigned); nullable scalars accept `null` to clear them (`rating: null`
+ * is unrated, distinct from `0`). All paths stay relative, exactly as stored.
  */
 export interface MoviePatch {
   title?: string;
@@ -136,6 +141,10 @@ export interface MoviePatch {
   synopsis?: string | null;
   director?: string | null;
   cast?: string[];
+  rating?: number | null;
+  isFavorite?: boolean;
+  watched?: boolean;
+  resumePositionSeconds?: number;
   videoPath?: string;
   posterPath?: string | null;
   backdropPath?: string | null;

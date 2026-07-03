@@ -28,11 +28,14 @@ export interface LibraryStorage {
    */
   addMovie(input: NewMovie): Movie;
   /**
-   * Edit a movie's metadata (scalars, plus genre/subtitle collections) in one
-   * transaction, refresh `updated_at`, and return the persisted full model. A
-   * supplied `genres`/`subtitles` replaces that whole collection; an omitted key
-   * leaves it untouched. Watch state, favorite, and rating are out of scope.
-   * Throws on an unknown id; a failure inside the transaction commits nothing.
+   * Edit a movie in one transaction, refresh `updated_at`, and return the
+   * persisted full model. This is the single general write path: any column can
+   * be patched (including watch state, favorite, and rating), a supplied
+   * `genres`/`subtitles` replaces that whole collection, and an omitted key
+   * leaves its column/collection untouched. It applies no side-effect conventions
+   * — the dedicated mutators (`markWatched`, `setResumePosition`, `setFavorite`,
+   * `setRating`) own the hot-path and side-effect behaviors. Throws on an unknown
+   * id; a failure inside the transaction commits nothing.
    */
   updateMovie(id: string, patch: MoviePatch): Movie;
   /**

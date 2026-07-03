@@ -5,10 +5,15 @@ import type { Movie, MoviePatch, NewMovie } from '../../../../src/types';
 import type { MovieReader } from '../read/read';
 
 /**
- * The scalar {@link MoviePatch} keys mapped to their `movies` column and (where
+ * Every scalar {@link MoviePatch} key mapped to its `movies` column and (where
  * needed) a value coercion. Drives {@link Write.updateMovie}'s dynamic `SET`
  * list: only keys present on the patch are emitted, so an omitted key leaves its
  * column untouched. `genres`/`subtitles` are handled separately (other tables).
+ *
+ * This spans all patchable columns — including `rating`, `is_favorite`,
+ * `watched`, and `resume_position_seconds` — so `updateMovie` is the single
+ * general write path; it applies no side-effect conventions (e.g. setting
+ * `watched` does not zero the resume position).
  */
 const PATCH_SCALARS: ReadonlyArray<{
   key: keyof MoviePatch;
@@ -22,6 +27,10 @@ const PATCH_SCALARS: ReadonlyArray<{
   { key: 'synopsis', column: 'synopsis' },
   { key: 'director', column: 'director' },
   { key: 'cast', column: 'cast', toDb: (v) => (v ? JSON.stringify(v) : null) },
+  { key: 'rating', column: 'rating' },
+  { key: 'isFavorite', column: 'is_favorite', toDb: (v) => (v ? 1 : 0) },
+  { key: 'watched', column: 'watched', toDb: (v) => (v ? 1 : 0) },
+  { key: 'resumePositionSeconds', column: 'resume_position_seconds' },
   { key: 'videoPath', column: 'video_path' },
   { key: 'posterPath', column: 'poster_path' },
   { key: 'backdropPath', column: 'backdrop_path' },
