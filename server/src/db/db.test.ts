@@ -16,7 +16,7 @@ import { existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { openDatabase } from '../db';
+import { openDatabase } from '.';
 import { createSqliteStorage } from '../library';
 
 // The exact 12-genre pool seeded by migration #1 (canonical source:
