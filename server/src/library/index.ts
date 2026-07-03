@@ -10,6 +10,7 @@ import { createMovieReader } from './read/read';
 import { createBrowse } from './browse/browse';
 import { createWrite } from './write/write';
 import { createWatch } from './watch/watch';
+import { createCuration } from './curation/curation';
 
 /**
  * The repository seam every consumer (routes, importer, player) reads and writes
@@ -95,19 +96,7 @@ export function createSqliteStorage(dbPath: string): LibraryStorage {
   const browse = createBrowse(db, reader);
   const write = createWrite(db, reader);
   const watch = createWatch(db);
-
-  const updateFavorite = db.prepare(
-    'UPDATE movies SET is_favorite = ? WHERE id = ?'
-  );
-  const updateRating = db.prepare('UPDATE movies SET rating = ? WHERE id = ?');
-
-  function setFavorite(id: string, value: boolean): void {
-    updateFavorite.run(value ? 1 : 0, id);
-  }
-
-  function setRating(id: string, units: number | null): void {
-    updateRating.run(units, id);
-  }
+  const curation = createCuration(db);
 
   return {
     addMovie: write.addMovie,
@@ -120,8 +109,8 @@ export function createSqliteStorage(dbPath: string): LibraryStorage {
     setResumePosition: watch.setResumePosition,
     markWatched: watch.markWatched,
     markUnwatched: watch.markUnwatched,
-    setFavorite,
-    setRating,
+    setFavorite: curation.setFavorite,
+    setRating: curation.setRating,
     close() {
       db.close();
     },
