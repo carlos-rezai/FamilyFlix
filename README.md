@@ -238,7 +238,7 @@ Builds the installer and publishes it to GitHub Releases automatically.
 | --------------------------------------------------- | --------------- |
 | Nx + Vite + React workspace scaffold                | ✅ Done         |
 | Claude Design handoff prototype                     | ✅ Done         |
-| Library core (movie model, SQLite, repository)      | 🔜 Planned      |
+| Library core (movie model, SQLite, repository)      | ✅ Done         |
 | Browse grid — genre rows                            | 🔜 Planned      |
 | Card carousel — prev/next arrows, 15-per-row cap    | 🔜 Planned      |
 | Movie detail page (synopsis, director, cast)        | 🔜 Planned      |
