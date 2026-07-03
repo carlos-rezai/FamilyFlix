@@ -9,12 +9,7 @@ import type {
   MovieSort,
   NewMovie,
 } from '../../../src/types';
-import {
-  mapRowToMovie,
-  type GenreRow,
-  type MovieRow,
-  type SubtitleRow,
-} from './read/read';
+import { createMovieReader, type MovieRow } from './read/read';
 
 /**
  * The repository seam every consumer (routes, importer, player) reads and writes
@@ -174,6 +169,8 @@ const PATCH_SCALARS: ReadonlyArray<{
 export function createSqliteStorage(dbPath: string): LibraryStorage {
   const db = openDatabase(dbPath);
 
+  const reader = createMovieReader(db);
+
   const insertMovie = db.prepare(`
     INSERT INTO movies (
       id, tmdb_id, title, year, runtime_minutes, synopsis, director, cast,
@@ -196,20 +193,6 @@ export function createSqliteStorage(dbPath: string): LibraryStorage {
     VALUES (@id, @movie_id, @path, @language, @position)
   `);
 
-  const selectMovie = db.prepare('SELECT * FROM movies WHERE id = ?');
-  const selectMovieGenres = db.prepare(`
-    SELECT g.id AS id, g.name AS name
-    FROM movie_genres mg
-    JOIN genres g ON g.id = mg.genre_id
-    WHERE mg.movie_id = ?
-    ORDER BY mg.position
-  `);
-  const selectMovieSubtitles = db.prepare(`
-    SELECT id, path, language, position
-    FROM subtitles
-    WHERE movie_id = ?
-    ORDER BY position
-  `);
   const updateResumePosition = db.prepare(
     'UPDATE movies SET resume_position_seconds = ? WHERE id = ?'
   );
@@ -238,16 +221,6 @@ export function createSqliteStorage(dbPath: string): LibraryStorage {
     GROUP BY g.id, g.name
     ORDER BY g.name
   `);
-
-  function getMovie(id: string): Movie | null {
-    const row = selectMovie.get(id) as MovieRow | undefined;
-    if (!row) {
-      return null;
-    }
-    const genres = selectMovieGenres.all(id) as GenreRow[];
-    const subtitles = selectMovieSubtitles.all(id) as SubtitleRow[];
-    return mapRowToMovie(row, genres, subtitles);
-  }
 
   const insertMovieGraph = db.transaction((id: string, input: NewMovie) => {
     const now = new Date().toISOString();
@@ -294,7 +267,7 @@ export function createSqliteStorage(dbPath: string): LibraryStorage {
   function addMovie(input: NewMovie): Movie {
     const id = randomUUID();
     insertMovieGraph(id, input);
-    const movie = getMovie(id);
+    const movie = reader.getMovie(id);
     if (!movie) {
       throw new Error(`Failed to persist movie ${id}`);
     }
@@ -302,7 +275,7 @@ export function createSqliteStorage(dbPath: string): LibraryStorage {
   }
 
   const updateMovieGraph = db.transaction((id: string, patch: MoviePatch) => {
-    const existing = selectMovie.get(id) as MovieRow | undefined;
+    const existing = reader.getMovie(id);
     if (!existing) {
       throw new Error(`Unknown movie: ${id}`);
     }
@@ -355,7 +328,7 @@ export function createSqliteStorage(dbPath: string): LibraryStorage {
 
   function updateMovie(id: string, patch: MoviePatch): Movie {
     updateMovieGraph(id, patch);
-    const movie = getMovie(id);
+    const movie = reader.getMovie(id);
     if (!movie) {
       throw new Error(`Failed to persist movie ${id}`);
     }
@@ -371,11 +344,7 @@ export function createSqliteStorage(dbPath: string): LibraryStorage {
   function listMovies(query: MovieQuery): Movie[] {
     const { sql, params } = buildListQuery(query);
     const rows = db.prepare(sql).all(...params) as MovieRow[];
-    return rows.map((row) => {
-      const genres = selectMovieGenres.all(row.id) as GenreRow[];
-      const subtitles = selectMovieSubtitles.all(row.id) as SubtitleRow[];
-      return mapRowToMovie(row, genres, subtitles);
-    });
+    return rows.map((row) => reader.assemble(row));
   }
 
   function searchMovies(text: string): Movie[] {
@@ -410,7 +379,7 @@ export function createSqliteStorage(dbPath: string): LibraryStorage {
     addMovie,
     updateMovie,
     deleteMovie,
-    getMovie,
+    getMovie: reader.getMovie,
     listMovies,
     searchMovies,
     listGenres,
