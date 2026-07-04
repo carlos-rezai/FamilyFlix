@@ -1,7 +1,12 @@
 import type { MouseEvent } from 'react';
 
-import { StarRating, StatusBadge, ProgressBar } from '../../primitives';
-import { HeartIcon, HeartOutlineIcon } from '../../primitives/Icon';
+import {
+  StarRating,
+  StatusBadge,
+  ProgressBar,
+  HeartIcon,
+  HeartOutlineIcon,
+} from '../../primitives';
 import type { PosterCardMovie } from '../../types';
 import {
   Root,

@@ -19,9 +19,11 @@ in `src/`.
   **styled-components `ThemeProvider`** theme; a `.styles.ts` file per component holds the
   styled blocks. No inline styles in the codebase — the prototype uses inline styles only
   because that is its authoring constraint.
-- **Four-file shape:** each component →
-  `Name/{index.ts, Name.tsx, Name.test.tsx, Name.styles.ts}`. Category folders
-  (`primitives/`, `components/`) get a barrel `index.ts`.
+- **Three-file shape:** each component →
+  `Name/{Name.tsx, Name.test.tsx, Name.styles.ts}` — no per-component barrel.
+  Only the category folders (`primitives/`, `components/`) get an `index.ts`,
+  re-exporting each component directly from its file
+  (`export { Button } from './Button/Button'`).
 - **Props:** each prototype component declares a typed `data-props` interface (the
   **Props** tables below are generated from those). `editor: null` props are
   data/callbacks (no design-time control); the rest are design knobs.
