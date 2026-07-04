@@ -47,6 +47,25 @@ export interface Movie {
 }
 
 /**
+ * The view model a `PosterCard` renders from — a `Movie` flattened to exactly
+ * what the tile shows, built by the `view()` mapper (`features/library/view.ts`).
+ * `rating` and `progress` are 0–100 percents (not stored units), `posterUrl` is
+ * a ready image-route URL or `null`, and `g1`/`g2` are the placeholder gradient
+ * stops used when there is no poster.
+ */
+export interface PosterCardMovie {
+  id: string;
+  title: string;
+  posterUrl: string | null;
+  g1: string;
+  g2: string;
+  rating: number;
+  watched: boolean;
+  progress: number;
+  favorite: boolean;
+}
+
+/**
  * The browse sort orders for `listMovies`. Each maps to one ORDER BY:
  * - `recently-added` — `created_at DESC` (newest first), `id` tiebreak.
  * - `a-z` — `title` ascending, case-insensitive.
