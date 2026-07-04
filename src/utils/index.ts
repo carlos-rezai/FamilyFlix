@@ -1,0 +1,10 @@
+/** Barrel — re-exports every pure util (helper functions). */
+export {
+  gradientFromId,
+  type GradientStops,
+} from './gradientFromId/gradientFromId';
+export { toRatingPercent } from './toRatingPercent/toRatingPercent';
+export {
+  toProgressPercent,
+  NOMINAL_SLIVER_PERCENT,
+} from './toProgressPercent/toProgressPercent';
