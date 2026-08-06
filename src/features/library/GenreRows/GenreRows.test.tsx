@@ -39,6 +39,32 @@ function makeMovie(overrides: Partial<Movie> = {}): Movie {
   };
 }
 
+/**
+ * A library as `GET /api/home` returns it: alphabetical by genre, each row
+ * capped at 15 movies while `count` stays the genre's true total (Action holds
+ * 214 movies but ships 2 cards here).
+ */
+const LIBRARY: HomeRow[] = [
+  {
+    genre: 'Action',
+    count: 214,
+    movies: [
+      makeMovie({ id: 'a1', title: 'Northwind' }),
+      makeMovie({ id: 'a2', title: 'Ironclad' }),
+    ],
+  },
+  {
+    genre: 'Comedy',
+    count: 3,
+    movies: [makeMovie({ id: 'c1', title: 'Comet Season' })],
+  },
+  {
+    genre: 'Drama',
+    count: 7,
+    movies: [makeMovie({ id: 'd1', title: 'Quiet Harbor' })],
+  },
+];
+
 /** One movie per row, so "the heart in the Action row" is never ambiguous. */
 const HOME_PAYLOAD: HomeRow[] = [
   {
@@ -122,6 +148,20 @@ function serve(
   });
 }
 
+/**
+ * Queue one successful home response. Anything requested other than the home
+ * aggregate rejects, so a screen that fans out per genre fails loudly.
+ */
+function respondWithRows(rows: HomeRow[]) {
+  fetchMock.mockImplementationOnce((input) => {
+    const url = String(input);
+    if (!url.includes('/api/home')) {
+      return Promise.reject(new Error(`Unexpected request: ${url}`));
+    }
+    return Promise.resolve(okResponse(rows));
+  });
+}
+
 function renderRows() {
   return render(
     <MemoryRouter>
@@ -130,6 +170,11 @@ function renderRows() {
       </ThemeProvider>
     </MemoryRouter>
   );
+}
+
+/** The rows are done loading once the first genre heading is on screen. */
+function findGenreHeading(name: string) {
+  return screen.findByRole('heading', { name });
 }
 
 /** The favorite heart on the single card in one genre's row. */
@@ -183,6 +228,98 @@ function favoriteRequests(): FavoriteRequest[] {
         init?.body === undefined ? undefined : JSON.parse(String(init.body)),
     }));
 }
+
+describe('GenreRows — loading the library', () => {
+  it('renders one genre row per populated genre, in the order the home payload gives them', async () => {
+    respondWithRows(LIBRARY);
+
+    renderRows();
+
+    await findGenreHeading('Action');
+
+    const genres = screen
+      .getAllByRole('heading', { level: 2 })
+      .map((heading) => heading.textContent);
+
+    expect(genres).toEqual(['Action', 'Comedy', 'Drama']);
+  });
+
+  it('renders each genre row as a labelled region holding that genre’s movies as cards', async () => {
+    respondWithRows(LIBRARY);
+
+    renderRows();
+
+    await findGenreHeading('Action');
+
+    const action = within(screen.getByRole('region', { name: 'Action' }));
+    expect(action.getAllByText('Northwind').length).toBeGreaterThan(0);
+    expect(action.getAllByText('Ironclad').length).toBeGreaterThan(0);
+
+    const comedy = within(screen.getByRole('region', { name: 'Comedy' }));
+    expect(comedy.getAllByText('Comet Season').length).toBeGreaterThan(0);
+    expect(comedy.queryByText('Northwind')).toBeNull();
+  });
+
+  it('shows skeleton genre rows, and no real rows, while the library is loading', () => {
+    fetchMock.mockReturnValueOnce(new Promise<Response>(() => undefined));
+
+    renderRows();
+
+    expect(screen.getByRole('status', { name: /loading/i })).toBeDefined();
+    expect(screen.queryAllByRole('heading', { level: 2 })).toHaveLength(0);
+    expect(screen.queryByText(/your library is empty/i)).toBeNull();
+    expect(screen.queryByText(/couldn.t load your library/i)).toBeNull();
+  });
+
+  it('shows the dedicated empty-library message, worded distinctly from a search miss, when no genre has movies', async () => {
+    respondWithRows([]);
+
+    renderRows();
+
+    expect(await screen.findByText(/your library is empty/i)).toBeDefined();
+    expect(screen.queryByText(/nothing here/i)).toBeNull();
+    expect(screen.queryAllByRole('heading', { level: 2 })).toHaveLength(0);
+  });
+
+  it('shows a retryable error when the library fails to load', async () => {
+    fetchMock.mockRejectedValueOnce(new Error('network down'));
+
+    renderRows();
+
+    expect(
+      await screen.findByText(/couldn.t load your library/i)
+    ).toBeDefined();
+    expect(screen.getByRole('button', { name: /retry/i })).toBeDefined();
+    expect(screen.queryAllByRole('heading', { level: 2 })).toHaveLength(0);
+  });
+
+  it('treats a non-OK response as a failed load', async () => {
+    fetchMock.mockResolvedValueOnce(serverErrorResponse());
+
+    renderRows();
+
+    expect(
+      await screen.findByText(/couldn.t load your library/i)
+    ).toBeDefined();
+    expect(screen.getByRole('button', { name: /retry/i })).toBeDefined();
+  });
+
+  it('recovers and renders the genre rows when retry succeeds', async () => {
+    fetchMock.mockRejectedValueOnce(new Error('network down'));
+    respondWithRows(LIBRARY);
+
+    renderRows();
+
+    fireEvent.click(await screen.findByRole('button', { name: /retry/i }));
+
+    await findGenreHeading('Action');
+
+    expect(screen.queryByText(/couldn.t load your library/i)).toBeNull();
+    expect(
+      screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)
+    ).toEqual(['Action', 'Comedy', 'Drama']);
+  });
+});
 
 describe('GenreRows — the favorite heart', () => {
   it('fills the heart immediately, before the save has come back', async () => {

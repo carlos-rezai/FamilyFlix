@@ -1,11 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import {
-  render,
-  screen,
-  waitFor,
-  within,
-  fireEvent,
-} from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { ThemeProvider } from 'styled-components';
 import { MemoryRouter } from 'react-router-dom';
 
@@ -39,29 +33,11 @@ function makeMovie(overrides: Partial<Movie> = {}): Movie {
   };
 }
 
-/**
- * A home payload as `GET /api/home` returns it: alphabetical by genre, each row
- * capped at 15 movies while `count` stays the genre's true total (Action holds
- * 214 movies but ships 2 cards here).
- */
 const HOME_PAYLOAD: HomeRow[] = [
   {
     genre: 'Action',
     count: 214,
-    movies: [
-      makeMovie({ id: 'a1', title: 'Northwind' }),
-      makeMovie({ id: 'a2', title: 'Ironclad' }),
-    ],
-  },
-  {
-    genre: 'Comedy',
-    count: 3,
-    movies: [makeMovie({ id: 'c1', title: 'Comet Season' })],
-  },
-  {
-    genre: 'Drama',
-    count: 7,
-    movies: [makeMovie({ id: 'd1', title: 'Quiet Harbor' })],
+    movies: [makeMovie({ id: 'a1', title: 'Northwind' })],
   },
 ];
 
@@ -70,14 +46,6 @@ function okResponse(rows: HomeRow[]): Response {
     ok: true,
     status: 200,
     json: () => Promise.resolve(rows),
-  } as unknown as Response;
-}
-
-function serverErrorResponse(): Response {
-  return {
-    ok: false,
-    status: 500,
-    json: () => Promise.resolve({ error: 'boom' }),
   } as unknown as Response;
 }
 
@@ -118,137 +86,46 @@ function renderPage() {
   );
 }
 
-/** The rows are done loading once the first genre heading is on screen. */
-function findGenreHeading(name: string) {
-  return screen.findByRole('heading', { name });
-}
+const logo = () => screen.getByRole('button', { name: /familyflix/i });
+const gear = () => screen.getByRole('button', { name: 'Settings' });
 
-describe('LibraryPage — genre rows against real /api/home data', () => {
-  it('renders one genre row per populated genre, in the order the home payload gives them', async () => {
+/**
+ * The browse home is composition only: the chrome from `MainLayout` and the
+ * body from the library feature's `GenreRows`. What those two do once mounted
+ * — load states, rows, the favorite heart — is tested where it lives.
+ */
+describe('LibraryPage', () => {
+  it('mounts the genre rows inside the layout chrome', async () => {
     respondWithRows(HOME_PAYLOAD);
 
     renderPage();
 
-    await findGenreHeading('Action');
-
-    const genres = screen
-      .getAllByRole('heading', { level: 2 })
-      .map((heading) => heading.textContent);
-
-    expect(genres).toEqual(['Action', 'Comedy', 'Drama']);
+    expect(logo()).toBeDefined();
+    expect(gear()).toBeDefined();
+    expect(await screen.findByRole('region', { name: 'Action' })).toBeDefined();
   });
 
-  it('renders each genre row as a labelled region holding that genre’s movies as cards', async () => {
-    respondWithRows(HOME_PAYLOAD);
-
-    renderPage();
-
-    await findGenreHeading('Action');
-
-    const action = within(screen.getByRole('region', { name: 'Action' }));
-    expect(action.getAllByText('Northwind').length).toBeGreaterThan(0);
-    expect(action.getAllByText('Ironclad').length).toBeGreaterThan(0);
-
-    const comedy = within(screen.getByRole('region', { name: 'Comedy' }));
-    expect(comedy.getAllByText('Comet Season').length).toBeGreaterThan(0);
-    expect(comedy.queryByText('Northwind')).toBeNull();
-  });
-
-  it('labels each row “View all {count}” with the genre’s true total, not the number of cards shown', async () => {
-    respondWithRows(HOME_PAYLOAD);
-
-    renderPage();
-
-    await findGenreHeading('Action');
-
-    const action = within(screen.getByRole('region', { name: 'Action' }));
-    expect(action.getByRole('button', { name: /view all 214/i })).toBeDefined();
-
-    const drama = within(screen.getByRole('region', { name: 'Drama' }));
-    expect(drama.getByRole('button', { name: /view all 7/i })).toBeDefined();
-  });
-
-  it('shows skeleton genre rows, and no real rows, while the library is loading', () => {
-    fetchMock.mockReturnValueOnce(new Promise<Response>(() => undefined));
-
-    renderPage();
-
-    expect(screen.getByRole('status', { name: /loading/i })).toBeDefined();
-    expect(screen.queryAllByRole('heading', { level: 2 })).toHaveLength(0);
-    expect(screen.queryByText(/your library is empty/i)).toBeNull();
-    expect(screen.queryByText(/couldn.t load your library/i)).toBeNull();
-  });
-
-  it('shows the dedicated empty-library message, worded distinctly from a search miss, when no genre has movies', async () => {
-    respondWithRows([]);
-
-    renderPage();
-
-    expect(await screen.findByText(/your library is empty/i)).toBeDefined();
-    expect(screen.queryByText(/nothing here/i)).toBeNull();
-    expect(screen.queryAllByRole('heading', { level: 2 })).toHaveLength(0);
-  });
-
-  it('shows a retryable error when the library fails to load', async () => {
-    fetchMock.mockRejectedValueOnce(new Error('network down'));
-
-    renderPage();
-
-    expect(
-      await screen.findByText(/couldn.t load your library/i)
-    ).toBeDefined();
-    expect(screen.getByRole('button', { name: /retry/i })).toBeDefined();
-    expect(screen.queryAllByRole('heading', { level: 2 })).toHaveLength(0);
-  });
-
-  it('treats a non-OK response as a failed load', async () => {
-    fetchMock.mockResolvedValueOnce(serverErrorResponse());
-
-    renderPage();
-
-    expect(
-      await screen.findByText(/couldn.t load your library/i)
-    ).toBeDefined();
-    expect(screen.getByRole('button', { name: /retry/i })).toBeDefined();
-  });
-
-  it('recovers and renders the genre rows when retry succeeds', async () => {
-    fetchMock.mockRejectedValueOnce(new Error('network down'));
-    respondWithRows(HOME_PAYLOAD);
-
-    renderPage();
-
-    fireEvent.click(await screen.findByRole('button', { name: /retry/i }));
-
-    await findGenreHeading('Action');
-
-    expect(screen.queryByText(/couldn.t load your library/i)).toBeNull();
-    expect(
-      screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)
-    ).toEqual(['Action', 'Comedy', 'Drama']);
-  });
-
-  it('keeps the header (logo + gear) rendered through loading, failure, and success', async () => {
+  it('keeps the header rendered through loading, failure, and success', async () => {
     fetchMock.mockRejectedValueOnce(new Error('network down'));
     respondWithRows(HOME_PAYLOAD);
 
     renderPage();
 
     // Loading.
-    expect(screen.getByRole('button', { name: /familyflix/i })).toBeDefined();
-    expect(screen.getByRole('button', { name: /settings/i })).toBeDefined();
+    expect(logo()).toBeDefined();
+    expect(gear()).toBeDefined();
 
     // Failed.
     await screen.findByText(/couldn.t load your library/i);
-    expect(screen.getByRole('button', { name: /familyflix/i })).toBeDefined();
-    expect(screen.getByRole('button', { name: /settings/i })).toBeDefined();
+    expect(logo()).toBeDefined();
+    expect(gear()).toBeDefined();
 
     // Loaded.
     fireEvent.click(screen.getByRole('button', { name: /retry/i }));
-    await findGenreHeading('Action');
+    await screen.findByRole('heading', { name: 'Action' });
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /familyflix/i })).toBeDefined();
+      expect(logo()).toBeDefined();
     });
-    expect(screen.getByRole('button', { name: /settings/i })).toBeDefined();
+    expect(gear()).toBeDefined();
   });
 });
