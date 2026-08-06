@@ -7,6 +7,7 @@ import {
   fireEvent,
 } from '@testing-library/react';
 import { ThemeProvider } from 'styled-components';
+import { MemoryRouter } from 'react-router-dom';
 
 import LibraryPage from './LibraryPage';
 import { theme } from '../../styles/theme';
@@ -109,9 +110,11 @@ function respondWithRows(rows: HomeRow[]) {
 
 function renderPage() {
   return render(
-    <ThemeProvider theme={theme}>
-      <LibraryPage />
-    </ThemeProvider>
+    <MemoryRouter>
+      <ThemeProvider theme={theme}>
+        <LibraryPage />
+      </ThemeProvider>
+    </MemoryRouter>
   );
 }
 

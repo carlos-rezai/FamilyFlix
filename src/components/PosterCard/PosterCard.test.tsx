@@ -19,12 +19,16 @@ const movie: PosterCardMovie = {
 };
 
 function renderCard(
-  handlers: { onOpen?: () => void; onToggleFav?: () => void } = {}
+  handlers: {
+    onOpen?: () => void;
+    onToggleFav?: () => void;
+    movie?: PosterCardMovie;
+  } = {}
 ) {
   return render(
     <ThemeProvider theme={theme}>
       <PosterCard
-        movie={movie}
+        movie={handlers.movie ?? movie}
         onOpen={handlers.onOpen ?? (() => undefined)}
         onToggleFav={handlers.onToggleFav ?? (() => undefined)}
       />
@@ -60,5 +64,19 @@ describe('PosterCard', () => {
 
     expect(onToggleFav).toHaveBeenCalledTimes(1);
     expect(onOpen).not.toHaveBeenCalled();
+  });
+
+  it('reports an unfavorited movie as an unpressed heart', () => {
+    const { getByTitle } = renderCard();
+
+    expect(getByTitle('Favorite').getAttribute('aria-pressed')).toBe('false');
+  });
+
+  it('reports a favorited movie as a pressed heart', () => {
+    const { getByTitle } = renderCard({
+      movie: { ...movie, favorite: true },
+    });
+
+    expect(getByTitle('Favorite').getAttribute('aria-pressed')).toBe('true');
   });
 });
