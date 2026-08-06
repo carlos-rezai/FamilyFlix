@@ -124,6 +124,17 @@ export interface HomeRow {
   movies: Movie[];
 }
 
+/**
+ * A {@link HomeRow} after the frontend has mapped every `Movie` through
+ * `view()` — what a `GenreRow` actually renders. Same genre and same **true
+ * total** `count`; only the movies are narrowed to their card view models.
+ */
+export interface GenreRowModel {
+  genre: string;
+  count: number;
+  movies: PosterCardMovie[];
+}
+
 /** A subtitle track as supplied when adding a movie (ids/positions are assigned). */
 export interface NewSubtitle {
   path: string;

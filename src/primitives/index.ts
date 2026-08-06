@@ -5,3 +5,6 @@ export { ProgressBar, type ProgressBarProps } from './ProgressBar/ProgressBar';
 export { IconBase, type IconProps } from './Icon/IconBase';
 export { HeartIcon } from './Icon/HeartIcon';
 export { HeartOutlineIcon } from './Icon/HeartOutlineIcon';
+export { SettingsIcon } from './Icon/SettingsIcon';
+export { ChevronLeftIcon } from './Icon/ChevronLeftIcon';
+export { ChevronRightIcon } from './Icon/ChevronRightIcon';
