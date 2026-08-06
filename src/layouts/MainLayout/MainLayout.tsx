@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-import { SettingsIcon } from '@/primitives';
+import { GearIcon } from '@/primitives';
 import {
   Root,
   Header,
@@ -47,7 +47,7 @@ export function MainLayout({ children }: MainLayoutProps) {
           aria-label="Settings"
           onClick={() => navigate('/settings')}
         >
-          <SettingsIcon size={22} />
+          <GearIcon size={22} />
         </GearButton>
       </Header>
       <Body>{children}</Body>

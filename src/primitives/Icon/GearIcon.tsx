@@ -1,7 +1,7 @@
 import { IconBase, type IconProps } from './IconBase';
 
 /** Gear — opens the settings screen from the header. */
-export const SettingsIcon = (props: IconProps) => (
+export const GearIcon = (props: IconProps) => (
   <IconBase {...props}>
     <path
       fillRule="evenodd"
