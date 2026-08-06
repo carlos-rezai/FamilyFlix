@@ -129,12 +129,12 @@ Substitute the real issue number for `#<n>`.
 
 1. **`chore: [browse-grid] issue #<n> add server tsconfig`**
    Add a `tsconfig.server.json` extending the root config, including
-   `server/**/*.ts` and the shared types, with `noEmit` and the `node`
-   - `vitest` type packages. Register it in the root config's
-     `references` array alongside the app and spec configs. This was
-     probed against the current tree and compiles with zero errors, so
-     no source fixes ride along. The backend is now compiler-checked for
-     the first time. Green.
+   `server/**/*.ts` and the shared types, with `noEmit` and the
+   `node` and `vitest` type packages. Register it in the root config's
+   `references` array alongside the app and spec configs. This was
+   probed against the current tree and compiles with zero errors, so
+   no source fixes ride along. The backend is now compiler-checked for
+   the first time. Green.
 
 2. **`chore: [browse-grid] issue #<n> add typecheck script`**
    Add an npm `typecheck` script that builds all three project
