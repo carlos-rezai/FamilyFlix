@@ -52,6 +52,7 @@ export function PosterCard({ movie, onOpen, onToggleFav }: PosterCardProps) {
         <FavButton
           type="button"
           title="Favorite"
+          aria-pressed={movie.favorite}
           $favorite={movie.favorite}
           onClick={handleFav}
         >

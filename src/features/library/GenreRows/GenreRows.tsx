@@ -1,3 +1,5 @@
+import { useNavigate } from 'react-router-dom';
+
 import { GenreRow } from '../GenreRow/GenreRow';
 import { useHomeRows } from '../useHomeRows/useHomeRows';
 import {
@@ -52,7 +54,8 @@ function LoadingRows() {
  * nothing, which belongs to the search feature.
  */
 export function GenreRows() {
-  const { status, rows, retry } = useHomeRows();
+  const { status, rows, retry, toggleFavorite } = useHomeRows();
+  const navigate = useNavigate();
 
   if (status === 'loading') {
     return <LoadingRows />;
@@ -82,7 +85,14 @@ export function GenreRows() {
   return (
     <>
       {rows.map((row) => (
-        <GenreRow key={row.genre} row={row} />
+        <GenreRow
+          key={row.genre}
+          row={row}
+          // A genre name is user data on its way into a URL — encode it.
+          onOpenAll={() => navigate(`/genre/${encodeURIComponent(row.genre)}`)}
+          onOpenMovie={(id) => navigate(`/movie/${encodeURIComponent(id)}`)}
+          onToggleFavorite={toggleFavorite}
+        />
       ))}
     </>
   );

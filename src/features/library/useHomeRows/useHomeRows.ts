@@ -6,6 +6,10 @@ import { view } from '../view/view';
 /** The one aggregate the browse home loads — a row per populated genre. */
 const HOME_ENDPOINT = '/api/home';
 
+/** Where one movie's favorite flag is saved. */
+const favoriteEndpoint = (id: string) =>
+  `/api/movies/${encodeURIComponent(id)}/favorite`;
+
 /** Where the load is: never both loading and errored, never rows without `ready`. */
 export type HomeRowsStatus = 'loading' | 'ready' | 'error';
 
@@ -15,6 +19,8 @@ export interface UseHomeRowsResult {
   rows: GenreRowModel[];
   /** Re-run the load after a failure. */
   retry: () => void;
+  /** Save one movie's favorite flag, showing the new value immediately. */
+  toggleFavorite: (id: string, favorite: boolean) => void;
 }
 
 /** Map one payload row's movies through the card view mapper. */
@@ -23,9 +29,32 @@ function toGenreRow(row: HomeRow): GenreRowModel {
 }
 
 /**
+ * One movie's favorite flag set in every row it appears in. A movie tagged with
+ * three genres has three cards, and they are one movie — they must never
+ * disagree about whether it is a favorite.
+ */
+function withFavorite(
+  rows: GenreRowModel[],
+  id: string,
+  favorite: boolean
+): GenreRowModel[] {
+  return rows.map((row) => ({
+    ...row,
+    movies: row.movies.map((movie) =>
+      movie.id === id ? { ...movie, favorite } : movie
+    ),
+  }));
+}
+
+/**
  * Loads the browse home in a single request and hands back render-ready genre
  * rows. One aggregate fetch means one loading transition — no per-genre fan-out
  * — and the payload's alphabetical order is preserved as it arrives.
+ *
+ * It also owns the one edit the browse home can make to those rows — the
+ * favorite heart — because the optimistic value and the loaded rows are the
+ * same state. The heart fills before the save is confirmed and reverts if the
+ * save fails, so it never claims something is saved that isn't.
  */
 export function useHomeRows(): UseHomeRowsResult {
   const [status, setStatus] = useState<HomeRowsStatus>('loading');
@@ -67,5 +96,31 @@ export function useHomeRows(): UseHomeRowsResult {
 
   const retry = useCallback(() => setAttempt((n) => n + 1), []);
 
-  return { status, rows, retry };
+  const toggleFavorite = useCallback((id: string, favorite: boolean) => {
+    setRows((current) => withFavorite(current, id, favorite));
+
+    fetch(favoriteEndpoint(id), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ value: favorite }),
+    })
+      .then(async (response) => {
+        if (!response.ok) {
+          throw new Error(`Saving favorite failed: ${response.status}`);
+        }
+        // The route echoes what it stored; trust that over what we assumed.
+        const saved = (await response.json()) as { value?: unknown };
+        return typeof saved.value === 'boolean' ? saved.value : favorite;
+      })
+      .then((saved) => {
+        if (saved !== favorite) {
+          setRows((current) => withFavorite(current, id, saved));
+        }
+      })
+      .catch(() => {
+        setRows((current) => withFavorite(current, id, !favorite));
+      });
+  }, []);
+
+  return { status, rows, retry, toggleFavorite };
 }

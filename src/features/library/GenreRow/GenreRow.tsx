@@ -6,12 +6,15 @@ import { Root, Header, Title, ViewAll, ViewAllArrow } from './GenreRow.styles';
 
 export interface GenreRowProps {
   row: GenreRowModel;
-  /** Open the genre's full page. Wired to routing in a later phase. */
+  /** Open the genre's full page. */
   onOpenAll?: () => void;
-  /** Open one movie's detail page. Wired to routing in a later phase. */
+  /** Open one movie's detail page. */
   onOpenMovie?: (id: string) => void;
-  /** Toggle one movie's favorite flag. Wired to the API in a later phase. */
-  onToggleFavorite?: (id: string) => void;
+  /**
+   * Set one movie's favorite flag. The card knows its own current value, so it
+   * hands over the value it wants saved rather than a bare "flip it".
+   */
+  onToggleFavorite?: (id: string, favorite: boolean) => void;
 }
 
 /**
@@ -30,7 +33,7 @@ export function GenreRow({
   const items: CarouselItem[] = row.movies.map((movie) => ({
     movie,
     onOpen: () => onOpenMovie?.(movie.id),
-    onToggleFavorite: () => onToggleFavorite?.(movie.id),
+    onToggleFavorite: () => onToggleFavorite?.(movie.id, !movie.favorite),
   }));
 
   return (
