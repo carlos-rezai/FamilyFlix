@@ -6,7 +6,7 @@ import type {
   MoviePatch,
   MovieQuery,
   NewMovie,
-} from '../../../src/types';
+} from '@/types';
 import { createMovieReader } from './read/read';
 import { createBrowse } from './browse/browse';
 import { createHome } from './home/home';

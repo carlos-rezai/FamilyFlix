@@ -20,7 +20,7 @@ import { isAbsolute, join } from 'node:path';
 
 import { createSqliteStorage } from '..';
 import { openDatabase, type SqliteDatabase } from '../../db';
-import type { MoviePatch, NewMovie } from '../../../../src/types';
+import type { MoviePatch, NewMovie } from '@/types';
 
 // RFC-4122 v4 UUID, as produced by crypto.randomUUID().
 const UUID_RE =

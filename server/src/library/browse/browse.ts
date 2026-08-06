@@ -1,10 +1,5 @@
 import type { SqliteDatabase } from '../../db';
-import type {
-  GenreCount,
-  Movie,
-  MovieQuery,
-  MovieSort,
-} from '../../../../src/types';
+import type { GenreCount, Movie, MovieQuery, MovieSort } from '@/types';
 import type { MovieReader, MovieRow } from '../read/read';
 
 /**

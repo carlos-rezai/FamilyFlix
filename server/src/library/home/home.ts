@@ -1,4 +1,4 @@
-import type { HomeRow } from '../../../../src/types';
+import type { HomeRow } from '@/types';
 import type { Browse } from '../browse/browse';
 
 /**

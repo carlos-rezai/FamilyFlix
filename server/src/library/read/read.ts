@@ -1,10 +1,5 @@
 import type { SqliteDatabase } from '../../db';
-import type {
-  Genre,
-  Movie,
-  Subtitle,
-  WatchStatus,
-} from '../../../../src/types';
+import type { Genre, Movie, Subtitle, WatchStatus } from '@/types';
 
 // --- raw row shapes (SELECT results) -------------------------------------------
 

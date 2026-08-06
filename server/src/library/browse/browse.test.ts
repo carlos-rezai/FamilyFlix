@@ -14,7 +14,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { createSqliteStorage } from '..';
-import type { MovieSort, NewMovie } from '../../../../src/types';
+import type { MovieSort, NewMovie } from '@/types';
 
 // --- per-test resource tracking ------------------------------------------------
 

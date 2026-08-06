@@ -1,7 +1,7 @@
 import express, { type Request, type Response, type Router } from 'express';
 
 import type { LibraryStorage } from '../library';
-import type { MovieQuery, MovieSort } from '../../../src/types';
+import type { MovieQuery, MovieSort } from '@/types';
 
 /** The sort values `GET /api/movies?sort=` accepts, mirroring {@link MovieSort}. */
 const SORTS: readonly MovieSort[] = [

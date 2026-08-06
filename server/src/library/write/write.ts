@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 
 import type { SqliteDatabase } from '../../db';
-import type { Movie, MoviePatch, NewMovie } from '../../../../src/types';
+import type { Movie, MoviePatch, NewMovie } from '@/types';
 import type { MovieReader } from '../read/read';
 
 /**
