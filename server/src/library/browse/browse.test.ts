@@ -229,6 +229,74 @@ describe('library: listMovies filters', () => {
   });
 });
 
+// --- limit ---------------------------------------------------------------------
+
+describe('library: listMovies limit', () => {
+  it('caps the number of rows returned', () => {
+    const storage = freshStorage();
+    storage.addMovie(newMovie({ title: 'Apple' }));
+    storage.addMovie(newMovie({ title: 'Banana' }));
+    storage.addMovie(newMovie({ title: 'Cherry' }));
+    storage.addMovie(newMovie({ title: 'Damson' }));
+
+    const list = storage.listMovies({ sort: 'a-z', limit: 2 });
+
+    // The cap applies after the sort — the first two titles A–Z, not any two.
+    expect(list.map((m) => m.title)).toEqual(['Apple', 'Banana']);
+  });
+
+  it('combines with a genre filter and a sort in one query', () => {
+    const storage = freshStorage();
+
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-01-01T00:00:00.000Z'));
+    storage.addMovie(newMovie({ title: 'Old Action', genres: ['Action'] }));
+    vi.setSystemTime(new Date('2026-01-02T00:00:00.000Z'));
+    storage.addMovie(newMovie({ title: 'Mid Action', genres: ['Action'] }));
+    vi.setSystemTime(new Date('2026-01-03T00:00:00.000Z'));
+    storage.addMovie(newMovie({ title: 'New Action', genres: ['Action'] }));
+    vi.setSystemTime(new Date('2026-01-04T00:00:00.000Z'));
+    storage.addMovie(newMovie({ title: 'Newest Drama', genres: ['Drama'] }));
+    vi.useRealTimers();
+
+    const list = storage.listMovies({
+      sort: 'recently-added',
+      genre: 'Action',
+      limit: 2,
+    });
+
+    // Filtered to Action, newest first, then capped — the Drama title is
+    // excluded even though it is the newest movie in the library.
+    expect(list.map((m) => m.title)).toEqual(['New Action', 'Mid Action']);
+  });
+
+  it('returns every matching row when no limit is given', () => {
+    const storage = freshStorage();
+    storage.addMovie(newMovie({ title: 'Apple' }));
+    storage.addMovie(newMovie({ title: 'Banana' }));
+    storage.addMovie(newMovie({ title: 'Cherry' }));
+
+    const list = storage.listMovies({ sort: 'a-z' });
+
+    expect(list.map((m) => m.title)).toEqual(['Apple', 'Banana', 'Cherry']);
+  });
+
+  it('returns every match when the limit exceeds the number of matches', () => {
+    const storage = freshStorage();
+    storage.addMovie(newMovie({ title: 'Apple', genres: ['Action'] }));
+    storage.addMovie(newMovie({ title: 'Banana', genres: ['Action'] }));
+    storage.addMovie(newMovie({ title: 'Cherry', genres: ['Drama'] }));
+
+    const list = storage.listMovies({
+      sort: 'a-z',
+      genre: 'Action',
+      limit: 15,
+    });
+
+    expect(list.map((m) => m.title)).toEqual(['Apple', 'Banana']);
+  });
+});
+
 // --- search --------------------------------------------------------------------
 
 describe('library: search by title', () => {
