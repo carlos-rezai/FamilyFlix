@@ -1,6 +1,6 @@
 import { useId } from 'react';
 
-import type { GenreRowModel } from '../../../types';
+import type { GenreRowModel } from '@/types';
 import { CardCarousel, type CarouselItem } from '../CardCarousel/CardCarousel';
 import { Root, Header, Title, ViewAll, ViewAllArrow } from './GenreRow.styles';
 

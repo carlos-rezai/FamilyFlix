@@ -3,8 +3,8 @@ import { render, fireEvent } from '@testing-library/react';
 import { ThemeProvider } from 'styled-components';
 
 import { PosterCard } from './PosterCard';
-import { theme } from '../../styles/theme';
-import type { PosterCardMovie } from '../../types';
+import { theme } from '@/styles/theme';
+import type { PosterCardMovie } from '@/types';
 
 const movie: PosterCardMovie = {
   id: 'm1',

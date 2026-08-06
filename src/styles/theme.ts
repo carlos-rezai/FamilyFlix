@@ -1,4 +1,4 @@
-import { colors, spacing, typography, radius, breakpoints } from '../tokens';
+import { colors, spacing, typography, radius, breakpoints } from '@/tokens';
 
 /**
  * The styled-components theme — the design tokens assembled into the one object

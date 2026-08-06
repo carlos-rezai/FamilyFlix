@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
 
 import { view } from './view';
-import { gradientFromId, NOMINAL_SLIVER_PERCENT } from '../../../utils';
-import type { Movie } from '../../../types';
+import { gradientFromId, NOMINAL_SLIVER_PERCENT } from '@/utils';
+import type { Movie } from '@/types';
 
 function makeMovie(overrides: Partial<Movie> = {}): Movie {
   return {

@@ -10,8 +10,8 @@ import { ThemeProvider } from 'styled-components';
 import { MemoryRouter } from 'react-router-dom';
 
 import LibraryPage from './LibraryPage';
-import { theme } from '../../styles/theme';
-import type { HomeRow, Movie } from '../../types';
+import { theme } from '@/styles/theme';
+import type { HomeRow, Movie } from '@/types';
 
 function makeMovie(overrides: Partial<Movie> = {}): Movie {
   return {

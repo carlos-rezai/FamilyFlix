@@ -1,6 +1,6 @@
 import { useParams } from 'react-router-dom';
 
-import { MainLayout } from '../../layouts/MainLayout/MainLayout';
+import { MainLayout } from '@/layouts/MainLayout/MainLayout';
 
 /**
  * `/movie/:id` — a placeholder that echoes the routed id, so every card on the

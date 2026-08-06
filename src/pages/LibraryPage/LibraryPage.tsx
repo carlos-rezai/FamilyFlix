@@ -1,5 +1,5 @@
-import { GenreRows } from '../../features/library/GenreRows/GenreRows';
-import { MainLayout } from '../../layouts/MainLayout/MainLayout';
+import { GenreRows } from '@/features/library/GenreRows/GenreRows';
+import { MainLayout } from '@/layouts/MainLayout/MainLayout';
 
 /**
  * The browse home (`/`) — the screen the family lands on. Composition only:

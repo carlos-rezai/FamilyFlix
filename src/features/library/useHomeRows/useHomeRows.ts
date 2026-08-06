@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 
-import type { GenreRowModel, HomeRow } from '../../../types';
+import type { GenreRowModel, HomeRow } from '@/types';
 import { view } from '../view/view';
 
 /** The one aggregate the browse home loads — a row per populated genre. */

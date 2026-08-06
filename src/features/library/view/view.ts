@@ -1,9 +1,5 @@
-import type { Movie, PosterCardMovie } from '../../../types';
-import {
-  gradientFromId,
-  toRatingPercent,
-  toProgressPercent,
-} from '../../../utils';
+import type { Movie, PosterCardMovie } from '@/types';
+import { gradientFromId, toRatingPercent, toProgressPercent } from '@/utils';
 
 /** Path prefix for the Express route that streams managed poster images. */
 const IMAGE_ROUTE = '/api/images/';

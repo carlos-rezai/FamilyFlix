@@ -3,7 +3,7 @@ import { render } from '@testing-library/react';
 import { ThemeProvider } from 'styled-components';
 
 import { StarRating } from './StarRating';
-import { theme } from '../../styles/theme';
+import { theme } from '@/styles/theme';
 
 function renderStars(props: Parameters<typeof StarRating>[0]) {
   return render(

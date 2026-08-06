@@ -1,12 +1,12 @@
 import { Route, Routes } from 'react-router-dom';
 import { ThemeProvider } from 'styled-components';
 
-import { GlobalStyle } from '../../styles/GlobalStyle';
-import { theme } from '../../styles/theme';
-import LibraryPage from '../../pages/LibraryPage/LibraryPage';
-import MoviePage from '../../pages/MoviePage/MoviePage';
-import GenrePage from '../../pages/GenrePage/GenrePage';
-import SettingsPage from '../../pages/SettingsPage/SettingsPage';
+import { GlobalStyle } from '@/styles/GlobalStyle';
+import { theme } from '@/styles/theme';
+import LibraryPage from '@/pages/LibraryPage/LibraryPage';
+import MoviePage from '@/pages/MoviePage/MoviePage';
+import GenrePage from '@/pages/GenrePage/GenrePage';
+import SettingsPage from '@/pages/SettingsPage/SettingsPage';
 
 /**
  * The app root: the theme and global reset every screen renders under, plus the

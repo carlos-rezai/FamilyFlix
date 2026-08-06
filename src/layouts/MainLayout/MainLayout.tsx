@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-import { SettingsIcon } from '../../primitives';
+import { SettingsIcon } from '@/primitives';
 import {
   Root,
   Header,

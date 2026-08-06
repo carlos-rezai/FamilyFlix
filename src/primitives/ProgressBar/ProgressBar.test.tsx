@@ -3,7 +3,7 @@ import { render } from '@testing-library/react';
 import { ThemeProvider } from 'styled-components';
 
 import { ProgressBar } from './ProgressBar';
-import { theme } from '../../styles/theme';
+import { theme } from '@/styles/theme';
 
 function renderBar(props: Parameters<typeof ProgressBar>[0]) {
   return render(

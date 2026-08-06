@@ -3,7 +3,7 @@ import { render, screen, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 
 import App from './App';
-import type { HomeRow, Movie } from '../../types';
+import type { HomeRow, Movie } from '@/types';
 
 function makeMovie(overrides: Partial<Movie> = {}): Movie {
   return {

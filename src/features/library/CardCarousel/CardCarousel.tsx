@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { PosterCard } from '../../../components';
-import { ChevronLeftIcon, ChevronRightIcon } from '../../../primitives';
-import type { PosterCardMovie } from '../../../types';
+import { PosterCard } from '@/components';
+import { ChevronLeftIcon, ChevronRightIcon } from '@/primitives';
+import type { PosterCardMovie } from '@/types';
 import {
   CARD_WIDTH,
   Root,

@@ -6,8 +6,8 @@ import {
   ProgressBar,
   HeartIcon,
   HeartOutlineIcon,
-} from '../../primitives';
-import type { PosterCardMovie } from '../../types';
+} from '@/primitives';
+import type { PosterCardMovie } from '@/types';
 import {
   Root,
   Poster,

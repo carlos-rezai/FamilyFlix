@@ -1,4 +1,4 @@
-import { MainLayout } from '../../layouts/MainLayout/MainLayout';
+import { MainLayout } from '@/layouts/MainLayout/MainLayout';
 
 /**
  * `/settings` — a placeholder giving the header's gear a real destination. The
