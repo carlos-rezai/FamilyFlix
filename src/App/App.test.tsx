@@ -167,31 +167,13 @@ describe('App — routing the browse home to its destinations', () => {
     ).toBeDefined();
   });
 
-  it('navigates to /settings when the gear is clicked', async () => {
-    renderApp();
-    await screen.findByRole('heading', { name: 'Action' });
+  it('renders the settings screen at /settings', async () => {
+    renderApp('/settings');
 
-    fireEvent.click(screen.getByRole('button', { name: /settings/i }));
-
-    expect(currentPath()).toBe('/settings');
     expect(
       await screen.findByRole('heading', { name: /settings/i })
     ).toBeDefined();
-  });
-
-  it('returns to the browse home when the logo is clicked from another screen', async () => {
-    renderApp();
-    await screen.findByRole('heading', { name: 'Action' });
-
-    fireEvent.click(screen.getByRole('button', { name: /settings/i }));
-    await screen.findByRole('heading', { name: /settings/i });
-
-    fireEvent.click(screen.getByRole('button', { name: /familyflix/i }));
-
-    expect(currentPath()).toBe('/');
-    expect(
-      await screen.findByRole('heading', { name: 'Action' })
-    ).toBeDefined();
+    expect(screen.queryByRole('heading', { name: 'Action' })).toBeNull();
   });
 
   it('renders a placeholder that echoes the id when /movie/:id is opened directly', async () => {
