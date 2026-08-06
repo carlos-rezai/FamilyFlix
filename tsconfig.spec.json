@@ -2,6 +2,10 @@
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "outDir": "./dist/out-tsc",
+    // `vite.config.mts` is type-checked here, and Vite ships its types behind an
+    // exports map that `node` resolution can't read. Resolve like the bundler
+    // that actually consumes this project.
+    "moduleResolution": "bundler",
     "types": [
       "vitest/globals",
       "vitest/importMeta",

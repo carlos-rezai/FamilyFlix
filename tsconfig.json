@@ -28,6 +28,9 @@
     },
     {
       "path": "./tsconfig.spec.json"
+    },
+    {
+      "path": "./tsconfig.server.json"
     }
   ],
   "compileOnSave": false,

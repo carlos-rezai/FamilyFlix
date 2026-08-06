@@ -9,6 +9,7 @@
     "dev:server": "tsx watch server/src/main.ts",
     "build": "nx build",
     "test": "nx test",
+    "typecheck": "tsc -b tsconfig.json",
     "prepare": "husky"
   },
   "nx": {

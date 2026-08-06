@@ -18,6 +18,9 @@ out-tsc
 electron/dist
 *.local
 
+# Incremental typecheck state (npm run typecheck)
+*.tsbuildinfo
+
 # Nx
 .nx/cache
 .nx/workspace-data
