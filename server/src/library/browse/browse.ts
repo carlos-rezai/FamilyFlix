@@ -26,30 +26,37 @@ const ORDER_BY: Record<MovieSort, string> = {
  * Pure {@link MovieQuery} → parameterized SQL builder. Each present filter adds
  * one `AND`-joined `WHERE` term and its bound parameter(s); omitted filters are
  * no-ops. The genre filter matches via a subquery so the row set stays one row
- * per movie regardless of how many genres it carries.
+ * per movie regardless of how many genres it carries. An optional `limit` caps
+ * the result with a trailing `LIMIT ?`, so the cap lands after the filters and
+ * the sort.
+ *
+ * The `WHERE` clause and its parameters come back separately from the full
+ * statement: the assembly pass re-runs the filter as a subquery and must not be
+ * handed the trailing `LIMIT` placeholder.
  */
 function buildListQuery(query: MovieQuery): {
   sql: string;
-  whereClause: string;
   params: unknown[];
+  whereClause: string;
+  whereParams: unknown[];
 } {
   const where: string[] = [];
-  const params: unknown[] = [];
+  const whereParams: unknown[] = [];
 
   if (query.genre !== undefined) {
     where.push(
       'm.id IN (SELECT mg.movie_id FROM movie_genres mg ' +
         'JOIN genres g ON g.id = mg.genre_id WHERE g.name = ?)'
     );
-    params.push(query.genre);
+    whereParams.push(query.genre);
   }
   if (query.minRating !== undefined) {
     where.push('m.rating >= ?');
-    params.push(query.minRating);
+    whereParams.push(query.minRating);
   }
   if (query.search !== undefined) {
     where.push('m.title LIKE ?');
-    params.push(`%${query.search}%`);
+    whereParams.push(`%${query.search}%`);
   }
   if (query.favoritesOnly) {
     where.push('m.is_favorite = 1');
@@ -59,8 +66,12 @@ function buildListQuery(query: MovieQuery): {
   }
 
   const whereClause = where.length > 0 ? `WHERE ${where.join(' AND ')}` : '';
-  const sql = `SELECT m.* FROM movies m ${whereClause} ORDER BY ${ORDER_BY[query.sort]}`;
-  return { sql, whereClause, params };
+  const limitClause = query.limit === undefined ? '' : ' LIMIT ?';
+  const sql = `SELECT m.* FROM movies m ${whereClause} ORDER BY ${ORDER_BY[query.sort]}${limitClause}`;
+  const params =
+    query.limit === undefined ? whereParams : [...whereParams, query.limit];
+
+  return { sql, params, whereClause, whereParams };
 }
 
 /** The read-only browse slice of the repository: the parameterized `listMovies`
@@ -81,9 +92,9 @@ export function createBrowse(db: SqliteDatabase, reader: MovieReader): Browse {
   `);
 
   function listMovies(query: MovieQuery): Movie[] {
-    const { sql, whereClause, params } = buildListQuery(query);
+    const { sql, params, whereClause, whereParams } = buildListQuery(query);
     const rows = db.prepare(sql).all(...params) as MovieRow[];
-    return reader.assembleMany(rows, whereClause, params);
+    return reader.assembleMany(rows, whereClause, whereParams);
   }
 
   function searchMovies(text: string): Movie[] {

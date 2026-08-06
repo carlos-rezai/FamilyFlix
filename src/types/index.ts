@@ -97,6 +97,11 @@ export interface MovieQuery {
   favoritesOnly?: boolean;
   /** Keep only in-progress movies (`resumePositionSeconds > 0` and not watched). */
   inProgressOnly?: boolean;
+  /**
+   * Cap how many movies come back, applied after the filters and the sort (SQL
+   * `LIMIT`). Omitted means no cap — every matching movie is returned.
+   */
+  limit?: number;
 }
 
 /** A genre plus how many movies are tagged with it — for the home genre rows. */
@@ -104,6 +109,19 @@ export interface GenreCount {
   id: string;
   name: string;
   count: number;
+}
+
+/**
+ * One genre row of the browse home, as `listHomeRows()` builds it and
+ * `GET /api/home` returns it: the genre name, its **true total** movie count,
+ * and the capped, recently-added-first slice of movies the row displays
+ * (`count` is therefore ≥ `movies.length`). The frontend maps each `Movie`
+ * through `view()` before rendering it as a card.
+ */
+export interface HomeRow {
+  genre: string;
+  count: number;
+  movies: Movie[];
 }
 
 /** A subtitle track as supplied when adding a movie (ids/positions are assigned). */

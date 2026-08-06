@@ -1,6 +1,7 @@
 import { openDatabase } from '../db';
 import type {
   GenreCount,
+  HomeRow,
   Movie,
   MoviePatch,
   MovieQuery,
@@ -8,6 +9,7 @@ import type {
 } from '../../../src/types';
 import { createMovieReader } from './read/read';
 import { createBrowse } from './browse/browse';
+import { createHome } from './home/home';
 import { createWrite } from './write/write';
 import { createWatch } from './watch/watch';
 import { createCuration } from './curation/curation';
@@ -59,6 +61,12 @@ export interface LibraryStorage {
   /** List only genres with at least one movie, each with its movie count. */
   listGenres(): GenreCount[];
   /**
+   * The browse home in one call: a row per populated genre (alphabetical),
+   * each carrying the genre's true movie count and its 15 most recently added
+   * movies. Returns `[]` for an empty library.
+   */
+  listHomeRows(): HomeRow[];
+  /**
    * Persist the resume position (seconds into the file). Called constantly during
    * playback, so it stays a cheap single-column write — only
    * `resume_position_seconds` is touched, not `updated_at`.
@@ -97,6 +105,7 @@ export function createSqliteStorage(dbPath: string): LibraryStorage {
 
   const reader = createMovieReader(db);
   const browse = createBrowse(db, reader);
+  const home = createHome(browse);
   const write = createWrite(db, reader);
   const watch = createWatch(db);
   const curation = createCuration(db);
@@ -109,6 +118,7 @@ export function createSqliteStorage(dbPath: string): LibraryStorage {
     listMovies: browse.listMovies,
     searchMovies: browse.searchMovies,
     listGenres: browse.listGenres,
+    listHomeRows: home.listHomeRows,
     setResumePosition: watch.setResumePosition,
     markWatched: watch.markWatched,
     markUnwatched: watch.markUnwatched,

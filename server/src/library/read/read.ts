@@ -108,9 +108,11 @@ export interface MovieReader {
   assemble(row: MovieRow): Movie;
   /**
    * Assemble a whole ordered row set with two set-based child reads instead of
-   * two-per-row. `whereClause`/`params` are `buildListQuery`'s filter, re-run as
-   * a subquery to scope the genre/subtitle reads to exactly `rows`. Output is
-   * identical to mapping {@link assemble} over `rows`, order preserved.
+   * two-per-row. `whereClause`/`params` are `buildListQuery`'s filter (without
+   * its `LIMIT`), re-run as a subquery to scope the genre/subtitle reads to the
+   * filtered set — exactly `rows`, or a superset of it under a `limit`; the
+   * extra children are simply never looked up. Output is identical to mapping
+   * {@link assemble} over `rows`, order preserved.
    */
   assembleMany(
     rows: MovieRow[],

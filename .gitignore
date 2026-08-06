@@ -68,6 +68,9 @@ familyflix.db
 familyflix.db-shm
 familyflix.db-wal
 
+# local dev managed media directory (default FAMILYFLIX_MEDIA_PATH)
+/media
+
 # Vite / Vitest timestamps
 vite.config.*.timestamp*
 vitest.config.*.timestamp*
