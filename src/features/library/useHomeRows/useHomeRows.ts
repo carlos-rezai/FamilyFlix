@@ -1,14 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 
 import type { GenreRowModel, HomeRow } from '@/types';
+import { fetchHomePayload, saveFavorite } from '../api/api';
 import { view } from '../view/view';
-
-/** The one aggregate the browse home loads — a row per populated genre. */
-const HOME_ENDPOINT = '/api/home';
-
-/** Where one movie's favorite flag is saved. */
-const favoriteEndpoint = (id: string) =>
-  `/api/movies/${encodeURIComponent(id)}/favorite`;
 
 /** Where the load is: never both loading and errored, never rows without `ready`. */
 export type HomeRowsStatus = 'loading' | 'ready' | 'error';
@@ -65,13 +59,7 @@ export function useHomeRows(): UseHomeRowsResult {
     let current = true;
     setStatus('loading');
 
-    fetch(HOME_ENDPOINT)
-      .then(async (response) => {
-        if (!response.ok) {
-          throw new Error(`GET ${HOME_ENDPOINT} failed: ${response.status}`);
-        }
-        return (await response.json()) as HomeRow[];
-      })
+    fetchHomePayload()
       .then((payload) => {
         if (!current) {
           return;
@@ -99,19 +87,8 @@ export function useHomeRows(): UseHomeRowsResult {
   const toggleFavorite = useCallback((id: string, favorite: boolean) => {
     setRows((current) => withFavorite(current, id, favorite));
 
-    fetch(favoriteEndpoint(id), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ value: favorite }),
-    })
-      .then(async (response) => {
-        if (!response.ok) {
-          throw new Error(`Saving favorite failed: ${response.status}`);
-        }
-        // The route echoes what it stored; trust that over what we assumed.
-        const saved = (await response.json()) as { value?: unknown };
-        return typeof saved.value === 'boolean' ? saved.value : favorite;
-      })
+    saveFavorite(id, favorite)
+      // The route echoes what it stored; trust that over what we assumed.
       .then((saved) => {
         if (saved !== favorite) {
           setRows((current) => withFavorite(current, id, saved));
