@@ -38,27 +38,35 @@
 
 ## Browse & display (frontend)
 
-| Term                        | Definition                                                                                                                        | Aliases to avoid                  |
-| --------------------------- | --------------------------------------------------------------------------------------------------------------------------------- | --------------------------------- |
-| **Browse home** (new)       | The `/` route (`LibraryPage`) — the parent-facing home screen listing **Genre rows**.                                             | home page, browse grid, dashboard |
-| **Genre row** (new)         | A titled horizontal row showing up to 15 **Poster cards** for one **Genre**, with a "View all {count}" link.                      | shelf, carousel row, genre shelf  |
-| **Card carousel** (new)     | The horizontal scroller (prev/next arrows) inside a **Genre row** that holds the **Poster cards**.                                | slider, scroller                  |
-| **Poster card** (new)       | The library's primary movie tile: **Poster** (or **Gradient fallback**), title, **Rating** stars, watch state, favorite heart.    | tile, thumbnail, cell             |
-| **View all** (new)          | The **Genre row** header link to that **Genre**'s full page (`/genre/:name`); its count is the true total, not the 15 shown.      | see all, more, expand             |
-| **Home payload** (new)      | The single `GET /api/home` response: one **Home row** per populated **Genre** (`{ genre, count, movies[≤15] }`).                  | feed, home data                   |
-| **Gradient fallback** (new) | A deterministic per-**Movie** color gradient (hashed from the **Movie** id) drawn on a **Poster card** when no **Poster** exists. | placeholder art, gradient stops   |
-| **Poster URL** (new)        | The browser-loadable URL (`/api/images/…`) that resolves a **Movie**'s **Poster path** through the image route.                   | image src, poster link            |
-| **Card view model** (new)   | `PosterCardMovie` — the small display shape a **Movie** is mapped to for a **Poster card** (rating→percent, progress→percent).    | card DTO, card props              |
-| **Nominal sliver** (new)    | The small fixed **Progress** bar length shown when a **Movie** is **In-progress** but `runtimeMinutes` is unknown.                | placeholder progress              |
+| Term                            | Definition                                                                                                                            | Aliases to avoid                      |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------- |
+| **Browse home**                 | The `/` route (`LibraryPage`) — the parent-facing home screen listing the **Continue Watching row** then the **Genre rows**.          | home page, browse grid, dashboard     |
+| **Genre row**                   | A titled horizontal row showing up to 15 **Poster cards** for one **Genre**, with a "View all {count}" link.                          | shelf, carousel row, genre shelf      |
+| **Continue Watching row** (new) | The **Browse home**'s top row: up to 15 **Continue cards** for **In-progress** **Movies**; hidden entirely when there are none.       | resume row, keep watching, up next    |
+| **Card carousel** (updated)     | The horizontal scroller (prev/next arrows) inside a row, holding **Poster cards** or **Continue cards** per its **Carousel variant**. | slider, scroller                      |
+| **Carousel variant** (new)      | Which card shape a **Card carousel** holds — `poster` or `continue`; also sets the tile width and arrow height.                       | mode, type, kind                      |
+| **Poster card**                 | The library's primary movie tile: **Poster** (or **Gradient fallback**), title, **Rating** stars, watch state, favorite heart.        | tile, thumbnail, cell                 |
+| **Continue card** (new)         | The wide 16:10 resume tile: **Gradient fallback**, title, **Resume label**, progress track, play badge. No **Favorite** heart.        | resume tile, continue tile, hero card |
+| **Resume label** (new)          | The human string on a **Continue card** — `Resume · 1:13 of 1:55`, or `Resume · 1:13` when runtime is unknown.                        | timestamp, progress text              |
+| **View all**                    | The **Genre row** header link to that **Genre**'s full page (`/genre/:name`); its count is the true total, not the 15 shown.          | see all, more, expand                 |
+| **Home payload** (updated)      | The single `GET /api/home` response — named sections: `{ continueWatching: Movie[], rows: HomeRow[] }`.                               | feed, home data                       |
+| **Gradient fallback**           | A deterministic per-**Movie** color gradient (hashed from the **Movie** id) drawn on a card when no **Poster** exists.                | placeholder art, gradient stops       |
+| **Poster URL**                  | The browser-loadable URL (`/api/images/…`) that resolves a **Movie**'s **Poster path** through the image route.                       | image src, poster link                |
+| **Card view model**             | `PosterCardMovie` — the small display shape a **Movie** is mapped to for a **Poster card** (rating→percent, progress→percent).        | card DTO, card props                  |
+| **Continue view model** (new)   | `ContinueCardMovie` — the display shape for a **Continue card**: id, title, gradient stops, **Resume label**, progress percent.       | continue DTO, resume model            |
+| **Nominal sliver**              | The small fixed **Progress** bar length shown when a **Movie** is **In-progress** but `runtimeMinutes` is unknown.                    | placeholder progress                  |
 
 ## Relationships
 
 - A **Movie** has zero-or-more **Genres** (ordered; `genres[0]` is the primary tag) and zero-or-more **Subtitles**.
-- The **Browse home** shows one **Genre row** per **Genre** with ≥1 **Movie**; each **Genre row** contains one **Card carousel** of at most 15 **Poster cards**.
+- The **Browse home** shows the **Continue Watching row** above one **Genre row** per **Genre** with ≥1 **Movie**; each row contains one **Card carousel** capped at 15 cards.
+- A **Card carousel** holds **Poster cards** or **Continue cards**, never both — decided by its **Carousel variant**.
 - A **Poster card** renders one **Movie** via its **Card view model**; it shows the **Poster** when present, else the **Gradient fallback**.
-- A **Genre row**'s **View all** count is the **Genre**'s full **Movie** total (`listGenres()`), independent of the 15 cards shown.
+- A **Continue card** renders one **In-progress** **Movie** via its **Continue view model**; it always draws the **Gradient fallback** (it has no image slot) and opens the **Movie detail page**, not the player.
+- A **Genre row**'s **View all** count is the **Genre**'s full **Movie** total (`listGenres()`), independent of the 15 cards shown; the **Continue Watching row** has no **View all**.
 - A **Movie** has exactly one **video path** (referenced in the **Library root**), and at most one **Poster** and one **Backdrop** (in the **Managed image cache**).
 - A **Movie**'s **Status** is derived from **Watched** + **Resume position** — never stored.
+- A **Resume label** is derived from **Resume position** + runtime; it is built in the mapper, never inside the **Continue card**.
 - A **Rating** belongs to exactly one **Movie**; it is **Unrated** until **TMDB** seeds it or the maintainer sets it.
 - One **Movie** maps to exactly one **TMDB** entry (`tmdb_id`); in v1 one **Movie** = one video file (no **Editions**).
 
@@ -72,19 +80,27 @@
 > **Dev:** "And the **Poster**?"
 > **Maintainer:** "That we download from **TMDB** into the **Managed image cache**,
 > because it isn't on my disk and I need it offline."
-> **Dev:** "What about the **Rating** — empty until I set it?"
-> **Maintainer:** "No, seed it from the **TMDB** score so there are no blank
-> fields. Only leave it **Unrated** if **TMDB** has too few votes to trust."
 > **Dev:** "If I half-watch it, the card shows **in-progress**?"
 > **Maintainer:** "Right — that **Status** is derived from the **Resume position**,
 > I never set it directly. I only ever flip **Watched**."
-> **Dev:** "On the **Browse home**, the Action **Genre row** says 'View all 214'
-> but I only see 15 **Poster cards** — bug?"
+> **Dev:** "So does that **Movie** then show up twice on the **Browse home** — once
+> in the **Continue Watching row** and once in its **Genre row**?"
+> **Maintainer:** "Yes, and that's correct. The **Continue Watching row** is a
+> different question — 'what am I part-way through' — not a **Genre**."
+> **Dev:** "Same tile in both?"
+> **Maintainer:** "No. The **Genre row** shows a **Poster card**; the **Continue
+> Watching row** shows a **Continue card** — wider, with the **Resume label** across
+> it. Same **Card carousel** underneath, different **Carousel variant**."
+> **Dev:** "Can I heart a **Movie** from the **Continue card**?"
+> **Maintainer:** "No — only from the **Poster card**. Clicking a **Continue card**
+> opens the **Movie**, same as anywhere else."
+> **Dev:** "And when nothing's been started?"
+> **Maintainer:** "Then there's no **Continue Watching row** at all — it doesn't sit
+> there empty. The **Genre rows** just start at the top."
+> **Dev:** "On the Action **Genre row** it says 'View all 214' but I only see 15
+> **Poster cards** — bug?"
 > **Maintainer:** "No — the **Card carousel** is capped at 15; the **View all**
 > count is the real total, and the link opens the full **Genre** page."
-> **Dev:** "And these cards have no **Poster** yet."
-> **Maintainer:** "Because nothing's imported from **TMDB** — so each **Poster
-> card** falls back to its **Gradient fallback** until the real **Poster** lands."
 
 ## Flagged ambiguities
 
@@ -109,3 +125,16 @@
   (`units × 10`) for the star display. An **Unrated** **Movie** maps to 0 stars,
   which looks identical to a literal 0 on the card — the **Unrated**/zero
   distinction is not surfaced there (flagged for the detail/edit grill).
+- **"Progress" is three things (new):** the stored **Resume position** (seconds),
+  the 0–100 display percent on a card's bar, and the **Resume label** string. Never
+  say bare "progress" across the seam — name which one. The stored value is always
+  **Resume position**.
+- **"Continue Watching" does not mean most-recently-watched (new):** the row is
+  ordered `recently-added`, because no sort exists over "when did playback last
+  touch this" and nothing writes **Resume position** until the player ships. The
+  name describes _which_ **Movies** appear (**In-progress**), not their order —
+  revisit the ordering with the player.
+- **The Continue card has no artwork (new):** it is **Gradient fallback**-only by
+  the prototype's design — there is no image slot in `mol.ContinueCard`, unlike the
+  **Poster card**. A **Movie**'s **Backdrop** would suit the 16:10 tile, but adding
+  it is a **prototype amendment**, not an implementation choice.
