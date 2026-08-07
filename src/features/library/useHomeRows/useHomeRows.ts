@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
 
-import type { GenreRowModel, HomeRow } from '@/types';
+import type { GenreRowModel } from '@/types';
 import { fetchHomePayload, saveFavorite } from '../api/api';
-import { view } from '../view/view';
+import { toGenreRow } from '../toGenreRow/toGenreRow';
+import { withFavorite } from '../withFavorite/withFavorite';
 
 /** Where the load is: never both loading and errored, never rows without `ready`. */
 export type HomeRowsStatus = 'loading' | 'ready' | 'error';
@@ -15,29 +16,6 @@ export interface UseHomeRowsResult {
   retry: () => void;
   /** Save one movie's favorite flag, showing the new value immediately. */
   toggleFavorite: (id: string, favorite: boolean) => void;
-}
-
-/** Map one payload row's movies through the card view mapper. */
-function toGenreRow(row: HomeRow): GenreRowModel {
-  return { genre: row.genre, count: row.count, movies: row.movies.map(view) };
-}
-
-/**
- * One movie's favorite flag set in every row it appears in. A movie tagged with
- * three genres has three cards, and they are one movie — they must never
- * disagree about whether it is a favorite.
- */
-function withFavorite(
-  rows: GenreRowModel[],
-  id: string,
-  favorite: boolean
-): GenreRowModel[] {
-  return rows.map((row) => ({
-    ...row,
-    movies: row.movies.map((movie) =>
-      movie.id === id ? { ...movie, favorite } : movie
-    ),
-  }));
 }
 
 /**
