@@ -79,20 +79,6 @@ const HOME_PAYLOAD: HomeRow[] = [
   },
 ];
 
-/** The same movie tagged with two genres — it earns a card in both rows. */
-const SHARED_MOVIE_PAYLOAD: HomeRow[] = [
-  {
-    genre: 'Action',
-    count: 1,
-    movies: [makeMovie({ id: 'x1', title: 'Ironclad', isFavorite: false })],
-  },
-  {
-    genre: 'Thriller',
-    count: 1,
-    movies: [makeMovie({ id: 'x1', title: 'Ironclad', isFavorite: false })],
-  },
-];
-
 function okResponse(body: unknown): Response {
   return {
     ok: true,
@@ -190,43 +176,12 @@ function isFilled(genre: string) {
   return heartIn(genre).getAttribute('aria-pressed');
 }
 
-interface FavoriteRequest {
-  url: string;
-  method: string | undefined;
-  contentType: string | null;
-  body: unknown;
-}
-
-function contentTypeOf(init?: RequestInit): string | null {
-  const headers = init?.headers;
-  if (!headers) {
-    return null;
-  }
-  if (Array.isArray(headers)) {
-    const pair = headers.find(([key]) => key.toLowerCase() === 'content-type');
-    return pair ? pair[1] : null;
-  }
-  if (typeof (headers as Headers).get === 'function') {
-    return (headers as Headers).get('content-type');
-  }
-  const record = headers as Record<string, string>;
-  const key = Object.keys(record).find(
-    (name) => name.toLowerCase() === 'content-type'
-  );
-  return key === undefined ? null : record[key];
-}
-
-/** Every favorite save the screen has attempted, in order. */
-function favoriteRequests(): FavoriteRequest[] {
+/** The id of every movie the screen has attempted to save, in order. */
+function favoriteSaves(): string[] {
   return fetchMock.mock.calls
-    .filter(([input]) => String(input).includes('/favorite'))
-    .map(([input, init]) => ({
-      url: String(input),
-      method: init?.method,
-      contentType: contentTypeOf(init),
-      body:
-        init?.body === undefined ? undefined : JSON.parse(String(init.body)),
-    }));
+    .map(([input]) => /\/api\/movies\/(.+)\/favorite/.exec(String(input)))
+    .filter((match): match is RegExpExecArray => match !== null)
+    .map((match) => decodeURIComponent(match[1]));
 }
 
 describe('GenreRows — loading the library', () => {
@@ -321,107 +276,24 @@ describe('GenreRows — loading the library', () => {
   });
 });
 
+/**
+ * The optimistic-favorite behaviour itself — reverting, echoing, one movie
+ * across several rows — belongs to `useHomeRows` and is tested there against
+ * the hook directly. What is left here is the claim only the rendered screen
+ * can make: that the heart on a card is actually wired to that hook, for the
+ * movie whose card was clicked.
+ */
 describe('GenreRows — the favorite heart', () => {
-  it('fills the heart immediately, before the save has come back', async () => {
-    // A save that never settles: anything filled here is optimistic, not confirmed.
-    serve(HOME_PAYLOAD, () => new Promise<Response>(() => undefined));
+  it('fills the clicked card’s heart and saves that movie', async () => {
+    serve(HOME_PAYLOAD);
     renderRows();
-    await screen.findByRole('heading', { name: 'Action' });
+    await findGenreHeading('Action');
 
     expect(isFilled('Action')).toBe('false');
 
     fireEvent.click(heartIn('Action'));
 
     expect(isFilled('Action')).toBe('true');
-  });
-
-  it('saves the new value to POST /api/movies/:id/favorite', async () => {
-    serve(HOME_PAYLOAD);
-    renderRows();
-    await screen.findByRole('heading', { name: 'Action' });
-
-    fireEvent.click(heartIn('Action'));
-
-    await waitFor(() => expect(favoriteRequests()).toHaveLength(1));
-
-    const [request] = favoriteRequests();
-    expect(request.url).toContain('/api/movies/a1/favorite');
-    expect(request.method?.toUpperCase()).toBe('POST');
-    expect(request.contentType).toMatch(/application\/json/i);
-    expect(request.body).toEqual({ value: true });
-  });
-
-  it('saves `false` when an existing favorite is unfavorited', async () => {
-    serve(HOME_PAYLOAD, () => Promise.resolve(okResponse({ value: false })));
-    renderRows();
-    await screen.findByRole('heading', { name: 'Comedy' });
-
-    expect(isFilled('Comedy')).toBe('true');
-
-    fireEvent.click(heartIn('Comedy'));
-
-    expect(isFilled('Comedy')).toBe('false');
-    await waitFor(() => expect(favoriteRequests()).toHaveLength(1));
-    expect(favoriteRequests()[0].url).toContain('/api/movies/c1/favorite');
-    expect(favoriteRequests()[0].body).toEqual({ value: false });
-  });
-
-  it('leaves the heart filled once the save succeeds', async () => {
-    serve(HOME_PAYLOAD);
-    renderRows();
-    await screen.findByRole('heading', { name: 'Action' });
-
-    fireEvent.click(heartIn('Action'));
-
-    await waitFor(() => expect(favoriteRequests()).toHaveLength(1));
-    expect(isFilled('Action')).toBe('true');
-  });
-
-  it('reverts the heart when the save fails, so it never lies about what is saved', async () => {
-    serve(HOME_PAYLOAD, () => Promise.reject(new Error('network down')));
-    renderRows();
-    await screen.findByRole('heading', { name: 'Action' });
-
-    fireEvent.click(heartIn('Action'));
-    expect(isFilled('Action')).toBe('true');
-
-    await waitFor(() => expect(isFilled('Action')).toBe('false'));
-  });
-
-  it('reverts the heart when the server rejects the save', async () => {
-    serve(HOME_PAYLOAD, () => Promise.resolve(serverErrorResponse()));
-    renderRows();
-    await screen.findByRole('heading', { name: 'Comedy' });
-
-    fireEvent.click(heartIn('Comedy'));
-    expect(isFilled('Comedy')).toBe('false');
-
-    await waitFor(() => expect(isFilled('Comedy')).toBe('true'));
-  });
-
-  it('fills the same movie in every genre row it appears in', async () => {
-    serve(SHARED_MOVIE_PAYLOAD);
-    renderRows();
-    await screen.findByRole('heading', { name: 'Action' });
-
-    fireEvent.click(heartIn('Action'));
-
-    expect(isFilled('Action')).toBe('true');
-    expect(isFilled('Thriller')).toBe('true');
-
-    await waitFor(() => expect(favoriteRequests()).toHaveLength(1));
-  });
-
-  it('reverts the same movie in every genre row when the save fails', async () => {
-    serve(SHARED_MOVIE_PAYLOAD, () =>
-      Promise.reject(new Error('network down'))
-    );
-    renderRows();
-    await screen.findByRole('heading', { name: 'Action' });
-
-    fireEvent.click(heartIn('Action'));
-
-    await waitFor(() => expect(isFilled('Action')).toBe('false'));
-    expect(isFilled('Thriller')).toBe('false');
+    await waitFor(() => expect(favoriteSaves()).toEqual(['a1']));
   });
 });
