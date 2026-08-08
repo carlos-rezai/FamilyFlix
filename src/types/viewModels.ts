@@ -25,6 +25,24 @@ export interface PosterCardMovie {
 }
 
 /**
+ * The view model a `ContinueCard` renders from — the wide resume tile on the
+ * home screen, built by the `continueView()` mapper
+ * (`features/library/continueView/continueView.ts`). The tile carries no
+ * artwork, so `g1`/`g2` are always the deterministic gradient stops.
+ * `resumeLabel` arrives as a finished string ("Resume · 1:13 of 1:55", or just
+ * the elapsed half when the runtime is unknown) so the molecule stays
+ * logic-free, and `progress` is a 0–100 percent.
+ */
+export interface ContinueCardMovie {
+  id: string;
+  title: string;
+  g1: string;
+  g2: string;
+  resumeLabel: string;
+  progress: number;
+}
+
+/**
  * A {@link HomeRow} after the frontend has mapped every `Movie` through
  * `view()` — what a `GenreRow` actually renders. Same genre and same **true
  * total** `count`; only the movies are narrowed to their card view models.

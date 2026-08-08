@@ -7,3 +7,4 @@ export { HeartOutlineIcon } from './Icon/HeartOutlineIcon';
 export { GearIcon } from './Icon/GearIcon';
 export { ChevronLeftIcon } from './Icon/ChevronLeftIcon';
 export { ChevronRightIcon } from './Icon/ChevronRightIcon';
+export { PlayIcon } from './Icon/PlayIcon';
