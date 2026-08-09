@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 
+import { ContinueRow } from '../ContinueRow/ContinueRow';
 import { GenreRow } from '../GenreRow/GenreRow';
 import { useHomeRows } from '../useHomeRows/useHomeRows';
 import {
@@ -15,7 +16,7 @@ import {
   SkeletonCard,
   SkeletonPoster,
   SkeletonLine,
-} from './GenreRows.styles';
+} from './HomeRows.styles';
 
 /** Enough placeholder rows and cards to fill the fold while the library loads. */
 const SKELETON_ROWS = 3;
@@ -47,14 +48,16 @@ function LoadingRows() {
 }
 
 /**
- * The body of the browse home: every populated genre as its own row, loaded in
- * one request. Owns the three load states — skeleton rows, the empty library,
- * and a retryable failure. The empty-library copy is deliberately its own
- * message: "no movies yet" is a different situation from a search that matched
- * nothing, which belongs to the search feature.
+ * The body of the browse home: what the family is part-way through, then every
+ * populated genre as its own row — both sections from the one request, so the
+ * screen paints at once. Owns the three load states — skeleton rows, the empty
+ * library, and a retryable failure. The empty-library copy is deliberately its
+ * own message: "no movies yet" is a different situation from a search that
+ * matched nothing, which belongs to the search feature.
  */
-export function GenreRows() {
-  const { status, rows, retry, toggleFavorite } = useHomeRows();
+export function HomeRows() {
+  const { status, rows, continueWatching, retry, toggleFavorite } =
+    useHomeRows();
   const navigate = useNavigate();
 
   if (status === 'loading') {
@@ -73,7 +76,9 @@ export function GenreRows() {
     );
   }
 
-  if (rows.length === 0) {
+  // An untagged movie earns no genre row, so empty rows alone don't mean an
+  // empty library — something in progress is proof there are movies.
+  if (rows.length === 0 && continueWatching.length === 0) {
     return (
       <Message>
         <MessageTitle>Your library is empty</MessageTitle>
@@ -82,15 +87,19 @@ export function GenreRows() {
     );
   }
 
+  const openMovie = (id: string) =>
+    navigate(`/movie/${encodeURIComponent(id)}`);
+
   return (
     <>
+      <ContinueRow movies={continueWatching} onOpenMovie={openMovie} />
       {rows.map((row) => (
         <GenreRow
           key={row.genre}
           row={row}
           // A genre name is user data on its way into a URL — encode it.
           onOpenAll={() => navigate(`/genre/${encodeURIComponent(row.genre)}`)}
-          onOpenMovie={(id) => navigate(`/movie/${encodeURIComponent(id)}`)}
+          onOpenMovie={openMovie}
           onToggleFavorite={toggleFavorite}
         />
       ))}

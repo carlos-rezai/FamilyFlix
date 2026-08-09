@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 
-import type { GenreRowModel } from '@/types';
+import type { ContinueCardMovie, GenreRowModel } from '@/types';
 import { fetchHomePayload, saveFavorite } from '../api/api';
+import { continueView } from '../continueView/continueView';
 import { toGenreRow } from '../toGenreRow/toGenreRow';
 import { withFavorite } from '../withFavorite/withFavorite';
 
@@ -12,6 +13,8 @@ export interface UseHomeRowsResult {
   status: HomeRowsStatus;
   /** The genre rows to render; empty unless `status` is `ready`. */
   rows: GenreRowModel[];
+  /** The resume tiles to render above them; empty unless `status` is `ready`. */
+  continueWatching: ContinueCardMovie[];
   /** Re-run the load after a failure. */
   retry: () => void;
   /** Save one movie's favorite flag, showing the new value immediately. */
@@ -19,9 +22,11 @@ export interface UseHomeRowsResult {
 }
 
 /**
- * Loads the browse home in a single request and hands back render-ready genre
- * rows. One aggregate fetch means one loading transition — no per-genre fan-out
- * — and the payload's alphabetical order is preserved as it arrives.
+ * Loads the browse home in a single request and hands back both of its
+ * render-ready sections — the resume tiles and the genre rows. One aggregate
+ * fetch means one loading transition, so the screen paints at once and no
+ * section pops in above rows that had already painted; the payload's
+ * alphabetical order is preserved as it arrives.
  *
  * It also owns the one edit the browse home can make to those rows — the
  * favorite heart — because the optimistic value and the loaded rows are the
@@ -31,6 +36,9 @@ export interface UseHomeRowsResult {
 export function useHomeRows(): UseHomeRowsResult {
   const [status, setStatus] = useState<HomeRowsStatus>('loading');
   const [rows, setRows] = useState<GenreRowModel[]>([]);
+  const [continueWatching, setContinueWatching] = useState<ContinueCardMovie[]>(
+    []
+  );
   const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
@@ -43,6 +51,7 @@ export function useHomeRows(): UseHomeRowsResult {
           return;
         }
         setRows(payload.rows.map(toGenreRow));
+        setContinueWatching(payload.continueWatching.map(continueView));
         setStatus('ready');
       })
       .catch(() => {
@@ -50,6 +59,7 @@ export function useHomeRows(): UseHomeRowsResult {
           return;
         }
         setRows([]);
+        setContinueWatching([]);
         setStatus('error');
       });
 
@@ -77,5 +87,5 @@ export function useHomeRows(): UseHomeRowsResult {
       });
   }, []);
 
-  return { status, rows, retry, toggleFavorite };
+  return { status, rows, continueWatching, retry, toggleFavorite };
 }
