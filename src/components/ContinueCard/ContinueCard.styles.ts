@@ -1,6 +1,27 @@
 import styled from 'styled-components';
 
-export const Root = styled.div`
+/**
+ * The whole tile is one control, so it is a real `<button>` rather than a div
+ * with a click handler: that is what makes it a tab stop and what gets Enter
+ * and Space handled by the browser instead of by us. The tile holds nothing
+ * else interactive, so there is no nested-control problem to work around.
+ *
+ * Everything above `width` is undoing the UA's button styling, so the rendered
+ * pixels are the same as the div's were: buttons come with a border, a padded
+ * grey background, a centred text alignment that would shift the title and
+ * resume label inside their absolutely-positioned wrapper, and their own font.
+ * The focus ring is deliberately left alone — it is the visible half of what
+ * this change is for.
+ */
+export const Root = styled.button`
+  appearance: none;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  display: block;
   width: 100%;
   cursor: pointer;
 

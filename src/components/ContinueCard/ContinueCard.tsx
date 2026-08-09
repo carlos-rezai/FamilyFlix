@@ -24,10 +24,15 @@ export interface ContinueCardProps {
  * accent progress track pinned to the bottom edge, and a play badge top-right.
  * Read-only by design: no favorite control, one `onOpen`. Presentational — the
  * label and percent arrive ready-made on the `ContinueCardMovie`.
+ *
+ * The tile is a single button (see `Root`), labelled with the movie's title
+ * rather than by its contents: read as content it would announce as "Comet
+ * Season Resume · 1:13 of 1:55", and the resume label is progress information
+ * for the eye, not part of what the control is called.
  */
 export function ContinueCard({ movie, onOpen }: ContinueCardProps) {
   return (
-    <Root onClick={onOpen}>
+    <Root type="button" aria-label={movie.title} onClick={onOpen}>
       <Tile>
         <Art $g1={movie.g1} $g2={movie.g2} />
         <Scrim />
