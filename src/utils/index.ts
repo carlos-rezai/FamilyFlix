@@ -9,3 +9,4 @@ export {
   NOMINAL_SLIVER_PERCENT,
 } from './toProgressPercent/toProgressPercent';
 export { formatClock } from './formatClock/formatClock';
+export { toRuntimeSeconds } from './toRuntimeSeconds/toRuntimeSeconds';

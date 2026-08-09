@@ -1,5 +1,10 @@
 import type { ContinueCardMovie, Movie } from '@/types';
-import { formatClock, gradientFromId, toProgressPercent } from '@/utils';
+import {
+  formatClock,
+  gradientFromId,
+  toProgressPercent,
+  toRuntimeSeconds,
+} from '@/utils';
 
 /**
  * Maps a canonical `Movie` record to the `ContinueCardMovie` a `ContinueCard`
@@ -13,10 +18,7 @@ import { formatClock, gradientFromId, toProgressPercent } from '@/utils';
 export function continueView(movie: Movie): ContinueCardMovie {
   const { g1, g2 } = gradientFromId(movie.id);
   const elapsed = formatClock(movie.resumePositionSeconds);
-  const totalSeconds =
-    movie.runtimeMinutes !== null && movie.runtimeMinutes > 0
-      ? movie.runtimeMinutes * 60
-      : null;
+  const totalSeconds = toRuntimeSeconds(movie.runtimeMinutes);
 
   return {
     id: movie.id,
