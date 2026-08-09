@@ -1,26 +1,10 @@
 import styled from 'styled-components';
 
-export const Root = styled.section`
-  margin-bottom: ${({ theme }) => theme.space.s7};
-`;
-
-export const Header = styled.div`
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 16px;
-  padding: ${({ theme }) => `0 ${theme.space.s6}`};
-  margin: ${({ theme }) => `0 0 ${theme.space.s4}`};
-`;
-
-export const Title = styled.h2`
-  font-family: ${({ theme }) => theme.fonts.serif};
-  font-weight: 600;
-  font-size: 22px;
-  color: ${({ theme }) => theme.colors.text};
-  margin: 0;
-`;
-
+/**
+ * The row's trailing action: "View all {count} →". The section, the heading and
+ * the strip this sits in all belong to `RowSection` now — what is left here is
+ * only what makes a genre row a genre row, which is this link to its full page.
+ */
 export const ViewAll = styled.button`
   display: flex;
   align-items: center;
@@ -41,6 +25,7 @@ export const ViewAll = styled.button`
   }
 `;
 
+/** The chevron after the label — decorative, and hidden from assistive tech. */
 export const ViewAllArrow = styled.span`
   font-size: 17px;
   line-height: 1;

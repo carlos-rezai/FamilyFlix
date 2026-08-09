@@ -1,11 +1,17 @@
-import { useId } from 'react';
-
 import type { GenreRowModel } from '@/types';
 import {
   CardCarousel,
   type PosterCarouselItem,
 } from '../CardCarousel/CardCarousel';
-import { Root, Header, Title, ViewAll, ViewAllArrow } from './GenreRow.styles';
+import { RowSection } from '../RowSection/RowSection';
+import { ViewAll, ViewAllArrow } from './GenreRow.styles';
+
+/**
+ * A genre row's heading is 22px in the prototype, a size below Continue
+ * Watching's 24px. Passed explicitly for the same reason: the difference is
+ * specified, not incidental.
+ */
+const TITLE_SIZE = 22;
 
 export interface GenreRowProps {
   row: GenreRowModel;
@@ -24,6 +30,10 @@ export interface GenreRowProps {
  * One genre's shelf on the browse home: the genre name, a "View all {count}"
  * link, and a carousel of that genre's poster cards. The count is the genre's
  * **true total**, not the number of cards the row happens to show.
+ *
+ * The section, heading and header strip come from `RowSection`, shared with
+ * `ContinueRow`; the "View all" control rides in as that section's trailing
+ * action, since it is the one piece of chrome only a genre has.
  */
 export function GenreRow({
   row,
@@ -31,8 +41,6 @@ export function GenreRow({
   onOpenMovie,
   onToggleFavorite,
 }: GenreRowProps) {
-  const titleId = useId();
-
   const items: PosterCarouselItem[] = row.movies.map((movie) => ({
     movie,
     onOpen: () => onOpenMovie?.(movie.id),
@@ -40,15 +48,17 @@ export function GenreRow({
   }));
 
   return (
-    <Root aria-labelledby={titleId}>
-      <Header>
-        <Title id={titleId}>{row.genre}</Title>
+    <RowSection
+      title={row.genre}
+      titleSize={TITLE_SIZE}
+      action={
         <ViewAll type="button" onClick={onOpenAll}>
           View all {row.count}
           <ViewAllArrow aria-hidden="true">→</ViewAllArrow>
         </ViewAll>
-      </Header>
+      }
+    >
       <CardCarousel items={items} variant="poster" />
-    </Root>
+    </RowSection>
   );
 }
