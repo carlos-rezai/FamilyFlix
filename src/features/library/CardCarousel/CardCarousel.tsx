@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import type { ReactNode } from 'react';
 
 import { ContinueCard, PosterCard } from '@/components';
 import { ChevronLeftIcon, ChevronRightIcon } from '@/primitives';
@@ -129,6 +130,20 @@ export function CardCarousel(props: CardCarouselProps) {
   const arrowTop = CARD_WIDTH * arrowCentre;
   const itemWidth = CARD_WIDTH * widthFactor;
 
+  /**
+   * The slot one card is laid out into — written once, so both variants scroll
+   * on identical geometry and only the card inside the slot differs. The two
+   * arms below still each map their own items, because that is where the props
+   * union is narrowed: which item shape a row holds is a compile-time fact, and
+   * flattening the two arms into one would mean widening the item back to a
+   * union and re-checking it at runtime.
+   */
+  const tile = (id: string, card: ReactNode) => (
+    <Item key={id} $width={itemWidth}>
+      {card}
+    </Item>
+  );
+
   return (
     <Root>
       {canLeft ? (
@@ -144,20 +159,22 @@ export function CardCarousel(props: CardCarouselProps) {
 
       <Scroller ref={scrollerRef} onScroll={measure}>
         {props.variant === 'continue'
-          ? props.items.map((item) => (
-              <Item key={item.movie.id} $width={itemWidth}>
+          ? props.items.map((item) =>
+              tile(
+                item.movie.id,
                 <ContinueCard movie={item.movie} onOpen={item.onOpen} />
-              </Item>
-            ))
-          : props.items.map((item) => (
-              <Item key={item.movie.id} $width={itemWidth}>
+              )
+            )
+          : props.items.map((item) =>
+              tile(
+                item.movie.id,
                 <PosterCard
                   movie={item.movie}
                   onOpen={item.onOpen}
                   onToggleFav={item.onToggleFavorite}
                 />
-              </Item>
-            ))}
+              )
+            )}
       </Scroller>
 
       {canRight ? (
