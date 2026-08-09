@@ -61,10 +61,11 @@ export function createApiRouter(
 
   router.use(express.json());
 
-  // The whole browse home in one request: a row per populated genre,
-  // alphabetical, each capped at 15 movies with the genre's true total.
+  // The whole browse home in one request: the in-progress movies, plus a row
+  // per populated genre, alphabetical, each capped at 15 movies with the
+  // genre's true total.
   router.get('/home', (_req: Request, res: Response) => {
-    res.json(storage.listHomeRows());
+    res.json(storage.getHome());
   });
 
   // The generic browse endpoint, for the genre page and any later filtered

@@ -42,7 +42,7 @@ export function useHomeRows(): UseHomeRowsResult {
         if (!current) {
           return;
         }
-        setRows(payload.map(toGenreRow));
+        setRows(payload.rows.map(toGenreRow));
         setStatus('ready');
       })
       .catch(() => {

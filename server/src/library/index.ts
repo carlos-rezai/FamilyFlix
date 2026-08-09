@@ -1,7 +1,7 @@
 import { openDatabase } from '../db';
 import type {
   GenreCount,
-  HomeRow,
+  HomePayload,
   Movie,
   MoviePatch,
   MovieQuery,
@@ -61,11 +61,12 @@ export interface LibraryStorage {
   /** List only genres with at least one movie, each with its movie count. */
   listGenres(): GenreCount[];
   /**
-   * The browse home in one call: a row per populated genre (alphabetical),
-   * each carrying the genre's true movie count and its 15 most recently added
-   * movies. Returns `[]` for an empty library.
+   * The browse home in one call: the in-progress movies as `continueWatching`,
+   * plus a `rows` entry per populated genre (alphabetical), each carrying the
+   * genre's true movie count. Both sections are ordered recently-added-first and
+   * capped at 15; both are `[]` for an empty library.
    */
-  listHomeRows(): HomeRow[];
+  getHome(): HomePayload;
   /**
    * Persist the resume position (seconds into the file). Called constantly during
    * playback, so it stays a cheap single-column write — only
@@ -118,7 +119,7 @@ export function createSqliteStorage(dbPath: string): LibraryStorage {
     listMovies: browse.listMovies,
     searchMovies: browse.searchMovies,
     listGenres: browse.listGenres,
-    listHomeRows: home.listHomeRows,
+    getHome: home.getHome,
     setResumePosition: watch.setResumePosition,
     markWatched: watch.markWatched,
     markUnwatched: watch.markUnwatched,

@@ -8,7 +8,13 @@
  * `docs/design-logs/01-library-core.md`.
  */
 export type { WatchStatus, Genre, Subtitle, Movie } from './movie';
-export type { MovieSort, MovieQuery, GenreCount, HomeRow } from './browse';
+export type {
+  MovieSort,
+  MovieQuery,
+  GenreCount,
+  HomeRow,
+  HomePayload,
+} from './browse';
 export type { NewSubtitle, NewMovie, MoviePatch } from './write';
 export type {
   PosterCardMovie,

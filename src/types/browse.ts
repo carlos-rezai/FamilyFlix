@@ -53,7 +53,7 @@ export interface GenreCount {
 }
 
 /**
- * One genre row of the browse home, as `listHomeRows()` builds it and
+ * One genre row of the browse home, as `getHome()` builds it and
  * `GET /api/home` returns it: the genre name, its **true total** movie count,
  * and the capped, recently-added-first slice of movies the row displays
  * (`count` is therefore ≥ `movies.length`). The frontend maps each `Movie`
@@ -63,4 +63,20 @@ export interface HomeRow {
   genre: string;
   count: number;
   movies: Movie[];
+}
+
+/**
+ * The whole browse home in one payload, as `getHome()` builds it and
+ * `GET /api/home` returns it — named sections rather than a bare row array, so
+ * a new section can join without breaking the ones already there.
+ *
+ * `continueWatching` holds the in-progress movies, recently-added-first and
+ * capped at the same limit as a genre row; a movie part-way through appears
+ * here **and** in each of its genre rows, since "what am I part-way through"
+ * and "what Action do I own" are two different questions. Both sections are
+ * `[]` for an empty library.
+ */
+export interface HomePayload {
+  continueWatching: Movie[];
+  rows: HomeRow[];
 }
