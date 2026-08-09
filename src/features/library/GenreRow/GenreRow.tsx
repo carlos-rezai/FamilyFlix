@@ -1,7 +1,10 @@
 import { useId } from 'react';
 
 import type { GenreRowModel } from '@/types';
-import { CardCarousel, type CarouselItem } from '../CardCarousel/CardCarousel';
+import {
+  CardCarousel,
+  type PosterCarouselItem,
+} from '../CardCarousel/CardCarousel';
 import { Root, Header, Title, ViewAll, ViewAllArrow } from './GenreRow.styles';
 
 export interface GenreRowProps {
@@ -30,7 +33,7 @@ export function GenreRow({
 }: GenreRowProps) {
   const titleId = useId();
 
-  const items: CarouselItem[] = row.movies.map((movie) => ({
+  const items: PosterCarouselItem[] = row.movies.map((movie) => ({
     movie,
     onOpen: () => onOpenMovie?.(movie.id),
     onToggleFavorite: () => onToggleFavorite?.(movie.id, !movie.favorite),

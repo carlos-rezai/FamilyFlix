@@ -486,17 +486,17 @@ describe('CardCarousel — illegal item and variant combinations do not compile'
   });
 
   it('will not hang a favorite handler on a continue item', () => {
-    const props: CardCarouselProps = {
-      variant: 'continue',
-      items: [
-        {
-          movie: makeContinueMovie({ id: 'a1' }),
-          onOpen: () => undefined,
-          // @ts-expect-error — a continue tile has no heart to raise this from
-          onToggleFavorite: () => undefined,
-        },
-      ],
+    // Annotated on its own rather than inline in `items`: nested one level
+    // deeper, the compiler reports the whole array as mismatched instead of
+    // naming the offending property, and the guard would stop being about the
+    // heart.
+    const item: ContinueCarouselItem = {
+      movie: makeContinueMovie({ id: 'a1' }),
+      onOpen: () => undefined,
+      // @ts-expect-error — a continue tile has no heart to raise this from
+      onToggleFavorite: () => undefined,
     };
+    const props: CardCarouselProps = { variant: 'continue', items: [item] };
 
     expect(props.items).toHaveLength(1);
   });

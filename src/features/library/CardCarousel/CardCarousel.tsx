@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { PosterCard } from '@/components';
+import { ContinueCard, PosterCard } from '@/components';
 import { ChevronLeftIcon, ChevronRightIcon } from '@/primitives';
-import type { PosterCardMovie } from '@/types';
+import type { ContinueCardMovie, PosterCardMovie } from '@/types';
 import {
   CARD_WIDTH,
   Root,
@@ -15,18 +15,39 @@ import {
 /** Which card shape the row holds; drives the item width and arrow height. */
 export type CarouselVariant = 'poster' | 'continue';
 
-/** One card in the row: its view model plus the actions it can raise. */
-export interface CarouselItem {
+/** One poster card in the row: its view model plus the actions it can raise. */
+export interface PosterCarouselItem {
   movie: PosterCardMovie;
   onOpen: () => void;
   onToggleFavorite: () => void;
 }
 
-export interface CardCarouselProps {
-  items: CarouselItem[];
-  /** Defaults to `poster`. */
-  variant?: CarouselVariant;
+/**
+ * One resume tile in the row. A continue tile carries no heart, so it has no
+ * favorite handler to raise — the absence is part of the type, not a runtime
+ * check inside the card.
+ */
+export interface ContinueCarouselItem {
+  movie: ContinueCardMovie;
+  onOpen: () => void;
 }
+
+/**
+ * Discriminated on `variant`, so an item can only ever sit in the row that
+ * renders its card shape: seating a continue tile in a poster row, or hanging a
+ * favorite handler on a continue tile, is a compile error rather than a branch
+ * the component has to narrow at runtime.
+ */
+export type CardCarouselProps =
+  | {
+      /** Defaults to `poster`. */
+      variant?: 'poster';
+      items: PosterCarouselItem[];
+    }
+  | {
+      variant: 'continue';
+      items: ContinueCarouselItem[];
+    };
 
 /** Slack around each edge, so a fractional scroll offset never strands an arrow. */
 const EDGE_TOLERANCE = 4;
@@ -42,12 +63,15 @@ const ARROW_TOP = { poster: 0.75, continue: 0.48 } as const;
 const ITEM_WIDTH = { poster: 1, continue: 1.55 } as const;
 
 /**
- * The horizontal scroller inside a genre row. Native wheel / trackpad scrolling
- * is never intercepted; the arrows are an addition on top of it, each paging
- * ~80% of the visible width. They appear only where there is somewhere to go —
+ * The horizontal scroller inside a home row — poster cards for a genre, or the
+ * wider resume tiles of Continue Watching. Native wheel / trackpad scrolling is
+ * never intercepted; the arrows are an addition on top of it, each paging ~80%
+ * of the visible width. They appear only where there is somewhere to go —
  * hidden at the start, at the end, and entirely when the row doesn't overflow.
  */
-export function CardCarousel({ items, variant = 'poster' }: CardCarouselProps) {
+export function CardCarousel(props: CardCarouselProps) {
+  const { items } = props;
+  const variant = props.variant ?? 'poster';
   const scrollerRef = useRef<HTMLDivElement | null>(null);
   const [canLeft, setCanLeft] = useState(false);
   const [canRight, setCanRight] = useState(false);
@@ -100,19 +124,21 @@ export function CardCarousel({ items, variant = 'poster' }: CardCarouselProps) {
       ) : null}
 
       <Scroller ref={scrollerRef} onScroll={measure}>
-        {items.map((item) => (
-          <Item key={item.movie.id} $width={itemWidth}>
-            {/* The `continue` variant renders its own card; that arrives with
-                the Continue Watching feature, which owns the ContinueCard. */}
-            {variant === 'poster' ? (
-              <PosterCard
-                movie={item.movie}
-                onOpen={item.onOpen}
-                onToggleFav={item.onToggleFavorite}
-              />
-            ) : null}
-          </Item>
-        ))}
+        {props.variant === 'continue'
+          ? props.items.map((item) => (
+              <Item key={item.movie.id} $width={itemWidth}>
+                <ContinueCard movie={item.movie} onOpen={item.onOpen} />
+              </Item>
+            ))
+          : props.items.map((item) => (
+              <Item key={item.movie.id} $width={itemWidth}>
+                <PosterCard
+                  movie={item.movie}
+                  onOpen={item.onOpen}
+                  onToggleFav={item.onToggleFavorite}
+                />
+              </Item>
+            ))}
       </Scroller>
 
       {canRight ? (
