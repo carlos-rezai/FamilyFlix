@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { ThemeProvider } from 'styled-components';
 
 import { ContinueCard } from './ContinueCard';
@@ -73,5 +73,43 @@ describe('ContinueCard', () => {
 
     expect(queryByTitle('Favorite')).toBeNull();
     expect(queryByLabelText(/favorite/i)).toBeNull();
+  });
+});
+
+describe('ContinueCard — opening it without a mouse', () => {
+  it('exposes a control named for the movie', () => {
+    renderCard();
+
+    expect(screen.getByRole('button', { name: 'Comet Season' })).toBeTruthy();
+  });
+
+  it('gives that control a tab stop, so it can be reached at all', () => {
+    renderCard();
+    const tile = screen.getByRole('button', { name: 'Comet Season' });
+
+    tile.focus();
+
+    // jsdom only moves focus to an element the focus rules say is focusable, so
+    // this fails for a bare div exactly as tabbing to one would.
+    expect(document.activeElement).toBe(tile);
+  });
+
+  it('is a real button, so Enter and Space open the movie', () => {
+    const onOpen = vi.fn();
+    renderCard({ onOpen });
+    const tile = screen.getByRole('button', { name: 'Comet Season' });
+
+    // The tile holds no other control, so it can be a button outright and let
+    // the platform do the keyboard work: browsers synthesise a click from Enter
+    // and from Space on a button, which is strictly better than re-implementing
+    // that by hand. jsdom does not simulate that synthesis, so the assertion
+    // that carries the guarantee is that this really is a button rather than a
+    // div wearing a role — and that the click it would synthesise opens the
+    // movie.
+    expect(tile.tagName).toBe('BUTTON');
+    expect(tile.hasAttribute('disabled')).toBe(false);
+
+    fireEvent.click(tile);
+    expect(onOpen).toHaveBeenCalledTimes(1);
   });
 });
