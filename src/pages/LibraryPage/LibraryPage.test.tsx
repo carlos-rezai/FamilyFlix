@@ -5,7 +5,7 @@ import { MemoryRouter } from 'react-router-dom';
 
 import LibraryPage from './LibraryPage';
 import { theme } from '@/styles/theme';
-import type { HomeRow, Movie } from '@/types';
+import type { HomePayload, HomeRow, Movie } from '@/types';
 
 function makeMovie(overrides: Partial<Movie> = {}): Movie {
   return {
@@ -41,11 +41,17 @@ const HOME_PAYLOAD: HomeRow[] = [
   },
 ];
 
+/**
+ * One home response, in the named-section envelope `GET /api/home` answers
+ * with (issue #18). This page reads only `rows`; the continue section arrives
+ * in the same request but has no surface here yet.
+ */
 function okResponse(rows: HomeRow[]): Response {
+  const payload: HomePayload = { continueWatching: [], rows };
   return {
     ok: true,
     status: 200,
-    json: () => Promise.resolve(rows),
+    json: () => Promise.resolve(payload),
   } as unknown as Response;
 }
 

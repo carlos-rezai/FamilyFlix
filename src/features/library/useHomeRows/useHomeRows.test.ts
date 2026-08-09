@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
 
 import { useHomeRows } from './useHomeRows';
-import type { GenreRowModel, HomeRow, Movie } from '@/types';
+import type { GenreRowModel, HomePayload, Movie } from '@/types';
 
 function makeMovie(overrides: Partial<Movie> = {}): Movie {
   return {
@@ -31,32 +31,57 @@ function makeMovie(overrides: Partial<Movie> = {}): Movie {
 }
 
 /** One movie per row, so "the favorite in Action" is never ambiguous. */
-const HOME_PAYLOAD: HomeRow[] = [
-  {
-    genre: 'Action',
-    count: 3,
-    movies: [makeMovie({ id: 'a1', title: 'Northwind', isFavorite: false })],
-  },
-  {
-    genre: 'Comedy',
-    count: 2,
-    movies: [makeMovie({ id: 'c1', title: 'Comet Season', isFavorite: true })],
-  },
-];
+const HOME_PAYLOAD: HomePayload = {
+  continueWatching: [],
+  rows: [
+    {
+      genre: 'Action',
+      count: 3,
+      movies: [makeMovie({ id: 'a1', title: 'Northwind', isFavorite: false })],
+    },
+    {
+      genre: 'Comedy',
+      count: 2,
+      movies: [
+        makeMovie({ id: 'c1', title: 'Comet Season', isFavorite: true }),
+      ],
+    },
+  ],
+};
+
+/**
+ * The same payload with the continue section populated — the movie is
+ * part-way through and so appears in both sections, exactly as the aggregate
+ * builds it.
+ */
+const STARTED_PAYLOAD: HomePayload = {
+  continueWatching: [
+    makeMovie({
+      id: 'a1',
+      title: 'Northwind',
+      resumePositionSeconds: 4380,
+      status: 'in-progress',
+    }),
+  ],
+  rows: HOME_PAYLOAD.rows,
+};
 
 /** The same movie tagged with two genres — it earns a card in both rows. */
-const SHARED_MOVIE_PAYLOAD: HomeRow[] = [
-  {
-    genre: 'Action',
-    count: 1,
-    movies: [makeMovie({ id: 'x1', title: 'Ironclad', isFavorite: false })],
-  },
-  {
-    genre: 'Thriller',
-    count: 1,
-    movies: [makeMovie({ id: 'x1', title: 'Ironclad', isFavorite: false })],
-  },
-];
+const SHARED_MOVIE_PAYLOAD: HomePayload = {
+  continueWatching: [],
+  rows: [
+    {
+      genre: 'Action',
+      count: 1,
+      movies: [makeMovie({ id: 'x1', title: 'Ironclad', isFavorite: false })],
+    },
+    {
+      genre: 'Thriller',
+      count: 1,
+      movies: [makeMovie({ id: 'x1', title: 'Ironclad', isFavorite: false })],
+    },
+  ],
+};
 
 function okResponse(body: unknown): Response {
   return {
@@ -93,18 +118,18 @@ afterEach(() => {
 });
 
 /**
- * Serve the home aggregate from `rows`, and every favorite save from
+ * Serve the home aggregate from `payload`, and every favorite save from
  * `onFavorite`. Any other request is a fan-out this hook shouldn't make.
  */
 function serve(
-  rows: HomeRow[],
+  payload: HomePayload,
   onFavorite: () => Promise<Response> = () =>
     Promise.resolve(okResponse({ value: true }))
 ) {
   fetchMock.mockImplementation((input) => {
     const url = String(input);
     if (url.includes('/api/home')) {
-      return Promise.resolve(okResponse(rows));
+      return Promise.resolve(okResponse(payload));
     }
     if (url.includes('/favorite')) {
       return onFavorite();
@@ -191,6 +216,25 @@ describe('useHomeRows — loading the library', () => {
 
     await loadRows();
 
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders the genre rows unchanged when a continue section arrives too', async () => {
+    // The section is fetched in the same request but has no surface yet; the
+    // screen must look exactly as it does today, and one request still means
+    // one loading transition.
+    serve(STARTED_PAYLOAD);
+
+    const { result } = await loadRows();
+
+    expect(result.current.status).toBe('ready');
+    expect(result.current.rows.map((row) => row.genre)).toEqual([
+      'Action',
+      'Comedy',
+    ]);
+    expect(result.current.rows[0].movies.map((movie) => movie.title)).toEqual([
+      'Northwind',
+    ]);
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 

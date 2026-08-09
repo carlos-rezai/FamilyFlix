@@ -3,7 +3,7 @@ import { render, screen, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 
 import App from './App';
-import type { HomeRow, Movie } from '@/types';
+import type { HomePayload, HomeRow, Movie } from '@/types';
 
 function makeMovie(overrides: Partial<Movie> = {}): Movie {
   return {
@@ -77,7 +77,12 @@ beforeEach(() => {
   fetchMock.mockImplementation((input) => {
     const url = String(input);
     if (url.includes('/api/home')) {
-      return Promise.resolve(okResponse(HOME_PAYLOAD));
+      // The named-section envelope (issue #18); routing reads only `rows`.
+      const payload: HomePayload = {
+        continueWatching: [],
+        rows: HOME_PAYLOAD,
+      };
+      return Promise.resolve(okResponse(payload));
     }
     if (url.includes('/favorite')) {
       return Promise.resolve(okResponse({ value: true }));

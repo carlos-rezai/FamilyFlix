@@ -11,7 +11,7 @@ import { MemoryRouter } from 'react-router-dom';
 
 import { GenreRows } from './GenreRows';
 import { theme } from '@/styles/theme';
-import type { HomeRow, Movie } from '@/types';
+import type { HomePayload, HomeRow, Movie } from '@/types';
 
 function makeMovie(overrides: Partial<Movie> = {}): Movie {
   return {
@@ -87,6 +87,15 @@ function okResponse(body: unknown): Response {
   } as unknown as Response;
 }
 
+/**
+ * The named-section envelope `GET /api/home` answers with (issue #18). This
+ * screen reads only `rows`; the continue section arrives in the same request
+ * but has no surface here yet.
+ */
+function homePayload(rows: HomeRow[]): HomePayload {
+  return { continueWatching: [], rows };
+}
+
 function serverErrorResponse(): Response {
   return {
     ok: false,
@@ -125,7 +134,7 @@ function serve(
   fetchMock.mockImplementation((input) => {
     const url = String(input);
     if (url.includes('/api/home')) {
-      return Promise.resolve(okResponse(rows));
+      return Promise.resolve(okResponse(homePayload(rows)));
     }
     if (url.includes('/favorite')) {
       return onFavorite();
@@ -144,7 +153,7 @@ function respondWithRows(rows: HomeRow[]) {
     if (!url.includes('/api/home')) {
       return Promise.reject(new Error(`Unexpected request: ${url}`));
     }
-    return Promise.resolve(okResponse(rows));
+    return Promise.resolve(okResponse(homePayload(rows)));
   });
 }
 
