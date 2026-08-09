@@ -59,7 +59,7 @@ const MIN_PAGE = 240;
 /** Arrow centre, as a multiple of the card width — a poster is the taller card. */
 const ARROW_TOP = { poster: 0.75, continue: 0.48 } as const;
 
-/** The `continue` card is a wide 16:9 tile rather than a 2:3 poster. */
+/** The `continue` card is a wide 16:10 tile rather than a 2:3 poster. */
 const ITEM_WIDTH = { poster: 1, continue: 1.55 } as const;
 
 /**
