@@ -10,6 +10,13 @@ export default defineConfig(() => ({
   server: {
     port: 4200,
     host: 'localhost',
+    // The frontend calls the API on relative paths (`/api/home`), because the
+    // packaged Electron app serves both from one origin. In dev they are two
+    // processes, so proxy `/api` to the Express server to keep those paths —
+    // and the frontend's fetch code — identical in both environments.
+    proxy: {
+      '/api': `http://localhost:${process.env.PORT ?? 3001}`,
+    },
   },
   preview: {
     port: 4300,
