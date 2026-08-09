@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
 
 import { useHomeRows } from './useHomeRows';
+import { gradientFromId, NOMINAL_SLIVER_PERCENT } from '@/utils';
 import type { GenreRowModel, HomePayload, Movie } from '@/types';
 
 function makeMovie(overrides: Partial<Movie> = {}): Movie {
@@ -60,6 +61,30 @@ const STARTED_PAYLOAD: HomePayload = {
       id: 'a1',
       title: 'Northwind',
       resumePositionSeconds: 4380,
+      status: 'in-progress',
+    }),
+  ],
+  rows: HOME_PAYLOAD.rows,
+};
+
+/**
+ * Two movies part-way through — one whose runtime is known and one whose
+ * isn't — so the mapped tiles cover both shapes of resume label.
+ */
+const IN_PROGRESS_PAYLOAD: HomePayload = {
+  continueWatching: [
+    makeMovie({
+      id: 'a1',
+      title: 'Northwind',
+      runtimeMinutes: 100,
+      resumePositionSeconds: 1500,
+      status: 'in-progress',
+    }),
+    makeMovie({
+      id: 'c1',
+      title: 'Comet Season',
+      runtimeMinutes: null,
+      resumePositionSeconds: 2520,
       status: 'in-progress',
     }),
   ],
@@ -289,6 +314,82 @@ describe('useHomeRows — loading the library', () => {
       'Action',
       'Comedy',
     ]);
+  });
+});
+
+describe('useHomeRows — the continue section', () => {
+  it('maps the continue section into render-ready resume tiles', async () => {
+    serve(IN_PROGRESS_PAYLOAD);
+
+    const { result } = await loadRows();
+
+    const [northwind, comet] = result.current.continueWatching;
+
+    expect(northwind.id).toBe('a1');
+    expect(northwind.title).toBe('Northwind');
+    // 25:00 into a 1:40:00 movie — a quarter of the way through.
+    expect(northwind.resumeLabel).toBe('Resume · 25:00 of 1:40:00');
+    expect(northwind.progress).toBe(25);
+
+    // Unknown runtime: elapsed alone, and the nominal sliver on the track.
+    expect(comet.resumeLabel).toBe('Resume · 42:00');
+    expect(comet.progress).toBe(NOMINAL_SLIVER_PERCENT);
+  });
+
+  it('gives every tile the gradient stops its id hashes to', async () => {
+    serve(IN_PROGRESS_PAYLOAD);
+
+    const { result } = await loadRows();
+
+    const [northwind] = result.current.continueWatching;
+    const { g1, g2 } = gradientFromId('a1');
+
+    expect(northwind.g1).toBe(g1);
+    expect(northwind.g2).toBe(g2);
+  });
+
+  it('holds no resume tiles when nothing is in progress', async () => {
+    serve(HOME_PAYLOAD);
+
+    const { result } = await loadRows();
+
+    expect(result.current.continueWatching).toEqual([]);
+  });
+
+  it('reports both sections in the one ready transition, from the one request', async () => {
+    // The screen paints at once: the continue tiles are never ready a beat
+    // after the rows that had already painted.
+    serve(IN_PROGRESS_PAYLOAD);
+
+    const { result } = await loadRows();
+
+    expect(result.current.status).toBe('ready');
+    expect(result.current.rows).toHaveLength(2);
+    expect(result.current.continueWatching).toHaveLength(2);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('holds no resume tiles when the load fails', async () => {
+    fetchMock.mockRejectedValue(new Error('network down'));
+
+    const { result } = await loadRows();
+
+    expect(result.current.status).toBe('error');
+    expect(result.current.continueWatching).toEqual([]);
+  });
+
+  it('restores the continue section on retry', async () => {
+    fetchMock.mockRejectedValueOnce(new Error('network down'));
+    const { result } = await loadRows();
+    expect(result.current.continueWatching).toEqual([]);
+
+    serve(IN_PROGRESS_PAYLOAD);
+    act(() => result.current.retry());
+
+    await waitFor(() => expect(result.current.status).toBe('ready'));
+    expect(result.current.continueWatching.map((movie) => movie.title)).toEqual(
+      ['Northwind', 'Comet Season']
+    );
   });
 });
 

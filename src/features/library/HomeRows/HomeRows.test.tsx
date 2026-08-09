@@ -7,9 +7,9 @@ import {
   within,
 } from '@testing-library/react';
 import { ThemeProvider } from 'styled-components';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, useLocation } from 'react-router-dom';
 
-import { GenreRows } from './GenreRows';
+import { HomeRows } from './HomeRows';
 import { theme } from '@/styles/theme';
 import type { HomePayload, HomeRow, Movie } from '@/types';
 
@@ -65,6 +65,43 @@ const LIBRARY: HomeRow[] = [
   },
 ];
 
+/**
+ * Two movies part-way through, both of which `LIBRARY` also carries in a genre
+ * row — a started movie earns a resume tile up top *and* keeps its poster card
+ * below. One has a known runtime, the other doesn't.
+ */
+const IN_PROGRESS: Movie[] = [
+  makeMovie({
+    id: 'a1',
+    title: 'Northwind',
+    runtimeMinutes: 100,
+    resumePositionSeconds: 1500,
+    status: 'in-progress',
+  }),
+  makeMovie({
+    id: 'd1',
+    title: 'Quiet Harbor',
+    runtimeMinutes: null,
+    resumePositionSeconds: 2520,
+    status: 'in-progress',
+  }),
+];
+
+/**
+ * One in-progress movie carrying no genre tags. It appears in no genre row, so
+ * the payload's `rows` come back empty while the library plainly is not.
+ */
+const UNTAGGED: Movie[] = [
+  makeMovie({
+    id: 'u1',
+    title: 'Lantern Road',
+    runtimeMinutes: 100,
+    resumePositionSeconds: 1500,
+    status: 'in-progress',
+    genres: [],
+  }),
+];
+
 /** One movie per row, so "the heart in the Action row" is never ambiguous. */
 const HOME_PAYLOAD: HomeRow[] = [
   {
@@ -88,12 +125,14 @@ function okResponse(body: unknown): Response {
 }
 
 /**
- * The named-section envelope `GET /api/home` answers with (issue #18). This
- * screen reads only `rows`; the continue section arrives in the same request
- * but has no surface here yet.
+ * The named-section envelope `GET /api/home` answers with — both sections of
+ * the browse home in the one response the screen makes.
  */
-function homePayload(rows: HomeRow[]): HomePayload {
-  return { continueWatching: [], rows };
+function homePayload(
+  rows: HomeRow[],
+  continueWatching: Movie[] = []
+): HomePayload {
+  return { continueWatching, rows };
 }
 
 function serverErrorResponse(): Response {
@@ -147,22 +186,33 @@ function serve(
  * Queue one successful home response. Anything requested other than the home
  * aggregate rejects, so a screen that fans out per genre fails loudly.
  */
-function respondWithRows(rows: HomeRow[]) {
+function respondWithRows(rows: HomeRow[], continueWatching: Movie[] = []) {
   fetchMock.mockImplementationOnce((input) => {
     const url = String(input);
     if (!url.includes('/api/home')) {
       return Promise.reject(new Error(`Unexpected request: ${url}`));
     }
-    return Promise.resolve(okResponse(homePayload(rows)));
+    return Promise.resolve(okResponse(homePayload(rows, continueWatching)));
   });
+}
+
+/** Reports where the router has been sent, so a click's destination is visible. */
+function LocationProbe() {
+  const location = useLocation();
+  return <div data-testid="location">{location.pathname}</div>;
+}
+
+function currentPath() {
+  return screen.getByTestId('location').textContent;
 }
 
 function renderRows() {
   return render(
     <MemoryRouter>
       <ThemeProvider theme={theme}>
-        <GenreRows />
+        <HomeRows />
       </ThemeProvider>
+      <LocationProbe />
     </MemoryRouter>
   );
 }
@@ -193,7 +243,7 @@ function favoriteSaves(): string[] {
     .map((match) => decodeURIComponent(match[1]));
 }
 
-describe('GenreRows — loading the library', () => {
+describe('HomeRows — loading the library', () => {
   it('renders one genre row per populated genre, in the order the home payload gives them', async () => {
     respondWithRows(LIBRARY);
 
@@ -286,13 +336,116 @@ describe('GenreRows — loading the library', () => {
 });
 
 /**
+ * The section above the genre rows. What the mapper produces for one tile is
+ * `continueView`'s business and is tested there; what only the assembled
+ * screen can claim is where the section sits, where a tile leads, and when the
+ * section is absent altogether.
+ */
+describe('HomeRows — the Continue Watching row', () => {
+  it('renders the Continue Watching row above every genre row', async () => {
+    respondWithRows(LIBRARY, IN_PROGRESS);
+
+    renderRows();
+
+    await findGenreHeading('Action');
+
+    expect(
+      screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)
+    ).toEqual(['Continue Watching', 'Action', 'Comedy', 'Drama']);
+  });
+
+  it('renders the section from the same single home request', async () => {
+    respondWithRows(LIBRARY, IN_PROGRESS);
+
+    renderRows();
+
+    await findGenreHeading('Action');
+
+    const started = within(
+      screen.getByRole('region', { name: 'Continue Watching' })
+    );
+    expect(started.getByText('Northwind')).toBeDefined();
+    expect(started.getByText('Quiet Harbor')).toBeDefined();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('opens the movie detail page when a continue tile is clicked, not the player', async () => {
+    respondWithRows(LIBRARY, IN_PROGRESS);
+
+    renderRows();
+
+    await findGenreHeading('Action');
+
+    const started = within(
+      screen.getByRole('region', { name: 'Continue Watching' })
+    );
+    fireEvent.click(started.getByText('Quiet Harbor'));
+
+    expect(currentPath()).toBe('/movie/d1');
+  });
+
+  it('leaves a started movie in its genre row as well', async () => {
+    respondWithRows(LIBRARY, IN_PROGRESS);
+
+    renderRows();
+
+    await findGenreHeading('Action');
+
+    // The same movie, two surfaces: a resume tile up top, a poster card below.
+    const action = within(screen.getByRole('region', { name: 'Action' }));
+    expect(action.getAllByText('Northwind').length).toBeGreaterThan(0);
+  });
+
+  it('is absent entirely — no heading, no empty shelf — when nothing is in progress', async () => {
+    respondWithRows(LIBRARY);
+
+    renderRows();
+
+    await findGenreHeading('Action');
+
+    expect(screen.queryByText(/continue watching/i)).toBeNull();
+    expect(
+      screen.queryByRole('region', { name: 'Continue Watching' })
+    ).toBeNull();
+  });
+});
+
+describe('HomeRows — the empty library', () => {
+  it('reports an empty library only when there are no genre rows and nothing in progress', async () => {
+    respondWithRows([], []);
+
+    renderRows();
+
+    expect(await screen.findByText(/your library is empty/i)).toBeDefined();
+    expect(screen.queryByText(/continue watching/i)).toBeNull();
+  });
+
+  it('shows the Continue Watching row, and no empty-library message, for an in-progress movie with no genre tags', async () => {
+    // An untagged movie produces no genre row, so the rows are empty while the
+    // library plainly is not.
+    respondWithRows([], UNTAGGED);
+
+    renderRows();
+
+    expect(
+      await screen.findByRole('heading', {
+        level: 2,
+        name: 'Continue Watching',
+      })
+    ).toBeDefined();
+    expect(screen.getByText('Lantern Road')).toBeDefined();
+    expect(screen.queryByText(/your library is empty/i)).toBeNull();
+  });
+});
+
+/**
  * The optimistic-favorite behaviour itself — reverting, echoing, one movie
  * across several rows — belongs to `useHomeRows` and is tested there against
  * the hook directly. What is left here is the claim only the rendered screen
  * can make: that the heart on a card is actually wired to that hook, for the
  * movie whose card was clicked.
  */
-describe('GenreRows — the favorite heart', () => {
+describe('HomeRows — the favorite heart', () => {
   it('fills the clicked card’s heart and saves that movie', async () => {
     serve(HOME_PAYLOAD);
     renderRows();
