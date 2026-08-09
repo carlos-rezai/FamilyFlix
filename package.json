@@ -8,6 +8,7 @@
     "dev": "concurrently --names \"server,web\" --prefix-colors \"cyan,magenta\" --kill-others \"npm:dev:server\" \"npm:dev:web\"",
     "dev:server": "tsx watch server/src/main.ts",
     "dev:web": "nx serve",
+    "db:seed": "tsx server/src/db/seed/seed.ts",
     "start": "nx serve",
     "build": "nx build",
     "test": "nx test",
