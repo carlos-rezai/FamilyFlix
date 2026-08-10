@@ -2,27 +2,28 @@
 
 ## Library entities
 
-| Term         | Definition                                                                                           | Aliases to avoid             |
-| ------------ | ---------------------------------------------------------------------------------------------------- | ---------------------------- |
-| **Movie**    | A single film in the library — the canonical domain entity, one row in `movies`, one poster card.    | _film_ (informal synonym OK) |
-| **Genre**    | A shared, queryable category a **Movie** belongs to; a real entity (junction table), used to browse. | category, tag                |
-| **Subtitle** | A subtitle **file asset** owned by a **Movie** — a path + human language label + track order.        | caption, sub track           |
-| **Cast**     | The display-only ordered list of actor names on a **Movie** (JSON, never queried).                   | actors list, credits         |
-| **Director** | The single display-only director name on a **Movie**.                                                | —                            |
-| **Poster**   | The portrait cover image for a **Movie**, downloaded from **TMDB** into the **Managed image cache**. | cover, thumbnail             |
-| **Backdrop** | The wide hero image behind the **Movie detail page**, downloaded from **TMDB** into the image cache. | banner, hero, background     |
+| Term                   | Definition                                                                                                             | Aliases to avoid                   |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------------------- | ---------------------------------- |
+| **Movie**              | A single film in the library — the canonical domain entity, one row in `movies`, one poster card.                      | _film_ (informal synonym OK)       |
+| **Genre**              | A shared, queryable category a **Movie** belongs to; a real entity (junction table), used to browse.                   | category, tag                      |
+| **Subtitle**           | A subtitle **file asset** owned by a **Movie** — a path + human language label + track order.                          | caption, sub track                 |
+| **Synopsis** (new)     | The **Movie**'s long-form plot summary (`synopsis`), shown clamped-and-expandable on the **Movie detail page**.        | description, plot, overview, blurb |
+| **Cast**               | The display-only ordered list of actor names on a **Movie** (JSON, never queried).                                     | actors list, credits               |
+| **Director**           | The single display-only director name on a **Movie**.                                                                  | —                                  |
+| **Poster**             | The portrait cover image for a **Movie**, downloaded from **TMDB** into the **Managed image cache**.                   | cover, thumbnail                   |
+| **Backdrop** (updated) | The wide image behind the **Movie detail page**'s title block, from **TMDB**; falls back to the **Gradient fallback**. | banner, hero, background           |
 
 ## Rating & watch state
 
-| Term                | Definition                                                                                             | Aliases to avoid         |
-| ------------------- | ------------------------------------------------------------------------------------------------------ | ------------------------ |
-| **Rating**          | Household 0–10 half-star score (10 = 5 stars), **seeded from TMDB** at import, maintainer-overridable. | review, score, vote      |
-| **Unrated**         | A **Movie** with no **Rating** (`NULL`) — distinct from a literal 0-star rating.                       | zero stars, unscored     |
-| **Status**          | A **Movie**'s **derived** watch state: `unwatched` \| `in-progress` \| `watched` (never stored).       | state, watch status      |
-| **Watched**         | Explicit boolean flag meaning the maintainer marked a **Movie** finished.                              | seen, completed          |
-| **Resume position** | Seconds into a **Movie**'s video where playback last stopped (`resume_position_seconds`).              | progress, playback time  |
-| **In-progress**     | Derived **Status** when `resume_position_seconds > 0` and not **Watched**.                             | partially watched        |
-| **Favorite**        | Per-movie household boolean (`is_favorite`) surfaced as the Favorites row.                             | liked, starred, bookmark |
+| Term                  | Definition                                                                                                                                    | Aliases to avoid         |
+| --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------ |
+| **Rating**            | Household 0–10 half-star score (10 = 5 stars), **seeded from TMDB** at import, maintainer-overridable.                                        | review, score, vote      |
+| **Unrated** (updated) | A **Movie** with no **Rating** (`NULL`) — distinct from a literal 0-star rating; renders as **no stars at all** on the **Movie detail page**. | zero stars, unscored     |
+| **Status**            | A **Movie**'s **derived** watch state: `unwatched` \| `in-progress` \| `watched` (never stored).                                              | state, watch status      |
+| **Watched** (updated) | Explicit boolean flag meaning the maintainer marked a **Movie** finished; setting it via `markWatched` also clears the **Resume position**.   | seen, completed          |
+| **Resume position**   | Seconds into a **Movie**'s video where playback last stopped (`resume_position_seconds`).                                                     | progress, playback time  |
+| **In-progress**       | Derived **Status** when `resume_position_seconds > 0` and not **Watched**.                                                                    | partially watched        |
+| **Favorite**          | Per-movie household boolean (`is_favorite`) surfaced as the Favorites row, togglable from the card and the **Movie detail page**.             | liked, starred, bookmark |
 
 ## Storage & sourcing
 
@@ -38,23 +39,38 @@
 
 ## Browse & display (frontend)
 
-| Term                            | Definition                                                                                                                            | Aliases to avoid                      |
-| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------- |
-| **Browse home**                 | The `/` route (`LibraryPage`) — the parent-facing home screen listing the **Continue Watching row** then the **Genre rows**.          | home page, browse grid, dashboard     |
-| **Genre row**                   | A titled horizontal row showing up to 15 **Poster cards** for one **Genre**, with a "View all {count}" link.                          | shelf, carousel row, genre shelf      |
-| **Continue Watching row** (new) | The **Browse home**'s top row: up to 15 **Continue cards** for **In-progress** **Movies**; hidden entirely when there are none.       | resume row, keep watching, up next    |
-| **Card carousel** (updated)     | The horizontal scroller (prev/next arrows) inside a row, holding **Poster cards** or **Continue cards** per its **Carousel variant**. | slider, scroller                      |
-| **Carousel variant** (new)      | Which card shape a **Card carousel** holds — `poster` or `continue`; also sets the tile width and arrow height.                       | mode, type, kind                      |
-| **Poster card**                 | The library's primary movie tile: **Poster** (or **Gradient fallback**), title, **Rating** stars, watch state, favorite heart.        | tile, thumbnail, cell                 |
-| **Continue card** (new)         | The wide 16:10 resume tile: **Gradient fallback**, title, **Resume label**, progress track, play badge. No **Favorite** heart.        | resume tile, continue tile, hero card |
-| **Resume label** (new)          | The human string on a **Continue card** — `Resume · 1:13 of 1:55`, or `Resume · 1:13` when runtime is unknown.                        | timestamp, progress text              |
-| **View all**                    | The **Genre row** header link to that **Genre**'s full page (`/genre/:name`); its count is the true total, not the 15 shown.          | see all, more, expand                 |
-| **Home payload** (updated)      | The single `GET /api/home` response — named sections: `{ continueWatching: Movie[], rows: HomeRow[] }`.                               | feed, home data                       |
-| **Gradient fallback**           | A deterministic per-**Movie** color gradient (hashed from the **Movie** id) drawn on a card when no **Poster** exists.                | placeholder art, gradient stops       |
-| **Poster URL**                  | The browser-loadable URL (`/api/images/…`) that resolves a **Movie**'s **Poster path** through the image route.                       | image src, poster link                |
-| **Card view model**             | `PosterCardMovie` — the small display shape a **Movie** is mapped to for a **Poster card** (rating→percent, progress→percent).        | card DTO, card props                  |
-| **Continue view model** (new)   | `ContinueCardMovie` — the display shape for a **Continue card**: id, title, gradient stops, **Resume label**, progress percent.       | continue DTO, resume model            |
-| **Nominal sliver**              | The small fixed **Progress** bar length shown when a **Movie** is **In-progress** but `runtimeMinutes` is unknown.                    | placeholder progress                  |
+| Term                            | Definition                                                                                                                                                          | Aliases to avoid                      |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------- |
+| **Browse home**                 | The `/` route (`LibraryPage`) — the parent-facing home screen listing the **Continue Watching row** then the **Genre rows**.                                        | home page, browse grid, dashboard     |
+| **Genre row**                   | A titled horizontal row showing up to 15 **Poster cards** for one **Genre**, with a "View all {count}" link.                                                        | shelf, carousel row, genre shelf      |
+| **Continue Watching row**       | The **Browse home**'s top row: up to 15 **Continue cards** for **In-progress** **Movies**; hidden entirely when there are none.                                     | resume row, keep watching, up next    |
+| **Card carousel**               | The horizontal scroller (prev/next arrows) inside a row, holding **Poster cards** or **Continue cards** per its **Carousel variant**.                               | slider, scroller                      |
+| **Carousel variant**            | Which card shape a **Card carousel** holds — `poster` or `continue`; also sets the tile width and arrow height.                                                     | mode, type, kind                      |
+| **Poster card**                 | The library's primary movie tile: **Poster** (or **Gradient fallback**), title, **Rating** stars, watch state, favorite heart.                                      | tile, thumbnail, cell                 |
+| **Continue card**               | The wide 16:10 resume tile: **Gradient fallback**, title, **Resume label**, progress track, play badge. No **Favorite** heart.                                      | resume tile, continue tile, hero card |
+| **Resume label**                | The human string on a **Continue card** — `Resume · 1:13 of 1:55`, or `Resume · 1:13` when runtime is unknown.                                                      | timestamp, progress text              |
+| **View all**                    | The **Genre row** header link to that **Genre**'s full page (`/genre/:name`); its count is the true total, not the 15 shown.                                        | see all, more, expand                 |
+| **Home payload**                | The single `GET /api/home` response — named sections: `{ continueWatching: Movie[], rows: HomeRow[] }`.                                                             | feed, home data                       |
+| **Gradient fallback** (updated) | A deterministic per-**Movie** color gradient (hashed from the **Movie** id) drawn wherever artwork is missing — cards, the detail **Poster**, and the **Backdrop**. | placeholder art, gradient stops       |
+| **Poster URL**                  | The browser-loadable URL (`/api/images/…`) that resolves a **Movie**'s **Poster path** through the image route.                                                     | image src, poster link                |
+| **Card view model**             | `PosterCardMovie` — the small display shape a **Movie** is mapped to for a **Poster card** (rating→percent, progress→percent).                                      | card DTO, card props                  |
+| **Continue view model**         | `ContinueCardMovie` — the display shape for a **Continue card**: id, title, gradient stops, **Resume label**, progress percent.                                     | continue DTO, resume model            |
+| **Nominal sliver**              | The small fixed **Progress** bar length shown when a **Movie** is **In-progress** but `runtimeMinutes` is unknown.                                                  | placeholder progress                  |
+
+## The Movie detail page (new)
+
+| Term                        | Definition                                                                                                                                     | Aliases to avoid                     |
+| --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------ |
+| **Movie detail page** (new) | The `/movie/:id` route (`MoviePage`) — one **Movie** in full: **Backdrop**, **Poster**, **Meta line**, **Synopsis**, **Credits row**, actions. | movie page, detail view, title page  |
+| **Detail view model** (new) | `MovieDetailModel` — the display shape a **Movie** is mapped to for the **Movie detail page**, built by `detailView()`.                        | detail DTO, page model               |
+| **Meta line** (new)         | The inline row under the title assembling the **Meta segments** that exist, separated by `·`.                                                  | info row, metadata line, subtitle    |
+| **Meta segment** (new)      | One item on the **Meta line** — year, **Runtime label**, or **Rating** stars; an absent one is omitted **with its separator**.                 | meta field, detail bit               |
+| **Runtime label** (new)     | The human runtime string — `2h 8m`, or `42m` / `2h` when an hour or minute component is zero.                                                  | duration, length, running time       |
+| **Play label** (new)        | The primary button's text — `Play`, or `Resume · 52:00` for an **In-progress** **Movie**, built from the **Resume position**.                  | play text, CTA label                 |
+| **Credits row** (new)       | The **Director** + **Cast** block below the **Synopsis**; a missing one shows `—`, and the row is omitted only when both are absent.           | credits block, cast section          |
+| **Edit menu** (new)         | The ⋯ overflow menu on the **Movie detail page**; holds Edit details today, Delete movie when that feature ships.                              | overflow menu, kebab menu, more menu |
+| **Load state** (new)        | Which of `loading` \| `ready` \| `not-found` \| `error` a screen is in; **not-found** and **error** are distinct and offer different actions.  | status, fetch state                  |
+| **Placeholder route** (new) | A registered route rendering a documented stub, so links have honest destinations before the real screen exists.                               | stub page, dummy route, TODO page    |
 
 ## Relationships
 
@@ -69,6 +85,9 @@
 - A **Resume label** is derived from **Resume position** + runtime; it is built in the mapper, never inside the **Continue card**.
 - A **Rating** belongs to exactly one **Movie**; it is **Unrated** until **TMDB** seeds it or the maintainer sets it.
 - One **Movie** maps to exactly one **TMDB** entry (`tmdb_id`); in v1 one **Movie** = one video file (no **Editions**).
+- The **Movie detail page** renders exactly one **Movie** via its **Detail view model**; every display decision (which **Meta segments** survive, the **Runtime label**'s wording, the **Play label**, whether there is a **Credits row**) is made in `detailView()`, never in the component.
+- A **Meta segment** that is absent takes its separator with it — the **Meta line** never renders a dangling `·`.
+- **Unrated** is treated as an absent **Meta segment** on the **Movie detail page**, but still renders as 0 stars on a **Poster card**.
 
 ## Example dialogue
 
@@ -79,28 +98,35 @@
 > we **reference it in place** under the **Library root**, we never copy it."
 > **Dev:** "And the **Poster**?"
 > **Maintainer:** "That we download from **TMDB** into the **Managed image cache**,
-> because it isn't on my disk and I need it offline."
-> **Dev:** "If I half-watch it, the card shows **in-progress**?"
-> **Maintainer:** "Right — that **Status** is derived from the **Resume position**,
-> I never set it directly. I only ever flip **Watched**."
-> **Dev:** "So does that **Movie** then show up twice on the **Browse home** — once
-> in the **Continue Watching row** and once in its **Genre row**?"
-> **Maintainer:** "Yes, and that's correct. The **Continue Watching row** is a
-> different question — 'what am I part-way through' — not a **Genre**."
-> **Dev:** "Same tile in both?"
-> **Maintainer:** "No. The **Genre row** shows a **Poster card**; the **Continue
-> Watching row** shows a **Continue card** — wider, with the **Resume label** across
-> it. Same **Card carousel** underneath, different **Carousel variant**."
-> **Dev:** "Can I heart a **Movie** from the **Continue card**?"
-> **Maintainer:** "No — only from the **Poster card**. Clicking a **Continue card**
-> opens the **Movie**, same as anywhere else."
-> **Dev:** "And when nothing's been started?"
-> **Maintainer:** "Then there's no **Continue Watching row** at all — it doesn't sit
-> there empty. The **Genre rows** just start at the top."
-> **Dev:** "On the Action **Genre row** it says 'View all 214' but I only see 15
-> **Poster cards** — bug?"
-> **Maintainer:** "No — the **Card carousel** is capped at 15; the **View all**
-> count is the real total, and the link opens the full **Genre** page."
+> because it isn't on my disk and I need it offline. Same for the **Backdrop** —
+> that's the one behind the title on the **Movie detail page**."
+> **Dev:** "If **TMDB** gives us neither?"
+> **Maintainer:** "Then both slots draw the **Gradient fallback**. It's the same
+> colors either way, hashed off the **Movie** id, so it looks deliberate rather
+> than broken."
+> **Dev:** "On the detail page I've got a **Movie** with no year and no runtime.
+> What does the **Meta line** show?"
+> **Maintainer:** "Just the stars. A **Meta segment** we don't have doesn't get a
+> placeholder, and it takes its separator with it — I never want to see a bullet
+> floating with nothing on either side of it."
+> **Dev:** "And if it's **Unrated** too — five empty stars?"
+> **Maintainer:** "No, nothing. Empty stars with '0.0' next to them says we watched
+> it and scored it zero. **Unrated** means nobody's said anything yet. On the
+> **Poster card** it still shows as 0 stars, but that's a fixed tile — I'd rather
+> have even rows there than be strictly right."
+> **Dev:** "I've got one sitting at `Resume · 52:00`. If I mark it **Watched** and
+> then change my mind, do I get my 52 minutes back?"
+> **Maintainer:** "No — marking it **Watched** clears the **Resume position**. That's
+> right for finishing a film and wrong for 'I've seen this before', and we know it.
+> Nothing writes a **Resume position** until the player ships anyway."
+> **Dev:** "The ⋯ **Edit menu** only has one item in it."
+> **Maintainer:** "That's fine. Delete isn't designed yet — there's no confirmation
+> anywhere in the prototype, so it isn't shipping as a button that looks like it
+> deletes and doesn't."
+> **Dev:** "And Play, with no player built?"
+> **Maintainer:** "A **Placeholder route**. Same as the detail page itself was until
+> now — a real URL with a stub behind it, so the link is honest and the screen
+> lands there later without anything having to change."
 
 ## Flagged ambiguities
 
@@ -121,20 +147,40 @@
   home** (`LibraryPage`). Prefer **Genre row** for the rows and **Browse home**
   for the screen; avoid "grid," which also suggests the flat `LibraryGrid` used on
   the **View all** genre page (a different layout).
-- **"Rating" on a card:** a **Poster card** renders **Rating** as a 0–100 percent
-  (`units × 10`) for the star display. An **Unrated** **Movie** maps to 0 stars,
-  which looks identical to a literal 0 on the card — the **Unrated**/zero
-  distinction is not surfaced there (flagged for the detail/edit grill).
-- **"Progress" is three things (new):** the stored **Resume position** (seconds),
+- **"Rating" on a card (updated — partly resolved):** an **Unrated** **Movie** maps
+  to 0 stars on a **Poster card**, which looks identical to a literal 0. Resolved
+  for the **Movie detail page** (the stars are omitted entirely); **still open for
+  the Poster card**, where the star row is fixed furniture in a fixed-height tile
+  and removing it would make cards in a row uneven. Revisit with the **Ratings**
+  feature, which owns the interactive picker and any explicit "Unrated" affordance.
+- **"Progress" is three things:** the stored **Resume position** (seconds),
   the 0–100 display percent on a card's bar, and the **Resume label** string. Never
   say bare "progress" across the seam — name which one. The stored value is always
   **Resume position**.
-- **"Continue Watching" does not mean most-recently-watched (new):** the row is
+- **"Continue Watching" does not mean most-recently-watched:** the row is
   ordered `recently-added`, because no sort exists over "when did playback last
   touch this" and nothing writes **Resume position** until the player ships. The
   name describes _which_ **Movies** appear (**In-progress**), not their order —
   revisit the ordering with the player.
-- **The Continue card has no artwork (new):** it is **Gradient fallback**-only by
+- **The Continue card has no artwork:** it is **Gradient fallback**-only by
   the prototype's design — there is no image slot in `mol.ContinueCard`, unlike the
   **Poster card**. A **Movie**'s **Backdrop** would suit the 16:10 tile, but adding
   it is a **prototype amendment**, not an implementation choice.
+- **"Hero" is still not a term (new):** the **Movie detail page**'s top art area is
+  a slot, not a concept — it shows the **Backdrop** when there is one and the
+  **Gradient fallback** otherwise. _Hero_ remains an alias to avoid for **Backdrop**;
+  don't reintroduce it for the area either.
+- **"Description" vs "Synopsis" (new):** `feat.MovieForm` labels the field
+  **Description**, but the column, the model, and the **Movie detail page** all say
+  `synopsis`. **Synopsis** is canonical; treat the form's label as UI copy only and
+  do not introduce a `description` field.
+- **Marking Watched destroys the Resume position (new):** `markWatched` zeroes
+  `resume_position_seconds` by documented convention, so the **Movie detail page**'s
+  reversible watched toggle loses the position on a round trip. `inProgressOnly` is
+  `watched = 0 AND resume > 0`, so the flag alone already removes the **Movie** from
+  the **Continue Watching row** — the zeroing is no longer load-bearing. **Flagged
+  for the watch-tracking grill:** should `markWatched` preserve it?
+- **Edit has no route of its own (new):** COMPONENT-SPEC lists no `/edit`; the
+  prototype reuses the add screen with an `addContext: 'edit'` flag. The **Movie
+  detail page** navigates to `/add?movie=<id>` as a **provisional** contract — the
+  movie-form grill owns the real one.
