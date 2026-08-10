@@ -240,7 +240,7 @@ Builds the installer and publishes it to GitHub Releases automatically.
 | Claude Design handoff prototype                     | ✅ Done         |
 | Library core (movie model, SQLite, repository)      | ✅ Done         |
 | Browse grid — genre rows                            | ✅ Done         |
-| Card carousel — prev/next arrows, 15-per-row cap    | 🔜 Planned      |
+| Card carousel — prev/next arrows, 15-per-row cap    | ✅ Done         |
 | Movie detail page (synopsis, director, cast)        | 🔜 Planned      |
 | Search + filter (title, genre, rating)              | 🔜 Planned      |
 | Sort (recent, A–Z, year, rating, unwatched)         | 🔜 Planned      |
