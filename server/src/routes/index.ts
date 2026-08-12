@@ -97,6 +97,23 @@ export function createApiRouter(
     res.json(storage.listMovies(query));
   });
 
+  // One movie by id, for the detail page's URL. The repository already
+  // assembles every field that screen renders — synopsis, director, cast,
+  // genres, subtitles, derived status — so this stays a lookup and a
+  // serialization. A missing movie is a JSON 404, never Express's HTML page:
+  // the client reads that body to tell "this movie is gone" from "the request
+  // went wrong", which is what makes the page's `not-found` state reachable.
+  router.get('/movies/:id', (req: Request<{ id: string }>, res: Response) => {
+    const { id } = req.params;
+    const movie = storage.getMovie(id);
+    if (!movie) {
+      res.status(404).json({ error: `Unknown movie: ${id}` });
+      return;
+    }
+
+    res.json(movie);
+  });
+
   // The Favorites toggle. Echoing the stored `value` back lets the optimistic
   // heart confirm what was actually persisted rather than assume it.
   router.post('/movies/:id/favorite', (req: Request<{ id: string }>, res) => {

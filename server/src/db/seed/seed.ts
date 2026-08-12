@@ -72,6 +72,22 @@ function seedVideoPath(slug: string): string {
  * - **Three are favorites** and one is deliberately unrated, so the heart and
  *   the empty star row are both visible somewhere on the screen.
  *
+ * The synopsis and credits exist for the movie detail page, whose lower
+ * two-thirds is otherwise blank on every fixture, and they cover that screen's
+ * states the same way:
+ *
+ * - **Several synopses run well past four lines** at the page's 560px measure,
+ *   so `ExpandableText`'s "Read more" is there to click, and **a few sit
+ *   comfortably under it** (`Havoc Line`, `Glasshouse`), so the absence of the
+ *   toggle is visible too.
+ * - **`Ash & Asphalt` has no synopsis** but keeps its credits, and
+ *   **`Reel 4, Unlabelled` has neither** — the blocks that are supposed to
+ *   disappear, disappearing.
+ * - **`The Last Convoy` is credited to a cast but no director**, which is the
+ *   case where the credits row renders "—" rather than dropping out, and
+ *   **`Crosswind` has neither credit**, which is the case where it drops out
+ *   entirely.
+ *
  * Genres are drawn only from the twelve the migration seeds — `addMovie`
  * rejects an unknown genre name, so a typo here fails the seed loudly rather
  * than writing a half-tagged library.
@@ -84,10 +100,21 @@ function seedVideoPath(slug: string): string {
 export const SEED_MOVIES: readonly NewMovie[] = [
   // --- Action: the deliberately overflowing row ------------------------------
   {
+    // Long synopsis: overflows the detail page's four-line clamp, so "Read
+    // more" is there to click.
     title: 'Northwind',
     videoPath: seedVideoPath('northwind-2018'),
     year: 2018,
     runtimeMinutes: 128,
+    synopsis:
+      'A retired ice pilot agrees to fly one last supply run to a research ' +
+      'station the government stopped listing on its maps, and finds the crew ' +
+      'gone and the radios still warm. What begins as a salvage job turns into ' +
+      'a slow walk north through a season that has already decided how it ends, ' +
+      'beside a passenger who knows more about the station than anyone left ' +
+      'alive should.',
+    director: 'Hal Brenner',
+    cast: ['Ivy Okonkwo', 'Tomas Reier', 'Nadia Fenn'],
     genres: ['Action', 'Adventure'],
     rating: 8,
     resumePositionSeconds: 3120,
@@ -97,6 +124,15 @@ export const SEED_MOVIES: readonly NewMovie[] = [
     videoPath: seedVideoPath('ironclad-sky-2021'),
     year: 2021,
     runtimeMinutes: 142,
+    synopsis:
+      'Three decades after the orbital blockade, a mechanic who keeps other ' +
+      "people's stolen fighters flying is handed a machine that answers to a " +
+      "dead pilot's voice. Getting it off the ground costs her the only " +
+      'workshop she has ever owned; keeping it in the air means finishing a war ' +
+      'her parents surrendered, one contested corridor at a time, with a ' +
+      'squadron assembled entirely out of people the fleet wrote off.',
+    director: 'Sunita Raval',
+    cast: ['Deena Marsh', 'Kwame Adjei', 'Lior Sabbagh', 'Perry Nakamura'],
     genres: ['Action', 'Sci-Fi'],
     rating: 9,
     resumePositionSeconds: 5100,
@@ -106,6 +142,12 @@ export const SEED_MOVIES: readonly NewMovie[] = [
     videoPath: seedVideoPath('midnight-errand-2020'),
     year: 2020,
     runtimeMinutes: 105,
+    synopsis:
+      'A courier with one night left on her visa takes a package across a city ' +
+      'that has quietly closed to her, and finds that everyone who touches the ' +
+      'box would rather she kept walking than delivered it.',
+    director: 'Émile Roux',
+    cast: ['Yara Demir', 'Anton Pilch'],
     genres: ['Action', 'Crime'],
     rating: 7,
   },
@@ -114,6 +156,12 @@ export const SEED_MOVIES: readonly NewMovie[] = [
     videoPath: seedVideoPath('blackwater-run-2019'),
     year: 2019,
     runtimeMinutes: 117,
+    synopsis:
+      'Two brothers run a fishing boat that has not carried fish in years. ' +
+      'When the elder takes on a cargo he refuses to describe, the younger has ' +
+      'to decide how much of the river he is willing to know.',
+    director: 'Ruth Calloway',
+    cast: ['Sam Ojo', 'Elias Ojo', 'Marguerite Vance'],
     genres: ['Action', 'Thriller'],
     rating: 6,
     isFavorite: true,
@@ -123,24 +171,47 @@ export const SEED_MOVIES: readonly NewMovie[] = [
     videoPath: seedVideoPath('iron-meridian-2016'),
     year: 2016,
     runtimeMinutes: 131,
+    synopsis:
+      'The last surveyor of a border that no longer exists walks its length ' +
+      'one final time, marking stones for a country that has already renamed ' +
+      'the valleys behind him. He is followed by a soldier assigned to make ' +
+      'sure the map comes out wrong, by a translator who has learned to hear ' +
+      'both sides lie in the same sentence, and eventually by the war itself, ' +
+      'arriving early and from the wrong direction.',
+    director: 'Beatrix Halloran',
+    cast: ['Gustav Weiss', 'Amira Haddad', 'Jonas Fell'],
     genres: ['Action'],
     rating: 9,
     watched: true,
   },
   {
+    // Credited to nobody in the chair, but the cast survived — the detail
+    // page's credits row shows "—" for the director and keeps the names.
     title: 'The Last Convoy',
     videoPath: seedVideoPath('the-last-convoy-2014'),
     year: 2014,
     runtimeMinutes: 108,
+    synopsis:
+      'A supply column crosses two hundred miles of open country with a radio ' +
+      'that only receives, and every night the drivers argue about whether the ' +
+      'voice on it is ahead of them or behind.',
+    cast: ['Rosa Iglesias', 'Duncan Frey'],
     genres: ['Action', 'Adventure'],
     rating: 5,
   },
   {
-    // Deliberately unrated (distinct from a stored 0) — the star row's empty state.
+    // Deliberately unrated (distinct from a stored 0) — the star row's empty
+    // state. Its synopsis is short enough to sit inside the clamp, so the
+    // absence of a "Read more" toggle is visible somewhere too.
     title: 'Havoc Line',
     videoPath: seedVideoPath('havoc-line-2022'),
     year: 2022,
     runtimeMinutes: 99,
+    synopsis:
+      'A demolition crew is given one week to bring down a tower nobody will ' +
+      'admit still has tenants.',
+    director: 'Priya Anand',
+    cast: ['Ola Berg', 'Curtis Vane'],
     genres: ['Action'],
   },
   {
@@ -148,6 +219,12 @@ export const SEED_MOVIES: readonly NewMovie[] = [
     videoPath: seedVideoPath('steel-rain-2015'),
     year: 2015,
     runtimeMinutes: 124,
+    synopsis:
+      "A monsoon strands a mine's night shift underground with the foreman who " +
+      'has been falsifying the safety logs for a decade, and the new hire who ' +
+      'has read all of them.',
+    director: 'Tobias Lindqvist',
+    cast: ['Neve Marchetti', 'Idris Kamara'],
     genres: ['Action', 'Drama'],
     rating: 8,
   },
@@ -156,15 +233,30 @@ export const SEED_MOVIES: readonly NewMovie[] = [
     videoPath: seedVideoPath('nightfall-protocol-2023'),
     year: 2023,
     runtimeMinutes: 136,
+    synopsis:
+      'An analyst who spent nine years writing the evacuation plan for a city ' +
+      'she never visited is finally sent there to run it, four hours after the ' +
+      'order she wrote was ignored. Every step of the protocol assumes people ' +
+      'who no longer hold their posts, roads that were rerouted in the spring, ' +
+      'and a chain of command that would rather the plan failed cleanly than ' +
+      'succeeded by improvisation.',
+    director: 'Wren Achebe',
+    cast: ['Cordelia Stamp', 'Miguel Arriaga', 'Hana Yoshida'],
     genres: ['Action', 'Thriller'],
     rating: 7,
     resumePositionSeconds: 1200,
   },
   {
+    // Uncredited on both counts: the detail page drops the credits row entirely
+    // for this one, which only reads as deliberate next to the movies that keep
+    // theirs.
     title: 'Crosswind',
     videoPath: seedVideoPath('crosswind-2012'),
     year: 2012,
     runtimeMinutes: 95,
+    synopsis:
+      'A crop duster with a grounded licence flies anyway, and the county ' +
+      'spends a summer pretending not to hear him.',
     genres: ['Action'],
     rating: 4,
   },
@@ -173,15 +265,25 @@ export const SEED_MOVIES: readonly NewMovie[] = [
     videoPath: seedVideoPath('redline-county-2017'),
     year: 2017,
     runtimeMinutes: 112,
+    synopsis:
+      "A sheriff's deputy inherits a stretch of highway, the arrangement that " +
+      'keeps it quiet, and the ledger naming everyone who has ever benefited ' +
+      'from both.',
+    director: 'Lorna Buckhalter',
+    cast: ['Theo Grant', 'Simone Aleixo'],
     genres: ['Action', 'Crime'],
     rating: 6,
     isFavorite: true,
   },
   {
+    // No synopsis at all, but fully credited: the synopsis block disappears and
+    // the credits row below it stays.
     title: 'Ash & Asphalt',
     videoPath: seedVideoPath('ash-and-asphalt-2011'),
     year: 2011,
     runtimeMinutes: 101,
+    director: 'Casimir Nowak',
+    cast: ['Bela Toth', 'Ren Aoki'],
     genres: ['Action'],
     rating: 5,
     watched: true,
@@ -193,6 +295,15 @@ export const SEED_MOVIES: readonly NewMovie[] = [
     videoPath: seedVideoPath('the-quiet-harbor-2016'),
     year: 2016,
     runtimeMinutes: 111,
+    synopsis:
+      'A lighthouse keeper on a coast the ferries stopped serving takes in a ' +
+      'girl who arrived on the last boat and will not say where from. Over one ' +
+      'long off-season they build something like a family out of a rationed ' +
+      'pantry, a broken radio, and the slow understanding that the mainland has ' +
+      'questions neither of them intends to answer honestly — and that the ' +
+      'light itself is scheduled to be automated in the spring.',
+    director: 'Ana Sørensen',
+    cast: ['Marit Holt', 'Peder Vinge', 'Ilse Brandt'],
     genres: ['Drama', 'Romance'],
     rating: 7,
   },
@@ -201,6 +312,11 @@ export const SEED_MOVIES: readonly NewMovie[] = [
     videoPath: seedVideoPath('paper-lanterns-2019'),
     year: 2019,
     runtimeMinutes: 96,
+    synopsis:
+      'A girl who folds lanterns for a festival her town can no longer afford ' +
+      'discovers that the ones she sends downriver are coming back.',
+    director: 'Mei-Lin Chow',
+    cast: ['Ayaka Sudo', 'Bruno Pereira'],
     genres: ['Animation', 'Family'],
     rating: 10,
     isFavorite: true,
@@ -211,6 +327,15 @@ export const SEED_MOVIES: readonly NewMovie[] = [
     videoPath: seedVideoPath('the-long-descent-2022'),
     year: 2022,
     runtimeMinutes: 88,
+    synopsis:
+      'Over four years, a camera follows the crew dismantling a mountain ' +
+      'railway that took sixty years to build, from the first bolt lifted out ' +
+      'of the summit station to the last carriage lowered onto a truck. The men ' +
+      'taking it apart are the sons of the men who laid it, and most of them ' +
+      'will have no work in the valley once the line is gone. The film never ' +
+      'leaves the mountain, and never asks anyone to explain themselves.',
+    director: 'Ingrid Vasquez',
+    cast: [],
     genres: ['Documentary'],
     rating: 7,
     resumePositionSeconds: 1500,
@@ -220,6 +345,11 @@ export const SEED_MOVIES: readonly NewMovie[] = [
     videoPath: seedVideoPath('glasshouse-2017'),
     year: 2017,
     runtimeMinutes: 94,
+    synopsis:
+      "A botanist inherits her aunt's greenhouse and the routine that keeps it " +
+      'alive, and learns which of the two the house actually needs.',
+    director: 'Sasha Ilves',
+    cast: ['Freya Lund', 'Otto Wexler'],
     genres: ['Horror', 'Thriller'],
     rating: 6,
     resumePositionSeconds: 900,
@@ -229,6 +359,12 @@ export const SEED_MOVIES: readonly NewMovie[] = [
     videoPath: seedVideoPath('cardboard-kings-2013'),
     year: 2013,
     runtimeMinutes: 98,
+    synopsis:
+      'Four children build a kingdom in the yard behind a furniture shop, and ' +
+      'defend it through a summer in which their parents quietly divide ' +
+      'everything else.',
+    director: 'Georgie Mbeki',
+    cast: ['Pia Rademacher', 'Sol Villanueva', 'Emmett Doyle'],
     genres: ['Comedy', 'Family'],
     rating: 8,
   },
@@ -237,6 +373,12 @@ export const SEED_MOVIES: readonly NewMovie[] = [
     videoPath: seedVideoPath('rooftop-season-2019'),
     year: 2019,
     runtimeMinutes: 102,
+    synopsis:
+      'Two neighbours who have never spoken share a rooftop through one summer ' +
+      'of repairs, and negotiate the whole of a friendship through the ' +
+      'placement of two chairs.',
+    director: 'Halvard Nyman',
+    cast: ['Junia Castro', 'Wallace Idowu'],
     genres: ['Comedy', 'Romance'],
     rating: 5,
   },
@@ -246,13 +388,19 @@ export const SEED_MOVIES: readonly NewMovie[] = [
     title: 'Signal Lost',
     videoPath: seedVideoPath('signal-lost-2023'),
     year: 2023,
+    synopsis:
+      'A night-shift operator at a decommissioned relay station keeps logging ' +
+      'transmissions the equipment is no longer capable of receiving.',
+    director: 'Tomasz Ferreira',
+    cast: ['Klara Bond'],
     genres: ['Sci-Fi', 'Thriller'],
     rating: 8,
     resumePositionSeconds: 2460,
   },
   {
     // No genres at all: earns no genre row, so Continue Watching is the only
-    // place it can appear.
+    // place it can appear. Nothing else either — no synopsis, no credits — the
+    // unlabelled reel is the detail page's emptiest possible movie.
     title: 'Reel 4, Unlabelled',
     videoPath: seedVideoPath('reel-4-unlabelled-2005'),
     year: 2005,
