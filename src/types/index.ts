@@ -19,5 +19,6 @@ export type { NewSubtitle, NewMovie, MoviePatch } from './write';
 export type {
   PosterCardMovie,
   ContinueCardMovie,
+  MovieDetailModel,
   GenreRowModel,
 } from './viewModels';

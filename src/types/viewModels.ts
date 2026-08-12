@@ -43,6 +43,48 @@ export interface ContinueCardMovie {
 }
 
 /**
+ * The view model the movie detail page renders from, built by `detailView()`
+ * (`features/movie-detail/detailView/detailView.ts`).
+ *
+ * It carries **nullable values rather than finished strings**: the meta line
+ * cannot collapse into one string because the stars sit in the middle of it, so
+ * the page interleaves the surviving segments itself. Every *decision* about an
+ * absent field is still made in the mapper — a `null` here means "this segment
+ * does not exist", never "render it empty".
+ */
+export interface MovieDetailModel {
+  id: string;
+  title: string;
+  /** The release year, or `null` when the record has none. */
+  year: number | null;
+  /** `2h 8m` / `42m` / `2h`, or `null` when the runtime is unknown. */
+  runtimeLabel: string | null;
+  /** 0–100 percent the stars fill against; `null` when the movie is unrated. */
+  ratingPercent: number | null;
+  isWatched: boolean;
+  /** Genre names, in the order the record holds them. */
+  genres: string[];
+  /** The synopsis, or `null` when there is none to clamp. */
+  synopsis: string | null;
+  /** False only when **both** the director and the cast are missing. */
+  hasCredits: boolean;
+  /** The director, or "—" when there is none. */
+  director: string;
+  /** The cast on one readable line, or "—" when there is none. */
+  castText: string;
+  /** Ready image-route URLs, or `null` → the gradient fallback. */
+  posterUrl: string | null;
+  backdropUrl: string | null;
+  /** True when either artwork exists; the overlays are drawn only without it. */
+  hasArtwork: boolean;
+  /** The placeholder gradient stops — the same ones the movie's card draws. */
+  g1: string;
+  g2: string;
+  /** The uppercase caption over the gradient; `null` when there is artwork. */
+  topTag: string | null;
+}
+
+/**
  * A {@link HomeRow} after the frontend has mapped every `Movie` through
  * `view()` — what a `GenreRow` actually renders. Same genre and same **true
  * total** `count`; only the movies are narrowed to their card view models.

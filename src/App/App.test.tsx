@@ -67,12 +67,16 @@ let fetchMock: ReturnType<
   >
 >;
 
+/** Every movie the fixture rows hold, as the detail route serves them by id. */
+const MOVIES = HOME_PAYLOAD.flatMap((row) => row.movies);
+
 beforeEach(() => {
   fetchMock =
     vi.fn<
       (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>
     >();
-  // The home aggregate always succeeds here; a favorite save always succeeds.
+  // The home aggregate always succeeds here; a favorite save always succeeds;
+  // one movie by id resolves against the same fixtures the rows are built from.
   // Anything else is a request this screen has no business making.
   fetchMock.mockImplementation((input) => {
     const url = String(input);
@@ -86,6 +90,13 @@ beforeEach(() => {
     }
     if (url.includes('/favorite')) {
       return Promise.resolve(okResponse({ value: true }));
+    }
+    if (url.includes('/api/movies/')) {
+      const id = url.slice(url.lastIndexOf('/') + 1);
+      const movie = MOVIES.find((candidate) => candidate.id === id);
+      if (movie) {
+        return Promise.resolve(okResponse(movie));
+      }
     }
     return Promise.reject(new Error(`Unexpected request: ${url}`));
   });
@@ -133,14 +144,16 @@ describe('App — routing the browse home to its destinations', () => {
     expect(currentPath()).toBe('/');
   });
 
-  it('navigates to /movie/:id when a poster card is clicked, and the movie page echoes the id', async () => {
+  it('navigates to /movie/:id when a poster card is clicked, and that movie’s page renders', async () => {
     renderApp();
     await screen.findByRole('heading', { name: 'Action' });
 
     fireEvent.click(cardFor('Northwind'));
 
     expect(currentPath()).toBe('/movie/a1');
-    expect(await screen.findByRole('heading', { name: /a1/ })).toBeDefined();
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Northwind' })
+    ).toBeDefined();
     expect(screen.queryByRole('heading', { name: 'Action' })).toBeNull();
   });
 
@@ -181,10 +194,14 @@ describe('App — routing the browse home to its destinations', () => {
     expect(screen.queryByRole('heading', { name: 'Action' })).toBeNull();
   });
 
-  it('renders a placeholder that echoes the id when /movie/:id is opened directly', async () => {
+  it('renders the movie itself when /movie/:id is opened directly', async () => {
+    // The detail page loads from the URL alone, so a deep link renders the same
+    // screen a click does — nothing arrives through navigation state.
     renderApp('/movie/a1');
 
-    expect(await screen.findByRole('heading', { name: /a1/ })).toBeDefined();
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Northwind' })
+    ).toBeDefined();
   });
 
   it('renders a placeholder that echoes the name when /genre/:name is opened directly', async () => {
