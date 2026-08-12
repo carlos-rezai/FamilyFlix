@@ -1,8 +1,15 @@
-import { Fragment, type ReactNode } from 'react';
-import { useParams } from 'react-router-dom';
+import {
+  Fragment,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 
 import { ExpandableText } from '@/components';
-import { Button, Chip, StarRating } from '@/primitives';
+import { Button, Chip, MoreIcon, StarRating } from '@/primitives';
 import type { MovieDetailModel } from '@/types';
 import { useMovieDetail } from '../useMovieDetail/useMovieDetail';
 import {
@@ -22,6 +29,12 @@ import {
   RatingWrap,
   WatchedBadge,
   Genres,
+  ActionRow,
+  MenuSlot,
+  MoreButton,
+  Menu,
+  MenuItem,
+  MenuGlyph,
   SynopsisWrap,
   Credits,
   Credit,
@@ -93,6 +106,89 @@ function metaSegments(movie: MovieDetailModel): MetaSegment[] {
   return segments;
 }
 
+/**
+ * The ⋯ overflow menu, in its fixed slot opposite the Back pill.
+ *
+ * It ships with one item. Delete is not designed anywhere in the handoff — no
+ * confirmation exists — so it lands with its own feature rather than as a red
+ * row that closes the menu and does nothing, or a permanently greyed one that
+ * reads as "this movie can't be deleted".
+ *
+ * Closing is deliberately symmetrical: Escape, a press outside, and activating
+ * the item all shut it, and each one hands focus back to the trigger, so a
+ * keyboard user is never dropped at the top of the document.
+ *
+ * Edit navigates to `/add?movie=<id>`, the prototype's own route for editing (it
+ * pre-fills the add form rather than owning an `/edit` screen). The query
+ * parameter is **provisional** — the movie-form grill owns the real contract.
+ */
+function EditMenu({ movieId }: { movieId: string }) {
+  const navigate = useNavigate();
+  const [open, setOpen] = useState(false);
+  const slotRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+
+  const close = useCallback(() => {
+    setOpen(false);
+    triggerRef.current?.focus();
+  }, []);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        close();
+      }
+    };
+    // Pointerdown rather than click: the menu should be gone by the time the
+    // press it was dismissed by lands on whatever is underneath.
+    const onPointerDown = (event: PointerEvent) => {
+      if (!slotRef.current?.contains(event.target as Node)) {
+        close();
+      }
+    };
+
+    document.addEventListener('keydown', onKeyDown);
+    document.addEventListener('pointerdown', onPointerDown);
+
+    return () => {
+      document.removeEventListener('keydown', onKeyDown);
+      document.removeEventListener('pointerdown', onPointerDown);
+    };
+  }, [open, close]);
+
+  const editDetails = () => {
+    close();
+    navigate(`/add?movie=${movieId}`);
+  };
+
+  return (
+    <MenuSlot ref={slotRef}>
+      <MoreButton
+        ref={triggerRef}
+        type="button"
+        aria-label="More options"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        onClick={() => (open ? close() : setOpen(true))}
+      >
+        <MoreIcon size={20} />
+      </MoreButton>
+      {open ? (
+        <Menu>
+          <MenuItem type="button" onClick={editDetails}>
+            <MenuGlyph aria-hidden="true">✎</MenuGlyph>
+            Edit details
+          </MenuItem>
+        </Menu>
+      ) : null}
+    </MenuSlot>
+  );
+}
+
 /** The page's own shape, held while the movie loads, rather than a blank screen. */
 function LoadingDetail() {
   return (
@@ -156,11 +252,13 @@ function LoadFailed({ onRetry }: { onRetry: () => void }) {
  * separators, which are interleaved between the surviving segments because the
  * stars sit in the middle of the line and no single string could hold them.
  *
- * The action row lands with the next slice; the space between the chips and the
- * synopsis is deliberately empty until then.
+ * The action row ships with its navigating half only: Play opens the player's
+ * URL and the ⋯ menu opens the add screen, neither of them writing anything.
+ * The two circular toggles beside Play become real in the next slice.
  */
 export function MovieDetail() {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const detail = useMovieDetail(id ?? '');
 
   if (detail.status === 'loading') {
@@ -181,6 +279,8 @@ export function MovieDetail() {
         <Art $url={movie.backdropUrl} $g1={movie.g1} $g2={movie.g2} />
         <Scrim />
       </ArtArea>
+
+      <EditMenu movieId={movie.id} />
 
       <Content>
         <PosterColumn>
@@ -215,6 +315,18 @@ export function MovieDetail() {
               <Chip key={genre} label={genre} size="sm" />
             ))}
           </Genres>
+
+          <ActionRow>
+            {/* Opening the player's URL is the whole of it: playback state is
+                written by the player and by nothing else. */}
+            <Button
+              label={movie.playLabel}
+              variant="primary"
+              size="lg"
+              icon="play"
+              onClick={() => navigate(`/movie/${movie.id}/play`)}
+            />
+          </ActionRow>
 
           {movie.synopsis === null ? null : (
             <SynopsisWrap>

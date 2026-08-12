@@ -152,6 +152,97 @@ export const Genres = styled.div`
   flex-wrap: wrap;
 `;
 
+/**
+ * The primary actions, directly under the genre chips and above the fold. The
+ * two circular toggles land in this row beside Play with the next slice; the
+ * gap and the wrap are already sized for them.
+ */
+export const ActionRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 28px;
+  flex-wrap: wrap;
+`;
+
+/**
+ * The ⋯ trigger's fixed slot, mirroring the Back pill across the top of the
+ * screen. It is the menu's positioned ancestor, and the box an outside
+ * pointerdown is measured against — a press inside it is never "outside".
+ */
+export const MenuSlot = styled.div`
+  position: fixed;
+  top: 24px;
+  right: 24px;
+  z-index: 30;
+`;
+
+/** Translucent over artwork, like the Back pill it sits opposite. */
+export const MoreButton = styled.button`
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  background: rgba(20, 17, 13, 0.6);
+  backdrop-filter: blur(10px);
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: ${({ theme }) => theme.radius.pill};
+  color: ${({ theme }) => theme.colors.textDim};
+  cursor: pointer;
+
+  &:hover {
+    color: ${({ theme }) => theme.colors.text};
+    background: ${({ theme }) => theme.colors.surface2};
+  }
+`;
+
+const pop = keyframes`
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+`;
+
+export const Menu = styled.div`
+  position: absolute;
+  top: 52px;
+  right: 0;
+  min-width: 170px;
+  background: ${({ theme }) => theme.colors.surface2};
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: ${({ theme }) => theme.radius.md};
+  padding: 6px;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.5);
+  animation: ${pop} 0.14s ease;
+  z-index: 30;
+`;
+
+/** A real button, so the menu is operable by keyboard like everything else. */
+export const MenuItem = styled.button`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: ${({ theme }) => theme.fonts.sans};
+  font-size: 15px;
+  color: ${({ theme }) => theme.colors.text};
+  text-align: left;
+  white-space: nowrap;
+
+  &:hover {
+    background: ${({ theme }) => theme.colors.surface3};
+  }
+`;
+
+/** The item's leading glyph — decorative, so it stays out of the item's name. */
+export const MenuGlyph = styled.span`
+  font-size: 14px;
+  line-height: 1;
+`;
+
 export const SynopsisWrap = styled.div`
   margin-top: 32px;
 `;

@@ -260,8 +260,9 @@ describe('App — the movie page’s navigating actions', () => {
 
     expect(await screen.findByRole('heading', { name: /play/i })).toBeDefined();
     // The routed movie survives the URL, so the real player lands knowing which
-    // film it was asked for.
-    expect(screen.getByText(/a1/)).toBeDefined();
+    // film it was asked for. (Matched with the word before it, so the location
+    // probe's own `/movie/a1/play` isn't what satisfies this.)
+    expect(screen.getByText(/movie a1/i)).toBeDefined();
   });
 
   it('renders the add-movie placeholder when /add is opened directly', async () => {

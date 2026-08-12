@@ -1,5 +1,5 @@
 import type { Movie, MovieDetailModel } from '@/types';
-import { gradientFromId, toRatingPercent } from '@/utils';
+import { formatClock, gradientFromId, toRatingPercent } from '@/utils';
 
 /** Path prefix for the Express route that streams managed artwork. */
 const IMAGE_ROUTE = '/api/images/';
@@ -34,6 +34,19 @@ function toRuntimeLabel(minutes: number | null): string | null {
   }
 
   return units.length === 0 ? null : units.join(' ');
+}
+
+/**
+ * The primary button's text. A movie left part-way in names the position it
+ * resumes from, so a parent clicking it is never surprised about where it
+ * starts. The in-progress test is the record's own derived **Status** rather
+ * than a second reading of `watched` + `resumePositionSeconds` — the repository
+ * owns that rule, and the frontend should not keep a private copy of it.
+ */
+function toPlayLabel(movie: Movie): string {
+  return movie.status === 'in-progress'
+    ? `Resume · ${formatClock(movie.resumePositionSeconds)}`
+    : 'Play';
 }
 
 /**
@@ -91,6 +104,7 @@ export function detailView(movie: Movie): MovieDetailModel {
     runtimeLabel: toRuntimeLabel(movie.runtimeMinutes),
     ratingPercent: movie.rating === null ? null : toRatingPercent(movie.rating),
     isWatched: movie.watched,
+    playLabel: toPlayLabel(movie),
     genres: movie.genres.map((genre) => genre.name),
     synopsis: movie.synopsis,
     hasCredits: hasDirector || hasCast,
