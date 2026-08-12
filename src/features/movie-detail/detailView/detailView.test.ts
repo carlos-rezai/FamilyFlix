@@ -115,6 +115,64 @@ describe('detailView — the rating segment', () => {
   });
 });
 
+/**
+ * The primary button's text, decided here like every other display decision, so
+ * the component never asks the record a question. A movie part-way in says
+ * where it resumes: clicking Play should never surprise a parent about where it
+ * starts.
+ */
+describe('detailView — the play label', () => {
+  it('reads "Play" for a movie nobody has started', () => {
+    const vm = detailView(
+      makeMovie({
+        resumePositionSeconds: 0,
+        watched: false,
+        status: 'unwatched',
+      })
+    );
+
+    expect(vm.playLabel).toBe('Play');
+  });
+
+  it('names the position an in-progress movie resumes from', () => {
+    const vm = detailView(
+      makeMovie({
+        resumePositionSeconds: 3120,
+        watched: false,
+        status: 'in-progress',
+      })
+    );
+
+    expect(vm.playLabel).toBe('Resume · 52:00');
+  });
+
+  it('writes an hour-deep position as a full clock', () => {
+    const vm = detailView(
+      makeMovie({
+        resumePositionSeconds: 3725,
+        watched: false,
+        status: 'in-progress',
+      })
+    );
+
+    expect(vm.playLabel).toBe('Resume · 1:02:05');
+  });
+
+  it('reads "Play" again once the movie has been watched', () => {
+    // Marking a movie watched clears its resume position by repository
+    // convention, so a finished film starts over rather than resuming.
+    const vm = detailView(
+      makeMovie({
+        resumePositionSeconds: 0,
+        watched: true,
+        status: 'watched',
+      })
+    );
+
+    expect(vm.playLabel).toBe('Play');
+  });
+});
+
 describe('detailView — the synopsis', () => {
   it('carries the synopsis through', () => {
     const synopsis = 'A lighthouse keeper takes in a runaway girl.';

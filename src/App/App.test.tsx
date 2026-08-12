@@ -113,7 +113,12 @@ afterEach(() => {
  */
 function LocationProbe() {
   const location = useLocation();
-  return <div data-testid="location">{location.pathname}</div>;
+  return (
+    <>
+      <div data-testid="location">{location.pathname}</div>
+      <div data-testid="search">{location.search}</div>
+    </>
+  );
 }
 
 function renderApp(entry = '/') {
@@ -127,6 +132,11 @@ function renderApp(entry = '/') {
 
 function currentPath() {
   return screen.getByTestId('location').textContent;
+}
+
+/** The query string the router currently carries, `?movie=a1` and the like. */
+function currentSearch() {
+  return screen.getByTestId('search').textContent;
 }
 
 /** The card for one movie — clicking its title bubbles to the card itself. */
@@ -212,6 +222,19 @@ describe('App — routing the browse home to its destinations', () => {
     ).toBeDefined();
   });
 
+  it('leaves the movie page’s Back control reachable without a mouse', async () => {
+    renderApp('/movie/a1');
+    await screen.findByRole('heading', { level: 1, name: 'Northwind' });
+
+    const back = screen.getByRole('button', { name: /back/i });
+    back.focus();
+    expect(document.activeElement).toBe(back);
+
+    fireEvent.click(back);
+
+    expect(currentPath()).toBe('/');
+  });
+
   it('does not open the movie when the favorite heart is clicked', async () => {
     renderApp();
     await screen.findByRole('heading', { name: 'Action' });
@@ -222,5 +245,50 @@ describe('App — routing the browse home to its destinations', () => {
     expect(currentPath()).toBe('/');
     expect(screen.queryByRole('heading', { name: /a1/ })).toBeNull();
     expect(screen.getByRole('heading', { name: 'Action' })).toBeDefined();
+  });
+});
+
+/**
+ * The movie page's two navigating actions. Both land on registered placeholders
+ * — the same device that made `/movie/:id` itself an honest link two features
+ * ago — so no link in the app is a lie and the real screens arrive later without
+ * a single link changing.
+ */
+describe('App — the movie page’s navigating actions', () => {
+  it('renders the player placeholder when /movie/:id/play is opened directly', async () => {
+    renderApp('/movie/a1/play');
+
+    expect(await screen.findByRole('heading', { name: /play/i })).toBeDefined();
+    // The routed movie survives the URL, so the real player lands knowing which
+    // film it was asked for.
+    expect(screen.getByText(/a1/)).toBeDefined();
+  });
+
+  it('renders the add-movie placeholder when /add is opened directly', async () => {
+    renderApp('/add');
+
+    expect(await screen.findByRole('heading', { name: /add/i })).toBeDefined();
+  });
+
+  it('sends Play to the player route for the movie being looked at', async () => {
+    renderApp('/movie/a1');
+    await screen.findByRole('heading', { level: 1, name: 'Northwind' });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Play' }));
+
+    expect(currentPath()).toBe('/movie/a1/play');
+    expect(await screen.findByRole('heading', { name: /play/i })).toBeDefined();
+  });
+
+  it('sends Edit details to the add screen carrying the movie id', async () => {
+    renderApp('/movie/a1');
+    await screen.findByRole('heading', { level: 1, name: 'Northwind' });
+
+    fireEvent.click(screen.getByRole('button', { name: /more options/i }));
+    fireEvent.click(screen.getByRole('button', { name: /edit details/i }));
+
+    expect(currentPath()).toBe('/add');
+    expect(currentSearch()).toBe('?movie=a1');
+    expect(await screen.findByRole('heading', { name: /add/i })).toBeDefined();
   });
 });

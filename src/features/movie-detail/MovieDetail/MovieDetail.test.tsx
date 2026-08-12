@@ -126,11 +126,21 @@ function serveMovie(overrides: Partial<Movie> = {}) {
 /** Reports where the router has been sent, so a link's destination is visible. */
 function LocationProbe() {
   const location = useLocation();
-  return <div data-testid="location">{location.pathname}</div>;
+  return (
+    <>
+      <div data-testid="location">{location.pathname}</div>
+      <div data-testid="search">{location.search}</div>
+    </>
+  );
 }
 
 function currentPath() {
   return screen.getByTestId('location').textContent;
+}
+
+/** The query string the router currently carries, `?movie=m1` and the like. */
+function currentSearch() {
+  return screen.getByTestId('search').textContent;
 }
 
 function renderDetail(id = 'm1') {
@@ -140,6 +150,10 @@ function renderDetail(id = 'm1') {
         <Routes>
           <Route path="/" element={<h1>Your library</h1>} />
           <Route path="/movie/:id" element={<MovieDetail />} />
+          {/* Stand-ins for the two placeholder screens, so this test can see
+              where a control sent the router without depending on their copy. */}
+          <Route path="/movie/:id/play" element={<h1>Player</h1>} />
+          <Route path="/add" element={<h1>Add a movie</h1>} />
         </Routes>
       </ThemeProvider>
       <LocationProbe />
@@ -385,6 +399,199 @@ describe('MovieDetail — artwork and the gradient fallback', () => {
 
     expect(screen.queryByText('Drama · 1994')).toBeNull();
     expect(screen.getAllByText('Northwind')).toHaveLength(1);
+  });
+});
+
+/**
+ * The row's navigation half. Play is the most obvious thing on the screen and
+ * the honest one: it opens the player's URL and touches nothing about the movie,
+ * because only the player writes playback state.
+ */
+describe('MovieDetail — the action row', () => {
+  it('offers Play for a movie nobody has started', async () => {
+    serveMovie({
+      resumePositionSeconds: 0,
+      watched: false,
+      status: 'unwatched',
+    });
+
+    renderDetail();
+    await findTitle('Northwind');
+
+    expect(screen.getByRole('button', { name: 'Play' })).toBeDefined();
+  });
+
+  it('says where it resumes for a movie left part-way in', async () => {
+    serveMovie({
+      resumePositionSeconds: 3120,
+      watched: false,
+      status: 'in-progress',
+    });
+
+    renderDetail();
+    await findTitle('Northwind');
+
+    expect(
+      screen.getByRole('button', { name: 'Resume · 52:00' })
+    ).toBeDefined();
+  });
+
+  it('opens the player at this movie’s own URL', async () => {
+    serveMovie();
+
+    renderDetail('m1');
+    await findTitle('Northwind');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Play' }));
+
+    expect(currentPath()).toBe('/movie/m1/play');
+  });
+
+  it('writes nothing when Play is clicked — no watch state, no resume position', async () => {
+    serveMovie();
+
+    renderDetail();
+    await findTitle('Northwind');
+    fireEvent.click(screen.getByRole('button', { name: 'Play' }));
+
+    // The load itself is the only request this screen has any business making.
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const writes = fetchMock.mock.calls.filter(
+      ([, init]) => (init?.method ?? 'GET') !== 'GET'
+    );
+    expect(writes).toHaveLength(0);
+  });
+});
+
+/**
+ * The ⋯ menu. It ships with one item: Delete is not designed, and a red row that
+ * closes the menu and does nothing is worse than no row at all.
+ */
+describe('MovieDetail — the edit menu', () => {
+  /** The ⋯ trigger in the page's fixed top-right slot. */
+  function moreButton() {
+    return screen.getByRole('button', { name: /more options/i });
+  }
+
+  /** Opens the menu the way a keyboard user does — focus the trigger, act. */
+  function openMenu() {
+    const more = moreButton();
+    more.focus();
+    fireEvent.click(more);
+    return more;
+  }
+
+  it('stays shut until the ⋯ trigger is used, and says so', async () => {
+    serveMovie();
+
+    renderDetail();
+    await findTitle('Northwind');
+
+    const more = moreButton();
+    expect(more.getAttribute('aria-haspopup')).toBeTruthy();
+    expect(more.getAttribute('aria-expanded')).toBe('false');
+    expect(screen.queryByRole('button', { name: /edit details/i })).toBeNull();
+  });
+
+  it('opens on the trigger and reports itself open', async () => {
+    serveMovie();
+
+    renderDetail();
+    await findTitle('Northwind');
+    const more = openMenu();
+
+    expect(more.getAttribute('aria-expanded')).toBe('true');
+    expect(screen.getByRole('button', { name: /edit details/i })).toBeDefined();
+  });
+
+  it('holds only Edit details — no Delete row, disabled or otherwise', async () => {
+    serveMovie();
+
+    renderDetail();
+    await findTitle('Northwind');
+    openMenu();
+
+    expect(screen.getByRole('button', { name: /edit details/i })).toBeDefined();
+    expect(screen.queryByText(/delete/i)).toBeNull();
+  });
+
+  it('sends Edit details to the add screen carrying this movie', async () => {
+    serveMovie();
+
+    renderDetail('m1');
+    await findTitle('Northwind');
+    openMenu();
+
+    fireEvent.click(screen.getByRole('button', { name: /edit details/i }));
+
+    expect(currentPath()).toBe('/add');
+    expect(currentSearch()).toBe('?movie=m1');
+  });
+
+  it('closes on Escape and gives focus back to the trigger', async () => {
+    serveMovie();
+
+    renderDetail();
+    await findTitle('Northwind');
+    const more = openMenu();
+
+    fireEvent.keyDown(document, { key: 'Escape' });
+
+    expect(screen.queryByRole('button', { name: /edit details/i })).toBeNull();
+    expect(more.getAttribute('aria-expanded')).toBe('false');
+    expect(document.activeElement).toBe(more);
+  });
+
+  it('closes on a pointerdown outside it and gives focus back to the trigger', async () => {
+    serveMovie();
+
+    renderDetail();
+    await findTitle('Northwind');
+    const more = openMenu();
+
+    fireEvent.pointerDown(document.body);
+
+    expect(screen.queryByRole('button', { name: /edit details/i })).toBeNull();
+    expect(document.activeElement).toBe(more);
+  });
+
+  it('closes when the trigger is used a second time', async () => {
+    serveMovie();
+
+    renderDetail();
+    await findTitle('Northwind');
+    const more = openMenu();
+
+    fireEvent.click(more);
+
+    expect(screen.queryByRole('button', { name: /edit details/i })).toBeNull();
+    expect(more.getAttribute('aria-expanded')).toBe('false');
+  });
+
+  it('is reachable without a mouse — the trigger and its item both take focus', async () => {
+    serveMovie();
+
+    renderDetail();
+    await findTitle('Northwind');
+    const more = openMenu();
+    expect(document.activeElement).toBe(more);
+
+    const edit = screen.getByRole('button', { name: /edit details/i });
+    edit.focus();
+
+    expect(document.activeElement).toBe(edit);
+  });
+
+  it('leaves Play reachable without a mouse too', async () => {
+    serveMovie();
+
+    renderDetail();
+    await findTitle('Northwind');
+
+    const play = screen.getByRole('button', { name: 'Play' });
+    play.focus();
+
+    expect(document.activeElement).toBe(play);
   });
 });
 
