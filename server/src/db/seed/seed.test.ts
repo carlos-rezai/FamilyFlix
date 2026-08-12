@@ -56,6 +56,28 @@ const MIN_OVERFLOWING_ROW = 8;
 const titlesOf = (movies: { title: string }[]) =>
   movies.map((movie) => movie.title).sort();
 
+/**
+ * How long a synopsis has to be before it overflows the detail page's clamp.
+ *
+ * `ExpandableText` clamps to 4 lines of 17px copy over a 560px measure, and its
+ * toggle appears only when the copy actually overflows — so a seed whose prose
+ * all fits leaves that toggle unreachable in the running app, which is the one
+ * thing this fixture set exists to make checkable by looking.
+ *
+ * jsdom measures nothing, so the real clamp cannot be exercised here. These are
+ * character-count proxies with deliberate margin on both sides: ~62 characters
+ * fit on a line at that size and measure, so four lines hold roughly 250. A
+ * synopsis past OVERFLOWS_CLAMP is comfortably too long whatever the font does
+ * with it, and one under FITS_CLAMP is comfortably short. Same device as
+ * MIN_OVERFLOWING_ROW above: assert the decision through a documented proxy,
+ * never the measurement.
+ */
+const OVERFLOWS_CLAMP = 340;
+const FITS_CLAMP = 150;
+
+/** How many fixtures have to overflow before the expanded state is easy to find. */
+const MIN_LONG_SYNOPSES = 3;
+
 describe('the dev seed — what a run writes', () => {
   it('writes the whole fixture set into an empty library', () => {
     const storage = freshStorage();
@@ -198,5 +220,95 @@ describe('the dev seed — the states it puts on the home screen', () => {
       expect(movie.posterPath).toBeNull();
       expect(movie.backdropPath).toBeNull();
     }
+  });
+});
+
+// --- what the movie detail page needs below the fold ---------------------------
+//
+// Everything above this point is about the browse home. The detail page renders
+// three fields no fixture carried until now — synopsis, director, and cast — so
+// a seeded library would have shown that screen's lower two-thirds blank on all
+// twenty-one movies. These tests pin the states that make the page checkable by
+// looking rather than only by unit test.
+
+describe('the dev seed — the states it puts on the movie detail page', () => {
+  it('writes prose that survives the round trip through the repository', () => {
+    const storage = freshStorage();
+
+    seedLibrary(storage);
+    const movies = storage.listMovies({ sort: 'a-z' });
+
+    // Not "the fixture object has a synopsis" — that a fixture sets a field the
+    // repository quietly drops is exactly what this catches.
+    const withSynopsis = movies.filter((movie) => movie.synopsis !== null);
+    const withDirector = movies.filter((movie) => movie.director !== null);
+    const withCast = movies.filter((movie) => movie.cast.length > 0);
+
+    expect(withSynopsis.length).toBeGreaterThan(1);
+    expect(withDirector.length).toBeGreaterThan(1);
+    expect(withCast.length).toBeGreaterThan(1);
+  });
+
+  it('varies synopsis length so both clamp states are reachable', () => {
+    const storage = freshStorage();
+
+    seedLibrary(storage);
+    const synopses = storage
+      .listMovies({ sort: 'a-z' })
+      .map((movie) => movie.synopsis)
+      .filter((synopsis): synopsis is string => synopsis !== null);
+
+    const long = synopses.filter(
+      (synopsis) => synopsis.length > OVERFLOWS_CLAMP
+    );
+    const short = synopses.filter((synopsis) => synopsis.length < FITS_CLAMP);
+
+    // Several that overflow, so "Read more" is easy to find...
+    expect(long.length).toBeGreaterThanOrEqual(MIN_LONG_SYNOPSES);
+    // ...and at least one that does not, so its absence is visible too.
+    expect(short.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('includes a movie missing only its director, which keeps its cast', () => {
+    const storage = freshStorage();
+
+    seedLibrary(storage);
+
+    // The credits row shows "—" for this one and keeps the cast beside it.
+    const directorless = storage
+      .listMovies({ sort: 'a-z' })
+      .filter((movie) => movie.director === null && movie.cast.length > 0);
+    expect(directorless.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('includes a movie missing both director and cast, beside ones with credits', () => {
+    const storage = freshStorage();
+
+    seedLibrary(storage);
+    const movies = storage.listMovies({ sort: 'a-z' });
+
+    // Both halves matter. A fixture set with no credits at all satisfies "one
+    // is uncredited" while showing nothing about the row that is supposed to
+    // disappear — the omission is only visible next to a row that stayed.
+    const uncredited = movies.filter(
+      (movie) => movie.director === null && movie.cast.length === 0
+    );
+    const credited = movies.filter(
+      (movie) => movie.director !== null || movie.cast.length > 0
+    );
+    expect(uncredited.length).toBeGreaterThanOrEqual(1);
+    expect(credited.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('includes a movie with no synopsis, beside ones that have one', () => {
+    const storage = freshStorage();
+
+    seedLibrary(storage);
+    const movies = storage.listMovies({ sort: 'a-z' });
+
+    const wordless = movies.filter((movie) => movie.synopsis === null);
+    const described = movies.filter((movie) => movie.synopsis !== null);
+    expect(wordless.length).toBeGreaterThanOrEqual(1);
+    expect(described.length).toBeGreaterThanOrEqual(1);
   });
 });
