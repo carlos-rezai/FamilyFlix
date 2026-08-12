@@ -51,6 +51,13 @@ describe('detailView — Movie → MovieDetailModel mapper', () => {
     expect(detailView(makeMovie({ watched: false })).isWatched).toBe(false);
   });
 
+  it('reports whether the movie is a favorite', () => {
+    // The heart has to arrive already filled for a movie favorited on the
+    // shelf — the two screens are looking at one flag, not two.
+    expect(detailView(makeMovie({ isFavorite: true })).isFavorite).toBe(true);
+    expect(detailView(makeMovie({ isFavorite: false })).isFavorite).toBe(false);
+  });
+
   it('lists the genre names in the order the record holds them', () => {
     const vm = detailView(
       makeMovie({

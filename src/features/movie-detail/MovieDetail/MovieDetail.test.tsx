@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { ThemeProvider } from 'styled-components';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 
@@ -121,6 +121,42 @@ function serveMovie(overrides: Partial<Movie> = {}) {
     }
     return Promise.reject(new Error(`Unexpected request: ${url}`));
   });
+}
+
+/**
+ * Answer the movie request with one record, and every save with the value it
+ * was asked to store — the ordinary case, where the server agrees.
+ */
+function serveMovieAndSaves(overrides: Partial<Movie> = {}) {
+  fetchMock.mockImplementation((_input, init) => {
+    const method = (init?.method ?? 'GET').toUpperCase();
+
+    if (method === 'GET') {
+      return Promise.resolve(okResponse(makeMovie(overrides)));
+    }
+    const body = JSON.parse(String(init?.body)) as { value: boolean };
+    return Promise.resolve(okResponse({ value: body.value }));
+  });
+}
+
+/** Answer the movie request, and refuse every save. */
+function serveMovieAndFailSaves(overrides: Partial<Movie> = {}) {
+  fetchMock.mockImplementation((input, init) => {
+    if ((init?.method ?? 'GET').toUpperCase() === 'GET') {
+      return Promise.resolve(okResponse(makeMovie(overrides)));
+    }
+    return Promise.reject(new Error(`Save refused: ${String(input)}`));
+  });
+}
+
+/** Every write this screen issued, as url plus the body it carried. */
+function writes() {
+  return fetchMock.mock.calls
+    .filter(([, init]) => (init?.method ?? 'GET').toUpperCase() !== 'GET')
+    .map(([input, init]) => ({
+      url: String(input),
+      body: JSON.parse(String(init?.body)) as unknown,
+    }));
 }
 
 /** Reports where the router has been sent, so a link's destination is visible. */
@@ -460,6 +496,200 @@ describe('MovieDetail — the action row', () => {
       ([, init]) => (init?.method ?? 'GET') !== 'GET'
     );
     expect(writes).toHaveLength(0);
+  });
+});
+
+/**
+ * The row's writing half — the two circles beside Play. Both fill before the
+ * save is confirmed, because a toggle that waits for a round trip reads as a
+ * click that didn't land; and both put themselves back if the save fails,
+ * because the page must never claim something is saved that isn't.
+ *
+ * They are found by their accessible names, which are the prototype's own tips
+ * — the label *is* the state, so a parent using a screen reader is told which
+ * way the next click goes rather than just that a button exists.
+ */
+describe('MovieDetail — the two toggles', () => {
+  const MARK_WATCHED = /mark as watched/i;
+  const UNMARK_WATCHED = /watched — click to unmark/i;
+  const ADD_FAVORITE = /add to favorites/i;
+  const REMOVE_FAVORITE = /in favorites — click to remove/i;
+
+  /** The "✓ Watched" pill beside the meta line, or nothing. */
+  function watchedBadge() {
+    return screen.queryByText(/✓\s*watched/i);
+  }
+
+  it('offers to mark an unwatched movie, and shows no badge yet', async () => {
+    serveMovieAndSaves({ watched: false });
+
+    renderDetail();
+    await findTitle('Northwind');
+
+    const toggle = screen.getByRole('button', { name: MARK_WATCHED });
+    expect(toggle.getAttribute('aria-pressed')).toBe('false');
+    expect(watchedBadge()).toBeNull();
+  });
+
+  it('fills the circle immediately when it is clicked, and the badge agrees', async () => {
+    serveMovieAndSaves({ watched: false });
+
+    renderDetail();
+    await findTitle('Northwind');
+    fireEvent.click(screen.getByRole('button', { name: MARK_WATCHED }));
+
+    // Synchronously after the click — nothing has been awaited, so no save has
+    // had the chance to confirm this.
+    const toggle = screen.getByRole('button', { name: UNMARK_WATCHED });
+    expect(toggle.getAttribute('aria-pressed')).toBe('true');
+    expect(watchedBadge()).not.toBeNull();
+  });
+
+  it('un-marks a movie marked by mistake', async () => {
+    serveMovieAndSaves({ watched: true });
+
+    renderDetail();
+    await findTitle('Northwind');
+    expect(watchedBadge()).not.toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: UNMARK_WATCHED }));
+
+    expect(screen.getByRole('button', { name: MARK_WATCHED })).toBeDefined();
+    expect(watchedBadge()).toBeNull();
+  });
+
+  it('saves the watched flag to this movie’s watched route', async () => {
+    serveMovieAndSaves({ watched: false });
+
+    renderDetail('m1');
+    await findTitle('Northwind');
+    fireEvent.click(screen.getByRole('button', { name: MARK_WATCHED }));
+
+    await waitFor(() => expect(writes()).toHaveLength(1));
+    expect(writes()[0].url).toBe('/api/movies/m1/watched');
+    expect(writes()[0].body).toEqual({ value: true });
+  });
+
+  it('stops offering a resume point once the movie is marked watched', async () => {
+    // Marking watched clears the resume position — the button must not keep
+    // offering 52:00 the server has already discarded.
+    serveMovieAndSaves({
+      watched: false,
+      resumePositionSeconds: 3120,
+      status: 'in-progress',
+    });
+
+    renderDetail();
+    await findTitle('Northwind');
+    expect(
+      screen.getByRole('button', { name: 'Resume · 52:00' })
+    ).toBeDefined();
+
+    fireEvent.click(screen.getByRole('button', { name: MARK_WATCHED }));
+
+    expect(screen.getByRole('button', { name: 'Play' })).toBeDefined();
+    expect(screen.queryByRole('button', { name: /resume/i })).toBeNull();
+  });
+
+  it('puts the watched circle back when the save is refused', async () => {
+    serveMovieAndFailSaves({ watched: false });
+
+    renderDetail();
+    await findTitle('Northwind');
+    fireEvent.click(screen.getByRole('button', { name: MARK_WATCHED }));
+
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: MARK_WATCHED })).toBeDefined()
+    );
+    expect(watchedBadge()).toBeNull();
+    // The failure costs the toggle, not the page.
+    expect(screen.getByRole('heading', { level: 1, name: 'Northwind' }));
+  });
+
+  it('arrives with the heart already filled for a movie favorited on the shelf', async () => {
+    serveMovieAndSaves({ isFavorite: true });
+
+    renderDetail();
+    await findTitle('Northwind');
+
+    const heart = screen.getByRole('button', { name: REMOVE_FAVORITE });
+    expect(heart.getAttribute('aria-pressed')).toBe('true');
+  });
+
+  it('fills the heart immediately when it is clicked', async () => {
+    serveMovieAndSaves({ isFavorite: false });
+
+    renderDetail();
+    await findTitle('Northwind');
+    fireEvent.click(screen.getByRole('button', { name: ADD_FAVORITE }));
+
+    const heart = screen.getByRole('button', { name: REMOVE_FAVORITE });
+    expect(heart.getAttribute('aria-pressed')).toBe('true');
+  });
+
+  it('saves the favorite through the same route the shelf writes to', async () => {
+    serveMovieAndSaves({ isFavorite: false });
+
+    renderDetail('m1');
+    await findTitle('Northwind');
+    fireEvent.click(screen.getByRole('button', { name: ADD_FAVORITE }));
+
+    // One flag, one route — which is what makes the shelf agree when the
+    // parent goes back to it.
+    await waitFor(() => expect(writes()).toHaveLength(1));
+    expect(writes()[0].url).toBe('/api/movies/m1/favorite');
+    expect(writes()[0].body).toEqual({ value: true });
+  });
+
+  it('empties the heart again for a movie taken out of Favorites', async () => {
+    serveMovieAndSaves({ isFavorite: true });
+
+    renderDetail();
+    await findTitle('Northwind');
+    fireEvent.click(screen.getByRole('button', { name: REMOVE_FAVORITE }));
+
+    await waitFor(() => expect(writes()[0].body).toEqual({ value: false }));
+    expect(screen.getByRole('button', { name: ADD_FAVORITE })).toBeDefined();
+  });
+
+  it('puts the heart back when the save is refused', async () => {
+    serveMovieAndFailSaves({ isFavorite: false });
+
+    renderDetail();
+    await findTitle('Northwind');
+    fireEvent.click(screen.getByRole('button', { name: ADD_FAVORITE }));
+
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: ADD_FAVORITE })).toBeDefined()
+    );
+  });
+
+  it('leaves the other toggle alone — one click writes one flag', async () => {
+    serveMovieAndSaves({ watched: false, isFavorite: false });
+
+    renderDetail();
+    await findTitle('Northwind');
+    fireEvent.click(screen.getByRole('button', { name: ADD_FAVORITE }));
+
+    await waitFor(() => expect(writes()).toHaveLength(1));
+    expect(writes()[0].url).toContain('/favorite');
+    expect(screen.getByRole('button', { name: MARK_WATCHED })).toBeDefined();
+    expect(watchedBadge()).toBeNull();
+  });
+
+  it('is reachable without a mouse — both circles take focus', async () => {
+    serveMovieAndSaves();
+
+    renderDetail();
+    await findTitle('Northwind');
+
+    const watched = screen.getByRole('button', { name: MARK_WATCHED });
+    watched.focus();
+    expect(document.activeElement).toBe(watched);
+
+    const favorite = screen.getByRole('button', { name: ADD_FAVORITE });
+    favorite.focus();
+    expect(document.activeElement).toBe(favorite);
   });
 });
 

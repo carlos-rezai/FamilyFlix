@@ -125,3 +125,103 @@ describe('GET /api/movies/:id', () => {
     expect(body.error).not.toBe('');
   });
 });
+
+// --- 04 — Movie detail, commit 3: "the two real toggles" (issue #27) ---------
+
+/** POST a watched-toggle body to one movie, exactly as the page does. */
+function postWatched(baseUrl: string, id: string, body: unknown) {
+  return fetch(`${baseUrl}/api/movies/${id}/watched`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+}
+
+describe('POST /api/movies/:id/watched', () => {
+  it('marks a movie watched and echoes the value it stored', async () => {
+    const { storage, baseUrl } = freshApi();
+    const stored = addFullMovie(storage);
+
+    const response = await postWatched(baseUrl, stored.id, { value: true });
+
+    expect(response.status).toBe(200);
+    // The echo is what lets the optimistic toggle reconcile against what
+    // actually persisted, rather than against what it assumed.
+    expect(await response.json()).toEqual({ value: true });
+    expect(storage.getMovie(stored.id)?.watched).toBe(true);
+  });
+
+  it('un-marks a movie that was marked by mistake', async () => {
+    const { storage, baseUrl } = freshApi();
+    const stored = addFullMovie(storage);
+    await postWatched(baseUrl, stored.id, { value: true });
+
+    const response = await postWatched(baseUrl, stored.id, { value: false });
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ value: false });
+    expect(storage.getMovie(stored.id)?.watched).toBe(false);
+  });
+
+  /**
+   * The dedicated mutators, not `updateMovie`. The observable difference is this
+   * one: `markWatched` zeroes the resume position by documented convention, so a
+   * route that dodged it to keep the position would pass every other test here
+   * and give this page different watch semantics than every other caller.
+   *
+   * The behaviour is accepted rather than worked around, and flagged for the
+   * watch-tracking grill.
+   */
+  it('clears the resume position when it marks a movie watched', async () => {
+    const { storage, baseUrl } = freshApi();
+    const stored = addFullMovie(storage);
+    expect(stored.resumePositionSeconds).toBe(3120);
+
+    await postWatched(baseUrl, stored.id, { value: true });
+
+    expect(storage.getMovie(stored.id)?.resumePositionSeconds).toBe(0);
+  });
+
+  it('does not restore the resume position when the movie is un-marked', async () => {
+    const { storage, baseUrl } = freshApi();
+    const stored = addFullMovie(storage);
+
+    await postWatched(baseUrl, stored.id, { value: true });
+    await postWatched(baseUrl, stored.id, { value: false });
+
+    // A movie at Resume · 52:00, marked then unmarked, comes back at 0:00 —
+    // the round trip's cost, asserted rather than discovered later.
+    const movie = storage.getMovie(stored.id);
+    expect(movie?.resumePositionSeconds).toBe(0);
+    expect(movie?.status).toBe('unwatched');
+  });
+
+  it('rejects a body that is not { value: boolean }', async () => {
+    const { storage, baseUrl } = freshApi();
+    const stored = addFullMovie(storage);
+
+    for (const body of [{ value: 'yes' }, { value: 1 }, {}]) {
+      const response = await postWatched(baseUrl, stored.id, body);
+
+      expect(response.status).toBe(400);
+      const error = (await response.json()) as { error?: unknown };
+      expect(typeof error.error).toBe('string');
+    }
+
+    // Nothing was written on the way to rejecting any of them.
+    expect(storage.getMovie(stored.id)?.watched).toBe(false);
+  });
+
+  it('answers 404 with an error body for an unknown id', async () => {
+    const { baseUrl } = freshApi();
+
+    const response = await postWatched(baseUrl, 'no-such-movie', {
+      value: true,
+    });
+
+    expect(response.status).toBe(404);
+    const body = (await response.json()) as { error?: unknown };
+    expect(typeof body.error).toBe('string');
+    expect(body.error).not.toBe('');
+  });
+});
