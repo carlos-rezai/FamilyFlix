@@ -3,6 +3,9 @@ import type { Movie } from '@/types';
 /** Where one movie is loaded from, by the id in the page's URL. */
 const movieEndpoint = (id: string) => `/api/movies/${encodeURIComponent(id)}`;
 
+/** Where one movie's watched flag is saved. */
+const watchedEndpoint = (id: string) => `${movieEndpoint(id)}/watched`;
+
 /**
  * Loads one movie by id — the whole record the detail page renders, synopsis,
  * credits, genres and subtitles included.
@@ -25,4 +28,29 @@ export async function fetchMovie(id: string): Promise<Movie | null> {
   }
 
   return (await response.json()) as Movie;
+}
+
+/**
+ * Saves one movie's watched flag and answers with the value that was stored.
+ * The same contract `saveFavorite` keeps — the route echoes what it wrote, and
+ * that echo is the truth; `watched` is only the fallback for a route that
+ * answers without one. Rejects if the save did not succeed, which is the
+ * toggle's cue to revert rather than leave the circle filled over nothing.
+ */
+export async function saveWatched(
+  id: string,
+  watched: boolean
+): Promise<boolean> {
+  const response = await fetch(watchedEndpoint(id), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ value: watched }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Saving watched failed: ${response.status}`);
+  }
+
+  const saved = (await response.json()) as { value?: unknown };
+  return typeof saved.value === 'boolean' ? saved.value : watched;
 }

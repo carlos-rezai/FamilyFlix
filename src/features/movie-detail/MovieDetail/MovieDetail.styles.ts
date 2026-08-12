@@ -153,9 +153,8 @@ export const Genres = styled.div`
 `;
 
 /**
- * The primary actions, directly under the genre chips and above the fold. The
- * two circular toggles land in this row beside Play with the next slice; the
- * gap and the wrap are already sized for them.
+ * The primary actions, directly under the genre chips and above the fold: Play
+ * and the two circular toggles beside it.
  */
 export const ActionRow = styled.div`
   display: flex;
@@ -163,6 +162,33 @@ export const ActionRow = styled.div`
   gap: 14px;
   margin-top: 28px;
   flex-wrap: wrap;
+`;
+
+/**
+ * One of the two circles beside Play — the watched tick and the favorite heart.
+ * `$on` is the whole of its appearance: filled in the accent when the flag is
+ * set, a bare outline when it is not, so the state is legible without reading
+ * the icon inside it.
+ */
+export const CircleToggle = styled.button<{ $on: boolean }>`
+  display: grid;
+  place-items: center;
+  width: 58px;
+  height: 58px;
+  flex: 0 0 auto;
+  background: ${({ theme, $on }) =>
+    $on ? theme.colors.accentSoft : 'transparent'};
+  border: 1px solid
+    ${({ theme, $on }) => ($on ? theme.colors.accentLine : theme.colors.border)};
+  border-radius: ${({ theme }) => theme.radius.pill};
+  color: ${({ theme, $on }) =>
+    $on ? theme.colors.accent : theme.colors.textDim};
+  cursor: pointer;
+
+  &:hover {
+    border-color: ${({ theme }) => theme.colors.accentLine};
+    color: ${({ theme }) => theme.colors.accent};
+  }
 `;
 
 /**

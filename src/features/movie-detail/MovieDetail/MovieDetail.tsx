@@ -9,7 +9,15 @@ import {
 import { useNavigate, useParams } from 'react-router-dom';
 
 import { ExpandableText } from '@/components';
-import { Button, Chip, MoreIcon, StarRating } from '@/primitives';
+import {
+  Button,
+  CheckIcon,
+  Chip,
+  HeartIcon,
+  HeartOutlineIcon,
+  MoreIcon,
+  StarRating,
+} from '@/primitives';
 import type { MovieDetailModel } from '@/types';
 import { useMovieDetail } from '../useMovieDetail/useMovieDetail';
 import {
@@ -30,6 +38,7 @@ import {
   WatchedBadge,
   Genres,
   ActionRow,
+  CircleToggle,
   MenuSlot,
   MoreButton,
   Menu,
@@ -62,6 +71,25 @@ const SYNOPSIS_MAX_WIDTH = 560;
 
 /** The stars sit at 20px on this page — larger than a card's 13px. */
 const STAR_SIZE = 20;
+
+/** The two circles' icons, at the sizes the prototype draws them. */
+const CHECK_SIZE = 24;
+const HEART_SIZE = 23;
+
+/**
+ * The toggles' tips, straight from the prototype. The label *is* the state and
+ * names the next click, so a parent using a screen reader is told which way the
+ * circle goes rather than only that a button is there.
+ */
+const WATCHED_TIP = {
+  on: 'Watched — click to unmark',
+  off: 'Mark as watched',
+} as const;
+
+const FAVORITE_TIP = {
+  on: 'In Favorites — click to remove',
+  off: 'Add to Favorites',
+} as const;
 
 /** Drawn between two surviving meta segments, never beside a missing one. */
 const META_SEPARATOR = '•';
@@ -252,9 +280,10 @@ function LoadFailed({ onRetry }: { onRetry: () => void }) {
  * separators, which are interleaved between the surviving segments because the
  * stars sit in the middle of the line and no single string could hold them.
  *
- * The action row ships with its navigating half only: Play opens the player's
- * URL and the ⋯ menu opens the add screen, neither of them writing anything.
- * The two circular toggles beside Play become real in the next slice.
+ * The action row's navigating half writes nothing: Play opens the player's URL
+ * and the ⋯ menu opens the add screen, because only the player owns playback
+ * state. Its writing half is the two circles beside Play, each of which shows
+ * its new value at once and hands the save to the hook.
  */
 export function MovieDetail() {
   const { id } = useParams<{ id: string }>();
@@ -326,6 +355,35 @@ export function MovieDetail() {
               icon="play"
               onClick={() => navigate(`/movie/${movie.id}/play`)}
             />
+
+            {/* Both circles fill on the click rather than on the save: a toggle
+                that waits for a round trip reads as a click that didn't land.
+                The hook puts them back if the save is refused. */}
+            <CircleToggle
+              type="button"
+              title={movie.isWatched ? WATCHED_TIP.on : WATCHED_TIP.off}
+              aria-label={movie.isWatched ? WATCHED_TIP.on : WATCHED_TIP.off}
+              aria-pressed={movie.isWatched}
+              $on={movie.isWatched}
+              onClick={detail.toggleWatched}
+            >
+              <CheckIcon size={CHECK_SIZE} />
+            </CircleToggle>
+
+            <CircleToggle
+              type="button"
+              title={movie.isFavorite ? FAVORITE_TIP.on : FAVORITE_TIP.off}
+              aria-label={movie.isFavorite ? FAVORITE_TIP.on : FAVORITE_TIP.off}
+              aria-pressed={movie.isFavorite}
+              $on={movie.isFavorite}
+              onClick={detail.toggleFavorite}
+            >
+              {movie.isFavorite ? (
+                <HeartIcon size={HEART_SIZE} />
+              ) : (
+                <HeartOutlineIcon size={HEART_SIZE} />
+              )}
+            </CircleToggle>
           </ActionRow>
 
           {movie.synopsis === null ? null : (

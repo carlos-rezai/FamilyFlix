@@ -133,6 +133,32 @@ export function createApiRouter(
     res.json({ value });
   });
 
+  // The watched toggle, echoing the stored `value` like the favorite route
+  // above it. It dispatches to the dedicated mutators rather than
+  // `updateMovie`, so this page gets the same watch semantics as every other
+  // caller: `markWatched` also zeroes the resume position by documented
+  // convention, and un-marking does not hand it back.
+  router.post('/movies/:id/watched', (req: Request<{ id: string }>, res) => {
+    const { value } = req.body as { value?: unknown };
+    if (typeof value !== 'boolean') {
+      res.status(400).json({ error: 'Body must be { value: boolean }' });
+      return;
+    }
+
+    const { id } = req.params;
+    if (!storage.getMovie(id)) {
+      res.status(404).json({ error: `Unknown movie: ${id}` });
+      return;
+    }
+
+    if (value) {
+      storage.markWatched(id);
+    } else {
+      storage.markUnwatched(id);
+    }
+    res.json({ value });
+  });
+
   // Posters and backdrops straight off disk. Serves nothing until an import
   // populates the managed media directory; cards fall back to their gradient
   // until then.

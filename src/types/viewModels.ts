@@ -62,6 +62,11 @@ export interface MovieDetailModel {
   /** 0–100 percent the stars fill against; `null` when the movie is unrated. */
   ratingPercent: number | null;
   isWatched: boolean;
+  /**
+   * The favorite flag — the same one the shelf's heart reads, so a movie
+   * favorited on a card arrives here already filled.
+   */
+  isFavorite: boolean;
   /** The primary button's text — `Play`, or `Resume · 52:00` part-way in. */
   playLabel: string;
   /** Genre names, in the order the record holds them. */

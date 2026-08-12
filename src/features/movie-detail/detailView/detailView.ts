@@ -104,6 +104,7 @@ export function detailView(movie: Movie): MovieDetailModel {
     runtimeLabel: toRuntimeLabel(movie.runtimeMinutes),
     ratingPercent: movie.rating === null ? null : toRatingPercent(movie.rating),
     isWatched: movie.watched,
+    isFavorite: movie.isFavorite,
     playLabel: toPlayLabel(movie),
     genres: movie.genres.map((genre) => genre.name),
     synopsis: movie.synopsis,
