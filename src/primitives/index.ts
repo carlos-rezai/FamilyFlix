@@ -1,4 +1,6 @@
 /** Barrel — re-exports every primitive (atoms). */
+export { Button, type ButtonProps } from './Button/Button';
+export { Chip, type ChipProps } from './Chip/Chip';
 export { StarRating, type StarRatingProps } from './StarRating/StarRating';
 export { StatusBadge, type StatusBadgeProps } from './StatusBadge/StatusBadge';
 export { ProgressBar, type ProgressBarProps } from './ProgressBar/ProgressBar';
@@ -8,3 +10,5 @@ export { GearIcon } from './Icon/GearIcon';
 export { ChevronLeftIcon } from './Icon/ChevronLeftIcon';
 export { ChevronRightIcon } from './Icon/ChevronRightIcon';
 export { PlayIcon } from './Icon/PlayIcon';
+export { MoreIcon } from './Icon/MoreIcon';
+export { CheckIcon } from './Icon/CheckIcon';

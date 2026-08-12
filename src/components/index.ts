@@ -4,3 +4,7 @@ export {
   ContinueCard,
   type ContinueCardProps,
 } from './ContinueCard/ContinueCard';
+export {
+  ExpandableText,
+  type ExpandableTextProps,
+} from './ExpandableText/ExpandableText';

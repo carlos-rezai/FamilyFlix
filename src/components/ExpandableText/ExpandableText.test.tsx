@@ -69,8 +69,13 @@ beforeEach(() => {
 afterEach(() => {
   // Own properties on HTMLElement.prototype shadowing jsdom's own accessors on
   // Element.prototype — deleting them restores the real ones.
-  delete (HTMLElement.prototype as Partial<HTMLElement>).scrollHeight;
-  delete (HTMLElement.prototype as Partial<HTMLElement>).clientHeight;
+  for (const prop of ['scrollHeight', 'clientHeight'] as const) {
+    // `Partial<HTMLElement>` keeps both properties `readonly`, which `delete`
+    // rejects — the cast has to drop that too, not just make them optional.
+    delete (HTMLElement.prototype as Partial<Record<typeof prop, number>>)[
+      prop
+    ];
+  }
   vi.unstubAllGlobals();
 });
 
