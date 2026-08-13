@@ -1,18 +1,7 @@
-import styled, { keyframes } from 'styled-components';
+import styled from 'styled-components';
 
+import { Skeleton } from '@/primitives';
 import { CARD_WIDTH } from '../CardCarousel/CardCarousel.styles';
-
-const pulse = keyframes`
-  from { opacity: 0.45; }
-  to { opacity: 0.8; }
-`;
-
-/** Every skeleton block breathes on the same beat. */
-const Block = styled.div`
-  background: ${({ theme }) => theme.colors.surface};
-  border-radius: ${({ theme }) => theme.radius.sm};
-  animation: ${pulse} 1.1s ease-in-out infinite alternate;
-`;
 
 export const SkeletonSection = styled.div`
   margin-bottom: ${({ theme }) => theme.space.s7};
@@ -27,12 +16,12 @@ export const SkeletonHeader = styled.div`
   margin: ${({ theme }) => `0 0 ${theme.space.s4}`};
 `;
 
-export const SkeletonTitle = styled(Block)`
+export const SkeletonTitle = styled(Skeleton)`
   width: 160px;
   height: 24px;
 `;
 
-export const SkeletonViewAll = styled(Block)`
+export const SkeletonViewAll = styled(Skeleton)`
   width: 90px;
   height: 16px;
 `;
@@ -49,13 +38,13 @@ export const SkeletonCard = styled.div`
   width: ${`${CARD_WIDTH}px`};
 `;
 
-export const SkeletonPoster = styled(Block)`
+export const SkeletonPoster = styled(Skeleton)`
   width: 100%;
   aspect-ratio: 2 / 3;
   border-radius: ${({ theme }) => theme.radius.md};
 `;
 
-export const SkeletonLine = styled(Block)`
+export const SkeletonLine = styled(Skeleton)`
   width: 70%;
   height: 14px;
   margin-top: 10px;
