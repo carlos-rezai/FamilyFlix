@@ -74,6 +74,9 @@ export type CardCarouselProps =
       items: ContinueCarouselItem[];
     };
 
+/** The paging arrows' square, from `feat.CardCarousel.dc.html`. */
+const ARROW_SIZE = 44;
+
 /** Slack around each edge, so a fractional scroll offset never strands an arrow. */
 const EDGE_TOLERANCE = 4;
 
@@ -148,8 +151,8 @@ export function CardCarousel(props: CardCarouselProps) {
     <Root>
       {canLeft ? (
         <LeftArrow
-          type="button"
-          aria-label="Scroll left"
+          label="Scroll left"
+          size={ARROW_SIZE}
           $top={arrowTop}
           onClick={() => page(-1)}
         >
@@ -179,8 +182,8 @@ export function CardCarousel(props: CardCarouselProps) {
 
       {canRight ? (
         <RightArrow
-          type="button"
-          aria-label="Scroll right"
+          label="Scroll right"
+          size={ARROW_SIZE}
           $top={arrowTop}
           onClick={() => page(1)}
         >
