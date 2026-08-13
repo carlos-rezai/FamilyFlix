@@ -1,4 +1,3 @@
-import { Fragment, type ReactNode } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
 import { ExpandableText } from '@/components';
@@ -9,10 +8,9 @@ import {
   Chip,
   HeartIcon,
   HeartOutlineIcon,
-  StarRating,
 } from '@/primitives';
-import type { MovieDetailModel } from '@/types';
 import { EditMenu } from '../EditMenu/EditMenu';
+import { MetaLine } from '../MetaLine/MetaLine';
 import { useMovieDetail } from '../useMovieDetail/useMovieDetail';
 import {
   ArtArea,
@@ -24,11 +22,6 @@ import {
   PosterTitle,
   Main,
   Title,
-  MetaLine,
-  MetaText,
-  Separator,
-  RatingWrap,
-  WatchedBadge,
   Genres,
   ActionRow,
   CircleToggle,
@@ -53,9 +46,6 @@ const SYNOPSIS_LINES = 4;
 const SYNOPSIS_FONT_SIZE = 17;
 const SYNOPSIS_MAX_WIDTH = 560;
 
-/** The stars sit at 20px on this page — larger than a card's 13px. */
-const STAR_SIZE = 20;
-
 /** The two circles' icons, at the sizes the prototype draws them. */
 const CHECK_SIZE = 24;
 const HEART_SIZE = 23;
@@ -78,48 +68,7 @@ const FAVORITE_TIP = {
   off: 'Add to Favorites',
 } as const;
 
-/** Drawn between two surviving meta segments, never beside a missing one. */
-const META_SEPARATOR = '•';
-
 const range = (length: number) => Array.from({ length }, (_, index) => index);
-
-/** One item on the meta line, keyed so the interleaved separators stay stable. */
-interface MetaSegment {
-  key: string;
-  node: ReactNode;
-}
-
-/**
- * The meta line's surviving segments, in order. Composing the list first is what
- * makes a dangling separator unrepresentable: the separators below are generated
- * *between* the members of this list, so an absent segment cannot leave one
- * behind. Every decision about what is absent was already made in `detailView`.
- */
-function metaSegments(movie: MovieDetailModel): MetaSegment[] {
-  const segments: MetaSegment[] = [];
-
-  if (movie.year !== null) {
-    segments.push({ key: 'year', node: <MetaText>{movie.year}</MetaText> });
-  }
-  if (movie.runtimeLabel !== null) {
-    segments.push({
-      key: 'runtime',
-      node: <MetaText>{movie.runtimeLabel}</MetaText>,
-    });
-  }
-  if (movie.ratingPercent !== null) {
-    segments.push({
-      key: 'rating',
-      node: (
-        <RatingWrap>
-          <StarRating rating={movie.ratingPercent} size={STAR_SIZE} showValue />
-        </RatingWrap>
-      ),
-    });
-  }
-
-  return segments;
-}
 
 /** The page's own shape, held while the movie loads, rather than a blank screen. */
 function LoadingDetail() {
@@ -221,15 +170,12 @@ export function MovieDetail() {
         <Main>
           <Title>{movie.title}</Title>
 
-          <MetaLine>
-            {metaSegments(movie).map((segment, index) => (
-              <Fragment key={segment.key}>
-                {index > 0 ? <Separator>{META_SEPARATOR}</Separator> : null}
-                {segment.node}
-              </Fragment>
-            ))}
-            {movie.isWatched ? <WatchedBadge>✓ Watched</WatchedBadge> : null}
-          </MetaLine>
+          <MetaLine
+            year={movie.year}
+            runtimeLabel={movie.runtimeLabel}
+            ratingPercent={movie.ratingPercent}
+            isWatched={movie.isWatched}
+          />
 
           <Genres>
             {movie.genres.map((genre) => (
