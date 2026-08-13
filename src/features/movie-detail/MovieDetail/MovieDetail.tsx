@@ -9,6 +9,7 @@ import {
   HeartIcon,
   HeartOutlineIcon,
 } from '@/primitives';
+import { CreditsRow } from '../CreditsRow/CreditsRow';
 import { EditMenu } from '../EditMenu/EditMenu';
 import { MetaLine } from '../MetaLine/MetaLine';
 import { useMovieDetail } from '../useMovieDetail/useMovieDetail';
@@ -26,12 +27,6 @@ import {
   ActionRow,
   CircleToggle,
   SynopsisWrap,
-  Credits,
-  Credit,
-  CastCredit,
-  CreditLabel,
-  CreditValue,
-  CastValue,
   DetailMessage,
   SkeletonPoster,
   SkeletonTitle,
@@ -235,18 +230,11 @@ export function MovieDetail() {
             </SynopsisWrap>
           )}
 
-          {movie.hasCredits ? (
-            <Credits>
-              <Credit>
-                <CreditLabel>Director</CreditLabel>
-                <CreditValue>{movie.director}</CreditValue>
-              </Credit>
-              <CastCredit>
-                <CreditLabel>Cast</CreditLabel>
-                <CastValue>{movie.castText}</CastValue>
-              </CastCredit>
-            </Credits>
-          ) : null}
+          <CreditsRow
+            director={movie.director}
+            castText={movie.castText}
+            hasCredits={movie.hasCredits}
+          />
         </Main>
       </Content>
     </>
