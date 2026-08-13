@@ -1,10 +1,55 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { ThemeProvider } from 'styled-components';
-import { MemoryRouter, useLocation } from 'react-router-dom';
+import {
+  MemoryRouter,
+  Route,
+  Routes,
+  useLocation,
+  useNavigate,
+} from 'react-router-dom';
 
 import { MainLayout } from './MainLayout';
 import { theme } from '@/styles/theme';
+
+/**
+ * jsdom does no layout: every element reports `scrollTop: 0` and drops writes to
+ * it, so the body returning to a position could never be observed. This gives
+ * each element a real, writable `scrollTop` and the browse home's measured
+ * overflow (6390 over a 698 viewport, issue #28), so a build that checks whether
+ * there is anything to scroll is not failed for checking.
+ */
+const scrollTops = new WeakMap<HTMLElement, number>();
+
+beforeEach(() => {
+  Object.defineProperty(HTMLElement.prototype, 'scrollTop', {
+    configurable: true,
+    get(this: HTMLElement) {
+      return scrollTops.get(this) ?? 0;
+    },
+    set(this: HTMLElement, value: number) {
+      scrollTops.set(this, value);
+    },
+  });
+  Object.defineProperty(HTMLElement.prototype, 'scrollHeight', {
+    configurable: true,
+    get: () => 6390,
+  });
+  Object.defineProperty(HTMLElement.prototype, 'clientHeight', {
+    configurable: true,
+    get: () => 698,
+  });
+});
+
+afterEach(() => {
+  // Own properties on HTMLElement.prototype shadowing jsdom's own accessors on
+  // Element.prototype — deleting them restores the real ones.
+  for (const prop of ['scrollTop', 'scrollHeight', 'clientHeight'] as const) {
+    delete (HTMLElement.prototype as Partial<Record<typeof prop, number>>)[
+      prop
+    ];
+  }
+});
 
 /** Reports the router's current path, so a navigation can name the URL. */
 function LocationProbe() {
@@ -72,5 +117,93 @@ describe('MainLayout', () => {
     renderLayout(<p>the library goes here</p>);
 
     expect(gear().getAttribute('aria-label')).toBe('Settings');
+  });
+});
+
+/**
+ * The chrome is where the scrolling happens — the document never scrolls, the
+ * body under the header does — so it is the chrome that has to remember where a
+ * screen was left. Every page wrapped in this layout inherits that, which is why
+ * the tests below drive it here rather than in any one feature.
+ */
+
+/** What a parent does with a wheel: the body moves, and it says so. */
+function scrollTo(element: HTMLElement, top: number) {
+  element.scrollTop = top;
+  fireEvent.scroll(element);
+}
+
+/** The layout's scrolling body: the one thing the header is followed by. */
+function scrollingBody() {
+  return screen.getByRole('banner').nextElementSibling as HTMLElement;
+}
+
+/** The two moves a history test needs, from outside the layout under test. */
+function Nav() {
+  const navigate = useNavigate();
+
+  return (
+    <>
+      <button type="button" onClick={() => navigate('/settings')}>
+        open settings
+      </button>
+      <button type="button" onClick={() => navigate(-1)}>
+        history step back
+      </button>
+    </>
+  );
+}
+
+/**
+ * One page component per route, as the app has. React reconciles by position and
+ * type, so two routes rendering `MainLayout` directly would hand the second
+ * screen the first one's body element, scroll offset and all — a layout that
+ * remembered nothing would look like it worked.
+ */
+function HomeScreen() {
+  return (
+    <MainLayout>
+      <p>the library goes here</p>
+    </MainLayout>
+  );
+}
+
+function SettingsScreen() {
+  return (
+    <MainLayout>
+      <p>the settings screen</p>
+    </MainLayout>
+  );
+}
+
+function renderWrappedScreens() {
+  return render(
+    <MemoryRouter initialEntries={['/']}>
+      <ThemeProvider theme={theme}>
+        <Nav />
+        <Routes>
+          <Route path="/" element={<HomeScreen />} />
+          <Route path="/settings" element={<SettingsScreen />} />
+        </Routes>
+      </ThemeProvider>
+    </MemoryRouter>
+  );
+}
+
+const step = (label: string) =>
+  fireEvent.click(screen.getByRole('button', { name: label }));
+
+describe('MainLayout — returning to where the screen was left', () => {
+  it('returns its scrolling body to where it was left when the entry is revisited', () => {
+    renderWrappedScreens();
+    scrollTo(scrollingBody(), 1240);
+
+    step('open settings');
+    // The screen that replaced it is a screen of its own, at its own top.
+    expect(scrollingBody().scrollTop).toBe(0);
+
+    step('history step back');
+
+    expect(scrollingBody().scrollTop).toBe(1240);
   });
 });

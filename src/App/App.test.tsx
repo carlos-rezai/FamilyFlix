@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
-import { MemoryRouter, useLocation } from 'react-router-dom';
+import { MemoryRouter, useLocation, useNavigate } from 'react-router-dom';
 
 import App from './App';
 import type { HomePayload, HomeRow, Movie } from '@/types';
@@ -108,6 +108,45 @@ afterEach(() => {
 });
 
 /**
+ * jsdom does no layout: every element reports `scrollTop: 0` and drops writes to
+ * it, so "Back lands where the parent was" could never be observed. This gives
+ * each element a real, writable `scrollTop`, and the browse home's measured
+ * overflow — 6390 inside a 698-tall body, the numbers from issue #28 — so a
+ * build that checks whether there is anything to scroll is not failed for it.
+ */
+const scrollTops = new WeakMap<HTMLElement, number>();
+
+beforeEach(() => {
+  Object.defineProperty(HTMLElement.prototype, 'scrollTop', {
+    configurable: true,
+    get(this: HTMLElement) {
+      return scrollTops.get(this) ?? 0;
+    },
+    set(this: HTMLElement, value: number) {
+      scrollTops.set(this, value);
+    },
+  });
+  Object.defineProperty(HTMLElement.prototype, 'scrollHeight', {
+    configurable: true,
+    get: () => 6390,
+  });
+  Object.defineProperty(HTMLElement.prototype, 'clientHeight', {
+    configurable: true,
+    get: () => 698,
+  });
+});
+
+afterEach(() => {
+  // Own properties on HTMLElement.prototype shadowing jsdom's own accessors on
+  // Element.prototype — deleting them restores the real ones.
+  for (const prop of ['scrollTop', 'scrollHeight', 'clientHeight'] as const) {
+    delete (HTMLElement.prototype as Partial<Record<typeof prop, number>>)[
+      prop
+    ];
+  }
+});
+
+/**
  * Reports the router's current path into the DOM, so a navigation assertion can
  * name the URL the app moved to rather than infer it from what rendered.
  */
@@ -121,11 +160,27 @@ function LocationProbe() {
   );
 }
 
+/**
+ * Stands in for the browser's own Back button, which is the same history step
+ * the chrome has no control over. Named without the word "back" so it never
+ * answers a query meant for the movie page's own Back pill.
+ */
+function HistoryProbe() {
+  const navigate = useNavigate();
+
+  return (
+    <button type="button" onClick={() => navigate(-1)}>
+      history step
+    </button>
+  );
+}
+
 function renderApp(entry = '/') {
   return render(
     <MemoryRouter initialEntries={[entry]}>
       <App />
       <LocationProbe />
+      <HistoryProbe />
     </MemoryRouter>
   );
 }
@@ -291,5 +346,65 @@ describe('App — the movie page’s navigating actions', () => {
     expect(currentPath()).toBe('/add');
     expect(currentSearch()).toBe('?movie=a1');
     expect(await screen.findByRole('heading', { name: /add/i })).toBeDefined();
+  });
+});
+
+/**
+ * The one acceptance criterion issue #25 left behind: leaving the browse home
+ * and coming back lands where the parent was, not at the top. The document never
+ * scrolls — the body under the header does — so nothing the browser or the
+ * router offers covers this, and these are the tests that say what "covered"
+ * means: the position after a back navigation, never where it was stored.
+ */
+describe('App — returning the browse home to where the parent was', () => {
+  /** What a parent does with a wheel: the body moves, and it says so. */
+  function scrollTo(element: HTMLElement, top: number) {
+    element.scrollTop = top;
+    fireEvent.scroll(element);
+  }
+
+  /** The browse home's scrolling body: the one thing the header is followed by. */
+  function homeBody() {
+    return screen.getByRole('banner').nextElementSibling as HTMLElement;
+  }
+
+  it('lands where the parent was when Back is pressed on a movie, and starts a deliberate trip home at the top', async () => {
+    // The case from the issue: scrolled down to the Action row, opened a movie.
+    renderApp();
+    await screen.findByRole('heading', { name: 'Action' });
+    scrollTo(homeBody(), 1240);
+
+    fireEvent.click(cardFor('Northwind'));
+    await screen.findByRole('heading', { level: 1, name: 'Northwind' });
+    fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+
+    expect(currentPath()).toBe('/');
+    await screen.findByRole('heading', { name: 'Action' });
+    expect(homeBody().scrollTop).toBe(1240);
+
+    // Asking for the home screen — the gear, then the logo — is a fresh visit,
+    // a new history entry rather than the scrolled one, so it starts at the top.
+    fireEvent.click(screen.getByRole('button', { name: 'Settings' }));
+    await screen.findByRole('heading', { name: /settings/i });
+    fireEvent.click(screen.getByRole('button', { name: /familyflix/i }));
+
+    expect(currentPath()).toBe('/');
+    await screen.findByRole('heading', { name: 'Action' });
+    expect(homeBody().scrollTop).toBe(0);
+  });
+
+  it('lands where the parent was on a browser back from a genre page', async () => {
+    renderApp();
+    await screen.findByRole('heading', { name: 'Action' });
+    scrollTo(homeBody(), 860);
+
+    const action = within(screen.getByRole('region', { name: 'Action' }));
+    fireEvent.click(action.getByRole('button', { name: /view all 214/i }));
+    await screen.findByRole('heading', { name: /Action/ });
+    fireEvent.click(screen.getByRole('button', { name: 'history step' }));
+
+    expect(currentPath()).toBe('/');
+    await screen.findByRole('heading', { name: 'Action' });
+    expect(homeBody().scrollTop).toBe(860);
   });
 });
