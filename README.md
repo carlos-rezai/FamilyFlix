@@ -241,7 +241,7 @@ Builds the installer and publishes it to GitHub Releases automatically.
 | Library core (movie model, SQLite, repository)      | ✅ Done         |
 | Browse grid — genre rows                            | ✅ Done         |
 | Card carousel — prev/next arrows, 15-per-row cap    | ✅ Done         |
-| Movie detail page (synopsis, director, cast)        | 🔜 Planned      |
+| Movie detail page (synopsis, director, cast)        | ✅ Done         |
 | Search + filter (title, genre, rating)              | 🔜 Planned      |
 | Sort (recent, A–Z, year, rating, unwatched)         | 🔜 Planned      |
 | Ratings — 5-star display + half-star picker         | 🔜 Planned      |
