@@ -54,24 +54,6 @@ export const Spacer = styled.div`
   flex: 1 1 auto;
 `;
 
-export const GearButton = styled.button`
-  display: grid;
-  place-items: center;
-  flex: 0 0 auto;
-  width: 46px;
-  height: 46px;
-  background: transparent;
-  border: 1px solid transparent;
-  border-radius: ${({ theme }) => theme.radius.pill};
-  color: ${({ theme }) => theme.colors.textFaint};
-  cursor: pointer;
-
-  &:hover {
-    color: ${({ theme }) => theme.colors.textDim};
-    background: ${({ theme }) => theme.colors.surface};
-  }
-`;
-
 export const Body = styled.div`
   flex: 1 1 auto;
   overflow-y: auto;

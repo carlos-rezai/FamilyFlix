@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-import { GearIcon } from '@/primitives';
+import { GearIcon, IconButton } from '@/primitives';
 import {
   Root,
   Header,
@@ -9,7 +9,6 @@ import {
   LogoWord,
   LogoAccent,
   Spacer,
-  GearButton,
   Body,
 } from './MainLayout.styles';
 
@@ -42,13 +41,11 @@ export function MainLayout({ children }: MainLayoutProps) {
           <LogoAccent>Flix</LogoAccent>
         </Logo>
         <Spacer />
-        <GearButton
-          type="button"
-          aria-label="Settings"
-          onClick={() => navigate('/settings')}
-        >
+        {/* The one call site that wears `IconButton`'s ghost face unaltered —
+            46px, transparent, faint ink — so it adds no chrome of its own. */}
+        <IconButton label="Settings" onClick={() => navigate('/settings')}>
           <GearIcon size={22} />
-        </GearButton>
+        </IconButton>
       </Header>
       <Body>{children}</Body>
     </Root>
