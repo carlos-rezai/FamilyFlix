@@ -1,7 +1,7 @@
-import styled, { keyframes } from 'styled-components';
+import styled from 'styled-components';
 
 import { LoadMessage } from '@/components';
-import { IconButton } from '@/primitives';
+import { IconButton, Skeleton } from '@/primitives';
 
 /**
  * The full-bleed art area behind the top of the page. It is sized against the
@@ -241,30 +241,18 @@ export const DetailMessage = styled(LoadMessage)`
   z-index: 10;
 `;
 
-const pulse = keyframes`
-  from { opacity: 0.45; }
-  to { opacity: 0.8; }
-`;
-
-/** Every skeleton block breathes on the same beat, as on the browse home. */
-const Block = styled.div`
-  background: ${({ theme }) => theme.colors.surface};
-  border-radius: ${({ theme }) => theme.radius.sm};
-  animation: ${pulse} 1.1s ease-in-out infinite alternate;
-`;
-
-export const SkeletonPoster = styled(Block)`
+export const SkeletonPoster = styled(Skeleton)`
   width: 300px;
   aspect-ratio: 2 / 3;
   border-radius: ${({ theme }) => theme.radius.lg};
 `;
 
-export const SkeletonTitle = styled(Block)`
+export const SkeletonTitle = styled(Skeleton)`
   width: 60%;
   height: 44px;
 `;
 
-export const SkeletonMeta = styled(Block)`
+export const SkeletonMeta = styled(Skeleton)`
   width: 240px;
   height: 20px;
   margin-top: 20px;
@@ -276,13 +264,13 @@ export const SkeletonChips = styled.div`
   margin-top: 18px;
 `;
 
-export const SkeletonChip = styled(Block)`
+export const SkeletonChip = styled(Skeleton)`
   width: 90px;
   height: 32px;
   border-radius: ${({ theme }) => theme.radius.pill};
 `;
 
-export const SkeletonLine = styled(Block)`
+export const SkeletonLine = styled(Skeleton)`
   width: 100%;
   max-width: 560px;
   height: 16px;
