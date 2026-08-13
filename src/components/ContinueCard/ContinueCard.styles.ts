@@ -39,13 +39,6 @@ export const Tile = styled.div`
   border: 1px solid ${({ theme }) => theme.colors.borderSoft};
 `;
 
-export const Art = styled.div<{ $g1: string; $g2: string }>`
-  position: absolute;
-  inset: 0;
-  background: ${({ $g1, $g2 }) =>
-    `linear-gradient(155deg, ${$g1} 0%, ${$g2} 100%)`};
-`;
-
 export const Scrim = styled.div`
   position: absolute;
   inset: 0;

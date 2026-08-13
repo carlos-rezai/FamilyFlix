@@ -1,9 +1,8 @@
-import { PlayIcon, ProgressBar } from '@/primitives';
+import { Artwork, PlayIcon, ProgressBar } from '@/primitives';
 import type { ContinueCardMovie } from '@/types';
 import {
   Root,
   Tile,
-  Art,
   Scrim,
   TextWrap,
   Title,
@@ -34,7 +33,9 @@ export function ContinueCard({ movie, onOpen }: ContinueCardProps) {
   return (
     <Root type="button" aria-label={movie.title} onClick={onOpen}>
       <Tile>
-        <Art $g1={movie.g1} $g2={movie.g2} />
+        {/* No url, ever: the resume tile has no image slot by design (design
+            log 03), and passing nothing is that decision written down. */}
+        <Artwork g1={movie.g1} g2={movie.g2} />
         <Scrim />
         <TextWrap>
           <Title>{movie.title}</Title>
