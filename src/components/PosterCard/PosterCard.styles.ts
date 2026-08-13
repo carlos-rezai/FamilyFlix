@@ -1,5 +1,7 @@
 import styled from 'styled-components';
 
+import { IconButton } from '@/primitives';
+
 export const Root = styled.div`
   width: 100%;
   cursor: pointer;
@@ -44,26 +46,31 @@ export const InnerBorder = styled.div`
   pointer-events: none;
 `;
 
-export const FavButton = styled.button<{ $favorite: boolean }>`
+/**
+ * The heart pinned to the poster's top-left corner. `IconButton` supplies the
+ * square, the pill corner and the toggle semantics; everything here is the
+ * chrome that lets it read over artwork — a translucent fill, a blur, and a
+ * hairline that survives against a bright poster.
+ *
+ * The hover repeats the ink deliberately: the heart brightens its fill on hover
+ * and keeps its colour, so the primitive's ghost face — which shifts both —
+ * has to be answered on both counts.
+ */
+export const FavButton = styled(IconButton)<{ $favorite: boolean }>`
   position: absolute;
   top: 10px;
   left: 10px;
-  width: 34px;
-  height: 34px;
-  border-radius: ${({ theme }) => theme.radius.pill};
   border: 1px solid rgba(255, 255, 255, 0.22);
   background: rgba(18, 14, 10, 0.5);
   backdrop-filter: blur(4px);
-  display: grid;
-  place-items: center;
-  cursor: pointer;
-  padding: 0;
   z-index: 3;
   color: ${({ theme, $favorite }) =>
     $favorite ? theme.colors.accent : '#fff'};
 
-  &:hover {
+  &:hover:enabled {
     background: rgba(18, 14, 10, 0.82);
+    color: ${({ theme, $favorite }) =>
+      $favorite ? theme.colors.accent : '#fff'};
   }
 `;
 

@@ -38,6 +38,9 @@ export interface PosterCardProps {
  */
 const ACTIVATION_KEYS = ['Enter', ' '];
 
+/** The heart's square, small enough to sit in the poster corner unobtrusively. */
+const FAV_SIZE = 34;
+
 /**
  * The library's primary tile — a 2:3 poster (real art or a deterministic
  * gradient placeholder with the title overlaid), a favorite toggle, a watched
@@ -96,9 +99,10 @@ export function PosterCard({ movie, onOpen, onToggleFav }: PosterCardProps) {
         <Art $posterUrl={movie.posterUrl} $g1={movie.g1} $g2={movie.g2} />
         <InnerBorder />
         <FavButton
-          type="button"
+          label="Favorite"
           title="Favorite"
-          aria-pressed={movie.favorite}
+          size={FAV_SIZE}
+          pressed={movie.favorite}
           $favorite={movie.favorite}
           onClick={handleFav}
           onKeyDown={handleFavKey}

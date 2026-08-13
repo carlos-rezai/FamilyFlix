@@ -35,6 +35,11 @@ const variants = {
  * and a pointer. Everything chromatic is one of the two faces above, or is
  * layered on by a `styled(IconButton)` at the call site — which is why the
  * variant block comes first in the cascade, so an extension's declarations win.
+ *
+ * One rule for those extensions: a call site replacing the hover must write
+ * `&:hover:enabled`, not `&:hover`. The faces above are guarded that way so a
+ * disabled control never lights up, and a bare `&:hover` is one selector
+ * shorter — it would lose to the face it was meant to replace.
  */
 export const Root = styled.button<{
   $size: number;
