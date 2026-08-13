@@ -78,6 +78,10 @@ const variants = {
  * cascade. `:disabled` rather than an `$disabled` prop keeps the styling tied
  * to the same attribute that takes the button out of the tab order — the two
  * can never drift apart.
+ *
+ * Declared as a `button` but rendered as a router `Link` when `Button` is given
+ * a destination. Everything above is element-agnostic, which is what makes one
+ * definition able to dress both.
  */
 export const Root = styled.button<{
   $variant: ButtonVariant;
@@ -92,6 +96,9 @@ export const Root = styled.button<{
   font-family: ${({ theme }) => theme.fonts.sans};
   cursor: pointer;
   white-space: nowrap;
+  /* For the link form. A button element is never underlined, so this costs the
+     button face nothing and saves the anchor face from being a second copy. */
+  text-decoration: none;
 
   ${({ $size }) => sizes[$size]}
   ${({ $variant }) => variants[$variant]}

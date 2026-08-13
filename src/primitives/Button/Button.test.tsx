@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { ThemeProvider } from 'styled-components';
+import { MemoryRouter } from 'react-router-dom';
 
 // Imported through the category barrel, the way every consumer will import it
 // (MovieForm, SettingsPage, ImportFlow, ExportModal) — there is no per-unit
@@ -92,6 +93,46 @@ describe('Button — the leading glyph', () => {
     // A decorative icon that leaks into the name gives screen readers
     // "image Play" rather than "Play".
     expect(screen.getByRole('button', { name: 'Play' })).toBeTruthy();
+  });
+});
+
+describe('Button — as a router link', () => {
+  function renderLink(to: string, label = 'Back to library') {
+    return render(
+      <ThemeProvider theme={theme}>
+        <MemoryRouter>
+          <Button label={label} to={to} variant="secondary" />
+        </MemoryRouter>
+      </ThemeProvider>
+    );
+  }
+
+  it('renders a real link to that destination', () => {
+    renderLink('/');
+
+    // A real anchor, so a parent can middle-click it into a new window and
+    // assistive technology announces a navigation rather than an action.
+    const link = screen.getByRole('link', { name: 'Back to library' });
+    expect(link.getAttribute('href')).toBe('/');
+  });
+
+  it('offers no button affordance, so it is not both at once', () => {
+    renderLink('/');
+
+    expect(screen.queryByRole('button')).toBeNull();
+  });
+
+  it('still draws its leading glyph', () => {
+    const { container } = render(
+      <ThemeProvider theme={theme}>
+        <MemoryRouter>
+          <Button label="Play" to="/movie/m1/play" icon="play" />
+        </MemoryRouter>
+      </ThemeProvider>
+    );
+
+    expect(container.querySelector('svg')).not.toBeNull();
+    expect(screen.getByRole('link', { name: 'Play' })).toBeTruthy();
   });
 });
 
