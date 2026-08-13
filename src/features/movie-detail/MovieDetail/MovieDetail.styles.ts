@@ -1,6 +1,8 @@
 import { Link } from 'react-router-dom';
 import styled, { keyframes } from 'styled-components';
 
+import { IconButton } from '@/primitives';
+
 /**
  * The full-bleed art area behind the top of the page. It is sized against the
  * scroll container (`MoviePage`), not the content, so a movie with a ten-line
@@ -204,19 +206,13 @@ export const MenuSlot = styled.div`
 `;
 
 /** Translucent over artwork, like the Back pill it sits opposite. */
-export const MoreButton = styled.button`
-  display: grid;
-  place-items: center;
-  width: 44px;
-  height: 44px;
+export const MoreButton = styled(IconButton)`
   background: rgba(20, 17, 13, 0.6);
   backdrop-filter: blur(10px);
   border: 1px solid ${({ theme }) => theme.colors.border};
-  border-radius: ${({ theme }) => theme.radius.pill};
   color: ${({ theme }) => theme.colors.textDim};
-  cursor: pointer;
 
-  &:hover {
+  &:hover:enabled {
     color: ${({ theme }) => theme.colors.text};
     background: ${({ theme }) => theme.colors.surface2};
   }

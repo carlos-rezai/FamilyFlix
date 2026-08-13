@@ -1,4 +1,10 @@
-import type { KeyboardEvent, MouseEvent, ReactNode, Ref } from 'react';
+import type {
+  AriaAttributes,
+  KeyboardEvent,
+  MouseEvent,
+  ReactNode,
+  Ref,
+} from 'react';
 
 import { Root, type IconButtonVariant } from './IconButton.styles';
 
@@ -33,6 +39,14 @@ export interface IconButtonProps {
   pressed?: boolean;
   /** Muted, unclickable, and out of the tab order. */
   disabled?: boolean;
+  /**
+   * What kind of popup this button opens, and whether it is open. Named
+   * explicitly rather than swept up by a `...rest` spread: these two are the
+   * only ARIA attributes a caller has ever needed to set here, and listing them
+   * keeps the surface something a reader can see the whole of.
+   */
+  'aria-haspopup'?: AriaAttributes['aria-haspopup'];
+  'aria-expanded'?: AriaAttributes['aria-expanded'];
   /** Set by `styled(IconButton)` — the whole basis of per-call-site chrome. */
   className?: string;
   ref?: Ref<HTMLButtonElement>;
@@ -65,6 +79,8 @@ export function IconButton({
   variant = 'ghost',
   pressed,
   disabled = false,
+  'aria-haspopup': ariaHasPopup,
+  'aria-expanded': ariaExpanded,
   className,
   ref,
   onClick,
@@ -77,6 +93,8 @@ export function IconButton({
       className={className}
       aria-label={label}
       aria-pressed={pressed}
+      aria-haspopup={ariaHasPopup}
+      aria-expanded={ariaExpanded}
       title={title}
       disabled={disabled}
       $size={size}

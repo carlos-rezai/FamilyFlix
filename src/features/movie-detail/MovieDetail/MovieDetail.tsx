@@ -76,6 +76,9 @@ const STAR_SIZE = 20;
 const CHECK_SIZE = 24;
 const HEART_SIZE = 23;
 
+/** The ⋯ trigger's square, matching the Back pill's height across the screen. */
+const MORE_SIZE = 44;
+
 /**
  * The toggles' tips, straight from the prototype. The label *is* the state and
  * names the next click, so a parent using a screen reader is told which way the
@@ -197,8 +200,8 @@ function EditMenu({ movieId }: { movieId: string }) {
     <MenuSlot ref={slotRef}>
       <MoreButton
         ref={triggerRef}
-        type="button"
-        aria-label="More options"
+        label="More options"
+        size={MORE_SIZE}
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={() => (open ? close() : setOpen(true))}
