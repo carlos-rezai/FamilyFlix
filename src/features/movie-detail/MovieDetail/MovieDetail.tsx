@@ -1,11 +1,4 @@
-import {
-  Fragment,
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-  type ReactNode,
-} from 'react';
+import { Fragment, type ReactNode } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
 import { ExpandableText } from '@/components';
@@ -15,10 +8,10 @@ import {
   Chip,
   HeartIcon,
   HeartOutlineIcon,
-  MoreIcon,
   StarRating,
 } from '@/primitives';
 import type { MovieDetailModel } from '@/types';
+import { EditMenu } from '../EditMenu/EditMenu';
 import { useMovieDetail } from '../useMovieDetail/useMovieDetail';
 import {
   ArtArea,
@@ -39,11 +32,6 @@ import {
   Genres,
   ActionRow,
   CircleToggle,
-  MenuSlot,
-  MoreButton,
-  Menu,
-  MenuItem,
-  MenuGlyph,
   SynopsisWrap,
   Credits,
   Credit,
@@ -75,9 +63,6 @@ const STAR_SIZE = 20;
 /** The two circles' icons, at the sizes the prototype draws them. */
 const CHECK_SIZE = 24;
 const HEART_SIZE = 23;
-
-/** The ⋯ trigger's square, matching the Back pill's height across the screen. */
-const MORE_SIZE = 44;
 
 /** The two circles' square, matching the `lg` Play button they sit beside. */
 const CIRCLE_SIZE = 58;
@@ -138,89 +123,6 @@ function metaSegments(movie: MovieDetailModel): MetaSegment[] {
   }
 
   return segments;
-}
-
-/**
- * The ⋯ overflow menu, in its fixed slot opposite the Back pill.
- *
- * It ships with one item. Delete is not designed anywhere in the handoff — no
- * confirmation exists — so it lands with its own feature rather than as a red
- * row that closes the menu and does nothing, or a permanently greyed one that
- * reads as "this movie can't be deleted".
- *
- * Closing is deliberately symmetrical: Escape, a press outside, and activating
- * the item all shut it, and each one hands focus back to the trigger, so a
- * keyboard user is never dropped at the top of the document.
- *
- * Edit navigates to `/add?movie=<id>`, the prototype's own route for editing (it
- * pre-fills the add form rather than owning an `/edit` screen). The query
- * parameter is **provisional** — the movie-form grill owns the real contract.
- */
-function EditMenu({ movieId }: { movieId: string }) {
-  const navigate = useNavigate();
-  const [open, setOpen] = useState(false);
-  const slotRef = useRef<HTMLDivElement>(null);
-  const triggerRef = useRef<HTMLButtonElement>(null);
-
-  const close = useCallback(() => {
-    setOpen(false);
-    triggerRef.current?.focus();
-  }, []);
-
-  useEffect(() => {
-    if (!open) {
-      return;
-    }
-
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        close();
-      }
-    };
-    // Pointerdown rather than click: the menu should be gone by the time the
-    // press it was dismissed by lands on whatever is underneath.
-    const onPointerDown = (event: PointerEvent) => {
-      if (!slotRef.current?.contains(event.target as Node)) {
-        close();
-      }
-    };
-
-    document.addEventListener('keydown', onKeyDown);
-    document.addEventListener('pointerdown', onPointerDown);
-
-    return () => {
-      document.removeEventListener('keydown', onKeyDown);
-      document.removeEventListener('pointerdown', onPointerDown);
-    };
-  }, [open, close]);
-
-  const editDetails = () => {
-    close();
-    navigate(`/add?movie=${movieId}`);
-  };
-
-  return (
-    <MenuSlot ref={slotRef}>
-      <MoreButton
-        ref={triggerRef}
-        label="More options"
-        size={MORE_SIZE}
-        aria-haspopup="menu"
-        aria-expanded={open}
-        onClick={() => (open ? close() : setOpen(true))}
-      >
-        <MoreIcon size={20} />
-      </MoreButton>
-      {open ? (
-        <Menu>
-          <MenuItem type="button" onClick={editDetails}>
-            <MenuGlyph aria-hidden="true">✎</MenuGlyph>
-            Edit details
-          </MenuItem>
-        </Menu>
-      ) : null}
-    </MenuSlot>
-  );
 }
 
 /** The page's own shape, held while the movie loads, rather than a blank screen. */
