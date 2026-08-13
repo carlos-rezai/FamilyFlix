@@ -2,47 +2,6 @@ import styled, { keyframes } from 'styled-components';
 
 import { CARD_WIDTH } from '../CardCarousel/CardCarousel.styles';
 
-/** The centered message layout the prototype uses for an empty result body. */
-export const Message = styled.div`
-  text-align: center;
-  padding: ${({ theme }) => `${theme.space.s8} ${theme.space.s6}`};
-  color: ${({ theme }) => theme.colors.textFaint};
-  font-family: ${({ theme }) => theme.fonts.sans};
-`;
-
-export const MessageTitle = styled.div`
-  font-family: ${({ theme }) => theme.fonts.serif};
-  font-size: 26px;
-  color: ${({ theme }) => theme.colors.textDim};
-  margin-bottom: 8px;
-`;
-
-export const MessageBody = styled.div`
-  font-size: 16px;
-`;
-
-export const RetryButton = styled.button`
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  height: 50px;
-  padding: 0 26px;
-  margin-top: ${({ theme }) => theme.space.s5};
-  background: transparent;
-  color: ${({ theme }) => theme.colors.text};
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  border-radius: 10px;
-  font-family: ${({ theme }) => theme.fonts.sans};
-  font-size: 16px;
-  font-weight: 500;
-  cursor: pointer;
-  white-space: nowrap;
-
-  &:hover {
-    border-color: ${({ theme }) => theme.colors.textFaint};
-  }
-`;
-
 const pulse = keyframes`
   from { opacity: 0.45; }
   to { opacity: 0.8; }

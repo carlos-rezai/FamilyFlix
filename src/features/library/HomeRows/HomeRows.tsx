@@ -1,13 +1,11 @@
 import { useNavigate } from 'react-router-dom';
 
+import { LoadMessage } from '@/components';
+import { Button } from '@/primitives';
 import { ContinueRow } from '../ContinueRow/ContinueRow';
 import { GenreRow } from '../GenreRow/GenreRow';
 import { useHomeRows } from '../useHomeRows/useHomeRows';
 import {
-  Message,
-  MessageTitle,
-  MessageBody,
-  RetryButton,
   SkeletonSection,
   SkeletonHeader,
   SkeletonTitle,
@@ -66,24 +64,23 @@ export function HomeRows() {
 
   if (status === 'error') {
     return (
-      <Message>
-        <MessageTitle>Couldn’t load your library</MessageTitle>
-        <MessageBody>Something went wrong reading your movies.</MessageBody>
-        <RetryButton type="button" onClick={retry}>
-          Retry
-        </RetryButton>
-      </Message>
+      <LoadMessage
+        title="Couldn’t load your library"
+        body="Something went wrong reading your movies."
+        action={<Button label="Retry" variant="secondary" onClick={retry} />}
+      />
     );
   }
 
   // An untagged movie earns no genre row, so empty rows alone don't mean an
-  // empty library — something in progress is proof there are movies.
+  // empty library — something in progress is proof there are movies. There is
+  // no action here: an empty library has nothing to retry.
   if (rows.length === 0 && continueWatching.length === 0) {
     return (
-      <Message>
-        <MessageTitle>Your library is empty</MessageTitle>
-        <MessageBody>Add a movie to start filling your shelves.</MessageBody>
-      </Message>
+      <LoadMessage
+        title="Your library is empty"
+        body="Add a movie to start filling your shelves."
+      />
     );
   }
 
