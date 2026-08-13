@@ -1,6 +1,7 @@
 import { useLocation, useNavigate } from 'react-router-dom';
 
 import { MovieDetail } from '@/features/movie-detail/MovieDetail/MovieDetail';
+import { useRestoredScroll } from '@/hooks/useRestoredScroll/useRestoredScroll';
 import { ChevronLeftIcon } from '@/primitives';
 import { Scroller, BackPill } from './MoviePage.styles';
 
@@ -22,10 +23,15 @@ const NO_HISTORY = 'default';
  * Back is a step through history rather than a link to `/`, so a parent who was
  * halfway along the Action row returns to that row at that scroll position — not
  * to the top of the home screen.
+ *
+ * Owning its scroll container also means owning what `MainLayout` gives every
+ * other screen for free: coming back to this page from the player returns it to
+ * where it was left.
  */
 export default function MoviePage() {
   const navigate = useNavigate();
   const location = useLocation();
+  const scroller = useRestoredScroll<HTMLDivElement>();
 
   const goBack = () => {
     if (location.key === NO_HISTORY) {
@@ -36,7 +42,7 @@ export default function MoviePage() {
   };
 
   return (
-    <Scroller>
+    <Scroller ref={scroller}>
       <BackPill type="button" onClick={goBack}>
         <ChevronLeftIcon size={18} />
         Back

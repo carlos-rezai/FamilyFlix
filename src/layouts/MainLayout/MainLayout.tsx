@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 
+import { useRestoredScroll } from '@/hooks/useRestoredScroll/useRestoredScroll';
 import { GearIcon, IconButton } from '@/primitives';
 import {
   Root,
@@ -29,9 +30,14 @@ export interface MainLayoutProps {
  * The header is deliberately partial: the logo and the settings gear are here,
  * while the search bar, the genre / rating / sort dropdowns, and the
  * back-to-top FAB land with the features that own them.
+ *
+ * The body is also where the scrolling happens — the document never scrolls —
+ * so the chrome is what remembers where a screen was left, and every page it
+ * wraps returns to that place on Back without wiring anything itself.
  */
 export function MainLayout({ children }: MainLayoutProps) {
   const navigate = useNavigate();
+  const body = useRestoredScroll<HTMLDivElement>();
 
   return (
     <Root>
@@ -47,7 +53,7 @@ export function MainLayout({ children }: MainLayoutProps) {
           <GearIcon size={22} />
         </IconButton>
       </Header>
-      <Body>{children}</Body>
+      <Body ref={body}>{children}</Body>
     </Root>
   );
 }

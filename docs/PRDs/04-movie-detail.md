@@ -276,6 +276,27 @@ place in the row. The choice is router-agnostic: it behaves identically under
 `BrowserRouter`, `HashRouter`, and `MemoryRouter`, so **the Electron router
 decision is not blocked on this** and is flagged for the shell grill.
 
+**The scroll position that Back returns to is restored by `useRestoredScroll`,
+attached to whichever element overflows** (issue #28). `navigate(-1)` was
+necessary but not sufficient: the document never scrolls in this app, so the
+browser's `history.scrollRestoration` — which only ever restores _document_
+scroll — never touched `MainLayout`'s body, and React Router's
+`<ScrollRestoration>` needs a data router this app does not use. The hook
+remembers one offset per `location.key`, so Back lands where the parent was
+while a deliberate trip home is a new entry that starts at the top; it re-reaches
+for the offset across a short window, because a container that is still waiting
+on its fetch can only scroll to 0. `MainLayout` wires it once for every screen it
+wraps; this page wires it itself, being the one screen that owns its container.
+Rejected: saving on unmount — a screen left before its content arrived is still
+at 0, and storing that erases the position the next visit is owed.
+
+**A carousel's horizontal offset is explicitly out of scope.** A **Genre row**
+revisited by Back starts at its first card even when the parent had paged along
+it. The vertical position is what "same row" means to a parent — the row they
+were looking at is back on screen — and per-carousel offsets are a second
+storage key per row on every screen, for a gesture that is one arrow press to
+redo. Revisit when search and Favorites add rows worth paging deep into.
+
 **Two new **Placeholder routes**: `PlayerPage` at `/movie/:id/play` and
 `AddMoviePage` at `/add`.** Edit navigates to `/add?movie=<id>`. COMPONENT-SPEC §6
 lists no `/edit` route — the prototype's `editMovie()` pre-fills the form and jumps
