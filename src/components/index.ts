@@ -8,3 +8,10 @@ export {
   ExpandableText,
   type ExpandableTextProps,
 } from './ExpandableText/ExpandableText';
+export {
+  Menu,
+  MenuItem,
+  type MenuProps,
+  type MenuItemProps,
+  type MenuTriggerProps,
+} from './Menu/Menu';
