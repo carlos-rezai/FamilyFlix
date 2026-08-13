@@ -15,20 +15,6 @@ export const ArtArea = styled.div`
   overflow: hidden;
 `;
 
-/** Real artwork, or the deterministic gradient the movie's card also draws. */
-export const Art = styled.div<{
-  $url: string | null;
-  $g1: string;
-  $g2: string;
-}>`
-  position: absolute;
-  inset: 0;
-  background: ${({ $url, $g1, $g2 }) =>
-    $url
-      ? `center / cover no-repeat url(${$url})`
-      : `linear-gradient(155deg, ${$g1} 0%, ${$g2} 100%)`};
-`;
-
 /** Three stops, landing on the page background so the art has no bottom edge. */
 export const Scrim = styled.div`
   position: absolute;

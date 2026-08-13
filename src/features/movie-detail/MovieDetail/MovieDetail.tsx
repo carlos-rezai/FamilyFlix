@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 
 import { ExpandableText } from '@/components';
 import {
+  Artwork,
   Button,
   CheckIcon,
   Chip,
@@ -15,7 +16,6 @@ import { EditMenu } from '../EditMenu/EditMenu';
 import { useMovieDetail } from '../useMovieDetail/useMovieDetail';
 import {
   ArtArea,
-  Art,
   Scrim,
   Content,
   PosterColumn,
@@ -197,7 +197,7 @@ export function MovieDetail() {
   return (
     <>
       <ArtArea aria-hidden="true">
-        <Art $url={movie.backdropUrl} $g1={movie.g1} $g2={movie.g2} />
+        <Artwork url={movie.backdropUrl} g1={movie.g1} g2={movie.g2} />
         <Scrim />
       </ArtArea>
 
@@ -206,7 +206,7 @@ export function MovieDetail() {
       <Content>
         <PosterColumn>
           <PosterFrame>
-            <Art $url={movie.posterUrl} $g1={movie.g1} $g2={movie.g2} />
+            <Artwork url={movie.posterUrl} g1={movie.g1} g2={movie.g2} />
             {/* Overlays caption the gradient placeholder only — real artwork is
                 never covered by text that duplicates the heading beside it. */}
             {movie.hasArtwork ? null : (
