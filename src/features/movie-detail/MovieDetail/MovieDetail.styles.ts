@@ -1,7 +1,7 @@
 import styled from 'styled-components';
 
 import { LoadMessage } from '@/components';
-import { IconButton, Skeleton } from '@/primitives';
+import { IconButton } from '@/primitives';
 
 /**
  * The full-bleed art area behind the top of the page. It is sized against the
@@ -149,40 +149,4 @@ export const SynopsisWrap = styled.div`
 export const DetailMessage = styled(LoadMessage)`
   position: relative;
   z-index: 10;
-`;
-
-export const SkeletonPoster = styled(Skeleton)`
-  width: 300px;
-  aspect-ratio: 2 / 3;
-  border-radius: ${({ theme }) => theme.radius.lg};
-`;
-
-export const SkeletonTitle = styled(Skeleton)`
-  width: 60%;
-  height: 44px;
-`;
-
-export const SkeletonMeta = styled(Skeleton)`
-  width: 240px;
-  height: 20px;
-  margin-top: 20px;
-`;
-
-export const SkeletonChips = styled.div`
-  display: flex;
-  gap: 10px;
-  margin-top: 18px;
-`;
-
-export const SkeletonChip = styled(Skeleton)`
-  width: 90px;
-  height: 32px;
-  border-radius: ${({ theme }) => theme.radius.pill};
-`;
-
-export const SkeletonLine = styled(Skeleton)`
-  width: 100%;
-  max-width: 560px;
-  height: 16px;
-  margin-top: 14px;
 `;

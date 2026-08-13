@@ -11,6 +11,7 @@ import {
 } from '@/primitives';
 import { CreditsRow } from '../CreditsRow/CreditsRow';
 import { EditMenu } from '../EditMenu/EditMenu';
+import { LoadingDetail } from '../LoadingDetail/LoadingDetail';
 import { MetaLine } from '../MetaLine/MetaLine';
 import { useMovieDetail } from '../useMovieDetail/useMovieDetail';
 import {
@@ -28,12 +29,6 @@ import {
   CircleToggle,
   SynopsisWrap,
   DetailMessage,
-  SkeletonPoster,
-  SkeletonTitle,
-  SkeletonMeta,
-  SkeletonChips,
-  SkeletonChip,
-  SkeletonLine,
 } from './MovieDetail.styles';
 
 /** The synopsis measure, from `page.MoviePage.dc.html`. */
@@ -62,31 +57,6 @@ const FAVORITE_TIP = {
   on: 'In Favorites — click to remove',
   off: 'Add to Favorites',
 } as const;
-
-const range = (length: number) => Array.from({ length }, (_, index) => index);
-
-/** The page's own shape, held while the movie loads, rather than a blank screen. */
-function LoadingDetail() {
-  return (
-    <Content role="status" aria-label="Loading movie">
-      <PosterColumn aria-hidden="true">
-        <SkeletonPoster />
-      </PosterColumn>
-      <Main aria-hidden="true">
-        <SkeletonTitle />
-        <SkeletonMeta />
-        <SkeletonChips>
-          {range(2).map((chip) => (
-            <SkeletonChip key={chip} />
-          ))}
-        </SkeletonChips>
-        {range(3).map((line) => (
-          <SkeletonLine key={line} />
-        ))}
-      </Main>
-    </Content>
-  );
-}
 
 /**
  * The movie detail screen — one movie in full, loaded by the id in the URL: the
