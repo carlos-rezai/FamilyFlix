@@ -25,19 +25,6 @@ export const Poster = styled.div`
   }
 `;
 
-export const Art = styled.div<{
-  $posterUrl: string | null;
-  $g1: string;
-  $g2: string;
-}>`
-  position: absolute;
-  inset: 0;
-  background: ${({ $posterUrl, $g1, $g2 }) =>
-    $posterUrl
-      ? `center / cover no-repeat url(${$posterUrl})`
-      : `linear-gradient(155deg, ${$g1} 0%, ${$g2} 100%)`};
-`;
-
 export const InnerBorder = styled.div`
   position: absolute;
   inset: 0;

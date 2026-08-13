@@ -1,6 +1,7 @@
 import type { KeyboardEvent, MouseEvent } from 'react';
 
 import {
+  Artwork,
   StarRating,
   StatusBadge,
   ProgressBar,
@@ -11,7 +12,6 @@ import type { PosterCardMovie } from '@/types';
 import {
   Root,
   Poster,
-  Art,
   InnerBorder,
   FavButton,
   TitleOverlay,
@@ -96,7 +96,7 @@ export function PosterCard({ movie, onOpen, onToggleFav }: PosterCardProps) {
       onKeyDown={handleOpenKey}
     >
       <Poster>
-        <Art $posterUrl={movie.posterUrl} $g1={movie.g1} $g2={movie.g2} />
+        <Artwork url={movie.posterUrl} g1={movie.g1} g2={movie.g2} />
         <InnerBorder />
         <FavButton
           label="Favorite"
