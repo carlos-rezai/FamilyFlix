@@ -1,6 +1,6 @@
-import { Link } from 'react-router-dom';
 import styled, { keyframes } from 'styled-components';
 
+import { LoadMessage } from '@/components';
 import { IconButton } from '@/primitives';
 
 /**
@@ -231,50 +231,14 @@ export const CastValue = styled(CreditValue)`
   line-height: 1.5;
 `;
 
-/** The centered message the two failure screens share, as `HomeRows` uses. */
-export const Message = styled.div`
+/**
+ * The block the two failure screens share. The stacking context is all this
+ * page adds to it: the art area is absolutely positioned across the top of the
+ * same scroller, and a message without a z-index paints underneath it.
+ */
+export const DetailMessage = styled(LoadMessage)`
   position: relative;
   z-index: 10;
-  text-align: center;
-  padding: ${({ theme }) => `${theme.space.s8} ${theme.space.s6}`};
-  color: ${({ theme }) => theme.colors.textFaint};
-  font-family: ${({ theme }) => theme.fonts.sans};
-`;
-
-export const MessageTitle = styled.div`
-  font-family: ${({ theme }) => theme.fonts.serif};
-  font-size: 26px;
-  color: ${({ theme }) => theme.colors.textDim};
-  margin-bottom: 8px;
-`;
-
-export const MessageBody = styled.div`
-  font-size: 16px;
-`;
-
-export const MessageAction = styled.div`
-  margin-top: ${({ theme }) => theme.space.s5};
-`;
-
-/** The way out of a movie that no longer exists — a real link, not a button. */
-export const BackLink = styled(Link)`
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  height: 50px;
-  padding: 0 26px;
-  background: transparent;
-  color: ${({ theme }) => theme.colors.text};
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  border-radius: ${({ theme }) => theme.radius.md};
-  font-size: 16px;
-  font-weight: 500;
-  text-decoration: none;
-  white-space: nowrap;
-
-  &:hover {
-    border-color: ${({ theme }) => theme.colors.textFaint};
-  }
 `;
 
 const pulse = keyframes`

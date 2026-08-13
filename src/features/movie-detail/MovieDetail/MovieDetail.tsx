@@ -39,11 +39,7 @@ import {
   CreditLabel,
   CreditValue,
   CastValue,
-  Message,
-  MessageTitle,
-  MessageBody,
-  MessageAction,
-  BackLink,
+  DetailMessage,
   SkeletonPoster,
   SkeletonTitle,
   SkeletonMeta,
@@ -149,35 +145,6 @@ function LoadingDetail() {
 }
 
 /**
- * A movie that is gone gets a way back to the library and no Retry — reloading
- * a 404 is a button that can never work.
- */
-function MovieMissing() {
-  return (
-    <Message>
-      <MessageTitle>That movie isn’t here</MessageTitle>
-      <MessageBody>It may have been removed from your library.</MessageBody>
-      <MessageAction>
-        <BackLink to="/">Back to library</BackLink>
-      </MessageAction>
-    </Message>
-  );
-}
-
-/** A movie that failed to load gets the opposite affordance: Retry, no link. */
-function LoadFailed({ onRetry }: { onRetry: () => void }) {
-  return (
-    <Message>
-      <MessageTitle>Couldn’t load this movie</MessageTitle>
-      <MessageBody>Something went wrong reading it.</MessageBody>
-      <MessageAction>
-        <Button label="Retry" variant="secondary" onClick={onRetry} />
-      </MessageAction>
-    </Message>
-  );
-}
-
-/**
  * The movie detail screen — one movie in full, loaded by the id in the URL: the
  * backdrop under its scrim, the poster, the title, the meta line, the genre
  * chips, the clamped synopsis, and the credits.
@@ -201,11 +168,28 @@ export function MovieDetail() {
   if (detail.status === 'loading') {
     return <LoadingDetail />;
   }
+  // A movie that is gone gets a way back to the library and no Retry —
+  // reloading a 404 is a button that can never work.
   if (detail.status === 'not-found') {
-    return <MovieMissing />;
+    return (
+      <DetailMessage
+        title="That movie isn’t here"
+        body="It may have been removed from your library."
+        action={<Button label="Back to library" to="/" variant="secondary" />}
+      />
+    );
   }
+  // A movie that failed to load gets the opposite affordance: Retry, no link.
   if (detail.status === 'error') {
-    return <LoadFailed onRetry={detail.retry} />;
+    return (
+      <DetailMessage
+        title="Couldn’t load this movie"
+        body="Something went wrong reading it."
+        action={
+          <Button label="Retry" variant="secondary" onClick={detail.retry} />
+        }
+      />
+    );
   }
 
   const { movie } = detail;
