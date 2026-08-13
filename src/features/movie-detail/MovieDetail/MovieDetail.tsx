@@ -79,6 +79,9 @@ const HEART_SIZE = 23;
 /** The ⋯ trigger's square, matching the Back pill's height across the screen. */
 const MORE_SIZE = 44;
 
+/** The two circles' square, matching the `lg` Play button they sit beside. */
+const CIRCLE_SIZE = 58;
+
 /**
  * The toggles' tips, straight from the prototype. The label *is* the state and
  * names the next click, so a parent using a screen reader is told which way the
@@ -363,10 +366,10 @@ export function MovieDetail() {
                 that waits for a round trip reads as a click that didn't land.
                 The hook puts them back if the save is refused. */}
             <CircleToggle
-              type="button"
+              label={movie.isWatched ? WATCHED_TIP.on : WATCHED_TIP.off}
               title={movie.isWatched ? WATCHED_TIP.on : WATCHED_TIP.off}
-              aria-label={movie.isWatched ? WATCHED_TIP.on : WATCHED_TIP.off}
-              aria-pressed={movie.isWatched}
+              size={CIRCLE_SIZE}
+              pressed={movie.isWatched}
               $on={movie.isWatched}
               onClick={detail.toggleWatched}
             >
@@ -374,10 +377,10 @@ export function MovieDetail() {
             </CircleToggle>
 
             <CircleToggle
-              type="button"
+              label={movie.isFavorite ? FAVORITE_TIP.on : FAVORITE_TIP.off}
               title={movie.isFavorite ? FAVORITE_TIP.on : FAVORITE_TIP.off}
-              aria-label={movie.isFavorite ? FAVORITE_TIP.on : FAVORITE_TIP.off}
-              aria-pressed={movie.isFavorite}
+              size={CIRCLE_SIZE}
+              pressed={movie.isFavorite}
               $on={movie.isFavorite}
               onClick={detail.toggleFavorite}
             >
