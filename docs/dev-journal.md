@@ -11,6 +11,119 @@ Newest entry first.
 
 ---
 
+## 2026-08-13 — Movie Detail refactor (issue #29)
+
+Closed the debt left behind by the shipped movie detail page. Twenty-five
+commits, in eight independent groups. Plan:
+`docs/refactor-plans/04-movie-detail-refactor.md`.
+
+The page worked and was well tested; it had simply been built as one screen
+rather than as a set of parts. `MovieDetail.tsx` held four components plus a
+helper in 415 lines, beside a styles file exporting 35 styled components, and
+pieces that were obviously reusable had been written where nothing else could
+reach them. It now holds one component in 212 lines, beside 14 styled
+components, and everything that left it went somewhere another screen can use.
+
+### What shipped
+
+**Six shared units, each with every existing copy migrated onto it.** The
+extraction is the easy half; the deliverable is the deletion. A shared unit with
+one consumer is the situation that produced this debt, not the fix for it.
+
+- **`prim.IconButton`** — the round icon-only button, now under all seven
+  hand-styled ones: the header gear, both carousel arrows, the card's favorite
+  heart, the ⋯ overflow trigger, and the detail page's two circles.
+- **`mol.Menu`** — the popup, and the whole contract for getting rid of it:
+  Escape, an outside press, an activated item, focus back to the trigger every
+  time, and the ARIA wiring.
+- **`mol.LoadMessage`** — the centred title/body/action block behind all four
+  **Load state** screens.
+- **`prim.Skeleton`** — the pulsing placeholder surface, previously two copies
+  of the same keyframe and base.
+- **`prim.Artwork`** — artwork or the **Gradient fallback**, previously three
+  hand-written copies of one `linear-gradient`.
+- **`prim.Button` gained a router-link form**, so the one bordered control that
+  must be an anchor stopped being a fourth copy of the same styling.
+
+**`IconButton` owns behaviour and geometry; chrome comes from
+`styled(IconButton)`.** A five-member variant enum was rejected: three of those
+five would have existed only because two hand-written CSS blocks picked
+different blur radii, and an enum would have frozen that accident into the API.
+The spec'd `ghost` and `outline` ship as defaults because the handoff names
+those two deliberately.
+
+**`IconButton`'s accessible name is a required `label`, separate from the
+optional `title`.** COMPONENT-SPEC's table has one `title` doing both; following
+it would have given four call sites a hover tooltip they do not have today and
+cost the two toggles their `aria-pressed`. A required `label` also makes an
+unnamed icon-only button unrepresentable, which the seven buttons it replaces
+could not guarantee.
+
+**The edit menu's hardest behaviour is no longer hoarded.** Escape-close,
+outside-pointerdown close, close-on-activation and focus return lived inside
+`MovieDetail.tsx` where `FilterDropdown` and the `LibraryHeader` gear menu could
+not reach them. They are `mol.Menu`'s now, and the eight existing edit-menu
+assertions passed untouched through the move — which is the proof the contract
+survived it.
+
+**`MovieDetail.tsx` decomposed last, not first.** Groups A–E removed roughly a
+third of the file by moving pieces into shared units, so the split was over what
+genuinely remained: `EditMenu`, `MetaLine`, `CreditsRow` and `LoadingDetail`
+each got their own folder, test and styles, and the two failure wrappers
+disappeared into `LoadMessage` call sites.
+
+### The one moved pixel
+
+`HomeRows.RetryButton` had `border-radius: 10px`. It is now `radius.md` (12px),
+which is what COMPONENT-SPEC specifies for `size="md"` and what every other
+button in the app already used. The 10px was a hand-typed literal that predated
+`prim.Button`. Adding a radius escape hatch to `prim.Button` to preserve it
+would have been encoding a typo as API. **Everything else in this refactor moves
+nothing.** If something looks different, that is a bug in the refactor.
+
+### Deliberately not changed
+
+- **`MoviePage.BackPill` was not migrated.** It is a labelled pill, not an
+  icon-only button, so `IconButton` is the wrong home for it. It keeps its own
+  copy of the translucent-over-artwork chrome, now shared with nothing —
+  recorded as accepted rather than fixed.
+- **No shared "chrome over artwork" treatment.** `BackPill`, `MoreButton`, the
+  carousel arrows and `FavButton` differ in alpha, blur radius, border and
+  hover. Deciding what they _should_ be is a design question for a grill, not
+  something to settle inside a refactor.
+- **`IconButton` has no `active` face**, though the prototype draws one. Every
+  toggle in the app paints its own on-state, so the face has no caller;
+  `pressed` carries the part a screen reader needs.
+- **`Menu`'s items are plain buttons, not `role="menuitem"`.** Adding the role
+  would have changed the accessibility tree and rewritten the assertions that
+  were this refactor's safety net. It is a real question, and it belongs to
+  whoever builds the second and third menus.
+- **The existing 459 tests were not edited.** They passed before and after every
+  one of the twenty-five commits. An untouched test file passing after an
+  extraction _is_ the proof the extraction was pure. The suite grew to 520.
+
+### Follow-ups this refactor surfaced
+
+- **The prototype designs no failure or empty states at all.** Searching
+  `docs/handoff/` for a retry, an error or an empty state returns nothing —
+  which is exactly why the four that exist drifted apart unnoticed, and why this
+  refactor had to invent the name `LoadMessage` with no handoff file to check it
+  against. Two of these screens will be seen by a parent (an empty library on
+  first run, and a failure) and neither has ever been designed. Worth raising at
+  the next grill.
+- **A `styled(IconButton)` that replaces the hover must replace all of it.**
+  Both built-in faces move `background` and `color` on hover, so a call site
+  that sets only one inherits the other from underneath, and a bare `&:hover` is
+  one selector shorter than the guarded `&:hover:enabled` it is trying to beat.
+  Both rules are written at the top of `IconButton.styles.ts`; this is the kind
+  of thing that is obvious once and invisible forever after.
+- **`Menu`'s panel is hard-coded to hang below-right of the trigger.**
+  `FilterDropdown` is the next consumer and may want left alignment. The prop
+  was not added speculatively — it is noted here so the next person adds it
+  rather than working around it.
+
+---
+
 ## 2026-08-09 — Card Carousel refactor (issue #21)
 
 Closed the debt left behind by the shipped card carousel and Continue Watching
