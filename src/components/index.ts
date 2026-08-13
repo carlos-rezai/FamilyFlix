@@ -8,6 +8,7 @@ export {
   ExpandableText,
   type ExpandableTextProps,
 } from './ExpandableText/ExpandableText';
+export { LoadMessage, type LoadMessageProps } from './LoadMessage/LoadMessage';
 export {
   Menu,
   MenuItem,
