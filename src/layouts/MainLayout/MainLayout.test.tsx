@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { ThemeProvider } from 'styled-components';
 import {
   MemoryRouter,
@@ -9,7 +9,7 @@ import {
   useNavigate,
 } from 'react-router-dom';
 
-import { MainLayout } from './MainLayout';
+import { MainLayout, type MainLayoutProps } from './MainLayout';
 import { theme } from '@/styles/theme';
 
 /**
@@ -57,11 +57,15 @@ function LocationProbe() {
   return <div data-testid="location">{location.pathname}</div>;
 }
 
-function renderLayout(children: React.ReactNode, entry = '/') {
+function renderLayout(
+  children: React.ReactNode,
+  entry = '/',
+  slots: Omit<Partial<MainLayoutProps>, 'children'> = {}
+) {
   return render(
     <MemoryRouter initialEntries={[entry]}>
       <ThemeProvider theme={theme}>
-        <MainLayout>{children}</MainLayout>
+        <MainLayout {...slots}>{children}</MainLayout>
       </ThemeProvider>
       <LocationProbe />
     </MemoryRouter>
@@ -117,6 +121,80 @@ describe('MainLayout', () => {
     renderLayout(<p>the library goes here</p>);
 
     expect(gear().getAttribute('aria-label')).toBe('Settings');
+  });
+});
+
+/**
+ * The prototype splits the header strip in two: the search bar sits *before* the
+ * flex spacer and the genre / rating / sort dropdowns *after* it. One slot cannot
+ * reproduce that, so the chrome offers two — and learns nothing about the library
+ * in the process. Both are structure: whatever a page hands in, it renders.
+ */
+
+/** The header's flex spacer — the one child that grows to split the strip. */
+function headerSpacer() {
+  const children = [...screen.getByRole('banner').children] as HTMLElement[];
+  return children.find((child) => getComputedStyle(child).flexGrow === '1');
+}
+
+/** Does `earlier` come before `later` in the document? */
+function comesBefore(earlier: Element, later: Element) {
+  return Boolean(
+    earlier.compareDocumentPosition(later) & Node.DOCUMENT_POSITION_FOLLOWING
+  );
+}
+
+describe('MainLayout — the header slots', () => {
+  it('renders both slots in the header, not in the body', () => {
+    renderLayout(<p>the library goes here</p>, '/', {
+      headerStart: <p>the search bar</p>,
+      headerEnd: <p>the dropdowns</p>,
+    });
+
+    const header = screen.getByRole('banner');
+    expect(header.contains(screen.getByText('the search bar'))).toBe(true);
+    expect(header.contains(screen.getByText('the dropdowns'))).toBe(true);
+  });
+
+  it('puts headerStart before the spacer and headerEnd after it', () => {
+    renderLayout(<p>the library goes here</p>, '/', {
+      headerStart: <p>the search bar</p>,
+      headerEnd: <p>the dropdowns</p>,
+    });
+
+    const spacer = headerSpacer();
+    expect(spacer).toBeDefined();
+    expect(comesBefore(screen.getByText('the search bar'), spacer!)).toBe(true);
+    expect(comesBefore(spacer!, screen.getByText('the dropdowns'))).toBe(true);
+  });
+
+  it('leaves the logo first and the gear last', () => {
+    renderLayout(<p>the library goes here</p>, '/', {
+      headerStart: <p>the search bar</p>,
+      headerEnd: <p>the dropdowns</p>,
+    });
+
+    expect(comesBefore(logo(), screen.getByText('the search bar'))).toBe(true);
+    expect(comesBefore(screen.getByText('the dropdowns'), gear())).toBe(true);
+  });
+
+  it('renders either slot alone', () => {
+    renderLayout(<p>the library goes here</p>, '/', {
+      headerEnd: <p>the dropdowns</p>,
+    });
+
+    const spacer = headerSpacer();
+    expect(spacer).toBeDefined();
+    expect(comesBefore(spacer!, screen.getByText('the dropdowns'))).toBe(true);
+  });
+
+  it('renders the header it always had when neither slot is given', () => {
+    // Every other page passes no slots and must be untouched by this.
+    renderLayout(<p>the library goes here</p>);
+
+    const header = screen.getByRole('banner');
+    expect(within(header).getAllByRole('button')).toHaveLength(2);
+    expect(headerSpacer()).toBeDefined();
   });
 });
 
