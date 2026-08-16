@@ -306,6 +306,177 @@ describe('library: getHome continue watching', () => {
   });
 });
 
+// --- the Library query ---------------------------------------------------------
+//
+// 05 — Search + filter, Phase 1: "search on the server, end to end" (issue #31).
+// One Library query produces one Home payload: the genre rows and the Continue
+// Watching row are built from it, so the top of the screen can never disagree
+// with the rest of it.
+
+describe('library: getHome under a Library query', () => {
+  it('narrows the genre rows to the movies that match the query', () => {
+    const storage = freshStorage();
+    storage.addMovie(newMovie({ title: 'Comic Caper', genres: ['Comedy'] }));
+    storage.addMovie(newMovie({ title: 'Comic Relief', genres: ['Drama'] }));
+    storage.addMovie(newMovie({ title: 'Weepie', genres: ['Drama'] }));
+
+    const { rows } = storage.getHome({
+      sort: 'recently-added',
+      search: 'comic',
+    });
+    const titlesByGenre = new Map(
+      rows.map((row) => [row.genre, row.movies.map((m) => m.title)])
+    );
+
+    expect(titlesByGenre.get('Comedy')).toEqual(['Comic Caper']);
+    expect(titlesByGenre.get('Drama')).toEqual(['Comic Relief']);
+  });
+
+  it("keeps a narrowed row's count at the genre's unfiltered total", () => {
+    const storage = freshStorage();
+    storage.addMovie(newMovie({ title: 'Harbor Lights', genres: ['Drama'] }));
+    storage.addMovie(newMovie({ title: 'Weepie', genres: ['Drama'] }));
+    storage.addMovie(newMovie({ title: 'Sad Ending', genres: ['Drama'] }));
+
+    const { rows } = storage.getHome({
+      sort: 'recently-added',
+      search: 'harbor',
+    });
+
+    // The row shows 1 of 3, and "View all 3" stays honest about the genre.
+    expect(rows).toHaveLength(1);
+    expect(rows[0].genre).toBe('Drama');
+    expect(rows[0].movies.map((m) => m.title)).toEqual(['Harbor Lights']);
+    expect(rows[0].count).toBe(3);
+  });
+
+  it('drops a row whose movies all failed the query', () => {
+    const storage = freshStorage();
+    storage.addMovie(newMovie({ title: 'Comic Caper', genres: ['Comedy'] }));
+    storage.addMovie(newMovie({ title: 'Weepie', genres: ['Drama'] }));
+    storage.addMovie(newMovie({ title: 'Chiller', genres: ['Horror'] }));
+
+    const { rows } = storage.getHome({
+      sort: 'recently-added',
+      search: 'comic',
+    });
+
+    // A screenful of empty rows is not an answer — the rows that matched
+    // nothing are gone, not rendered blank.
+    expect(rows.map((row) => row.genre)).toEqual(['Comedy']);
+  });
+
+  it('still caps a narrowed row at 15, newest first', () => {
+    const storage = freshStorage();
+    seedGenre(storage, 'Action', 20); // titles "Action 01".."Action 20"
+    storage.addMovie(newMovie({ title: 'Weepie', genres: ['Drama'] }));
+
+    const { rows } = storage.getHome({
+      sort: 'recently-added',
+      search: 'action',
+    });
+
+    expect(rows.map((row) => row.genre)).toEqual(['Action']);
+    expect(rows[0].movies).toHaveLength(15);
+    expect(rows[0].count).toBe(20);
+    expect(rows[0].movies[0].title).toBe('Action 20');
+    expect(rows[0].movies[14].title).toBe('Action 06');
+  });
+
+  it('narrows the continue section off the same query', () => {
+    const storage = freshStorage();
+    storage.addMovie(
+      newMovie({
+        title: 'Comic Caper',
+        genres: ['Comedy'],
+        resumePositionSeconds: 600,
+      })
+    );
+    storage.addMovie(
+      newMovie({
+        title: 'Weepie',
+        genres: ['Drama'],
+        resumePositionSeconds: 300,
+      })
+    );
+
+    const home = storage.getHome({ sort: 'recently-added', search: 'comic' });
+
+    // Both sections narrow together, off the one query.
+    expect(home.continueWatching.map((m) => m.title)).toEqual(['Comic Caper']);
+    expect(home.rows.map((row) => row.genre)).toEqual(['Comedy']);
+  });
+
+  it('drops an in-progress movie that fails the query from the continue section', () => {
+    const storage = freshStorage();
+    storage.addMovie(
+      newMovie({ title: 'Halfway', resumePositionSeconds: 600 })
+    );
+
+    const home = storage.getHome({
+      sort: 'recently-added',
+      search: 'zzz-nothing',
+    });
+
+    expect(home.continueWatching).toEqual([]);
+    expect(home.rows).toEqual([]);
+  });
+
+  it('matches the widened search inside the rows (synopsis and genre name)', () => {
+    const storage = freshStorage();
+    storage.addMovie(
+      newMovie({
+        title: 'Northwind',
+        genres: ['Action'],
+        synopsis: 'A lighthouse keeper on a fading coast.',
+      })
+    );
+    storage.addMovie(newMovie({ title: 'Decoy', genres: ['Action'] }));
+
+    const { rows } = storage.getHome({
+      sort: 'recently-added',
+      search: 'lighthouse',
+    });
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0].movies.map((m) => m.title)).toEqual(['Northwind']);
+  });
+
+  /**
+   * Regression guard on the signature change — green before and after. An
+   * un-narrowed home is what the browse screen has rendered since 02, and
+   * growing a query parameter must not move it.
+   */
+  it('returns the unfiltered home when no query is given', () => {
+    const storage = freshStorage();
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-01-01T00:00:00.000Z'));
+    storage.addMovie(newMovie({ title: 'Weepie', genres: ['Drama'] }));
+    vi.setSystemTime(new Date('2026-01-02T00:00:00.000Z'));
+    storage.addMovie(newMovie({ title: 'Actioner', genres: ['Action'] }));
+    vi.setSystemTime(new Date('2026-01-03T00:00:00.000Z'));
+    storage.addMovie(
+      newMovie({
+        title: 'Halfway',
+        genres: ['Action'],
+        resumePositionSeconds: 600,
+      })
+    );
+    vi.useRealTimers();
+
+    const home = storage.getHome();
+
+    expect(home.rows.map((row) => row.genre)).toEqual(['Action', 'Drama']);
+    expect(home.rows.map((row) => row.movies.map((m) => m.title))).toEqual([
+      ['Halfway', 'Actioner'],
+      ['Weepie'],
+    ]);
+    expect(home.continueWatching.map((m) => m.title)).toEqual(['Halfway']);
+    // The default query and no query at all are the same request.
+    expect(home).toEqual(storage.getHome({ sort: 'recently-added' }));
+  });
+});
+
 // --- payload shape -------------------------------------------------------------
 
 describe('library: getHome payload shape', () => {

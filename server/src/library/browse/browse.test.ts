@@ -298,9 +298,256 @@ describe('library: listMovies limit', () => {
 });
 
 // --- search --------------------------------------------------------------------
+//
+// 05 — Search + filter, Phase 1: "search on the server, end to end" (issue #31).
+// The search text widens from a title substring to title OR synopsis OR genre
+// name, so a parent who types "comedy" or a half-remembered plot fragment finds
+// the film. The title tests below are the pre-existing ones, kept as-is.
 
-describe('library: search by title', () => {
-  it('searchMovies matches a case-insensitive title substring', () => {
+describe('library: listMovies search', () => {
+  it('matches a case-insensitive title substring', () => {
+    const storage = freshStorage();
+    storage.addMovie(newMovie({ title: 'The Matrix' }));
+    storage.addMovie(newMovie({ title: 'Matrix Reloaded' }));
+    storage.addMovie(newMovie({ title: 'Inception' }));
+
+    const list = storage.listMovies({ sort: 'a-z', search: 'matrix' });
+
+    expect(list.map((m) => m.title)).toEqual(['Matrix Reloaded', 'The Matrix']);
+  });
+
+  it('matches a case-insensitive synopsis substring', () => {
+    const storage = freshStorage();
+    storage.addMovie(
+      newMovie({
+        title: 'Northwind',
+        synopsis: 'A lighthouse keeper on a fading coast takes in a runaway.',
+      })
+    );
+    storage.addMovie(
+      newMovie({
+        title: 'Inception',
+        synopsis: 'A thief who steals corporate secrets through dreams.',
+      })
+    );
+    storage.addMovie(newMovie({ title: 'Untold' })); // no synopsis at all
+
+    // Half-remembered plot, typed in any case — the title says nothing about it.
+    const list = storage.listMovies({ sort: 'a-z', search: 'LIGHTHOUSE' });
+
+    expect(list.map((m) => m.title)).toEqual(['Northwind']);
+  });
+
+  it('matches a case-insensitive genre-name substring', () => {
+    const storage = freshStorage();
+    storage.addMovie(newMovie({ title: 'Chuckles', genres: ['Comedy'] }));
+    storage.addMovie(newMovie({ title: 'Weepie', genres: ['Drama'] }));
+    storage.addMovie(newMovie({ title: 'Untagged' }));
+
+    // "COMED" is in no title and no synopsis — only in a genre name.
+    const list = storage.listMovies({ sort: 'a-z', search: 'COMED' });
+
+    expect(list.map((m) => m.title)).toEqual(['Chuckles']);
+  });
+
+  it('returns a movie matching on several arms exactly once', () => {
+    const storage = freshStorage();
+    // "ion" is in both the Action and Animation genre names — and in this
+    // movie's title, and in its synopsis. Four matching arms, one movie.
+    storage.addMovie(
+      newMovie({
+        title: 'Action Hero',
+        synopsis: 'An expedition of pure motion.',
+        genres: ['Action', 'Animation'],
+      })
+    );
+    // Matches on two genre names only — nothing in its title or synopsis.
+    storage.addMovie(
+      newMovie({ title: 'Northwind', genres: ['Action', 'Animation'] })
+    );
+
+    const list = storage.listMovies({ sort: 'a-z', search: 'ion' });
+
+    // One row per movie, however many arms and however many genres match —
+    // the row set must not multiply out over the genre join.
+    expect(list).toHaveLength(2);
+    expect(list.map((m) => m.title)).toEqual(['Action Hero', 'Northwind']);
+  });
+
+  it('returns [] for a fragment nothing holds', () => {
+    const storage = freshStorage();
+    storage.addMovie(
+      newMovie({
+        title: 'Inception',
+        synopsis: 'A thief who steals corporate secrets.',
+        genres: ['Sci-Fi'],
+      })
+    );
+
+    expect(storage.listMovies({ sort: 'a-z', search: 'zzz-nothing' })).toEqual(
+      []
+    );
+  });
+
+  it('combines with a genre filter', () => {
+    const storage = freshStorage();
+    storage.addMovie(
+      newMovie({
+        title: 'Comic Caper',
+        synopsis: 'A heist that goes sideways.',
+        genres: ['Comedy'],
+      })
+    );
+    storage.addMovie(
+      newMovie({
+        title: 'Grim Job',
+        synopsis: 'A heist that goes sideways.',
+        genres: ['Drama'],
+      })
+    );
+
+    const list = storage.listMovies({
+      sort: 'a-z',
+      genre: 'Drama',
+      search: 'heist',
+    });
+
+    expect(list.map((m) => m.title)).toEqual(['Grim Job']);
+  });
+
+  it('combines with a minimum rating', () => {
+    const storage = freshStorage();
+    storage.addMovie(
+      newMovie({
+        title: 'Harbor Lights',
+        synopsis: 'A lighthouse tale.',
+        rating: 9,
+      })
+    );
+    storage.addMovie(
+      newMovie({
+        title: 'Harbor Dark',
+        synopsis: 'A lighthouse tale.',
+        rating: 4,
+      })
+    );
+    storage.addMovie(newMovie({ title: 'Unrelated', rating: 10 }));
+
+    const list = storage.listMovies({
+      sort: 'a-z',
+      search: 'lighthouse',
+      minRating: 8,
+    });
+
+    expect(list.map((m) => m.title)).toEqual(['Harbor Lights']);
+  });
+
+  it('applies each of the five sorts to the widened result set', () => {
+    const storage = freshStorage();
+
+    // Three movies matching "dram" through three different arms — title,
+    // genre name, synopsis — plus one control that matches through none.
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-01-01T00:00:00.000Z'));
+    storage.addMovie(
+      newMovie({ title: 'Xray Drama', year: 2010, rating: 3 }) // unwatched
+    );
+    vi.setSystemTime(new Date('2026-01-02T00:00:00.000Z'));
+    storage.addMovie(
+      newMovie({
+        title: 'Yankee',
+        genres: ['Drama'],
+        year: 2021,
+        rating: 8,
+        resumePositionSeconds: 60, // in-progress
+      })
+    );
+    vi.setSystemTime(new Date('2026-01-03T00:00:00.000Z'));
+    storage.addMovie(
+      newMovie({
+        title: 'Zulu',
+        synopsis: 'A dramatic turn on a quiet street.',
+        year: 1999,
+        rating: 10,
+        watched: true,
+      })
+    );
+    vi.setSystemTime(new Date('2026-01-04T00:00:00.000Z'));
+    // Newest, highest year, top rating, unwatched, first alphabetically — it
+    // would lead every sort below if the search were not applied.
+    storage.addMovie(
+      newMovie({
+        title: 'Alpha Control',
+        synopsis: 'A quiet comedy of manners.',
+        year: 2030,
+        rating: 10,
+      })
+    );
+    vi.useRealTimers();
+
+    const titlesFor = (sort: MovieSort) =>
+      storage.listMovies({ sort, search: 'dram' }).map((m) => m.title);
+
+    expect(titlesFor('recently-added')).toEqual([
+      'Zulu',
+      'Yankee',
+      'Xray Drama',
+    ]);
+    expect(titlesFor('a-z')).toEqual(['Xray Drama', 'Yankee', 'Zulu']);
+    expect(titlesFor('year')).toEqual(['Yankee', 'Xray Drama', 'Zulu']);
+    expect(titlesFor('highest-rated')).toEqual([
+      'Zulu',
+      'Yankee',
+      'Xray Drama',
+    ]);
+    expect(titlesFor('unwatched-first')).toEqual([
+      'Xray Drama',
+      'Yankee',
+      'Zulu',
+    ]);
+  });
+
+  it('assembles genres and subtitles correctly when the genre arm matches', () => {
+    const storage = freshStorage();
+    const added = storage.addMovie(
+      newMovie({
+        title: 'Northwind',
+        year: 2018,
+        cast: ['Alice Stone', 'Bob Vance'],
+        rating: 8,
+        genres: ['Action', 'Sci-Fi'],
+        subtitles: [
+          { path: 'Northwind (2018)/en.srt', language: 'English' },
+          { path: 'Northwind (2018)/de.srt', language: 'German' },
+        ],
+        resumePositionSeconds: 600,
+      })
+    );
+    // A movie the search misses — its children must not leak into the batch.
+    storage.addMovie(
+      newMovie({
+        title: 'Weepie',
+        genres: ['Drama'],
+        subtitles: [{ path: 'Weepie/fr.srt', language: 'French' }],
+      })
+    );
+
+    const list = storage.listMovies({ sort: 'a-z', search: 'sci' });
+
+    // The batched child reads re-run the widened WHERE as a subquery, so the
+    // assembled model has to stay identical to the single-row read path.
+    expect(list).toHaveLength(1);
+    expect(list[0]).toEqual(storage.getMovie(added.id));
+    expect(list[0].genres.map((g) => g.name)).toEqual(['Action', 'Sci-Fi']);
+    expect(list[0].subtitles.map((s) => s.language)).toEqual([
+      'English',
+      'German',
+    ]);
+  });
+});
+
+describe('library: searchMovies', () => {
+  it('matches a case-insensitive title substring', () => {
     const storage = freshStorage();
     storage.addMovie(newMovie({ title: 'The Matrix' }));
     storage.addMovie(newMovie({ title: 'Matrix Reloaded' }));
@@ -314,20 +561,50 @@ describe('library: search by title', () => {
     expect(titles).toEqual(['Matrix Reloaded', 'The Matrix']);
   });
 
-  it('the listMovies search filter matches the same titles', () => {
+  it('matches on synopsis and on genre name too, ordered A–Z', () => {
     const storage = freshStorage();
-    storage.addMovie(newMovie({ title: 'The Matrix' }));
-    storage.addMovie(newMovie({ title: 'Matrix Reloaded' }));
-    storage.addMovie(newMovie({ title: 'Inception' }));
+    storage.addMovie(newMovie({ title: 'Zulu', genres: ['Comedy'] }));
+    storage.addMovie(
+      newMovie({ title: 'Alpha', synopsis: 'A comedic misunderstanding.' })
+    );
+    storage.addMovie(newMovie({ title: 'Comedy Central' }));
+    storage.addMovie(newMovie({ title: 'Weepie', genres: ['Drama'] }));
 
-    const list = storage.listMovies({ sort: 'a-z', search: 'matrix' });
+    expect(storage.searchMovies('comed').map((m) => m.title)).toEqual([
+      'Alpha',
+      'Comedy Central',
+      'Zulu',
+    ]);
+  });
 
-    expect(list.map((m) => m.title)).toEqual(['Matrix Reloaded', 'The Matrix']);
+  it('returns exactly what listMovies with the search filter returns', () => {
+    const storage = freshStorage();
+    storage.addMovie(
+      newMovie({ title: 'Chuckles', genres: ['Comedy'], rating: 7 })
+    );
+    storage.addMovie(
+      newMovie({ title: 'Alpha', synopsis: 'A comedic misunderstanding.' })
+    );
+    storage.addMovie(newMovie({ title: 'Weepie', genres: ['Drama'] }));
+
+    // The documented promise: a shorthand over the query, not its own
+    // semantics. Asserted over a non-empty result, so two empty arrays can
+    // never make the equivalence look true.
+    const found = storage.searchMovies('comed');
+
+    expect(found).toHaveLength(2);
+    expect(found).toEqual(storage.listMovies({ sort: 'a-z', search: 'comed' }));
   });
 
   it('returns [] when nothing matches the search', () => {
     const storage = freshStorage();
-    storage.addMovie(newMovie({ title: 'Inception' }));
+    storage.addMovie(
+      newMovie({
+        title: 'Inception',
+        synopsis: 'A thief who steals corporate secrets.',
+        genres: ['Sci-Fi'],
+      })
+    );
 
     expect(storage.searchMovies('zzz-no-such-title')).toEqual([]);
   });

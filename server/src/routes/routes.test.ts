@@ -20,7 +20,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { createApiRouter } from '.';
 import { createSqliteStorage, type LibraryStorage } from '../library';
-import type { Movie } from '@/types';
+import type { HomePayload, Movie } from '@/types';
 
 // --- per-test resource tracking ------------------------------------------------
 
@@ -79,6 +79,109 @@ function addFullMovie(storage: LibraryStorage): Movie {
     ],
   });
 }
+
+// --- 05 — Search + filter, Phase 1: "search on the server" (issue #31) -------
+
+/**
+ * A small library with three genres and two movies part-way through, so both
+ * sections of the home payload have something to narrow.
+ */
+function addBrowsableLibrary(storage: LibraryStorage): void {
+  storage.addMovie({
+    title: 'Comic Caper',
+    videoPath: 'Comic Caper (2019)/comic-caper.mkv',
+    genres: ['Comedy'],
+    resumePositionSeconds: 600,
+  });
+  storage.addMovie({
+    title: 'Weepie',
+    videoPath: 'Weepie (2020)/weepie.mkv',
+    synopsis: 'A slow farewell on a fading coast.',
+    genres: ['Drama'],
+    resumePositionSeconds: 300,
+  });
+  storage.addMovie({
+    title: 'Chiller',
+    videoPath: 'Chiller (2021)/chiller.mkv',
+    genres: ['Horror'],
+  });
+}
+
+async function getHomePayload(
+  baseUrl: string,
+  search?: string
+): Promise<HomePayload> {
+  const url =
+    search === undefined
+      ? `${baseUrl}/api/home`
+      : `${baseUrl}/api/home?q=${encodeURIComponent(search)}`;
+  const response = await fetch(url);
+  expect(response.status).toBe(200);
+  return (await response.json()) as HomePayload;
+}
+
+describe('GET /api/home', () => {
+  it('narrows both sections to the search term in ?q=', async () => {
+    const { storage, baseUrl } = freshApi();
+    addBrowsableLibrary(storage);
+
+    const home = await getHomePayload(baseUrl, 'comic');
+
+    // `q` is the wire name for the search text; the route translates it to the
+    // domain's `search` at this boundary and nowhere else.
+    expect(home.rows.map((row) => row.genre)).toEqual(['Comedy']);
+    expect(home.rows[0].movies.map((m) => m.title)).toEqual(['Comic Caper']);
+    expect(home.continueWatching.map((m) => m.title)).toEqual(['Comic Caper']);
+  });
+
+  it('matches the widened search over the wire (synopsis, not just title)', async () => {
+    const { storage, baseUrl } = freshApi();
+    addBrowsableLibrary(storage);
+
+    const home = await getHomePayload(baseUrl, 'fading coast');
+
+    expect(home.rows.map((row) => row.genre)).toEqual(['Drama']);
+    expect(home.rows[0].movies.map((m) => m.title)).toEqual(['Weepie']);
+  });
+
+  it('answers with an empty payload when the term matches nothing', async () => {
+    const { storage, baseUrl } = freshApi();
+    addBrowsableLibrary(storage);
+
+    const home = await getHomePayload(baseUrl, 'zzz-nothing');
+
+    // Not a 404 and not an error — a Library query that matched nothing is a
+    // normal answer the screen renders as "No results".
+    expect(home).toEqual({ continueWatching: [], rows: [] });
+  });
+
+  /** Regression guards on the new parameter — green before and after. */
+  it('answers with the whole browse home for an argument-less request', async () => {
+    const { storage, baseUrl } = freshApi();
+    addBrowsableLibrary(storage);
+
+    const home = await getHomePayload(baseUrl);
+
+    expect(home.rows.map((row) => row.genre)).toEqual([
+      'Comedy',
+      'Drama',
+      'Horror',
+    ]);
+    expect(home.continueWatching.map((m) => m.title).sort()).toEqual([
+      'Comic Caper',
+      'Weepie',
+    ]);
+  });
+
+  it('treats an empty ?q= as no search at all', async () => {
+    const { storage, baseUrl } = freshApi();
+    addBrowsableLibrary(storage);
+
+    expect(await getHomePayload(baseUrl, '')).toEqual(
+      await getHomePayload(baseUrl)
+    );
+  });
+});
 
 describe('GET /api/movies/:id', () => {
   it('answers with the fully-assembled movie for a known id', async () => {
