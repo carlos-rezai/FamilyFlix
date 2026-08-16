@@ -50,8 +50,17 @@ function buildListQuery(query: MovieQuery): {
     whereParams.push(query.minRating);
   }
   if (query.search !== undefined) {
-    where.push('m.title LIKE ?');
-    whereParams.push(`%${query.search}%`);
+    // Title OR synopsis OR genre name, so a half-remembered plot fragment or a
+    // genre typed into the box both find the film. The genre arm reuses the
+    // genre filter's subquery shape rather than joining, so a movie matching on
+    // several arms — or on several genres — still yields exactly one row.
+    where.push(
+      '(m.title LIKE ? OR m.synopsis LIKE ? OR m.id IN (' +
+        'SELECT mg.movie_id FROM movie_genres mg ' +
+        'JOIN genres g ON g.id = mg.genre_id WHERE g.name LIKE ?))'
+    );
+    const pattern = `%${query.search}%`;
+    whereParams.push(pattern, pattern, pattern);
   }
   if (query.favoritesOnly) {
     where.push('m.is_favorite = 1');
@@ -92,6 +101,8 @@ export function createBrowse(db: SqliteDatabase, reader: MovieReader): Browse {
     return reader.assembleMany(rows, whereClause, whereParams);
   }
 
+  /** Case-insensitive substring match on title, synopsis, or genre name, A–Z —
+   *  exactly a `listMovies` call with the `search` filter, and nothing more. */
   function searchMovies(text: string): Movie[] {
     return listMovies({ sort: 'a-z', search: text });
   }

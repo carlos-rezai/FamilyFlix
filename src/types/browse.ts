@@ -32,7 +32,10 @@ export interface MovieQuery {
   genre?: string;
   /** Keep only movies with `rating >= minRating`; unrated movies are excluded. */
   minRating?: number;
-  /** Case-insensitive substring match on the title. */
+  /**
+   * Case-insensitive substring match on the title, the synopsis, **or** a genre
+   * name — a movie matching on several of those arms still comes back once.
+   */
   search?: string;
   /** Keep only favorites. */
   favoritesOnly?: boolean;
@@ -43,6 +46,23 @@ export interface MovieQuery {
    * `LIMIT`). Omitted means no cap — every matching movie is returned.
    */
   limit?: number;
+}
+
+/**
+ * The browse home's query: the filters and sort the header composes, threaded
+ * into every section of the home payload so the top of the screen can never
+ * disagree with the rest of it. A subset of {@link MovieQuery} — the
+ * per-section additions (`genre` for a row, `inProgressOnly` for the continue
+ * section, and the row `limit`) belong to `getHome`, not to the caller.
+ */
+export interface HomeQuery {
+  sort: MovieSort;
+  /** @see MovieQuery.search */
+  search?: string;
+  /** @see MovieQuery.genre */
+  genre?: string;
+  /** @see MovieQuery.minRating */
+  minRating?: number;
 }
 
 /** A genre plus how many movies are tagged with it — for the home genre rows. */

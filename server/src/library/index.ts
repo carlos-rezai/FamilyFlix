@@ -2,6 +2,7 @@ import { openDatabase } from '../db';
 import type {
   GenreCount,
   HomePayload,
+  HomeQuery,
   Movie,
   MoviePatch,
   MovieQuery,
@@ -54,8 +55,10 @@ export interface LibraryStorage {
    */
   listMovies(query: MovieQuery): Movie[];
   /**
-   * Search movies by case-insensitive title substring, returning fully-assembled
-   * movies (or `[]`). Equivalent to a `listMovies` call with the `search` filter.
+   * Search movies by case-insensitive substring of the title, the synopsis, or a
+   * genre name, returning fully-assembled movies (or `[]`) — one entry per movie
+   * however many of those arms match. Equivalent to a `listMovies` call with the
+   * `search` filter.
    */
   searchMovies(text: string): Movie[];
   /** List only genres with at least one movie, each with its movie count. */
@@ -65,8 +68,12 @@ export interface LibraryStorage {
    * plus a `rows` entry per populated genre (alphabetical), each carrying the
    * genre's true movie count. Both sections are ordered recently-added-first and
    * capped at 15; both are `[]` for an empty library.
+   *
+   * An optional `query` narrows **both** sections alike, and drops any row it
+   * empties; a row's `count` stays the genre's unfiltered total. Omitting it is
+   * the unfiltered home.
    */
-  getHome(): HomePayload;
+  getHome(query?: HomeQuery): HomePayload;
   /**
    * Persist the resume position (seconds into the file). Called constantly during
    * playback, so it stays a cheap single-column write — only

@@ -11,6 +11,7 @@ export type { WatchStatus, Genre, Subtitle, Movie } from './movie';
 export type {
   MovieSort,
   MovieQuery,
+  HomeQuery,
   GenreCount,
   HomeRow,
   HomePayload,

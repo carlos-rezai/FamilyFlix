@@ -1,7 +1,7 @@
 import express, { type Request, type Response, type Router } from 'express';
 
 import type { LibraryStorage } from '../library';
-import type { MovieQuery, MovieSort } from '@/types';
+import type { HomeQuery, MovieQuery, MovieSort } from '@/types';
 
 /** The sort values `GET /api/movies?sort=` accepts, mirroring {@link MovieSort}. */
 const SORTS: readonly MovieSort[] = [
@@ -12,7 +12,7 @@ const SORTS: readonly MovieSort[] = [
   'unwatched-first',
 ];
 
-/** Applied when `GET /api/movies` omits `sort`, matching the home rows. */
+/** Applied when a browse request omits `sort`, matching the home rows. */
 const DEFAULT_SORT: MovieSort = 'recently-added';
 
 /**
@@ -64,8 +64,20 @@ export function createApiRouter(
   // The whole browse home in one request: the in-progress movies, plus a row
   // per populated genre, alphabetical, each capped at 15 movies with the
   // genre's true total.
-  router.get('/home', (_req: Request, res: Response) => {
-    res.json(storage.getHome());
+  //
+  // `?q=` narrows both sections to a search term — `q` is the wire name, and
+  // this boundary is the only place it is translated to the domain's `search`.
+  // An empty value means no search, so a cleared box is the plain home again;
+  // a term that matches nothing is an empty payload, not a 404.
+  router.get('/home', (req: Request, res: Response) => {
+    const query: HomeQuery = { sort: DEFAULT_SORT };
+
+    const search = queryString(req.query.q);
+    if (search !== undefined && search !== '') {
+      query.search = search;
+    }
+
+    res.json(storage.getHome(query));
   });
 
   // The generic browse endpoint, for the genre page and any later filtered

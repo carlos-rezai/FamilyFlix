@@ -1,4 +1,4 @@
-import type { HomePayload, HomeRow, Movie } from '@/types';
+import type { HomePayload, HomeQuery, HomeRow, Movie } from '@/types';
 import type { Browse } from '../browse/browse';
 
 /**
@@ -9,9 +9,15 @@ import type { Browse } from '../browse/browse';
  */
 export const HOME_ROW_LIMIT = 15;
 
+/**
+ * The query an argument-less `getHome()` stands for — the unfiltered browse
+ * home, in the recently-added order it has rendered in since 02.
+ */
+const DEFAULT_HOME_QUERY: HomeQuery = { sort: 'recently-added' };
+
 /** The home-screen aggregate: the whole browse payload in one call. */
 export interface Home {
-  getHome(): HomePayload;
+  getHome(query?: HomeQuery): HomePayload;
 }
 
 /**
@@ -31,32 +37,47 @@ export interface Home {
  * independently of the rows, so a movie part-way through appears in both, and
  * an untagged one appears here even though it earns no row.
  *
+ * Both sections are built from the one {@link HomeQuery}, so the top of the
+ * screen can never disagree with the rest of it: each section adds only what
+ * makes it that section (a `genre` for a row, `inProgressOnly` for continue,
+ * and the shared cap) on top of the caller's filters and sort. A row whose
+ * movies all failed the query is dropped rather than rendered blank — a
+ * screenful of empty rows is not an answer. Its `count` still comes from
+ * `listGenres()`, so "View all {count}" keeps reporting the genre's unfiltered
+ * total however far the query narrows the row.
+ *
  * Aggregating here keeps the home a single call for the route to serve, instead
  * of leaving the client to fan out a request per section.
  */
 export function createHome(browse: Browse): Home {
-  function listRows(): HomeRow[] {
-    return browse.listGenres().map((genre) => ({
-      genre: genre.name,
-      count: genre.count,
-      movies: browse.listMovies({
+  function listRows(query: HomeQuery): HomeRow[] {
+    return browse
+      .listGenres()
+      .map((genre) => ({
         genre: genre.name,
-        sort: 'recently-added',
-        limit: HOME_ROW_LIMIT,
-      }),
-    }));
+        count: genre.count,
+        movies: browse.listMovies({
+          ...query,
+          genre: genre.name,
+          limit: HOME_ROW_LIMIT,
+        }),
+      }))
+      .filter((row) => row.movies.length > 0);
   }
 
-  function listContinueWatching(): Movie[] {
+  function listContinueWatching(query: HomeQuery): Movie[] {
     return browse.listMovies({
+      ...query,
       inProgressOnly: true,
-      sort: 'recently-added',
       limit: HOME_ROW_LIMIT,
     });
   }
 
-  function getHome(): HomePayload {
-    return { continueWatching: listContinueWatching(), rows: listRows() };
+  function getHome(query: HomeQuery = DEFAULT_HOME_QUERY): HomePayload {
+    return {
+      continueWatching: listContinueWatching(query),
+      rows: listRows(query),
+    };
   }
 
   return { getHome };
