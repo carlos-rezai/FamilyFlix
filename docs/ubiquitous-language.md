@@ -2,28 +2,28 @@
 
 ## Library entities
 
-| Term                   | Definition                                                                                                             | Aliases to avoid                   |
-| ---------------------- | ---------------------------------------------------------------------------------------------------------------------- | ---------------------------------- |
-| **Movie**              | A single film in the library — the canonical domain entity, one row in `movies`, one poster card.                      | _film_ (informal synonym OK)       |
-| **Genre**              | A shared, queryable category a **Movie** belongs to; a real entity (junction table), used to browse.                   | category, tag                      |
-| **Subtitle**           | A subtitle **file asset** owned by a **Movie** — a path + human language label + track order.                          | caption, sub track                 |
-| **Synopsis** (new)     | The **Movie**'s long-form plot summary (`synopsis`), shown clamped-and-expandable on the **Movie detail page**.        | description, plot, overview, blurb |
-| **Cast**               | The display-only ordered list of actor names on a **Movie** (JSON, never queried).                                     | actors list, credits               |
-| **Director**           | The single display-only director name on a **Movie**.                                                                  | —                                  |
-| **Poster**             | The portrait cover image for a **Movie**, downloaded from **TMDB** into the **Managed image cache**.                   | cover, thumbnail                   |
-| **Backdrop** (updated) | The wide image behind the **Movie detail page**'s title block, from **TMDB**; falls back to the **Gradient fallback**. | banner, hero, background           |
+| Term         | Definition                                                                                                             | Aliases to avoid                   |
+| ------------ | ---------------------------------------------------------------------------------------------------------------------- | ---------------------------------- |
+| **Movie**    | A single film in the library — the canonical domain entity, one row in `movies`, one poster card.                      | _film_ (informal synonym OK)       |
+| **Genre**    | A shared, queryable category a **Movie** belongs to; a real entity (junction table), used to browse.                   | category, tag                      |
+| **Subtitle** | A subtitle **file asset** owned by a **Movie** — a path + human language label + track order.                          | caption, sub track                 |
+| **Synopsis** | The **Movie**'s long-form plot summary (`synopsis`), shown clamped-and-expandable on the **Movie detail page**.        | description, plot, overview, blurb |
+| **Cast**     | The display-only ordered list of actor names on a **Movie** (JSON, never queried).                                     | actors list, credits               |
+| **Director** | The single display-only director name on a **Movie**.                                                                  | —                                  |
+| **Poster**   | The portrait cover image for a **Movie**, downloaded from **TMDB** into the **Managed image cache**.                   | cover, thumbnail                   |
+| **Backdrop** | The wide image behind the **Movie detail page**'s title block, from **TMDB**; falls back to the **Gradient fallback**. | banner, hero, background           |
 
 ## Rating & watch state
 
-| Term                  | Definition                                                                                                                                    | Aliases to avoid         |
-| --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------ |
-| **Rating**            | Household 0–10 half-star score (10 = 5 stars), **seeded from TMDB** at import, maintainer-overridable.                                        | review, score, vote      |
-| **Unrated** (updated) | A **Movie** with no **Rating** (`NULL`) — distinct from a literal 0-star rating; renders as **no stars at all** on the **Movie detail page**. | zero stars, unscored     |
-| **Status**            | A **Movie**'s **derived** watch state: `unwatched` \| `in-progress` \| `watched` (never stored).                                              | state, watch status      |
-| **Watched** (updated) | Explicit boolean flag meaning the maintainer marked a **Movie** finished; setting it via `markWatched` also clears the **Resume position**.   | seen, completed          |
-| **Resume position**   | Seconds into a **Movie**'s video where playback last stopped (`resume_position_seconds`).                                                     | progress, playback time  |
-| **In-progress**       | Derived **Status** when `resume_position_seconds > 0` and not **Watched**.                                                                    | partially watched        |
-| **Favorite**          | Per-movie household boolean (`is_favorite`) surfaced as the Favorites row, togglable from the card and the **Movie detail page**.             | liked, starred, bookmark |
+| Term                | Definition                                                                                                                                    | Aliases to avoid         |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------ |
+| **Rating**          | Household 0–10 half-star score (10 = 5 stars), **seeded from TMDB** at import, maintainer-overridable.                                        | review, score, vote      |
+| **Unrated**         | A **Movie** with no **Rating** (`NULL`) — distinct from a literal 0-star rating; renders as **no stars at all** on the **Movie detail page**. | zero stars, unscored     |
+| **Status**          | A **Movie**'s **derived** watch state: `unwatched` \| `in-progress` \| `watched` (never stored).                                              | state, watch status      |
+| **Watched**         | Explicit boolean flag meaning the maintainer marked a **Movie** finished; setting it via `markWatched` also clears the **Resume position**.   | seen, completed          |
+| **Resume position** | Seconds into a **Movie**'s video where playback last stopped (`resume_position_seconds`).                                                     | progress, playback time  |
+| **In-progress**     | Derived **Status** when `resume_position_seconds > 0` and not **Watched**.                                                                    | partially watched        |
+| **Favorite**        | Per-movie household boolean (`is_favorite`) surfaced as the Favorites row, togglable from the card and the **Movie detail page**.             | liked, starred, bookmark |
 
 ## Storage & sourcing
 
@@ -39,50 +39,67 @@
 
 ## Browse & display (frontend)
 
-| Term                            | Definition                                                                                                                                                                                                                                                             | Aliases to avoid                      |
-| ------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------- |
-| **Browse home**                 | The `/` route (`LibraryPage`) — the parent-facing home screen listing the **Continue Watching row** then the **Genre rows**.                                                                                                                                           | home page, browse grid, dashboard     |
-| **Genre row**                   | A titled horizontal row showing up to 15 **Poster cards** for one **Genre**, with a "View all {count}" link.                                                                                                                                                           | shelf, carousel row, genre shelf      |
-| **Continue Watching row**       | The **Browse home**'s top row: up to 15 **Continue cards** for **In-progress** **Movies**; hidden entirely when there are none.                                                                                                                                        | resume row, keep watching, up next    |
-| **Card carousel**               | The horizontal scroller (prev/next arrows) inside a row, holding **Poster cards** or **Continue cards** per its **Carousel variant**.                                                                                                                                  | slider, scroller                      |
-| **Carousel variant**            | Which card shape a **Card carousel** holds — `poster` or `continue`; also sets the tile width and arrow height.                                                                                                                                                        | mode, type, kind                      |
-| **Poster card**                 | The library's primary movie tile: **Poster** (or **Gradient fallback**), title, **Rating** stars, watch state, favorite heart.                                                                                                                                         | tile, thumbnail, cell                 |
-| **Continue card**               | The wide 16:10 resume tile: **Gradient fallback**, title, **Resume label**, progress track, play badge. No **Favorite** heart.                                                                                                                                         | resume tile, continue tile, hero card |
-| **Resume label**                | The human string on a **Continue card** — `Resume · 1:13 of 1:55`, or `Resume · 1:13` when runtime is unknown.                                                                                                                                                         | timestamp, progress text              |
-| **View all**                    | The **Genre row** header link to that **Genre**'s full page (`/genre/:name`); its count is the true total, not the 15 shown.                                                                                                                                           | see all, more, expand                 |
-| **Home payload**                | The single `GET /api/home` response — named sections: `{ continueWatching: Movie[], rows: HomeRow[] }`.                                                                                                                                                                | feed, home data                       |
-| **Gradient fallback** (updated) | A deterministic per-**Movie** color gradient (hashed from the **Movie** id) drawn wherever artwork is missing — cards, the detail **Poster**, and the **Backdrop**. Drawn by the `Artwork` primitive, which resolves artwork-or-fallback at every one of those places. | placeholder art, gradient stops       |
-| **Poster URL**                  | The browser-loadable URL (`/api/images/…`) that resolves a **Movie**'s **Poster path** through the image route.                                                                                                                                                        | image src, poster link                |
-| **Card view model**             | `PosterCardMovie` — the small display shape a **Movie** is mapped to for a **Poster card** (rating→percent, progress→percent).                                                                                                                                         | card DTO, card props                  |
-| **Continue view model**         | `ContinueCardMovie` — the display shape for a **Continue card**: id, title, gradient stops, **Resume label**, progress percent.                                                                                                                                        | continue DTO, resume model            |
-| **Nominal sliver**              | The small fixed **Progress** bar length shown when a **Movie** is **In-progress** but `runtimeMinutes` is unknown.                                                                                                                                                     | placeholder progress                  |
+| Term                       | Definition                                                                                                                                                                                                                                                             | Aliases to avoid                      |
+| -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------- |
+| **Browse home**            | The `/` route (`LibraryPage`) — the parent-facing home screen listing the **Continue Watching row** then the **Genre rows**.                                                                                                                                           | home page, browse grid, dashboard     |
+| **Genre row**              | A titled horizontal row showing up to 15 **Poster cards** for one **Genre**, with a "View all {count}" link.                                                                                                                                                           | shelf, carousel row, genre shelf      |
+| **Continue Watching row**  | The **Browse home**'s top row: up to 15 **Continue cards** for **In-progress** **Movies**; hidden entirely when there are none.                                                                                                                                        | resume row, keep watching, up next    |
+| **Card carousel**          | The horizontal scroller (prev/next arrows) inside a row, holding **Poster cards** or **Continue cards** per its **Carousel variant**.                                                                                                                                  | slider, scroller                      |
+| **Carousel variant**       | Which card shape a **Card carousel** holds — `poster` or `continue`; also sets the tile width and arrow height.                                                                                                                                                        | mode, type, kind                      |
+| **Poster card**            | The library's primary movie tile: **Poster** (or **Gradient fallback**), title, **Rating** stars, watch state, favorite heart.                                                                                                                                         | tile, thumbnail, cell                 |
+| **Continue card**          | The wide 16:10 resume tile: **Gradient fallback**, title, **Resume label**, progress track, play badge. No **Favorite** heart.                                                                                                                                         | resume tile, continue tile, hero card |
+| **Resume label**           | The human string on a **Continue card** — `Resume · 1:13 of 1:55`, or `Resume · 1:13` when runtime is unknown.                                                                                                                                                         | timestamp, progress text              |
+| **View all**               | The **Genre row** header link to that **Genre**'s full page (`/genre/:name`); its count is the true total, not the 15 shown.                                                                                                                                           | see all, more, expand                 |
+| **Home payload** (updated) | The single `GET /api/home` response — named sections: `{ continueWatching: Movie[], rows: HomeRow[] }` — now built for one **Library query**.                                                                                                                          | feed, home data                       |
+| **Gradient fallback**      | A deterministic per-**Movie** color gradient (hashed from the **Movie** id) drawn wherever artwork is missing — cards, the detail **Poster**, and the **Backdrop**. Drawn by the `Artwork` primitive, which resolves artwork-or-fallback at every one of those places. | placeholder art, gradient stops       |
+| **Poster URL**             | The browser-loadable URL (`/api/images/…`) that resolves a **Movie**'s **Poster path** through the image route.                                                                                                                                                        | image src, poster link                |
+| **Card view model**        | `PosterCardMovie` — the small display shape a **Movie** is mapped to for a **Poster card** (rating→percent, progress→percent).                                                                                                                                         | card DTO, card props                  |
+| **Continue view model**    | `ContinueCardMovie` — the display shape for a **Continue card**: id, title, gradient stops, **Resume label**, progress percent.                                                                                                                                        | continue DTO, resume model            |
+| **Nominal sliver**         | The small fixed **Progress** bar length shown when a **Movie** is **In-progress** but `runtimeMinutes` is unknown.                                                                                                                                                     | placeholder progress                  |
 
-## The Movie detail page (new)
+## The Movie detail page
 
-| Term                        | Definition                                                                                                                                     | Aliases to avoid                     |
-| --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------ |
-| **Movie detail page** (new) | The `/movie/:id` route (`MoviePage`) — one **Movie** in full: **Backdrop**, **Poster**, **Meta line**, **Synopsis**, **Credits row**, actions. | movie page, detail view, title page  |
-| **Detail view model** (new) | `MovieDetailModel` — the display shape a **Movie** is mapped to for the **Movie detail page**, built by `detailView()`.                        | detail DTO, page model               |
-| **Meta line** (new)         | The inline row under the title assembling the **Meta segments** that exist, separated by `·`.                                                  | info row, metadata line, subtitle    |
-| **Meta segment** (new)      | One item on the **Meta line** — year, **Runtime label**, or **Rating** stars; an absent one is omitted **with its separator**.                 | meta field, detail bit               |
-| **Runtime label** (new)     | The human runtime string — `2h 8m`, or `42m` / `2h` when an hour or minute component is zero.                                                  | duration, length, running time       |
-| **Play label** (new)        | The primary button's text — `Play`, or `Resume · 52:00` for an **In-progress** **Movie**, built from the **Resume position**.                  | play text, CTA label                 |
-| **Credits row** (new)       | The **Director** + **Cast** block below the **Synopsis**; a missing one shows `—`, and the row is omitted only when both are absent.           | credits block, cast section          |
-| **Edit menu** (new)         | The ⋯ overflow menu on the **Movie detail page**; holds Edit details today, Delete movie when that feature ships.                              | overflow menu, kebab menu, more menu |
-| **Load state** (new)        | Which of `loading` \| `ready` \| `not-found` \| `error` a screen is in; **not-found** and **error** are distinct and offer different actions.  | status, fetch state                  |
-| **Placeholder route** (new) | A registered route rendering a documented stub, so links have honest destinations before the real screen exists.                               | stub page, dummy route, TODO page    |
+| Term                  | Definition                                                                                                                                     | Aliases to avoid                     |
+| --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------ |
+| **Movie detail page** | The `/movie/:id` route (`MoviePage`) — one **Movie** in full: **Backdrop**, **Poster**, **Meta line**, **Synopsis**, **Credits row**, actions. | movie page, detail view, title page  |
+| **Detail view model** | `MovieDetailModel` — the display shape a **Movie** is mapped to for the **Movie detail page**, built by `detailView()`.                        | detail DTO, page model               |
+| **Meta line**         | The inline row under the title assembling the **Meta segments** that exist, separated by `·`.                                                  | info row, metadata line, subtitle    |
+| **Meta segment**      | One item on the **Meta line** — year, **Runtime label**, or **Rating** stars; an absent one is omitted **with its separator**.                 | meta field, detail bit               |
+| **Runtime label**     | The human runtime string — `2h 8m`, or `42m` / `2h` when an hour or minute component is zero.                                                  | duration, length, running time       |
+| **Play label**        | The primary button's text — `Play`, or `Resume · 52:00` for an **In-progress** **Movie**, built from the **Resume position**.                  | play text, CTA label                 |
+| **Credits row**       | The **Director** + **Cast** block below the **Synopsis**; a missing one shows `—`, and the row is omitted only when both are absent.           | credits block, cast section          |
+| **Edit menu**         | The ⋯ overflow menu on the **Movie detail page**; holds Edit details today, Delete movie when that feature ships.                              | overflow menu, kebab menu, more menu |
+| **Load state**        | Which of `loading` \| `ready` \| `not-found` \| `error` a screen is in; **not-found** and **error** are distinct and offer different actions.  | status, fetch state                  |
+| **Placeholder route** | A registered route rendering a documented stub, so links have honest destinations before the real screen exists.                               | stub page, dummy route, TODO page    |
 
-## Shared UI units (new)
+## Shared UI units
 
 Vocabulary for the units several screens draw from. These name our components,
 not anything the prototype adds — `docs/handoff/` gives the visual surface, and
 these give the shared code behind it a single agreed name.
 
-| Term                   | Definition                                                                                                                                                                                                      | Aliases to avoid                 |
-| ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------- |
-| **Load message** (new) | The centred title + body + optional action block a screen shows instead of its content — an empty library, a failed load, a **Movie** that is gone. Named for the **Load state** three of its four uses are in. | empty state, error state, notice |
-| **Skeleton** (new)     | One pulsing placeholder block held while content loads. Each screen arranges its own; only the surface and the pulse are shared.                                                                                | shimmer, ghost, loader, spinner  |
-| **Menu** (new)         | A popup panel opened by a caller-supplied trigger, closing on Escape, an outside press, or an activated item — returning focus to the trigger every time. The **Edit menu** is one.                             | dropdown, popover, context menu  |
+| Term                  | Definition                                                                                                                                                                                                          | Aliases to avoid                 |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------- |
+| **Load message**      | The centred title + body + optional action block a screen shows instead of its content — an empty library, a failed load, a **Movie** that is gone. Named for the **Load state** three of its four uses are in.     | empty state, error state, notice |
+| **Skeleton**          | One pulsing placeholder block held while content loads. Each screen arranges its own; only the surface and the pulse are shared.                                                                                    | shimmer, ghost, loader, spinner  |
+| **Menu** (updated)    | A popup panel opened by a caller-supplied trigger, closing on Escape, an outside press, or an activated item — returning focus to the trigger every time. The **Edit menu** and every **Filter dropdown** are ones. | dropdown, popover, context menu  |
+| **Header slot** (new) | One of `MainLayout`'s two optional places for a screen's own controls — `headerStart` (before the spacer) and `headerEnd` (after it, before the gear).                                                              | header prop, toolbar, actions    |
+
+## Search, filter & sort (new)
+
+| Term                      | Definition                                                                                                                                                                | Aliases to avoid                    |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------- |
+| **Library query** (new)   | The **Search text** + **Genre filter** + **Minimum rating** + **Sort order** that together decide what the **Browse home** shows; lives in the URL, never in a component. | filters, criteria, params, search   |
+| **Search text** (new)     | The free-text fragment of a **Library query**, matched against a **Movie**'s title, **Synopsis**, or **Genre** names (`?q=`).                                             | query, keyword, term, search string |
+| **Genre filter** (new)    | The **Library query**'s restriction to a single **Genre**; `All Genres` is its unset state, not a value.                                                                  | category filter, genre selection    |
+| **Minimum rating** (new)  | The **Library query**'s floor on **Rating** — 8 / 6 / 4 units, shown as `4+ stars` / `3+ stars` / `2+ stars`; **Unrated** **Movies** never pass one.                      | rating filter, stars, score filter  |
+| **Sort order** (new)      | Which of `recently-added` \| `a-z` \| `year` \| `highest-rated` \| `unwatched-first` a **Library query** orders by. Part of the query, but not a filter.                  | ordering, sort by, sorting          |
+| **Settled query** (new)   | The **Library query** as recorded in the URL — what every reader acts on, after the **Search bar**'s 250ms debounce has stopped moving.                                   | current filters, applied query      |
+| **Search bar** (new)      | The **Browse home** header's text control (its `headerStart` **Header slot**); the only holder of un-**settled** input.                                                   | search box, search field, omnibox   |
+| **Filter dropdown** (new) | One pill-triggered **Menu** presenting the **Filter options** for one part of a **Library query**. The **Browse home** header has three: Genre, rating, Sort.             | select, picker, combo box, dropdown |
+| **Filter option** (new)   | One row of a **Filter dropdown** — label, optional count, and whether it is the current selection.                                                                        | menu item, choice, entry            |
+| **Genre list** (new)      | The **unfiltered** `{ total, genres }` payload from `GET /api/genres` backing the Genre **Filter dropdown**'s counts; fetched once, never per query.                      | genre counts, facets, genre payload |
+| **No results** (new)      | The **Load message** shown when a **Library query** matches nothing — a different situation from an empty library, with different copy.                                   | empty state, no matches, zero state |
 
 ## Relationships
 
@@ -100,6 +117,11 @@ these give the shared code behind it a single agreed name.
 - The **Movie detail page** renders exactly one **Movie** via its **Detail view model**; every display decision (which **Meta segments** survive, the **Runtime label**'s wording, the **Play label**, whether there is a **Credits row**) is made in `detailView()`, never in the component.
 - A **Meta segment** that is absent takes its separator with it — the **Meta line** never renders a dangling `·`.
 - **Unrated** is treated as an absent **Meta segment** on the **Movie detail page**, but still renders as 0 stars on a **Poster card**.
+- A **Library query** produces exactly one **Home payload**; both the **Genre rows** and the **Continue Watching row** are built from it, so both narrow together.
+- The **Search bar** and the **Filter dropdowns** only ever _write_ a **Library query**; everything that renders reads the **Settled query** from the URL, so no screen owns it.
+- A **Filter dropdown** holds one **Filter option** per choice, exactly one of which is selected; `All Genres` and `All ratings` are the options that mean "unset".
+- A **Genre row**'s **View all** count comes from the **Genre list**, not the **Library query** — it stays the **Genre**'s true total even when the row shows three matches.
+- **No results** and "Your library is empty" are different **Load messages**: the first means a **Library query** matched nothing, the second means there are no **Movies** at all.
 
 ## Example dialogue
 
@@ -139,6 +161,22 @@ these give the shared code behind it a single agreed name.
 > **Maintainer:** "A **Placeholder route**. Same as the detail page itself was until
 > now — a real URL with a stub behind it, so the link is honest and the screen
 > lands there later without anything having to change."
+> **Dev:** "When Mum types 'com' in the **Search bar**, does the **Continue Watching
+> row** stay put?"
+> **Maintainer:** "No — it narrows with everything else. One **Library query**, one
+> **Home payload**. If nothing she's part-way through matches 'com', that row goes
+> too. Anything else would be the screen disagreeing with itself."
+> **Dev:** "The Genre **Filter dropdown** says 'Drama 6'. Once she's typed 'com',
+> does that 6 become 1?"
+> **Maintainer:** "No. Those counts come from the **Genre list**, and that's the
+> whole library, always. A list that reshuffles while you're reaching for it is
+> horrible — and she'd never find the genre she wanted."
+> **Dev:** "She picks Drama and **Minimum rating** `4+ stars`, and nothing comes back."
+> **Maintainer:** "Then **No results** — but don't quote her back an empty search.
+> She didn't type anything; the genre and the stars did it. Say the filters."
+> **Dev:** "Last one: does the whole screen go back to skeletons on every keystroke?"
+> **Maintainer:** "God, no. Skeletons on the first load only. After that the rows she's
+> looking at stay on screen until the new ones are ready — she's reading them."
 
 ## Flagged ambiguities
 
@@ -178,21 +216,44 @@ these give the shared code behind it a single agreed name.
   the prototype's design — there is no image slot in `mol.ContinueCard`, unlike the
   **Poster card**. A **Movie**'s **Backdrop** would suit the 16:10 tile, but adding
   it is a **prototype amendment**, not an implementation choice.
-- **"Hero" is still not a term (new):** the **Movie detail page**'s top art area is
+- **"Hero" is still not a term:** the **Movie detail page**'s top art area is
   a slot, not a concept — it shows the **Backdrop** when there is one and the
   **Gradient fallback** otherwise. _Hero_ remains an alias to avoid for **Backdrop**;
   don't reintroduce it for the area either.
-- **"Description" vs "Synopsis" (new):** `feat.MovieForm` labels the field
+- **"Description" vs "Synopsis":** `feat.MovieForm` labels the field
   **Description**, but the column, the model, and the **Movie detail page** all say
   `synopsis`. **Synopsis** is canonical; treat the form's label as UI copy only and
   do not introduce a `description` field.
-- **Marking Watched destroys the Resume position (new):** `markWatched` zeroes
+- **Marking Watched destroys the Resume position:** `markWatched` zeroes
   `resume_position_seconds` by documented convention, so the **Movie detail page**'s
   reversible watched toggle loses the position on a round trip. `inProgressOnly` is
   `watched = 0 AND resume > 0`, so the flag alone already removes the **Movie** from
   the **Continue Watching row** — the zeroing is no longer load-bearing. **Flagged
   for the watch-tracking grill:** should `markWatched` preserve it?
-- **Edit has no route of its own (new):** COMPONENT-SPEC lists no `/edit`; the
+- **"Filter" colloquially swallows sort (new):** **Sort order** is part of a
+  **Library query** but changes _which order_, never _which_ **Movies**. The
+  component holding all three dropdowns is `LibraryFilters` for layout reasons
+  (they share the header's trailing group), not because sort is a filter. Say
+  **Library query** when you mean all four, and never "the filters" for the sort.
+- **"Rating" vs "Minimum rating" (new):** a **Rating** belongs to a **Movie**;
+  a **Minimum rating** is a floor in a **Library query**. Both are in 0–10 units
+  and both are rendered as stars, so name which one. Note the asymmetry: an
+  **Unrated** **Movie** shows 0 stars on a **Poster card** but is _excluded_ by
+  any **Minimum rating** — it does not behave as a 0.
+- **"Search" is a feature folder and a field (new):** `features/search/` owns all
+  four controls, not just the text one. The `search` field of a query is the
+  **Search text** alone. The URL and the API both say `q` for it; only the domain
+  types say `search`.
+- **Search matches more than titles (new):** **Search text** matches title,
+  **Synopsis** _or_ **Genre** name, per the prototype. So typing "comedy" returns
+  comedies without touching the **Genre filter**, and the two mechanisms can
+  overlap. Case-insensitivity is ASCII-only (SQLite `LIKE`).
+- **Genre row ordering is still divergent (new):** the **Browse home** orders its
+  **Genre rows** alphabetically (`listGenres()` is `ORDER BY g.name`); the
+  prototype orders them by count descending. The new Genre **Filter dropdown**
+  follows the prototype (count desc). **Open** — a pre-existing browse-grid
+  divergence, deliberately not corrected inside the search work.
+- **Edit has no route of its own:** COMPONENT-SPEC lists no `/edit`; the
   prototype reuses the add screen with an `addContext: 'edit'` flag. The **Movie
   detail page** navigates to `/add?movie=<id>` as a **provisional** contract — the
   movie-form grill owns the real one.
