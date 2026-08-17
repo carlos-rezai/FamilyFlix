@@ -9,6 +9,7 @@ export {
   type ExpandableTextProps,
 } from './ExpandableText/ExpandableText';
 export { LoadMessage, type LoadMessageProps } from './LoadMessage/LoadMessage';
+export { SearchBar, type SearchBarProps } from './SearchBar/SearchBar';
 export {
   Menu,
   MenuItem,

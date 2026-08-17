@@ -16,6 +16,10 @@ import {
 export interface MainLayoutProps {
   /** The scrollable page body rendered under the header. */
   children: ReactNode;
+  /** Header content between the logo and the spacer — the search bar. */
+  headerStart?: ReactNode;
+  /** Header content between the spacer and the gear — the filter dropdowns. */
+  headerEnd?: ReactNode;
 }
 
 /**
@@ -27,15 +31,23 @@ export interface MainLayoutProps {
  * owns, so the chrome routes them itself: every page gets the same header
  * without re-wiring it.
  *
- * The header is deliberately partial: the logo and the settings gear are here,
- * while the search bar, the genre / rating / sort dropdowns, and the
- * back-to-top FAB land with the features that own them.
+ * The header is the logo and the settings gear plus two slots: the prototype
+ * puts the search bar before the flex spacer and the genre / rating / sort
+ * dropdowns after it, so the chrome offers a `headerStart` and a `headerEnd`
+ * and renders whatever a page hands in. They are structure — the layout learns
+ * nothing about the library from them — and a page that passes neither gets the
+ * header it always had. The back-to-top FAB still lands with the feature that
+ * owns it.
  *
  * The body is also where the scrolling happens — the document never scrolls —
  * so the chrome is what remembers where a screen was left, and every page it
  * wraps returns to that place on Back without wiring anything itself.
  */
-export function MainLayout({ children }: MainLayoutProps) {
+export function MainLayout({
+  children,
+  headerStart,
+  headerEnd,
+}: MainLayoutProps) {
   const navigate = useNavigate();
   const body = useRestoredScroll<HTMLDivElement>();
 
@@ -46,7 +58,9 @@ export function MainLayout({ children }: MainLayoutProps) {
           <LogoWord>Family</LogoWord>
           <LogoAccent>Flix</LogoAccent>
         </Logo>
+        {headerStart}
         <Spacer />
+        {headerEnd}
         {/* The one call site that wears `IconButton`'s ghost face unaltered —
             46px, transparent, faint ink — so it adds no chrome of its own. */}
         <IconButton label="Settings" onClick={() => navigate('/settings')}>
