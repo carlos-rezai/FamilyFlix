@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import { LoadMessage } from '@/components';
 import { Button } from '@/primitives';
@@ -48,15 +48,21 @@ function LoadingRows() {
 /**
  * The body of the browse home: what the family is part-way through, then every
  * populated genre as its own row — both sections from the one request, so the
- * screen paints at once. Owns the three load states — skeleton rows, the empty
- * library, and a retryable failure. The empty-library copy is deliberately its
- * own message: "no movies yet" is a different situation from a search that
- * matched nothing, which belongs to the search feature.
+ * screen paints at once. Owns every result state — skeleton rows, a retryable
+ * failure, and the two ways of coming back with nothing.
+ *
+ * Those two are deliberately worded apart. "Your library is empty" is a shelf
+ * with nothing on it; a search that matched nothing is a working library and a
+ * term that missed, so it says so plainly and quotes the term back — the only
+ * way to spot a typo in it. The term is read from the URL, which is where the
+ * settled query lives, so nothing here is imported from the search feature.
  */
 export function HomeRows() {
   const { status, rows, continueWatching, retry, toggleFavorite } =
     useHomeRows();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const search = searchParams.get('q') ?? '';
 
   if (status === 'loading') {
     return <LoadingRows />;
@@ -76,6 +82,15 @@ export function HomeRows() {
   // empty library — something in progress is proof there are movies. There is
   // no action here: an empty library has nothing to retry.
   if (rows.length === 0 && continueWatching.length === 0) {
+    if (search !== '') {
+      return (
+        <LoadMessage
+          title="Nothing here"
+          body={`No movies match “${search}”. Try a different search or genre.`}
+        />
+      );
+    }
+
     return (
       <LoadMessage
         title="Your library is empty"
