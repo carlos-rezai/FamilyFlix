@@ -1,5 +1,7 @@
+import type { ReactNode } from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
+import { MemoryRouter, useNavigate } from 'react-router-dom';
 
 import { useHomeRows } from './useHomeRows';
 import { gradientFromId, NOMINAL_SLIVER_PERCENT } from '@/utils';
@@ -163,11 +165,51 @@ function serve(
   });
 }
 
+/**
+ * Drives the URL the way the header controls do — the hook reads the settled
+ * query from the router, so changing the query means changing the address.
+ */
+let goTo: (url: string) => void = () => undefined;
+
+function Navigator() {
+  const navigate = useNavigate();
+  goTo = (url) => navigate(url, { replace: true });
+  return null;
+}
+
+function routerAt(url: string) {
+  return function Wrapper({ children }: { children: ReactNode }) {
+    return (
+      <MemoryRouter initialEntries={[url]}>
+        {children}
+        <Navigator />
+      </MemoryRouter>
+    );
+  };
+}
+
+/** Mount the hook on a URL, without waiting for anything. */
+function mountRows(url = '/') {
+  return renderHook(() => useHomeRows(), { wrapper: routerAt(url) });
+}
+
 /** Mount the hook and wait for the initial load to settle. */
-async function loadRows() {
-  const view = renderHook(() => useHomeRows());
+async function loadRows(url = '/') {
+  const view = mountRows(url);
   await waitFor(() => expect(view.result.current.status).not.toBe('loading'));
   return view;
+}
+
+/** Every home request the hook has issued, as its URL. */
+function homeRequests(): string[] {
+  return fetchMock.mock.calls
+    .map(([input]) => String(input))
+    .filter((url) => url.includes('/api/home'));
+}
+
+/** The query string of the nth home request, parsed rather than matched. */
+function homeQuery(index: number): URLSearchParams {
+  return new URLSearchParams(homeRequests()[index].split('?')[1] ?? '');
 }
 
 /** Whether one movie reads as a favorite in one genre's row. */
@@ -297,7 +339,7 @@ describe('useHomeRows — loading the library', () => {
         })
     );
 
-    const { result } = renderHook(() => useHomeRows());
+    const { result } = mountRows();
     expect(result.current.status).toBe('loading');
 
     serve(HOME_PAYLOAD);
@@ -314,6 +356,127 @@ describe('useHomeRows — loading the library', () => {
       'Action',
       'Comedy',
     ]);
+  });
+});
+
+describe('useHomeRows — the settled query', () => {
+  /** The same library narrowed by a search: Action matched nothing and was dropped. */
+  const NARROWED_PAYLOAD: HomePayload = {
+    continueWatching: [],
+    rows: [
+      {
+        genre: 'Comedy',
+        count: 2,
+        movies: [makeMovie({ id: 'c1', title: 'Comet Season' })],
+      },
+    ],
+  };
+
+  /** Answer the first home request from `first`, every later one from `rest`. */
+  function serveInTurn(first: HomePayload, rest: HomePayload) {
+    fetchMock.mockImplementationOnce(() => Promise.resolve(okResponse(first)));
+    fetchMock.mockImplementation(() => Promise.resolve(okResponse(rest)));
+  }
+
+  it('asks for the whole library when the URL carries no query', async () => {
+    serve(HOME_PAYLOAD);
+
+    await loadRows('/');
+
+    expect(homeRequests()).toEqual(['/api/home']);
+  });
+
+  it('asks with the search the URL was opened on, so a shared link loads narrowed', async () => {
+    // The query is in the URL, so it is already known on the very first render
+    // — there is no unfiltered load to flash past first.
+    serve(NARROWED_PAYLOAD);
+
+    const { result } = await loadRows('/?q=comet');
+
+    expect(homeRequests()).toHaveLength(1);
+    expect(homeQuery(0).get('q')).toBe('comet');
+    expect(result.current.rows.map((row) => row.genre)).toEqual(['Comedy']);
+  });
+
+  it('asks again, with the new term, when the settled query changes', async () => {
+    serveInTurn(HOME_PAYLOAD, NARROWED_PAYLOAD);
+    const { result } = await loadRows('/');
+    expect(result.current.rows.map((row) => row.genre)).toEqual([
+      'Action',
+      'Comedy',
+    ]);
+
+    act(() => goTo('/?q=comet'));
+
+    await waitFor(() =>
+      expect(result.current.rows.map((row) => row.genre)).toEqual(['Comedy'])
+    );
+    expect(homeRequests()).toHaveLength(2);
+    expect(homeQuery(1).get('q')).toBe('comet');
+  });
+
+  it('keeps the rows already on screen while the new ones are loading', async () => {
+    // Flashing the skeleton every 250ms of typing would be unreadable — she is
+    // reading them. The old answer stays until the new one arrives.
+    serveInTurn(HOME_PAYLOAD, NARROWED_PAYLOAD);
+    const { result } = await loadRows('/');
+
+    // The refetch is in flight and has not answered yet.
+    fetchMock.mockImplementation(() => new Promise<Response>(() => undefined));
+    act(() => goTo('/?q=comet'));
+
+    await waitFor(() => expect(homeRequests()).toHaveLength(2));
+    expect(result.current.status).toBe('ready');
+    expect(result.current.rows.map((row) => row.genre)).toEqual([
+      'Action',
+      'Comedy',
+    ]);
+  });
+
+  it('shows the skeleton on the very first load', async () => {
+    fetchMock.mockImplementation(() => new Promise<Response>(() => undefined));
+
+    const { result } = mountRows('/');
+
+    expect(result.current.status).toBe('loading');
+    expect(result.current.rows).toEqual([]);
+  });
+
+  it('leaves the rows alone when a part of the URL it does not read changes', async () => {
+    serve(HOME_PAYLOAD);
+    const { result } = await loadRows('/');
+
+    act(() => goTo('/?scroll=120'));
+
+    await waitFor(() => expect(result.current.status).toBe('ready'));
+    expect(homeRequests()).toHaveLength(1);
+  });
+
+  it('does not let an abandoned query’s slow answer overwrite the newer one', async () => {
+    // The unfiltered load is still in flight when the parent finishes typing;
+    // its answer is a library that no longer applies when it finally lands.
+    let settleFirst: (response: Response) => void = () => undefined;
+    fetchMock.mockImplementationOnce(
+      () =>
+        new Promise<Response>((resolve) => {
+          settleFirst = resolve;
+        })
+    );
+    fetchMock.mockImplementation(() =>
+      Promise.resolve(okResponse(NARROWED_PAYLOAD))
+    );
+
+    const { result } = mountRows('/');
+    expect(result.current.status).toBe('loading');
+
+    act(() => goTo('/?q=comet'));
+    await waitFor(() => expect(result.current.status).toBe('ready'));
+
+    await act(async () => {
+      settleFirst(okResponse(HOME_PAYLOAD));
+    });
+
+    expect(result.current.rows.map((row) => row.genre)).toEqual(['Comedy']);
   });
 });
 

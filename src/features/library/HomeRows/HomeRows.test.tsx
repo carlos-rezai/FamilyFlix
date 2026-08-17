@@ -7,7 +7,7 @@ import {
   within,
 } from '@testing-library/react';
 import { ThemeProvider } from 'styled-components';
-import { MemoryRouter, useLocation } from 'react-router-dom';
+import { MemoryRouter, useLocation, useNavigate } from 'react-router-dom';
 
 import { HomeRows } from './HomeRows';
 import { theme } from '@/styles/theme';
@@ -206,9 +206,9 @@ function currentPath() {
   return screen.getByTestId('location').textContent;
 }
 
-function renderRows() {
+function renderRows(url = '/') {
   return render(
-    <MemoryRouter>
+    <MemoryRouter initialEntries={[url]}>
       <ThemeProvider theme={theme}>
         <HomeRows />
       </ThemeProvider>
@@ -435,6 +435,87 @@ describe('HomeRows — the empty library', () => {
     ).toBeDefined();
     expect(screen.getByText('Lantern Road')).toBeDefined();
     expect(screen.queryByText(/your library is empty/i)).toBeNull();
+  });
+});
+
+describe('HomeRows — a search that matched nothing', () => {
+  it('says so plainly, and quotes back what was typed', async () => {
+    // A miss must not read as a broken app, and the parent needs to see the
+    // term to spot a typo in it.
+    respondWithRows([], []);
+
+    renderRows('/?q=lighthouse');
+
+    expect(await screen.findByText('Nothing here')).toBeDefined();
+    expect(
+      screen.getByText(
+        'No movies match “lighthouse”. Try a different search or genre.'
+      )
+    ).toBeDefined();
+  });
+
+  it('keeps the empty library’s own words for a library that really is empty', async () => {
+    // A bad search and an empty shelf are different situations, and the two
+    // messages must be tellable apart.
+    respondWithRows([], []);
+
+    renderRows('/');
+
+    expect(await screen.findByText(/your library is empty/i)).toBeDefined();
+    expect(screen.queryByText('Nothing here')).toBeNull();
+  });
+
+  it('shows the rows, not the miss, when the search did match something', async () => {
+    respondWithRows([LIBRARY[1]], []);
+
+    renderRows('/?q=comet');
+
+    expect(await findGenreHeading('Comedy')).toBeDefined();
+    expect(screen.queryByText('Nothing here')).toBeNull();
+    expect(screen.queryByText(/your library is empty/i)).toBeNull();
+  });
+});
+
+describe('HomeRows — while a new query is loading', () => {
+  /** A stand-in for the header's search bar: it only ever writes the URL. */
+  function SearchTrigger() {
+    const navigate = useNavigate();
+    return (
+      <button
+        type="button"
+        onClick={() => navigate('/?q=comet', { replace: true })}
+      >
+        Search
+      </button>
+    );
+  }
+
+  function renderSearchable() {
+    return render(
+      <MemoryRouter initialEntries={['/']}>
+        <ThemeProvider theme={theme}>
+          <HomeRows />
+        </ThemeProvider>
+        <SearchTrigger />
+      </MemoryRouter>
+    );
+  }
+
+  it('leaves the rows on screen instead of flashing the skeleton back', async () => {
+    // The screen must not go grey on every letter — she is reading them.
+    respondWithRows(LIBRARY, []);
+    renderSearchable();
+    await findGenreHeading('Action');
+
+    // The next answer never arrives, so whatever is on screen is what stayed.
+    fetchMock.mockImplementation(() => new Promise<Response>(() => undefined));
+    fireEvent.click(screen.getByRole('button', { name: 'Search' }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    expect(screen.getByRole('heading', { name: 'Action' })).toBeDefined();
+    expect(
+      screen.queryByRole('status', { name: 'Loading your library' })
+    ).toBeNull();
   });
 });
 

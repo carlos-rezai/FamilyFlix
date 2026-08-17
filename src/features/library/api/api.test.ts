@@ -1,7 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 import { fetchHomePayload, saveFavorite } from './api';
-import type { HomePayload, Movie } from '@/types';
+import type { HomePayload, HomeQuery, Movie } from '@/types';
+
+/** The query an unfiltered browse home asks with — every part at its default. */
+const UNFILTERED: HomeQuery = { sort: 'recently-added' };
 
 function makeMovie(overrides: Partial<Movie> = {}): Movie {
   return {
@@ -87,7 +90,7 @@ describe('fetchHomePayload', () => {
   it('GETs the home aggregate and returns the payload it answers with', async () => {
     fetchMock.mockResolvedValue(okResponse(HOME_PAYLOAD));
 
-    const payload = await fetchHomePayload();
+    const payload = await fetchHomePayload(UNFILTERED);
 
     expect(onlyRequest().url).toBe('/api/home');
     expect(payload).toEqual(HOME_PAYLOAD);
@@ -99,7 +102,7 @@ describe('fetchHomePayload', () => {
       okResponse({ ...HOME_PAYLOAD, continueWatching: [started] })
     );
 
-    const payload = await fetchHomePayload();
+    const payload = await fetchHomePayload(UNFILTERED);
 
     expect(payload.continueWatching.map((movie) => movie.title)).toEqual([
       'Halfway',
@@ -110,7 +113,49 @@ describe('fetchHomePayload', () => {
   it('throws when the route does not answer OK', async () => {
     fetchMock.mockResolvedValue(serverErrorResponse());
 
-    await expect(fetchHomePayload()).rejects.toThrow(/500/);
+    await expect(fetchHomePayload(UNFILTERED)).rejects.toThrow(/500/);
+  });
+});
+
+describe('fetchHomePayload — asking for a narrowed library', () => {
+  /** The query string the one request carried, parsed rather than matched. */
+  function requestedQuery(): URLSearchParams {
+    return new URLSearchParams(onlyRequest().url.split('?')[1] ?? '');
+  }
+
+  it('asks a clean “/api/home” when nothing narrows the library', async () => {
+    // Every parameter is omitted at its default, so the request matches the
+    // clean “/” the parent is looking at.
+    fetchMock.mockResolvedValue(okResponse(HOME_PAYLOAD));
+
+    await fetchHomePayload(UNFILTERED);
+
+    expect(onlyRequest().url).toBe('/api/home');
+  });
+
+  it('carries the search text to the route as “q”', async () => {
+    fetchMock.mockResolvedValue(okResponse(HOME_PAYLOAD));
+
+    await fetchHomePayload({ ...UNFILTERED, search: 'lighthouse' });
+
+    expect(requestedQuery().get('q')).toBe('lighthouse');
+  });
+
+  it('encodes a term that would otherwise break the query string', async () => {
+    fetchMock.mockResolvedValue(okResponse(HOME_PAYLOAD));
+
+    await fetchHomePayload({ ...UNFILTERED, search: 'comet & season' });
+
+    expect(onlyRequest().url).not.toContain('comet & season');
+    expect(requestedQuery().get('q')).toBe('comet & season');
+  });
+
+  it('omits “q” entirely when the query holds no search text', async () => {
+    fetchMock.mockResolvedValue(okResponse(HOME_PAYLOAD));
+
+    await fetchHomePayload({ ...UNFILTERED, search: undefined });
+
+    expect(requestedQuery().has('q')).toBe(false);
   });
 });
 

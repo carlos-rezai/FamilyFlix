@@ -82,9 +82,9 @@ function respondWithRows(rows: HomeRow[]) {
   });
 }
 
-function renderPage() {
+function renderPage(url = '/') {
   return render(
-    <MemoryRouter>
+    <MemoryRouter initialEntries={[url]}>
       <ThemeProvider theme={theme}>
         <LibraryPage />
       </ThemeProvider>
@@ -94,6 +94,16 @@ function renderPage() {
 
 const logo = () => screen.getByRole('button', { name: /familyflix/i });
 const gear = () => screen.getByRole('button', { name: 'Settings' });
+const searchBox = () =>
+  screen.getByRole('textbox', {
+    name: 'Search your movies',
+  }) as HTMLInputElement;
+
+/** The query string of the home request the page issued. */
+function requestedQuery(): URLSearchParams {
+  const url = String(fetchMock.mock.calls[0][0]);
+  return new URLSearchParams(url.split('?')[1] ?? '');
+}
 
 /**
  * The browse home is composition only: the chrome from `MainLayout` and the
@@ -109,6 +119,28 @@ describe('LibraryPage', () => {
     expect(logo()).toBeDefined();
     expect(gear()).toBeDefined();
     expect(await screen.findByRole('region', { name: 'Action' })).toBeDefined();
+  });
+
+  it('mounts the search bar in the header, beside the chrome that was always there', async () => {
+    respondWithRows(HOME_PAYLOAD);
+
+    renderPage();
+
+    expect(searchBox()).toBeDefined();
+    expect(logo()).toBeDefined();
+    expect(gear()).toBeDefined();
+    await screen.findByRole('region', { name: 'Action' });
+  });
+
+  it('holds no query of its own — the URL feeds both the box and the request', async () => {
+    // The page composes two subtrees that never speak to each other; a query
+    // in the URL reaches both without the page storing anything.
+    respondWithRows(HOME_PAYLOAD);
+
+    renderPage('/?q=northwind');
+
+    expect(searchBox().value).toBe('northwind');
+    await waitFor(() => expect(requestedQuery().get('q')).toBe('northwind'));
   });
 
   it('keeps the header rendered through loading, failure, and success', async () => {
