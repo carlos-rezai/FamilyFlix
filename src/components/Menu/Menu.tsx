@@ -9,7 +9,7 @@ import {
   type Ref,
 } from 'react';
 
-import { Slot, Panel, Item, Glyph } from './Menu.styles';
+import { Slot, Panel, Item, Glyph, Trailing } from './Menu.styles';
 
 /**
  * What the caller must spread onto whatever control opens the menu. Handing
@@ -46,17 +46,38 @@ export interface MenuItemProps {
   children: ReactNode;
   /** Decorative leading character, kept out of the accessible name. */
   glyph?: ReactNode;
+  /**
+   * Marks the row a filter list currently stands on: accent, 600, and
+   * `aria-current`. A statement about the row, not a mode — a marked row still
+   * reports and still shuts the menu like any other.
+   */
+  selected?: boolean;
+  /**
+   * Chrome at the row's right edge — the filter list's count. Decorative like
+   * the glyph, so it stays out of the accessible name.
+   */
+  trailing?: ReactNode;
   /** What the item does. The menu is already closing by the time this runs. */
   onSelect: () => void;
 }
 
 /** One row of a `Menu`. Closes the menu, then does its own work. */
-export function MenuItem({ children, glyph, onSelect }: MenuItemProps) {
+export function MenuItem({
+  children,
+  glyph,
+  selected = false,
+  trailing,
+  onSelect,
+}: MenuItemProps) {
   const close = useContext(CloseContext);
 
   return (
     <Item
       type="button"
+      $selected={selected}
+      // Not `role="menuitemradio"`: that promises the arrow-key navigation of
+      // the full ARIA menu pattern, which this menu does not implement.
+      aria-current={selected ? 'true' : undefined}
       onClick={() => {
         // Close first: closing returns focus to the trigger, and a navigation
         // that ran first would be handing focus back on a page that has gone.
@@ -66,6 +87,9 @@ export function MenuItem({ children, glyph, onSelect }: MenuItemProps) {
     >
       {glyph === undefined ? null : <Glyph aria-hidden="true">{glyph}</Glyph>}
       {children}
+      {trailing === undefined ? null : (
+        <Trailing aria-hidden="true">{trailing}</Trailing>
+      )}
     </Item>
   );
 }

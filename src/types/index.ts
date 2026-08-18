@@ -22,4 +22,5 @@ export type {
   ContinueCardMovie,
   MovieDetailModel,
   GenreRowModel,
+  FilterOption,
 } from './viewModels';

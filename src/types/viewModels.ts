@@ -101,3 +101,21 @@ export interface GenreRowModel {
   count: number;
   movies: PosterCardMovie[];
 }
+
+/**
+ * One row of a `FilterDropdown` menu — the shape the Genre, Sort and Rating
+ * dropdowns all build. A view model rather than a component-local type because
+ * three different callers construct it from three different sources (genre
+ * counts, the sort slugs, the rating thresholds) and only the dropdown renders
+ * it.
+ */
+export interface FilterOption {
+  /** The row's visible text, and its accessible name. */
+  label: string;
+  /** The tally shown at the row's right edge; omitted when there is none. */
+  count?: number;
+  /** True for the option the dropdown currently shows as its value. */
+  selected: boolean;
+  /** What choosing the row does. The panel is already closing by then. */
+  onSelect: () => void;
+}
