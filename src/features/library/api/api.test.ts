@@ -297,3 +297,58 @@ describe('fetchHomePayload — the genre', () => {
     expect(requested.get('sort')).toBe('a-z');
   });
 });
+
+// --- 05 — Search + filter, Phase 5: "the Rating dropdown" (issue #37) ---------
+
+describe('fetchHomePayload — the minimum rating', () => {
+  /** The query string of the single request that was issued, parsed. */
+  function requestedQuery(): URLSearchParams {
+    return new URLSearchParams(onlyRequest().url.split('?')[1] ?? '');
+  }
+
+  it('asks for the minimum the query is carrying, under the wire name', async () => {
+    // `minRating` is the domain name; `rating` is what the app URL and the
+    // route both spell it.
+    fetchMock.mockResolvedValue(okResponse(HOME_PAYLOAD));
+
+    await fetchHomePayload({ ...UNFILTERED, minRating: 6 });
+
+    expect(requestedQuery().get('rating')).toBe('6');
+  });
+
+  it('omits the parameter when no minimum is set', async () => {
+    fetchMock.mockResolvedValue(okResponse(HOME_PAYLOAD));
+
+    await fetchHomePayload(UNFILTERED);
+
+    // "All ratings" is the absence of the filter, so it asks a clean URL.
+    expect(onlyRequest().url).toBe('/api/home');
+  });
+
+  it('omits the parameter for a minimum of nought', async () => {
+    // A zero minimum would exclude every unrated movie; "All ratings" means
+    // asking for no minimum at all.
+    fetchMock.mockResolvedValue(okResponse(HOME_PAYLOAD));
+
+    await fetchHomePayload({ ...UNFILTERED, minRating: 0 });
+
+    expect(onlyRequest().url).toBe('/api/home');
+  });
+
+  it('asks a rated, filtered, searched, sorted home as one request', async () => {
+    fetchMock.mockResolvedValue(okResponse(HOME_PAYLOAD));
+
+    await fetchHomePayload({
+      sort: 'a-z',
+      search: 'comet',
+      genre: 'Drama',
+      minRating: 8,
+    });
+
+    const requested = requestedQuery();
+    expect(requested.get('q')).toBe('comet');
+    expect(requested.get('genre')).toBe('Drama');
+    expect(requested.get('sort')).toBe('a-z');
+    expect(requested.get('rating')).toBe('8');
+  });
+});

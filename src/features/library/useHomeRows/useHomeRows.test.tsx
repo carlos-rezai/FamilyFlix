@@ -909,3 +909,135 @@ describe('useHomeRows — the genre filter', () => {
     expect(result.current.rows[0].movies).toHaveLength(1);
   });
 });
+
+// --- 05 — Search + filter, Phase 5: "the Rating dropdown" (issue #37) ---------
+
+describe('useHomeRows — the minimum rating', () => {
+  /** The library narrowed to what is well rated, as a filtered request answers it. */
+  const HIGHLY_RATED_PAYLOAD: HomePayload = {
+    continueWatching: [],
+    rows: [
+      {
+        genre: 'Action',
+        count: 3,
+        movies: [makeMovie({ id: 'a1', title: 'Northwind', rating: 9 })],
+      },
+    ],
+  };
+
+  it('asks with the minimum the URL was opened on, so a shared link loads filtered', async () => {
+    serve(HIGHLY_RATED_PAYLOAD);
+
+    const { result } = await loadRows('/?rating=8');
+
+    expect(homeRequests()).toHaveLength(1);
+    expect(homeQuery(0).get('rating')).toBe('8');
+    expect(result.current.rows.map((row) => row.genre)).toEqual(['Action']);
+  });
+
+  it('asks for the whole library when the URL carries no minimum', async () => {
+    serve(HOME_PAYLOAD);
+
+    await loadRows('/');
+
+    expect(homeQuery(0).has('rating')).toBe(false);
+  });
+
+  it('asks for no minimum when the URL carries one the dropdown never wrote', async () => {
+    // The header's pill would read "All ratings" for this URL; the request has
+    // to agree with it, or the screen contradicts itself.
+    serve(HOME_PAYLOAD);
+
+    await loadRows('/?rating=7');
+
+    expect(homeQuery(0).has('rating')).toBe(false);
+  });
+
+  it('asks for no minimum when the URL carries a nought', async () => {
+    serve(HOME_PAYLOAD);
+
+    await loadRows('/?rating=0');
+
+    expect(homeQuery(0).has('rating')).toBe(false);
+  });
+
+  it('asks again, for the new minimum, when only the rating changes', async () => {
+    fetchMock.mockImplementationOnce(() =>
+      Promise.resolve(okResponse(HOME_PAYLOAD))
+    );
+    fetchMock.mockImplementation(() =>
+      Promise.resolve(okResponse(HIGHLY_RATED_PAYLOAD))
+    );
+    const { result } = await loadRows('/');
+    expect(result.current.rows.map((row) => row.genre)).toEqual([
+      'Action',
+      'Comedy',
+    ]);
+
+    act(() => goTo('/?rating=8'));
+
+    await waitFor(() =>
+      expect(result.current.rows.map((row) => row.genre)).toEqual(['Action'])
+    );
+    expect(homeQuery(1).get('rating')).toBe('8');
+  });
+
+  it('goes back to the whole library when the minimum is cleared', async () => {
+    fetchMock.mockImplementationOnce(() =>
+      Promise.resolve(okResponse(HIGHLY_RATED_PAYLOAD))
+    );
+    fetchMock.mockImplementation(() =>
+      Promise.resolve(okResponse(HOME_PAYLOAD))
+    );
+    const { result } = await loadRows('/?rating=8');
+
+    act(() => goTo('/'));
+
+    await waitFor(() =>
+      expect(result.current.rows.map((row) => row.genre)).toEqual([
+        'Action',
+        'Comedy',
+      ])
+    );
+    expect(homeQuery(1).has('rating')).toBe(false);
+  });
+
+  it('keeps the rows already on screen while the rated ones load', async () => {
+    fetchMock.mockImplementationOnce(() =>
+      Promise.resolve(okResponse(HOME_PAYLOAD))
+    );
+    const { result } = await loadRows('/');
+
+    fetchMock.mockImplementation(() => new Promise<Response>(() => undefined));
+    act(() => goTo('/?rating=8'));
+
+    await waitFor(() => expect(homeRequests()).toHaveLength(2));
+    expect(result.current.status).toBe('ready');
+    expect(result.current.rows.map((row) => row.genre)).toEqual([
+      'Action',
+      'Comedy',
+    ]);
+  });
+
+  it('does not reload when a parameter it does not read changes', async () => {
+    serve(HOME_PAYLOAD);
+    await loadRows('/?rating=8');
+
+    act(() => goTo('/?rating=8&scroll=120'));
+
+    await waitFor(() => expect(homeRequests()).toHaveLength(1));
+  });
+
+  it('asks a rated, filtered, searched, sorted home as one request', async () => {
+    serve(HIGHLY_RATED_PAYLOAD);
+
+    await loadRows('/?q=comet&genre=Action&sort=a-z&rating=8');
+
+    expect(homeRequests()).toHaveLength(1);
+    const asked = homeQuery(0);
+    expect(asked.get('q')).toBe('comet');
+    expect(asked.get('genre')).toBe('Action');
+    expect(asked.get('sort')).toBe('a-z');
+    expect(asked.get('rating')).toBe('8');
+  });
+});

@@ -316,3 +316,96 @@ describe('useLibraryQuery — writing the genre', () => {
     expect(currentUrl()).toBe('/movie/a1');
   });
 });
+
+// --- 05 — Search + filter, Phase 5: "the Rating dropdown" (issue #37) ---------
+
+describe('useLibraryQuery — reading the minimum rating', () => {
+  it('reads the minimum the URL is carrying, under its domain name', () => {
+    const { result } = mountOn(['/?rating=6']);
+
+    expect(result.current.query.minRating).toBe(6);
+  });
+
+  it('holds no minimum on a clean “/”', () => {
+    const { result } = mountOn(['/']);
+
+    expect(result.current.query.minRating).toBeUndefined();
+  });
+
+  it('ignores a minimum the dropdown could not have written', () => {
+    // A hand-edited URL must not narrow the library behind a pill that still
+    // says "All ratings".
+    const { result } = mountOn(['/?rating=7']);
+
+    expect(result.current.query.minRating).toBeUndefined();
+  });
+
+  it('reports the new minimum once the URL has changed', () => {
+    const { result } = mountOn(['/']);
+
+    act(() => result.current.setRating(8));
+
+    expect(result.current.query.minRating).toBe(8);
+  });
+});
+
+describe('useLibraryQuery — writing the minimum rating', () => {
+  it('writes the chosen minimum into the URL as “rating”', () => {
+    const { result } = mountOn(['/']);
+
+    act(() => result.current.setRating(6));
+
+    expect(currentUrl()).toBe('/?rating=6');
+  });
+
+  it('removes “rating” for nought, so “All ratings” is a clean “/”', () => {
+    const { result } = mountOn(['/?rating=8']);
+
+    act(() => result.current.setRating(0));
+
+    expect(currentUrl()).toBe('/');
+  });
+
+  it('leaves the search text, the genre and the order exactly as it found them', () => {
+    const { result } = mountOn(['/?q=lighthouse&genre=Drama&sort=a-z']);
+
+    act(() => result.current.setRating(8));
+
+    const written = new URLSearchParams(String(currentUrl()).split('?')[1]);
+    expect(written.get('q')).toBe('lighthouse');
+    expect(written.get('genre')).toBe('Drama');
+    expect(written.get('sort')).toBe('a-z');
+    expect(written.get('rating')).toBe('8');
+  });
+
+  it('removes only its own parameter when the minimum is cleared', () => {
+    const { result } = mountOn(['/?q=lighthouse&genre=Drama&rating=8']);
+
+    act(() => result.current.setRating(0));
+
+    const written = new URLSearchParams(String(currentUrl()).split('?')[1]);
+    expect(written.has('rating')).toBe(false);
+    expect(written.get('q')).toBe('lighthouse');
+    expect(written.get('genre')).toBe('Drama');
+  });
+
+  it('replaces the minimum rather than stacking a second one', () => {
+    const { result } = mountOn(['/?rating=8']);
+
+    act(() => result.current.setRating(4));
+
+    expect(currentUrl()).toBe('/?rating=4');
+  });
+
+  it('costs no history, so one Back still escapes the whole screen', () => {
+    const { result } = mountOn(['/movie/a1', '/']);
+
+    act(() => result.current.setRating(8));
+    act(() => result.current.setRating(6));
+    act(() => result.current.setRating(0));
+
+    goBack();
+
+    expect(currentUrl()).toBe('/movie/a1');
+  });
+});

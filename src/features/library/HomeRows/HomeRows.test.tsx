@@ -613,3 +613,72 @@ describe('HomeRows — filters that matched nothing', () => {
     expect(await screen.findByText(FILTER_MISS)).toBeDefined();
   });
 });
+
+// --- 05 — Search + filter, Phase 5: "the Rating dropdown" (issue #37) ---------
+
+describe('HomeRows — a rating that matched nothing', () => {
+  const FILTER_MISS =
+    'No movies match these filters. Try a different genre or rating.';
+
+  it('talks about the filters when only a rating is narrowing the library', async () => {
+    // A cut-off is a filter with no term to quote, exactly like a genre.
+    respondWithRows([], []);
+
+    renderRows('/?rating=8');
+
+    expect(await screen.findByText('Nothing here')).toBeDefined();
+    expect(screen.getByText(FILTER_MISS)).toBeDefined();
+  });
+
+  it('never quotes an empty search back', async () => {
+    respondWithRows([], []);
+
+    renderRows('/?rating=8');
+
+    await screen.findByText('Nothing here');
+    expect(screen.queryByText(/“”/)).toBeNull();
+  });
+
+  it('talks about the filters when a rating and a genre are both set', async () => {
+    respondWithRows([], []);
+
+    renderRows('/?genre=Drama&rating=6');
+
+    expect(await screen.findByText('Nothing here')).toBeDefined();
+    expect(screen.getByText(FILTER_MISS)).toBeDefined();
+  });
+
+  it('quotes the term when a search is what narrowed the library', async () => {
+    respondWithRows([], []);
+
+    renderRows('/?q=lighthouse&rating=8');
+
+    expect(await screen.findByText('Nothing here')).toBeDefined();
+    expect(
+      screen.getByText(
+        'No movies match “lighthouse”. Try a different search or genre.'
+      )
+    ).toBeDefined();
+    expect(screen.queryByText(FILTER_MISS)).toBeNull();
+  });
+
+  it('keeps the empty library’s own words for a rating the query drops', async () => {
+    // A URL the filter never applied is not a filter that missed — the shelf
+    // really is empty.
+    respondWithRows([], []);
+
+    renderRows('/?rating=7');
+
+    expect(await screen.findByText(/your library is empty/i)).toBeDefined();
+    expect(screen.queryByText(FILTER_MISS)).toBeNull();
+  });
+
+  it('shows the row, not the miss, when the rating did match something', async () => {
+    respondWithRows([LIBRARY[0]], []);
+
+    renderRows('/?rating=8');
+
+    await findGenreHeading(LIBRARY[0].genre);
+    expect(screen.queryByText('Nothing here')).toBeNull();
+  });
+});

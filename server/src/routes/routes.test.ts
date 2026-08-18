@@ -791,3 +791,232 @@ describe('GET /api/home?genre=', () => {
     expect(home.rows.map((row) => row.genre)).toEqual(['Sci-Fi']);
   });
 });
+
+// --- 05 — Search + filter, Phase 5: "the Rating dropdown" (issue #37) ---------
+
+/**
+ * A library whose Drama row disagrees on rating alone: one movie at each of the
+ * cut-offs the dropdown offers, one below all of them, and one nobody has rated
+ * at all. Two of them are part-way through, so the continue section is narrowed
+ * by the same minimum rather than left whole.
+ */
+function addRatedLibrary(storage: LibraryStorage): void {
+  storage.addMovie({
+    title: 'Masterpiece',
+    videoPath: 'Masterpiece/masterpiece.mkv',
+    rating: 9,
+    genres: ['Drama'],
+    resumePositionSeconds: 600,
+  });
+  storage.addMovie({
+    title: 'Solid',
+    videoPath: 'Solid/solid.mkv',
+    rating: 7,
+    genres: ['Drama'],
+  });
+  storage.addMovie({
+    title: 'Passable',
+    videoPath: 'Passable/passable.mkv',
+    rating: 5,
+    genres: ['Drama'],
+    resumePositionSeconds: 300,
+  });
+  storage.addMovie({
+    title: 'Dreadful',
+    videoPath: 'Dreadful/dreadful.mkv',
+    rating: 2,
+    genres: ['Drama'],
+  });
+  storage.addMovie({
+    title: 'Unrated',
+    videoPath: 'Unrated/unrated.mkv',
+    genres: ['Drama'],
+  });
+}
+
+/** The titles of the Drama row under one minimum, sorted so they can be compared. */
+async function ratedDramaTitles(
+  baseUrl: string,
+  query: Record<string, string>
+): Promise<string[]> {
+  const response = await homeResponse(baseUrl, query);
+  expect(response.status).toBe(200);
+  const home = (await response.json()) as HomePayload;
+  const drama = home.rows.find((row) => row.genre === 'Drama');
+  return (drama?.movies ?? []).map((movie) => movie.title).sort();
+}
+
+describe('GET /api/home?rating=', () => {
+  it('narrows the rows to movies at or above the minimum', async () => {
+    const { storage, baseUrl } = freshApi();
+    addRatedLibrary(storage);
+
+    // 8 is "4+ stars" — ratings are stored in 0–10 half-star units.
+    expect(await ratedDramaTitles(baseUrl, { rating: '8' })).toEqual([
+      'Masterpiece',
+    ]);
+  });
+
+  it('reads each cut-off the dropdown offers as its own minimum', async () => {
+    const { storage, baseUrl } = freshApi();
+    addRatedLibrary(storage);
+
+    expect(await ratedDramaTitles(baseUrl, { rating: '6' })).toEqual([
+      'Masterpiece',
+      'Solid',
+    ]);
+    expect(await ratedDramaTitles(baseUrl, { rating: '4' })).toEqual([
+      'Masterpiece',
+      'Passable',
+      'Solid',
+    ]);
+  });
+
+  it('excludes movies nobody has rated whenever a minimum is set', async () => {
+    const { storage, baseUrl } = freshApi();
+    addRatedLibrary(storage);
+
+    // Unrated means nobody has said anything yet — not a nought out of ten,
+    // and never a pass at "2+ stars".
+    expect(await ratedDramaTitles(baseUrl, { rating: '4' })).not.toContain(
+      'Unrated'
+    );
+  });
+
+  it('narrows the continue section by the same minimum', async () => {
+    const { storage, baseUrl } = freshApi();
+    addRatedLibrary(storage);
+
+    const response = await homeResponse(baseUrl, { rating: '8' });
+    const home = (await response.json()) as HomePayload;
+
+    // The top of the screen can never disagree with the rest of it.
+    expect(home.continueWatching.map((movie) => movie.title)).toEqual([
+      'Masterpiece',
+    ]);
+  });
+
+  it('keeps the row’s count at the genre’s unfiltered total', async () => {
+    const { storage, baseUrl } = freshApi();
+    addRatedLibrary(storage);
+
+    const response = await homeResponse(baseUrl, { rating: '8' });
+    const home = (await response.json()) as HomePayload;
+
+    // "View all 5" stays honest however far the minimum narrows the row.
+    expect(home.rows[0].count).toBe(5);
+  });
+
+  it('answers an empty ?rating= exactly as an argument-less request', async () => {
+    const { storage, baseUrl } = freshApi();
+    addRatedLibrary(storage);
+
+    const response = await homeResponse(baseUrl, { rating: '' });
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual(await getHomePayload(baseUrl));
+  });
+
+  it('reads a minimum of nought as no minimum, so unrated movies stay', async () => {
+    const { storage, baseUrl } = freshApi();
+    addRatedLibrary(storage);
+
+    // "All ratings" is the absence of the filter, not a floor of zero.
+    expect(await ratedDramaTitles(baseUrl, { rating: '0' })).toContain(
+      'Unrated'
+    );
+  });
+
+  it('takes a minimum anywhere on the stored scale, not only the dropdown’s', async () => {
+    const { storage, baseUrl } = freshApi();
+    addRatedLibrary(storage);
+
+    // The route is a general API over 0–10; the four cut-offs are the
+    // control's vocabulary, not the endpoint's.
+    expect(await ratedDramaTitles(baseUrl, { rating: '7' })).toEqual([
+      'Masterpiece',
+      'Solid',
+    ]);
+  });
+
+  it('answers with an empty payload when nothing is rated that highly', async () => {
+    const { storage, baseUrl } = freshApi();
+    addRatedLibrary(storage);
+
+    const response = await homeResponse(baseUrl, { rating: '10' });
+
+    // A minimum nothing meets is a normal "nothing here", not a 404.
+    expect(response.status).toBe(200);
+    const home = (await response.json()) as HomePayload;
+    expect(home.rows).toEqual([]);
+    expect(home.continueWatching).toEqual([]);
+  });
+
+  it('takes the minimum, the genre, the term and the order in one request', async () => {
+    const { storage, baseUrl } = freshApi();
+    addRatedLibrary(storage);
+
+    const response = await homeResponse(baseUrl, {
+      rating: '6',
+      genre: 'Drama',
+      q: 'a',
+      sort: 'a-z',
+    });
+
+    expect(response.status).toBe(200);
+    const home = (await response.json()) as HomePayload;
+    expect(home.rows.map((row) => row.genre)).toEqual(['Drama']);
+    expect(home.rows[0].movies.map((movie) => movie.title)).toEqual([
+      'Masterpiece',
+      'Solid',
+    ]);
+  });
+});
+
+describe('GET /api/home?rating= — a rating the route cannot read', () => {
+  it('rejects a rating that is not a number', async () => {
+    const { storage, baseUrl } = freshApi();
+    addRatedLibrary(storage);
+
+    const response = await homeResponse(baseUrl, { rating: 'four' });
+
+    expect(response.status).toBe(400);
+    const body = (await response.json()) as { error?: unknown };
+    expect(typeof body.error).toBe('string');
+    expect(body.error).not.toBe('');
+  });
+
+  it('rejects a negative rating', async () => {
+    const { storage, baseUrl } = freshApi();
+    addRatedLibrary(storage);
+
+    expect((await homeResponse(baseUrl, { rating: '-1' })).status).toBe(400);
+  });
+
+  it('rejects a rating above the top of the scale', async () => {
+    const { storage, baseUrl } = freshApi();
+    addRatedLibrary(storage);
+
+    // Ten is five stars; there is nothing beyond it to ask for.
+    expect((await homeResponse(baseUrl, { rating: '11' })).status).toBe(400);
+  });
+
+  it('rejects a fractional rating, since a rating is a whole half-star unit', async () => {
+    const { storage, baseUrl } = freshApi();
+    addRatedLibrary(storage);
+
+    expect((await homeResponse(baseUrl, { rating: '4.5' })).status).toBe(400);
+  });
+
+  it('leaves the library alone when it refuses, rather than answering half a home', async () => {
+    const { storage, baseUrl } = freshApi();
+    addRatedLibrary(storage);
+
+    await homeResponse(baseUrl, { rating: 'four' });
+
+    // The refusal is the whole answer — the next honest request still works.
+    expect(await ratedDramaTitles(baseUrl, { rating: '8' })).toEqual([
+      'Masterpiece',
+    ]);
+  });
+});

@@ -334,3 +334,87 @@ describe('LibraryPage — the genre dropdown in the header', () => {
     expect(genrePill()).toBeDefined();
   });
 });
+
+/**
+ * 05 — Search + filter, Phase 5: "the Rating dropdown" (issue #37). The last
+ * of the four header controls, and the one with no visible caption — so the
+ * page's claim is that all four are mounted and all four feed the one request.
+ */
+describe('LibraryPage — the rating dropdown in the header', () => {
+  const genrePill = (value = 'All Genres') =>
+    screen.getByRole('button', { name: `Genre: ${value}` });
+
+  const ratingPill = (value = 'All ratings') =>
+    screen.getByRole('button', { name: `Minimum rating: ${value}` });
+
+  const sortPill = (value = 'Recently Added') =>
+    screen.getByRole('button', { name: `Sort: ${value}` });
+
+  it('mounts all four controls in the header, beside the gear', async () => {
+    respondWithRows(HOME_PAYLOAD);
+
+    renderPage();
+
+    expect(searchBox()).toBeDefined();
+    expect(genrePill()).toBeDefined();
+    expect(ratingPill()).toBeDefined();
+    expect(sortPill()).toBeDefined();
+    expect(gear()).toBeDefined();
+    await screen.findByRole('region', { name: 'Action' });
+  });
+
+  it('opens showing the minimum the URL carries, and asks the route for it too', async () => {
+    // Same URL, both subtrees: the pill and the request agree without the page
+    // holding anything.
+    respondWithRows(HOME_PAYLOAD);
+
+    renderPage('/?rating=6');
+
+    expect(ratingPill('3+ stars')).toBeDefined();
+    await waitFor(() => expect(requestedQuery().get('rating')).toBe('6'));
+  });
+
+  it('asks one narrowed question of the route, not four', async () => {
+    // "Highest rated comedies with a lighthouse in them" is a single request.
+    respondWithRows(HOME_PAYLOAD);
+
+    renderPage('/?q=lighthouse&genre=Action&sort=a-z&rating=8');
+
+    await screen.findByRole('region', { name: 'Action' });
+    const asked = requestedQuery();
+    expect(asked.get('q')).toBe('lighthouse');
+    expect(asked.get('genre')).toBe('Action');
+    expect(asked.get('sort')).toBe('a-z');
+    expect(asked.get('rating')).toBe('8');
+  });
+
+  it('narrows the library when a cut-off is chosen from the header', async () => {
+    respondWithRows(HOME_PAYLOAD);
+    respondWithRows([
+      { genre: 'Action', count: 214, movies: [makeMovie({ id: 'a1' })] },
+    ]);
+
+    renderPage();
+    await screen.findByRole('region', { name: 'Action' });
+
+    fireEvent.click(ratingPill());
+    fireEvent.click(screen.getByRole('button', { name: '4+ stars' }));
+
+    await waitFor(() =>
+      expect(
+        fetchMock.mock.calls
+          .map(([input]) => String(input))
+          .filter((url) => url.includes('/api/home'))
+      ).toHaveLength(2)
+    );
+    expect(ratingPill('4+ stars')).toBeDefined();
+  });
+
+  it('keeps the rating dropdown rendered while the library is still loading', async () => {
+    fetchMock.mockImplementation(() => new Promise<Response>(() => undefined));
+
+    renderPage();
+
+    expect(ratingPill()).toBeDefined();
+  });
+});

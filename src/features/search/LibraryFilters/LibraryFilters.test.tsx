@@ -596,3 +596,285 @@ describe('LibraryFilters — when the genre list cannot be loaded', () => {
     expect(genrePill('Drama')).toBeTruthy();
   });
 });
+
+// --- 05 — Search + filter, Phase 5: "the Rating dropdown" (issue #37) ---------
+
+/** The panel's rows in the prototype's order (`FamilyFlix.dc.html:162`). */
+const RATING_ROWS = ['All ratings', '4+ stars', '3+ stars', '2+ stars'];
+
+/** The rows paired with the minimum each one writes, in stored half-star units. */
+const RATING_OPTIONS = [
+  ['4+ stars', '8'],
+  ['3+ stars', '6'],
+  ['2+ stars', '4'],
+] as const;
+
+/**
+ * The rating pill, found by the name it announces. There is no caption on
+ * screen to find it by — the accessible name is the only name it has.
+ */
+const ratingPill = (value = 'All ratings') =>
+  screen.getByRole('button', { name: `Minimum rating: ${value}` });
+
+/** Opens it the way a keyboard user does — focus the pill, then activate it. */
+function openRating(value?: string) {
+  const control = ratingPill(value);
+  act(() => control.focus());
+  fireEvent.click(control);
+  return control;
+}
+
+/** The header's pills in the order the document holds them. */
+function headerPillOrder(): string[] {
+  return screen
+    .getAllByRole('button')
+    .map((control) => control.getAttribute('aria-label') ?? '')
+    .filter((name) => /^(Genre|Minimum rating|Sort):/.test(name))
+    .map((name) => name.split(':')[0]);
+}
+
+describe('LibraryFilters — the rating pill', () => {
+  it('shows “All ratings” on a clean “/”, so the way out is already visible', () => {
+    renderFilters('/');
+
+    expect(ratingPill().textContent).toContain('All ratings');
+  });
+
+  it('wears a ★ where the other pills wear a word', () => {
+    renderFilters('/');
+
+    expect(ratingPill().textContent).toContain('★');
+  });
+
+  it('shows no caption on screen, which is what the ★ is standing in for', () => {
+    renderFilters('/');
+
+    expect(ratingPill().textContent).not.toContain('Minimum rating');
+    expect(screen.queryByText('Minimum rating')).toBeNull();
+  });
+
+  it('still announces what it filters, so the pill is not a value with no subject', () => {
+    // `showLabel={false}` hides the caption; it never drops it from the name.
+    renderFilters('/?rating=6');
+
+    expect(ratingPill('3+ stars').getAttribute('aria-label')).toBe(
+      'Minimum rating: 3+ stars'
+    );
+  });
+
+  it('shows the minimum the URL is carrying', () => {
+    // A shared or bookmarked link opens with the pill already saying so.
+    renderFilters('/?rating=8');
+
+    expect(ratingPill('4+ stars')).toBeTruthy();
+  });
+
+  it('shows “All ratings” for a minimum the dropdown could not have written', () => {
+    // The pill and the rows must agree: a URL the query drops is a filter that
+    // is not applied.
+    renderFilters('/?rating=7');
+
+    expect(ratingPill()).toBeTruthy();
+  });
+
+  it('sits between the genre and the sort pills, as the prototype draws them', () => {
+    renderFilters('/');
+
+    expect(headerPillOrder()).toEqual(['Genre', 'Minimum rating', 'Sort']);
+  });
+
+  it('lists nothing until it is opened', () => {
+    renderFilters('/');
+
+    expect(noOptionRow('3+ stars')).toBeNull();
+  });
+});
+
+describe('LibraryFilters — the rating list', () => {
+  it('offers the four cut-offs in order, strongest first under “All ratings”', () => {
+    renderFilters('/');
+
+    const control = openRating();
+
+    expect(openOptionLabels(control)).toEqual(RATING_ROWS);
+  });
+
+  it('writes every cut-off in stars rather than in stored units', () => {
+    renderFilters('/');
+
+    openRating();
+
+    // Nobody has to know that "3+ stars" is a 6 on the wire.
+    expect(noOptionRow('6')).toBeNull();
+    expect(optionRow('3+ stars')).toBeTruthy();
+  });
+
+  it('shows no tally beside a cut-off, unlike the genre rows', () => {
+    renderFilters('/');
+
+    const control = openRating();
+
+    for (const row of openOptionLabels(control)) {
+      expect(row).not.toMatch(/\d+$/);
+    }
+  });
+
+  it('marks the cut-off the URL is carrying as the current one', () => {
+    renderFilters('/?rating=6');
+
+    openRating('3+ stars');
+
+    expect(optionRow('3+ stars').getAttribute('aria-current')).toBe('true');
+  });
+
+  it('marks “All ratings” when nothing is filtering', () => {
+    renderFilters('/');
+
+    openRating();
+
+    expect(optionRow('All ratings').getAttribute('aria-current')).toBe('true');
+  });
+});
+
+describe('LibraryFilters — choosing a minimum rating', () => {
+  it('writes the chosen cut-off into the URL as “rating”', () => {
+    for (const [label, value] of RATING_OPTIONS) {
+      const view = renderFilters('/');
+
+      openRating();
+      fireEvent.click(optionRow(label));
+
+      expect(currentUrl()).toBe(`/?rating=${value}`);
+      view.unmount();
+    }
+  });
+
+  it('takes the parameter back off the URL for “All ratings”', () => {
+    renderFilters('/?rating=8');
+
+    openRating('4+ stars');
+    fireEvent.click(optionRow('All ratings'));
+
+    expect(currentUrl()).toBe('/');
+  });
+
+  it('shuts the panel once a cut-off is chosen', () => {
+    renderFilters('/');
+
+    openRating();
+    fireEvent.click(optionRow('3+ stars'));
+
+    expect(noOptionRow('2+ stars')).toBeNull();
+  });
+
+  it('shows the new cut-off on the pill', () => {
+    renderFilters('/');
+
+    openRating();
+    fireEvent.click(optionRow('3+ stars'));
+
+    expect(ratingPill('3+ stars')).toBeTruthy();
+  });
+
+  it('replaces the minimum rather than stacking a second one', () => {
+    renderFilters('/?rating=8');
+
+    openRating('4+ stars');
+    fireEvent.click(optionRow('2+ stars'));
+
+    expect(currentUrl()).toBe('/?rating=4');
+  });
+
+  it('leaves the search text, the genre and the order alone', () => {
+    // "Highest rated comedies" is one question, not two.
+    renderFilters('/?q=lighthouse&genre=Comedy&sort=highest-rated');
+
+    openRating();
+    fireEvent.click(optionRow('4+ stars'));
+
+    const written = new URLSearchParams(String(currentUrl()).split('?')[1]);
+    expect(written.get('q')).toBe('lighthouse');
+    expect(written.get('genre')).toBe('Comedy');
+    expect(written.get('sort')).toBe('highest-rated');
+    expect(written.get('rating')).toBe('8');
+  });
+});
+
+describe('LibraryFilters — the rating pill from the keyboard', () => {
+  it('offers the pill as a real button, so Tab reaches it', () => {
+    renderFilters('/');
+
+    act(() => ratingPill().focus());
+
+    expect(document.activeElement).toBe(ratingPill());
+  });
+
+  it('opens on the pill being activated, onto options that are buttons too', () => {
+    renderFilters('/');
+
+    openRating();
+
+    for (const label of RATING_ROWS) {
+      expect(optionRow(label).tagName).toBe('BUTTON');
+    }
+  });
+
+  it('hands focus back to the pill when a cut-off is chosen', () => {
+    renderFilters('/');
+
+    openRating();
+    fireEvent.click(optionRow('3+ stars'));
+
+    expect(document.activeElement).toBe(ratingPill('3+ stars'));
+  });
+
+  it('closes on Escape, with focus back on the pill and the URL untouched', () => {
+    renderFilters('/');
+
+    openRating();
+    fireEvent.keyDown(document, { key: 'Escape' });
+
+    expect(noOptionRow('3+ stars')).toBeNull();
+    expect(document.activeElement).toBe(ratingPill());
+    expect(currentUrl()).toBe('/');
+  });
+});
+
+describe('LibraryFilters — three pills in one header', () => {
+  it('opens the rating panel and the genre panel one at a time', async () => {
+    renderFilters('/');
+
+    const genre = await openGenre();
+    expect(optionRow('Drama')).toBeTruthy();
+
+    const rating = ratingPill();
+    act(() => rating.focus());
+    fireEvent.pointerDown(rating);
+    fireEvent.click(rating);
+
+    // Opening a third pill is a press outside the other two, which is already
+    // what shuts them — still no coordinating state anywhere.
+    expect(openOptionLabels(genre)).toEqual([]);
+    expect(optionRow('3+ stars')).toBeTruthy();
+  });
+
+  it('shows all three pills with what the URL says, without any reading another', () => {
+    renderFilters('/?genre=Drama&sort=year&rating=6');
+
+    expect(genrePill('Drama')).toBeTruthy();
+    expect(ratingPill('3+ stars')).toBeTruthy();
+    expect(pill('Year')).toBeTruthy();
+  });
+
+  it('keeps working when the genre list cannot be loaded', async () => {
+    // The genre list has no error state by design; its failure must not take
+    // the rating filter down with it.
+    fetchMock.mockRejectedValue(new Error('offline'));
+    renderFilters('/');
+
+    openRating();
+    fireEvent.click(optionRow('4+ stars'));
+
+    expect(currentUrl()).toBe('/?rating=8');
+  });
+});

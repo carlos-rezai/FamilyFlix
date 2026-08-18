@@ -149,3 +149,83 @@ describe('parseLibraryQuery — the genre', () => {
     });
   });
 });
+
+// --- 05 — Search + filter, Phase 5: "the Rating dropdown" (issue #37) ---------
+
+describe('parseLibraryQuery — the minimum rating', () => {
+  it('reads “rating” as the query’s minimum, under its domain name', () => {
+    // `rating` is the wire name the app URL and `GET /api/home` share;
+    // `minRating` is what the repository calls it.
+    expect(parseLibraryQuery(params('?rating=6'))).toEqual({
+      sort: 'recently-added',
+      minRating: 6,
+    });
+  });
+
+  it('reads every cut-off the dropdown offers', () => {
+    expect(parseLibraryQuery(params('?rating=8')).minRating).toBe(8);
+    expect(parseLibraryQuery(params('?rating=6')).minRating).toBe(6);
+    expect(parseLibraryQuery(params('?rating=4')).minRating).toBe(4);
+  });
+
+  it('holds no minimum when “rating” is absent', () => {
+    expect(
+      parseLibraryQuery(params('?q=lighthouse')).minRating
+    ).toBeUndefined();
+  });
+
+  it('treats an empty “rating” as no minimum at all', () => {
+    expect(parseLibraryQuery(params('?rating=')).minRating).toBeUndefined();
+  });
+
+  it('treats “0” as “All ratings” rather than a minimum of nought', () => {
+    // A literal minimum of zero would exclude every unrated movie, which is
+    // not what the row that writes it says.
+    expect(parseLibraryQuery(params('?rating=0')).minRating).toBeUndefined();
+  });
+
+  it('drops a rating that is not a number', () => {
+    expect(parseLibraryQuery(params('?rating=four')).minRating).toBeUndefined();
+  });
+
+  it('drops a negative rating', () => {
+    expect(parseLibraryQuery(params('?rating=-2')).minRating).toBeUndefined();
+  });
+
+  it('drops a rating above the top of the scale', () => {
+    expect(parseLibraryQuery(params('?rating=11')).minRating).toBeUndefined();
+  });
+
+  it('drops a rating the dropdown has no row for', () => {
+    // Honouring it would narrow the library behind a pill still saying "All
+    // ratings" — the URL and the screen must agree.
+    expect(parseLibraryQuery(params('?rating=7')).minRating).toBeUndefined();
+  });
+
+  it('opens the plain home rather than failing on a bad rating', () => {
+    expect(parseLibraryQuery(params('?rating=%F0%9F%92%A5'))).toEqual({
+      sort: 'recently-added',
+    });
+  });
+
+  it('leaves the rest of the query alone when the rating is dropped', () => {
+    expect(
+      parseLibraryQuery(params('?q=comet&rating=nonsense&sort=a-z'))
+    ).toEqual({
+      sort: 'a-z',
+      search: 'comet',
+    });
+  });
+
+  it('takes the term, the genre, the order and the minimum as one query', () => {
+    // "Highest rated comedies with a lighthouse in them" is one question.
+    expect(
+      parseLibraryQuery(params('?q=lighthouse&genre=Comedy&sort=a-z&rating=8'))
+    ).toEqual({
+      sort: 'a-z',
+      search: 'lighthouse',
+      genre: 'Comedy',
+      minRating: 8,
+    });
+  });
+});
