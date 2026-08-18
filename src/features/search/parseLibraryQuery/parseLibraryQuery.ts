@@ -12,8 +12,8 @@ const DEFAULT_SORT: MovieSort = 'recently-added';
  * same as absent, and anything this slice doesn't read is left alone rather
  * than rejected — a bookmark from an older build still opens.
  *
- * Pure, so the same URL always yields the same query. The genre and rating
- * parameters join it as their controls ship.
+ * Pure, so the same URL always yields the same query. The rating parameter
+ * joins it as its control ships.
  */
 export function parseLibraryQuery(params: URLSearchParams): HomeQuery {
   const query: HomeQuery = { sort: DEFAULT_SORT };
@@ -31,6 +31,15 @@ export function parseLibraryQuery(params: URLSearchParams): HomeQuery {
   const sort = params.get('sort');
   if (sort !== null && isMovieSort(sort)) {
     query.sort = sort;
+  }
+
+  // Kept exactly as spelled, and matched by the server rather than here: a
+  // genre the library does not hold is a URL worth passing on, because the
+  // honest answer to it is simply no rows. An empty `?genre=` is "All Genres",
+  // which is the absence of the filter.
+  const genre = params.get('genre');
+  if (genre !== null && genre !== '') {
+    query.genre = genre;
   }
 
   return query;

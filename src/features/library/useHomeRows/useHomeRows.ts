@@ -38,10 +38,12 @@ export interface UseHomeRowsResult {
  * section pops in above rows that had already painted; the payload's
  * alphabetical order is preserved as it arrives.
  *
- * The query it loads is whatever the URL is carrying — the search text and the
- * sort order alike, read straight from the router as app-level state rather
- * than a sibling feature's, which is why the header's controls and this hook
- * never speak to each other. It is already known on the first render, so a
+ * The query it loads is whatever the URL is carrying — the search text, the
+ * genre and the sort order alike, read straight from the router as app-level
+ * state rather than a sibling feature's, which is why the header's controls and
+ * this hook never speak to each other. Narrowing to one genre is the server's
+ * answer to that query, not a filter applied to rows already here: one row
+ * arrives because one row was built. It is already known on the first render, so a
  * shared link loads narrowed and in its order with no unfiltered library
  * flashing past first, and it refetches whenever the settled query changes.
  * Through that refetch the rows already on screen stay put: the skeleton is
@@ -69,10 +71,19 @@ export function useHomeRows(): UseHomeRowsResult {
   const search = searchParams.get('q') ?? '';
   const sortParam = searchParams.get('sort') ?? '';
   const sort = isMovieSort(sortParam) ? sortParam : DEFAULT_SORT;
-  const query = useMemo<HomeQuery>(
-    () => (search === '' ? { sort } : { sort, search }),
-    [search, sort]
-  );
+  // An empty `?genre=` is "All Genres", so it reads as no genre and reloads
+  // nothing — the same rule the parameter is written by.
+  const genre = searchParams.get('genre') ?? '';
+  const query = useMemo<HomeQuery>(() => {
+    const next: HomeQuery = { sort };
+    if (search !== '') {
+      next.search = search;
+    }
+    if (genre !== '') {
+      next.genre = genre;
+    }
+    return next;
+  }, [search, sort, genre]);
 
   useEffect(() => {
     let current = true;

@@ -79,11 +79,13 @@ function buildListQuery(query: MovieQuery): {
 }
 
 /** The read-only browse slice of the repository: the parameterized `listMovies`
- *  query, the `searchMovies` shorthand over it, and the home-screen genre rows. */
+ *  query, the `searchMovies` shorthand over it, the home-screen genre rows, and
+ *  the library's movie count. */
 export interface Browse {
   listMovies(query: MovieQuery): Movie[];
   searchMovies(text: string): Movie[];
   listGenres(): GenreCount[];
+  countMovies(): number;
 }
 
 export function createBrowse(db: SqliteDatabase, reader: MovieReader): Browse {
@@ -94,6 +96,8 @@ export function createBrowse(db: SqliteDatabase, reader: MovieReader): Browse {
     GROUP BY g.id, g.name
     ORDER BY g.name
   `);
+
+  const selectMovieCount = db.prepare('SELECT COUNT(*) AS count FROM movies');
 
   function listMovies(query: MovieQuery): Movie[] {
     const { sql, params, whereClause, whereParams } = buildListQuery(query);
@@ -111,5 +115,15 @@ export function createBrowse(db: SqliteDatabase, reader: MovieReader): Browse {
     return selectGenreCounts.all() as GenreCount[];
   }
 
-  return { listMovies, searchMovies, listGenres };
+  /**
+   * How many movies the library holds — the "All Genres" tally. Its own query
+   * rather than a sum of {@link listGenres}: that sum counts a movie once per
+   * genre it carries and misses an untagged one entirely, and this is a count
+   * of what is on the shelf.
+   */
+  function countMovies(): number {
+    return (selectMovieCount.get() as { count: number }).count;
+  }
+
+  return { listMovies, searchMovies, listGenres, countMovies };
 }

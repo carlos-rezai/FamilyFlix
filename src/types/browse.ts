@@ -100,3 +100,18 @@ export interface HomePayload {
   continueWatching: Movie[];
   rows: HomeRow[];
 }
+
+/**
+ * The genre list `GET /api/genres` answers with — what the Genre dropdown is
+ * built from. It has a different lifetime to {@link HomePayload}: fetched once
+ * per mount and deliberately unfiltered, so the counts cannot reshuffle under a
+ * finger already reaching for them.
+ *
+ * `total` is a count of **movies**, not the sum of `genres[].count` — a movie
+ * tagged twice is still one movie on the shelf, and it includes the untagged
+ * ones that earn no genre row at all.
+ */
+export interface GenreListPayload {
+  total: number;
+  genres: GenreCount[];
+}

@@ -29,6 +29,13 @@ function homeUrl(query: HomeQuery): string {
     params.set('sort', query.sort);
   }
 
+  // "All Genres" is the absence of the filter, so it writes no parameter.
+  // `URLSearchParams` encodes the name on the way out, which a genre with a
+  // space in it needs.
+  if (query.genre !== undefined && query.genre !== '') {
+    params.set('genre', query.genre);
+  }
+
   const search = params.toString();
   return search === '' ? HOME_ENDPOINT : `${HOME_ENDPOINT}?${search}`;
 }

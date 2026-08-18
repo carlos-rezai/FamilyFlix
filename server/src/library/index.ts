@@ -64,6 +64,13 @@ export interface LibraryStorage {
   /** List only genres with at least one movie, each with its movie count. */
   listGenres(): GenreCount[];
   /**
+   * How many movies the library holds — the "All Genres" tally behind the genre
+   * dropdown. Deliberately not a sum of {@link listGenres}: a movie tagged with
+   * several genres is counted once, and an untagged one — which earns no genre
+   * row — is counted too. `0` for an empty library.
+   */
+  countMovies(): number;
+  /**
    * The browse home in one call: the in-progress movies as `continueWatching`,
    * plus a `rows` entry per populated genre (alphabetical), each carrying the
    * genre's true movie count. Both sections are ordered recently-added-first and
@@ -126,6 +133,7 @@ export function createSqliteStorage(dbPath: string): LibraryStorage {
     listMovies: browse.listMovies,
     searchMovies: browse.searchMovies,
     listGenres: browse.listGenres,
+    countMovies: browse.countMovies,
     getHome: home.getHome,
     setResumePosition: watch.setResumePosition,
     markWatched: watch.markWatched,

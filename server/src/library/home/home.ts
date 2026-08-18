@@ -31,6 +31,12 @@ export interface Home {
  * produces no row; a movie tagged with several genres appears in each of their
  * rows.
  *
+ * A `genre` on the query is the one filter that does not merely narrow the
+ * rows — it decides which rows exist at all. Choosing a genre is a narrowing of
+ * the whole screen rather than a highlight within it, so exactly that genre's
+ * row is built and every other one is left out. A genre the library does not
+ * hold builds no row rather than an empty one.
+ *
  * `continueWatching` is the same browse query narrowed to in-progress movies —
  * started but not finished, since `markWatched` zeroes the resume position — in
  * the same recently-added order and under the same cap. It is built
@@ -51,8 +57,12 @@ export interface Home {
  */
 export function createHome(browse: Browse): Home {
   function listRows(query: HomeQuery): HomeRow[] {
-    return browse
-      .listGenres()
+    const genres =
+      query.genre === undefined
+        ? browse.listGenres()
+        : browse.listGenres().filter((genre) => genre.name === query.genre);
+
+    return genres
       .map((genre) => ({
         genre: genre.name,
         count: genre.count,

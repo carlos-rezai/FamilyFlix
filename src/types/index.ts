@@ -13,6 +13,7 @@ export type {
   MovieQuery,
   HomeQuery,
   GenreCount,
+  GenreListPayload,
   HomeRow,
   HomePayload,
 } from './browse';

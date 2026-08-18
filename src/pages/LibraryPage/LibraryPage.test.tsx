@@ -55,12 +55,52 @@ function okResponse(rows: HomeRow[]): Response {
   } as unknown as Response;
 }
 
+/**
+ * The genre list `GET /api/genres` answers with — what the header's Genre pill
+ * is built from. Always served, and never from the home queue below: it is a
+ * second endpoint with its own lifetime, and no test here is about it.
+ */
+function genreListResponse(): Response {
+  return {
+    ok: true,
+    status: 200,
+    json: () =>
+      Promise.resolve({
+        total: 1,
+        genres: [{ id: 'g1', name: 'Action', count: 1 }],
+      }),
+  } as unknown as Response;
+}
+
 let fetchMock: ReturnType<
   typeof vi.fn<(input: RequestInfo | URL) => Promise<Response>>
 >;
 
+/**
+ * The answers queued for `/api/home`, oldest first — one per load, so a retry
+ * takes the next. Queued per endpoint rather than per call because the page
+ * issues two requests and the order they go out in is not this page's promise.
+ */
+let homeQueue: Array<() => Promise<Response>>;
+
 beforeEach(() => {
+  homeQueue = [];
   fetchMock = vi.fn<(input: RequestInfo | URL) => Promise<Response>>();
+  // Anything requested other than those two rejects, so a page that fans out
+  // per genre fails loudly.
+  fetchMock.mockImplementation((input) => {
+    const url = String(input);
+    if (url.includes('/api/genres')) {
+      return Promise.resolve(genreListResponse());
+    }
+    if (url.includes('/api/home')) {
+      const next = homeQueue.shift();
+      return next
+        ? next()
+        : Promise.reject(new Error(`Unqueued home request: ${url}`));
+    }
+    return Promise.reject(new Error(`Unexpected request: ${url}`));
+  });
   vi.stubGlobal('fetch', fetchMock);
 });
 
@@ -68,18 +108,14 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-/**
- * Queue one successful home response. Anything requested other than the home
- * aggregate rejects, so a page that fans out per genre fails loudly.
- */
+/** Queue one successful home response. */
 function respondWithRows(rows: HomeRow[]) {
-  fetchMock.mockImplementationOnce((input) => {
-    const url = String(input);
-    if (!url.includes('/api/home')) {
-      return Promise.reject(new Error(`Unexpected request: ${url}`));
-    }
-    return Promise.resolve(okResponse(rows));
-  });
+  homeQueue.push(() => Promise.resolve(okResponse(rows)));
+}
+
+/** Queue one failed home response, for the load the retry button comes back from. */
+function failNextHome() {
+  homeQueue.push(() => Promise.reject(new Error('network down')));
 }
 
 function renderPage(url = '/') {
@@ -99,10 +135,12 @@ const searchBox = () =>
     name: 'Search your movies',
   }) as HTMLInputElement;
 
-/** The query string of the home request the page issued. */
+/** The query string of the home request the page issued, whichever went first. */
 function requestedQuery(): URLSearchParams {
-  const url = String(fetchMock.mock.calls[0][0]);
-  return new URLSearchParams(url.split('?')[1] ?? '');
+  const url = fetchMock.mock.calls
+    .map(([input]) => String(input))
+    .find((candidate) => candidate.includes('/api/home'));
+  return new URLSearchParams((url ?? '').split('?')[1] ?? '');
 }
 
 /**
@@ -144,7 +182,7 @@ describe('LibraryPage', () => {
   });
 
   it('keeps the header rendered through loading, failure, and success', async () => {
-    fetchMock.mockRejectedValueOnce(new Error('network down'));
+    failNextHome();
     respondWithRows(HOME_PAYLOAD);
 
     renderPage();

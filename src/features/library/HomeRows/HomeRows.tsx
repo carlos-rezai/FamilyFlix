@@ -49,13 +49,17 @@ function LoadingRows() {
  * The body of the browse home: what the family is part-way through, then every
  * populated genre as its own row — both sections from the one request, so the
  * screen paints at once. Owns every result state — skeleton rows, a retryable
- * failure, and the two ways of coming back with nothing.
+ * failure, and the three ways of coming back with nothing.
  *
- * Those two are deliberately worded apart. "Your library is empty" is a shelf
+ * Those three are deliberately worded apart. "Your library is empty" is a shelf
  * with nothing on it; a search that matched nothing is a working library and a
  * term that missed, so it says so plainly and quotes the term back — the only
- * way to spot a typo in it. The term is read from the URL, which is where the
- * settled query lives, so nothing here is imported from the search feature.
+ * way to spot a typo in it. A filter that matched nothing with the box empty
+ * has no term worth quoting, and the prototype's single string would render a
+ * pair of empty quotes there, so it names the filters instead. The typed term
+ * wins whenever there is one: a typo in it is the likeliest reason for the
+ * miss. All of it is read from the URL, which is where the settled query lives,
+ * so nothing here is imported from the search feature.
  */
 export function HomeRows() {
   const { status, rows, continueWatching, retry, toggleFavorite } =
@@ -63,6 +67,7 @@ export function HomeRows() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const search = searchParams.get('q') ?? '';
+  const genre = searchParams.get('genre') ?? '';
 
   if (status === 'loading') {
     return <LoadingRows />;
@@ -87,6 +92,15 @@ export function HomeRows() {
         <LoadMessage
           title="Nothing here"
           body={`No movies match “${search}”. Try a different search or genre.`}
+        />
+      );
+    }
+
+    if (genre !== '') {
+      return (
+        <LoadMessage
+          title="Nothing here"
+          body="No movies match these filters. Try a different genre or rating."
         />
       );
     }

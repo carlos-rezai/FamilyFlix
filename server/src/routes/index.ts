@@ -1,7 +1,12 @@
 import express, { type Request, type Response, type Router } from 'express';
 
 import type { LibraryStorage } from '../library';
-import type { HomeQuery, MovieQuery, MovieSort } from '@/types';
+import type {
+  GenreListPayload,
+  HomeQuery,
+  MovieQuery,
+  MovieSort,
+} from '@/types';
 
 /** The sort values `GET /api/movies?sort=` accepts, mirroring {@link MovieSort}. */
 const SORTS: readonly MovieSort[] = [
@@ -74,6 +79,12 @@ export function createApiRouter(
   // can never disagree with the rest of it. A sort this API does not know is a
   // 400, the way `/movies` answers one — an empty value is still no sort at
   // all, and simply leaves the default in place.
+  //
+  // `?genre=` narrows the screen to one row — the repository's precedence rule,
+  // not this layer's. The name travels through unnormalised, so it has to be
+  // spelled the way the library spells it; a genre the library does not hold is
+  // an empty payload rather than a 404, because a stale bookmark for an emptied
+  // genre is a normal "nothing here".
   router.get('/home', (req: Request, res: Response) => {
     let sort: MovieSort = DEFAULT_SORT;
     const sortParam = queryString(req.query.sort);
@@ -92,7 +103,32 @@ export function createApiRouter(
       query.search = search;
     }
 
+    const genre = queryString(req.query.genre);
+    if (genre !== undefined && genre !== '') {
+      query.genre = genre;
+    }
+
     res.json(storage.getHome(query));
+  });
+
+  // The Genre dropdown's list: every populated genre with its count, and the
+  // library's own movie total for the "All Genres" row.
+  //
+  // Its own endpoint rather than a field on the home payload because it has a
+  // different lifetime — the client fetches it once per mount, where `/home`
+  // refetches per settled query, precisely so the counts cannot reshuffle under
+  // a finger already reaching for them.
+  //
+  // `total` is a count of movies rather than a sum of the genre counts: that
+  // sum double-counts a movie tagged twice and misses an untagged one entirely.
+  // An empty library is `{ total: 0, genres: [] }` — a normal answer, since the
+  // dropdown still has its "All Genres" row to draw.
+  router.get('/genres', (_req: Request, res: Response) => {
+    const payload: GenreListPayload = {
+      total: storage.countMovies(),
+      genres: storage.listGenres(),
+    };
+    res.json(payload);
   });
 
   // The generic browse endpoint, for the genre page and any later filtered

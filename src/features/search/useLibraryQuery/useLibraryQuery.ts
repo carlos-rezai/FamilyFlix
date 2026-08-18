@@ -14,6 +14,8 @@ export interface UseLibraryQueryResult {
   setSearch: (value: string) => void;
   /** Write the sort order; the default order takes `sort` back off the URL. */
   setSort: (value: MovieSort) => void;
+  /** Write the genre; the empty string ("All Genres") takes `genre` back off. */
+  setGenre: (value: string) => void;
 }
 
 /**
@@ -66,5 +68,10 @@ export function useLibraryQuery(): UseLibraryQueryResult {
     [setParam]
   );
 
-  return { query, setSearch, setSort };
+  const setGenre = useCallback(
+    (value: string) => setParam('genre', value, ''),
+    [setParam]
+  );
+
+  return { query, setSearch, setSort, setGenre };
 }
