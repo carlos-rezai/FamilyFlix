@@ -69,8 +69,23 @@ export function createApiRouter(
   // this boundary is the only place it is translated to the domain's `search`.
   // An empty value means no search, so a cleared box is the plain home again;
   // a term that matches nothing is an empty payload, not a 404.
+  //
+  // `?sort=` orders both sections by the same order, so the top of the screen
+  // can never disagree with the rest of it. A sort this API does not know is a
+  // 400, the way `/movies` answers one — an empty value is still no sort at
+  // all, and simply leaves the default in place.
   router.get('/home', (req: Request, res: Response) => {
-    const query: HomeQuery = { sort: DEFAULT_SORT };
+    let sort: MovieSort = DEFAULT_SORT;
+    const sortParam = queryString(req.query.sort);
+    if (sortParam !== undefined && sortParam !== '') {
+      if (!isMovieSort(sortParam)) {
+        res.status(400).json({ error: `Unknown sort: ${sortParam}` });
+        return;
+      }
+      sort = sortParam;
+    }
+
+    const query: HomeQuery = { sort };
 
     const search = queryString(req.query.q);
     if (search !== undefined && search !== '') {

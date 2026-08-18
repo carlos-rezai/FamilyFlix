@@ -7,6 +7,7 @@ import type {
   HomeQuery,
   MovieSort,
 } from '@/types';
+import { isMovieSort } from '@/utils';
 import { fetchHomePayload, saveFavorite } from '../api/api';
 import { continueView } from '../continueView/continueView';
 import { toGenreRow } from '../toGenreRow/toGenreRow';
@@ -37,14 +38,15 @@ export interface UseHomeRowsResult {
  * section pops in above rows that had already painted; the payload's
  * alphabetical order is preserved as it arrives.
  *
- * The query it loads is whatever the URL is carrying, read straight from the
- * router — app-level state rather than a sibling feature's, which is why the
- * header's search box and this hook never speak to each other. It is already
- * known on the first render, so a shared link loads narrowed with no
- * unfiltered library flashing past first, and it refetches whenever the
- * settled query changes. Through that refetch the rows already on screen stay
- * put: the skeleton is for the first load only, because flashing the whole
- * screen every time the typing settles would be unreadable.
+ * The query it loads is whatever the URL is carrying — the search text and the
+ * sort order alike, read straight from the router as app-level state rather
+ * than a sibling feature's, which is why the header's controls and this hook
+ * never speak to each other. It is already known on the first render, so a
+ * shared link loads narrowed and in its order with no unfiltered library
+ * flashing past first, and it refetches whenever the settled query changes.
+ * Through that refetch the rows already on screen stay put: the skeleton is
+ * for the first load only, because flashing the whole screen every time the
+ * typing settles would be unreadable.
  *
  * It also owns the one edit the browse home can make to those rows — the
  * favorite heart — because the optimistic value and the loaded rows are the
@@ -61,12 +63,15 @@ export function useHomeRows(): UseHomeRowsResult {
   const [attempt, setAttempt] = useState(0);
 
   // Only the parts of the URL this hook reads may reload the library — a
-  // scroll offset or a tracking parameter changing is not a new query.
+  // scroll offset or a tracking parameter changing is not a new query. An
+  // order the app doesn't recognise reads as the default, so a hand-edited or
+  // stale URL loads the plain home rather than asking the route for a 400.
   const search = searchParams.get('q') ?? '';
+  const sortParam = searchParams.get('sort') ?? '';
+  const sort = isMovieSort(sortParam) ? sortParam : DEFAULT_SORT;
   const query = useMemo<HomeQuery>(
-    () =>
-      search === '' ? { sort: DEFAULT_SORT } : { sort: DEFAULT_SORT, search },
-    [search]
+    () => (search === '' ? { sort } : { sort, search }),
+    [search, sort]
   );
 
   useEffect(() => {

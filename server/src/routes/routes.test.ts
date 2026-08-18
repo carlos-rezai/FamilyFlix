@@ -514,8 +514,8 @@ describe('GET /api/home?sort=', () => {
     // and another to order.
     expect(home.rows.map((row) => row.genre)).toEqual(['Drama']);
     expect(home.rows[0].movies.map((m) => m.title)).toEqual([
-      'apple Grove',
       'Applause',
+      'apple Grove',
     ]);
   });
 

@@ -1,4 +1,5 @@
 import type { HomeQuery, MovieSort } from '@/types';
+import { isMovieSort } from '@/utils';
 
 /** What the home rows are ordered by until a sort control writes another one. */
 const DEFAULT_SORT: MovieSort = 'recently-added';
@@ -11,8 +12,8 @@ const DEFAULT_SORT: MovieSort = 'recently-added';
  * same as absent, and anything this slice doesn't read is left alone rather
  * than rejected — a bookmark from an older build still opens.
  *
- * Pure, so the same URL always yields the same query. The genre, rating and
- * sort parameters join it as their controls ship.
+ * Pure, so the same URL always yields the same query. The genre and rating
+ * parameters join it as their controls ship.
  */
 export function parseLibraryQuery(params: URLSearchParams): HomeQuery {
   const query: HomeQuery = { sort: DEFAULT_SORT };
@@ -22,6 +23,14 @@ export function parseLibraryQuery(params: URLSearchParams): HomeQuery {
   const search = params.get('q');
   if (search !== null && search !== '') {
     query.search = search;
+  }
+
+  // An order the app doesn't know is not a bad request here, only a URL worth
+  // ignoring: the home opens in the order it has always opened in rather than
+  // asking the route for something it would refuse.
+  const sort = params.get('sort');
+  if (sort !== null && isMovieSort(sort)) {
+    query.sort = sort;
   }
 
   return query;

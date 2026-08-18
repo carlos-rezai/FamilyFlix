@@ -10,3 +10,4 @@ export {
 } from './toProgressPercent/toProgressPercent';
 export { formatClock } from './formatClock/formatClock';
 export { toRuntimeSeconds } from './toRuntimeSeconds/toRuntimeSeconds';
+export { isMovieSort, MOVIE_SORTS } from './isMovieSort/isMovieSort';

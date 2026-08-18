@@ -1,14 +1,19 @@
 import { useCallback, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
-import type { HomeQuery } from '@/types';
+import type { HomeQuery, MovieSort } from '@/types';
 import { parseLibraryQuery } from '../parseLibraryQuery/parseLibraryQuery';
+
+/** The order the home opens in, and so the one that writes no parameter. */
+const DEFAULT_SORT: MovieSort = 'recently-added';
 
 export interface UseLibraryQueryResult {
   /** The settled query the URL is currently carrying. */
   query: HomeQuery;
   /** Write the search text; the empty string takes `q` back off the URL. */
   setSearch: (value: string) => void;
+  /** Write the sort order; the default order takes `sort` back off the URL. */
+  setSort: (value: MovieSort) => void;
 }
 
 /**
@@ -31,15 +36,17 @@ export function useLibraryQuery(): UseLibraryQueryResult {
 
   const query = useMemo(() => parseLibraryQuery(searchParams), [searchParams]);
 
-  const setSearch = useCallback(
-    (value: string) => {
+  // One parameter at a time, copied off whatever the URL currently holds, so a
+  // setter can only ever add, replace or remove its own.
+  const setParam = useCallback(
+    (name: string, value: string, omitAt: string) => {
       setSearchParams(
         (current) => {
           const next = new URLSearchParams(current);
-          if (value === '') {
-            next.delete('q');
+          if (value === omitAt) {
+            next.delete(name);
           } else {
-            next.set('q', value);
+            next.set(name, value);
           }
           return next;
         },
@@ -49,5 +56,15 @@ export function useLibraryQuery(): UseLibraryQueryResult {
     [setSearchParams]
   );
 
-  return { query, setSearch };
+  const setSearch = useCallback(
+    (value: string) => setParam('q', value, ''),
+    [setParam]
+  );
+
+  const setSort = useCallback(
+    (value: MovieSort) => setParam('sort', value, DEFAULT_SORT),
+    [setParam]
+  );
+
+  return { query, setSearch, setSort };
 }

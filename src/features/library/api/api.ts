@@ -1,7 +1,10 @@
-import type { HomePayload, HomeQuery } from '@/types';
+import type { HomePayload, HomeQuery, MovieSort } from '@/types';
 
 /** The one aggregate the browse home loads — every section in one payload. */
 const HOME_ENDPOINT = '/api/home';
+
+/** The order the route sorts by unasked, and so the one that is never sent. */
+const DEFAULT_SORT: MovieSort = 'recently-added';
 
 /** Where one movie's favorite flag is saved. */
 const favoriteEndpoint = (id: string) =>
@@ -10,14 +13,20 @@ const favoriteEndpoint = (id: string) =>
 /**
  * The home endpoint narrowed by a query. Every parameter is omitted at its
  * default, so an unfiltered home asks a clean `/api/home` — the request the
- * parent is looking at, rather than a longhand of it. `q` is the wire name the
- * app URL and the route already share.
+ * parent is looking at, rather than a longhand of it. `q` and `sort` are the
+ * wire names the app URL and the route already share.
  */
 function homeUrl(query: HomeQuery): string {
   const params = new URLSearchParams();
 
   if (query.search !== undefined && query.search !== '') {
     params.set('q', query.search);
+  }
+
+  // Recently-added is what the route does when asked nothing; saying so would
+  // add a parameter that changes no answer.
+  if (query.sort !== DEFAULT_SORT) {
+    params.set('sort', query.sort);
   }
 
   const search = params.toString();
