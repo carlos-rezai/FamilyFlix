@@ -110,3 +110,42 @@ describe('parseLibraryQuery — the sort order', () => {
     });
   });
 });
+
+describe('parseLibraryQuery — the genre', () => {
+  it('reads “genre” as the query’s genre', () => {
+    expect(parseLibraryQuery(params('?genre=Drama'))).toEqual({
+      sort: 'recently-added',
+      genre: 'Drama',
+    });
+  });
+
+  it('holds no genre when “genre” is absent', () => {
+    expect(parseLibraryQuery(params('?q=lighthouse')).genre).toBeUndefined();
+  });
+
+  it('treats an empty “genre” as no genre at all', () => {
+    // "All Genres" is the absence of the filter; a stale `?genre=` means the
+    // same as not filtering.
+    expect(parseLibraryQuery(params('?genre=')).genre).toBeUndefined();
+  });
+
+  it('keeps a genre name the URL had to encode', () => {
+    expect(parseLibraryQuery(params('?genre=Science%20Fiction')).genre).toBe(
+      'Science Fiction'
+    );
+  });
+
+  it('keeps the genre exactly as spelled, and leaves matching to the server', () => {
+    // A genre the library does not hold is a URL worth passing on rather than
+    // rejecting: the answer is simply no rows.
+    expect(parseLibraryQuery(params('?genre=westerns')).genre).toBe('westerns');
+  });
+
+  it('reads the genre, the term and the order together, as one query', () => {
+    expect(parseLibraryQuery(params('?q=comet&genre=Drama&sort=a-z'))).toEqual({
+      sort: 'a-z',
+      search: 'comet',
+      genre: 'Drama',
+    });
+  });
+});

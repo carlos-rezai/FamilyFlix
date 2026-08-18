@@ -225,3 +225,94 @@ describe('useLibraryQuery — writing the sort order', () => {
     expect(currentUrl()).toBe('/movie/a1');
   });
 });
+
+describe('useLibraryQuery — reading the genre', () => {
+  it('reads the genre the URL is carrying', () => {
+    const { result } = mountOn(['/?genre=Drama']);
+
+    expect(result.current.query.genre).toBe('Drama');
+  });
+
+  it('holds no genre on a clean “/”', () => {
+    const { result } = mountOn(['/']);
+
+    expect(result.current.query.genre).toBeUndefined();
+  });
+
+  it('reports the new genre once the URL has changed', () => {
+    const { result } = mountOn(['/']);
+
+    act(() => result.current.setGenre('Action'));
+
+    expect(result.current.query.genre).toBe('Action');
+  });
+});
+
+describe('useLibraryQuery — writing the genre', () => {
+  it('writes the chosen genre into the URL as “genre”', () => {
+    const { result } = mountOn(['/']);
+
+    act(() => result.current.setGenre('Drama'));
+
+    expect(currentUrl()).toBe('/?genre=Drama');
+  });
+
+  it('removes “genre” for the empty string, so “All Genres” is a clean “/”', () => {
+    const { result } = mountOn(['/?genre=Drama']);
+
+    act(() => result.current.setGenre(''));
+
+    expect(currentUrl()).toBe('/');
+  });
+
+  it('encodes a genre name that would otherwise break the query string', () => {
+    const { result } = mountOn(['/']);
+
+    act(() => result.current.setGenre('Science Fiction'));
+
+    expect(result.current.query.genre).toBe('Science Fiction');
+    expect(currentUrl()).not.toContain('Science Fiction');
+  });
+
+  it('leaves the search text and the order exactly as it found them', () => {
+    const { result } = mountOn(['/?q=lighthouse&sort=a-z']);
+
+    act(() => result.current.setGenre('Drama'));
+
+    const written = new URLSearchParams(String(currentUrl()).split('?')[1]);
+    expect(written.get('q')).toBe('lighthouse');
+    expect(written.get('sort')).toBe('a-z');
+    expect(written.get('genre')).toBe('Drama');
+  });
+
+  it('removes only its own parameter when the genre is cleared', () => {
+    const { result } = mountOn(['/?q=lighthouse&genre=Drama&sort=a-z']);
+
+    act(() => result.current.setGenre(''));
+
+    const written = new URLSearchParams(String(currentUrl()).split('?')[1]);
+    expect(written.has('genre')).toBe(false);
+    expect(written.get('q')).toBe('lighthouse');
+    expect(written.get('sort')).toBe('a-z');
+  });
+
+  it('replaces the genre rather than stacking a second one', () => {
+    const { result } = mountOn(['/?genre=Drama']);
+
+    act(() => result.current.setGenre('Action'));
+
+    expect(currentUrl()).toBe('/?genre=Action');
+  });
+
+  it('costs no history, so one Back still escapes the whole screen', () => {
+    const { result } = mountOn(['/movie/a1', '/']);
+
+    act(() => result.current.setGenre('Drama'));
+    act(() => result.current.setGenre('Action'));
+    act(() => result.current.setGenre(''));
+
+    goBack();
+
+    expect(currentUrl()).toBe('/movie/a1');
+  });
+});

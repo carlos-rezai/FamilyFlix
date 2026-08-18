@@ -540,3 +540,76 @@ describe('HomeRows — the favorite heart', () => {
     await waitFor(() => expect(favoriteSaves()).toEqual(['a1']));
   });
 });
+
+/**
+ * 05 — Search + filter, Phase 4: "the Genre dropdown" (issue #36). A filter can
+ * now empty the screen with nothing typed, which the search copy cannot
+ * describe — it would quote an empty term back.
+ */
+describe('HomeRows — filters that matched nothing', () => {
+  const FILTER_MISS =
+    'No movies match these filters. Try a different genre or rating.';
+
+  it('talks about the filters when nothing was typed', async () => {
+    respondWithRows([], []);
+
+    renderRows('/?genre=Drama');
+
+    expect(await screen.findByText('Nothing here')).toBeDefined();
+    expect(screen.getByText(FILTER_MISS)).toBeDefined();
+  });
+
+  it('never quotes an empty search back', async () => {
+    // The prototype's single string interpolates the search term always, which
+    // renders as a pair of empty quotes when the box is empty.
+    respondWithRows([], []);
+
+    renderRows('/?genre=Drama');
+
+    await screen.findByText('Nothing here');
+    expect(screen.queryByText(/“”/)).toBeNull();
+    expect(screen.queryByText(/Try a different search or genre/)).toBeNull();
+  });
+
+  it('quotes the term when a search is what narrowed the library', async () => {
+    // With something typed, the term is the thing worth showing — a typo in it
+    // is the likeliest reason for the miss.
+    respondWithRows([], []);
+
+    renderRows('/?q=lighthouse&genre=Drama');
+
+    expect(await screen.findByText('Nothing here')).toBeDefined();
+    expect(
+      screen.getByText(
+        'No movies match “lighthouse”. Try a different search or genre.'
+      )
+    ).toBeDefined();
+    expect(screen.queryByText(FILTER_MISS)).toBeNull();
+  });
+
+  it('keeps the empty library’s own words when nothing is filtering at all', async () => {
+    respondWithRows([], []);
+
+    renderRows('/');
+
+    expect(await screen.findByText(/your library is empty/i)).toBeDefined();
+    expect(screen.queryByText(FILTER_MISS)).toBeNull();
+  });
+
+  it('shows the row, not the miss, when the genre did match something', async () => {
+    respondWithRows([LIBRARY[0]], []);
+
+    renderRows('/?genre=Action');
+
+    expect(await findGenreHeading('Action')).toBeDefined();
+    expect(screen.queryByText('Nothing here')).toBeNull();
+  });
+
+  it('says the same thing for a sort-and-genre miss as for a genre one', async () => {
+    respondWithRows([], []);
+
+    renderRows('/?genre=Drama&sort=a-z');
+
+    expect(await screen.findByText(FILTER_MISS)).toBeDefined();
+  });
+});

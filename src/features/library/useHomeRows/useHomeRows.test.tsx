@@ -779,3 +779,133 @@ describe('useHomeRows — the sort order', () => {
     expect(homeRequests()).toHaveLength(1);
   });
 });
+
+/**
+ * 05 — Search + filter, Phase 4: "the Genre dropdown" (issue #36). The genre is
+ * read from the URL like every other part of the settled query, and the server
+ * is what narrows the screen down to the one row.
+ */
+describe('useHomeRows — the genre filter', () => {
+  /** The library narrowed to one genre, as a filtered request would answer it. */
+  const ONE_ROW_PAYLOAD: HomePayload = {
+    continueWatching: [],
+    rows: [
+      {
+        genre: 'Action',
+        count: 3,
+        movies: [makeMovie({ id: 'a1', title: 'Northwind' })],
+      },
+    ],
+  };
+
+  it('asks with the genre the URL was opened on, so a shared link loads filtered', async () => {
+    serve(ONE_ROW_PAYLOAD);
+
+    const { result } = await loadRows('/?genre=Action');
+
+    expect(homeRequests()).toHaveLength(1);
+    expect(homeQuery(0).get('genre')).toBe('Action');
+    expect(result.current.rows.map((row) => row.genre)).toEqual(['Action']);
+  });
+
+  it('asks for the whole library when the URL carries no genre', async () => {
+    serve(HOME_PAYLOAD);
+
+    await loadRows('/');
+
+    expect(homeQuery(0).has('genre')).toBe(false);
+  });
+
+  it('asks again, for the new genre, when only the genre changes', async () => {
+    fetchMock.mockImplementationOnce(() =>
+      Promise.resolve(okResponse(HOME_PAYLOAD))
+    );
+    fetchMock.mockImplementation(() =>
+      Promise.resolve(okResponse(ONE_ROW_PAYLOAD))
+    );
+    const { result } = await loadRows('/');
+    expect(result.current.rows.map((row) => row.genre)).toEqual([
+      'Action',
+      'Comedy',
+    ]);
+
+    act(() => goTo('/?genre=Action'));
+
+    // One row on screen, because the server built one row — not because this
+    // hook hid the others.
+    await waitFor(() =>
+      expect(result.current.rows.map((row) => row.genre)).toEqual(['Action'])
+    );
+    expect(homeQuery(1).get('genre')).toBe('Action');
+  });
+
+  it('goes back to every row when the genre is cleared', async () => {
+    fetchMock.mockImplementationOnce(() =>
+      Promise.resolve(okResponse(ONE_ROW_PAYLOAD))
+    );
+    fetchMock.mockImplementation(() =>
+      Promise.resolve(okResponse(HOME_PAYLOAD))
+    );
+    const { result } = await loadRows('/?genre=Action');
+
+    act(() => goTo('/'));
+
+    await waitFor(() =>
+      expect(result.current.rows.map((row) => row.genre)).toEqual([
+        'Action',
+        'Comedy',
+      ])
+    );
+    expect(homeQuery(1).has('genre')).toBe(false);
+  });
+
+  it('keeps the rows already on screen while the filtered ones load', async () => {
+    fetchMock.mockImplementationOnce(() =>
+      Promise.resolve(okResponse(HOME_PAYLOAD))
+    );
+    const { result } = await loadRows('/');
+
+    fetchMock.mockImplementation(() => new Promise<Response>(() => undefined));
+    act(() => goTo('/?genre=Action'));
+
+    await waitFor(() => expect(homeRequests()).toHaveLength(2));
+    expect(result.current.status).toBe('ready');
+    expect(result.current.rows.map((row) => row.genre)).toEqual([
+      'Action',
+      'Comedy',
+    ]);
+  });
+
+  it('asks a filtered, searched, sorted home as one request', async () => {
+    serve(ONE_ROW_PAYLOAD);
+
+    await loadRows('/?q=north&genre=Action&sort=a-z');
+
+    expect(homeRequests()).toHaveLength(1);
+    const asked = homeQuery(0);
+    expect(asked.get('q')).toBe('north');
+    expect(asked.get('genre')).toBe('Action');
+    expect(asked.get('sort')).toBe('a-z');
+  });
+
+  it('reads an empty ?genre= as no genre, and does not reload for it', async () => {
+    serve(HOME_PAYLOAD);
+    const { result } = await loadRows('/');
+
+    act(() => goTo('/?genre='));
+
+    await waitFor(() => expect(result.current.status).toBe('ready'));
+    expect(homeRequests()).toHaveLength(1);
+  });
+
+  it('keeps the row’s own count, so “View all” still reports the genre total', async () => {
+    // The row shows one movie of three; the count came from the unfiltered
+    // genre and has to survive the trip.
+    serve(ONE_ROW_PAYLOAD);
+
+    const { result } = await loadRows('/?genre=Action');
+
+    expect(result.current.rows[0].count).toBe(3);
+    expect(result.current.rows[0].movies).toHaveLength(1);
+  });
+});

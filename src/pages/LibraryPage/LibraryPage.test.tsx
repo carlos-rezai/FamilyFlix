@@ -207,3 +207,92 @@ describe('LibraryPage — the header controls', () => {
     expect(searchBox()).toBeDefined();
   });
 });
+
+/**
+ * 05 — Search + filter, Phase 4: "the Genre dropdown" (issue #36). The header
+ * now loads something of its own, from a second endpoint with a different
+ * lifetime to the home payload's — so the page issues two requests, and neither
+ * may spoil the other.
+ */
+describe('LibraryPage — the genre dropdown in the header', () => {
+  const genrePill = (value = 'All Genres') =>
+    screen.getByRole('button', { name: `Genre: ${value}` });
+
+  const sortPill = () =>
+    screen.getByRole('button', { name: 'Sort: Recently Added' });
+
+  /** The genre list `GET /api/genres` answers with, as its own 200. */
+  function genreListResponse(): Response {
+    return {
+      ok: true,
+      status: 200,
+      json: () =>
+        Promise.resolve({
+          total: 12,
+          genres: [{ id: 'g1', name: 'Action', count: 3 }],
+        }),
+    } as unknown as Response;
+  }
+
+  /** The home payload and the genre list, each answered on its own endpoint. */
+  function serveBoth(rows: HomeRow[] = HOME_PAYLOAD) {
+    fetchMock.mockImplementation((input) => {
+      const url = String(input);
+      if (url.includes('/api/genres')) {
+        return Promise.resolve(genreListResponse());
+      }
+      if (url.includes('/api/home')) {
+        return Promise.resolve(okResponse(rows));
+      }
+      return Promise.reject(new Error(`Unexpected request: ${url}`));
+    });
+  }
+
+  /** The home request the page issued, whichever order the two went out in. */
+  function homeQuery(): URLSearchParams {
+    const url = fetchMock.mock.calls
+      .map(([input]) => String(input))
+      .find((candidate) => candidate.includes('/api/home'));
+    return new URLSearchParams((url ?? '').split('?')[1] ?? '');
+  }
+
+  it('mounts all three controls in the header, beside the gear', async () => {
+    serveBoth();
+
+    renderPage();
+
+    expect(genrePill()).toBeDefined();
+    expect(sortPill()).toBeDefined();
+    expect(searchBox()).toBeDefined();
+    expect(gear()).toBeDefined();
+    await screen.findByRole('region', { name: 'Action' });
+  });
+
+  it('opens showing the genre the URL carries, and asks the route for it too', async () => {
+    // Same URL, both subtrees: the pill and the request agree without the page
+    // holding anything.
+    serveBoth();
+
+    renderPage('/?genre=Action');
+
+    expect(genrePill('Action')).toBeDefined();
+    await waitFor(() => expect(homeQuery().get('genre')).toBe('Action'));
+  });
+
+  it('loads the rows even when the genre list fails', async () => {
+    // The genre list has no error state by design; its failure must not become
+    // the library's.
+    fetchMock.mockImplementation((input) => {
+      const url = String(input);
+      if (url.includes('/api/genres')) {
+        return Promise.reject(new Error('offline'));
+      }
+      return Promise.resolve(okResponse(HOME_PAYLOAD));
+    });
+
+    renderPage();
+
+    expect(await screen.findByRole('region', { name: 'Action' })).toBeDefined();
+    expect(genrePill()).toBeDefined();
+  });
+});

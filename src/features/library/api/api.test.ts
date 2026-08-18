@@ -249,3 +249,51 @@ describe('saveFavorite', () => {
     await expect(saveFavorite('a1', true)).rejects.toThrow(/500/);
   });
 });
+
+/**
+ * 05 — Search + filter, Phase 4: "the Genre dropdown" (issue #36). `genre`
+ * joins the query on the wire under the same name the app URL uses.
+ */
+describe('fetchHomePayload — the genre', () => {
+  /** The query string of the single request that was issued, parsed. */
+  function requestedQuery(): URLSearchParams {
+    return new URLSearchParams(onlyRequest().url.split('?')[1] ?? '');
+  }
+
+  it('asks for the genre the query is carrying', async () => {
+    fetchMock.mockResolvedValue(okResponse(HOME_PAYLOAD));
+
+    await fetchHomePayload({ ...UNFILTERED, genre: 'Drama' });
+
+    expect(requestedQuery().get('genre')).toBe('Drama');
+  });
+
+  it('omits the parameter when no genre is set', async () => {
+    fetchMock.mockResolvedValue(okResponse(HOME_PAYLOAD));
+
+    await fetchHomePayload(UNFILTERED);
+
+    // "All Genres" is the absence of the filter, so it asks a clean URL.
+    expect(onlyRequest().url).toBe('/api/home');
+  });
+
+  it('encodes a genre name that would otherwise break the query string', async () => {
+    fetchMock.mockResolvedValue(okResponse(HOME_PAYLOAD));
+
+    await fetchHomePayload({ ...UNFILTERED, genre: 'Science Fiction' });
+
+    expect(onlyRequest().url).not.toContain('Science Fiction');
+    expect(requestedQuery().get('genre')).toBe('Science Fiction');
+  });
+
+  it('asks a filtered, searched, sorted home as one request', async () => {
+    fetchMock.mockResolvedValue(okResponse(HOME_PAYLOAD));
+
+    await fetchHomePayload({ sort: 'a-z', search: 'comet', genre: 'Drama' });
+
+    const requested = requestedQuery();
+    expect(requested.get('q')).toBe('comet');
+    expect(requested.get('genre')).toBe('Drama');
+    expect(requested.get('sort')).toBe('a-z');
+  });
+});

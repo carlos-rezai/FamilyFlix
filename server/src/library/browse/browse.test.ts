@@ -698,3 +698,66 @@ describe('library: empty results and full-model assembly', () => {
     expect(item.status).toBe('in-progress');
   });
 });
+
+// --- 05 — Search + filter, Phase 4: "the Genre dropdown" (issue #36) ------------
+
+describe('library: countMovies', () => {
+  it('counts every movie in the library', () => {
+    const storage = freshStorage();
+    storage.addMovie(newMovie({ title: 'One' }));
+    storage.addMovie(newMovie({ title: 'Two' }));
+    storage.addMovie(newMovie({ title: 'Three' }));
+
+    expect(storage.countMovies()).toBe(3);
+  });
+
+  it('counts a movie once however many genres it carries', () => {
+    const storage = freshStorage();
+    storage.addMovie(
+      newMovie({ title: 'Triple', genres: ['Action', 'Comedy', 'Drama'] })
+    );
+
+    // This is the whole reason the count is its own query: the "All Genres"
+    // row is a count of movies, and a movie tagged three times is still one
+    // movie on the shelf.
+    expect(storage.countMovies()).toBe(1);
+  });
+
+  it('is not the sum of the genre counts when movies are tagged twice', () => {
+    const storage = freshStorage();
+    storage.addMovie(newMovie({ title: 'Both', genres: ['Action', 'Comedy'] }));
+    storage.addMovie(newMovie({ title: 'Just Action', genres: ['Action'] }));
+
+    const summed = storage
+      .listGenres()
+      .reduce((total, genre) => total + genre.count, 0);
+
+    expect(summed).toBe(3);
+    expect(storage.countMovies()).toBe(2);
+  });
+
+  it('counts a movie with no genre at all', () => {
+    const storage = freshStorage();
+    storage.addMovie(newMovie({ title: 'Untagged' }));
+    storage.addMovie(newMovie({ title: 'Tagged', genres: ['Drama'] }));
+
+    // An untagged movie earns no genre row, but it is still on the shelf, so
+    // "All Genres" has to include it.
+    expect(storage.listGenres()).toHaveLength(1);
+    expect(storage.countMovies()).toBe(2);
+  });
+
+  it('returns 0 on an empty library', () => {
+    expect(freshStorage().countMovies()).toBe(0);
+  });
+
+  it('drops back down when a movie is deleted', () => {
+    const storage = freshStorage();
+    const added = storage.addMovie(newMovie({ title: 'Fleeting' }));
+    expect(storage.countMovies()).toBe(1);
+
+    storage.deleteMovie(added.id);
+
+    expect(storage.countMovies()).toBe(0);
+  });
+});

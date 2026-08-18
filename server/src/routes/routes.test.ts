@@ -20,7 +20,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { createApiRouter } from '.';
 import { createSqliteStorage, type LibraryStorage } from '../library';
-import type { HomePayload, Movie } from '@/types';
+import type { GenreListPayload, HomePayload, Movie } from '@/types';
 
 // --- per-test resource tracking ------------------------------------------------
 
@@ -553,5 +553,241 @@ describe('GET /api/home?sort=', () => {
 
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual(await getHomePayload(baseUrl));
+  });
+});
+
+// --- 05 — Search + filter, Phase 4: "the Genre dropdown" (issue #36) ----------
+
+/**
+ * Five movies, two of them tagged twice and one not tagged at all — so the
+ * genre counts sum to six where the library holds five. A `total` that summed
+ * the counts cannot pass here, and neither can one that forgot the untagged
+ * movie.
+ */
+function addGenreCountedLibrary(storage: LibraryStorage): void {
+  storage.addMovie({
+    title: 'Both Ways',
+    videoPath: 'Both Ways/both-ways.mkv',
+    genres: ['Comedy', 'Drama'],
+  });
+  storage.addMovie({
+    title: 'Weepie',
+    videoPath: 'Weepie/weepie.mkv',
+    genres: ['Drama'],
+  });
+  storage.addMovie({
+    title: 'Sad Ending',
+    videoPath: 'Sad Ending/sad-ending.mkv',
+    genres: ['Drama'],
+  });
+  storage.addMovie({
+    title: 'Chiller',
+    videoPath: 'Chiller/chiller.mkv',
+    genres: ['Horror', 'Drama'],
+  });
+  storage.addMovie({
+    title: 'Untagged',
+    videoPath: 'Untagged/untagged.mkv',
+  });
+}
+
+/** `GET /api/genres`, checked for a 200 and parsed. */
+async function getGenreList(baseUrl: string): Promise<GenreListPayload> {
+  const response = await fetch(`${baseUrl}/api/genres`);
+  expect(response.status).toBe(200);
+  return (await response.json()) as GenreListPayload;
+}
+
+describe('GET /api/genres', () => {
+  it('answers with the library total and every populated genre', async () => {
+    const { storage, baseUrl } = freshApi();
+    addGenreCountedLibrary(storage);
+
+    const list = await getGenreList(baseUrl);
+
+    expect(list.total).toBe(5);
+    expect(list.genres.map((genre) => [genre.name, genre.count])).toEqual(
+      expect.arrayContaining([
+        ['Comedy', 1],
+        ['Drama', 4],
+        ['Horror', 1],
+      ])
+    );
+  });
+
+  it('counts movies for the total, not genre tags', async () => {
+    const { storage, baseUrl } = freshApi();
+    addGenreCountedLibrary(storage);
+
+    const list = await getGenreList(baseUrl);
+    const summed = list.genres.reduce((total, genre) => total + genre.count, 0);
+
+    // "All Genres · 5" is a count of what is on the shelf. Summing the genre
+    // counts says 6, because two of the five movies are tagged twice — which is
+    // exactly why the total is its own query.
+    expect(summed).toBe(6);
+    expect(list.total).toBe(5);
+  });
+
+  it('counts a movie no genre claims, which earns no row of its own', async () => {
+    const { storage, baseUrl } = freshApi();
+    addGenreCountedLibrary(storage);
+
+    const list = await getGenreList(baseUrl);
+
+    // 'Untagged' is on the shelf and shows up under "All Genres", but it is in
+    // none of the three genre rows.
+    expect(list.genres.map((genre) => genre.name).sort()).toEqual([
+      'Comedy',
+      'Drama',
+      'Horror',
+    ]);
+    expect(list.total).toBe(5);
+  });
+
+  it('never double-counts a movie tagged with several genres', async () => {
+    const { storage, baseUrl } = freshApi();
+    storage.addMovie({
+      title: 'Triple',
+      videoPath: 'Triple/triple.mkv',
+      genres: ['Action', 'Comedy', 'Drama'],
+    });
+
+    const list = await getGenreList(baseUrl);
+
+    expect(list.total).toBe(1);
+    expect(list.genres.reduce((total, genre) => total + genre.count, 0)).toBe(
+      3
+    );
+  });
+
+  it('answers with an empty list and a zero total for an empty library', async () => {
+    const { baseUrl } = freshApi();
+
+    // Not a 404 — an empty library is a normal answer, and the dropdown still
+    // has to render its "All Genres" row.
+    expect(await getGenreList(baseUrl)).toEqual({ total: 0, genres: [] });
+  });
+
+  it('gives every genre an id, a name and a count', async () => {
+    const { storage, baseUrl } = freshApi();
+    addGenreCountedLibrary(storage);
+
+    const [genre] = (await getGenreList(baseUrl)).genres;
+
+    expect(typeof genre.id).toBe('string');
+    expect(genre.id).not.toBe('');
+    expect(typeof genre.name).toBe('string');
+    expect(typeof genre.count).toBe('number');
+  });
+
+  it('leaves out a genre no movie carries', async () => {
+    const { storage, baseUrl } = freshApi();
+    storage.addMovie({
+      title: 'Only Drama',
+      videoPath: 'Only Drama/only-drama.mkv',
+      genres: ['Drama'],
+    });
+
+    const list = await getGenreList(baseUrl);
+
+    expect(list.genres.map((genre) => genre.name)).toEqual(['Drama']);
+  });
+});
+
+describe('GET /api/home?genre=', () => {
+  it('answers with exactly one row — the genre that was asked for', async () => {
+    const { storage, baseUrl } = freshApi();
+    addBrowsableLibrary(storage);
+
+    const response = await homeResponse(baseUrl, { genre: 'Drama' });
+
+    expect(response.status).toBe(200);
+    const home = (await response.json()) as HomePayload;
+    expect(home.rows.map((row) => row.genre)).toEqual(['Drama']);
+    expect(home.rows[0].movies.map((movie) => movie.title)).toEqual(['Weepie']);
+  });
+
+  it('keeps the row’s count at the genre’s unfiltered total', async () => {
+    const { storage, baseUrl } = freshApi();
+    addGenreCountedLibrary(storage);
+
+    const response = await homeResponse(baseUrl, { genre: 'Drama' });
+    const home = (await response.json()) as HomePayload;
+
+    // One row on screen, still offering "View all 4" — the Drama total, which
+    // the filter narrows the row to but never rewrites.
+    expect(home.rows.map((row) => row.genre)).toEqual(['Drama']);
+    expect(home.rows[0].count).toBe(4);
+  });
+
+  it('narrows the continue section to that genre as well', async () => {
+    const { storage, baseUrl } = freshApi();
+    addBrowsableLibrary(storage);
+
+    const response = await homeResponse(baseUrl, { genre: 'Drama' });
+    const home = (await response.json()) as HomePayload;
+
+    expect(home.continueWatching.map((movie) => movie.title)).toEqual([
+      'Weepie',
+    ]);
+  });
+
+  it('takes the genre, the term and the order in one request', async () => {
+    const { storage, baseUrl } = freshApi();
+    addSortableLibrary(storage);
+
+    const response = await homeResponse(baseUrl, {
+      genre: 'Drama',
+      q: 'e',
+      sort: 'a-z',
+    });
+
+    expect(response.status).toBe(200);
+    const home = (await response.json()) as HomePayload;
+    expect(home.rows.map((row) => row.genre)).toEqual(['Drama']);
+    expect(home.rows[0].movies.map((movie) => movie.title)).toEqual([
+      'apple Grove',
+      'Meridian',
+      'Zephyr',
+    ]);
+  });
+
+  it('answers with an empty payload for a genre the library does not hold', async () => {
+    const { storage, baseUrl } = freshApi();
+    addBrowsableLibrary(storage);
+
+    const response = await homeResponse(baseUrl, { genre: 'Westerns' });
+
+    // A stale bookmark for a genre that has since been emptied is a normal
+    // "nothing here", not a bad request.
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ continueWatching: [], rows: [] });
+  });
+
+  it('treats an empty ?genre= as no genre at all', async () => {
+    const { storage, baseUrl } = freshApi();
+    addBrowsableLibrary(storage);
+
+    const response = await homeResponse(baseUrl, { genre: '' });
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual(await getHomePayload(baseUrl));
+  });
+
+  it('matches the genre name exactly as the library spells it', async () => {
+    const { storage, baseUrl } = freshApi();
+    storage.addMovie({
+      title: 'Star Cruiser',
+      videoPath: 'Star Cruiser/star-cruiser.mkv',
+      genres: ['Sci-Fi'],
+    });
+
+    const response = await homeResponse(baseUrl, { genre: 'Sci-Fi' });
+    const home = (await response.json()) as HomePayload;
+
+    // The name travels through the query string and back without being
+    // normalised on the way — the pool spells it 'Sci-Fi', so the URL must too.
+    expect(home.rows.map((row) => row.genre)).toEqual(['Sci-Fi']);
   });
 });

@@ -515,3 +515,171 @@ describe('library: getHome payload shape', () => {
     expect(started).toEqual(storage.getMovie(added.id));
   });
 });
+
+// --- 05 — Search + filter, Phase 4: "the Genre dropdown" (issue #36) ------------
+
+describe('library: getHome under a genre filter', () => {
+  /** Three populated genres, one movie apiece, so a row can only be missing on purpose. */
+  function seedThreeGenres(
+    storage: ReturnType<typeof createSqliteStorage>
+  ): void {
+    storage.addMovie(newMovie({ title: 'Comic Caper', genres: ['Comedy'] }));
+    storage.addMovie(newMovie({ title: 'Weepie', genres: ['Drama'] }));
+    storage.addMovie(newMovie({ title: 'Chiller', genres: ['Horror'] }));
+  }
+
+  it('builds only the asked-for genre’s row, and leaves every other one out', () => {
+    const storage = freshStorage();
+    seedThreeGenres(storage);
+
+    const { rows } = storage.getHome({
+      sort: 'recently-added',
+      genre: 'Drama',
+    });
+
+    // Choosing a genre is a narrowing of the whole screen, not a highlight:
+    // exactly one row survives it.
+    expect(rows).toHaveLength(1);
+    expect(rows[0].genre).toBe('Drama');
+    expect(rows[0].movies.map((m) => m.title)).toEqual(['Weepie']);
+  });
+
+  it('keeps that row’s count at the genre’s unfiltered total', () => {
+    const storage = freshStorage();
+    seedGenre(storage, 'Drama', 24); // "Drama 01".."Drama 24"
+    storage.addMovie(newMovie({ title: 'Comic Caper', genres: ['Comedy'] }));
+
+    const { rows } = storage.getHome({
+      sort: 'recently-added',
+      genre: 'Drama',
+    });
+
+    // One row, showing the 15 a carousel holds — but "View all 24" still says
+    // 24, because the count is the genre's rather than the query's.
+    expect(rows).toHaveLength(1);
+    expect(rows[0].movies).toHaveLength(15);
+    expect(rows[0].count).toBe(24);
+  });
+
+  it('still caps the one surviving row at 15, newest first', () => {
+    const storage = freshStorage();
+    seedGenre(storage, 'Action', 20);
+
+    const { rows } = storage.getHome({
+      sort: 'recently-added',
+      genre: 'Action',
+    });
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0].movies).toHaveLength(15);
+    expect(rows[0].count).toBe(20);
+    expect(rows[0].movies[0].title).toBe('Action 20');
+  });
+
+  it('narrows that row by the search term as well, in one query', () => {
+    const storage = freshStorage();
+    storage.addMovie(newMovie({ title: 'Comic Caper', genres: ['Comedy'] }));
+    storage.addMovie(newMovie({ title: 'Comic Relief', genres: ['Drama'] }));
+    storage.addMovie(newMovie({ title: 'Weepie', genres: ['Drama'] }));
+
+    const { rows } = storage.getHome({
+      sort: 'recently-added',
+      genre: 'Drama',
+      search: 'comic',
+    });
+
+    // "Comedies about the sea" is one question, not two: the genre picks the
+    // row and the term picks what is in it.
+    expect(rows).toHaveLength(1);
+    expect(rows[0].genre).toBe('Drama');
+    expect(rows[0].movies.map((m) => m.title)).toEqual(['Comic Relief']);
+  });
+
+  it('orders that row by the sort the query carries', () => {
+    const storage = freshStorage();
+    seedByAge(storage, 3, (label) => ({
+      title: `Drama ${label}`,
+      genres: ['Drama'],
+    }));
+
+    const { rows } = storage.getHome({ sort: 'a-z', genre: 'Drama' });
+
+    expect(rows[0].movies.map((m) => m.title)).toEqual([
+      'Drama 01',
+      'Drama 02',
+      'Drama 03',
+    ]);
+  });
+
+  it('comes back with no rows at all when the genre holds nothing that matched', () => {
+    const storage = freshStorage();
+    seedThreeGenres(storage);
+
+    const { rows } = storage.getHome({
+      sort: 'recently-added',
+      genre: 'Drama',
+      search: 'zzz-nothing',
+    });
+
+    // The empty-row drop rule still applies to the one row that was built —
+    // a blank shelf is not an answer.
+    expect(rows).toEqual([]);
+  });
+
+  it('comes back with no rows for a genre the library does not hold', () => {
+    const storage = freshStorage();
+    seedThreeGenres(storage);
+
+    expect(
+      storage.getHome({ sort: 'recently-added', genre: 'Westerns' }).rows
+    ).toEqual([]);
+  });
+
+  it('narrows the continue section to that genre too, off the same query', () => {
+    const storage = freshStorage();
+    storage.addMovie(
+      newMovie({
+        title: 'Comic Caper',
+        genres: ['Comedy'],
+        resumePositionSeconds: 600,
+      })
+    );
+    storage.addMovie(
+      newMovie({
+        title: 'Weepie',
+        genres: ['Drama'],
+        resumePositionSeconds: 300,
+      })
+    );
+
+    const home = storage.getHome({ sort: 'recently-added', genre: 'Drama' });
+
+    // The top of the screen can never disagree with the rest of it.
+    expect(home.continueWatching.map((m) => m.title)).toEqual(['Weepie']);
+    expect(home.rows.map((row) => row.genre)).toEqual(['Drama']);
+  });
+
+  it('builds every populated genre’s row again once the genre is dropped', () => {
+    const storage = freshStorage();
+    seedThreeGenres(storage);
+
+    // "All Genres" is the absence of the filter, not a genre of its own.
+    expect(
+      storage.getHome({ sort: 'recently-added' }).rows.map((row) => row.genre)
+    ).toEqual(['Comedy', 'Drama', 'Horror']);
+  });
+
+  it('leaves a movie tagged with several genres in the row that was asked for', () => {
+    const storage = freshStorage();
+    storage.addMovie(newMovie({ title: 'Both', genres: ['Comedy', 'Drama'] }));
+
+    const { rows } = storage.getHome({
+      sort: 'recently-added',
+      genre: 'Drama',
+    });
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0].genre).toBe('Drama');
+    expect(rows[0].movies.map((m) => m.title)).toEqual(['Both']);
+  });
+});
