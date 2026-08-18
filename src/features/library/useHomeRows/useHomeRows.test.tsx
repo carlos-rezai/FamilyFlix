@@ -672,3 +672,110 @@ describe('useHomeRows — the favorite flag', () => {
     expect(favoriteIn(result.current.rows, 'Thriller', 'x1')).toBe(false);
   });
 });
+
+describe('useHomeRows — the sort order', () => {
+  /** The same library the other way up, as a sorted request would answer it. */
+  const SORTED_PAYLOAD: HomePayload = {
+    continueWatching: [],
+    rows: [
+      {
+        genre: 'Comedy',
+        count: 2,
+        movies: [makeMovie({ id: 'c1', title: 'Comet Season' })],
+      },
+      {
+        genre: 'Action',
+        count: 3,
+        movies: [makeMovie({ id: 'a1', title: 'Northwind' })],
+      },
+    ],
+  };
+
+  it('asks with the order the URL was opened on, so a shared link loads sorted', async () => {
+    serve(SORTED_PAYLOAD);
+
+    await loadRows('/?sort=a-z');
+
+    expect(homeRequests()).toHaveLength(1);
+    expect(homeQuery(0).get('sort')).toBe('a-z');
+  });
+
+  it('asks for the default order when the URL carries no sort', async () => {
+    serve(HOME_PAYLOAD);
+
+    await loadRows('/');
+
+    // The plain home needs no parameter to explain what it already does.
+    expect(homeQuery(0).has('sort')).toBe(false);
+  });
+
+  it('asks again, in the new order, when only the sort changes', async () => {
+    fetchMock.mockImplementationOnce(() =>
+      Promise.resolve(okResponse(HOME_PAYLOAD))
+    );
+    fetchMock.mockImplementation(() =>
+      Promise.resolve(okResponse(SORTED_PAYLOAD))
+    );
+    const { result } = await loadRows('/');
+
+    act(() => goTo('/?sort=a-z'));
+
+    await waitFor(() =>
+      expect(result.current.rows.map((row) => row.genre)).toEqual([
+        'Comedy',
+        'Action',
+      ])
+    );
+    expect(homeRequests()).toHaveLength(2);
+    expect(homeQuery(1).get('sort')).toBe('a-z');
+  });
+
+  it('keeps the rows already on screen while the re-ordered ones load', async () => {
+    // Choosing an order is not a reason to blank the screen she is reading.
+    fetchMock.mockImplementationOnce(() =>
+      Promise.resolve(okResponse(HOME_PAYLOAD))
+    );
+    const { result } = await loadRows('/');
+
+    fetchMock.mockImplementation(() => new Promise<Response>(() => undefined));
+    act(() => goTo('/?sort=a-z'));
+
+    await waitFor(() => expect(homeRequests()).toHaveLength(2));
+    expect(result.current.status).toBe('ready');
+    expect(result.current.rows.map((row) => row.genre)).toEqual([
+      'Action',
+      'Comedy',
+    ]);
+  });
+
+  it('asks a sorted search as one request, not one each', async () => {
+    serve(SORTED_PAYLOAD);
+
+    await loadRows('/?q=comet&sort=a-z');
+
+    expect(homeRequests()).toHaveLength(1);
+    expect(homeQuery(0).get('q')).toBe('comet');
+    expect(homeQuery(0).get('sort')).toBe('a-z');
+  });
+
+  it('falls back to the default order for a sort it does not recognise', async () => {
+    // A hand-edited or stale URL opens the plain home rather than asking the
+    // route something it will refuse.
+    serve(HOME_PAYLOAD);
+
+    const { result } = await loadRows('/?sort=by-vibes');
+
+    expect(homeQuery(0).has('sort')).toBe(false);
+    expect(result.current.status).toBe('ready');
+  });
+
+  it('does not reload when the URL changes to a sort meaning the same thing', async () => {
+    serve(HOME_PAYLOAD);
+    const { result } = await loadRows('/');
+
+    act(() => goTo('/?sort=recently-added'));
+
+    await waitFor(() => expect(result.current.status).toBe('ready'));
+    expect(homeRequests()).toHaveLength(1);
+  });
+});

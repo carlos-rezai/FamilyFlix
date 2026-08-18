@@ -159,6 +159,57 @@ describe('fetchHomePayload — asking for a narrowed library', () => {
   });
 });
 
+describe('fetchHomePayload — asking for a sorted library', () => {
+  /** The query string the one request carried, parsed rather than matched. */
+  function requestedQuery(): URLSearchParams {
+    return new URLSearchParams(onlyRequest().url.split('?')[1] ?? '');
+  }
+
+  it('carries the chosen order to the route as “sort”', async () => {
+    fetchMock.mockResolvedValue(okResponse(HOME_PAYLOAD));
+
+    await fetchHomePayload({ sort: 'a-z' });
+
+    expect(requestedQuery().get('sort')).toBe('a-z');
+  });
+
+  it('carries each of the orders the dropdown offers', async () => {
+    for (const sort of [
+      'a-z',
+      'year',
+      'highest-rated',
+      'unwatched-first',
+    ] as const) {
+      fetchMock.mockClear();
+      fetchMock.mockResolvedValue(okResponse(HOME_PAYLOAD));
+
+      await fetchHomePayload({ sort });
+
+      expect(requestedQuery().get('sort')).toBe(sort);
+    }
+  });
+
+  it('omits “sort” at the default order, so the plain home is a clean request', async () => {
+    // Recently-added is what the route already does; saying so adds nothing
+    // but noise to the request the parent is looking at.
+    fetchMock.mockResolvedValue(okResponse(HOME_PAYLOAD));
+
+    await fetchHomePayload(UNFILTERED);
+
+    expect(onlyRequest().url).toBe('/api/home');
+  });
+
+  it('asks a sorted search as one request, not two', async () => {
+    fetchMock.mockResolvedValue(okResponse(HOME_PAYLOAD));
+
+    await fetchHomePayload({ sort: 'a-z', search: 'comet' });
+
+    const requested = requestedQuery();
+    expect(requested.get('q')).toBe('comet');
+    expect(requested.get('sort')).toBe('a-z');
+  });
+});
+
 describe('saveFavorite', () => {
   it('POSTs the new value as JSON to the movie’s favorite route', async () => {
     fetchMock.mockResolvedValue(okResponse({ value: true }));

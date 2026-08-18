@@ -167,3 +167,43 @@ describe('LibraryPage', () => {
     expect(gear()).toBeDefined();
   });
 });
+
+/**
+ * 05 — Search + filter, Phase 3: "the Sort dropdown" (issue #35). The header
+ * grows its second control, in the slot on the other side of the spacer.
+ */
+describe('LibraryPage — the header controls', () => {
+  const sortPill = (value = 'Recently Added') =>
+    screen.getByRole('button', { name: `Sort: ${value}` });
+
+  it('mounts the sort dropdown in the header, beside the search box and the gear', async () => {
+    respondWithRows(HOME_PAYLOAD);
+
+    renderPage();
+
+    expect(sortPill()).toBeDefined();
+    expect(searchBox()).toBeDefined();
+    expect(gear()).toBeDefined();
+    await screen.findByRole('region', { name: 'Action' });
+  });
+
+  it('opens showing the order the URL carries, and asks the route for it too', async () => {
+    // Same URL, both subtrees: the pill and the request agree without the page
+    // holding anything.
+    respondWithRows(HOME_PAYLOAD);
+
+    renderPage('/?sort=a-z');
+
+    expect(sortPill('Title (A–Z)')).toBeDefined();
+    await waitFor(() => expect(requestedQuery().get('sort')).toBe('a-z'));
+  });
+
+  it('keeps the sort dropdown rendered while the library is still loading', async () => {
+    fetchMock.mockImplementation(() => new Promise<Response>(() => undefined));
+
+    renderPage();
+
+    expect(sortPill()).toBeDefined();
+    expect(searchBox()).toBeDefined();
+  });
+});

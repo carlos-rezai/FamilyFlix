@@ -143,3 +143,85 @@ describe('useLibraryQuery — what the writes do to history', () => {
     expect(currentUrl()).toBe('/movie/a1');
   });
 });
+
+describe('useLibraryQuery — reading the sort order', () => {
+  it('reads the sort the URL is carrying', () => {
+    const { result } = mountOn(['/?sort=a-z']);
+
+    expect(result.current.query.sort).toBe('a-z');
+  });
+
+  it('reads the default order from a clean “/”', () => {
+    const { result } = mountOn(['/']);
+
+    expect(result.current.query.sort).toBe('recently-added');
+  });
+
+  it('reports the new order once the URL has changed', () => {
+    const { result } = mountOn(['/']);
+
+    act(() => result.current.setSort('highest-rated'));
+
+    expect(result.current.query.sort).toBe('highest-rated');
+  });
+});
+
+describe('useLibraryQuery — writing the sort order', () => {
+  it('writes the chosen order into the URL as “sort”', () => {
+    const { result } = mountOn(['/']);
+
+    act(() => result.current.setSort('a-z'));
+
+    expect(currentUrl()).toBe('/?sort=a-z');
+  });
+
+  it('removes “sort” at the default order, so an unsorted home is a clean “/”', () => {
+    // Recently-added is what the home has always shown; it needs no parameter
+    // to explain it.
+    const { result } = mountOn(['/?sort=a-z']);
+
+    act(() => result.current.setSort('recently-added'));
+
+    expect(currentUrl()).toBe('/');
+  });
+
+  it('leaves the search text exactly as it found it', () => {
+    // Each part of the query has its own setter; choosing an order must not
+    // throw away what the parent typed.
+    const { result } = mountOn(['/?q=lighthouse']);
+
+    act(() => result.current.setSort('year'));
+
+    const written = new URLSearchParams(String(currentUrl()).split('?')[1]);
+    expect(written.get('q')).toBe('lighthouse');
+    expect(written.get('sort')).toBe('year');
+  });
+
+  it('removes only its own parameter when the order goes back to the default', () => {
+    const { result } = mountOn(['/?q=lighthouse&sort=a-z']);
+
+    act(() => result.current.setSort('recently-added'));
+
+    expect(currentUrl()).toBe('/?q=lighthouse');
+  });
+
+  it('replaces the order rather than stacking a second one', () => {
+    const { result } = mountOn(['/?sort=a-z']);
+
+    act(() => result.current.setSort('year'));
+
+    expect(currentUrl()).toBe('/?sort=year');
+  });
+
+  it('costs no history, so one Back still escapes the whole screen', () => {
+    const { result } = mountOn(['/movie/a1', '/']);
+
+    act(() => result.current.setSort('a-z'));
+    act(() => result.current.setSort('year'));
+    act(() => result.current.setSearch('comet'));
+
+    goBack();
+
+    expect(currentUrl()).toBe('/movie/a1');
+  });
+});

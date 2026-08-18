@@ -16,7 +16,7 @@
 import express from 'express';
 import type { AddressInfo } from 'node:net';
 import type { Server } from 'node:http';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { createApiRouter } from '.';
 import { createSqliteStorage, type LibraryStorage } from '../library';
@@ -326,5 +326,232 @@ describe('POST /api/movies/:id/watched', () => {
     const body = (await response.json()) as { error?: unknown };
     expect(typeof body.error).toBe('string');
     expect(body.error).not.toBe('');
+  });
+});
+
+// --- 05 — Search + filter, Phase 3: "the Sort dropdown" (issue #35) -----------
+
+/**
+ * A library whose movies disagree on every key the five sorts order by: the
+ * highest rated has no year, the lowest rated is watched, one title is
+ * lowercase, and two different genres are part-way through. Every sort here
+ * produces a different order from every other **and** from the recently-added
+ * default, so no assertion below can pass on a coincidence.
+ *
+ * Added oldest-first under fake timers, because `created_at` is repo-generated
+ * from `new Date()`: four movies added in the same millisecond tie, and the
+ * `m.id` tiebreak is a random UUID. Distinct instants are what make the
+ * default order deterministic enough to be told apart from a real sort.
+ */
+function addSortableLibrary(storage: LibraryStorage): void {
+  vi.useFakeTimers();
+
+  vi.setSystemTime(new Date('2026-01-01T00:00:00.000Z'));
+  storage.addMovie({
+    title: 'Zephyr',
+    videoPath: 'Zephyr (1999)/zephyr.mkv',
+    year: 1999,
+    rating: 4,
+    watched: true,
+    genres: ['Drama'],
+  });
+
+  vi.setSystemTime(new Date('2026-01-02T00:00:00.000Z'));
+  storage.addMovie({
+    title: 'apple Grove',
+    videoPath: 'apple Grove (2021)/apple-grove.mkv',
+    year: 2021,
+    genres: ['Drama'],
+  });
+
+  vi.setSystemTime(new Date('2026-01-03T00:00:00.000Z'));
+  storage.addMovie({
+    title: 'Backwater',
+    videoPath: 'Backwater/backwater.mkv',
+    resumePositionSeconds: 300,
+    genres: ['Horror'],
+  });
+
+  vi.setSystemTime(new Date('2026-01-04T00:00:00.000Z'));
+  storage.addMovie({
+    title: 'Meridian',
+    videoPath: 'Meridian/meridian.mkv',
+    rating: 9,
+    resumePositionSeconds: 600,
+    genres: ['Drama'],
+  });
+
+  // Back to real time before anything is fetched — the requests below are real
+  // HTTP over a real listener, and a frozen clock would strand them.
+  vi.useRealTimers();
+}
+
+/** `GET /api/home` with whatever parameters, unchecked — status included. */
+function homeResponse(
+  baseUrl: string,
+  query: Record<string, string>
+): Promise<Response> {
+  return fetch(`${baseUrl}/api/home?${new URLSearchParams(query)}`);
+}
+
+/** The titles of the Drama row under one sort, which is what each sort claims. */
+async function dramaTitles(baseUrl: string, sort: string): Promise<string[]> {
+  const response = await homeResponse(baseUrl, { sort });
+  expect(response.status).toBe(200);
+  const home = (await response.json()) as HomePayload;
+  const drama = home.rows.find((row) => row.genre === 'Drama');
+  return (drama?.movies ?? []).map((movie) => movie.title);
+}
+
+describe('GET /api/home?sort=', () => {
+  it('orders the rows by title for a-z, without minding the case', async () => {
+    const { storage, baseUrl } = freshApi();
+    addSortableLibrary(storage);
+
+    // A parent looking for a title does not know which of them was
+    // capitalised, so "apple Grove" sorts before "Meridian".
+    expect(await dramaTitles(baseUrl, 'a-z')).toEqual([
+      'apple Grove',
+      'Meridian',
+      'Zephyr',
+    ]);
+  });
+
+  it('orders the rows newest year first, leaving an unknown year last', async () => {
+    const { storage, baseUrl } = freshApi();
+    addSortableLibrary(storage);
+
+    // A movie with no year is not a movie from year zero.
+    expect(await dramaTitles(baseUrl, 'year')).toEqual([
+      'apple Grove',
+      'Zephyr',
+      'Meridian',
+    ]);
+  });
+
+  it('orders the rows best first, leaving an unrated movie last', async () => {
+    const { storage, baseUrl } = freshApi();
+    addSortableLibrary(storage);
+
+    // Unrated means nobody has said anything yet — not a nought out of ten.
+    expect(await dramaTitles(baseUrl, 'highest-rated')).toEqual([
+      'Meridian',
+      'Zephyr',
+      'apple Grove',
+    ]);
+  });
+
+  it('orders the rows unwatched, then in-progress, then watched', async () => {
+    const { storage, baseUrl } = freshApi();
+    addSortableLibrary(storage);
+
+    // What is still ahead of you comes first; what you have finished sinks.
+    expect(await dramaTitles(baseUrl, 'unwatched-first')).toEqual([
+      'apple Grove',
+      'Meridian',
+      'Zephyr',
+    ]);
+  });
+
+  it('answers a request for the default sort exactly as an argument-less one', async () => {
+    const { storage, baseUrl } = freshApi();
+    addSortableLibrary(storage);
+
+    const response = await homeResponse(baseUrl, { sort: 'recently-added' });
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual(await getHomePayload(baseUrl));
+  });
+
+  it('sorts every row, not just the first one', async () => {
+    const { storage, baseUrl } = freshApi();
+    addSortableLibrary(storage);
+    // The newest movie in the library, and the last one alphabetically — so
+    // the Horror row can only come back this way if it was really sorted.
+    storage.addMovie({
+      title: 'Wolves',
+      videoPath: 'Wolves/wolves.mkv',
+      genres: ['Horror'],
+    });
+
+    const response = await homeResponse(baseUrl, { sort: 'a-z' });
+    const home = (await response.json()) as HomePayload;
+
+    expect(home.rows.map((row) => row.movies.map((m) => m.title))).toEqual([
+      ['apple Grove', 'Meridian', 'Zephyr'],
+      ['Backwater', 'Wolves'],
+    ]);
+  });
+
+  it('orders the continue section by the same sort as the rows', async () => {
+    const { storage, baseUrl } = freshApi();
+    addSortableLibrary(storage);
+
+    const response = await homeResponse(baseUrl, { sort: 'a-z' });
+    const home = (await response.json()) as HomePayload;
+
+    // One query, one order — the top of the screen cannot disagree with the
+    // rest of it about what A–Z means.
+    expect(home.continueWatching.map((m) => m.title)).toEqual([
+      'Backwater',
+      'Meridian',
+    ]);
+  });
+
+  it('sorts a search rather than answering it as two questions', async () => {
+    const { storage, baseUrl } = freshApi();
+    addSortableLibrary(storage);
+    storage.addMovie({
+      title: 'Applause',
+      videoPath: 'Applause/applause.mkv',
+      genres: ['Drama'],
+    });
+
+    const response = await homeResponse(baseUrl, { q: 'app', sort: 'a-z' });
+    const home = (await response.json()) as HomePayload;
+
+    // "The films with 'app' in them, A–Z" is one request, not one to filter
+    // and another to order.
+    expect(home.rows.map((row) => row.genre)).toEqual(['Drama']);
+    expect(home.rows[0].movies.map((m) => m.title)).toEqual([
+      'apple Grove',
+      'Applause',
+    ]);
+  });
+
+  it('rejects a sort it does not recognise, the way /api/movies does', async () => {
+    const { storage, baseUrl } = freshApi();
+    addSortableLibrary(storage);
+
+    const response = await homeResponse(baseUrl, { sort: 'by-vibes' });
+
+    // A hand-edited or stale URL is a bad request, not a silent default: the
+    // two browse endpoints answer an unknown sort the same way.
+    expect(response.status).toBe(400);
+    const body = (await response.json()) as { error?: unknown };
+    expect(typeof body.error).toBe('string');
+    expect(body.error).not.toBe('');
+  });
+
+  it('rejects an unknown sort even when the rest of the request is valid', async () => {
+    const { storage, baseUrl } = freshApi();
+    addSortableLibrary(storage);
+
+    const response = await homeResponse(baseUrl, {
+      q: 'app',
+      sort: 'by-vibes',
+    });
+
+    expect(response.status).toBe(400);
+  });
+
+  it('treats an empty ?sort= as the default order, not as a bad request', async () => {
+    const { storage, baseUrl } = freshApi();
+    addSortableLibrary(storage);
+
+    const response = await homeResponse(baseUrl, { sort: '' });
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual(await getHomePayload(baseUrl));
   });
 });

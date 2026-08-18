@@ -62,3 +62,51 @@ describe('parseLibraryQuery — a hostile or stale URL', () => {
     });
   });
 });
+
+describe('parseLibraryQuery — the sort order', () => {
+  it('reads every sort the dropdown can write', () => {
+    // The five slugs are the ones already on the wire; the URL carries them
+    // unchanged rather than inventing a second spelling for each.
+    expect(parseLibraryQuery(params('?sort=a-z')).sort).toBe('a-z');
+    expect(parseLibraryQuery(params('?sort=year')).sort).toBe('year');
+    expect(parseLibraryQuery(params('?sort=highest-rated')).sort).toBe(
+      'highest-rated'
+    );
+    expect(parseLibraryQuery(params('?sort=unwatched-first')).sort).toBe(
+      'unwatched-first'
+    );
+    expect(parseLibraryQuery(params('?sort=recently-added')).sort).toBe(
+      'recently-added'
+    );
+  });
+
+  it('falls back to the default order when “sort” is absent', () => {
+    expect(parseLibraryQuery(params('?q=lighthouse')).sort).toBe(
+      'recently-added'
+    );
+  });
+
+  it('falls back to the default order for an empty “sort”', () => {
+    expect(parseLibraryQuery(params('?sort=')).sort).toBe('recently-added');
+  });
+
+  it('falls back to the default order for a sort it does not recognise', () => {
+    // A hand-edited URL opens the plain home rather than asking the server
+    // something it will refuse.
+    expect(parseLibraryQuery(params('?sort=by-vibes')).sort).toBe(
+      'recently-added'
+    );
+  });
+
+  it('is not fooled by a sort that only looks like one', () => {
+    expect(parseLibraryQuery(params('?sort=A-Z')).sort).toBe('recently-added');
+    expect(parseLibraryQuery(params('?sort=a-z ')).sort).toBe('recently-added');
+  });
+
+  it('reads the sort and the search together, as one query', () => {
+    expect(parseLibraryQuery(params('?q=comet&sort=a-z'))).toEqual({
+      sort: 'a-z',
+      search: 'comet',
+    });
+  });
+});
