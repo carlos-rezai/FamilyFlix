@@ -146,3 +146,132 @@ describe('Menu — reopening', () => {
     expect(item()).toBeNull();
   });
 });
+
+/**
+ * The same menu wearing what a filter list needs: one selected row, one row
+ * with a count, one plain row. Deliberately a separate helper — the dismissal
+ * tests above are the contract these additions must not disturb, so they keep
+ * their own single-item menu untouched.
+ */
+function renderFilterMenu(onSelect: () => void = () => undefined) {
+  return render(
+    <ThemeProvider theme={theme}>
+      <Menu trigger={(props) => <button {...props}>Genre</button>}>
+        <MenuItem selected onSelect={() => undefined}>
+          All Genres
+        </MenuItem>
+        <MenuItem trailing="6" onSelect={onSelect}>
+          Drama
+        </MenuItem>
+        <MenuItem onSelect={() => undefined}>Comedy</MenuItem>
+      </Menu>
+    </ThemeProvider>
+  );
+}
+
+const filterTrigger = () => screen.getByRole('button', { name: 'Genre' });
+
+function openFilterMenu() {
+  const control = filterTrigger();
+  control.focus();
+  fireEvent.click(control);
+  return control;
+}
+
+/** A row, found by the name it announces — a count must never be part of it. */
+const row = (name: string) => screen.getByRole('button', { name });
+
+describe('MenuItem — marking the current choice', () => {
+  it('marks the selected row as current and leaves the rest unmarked', () => {
+    renderFilterMenu();
+    openFilterMenu();
+
+    expect(row('All Genres').getAttribute('aria-current')).toBe('true');
+    expect(row('Drama').getAttribute('aria-current')).toBeNull();
+    expect(row('Comedy').getAttribute('aria-current')).toBeNull();
+  });
+
+  it('changes nothing about what selecting a marked row does', () => {
+    // `selected` is a statement about the row, not a mode: a marked row still
+    // reports and still shuts the menu, exactly like an unmarked one.
+    const onSelect = vi.fn();
+    render(
+      <ThemeProvider theme={theme}>
+        <Menu trigger={(props) => <button {...props}>Genre</button>}>
+          <MenuItem selected onSelect={onSelect}>
+            All Genres
+          </MenuItem>
+        </Menu>
+      </ThemeProvider>
+    );
+    const control = openFilterMenu();
+    expect(row('All Genres').getAttribute('aria-current')).toBe('true');
+
+    fireEvent.click(row('All Genres'));
+
+    expect(onSelect).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole('button', { name: 'All Genres' })).toBeNull();
+    expect(document.activeElement).toBe(control);
+  });
+});
+
+describe('MenuItem — the trailing count', () => {
+  it('shows a row’s count, and nothing at all for a row without one', () => {
+    renderFilterMenu();
+    openFilterMenu();
+
+    expect(row('Drama').textContent).toContain('6');
+    expect(row('Comedy').textContent).toBe('Comedy');
+  });
+
+  it('keeps the count out of the row’s accessible name', () => {
+    // Announced as "Drama", not "Drama 6" — chrome, like the leading glyph. The
+    // exact-name query is the assertion: it stops matching if the 6 joins it.
+    renderFilterMenu();
+    openFilterMenu();
+
+    const drama = row('Drama');
+
+    expect(drama.textContent).toContain('6');
+    expect(drama.getAttribute('aria-label')).toBeNull();
+  });
+
+  it('still shuts the menu and reports when a counted row is used', () => {
+    const onSelect = vi.fn();
+    renderFilterMenu(onSelect);
+    const control = openFilterMenu();
+    expect(row('Drama').textContent).toContain('6');
+
+    fireEvent.click(row('Drama'));
+
+    expect(onSelect).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole('button', { name: 'Drama' })).toBeNull();
+    expect(document.activeElement).toBe(control);
+  });
+});
+
+describe('Menu — how tall the panel gets', () => {
+  /** The panel is the box the rows sit in — reached through the DOM, not a class. */
+  const panelOf = (item: HTMLElement) => item.parentElement as HTMLElement;
+
+  it('caps the panel so a long list scrolls inside it', () => {
+    renderFilterMenu();
+    openFilterMenu();
+
+    const panel = panelOf(row('Drama'));
+
+    expect(getComputedStyle(panel).maxHeight).toBe('340px');
+    expect(getComputedStyle(panel).overflowY).toBe('auto');
+  });
+
+  it('is inert for a short menu, which shows no scrollbar', () => {
+    // `auto`, not `scroll`: the edit menu's four rows fit, so the cap it now
+    // carries changes nothing a reader of that menu can see.
+    renderMenu();
+    openMenu();
+
+    const panel = panelOf(screen.getByRole('button', { name: 'Edit details' }));
+
+    expect(getComputedStyle(panel).overflowY).toBe('auto');
+  });
+});
