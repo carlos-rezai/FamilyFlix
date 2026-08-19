@@ -12,7 +12,7 @@
  * can have and the names a sort can be checked against are one declaration.
  * Both build targets import it as a value.
  */
-export { MOVIE_SORTS } from './browse';
+export { MOVIE_SORTS, DEFAULT_MOVIE_SORT } from './browse';
 
 export type { WatchStatus, Genre, Subtitle, Movie } from './movie';
 export type {

@@ -1,10 +1,7 @@
-import type { HomePayload, HomeQuery, MovieSort } from '@/types';
+import { DEFAULT_MOVIE_SORT, type HomePayload, type HomeQuery } from '@/types';
 
 /** The one aggregate the browse home loads — every section in one payload. */
 const HOME_ENDPOINT = '/api/home';
-
-/** The order the route sorts by unasked, and so the one that is never sent. */
-const DEFAULT_SORT: MovieSort = 'recently-added';
 
 /** Where one movie's favorite flag is saved. */
 const favoriteEndpoint = (id: string) =>
@@ -25,7 +22,7 @@ function homeUrl(query: HomeQuery): string {
 
   // Recently-added is what the route does when asked nothing; saying so would
   // add a parameter that changes no answer.
-  if (query.sort !== DEFAULT_SORT) {
+  if (query.sort !== DEFAULT_MOVIE_SORT) {
     params.set('sort', query.sort);
   }
 

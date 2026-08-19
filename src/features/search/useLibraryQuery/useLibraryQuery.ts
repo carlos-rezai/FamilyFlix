@@ -1,11 +1,8 @@
 import { useCallback, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
-import type { HomeQuery, MovieSort } from '@/types';
+import { DEFAULT_MOVIE_SORT, type HomeQuery, type MovieSort } from '@/types';
 import { parseLibraryQuery } from '../parseLibraryQuery/parseLibraryQuery';
-
-/** The order the home opens in, and so the one that writes no parameter. */
-const DEFAULT_SORT: MovieSort = 'recently-added';
 
 export interface UseLibraryQueryResult {
   /** The settled query the URL is currently carrying. */
@@ -66,7 +63,7 @@ export function useLibraryQuery(): UseLibraryQueryResult {
   );
 
   const setSort = useCallback(
-    (value: MovieSort) => setParam('sort', value, DEFAULT_SORT),
+    (value: MovieSort) => setParam('sort', value, DEFAULT_MOVIE_SORT),
     [setParam]
   );
 

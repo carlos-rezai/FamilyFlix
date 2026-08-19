@@ -36,6 +36,18 @@ export const MOVIE_SORTS = [
 export type MovieSort = (typeof MOVIE_SORTS)[number];
 
 /**
+ * The order the library is in until something asks for another one.
+ *
+ * Shared because it is the value five different modules have to agree on to
+ * stay correct rather than merely consistent: the route applies it when a
+ * request omits `sort`, the URL parser falls back to it, and both serializers
+ * omit `sort` at it. A URL that named a different default would ask the route
+ * for the order it was already going to use — or, worse, stop asking for one
+ * it wasn't.
+ */
+export const DEFAULT_MOVIE_SORT: MovieSort = 'recently-added';
+
+/**
  * A parameterized browse query: one `sort` plus any combination of filters.
  * Every filter narrows the result; omitted filters are no-ops. Filters and sort
  * combine in a single query.

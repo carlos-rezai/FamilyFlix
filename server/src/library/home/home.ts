@@ -1,4 +1,10 @@
-import type { HomePayload, HomeQuery, HomeRow, Movie } from '@/types';
+import {
+  DEFAULT_MOVIE_SORT,
+  type HomePayload,
+  type HomeQuery,
+  type HomeRow,
+  type Movie,
+} from '@/types';
 import type { Browse } from '../browse/browse';
 
 /**
@@ -13,7 +19,7 @@ export const HOME_ROW_LIMIT = 15;
  * The query an argument-less `getHome()` stands for — the unfiltered browse
  * home, in the recently-added order it has rendered in since 02.
  */
-const DEFAULT_HOME_QUERY: HomeQuery = { sort: 'recently-added' };
+const DEFAULT_HOME_QUERY: HomeQuery = { sort: DEFAULT_MOVIE_SORT };
 
 /** The home-screen aggregate: the whole browse payload in one call. */
 export interface Home {

@@ -2,15 +2,13 @@ import express, { type Request, type Response, type Router } from 'express';
 
 import type { LibraryStorage } from '../library';
 import {
+  DEFAULT_MOVIE_SORT,
   MOVIE_SORTS,
   type GenreListPayload,
   type HomeQuery,
   type MovieQuery,
   type MovieSort,
 } from '@/types';
-
-/** Applied when a browse request omits `sort`, matching the home rows. */
-const DEFAULT_SORT: MovieSort = 'recently-added';
 
 /**
  * The first value of a query parameter, or `undefined` when it is absent.
@@ -110,7 +108,7 @@ export function createApiRouter(
   // is, but `0` and an empty value are no minimum at all rather than a floor of
   // nought, which would throw away every unrated movie in the library.
   router.get('/home', (req: Request, res: Response) => {
-    let sort: MovieSort = DEFAULT_SORT;
+    let sort: MovieSort = DEFAULT_MOVIE_SORT;
     const sortParam = queryString(req.query.sort);
     if (sortParam !== undefined && sortParam !== '') {
       if (!isMovieSort(sortParam)) {
@@ -176,7 +174,7 @@ export function createApiRouter(
       return;
     }
 
-    const query: MovieQuery = { sort: sortParam ?? DEFAULT_SORT };
+    const query: MovieQuery = { sort: sortParam ?? DEFAULT_MOVIE_SORT };
 
     const genre = queryString(req.query.genre);
     if (genre !== undefined && genre !== '') {

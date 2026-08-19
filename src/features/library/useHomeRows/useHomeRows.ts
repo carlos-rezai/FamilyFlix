@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
-import type {
-  ContinueCardMovie,
-  GenreRowModel,
-  HomeQuery,
-  MovieSort,
+import {
+  DEFAULT_MOVIE_SORT,
+  type ContinueCardMovie,
+  type GenreRowModel,
+  type HomeQuery,
 } from '@/types';
 import { isMovieSort, parseMinRating } from '@/utils';
 import { fetchHomePayload, saveFavorite } from '../api/api';
@@ -15,9 +15,6 @@ import { withFavorite } from '../withFavorite/withFavorite';
 
 /** Where the load is: never both loading and errored, never rows without `ready`. */
 export type HomeRowsStatus = 'loading' | 'ready' | 'error';
-
-/** What the home rows are ordered by until a sort control writes another one. */
-const DEFAULT_SORT: MovieSort = 'recently-added';
 
 export interface UseHomeRowsResult {
   status: HomeRowsStatus;
@@ -70,7 +67,7 @@ export function useHomeRows(): UseHomeRowsResult {
   // stale URL loads the plain home rather than asking the route for a 400.
   const search = searchParams.get('q') ?? '';
   const sortParam = searchParams.get('sort') ?? '';
-  const sort = isMovieSort(sortParam) ? sortParam : DEFAULT_SORT;
+  const sort = isMovieSort(sortParam) ? sortParam : DEFAULT_MOVIE_SORT;
   // An empty `?genre=` is "All Genres", so it reads as no genre and reloads
   // nothing — the same rule the parameter is written by.
   const genre = searchParams.get('genre') ?? '';

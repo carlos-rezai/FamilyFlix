@@ -1,8 +1,5 @@
-import type { HomeQuery, MovieSort } from '@/types';
+import { DEFAULT_MOVIE_SORT, type HomeQuery } from '@/types';
 import { isMovieSort, parseMinRating } from '@/utils';
-
-/** What the home rows are ordered by until a sort control writes another one. */
-const DEFAULT_SORT: MovieSort = 'recently-added';
 
 /**
  * Turns the URL's query string into the **settled query** the browse home is
@@ -15,7 +12,7 @@ const DEFAULT_SORT: MovieSort = 'recently-added';
  * Pure, so the same URL always yields the same query.
  */
 export function parseLibraryQuery(params: URLSearchParams): HomeQuery {
-  const query: HomeQuery = { sort: DEFAULT_SORT };
+  const query: HomeQuery = { sort: DEFAULT_MOVIE_SORT };
 
   // A cleared box leaves `?q=` behind on some paths; it is not a search for
   // the empty string, it is no search at all.
