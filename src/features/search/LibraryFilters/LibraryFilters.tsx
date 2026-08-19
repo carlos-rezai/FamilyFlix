@@ -1,36 +1,10 @@
 import { FilterDropdown } from '@/components';
-import type { FilterOption, MovieSort } from '@/types';
 
 import { ALL_GENRES, genreOptions } from '../genreOptions/genreOptions';
 import { ratingLabel, ratingOptions } from '../ratingOptions/ratingOptions';
+import { sortLabel, sortOptions } from '../sortOptions/sortOptions';
 import { useGenreList } from '../useGenreList/useGenreList';
 import { useLibraryQuery } from '../useLibraryQuery/useLibraryQuery';
-
-/**
- * How each order is written on the pill and in the panel. Every `MovieSort` has
- * a name here, so the pill can never fall back to showing a slug.
- */
-const SORT_LABELS: Record<MovieSort, string> = {
-  'recently-added': 'Recently Added',
-  'a-z': 'Title (A–Z)',
-  year: 'Year',
-  'unwatched-first': 'Unwatched First',
-  'highest-rated': 'Highest Rated',
-};
-
-/**
- * The order the panel draws them in — the prototype's
- * (`FamilyFlix.dc.html:160`), which deliberately is not the declaration order
- * of `MovieSort`: Unwatched First sits above Highest Rated, because "what have
- * we not seen yet" is the question asked more often than "what's best".
- */
-const SORT_ORDER: readonly MovieSort[] = [
-  'recently-added',
-  'a-z',
-  'year',
-  'unwatched-first',
-  'highest-rated',
-];
 
 /**
  * The header's filter pills — the `headerEnd` slot of `MainLayout`, carrying
@@ -54,16 +28,14 @@ const SORT_ORDER: readonly MovieSort[] = [
  * The rating pill is the one that wears a ★ instead of a caption: `label` still
  * supplies its accessible name, so hiding the words on screen never leaves it
  * announcing a value with no subject.
+ *
+ * No pill's vocabulary lives here. Each one is a pure builder from the domain
+ * data and the current selection to `FilterOption[]`, in its own folder with
+ * its own test, and this component is what puts the three side by side.
  */
 export function LibraryFilters() {
   const { query, setSort, setGenre, setRating } = useLibraryQuery();
   const genres = useGenreList();
-
-  const sortOptions: FilterOption[] = SORT_ORDER.map((sort) => ({
-    label: SORT_LABELS[sort],
-    selected: sort === query.sort,
-    onSelect: () => setSort(sort),
-  }));
 
   return (
     <>
@@ -81,8 +53,8 @@ export function LibraryFilters() {
       />
       <FilterDropdown
         label="Sort"
-        value={SORT_LABELS[query.sort]}
-        options={sortOptions}
+        value={sortLabel(query.sort)}
+        options={sortOptions(query.sort, setSort)}
         menuWidth={220}
       />
     </>
