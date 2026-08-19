@@ -87,19 +87,19 @@ these give the shared code behind it a single agreed name.
 
 ## Search, filter & sort (new)
 
-| Term                      | Definition                                                                                                                                                                | Aliases to avoid                    |
-| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------- |
-| **Library query** (new)   | The **Search text** + **Genre filter** + **Minimum rating** + **Sort order** that together decide what the **Browse home** shows; lives in the URL, never in a component. | filters, criteria, params, search   |
-| **Search text** (new)     | The free-text fragment of a **Library query**, matched against a **Movie**'s title, **Synopsis**, or **Genre** names (`?q=`).                                             | query, keyword, term, search string |
-| **Genre filter** (new)    | The **Library query**'s restriction to a single **Genre**; `All Genres` is its unset state, not a value.                                                                  | category filter, genre selection    |
-| **Minimum rating** (new)  | The **Library query**'s floor on **Rating** — 8 / 6 / 4 units, shown as `4+ stars` / `3+ stars` / `2+ stars`; **Unrated** **Movies** never pass one.                      | rating filter, stars, score filter  |
-| **Sort order** (new)      | Which of `recently-added` \| `a-z` \| `year` \| `highest-rated` \| `unwatched-first` a **Library query** orders by. Part of the query, but not a filter.                  | ordering, sort by, sorting          |
-| **Settled query** (new)   | The **Library query** as recorded in the URL — what every reader acts on, after the **Search bar**'s 250ms debounce has stopped moving.                                   | current filters, applied query      |
-| **Search bar** (new)      | The **Browse home** header's text control (its `headerStart` **Header slot**); the only holder of un-**settled** input.                                                   | search box, search field, omnibox   |
-| **Filter dropdown** (new) | One pill-triggered **Menu** presenting the **Filter options** for one part of a **Library query**. The **Browse home** header has three: Genre, rating, Sort.             | select, picker, combo box, dropdown |
-| **Filter option** (new)   | One row of a **Filter dropdown** — label, optional count, and whether it is the current selection.                                                                        | menu item, choice, entry            |
-| **Genre list** (new)      | The **unfiltered** `{ total, genres }` payload from `GET /api/genres` backing the Genre **Filter dropdown**'s counts; fetched once, never per query.                      | genre counts, facets, genre payload |
-| **No results** (new)      | The **Load message** shown when a **Library query** matches nothing — a different situation from an empty library, with different copy.                                   | empty state, no matches, zero state |
+| Term                      | Definition                                                                                                                                                                                        | Aliases to avoid                              |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------- |
+| **Library query** (new)   | The **Search text** + **Genre filter** + **Minimum rating** + **Sort order** that together decide what the **Browse home** shows; lives in the URL, never in a component. `LibraryQuery` in code. | home query, filters, criteria, params, search |
+| **Search text** (new)     | The free-text fragment of a **Library query**, matched against a **Movie**'s title, **Synopsis**, or **Genre** names (`?q=`).                                                                     | query, keyword, term, search string           |
+| **Genre filter** (new)    | The **Library query**'s restriction to a single **Genre**; `All Genres` is its unset state, not a value.                                                                                          | category filter, genre selection              |
+| **Minimum rating** (new)  | The **Library query**'s floor on **Rating** — 8 / 6 / 4 units, shown as `4+ stars` / `3+ stars` / `2+ stars`; **Unrated** **Movies** never pass one.                                              | rating filter, stars, score filter            |
+| **Sort order** (new)      | Which of `recently-added` \| `a-z` \| `year` \| `highest-rated` \| `unwatched-first` a **Library query** orders by. Part of the query, but not a filter. The five live once, as `MOVIE_SORTS`.    | ordering, sort by, sorting                    |
+| **Settled query** (new)   | The **Library query** as recorded in the URL — what every reader acts on, after the **Search bar**'s 250ms debounce has stopped moving.                                                           | current filters, applied query                |
+| **Search bar** (new)      | The **Browse home** header's text control (its `headerStart` **Header slot**); the only holder of un-**settled** input.                                                                           | search box, search field, omnibox             |
+| **Filter dropdown** (new) | One pill-triggered **Menu** presenting the **Filter options** for one part of a **Library query**. The **Browse home** header has three: Genre, rating, Sort.                                     | select, picker, combo box, dropdown           |
+| **Filter option** (new)   | One row of a **Filter dropdown** — label, optional count, and whether it is the current selection.                                                                                                | menu item, choice, entry                      |
+| **Genre list** (new)      | The **unfiltered** `{ total, genres }` payload from `GET /api/genres` backing the Genre **Filter dropdown**'s counts; fetched once, never per query.                                              | genre counts, facets, genre payload           |
+| **No results** (new)      | The **Load message** shown when a **Library query** matches nothing — a different situation from an empty library, with different copy.                                                           | empty state, no matches, zero state           |
 
 ## Relationships
 
@@ -240,6 +240,18 @@ these give the shared code behind it a single agreed name.
   and both are rendered as stars, so name which one. Note the asymmetry: an
   **Unrated** **Movie** shows 0 stars on a **Poster card** but is _excluded_ by
   any **Minimum rating** — it does not behave as a 0.
+- **The query is the library's, not the home screen's (refactor 05):** the type
+  is `LibraryQuery`; it was `HomeQuery` until the search + filter refactor, which
+  is why older commits and design logs say the latter. `HomePayload` and
+  `HomeRow` keep their home names deliberately — a payload really is one
+  screen's, where the query narrows the whole library.
+- **One list of Sort orders, and the type is made from it (refactor 05):** the
+  five orders are declared once as `MOVIE_SORTS` in `src/types/browse.ts`, and
+  `MovieSort` is derived from that tuple. Both build targets import it as a
+  value, so a route validator, a URL parser and a **Filter dropdown** cannot come
+  to recognise different sets of orders. Adding a sixth means adding it there,
+  and the compiler then asks the exhaustive records — `ORDER_BY` and the sort
+  **Filter option** rows — for its SQL and its label.
 - **"Search" is a feature folder and a field (new):** `features/search/` owns all
   four controls, not just the text one. The `search` field of a query is the
   **Search text** alone. The URL and the API both say `q` for it; only the domain
