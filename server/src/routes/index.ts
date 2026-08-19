@@ -1,21 +1,13 @@
 import express, { type Request, type Response, type Router } from 'express';
 
 import type { LibraryStorage } from '../library';
-import type {
-  GenreListPayload,
-  HomeQuery,
-  MovieQuery,
-  MovieSort,
+import {
+  MOVIE_SORTS,
+  type GenreListPayload,
+  type HomeQuery,
+  type MovieQuery,
+  type MovieSort,
 } from '@/types';
-
-/** The sort values `GET /api/movies?sort=` accepts, mirroring {@link MovieSort}. */
-const SORTS: readonly MovieSort[] = [
-  'recently-added',
-  'a-z',
-  'year',
-  'highest-rated',
-  'unwatched-first',
-];
 
 /** Applied when a browse request omits `sort`, matching the home rows. */
 const DEFAULT_SORT: MovieSort = 'recently-added';
@@ -35,8 +27,18 @@ function queryString(value: unknown): string | undefined {
   return undefined;
 }
 
+/**
+ * Whether a query parameter names a sort this API accepts.
+ *
+ * The list is the shared one, so a sort order the repository can order by can
+ * never be one this layer rejects. The guard itself stays local rather than
+ * importing `src/utils/isMovieSort`: the server build includes the shared types
+ * and nothing else of the frontend, and widening it to share one `.includes()`
+ * would couple both build targets for less than it costs. The vocabulary was
+ * the duplication that mattered.
+ */
 function isMovieSort(value: string): value is MovieSort {
-  return (SORTS as readonly string[]).includes(value);
+  return (MOVIE_SORTS as readonly string[]).includes(value);
 }
 
 /** The top of the stored rating scale — 10 half-star units, five whole stars. */
