@@ -7,19 +7,33 @@
 import type { Movie } from './movie';
 
 /**
- * The browse sort orders for `listMovies`. Each maps to one ORDER BY:
+ * Every browse sort order `listMovies` offers, and the wire's vocabulary for
+ * them. Each maps to one ORDER BY:
  * - `recently-added` — `created_at DESC` (newest first), `id` tiebreak.
  * - `a-z` — `title` ascending, case-insensitive.
  * - `year` — `year DESC` (newest first); unknown year (`null`) sorts last.
  * - `highest-rated` — `rating DESC`; unrated (`null`) sorts last.
  * - `unwatched-first` — unwatched, then in-progress, then watched; title A–Z within each.
+ *
+ * The list is a value rather than only a type because both build targets have
+ * to *check* a sort at runtime as well as name one: a sort arrives from a
+ * hand-editable URL, and a route, a URL parser and a dropdown each have to say
+ * whether they recognise it. Declaring the union separately from that list is
+ * how the two drift, so the union is derived from it below.
+ *
+ * This is the wire's order, not a running order — the dropdown draws the
+ * prototype's, which deliberately is not this one.
  */
-export type MovieSort =
-  | 'recently-added'
-  | 'a-z'
-  | 'year'
-  | 'highest-rated'
-  | 'unwatched-first';
+export const MOVIE_SORTS = [
+  'recently-added',
+  'a-z',
+  'year',
+  'highest-rated',
+  'unwatched-first',
+] as const;
+
+/** One of the orders in {@link MOVIE_SORTS}, and never anything else. */
+export type MovieSort = (typeof MOVIE_SORTS)[number];
 
 /**
  * A parameterized browse query: one `sort` plus any combination of filters.

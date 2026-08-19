@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 
-import { isMovieSort, MOVIE_SORTS } from './isMovieSort';
+import { MOVIE_SORTS } from '@/types';
+import { isMovieSort } from './isMovieSort';
 
 describe('isMovieSort', () => {
   it('accepts every sort order the API offers', () => {
