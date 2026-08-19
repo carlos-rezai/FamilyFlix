@@ -110,6 +110,23 @@ string is only sound because the round trip holds.
   flagged, which is fixed. Left alone deliberately: it is outside the plan, and
   the repo is otherwise at zero warnings now, which is what makes it visible.
 
+### The guard that could not be committed
+
+The plan's last item was a line in `.claude/CLAUDE.md`'s commit conventions:
+never write a closing keyword — `close`, `fix`, `resolve` and their inflections
+— before a `#n` for an issue the commit does not close. GitHub's parser accepts
+a colon between the two and does not read the sentence around them, so a commit
+body saying follow-ups were filed _rather than_ fixed closed one of them on the
+spot, with nothing shipped against it. The other survived only because it came
+after an "and". The rule is now in that file, and the fix when listing follow-ups
+is to write the bare number: "filed as 39 and 40".
+
+**It is not in version control.** `.claude/` is gitignored, so the project's own
+instructions live on one disk. That was already flagged in the movie-detail entry
+below as a decision worth making deliberately; this is the second time it has
+cost something — a rule written to stop a recurrence that no clone of this repo
+will ever see. Worth its own issue.
+
 ### The pattern worth keeping
 
 The build discovered the right rule halfway through, applied it twice, wrote down
