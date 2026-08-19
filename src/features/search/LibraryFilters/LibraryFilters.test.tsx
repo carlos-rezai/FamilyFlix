@@ -90,8 +90,16 @@ function UrlProbe() {
   );
 }
 
-function renderFilters(url = '/') {
-  return render(
+/**
+ * Render the pills and let the genre list land before handing back.
+ *
+ * `useGenreList` fetches on mount, so its state update arrives after the
+ * synchronous render — outside `act`, which React is right to warn about. The
+ * settle belongs here rather than in the hook, which is behaving correctly: a
+ * dropdown that renders before its list arrives is the point.
+ */
+async function renderFilters(url = '/') {
+  const view = render(
     <MemoryRouter initialEntries={[url]}>
       <ThemeProvider theme={theme}>
         <LibraryFilters />
@@ -99,6 +107,8 @@ function renderFilters(url = '/') {
       <UrlProbe />
     </MemoryRouter>
   );
+  await act(async () => undefined);
+  return view;
 }
 
 function currentUrl() {
@@ -136,22 +146,22 @@ function openOptionLabels(trigger: HTMLElement = pill()): string[] {
 }
 
 describe('LibraryFilters — the sort pill', () => {
-  it('shows the order the home is already in, on a clean “/”', () => {
+  it('shows the order the home is already in, on a clean “/”', async () => {
     // The pill reads the state of the screen without anything being opened.
-    renderFilters('/');
+    await renderFilters('/');
 
     expect(pill('Recently Added').textContent).toContain('Recently Added');
   });
 
-  it('shows the order the URL is carrying', () => {
-    renderFilters('/?sort=highest-rated');
+  it('shows the order the URL is carrying', async () => {
+    await renderFilters('/?sort=highest-rated');
 
     expect(pill('Highest Rated')).toBeTruthy();
   });
 
-  it('names every order the way the prototype writes it', () => {
+  it('names every order the way the prototype writes it', async () => {
     for (const [label, slug] of SORT_OPTIONS) {
-      const view = renderFilters(`/?sort=${slug}`);
+      const view = await renderFilters(`/?sort=${slug}`);
 
       expect(pill(label)).toBeTruthy();
 
@@ -159,40 +169,40 @@ describe('LibraryFilters — the sort pill', () => {
     }
   });
 
-  it('says “Sort”, so the pill is not a value with no subject', () => {
-    renderFilters('/');
+  it('says “Sort”, so the pill is not a value with no subject', async () => {
+    await renderFilters('/');
 
     expect(pill().textContent).toContain('Sort');
   });
 
-  it('lists nothing until it is opened', () => {
-    renderFilters('/');
+  it('lists nothing until it is opened', async () => {
+    await renderFilters('/');
 
     expect(noOptionRow('Year')).toBeNull();
   });
 });
 
 describe('LibraryFilters — the option list', () => {
-  it('lists the five orders in the prototype’s order', () => {
+  it('lists the five orders in the prototype’s order', async () => {
     // Not the declaration order of `MovieSort`: the dropdown follows the
     // prototype, which puts Unwatched First before Highest Rated.
-    renderFilters('/');
+    await renderFilters('/');
 
     openSort();
 
     expect(openOptionLabels()).toEqual(SORT_OPTIONS.map(([label]) => label));
   });
 
-  it('ticks the order the screen is currently in', () => {
-    renderFilters('/?sort=year');
+  it('ticks the order the screen is currently in', async () => {
+    await renderFilters('/?sort=year');
 
     openSort('Year');
 
     expect(optionRow('Year').getAttribute('aria-current')).toBe('true');
   });
 
-  it('ticks exactly one order, and it is the current one', () => {
-    renderFilters('/?sort=year');
+  it('ticks exactly one order, and it is the current one', async () => {
+    await renderFilters('/?sort=year');
 
     openSort('Year');
 
@@ -203,8 +213,8 @@ describe('LibraryFilters — the option list', () => {
     expect(ticked[0].textContent).toBe('Year');
   });
 
-  it('ticks the default order on a home that has never been sorted', () => {
-    renderFilters('/');
+  it('ticks the default order on a home that has never been sorted', async () => {
+    await renderFilters('/');
 
     openSort();
 
@@ -215,8 +225,8 @@ describe('LibraryFilters — the option list', () => {
 });
 
 describe('LibraryFilters — choosing an order', () => {
-  it('writes the chosen order into the URL', () => {
-    renderFilters('/');
+  it('writes the chosen order into the URL', async () => {
+    await renderFilters('/');
 
     openSort();
     fireEvent.click(optionRow('Title (A–Z)'));
@@ -224,9 +234,9 @@ describe('LibraryFilters — choosing an order', () => {
     expect(currentUrl()).toBe('/?sort=a-z');
   });
 
-  it('writes the slug the wire uses, not the words on the row', () => {
+  it('writes the slug the wire uses, not the words on the row', async () => {
     for (const [label, slug] of SORT_OPTIONS.slice(1)) {
-      const view = renderFilters('/');
+      const view = await renderFilters('/');
 
       openSort();
       fireEvent.click(optionRow(label));
@@ -237,8 +247,8 @@ describe('LibraryFilters — choosing an order', () => {
     }
   });
 
-  it('writes no parameter for the default order, so “/” stays clean', () => {
-    renderFilters('/?sort=a-z');
+  it('writes no parameter for the default order, so “/” stays clean', async () => {
+    await renderFilters('/?sort=a-z');
 
     openSort('Title (A–Z)');
     fireEvent.click(optionRow('Recently Added'));
@@ -246,8 +256,8 @@ describe('LibraryFilters — choosing an order', () => {
     expect(currentUrl()).toBe('/');
   });
 
-  it('shuts the panel once an order is chosen', () => {
-    renderFilters('/');
+  it('shuts the panel once an order is chosen', async () => {
+    await renderFilters('/');
 
     openSort();
     fireEvent.click(optionRow('Year'));
@@ -255,8 +265,8 @@ describe('LibraryFilters — choosing an order', () => {
     expect(noOptionRow('Title (A–Z)')).toBeNull();
   });
 
-  it('shows the new order on the pill', () => {
-    renderFilters('/');
+  it('shows the new order on the pill', async () => {
+    await renderFilters('/');
 
     openSort();
     fireEvent.click(optionRow('Year'));
@@ -264,8 +274,8 @@ describe('LibraryFilters — choosing an order', () => {
     expect(pill('Year')).toBeTruthy();
   });
 
-  it('leaves the search text alone — sorting is not a new search', () => {
-    renderFilters('/?q=lighthouse');
+  it('leaves the search text alone — sorting is not a new search', async () => {
+    await renderFilters('/?q=lighthouse');
 
     openSort();
     fireEvent.click(optionRow('Year'));
@@ -277,16 +287,16 @@ describe('LibraryFilters — choosing an order', () => {
 });
 
 describe('LibraryFilters — from the keyboard', () => {
-  it('offers the pill as a real button, so Tab reaches it', () => {
-    renderFilters('/');
+  it('offers the pill as a real button, so Tab reaches it', async () => {
+    await renderFilters('/');
 
     act(() => pill().focus());
 
     expect(document.activeElement).toBe(pill());
   });
 
-  it('opens on the pill being activated, onto options that are buttons too', () => {
-    renderFilters('/');
+  it('opens on the pill being activated, onto options that are buttons too', async () => {
+    await renderFilters('/');
 
     openSort();
 
@@ -295,9 +305,9 @@ describe('LibraryFilters — from the keyboard', () => {
     }
   });
 
-  it('hands focus back to the pill when an order is chosen', () => {
+  it('hands focus back to the pill when an order is chosen', async () => {
     // A parent on the keyboard is never dropped at the top of the document.
-    renderFilters('/');
+    await renderFilters('/');
 
     openSort();
     fireEvent.click(optionRow('Year'));
@@ -305,8 +315,8 @@ describe('LibraryFilters — from the keyboard', () => {
     expect(document.activeElement).toBe(pill('Year'));
   });
 
-  it('closes on Escape, with focus back on the pill', () => {
-    renderFilters('/');
+  it('closes on Escape, with focus back on the pill', async () => {
+    await renderFilters('/');
 
     openSort();
     fireEvent.keyDown(document, { key: 'Escape' });
@@ -315,8 +325,8 @@ describe('LibraryFilters — from the keyboard', () => {
     expect(document.activeElement).toBe(pill());
   });
 
-  it('leaves the order alone when the panel is dismissed rather than used', () => {
-    renderFilters('/');
+  it('leaves the order alone when the panel is dismissed rather than used', async () => {
+    await renderFilters('/');
 
     openSort();
     fireEvent.keyDown(document, { key: 'Escape' });
@@ -355,42 +365,42 @@ function genreRequests(): string[] {
 }
 
 describe('LibraryFilters — the genre pill', () => {
-  it('shows “All Genres” on a clean “/”, so the way out is already visible', () => {
-    renderFilters('/');
+  it('shows “All Genres” on a clean “/”, so the way out is already visible', async () => {
+    await renderFilters('/');
 
     expect(genrePill().textContent).toContain('All Genres');
   });
 
-  it('says “Genre”, so the pill is not a value with no subject', () => {
-    renderFilters('/');
+  it('says “Genre”, so the pill is not a value with no subject', async () => {
+    await renderFilters('/');
 
     expect(genrePill().textContent).toContain('Genre');
   });
 
-  it('shows the genre the URL is carrying', () => {
+  it('shows the genre the URL is carrying', async () => {
     // A shared or bookmarked link opens with the pill already saying so.
-    renderFilters('/?genre=Drama');
+    await renderFilters('/?genre=Drama');
 
     expect(genrePill('Drama')).toBeTruthy();
   });
 
-  it('shows a genre name the URL had to encode', () => {
-    renderFilters('/?genre=Science%20Fiction');
+  it('shows a genre name the URL had to encode', async () => {
+    await renderFilters('/?genre=Science%20Fiction');
 
     expect(genrePill('Science Fiction')).toBeTruthy();
   });
 
   it('lists nothing until it is opened', async () => {
-    renderFilters('/');
+    await renderFilters('/');
 
     await waitFor(() => expect(genreRequests()).toHaveLength(1));
     expect(noOptionRow('Drama')).toBeNull();
   });
 
-  it('renders before the list has arrived rather than waiting for it', () => {
+  it('renders before the list has arrived rather than waiting for it', async () => {
     fetchMock.mockImplementation(() => new Promise<Response>(() => undefined));
 
-    renderFilters('/');
+    await renderFilters('/');
 
     expect(genrePill()).toBeTruthy();
   });
@@ -398,7 +408,7 @@ describe('LibraryFilters — the genre pill', () => {
 
 describe('LibraryFilters — the genre list', () => {
   it('lists “All Genres” first, then the genres by count, most first', async () => {
-    renderFilters('/');
+    await renderFilters('/');
 
     const control = await openGenre();
 
@@ -406,7 +416,7 @@ describe('LibraryFilters — the genre list', () => {
   });
 
   it('shows each genre’s count beside it', async () => {
-    renderFilters('/');
+    await renderFilters('/');
 
     await openGenre();
 
@@ -417,7 +427,7 @@ describe('LibraryFilters — the genre list', () => {
   });
 
   it('shows the library total beside “All Genres”', async () => {
-    renderFilters('/');
+    await renderFilters('/');
 
     await openGenre();
 
@@ -427,7 +437,7 @@ describe('LibraryFilters — the genre list', () => {
   });
 
   it('ticks “All Genres” when no genre is set', async () => {
-    renderFilters('/');
+    await renderFilters('/');
 
     await openGenre();
 
@@ -435,7 +445,7 @@ describe('LibraryFilters — the genre list', () => {
   });
 
   it('ticks the genre the screen is filtered to, and only that one', async () => {
-    renderFilters('/?genre=Drama');
+    await renderFilters('/?genre=Drama');
 
     const control = await openGenre('Drama');
 
@@ -447,7 +457,7 @@ describe('LibraryFilters — the genre list', () => {
   });
 
   it('asks for the list once, and not again as the query changes', async () => {
-    renderFilters('/');
+    await renderFilters('/');
     await openGenre();
 
     fireEvent.click(optionRow('Drama'));
@@ -461,7 +471,7 @@ describe('LibraryFilters — the genre list', () => {
 
 describe('LibraryFilters — choosing a genre', () => {
   it('writes the chosen genre into the URL', async () => {
-    renderFilters('/');
+    await renderFilters('/');
 
     await openGenre();
     fireEvent.click(optionRow('Drama'));
@@ -470,7 +480,7 @@ describe('LibraryFilters — choosing a genre', () => {
   });
 
   it('takes the parameter back off the URL for “All Genres”', async () => {
-    renderFilters('/?genre=Drama');
+    await renderFilters('/?genre=Drama');
 
     await openGenre('Drama');
     fireEvent.click(optionRow('All Genres'));
@@ -479,7 +489,7 @@ describe('LibraryFilters — choosing a genre', () => {
   });
 
   it('shuts the panel once a genre is chosen', async () => {
-    renderFilters('/');
+    await renderFilters('/');
 
     await openGenre();
     fireEvent.click(optionRow('Drama'));
@@ -488,7 +498,7 @@ describe('LibraryFilters — choosing a genre', () => {
   });
 
   it('shows the new genre on the pill', async () => {
-    renderFilters('/');
+    await renderFilters('/');
 
     await openGenre();
     fireEvent.click(optionRow('Drama'));
@@ -497,7 +507,7 @@ describe('LibraryFilters — choosing a genre', () => {
   });
 
   it('replaces the genre rather than stacking a second one', async () => {
-    renderFilters('/?genre=Drama');
+    await renderFilters('/?genre=Drama');
 
     await openGenre('Drama');
     fireEvent.click(optionRow('Action'));
@@ -506,7 +516,7 @@ describe('LibraryFilters — choosing a genre', () => {
   });
 
   it('leaves the search text and the order alone', async () => {
-    renderFilters('/?q=lighthouse&sort=a-z');
+    await renderFilters('/?q=lighthouse&sort=a-z');
 
     await openGenre();
     fireEvent.click(optionRow('Drama'));
@@ -518,7 +528,7 @@ describe('LibraryFilters — choosing a genre', () => {
   });
 
   it('hands focus back to the pill, so the keyboard is never dropped', async () => {
-    renderFilters('/');
+    await renderFilters('/');
 
     await openGenre();
     fireEvent.click(optionRow('Drama'));
@@ -527,7 +537,7 @@ describe('LibraryFilters — choosing a genre', () => {
   });
 
   it('leaves the genre alone when the panel is dismissed rather than used', async () => {
-    renderFilters('/');
+    await renderFilters('/');
 
     await openGenre();
     fireEvent.keyDown(document, { key: 'Escape' });
@@ -539,7 +549,7 @@ describe('LibraryFilters — choosing a genre', () => {
 
 describe('LibraryFilters — two pills in one header', () => {
   it('opens the genre panel and the sort panel one at a time', async () => {
-    renderFilters('/');
+    await renderFilters('/');
 
     const genre = await openGenre();
     expect(optionRow('Drama')).toBeTruthy();
@@ -554,8 +564,8 @@ describe('LibraryFilters — two pills in one header', () => {
     expect(optionRow('Year')).toBeTruthy();
   });
 
-  it('shows both pills with what the URL says, without either reading the other', () => {
-    renderFilters('/?genre=Drama&sort=year');
+  it('shows both pills with what the URL says, without either reading the other', async () => {
+    await renderFilters('/?genre=Drama&sort=year');
 
     expect(genrePill('Drama')).toBeTruthy();
     expect(pill('Year')).toBeTruthy();
@@ -565,7 +575,7 @@ describe('LibraryFilters — two pills in one header', () => {
 describe('LibraryFilters — when the genre list cannot be loaded', () => {
   it('offers “All Genres” alone rather than an empty panel', async () => {
     fetchMock.mockRejectedValue(new Error('offline'));
-    renderFilters('/');
+    await renderFilters('/');
 
     const control = genrePill();
     act(() => control.focus());
@@ -579,7 +589,7 @@ describe('LibraryFilters — when the genre list cannot be loaded', () => {
     // The prototype designs no error state here, so a failed list is a quiet
     // one — it must not take the rest of the header down with it.
     fetchMock.mockRejectedValue(new Error('offline'));
-    renderFilters('/');
+    await renderFilters('/');
     await waitFor(() => expect(genreRequests()).toHaveLength(1));
 
     openSort();
@@ -590,7 +600,7 @@ describe('LibraryFilters — when the genre list cannot be loaded', () => {
 
   it('still shows a genre the URL is carrying on the pill', async () => {
     fetchMock.mockRejectedValue(new Error('offline'));
-    renderFilters('/?genre=Drama');
+    await renderFilters('/?genre=Drama');
 
     await waitFor(() => expect(genreRequests()).toHaveLength(1));
     expect(genrePill('Drama')).toBeTruthy();
@@ -634,73 +644,73 @@ function headerPillOrder(): string[] {
 }
 
 describe('LibraryFilters — the rating pill', () => {
-  it('shows “All ratings” on a clean “/”, so the way out is already visible', () => {
-    renderFilters('/');
+  it('shows “All ratings” on a clean “/”, so the way out is already visible', async () => {
+    await renderFilters('/');
 
     expect(ratingPill().textContent).toContain('All ratings');
   });
 
-  it('wears a ★ where the other pills wear a word', () => {
-    renderFilters('/');
+  it('wears a ★ where the other pills wear a word', async () => {
+    await renderFilters('/');
 
     expect(ratingPill().textContent).toContain('★');
   });
 
-  it('shows no caption on screen, which is what the ★ is standing in for', () => {
-    renderFilters('/');
+  it('shows no caption on screen, which is what the ★ is standing in for', async () => {
+    await renderFilters('/');
 
     expect(ratingPill().textContent).not.toContain('Minimum rating');
     expect(screen.queryByText('Minimum rating')).toBeNull();
   });
 
-  it('still announces what it filters, so the pill is not a value with no subject', () => {
+  it('still announces what it filters, so the pill is not a value with no subject', async () => {
     // `showLabel={false}` hides the caption; it never drops it from the name.
-    renderFilters('/?rating=6');
+    await renderFilters('/?rating=6');
 
     expect(ratingPill('3+ stars').getAttribute('aria-label')).toBe(
       'Minimum rating: 3+ stars'
     );
   });
 
-  it('shows the minimum the URL is carrying', () => {
+  it('shows the minimum the URL is carrying', async () => {
     // A shared or bookmarked link opens with the pill already saying so.
-    renderFilters('/?rating=8');
+    await renderFilters('/?rating=8');
 
     expect(ratingPill('4+ stars')).toBeTruthy();
   });
 
-  it('shows “All ratings” for a minimum the dropdown could not have written', () => {
+  it('shows “All ratings” for a minimum the dropdown could not have written', async () => {
     // The pill and the rows must agree: a URL the query drops is a filter that
     // is not applied.
-    renderFilters('/?rating=7');
+    await renderFilters('/?rating=7');
 
     expect(ratingPill()).toBeTruthy();
   });
 
-  it('sits between the genre and the sort pills, as the prototype draws them', () => {
-    renderFilters('/');
+  it('sits between the genre and the sort pills, as the prototype draws them', async () => {
+    await renderFilters('/');
 
     expect(headerPillOrder()).toEqual(['Genre', 'Minimum rating', 'Sort']);
   });
 
-  it('lists nothing until it is opened', () => {
-    renderFilters('/');
+  it('lists nothing until it is opened', async () => {
+    await renderFilters('/');
 
     expect(noOptionRow('3+ stars')).toBeNull();
   });
 });
 
 describe('LibraryFilters — the rating list', () => {
-  it('offers the four cut-offs in order, strongest first under “All ratings”', () => {
-    renderFilters('/');
+  it('offers the four cut-offs in order, strongest first under “All ratings”', async () => {
+    await renderFilters('/');
 
     const control = openRating();
 
     expect(openOptionLabels(control)).toEqual(RATING_ROWS);
   });
 
-  it('writes every cut-off in stars rather than in stored units', () => {
-    renderFilters('/');
+  it('writes every cut-off in stars rather than in stored units', async () => {
+    await renderFilters('/');
 
     openRating();
 
@@ -709,8 +719,8 @@ describe('LibraryFilters — the rating list', () => {
     expect(optionRow('3+ stars')).toBeTruthy();
   });
 
-  it('shows no tally beside a cut-off, unlike the genre rows', () => {
-    renderFilters('/');
+  it('shows no tally beside a cut-off, unlike the genre rows', async () => {
+    await renderFilters('/');
 
     const control = openRating();
 
@@ -719,16 +729,16 @@ describe('LibraryFilters — the rating list', () => {
     }
   });
 
-  it('marks the cut-off the URL is carrying as the current one', () => {
-    renderFilters('/?rating=6');
+  it('marks the cut-off the URL is carrying as the current one', async () => {
+    await renderFilters('/?rating=6');
 
     openRating('3+ stars');
 
     expect(optionRow('3+ stars').getAttribute('aria-current')).toBe('true');
   });
 
-  it('marks “All ratings” when nothing is filtering', () => {
-    renderFilters('/');
+  it('marks “All ratings” when nothing is filtering', async () => {
+    await renderFilters('/');
 
     openRating();
 
@@ -737,9 +747,9 @@ describe('LibraryFilters — the rating list', () => {
 });
 
 describe('LibraryFilters — choosing a minimum rating', () => {
-  it('writes the chosen cut-off into the URL as “rating”', () => {
+  it('writes the chosen cut-off into the URL as “rating”', async () => {
     for (const [label, value] of RATING_OPTIONS) {
-      const view = renderFilters('/');
+      const view = await renderFilters('/');
 
       openRating();
       fireEvent.click(optionRow(label));
@@ -749,8 +759,8 @@ describe('LibraryFilters — choosing a minimum rating', () => {
     }
   });
 
-  it('takes the parameter back off the URL for “All ratings”', () => {
-    renderFilters('/?rating=8');
+  it('takes the parameter back off the URL for “All ratings”', async () => {
+    await renderFilters('/?rating=8');
 
     openRating('4+ stars');
     fireEvent.click(optionRow('All ratings'));
@@ -758,8 +768,8 @@ describe('LibraryFilters — choosing a minimum rating', () => {
     expect(currentUrl()).toBe('/');
   });
 
-  it('shuts the panel once a cut-off is chosen', () => {
-    renderFilters('/');
+  it('shuts the panel once a cut-off is chosen', async () => {
+    await renderFilters('/');
 
     openRating();
     fireEvent.click(optionRow('3+ stars'));
@@ -767,8 +777,8 @@ describe('LibraryFilters — choosing a minimum rating', () => {
     expect(noOptionRow('2+ stars')).toBeNull();
   });
 
-  it('shows the new cut-off on the pill', () => {
-    renderFilters('/');
+  it('shows the new cut-off on the pill', async () => {
+    await renderFilters('/');
 
     openRating();
     fireEvent.click(optionRow('3+ stars'));
@@ -776,8 +786,8 @@ describe('LibraryFilters — choosing a minimum rating', () => {
     expect(ratingPill('3+ stars')).toBeTruthy();
   });
 
-  it('replaces the minimum rather than stacking a second one', () => {
-    renderFilters('/?rating=8');
+  it('replaces the minimum rather than stacking a second one', async () => {
+    await renderFilters('/?rating=8');
 
     openRating('4+ stars');
     fireEvent.click(optionRow('2+ stars'));
@@ -785,9 +795,9 @@ describe('LibraryFilters — choosing a minimum rating', () => {
     expect(currentUrl()).toBe('/?rating=4');
   });
 
-  it('leaves the search text, the genre and the order alone', () => {
+  it('leaves the search text, the genre and the order alone', async () => {
     // "Highest rated comedies" is one question, not two.
-    renderFilters('/?q=lighthouse&genre=Comedy&sort=highest-rated');
+    await renderFilters('/?q=lighthouse&genre=Comedy&sort=highest-rated');
 
     openRating();
     fireEvent.click(optionRow('4+ stars'));
@@ -801,16 +811,16 @@ describe('LibraryFilters — choosing a minimum rating', () => {
 });
 
 describe('LibraryFilters — the rating pill from the keyboard', () => {
-  it('offers the pill as a real button, so Tab reaches it', () => {
-    renderFilters('/');
+  it('offers the pill as a real button, so Tab reaches it', async () => {
+    await renderFilters('/');
 
     act(() => ratingPill().focus());
 
     expect(document.activeElement).toBe(ratingPill());
   });
 
-  it('opens on the pill being activated, onto options that are buttons too', () => {
-    renderFilters('/');
+  it('opens on the pill being activated, onto options that are buttons too', async () => {
+    await renderFilters('/');
 
     openRating();
 
@@ -819,8 +829,8 @@ describe('LibraryFilters — the rating pill from the keyboard', () => {
     }
   });
 
-  it('hands focus back to the pill when a cut-off is chosen', () => {
-    renderFilters('/');
+  it('hands focus back to the pill when a cut-off is chosen', async () => {
+    await renderFilters('/');
 
     openRating();
     fireEvent.click(optionRow('3+ stars'));
@@ -828,8 +838,8 @@ describe('LibraryFilters — the rating pill from the keyboard', () => {
     expect(document.activeElement).toBe(ratingPill('3+ stars'));
   });
 
-  it('closes on Escape, with focus back on the pill and the URL untouched', () => {
-    renderFilters('/');
+  it('closes on Escape, with focus back on the pill and the URL untouched', async () => {
+    await renderFilters('/');
 
     openRating();
     fireEvent.keyDown(document, { key: 'Escape' });
@@ -842,7 +852,7 @@ describe('LibraryFilters — the rating pill from the keyboard', () => {
 
 describe('LibraryFilters — three pills in one header', () => {
   it('opens the rating panel and the genre panel one at a time', async () => {
-    renderFilters('/');
+    await renderFilters('/');
 
     const genre = await openGenre();
     expect(optionRow('Drama')).toBeTruthy();
@@ -858,8 +868,8 @@ describe('LibraryFilters — three pills in one header', () => {
     expect(optionRow('3+ stars')).toBeTruthy();
   });
 
-  it('shows all three pills with what the URL says, without any reading another', () => {
-    renderFilters('/?genre=Drama&sort=year&rating=6');
+  it('shows all three pills with what the URL says, without any reading another', async () => {
+    await renderFilters('/?genre=Drama&sort=year&rating=6');
 
     expect(genrePill('Drama')).toBeTruthy();
     expect(ratingPill('3+ stars')).toBeTruthy();
@@ -870,7 +880,7 @@ describe('LibraryFilters — three pills in one header', () => {
     // The genre list has no error state by design; its failure must not take
     // the rating filter down with it.
     fetchMock.mockRejectedValue(new Error('offline'));
-    renderFilters('/');
+    await renderFilters('/');
 
     openRating();
     fireEvent.click(optionRow('4+ stars'));

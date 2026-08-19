@@ -131,10 +131,23 @@ describe('MainLayout', () => {
  * in the process. Both are structure: whatever a page hands in, it renders.
  */
 
-/** The header's flex spacer — the one child that grows to split the strip. */
-function headerSpacer() {
-  const children = [...screen.getByRole('banner').children] as HTMLElement[];
-  return children.find((child) => getComputedStyle(child).flexGrow === '1');
+/**
+ * The header's flex spacer — the one child that grows to split the strip.
+ *
+ * Throws when the header has lost it, rather than handing back nothing for the
+ * caller to assert around: a missing spacer is the failure, and it reads better
+ * as one sentence here than as three tests going quiet about where their
+ * elements sit relative to something that isn't there.
+ */
+function headerSpacer(): Element {
+  const children = Array.from(screen.getByRole('banner').children);
+  const spacer = children.find(
+    (child) => getComputedStyle(child).flexGrow === '1'
+  );
+  if (!spacer) {
+    throw new Error('The header has no flex spacer to split the strip.');
+  }
+  return spacer;
 }
 
 /** Does `earlier` come before `later` in the document? */
@@ -163,9 +176,8 @@ describe('MainLayout — the header slots', () => {
     });
 
     const spacer = headerSpacer();
-    expect(spacer).toBeDefined();
-    expect(comesBefore(screen.getByText('the search bar'), spacer!)).toBe(true);
-    expect(comesBefore(spacer!, screen.getByText('the dropdowns'))).toBe(true);
+    expect(comesBefore(screen.getByText('the search bar'), spacer)).toBe(true);
+    expect(comesBefore(spacer, screen.getByText('the dropdowns'))).toBe(true);
   });
 
   it('leaves the logo first and the gear last', () => {
@@ -184,8 +196,7 @@ describe('MainLayout — the header slots', () => {
     });
 
     const spacer = headerSpacer();
-    expect(spacer).toBeDefined();
-    expect(comesBefore(spacer!, screen.getByText('the dropdowns'))).toBe(true);
+    expect(comesBefore(spacer, screen.getByText('the dropdowns'))).toBe(true);
   });
 
   it('renders the header it always had when neither slot is given', () => {
