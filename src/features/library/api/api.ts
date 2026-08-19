@@ -1,8 +1,5 @@
-import {
-  DEFAULT_MOVIE_SORT,
-  type HomePayload,
-  type LibraryQuery,
-} from '@/types';
+import type { HomePayload, LibraryQuery } from '@/types';
+import { toLibraryQueryParams } from '@/utils';
 
 /** The one aggregate the browse home loads — every section in one payload. */
 const HOME_ENDPOINT = '/api/home';
@@ -12,39 +9,13 @@ const favoriteEndpoint = (id: string) =>
   `/api/movies/${encodeURIComponent(id)}/favorite`;
 
 /**
- * The home endpoint narrowed by a query. Every parameter is omitted at its
- * default, so an unfiltered home asks a clean `/api/home` — the request the
- * parent is looking at, rather than a longhand of it. `q` and `sort` are the
- * wire names the app URL and the route already share.
+ * The home endpoint narrowed by a query. The parameters are the settled
+ * query's own — written by the same util the app URL is written by, so the
+ * request can only ever ask for what the header is showing. An unfiltered home
+ * asks a clean `/api/home`, because every part is omitted at its default.
  */
 function homeUrl(query: LibraryQuery): string {
-  const params = new URLSearchParams();
-
-  if (query.search !== undefined && query.search !== '') {
-    params.set('q', query.search);
-  }
-
-  // Recently-added is what the route does when asked nothing; saying so would
-  // add a parameter that changes no answer.
-  if (query.sort !== DEFAULT_MOVIE_SORT) {
-    params.set('sort', query.sort);
-  }
-
-  // "All Genres" is the absence of the filter, so it writes no parameter.
-  // `URLSearchParams` encodes the name on the way out, which a genre with a
-  // space in it needs.
-  if (query.genre !== undefined && query.genre !== '') {
-    params.set('genre', query.genre);
-  }
-
-  // "All ratings" is the absence of the filter, and so is a minimum of nought
-  // — a literal floor of zero would exclude every unrated movie. `rating` is
-  // the wire name; `minRating` is what the repository calls it.
-  if (query.minRating !== undefined && query.minRating !== 0) {
-    params.set('rating', String(query.minRating));
-  }
-
-  const search = params.toString();
+  const search = toLibraryQueryParams(query).toString();
   return search === '' ? HOME_ENDPOINT : `${HOME_ENDPOINT}?${search}`;
 }
 
