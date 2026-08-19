@@ -1,7 +1,7 @@
 import {
   DEFAULT_MOVIE_SORT,
   type HomePayload,
-  type HomeQuery,
+  type LibraryQuery,
   type HomeRow,
   type Movie,
 } from '@/types';
@@ -19,11 +19,11 @@ export const HOME_ROW_LIMIT = 15;
  * The query an argument-less `getHome()` stands for — the unfiltered browse
  * home, in the recently-added order it has rendered in since 02.
  */
-const DEFAULT_HOME_QUERY: HomeQuery = { sort: DEFAULT_MOVIE_SORT };
+const DEFAULT_LIBRARY_QUERY: LibraryQuery = { sort: DEFAULT_MOVIE_SORT };
 
 /** The home-screen aggregate: the whole browse payload in one call. */
 export interface Home {
-  getHome(query?: HomeQuery): HomePayload;
+  getHome(query?: LibraryQuery): HomePayload;
 }
 
 /**
@@ -49,7 +49,7 @@ export interface Home {
  * independently of the rows, so a movie part-way through appears in both, and
  * an untagged one appears here even though it earns no row.
  *
- * Both sections are built from the one {@link HomeQuery}, so the top of the
+ * Both sections are built from the one {@link LibraryQuery}, so the top of the
  * screen can never disagree with the rest of it: each section adds only what
  * makes it that section (a `genre` for a row, `inProgressOnly` for continue,
  * and the shared cap) on top of the caller's filters and sort. A row whose
@@ -62,7 +62,7 @@ export interface Home {
  * of leaving the client to fan out a request per section.
  */
 export function createHome(browse: Browse): Home {
-  function listRows(query: HomeQuery): HomeRow[] {
+  function listRows(query: LibraryQuery): HomeRow[] {
     const genres =
       query.genre === undefined
         ? browse.listGenres()
@@ -81,7 +81,7 @@ export function createHome(browse: Browse): Home {
       .filter((row) => row.movies.length > 0);
   }
 
-  function listContinueWatching(query: HomeQuery): Movie[] {
+  function listContinueWatching(query: LibraryQuery): Movie[] {
     return browse.listMovies({
       ...query,
       inProgressOnly: true,
@@ -89,7 +89,7 @@ export function createHome(browse: Browse): Home {
     });
   }
 
-  function getHome(query: HomeQuery = DEFAULT_HOME_QUERY): HomePayload {
+  function getHome(query: LibraryQuery = DEFAULT_LIBRARY_QUERY): HomePayload {
     return {
       continueWatching: listContinueWatching(query),
       rows: listRows(query),

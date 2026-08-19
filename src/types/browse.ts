@@ -75,13 +75,20 @@ export interface MovieQuery {
 }
 
 /**
- * The browse home's query: the filters and sort the header composes, threaded
- * into every section of the home payload so the top of the screen can never
- * disagree with the rest of it. A subset of {@link MovieQuery} — the
- * per-section additions (`genre` for a row, `inProgressOnly` for the continue
- * section, and the row `limit`) belong to `getHome`, not to the caller.
+ * The **library query**: the filters and sort the header composes, naming what
+ * the family is currently looking at. It is threaded into every section of the
+ * home payload, so the top of the screen can never disagree with the rest of
+ * it. A subset of {@link MovieQuery} — the per-section additions (`genre` for a
+ * row, `inProgressOnly` for the continue section, and the row `limit`) belong
+ * to `getHome`, not to the caller.
+ *
+ * Named for the library rather than the home screen because it is the whole
+ * library it narrows, and because the glossary, the hook (`useLibraryQuery`)
+ * and the parser (`parseLibraryQuery`) all already said so. The payload types
+ * beside it keep their home names: a home payload really is one screen's,
+ * where this is not.
  */
-export interface HomeQuery {
+export interface LibraryQuery {
   sort: MovieSort;
   /** @see MovieQuery.search */
   search?: string;

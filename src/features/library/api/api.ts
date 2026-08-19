@@ -1,4 +1,8 @@
-import { DEFAULT_MOVIE_SORT, type HomePayload, type HomeQuery } from '@/types';
+import {
+  DEFAULT_MOVIE_SORT,
+  type HomePayload,
+  type LibraryQuery,
+} from '@/types';
 
 /** The one aggregate the browse home loads — every section in one payload. */
 const HOME_ENDPOINT = '/api/home';
@@ -13,7 +17,7 @@ const favoriteEndpoint = (id: string) =>
  * parent is looking at, rather than a longhand of it. `q` and `sort` are the
  * wire names the app URL and the route already share.
  */
-function homeUrl(query: HomeQuery): string {
+function homeUrl(query: LibraryQuery): string {
   const params = new URLSearchParams();
 
   if (query.search !== undefined && query.search !== '') {
@@ -52,7 +56,9 @@ function homeUrl(query: HomeQuery): string {
  * of it. One request, never one per section. Rejects if the route answers with
  * anything but a 2xx.
  */
-export async function fetchHomePayload(query: HomeQuery): Promise<HomePayload> {
+export async function fetchHomePayload(
+  query: LibraryQuery
+): Promise<HomePayload> {
   const response = await fetch(homeUrl(query));
   if (!response.ok) {
     throw new Error(`GET ${HOME_ENDPOINT} failed: ${response.status}`);

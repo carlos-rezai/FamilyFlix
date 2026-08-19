@@ -5,7 +5,7 @@ import {
   DEFAULT_MOVIE_SORT,
   type ContinueCardMovie,
   type GenreRowModel,
-  type HomeQuery,
+  type LibraryQuery,
 } from '@/types';
 import { isMovieSort, parseMinRating } from '@/utils';
 import { fetchHomePayload, saveFavorite } from '../api/api';
@@ -75,8 +75,8 @@ export function useHomeRows(): UseHomeRowsResult {
   // hand-edited `?rating=7` asks for the whole library — the same rule the pill
   // draws itself by, or the request would disagree with the header.
   const minRating = parseMinRating(searchParams.get('rating'));
-  const query = useMemo<HomeQuery>(() => {
-    const next: HomeQuery = { sort };
+  const query = useMemo<LibraryQuery>(() => {
+    const next: LibraryQuery = { sort };
     if (search !== '') {
       next.search = search;
     }

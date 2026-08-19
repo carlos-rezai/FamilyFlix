@@ -2,7 +2,7 @@ import { openDatabase } from '../db';
 import type {
   GenreCount,
   HomePayload,
-  HomeQuery,
+  LibraryQuery,
   Movie,
   MoviePatch,
   MovieQuery,
@@ -80,7 +80,7 @@ export interface LibraryStorage {
    * empties; a row's `count` stays the genre's unfiltered total. Omitting it is
    * the unfiltered home.
    */
-  getHome(query?: HomeQuery): HomePayload;
+  getHome(query?: LibraryQuery): HomePayload;
   /**
    * Persist the resume position (seconds into the file). Called constantly during
    * playback, so it stays a cheap single-column write — only

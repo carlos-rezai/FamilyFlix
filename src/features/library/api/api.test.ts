@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 import { fetchHomePayload, saveFavorite } from './api';
-import type { HomePayload, HomeQuery, Movie } from '@/types';
+import type { HomePayload, LibraryQuery, Movie } from '@/types';
 
 /** The query an unfiltered browse home asks with — every part at its default. */
-const UNFILTERED: HomeQuery = { sort: 'recently-added' };
+const UNFILTERED: LibraryQuery = { sort: 'recently-added' };
 
 function makeMovie(overrides: Partial<Movie> = {}): Movie {
   return {

@@ -1,4 +1,4 @@
-import { DEFAULT_MOVIE_SORT, type HomeQuery } from '@/types';
+import { DEFAULT_MOVIE_SORT, type LibraryQuery } from '@/types';
 import { isMovieSort, parseMinRating } from '@/utils';
 
 /**
@@ -11,8 +11,8 @@ import { isMovieSort, parseMinRating } from '@/utils';
  *
  * Pure, so the same URL always yields the same query.
  */
-export function parseLibraryQuery(params: URLSearchParams): HomeQuery {
-  const query: HomeQuery = { sort: DEFAULT_MOVIE_SORT };
+export function parseLibraryQuery(params: URLSearchParams): LibraryQuery {
+  const query: LibraryQuery = { sort: DEFAULT_MOVIE_SORT };
 
   // A cleared box leaves `?q=` behind on some paths; it is not a search for
   // the empty string, it is no search at all.

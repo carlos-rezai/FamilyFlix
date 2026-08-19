@@ -1,12 +1,12 @@
 import { useCallback, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
-import { DEFAULT_MOVIE_SORT, type HomeQuery, type MovieSort } from '@/types';
+import { DEFAULT_MOVIE_SORT, type LibraryQuery, type MovieSort } from '@/types';
 import { parseLibraryQuery } from '../parseLibraryQuery/parseLibraryQuery';
 
 export interface UseLibraryQueryResult {
   /** The settled query the URL is currently carrying. */
-  query: HomeQuery;
+  query: LibraryQuery;
   /** Write the search text; the empty string takes `q` back off the URL. */
   setSearch: (value: string) => void;
   /** Write the sort order; the default order takes `sort` back off the URL. */

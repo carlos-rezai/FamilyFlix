@@ -5,7 +5,7 @@ import {
   DEFAULT_MOVIE_SORT,
   MOVIE_SORTS,
   type GenreListPayload,
-  type HomeQuery,
+  type LibraryQuery,
   type MovieQuery,
   type MovieSort,
 } from '@/types';
@@ -118,7 +118,7 @@ export function createApiRouter(
       sort = sortParam;
     }
 
-    const query: HomeQuery = { sort };
+    const query: LibraryQuery = { sort };
 
     const search = queryString(req.query.q);
     if (search !== undefined && search !== '') {
