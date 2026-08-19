@@ -242,8 +242,8 @@ Builds the installer and publishes it to GitHub Releases automatically.
 | Browse grid — genre rows                            | ✅ Done         |
 | Card carousel — prev/next arrows, 15-per-row cap    | ✅ Done         |
 | Movie detail page (synopsis, director, cast)        | ✅ Done         |
-| Search + filter (title, genre, rating)              | ✅ Done         |
-| Sort (recent, A–Z, year, rating, unwatched)         | ✅ Done         |
+| Search + filter (title, genre, rating)              | 🔜 Planned      |
+| Sort (recent, A–Z, year, rating, unwatched)         | 🔜 Planned      |
 | Ratings — 5-star display + half-star picker         | 🔜 Planned      |
 | Favorites — mark + dedicated row                    | 🔜 Planned      |
 | Continue Watching row                               | 🔜 Planned      |
