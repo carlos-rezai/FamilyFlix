@@ -11,6 +11,114 @@ Newest entry first.
 
 ---
 
+## 2026-08-19 — Search + Filter refactor (issue #41)
+
+Closed the debt the search + filter build left behind. Fourteen commits in five
+groups. Plan: `docs/refactor-plans/05-search-filter-refactor.md`.
+
+Nothing here was about behaviour. The feature worked and 956 tests passed; what
+it had cost was a **settled query that five modules each knew how to read, write
+and name for themselves**. The URL-as-state decision was right and stands — the
+router is still the only seam between `features/search` and `features/library`,
+and no import crosses between them. What that decision never resolved was where
+the shared _vocabulary_ for the seam lives, so each side grew its own copy.
+
+### What shipped
+
+**One sort vocabulary.** `MOVIE_SORTS` is now an `as const` tuple in
+`src/types/browse.ts` and `MovieSort` is derived from it, so the union and the
+runtime list cannot drift — one is made out of the other. The route layer's
+verbatim copy is gone. `DEFAULT_MOVIE_SORT` joins it and collapses six
+declarations of `'recently-added'` spanning both build targets.
+
+**One parser, one serializer, and a tested round trip.** `parseLibraryQuery`
+moved to `src/utils/`, and `homeUrl()`'s hand-written omit-at-default rules came
+out beside it as `toLibraryQueryParams`. The pair are inverses and nothing had
+ever checked it; thirteen settled queries now assert the property directly.
+Both duplicate readers were deleted rather than bypassed — `useHomeRows` calls
+the parser, and `HomeRows` reads its miss copy off the query the hook loaded
+for, so the message can no longer name a filter the request ignored.
+
+**The third dropdown got the shape the other two had.** `SORT_LABELS` and
+`SORT_ORDER` collapsed into one exhaustive record in `features/search/sortOptions/`,
+carrying each order's label _and_ its place in the panel. `LibraryFilters` is now
+three near-identical dropdown calls with no vocabulary of its own.
+
+**`HomeQuery` became `LibraryQuery`**, so the glossary's headline term, the hook,
+the parser and the type all say the same word.
+
+### The verified finding the next person will need
+
+**A value import crosses the `@/types` boundary safely under both server
+runtimes.** All seven of the server's imports from `@/types` were `import type`
+and therefore erased, so nothing had ever proven the alias resolves at runtime
+for the backend. It does: verified under `tsx` (the dev server and the seed) and
+under `vitest` (every server test) before the route layer was allowed to depend
+on it. `tsconfig.server.json` includes `src/types/**` and nothing else of the
+frontend, so the boundary widens from "shared type vocabulary" to "shared type
+and constant vocabulary" — and no further. This is the fact to check first
+before sharing anything else across it.
+
+### The rule this settles
+
+**If two features read the same thing out of the URL, the thing that reads it is
+a util.** Not new — it is the rule the build already applied twice mid-flight,
+when `isMovieSort` and `parseMinRating` were promoted for exactly this reason,
+and then stopped applying. Everything in Group B is that same discovery carried
+to its conclusion.
+
+A related one, worth its own sentence: **a parser and its inverse are one unit of
+correctness even in two folders**, and the round-trip test is what says so.
+`useHomeRows` now leans on it directly — its memo is keyed on the query's
+canonical serialization, which is what keeps a scroll offset or a sort spelled at
+its default from reloading the library, and reading the query back from that
+string is only sound because the round trip holds.
+
+### Deliberately not changed
+
+- **The server keeps a local one-line sort guard.** Sharing the type predicate
+  would mean widening the server build to include the frontend's `utils/`
+  directory. The five-item list was the duplication with teeth; a single
+  `.includes()` is not worth coupling two build targets over.
+- **The two `parseMinRating` implementations stay different.** The route is a
+  general API over the stored 0–10 scale; the client accepts only the three
+  cut-offs the dropdown can produce. Not duplication — two different contracts.
+- **`HomePayload` and `HomeRow` keep their home names.** A payload really is one
+  screen's, where the query narrows the whole library.
+- **`LibraryFilters.test.tsx` was not redistributed.** At 880 lines it is the
+  largest test file in the feature, and the obvious move after extracting
+  `sortOptions` was to move its sort cases down to the new unit. It stays: it is
+  now the integration proof above the unit test, and every one of its assertions
+  passing unedited is what proved the extraction pure.
+- **No behaviour, no request and no pixel changed.** The verification rule for
+  every commit was that the existing tests pass unedited — `useHomeRows.test.tsx`
+  and `HomeRows.test.tsx` in particular were never opened, and their forty-odd
+  URL-to-request assertions are the entire proof of Group B.
+
+### Two things found along the way
+
+- **`npm run typecheck` was red on `main`.** A `TS2488` in
+  `MainLayout.test.tsx`: spreading an `HTMLCollection` under an ES2015 target
+  without `downlevelIteration`. It sat on the same helper as the repo's only
+  three ESLint warnings, so it was fixed with them rather than left as a
+  half-clean file. **Nothing in the pre-commit hook or CI runs `typecheck`**,
+  which is why a compile error could live on the default branch — that gap is
+  the real finding, and it is not this refactor's to close.
+- **`App.test.tsx` emits three `act(...)` warnings**, from a `HomeRows` update
+  landing after a synchronous render. Pre-existing on `main` and confirmed as
+  such against `08013fd`; distinct from the `LibraryFilters` warning the plan
+  flagged, which is fixed. Left alone deliberately: it is outside the plan, and
+  the repo is otherwise at zero warnings now, which is what makes it visible.
+
+### The pattern worth keeping
+
+The build discovered the right rule halfway through, applied it twice, wrote down
+why in this journal — and then left the other five copies standing. A shared unit
+with its duplicates still beside it is the situation that produces this debt, not
+the fix for it. The deletion is the deliverable; the extraction is the easy half.
+
+---
+
 ## 2026-08-19 — Search + Filter + Sort (issues #30–#38)
 
 The browse home's header controls, filling the gap `MainLayout` has carried
