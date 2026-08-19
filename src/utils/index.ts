@@ -15,3 +15,4 @@ export {
   parseMinRating,
   RATING_CUTOFFS,
 } from './parseMinRating/parseMinRating';
+export { parseLibraryQuery } from './parseLibraryQuery/parseLibraryQuery';

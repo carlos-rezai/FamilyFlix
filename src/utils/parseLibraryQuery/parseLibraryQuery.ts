@@ -10,6 +10,15 @@ import { isMovieSort, parseMinRating } from '@/utils';
  * than rejected — a bookmark from an older build still opens.
  *
  * Pure, so the same URL always yields the same query.
+ *
+ * A util rather than a feature-local helper for the same reason as
+ * `isMovieSort` and `parseMinRating`, which it is built from: two features read
+ * the settled query out of the URL independently — the search feature to draw
+ * the pills, the library feature to build the home request — and a second
+ * parser is a second set of rules that can come to disagree with this one.
+ * That does not show up as a crash; it shows up as the request narrowing on
+ * something the pill does not show, or the miss message naming a filter the
+ * request ignored. A screen contradicting itself.
  */
 export function parseLibraryQuery(params: URLSearchParams): LibraryQuery {
   const query: LibraryQuery = { sort: DEFAULT_MOVIE_SORT };
