@@ -7,7 +7,7 @@ import type {
   HomeQuery,
   MovieSort,
 } from '@/types';
-import { isMovieSort } from '@/utils';
+import { isMovieSort, parseMinRating } from '@/utils';
 import { fetchHomePayload, saveFavorite } from '../api/api';
 import { continueView } from '../continueView/continueView';
 import { toGenreRow } from '../toGenreRow/toGenreRow';
@@ -39,9 +39,9 @@ export interface UseHomeRowsResult {
  * alphabetical order is preserved as it arrives.
  *
  * The query it loads is whatever the URL is carrying — the search text, the
- * genre and the sort order alike, read straight from the router as app-level
- * state rather than a sibling feature's, which is why the header's controls and
- * this hook never speak to each other. Narrowing to one genre is the server's
+ * genre, the minimum rating and the sort order alike, read straight from the
+ * router as app-level state rather than a sibling feature's, which is why the
+ * header's controls and this hook never speak to each other. Narrowing to one genre is the server's
  * answer to that query, not a filter applied to rows already here: one row
  * arrives because one row was built. It is already known on the first render, so a
  * shared link loads narrowed and in its order with no unfiltered library
@@ -74,6 +74,10 @@ export function useHomeRows(): UseHomeRowsResult {
   // An empty `?genre=` is "All Genres", so it reads as no genre and reloads
   // nothing — the same rule the parameter is written by.
   const genre = searchParams.get('genre') ?? '';
+  // Only a cut-off the dropdown can produce reads as a minimum, so a
+  // hand-edited `?rating=7` asks for the whole library — the same rule the pill
+  // draws itself by, or the request would disagree with the header.
+  const minRating = parseMinRating(searchParams.get('rating'));
   const query = useMemo<HomeQuery>(() => {
     const next: HomeQuery = { sort };
     if (search !== '') {
@@ -82,8 +86,11 @@ export function useHomeRows(): UseHomeRowsResult {
     if (genre !== '') {
       next.genre = genre;
     }
+    if (minRating !== undefined) {
+      next.minRating = minRating;
+    }
     return next;
-  }, [search, sort, genre]);
+  }, [search, sort, genre, minRating]);
 
   useEffect(() => {
     let current = true;

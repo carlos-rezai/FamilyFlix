@@ -16,6 +16,8 @@ export interface UseLibraryQueryResult {
   setSort: (value: MovieSort) => void;
   /** Write the genre; the empty string ("All Genres") takes `genre` back off. */
   setGenre: (value: string) => void;
+  /** Write the minimum rating; nought ("All ratings") takes `rating` back off. */
+  setRating: (value: number) => void;
 }
 
 /**
@@ -73,5 +75,12 @@ export function useLibraryQuery(): UseLibraryQueryResult {
     [setParam]
   );
 
-  return { query, setSearch, setSort, setGenre };
+  // Nought is "All ratings", which is the absence of the filter rather than a
+  // floor of zero — so it writes no parameter at all.
+  const setRating = useCallback(
+    (value: number) => setParam('rating', String(value), '0'),
+    [setParam]
+  );
+
+  return { query, setSearch, setSort, setGenre, setRating };
 }

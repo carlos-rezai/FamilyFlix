@@ -1,5 +1,5 @@
 import type { HomeQuery, MovieSort } from '@/types';
-import { isMovieSort } from '@/utils';
+import { isMovieSort, parseMinRating } from '@/utils';
 
 /** What the home rows are ordered by until a sort control writes another one. */
 const DEFAULT_SORT: MovieSort = 'recently-added';
@@ -12,8 +12,7 @@ const DEFAULT_SORT: MovieSort = 'recently-added';
  * same as absent, and anything this slice doesn't read is left alone rather
  * than rejected — a bookmark from an older build still opens.
  *
- * Pure, so the same URL always yields the same query. The rating parameter
- * joins it as its control ships.
+ * Pure, so the same URL always yields the same query.
  */
 export function parseLibraryQuery(params: URLSearchParams): HomeQuery {
   const query: HomeQuery = { sort: DEFAULT_SORT };
@@ -40,6 +39,15 @@ export function parseLibraryQuery(params: URLSearchParams): HomeQuery {
   const genre = params.get('genre');
   if (genre !== null && genre !== '') {
     query.genre = genre;
+  }
+
+  // Only a cut-off the dropdown can produce reads as a minimum, so a
+  // hand-edited `?rating=7` can never narrow the library behind a pill still
+  // saying "All ratings" — the URL and the screen must agree. `rating` is the
+  // wire name the app URL and the route share; `minRating` is the domain's.
+  const minRating = parseMinRating(params.get('rating'));
+  if (minRating !== undefined) {
+    query.minRating = minRating;
   }
 
   return query;

@@ -36,6 +36,13 @@ function homeUrl(query: HomeQuery): string {
     params.set('genre', query.genre);
   }
 
+  // "All ratings" is the absence of the filter, and so is a minimum of nought
+  // — a literal floor of zero would exclude every unrated movie. `rating` is
+  // the wire name; `minRating` is what the repository calls it.
+  if (query.minRating !== undefined && query.minRating !== 0) {
+    params.set('rating', String(query.minRating));
+  }
+
   const search = params.toString();
   return search === '' ? HOME_ENDPOINT : `${HOME_ENDPOINT}?${search}`;
 }

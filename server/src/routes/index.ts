@@ -39,6 +39,22 @@ function isMovieSort(value: string): value is MovieSort {
   return (SORTS as readonly string[]).includes(value);
 }
 
+/** The top of the stored rating scale — 10 half-star units, five whole stars. */
+const MAX_RATING = 10;
+
+/**
+ * Reject anything that is not a point on the stored 0–10 half-star scale. The
+ * four cut-offs the dropdown offers are that control's vocabulary, not this
+ * endpoint's: `/home` stays a general API over the whole scale.
+ */
+function parseMinRating(value: string): number | null {
+  const minimum = Number(value);
+  if (!Number.isInteger(minimum) || minimum < 0 || minimum > MAX_RATING) {
+    return null;
+  }
+  return minimum;
+}
+
 /** Reject anything that is not a positive whole number of rows. */
 function parseLimit(value: string): number | null {
   const limit = Number(value);
@@ -85,6 +101,12 @@ export function createApiRouter(
   // spelled the way the library spells it; a genre the library does not hold is
   // an empty payload rather than a 404, because a stale bookmark for an emptied
   // genre is a normal "nothing here".
+  //
+  // `?rating=` keeps only movies rated at or above it, and drops the unrated
+  // ones with it — nobody has said anything about those yet, which is not a
+  // nought out of ten. A minimum off the scale is a 400 the way an unknown sort
+  // is, but `0` and an empty value are no minimum at all rather than a floor of
+  // nought, which would throw away every unrated movie in the library.
   router.get('/home', (req: Request, res: Response) => {
     let sort: MovieSort = DEFAULT_SORT;
     const sortParam = queryString(req.query.sort);
@@ -106,6 +128,18 @@ export function createApiRouter(
     const genre = queryString(req.query.genre);
     if (genre !== undefined && genre !== '') {
       query.genre = genre;
+    }
+
+    const ratingParam = queryString(req.query.rating);
+    if (ratingParam !== undefined && ratingParam !== '') {
+      const minimum = parseMinRating(ratingParam);
+      if (minimum === null) {
+        res.status(400).json({ error: `Invalid rating: ${ratingParam}` });
+        return;
+      }
+      if (minimum > 0) {
+        query.minRating = minimum;
+      }
     }
 
     res.json(storage.getHome(query));

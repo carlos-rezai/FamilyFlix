@@ -2,6 +2,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import { LoadMessage } from '@/components';
 import { Button } from '@/primitives';
+import { parseMinRating } from '@/utils';
 import { ContinueRow } from '../ContinueRow/ContinueRow';
 import { GenreRow } from '../GenreRow/GenreRow';
 import { useHomeRows } from '../useHomeRows/useHomeRows';
@@ -55,10 +56,10 @@ function LoadingRows() {
  * with nothing on it; a search that matched nothing is a working library and a
  * term that missed, so it says so plainly and quotes the term back — the only
  * way to spot a typo in it. A filter that matched nothing with the box empty
- * has no term worth quoting, and the prototype's single string would render a
- * pair of empty quotes there, so it names the filters instead. The typed term
- * wins whenever there is one: a typo in it is the likeliest reason for the
- * miss. All of it is read from the URL, which is where the settled query lives,
+ * has no term worth quoting — a genre and a rating cut-off alike — and the
+ * prototype's single string would render a pair of empty quotes there, so it
+ * names the filters instead. The typed term wins whenever there is one: a typo
+ * in it is the likeliest reason for the miss. All of it is read from the URL, which is where the settled query lives,
  * so nothing here is imported from the search feature.
  */
 export function HomeRows() {
@@ -68,6 +69,9 @@ export function HomeRows() {
   const navigate = useNavigate();
   const search = searchParams.get('q') ?? '';
   const genre = searchParams.get('genre') ?? '';
+  // A minimum the query would drop never narrowed anything, so it is not a
+  // filter that missed — the same rule the request and the pill read it by.
+  const minRating = parseMinRating(searchParams.get('rating'));
 
   if (status === 'loading') {
     return <LoadingRows />;
@@ -96,7 +100,7 @@ export function HomeRows() {
       );
     }
 
-    if (genre !== '') {
+    if (genre !== '' || minRating !== undefined) {
       return (
         <LoadMessage
           title="Nothing here"
