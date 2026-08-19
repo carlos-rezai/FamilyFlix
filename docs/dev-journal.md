@@ -13,8 +13,11 @@ Newest entry first.
 
 ## 2026-08-19 — Search + Filter refactor (issue #41)
 
-Closed the debt the search + filter build left behind. Fourteen commits in five
-groups. Plan: `docs/refactor-plans/05-search-filter-refactor.md`.
+Closed the debt the search + filter build left behind. The plan's fifteen commits
+landed as fourteen — D1 and D2 were both one-file test fixes on the same theme
+and went together — plus a fifteenth ticking the two README rows that `a087304`
+had reverted to Planned pending exactly this work. Plan:
+`docs/refactor-plans/05-search-filter-refactor.md`.
 
 Nothing here was about behaviour. The feature worked and 956 tests passed; what
 it had cost was a **settled query that five modules each knew how to read, write
