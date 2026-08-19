@@ -1,13 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
-import {
-  DEFAULT_MOVIE_SORT,
-  type ContinueCardMovie,
-  type GenreRowModel,
-  type LibraryQuery,
-} from '@/types';
-import { isMovieSort, parseMinRating } from '@/utils';
+import type { ContinueCardMovie, GenreRowModel } from '@/types';
+import { parseLibraryQuery, toLibraryQueryParams } from '@/utils';
 import { fetchHomePayload, saveFavorite } from '../api/api';
 import { continueView } from '../continueView/continueView';
 import { toGenreRow } from '../toGenreRow/toGenreRow';
@@ -61,33 +56,25 @@ export function useHomeRows(): UseHomeRowsResult {
   );
   const [attempt, setAttempt] = useState(0);
 
-  // Only the parts of the URL this hook reads may reload the library — a
-  // scroll offset or a tracking parameter changing is not a new query. An
-  // order the app doesn't recognise reads as the default, so a hand-edited or
-  // stale URL loads the plain home rather than asking the route for a 400.
-  const search = searchParams.get('q') ?? '';
-  const sortParam = searchParams.get('sort') ?? '';
-  const sort = isMovieSort(sortParam) ? sortParam : DEFAULT_MOVIE_SORT;
-  // An empty `?genre=` is "All Genres", so it reads as no genre and reloads
-  // nothing — the same rule the parameter is written by.
-  const genre = searchParams.get('genre') ?? '';
-  // Only a cut-off the dropdown can produce reads as a minimum, so a
-  // hand-edited `?rating=7` asks for the whole library — the same rule the pill
-  // draws itself by, or the request would disagree with the header.
-  const minRating = parseMinRating(searchParams.get('rating'));
-  const query = useMemo<LibraryQuery>(() => {
-    const next: LibraryQuery = { sort };
-    if (search !== '') {
-      next.search = search;
-    }
-    if (genre !== '') {
-      next.genre = genre;
-    }
-    if (minRating !== undefined) {
-      next.minRating = minRating;
-    }
-    return next;
-  }, [search, sort, genre, minRating]);
+  // The settled query written back out the way the URL spells it — the shared
+  // parser's answer, so a stale, hand-edited or hostile URL is made safe here
+  // by exactly the rules the header's pills read it by.
+  //
+  // Reducing it to that canonical string first is what decides when the library
+  // reloads: only the parts this hook reads are in it, at their settled values,
+  // so a scroll offset arriving, an empty `?genre=`, or a sort spelled at the
+  // default it was already in all leave the string alone and reload nothing.
+  const settled = toLibraryQueryParams(
+    parseLibraryQuery(searchParams)
+  ).toString();
+
+  // Read back from that canonical form, so an unchanged query keeps one
+  // identity for the effect below. It yields what the URL says because the two
+  // functions are inverses — a property their own test asserts.
+  const query = useMemo(
+    () => parseLibraryQuery(new URLSearchParams(settled)),
+    [settled]
+  );
 
   useEffect(() => {
     let current = true;
