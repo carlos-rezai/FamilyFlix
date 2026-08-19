@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
-import type { ContinueCardMovie, GenreRowModel } from '@/types';
+import type { ContinueCardMovie, GenreRowModel, LibraryQuery } from '@/types';
 import { parseLibraryQuery, toLibraryQueryParams } from '@/utils';
 import { fetchHomePayload, saveFavorite } from '../api/api';
 import { continueView } from '../continueView/continueView';
@@ -13,6 +13,13 @@ export type HomeRowsStatus = 'loading' | 'ready' | 'error';
 
 export interface UseHomeRowsResult {
   status: HomeRowsStatus;
+  /**
+   * The settled query these rows were loaded for. Handed back so that anything
+   * describing the result — the miss copy above all — reads the same query the
+   * request was built from, rather than parsing the URL for itself and risking
+   * naming a filter the request ignored.
+   */
+  query: LibraryQuery;
   /** The genre rows to render; empty unless `status` is `ready`. */
   rows: GenreRowModel[];
   /** The resume tiles to render above them; empty unless `status` is `ready`. */
@@ -124,5 +131,5 @@ export function useHomeRows(): UseHomeRowsResult {
       });
   }, []);
 
-  return { status, rows, continueWatching, retry, toggleFavorite };
+  return { status, query, rows, continueWatching, retry, toggleFavorite };
 }

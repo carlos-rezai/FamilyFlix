@@ -1,8 +1,7 @@
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 
 import { LoadMessage } from '@/components';
 import { Button } from '@/primitives';
-import { parseMinRating } from '@/utils';
 import { ContinueRow } from '../ContinueRow/ContinueRow';
 import { GenreRow } from '../GenreRow/GenreRow';
 import { useHomeRows } from '../useHomeRows/useHomeRows';
@@ -59,19 +58,20 @@ function LoadingRows() {
  * has no term worth quoting — a genre and a rating cut-off alike — and the
  * prototype's single string would render a pair of empty quotes there, so it
  * names the filters instead. The typed term wins whenever there is one: a typo
- * in it is the likeliest reason for the miss. All of it is read from the URL, which is where the settled query lives,
- * so nothing here is imported from the search feature.
+ * in it is the likeliest reason for the miss.
+ *
+ * Which filters it names come from the settled query the rows were loaded for,
+ * handed over by the hook. That is the same value the request was built from,
+ * so the message can never name a filter the request ignored — and the query
+ * still lives in the URL, so nothing here is imported from the search feature.
  */
 export function HomeRows() {
-  const { status, rows, continueWatching, retry, toggleFavorite } =
+  const { status, query, rows, continueWatching, retry, toggleFavorite } =
     useHomeRows();
-  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const search = searchParams.get('q') ?? '';
-  const genre = searchParams.get('genre') ?? '';
-  // A minimum the query would drop never narrowed anything, so it is not a
-  // filter that missed — the same rule the request and the pill read it by.
-  const minRating = parseMinRating(searchParams.get('rating'));
+  // A settled query holds a filter or holds nothing; there is no empty one to
+  // tell apart, because the parser already dropped those.
+  const { search, genre, minRating } = query;
 
   if (status === 'loading') {
     return <LoadingRows />;
@@ -91,7 +91,7 @@ export function HomeRows() {
   // empty library — something in progress is proof there are movies. There is
   // no action here: an empty library has nothing to retry.
   if (rows.length === 0 && continueWatching.length === 0) {
-    if (search !== '') {
+    if (search !== undefined) {
       return (
         <LoadMessage
           title="Nothing here"
@@ -100,7 +100,7 @@ export function HomeRows() {
       );
     }
 
-    if (genre !== '' || minRating !== undefined) {
+    if (genre !== undefined || minRating !== undefined) {
       return (
         <LoadMessage
           title="Nothing here"
