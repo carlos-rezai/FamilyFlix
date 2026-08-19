@@ -247,12 +247,20 @@ these give the shared code behind it a single agreed name.
 - **Search matches more than titles (new):** **Search text** matches title,
   **Synopsis** _or_ **Genre** name, per the prototype. So typing "comedy" returns
   comedies without touching the **Genre filter**, and the two mechanisms can
-  overlap. Case-insensitivity is ASCII-only (SQLite `LIKE`).
+  overlap.
+- **Case-insensitive search is ASCII-only (new):** SQLite's `LIKE` folds case for
+  A–Z and for nothing else, so **Search text** `amélie` finds _Amélie_ while
+  `AMÉLIE` does not — the ASCII letters around the accent fold, the `é`/`É` pair
+  is compared byte for byte. A **known limit, recorded rather than worked
+  around**: every fix (a normalised shadow column, folding at write time, FTS
+  with `unicode61`) is schema work this feature had no reason to buy. Worth
+  revisiting when a title with an accent is actually in the library.
 - **Genre row ordering is still divergent (new):** the **Browse home** orders its
   **Genre rows** alphabetically (`listGenres()` is `ORDER BY g.name`); the
   prototype orders them by count descending. The new Genre **Filter dropdown**
-  follows the prototype (count desc). **Open** — a pre-existing browse-grid
-  divergence, deliberately not corrected inside the search work.
+  follows the prototype (count desc), which orders the rows that way too — so the
+  rows are the surface that disagrees with it. **Open (#39)** — a pre-existing
+  browse-grid divergence, deliberately not corrected inside the search work.
 - **Edit has no route of its own:** COMPONENT-SPEC lists no `/edit`; the
   prototype reuses the add screen with an `addContext: 'edit'` flag. The **Movie
   detail page** navigates to `/add?movie=<id>` as a **provisional** contract — the

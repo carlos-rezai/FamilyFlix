@@ -11,6 +11,173 @@ Newest entry first.
 
 ---
 
+## 2026-08-19 — Search + Filter + Sort (issues #30–#38)
+
+The browse home's header controls, filling the gap `MainLayout` has carried
+since `02-browse-grid`: a search box, a Genre pill, a rating pill and a Sort
+pill. Sixteen commits across seven build issues (#31–#37), red tests then green
+for each. PRD: `docs/PRDs/05-search-filter.md`; plan:
+`docs/PRDs/05-search-filter-plan.md`.
+
+Almost nothing new was stored. `MovieQuery` has carried `search`, `genre`,
+`minRating` and `sort` since Library Core, and `buildListQuery` already
+assembled every one of them into parameterized SQL. What this feature built was
+the path from a header control down to that query — plus the two arms of
+`search` the prototype implies and the repository did not have. No migration:
+the only new SQL in the whole feature is `countMovies()`, a `SELECT COUNT(*)`.
+
+### The decision everything else follows from
+
+**The query is the URL.** `/?q=&genre=&rating=&sort=` is the entire state of
+this feature — no component state above the controls, no context provider. The
+controls only ever _write_ it; `useHomeRows`, the pills' own selected values and
+`HomeRows`' miss copy only ever _read_ it. That is what lets `features/search/`
+and `features/library/` both act on the query without a single import crossing
+between them: the router is the seam, and it already existed.
+
+Three consequences worth knowing before touching any of it:
+
+- **Every parameter is omitted at its default**, so an unfiltered home is a
+  clean `/`, and "All Genres" / "All ratings" _remove_ their parameter rather
+  than writing an empty one.
+- **Writes are `replace: true`**, so typing does not stack a history entry per
+  keystroke and one Back escapes a search of any length. The price is that each
+  settled query mints a fresh history key, which resets scroll to the top —
+  right for a reshuffled list, but a consequence rather than a goal. Remember it
+  if `useRestoredScroll` is ever revisited.
+- **A hostile or stale URL is made safe in exactly one place.**
+  `parseLibraryQuery` turns `URLSearchParams` into a `HomeQuery`; an unknown
+  sort falls back to the default and an unrecognised rating is dropped, so a
+  bookmark from an older build opens rather than crashes.
+
+### What shipped
+
+**Search widened from a title substring to title OR synopsis OR genre name.**
+The genre arm reuses the genre filter's `m.id IN (SELECT …)` subquery shape
+rather than joining, so a movie matching on several arms — or on several
+genres — still comes back exactly once, and `assembleMany` keeps re-running the
+`WHERE` as a subquery unchanged. `searchMovies` widened with it, since it is
+documented as a `listMovies` call with the `search` filter and should keep
+meaning that.
+
+**`getHome` takes a `HomeQuery` and threads it into both `listMovies` calls**,
+so the genre rows and the Continue Watching row narrow off one query and the top
+of the screen can never disagree with the rest of it. Rows that matched nothing
+are dropped — moved forward from the genre slice into Phase 1, because a search
+that leaves every genre row standing renders a screenful of empty rows. A
+narrowed row's `count` still comes from `listGenres()`, so "View all 24" keeps
+saying 24 while the row shows the three that matched.
+
+**Filtering happens on the server, never on the payload already held.**
+Filtering 15 of a genre's 40 movies would silently miss the other 25, and every
+user-facing symptom of that bug looks exactly like "we don't own that film".
+
+**`GET /api/genres` → `{ total, genres }`, its own endpoint.** Not a field on
+`HomePayload`, because it has a different lifetime: it is fetched once per mount
+where `/home` refetches per settled query, and the counts must not reshuffle
+under a finger already reaching for them. `total` needs `countMovies()` rather
+than a sum of genre counts, which would double-count anything tagged twice.
+`useGenreList` resolves to an **empty list on failure** — the Genre pill renders
+with "All Genres" alone and the other two are untouched, because the prototype
+designs no error surface here.
+
+**`FilterDropdown` is built on `Menu`.** The dismissal contract it needs —
+Escape, outside pointerdown, select-to-close, focus back to the trigger —
+already existed, and taking it buys the prototype's single-open behaviour for
+free with no coordinating state anywhere. The deliberate price: the prototype's
+`open` / `onToggle` props are **dropped**, because `Menu` owns open state.
+`Menu` gained only `MenuItem`'s `selected` and `trailing`, and a scrollable
+panel; its existing dismissal tests were not edited and still pass.
+
+**`label` on `FilterDropdown` is always required and always forms the accessible
+name**, rather than an `aria-label` a caller can forget. That is what lets the
+rating pill wear a ★ with no visible caption and still announce "Minimum rating:
+3+ stars".
+
+**The debounce lives in `LibrarySearch` and nowhere else** — local input state
+for instant typing, a 250ms debounced URL write. It is the only holder of
+un-settled input in the app; everything downstream treats the URL as already
+settled and knows nothing about debouncing. That is the deliberate price of
+keeping `useHomeRows` free of any import from `features/search`.
+
+**The skeleton does not come back.** Rows already on screen stay put through a
+refetch — first load only, because flashing the whole screen every 250ms of
+typing would be unreadable. A stale in-flight response cannot overwrite a newer
+one.
+
+**`HomeRows` distinguishes three misses, not two.** A search miss quotes the
+text back; a filter-only miss talks about genre and rating; "Your library is
+empty" still means there are no movies at all. The prototype conflates the first
+two into one string that renders as empty quotes when nobody typed anything.
+
+**427 new tests.** The suite went from 519 to 946 written cases — 956 executed,
+across 64 files.
+
+### Two shared utils that were not on the plan
+
+`isMovieSort` and `parseMinRating` (with `RATING_CUTOFFS`) landed in
+`src/utils/` rather than inside `features/search/`, because the sort and the
+minimum arrive from the URL and **two features read them from there
+independently**: the search feature parses the settled query and draws the pill,
+the library feature builds the home request. A feature-local helper would have
+meant one of them importing the other, or — worse — two parsers that could
+disagree, which shows up as a screen contradicting itself rather than as a
+crash.
+
+`parseMinRating` is also **stricter on the client than the route is**, which was
+a build-time discovery rather than a planned one. `/api/home` stays a general
+API over the whole stored 0–10 scale and `400`s only what is off it; the client
+accepts **only the three cut-offs the dropdown can produce** (8 / 6 / 4). A
+hand-edited `?rating=7` would otherwise narrow the library behind a pill still
+reading "All ratings". `0` is "All ratings" too, not a floor of nought — a
+literal minimum of zero would exclude every unrated movie, the opposite of what
+that row promises.
+
+### Deliberately not changed
+
+- **`getHome` still runs one query per genre**, so a library with many genres
+  pays a statement each. Sub-millisecond against a local SQLite file, and the
+  seam to batch it later is one function.
+- **`/api/movies` did not gain `q` or `rating`.** Nothing calls it with them
+  until the GenrePage grid exists.
+- **The GenrePage header, the Favorites row and persisted filters** are all
+  absent from the prototype. Each would have been inventing design at build
+  time.
+- **Nothing was made "smart".** Substring `LIKE` over three columns — no fuzzy
+  matching, no stemming, no ranking. FamilyFlix has no AI, and this is not the
+  seam to hide a scoring function behind.
+- **`docs/handoff/` is now ignored by ESLint.** Its vendored `support.js` was
+  the only thing in the repo `eslint .` had ever failed on, and it is a
+  prototype we read rather than a source we own — correcting it would edit the
+  visual source of truth. Recorded here because it is a config change made while
+  closing out a feature, not part of the feature.
+
+### Follow-ups this feature surfaced
+
+- **Home-row ordering is knowingly inconsistent with the Genre dropdown.** The
+  **Browse home** orders its rows alphabetically (`listGenres()` is
+  `ORDER BY g.name`); the Genre dropdown orders its options by count descending,
+  because that is what the prototype does (`FamilyFlix.dc.html:409`). The
+  prototype orders the rows that way too (`:328`), so the rows are the surface
+  that is wrong — a pre-existing `02-browse-grid` divergence, not this feature's
+  to change silently under a filter. Filed as #39.
+- **`Menu` promises more ARIA than it implements.** The trigger says
+  `aria-haspopup="menu"`, but the panel carries no `role="menu"` and the items
+  are plain buttons with `aria-current` — chosen deliberately, because
+  `role="menu"` and `menuitemradio` promise the arrow-key navigation of the full
+  ARIA menu pattern, which does not exist here. `aria-current` is valid and
+  meaningful without promising it. Promoting the pattern is its own piece of
+  work. Filed as #40.
+- **`MainLayout.test.tsx` has three non-null assertions** left by the
+  header-slot work — ESLint warnings, not errors. Small, but they are the only
+  lint noise in `src/` and worth clearing whenever that file is next opened.
+- **`LibraryFilters`' tests log an `act(...)` warning.** The suite passes; a
+  state update from the genre-list fetch settles outside `act`. Worth tightening
+  before the next hook in that feature is written, so a real warning is not lost
+  in a familiar one.
+
+---
+
 ## 2026-08-13 — Movie Detail refactor (issue #29)
 
 Closed the debt left behind by the shipped movie detail page. Twenty-five
