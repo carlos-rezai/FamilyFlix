@@ -267,12 +267,17 @@ these give the shared code behind it a single agreed name.
   around**: every fix (a normalised shadow column, folding at write time, FTS
   with `unicode61`) is schema work this feature had no reason to buy. Worth
   revisiting when a title with an accent is actually in the library.
-- **Genre row ordering is still divergent (new):** the **Browse home** orders its
-  **Genre rows** alphabetically (`listGenres()` is `ORDER BY g.name`); the
-  prototype orders them by count descending. The new Genre **Filter dropdown**
-  follows the prototype (count desc), which orders the rows that way too — so the
-  rows are the surface that disagrees with it. **Open (#39)** — a pre-existing
-  browse-grid divergence, deliberately not corrected inside the search work.
+- **Genre order is one order, count descending (settled #39):** every surface
+  that lists **Genres** — the **Browse home**'s **Genre rows** and the Genre
+  **Filter dropdown** above them — orders them by movie count descending with an
+  alphabetical tiebreak, as the prototype draws them
+  (`FamilyFlix.dc.html:328` and `:409`). It is one order because it is one list:
+  `listGenres()` is `ORDER BY COUNT(mg.movie_id) DESC, g.name`, and both surfaces
+  read it, so the header can never rank the **Genres** differently from the body
+  underneath it. The tiebreak is what makes the list learnable — two **Genres**
+  holding the same count must not swap places between visits. Resolves the
+  alphabetical row order carried since **02**, which was a pre-existing
+  browse-grid divergence rather than anything the search work introduced.
 - **Edit has no route of its own:** COMPONENT-SPEC lists no `/edit`; the
   prototype reuses the add screen with an `addContext: 'edit'` flag. The **Movie
   detail page** navigates to `/add?movie=<id>` as a **provisional** contract — the

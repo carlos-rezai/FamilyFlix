@@ -10,10 +10,13 @@ export const ALL_GENRES = 'All Genres';
  * The genre list as the dropdown's rows: "All Genres" carrying the library
  * total, then every genre by count descending with an alphabetical tiebreak.
  *
- * The order is the prototype's (`FamilyFlix.dc.html:409`) and is not the order
- * the route sends: the busiest genres are the ones worth reaching first, and
- * the name tiebreak is what makes the list stable enough to learn — two genres
- * holding the same count must not swap places between openings.
+ * The order is the prototype's (`FamilyFlix.dc.html:409`): the busiest genres
+ * are the ones worth reaching first, and the name tiebreak is what makes the
+ * list stable enough to learn — two genres holding the same count must not swap
+ * places between openings. Since #39 the route sends the genres in exactly this
+ * order, so the sort here is a restatement of the contract rather than a
+ * correction of it, and it stays to keep the dropdown's order legible where the
+ * dropdown is read.
  *
  * "All Genres" leads whatever the counts are, because the way out of a filter
  * belongs under the finger before the filters do. Its count is the library

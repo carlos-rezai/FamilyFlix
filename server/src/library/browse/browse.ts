@@ -94,7 +94,7 @@ export function createBrowse(db: SqliteDatabase, reader: MovieReader): Browse {
     FROM genres g
     JOIN movie_genres mg ON mg.genre_id = g.id
     GROUP BY g.id, g.name
-    ORDER BY g.name
+    ORDER BY COUNT(mg.movie_id) DESC, g.name
   `);
 
   const selectMovieCount = db.prepare('SELECT COUNT(*) AS count FROM movies');
@@ -111,6 +111,19 @@ export function createBrowse(db: SqliteDatabase, reader: MovieReader): Browse {
     return listMovies({ sort: 'a-z', search: text });
   }
 
+  /**
+   * Every populated genre and how many movies it holds, busiest first, ties
+   * broken by name — the order the prototype draws both the home's genre rows
+   * (`FamilyFlix.dc.html:328`) and the Genre dropdown above them (`:409`) in.
+   *
+   * The count order is the point: the genres worth reaching first are the ones
+   * with the most behind them. The name tiebreak is what makes the list stable
+   * enough to learn, so two equal genres cannot swap places between visits.
+   *
+   * Both surfaces read this one list rather than sorting their own copies, so
+   * the header can never rank the genres differently from the body underneath
+   * it. A genre with no movies never survives the join, so it never appears.
+   */
   function listGenres(): GenreCount[] {
     return selectGenreCounts.all() as GenreCount[];
   }

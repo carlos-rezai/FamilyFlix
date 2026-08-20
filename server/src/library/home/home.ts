@@ -31,11 +31,14 @@ export interface Home {
  * composition of the two existing browse queries, so no new SQL and no new
  * repository primitive appear here.
  *
- * `rows` is one row per populated genre (alphabetical, since `listGenres`
- * already orders by name), each capped at {@link HOME_ROW_LIMIT} movies
- * newest-first. A genre with no movies never reaches `listGenres`, so it simply
- * produces no row; a movie tagged with several genres appears in each of their
- * rows.
+ * `rows` is one row per populated genre (busiest genre first, since
+ * `listGenres` already orders by count), each capped at {@link HOME_ROW_LIMIT}
+ * movies newest-first. Taking that order as given is what keeps the rows and
+ * the Genre dropdown above them reading one list: a query narrows what a row
+ * holds and can drop a row entirely, but never re-ranks the rows by how much
+ * of each matched. A genre with no movies never reaches `listGenres`, so it
+ * simply produces no row; a movie tagged with several genres appears in each of
+ * their rows.
  *
  * A `genre` on the query is the one filter that does not merely narrow the
  * rows — it decides which rows exist at all. Choosing a genre is a narrowing of
