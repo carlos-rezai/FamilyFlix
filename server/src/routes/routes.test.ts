@@ -173,6 +173,24 @@ describe('GET /api/home', () => {
     ]);
   });
 
+  // --- 06 — Genre row ordering (issue #39) ------------------------------------
+
+  it('sends the genre rows busiest genre first', async () => {
+    const { storage, baseUrl } = freshApi();
+    addGenreCountedLibrary(storage);
+
+    const home = await getHomePayload(baseUrl);
+
+    // Drama holds four of the five, Comedy and Horror one each — so count
+    // order and A–Z order disagree, and the wire carries the count order the
+    // prototype draws (`FamilyFlix.dc.html:328`).
+    expect(home.rows.map((row) => [row.genre, row.count])).toEqual([
+      ['Drama', 4],
+      ['Comedy', 1],
+      ['Horror', 1],
+    ]);
+  });
+
   it('treats an empty ?q= as no search at all', async () => {
     const { storage, baseUrl } = freshApi();
     addBrowsableLibrary(storage);
@@ -643,6 +661,31 @@ describe('GET /api/genres', () => {
       'Horror',
     ]);
     expect(list.total).toBe(5);
+  });
+
+  // --- 06 — Genre row ordering (issue #39) ------------------------------------
+
+  it('sends the genres in the same order the home rows arrive in', async () => {
+    const { storage, baseUrl } = freshApi();
+    addGenreCountedLibrary(storage);
+
+    const list = await getGenreList(baseUrl);
+    const home = await getHomePayload(baseUrl);
+
+    // The dropdown and the rows are one list read twice, not two lists that
+    // happen to agree: both come off `listGenres()`, so the header can never
+    // rank the genres differently from the body underneath it.
+    expect(list.genres.map((genre) => genre.name)).toEqual([
+      'Drama',
+      'Comedy',
+      'Horror',
+    ]);
+    expect(list.genres.map((genre) => genre.name)).toEqual(
+      home.rows.map((row) => row.genre)
+    );
+    expect(list.genres.map((genre) => genre.count)).toEqual(
+      home.rows.map((row) => row.count)
+    );
   });
 
   it('never double-counts a movie tagged with several genres', async () => {

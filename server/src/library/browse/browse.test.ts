@@ -636,6 +636,50 @@ describe('library: listGenres', () => {
 
     expect(storage.listGenres()).toEqual([]);
   });
+
+  // --- 06 — Genre row ordering (issue #39) -------------------------------------
+
+  it('orders genres by movie count, busiest first', () => {
+    const storage = freshStorage();
+    // Deliberately not alphabetical: 'Action' would lead an A–Z list, and here
+    // it holds the fewest movies, so it has to come last.
+    storage.addMovie(newMovie({ title: 'A1', genres: ['Action'] }));
+    storage.addMovie(newMovie({ title: 'C1', genres: ['Comedy'] }));
+    storage.addMovie(newMovie({ title: 'C2', genres: ['Comedy'] }));
+    storage.addMovie(newMovie({ title: 'D1', genres: ['Drama'] }));
+    storage.addMovie(newMovie({ title: 'D2', genres: ['Drama'] }));
+    storage.addMovie(newMovie({ title: 'D3', genres: ['Drama'] }));
+
+    expect(
+      storage.listGenres().map((genre) => [genre.name, genre.count])
+    ).toEqual([
+      ['Drama', 3],
+      ['Comedy', 2],
+      ['Action', 1],
+    ]);
+  });
+
+  it('breaks an equal count alphabetically', () => {
+    const storage = freshStorage();
+    // Horror and Comedy tie on two; the name is what settles them, so the list
+    // is stable enough to learn rather than reordering itself between calls.
+    storage.addMovie(newMovie({ title: 'H1', genres: ['Horror'] }));
+    storage.addMovie(newMovie({ title: 'H2', genres: ['Horror'] }));
+    storage.addMovie(newMovie({ title: 'C1', genres: ['Comedy'] }));
+    storage.addMovie(newMovie({ title: 'C2', genres: ['Comedy'] }));
+    storage.addMovie(newMovie({ title: 'T1', genres: ['Thriller'] }));
+    storage.addMovie(newMovie({ title: 'T2', genres: ['Thriller'] }));
+    storage.addMovie(newMovie({ title: 'D1', genres: ['Drama'] }));
+    storage.addMovie(newMovie({ title: 'D2', genres: ['Drama'] }));
+    storage.addMovie(newMovie({ title: 'D3', genres: ['Drama'] }));
+
+    expect(storage.listGenres().map((genre) => genre.name)).toEqual([
+      'Drama',
+      'Comedy',
+      'Horror',
+      'Thriller',
+    ]);
+  });
 });
 
 // --- empty results & full assembly ---------------------------------------------

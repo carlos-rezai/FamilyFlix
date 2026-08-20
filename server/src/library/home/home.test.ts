@@ -103,15 +103,24 @@ function seedInProgress(
 // --- genre rows: the 02 behaviour, unchanged under the new envelope -------------
 
 describe('library: getHome genre rows', () => {
-  it('returns one row per populated genre, alphabetically by genre name', () => {
+  // Rewritten by 06 (issue #39): the rows used to come back alphabetically,
+  // which disagreed with the prototype (`FamilyFlix.dc.html:328`) and with the
+  // Genre dropdown sitting directly above them. The contract is now the
+  // dropdown's — busiest genre first.
+  it('returns one row per populated genre, busiest genre first', () => {
     const storage = freshStorage();
-    storage.addMovie(newMovie({ title: 'Weepie', genres: ['Drama'] }));
+    // 'Action' leads an A–Z list and holds the fewest movies, so an
+    // alphabetical order and a count order disagree about this library.
     storage.addMovie(newMovie({ title: 'Actioner', genres: ['Action'] }));
     storage.addMovie(newMovie({ title: 'Chiller', genres: ['Horror'] }));
+    storage.addMovie(newMovie({ title: 'Chiller 2', genres: ['Horror'] }));
+    storage.addMovie(newMovie({ title: 'Weepie', genres: ['Drama'] }));
+    storage.addMovie(newMovie({ title: 'Weepie 2', genres: ['Drama'] }));
+    storage.addMovie(newMovie({ title: 'Weepie 3', genres: ['Drama'] }));
 
     const { rows } = storage.getHome();
 
-    expect(rows.map((row) => row.genre)).toEqual(['Action', 'Drama', 'Horror']);
+    expect(rows.map((row) => row.genre)).toEqual(['Drama', 'Horror', 'Action']);
   });
 
   it('produces no row for a genre with no movies', () => {
@@ -348,6 +357,32 @@ describe('library: getHome under a Library query', () => {
     expect(rows[0].genre).toBe('Drama');
     expect(rows[0].movies.map((m) => m.title)).toEqual(['Harbor Lights']);
     expect(rows[0].count).toBe(3);
+  });
+
+  it("orders the narrowed rows by each genre's unfiltered size", () => {
+    const storage = freshStorage();
+    storage.addMovie(newMovie({ title: 'Harbor Lights', genres: ['Drama'] }));
+    storage.addMovie(newMovie({ title: 'Weepie', genres: ['Drama'] }));
+    storage.addMovie(newMovie({ title: 'Sad Ending', genres: ['Drama'] }));
+    storage.addMovie(newMovie({ title: 'Harbor Comic', genres: ['Comedy'] }));
+
+    const { rows } = storage.getHome({
+      sort: 'recently-added',
+      search: 'harbor',
+    });
+
+    // Both rows survive with one match each. Drama leads because Drama is the
+    // bigger genre, not because more of it matched — the query narrows what a
+    // row holds, and never re-ranks the rows themselves. Alphabetically Comedy
+    // would lead, and by matches this would be a tie.
+    expect(rows.map((row) => [row.genre, row.count])).toEqual([
+      ['Drama', 3],
+      ['Comedy', 1],
+    ]);
+    expect(rows.map((row) => row.movies.map((m) => m.title))).toEqual([
+      ['Harbor Lights'],
+      ['Harbor Comic'],
+    ]);
   });
 
   it('drops a row whose movies all failed the query', () => {
