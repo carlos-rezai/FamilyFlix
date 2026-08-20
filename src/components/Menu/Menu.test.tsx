@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { ThemeProvider } from 'styled-components';
 
 import { Menu, MenuItem } from '@/components';
@@ -27,7 +27,7 @@ function renderMenu(onSelect: () => void = () => undefined) {
 }
 
 const trigger = () => screen.getByRole('button', { name: 'Options' });
-const item = () => screen.queryByRole('button', { name: 'Edit details' });
+const item = () => screen.queryByRole('menuitem', { name: 'Edit details' });
 
 /** Opens it the way a keyboard user does — focus the trigger, then act. */
 function openMenu() {
@@ -60,7 +60,7 @@ describe('Menu', () => {
     openMenu();
 
     // Announced as "Edit details", not "✎ Edit details".
-    expect(screen.getByRole('button', { name: 'Edit details' })).toBeTruthy();
+    expect(screen.getByRole('menuitem', { name: 'Edit details' })).toBeTruthy();
   });
 });
 
@@ -112,7 +112,7 @@ describe('Menu — the three ways out', () => {
     renderMenu(onSelect);
     const control = openMenu();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Edit details' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Edit details' }));
 
     expect(onSelect).toHaveBeenCalledTimes(1);
     expect(item()).toBeNull();
@@ -179,7 +179,7 @@ function openFilterMenu() {
 }
 
 /** A row, found by the name it announces — a count must never be part of it. */
-const row = (name: string) => screen.getByRole('button', { name });
+const row = (name: string) => screen.getByRole('menuitem', { name });
 
 describe('MenuItem — marking the current choice', () => {
   it('marks the selected row as current and leaves the rest unmarked', () => {
@@ -210,7 +210,7 @@ describe('MenuItem — marking the current choice', () => {
     fireEvent.click(row('All Genres'));
 
     expect(onSelect).toHaveBeenCalledTimes(1);
-    expect(screen.queryByRole('button', { name: 'All Genres' })).toBeNull();
+    expect(screen.queryByRole('menuitem', { name: 'All Genres' })).toBeNull();
     expect(document.activeElement).toBe(control);
   });
 });
@@ -245,7 +245,7 @@ describe('MenuItem — the trailing count', () => {
     fireEvent.click(row('Drama'));
 
     expect(onSelect).toHaveBeenCalledTimes(1);
-    expect(screen.queryByRole('button', { name: 'Drama' })).toBeNull();
+    expect(screen.queryByRole('menuitem', { name: 'Drama' })).toBeNull();
     expect(document.activeElement).toBe(control);
   });
 });
@@ -270,8 +270,194 @@ describe('Menu — how tall the panel gets', () => {
     renderMenu();
     openMenu();
 
-    const panel = panelOf(screen.getByRole('button', { name: 'Edit details' }));
+    const panel = panelOf(
+      screen.getByRole('menuitem', { name: 'Edit details' })
+    );
 
     expect(getComputedStyle(panel).overflowY).toBe('auto');
+  });
+});
+
+/**
+ * Three rows named for where they sit, because where focus sits is the whole
+ * subject of the tests below — `expect(focusedRow()).toBe('Third')` says what
+ * it means without a mapping back to a genre or an action. `selected` marks one
+ * of them the way a filter list marks the choice it is currently standing on.
+ */
+function renderOrderedMenu({
+  selected,
+  onSelect = () => undefined,
+}: { selected?: string; onSelect?: (label: string) => void } = {}) {
+  return render(
+    <ThemeProvider theme={theme}>
+      <Menu trigger={(props) => <button {...props}>Options</button>}>
+        {['First', 'Second', 'Third'].map((label) => (
+          <MenuItem
+            key={label}
+            selected={label === selected}
+            onSelect={() => onSelect(label)}
+          >
+            {label}
+          </MenuItem>
+        ))}
+      </Menu>
+    </ThemeProvider>
+  );
+}
+
+/** The open panel's rows, in the order they are drawn. */
+const orderedRows = () => screen.getAllByRole('menuitem');
+
+/** Which row focus is on, by name — null when focus is not on a row at all. */
+function focusedRow() {
+  const active = document.activeElement;
+  return active?.getAttribute('role') === 'menuitem'
+    ? active.textContent
+    : null;
+}
+
+/** A key pressed where a keyboard user presses it: on whatever holds focus. */
+const press = (key: string) =>
+  fireEvent.keyDown(document.activeElement ?? document.body, { key });
+
+describe('Menu — the ARIA menu pattern', () => {
+  it('announces the panel as a menu holding menu items', () => {
+    renderOrderedMenu();
+    openMenu();
+
+    const panel = screen.getByRole('menu');
+
+    expect(
+      within(panel)
+        .getAllByRole('menuitem')
+        .map((option) => option.textContent)
+    ).toEqual(['First', 'Second', 'Third']);
+    // The trigger is the only button left in the document: the rows announce
+    // themselves as the items of the menu the trigger promised, not as a list
+    // of buttons that happens to have appeared.
+    expect(
+      screen.getAllByRole('button').map((control) => control.textContent)
+    ).toEqual(['Options']);
+  });
+});
+
+describe('Menu — where focus lands when it opens', () => {
+  it('puts focus on the first row when no row is marked', () => {
+    renderOrderedMenu();
+
+    openMenu();
+
+    expect(focusedRow()).toBe('First');
+  });
+
+  it('puts focus on the marked row instead, where there is one', () => {
+    // A filter list opens standing on the choice it is already showing, so the
+    // next Arrow key moves from there rather than from the top of the list.
+    renderOrderedMenu({ selected: 'Second' });
+
+    openMenu();
+
+    expect(focusedRow()).toBe('Second');
+  });
+});
+
+describe('Menu — moving between the rows', () => {
+  it('walks forward on ArrowDown', () => {
+    renderOrderedMenu();
+    openMenu();
+
+    press('ArrowDown');
+    expect(focusedRow()).toBe('Second');
+
+    press('ArrowDown');
+    expect(focusedRow()).toBe('Third');
+  });
+
+  it('wraps round to the first row past the last', () => {
+    renderOrderedMenu({ selected: 'Third' });
+    openMenu();
+
+    press('ArrowDown');
+
+    expect(focusedRow()).toBe('First');
+  });
+
+  it('walks back on ArrowUp', () => {
+    renderOrderedMenu({ selected: 'Third' });
+    openMenu();
+
+    press('ArrowUp');
+
+    expect(focusedRow()).toBe('Second');
+  });
+
+  it('wraps round to the last row past the first', () => {
+    renderOrderedMenu();
+    openMenu();
+
+    press('ArrowUp');
+
+    expect(focusedRow()).toBe('Third');
+  });
+
+  it('jumps to the ends on Home and End', () => {
+    renderOrderedMenu({ selected: 'Second' });
+    openMenu();
+
+    press('End');
+    expect(focusedRow()).toBe('Third');
+
+    press('Home');
+    expect(focusedRow()).toBe('First');
+  });
+});
+
+describe('Menu — the roving tabindex', () => {
+  /** Every row's tab stop, in drawn order. */
+  const tabStops = () =>
+    orderedRows().map((row) => row.getAttribute('tabindex'));
+
+  it('holds exactly one row in the tab order', () => {
+    // One Tab reaches the menu and one Tab leaves it; Arrow keys move about
+    // inside. Without this a keyboard user Tabs through every option in turn.
+    renderOrderedMenu();
+    openMenu();
+
+    expect(tabStops()).toEqual(['0', '-1', '-1']);
+  });
+
+  it('opens with the tab stop on the marked row', () => {
+    renderOrderedMenu({ selected: 'Second' });
+    openMenu();
+
+    expect(tabStops()).toEqual(['-1', '0', '-1']);
+  });
+
+  it('moves the tab stop to whichever row focus reaches', () => {
+    renderOrderedMenu();
+    openMenu();
+
+    press('End');
+
+    expect(tabStops()).toEqual(['-1', '-1', '0']);
+    expect(focusedRow()).toBe('Third');
+  });
+});
+
+describe('Menu — activating the row focus is on', () => {
+  it('reports the row the Arrow keys arrived at, and still shuts', () => {
+    // The other end of the pattern: moving focus is only worth anything if the
+    // row focus lands on is the row that gets used, and the dismissal contract
+    // holds for a row reached by keyboard exactly as for one that was clicked.
+    const onSelect = vi.fn();
+    renderOrderedMenu({ onSelect });
+    const control = openMenu();
+
+    press('ArrowDown');
+    fireEvent.click(document.activeElement as HTMLElement);
+
+    expect(onSelect).toHaveBeenCalledWith('Second');
+    expect(screen.queryByRole('menu')).toBeNull();
+    expect(document.activeElement).toBe(control);
   });
 });
