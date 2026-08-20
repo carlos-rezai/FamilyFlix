@@ -39,23 +39,23 @@
 
 ## Browse & display (frontend)
 
-| Term                       | Definition                                                                                                                                                                                                                                                             | Aliases to avoid                      |
-| -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------- |
-| **Browse home**            | The `/` route (`LibraryPage`) — the parent-facing home screen listing the **Continue Watching row** then the **Genre rows**.                                                                                                                                           | home page, browse grid, dashboard     |
-| **Genre row**              | A titled horizontal row showing up to 15 **Poster cards** for one **Genre**, with a "View all {count}" link.                                                                                                                                                           | shelf, carousel row, genre shelf      |
-| **Continue Watching row**  | The **Browse home**'s top row: up to 15 **Continue cards** for **In-progress** **Movies**; hidden entirely when there are none.                                                                                                                                        | resume row, keep watching, up next    |
-| **Card carousel**          | The horizontal scroller (prev/next arrows) inside a row, holding **Poster cards** or **Continue cards** per its **Carousel variant**.                                                                                                                                  | slider, scroller                      |
-| **Carousel variant**       | Which card shape a **Card carousel** holds — `poster` or `continue`; also sets the tile width and arrow height.                                                                                                                                                        | mode, type, kind                      |
-| **Poster card**            | The library's primary movie tile: **Poster** (or **Gradient fallback**), title, **Rating** stars, watch state, favorite heart.                                                                                                                                         | tile, thumbnail, cell                 |
-| **Continue card**          | The wide 16:10 resume tile: **Gradient fallback**, title, **Resume label**, progress track, play badge. No **Favorite** heart.                                                                                                                                         | resume tile, continue tile, hero card |
-| **Resume label**           | The human string on a **Continue card** — `Resume · 1:13 of 1:55`, or `Resume · 1:13` when runtime is unknown.                                                                                                                                                         | timestamp, progress text              |
-| **View all**               | The **Genre row** header link to that **Genre**'s full page (`/genre/:name`); its count is the true total, not the 15 shown.                                                                                                                                           | see all, more, expand                 |
-| **Home payload** (updated) | The single `GET /api/home` response — named sections: `{ continueWatching: Movie[], rows: HomeRow[] }` — now built for one **Library query**.                                                                                                                          | feed, home data                       |
-| **Gradient fallback**      | A deterministic per-**Movie** color gradient (hashed from the **Movie** id) drawn wherever artwork is missing — cards, the detail **Poster**, and the **Backdrop**. Drawn by the `Artwork` primitive, which resolves artwork-or-fallback at every one of those places. | placeholder art, gradient stops       |
-| **Poster URL**             | The browser-loadable URL (`/api/images/…`) that resolves a **Movie**'s **Poster path** through the image route.                                                                                                                                                        | image src, poster link                |
-| **Card view model**        | `PosterCardMovie` — the small display shape a **Movie** is mapped to for a **Poster card** (rating→percent, progress→percent).                                                                                                                                         | card DTO, card props                  |
-| **Continue view model**    | `ContinueCardMovie` — the display shape for a **Continue card**: id, title, gradient stops, **Resume label**, progress percent.                                                                                                                                        | continue DTO, resume model            |
-| **Nominal sliver**         | The small fixed **Progress** bar length shown when a **Movie** is **In-progress** but `runtimeMinutes` is unknown.                                                                                                                                                     | placeholder progress                  |
+| Term                      | Definition                                                                                                                                                                                                                                                             | Aliases to avoid                      |
+| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------- |
+| **Browse home**           | The `/` route (`LibraryPage`) — the parent-facing home screen listing the **Continue Watching row** then the **Genre rows**.                                                                                                                                           | home page, browse grid, dashboard     |
+| **Genre row**             | A titled horizontal row showing up to 15 **Poster cards** for one **Genre**, with a "View all {count}" link.                                                                                                                                                           | shelf, carousel row, genre shelf      |
+| **Continue Watching row** | The **Browse home**'s top row: up to 15 **Continue cards** for **In-progress** **Movies**; hidden entirely when there are none.                                                                                                                                        | resume row, keep watching, up next    |
+| **Card carousel**         | The horizontal scroller (prev/next arrows) inside a row, holding **Poster cards** or **Continue cards** per its **Carousel variant**.                                                                                                                                  | slider, scroller                      |
+| **Carousel variant**      | Which card shape a **Card carousel** holds — `poster` or `continue`; also sets the tile width and arrow height.                                                                                                                                                        | mode, type, kind                      |
+| **Poster card**           | The library's primary movie tile: **Poster** (or **Gradient fallback**), title, **Rating** stars, watch state, favorite heart.                                                                                                                                         | tile, thumbnail, cell                 |
+| **Continue card**         | The wide 16:10 resume tile: **Gradient fallback**, title, **Resume label**, progress track, play badge. No **Favorite** heart.                                                                                                                                         | resume tile, continue tile, hero card |
+| **Resume label**          | The human string on a **Continue card** — `Resume · 1:13 of 1:55`, or `Resume · 1:13` when runtime is unknown.                                                                                                                                                         | timestamp, progress text              |
+| **View all** (updated)    | The **Genre row** header link to that **Genre**'s **Genre page** (`/genre/:name`); its count is the **Genre total**, not the 15 shown, and it hands over the **Carried sort**.                                                                                         | see all, more, expand                 |
+| **Home payload**          | The single `GET /api/home` response — named sections: `{ continueWatching: Movie[], rows: HomeRow[] }` — now built for one **Library query**.                                                                                                                          | feed, home data                       |
+| **Gradient fallback**     | A deterministic per-**Movie** color gradient (hashed from the **Movie** id) drawn wherever artwork is missing — cards, the detail **Poster**, and the **Backdrop**. Drawn by the `Artwork` primitive, which resolves artwork-or-fallback at every one of those places. | placeholder art, gradient stops       |
+| **Poster URL**            | The browser-loadable URL (`/api/images/…`) that resolves a **Movie**'s **Poster path** through the image route.                                                                                                                                                        | image src, poster link                |
+| **Card view model**       | `PosterCardMovie` — the small display shape a **Movie** is mapped to for a **Poster card** (rating→percent, progress→percent).                                                                                                                                         | card DTO, card props                  |
+| **Continue view model**   | `ContinueCardMovie` — the display shape for a **Continue card**: id, title, gradient stops, **Resume label**, progress percent.                                                                                                                                        | continue DTO, resume model            |
+| **Nominal sliver**        | The small fixed **Progress** bar length shown when a **Movie** is **In-progress** but `runtimeMinutes` is unknown.                                                                                                                                                     | placeholder progress                  |
 
 ## The Movie detail page
 
@@ -78,28 +78,46 @@ Vocabulary for the units several screens draw from. These name our components,
 not anything the prototype adds — `docs/handoff/` gives the visual surface, and
 these give the shared code behind it a single agreed name.
 
-| Term                  | Definition                                                                                                                                                                                                          | Aliases to avoid                 |
-| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------- |
-| **Load message**      | The centred title + body + optional action block a screen shows instead of its content — an empty library, a failed load, a **Movie** that is gone. Named for the **Load state** three of its four uses are in.     | empty state, error state, notice |
-| **Skeleton**          | One pulsing placeholder block held while content loads. Each screen arranges its own; only the surface and the pulse are shared.                                                                                    | shimmer, ghost, loader, spinner  |
-| **Menu** (updated)    | A popup panel opened by a caller-supplied trigger, closing on Escape, an outside press, or an activated item — returning focus to the trigger every time. The **Edit menu** and every **Filter dropdown** are ones. | dropdown, popover, context menu  |
-| **Header slot** (new) | One of `MainLayout`'s two optional places for a screen's own controls — `headerStart` (before the spacer) and `headerEnd` (after it, before the gear).                                                              | header prop, toolbar, actions    |
+| Term                      | Definition                                                                                                                                                                                                                          | Aliases to avoid                 |
+| ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------- |
+| **Load message**          | The centred title + body + optional action block a screen shows instead of its content — an empty library, a failed load, a **Movie** that is gone. Named for the **Load state** three of its four uses are in.                     | empty state, error state, notice |
+| **Skeleton**              | One pulsing placeholder block held while content loads. Each screen arranges its own; only the surface and the pulse are shared.                                                                                                    | shimmer, ghost, loader, spinner  |
+| **Menu**                  | A popup panel opened by a caller-supplied trigger, closing on Escape, an outside press, or an activated item — returning focus to the trigger every time. The **Edit menu** and every **Filter dropdown** are ones.                 | dropdown, popover, context menu  |
+| **Header slot** (updated) | One of a layout's optional places for a screen's own controls — `MainLayout`'s `headerStart` / `headerEnd`, and `GenreLayout`'s `heading` / `headerEnd`. Every screen's chrome is a layout; only what fills the slots is a feature. | header prop, toolbar, actions    |
 
-## Search, filter & sort (new)
+## Search, filter & sort
 
-| Term                      | Definition                                                                                                                                                                                        | Aliases to avoid                              |
-| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------- |
-| **Library query** (new)   | The **Search text** + **Genre filter** + **Minimum rating** + **Sort order** that together decide what the **Browse home** shows; lives in the URL, never in a component. `LibraryQuery` in code. | home query, filters, criteria, params, search |
-| **Search text** (new)     | The free-text fragment of a **Library query**, matched against a **Movie**'s title, **Synopsis**, or **Genre** names (`?q=`).                                                                     | query, keyword, term, search string           |
-| **Genre filter** (new)    | The **Library query**'s restriction to a single **Genre**; `All Genres` is its unset state, not a value.                                                                                          | category filter, genre selection              |
-| **Minimum rating** (new)  | The **Library query**'s floor on **Rating** — 8 / 6 / 4 units, shown as `4+ stars` / `3+ stars` / `2+ stars`; **Unrated** **Movies** never pass one.                                              | rating filter, stars, score filter            |
-| **Sort order** (new)      | Which of `recently-added` \| `a-z` \| `year` \| `highest-rated` \| `unwatched-first` a **Library query** orders by. Part of the query, but not a filter. The five live once, as `MOVIE_SORTS`.    | ordering, sort by, sorting                    |
-| **Settled query** (new)   | The **Library query** as recorded in the URL — what every reader acts on, after the **Search bar**'s 250ms debounce has stopped moving.                                                           | current filters, applied query                |
-| **Search bar** (new)      | The **Browse home** header's text control (its `headerStart` **Header slot**); the only holder of un-**settled** input.                                                                           | search box, search field, omnibox             |
-| **Filter dropdown** (new) | One pill-triggered **Menu** presenting the **Filter options** for one part of a **Library query**. The **Browse home** header has three: Genre, rating, Sort.                                     | select, picker, combo box, dropdown           |
-| **Filter option** (new)   | One row of a **Filter dropdown** — label, optional count, and whether it is the current selection.                                                                                                | menu item, choice, entry                      |
-| **Genre list** (new)      | The **unfiltered** `{ total, genres }` payload from `GET /api/genres` backing the Genre **Filter dropdown**'s counts; fetched once, never per query.                                              | genre counts, facets, genre payload           |
-| **No results** (new)      | The **Load message** shown when a **Library query** matches nothing — a different situation from an empty library, with different copy.                                                           | empty state, no matches, zero state           |
+| Term                      | Definition                                                                                                                                                                                                                                      | Aliases to avoid                              |
+| ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------- |
+| **Library query**         | The **Search text** + **Genre filter** + **Minimum rating** + **Sort order** that together decide what the **Browse home** shows; lives in the URL, never in a component. `LibraryQuery` in code.                                               | home query, filters, criteria, params, search |
+| **Search text** (updated) | The free-text fragment of a **Library query** _or_ a **Genre query**, matched against a **Movie**'s title, **Synopsis**, or **Genre** names (`?q=`). Each route carries its own — the **Browse home**'s and a **Genre page**'s never share one. | query, keyword, term, search string           |
+| **Genre filter**          | The **Library query**'s restriction to a single **Genre**; `All Genres` is its unset state, not a value.                                                                                                                                        | category filter, genre selection              |
+| **Minimum rating**        | The **Library query**'s floor on **Rating** — 8 / 6 / 4 units, shown as `4+ stars` / `3+ stars` / `2+ stars`; **Unrated** **Movies** never pass one.                                                                                            | rating filter, stars, score filter            |
+| **Sort order**            | Which of `recently-added` \| `a-z` \| `year` \| `highest-rated` \| `unwatched-first` a **Library query** orders by. Part of the query, but not a filter. The five live once, as `MOVIE_SORTS`.                                                  | ordering, sort by, sorting                    |
+| **Settled query**         | The **Library query** as recorded in the URL — what every reader acts on, after the **Search bar**'s 250ms debounce has stopped moving.                                                                                                         | current filters, applied query                |
+| **Search bar** (updated)  | A screen header's text control — the **Browse home**'s (`headerStart`, 460px) and the **Genre header**'s (250px, "Search in {genre}"). Always the only holder of un-**settled** input, via **Settled text**.                                    | search box, search field, omnibox             |
+| **Filter dropdown**       | One pill-triggered **Menu** presenting the **Filter options** for one part of a **Library query**. The **Browse home** header has three: Genre, rating, Sort.                                                                                   | select, picker, combo box, dropdown           |
+| **Filter option**         | One row of a **Filter dropdown** — label, optional count, and whether it is the current selection.                                                                                                                                              | menu item, choice, entry                      |
+| **Genre list**            | The **unfiltered** `{ total, genres }` payload from `GET /api/genres` backing the Genre **Filter dropdown**'s counts; fetched once, never per query.                                                                                            | genre counts, facets, genre payload           |
+| **No results**            | The **Load message** shown when a **Library query** matches nothing — a different situation from an empty library, with different copy.                                                                                                         | empty state, no matches, zero state           |
+
+## The Genre page (new)
+
+The second browse screen: one **Genre** in full, behind every **Genre row**'s
+**View all**. It has its own chrome and its own query, so its vocabulary is
+deliberately parallel to the **Browse home**'s rather than shared with it.
+
+| Term                        | Definition                                                                                                                                                                                                                        | Aliases to avoid                          |
+| --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------- |
+| **Genre page** (new)        | The `/genre/:name` route (`GenrePage`) — every **Movie** in one **Genre** as a **Library grid**, under a **Genre header**.                                                                                                        | view-all page, category page, genre view  |
+| **Genre header** (new)      | The **Genre page**'s own chrome: Back, the **Genre** name over its **Genre count label**, a **Search bar**, and the Sort **Filter dropdown**. Shares nothing with `MainLayout`.                                                   | toolbar, page header, subheader           |
+| **Library grid** (new)      | The flat, responsive grid of **Poster cards** that fills the **Genre page** — the whole set, never capped. `LibraryGrid` in code.                                                                                                 | browse grid, gallery, list, results grid  |
+| **Genre query** (new)       | The **Search text** + **Sort order** deciding what one **Genre page** shows; lives in that route's URL (`?q=&sort=`). `GenreQuery` in code. Carries no **Genre filter** — the **Genre** is the route — and no **Minimum rating**. | library query, filters, genre filter      |
+| **Genre payload** (new)     | The single `{ genre, total, movies }` response from `GET /api/genre/:name` — the **Genre total** and the narrowed list in one request.                                                                                            | genre data, movies payload, results       |
+| **Genre total** (new)       | A **Genre**'s **unfiltered** **Movie** count, from `listGenres()` — the same number a **Genre row**'s **View all** promised, unchanged by the **Genre query**.                                                                    | count, result count, matches              |
+| **Genre count label** (new) | The **Genre header**'s line under the name — `214 titles`, or `12 of 214 titles` while a **Search text** narrows the grid, or `1 title`.                                                                                          | subtitle, count line, results text        |
+| **Carried sort** (new)      | The **Sort order** a **View all** hands from the **Browse home** to the **Genre page** through the link (`/genre/Action?sort=a-z`), omitted at the default.                                                                       | inherited sort, global sort, shared state |
+| **Settled text** (new)      | The debounced text behavior shared by every **Search bar**: the field follows each keystroke, the URL is written 250ms after the typing stops. `useSettledText` in code.                                                          | debounce, throttle, input state           |
 
 ## Relationships
 
@@ -122,6 +140,13 @@ these give the shared code behind it a single agreed name.
 - A **Filter dropdown** holds one **Filter option** per choice, exactly one of which is selected; `All Genres` and `All ratings` are the options that mean "unset".
 - A **Genre row**'s **View all** count comes from the **Genre list**, not the **Library query** — it stays the **Genre**'s true total even when the row shows three matches.
 - **No results** and "Your library is empty" are different **Load messages**: the first means a **Library query** matched nothing, the second means there are no **Movies** at all.
+- One **Genre page** shows exactly one **Genre**, named by the route rather than by a **Genre filter**; a **Genre query** therefore has two parts where a **Library query** has four.
+- A **Genre query** produces exactly one **Genre payload**, and both the **Genre count label** and the **Library grid** are built from it — the header can never disagree with the grid below it.
+- A **Genre total** comes from `listGenres()`, never from the **Genre payload**'s `movies.length`; the two are equal only when nothing narrows the grid.
+- A **View all** carries the **Sort order** to the **Genre page** as the **Carried sort**, but never the **Search text** — the **Genre header**'s **Search bar** starts empty.
+- A **Minimum rating** exists only in a **Library query**. The **Genre header** has no rating **Filter dropdown**, so the **Genre page** applies no rating floor at all.
+- A **Library grid** holds **Poster cards** only — never **Continue cards**, and never a **Card carousel**; it is the uncapped counterpart of a **Genre row**.
+- Every **Search bar** in the app gets its debounce from **Settled text**; there is exactly one such behavior, whatever the screen.
 
 ## Example dialogue
 
@@ -177,6 +202,28 @@ these give the shared code behind it a single agreed name.
 > **Dev:** "Last one: does the whole screen go back to skeletons on every keystroke?"
 > **Maintainer:** "God, no. Skeletons on the first load only. After that the rows she's
 > looking at stay on screen until the new ones are ready — she's reading them."
+> **Dev:** "She's sorted the home A–Z and clicks **View all** on Drama. What order
+> does the **Genre page** open in?"
+> **Maintainer:** "A–Z. If I've just told the app how I want things arranged, going
+> one level deeper shouldn't quietly undo it. The link carries it — that's the
+> **Carried sort**."
+> **Dev:** "Her search too? She'd typed 'com' on the home."
+> **Maintainer:** "No. That box says 'Search in Drama' now — it's a different, smaller
+> search. Starting it with someone else's word in it would be confusing."
+> **Dev:** "The header says '12 of 214 titles'. Where does 214 come from — the 12 are
+> what came back."
+> **Maintainer:** "214 is the **Genre total**, the same number the row promised on the
+> way in. If that shrank every time she typed, the two screens would be telling her
+> different things about the same shelf."
+> **Dev:** "She had **Minimum rating** `4+ stars` set on the home. Does that follow her
+> into Drama?"
+> **Maintainer:** "No — there's no star pill on that screen. A filter I can't see and
+> can't turn off is worse than no filter. If I'm hiding half her Dramas, there has to
+> be something on screen saying so."
+> **Dev:** "And `/genre/Westerns` when we own no westerns?"
+> **Maintainer:** "Just 'Nothing here'. Not an error — she probably bookmarked it back
+> when we had two. Different from 'No matches', which means the **Genre** is there
+> and her word missed."
 
 ## Flagged ambiguities
 
@@ -192,11 +239,13 @@ these give the shared code behind it a single agreed name.
   is no second "community rating" field.
 - **"Edition":** discussed but **deferred to roadmap**. In v1 a **Movie** is one
   video file; do not model **Editions** yet.
-- **"Browse grid" vs "Browse home":** the CLAUDE.md feature "Browse grid" names
-  the **Genre row** body specifically. The screen it lives on is the **Browse
-  home** (`LibraryPage`). Prefer **Genre row** for the rows and **Browse home**
-  for the screen; avoid "grid," which also suggests the flat `LibraryGrid` used on
-  the **View all** genre page (a different layout).
+- **"Browse grid" vs "Browse home" (updated — now a real collision):** the
+  CLAUDE.md feature "Browse grid" names the **Genre row** body specifically, and
+  the screen it lives on is the **Browse home** (`LibraryPage`). The **Library
+  grid** now exists as an actual flat grid on the **Genre page**, so "grid" is no
+  longer merely suggestive of two things — it names two. Prefer **Genre row** for
+  the home's rows, **Browse home** for that screen, and **Library grid** only for
+  the **Genre page**'s uncapped grid. Never say "browse grid" for either.
 - **"Rating" on a card (updated — partly resolved):** an **Unrated** **Movie** maps
   to 0 stars on a **Poster card**, which looks identical to a literal 0. Resolved
   for the **Movie detail page** (the stars are omitted entirely); **still open for
@@ -230,12 +279,12 @@ these give the shared code behind it a single agreed name.
   `watched = 0 AND resume > 0`, so the flag alone already removes the **Movie** from
   the **Continue Watching row** — the zeroing is no longer load-bearing. **Flagged
   for the watch-tracking grill:** should `markWatched` preserve it?
-- **"Filter" colloquially swallows sort (new):** **Sort order** is part of a
+- **"Filter" colloquially swallows sort:** **Sort order** is part of a
   **Library query** but changes _which order_, never _which_ **Movies**. The
   component holding all three dropdowns is `LibraryFilters` for layout reasons
   (they share the header's trailing group), not because sort is a filter. Say
   **Library query** when you mean all four, and never "the filters" for the sort.
-- **"Rating" vs "Minimum rating" (new):** a **Rating** belongs to a **Movie**;
+- **"Rating" vs "Minimum rating":** a **Rating** belongs to a **Movie**;
   a **Minimum rating** is a floor in a **Library query**. Both are in 0–10 units
   and both are rendered as stars, so name which one. Note the asymmetry: an
   **Unrated** **Movie** shows 0 stars on a **Poster card** but is _excluded_ by
@@ -252,15 +301,15 @@ these give the shared code behind it a single agreed name.
   to recognise different sets of orders. Adding a sixth means adding it there,
   and the compiler then asks the exhaustive records — `ORDER_BY` and the sort
   **Filter option** rows — for its SQL and its label.
-- **"Search" is a feature folder and a field (new):** `features/search/` owns all
+- **"Search" is a feature folder and a field:** `features/search/` owns all
   four controls, not just the text one. The `search` field of a query is the
   **Search text** alone. The URL and the API both say `q` for it; only the domain
   types say `search`.
-- **Search matches more than titles (new):** **Search text** matches title,
+- **Search matches more than titles:** **Search text** matches title,
   **Synopsis** _or_ **Genre** name, per the prototype. So typing "comedy" returns
   comedies without touching the **Genre filter**, and the two mechanisms can
   overlap.
-- **Case-insensitive search is ASCII-only (new):** SQLite's `LIKE` folds case for
+- **Case-insensitive search is ASCII-only:** SQLite's `LIKE` folds case for
   A–Z and for nothing else, so **Search text** `amélie` finds _Amélie_ while
   `AMÉLIE` does not — the ASCII letters around the accent fold, the `é`/`É` pair
   is compared byte for byte. A **known limit, recorded rather than worked
@@ -282,3 +331,38 @@ these give the shared code behind it a single agreed name.
   prototype reuses the add screen with an `addContext: 'edit'` flag. The **Movie
   detail page** navigates to `/add?movie=<id>` as a **provisional** contract — the
   movie-form grill owns the real one.
+- **"Genre" is now three things (new):** the **Genre** entity (a row in `genres`),
+  the **Genre filter** (a **Library query** narrowing the **Browse home** to one),
+  and the **Genre page** (a route that _is_ one). They behave differently: the
+  filter is optional and has an unset state (`All Genres`), the route never does.
+  A `?genre=` on `/genre/:name` is meaningless and is ignored. Say which one.
+- **Sort carries between screens, search does not (new):** deliberate, and the
+  asymmetry is the point — an order is a standing preference, a **Search text** is
+  a question just asked. It follows the prototype, which shares `sort` state
+  across screens but clears `genreSearch` on entry (`FamilyFlix.dc.html:307`).
+  Because our query lives in the URL, "carries" means the **View all** link writes
+  it; nothing is shared between routes. See **Carried sort**.
+- **The prototype applies a rating filter it does not show (new — deviation):**
+  `genrePageMovies()` calls `passRating(m)` (`:320`) while the **Genre header**
+  has no rating **Filter dropdown**. We reproduce the surface and drop the
+  filter — the same rule `parseLibraryQuery` already records: the URL and the
+  screen must agree, so nothing narrows the library behind a control that is not
+  there. A **recorded divergence from the prototype's behavior**, not an
+  oversight; if a rating floor is ever wanted here, it arrives with a pill and a
+  **prototype amendment**.
+- **"1 titles" is a prototype copy bug (new):** the **Genre count label** in
+  `FamilyFlix.dc.html:490` is `all + ' titles'` unconditionally. The fix is
+  singularisation (`1 title`), and per CLAUDE.md it is a **prototype amendment
+  made first** — the build then matches the amended prototype rather than
+  improving on it in code.
+- **Two query parsers, on purpose (new):** `parseLibraryQuery` reads four
+  parameters and `parseGenreQuery` reads two. A single parametrised parser would
+  make the **Genre page** silently accept a `rating` and a `genre` it cannot show,
+  which is exactly the screen-disagrees-with-the-URL failure both were written to
+  prevent. They share `isMovieSort`, not their vocabulary.
+- **`GET /api/movies` is no longer any screen's endpoint (new):** the **Genre
+  page** takes `GET /api/genre/:name` instead, because it needs the **Genre
+  total** beside the list and one request rather than a fan-out. `/api/movies`
+  stays as the generic browse API the exporter will want; its comment claiming it
+  is "for the genre page" is corrected. If nothing has claimed it by the time
+  export ships, delete it then.
