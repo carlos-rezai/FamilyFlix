@@ -42,8 +42,8 @@ const pill = (name = 'Genre: All Genres') =>
   screen.getByRole('button', { name });
 
 /** One row of the open panel. */
-const option = (name: string) => screen.getByRole('button', { name });
-const noOption = (name: string) => screen.queryByRole('button', { name });
+const option = (name: string) => screen.getByRole('menuitem', { name });
+const noOption = (name: string) => screen.queryByRole('menuitem', { name });
 
 /** Opens it the way a keyboard user does — focus the pill, then act. */
 function openDropdown(name?: string) {

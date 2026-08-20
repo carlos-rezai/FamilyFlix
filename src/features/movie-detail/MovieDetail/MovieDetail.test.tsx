@@ -720,7 +720,9 @@ describe('MovieDetail — the edit menu', () => {
     const more = moreButton();
     expect(more.getAttribute('aria-haspopup')).toBeTruthy();
     expect(more.getAttribute('aria-expanded')).toBe('false');
-    expect(screen.queryByRole('button', { name: /edit details/i })).toBeNull();
+    expect(
+      screen.queryByRole('menuitem', { name: /edit details/i })
+    ).toBeNull();
   });
 
   it('opens on the trigger and reports itself open', async () => {
@@ -731,7 +733,9 @@ describe('MovieDetail — the edit menu', () => {
     const more = openMenu();
 
     expect(more.getAttribute('aria-expanded')).toBe('true');
-    expect(screen.getByRole('button', { name: /edit details/i })).toBeDefined();
+    expect(
+      screen.getByRole('menuitem', { name: /edit details/i })
+    ).toBeDefined();
   });
 
   it('holds only Edit details — no Delete row, disabled or otherwise', async () => {
@@ -741,7 +745,9 @@ describe('MovieDetail — the edit menu', () => {
     await findTitle('Northwind');
     openMenu();
 
-    expect(screen.getByRole('button', { name: /edit details/i })).toBeDefined();
+    expect(
+      screen.getByRole('menuitem', { name: /edit details/i })
+    ).toBeDefined();
     expect(screen.queryByText(/delete/i)).toBeNull();
   });
 
@@ -752,7 +758,7 @@ describe('MovieDetail — the edit menu', () => {
     await findTitle('Northwind');
     openMenu();
 
-    fireEvent.click(screen.getByRole('button', { name: /edit details/i }));
+    fireEvent.click(screen.getByRole('menuitem', { name: /edit details/i }));
 
     expect(currentPath()).toBe('/add');
     expect(currentSearch()).toBe('?movie=m1');
@@ -767,7 +773,9 @@ describe('MovieDetail — the edit menu', () => {
 
     fireEvent.keyDown(document, { key: 'Escape' });
 
-    expect(screen.queryByRole('button', { name: /edit details/i })).toBeNull();
+    expect(
+      screen.queryByRole('menuitem', { name: /edit details/i })
+    ).toBeNull();
     expect(more.getAttribute('aria-expanded')).toBe('false');
     expect(document.activeElement).toBe(more);
   });
@@ -781,7 +789,9 @@ describe('MovieDetail — the edit menu', () => {
 
     fireEvent.pointerDown(document.body);
 
-    expect(screen.queryByRole('button', { name: /edit details/i })).toBeNull();
+    expect(
+      screen.queryByRole('menuitem', { name: /edit details/i })
+    ).toBeNull();
     expect(document.activeElement).toBe(more);
   });
 
@@ -794,7 +804,9 @@ describe('MovieDetail — the edit menu', () => {
 
     fireEvent.click(more);
 
-    expect(screen.queryByRole('button', { name: /edit details/i })).toBeNull();
+    expect(
+      screen.queryByRole('menuitem', { name: /edit details/i })
+    ).toBeNull();
     expect(more.getAttribute('aria-expanded')).toBe('false');
   });
 
@@ -804,12 +816,16 @@ describe('MovieDetail — the edit menu', () => {
     renderDetail();
     await findTitle('Northwind');
     const more = openMenu();
-    expect(document.activeElement).toBe(more);
+    expect(more.getAttribute('aria-expanded')).toBe('true');
 
-    const edit = screen.getByRole('button', { name: /edit details/i });
-    edit.focus();
-
+    // The menu pattern puts focus straight onto a row as the panel opens, so
+    // the item is reached without a Tab and Escape hands focus back to the ⋯.
+    const edit = screen.getByRole('menuitem', { name: /edit details/i });
     expect(document.activeElement).toBe(edit);
+
+    fireEvent.keyDown(document, { key: 'Escape' });
+
+    expect(document.activeElement).toBe(more);
   });
 
   it('leaves Play reachable without a mouse too', async () => {

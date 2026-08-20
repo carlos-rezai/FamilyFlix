@@ -121,9 +121,9 @@ const pill = (value = 'Recently Added') =>
 
 /** One row of the open panel. */
 const optionRow = (label: string) =>
-  screen.getByRole('button', { name: label });
+  screen.getByRole('menuitem', { name: label });
 const noOptionRow = (label: string) =>
-  screen.queryByRole('button', { name: label });
+  screen.queryByRole('menuitem', { name: label });
 
 /** Opens it the way a keyboard user does — focus the pill, then activate it. */
 function openSort(value?: string) {
@@ -134,14 +134,14 @@ function openSort(value?: string) {
 }
 
 /**
- * The rows of the panel opened from one pill, in the order they are drawn.
- * Scoped to the pill's own slot, which holds the trigger and its panel and
- * nothing else — there is more than one pill in the header now.
+ * The rows of the panel opened from one pill, in the order they are drawn, and
+ * an empty list for a pill that is shut. Scoped to the pill's own slot, which
+ * holds the trigger and its panel and nothing else — there is more than one
+ * pill in the header now.
  */
 function openOptionLabels(trigger: HTMLElement = pill()): string[] {
   return within(trigger.parentElement as HTMLElement)
-    .getAllByRole('button')
-    .filter((row) => row !== trigger)
+    .queryAllByRole('menuitem')
     .map((row) => row.textContent ?? '');
 }
 
@@ -207,7 +207,7 @@ describe('LibraryFilters — the option list', () => {
     openSort('Year');
 
     const ticked = screen
-      .getAllByRole('button')
+      .getAllByRole('menuitem')
       .filter((row) => row.getAttribute('aria-current') === 'true');
     expect(ticked).toHaveLength(1);
     expect(ticked[0].textContent).toBe('Year');
@@ -450,7 +450,7 @@ describe('LibraryFilters — the genre list', () => {
     const control = await openGenre('Drama');
 
     const ticked = within(control.parentElement as HTMLElement)
-      .getAllByRole('button')
+      .getAllByRole('menuitem')
       .filter((row) => row.getAttribute('aria-current') === 'true');
     expect(ticked).toHaveLength(1);
     expect(ticked[0].textContent).toContain('Drama');

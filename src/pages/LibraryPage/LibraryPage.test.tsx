@@ -398,7 +398,7 @@ describe('LibraryPage — the rating dropdown in the header', () => {
     await screen.findByRole('region', { name: 'Action' });
 
     fireEvent.click(ratingPill());
-    fireEvent.click(screen.getByRole('button', { name: '4+ stars' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: '4+ stars' }));
 
     await waitFor(() =>
       expect(

@@ -44,7 +44,7 @@ describe('EditMenu', () => {
 
     openMenu();
 
-    expect(screen.getByRole('button', { name: 'Edit details' })).toBeTruthy();
+    expect(screen.getByRole('menuitem', { name: 'Edit details' })).toBeTruthy();
     expect(screen.queryByText(/delete/i)).toBeNull();
   });
 
@@ -52,7 +52,7 @@ describe('EditMenu', () => {
     renderEditMenu('northwind-1994');
 
     openMenu();
-    fireEvent.click(screen.getByRole('button', { name: 'Edit details' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Edit details' }));
 
     expect(screen.getByTestId('destination').textContent).toBe(
       '/add?movie=northwind-1994'

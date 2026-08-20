@@ -341,7 +341,7 @@ describe('App — the movie page’s navigating actions', () => {
     await screen.findByRole('heading', { level: 1, name: 'Northwind' });
 
     fireEvent.click(screen.getByRole('button', { name: /more options/i }));
-    fireEvent.click(screen.getByRole('button', { name: /edit details/i }));
+    fireEvent.click(screen.getByRole('menuitem', { name: /edit details/i }));
 
     expect(currentPath()).toBe('/add');
     expect(currentSearch()).toBe('?movie=a1');
