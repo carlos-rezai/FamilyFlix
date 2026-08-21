@@ -1,6 +1,8 @@
 import { openDatabase } from '../db';
 import type {
   GenreCount,
+  GenrePayload,
+  GenreQuery,
   HomePayload,
   LibraryQuery,
   Movie,
@@ -11,6 +13,7 @@ import type {
 import { createMovieReader } from './read/read';
 import { createBrowse } from './browse/browse';
 import { createHome } from './home/home';
+import { createGenre } from './genre/genre';
 import { createWrite } from './write/write';
 import { createWatch } from './watch/watch';
 import { createCuration } from './curation/curation';
@@ -82,6 +85,18 @@ export interface LibraryStorage {
    */
   getHome(query?: LibraryQuery): HomePayload;
   /**
+   * One genre in full, in one call: the name as it was asked for, the genre's
+   * **unfiltered** movie count, and every movie tagged with it — uncapped,
+   * because this is the call behind a genre row's "View all".
+   *
+   * An optional `query` narrows the list to a search term and orders it; `total`
+   * stays the genre's own count however far the search narrows the list, so "12
+   * of 214 titles" keeps the number the row promised. Omitting the query — or
+   * just its sort — is the genre in the default order. A genre the library does
+   * not hold is `{ genre, total: 0, movies: [] }`, not an error.
+   */
+  getGenre(name: string, query?: Partial<GenreQuery>): GenrePayload;
+  /**
    * Persist the resume position (seconds into the file). Called constantly during
    * playback, so it stays a cheap single-column write — only
    * `resume_position_seconds` is touched, not `updated_at`.
@@ -121,6 +136,7 @@ export function createSqliteStorage(dbPath: string): LibraryStorage {
   const reader = createMovieReader(db);
   const browse = createBrowse(db, reader);
   const home = createHome(browse);
+  const genre = createGenre(browse);
   const write = createWrite(db, reader);
   const watch = createWatch(db);
   const curation = createCuration(db);
@@ -135,6 +151,7 @@ export function createSqliteStorage(dbPath: string): LibraryStorage {
     listGenres: browse.listGenres,
     countMovies: browse.countMovies,
     getHome: home.getHome,
+    getGenre: genre.getGenre,
     setResumePosition: watch.setResumePosition,
     markWatched: watch.markWatched,
     markUnwatched: watch.markUnwatched,

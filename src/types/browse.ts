@@ -148,3 +148,37 @@ export interface GenreListPayload {
   total: number;
   genres: GenreCount[];
 }
+
+/**
+ * The **genre query**: what one {@link GenrePayload} was asked for. Two parts
+ * where a {@link LibraryQuery} has four — the genre travels in the path
+ * (`/genre/:name`), because it is which screen this is rather than a filter
+ * within it, and there is no minimum rating because that screen has no control
+ * for one. A filter with no control on screen is a filter the URL could contradict.
+ */
+export interface GenreQuery {
+  sort: MovieSort;
+  /** @see MovieQuery.search */
+  search?: string;
+}
+
+/**
+ * One genre in full, as `getGenre()` builds it and `GET /api/genre/:name`
+ * returns it — the whole screen in one payload, so its heading can never
+ * disagree with the grid underneath it.
+ *
+ * `genre` is the name as it was asked for, so a genre the library does not hold
+ * still gives the heading something to print. `movies` is **uncapped**: this
+ * screen is what a genre row's "View all" opens, so a cap here would leave
+ * movies unreachable by any route in the app.
+ *
+ * `total` is the genre's **unfiltered** count — the same number "View all 214"
+ * already promised on the row, and unchanged by a `search` that narrows
+ * `movies`. That is what lets the count line read "12 of 214 titles", and what
+ * tells a genre holding nothing apart from a genre whose search found nothing.
+ */
+export interface GenrePayload {
+  genre: string;
+  total: number;
+  movies: Movie[];
+}

@@ -5,6 +5,7 @@ import {
   DEFAULT_MOVIE_SORT,
   MOVIE_SORTS,
   type GenreListPayload,
+  type GenreQuery,
   type LibraryQuery,
   type MovieQuery,
   type MovieSort,
@@ -165,8 +166,57 @@ export function createApiRouter(
     res.json(payload);
   });
 
-  // The generic browse endpoint, for the genre page and any later filtered
-  // view. Not used by the home screen — that one call is `/home`.
+  // One genre in full — the whole genre page in a single request: the name, the
+  // genre's unfiltered total, and every movie tagged with it, uncapped. This is
+  // what a genre row's "View all 214 →" opens, so a cap here would leave the
+  // rest of a genre unreachable by any route in the app.
+  //
+  // One call rather than `/movies` for the list plus `/genres` for the number:
+  // that fan-out is exactly what `/home` was built to avoid, and it would let
+  // the heading disagree with the grid underneath it.
+  //
+  // The genre travels in the **path**, not as a parameter — it is not a filter
+  // here, it is which screen this is. Express decodes it, so "Science%20Fiction"
+  // arrives as the name the library spells; like `?genre=`, it is matched
+  // unnormalised, and a genre the library does not hold is a 200 with an empty
+  // payload rather than a 404, since a stale bookmark for an emptied genre is a
+  // normal "nothing here".
+  //
+  // `?q=` and `?sort=` are the only parameters read, under the same conventions
+  // `/home` set: `q` is the wire name translated to the domain's `search` at
+  // this boundary, an empty value is no parameter at all rather than a filter
+  // for the empty string, and a sort this API does not know is a 400.
+  //
+  // `?genre=` and `?rating=` are ignored entirely — the genre is the route, and
+  // this screen has no rating pill. A hand-edited filter with no control on
+  // screen is a URL that contradicts what the page is showing.
+  router.get(
+    '/genre/:name',
+    (req: Request<{ name: string }>, res: Response) => {
+      let sort: MovieSort = DEFAULT_MOVIE_SORT;
+      const sortParam = queryString(req.query.sort);
+      if (sortParam !== undefined && sortParam !== '') {
+        if (!isMovieSort(sortParam)) {
+          res.status(400).json({ error: `Unknown sort: ${sortParam}` });
+          return;
+        }
+        sort = sortParam;
+      }
+
+      const query: GenreQuery = { sort };
+
+      const search = queryString(req.query.q);
+      if (search !== undefined && search !== '') {
+        query.search = search;
+      }
+
+      res.json(storage.getGenre(req.params.name, query));
+    }
+  );
+
+  // The generic browse endpoint the CSV exporter will read the library through,
+  // and any later filtered view. Not used by the home screen — that one call is
+  // `/home` — nor by the genre page, which has `/genre/:name` above.
   router.get('/movies', (req: Request, res: Response) => {
     const sortParam = queryString(req.query.sort);
     if (sortParam !== undefined && !isMovieSort(sortParam)) {

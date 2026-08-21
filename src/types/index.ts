@@ -21,6 +21,8 @@ export type {
   LibraryQuery,
   GenreCount,
   GenreListPayload,
+  GenreQuery,
+  GenrePayload,
   HomeRow,
   HomePayload,
 } from './browse';
