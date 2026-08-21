@@ -20,7 +20,12 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { createApiRouter } from '.';
 import { createSqliteStorage, type LibraryStorage } from '../library';
-import type { GenreListPayload, HomePayload, Movie } from '@/types';
+import type {
+  GenreListPayload,
+  GenrePayload,
+  HomePayload,
+  Movie,
+} from '@/types';
 
 // --- per-test resource tracking ------------------------------------------------
 
@@ -1061,5 +1066,278 @@ describe('GET /api/home?rating= — a rating the route cannot read', () => {
     expect(await ratedDramaTitles(baseUrl, { rating: '8' })).toEqual([
       'Masterpiece',
     ]);
+  });
+});
+
+// --- 06 — Genre page, Phase 1: "the genre payload, end to end" (issue #43) ----
+
+/**
+ * A Drama shelf whose A–Z order, recently-added order and ratings all disagree,
+ * beside a second genre and one whose name carries a space. Added oldest-first
+ * under fake timers, because `created_at` is repo-generated from `new Date()`
+ * and four movies added in the same millisecond tie on a random-UUID id.
+ */
+function addGenrePageLibrary(storage: LibraryStorage): void {
+  vi.useFakeTimers();
+
+  vi.setSystemTime(new Date('2026-02-01T00:00:00.000Z'));
+  storage.addMovie({
+    title: 'Harbor Lights',
+    videoPath: 'Harbor Lights/harbor-lights.mkv',
+    synopsis: 'A slow farewell on a fading coast.',
+    genres: ['Drama'],
+  });
+
+  vi.setSystemTime(new Date('2026-02-02T00:00:00.000Z'));
+  storage.addMovie({
+    title: 'Weepie',
+    videoPath: 'Weepie/weepie.mkv',
+    rating: 1,
+    genres: ['Drama'],
+  });
+
+  vi.setSystemTime(new Date('2026-02-03T00:00:00.000Z'));
+  storage.addMovie({
+    title: 'apple Grove',
+    videoPath: 'apple Grove/apple-grove.mkv',
+    year: 2021,
+    rating: 3,
+    genres: ['Drama'],
+  });
+
+  vi.setSystemTime(new Date('2026-02-04T00:00:00.000Z'));
+  storage.addMovie({
+    title: 'Zephyr',
+    videoPath: 'Zephyr/zephyr.mkv',
+    year: 1999,
+    rating: 9,
+    genres: ['Drama'],
+  });
+
+  vi.setSystemTime(new Date('2026-02-05T00:00:00.000Z'));
+  storage.addMovie({
+    title: 'Chiller',
+    videoPath: 'Chiller/chiller.mkv',
+    genres: ['Horror'],
+  });
+
+  vi.setSystemTime(new Date('2026-02-06T00:00:00.000Z'));
+  storage.addMovie({
+    title: 'Starfarer',
+    videoPath: 'Starfarer/starfarer.mkv',
+    genres: ['Sci-Fi'],
+  });
+
+  // Back to real time before anything is fetched — the requests below are real
+  // HTTP over a real listener, and a frozen clock would strand them.
+  vi.useRealTimers();
+}
+
+/** `GET /api/genre/:name` with whatever parameters, unchecked — status included. */
+function genreResponse(
+  baseUrl: string,
+  name: string,
+  query: Record<string, string> = {}
+): Promise<Response> {
+  const params = new URLSearchParams(query).toString();
+  const suffix = params === '' ? '' : `?${params}`;
+  return fetch(`${baseUrl}/api/genre/${encodeURIComponent(name)}${suffix}`);
+}
+
+/** `GET /api/genre/:name`, checked for a 200 and parsed. */
+async function getGenrePayload(
+  baseUrl: string,
+  name: string,
+  query: Record<string, string> = {}
+): Promise<GenrePayload> {
+  const response = await genreResponse(baseUrl, name, query);
+  expect(response.status).toBe(200);
+  return (await response.json()) as GenrePayload;
+}
+
+describe('GET /api/genre/:name', () => {
+  it('answers with the genre, its total, and every movie in it', async () => {
+    const { storage, baseUrl } = freshApi();
+    addGenrePageLibrary(storage);
+
+    const payload = await getGenrePayload(baseUrl, 'Drama');
+
+    expect(payload.genre).toBe('Drama');
+    expect(payload.total).toBe(4);
+    expect(payload.movies.map((m) => m.title)).toEqual([
+      'Zephyr',
+      'apple Grove',
+      'Weepie',
+      'Harbor Lights',
+    ]);
+  });
+
+  it('serves the whole genre over the wire, past the fifteen a row shows', async () => {
+    const { storage, baseUrl } = freshApi();
+    for (let n = 1; n <= 20; n += 1) {
+      storage.addMovie({
+        title: `Action ${String(n).padStart(2, '0')}`,
+        videoPath: `Action ${n}/action-${n}.mkv`,
+        genres: ['Action'],
+      });
+    }
+
+    const payload = await getGenrePayload(baseUrl, 'Action');
+
+    // This endpoint is what "View all 20 →" opens; a cap here would leave five
+    // movies unreachable by any route in the app.
+    expect(payload.movies).toHaveLength(20);
+    expect(payload.total).toBe(20);
+  });
+
+  it('narrows the movies to the search term in ?q=, keeping the total', async () => {
+    const { storage, baseUrl } = freshApi();
+    addGenrePageLibrary(storage);
+
+    const payload = await getGenrePayload(baseUrl, 'Drama', { q: 'weepie' });
+
+    // `q` is the wire name for the search text; the route translates it to the
+    // domain's `search` at this boundary and nowhere else. The total is still
+    // the genre's own, so the header can say "1 of 4 titles".
+    expect(payload.movies.map((m) => m.title)).toEqual(['Weepie']);
+    expect(payload.total).toBe(4);
+  });
+
+  it('matches the widened search over the wire (synopsis, not just title)', async () => {
+    const { storage, baseUrl } = freshApi();
+    addGenrePageLibrary(storage);
+
+    const payload = await getGenrePayload(baseUrl, 'Drama', {
+      q: 'fading coast',
+    });
+
+    expect(payload.movies.map((m) => m.title)).toEqual(['Harbor Lights']);
+  });
+
+  it('answers an empty list, and the true total, when the term matches nothing', async () => {
+    const { storage, baseUrl } = freshApi();
+    addGenrePageLibrary(storage);
+
+    const payload = await getGenrePayload(baseUrl, 'Drama', {
+      q: 'zzz-nothing',
+    });
+
+    // Not a 404 — "No matches" inside a genre that is very much still there.
+    expect(payload).toEqual({ genre: 'Drama', total: 4, movies: [] });
+  });
+
+  it('orders the movies by ?sort=', async () => {
+    const { storage, baseUrl } = freshApi();
+    addGenrePageLibrary(storage);
+
+    const payload = await getGenrePayload(baseUrl, 'Drama', { sort: 'a-z' });
+
+    // The Carried sort a "View all" hands over arrives here, and a parent
+    // looking for a title does not know which of them was capitalised.
+    expect(payload.movies.map((m) => m.title)).toEqual([
+      'apple Grove',
+      'Harbor Lights',
+      'Weepie',
+      'Zephyr',
+    ]);
+  });
+
+  it('takes the term and the order in one request', async () => {
+    const { storage, baseUrl } = freshApi();
+    addGenrePageLibrary(storage);
+
+    const payload = await getGenrePayload(baseUrl, 'Drama', {
+      q: 'p',
+      sort: 'a-z',
+    });
+
+    // Narrowed to three and re-ordered — not one question answered and the
+    // other dropped. The recently-added default would lead with "Zephyr".
+    expect(payload.movies.map((m) => m.title)).toEqual([
+      'apple Grove',
+      'Weepie',
+      'Zephyr',
+    ]);
+    expect(payload.total).toBe(4);
+  });
+
+  it('treats an empty ?q= as no search at all', async () => {
+    const { storage, baseUrl } = freshApi();
+    addGenrePageLibrary(storage);
+
+    expect(await getGenrePayload(baseUrl, 'Drama', { q: '' })).toEqual(
+      await getGenrePayload(baseUrl, 'Drama')
+    );
+  });
+
+  it('treats an empty ?sort= as the default order, not as a bad request', async () => {
+    const { storage, baseUrl } = freshApi();
+    addGenrePageLibrary(storage);
+
+    expect(await getGenrePayload(baseUrl, 'Drama', { sort: '' })).toEqual(
+      await getGenrePayload(baseUrl, 'Drama')
+    );
+  });
+
+  it('rejects a sort it does not recognise, the way /api/home does', async () => {
+    const { storage, baseUrl } = freshApi();
+    addGenrePageLibrary(storage);
+
+    const response = await genreResponse(baseUrl, 'Drama', {
+      sort: 'by-vibes',
+    });
+
+    expect(response.status).toBe(400);
+    expect((await response.json()) as { error: string }).toEqual({
+      error: 'Unknown sort: by-vibes',
+    });
+  });
+
+  it('answers 200 with an empty payload for a genre the library does not hold', async () => {
+    const { storage, baseUrl } = freshApi();
+    addGenrePageLibrary(storage);
+
+    const payload = await getGenrePayload(baseUrl, 'Westerns');
+
+    // A stale bookmark for an emptied genre is a normal "nothing here", not a
+    // 404 — the screen still has a name to put in its heading.
+    expect(payload).toEqual({ genre: 'Westerns', total: 0, movies: [] });
+  });
+
+  it('decodes a genre name with a space in it out of the path', async () => {
+    const { storage, baseUrl } = freshApi();
+    addGenrePageLibrary(storage);
+
+    const payload = await getGenrePayload(baseUrl, 'Science Fiction');
+
+    // "Science%20Fiction" has to arrive as "Science Fiction" — a name left
+    // percent-encoded matches no genre the library spells, and would print
+    // itself into the heading. The seeded 12-genre pool holds no two-word name
+    // to look up, so what this asserts is the decode, not the hit.
+    expect(payload).toEqual({
+      genre: 'Science Fiction',
+      total: 0,
+      movies: [],
+    });
+  });
+
+  it('ignores a ?genre= parameter entirely — the genre is the route', async () => {
+    const { storage, baseUrl } = freshApi();
+    addGenrePageLibrary(storage);
+
+    expect(
+      await getGenrePayload(baseUrl, 'Drama', { genre: 'Horror' })
+    ).toEqual(await getGenrePayload(baseUrl, 'Drama'));
+  });
+
+  it('ignores a ?rating= parameter entirely — this screen has no rating pill', async () => {
+    const { storage, baseUrl } = freshApi();
+    addGenrePageLibrary(storage);
+
+    // A hand-edited minimum would drop three of the four Drama titles. The URL
+    // and the screen must agree, so a filter with no control never applies.
+    expect(await getGenrePayload(baseUrl, 'Drama', { rating: '8' })).toEqual(
+      await getGenrePayload(baseUrl, 'Drama')
+    );
   });
 });
