@@ -17,3 +17,5 @@ export {
 } from './parseMinRating/parseMinRating';
 export { parseLibraryQuery } from './parseLibraryQuery/parseLibraryQuery';
 export { toLibraryQueryParams } from './toLibraryQueryParams/toLibraryQueryParams';
+export { parseGenreQuery } from './parseGenreQuery/parseGenreQuery';
+export { toGenreQueryParams } from './toGenreQueryParams/toGenreQueryParams';
