@@ -154,7 +154,12 @@ describe('LibraryGrid', () => {
     // favorite heart, and the watched badge on the one movie that has been seen.
     const watched = screen.getByRole('button', { name: 'Deep Harbour' });
 
-    expect(within(watched).getByText('Deep Harbour')).toBeDefined();
+    // A poster-less card carries its title twice — overlaid on the gradient
+    // placeholder and again as the label below it — so this asks that the card
+    // named it, not that it named it once.
+    expect(within(watched).getAllByText('Deep Harbour').length).toBeGreaterThan(
+      0
+    );
     expect(within(watched).getByTitle('Favorite')).toBeDefined();
     expect(within(watched).getByText('4.0')).toBeDefined();
     expect(within(watched).getByRole('img', { name: 'Watched' })).toBeDefined();
