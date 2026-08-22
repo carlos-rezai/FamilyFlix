@@ -1,6 +1,7 @@
 import { GenreMoviesProvider } from '@/features/library/GenreMovies/GenreMovies';
 import { GenreHeading } from '@/features/library/GenreHeading/GenreHeading';
 import { GenreGrid } from '@/features/library/GenreGrid/GenreGrid';
+import { GenreControls } from '@/features/search/GenreControls/GenreControls';
 import { GenreLayout } from '@/layouts/GenreLayout/GenreLayout';
 
 /**
@@ -13,11 +14,16 @@ import { GenreLayout } from '@/layouts/GenreLayout/GenreLayout';
  * itself never learns what a genre is: it holds no state, fetches nothing, and
  * reads neither the path nor the query. Both halves ask `useGenreMovies()` for
  * what they need.
+ *
+ * The controls sit inside that provider too, but they are not fed by it: they
+ * read and write the URL, and the provider reloads because the URL changed. So
+ * a search settling or an order being chosen refetches the genre once, and the
+ * count line the header prints comes from the same answer the grid did.
  */
 export default function GenrePage() {
   return (
     <GenreMoviesProvider>
-      <GenreLayout heading={<GenreHeading />}>
+      <GenreLayout heading={<GenreHeading />} headerEnd={<GenreControls />}>
         <GenreGrid />
       </GenreLayout>
     </GenreMoviesProvider>

@@ -471,14 +471,18 @@ describe('App — the genre screen behind “View all”', () => {
   }
 
   /**
-   * Every poster card on screen. A card is a button carrying a movie title as
-   * its accessible name, which neither the hearts nor the chrome do.
+   * Every poster card on screen. A card is a button in the scrolling body
+   * carrying a movie title as its accessible name, which the hearts beside them
+   * do not — and the header is excluded outright, because its own controls
+   * announce themselves too ("Sort: Recently Added") without being cards.
    */
   function posterCards() {
-    return screen.queryAllByRole('button').filter((button) => {
-      const label = button.getAttribute('aria-label');
-      return label !== null && label !== 'Favorite';
-    });
+    return within(screenBody())
+      .queryAllByRole('button')
+      .filter((button) => {
+        const label = button.getAttribute('aria-label');
+        return label !== null && label !== 'Favorite';
+      });
   }
 
   /** The accessible name of every poster card, in the order they are rendered. */
