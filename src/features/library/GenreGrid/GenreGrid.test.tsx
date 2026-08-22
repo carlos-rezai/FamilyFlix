@@ -1,7 +1,20 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import {
+  act,
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  within,
+} from '@testing-library/react';
 import { ThemeProvider } from 'styled-components';
-import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
+import {
+  MemoryRouter,
+  Route,
+  Routes,
+  useLocation,
+  useNavigate,
+} from 'react-router-dom';
 
 import { GenreGrid } from './GenreGrid';
 import { GenreMoviesProvider } from '../GenreMovies/GenreMovies';
@@ -87,6 +100,19 @@ function serve(body: GenrePayload) {
   fetchMock.mockResolvedValue(okResponse(body));
 }
 
+/**
+ * Drives the URL the way the header's controls do — the grid's provider reads
+ * the settled query from the router, so narrowing the genre means changing the
+ * address rather than calling anything on the grid.
+ */
+let goTo: (url: string) => void = () => undefined;
+
+function Navigator() {
+  const navigate = useNavigate();
+  goTo = (url) => navigate(url, { replace: true });
+  return null;
+}
+
 /** Reports where the router is, so an opened card is asserted by destination. */
 function LocationProbe() {
   const location = useLocation();
@@ -118,6 +144,7 @@ function renderGrid(url = '/genre/Action') {
         </Routes>
       </ThemeProvider>
       <LocationProbe />
+      <Navigator />
     </MemoryRouter>
   );
 }
@@ -223,5 +250,271 @@ describe('GenreGrid — opening a movie', () => {
 
     expect(currentPath()).toBe('/movie/a%20b%2Fc');
     expect(screen.getByText('the movie detail page')).toBeDefined();
+  });
+});
+
+/** A genre the library holds nothing under — what a stale bookmark opens. */
+const EMPTY: GenrePayload = { genre: 'Action', total: 0, movies: [] };
+
+/** A genre with 214 movies and a search that found none of them. */
+const MISSED: GenrePayload = { genre: 'Action', total: 214, movies: [] };
+
+/** Two movies, one already a favorite, for the tests that press a heart. */
+const HEARTS: GenrePayload = {
+  genre: 'Action',
+  total: 2,
+  movies: [
+    makeMovie({ id: 'a1', title: 'Northwind', isFavorite: false }),
+    makeMovie({ id: 'a2', title: 'Ironclad', isFavorite: true }),
+  ],
+};
+
+function serverErrorResponse(): Response {
+  return {
+    ok: false,
+    status: 500,
+    json: () => Promise.resolve({ error: 'boom' }),
+  } as unknown as Response;
+}
+
+/** Every genre request the grid's provider has issued, as its URL. */
+function genreRequests(): string[] {
+  return fetchMock.mock.calls
+    .map(([input]) => String(input))
+    .filter((url) => url.includes('/api/genre/'));
+}
+
+/** The heart on one card — the button the card takes for its favorite flag. */
+function heartOn(title: string) {
+  return within(screen.getByRole('button', { name: title })).getByRole(
+    'button',
+    { name: /favorite/i }
+  );
+}
+
+/** Whether that card's heart reads as filled — the card's public "is a favorite". */
+function isFilled(title: string) {
+  return heartOn(title).getAttribute('aria-pressed');
+}
+
+/** The id of every movie the screen has attempted to save, in order. */
+function favoriteSaves(): string[] {
+  return fetchMock.mock.calls
+    .map(([input]) => /\/api\/movies\/(.+)\/favorite/.exec(String(input)))
+    .filter((match): match is RegExpExecArray => match !== null)
+    .map((match) => decodeURIComponent(match[1]));
+}
+
+describe('GenreGrid — a load that failed', () => {
+  it('says the genre could not be loaded, rather than showing an empty shelf', async () => {
+    // A failure must read as a failure: an empty grid here would claim the
+    // genre holds nothing, which is a different and wrong thing to say.
+    fetchMock.mockRejectedValue(new Error('network down'));
+
+    renderGrid();
+
+    expect(await screen.findByText(/couldn.t load this genre/i)).toBeDefined();
+  });
+
+  it('offers a Retry on that failure', async () => {
+    fetchMock.mockRejectedValue(new Error('network down'));
+
+    renderGrid();
+
+    await screen.findByText(/couldn.t load this genre/i);
+    expect(screen.getByRole('button', { name: /retry/i })).toBeDefined();
+  });
+
+  it('treats a non-OK response as a failed load', async () => {
+    fetchMock.mockResolvedValue(serverErrorResponse());
+
+    renderGrid();
+
+    expect(await screen.findByText(/couldn.t load this genre/i)).toBeDefined();
+  });
+
+  it('shows the movies once a Retry succeeds', async () => {
+    fetchMock.mockRejectedValueOnce(new Error('network down'));
+
+    renderGrid();
+    await screen.findByText(/couldn.t load this genre/i);
+
+    serve(NAMED);
+    fireEvent.click(screen.getByRole('button', { name: /retry/i }));
+
+    await screen.findByRole('button', { name: 'Northwind' });
+    expect(screen.queryByText(/couldn.t load this genre/i)).toBeNull();
+  });
+
+  it('never says the genre is empty when the load failed', async () => {
+    fetchMock.mockRejectedValue(new Error('network down'));
+
+    renderGrid();
+
+    await screen.findByText(/couldn.t load this genre/i);
+    expect(screen.queryByText(/there are no movies in/i)).toBeNull();
+  });
+});
+
+describe('GenreGrid — a genre that holds nothing', () => {
+  it('says the shelf is empty, naming the genre', async () => {
+    serve(EMPTY);
+
+    renderGrid();
+
+    expect(await screen.findByText('Nothing here')).toBeDefined();
+    expect(screen.getByText('There are no movies in Action.')).toBeDefined();
+  });
+
+  it('offers nothing to retry, having nothing to retry', async () => {
+    serve(EMPTY);
+
+    renderGrid();
+
+    await screen.findByText('Nothing here');
+    expect(screen.queryByRole('button', { name: /retry/i })).toBeNull();
+  });
+
+  it('reads as empty rather than as an error for a genre the library does not hold', async () => {
+    // The route answers 200 with an empty payload, so a stale bookmark for an
+    // emptied genre is a normal "nothing here".
+    serve(EMPTY);
+
+    renderGrid('/genre/Westerns');
+
+    expect(await screen.findByText('Nothing here')).toBeDefined();
+    expect(screen.queryByText(/couldn.t load this genre/i)).toBeNull();
+  });
+
+  it('names the genre the URL asked for, not the one the payload echoed', async () => {
+    serve(EMPTY);
+
+    renderGrid('/genre/Science%20Fiction');
+
+    expect(
+      await screen.findByText('There are no movies in Science Fiction.')
+    ).toBeDefined();
+  });
+
+  it('keeps its own words when a search is running on an empty genre', async () => {
+    // The shelf is empty; the search is not why nothing came back, so quoting
+    // the term would blame the wrong thing.
+    serve(EMPTY);
+
+    renderGrid('/genre/Action?q=lighthouse');
+
+    expect(await screen.findByText('Nothing here')).toBeDefined();
+    expect(screen.queryByText(/matches/i)).toBeNull();
+  });
+});
+
+describe('GenreGrid — a search that matched nothing', () => {
+  it('says so plainly, and quotes back what was typed', async () => {
+    serve(MISSED);
+
+    renderGrid('/genre/Action?q=lighthouse');
+
+    expect(await screen.findByText('No matches')).toBeDefined();
+    expect(
+      screen.getByText('Nothing in Action matches “lighthouse”.')
+    ).toBeDefined();
+  });
+
+  it('is worded apart from the empty genre, so the two are never one sentence', async () => {
+    serve(MISSED);
+
+    renderGrid('/genre/Action?q=lighthouse');
+
+    await screen.findByText('No matches');
+    expect(screen.queryByText('Nothing here')).toBeNull();
+    expect(screen.queryByText(/there are no movies in/i)).toBeNull();
+  });
+
+  it('offers nothing to retry either — the request worked', async () => {
+    serve(MISSED);
+
+    renderGrid('/genre/Action?q=lighthouse');
+
+    await screen.findByText('No matches');
+    expect(screen.queryByRole('button', { name: /retry/i })).toBeNull();
+  });
+
+  it('shows the cards, not the miss, when the search did match something', async () => {
+    serve(NAMED);
+
+    renderGrid('/genre/Action?q=north');
+
+    await screen.findByRole('button', { name: 'Northwind' });
+    expect(screen.queryByText('No matches')).toBeNull();
+  });
+});
+
+describe('GenreGrid — while a new query is loading', () => {
+  it('leaves the cards on screen instead of flashing the skeleton back', async () => {
+    serve(NAMED);
+    renderGrid('/genre/Action');
+    await screen.findByRole('button', { name: 'Northwind' });
+
+    // The refetch is in flight and has not answered yet.
+    fetchMock.mockImplementation(() => new Promise<Response>(() => undefined));
+    act(() => goTo('/genre/Action?q=north'));
+
+    await waitFor(() => expect(genreRequests()).toHaveLength(2));
+    expect(screen.queryByRole('status', { name: /loading/i })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Northwind' })).toBeDefined();
+  });
+});
+
+describe('GenreGrid — the favorite heart', () => {
+  it('fills the clicked card’s heart and saves that movie', async () => {
+    serve(HEARTS);
+
+    renderGrid();
+    await screen.findByRole('button', { name: 'Northwind' });
+
+    expect(isFilled('Northwind')).toBe('false');
+
+    fireEvent.click(heartOn('Northwind'));
+
+    expect(isFilled('Northwind')).toBe('true');
+    await waitFor(() => expect(favoriteSaves()).toEqual(['a1']));
+  });
+
+  it('empties the heart of a movie that was already a favorite', async () => {
+    serve(HEARTS);
+
+    renderGrid();
+    await screen.findByRole('button', { name: 'Ironclad' });
+
+    expect(isFilled('Ironclad')).toBe('true');
+
+    fireEvent.click(heartOn('Ironclad'));
+
+    expect(isFilled('Ironclad')).toBe('false');
+    await waitFor(() => expect(favoriteSaves()).toEqual(['a2']));
+  });
+
+  it('reverts the heart when the save fails', async () => {
+    serve(HEARTS);
+
+    renderGrid();
+    await screen.findByRole('button', { name: 'Northwind' });
+
+    fetchMock.mockRejectedValue(new Error('network down'));
+    fireEvent.click(heartOn('Northwind'));
+    expect(isFilled('Northwind')).toBe('true');
+
+    await waitFor(() => expect(isFilled('Northwind')).toBe('false'));
+  });
+
+  it('does not open the movie when the heart is pressed', async () => {
+    serve(HEARTS);
+
+    renderGrid();
+    await screen.findByRole('button', { name: 'Northwind' });
+
+    fireEvent.click(heartOn('Northwind'));
+
+    expect(currentPath()).toBe('/genre/Action');
   });
 });

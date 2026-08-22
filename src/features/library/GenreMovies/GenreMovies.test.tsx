@@ -1,11 +1,17 @@
 import type { ReactNode } from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, renderHook, screen, waitFor } from '@testing-library/react';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import {
+  act,
+  render,
+  renderHook,
+  screen,
+  waitFor,
+} from '@testing-library/react';
+import { MemoryRouter, Route, Routes, useNavigate } from 'react-router-dom';
 
 import { GenreMoviesProvider, useGenreMovies } from './GenreMovies';
 import { gradientFromId } from '@/utils';
-import type { GenrePayload, Movie } from '@/types';
+import type { GenrePayload, Movie, PosterCardMovie } from '@/types';
 
 function makeMovie(overrides: Partial<Movie> = {}): Movie {
   return {
@@ -63,6 +69,14 @@ function okResponse(body: unknown): Response {
   } as unknown as Response;
 }
 
+function serverErrorResponse(): Response {
+  return {
+    ok: false,
+    status: 500,
+    json: () => Promise.resolve({ error: 'boom' }),
+  } as unknown as Response;
+}
+
 let fetchMock: ReturnType<
   typeof vi.fn<
     (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>
@@ -82,14 +96,35 @@ afterEach(() => {
 });
 
 /**
- * Serve the genre aggregate from `payload`. Any other request is a fan-out this
- * provider has no business making.
+ * Serve the genre aggregate from `payload`, and answer a favorite save with
+ * `onFavorite`. Any other request is a fan-out this provider has no business
+ * making.
  */
-function serve(payload: GenrePayload) {
+function serve(
+  payload: GenrePayload,
+  onFavorite: () => Promise<Response> = () =>
+    Promise.resolve(okResponse({ value: true }))
+) {
   fetchMock.mockImplementation((input) => {
     const url = String(input);
     if (url.includes('/api/genre/')) {
       return Promise.resolve(okResponse(payload));
+    }
+    if (url.includes('/favorite')) {
+      return onFavorite();
+    }
+    return Promise.reject(new Error(`Unexpected request: ${url}`));
+  });
+}
+
+/** Answer the first genre request with `first` and every later one with `rest`. */
+function serveInTurn(first: GenrePayload, rest: GenrePayload) {
+  let served = 0;
+  fetchMock.mockImplementation((input) => {
+    const url = String(input);
+    if (url.includes('/api/genre/')) {
+      served += 1;
+      return Promise.resolve(okResponse(served === 1 ? first : rest));
     }
     return Promise.reject(new Error(`Unexpected request: ${url}`));
   });
@@ -113,6 +148,19 @@ function requestedQuery(index = 0): URLSearchParams {
 }
 
 /**
+ * Drives the URL the way the header's controls do — the provider reads the
+ * settled query from the router, so changing the query means changing the
+ * address rather than calling anything on the provider.
+ */
+let goTo: (url: string) => void = () => undefined;
+
+function Navigator() {
+  const navigate = useNavigate();
+  goTo = (url) => navigate(url, { replace: true });
+  return null;
+}
+
+/**
  * Mounts the provider under the real `/genre/:name` route, so the genre it
  * loads is the one the URL is carrying — the same way a deep link arrives.
  */
@@ -126,6 +174,7 @@ function providerAt(url: string) {
             element={<GenreMoviesProvider>{children}</GenreMoviesProvider>}
           />
         </Routes>
+        <Navigator />
       </MemoryRouter>
     );
   };
@@ -370,5 +419,290 @@ describe('GenreMovies — one request for the whole screen', () => {
     expect(genreRequests()).toHaveLength(1);
     expect(readingOf('heading')).toBe('ready · Action · 214 · 2');
     expect(readingOf('grid')).toBe(readingOf('heading'));
+  });
+});
+
+/** Two movies in one genre, one of them already a favorite. */
+const HEARTS: GenrePayload = {
+  genre: 'Action',
+  total: 2,
+  movies: [
+    makeMovie({ id: 'a1', title: 'Northwind', isFavorite: false }),
+    makeMovie({ id: 'a2', title: 'Ironclad', isFavorite: true }),
+  ],
+};
+
+/** Whether one movie reads as a favorite in the grid the provider reports. */
+function favoriteOf(movies: PosterCardMovie[], id: string) {
+  return movies.find((movie) => movie.id === id)?.favorite;
+}
+
+interface FavoriteRequest {
+  url: string;
+  method: string | undefined;
+  body: unknown;
+}
+
+/** Every favorite save the provider has attempted, in order. */
+function favoriteRequests(): FavoriteRequest[] {
+  return fetchMock.mock.calls
+    .filter(([input]) => String(input).includes('/favorite'))
+    .map(([input, init]) => ({
+      url: String(input),
+      method: init?.method,
+      body:
+        init?.body === undefined ? undefined : JSON.parse(String(init.body)),
+    }));
+}
+
+describe('GenreMovies — a query that changes under it', () => {
+  it('asks again, with the new term, when the settled query changes', async () => {
+    serveInTurn(ACTION, NARROWED);
+    const { result } = await loadGenre('/genre/Action');
+
+    act(() => goTo('/genre/Action?q=north'));
+
+    await waitFor(() => expect(result.current.movies).toHaveLength(2));
+    expect(genreRequests()).toHaveLength(2);
+    expect(requestedQuery(1).get('q')).toBe('north');
+  });
+
+  it('keeps the movies already on screen while the new ones load', async () => {
+    // Flashing the skeleton every time the typing settles would be unreadable —
+    // she is reading them. The old answer stays until the new one arrives.
+    serve(ACTION);
+    const { result } = await loadGenre('/genre/Action');
+
+    // The refetch is in flight and has not answered yet.
+    fetchMock.mockImplementation(() => new Promise<Response>(() => undefined));
+    act(() => goTo('/genre/Action?q=north'));
+
+    await waitFor(() => expect(genreRequests()).toHaveLength(2));
+    expect(result.current.movies).toHaveLength(214);
+  });
+
+  it('does not go back to loading during that refetch', async () => {
+    // The skeleton is for the first load only, the same discipline the home
+    // rows follow.
+    serve(ACTION);
+    const { result } = await loadGenre('/genre/Action');
+
+    fetchMock.mockImplementation(() => new Promise<Response>(() => undefined));
+    act(() => goTo('/genre/Action?q=north'));
+
+    await waitFor(() => expect(genreRequests()).toHaveLength(2));
+    expect(result.current.status).toBe('ready');
+  });
+
+  it('leaves the movies alone when a part of the URL it does not read changes', async () => {
+    serve(ACTION);
+    const { result } = await loadGenre('/genre/Action');
+
+    act(() => goTo('/genre/Action?rating=7'));
+
+    await waitFor(() => expect(result.current.status).toBe('ready'));
+    expect(genreRequests()).toHaveLength(1);
+  });
+
+  it('does not let an abandoned query’s slow answer overwrite the newer one', async () => {
+    // The unnarrowed genre is still in flight when the parent finishes typing;
+    // its answer is a grid that no longer applies when it finally lands.
+    let settleFirst: (response: Response) => void = () => undefined;
+    fetchMock.mockImplementationOnce(
+      () =>
+        new Promise<Response>((resolve) => {
+          settleFirst = resolve;
+        })
+    );
+    fetchMock.mockImplementation(() => Promise.resolve(okResponse(NARROWED)));
+
+    const { result } = mountGenre('/genre/Action');
+    expect(result.current.status).toBe('loading');
+
+    act(() => goTo('/genre/Action?q=north'));
+    await waitFor(() => expect(result.current.status).toBe('ready'));
+
+    await act(async () => {
+      settleFirst(okResponse(ACTION));
+    });
+
+    expect(result.current.movies).toHaveLength(2);
+  });
+});
+
+describe('GenreMovies — a load that failed', () => {
+  it('reports error and holds no movies when the request fails', async () => {
+    fetchMock.mockRejectedValue(new Error('network down'));
+
+    const { result } = await loadGenre();
+
+    expect(result.current.status).toBe('error');
+    expect(result.current.movies).toEqual([]);
+  });
+
+  it('treats a non-OK response as a failed load', async () => {
+    fetchMock.mockResolvedValue(serverErrorResponse());
+
+    const { result } = await loadGenre();
+
+    expect(result.current.status).toBe('error');
+  });
+
+  it('reports a zero total on a failure, so no stale count survives it', async () => {
+    serve(ACTION);
+    const { result } = await loadGenre();
+    expect(result.current.total).toBe(214);
+
+    fetchMock.mockRejectedValue(new Error('network down'));
+    act(() => goTo('/genre/Action?q=north'));
+
+    await waitFor(() => expect(result.current.status).toBe('error'));
+    expect(result.current.total).toBe(0);
+  });
+
+  it('recovers on retry', async () => {
+    fetchMock.mockRejectedValueOnce(new Error('network down'));
+    const { result } = await loadGenre();
+    expect(result.current.status).toBe('error');
+
+    serve(ACTION);
+    act(() => result.current.retry());
+
+    await waitFor(() => expect(result.current.status).toBe('ready'));
+    expect(result.current.movies).toHaveLength(214);
+  });
+
+  it('asks for the same genre and query again on retry', async () => {
+    fetchMock.mockRejectedValueOnce(new Error('network down'));
+    const { result } = await loadGenre('/genre/Action?q=north&sort=a-z');
+
+    serve(NARROWED);
+    act(() => result.current.retry());
+
+    await waitFor(() => expect(result.current.status).toBe('ready'));
+    expect(requestedPath(1)).toBe('/api/genre/Action');
+    expect(requestedQuery(1).get('q')).toBe('north');
+    expect(requestedQuery(1).get('sort')).toBe('a-z');
+  });
+
+  it('does not let a slow first load overwrite the retry that replaced it', async () => {
+    let settleFirst: (response: Response) => void = () => undefined;
+    fetchMock.mockImplementationOnce(
+      () =>
+        new Promise<Response>((resolve) => {
+          settleFirst = resolve;
+        })
+    );
+
+    const { result } = mountGenre();
+    expect(result.current.status).toBe('loading');
+
+    serve(ACTION);
+    act(() => result.current.retry());
+    await waitFor(() => expect(result.current.status).toBe('ready'));
+
+    // The abandoned load finally answers, with a grid that no longer applies.
+    await act(async () => {
+      settleFirst(okResponse(NARROWED));
+    });
+
+    expect(result.current.status).toBe('ready');
+    expect(result.current.movies).toHaveLength(214);
+  });
+});
+
+describe('GenreMovies — the favorite flag', () => {
+  it('shows the new value immediately, before the save has come back', async () => {
+    // A save that never settles: anything set here is optimistic, not confirmed.
+    serve(HEARTS, () => new Promise<Response>(() => undefined));
+    const { result } = await loadGenre();
+
+    expect(favoriteOf(result.current.movies, 'a1')).toBe(false);
+
+    act(() => result.current.toggleFavorite('a1', true));
+
+    expect(favoriteOf(result.current.movies, 'a1')).toBe(true);
+  });
+
+  it('saves the new value to POST /api/movies/:id/favorite', async () => {
+    // The same endpoint the home screen writes through, so a favorite means one
+    // thing in one place.
+    serve(HEARTS);
+    const { result } = await loadGenre();
+
+    act(() => result.current.toggleFavorite('a1', true));
+
+    await waitFor(() => expect(favoriteRequests()).toHaveLength(1));
+
+    const [request] = favoriteRequests();
+    expect(request.url).toContain('/api/movies/a1/favorite');
+    expect(request.method?.toUpperCase()).toBe('POST');
+    expect(request.body).toEqual({ value: true });
+  });
+
+  it('saves `false` when an existing favorite is un-favorited', async () => {
+    serve(HEARTS, () => Promise.resolve(okResponse({ value: false })));
+    const { result } = await loadGenre();
+
+    expect(favoriteOf(result.current.movies, 'a2')).toBe(true);
+
+    act(() => result.current.toggleFavorite('a2', false));
+
+    expect(favoriteOf(result.current.movies, 'a2')).toBe(false);
+    await waitFor(() => expect(favoriteRequests()).toHaveLength(1));
+    expect(favoriteRequests()[0].body).toEqual({ value: false });
+  });
+
+  it('adopts what the route echoes back when it disagrees with what was asked', async () => {
+    // The route reports it stored `false`; that is the truth, not our assumption.
+    serve(HEARTS, () => Promise.resolve(okResponse({ value: false })));
+    const { result } = await loadGenre();
+
+    act(() => result.current.toggleFavorite('a1', true));
+    expect(favoriteOf(result.current.movies, 'a1')).toBe(true);
+
+    await waitFor(() =>
+      expect(favoriteOf(result.current.movies, 'a1')).toBe(false)
+    );
+  });
+
+  it('reverts when the save fails, so it never claims something is saved', async () => {
+    serve(HEARTS, () => Promise.reject(new Error('network down')));
+    const { result } = await loadGenre();
+
+    act(() => result.current.toggleFavorite('a1', true));
+    expect(favoriteOf(result.current.movies, 'a1')).toBe(true);
+
+    await waitFor(() =>
+      expect(favoriteOf(result.current.movies, 'a1')).toBe(false)
+    );
+  });
+
+  it('reverts when the server rejects the save', async () => {
+    serve(HEARTS, () => Promise.resolve(serverErrorResponse()));
+    const { result } = await loadGenre();
+
+    act(() => result.current.toggleFavorite('a2', false));
+    expect(favoriteOf(result.current.movies, 'a2')).toBe(false);
+
+    await waitFor(() =>
+      expect(favoriteOf(result.current.movies, 'a2')).toBe(true)
+    );
+  });
+
+  it('leaves every other movie in the grid alone', async () => {
+    serve(HEARTS);
+    const { result } = await loadGenre();
+
+    act(() => result.current.toggleFavorite('a1', true));
+
+    expect(favoriteOf(result.current.movies, 'a2')).toBe(true);
+    expect(result.current.movies.map((movie) => movie.id)).toEqual([
+      'a1',
+      'a2',
+    ]);
+
+    // One movie, one save — not one per card.
+    await waitFor(() => expect(favoriteRequests()).toHaveLength(1));
   });
 });

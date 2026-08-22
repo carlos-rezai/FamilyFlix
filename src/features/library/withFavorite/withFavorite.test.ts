@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 
-import { withFavorite } from './withFavorite';
+import { withFavorite, withFavoriteInList } from './withFavorite';
 import type { GenreRowModel, PosterCardMovie } from '@/types';
 
 function makeCard(overrides: Partial<PosterCardMovie> = {}): PosterCardMovie {
@@ -91,5 +91,78 @@ describe('withFavorite', () => {
     const before = rows();
 
     expect(withFavorite(before, 'nope', true)).toEqual(before);
+  });
+});
+
+/**
+ * A genre page's worth of cards — one flat list, no rows around it, with one
+ * of them already a favorite so both directions have something to move.
+ */
+function list(): PosterCardMovie[] {
+  return [
+    makeCard({ id: 'a1', title: 'Northwind' }),
+    makeCard({ id: 'a2', title: 'Ironclad', favorite: true }),
+    makeCard({ id: 'a3', title: 'Quiet Harbor' }),
+  ];
+}
+
+/** Whether one movie reads as a favorite in a flat list. */
+function favoriteOf(movies: PosterCardMovie[], id: string) {
+  return movies.find((movie) => movie.id === id)?.favorite;
+}
+
+describe('withFavoriteInList', () => {
+  it('sets the flag on the movie whose id matches', () => {
+    const next = withFavoriteInList(list(), 'a1', true);
+
+    expect(favoriteOf(next, 'a1')).toBe(true);
+  });
+
+  it('clears the flag on the movie whose id matches', () => {
+    const next = withFavoriteInList(list(), 'a2', false);
+
+    expect(favoriteOf(next, 'a2')).toBe(false);
+  });
+
+  it('leaves every other movie alone', () => {
+    const next = withFavoriteInList(list(), 'a1', true);
+
+    expect(favoriteOf(next, 'a2')).toBe(true);
+    expect(favoriteOf(next, 'a3')).toBe(false);
+  });
+
+  it('keeps the list it was given, in its order and at its length', () => {
+    // The grid is the server's answer; a heart never adds, drops or reorders a
+    // card in it.
+    const next = withFavoriteInList(list(), 'a1', true);
+
+    expect(next.map((movie) => movie.id)).toEqual(['a1', 'a2', 'a3']);
+  });
+
+  it('leaves the rest of the matched movie untouched', () => {
+    const next = withFavoriteInList(list(), 'a1', true);
+
+    expect(next[0]).toMatchObject({
+      id: 'a1',
+      title: 'Northwind',
+      rating: 80,
+      watched: false,
+    });
+  });
+
+  it('does not mutate the list it is given', () => {
+    // An optimistic value must be appliable and revertable from the same source
+    // list, so nothing here may write through it.
+    const before = list();
+
+    withFavoriteInList(before, 'a1', true);
+
+    expect(favoriteOf(before, 'a1')).toBe(false);
+  });
+
+  it('is a no-op for a movie that is not in the list', () => {
+    const before = list();
+
+    expect(withFavoriteInList(before, 'nope', true)).toEqual(before);
   });
 });
