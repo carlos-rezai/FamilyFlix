@@ -1,7 +1,13 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-import { fetchHomePayload, saveFavorite } from './api';
-import type { HomePayload, LibraryQuery, Movie } from '@/types';
+import { fetchGenrePayload, fetchHomePayload, saveFavorite } from './api';
+import type {
+  GenrePayload,
+  GenreQuery,
+  HomePayload,
+  LibraryQuery,
+  Movie,
+} from '@/types';
 
 /** The query an unfiltered browse home asks with — every part at its default. */
 const UNFILTERED: LibraryQuery = { sort: 'recently-added' };
@@ -350,5 +356,162 @@ describe('fetchHomePayload — the minimum rating', () => {
     expect(requested.get('genre')).toBe('Drama');
     expect(requested.get('sort')).toBe('a-z');
     expect(requested.get('rating')).toBe('8');
+  });
+});
+
+// --- 06 — Genre page, Phase 4: "the screen loads a real genre" (issue #47) ---
+
+/** The query a plain genre page asks with — both parts at their defaults. */
+const PLAIN_GENRE: GenreQuery = { sort: 'recently-added' };
+
+/**
+ * One genre in full, as `GET /api/genre/:name` answers it: the name as it was
+ * asked for, the genre's **unfiltered** total, and the uncapped list.
+ */
+const GENRE_PAYLOAD: GenrePayload = {
+  genre: 'Action',
+  total: 214,
+  movies: [makeMovie({ id: 'a1', title: 'Northwind' })],
+};
+
+describe('fetchGenrePayload', () => {
+  it('GETs the genre aggregate and returns the payload it answers with', async () => {
+    fetchMock.mockResolvedValue(okResponse(GENRE_PAYLOAD));
+
+    const payload = await fetchGenrePayload('Action', PLAIN_GENRE);
+
+    expect(onlyRequest().url).toBe('/api/genre/Action');
+    expect(payload).toEqual(GENRE_PAYLOAD);
+  });
+
+  it('carries the whole screen — name, total and the uncapped list — in one answer', async () => {
+    fetchMock.mockResolvedValue(okResponse(GENRE_PAYLOAD));
+
+    const payload = await fetchGenrePayload('Action', PLAIN_GENRE);
+
+    expect(payload.genre).toBe('Action');
+    expect(payload.total).toBe(214);
+    expect(payload.movies.map((movie) => movie.title)).toEqual(['Northwind']);
+  });
+
+  it('throws when the route does not answer OK', async () => {
+    fetchMock.mockResolvedValue(serverErrorResponse());
+
+    await expect(fetchGenrePayload('Action', PLAIN_GENRE)).rejects.toThrow(
+      /500/
+    );
+  });
+});
+
+describe('fetchGenrePayload — asking for one genre', () => {
+  /** The query string the one request carried, parsed rather than matched. */
+  function requestedQuery(): URLSearchParams {
+    return new URLSearchParams(onlyRequest().url.split('?')[1] ?? '');
+  }
+
+  it('asks a clean URL when nothing narrows the genre', async () => {
+    // Both parameters are omitted at their defaults, so the request matches the
+    // clean `/genre/Action` the parent is looking at.
+    fetchMock.mockResolvedValue(okResponse(GENRE_PAYLOAD));
+
+    await fetchGenrePayload('Action', PLAIN_GENRE);
+
+    expect(onlyRequest().url).toBe('/api/genre/Action');
+  });
+
+  it('carries the genre in the path, never as a parameter', async () => {
+    // It is which screen this is, not a filter within it — the same way the app
+    // URL spells it.
+    fetchMock.mockResolvedValue(okResponse(GENRE_PAYLOAD));
+
+    await fetchGenrePayload('Action', { ...PLAIN_GENRE, search: 'north' });
+
+    expect(requestedQuery().has('genre')).toBe(false);
+  });
+
+  it('encodes a genre name with a space into the path', async () => {
+    fetchMock.mockResolvedValue(
+      okResponse({ ...GENRE_PAYLOAD, genre: 'Science Fiction' })
+    );
+
+    await fetchGenrePayload('Science Fiction', PLAIN_GENRE);
+
+    expect(onlyRequest().url).toBe('/api/genre/Science%20Fiction');
+  });
+
+  it('encodes a genre name that would otherwise break the path', async () => {
+    fetchMock.mockResolvedValue(okResponse(GENRE_PAYLOAD));
+
+    await fetchGenrePayload('Action/Adventure', PLAIN_GENRE);
+
+    expect(onlyRequest().url).toBe('/api/genre/Action%2FAdventure');
+  });
+
+  it('carries the search text to the route as “q”', async () => {
+    fetchMock.mockResolvedValue(okResponse(GENRE_PAYLOAD));
+
+    await fetchGenrePayload('Action', { ...PLAIN_GENRE, search: 'lighthouse' });
+
+    expect(requestedQuery().get('q')).toBe('lighthouse');
+  });
+
+  it('omits “q” entirely when the query holds no search text', async () => {
+    fetchMock.mockResolvedValue(okResponse(GENRE_PAYLOAD));
+
+    await fetchGenrePayload('Action', { ...PLAIN_GENRE, search: undefined });
+
+    expect(requestedQuery().has('q')).toBe(false);
+  });
+
+  it('encodes a term that would otherwise break the query string', async () => {
+    fetchMock.mockResolvedValue(okResponse(GENRE_PAYLOAD));
+
+    await fetchGenrePayload('Action', {
+      ...PLAIN_GENRE,
+      search: 'comet & season',
+    });
+
+    expect(onlyRequest().url).not.toContain('comet & season');
+    expect(requestedQuery().get('q')).toBe('comet & season');
+  });
+
+  it('carries the chosen order to the route as “sort”', async () => {
+    fetchMock.mockResolvedValue(okResponse(GENRE_PAYLOAD));
+
+    await fetchGenrePayload('Action', { sort: 'a-z' });
+
+    expect(requestedQuery().get('sort')).toBe('a-z');
+  });
+
+  it('omits “sort” at the default order, so a plain genre is a clean request', async () => {
+    fetchMock.mockResolvedValue(okResponse(GENRE_PAYLOAD));
+
+    await fetchGenrePayload('Action', { sort: 'recently-added' });
+
+    expect(onlyRequest().url).toBe('/api/genre/Action');
+  });
+
+  it('never asks for a rating, which this screen has no control for', async () => {
+    // The URL and the screen must agree: a filter with nothing on screen to
+    // show it with is a filter the request must not carry.
+    fetchMock.mockResolvedValue(okResponse(GENRE_PAYLOAD));
+
+    await fetchGenrePayload('Action', { sort: 'a-z', search: 'north' });
+
+    expect(requestedQuery().has('rating')).toBe(false);
+  });
+
+  it('asks a searched, sorted genre as one request, not two', async () => {
+    fetchMock.mockResolvedValue(okResponse(GENRE_PAYLOAD));
+
+    await fetchGenrePayload('Science Fiction', {
+      sort: 'a-z',
+      search: 'quiet',
+    });
+
+    const request = onlyRequest();
+    expect(request.url.split('?')[0]).toBe('/api/genre/Science%20Fiction');
+    expect(requestedQuery().get('q')).toBe('quiet');
+    expect(requestedQuery().get('sort')).toBe('a-z');
   });
 });

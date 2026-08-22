@@ -3,7 +3,7 @@ import { render, screen, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter, useLocation, useNavigate } from 'react-router-dom';
 
 import App from './App';
-import type { HomePayload, HomeRow, Movie } from '@/types';
+import type { GenrePayload, HomePayload, HomeRow, Movie } from '@/types';
 
 function makeMovie(overrides: Partial<Movie> = {}): Movie {
   return {
@@ -67,6 +67,56 @@ let fetchMock: ReturnType<
   >
 >;
 
+/**
+ * Every movie in Action, as `GET /api/genre/Action` answers it: all 214 of
+ * them, uncapped, where the home row shipped two. Science Fiction’s four sit
+ * beside them, so a genre name with a space has a real screen behind it.
+ */
+const GENRE_MOVIES: Record<string, Movie[]> = {
+  Action: [
+    ...HOME_PAYLOAD[0].movies,
+    ...Array.from({ length: 212 }, (_, index) =>
+      makeMovie({ id: `a${index + 3}`, title: `Action ${index + 3}` })
+    ),
+  ],
+  'Science Fiction': [
+    ...HOME_PAYLOAD[1].movies,
+    makeMovie({ id: 's2', title: 'Orbital Drift' }),
+    makeMovie({ id: 's3', title: 'The Long Night' }),
+    makeMovie({ id: 's4', title: 'Zenith' }),
+  ],
+};
+
+/**
+ * The genre route, standing in for the server: it owns the narrowing and the
+ * order, and `total` stays the genre’s unfiltered count however far a search
+ * narrows the list.
+ */
+function genreResponse(url: string): Response {
+  const [path, query] = url.split('?');
+  const name = decodeURIComponent(path.slice(path.lastIndexOf('/') + 1));
+  const params = new URLSearchParams(query ?? '');
+  const all = GENRE_MOVIES[name] ?? [];
+
+  const search = params.get('q');
+  const matched =
+    search === null
+      ? all
+      : all.filter((movie) =>
+          movie.title.toLowerCase().includes(search.toLowerCase())
+        );
+
+  const movies =
+    params.get('sort') === 'a-z'
+      ? [...matched].sort((left, right) =>
+          left.title.localeCompare(right.title)
+        )
+      : matched;
+
+  const payload: GenrePayload = { genre: name, total: all.length, movies };
+  return okResponse(payload);
+}
+
 /** Every movie the fixture rows hold, as the detail route serves them by id. */
 const MOVIES = HOME_PAYLOAD.flatMap((row) => row.movies);
 
@@ -87,6 +137,9 @@ beforeEach(() => {
         rows: HOME_PAYLOAD,
       };
       return Promise.resolve(okResponse(payload));
+    }
+    if (url.includes('/api/genre/')) {
+      return Promise.resolve(genreResponse(url));
     }
     if (url.includes('/favorite')) {
       return Promise.resolve(okResponse({ value: true }));
@@ -269,14 +322,6 @@ describe('App — routing the browse home to its destinations', () => {
     ).toBeDefined();
   });
 
-  it('renders a placeholder that echoes the name when /genre/:name is opened directly', async () => {
-    renderApp('/genre/Science%20Fiction');
-
-    expect(
-      await screen.findByRole('heading', { name: /Science Fiction/ })
-    ).toBeDefined();
-  });
-
   it('leaves the movie page’s Back control reachable without a mouse', async () => {
     renderApp('/movie/a1');
     await screen.findByRole('heading', { level: 1, name: 'Northwind' });
@@ -406,5 +451,99 @@ describe('App — returning the browse home to where the parent was', () => {
     expect(currentPath()).toBe('/');
     await screen.findByRole('heading', { name: 'Action' });
     expect(homeBody().scrollTop).toBe(860);
+  });
+});
+
+/**
+ * 06 — Genre page, Phase 4: "the screen loads a real genre" (issue #47).
+ * "View all" stops landing on a placeholder and starts keeping its promise.
+ */
+describe('App — the genre screen behind “View all”', () => {
+  /** What a parent does with a wheel: the body moves, and it says so. */
+  function scrollTo(element: HTMLElement, top: number) {
+    element.scrollTop = top;
+    fireEvent.scroll(element);
+  }
+
+  /** The scrolling body of whichever screen is up — what follows its header. */
+  function screenBody() {
+    return screen.getByRole('banner').nextElementSibling as HTMLElement;
+  }
+
+  /**
+   * Every poster card on screen. A card is a button carrying a movie title as
+   * its accessible name, which neither the hearts nor the chrome do.
+   */
+  function posterCards() {
+    return screen.queryAllByRole('button').filter((button) => {
+      const label = button.getAttribute('aria-label');
+      return label !== null && label !== 'Favorite';
+    });
+  }
+
+  /** The accessible name of every poster card, in the order they are rendered. */
+  function cardTitles() {
+    return posterCards().map((card) => card.getAttribute('aria-label'));
+  }
+
+  it('opens every movie in the genre, uncapped, when “View all 214” is pressed', async () => {
+    // The row shipped two of Action’s 214; the other 212 are reachable by no
+    // other route in the app, which is what this screen is for.
+    renderApp();
+    await screen.findByRole('heading', { name: 'Action' });
+
+    const action = within(screen.getByRole('region', { name: 'Action' }));
+    fireEvent.click(action.getByRole('button', { name: /view all 214/i }));
+
+    expect(currentPath()).toBe('/genre/Action');
+    await screen.findByRole('heading', { level: 1, name: 'Action' });
+    // The count line is the payload landing; the name was on screen before it.
+    await screen.findByText('214 titles');
+    expect(posterCards()).toHaveLength(214);
+    expect(screen.getByRole('button', { name: 'Action 100' })).toBeDefined();
+  });
+
+  it('renders a deep-linked genre already narrowed and in its order', async () => {
+    // A shared or bookmarked link loads the screen it names, with no
+    // unnarrowed genre flashing past first.
+    renderApp('/genre/Science%20Fiction?q=or&sort=a-z');
+
+    expect(
+      await screen.findByRole('heading', {
+        level: 1,
+        name: 'Science Fiction',
+      })
+    ).toBeDefined();
+    await screen.findByText('2 of 4 titles');
+    expect(cardTitles()).toEqual(['Orbital Drift', 'Quiet Harbor']);
+  });
+
+  it('opens a movie’s detail page from a card on the genre screen', async () => {
+    renderApp('/genre/Action');
+    await screen.findByText('214 titles');
+
+    fireEvent.click(cardFor('Northwind'));
+
+    expect(currentPath()).toBe('/movie/a1');
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Northwind' })
+    ).toBeDefined();
+  });
+
+  it('lands back on the narrowed grid, where the parent left it', async () => {
+    // The query lives in the URL and the offset with the chrome, so nothing
+    // about the shelf was in a component to lose on the way to the movie.
+    renderApp('/genre/Action?q=north&sort=a-z');
+    await screen.findByText('1 of 214 titles');
+    scrollTo(screenBody(), 1240);
+
+    fireEvent.click(cardFor('Northwind'));
+    await screen.findByRole('heading', { level: 1, name: 'Northwind' });
+    fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+
+    expect(currentPath()).toBe('/genre/Action');
+    expect(currentSearch()).toBe('?q=north&sort=a-z');
+    await screen.findByText('1 of 214 titles');
+    expect(screenBody().scrollTop).toBe(1240);
   });
 });
