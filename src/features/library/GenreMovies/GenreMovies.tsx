@@ -1,5 +1,6 @@
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useMemo,
@@ -10,8 +11,9 @@ import { useParams, useSearchParams } from 'react-router-dom';
 
 import type { GenreQuery, PosterCardMovie } from '@/types';
 import { parseGenreQuery, toGenreQueryParams } from '@/utils';
-import { fetchGenrePayload } from '../api/api';
+import { fetchGenrePayload, saveFavorite } from '../api/api';
 import { view } from '../view/view';
+import { withFavoriteInList } from '../withFavorite/withFavorite';
 
 /** Where the load is: never both loading and errored, never movies without `ready`. */
 export type GenreMoviesStatus = 'loading' | 'ready' | 'error';
@@ -39,6 +41,10 @@ export interface GenreMoviesValue {
   total: number;
   /** The movies to render, uncapped; empty until the payload lands. */
   movies: PosterCardMovie[];
+  /** Re-run the load after a failure. */
+  retry: () => void;
+  /** Save one movie's favorite flag, showing the new value immediately. */
+  toggleFavorite: (id: string, favorite: boolean) => void;
 }
 
 const GenreMoviesContext = createContext<GenreMoviesValue | null>(null);
@@ -74,6 +80,7 @@ export function GenreMoviesProvider({ children }: GenreMoviesProviderProps) {
   const [status, setStatus] = useState<GenreMoviesStatus>('loading');
   const [total, setTotal] = useState(0);
   const [movies, setMovies] = useState<PosterCardMovie[]>([]);
+  const [attempt, setAttempt] = useState(0);
 
   // The name arrives decoded from the router, which is what lets a genre with a
   // space in it ("Science Fiction") survive the round-trip through the URL.
@@ -99,6 +106,11 @@ export function GenreMoviesProvider({ children }: GenreMoviesProviderProps) {
 
   useEffect(() => {
     let current = true;
+    // A query change with a grid already on screen keeps it; only a load with
+    // nothing to show falls back to the skeleton. The same discipline the home
+    // rows follow — flashing the skeleton every time the typing settles would
+    // be unreadable while she is reading the posters.
+    setStatus((previous) => (previous === 'ready' ? 'ready' : 'loading'));
 
     fetchGenrePayload(genre, query)
       .then((payload) => {
@@ -118,16 +130,39 @@ export function GenreMoviesProvider({ children }: GenreMoviesProviderProps) {
         setStatus('error');
       });
 
-    // A newer genre or query landing while an earlier load is still in flight
-    // must not have the abandoned response overwrite it.
+    // A retry — or a newer genre or query — landing while an earlier load is
+    // still in flight must not have the abandoned response overwrite it.
     return () => {
       current = false;
     };
-  }, [genre, query]);
+  }, [genre, query, attempt]);
+
+  const retry = useCallback(() => setAttempt((n) => n + 1), []);
+
+  /**
+   * The one edit this screen can make to the grid it loaded. It lives here
+   * because the optimistic value and the loaded movies are the same state, and
+   * it writes through the same endpoint the home screen's hearts write through,
+   * so a favorite means one thing in one place.
+   */
+  const toggleFavorite = useCallback((id: string, favorite: boolean) => {
+    setMovies((current) => withFavoriteInList(current, id, favorite));
+
+    saveFavorite(id, favorite)
+      // The route echoes what it stored; trust that over what we assumed.
+      .then((saved) => {
+        if (saved !== favorite) {
+          setMovies((current) => withFavoriteInList(current, id, saved));
+        }
+      })
+      .catch(() => {
+        setMovies((current) => withFavoriteInList(current, id, !favorite));
+      });
+  }, []);
 
   const value = useMemo<GenreMoviesValue>(
-    () => ({ status, genre, query, total, movies }),
-    [status, genre, query, total, movies]
+    () => ({ status, genre, query, total, movies, retry, toggleFavorite }),
+    [status, genre, query, total, movies, retry, toggleFavorite]
   );
 
   return (
