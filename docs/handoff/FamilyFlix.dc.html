@@ -487,10 +487,10 @@
             goBrowse:()=>this.goBrowse(), backFromDetail:()=>this.backFromDetail(),
             genreView:s.genreView, genrePageList:this.genrePageMovies().map(m=>this.view(m)), genreNoResults:this.genrePageMovies().length===0,
             genreSearch:s.genreSearch, onGenreSearch:(e)=>this.onGenreSearch(e),
-            genreCountLabel:(function(self){ if(!s.genreView) return ''; const all=self.rawMovies.filter(m=>m.genres.includes(s.genreView)).length; const shown=self.genrePageMovies().length; return shown===all? all+' titles' : shown+' of '+all+' titles'; })(this),
+            genreCountLabel:(function(self){ if(!s.genreView) return ''; const all=self.rawMovies.filter(m=>m.genres.includes(s.genreView)).length; const shown=self.genrePageMovies().length; const noun=all===1?' title':' titles'; return shown===all? all+noun : shown+' of '+all+noun; })(this),
             genreModel:{
               onBack:()=>this.goBrowse(), name:s.genreView,
-              countLabel:(function(self){ if(!s.genreView) return ''; const all=self.rawMovies.filter(m=>m.genres.includes(s.genreView)).length; const shown=self.genrePageMovies().length; return shown===all? all+' titles' : shown+' of '+all+' titles'; })(this),
+              countLabel:(function(self){ if(!s.genreView) return ''; const all=self.rawMovies.filter(m=>m.genres.includes(s.genreView)).length; const shown=self.genrePageMovies().length; const noun=all===1?' title':' titles'; return shown===all? all+noun : shown+' of '+all+noun; })(this),
               search:s.genreSearch, onSearch:(e)=>this.onGenreSearch(e), searchPlaceholder:'Search in '+(s.genreView||''),
               sortValue:sortLabel, sortOpen:s.openDrop==='sort', onToggleSort:()=>this.toggleSort(), sortOptions,
               movies:this.genrePageMovies().map(m=>this.view(m)), noResults:this.genrePageMovies().length===0,
