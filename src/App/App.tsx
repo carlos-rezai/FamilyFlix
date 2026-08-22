@@ -16,11 +16,11 @@ import SettingsPage from '@/pages/SettingsPage/SettingsPage';
  * `BrowserRouter`, tests a `MemoryRouter`), so the app can be mounted at any
  * entry URL.
  *
- * `/movie/:id` is the browse home's destination and a real screen; `/genre/:name`,
- * `/movie/:id/play` and `/add` are placeholders. The URLs are the stable part —
- * each real screen lands behind the one already pointed at, without any link
- * changing, which is why every link in the app can be honest before the screen
- * behind it exists.
+ * `/movie/:id` and `/genre/:name` are the browse home's two destinations and
+ * both real screens; `/movie/:id/play` and `/add` are placeholders. The URLs are
+ * the stable part — each real screen lands behind the one already pointed at,
+ * without any link changing, which is why every link in the app can be honest
+ * before the screen behind it exists.
  */
 export default function App() {
   return (
