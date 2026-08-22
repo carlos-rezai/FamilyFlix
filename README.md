@@ -244,7 +244,7 @@ Builds the installer and publishes it to GitHub Releases automatically.
 | Movie detail page (synopsis, director, cast)        | ✅ Done         |
 | Search + filter (title, genre, rating)              | ✅ Done         |
 | Genre page — every movie in one genre, uncapped     | 🔜 Planned      |
-| Sort (recent, A–Z, year, rating, unwatched)         | 🔜 Planned      |
+| Sort (recent, A–Z, year, rating, unwatched)         | ✅ Done         |
 | Ratings — 5-star display + half-star picker         | 🔜 Planned      |
 | Favorites — mark + dedicated row                    | 🔜 Planned      |
 | Continue Watching row                               | 🔜 Planned      |
