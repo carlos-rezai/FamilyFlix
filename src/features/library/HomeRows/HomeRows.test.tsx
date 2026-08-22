@@ -5,13 +5,20 @@ import {
   fireEvent,
   waitFor,
   within,
+  act,
 } from '@testing-library/react';
 import { ThemeProvider } from 'styled-components';
 import { MemoryRouter, useLocation, useNavigate } from 'react-router-dom';
 
 import { HomeRows } from './HomeRows';
 import { theme } from '@/styles/theme';
-import type { HomePayload, HomeRow, Movie } from '@/types';
+import {
+  MOVIE_SORTS,
+  type HomePayload,
+  type HomeRow,
+  type Movie,
+} from '@/types';
+import { toGenreQueryParams } from '@/utils';
 
 function makeMovie(overrides: Partial<Movie> = {}): Movie {
   return {
@@ -196,14 +203,28 @@ function respondWithRows(rows: HomeRow[], continueWatching: Movie[] = []) {
   });
 }
 
-/** Reports where the router has been sent, so a click's destination is visible. */
+/**
+ * Reports where the router has been sent, so a click's destination is visible —
+ * the path and the query string apart, because a destination's cleanliness is a
+ * claim about the second one on its own.
+ */
 function LocationProbe() {
   const location = useLocation();
-  return <div data-testid="location">{location.pathname}</div>;
+  return (
+    <>
+      <div data-testid="location">{location.pathname}</div>
+      <div data-testid="search">{location.search}</div>
+    </>
+  );
 }
 
 function currentPath() {
   return screen.getByTestId('location').textContent;
+}
+
+/** The query string the router currently carries, `?sort=a-z` and the like. */
+function currentSearch() {
+  return screen.getByTestId('search').textContent;
 }
 
 function renderRows(url = '/') {
@@ -680,5 +701,123 @@ describe('HomeRows — a rating that matched nothing', () => {
 
     await findGenreHeading(LIBRARY[0].genre);
     expect(screen.queryByText('Nothing here')).toBeNull();
+  });
+});
+
+/**
+ * 06 — Genre page, Phase 5: "the carried sort on View all" (issue #50). The
+ * **Carried sort**: the order the parent put the library in survives the route
+ * change, because "View all" spells it into the link rather than leaving it in
+ * hidden global state for the next screen to find. `/genre/Action` is a
+ * different URL from `/`, so an order left unspoken here is an order silently
+ * dropped back to Recently Added by nothing but a route change.
+ *
+ * The destination's path and its query string are asserted apart, because
+ * "clean" is a claim about the second one on its own.
+ */
+describe('HomeRows — the carried sort on View all', () => {
+  /**
+   * A genre whose name has a space in it, so the path encoding and the carried
+   * parameter are seen surviving the same click.
+   */
+  const SPACED: HomeRow[] = [
+    {
+      genre: 'Science Fiction',
+      count: 4,
+      movies: [makeMovie({ id: 's1', title: 'Orbital Drift' })],
+    },
+  ];
+
+  /** That genre row's "View all 214 →" control. */
+  function viewAllIn(genre: string) {
+    return within(screen.getByRole('region', { name: genre })).getByRole(
+      'button',
+      { name: /view all/i }
+    );
+  }
+
+  /**
+   * Load the home at `url`, then press one row's "View all".
+   *
+   * The rows stay mounted behind the destination here, and a destination that
+   * carries a different query reloads them — so the home is served durably and
+   * that reload is let land, leaving the assertions about the URL alone.
+   */
+  async function openAll(url: string, genre: string, rows = LIBRARY) {
+    serve(rows);
+    renderRows(url);
+    await findGenreHeading(genre);
+    fireEvent.click(viewAllIn(genre));
+    await act(async () => undefined);
+  }
+
+  it('carries the order the library is in into the genre page', async () => {
+    await openAll('/?sort=a-z', 'Action');
+
+    expect(currentPath()).toBe('/genre/Action');
+    expect(currentSearch()).toBe('?sort=a-z');
+  });
+
+  it('goes to a clean path, with no query string at all, at the default order', async () => {
+    // A copied link to a default-order genre page is the screen the parent is
+    // looking at, not a longhand of it.
+    await openAll('/', 'Action');
+
+    expect(currentPath()).toBe('/genre/Action');
+    expect(currentSearch()).toBe('');
+  });
+
+  it('still goes clean when the URL spells the default order out', async () => {
+    // `?sort=recently-added` and no sort at all are the same library, so they
+    // are the same destination.
+    await openAll('/?sort=recently-added', 'Action');
+
+    expect(currentSearch()).toBe('');
+  });
+
+  it('never carries an order the rows are not actually in', async () => {
+    // A hand-edited or stale `?sort=` the parser drops leaves the home in the
+    // default order; the link must say what the rows say, not what the URL did.
+    await openAll('/?sort=nonsense', 'Action');
+
+    expect(currentPath()).toBe('/genre/Action');
+    expect(currentSearch()).toBe('');
+  });
+
+  it.each(MOVIE_SORTS)(
+    'carries the %s order exactly as the genre page spells it',
+    async (sort) => {
+      // The link is written by the same serializer the genre page reads back,
+      // so a hand-assembled query string cannot pass this.
+      const expected = toGenreQueryParams({ sort }).toString();
+
+      await openAll(`/?sort=${sort}`, 'Action');
+
+      expect(currentSearch()).toBe(expected === '' ? '' : `?${expected}`);
+    }
+  );
+
+  it('leaves the search text behind', async () => {
+    // A fresh, narrower search starts on the genre page; the header's own empty
+    // box is what covers that.
+    await openAll('/?q=comet&sort=a-z', 'Action');
+
+    expect(currentSearch()).toBe('?sort=a-z');
+  });
+
+  it('leaves the home’s genre and rating filters behind', async () => {
+    // The genre travels in the path, and the genre page has no rating control —
+    // a parameter it cannot show is one it must never be handed.
+    await openAll('/?genre=Action&rating=8&sort=a-z', 'Action');
+
+    expect(currentPath()).toBe('/genre/Action');
+    expect(currentSearch()).toBe('?sort=a-z');
+  });
+
+  it('encodes a genre name with a space in it and carries the order alongside', async () => {
+    await openAll('/?sort=a-z', 'Science Fiction', SPACED);
+
+    expect(currentPath()).toBe('/genre/Science%20Fiction');
+    expect(currentSearch()).toBe('?sort=a-z');
   });
 });

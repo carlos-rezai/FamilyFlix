@@ -1,5 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, within } from '@testing-library/react';
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  within,
+  act,
+} from '@testing-library/react';
 import { MemoryRouter, useLocation, useNavigate } from 'react-router-dom';
 
 import App from './App';
@@ -549,5 +556,101 @@ describe('App — the genre screen behind “View all”', () => {
     expect(currentSearch()).toBe('?q=north&sort=a-z');
     await screen.findByText('1 of 214 titles');
     expect(screenBody().scrollTop).toBe(1240);
+  });
+});
+
+/**
+ * 06 — Genre page, Phase 5: "the carried sort on View all" (issue #50). The
+ * **Carried sort**, end to end: the order the parent put the library in is
+ * still the order the genre page opens in, because "View all" carried it in
+ * the link. `/genre/:name` is a different URL from `/`, so without this the
+ * order is dropped back to Recently Added by nothing but a route change.
+ *
+ * Science Fiction is the genre under test because its four movies read
+ * differently in the two orders, and its name has a space in it — the path
+ * encoding and the carried parameter survive the same click.
+ */
+describe('App — the order carried from the home to the genre page', () => {
+  /** The scrolling body of whichever screen is up — what follows its header. */
+  function screenBody() {
+    return screen.getByRole('banner').nextElementSibling as HTMLElement;
+  }
+
+  /**
+   * The accessible name of every poster card, in the order they are rendered.
+   * Scoped to the scrolling body, so the header's own announcing controls
+   * ("Sort: Recently Added") are never mistaken for cards.
+   */
+  function cardTitles() {
+    return within(screenBody())
+      .queryAllByRole('button')
+      .map((button) => button.getAttribute('aria-label'))
+      .filter(
+        (label): label is string => label !== null && label !== 'Favorite'
+      );
+  }
+
+  /** How many times the browse home has been asked for. */
+  function homeRequests() {
+    return fetchMock.mock.calls.filter(([input]) =>
+      String(input).includes('/api/home')
+    ).length;
+  }
+
+  /** Put the library in one order the way a parent does — through the pill. */
+  async function chooseSort(label: string) {
+    const pill = screen.getByRole('button', { name: /^Sort: / });
+    act(() => pill.focus());
+    fireEvent.click(pill);
+    fireEvent.click(screen.getByRole('menuitem', { name: label }));
+    await waitFor(() => expect(homeRequests()).toBe(2));
+  }
+
+  it('opens the genre page in the order the home was in', async () => {
+    renderApp();
+    await screen.findByRole('heading', { name: 'Science Fiction' });
+
+    await chooseSort('Title (A–Z)');
+    const sciFi = within(
+      screen.getByRole('region', { name: 'Science Fiction' })
+    );
+    fireEvent.click(sciFi.getByRole('button', { name: /view all 4/i }));
+
+    expect(currentPath()).toBe('/genre/Science%20Fiction');
+    expect(currentSearch()).toBe('?sort=a-z');
+    await screen.findByText('4 titles');
+    // The server owns the order; the grid renders the answer it gave.
+    expect(cardTitles()).toEqual([
+      'Orbital Drift',
+      'Quiet Harbor',
+      'The Long Night',
+      'Zenith',
+    ]);
+    expect(
+      screen.getByRole('button', { name: 'Sort: Title (A–Z)' })
+    ).toBeDefined();
+  });
+
+  it('opens a clean genre page, in the library’s own order, at the default', async () => {
+    renderApp();
+    await screen.findByRole('heading', { name: 'Science Fiction' });
+
+    const sciFi = within(
+      screen.getByRole('region', { name: 'Science Fiction' })
+    );
+    fireEvent.click(sciFi.getByRole('button', { name: /view all 4/i }));
+
+    expect(currentPath()).toBe('/genre/Science%20Fiction');
+    expect(currentSearch()).toBe('');
+    await screen.findByText('4 titles');
+    expect(cardTitles()).toEqual([
+      'Quiet Harbor',
+      'Orbital Drift',
+      'The Long Night',
+      'Zenith',
+    ]);
+    expect(
+      screen.getByRole('button', { name: 'Sort: Recently Added' })
+    ).toBeDefined();
   });
 });
