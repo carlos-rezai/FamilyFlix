@@ -11,6 +11,200 @@ Newest entry first.
 
 ---
 
+## 2026-08-22 — Genre page (issues #42–#51)
+
+Closed the last dead end in browse-and-discover. `/genre/:name` had been a
+registered placeholder since `03-card-carousel`, and every genre row still ended
+in a "View all 214 →" that landed on an `<h1>` and a line of prose. A row caps at
+`HOME_ROW_LIMIT`, so for a 214-title genre the other 199 were unreachable by any
+route in the app — not by scrolling, not by search, not by any filter. Eight
+build issues, #43–#50, each a `test:` commit stopping at RED and a `feat:` commit
+taking it green, plus the prototype amendment. 1279 tests pass. Plan:
+`docs/PRDs/06-genre-page-plan.md`.
+
+Nothing new is stored and no schema moved. `listMovies` already took every filter
+this screen needs and `listGenres` already returned the count "View all 214"
+promised, so what this feature built is a second screen over primitives that were
+already there — and the header/body split that a screen whose heading depends on
+its body's payload forces.
+
+### The decision everything else follows from
+
+**The heading is a fact about what the grid below it loaded.** "12 of 214 titles"
+is not something the header can know on its own, and a header that fetches
+separately from its body is two requests and two chances to disagree with each
+other. `GenreMovies` is the answer: a feature-local provider owning the one
+fetch, the `loading` / `ready` / `error` machine, `retry` and the optimistic
+`toggleFavorite`, with `useGenreMovies()` as what the heading and the grid both
+read. Calling a hook in both subtrees would mean two requests; lifting the fetch
+into `GenrePage` would put data logic in a page, which the layer rules forbid.
+
+That shape — a fixed header and a scrolling body over one payload — is the thing
+this feature actually contributes to the codebase. Favorites, a flat
+search-results page and a collection all copy it rather than re-deriving it.
+
+### What shipped
+
+**One request answers the whole screen.** `GET /api/genre/:name?q=&sort=`, served
+by `createGenre(browse)` sitting beside `createHome(browse)` and built the same
+way — a composition over the existing `Browse` slice, so no new SQL and no new
+repository primitive appeared. `total` is `listGenres()` matched by name; `movies`
+is `listMovies({ ...query, genre: name })` with **no cap**, because this screen
+_is_ "View all". The rejected alternative — `/movies` for the list plus `/genres`
+for the number — is the fan-out `getHome` was built to avoid, and would have
+forced `features/library` to import `features/search`'s `useGenreList` so that one
+screen could print a number.
+
+**`total` is the genre's unfiltered count, on purpose.** It stays the number the
+row's "View all 214" already promised while a search narrows the grid underneath
+it, which is what makes "12 of 214 titles" true rather than a tautology. Both the
+count label and the grid are built from that one payload, so the header can never
+disagree with what is under it.
+
+**The genre travels in the path; the query travels in the URL.** Two parameters,
+each omitted at its default, so a plain genre page is a clean `/genre/Drama`.
+`parseGenreQuery` and `toGenreQueryParams` are exact inverses carrying the same
+round-trip property test their library-query siblings carry, and they share
+`isMovieSort` with them. Deliberately **not** a parametrised `parseLibraryQuery`:
+one shared parser would build a screen that silently honours a hand-edited
+`?rating=7` it has no control to display.
+
+**The rating filter does not apply here at all.** A deliberate deviation from the
+prototype's _behaviour_ — `FamilyFlix.dc.html:320`'s `genrePageMovies()` calls
+`passRating` — but not from its _surface_, where the genre header has no rating
+pill. Reproduce the surface exactly; never port a filter with no control. The
+route ignores `genre` and `rating` outright rather than rejecting them, so an old
+bookmark still opens.
+
+**A second layout, not a `MainLayout` variant.** `GenreLayout` is a Back pill, a
+`heading` slot, a `headerEnd` slot and a `useRestoredScroll` body that is the only
+thing on the screen that overflows — so the header stays reachable all the way
+down a 214-card shelf. No logo, no gear. Bending `MainLayout` to cover both would
+have made it a component with two unrelated modes. `MainLayout` is untouched.
+
+**Two extractions, each switching its existing call site in the same commit**, so
+no interim second copy ever existed. `useGoBack` came out of `MoviePage` in the
+phase `GenreLayout`'s Back pill became its second consumer — a history step with a
+`/` fallback only when `location.key` is the session's first entry, so a
+deep-linked genre page never shows a dead button, and a step rather than a link
+home is what preserves the library's filters and its restored scroll.
+`useSettledText` came out of `LibrarySearch` in the phase `GenreControls` became
+_its_ second consumer. `LibrarySearch`'s docblock claimed the debounce "lives here
+and nowhere else"; the extraction is what kept that sentence true rather than
+letting it quietly become false. Both existing test files are unmodified and still
+pass, which is the guard that the extractions changed nothing.
+
+**The two empty states are told apart by the genre's unfiltered total**, not by
+whether a search is present. "Nothing here — There are no movies in Action." has
+no Retry; "No matches — Nothing in Action matches “lighthouse”." quotes the term
+back so a typo is spottable. Keying off the total is what stops a search running
+over an already-empty genre being blamed for a miss it did not cause.
+
+**The skeleton does not come back.** Twelve cards on the very first load only; a
+refetch on a settled-query change keeps the grid on screen rather than flashing
+the skeleton back, the same discipline `useHomeRows` follows. The in-flight latch
+covers `retry` as well as a query change, so a stale response can never overwrite
+a newer one.
+
+**The carried sort travels through the link, not through hidden state.**
+`HomeRows` serializes the order through `toGenreQueryParams` — the same writer the
+genre page reads back — and off the _settled_ query rather than the raw URL, so a
+stale or unrecognised `?sort=` carries nothing. At the default it writes nothing
+and the path stays a clean `/genre/Drama`. The search text stays behind
+deliberately: the genre's box is a fresh, narrower search, relabelled
+"Search in {genre}".
+
+**`LibraryGrid` reuses the exported `CARD_WIDTH`** rather than declaring a second
+magic number, so the uncapped grid and the capped carousels cannot drift apart. A
+wide window gets more columns rather than wider cards.
+
+**`withFavorite` gained a flat-list sibling**, with the existing rows variant
+expressed in terms of it — one concept, two shapes, one folder.
+
+### Two ordering corrections the plan made against the PRD
+
+Both closed a gap where a phase would otherwise have depended on something
+shipping later.
+
+- **`useGoBack` moved from Phase 5 into Phase 3.** `GenreLayout` owns the Back
+  pill, so Phase 3 was the rule's first new consumer; extracting in Phase 5 would
+  have meant Phases 3–4 carrying an inline second copy of exactly the rule the
+  extraction exists to prevent.
+- **The prototype amendment moved from Phase 6 into Phase 4.**
+  `FamilyFlix.dc.html:490` read "1 titles". CLAUDE.md says amend the prototype
+  first, then build to the amended prototype, and `genreCountLabel` singularises
+  in Phase 4 — so the amendment opened that phase as `0f19a23` rather than
+  trailing the build it governs.
+
+### Deliberately not changed
+
+- **`GET /api/movies` kept its behaviour exactly.** Only its comment changed: it
+  stopped claiming to serve the genre page and is now described as the generic
+  browse endpoint the CSV exporter will read the library through.
+- **`GenreQuery` keeps a required `sort`** because it is the URL contract type and
+  a URL always carries an order, even an implicit one. The repository method takes
+  a `Partial` of it instead, so a server caller can name only the part it cares
+  about and an omitted sort means the default order. Two shapes for two jobs, in
+  preference to one optional field pretending to serve both.
+- **No client-side re-sorting of a loaded grid, and no client-side filtering of a
+  payload already held.** The server owns order and narrowing, as `05` decided.
+- **The two query parsers stay separate**, per the reasoning above. Note that this
+  was an argument about _vocabulary_, not about mechanics — see the follow-ups.
+
+### The production line bent to suit a test runner
+
+`GenreLayout`'s spacer is `flex-grow` / `flex-shrink` / `flex-basis` longhand
+rather than the `flex` shorthand `MainLayout` uses, purely because jsdom does not
+expand the shorthand and the test reads `flexGrow` back off the computed style.
+It is one line and it is commented where it sits, but it is a stylesheet written
+around a limitation of the test environment rather than around the design, and
+that is worth naming out loud rather than leaving as a curiosity for whoever next
+diffs the two layouts and wonders why they disagree.
+
+A smaller one in the same family: `App.test`'s `posterCards()` helper counted any
+labelled button as a card, so the genre header's new Sort pill read as a 215th. It
+is now scoped to the scrolling body, where the grid actually is; the two
+assertions it feeds are unchanged.
+
+### Follow-ups this feature surfaced
+
+- **The URL-write mechanic is duplicated verbatim.** `useGenreQuery` and
+  `useLibraryQuery` hold byte-identical copies of `setParam` — copy the current
+  params, set or delete one name, write with `replace: true` — and identical
+  `setSearch` and `setSort` on top of it. The design log's argument for keeping the
+  two hooks apart was about _vocabulary_: a shared **parser** would let a screen
+  accept filters it cannot display. That argument does not reach the **writer**,
+  which knows nothing about which parameters exist. Filed as #53.
+- **Router and scroll test scaffolding is copied ten and five times.** A
+  `LocationProbe` component appears in ten test files (with two different
+  `data-testid` values, so an assertion cannot be moved between them), and the
+  thirty-line jsdom scroll-metrics stub — `scrollTop` through a `WeakMap`, a fixed
+  `scrollHeight`, the `afterEach` that deletes the shadowing own-properties — in
+  five, differing only in one number. This feature added four copies of the first
+  and one of the second. Filed as #54.
+- **The genre page's five units sit flat in `features/library/`** alongside the
+  home-row units: `GenreGrid`, `GenreHeading`, `GenreMovies`, `genreCountLabel`
+  and `LibraryGrid` next to `GenreRow`, `HomeRows`, `RowSection` and the rest.
+  Sixteen folders in one feature, serving two screens. Whether that wants a
+  sub-grouping is a judgement call for the refactor rather than a defect.
+
+### The rows this feature did not tick
+
+The genre page is recorded in both feature lists as **🔜 Planned**, not ✅ Done,
+and issue #51 asked for it ticked. The standing rule is that a feature is Done
+after step 7–8 of the workflow — `request-refactor-plan` → `refactor` — and not
+when its build issues close; `813b546` reverted exactly such a tick on Search +
+Filter for exactly this reason. No refactor issue exists for the genre page yet,
+so the rows go in at 🔜 and the refactor is what flips them. The row did not
+previously exist in either list at all, so this is an addition rather than a
+deferred tick.
+
+The Sort ✅ correction, which `813b546` also reverted and which _has_ cleared the
+bar twice over (#35 built it, #41 refactored it), is deliberately not part of this
+entry — it is its own docs commit, tracked as #52.
+
+---
+
 ## 2026-08-19 — Search + Filter refactor (issue #41)
 
 Closed the debt the search + filter build left behind. The plan's fifteen commits
