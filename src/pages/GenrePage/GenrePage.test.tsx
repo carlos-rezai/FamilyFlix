@@ -1,5 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import {
+  render,
+  screen,
+  waitFor,
+  act,
+  fireEvent,
+} from '@testing-library/react';
 import { ThemeProvider } from 'styled-components';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 
@@ -154,5 +160,123 @@ describe('GenrePage', () => {
     renderPage();
 
     expect(screen.getByRole('status', { name: /loading/i })).toBeDefined();
+  });
+});
+
+/** How long the typing has to stop for before the URL is written. */
+const DEBOUNCE_MS = 250;
+
+/** The same genre, narrowed to the one title a search for "north" matches. */
+const NARROWED: GenrePayload = {
+  genre: 'Action',
+  total: 214,
+  movies: [ACTION.movies[0]],
+};
+
+/**
+ * The header's controls wired to the body's load, which is the whole reason
+ * this screen is composed rather than assembled twice: the search box and the
+ * Sort pill live in the fixed header, the grid scrolls under them, and one
+ * request answers both.
+ */
+describe('GenrePage — the header controls', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  /** Lets the request in flight land while the clock is being faked. */
+  async function flush() {
+    await act(async () => undefined);
+  }
+
+  /** Advances past the debounce and lets the refetch it causes land. */
+  async function settle() {
+    await act(async () => {
+      vi.advanceTimersByTime(DEBOUNCE_MS);
+    });
+    await flush();
+  }
+
+  function box() {
+    return screen.getByRole('textbox', {
+      name: 'Search in Action',
+    }) as HTMLInputElement;
+  }
+
+  function type(value: string) {
+    fireEvent.change(box(), { target: { value } });
+  }
+
+  it('puts both controls in the header, over the grid rather than in it', async () => {
+    serve(ACTION);
+
+    renderPage();
+    await flush();
+
+    const header = screen.getByRole('banner');
+
+    expect(header.contains(box())).toBe(true);
+    expect(
+      header.contains(
+        screen.getByRole('button', { name: 'Sort: Recently Added' })
+      )
+    ).toBe(true);
+    expect(
+      header.contains(screen.getByRole('button', { name: 'Northwind' }))
+    ).toBe(false);
+  });
+
+  it('narrows the grid and the count line from one refetch after the typing settles', async () => {
+    // Five keystrokes, one extra request: the app has exactly one debounce, and
+    // the count line the header prints comes from the same answer the grid did.
+    fetchMock.mockImplementation((input) =>
+      Promise.resolve(
+        okResponse(String(input).includes('q=north') ? NARROWED : ACTION)
+      )
+    );
+
+    renderPage();
+    await flush();
+    expect(screen.getByText('2 of 214 titles')).toBeDefined();
+
+    'north'.split('').forEach((_, index) => {
+      type('north'.slice(0, index + 1));
+      act(() => {
+        vi.advanceTimersByTime(50);
+      });
+    });
+    await settle();
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(screen.getByText('1 of 214 titles')).toBeDefined();
+    expect(screen.queryByRole('button', { name: 'Northern Star' })).toBeNull();
+  });
+
+  it('reorders the grid from the pill without dropping the search', async () => {
+    serve(ACTION);
+
+    renderPage('/genre/Action?q=north');
+    await flush();
+
+    const trigger = screen.getByRole('button', {
+      name: 'Sort: Recently Added',
+    });
+    act(() => trigger.focus());
+    fireEvent.click(trigger);
+    act(() => {
+      screen.getByRole('menuitem', { name: 'Title (A–Z)' }).click();
+    });
+    await flush();
+
+    const requested = String(fetchMock.mock.calls.at(-1)?.[0]);
+    expect(requested).toContain('sort=a-z');
+    expect(requested).toContain('q=north');
+    expect(
+      screen.getByRole('button', { name: 'Sort: Title (A–Z)' })
+    ).toBeDefined();
   });
 });
