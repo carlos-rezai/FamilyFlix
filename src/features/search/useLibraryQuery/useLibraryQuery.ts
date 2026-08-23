@@ -4,6 +4,8 @@ import { useSearchParams } from 'react-router-dom';
 import { DEFAULT_MOVIE_SORT, type LibraryQuery, type MovieSort } from '@/types';
 import { parseLibraryQuery } from '@/utils';
 
+import { useQueryParamWriter } from '../useQueryParamWriter/useQueryParamWriter';
+
 export interface UseLibraryQueryResult {
   /** The settled query the URL is currently carrying. */
   query: LibraryQuery;
@@ -33,29 +35,11 @@ export interface UseLibraryQueryResult {
  * out of a movie.
  */
 export function useLibraryQuery(): UseLibraryQueryResult {
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
 
   const query = useMemo(() => parseLibraryQuery(searchParams), [searchParams]);
 
-  // One parameter at a time, copied off whatever the URL currently holds, so a
-  // setter can only ever add, replace or remove its own.
-  const setParam = useCallback(
-    (name: string, value: string, omitAt: string) => {
-      setSearchParams(
-        (current) => {
-          const next = new URLSearchParams(current);
-          if (value === omitAt) {
-            next.delete(name);
-          } else {
-            next.set(name, value);
-          }
-          return next;
-        },
-        { replace: true }
-      );
-    },
-    [setSearchParams]
-  );
+  const setParam = useQueryParamWriter();
 
   const setSearch = useCallback(
     (value: string) => setParam('q', value, ''),

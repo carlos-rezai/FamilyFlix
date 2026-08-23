@@ -4,6 +4,8 @@ import { useSearchParams } from 'react-router-dom';
 import { DEFAULT_MOVIE_SORT, type GenreQuery, type MovieSort } from '@/types';
 import { parseGenreQuery } from '@/utils';
 
+import { useQueryParamWriter } from '../useQueryParamWriter/useQueryParamWriter';
+
 export interface UseGenreQueryResult {
   /** The settled query the URL is currently carrying. */
   query: GenreQuery;
@@ -32,29 +34,11 @@ export interface UseGenreQueryResult {
  * out of the genre.
  */
 export function useGenreQuery(): UseGenreQueryResult {
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
 
   const query = useMemo(() => parseGenreQuery(searchParams), [searchParams]);
 
-  // One parameter at a time, copied off whatever the URL currently holds, so a
-  // setter can only ever add, replace or remove its own.
-  const setParam = useCallback(
-    (name: string, value: string, omitAt: string) => {
-      setSearchParams(
-        (current) => {
-          const next = new URLSearchParams(current);
-          if (value === omitAt) {
-            next.delete(name);
-          } else {
-            next.set(name, value);
-          }
-          return next;
-        },
-        { replace: true }
-      );
-    },
-    [setSearchParams]
-  );
+  const setParam = useQueryParamWriter();
 
   const setSearch = useCallback(
     (value: string) => setParam('q', value, ''),
