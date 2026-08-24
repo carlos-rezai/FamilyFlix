@@ -2,7 +2,7 @@ import type { ContinueCardMovie } from '@/types';
 import {
   CardCarousel,
   type ContinueCarouselItem,
-} from '../CardCarousel/CardCarousel';
+} from '../../CardCarousel/CardCarousel';
 import { RowSection } from '../RowSection/RowSection';
 
 /**

@@ -4,7 +4,7 @@ import { LoadMessage } from '@/components';
 import { range, toGenreQueryParams } from '@/utils';
 import { ContinueRow } from '../ContinueRow/ContinueRow';
 import { GenreRow } from '../GenreRow/GenreRow';
-import { RetryableFailure } from '../RetryableFailure/RetryableFailure';
+import { RetryableFailure } from '../../RetryableFailure/RetryableFailure';
 import { useHomeRows } from '../useHomeRows/useHomeRows';
 import {
   SkeletonSection,

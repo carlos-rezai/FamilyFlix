@@ -2,7 +2,7 @@ import type { GenreRowModel } from '@/types';
 import {
   CardCarousel,
   type PosterCarouselItem,
-} from '../CardCarousel/CardCarousel';
+} from '../../CardCarousel/CardCarousel';
 import { RowSection } from '../RowSection/RowSection';
 import { ViewAll, ViewAllArrow } from './GenreRow.styles';
 

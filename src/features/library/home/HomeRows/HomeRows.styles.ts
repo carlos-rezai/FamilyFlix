@@ -1,8 +1,8 @@
 import styled from 'styled-components';
 
 import { Skeleton } from '@/primitives';
-import { CARD_WIDTH } from '../CardCarousel/CardCarousel.styles';
-import { SkeletonCard as PosterPlaceholder } from '../SkeletonCard/SkeletonCard';
+import { CARD_WIDTH } from '../../CardCarousel/CardCarousel.styles';
+import { SkeletonCard as PosterPlaceholder } from '../../SkeletonCard/SkeletonCard';
 
 export const SkeletonSection = styled.div`
   margin-bottom: ${({ theme }) => theme.space.s7};

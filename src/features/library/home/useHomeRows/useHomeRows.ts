@@ -3,12 +3,12 @@ import { useSearchParams } from 'react-router-dom';
 
 import type { ContinueCardMovie, GenreRowModel, LibraryQuery } from '@/types';
 import { parseLibraryQuery, toLibraryQueryParams } from '@/utils';
-import { fetchHomePayload, saveFavorite } from '../api/api';
+import { fetchHomePayload, saveFavorite } from '../../api/api';
 import { continueView } from '../continueView/continueView';
 import { toGenreRow } from '../toGenreRow/toGenreRow';
-import { useBrowseLoad } from '../useBrowseLoad/useBrowseLoad';
-import { useOptimisticSave } from '../useOptimisticSave/useOptimisticSave';
-import { withFavorite } from '../withFavorite/withFavorite';
+import { useBrowseLoad } from '../../useBrowseLoad/useBrowseLoad';
+import { useOptimisticSave } from '../../useOptimisticSave/useOptimisticSave';
+import { withFavorite } from '../../withFavorite/withFavorite';
 
 /** The home payload as the two sections render it, mapped once as it lands. */
 interface HomeSections {

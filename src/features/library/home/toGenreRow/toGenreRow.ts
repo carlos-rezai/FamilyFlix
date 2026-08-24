@@ -1,5 +1,5 @@
 import type { GenreRowModel, HomeRow } from '@/types';
-import { view } from '../view/view';
+import { view } from '../../view/view';
 
 /**
  * Maps one row of the home payload to the row a `GenreRow` renders: the genre

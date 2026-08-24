@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 
 import { toGenreRow } from './toGenreRow';
-import { view } from '../view/view';
+import { view } from '../../view/view';
 import type { Movie } from '@/types';
 
 function makeMovie(overrides: Partial<Movie> = {}): Movie {

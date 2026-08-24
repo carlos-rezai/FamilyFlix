@@ -1,4 +1,4 @@
-import { HomeRows } from '@/features/library/HomeRows/HomeRows';
+import { HomeRows } from '@/features/library/home/HomeRows/HomeRows';
 import { LibraryFilters } from '@/features/search/LibraryFilters/LibraryFilters';
 import { LibrarySearch } from '@/features/search/LibrarySearch/LibrarySearch';
 import { MainLayout } from '@/layouts/MainLayout/MainLayout';
