@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
 import type { ContinueCardMovie, GenreRowModel, LibraryQuery } from '@/types';
@@ -6,7 +6,30 @@ import { parseLibraryQuery, toLibraryQueryParams } from '@/utils';
 import { fetchHomePayload, saveFavorite } from '../api/api';
 import { continueView } from '../continueView/continueView';
 import { toGenreRow } from '../toGenreRow/toGenreRow';
+import { useBrowseLoad } from '../useBrowseLoad/useBrowseLoad';
 import { withFavorite } from '../withFavorite/withFavorite';
+
+/** The home payload as the two sections render it, mapped once as it lands. */
+interface HomeSections {
+  rows: GenreRowModel[];
+  continueWatching: ContinueCardMovie[];
+}
+
+/**
+ * What the screen has before a load has succeeded. One frozen value rather than
+ * a fresh `[]` per render, so a consumer memoised on these sections is not
+ * re-rendered by a hook that has nothing new to tell it.
+ */
+const NO_SECTIONS: HomeSections = { rows: [], continueWatching: [] };
+
+/** Both sections, render-ready, from one aggregate response. */
+async function loadSections(query: LibraryQuery): Promise<HomeSections> {
+  const payload = await fetchHomePayload(query);
+  return {
+    rows: payload.rows.map(toGenreRow),
+    continueWatching: payload.continueWatching.map(continueView),
+  };
+}
 
 /** Where the load is: never both loading and errored, never rows without `ready`. */
 export type HomeRowsStatus = 'loading' | 'ready' | 'error';
@@ -56,12 +79,6 @@ export interface UseHomeRowsResult {
  */
 export function useHomeRows(): UseHomeRowsResult {
   const [searchParams] = useSearchParams();
-  const [status, setStatus] = useState<HomeRowsStatus>('loading');
-  const [rows, setRows] = useState<GenreRowModel[]>([]);
-  const [continueWatching, setContinueWatching] = useState<ContinueCardMovie[]>(
-    []
-  );
-  const [attempt, setAttempt] = useState(0);
 
   // The settled query written back out the way the URL spells it — the shared
   // parser's answer, so a stale, hand-edited or hostile URL is made safe here
@@ -83,53 +100,43 @@ export function useHomeRows(): UseHomeRowsResult {
     [settled]
   );
 
-  useEffect(() => {
-    let current = true;
-    // A query change with rows already on screen keeps them; only a load with
-    // nothing to show falls back to the skeleton.
-    setStatus((previous) => (previous === 'ready' ? 'ready' : 'loading'));
+  const { status, data, setData, retry } = useBrowseLoad(
+    () => loadSections(query),
+    settled
+  );
 
-    fetchHomePayload(query)
-      .then((payload) => {
-        if (!current) {
-          return;
-        }
-        setRows(payload.rows.map(toGenreRow));
-        setContinueWatching(payload.continueWatching.map(continueView));
-        setStatus('ready');
-      })
-      .catch(() => {
-        if (!current) {
-          return;
-        }
-        setRows([]);
-        setContinueWatching([]);
-        setStatus('error');
-      });
+  // A failed or unfinished load has no sections; the screen shows its own copy
+  // for that, never an empty grid pretending to be a loaded one.
+  const { rows, continueWatching } = data ?? NO_SECTIONS;
 
-    // A retry — or a newer query — that lands while an earlier load is still in
-    // flight must not have the abandoned response overwrite it.
-    return () => {
-      current = false;
-    };
-  }, [query, attempt]);
+  /** Applies a favorite value to the loaded rows, leaving nothing else moved. */
+  const applyFavorite = useCallback(
+    (id: string, favorite: boolean) =>
+      setData((current) =>
+        current === null
+          ? current
+          : { ...current, rows: withFavorite(current.rows, id, favorite) }
+      ),
+    [setData]
+  );
 
-  const retry = useCallback(() => setAttempt((n) => n + 1), []);
+  const toggleFavorite = useCallback(
+    (id: string, favorite: boolean) => {
+      applyFavorite(id, favorite);
 
-  const toggleFavorite = useCallback((id: string, favorite: boolean) => {
-    setRows((current) => withFavorite(current, id, favorite));
-
-    saveFavorite(id, favorite)
-      // The route echoes what it stored; trust that over what we assumed.
-      .then((saved) => {
-        if (saved !== favorite) {
-          setRows((current) => withFavorite(current, id, saved));
-        }
-      })
-      .catch(() => {
-        setRows((current) => withFavorite(current, id, !favorite));
-      });
-  }, []);
+      saveFavorite(id, favorite)
+        // The route echoes what it stored; trust that over what we assumed.
+        .then((saved) => {
+          if (saved !== favorite) {
+            applyFavorite(id, saved);
+          }
+        })
+        .catch(() => {
+          applyFavorite(id, !favorite);
+        });
+    },
+    [applyFavorite]
+  );
 
   return { status, query, rows, continueWatching, retry, toggleFavorite };
 }
