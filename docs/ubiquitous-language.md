@@ -78,12 +78,26 @@ Vocabulary for the units several screens draw from. These name our components,
 not anything the prototype adds — `docs/handoff/` gives the visual surface, and
 these give the shared code behind it a single agreed name.
 
-| Term                      | Definition                                                                                                                                                                                                                          | Aliases to avoid                 |
-| ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------- |
-| **Load message**          | The centred title + body + optional action block a screen shows instead of its content — an empty library, a failed load, a **Movie** that is gone. Named for the **Load state** three of its four uses are in.                     | empty state, error state, notice |
-| **Skeleton**              | One pulsing placeholder block held while content loads. Each screen arranges its own; only the surface and the pulse are shared.                                                                                                    | shimmer, ghost, loader, spinner  |
-| **Menu**                  | A popup panel opened by a caller-supplied trigger, closing on Escape, an outside press, or an activated item — returning focus to the trigger every time. The **Edit menu** and every **Filter dropdown** are ones.                 | dropdown, popover, context menu  |
-| **Header slot** (updated) | One of a layout's optional places for a screen's own controls — `MainLayout`'s `headerStart` / `headerEnd`, and `GenreLayout`'s `heading` / `headerEnd`. Every screen's chrome is a layout; only what fills the slots is a feature. | header prop, toolbar, actions    |
+| Term                      | Definition                                                                                                                                                                                                                                    | Aliases to avoid                 |
+| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------- |
+| **Load message**          | The centred title + body + optional action block a screen shows instead of its content — an empty library, a failed load, a **Movie** that is gone. Named for the **Load state** three of its four uses are in.                               | empty state, error state, notice |
+| **Skeleton**              | One pulsing placeholder block held while content loads. Each screen arranges its own; only the surface and the pulse are shared.                                                                                                              | shimmer, ghost, loader, spinner  |
+| **Menu**                  | A popup panel opened by a caller-supplied trigger, closing on Escape, an outside press, or an activated item — returning focus to the trigger every time. The **Edit menu** and every **Filter dropdown** are ones.                           | dropdown, popover, context menu  |
+| **Header slot** (updated) | One of a layout's optional places for a screen's own controls — `MainLayout`'s `headerStart` / `headerEnd`, and `GenreLayout`'s `heading` / `headerEnd`. Every screen's chrome is a layout; only what fills the slots is a feature.           | header prop, toolbar, actions    |
+| **Chrome** (new)          | The furniture every full-screen route sits in — the page filling the viewport once, the fixed header strip, the one scrolling body. Shared as styles both layouts extend (`layouts/chrome.styles.ts`), never as one layout extending another. | shell, frame, wrapper, container |
+
+## The browse load
+
+Vocabulary for the machinery both browse screens run on. These name one hook
+apiece, and the policies those hooks hold — policies that were previously stated
+twice, in two screens, with nothing holding them together.
+
+| Term                      | Definition                                                                                                                                                                                                                                                          | Aliases to avoid                        |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------- |
+| **Browse load** (new)     | One browse screen's request for a **Settled query**, with its **Load state**, its payload and its retry. `useBrowseLoad` in code, at `features/library`'s shared rung. Moves up to `src/hooks/` the day a second feature wants it.                                  | fetch hook, data hook, query hook       |
+| **Skeleton latch** (new)  | The rule a **Browse load** holds: once a screen is loaded, a refetch keeps what is painted and only a load with nothing behind it falls back to the **Skeleton**. Flashing the grid every time the typing settles would be unreadable. Stated in exactly one place. | loading flicker, stale-while-revalidate |
+| **Optimistic save** (new) | The bargain a flag keeps with the server: show the new value at once, take the route's echo over what was assumed, put the old value back if the save is refused. `useOptimisticSave` in code; the **Favorite** heart is the only one so far.                       | optimistic update, local write, cache   |
+| **Load key** (new)        | The string that says which **Browse load** a request is — the **Settled query** for the **Browse home**, that plus the **Genre** for a **Genre page**. Change it and the screen reloads; leave it and no amount of re-rendering asks again.                         | cache key, dependency, query id         |
 
 ## Search, filter & sort
 
@@ -144,6 +158,8 @@ deliberately parallel to the **Browse home**'s rather than shared with it.
 - A **Genre query** produces exactly one **Genre payload**, and both the **Genre count label** and the **Library grid** are built from it — the header can never disagree with the grid below it.
 - A **Genre total** comes from `listGenres()`, never from the **Genre payload**'s `movies.length`; the two are equal only when nothing narrows the grid.
 - A **View all** carries the **Sort order** to the **Genre page** as the **Carried sort**, but never the **Search text** — the **Genre header**'s **Search bar** starts empty.
+- `features/library` is grouped **by screen**, not by kind: `home/` holds the **Browse home**'s units, `genre/` holds the **Genre page**'s, and what both draw on stays at the top of the feature — the **Browse load**, the **Optimistic save**, the **Card carousel**, the **Library grid**, the shared skeleton card and the retryable failure. A third browse screen gets a third folder, not a third copy.
+- Both browse screens run one **Browse load** each, and both hold the **Skeleton latch** and the **Optimistic save** by using the same two hooks rather than by restating them.
 - A **Minimum rating** exists only in a **Library query**. The **Genre header** has no rating **Filter dropdown**, so the **Genre page** applies no rating floor at all.
 - A **Library grid** holds **Poster cards** only — never **Continue cards**, and never a **Card carousel**; it is the uncapped counterpart of a **Genre row**.
 - Every **Search bar** in the app gets its debounce from **Settled text**; there is exactly one such behavior, whatever the screen.
@@ -265,6 +281,12 @@ deliberately parallel to the **Browse home**'s rather than shared with it.
   the prototype's design — there is no image slot in `mol.ContinueCard`, unlike the
   **Poster card**. A **Movie**'s **Backdrop** would suit the 16:10 tile, but adding
   it is a **prototype amendment**, not an implementation choice.
+- **An empty `?sort=` is the default order, on all three endpoints (resolved):**
+  `/home` and `/genre/:name` have always read an empty value as "no sort at all"
+  and both have a test saying so. `GET /api/movies?sort=` disagreed and answered
+  400 — untested, unused by any client, and contradicted by its own comment.
+  Corrected under issue #55: all three now read it the same way, through one
+  parser. An **unknown** sort is still a 400 everywhere.
 - **"Hero" is still not a term:** the **Movie detail page**'s top art area is
   a slot, not a concept — it shows the **Backdrop** when there is one and the
   **Gradient fallback** otherwise. _Hero_ remains an alias to avoid for **Backdrop**;
