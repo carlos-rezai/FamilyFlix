@@ -338,6 +338,10 @@ describe('App — routing the browse home to its destinations', () => {
     fireEvent.click(back);
 
     expect(currentPath()).toBe('/');
+    // Back lands on the browse home, which loads. Wait for the rows the trip
+    // was for, rather than leaving the fetch to resolve into a tree the next
+    // test has already torn down.
+    await screen.findByRole('heading', { name: 'Action' });
   });
 
   it('does not open the movie when the favorite heart is clicked', async () => {
