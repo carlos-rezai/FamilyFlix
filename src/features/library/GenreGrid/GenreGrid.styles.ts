@@ -1,6 +1,5 @@
 import styled from 'styled-components';
 
-import { Skeleton } from '@/primitives';
 import { Grid } from '../LibraryGrid/LibraryGrid.styles';
 
 /**
@@ -10,17 +9,3 @@ import { Grid } from '../LibraryGrid/LibraryGrid.styles';
  * the eye when they do.
  */
 export const SkeletonGrid = styled(Grid)``;
-
-export const SkeletonCard = styled.div``;
-
-export const SkeletonPoster = styled(Skeleton)`
-  width: 100%;
-  aspect-ratio: 2 / 3;
-  border-radius: ${({ theme }) => theme.radius.md};
-`;
-
-export const SkeletonLine = styled(Skeleton)`
-  width: 70%;
-  height: 14px;
-  margin-top: 10px;
-`;

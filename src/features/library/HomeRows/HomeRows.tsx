@@ -2,7 +2,7 @@ import { useNavigate } from 'react-router-dom';
 
 import { LoadMessage } from '@/components';
 import { Button } from '@/primitives';
-import { toGenreQueryParams } from '@/utils';
+import { range, toGenreQueryParams } from '@/utils';
 import { ContinueRow } from '../ContinueRow/ContinueRow';
 import { GenreRow } from '../GenreRow/GenreRow';
 import { useHomeRows } from '../useHomeRows/useHomeRows';
@@ -13,15 +13,11 @@ import {
   SkeletonViewAll,
   SkeletonStrip,
   SkeletonCard,
-  SkeletonPoster,
-  SkeletonLine,
 } from './HomeRows.styles';
 
 /** Enough placeholder rows and cards to fill the fold while the library loads. */
 const SKELETON_ROWS = 3;
 const SKELETON_CARDS = 6;
-
-const range = (length: number) => Array.from({ length }, (_, index) => index);
 
 function LoadingRows() {
   return (
@@ -34,10 +30,7 @@ function LoadingRows() {
           </SkeletonHeader>
           <SkeletonStrip>
             {range(SKELETON_CARDS).map((card) => (
-              <SkeletonCard key={card}>
-                <SkeletonPoster />
-                <SkeletonLine />
-              </SkeletonCard>
+              <SkeletonCard key={card} />
             ))}
           </SkeletonStrip>
         </SkeletonSection>

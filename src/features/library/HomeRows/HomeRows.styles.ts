@@ -2,6 +2,7 @@ import styled from 'styled-components';
 
 import { Skeleton } from '@/primitives';
 import { CARD_WIDTH } from '../CardCarousel/CardCarousel.styles';
+import { SkeletonCard as PosterPlaceholder } from '../SkeletonCard/SkeletonCard';
 
 export const SkeletonSection = styled.div`
   margin-bottom: ${({ theme }) => theme.space.s7};
@@ -33,19 +34,11 @@ export const SkeletonStrip = styled.div`
   padding: ${({ theme }) => `4px ${theme.space.s6} ${theme.space.s5}`};
 `;
 
-export const SkeletonCard = styled.div`
+/**
+ * The shared placeholder, fixed to a card's width: these sit in a strip that
+ * scrolls sideways, so nothing else is there to size them.
+ */
+export const SkeletonCard = styled(PosterPlaceholder)`
   flex: 0 0 auto;
   width: ${`${CARD_WIDTH}px`};
-`;
-
-export const SkeletonPoster = styled(Skeleton)`
-  width: 100%;
-  aspect-ratio: 2 / 3;
-  border-radius: ${({ theme }) => theme.radius.md};
-`;
-
-export const SkeletonLine = styled(Skeleton)`
-  width: 70%;
-  height: 14px;
-  margin-top: 10px;
 `;

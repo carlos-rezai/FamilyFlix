@@ -11,6 +11,7 @@ export {
 export { formatClock } from './formatClock/formatClock';
 export { toRuntimeSeconds } from './toRuntimeSeconds/toRuntimeSeconds';
 export { isMovieSort } from './isMovieSort/isMovieSort';
+export { range } from './range/range';
 export {
   parseMinRating,
   RATING_CUTOFFS,

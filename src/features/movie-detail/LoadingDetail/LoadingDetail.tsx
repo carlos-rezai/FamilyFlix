@@ -1,3 +1,5 @@
+import { range } from '@/utils';
+
 // The frame is the real page's own, imported rather than copied: a skeleton
 // that traced its own columns would be free to drift out of alignment with the
 // screen it is standing in for, which is the one thing it must never do.
@@ -14,8 +16,6 @@ import {
 /** Enough placeholder chips and lines to fill the fold while the movie loads. */
 const SKELETON_CHIPS = 2;
 const SKELETON_LINES = 3;
-
-const range = (length: number) => Array.from({ length }, (_, index) => index);
 
 /**
  * The movie detail page's own shape, held while the movie loads, rather than a

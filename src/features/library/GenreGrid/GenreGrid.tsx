@@ -2,28 +2,20 @@ import { useNavigate } from 'react-router-dom';
 
 import { LoadMessage } from '@/components';
 import { Button } from '@/primitives';
+import { range } from '@/utils';
 import { LibraryGrid } from '../LibraryGrid/LibraryGrid';
 import { useGenreMovies } from '../GenreMovies/GenreMovies';
-import {
-  SkeletonGrid,
-  SkeletonCard,
-  SkeletonPoster,
-  SkeletonLine,
-} from './GenreGrid.styles';
+import { SkeletonCard } from '../SkeletonCard/SkeletonCard';
+import { SkeletonGrid } from './GenreGrid.styles';
 
 /** Enough placeholder tiles to fill the fold while the genre loads. */
 const SKELETON_CARDS = 12;
-
-const range = (length: number) => Array.from({ length }, (_, index) => index);
 
 function LoadingGrid({ genre }: { genre: string }) {
   return (
     <SkeletonGrid role="status" aria-label={`Loading ${genre}`}>
       {range(SKELETON_CARDS).map((card) => (
-        <SkeletonCard key={card} aria-hidden="true">
-          <SkeletonPoster />
-          <SkeletonLine />
-        </SkeletonCard>
+        <SkeletonCard key={card} />
       ))}
     </SkeletonGrid>
   );
