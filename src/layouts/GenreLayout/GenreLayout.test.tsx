@@ -11,6 +11,8 @@ import {
 
 import { GenreLayout, type GenreLayoutProps } from './GenreLayout';
 import { theme } from '@/styles/theme';
+import { comesBefore } from '@/test-support/comesBefore/comesBefore';
+import { headerSpacer } from '@/test-support/headerSpacer/headerSpacer';
 import { LocationProbe } from '@/test-support/LocationProbe/LocationProbe';
 import { stubScrollMetrics } from '@/test-support/stubScrollMetrics/stubScrollMetrics';
 
@@ -35,32 +37,6 @@ function renderLayout(
 const pathname = () => screen.getByTestId('pathname').textContent;
 
 const back = () => screen.getByRole('button', { name: 'Back' });
-
-/**
- * The header's flex spacer — the one child that grows to split the strip.
- *
- * Throws when the header has lost it, rather than handing back nothing for the
- * caller to assert around: a missing spacer is the failure, and it reads better
- * as one sentence here than as three tests going quiet about where their
- * elements sit relative to something that isn't there.
- */
-function headerSpacer(): Element {
-  const children = Array.from(screen.getByRole('banner').children);
-  const spacer = children.find(
-    (child) => getComputedStyle(child).flexGrow === '1'
-  );
-  if (!spacer) {
-    throw new Error('The header has no flex spacer to split the strip.');
-  }
-  return spacer;
-}
-
-/** Does `earlier` come before `later` in the document? */
-function comesBefore(earlier: Element, later: Element) {
-  return Boolean(
-    earlier.compareDocumentPosition(later) & Node.DOCUMENT_POSITION_FOLLOWING
-  );
-}
 
 /** The layout's scrolling body: the one thing the header is followed by. */
 function scrollingBody() {

@@ -5,6 +5,8 @@ import { MemoryRouter, Route, Routes, useNavigate } from 'react-router-dom';
 
 import { MainLayout, type MainLayoutProps } from './MainLayout';
 import { theme } from '@/styles/theme';
+import { comesBefore } from '@/test-support/comesBefore/comesBefore';
+import { headerSpacer } from '@/test-support/headerSpacer/headerSpacer';
 import { LocationProbe } from '@/test-support/LocationProbe/LocationProbe';
 import { stubScrollMetrics } from '@/test-support/stubScrollMetrics/stubScrollMetrics';
 
@@ -83,32 +85,6 @@ describe('MainLayout', () => {
  * reproduce that, so the chrome offers two — and learns nothing about the library
  * in the process. Both are structure: whatever a page hands in, it renders.
  */
-
-/**
- * The header's flex spacer — the one child that grows to split the strip.
- *
- * Throws when the header has lost it, rather than handing back nothing for the
- * caller to assert around: a missing spacer is the failure, and it reads better
- * as one sentence here than as three tests going quiet about where their
- * elements sit relative to something that isn't there.
- */
-function headerSpacer(): Element {
-  const children = Array.from(screen.getByRole('banner').children);
-  const spacer = children.find(
-    (child) => getComputedStyle(child).flexGrow === '1'
-  );
-  if (!spacer) {
-    throw new Error('The header has no flex spacer to split the strip.');
-  }
-  return spacer;
-}
-
-/** Does `earlier` come before `later` in the document? */
-function comesBefore(earlier: Element, later: Element) {
-  return Boolean(
-    earlier.compareDocumentPosition(later) & Node.DOCUMENT_POSITION_FOLLOWING
-  );
-}
 
 describe('MainLayout — the header slots', () => {
   it('renders both slots in the header, not in the body', () => {
