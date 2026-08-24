@@ -1,6 +1,6 @@
 import styled from 'styled-components';
 
-import { Grid } from '../LibraryGrid/LibraryGrid.styles';
+import { Grid } from '../../LibraryGrid/LibraryGrid.styles';
 
 /**
  * The first load, laid out on the grid it is about to become. It reuses

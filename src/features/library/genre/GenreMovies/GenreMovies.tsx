@@ -9,11 +9,11 @@ import { useParams, useSearchParams } from 'react-router-dom';
 
 import type { GenreQuery, PosterCardMovie } from '@/types';
 import { parseGenreQuery, toGenreQueryParams } from '@/utils';
-import { fetchGenrePayload, saveFavorite } from '../api/api';
-import { useBrowseLoad } from '../useBrowseLoad/useBrowseLoad';
-import { useOptimisticSave } from '../useOptimisticSave/useOptimisticSave';
-import { view } from '../view/view';
-import { withFavoriteInList } from '../withFavorite/withFavorite';
+import { fetchGenrePayload, saveFavorite } from '../../api/api';
+import { useBrowseLoad } from '../../useBrowseLoad/useBrowseLoad';
+import { useOptimisticSave } from '../../useOptimisticSave/useOptimisticSave';
+import { view } from '../../view/view';
+import { withFavoriteInList } from '../../withFavorite/withFavorite';
 
 /** One genre as this screen renders it, mapped once as the payload lands. */
 interface GenreScreen {

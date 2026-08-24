@@ -1,6 +1,6 @@
-import { GenreMoviesProvider } from '@/features/library/GenreMovies/GenreMovies';
-import { GenreHeading } from '@/features/library/GenreHeading/GenreHeading';
-import { GenreGrid } from '@/features/library/GenreGrid/GenreGrid';
+import { GenreMoviesProvider } from '@/features/library/genre/GenreMovies/GenreMovies';
+import { GenreHeading } from '@/features/library/genre/GenreHeading/GenreHeading';
+import { GenreGrid } from '@/features/library/genre/GenreGrid/GenreGrid';
 import { GenreControls } from '@/features/search/GenreControls/GenreControls';
 import { GenreLayout } from '@/layouts/GenreLayout/GenreLayout';
 

@@ -2,10 +2,10 @@ import { useNavigate } from 'react-router-dom';
 
 import { LoadMessage } from '@/components';
 import { range } from '@/utils';
-import { LibraryGrid } from '../LibraryGrid/LibraryGrid';
+import { LibraryGrid } from '../../LibraryGrid/LibraryGrid';
 import { useGenreMovies } from '../GenreMovies/GenreMovies';
-import { RetryableFailure } from '../RetryableFailure/RetryableFailure';
-import { SkeletonCard } from '../SkeletonCard/SkeletonCard';
+import { RetryableFailure } from '../../RetryableFailure/RetryableFailure';
+import { SkeletonCard } from '../../SkeletonCard/SkeletonCard';
 import { SkeletonGrid } from './GenreGrid.styles';
 
 /** Enough placeholder tiles to fill the fold while the genre loads. */
