@@ -231,12 +231,13 @@ export function createApiRouter(
   // `/home` — nor by the genre page, which has `/genre/:name` above.
   router.get('/movies', (req: Request, res: Response) => {
     const sortParam = queryString(req.query.sort);
-    if (sortParam !== undefined && !isMovieSort(sortParam)) {
+    const sort = parseSort(sortParam);
+    if (sort === null) {
       res.status(400).json({ error: `Unknown sort: ${sortParam}` });
       return;
     }
 
-    const query: MovieQuery = { sort: sortParam ?? DEFAULT_MOVIE_SORT };
+    const query: MovieQuery = { sort };
 
     const genre = queryString(req.query.genre);
     if (genre !== undefined && genre !== '') {
