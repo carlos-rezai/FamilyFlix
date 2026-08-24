@@ -40,27 +40,53 @@ function makeMovie(overrides: Partial<Movie> = {}): Movie {
   };
 }
 
+/** The two of Action the home row ships, of however many the genre holds. */
+const ACTION_SHIPPED: Movie[] = [
+  makeMovie({ id: 'a1', title: 'Northwind' }),
+  makeMovie({ id: 'a2', title: 'Ironclad' }),
+];
+
+/** The one of Science Fiction the home row ships, of its four. */
+const SCI_FI_SHIPPED: Movie[] = [
+  makeMovie({ id: 's1', title: 'Quiet Harbor' }),
+];
+
+/**
+ * Enough of Action to be a grid, which is all any test but one needs. This file
+ * renders real `PosterCard`s through jsdom, and materialising a genre of 214 for
+ * tests that only wanted a heading is what made it the slowest file in the
+ * suite — slow enough that two of its tests crossed vitest's default timeout
+ * under a full parallel run.
+ */
+const ACTION_SAMPLE = 8;
+
+/**
+ * How many movies Action holds. A variable because exactly one test is about
+ * the number — the grid being uncapped — and it grows the genre for itself, so
+ * the home row's count, the "View all" label and the grid all move together the
+ * way the server moves them. See `materialiseWholeOfAction`.
+ */
+let actionTotal: number;
+
 /**
  * A home payload as `GET /api/home` returns it. "Science Fiction" is not in
  * today's seeded 12-genre pool, but the genre name is user data that lands in a
  * URL — the row is here so the round-trip through `/genre/:name` is pinned
  * before the TMDB genre vocabulary (which does contain spaces) arrives.
+ *
+ * A row's `count` is the genre's whole tally from `listGenres()`, not the length
+ * of the handful it ships, which is why "View all" has a number on it at all.
  */
-const HOME_PAYLOAD: HomeRow[] = [
-  {
-    genre: 'Action',
-    count: 214,
-    movies: [
-      makeMovie({ id: 'a1', title: 'Northwind' }),
-      makeMovie({ id: 'a2', title: 'Ironclad' }),
-    ],
-  },
-  {
-    genre: 'Science Fiction',
-    count: 4,
-    movies: [makeMovie({ id: 's1', title: 'Quiet Harbor' })],
-  },
-];
+function homeRows(): HomeRow[] {
+  return [
+    { genre: 'Action', count: actionTotal, movies: ACTION_SHIPPED },
+    {
+      genre: 'Science Fiction',
+      count: SCI_FI_MOVIES.length,
+      movies: SCI_FI_SHIPPED,
+    },
+  ];
+}
 
 function okResponse(body: unknown): Response {
   return {
@@ -77,24 +103,40 @@ let fetchMock: ReturnType<
 >;
 
 /**
- * Every movie in Action, as `GET /api/genre/Action` answers it: all 214 of
- * them, uncapped, where the home row shipped two. Science Fiction’s four sit
- * beside them, so a genre name with a space has a real screen behind it.
+ * Action as `GET /api/genre/Action` answers it, uncapped: the two the home row
+ * shipped, then `a3` upward to the genre's total.
  */
-const GENRE_MOVIES: Record<string, Movie[]> = {
-  Action: [
-    ...HOME_PAYLOAD[0].movies,
-    ...Array.from({ length: 212 }, (_, index) =>
+function actionMovies(total: number): Movie[] {
+  return [
+    ...ACTION_SHIPPED,
+    ...Array.from({ length: total - ACTION_SHIPPED.length }, (_, index) =>
       makeMovie({ id: `a${index + 3}`, title: `Action ${index + 3}` })
     ),
-  ],
-  'Science Fiction': [
-    ...HOME_PAYLOAD[1].movies,
-    makeMovie({ id: 's2', title: 'Orbital Drift' }),
-    makeMovie({ id: 's3', title: 'The Long Night' }),
-    makeMovie({ id: 's4', title: 'Zenith' }),
-  ],
-};
+  ];
+}
+
+/** Science Fiction’s whole genre — a name with a space, with a screen behind it. */
+const SCI_FI_MOVIES: Movie[] = [
+  ...SCI_FI_SHIPPED,
+  makeMovie({ id: 's2', title: 'Orbital Drift' }),
+  makeMovie({ id: 's3', title: 'The Long Night' }),
+  makeMovie({ id: 's4', title: 'Zenith' }),
+];
+
+/**
+ * The movies behind each genre route, rebuilt for every test so the one test
+ * that materialises the whole of Action cannot leave 214 cards to the next.
+ */
+let genreMovies: Record<string, Movie[]>;
+
+/**
+ * Grows Action to the 214 the "View all" label promises, for the one test that
+ * is about that promise being kept. Every other test is served `ACTION_SAMPLE`.
+ */
+function materialiseWholeOfAction() {
+  actionTotal = 214;
+  genreMovies.Action = actionMovies(actionTotal);
+}
 
 /**
  * The genre route, standing in for the server: it owns the narrowing and the
@@ -105,7 +147,7 @@ function genreResponse(url: string): Response {
   const [path, query] = url.split('?');
   const name = decodeURIComponent(path.slice(path.lastIndexOf('/') + 1));
   const params = new URLSearchParams(query ?? '');
-  const all = GENRE_MOVIES[name] ?? [];
+  const all = genreMovies[name] ?? [];
 
   const search = params.get('q');
   const matched =
@@ -127,9 +169,14 @@ function genreResponse(url: string): Response {
 }
 
 /** Every movie the fixture rows hold, as the detail route serves them by id. */
-const MOVIES = HOME_PAYLOAD.flatMap((row) => row.movies);
+const MOVIES = [...ACTION_SHIPPED, ...SCI_FI_SHIPPED];
 
 beforeEach(() => {
+  actionTotal = ACTION_SAMPLE;
+  genreMovies = {
+    Action: actionMovies(actionTotal),
+    'Science Fiction': SCI_FI_MOVIES,
+  };
   fetchMock =
     vi.fn<
       (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>
@@ -143,7 +190,7 @@ beforeEach(() => {
       // The named-section envelope (issue #18); routing reads only `rows`.
       const payload: HomePayload = {
         continueWatching: [],
-        rows: HOME_PAYLOAD,
+        rows: homeRows(),
       };
       return Promise.resolve(okResponse(payload));
     }
@@ -238,7 +285,7 @@ describe('App — routing the browse home to its destinations', () => {
     await screen.findByRole('heading', { name: 'Action' });
 
     const action = within(screen.getByRole('region', { name: 'Action' }));
-    fireEvent.click(action.getByRole('button', { name: /view all 214/i }));
+    fireEvent.click(action.getByRole('button', { name: /view all/i }));
 
     expect(currentPath()).toBe('/genre/Action');
     expect(
@@ -402,7 +449,7 @@ describe('App — returning the browse home to where the parent was', () => {
     scrollTo(homeBody(), 860);
 
     const action = within(screen.getByRole('region', { name: 'Action' }));
-    fireEvent.click(action.getByRole('button', { name: /view all 214/i }));
+    fireEvent.click(action.getByRole('button', { name: /view all/i }));
     await screen.findByRole('heading', { name: /Action/ });
     fireEvent.click(screen.getByRole('button', { name: 'history step' }));
 
@@ -450,7 +497,10 @@ describe('App — the genre screen behind “View all”', () => {
 
   it('opens every movie in the genre, uncapped, when “View all 214” is pressed', async () => {
     // The row shipped two of Action’s 214; the other 212 are reachable by no
-    // other route in the app, which is what this screen is for.
+    // other route in the app, which is what this screen is for. This is the one
+    // test the number is about, so it is the one that pays to render it.
+    materialiseWholeOfAction();
+
     renderApp();
     await screen.findByRole('heading', { name: 'Action' });
 
@@ -482,7 +532,7 @@ describe('App — the genre screen behind “View all”', () => {
 
   it('opens a movie’s detail page from a card on the genre screen', async () => {
     renderApp('/genre/Action');
-    await screen.findByText('214 titles');
+    await screen.findByText('8 titles');
 
     fireEvent.click(cardFor('Northwind'));
 
@@ -496,7 +546,7 @@ describe('App — the genre screen behind “View all”', () => {
     // The query lives in the URL and the offset with the chrome, so nothing
     // about the shelf was in a component to lose on the way to the movie.
     renderApp('/genre/Action?q=north&sort=a-z');
-    await screen.findByText('1 of 214 titles');
+    await screen.findByText('1 of 8 titles');
     scrollTo(screenBody(), 1240);
 
     fireEvent.click(cardFor('Northwind'));
@@ -505,7 +555,7 @@ describe('App — the genre screen behind “View all”', () => {
 
     expect(currentPath()).toBe('/genre/Action');
     expect(currentSearch()).toBe('?q=north&sort=a-z');
-    await screen.findByText('1 of 214 titles');
+    await screen.findByText('1 of 8 titles');
     expect(screenBody().scrollTop).toBe(1240);
   });
 });
