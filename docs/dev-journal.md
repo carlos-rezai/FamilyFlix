@@ -11,6 +11,151 @@ Newest entry first.
 
 ---
 
+## 2026-08-24 — Genre page refactor (issue #55)
+
+Twenty commits in eight groups, against
+`docs/refactor-plans/06-genre-page-refactor.md`. The genre page shipped working
+and left behind a **second browse screen that had re-derived, rather than reused,
+the machinery the first one already had** — two copies of the load machine, two
+of the optimistic favorite, two skeleton cards, two sets of chrome styles, and
+three route handlers that disagreed about what an empty `?sort=` means. All of it
+is written once now. 1352 tests pass, up from 1308.
+
+### The suite was not green, and nothing had noticed
+
+`vitest run` had been failing on `src/App/App.test.tsx` in full runs while passing
+in isolation. Not a product bug: `GENRE_MOVIES.Action` was a module-level array
+of 214 movies, and **six** of that file's twenty tests navigated into that genre
+page, each rendering 214 real `PosterCard`s through jsdom and styled-components.
+Under 43 parallel workers the two heaviest crossed vitest's default 5000ms
+`testTimeout`, which `vite.config.mts` did not override.
+
+A refactor whose safety net is intermittently red is not a safety net, so this
+was fixed first. The fixture is a genre of eight now, and the one test that is
+genuinely about the number — "opens every movie in the genre, uncapped" — grows
+Action to 214 for itself. That file went from 12.5s to 4.9s. An explicit
+`testTimeout` was set alongside it as margin, not as the fix.
+
+**Worth naming as a shape rather than an incident:** a fixture grew to 214
+because one test needed it, then five more reused it because it was there. That
+gets worse rather than better, and the genre page was the first screen in this
+codebase with a fixture big enough for it to matter.
+
+**Where the plan was wrong.** It called for the fixture to shrink with _no
+assertion changed anywhere_, reasoning that a genre's `total` comes from
+`listGenres()` and was never the length of anything the fixture held. True of the
+server — but `genreCountLabel` renders `shown === all` as "214 titles" and
+anything else as "8 of 214 titles", so a fixture reporting a total of 214 behind
+eight movies produces a count line no server could ever send. The decoupling is
+visible in product code. Two tests' awaited count text changed instead, and two
+more now press "View all" without asserting the number on it, which leaves 214 in
+the one test it belongs to. The fixture stays a response the server could
+actually produce, which is worth more than an untouched line of text.
+
+### What shipped
+
+**One load machine.** `useBrowseLoad` holds the `attempt` counter, the in-flight
+guard, and the **skeleton latch** — the rule that a refetch keeps what is already
+painted, and only a load with nothing behind it falls back to the skeleton. That
+rule had been a policy stated in two hooks with nothing holding it together; its
+docblock is where it lives now. `useHomeRows` and `GenreMoviesProvider` are
+substitutions on top of it, and **neither test file was edited** — 52 and 34
+tests respectively still pass, which is the evidence that nothing a caller can
+see moved.
+
+The hook returns `setData` as well as `data`. That was not in the plan and is
+load-bearing: the optimistic favorite writes into the same state the load fills,
+so without a setter the two would drift into separate copies of the movie list.
+The fetchers map the payload as it lands, so `data` is the render-ready shape and
+the heart edits exactly what the grid renders.
+
+**One optimistic save.** `useOptimisticSave` holds the bargain: show the new
+value at once, take the route's echo over what was assumed, put the old one back
+if the save is refused. It was written verbatim four times across the codebase;
+two of those are one line each now. It is typed to a boolean flag deliberately —
+the revert is `!value`, and a save with more than two values (a resume position)
+has to be told what to put back, which is a parameter to add when one arrives.
+
+**One skeleton card, one retryable failure, one piece of chrome.** The poster
+placeholder and the Retry block were byte-identical between the two screens; the
+one real difference — the home's card is fixed to `CARD_WIDTH` because it sits in
+a strip, the genre's takes its grid track — is kept where it belongs, as the
+extension each screen's styles apply. `layouts/chrome.styles.ts` holds the
+gradient, the 100vh flex column, the translucent blurred strip and the
+`z-index: 40`; both layouts extend it and state only their own differences.
+Deliberately **not** `GenreLayout` extending `MainLayout`, which would make one
+screen's styles another screen's public surface right before Settings and the
+player arrive wanting chrome that is neither.
+
+**`range` went to `src/utils/`, not to the feature.** The plan put it beside the
+shared skeleton. It turned out to be written **three** times, the third in
+`movie-detail/LoadingDetail` — a different feature, so keeping it inside
+`features/library` would have been wrong on the codebase's own rules. It is a
+pure helper with a test, which is what `src/utils/` is for.
+
+**Two folders.** `features/library/home/` and `features/library/genre/`, with
+what both screens draw on left at the top: `api`, `view`, `withFavorite`,
+`CardCarousel`, `LibraryGrid`, `SkeletonCard`, `RetryableFailure`,
+`useBrowseLoad` and `useOptimisticSave`. Sixteen flat folders serving two screens
+is nine that say which, now. No barrel was added at either — `features/` has
+never had one.
+
+### One behaviour change, deliberately
+
+`GET /api/movies?sort=` answered **400** for an empty value, where `/home` and
+`/genre/:name` both answered the default order and both had a test saying so. All
+three endpoints' comments already claimed the shared rule; only two of them kept
+it. It had no test asserting the 400 and no client sends an empty `?sort=`, so it
+was a drift rather than a contract. One `parseSort` serves all three now, and the
+correction is pinned by a new test — verified failing against the old rule before
+it was kept. An unknown sort is still a 400 everywhere. `GET /api/movies` had
+**no tests at all** before this; it has three now.
+
+### Retracted from the 2026-08-22 entry
+
+**"The production line bent to suit a test runner" was wrong.** `GenreLayout`'s
+`Spacer` was written as `flex-grow` / `flex-shrink` / `flex-basis` longhand,
+commented as being that way because jsdom does not expand the `flex` shorthand.
+`MainLayout`'s `Spacer` has always been `flex: 1 1 auto`, and `MainLayout.test`
+asserts on it with the identical `getComputedStyle(child).flexGrow === '1'`
+predicate — and passes. Measured against this repo's jsdom: the shorthand reports
+`flexGrow === "1"`, exactly as the longhand does. The shorthand is restored with
+**no test change at all**, which is the proof. The claim is retracted rather than
+reworded; the paragraph in that entry is marked accordingly.
+
+### Left alone, on purpose
+
+- **`useMovieDetail`** keeps its own load machine and its own two optimistic
+  saves. It is the same mechanics around a genuinely different state shape — four
+  statuses and a discriminated union, because a 404 and a failure earn different
+  buttons. Folding it in would mean expressing `not-found` as a payload value and
+  bending a union that exists precisely so the page cannot read `ready` beside an
+  absent movie. Two verbatim copies justify an extraction; a third near-miss does
+  not.
+- **`parseGenreQuery` / `parseLibraryQuery`** stay parallel, per the design log's
+  Q12. A shared parser would build a screen that silently honours a hand-edited
+  `?rating=7` it has no control to display. #53 already took the shareable half.
+- **`GenreMovies` stays a context.** A fixed header and a scrolling body over one
+  payload cannot be served by a hook called in both subtrees without making it
+  two requests. Only its innards were extracted; its value shape is unchanged.
+- **The shared hooks stay at `features/library`'s rung**, not `src/hooks/`, whose
+  stated rule is "only hooks used across 2+ features". The promotion trigger is
+  recorded: the first consumer outside `features/library` — most likely Favorites
+  — is when they move, and that is a one-commit move with no call-site churn.
+
+### Follow-ups
+
+- **The `api/` modules' `fetch` → `!ok` → `throw` → `json` bodies** are four
+  copies across three features, and the fourth (`fetchMovie`) resolves `null` on
+  a 404 rather than throwing — so they are not four copies of one thing. Noted,
+  not done.
+- **`GenreLayout`'s header `gap` is `18px`**, which is not on the 4px spacing
+  scale (`s5` is 24px). It matches the prototype and was left exactly as it was —
+  this refactor changed no design — but a hard-coded pixel gap beside tokenised
+  padding is the kind of thing a later reader will assume is a mistake.
+
+---
+
 ## 2026-08-22 — Genre page (issues #42–#51)
 
 Closed the last dead end in browse-and-discover. `/genre/:name` had been a
@@ -152,6 +297,13 @@ shipping later.
   was an argument about _vocabulary_, not about mechanics — see the follow-ups.
 
 ### The production line bent to suit a test runner
+
+> **Retracted 2026-08-24 (issue #55).** This was wrong. jsdom _does_ report
+> `flexGrow === "1"` for the `flex` shorthand — `MainLayout` had always relied on
+> exactly that — so the longhand was never needed and no test ever required it.
+> The shorthand is restored, with no test change. The paragraph is kept as
+> written, below, because the record of a wrong call is worth more than a tidy
+> one.
 
 `GenreLayout`'s spacer is `flex-grow` / `flex-shrink` / `flex-basis` longhand
 rather than the `flex` shorthand `MainLayout` uses, purely because jsdom does not
