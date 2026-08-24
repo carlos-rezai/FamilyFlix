@@ -40,6 +40,13 @@ export default defineConfig(() => ({
     watch: false,
     globals: true,
     environment: 'jsdom',
+    // Vitest's 5000ms default is tuned for unit tests. This suite renders real
+    // component trees through jsdom and styled-components, and does it under 43
+    // parallel workers, where the heaviest integration tests — a whole genre of
+    // poster cards, uncapped — measure in seconds rather than milliseconds and
+    // get slower the busier the machine is. State the margin rather than
+    // inheriting a default that has nothing to do with this kind of test.
+    testTimeout: 20000,
     include: [
       '{src,server,tests}/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}',
     ],
