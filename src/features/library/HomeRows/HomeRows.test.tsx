@@ -8,7 +8,7 @@ import {
   act,
 } from '@testing-library/react';
 import { ThemeProvider } from 'styled-components';
-import { MemoryRouter, useLocation, useNavigate } from 'react-router-dom';
+import { MemoryRouter, useNavigate } from 'react-router-dom';
 
 import { HomeRows } from './HomeRows';
 import { theme } from '@/styles/theme';
@@ -19,6 +19,7 @@ import {
   type Movie,
 } from '@/types';
 import { toGenreQueryParams } from '@/utils';
+import { LocationProbe } from '@/test-support/LocationProbe/LocationProbe';
 
 function makeMovie(overrides: Partial<Movie> = {}): Movie {
   return {
@@ -203,23 +204,8 @@ function respondWithRows(rows: HomeRow[], continueWatching: Movie[] = []) {
   });
 }
 
-/**
- * Reports where the router has been sent, so a click's destination is visible —
- * the path and the query string apart, because a destination's cleanliness is a
- * claim about the second one on its own.
- */
-function LocationProbe() {
-  const location = useLocation();
-  return (
-    <>
-      <div data-testid="location">{location.pathname}</div>
-      <div data-testid="search">{location.search}</div>
-    </>
-  );
-}
-
 function currentPath() {
-  return screen.getByTestId('location').textContent;
+  return screen.getByTestId('pathname').textContent;
 }
 
 /** The query string the router currently carries, `?sort=a-z` and the like. */

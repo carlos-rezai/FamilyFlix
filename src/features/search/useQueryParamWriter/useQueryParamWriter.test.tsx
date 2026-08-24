@@ -1,27 +1,10 @@
 import type { ReactNode } from 'react';
 import { describe, it, expect } from 'vitest';
 import { renderHook, act, screen } from '@testing-library/react';
-import { MemoryRouter, useLocation, useNavigate } from 'react-router-dom';
+import { MemoryRouter } from 'react-router-dom';
 
 import { useQueryParamWriter } from './useQueryParamWriter';
-
-/**
- * Reports the URL the router is currently at, and offers the browser Back
- * button as something a test can press — the two things every claim here is
- * about.
- */
-function LocationProbe() {
-  const location = useLocation();
-  const navigate = useNavigate();
-  return (
-    <>
-      <div data-testid="url">{`${location.pathname}${location.search}`}</div>
-      <button type="button" onClick={() => navigate(-1)}>
-        Back
-      </button>
-    </>
-  );
-}
+import { LocationProbe } from '@/test-support/LocationProbe/LocationProbe';
 
 function currentUrl() {
   return screen.getByTestId('url').textContent;
@@ -43,7 +26,7 @@ function mountOn(entries: string[] = ['/']) {
     wrapper: ({ children }: { children: ReactNode }) => (
       <MemoryRouter initialEntries={entries} initialIndex={entries.length - 1}>
         {children}
-        <LocationProbe />
+        <LocationProbe withBack />
       </MemoryRouter>
     ),
   });

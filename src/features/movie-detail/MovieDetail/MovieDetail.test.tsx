@@ -1,11 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { ThemeProvider } from 'styled-components';
-import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
+import { MemoryRouter, Route, Routes } from 'react-router-dom';
 
 import { MovieDetail } from './MovieDetail';
 import { theme } from '@/styles/theme';
 import type { Movie } from '@/types';
+import { LocationProbe } from '@/test-support/LocationProbe/LocationProbe';
 
 const SYNOPSIS =
   'A lighthouse keeper on a fading coast takes in a runaway girl, and the two ' +
@@ -159,19 +160,8 @@ function writes() {
     }));
 }
 
-/** Reports where the router has been sent, so a link's destination is visible. */
-function LocationProbe() {
-  const location = useLocation();
-  return (
-    <>
-      <div data-testid="location">{location.pathname}</div>
-      <div data-testid="search">{location.search}</div>
-    </>
-  );
-}
-
 function currentPath() {
-  return screen.getByTestId('location').textContent;
+  return screen.getByTestId('pathname').textContent;
 }
 
 /** The query string the router currently carries, `?movie=m1` and the like. */

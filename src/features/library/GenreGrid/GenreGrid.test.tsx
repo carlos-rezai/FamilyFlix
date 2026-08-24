@@ -8,18 +8,13 @@ import {
   within,
 } from '@testing-library/react';
 import { ThemeProvider } from 'styled-components';
-import {
-  MemoryRouter,
-  Route,
-  Routes,
-  useLocation,
-  useNavigate,
-} from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useNavigate } from 'react-router-dom';
 
 import { GenreGrid } from './GenreGrid';
 import { GenreMoviesProvider } from '../GenreMovies/GenreMovies';
 import { theme } from '@/styles/theme';
 import type { GenrePayload, Movie } from '@/types';
+import { LocationProbe } from '@/test-support/LocationProbe/LocationProbe';
 
 function makeMovie(overrides: Partial<Movie> = {}): Movie {
   return {
@@ -113,14 +108,8 @@ function Navigator() {
   return null;
 }
 
-/** Reports where the router is, so an opened card is asserted by destination. */
-function LocationProbe() {
-  const location = useLocation();
-  return <div data-testid="location">{location.pathname}</div>;
-}
-
 function currentPath() {
-  return screen.getByTestId('location').textContent;
+  return screen.getByTestId('pathname').textContent;
 }
 
 /**

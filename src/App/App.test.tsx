@@ -7,10 +7,12 @@ import {
   within,
   act,
 } from '@testing-library/react';
-import { MemoryRouter, useLocation, useNavigate } from 'react-router-dom';
+import { MemoryRouter, useNavigate } from 'react-router-dom';
 
 import App from './App';
 import type { GenrePayload, HomePayload, HomeRow, Movie } from '@/types';
+import { LocationProbe } from '@/test-support/LocationProbe/LocationProbe';
+import { stubScrollMetrics } from '@/test-support/stubScrollMetrics/stubScrollMetrics';
 
 function makeMovie(overrides: Partial<Movie> = {}): Movie {
   return {
@@ -167,58 +169,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-/**
- * jsdom does no layout: every element reports `scrollTop: 0` and drops writes to
- * it, so "Back lands where the parent was" could never be observed. This gives
- * each element a real, writable `scrollTop`, and the browse home's measured
- * overflow — 6390 inside a 698-tall body, the numbers from issue #28 — so a
- * build that checks whether there is anything to scroll is not failed for it.
- */
-const scrollTops = new WeakMap<HTMLElement, number>();
-
-beforeEach(() => {
-  Object.defineProperty(HTMLElement.prototype, 'scrollTop', {
-    configurable: true,
-    get(this: HTMLElement) {
-      return scrollTops.get(this) ?? 0;
-    },
-    set(this: HTMLElement, value: number) {
-      scrollTops.set(this, value);
-    },
-  });
-  Object.defineProperty(HTMLElement.prototype, 'scrollHeight', {
-    configurable: true,
-    get: () => 6390,
-  });
-  Object.defineProperty(HTMLElement.prototype, 'clientHeight', {
-    configurable: true,
-    get: () => 698,
-  });
-});
-
-afterEach(() => {
-  // Own properties on HTMLElement.prototype shadowing jsdom's own accessors on
-  // Element.prototype — deleting them restores the real ones.
-  for (const prop of ['scrollTop', 'scrollHeight', 'clientHeight'] as const) {
-    delete (HTMLElement.prototype as Partial<Record<typeof prop, number>>)[
-      prop
-    ];
-  }
-});
-
-/**
- * Reports the router's current path into the DOM, so a navigation assertion can
- * name the URL the app moved to rather than infer it from what rendered.
- */
-function LocationProbe() {
-  const location = useLocation();
-  return (
-    <>
-      <div data-testid="location">{location.pathname}</div>
-      <div data-testid="search">{location.search}</div>
-    </>
-  );
-}
+stubScrollMetrics(6390);
 
 /**
  * Stands in for the browser's own Back button, which is the same history step
@@ -246,7 +197,7 @@ function renderApp(entry = '/') {
 }
 
 function currentPath() {
-  return screen.getByTestId('location').textContent;
+  return screen.getByTestId('pathname').textContent;
 }
 
 /** The query string the router currently carries, `?movie=a1` and the like. */

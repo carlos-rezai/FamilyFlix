@@ -1,61 +1,14 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import { ThemeProvider } from 'styled-components';
-import {
-  MemoryRouter,
-  Route,
-  Routes,
-  useLocation,
-  useNavigate,
-} from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useNavigate } from 'react-router-dom';
 
 import { MainLayout, type MainLayoutProps } from './MainLayout';
 import { theme } from '@/styles/theme';
+import { LocationProbe } from '@/test-support/LocationProbe/LocationProbe';
+import { stubScrollMetrics } from '@/test-support/stubScrollMetrics/stubScrollMetrics';
 
-/**
- * jsdom does no layout: every element reports `scrollTop: 0` and drops writes to
- * it, so the body returning to a position could never be observed. This gives
- * each element a real, writable `scrollTop` and the browse home's measured
- * overflow (6390 over a 698 viewport, issue #28), so a build that checks whether
- * there is anything to scroll is not failed for checking.
- */
-const scrollTops = new WeakMap<HTMLElement, number>();
-
-beforeEach(() => {
-  Object.defineProperty(HTMLElement.prototype, 'scrollTop', {
-    configurable: true,
-    get(this: HTMLElement) {
-      return scrollTops.get(this) ?? 0;
-    },
-    set(this: HTMLElement, value: number) {
-      scrollTops.set(this, value);
-    },
-  });
-  Object.defineProperty(HTMLElement.prototype, 'scrollHeight', {
-    configurable: true,
-    get: () => 6390,
-  });
-  Object.defineProperty(HTMLElement.prototype, 'clientHeight', {
-    configurable: true,
-    get: () => 698,
-  });
-});
-
-afterEach(() => {
-  // Own properties on HTMLElement.prototype shadowing jsdom's own accessors on
-  // Element.prototype — deleting them restores the real ones.
-  for (const prop of ['scrollTop', 'scrollHeight', 'clientHeight'] as const) {
-    delete (HTMLElement.prototype as Partial<Record<typeof prop, number>>)[
-      prop
-    ];
-  }
-});
-
-/** Reports the router's current path, so a navigation can name the URL. */
-function LocationProbe() {
-  const location = useLocation();
-  return <div data-testid="location">{location.pathname}</div>;
-}
+stubScrollMetrics(6390);
 
 function renderLayout(
   children: React.ReactNode,
@@ -73,7 +26,7 @@ function renderLayout(
 }
 
 function currentPath() {
-  return screen.getByTestId('location').textContent;
+  return screen.getByTestId('pathname').textContent;
 }
 
 const logo = () => screen.getByRole('button', { name: /familyflix/i });

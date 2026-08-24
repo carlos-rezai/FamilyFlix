@@ -1,62 +1,20 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import { ThemeProvider } from 'styled-components';
 import {
   MemoryRouter,
   Route,
   Routes,
-  useLocation,
   useNavigate,
   type MemoryRouterProps,
 } from 'react-router-dom';
 
 import { GenreLayout, type GenreLayoutProps } from './GenreLayout';
 import { theme } from '@/styles/theme';
+import { LocationProbe } from '@/test-support/LocationProbe/LocationProbe';
+import { stubScrollMetrics } from '@/test-support/stubScrollMetrics/stubScrollMetrics';
 
-/**
- * jsdom does no layout: every element reports `scrollTop: 0` and drops writes to
- * it, so the body returning to a position could never be observed. This gives
- * each element a real, writable `scrollTop` and a genuine overflow — a 214-card
- * shelf is far taller than the window — so a build that checks whether there is
- * anything to scroll is not failed for checking.
- */
-const scrollTops = new WeakMap<HTMLElement, number>();
-
-beforeEach(() => {
-  Object.defineProperty(HTMLElement.prototype, 'scrollTop', {
-    configurable: true,
-    get(this: HTMLElement) {
-      return scrollTops.get(this) ?? 0;
-    },
-    set(this: HTMLElement, value: number) {
-      scrollTops.set(this, value);
-    },
-  });
-  Object.defineProperty(HTMLElement.prototype, 'scrollHeight', {
-    configurable: true,
-    get: () => 9400,
-  });
-  Object.defineProperty(HTMLElement.prototype, 'clientHeight', {
-    configurable: true,
-    get: () => 698,
-  });
-});
-
-afterEach(() => {
-  // Own properties on HTMLElement.prototype shadowing jsdom's own accessors on
-  // Element.prototype — deleting them restores the real ones.
-  for (const prop of ['scrollTop', 'scrollHeight', 'clientHeight'] as const) {
-    delete (HTMLElement.prototype as Partial<Record<typeof prop, number>>)[
-      prop
-    ];
-  }
-});
-
-/** Reports where the router actually is, so Back is asserted by destination. */
-function LocationProbe() {
-  const location = useLocation();
-  return <span data-testid="pathname">{location.pathname}</span>;
-}
+stubScrollMetrics(9400);
 
 function renderLayout(
   children: React.ReactNode,

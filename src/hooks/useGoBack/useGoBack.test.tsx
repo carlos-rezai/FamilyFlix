@@ -4,17 +4,11 @@ import {
   MemoryRouter,
   Route,
   Routes,
-  useLocation,
   type MemoryRouterProps,
 } from 'react-router-dom';
 
 import { useGoBack } from './useGoBack';
-
-/** Reports where the router actually is, so Back is asserted by destination. */
-function LocationProbe() {
-  const location = useLocation();
-  return <span data-testid="pathname">{location.pathname}</span>;
-}
+import { LocationProbe } from '@/test-support/LocationProbe/LocationProbe';
 
 /**
  * A screen whose only control is the one this hook returns. Nothing about the

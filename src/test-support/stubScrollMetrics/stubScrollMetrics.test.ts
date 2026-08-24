@@ -64,10 +64,8 @@ describe('stubScrollMetrics — after those blocks have finished', () => {
   it('has handed scroll metrics back to jsdom, which does no layout', () => {
     const element = document.createElement('div');
 
-    element.scrollTop = 1840;
-
-    expect(element.scrollTop).toBe(0);
     expect(element.scrollHeight).toBe(0);
+    expect(element.clientHeight).toBe(0);
   });
 
   it('leaves nothing of its own shadowing the prototype for the next file', () => {

@@ -5,6 +5,7 @@
     "types": ["node", "vite/client"]
   },
   "exclude": [
+    "src/test-support/**/*",
     "src/**/*.spec.ts",
     "src/**/*.test.ts",
     "src/**/*.spec.tsx",

@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import {
   MemoryRouter,
@@ -9,49 +9,9 @@ import {
 } from 'react-router-dom';
 
 import { useRestoredScroll } from './useRestoredScroll';
+import { stubScrollMetrics } from '@/test-support/stubScrollMetrics/stubScrollMetrics';
 
-/**
- * jsdom does no layout: every element reports `scrollTop: 0` and silently drops
- * writes to it, so a restored scroll could never be observed at all. This gives
- * each element a real, writable `scrollTop`, and makes every element look
- * genuinely overflowing — the browse home's measured 6390 over a 698 viewport
- * (issue #28) — so a build that checks whether there is anything to scroll is
- * not failed for checking.
- *
- * Nothing here says *when* a position is saved or restored: on the scroll event,
- * on unmount, in a layout effect, or after content settles all pass identically.
- */
-const scrollTops = new WeakMap<HTMLElement, number>();
-
-beforeEach(() => {
-  Object.defineProperty(HTMLElement.prototype, 'scrollTop', {
-    configurable: true,
-    get(this: HTMLElement) {
-      return scrollTops.get(this) ?? 0;
-    },
-    set(this: HTMLElement, value: number) {
-      scrollTops.set(this, value);
-    },
-  });
-  Object.defineProperty(HTMLElement.prototype, 'scrollHeight', {
-    configurable: true,
-    get: () => 6390,
-  });
-  Object.defineProperty(HTMLElement.prototype, 'clientHeight', {
-    configurable: true,
-    get: () => 698,
-  });
-});
-
-afterEach(() => {
-  // Own properties on HTMLElement.prototype shadowing jsdom's own accessors on
-  // Element.prototype — deleting them restores the real ones.
-  for (const prop of ['scrollTop', 'scrollHeight', 'clientHeight'] as const) {
-    delete (HTMLElement.prototype as Partial<Record<typeof prop, number>>)[
-      prop
-    ];
-  }
-});
+stubScrollMetrics(6390);
 
 /** What a parent does with a wheel: the container moves, and it says so. */
 function scrollTo(element: HTMLElement, top: number) {

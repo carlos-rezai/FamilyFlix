@@ -5,13 +5,14 @@ import {
   MemoryRouter,
   Route,
   Routes,
-  useLocation,
   useNavigate,
   type MemoryRouterProps,
 } from 'react-router-dom';
 
 import MoviePage from './MoviePage';
 import { theme } from '@/styles/theme';
+import { LocationProbe } from '@/test-support/LocationProbe/LocationProbe';
+import { stubScrollMetrics } from '@/test-support/stubScrollMetrics/stubScrollMetrics';
 
 function notFoundResponse(): Response {
   return {
@@ -45,49 +46,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-/**
- * jsdom does no layout: every element reports `scrollTop: 0` and drops writes to
- * it, so this page returning to a position could never be observed. This gives
- * each element a real, writable `scrollTop` and a genuine overflow, so a build
- * that checks whether there is anything to scroll is not failed for checking.
- */
-const scrollTops = new WeakMap<HTMLElement, number>();
-
-beforeEach(() => {
-  Object.defineProperty(HTMLElement.prototype, 'scrollTop', {
-    configurable: true,
-    get(this: HTMLElement) {
-      return scrollTops.get(this) ?? 0;
-    },
-    set(this: HTMLElement, value: number) {
-      scrollTops.set(this, value);
-    },
-  });
-  Object.defineProperty(HTMLElement.prototype, 'scrollHeight', {
-    configurable: true,
-    get: () => 4200,
-  });
-  Object.defineProperty(HTMLElement.prototype, 'clientHeight', {
-    configurable: true,
-    get: () => 698,
-  });
-});
-
-afterEach(() => {
-  // Own properties on HTMLElement.prototype shadowing jsdom's own accessors on
-  // Element.prototype — deleting them restores the real ones.
-  for (const prop of ['scrollTop', 'scrollHeight', 'clientHeight'] as const) {
-    delete (HTMLElement.prototype as Partial<Record<typeof prop, number>>)[
-      prop
-    ];
-  }
-});
-
-/** Reports where the router actually is, so Back is asserted by destination. */
-function LocationProbe() {
-  const location = useLocation();
-  return <span data-testid="pathname">{location.pathname}</span>;
-}
+stubScrollMetrics(4200);
 
 function renderAt(
   initialEntries: MemoryRouterProps['initialEntries'],
