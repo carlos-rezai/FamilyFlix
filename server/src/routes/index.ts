@@ -58,6 +58,19 @@ function parseSort(value: string | undefined): MovieSort | null {
   return isMovieSort(value) ? value : null;
 }
 
+/**
+ * The search term a request is asking for. `q` is the wire name and `search` is
+ * the domain's, and this boundary is the only place the two are translated —
+ * which is why the parameter is read here rather than passed through.
+ *
+ * An empty value is no search at all rather than a filter for the empty string:
+ * a cleared box is the plain screen again, not a screen narrowed to everything
+ * containing nothing.
+ */
+function parseSearch(value: string | undefined): string | undefined {
+  return value === undefined || value === '' ? undefined : value;
+}
+
 /** The top of the stored rating scale — 10 half-star units, five whole stars. */
 const MAX_RATING = 10;
 
@@ -136,8 +149,8 @@ export function createApiRouter(
 
     const query: LibraryQuery = { sort };
 
-    const search = queryString(req.query.q);
-    if (search !== undefined && search !== '') {
+    const search = parseSearch(queryString(req.query.q));
+    if (search !== undefined) {
       query.search = search;
     }
 
@@ -217,8 +230,8 @@ export function createApiRouter(
 
       const query: GenreQuery = { sort };
 
-      const search = queryString(req.query.q);
-      if (search !== undefined && search !== '') {
+      const search = parseSearch(queryString(req.query.q));
+      if (search !== undefined) {
         query.search = search;
       }
 
