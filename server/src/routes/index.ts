@@ -40,6 +40,24 @@ function isMovieSort(value: string): value is MovieSort {
   return (MOVIE_SORTS as readonly string[]).includes(value);
 }
 
+/**
+ * The order a request is asking for, read the one way every browse endpoint
+ * reads it: absent or empty is the library's own default order — a control at
+ * its default writes no parameter, and a cleared one is not a request for
+ * nothing — while a sort this API does not know is a bad request rather than a
+ * silent fallback, since a URL naming an order it will not get is a lie the
+ * screen would go on to tell.
+ *
+ * `null` is the signal to answer 400. The caller still holds the parameter, so
+ * the message can quote what was actually asked for.
+ */
+function parseSort(value: string | undefined): MovieSort | null {
+  if (value === undefined || value === '') {
+    return DEFAULT_MOVIE_SORT;
+  }
+  return isMovieSort(value) ? value : null;
+}
+
 /** The top of the stored rating scale — 10 half-star units, five whole stars. */
 const MAX_RATING = 10;
 
@@ -109,14 +127,11 @@ export function createApiRouter(
   // is, but `0` and an empty value are no minimum at all rather than a floor of
   // nought, which would throw away every unrated movie in the library.
   router.get('/home', (req: Request, res: Response) => {
-    let sort: MovieSort = DEFAULT_MOVIE_SORT;
     const sortParam = queryString(req.query.sort);
-    if (sortParam !== undefined && sortParam !== '') {
-      if (!isMovieSort(sortParam)) {
-        res.status(400).json({ error: `Unknown sort: ${sortParam}` });
-        return;
-      }
-      sort = sortParam;
+    const sort = parseSort(sortParam);
+    if (sort === null) {
+      res.status(400).json({ error: `Unknown sort: ${sortParam}` });
+      return;
     }
 
     const query: LibraryQuery = { sort };
@@ -193,14 +208,11 @@ export function createApiRouter(
   router.get(
     '/genre/:name',
     (req: Request<{ name: string }>, res: Response) => {
-      let sort: MovieSort = DEFAULT_MOVIE_SORT;
       const sortParam = queryString(req.query.sort);
-      if (sortParam !== undefined && sortParam !== '') {
-        if (!isMovieSort(sortParam)) {
-          res.status(400).json({ error: `Unknown sort: ${sortParam}` });
-          return;
-        }
-        sort = sortParam;
+      const sort = parseSort(sortParam);
+      if (sort === null) {
+        res.status(400).json({ error: `Unknown sort: ${sortParam}` });
+        return;
       }
 
       const query: GenreQuery = { sort };
