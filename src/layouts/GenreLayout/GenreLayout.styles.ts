@@ -59,15 +59,9 @@ export const HeadingSlot = styled.div`
   min-width: 0;
 `;
 
-/**
- * Pushes the trailing header controls to the right edge. Written as longhand
- * because the tests read `flexGrow` back off the computed style, and jsdom does
- * not expand the `flex` shorthand.
- */
+/** Pushes the trailing header controls to the right edge. */
 export const Spacer = styled.div`
-  flex-grow: 1;
-  flex-shrink: 1;
-  flex-basis: auto;
+  flex: 1 1 auto;
 `;
 
 export const Body = styled.div`
