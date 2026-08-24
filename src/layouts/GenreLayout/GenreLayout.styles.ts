@@ -1,27 +1,12 @@
 import styled from 'styled-components';
 
-export const Root = styled.div`
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-  background: radial-gradient(
-    140% 90% at 80% -10%,
-    #1d1812 0%,
-    ${({ theme }) => theme.colors.bg} 60%
-  );
-`;
+import { Header as ChromeHeader } from '../chrome.styles';
 
-export const Header = styled.header`
-  flex: 0 0 auto;
-  display: flex;
-  align-items: center;
+export { Root, Body } from '../chrome.styles';
+
+/** Tighter than the home's, so the pill and the genre name read as one group. */
+export const Header = styled(ChromeHeader)`
   gap: 18px;
-  padding: ${({ theme }) => `${theme.space.s4} ${theme.space.s6}`};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.borderSoft};
-  background: rgba(20, 17, 13, 0.85);
-  backdrop-filter: blur(12px);
-  position: relative;
-  z-index: 40;
 `;
 
 /**
@@ -59,12 +44,4 @@ export const HeadingSlot = styled.div`
   min-width: 0;
 `;
 
-/** Pushes the trailing header controls to the right edge. */
-export const Spacer = styled.div`
-  flex: 1 1 auto;
-`;
-
-export const Body = styled.div`
-  flex: 1 1 auto;
-  overflow-y: auto;
-`;
+export { Spacer } from '../chrome.styles';
