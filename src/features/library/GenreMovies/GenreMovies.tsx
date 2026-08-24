@@ -2,9 +2,7 @@ import {
   createContext,
   useCallback,
   useContext,
-  useEffect,
   useMemo,
-  useState,
   type ReactNode,
 } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
@@ -12,8 +10,31 @@ import { useParams, useSearchParams } from 'react-router-dom';
 import type { GenreQuery, PosterCardMovie } from '@/types';
 import { parseGenreQuery, toGenreQueryParams } from '@/utils';
 import { fetchGenrePayload, saveFavorite } from '../api/api';
+import { useBrowseLoad } from '../useBrowseLoad/useBrowseLoad';
 import { view } from '../view/view';
 import { withFavoriteInList } from '../withFavorite/withFavorite';
+
+/** One genre as this screen renders it, mapped once as the payload lands. */
+interface GenreScreen {
+  total: number;
+  movies: PosterCardMovie[];
+}
+
+/**
+ * What the screen has before a load has succeeded. One frozen value rather than
+ * a fresh `[]` per render, so the context value below does not change identity
+ * on a render that has nothing new in it.
+ */
+const NO_GENRE: GenreScreen = { total: 0, movies: [] };
+
+/** The grid and the total it is counted against, from one response. */
+async function loadGenre(
+  genre: string,
+  query: GenreQuery
+): Promise<GenreScreen> {
+  const payload = await fetchGenrePayload(genre, query);
+  return { total: payload.total, movies: payload.movies.map(view) };
+}
 
 /** Where the load is: never both loading and errored, never movies without `ready`. */
 export type GenreMoviesStatus = 'loading' | 'ready' | 'error';
@@ -77,10 +98,6 @@ export interface GenreMoviesProviderProps {
 export function GenreMoviesProvider({ children }: GenreMoviesProviderProps) {
   const { name } = useParams<{ name: string }>();
   const [searchParams] = useSearchParams();
-  const [status, setStatus] = useState<GenreMoviesStatus>('loading');
-  const [total, setTotal] = useState(0);
-  const [movies, setMovies] = useState<PosterCardMovie[]>([]);
-  const [attempt, setAttempt] = useState(0);
 
   // The name arrives decoded from the router, which is what lets a genre with a
   // space in it ("Science Fiction") survive the round-trip through the URL.
@@ -104,40 +121,33 @@ export function GenreMoviesProvider({ children }: GenreMoviesProviderProps) {
     [settled]
   );
 
-  useEffect(() => {
-    let current = true;
-    // A query change with a grid already on screen keeps it; only a load with
-    // nothing to show falls back to the skeleton. The same discipline the home
-    // rows follow — flashing the skeleton every time the typing settles would
-    // be unreadable while she is reading the posters.
-    setStatus((previous) => (previous === 'ready' ? 'ready' : 'loading'));
+  // Which load this is: the genre and the settled query together, since either
+  // one changing is a different screen. The name is encoded so that a genre
+  // holding a `?` cannot spell the same key as some other genre and query.
+  const key = `${encodeURIComponent(genre)}?${settled}`;
 
-    fetchGenrePayload(genre, query)
-      .then((payload) => {
-        if (!current) {
-          return;
-        }
-        setTotal(payload.total);
-        setMovies(payload.movies.map(view));
-        setStatus('ready');
-      })
-      .catch(() => {
-        if (!current) {
-          return;
-        }
-        setTotal(0);
-        setMovies([]);
-        setStatus('error');
-      });
+  const { status, data, setData, retry } = useBrowseLoad(
+    () => loadGenre(genre, query),
+    key
+  );
 
-    // A retry — or a newer genre or query — landing while an earlier load is
-    // still in flight must not have the abandoned response overwrite it.
-    return () => {
-      current = false;
-    };
-  }, [genre, query, attempt]);
+  // A failed or unfinished load has no grid; the screen shows its own copy for
+  // that, never an empty grid pretending to be a loaded one.
+  const { total, movies } = data ?? NO_GENRE;
 
-  const retry = useCallback(() => setAttempt((n) => n + 1), []);
+  /** Applies a favorite value to the loaded grid, leaving the total alone. */
+  const applyFavorite = useCallback(
+    (id: string, favorite: boolean) =>
+      setData((current) =>
+        current === null
+          ? current
+          : {
+              ...current,
+              movies: withFavoriteInList(current.movies, id, favorite),
+            }
+      ),
+    [setData]
+  );
 
   /**
    * The one edit this screen can make to the grid it loaded. It lives here
@@ -145,20 +155,23 @@ export function GenreMoviesProvider({ children }: GenreMoviesProviderProps) {
    * it writes through the same endpoint the home screen's hearts write through,
    * so a favorite means one thing in one place.
    */
-  const toggleFavorite = useCallback((id: string, favorite: boolean) => {
-    setMovies((current) => withFavoriteInList(current, id, favorite));
+  const toggleFavorite = useCallback(
+    (id: string, favorite: boolean) => {
+      applyFavorite(id, favorite);
 
-    saveFavorite(id, favorite)
-      // The route echoes what it stored; trust that over what we assumed.
-      .then((saved) => {
-        if (saved !== favorite) {
-          setMovies((current) => withFavoriteInList(current, id, saved));
-        }
-      })
-      .catch(() => {
-        setMovies((current) => withFavoriteInList(current, id, !favorite));
-      });
-  }, []);
+      saveFavorite(id, favorite)
+        // The route echoes what it stored; trust that over what we assumed.
+        .then((saved) => {
+          if (saved !== favorite) {
+            applyFavorite(id, saved);
+          }
+        })
+        .catch(() => {
+          applyFavorite(id, !favorite);
+        });
+    },
+    [applyFavorite]
+  );
 
   const value = useMemo<GenreMoviesValue>(
     () => ({ status, genre, query, total, movies, retry, toggleFavorite }),
