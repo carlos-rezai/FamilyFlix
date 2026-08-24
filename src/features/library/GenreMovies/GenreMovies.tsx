@@ -11,6 +11,7 @@ import type { GenreQuery, PosterCardMovie } from '@/types';
 import { parseGenreQuery, toGenreQueryParams } from '@/utils';
 import { fetchGenrePayload, saveFavorite } from '../api/api';
 import { useBrowseLoad } from '../useBrowseLoad/useBrowseLoad';
+import { useOptimisticSave } from '../useOptimisticSave/useOptimisticSave';
 import { view } from '../view/view';
 import { withFavoriteInList } from '../withFavorite/withFavorite';
 
@@ -156,23 +157,7 @@ export function GenreMoviesProvider({ children }: GenreMoviesProviderProps) {
    * it writes through the same endpoint the home screen's hearts write through,
    * so a favorite means one thing in one place.
    */
-  const toggleFavorite = useCallback(
-    (id: string, favorite: boolean) => {
-      applyFavorite(id, favorite);
-
-      saveFavorite(id, favorite)
-        // The route echoes what it stored; trust that over what we assumed.
-        .then((saved) => {
-          if (saved !== favorite) {
-            applyFavorite(id, saved);
-          }
-        })
-        .catch(() => {
-          applyFavorite(id, !favorite);
-        });
-    },
-    [applyFavorite]
-  );
+  const toggleFavorite = useOptimisticSave(applyFavorite, saveFavorite);
 
   const value = useMemo<GenreMoviesValue>(
     () => ({ status, genre, query, total, movies, retry, toggleFavorite }),

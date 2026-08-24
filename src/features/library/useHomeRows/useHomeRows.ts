@@ -7,6 +7,7 @@ import { fetchHomePayload, saveFavorite } from '../api/api';
 import { continueView } from '../continueView/continueView';
 import { toGenreRow } from '../toGenreRow/toGenreRow';
 import { useBrowseLoad } from '../useBrowseLoad/useBrowseLoad';
+import { useOptimisticSave } from '../useOptimisticSave/useOptimisticSave';
 import { withFavorite } from '../withFavorite/withFavorite';
 
 /** The home payload as the two sections render it, mapped once as it lands. */
@@ -121,23 +122,7 @@ export function useHomeRows(): UseHomeRowsResult {
     [setData]
   );
 
-  const toggleFavorite = useCallback(
-    (id: string, favorite: boolean) => {
-      applyFavorite(id, favorite);
-
-      saveFavorite(id, favorite)
-        // The route echoes what it stored; trust that over what we assumed.
-        .then((saved) => {
-          if (saved !== favorite) {
-            applyFavorite(id, saved);
-          }
-        })
-        .catch(() => {
-          applyFavorite(id, !favorite);
-        });
-    },
-    [applyFavorite]
-  );
+  const toggleFavorite = useOptimisticSave(applyFavorite, saveFavorite);
 
   return { status, query, rows, continueWatching, retry, toggleFavorite };
 }
