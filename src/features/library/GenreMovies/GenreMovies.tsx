@@ -89,7 +89,8 @@ export interface GenreMoviesProviderProps {
  * the URL is carrying beside it, both read straight from the router as
  * app-level state. Both are known on the first render, so a shared or
  * bookmarked link loads already narrowed and in its order, with no unnarrowed
- * genre flashing past first.
+ * genre flashing past first. Through a refetch the grid already on screen stays
+ * put — the skeleton latch, which {@link useBrowseLoad} owns and explains.
  *
  * That the value travels by context is an implementation detail of this module,
  * not a contract: `useGenreMovies()` is what consumers read, and nothing about
@@ -114,7 +115,7 @@ export function GenreMoviesProvider({ children }: GenreMoviesProviderProps) {
   const settled = toGenreQueryParams(parseGenreQuery(searchParams)).toString();
 
   // Read back from that canonical form, so an unchanged query keeps one identity
-  // for the effect below. It yields what the URL says because the two functions
+  // for the load below. It yields what the URL says because the two functions
   // are inverses — a property their own test asserts.
   const query = useMemo(
     () => parseGenreQuery(new URLSearchParams(settled)),

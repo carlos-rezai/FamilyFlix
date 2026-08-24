@@ -68,9 +68,8 @@ export interface UseHomeRowsResult {
  * arrives because one row was built. It is already known on the first render, so a
  * shared link loads narrowed and in its order with no unfiltered library
  * flashing past first, and it refetches whenever the settled query changes.
- * Through that refetch the rows already on screen stay put: the skeleton is
- * for the first load only, because flashing the whole screen every time the
- * typing settles would be unreadable.
+ * Through that refetch the rows already on screen stay put — the skeleton latch,
+ * which {@link useBrowseLoad} owns and explains.
  *
  * It also owns the one edit the browse home can make to those rows — the
  * favorite heart — because the optimistic value and the loaded rows are the
@@ -93,13 +92,15 @@ export function useHomeRows(): UseHomeRowsResult {
   ).toString();
 
   // Read back from that canonical form, so an unchanged query keeps one
-  // identity for the effect below. It yields what the URL says because the two
+  // identity for the load below. It yields what the URL says because the two
   // functions are inverses — a property their own test asserts.
   const query = useMemo(
     () => parseLibraryQuery(new URLSearchParams(settled)),
     [settled]
   );
 
+  // The settled query string is what says which load this is: an unchanged
+  // query is an unchanged string, and nothing else about a render can move it.
   const { status, data, setData, retry } = useBrowseLoad(
     () => loadSections(query),
     settled
