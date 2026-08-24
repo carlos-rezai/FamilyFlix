@@ -1,10 +1,10 @@
 import { useNavigate } from 'react-router-dom';
 
 import { LoadMessage } from '@/components';
-import { Button } from '@/primitives';
 import { range } from '@/utils';
 import { LibraryGrid } from '../LibraryGrid/LibraryGrid';
 import { useGenreMovies } from '../GenreMovies/GenreMovies';
+import { RetryableFailure } from '../RetryableFailure/RetryableFailure';
 import { SkeletonCard } from '../SkeletonCard/SkeletonCard';
 import { SkeletonGrid } from './GenreGrid.styles';
 
@@ -53,13 +53,11 @@ export function GenreGrid() {
   }
 
   if (status === 'error') {
-    // A failure must read as a failure: an empty grid here would claim the
-    // genre holds nothing, which is a different and wrong thing to say.
     return (
-      <LoadMessage
+      <RetryableFailure
         title="Couldn’t load this genre"
         body="Something went wrong reading these movies."
-        action={<Button label="Retry" variant="secondary" onClick={retry} />}
+        onRetry={retry}
       />
     );
   }

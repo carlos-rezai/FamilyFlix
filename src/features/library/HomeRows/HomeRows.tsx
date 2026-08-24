@@ -1,10 +1,10 @@
 import { useNavigate } from 'react-router-dom';
 
 import { LoadMessage } from '@/components';
-import { Button } from '@/primitives';
 import { range, toGenreQueryParams } from '@/utils';
 import { ContinueRow } from '../ContinueRow/ContinueRow';
 import { GenreRow } from '../GenreRow/GenreRow';
+import { RetryableFailure } from '../RetryableFailure/RetryableFailure';
 import { useHomeRows } from '../useHomeRows/useHomeRows';
 import {
   SkeletonSection,
@@ -73,10 +73,10 @@ export function HomeRows() {
 
   if (status === 'error') {
     return (
-      <LoadMessage
+      <RetryableFailure
         title="Couldn’t load your library"
         body="Something went wrong reading your movies."
-        action={<Button label="Retry" variant="secondary" onClick={retry} />}
+        onRetry={retry}
       />
     );
   }
