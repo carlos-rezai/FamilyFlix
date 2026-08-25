@@ -15,15 +15,27 @@
 
 ## Rating & watch state
 
-| Term                | Definition                                                                                                                                    | Aliases to avoid         |
-| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------ |
-| **Rating**          | Household 0–10 half-star score (10 = 5 stars), **seeded from TMDB** at import, maintainer-overridable.                                        | review, score, vote      |
-| **Unrated**         | A **Movie** with no **Rating** (`NULL`) — distinct from a literal 0-star rating; renders as **no stars at all** on the **Movie detail page**. | zero stars, unscored     |
-| **Status**          | A **Movie**'s **derived** watch state: `unwatched` \| `in-progress` \| `watched` (never stored).                                              | state, watch status      |
-| **Watched**         | Explicit boolean flag meaning the maintainer marked a **Movie** finished; setting it via `markWatched` also clears the **Resume position**.   | seen, completed          |
-| **Resume position** | Seconds into a **Movie**'s video where playback last stopped (`resume_position_seconds`).                                                     | progress, playback time  |
-| **In-progress**     | Derived **Status** when `resume_position_seconds > 0` and not **Watched**.                                                                    | partially watched        |
-| **Favorite**        | Per-movie household boolean (`is_favorite`) surfaced as the Favorites row, togglable from the card and the **Movie detail page**.             | liked, starred, bookmark |
+| Term                  | Definition                                                                                                                                                                                                                                             | Aliases to avoid              |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------- |
+| **Rating** (updated)  | Household 0–10 half-star score (10 = 5 stars), **seeded from TMDB** at import and set or cleared any time from the **Movie detail page**'s **Rating picker**.                                                                                          | review, score, vote           |
+| **Unrated** (updated) | A **Movie** with no **Rating** (`NULL`) — distinct from a literal 0-star rating. Renders as five **empty, clickable** stars labelled `Not rated` on the **Movie detail page**, and as five empty stars with **no numeric value** on a **Poster card**. | zero stars, unscored, 0 stars |
+| **Status**            | A **Movie**'s **derived** watch state: `unwatched` \| `in-progress` \| `watched` (never stored).                                                                                                                                                       | state, watch status           |
+| **Watched**           | Explicit boolean flag meaning the maintainer marked a **Movie** finished; setting it via `markWatched` also clears the **Resume position**.                                                                                                            | seen, completed               |
+| **Resume position**   | Seconds into a **Movie**'s video where playback last stopped (`resume_position_seconds`).                                                                                                                                                              | progress, playback time       |
+| **In-progress**       | Derived **Status** when `resume_position_seconds > 0` and not **Watched**.                                                                                                                                                                             | partially watched             |
+| **Favorite**          | Per-movie household boolean (`is_favorite`) surfaced as the Favorites row, togglable from the card and the **Movie detail page**.                                                                                                                      | liked, starred, bookmark      |
+
+## Rating input (new)
+
+Vocabulary for the control that _writes_ a **Rating**. Star **display** is
+`StarRating` and has no vocabulary of its own — these three name the interactive
+half only, which lives in exactly one component.
+
+| Term                        | Definition                                                                                                                                                                                                                          | Aliases to avoid                     |
+| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------ |
+| **Rating picker** (new)     | The interactive five-star control that sets or clears a **Movie**'s **Rating** — on the **Movie detail page**'s **Meta line**, and later in `MovieForm`. `RatingPicker` in code; takes a 0–100 percent, `null` for **Unrated**.     | star input, rate widget, star picker |
+| **Half-star segment** (new) | One of a **Rating picker**'s ten clickable regions (the left or right half of a star); the smallest **Rating** it can set is one segment, and clicking the segment that already holds the current value clears back to **Unrated**. | star half, hit area, tick            |
+| **Rating preview** (new)    | The fill a **Rating picker** shows while a **Half-star segment** is hovered or focused — never committed, and discarded when the pointer or focus leaves the strip.                                                                 | hover state, temp rating, draft      |
 
 ## Storage & sourcing
 
@@ -59,18 +71,18 @@
 
 ## The Movie detail page
 
-| Term                  | Definition                                                                                                                                     | Aliases to avoid                     |
-| --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------ |
-| **Movie detail page** | The `/movie/:id` route (`MoviePage`) — one **Movie** in full: **Backdrop**, **Poster**, **Meta line**, **Synopsis**, **Credits row**, actions. | movie page, detail view, title page  |
-| **Detail view model** | `MovieDetailModel` — the display shape a **Movie** is mapped to for the **Movie detail page**, built by `detailView()`.                        | detail DTO, page model               |
-| **Meta line**         | The inline row under the title assembling the **Meta segments** that exist, separated by `·`.                                                  | info row, metadata line, subtitle    |
-| **Meta segment**      | One item on the **Meta line** — year, **Runtime label**, or **Rating** stars; an absent one is omitted **with its separator**.                 | meta field, detail bit               |
-| **Runtime label**     | The human runtime string — `2h 8m`, or `42m` / `2h` when an hour or minute component is zero.                                                  | duration, length, running time       |
-| **Play label**        | The primary button's text — `Play`, or `Resume · 52:00` for an **In-progress** **Movie**, built from the **Resume position**.                  | play text, CTA label                 |
-| **Credits row**       | The **Director** + **Cast** block below the **Synopsis**; a missing one shows `—`, and the row is omitted only when both are absent.           | credits block, cast section          |
-| **Edit menu**         | The ⋯ overflow menu on the **Movie detail page**; holds Edit details today, Delete movie when that feature ships.                              | overflow menu, kebab menu, more menu |
-| **Load state**        | Which of `loading` \| `ready` \| `not-found` \| `error` a screen is in; **not-found** and **error** are distinct and offer different actions.  | status, fetch state                  |
-| **Placeholder route** | A registered route rendering a documented stub, so links have honest destinations before the real screen exists.                               | stub page, dummy route, TODO page    |
+| Term                       | Definition                                                                                                                                                                                                           | Aliases to avoid                     |
+| -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------ |
+| **Movie detail page**      | The `/movie/:id` route (`MoviePage`) — one **Movie** in full: **Backdrop**, **Poster**, **Meta line**, **Synopsis**, **Credits row**, actions.                                                                       | movie page, detail view, title page  |
+| **Detail view model**      | `MovieDetailModel` — the display shape a **Movie** is mapped to for the **Movie detail page**, built by `detailView()`.                                                                                              | detail DTO, page model               |
+| **Meta line**              | The inline row under the title assembling the **Meta segments** that exist, separated by `·`.                                                                                                                        | info row, metadata line, subtitle    |
+| **Meta segment** (updated) | One item on the **Meta line** — year, **Runtime label**, or the **Rating picker**; an absent one is omitted **with its separator**. The rating segment is the one that is **never** absent, because it is a control. | meta field, detail bit               |
+| **Runtime label**          | The human runtime string — `2h 8m`, or `42m` / `2h` when an hour or minute component is zero.                                                                                                                        | duration, length, running time       |
+| **Play label**             | The primary button's text — `Play`, or `Resume · 52:00` for an **In-progress** **Movie**, built from the **Resume position**.                                                                                        | play text, CTA label                 |
+| **Credits row**            | The **Director** + **Cast** block below the **Synopsis**; a missing one shows `—`, and the row is omitted only when both are absent.                                                                                 | credits block, cast section          |
+| **Edit menu**              | The ⋯ overflow menu on the **Movie detail page**; holds Edit details today, Delete movie when that feature ships.                                                                                                    | overflow menu, kebab menu, more menu |
+| **Load state**             | Which of `loading` \| `ready` \| `not-found` \| `error` a screen is in; **not-found** and **error** are distinct and offer different actions.                                                                        | status, fetch state                  |
+| **Placeholder route**      | A registered route rendering a documented stub, so links have honest destinations before the real screen exists.                                                                                                     | stub page, dummy route, TODO page    |
 
 ## Shared UI units
 
@@ -92,12 +104,12 @@ Vocabulary for the machinery both browse screens run on. These name one hook
 apiece, and the policies those hooks hold — policies that were previously stated
 twice, in two screens, with nothing holding them together.
 
-| Term                      | Definition                                                                                                                                                                                                                                                          | Aliases to avoid                        |
-| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------- |
-| **Browse load** (new)     | One browse screen's request for a **Settled query**, with its **Load state**, its payload and its retry. `useBrowseLoad` in code, at `features/library`'s shared rung. Moves up to `src/hooks/` the day a second feature wants it.                                  | fetch hook, data hook, query hook       |
-| **Skeleton latch** (new)  | The rule a **Browse load** holds: once a screen is loaded, a refetch keeps what is painted and only a load with nothing behind it falls back to the **Skeleton**. Flashing the grid every time the typing settles would be unreadable. Stated in exactly one place. | loading flicker, stale-while-revalidate |
-| **Optimistic save** (new) | The bargain a flag keeps with the server: show the new value at once, take the route's echo over what was assumed, put the old value back if the save is refused. `useOptimisticSave` in code; the **Favorite** heart is the only one so far.                       | optimistic update, local write, cache   |
-| **Load key** (new)        | The string that says which **Browse load** a request is — the **Settled query** for the **Browse home**, that plus the **Genre** for a **Genre page**. Change it and the screen reloads; leave it and no amount of re-rendering asks again.                         | cache key, dependency, query id         |
+| Term                          | Definition                                                                                                                                                                                                                                                                                                                                                                                                                      | Aliases to avoid                        |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------- |
+| **Browse load** (new)         | One browse screen's request for a **Settled query**, with its **Load state**, its payload and its retry. `useBrowseLoad` in code, at `features/library`'s shared rung. Moves up to `src/hooks/` the day a second feature wants it.                                                                                                                                                                                              | fetch hook, data hook, query hook       |
+| **Skeleton latch** (new)      | The rule a **Browse load** holds: once a screen is loaded, a refetch keeps what is painted and only a load with nothing behind it falls back to the **Skeleton**. Flashing the grid every time the typing settles would be unreadable. Stated in exactly one place.                                                                                                                                                             | loading flicker, stale-while-revalidate |
+| **Optimistic save** (updated) | The bargain an edit keeps with the server: show the new value at once, take the route's echo over what was assumed, put the old value back if the save is refused. `useOptimisticSave` in code holds the **boolean** case (the **Favorite** heart); the watched tick and the **Rating picker** keep the same bargain hand-rolled in `useMovieDetail`, because a **Rating** has eleven values and must be told what to put back. | optimistic update, local write, cache   |
+| **Load key** (new)            | The string that says which **Browse load** a request is — the **Settled query** for the **Browse home**, that plus the **Genre** for a **Genre page**. Change it and the screen reloads; leave it and no amount of re-rendering asks again.                                                                                                                                                                                     | cache key, dependency, query id         |
 
 ## Search, filter & sort
 
@@ -144,11 +156,14 @@ deliberately parallel to the **Browse home**'s rather than shared with it.
 - A **Movie** has exactly one **video path** (referenced in the **Library root**), and at most one **Poster** and one **Backdrop** (in the **Managed image cache**).
 - A **Movie**'s **Status** is derived from **Watched** + **Resume position** — never stored.
 - A **Resume label** is derived from **Resume position** + runtime; it is built in the mapper, never inside the **Continue card**.
-- A **Rating** belongs to exactly one **Movie**; it is **Unrated** until **TMDB** seeds it or the maintainer sets it.
+- A **Rating** belongs to exactly one **Movie**; it is **Unrated** until **TMDB** seeds it or someone sets it from the **Rating picker**.
+- A **Rating picker** writes exactly one **Movie**'s **Rating**, through `POST /api/movies/:id/rating` → `setRating` — the third single-signal write route, beside **Favorite**'s and **Watched**'s, never through `updateMovie`.
+- A **Half-star segment** is the unit a **Rating picker** sets in; ten of them cover the 0–10 scale, so the picker can express every **Rating** except a literal `0` — clicking the current value's segment means **Unrated**, not nought.
+- A **Rating preview** belongs to one **Rating picker** and never leaves it; nothing outside the component ever sees an uncommitted **Rating**.
 - One **Movie** maps to exactly one **TMDB** entry (`tmdb_id`); in v1 one **Movie** = one video file (no **Editions**).
 - The **Movie detail page** renders exactly one **Movie** via its **Detail view model**; every display decision (which **Meta segments** survive, the **Runtime label**'s wording, the **Play label**, whether there is a **Credits row**) is made in `detailView()`, never in the component.
 - A **Meta segment** that is absent takes its separator with it — the **Meta line** never renders a dangling `·`.
-- **Unrated** is treated as an absent **Meta segment** on the **Movie detail page**, but still renders as 0 stars on a **Poster card**.
+- **Unrated** renders as five empty **Rating picker** stars labelled `Not rated` on the **Movie detail page** (**retracted**: it used to be an absent **Meta segment**), and as five empty stars with no numeric value on a **Poster card**. Neither surface prints `0.0` for it.
 - A **Library query** produces exactly one **Home payload**; both the **Genre rows** and the **Continue Watching row** are built from it, so both narrow together.
 - The **Search bar** and the **Filter dropdowns** only ever _write_ a **Library query**; everything that renders reads the **Settled query** from the URL, so no screen owns it.
 - A **Filter dropdown** holds one **Filter option** per choice, exactly one of which is selected; `All Genres` and `All ratings` are the options that mean "unset".
@@ -184,11 +199,24 @@ deliberately parallel to the **Browse home**'s rather than shared with it.
 > **Maintainer:** "Just the stars. A **Meta segment** we don't have doesn't get a
 > placeholder, and it takes its separator with it — I never want to see a bullet
 > floating with nothing on either side of it."
-> **Dev:** "And if it's **Unrated** too — five empty stars?"
-> **Maintainer:** "No, nothing. Empty stars with '0.0' next to them says we watched
-> it and scored it zero. **Unrated** means nobody's said anything yet. On the
-> **Poster card** it still shows as 0 stars, but that's a fixed tile — I'd rather
-> have even rows there than be strictly right."
+> **Dev:** "And if it's **Unrated** too — do the stars go with it?"
+> **Maintainer:** "They used to. Not any more, now that they're a **Rating picker** —
+> five empty ones and the words 'Not rated'. Empty stars reading '0.0' sounded like
+> we'd watched it and scored it nothing; empty stars you can _click_ read as 'go on
+> then'. And it's the **Unrated** ones I actually want to rate, so hiding the control
+> on exactly those was backwards."
+> **Dev:** "How fine can she go? Does clicking the left side of the third star mean
+> two and a half?"
+> **Maintainer:** "Yes — that's a **Half-star segment**, ten of them across the row.
+> Hovering shows you what you'd get before you commit to it."
+> **Dev:** "And if she mis-clicks? There's no undo."
+> **Maintainer:** "Click the same **Half-star segment** again and it goes back to
+> **Unrated**. Same as clicking the heart twice. It can't set a flat zero, mind —
+> nought out of ten and 'nobody's said' are different things, and the only one worth
+> a click is the second."
+> **Dev:** "On the **Poster card**, then — **Unrated** still shows five empty stars?"
+> **Maintainer:** "It has to, or the rows go uneven. But drop the '0.0' next to them.
+> That's the bit that was making it look like a verdict."
 > **Dev:** "I've got one sitting at `Resume · 52:00`. If I mark it **Watched** and
 > then change my mind, do I get my 52 minutes back?"
 > **Maintainer:** "No — marking it **Watched** clears the **Resume position**. That's
@@ -262,12 +290,33 @@ deliberately parallel to the **Browse home**'s rather than shared with it.
   longer merely suggestive of two things — it names two. Prefer **Genre row** for
   the home's rows, **Browse home** for that screen, and **Library grid** only for
   the **Genre page**'s uncapped grid. Never say "browse grid" for either.
-- **"Rating" on a card (updated — partly resolved):** an **Unrated** **Movie** maps
-  to 0 stars on a **Poster card**, which looks identical to a literal 0. Resolved
-  for the **Movie detail page** (the stars are omitted entirely); **still open for
-  the Poster card**, where the star row is fixed furniture in a fixed-height tile
-  and removing it would make cards in a row uneven. Revisit with the **Ratings**
-  feature, which owns the interactive picker and any explicit "Unrated" affordance.
+- **"Rating" on a card (updated — resolved by Ratings):** an **Unrated** **Movie**
+  used to map to `★★★★★ 0.0` on a **Poster card**, identical to a literal 0. The
+  star row stays — it is fixed furniture in a fixed-height tile, and removing it
+  would make cards in a row uneven — but the **numeric value is omitted** when
+  **Unrated**. So **Unrated** reads `★★★★★` and a literal `0` reads `★★★★★ 0.0`.
+  `StarRating.rating` and `PosterCardMovie.rating` are `number | null` to carry
+  the distinction rather than have each caller re-derive it. **No longer open.**
+- **The Unrated Meta segment was retracted (new):** `04-movie-detail` Q10 omitted
+  the rating **Meta segment** entirely for an **Unrated** **Movie**, on the
+  grounds that empty stars printing `0.0` sound like a verdict — and named this
+  feature as the successor that would give **Unrated** "the affordance that acts
+  on it". The affordance is here, so the segment comes back: empty stars that are
+  visibly a **Rating picker** labelled `Not rated` read as an invitation, and the
+  **Movies** most in need of a **Rating** are exactly the ones the old rule left
+  with nothing to click. Older commits and `04-movie-detail.md` describe the
+  omission; `07-ratings.md` Q5 is the current rule.
+- **The Rating picker is a prototype amendment (new):**
+  `page.MoviePage.dc.html` renders `prim.StarRating` display-only, and the
+  prototype's only **Rating picker** is inside `feat.MovieForm` — a 🔜 maintainer
+  screen. We **amend the prototype** so the **Meta line**'s rating **Meta
+  segment** is a **Rating picker** at `size=20`, per CLAUDE.md's "amend the
+  prototype first, then build to the amended prototype". The reasons are on the
+  record in `07-ratings.md` Q2: README files Ratings as parent-facing, `setRating`
+  is `setFavorite`'s sibling in one `curation` slice and **Favorite** is settable
+  here, and a molecule with no call site is speculative work. This is the first
+  amendment this project has taken — `page.MoviePage.dc.html` and the
+  implementation change together, or "the prototype is the spec" quietly rots.
 - **"Progress" is three things:** the stored **Resume position** (seconds),
   the 0–100 display percent on a card's bar, and the **Resume label** string. Never
   say bare "progress" across the seam — name which one. The stored value is always
@@ -309,8 +358,10 @@ deliberately parallel to the **Browse home**'s rather than shared with it.
 - **"Rating" vs "Minimum rating":** a **Rating** belongs to a **Movie**;
   a **Minimum rating** is a floor in a **Library query**. Both are in 0–10 units
   and both are rendered as stars, so name which one. Note the asymmetry: an
-  **Unrated** **Movie** shows 0 stars on a **Poster card** but is _excluded_ by
-  any **Minimum rating** — it does not behave as a 0.
+  **Unrated** **Movie** shows five empty stars on a **Poster card** but is
+  _excluded_ by any **Minimum rating** — it does not behave as a 0. A **Rating
+  picker** sets the former and never the latter; the **Minimum rating** has its
+  own **Filter dropdown**.
 - **The query is the library's, not the home screen's (refactor 05):** the type
   is `LibraryQuery`; it was `HomeQuery` until the search + filter refactor, which
   is why older commits and design logs say the latter. `HomePayload` and
