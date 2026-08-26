@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { ThemeProvider } from 'styled-components';
 
 // Through the category barrel — no per-unit barrel.
@@ -26,9 +27,9 @@ function renderPicker(props: Partial<RatingPickerProps> = {}) {
  * The ten **Half-star segments**, in the order they span the row. Every button
  * the molecule draws is one of them, so the role alone finds the set — and a
  * segment's position in it is what a parent aims at, which is why the tests
- * below ask for "the fourth star's left half" rather than for a label. Naming
- * them for a screen reader is the next issue's; this one is the geometry, the
- * interaction, and the label beside the stars.
+ * below ask for "the fourth star's left half" rather than for a label. The
+ * blocks that do care what a screen reader hears ask for them by name instead,
+ * through `named()`.
  */
 const segments = () => screen.queryAllByRole('button');
 
@@ -424,5 +425,320 @@ describe('RatingPicker — the label', () => {
 
     expect(label.fontSize).toBe('14px');
     expect(label.color).toBe('rgb(182, 169, 148)');
+  });
+});
+
+/**
+ * What a screen reader reads out for each **Half-star segment**, 1–10 from the
+ * left, on a picker with no value in any of them. The wording is grammatical
+ * rather than uniform — "Rate 1 stars" is what a parent would otherwise hear.
+ */
+const SEGMENT_LABELS = [
+  'Rate ½ a star',
+  'Rate 1 star',
+  'Rate 1½ stars',
+  'Rate 2 stars',
+  'Rate 2½ stars',
+  'Rate 3 stars',
+  'Rate 3½ stars',
+  'Rate 4 stars',
+  'Rate 4½ stars',
+  'Rate 5 stars',
+];
+
+/** The strip as an assistive technology finds it, rather than by geometry. */
+const group = () => screen.getByRole('group', { name: 'Your rating' });
+
+/** One segment as an assistive technology finds it: by what it says it does. */
+const named = (name: string) => screen.getByRole('button', { name });
+
+describe('RatingPicker — reaching it with Tab', () => {
+  it('puts all ten segments in the tab order, left to right', async () => {
+    // Story 24. The prototype's hit areas were bare `<div onClick>`s, which no
+    // amount of tabbing ever reaches; #59 made them buttons, and this is the
+    // proof that nothing since has taken them back out of the tab order.
+    const user = userEvent.setup();
+    renderPicker({ value: 60 });
+
+    for (let nth = 1; nth <= 10; nth += 1) {
+      await user.tab();
+      expect(document.activeElement).toBe(segment(nth));
+    }
+  });
+
+  it('lets focus leave the strip again on the next Tab', async () => {
+    const user = userEvent.setup();
+    renderPicker({ value: 60 });
+
+    for (let nth = 1; nth <= 10; nth += 1) {
+      await user.tab();
+    }
+    await user.tab();
+
+    expect(strip().contains(document.activeElement)).toBe(false);
+  });
+});
+
+describe('RatingPicker — the Rating preview under focus', () => {
+  it('previews exactly what hovering the same segment previews', async () => {
+    // Story 25: the keyboard user gets the feedback the mouse user gets, not a
+    // lesser version of it. Same segment, same three fills.
+    const user = userEvent.setup();
+    renderPicker({ value: null });
+
+    fireEvent.mouseEnter(segment(7));
+    const hovered = [fillOf(3), fillOf(4), fillOf(5)];
+    fireEvent.mouseLeave(strip());
+
+    for (let nth = 1; nth <= 7; nth += 1) {
+      await user.tab();
+    }
+
+    expect([fillOf(3), fillOf(4), fillOf(5)]).toEqual(hovered);
+    expect(fillOf(4)).toBe('50%');
+  });
+
+  it('writes nothing while focus is only passing through', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    renderPicker({ value: 40, onChange });
+
+    await user.tab();
+    await user.tab();
+    await user.tab();
+
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it('keeps the label on the stored value throughout, as a hover does', async () => {
+    // The preview is a fill, not a reading. Nothing outside the molecule ever
+    // sees an uncommitted rating, and the one number on screen still says what
+    // the database says.
+    const user = userEvent.setup();
+    renderPicker({ value: 80 });
+
+    await user.tab();
+    await user.tab();
+
+    expect(fillOf(4)).toBe('0%');
+    expect(screen.getByText('4.0 / 5')).toBeTruthy();
+  });
+});
+
+describe('RatingPicker — leaving the strip with the keyboard', () => {
+  it('follows focus from one segment to the next without restoring', async () => {
+    // Story 30's other half, and the reason a bare blur is not enough: a Tab
+    // from segment 3 to segment 4 blurs a segment without leaving the strip,
+    // and the preview has to survive it.
+    const user = userEvent.setup();
+    renderPicker({ value: 80 });
+
+    for (let nth = 1; nth <= 3; nth += 1) {
+      await user.tab();
+    }
+    expect(fillOf(2)).toBe('50%');
+
+    await user.tab();
+
+    expect(fillOf(2)).toBe('100%');
+    expect(fillOf(4)).toBe('0%');
+  });
+
+  it('restores the stored value when focus leaves the strip entirely', async () => {
+    // Story 30: a stale preview must not outlive the tab away.
+    const user = userEvent.setup();
+    renderPicker({ value: 80 });
+
+    for (let nth = 1; nth <= 3; nth += 1) {
+      await user.tab();
+    }
+    expect(fillOf(4)).toBe('0%');
+
+    for (let nth = 4; nth <= 11; nth += 1) {
+      await user.tab();
+    }
+
+    expect(fillOf(4)).toBe('100%');
+    expect(fillOf(5)).toBe('0%');
+  });
+
+  it('restores it when focus lands on something outside the picker', async () => {
+    // The same exit, but reached by clicking away rather than by tabbing off
+    // the end — a real element takes the focus, so the strip is left with a
+    // neighbour to name rather than with nothing. Both are leaving.
+    const user = userEvent.setup();
+    render(
+      <ThemeProvider theme={theme}>
+        <RatingPicker value={80} onChange={() => undefined} />
+        <button type="button">Play</button>
+      </ThemeProvider>
+    );
+
+    // The neighbour is drawn last, so the ten segments are still buttons 1-10.
+    segment(3).focus();
+    expect(fillOf(4)).toBe('0%');
+
+    await user.click(screen.getByRole('button', { name: 'Play' }));
+
+    expect(fillOf(4)).toBe('100%');
+    expect(fillOf(5)).toBe('0%');
+  });
+
+  it('gives an unrated picker its empty stars back when focus leaves', async () => {
+    const user = userEvent.setup();
+    renderPicker({ value: null });
+
+    for (let nth = 1; nth <= 6; nth += 1) {
+      await user.tab();
+    }
+    expect(fillOf(3)).toBe('100%');
+
+    for (let nth = 7; nth <= 11; nth += 1) {
+      await user.tab();
+    }
+
+    expect(fillOf(1)).toBe('0%');
+    expect(fillOf(3)).toBe('0%');
+  });
+});
+
+describe('RatingPicker — Enter and Space', () => {
+  it('sets the focused segment’s rating on Enter', async () => {
+    // Story 26. The control behaves like the button it is.
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    renderPicker({ value: null, onChange });
+
+    segment(7).focus();
+    await user.keyboard('{Enter}');
+
+    expect(onChange).toHaveBeenCalledWith(70);
+  });
+
+  it('sets it on Space too', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    renderPicker({ value: null, onChange });
+
+    segment(4).focus();
+    await user.keyboard(' ');
+
+    expect(onChange).toHaveBeenCalledWith(40);
+  });
+
+  it('clears from the keyboard exactly as a click does', async () => {
+    // The clear is not a mouse-only gesture: the segment holding the value
+    // asks for `null` however it is pressed.
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    renderPicker({ value: 70, onChange });
+
+    segment(7).focus();
+    await user.keyboard('{Enter}');
+
+    expect(onChange).toHaveBeenCalledWith(null);
+  });
+
+  it('emits once per press, not once per key event', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    renderPicker({ value: null, onChange });
+
+    segment(10).focus();
+    await user.keyboard('{Enter}');
+
+    expect(asked(onChange)).toEqual([100]);
+  });
+});
+
+describe('RatingPicker — what each segment says it does', () => {
+  it('names every segment for the rating it would set', () => {
+    // Story 27: a screen-reader user knows what they are about to commit
+    // before they commit it — half-stars included, and worded so that
+    // "Rate 1 star" is not read out as "Rate 1 stars".
+    renderPicker({ value: null });
+
+    SEGMENT_LABELS.forEach((label, index) => {
+      expect(named(label)).toBe(segment(index + 1));
+    });
+  });
+
+  it('names the segment holding the current value "Clear rating" instead', () => {
+    // Story 28: the clear stops being a trick you have to know.
+    renderPicker({ value: 70 });
+
+    expect(named('Clear rating')).toBe(segment(7));
+    expect(screen.queryByRole('button', { name: 'Rate 3½ stars' })).toBeNull();
+  });
+
+  it('leaves every other segment naming what it would set', () => {
+    renderPicker({ value: 70 });
+
+    expect(named('Rate 3 stars')).toBe(segment(6));
+    expect(named('Rate 4 stars')).toBe(segment(8));
+    expect(
+      screen.getAllByRole('button', { name: 'Clear rating' })
+    ).toHaveLength(1);
+  });
+
+  it('moves the "Clear rating" label with the value', () => {
+    const { rerender } = renderPicker({ value: 70 });
+    expect(named('Clear rating')).toBe(segment(7));
+
+    rerender(picker({ value: 20 }));
+
+    expect(named('Clear rating')).toBe(segment(2));
+    expect(named('Rate 3½ stars')).toBe(segment(7));
+  });
+
+  it('offers no clear at all on an unrated movie', () => {
+    // Nothing to clear, so no segment claims it can.
+    renderPicker({ value: null });
+
+    expect(screen.queryByRole('button', { name: 'Clear rating' })).toBeNull();
+  });
+
+  it('offers no clear for a stored zero either', () => {
+    // A seeded 0 is a rating this picker can read and has no segment to write,
+    // so no segment can honestly offer to clear it — the first one still says
+    // it would set half a star, which is what it does.
+    renderPicker({ value: 0 });
+
+    expect(screen.queryByRole('button', { name: 'Clear rating' })).toBeNull();
+    expect(named('Rate ½ a star')).toBe(segment(1));
+  });
+
+  it('keeps the labels on the stored value while a preview is showing', () => {
+    // The **Rating preview** is uncommitted, so it must not start renaming the
+    // clear onto a segment that would not clear anything.
+    renderPicker({ value: 70 });
+
+    fireEvent.mouseEnter(segment(2));
+
+    expect(named('Clear rating')).toBe(segment(7));
+    expect(named('Rate 1 star')).toBe(segment(2));
+  });
+});
+
+describe('RatingPicker — the strip as a group', () => {
+  it('announces the ten buttons as a group called "Your rating"', () => {
+    // Story 29: ten adjacent buttons arrive with a context rather than as loose
+    // furniture. The name matches the field label the prototype's MovieForm
+    // already prints above the picker.
+    renderPicker({ value: 80 });
+
+    expect(group()).toBeTruthy();
+    for (let nth = 1; nth <= 10; nth += 1) {
+      expect(group().contains(segment(nth))).toBe(true);
+    }
+  });
+
+  it('puts the group on the strip itself, adding no box of its own', () => {
+    // The pixel guard for this issue: semantics only. If the group were a new
+    // wrapper rather than the existing strip, the layout would have changed.
+    renderPicker({ value: 80 });
+
+    expect(group()).toBe(strip());
+    expect(getComputedStyle(group()).gap).toBe('5px');
   });
 });
