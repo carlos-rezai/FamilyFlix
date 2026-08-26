@@ -1,5 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  within,
+} from '@testing-library/react';
 import { ThemeProvider } from 'styled-components';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 
@@ -204,13 +210,15 @@ function separators() {
 /**
  * The rating segment's ten **Half-star segments**. They are controls now rather
  * than glyph text — the meta line renders a `RatingPicker` where its
- * `StarRating` used to sit — and they are the only controls on this page that
- * a screen reader has nothing to say about yet, which is what tells them apart
- * from Play, the two circles and the ⋯ trigger. Naming them is the next
- * issue's; until then their position in the row is what a parent aims at.
+ * `StarRating` used to sit — and the picker's own group is what tells them
+ * apart from Play, the two circles and the ⋯ trigger. Each says what it
+ * would set, but a name is not how a parent aims at one, so the tests below
+ * still ask for a position in the row.
  */
 function starButtons() {
-  return screen.queryAllByRole('button', { name: '' });
+  const strip = screen.queryByRole('group', { name: 'Your rating' });
+
+  return strip === null ? [] : within(strip).queryAllByRole('button');
 }
 
 /** One segment, 1–10 from the left: 7 is the fourth star's left half. */

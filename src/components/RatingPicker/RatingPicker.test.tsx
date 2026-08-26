@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ThemeProvider } from 'styled-components';
 
@@ -575,7 +575,10 @@ describe('RatingPicker — leaving the strip with the keyboard', () => {
     );
 
     // The neighbour is drawn last, so the ten segments are still buttons 1-10.
-    segment(3).focus();
+    // The focus is real rather than a fired event — it is what gives the click
+    // away something to blur from — and `act` is what flushes the preview it
+    // sets, since a bare `.focus()` renders no sooner than the next act.
+    act(() => segment(3).focus());
     expect(fillOf(4)).toBe('0%');
 
     await user.click(screen.getByRole('button', { name: 'Play' }));
