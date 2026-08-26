@@ -763,8 +763,12 @@ describe('MovieDetail — the rating picker', () => {
     await findTitle('Northwind');
     fireEvent.click(starSegment(8));
 
-    expect(screen.getByText(/not rated/i)).toBeDefined();
+    // On this page the cleared rating reads as an absence by *losing* its
+    // segment: the meta line is still conditional on a rating existing, and
+    // 62's retraction is what turns a cleared rating into a "Not rated" picker
+    // rather than a missing one. What must never appear either way is a zero.
     expect(screen.queryByText('0.0 / 5')).toBeNull();
+    expect(starButtons()).toHaveLength(0);
     await waitFor(() =>
       expect(writes()).toContainEqual({
         url: '/api/movies/m1/rating',
