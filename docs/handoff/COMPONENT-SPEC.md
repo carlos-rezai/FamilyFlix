@@ -116,7 +116,7 @@ MovieForm/SettingsPage/ImportFlow.
 Target: `primitives/StarRating/` · **display only** (0–100% → 5 stars, half-star steps).
 | Prop | Type | Default | Notes |
 | --- | --- | --- | --- |
-| `rating` | number (0–100) | 80 | percent |
+| `rating` | number \| null (0–100) | 80 | percent; `null` is unrated — five empty stars, and no numeric value even when `showValue` is set |
 | `size` | number | 14 | star px |
 | `showValue` | boolean | false | append "4.0" |
 
@@ -330,7 +330,11 @@ install). In code, a `ResizeObserver`/`useEffect` keeps it pinned to the bottom.
 ### RatingPicker — `mol.RatingPicker.dc.html`
 
 Target: `components/RatingPicker/` · **interactive** half-star input (local hover state).
-Props: `value` (0–100), `onChange(percent)`.
+| Prop | Type | Default | Notes |
+| --- | --- | --- | --- |
+| `value` | number \| null (0–100) | 70 | percent; `null` is unrated, and the label reads "Not rated" |
+| `size` | number | 30 | star px; gaps and hit areas scale off it, so the MoviePage meta line's 20px instance is a smaller picker rather than a broken one |
+| `onChange` | (percent: number \| null) => void | — | clicking the segment that already holds the current value emits `null` |
 
 ### SubtitleRow — `mol.SubtitleRow.dc.html`
 
@@ -386,7 +390,7 @@ needs.
 | ------------------------ | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `page.LibraryPage` ✅    | `pages/LibraryPage`  | browse header (SearchBar + FilterDropdown ×3 + gear → Settings) + ContinueCard row + Favorites row + `GenreRow` ×n                                                              |
 | `page.GenrePage` ✅      | `pages/GenrePage`    | genre header (SearchBar + Sort FilterDropdown) + `LibraryGrid`                                                                                                                  |
-| `page.MoviePage` ✅      | `pages/MoviePage`    | backdrop + poster + meta (StarRating, Chip tags, director/cast) + actions                                                                                                       |
+| `page.MoviePage` ✅      | `pages/MoviePage`    | backdrop + poster + meta (RatingPicker, Chip tags, director/cast) + actions                                                                                                     |
 | `page.SettingsPage` ✅   | `pages/SettingsPage` | grouped settings hub: **Library** (Add/Import/Export actions) · **Playback** (`CodecManager` + default-subtitle FilterDropdown) · **Storage** (media folder, space) · **About** |
 | `feat.PlayerControls` ✅ | `pages/PlayerPage`   | full player surface + subtitle overlay (player is one self-contained screen)                                                                                                    |
 | `feat.MovieForm` ✅      | `pages/AddMoviePage` | the Add/Edit form (also resolves an import row)                                                                                                                                 |

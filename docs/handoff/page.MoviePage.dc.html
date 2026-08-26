@@ -265,11 +265,11 @@
                 "
               >
                 <dc-import
-                  name="prim.StarRating"
-                  rating="{{ detail.ratingPct }}"
+                  name="mol.RatingPicker"
+                  value="{{ detail.ratingPct }}"
                   size="20"
-                  show-value="{{ true }}"
-                  hint-size="120px,24px"
+                  on-change="{{ detail.onRate }}"
+                  hint-size="182px,24px"
                 ></dc-import>
               </span>
               <sc-if
