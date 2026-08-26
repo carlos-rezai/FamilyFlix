@@ -58,4 +58,12 @@ describe('toRatingUnits — the inverse of toRatingPercent', () => {
       expect(toRatingUnits(toRatingPercent(units))).toBe(units);
     }
   });
+
+  it('round-trips an absent rating as an absence, in both directions', () => {
+    // The half-star points above are the whole numeric domain; unrated is the
+    // point outside it, and the only one where a round trip that "worked"
+    // would silently rewrite an absence into a nought.
+    expect(toRatingPercent(toRatingUnits(null))).toBeNull();
+    expect(toRatingUnits(toRatingPercent(null))).toBeNull();
+  });
 });

@@ -188,3 +188,40 @@ describe('PosterCard — what it deliberately does not offer', () => {
     expect(screen.queryAllByRole('button', { name: '' })).toHaveLength(0);
   });
 });
+
+/**
+ * The tile used to print `★★★★★ 0.0` for a movie nobody had rated, which is
+ * character-for-character what it prints for a movie rated nought. The
+ * ambiguity is closed by dropping the number rather than the stars: the star
+ * row is fixed furniture in a fixed-height tile, and taking it away would leave
+ * the cards in a carousel row sitting at different heights.
+ */
+describe('PosterCard — an unrated movie is not a zero-rated one', () => {
+  it('shows five stars and no number for an unrated movie', () => {
+    const { container } = renderCard({ movie: { ...movie, rating: null } });
+
+    expect(container.textContent).toContain('★★★★★');
+    expect(screen.queryByText('0.0')).toBeNull();
+  });
+
+  it('shows five stars and 0.0 for a movie genuinely rated zero', () => {
+    const { container } = renderCard({ movie: { ...movie, rating: 0 } });
+
+    expect(container.textContent).toContain('★★★★★');
+    expect(screen.getByText('0.0')).toBeTruthy();
+  });
+
+  it('keeps the star row on an unrated card, so tiles stay the same height', () => {
+    // jsdom measures nothing, so the height claim is asserted through a
+    // documented proxy: the unrated card renders the same star markup as a
+    // rated one, and only the numeric value differs between them.
+    const unrated = renderCard({ movie: { ...movie, rating: null } });
+    const rated = renderCard({ movie: { ...movie, rating: 80 } });
+
+    const starsIn = (view: { container: HTMLElement }) =>
+      (view.container.textContent ?? '').match(/★★★★★/g) ?? [];
+
+    expect(starsIn(unrated).length).toBeGreaterThan(0);
+    expect(starsIn(unrated)).toHaveLength(starsIn(rated).length);
+  });
+});

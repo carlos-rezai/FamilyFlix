@@ -211,6 +211,36 @@ describe('the dev seed — the states it puts on the home screen', () => {
     expect(movies.some((movie) => movie.status === 'in-progress')).toBe(true);
   });
 
+  it('puts an unrated movie and a zero-rated one side by side on the shelves', () => {
+    const storage = freshStorage();
+
+    seedLibrary(storage);
+    const movies = storage.listMovies({ sort: 'a-z' });
+
+    // Not "a fixture object omits rating" — the round trip is the point. A
+    // repository that stored a literal 0 as NULL would put both cards in the
+    // same state, and the whole reason these two fixtures exist is that the
+    // difference between them is supposed to be visible by looking.
+    const unrated = movies.filter((movie) => movie.rating === null);
+    const zeroRated = movies.filter((movie) => movie.rating === 0);
+
+    expect(unrated.length).toBeGreaterThanOrEqual(1);
+    expect(zeroRated.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('keeps both rating states through a second run', () => {
+    const storage = freshStorage();
+
+    // The zero-rated fixture is the one a re-run could quietly lose: rewriting
+    // it as unrated would still leave the library the right length.
+    seedLibrary(storage);
+    seedLibrary(storage);
+    const movies = storage.listMovies({ sort: 'a-z' });
+
+    expect(movies.some((movie) => movie.rating === null)).toBe(true);
+    expect(movies.some((movie) => movie.rating === 0)).toBe(true);
+  });
+
   it('leaves every fixture without artwork, so the cards render their gradient', () => {
     const storage = freshStorage();
 

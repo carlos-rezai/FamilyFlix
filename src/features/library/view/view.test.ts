@@ -42,8 +42,14 @@ describe('view — Movie → PosterCardMovie mapper', () => {
     expect(view(makeMovie({ rating: 8 })).rating).toBe(80);
   });
 
-  it('renders an unrated movie as 0 stars (rating percent 0), not a crash or blank', () => {
-    expect(view(makeMovie({ rating: null })).rating).toBe(0);
+  it('carries an unrated movie through as an absence, not as a zero score', () => {
+    // The card reads this to decide whether to print a number at all, so a
+    // flattened 0 here is what made "unrated" and "rated nought" the same tile.
+    expect(view(makeMovie({ rating: null })).rating).toBeNull();
+  });
+
+  it('maps a movie genuinely rated zero to 0, beside the unrated null', () => {
+    expect(view(makeMovie({ rating: 0 })).rating).toBe(0);
   });
 
   it('builds a poster URL through the image route when a poster path exists', () => {

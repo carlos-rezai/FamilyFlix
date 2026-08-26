@@ -9,11 +9,14 @@ describe('toRatingPercent', () => {
     expect(toRatingPercent(4.5)).toBe(45);
   });
 
-  it('maps an unrated movie (null) to 0', () => {
-    expect(toRatingPercent(null)).toBe(0);
+  it('passes an unrated movie (null) straight through as null', () => {
+    // The flattening this used to do — `null` in, `0` out — is what made an
+    // unrated movie indistinguishable from one someone actually scored nought.
+    // Carrying the absence is what lets every caller below tell them apart.
+    expect(toRatingPercent(null)).toBeNull();
   });
 
-  it('maps a literal 0-unit rating to 0', () => {
+  it('maps a literal 0-unit rating to 0, which is not the same as null', () => {
     expect(toRatingPercent(0)).toBe(0);
   });
 });
