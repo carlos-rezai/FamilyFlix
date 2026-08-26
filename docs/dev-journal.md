@@ -11,6 +11,241 @@ Newest entry first.
 
 ---
 
+## 2026-08-26 — Ratings (issues #57–#63)
+
+The stars have been on screen since `02-browse-grid` and unreachable that whole
+time. Thirteen pixels on every **Poster card**, twenty on the **Movie detail
+page**, a `4+ stars` **Minimum rating** pill, a `highest-rated` **Sort order** —
+and no route, no client call, and no control anywhere that a person could click.
+Every rating in the database got there through the dev seed. Six build issues,
+#57–#62, each a `test:` commit stopping at RED and a `feat:` commit taking it
+green, plus the prototype amendment ahead of all of them. 1478 tests pass, up
+from 1352. Plan: `docs/PRDs/07-ratings-plan.md`.
+
+No schema moved and no migration ran. The column has been
+`rating INTEGER CHECK(rating BETWEEN 0 AND 10)` with `NULL` meaning **Unrated**
+since `01-library-core`, and `storage.setRating(id, units | null)` has been
+sitting in the `curation` slice beside `setFavorite` for the same six features.
+What this feature built is the path from a click to that mutator, and the
+honesty to stop pretending an absence is a zero on the way.
+
+### The project's first prototype amendment
+
+This is the thing about this feature worth remembering, and it is a process fact
+rather than a code one.
+
+`page.MoviePage.dc.html` rendered `prim.StarRating`, display-only. The
+prototype's only **Rating picker** lives inside `feat.MovieForm` — a 🔜,
+unscheduled maintainer screen. So the prototype, read literally, says a
+**Rating** is something the maintainer sets in a form that does not exist, while
+README and CLAUDE.md both file Ratings under **Browse & discover
+(parent-facing)** and `setRating`'s own sibling `setFavorite` is settable from
+the detail page today.
+
+CLAUDE.md's rule for this case is exact: "If something seems wrong, raise it in
+the grill-me session and amend the prototype first, then build to the amended
+prototype." That is what happened, and the commit order is the evidence —
+`f8b8f5b` amends `page.MoviePage.dc.html` and `COMPONENT-SPEC.md`, and `8a14170`
+is the first line of implementation, after it. Nothing in `src/` or `server/`
+moved until the spec said what was being built.
+
+**The precedent is the sequence, not the outcome.** _Raise it in grill-me, amend
+the prototype, then build to the amended prototype_ — never _build something
+different and reconcile the prototype later_. The second order is how "the
+prototype is the spec" quietly becomes "the prototype is where we started",
+which is exactly the failure that CLAUDE.md section exists to prevent. The
+amendment itself is small — one `dc-import` swapped, one row in
+`COMPONENT-SPEC.md`'s page table, two prop tables widened — and its size is the
+point: an amendment that has to be argued for and committed on its own is cheap
+when it is honest and expensive when it is a redesign in disguise.
+
+The reasoning is on the record in `07-ratings.md` Q2 rather than here, so the
+next amendment has a shape to copy rather than a precedent to infer.
+
+### Two deferrals closing, both as deferred halves arriving
+
+Neither of these is a reversal, and it matters that the journal says so. Both
+questions were answered correctly for the app as it stood, and both named this
+feature as the successor that would change the conditions.
+
+**`04-movie-detail` Q10 — the hidden Meta segment.** An **Unrated** movie showed
+no rating **Meta segment** at all, treated as a missing segment under Q9's
+interleaving rule. The reason was sound: with `showValue`, five empty stars
+print `0.0`, and that is the household asserting it watched the film and scored
+it nothing — the opposite of nobody having said anything. Q10 wrote down what
+would change it, in those words: "an 'unrated, tap to rate' state wants the
+affordance that acts on it." The affordance is here. Empty stars that are
+visibly an input, labelled `Not rated`, read as an invitation rather than a
+verdict, so the segment comes back and stops being omissible (#62). The movies
+most in need of a rating had been precisely the ones offering nothing to click.
+
+**`02-browse-grid` Q10 — unrated as zero on the card.** That log mapped `null` →
+0 stars and flagged it in the same sentence as "visually identical to a real 0",
+and `ubiquitous-language.md` has carried it as an open ambiguity ever since, to
+be "revisit[ed] with the **Ratings** feature". Resolved at #61 by splitting the
+tile's two halves rather than choosing between them: the **star row stays**,
+because it is fixed furniture in a fixed-height tile and dropping it would leave
+cards in a carousel row at uneven heights — which is why Q10 deferred rather
+than solved — and the **numeric value goes**. **Unrated** reads `★★★★★`; a movie
+scored nought reads `★★★★★ 0.0`.
+
+Both are marked resolved in the glossary rather than deleted from it. The older
+design logs still describe the old rules and are left exactly as written.
+
+### What shipped
+
+**One route, the third of a set.** `POST /api/movies/:id/rating`, body
+`{ value: number | null }`, echoing `{ value }` — the same shape, the same
+404-before-write check and the same echo-is-truth bargain as `/favorite` and
+`/watched`. Deliberately not `PATCH /movies/:id`: `updateMovie` is the _form's_
+path, it refreshes `updated_at`, and a newly scored 1974 film jumping to the top
+of a `recently-added` shelf is the kind of bug nobody would think to look for.
+`setRating` is a single-column write and stays one.
+
+**The accepted set is an allow-list, and that is load-bearing.** "Exactly `null`,
+or an integer 0–10", not `typeof value !== 'number'` → reject. The second test
+lets every non-numeric value through as a clear, and a clear is the one write
+that erases data. A body with **no `value` key** is a 400 rather than a clear,
+for the same reason: a malformed request and a deliberate `null` must not be the
+same wire message.
+
+**`null` is carried, never re-derived.** Four types widened from `number` to
+`number | null` — `StarRatingProps.rating`, `PosterCardMovie.rating`,
+`toRatingPercent`'s return, and `RatingPickerProps.value`. **Unrated** stopped
+being a `value > 0` test at four separate rungs and became a value the whole
+path carries. `toRatingPercent` losing its flattening is what forced the rest,
+and `view()` needed no code change at all once it went — it had always forwarded
+what the mapper handed it. `detailView`'s `movie.rating === null ? null : …`
+collapsed to a plain call in the same pass.
+
+**`toRatingUnits` is a util with a test, not an inline `/ 10`.** The pure inverse
+of `toRatingPercent`, and the one place the component layer's percent scale meets
+the domain's stored units. It exists as its own unit because the `null` case must
+not round: erasing a rating and scoring a movie nothing are two different facts,
+and a `/ 10` written inline is one keystroke from conflating them. The two are
+pinned against each other at every half-star point in both directions.
+
+**The molecule speaks percent in both directions.** `RatingPicker` takes and
+emits 0–100, exactly as `StarRating` does. A `components/` unit that is meant to
+know nothing about the domain must not start speaking in the 0–10 the column
+happens to store, so `useMovieDetail` converts at the seam and nothing below it
+ever sees stored units.
+
+**Ten `<button>` segments where the prototype had ten `<div onClick>`.** The
+pixels are the prototype's exactly — each star is a span carrying the glyph and
+its clipped accent fill, with two 50%-wide segments laid over it — and the hit
+areas are real elements with real semantics. Every segment names the rating it
+would set, worded grammatically rather than uniformly (`Rate ½ a star`,
+`Rate 3½ stars`, `Rate 1 star`), because a parent would otherwise hear "Rate 1
+stars". The strip arrives as a `role="group"` called "Your rating" rather than as
+ten pieces of loose furniture. Same trade `prim.Toggle` already made with
+`role="switch"`: identical pixels, honest semantics.
+
+**Clearing is click-the-current-segment.** No X, no second control, no copy the
+prototype does not contain — the same "click it again to turn it off" grammar the
+favorite heart and the watched tick already use. It is also the only undo a
+mis-click has until MovieForm ships. The segment holding the current value
+announces `Clear rating` instead of a rating, so the grammar is spoken rather
+than guessed at.
+
+**The Rating preview never leaves the molecule.** Hover and focus preview the
+same fill, the label keeps reading the _stored_ value throughout, and nothing
+outside the component ever sees an uncommitted rating — so a hover can never look
+like a rating that took. The blur is read on the strip rather than on each
+segment, because moving between segments inside it is not leaving.
+
+**The seed grew a pair.** `Cold Open` (Action, `rating: 0`) sits beside
+`Havoc Line` (Action, unrated) so the two share a shelf row. Phases 3 and 4 exist
+precisely to tell those two apart, and without fixtures the distinction was
+provable in unit tests and invisible in the running app — which is the one thing
+CLAUDE.md says the seed is for. It goes in through the ordinary `LibraryStorage`
+interface under the reserved prefix, so a re-run stays idempotent.
+
+### The known cost, taken deliberately
+
+`useMovieDetail` now holds **three** hand-rolled optimistic writes — the watched
+tick, the favorite heart and the rating — each keeping the same bargain by hand:
+capture what the click cost, apply the new value at once, reconcile against the
+route's echo, put the captured value back if the save is refused, all routed
+through the `editMovie` guard so a response landing after the page has moved on
+is discarded rather than resurrecting a movie the state let go of.
+
+`useOptimisticSave` could not take the third. It is boolean-only by explicit
+design and its own comment named this arrival a feature ago: "a save with more
+than two values … has to be told what to put back." A rating has eleven values
+plus an absence, and `!value` cannot express any of it.
+
+So the duplication is real and it is filed rather than fixed:
+**`useOptimisticEdit(previous, apply, save)`**, against all three writes. The
+reason for filing rather than generalising mid-build is worth stating plainly —
+**two examples were not enough to design the generalisation against, and three
+are.** The `04-movie-detail` refactor looked at two and correctly declined; the
+genre-page refactor looked at the boolean pair and extracted exactly the boolean
+case, no wider. Guessing the shape from two would have produced a hook the third
+write then had to be bent into. The cost of waiting is one build cycle carrying a
+third copy, which is cheap and visible; the cost of guessing early is an
+abstraction nobody can change afterwards.
+
+### Worth naming
+
+**The suite took its first new dependency.** `@testing-library/user-event`, at
+#60. jsdom does not synthesise a click from Enter or Space on a `<button>`, so
+"the segments activate from the keyboard" is otherwise untestable, and a real tab
+walk is what the accessibility AC actually asks for. Recorded because a test
+dependency arriving is worth one line in a journal — the next one should have to
+justify itself the same way.
+
+**Tests that were green on arrival, reported as green.** Both #59 and #60 landed
+tests that passed the moment they were written: tab reach and Enter/Space were
+already delivered by #59 promoting the hit areas to real buttons, and several
+"still works" clauses restated behaviour an earlier phase had satisfied. The
+alternative was breaking the component to manufacture a RED, which would have
+been a lie about what the phase owed. They land as regression guards instead, and
+the commit messages say which ones and why. A RED phase is a specification
+device, not a quota.
+
+**A phase boundary that was visible in a test, and then wasn't.** #59 made the
+picker able to clear a rating, but the **Meta line**'s rating segment was still
+conditional on a rating existing — so a cleared rating lost its segment rather
+than showing `Not rated`. `MovieDetail`'s assertion was narrowed to what that
+phase actually owed (no `0.0 / 5` on screen, no segments left, `{ value: null }`
+on the wire), and the retraction restored the full claim at #62. The narrowing is
+in `5845a4c`'s message with the reason attached, which is what stops a later
+reader taking it for a weakened test.
+
+**The picker cannot write a literal `0`.** Its smallest click is half a star, so
+`0` arrives only from a TMDB-seeded import. When a person clears, they mean
+**Unrated** — the same asymmetry **Minimum rating** already documents, where an
+**Unrated** movie shows five empty stars but is excluded by any floor rather than
+behaving as a zero.
+
+### Deliberately not built
+
+- **Rating from a Poster card.** The prototype gives the card a heart and nothing
+  else, and ten **Half-star segments** on a 210px tile is a mis-click hazard on
+  the screen the parents use most.
+- **A snackbar when a save is refused.** The snackbar system is its own 🔜
+  feature. The revert is the feedback, exactly as it is for the heart and the
+  tick.
+- **Any cross-screen store.** A rating set on the detail page reaches the browse
+  grid on its next load, as **Favorite** and watched already do. Nothing here
+  introduces a cache that would let a poster card restyle itself without a
+  reload.
+- **TMDB seeding and MovieForm's rating field.** Those belong to import-export
+  and movie-form respectively. `RatingPicker` lands fully built and tested, so
+  MovieForm consumes it later with no rating work of its own.
+
+### The row this feature did not tick
+
+Ratings stays **🔜 Planned** in both feature lists, and issue #63 asks for it
+ticked. The standing rule is that a feature is Done after steps 7–8 of the
+workflow — `request-refactor-plan` → `refactor` — and not when its build issues
+close. `813b546` reverted exactly such a premature tick on Search + Filter, and
+the genre page waited the same way one feature ago. The `useOptimisticEdit` issue
+is filed; the tick is a separate docs commit once it closes.
+
+---
+
 ## 2026-08-24 — Genre page refactor (issue #55)
 
 Twenty commits in eight groups, against
