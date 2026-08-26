@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { describe, it, expect, vi } from 'vitest';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { ThemeProvider } from 'styled-components';
 
 import { MetaLine, type MetaLineProps } from './MetaLine';
@@ -19,6 +19,7 @@ function renderMetaLine(props: Partial<MetaLineProps> = {}) {
           props.ratingPercent === undefined ? 80 : props.ratingPercent
         }
         isWatched={props.isWatched ?? false}
+        onRate={props.onRate ?? (() => undefined)}
       />
     </ThemeProvider>
   );
@@ -26,8 +27,13 @@ function renderMetaLine(props: Partial<MetaLineProps> = {}) {
 
 const separators = () => screen.queryAllByText(SEPARATOR);
 
-/** The star row, drawn as glyph text rather than as an image. */
-const stars = () => screen.queryAllByText('★★★★★');
+/**
+ * The rating segment's stars — controls now, not glyph text, because the line
+ * renders a `RatingPicker` where its `StarRating` used to sit. Finding them by
+ * what a click would do is what makes "the stars are clickable" the assertion
+ * rather than "some stars are drawn".
+ */
+const stars = () => screen.queryAllByRole('button', { name: /^rate /i });
 
 describe('MetaLine — the segments', () => {
   it('shows the year, the runtime and the stars when the movie has all three', () => {
@@ -52,12 +58,15 @@ describe('MetaLine — the segments', () => {
     expect(screen.getByText('1994')).toBeTruthy();
   });
 
-  it('draws no stars at all for an unrated movie, rather than an empty five', () => {
-    // An empty five reading "0.0" would be the household asserting it scored
-    // the movie zero, which is not the same as never having scored it.
+  it('draws no picker at all for an unrated movie, rather than an empty five', () => {
+    // Still the `04-movie-detail` Q10 omission: an empty five reading "0.0"
+    // would be the household asserting it scored the movie zero. Retracting it
+    // in favour of five clickable empty stars is a later issue's, not this one's
+    // — this line only stops being a label.
     renderMetaLine({ ratingPercent: null });
 
     expect(stars()).toHaveLength(0);
+    expect(screen.queryByText(/not rated/i)).toBeNull();
   });
 });
 
@@ -115,5 +124,62 @@ describe('MetaLine — the Watched badge', () => {
     renderMetaLine({ isWatched: true });
 
     expect(separators()).toHaveLength(2);
+  });
+});
+
+/**
+ * The line's one interactive segment. It is the same twenty pixels in the same
+ * place the `StarRating` held — what changed is that a parent can now click it.
+ * The line still asks no display question of its own: whether there is a rating
+ * segment at all is a `null` `detailView` already decided.
+ */
+describe('MetaLine — the rating picker', () => {
+  it('renders a picker in the rating segment, not a label', () => {
+    renderMetaLine({ ratingPercent: 80 });
+
+    expect(stars()).toHaveLength(5);
+  });
+
+  it('shows the stored rating beside the stars', () => {
+    renderMetaLine({ ratingPercent: 80 });
+
+    expect(screen.getByText('4.0 / 5')).toBeTruthy();
+  });
+
+  it('draws its stars at 20px — the size the stars here have always been', () => {
+    renderMetaLine({ ratingPercent: 80 });
+
+    expect(getComputedStyle(stars()[0]).fontSize).toBe('20px');
+  });
+
+  it('reports the star that was clicked, as a percent', () => {
+    const onRate = vi.fn();
+    renderMetaLine({ ratingPercent: 80, onRate });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Rate 3 stars' }));
+
+    expect(onRate).toHaveBeenCalledWith(60);
+  });
+
+  it('reports nothing on render — drawing the line writes no rating', () => {
+    const onRate = vi.fn();
+    renderMetaLine({ ratingPercent: 80, onRate });
+
+    expect(onRate).not.toHaveBeenCalled();
+  });
+
+  it('sits where the stars sat — after the runtime, before the Watched badge', () => {
+    renderMetaLine({ isWatched: true });
+
+    const runtime = screen.getByText('2h 8m');
+    const picker = stars()[0];
+    const badge = screen.getByText(/✓\s*watched/i);
+
+    expect(
+      runtime.compareDocumentPosition(picker) & Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
+    expect(
+      picker.compareDocumentPosition(badge) & Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
   });
 });

@@ -135,7 +135,7 @@ function serveMovieAndSaves(overrides: Partial<Movie> = {}) {
     if (method === 'GET') {
       return Promise.resolve(okResponse(makeMovie(overrides)));
     }
-    const body = JSON.parse(String(init?.body)) as { value: boolean };
+    const body = JSON.parse(String(init?.body)) as { value: unknown };
     return Promise.resolve(okResponse({ value: body.value }));
   });
 }
@@ -201,9 +201,13 @@ function separators() {
   return screen.queryAllByText((content) => /^[·•]$/.test(content.trim()));
 }
 
-/** Whether a star row is on screen at all (`StarRating` draws base + fill). */
-function starRows() {
-  return screen.queryAllByText('★★★★★');
+/**
+ * The rating segment's stars. They are controls now rather than glyph text —
+ * the meta line renders a `RatingPicker` where its `StarRating` used to sit —
+ * so they are found by what a click on one would do.
+ */
+function starButtons() {
+  return screen.queryAllByRole('button', { name: /^rate /i });
 }
 
 describe('MovieDetail — the movie on screen', () => {
@@ -224,8 +228,8 @@ describe('MovieDetail — the movie on screen', () => {
 
     expect(screen.getByText('1994')).toBeDefined();
     expect(screen.getByText('2h 8m')).toBeDefined();
-    expect(starRows().length).toBeGreaterThan(0);
-    expect(screen.getByText('4.0')).toBeDefined();
+    expect(starButtons()).toHaveLength(5);
+    expect(screen.getByText('4.0 / 5')).toBeDefined();
   });
 
   it('renders one chip per genre', async () => {
@@ -283,7 +287,7 @@ describe('MovieDetail — the meta line', () => {
     await findTitle('Northwind');
 
     expect(screen.getByText('2h 8m')).toBeDefined();
-    expect(starRows().length).toBeGreaterThan(0);
+    expect(starButtons().length).toBeGreaterThan(0);
     expect(separators()).toHaveLength(1);
   });
 
@@ -303,7 +307,7 @@ describe('MovieDetail — the meta line', () => {
     renderDetail();
     await findTitle('Northwind');
 
-    expect(starRows().length).toBeGreaterThan(0);
+    expect(starButtons().length).toBeGreaterThan(0);
     expect(separators()).toHaveLength(0);
   });
 
@@ -315,20 +319,23 @@ describe('MovieDetail — the meta line', () => {
     renderDetail();
     await findTitle('Northwind');
 
-    expect(starRows()).toHaveLength(0);
-    expect(screen.queryByText('0.0')).toBeNull();
+    expect(starButtons()).toHaveLength(0);
+    expect(screen.queryByText('0.0 / 5')).toBeNull();
+    expect(screen.queryByText(/not rated/i)).toBeNull();
     // Year and runtime survive, so exactly one separator sits between them.
     expect(separators()).toHaveLength(1);
   });
 
   it('still shows an empty star row reading 0.0 for a movie stored at zero', async () => {
+    // A real zero keeps its segment and its number: the picker distinguishes
+    // "scored nothing" from "not scored" that its label alone never could.
     serveMovie({ rating: 0 });
 
     renderDetail();
     await findTitle('Northwind');
 
-    expect(starRows().length).toBeGreaterThan(0);
-    expect(screen.getByText('0.0')).toBeDefined();
+    expect(starButtons()).toHaveLength(5);
+    expect(screen.getByText('0.0 / 5')).toBeDefined();
     expect(separators()).toHaveLength(2);
   });
 
@@ -687,6 +694,83 @@ describe('MovieDetail — the two toggles', () => {
  * The ⋯ menu. It ships with one item: Delete is not designed, and a red row that
  * closes the menu and does nothing is worse than no row at all.
  */
+/**
+ * The page's third write, and the only one on the meta line. Same bargain as
+ * the two circles: the stars move on the click rather than on the save, and the
+ * hook puts them back if the route refuses — a picker that waited for a round
+ * trip would read as a click that didn't land.
+ */
+describe('MovieDetail — the rating picker', () => {
+  it('saves the star that was clicked to this movie’s rating route, in stored units', async () => {
+    serveMovieAndSaves({ rating: 8 });
+
+    renderDetail('m1');
+    await findTitle('Northwind');
+    fireEvent.click(screen.getByRole('button', { name: 'Rate 5 stars' }));
+
+    await waitFor(() =>
+      expect(writes()).toContainEqual({
+        url: '/api/movies/m1/rating',
+        body: { value: 10 },
+      })
+    );
+  });
+
+  it('shows the new rating at once, and keeps it once the save lands', async () => {
+    serveMovieAndSaves({ rating: 8 });
+
+    renderDetail();
+    await findTitle('Northwind');
+    expect(screen.getByText('4.0 / 5')).toBeDefined();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Rate 2 stars' }));
+
+    expect(screen.getByText('2.0 / 5')).toBeDefined();
+    await waitFor(() => expect(writes()).toHaveLength(1));
+    expect(screen.getByText('2.0 / 5')).toBeDefined();
+  });
+
+  it('puts the previous rating back when the save is refused', async () => {
+    serveMovieAndFailSaves({ rating: 8 });
+
+    renderDetail();
+    await findTitle('Northwind');
+    fireEvent.click(screen.getByRole('button', { name: 'Rate 1 star' }));
+    expect(screen.getByText('1.0 / 5')).toBeDefined();
+
+    await waitFor(() => expect(screen.getByText('4.0 / 5')).toBeDefined());
+    // A failed save costs the rating and nothing else — no error screen, and
+    // the movie is still on it.
+    expect(
+      screen.getByRole('heading', { level: 1, name: 'Northwind' })
+    ).toBeDefined();
+    expect(screen.queryByRole('button', { name: /retry/i })).toBeNull();
+  });
+
+  it('offers no picker at all for an unrated movie', async () => {
+    // The retraction that gives an unrated movie five clickable empty stars is
+    // a later issue's — here the segment is still absent entirely.
+    serveMovieAndSaves({ rating: null });
+
+    renderDetail();
+    await findTitle('Northwind');
+
+    expect(starButtons()).toHaveLength(0);
+  });
+
+  it('is reachable without a mouse — the stars take focus', async () => {
+    serveMovieAndSaves({ rating: 8 });
+
+    renderDetail();
+    await findTitle('Northwind');
+
+    const third = screen.getByRole('button', { name: 'Rate 3 stars' });
+    third.focus();
+
+    expect(document.activeElement).toBe(third);
+  });
+});
+
 describe('MovieDetail — the edit menu', () => {
   /** The ⋯ trigger in the page's fixed top-right slot. */
   function moreButton() {

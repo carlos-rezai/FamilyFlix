@@ -165,8 +165,11 @@ function serveWithPendingSaves(movie: Movie): PendingSave[] {
   return saves;
 }
 
-/** The saves that went to one of the two write routes. */
-function savesTo(saves: PendingSave[], route: 'watched' | 'favorite') {
+/** The saves that went to one of the three write routes. */
+function savesTo(
+  saves: PendingSave[],
+  route: 'watched' | 'favorite' | 'rating'
+) {
   return saves.filter((save) => save.url.endsWith(`/${route}`));
 }
 
@@ -443,5 +446,171 @@ describe('useMovieDetail — the favorite toggle', () => {
     expect(result.current.movie?.isFavorite).toBe(true);
     expect(result.current.movie?.isWatched).toBe(true);
     expect(savesTo(saves, 'watched')).toHaveLength(0);
+  });
+});
+
+/**
+ * The third optimistic write, and the first one that is not a flag. It keeps
+ * the identical bargain the two toggles keep — show the new value at once,
+ * take the route’s echo over what was assumed, put the old value back if the
+ * save is refused — hand-rolled rather than through `useOptimisticSave`,
+ * because that hook reverts by negating a boolean and a rating has eleven
+ * values plus an absence. What it goes back to has to be captured, not derived.
+ *
+ * It speaks percent on the way in and stored units on the wire: the picker
+ * above it is a molecule that knows nothing about the domain, and the column
+ * below it stores 0–10.
+ */
+describe('useMovieDetail — the rating', () => {
+  it('shows the new rating immediately, before the save is confirmed', async () => {
+    const saves = serveWithPendingSaves(NORTHWIND);
+    const { result } = await loadMovie();
+    expect(result.current.movie?.ratingPercent).toBe(80);
+
+    act(() => result.current.rate(100));
+
+    // The save is still in flight — nothing has confirmed anything yet.
+    expect(result.current.movie?.ratingPercent).toBe(100);
+    expect(savesTo(saves, 'rating')).toHaveLength(1);
+  });
+
+  it('saves the new rating to the movie’s rating route, in stored units', async () => {
+    const saves = serveWithPendingSaves(NORTHWIND);
+    const { result } = await loadMovie('m1');
+
+    act(() => result.current.rate(60));
+
+    const [save] = savesTo(saves, 'rating');
+    expect(save.url).toBe('/api/movies/m1/rating');
+    expect(save.method).toBe('POST');
+    // 60% on screen is 6 in the column — the one place the scales meet.
+    expect(save.body).toEqual({ value: 6 });
+  });
+
+  it('takes the server’s echo when it differs from what was assumed', async () => {
+    const saves = serveWithPendingSaves(NORTHWIND);
+    const { result } = await loadMovie();
+
+    act(() => result.current.rate(100));
+    await savesTo(saves, 'rating')[0].answer(okResponse({ value: 9 }));
+
+    expect(result.current.movie?.ratingPercent).toBe(90);
+  });
+
+  it('takes a null echo as the movie having been cleared', async () => {
+    const saves = serveWithPendingSaves(NORTHWIND);
+    const { result } = await loadMovie();
+
+    act(() => result.current.rate(100));
+    await savesTo(saves, 'rating')[0].answer(okResponse({ value: null }));
+
+    // Unrated, not zero — the distinction the whole feature exists to keep.
+    expect(result.current.movie?.ratingPercent).toBeNull();
+  });
+
+  it('clears the rating optimistically and sends null', async () => {
+    const saves = serveWithPendingSaves(NORTHWIND);
+    const { result } = await loadMovie();
+
+    act(() => result.current.rate(null));
+
+    expect(result.current.movie?.ratingPercent).toBeNull();
+    expect(savesTo(saves, 'rating')[0].body).toEqual({ value: null });
+  });
+
+  it('puts the previous rating back when the save is refused', async () => {
+    const saves = serveWithPendingSaves(NORTHWIND);
+    const { result } = await loadMovie();
+
+    act(() => result.current.rate(20));
+    expect(result.current.movie?.ratingPercent).toBe(20);
+
+    await savesTo(saves, 'rating')[0].fail(new Error('network down'));
+
+    expect(result.current.movie?.ratingPercent).toBe(80);
+  });
+
+  it('puts an unrated movie back to unrated when the save is refused', async () => {
+    // The revert has to restore an absence, which is exactly what a boolean
+    // toggle’s `!value` could never express.
+    const saves = serveWithPendingSaves(makeMovie({ rating: null }));
+    const { result } = await loadMovie();
+    expect(result.current.movie?.ratingPercent).toBeNull();
+
+    act(() => result.current.rate(80));
+    expect(result.current.movie?.ratingPercent).toBe(80);
+
+    await savesTo(saves, 'rating')[0].fail(new Error('network down'));
+
+    expect(result.current.movie?.ratingPercent).toBeNull();
+  });
+
+  it('puts the rating back when a clear is refused', async () => {
+    const saves = serveWithPendingSaves(NORTHWIND);
+    const { result } = await loadMovie();
+
+    act(() => result.current.rate(null));
+    await savesTo(saves, 'rating')[0].fail(new Error('network down'));
+
+    expect(result.current.movie?.ratingPercent).toBe(80);
+  });
+
+  it('costs the rating and nothing else when the save is refused', async () => {
+    const saves = serveWithPendingSaves(
+      makeMovie({ watched: true, isFavorite: true })
+    );
+    const { result } = await loadMovie();
+
+    act(() => result.current.rate(20));
+    await savesTo(saves, 'rating')[0].fail(new Error('network down'));
+
+    // A failed save is not a failed page: the movie is still here, still
+    // watched, still favorited, and the page never went to `error`.
+    expect(result.current.status).toBe('ready');
+    expect(result.current.movie?.title).toBe('Comet Season');
+    expect(result.current.movie?.isWatched).toBe(true);
+    expect(result.current.movie?.isFavorite).toBe(true);
+  });
+
+  it('discards a response that lands after the page has moved on', async () => {
+    const saves = serveWithPendingSaves(NORTHWIND);
+    const { result } = await loadMovie();
+
+    act(() => result.current.rate(100));
+
+    // The page moves on — a retry whose own load has not answered yet.
+    fetchMock.mockImplementation(() => new Promise<Response>(() => undefined));
+    act(() => result.current.retry());
+    expect(result.current.status).toBe('loading');
+
+    await savesTo(saves, 'rating')[0].answer(okResponse({ value: 4 }));
+
+    // The `editMovie` guard drops it: a save must never resurrect a movie the
+    // state has already let go of.
+    expect(result.current.status).toBe('loading');
+    expect(result.current.movie).toBeNull();
+  });
+
+  it('does nothing at all before the movie is ready', async () => {
+    fetchMock.mockImplementation(() => new Promise<Response>(() => undefined));
+    const { result } = renderHook(() => useMovieDetail('m1'));
+    expect(result.current.status).toBe('loading');
+
+    act(() => result.current.rate(80));
+
+    // The load, and no write — there is nothing yet to rate.
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('leaves the two toggles alone — one click writes one value', async () => {
+    const saves = serveWithPendingSaves(makeMovie({ watched: true }));
+    const { result } = await loadMovie();
+
+    act(() => result.current.rate(40));
+
+    expect(result.current.movie?.ratingPercent).toBe(40);
+    expect(result.current.movie?.isWatched).toBe(true);
+    expect(savesTo(saves, 'watched')).toHaveLength(0);
+    expect(savesTo(saves, 'favorite')).toHaveLength(0);
   });
 });
