@@ -10,7 +10,9 @@
  * what the tile shows, built by the `view()` mapper (`features/library/view.ts`).
  * `rating` and `progress` are 0–100 percents (not stored units), `posterUrl` is
  * a ready image-route URL or `null`, and `g1`/`g2` are the placeholder gradient
- * stops used when there is no poster.
+ * stops used when there is no poster. `rating` is `null` when nobody has rated
+ * the movie, which the tile shows as empty stars with no number — distinct from
+ * a stored 0, which reads `0.0`.
  */
 export interface PosterCardMovie {
   id: string;
@@ -18,7 +20,7 @@ export interface PosterCardMovie {
   posterUrl: string | null;
   g1: string;
   g2: string;
-  rating: number;
+  rating: number | null;
   watched: boolean;
   progress: number;
   favorite: boolean;

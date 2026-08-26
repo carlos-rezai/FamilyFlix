@@ -11,6 +11,10 @@ const IMAGE_ROUTE = '/api/images/';
  * computes deterministic gradient stops from the id, scales the rating and
  * resume position to percents, and carries the watched / favorite flags through
  * (`isFavorite` → `favorite`).
+ *
+ * An unrated movie stays unrated: `rating` comes through as `null` rather than
+ * as a zero score, because those are different facts and the tile prints them
+ * differently.
  */
 export function view(movie: Movie): PosterCardMovie {
   const { g1, g2 } = gradientFromId(movie.id);

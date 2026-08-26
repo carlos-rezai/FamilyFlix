@@ -69,8 +69,12 @@ function seedVideoPath(slug: string): string {
  *   it earns no genre row and appears in Continue Watching alone.
  * - **Three are watched**, which is the poster card's badge state, and the rest
  *   are unwatched, which is its plain state.
- * - **Three are favorites** and one is deliberately unrated, so the heart and
- *   the empty star row are both visible somewhere on the screen.
+ * - **Three are favorites**, so the heart is visible somewhere on the screen.
+ * - **One is deliberately unrated and one is deliberately rated nought**
+ *   (`Havoc Line` and `Cold Open`, both in Action so they share a row). The
+ *   two used to render the identical tile; the pair is here so that the
+ *   difference between them — a bare star row versus one reading `0.0` —
+ *   is checkable by looking, which is the reason this seed exists at all.
  *
  * The synopsis and credits exist for the movie detail page, whose lower
  * two-thirds is otherwise blank on every fixture, and they cover that screen's
@@ -213,6 +217,23 @@ export const SEED_MOVIES: readonly NewMovie[] = [
     director: 'Priya Anand',
     cast: ['Ola Berg', 'Curtis Vane'],
     genres: ['Action'],
+  },
+  {
+    // Rated nought, on purpose, and filed next to `Havoc Line` so the pair sits
+    // in the same row: five empty stars with no number is the unrated card,
+    // five empty stars reading `0.0` is this one. Every claim about telling
+    // them apart is checkable by looking at the Action shelf.
+    title: 'Cold Open',
+    videoPath: seedVideoPath('cold-open-2019'),
+    year: 2019,
+    runtimeMinutes: 91,
+    synopsis:
+      'A stunt team is hired to stage a heist for a film that turns out to ' +
+      'have no crew, no cameras and a very real vault.',
+    director: 'Marguerite Osei',
+    cast: ['Dov Halperin', 'Ines Carvalho'],
+    genres: ['Action'],
+    rating: 0,
   },
   {
     title: 'Steel Rain',
