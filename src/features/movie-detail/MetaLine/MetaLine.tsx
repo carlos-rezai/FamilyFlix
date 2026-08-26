@@ -1,6 +1,6 @@
 import { Fragment, type ReactNode } from 'react';
 
-import { StarRating } from '@/primitives';
+import { RatingPicker } from '@/components';
 import {
   Root,
   MetaText,
@@ -18,9 +18,11 @@ export interface MetaLineProps {
   ratingPercent: number | null;
   /** Closes the line with the Watched badge. */
   isWatched: boolean;
+  /** The rating a click on the stars asks for, as a percent. */
+  onRate: (percent: number | null) => void;
 }
 
-/** The stars sit at 20px on this page — larger than a card's 13px. */
+/** The picker's stars sit at 20px on this page — larger than a card's 13px. */
 const STAR_SIZE = 20;
 
 /** Drawn between two surviving **Meta segments**, never beside a missing one. */
@@ -42,6 +44,7 @@ function metaSegments({
   year,
   runtimeLabel,
   ratingPercent,
+  onRate,
 }: MetaLineProps): MetaSegment[] {
   const segments: MetaSegment[] = [];
 
@@ -59,7 +62,11 @@ function metaSegments({
       key: 'rating',
       node: (
         <RatingWrap>
-          <StarRating rating={ratingPercent} size={STAR_SIZE} showValue />
+          <RatingPicker
+            value={ratingPercent}
+            size={STAR_SIZE}
+            onChange={onRate}
+          />
         </RatingWrap>
       ),
     });
@@ -69,8 +76,11 @@ function metaSegments({
 }
 
 /**
- * The **Meta line** under the movie's title: year, runtime, and stars, with a
- * bullet between each pair that survives, and the Watched badge at the end.
+ * The **Meta line** under the movie's title: year, runtime, and the rating
+ * picker, with a bullet between each pair that survives, and the Watched badge
+ * at the end. The stars are the line's one interactive segment — the same
+ * twenty pixels in the same place they have always held, except that a parent
+ * can now click them.
  *
  * The separators are interleaved rather than baked into a single string because
  * the stars sit in the middle of the line — no one string could hold them — and

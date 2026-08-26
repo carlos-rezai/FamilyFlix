@@ -4,6 +4,7 @@ export {
   type GradientStops,
 } from './gradientFromId/gradientFromId';
 export { toRatingPercent } from './toRatingPercent/toRatingPercent';
+export { toRatingUnits } from './toRatingUnits/toRatingUnits';
 export {
   toProgressPercent,
   NOMINAL_SLIVER_PERCENT,

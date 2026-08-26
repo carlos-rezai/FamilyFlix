@@ -72,7 +72,8 @@ const FAVORITE_TIP = {
  * The action row's navigating half writes nothing: Play opens the player's URL
  * and the ⋯ menu opens the add screen, because only the player owns playback
  * state. Its writing half is the two circles beside Play, each of which shows
- * its new value at once and hands the save to the hook.
+ * its new value at once and hands the save to the hook — as does the meta
+ * line's rating picker, the page's third write and the only one off the row.
  */
 export function MovieDetail() {
   const { id } = useParams<{ id: string }>();
@@ -140,6 +141,7 @@ export function MovieDetail() {
             runtimeLabel={movie.runtimeLabel}
             ratingPercent={movie.ratingPercent}
             isWatched={movie.isWatched}
+            onRate={detail.rate}
           />
 
           <Genres>

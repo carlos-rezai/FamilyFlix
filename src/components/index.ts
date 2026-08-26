@@ -21,3 +21,7 @@ export {
   FilterDropdown,
   type FilterDropdownProps,
 } from './FilterDropdown/FilterDropdown';
+export {
+  RatingPicker,
+  type RatingPickerProps,
+} from './RatingPicker/RatingPicker';

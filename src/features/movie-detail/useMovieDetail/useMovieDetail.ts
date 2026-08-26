@@ -6,7 +6,8 @@ import type { MovieDetailModel } from '@/types';
 // lands it re-homes this call and the shelf's together, once — one flag, one
 // route, and never a second copy of the save in the meantime.
 import { saveFavorite } from '@/features/library/api/api';
-import { fetchMovie, saveWatched } from '../api/api';
+import { toRatingPercent, toRatingUnits } from '@/utils';
+import { fetchMovie, saveRating, saveWatched } from '../api/api';
 import { detailView } from '../detailView/detailView';
 
 /**
@@ -39,6 +40,11 @@ export type UseMovieDetailResult = MovieDetailState & {
   toggleWatched: () => void;
   /** Flip the favorite flag, showing the new value immediately. */
   toggleFavorite: () => void;
+  /**
+   * Score the movie, as a 0–100 percent, or `null` to clear it — showing the
+   * new rating immediately.
+   */
+  rate: (percent: number | null) => void;
 };
 
 /** The primary button once there is no resume point left to offer. */
@@ -67,12 +73,13 @@ function withWatched(
  * `not-found` distinct from `error` here — the difference the parent sees is
  * which button they are offered.
  *
- * It also owns the two edits this page can make — the watched tick and the
- * favorite heart — because the optimistic value and the loaded movie are the
- * same state. Both keep one bargain, the same one the browse shelf's heart
- * keeps: show the new value at once, take the route's echo over what was
- * assumed, and put it back if the save is refused, so the page never claims
- * something is saved that isn't. A refused save costs the toggle, not the page.
+ * It also owns the three edits this page can make — the watched tick, the
+ * favorite heart and the rating — because the optimistic value and the loaded
+ * movie are the same state. All three keep one bargain, the same one the browse
+ * shelf's heart keeps: show the new value at once, take the route's echo over
+ * what was assumed, and put it back if the save is refused, so the page never
+ * claims something is saved that isn't. A refused save costs the edit, not the
+ * page.
  */
 export function useMovieDetail(id: string): UseMovieDetailResult {
   const [state, setState] = useState<MovieDetailState>({
@@ -174,5 +181,47 @@ export function useMovieDetail(id: string): UseMovieDetailResult {
       });
   }, [movie, editMovie]);
 
-  return { ...state, retry, toggleWatched, toggleFavorite };
+  /**
+   * The third optimistic write, and the first that is not a flag — which is why
+   * it is hand-rolled rather than run through `useOptimisticSave`. That hook
+   * reverts by negating a boolean, and a rating has eleven values plus an
+   * absence: what it goes back to has to be captured, not derived.
+   *
+   * Percent on the way in, stored units on the wire — the picker above knows
+   * nothing about the domain and the column below stores 0–10.
+   */
+  const rate = useCallback(
+    (percent: number | null) => {
+      if (movie === null) {
+        return;
+      }
+
+      // What the click cost, kept so a refused save can hand it back —
+      // including an absence, which is the case a `!value` could never express.
+      const { ratingPercent } = movie;
+
+      editMovie((current) => ({ ...current, ratingPercent: percent }));
+
+      saveRating(movie.id, toRatingUnits(percent))
+        // The route echoes what it stored; trust that over what we assumed. A
+        // `null` echo is a rating that was cleared, not an absent value —
+        // `toRatingPercent` still flattens unrated to zero until the
+        // retraction lands, so the two are told apart here.
+        .then((saved) => {
+          const savedPercent = saved === null ? null : toRatingPercent(saved);
+          if (savedPercent !== percent) {
+            editMovie((current) => ({
+              ...current,
+              ratingPercent: savedPercent,
+            }));
+          }
+        })
+        .catch(() => {
+          editMovie((current) => ({ ...current, ratingPercent }));
+        });
+    },
+    [movie, editMovie]
+  );
+
+  return { ...state, retry, toggleWatched, toggleFavorite, rate };
 }
