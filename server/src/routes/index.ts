@@ -87,6 +87,26 @@ function parseMinRating(value: string): number | null {
   return minimum;
 }
 
+/**
+ * Whether a posted rating is a value this API stores: exactly `null`, or an
+ * integer on the 0–10 half-star scale.
+ *
+ * Stated as an allow-list rather than as a `typeof value !== 'number'`
+ * rejection, because that test alone lets every non-numeric value through as a
+ * clear — and a clear is the one write that erases a rating.
+ */
+function isRatingValue(value: unknown): value is number | null {
+  if (value === null) {
+    return true;
+  }
+  return (
+    typeof value === 'number' &&
+    Number.isInteger(value) &&
+    value >= 0 &&
+    value <= MAX_RATING
+  );
+}
+
 /** Reject anything that is not a positive whole number of rows. */
 function parseLimit(value: string): number | null {
   const limit = Number(value);
@@ -329,6 +349,43 @@ export function createApiRouter(
     } else {
       storage.markUnwatched(id);
     }
+    res.json({ value });
+  });
+
+  // The rating write, the third sibling of the two toggles above: the same
+  // shape, the same 404-before-write check, and the same echo-is-truth bargain,
+  // so the optimistic picker reconciles against what persisted rather than
+  // against what it assumed.
+  //
+  // A body with no `value` key is a 400 rather than a clear — a malformed
+  // request and a deliberate `null` must not be the same wire message, since one
+  // of them erases a rating. Everything else off the scale answers with the
+  // shape the `?rating=` rejection above already uses, quoting the value as it
+  // arrived on the wire so `'7'` is distinguishable from `7`.
+  //
+  // It dispatches to `setRating`, not to `updateMovie`: that one is the form's
+  // path and refreshes `updated_at`, which would jump a newly scored old film to
+  // the top of a `recently-added` shelf.
+  router.post('/movies/:id/rating', (req: Request<{ id: string }>, res) => {
+    const { value } = req.body as { value?: unknown };
+    if (value === undefined) {
+      res.status(400).json({ error: 'Body must be { value: number | null }' });
+      return;
+    }
+    if (!isRatingValue(value)) {
+      res
+        .status(400)
+        .json({ error: `Invalid rating: ${JSON.stringify(value)}` });
+      return;
+    }
+
+    const { id } = req.params;
+    if (!storage.getMovie(id)) {
+      res.status(404).json({ error: `Unknown movie: ${id}` });
+      return;
+    }
+
+    storage.setRating(id, value);
     res.json({ value });
   });
 
