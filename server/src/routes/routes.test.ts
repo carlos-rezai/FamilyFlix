@@ -1397,3 +1397,183 @@ describe('GET /api/genre/:name', () => {
     );
   });
 });
+
+// --- 07 — Ratings, Phase 1: "the rating route" (issue #57) -------------------
+
+/** POST a rating body to one movie, exactly as the picker's rate handler does. */
+function postRating(baseUrl: string, id: string, body: unknown) {
+  return fetch(`${baseUrl}/api/movies/${id}/rating`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+}
+
+/** The titles of `GET /api/movies`, in whatever order the endpoint sends them. */
+async function movieTitles(baseUrl: string, sort: string): Promise<string[]> {
+  const response = await fetch(`${baseUrl}/api/movies?sort=${sort}`);
+  expect(response.status).toBe(200);
+  const movies = (await response.json()) as Movie[];
+  return movies.map((movie) => movie.title);
+}
+
+describe('POST /api/movies/:id/rating', () => {
+  it('stores a rating and echoes the value it stored', async () => {
+    const { storage, baseUrl } = freshApi();
+    const stored = addFullMovie(storage);
+
+    const response = await postRating(baseUrl, stored.id, { value: 9 });
+
+    expect(response.status).toBe(200);
+    // The same echo-is-truth bargain the two sibling toggles strike: the
+    // optimistic picker reconciles against what persisted, not what it assumed.
+    expect(await response.json()).toEqual({ value: 9 });
+    expect(storage.getMovie(stored.id)?.rating).toBe(9);
+  });
+
+  it('overwrites a rating the movie already had', async () => {
+    const { storage, baseUrl } = freshApi();
+    const stored = addFullMovie(storage);
+    expect(stored.rating).toBe(7);
+
+    const response = await postRating(baseUrl, stored.id, { value: 3 });
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ value: 3 });
+    expect(storage.getMovie(stored.id)?.rating).toBe(3);
+  });
+
+  /**
+   * `null` is a deliberate clear, not an absence — the one wire message that
+   * means "nobody has said anything about this film after all". It has to be
+   * expressible, and it has to come back as `null` rather than as a 400 or a
+   * silently-stored nought.
+   */
+  it('accepts null as an explicit clear and reads back unrated', async () => {
+    const { storage, baseUrl } = freshApi();
+    const stored = addFullMovie(storage);
+    expect(stored.rating).toBe(7);
+
+    const response = await postRating(baseUrl, stored.id, { value: null });
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ value: null });
+    expect(storage.getMovie(stored.id)?.rating).toBe(null);
+  });
+
+  /**
+   * Both ends of the stored 0–10 half-star scale, and the distinction the whole
+   * feature turns on: a stored `0` is a real rating — half a star's worth of
+   * nothing, said out loud — and is not the same as unrated.
+   */
+  it('accepts both ends of the scale, and stores 0 as a real rating', async () => {
+    const { storage, baseUrl } = freshApi();
+    const low = addFullMovie(storage);
+    const high = addFullMovie(storage);
+
+    const lowResponse = await postRating(baseUrl, low.id, { value: 0 });
+    const highResponse = await postRating(baseUrl, high.id, { value: 10 });
+
+    expect(lowResponse.status).toBe(200);
+    expect(await lowResponse.json()).toEqual({ value: 0 });
+    expect(highResponse.status).toBe(200);
+    expect(await highResponse.json()).toEqual({ value: 10 });
+
+    expect(storage.getMovie(high.id)?.rating).toBe(10);
+    expect(storage.getMovie(low.id)?.rating).toBe(0);
+    expect(storage.getMovie(low.id)?.rating).not.toBe(null);
+  });
+
+  /**
+   * The accepted set is stated as an allow-list — exactly `null`, or an integer
+   * 0–10 — rather than as a `typeof value !== 'number'` rejection, because that
+   * test alone lets every non-numeric value through as a clear.
+   *
+   * The body with no `value` key is the case that matters most: a malformed
+   * request and a deliberate clear must not be the same wire message, so `{}` is
+   * a 400 here rather than the `{ value: null }` above.
+   */
+  it('rejects anything that is not null or an integer 0–10', async () => {
+    const { storage, baseUrl } = freshApi();
+    const stored = addFullMovie(storage);
+
+    const rejected: unknown[] = [
+      { value: 3.5 },
+      { value: -1 },
+      { value: 11 },
+      { value: '7' },
+      { value: true },
+      {},
+    ];
+
+    for (const body of rejected) {
+      const response = await postRating(baseUrl, stored.id, body);
+
+      expect(response.status).toBe(400);
+      const error = (await response.json()) as { error?: unknown };
+      expect(typeof error.error).toBe('string');
+      expect(error.error).not.toBe('');
+    }
+
+    // Nothing was written on the way to rejecting any of them — the rating the
+    // movie arrived with is the rating it still has.
+    expect(storage.getMovie(stored.id)?.rating).toBe(7);
+  });
+
+  it('answers 404 with an error body for an unknown id', async () => {
+    const { baseUrl } = freshApi();
+
+    const response = await postRating(baseUrl, 'no-such-movie', { value: 5 });
+
+    expect(response.status).toBe(404);
+    const body = (await response.json()) as { error?: unknown };
+    expect(typeof body.error).toBe('string');
+    expect(body.error).not.toBe('');
+  });
+
+  /**
+   * Scoring an old film must not jump it to the top of the library. This is the
+   * observable difference between the two write paths: `setRating` is a plain
+   * single-column UPDATE, where `updateMovie` refreshes `updated_at` — so a
+   * route that dispatched to the form's path passes every test above and fails
+   * this one.
+   *
+   * Added under fake timers at distinct instants, because `created_at` is
+   * repo-generated and two movies inserted in the same millisecond tie on a
+   * random-UUID tiebreak. Back to real time before the request: the POST is real
+   * HTTP over a real listener, which a frozen clock would strand.
+   */
+  it('leaves updated_at alone and does not reorder recently-added', async () => {
+    const { storage, baseUrl } = freshApi();
+
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-01-01T00:00:00.000Z'));
+    const older = storage.addMovie({
+      title: 'Old Harbor',
+      videoPath: 'Old Harbor (1998)/old-harbor.mkv',
+    });
+    vi.setSystemTime(new Date('2026-01-02T00:00:00.000Z'));
+    storage.addMovie({
+      title: 'New Harbor',
+      videoPath: 'New Harbor (2024)/new-harbor.mkv',
+    });
+    vi.useRealTimers();
+
+    expect(await movieTitles(baseUrl, 'recently-added')).toEqual([
+      'New Harbor',
+      'Old Harbor',
+    ]);
+
+    const response = await postRating(baseUrl, older.id, { value: 10 });
+    expect(response.status).toBe(200);
+
+    const after = storage.getMovie(older.id);
+    expect(after?.rating).toBe(10);
+    expect(after?.updatedAt).toBe(older.updatedAt);
+    // Top-rated in the library, and still the older of the two on the shelf.
+    expect(await movieTitles(baseUrl, 'recently-added')).toEqual([
+      'New Harbor',
+      'Old Harbor',
+    ]);
+  });
+});
