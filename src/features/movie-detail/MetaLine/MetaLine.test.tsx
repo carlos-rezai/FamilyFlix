@@ -73,14 +73,27 @@ describe('MetaLine — the segments', () => {
     expect(screen.getByText('1994')).toBeTruthy();
   });
 
-  it('draws no picker at all for an unrated movie, rather than an empty five', () => {
-    // Still the `04-movie-detail` Q10 omission: an empty five reading "0.0"
-    // would be the household asserting it scored the movie zero. Retracting it
-    // in favour of five clickable empty stars is a later issue's, not this one's
-    // — this line only stops being a label.
+  it('draws the full picker for an unrated movie, labelled Not rated', () => {
+    // The `04-movie-detail` Q10 retraction. Q10 hid the segment because an
+    // empty five printing "0.0" would be the household asserting it scored the
+    // movie zero — and named this feature as the point it would be revisited.
+    // Stars a parent can *click*, labelled `Not rated`, read as an invitation
+    // instead, so the movies most in need of a rating stop being the ones
+    // offering no control.
     renderMetaLine({ ratingPercent: null });
 
-    expect(segments()).toHaveLength(0);
+    expect(segments()).toHaveLength(10);
+    expect(screen.getByText(/not rated/i)).toBeTruthy();
+    expect(screen.queryByText('0.0 / 5')).toBeNull();
+  });
+
+  it('keeps the segment for a zero-rated movie, reading 0.0', () => {
+    // The other half of the distinction the label carries: a stored zero is a
+    // rating somebody gave, and it keeps its number.
+    renderMetaLine({ ratingPercent: 0 });
+
+    expect(segments()).toHaveLength(10);
+    expect(screen.getByText('0.0 / 5')).toBeTruthy();
     expect(screen.queryByText(/not rated/i)).toBeNull();
   });
 });
@@ -100,6 +113,21 @@ describe('MetaLine — the separators', () => {
     expect(separators()).toHaveLength(1);
   });
 
+  it('counts the rating segment for an unrated movie too — two gaps, not one', () => {
+    // A missing *rating* no longer takes a bullet with it, because the rating
+    // is no longer something that can be missing. Year, runtime and the picker
+    // are three segments however the movie was scored.
+    renderMetaLine({ ratingPercent: null });
+
+    expect(separators()).toHaveLength(2);
+  });
+
+  it('puts exactly one between a year and an unrated picker', () => {
+    renderMetaLine({ runtimeLabel: null, ratingPercent: null });
+
+    expect(separators()).toHaveLength(1);
+  });
+
   it('draws none at all when only one segment survives', () => {
     renderMetaLine({ year: null, runtimeLabel: null });
 
@@ -113,9 +141,12 @@ describe('MetaLine — the separators', () => {
     expect(separators()).toHaveLength(0);
   });
 
-  it('draws none when every segment is missing', () => {
+  it('leaves an unrated picker standing alone with no bullet in front of it', () => {
+    // The segment that can never be missing, as the only survivor: there is
+    // nothing to its left, so nothing may be drawn there.
     renderMetaLine({ year: null, runtimeLabel: null, ratingPercent: null });
 
+    expect(segments()).toHaveLength(10);
     expect(separators()).toHaveLength(0);
   });
 });
@@ -143,10 +174,12 @@ describe('MetaLine — the Watched badge', () => {
 });
 
 /**
- * The line's one interactive segment. It is the same twenty pixels in the same
- * place the `StarRating` held — what changed is that a parent can now click it.
- * The line still asks no display question of its own: whether there is a rating
- * segment at all is a `null` `detailView` already decided.
+ * The line's one interactive segment, and now its one permanent one. It is the
+ * same twenty pixels in the same place the `StarRating` held — what changed is
+ * that a parent can click it, and that it is there to be clicked whatever the
+ * movie's rating is. The line still asks no display question of its own: a
+ * `null` here is an unrated movie, not an absent segment, and the picker itself
+ * is what knows to label it `Not rated`.
  */
 describe('MetaLine — the rating picker', () => {
   it('renders the full picker in the rating segment, not a label', () => {
@@ -197,8 +230,48 @@ describe('MetaLine — the rating picker', () => {
     expect(onRate).not.toHaveBeenCalled();
   });
 
+  it('reports the segment clicked on an unrated movie, as a percent', () => {
+    // What the retraction is for: the first rating a movie ever gets is set
+    // from stars that were empty a moment before.
+    const onRate = vi.fn();
+    renderMetaLine({ ratingPercent: null, onRate });
+
+    fireEvent.click(segment(6));
+
+    expect(onRate).toHaveBeenCalledWith(60);
+  });
+
+  it('has nothing to clear on an unrated movie — every segment sets a rating', () => {
+    // "Click it again to turn it off" needs something to be on. On an unrated
+    // movie no segment holds the value, so none of them can ask for `null`.
+    const onRate = vi.fn();
+    renderMetaLine({ ratingPercent: null, onRate });
+
+    fireEvent.click(segment(1));
+
+    expect(onRate).toHaveBeenCalledWith(10);
+    expect(onRate).not.toHaveBeenCalledWith(null);
+  });
+
   it('sits where the stars sat — after the runtime, before the Watched badge', () => {
     renderMetaLine({ isWatched: true });
+
+    const runtime = screen.getByText('2h 8m');
+    const picker = segment(1);
+    const badge = screen.getByText(/✓\s*watched/i);
+
+    expect(
+      runtime.compareDocumentPosition(picker) & Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
+    expect(
+      picker.compareDocumentPosition(badge) & Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
+  });
+
+  it('sits in that same place for an unrated movie', () => {
+    // Nothing about the line moved — an unrated movie's stars occupy the
+    // twenty pixels a rated movie's stars have always occupied.
+    renderMetaLine({ ratingPercent: null, isWatched: true });
 
     const runtime = screen.getByText('2h 8m');
     const picker = segment(1);

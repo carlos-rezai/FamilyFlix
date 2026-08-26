@@ -105,19 +105,24 @@ describe('detailView — the runtime label', () => {
 
 /**
  * **Unrated** and a stored zero are different claims — "nobody has scored this"
- * versus "we scored it zero" — and only the mapper can keep them apart, because
- * both would otherwise reach `StarRating` as the same 0%.
+ * versus "we scored it zero" — and the absence has to survive the mapping,
+ * because both would otherwise reach the picker as the same 0% and print the
+ * same `0.0`.
+ *
+ * The mapper no longer decides anything here beyond the scale: the segment is
+ * permanent now, and `null` is the value that makes the picker read
+ * `Not rated` rather than the value that removes it from the line.
  */
 describe('detailView — the rating segment', () => {
   it('maps a stored rating to the percent the stars fill against', () => {
     expect(detailView(makeMovie({ rating: 8 })).ratingPercent).toBe(80);
   });
 
-  it('gives an unrated movie no rating segment at all', () => {
+  it('carries an unrated movie through as unrated, for the picker to label', () => {
     expect(detailView(makeMovie({ rating: null })).ratingPercent).toBeNull();
   });
 
-  it('keeps a stored zero as a real segment, distinct from unrated', () => {
+  it('keeps a stored zero as a real rating, distinct from unrated', () => {
     expect(detailView(makeMovie({ rating: 0 })).ratingPercent).toBe(0);
   });
 });

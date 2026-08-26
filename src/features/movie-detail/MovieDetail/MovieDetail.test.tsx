@@ -334,18 +334,44 @@ describe('MovieDetail — the meta line', () => {
     expect(separators()).toHaveLength(0);
   });
 
-  it('shows no stars at all for an unrated movie', async () => {
-    // Empty stars reading "0.0" would be the household asserting it scored the
-    // film zero — the opposite of nobody having said anything yet.
+  it('shows the picker, not a gap, for an unrated movie', async () => {
+    // The `04-movie-detail` Q10 retraction. Q10's worry was the "0.0" an empty
+    // five would print, which is what the `Not rated` label exists to keep off
+    // the page; the stars themselves are an invitation, and a maintainer
+    // scanning the page never has to wonder whether a missing control means
+    // unrated or means broken.
     serveMovie({ rating: null });
 
     renderDetail();
     await findTitle('Northwind');
 
-    expect(starButtons()).toHaveLength(0);
+    expect(starButtons()).toHaveLength(10);
+    expect(screen.getByText(/not rated/i)).toBeDefined();
     expect(screen.queryByText('0.0 / 5')).toBeNull();
-    expect(screen.queryByText(/not rated/i)).toBeNull();
-    // Year and runtime survive, so exactly one separator sits between them.
+    // Three segments survive whatever the rating is, so two separators do.
+    expect(separators()).toHaveLength(2);
+  });
+
+  it('shows the unrated picker alone when neither year nor runtime survives', async () => {
+    // The permanent segment as the only survivor: a bullet in front of it
+    // would have nothing on its left.
+    serveMovie({ year: null, runtimeMinutes: null, rating: null });
+
+    renderDetail();
+    await findTitle('Northwind');
+
+    expect(starButtons()).toHaveLength(10);
+    expect(separators()).toHaveLength(0);
+  });
+
+  it('puts exactly one separator between a year and an unrated picker', async () => {
+    serveMovie({ year: 1994, runtimeMinutes: null, rating: null });
+
+    renderDetail();
+    await findTitle('Northwind');
+
+    expect(screen.getByText('1994')).toBeDefined();
+    expect(starButtons()).toHaveLength(10);
     expect(separators()).toHaveLength(1);
   });
 
@@ -771,12 +797,13 @@ describe('MovieDetail — the rating picker', () => {
     await findTitle('Northwind');
     fireEvent.click(starSegment(8));
 
-    // On this page the cleared rating reads as an absence by *losing* its
-    // segment: the meta line is still conditional on a rating existing, and
-    // 62's retraction is what turns a cleared rating into a "Not rated" picker
-    // rather than a missing one. What must never appear either way is a zero.
+    // A cleared rating now reads as an absence by *saying so*: the stars stay
+    // where they are, empty and still clickable, and the label reads
+    // `Not rated`. What must never appear is a zero — that would be the
+    // household claiming it scored the film nothing.
     expect(screen.queryByText('0.0 / 5')).toBeNull();
-    expect(starButtons()).toHaveLength(0);
+    expect(screen.getByText(/not rated/i)).toBeDefined();
+    expect(starButtons()).toHaveLength(10);
     await waitFor(() =>
       expect(writes()).toContainEqual({
         url: '/api/movies/m1/rating',
@@ -816,15 +843,53 @@ describe('MovieDetail — the rating picker', () => {
     expect(screen.queryByRole('button', { name: /retry/i })).toBeNull();
   });
 
-  it('offers no picker at all for an unrated movie', async () => {
-    // The retraction that gives an unrated movie five clickable empty stars is
-    // a later issue's — here the segment is still absent entirely.
+  it('scores a movie nobody had rated, from the stars that were empty', async () => {
+    // The whole point of the retraction, end to end: the first rating a movie
+    // ever gets is set from a control that only exists because unrated stopped
+    // meaning "no control". Percent on screen, stored units on the wire.
+    serveMovieAndSaves({ rating: null });
+
+    renderDetail('m1');
+    await findTitle('Northwind');
+    expect(screen.getByText(/not rated/i)).toBeDefined();
+
+    fireEvent.click(starSegment(9));
+
+    expect(screen.getByText('4.5 / 5')).toBeDefined();
+    await waitFor(() =>
+      expect(writes()).toContainEqual({
+        url: '/api/movies/m1/rating',
+        body: { value: 9 },
+      })
+    );
+  });
+
+  it('puts an unrated movie back to Not rated when the save is refused', async () => {
+    // The revert case the retraction newly makes reachable from this page: what
+    // the click cost was an absence, and an absence is what has to come back —
+    // not the zero a naive revert would leave behind.
+    serveMovieAndFailSaves({ rating: null });
+
+    renderDetail();
+    await findTitle('Northwind');
+    fireEvent.click(starSegment(4));
+    expect(screen.getByText('2.0 / 5')).toBeDefined();
+
+    await waitFor(() => expect(screen.getByText(/not rated/i)).toBeDefined());
+    expect(screen.queryByText('0.0 / 5')).toBeNull();
+    expect(starButtons()).toHaveLength(10);
+  });
+
+  it('is reachable without a mouse on an unrated movie too', async () => {
     serveMovieAndSaves({ rating: null });
 
     renderDetail();
     await findTitle('Northwind');
 
-    expect(starButtons()).toHaveLength(0);
+    const half = starSegment(5);
+    half.focus();
+
+    expect(document.activeElement).toBe(half);
   });
 
   it('is reachable without a mouse — the stars take focus', async () => {
