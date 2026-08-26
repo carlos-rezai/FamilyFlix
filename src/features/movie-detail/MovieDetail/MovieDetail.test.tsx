@@ -202,12 +202,27 @@ function separators() {
 }
 
 /**
- * The rating segment's stars. They are controls now rather than glyph text —
- * the meta line renders a `RatingPicker` where its `StarRating` used to sit —
- * so they are found by what a click on one would do.
+ * The rating segment's ten **Half-star segments**. They are controls now rather
+ * than glyph text — the meta line renders a `RatingPicker` where its
+ * `StarRating` used to sit — and they are the only controls on this page that
+ * a screen reader has nothing to say about yet, which is what tells them apart
+ * from Play, the two circles and the ⋯ trigger. Naming them is the next
+ * issue's; until then their position in the row is what a parent aims at.
  */
 function starButtons() {
-  return screen.queryAllByRole('button', { name: /^rate /i });
+  return screen.queryAllByRole('button', { name: '' });
+}
+
+/** One segment, 1–10 from the left: 7 is the fourth star's left half. */
+function starSegment(nth: number): HTMLElement {
+  const found = starButtons()[nth - 1];
+
+  if (found === undefined) {
+    throw new Error(
+      `No segment ${nth} — the meta line drew ${starButtons().length} of them.`
+    );
+  }
+  return found;
 }
 
 describe('MovieDetail — the movie on screen', () => {
@@ -228,7 +243,7 @@ describe('MovieDetail — the movie on screen', () => {
 
     expect(screen.getByText('1994')).toBeDefined();
     expect(screen.getByText('2h 8m')).toBeDefined();
-    expect(starButtons()).toHaveLength(5);
+    expect(starButtons()).toHaveLength(10);
     expect(screen.getByText('4.0 / 5')).toBeDefined();
   });
 
@@ -334,7 +349,7 @@ describe('MovieDetail — the meta line', () => {
     renderDetail();
     await findTitle('Northwind');
 
-    expect(starButtons()).toHaveLength(5);
+    expect(starButtons()).toHaveLength(10);
     expect(screen.getByText('0.0 / 5')).toBeDefined();
     expect(separators()).toHaveLength(2);
   });
@@ -701,17 +716,59 @@ describe('MovieDetail — the two toggles', () => {
  * trip would read as a click that didn't land.
  */
 describe('MovieDetail — the rating picker', () => {
-  it('saves the star that was clicked to this movie’s rating route, in stored units', async () => {
+  it('saves the segment that was clicked to this movie’s rating route, in stored units', async () => {
     serveMovieAndSaves({ rating: 8 });
 
     renderDetail('m1');
     await findTitle('Northwind');
-    fireEvent.click(screen.getByRole('button', { name: 'Rate 5 stars' }));
+    fireEvent.click(starSegment(10));
 
     await waitFor(() =>
       expect(writes()).toContainEqual({
         url: '/api/movies/m1/rating',
         body: { value: 10 },
+      })
+    );
+  });
+
+  it('saves a half-star as the half-star unit it is', async () => {
+    // The scale the picker can now reach and the column has always held: the
+    // fourth star's left half is 70 percent on screen and a stored 7.
+    serveMovieAndSaves({ rating: 8 });
+
+    renderDetail('m1');
+    await findTitle('Northwind');
+    fireEvent.click(starSegment(7));
+
+    expect(screen.getByText('3.5 / 5')).toBeDefined();
+    await waitFor(() =>
+      expect(writes()).toContainEqual({
+        url: '/api/movies/m1/rating',
+        body: { value: 7 },
+      })
+    );
+  });
+
+  /**
+   * The clear, end to end. Clicking the segment that already holds the rating
+   * has to reach the route as `{ value: null }` and not as a zero — "I haven't
+   * scored this" and "I scored this nothing" are the two facts the whole
+   * feature exists to keep apart, and this is the one path that can confuse
+   * them.
+   */
+  it('clears a rating to null rather than to zero when its own segment is clicked', async () => {
+    serveMovieAndSaves({ rating: 8 });
+
+    renderDetail('m1');
+    await findTitle('Northwind');
+    fireEvent.click(starSegment(8));
+
+    expect(screen.getByText(/not rated/i)).toBeDefined();
+    expect(screen.queryByText('0.0 / 5')).toBeNull();
+    await waitFor(() =>
+      expect(writes()).toContainEqual({
+        url: '/api/movies/m1/rating',
+        body: { value: null },
       })
     );
   });
@@ -723,7 +780,7 @@ describe('MovieDetail — the rating picker', () => {
     await findTitle('Northwind');
     expect(screen.getByText('4.0 / 5')).toBeDefined();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Rate 2 stars' }));
+    fireEvent.click(starSegment(4));
 
     expect(screen.getByText('2.0 / 5')).toBeDefined();
     await waitFor(() => expect(writes()).toHaveLength(1));
@@ -735,7 +792,7 @@ describe('MovieDetail — the rating picker', () => {
 
     renderDetail();
     await findTitle('Northwind');
-    fireEvent.click(screen.getByRole('button', { name: 'Rate 1 star' }));
+    fireEvent.click(starSegment(2));
     expect(screen.getByText('1.0 / 5')).toBeDefined();
 
     await waitFor(() => expect(screen.getByText('4.0 / 5')).toBeDefined());
@@ -764,10 +821,10 @@ describe('MovieDetail — the rating picker', () => {
     renderDetail();
     await findTitle('Northwind');
 
-    const third = screen.getByRole('button', { name: 'Rate 3 stars' });
-    third.focus();
+    const half = starSegment(5);
+    half.focus();
 
-    expect(document.activeElement).toBe(third);
+    expect(document.activeElement).toBe(half);
   });
 });
 

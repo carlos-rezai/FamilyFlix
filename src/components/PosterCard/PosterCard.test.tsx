@@ -160,3 +160,31 @@ describe('PosterCard — opening it without a mouse', () => {
     expect(onOpen).not.toHaveBeenCalled();
   });
 });
+
+/**
+ * The card offers the heart and nothing else, on purpose. Ten **Half-star
+ * segments** on a 210px tile is a mis-click hazard on the screen the parents
+ * use most, so rating stays something you open a movie to do — a deliberate act
+ * rather than something a scroll can trigger. The stars here are still a
+ * reading, not a control.
+ */
+describe('PosterCard — what it deliberately does not offer', () => {
+  it('holds exactly two controls: the card itself and the heart', () => {
+    renderCard();
+
+    const controls = screen
+      .getAllByRole('button')
+      .map((control) => control.getAttribute('title') ?? control.textContent);
+
+    expect(controls).toHaveLength(2);
+    expect(controls).toContain('Favorite');
+  });
+
+  it('draws its stars as a reading, with nothing on them to click', () => {
+    renderCard({ movie: { ...movie, rating: 70 } });
+
+    // A rating picker would put a control on every half-star; the card's row is
+    // display-only, so the only button inside it is the heart.
+    expect(screen.queryAllByRole('button', { name: '' })).toHaveLength(0);
+  });
+});

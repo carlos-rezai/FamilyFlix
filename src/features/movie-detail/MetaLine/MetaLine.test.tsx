@@ -28,12 +28,27 @@ function renderMetaLine(props: Partial<MetaLineProps> = {}) {
 const separators = () => screen.queryAllByText(SEPARATOR);
 
 /**
- * The rating segment's stars — controls now, not glyph text, because the line
- * renders a `RatingPicker` where its `StarRating` used to sit. Finding them by
- * what a click would do is what makes "the stars are clickable" the assertion
- * rather than "some stars are drawn".
+ * The rating segment's **Half-star segments** — controls now, not glyph text,
+ * because the line renders a `RatingPicker` where its `StarRating` used to sit.
+ * They are the only buttons the line draws, and their position in the row is
+ * what a parent aims at, so the role alone finds them.
  */
-const stars = () => screen.queryAllByRole('button', { name: /^rate /i });
+const segments = () => screen.queryAllByRole('button');
+
+/** One segment, 1–10 from the left: 7 is the fourth star's left half. */
+function segment(nth: number): HTMLElement {
+  const found = segments()[nth - 1];
+
+  if (found === undefined) {
+    throw new Error(
+      `No segment ${nth} — the line drew ${segments().length} of them.`
+    );
+  }
+  return found;
+}
+
+/** The star a segment sits on — the box carrying the glyph and its size. */
+const starBox = (nth: number) => segment(nth).parentElement as HTMLElement;
 
 describe('MetaLine — the segments', () => {
   it('shows the year, the runtime and the stars when the movie has all three', () => {
@@ -41,7 +56,7 @@ describe('MetaLine — the segments', () => {
 
     expect(screen.getByText('1994')).toBeTruthy();
     expect(screen.getByText('2h 8m')).toBeTruthy();
-    expect(stars()).not.toHaveLength(0);
+    expect(segments()).not.toHaveLength(0);
   });
 
   it('omits the year without leaving a gap where it was', () => {
@@ -65,7 +80,7 @@ describe('MetaLine — the segments', () => {
     // — this line only stops being a label.
     renderMetaLine({ ratingPercent: null });
 
-    expect(stars()).toHaveLength(0);
+    expect(segments()).toHaveLength(0);
     expect(screen.queryByText(/not rated/i)).toBeNull();
   });
 });
@@ -94,7 +109,7 @@ describe('MetaLine — the separators', () => {
   it('leaves nothing dangling when the stars are the only survivor', () => {
     renderMetaLine({ year: null, runtimeLabel: null });
 
-    expect(stars()).not.toHaveLength(0);
+    expect(segments()).not.toHaveLength(0);
     expect(separators()).toHaveLength(0);
   });
 
@@ -134,10 +149,10 @@ describe('MetaLine — the Watched badge', () => {
  * segment at all is a `null` `detailView` already decided.
  */
 describe('MetaLine — the rating picker', () => {
-  it('renders a picker in the rating segment, not a label', () => {
+  it('renders the full picker in the rating segment, not a label', () => {
     renderMetaLine({ ratingPercent: 80 });
 
-    expect(stars()).toHaveLength(5);
+    expect(segments()).toHaveLength(10);
   });
 
   it('shows the stored rating beside the stars', () => {
@@ -147,18 +162,32 @@ describe('MetaLine — the rating picker', () => {
   });
 
   it('draws its stars at 20px — the size the stars here have always been', () => {
+    // A smaller picker, not a broken one: the meta line asks for 20 and the
+    // segments, gaps and glyphs all come down with it.
     renderMetaLine({ ratingPercent: 80 });
 
-    expect(getComputedStyle(stars()[0]).fontSize).toBe('20px');
+    expect(getComputedStyle(starBox(1)).fontSize).toBe('20px');
   });
 
-  it('reports the star that was clicked, as a percent', () => {
+  it('reports the half-star segment that was clicked, as a percent', () => {
     const onRate = vi.fn();
     renderMetaLine({ ratingPercent: 80, onRate });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Rate 3 stars' }));
+    fireEvent.click(segment(7));
 
-    expect(onRate).toHaveBeenCalledWith(60);
+    expect(onRate).toHaveBeenCalledWith(70);
+  });
+
+  it('reports null when the segment holding the current rating is clicked', () => {
+    // The client end of "a cleared rating is genuinely unrated in the database,
+    // not a zero": the line hands the picker's `null` straight to the rate
+    // callback, which is what puts `{ value: null }` on the wire.
+    const onRate = vi.fn();
+    renderMetaLine({ ratingPercent: 80, onRate });
+
+    fireEvent.click(segment(8));
+
+    expect(onRate).toHaveBeenCalledWith(null);
   });
 
   it('reports nothing on render — drawing the line writes no rating', () => {
@@ -172,7 +201,7 @@ describe('MetaLine — the rating picker', () => {
     renderMetaLine({ isWatched: true });
 
     const runtime = screen.getByText('2h 8m');
-    const picker = stars()[0];
+    const picker = segment(1);
     const badge = screen.getByText(/✓\s*watched/i);
 
     expect(
