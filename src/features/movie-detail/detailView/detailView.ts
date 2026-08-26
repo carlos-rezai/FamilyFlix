@@ -86,9 +86,10 @@ function toTopTag(movie: Movie, hasArtwork: boolean): string | null {
  * credits row disappears only when there is nothing at all to put in it.
  *
  * Two distinctions the mapper exists to preserve. **Unrated is not zero**: a
- * `null` rating produces no rating segment, because empty stars reading "0.0"
- * would be the household asserting it scored the film zero — the opposite of
- * nobody having rated it. And **artwork is not decorated**: the overlays follow
+ * `null` rating stays `null` all the way to the picker, which labels it
+ * `Not rated` rather than printing the "0.0" a movie scored nought prints. The
+ * segment itself is permanent — the mapper decides the scale here, not whether
+ * the stars exist. And **artwork is not decorated**: the overlays follow
  * `PosterCard`'s rule and caption the deterministic gradient only.
  */
 export function detailView(movie: Movie): MovieDetailModel {
@@ -102,7 +103,7 @@ export function detailView(movie: Movie): MovieDetailModel {
     title: movie.title,
     year: movie.year,
     runtimeLabel: toRuntimeLabel(movie.runtimeMinutes),
-    ratingPercent: movie.rating === null ? null : toRatingPercent(movie.rating),
+    ratingPercent: toRatingPercent(movie.rating),
     isWatched: movie.watched,
     isFavorite: movie.isFavorite,
     playLabel: toPlayLabel(movie),

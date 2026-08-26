@@ -39,6 +39,11 @@ interface MetaSegment {
  * makes a dangling separator unrepresentable: the separators below are generated
  * *between* the members of this list, so an absent segment cannot leave one
  * behind. Every decision about what is absent was already made in `detailView`.
+ *
+ * The rating is the one segment that always survives. `year` and `runtimeLabel`
+ * stay nullable, so the interleaving still has real work to do — but an unrated
+ * movie is one the picker labels `Not rated`, not one the line leaves a hole
+ * for, so a missing control can never mean "unrated" *or* "broken".
  */
 function metaSegments({
   year,
@@ -57,20 +62,18 @@ function metaSegments({
       node: <MetaText>{runtimeLabel}</MetaText>,
     });
   }
-  if (ratingPercent !== null) {
-    segments.push({
-      key: 'rating',
-      node: (
-        <RatingWrap>
-          <RatingPicker
-            value={ratingPercent}
-            size={STAR_SIZE}
-            onChange={onRate}
-          />
-        </RatingWrap>
-      ),
-    });
-  }
+  segments.push({
+    key: 'rating',
+    node: (
+      <RatingWrap>
+        <RatingPicker
+          value={ratingPercent}
+          size={STAR_SIZE}
+          onChange={onRate}
+        />
+      </RatingWrap>
+    ),
+  });
 
   return segments;
 }
@@ -78,9 +81,9 @@ function metaSegments({
 /**
  * The **Meta line** under the movie's title: year, runtime, and the rating
  * picker, with a bullet between each pair that survives, and the Watched badge
- * at the end. The stars are the line's one interactive segment — the same
- * twenty pixels in the same place they have always held, except that a parent
- * can now click them.
+ * at the end. The stars are the line's one interactive segment and its one
+ * permanent one — the same twenty pixels in the same place they have always
+ * held, except that a parent can now click them, whatever the movie's rating is.
  *
  * The separators are interleaved rather than baked into a single string because
  * the stars sit in the middle of the line — no one string could hold them — and
@@ -88,7 +91,8 @@ function metaSegments({
  * nothing after it impossible to draw.
  *
  * It asks no display questions of its own: every `null` here was already
- * decided by `detailView`.
+ * decided by `detailView`, and a `null` rating is an unrated movie for the
+ * picker to label rather than a segment to drop.
  */
 export function MetaLine(props: MetaLineProps) {
   return (

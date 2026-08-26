@@ -204,11 +204,10 @@ export function useMovieDetail(id: string): UseMovieDetailResult {
 
       saveRating(movie.id, toRatingUnits(percent))
         // The route echoes what it stored; trust that over what we assumed. A
-        // `null` echo is a rating that was cleared, not an absent value —
-        // `toRatingPercent` still flattens unrated to zero until the
-        // retraction lands, so the two are told apart here.
+        // `null` echo is a cleared rating, and it stays `null` all the way to
+        // the picker, which labels it `Not rated` rather than printing a zero.
         .then((saved) => {
-          const savedPercent = saved === null ? null : toRatingPercent(saved);
+          const savedPercent = toRatingPercent(saved);
           if (savedPercent !== percent) {
             editMovie((current) => ({
               ...current,
