@@ -161,29 +161,24 @@ export function useMovieDetail(id: string): UseMovieDetailResult {
    */
   const edit = useOptimisticEdit(movie, editMovie);
 
+  /**
+   * The one edit that costs more than the field it writes: marking watched also
+   * spends the resume offer, so what a refused save hands back is the pair, not
+   * the flag. A save that never landed never discarded the position.
+   */
   const toggleWatched = useCallback(() => {
     if (movie === null) {
       return;
     }
 
-    const next = !movie.isWatched;
-    // What the click cost, kept so a refused save can hand it back — including
-    // the resume offer, which was never actually discarded if nothing persisted.
-    const { isWatched, playLabel } = movie;
-
-    editMovie((current) => withWatched(current, next));
-
-    saveWatched(movie.id, next)
-      // The route echoes what it stored; trust that over what we assumed.
-      .then((saved) => {
-        if (saved !== next) {
-          editMovie((current) => withWatched(current, saved));
-        }
-      })
-      .catch(() => {
-        editMovie((current) => ({ ...current, isWatched, playLabel }));
-      });
-  }, [movie, editMovie]);
+    edit({
+      next: !movie.isWatched,
+      capture: ({ isWatched, playLabel }) => ({ isWatched, playLabel }),
+      apply: withWatched,
+      restore: (current, previous) => ({ ...current, ...previous }),
+      save: saveWatched,
+    });
+  }, [movie, edit]);
 
   const toggleFavorite = useCallback(() => {
     if (movie === null) {
