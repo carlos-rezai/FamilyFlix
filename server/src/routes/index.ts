@@ -12,6 +12,43 @@ import {
 } from '@/types';
 
 /**
+ * What every single-signal write does once its body has been read and found
+ * valid: look the movie up, 404 if it is gone, mutate, and echo `{ value }`
+ * back.
+ *
+ * The 404-before-write check is the reason this exists. It is a correctness
+ * rule — never write to a movie that is no longer there — and it was upheld by
+ * three routes having remembered to paste the same four lines. That is the
+ * class of duplication where the fourth author forgets and the bug is silent.
+ * The echo matters as much: it is what lets an optimistic control reconcile
+ * against what persisted rather than against what it assumed, and a route that
+ * quietly stopped echoing would leave the screen believing itself.
+ *
+ * **Validation is not in here**, deliberately. What a valid body is stays with
+ * each route, because the three genuinely disagree — two accept exactly a
+ * boolean, and the rating accepts an allow-list with two distinct rejection
+ * messages, one of which guards a write that erases data. A caller reaches this
+ * function holding a value it has already vouched for, which is why `value` is
+ * typed rather than `unknown`.
+ */
+function writeSignal<V>(
+  storage: LibraryStorage,
+  req: Request<{ id: string }>,
+  res: Response,
+  value: V,
+  mutate: (id: string, value: V) => void
+): void {
+  const { id } = req.params;
+  if (!storage.getMovie(id)) {
+    res.status(404).json({ error: `Unknown movie: ${id}` });
+    return;
+  }
+
+  mutate(id, value);
+  res.json({ value });
+}
+
+/**
  * The first value of a query parameter, or `undefined` when it is absent.
  * Express parses `?genre=a&genre=b` into an array and nested keys into objects;
  * this route layer only ever means the simple scalar case.
@@ -307,8 +344,9 @@ export function createApiRouter(
     res.json(movie);
   });
 
-  // The Favorites toggle. Echoing the stored `value` back lets the optimistic
-  // heart confirm what was actually persisted rather than assume it.
+  // The Favorites toggle. What is left here is what this route alone decides:
+  // that a valid body is exactly a boolean, and that the write is `setFavorite`.
+  // The lookup, the 404, and the echo are `writeSignal`'s.
   router.post('/movies/:id/favorite', (req: Request<{ id: string }>, res) => {
     const { value } = req.body as { value?: unknown };
     if (typeof value !== 'boolean') {
@@ -316,14 +354,9 @@ export function createApiRouter(
       return;
     }
 
-    const { id } = req.params;
-    if (!storage.getMovie(id)) {
-      res.status(404).json({ error: `Unknown movie: ${id}` });
-      return;
-    }
-
-    storage.setFavorite(id, value);
-    res.json({ value });
+    writeSignal(storage, req, res, value, (id, favorite) =>
+      storage.setFavorite(id, favorite)
+    );
   });
 
   // The watched toggle, echoing the stored `value` like the favorite route
