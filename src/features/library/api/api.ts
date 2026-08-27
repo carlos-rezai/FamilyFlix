@@ -5,6 +5,7 @@ import type {
   LibraryQuery,
 } from '@/types';
 import { toGenreQueryParams, toLibraryQueryParams } from '@/utils';
+import { postValue } from '@/api/postValue/postValue';
 
 /** The one aggregate the browse home loads — every section in one payload. */
 const HOME_ENDPOINT = '/api/home';
@@ -50,28 +51,18 @@ export async function fetchHomePayload(
   return (await response.json()) as HomePayload;
 }
 
+/** What the favorite route accepts as an echo of what it stored. */
+function isFavoriteEcho(echoed: unknown): echoed is boolean {
+  return typeof echoed === 'boolean';
+}
+
 /**
- * Saves one movie's favorite flag and answers with the value that was stored.
- * The route echoes what it wrote, and that echo is the truth — `favorite` is
- * only the fallback for a route that answers without one. Rejects if the save
- * did not succeed, which is the caller's cue to revert.
+ * Saves one movie's favorite flag and answers with the value that was stored —
+ * the wire contract in `postValue`, with a flag as its echo. Rejects if the
+ * save did not succeed, which is the caller's cue to revert.
  */
-export async function saveFavorite(
-  id: string,
-  favorite: boolean
-): Promise<boolean> {
-  const response = await fetch(favoriteEndpoint(id), {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ value: favorite }),
-  });
-
-  if (!response.ok) {
-    throw new Error(`Saving favorite failed: ${response.status}`);
-  }
-
-  const saved = (await response.json()) as { value?: unknown };
-  return typeof saved.value === 'boolean' ? saved.value : favorite;
+export function saveFavorite(id: string, favorite: boolean): Promise<boolean> {
+  return postValue(favoriteEndpoint(id), favorite, isFavoriteEcho);
 }
 
 /**
