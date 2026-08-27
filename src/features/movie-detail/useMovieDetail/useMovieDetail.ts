@@ -92,11 +92,10 @@ function withRating(
  *
  * It also owns the three edits this page can make — the watched tick, the
  * favorite heart and the rating — because the optimistic value and the loaded
- * movie are the same state. All three keep one bargain, the same one the browse
- * shelf's heart keeps: show the new value at once, take the route's echo over
- * what was assumed, and put it back if the save is refused, so the page never
- * claims something is saved that isn't. A refused save costs the edit, not the
- * page.
+ * movie are the same state. All three keep one bargain and `useOptimisticEdit`
+ * is where that bargain is written; what each one says here is only what it
+ * writes, what that costs, and how to save it. A refused save costs the edit,
+ * not the page.
  */
 export function useMovieDetail(id: string): UseMovieDetailResult {
   const [state, setState] = useState<MovieDetailState>({
