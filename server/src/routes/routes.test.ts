@@ -1577,3 +1577,95 @@ describe('POST /api/movies/:id/rating', () => {
     ]);
   });
 });
+
+// --- 07 — Ratings refactor, Group E: the untested third sibling (issue #65) ---
+
+/**
+ * The favorite route shipped with the browse shelf's heart and was never
+ * covered here — the only one of the three single-signal writes with no test at
+ * this layer. Found while refactoring all three onto one helper, which is
+ * exactly the wrong moment to have no safety net under one of them.
+ *
+ * These characterise what it already does. Nothing here is new behaviour.
+ */
+function postFavorite(baseUrl: string, id: string, body: unknown) {
+  return fetch(`${baseUrl}/api/movies/${id}/favorite`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+}
+
+describe('POST /api/movies/:id/favorite', () => {
+  it('favorites a movie and echoes the value it stored', async () => {
+    const { storage, baseUrl } = freshApi();
+    const stored = addFullMovie(storage);
+
+    const response = await postFavorite(baseUrl, stored.id, { value: true });
+
+    expect(response.status).toBe(200);
+    // The echo is what lets the optimistic heart reconcile against what
+    // actually persisted, rather than against what it assumed.
+    expect(await response.json()).toEqual({ value: true });
+    expect(storage.getMovie(stored.id)?.isFavorite).toBe(true);
+  });
+
+  it('un-favorites one that was favorited by mistake', async () => {
+    const { storage, baseUrl } = freshApi();
+    const stored = addFullMovie(storage);
+    await postFavorite(baseUrl, stored.id, { value: true });
+
+    const response = await postFavorite(baseUrl, stored.id, { value: false });
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ value: false });
+    expect(storage.getMovie(stored.id)?.isFavorite).toBe(false);
+  });
+
+  it('rejects a body that is not { value: boolean }', async () => {
+    const { storage, baseUrl } = freshApi();
+    const stored = addFullMovie(storage);
+
+    for (const body of [{ value: 'yes' }, { value: 1 }, { value: null }, {}]) {
+      const response = await postFavorite(baseUrl, stored.id, body);
+
+      expect(response.status).toBe(400);
+      const error = (await response.json()) as { error?: unknown };
+      expect(typeof error.error).toBe('string');
+      expect(error.error).not.toBe('');
+    }
+
+    // Nothing was written on the way to rejecting any of them.
+    expect(storage.getMovie(stored.id)?.isFavorite).toBe(false);
+  });
+
+  it('answers 404 with an error body for an unknown id', async () => {
+    const { baseUrl } = freshApi();
+
+    const response = await postFavorite(baseUrl, 'no-such-movie', {
+      value: true,
+    });
+
+    expect(response.status).toBe(404);
+    const body = (await response.json()) as { error?: unknown };
+    expect(typeof body.error).toBe('string');
+    expect(body.error).not.toBe('');
+  });
+
+  it('moves the flag and nothing else', async () => {
+    // The single-signal rule, and the same one `setRating` is pinned against
+    // below: `setFavorite` is a plain single-column UPDATE, so favoriting an
+    // old film must not refresh `updated_at` and jump it up a recently-added
+    // shelf.
+    const { storage, baseUrl } = freshApi();
+    const stored = addFullMovie(storage);
+
+    await postFavorite(baseUrl, stored.id, { value: true });
+
+    const after = storage.getMovie(stored.id);
+    expect(after?.watched).toBe(stored.watched);
+    expect(after?.rating).toBe(stored.rating);
+    expect(after?.resumePositionSeconds).toBe(stored.resumePositionSeconds);
+    expect(after?.updatedAt).toBe(stored.updatedAt);
+  });
+});
