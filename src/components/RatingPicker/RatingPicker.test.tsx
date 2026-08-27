@@ -612,7 +612,10 @@ describe('RatingPicker — Enter and Space', () => {
     const onChange = vi.fn();
     renderPicker({ value: null, onChange });
 
-    segment(7).focus();
+    // Focusing a *named* segment is the point of these four tests, so they
+    // reach for it directly rather than tabbing to it — and `act` flushes the
+    // Rating preview that landing there sets.
+    act(() => segment(7).focus());
     await user.keyboard('{Enter}');
 
     expect(onChange).toHaveBeenCalledWith(70);
@@ -623,7 +626,7 @@ describe('RatingPicker — Enter and Space', () => {
     const onChange = vi.fn();
     renderPicker({ value: null, onChange });
 
-    segment(4).focus();
+    act(() => segment(4).focus());
     await user.keyboard(' ');
 
     expect(onChange).toHaveBeenCalledWith(40);
@@ -636,7 +639,7 @@ describe('RatingPicker — Enter and Space', () => {
     const onChange = vi.fn();
     renderPicker({ value: 70, onChange });
 
-    segment(7).focus();
+    act(() => segment(7).focus());
     await user.keyboard('{Enter}');
 
     expect(onChange).toHaveBeenCalledWith(null);
@@ -647,7 +650,7 @@ describe('RatingPicker — Enter and Space', () => {
     const onChange = vi.fn();
     renderPicker({ value: null, onChange });
 
-    segment(10).focus();
+    act(() => segment(10).focus());
     await user.keyboard('{Enter}');
 
     expect(asked(onChange)).toEqual([100]);
