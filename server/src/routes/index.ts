@@ -30,6 +30,14 @@ import {
  * messages, one of which guards a write that erases data. A caller reaches this
  * function holding a value it has already vouched for, which is why `value` is
  * typed rather than `unknown`.
+ *
+ * It stays local to this file, like `isMovieSort` above. Extracting it was
+ * considered and declined on the one-folder-per-unit rule's own trigger: that
+ * rule is about companion files, and this has none — it is covered through the
+ * router by `routes.test.ts`, which is where a route helper's behaviour is
+ * observable in the first place. Nor did it leave this file thinner; the three
+ * routes it drained are shorter, and the rule it holds is written down once
+ * instead of pasted three times, which was the point rather than the volume.
  */
 function writeSignal<V>(
   storage: LibraryStorage,
