@@ -1,5 +1,7 @@
 import { useState, type FocusEvent } from 'react';
 
+import { toStarLabel } from '@/utils';
+
 import {
   Root,
   Stars,
@@ -68,8 +70,7 @@ function valueLabel(percent: number | null): string {
   if (percent === null) {
     return UNRATED_LABEL;
   }
-  const stars = Math.round((percent / PERCENT_PER_STAR) * 2) / 2;
-  return `${stars.toFixed(1)} / 5`;
+  return `${toStarLabel(percent)} / 5`;
 }
 
 /**
