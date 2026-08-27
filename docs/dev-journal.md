@@ -11,6 +11,171 @@ Newest entry first.
 
 ---
 
+## 2026-08-27 — Ratings refactor (issue #65)
+
+Twenty commits in six groups, against
+`docs/refactor-plans/07-ratings-refactor.md`. Ratings shipped working and left
+behind **the third copy of three different bargains** — the optimistic write, the
+wire contract, and the single-signal write route. The plan's argument was that
+two examples are not enough to design a generalisation against and three are, so
+this cashes that in three times rather than once. All three are written once now.
+1511 tests pass, up from 1478.
+
+Nothing here changes an HTTP contract, a rendered pixel, or a stored value. The
+1478 existing tests were the specification, and no test file was edited to make a
+refactor commit pass — the two that were touched were touched to stop them
+printing warnings, before any production code moved.
+
+### The suite was green and noisy, which is worse than it sounds
+
+`vitest run` printed eight `act()` warnings while passing, seven of them this
+feature's: four in `RatingPicker.test.tsx`'s `Enter and Space` block, two in
+`MovieDetail.test.tsx`'s rating focus tests. One cause for all seven — a raw
+`segment(n).focus()` fires the picker's `onFocus`, which sets the **Rating
+preview**, which is a React state update outside `act()`. The neighbouring
+watched/favorite focus tests do not warn because those buttons have no focus
+handler that writes state.
+
+Worth naming as a shape: `@testing-library/user-event` arrived at #60 and the
+file uses it correctly in its tab-order tests (`await user.tab()`), then reaches
+around it four tests later. **A dependency half-adopted inside one file is the
+version of this that is hardest to see**, because the correct idiom is right
+there in the same describe block. The fix was the file's own existing `act()`
+idiom, not a new one.
+
+This went first so every later group could use "the suite is silent" as its
+check rather than "green apart from the known seven". A suite that prints
+warnings while passing is a suite where the next real `act()` warning arrives
+pre-camouflaged.
+
+`GenreMoviesProvider` still warns twice. It pre-dates Ratings, it is noted in the
+commit body that left it, and it belongs to whoever refactors that screen next.
+
+### The favorite route had no tests at all
+
+Not in the plan, found one commit before it mattered. `POST /movies/:id/favorite`
+was the only one of the three single-signal writes with **no test at the route
+layer** — its two siblings have five each, including the 404-before-write check.
+It shipped with the browse shelf's heart in `02-browse-grid` and was never
+covered here.
+
+That is the wrong state to be in one commit before all three routes move onto a
+shared helper, since "the existing tests are the specification" is the entire
+safety argument of this refactor and for that route there were none. Five
+characterisation tests went in first, asserting only what the route already did.
+
+**The general shape:** a duplication audit finds missing coverage, because the
+thing that makes three copies hard to see — that they are spread across files
+nobody reads together — is the same thing that lets one of them go untested. The
+sibling routes' tests made the gap look filled.
+
+### What shipped
+
+**One half-star number.** `StarRating` and `RatingPicker` both rounded a percent
+to the nearest half star and printed it to one decimal. It was the only
+arithmetic in the feature with no test of its own on either side — covered only
+through two components' render assertions — and the seam where a rounding change
+on one side leaves two controls on the same page disagreeing about what 70% is
+called. `src/utils/toStarLabel/` is that rule once, with a table pinning every
+half-star point and the ties between them. Both components' rendered output is
+byte-identical and neither's tests changed.
+
+**One optimistic bargain** (closes 64). `useOptimisticEdit(movie, editMovie)`
+returns a runner each write describes itself to — `next`, `capture`, `apply`,
+`restore`, `save`. The reconcile and the revert are written once. The rating
+moved first, deliberately: widest value set, and the one restore
+`useOptimisticSave` could not express, so a hook that could not hold it would
+have failed at the first call site rather than the third. It held.
+`useMovieDetail.test.ts` and `MovieDetail.test.tsx` both pass unmodified.
+
+`useOptimisticSave` survives unchanged and stays boolean. Two hooks, two shapes:
+it reverts by negating a flag and addresses a movie **by id inside a list**,
+where this one is told what to put back and edits **the one movie a page holds**.
+Whether the browse screens ever migrate is a Favorites question.
+
+**One wire contract.** `postValue` at `src/api/` — a new shared rung, following
+`test-support/`'s precedent of a top-level folder with no barrel. Three saves
+across two features kept the same contract, and `useMovieDetail` was already
+reaching into `features/library/api` for `saveFavorite` with a comment
+apologising for it; the shared rung is where that import had been pointing all
+along. The echo guard is a **parameter**, because "a `null` echo is a cleared
+rating" is a per-route fact — true of the rating route, nonsense from a flag
+route — and inspecting the value's type to decide would make one route's rule
+everybody's. That distinction had been defended by a comment in one of three
+copies; it is an argument now, with a test either side of it.
+
+The three near-identical throw messages collapsed into `POST ${endpoint} failed:
+${status}`, which is the idiom `fetchMovie` and `fetchHomePayload` already use
+and names the request that failed. No test asserted the old wording.
+
+**One single-signal write.** `writeSignal` holds lookup → 404 → mutate → echo.
+Validation is deliberately **not** in it: the three routes genuinely disagree
+about what a valid body is, and the rating's disagreement — a missing `value` key
+is a 400 rather than a clear — guards the one write that erases data. Each route
+now reads as its validation and its mutation and nothing else.
+
+The argument for this one was never volume. Three routes of ten lines is not much
+duplication; the point is that the 404-before-write check is a **correctness
+rule** — never write to a movie that is gone — that was written four times in one
+file, character for character, and upheld by everyone having remembered to paste
+it. That is the class of duplication where the fourth author forgets and nothing
+fails loudly.
+
+### Where the plan was wrong, twice
+
+**E1 could not be its own commit.** The plan called for the route helper to land
+with its own test, RED first. But its own Testing Decisions section says the
+helper is tested _through the router_ with a fake `LibraryStorage`, which is the
+only place a route helper's behaviour is observable — so there is no RED to write
+that `routes.test.ts` does not already have. A helper committed alone with no
+caller leaves an unused-vars warning in a tree the plan requires to lint clean.
+E1 and E2 landed together, which is why this is twenty commits and not the
+sixteen the plan counted.
+
+**E5 answered itself the other way.** Its condition was "if the helper leaves
+`routes/index.ts` meaningfully thinner, extract it to its own folder". It does
+not — the file went from 398 lines to 416, because the correctness rule costs
+more to explain once than it did to paste three times. The one-folder-per-unit
+trigger is companion files, and a helper tested through the router has none.
+Both halves point the same way, so `writeSignal` stays local, with the reasoning
+written next to it the way `isMovieSort`'s already is.
+
+### Deliberately not done
+
+- **The two star strips do not merge.** The prototype has them differing exactly
+  as the code does — `.22` against `.2` on the dim glyph, `--color-text-faint`
+  against `--color-text-dim`, a 6px root gap against 14px, a value scaled at
+  `size * 0.86` against a fixed 14px. Unifying them is a redesign wearing a
+  refactor's clothes, and the rule is that the prototype gets amended in a
+  grill-me first or not at all. The shared _arithmetic_ moved; the pixels did not,
+  because they are not shared.
+- **The raw `rgba(255, 255, 255, …)` literals stay.** 1:1 translations of inline
+  prototype values, no token exists for them, and eight style modules already do
+  this. A codebase-wide question, not a Ratings one.
+- **`parseMinRating` still exists twice** with two different contracts — an
+  allow-list of the dropdown's cut-offs in `src/utils/`, a 0–10 range check local
+  to the route layer. Both correct, the separation deliberate per the
+  `isMovieSort` precedent. Only the shared _name_ is unfortunate, and it reads
+  fine until someone greps for it. Left alone; worth a follow-up if it ever bites.
+- **`toRatingPercent` / `toRatingUnits` stay two functions.** Pinned against each
+  other in both directions already, and collapsing an inverse pair into one
+  parameterised function makes the `null` case — the one that must not round —
+  harder to read.
+- **The picker still speaks percent.** A `components/` unit knowing the stored
+  0–10 scale is the boundary the build spent a paragraph avoiding; the conversion
+  stays at the `useMovieDetail` seam.
+- **No cross-screen rating store, no snackbar, no retry.** Unchanged by anything
+  here.
+
+### The row this feature finally ticks
+
+Ratings goes ✅ in README.md and `.claude/CLAUDE.md` with this refactor, closing
+issue 63's last acceptance criterion. That criterion was written against 64
+specifically, which was the only refactor issue filed at the time — but a feature
+is Done after workflow step 8, and step 8 is all of this, not just Group C.
+
+---
+
 ## 2026-08-26 — Ratings (issues #57–#63)
 
 The stars have been on screen since `02-browse-grid` and unreachable that whole
