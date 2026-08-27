@@ -64,6 +64,14 @@ function withWatched(
   return { ...movie, isWatched: watched, playLabel: PLAY_LABEL };
 }
 
+/** The model with the favorite flag set. */
+function withFavorite(
+  movie: MovieDetailModel,
+  favorite: boolean
+): MovieDetailModel {
+  return { ...movie, isFavorite: favorite };
+}
+
 /** The model scored, or unscored — `null` is a cleared rating, not a missing one. */
 function withRating(
   movie: MovieDetailModel,
@@ -182,20 +190,14 @@ export function useMovieDetail(id: string): UseMovieDetailResult {
       return;
     }
 
-    const next = !movie.isFavorite;
-
-    editMovie((current) => ({ ...current, isFavorite: next }));
-
-    saveFavorite(movie.id, next)
-      .then((saved) => {
-        if (saved !== next) {
-          editMovie((current) => ({ ...current, isFavorite: saved }));
-        }
-      })
-      .catch(() => {
-        editMovie((current) => ({ ...current, isFavorite: !next }));
-      });
-  }, [movie, editMovie]);
+    edit({
+      next: !movie.isFavorite,
+      capture: (current) => current.isFavorite,
+      apply: withFavorite,
+      restore: withFavorite,
+      save: saveFavorite,
+    });
+  }, [movie, edit]);
 
   /**
    * Percent on the way in, stored units on the wire — the picker above knows
