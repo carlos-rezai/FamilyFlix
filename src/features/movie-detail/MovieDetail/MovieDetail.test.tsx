@@ -5,6 +5,7 @@ import {
   fireEvent,
   waitFor,
   within,
+  act,
 } from '@testing-library/react';
 import { ThemeProvider } from 'styled-components';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
@@ -887,7 +888,7 @@ describe('MovieDetail — the rating picker', () => {
     await findTitle('Northwind');
 
     const half = starSegment(5);
-    half.focus();
+    act(() => half.focus());
 
     expect(document.activeElement).toBe(half);
   });
@@ -898,8 +899,10 @@ describe('MovieDetail — the rating picker', () => {
     renderDetail();
     await findTitle('Northwind');
 
+    // Unlike the watched/favorite circles below, landing on a star segment
+    // sets the picker's Rating preview, so the focus needs flushing.
     const half = starSegment(5);
-    half.focus();
+    act(() => half.focus());
 
     expect(document.activeElement).toBe(half);
   });
