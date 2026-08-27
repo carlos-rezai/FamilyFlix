@@ -6,6 +6,15 @@ function isWatchedEcho(echoed: unknown): echoed is boolean {
   return typeof echoed === 'boolean';
 }
 
+/**
+ * What the rating route accepts. `null` is in, because `null` is a rating this
+ * route can genuinely store — a cleared one — so an echoed `null` is an answer
+ * rather than the absence of one, and only a missing key falls back.
+ */
+function isRatingEcho(echoed: unknown): echoed is number | null {
+  return typeof echoed === 'number' || echoed === null;
+}
+
 /** Where one movie is loaded from, by the id in the page's URL. */
 const movieEndpoint = (id: string) => `/api/movies/${encodeURIComponent(id)}`;
 
@@ -51,34 +60,17 @@ export function saveWatched(id: string, watched: boolean): Promise<boolean> {
 
 /**
  * Saves one movie's rating in stored units — 0–10, or `null` to clear it — and
- * answers with the value that was stored. The third call keeping the contract
- * `saveWatched` and `saveFavorite` keep: the route echoes what it wrote, and
- * that echo is the truth.
+ * answers with the value that was stored. The wire contract in `postValue`,
+ * with `isRatingEcho` as the one thing this route does not share: a `null` here
+ * is a cleared rating rather than a route answering with nothing, and confusing
+ * the two would let a failed clear read as a successful one.
  *
- * One thing here is its own. `null` is a value this route can legitimately
- * store, so a `null` echo is the route saying it cleared the rating, not a
- * route answering with nothing usable — only a missing `value` key falls back
- * to what was sent. Confusing the two would let a failed clear read as a
- * successful one. Rejects if the save did not succeed, which is the picker's
- * cue to put the old stars back.
+ * Rejects if the save did not succeed, which is the picker's cue to put the old
+ * stars back.
  */
-export async function saveRating(
+export function saveRating(
   id: string,
   units: number | null
 ): Promise<number | null> {
-  const response = await fetch(ratingEndpoint(id), {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ value: units }),
-  });
-
-  if (!response.ok) {
-    throw new Error(`Saving rating failed: ${response.status}`);
-  }
-
-  const saved = (await response.json()) as { value?: unknown };
-  if (typeof saved.value === 'number' || saved.value === null) {
-    return saved.value;
-  }
-  return units;
+  return postValue(ratingEndpoint(id), units, isRatingEcho);
 }
