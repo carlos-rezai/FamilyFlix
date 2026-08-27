@@ -371,18 +371,13 @@ export function createApiRouter(
       return;
     }
 
-    const { id } = req.params;
-    if (!storage.getMovie(id)) {
-      res.status(404).json({ error: `Unknown movie: ${id}` });
-      return;
-    }
-
-    if (value) {
-      storage.markWatched(id);
-    } else {
-      storage.markUnwatched(id);
-    }
-    res.json({ value });
+    writeSignal(storage, req, res, value, (id, watched) => {
+      if (watched) {
+        storage.markWatched(id);
+      } else {
+        storage.markUnwatched(id);
+      }
+    });
   });
 
   // The rating write, the third sibling of the two toggles above: the same
