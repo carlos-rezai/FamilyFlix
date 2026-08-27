@@ -359,8 +359,7 @@ export function createApiRouter(
     );
   });
 
-  // The watched toggle, echoing the stored `value` like the favorite route
-  // above it. It dispatches to the dedicated mutators rather than
+  // The watched toggle. It dispatches to the dedicated mutators rather than
   // `updateMovie`, so this page gets the same watch semantics as every other
   // caller: `markWatched` also zeroes the resume position by documented
   // convention, and un-marking does not hand it back.
@@ -380,12 +379,8 @@ export function createApiRouter(
     });
   });
 
-  // The rating write, the third sibling of the two toggles above: the same
-  // shape, the same 404-before-write check, and the same echo-is-truth bargain,
-  // so the optimistic picker reconciles against what persisted rather than
-  // against what it assumed.
-  //
-  // A body with no `value` key is a 400 rather than a clear — a malformed
+  // The rating write. Its two 400s are distinct on purpose and stay that way:
+  // a body with no `value` key is a 400 rather than a clear — a malformed
   // request and a deliberate `null` must not be the same wire message, since one
   // of them erases a rating. Everything else off the scale answers with the
   // shape the `?rating=` rejection above already uses, quoting the value as it
@@ -407,14 +402,9 @@ export function createApiRouter(
       return;
     }
 
-    const { id } = req.params;
-    if (!storage.getMovie(id)) {
-      res.status(404).json({ error: `Unknown movie: ${id}` });
-      return;
-    }
-
-    storage.setRating(id, value);
-    res.json({ value });
+    writeSignal(storage, req, res, value, (id, units) =>
+      storage.setRating(id, units)
+    );
   });
 
   // Posters and backdrops straight off disk. Serves nothing until an import
