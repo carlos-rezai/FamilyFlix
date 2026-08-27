@@ -9,6 +9,7 @@ import { saveFavorite } from '@/features/library/api/api';
 import { toRatingPercent, toRatingUnits } from '@/utils';
 import { fetchMovie, saveRating, saveWatched } from '../api/api';
 import { detailView } from '../detailView/detailView';
+import { useOptimisticEdit } from '../useOptimisticEdit/useOptimisticEdit';
 
 /**
  * Where the load is. Four, not three: a movie that is gone and a movie that
@@ -61,6 +62,14 @@ function withWatched(
   watched: boolean
 ): MovieDetailModel {
   return { ...movie, isWatched: watched, playLabel: PLAY_LABEL };
+}
+
+/** The model scored, or unscored — `null` is a cleared rating, not a missing one. */
+function withRating(
+  movie: MovieDetailModel,
+  percent: number | null
+): MovieDetailModel {
+  return { ...movie, ratingPercent: percent };
 }
 
 /**
@@ -137,6 +146,13 @@ export function useMovieDetail(id: string): UseMovieDetailResult {
 
   const movie = state.status === 'ready' ? state.movie : null;
 
+  /**
+   * The bargain all three edits below keep. Each one says what it writes, what
+   * that costs and how to save it; the reconcile and the revert live in one
+   * place rather than three (see `useOptimisticEdit`).
+   */
+  const edit = useOptimisticEdit(movie, editMovie);
+
   const toggleWatched = useCallback(() => {
     if (movie === null) {
       return;
@@ -182,44 +198,23 @@ export function useMovieDetail(id: string): UseMovieDetailResult {
   }, [movie, editMovie]);
 
   /**
-   * The third optimistic write, and the first that is not a flag — which is why
-   * it is hand-rolled rather than run through `useOptimisticSave`. That hook
-   * reverts by negating a boolean, and a rating has eleven values plus an
-   * absence: what it goes back to has to be captured, not derived.
-   *
    * Percent on the way in, stored units on the wire — the picker above knows
-   * nothing about the domain and the column below stores 0–10.
+   * nothing about the domain and the column below stores 0–10. The echo comes
+   * back as units and is mapped before the hook reconciles it, so both sides of
+   * that comparison speak percent.
    */
   const rate = useCallback(
     (percent: number | null) => {
-      if (movie === null) {
-        return;
-      }
-
-      // What the click cost, kept so a refused save can hand it back —
-      // including an absence, which is the case a `!value` could never express.
-      const { ratingPercent } = movie;
-
-      editMovie((current) => ({ ...current, ratingPercent: percent }));
-
-      saveRating(movie.id, toRatingUnits(percent))
-        // The route echoes what it stored; trust that over what we assumed. A
-        // `null` echo is a cleared rating, and it stays `null` all the way to
-        // the picker, which labels it `Not rated` rather than printing a zero.
-        .then((saved) => {
-          const savedPercent = toRatingPercent(saved);
-          if (savedPercent !== percent) {
-            editMovie((current) => ({
-              ...current,
-              ratingPercent: savedPercent,
-            }));
-          }
-        })
-        .catch(() => {
-          editMovie((current) => ({ ...current, ratingPercent }));
-        });
+      edit({
+        next: percent,
+        capture: (current) => current.ratingPercent,
+        apply: withRating,
+        restore: withRating,
+        save: (id, value) =>
+          saveRating(id, toRatingUnits(value)).then(toRatingPercent),
+      });
     },
-    [movie, editMovie]
+    [edit]
   );
 
   return { ...state, retry, toggleWatched, toggleFavorite, rate };
