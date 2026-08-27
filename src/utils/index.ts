@@ -5,6 +5,7 @@ export {
 } from './gradientFromId/gradientFromId';
 export { toRatingPercent } from './toRatingPercent/toRatingPercent';
 export { toRatingUnits } from './toRatingUnits/toRatingUnits';
+export { toStarLabel } from './toStarLabel/toStarLabel';
 export {
   toProgressPercent,
   NOMINAL_SLIVER_PERCENT,
