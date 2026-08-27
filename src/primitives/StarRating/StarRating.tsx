@@ -1,3 +1,5 @@
+import { toStarLabel } from '@/utils';
+
 import { Root, StarWrap, StarBase, StarFill, Value } from './StarRating.styles';
 
 export interface StarRatingProps {
@@ -27,7 +29,7 @@ export function StarRating({
   showValue = false,
 }: StarRatingProps) {
   const clamped = rating === null ? 0 : Math.max(0, Math.min(100, rating));
-  const value = (Math.round((clamped / 20) * 2) / 2).toFixed(1);
+  const value = toStarLabel(clamped);
 
   return (
     <Root>
