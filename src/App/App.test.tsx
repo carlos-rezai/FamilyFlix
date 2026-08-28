@@ -190,6 +190,7 @@ beforeEach(() => {
       // The named-section envelope (issue #18); routing reads only `rows`.
       const payload: HomePayload = {
         continueWatching: [],
+        favorites: [],
         rows: homeRows(),
       };
       return Promise.resolve(okResponse(payload));

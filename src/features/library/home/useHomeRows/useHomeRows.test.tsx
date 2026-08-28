@@ -36,6 +36,7 @@ function makeMovie(overrides: Partial<Movie> = {}): Movie {
 /** One movie per row, so "the favorite in Action" is never ambiguous. */
 const HOME_PAYLOAD: HomePayload = {
   continueWatching: [],
+  favorites: [],
   rows: [
     {
       genre: 'Action',
@@ -66,6 +67,7 @@ const STARTED_PAYLOAD: HomePayload = {
       status: 'in-progress',
     }),
   ],
+  favorites: [],
   rows: HOME_PAYLOAD.rows,
 };
 
@@ -90,12 +92,14 @@ const IN_PROGRESS_PAYLOAD: HomePayload = {
       status: 'in-progress',
     }),
   ],
+  favorites: [],
   rows: HOME_PAYLOAD.rows,
 };
 
 /** The same movie tagged with two genres — it earns a card in both rows. */
 const SHARED_MOVIE_PAYLOAD: HomePayload = {
   continueWatching: [],
+  favorites: [],
   rows: [
     {
       genre: 'Action',
@@ -363,6 +367,7 @@ describe('useHomeRows — the settled query', () => {
   /** The same library narrowed by a search: Action matched nothing and was dropped. */
   const NARROWED_PAYLOAD: HomePayload = {
     continueWatching: [],
+    favorites: [],
     rows: [
       {
         genre: 'Comedy',
@@ -677,6 +682,7 @@ describe('useHomeRows — the sort order', () => {
   /** The same library the other way up, as a sorted request would answer it. */
   const SORTED_PAYLOAD: HomePayload = {
     continueWatching: [],
+    favorites: [],
     rows: [
       {
         genre: 'Comedy',
@@ -789,6 +795,7 @@ describe('useHomeRows — the genre filter', () => {
   /** The library narrowed to one genre, as a filtered request would answer it. */
   const ONE_ROW_PAYLOAD: HomePayload = {
     continueWatching: [],
+    favorites: [],
     rows: [
       {
         genre: 'Action',
@@ -916,6 +923,7 @@ describe('useHomeRows — the minimum rating', () => {
   /** The library narrowed to what is well rated, as a filtered request answers it. */
   const HIGHLY_RATED_PAYLOAD: HomePayload = {
     continueWatching: [],
+    favorites: [],
     rows: [
       {
         genre: 'Action',

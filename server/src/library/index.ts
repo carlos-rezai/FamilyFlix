@@ -75,11 +75,12 @@ export interface LibraryStorage {
   countMovies(): number;
   /**
    * The browse home in one call: the in-progress movies as `continueWatching`,
-   * plus a `rows` entry per populated genre (alphabetical), each carrying the
-   * genre's true movie count. Both sections are ordered recently-added-first and
-   * capped at 15; both are `[]` for an empty library.
+   * the favorited ones as `favorites`, plus a `rows` entry per populated genre
+   * (alphabetical), each carrying the genre's true movie count. Every section is
+   * ordered recently-added-first and capped at 15, and every one is `[]` for an
+   * empty library. The sections overlap freely — one movie can be in all three.
    *
-   * An optional `query` narrows **both** sections alike, and drops any row it
+   * An optional `query` narrows **every** section alike, and drops any row it
    * empties; a row's `count` stays the genre's unfiltered total. Omitting it is
    * the unfiltered home.
    */

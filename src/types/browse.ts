@@ -121,16 +121,22 @@ export interface HomeRow {
 /**
  * The whole browse home in one payload, as `getHome()` builds it and
  * `GET /api/home` returns it — named sections rather than a bare row array, so
- * a new section can join without breaking the ones already there.
+ * a new section can join without breaking the ones already there. `favorites`
+ * is the first section to cash that in; the keys are declared in the order the
+ * screen renders them.
  *
  * `continueWatching` holds the in-progress movies, recently-added-first and
  * capped at the same limit as a genre row; a movie part-way through appears
  * here **and** in each of its genre rows, since "what am I part-way through"
- * and "what Action do I own" are two different questions. Both sections are
- * `[]` for an empty library.
+ * and "what Action do I own" are two different questions. `favorites` holds the
+ * favorited ones under the same order and the same cap, and overlaps the other
+ * two sections just as freely — a movie can be part-way through, favorited, and
+ * tagged Action, and it appears in all three. Every section is `[]` for an
+ * empty library.
  */
 export interface HomePayload {
   continueWatching: Movie[];
+  favorites: Movie[];
   rows: HomeRow[];
 }
 

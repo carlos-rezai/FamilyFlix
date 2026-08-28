@@ -140,7 +140,7 @@ function homePayload(
   rows: HomeRow[],
   continueWatching: Movie[] = []
 ): HomePayload {
-  return { continueWatching, rows };
+  return { continueWatching, favorites: [], rows };
 }
 
 function serverErrorResponse(): Response {

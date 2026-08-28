@@ -41,6 +41,7 @@ function makeMovie(overrides: Partial<Movie> = {}): Movie {
 /** The named-section envelope `GET /api/home` answers with (issue #18). */
 const HOME_PAYLOAD: HomePayload = {
   continueWatching: [],
+  favorites: [],
   rows: [{ genre: 'Action', count: 3, movies: [] }],
 };
 

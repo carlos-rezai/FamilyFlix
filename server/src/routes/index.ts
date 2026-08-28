@@ -179,16 +179,18 @@ export function createApiRouter(
 
   router.use(express.json());
 
-  // The whole browse home in one request: the in-progress movies, plus a row
-  // per populated genre, alphabetical, each capped at 15 movies with the
-  // genre's true total.
+  // The whole browse home in one request: the in-progress movies, the favorited
+  // ones, plus a row per populated genre, alphabetical, each capped at 15
+  // movies with the genre's true total. The favorites shelf arrives on this
+  // same wire rather than through an `/api/favorites` of its own — a second
+  // request for one screen is exactly what this endpoint exists to avoid.
   //
-  // `?q=` narrows both sections to a search term — `q` is the wire name, and
+  // `?q=` narrows every section to a search term — `q` is the wire name, and
   // this boundary is the only place it is translated to the domain's `search`.
   // An empty value means no search, so a cleared box is the plain home again;
   // a term that matches nothing is an empty payload, not a 404.
   //
-  // `?sort=` orders both sections by the same order, so the top of the screen
+  // `?sort=` orders every section by the same order, so the top of the screen
   // can never disagree with the rest of it. A sort this API does not know is a
   // 400, the way `/movies` answers one — an empty value is still no sort at
   // all, and simply leaves the default in place.

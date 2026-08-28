@@ -47,7 +47,11 @@ const HOME_PAYLOAD: HomeRow[] = [
  * in the same request but has no surface here yet.
  */
 function okResponse(rows: HomeRow[]): Response {
-  const payload: HomePayload = { continueWatching: [], rows };
+  const payload: HomePayload = {
+    continueWatching: [],
+    favorites: [],
+    rows,
+  };
   return {
     ok: true,
     status: 200,

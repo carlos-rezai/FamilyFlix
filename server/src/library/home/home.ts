@@ -8,10 +8,10 @@ import {
 import type { Browse } from '../browse/browse';
 
 /**
- * How many movies a single home section carries — a genre row or the continue
- * section alike. A genre row's `count` still reports the genre's true total, so
- * "View all {count}" stays honest when the genre holds more than the carousel
- * shows.
+ * How many movies a single home section carries — a genre row, the continue
+ * section and the favorites shelf alike. A genre row's `count` still reports
+ * the genre's true total, so "View all {count}" stays honest when the genre
+ * holds more than the carousel shows.
  */
 export const HOME_ROW_LIMIT = 15;
 
@@ -52,14 +52,20 @@ export interface Home {
  * independently of the rows, so a movie part-way through appears in both, and
  * an untagged one appears here even though it earns no row.
  *
- * Both sections are built from the one {@link LibraryQuery}, so the top of the
+ * `favorites` is that same shape again with a different flag: the caller's
+ * query narrowed to `favoritesOnly`, same order, same cap. It too is built
+ * independently, so a favorite still appears in each of its genre rows and in
+ * the continue section if it is part-way through, and a favorite with no genre
+ * tags is on the shelf even though it earns no row.
+ *
+ * Every section is built from the one {@link LibraryQuery}, so the top of the
  * screen can never disagree with the rest of it: each section adds only what
  * makes it that section (a `genre` for a row, `inProgressOnly` for continue,
- * and the shared cap) on top of the caller's filters and sort. A row whose
- * movies all failed the query is dropped rather than rendered blank — a
- * screenful of empty rows is not an answer. Its `count` still comes from
- * `listGenres()`, so "View all {count}" keeps reporting the genre's unfiltered
- * total however far the query narrows the row.
+ * `favoritesOnly` for the shelf, and the shared cap) on top of the caller's
+ * filters and sort. A row whose movies all failed the query is dropped rather
+ * than rendered blank — a screenful of empty rows is not an answer. Its `count`
+ * still comes from `listGenres()`, so "View all {count}" keeps reporting the
+ * genre's unfiltered total however far the query narrows the row.
  *
  * Aggregating here keeps the home a single call for the route to serve, instead
  * of leaving the client to fan out a request per section.
@@ -92,9 +98,18 @@ export function createHome(browse: Browse): Home {
     });
   }
 
+  function listFavorites(query: LibraryQuery): Movie[] {
+    return browse.listMovies({
+      ...query,
+      favoritesOnly: true,
+      limit: HOME_ROW_LIMIT,
+    });
+  }
+
   function getHome(query: LibraryQuery = DEFAULT_LIBRARY_QUERY): HomePayload {
     return {
       continueWatching: listContinueWatching(query),
+      favorites: listFavorites(query),
       rows: listRows(query),
     };
   }
