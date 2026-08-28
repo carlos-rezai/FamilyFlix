@@ -89,6 +89,17 @@ function seedGenre(
   }));
 }
 
+/** `count` favorited movies, oldest first, titled `Loved 01`…`Loved NN`. */
+function seedFavorites(
+  storage: ReturnType<typeof createSqliteStorage>,
+  count: number
+): void {
+  seedByAge(storage, count, (label) => ({
+    title: `Loved ${label}`,
+    isFavorite: true,
+  }));
+}
+
 /** `count` in-progress movies (a resume position, not watched), oldest first. */
 function seedInProgress(
   storage: ReturnType<typeof createSqliteStorage>,
@@ -315,6 +326,253 @@ describe('library: getHome continue watching', () => {
   });
 });
 
+// --- favorites -----------------------------------------------------------------
+//
+// 08 — Favorites, Phase 1: "the section, from the query to the wire" (issue
+// #68). The payload's third section, and the first caller anywhere in the app
+// of the `favoritesOnly` flag `MovieQuery` has carried since 02.
+
+describe('library: getHome favorites', () => {
+  it('holds only favorites — the unfavorited one is left out', () => {
+    const storage = freshStorage();
+    storage.addMovie(newMovie({ title: 'Ordinary' }));
+    storage.addMovie(newMovie({ title: 'Loved', isFavorite: true }));
+
+    const { favorites } = storage.getHome();
+
+    expect(favorites.map((m) => m.title)).toEqual(['Loved']);
+  });
+
+  it('orders recently-added first', () => {
+    const storage = freshStorage();
+    seedFavorites(storage, 3);
+
+    const { favorites } = storage.getHome();
+
+    expect(favorites.map((m) => m.title)).toEqual([
+      'Loved 03',
+      'Loved 02',
+      'Loved 01',
+    ]);
+  });
+
+  it('caps at the same 15 as every other section, newest first', () => {
+    const storage = freshStorage();
+    seedFavorites(storage, 20);
+
+    const { favorites } = storage.getHome();
+
+    // The shared HOME_ROW_LIMIT, applied by the server — not a
+    // favorites-specific cap, and never a client-side trim.
+    expect(favorites).toHaveLength(15);
+    expect(favorites.map((m) => m.title)).toEqual([
+      'Loved 20',
+      'Loved 19',
+      'Loved 18',
+      'Loved 17',
+      'Loved 16',
+      'Loved 15',
+      'Loved 14',
+      'Loved 13',
+      'Loved 12',
+      'Loved 11',
+      'Loved 10',
+      'Loved 09',
+      'Loved 08',
+      'Loved 07',
+      'Loved 06',
+    ]);
+  });
+
+  it('is empty when nothing is favorited', () => {
+    const storage = freshStorage();
+    storage.addMovie(newMovie({ title: 'Ordinary', genres: ['Drama'] }));
+
+    const home = storage.getHome();
+
+    expect(home.favorites).toEqual([]);
+    // The library is not empty — only the shelf is.
+    expect(home.rows.map((row) => row.genre)).toEqual(['Drama']);
+  });
+
+  it('drops a movie once it is unfavorited', () => {
+    const storage = freshStorage();
+    const loved = storage.addMovie(
+      newMovie({ title: 'Loved', isFavorite: true })
+    );
+    expect(storage.getHome().favorites).toHaveLength(1);
+
+    storage.setFavorite(loved.id, false);
+
+    expect(storage.getHome().favorites).toEqual([]);
+  });
+
+  it('lists a favorite here and still in each of its genre rows', () => {
+    const storage = freshStorage();
+    storage.addMovie(
+      newMovie({
+        title: 'Loved',
+        genres: ['Action', 'Drama'],
+        isFavorite: true,
+      })
+    );
+
+    const home = storage.getHome();
+    const titlesByGenre = new Map(
+      home.rows.map((row) => [row.genre, row.movies.map((m) => m.title)])
+    );
+
+    // "What do we love" and "what Action do I own" are two different
+    // questions, so the same movie earns a place in every answer.
+    expect(home.favorites.map((m) => m.title)).toEqual(['Loved']);
+    expect(titlesByGenre.get('Action')).toEqual(['Loved']);
+    expect(titlesByGenre.get('Drama')).toEqual(['Loved']);
+  });
+
+  it('lists a favorite with no genre tags, which earns no row at all', () => {
+    const storage = freshStorage();
+    storage.addMovie(newMovie({ title: 'Untagged', isFavorite: true }));
+
+    const home = storage.getHome();
+
+    expect(home.favorites.map((m) => m.title)).toEqual(['Untagged']);
+    expect(home.rows).toEqual([]);
+  });
+
+  it('lists a movie that is in progress and favorited in all three sections', () => {
+    const storage = freshStorage();
+    storage.addMovie(
+      newMovie({
+        title: 'Loved Halfway',
+        genres: ['Action'],
+        isFavorite: true,
+        resumePositionSeconds: 600,
+      })
+    );
+
+    const home = storage.getHome();
+
+    // The sections answer different questions and never compete for a movie.
+    expect(home.continueWatching.map((m) => m.title)).toEqual([
+      'Loved Halfway',
+    ]);
+    expect(home.favorites.map((m) => m.title)).toEqual(['Loved Halfway']);
+    expect(home.rows.map((row) => row.genre)).toEqual(['Action']);
+    expect(home.rows[0].movies.map((m) => m.title)).toEqual(['Loved Halfway']);
+  });
+});
+
+// --- favorites under the Library query -----------------------------------------
+//
+// The shelf is built from the caller's whole query with the flag laid on top,
+// so it narrows with the rest of the screen rather than standing outside it.
+// This is the invariant `getHome` exists to protect: the top of the screen can
+// never disagree with the rest of it.
+
+describe('library: getHome favorites under a Library query', () => {
+  it('drops a favorite that fails the search term', () => {
+    const storage = freshStorage();
+    storage.addMovie(newMovie({ title: 'Comic Caper', isFavorite: true }));
+    storage.addMovie(newMovie({ title: 'Weepie', isFavorite: true }));
+
+    const { favorites } = storage.getHome({
+      sort: 'recently-added',
+      search: 'comic',
+    });
+
+    expect(favorites.map((m) => m.title)).toEqual(['Comic Caper']);
+  });
+
+  it('drops a favorite that fails the genre filter', () => {
+    const storage = freshStorage();
+    storage.addMovie(
+      newMovie({ title: 'Loved Comedy', genres: ['Comedy'], isFavorite: true })
+    );
+    storage.addMovie(
+      newMovie({ title: 'Loved Drama', genres: ['Drama'], isFavorite: true })
+    );
+
+    const home = storage.getHome({ sort: 'recently-added', genre: 'Drama' });
+
+    expect(home.favorites.map((m) => m.title)).toEqual(['Loved Drama']);
+    expect(home.rows.map((row) => row.genre)).toEqual(['Drama']);
+  });
+
+  it('drops a favorite that fails the rating minimum', () => {
+    const storage = freshStorage();
+    storage.addMovie(
+      newMovie({ title: 'Adored', rating: 9, isFavorite: true })
+    );
+    storage.addMovie(newMovie({ title: 'Liked', rating: 4, isFavorite: true }));
+    // Unrated is not a nought out of ten, but a minimum still excludes it —
+    // the same rule every other section reads.
+    storage.addMovie(newMovie({ title: 'Unrated', isFavorite: true }));
+
+    const { favorites } = storage.getHome({
+      sort: 'recently-added',
+      minRating: 8,
+    });
+
+    expect(favorites.map((m) => m.title)).toEqual(['Adored']);
+  });
+
+  it('comes back in the sort the query asked for', () => {
+    const storage = freshStorage();
+    seedFavorites(storage, 3); // "Loved 01".."Loved 03", oldest first
+
+    const { favorites } = storage.getHome({ sort: 'a-z' });
+
+    // Not the recently-added default: the shelf takes the header's sort like
+    // every other section.
+    expect(favorites.map((m) => m.title)).toEqual([
+      'Loved 01',
+      'Loved 02',
+      'Loved 03',
+    ]);
+  });
+
+  it('narrows every section off the one query together', () => {
+    const storage = freshStorage();
+    storage.addMovie(
+      newMovie({
+        title: 'Comic Caper',
+        genres: ['Comedy'],
+        isFavorite: true,
+        resumePositionSeconds: 600,
+      })
+    );
+    storage.addMovie(
+      newMovie({
+        title: 'Weepie',
+        genres: ['Drama'],
+        isFavorite: true,
+        resumePositionSeconds: 300,
+      })
+    );
+
+    const home = storage.getHome({ sort: 'recently-added', search: 'comic' });
+
+    expect(home.favorites.map((m) => m.title)).toEqual(['Comic Caper']);
+    expect(home.continueWatching.map((m) => m.title)).toEqual(['Comic Caper']);
+    expect(home.rows.map((row) => row.genre)).toEqual(['Comedy']);
+  });
+
+  it('still caps a narrowed shelf at 15, newest first', () => {
+    const storage = freshStorage();
+    seedFavorites(storage, 20); // "Loved 01".."Loved 20"
+    storage.addMovie(newMovie({ title: 'Decoy', isFavorite: true }));
+
+    const { favorites } = storage.getHome({
+      sort: 'recently-added',
+      search: 'loved',
+    });
+
+    expect(favorites).toHaveLength(15);
+    expect(favorites[0].title).toBe('Loved 20');
+    expect(favorites[14].title).toBe('Loved 06');
+  });
+});
+
 // --- the Library query ---------------------------------------------------------
 //
 // 05 — Search + filter, Phase 1: "search on the server, end to end" (issue #31).
@@ -515,13 +773,18 @@ describe('library: getHome under a Library query', () => {
 // --- payload shape -------------------------------------------------------------
 
 describe('library: getHome payload shape', () => {
-  it('returns both sections empty for an empty library', () => {
+  it('returns all three sections empty for an empty library', () => {
     const storage = freshStorage();
 
-    expect(storage.getHome()).toEqual({ continueWatching: [], rows: [] });
+    // Declared in the order the screen renders them: continue, favorites, rows.
+    expect(storage.getHome()).toEqual({
+      continueWatching: [],
+      favorites: [],
+      rows: [],
+    });
   });
 
-  it('carries fully assembled Movie models in both sections (matching getMovie)', () => {
+  it('carries fully assembled Movie models in all three sections (matching getMovie)', () => {
     const storage = freshStorage();
     const added = storage.addMovie(
       newMovie({
@@ -535,12 +798,14 @@ describe('library: getHome payload shape', () => {
           { path: 'Northwind (2018)/de.srt', language: 'German' },
         ],
         resumePositionSeconds: 600,
+        isFavorite: true,
       })
     );
 
     const home = storage.getHome();
     const [movie] = home.rows[0].movies;
     const [started] = home.continueWatching;
+    const [loved] = home.favorites;
 
     // Same model the rest of the repository returns: ordered genres, parsed
     // cast, ordered subtitles, derived status — the cards need all of it.
@@ -548,6 +813,7 @@ describe('library: getHome payload shape', () => {
     expect(movie.genres.map((g) => g.name)).toEqual(['Action', 'Sci-Fi']);
     expect(movie.status).toBe('in-progress');
     expect(started).toEqual(storage.getMovie(added.id));
+    expect(loved).toEqual(storage.getMovie(added.id));
   });
 });
 

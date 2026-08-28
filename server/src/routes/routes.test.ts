@@ -157,7 +157,7 @@ describe('GET /api/home', () => {
 
     // Not a 404 and not an error — a Library query that matched nothing is a
     // normal answer the screen renders as "No results".
-    expect(home).toEqual({ continueWatching: [], rows: [] });
+    expect(home).toEqual({ continueWatching: [], favorites: [], rows: [] });
   });
 
   /** Regression guards on the new parameter — green before and after. */
@@ -203,6 +203,135 @@ describe('GET /api/home', () => {
     expect(await getHomePayload(baseUrl, '')).toEqual(
       await getHomePayload(baseUrl)
     );
+  });
+});
+
+// --- 08 — Favorites, Phase 1: "the section, from the query to the wire" ------
+//
+// Issue #68. `GET /api/home` needs no change to serve the new section — it
+// already forwards the whole Library query and serialises whatever comes back.
+// These tests hold it to that: the shelf arrives on the existing wire, narrows
+// under the existing parameters, and never costs a second request.
+
+/**
+ * A library where the favorites cut across the other two sections: one
+ * favorite is also part-way through, one is favorited but untagged and
+ * unstarted, and one movie is neither. Enough for the shelf to be visibly its
+ * own answer rather than a copy of another section's.
+ */
+function addFavoritedLibrary(storage: LibraryStorage): void {
+  storage.addMovie({
+    title: 'Comic Caper',
+    videoPath: 'Comic Caper (2019)/comic-caper.mkv',
+    genres: ['Comedy'],
+    isFavorite: true,
+    resumePositionSeconds: 600,
+  });
+  storage.addMovie({
+    title: 'Weepie',
+    videoPath: 'Weepie (2020)/weepie.mkv',
+    genres: ['Drama'],
+    isFavorite: true,
+  });
+  storage.addMovie({
+    title: 'Chiller',
+    videoPath: 'Chiller (2021)/chiller.mkv',
+    genres: ['Horror'],
+  });
+}
+
+describe('GET /api/home favorites', () => {
+  it('sends the favorites section alongside the other two', async () => {
+    const { storage, baseUrl } = freshApi();
+    addFavoritedLibrary(storage);
+
+    const home = await getHomePayload(baseUrl);
+
+    expect(home.favorites.map((movie) => movie.title).sort()).toEqual([
+      'Comic Caper',
+      'Weepie',
+    ]);
+    // The section the shelf reads is its own — it does not stand in for the
+    // continue section or for a genre row, and does not disturb either.
+    expect(home.continueWatching.map((movie) => movie.title)).toEqual([
+      'Comic Caper',
+    ]);
+    expect(home.rows.map((row) => row.genre)).toEqual([
+      'Comedy',
+      'Drama',
+      'Horror',
+    ]);
+  });
+
+  it('sends an empty favorites section when nothing is favorited', async () => {
+    const { storage, baseUrl } = freshApi();
+    addBrowsableLibrary(storage);
+
+    const home = await getHomePayload(baseUrl);
+
+    expect(home.favorites).toEqual([]);
+    expect(home.rows).toHaveLength(3);
+  });
+
+  it('narrows the favorites section under ?q=, in one round trip', async () => {
+    const { storage, baseUrl } = freshApi();
+    addFavoritedLibrary(storage);
+
+    // One request, one payload: there is no /api/favorites to fetch, which is
+    // the whole reason /home aggregates.
+    const home = await getHomePayload(baseUrl, 'comic');
+
+    expect(home.favorites.map((movie) => movie.title)).toEqual(['Comic Caper']);
+    expect(home.rows.map((row) => row.genre)).toEqual(['Comedy']);
+  });
+
+  it('narrows the favorites section under ?genre=', async () => {
+    const { storage, baseUrl } = freshApi();
+    addFavoritedLibrary(storage);
+
+    const response = await homeResponse(baseUrl, { genre: 'Drama' });
+
+    expect(response.status).toBe(200);
+    const home = (await response.json()) as HomePayload;
+    expect(home.favorites.map((movie) => movie.title)).toEqual(['Weepie']);
+  });
+
+  it('narrows the favorites section under ?rating=', async () => {
+    const { storage, baseUrl } = freshApi();
+    storage.addMovie({
+      title: 'Adored',
+      videoPath: 'Adored (2019)/adored.mkv',
+      rating: 9,
+      isFavorite: true,
+    });
+    storage.addMovie({
+      title: 'Liked',
+      videoPath: 'Liked (2020)/liked.mkv',
+      rating: 4,
+      isFavorite: true,
+    });
+
+    const response = await homeResponse(baseUrl, { rating: '8' });
+
+    expect(response.status).toBe(200);
+    const home = (await response.json()) as HomePayload;
+    expect(home.favorites.map((movie) => movie.title)).toEqual(['Adored']);
+  });
+
+  it('orders the favorites section by ?sort=', async () => {
+    const { storage, baseUrl } = freshApi();
+    addFavoritedLibrary(storage);
+
+    const response = await homeResponse(baseUrl, { sort: 'a-z' });
+
+    expect(response.status).toBe(200);
+    const home = (await response.json()) as HomePayload;
+    // The shelf takes the header's sort like every other section, so the top
+    // of the screen cannot disagree with the rest of it.
+    expect(home.favorites.map((movie) => movie.title)).toEqual([
+      'Comic Caper',
+      'Weepie',
+    ]);
   });
 });
 
@@ -866,7 +995,11 @@ describe('GET /api/home?genre=', () => {
     // A stale bookmark for a genre that has since been emptied is a normal
     // "nothing here", not a bad request.
     expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({ continueWatching: [], rows: [] });
+    expect(await response.json()).toEqual({
+      continueWatching: [],
+      favorites: [],
+      rows: [],
+    });
   });
 
   it('treats an empty ?genre= as no genre at all', async () => {
