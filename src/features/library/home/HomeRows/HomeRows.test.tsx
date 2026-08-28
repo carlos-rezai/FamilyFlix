@@ -110,6 +110,32 @@ const UNTAGGED: Movie[] = [
   }),
 ];
 
+/**
+ * Two favorites the payload's shelf carries. `Northwind` is also in the Action
+ * row — a favorite earns a place on the shelf and keeps its poster card below.
+ * `Lantern Road` is untagged, so the shelf is the only row that holds it.
+ */
+const FAVORITES: Movie[] = [
+  makeMovie({ id: 'a1', title: 'Northwind', isFavorite: true }),
+  makeMovie({ id: 'f2', title: 'Lantern Road', isFavorite: true, genres: [] }),
+];
+
+/**
+ * One watched, untagged favorite. It earns no genre row and no resume tile, so
+ * every section but the shelf comes back empty while the library plainly is
+ * not — the case the empty-library guard's third term exists for.
+ */
+const WATCHED_UNTAGGED_FAVORITE: Movie[] = [
+  makeMovie({
+    id: 'w1',
+    title: 'Harbour Lights',
+    watched: true,
+    status: 'watched',
+    isFavorite: true,
+    genres: [],
+  }),
+];
+
 /** One movie per row, so "the heart in the Action row" is never ambiguous. */
 const HOME_PAYLOAD: HomeRow[] = [
   {
@@ -138,9 +164,10 @@ function okResponse(body: unknown): Response {
  */
 function homePayload(
   rows: HomeRow[],
-  continueWatching: Movie[] = []
+  continueWatching: Movie[] = [],
+  favorites: Movie[] = []
 ): HomePayload {
-  return { continueWatching, favorites: [], rows };
+  return { continueWatching, favorites, rows };
 }
 
 function serverErrorResponse(): Response {
@@ -194,13 +221,19 @@ function serve(
  * Queue one successful home response. Anything requested other than the home
  * aggregate rejects, so a screen that fans out per genre fails loudly.
  */
-function respondWithRows(rows: HomeRow[], continueWatching: Movie[] = []) {
+function respondWithRows(
+  rows: HomeRow[],
+  continueWatching: Movie[] = [],
+  favorites: Movie[] = []
+) {
   fetchMock.mockImplementationOnce((input) => {
     const url = String(input);
     if (!url.includes('/api/home')) {
       return Promise.reject(new Error(`Unexpected request: ${url}`));
     }
-    return Promise.resolve(okResponse(homePayload(rows, continueWatching)));
+    return Promise.resolve(
+      okResponse(homePayload(rows, continueWatching, favorites))
+    );
   });
 }
 
@@ -417,6 +450,124 @@ describe('HomeRows — the Continue Watching row', () => {
   });
 });
 
+describe('HomeRows — the Favorites row', () => {
+  it('renders the Favorites row between Continue Watching and the genre rows', async () => {
+    respondWithRows(LIBRARY, IN_PROGRESS, FAVORITES);
+
+    renderRows();
+
+    await findGenreHeading('Action');
+
+    expect(
+      screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)
+    ).toEqual(['Continue Watching', 'Favorites', 'Action', 'Comedy', 'Drama']);
+  });
+
+  it('renders the shelf from the same single home request', async () => {
+    respondWithRows(LIBRARY, [], FAVORITES);
+
+    renderRows();
+
+    await findGenreHeading('Action');
+
+    const shelf = within(screen.getByRole('region', { name: 'Favorites' }));
+    expect(shelf.getAllByText('Northwind').length).toBeGreaterThan(0);
+    expect(shelf.getAllByText('Lantern Road').length).toBeGreaterThan(0);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('opens the movie detail page when a card on the shelf is opened', async () => {
+    respondWithRows(LIBRARY, [], FAVORITES);
+
+    renderRows();
+
+    await findGenreHeading('Action');
+
+    const shelf = within(screen.getByRole('region', { name: 'Favorites' }));
+    fireEvent.click(shelf.getByRole('button', { name: 'Lantern Road' }));
+
+    expect(currentPath()).toBe('/movie/f2');
+  });
+
+  it('leaves a favorite in its genre row as well', async () => {
+    respondWithRows(LIBRARY, [], FAVORITES);
+
+    renderRows();
+
+    await findGenreHeading('Action');
+
+    // The same movie, two surfaces: a card on the shelf and a card in Action.
+    const shelf = within(screen.getByRole('region', { name: 'Favorites' }));
+    expect(shelf.getAllByText('Northwind').length).toBeGreaterThan(0);
+
+    const action = within(screen.getByRole('region', { name: 'Action' }));
+    expect(action.getAllByText('Northwind').length).toBeGreaterThan(0);
+  });
+
+  it('is absent entirely — no heading, no empty shelf — when nothing is favorited', async () => {
+    respondWithRows(LIBRARY);
+
+    renderRows();
+
+    await findGenreHeading('Action');
+
+    expect(screen.queryByText(/favorites/i)).toBeNull();
+    expect(screen.queryByRole('region', { name: 'Favorites' })).toBeNull();
+  });
+
+  it('shows only the favorites a search left, since the shelf takes the same query', async () => {
+    respondWithRows(HOME_PAYLOAD, [], [FAVORITES[0]]);
+
+    renderRows('/?q=north');
+
+    await findGenreHeading('Action');
+
+    const shelf = within(screen.getByRole('region', { name: 'Favorites' }));
+    expect(shelf.getAllByText('Northwind').length).toBeGreaterThan(0);
+    expect(shelf.queryByText('Lantern Road')).toBeNull();
+  });
+
+  it('hides the shelf when a search excluded every favorite, leaving the rows it matched', async () => {
+    respondWithRows(LIBRARY, [], []);
+
+    renderRows('/?q=comet');
+
+    await findGenreHeading('Action');
+
+    expect(screen.queryByRole('region', { name: 'Favorites' })).toBeNull();
+  });
+
+  it('hides the shelf when a filter excluded every favorite, leaving the rows it matched', async () => {
+    respondWithRows(LIBRARY, [], []);
+
+    renderRows('/?genre=Action&rating=4');
+
+    await findGenreHeading('Action');
+
+    expect(screen.queryByRole('region', { name: 'Favorites' })).toBeNull();
+  });
+
+  it('shows no shelf while the library is loading — the same three skeleton rows and nothing else', () => {
+    fetchMock.mockReturnValueOnce(new Promise<Response>(() => undefined));
+
+    renderRows();
+
+    expect(screen.getByRole('status', { name: /loading/i })).toBeDefined();
+    expect(screen.queryByRole('region', { name: 'Favorites' })).toBeNull();
+  });
+
+  it('shows no shelf behind a failed load — one retryable error covers the whole screen', async () => {
+    fetchMock.mockRejectedValueOnce(new Error('network down'));
+
+    renderRows();
+
+    expect(
+      await screen.findByText(/couldn.t load your library/i)
+    ).toBeDefined();
+    expect(screen.queryByRole('region', { name: 'Favorites' })).toBeNull();
+  });
+});
+
 describe('HomeRows — the empty library', () => {
   it('reports an empty library only when there are no genre rows and nothing in progress', async () => {
     respondWithRows([], []);
@@ -442,6 +593,32 @@ describe('HomeRows — the empty library', () => {
     ).toBeDefined();
     expect(screen.getByText('Lantern Road')).toBeDefined();
     expect(screen.queryByText(/your library is empty/i)).toBeNull();
+  });
+
+  it('shows the Favorites row, and no empty-library message, for a watched, untagged favorite', async () => {
+    // Watched, so no resume tile; untagged, so no genre row. Without the
+    // guard's third term the screen would print "Your library is empty"
+    // directly above a populated shelf.
+    respondWithRows([], [], WATCHED_UNTAGGED_FAVORITE);
+
+    renderRows();
+
+    expect(
+      await screen.findByRole('heading', { level: 2, name: 'Favorites' })
+    ).toBeDefined();
+    expect(screen.getAllByText('Harbour Lights').length).toBeGreaterThan(0);
+    expect(screen.queryByText(/your library is empty/i)).toBeNull();
+  });
+
+  it('still says the library is empty when all three sections are empty', async () => {
+    respondWithRows([], [], []);
+
+    renderRows();
+
+    expect(await screen.findByText(/your library is empty/i)).toBeDefined();
+    expect(screen.queryByText(/nothing here/i)).toBeNull();
+    expect(screen.queryByRole('region', { name: 'Favorites' })).toBeNull();
+    expect(screen.queryByText(/continue watching/i)).toBeNull();
   });
 });
 

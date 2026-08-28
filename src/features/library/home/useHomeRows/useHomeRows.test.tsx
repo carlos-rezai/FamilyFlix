@@ -96,6 +96,25 @@ const IN_PROGRESS_PAYLOAD: HomePayload = {
   rows: HOME_PAYLOAD.rows,
 };
 
+/**
+ * Two favorites, one of which is also in a genre row — a favorite keeps its
+ * poster card below as well as earning a place on the shelf. The second is
+ * untagged, so the section carries a movie no genre row does.
+ */
+const FAVORITES_PAYLOAD: HomePayload = {
+  continueWatching: [],
+  favorites: [
+    makeMovie({ id: 'a1', title: 'Northwind', isFavorite: true }),
+    makeMovie({
+      id: 'f2',
+      title: 'Lantern Road',
+      isFavorite: true,
+      genres: [],
+    }),
+  ],
+  rows: HOME_PAYLOAD.rows,
+};
+
 /** The same movie tagged with two genres — it earns a card in both rows. */
 const SHARED_MOVIE_PAYLOAD: HomePayload = {
   continueWatching: [],
@@ -558,6 +577,104 @@ describe('useHomeRows — the continue section', () => {
     expect(result.current.continueWatching.map((movie) => movie.title)).toEqual(
       ['Northwind', 'Comet Season']
     );
+  });
+});
+
+describe('useHomeRows — the favorites section', () => {
+  it('maps the favorites section into render-ready poster cards', async () => {
+    serve(FAVORITES_PAYLOAD);
+
+    const { result } = await loadRows();
+
+    const [northwind, lantern] = result.current.favorites;
+
+    // The same narrowing a genre row's movies get — `view()`, not a second
+    // mapper: an id, a title, the flag spelled `favorite`, and the gradient
+    // stops the id hashes to.
+    expect(northwind.id).toBe('a1');
+    expect(northwind.title).toBe('Northwind');
+    expect(northwind.favorite).toBe(true);
+    expect(northwind.g1).toBe(gradientFromId('a1').g1);
+    expect(northwind.g2).toBe(gradientFromId('a1').g2);
+
+    // An untagged favorite earns no genre row, and still reaches the shelf.
+    expect(lantern.id).toBe('f2');
+    expect(lantern.title).toBe('Lantern Road');
+  });
+
+  it('reports all three sections in the one ready transition, from the one request', async () => {
+    // The screen paints at once: the shelf is never ready a beat after the
+    // rows that had already painted.
+    serve({
+      ...FAVORITES_PAYLOAD,
+      continueWatching: IN_PROGRESS_PAYLOAD.continueWatching,
+    });
+
+    const { result } = await loadRows();
+
+    expect(result.current.status).toBe('ready');
+    expect(result.current.rows).toHaveLength(2);
+    expect(result.current.continueWatching).toHaveLength(2);
+    expect(result.current.favorites).toHaveLength(2);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('holds no favorites when nothing is favorited', async () => {
+    serve(HOME_PAYLOAD);
+
+    const { result } = await loadRows();
+
+    expect(result.current.favorites).toEqual([]);
+  });
+
+  it('holds no favorites while the load is still running', () => {
+    fetchMock.mockReturnValue(new Promise<Response>(() => undefined));
+
+    const { result } = mountRows();
+
+    expect(result.current.status).toBe('loading');
+    expect(result.current.favorites).toEqual([]);
+  });
+
+  it('holds no favorites when the load fails', async () => {
+    fetchMock.mockRejectedValue(new Error('network down'));
+
+    const { result } = await loadRows();
+
+    expect(result.current.status).toBe('error');
+    expect(result.current.favorites).toEqual([]);
+  });
+
+  it('restores the favorites section on retry', async () => {
+    fetchMock.mockRejectedValueOnce(new Error('network down'));
+    const { result } = await loadRows();
+    expect(result.current.favorites).toEqual([]);
+
+    serve(FAVORITES_PAYLOAD);
+    act(() => result.current.retry());
+
+    await waitFor(() => expect(result.current.status).toBe('ready'));
+    expect(result.current.favorites.map((movie) => movie.title)).toEqual([
+      'Northwind',
+      'Lantern Road',
+    ]);
+  });
+
+  it('hands back the same empty sections on every render before a load succeeds', () => {
+    // The sections a consumer memoises on are one frozen value, not a fresh
+    // `[]` per render — a hook with nothing new to tell it must not re-render
+    // the screen.
+    fetchMock.mockReturnValue(new Promise<Response>(() => undefined));
+
+    const { result, rerender } = mountRows();
+    const { favorites, rows, continueWatching } = result.current;
+    expect(favorites).toEqual([]);
+
+    rerender();
+
+    expect(result.current.favorites).toBe(favorites);
+    expect(result.current.rows).toBe(rows);
+    expect(result.current.continueWatching).toBe(continueWatching);
   });
 });
 
