@@ -5,6 +5,7 @@ import {
   type PosterCarouselItem,
 } from '../../CardCarousel/CardCarousel';
 import { RowSection } from '../RowSection/RowSection';
+import { shelvedFavorites } from '../shelvedFavorites/shelvedFavorites';
 import { HeartMark } from './FavoritesRow.styles';
 
 /**
@@ -44,20 +45,23 @@ export interface FavoritesRowProps {
  * it renders nothing at all when it has nothing to show — no heading, no empty
  * shelf. A shelf with nothing on it is not a shelf.
  *
- * A list called `favorites` is nevertheless filtered for favorites, and the
- * filter is what makes the shelf editable from the shelf. What is rendered is a
- * derived view of hook state, not the state itself: un-hearting a card flips
+ * A list called `favorites` is nevertheless narrowed to favorites, and that
+ * narrowing is what makes the shelf editable from the shelf. What is rendered
+ * is a derived view of hook state, not the state itself: un-hearting a card flips
  * its flag where the hook holds it, and the card leaves here the same render,
  * with the row closing up around it. The hook never removes the movie, so if
  * the save is refused the revert has something to put back and the card
  * returns — which it could not do had it been spliced out of the section.
+ *
+ * The narrowing itself lives in `shelvedFavorites` rather than here, because
+ * the browse home's empty guard has to count the same cards this row draws.
  */
 export function FavoritesRow({
   movies,
   onOpenMovie,
   onToggleFavorite,
 }: FavoritesRowProps) {
-  const shelved = movies.filter((movie) => movie.favorite);
+  const shelved = shelvedFavorites(movies);
 
   if (shelved.length === 0) {
     return null;

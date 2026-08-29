@@ -6,6 +6,7 @@ import { ContinueRow } from '../ContinueRow/ContinueRow';
 import { FavoritesRow } from '../FavoritesRow/FavoritesRow';
 import { GenreRow } from '../GenreRow/GenreRow';
 import { RetryableFailure } from '../../RetryableFailure/RetryableFailure';
+import { shelvedFavorites } from '../shelvedFavorites/shelvedFavorites';
 import { useHomeRows } from '../useHomeRows/useHomeRows';
 import {
   SkeletonSection,
@@ -94,10 +95,17 @@ export function HomeRows() {
   // something on the favorites shelf: a watched, untagged favorite reaches
   // neither of the other two sections. There is no action here: an empty
   // library has nothing to retry.
+  //
+  // What each section *renders* is the test, not what it holds. Two of the
+  // three make those identical, because they draw a card per movie they were
+  // given. The shelf does not: it draws `shelvedFavorites` of its section, and
+  // the hook leaves an un-hearted movie in that section on purpose. Counting
+  // the raw length there reads a populated library off a shelf with nothing on
+  // it, skips all three messages, and leaves the screen blank.
   if (
     rows.length === 0 &&
     continueWatching.length === 0 &&
-    favorites.length === 0
+    shelvedFavorites(favorites).length === 0
   ) {
     if (search !== undefined) {
       return (
