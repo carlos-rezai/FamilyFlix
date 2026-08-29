@@ -96,6 +96,19 @@ ComponentName/
 
 Category folders (`primitives/`, `components/`) also carry their own `index.ts` barrel file, so components are imported from the category, not from their individual folder.
 
+Three folders under `src/` sit outside the ladder, because what they hold is not UI:
+
+| Folder          | Purpose              | Rule                                                            |
+| --------------- | -------------------- | --------------------------------------------------------------- |
+| `api/`          | Shared wire calls    | One folder per call with its test. No barrel — imported by path |
+| `App/`          | Router and providers | The shell every page renders inside. No domain logic            |
+| `test-support/` | Shared test doubles  | Never imported by shipping code                                 |
+
+`api/` is the narrow one and the rule is what keeps it narrow: a call lives there
+only once **two or more features** make it, because the alternative is one feature
+importing another's wire. A call with a single caller stays with the feature that
+makes it, and moves up only when a second feature asks for it.
+
 ---
 
 Every feature is a 1:1 translation of the canonical prototype in docs/handoff/ — the prototype is designed and resolved first, then implemented against, never redesigned mid-build.
@@ -130,6 +143,7 @@ familyflix/
 │       ├── import-export/  # Excel/CSV parsing, row-to-folder matching, CSV export
 │       └── db/             # SQLite connection + schema/migrations
 ├── src/                # React frontend
+│   ├── App/            # Router and app-level providers
 │   ├── assets/         # Static images, fonts, icons
 │   ├── styles/         # Global CSS reset, themes
 │   ├── tokens/         # Colors, spacing, typography, breakpoints
@@ -144,9 +158,11 @@ familyflix/
 │   │   └── collections/     # playlists (roadmap)
 │   ├── layouts/         # Page chrome
 │   ├── pages/           # Route-level views, composition only
+│   ├── api/             # Wire calls two or more features share
 │   ├── hooks/            # Global shared hooks
 │   ├── types/            # Shared TypeScript interfaces
-│   └── utils/            # Pure helper functions
+│   ├── utils/            # Pure helper functions
+│   └── test-support/     # Shared test doubles
 └── docs/
     ├── design-logs/    # Immutable feature design snapshots
     ├── PRDs/           # Product requirements and implementation plans
