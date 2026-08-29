@@ -1,9 +1,11 @@
+import { HeartIcon } from '@/primitives';
 import type { PosterCardMovie } from '@/types';
 import {
   CardCarousel,
   type PosterCarouselItem,
 } from '../../CardCarousel/CardCarousel';
 import { RowSection } from '../RowSection/RowSection';
+import { HeartMark } from './FavoritesRow.styles';
 
 /**
  * The shelf sits at a genre row's 22px, not Continue Watching's 24. Passed
@@ -19,6 +21,14 @@ const TITLE_SIZE = 22;
  * a handler that does nothing, rather than a card shape that has no heart.
  */
 const NO_TOGGLE = () => undefined;
+
+/**
+ * The prototype's heading heart: 20px, accent-coloured. Passed with no `title`,
+ * so `IconBase` renders it `aria-hidden` and the region stays named "Favorites"
+ * alone — it repeats the heading beside it, and a shelf a screen-reader user
+ * hears as "heart Favorites" is worse, not richer.
+ */
+const HEART_SIZE = 20;
 
 export interface FavoritesRowProps {
   movies: PosterCardMovie[];
@@ -52,7 +62,15 @@ export function FavoritesRow({ movies, onOpenMovie }: FavoritesRowProps) {
   }));
 
   return (
-    <RowSection title="Favorites" titleSize={TITLE_SIZE}>
+    <RowSection
+      title="Favorites"
+      titleSize={TITLE_SIZE}
+      icon={
+        <HeartMark>
+          <HeartIcon size={HEART_SIZE} />
+        </HeartMark>
+      }
+    >
       <CardCarousel items={items} variant="poster" />
     </RowSection>
   );

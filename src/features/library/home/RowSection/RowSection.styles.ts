@@ -31,8 +31,20 @@ export const Header = styled.div`
  * The row's title. The size is a prop rather than a token because the prototype
  * genuinely differs per row — Continue Watching is 24px, a genre row is 22px —
  * and that difference is the spec, not an inconsistency to average out.
+ *
+ * It is a flex container so an optional leading mark and the title text share
+ * one centred line, 10px apart. **`inline-flex`, not `flex`**: `Header` lines
+ * its trailing action up on the heading's baseline, and a block-level flex box
+ * has no baseline to share — a genre row's "View all" would drop off the
+ * heading's line the moment this became `display: flex`.
+ *
+ * The mark is dropped in bare, exactly as the caller passed it. Colouring it is
+ * the caller's business; this heading knows only that something may lead it.
  */
 export const Title = styled.h2<{ $size: number }>`
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
   font-family: ${({ theme }) => theme.fonts.serif};
   font-weight: 600;
   font-size: ${({ $size }) => `${$size}px`};
