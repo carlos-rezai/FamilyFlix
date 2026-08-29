@@ -1177,3 +1177,84 @@ describe('HomeRows — pruning the shelf', () => {
     await waitFor(() => expect(favoriteSaves()).toEqual(['a1']));
   });
 });
+
+// --- 74 — the browse home renders blank when the shelf empties -----------------
+
+/**
+ * The shelf is the one section that draws less than it holds: the hook never
+ * removes an un-hearted movie from `favorites` — that is what gives a refused
+ * save a card to put back — so a section of nothing but un-hearted movies has a
+ * non-zero length and renders nothing at all. A guard reading raw lengths sees
+ * a populated library, skips every message, and the screen goes blank.
+ */
+describe('HomeRows — the shelf that empties under the guard', () => {
+  const FILTER_MISS =
+    'No movies match these filters. Try a different genre or rating.';
+
+  /** A home whose only populated section is the shelf, holding one favorite. */
+  function serveShelfOnly() {
+    serveShelf([], WATCHED_UNTAGGED_FAVORITE, () =>
+      Promise.resolve(okResponse({ value: false }))
+    );
+  }
+
+  /** The shelf is done loading once its own heading is on screen. */
+  function findShelfHeading() {
+    return screen.findByRole('heading', { name: 'Favorites' });
+  }
+
+  it('says the library is empty once the shelf’s last favorite is un-hearted', async () => {
+    serveShelfOnly();
+    renderRows();
+    await findShelfHeading();
+
+    fireEvent.click(shelfHeart('Harbour Lights'));
+
+    expect(await screen.findByText(/your library is empty/i)).toBeDefined();
+  });
+
+  it('quotes the search back when a term is what narrowed the library to that shelf', async () => {
+    // The typed term still wins over the empty-library copy: a miss is a
+    // working library and a term that missed.
+    serveShelfOnly();
+    renderRows('/?q=harbour');
+    await findShelfHeading();
+
+    fireEvent.click(shelfHeart('Harbour Lights'));
+
+    expect(
+      await screen.findByText(
+        'No movies match “harbour”. Try a different search or genre.'
+      )
+    ).toBeDefined();
+  });
+
+  it('names the filters when a rating is what narrowed it', async () => {
+    serveShelfOnly();
+    renderRows('/?rating=4');
+    await findShelfHeading();
+
+    fireEvent.click(shelfHeart('Harbour Lights'));
+
+    expect(await screen.findByText(FILTER_MISS)).toBeDefined();
+  });
+
+  it('puts the card back, and keeps the message away, when the save is refused', async () => {
+    // The revert is what the never-remove behaviour exists for, and the
+    // message must not be showing over a shelf that came back.
+    serveShelf([], WATCHED_UNTAGGED_FAVORITE, () =>
+      Promise.reject(new Error('network down'))
+    );
+    renderRows();
+    await findShelfHeading();
+
+    fireEvent.click(shelfHeart('Harbour Lights'));
+
+    await waitFor(() =>
+      expect(
+        shelf().getByRole('button', { name: 'Harbour Lights' })
+      ).toBeDefined()
+    );
+    expect(screen.queryByText(/your library is empty/i)).toBeNull();
+  });
+});
