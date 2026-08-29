@@ -11,6 +11,51 @@ Newest entry first.
 
 ---
 
+## 2026-08-29 — Favorites refactor (issue #73)
+
+Against `docs/refactor-plans/08-favorites-refactor.md`, after the blank-screen
+defect it found was fixed under its own issue (74).
+
+### Three copies of two closures, compared and kept
+
+`GenreRow` and `FavoritesRow` build the same item object character for
+character, and `LibraryGrid` writes the same two closures straight onto
+`PosterCard`'s props:
+
+```
+onOpen: () => onOpenMovie?.(movie.id),
+onToggleFavorite: () => onToggleFavorite?.(movie.id, !movie.favorite),
+```
+
+Three call sites is this project's own threshold for attempting a
+generalisation, so it was attempted rather than declined on sight — written,
+compiled, and run green — against the two bars the plan set in advance. **It
+failed both, and was reverted.**
+
+The helper was `posterCardItems(movies, onOpenMovie?, onToggleFavorite?)`.
+
+- **A bag of optional handlers.** Every call site passed both handlers
+  positionally and unlabelled. Nothing at the call site said what the second and
+  third arguments were for, and the two rows ended up reading identically to each
+  other while saying nothing about what a card can do.
+- **It served the third call site by making it pretend to be the other two.**
+  `LibraryGrid` has no carousel, and the extraction had it build a
+  `PosterCarouselItem` and spread it onto a card. The two shapes share three
+  field names by coincidence, not because they are one concept — and after the
+  change the grid's JSX no longer named the props the card receives.
+
+So the count that obliged the attempt is not the count that decides the outcome.
+The two closures are the most legible lines in all three files — "open me", and
+"save the opposite of what I am now" — and a reader who wants to know what a card
+raises should not have to open a fourth file to find out. The extraction cost a
+module, a test file and three imports to hide six lines that were never unclear.
+
+Recorded here so the next reader is looking at a decision rather than an
+oversight. If a fourth shelf arrives, this is the note to re-read — but a fourth
+copy is not on its own an argument, since these three were not either.
+
+---
+
 ## 2026-08-29 — Favorites (issues #68–#72)
 
 **The feature was already built.** `is_favorite` and its partial index and
