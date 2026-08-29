@@ -11,6 +11,220 @@ Newest entry first.
 
 ---
 
+## 2026-08-29 — Favorites (issues #68–#72)
+
+**The feature was already built.** `is_favorite` and its partial index and
+`setFavorite` shipped in `01-library-core`. `POST /api/movies/:id/favorite` and
+`saveFavorite` shipped with the browse grid, along with `PosterCard`'s corner
+heart, `withFavorite`, `withFavoriteInList` and `useOptimisticSave` wiring it on
+both browse screens. The detail page's heart arrived with `useOptimisticEdit` in
+`07-ratings`. `RowSection` was written one feature ago carrying a docblock that
+named what was coming: _"the prototype has a third of them coming (Favorites,
+22px with a leading icon)"_. CLAUDE.md's "mark from card and detail" had been
+done for months.
+
+What did not exist was the shelf. Four build issues, #68–#71, each a `test:`
+commit stopping at RED and a `feat:` commit taking it green. 1593 tests pass
+across 96 files, up from 1531. Plan: `docs/PRDs/08-favorites-plan.md`.
+
+No migration, no schema change, no new route, no new repository primitive, no
+new primitive, molecule or util. One payload section, one feature component, one
+`RowSection` prop, and the wiring between them. That is the rarest shape a
+feature comes in here, and the reason it was possible is the rest of this entry.
+
+### The flag that waited two months for its only caller
+
+This is the thing about this feature worth remembering, and like the last one it
+is a process fact rather than a code one.
+
+`favoritesOnly` went onto `MovieQuery` and was honoured by `browse.listMovies`
+in `ff0e97c` — `feat: [library-core] issue #4 add browse query layer`, 29 June.
+Its first caller anywhere in the app is `home.ts:104`, in `33b7c7b`, 28 August.
+**Two months less a day, six initiatives, and nothing ever called it.**
+
+The design log records this as `02-browse-grid`'s doing (`08-favorites.md:20`),
+which is where the flag's _type_ moved when `14ddc70` split the types into topic
+files, not where the flag was born. Git says library-core. The log is an
+immutable snapshot and stays exactly as written; the correction lives here, and
+it makes the point larger rather than smaller — the wait was six initiatives,
+not five.
+
+**Why it survived instead of rotting.** A branch nobody calls is normally the
+definition of dead code, and this one was not, for two reasons worth separating:
+
+- It was **honoured and tested from the day it landed**. `browse.listMovies`
+  applied it, and `curation.test.ts` has asserted the `favoritesOnly` set since
+  library-core — a movie entering it when hearted, leaving it when cleared. So
+  it was an uncalled branch with a specification, not an unexercised one.
+- It was **built for a named future caller**, and the name was right. The row it
+  was put there for is the row that eventually called it.
+
+**Why it is still the pattern to watch for.** A flag with no call site is a
+design guess that nothing can check. This one happened to be correct, and the
+way we know it was correct is that #68 needed one function of four lines to cash
+it in — `listFavorites`, the structural twin of `listContinueWatching`, the
+caller's whole query spread first and then the flag. Had the guess been wrong,
+nothing would have failed for two months; it would simply have been rewritten at
+first use, and the two months of carrying it would have bought nothing.
+
+So the rule this suggests is not "never build ahead of the caller". It is that
+**building ahead is only free when the thing built is small, tested, and named
+for the caller it is waiting on** — all three, not two of them. `RowSection`'s
+icon slot passed the same test one feature later and cost one prop.
+
+### What shipped
+
+**One section on an aggregate that was built to take one** (#68). `HomePayload`
+gains `favorites: Movie[]`, declared `continueWatching, favorites, rows` — the
+order the screen renders them in. Named sections were chosen back in
+`02-browse-grid` precisely so a section could join without disturbing the ones
+already there, and this is the first time that is cashed in. `GET /api/home`
+already forwarded the whole **Library query** and serialised what came back, so
+it served the new section unchanged: the only edit to the route was a comment,
+recording that the shelf rides this wire rather than an `/api/favorites` of its
+own. Five frontend fixtures gained `favorites: []` to keep `tsc` clean — a type
+ripple, not feature work.
+
+The invariant that made it a four-line function is `getHome`'s own: spread the
+caller's query first, then add only what makes this section that section. The
+shelf obeys the search box, the genre dropdown, the rating pill and the sort for
+the same reason the continue row does, and neither had to be taught to.
+
+**The shelf** (#69). `FavoritesRow` is `RowSection` at 22px — a genre row's
+size, not Continue Watching's 24 — around a poster `CardCarousel`, rendering
+`null` when handed nothing. No "View all": the prototype's section has no
+trailing action and `docs/handoff/` has no Favorites page behind one.
+`useHomeRows` maps the section through the same `view()` a genre row's movies go
+through rather than a mapper of its own, and `NO_SECTIONS` stayed one frozen
+value with a third empty array on it, so a memoised consumer keeps its identity
+across a render with nothing new in it. All three sections still come out of the
+one `fetchHomePayload`, so the screen keeps its single ready transition.
+
+`HomeRows`' empty-library guard gained its third term in the same commit. A
+**watched, untagged** favorite earns no genre row and no resume tile, so without
+it the screen would have printed "Your library is empty" directly above a
+populated shelf.
+
+**The heart in the heading** (#70). `RowSection` gains one optional `icon` prop,
+dropped into the heading ahead of the title and coloured by nobody; `Title`
+becomes inline-flex with a 10px gap, inline-level so `Header` keeps a baseline
+for a genre row's "View all" to sit on. The accent lives in
+`FavoritesRow.styles.ts` for `currentColor` to pick up, along with the
+prototype's 2px optical nudge. `RowSection` references no hearts, no favorites
+and no accent anywhere, docblocks included — the promise its docblock made when
+it was extracted, kept at the first opportunity to break it.
+
+**Pruning the shelf** (#71). `FavoritesRow` takes `onToggleFavorite` and hands
+back the clicked movie's id with the negated value — the same contract a genre
+row's cards already use — and renders `movies.filter((m) => m.favorite)` rather
+than everything it is handed. `useHomeRows` applies the flag to both sections
+inside one `setData`. Three files, no new hook, no new signature.
+
+### The two precedents #71 set
+
+Both are small, both are about the same click, and the next shelf will follow
+them rather than rediscover them.
+
+**One optimistic edit reaching two sections of one payload, in a single
+`setData`.** `applyFavorite` runs `withFavorite` over the rows _and_
+`withFavoriteInList` over the favorites in one update, so the shelf card and
+every genre card of one film move on the same render. Two cards of one film
+telling a parent different things is not a state we ship, and "the same render"
+is the only version of that guarantee worth having — one behind the other is
+still a frame in which they disagree. `useOptimisticSave` is called exactly as
+before; nothing about the bargain changed, only how many places `apply` writes.
+
+**A row whose rendered contents are a derived view of hook state.** The hook
+never removes a movie. An un-favorited film stays in the `favorites` section with
+its flag false, and the row filters it out on render. That indirection is what
+makes the revert possible: `useOptimisticSave` puts the old value back by
+flipping the flag, and a movie spliced out of state has nothing to flip. So the
+card leaves the shelf the instant the heart empties — a shelf called Favorites
+holding a non-favorite is a lie — and comes back if the save is refused.
+
+It is worth naming because it reads backwards. A list called `favorites`, then
+filtered for favorites, looks like something to simplify away, and the empty
+guard reads the _filtered_ list for the same reason — a shelf handed only
+non-favorites renders nothing rather than a heading over an empty carousel.
+Anyone who deletes the filter will find every test still green except the
+refused-save ones, which is exactly the shape of a change that gets merged.
+
+### Worth naming
+
+**The heading was naming itself out of its own children, and the heart leaked
+into it.** #70's RED tests pinned the region's accessible name using a mark that
+carried visible text, and six of them failed on the leaked glyph. The heading
+now names itself from `title` via `aria-label` rather than from its content.
+Callers are still asked for a hidden mark — `HeartIcon` with no `title` renders
+`aria-hidden` — but the guarantee no longer rests on their remembering to, and
+the label repeats the visible text exactly so voice control still matches the
+words on screen. The alternative, an id-bearing span around the title text, is
+ruled out by the test asserting the heading has no element child when no icon is
+passed.
+
+The general shape: a slot that accepts arbitrary caller content cannot also
+derive its name from its content. Adding the slot is what turned a safe pattern
+into an unsafe one, and the tests caught it because they were written against a
+mark with text in it rather than against the icon that was actually coming.
+
+**A prop named for the issue that would delete it.** #69 shipped the shelf with
+its hearts drawn but inert, because `PosterCarouselItem` requires a handler.
+Rather than making the prop optional or leaving a bare `() => {}`, the row
+passed `NO_TOGGLE`, named for the issue that would replace it. #71 deleted it. A
+placeholder that says when it expires is cheap; the version of this that rots is
+the anonymous no-op.
+
+**Three tests green on arrival, reported as guards.** #71 landed 22 tests of
+which 19 were RED, and the commit says which three were not and why: keyboard
+parity on the heart, the optional toggle callback, and no refetch on a toggle.
+All three are ACs the issue asks for that earlier work already satisfied —
+`PosterCard` has stopped activation keys propagating since it shipped, and
+`useBrowseLoad` reloads on the load key alone. Breaking working components to
+manufacture a RED would have been a lie about what the phase owed. Same call
+Ratings made at #59 and #60, made the same way.
+
+### Deliberately not built
+
+- **A "View all" and a Favorites page behind it.** The prototype has neither,
+  and CLAUDE.md's rule is that the prototype is amended in a grill-me first.
+  Filed as **67** and still open: past the 15th favorite there is no route in the
+  app, and a genre row's identical cap is safe only because "View all" exists.
+  Recorded as a prototype gap, not improvised around mid-build.
+- **A favorites filter pill, a `/favorites` route, `favoritesOnly` in a Library
+  query.** Favorites is a shelf, not a filter. The flag exists on the
+  repository's `MovieQuery` only, where `getHome` sets it — nothing a URL can ask
+  for.
+- **A `/api/favorites` endpoint.** A second request for one screen is what
+  `/home` was built to avoid.
+- **A Favorites skeleton.** `LoadingRows`' three skeleton sections already stand
+  in for the whole body, and the prototype has no favorites-shaped placeholder.
+- **Per-person favorites.** One shared household profile, permanently.
+- **Any cross-screen store.** A heart set on one screen reaches the others on
+  their next load, as it already did.
+
+### The row this feature did not tick
+
+Favorites stays **🔜 Planned** in both feature lists. The standing rule is that a
+feature is Done after steps 7–8 of the workflow — `request-refactor-plan` →
+`refactor` — not when its build issues close; `813b546` reverted exactly such a
+premature tick on Search + Filter, and the genre page and Ratings both waited the
+same way. The refactor issue is filed as **73**, and the tick is its last commit.
+
+Issue 67 does not block that tick. It is a prototype amendment rather than a
+refactor, and the plan for 73 says so explicitly so that neither swallows the
+other.
+
+The glossary needed no rewriting here. **Favorites row**, **Home section** and
+**Row section** were added and **Favorite** and **Home payload** amended when the
+design log landed, ahead of the build, and what shipped matches them — including
+the two entries that are easiest to drift: the **Optimistic save** entry that now
+describes one edit reaching every **Home section** a movie has a card in, and the
+flagged ambiguity recording that what the row renders is not what its section
+holds. Confirmed rather than rewritten, which is the outcome writing the glossary
+first is supposed to produce.
+
+---
+
 ## 2026-08-27 — Ratings refactor (issue #65)
 
 Twenty commits in six groups, against
