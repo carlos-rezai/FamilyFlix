@@ -1,19 +1,26 @@
 import { useCallback, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
-import type { ContinueCardMovie, GenreRowModel, LibraryQuery } from '@/types';
+import type {
+  ContinueCardMovie,
+  GenreRowModel,
+  LibraryQuery,
+  PosterCardMovie,
+} from '@/types';
 import { parseLibraryQuery, toLibraryQueryParams } from '@/utils';
 import { fetchHomePayload, saveFavorite } from '../../api/api';
 import { continueView } from '../continueView/continueView';
 import { toGenreRow } from '../toGenreRow/toGenreRow';
+import { view } from '../../view/view';
 import { useBrowseLoad } from '../../useBrowseLoad/useBrowseLoad';
 import { useOptimisticSave } from '../../useOptimisticSave/useOptimisticSave';
 import { withFavorite } from '../../withFavorite/withFavorite';
 
-/** The home payload as the two sections render it, mapped once as it lands. */
+/** The home payload as the three sections render it, mapped once as it lands. */
 interface HomeSections {
   rows: GenreRowModel[];
   continueWatching: ContinueCardMovie[];
+  favorites: PosterCardMovie[];
 }
 
 /**
@@ -21,14 +28,21 @@ interface HomeSections {
  * a fresh `[]` per render, so a consumer memoised on these sections is not
  * re-rendered by a hook that has nothing new to tell it.
  */
-const NO_SECTIONS: HomeSections = { rows: [], continueWatching: [] };
+const NO_SECTIONS: HomeSections = {
+  rows: [],
+  continueWatching: [],
+  favorites: [],
+};
 
-/** Both sections, render-ready, from one aggregate response. */
+/** All three sections, render-ready, from one aggregate response. */
 async function loadSections(query: LibraryQuery): Promise<HomeSections> {
   const payload = await fetchHomePayload(query);
   return {
     rows: payload.rows.map(toGenreRow),
     continueWatching: payload.continueWatching.map(continueView),
+    // The shelf holds poster cards, so its movies take the same narrowing a
+    // genre row's do — `view`, not a mapper of its own.
+    favorites: payload.favorites.map(view),
   };
 }
 
@@ -48,6 +62,8 @@ export interface UseHomeRowsResult {
   rows: GenreRowModel[];
   /** The resume tiles to render above them; empty unless `status` is `ready`. */
   continueWatching: ContinueCardMovie[];
+  /** The favorites shelf between the two; empty unless `status` is `ready`. */
+  favorites: PosterCardMovie[];
   /** Re-run the load after a failure. */
   retry: () => void;
   /** Save one movie's favorite flag, showing the new value immediately. */
@@ -55,11 +71,11 @@ export interface UseHomeRowsResult {
 }
 
 /**
- * Loads the browse home in a single request and hands back both of its
- * render-ready sections — the resume tiles and the genre rows. One aggregate
- * fetch means one loading transition, so the screen paints at once and no
- * section pops in above rows that had already painted; the payload's
- * alphabetical order is preserved as it arrives.
+ * Loads the browse home in a single request and hands back all three of its
+ * render-ready sections — the resume tiles, the favorites shelf and the genre
+ * rows. One aggregate fetch means one loading transition, so the screen paints
+ * at once and no section pops in above rows that had already painted; the
+ * payload's alphabetical order is preserved as it arrives.
  *
  * The query it loads is whatever the URL is carrying — the search text, the
  * genre, the minimum rating and the sort order alike, read straight from the
@@ -109,7 +125,7 @@ export function useHomeRows(): UseHomeRowsResult {
 
   // A failed or unfinished load has no sections; the screen shows its own copy
   // for that, never an empty grid pretending to be a loaded one.
-  const { rows, continueWatching } = data ?? NO_SECTIONS;
+  const { rows, continueWatching, favorites } = data ?? NO_SECTIONS;
 
   /** Applies a favorite value to the loaded rows, leaving nothing else moved. */
   const applyFavorite = useCallback(
@@ -124,5 +140,13 @@ export function useHomeRows(): UseHomeRowsResult {
 
   const toggleFavorite = useOptimisticSave(applyFavorite, saveFavorite);
 
-  return { status, query, rows, continueWatching, retry, toggleFavorite };
+  return {
+    status,
+    query,
+    rows,
+    continueWatching,
+    favorites,
+    retry,
+    toggleFavorite,
+  };
 }

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { LoadMessage } from '@/components';
 import { range, toGenreQueryParams } from '@/utils';
 import { ContinueRow } from '../ContinueRow/ContinueRow';
+import { FavoritesRow } from '../FavoritesRow/FavoritesRow';
 import { GenreRow } from '../GenreRow/GenreRow';
 import { RetryableFailure } from '../../RetryableFailure/RetryableFailure';
 import { useHomeRows } from '../useHomeRows/useHomeRows';
@@ -40,9 +41,9 @@ function LoadingRows() {
 }
 
 /**
- * The body of the browse home: what the family is part-way through, then every
- * populated genre as its own row — both sections from the one request, so the
- * screen paints at once. Owns every result state — skeleton rows, a retryable
+ * The body of the browse home: what the family is part-way through, then what
+ * they have starred, then every populated genre as its own row — all three
+ * sections from the one request, so the screen paints at once. Owns every result state — skeleton rows, a retryable
  * failure, and the three ways of coming back with nothing.
  *
  * Those three are deliberately worded apart. "Your library is empty" is a shelf
@@ -60,8 +61,15 @@ function LoadingRows() {
  * still lives in the URL, so nothing here is imported from the search feature.
  */
 export function HomeRows() {
-  const { status, query, rows, continueWatching, retry, toggleFavorite } =
-    useHomeRows();
+  const {
+    status,
+    query,
+    rows,
+    continueWatching,
+    favorites,
+    retry,
+    toggleFavorite,
+  } = useHomeRows();
   const navigate = useNavigate();
   // A settled query holds a filter or holds nothing; there is no empty one to
   // tell apart, because the parser already dropped those.
@@ -82,9 +90,15 @@ export function HomeRows() {
   }
 
   // An untagged movie earns no genre row, so empty rows alone don't mean an
-  // empty library — something in progress is proof there are movies. There is
-  // no action here: an empty library has nothing to retry.
-  if (rows.length === 0 && continueWatching.length === 0) {
+  // empty library — something in progress is proof there are movies, and so is
+  // something on the favorites shelf: a watched, untagged favorite reaches
+  // neither of the other two sections. There is no action here: an empty
+  // library has nothing to retry.
+  if (
+    rows.length === 0 &&
+    continueWatching.length === 0 &&
+    favorites.length === 0
+  ) {
     if (search !== undefined) {
       return (
         <LoadMessage
@@ -130,6 +144,7 @@ export function HomeRows() {
   return (
     <>
       <ContinueRow movies={continueWatching} onOpenMovie={openMovie} />
+      <FavoritesRow movies={favorites} onOpenMovie={openMovie} />
       {rows.map((row) => (
         <GenreRow
           key={row.genre}
