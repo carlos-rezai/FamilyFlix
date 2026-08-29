@@ -8,7 +8,8 @@ import type {
   PosterCardMovie,
 } from '@/types';
 import { parseLibraryQuery, toLibraryQueryParams } from '@/utils';
-import { fetchHomePayload, saveFavorite } from '../../api/api';
+import { saveFavorite } from '@/api/saveFavorite/saveFavorite';
+import { fetchHomePayload } from '../../api/api';
 import { continueView } from '../continueView/continueView';
 import { toGenreRow } from '../toGenreRow/toGenreRow';
 import { view } from '../../view/view';

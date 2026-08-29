@@ -9,7 +9,8 @@ import { useParams, useSearchParams } from 'react-router-dom';
 
 import type { GenreQuery, PosterCardMovie } from '@/types';
 import { parseGenreQuery, toGenreQueryParams } from '@/utils';
-import { fetchGenrePayload, saveFavorite } from '../../api/api';
+import { saveFavorite } from '@/api/saveFavorite/saveFavorite';
+import { fetchGenrePayload } from '../../api/api';
 import { useBrowseLoad } from '../../useBrowseLoad/useBrowseLoad';
 import { useOptimisticSave } from '../../useOptimisticSave/useOptimisticSave';
 import { view } from '../../view/view';

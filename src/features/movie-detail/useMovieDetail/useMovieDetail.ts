@@ -5,7 +5,7 @@ import type { MovieDetailModel } from '@/types';
 // shipped first. CLAUDE.md assigns Favorites both surfaces, so when that feature
 // lands it re-homes this call and the shelf's together, once — one flag, one
 // route, and never a second copy of the save in the meantime.
-import { saveFavorite } from '@/features/library/api/api';
+import { saveFavorite } from '@/api/saveFavorite/saveFavorite';
 import { toRatingPercent, toRatingUnits } from '@/utils';
 import { fetchMovie, saveRating, saveWatched } from '../api/api';
 import { detailView } from '../detailView/detailView';

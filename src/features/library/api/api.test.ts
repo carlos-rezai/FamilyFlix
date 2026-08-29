@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-import { fetchGenrePayload, fetchHomePayload, saveFavorite } from './api';
+import { fetchGenrePayload, fetchHomePayload } from './api';
 import type {
   GenrePayload,
   GenreQuery,
@@ -214,46 +214,6 @@ describe('fetchHomePayload — asking for a sorted library', () => {
     const requested = requestedQuery();
     expect(requested.get('q')).toBe('comet');
     expect(requested.get('sort')).toBe('a-z');
-  });
-});
-
-describe('saveFavorite', () => {
-  it('POSTs the new value as JSON to the movie’s favorite route', async () => {
-    fetchMock.mockResolvedValue(okResponse({ value: true }));
-
-    await saveFavorite('a1', true);
-
-    const request = onlyRequest();
-    expect(request.url).toBe('/api/movies/a1/favorite');
-    expect(request.method?.toUpperCase()).toBe('POST');
-    expect(request.contentType).toMatch(/application\/json/i);
-    expect(request.body).toEqual({ value: true });
-  });
-
-  it('encodes an id that would otherwise break the path', async () => {
-    fetchMock.mockResolvedValue(okResponse({ value: true }));
-
-    await saveFavorite('a/1 b', true);
-
-    expect(onlyRequest().url).toBe('/api/movies/a%2F1%20b/favorite');
-  });
-
-  it('answers with the value the route says it stored, not the one asked for', async () => {
-    fetchMock.mockResolvedValue(okResponse({ value: false }));
-
-    await expect(saveFavorite('a1', true)).resolves.toBe(false);
-  });
-
-  it('falls back to the requested value when the route echoes nothing usable', async () => {
-    fetchMock.mockResolvedValue(okResponse({}));
-
-    await expect(saveFavorite('a1', true)).resolves.toBe(true);
-  });
-
-  it('throws when the save does not succeed', async () => {
-    fetchMock.mockResolvedValue(serverErrorResponse());
-
-    await expect(saveFavorite('a1', true)).rejects.toThrow(/500/);
   });
 });
 
