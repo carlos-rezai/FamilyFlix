@@ -112,3 +112,76 @@ describe('FavoritesRow', () => {
     expect(screen.getByRole('region', { name: 'Favorites' })).toBeDefined();
   });
 });
+
+/** The heading's heart, which is the only svg the heading holds. */
+function headingHeart() {
+  const heading = screen.getByRole('heading', { name: 'Favorites' });
+  return heading.querySelector('svg') as SVGSVGElement;
+}
+
+describe('FavoritesRow — the accent heart in the heading', () => {
+  it('draws a heart before the word “Favorites”', () => {
+    renderRow();
+
+    const heading = screen.getByRole('heading', { name: 'Favorites' });
+    const heart = headingHeart();
+
+    expect(heart).not.toBeNull();
+    expect(heading.textContent).toBe('Favorites');
+    // The mark leads the heading: the prototype's svg sits ahead of the text
+    // node, not after it.
+    expect(
+      heart.compareDocumentPosition(heading.lastChild as Node) &
+        Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
+  });
+
+  it('draws it at 20px', () => {
+    renderRow();
+
+    const heart = headingHeart();
+    expect(heart.getAttribute('width')).toBe('20');
+    expect(heart.getAttribute('height')).toBe('20');
+  });
+
+  it('paints it the accent colour, from the wrapper the heart inherits', () => {
+    // `HeartIcon` fills with `currentColor`, so the accent is set as `color` on
+    // the wrapper around it — and that wrapper is `FavoritesRow`'s, not
+    // `RowSection`'s.
+    renderRow();
+
+    const wrapper = headingHeart().parentElement as HTMLElement;
+    expect(getComputedStyle(wrapper).color).toBe('rgb(217, 122, 78)');
+  });
+
+  it('carries the prototype’s 2px optical nudge', () => {
+    renderRow();
+
+    const wrapper = headingHeart().parentElement as HTMLElement;
+    expect(getComputedStyle(wrapper).marginTop).toBe('2px');
+  });
+
+  it('does not announce the heart — the row is still named “Favorites” alone', () => {
+    renderRow();
+
+    expect(headingHeart().getAttribute('aria-hidden')).toBe('true');
+    expect(headingHeart().getAttribute('role')).toBeNull();
+    expect(screen.getByRole('region', { name: 'Favorites' })).toBeDefined();
+    expect(
+      screen.getByRole('heading', { level: 2, name: 'Favorites' })
+    ).toBeDefined();
+  });
+
+  it('matches the prototype’s heading: 22px serif, 10px gap', () => {
+    renderRow();
+
+    const heading = getComputedStyle(
+      screen.getByRole('heading', { name: 'Favorites' })
+    );
+    expect(heading.fontSize).toBe('22px');
+    // jsdom re-quotes family names, so match the face rather than the token
+    // string character for character.
+    expect(heading.fontFamily).toContain('Source Serif 4');
+    expect(heading.gap).toBe('10px');
+  });
+});
