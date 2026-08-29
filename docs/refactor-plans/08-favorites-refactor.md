@@ -358,9 +358,11 @@ reader is looking at a decision rather than an oversight.
 **Favorite** is spelled in full everywhere in code and that `Movie.isFavorite`
 beside `PosterCardMovie.favorite` is the one deliberate pair; and Favorites
 ticked ✅ in `README.md` and `.claude/CLAUDE.md` — issue #72's last acceptance
-criterion, which is written against this issue closing. Issue 67 (no route past
-the 15th favorite) stays open as a recorded prototype gap and does not block the
-tick, per that issue's own terms.
+criterion, which is written against this issue closing. F1 also records that
+issue 67 (no route past the 15th favorite) was **closed as not-planned** on
+2026-08-29, after the journal entry that called it open was written — so the
+15-cap's missing route now lives in the glossary's flagged ambiguities and
+nowhere else. It does not block the tick either way.
 
 ## Decision Document
 
@@ -453,9 +455,10 @@ unmodified is the whole safety argument.
 
 - **The write path.** Route, `writeSignal`, `setFavorite`, the column and its
   index. Untouched by the build, untouched here.
-- **A Favorites page behind "View all"** — issue 67. It is a prototype
-  amendment, and CLAUDE.md's rule is that the prototype is amended in a grill-me
-  first. A refactor is the wrong instrument entirely.
+- **A Favorites page behind "View all"** — issue 67, now closed as not-planned.
+  It is a prototype amendment, and CLAUDE.md's rule is that the prototype is
+  amended in a grill-me first. A refactor is the wrong instrument entirely, and
+  a closed issue does not make it the right one.
 - **A favorites filter pill, a `/favorites` route, per-person favorites.** All
   three are ruled out in `08-favorites` and the glossary; nothing here reopens
   them.
