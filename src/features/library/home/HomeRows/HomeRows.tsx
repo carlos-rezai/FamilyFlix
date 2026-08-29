@@ -144,7 +144,11 @@ export function HomeRows() {
   return (
     <>
       <ContinueRow movies={continueWatching} onOpenMovie={openMovie} />
-      <FavoritesRow movies={favorites} onOpenMovie={openMovie} />
+      <FavoritesRow
+        movies={favorites}
+        onOpenMovie={openMovie}
+        onToggleFavorite={toggleFavorite}
+      />
       {rows.map((row) => (
         <GenreRow
           key={row.genre}

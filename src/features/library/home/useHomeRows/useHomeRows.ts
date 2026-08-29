@@ -14,7 +14,10 @@ import { toGenreRow } from '../toGenreRow/toGenreRow';
 import { view } from '../../view/view';
 import { useBrowseLoad } from '../../useBrowseLoad/useBrowseLoad';
 import { useOptimisticSave } from '../../useOptimisticSave/useOptimisticSave';
-import { withFavorite } from '../../withFavorite/withFavorite';
+import {
+  withFavorite,
+  withFavoriteInList,
+} from '../../withFavorite/withFavorite';
 
 /** The home payload as the three sections render it, mapped once as it lands. */
 interface HomeSections {
@@ -127,13 +130,29 @@ export function useHomeRows(): UseHomeRowsResult {
   // for that, never an empty grid pretending to be a loaded one.
   const { rows, continueWatching, favorites } = data ?? NO_SECTIONS;
 
-  /** Applies a favorite value to the loaded rows, leaving nothing else moved. */
+  /**
+   * Applies a favorite value everywhere the payload carries the movie, leaving
+   * nothing else moved. A film can hold two cards on this screen at once — one
+   * on the shelf and one in each genre row it is tagged with — and they are one
+   * film: two cards telling the reader different things is not a state we ship.
+   * So both sections move inside a single `setData`, which is what makes the
+   * shelf card and the Drama card flip on the same render rather than one
+   * behind the other.
+   *
+   * Nothing is ever removed here. An un-favorited movie stays in `favorites`
+   * with its flag false — `FavoritesRow` filters what it renders — so a refused
+   * save has a movie to flip back and the card returns to the shelf.
+   */
   const applyFavorite = useCallback(
     (id: string, favorite: boolean) =>
       setData((current) =>
         current === null
           ? current
-          : { ...current, rows: withFavorite(current.rows, id, favorite) }
+          : {
+              ...current,
+              rows: withFavorite(current.rows, id, favorite),
+              favorites: withFavoriteInList(current.favorites, id, favorite),
+            }
       ),
     [setData]
   );

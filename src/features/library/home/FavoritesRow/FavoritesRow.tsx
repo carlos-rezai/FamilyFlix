@@ -15,14 +15,6 @@ import { HeartMark } from './FavoritesRow.styles';
 const TITLE_SIZE = 22;
 
 /**
- * The heart on a card in this row is drawn but inert for now — a `PosterCard`
- * always draws one, and the toggle arrives with issue 71 together with the
- * two-section edit an un-favorite needs. Until then the row hands the carousel
- * a handler that does nothing, rather than a card shape that has no heart.
- */
-const NO_TOGGLE = () => undefined;
-
-/**
  * The prototype's heading heart: 20px, accent-coloured. Passed with no `title`,
  * so `IconBase` renders it `aria-hidden` and the region stays named "Favorites"
  * alone — it repeats the heading beside it, and a shelf a screen-reader user
@@ -34,6 +26,12 @@ export interface FavoritesRowProps {
   movies: PosterCardMovie[];
   /** Open one movie's detail page. */
   onOpenMovie?: (id: string) => void;
+  /**
+   * Set one movie's favorite flag. The card knows its own current value, so it
+   * hands over the value it wants saved rather than a bare "flip it" — the
+   * same contract a genre row's cards use.
+   */
+  onToggleFavorite?: (id: string, favorite: boolean) => void;
 }
 
 /**
@@ -46,19 +44,29 @@ export interface FavoritesRowProps {
  * it renders nothing at all when it has nothing to show — no heading, no empty
  * shelf. A shelf with nothing on it is not a shelf.
  *
- * Every movie it is handed is rendered. The section is the server's answer to
- * the Library query, so it already holds exactly the favorites the header's
- * search, genre and rating left standing; there is nothing here left to filter.
+ * A list called `favorites` is nevertheless filtered for favorites, and the
+ * filter is what makes the shelf editable from the shelf. What is rendered is a
+ * derived view of hook state, not the state itself: un-hearting a card flips
+ * its flag where the hook holds it, and the card leaves here the same render,
+ * with the row closing up around it. The hook never removes the movie, so if
+ * the save is refused the revert has something to put back and the card
+ * returns — which it could not do had it been spliced out of the section.
  */
-export function FavoritesRow({ movies, onOpenMovie }: FavoritesRowProps) {
-  if (movies.length === 0) {
+export function FavoritesRow({
+  movies,
+  onOpenMovie,
+  onToggleFavorite,
+}: FavoritesRowProps) {
+  const shelved = movies.filter((movie) => movie.favorite);
+
+  if (shelved.length === 0) {
     return null;
   }
 
-  const items: PosterCarouselItem[] = movies.map((movie) => ({
+  const items: PosterCarouselItem[] = shelved.map((movie) => ({
     movie,
     onOpen: () => onOpenMovie?.(movie.id),
-    onToggleFavorite: NO_TOGGLE,
+    onToggleFavorite: () => onToggleFavorite?.(movie.id, !movie.favorite),
   }));
 
   return (
