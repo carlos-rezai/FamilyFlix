@@ -21,6 +21,13 @@ export const HOME_ROW_LIMIT = 15;
  */
 const DEFAULT_LIBRARY_QUERY: LibraryQuery = { sort: DEFAULT_MOVIE_SORT };
 
+/**
+ * What makes a flat home section that section rather than the other — the one
+ * `MovieQuery` flag it adds to the caller's query. A third flat section arrives
+ * as a third flag here.
+ */
+type SectionFlag = 'inProgressOnly' | 'favoritesOnly';
+
 /** The home-screen aggregate: the whole browse payload in one call. */
 export interface Home {
   getHome(query?: LibraryQuery): HomePayload;
@@ -90,26 +97,23 @@ export function createHome(browse: Browse): Home {
       .filter((row) => row.movies.length > 0);
   }
 
-  function listContinueWatching(query: LibraryQuery): Movie[] {
-    return browse.listMovies({
-      ...query,
-      inProgressOnly: true,
-      limit: HOME_ROW_LIMIT,
-    });
-  }
-
-  function listFavorites(query: LibraryQuery): Movie[] {
-    return browse.listMovies({
-      ...query,
-      favoritesOnly: true,
-      limit: HOME_ROW_LIMIT,
-    });
+  /**
+   * One flat section: the caller's query, narrowed by the single flag that
+   * makes it the section it is, in the same order and under the same cap. Both
+   * of them are that composition and nothing else, so it is written once —
+   * which is also what this module's own contract says every section is.
+   *
+   * `listRows` is genuinely a different shape and stays its own function: it
+   * fans out over genres and drops the ones that matched nothing.
+   */
+  function listSection(query: LibraryQuery, only: SectionFlag): Movie[] {
+    return browse.listMovies({ ...query, [only]: true, limit: HOME_ROW_LIMIT });
   }
 
   function getHome(query: LibraryQuery = DEFAULT_LIBRARY_QUERY): HomePayload {
     return {
-      continueWatching: listContinueWatching(query),
-      favorites: listFavorites(query),
+      continueWatching: listSection(query, 'inProgressOnly'),
+      favorites: listSection(query, 'favoritesOnly'),
       rows: listRows(query),
     };
   }
