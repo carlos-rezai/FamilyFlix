@@ -43,7 +43,7 @@ export const InnerBorder = styled.div`
  * and keeps its colour, so the primitive's ghost face — which shifts both —
  * has to be answered on both counts.
  */
-export const FavButton = styled(IconButton)<{ $favorite: boolean }>`
+export const FavoriteButton = styled(IconButton)<{ $favorite: boolean }>`
   position: absolute;
   top: 10px;
   left: 10px;

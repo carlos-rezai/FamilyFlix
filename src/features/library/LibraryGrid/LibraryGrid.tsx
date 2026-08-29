@@ -37,7 +37,7 @@ export function LibraryGrid({
           key={movie.id}
           movie={movie}
           onOpen={() => onOpenMovie?.(movie.id)}
-          onToggleFav={() => onToggleFavorite?.(movie.id, !movie.favorite)}
+          onToggleFavorite={() => onToggleFavorite?.(movie.id, !movie.favorite)}
         />
       ))}
     </Grid>

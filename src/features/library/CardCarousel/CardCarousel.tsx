@@ -174,7 +174,7 @@ export function CardCarousel(props: CardCarouselProps) {
                 <PosterCard
                   movie={item.movie}
                   onOpen={item.onOpen}
-                  onToggleFav={item.onToggleFavorite}
+                  onToggleFavorite={item.onToggleFavorite}
                 />
               )
             )}

@@ -13,7 +13,7 @@ import {
   Root,
   Poster,
   InnerBorder,
-  FavButton,
+  FavoriteButton,
   TitleOverlay,
   BadgeWrap,
   ProgressWrap,
@@ -27,7 +27,7 @@ export interface PosterCardProps {
   /** Open the movie's detail page. */
   onOpen: () => void;
   /** Toggle the movie's favorite flag (does not open the card). */
-  onToggleFav: () => void;
+  onToggleFavorite: () => void;
 }
 
 /**
@@ -39,13 +39,13 @@ export interface PosterCardProps {
 const ACTIVATION_KEYS = ['Enter', ' '];
 
 /** The heart's square, small enough to sit in the poster corner unobtrusively. */
-const FAV_SIZE = 34;
+const FAVORITE_SIZE = 34;
 
 /**
  * The library's primary tile — a 2:3 poster (real art or a deterministic
  * gradient placeholder with the title overlaid), a favorite toggle, a watched
  * badge or in-progress bar, and the title + star rating below. Presentational:
- * it renders a `PosterCardMovie` and emits `onOpen` / `onToggleFav`.
+ * it renders a `PosterCardMovie` and emits `onOpen` / `onToggleFavorite`.
  *
  * Unlike `ContinueCard`, this one cannot simply become a `<button>`: the
  * favorite heart inside it is already a button, and a button inside a button is
@@ -55,7 +55,11 @@ const FAV_SIZE = 34;
  * the honest reflection of a real difference between them, not an inconsistency
  * to iron out.
  */
-export function PosterCard({ movie, onOpen, onToggleFav }: PosterCardProps) {
+export function PosterCard({
+  movie,
+  onOpen,
+  onToggleFavorite,
+}: PosterCardProps) {
   const inProgress = !movie.watched && movie.progress > 0;
 
   const handleOpenKey = (event: KeyboardEvent<HTMLDivElement>) => {
@@ -68,9 +72,9 @@ export function PosterCard({ movie, onOpen, onToggleFav }: PosterCardProps) {
     onOpen();
   };
 
-  const handleFav = (event: MouseEvent<HTMLButtonElement>) => {
+  const handleFavorite = (event: MouseEvent<HTMLButtonElement>) => {
     event.stopPropagation();
-    onToggleFav();
+    onToggleFavorite();
   };
 
   /**
@@ -81,7 +85,7 @@ export function PosterCard({ movie, onOpen, onToggleFav }: PosterCardProps) {
    * still passes through. The browser still synthesises the heart's own click,
    * which is what actually toggles the flag.
    */
-  const handleFavKey = (event: KeyboardEvent<HTMLButtonElement>) => {
+  const handleFavoriteKey = (event: KeyboardEvent<HTMLButtonElement>) => {
     if (ACTIVATION_KEYS.includes(event.key)) {
       event.stopPropagation();
     }
@@ -98,21 +102,21 @@ export function PosterCard({ movie, onOpen, onToggleFav }: PosterCardProps) {
       <Poster>
         <Artwork url={movie.posterUrl} g1={movie.g1} g2={movie.g2} />
         <InnerBorder />
-        <FavButton
+        <FavoriteButton
           label="Favorite"
           title="Favorite"
-          size={FAV_SIZE}
+          size={FAVORITE_SIZE}
           pressed={movie.favorite}
           $favorite={movie.favorite}
-          onClick={handleFav}
-          onKeyDown={handleFavKey}
+          onClick={handleFavorite}
+          onKeyDown={handleFavoriteKey}
         >
           {movie.favorite ? (
             <HeartIcon size={18} />
           ) : (
             <HeartOutlineIcon size={18} />
           )}
-        </FavButton>
+        </FavoriteButton>
         {movie.posterUrl ? null : <TitleOverlay>{movie.title}</TitleOverlay>}
         {movie.watched ? (
           <BadgeWrap>

@@ -21,7 +21,7 @@ const movie: PosterCardMovie = {
 function renderCard(
   handlers: {
     onOpen?: () => void;
-    onToggleFav?: () => void;
+    onToggleFavorite?: () => void;
     movie?: PosterCardMovie;
   } = {}
 ) {
@@ -30,7 +30,7 @@ function renderCard(
       <PosterCard
         movie={handlers.movie ?? movie}
         onOpen={handlers.onOpen ?? (() => undefined)}
-        onToggleFav={handlers.onToggleFav ?? (() => undefined)}
+        onToggleFavorite={handlers.onToggleFavorite ?? (() => undefined)}
       />
     </ThemeProvider>
   );
@@ -46,23 +46,23 @@ describe('PosterCard', () => {
     expect(onOpen).toHaveBeenCalledTimes(1);
   });
 
-  it('calls onToggleFav when the favorite heart is clicked', () => {
-    const onToggleFav = vi.fn();
-    const { getByTitle } = renderCard({ onToggleFav });
+  it('calls onToggleFavorite when the favorite heart is clicked', () => {
+    const onToggleFavorite = vi.fn();
+    const { getByTitle } = renderCard({ onToggleFavorite });
 
     fireEvent.click(getByTitle('Favorite'));
 
-    expect(onToggleFav).toHaveBeenCalledTimes(1);
+    expect(onToggleFavorite).toHaveBeenCalledTimes(1);
   });
 
   it('does not also open the card when the favorite heart is clicked (propagation stopped)', () => {
     const onOpen = vi.fn();
-    const onToggleFav = vi.fn();
-    const { getByTitle } = renderCard({ onOpen, onToggleFav });
+    const onToggleFavorite = vi.fn();
+    const { getByTitle } = renderCard({ onOpen, onToggleFavorite });
 
     fireEvent.click(getByTitle('Favorite'));
 
-    expect(onToggleFav).toHaveBeenCalledTimes(1);
+    expect(onToggleFavorite).toHaveBeenCalledTimes(1);
     expect(onOpen).not.toHaveBeenCalled();
   });
 
