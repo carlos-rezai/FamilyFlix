@@ -15,15 +15,15 @@
 
 ## Rating & watch state
 
-| Term                   | Definition                                                                                                                                                                                                                                                       | Aliases to avoid              |
-| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------- |
-| **Rating** (updated)   | Household 0–10 half-star score (10 = 5 stars), **seeded from TMDB** at import and set or cleared any time from the **Movie detail page**'s **Rating picker**. A stored `0` can only arrive from a seed — the picker sets 1–10 or clears to **Unrated**.          | review, score, vote           |
-| **Unrated** (updated)  | A **Movie** with no **Rating** (`NULL`) — distinct from a literal 0-star rating. Renders as five **empty, clickable** stars labelled `Not rated` on the **Movie detail page**, and as five empty stars with **no numeric value** on a **Poster card**.           | zero stars, unscored, 0 stars |
-| **Status**             | A **Movie**'s **derived** watch state: `unwatched` \| `in-progress` \| `watched` (never stored).                                                                                                                                                                 | state, watch status           |
-| **Watched**            | Explicit boolean flag meaning the maintainer marked a **Movie** finished; setting it via `markWatched` also clears the **Resume position**.                                                                                                                      | seen, completed               |
-| **Resume position**    | Seconds into a **Movie**'s video where playback last stopped (`resume_position_seconds`).                                                                                                                                                                        | progress, playback time       |
-| **In-progress**        | Derived **Status** when `resume_position_seconds > 0` and not **Watched**.                                                                                                                                                                                       | partially watched             |
-| **Favorite** (updated) | Per-movie household boolean (`is_favorite`), togglable from any **Poster card**'s heart on either browse screen and from the **Movie detail page**, and surfaced as the **Favorites row**. One **Movie**'s **Favorite** is one value however many cards show it. | liked, starred, bookmark      |
+| Term                   | Definition                                                                                                                                                                                                                                                                                                                                                                                     | Aliases to avoid              |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------- |
+| **Rating** (updated)   | Household 0–10 half-star score (10 = 5 stars), **seeded from TMDB** at import and set or cleared any time from the **Movie detail page**'s **Rating picker**. A stored `0` can only arrive from a seed — the picker sets 1–10 or clears to **Unrated**.                                                                                                                                        | review, score, vote           |
+| **Unrated** (updated)  | A **Movie** with no **Rating** (`NULL`) — distinct from a literal 0-star rating. Renders as five **empty, clickable** stars labelled `Not rated` on the **Movie detail page**, and as five empty stars with **no numeric value** on a **Poster card**.                                                                                                                                         | zero stars, unscored, 0 stars |
+| **Status**             | A **Movie**'s **derived** watch state: `unwatched` \| `in-progress` \| `watched` (never stored).                                                                                                                                                                                                                                                                                               | state, watch status           |
+| **Watched**            | Explicit boolean flag meaning the maintainer marked a **Movie** finished; setting it via `markWatched` also clears the **Resume position**.                                                                                                                                                                                                                                                    | seen, completed               |
+| **Resume position**    | Seconds into a **Movie**'s video where playback last stopped (`resume_position_seconds`).                                                                                                                                                                                                                                                                                                      | progress, playback time       |
+| **In-progress**        | Derived **Status** when `resume_position_seconds > 0` and not **Watched**.                                                                                                                                                                                                                                                                                                                     | partially watched             |
+| **Favorite** (updated) | Per-movie household boolean (`is_favorite`), togglable from any **Poster card**'s heart on either browse screen and from the **Movie detail page**, and surfaced as the **Favorites row**. One **Movie**'s **Favorite** is one value however many cards show it. **Spelled in full everywhere in code** — no `Fav` abbreviation at any rung, including props, styled components and constants. | liked, starred, bookmark, fav |
 
 ## Rating input (new)
 
@@ -307,18 +307,29 @@ deliberately parallel to the **Browse home**'s rather than shared with it.
   section** takes has nothing behind it here — a 16th **Favorite** is reachable
   from no route in the app. A **Genre row**'s cap is safe precisely because
   **View all** exists. Recorded as a **prototype amendment**, not built:
-  `08-favorites` Q10.
+  `08-favorites` Q10. Filed as issue 67 and **closed as not-planned on
+  2026-08-29**, so this bullet is now the only record of it: a route past the
+  15th **Favorite** wants a grill-me and a prototype amendment first, which is
+  what a closed issue does not substitute for.
 - **"Favorites" is a shelf, not a filter (new):** the **Favorites row** is a
   **Home section**, and there is no favorites **Filter dropdown**, no
   `favoritesOnly` in a **Library query**, and no `/favorites` route. The
   `favoritesOnly` flag exists on the repository's `MovieQuery` only, where
   `getHome` sets it to build that one section — it is not something a URL can
   ask for.
-- **What the Favorites row renders is not what its Home section holds (new):**
-  the section keeps every **Movie** the payload sent; the row draws the
-  **Favorite** ones. The difference is load-bearing rather than cosmetic — an
+- **What the Favorites row renders is not what its Home section holds
+  (updated):** the section keeps every **Movie** the payload sent; the row draws
+  the **Favorite** ones. The difference is load-bearing rather than cosmetic — an
   **Optimistic save** reverts by flipping the flag back, so a card spliced out of
-  state could never return when a write is refused.
+  state could never return when a write is refused. **Anything counting a section
+  must count what it draws**, through `shelvedFavorites`, not what it holds: the
+  **Browse home**'s empty guard read the raw length and rendered a blank page
+  (74). Any future section drawing a derived view of its data inherits the rule.
+- **`Movie.isFavorite` beside `PosterCardMovie.favorite` (new):** two spellings
+  of two different things, both deliberate and both 1:1 with the prototype's own
+  `data-props` — the domain record's field and the card view model's field. The
+  `view()` mapper is where they cross. This is the **only** pair of spellings
+  Favorite is allowed; it is not an abbreviation to finish tidying up.
 - **"Movie" vs "Film":** the maintainer says _film_ conversationally, but **Movie**
   is the single canonical term in code, schema, prototype, and docs. _Film_ is an
   accepted informal synonym; do not introduce a `Film` type or `films` table.

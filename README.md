@@ -262,7 +262,7 @@ Builds the installer and publishes it to GitHub Releases automatically.
 | Genre page — every movie in one genre, uncapped     | ✅ Done         |
 | Sort (recent, A–Z, year, rating, unwatched)         | ✅ Done         |
 | Ratings — 5-star display + half-star picker         | ✅ Done         |
-| Favorites — mark + dedicated row                    | 🔜 Planned      |
+| Favorites — mark + dedicated row                    | ✅ Done         |
 | Continue Watching row                               | 🔜 Planned      |
 | Built-in video player (playback, subtitles)         | 🔜 Planned      |
 | Watch tracking (watched / in-progress / resume)     | 🔜 Planned      |

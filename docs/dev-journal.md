@@ -13,8 +13,107 @@ Newest entry first.
 
 ## 2026-08-29 — Favorites refactor (issue #73)
 
-Against `docs/refactor-plans/08-favorites-refactor.md`, after the blank-screen
-defect it found was fixed under its own issue (74).
+Nine commits in six groups against
+`docs/refactor-plans/08-favorites-refactor.md`, plus a `test:`/`fix:` pair for
+the defect the plan found while being written, which went first under its own
+issue (74). 1600 tests pass across 97 files, up from 1593 across 96.
+
+**Favorites left very little behind**, and the plan said so in advance rather
+than manufacturing work to look substantial. The feature was assembled from a
+column, a route, a client call, a query flag, a molecule and a chrome component
+that all already existed; the build added one payload section, one component,
+one `RowSection` prop and the wiring between them. So most of this refactor is
+**decisions written down**, and two of the six groups were explicitly conditional
+— one was taken, one was tried and reverted.
+
+Nothing here changes an HTTP contract, a rendered pixel, or a stored value. The
+one commit that changes what a component draws is the defect fix, which is why it
+is a `fix:` under a different issue and not a group in this plan.
+
+### The suite was green over a blank page
+
+The browse home rendered **zero bytes of HTML** — no shelf, no heading, no
+message — when the last movie on the Favorites shelf was un-hearted and the shelf
+was the only populated section. The only way back was a reload.
+
+`HomeRows`' empty guard counted the three sections' raw lengths. For two of them
+that is right: `ContinueRow` draws a card per movie it was given, so "holds
+nothing" and "draws nothing" are the same condition. **For the shelf they are
+not.** `useHomeRows` deliberately never removes an un-hearted movie from
+`favorites` — that indirection is what gives a refused save a card to put back,
+and #71 shipped it on purpose — so a section of nothing but un-hearted movies has
+a non-zero length and draws no cards. The guard read a populated library and
+skipped all three messages.
+
+Two general facts fall out of it, both larger than this feature:
+
+- **#71's precedent has a cost nobody priced.** "A row whose rendered contents
+  are a derived view of hook state" is a good pattern, and it is what makes the
+  revert possible. But it silently breaks every other place that treats section
+  length as a proxy for section content, and the guard was the only such place at
+  the time. The next derived-view row inherits the same trap. The rule now has a
+  name — `shelvedFavorites` — and both the row and the guard read it, so the two
+  cannot disagree about what is on screen.
+- **1593 passing tests are the specification of what was thought of.** Every
+  existing test that empties the shelf serves populated genre rows beside it, so
+  the guard was never the thing under test at the moment it mattered.
+
+And the way it was found is worth recording: not by reading the diff, but by
+asking what the guard's third term actually counts and then **running the case
+rather than reasoning about it**. The reasoning alone produced "probably fine —
+`favorites` is a favorites-only section". The run produced an empty document.
+
+### What moved
+
+**`saveFavorite` onto the rung built for it.** `src/api/postValue` exists
+because of an argument the Ratings refactor made and wrote into its own
+docblock — three saves across two features keep one contract, and neither feature
+should import the other's wire. The rung was built and only `postValue` moved
+onto it; `saveFavorite`, the one of the three actually called from both sides,
+stayed in `features/library/api` with a comment in `useMovieDetail` apologising
+for reaching across. **The comment was the tell.** An import that has to explain
+itself is the one the shared rung was created to retire.
+
+`saveWatched` and `saveRating` did **not** move. They have one caller each and
+are correctly placed today; moving them for symmetry would be churn. The rule is
+"a second feature asked for it", not "it looks like its siblings".
+
+**The rung itself got written down.** `src/api/`, `src/App/` and
+`src/test-support/` were all real, all undocumented, and both README and
+CLAUDE.md still described an `src/` of eleven folders where there are fourteen.
+A boundary that exists only in the code is one the next author is entitled to
+guess at — and Group A doubled `api/`'s population, making it the answer to a
+question the next feature will ask.
+
+**One spelling for one concept.** The molecule rung said `onToggleFav` and the
+feature rung said `onToggleFavorite`, so two call sites existed mainly to
+translate between them. The prototype spells it both ways — `mol.PosterCard` and
+COMPONENT-SPEC abbreviate, `page.MoviePage` and `FamilyFlix.dc.html` do not — so
+it does not decide this and the glossary does. The 1:1 rule binds the UI surface,
+not the prototype's identifiers, and COMPONENT-SPEC's prop table has been
+overridden on the same reasoning once before.
+
+**Two growth points closed.** The empty guard now reads over one list of what
+the sections draw rather than a term per section in a chain of `&&`; and
+`createHome`'s `listContinueWatching` and `listFavorites`, literal twins
+differing by one flag key, collapsed into one `listSection(query, flag)`. Both
+were places where forgetting to add something produces a visible bug — which is a
+different risk from a place where copying two lines produces two correct lines.
+
+**The deferred question, answered where it was asked.** `07-ratings-refactor`
+named this feature, by name, as the place to decide whether the browse screens
+migrate onto `useOptimisticEdit`. The answer is **no**, and it is written into
+both hooks rather than only into a plan: a hook general enough for both would be
+parameterised over what it edits _and_ over how it reverts, and neither caller is
+asking for that. Unlike the three bargains `07` did merge, the second example
+here is not a third copy of the first.
+
+`useOptimisticSave` was also **wrong about itself**. Its docblock claimed `apply`
+was `withFavorite` over genre rows _or_ `withFavoriteInList` over a flat grid;
+since #71 its busiest caller writes both, into two sections of one payload inside
+a single `setData`. The glossary was updated for that when the design log landed
+and the hook was not — a reminder that a docblock arguing its own scope is a
+thing that goes stale when the scope moves.
 
 ### Three copies of two closures, compared and kept
 
@@ -53,6 +152,52 @@ module, a test file and three imports to hide six lines that were never unclear.
 Recorded here so the next reader is looking at a decision rather than an
 oversight. If a fourth shelf arrives, this is the note to re-read — but a fourth
 copy is not on its own an argument, since these three were not either.
+
+### Deliberately not changed
+
+- **`TITLE_SIZE` stays duplicated** in `GenreRow` and `FavoritesRow`. Both files
+  carry a comment saying the value is passed explicitly because the difference
+  between the three headings is specified in the prototype rather than
+  incidental. Sharing the constant would overturn a written decision, not tidy an
+  oversight.
+- **`FavoritesRow`'s narrowing stays.** It reads like something to simplify and
+  must not be: it is the only reason a refused save has a card to put back. The
+  defect was in the guard, and fixing it by deleting the narrowing would have
+  traded a blank screen for a broken revert.
+- **`withFavorite` / `withFavoriteInList` stay two.** One concept over two
+  shapes, with a docblock that already argues exactly that, and the pair is what
+  makes the two-section edit expressible.
+- **`Movie.isFavorite` beside `PosterCardMovie.favorite` stays.** Two spellings
+  of two different things, both 1:1 with the prototype's `data-props`. Named in
+  the plan and now in the glossary so it is visibly a decision and nobody
+  "finishes the job" the rename started.
+- **`NO_SECTIONS` stays one frozen value.** Held deliberately so a memoised
+  consumer keeps its identity.
+- **The write path was not reopened.** Route, `writeSignal`, `setFavorite`, the
+  column and its partial index — untouched by the build and untouched here.
+
+### Follow-ups this refactor surfaced
+
+- **README's component shape is stale.** It documents a four-file component
+  folder with a per-component `index.ts`; CLAUDE.md documents three files and
+  only category barrels, and the code follows CLAUDE.md — no unit folder in
+  `src/` has an `index.ts`. Found while amending the same section for `api/` and
+  left alone, because rewriting a rung's documented shape is not a Favorites
+  refactor. It is a docs-only fix and wants its own small issue.
+- **`.claude/CLAUDE.md` is still gitignored**, so the `api/` / `App/` /
+  `test-support/` amendment and the ✅ tick exist on disk and not in review.
+  Open since `03-card-carousel-refactor`, surfaced again here, still a
+  repository-policy question rather than a refactor one.
+- **`GenreMovies` still prints two `act()` warnings.** They pre-date Favorites,
+  the Ratings refactor noted and left them, and they belong to whoever refactors
+  the genre screen. The suite is otherwise silent, which is the state `07` left
+  it in deliberately.
+- **Issue 67 — no route past the 15th favorite — was closed as not-planned** on
+  2026-08-29, after the Favorites build entry below was written calling it open.
+  The 15-cap's missing route now lives in the glossary's flagged ambiguities and
+  nowhere else. A closed issue is not a decision that the gap does not exist; the
+  gap wants a grill-me and a prototype amendment, which is exactly what a
+  refactor is the wrong instrument for.
 
 ---
 
