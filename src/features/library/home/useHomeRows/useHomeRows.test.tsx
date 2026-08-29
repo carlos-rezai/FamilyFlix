@@ -5,7 +5,12 @@ import { MemoryRouter, useNavigate } from 'react-router-dom';
 
 import { useHomeRows } from './useHomeRows';
 import { gradientFromId, NOMINAL_SLIVER_PERCENT } from '@/utils';
-import type { GenreRowModel, HomePayload, Movie } from '@/types';
+import type {
+  GenreRowModel,
+  HomePayload,
+  Movie,
+  PosterCardMovie,
+} from '@/types';
 
 function makeMovie(overrides: Partial<Movie> = {}): Movie {
   return {
@@ -113,6 +118,39 @@ const FAVORITES_PAYLOAD: HomePayload = {
     }),
   ],
   rows: HOME_PAYLOAD.rows,
+};
+
+/**
+ * A payload whose sections agree with each other: `a1` is a favorite, and it is
+ * a favorite on the shelf *and* in the Action row it is tagged with. Two cards
+ * of one film, so "both sections moved" is a claim about one movie rather than
+ * about two spellings of it. `f2` is untagged — it reaches the shelf and no row.
+ */
+const SHELF_PAYLOAD: HomePayload = {
+  continueWatching: [],
+  favorites: [
+    makeMovie({ id: 'a1', title: 'Northwind', isFavorite: true }),
+    makeMovie({
+      id: 'f2',
+      title: 'Lantern Road',
+      isFavorite: true,
+      genres: [],
+    }),
+  ],
+  rows: [
+    {
+      genre: 'Action',
+      count: 3,
+      movies: [makeMovie({ id: 'a1', title: 'Northwind', isFavorite: true })],
+    },
+    {
+      genre: 'Comedy',
+      count: 2,
+      movies: [
+        makeMovie({ id: 'c1', title: 'Comet Season', isFavorite: true }),
+      ],
+    },
+  ],
 };
 
 /** The same movie tagged with two genres — it earns a card in both rows. */
@@ -233,6 +271,11 @@ function homeRequests(): string[] {
 /** The query string of the nth home request, parsed rather than matched. */
 function homeQuery(index: number): URLSearchParams {
   return new URLSearchParams(homeRequests()[index].split('?')[1] ?? '');
+}
+
+/** Whether one movie reads as a favorite on the favorites shelf. */
+function favoriteOnShelf(favorites: PosterCardMovie[], id: string) {
+  return favorites.find((movie) => movie.id === id)?.favorite;
 }
 
 /** Whether one movie reads as a favorite in one genre's row. */
@@ -792,6 +835,110 @@ describe('useHomeRows — the favorite flag', () => {
       expect(favoriteIn(result.current.rows, 'Action', 'x1')).toBe(false)
     );
     expect(favoriteIn(result.current.rows, 'Thriller', 'x1')).toBe(false);
+  });
+});
+
+describe('useHomeRows — one heart, two sections', () => {
+  it('sets the flag on the shelf and in every genre row the movie has a card in', async () => {
+    // A save that never settles: everything asserted here is the optimistic
+    // edit, applied in one `setData` across both sections.
+    serve(SHELF_PAYLOAD, () => new Promise<Response>(() => undefined));
+    const { result } = await loadRows();
+
+    act(() => result.current.toggleFavorite('a1', false));
+
+    expect(favoriteOnShelf(result.current.favorites, 'a1')).toBe(false);
+    expect(favoriteIn(result.current.rows, 'Action', 'a1')).toBe(false);
+    // Nothing else moved: the other favorite and the other row are untouched.
+    expect(favoriteOnShelf(result.current.favorites, 'f2')).toBe(true);
+    expect(favoriteIn(result.current.rows, 'Comedy', 'c1')).toBe(true);
+  });
+
+  it('keeps the un-favorited movie in the favorites section rather than removing it', async () => {
+    // The hook never splices a movie out — the row filters what it renders.
+    // Removing it here would leave a refused save with nothing to put back.
+    serve(SHELF_PAYLOAD, () => new Promise<Response>(() => undefined));
+    const { result } = await loadRows();
+
+    act(() => result.current.toggleFavorite('a1', false));
+
+    // Still there, and now reading as not-a-favorite: the section keeps every
+    // movie the payload sent and only flips flags on them. What leaves the
+    // shelf is the row's business, not the hook's.
+    expect(result.current.favorites.map((movie) => movie.id)).toEqual([
+      'a1',
+      'f2',
+    ]);
+    expect(favoriteOnShelf(result.current.favorites, 'a1')).toBe(false);
+  });
+
+  it('reverts both sections when the save fails', async () => {
+    serve(SHELF_PAYLOAD, () => Promise.reject(new Error('network down')));
+    const { result } = await loadRows();
+
+    act(() => result.current.toggleFavorite('a1', false));
+    expect(favoriteOnShelf(result.current.favorites, 'a1')).toBe(false);
+
+    await waitFor(() =>
+      expect(favoriteOnShelf(result.current.favorites, 'a1')).toBe(true)
+    );
+    expect(favoriteIn(result.current.rows, 'Action', 'a1')).toBe(true);
+  });
+
+  it('reverts both sections when the server rejects the save', async () => {
+    serve(SHELF_PAYLOAD, () => Promise.resolve(serverErrorResponse()));
+    const { result } = await loadRows();
+
+    act(() => result.current.toggleFavorite('a1', false));
+    expect(favoriteIn(result.current.rows, 'Action', 'a1')).toBe(false);
+    expect(favoriteOnShelf(result.current.favorites, 'a1')).toBe(false);
+
+    await waitFor(() =>
+      expect(favoriteIn(result.current.rows, 'Action', 'a1')).toBe(true)
+    );
+    expect(favoriteOnShelf(result.current.favorites, 'a1')).toBe(true);
+  });
+
+  it('adopts what the route echoes back in both sections', async () => {
+    // The route reports it stored `true` — it refused the un-favorite. That is
+    // the truth in both sections, not our assumption in either.
+    serve(SHELF_PAYLOAD, () => Promise.resolve(okResponse({ value: true })));
+    const { result } = await loadRows();
+
+    act(() => result.current.toggleFavorite('a1', false));
+    expect(favoriteOnShelf(result.current.favorites, 'a1')).toBe(false);
+    expect(favoriteIn(result.current.rows, 'Action', 'a1')).toBe(false);
+
+    await waitFor(() =>
+      expect(favoriteOnShelf(result.current.favorites, 'a1')).toBe(true)
+    );
+    expect(favoriteIn(result.current.rows, 'Action', 'a1')).toBe(true);
+  });
+
+  it('asks for the home again for no heart it is handed', async () => {
+    // One edit, no reload: the screen keeps what it has painted and its place
+    // on the page.
+    serve(SHELF_PAYLOAD);
+    const { result } = await loadRows();
+    expect(homeRequests()).toHaveLength(1);
+
+    act(() => result.current.toggleFavorite('a1', false));
+
+    await waitFor(() => expect(favoriteRequests()).toHaveLength(1));
+    expect(homeRequests()).toHaveLength(1);
+  });
+
+  it('toggles a favorite that no genre row carries', async () => {
+    // The untagged favorite: the shelf is the only section holding it, and the
+    // rows come through the edit unchanged rather than erroring on a miss.
+    serve(SHELF_PAYLOAD, () => new Promise<Response>(() => undefined));
+    const { result } = await loadRows();
+
+    act(() => result.current.toggleFavorite('f2', false));
+
+    expect(favoriteOnShelf(result.current.favorites, 'f2')).toBe(false);
+    expect(favoriteIn(result.current.rows, 'Action', 'a1')).toBe(true);
+    expect(favoriteIn(result.current.rows, 'Comedy', 'c1')).toBe(true);
   });
 });
 

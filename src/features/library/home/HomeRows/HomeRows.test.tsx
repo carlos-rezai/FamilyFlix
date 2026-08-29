@@ -984,3 +984,196 @@ describe('HomeRows — the carried sort on View all', () => {
     expect(currentSearch()).toBe('?sort=a-z');
   });
 });
+
+/**
+ * A home whose two sections agree: `Northwind` is a favorite on the shelf and a
+ * favorite on its Action card. One movie per genre row, so "the heart in the
+ * Action row" stays unambiguous.
+ */
+const SHELF_ROWS: HomeRow[] = [
+  {
+    genre: 'Action',
+    count: 3,
+    movies: [makeMovie({ id: 'a1', title: 'Northwind', isFavorite: true })],
+  },
+  {
+    genre: 'Comedy',
+    count: 2,
+    movies: [makeMovie({ id: 'c1', title: 'Comet Season', isFavorite: false })],
+  },
+];
+
+const SHELF_FAVORITES: Movie[] = [
+  makeMovie({ id: 'a1', title: 'Northwind', isFavorite: true }),
+  makeMovie({ id: 'f2', title: 'Lantern Road', isFavorite: true, genres: [] }),
+];
+
+/**
+ * Serve a home whose shelf is populated, and every favorite save from
+ * `onFavorite`. The suite's own `serve` answers with an empty shelf, which is
+ * exactly what these tests need it not to be.
+ */
+function serveShelf(
+  rows: HomeRow[],
+  favorites: Movie[],
+  onFavorite: () => Promise<Response> = () =>
+    Promise.resolve(okResponse({ value: true }))
+) {
+  fetchMock.mockImplementation((input) => {
+    const url = String(input);
+    if (url.includes('/api/home')) {
+      return Promise.resolve(okResponse(homePayload(rows, [], favorites)));
+    }
+    if (url.includes('/favorite')) {
+      return onFavorite();
+    }
+    return Promise.reject(new Error(`Unexpected request: ${url}`));
+  });
+}
+
+/** The Favorites shelf, once it is on screen. */
+function shelf() {
+  return within(screen.getByRole('region', { name: 'Favorites' }));
+}
+
+/** The heart on one movie's card on the shelf. */
+function shelfHeart(title: string) {
+  return within(shelf().getByRole('button', { name: title })).getByRole(
+    'button',
+    { name: /^favorite$/i }
+  );
+}
+
+/** Every home request the screen has issued. */
+function homeRequests(): string[] {
+  return fetchMock.mock.calls
+    .map(([input]) => String(input))
+    .filter((url) => url.includes('/api/home'));
+}
+
+describe('HomeRows — pruning the shelf', () => {
+  it('takes the card off the shelf the instant it is un-hearted, leaving the other favorite', async () => {
+    serveShelf(SHELF_ROWS, SHELF_FAVORITES, () =>
+      Promise.resolve(okResponse({ value: false }))
+    );
+    renderRows();
+    await findGenreHeading('Action');
+
+    expect(shelf().getByRole('button', { name: 'Northwind' })).toBeDefined();
+
+    fireEvent.click(shelfHeart('Northwind'));
+
+    // Gone at once, before the save has come back — and the row closes up
+    // around it rather than leaving a gap.
+    expect(shelf().queryByRole('button', { name: 'Northwind' })).toBeNull();
+    expect(shelf().getByRole('button', { name: 'Lantern Road' })).toBeDefined();
+    await waitFor(() => expect(favoriteSaves()).toEqual(['a1']));
+  });
+
+  it('empties that movie’s heart in its genre row at the same time', async () => {
+    // One heart, two cards of one film. They must never disagree.
+    serveShelf(SHELF_ROWS, SHELF_FAVORITES, () =>
+      Promise.resolve(okResponse({ value: false }))
+    );
+    renderRows();
+    await findGenreHeading('Action');
+
+    expect(isFilled('Action')).toBe('true');
+
+    fireEvent.click(shelfHeart('Northwind'));
+
+    expect(isFilled('Action')).toBe('false');
+  });
+
+  it('fills the shelf card’s heart when the movie is hearted from its genre row', async () => {
+    // The other direction: the shelf still holds the movie, so hearting it in
+    // Action shows on its shelf card too.
+    serveShelf(SHELF_ROWS, SHELF_FAVORITES, () =>
+      Promise.resolve(okResponse({ value: false }))
+    );
+    renderRows();
+    await findGenreHeading('Action');
+
+    fireEvent.click(heartIn('Action'));
+    expect(shelf().queryByRole('button', { name: 'Northwind' })).toBeNull();
+
+    fireEvent.click(heartIn('Action'));
+
+    const card = shelf().getByRole('button', { name: 'Northwind' });
+    expect(
+      within(card)
+        .getByRole('button', { name: /^favorite$/i })
+        .getAttribute('aria-pressed')
+    ).toBe('true');
+  });
+
+  it('brings the card back to the shelf when the save is refused', async () => {
+    serveShelf(SHELF_ROWS, SHELF_FAVORITES, () =>
+      Promise.reject(new Error('network down'))
+    );
+    renderRows();
+    await findGenreHeading('Action');
+
+    fireEvent.click(shelfHeart('Northwind'));
+    expect(shelf().queryByRole('button', { name: 'Northwind' })).toBeNull();
+
+    // The movie was never removed from state, so the revert has something to
+    // put back — on the shelf and in Action alike.
+    await waitFor(() =>
+      expect(shelf().getByRole('button', { name: 'Northwind' })).toBeDefined()
+    );
+    expect(isFilled('Action')).toBe('true');
+  });
+
+  it('hides the whole shelf when the last favorite is un-hearted', async () => {
+    serveShelf(SHELF_ROWS, [SHELF_FAVORITES[0]], () =>
+      Promise.resolve(okResponse({ value: false }))
+    );
+    renderRows();
+    await findGenreHeading('Action');
+
+    fireEvent.click(shelfHeart('Northwind'));
+
+    // No heading over an empty carousel: the shelf goes with its last card.
+    expect(screen.queryByRole('region', { name: 'Favorites' })).toBeNull();
+    expect(
+      screen.queryByRole('heading', { level: 2, name: 'Favorites' })
+    ).toBeNull();
+  });
+
+  it('asks for the home again for neither toggle', async () => {
+    serveShelf(SHELF_ROWS, SHELF_FAVORITES, () =>
+      Promise.resolve(okResponse({ value: false }))
+    );
+    renderRows();
+    await findGenreHeading('Action');
+    expect(homeRequests()).toHaveLength(1);
+
+    fireEvent.click(shelfHeart('Lantern Road'));
+    fireEvent.click(heartIn('Action'));
+
+    await waitFor(() => expect(favoriteSaves()).toEqual(['f2', 'a1']));
+    // The screen edits what it is holding; it never reloads and never loses
+    // the reader's place on the page.
+    expect(homeRequests()).toHaveLength(1);
+  });
+
+  it('presses the shelf’s heart from the keyboard, as a genre row’s is', async () => {
+    serveShelf(SHELF_ROWS, SHELF_FAVORITES, () =>
+      Promise.resolve(okResponse({ value: false }))
+    );
+    renderRows();
+    await findGenreHeading('Action');
+
+    const heart = shelfHeart('Northwind');
+    expect(heart.tagName).toBe('BUTTON');
+
+    // Enter on the heart presses the heart. It must not open the movie behind
+    // it, exactly as in a genre row.
+    fireEvent.keyDown(heart, { key: 'Enter' });
+    fireEvent.click(heart);
+
+    expect(currentPath()).toBe('/');
+    await waitFor(() => expect(favoriteSaves()).toEqual(['a1']));
+  });
+});
