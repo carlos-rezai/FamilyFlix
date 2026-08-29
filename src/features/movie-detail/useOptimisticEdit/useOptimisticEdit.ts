@@ -40,6 +40,13 @@ export interface OptimisticEdit<V, R> {
  * (`capture`) and how to hand it back (`restore`), and both are ordinary values
  * rather than something inferred from the one being written.
  *
+ * The second difference is what each one edits: this hook edits the single
+ * movie a page is holding, `useOptimisticSave` edits a movie by id wherever a
+ * screen holds a card for it. **The two stay two** — a hook general enough for
+ * both would be parameterised over both axes at once, and neither caller is
+ * asking for that. The decision is argued in full on `useOptimisticSave`, where
+ * `07-ratings-refactor` left the question.
+ *
  * Every write goes through `editMovie` and none around it. That guard is what
  * stops a save answering after the page has moved on — a retry, a different
  * movie — from resurrecting a movie the state has already dropped.
