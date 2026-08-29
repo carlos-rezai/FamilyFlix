@@ -90,23 +90,25 @@ export function HomeRows() {
     );
   }
 
+  // Every section, as the cards it actually draws — one list, in the order the
+  // screen draws them, rather than a term per section in a growing chain. A
+  // fourth section is one entry here, beside the three it joins.
+  //
+  // What a section **renders** is the test, not what it holds. Two of these
+  // make those identical, because they draw a card per movie they were given.
+  // The shelf does not: it draws `shelvedFavorites` of its section, and the
+  // hook leaves an un-hearted movie in that section on purpose. Reading the raw
+  // length there once read a populated library off a shelf with nothing on it,
+  // skipped all three messages, and left the screen blank (74). Any future
+  // section rendering a derived view of its data joins the same rule.
+  const drawn = [rows, continueWatching, shelvedFavorites(favorites)];
+
   // An untagged movie earns no genre row, so empty rows alone don't mean an
   // empty library — something in progress is proof there are movies, and so is
   // something on the favorites shelf: a watched, untagged favorite reaches
   // neither of the other two sections. There is no action here: an empty
   // library has nothing to retry.
-  //
-  // What each section *renders* is the test, not what it holds. Two of the
-  // three make those identical, because they draw a card per movie they were
-  // given. The shelf does not: it draws `shelvedFavorites` of its section, and
-  // the hook leaves an un-hearted movie in that section on purpose. Counting
-  // the raw length there reads a populated library off a shelf with nothing on
-  // it, skips all three messages, and leaves the screen blank.
-  if (
-    rows.length === 0 &&
-    continueWatching.length === 0 &&
-    shelvedFavorites(favorites).length === 0
-  ) {
+  if (drawn.every((section) => section.length === 0)) {
     if (search !== undefined) {
       return (
         <LoadMessage
