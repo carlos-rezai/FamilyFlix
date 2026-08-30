@@ -18,6 +18,8 @@ import { createSqliteStorage } from '..';
 import { MOVIE_SORTS, type Movie, type NewMovie } from '@/types';
 import { freshStorage } from '../../test-support/freshStorage/freshStorage';
 import { newMovie } from '../../test-support/newMovie/newMovie';
+import { seedByAge } from '../../test-support/seedByAge/seedByAge';
+import { seedGenre } from '../../test-support/seedGenre/seedGenre';
 
 /** Fake timers are how these tests get distinct creation instants. */
 afterEach(() => {
@@ -25,37 +27,6 @@ afterEach(() => {
 });
 
 // --- helpers -------------------------------------------------------------------
-
-/**
- * Add `count` movies, each a day newer than the last, so `recently-added`
- * ordering is deterministic rather than tie-dependent (`created_at` is
- * repo-generated from `new Date()`). `build` shapes movie `n`, numbered from 1
- * (oldest) to `count` (newest), and receives that number zero-padded for titles.
- */
-function seedByAge(
-  storage: ReturnType<typeof createSqliteStorage>,
-  count: number,
-  build: (label: string) => Partial<NewMovie>
-): void {
-  vi.useFakeTimers();
-  for (let n = 1; n <= count; n += 1) {
-    vi.setSystemTime(new Date(Date.UTC(2026, 0, n)));
-    storage.addMovie(newMovie(build(String(n).padStart(2, '0'))));
-  }
-  vi.useRealTimers();
-}
-
-/** `count` movies in one genre, oldest first, titled `{genre} 01`…`{genre} NN`. */
-function seedGenre(
-  storage: ReturnType<typeof createSqliteStorage>,
-  genre: string,
-  count: number
-): void {
-  seedByAge(storage, count, (label) => ({
-    title: `${genre} ${label}`,
-    genres: [genre],
-  }));
-}
 
 /** `count` favorited movies, oldest first, titled `Loved 01`…`Loved NN`. */
 function seedFavorites(
