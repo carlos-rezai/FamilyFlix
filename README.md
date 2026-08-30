@@ -104,6 +104,14 @@ Three folders under `src/` sit outside the ladder, because what they hold is not
 | `App/`          | Router and providers | The shell every page renders inside. No domain logic            |
 | `test-support/` | Shared test doubles  | Never imported by shipping code                                 |
 
+`server/src/` carries the mirror of the last of those. It is otherwise organised
+strictly by domain — `library/`, `media/`, `import-export/`, with `db/` as shared
+infrastructure and no miscellaneous catch-all — and that rule is about **backend
+logic** having a domain home. Test doubles are not backend logic, so
+`server/src/test-support/` gets the same one-line rule the frontend's rung has:
+shared test doubles, one folder per unit with its test, never imported by
+shipping code.
+
 `api/` is the narrow one and the rule is what keeps it narrow: a call lives there
 only once **two or more features** make it, because the alternative is one feature
 importing another's wire. A call with a single caller stays with the feature that
@@ -141,7 +149,8 @@ familyflix/
 │       ├── library/        # movie CRUD, SQLite queries, watch-state + resume position
 │       ├── media/          # folder scanning, copying files into managed storage, subtitle detection
 │       ├── import-export/  # Excel/CSV parsing, row-to-folder matching, CSV export
-│       └── db/             # SQLite connection + schema/migrations
+│       ├── db/             # SQLite connection + schema/migrations
+│       └── test-support/   # Shared test doubles — never imported by shipping code
 ├── src/                # React frontend
 │   ├── App/            # Router and app-level providers
 │   ├── assets/         # Static images, fonts, icons
