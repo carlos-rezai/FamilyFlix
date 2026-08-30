@@ -15,7 +15,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { createSqliteStorage } from '..';
-import type { NewMovie } from '@/types';
+import { MOVIE_SORTS, type Movie, type NewMovie } from '@/types';
 
 // --- per-test resource tracking ------------------------------------------------
 
@@ -244,6 +244,12 @@ describe('library: getHome continue watching', () => {
     expect(storage.getHome().continueWatching).toEqual([]);
   });
 
+  // Reads as the section's own order, but is not: since 09 (issue #78) the
+  // continue section is pinned to `last-watched`, and `seedInProgress` writes
+  // no stamps — so what this asserts is the nulls-last fallback landing on
+  // `recently-added`'s body verbatim. It is the unstamped-library guarantee
+  // seen from 03, and the section's real order is asserted in "getHome pins the
+  // continue section's order" below.
   it('orders recently-added first', () => {
     const storage = freshStorage();
     seedInProgress(storage, 3);
@@ -257,6 +263,9 @@ describe('library: getHome continue watching', () => {
     ]);
   });
 
+  // Same caveat as above: "newest first" here is the unstamped fallback, not
+  // the pinned order. The cap under the order that actually ships is asserted
+  // by "caps at the 15 most recently watched, not the 15 most recently added".
   it('caps at the same 15 as the genre rows, newest first', () => {
     const storage = freshStorage();
     seedInProgress(storage, 20);
@@ -982,5 +991,349 @@ describe('library: getHome under a genre filter', () => {
     expect(rows).toHaveLength(1);
     expect(rows[0].genre).toBe('Drama');
     expect(rows[0].movies.map((m) => m.title)).toEqual(['Both']);
+  });
+});
+
+// --- the pinned order of the continue section ----------------------------------
+//
+// 09 — Continue Watching, Phase 3: "the shelf pins its order" (issue #78), the
+// last mile of the tracer bullet #76 and #77 laid down.
+//
+// The resume queue's order is part of what the shelf *means*, so it stops being
+// the caller's to set: `getHome` pins `last-watched` for `continueWatching`
+// while the Favorites shelf and every genre row go on obeying the header's
+// Sort. Nothing about a shelf of favorites implies an intrinsic order; a queue
+// has one. That asymmetry is deliberate — it is the whole feature.
+//
+// Everything here goes through `getHome()`, the single call `GET /api/home`
+// serves. `listSection` growing an argument is an implementation detail of this
+// module and is never touched directly.
+//
+// The stamps are written through `NewMovie.lastWatchedAt` rather than through
+// `setResumePosition`, because what is under test is the order, not the
+// mutators that feed it — those are Phase 1's, and `write.test.ts` owns them.
+// The two mutator tests below are the exceptions, and they assert what the
+// *section* does, not what the column holds.
+
+/** An in-progress movie carrying the stamp the player will one day write. */
+function started(
+  title: string,
+  lastWatchedAt: string,
+  extra: Partial<NewMovie> = {}
+): NewMovie {
+  return newMovie({
+    title,
+    resumePositionSeconds: 600,
+    lastWatchedAt,
+    ...extra,
+  });
+}
+
+/**
+ * Three in-progress films whose last-watched order is the reverse of every
+ * order the Sort dropdown can name.
+ *
+ * Stamps run Charlie → Bravo → Alpha, most recent first. Creation instant,
+ * title, year and rating all run Alpha → Bravo → Charlie, and all three are
+ * in-progress so `unwatched-first` falls to its title tiebreak — so each of the
+ * five wire sorts puts these films in the exact opposite order to the shelf's
+ * own. Each is favorited and tagged Drama, so all three sections hold the same
+ * three films and the only thing that can differ between them is the order.
+ */
+function seedQueueAgainstEverySort(
+  storage: ReturnType<typeof createSqliteStorage>
+): void {
+  const films = [
+    { title: 'Charlie', year: 2000, rating: 2, watched: '2026-06-03' },
+    { title: 'Bravo', year: 2010, rating: 6, watched: '2026-06-02' },
+    { title: 'Alpha', year: 2020, rating: 10, watched: '2026-06-01' },
+  ];
+
+  vi.useFakeTimers();
+  films.forEach((film, index) => {
+    vi.setSystemTime(new Date(Date.UTC(2026, 0, index + 1)));
+    storage.addMovie(
+      started(film.title, `${film.watched}T00:00:00.000Z`, {
+        year: film.year,
+        rating: film.rating,
+        genres: ['Drama'],
+        isFavorite: true,
+      })
+    );
+  });
+  vi.useRealTimers();
+}
+
+/**
+ * The same three-film queue without the favorites, genres, years and ratings —
+ * stamps running Charlie → Bravo → Alpha, creation instants running the other
+ * way, returned in stamp order. Staggering the instants is what makes these
+ * tests deterministic: `created_at` ties would leave the order to
+ * `recently-added`'s random-uuid tiebreak.
+ */
+function seedQueue(storage: ReturnType<typeof createSqliteStorage>): {
+  charlie: Movie;
+  bravo: Movie;
+  alpha: Movie;
+} {
+  vi.useFakeTimers();
+  vi.setSystemTime(new Date('2026-01-01T00:00:00.000Z'));
+  const charlie = storage.addMovie(
+    started('Charlie', '2026-06-03T00:00:00.000Z')
+  );
+  vi.setSystemTime(new Date('2026-01-02T00:00:00.000Z'));
+  const bravo = storage.addMovie(started('Bravo', '2026-06-02T00:00:00.000Z'));
+  vi.setSystemTime(new Date('2026-01-03T00:00:00.000Z'));
+  const alpha = storage.addMovie(started('Alpha', '2026-06-01T00:00:00.000Z'));
+  vi.useRealTimers();
+
+  return { charlie, bravo, alpha };
+}
+
+describe('library: getHome pins the continue section’s order', () => {
+  // The demoable case is `a-z`: pick "A–Z" from Sort and the row holds its
+  // order while the Favorites shelf and every genre row alphabetise underneath
+  // it. The other four are the same claim, so the whole wire vocabulary is
+  // asserted at once — and a sixth option added to `MOVIE_SORTS` without a
+  // thought for this shelf lands here as a new failing case rather than as
+  // silence.
+  it.each([...MOVIE_SORTS])(
+    'holds last-watched-first under sort=%s, while the favorites shelf and the genre rows obey it',
+    (sort) => {
+      const storage = freshStorage();
+      seedQueueAgainstEverySort(storage);
+
+      const home = storage.getHome({ sort });
+
+      expect(home.continueWatching.map((m) => m.title)).toEqual([
+        'Charlie',
+        'Bravo',
+        'Alpha',
+      ]);
+      // Every one of the five sorts ranks these three the other way round, so
+      // the shelf and the rows disagreeing is the assertion.
+      expect(home.favorites.map((m) => m.title)).toEqual([
+        'Alpha',
+        'Bravo',
+        'Charlie',
+      ]);
+      expect(home.rows.map((row) => row.genre)).toEqual(['Drama']);
+      expect(home.rows[0].movies.map((m) => m.title)).toEqual([
+        'Alpha',
+        'Bravo',
+        'Charlie',
+      ]);
+    }
+  );
+
+  it('leads with the film stamped last night over one stamped weeks ago, whichever was added first', () => {
+    const storage = freshStorage();
+
+    // Import order is the adversary: the film watched weeks ago is the one
+    // added most recently, so the old `recently-added` shelf led with it.
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-01-01T00:00:00.000Z'));
+    storage.addMovie(started('Last Night', '2026-06-03T00:00:00.000Z'));
+    vi.setSystemTime(new Date('2026-01-03T00:00:00.000Z'));
+    storage.addMovie(started('Weeks Ago', '2026-05-01T00:00:00.000Z'));
+    vi.useRealTimers();
+
+    const { continueWatching } = storage.getHome();
+
+    expect(continueWatching.map((m) => m.title)).toEqual([
+      'Last Night',
+      'Weeks Ago',
+    ]);
+  });
+
+  it('does not move a film when it is favorited or re-rated', () => {
+    const storage = freshStorage();
+    const { bravo, alpha } = seedQueue(storage);
+
+    // Tidying up the library is not watching it. This is the reason the column
+    // is `last_watched_at` and not `updated_at`.
+    storage.setFavorite(alpha.id, true);
+    storage.setRating(bravo.id, 10);
+
+    expect(storage.getHome().continueWatching.map((m) => m.title)).toEqual([
+      'Charlie',
+      'Bravo',
+      'Alpha',
+    ]);
+  });
+
+  it('still drops a film from the section entirely once it is marked watched', () => {
+    const storage = freshStorage();
+    const { bravo } = seedQueue(storage);
+
+    // `markWatched` stamps as well as zeroing the resume position, so a film
+    // that leaves the shelf must not reappear at the head of it.
+    storage.markWatched(bravo.id);
+
+    expect(storage.getHome().continueWatching.map((m) => m.title)).toEqual([
+      'Charlie',
+      'Alpha',
+    ]);
+  });
+
+  it('reorders nothing when a film is un-marked as watched', () => {
+    const storage = freshStorage();
+    const { alpha } = seedQueue(storage);
+    const before = storage.getHome().continueWatching;
+
+    // The film at the *back* of the queue, so a stamp written here would send
+    // it to the front and the order alone would catch it.
+    storage.markUnwatched(alpha.id);
+
+    const after = storage.getHome().continueWatching;
+    expect(after.map((m) => m.title)).toEqual(['Charlie', 'Bravo', 'Alpha']);
+    // Whole assembled models: correcting a mis-tap changes nothing at all.
+    expect(after).toEqual(before);
+  });
+
+  it('still drops an in-progress film that fails the search term, and keeps the order among the rest', () => {
+    const storage = freshStorage();
+    storage.addMovie(started('Zed Comic', '2026-06-03T00:00:00.000Z'));
+    storage.addMovie(started('Weepie', '2026-06-02T00:00:00.000Z'));
+    storage.addMovie(started('Comic Alpha', '2026-06-01T00:00:00.000Z'));
+
+    // A filter answers *which* films are on the shelf; the order is the
+    // shelf's own. The film the search drops sits between the two survivors,
+    // and A–Z would swap them.
+    const { continueWatching } = storage.getHome({
+      sort: 'a-z',
+      search: 'comic',
+    });
+
+    expect(continueWatching.map((m) => m.title)).toEqual([
+      'Zed Comic',
+      'Comic Alpha',
+    ]);
+  });
+
+  it('still drops an in-progress film that fails the genre filter, and keeps the order among the rest', () => {
+    const storage = freshStorage();
+    storage.addMovie(
+      started('Zed Drama', '2026-06-03T00:00:00.000Z', { genres: ['Drama'] })
+    );
+    storage.addMovie(
+      started('Comic Caper', '2026-06-02T00:00:00.000Z', { genres: ['Comedy'] })
+    );
+    storage.addMovie(
+      started('Alpha Drama', '2026-06-01T00:00:00.000Z', { genres: ['Drama'] })
+    );
+
+    const { continueWatching } = storage.getHome({
+      sort: 'a-z',
+      genre: 'Drama',
+    });
+
+    expect(continueWatching.map((m) => m.title)).toEqual([
+      'Zed Drama',
+      'Alpha Drama',
+    ]);
+  });
+
+  it('still drops an in-progress film that fails the rating minimum, and keeps the order among the rest', () => {
+    const storage = freshStorage();
+    storage.addMovie(
+      started('Zed Great', '2026-06-03T00:00:00.000Z', { rating: 10 })
+    );
+    storage.addMovie(
+      started('Weepie Poor', '2026-06-02T00:00:00.000Z', { rating: 2 })
+    );
+    storage.addMovie(
+      started('Alpha Great', '2026-06-01T00:00:00.000Z', { rating: 8 })
+    );
+
+    const { continueWatching } = storage.getHome({
+      sort: 'a-z',
+      minRating: 6,
+    });
+
+    expect(continueWatching.map((m) => m.title)).toEqual([
+      'Zed Great',
+      'Alpha Great',
+    ]);
+  });
+
+  it('caps at the 15 most recently watched, not the 15 most recently added', () => {
+    const storage = freshStorage();
+
+    // Deliberately adversarial: import order runs exactly opposite to watch
+    // order, so `Started 16` is the film added most recently *and* the film
+    // watched longest ago. A cap taken over `recently-added` and then
+    // re-sorted in JavaScript leads with it; the right shelf leaves it off.
+    vi.useFakeTimers();
+    for (let n = 1; n <= 16; n += 1) {
+      vi.setSystemTime(new Date(Date.UTC(2026, 0, n)));
+      const label = String(n).padStart(2, '0');
+      const day = String(17 - n).padStart(2, '0');
+      storage.addMovie(
+        started(`Started ${label}`, `2026-06-${day}T00:00:00.000Z`)
+      );
+    }
+    vi.useRealTimers();
+
+    const { continueWatching } = storage.getHome();
+
+    expect(continueWatching).toHaveLength(15);
+    expect(continueWatching.map((m) => m.title)).toEqual([
+      'Started 01',
+      'Started 02',
+      'Started 03',
+      'Started 04',
+      'Started 05',
+      'Started 06',
+      'Started 07',
+      'Started 08',
+      'Started 09',
+      'Started 10',
+      'Started 11',
+      'Started 12',
+      'Started 13',
+      'Started 14',
+      'Started 15',
+    ]);
+    // The 16th most recently watched is off the shelf, recently added or not.
+    expect(continueWatching.map((m) => m.title)).not.toContain('Started 16');
+  });
+
+  it('is empty when nothing is in progress, whatever the caller’s sort', () => {
+    const storage = freshStorage();
+    const finished = storage.addMovie(
+      started('Finished', '2026-06-03T00:00:00.000Z', { genres: ['Drama'] })
+    );
+    storage.markWatched(finished.id);
+    storage.addMovie(newMovie({ title: 'Untouched', genres: ['Drama'] }));
+
+    const home = storage.getHome({ sort: 'a-z' });
+
+    // Pinning the order must not conjure a shelf out of a library with no
+    // queue in it — the row stays hidden (`HomeRows.test.tsx`).
+    expect(home.continueWatching).toEqual([]);
+    expect(home.rows.map((row) => row.genre)).toEqual(['Drama']);
+  });
+
+  it('returns exactly today’s section, in today’s order, for a library where nothing has been stamped', () => {
+    const storage = freshStorage();
+    seedInProgress(storage, 3); // no stamps: `lastWatchedAt` is null throughout
+
+    const { continueWatching } = storage.getHome();
+
+    expect(continueWatching.map((m) => m.title)).toEqual([
+      'Started 03',
+      'Started 02',
+      'Started 01',
+    ]);
+    // Whole assembled models against the shelf as it is built today, so the
+    // change is invisible until it has something to say. 15 is HOME_ROW_LIMIT.
+    expect(continueWatching).toEqual(
+      storage.listMovies({
+        sort: 'recently-added',
+        inProgressOnly: true,
+        limit: 15,
+      })
+    );
   });
 });
