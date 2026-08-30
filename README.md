@@ -272,7 +272,7 @@ Builds the installer and publishes it to GitHub Releases automatically.
 | Sort (recent, A–Z, year, rating, unwatched)         | ✅ Done         |
 | Ratings — 5-star display + half-star picker         | ✅ Done         |
 | Favorites — mark + dedicated row                    | ✅ Done         |
-| Continue Watching row                               | 🔜 Planned      |
+| Continue Watching row                               | ✅ Done         |
 | Built-in video player (playback, subtitles)         | 🔜 Planned      |
 | Watch tracking (watched / in-progress / resume)     | 🔜 Planned      |
 | Add Movie — manual file picker                      | 🔜 Planned      |
