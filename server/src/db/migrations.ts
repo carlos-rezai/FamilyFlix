@@ -95,4 +95,24 @@ export const migrations: readonly Migration[] = [
       }
     },
   },
+  {
+    // The last-watched stamp that orders the Continue Watching row. Added here
+    // rather than in `V1_SCHEMA` so every existing dev database gains the
+    // column instead of silently lacking it, and with no backfill: an existing
+    // row migrates to NULL, which means "never watched, as far as we
+    // recorded". Borrowing `updated_at` would invent a watch history.
+    //
+    // The index is partial, the same shape `idx_movies_is_favorite` uses —
+    // only the rows that carry a stamp are worth indexing, and they are the
+    // only ones the resume shelf orders by.
+    version: 2,
+    up(db) {
+      db.exec(`
+        ALTER TABLE movies ADD COLUMN last_watched_at TEXT;
+
+        CREATE INDEX idx_movies_last_watched_at ON movies(last_watched_at)
+          WHERE last_watched_at IS NOT NULL;
+      `);
+    },
+  },
 ];

@@ -21,6 +21,7 @@ export interface MovieRow {
   backdrop_path: string | null;
   created_at: string;
   updated_at: string;
+  last_watched_at: string | null;
 }
 
 export interface GenreRow {
@@ -78,6 +79,7 @@ export function mapRowToMovie(
     subtitles,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+    lastWatchedAt: row.last_watched_at,
   };
 }
 

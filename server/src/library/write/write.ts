@@ -50,11 +50,11 @@ export function createWrite(db: SqliteDatabase, reader: MovieReader): Write {
     INSERT INTO movies (
       id, tmdb_id, title, year, runtime_minutes, synopsis, director, cast,
       rating, is_favorite, watched, resume_position_seconds, video_path,
-      poster_path, backdrop_path, created_at, updated_at
+      poster_path, backdrop_path, created_at, updated_at, last_watched_at
     ) VALUES (
       @id, @tmdb_id, @title, @year, @runtime_minutes, @synopsis, @director, @cast,
       @rating, @is_favorite, @watched, @resume_position_seconds, @video_path,
-      @poster_path, @backdrop_path, @created_at, @updated_at
+      @poster_path, @backdrop_path, @created_at, @updated_at, @last_watched_at
     )
   `);
   const selectGenreIdByName = db.prepare(
@@ -96,6 +96,10 @@ export function createWrite(db: SqliteDatabase, reader: MovieReader): Write {
       backdrop_path: input.backdropPath ?? null,
       created_at: now,
       updated_at: now,
+      // Carried in when supplied (bulk import brings watch history over), NULL
+      // otherwise — an added movie has not been watched by us. Never `now`:
+      // adding a movie is not watching it.
+      last_watched_at: input.lastWatchedAt ?? null,
     });
 
     input.genres?.forEach((name, position) => {

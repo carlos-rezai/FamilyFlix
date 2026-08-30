@@ -67,6 +67,11 @@ function seedVideoPath(slug: string): string {
  *   case that renders the elapsed-only label and the nominal progress sliver.
  * - **One is in progress and carries no genre tags** (`Reel 4, Unlabelled`), so
  *   it earns no genre row and appears in Continue Watching alone.
+ * - **Every in-progress fixture carries its own `lastWatchedAt` stamp**, spread
+ *   over the past few weeks rather than sharing one instant. Nothing orders by
+ *   the column yet, but when the Continue Watching row does, staggered stamps
+ *   are what make that order visible by looking at the app instead of only by
+ *   reading a test — the whole reason this seed exists.
  * - **Three are watched**, which is the poster card's badge state, and the rest
  *   are unwatched, which is its plain state.
  * - **Three are favorites**, so the heart is visible somewhere on the screen.
@@ -122,6 +127,7 @@ export const SEED_MOVIES: readonly NewMovie[] = [
     genres: ['Action', 'Adventure'],
     rating: 8,
     resumePositionSeconds: 3120,
+    lastWatchedAt: '2026-08-29T21:40:00.000Z',
   },
   {
     title: 'Ironclad Sky',
@@ -140,6 +146,7 @@ export const SEED_MOVIES: readonly NewMovie[] = [
     genres: ['Action', 'Sci-Fi'],
     rating: 9,
     resumePositionSeconds: 5100,
+    lastWatchedAt: '2026-08-28T22:05:00.000Z',
   },
   {
     title: 'Midnight Errand',
@@ -266,6 +273,7 @@ export const SEED_MOVIES: readonly NewMovie[] = [
     genres: ['Action', 'Thriller'],
     rating: 7,
     resumePositionSeconds: 1200,
+    lastWatchedAt: '2026-08-26T20:15:00.000Z',
   },
   {
     // Uncredited on both counts: the detail page drops the credits row entirely
@@ -360,6 +368,7 @@ export const SEED_MOVIES: readonly NewMovie[] = [
     genres: ['Documentary'],
     rating: 7,
     resumePositionSeconds: 1500,
+    lastWatchedAt: '2026-08-23T21:00:00.000Z',
   },
   {
     title: 'Glasshouse',
@@ -374,6 +383,7 @@ export const SEED_MOVIES: readonly NewMovie[] = [
     genres: ['Horror', 'Thriller'],
     rating: 6,
     resumePositionSeconds: 900,
+    lastWatchedAt: '2026-08-19T19:30:00.000Z',
   },
   {
     title: 'Cardboard Kings',
@@ -417,6 +427,7 @@ export const SEED_MOVIES: readonly NewMovie[] = [
     genres: ['Sci-Fi', 'Thriller'],
     rating: 8,
     resumePositionSeconds: 2460,
+    lastWatchedAt: '2026-08-14T22:20:00.000Z',
   },
   {
     // No genres at all: earns no genre row, so Continue Watching is the only
@@ -427,6 +438,7 @@ export const SEED_MOVIES: readonly NewMovie[] = [
     year: 2005,
     runtimeMinutes: 42,
     resumePositionSeconds: 600,
+    lastWatchedAt: '2026-08-07T20:45:00.000Z',
   },
 ];
 

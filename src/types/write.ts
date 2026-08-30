@@ -28,6 +28,10 @@ export interface NewMovie {
   isFavorite?: boolean;
   watched?: boolean;
   resumePositionSeconds?: number;
+  /** An ISO watch stamp carried in with the record — what lets bulk import
+   *  bring watch history over rather than flattening it. Omitted, the movie
+   *  reads back as never watched. */
+  lastWatchedAt?: string;
   posterPath?: string;
   backdropPath?: string;
   genres?: string[];

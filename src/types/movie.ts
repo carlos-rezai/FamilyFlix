@@ -45,4 +45,8 @@ export interface Movie {
   subtitles: Subtitle[];
   createdAt: string;
   updatedAt: string;
+  /** When the movie was last watched, or `null` if it never was. Written only
+   *  by the watch mutators (`setResumePosition`, `markWatched`); never by an
+   *  ordinary edit. */
+  lastWatchedAt: string | null;
 }
