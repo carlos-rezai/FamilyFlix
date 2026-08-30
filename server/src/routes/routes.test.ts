@@ -521,6 +521,10 @@ function addSortableLibrary(storage: LibraryStorage): void {
     title: 'Backwater',
     videoPath: 'Backwater/backwater.mkv',
     resumePositionSeconds: 300,
+    // Stamped by 09 (issue #78): the two in-progress films carry watch times,
+    // so the continue section's pinned order is something a request can be
+    // asked to disturb — and shown not to.
+    lastWatchedAt: '2026-06-01T00:00:00.000Z',
     genres: ['Horror'],
   });
 
@@ -530,6 +534,7 @@ function addSortableLibrary(storage: LibraryStorage): void {
     videoPath: 'Meridian/meridian.mkv',
     rating: 9,
     resumePositionSeconds: 600,
+    lastWatchedAt: '2026-06-03T00:00:00.000Z',
     genres: ['Drama'],
   });
 
@@ -635,18 +640,39 @@ describe('GET /api/home?sort=', () => {
     ]);
   });
 
-  it('orders the continue section by the same sort as the rows', async () => {
+  // Rewritten by 09 (issue #78). This used to assert that the continue section
+  // took the request's sort like every other section. It no longer does: the
+  // resume queue's order is part of what that shelf means, so `?sort=` narrows
+  // and reorders the rest of the screen and leaves the queue alone. What this
+  // guards now is that the pin survives the wire — the route is a passthrough,
+  // and the full order matrix is `home.test.ts`'s.
+  it('leaves the continue section in its own order whatever sort is asked for', async () => {
     const { storage, baseUrl } = freshApi();
     addSortableLibrary(storage);
+    // A third in-progress film, watched between the other two but added after
+    // both, so last-watched order differs from A–Z *and* from recently-added.
+    storage.addMovie({
+      title: 'Nightjar',
+      videoPath: 'Nightjar/nightjar.mkv',
+      resumePositionSeconds: 900,
+      lastWatchedAt: '2026-06-02T00:00:00.000Z',
+      genres: ['Horror'],
+    });
 
     const response = await homeResponse(baseUrl, { sort: 'a-z' });
     const home = (await response.json()) as HomePayload;
 
-    // One query, one order — the top of the screen cannot disagree with the
-    // rest of it about what A–Z means.
+    // Most recently watched first — not A–Z (Backwater, Meridian, Nightjar),
+    // and not recently-added (Nightjar, Meridian, Backwater) either.
     expect(home.continueWatching.map((m) => m.title)).toEqual([
-      'Backwater',
       'Meridian',
+      'Nightjar',
+      'Backwater',
+    ]);
+    // The sort the request did ask for still lands everywhere else.
+    expect(home.rows.map((row) => row.movies.map((m) => m.title))).toEqual([
+      ['apple Grove', 'Meridian', 'Zephyr'],
+      ['Backwater', 'Nightjar'],
     ]);
   });
 

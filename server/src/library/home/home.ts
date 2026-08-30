@@ -3,6 +3,7 @@ import {
   type HomePayload,
   type LibraryQuery,
   type HomeRow,
+  type ListSort,
   type Movie,
 } from '@/types';
 import type { Browse } from '../browse/browse';
@@ -27,6 +28,13 @@ const DEFAULT_LIBRARY_QUERY: LibraryQuery = { sort: DEFAULT_MOVIE_SORT };
  * as a third flag here.
  */
 type SectionFlag = 'inProgressOnly' | 'favoritesOnly';
+
+/**
+ * The order the resume queue is always built in, whatever the header's Sort
+ * says. Named here rather than written inline at the call, because it is the
+ * one thing about the continue section that is not the caller's to set.
+ */
+const CONTINUE_SORT: ListSort = 'last-watched';
 
 /** The home-screen aggregate: the whole browse payload in one call. */
 export interface Home {
@@ -54,22 +62,32 @@ export interface Home {
  * hold builds no row rather than an empty one.
  *
  * `continueWatching` is the same browse query narrowed to in-progress movies —
- * started but not finished, since `markWatched` zeroes the resume position — in
- * the same recently-added order and under the same cap. It is built
- * independently of the rows, so a movie part-way through appears in both, and
- * an untagged one appears here even though it earns no row.
+ * started but not finished, since `markWatched` zeroes the resume position —
+ * under the same cap, but in its own {@link CONTINUE_SORT} order rather than
+ * the caller's. It is built independently of the rows, so a movie part-way
+ * through appears in both, and an untagged one appears here even though it
+ * earns no row.
  *
  * `favorites` is that same shape again with a different flag: the caller's
- * query narrowed to `favoritesOnly`, same order, same cap. It too is built
+ * query narrowed to `favoritesOnly`, in the caller's own sort, same cap. It too
+ * is built
  * independently, so a favorite still appears in each of its genre rows and in
  * the continue section if it is part-way through, and a favorite with no genre
  * tags is on the shelf even though it earns no row.
  *
- * Every section is built from the one {@link LibraryQuery}, so the top of the
- * screen can never disagree with the rest of it: each section adds only what
- * makes it that section (a `genre` for a row, `inProgressOnly` for continue,
- * `favoritesOnly` for the shelf, and the shared cap) on top of the caller's
- * filters and sort. A row whose movies all failed the query is dropped rather
+ * Every section is **filtered** by the one {@link LibraryQuery}, so the top of
+ * the screen can never disagree with the rest of it: each section adds only
+ * what makes it that section (a `genre` for a row, `inProgressOnly` for
+ * continue, `favoritesOnly` for the shelf, and the shared cap) on top of the
+ * caller's filters. A filter answers *which* movies are on a shelf, and that
+ * answer is the whole screen's to give.
+ *
+ * The **sort** is not quite so uniform, and deliberately so: the continue
+ * section pins {@link CONTINUE_SORT} while every other section takes the
+ * caller's. A resume queue's order is part of what that shelf *means* — it is
+ * the queue — so it is not the header's to reorder. Nothing about a shelf of
+ * favorites, or a row of a genre, implies an intrinsic order, so those keep
+ * obeying Sort. A row whose movies all failed the query is dropped rather
  * than rendered blank — a screenful of empty rows is not an answer. Its `count`
  * still comes from `listGenres()`, so "View all {count}" keeps reporting the
  * genre's unfiltered total however far the query narrows the row.
@@ -99,21 +117,38 @@ export function createHome(browse: Browse): Home {
 
   /**
    * One flat section: the caller's query, narrowed by the single flag that
-   * makes it the section it is, in the same order and under the same cap. Both
-   * of them are that composition and nothing else, so it is written once —
-   * which is also what this module's own contract says every section is.
+   * makes it the section it is, in the order that section is built in, under
+   * the shared cap. Both of them are that composition and nothing else, so it
+   * is written once.
+   *
+   * The sort sits beside the flag because the two are the same kind of thing —
+   * what makes this section that section — and the caller's own sort is only
+   * one of the answers. The `sort` therefore overrides the one `query` carries
+   * rather than merging with it.
    *
    * `listRows` is genuinely a different shape and stays its own function: it
    * fans out over genres and drops the ones that matched nothing.
    */
-  function listSection(query: LibraryQuery, only: SectionFlag): Movie[] {
-    return browse.listMovies({ ...query, [only]: true, limit: HOME_ROW_LIMIT });
+  function listSection(
+    query: LibraryQuery,
+    only: SectionFlag,
+    sort: ListSort
+  ): Movie[] {
+    return browse.listMovies({
+      ...query,
+      [only]: true,
+      sort,
+      limit: HOME_ROW_LIMIT,
+    });
   }
 
   function getHome(query: LibraryQuery = DEFAULT_LIBRARY_QUERY): HomePayload {
     return {
-      continueWatching: listSection(query, 'inProgressOnly'),
-      favorites: listSection(query, 'favoritesOnly'),
+      // The two calls differ in their third argument, and that asymmetry is
+      // the feature: the resume queue orders itself, the favorites shelf obeys
+      // the header. See this module's contract above for why.
+      continueWatching: listSection(query, 'inProgressOnly', CONTINUE_SORT),
+      favorites: listSection(query, 'favoritesOnly', query.sort),
       rows: listRows(query),
     };
   }
