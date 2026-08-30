@@ -36,7 +36,14 @@ export interface SubtitleRow {
   position: number;
 }
 
-/** Derive the three-way watch status from the two stored facts. */
+/**
+ * Derive the three-way watch status from the two stored facts.
+ *
+ * The same rule exists in SQL as `IN_PROGRESS` in `browse/`, which is what
+ * narrows the Continue Watching row and ranks `unwatched-first`. Deliberately
+ * two implementations: that one chooses which rows the database returns, this
+ * one labels a row already in hand. Change one and check the other.
+ */
 export function deriveStatus(
   watched: boolean,
   resumePositionSeconds: number

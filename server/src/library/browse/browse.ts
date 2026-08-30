@@ -3,6 +3,22 @@ import type { GenreCount, ListSort, Movie, MovieQuery } from '@/types';
 import type { MovieReader, MovieRow } from '../read/read';
 
 /**
+ * "Started but not finished" — the rule the Continue Watching row is defined by,
+ * written once and read twice below: it narrows the row set for
+ * `inProgressOnly`, and it is the middle rank of `unwatched-first`.
+ *
+ * Its TypeScript twin is `deriveStatus` in `read/`. Same rule, two languages,
+ * two jobs: this one decides which rows the database returns, that one derives a
+ * display status from a row already in hand. They stay separate on purpose —
+ * merging them would put SQL text and TypeScript branching in one module — so
+ * this cross-reference is what makes each findable from the other.
+ */
+const IN_PROGRESS = 'm.watched = 0 AND m.resume_position_seconds > 0';
+
+/** `recently-added`'s body, named because `last-watched` ends with it. */
+const RECENTLY_ADDED = 'm.created_at DESC, m.id';
+
+/**
  * Each {@link ListSort} mapped to its `ORDER BY` body (over the `movies m`
  * alias). `null` year/rating/stamp sort last via the `IS NULL` leading key; the
  * `unwatched-first` rank groups unwatched (0) → in-progress (1) → watched (2),
@@ -13,19 +29,21 @@ import type { MovieReader, MovieRow } from '../read/read';
  * body exists.
  */
 const ORDER_BY: Record<ListSort, string> = {
-  'recently-added': 'm.created_at DESC, m.id',
+  'recently-added': RECENTLY_ADDED,
   'a-z': 'm.title COLLATE NOCASE ASC',
   year: 'm.year IS NULL, m.year DESC, m.title COLLATE NOCASE',
   'highest-rated': 'm.rating IS NULL, m.rating DESC, m.title COLLATE NOCASE',
   'unwatched-first':
-    'CASE WHEN m.watched = 1 THEN 2 WHEN m.resume_position_seconds > 0 THEN 1 ELSE 0 END, m.title COLLATE NOCASE',
+    `CASE WHEN m.watched = 1 THEN 2 WHEN ${IN_PROGRESS} THEN 1 ELSE 0 END, ` +
+    'm.title COLLATE NOCASE',
   // Never watched is not "watched at the dawn of time" — an unstamped movie is
   // not in the queue at all, so the `IS NULL` leading key sinks it below a film
-  // last touched years ago rather than letting a NULL win the DESC. The tail is
-  // `recently-added`'s body verbatim: with nothing stamped this order *is* that
-  // one, down to the id tiebreak.
-  'last-watched':
-    'm.last_watched_at IS NULL, m.last_watched_at DESC, m.created_at DESC, m.id',
+  // last touched years ago rather than letting a NULL win the DESC.
+  //
+  // The tail is `recently-added`'s body itself, not a copy of it: with nothing
+  // stamped this order *is* that one, down to the id tiebreak, and composing it
+  // is what keeps that true when someone edits `recently-added`.
+  'last-watched': `m.last_watched_at IS NULL, m.last_watched_at DESC, ${RECENTLY_ADDED}`,
 };
 
 /**
@@ -77,7 +95,7 @@ function buildListQuery(query: MovieQuery): {
     where.push('m.is_favorite = 1');
   }
   if (query.inProgressOnly) {
-    where.push('m.watched = 0 AND m.resume_position_seconds > 0');
+    where.push(IN_PROGRESS);
   }
 
   const whereClause = where.length > 0 ? `WHERE ${where.join(' AND ')}` : '';
