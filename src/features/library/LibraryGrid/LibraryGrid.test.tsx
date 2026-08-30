@@ -6,27 +6,13 @@ import { LibraryGrid, type LibraryGridProps } from './LibraryGrid';
 import { CARD_WIDTH } from '../CardCarousel/CardCarousel.styles';
 import { theme } from '@/styles/theme';
 import type { PosterCardMovie } from '@/types';
-
-function makeMovie(overrides: Partial<PosterCardMovie> = {}): PosterCardMovie {
-  return {
-    id: 'm1',
-    title: 'Comet Season',
-    posterUrl: null,
-    g1: '#1f2a3a',
-    g2: '#3a6a8a',
-    rating: 80,
-    watched: false,
-    progress: 0,
-    favorite: false,
-    ...overrides,
-  };
-}
+import { makePosterCardMovie } from '@/test-support/makePosterCardMovie/makePosterCardMovie';
 
 /** Three of a genre's movies — the grid is handed the whole set, never a cap. */
 const MOVIES: PosterCardMovie[] = [
-  makeMovie({ id: 'a1', title: 'Northwind' }),
-  makeMovie({ id: 'a2', title: 'Ironclad', favorite: true }),
-  makeMovie({ id: 'a3', title: 'Deep Harbour', watched: true }),
+  makePosterCardMovie({ id: 'a1', title: 'Northwind' }),
+  makePosterCardMovie({ id: 'a2', title: 'Ironclad', favorite: true }),
+  makePosterCardMovie({ id: 'a3', title: 'Deep Harbour', watched: true }),
 ];
 
 function renderGrid(props: Partial<LibraryGridProps> = {}) {

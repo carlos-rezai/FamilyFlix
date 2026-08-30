@@ -4,22 +4,8 @@ import { ThemeProvider } from 'styled-components';
 
 import { GenreRow, type GenreRowProps } from './GenreRow';
 import { theme } from '@/styles/theme';
-import type { GenreRowModel, PosterCardMovie } from '@/types';
-
-function makeMovie(overrides: Partial<PosterCardMovie> = {}): PosterCardMovie {
-  return {
-    id: 'm1',
-    title: 'Comet Season',
-    posterUrl: null,
-    g1: '#1f2a3a',
-    g2: '#3a6a8a',
-    rating: 80,
-    watched: false,
-    progress: 0,
-    favorite: false,
-    ...overrides,
-  };
-}
+import type { GenreRowModel } from '@/types';
+import { makePosterCardMovie } from '@/test-support/makePosterCardMovie/makePosterCardMovie';
 
 /**
  * Two cards, but a genre total of 214 — the row is handed the **true total**,
@@ -29,8 +15,8 @@ const ACTION: GenreRowModel = {
   genre: 'Action',
   count: 214,
   movies: [
-    makeMovie({ id: 'a1', title: 'Northwind' }),
-    makeMovie({ id: 'a2', title: 'Ironclad', favorite: true }),
+    makePosterCardMovie({ id: 'a1', title: 'Northwind' }),
+    makePosterCardMovie({ id: 'a2', title: 'Ironclad', favorite: true }),
   ],
 };
 

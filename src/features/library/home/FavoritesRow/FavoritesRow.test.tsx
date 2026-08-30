@@ -5,26 +5,22 @@ import { ThemeProvider } from 'styled-components';
 import { FavoritesRow, type FavoritesRowProps } from './FavoritesRow';
 import { theme } from '@/styles/theme';
 import type { PosterCardMovie } from '@/types';
+import { makePosterCardMovie } from '@/test-support/makePosterCardMovie/makePosterCardMovie';
 
-function makeMovie(overrides: Partial<PosterCardMovie> = {}): PosterCardMovie {
-  return {
-    id: 'm1',
-    title: 'Comet Season',
-    posterUrl: null,
-    g1: '#1f2a3a',
-    g2: '#3a6a8a',
-    rating: 80,
-    watched: false,
-    progress: 0,
-    favorite: true,
-    ...overrides,
-  };
+/**
+ * Every tile on this shelf is favorited — that is what puts it here, and the
+ * heart the row renders is the one thing the row is about.
+ */
+function makeFavorite(
+  overrides: Partial<PosterCardMovie> = {}
+): PosterCardMovie {
+  return makePosterCardMovie({ favorite: true, ...overrides });
 }
 
 /** Two favorites — enough that "the card that was opened" is never ambiguous. */
 const FAVORITES: PosterCardMovie[] = [
-  makeMovie({ id: 'a1', title: 'Northwind' }),
-  makeMovie({ id: 'a2', title: 'Ironclad' }),
+  makeFavorite({ id: 'a1', title: 'Northwind' }),
+  makeFavorite({ id: 'a2', title: 'Ironclad' }),
 ];
 
 function renderRow(props: Partial<FavoritesRowProps> = {}) {
@@ -256,8 +252,8 @@ describe('FavoritesRow — pruning the shelf', () => {
     // optimistically un-hearted movie can stay in state and leave the shelf.
     renderRow({
       movies: [
-        makeMovie({ id: 'a1', title: 'Northwind', favorite: true }),
-        makeMovie({ id: 'n1', title: 'Stray Signal', favorite: false }),
+        makeFavorite({ id: 'a1', title: 'Northwind', favorite: true }),
+        makeFavorite({ id: 'n1', title: 'Stray Signal', favorite: false }),
       ],
     });
 
@@ -272,8 +268,8 @@ describe('FavoritesRow — pruning the shelf', () => {
   it('renders nothing at all when handed only non-favorites', () => {
     const { container } = renderRow({
       movies: [
-        makeMovie({ id: 'n1', title: 'Stray Signal', favorite: false }),
-        makeMovie({ id: 'n2', title: 'Paper Moon', favorite: false }),
+        makeFavorite({ id: 'n1', title: 'Stray Signal', favorite: false }),
+        makeFavorite({ id: 'n2', title: 'Paper Moon', favorite: false }),
       ],
     });
 
@@ -283,9 +279,9 @@ describe('FavoritesRow — pruning the shelf', () => {
 
   it('drops a card the instant its flag goes false, and the rest reflow in order', () => {
     const three = [
-      makeMovie({ id: 'a1', title: 'Northwind' }),
-      makeMovie({ id: 'a2', title: 'Ironclad' }),
-      makeMovie({ id: 'a3', title: 'Lantern Road' }),
+      makeFavorite({ id: 'a1', title: 'Northwind' }),
+      makeFavorite({ id: 'a2', title: 'Ironclad' }),
+      makeFavorite({ id: 'a3', title: 'Lantern Road' }),
     ];
     const { rerender } = renderRow({ movies: three });
     expect(cardTitles()).toEqual(['Northwind', 'Ironclad', 'Lantern Road']);

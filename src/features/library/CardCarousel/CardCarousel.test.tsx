@@ -10,21 +10,7 @@ import {
 } from './CardCarousel';
 import { theme } from '@/styles/theme';
 import type { ContinueCardMovie, PosterCardMovie } from '@/types';
-
-function makeMovie(overrides: Partial<PosterCardMovie> = {}): PosterCardMovie {
-  return {
-    id: 'm1',
-    title: 'Comet Season',
-    posterUrl: null,
-    g1: '#1f2a3a',
-    g2: '#3a6a8a',
-    rating: 80,
-    watched: false,
-    progress: 0,
-    favorite: false,
-    ...overrides,
-  };
-}
+import { makePosterCardMovie } from '@/test-support/makePosterCardMovie/makePosterCardMovie';
 
 function makeContinueMovie(
   overrides: Partial<ContinueCardMovie> = {}
@@ -141,9 +127,9 @@ describe('CardCarousel — the cards it holds', () => {
   it('renders one poster card per item', () => {
     renderCarousel({
       items: posterItems(
-        makeMovie({ id: 'a1', title: 'Northwind' }),
-        makeMovie({ id: 'a2', title: 'Ironclad' }),
-        makeMovie({ id: 'a3', title: 'Quiet Harbor' })
+        makePosterCardMovie({ id: 'a1', title: 'Northwind' }),
+        makePosterCardMovie({ id: 'a2', title: 'Ironclad' }),
+        makePosterCardMovie({ id: 'a3', title: 'Quiet Harbor' })
       ),
     });
 
@@ -154,7 +140,7 @@ describe('CardCarousel — the cards it holds', () => {
   });
 
   it('defaults to the poster variant', () => {
-    renderCarousel({ items: posterItems(makeMovie({ id: 'a1' })) });
+    renderCarousel({ items: posterItems(makePosterCardMovie({ id: 'a1' })) });
 
     expect(cards()).toHaveLength(1);
   });
@@ -225,7 +211,7 @@ describe('CardCarousel — the cards it holds', () => {
 describe('CardCarousel — the same movie in either variant', () => {
   it('gives the poster tile a heart and the continue tile a resume label instead', () => {
     const poster = renderCarousel({
-      items: posterItems(makeMovie({ id: 'a1', title: 'Northwind' })),
+      items: posterItems(makePosterCardMovie({ id: 'a1', title: 'Northwind' })),
     });
     const resume = renderCarousel({
       variant: 'continue',
@@ -257,7 +243,7 @@ describe('CardCarousel — the same movie in either variant', () => {
 describe('CardCarousel — a row is laid out for the tiles it holds', () => {
   it('gives a continue tile more width than a poster, so the row reads as different', () => {
     const poster = renderCarousel({
-      items: posterItems(makeMovie({ id: 'a1', title: 'Northwind' })),
+      items: posterItems(makePosterCardMovie({ id: 'a1', title: 'Northwind' })),
     });
     const resume = renderCarousel({
       variant: 'continue',
@@ -273,7 +259,7 @@ describe('CardCarousel — a row is laid out for the tiles it holds', () => {
 
   it('centres the arrows on the shorter continue tiles, not the taller posters', () => {
     const poster = renderCarousel({
-      items: posterItems(makeMovie({ id: 'a1', title: 'Northwind' })),
+      items: posterItems(makePosterCardMovie({ id: 'a1', title: 'Northwind' })),
     });
     const resume = renderCarousel({
       variant: 'continue',
@@ -294,7 +280,7 @@ describe('CardCarousel — a row is laid out for the tiles it holds', () => {
 describe('CardCarousel — arrows appear only where there is somewhere to go', () => {
   it('offers neither arrow when the row does not overflow', () => {
     renderCarousel({
-      items: posterItems(makeMovie({ id: 'a1', title: 'Northwind' })),
+      items: posterItems(makePosterCardMovie({ id: 'a1', title: 'Northwind' })),
     });
 
     expect(leftArrow()).toBeNull();
@@ -303,7 +289,7 @@ describe('CardCarousel — arrows appear only where there is somewhere to go', (
 
   it('offers the right arrow once the row overflows', () => {
     const { container } = renderCarousel({
-      items: posterItems(makeMovie({ id: 'a1', title: 'Northwind' })),
+      items: posterItems(makePosterCardMovie({ id: 'a1', title: 'Northwind' })),
     });
     const scroller = scrollerIn(container);
 
@@ -315,7 +301,7 @@ describe('CardCarousel — arrows appear only where there is somewhere to go', (
 
   it('withholds the left arrow at the start of an overflowing row', () => {
     const { container } = renderCarousel({
-      items: posterItems(makeMovie({ id: 'a1', title: 'Northwind' })),
+      items: posterItems(makePosterCardMovie({ id: 'a1', title: 'Northwind' })),
     });
     const scroller = scrollerIn(container);
 
@@ -327,7 +313,7 @@ describe('CardCarousel — arrows appear only where there is somewhere to go', (
 
   it('offers both arrows in the middle of an overflowing row', () => {
     const { container } = renderCarousel({
-      items: posterItems(makeMovie({ id: 'a1', title: 'Northwind' })),
+      items: posterItems(makePosterCardMovie({ id: 'a1', title: 'Northwind' })),
     });
     const scroller = scrollerIn(container);
 
@@ -340,7 +326,7 @@ describe('CardCarousel — arrows appear only where there is somewhere to go', (
 
   it('withholds the right arrow at the end, keeping the way back', () => {
     const { container } = renderCarousel({
-      items: posterItems(makeMovie({ id: 'a1', title: 'Northwind' })),
+      items: posterItems(makePosterCardMovie({ id: 'a1', title: 'Northwind' })),
     });
     const scroller = scrollerIn(container);
 
@@ -353,7 +339,7 @@ describe('CardCarousel — arrows appear only where there is somewhere to go', (
 
   it('treats a fractional offset at either edge as being at that edge', () => {
     const { container } = renderCarousel({
-      items: posterItems(makeMovie({ id: 'a1', title: 'Northwind' })),
+      items: posterItems(makePosterCardMovie({ id: 'a1', title: 'Northwind' })),
     });
     const scroller = scrollerIn(container);
 
@@ -371,7 +357,7 @@ describe('CardCarousel — arrows appear only where there is somewhere to go', (
 describe('CardCarousel — paging', () => {
   it('pages forward when the right arrow is used', () => {
     const { container } = renderCarousel({
-      items: posterItems(makeMovie({ id: 'a1', title: 'Northwind' })),
+      items: posterItems(makePosterCardMovie({ id: 'a1', title: 'Northwind' })),
     });
     const scroller = scrollerIn(container);
 
@@ -386,7 +372,7 @@ describe('CardCarousel — paging', () => {
 
   it('pages back when the left arrow is used', () => {
     const { container } = renderCarousel({
-      items: posterItems(makeMovie({ id: 'a1', title: 'Northwind' })),
+      items: posterItems(makePosterCardMovie({ id: 'a1', title: 'Northwind' })),
     });
     const scroller = scrollerIn(container);
 
@@ -401,7 +387,7 @@ describe('CardCarousel — paging', () => {
 
   it('re-measures when the window resizes, since that changes what fits', () => {
     const { container } = renderCarousel({
-      items: posterItems(makeMovie({ id: 'a1', title: 'Northwind' })),
+      items: posterItems(makePosterCardMovie({ id: 'a1', title: 'Northwind' })),
     });
     const scroller = scrollerIn(container);
 
