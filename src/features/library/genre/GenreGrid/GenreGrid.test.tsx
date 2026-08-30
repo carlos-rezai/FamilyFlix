@@ -13,35 +13,9 @@ import { MemoryRouter, Route, Routes, useNavigate } from 'react-router-dom';
 import { GenreGrid } from './GenreGrid';
 import { GenreMoviesProvider } from '../GenreMovies/GenreMovies';
 import { theme } from '@/styles/theme';
-import type { GenrePayload, Movie } from '@/types';
+import type { GenrePayload } from '@/types';
 import { LocationProbe } from '@/test-support/LocationProbe/LocationProbe';
-
-function makeMovie(overrides: Partial<Movie> = {}): Movie {
-  return {
-    id: 'm1',
-    tmdbId: null,
-    title: 'Comet Season',
-    year: 2018,
-    runtimeMinutes: 90,
-    synopsis: null,
-    director: null,
-    cast: [],
-    rating: 8,
-    isFavorite: false,
-    watched: false,
-    resumePositionSeconds: 0,
-    status: 'unwatched',
-    videoPath: 'Comet Season/comet.mp4',
-    posterPath: null,
-    backdropPath: null,
-    genres: [],
-    subtitles: [],
-    createdAt: '2026-01-01T00:00:00.000Z',
-    updatedAt: '2026-01-01T00:00:00.000Z',
-    lastWatchedAt: null,
-    ...overrides,
-  };
-}
+import { makeMovie } from '@/test-support/makeMovie/makeMovie';
 
 /**
  * Eighteen movies in one genre — more than the fifteen a home row caps at, so

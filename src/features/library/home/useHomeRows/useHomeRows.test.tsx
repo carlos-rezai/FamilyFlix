@@ -5,39 +5,8 @@ import { MemoryRouter, useNavigate } from 'react-router-dom';
 
 import { useHomeRows } from './useHomeRows';
 import { gradientFromId, NOMINAL_SLIVER_PERCENT } from '@/utils';
-import type {
-  GenreRowModel,
-  HomePayload,
-  Movie,
-  PosterCardMovie,
-} from '@/types';
-
-function makeMovie(overrides: Partial<Movie> = {}): Movie {
-  return {
-    id: 'm1',
-    tmdbId: null,
-    title: 'Comet Season',
-    year: 2018,
-    runtimeMinutes: 90,
-    synopsis: null,
-    director: null,
-    cast: [],
-    rating: 8,
-    isFavorite: false,
-    watched: false,
-    resumePositionSeconds: 0,
-    status: 'unwatched',
-    videoPath: 'Comet Season/comet.mp4',
-    posterPath: null,
-    backdropPath: null,
-    genres: [],
-    subtitles: [],
-    createdAt: '2026-01-01T00:00:00.000Z',
-    updatedAt: '2026-01-01T00:00:00.000Z',
-    lastWatchedAt: null,
-    ...overrides,
-  };
-}
+import type { GenreRowModel, HomePayload, PosterCardMovie } from '@/types';
+import { makeMovie } from '@/test-support/makeMovie/makeMovie';
 
 /** One movie per row, so "the favorite in Action" is never ambiguous. */
 const HOME_PAYLOAD: HomePayload = {

@@ -6,34 +6,8 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { GenreHeading } from './GenreHeading';
 import { GenreMoviesProvider } from '../GenreMovies/GenreMovies';
 import { theme } from '@/styles/theme';
-import type { GenrePayload, Movie } from '@/types';
-
-function makeMovie(overrides: Partial<Movie> = {}): Movie {
-  return {
-    id: 'm1',
-    tmdbId: null,
-    title: 'Comet Season',
-    year: 2018,
-    runtimeMinutes: 90,
-    synopsis: null,
-    director: null,
-    cast: [],
-    rating: 8,
-    isFavorite: false,
-    watched: false,
-    resumePositionSeconds: 0,
-    status: 'unwatched',
-    videoPath: 'Comet Season/comet.mp4',
-    posterPath: null,
-    backdropPath: null,
-    genres: [],
-    subtitles: [],
-    createdAt: '2026-01-01T00:00:00.000Z',
-    updatedAt: '2026-01-01T00:00:00.000Z',
-    lastWatchedAt: null,
-    ...overrides,
-  };
-}
+import type { GenrePayload } from '@/types';
+import { makeMovie } from '@/test-support/makeMovie/makeMovie';
 
 /** A genre of `count` movies, as the route answers it, with `total` alongside. */
 function payload(genre: string, count: number, total = count): GenrePayload {
