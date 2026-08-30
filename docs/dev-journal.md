@@ -11,6 +11,149 @@ Newest entry first.
 
 ---
 
+## 2026-08-30 — Continue Watching refactor (issues #80, #81)
+
+Fourteen commits in five groups against
+`docs/refactor-plans/09-continue-watching-refactor.md`, with issue 80 folded in
+as Group A exactly as 80 asked in writing. **1677 tests pass across 104 files**,
+up from 1644 across 98 — every one of the 33 new tests belongs to a helper that
+moved onto a test-support rung, and not one existing assertion changed.
+
+Nothing here changes a rendered pixel, an HTTP contract, a stored value, or a
+SQL result. No frontend shipping file changed at all, exactly as the build
+didn't. Two backend shipping files changed, both in Group C, and both only in
+how a SQL string is built rather than in what it produces.
+
+### The bill that had been accruing since #15
+
+`Movie` gained a required `lastWatchedAt` in issue #76, and **sixteen frontend
+test files stopped type-checking in the same commit** — each carrying its own
+23-field `makeMovie` literal, each needing the identical one-line edit.
+
+It arrived not because #76 was careless but because `Movie` had not gained a
+field since the type was split out in #15, so nothing had ever tested what a
+change to the library's central record costs. The answer was sixteen edits. Add
+Movie, bulk import and the player each add fields to this record, so the same
+bill was going to arrive three more times.
+
+Measured before it was fixed: twelve of the sixteen were byte-for-byte
+identical, and the other four differed **only in what specimen the file wanted**
+— never in the record's shape. That is what an override factory is for. One
+`src/test-support/makeMovie/` now holds the shape; the four specimens live at
+their call sites as thin local wrappers named for what they build
+(`makeStartedMovie`, `makeNorthwind`, `makeQuietHarbor`). The builder never grew
+a parameter per specimen, because that would be the same duplication wearing a
+different hat.
+
+**The same measurement then found four more, one rung down.** `CardCarousel`,
+`GenreRow`, `LibraryGrid` and `FavoritesRow` all build `PosterCardMovie`, three
+of them from a byte-identical literal — so `makePosterCardMovie` joined the rung
+on the same argument. `ContinueRow`'s `ContinueCardMovie` builder stayed put: one
+caller is not duplication, and moving it would be the mirror of the `api/` rule
+this codebase already follows.
+
+### The server had the same problem, worse, with nowhere to put the answer
+
+Seven backend test files opened with a **byte-identical forty-line preamble** —
+`Closeable`, `closeables`, `track`, `freshStorage`, an `afterEach` teardown, and
+a `newMovie` builder — and two of them additionally shared `seedByAge` and
+`seedGenre`. The frontend has had a `test-support/` rung since #54. `server/src/`
+had none, so the duplication had nowhere to go and was copied file by file.
+
+`server/src/test-support/` is a **documented boundary amendment**, argued in the
+plan and landed as a docs-only commit before any code moved. CLAUDE.md keeps
+`server/src/` deliberately closed to catch-all folders — but that rule is about
+_backend logic_ having a domain home, and test doubles are not backend logic.
+They are the category the frontend already gave its own rung and its own
+one-line rule.
+
+**No invoice had been delivered on the server yet.** `NewMovie`'s new field was
+optional, so nothing broke. The next one might not be.
+
+Two things the move taught, neither of them guessed:
+
+- **A module-scope `afterEach` inside an imported helper registers per importing
+  file.** This was verified with a throwaway two-file probe before the harness
+  was written, rather than assumed: under Vitest's default isolation each test
+  file gets its own module registry, so each gets its own `closeables` array and
+  its own teardown. `freshStorage.test.ts` pins it permanently.
+- **Splitting one `afterEach` into two exposed an ordering rule.** Vitest runs
+  `afterEach` hooks in **reverse** registration order, so a file's own hook runs
+  _before_ an imported one — and Windows will not delete a directory holding an
+  open database file. `write` and `genre` went red immediately. The harness now
+  exports `closeTracked()` for exactly that case. Found by the suite, not by
+  reading.
+
+### Four comments doing a compiler's job
+
+The build left four places where a comment held a guarantee the code could hold
+itself. All four are now the code's.
+
+- `last-watched`'s `ORDER BY` tail was `recently-added`'s body copied character
+  for character, with a comment promising the two stay identical. It is composed
+  from the same named constant now, so editing `recently-added`'s tiebreak can
+  no longer silently break the unstamped-library guarantee while the comment
+  goes on claiming otherwise.
+- **"Started but not finished" was written twice in SQL** — the `inProgressOnly`
+  `WHERE` term and the middle rank of `unwatched-first` — for the rule the
+  Continue Watching row is _defined_ by. One `IN_PROGRESS` constant now. Its
+  TypeScript twin `deriveStatus` deliberately did **not** merge: same rule, two
+  languages, two jobs, and merging them would put SQL text and TypeScript
+  branching in one module. They got a cross-reference instead.
+- `home.ts` argued the pinned-order asymmetry in three near-identical paragraphs.
+  The inline note at the `listSection` call pair stays — that is where a reader
+  meets the two disagreeing arguments — and the other two are pointers at it.
+- **Two tests asserted something other than what their names said**, and #78
+  papered over both with a six-line caveat rather than renaming them. A test
+  whose name has to be corrected by a comment is a test nobody trusts at a
+  glance. Renamed; caveats deleted along with the need for them.
+
+### The three conditional commits, and what they decided
+
+The plan made three commits explicitly conditional with a stated escape hatch,
+because _a duplication nobody has ruled on gets copied a third time by default_.
+All three were measured rather than eyeballed.
+
+- **The five view-model builders (A6): folded, four of five.** Covered above.
+- **`tempDbPath` (B7): not moved.** The plan called `write`'s and `genre`'s
+  copies byte-identical; they are not. `write` memoises one directory and
+  returns many random filenames inside it; `genre` creates a fresh directory per
+  call and returns a fixed filename; `db.test.ts` has a third shape again on
+  `beforeEach`/`afterEach`. Three ownership models, three lifetimes. A shared
+  helper would have to invent a fourth shape satisfying all three, which is
+  forcing it, so it was dropped as the plan permitted.
+- **Splitting `home.test.ts` (D3): not split.** 1339 lines before, **1269**
+  after, against `browse.test.ts`'s 972 and `routes.test.ts`'s 1881. It is not an
+  outlier, it now has one helper block instead of two 950 lines apart, and the
+  plan was explicit: do not split it to hit a number.
+
+### Known and deliberately not fixed
+
+- **The dev seed's `lastWatchedAt` stamps are absolute dates**, written to the
+  week they were authored. "The past few weeks" will age into "months ago" and
+  eventually into something that reads as wrong. Harmless while nothing renders
+  the timestamp — no screen does — and a trap the day something does.
+- **`setResumePosition` still has no HTTP seam.** No route, no caller, until the
+  player ships. That was #75's decision and this round did not revisit it; adding
+  one now re-creates the dead-code shape two previous rounds refused.
+- **Whether `markWatched` should preserve the resume position** stays flagged in
+  the glossary for the watch-tracking grill. It changes stored values, which is
+  the one thing this plan promised not to do.
+- **`routes.test.ts`'s twenty-odd local helpers.** 1881 lines with a fixture
+  builder per endpoint group — but those build _HTTP libraries_, not records. A
+  genuinely different problem, and its own round if it earns one.
+
+### Two features in a row have left almost nothing behind
+
+Favorites left six undocumented decisions; Continue Watching left one accrued
+debt and four comments doing a compiler's job. Both builds were preceded by a
+`grill-me` that answered the hard questions in advance — nineteen of them here,
+before a line was written — and both refactor rounds spent most of their commits
+on scaffolding and prose rather than on repairing the feature. That is a result,
+not a gap.
+
+---
+
 ## 2026-08-29 — Favorites refactor (issue #73)
 
 Nine commits in six groups against

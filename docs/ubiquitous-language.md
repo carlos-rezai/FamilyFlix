@@ -433,11 +433,16 @@ deliberately parallel to the **Browse home**'s rather than shared with it.
   the 0–100 display percent on a card's bar, and the **Resume label** string. Never
   say bare "progress" across the seam — name which one. The stored value is always
   **Resume position**.
-- **"Continue Watching" does not mean most-recently-watched:** the row is
-  ordered `recently-added`, because no sort exists over "when did playback last
-  touch this" and nothing writes **Resume position** until the player ships. The
-  name describes _which_ **Movies** appear (**In-progress**), not their order —
-  revisit the ordering with the player.
+- **"Continue Watching" _does_ mean most-recently-watched (resolved):** the row
+  used to be ordered `recently-added`, because no sort existed over "when did
+  playback last touch this" — so the name described only _which_ **Movies**
+  appear (**In-progress**), not their order, and the ambiguity was flagged to be
+  revisited with the player. Issue #77 added exactly that sort: **Last watched
+  at** is stamped by the watch mutators, `last-watched` is the **List sort** over
+  it, and issue #78 pinned the row to it whatever the header's **Sort order**
+  says. The name and the order now agree. Nothing writes the stamp through the
+  UI until the player ships, and an unstamped library still falls back to
+  `recently-added` — which is why the old wording was true when it was written.
 - **The Continue card has no artwork:** it is **Gradient fallback**-only by
   the prototype's design — there is no image slot in `mol.ContinueCard`, unlike the
   **Poster card**. A **Movie**'s **Backdrop** would suit the 16:10 tile, but adding
