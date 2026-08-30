@@ -17,6 +17,7 @@ export { MOVIE_SORTS, DEFAULT_MOVIE_SORT } from './browse';
 export type { WatchStatus, Genre, Subtitle, Movie } from './movie';
 export type {
   MovieSort,
+  ListSort,
   MovieQuery,
   LibraryQuery,
   GenreCount,

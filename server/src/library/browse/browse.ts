@@ -1,20 +1,31 @@
 import type { SqliteDatabase } from '../../db';
-import type { GenreCount, Movie, MovieQuery, MovieSort } from '@/types';
+import type { GenreCount, ListSort, Movie, MovieQuery } from '@/types';
 import type { MovieReader, MovieRow } from '../read/read';
 
 /**
- * Each {@link MovieSort} mapped to its `ORDER BY` body (over the `movies m`
- * alias). `null` year/rating sort last via the `IS NULL` leading key; the
+ * Each {@link ListSort} mapped to its `ORDER BY` body (over the `movies m`
+ * alias). `null` year/rating/stamp sort last via the `IS NULL` leading key; the
  * `unwatched-first` rank groups unwatched (0) → in-progress (1) → watched (2),
  * with a case-insensitive title tiebreak inside every group.
+ *
+ * Typed over `ListSort` rather than `MovieSort`, so the record is one entry
+ * wider than the wire's vocabulary and the compiler is what demands the extra
+ * body exists.
  */
-const ORDER_BY: Record<MovieSort, string> = {
+const ORDER_BY: Record<ListSort, string> = {
   'recently-added': 'm.created_at DESC, m.id',
   'a-z': 'm.title COLLATE NOCASE ASC',
   year: 'm.year IS NULL, m.year DESC, m.title COLLATE NOCASE',
   'highest-rated': 'm.rating IS NULL, m.rating DESC, m.title COLLATE NOCASE',
   'unwatched-first':
     'CASE WHEN m.watched = 1 THEN 2 WHEN m.resume_position_seconds > 0 THEN 1 ELSE 0 END, m.title COLLATE NOCASE',
+  // Never watched is not "watched at the dawn of time" — an unstamped movie is
+  // not in the queue at all, so the `IS NULL` leading key sinks it below a film
+  // last touched years ago rather than letting a NULL win the DESC. The tail is
+  // `recently-added`'s body verbatim: with nothing stamped this order *is* that
+  // one, down to the id tiebreak.
+  'last-watched':
+    'm.last_watched_at IS NULL, m.last_watched_at DESC, m.created_at DESC, m.id',
 };
 
 /**

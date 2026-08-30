@@ -36,6 +36,22 @@ export const MOVIE_SORTS = [
 export type MovieSort = (typeof MOVIE_SORTS)[number];
 
 /**
+ * Every order `listMovies` can be asked for — the wire's five plus
+ * `last-watched`, which orders by the resume shelf's stamp: most recently
+ * watched first, then every unstamped movie in {@link MOVIE_SORTS}'
+ * `recently-added` order exactly.
+ *
+ * One member wider than {@link MovieSort} on purpose. `last-watched` is a
+ * repository order, not a wire one: the Continue Watching row asks the
+ * repository for it directly, and nothing else ever names it. Keeping it out of
+ * `MOVIE_SORTS` is what stops `?sort=last-watched` from becoming a URL the
+ * route answers and the Sort dropdown from growing a sixth option nobody
+ * designed — the route validates against the list, so an order absent from it
+ * is unreachable from a hand-edited URL by construction.
+ */
+export type ListSort = MovieSort | 'last-watched';
+
+/**
  * The order the library is in until something asks for another one.
  *
  * Shared because it is the value five different modules have to agree on to
@@ -53,7 +69,9 @@ export const DEFAULT_MOVIE_SORT: MovieSort = 'recently-added';
  * combine in a single query.
  */
 export interface MovieQuery {
-  sort: MovieSort;
+  /** Any {@link ListSort} — this is the repository's own vocabulary, not the
+   *  wire's, so it is the one shape here that can name `last-watched`. */
+  sort: ListSort;
   /** Restrict to movies tagged with this genre name (e.g. `'Action'`). */
   genre?: string;
   /** Keep only movies with `rating >= minRating`; unrated movies are excluded. */
