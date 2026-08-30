@@ -50,6 +50,81 @@ function seedInProgress(
   }));
 }
 
+/** An in-progress movie carrying the stamp the player will one day write. */
+function started(
+  title: string,
+  lastWatchedAt: string,
+  extra: Partial<NewMovie> = {}
+): NewMovie {
+  return newMovie({
+    title,
+    resumePositionSeconds: 600,
+    lastWatchedAt,
+    ...extra,
+  });
+}
+
+/**
+ * Three in-progress films whose last-watched order is the reverse of every
+ * order the Sort dropdown can name.
+ *
+ * Stamps run Charlie → Bravo → Alpha, most recent first. Creation instant,
+ * title, year and rating all run Alpha → Bravo → Charlie, and all three are
+ * in-progress so `unwatched-first` falls to its title tiebreak — so each of the
+ * five wire sorts puts these films in the exact opposite order to the shelf's
+ * own. Each is favorited and tagged Drama, so all three sections hold the same
+ * three films and the only thing that can differ between them is the order.
+ */
+function seedQueueAgainstEverySort(
+  storage: ReturnType<typeof createSqliteStorage>
+): void {
+  const films = [
+    { title: 'Charlie', year: 2000, rating: 2, watched: '2026-06-03' },
+    { title: 'Bravo', year: 2010, rating: 6, watched: '2026-06-02' },
+    { title: 'Alpha', year: 2020, rating: 10, watched: '2026-06-01' },
+  ];
+
+  vi.useFakeTimers();
+  films.forEach((film, index) => {
+    vi.setSystemTime(new Date(Date.UTC(2026, 0, index + 1)));
+    storage.addMovie(
+      started(film.title, `${film.watched}T00:00:00.000Z`, {
+        year: film.year,
+        rating: film.rating,
+        genres: ['Drama'],
+        isFavorite: true,
+      })
+    );
+  });
+  vi.useRealTimers();
+}
+
+/**
+ * The same three-film queue without the favorites, genres, years and ratings —
+ * stamps running Charlie → Bravo → Alpha, creation instants running the other
+ * way, returned in stamp order. Staggering the instants is what makes these
+ * tests deterministic: `created_at` ties would leave the order to
+ * `recently-added`'s random-uuid tiebreak.
+ */
+function seedQueue(storage: ReturnType<typeof createSqliteStorage>): {
+  charlie: Movie;
+  bravo: Movie;
+  alpha: Movie;
+} {
+  vi.useFakeTimers();
+  vi.setSystemTime(new Date('2026-01-01T00:00:00.000Z'));
+  const charlie = storage.addMovie(
+    started('Charlie', '2026-06-03T00:00:00.000Z')
+  );
+  vi.setSystemTime(new Date('2026-01-02T00:00:00.000Z'));
+  const bravo = storage.addMovie(started('Bravo', '2026-06-02T00:00:00.000Z'));
+  vi.setSystemTime(new Date('2026-01-03T00:00:00.000Z'));
+  const alpha = storage.addMovie(started('Alpha', '2026-06-01T00:00:00.000Z'));
+  vi.useRealTimers();
+
+  return { charlie, bravo, alpha };
+}
+
 // --- genre rows: the 02 behaviour, unchanged under the new envelope -------------
 
 describe('library: getHome genre rows', () => {
@@ -183,13 +258,7 @@ describe('library: getHome continue watching', () => {
     expect(storage.getHome().continueWatching).toEqual([]);
   });
 
-  // Reads as the section's own order, but is not: since 09 (issue #78) the
-  // continue section is pinned to `last-watched`, and `seedInProgress` writes
-  // no stamps — so what this asserts is the nulls-last fallback landing on
-  // `recently-added`'s body verbatim. It is the unstamped-library guarantee
-  // seen from 03, and the section's real order is asserted in "getHome pins the
-  // continue section's order" below.
-  it('orders recently-added first', () => {
+  it('falls back to recently-added when nothing is stamped', () => {
     const storage = freshStorage();
     seedInProgress(storage, 3);
 
@@ -202,10 +271,7 @@ describe('library: getHome continue watching', () => {
     ]);
   });
 
-  // Same caveat as above: "newest first" here is the unstamped fallback, not
-  // the pinned order. The cap under the order that actually ships is asserted
-  // by "caps at the 15 most recently watched, not the 15 most recently added".
-  it('caps at the same 15 as the genre rows, newest first', () => {
+  it('caps at the same 15 as the genre rows, under that fallback', () => {
     const storage = freshStorage();
     seedInProgress(storage, 20);
 
@@ -953,81 +1019,6 @@ describe('library: getHome under a genre filter', () => {
 // mutators that feed it — those are Phase 1's, and `write.test.ts` owns them.
 // The two mutator tests below are the exceptions, and they assert what the
 // *section* does, not what the column holds.
-
-/** An in-progress movie carrying the stamp the player will one day write. */
-function started(
-  title: string,
-  lastWatchedAt: string,
-  extra: Partial<NewMovie> = {}
-): NewMovie {
-  return newMovie({
-    title,
-    resumePositionSeconds: 600,
-    lastWatchedAt,
-    ...extra,
-  });
-}
-
-/**
- * Three in-progress films whose last-watched order is the reverse of every
- * order the Sort dropdown can name.
- *
- * Stamps run Charlie → Bravo → Alpha, most recent first. Creation instant,
- * title, year and rating all run Alpha → Bravo → Charlie, and all three are
- * in-progress so `unwatched-first` falls to its title tiebreak — so each of the
- * five wire sorts puts these films in the exact opposite order to the shelf's
- * own. Each is favorited and tagged Drama, so all three sections hold the same
- * three films and the only thing that can differ between them is the order.
- */
-function seedQueueAgainstEverySort(
-  storage: ReturnType<typeof createSqliteStorage>
-): void {
-  const films = [
-    { title: 'Charlie', year: 2000, rating: 2, watched: '2026-06-03' },
-    { title: 'Bravo', year: 2010, rating: 6, watched: '2026-06-02' },
-    { title: 'Alpha', year: 2020, rating: 10, watched: '2026-06-01' },
-  ];
-
-  vi.useFakeTimers();
-  films.forEach((film, index) => {
-    vi.setSystemTime(new Date(Date.UTC(2026, 0, index + 1)));
-    storage.addMovie(
-      started(film.title, `${film.watched}T00:00:00.000Z`, {
-        year: film.year,
-        rating: film.rating,
-        genres: ['Drama'],
-        isFavorite: true,
-      })
-    );
-  });
-  vi.useRealTimers();
-}
-
-/**
- * The same three-film queue without the favorites, genres, years and ratings —
- * stamps running Charlie → Bravo → Alpha, creation instants running the other
- * way, returned in stamp order. Staggering the instants is what makes these
- * tests deterministic: `created_at` ties would leave the order to
- * `recently-added`'s random-uuid tiebreak.
- */
-function seedQueue(storage: ReturnType<typeof createSqliteStorage>): {
-  charlie: Movie;
-  bravo: Movie;
-  alpha: Movie;
-} {
-  vi.useFakeTimers();
-  vi.setSystemTime(new Date('2026-01-01T00:00:00.000Z'));
-  const charlie = storage.addMovie(
-    started('Charlie', '2026-06-03T00:00:00.000Z')
-  );
-  vi.setSystemTime(new Date('2026-01-02T00:00:00.000Z'));
-  const bravo = storage.addMovie(started('Bravo', '2026-06-02T00:00:00.000Z'));
-  vi.setSystemTime(new Date('2026-01-03T00:00:00.000Z'));
-  const alpha = storage.addMovie(started('Alpha', '2026-06-01T00:00:00.000Z'));
-  vi.useRealTimers();
-
-  return { charlie, bravo, alpha };
-}
 
 describe('library: getHome pins the continue section’s order', () => {
   // The demoable case is `a-z`: pick "A–Z" from Sort and the row holds its
