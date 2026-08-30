@@ -14,36 +14,12 @@
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { createSqliteStorage } from '..';
 import type { NewMovie } from '@/types';
+import { freshStorage } from '../../test-support/freshStorage/freshStorage';
 
-// --- per-test resource tracking ------------------------------------------------
-
-interface Closeable {
-  close(): void;
-}
-
-const closeables: Closeable[] = [];
-
-function track<T extends Closeable>(resource: T): T {
-  closeables.push(resource);
-  return resource;
-}
-
-/** A fresh, fully-migrated in-memory repository, closed automatically. */
-function freshStorage(): ReturnType<typeof createSqliteStorage> {
-  return track(createSqliteStorage(':memory:'));
-}
-
+/** Fake timers are how these tests get distinct creation instants. */
 afterEach(() => {
   vi.useRealTimers();
-  for (const resource of closeables.splice(0)) {
-    try {
-      resource.close();
-    } catch {
-      // already closed by the test — fine.
-    }
-  }
 });
 
 // --- helpers -------------------------------------------------------------------
