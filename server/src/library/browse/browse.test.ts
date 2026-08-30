@@ -14,7 +14,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { createSqliteStorage } from '..';
-import type { MovieSort, NewMovie } from '@/types';
+import { MOVIE_SORTS } from '@/types';
+import type { GenreQuery, LibraryQuery, MovieSort, NewMovie } from '@/types';
 
 // --- per-test resource tracking ------------------------------------------------
 
@@ -137,6 +138,203 @@ describe('library: listMovies sort', () => {
       'unwatched',
       'in-progress',
       'watched',
+    ]);
+  });
+});
+
+// --- the last-watched order ----------------------------------------------------
+
+// 09 — Continue Watching, Phase 2: "the last-watched order" (issue #77).
+//
+// The repository gains an order the wire cannot name. `last-watched` exists in
+// `ListSort` and in the `ORDER_BY` record; it is deliberately absent from
+// `MOVIE_SORTS`, so no URL and no dropdown can ask for it — only `listMovies`
+// can, and for this one phase its only caller is this file.
+//
+// The stamps are written through `NewMovie.lastWatchedAt` rather than through
+// `setResumePosition`, because what is under test here is the ORDER BY, not the
+// mutators that feed it — those are Phase 1's, and `write.test.ts` owns them.
+
+describe('library: listMovies last-watched sort', () => {
+  it('orders the most recently watched first', () => {
+    const storage = freshStorage();
+    storage.addMovie(
+      newMovie({ title: 'Oldest', lastWatchedAt: '2026-01-01T00:00:00.000Z' })
+    );
+    storage.addMovie(
+      newMovie({ title: 'Newest', lastWatchedAt: '2026-03-01T00:00:00.000Z' })
+    );
+    storage.addMovie(
+      newMovie({ title: 'Middle', lastWatchedAt: '2026-02-01T00:00:00.000Z' })
+    );
+
+    const list = storage.listMovies({ sort: 'last-watched' });
+
+    // What you were watching last night is what the shelf leads with.
+    expect(list.map((m) => m.title)).toEqual(['Newest', 'Middle', 'Oldest']);
+  });
+
+  it('sorts every unstamped movie after every stamped one', () => {
+    const storage = freshStorage();
+
+    // The unstamped pair is added last, so a missing `IS NULL` leading key
+    // would leave them at the front under `created_at DESC` rather than behind.
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-01-01T00:00:00.000Z'));
+    storage.addMovie(
+      newMovie({
+        title: 'Watched Long Ago',
+        lastWatchedAt: '2020-01-01T00:00:00.000Z',
+      })
+    );
+    vi.setSystemTime(new Date('2026-01-02T00:00:00.000Z'));
+    storage.addMovie(newMovie({ title: 'Never Watched' })); // stamp -> null
+    vi.setSystemTime(new Date('2026-01-03T00:00:00.000Z'));
+    storage.addMovie(newMovie({ title: 'Also Never Watched' }));
+    vi.useRealTimers();
+
+    const list = storage.listMovies({ sort: 'last-watched' });
+
+    // Never watched is not "watched at the dawn of time" — it is not in the
+    // queue at all, and sinks below a film last touched six years ago.
+    expect(list.map((m) => m.title)).toEqual([
+      'Watched Long Ago',
+      'Also Never Watched',
+      'Never Watched',
+    ]);
+    expect(list.map((m) => m.lastWatchedAt)).toEqual([
+      '2020-01-01T00:00:00.000Z',
+      null,
+      null,
+    ]);
+  });
+
+  it('is byte-for-byte the recently-added list when nothing is stamped', () => {
+    const storage = freshStorage();
+
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-01-01T00:00:00.000Z'));
+    storage.addMovie(
+      newMovie({ title: 'Apple', genres: ['Drama'], rating: 4 })
+    );
+    vi.setSystemTime(new Date('2026-01-02T00:00:00.000Z'));
+    storage.addMovie(newMovie({ title: 'Banana', year: 1999 }));
+    vi.setSystemTime(new Date('2026-01-03T00:00:00.000Z'));
+    storage.addMovie(newMovie({ title: 'Cherry', genres: ['Action'] }));
+    vi.useRealTimers();
+
+    // Whole assembled models, not just ids: an unstamped library is the shelf
+    // it is today, and a tiebreak that differed while preserving the ids would
+    // still be a change nobody asked for.
+    expect(storage.listMovies({ sort: 'last-watched' })).toEqual(
+      storage.listMovies({ sort: 'recently-added' })
+    );
+  });
+
+  it('falls back to the id when unstamped movies share a creation instant', () => {
+    const storage = freshStorage();
+
+    // One frozen instant, so `created_at DESC` cannot separate them and only
+    // `recently-added`'s own `m.id` tiebreak is left to decide.
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-01-01T00:00:00.000Z'));
+    const ids = [
+      storage.addMovie(newMovie({ title: 'One' })).id,
+      storage.addMovie(newMovie({ title: 'Two' })).id,
+      storage.addMovie(newMovie({ title: 'Three' })).id,
+    ];
+    vi.useRealTimers();
+
+    const list = storage.listMovies({ sort: 'last-watched' });
+
+    expect(list.map((m) => m.id)).toEqual([...ids].sort());
+  });
+
+  it('applies the cap after this order, not after another one re-sorted', () => {
+    const storage = freshStorage();
+
+    // Deliberately adversarial: the two most recently *added* movies are the
+    // two watched *longest* ago. A limit applied to `recently-added` and then
+    // re-sorted in JavaScript returns those two — the wrong fifteen, in
+    // miniature.
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-01-01T00:00:00.000Z'));
+    storage.addMovie(
+      newMovie({
+        title: 'Last Night',
+        lastWatchedAt: '2026-06-03T00:00:00.000Z',
+      })
+    );
+    vi.setSystemTime(new Date('2026-01-02T00:00:00.000Z'));
+    storage.addMovie(
+      newMovie({
+        title: 'The Night Before',
+        lastWatchedAt: '2026-06-02T00:00:00.000Z',
+      })
+    );
+    vi.setSystemTime(new Date('2026-01-03T00:00:00.000Z'));
+    storage.addMovie(
+      newMovie({
+        title: 'Months Back',
+        lastWatchedAt: '2026-01-15T00:00:00.000Z',
+      })
+    );
+    vi.setSystemTime(new Date('2026-01-04T00:00:00.000Z'));
+    storage.addMovie(
+      newMovie({
+        title: 'Years Back',
+        lastWatchedAt: '2021-01-15T00:00:00.000Z',
+      })
+    );
+    vi.useRealTimers();
+
+    const list = storage.listMovies({ sort: 'last-watched', limit: 2 });
+
+    expect(list.map((m) => m.title)).toEqual([
+      'Last Night',
+      'The Night Before',
+    ]);
+  });
+});
+
+// --- the two sort vocabularies -------------------------------------------------
+
+// The new order is reachable from `listMovies` and from nowhere else. These
+// guard that boundary rather than the behaviour above: they pass today and must
+// go on passing, because widening either vocabulary is how `?sort=last-watched`
+// would quietly become a URL the app answers, and the Sort dropdown a control
+// with a sixth option nobody designed.
+
+describe('library: the wire sort vocabulary', () => {
+  it('still holds exactly its five orders, and last-watched is not one', () => {
+    expect(MOVIE_SORTS).toEqual([
+      'recently-added',
+      'a-z',
+      'year',
+      'highest-rated',
+      'unwatched-first',
+    ]);
+    expect(MOVIE_SORTS as readonly string[]).not.toContain('last-watched');
+  });
+
+  it('is what a LibraryQuery and a GenreQuery carry, so neither can name it', () => {
+    const library: LibraryQuery = {
+      // @ts-expect-error LibraryQuery.sort stays MovieSort — a home request
+      // comes off a URL, and a URL may only name an order the dropdown can
+      // show. The suppression IS the assertion: widening this to ListSort
+      // makes it an unused @ts-expect-error and fails the type check.
+      sort: 'last-watched',
+    };
+    const genre: GenreQuery = {
+      // @ts-expect-error GenreQuery.sort stays MovieSort, for the same reason —
+      // this is the order a row's "View all" carries over in the URL.
+      sort: 'last-watched',
+    };
+
+    // Read both, so neither is an unused binding rather than an assertion.
+    expect([library.sort, genre.sort]).toEqual([
+      'last-watched',
+      'last-watched',
     ]);
   });
 });

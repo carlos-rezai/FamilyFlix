@@ -706,6 +706,27 @@ describe('GET /api/home?sort=', () => {
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual(await getHomePayload(baseUrl));
   });
+
+  // 09 — Continue Watching, Phase 2: "the last-watched order" (issue #77).
+  //
+  // `last-watched` is a real order the repository can be asked for by name, and
+  // it is exactly as unknown to this layer as `by-vibes` is. `parseSort`
+  // validates against `MOVIE_SORTS`, which the new order deliberately never
+  // joined, so the three browse endpoints each answer 400 — asserted here
+  // rather than assumed, because the day someone widens `MOVIE_SORTS` to make
+  // the repository's order reachable is the day a URL starts naming an order
+  // the Sort dropdown cannot show.
+  it('rejects last-watched, an order the repository has but the wire does not', async () => {
+    const { storage, baseUrl } = freshApi();
+    addSortableLibrary(storage);
+
+    const response = await homeResponse(baseUrl, { sort: 'last-watched' });
+
+    expect(response.status).toBe(400);
+    expect((await response.json()) as { error: string }).toEqual({
+      error: 'Unknown sort: last-watched',
+    });
+  });
 });
 
 // --- 05 — Search + filter, Phase 4: "the Genre dropdown" (issue #36) ----------
@@ -787,6 +808,20 @@ describe('GET /api/movies?sort=', () => {
     expect(response.status).toBe(400);
     expect((await response.json()) as { error: string }).toEqual({
       error: 'Unknown sort: by-vibes',
+    });
+  });
+
+  // See `/home`'s note above: `last-watched` reaches `listMovies` and nothing
+  // else, and this is the endpoint that would hand a URL straight to it.
+  it('rejects last-watched, an order the repository has but the wire does not', async () => {
+    const { storage, baseUrl } = freshApi();
+    addSortableLibrary(storage);
+
+    const response = await moviesResponse(baseUrl, { sort: 'last-watched' });
+
+    expect(response.status).toBe(400);
+    expect((await response.json()) as { error: string }).toEqual({
+      error: 'Unknown sort: last-watched',
     });
   });
 
@@ -1479,6 +1514,22 @@ describe('GET /api/genre/:name', () => {
     expect(response.status).toBe(400);
     expect((await response.json()) as { error: string }).toEqual({
       error: 'Unknown sort: by-vibes',
+    });
+  });
+
+  // See `/home`'s note above: the Carried sort arrives here from a row's "View
+  // all", and `last-watched` is no more nameable in that URL than anywhere else.
+  it('rejects last-watched, an order the repository has but the wire does not', async () => {
+    const { storage, baseUrl } = freshApi();
+    addGenrePageLibrary(storage);
+
+    const response = await genreResponse(baseUrl, 'Drama', {
+      sort: 'last-watched',
+    });
+
+    expect(response.status).toBe(400);
+    expect((await response.json()) as { error: string }).toEqual({
+      error: 'Unknown sort: last-watched',
     });
   });
 
