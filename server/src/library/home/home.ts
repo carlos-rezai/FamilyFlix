@@ -83,13 +83,13 @@ export interface Home {
  *
  * The **sort** is not quite so uniform, and deliberately so: the continue
  * section pins {@link CONTINUE_SORT} while every other section takes the
- * caller's. A resume queue's order is part of what that shelf *means* — it is
- * the queue — so it is not the header's to reorder. Nothing about a shelf of
- * favorites, or a row of a genre, implies an intrinsic order, so those keep
- * obeying Sort. A row whose movies all failed the query is dropped rather
- * than rendered blank — a screenful of empty rows is not an answer. Its `count`
- * still comes from `listGenres()`, so "View all {count}" keeps reporting the
- * genre's unfiltered total however far the query narrows the row.
+ * caller's. Why is argued once, at the `listSection` call pair in `getHome` —
+ * where a reader meets the two disagreeing arguments and asks the question.
+ *
+ * A row whose movies all failed the query is dropped rather than rendered
+ * blank — a screenful of empty rows is not an answer. Its `count` still comes
+ * from `listGenres()`, so "View all {count}" keeps reporting the genre's
+ * unfiltered total however far the query narrows the row.
  *
  * Aggregating here keeps the home a single call for the route to serve, instead
  * of leaving the client to fan out a request per section.
@@ -122,8 +122,9 @@ export function createHome(browse: Browse): Home {
    *
    * The sort sits beside the flag because the two are the same kind of thing —
    * what makes this section that section — and the caller's own sort is only
-   * one of the answers. The `sort` therefore overrides the one `query` carries
-   * rather than merging with it.
+   * one of the answers, so it overrides the one `query` carries rather than
+   * merging with it. Why the two callers pass different ones is argued where
+   * they sit, in `getHome`.
    *
    * `listRows` is genuinely a different shape and stays its own function: it
    * fans out over genres and drops the ones that matched nothing.
