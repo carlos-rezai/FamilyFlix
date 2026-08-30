@@ -14,8 +14,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { MOVIE_SORTS } from '@/types';
-import type { GenreQuery, LibraryQuery, MovieSort, NewMovie } from '@/types';
+import type { GenreQuery, LibraryQuery, MovieSort } from '@/types';
 import { freshStorage } from '../../test-support/freshStorage/freshStorage';
+import { newMovie } from '../../test-support/newMovie/newMovie';
 
 /** Fake timers are how these tests get distinct creation instants. */
 afterEach(() => {
@@ -23,16 +24,6 @@ afterEach(() => {
 });
 
 // --- helpers -------------------------------------------------------------------
-
-/** A minimal valid NewMovie (title + videoPath are the only required fields),
- *  overridable per test. */
-function newMovie(overrides: Partial<NewMovie> = {}): NewMovie {
-  return {
-    title: 'Northwind',
-    videoPath: 'Northwind (2018)/northwind.mkv',
-    ...overrides,
-  };
-}
 
 // --- sort ----------------------------------------------------------------------
 

@@ -26,6 +26,7 @@ import {
   freshStorage,
   track,
 } from '../../test-support/freshStorage/freshStorage';
+import { newMovie } from '../../test-support/newMovie/newMovie';
 
 // RFC-4122 v4 UUID, as produced by crypto.randomUUID().
 const UUID_RE =
@@ -58,16 +59,6 @@ afterEach(() => {
 });
 
 // --- helpers -------------------------------------------------------------------
-
-/** A minimal valid NewMovie (title + videoPath are the only required fields),
- *  overridable per test. */
-function newMovie(overrides: Partial<NewMovie> = {}): NewMovie {
-  return {
-    title: 'Northwind',
-    videoPath: 'Northwind (2018)/northwind.mkv',
-    ...overrides,
-  };
-}
 
 /** A richly-populated movie (genres + subtitles + scalar metadata) — the
  *  starting point for edits that must leave the untouched parts intact. */

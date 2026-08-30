@@ -11,20 +11,10 @@
 
 import { describe, expect, it } from 'vitest';
 
-import type { NewMovie } from '@/types';
 import { freshStorage } from '../../test-support/freshStorage/freshStorage';
+import { newMovie } from '../../test-support/newMovie/newMovie';
 
 // --- helpers -------------------------------------------------------------------
-
-/** A minimal valid NewMovie (title + videoPath are the only required fields),
- *  overridable per test. */
-function newMovie(overrides: Partial<NewMovie> = {}): NewMovie {
-  return {
-    title: 'Northwind',
-    videoPath: 'Northwind (2018)/northwind.mkv',
-    ...overrides,
-  };
-}
 
 // --- tests ---------------------------------------------------------------------
 

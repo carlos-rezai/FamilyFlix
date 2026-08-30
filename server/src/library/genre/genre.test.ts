@@ -30,6 +30,7 @@ import {
   freshStorage,
   track,
 } from '../../test-support/freshStorage/freshStorage';
+import { newMovie } from '../../test-support/newMovie/newMovie';
 
 const tempDirs: string[] = [];
 
@@ -52,16 +53,6 @@ afterEach(() => {
 });
 
 // --- helpers -------------------------------------------------------------------
-
-/** A minimal valid NewMovie (title + videoPath are the only required fields),
- *  overridable per test. */
-function newMovie(overrides: Partial<NewMovie> = {}): NewMovie {
-  return {
-    title: 'Northwind',
-    videoPath: 'Northwind (2018)/northwind.mkv',
-    ...overrides,
-  };
-}
 
 /**
  * Add `count` movies, each a day newer than the last, so `recently-added`
