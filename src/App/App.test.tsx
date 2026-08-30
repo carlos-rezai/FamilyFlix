@@ -12,34 +12,8 @@ import { MemoryRouter, useNavigate } from 'react-router-dom';
 import App from './App';
 import type { GenrePayload, HomePayload, HomeRow, Movie } from '@/types';
 import { LocationProbe } from '@/test-support/LocationProbe/LocationProbe';
+import { makeMovie } from '@/test-support/makeMovie/makeMovie';
 import { stubScrollMetrics } from '@/test-support/stubScrollMetrics/stubScrollMetrics';
-
-function makeMovie(overrides: Partial<Movie> = {}): Movie {
-  return {
-    id: 'm1',
-    tmdbId: null,
-    title: 'Comet Season',
-    year: 2018,
-    runtimeMinutes: 90,
-    synopsis: null,
-    director: null,
-    cast: [],
-    rating: 8,
-    isFavorite: false,
-    watched: false,
-    resumePositionSeconds: 0,
-    status: 'unwatched',
-    videoPath: 'Comet Season/comet.mp4',
-    posterPath: null,
-    backdropPath: null,
-    genres: [],
-    subtitles: [],
-    createdAt: '2026-01-01T00:00:00.000Z',
-    updatedAt: '2026-01-01T00:00:00.000Z',
-    lastWatchedAt: null,
-    ...overrides,
-  };
-}
 
 /** The two of Action the home row ships, of however many the genre holds. */
 const ACTION_SHIPPED: Movie[] = [
