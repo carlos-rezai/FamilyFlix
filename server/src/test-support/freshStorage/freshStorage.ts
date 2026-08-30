@@ -32,7 +32,17 @@ export function freshStorage(): ReturnType<typeof createSqliteStorage> {
   return track(createSqliteStorage(':memory:'));
 }
 
-afterEach(() => {
+/**
+ * Close everything tracked so far.
+ *
+ * The teardown below is the ordinary way this runs. It is exported for the two
+ * files that open an **on-disk** database and must delete its directory
+ * afterwards: Vitest runs `afterEach` hooks in reverse registration order, so a
+ * file's own hook runs *before* this module's, and Windows will not remove a
+ * directory holding an open file. Those files call this first, which drains the
+ * list and leaves the teardown below nothing to do.
+ */
+export function closeTracked(): void {
   for (const resource of closeables.splice(0)) {
     try {
       resource.close();
@@ -40,4 +50,6 @@ afterEach(() => {
       // already closed by the test — fine.
     }
   }
-});
+}
+
+afterEach(closeTracked);

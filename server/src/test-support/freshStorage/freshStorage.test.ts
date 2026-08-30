@@ -6,7 +6,7 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { freshStorage, track } from './freshStorage';
+import { closeTracked, freshStorage, track } from './freshStorage';
 import type { NewMovie } from '@/types';
 
 const MINIMAL: NewMovie = {
@@ -69,5 +69,31 @@ describe('track — what it registers', () => {
   it('closed the resource the previous test tracked', () => {
     // One test later is the only vantage point a test has on an `afterEach`.
     expect(trackedClosed).toBe(true);
+  });
+});
+
+describe('closeTracked — closing early, on purpose', () => {
+  it('closes what is tracked at the moment it is called', () => {
+    // The two files that open an on-disk database call this before deleting
+    // the directory it sits in, because their own hook runs first.
+    const storage = freshStorage();
+
+    closeTracked();
+
+    expect(() => storage.listMovies({ sort: 'a-z' })).toThrow();
+  });
+
+  it('leaves nothing behind for the teardown to close twice', () => {
+    let closes = 0;
+    track({
+      close() {
+        closes += 1;
+      },
+    });
+
+    closeTracked();
+    closeTracked();
+
+    expect(closes).toBe(1);
   });
 });

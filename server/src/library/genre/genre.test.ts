@@ -25,25 +25,13 @@ import { createBrowse } from '../browse/browse';
 import { createMovieReader } from '../read/read';
 import { createGenre } from './genre';
 import type { GenrePayload, GenreQuery, MovieSort, NewMovie } from '@/types';
+import {
+  closeTracked,
+  freshStorage,
+  track,
+} from '../../test-support/freshStorage/freshStorage';
 
-// --- per-test resource tracking ------------------------------------------------
-
-interface Closeable {
-  close(): void;
-}
-
-const closeables: Closeable[] = [];
 const tempDirs: string[] = [];
-
-function track<T extends Closeable>(resource: T): T {
-  closeables.push(resource);
-  return resource;
-}
-
-/** A fresh, fully-migrated in-memory repository, closed automatically. */
-function freshStorage(): ReturnType<typeof createSqliteStorage> {
-  return track(createSqliteStorage(':memory:'));
-}
 
 /** A path to a database file no other test shares, removed automatically. */
 function tempDbPath(): string {
@@ -54,13 +42,10 @@ function tempDbPath(): string {
 
 afterEach(() => {
   vi.useRealTimers();
-  for (const resource of closeables.splice(0)) {
-    try {
-      resource.close();
-    } catch {
-      // already closed by the test — fine.
-    }
-  }
+  // Close the tracked databases before removing the directories they sit in —
+  // Windows will not delete an open file, and this hook runs before the
+  // harness's own teardown.
+  closeTracked();
   for (const dir of tempDirs.splice(0)) {
     rmSync(dir, { recursive: true, force: true });
   }

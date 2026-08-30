@@ -21,6 +21,11 @@ import { isAbsolute, join } from 'node:path';
 import { createSqliteStorage } from '..';
 import { openDatabase, type SqliteDatabase } from '../../db';
 import type { MoviePatch, NewMovie } from '@/types';
+import {
+  closeTracked,
+  freshStorage,
+  track,
+} from '../../test-support/freshStorage/freshStorage';
 
 // RFC-4122 v4 UUID, as produced by crypto.randomUUID().
 const UUID_RE =
@@ -29,24 +34,7 @@ const UUID_RE =
 // A syntactically-valid v4 UUID that no test ever inserts.
 const MISSING_ID = '00000000-0000-4000-8000-000000000000';
 
-// --- per-test resource tracking ------------------------------------------------
-
-interface Closeable {
-  close(): void;
-}
-
-const closeables: Closeable[] = [];
 let tempDir: string | null = null;
-
-function track<T extends Closeable>(resource: T): T {
-  closeables.push(resource);
-  return resource;
-}
-
-/** A fresh, fully-migrated in-memory repository, closed automatically. */
-function freshStorage(): ReturnType<typeof createSqliteStorage> {
-  return track(createSqliteStorage(':memory:'));
-}
 
 /** A throwaway on-disk DB path (lets a second connection inspect committed
  *  rows; `:memory:` databases are private to their single connection). */
@@ -59,13 +47,10 @@ function tempDbPath(): string {
 
 afterEach(() => {
   vi.useRealTimers();
-  for (const resource of closeables.splice(0)) {
-    try {
-      resource.close();
-    } catch {
-      // already closed by the test — fine.
-    }
-  }
+  // Close the tracked databases before removing the directory they sit in —
+  // Windows will not delete an open file, and this hook runs before the
+  // harness's own teardown.
+  closeTracked();
   if (tempDir && existsSync(tempDir)) {
     rmSync(tempDir, { recursive: true, force: true });
     tempDir = null;

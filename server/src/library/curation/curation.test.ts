@@ -12,38 +12,10 @@
 //
 // A fresh, isolated `:memory:` database is created per test via the factory.
 
-import { afterEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
-import { createSqliteStorage } from '..';
 import type { NewMovie } from '@/types';
-
-// --- per-test resource tracking ------------------------------------------------
-
-interface Closeable {
-  close(): void;
-}
-
-const closeables: Closeable[] = [];
-
-function track<T extends Closeable>(resource: T): T {
-  closeables.push(resource);
-  return resource;
-}
-
-/** A fresh, fully-migrated in-memory repository, closed automatically. */
-function freshStorage(): ReturnType<typeof createSqliteStorage> {
-  return track(createSqliteStorage(':memory:'));
-}
-
-afterEach(() => {
-  for (const resource of closeables.splice(0)) {
-    try {
-      resource.close();
-    } catch {
-      // already closed by the test — fine.
-    }
-  }
-});
+import { freshStorage } from '../../test-support/freshStorage/freshStorage';
 
 // --- helpers -------------------------------------------------------------------
 
