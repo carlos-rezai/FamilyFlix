@@ -7,13 +7,23 @@
 import type { Movie } from './movie';
 
 /**
- * Every browse sort order `listMovies` offers, and the wire's vocabulary for
- * them. Each maps to one ORDER BY:
+ * The **wire's** sort vocabulary: every order a URL may name, a route will
+ * answer to, and the Sort dropdown can show. Each maps to one ORDER BY:
  * - `recently-added` — `created_at DESC` (newest first), `id` tiebreak.
  * - `a-z` — `title` ascending, case-insensitive.
  * - `year` — `year DESC` (newest first); unknown year (`null`) sorts last.
  * - `highest-rated` — `rating DESC`; unrated (`null`) sorts last.
  * - `unwatched-first` — unwatched, then in-progress, then watched; title A–Z within each.
+ *
+ * `listMovies` knows one order more than these five — see {@link ListSort}. The
+ * list stops here because a sort a URL can name must be one a control can undo:
+ * `last-watched` has no option in the prototype's Sort menu, so a
+ * `?sort=last-watched` the route honoured would leave the family looking at an
+ * order nothing on the screen could take them back out of. The repository is
+ * under no such obligation — the Continue Watching row asks it for that order
+ * from code, not from an address bar — so the wider vocabulary sits beside this
+ * list rather than in it, and validating against this list is precisely what
+ * keeps the extra member unreachable from outside.
  *
  * The list is a value rather than only a type because both build targets have
  * to *check* a sort at runtime as well as name one: a sort arrives from a
@@ -126,7 +136,7 @@ export interface GenreCount {
 /**
  * One genre row of the browse home, as `getHome()` builds it and
  * `GET /api/home` returns it: the genre name, its **true total** movie count,
- * and the capped, recently-added-first slice of movies the row displays
+ * and the capped slice of movies the row displays, in the caller's own sort
  * (`count` is therefore ≥ `movies.length`). The frontend maps each `Movie`
  * through `view()` before rendering it as a card.
  */
@@ -143,14 +153,15 @@ export interface HomeRow {
  * is the first section to cash that in; the keys are declared in the order the
  * screen renders them.
  *
- * `continueWatching` holds the in-progress movies, recently-added-first and
- * capped at the same limit as a genre row; a movie part-way through appears
+ * `continueWatching` holds the in-progress movies, most-recently-watched-first
+ * and capped at the same limit as a genre row; a movie part-way through appears
  * here **and** in each of its genre rows, since "what am I part-way through"
  * and "what Action do I own" are two different questions. `favorites` holds the
- * favorited ones under the same order and the same cap, and overlaps the other
- * two sections just as freely — a movie can be part-way through, favorited, and
- * tagged Action, and it appears in all three. Every section is `[]` for an
- * empty library.
+ * favorited ones under the same cap in the caller's own sort, and overlaps the
+ * other two sections just as freely — a movie can be part-way through,
+ * favorited, and tagged Action, and it appears in all three. The resume queue is
+ * the one section with an order of its own; see `createHome` for why. Every
+ * section is `[]` for an empty library.
  */
 export interface HomePayload {
   continueWatching: Movie[];

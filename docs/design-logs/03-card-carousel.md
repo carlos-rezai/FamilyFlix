@@ -78,6 +78,15 @@ without shipping a variant that nothing mounts. The only consumer of
     The _correct_ order is most-recently-watched, which needs an `updated_at`-backed
     sort `MovieSort` doesn't have. ❌ adding a sort with no writer behind it —
     revisit when the player reports positions.
+    > **Answered by [09-continue-watching](./09-continue-watching.md) (issues
+    > #76–#79).** The revisit happened without waiting for the player. A nullable
+    > `last_watched_at` column is stamped by `setResumePosition` and `markWatched`
+    > — so the writer exists the moment playback reports anything — and the
+    > repository gained a `last-watched` order over it, pinned by `getHome` for the
+    > continue section alone. It is deliberately **not** a `MovieSort`: `ListSort`
+    > is one member wider, so the order is reachable from `listMovies` and never
+    > from a URL or the Sort menu. The cap stays 15 and now keeps the right
+    > fifteen, the `ORDER BY` running before the `LIMIT`.
 12. **Where does the row component live?** `features/library/ContinueRow/`, the
     structural twin of `GenreRow`. ❌ inlined into `LibraryPage` (pages are
     composition only).

@@ -76,13 +76,18 @@ export interface LibraryStorage {
   /**
    * The browse home in one call: the in-progress movies as `continueWatching`,
    * the favorited ones as `favorites`, plus a `rows` entry per populated genre
-   * (alphabetical), each carrying the genre's true movie count. Every section is
-   * ordered recently-added-first and capped at 15, and every one is `[]` for an
-   * empty library. The sections overlap freely — one movie can be in all three.
+   * (busiest genre first), each carrying the genre's true movie count. Every
+   * section is capped at 15, and every one is `[]` for an empty library. The
+   * sections overlap freely — one movie can be in all three.
    *
-   * An optional `query` narrows **every** section alike, and drops any row it
+   * An optional `query` **filters** every section alike, and drops any row it
    * empties; a row's `count` stays the genre's unfiltered total. Omitting it is
-   * the unfiltered home.
+   * the unfiltered home in the default order.
+   *
+   * Its **sort** reaches every section but one: `continueWatching` always comes
+   * back most-recently-watched-first, whatever the query asks for, because a
+   * resume queue's order is part of what that shelf means rather than something
+   * the header sets. `favorites` and the genre rows take the caller's sort.
    */
   getHome(query?: LibraryQuery): HomePayload;
   /**
@@ -98,15 +103,19 @@ export interface LibraryStorage {
    */
   getGenre(name: string, query?: Partial<GenreQuery>): GenrePayload;
   /**
-   * Persist the resume position (seconds into the file). Called constantly during
-   * playback, so it stays a cheap single-column write — only
-   * `resume_position_seconds` is touched, not `updated_at`.
+   * Persist the resume position (seconds into the file), and stamp
+   * `last_watched_at` with the current ISO time — this is the call that means
+   * "we are watching this", and that stamp is what orders the Continue Watching
+   * row. Called constantly during playback, so it stays a cheap two-column
+   * write; `updated_at` is still untouched, a general edit's timestamp being a
+   * different fact from a watch.
    */
   setResumePosition(id: string, seconds: number): void;
   /**
    * Mark a movie watched. By convention this also zeroes
    * `resume_position_seconds`, so a finished movie leaves the Continue Watching
-   * row.
+   * row, and it stamps `last_watched_at` alongside {@link setResumePosition} —
+   * finishing a movie is watching it.
    */
   markWatched(id: string): void;
   /** Clear the watched flag, leaving any resume position untouched. */

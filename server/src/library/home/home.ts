@@ -48,10 +48,10 @@ export interface Home {
  *
  * `rows` is one row per populated genre (busiest genre first, since
  * `listGenres` already orders by count), each capped at {@link HOME_ROW_LIMIT}
- * movies newest-first. Taking that order as given is what keeps the rows and
- * the Genre dropdown above them reading one list: a query narrows what a row
- * holds and can drop a row entirely, but never re-ranks the rows by how much
- * of each matched. A genre with no movies never reaches `listGenres`, so it
+ * movies in the caller's own sort. Taking that order as given is what keeps the
+ * rows and the Genre dropdown above them reading one list: a query narrows what
+ * a row holds and can drop a row entirely, but never re-ranks the rows by how
+ * much of each matched. A genre with no movies never reaches `listGenres`, so it
  * simply produces no row; a movie tagged with several genres appears in each of
  * their rows.
  *
@@ -70,10 +70,9 @@ export interface Home {
  *
  * `favorites` is that same shape again with a different flag: the caller's
  * query narrowed to `favoritesOnly`, in the caller's own sort, same cap. It too
- * is built
- * independently, so a favorite still appears in each of its genre rows and in
- * the continue section if it is part-way through, and a favorite with no genre
- * tags is on the shelf even though it earns no row.
+ * is built independently, so a favorite still appears in each of its genre rows
+ * and in the continue section if it is part-way through, and a favorite with no
+ * genre tags is on the shelf even though it earns no row.
  *
  * Every section is **filtered** by the one {@link LibraryQuery}, so the top of
  * the screen can never disagree with the rest of it: each section adds only
@@ -145,8 +144,12 @@ export function createHome(browse: Browse): Home {
   function getHome(query: LibraryQuery = DEFAULT_LIBRARY_QUERY): HomePayload {
     return {
       // The two calls differ in their third argument, and that asymmetry is
-      // the feature: the resume queue orders itself, the favorites shelf obeys
-      // the header. See this module's contract above for why.
+      // the feature rather than an oversight. A resume queue's order is part of
+      // what that shelf *means* — it is the queue — so it is not the header's
+      // to reorder, and the continue section pins its own. Nothing about a
+      // shelf of favorites implies an intrinsic order, so that one goes on
+      // obeying Sort. Both take their *filters* from the same query either way;
+      // see this module's contract above.
       continueWatching: listSection(query, 'inProgressOnly', CONTINUE_SORT),
       favorites: listSection(query, 'favoritesOnly', query.sort),
       rows: listRows(query),
