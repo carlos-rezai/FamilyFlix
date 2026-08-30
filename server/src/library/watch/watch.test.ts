@@ -233,3 +233,87 @@ describe('library: watch-state transitions (derived status)', () => {
     expect(storage.getMovie(id)?.status).toBe('unwatched');
   });
 });
+
+// --- the last-watched stamp ----------------------------------------------------
+
+/** A fixed instant to freeze the clock at, so an asserted stamp is a value the
+ *  test chose rather than one it read back from the row it is checking. */
+const WATCHED_AT = '2026-03-04T21:15:00.000Z';
+const LATER = '2026-03-04T21:45:00.000Z';
+
+describe('library: the last-watched stamp', () => {
+  it('is null for a movie that has never been watched', () => {
+    const storage = freshStorage();
+
+    const added = storage.addMovie(newMovie());
+
+    expect(added.lastWatchedAt).toBeNull();
+    expect(storage.getMovie(added.id)?.lastWatchedAt).toBeNull();
+  });
+
+  it('is stamped by setResumePosition with the current time, as an ISO string', () => {
+    const storage = freshStorage();
+    const added = storage.addMovie(newMovie());
+
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(WATCHED_AT));
+    storage.setResumePosition(added.id, 742);
+
+    const stamp = storage.getMovie(added.id)?.lastWatchedAt;
+    expect(stamp).toBe(WATCHED_AT);
+    // Generated in the mutator, not by SQLite's datetime('now'), which yields
+    // `YYYY-MM-DD HH:MM:SS` and would violate the ISO-strings code rule.
+    expect(new Date(stamp as string).toISOString()).toBe(stamp);
+  });
+
+  it('moves forward on every setResumePosition, keeping the latest', () => {
+    // The player reports position constantly during playback; the shelf orders
+    // by the most recent report, not the first one.
+    const storage = freshStorage();
+    const added = storage.addMovie(newMovie());
+
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(WATCHED_AT));
+    storage.setResumePosition(added.id, 120);
+    vi.setSystemTime(new Date(LATER));
+    storage.setResumePosition(added.id, 1920);
+
+    expect(storage.getMovie(added.id)?.lastWatchedAt).toBe(LATER);
+  });
+
+  it('is stamped by markWatched too — finishing a movie is watching it', () => {
+    const storage = freshStorage();
+    const added = storage.addMovie(newMovie({ resumePositionSeconds: 600 }));
+
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(WATCHED_AT));
+    storage.markWatched(added.id);
+
+    expect(storage.getMovie(added.id)?.lastWatchedAt).toBe(WATCHED_AT);
+  });
+
+  it('is not stamped by markUnwatched — un-marking is not watching', () => {
+    const storage = freshStorage();
+    const added = storage.addMovie(newMovie({ watched: true }));
+
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(WATCHED_AT));
+    storage.markUnwatched(added.id);
+
+    expect(storage.getMovie(added.id)?.lastWatchedAt).toBeNull();
+  });
+
+  it('survives markUnwatched exactly as it was, so correcting a mis-tap reshuffles nothing', () => {
+    const storage = freshStorage();
+    const added = storage.addMovie(newMovie());
+
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(WATCHED_AT));
+    storage.markWatched(added.id);
+
+    vi.setSystemTime(new Date(LATER));
+    storage.markUnwatched(added.id);
+
+    expect(storage.getMovie(added.id)?.lastWatchedAt).toBe(WATCHED_AT);
+  });
+});

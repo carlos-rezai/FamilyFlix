@@ -54,11 +54,18 @@ const open = openDatabase as unknown as (dbPath: string) => TestDb;
 // --- per-test resource tracking ------------------------------------------------
 
 const openedDbs: TestDb[] = [];
+const openedStorages: Array<{ close(): void }> = [];
 let tempDir: string | null = null;
 
 function track(db: TestDb): TestDb {
   openedDbs.push(db);
   return db;
+}
+
+/** Track a repository handle (not a raw one) so it is closed with the rest. */
+function trackStorage<T extends { close(): void }>(storage: T): T {
+  openedStorages.push(storage);
+  return storage;
 }
 
 /** A throwaway on-disk DB path (needed for WAL + reopen tests; `:memory:`
@@ -75,9 +82,12 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  for (const db of openedDbs.splice(0)) {
+  for (const resource of [
+    ...openedStorages.splice(0),
+    ...openedDbs.splice(0),
+  ]) {
     try {
-      db.close();
+      resource.close();
     } catch {
       // already closed by the test — fine.
     }
@@ -137,6 +147,52 @@ function explicitIndexes(db: TestDb, table: string): IndexDescriptor[] {
     });
 }
 
+/** The declared columns of a table, in declaration order. */
+function columnNames(db: TestDb, table: string): string[] {
+  const info = db.pragma(`table_info(${table})`) as Array<{
+    cid: number;
+    name: string;
+  }>;
+  return [...info].sort((a, b) => a.cid - b.cid).map((column) => column.name);
+}
+
+/** The names of every index whose definition mentions `column`. */
+function indexesReferencing(db: TestDb, column: string): string[] {
+  const rows = db
+    .prepare(
+      "SELECT name, sql FROM sqlite_master WHERE type = 'index' AND sql IS NOT NULL"
+    )
+    .all() as Array<{ name: string; sql: string }>;
+  return rows.filter((row) => row.sql.includes(column)).map((row) => row.name);
+}
+
+/**
+ * Leave the database at `path` looking exactly like one written before
+ * migration #2 existed: open it (which migrates it to the latest), then undo
+ * what #2 added and wind `user_version` back to 1.
+ *
+ * Un-doing a v2 database rather than importing better-sqlite3 to run
+ * `migrations[0].up` by hand keeps this file's rule that the only seam it knows
+ * is `openDatabase`. Re-opening the file afterwards is the exact upgrade path a
+ * developer's existing dev database takes — and because the version is wound
+ * back to 1, not 0, the runner applies only migration #2, so anything that
+ * reappears demonstrably came from #2 rather than from `V1_SCHEMA`.
+ */
+function windBackToV1(path: string): void {
+  const db = open(path);
+  try {
+    for (const name of indexesReferencing(db, 'last_watched_at')) {
+      db.prepare(`DROP INDEX ${name}`).run();
+    }
+    db.prepare('ALTER TABLE movies DROP COLUMN last_watched_at').run();
+    db.pragma('user_version = 1');
+  } finally {
+    // Closed even on the way out, so a failure here does not leave a handle
+    // open on the temp file and turn one red test into a cascade of EPERMs.
+    db.close();
+  }
+}
+
 // --- tests ---------------------------------------------------------------------
 
 describe('db: connection pragmas', () => {
@@ -154,9 +210,9 @@ describe('db: connection pragmas', () => {
 });
 
 describe('db: migration runner', () => {
-  it('migrates a fresh :memory: database to user_version 1', () => {
+  it('migrates a fresh :memory: database to the latest user_version', () => {
     const db = track(open(':memory:'));
-    expect(userVersion(db)).toBe(1);
+    expect(userVersion(db)).toBe(2);
   });
 
   it('seeds exactly the 12 canonical genres', () => {
@@ -171,13 +227,13 @@ describe('db: migration runner', () => {
     const path = tempDbPath();
 
     const first = track(open(path));
-    expect(userVersion(first)).toBe(1);
+    expect(userVersion(first)).toBe(2);
     first.close();
 
     // Re-opening the same file runs the migration runner again; it must detect
-    // the DB is already at version 1 and apply nothing.
+    // the DB is already current and apply nothing.
     const second = track(open(path));
-    expect(userVersion(second)).toBe(1);
+    expect(userVersion(second)).toBe(2);
 
     const names = genreNames(second);
     expect(names).toHaveLength(12);
@@ -225,6 +281,83 @@ describe('db: v1 schema', () => {
       (i) => i.columns[0]
     );
     expect(subtitleLink).toContain('movie_id');
+  });
+});
+
+describe('db: migration #2 — last_watched_at', () => {
+  it('adds a nullable last_watched_at column to movies', () => {
+    const db = track(open(':memory:'));
+
+    expect(columnNames(db, 'movies')).toContain('last_watched_at');
+  });
+
+  it('creates a PARTIAL index on movies(last_watched_at)', () => {
+    // Same shape as idx_movies_is_favorite: only the rows that have a value are
+    // indexed, so ordering the resume shelf stays cheap as the library grows.
+    const db = track(open(':memory:'));
+    const stampIndex = explicitIndexes(db, 'movies').find(
+      (i) => i.columns.includes('last_watched_at') && i.partial
+    );
+
+    expect(stampIndex).toBeDefined();
+  });
+
+  it('is a migration of its own — a fresh database reaching version 2 proves V1_SCHEMA never declared the column', () => {
+    // If the column were added to V1_SCHEMA instead, migration #2's
+    // `ALTER TABLE ... ADD COLUMN` would fail as a duplicate on every fresh
+    // database and the runner would leave the version at 1.
+    const db = track(open(':memory:'));
+
+    expect(userVersion(db)).toBe(2);
+    expect(columnNames(db, 'movies')).toContain('last_watched_at');
+  });
+
+  it('upgrades a database already at version 1 in place, keeping its rows', () => {
+    const path = tempDbPath();
+
+    const before = trackStorage(createSqliteStorage(path));
+    const added = before.addMovie({
+      title: 'Northwind',
+      videoPath: 'Northwind (2018)/northwind.mkv',
+      genres: ['Action'],
+    });
+    before.close();
+    windBackToV1(path);
+
+    const upgraded = track(open(path));
+
+    expect(userVersion(upgraded)).toBe(2);
+    expect(columnNames(upgraded, 'movies')).toContain('last_watched_at');
+    // Migration #1 is skipped rather than re-run: the genre pool is seeded once.
+    expect(genreNames(upgraded)).toHaveLength(12);
+    upgraded.close();
+
+    const storage = trackStorage(createSqliteStorage(path));
+    const movie = storage.getMovie(added.id);
+    expect(movie?.title).toBe('Northwind');
+    expect(movie?.genres.map((g) => g.name)).toEqual(['Action']);
+  });
+
+  it('backfills nothing — every pre-existing row reads back as never watched', () => {
+    const path = tempDbPath();
+
+    const before = trackStorage(createSqliteStorage(path));
+    // A movie edited long after it was added: `updated_at` moves, which is
+    // exactly the value a backfill would be tempted to borrow.
+    const added = before.addMovie({
+      title: 'Ironclad Sky',
+      videoPath: 'Ironclad Sky (2021)/ironclad-sky.mkv',
+    });
+    before.updateMovie(added.id, { title: 'Ironclad Sky (Remastered)' });
+    before.close();
+    windBackToV1(path);
+
+    const storage = trackStorage(createSqliteStorage(path));
+
+    expect(storage.getMovie(added.id)?.lastWatchedAt).toBeNull();
+    expect(
+      storage.listMovies({ sort: 'a-z' }).map((m) => m.lastWatchedAt)
+    ).toEqual([null]);
   });
 });
 

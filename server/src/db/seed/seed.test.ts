@@ -342,3 +342,77 @@ describe('the dev seed — the states it puts on the movie detail page', () => {
     expect(described.length).toBeGreaterThanOrEqual(1);
   });
 });
+
+// --- the last-watched stamps ---------------------------------------------------
+
+/** Every fixture's stamp, keyed by title — the shape a second run has to
+ *  reproduce exactly, since `addMovie` mints a fresh id each time. */
+function stampsByTitle(
+  storage: ReturnType<typeof createSqliteStorage>
+): Record<string, string | null> {
+  return Object.fromEntries(
+    storage
+      .listMovies({ sort: 'a-z' })
+      .map((movie) => [movie.title, movie.lastWatchedAt])
+  );
+}
+
+describe('the dev seed — the last-watched stamps', () => {
+  it('stamps every in-progress fixture', () => {
+    // Without these the whole shelf is unstamped, the order falls back to
+    // `created_at`, and the resume queue's order is invisible in the running
+    // app until the player ships.
+    const storage = freshStorage();
+
+    seedLibrary(storage);
+
+    const inProgress = storage.listMovies({
+      sort: 'a-z',
+      inProgressOnly: true,
+    });
+    expect(inProgress.length).toBeGreaterThan(1);
+    for (const movie of inProgress) {
+      expect(typeof movie.lastWatchedAt).toBe('string');
+    }
+  });
+
+  it('staggers them, so the shelf has an order to show rather than a tie', () => {
+    const storage = freshStorage();
+
+    seedLibrary(storage);
+
+    const stamps = storage
+      .listMovies({ sort: 'a-z', inProgressOnly: true })
+      .map((movie) => movie.lastWatchedAt);
+    expect(new Set(stamps).size).toBe(stamps.length);
+  });
+
+  it('writes ISO strings, the same as every other date in the app', () => {
+    const storage = freshStorage();
+
+    seedLibrary(storage);
+
+    for (const movie of storage.listMovies({
+      sort: 'a-z',
+      inProgressOnly: true,
+    })) {
+      const stamp = movie.lastWatchedAt as string;
+      expect(new Date(stamp).toISOString()).toBe(stamp);
+    }
+  });
+
+  it('keeps the same stamps through a second run', () => {
+    const storage = freshStorage();
+
+    seedLibrary(storage);
+    const first = stampsByTitle(storage);
+    // The comparison only means something if there are stamps to compare.
+    expect(
+      Object.values(first).filter((stamp) => typeof stamp === 'string').length
+    ).toBeGreaterThan(1);
+
+    seedLibrary(storage);
+
+    expect(stampsByTitle(storage)).toEqual(first);
+  });
+});

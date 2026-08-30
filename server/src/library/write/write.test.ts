@@ -506,6 +506,79 @@ describe('library: updateMovie', () => {
 
 // --- deleteMovie ---------------------------------------------------------------
 
+describe('library: the last-watched stamp on the write path', () => {
+  it('reads back null for a movie added without one', () => {
+    const storage = freshStorage();
+
+    const added = storage.addMovie(newMovie());
+
+    expect(added.lastWatchedAt).toBeNull();
+    expect(storage.getMovie(added.id)?.lastWatchedAt).toBeNull();
+    expect(
+      storage.listMovies({ sort: 'a-z' }).map((movie) => movie.lastWatchedAt)
+    ).toEqual([null]);
+  });
+
+  it('reads back exactly the value it was added with', () => {
+    // What lets bulk import carry watch history in from the spreadsheet rather
+    // than flattening it — and what lets the dev seed stagger its fixtures.
+    const storage = freshStorage();
+    const watchedAt = '2026-02-14T20:00:00.000Z';
+
+    const added = storage.addMovie(newMovie({ lastWatchedAt: watchedAt }));
+
+    expect(added.lastWatchedAt).toBe(watchedAt);
+    expect(storage.getMovie(added.id)?.lastWatchedAt).toBe(watchedAt);
+    expect(
+      storage.listMovies({ sort: 'a-z' }).map((movie) => movie.lastWatchedAt)
+    ).toEqual([watchedAt]);
+  });
+
+  it('cannot be written by updateMovie, so an ordinary edit never reorders the resume queue', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-07-03T10:00:00.000Z'));
+
+    const storage = freshStorage();
+    const added = storage.addMovie(fullMovie());
+    storage.setResumePosition(added.id, 640);
+    const watchedAt = storage.getMovie(added.id)?.lastWatchedAt;
+    expect(typeof watchedAt).toBe('string');
+
+    // A later edit that plainly moves `updated_at`: renaming, re-rating and
+    // favoriting are exactly the tidying-up that must not move the shelf.
+    vi.setSystemTime(new Date('2026-09-09T09:00:00.000Z'));
+    const updated = storage.updateMovie(added.id, {
+      title: 'Renamed',
+      rating: 9,
+      isFavorite: true,
+    });
+
+    expect(updated.updatedAt).not.toBe(added.updatedAt);
+    expect(updated.lastWatchedAt).toBe(watchedAt);
+    expect(storage.getMovie(added.id)?.lastWatchedAt).toBe(watchedAt);
+  });
+
+  it('is absent from MoviePatch, so no caller can even name it', () => {
+    const storage = freshStorage();
+    const added = storage.addMovie(newMovie());
+    storage.setResumePosition(added.id, 300);
+    const watchedAt = storage.getMovie(added.id)?.lastWatchedAt;
+    expect(typeof watchedAt).toBe('string');
+
+    const patch: MoviePatch = {
+      title: 'Renamed',
+      // @ts-expect-error MoviePatch deliberately omits lastWatchedAt — the
+      // stamp is maintained by the watch mutators alone, exactly as updated_at
+      // is. The suppression IS the assertion: adding the key to MoviePatch
+      // makes this an unused @ts-expect-error and fails the type check.
+      lastWatchedAt: '1999-12-31T00:00:00.000Z',
+    };
+    storage.updateMovie(added.id, patch);
+
+    expect(storage.getMovie(added.id)?.lastWatchedAt).toBe(watchedAt);
+  });
+});
+
 describe('library: deleteMovie', () => {
   it('removes the movie (getMovie returns null afterwards)', () => {
     const storage = freshStorage();
