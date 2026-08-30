@@ -2,11 +2,14 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 import { fetchMovie, saveRating, saveWatched } from './api';
 import type { Movie } from '@/types';
+import { makeMovie } from '@/test-support/makeMovie/makeMovie';
 
-function makeMovie(overrides: Partial<Movie> = {}): Movie {
-  return {
-    id: 'm1',
-    tmdbId: null,
+/**
+ * A fully-populated specimen, so the round-trip assertions prove the whole
+ * record came back rather than a stub that would match on its defaults anyway.
+ */
+function makeQuietHarbor(overrides: Partial<Movie> = {}): Movie {
+  return makeMovie({
     title: 'The Quiet Harbor',
     year: 2016,
     runtimeMinutes: 111,
@@ -14,20 +17,9 @@ function makeMovie(overrides: Partial<Movie> = {}): Movie {
     director: 'Ana Sørensen',
     cast: ['Marit Holt', 'Peder Vinge'],
     rating: 7,
-    isFavorite: false,
-    watched: false,
-    resumePositionSeconds: 0,
-    status: 'unwatched',
     videoPath: 'The Quiet Harbor (2016)/the-quiet-harbor.mkv',
-    posterPath: null,
-    backdropPath: null,
-    genres: [],
-    subtitles: [],
-    createdAt: '2026-01-01T00:00:00.000Z',
-    updatedAt: '2026-01-01T00:00:00.000Z',
-    lastWatchedAt: null,
     ...overrides,
-  };
+  });
 }
 
 function okResponse(body: unknown): Response {
@@ -95,7 +87,7 @@ function onlyRequest() {
 
 describe('fetchMovie', () => {
   it('GETs the movie by id and returns the record it answers with', async () => {
-    const movie = makeMovie();
+    const movie = makeQuietHarbor();
     fetchMock.mockResolvedValue(okResponse(movie));
 
     const loaded = await fetchMovie('m1');
@@ -105,7 +97,7 @@ describe('fetchMovie', () => {
   });
 
   it('encodes an id that would otherwise break the path', async () => {
-    fetchMock.mockResolvedValue(okResponse(makeMovie()));
+    fetchMock.mockResolvedValue(okResponse(makeQuietHarbor()));
 
     await fetchMovie('a/1 b');
 

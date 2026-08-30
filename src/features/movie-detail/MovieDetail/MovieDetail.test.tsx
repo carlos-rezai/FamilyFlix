@@ -14,39 +14,33 @@ import { MovieDetail } from './MovieDetail';
 import { theme } from '@/styles/theme';
 import type { Movie } from '@/types';
 import { LocationProbe } from '@/test-support/LocationProbe/LocationProbe';
+import { makeMovie } from '@/test-support/makeMovie/makeMovie';
 
 const SYNOPSIS =
   'A lighthouse keeper on a fading coast takes in a runaway girl, and the two ' +
   'slowly rebuild a family out of the wreckage of the season.';
 
-function makeMovie(overrides: Partial<Movie> = {}): Movie {
-  return {
-    id: 'm1',
-    tmdbId: null,
+/**
+ * The specimen this screen is written against — a movie with everything the
+ * detail page renders: a synopsis long enough to clamp, a director, a cast, and
+ * two genres. The shared builder's default has none of them, and a page test
+ * cannot assert what a record does not carry.
+ */
+function makeNorthwind(overrides: Partial<Movie> = {}): Movie {
+  return makeMovie({
     title: 'Northwind',
     year: 1994,
     runtimeMinutes: 128,
     synopsis: SYNOPSIS,
     director: 'Michael Rowe',
     cast: ['Ana Vega', 'Tomas Bell'],
-    rating: 8,
-    isFavorite: false,
-    watched: false,
-    resumePositionSeconds: 0,
-    status: 'unwatched',
     videoPath: 'Northwind/northwind.mp4',
-    posterPath: null,
-    backdropPath: null,
     genres: [
       { id: 'g1', name: 'Drama' },
       { id: 'g2', name: 'Thriller' },
     ],
-    subtitles: [],
-    createdAt: '2026-01-01T00:00:00.000Z',
-    updatedAt: '2026-01-01T00:00:00.000Z',
-    lastWatchedAt: null,
     ...overrides,
-  };
+  });
 }
 
 function okResponse(body: unknown): Response {
@@ -126,7 +120,7 @@ function serveMovie(overrides: Partial<Movie> = {}) {
   fetchMock.mockImplementation((input) => {
     const url = String(input);
     if (url.includes('/api/movies/')) {
-      return Promise.resolve(okResponse(makeMovie(overrides)));
+      return Promise.resolve(okResponse(makeNorthwind(overrides)));
     }
     return Promise.reject(new Error(`Unexpected request: ${url}`));
   });
@@ -141,7 +135,7 @@ function serveMovieAndSaves(overrides: Partial<Movie> = {}) {
     const method = (init?.method ?? 'GET').toUpperCase();
 
     if (method === 'GET') {
-      return Promise.resolve(okResponse(makeMovie(overrides)));
+      return Promise.resolve(okResponse(makeNorthwind(overrides)));
     }
     const body = JSON.parse(String(init?.body)) as { value: unknown };
     return Promise.resolve(okResponse({ value: body.value }));
@@ -152,7 +146,7 @@ function serveMovieAndSaves(overrides: Partial<Movie> = {}) {
 function serveMovieAndFailSaves(overrides: Partial<Movie> = {}) {
   fetchMock.mockImplementation((input, init) => {
     if ((init?.method ?? 'GET').toUpperCase() === 'GET') {
-      return Promise.resolve(okResponse(makeMovie(overrides)));
+      return Promise.resolve(okResponse(makeNorthwind(overrides)));
     }
     return Promise.reject(new Error(`Save refused: ${String(input)}`));
   });

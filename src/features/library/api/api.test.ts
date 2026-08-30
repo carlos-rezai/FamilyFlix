@@ -8,36 +8,10 @@ import type {
   LibraryQuery,
   Movie,
 } from '@/types';
+import { makeMovie } from '@/test-support/makeMovie/makeMovie';
 
 /** The query an unfiltered browse home asks with — every part at its default. */
 const UNFILTERED: LibraryQuery = { sort: 'recently-added' };
-
-function makeMovie(overrides: Partial<Movie> = {}): Movie {
-  return {
-    id: 'm1',
-    tmdbId: null,
-    title: 'Comet Season',
-    year: 2018,
-    runtimeMinutes: 90,
-    synopsis: null,
-    director: null,
-    cast: [],
-    rating: 8,
-    isFavorite: false,
-    watched: false,
-    resumePositionSeconds: 600,
-    status: 'in-progress',
-    videoPath: 'Comet Season/comet.mp4',
-    posterPath: null,
-    backdropPath: null,
-    genres: [],
-    subtitles: [],
-    createdAt: '2026-01-01T00:00:00.000Z',
-    updatedAt: '2026-01-01T00:00:00.000Z',
-    lastWatchedAt: null,
-    ...overrides,
-  };
-}
 
 /** The named-section envelope `GET /api/home` answers with (issue #18). */
 const HOME_PAYLOAD: HomePayload = {
@@ -105,7 +79,12 @@ describe('fetchHomePayload', () => {
   });
 
   it('carries both named sections, not a bare row array', async () => {
-    const started: Movie = makeMovie({ id: 'p1', title: 'Halfway' });
+    const started: Movie = makeMovie({
+      id: 'p1',
+      title: 'Halfway',
+      resumePositionSeconds: 600,
+      status: 'in-progress',
+    });
     fetchMock.mockResolvedValue(
       okResponse({ ...HOME_PAYLOAD, continueWatching: [started] })
     );
