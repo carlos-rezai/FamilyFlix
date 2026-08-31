@@ -82,11 +82,12 @@ rather than transcribed.
    live stream — `video.duration` is unknown and byte ranges do not exist — so a
    scrubber drag re-points `video.src` at a new `t`, ffmpeg starts at `-ss t`,
    and the hook re-anchors: **absolute position = `t` + element time**. This
-   works precisely _because_ the scrubber is ours and reads duration from the
-   movie record, never from the element. ❌ **HLS + hls.js** — smoother
-   scrubbing inside a transcode, at the cost of a client dependency, a segment
-   and temp-directory lifecycle, and cleanup on crash; kept as the escape hatch
-   if restart-seeking proves janky. ❌ **no seeking outside the direct path** —
+   works precisely _because_ the scrubber is ours and takes duration from
+   somewhere other than the element — which Q19 settles is the probe, not the
+   movie record. ❌ **HLS + hls.js** — smoother scrubbing inside a transcode, at
+   the cost of a client dependency, a segment and temp-directory lifecycle, and
+   cleanup on crash; kept as the escape hatch if restart-seeking proves janky.
+   ❌ **no seeking outside the direct path** —
    most of the family's films are MKV, so most would have a dead scrubber.
 
 5. **Where does FFmpeg come from, and what becomes of the "Add a codec pack"
@@ -101,6 +102,8 @@ rather than transcribed.
    improvisation. ❌ **not bundling** — the most literal reading, but the app
    ships unable to play MKV and my parents are the ones who hit it. ❌ **bundle
    only, drop the upload surface** — discards the screen and the stated goal.
+   The installer that would do the bundling is the Electron initiative's, which
+   is not this one, so **what resolves the binary in the meantime is Q20**.
 
 6. **How are subtitles parsed, delivered and rendered?** ✅ **The server
    normalises any format to a cue list; we render it ourselves.**
@@ -154,10 +157,11 @@ defaultLanguage)`** — a pure function, falling back to `position` order until
     the existing `POST /api/movies/:id/watched`, so `markWatched` zeroes the
     resume position as `04-movie-detail.md` Q11 already accepted.
 
-13. **New routes?** ✅ **One** — `POST /api/movies/:id/resume` `{ value }`,
+13. **New routes?** ✅ **One write** — `POST /api/movies/:id/resume` `{ value }`,
     through the existing `writeSignal` helper so it inherits 404-before-write
     and the echo an optimistic control reconciles against. Watched reuses the
-    route that already exists. Plus the two reads, `stream` and `subtitles`.
+    route that already exists. Plus the reads: `stream` and `subtitles` — and
+    **`playback`, which Q19 adds**, making it three rather than two.
 
 14. **Where does `saveWatched` live now?** ✅ **Promoted to
     `src/api/saveWatched/`.** CLAUDE.md's `api/` rule says a wire call moves up
@@ -193,6 +197,59 @@ defaultLanguage)`** — a pure function, falling back to `position` order until
 18. **Path safety?** ✅ **Paths are resolved from the database, never from the
     URL** — the URL carries a movie id and a subtitle id — and the resolved path
     is verified to stay under `FAMILYFLIX_MEDIA_PATH` before anything is opened.
+
+### Settled during `write-a-prd` (issue 82)
+
+Three questions this log left standing, answered while the PRD was written. They
+amend Q4, Q5 and Q13 above rather than sitting beside them.
+
+19. **Where does the scrubber's duration actually come from?** ✅ **A third read,
+    `GET /api/movies/:id/playback` → `{ path, durationSeconds }`**, fetched once
+    on open. Q4 said "the movie record", and that has no answer for a film whose
+    `runtimeMinutes` is `null` — a real state the library already models and
+    `toRuntimeSeconds` already has a rule for. The probe is run for the stream
+    anyway and knows the true duration, which is **better than the record even
+    when the record has one**: `runtimeMinutes` is rounded metadata, and a
+    scrubber built on it disagrees with the file by up to thirty seconds at the
+    end. The same response hands over the chosen **playback path**, which is what
+    tells `usePlayback` whether to re-anchor at all — so the client stops having
+    to infer from a stream's behaviour what the server already decided.
+    ❌ **falling back to `video.duration` on direct play only** — no new route,
+    but the same film then behaves differently depending on its container, and
+    the one rule worth keeping is that the element is never asked. ❌
+    **elapsed-only with a dead scrubber** — honest, and it would mirror
+    `NOMINAL_SLIVER_PERCENT`'s precedent, but it makes a two-hour film unseekable
+    over a blank metadata field.
+
+20. **What resolves the FFmpeg binary before an installer exists?** ✅
+    **`FAMILYFLIX_FFMPEG_PATH`, then `PATH`, then absent** — and **absent is a
+    first-class state, not an error**. Q5 settled that the installer bundles a
+    build and the drop zone replaces it; Electron is out of scope here, so
+    neither of those exists yet and something has to answer in the meantime. The
+    env var is the slot the installer will later fill and the one an uploaded
+    component will occupy, so nothing about the resolution order changes when
+    packaging lands. With no component at all, **direct play still works**, remux
+    and transcode answer the `cannot-play` notice from Q16, and `capabilities`
+    reports Chromium's native set alone — which is the truth, and the whole point
+    of Q5's "truthful probed report". ❌ **requiring it on `PATH`** — no
+    resolution logic and no absent state, but the app hard-fails on a machine
+    without it and `capabilities` has nothing honest to say. ❌ **vendoring a
+    build into the repo now** — matches the shipped app exactly, at ~80MB of
+    binary in git history, and pre-empts a packaging decision that is not this
+    initiative's to make.
+
+21. **What does the player play in development?** ✅ **A small silent H.264/AAC
+    MP4, checked in and copied under the seed's reserved prefix.** The seed's own
+    doc comment says nothing on disk backs its paths, "which is fine because
+    nothing plays a seed movie" — a sentence this initiative makes false. Without
+    a file every seeded movie renders the `missing-file` notice, and the player
+    becomes the one feature in the app that cannot be checked by looking at it,
+    which is the exact failure the seed exists to prevent. The fixture is
+    prefix-scoped and idempotent like the rest of the seed, and is deleted with
+    it when bulk import ships. Pointing `FAMILYFLIX_MEDIA_PATH` at a real folder
+    of the family's films stays the way to exercise remux and transcode against
+    actual MKVs. ❌ **leaving the seed alone** — realistic, but only on my
+    machine, and only for as long as that folder is where I left it.
 
 ## Design
 
@@ -242,7 +299,7 @@ belongs here.
 
 ```
 server/src/playback/
-├── ffmpegBinary/        resolve bundled or user-installed binary
+├── ffmpegBinary/        env var, then PATH, then absent (Q20)
 ├── probe/               ffprobe wrapper -> MediaProbe
 ├── choosePlaybackPath/  pure: MediaProbe -> PlaybackPath + argv
 ├── streamMovie/         sendFile or spawn; kills the child on client disconnect
@@ -258,6 +315,7 @@ server/src/playback/
 `storage` already is.
 
 ```
+GET  /api/movies/:id/playback                -> { path, durationSeconds }   (Q19)
 GET  /api/movies/:id/stream?t=<seconds>
 GET  /api/movies/:id/subtitles/:subtitleId   -> Cue[]
 POST /api/movies/:id/resume  { value: seconds }   (via writeSignal)
@@ -279,7 +337,7 @@ usePlayerKeys/
 useDragScalar/          shared drag logic: scrubber + volume
 cueAt/                  pure, tested
 preferredSubtitle/      pure, tested
-api/                    fetchSubtitleCues, saveResume
+api/                    fetchPlayback, fetchSubtitleCues, saveResume
 ```
 
 `pages/PlayerPage/PlayerPage.tsx` stays composition-only: read `:id`, render
@@ -301,12 +359,13 @@ on the scrubber, HLS, embedded (in-container) subtitle track extraction.
 
 1. **Thinnest end-to-end slice: direct play.**
    `GET /api/movies/:id/stream` with `sendFile` + Range and the under-media-root
-   path check; a `<video>` in `Player/` pointed at it; `PlayerPage` renders it.
-   An MP4 in the seed plays with browser-default controls. No chrome yet.
+   path check; the seed's MP4 fixture (Q21); a `<video>` in `Player/` pointed at
+   it; `PlayerPage` renders it. A seeded movie plays with browser-default
+   controls. No chrome yet.
 2. **The chrome, 1:1.** `PlayerControls`, `PlayerScrubber`, `VolumeSlider`,
-   `useDragScalar`, `useControlsVisibility`, `usePlayback` — the prototype's
-   surface, driven by real element state, against a direct-play file.
-   `stubMediaElement` lands here.
+   `useDragScalar`, `useControlsVisibility`, `usePlayback`, and the `playback`
+   read the scrubber takes its duration from — the prototype's surface, driven by
+   real element state, against a direct-play file. `stubMediaElement` lands here.
 3. **Watch writes.** `POST /api/movies/:id/resume`, `useWatchReporter`,
    `saveResume`, `saveWatched` promoted to `src/api/`. Resume-on-open, 10s
    coalesced ticks, finish at `ended`/95%. Continue Watching now orders itself
@@ -323,7 +382,7 @@ on the scrubber, HLS, embedded (in-container) subtitle track extraction.
 
 **Easier.** Custom chrome is free rather than fought for, because there is no
 vendor skin. The transcode-seek design falls out of a decision already made —
-the scrubber reading duration from the movie record — instead of needing a
+the scrubber never asking the element how long the film is — instead of needing a
 manifest format. The two hardest pieces of policy (`choosePlaybackPath`, the
 subtitle parsers) are pure functions, so the risky logic is the cheap logic to
 test. The CodecManager stops being a fiction and becomes a live report of what

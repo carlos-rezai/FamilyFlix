@@ -156,31 +156,32 @@ deliberately parallel to the **Browse home**'s rather than shared with it.
 
 How a **Movie**'s video reaches the element. Backend vocabulary — `server/src/playback/`.
 
-| Term                         | Definition                                                                                                                                                                                           | Aliases to avoid                     |
-| ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------ |
-| **Playback path** (new)      | Which of three routes a **Movie**'s video takes to the player — **Direct play**, **Remux** or **Transcode** — decided per request by the pure `choosePlaybackPath` from an **ffprobe** read.         | streaming mode, delivery, strategy   |
-| **Direct play** (new)        | The **Playback path** that sends the file untouched (`sendFile` + HTTP Range) because Chromium already reads its container and codecs.                                                               | passthrough, native, raw             |
-| **Remux** (new)              | The **Playback path** where only the container is unreadable, so the **Playback component** rewraps the untouched streams into fragmented MP4 (`-c copy`).                                           | repackage, convert, wrap             |
-| **Transcode** (new)          | The **Playback path** where a codec is unreadable, so the **Playback component** re-encodes to H.264/AAC.                                                                                            | convert, re-encode, compress         |
-| **Stream offset** (new)      | The `?t=` seconds a **Remux** or **Transcode** stream is started at (`ffmpeg -ss`) — zero on a fresh open, the seek target after a scrub. Meaningless on **Direct play**, which seeks by byte range. | seek param, start time, position     |
-| **Absolute position** (new)  | Seconds into the **Movie itself** — what the **Scrubber**, the **Resume position** and every **Cue** time mean. On a stream path it is **Stream offset** + **Element time**.                         | currentTime, time, position          |
-| **Element time** (new)       | `video.currentTime` — seconds into _what the element was handed_, which equals **Absolute position** only on **Direct play**.                                                                        | currentTime, playhead, position      |
-| **Playback component** (new) | The resolved FFmpeg binary — bundled by the installer, replaceable by the maintainer — that makes **Remux** and **Transcode** possible. This is what the prototype's "codec pack" actually is.       | codec pack, codec, plugin, ffmpeg    |
-| **Format support** (new)     | What the app can do with a given container/codec: **native** (Chromium reads it), **via component** (the **Playback component** decodes it), or **unsupported**. Probed, never hand-listed.          | codec status, compatibility, support |
+| Term                         | Definition                                                                                                                                                                                                                                                                                        | Aliases to avoid                     |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------ |
+| **Playback path** (new)      | Which of three routes a **Movie**'s video takes to the player — **Direct play**, **Remux** or **Transcode** — decided per request by the pure `choosePlaybackPath` from an **ffprobe** read.                                                                                                      | streaming mode, delivery, strategy   |
+| **Direct play** (new)        | The **Playback path** that sends the file untouched (`sendFile` + HTTP Range) because Chromium already reads its container and codecs.                                                                                                                                                            | passthrough, native, raw             |
+| **Remux** (new)              | The **Playback path** where only the container is unreadable, so the **Playback component** rewraps the untouched streams into fragmented MP4 (`-c copy`).                                                                                                                                        | repackage, convert, wrap             |
+| **Transcode** (new)          | The **Playback path** where a codec is unreadable, so the **Playback component** re-encodes to H.264/AAC.                                                                                                                                                                                         | convert, re-encode, compress         |
+| **Stream offset** (new)      | The `?t=` seconds a **Remux** or **Transcode** stream is started at (`ffmpeg -ss`) — zero on a fresh open, the seek target after a scrub. Meaningless on **Direct play**, which seeks by byte range.                                                                                              | seek param, start time, position     |
+| **Absolute position** (new)  | Seconds into the **Movie itself** — what the **Scrubber**, the **Resume position** and every **Cue** time mean. On a stream path it is **Stream offset** + **Element time**.                                                                                                                      | currentTime, time, position          |
+| **Element time** (new)       | `video.currentTime` — seconds into _what the element was handed_, which equals **Absolute position** only on **Direct play**.                                                                                                                                                                     | currentTime, playhead, position      |
+| **Playback component** (new) | The resolved FFmpeg binary — `FAMILYFLIX_FFMPEG_PATH`, then `PATH`, then **absent** — that makes **Remux** and **Transcode** possible. Bundled by the installer and replaceable by the maintainer, both of which fill the same first slot. This is what the prototype's "codec pack" actually is. | codec pack, codec, plugin, ffmpeg    |
+| **Format support** (new)     | What the app can do with a given container/codec: **native** (Chromium reads it), **via component** (the **Playback component** decodes it), or **unsupported**. Probed, never hand-listed.                                                                                                       | codec status, compatibility, support |
+| **Playback read** (new)      | `GET /api/movies/:id/playback` → `{ path, durationSeconds }`, fetched once when the **Player** opens. The one place the **Scrubber**'s duration and the **Playback path** come from — the probe's answer, not the **Movie** record's `runtimeMinutes`.                                            | metadata call, info, manifest        |
 
 ## The player screen (new)
 
-| Term                       | Definition                                                                                                                                                                                        | Aliases to avoid                 |
-| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------- |
-| **Player** (new)           | The `/movie/:id/play` route — one self-contained screen owning its own **Chrome**, outside `MainLayout`, as the **Movie detail page** already is.                                                 | video page, watch screen, viewer |
-| **Chrome** (new)           | The **Player**'s two overlaid bars — back pill + title above, **Scrubber** + transport below — which fade in and out together as one thing.                                                       | controls, overlay, HUD, toolbar  |
-| **Idle** (new)             | The **Player** state 3s after the last mouse movement during playback: **Chrome** fades out and the cursor is hidden. Any movement ends it.                                                       | timeout, inactive, hidden, afk   |
-| **Scrubber** (new)         | The **Player**'s seek bar — track, accent fill, knob — clickable _and_ draggable; it takes duration from the **Movie** record, never from the element, which is what makes seeking a stream work. | progress bar, timeline, seek bar |
-| **Cue** (new)              | One timed subtitle line — `{ start, end, text }` in **Absolute position** seconds — the single normalized shape every subtitle format is parsed into.                                             | caption, line, subtitle, vtt cue |
-| **Cue list** (new)         | The full ordered array of **Cues** for one **Subtitle**, fetched once when subtitles are switched on and held in memory for the session.                                                          | track, vtt, captions file        |
-| **Subtitle track** (new)   | The one **Subtitle** currently rendering, chosen by `preferredSubtitle` from the default language then track order — never by the viewer, since no picker ships.                                  | selected sub, language, sub file |
-| **Subtitle overlay** (new) | The styled box near the foot of the **Player** drawing the **Cue** that covers the **Absolute position**. Ours, not `::cue`.                                                                      | captions, CC box, subtitle bar   |
-| **Player notice** (new)    | The message drawn in the big-play circle's geometry instead of the play glyph: **buffering** while a stream spins up, or **unavailable** (`missing-file` / `cannot-play`).                        | error, spinner, loader, toast    |
+| Term                       | Definition                                                                                                                                                                                         | Aliases to avoid                 |
+| -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------- |
+| **Player** (new)           | The `/movie/:id/play` route — one self-contained screen owning its own **Chrome**, outside `MainLayout`, as the **Movie detail page** already is.                                                  | video page, watch screen, viewer |
+| **Chrome** (new)           | The **Player**'s two overlaid bars — back pill + title above, **Scrubber** + transport below — which fade in and out together as one thing.                                                        | controls, overlay, HUD, toolbar  |
+| **Idle** (new)             | The **Player** state 3s after the last mouse movement during playback: **Chrome** fades out and the cursor is hidden. Any movement ends it.                                                        | timeout, inactive, hidden, afk   |
+| **Scrubber** (new)         | The **Player**'s seek bar — track, accent fill, knob — clickable _and_ draggable; it takes duration from the **Playback read**, never from the element, which is what makes seeking a stream work. | progress bar, timeline, seek bar |
+| **Cue** (new)              | One timed subtitle line — `{ start, end, text }` in **Absolute position** seconds — the single normalized shape every subtitle format is parsed into.                                              | caption, line, subtitle, vtt cue |
+| **Cue list** (new)         | The full ordered array of **Cues** for one **Subtitle**, fetched once when subtitles are switched on and held in memory for the session.                                                           | track, vtt, captions file        |
+| **Subtitle track** (new)   | The one **Subtitle** currently rendering, chosen by `preferredSubtitle` from the default language then track order — never by the viewer, since no picker ships.                                   | selected sub, language, sub file |
+| **Subtitle overlay** (new) | The styled box near the foot of the **Player** drawing the **Cue** that covers the **Absolute position**. Ours, not `::cue`.                                                                       | captions, CC box, subtitle bar   |
+| **Player notice** (new)    | The message drawn in the big-play circle's geometry instead of the play glyph: **buffering** while a stream spins up, or **unavailable** (`missing-file` / `cannot-play`).                         | error, spinner, loader, toast    |
 
 ## Watch reporting (new)
 
@@ -230,9 +231,10 @@ How a **Movie**'s video reaches the element. Backend vocabulary — `server/src/
 - A **Library grid** holds **Poster cards** only — never **Continue cards**, and never a **Card carousel**; it is the uncapped counterpart of a **Genre row**.
 - Every **Search bar** in the app gets its debounce from **Settled text**; there is exactly one such behavior, whatever the screen.
 - One **Movie** takes exactly one **Playback path** per request, decided fresh from **ffprobe** rather than stored — the same film can **Direct play** today and **Transcode** tomorrow if the **Playback component** is replaced.
-- **Direct play** needs no **Playback component** at all; **Remux** and **Transcode** cannot happen without one, which is why the installer bundles it rather than waiting for the maintainer to supply it.
+- **Direct play** needs no **Playback component** at all; **Remux** and **Transcode** cannot happen without one, which is why the installer bundles it rather than waiting for the maintainer to supply it. An **absent** component is therefore a reduced app, not a broken one: MP4s still play, and everything else is a **Player notice**.
 - A **Stream offset** exists only on **Remux** and **Transcode**. **Absolute position** = **Stream offset** + **Element time** on those; on **Direct play** the two are the same number and the offset is always 0.
-- The **Scrubber** reads duration from the **Movie** record and position from **Absolute position** — never from `video.duration` or **Element time**, either of which is a lie on a stream path.
+- The **Scrubber** reads duration from the **Playback read** and position from **Absolute position** — never from `video.duration` or **Element time**, either of which is a lie on a stream path.
+- A **Playback read** is per-open, not per-seek: it is what a **Stream offset** is measured against, so re-fetching it after a scrub would re-anchor the **Scrubber** to the stream instead of to the **Movie**.
 - A **Subtitle** is a file on disk; a **Cue list** is what the server parses it into; a **Cue** is one line of that list. Nothing downstream of `parseSubtitle` knows whether the file was `.srt`, `.ass`, `.sub` or `.vtt`.
 - One **Movie** has zero-or-more **Subtitles**, of which at most one is the **Subtitle track** at a time, and it renders through exactly one **Subtitle overlay**.
 - **Format support** is derived — Chromium's native set ∪ what the **Playback component** reports — never a hand-maintained list, which is what makes the CodecManager rows true rather than decorative.
@@ -410,6 +412,20 @@ How a **Movie**'s video reaches the element. Backend vocabulary — `server/src/
 > **Maintainer:** "**Finish threshold**. Past ninety-five per cent it's watched, and
 > it comes off the resume shelf on its own. Leaving a film he's finished sitting
 > there at 'Resume · 2:04:00' forever is the thing that makes the shelf useless."
+> **Dev:** "The **Scrubber** needs a total. I've got `runtimeMinutes` on the
+> **Movie** — 118 minutes."
+> **Maintainer:** "And what do you do with the ones where it's blank?"
+> **Dev:** "…nothing. There's no total, so there's no bar to drag."
+> **Maintainer:** "Then it's the wrong number. **ffprobe** is already reading the
+> file to pick a **Playback path** — take the duration off that. That's the
+> **Playback read**, and it's right even when the catalogue is."
+> **Dev:** "So `runtimeMinutes` is what, then?"
+> **Maintainer:** "It's what the **Resume label** says on a card. It's metadata.
+> It's not how long the film is."
+> **Dev:** "Last one. My machine has no FFmpeg on it at all yet."
+> **Maintainer:** "Then MP4s play and everything else says so. That's a **Player
+> notice**, not a crash. The app being half-useful is a state we're allowed to
+> have — the app refusing to start isn't."
 
 ## Flagged ambiguities
 
@@ -465,6 +481,16 @@ How a **Movie**'s video reaches the element. Backend vocabulary — `server/src/
   `data-props` — the domain record's field and the card view model's field. The
   `view()` mapper is where they cross. This is the **only** pair of spellings
   Favorite is allowed; it is not an abbreviation to finish tidying up.
+- **A Movie's length now has two sources, and only one of them is duration
+  (new):** `runtimeMinutes` on the **Movie** record is catalogue metadata —
+  rounded, nullable, and what the **Resume label** and the **Poster card**'s
+  progress bar are built from. `durationSeconds` on the **Playback read** is what
+  the file actually is, and it is the only one the **Scrubber** and the **Finish
+  threshold** may use. They disagree by up to half a minute on a normal film and
+  completely on a **Movie** that arrived without a runtime, which is the case
+  that forced the split (`10-video-player` Q19). Do not reach for
+  `toRuntimeSeconds` inside the **Player**; do not put `durationSeconds` on a
+  card.
 - **"Movie" vs "Film":** the maintainer says _film_ conversationally, but **Movie**
   is the single canonical term in code, schema, prototype, and docs. _Film_ is an
   accepted informal synonym; do not introduce a `Film` type or `films` table.
