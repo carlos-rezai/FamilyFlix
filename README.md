@@ -125,15 +125,15 @@ Every feature is a 1:1 translation of the canonical prototype in docs/handoff/ â
 
 ## Tech Stack
 
-| Layer    | Choice                                   | Why                                                               |
-| -------- | ---------------------------------------- | ----------------------------------------------------------------- |
-| Frontend | React + TypeScript + Vite + Nx           | Production-standard, full TypeScript coverage                     |
-| UI       | styled-components + custom design system | Built via Claude Design handoff, precision over convenience       |
-| Backend  | Node.js + Express                        | Lightweight, consistent with JS ecosystem                         |
-| Database | SQLite via better-sqlite3                | Offline-first, single-file, zero config                           |
-| Playback | video.js                                 | Built-in subtitle support, seeking, no external player dependency |
-| Desktop  | Electron + electron-builder              | Wraps the existing app for offline family use                     |
-| Testing  | Vitest + Testing Library                 | Fast, Vite-native, great DX                                       |
+| Layer    | Choice                                   | Why                                                                                      |
+| -------- | ---------------------------------------- | ---------------------------------------------------------------------------------------- |
+| Frontend | React + TypeScript + Vite + Nx           | Production-standard, full TypeScript coverage                                            |
+| UI       | styled-components + custom design system | Built via Claude Design handoff, precision over convenience                              |
+| Backend  | Node.js + Express                        | Lightweight, consistent with JS ecosystem                                                |
+| Database | SQLite via better-sqlite3                | Offline-first, single-file, zero config                                                  |
+| Playback | Plain `<video>` + FFmpeg (server-side)   | Bespoke chrome needs no library skin; FFmpeg remuxes/transcodes what Chromium can't read |
+| Desktop  | Electron + electron-builder              | Wraps the existing app for offline family use                                            |
+| Testing  | Vitest + Testing Library                 | Fast, Vite-native, great DX                                                              |
 
 ---
 

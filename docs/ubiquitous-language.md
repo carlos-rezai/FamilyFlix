@@ -152,6 +152,44 @@ deliberately parallel to the **Browse home**'s rather than shared with it.
 | **Carried sort** (new)      | The **Sort order** a **View all** hands from the **Browse home** to the **Genre page** through the link (`/genre/Action?sort=a-z`), omitted at the default.                                                                       | inherited sort, global sort, shared state |
 | **Settled text** (new)      | The debounced text behavior shared by every **Search bar**: the field follows each keystroke, the URL is written 250ms after the typing stops. `useSettledText` in code.                                                          | debounce, throttle, input state           |
 
+## Playback delivery (new)
+
+How a **Movie**'s video reaches the element. Backend vocabulary — `server/src/playback/`.
+
+| Term                         | Definition                                                                                                                                                                                           | Aliases to avoid                     |
+| ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------ |
+| **Playback path** (new)      | Which of three routes a **Movie**'s video takes to the player — **Direct play**, **Remux** or **Transcode** — decided per request by the pure `choosePlaybackPath` from an **ffprobe** read.         | streaming mode, delivery, strategy   |
+| **Direct play** (new)        | The **Playback path** that sends the file untouched (`sendFile` + HTTP Range) because Chromium already reads its container and codecs.                                                               | passthrough, native, raw             |
+| **Remux** (new)              | The **Playback path** where only the container is unreadable, so the **Playback component** rewraps the untouched streams into fragmented MP4 (`-c copy`).                                           | repackage, convert, wrap             |
+| **Transcode** (new)          | The **Playback path** where a codec is unreadable, so the **Playback component** re-encodes to H.264/AAC.                                                                                            | convert, re-encode, compress         |
+| **Stream offset** (new)      | The `?t=` seconds a **Remux** or **Transcode** stream is started at (`ffmpeg -ss`) — zero on a fresh open, the seek target after a scrub. Meaningless on **Direct play**, which seeks by byte range. | seek param, start time, position     |
+| **Absolute position** (new)  | Seconds into the **Movie itself** — what the **Scrubber**, the **Resume position** and every **Cue** time mean. On a stream path it is **Stream offset** + **Element time**.                         | currentTime, time, position          |
+| **Element time** (new)       | `video.currentTime` — seconds into _what the element was handed_, which equals **Absolute position** only on **Direct play**.                                                                        | currentTime, playhead, position      |
+| **Playback component** (new) | The resolved FFmpeg binary — bundled by the installer, replaceable by the maintainer — that makes **Remux** and **Transcode** possible. This is what the prototype's "codec pack" actually is.       | codec pack, codec, plugin, ffmpeg    |
+| **Format support** (new)     | What the app can do with a given container/codec: **native** (Chromium reads it), **via component** (the **Playback component** decodes it), or **unsupported**. Probed, never hand-listed.          | codec status, compatibility, support |
+
+## The player screen (new)
+
+| Term                       | Definition                                                                                                                                                                                        | Aliases to avoid                 |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------- |
+| **Player** (new)           | The `/movie/:id/play` route — one self-contained screen owning its own **Chrome**, outside `MainLayout`, as the **Movie detail page** already is.                                                 | video page, watch screen, viewer |
+| **Chrome** (new)           | The **Player**'s two overlaid bars — back pill + title above, **Scrubber** + transport below — which fade in and out together as one thing.                                                       | controls, overlay, HUD, toolbar  |
+| **Idle** (new)             | The **Player** state 3s after the last mouse movement during playback: **Chrome** fades out and the cursor is hidden. Any movement ends it.                                                       | timeout, inactive, hidden, afk   |
+| **Scrubber** (new)         | The **Player**'s seek bar — track, accent fill, knob — clickable _and_ draggable; it takes duration from the **Movie** record, never from the element, which is what makes seeking a stream work. | progress bar, timeline, seek bar |
+| **Cue** (new)              | One timed subtitle line — `{ start, end, text }` in **Absolute position** seconds — the single normalized shape every subtitle format is parsed into.                                             | caption, line, subtitle, vtt cue |
+| **Cue list** (new)         | The full ordered array of **Cues** for one **Subtitle**, fetched once when subtitles are switched on and held in memory for the session.                                                          | track, vtt, captions file        |
+| **Subtitle track** (new)   | The one **Subtitle** currently rendering, chosen by `preferredSubtitle` from the default language then track order — never by the viewer, since no picker ships.                                  | selected sub, language, sub file |
+| **Subtitle overlay** (new) | The styled box near the foot of the **Player** drawing the **Cue** that covers the **Absolute position**. Ours, not `::cue`.                                                                      | captions, CC box, subtitle bar   |
+| **Player notice** (new)    | The message drawn in the big-play circle's geometry instead of the play glyph: **buffering** while a stream spins up, or **unavailable** (`missing-file` / `cannot-play`).                        | error, spinner, loader, toast    |
+
+## Watch reporting (new)
+
+| Term                       | Definition                                                                                                                                                       | Aliases to avoid                |
+| -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------- |
+| **Watch tick** (new)       | One write of the **Absolute position** through `POST /api/movies/:id/resume` — every 10s of playback, plus on pause, on seek-settle and on exit.                 | ping, heartbeat, autosave, sync |
+| **Tick threshold** (new)   | The ≥5s of movement below which a **Watch tick** is skipped, so a paused or nudged **Player** writes nothing and cannot reshuffle the **Continue Watching row**. | debounce, throttle, interval    |
+| **Finish threshold** (new) | `ended`, or ≥95% of duration on exit — where a **Movie** becomes **Watched** without anyone marking it, so credits do not leave a film **In-progress** forever.  | completion, end credits, done   |
+
 ## Relationships
 
 - A **Movie** has zero-or-more **Genres** (ordered; `genres[0]` is the primary tag) and zero-or-more **Subtitles**.
@@ -191,6 +229,16 @@ deliberately parallel to the **Browse home**'s rather than shared with it.
 - A **Minimum rating** exists only in a **Library query**. The **Genre header** has no rating **Filter dropdown**, so the **Genre page** applies no rating floor at all.
 - A **Library grid** holds **Poster cards** only — never **Continue cards**, and never a **Card carousel**; it is the uncapped counterpart of a **Genre row**.
 - Every **Search bar** in the app gets its debounce from **Settled text**; there is exactly one such behavior, whatever the screen.
+- One **Movie** takes exactly one **Playback path** per request, decided fresh from **ffprobe** rather than stored — the same film can **Direct play** today and **Transcode** tomorrow if the **Playback component** is replaced.
+- **Direct play** needs no **Playback component** at all; **Remux** and **Transcode** cannot happen without one, which is why the installer bundles it rather than waiting for the maintainer to supply it.
+- A **Stream offset** exists only on **Remux** and **Transcode**. **Absolute position** = **Stream offset** + **Element time** on those; on **Direct play** the two are the same number and the offset is always 0.
+- The **Scrubber** reads duration from the **Movie** record and position from **Absolute position** — never from `video.duration` or **Element time**, either of which is a lie on a stream path.
+- A **Subtitle** is a file on disk; a **Cue list** is what the server parses it into; a **Cue** is one line of that list. Nothing downstream of `parseSubtitle` knows whether the file was `.srt`, `.ass`, `.sub` or `.vtt`.
+- One **Movie** has zero-or-more **Subtitles**, of which at most one is the **Subtitle track** at a time, and it renders through exactly one **Subtitle overlay**.
+- **Format support** is derived — Chromium's native set ∪ what the **Playback component** reports — never a hand-maintained list, which is what makes the CodecManager rows true rather than decorative.
+- A **Watch tick** writes the **Resume position** and therefore stamps **Last watched at**; the first tick is the earliest moment opening the **Player** can affect the **Continue Watching row**.
+- Crossing the **Finish threshold** dispatches to `markWatched`, which clears the **Resume position** — so a finished **Movie** leaves the **Continue Watching row** by the same rule a manually-ticked one does.
+- **Chrome** and **Idle** are one state, not two: **Idle** _is_ **Chrome** hidden, and any mouse movement ends both.
 
 ## Example dialogue
 
@@ -324,6 +372,44 @@ deliberately parallel to the **Browse home**'s rather than shared with it.
 > **Dev:** "And the **Favorites row**? Does it pin an order too?"
 > **Maintainer:** "No — leave that one following the sort. A shelf of favorites has
 > no natural order for me to be annoyed you overrode."
+>
+> **Dev:** "Mum presses Play on an MKV. Chromium can't open the container at all."
+> **Maintainer:** "Then it's a **Remux**. The picture and sound inside are fine —
+> it's the wrapper it can't read — so the **Playback component** rewraps them
+> without touching a frame. It's a file copy's worth of work."
+> **Dev:** "And if it's HEVC with DTS?"
+> **Maintainer:** "**Transcode**, and it'll cost us. But she gets a picture, which
+> is the whole point. She should never learn what a container is."
+> **Dev:** "So we upload a `.dll` to make HEVC play, like the prototype shows?"
+> **Maintainer:** "You can't — the decoder's compiled into Chromium. What you'd
+> actually be dropping in is the **Playback component**, a different FFmpeg build
+> with more decoders in it. That's the honest version of that screen, and the rows
+> above it should say what **Format support** we really have, not a list I typed."
+> **Dev:** "She drags the **Scrubber** to 01:12:00 mid-**Transcode**. There's no file
+> to seek in."
+> **Maintainer:** "Then start a new one at 01:12:00 — that's the **Stream offset**.
+> Just don't let the screen believe the element: the element thinks it's at zero, and
+> the **Absolute position** is an hour and twelve minutes in. Everything the family
+> sees is the second number."
+> **Dev:** "Does that throw the subtitles out by an hour?"
+> **Maintainer:** "It would if we let the browser time them, which is exactly why we
+> don't. A **Cue** is stamped in **Absolute position**, and we draw it ourselves."
+> **Dev:** "Speaking of — are subtitles on when the film starts?"
+> **Maintainer:** "No. There's a toggle in Settings for that and it ships switched
+> off and disabled. Turning them on by default would be shipping the roadmap by
+> accident."
+> **Dev:** "But the prototype's player has them on."
+> **Maintainer:** "That's so you can _see_ the box in the mockup. Don't build the
+> screenshot."
+> **Dev:** "Dad opens a film, changes his mind, backs out after three seconds. Does
+> that jump to the top of **Continue Watching**?"
+> **Maintainer:** "God, no. Nothing's written until the first **Watch tick**, and
+> nothing's written then either unless he's actually moved — that's the **Tick
+> threshold**. Three seconds isn't watching something."
+> **Dev:** "And when the credits roll and he wanders off?"
+> **Maintainer:** "**Finish threshold**. Past ninety-five per cent it's watched, and
+> it comes off the resume shelf on its own. Leaving a film he's finished sitting
+> there at 'Resume · 2:04:00' forever is the thing that makes the shelf useless."
 
 ## Flagged ambiguities
 
@@ -556,3 +642,46 @@ deliberately parallel to the **Browse home**'s rather than shared with it.
   stays as the generic browse API the exporter will want; its comment claiming it
   is "for the genre page" is corrected. If nothing has claimed it by the time
   export ships, delete it then.
+- **"Codec pack" is a fiction we are deliberately replacing (new):** the
+  prototype's CodecManager drops a `.dll` / `.so` / `.pak` and a format lights
+  up (`FamilyFlix.dc.html:287`, appending a canned row). No such file can change
+  what plays — Chromium's decoders are compiled into the binary. The one thing
+  that genuinely is uploadable and genuinely does change what plays is the
+  **Playback component**. Say **Playback component**, never "codec pack" or
+  "codec", and record the copy change as a **prototype amendment**
+  (`10-video-player` Q5), not as something invented at build time.
+- **"Position" is now three things (new):** **Resume position** is what is
+  stored, **Absolute position** is where we are in the **Movie**, and **Element
+  time** is what `video.currentTime` reports. On **Direct play** all three agree,
+  which is exactly why the bug will not show up in the first thing anyone tests.
+  On **Remux** and **Transcode**, **Element time** is short by the **Stream
+  offset**. Never write `currentTime` in domain code without saying which.
+- **"Chrome" is overloaded (new):** CLAUDE.md's layer table calls `layouts/`
+  "page chrome", and the **Player** has no `layouts/` involvement at all — its
+  **Chrome** is the two fading overlay bars it owns itself. Both usages are
+  staying; qualify it as **player Chrome** when the sentence could go either way.
+- **"Track" pulls three ways (new):** a **Subtitle** is the file record in the
+  database, a **Cue list** is its parsed contents, and a **Subtitle track** is
+  whichever one is currently rendering. The HTML `<track>` element is a fourth
+  thing and we do not use it at all (`10-video-player` Q6). Prefer the specific
+  term; "track" alone should not appear in code.
+- **The prototype plays with subtitles on; we ship them off (new — deviation):**
+  `playMovie()` sets `subsOn:true` (`FamilyFlix.dc.html:338`) so the
+  **Subtitle overlay** is visible in the mockup. `page.SettingsPage` is the
+  product decision, and there "Turn on automatically" ships **disabled** with
+  auto-on subtitles marked 🧭 roadmap in CLAUDE.md. Reproducing the mockup's
+  default would implement a roadmap item by accident. A **recorded divergence
+  from the prototype's behavior**, in the same class as the rating filter the
+  **Genre page** does not apply.
+- **The fullscreen button is drawn but inert (new):** `feat.PlayerControls`
+  gives it a `title` and no handler, the same way the prototype's other
+  simulated affordances behave. Wiring it is not a redesign — it moves no pixel —
+  so it ships wired (`10-video-player` Q15). Contrast the **CC** button, which
+  ships as the plain toggle it is drawn as: adding a **Subtitle track** picker
+  behind it _would_ be new UI, and so a **prototype amendment**.
+- **The player needs two states the prototype never draws (new):** a
+  **Transcode** takes a second or two to produce its first bytes, and a video
+  file can be missing. Both render as a **Player notice** reusing the big-play
+  circle's exact geometry rather than as a new element, and both are recorded as
+  **prototype amendments to make before building**, per CLAUDE.md — the surface
+  is amended first, then translated, never improvised in code.
