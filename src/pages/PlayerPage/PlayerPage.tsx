@@ -1,14 +1,13 @@
 import { useParams } from 'react-router-dom';
 
+import { Player } from '@/features/player/Player/Player';
+
 /**
- * `/movie/:id/play` — a placeholder that echoes the routed movie, so the detail
- * page's Play button has a real destination now. The built-in player, its
- * subtitle tracks and its transport controls arrive with the playback feature
- * and slot in behind this same URL.
+ * `/movie/:id/play` — the player screen.
  *
- * It writes nothing, and neither does the button that opens it: playback state
- * is written by the player, and until the player exists nothing writes it at
- * all.
+ * Composition only, the way every page in this app is: read the `:id` the route
+ * matched and hand it to `Player`, which owns the picture and (from the next
+ * slice) the chrome, the hooks and the state.
  *
  * No `MainLayout` — COMPONENT-SPEC §6 makes the player one self-contained
  * screen owning its own chrome, as the movie detail page already does.
@@ -16,10 +15,5 @@ import { useParams } from 'react-router-dom';
 export default function PlayerPage() {
   const { id } = useParams<{ id: string }>();
 
-  return (
-    <main>
-      <h1>Player</h1>
-      <p>Playback for movie {id} lands here.</p>
-    </main>
-  );
+  return <Player movieId={id ?? ''} />;
 }

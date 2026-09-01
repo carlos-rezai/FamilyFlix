@@ -1,6 +1,7 @@
 import express from 'express';
 
 import { createSqliteStorage } from './library';
+import { createPlayback } from './playback/createPlayback/createPlayback';
 import { createApiRouter } from './routes';
 
 /**
@@ -16,7 +17,10 @@ const MEDIA_PATH = process.env.FAMILYFLIX_MEDIA_PATH ?? './media';
 const storage = createSqliteStorage(DB_PATH);
 
 const app = express();
-app.use('/api', createApiRouter(storage, MEDIA_PATH));
+app.use(
+  '/api',
+  createApiRouter(storage, MEDIA_PATH, createPlayback(MEDIA_PATH))
+);
 
 const server = app.listen(PORT);
 

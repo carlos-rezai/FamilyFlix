@@ -1,6 +1,7 @@
 import express, { type Request, type Response, type Router } from 'express';
 
 import type { LibraryStorage } from '../library';
+import type { Playback } from '../playback/createPlayback/createPlayback';
 import {
   DEFAULT_MOVIE_SORT,
   MOVIE_SORTS,
@@ -170,10 +171,16 @@ function parseLimit(value: string): number | null {
  * relative `posterPath` / `backdropPath` values the repository stores resolve
  * under it, which is what makes `/api/images/<posterPath>` loadable by the
  * browser.
+ *
+ * `playback` is the playback domain, injected the way `storage` already is. It
+ * answers one question in this slice — where a movie's video file really is —
+ * and grows the probe, the path choice and the subtitle parsing behind the same
+ * object, so the routes written against it do not change shape when it does.
  */
 export function createApiRouter(
   storage: LibraryStorage,
-  mediaPath: string
+  mediaPath: string,
+  playback: Playback
 ): Router {
   const router = express.Router();
 
@@ -415,6 +422,47 @@ export function createApiRouter(
     writeSignal(storage, req, res, value, (id, units) =>
       storage.setRating(id, units)
     );
+  });
+
+  // The movie's bytes, for the player's `<video>`.
+  //
+  // The URL carries an **id, never a path**: the file is resolved from the
+  // movie's stored `videoPath` and verified to sit under the managed media
+  // directory before anything is opened, so a row is trusted no further than a
+  // URL would be. `sendFile` is what serves it — it answers a `Range` request
+  // with a 206 and a `Content-Range`, which is the whole of the seeking the
+  // browser's own transport needs, and it names the content type from the
+  // extension so the element can decide it can play it.
+  //
+  // Both ways of having nothing to send answer a JSON 404 rather than Express's
+  // HTML page, for the reason `/movies/:id` does: the client reads that body to
+  // tell "gone" from "went wrong". A stored path that escaped the media
+  // directory gets deliberately the same answer as a file that is simply
+  // absent — what is or is not on this disk is not something the API reports
+  // back. And a read that fails after the headers are gone is an answer too:
+  // the connection ends, and the process stays up to serve the next request,
+  // because a maintainer's library will have gaps.
+  router.get('/movies/:id/stream', (req: Request<{ id: string }>, res) => {
+    const { id } = req.params;
+    const movie = storage.getMovie(id);
+    if (!movie) {
+      res.status(404).json({ error: `Unknown movie: ${id}` });
+      return;
+    }
+
+    const file = playback.videoFile(movie.videoPath);
+    if (file === null) {
+      res.status(404).json({ error: `No video file for movie: ${id}` });
+      return;
+    }
+
+    res.sendFile(file, (error) => {
+      if (error && !res.headersSent) {
+        res.status(404).json({ error: `No video file for movie: ${id}` });
+      } else if (error) {
+        res.end();
+      }
+    });
   });
 
   // Posters and backdrops straight off disk. Serves nothing until an import

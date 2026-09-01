@@ -1,5 +1,6 @@
 import { fileURLToPath } from 'node:url';
-import { resolve } from 'node:path';
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { dirname, join, resolve } from 'node:path';
 
 import { createSqliteStorage, type LibraryStorage } from '../../library';
 import type { NewMovie } from '@/types';
@@ -34,6 +35,21 @@ import type { NewMovie } from '@/types';
  */
 export const SEED_VIDEO_PREFIX = '__seed__/';
 
+/**
+ * The video every fixture points at: ten seconds of colour bars, H.264 in an
+ * MP4, silent and about 23 KB.
+ *
+ * One real file copied twenty-one times rather than twenty-one files, because
+ * what the fixtures need from it is identical — bytes a browser can decode at
+ * the end of a stored path. It is deliberately the container and codec that
+ * **direct-play**: the stream route sends the file as it is, so a seeded
+ * library exercises the path that needs no playback component at all, which is
+ * also the one every machine has.
+ */
+export const SEED_FIXTURE_VIDEO = fileURLToPath(
+  new URL('./seed-fixture.mp4', import.meta.url)
+);
+
 /** What one run of the seed did, for the caller and for the stdout report. */
 export interface SeedReport {
   /** Seed rows found from a previous run and removed before rewriting. */
@@ -45,11 +61,15 @@ export interface SeedReport {
 /**
  * Build the reserved relative video path for one fixture. Paths are stored
  * relative to the managed media directory, exactly as a real import would store
- * them; nothing on disk backs them, which is fine because nothing plays a seed
- * movie.
+ * them, and a run copies {@link SEED_FIXTURE_VIDEO} to every one of them, so
+ * each is a path with a file really behind it.
+ *
+ * `.mp4` because that is what the fixture is. The extension is what the stream
+ * route names the content type from, so a fixture claiming `.mkv` over H.264
+ * bytes in an MP4 would be served as something no browser would decode.
  */
 function seedVideoPath(slug: string): string {
-  return `${SEED_VIDEO_PREFIX}${slug}/${slug}.mkv`;
+  return `${SEED_VIDEO_PREFIX}${slug}/${slug}.mp4`;
 }
 
 /**
@@ -104,7 +124,9 @@ function seedVideoPath(slug: string): string {
  * No fixture carries a poster or backdrop path. That is deliberate: with no
  * artwork the cards render their deterministic id-derived gradient, which is
  * exactly what they are specified to do for a movie whose images have not been
- * imported, and it keeps the seed from depending on binary files in the repo.
+ * imported. The one binary the seed does depend on is
+ * {@link SEED_FIXTURE_VIDEO}, because a library whose films cannot be opened
+ * makes the player the one feature this seed cannot help anyone look at.
  */
 export const SEED_MOVIES: readonly NewMovie[] = [
   // --- Action: the deliberately overflowing row ------------------------------
@@ -443,16 +465,30 @@ export const SEED_MOVIES: readonly NewMovie[] = [
 ];
 
 /**
- * Replace the seed's rows in `storage` with the current fixture set, leaving
- * every other movie alone.
+ * Replace the seed's rows in `storage` — and the files behind them under
+ * `mediaPath` — with the current fixture set, leaving every other movie alone.
  *
- * Idempotent by construction: the delete pass is scoped to the reserved video
- * prefix, so running twice leaves the same library rather than a doubled one,
- * and editing {@link SEED_MOVIES} then re-running converges on the new set.
+ * Idempotent by construction, in both halves: the delete pass is scoped to the
+ * reserved video prefix in the database and to the directory of the same name
+ * on disk, so running twice leaves the same library and the same tree rather
+ * than doubled ones, and editing {@link SEED_MOVIES} then re-running converges
+ * on the new set. That scope is also the guarantee that makes this safe to
+ * point at the real media directory: a movie added any other way stores its
+ * video somewhere else, so neither pass can reach it.
+ *
+ * Clearing the whole prefixed directory rather than the paths this run is about
+ * to write is what retires a stale copy — rename a fixture and its old file
+ * would otherwise sit there for ever — and what puts back a file deleted by
+ * hand, since every path is written afresh either way.
+ *
  * Takes the storage rather than a path so a test can hand it an in-memory
- * database and exercise the real repository.
+ * database and exercise the real repository; takes the media directory for the
+ * same reason.
  */
-export function seedLibrary(storage: LibraryStorage): SeedReport {
+export function seedLibrary(
+  storage: LibraryStorage,
+  mediaPath: string
+): SeedReport {
   const previous = storage
     .listMovies({ sort: 'a-z' })
     .filter((movie) => movie.videoPath.startsWith(SEED_VIDEO_PREFIX));
@@ -460,9 +496,15 @@ export function seedLibrary(storage: LibraryStorage): SeedReport {
   for (const movie of previous) {
     storage.deleteMovie(movie.id);
   }
+  rmSync(join(mediaPath, SEED_VIDEO_PREFIX), { recursive: true, force: true });
 
-  for (const fixture of SEED_MOVIES) {
-    storage.addMovie(fixture);
+  const fixture = readFileSync(SEED_FIXTURE_VIDEO);
+  for (const movie of SEED_MOVIES) {
+    storage.addMovie(movie);
+
+    const file = join(mediaPath, movie.videoPath);
+    mkdirSync(dirname(file), { recursive: true });
+    writeFileSync(file, fixture);
   }
 
   return { removed: previous.length, added: SEED_MOVIES.length };
@@ -480,6 +522,14 @@ export function seedLibrary(storage: LibraryStorage): SeedReport {
 const DEFAULT_DB_PATH = './familyflix.db';
 
 /**
+ * The managed media directory the seed copies its fixture video into, mirroring
+ * `server/src/main.ts`'s default for exactly the same reason as
+ * {@link DEFAULT_DB_PATH}: the rows the seed writes point under this directory,
+ * so the server that serves them has to be reading the same one.
+ */
+const DEFAULT_MEDIA_PATH = './media';
+
+/**
  * Open the library, seed it, report what happened, close the connection.
  *
  * Reports through `console.info` rather than `console.log`: the code rules ban
@@ -488,15 +538,16 @@ const DEFAULT_DB_PATH = './familyflix.db';
  * is to tell you what it wrote needs to say so somewhere.
  */
 export function runSeed(
-  dbPath: string = process.env.FAMILYFLIX_DB_PATH ?? DEFAULT_DB_PATH
+  dbPath: string = process.env.FAMILYFLIX_DB_PATH ?? DEFAULT_DB_PATH,
+  mediaPath: string = process.env.FAMILYFLIX_MEDIA_PATH ?? DEFAULT_MEDIA_PATH
 ): SeedReport {
   const storage = createSqliteStorage(dbPath);
 
   try {
-    const report = seedLibrary(storage);
+    const report = seedLibrary(storage, mediaPath);
     console.info(
-      `Seeded ${report.added} movies into ${dbPath} ` +
-        `(removed ${report.removed} from a previous run).`
+      `Seeded ${report.added} movies into ${dbPath}, with their video files ` +
+        `under ${mediaPath} (removed ${report.removed} from a previous run).`
     );
     return report;
   } finally {
