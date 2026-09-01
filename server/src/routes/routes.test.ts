@@ -17,6 +17,7 @@ import express from 'express';
 import type { AddressInfo } from 'node:net';
 import type { Server } from 'node:http';
 import {
+  copyFileSync,
   mkdirSync,
   mkdtempSync,
   realpathSync,
@@ -25,6 +26,7 @@ import {
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { createApiRouter } from '.';
@@ -2121,5 +2123,163 @@ describe('GET /api/movies/:id/stream — a stored path that leaves the media dir
 
     expect(response.status).toBe(404);
     expect(Buffer.from(await response.arrayBuffer())).not.toEqual(VIDEO_BYTES);
+  });
+});
+
+// --- 10 — Video player, Phase 3: "the playback read" (issue #85) --------------
+
+/**
+ * The one file in the repository with a real duration in it: the seed's
+ * fixture, ten seconds of colour bars, H.264 in an MP4.
+ *
+ * The stream suite above writes a hand-made buffer, because bytes going out
+ * over a Range are all it asks about. The playback read asks the one question a
+ * hand-made buffer has no answer to — how long is this film — so it needs a
+ * file that genuinely is a film. Reached by path rather than by importing the
+ * seed: the seed is scaffolding that gets deleted when bulk import ships, and
+ * these tests outlive it.
+ */
+const FIXTURE_VIDEO = fileURLToPath(
+  new URL('../db/seed/seed-fixture.mp4', import.meta.url)
+);
+
+/** What that fixture is: ten seconds, exactly, by its own container header. */
+const FIXTURE_DURATION_SECONDS = 10;
+
+/**
+ * A movie with the fixture behind it, carrying whatever `runtimeMinutes` the
+ * test wants — 111 minutes of stored metadata over ten seconds of video, or
+ * none at all, which is the film whose runtime the library never learned.
+ *
+ * The disagreement is the point: a read that answered from the record would say
+ * 6660, and this is the seam where that is visible.
+ */
+function addPlayableMovie(
+  storage: LibraryStorage,
+  media: string,
+  runtimeMinutes?: number
+): Movie {
+  const relativePath = 'Northwind (2018)/northwind.mp4';
+  const absolute = join(media, relativePath);
+  mkdirSync(join(absolute, '..'), { recursive: true });
+  copyFileSync(FIXTURE_VIDEO, absolute);
+
+  return storage.addMovie({
+    title: 'Northwind',
+    videoPath: relativePath,
+    runtimeMinutes,
+    genres: ['Action'],
+  });
+}
+
+const playbackUrl = (baseUrl: string, id: string) =>
+  `${baseUrl}/api/movies/${encodeURIComponent(id)}/playback`;
+
+describe('GET /api/movies/:id/playback — a movie with a file behind it', () => {
+  it('answers the path the film takes and how long it runs', async () => {
+    const { storage, baseUrl, media } = freshApi();
+    const stored = addPlayableMovie(storage, media, 111);
+
+    const response = await fetch(playbackUrl(baseUrl, stored.id));
+
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as {
+      path: string;
+      durationSeconds: number;
+    };
+    // One path exists in this slice, and the field is here anyway: it is what
+    // tells the player whether to re-anchor, and adding it later would change
+    // a payload four slices of client code have already read.
+    expect(body.path).toBe('direct');
+    expect(body.durationSeconds).toBeCloseTo(FIXTURE_DURATION_SECONDS, 1);
+  });
+
+  it('reads the duration from the file, not from the movie’s runtime', async () => {
+    // The record says 111 minutes; the file is ten seconds. `runtimeMinutes` is
+    // rounded metadata and the file is the film, so the two disagreeing is
+    // exactly the case the read exists to settle.
+    const { storage, baseUrl, media } = freshApi();
+    const stored = addPlayableMovie(storage, media, 111);
+
+    const response = await fetch(playbackUrl(baseUrl, stored.id));
+
+    const { durationSeconds } = (await response.json()) as {
+      durationSeconds: number;
+    };
+    expect(durationSeconds).toBeCloseTo(FIXTURE_DURATION_SECONDS, 1);
+    expect(durationSeconds).not.toBe(111 * 60);
+  });
+
+  it('answers for a movie whose runtime the library never learned', async () => {
+    // A nullable column the library already models. A scrubber built on the
+    // record would have nothing to draw here; one built on the file does.
+    const { storage, baseUrl, media } = freshApi();
+    const stored = addPlayableMovie(storage, media);
+    expect(storage.getMovie(stored.id)?.runtimeMinutes).toBeNull();
+
+    const response = await fetch(playbackUrl(baseUrl, stored.id));
+
+    expect(response.status).toBe(200);
+    const { durationSeconds } = (await response.json()) as {
+      durationSeconds: number;
+    };
+    expect(durationSeconds).toBeCloseTo(FIXTURE_DURATION_SECONDS, 1);
+  });
+});
+
+describe('GET /api/movies/:id/playback — when there is nothing to read', () => {
+  it('answers a JSON 404 for an unknown id, in the shape /movies/:id uses', async () => {
+    // The shape matters more than the status: the client reads this body to
+    // tell "this film is gone" from "the request went wrong", and a stale
+    // bookmark has to get an answer rather than Express's HTML page.
+    const { baseUrl } = freshApi();
+
+    const response = await fetch(playbackUrl(baseUrl, 'no-such-movie'));
+
+    expect(response.status).toBe(404);
+    expect(response.headers.get('content-type')).toContain('application/json');
+    expect(await response.json()).toEqual({
+      error: 'Unknown movie: no-such-movie',
+    });
+  });
+
+  it('answers a JSON 404 for a row whose file is not on disk', async () => {
+    // What the player turns into the missing-file notice. A film with no file
+    // has no duration to report, so this is the same answer the stream route
+    // gives and the screen has a message for it.
+    const { storage, baseUrl } = freshApi();
+    const stored = storage.addMovie({
+      title: 'Signal Lost',
+      videoPath: 'Signal Lost (2023)/signal-lost.mp4',
+      genres: ['Sci-Fi'],
+    });
+
+    const response = await fetch(playbackUrl(baseUrl, stored.id));
+
+    expect(response.status).toBe(404);
+    expect(response.headers.get('content-type')).toContain('application/json');
+    const body = (await response.json()) as { error?: unknown };
+    expect(typeof body.error).toBe('string');
+    expect(body.error).not.toBe('');
+  });
+
+  it('refuses a stored path that leaves the managed media directory', async () => {
+    // The file is really there, so a refusal cannot be the accident of there
+    // being nothing to open. Every route that resolves a path goes through the
+    // same check — a read that probed a file the stream route would refuse to
+    // send would be a hole in it.
+    const { storage, baseUrl, outside } = freshApi();
+    copyFileSync(FIXTURE_VIDEO, join(outside, 'private.mp4'));
+    const stored = storage.addMovie({
+      title: 'Crafted',
+      videoPath: '../elsewhere/private.mp4',
+      genres: ['Action'],
+    });
+
+    const response = await fetch(playbackUrl(baseUrl, stored.id));
+
+    expect(response.status).toBe(404);
+    expect(response.headers.get('content-type')).toContain('application/json');
+    expect(await response.json()).not.toHaveProperty('durationSeconds');
   });
 });
