@@ -334,20 +334,25 @@ describe('App — routing the browse home to its destinations', () => {
 });
 
 /**
- * The movie page's two navigating actions. Both land on registered placeholders
- * — the same device that made `/movie/:id` itself an honest link two features
- * ago — so no link in the app is a lie and the real screens arrive later without
- * a single link changing.
+ * The movie page's two navigating actions. `/add` still lands on a registered
+ * placeholder — the device that made `/movie/:id` itself an honest link two
+ * features ago — and `/movie/:id/play` is the first of the two to have the real
+ * screen behind it, arriving without a single link changing, which was the whole
+ * point of registering the URL early.
  */
 describe('App — the movie page’s navigating actions', () => {
-  it('renders the player placeholder when /movie/:id/play is opened directly', async () => {
-    renderApp('/movie/a1/play');
+  it('renders the player when /movie/:id/play is opened directly', async () => {
+    // 10 — Video player, Phase 2 (issue #84): the placeholder is gone, and the
+    // routed movie still survives the URL — now visibly, as the stream the
+    // element is pointed at rather than as an echo of the id.
+    const { container } = renderApp('/movie/a1/play');
 
-    expect(await screen.findByRole('heading', { name: /play/i })).toBeDefined();
-    // The routed movie survives the URL, so the real player lands knowing which
-    // film it was asked for. (Matched with the word before it, so the location
-    // probe's own `/movie/a1/play` isn't what satisfies this.)
-    expect(screen.getByText(/movie a1/i)).toBeDefined();
+    await waitFor(() =>
+      expect(container.querySelector('video')).not.toBeNull()
+    );
+    expect(container.querySelector('video')?.getAttribute('src')).toBe(
+      '/api/movies/a1/stream'
+    );
   });
 
   it('renders the add-movie placeholder when /add is opened directly', async () => {
@@ -357,13 +362,20 @@ describe('App — the movie page’s navigating actions', () => {
   });
 
   it('sends Play to the player route for the movie being looked at', async () => {
-    renderApp('/movie/a1');
+    const { container } = renderApp('/movie/a1');
     await screen.findByRole('heading', { level: 1, name: 'Northwind' });
 
     fireEvent.click(screen.getByRole('button', { name: 'Play' }));
 
     expect(currentPath()).toBe('/movie/a1/play');
-    expect(await screen.findByRole('heading', { name: /play/i })).toBeDefined();
+    // Pressing Play on Northwind plays Northwind: the button, the URL and the
+    // stream all name the same film.
+    await waitFor(() =>
+      expect(container.querySelector('video')).not.toBeNull()
+    );
+    expect(container.querySelector('video')?.getAttribute('src')).toBe(
+      '/api/movies/a1/stream'
+    );
   });
 
   it('sends Edit details to the add screen carrying the movie id', async () => {

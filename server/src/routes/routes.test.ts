@@ -16,9 +16,19 @@
 import express from 'express';
 import type { AddressInfo } from 'node:net';
 import type { Server } from 'node:http';
+import {
+  mkdirSync,
+  mkdtempSync,
+  realpathSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { createApiRouter } from '.';
+import { createPlayback } from '../playback/createPlayback/createPlayback';
 import { createSqliteStorage, type LibraryStorage } from '../library';
 import type {
   GenreListPayload,
@@ -31,6 +41,7 @@ import type {
 
 const storages: LibraryStorage[] = [];
 const servers: Server[] = [];
+const sandboxes: string[] = [];
 
 afterEach(async () => {
   for (const server of servers.splice(0)) {
@@ -39,28 +50,49 @@ afterEach(async () => {
   for (const storage of storages.splice(0)) {
     storage.close();
   }
+  for (const root of sandboxes.splice(0)) {
+    rmSync(root, { recursive: true, force: true });
+  }
 });
 
 /**
- * A fresh library behind a listening API, and the base URL to call it on.
+ * A fresh library behind a listening API, the base URL to call it on, and the
+ * managed media directory the two file-serving routes read.
  *
  * `listen(0)` takes whatever port the OS hands out, so tests never collide with
- * the dev server or with each other. The media directory is a path that does
- * not exist — nothing here touches `/api/images`, and `express.static` over a
- * missing directory simply serves nothing.
+ * the dev server or with each other.
+ *
+ * The media directory used to be `./media`, a path that does not exist, because
+ * nothing here opened a file. `/api/movies/:id/stream` does, so it is now a real
+ * empty temporary directory removed afterwards — `outside` is its sibling, for
+ * the tests that stage a stored path leaving the tree. Both are `realpathSync`d
+ * for the same reason `mediaFilePath`'s own sandbox is: a temporary directory is
+ * a symlink on macOS and an 8.3 short name on Windows.
  */
-function freshApi(): { storage: LibraryStorage; baseUrl: string } {
+function freshApi(): {
+  storage: LibraryStorage;
+  baseUrl: string;
+  media: string;
+  outside: string;
+} {
   const storage = createSqliteStorage(':memory:');
   storages.push(storage);
 
+  const root = realpathSync(mkdtempSync(join(tmpdir(), 'familyflix-api-')));
+  sandboxes.push(root);
+  const media = join(root, 'media');
+  const outside = join(root, 'elsewhere');
+  mkdirSync(media);
+  mkdirSync(outside);
+
   const app = express();
-  app.use('/api', createApiRouter(storage, './media'));
+  app.use('/api', createApiRouter(storage, media, createPlayback(media)));
 
   const server = app.listen(0);
   servers.push(server);
 
   const { port } = server.address() as AddressInfo;
-  return { storage, baseUrl: `http://127.0.0.1:${port}` };
+  return { storage, baseUrl: `http://127.0.0.1:${port}`, media, outside };
 }
 
 /** One movie with every field the detail screen renders actually populated. */
@@ -1877,5 +1909,217 @@ describe('POST /api/movies/:id/favorite', () => {
     expect(after?.rating).toBe(stored.rating);
     expect(after?.resumePositionSeconds).toBe(stored.resumePositionSeconds);
     expect(after?.updatedAt).toBe(stored.updatedAt);
+  });
+});
+
+// --- 10 — Video player, Phase 2: "direct play" (issue #84) -------------------
+//
+// The first route in this file that opens a file rather than serializing a row,
+// and the first whose answer is bytes. The seam is unchanged: a real listener, a
+// real `fetch`, real status codes — and now a real file in a real managed media
+// directory, because a stream route tested over a stubbed filesystem asserts
+// nothing about the thing that can actually go wrong.
+//
+// What the URL promises is an id, never a path. Every path in these tests is
+// stored in the database and resolved from it; the two that leave the tree are
+// there to show that a row is not trusted any further than a URL would be.
+
+/** The fixture's bytes — long enough that a Range slice is a real subset. */
+const VIDEO_BYTES = Buffer.from(
+  'FAMILYFLIX fixture video bytes, long enough to take a slice out of.'
+);
+
+/**
+ * Write a video file into the managed media directory and add a movie pointing
+ * at it, the way an import would: the row stores the path **relative** to the
+ * media root.
+ */
+function addStreamableMovie(
+  storage: LibraryStorage,
+  media: string,
+  relativePath = 'Northwind (2018)/northwind.mp4'
+): Movie {
+  const absolute = join(media, relativePath);
+  mkdirSync(join(absolute, '..'), { recursive: true });
+  writeFileSync(absolute, VIDEO_BYTES);
+
+  return storage.addMovie({
+    title: 'Northwind',
+    videoPath: relativePath,
+    genres: ['Action'],
+  });
+}
+
+const streamUrl = (baseUrl: string, id: string) =>
+  `${baseUrl}/api/movies/${encodeURIComponent(id)}/stream`;
+
+describe('GET /api/movies/:id/stream — a movie with a file behind it', () => {
+  it('answers the file’s bytes', async () => {
+    const { storage, baseUrl, media } = freshApi();
+    const stored = addStreamableMovie(storage, media);
+
+    const response = await fetch(streamUrl(baseUrl, stored.id));
+
+    expect(response.status).toBe(200);
+    expect(Buffer.from(await response.arrayBuffer())).toEqual(VIDEO_BYTES);
+  });
+
+  it('names the type the browser needs to decide it can play it', async () => {
+    const { storage, baseUrl, media } = freshApi();
+    const stored = addStreamableMovie(storage, media);
+
+    const response = await fetch(streamUrl(baseUrl, stored.id));
+
+    expect(response.headers.get('content-type')).toContain('video/mp4');
+  });
+
+  it('advertises that it takes ranges, which is what lets the element seek', async () => {
+    const { storage, baseUrl, media } = freshApi();
+    const stored = addStreamableMovie(storage, media);
+
+    const response = await fetch(streamUrl(baseUrl, stored.id));
+
+    expect(response.headers.get('accept-ranges')).toBe('bytes');
+    expect(response.headers.get('content-length')).toBe(
+      String(VIDEO_BYTES.length)
+    );
+  });
+});
+
+describe('GET /api/movies/:id/stream — a Range request', () => {
+  it('answers 206 with the requested slice, not the whole file', async () => {
+    const { storage, baseUrl, media } = freshApi();
+    const stored = addStreamableMovie(storage, media);
+
+    const response = await fetch(streamUrl(baseUrl, stored.id), {
+      headers: { Range: 'bytes=10-19' },
+    });
+
+    expect(response.status).toBe(206);
+    expect(Buffer.from(await response.arrayBuffer())).toEqual(
+      VIDEO_BYTES.subarray(10, 20)
+    );
+  });
+
+  it('describes the slice it sent, in the file’s own terms', async () => {
+    // The three headers a scrubbing element reads together. A `Content-Length`
+    // of the whole file beside a ten-byte body is the failure that looks like a
+    // working seek until the film stalls.
+    const { storage, baseUrl, media } = freshApi();
+    const stored = addStreamableMovie(storage, media);
+
+    const response = await fetch(streamUrl(baseUrl, stored.id), {
+      headers: { Range: 'bytes=10-19' },
+    });
+
+    expect(response.headers.get('content-range')).toBe(
+      `bytes 10-19/${VIDEO_BYTES.length}`
+    );
+    expect(response.headers.get('content-length')).toBe('10');
+    await response.arrayBuffer();
+  });
+
+  it('answers an open-ended range from the offset to the end', async () => {
+    // What an element asks for when it resumes: everything from here on.
+    const { storage, baseUrl, media } = freshApi();
+    const stored = addStreamableMovie(storage, media);
+
+    const response = await fetch(streamUrl(baseUrl, stored.id), {
+      headers: { Range: 'bytes=40-' },
+    });
+
+    expect(response.status).toBe(206);
+    expect(Buffer.from(await response.arrayBuffer())).toEqual(
+      VIDEO_BYTES.subarray(40)
+    );
+  });
+});
+
+describe('GET /api/movies/:id/stream — when there is nothing to send', () => {
+  it('answers a JSON 404 for an unknown id, in the shape /movies/:id uses', async () => {
+    // Not Express's HTML page: the client reads this body to tell "this movie
+    // is gone" from "the request went wrong", and a stale bookmark has to get
+    // an answer rather than a hang.
+    const { baseUrl } = freshApi();
+
+    const response = await fetch(streamUrl(baseUrl, 'no-such-movie'));
+
+    expect(response.status).toBe(404);
+    expect(response.headers.get('content-type')).toContain('application/json');
+    expect(await response.json()).toEqual({
+      error: 'Unknown movie: no-such-movie',
+    });
+  });
+
+  it('answers a JSON 404 for a row whose file is not on disk', async () => {
+    const { storage, baseUrl } = freshApi();
+    const stored = storage.addMovie({
+      title: 'Signal Lost',
+      videoPath: 'Signal Lost (2023)/signal-lost.mp4',
+      genres: ['Sci-Fi'],
+    });
+
+    const response = await fetch(streamUrl(baseUrl, stored.id));
+
+    expect(response.status).toBe(404);
+    expect(response.headers.get('content-type')).toContain('application/json');
+    const body = (await response.json()) as { error?: unknown };
+    expect(typeof body.error).toBe('string');
+    expect(body.error).not.toBe('');
+  });
+
+  it('stays up afterwards, and serves the next request normally', async () => {
+    // A missing file is an answer, not an unhandled rejection that takes the
+    // server down with it — the maintainer's library will have gaps.
+    const { storage, baseUrl, media } = freshApi();
+    const missing = storage.addMovie({
+      title: 'Signal Lost',
+      videoPath: 'Signal Lost (2023)/signal-lost.mp4',
+      genres: ['Sci-Fi'],
+    });
+    const present = addStreamableMovie(storage, media);
+
+    await fetch(streamUrl(baseUrl, missing.id));
+    const response = await fetch(streamUrl(baseUrl, present.id));
+
+    expect(response.status).toBe(200);
+    expect(Buffer.from(await response.arrayBuffer())).toEqual(VIDEO_BYTES);
+  });
+});
+
+describe('GET /api/movies/:id/stream — a stored path that leaves the media directory', () => {
+  it('refuses a `..` walk, and says no more than a missing file does', async () => {
+    // The file is really there, so a refusal cannot be the accident of there
+    // being nothing to open. The answer is deliberately the same one a missing
+    // file gets: what is or is not on this disk is not something the API
+    // reports back.
+    const { storage, baseUrl, outside } = freshApi();
+    writeFileSync(join(outside, 'private.mp4'), VIDEO_BYTES);
+    const stored = storage.addMovie({
+      title: 'Crafted',
+      videoPath: '../elsewhere/private.mp4',
+      genres: ['Action'],
+    });
+
+    const response = await fetch(streamUrl(baseUrl, stored.id));
+
+    expect(response.status).toBe(404);
+    expect(Buffer.from(await response.arrayBuffer())).not.toEqual(VIDEO_BYTES);
+  });
+
+  it('refuses an absolute path, however real the file behind it', async () => {
+    const { storage, baseUrl, outside } = freshApi();
+    const absolute = join(outside, 'private.mp4');
+    writeFileSync(absolute, VIDEO_BYTES);
+    const stored = storage.addMovie({
+      title: 'Crafted',
+      videoPath: absolute,
+      genres: ['Action'],
+    });
+
+    const response = await fetch(streamUrl(baseUrl, stored.id));
+
+    expect(response.status).toBe(404);
+    expect(Buffer.from(await response.arrayBuffer())).not.toEqual(VIDEO_BYTES);
   });
 });
