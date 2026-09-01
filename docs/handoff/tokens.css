@@ -98,6 +98,11 @@
     transform: none;
   }
 }
+@keyframes ffSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
 @keyframes ffBar {
   from {
     background-position: 0 0;

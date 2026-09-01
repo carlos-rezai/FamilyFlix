@@ -160,6 +160,14 @@
         sortDefs = [['recent','Recently Added'],['az','Title (A\u2013Z)'],['year','Year'],['unwatched','Unwatched First'],['rating','Highest Rated']];
         ratings = {1:90,2:80,3:70,4:60,5:80,6:90,7:50,8:70,9:60,10:80,11:70,12:90,13:50,14:40,15:80,16:70,17:60,18:50,19:70,20:60};
         ratingDefs = [['0','All ratings'],['80','4+ stars'],['60','3+ stars'],['40','2+ stars']];
+        // Simulated playability, so both Player notices are reachable by pressing Play.
+        // Every other title buffers briefly and then plays.
+        playability = {14:'cannot-play', 19:'missing-file'};
+        noticeCopy = {
+          buffering:{title:'Getting this film ready…'},
+          'missing-file':{title:'This film’s file is missing', body:'FamilyFlix can’t find the video file for this title. It may have been moved or renamed outside the app.'},
+          'cannot-play':{title:'This film can’t be played', body:'FamilyFlix can’t decode this file’s format. Adding a playback component in Settings may fix it.'},
+        };
         credits = {
           1:{dir:'Eleanor Past',cast:['Tomas Hale','Maeve Cole','Iris Bell']},
           2:{dir:'Júlia Renning',cast:['Andre Sol','Nina Voss','Peter Ahl']},
@@ -189,7 +197,7 @@
           fRating:0, fRatingHover:null,
           openDrop:null, gearOpen:false, editMenuOpen:false, overrides:{}, favorites:[4,12,16],
           genreView:null, genreSearch:'', detailReturn:'browse',
-          playing:true, currentTime:0, subsOn:true, muted:false, volume:0.8, controlsVisible:true,
+          playing:true, currentTime:0, subsOn:true, muted:false, volume:0.8, controlsVisible:true, playNotice:null,
           addMode:'folder', folderPath:'', scanned:false,
           fTitle:'', fYear:'', fDirector:'', fCast:'', fDescription:'', fGenres:[], fVideo:'', fPoster:'', fSubs:[], subLangOpen:null,
           addContext:null, resolveId:null,
@@ -218,7 +226,8 @@
             if(s.screen==='player'){
               const dur=this.durationOf(); const patch={};
               if(s.playing && s.currentTime<dur) patch.currentTime=Math.min(dur,s.currentTime+0.25);
-              if(s.playing && Date.now()-this.lastMove>3000 && s.controlsVisible) patch.controlsVisible=false;
+              // Chrome never idles away behind a notice — Back stays reachable (story 62).
+              if(s.playing && !s.playNotice && Date.now()-this.lastMove>3000 && s.controlsVisible) patch.controlsVisible=false;
               if(Object.keys(patch).length) this.setState(patch);
             } else if(s.screen==='import' && s.impStep==='running'){
               if(s.impPhase==='scan'){
@@ -251,7 +260,7 @@
             }
           },220);
         }
-        componentWillUnmount(){ clearInterval(this.timer); }
+        componentWillUnmount(){ clearInterval(this.timer); clearTimeout(this._bufferTimer); }
 
         // ---- helpers ----
         eff(m){ return this.state.overrides[m.id]!=null ? this.state.overrides[m.id] : m.st; }
@@ -335,16 +344,16 @@
         toggleFavorite(){ const m=this.cur(); if(m) this.toggleFavById(m.id); }
         toggleEditMenu(){ this.setState(s=>({editMenuOpen:!s.editMenuOpen})); }
         editMovie(){ const m=this.cur(); if(!m)return; const cr=this.credits[m.id]||{dir:'',cast:[]}; this.setState({fTitle:m.title,fYear:String(m.year),fDirector:cr.dir,fCast:cr.cast.join(', '),fDescription:m.syn,fGenres:[...m.genres],fVideo:m.title.toLowerCase().replace(/[^a-z0-9]+/g,'-')+'.mp4',fPoster:'poster.jpg',fSubs:[{filename:'subtitles.en.srt',lang:'English'}],fRating:this.ratingOf(m),fRatingHover:null,addMode:'manual',scanned:true,screen:'add',editMenuOpen:false,addContext:'edit',resolveId:null}); }
-        playMovie(){ const m=this.cur(); if(!m)return; const resume=this.eff(m)==='progress'? m.runtime*60*m.prog/100 : 0; this.lastMove=Date.now(); this.setState({screen:'player',currentTime:resume,playing:true,controlsVisible:true,subsOn:true}); }
+        playMovie(){ const m=this.cur(); if(!m)return; const resume=this.eff(m)==='progress'? m.runtime*60*m.prog/100 : 0; this.lastMove=Date.now(); const broken=this.playability[m.id]||null; clearTimeout(this._bufferTimer); this.setState({screen:'player',currentTime:resume,playing:false,controlsVisible:true,subsOn:true,playNotice:broken||'buffering'}); if(!broken) this._bufferTimer=setTimeout(()=>this.setState({playNotice:null,playing:true}), 1100); }
 
         // ---- player ----
         onPlayerMove(){ this.lastMove=Date.now(); if(!this.state.controlsVisible) this.setState({controlsVisible:true}); }
-        togglePlay(){ this.lastMove=Date.now(); this.setState(s=>({playing:!s.playing,controlsVisible:true})); }
+        togglePlay(){ this.lastMove=Date.now(); this.setState(s=>s.playNotice?{controlsVisible:true}:({playing:!s.playing,controlsVisible:true})); }
         skipBack(){ this.lastMove=Date.now(); this.setState(s=>({currentTime:Math.max(0,s.currentTime-10),controlsVisible:true})); }
         skipFwd(){ this.lastMove=Date.now(); this.setState(s=>({currentTime:Math.min(this.durationOf(),s.currentTime+10),controlsVisible:true})); }
         toggleMute(){ this.setState(s=>({muted:!s.muted})); }
         toggleSubs(){ this.setState(s=>({subsOn:!s.subsOn})); }
-        exitPlayer(){ this.setState({screen:'detail',playing:false}); }
+        exitPlayer(){ clearTimeout(this._bufferTimer); this.setState({screen:'detail',playing:false,playNotice:null}); }
         onSeekClick(e){ const r=e.currentTarget.getBoundingClientRect(); const p=(e.clientX-r.left)/r.width; this.lastMove=Date.now(); this.setState({currentTime:Math.max(0,Math.min(1,p))*this.durationOf(),controlsVisible:true}); }
         onVolClick(e){ const r=e.currentTarget.getBoundingClientRect(); const p=Math.max(0,Math.min(1,(e.clientX-r.left)/r.width)); this.setState({volume:p,muted:p===0}); }
 
@@ -446,6 +455,7 @@
           const playIcon=React.createElement('svg',{width:24,height:24,viewBox:'0 0 24 24',fill:'#fff'},s.playing?React.createElement('path',{d:'M7 4h4v16H7zM13 4h4v16h-4z'}):React.createElement('path',{d:'M7 5l12 7-12 7z'}));
           const volIcon=React.createElement('svg',{width:22,height:22,viewBox:'0 0 24 24',fill:'none'},React.createElement('path',{d:'M4 9v6h4l5 4V5L8 9H4z',fill:'#fff'}),(s.muted||s.volume<0.05)?React.createElement('path',{d:'M17 9l4 6M21 9l-4 6',stroke:'#fff',strokeWidth:1.8,strokeLinecap:'round'}):React.createElement('path',{d:'M16.5 8.5a5 5 0 010 7',stroke:'#fff',strokeWidth:1.8,strokeLinecap:'round'}));
           const hasSubs = m ? true : false;
+          const notice = this.noticeCopy[s.playNotice] || {title:'', body:''};
 
           // add form
           const labelStyle={display:'block',fontFamily:'var(--font-sans)',fontSize:'13px',fontWeight:'600',color:'var(--color-text-dim)',marginBottom:'8px',letterSpacing:'.2px'};
@@ -554,8 +564,10 @@
               seekKnob:{position:'absolute',top:'50%',left:pct+'%',width:'14px',height:'14px',borderRadius:'99px',background:'#fff',transform:'translate(-50%,-50%)',boxShadow:'0 1px 4px rgba(0,0,0,.5)'},
               volStyle:{height:'100%',width:volPct+'%',background:'#fff',borderRadius:'99px'},
               playPauseIcon:playIcon, volumeIcon:volIcon, subBtnStyle:subBtn, hasSubs,
-              showBigPlay:!s.playing, showSubtitle:s.subsOn && hasSubs,
+              showBigPlay:!s.playing && !s.playNotice, showSubtitle:s.subsOn && hasSubs && !s.playNotice,
               subtitleLine:'— You can see the whole coast from up here.',
+              showBuffering:s.playNotice==='buffering', showUnavailable:s.playNotice==='missing-file' || s.playNotice==='cannot-play',
+              noticeTitle:notice.title, noticeBody:notice.body,
             },
             // add
             formModel:{
