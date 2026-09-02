@@ -1230,3 +1230,127 @@ describe('Player — a subtitle file that is no good', () => {
     expect(screen.queryByText(MISSING_TITLE)).toBeNull();
   });
 });
+
+/**
+ * 10 — Video player, Phase 7 (second slice): "seeking on a stream path"
+ * (issue #90).
+ *
+ * The property the whole slice exists to prove, and the reason it waited for
+ * every consumer to be built: on a **Remux** or a **Transcode** the element is
+ * re-pointed at a new **Stream offset** and comes back at zero, and the
+ * **Scrubber**, the **Subtitle overlay** and the **Watch tick** all go on
+ * reading one number — the **Absolute position** — without one of them learning
+ * which **Playback path** is playing.
+ *
+ * Nothing in those three changed to make this true, which is why it is asserted
+ * here, through their own surfaces: the elapsed label on screen, the line in
+ * the box, and the value that went out on the wire.
+ */
+describe('Player — a settled scrub on a film that is being converted', () => {
+  stubMediaElement();
+
+  /** The same film, arriving down a live stream rather than off the disk. */
+  const REMUX: PlaybackRead = { path: 'remux', durationSeconds: 6832.5 };
+
+  const TRACK_LEFT = 100;
+  const TRACK_WIDTH = 200;
+
+  /** 3601 seconds in: an hour and a second, and the second cue's stretch. */
+  const TARGET = 3601;
+
+  /** The scrubber, laid out — jsdom lays nothing out, so the rect is stubbed. */
+  async function seekBar(): Promise<HTMLElement> {
+    const track = await screen.findByRole('slider', { name: 'Seek' });
+    track.getBoundingClientRect = () =>
+      ({
+        x: TRACK_LEFT,
+        y: 0,
+        left: TRACK_LEFT,
+        right: TRACK_LEFT + TRACK_WIDTH,
+        top: 0,
+        bottom: 6,
+        width: TRACK_WIDTH,
+        height: 6,
+        toJSON: () => ({}),
+      }) as DOMRect;
+    return track;
+  }
+
+  /** Drag the knob to a fraction along the bar and let go of it there. */
+  function dragTo(track: HTMLElement, fraction: number): void {
+    const clientX = TRACK_LEFT + TRACK_WIDTH * fraction;
+    fireEvent.pointerDown(track, { clientX: TRACK_LEFT });
+    act(() => {
+      window.dispatchEvent(new MouseEvent('pointermove', { clientX }));
+    });
+    act(() => {
+      window.dispatchEvent(new MouseEvent('pointerup', { clientX }));
+    });
+  }
+
+  /** The **Stream offset** the element's source carries, in seconds. */
+  function offsetOf(video: HTMLVideoElement): number {
+    const src = video.getAttribute('src') ?? '';
+    const t = src.includes('?')
+      ? new URLSearchParams(src.slice(src.indexOf('?') + 1)).get('t')
+      : null;
+    return t === null ? 0 : Number(t);
+  }
+
+  /** The converted film, playing, an hour in, with subtitles switched on. */
+  async function scrubbedAnHourIn() {
+    answerWith({ movie: SUBTITLED, cues: CUES, playback: REMUX });
+    const view = renderPlayer();
+    await waitFor(() => expect(view.video.paused).toBe(false));
+    fireEvent.click(await screen.findByRole('button', { name: 'Subtitles' }));
+    await waitFor(() => expect(cueRequests()).toHaveLength(1));
+
+    view.video.currentTime = 2;
+    emit(view.video, 'timeupdate');
+    await screen.findByText(FIRST_LINE);
+
+    dragTo(await seekBar(), TARGET / REMUX.durationSeconds);
+    return view;
+  }
+
+  it('re-points the element at a stream that starts there, rather than winding it', async () => {
+    // There is no byte range to seek in and no second in the element to seek
+    // to: the film is restarted at the offset, which is the only seek a live
+    // stream has.
+    const { video } = await scrubbedAnHourIn();
+
+    expect(offsetOf(video)).toBeCloseTo(TARGET, 0);
+    expect(video.currentTime).toBe(2);
+  });
+
+  it('has the elapsed label, the line on screen and the write all reading the same second', async () => {
+    // Three consumers, one number, none of them changed for this slice.
+    const { video } = await scrubbedAnHourIn();
+
+    expect(await screen.findByText('1:00:01')).toBeDefined();
+    expect(await screen.findByText(LATER_LINE)).toBeDefined();
+    expect(screen.queryByText(FIRST_LINE)).toBeNull();
+
+    const resumes = watchWrites().filter((write) => write.route === 'resume');
+    expect(resumes).toHaveLength(1);
+    expect(resumes[0].value as number).toBeCloseTo(TARGET, 0);
+    expect(video.currentTime).toBe(2);
+  });
+
+  it('keeps them agreeing as the restarted stream runs on', async () => {
+    // The element is two seconds into a stream that began an hour into the
+    // film. Every one of the three has to say an hour and three seconds — the
+    // version of this bug that ships is a subtitle track an hour behind.
+    const { video } = await scrubbedAnHourIn();
+
+    // The restarted stream, as the browser hands it back: from its beginning.
+    video.currentTime = 0;
+    emit(video, 'timeupdate');
+    video.currentTime = 2;
+    emit(video, 'timeupdate');
+
+    expect(await screen.findByText('1:00:03')).toBeDefined();
+    expect(screen.getByText(LATER_LINE)).toBeDefined();
+    expect(screen.queryByText('0:02')).toBeNull();
+  });
+});

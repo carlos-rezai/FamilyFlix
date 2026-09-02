@@ -3182,3 +3182,165 @@ describe('GET /api/movies/:id/stream — a film that cannot be played', () => {
     expect(component.spawned).toHaveLength(0);
   });
 });
+
+// --- 10 — Video player, Phase 7 (second slice): "seeking on a stream path"
+// (issue #90) -----------------------------------------------------------------
+//
+// The **Stream offset** on the wire. Through every slice so far this route has
+// had one path — `sendFile` + Range — and `?t=` has had nothing to do; here it
+// becomes the only way a converted film can be seeked at all, because a live
+// stream has no byte ranges and no known length for the element to seek in.
+//
+// Three answers, and the interesting ones are the two that are not bytes: a
+// position the film does not have, and a `t` that is not a position. Neither may
+// start a conversion — a process spawned over an unreachable second produces
+// nothing, forever, and a family movie night is the wrong place to find that out.
+
+/** The stream URL with a **Stream offset** on it, exactly as the player writes it. */
+const streamAt = (baseUrl: string, id: string, t: string | number) =>
+  `${streamUrl(baseUrl, id)}?t=${t}`;
+
+describe('GET /api/movies/:id/stream — a converted film asked for partway in', () => {
+  it('starts the conversion at the second the URL asked for', async () => {
+    const component = fakeComponent({ probe: REMUXABLE });
+    const { storage, baseUrl, media } = freshApi(component);
+    const stored = addMkvMovie(storage, media);
+
+    const response = await fetch(streamAt(baseUrl, stored.id, 1200));
+
+    expect(response.status).toBe(200);
+    expect(Buffer.from(await response.arrayBuffer())).toEqual(CONVERTED_BYTES);
+    expect(component.spawned).toHaveLength(1);
+    expect(component.spawned[0].join(' ')).toContain('-ss 1200');
+  });
+
+  it('asks for no offset when the film is opened at its beginning', async () => {
+    // The commonest request this route serves, and the one that must not
+    // quietly acquire an argument it never had.
+    const component = fakeComponent({ probe: REMUXABLE });
+    const { storage, baseUrl, media } = freshApi(component);
+    const stored = addMkvMovie(storage, media);
+
+    await (await fetch(streamUrl(baseUrl, stored.id))).arrayBuffer();
+
+    expect(component.spawned[0]).not.toContain('-ss');
+  });
+
+  it('starts a transcode partway in too, not only a remux', async () => {
+    const component = fakeComponent({ probe: TRANSCODABLE });
+    const { storage, baseUrl, media } = freshApi(component);
+    const stored = addMkvMovie(storage, media);
+
+    await (await fetch(streamAt(baseUrl, stored.id, 90))).arrayBuffer();
+
+    expect(component.spawned[0].join(' ')).toContain('-ss 90');
+  });
+
+  it('serves a second the film really has, right up against its end', async () => {
+    // The boundary the refusal below must not swallow: 5391 of a 5391.2-second
+    // film is the last of it, not past it, and a scrubber dragged to the far
+    // end lands here every time.
+    const component = fakeComponent({ probe: REMUXABLE });
+    const { storage, baseUrl, media } = freshApi(component);
+    const stored = addMkvMovie(storage, media);
+
+    const response = await fetch(streamAt(baseUrl, stored.id, 5391));
+
+    expect(response.status).toBe(200);
+    await response.arrayBuffer();
+    expect(component.spawned).toHaveLength(1);
+  });
+});
+
+describe('GET /api/movies/:id/stream — direct play ignores the offset', () => {
+  it('sends the file untouched and runs nothing, however the URL is spelled', async () => {
+    // **Direct play** seeks by byte range, so `?t=` means nothing to it — and a
+    // file that started being sent from the middle because of one would be a
+    // film that skips its own opening.
+    const component = fakeComponent({ probe: NATIVE });
+    const { storage, baseUrl, media } = freshApi(component);
+    const stored = addStreamableMovie(storage, media);
+
+    const response = await fetch(streamAt(baseUrl, stored.id, 1200));
+
+    expect(response.status).toBe(200);
+    expect(Buffer.from(await response.arrayBuffer())).toEqual(VIDEO_BYTES);
+    expect(component.spawned).toHaveLength(0);
+  });
+
+  it('still answers a Range with the slice that was asked for', async () => {
+    // The element's own transport, which is the whole of the seeking direct
+    // play needs. A `?t=` on the URL must not cost the cheapest path its 206.
+    const component = fakeComponent({ probe: NATIVE });
+    const { storage, baseUrl, media } = freshApi(component);
+    const stored = addStreamableMovie(storage, media);
+
+    const response = await fetch(streamAt(baseUrl, stored.id, 1200), {
+      headers: { Range: 'bytes=10-19' },
+    });
+
+    expect(response.status).toBe(206);
+    expect(Buffer.from(await response.arrayBuffer())).toEqual(
+      VIDEO_BYTES.subarray(10, 20)
+    );
+  });
+});
+
+describe('GET /api/movies/:id/stream — a second the film does not have', () => {
+  it('answers rather than spawning something that produces nothing', async () => {
+    // User story 66, and the reason it is a story at all: `-ss` past the end of
+    // a film starts a conversion that reads to the end, writes no frames, and
+    // never exits on its own.
+    const component = fakeComponent({ probe: REMUXABLE });
+    const { storage, baseUrl, media } = freshApi(component);
+    const stored = addMkvMovie(storage, media);
+
+    const response = await fetch(streamAt(baseUrl, stored.id, 99999));
+
+    expect(response.status).toBe(416);
+    expect(response.headers.get('content-type')).toContain('application/json');
+    const body = (await response.json()) as { error?: unknown };
+    expect(typeof body.error).toBe('string');
+    expect(component.spawned).toHaveLength(0);
+  });
+});
+
+describe('GET /api/movies/:id/stream — a t that is not a position', () => {
+  it('refuses a t that is not a number', async () => {
+    const component = fakeComponent({ probe: REMUXABLE });
+    const { storage, baseUrl, media } = freshApi(component);
+    const stored = addMkvMovie(storage, media);
+
+    const response = await fetch(streamAt(baseUrl, stored.id, 'abc'));
+
+    expect(response.status).toBe(400);
+    const body = (await response.json()) as { error?: unknown };
+    expect(typeof body.error).toBe('string');
+    expect(component.spawned).toHaveLength(0);
+  });
+
+  it('refuses a negative t', async () => {
+    const component = fakeComponent({ probe: REMUXABLE });
+    const { storage, baseUrl, media } = freshApi(component);
+    const stored = addMkvMovie(storage, media);
+
+    const response = await fetch(streamAt(baseUrl, stored.id, -5));
+
+    expect(response.status).toBe(400);
+    expect(component.spawned).toHaveLength(0);
+  });
+
+  it('refuses it on a direct-play film too, which ignores only a real one', async () => {
+    // The offset is read before the **Playback path** is chosen, so a malformed
+    // URL gets the same answer whatever the film turns out to be. "Direct play
+    // ignores `?t=`" is about a position it has no use for, not about accepting
+    // a value that is not one.
+    const component = fakeComponent({ probe: NATIVE });
+    const { storage, baseUrl, media } = freshApi(component);
+    const stored = addStreamableMovie(storage, media);
+
+    const response = await fetch(streamAt(baseUrl, stored.id, 'abc'));
+
+    expect(response.status).toBe(400);
+  });
+});

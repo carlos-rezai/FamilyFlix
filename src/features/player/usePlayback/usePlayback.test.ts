@@ -31,10 +31,17 @@ import { stubMediaElement } from '@/test-support/stubMediaElement/stubMediaEleme
  */
 const DIRECT_PLAY: PlaybackRead = { path: 'direct', durationSeconds: 6832.5 };
 
+/**
+ * Where the film's bytes come from, before any **Stream offset** is put on it.
+ * The hook is handed the plain stream URL and answers with the one the element
+ * should be pointed at, which on a stream path is this plus a `?t=`.
+ */
+const STREAM = '/api/movies/m1/stream';
+
 function renderPlayback(read: PlaybackRead = DIRECT_PLAY, startAt = 0) {
   const video = document.createElement('video');
   const ref = { current: video };
-  const view = renderHook(() => usePlayback(ref, read, startAt));
+  const view = renderHook(() => usePlayback(ref, read, startAt, STREAM));
   return { video, ...view };
 }
 
@@ -405,5 +412,161 @@ describe('usePlayback — resuming', () => {
     rerender();
 
     expect(video.currentTime).toBe(2400);
+  });
+});
+
+/**
+ * 10 — Video player, Phase 7 (second slice): "seeking on a stream path"
+ * (issue #90).
+ *
+ * The invariant this hook was built around finally gets a caller. On a
+ * **Remux** or a **Transcode** there are no byte ranges and no known length, so
+ * a seek cannot be a write to `currentTime`: it re-points the element at a new
+ * **Stream offset**, ffmpeg restarts there, and the element comes back at zero
+ * knowing nothing about where in the film it is.
+ *
+ * What the hook reports through all of that is the one number every consumer
+ * already reads:
+ *
+ * > **Absolute position = Stream offset + Element time**
+ *
+ * Nothing above the hook learns which path is playing, which is why the
+ * scrubber, the overlay and the reporter do not change in this slice.
+ */
+describe('usePlayback — seeking a film that is being converted', () => {
+  stubMediaElement();
+
+  /** A film whose container alone was wrong: a live stream, started at a `t`. */
+  const REMUX: PlaybackRead = { path: 'remux', durationSeconds: 5391.2 };
+
+  /**
+   * The **Stream offset** a source carries, in seconds — nought for a URL with
+   * no `?t=` on it. The invariant is about the number, not about how the URL is
+   * spelled, so this is what the assertions below read.
+   */
+  function offsetOf(src: string): number {
+    const query = src.slice(src.indexOf('?') + 1);
+    const t = new URLSearchParams(src.includes('?') ? query : '').get('t');
+    return t === null ? 0 : Number(t);
+  }
+
+  it('re-points the source at the second the family let go of the knob', async () => {
+    // The one place the wire contract is spelled out: this is the URL the
+    // stream route parses a `?t=` out of.
+    const { result } = renderPlayback(REMUX);
+    await waitFor(() => expect(result.current.playing).toBe(true));
+
+    act(() => result.current.seek(1200));
+
+    expect(result.current.src).toBe(`${STREAM}?t=1200`);
+  });
+
+  it('does not wind the element, which has no such second in it', async () => {
+    // `currentTime = 1200` on a live stream is either ignored or an error: the
+    // element was handed a film that starts where the conversion started, and
+    // it holds nothing before that.
+    const { video, result } = renderPlayback(REMUX);
+    await waitFor(() => expect(result.current.playing).toBe(true));
+
+    act(() => result.current.seek(1200));
+
+    expect(video.currentTime).toBe(0);
+  });
+
+  it('reports the second that was asked for straight away', async () => {
+    // Before the restarted stream has fired anything. A position that fell back
+    // to nought for even a frame would take the **Scrubber** to the start of
+    // the film and write that second down as where the family was watching.
+    const { video, result } = renderPlayback(REMUX);
+    await waitFor(() => expect(result.current.playing).toBe(true));
+    video.currentTime = 45;
+    emit(video, 'timeupdate');
+    expect(result.current.position).toBe(45);
+
+    act(() => result.current.seek(1200));
+
+    expect(result.current.position).toBe(1200);
+  });
+
+  it('adds the element’s own time to the offset as the film runs on', async () => {
+    // The invariant itself: the element is 45 seconds into a stream that began
+    // 1200 seconds into the film, and what the screen shows is 1245.
+    const { video, result } = renderPlayback(REMUX);
+    await waitFor(() => expect(result.current.playing).toBe(true));
+    act(() => result.current.seek(1200));
+
+    video.currentTime = 45;
+    emit(video, 'timeupdate');
+
+    expect(result.current.position).toBe(1245);
+  });
+
+  it('skips ten seconds from where the film is, not from where the stream is', async () => {
+    // A −10s at 1245 has to land at 1235 of the *film*. Reading the element
+    // alone would take it to nought and start the whole conversion again.
+    const { video, result } = renderPlayback(REMUX);
+    await waitFor(() => expect(result.current.playing).toBe(true));
+    act(() => result.current.seek(1200));
+    video.currentTime = 45;
+    emit(video, 'timeupdate');
+
+    act(() => result.current.skip(-10));
+
+    expect(offsetOf(result.current.src)).toBe(1235);
+    expect(result.current.position).toBe(1235);
+  });
+
+  it('answers with the second it landed on, which is what the watch tick is written from', async () => {
+    // The screen passes this straight to `reportSeek`: the position the hook
+    // reports has not caught up at the moment the knob is let go, so a reporter
+    // reading it would store the second the film was at before it moved.
+    const { result } = renderPlayback(REMUX);
+    await waitFor(() => expect(result.current.playing).toBe(true));
+
+    let landed = 0;
+    act(() => {
+      landed = result.current.seek(1200);
+    });
+
+    expect(landed).toBe(1200);
+  });
+
+  it('cannot be taken past either end of the film', async () => {
+    // The same clamp direct play has, against the same duration — the
+    // **Playback read**'s, which is the only length either path has.
+    const { result } = renderPlayback(REMUX);
+    await waitFor(() => expect(result.current.playing).toBe(true));
+
+    act(() => result.current.seek(99999));
+    expect(offsetOf(result.current.src)).toBe(5391.2);
+    expect(result.current.position).toBe(5391.2);
+
+    act(() => result.current.seek(-30));
+    expect(offsetOf(result.current.src)).toBe(0);
+    expect(result.current.position).toBe(0);
+  });
+
+  it('opens an in-progress film at its resume position rather than winding to it', async () => {
+    // The same re-anchoring, on the way in. Winding the element is a no-op on a
+    // live stream, so a film left an hour in would silently start again from
+    // the beginning — the exact thing the **Resume position** exists to prevent.
+    const { video, result } = renderPlayback(REMUX, 1800);
+
+    await waitFor(() => expect(offsetOf(result.current.src)).toBe(1800));
+    expect(result.current.position).toBe(1800);
+    expect(video.currentTime).toBe(0);
+  });
+
+  it('leaves direct play seeking the way it always has', async () => {
+    // The common case changes in nothing: the element is wound, the source is
+    // never re-pointed, and no `?t=` is ever put on it.
+    const { video, result } = renderPlayback(DIRECT_PLAY);
+    await waitFor(() => expect(result.current.playing).toBe(true));
+
+    act(() => result.current.seek(1200));
+
+    expect(video.currentTime).toBe(1200);
+    expect(result.current.src).toBe(STREAM);
+    expect(result.current.position).toBe(1200);
   });
 });

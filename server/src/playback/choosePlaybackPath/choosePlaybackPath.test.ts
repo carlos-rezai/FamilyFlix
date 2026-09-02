@@ -56,9 +56,10 @@ function probeOf(partial: Partial<MediaProbe> = {}): MediaProbe {
 function choose(
   file: string,
   probe: MediaProbe | null,
-  component = SOFTWARE
+  component = SOFTWARE,
+  offsetSeconds = 0
 ): PlaybackDecision {
-  return choosePlaybackPath({ file, probe, component });
+  return choosePlaybackPath({ file, probe, component, offsetSeconds });
 }
 
 /**
@@ -239,5 +240,81 @@ describe('choosePlaybackPath — with no playback component at all', () => {
 
   it('produces no argv it has nothing to run', () => {
     expect(choose(MKV, null, ABSENT)).not.toHaveProperty('args');
+  });
+});
+
+// --- 10 — Video player, Phase 7 (second slice): "seeking on a stream path"
+// (issue #90) -----------------------------------------------------------------
+//
+// The **Stream offset** reaches the format policy, which is the only place it
+// can: a stream path has no byte ranges to seek in, so where the film starts is
+// an argument to the conversion rather than something the element asks for
+// later. It is still a pure function — a number in, an argument out — and it
+// stays the one place in `playback/` that decides anything about an argv.
+
+describe('choosePlaybackPath — starting a conversion partway into the film', () => {
+  /** Where the family let go of the knob, in **Absolute position** seconds. */
+  const OFFSET = 1200;
+
+  it('starts a remux at the second it was given', () => {
+    const args = argvOf(
+      choose(MKV, probeOf({ container: 'matroska' }), SOFTWARE, OFFSET)
+    );
+
+    expect(args.join(' ')).toContain('-ss 1200');
+  });
+
+  it('starts a transcode at the second it was given', () => {
+    const args = argvOf(
+      choose(MKV, probeOf({ videoCodec: 'hevc' }), SOFTWARE, OFFSET)
+    );
+
+    expect(args.join(' ')).toContain('-ss 1200');
+  });
+
+  it('seeks the input rather than the output, on both converting paths', () => {
+    // `-ss` before `-i` tells ffmpeg to open the file at that second; after
+    // `-i` it decodes everything up to it and throws it away. On a two-hour
+    // film that is the difference between a scrub that settles and one that
+    // spends minutes producing nothing.
+    for (const probe of [
+      probeOf({ container: 'matroska' }),
+      probeOf({ videoCodec: 'hevc' }),
+    ]) {
+      const args = argvOf(choose(MKV, probe, SOFTWARE, OFFSET));
+
+      expect(args.indexOf('-ss')).toBeGreaterThanOrEqual(0);
+      expect(args.indexOf('-ss')).toBeLessThan(args.indexOf('-i'));
+    }
+  });
+
+  it('asks for no offset at all when the film starts at its beginning', () => {
+    // Nought is nothing to say rather than `-ss 0`: the fresh open is the
+    // commonest request the route serves, and it should read as the plain one.
+    const args = argvOf(choose(MKV, probeOf({ container: 'matroska' })));
+
+    expect(args).not.toContain('-ss');
+  });
+
+  it('leaves direct play alone, offset or no offset', () => {
+    // **Direct play** seeks by byte range and the offset is meaningless to it.
+    // A file that started being sent from the middle because of a `?t=` would
+    // be a film that skips its own opening.
+    const decision = choose(MP4, probeOf(), SOFTWARE, OFFSET);
+
+    expect(decision.path).toBe('direct');
+    expect(decision).not.toHaveProperty('args');
+  });
+
+  it('leaves a film nothing can play unplayable, offset or no offset', () => {
+    const decision = choose(
+      MKV,
+      probeOf({ container: 'matroska' }),
+      ABSENT,
+      OFFSET
+    );
+
+    expect(decision.path).toBe('cannot-play');
+    expect(decision).not.toHaveProperty('args');
   });
 });
