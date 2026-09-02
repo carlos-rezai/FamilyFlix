@@ -32,6 +32,7 @@ function renderControls(
   const onSkip = vi.fn<(deltaSeconds: number) => void>();
   const onVolumeChange = vi.fn<(value: number) => void>();
   const onToggleMute = vi.fn();
+  const onToggleSubtitles = vi.fn();
   const view = render(
     <ThemeProvider theme={theme}>
       <PlayerControls
@@ -42,12 +43,15 @@ function renderControls(
         duration={DURATION}
         volume={0.8}
         muted={false}
+        hasSubtitles
+        subtitlesOn={false}
         onBack={onBack}
         onTogglePlay={onTogglePlay}
         onSeek={onSeek}
         onSkip={onSkip}
         onVolumeChange={onVolumeChange}
         onToggleMute={onToggleMute}
+        onToggleSubtitles={onToggleSubtitles}
         {...overrides}
       />
     </ThemeProvider>
@@ -61,6 +65,7 @@ function renderControls(
     onSkip,
     onVolumeChange,
     onToggleMute,
+    onToggleSubtitles,
   };
 }
 
@@ -248,3 +253,127 @@ describe('the two sliders', () => {
 function sourceOf(path: string): string {
   return readFileSync(path, 'utf8');
 }
+
+/**
+ * 10 — Video player, Phase 6: "subtitles" (issue #88).
+ *
+ * The CC pill, the last control `feat.PlayerControls.dc.html` draws that this
+ * component had left out — deliberately, because a control that does nothing
+ * when a parent presses it is worse than one that is not there yet, and there
+ * was nothing to turn on until now.
+ *
+ * It ships as the plain toggle the prototype draws. A **Subtitle track** picker
+ * behind it would be new UI and therefore a prototype amendment, so
+ * `preferredSubtitle` chooses and nobody else does.
+ *
+ * The prototype draws it inside an `sc-if` on `p.hasSubs`, and that is the
+ * behaviour worth guarding hardest: a film with no subtitle files gets **no
+ * button at all**, not a disabled one. A dead control on a screen my parents
+ * use is a question they have to ask me.
+ */
+describe('PlayerControls — the CC pill', () => {
+  it('is drawn for a film that has subtitle files', () => {
+    renderControls({ hasSubtitles: true });
+
+    expect(screen.getByRole('button', { name: 'Subtitles' })).toBeDefined();
+  });
+
+  it('says CC on it, as the prototype draws it', () => {
+    renderControls({ hasSubtitles: true });
+
+    expect(
+      screen.getByRole('button', { name: 'Subtitles' }).textContent
+    ).toContain('CC');
+  });
+
+  it('is not drawn at all for a film with no subtitle files', () => {
+    // Absent, not disabled. There is nothing to press and nothing to explain.
+    //
+    // Stated against the film that *does* have them, in the same test: an
+    // absence on its own is satisfied by a control that was never built, by a
+    // renamed one, and by a typo in the query — none of which is the behaviour
+    // being claimed.
+    const { unmount } = renderControls({ hasSubtitles: true });
+    expect(screen.getByRole('button', { name: 'Subtitles' })).toBeDefined();
+    unmount();
+
+    renderControls({ hasSubtitles: false });
+
+    expect(screen.queryByRole('button', { name: 'Subtitles' })).toBeNull();
+    expect(screen.queryByText('CC')).toBeNull();
+  });
+
+  it('asks for subtitles to be turned on when it is pressed', () => {
+    const { onToggleSubtitles } = renderControls({ subtitlesOn: false });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Subtitles' }));
+
+    expect(onToggleSubtitles).toHaveBeenCalledTimes(1);
+  });
+
+  it('asks for them to be turned off again on the next press', () => {
+    // One handler, not an on and an off: the state is the screen's, and this
+    // component is handed it rather than remembering it.
+    const { onToggleSubtitles } = renderControls({ subtitlesOn: true });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Subtitles' }));
+
+    expect(onToggleSubtitles).toHaveBeenCalledTimes(1);
+  });
+
+  it('reads as switched on while subtitles are showing', () => {
+    // `aria-pressed`, so the state is available to something that cannot see
+    // the lit face below.
+    renderControls({ subtitlesOn: true });
+
+    expect(
+      screen
+        .getByRole('button', { name: 'Subtitles' })
+        .getAttribute('aria-pressed')
+    ).toBe('true');
+  });
+
+  it('reads as switched off while they are not', () => {
+    renderControls({ subtitlesOn: false });
+
+    expect(
+      screen
+        .getByRole('button', { name: 'Subtitles' })
+        .getAttribute('aria-pressed')
+    ).toBe('false');
+  });
+
+  it('wears the prototype’s lit face when on, and its dim one when off', () => {
+    // `subBtn` in `FamilyFlix.dc.html`: a filled, brighter-bordered, white-inked
+    // pill when on; transparent and faint when off. The state has to be visible
+    // to a parent glancing at it, not only to a screen reader.
+    const { unmount } = renderControls({ subtitlesOn: true });
+    const on = window.getComputedStyle(
+      screen.getByRole('button', { name: 'Subtitles' })
+    );
+    expect(on.backgroundColor).toBe('rgba(255, 255, 255, 0.16)');
+    expect(on.color).toBe('rgb(255, 255, 255)');
+    unmount();
+
+    renderControls({ subtitlesOn: false });
+    const off = window.getComputedStyle(
+      screen.getByRole('button', { name: 'Subtitles' })
+    );
+    expect(off.backgroundColor).not.toBe('rgba(255, 255, 255, 0.16)');
+    expect(off.color).not.toBe('rgb(255, 255, 255)');
+  });
+
+  it('goes with the rest of the chrome when the player idles', () => {
+    // The bars fade as one thing, and their controls are unmounted behind the
+    // fade — an invisible pill a keyboard could still land on is exactly what
+    // the rest of this row already avoids. Paired with the visible case for the
+    // same reason as above.
+    const { unmount } = renderControls({ visible: true });
+    expect(screen.getByRole('button', { name: 'Subtitles' })).toBeDefined();
+    unmount();
+
+    renderControls({ visible: false });
+
+    expect(screen.queryByRole('button', { name: 'Subtitles' })).toBeNull();
+  });
+});

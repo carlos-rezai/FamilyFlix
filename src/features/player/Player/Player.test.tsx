@@ -11,7 +11,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 
 import { Player } from './Player';
 import { theme } from '@/styles/theme';
-import type { Movie, PlaybackRead } from '@/types';
+import type { Cue, Movie, PlaybackRead } from '@/types';
 import { LocationProbe } from '@/test-support/LocationProbe/LocationProbe';
 import { makeMovie } from '@/test-support/makeMovie/makeMovie';
 import { stubMediaElement } from '@/test-support/stubMediaElement/stubMediaElement';
@@ -111,9 +111,11 @@ afterEach(() => {
 function answerWith({
   movie = NORTHWIND,
   playback = DIRECT_PLAY as PlaybackRead | null,
+  cues = [] as Cue[] | null,
 }: {
   movie?: Movie;
   playback?: PlaybackRead | null;
+  cues?: Cue[] | null;
 }) {
   fetchMock.mockImplementation((input, init) => {
     const url = String(input);
@@ -125,6 +127,16 @@ function answerWith({
         playback === null
           ? notFoundResponse('No video file for movie: m1')
           : okResponse(playback)
+      );
+    }
+    // The **Cue list**, which is asked for only once subtitles are switched on.
+    // `null` is the subtitle row whose file has gone; `[]` is the file that
+    // would not parse. Both leave the film playing with no box.
+    if (url.startsWith('/api/movies/m1/subtitles/')) {
+      return Promise.resolve(
+        cues === null
+          ? notFoundResponse('No subtitle file for movie: m1')
+          : okResponse(cues)
       );
     }
     // The two watch writes. They echo what they were sent, which is what the
@@ -725,5 +737,418 @@ describe('Player — watching writes', () => {
     expect(video.currentTime).toBe(900);
     expect(screen.queryByText(MISSING_TITLE)).toBeNull();
     expect(screen.queryByText(BUFFERING)).toBeNull();
+  });
+});
+
+/**
+ * 10 — Video player, Phase 6: "subtitles" (issue #88).
+ *
+ * Subtitles end to end, which for this screen means four questions: whether the
+ * CC pill is there at all, what pressing it does, which line is on screen, and
+ * what happens when the file behind it is no good.
+ *
+ * The seam is unchanged — what is on screen and what a click does — and
+ * everything underneath is asserted where it belongs: which format the file was
+ * is `parseSubtitle`'s, which track was picked is `preferredSubtitle`'s, which
+ * cue covers a second is `cueAt`'s, and what the box looks like is
+ * `SubtitleOverlay`'s. What is left here is the wiring those four hang off, and
+ * the two states only this screen can show: **off when the film opens**, and
+ * **still playing** when the subtitle file is unreadable.
+ */
+
+/** Two lines of the film, as the cue route hands them over. */
+const CUES: Cue[] = [
+  { start: 1, end: 4, text: '— You can see the whole coast from up here.' },
+  { start: 3600, end: 3604, text: 'An hour later.' },
+];
+
+const FIRST_LINE = CUES[0].text;
+const LATER_LINE = CUES[1].text;
+
+/** The film with subtitle files beside it — two, so a track has to be chosen. */
+const SUBTITLED: Movie = makeMovie({
+  id: 'm1',
+  title: FILM,
+  year: 1994,
+  runtimeMinutes: 128,
+  videoPath: 'Northwind (1994)/northwind.mp4',
+  subtitles: [
+    {
+      id: 'sub-pt',
+      path: 'Northwind (1994)/pt.srt',
+      language: 'pt',
+      position: 1,
+    },
+    {
+      id: 'sub-en',
+      path: 'Northwind (1994)/en.srt',
+      language: 'en',
+      position: 0,
+    },
+  ],
+});
+
+/** Every cue list this screen asked for, as the subtitle id it asked under. */
+function cueRequests(): string[] {
+  return fetchMock.mock.calls
+    .map(([input]) => String(input))
+    .filter((url) => url.includes('/subtitles/'))
+    .map((url) => url.slice(url.lastIndexOf('/') + 1));
+}
+
+describe('Player — the CC pill', () => {
+  stubMediaElement();
+
+  it('is drawn for a film with subtitle files beside it', async () => {
+    answerWith({ movie: SUBTITLED, cues: CUES });
+    renderPlayer();
+
+    expect(
+      await screen.findByRole('button', { name: 'Subtitles' })
+    ).toBeDefined();
+  });
+
+  it('is not drawn at all for a film with none', async () => {
+    // `NORTHWIND` has no subtitle rows. Nothing to press, and nothing to
+    // explain to a parent who pressed it and saw no change.
+    //
+    // Stated against the subtitled film in the same test, because an absence on
+    // its own is equally satisfied by a pill that was never built.
+    answerWith({ movie: SUBTITLED, cues: CUES });
+    const subtitled = renderPlayer();
+    expect(
+      await screen.findByRole('button', { name: 'Subtitles' })
+    ).toBeDefined();
+    subtitled.unmount();
+
+    answerWith({ movie: NORTHWIND });
+    renderPlayer();
+
+    await screen.findByRole('button', { name: 'Back' });
+    expect(screen.queryByRole('button', { name: 'Subtitles' })).toBeNull();
+  });
+});
+
+describe('Player — turning subtitles on and off', () => {
+  stubMediaElement();
+
+  it('opens the film with subtitles off', async () => {
+    // The prototype's `playMovie()` sets `subsOn:true`; we ship them off. That
+    // is a recorded divergence, not an oversight — auto-on subtitles are a
+    // roadmap item, and defaulting them on would implement it by accident.
+    answerWith({ movie: SUBTITLED, cues: CUES });
+    renderPlayer();
+
+    const pill = await screen.findByRole('button', { name: 'Subtitles' });
+    expect(pill.getAttribute('aria-pressed')).toBe('false');
+    expect(screen.queryByText(FIRST_LINE)).toBeNull();
+  });
+
+  it('asks for no cue list until someone presses CC', async () => {
+    // A film watched without subtitles should not fetch a file it will never
+    // draw.
+    answerWith({ movie: SUBTITLED, cues: CUES });
+    renderPlayer();
+
+    await screen.findByRole('button', { name: 'Subtitles' });
+    expect(cueRequests()).toEqual([]);
+  });
+
+  it('puts the line for where the film is on screen when CC is pressed', async () => {
+    answerWith({ movie: SUBTITLED, cues: CUES });
+    const { video } = renderPlayer();
+    await waitFor(() => expect(video.paused).toBe(false));
+    video.currentTime = 2;
+    emit(video, 'timeupdate');
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Subtitles' }));
+
+    expect(await screen.findByText(FIRST_LINE)).toBeDefined();
+  });
+
+  it('reads as switched on while they are showing', async () => {
+    answerWith({ movie: SUBTITLED, cues: CUES });
+    const { video } = renderPlayer();
+    await waitFor(() => expect(video.paused).toBe(false));
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Subtitles' }));
+
+    await waitFor(() =>
+      expect(
+        screen
+          .getByRole('button', { name: 'Subtitles' })
+          .getAttribute('aria-pressed')
+      ).toBe('true')
+    );
+  });
+
+  it('takes them away again on a second press', async () => {
+    answerWith({ movie: SUBTITLED, cues: CUES });
+    const { video } = renderPlayer();
+    await waitFor(() => expect(video.paused).toBe(false));
+    video.currentTime = 2;
+    emit(video, 'timeupdate');
+    const pill = await screen.findByRole('button', { name: 'Subtitles' });
+
+    fireEvent.click(pill);
+    await screen.findByText(FIRST_LINE);
+    fireEvent.click(pill);
+
+    await waitFor(() => expect(screen.queryByText(FIRST_LINE)).toBeNull());
+    expect(pill.getAttribute('aria-pressed')).toBe('false');
+  });
+
+  it('fetches the cue list once, not again on every press', async () => {
+    // Cues are stamped in absolute position, so there is nothing about turning
+    // them off and on again — or about a seek — for them to be re-fetched
+    // against.
+    answerWith({ movie: SUBTITLED, cues: CUES });
+    const { video } = renderPlayer();
+    await waitFor(() => expect(video.paused).toBe(false));
+    const pill = await screen.findByRole('button', { name: 'Subtitles' });
+
+    fireEvent.click(pill);
+    await screen.findByText(FIRST_LINE);
+    fireEvent.click(pill);
+    fireEvent.click(pill);
+    await screen.findByText(FIRST_LINE);
+
+    expect(cueRequests()).toHaveLength(1);
+  });
+
+  it('reads the track preferredSubtitle picked, not whichever row came back first', async () => {
+    // The rows arrive Portuguese-first; `position` says English is track one.
+    // Nobody chooses, so the choice has to be the deterministic one.
+    answerWith({ movie: SUBTITLED, cues: CUES });
+    const { video } = renderPlayer();
+    await waitFor(() => expect(video.paused).toBe(false));
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Subtitles' }));
+
+    await waitFor(() => expect(cueRequests()).toEqual(['sub-en']));
+  });
+});
+
+describe('Player — which line is on screen', () => {
+  stubMediaElement();
+
+  const TRACK_LEFT = 100;
+  const TRACK_WIDTH = 200;
+
+  /** The scrubber, laid out — jsdom lays nothing out, so the rect is stubbed. */
+  async function seekBar(): Promise<HTMLElement> {
+    const track = await screen.findByRole('slider', { name: 'Seek' });
+    track.getBoundingClientRect = () =>
+      ({
+        x: TRACK_LEFT,
+        y: 0,
+        left: TRACK_LEFT,
+        right: TRACK_LEFT + TRACK_WIDTH,
+        top: 0,
+        bottom: 6,
+        width: TRACK_WIDTH,
+        height: 6,
+        toJSON: () => ({}),
+      }) as DOMRect;
+    return track;
+  }
+
+  /** Drag the knob to a fraction along the bar and let go of it there. */
+  function dragTo(track: HTMLElement, fraction: number): void {
+    const clientX = TRACK_LEFT + TRACK_WIDTH * fraction;
+    fireEvent.pointerDown(track, { clientX: TRACK_LEFT });
+    act(() => {
+      window.dispatchEvent(new MouseEvent('pointermove', { clientX }));
+    });
+    act(() => {
+      window.dispatchEvent(new MouseEvent('pointerup', { clientX }));
+    });
+  }
+
+  /** Open the film, start it, and switch subtitles on. */
+  async function withSubtitlesOn() {
+    answerWith({ movie: SUBTITLED, cues: CUES });
+    const view = renderPlayer();
+    await waitFor(() => expect(view.video.paused).toBe(false));
+    fireEvent.click(await screen.findByRole('button', { name: 'Subtitles' }));
+    await waitFor(() => expect(cueRequests()).toHaveLength(1));
+    return view;
+  }
+
+  it('follows the film from one line to the next', async () => {
+    const { video } = await withSubtitlesOn();
+
+    video.currentTime = 2;
+    emit(video, 'timeupdate');
+    expect(await screen.findByText(FIRST_LINE)).toBeDefined();
+
+    video.currentTime = 3601;
+    emit(video, 'timeupdate');
+    expect(await screen.findByText(LATER_LINE)).toBeDefined();
+    expect(screen.queryByText(FIRST_LINE)).toBeNull();
+  });
+
+  it('draws no box at all through a stretch with no dialogue', async () => {
+    // Not an empty plate hovering over the picture — nothing.
+    const { video } = await withSubtitlesOn();
+    video.currentTime = 2;
+    emit(video, 'timeupdate');
+    await screen.findByText(FIRST_LINE);
+
+    video.currentTime = 600;
+    emit(video, 'timeupdate');
+
+    await waitFor(() => expect(screen.queryByText(FIRST_LINE)).toBeNull());
+    expect(screen.queryByText(LATER_LINE)).toBeNull();
+  });
+
+  it('has the right line immediately after a scrub, not the one from before it', async () => {
+    // The property the whole design exists for, and the cheapest place to
+    // assert it. A native `<track>` is timed against **Element time**, so once a
+    // stream path starts at a non-zero **Stream offset** its cues run late by
+    // exactly the seek distance. Ours are stamped in **Absolute position** and
+    // read by absolute position, so a jump cannot desync them.
+    const { video } = await withSubtitlesOn();
+    video.currentTime = 2;
+    emit(video, 'timeupdate');
+    await screen.findByText(FIRST_LINE);
+
+    // 3601 seconds along a 6832.5-second film.
+    dragTo(await seekBar(), 3601 / 6832.5);
+    emit(video, 'timeupdate');
+
+    expect(await screen.findByText(LATER_LINE)).toBeDefined();
+    expect(screen.queryByText(FIRST_LINE)).toBeNull();
+  });
+
+  it('uses no native captions machinery to do it', async () => {
+    // No `<track>`, in the document or on the element. The box is ours, so
+    // there is nothing native to hide, style around, or keep in step.
+    const { container, video } = await withSubtitlesOn();
+    video.currentTime = 2;
+    emit(video, 'timeupdate');
+    await screen.findByText(FIRST_LINE);
+
+    expect(container.querySelector('track')).toBeNull();
+    expect(video.querySelector('track')).toBeNull();
+    expect(video.textTracks?.length ?? 0).toBe(0);
+  });
+});
+
+describe('Player — the subtitle box and the chrome', () => {
+  stubMediaElement();
+
+  /** The band the line is centred in — what positions the box up the picture. */
+  function band(): HTMLElement {
+    const parent = screen.getByText(FIRST_LINE).parentElement;
+    if (parent === null) {
+      throw new Error('The subtitle box was drawn outside anything');
+    }
+    return parent;
+  }
+
+  /** The stacking order of the element, walked up until one is declared. */
+  function stackingOrder(from: HTMLElement): number {
+    for (
+      let element: HTMLElement | null = from;
+      element;
+      element = element.parentElement
+    ) {
+      const index = window.getComputedStyle(element).zIndex;
+      if (index !== '' && index !== 'auto') {
+        return Number(index);
+      }
+    }
+    return 0;
+  }
+
+  beforeEach(() => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  async function withSubtitlesOn() {
+    answerWith({ movie: SUBTITLED, cues: CUES });
+    const view = renderPlayer();
+    await waitFor(() => expect(view.video.paused).toBe(false));
+    fireEvent.click(await screen.findByRole('button', { name: 'Subtitles' }));
+    view.video.currentTime = 2;
+    emit(view.video, 'timeupdate');
+    await screen.findByText(FIRST_LINE);
+    return view;
+  }
+
+  it('lifts out of the chrome’s way while the chrome is on screen', async () => {
+    const { container } = await withSubtitlesOn();
+    const lifted = parseFloat(window.getComputedStyle(band()).bottom);
+
+    // Three seconds of stillness, and the chrome goes.
+    act(() => {
+      vi.advanceTimersByTime(3100);
+    });
+    await waitFor(() =>
+      expect(container.querySelector('[aria-hidden="true"]')).toBeDefined()
+    );
+
+    await waitFor(() =>
+      expect(parseFloat(window.getComputedStyle(band()).bottom)).toBeLessThan(
+        lifted
+      )
+    );
+  });
+
+  it('never sits under the chrome, whichever is drawn first', async () => {
+    // "Above the controls" is a stacking claim, not only a vertical one: the
+    // last line of a film must not end up behind the transport row.
+    await withSubtitlesOn();
+    const bottomBar = screen.getByRole('slider', { name: 'Seek' });
+
+    expect(stackingOrder(band())).toBeGreaterThanOrEqual(
+      stackingOrder(bottomBar)
+    );
+  });
+});
+
+describe('Player — a subtitle file that is no good', () => {
+  stubMediaElement();
+
+  it('keeps the film playing when the file would not parse', async () => {
+    // The route answers `200 []` for a malformed `.ass`. The film runs on, the
+    // box never appears, and no notice is drawn — a bad subtitle file is not a
+    // broken film.
+    answerWith({ movie: SUBTITLED, cues: [] });
+    const { container, video } = renderPlayer();
+    await waitFor(() => expect(video.paused).toBe(false));
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Subtitles' }));
+    video.currentTime = 2;
+    emit(video, 'timeupdate');
+
+    await waitFor(() => expect(cueRequests()).toHaveLength(1));
+    expect(video.paused).toBe(false);
+    expect(screen.queryByText(FIRST_LINE)).toBeNull();
+    expect(circle(container)).toBeUndefined();
+    expect(screen.queryByText(MISSING_TITLE)).toBeNull();
+  });
+
+  it('keeps the film playing when the subtitle file has gone entirely', async () => {
+    // A 404 on the cue route: the row is in the database, the file is not on
+    // disk. Same silence, same running film.
+    answerWith({ movie: SUBTITLED, cues: null });
+    const { container, video } = renderPlayer();
+    await waitFor(() => expect(video.paused).toBe(false));
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Subtitles' }));
+    video.currentTime = 2;
+    emit(video, 'timeupdate');
+
+    await waitFor(() => expect(cueRequests()).toHaveLength(1));
+    expect(video.paused).toBe(false);
+    expect(screen.queryByText(FIRST_LINE)).toBeNull();
+    expect(circle(container)).toBeUndefined();
+    expect(screen.queryByText(MISSING_TITLE)).toBeNull();
   });
 });

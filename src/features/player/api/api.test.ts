@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-import { fetchPlayback, saveResume } from './api';
-import type { PlaybackRead } from '@/types';
+import { fetchPlayback, fetchSubtitleCues, saveResume } from './api';
+import type { Cue, PlaybackRead } from '@/types';
 
 /**
  * 10 — Video player, Phase 3: "the playback read" (issue #85).
@@ -196,5 +196,73 @@ describe('saveResume', () => {
     fetchMock.mockResolvedValue(serverErrorResponse());
 
     await expect(saveResume('m1', 1840)).rejects.toThrow(/500/);
+  });
+});
+
+/**
+ * 10 — Video player, Phase 6: "subtitles" (issue #88).
+ *
+ * The **Cue list** on the wire, fetched once when subtitles are switched on and
+ * held for the session — the film does not re-ask on every seek, because the
+ * cues are stamped in **Absolute position** and there is nothing about a seek
+ * for them to be re-stamped against.
+ *
+ * Its 404 is the interesting case, and it resolves rather than rejects: a
+ * subtitle row whose file has gone is a film that plays on without subtitles,
+ * which is the acceptance criterion in one sentence. Swallowing it here rather
+ * than in the screen keeps the screen with one path for "no cues" and no error
+ * state to draw. A 500 still rejects, exactly as `fetchPlayback` treats one — a
+ * backend hiccup is not a missing track, and collapsing them would hide a
+ * server falling over behind a film that quietly has no subtitles.
+ */
+const CUES: Cue[] = [
+  { start: 1, end: 4, text: '— You can see the whole coast from up here.' },
+  { start: 5.5, end: 8.25, text: 'It was worth the walk.' },
+];
+
+describe('fetchSubtitleCues', () => {
+  it('GETs the subtitle’s cue list and returns what it answers', async () => {
+    fetchMock.mockResolvedValue(okResponse(CUES));
+
+    const cues = await fetchSubtitleCues('m1', 's2');
+
+    expect(onlyRequestUrl()).toBe('/api/movies/m1/subtitles/s2');
+    expect(cues).toEqual(CUES);
+  });
+
+  it('encodes both ids, so neither can change the URL’s shape', async () => {
+    fetchMock.mockResolvedValue(okResponse(CUES));
+
+    await fetchSubtitleCues('a/1 b', 's/2');
+
+    expect(onlyRequestUrl()).toBe('/api/movies/a%2F1%20b/subtitles/s%2F2');
+  });
+
+  it('answers an empty cue list when the route says there is no such subtitle', async () => {
+    fetchMock.mockResolvedValue(notFoundResponse());
+
+    // No subtitles is a thing the screen already draws — no box — so there is
+    // nothing here for the film to trip over.
+    await expect(fetchSubtitleCues('m1', 's2')).resolves.toEqual([]);
+  });
+
+  it('passes through the empty list a file that would not parse answers with', async () => {
+    // The route answers `200 []` for a malformed file rather than an error, and
+    // this call has nothing to add: same empty list, same silent film.
+    fetchMock.mockResolvedValue(okResponse([]));
+
+    await expect(fetchSubtitleCues('m1', 's2')).resolves.toEqual([]);
+  });
+
+  it('fails on any other unsuccessful response, rather than reading as absent', async () => {
+    fetchMock.mockResolvedValue(serverErrorResponse());
+
+    await expect(fetchSubtitleCues('m1', 's2')).rejects.toThrow(/500/);
+  });
+
+  it('fails when the request itself cannot be made', async () => {
+    fetchMock.mockRejectedValue(new TypeError('Failed to fetch'));
+
+    await expect(fetchSubtitleCues('m1', 's2')).rejects.toThrow();
   });
 });

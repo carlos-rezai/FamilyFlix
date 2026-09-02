@@ -2461,3 +2461,278 @@ describe('POST /api/movies/:id/resume', () => {
     expect(body.error).not.toBe('');
   });
 });
+
+// --- 10 — Video player, Phase 6: "subtitles" (issue #88) ---------------------
+//
+// The third read, and the second route in this file that opens a file rather
+// than serializing a row. The URL carries a **movie id and a subtitle id, never
+// a path**: the file is resolved from the subtitle row's stored `path` and
+// checked to sit under the managed media directory exactly the way the stream
+// route checks a video, because a subtitles table is not trusted any further
+// than a video path is.
+//
+// What comes back is a **Cue list** — `{ start, end, text }` in **Absolute
+// position** seconds — and nothing in the answer says which of the four formats
+// the file was. That is the whole point of the four parsers, and it is asserted
+// here at the seam a caller actually sees.
+//
+// The interesting status is the one that is *not* an error. A file that will not
+// parse answers `200 []`: the subtitle row was there and the file was there, so
+// there is nothing missing to report — the film simply plays on with no
+// subtitles. Collapsing that into a 404 would make a malformed `.ass`
+// indistinguishable from a deleted one, and the family would see the same
+// nothing either way while the maintainer lost the difference.
+
+/** Two lines of SubRip, the format most of the family folder is written in. */
+const SRT_FIXTURE = [
+  '1',
+  '00:00:01,000 --> 00:00:04,000',
+  '— You can see the whole coast from up here.',
+  '',
+  '2',
+  '00:00:05,500 --> 00:00:08,250',
+  'It was worth the walk.',
+  '',
+].join('\n');
+
+/** What that file is expected to become, whatever it was written in. */
+const SRT_CUES = [
+  { start: 1, end: 4, text: '— You can see the whole coast from up here.' },
+  { start: 5.5, end: 8.25, text: 'It was worth the walk.' },
+];
+
+/**
+ * A movie with one subtitle file really on disk beside its video, the way an
+ * import leaves it: both rows store paths **relative** to the media root.
+ *
+ * `contents` is what gets written, so a test can stage a file that will not
+ * parse without staging a different route.
+ */
+function addSubtitledMovie(
+  storage: LibraryStorage,
+  media: string,
+  {
+    subtitlePath = 'Northwind (2018)/en.srt',
+    contents = SRT_FIXTURE,
+    write = true,
+    extra = [] as { path: string; language: string }[],
+  } = {}
+): Movie {
+  if (write) {
+    const absolute = join(media, subtitlePath);
+    mkdirSync(join(absolute, '..'), { recursive: true });
+    writeFileSync(absolute, contents, 'utf8');
+  }
+
+  return storage.addMovie({
+    title: 'Northwind',
+    videoPath: 'Northwind (2018)/northwind.mp4',
+    genres: ['Action'],
+    subtitles: [{ path: subtitlePath, language: 'en' }, ...extra],
+  });
+}
+
+const cuesUrl = (baseUrl: string, id: string, subtitleId: string) =>
+  `${baseUrl}/api/movies/${encodeURIComponent(id)}/subtitles/${encodeURIComponent(subtitleId)}`;
+
+describe('GET /api/movies/:id/subtitles/:subtitleId — a subtitle with a file behind it', () => {
+  it('answers the cue list, in absolute position seconds', async () => {
+    const { storage, baseUrl, media } = freshApi();
+    const stored = addSubtitledMovie(storage, media);
+
+    const response = await fetch(
+      cuesUrl(baseUrl, stored.id, stored.subtitles[0].id)
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get('content-type')).toContain('application/json');
+    expect(await response.json()).toEqual(SRT_CUES);
+  });
+
+  it('answers the same cue list whichever of the four formats the file is', async () => {
+    // Nothing on the wire says what the file was. A client that wanted to
+    // branch on format would have nothing to branch on, which is the point.
+    const { storage, baseUrl, media } = freshApi();
+    const stored = addSubtitledMovie(storage, media, {
+      subtitlePath: 'Northwind (2018)/en.vtt',
+      contents: [
+        'WEBVTT',
+        '',
+        '00:00:01.000 --> 00:00:04.000',
+        '— You can see the whole coast from up here.',
+        '',
+        '00:00:05.500 --> 00:00:08.250',
+        'It was worth the walk.',
+        '',
+      ].join('\n'),
+    });
+
+    const response = await fetch(
+      cuesUrl(baseUrl, stored.id, stored.subtitles[0].id)
+    );
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual(SRT_CUES);
+  });
+
+  it('answers the cue list of the subtitle that was asked for, not the first one', async () => {
+    const { storage, baseUrl, media } = freshApi();
+    const stored = addSubtitledMovie(storage, media, {
+      extra: [{ path: 'Northwind (2018)/pt.srt', language: 'pt' }],
+    });
+    writeFileSync(
+      join(media, 'Northwind (2018)/pt.srt'),
+      ['1', '00:00:02,000 --> 00:00:03,000', 'Uma linha.', ''].join('\n'),
+      'utf8'
+    );
+    const second = stored.subtitles.find((track) => track.language === 'pt');
+
+    const response = await fetch(
+      cuesUrl(baseUrl, stored.id, second?.id ?? 'missing')
+    );
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual([
+      { start: 2, end: 3, text: 'Uma linha.' },
+    ]);
+  });
+});
+
+describe('GET /api/movies/:id/subtitles/:subtitleId — a file that will not parse', () => {
+  it('answers an empty cue list rather than an error, so the film plays on', async () => {
+    // The one status in this suite that is deliberately not a 404. A malformed
+    // `.ass` must not be able to kill playback.
+    const { storage, baseUrl, media } = freshApi();
+    const stored = addSubtitledMovie(storage, media, {
+      subtitlePath: 'Northwind (2018)/en.ass',
+      contents: 'this is not a subtitle file at all',
+    });
+
+    const response = await fetch(
+      cuesUrl(baseUrl, stored.id, stored.subtitles[0].id)
+    );
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual([]);
+  });
+
+  it('answers an empty cue list for an extension nothing here can read', async () => {
+    const { storage, baseUrl, media } = freshApi();
+    const stored = addSubtitledMovie(storage, media, {
+      subtitlePath: 'Northwind (2018)/en.txt',
+      contents: SRT_FIXTURE,
+    });
+
+    const response = await fetch(
+      cuesUrl(baseUrl, stored.id, stored.subtitles[0].id)
+    );
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual([]);
+  });
+});
+
+describe('GET /api/movies/:id/subtitles/:subtitleId — when there is nothing to answer', () => {
+  it('answers 404 with an error body for an unknown movie id', async () => {
+    const { baseUrl } = freshApi();
+
+    const response = await fetch(cuesUrl(baseUrl, 'no-such-movie', 's1'));
+
+    expect(response.status).toBe(404);
+    expect(response.headers.get('content-type')).toContain('application/json');
+    const body = (await response.json()) as { error?: unknown };
+    expect(typeof body.error).toBe('string');
+    expect(body.error).not.toBe('');
+  });
+
+  it('answers 404 for a subtitle id this movie does not have', async () => {
+    const { storage, baseUrl, media } = freshApi();
+    const stored = addSubtitledMovie(storage, media);
+
+    const response = await fetch(
+      cuesUrl(baseUrl, stored.id, 'no-such-subtitle')
+    );
+
+    expect(response.status).toBe(404);
+    expect(response.headers.get('content-type')).toContain('application/json');
+    expect(await response.json()).toHaveProperty('error');
+  });
+
+  it('answers 404 for a subtitle id belonging to a different movie', async () => {
+    // The pair is the address. A subtitle id alone must not open a file under
+    // any movie that happens to be asked about.
+    const { storage, baseUrl, media } = freshApi();
+    const subtitled = addSubtitledMovie(storage, media);
+    const other = storage.addMovie({
+      title: 'Elsewhere',
+      videoPath: 'Elsewhere (2011)/elsewhere.mp4',
+      genres: ['Drama'],
+    });
+
+    const response = await fetch(
+      cuesUrl(baseUrl, other.id, subtitled.subtitles[0].id)
+    );
+
+    expect(response.status).toBe(404);
+    expect(response.headers.get('content-type')).toContain('application/json');
+    expect(await response.json()).toHaveProperty('error');
+  });
+
+  it('answers 404 for a subtitle row whose file is not on disk', async () => {
+    const { storage, baseUrl, media } = freshApi();
+    const stored = addSubtitledMovie(storage, media, { write: false });
+
+    const response = await fetch(
+      cuesUrl(baseUrl, stored.id, stored.subtitles[0].id)
+    );
+
+    expect(response.status).toBe(404);
+    expect(response.headers.get('content-type')).toContain('application/json');
+    expect(await response.json()).toHaveProperty('error');
+  });
+});
+
+describe('GET /api/movies/:id/subtitles/:subtitleId — a stored path that leaves the media directory', () => {
+  it('refuses a `..` walk, and says no more than a missing file does', async () => {
+    // The same check the stream route makes, on a row from a different table.
+    // The file is really there, so a refusal cannot be the accident of there
+    // being nothing to open — and the answer is deliberately the one a missing
+    // file gets.
+    const { storage, baseUrl, outside } = freshApi();
+    writeFileSync(join(outside, 'private.srt'), SRT_FIXTURE, 'utf8');
+    const stored = storage.addMovie({
+      title: 'Crafted',
+      videoPath: 'Crafted (2020)/crafted.mp4',
+      genres: ['Action'],
+      subtitles: [{ path: '../elsewhere/private.srt', language: 'en' }],
+    });
+
+    const response = await fetch(
+      cuesUrl(baseUrl, stored.id, stored.subtitles[0].id)
+    );
+
+    expect(response.status).toBe(404);
+    expect(response.headers.get('content-type')).toContain('application/json');
+    expect(await response.json()).not.toEqual(SRT_CUES);
+  });
+
+  it('refuses an absolute path, however real the file behind it', async () => {
+    const { storage, baseUrl, outside } = freshApi();
+    const absolute = join(outside, 'private.srt');
+    writeFileSync(absolute, SRT_FIXTURE, 'utf8');
+    const stored = storage.addMovie({
+      title: 'Crafted',
+      videoPath: 'Crafted (2020)/crafted.mp4',
+      genres: ['Action'],
+      subtitles: [{ path: absolute, language: 'en' }],
+    });
+
+    const response = await fetch(
+      cuesUrl(baseUrl, stored.id, stored.subtitles[0].id)
+    );
+
+    expect(response.status).toBe(404);
+    expect(response.headers.get('content-type')).toContain('application/json');
+    expect(await response.json()).not.toEqual(SRT_CUES);
+  });
+});
