@@ -25,12 +25,18 @@ import {
   writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { isAbsolute, join } from 'node:path';
+import { Readable } from 'node:stream';
 import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { createApiRouter } from '.';
 import { createPlayback } from '../playback/createPlayback/createPlayback';
+import type {
+  PlaybackComponent,
+  PlaybackProcess,
+} from '../playback/ffmpegComponent/ffmpegComponent';
+import type { MediaProbe } from '../playback/probe/probe';
 import { createSqliteStorage, type LibraryStorage } from '../library';
 import type {
   GenreListPayload,
@@ -70,8 +76,14 @@ afterEach(async () => {
  * the tests that stage a stored path leaving the tree. Both are `realpathSync`d
  * for the same reason `mediaFilePath`'s own sandbox is: a temporary directory is
  * a symlink on macOS and an 8.3 short name on Windows.
+ *
+ * `component` is the **Playback component** the domain is composed over, and it
+ * defaults to **absent** — the machine with no FFmpeg on it, which is the one
+ * every test above this line was written against and the one CI actually is.
+ * The Phase 7 tests hand over a fake instead, which is what lets the converting
+ * paths be exercised without a binary being spawned anywhere.
  */
-function freshApi(): {
+function freshApi(component: PlaybackComponent | null = null): {
   storage: LibraryStorage;
   baseUrl: string;
   media: string;
@@ -88,7 +100,10 @@ function freshApi(): {
   mkdirSync(outside);
 
   const app = express();
-  app.use('/api', createApiRouter(storage, media, createPlayback(media)));
+  app.use(
+    '/api',
+    createApiRouter(storage, media, createPlayback(media, component))
+  );
 
   const server = app.listen(0);
   servers.push(server);
@@ -2734,5 +2749,436 @@ describe('GET /api/movies/:id/subtitles/:subtitleId — a stored path that leave
     expect(response.status).toBe(404);
     expect(response.headers.get('content-type')).toContain('application/json');
     expect(await response.json()).not.toEqual(SRT_CUES);
+  });
+});
+
+// --- 10 — Video player, Phase 7: "the FFmpeg pipeline" (issue #89) -----------
+//
+// Where most of the family's library becomes watchable: a file Chromium cannot
+// read on its own arrives anyway. The seam is unchanged — a real listener, a
+// real `fetch`, real status codes over a real database — and the one new thing
+// is that the **Playback component** is injected, so the converting arms can be
+// exercised without a binary being spawned anywhere. **No test here spawns a
+// real process**, and none can: the fake is the only component the router ever
+// sees.
+//
+// The fake stays local to this file rather than moving to `test-support/`. That
+// rung is for doubles shared across server tests, and exactly one file needs
+// this one — the same reason `addStreamableMovie` above lives here.
+
+/** What a converted stream looks like coming out of the component. */
+const CONVERTED_BYTES = Buffer.from(
+  'FAMILYFLIX converted bytes — fragmented MP4, as the element would get them.'
+);
+
+/** The bytes of the file on disk, which are never what a converted path sends. */
+const MKV_BYTES = Buffer.from(
+  'FAMILYFLIX matroska bytes, which Chromium will not read.'
+);
+
+/** An MKV of H.264 and AAC: only the container is wrong, so it is a **Remux**. */
+const REMUXABLE: MediaProbe = {
+  container: 'matroska',
+  videoCodec: 'h264',
+  audioCodec: 'aac',
+  durationSeconds: 5391.2,
+};
+
+/** An MKV of HEVC and AC-3: two unreadable codecs, so it is a **Transcode**. */
+const TRANSCODABLE: MediaProbe = {
+  container: 'matroska',
+  videoCodec: 'hevc',
+  audioCodec: 'ac3',
+  durationSeconds: 4102.5,
+};
+
+/** An MP4 of H.264 and AAC: **Direct play**, component installed or not. */
+const NATIVE: MediaProbe = {
+  container: 'mp4',
+  videoCodec: 'h264',
+  audioCodec: 'aac',
+  durationSeconds: 6832.5,
+};
+
+/**
+ * A **Playback component** that answers a fixed probe and hands back bytes
+ * instead of running FFmpeg, while recording what it was asked to do.
+ *
+ * `spawned` is what proves a path was — or was not — taken: a direct play that
+ * quietly spawned a converter would still answer the right bytes, and this is
+ * the only place that difference is visible. `killed` is the same idea for the
+ * disconnect, which has no HTTP answer at all.
+ *
+ * `endless` is the film that is still playing when the family walks out: the
+ * stream never ends on its own, so the only thing that can close it is the
+ * route noticing the client has gone.
+ */
+interface FakeComponent extends PlaybackComponent {
+  /** Every argv the route asked to run, in order. */
+  spawned: string[][];
+  /** Whether the conversion was stopped. */
+  killed: boolean;
+}
+
+function fakeComponent({
+  probe = null,
+  hardwareEncoder = null,
+  endless = false,
+}: {
+  probe?: MediaProbe | null;
+  hardwareEncoder?: string | null;
+  endless?: boolean;
+} = {}): FakeComponent {
+  const component: FakeComponent = {
+    spawned: [],
+    killed: false,
+    hardwareEncoder,
+    probe: () => probe,
+    spawn: (args: string[]): PlaybackProcess => {
+      component.spawned.push(args);
+
+      let sent = false;
+      const stdout = new Readable({
+        read() {
+          if (sent) {
+            return;
+          }
+          sent = true;
+          this.push(CONVERTED_BYTES);
+          if (!endless) {
+            this.push(null);
+          }
+        },
+      });
+
+      return {
+        stdout,
+        kill: () => {
+          component.killed = true;
+          stdout.push(null);
+        },
+      };
+    },
+  };
+
+  return component;
+}
+
+/**
+ * Write an MKV into the managed media directory and add a movie pointing at it.
+ * The bytes are not a real Matroska file, and do not need to be: every question
+ * about what this file *is* is answered by the injected component's probe, which
+ * is the point of injecting it.
+ */
+function addMkvMovie(
+  storage: LibraryStorage,
+  media: string,
+  relativePath = 'Northwind (2018)/northwind.mkv'
+): Movie {
+  const absolute = join(media, relativePath);
+  mkdirSync(join(absolute, '..'), { recursive: true });
+  writeFileSync(absolute, MKV_BYTES);
+
+  return storage.addMovie({
+    title: 'Northwind',
+    videoPath: relativePath,
+    genres: ['Action'],
+  });
+}
+
+/**
+ * A second listener over a library and media directory that already exist,
+ * differing from the first in nothing but the component it was given.
+ *
+ * This is how "the decision is made per request, never stored" is asserted: the
+ * same row, the same file, the same id, two components, two answers.
+ */
+function relisten(
+  storage: LibraryStorage,
+  media: string,
+  component: PlaybackComponent | null
+): string {
+  const app = express();
+  app.use(
+    '/api',
+    createApiRouter(storage, media, createPlayback(media, component))
+  );
+
+  const server = app.listen(0);
+  servers.push(server);
+
+  const { port } = server.address() as AddressInfo;
+  return `http://127.0.0.1:${port}`;
+}
+
+/** The playback read's body, which now carries four possible paths. */
+async function readPlayback(
+  baseUrl: string,
+  id: string
+): Promise<{ path: string; durationSeconds: number }> {
+  const response = await fetch(playbackUrl(baseUrl, id));
+  return (await response.json()) as { path: string; durationSeconds: number };
+}
+
+describe('GET /api/movies/:id/playback — the path is decided from the file', () => {
+  it('answers remux for a film whose container alone is wrong', async () => {
+    const component = fakeComponent({ probe: REMUXABLE });
+    const { storage, baseUrl, media } = freshApi(component);
+    const stored = addMkvMovie(storage, media);
+
+    const body = await readPlayback(baseUrl, stored.id);
+
+    expect(body.path).toBe('remux');
+  });
+
+  it('answers transcode for a film with a codec the browser cannot decode', async () => {
+    const component = fakeComponent({ probe: TRANSCODABLE });
+    const { storage, baseUrl, media } = freshApi(component);
+    const stored = addMkvMovie(storage, media);
+
+    const body = await readPlayback(baseUrl, stored.id);
+
+    expect(body.path).toBe('transcode');
+  });
+
+  it('answers direct for an MP4 even with a component installed', async () => {
+    const component = fakeComponent({ probe: NATIVE });
+    const { storage, baseUrl, media } = freshApi(component);
+    const stored = addStreamableMovie(storage, media);
+
+    const body = await readPlayback(baseUrl, stored.id);
+
+    expect(body.path).toBe('direct');
+  });
+
+  it('reports the duration the probe read, not the container header', async () => {
+    // The MKV on disk has no MP4 header to parse, so a read that still fell
+    // back to `mediaDuration` would answer 404 here rather than a duration.
+    // This is the seam where the probe becoming the source of truth is visible.
+    const component = fakeComponent({ probe: REMUXABLE });
+    const { storage, baseUrl, media } = freshApi(component);
+    const stored = addMkvMovie(storage, media);
+
+    const body = await readPlayback(baseUrl, stored.id);
+
+    expect(body.durationSeconds).toBeCloseTo(REMUXABLE.durationSeconds, 1);
+  });
+});
+
+describe('GET /api/movies/:id/playback — nothing about the path is stored', () => {
+  it('answers differently for the same film once a component appears', async () => {
+    // Installing a better component has to make old films play with no
+    // re-import and no schema change. Two listeners over one library, one row,
+    // one file: the only thing that changed is what is installed.
+    const { storage, baseUrl, media } = freshApi();
+    const stored = addMkvMovie(storage, media);
+
+    const before = await readPlayback(baseUrl, stored.id);
+    const withComponent = relisten(
+      storage,
+      media,
+      fakeComponent({ probe: REMUXABLE })
+    );
+    const after = await readPlayback(withComponent, stored.id);
+
+    expect(before.path).toBe('cannot-play');
+    expect(after.path).toBe('remux');
+  });
+
+  it('writes nothing to the movie while answering', async () => {
+    // A decision cached on the row is a film that stays unplayable after the
+    // component that would play it is installed. The read is a read.
+    const { storage, baseUrl, media } = freshApi(
+      fakeComponent({ probe: TRANSCODABLE })
+    );
+    const stored = addMkvMovie(storage, media);
+    const before = storage.getMovie(stored.id);
+
+    await readPlayback(baseUrl, stored.id);
+
+    expect(storage.getMovie(stored.id)).toEqual(before);
+  });
+});
+
+describe('GET /api/movies/:id/playback — a film that cannot be played', () => {
+  it('says so, which is not the same as saying the file is missing', async () => {
+    // The distinction the family sees: one message says the disc is gone, the
+    // other says this build cannot decode it. A 404 here would tell them a file
+    // is missing while it sits on the disk in front of them.
+    const { storage, baseUrl, media } = freshApi();
+    const stored = addMkvMovie(storage, media);
+
+    const response = await fetch(playbackUrl(baseUrl, stored.id));
+
+    expect(response.status).toBe(200);
+    expect(((await response.json()) as { path: string }).path).toBe(
+      'cannot-play'
+    );
+  });
+
+  it('reports no duration it has no way of knowing', async () => {
+    const { storage, baseUrl, media } = freshApi();
+    const stored = addMkvMovie(storage, media);
+
+    const body = await readPlayback(baseUrl, stored.id);
+
+    expect(body.durationSeconds).toBe(0);
+  });
+
+  it('still answers 404 for a film whose file really is gone', async () => {
+    // The two must not have collapsed into one another in either direction.
+    const { storage, baseUrl } = freshApi(fakeComponent({ probe: REMUXABLE }));
+    const stored = storage.addMovie({
+      title: 'Signal Lost',
+      videoPath: 'Signal Lost (2023)/signal-lost.mkv',
+      genres: ['Sci-Fi'],
+    });
+
+    const response = await fetch(playbackUrl(baseUrl, stored.id));
+
+    expect(response.status).toBe(404);
+  });
+});
+
+describe('GET /api/movies/:id/stream — a film that has to be converted', () => {
+  it('answers the converted bytes rather than the file on disk', async () => {
+    const component = fakeComponent({ probe: REMUXABLE });
+    const { storage, baseUrl, media } = freshApi(component);
+    const stored = addMkvMovie(storage, media);
+
+    const response = await fetch(streamUrl(baseUrl, stored.id));
+
+    expect(response.status).toBe(200);
+    expect(Buffer.from(await response.arrayBuffer())).toEqual(CONVERTED_BYTES);
+  });
+
+  it('names the type the browser needs to decide it can play it', async () => {
+    // Whatever the file on disk was called, what leaves here is an MP4. An
+    // element told `video/x-matroska` refuses bytes it could have played.
+    const component = fakeComponent({ probe: TRANSCODABLE });
+    const { storage, baseUrl, media } = freshApi(component);
+    const stored = addMkvMovie(storage, media);
+
+    const response = await fetch(streamUrl(baseUrl, stored.id));
+
+    expect(response.headers.get('content-type')).toContain('video/mp4');
+    await response.arrayBuffer();
+  });
+
+  it('runs the component once, over the file it resolved from the row', async () => {
+    // The URL carried an id. What the component is handed has to be the
+    // absolute path that came out of the containment check, never the string
+    // stored in the database.
+    const component = fakeComponent({ probe: REMUXABLE });
+    const { storage, baseUrl, media } = freshApi(component);
+    const stored = addMkvMovie(storage, media);
+
+    await (await fetch(streamUrl(baseUrl, stored.id))).arrayBuffer();
+
+    expect(component.spawned).toHaveLength(1);
+    const named = component.spawned[0].find((arg) =>
+      arg.endsWith('northwind.mkv')
+    );
+    expect(named).toBeDefined();
+    expect(isAbsolute(named as string)).toBe(true);
+  });
+});
+
+describe('GET /api/movies/:id/stream — direct play with a component installed', () => {
+  it('sends the file untouched and runs nothing', async () => {
+    // The path that must not quietly become a transcode: the same bytes, and a
+    // component that was never asked to do anything.
+    const component = fakeComponent({ probe: NATIVE });
+    const { storage, baseUrl, media } = freshApi(component);
+    const stored = addStreamableMovie(storage, media);
+
+    const response = await fetch(streamUrl(baseUrl, stored.id));
+
+    expect(Buffer.from(await response.arrayBuffer())).toEqual(VIDEO_BYTES);
+    expect(component.spawned).toHaveLength(0);
+  });
+
+  it('still answers a Range with the slice that was asked for', async () => {
+    // Byte-range seeking is what direct play is *for*, and a component being
+    // installed must not cost the library its cheapest path.
+    const component = fakeComponent({ probe: NATIVE });
+    const { storage, baseUrl, media } = freshApi(component);
+    const stored = addStreamableMovie(storage, media);
+
+    const response = await fetch(streamUrl(baseUrl, stored.id), {
+      headers: { Range: 'bytes=10-19' },
+    });
+
+    expect(response.status).toBe(206);
+    expect(Buffer.from(await response.arrayBuffer())).toEqual(
+      VIDEO_BYTES.subarray(10, 20)
+    );
+  });
+});
+
+describe('GET /api/movies/:id/stream — leaving the film', () => {
+  it('stops the conversion when the client disconnects', async () => {
+    // A family movie night must not leave transcodes running. There is no HTTP
+    // answer to assert here — the client has gone — so the component is asked
+    // directly whether it was stopped.
+    const component = fakeComponent({ probe: TRANSCODABLE, endless: true });
+    const { storage, baseUrl, media } = freshApi(component);
+    const stored = addMkvMovie(storage, media);
+
+    const controller = new AbortController();
+    const response = await fetch(streamUrl(baseUrl, stored.id), {
+      signal: controller.signal,
+    });
+    const reader = (response.body as ReadableStream<Uint8Array>).getReader();
+    await reader.read();
+    expect(component.killed).toBe(false);
+
+    controller.abort();
+
+    await vi.waitFor(() => expect(component.killed).toBe(true));
+  });
+
+  it('stays up afterwards, and serves the next request normally', async () => {
+    const component = fakeComponent({ probe: TRANSCODABLE, endless: true });
+    const { storage, baseUrl, media } = freshApi(component);
+    const stored = addMkvMovie(storage, media);
+
+    const controller = new AbortController();
+    const response = await fetch(streamUrl(baseUrl, stored.id), {
+      signal: controller.signal,
+    });
+    await (response.body as ReadableStream<Uint8Array>).getReader().read();
+    controller.abort();
+    await vi.waitFor(() => expect(component.killed).toBe(true));
+
+    const next = await fetch(`${baseUrl}/api/movies/${stored.id}`);
+    expect(next.status).toBe(200);
+  });
+});
+
+describe('GET /api/movies/:id/stream — a film that cannot be played', () => {
+  it('answers rather than sending bytes no browser can read', async () => {
+    const { storage, baseUrl, media } = freshApi();
+    const stored = addMkvMovie(storage, media);
+
+    const response = await fetch(streamUrl(baseUrl, stored.id));
+
+    expect(response.status).toBe(415);
+    expect(response.headers.get('content-type')).toContain('application/json');
+    const body = (await response.json()) as { error?: unknown };
+    expect(typeof body.error).toBe('string');
+  });
+
+  it('spawns nothing for a file the component cannot make sense of', async () => {
+    // A component that is installed but cannot read this file is still a film
+    // that cannot be played, and starting a converter over a probe that
+    // answered nothing would leave a process producing nothing forever.
+    const component = fakeComponent({ probe: null });
+    const { storage, baseUrl, media } = freshApi(component);
+    const stored = addMkvMovie(storage, media);
+
+    await fetch(streamUrl(baseUrl, stored.id));
+
+    expect(component.spawned).toHaveLength(0);
   });
 });

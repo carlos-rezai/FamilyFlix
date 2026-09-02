@@ -49,8 +49,19 @@ const NORTHWIND: Movie = makeMovie({
 /** What the file says it runs to, which is not what the record says. */
 const DIRECT_PLAY: PlaybackRead = { path: 'direct', durationSeconds: 6832.5 };
 
+/**
+ * A film that arrived in a container this build cannot convert — the read
+ * answers 200 with the path it actually chose, which is how the screen tells a
+ * film it cannot decode from one it cannot find.
+ */
+const CANNOT_PLAY: PlaybackRead = {
+  path: 'cannot-play',
+  durationSeconds: 5391.2,
+};
+
 const BUFFERING = 'Getting this film ready…';
 const MISSING_TITLE = 'This film’s file is missing';
+const CANNOT_TITLE = 'This film can’t be played';
 
 /** The prototype's circle, to the pixel — the one centred element. */
 const CIRCLE_SIZE = '96px';
@@ -436,6 +447,69 @@ describe('Player — a film whose file is missing', () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+});
+
+describe('Player — a film this build cannot play', () => {
+  // 10 — Video player, Phase 7: "the FFmpeg pipeline" (issue #89).
+  //
+  // The **Playback read** now answers with the path that was actually chosen,
+  // and `cannot-play` is one of them. It is a 200, not a 404 — the file is
+  // there, and the family has to be told the truth about which of the two
+  // things has gone wrong, because the two have different remedies.
+  stubMediaElement();
+
+  beforeEach(() => {
+    answerWith({ playback: CANNOT_PLAY });
+  });
+
+  it('says the film cannot be played, not that its file is missing', async () => {
+    const { container } = renderPlayer();
+
+    expect(await screen.findByText(CANNOT_TITLE)).toBeDefined();
+    expect(container.textContent).not.toContain(MISSING_TITLE);
+  });
+
+  it('does not sit an element over bytes no browser can read', async () => {
+    // Leaving the `<video>` there means an element that stalls, retries, and
+    // logs a decode error behind a notice already saying what happened.
+    const { container } = renderPlayer();
+    await screen.findByText(CANNOT_TITLE);
+
+    expect(container.querySelector('video')).toBeNull();
+  });
+
+  it('leaves a way back, the same one the missing-file notice has', async () => {
+    renderPlayer();
+    await screen.findByText(CANNOT_TITLE);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+
+    expect(pathname()).toBe('/movie/m1');
+  });
+
+  it('does not idle its own way out away', async () => {
+    // A notice whose only exit fades after three seconds is a trap.
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      renderPlayer();
+      await screen.findByText(CANNOT_TITLE);
+
+      act(() => {
+        vi.advanceTimersByTime(30000);
+      });
+
+      expect(screen.getByRole('button', { name: 'Back' })).toBeDefined();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('keeps its backdrop rather than going black', async () => {
+    const { container } = renderPlayer();
+    await screen.findByText(CANNOT_TITLE);
+
+    expect(blurredLayer(container)).toBeDefined();
   });
 });
 

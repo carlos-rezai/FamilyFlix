@@ -27,10 +27,22 @@ const MISSING_BODY =
   'FamilyFlix can’t find the video file for this title. It may have been ' +
   'moved or renamed outside the app.';
 
+/**
+ * The third message, added with the FFmpeg pipeline (issue #89) — the state
+ * that only becomes possible once there is more than one **Playback path** to
+ * fail to find. Also the prototype's copy verbatim.
+ */
+const CANNOT_TITLE = 'This film can’t be played';
+const CANNOT_BODY =
+  'FamilyFlix can’t decode this file’s format. Adding a playback component in ' +
+  'Settings may fix it.';
+
 /** The prototype's circle, to the pixel. */
 const CIRCLE_SIZE = '96px';
 
-function renderNotice(kind: 'play' | 'buffering' | 'missing-file') {
+function renderNotice(
+  kind: 'play' | 'buffering' | 'missing-file' | 'cannot-play'
+) {
   return render(
     <ThemeProvider theme={theme}>
       <PlayerNotice kind={kind} />
@@ -72,9 +84,36 @@ describe('PlayerNotice', () => {
     expect(screen.getByText(MISSING_BODY)).toBeDefined();
   });
 
+  it('says what has happened when this build cannot decode the film', () => {
+    // The message the FFmpeg pipeline made possible: the file is right there,
+    // and nothing installed can read it.
+    renderNotice('cannot-play');
+
+    expect(screen.getByText(CANNOT_TITLE)).toBeDefined();
+    expect(screen.getByText(CANNOT_BODY)).toBeDefined();
+  });
+
+  it('keeps a film it cannot decode apart from a film it cannot find', () => {
+    // Two different things have gone wrong and they have two different
+    // remedies — find the file, or install a component. One message for both
+    // would send the family looking for a disc that is on the shelf.
+    const undecodable = renderNotice('cannot-play');
+    const absent = renderNotice('missing-file');
+
+    expect(undecodable.container.textContent).not.toBe(
+      absent.container.textContent
+    );
+    expect(undecodable.container.textContent).not.toContain(MISSING_TITLE);
+  });
+
   it('draws every state inside the same circle', () => {
-    // One centred element with three faces, not three centred elements.
-    for (const kind of ['play', 'buffering', 'missing-file'] as const) {
+    // One centred element with four faces, not four centred elements.
+    for (const kind of [
+      'play',
+      'buffering',
+      'missing-file',
+      'cannot-play',
+    ] as const) {
       const { container, unmount } = renderNotice(kind);
 
       expect(circle(container)).toBeDefined();
