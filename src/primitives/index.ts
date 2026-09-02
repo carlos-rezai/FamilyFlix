@@ -19,3 +19,7 @@ export { PauseIcon } from './Icon/PauseIcon';
 export { MoreIcon } from './Icon/MoreIcon';
 export { CheckIcon } from './Icon/CheckIcon';
 export { SearchIcon } from './Icon/SearchIcon';
+export { SkipBackIcon } from './Icon/SkipBackIcon';
+export { SkipForwardIcon } from './Icon/SkipForwardIcon';
+export { VolumeIcon } from './Icon/VolumeIcon';
+export { VolumeMutedIcon } from './Icon/VolumeMutedIcon';

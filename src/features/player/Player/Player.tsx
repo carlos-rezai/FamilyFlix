@@ -120,7 +120,19 @@ export function Player({ movieId }: PlayerProps) {
     };
   }, [movieId]);
 
-  const { playing, buffering, toggle } = usePlayback(videoRef, playback);
+  const {
+    playing,
+    position,
+    buffering,
+    duration,
+    volume,
+    muted,
+    toggle,
+    seek,
+    skip,
+    setVolume,
+    toggleMute,
+  } = usePlayback(videoRef, playback);
 
   const notice = noticeFor(fileMissing, buffering, playing);
 
@@ -174,8 +186,16 @@ export function Player({ movieId }: PlayerProps) {
         title={movie?.title ?? ''}
         visible={visible}
         playing={playing}
+        position={position}
+        duration={duration}
+        volume={volume}
+        muted={muted}
         onBack={leave}
         onTogglePlay={toggle}
+        onSeek={seek}
+        onSkip={skip}
+        onVolumeChange={setVolume}
+        onToggleMute={toggleMute}
       />
     </Stage>
   );

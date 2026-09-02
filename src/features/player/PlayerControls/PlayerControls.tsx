@@ -1,5 +1,13 @@
-import { ChevronLeftIcon, PauseIcon, PlayIcon } from '@/primitives';
+import {
+  ChevronLeftIcon,
+  PauseIcon,
+  PlayIcon,
+  SkipBackIcon,
+  SkipForwardIcon,
+} from '@/primitives';
 
+import { PlayerScrubber } from '../PlayerScrubber/PlayerScrubber';
+import { VolumeSlider } from '../VolumeSlider/VolumeSlider';
 import {
   BackPill,
   BottomBar,
@@ -16,11 +24,34 @@ export interface PlayerControlsProps {
   visible: boolean;
   /** Whether the film is running, which is the transport button's face. */
   playing: boolean;
+  /** The **Absolute position** the film is at, in seconds. */
+  position: number;
+  /** How long the film runs, from the **Playback read** by way of the screen above. */
+  duration: number;
+  /** How loud the film is, 0–1. */
+  volume: number;
+  /** Whether the film is silenced. */
+  muted: boolean;
   /** Leave the player, back to the film's page. */
   onBack: () => void;
   /** Stop a running film, or start a stopped one. */
   onTogglePlay: () => void;
+  /** Take the film to a second — the **Scrubber**, on release. */
+  onSeek: (seconds: number) => void;
+  /**
+   * Move the film by a signed number of seconds. One handler with a delta
+   * rather than two, because the keyboard map arrives next and has to move the
+   * film the same way these buttons do rather than by a second code path.
+   */
+  onSkip: (deltaSeconds: number) => void;
+  /** Set how loud the film is. */
+  onVolumeChange: (value: number) => void;
+  /** Silence the film, or give back the level it was at. */
+  onToggleMute: () => void;
 }
+
+/** What the ±10s buttons move the film by, in seconds. */
+const SKIP_SECONDS = 10;
 
 /** How far each bar drifts as it fades — out the way it came in. */
 const TOP_DRIFT = '-12px';
@@ -39,19 +70,26 @@ const BOTTOM_DRIFT = '12px';
  * gone — an invisible Back pill a keyboard can still land on is a control
  * nobody can see, and `pointer-events: none` alone would leave it exactly that.
  *
- * What it draws is this slice's half of `feat.PlayerControls.dc.html`. The
- * scrubber and its two clocks, the volume slider and the ±10s buttons arrive
- * with the drag arithmetic; the CC pill arrives with subtitles, and only for a
- * film that has any; fullscreen arrives with the keyboard map. Each is drawn in
- * the slice that can make it do something, because a control that does nothing
- * when a parent presses it is worse than one that is not there yet.
+ * What it draws is `feat.PlayerControls.dc.html` less two controls: the CC pill
+ * arrives with subtitles, and only for a film that has any, and fullscreen
+ * arrives with the keyboard map. Each is drawn in the slice that can make it do
+ * something, because a control that does nothing when a parent presses it is
+ * worse than one that is not there yet.
  */
 export function PlayerControls({
   title,
   visible,
   playing,
+  position,
+  duration,
+  volume,
+  muted,
   onBack,
   onTogglePlay,
+  onSeek,
+  onSkip,
+  onVolumeChange,
+  onToggleMute,
 }: PlayerControlsProps) {
   return (
     <>
@@ -70,17 +108,46 @@ export function PlayerControls({
         $drift={BOTTOM_DRIFT}
         aria-hidden={!visible}
       >
-        <TransportRow>
-          {visible ? (
-            <TransportButton
-              label={playing ? 'Pause' : 'Play'}
-              size={48}
-              onClick={onTogglePlay}
-            >
-              {playing ? <PauseIcon size={24} /> : <PlayIcon size={24} />}
-            </TransportButton>
-          ) : null}
-        </TransportRow>
+        {visible ? (
+          <>
+            <PlayerScrubber
+              position={position}
+              duration={duration}
+              onSeek={onSeek}
+            />
+            <TransportRow>
+              <TransportButton
+                label={playing ? 'Pause' : 'Play'}
+                size={48}
+                onClick={onTogglePlay}
+              >
+                {playing ? <PauseIcon size={24} /> : <PlayIcon size={24} />}
+              </TransportButton>
+              <TransportButton
+                label="Back 10s"
+                title="Back 10s"
+                size={44}
+                onClick={() => onSkip(-SKIP_SECONDS)}
+              >
+                <SkipBackIcon size={22} />
+              </TransportButton>
+              <TransportButton
+                label="Forward 10s"
+                title="Forward 10s"
+                size={44}
+                onClick={() => onSkip(SKIP_SECONDS)}
+              >
+                <SkipForwardIcon size={22} />
+              </TransportButton>
+              <VolumeSlider
+                volume={volume}
+                muted={muted}
+                onVolumeChange={onVolumeChange}
+                onToggleMute={onToggleMute}
+              />
+            </TransportRow>
+          </>
+        ) : null}
       </BottomBar>
     </>
   );
