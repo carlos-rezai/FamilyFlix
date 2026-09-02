@@ -20,6 +20,15 @@ export interface PlaybackSource {
 
 /** Everything the screen above knows about the film that is running. */
 export interface PlaybackState {
+  /**
+   * Where the element is to be pointed: the film's stream, carrying the
+   * **Stream offset** it was last asked for as a `?t=`.
+   *
+   * It is the hook's answer rather than the screen's because a seek on a stream
+   * path *is* a change of source — there are no byte ranges to seek in — and
+   * the offset is the other half of the position the hook reports.
+   */
+  src: string;
   /** Whether the film is running, as the **element** reports it. */
   playing: boolean;
   /** The **Absolute position** — seconds into the film, not into the stream. */
@@ -86,20 +95,24 @@ export interface PlaybackState {
  */
 export function usePlayback(
   videoRef: RefObject<HTMLVideoElement | null>,
-  // Every stream is direct play today, so the **Stream offset** is nought and
-  // the position the hook reports is the element's own; `path` is what will say
-  // a stream begins somewhere other than the beginning, and it is on the wire
-  // four slices early precisely so the payload does not change shape under
-  // client code that has already read it.
+  // Which **Playback path** the film takes, and how long it runs. The path is
+  // what says whether a seek can be a write to `currentTime` at all: on a
+  // **Remux** or a **Transcode** there is nothing in the element to seek to, so
+  // the film is restarted at a new **Stream offset** instead.
   source: PlaybackSource | null,
   // The **Absolute position** the film opens at — its stored **Resume
   // position**, or nought for a film nobody has watched and for a finished one.
   // It arrives late, with the movie record, which is why it is applied by an
   // effect rather than read once.
-  startAt = 0
+  startAt = 0,
+  // Where the film's bytes come from, before any **Stream offset** is put on
+  // it. The hook is handed the plain stream URL and answers with the one the
+  // element should be pointed at.
+  streamSrc = ''
 ): PlaybackState {
   const [playing, setPlaying] = useState(false);
   const [elementTime, setElementTime] = useState(0);
+  const [offset, setOffset] = useState(0);
   const [buffering, setBuffering] = useState(false);
   const [ended, setEnded] = useState(false);
   const [volume, setVolumeState] = useState(1);
@@ -108,6 +121,55 @@ export function usePlayback(
   // A film with no read behind it has no length, which is the state the screen
   // is in for the moment between opening and the read landing.
   const duration = source?.durationSeconds ?? 0;
+
+  /**
+   * Whether the film's bytes are being converted as they are sent. A stream has
+   * no byte ranges and no length the element knows, so its only seek is being
+   * restarted at another second.
+   *
+   * A film with no read yet, and one nothing can play, are both handled as
+   * direct play: neither has a stream to re-point, and the element they would
+   * re-point is not on the screen.
+   */
+  const streaming = source?.path === 'remux' || source?.path === 'transcode';
+
+  /**
+   * The two halves of the **Absolute position**, kept as refs beside their
+   * state so that a seek can be read back before React has re-rendered — two
+   * −10s presses in the same tenth of a second have to move the film twenty
+   * seconds, and on a stream path the element cannot be asked where it is,
+   * because it is still holding the second it was at before the source moved.
+   */
+  const offsetRef = useRef(0);
+  const elementTimeRef = useRef(0);
+
+  /** Where the film is, whatever it is arriving down. */
+  const absolute = useCallback(
+    (): number => offsetRef.current + elementTimeRef.current,
+    []
+  );
+
+  /** How far into the stream the element is, ref and state together. */
+  const anchorElement = useCallback((seconds: number): void => {
+    elementTimeRef.current = seconds;
+    setElementTime(seconds);
+  }, []);
+
+  /**
+   * Point the stream at a second: the film restarts there, and the element
+   * comes back at nought knowing nothing about where in the film it is. The
+   * position is reported from the offset straight away — one frame of nought
+   * would take the **Scrubber** to the start of the film and write that second
+   * down as where the family was watching.
+   */
+  const anchorStream = useCallback(
+    (seconds: number): void => {
+      offsetRef.current = seconds;
+      setOffset(seconds);
+      anchorElement(0);
+    },
+    [anchorElement]
+  );
 
   useEffect(() => {
     const video = videoRef.current;
@@ -120,7 +182,10 @@ export function usePlayback(
       setEnded(false);
     };
     const onPause = () => setPlaying(false);
-    const onTimeUpdate = () => setElementTime(video.currentTime);
+    const onTimeUpdate = () => {
+      elementTimeRef.current = video.currentTime;
+      setElementTime(video.currentTime);
+    };
     const onWaiting = () => setBuffering(true);
     const onPlaying = () => {
       setBuffering(false);
@@ -181,12 +246,22 @@ export function usePlayback(
       return;
     }
     resumed.current = true;
+
+    // On a stream path the film is *opened* an hour in rather than wound to it:
+    // winding is a no-op on a live stream, so a film left half-watched would
+    // silently start again from the beginning — the exact thing the **Resume
+    // position** exists to prevent.
+    if (streaming) {
+      anchorStream(startAt);
+      return;
+    }
+
     video.currentTime = startAt;
     // The element fires no `timeupdate` for a position it was handed, and a
     // scrubber drawn at nought for a frame before jumping reads as the film
     // having been lost.
-    setElementTime(startAt);
-  }, [videoRef, startAt]);
+    anchorElement(startAt);
+  }, [videoRef, startAt, streaming, anchorStream, anchorElement]);
 
   /**
    * Asked of the element rather than of our own `playing`, so a press can never
@@ -213,32 +288,39 @@ export function usePlayback(
    */
   const seek = useCallback(
     (seconds: number): number => {
-      // On direct play the **Stream offset** is nought, so an **Absolute
-      // position** is the element's own time.
       const landing = Math.min(duration, Math.max(0, seconds));
+
+      // The two seeks a film can have, against the same clamp and answering the
+      // same second. On a stream path the source moves and the element is left
+      // alone — there is no such second in it to wind to; on **Direct play**
+      // the element is wound and the **Stream offset** stays nought.
+      if (streaming) {
+        anchorStream(landing);
+        return landing;
+      }
+
       const video = videoRef.current;
       if (video !== null) {
         video.currentTime = landing;
       }
+      anchorElement(landing);
       return landing;
     },
-    [videoRef, duration]
+    [videoRef, duration, streaming, anchorStream, anchorElement]
   );
 
   /**
-   * From where the film is now, asked of the element rather than of our own
-   * `position`: a −10s pressed twice in the same tenth of a second has to move
-   * the film twenty seconds, not ten.
+   * From the **Absolute position** the film is at now, read from the refs
+   * rather than from the rendered `position`: a −10s pressed twice in the same
+   * tenth of a second has to move the film twenty seconds, not ten.
+   *
+   * It is the absolute second rather than the element's own that is moved, so a
+   * −10s an hour into a converted film lands ten seconds earlier in the *film*
+   * rather than taking it back to the beginning of it.
    */
   const skip = useCallback(
-    (deltaSeconds: number): number => {
-      const video = videoRef.current;
-      if (video === null) {
-        return elementTime;
-      }
-      return seek(video.currentTime + deltaSeconds);
-    },
-    [videoRef, seek, elementTime]
+    (deltaSeconds: number): number => seek(absolute() + deltaSeconds),
+    [seek, absolute]
   );
 
   const setVolume = useCallback(
@@ -269,8 +351,13 @@ export function usePlayback(
   }, [videoRef]);
 
   return {
+    // Nought is nothing to say rather than `?t=0`: the fresh open is the
+    // commonest thing this URL is, and it should read as the plain one.
+    src: offset > 0 ? `${streamSrc}?t=${offset}` : streamSrc,
     playing,
-    position: elementTime,
+    // The **Absolute position**: seconds into the film, which on a stream path
+    // is where the conversion started plus how far into it the element is.
+    position: offset + elementTime,
     buffering,
     ended,
     duration,

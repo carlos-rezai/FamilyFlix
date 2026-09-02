@@ -44,6 +44,13 @@ function streamUrl(movieId: string): string {
   return `/api/movies/${encodeURIComponent(movieId)}/stream`;
 }
 
+/**
+ * The **Stream offset** is not put on here. `usePlayback` owns it: on a
+ * converted film a seek *is* a change of source, so the URL the element is
+ * pointed at and the position the screen reports are two halves of one thing,
+ * and the hook hands back the src to use.
+ */
+
 /** Where the film's page is, which is where both ways out of the player land. */
 function moviePath(movieId: string): string {
   return `/movie/${encodeURIComponent(movieId)}`;
@@ -163,6 +170,7 @@ export function Player({ movieId }: PlayerProps) {
   }, [movieId]);
 
   const {
+    src,
     playing,
     position,
     buffering,
@@ -175,7 +183,7 @@ export function Player({ movieId }: PlayerProps) {
     skip,
     setVolume,
     toggleMute,
-  } = usePlayback(videoRef, playback, openAt(movie));
+  } = usePlayback(videoRef, playback, openAt(movie), streamUrl(movieId));
 
   // Where the watching gets written down. The screen hands it what is true and
   // learns nothing back except the one thing only the screen knows: the second
@@ -282,7 +290,7 @@ export function Player({ movieId }: PlayerProps) {
             retries and logs a decode error behind a notice already saying what
             happened. */}
         {fileMissing || cannotPlay ? null : (
-          <Picture ref={videoRef} src={streamUrl(movieId)} />
+          <Picture ref={videoRef} src={src} />
         )}
         {notice === null ? null : (
           <Centre>

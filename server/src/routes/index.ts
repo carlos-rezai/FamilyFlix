@@ -155,6 +155,26 @@ function isRatingValue(value: unknown): value is number | null {
   );
 }
 
+/**
+ * The **Stream offset** a stream URL carries, in seconds — nought for a URL
+ * with no `?t=` on it at all, and `null` for a `t` that is not a position.
+ *
+ * A fraction is a position: the **Scrubber** hands the film's own length back
+ * when the knob is dragged to the far end, and that length is a fraction of a
+ * second on most files.
+ */
+function streamOffset(value: unknown): number | null {
+  if (value === undefined) {
+    return 0;
+  }
+  const raw = queryString(value);
+  if (raw === undefined || raw.trim() === '') {
+    return null;
+  }
+  const seconds = Number(raw);
+  return Number.isFinite(seconds) && seconds >= 0 ? seconds : null;
+}
+
 /** Reject anything that is not a positive whole number of rows. */
 function parseLimit(value: string): number | null {
   const limit = Number(value);
@@ -527,8 +547,26 @@ export function createApiRouter(
   // killed the moment the client goes**, which is the one thing on this route
   // with no HTTP answer to it: a family movie night must not leave transcodes
   // running.
+  //
+  // `?t=` is the **Stream offset**: the second a converted film is wanted from,
+  // because a live stream has no byte ranges for the element to seek in. It is
+  // read **before the path is chosen**, so a URL that is not a position gets the
+  // same 400 whatever the film turns out to be — "direct play ignores `?t=`" is
+  // about a position it has no use for, not about accepting a value that is not
+  // one. A second the film does not have is a **416**, and neither refusal
+  // spawns anything: a conversion started over an unreachable second produces
+  // no bytes and never ends.
   router.get('/movies/:id/stream', (req: Request<{ id: string }>, res) => {
     const { id } = req.params;
+
+    const offsetSeconds = streamOffset(req.query.t);
+    if (offsetSeconds === null) {
+      res
+        .status(400)
+        .json({ error: 'Query t must be a position in seconds, from 0' });
+      return;
+    }
+
     const movie = storage.getMovie(id);
     if (!movie) {
       res.status(404).json({ error: `Unknown movie: ${id}` });
@@ -541,12 +579,19 @@ export function createApiRouter(
       return;
     }
 
-    const plan = playback.stream(file);
+    const plan = playback.stream(file, offsetSeconds);
 
     if (plan.path === 'cannot-play') {
       res
         .status(415)
         .json({ error: `Cannot play the video file for movie: ${id}` });
+      return;
+    }
+
+    if (plan.path === 'past-end') {
+      res
+        .status(416)
+        .json({ error: `The film ends before ${offsetSeconds}s: ${id}` });
       return;
     }
 

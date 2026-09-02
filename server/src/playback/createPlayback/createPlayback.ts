@@ -13,6 +13,7 @@ import type {
 import { mediaDuration } from '../mediaDuration/mediaDuration';
 import { mediaFilePath } from '../mediaFilePath/mediaFilePath';
 import { parseSubtitle } from '../parseSubtitle/parseSubtitle';
+import type { MediaProbe } from '../probe/probe';
 
 /**
  * What to do with a film's bytes: send the file as it is, read them off a
@@ -26,7 +27,8 @@ import { parseSubtitle } from '../parseSubtitle/parseSubtitle';
 export type StreamPlan =
   | { path: 'direct' }
   | { path: 'converted'; conversion: PlaybackProcess }
-  | { path: 'cannot-play' };
+  | { path: 'cannot-play' }
+  | { path: 'past-end' };
 
 /**
  * What the API layer can ask the playback domain for.
@@ -75,8 +77,19 @@ export interface Playback {
    * {@link read} answered, made again from the file rather than remembered
    * from it, because a decision cached between two requests is the beginning
    * of a decision cached between two runs.
+   *
+   * `offsetSeconds` is the **Stream offset** the film is wanted from, which
+   * only a converting path has any use for: **Direct play** seeks by byte
+   * range, and a file that started being sent from the middle because of one
+   * would be a film that skips its own opening.
+   *
+   * A second the film does not have is `past-end` rather than a conversion:
+   * `-ss` past the end of a film starts a process that reads to the end, writes
+   * no frames, and never exits on its own. The film's very last second is not
+   * past it — a **Scrubber** dragged to the far end asks for exactly the
+   * duration, and refusing that would break the commonest scrub there is.
    */
-  stream(file: string): StreamPlan;
+  stream(file: string, offsetSeconds?: number): StreamPlan;
 
   /**
    * The absolute file behind a **Subtitle**'s stored path, or `null` when there
@@ -137,7 +150,7 @@ export function createPlayback(
    * file, which is what lets a film that could not be played this morning play
    * this afternoon.
    */
-  const decide = (file: string) => {
+  const decide = (file: string, offsetSeconds = 0) => {
     const probe = component === null ? null : component.probe(file);
     return {
       probe,
@@ -145,19 +158,24 @@ export function createPlayback(
         file,
         probe,
         component: availabilityOf(component),
+        offsetSeconds,
       }),
     };
   };
+
+  /**
+   * How long the film runs: the probe's answer when there was a probe, and the
+   * container's own header when there was not — which is the machine with no
+   * component on it, reading the one format it can parse unaided.
+   */
+  const lengthOf = (file: string, probe: MediaProbe | null): number =>
+    probe?.durationSeconds ?? mediaDuration(file) ?? 0;
 
   return {
     videoFile: (storedPath) => mediaFilePath(mediaPath, storedPath),
     read: (file) => {
       const { probe, decision } = decide(file);
-      // The probe's duration when there was a probe, and the container's own
-      // header when there was not — which is the machine with no component on
-      // it, reading the one format it can parse unaided.
-      const durationSeconds =
-        probe?.durationSeconds ?? mediaDuration(file) ?? 0;
+      const durationSeconds = lengthOf(file, probe);
 
       // A film whose length nothing can determine is a film that cannot be
       // played, not a film that plays with a scrubber drawn to nowhere: the
@@ -167,8 +185,8 @@ export function createPlayback(
         ? { path: 'cannot-play', durationSeconds: 0 }
         : { path: decision.path, durationSeconds };
     },
-    stream: (file) => {
-      const { decision } = decide(file);
+    stream: (file, offsetSeconds = 0) => {
+      const { probe, decision } = decide(file, offsetSeconds);
 
       if (decision.path === 'direct') {
         return { path: 'direct' };
@@ -178,6 +196,13 @@ export function createPlayback(
       // stating it here is cheaper than a caller having to know that.
       if (decision.path === 'cannot-play' || component === null) {
         return { path: 'cannot-play' };
+      }
+      // Checked here rather than at the route, because this is where the film's
+      // length is known — and checked before the spawn, which is the whole
+      // point: the process that would be started over an unreachable second
+      // never produces a byte and never ends.
+      if (offsetSeconds > lengthOf(file, probe)) {
+        return { path: 'past-end' };
       }
 
       return { path: 'converted', conversion: component.spawn(decision.args) };

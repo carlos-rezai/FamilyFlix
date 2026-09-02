@@ -33,6 +33,17 @@ export interface PlaybackChoice {
   /** What **ffprobe** said the file is, or `null` when nothing could read it. */
   probe: MediaProbe | null;
   component: ComponentAvailability;
+  /**
+   * The **Stream offset** the conversion is to start at, in **Absolute
+   * position** seconds — where the family let go of the knob.
+   *
+   * It reaches the format policy because this is the only place it can: a
+   * stream path has no byte ranges to seek in, so where the film starts is an
+   * argument to the conversion rather than something the element asks for
+   * later. Nought — the fresh open, and every **Direct play** — asks for
+   * nothing at all rather than for `-ss 0`.
+   */
+  offsetSeconds?: number;
 }
 
 /** Containers Chromium demuxes on its own. */
@@ -62,9 +73,18 @@ const FRAGMENTED_MP4 = 'frag_keyframe+empty_moov+default_base_moof';
 /** The encoder a machine with no hardware one falls back to. */
 const SOFTWARE_ENCODER = 'libx264';
 
-/** Everything before the output options: quiet, and reading one film. */
-function inputArgs(file: string): string[] {
-  return ['-hide_banner', '-loglevel', 'error', '-i', file];
+/**
+ * Everything before the output options: quiet, starting where it was asked to,
+ * and reading one film.
+ *
+ * `-ss` goes **before** `-i`, which is what makes it an input seek: ffmpeg
+ * opens the file at that second rather than decoding everything up to it and
+ * throwing it away. On a two-hour film that is the difference between a scrub
+ * that settles and one that spends minutes producing nothing.
+ */
+function inputArgs(file: string, offsetSeconds: number): string[] {
+  const seek = offsetSeconds > 0 ? ['-ss', String(offsetSeconds)] : [];
+  return ['-hide_banner', '-loglevel', 'error', ...seek, '-i', file];
 }
 
 /** Everything after them: a fragmented MP4, down the pipe. */
@@ -73,8 +93,8 @@ function outputArgs(): string[] {
 }
 
 /** Rewrap the streams without touching them — I/O-bound, and nothing is lost. */
-function remuxArgs(file: string): string[] {
-  return [...inputArgs(file), '-c', 'copy', ...outputArgs()];
+function remuxArgs(file: string, offsetSeconds: number): string[] {
+  return [...inputArgs(file, offsetSeconds), '-c', 'copy', ...outputArgs()];
 }
 
 /**
@@ -82,14 +102,18 @@ function remuxArgs(file: string): string[] {
  * arrived as: a **Transcode** answers one shape, and a path that sometimes
  * copied the audio would be two paths wearing one name.
  */
-function transcodeArgs(file: string, hardwareEncoder: string | null): string[] {
+function transcodeArgs(
+  file: string,
+  hardwareEncoder: string | null,
+  offsetSeconds: number
+): string[] {
   const video =
     hardwareEncoder === null
       ? ['-c:v', SOFTWARE_ENCODER, '-preset', 'veryfast', '-crf', '20']
       : ['-c:v', hardwareEncoder];
 
   return [
-    ...inputArgs(file),
+    ...inputArgs(file, offsetSeconds),
     ...video,
     '-c:a',
     'aac',
@@ -153,6 +177,7 @@ export function choosePlaybackPath({
   file,
   probe,
   component,
+  offsetSeconds = 0,
 }: PlaybackChoice): PlaybackDecision {
   if (probe === null) {
     return looksNative(file) ? { path: 'direct' } : { path: 'cannot-play' };
@@ -167,9 +192,9 @@ export function choosePlaybackPath({
   }
 
   return codecsAreNative(probe)
-    ? { path: 'remux', args: remuxArgs(file) }
+    ? { path: 'remux', args: remuxArgs(file, offsetSeconds) }
     : {
         path: 'transcode',
-        args: transcodeArgs(file, component.hardwareEncoder),
+        args: transcodeArgs(file, component.hardwareEncoder, offsetSeconds),
       };
 }
