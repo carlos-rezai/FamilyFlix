@@ -71,6 +71,17 @@ function notFoundResponse(error: string): Response {
   } as unknown as Response;
 }
 
+function serverErrorResponse(): Response {
+  return {
+    ok: false,
+    status: 500,
+    json: () => Promise.resolve({ error: 'boom' }),
+  } as unknown as Response;
+}
+
+/** Whether the two watch writes are refused — a backend hiccup, mid-film. */
+let writeFails = false;
+
 let fetchMock: ReturnType<
   typeof vi.fn<
     (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>
@@ -83,6 +94,7 @@ beforeEach(() => {
       (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>
     >();
   vi.stubGlobal('fetch', fetchMock);
+  writeFails = false;
   answerWith({});
 });
 
@@ -103,7 +115,7 @@ function answerWith({
   movie?: Movie;
   playback?: PlaybackRead | null;
 }) {
-  fetchMock.mockImplementation((input) => {
+  fetchMock.mockImplementation((input, init) => {
     const url = String(input);
     if (url === '/api/movies/m1') {
       return Promise.resolve(okResponse(movie));
@@ -115,8 +127,41 @@ function answerWith({
           : okResponse(playback)
       );
     }
+    // The two watch writes. They echo what they were sent, which is what the
+    // real routes do; `writeFails` is the backend hiccup that must never reach
+    // the film.
+    if (url === '/api/movies/m1/resume' || url === '/api/movies/m1/watched') {
+      if (writeFails) {
+        return Promise.resolve(serverErrorResponse());
+      }
+      const body = (
+        init?.body === undefined ? {} : JSON.parse(String(init.body))
+      ) as { value?: unknown };
+      return Promise.resolve(okResponse({ value: body.value }));
+    }
     return Promise.reject(new Error(`Unexpected request: ${url}`));
   });
+}
+
+/** Every watch write the screen made, as the route and the value it carried. */
+function watchWrites(): {
+  route: string;
+  value: unknown;
+  keepalive?: boolean;
+}[] {
+  return fetchMock.mock.calls
+    .filter(([, init]) => init?.method?.toUpperCase() === 'POST')
+    .map(([input, init]) => {
+      const url = String(input);
+      const body = (
+        init?.body === undefined ? {} : JSON.parse(String(init.body))
+      ) as { value?: unknown };
+      return {
+        route: url.slice(url.lastIndexOf('/') + 1),
+        value: body.value,
+        keepalive: init?.keepalive,
+      };
+    });
 }
 
 /**
@@ -530,5 +575,155 @@ describe('Player — the scrubber over a real film', () => {
     dragTo(await seekBar(), 0.25);
 
     expect(video.currentTime).toBe(6832.5 / 4);
+  });
+});
+
+/**
+ * 10 — Video player, Phase 5: "watching writes" (issue #87).
+ *
+ * The loop closes on screen. Everything the family gets out of this slice is
+ * here: a film that starts where they left it, a position that keeps being
+ * written while they watch, and — as importantly — nothing at all written when
+ * they open a film and change their mind.
+ *
+ * The reporter's own rules are pinned in `useWatchReporter.test.ts`. What these
+ * assert is the wiring: that the screen hands it the **Absolute position** and
+ * the film's real length, that Back is an exit, and that a refused write is
+ * something the family never sees.
+ */
+describe('Player — watching writes', () => {
+  stubMediaElement();
+
+  it('starts an in-progress film where the family left it', async () => {
+    answerWith({
+      movie: makeMovie({
+        id: 'm1',
+        title: FILM,
+        resumePositionSeconds: 1800,
+        status: 'in-progress',
+      }),
+    });
+    const { video } = renderPlayer();
+
+    // Silently, and with no "Resume / Start over" dialog — the prototype draws
+    // none, and the film simply carries on.
+    await waitFor(() => expect(video.currentTime).toBe(1800));
+    expect(screen.queryByText('Start over')).toBeNull();
+  });
+
+  it('starts a film nobody has opened at the beginning', async () => {
+    const { video } = renderPlayer();
+    await waitFor(() => expect(video.paused).toBe(false));
+
+    expect(video.currentTime).toBe(0);
+  });
+
+  it('starts a finished film at the beginning rather than in the credits', async () => {
+    answerWith({
+      movie: makeMovie({
+        id: 'm1',
+        title: FILM,
+        watched: true,
+        resumePositionSeconds: 5400,
+        status: 'watched',
+      }),
+    });
+    const { video } = renderPlayer();
+    await waitFor(() => expect(video.paused).toBe(false));
+
+    expect(video.currentTime).toBe(0);
+  });
+
+  it('writes nothing when a film is opened and left again straight away', async () => {
+    // Three seconds is not watching. If this wrote, the film would be sitting
+    // at the front of the family's Continue Watching row over a glance.
+    const { video } = renderPlayer();
+    await waitFor(() => expect(video.paused).toBe(false));
+    video.currentTime = 3;
+    emit(video, 'timeupdate');
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Back' }));
+
+    expect(watchWrites()).toEqual([]);
+  });
+
+  it('writes where the film was on the way out', async () => {
+    const { video } = renderPlayer();
+    await waitFor(() => expect(video.paused).toBe(false));
+    video.currentTime = 1200;
+    emit(video, 'timeupdate');
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Back' }));
+
+    expect(watchWrites()).toEqual([
+      { route: 'resume', value: 1200, keepalive: true },
+    ]);
+  });
+
+  it('writes where the film was when it is paused', async () => {
+    const { video } = renderPlayer();
+    await waitFor(() => expect(video.paused).toBe(false));
+    video.currentTime = 900;
+    emit(video, 'timeupdate');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Pause' }));
+
+    await waitFor(() =>
+      expect(watchWrites()).toEqual([
+        { route: 'resume', value: 900, keepalive: undefined },
+      ])
+    );
+  });
+
+  it('writes where a settled seek left the film', async () => {
+    // The second the film was taken to, not the one it was at before it moved:
+    // the position prop has not caught up when the seek lands, and a reporter
+    // reading it would store the wrong place every time.
+    const { video } = renderPlayer();
+    await waitFor(() => expect(video.paused).toBe(false));
+    video.currentTime = 900;
+    emit(video, 'timeupdate');
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Back 10s' }));
+
+    await waitFor(() =>
+      expect(watchWrites()).toEqual([
+        { route: 'resume', value: 890, keepalive: undefined },
+      ])
+    );
+  });
+
+  it('marks a film watched when it reaches its end', async () => {
+    const { video } = renderPlayer();
+    await waitFor(() => expect(video.paused).toBe(false));
+    video.currentTime = 6832.5;
+    emit(video, 'timeupdate');
+
+    emit(video, 'ended');
+
+    await waitFor(() =>
+      expect(watchWrites()).toEqual([
+        { route: 'watched', value: true, keepalive: undefined },
+      ])
+    );
+  });
+
+  it('leaves the film playing when the server refuses a write', async () => {
+    // A backend hiccup must never interrupt the film: no notice over the
+    // picture, no pause, and the position exactly where it was.
+    writeFails = true;
+    const { video } = renderPlayer();
+    await waitFor(() => expect(video.paused).toBe(false));
+    video.currentTime = 900;
+    emit(video, 'timeupdate');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Pause' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Play' }));
+    await waitFor(() => expect(watchWrites()).toHaveLength(1));
+
+    expect(video.paused).toBe(false);
+    expect(video.currentTime).toBe(900);
+    expect(screen.queryByText(MISSING_TITLE)).toBeNull();
+    expect(screen.queryByText(BUFFERING)).toBeNull();
   });
 });

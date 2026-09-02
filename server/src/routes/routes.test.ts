@@ -2283,3 +2283,181 @@ describe('GET /api/movies/:id/playback — when there is nothing to read', () =>
     expect(await response.json()).not.toHaveProperty('durationSeconds');
   });
 });
+
+// --- 10 — Video player, Phase 5: "watching writes" (issue #87) ---------------
+//
+// The fourth single-signal write, and the one that closes the loop:
+// `setResumePosition` has existed since the library core and nothing has ever
+// called it, because the only thing that can write a resume position is a
+// player.
+//
+// It is the first of the four whose value is a number rather than a flag, and
+// the first whose side effect is an ordering: `setResumePosition` stamps
+// `last_watched_at`, which is what the Continue Watching row is sorted by. So
+// these tests assert the write, the echo, the stamp, and the shelf — the last
+// one end to end through `/home`, because "the film moves to the front of the
+// row" is the behaviour the family actually sees.
+
+/** POST a resume position to one movie, exactly as the player does. */
+function postResume(baseUrl: string, id: string, body: unknown) {
+  return fetch(`${baseUrl}/api/movies/${id}/resume`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+}
+
+describe('POST /api/movies/:id/resume', () => {
+  it('stores the position and echoes the value it stored', async () => {
+    const { storage, baseUrl } = freshApi();
+    const stored = addFullMovie(storage);
+
+    const response = await postResume(baseUrl, stored.id, { value: 1840 });
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ value: 1840 });
+    expect(storage.getMovie(stored.id)?.resumePositionSeconds).toBe(1840);
+  });
+
+  it('stores whole seconds, and echoes the second it stored', async () => {
+    // `resume_position_seconds` is an INTEGER column and a resume position is
+    // spoken in whole seconds — `Resume · 30:40`. The player reports the
+    // **Absolute position** as the element gives it, fraction and all, so the
+    // rounding is the route's job rather than every caller's. The echo is what
+    // was stored, not what was sent, because the echo's whole purpose is to be
+    // the truth about the row.
+    const { storage, baseUrl } = freshApi();
+    const stored = addFullMovie(storage);
+
+    const response = await postResume(baseUrl, stored.id, { value: 1840.6 });
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ value: 1841 });
+    expect(storage.getMovie(stored.id)?.resumePositionSeconds).toBe(1841);
+  });
+
+  it('stamps the movie as last watched now, which is what reorders the shelf', async () => {
+    const { storage, baseUrl } = freshApi();
+    const stored = addFullMovie(storage);
+    expect(stored.lastWatchedAt).toBeNull();
+
+    await postResume(baseUrl, stored.id, { value: 600 });
+
+    const after = storage.getMovie(stored.id);
+    expect(typeof after?.lastWatchedAt).toBe('string');
+    expect(after?.lastWatchedAt).not.toBe('');
+  });
+
+  it('moves the position and the stamp, and nothing else', async () => {
+    // The single-signal rule the other three keep: a position written ten times
+    // a minute must not refresh `updated_at` and walk a film up a
+    // recently-added shelf while it plays.
+    const { storage, baseUrl } = freshApi();
+    const stored = addFullMovie(storage);
+
+    const response = await postResume(baseUrl, stored.id, { value: 90 });
+    expect(response.status).toBe(200);
+
+    const after = storage.getMovie(stored.id);
+    expect(after?.resumePositionSeconds).toBe(90);
+    expect(after?.watched).toBe(stored.watched);
+    expect(after?.rating).toBe(stored.rating);
+    expect(after?.isFavorite).toBe(stored.isFavorite);
+    expect(after?.updatedAt).toBe(stored.updatedAt);
+  });
+
+  it('puts the film at the front of Continue Watching, and finishing takes it off', async () => {
+    // The loop, end to end and in the family's terms: watching a film moves it
+    // to the front of the shelf, and finishing it drops it off — the same rule
+    // a manually-ticked film already followed, now reached by playing one.
+    const { storage, baseUrl } = freshApi();
+    const first = storage.addMovie({
+      title: 'Backwater',
+      videoPath: 'Backwater/backwater.mp4',
+      genres: ['Drama'],
+    });
+    const second = storage.addMovie({
+      title: 'Meridian',
+      videoPath: 'Meridian/meridian.mp4',
+      genres: ['Drama'],
+    });
+
+    await postResume(baseUrl, first.id, { value: 300 });
+    await postResume(baseUrl, second.id, { value: 300 });
+
+    const shelf = async () => {
+      const response = await fetch(`${baseUrl}/api/home`);
+      const payload = (await response.json()) as HomePayload;
+      return payload.continueWatching.map((movie) => movie.title);
+    };
+
+    // Most recently watched first — Meridian was the last one played.
+    expect(await shelf()).toEqual(['Meridian', 'Backwater']);
+
+    await postWatched(baseUrl, second.id, { value: true });
+
+    expect(await shelf()).toEqual(['Backwater']);
+    expect(storage.getMovie(second.id)?.resumePositionSeconds).toBe(0);
+  });
+
+  it('rejects a body that is not { value: number }', async () => {
+    const { storage, baseUrl } = freshApi();
+    const stored = addFullMovie(storage);
+    const before = stored.resumePositionSeconds;
+
+    for (const body of [
+      { value: '600' },
+      { value: true },
+      { value: null },
+      { value: Number.NaN },
+      {},
+    ]) {
+      const response = await postResume(baseUrl, stored.id, body);
+
+      expect(response.status).toBe(400);
+      const error = (await response.json()) as { error?: unknown };
+      expect(typeof error.error).toBe('string');
+      expect(error.error).not.toBe('');
+    }
+
+    // Nothing was written on the way to rejecting any of them.
+    expect(storage.getMovie(stored.id)?.resumePositionSeconds).toBe(before);
+    expect(storage.getMovie(stored.id)?.lastWatchedAt).toBeNull();
+  });
+
+  it('rejects a position before the beginning of the film', async () => {
+    const { storage, baseUrl } = freshApi();
+    const stored = addFullMovie(storage);
+
+    const response = await postResume(baseUrl, stored.id, { value: -1 });
+
+    expect(response.status).toBe(400);
+    expect(storage.getMovie(stored.id)?.resumePositionSeconds).toBe(
+      stored.resumePositionSeconds
+    );
+  });
+
+  it('accepts the beginning of the film', async () => {
+    // Nought is a position, not a missing one — the route's rejection is about
+    // shape, and a film wound back to the start is a real thing to store.
+    const { storage, baseUrl } = freshApi();
+    const stored = addFullMovie(storage);
+
+    const response = await postResume(baseUrl, stored.id, { value: 0 });
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ value: 0 });
+    expect(storage.getMovie(stored.id)?.resumePositionSeconds).toBe(0);
+  });
+
+  it('answers 404 with an error body for an unknown id', async () => {
+    const { baseUrl } = freshApi();
+
+    const response = await postResume(baseUrl, 'no-such-movie', { value: 600 });
+
+    expect(response.status).toBe(404);
+    const body = (await response.json()) as { error?: unknown };
+    expect(typeof body.error).toBe('string');
+    expect(body.error).not.toBe('');
+  });
+});

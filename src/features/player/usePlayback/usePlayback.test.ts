@@ -31,10 +31,10 @@ import { stubMediaElement } from '@/test-support/stubMediaElement/stubMediaEleme
  */
 const DIRECT_PLAY: PlaybackRead = { path: 'direct', durationSeconds: 6832.5 };
 
-function renderPlayback(read: PlaybackRead = DIRECT_PLAY) {
+function renderPlayback(read: PlaybackRead = DIRECT_PLAY, startAt = 0) {
   const video = document.createElement('video');
   const ref = { current: video };
-  const view = renderHook(() => usePlayback(ref, read));
+  const view = renderHook(() => usePlayback(ref, read, startAt));
   return { video, ...view };
 }
 
@@ -355,3 +355,55 @@ function sourceFiles(root: string): string[] {
       (file) => /\.tsx?$/.test(file) && !/\.(test|spec)\.tsx?$/.test(file)
     );
 }
+
+/**
+ * 10 — Video player, Phase 5 (issue #87).
+ *
+ * The read side of the **Resume position**. It lands in this hook rather than
+ * in the screen above for the reason the hook exists: winding a film to a
+ * second before it starts is a media-element concern — it has to happen once,
+ * before the first frame, and on a stream path it is the thing the **Stream
+ * offset** will re-anchor against.
+ *
+ * Silently, per the design log: an in-progress film simply starts where it was
+ * left, with no "Resume / Start over" dialog the prototype does not draw.
+ */
+describe('usePlayback — resuming', () => {
+  stubMediaElement();
+
+  it('starts an in-progress film where the family left it', async () => {
+    const { video, result } = renderPlayback(DIRECT_PLAY, 1800);
+
+    await waitFor(() => expect(result.current.playing).toBe(true));
+    expect(video.currentTime).toBe(1800);
+  });
+
+  it('reports the resumed position rather than the beginning', () => {
+    // Otherwise the **Scrubber** draws an empty bar for a frame before jumping,
+    // which reads as the film having been lost.
+    const { result } = renderPlayback(DIRECT_PLAY, 1800);
+
+    expect(result.current.position).toBe(1800);
+  });
+
+  it('starts a film with nothing stored at the beginning', async () => {
+    const { video, result } = renderPlayback(DIRECT_PLAY, 0);
+
+    await waitFor(() => expect(result.current.playing).toBe(true));
+    expect(video.currentTime).toBe(0);
+  });
+
+  it('winds the film to its position once, and never again', async () => {
+    // The screen re-renders constantly — the position ticks ten times a second
+    // — and a resume that re-applied would pin a film to the second it opened
+    // at and make every seek snap back.
+    const { video, result, rerender } = renderPlayback(DIRECT_PLAY, 1800);
+    await waitFor(() => expect(result.current.playing).toBe(true));
+    expect(video.currentTime).toBe(1800);
+
+    act(() => result.current.seek(2400));
+    rerender();
+
+    expect(video.currentTime).toBe(2400);
+  });
+});

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-import { fetchPlayback } from './api';
+import { fetchPlayback, saveResume } from './api';
 import type { PlaybackRead } from '@/types';
 
 /**
@@ -106,5 +106,95 @@ describe('fetchPlayback', () => {
     fetchMock.mockRejectedValue(new TypeError('Failed to fetch'));
 
     await expect(fetchPlayback('m1')).rejects.toThrow();
+  });
+});
+
+/**
+ * 10 — Video player, Phase 5: "watching writes" (issue #87).
+ *
+ * The **Watch tick** on the wire. It is the same contract `saveFavorite` and
+ * `saveWatched` keep — POST the value, take the route's echo as the truth,
+ * reject on anything but a 2xx — with one addition nothing else needs:
+ * `keepalive`, so the write the player makes on its way out survives the screen
+ * being torn down around it.
+ *
+ * It stays in `features/player/api/` rather than moving up beside
+ * `saveWatched`: the player is the only thing in the app that can know where a
+ * film is, which is CLAUDE.md's `api/` rule read the other way round.
+ */
+
+/** The one request that was issued, as url plus the init it carried. */
+function onlyRequest() {
+  expect(fetchMock).toHaveBeenCalledTimes(1);
+  const [input, init] = fetchMock.mock.calls[0];
+  return {
+    url: String(input),
+    method: init?.method,
+    contentType: (init?.headers as Record<string, string> | undefined)?.[
+      'Content-Type'
+    ],
+    keepalive: init?.keepalive,
+    body: init?.body === undefined ? undefined : JSON.parse(String(init.body)),
+  };
+}
+
+describe('saveResume', () => {
+  it('POSTs the position as JSON to the movie’s resume route', async () => {
+    fetchMock.mockResolvedValue(okResponse({ value: 1840 }));
+
+    await saveResume('m1', 1840);
+
+    const request = onlyRequest();
+    expect(request.url).toBe('/api/movies/m1/resume');
+    expect(request.method?.toUpperCase()).toBe('POST');
+    expect(request.contentType).toMatch(/application\/json/i);
+    expect(request.body).toEqual({ value: 1840 });
+  });
+
+  it('encodes an id that would otherwise break the path', async () => {
+    fetchMock.mockResolvedValue(okResponse({ value: 1840 }));
+
+    await saveResume('a/1 b', 1840);
+
+    expect(onlyRequest().url).toBe('/api/movies/a%2F1%20b/resume');
+  });
+
+  it('answers with the second the route says it stored, not the one asked for', async () => {
+    // The route stores whole seconds; the player reports the position with the
+    // fraction the element gave it. The echo is the row's truth.
+    fetchMock.mockResolvedValue(okResponse({ value: 1841 }));
+
+    await expect(saveResume('m1', 1840.6)).resolves.toBe(1841);
+  });
+
+  it('falls back to the requested position when the route echoes nothing usable', async () => {
+    fetchMock.mockResolvedValue(okResponse({}));
+
+    await expect(saveResume('m1', 1840)).resolves.toBe(1840);
+  });
+
+  it('is an ordinary request unless the caller says otherwise', async () => {
+    fetchMock.mockResolvedValue(okResponse({ value: 1840 }));
+
+    await saveResume('m1', 1840);
+
+    // Every tick during playback is a normal fetch. `keepalive` is for the one
+    // write that has to outlive the page, and asking for it on all of them
+    // would spend that budget on writes nothing is racing.
+    expect(onlyRequest().keepalive).toBeFalsy();
+  });
+
+  it('survives the screen going away when the exit write asks it to', async () => {
+    fetchMock.mockResolvedValue(okResponse({ value: 1840 }));
+
+    await saveResume('m1', 1840, { keepalive: true });
+
+    expect(onlyRequest().keepalive).toBe(true);
+  });
+
+  it('throws when the save does not succeed', async () => {
+    fetchMock.mockResolvedValue(serverErrorResponse());
+
+    await expect(saveResume('m1', 1840)).rejects.toThrow(/500/);
   });
 });
