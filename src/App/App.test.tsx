@@ -13,6 +13,7 @@ import App from './App';
 import type { GenrePayload, HomePayload, HomeRow, Movie } from '@/types';
 import { LocationProbe } from '@/test-support/LocationProbe/LocationProbe';
 import { makeMovie } from '@/test-support/makeMovie/makeMovie';
+import { stubMediaElement } from '@/test-support/stubMediaElement/stubMediaElement';
 import { stubScrollMetrics } from '@/test-support/stubScrollMetrics/stubScrollMetrics';
 
 /** The two of Action the home row ships, of however many the genre holds. */
@@ -341,6 +342,11 @@ describe('App — routing the browse home to its destinations', () => {
  * point of registering the URL early.
  */
 describe('App — the movie page’s navigating actions', () => {
+  // The player behind `/movie/:id/play` drives a media element, and jsdom
+  // has none: `play()` returns nothing at all there, so without the stub the
+  // two tests that open the player die inside the hook rather than asserting.
+  stubMediaElement();
+
   it('renders the player when /movie/:id/play is opened directly', async () => {
     // 10 — Video player, Phase 2 (issue #84): the placeholder is gone, and the
     // routed movie still survives the URL — now visibly, as the stream the

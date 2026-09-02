@@ -424,6 +424,46 @@ export function createApiRouter(
     );
   });
 
+  // What the player is told before a byte arrives: which path the film takes,
+  // and how long it runs.
+  //
+  // The duration is read from the **file**, never from the movie record's
+  // `runtimeMinutes` — that column is rounded metadata and a film is allowed to
+  // arrive without one, so a scrubber built on it would have nothing to draw
+  // for half the library. The client never asks the media element either, which
+  // is the rule that makes seeking a converted film possible at all.
+  //
+  // Two ways of having nothing to answer, kept apart on purpose. A file that is
+  // not there — or a stored path that escaped the managed media directory,
+  // which gets deliberately the same answer — is the same 404 the stream route
+  // gives, and it is what the missing-file notice is reached through. A file
+  // that is there but will not say how long it is is a different sentence: it
+  // is a film this build cannot make sense of, which is what the transcoding
+  // slice's second message is for. Collapsing them would tell the family a file
+  // is missing while it sits on the disk in front of them.
+  router.get('/movies/:id/playback', (req: Request<{ id: string }>, res) => {
+    const { id } = req.params;
+    const movie = storage.getMovie(id);
+    if (!movie) {
+      res.status(404).json({ error: `Unknown movie: ${id}` });
+      return;
+    }
+
+    const file = playback.videoFile(movie.videoPath);
+    if (file === null) {
+      res.status(404).json({ error: `No video file for movie: ${id}` });
+      return;
+    }
+
+    const read = playback.read(file);
+    if (read === null) {
+      res.status(404).json({ error: `Cannot read playback for movie: ${id}` });
+      return;
+    }
+
+    res.json(read);
+  });
+
   // The movie's bytes, for the player's `<video>`.
   //
   // The URL carries an **id, never a path**: the file is resolved from the

@@ -1,4 +1,3 @@
-import type { Movie } from '@/types';
 import { postValue } from '@/api/postValue/postValue';
 
 /** What the watched route accepts as an echo of what it stored. */
@@ -15,7 +14,11 @@ function isRatingEcho(echoed: unknown): echoed is number | null {
   return typeof echoed === 'number' || echoed === null;
 }
 
-/** Where one movie is loaded from, by the id in the page's URL. */
+/**
+ * The movie both writes below hang off. The read that used to live here moved
+ * to `src/api/fetchMovie/` when the player became its second caller; the two
+ * saves have one caller each and stay.
+ */
 const movieEndpoint = (id: string) => `/api/movies/${encodeURIComponent(id)}`;
 
 /** Where one movie's watched flag is saved. */
@@ -23,30 +26,6 @@ const watchedEndpoint = (id: string) => `${movieEndpoint(id)}/watched`;
 
 /** Where one movie's rating is saved. */
 const ratingEndpoint = (id: string) => `${movieEndpoint(id)}/rating`;
-
-/**
- * Loads one movie by id — the whole record the detail page renders, synopsis,
- * credits, genres and subtitles included.
- *
- * Resolves `null` when the route answers 404: a movie that is gone is an
- * outcome the page has a screen for, not a failure, and keeping it separate
- * from a rejection is what makes `not-found` reachable. Every other
- * unsuccessful response, and a request that could not be made at all, rejects
- * — those earn a Retry rather than a way back to the library.
- */
-export async function fetchMovie(id: string): Promise<Movie | null> {
-  const endpoint = movieEndpoint(id);
-  const response = await fetch(endpoint);
-
-  if (response.status === 404) {
-    return null;
-  }
-  if (!response.ok) {
-    throw new Error(`GET ${endpoint} failed: ${response.status}`);
-  }
-
-  return (await response.json()) as Movie;
-}
 
 /**
  * Saves one movie's watched flag and answers with the value that was stored —

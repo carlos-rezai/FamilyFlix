@@ -1,26 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-import { fetchMovie, saveRating, saveWatched } from './api';
-import type { Movie } from '@/types';
-import { makeMovie } from '@/test-support/makeMovie/makeMovie';
-
-/**
- * A fully-populated specimen, so the round-trip assertions prove the whole
- * record came back rather than a stub that would match on its defaults anyway.
- */
-function makeQuietHarbor(overrides: Partial<Movie> = {}): Movie {
-  return makeMovie({
-    title: 'The Quiet Harbor',
-    year: 2016,
-    runtimeMinutes: 111,
-    synopsis: 'A lighthouse keeper on a fading coast takes in a runaway girl.',
-    director: 'Ana Sørensen',
-    cast: ['Marit Holt', 'Peder Vinge'],
-    rating: 7,
-    videoPath: 'The Quiet Harbor (2016)/the-quiet-harbor.mkv',
-    ...overrides,
-  });
-}
+import { saveRating, saveWatched } from './api';
 
 function okResponse(body: unknown): Response {
   return {
@@ -84,48 +64,6 @@ function onlyRequest() {
     body: init?.body === undefined ? undefined : JSON.parse(String(init.body)),
   };
 }
-
-describe('fetchMovie', () => {
-  it('GETs the movie by id and returns the record it answers with', async () => {
-    const movie = makeQuietHarbor();
-    fetchMock.mockResolvedValue(okResponse(movie));
-
-    const loaded = await fetchMovie('m1');
-
-    expect(onlyRequestUrl()).toBe('/api/movies/m1');
-    expect(loaded).toEqual(movie);
-  });
-
-  it('encodes an id that would otherwise break the path', async () => {
-    fetchMock.mockResolvedValue(okResponse(makeQuietHarbor()));
-
-    await fetchMovie('a/1 b');
-
-    expect(onlyRequestUrl()).toBe('/api/movies/a%2F1%20b');
-  });
-
-  it('answers with no movie when the route says there is none', async () => {
-    fetchMock.mockResolvedValue(notFoundResponse());
-
-    // A movie that is gone is an outcome, not a failure — this resolution is
-    // the only thing that makes the page's `not-found` state reachable.
-    await expect(fetchMovie('gone')).resolves.toBeNull();
-  });
-
-  it('fails on any other unsuccessful response, rather than reading as absent', async () => {
-    fetchMock.mockResolvedValue(serverErrorResponse());
-
-    await expect(fetchMovie('m1')).rejects.toThrow(/500/);
-  });
-
-  it('fails when the request itself cannot be made', async () => {
-    fetchMock.mockRejectedValue(new TypeError('Failed to fetch'));
-
-    // The offline case has to stay distinguishable from a 404: one earns a
-    // Retry, the other earns a way back to the library.
-    await expect(fetchMovie('m1')).rejects.toThrow();
-  });
-});
 
 /**
  * The watched half of the action row's save. It is the same contract

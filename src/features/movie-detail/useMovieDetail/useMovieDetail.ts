@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
 
 import type { MovieDetailModel } from '@/types';
+import { fetchMovie } from '@/api/fetchMovie/fetchMovie';
 import { saveFavorite } from '@/api/saveFavorite/saveFavorite';
 import { toRatingPercent, toRatingUnits } from '@/utils';
-import { fetchMovie, saveRating, saveWatched } from '../api/api';
+import { saveRating, saveWatched } from '../api/api';
 import { detailView } from '../detailView/detailView';
 import { useOptimisticEdit } from '../useOptimisticEdit/useOptimisticEdit';
 
