@@ -33,6 +33,7 @@ function renderControls(
   const onVolumeChange = vi.fn<(value: number) => void>();
   const onToggleMute = vi.fn();
   const onToggleSubtitles = vi.fn();
+  const onToggleFullscreen = vi.fn();
   const view = render(
     <ThemeProvider theme={theme}>
       <PlayerControls
@@ -52,6 +53,7 @@ function renderControls(
         onVolumeChange={onVolumeChange}
         onToggleMute={onToggleMute}
         onToggleSubtitles={onToggleSubtitles}
+        onToggleFullscreen={onToggleFullscreen}
         {...overrides}
       />
     </ThemeProvider>
@@ -66,6 +68,7 @@ function renderControls(
     onVolumeChange,
     onToggleMute,
     onToggleSubtitles,
+    onToggleFullscreen,
   };
 }
 
@@ -196,6 +199,7 @@ describe('PlayerControls — the transport row', () => {
           onVolumeChange={vi.fn()}
           onToggleMute={vi.fn()}
           onToggleSubtitles={vi.fn()}
+          onToggleFullscreen={vi.fn()}
         />
       </ThemeProvider>
     );
@@ -369,5 +373,86 @@ describe('PlayerControls — the CC pill', () => {
     renderControls({ visible: false });
 
     expect(screen.queryByRole('button', { name: 'Subtitles' })).toBeNull();
+  });
+});
+
+/**
+ * 10 — Video player, Phase 8 (issue #91).
+ *
+ * The fullscreen button — the last control `feat.PlayerControls.dc.html` draws
+ * that this component had left out, and left out for the reason the CC pill
+ * was: a control that does nothing when a parent presses it is worse than one
+ * that is not there yet. There is something behind it now.
+ *
+ * The prototype draws one glyph and one tooltip, in one state, at the end of
+ * the row. That is what ships: no second face, no `aria-pressed`, nothing this
+ * slice invents. The rest of the row is untouched — everything asserted in the
+ * blocks above still holds, which is the acceptance criterion about the
+ * rendered surface, read as it was meant.
+ */
+describe('PlayerControls — the fullscreen button', () => {
+  it('is drawn for every film, unlike the CC pill', () => {
+    // The pill depends on the film having subtitle files. This does not: any
+    // film can fill the television.
+    renderControls({ hasSubtitles: false });
+
+    expect(screen.getByRole('button', { name: 'Fullscreen' })).toBeDefined();
+  });
+
+  it('fills the screen when it is pressed', () => {
+    const { onToggleFullscreen } = renderControls();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Fullscreen' }));
+
+    expect(onToggleFullscreen).toHaveBeenCalledTimes(1);
+  });
+
+  it('sits at the end of the row, after the CC pill', () => {
+    // The prototype's order, which is also the reading order a keyboard walks:
+    // transport, volume, the flexible gap, captions, fullscreen.
+    renderControls({ hasSubtitles: true });
+
+    const captions = screen.getByRole('button', { name: 'Subtitles' });
+    const fullscreen = screen.getByRole('button', { name: 'Fullscreen' });
+
+    expect(
+      captions.compareDocumentPosition(fullscreen) &
+        Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
+  });
+
+  it('is the 44px square the prototype draws, like the ±10s buttons beside it', () => {
+    renderControls();
+
+    const style = window.getComputedStyle(
+      screen.getByRole('button', { name: 'Fullscreen' })
+    );
+
+    expect(style.width).toBe('44px');
+    expect(style.height).toBe('44px');
+  });
+
+  it('names itself on hover, as the prototype does', () => {
+    // `title="Fullscreen"` in `feat.PlayerControls.dc.html` — the tooltip is
+    // the only label the prototype gives an icon nobody has to recognise.
+    renderControls();
+
+    expect(
+      screen.getByRole('button', { name: 'Fullscreen' }).getAttribute('title')
+    ).toBe('Fullscreen');
+  });
+
+  it('goes with the rest of the chrome when the player idles', () => {
+    // Same rule as every other control in the row: unmounted behind the fade,
+    // so a keyboard cannot land on something nobody can see. Paired with the
+    // visible case, because an absence on its own is also what a button that
+    // was never drawn looks like.
+    const { unmount } = renderControls({ visible: true });
+    expect(screen.getByRole('button', { name: 'Fullscreen' })).toBeDefined();
+    unmount();
+
+    renderControls({ visible: false });
+
+    expect(screen.queryByRole('button', { name: 'Fullscreen' })).toBeNull();
   });
 });

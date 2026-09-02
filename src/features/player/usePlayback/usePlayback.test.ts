@@ -4,6 +4,7 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { usePlayback } from './usePlayback';
+import type { VolumePreference } from '../volumePreference/volumePreference';
 import type { PlaybackRead } from '@/types';
 import { stubMediaElement } from '@/test-support/stubMediaElement/stubMediaElement';
 
@@ -38,10 +39,16 @@ const DIRECT_PLAY: PlaybackRead = { path: 'direct', durationSeconds: 6832.5 };
  */
 const STREAM = '/api/movies/m1/stream';
 
-function renderPlayback(read: PlaybackRead = DIRECT_PLAY, startAt = 0) {
+function renderPlayback(
+  read: PlaybackRead = DIRECT_PLAY,
+  startAt = 0,
+  startVolume?: VolumePreference
+) {
   const video = document.createElement('video');
   const ref = { current: video };
-  const view = renderHook(() => usePlayback(ref, read, startAt, STREAM));
+  const view = renderHook(() =>
+    usePlayback(ref, read, startAt, STREAM, startVolume)
+  );
   return { video, ...view };
 }
 
@@ -264,8 +271,9 @@ describe('usePlayback — seeking', () => {
 
 /**
  * Volume lives here for the same reason seeking does — it is element state, and
- * the hook is the one thing allowed to touch the element. Remembering it across
- * films is not this slice's; it lands with the keyboard and fullscreen work.
+ * the hook is the one thing allowed to touch the element. What the family left
+ * it at between films is `volumePreference`'s; applying that to an element is
+ * this hook's, and the two meet at the level the film opens at.
  */
 describe('usePlayback — volume and mute', () => {
   stubMediaElement();
@@ -568,5 +576,75 @@ describe('usePlayback — seeking a film that is being converted', () => {
     expect(video.currentTime).toBe(1200);
     expect(result.current.src).toBe(STREAM);
     expect(result.current.position).toBe(1200);
+  });
+});
+
+/**
+ * 10 — Video player, Phase 8 (issue #91).
+ *
+ * The level the film opens at. Where it comes from is `volumePreference`'s
+ * question — a per-machine preference in `localStorage`, and every hostile
+ * answer that key can give is pinned there. What is pinned here is the half
+ * only this hook can do: putting it on the element, once, on the way in.
+ *
+ * It is the same shape as the **Resume position** and for the same reason.
+ * Both are a number that arrives from outside and has to reach the element
+ * exactly once: an opening level re-applied on every render would pin the film
+ * to it and make the slider snap back under the hand dragging it.
+ */
+describe('usePlayback — the level the film opens at', () => {
+  stubMediaElement();
+
+  it('opens at the level the family left the last film at', async () => {
+    const { video, result } = renderPlayback(DIRECT_PLAY, 0, {
+      volume: 0.3,
+      muted: false,
+    });
+
+    await waitFor(() => expect(video.volume).toBeCloseTo(0.3));
+    expect(result.current.volume).toBeCloseTo(0.3);
+  });
+
+  it('opens silenced if that is how the last film was left', async () => {
+    // Muted with a level underneath, so the first press of unmute gives back
+    // the quarter it was at rather than waking the house up.
+    const { video, result } = renderPlayback(DIRECT_PLAY, 0, {
+      volume: 0.25,
+      muted: true,
+    });
+
+    await waitFor(() => expect(video.muted).toBe(true));
+    expect(result.current.muted).toBe(true);
+    expect(video.volume).toBeCloseTo(0.25);
+  });
+
+  it('opens at full volume, unmuted, when it is handed nothing', async () => {
+    // The state of a machine that has never played a film — and the state a
+    // refused or nonsense `localStorage` has to come back as.
+    const { video, result } = renderPlayback();
+
+    await waitFor(() => expect(result.current.playing).toBe(true));
+
+    expect(video.volume).toBe(1);
+    expect(video.muted).toBe(false);
+    expect(result.current.volume).toBe(1);
+    expect(result.current.muted).toBe(false);
+  });
+
+  it('applies it once, and then leaves the volume alone', async () => {
+    // Re-applying it on a later render would fight the slider: the level would
+    // snap back to what the film opened at on the next thing that re-rendered
+    // this screen, which is the position ticking ten times a second.
+    const { video, result, rerender } = renderPlayback(DIRECT_PLAY, 0, {
+      volume: 0.3,
+      muted: false,
+    });
+    await waitFor(() => expect(video.volume).toBeCloseTo(0.3));
+
+    act(() => result.current.setVolume(0.8));
+    rerender();
+
+    expect(video.volume).toBeCloseTo(0.8);
+    expect(result.current.volume).toBeCloseTo(0.8);
   });
 });

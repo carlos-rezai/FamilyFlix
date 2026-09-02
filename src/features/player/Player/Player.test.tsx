@@ -14,6 +14,7 @@ import { theme } from '@/styles/theme';
 import type { Cue, Movie, PlaybackRead } from '@/types';
 import { LocationProbe } from '@/test-support/LocationProbe/LocationProbe';
 import { makeMovie } from '@/test-support/makeMovie/makeMovie';
+import { stubFullscreen } from '@/test-support/stubFullscreen/stubFullscreen';
 import { stubMediaElement } from '@/test-support/stubMediaElement/stubMediaElement';
 
 /**
@@ -1352,5 +1353,477 @@ describe('Player — a settled scrub on a film that is being converted', () => {
     expect(await screen.findByText('1:00:03')).toBeDefined();
     expect(screen.getByText(LATER_LINE)).toBeDefined();
     expect(screen.queryByText('0:02')).toBeNull();
+  });
+});
+
+/**
+ * 10 — Video player, Phase 8: "keyboard, fullscreen and remembered volume"
+ * (issue #91).
+ *
+ * Behaviour added around a surface that does not move. The buttons all exist;
+ * this slice gives them keys, makes the fullscreen one work, and lets the
+ * volume survive the film.
+ *
+ * The keys are asserted here rather than only in `usePlayerKeys.test.ts`
+ * because this is the only place both halves are visible at once. Which handler
+ * a key reaches is that hook's; that it is **the same handler the button
+ * reaches** is this screen's, and it is the acceptance criterion that says
+ * "asserted, not assumed". The way to assert it without reaching inside the
+ * screen is to press the key and the button in turn and require the same things
+ * of the film and of the wire — a second code path that moved the element but
+ * skipped the **Watch tick** would pass every test in the hook's own file.
+ */
+
+/** What a browser calls the space bar: the character itself. */
+const SPACE = ' ';
+
+describe('Player — the keyboard', () => {
+  stubMediaElement();
+
+  /** Press a key at the screen, the way a browser delivers one to the page. */
+  function press(key: string): void {
+    fireEvent.keyDown(window, { key });
+  }
+
+  /** The volume slider's level, 0–100, as the chrome reports it. */
+  function level(): number {
+    return Number(
+      screen
+        .getByRole('slider', { name: 'Volume' })
+        .getAttribute('aria-valuenow')
+    );
+  }
+
+  it('stops the film on Space and starts it again on the next press', async () => {
+    const { video } = renderPlayer();
+    await waitFor(() => expect(video.paused).toBe(false));
+
+    press(SPACE);
+    await waitFor(() => expect(video.paused).toBe(true));
+
+    press(SPACE);
+    await waitFor(() => expect(video.paused).toBe(false));
+  });
+
+  it('does the same on K', async () => {
+    const { video } = renderPlayer();
+    await waitFor(() => expect(video.paused).toBe(false));
+
+    press('k');
+
+    await waitFor(() => expect(video.paused).toBe(true));
+  });
+
+  it('shows the big-play circle on a film paused from the keyboard', async () => {
+    // The picture and the keyboard cannot disagree about what state the film is
+    // in, because neither of them is where that state lives.
+    const { video } = renderPlayer();
+    await waitFor(() => expect(video.paused).toBe(false));
+
+    press(SPACE);
+
+    expect(await screen.findByRole('button', { name: 'Play' })).toBeDefined();
+  });
+
+  it('moves the film ten seconds and writes the same tick the button writes', async () => {
+    // The acceptance criterion that says "asserted, not assumed", asserted the
+    // only way it can be from outside: the same second on the element *and* the
+    // same value on the wire. A keyboard that moved the film through a second
+    // code path would move it and write nothing.
+    const first = renderPlayer();
+    await waitFor(() => expect(first.video.paused).toBe(false));
+    first.video.currentTime = 1200;
+    emit(first.video, 'timeupdate');
+
+    press('ArrowRight');
+
+    await waitFor(() =>
+      expect(watchWrites()).toEqual([
+        { route: 'resume', value: 1210, keepalive: undefined },
+      ])
+    );
+    const byKeyboard = watchWrites();
+    expect(first.video.currentTime).toBe(1210);
+    first.unmount();
+
+    fetchMock.mockClear();
+    const second = renderPlayer();
+    await waitFor(() => expect(second.video.paused).toBe(false));
+    second.video.currentTime = 1200;
+    emit(second.video, 'timeupdate');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Forward 10s' }));
+
+    await waitFor(() => expect(watchWrites()).toEqual(byKeyboard));
+    expect(second.video.currentTime).toBe(1210);
+  });
+
+  it('replays the last ten seconds on the left arrow, the same way', async () => {
+    const { video } = renderPlayer();
+    await waitFor(() => expect(video.paused).toBe(false));
+    video.currentTime = 1200;
+    emit(video, 'timeupdate');
+
+    press('ArrowLeft');
+
+    await waitFor(() => expect(video.currentTime).toBe(1190));
+    expect(watchWrites()).toEqual([
+      { route: 'resume', value: 1190, keepalive: undefined },
+    ]);
+  });
+
+  it('turns the film down on the down arrow, and the slider follows', async () => {
+    const { video } = renderPlayer();
+    await waitFor(() => expect(video.paused).toBe(false));
+    expect(level()).toBe(100);
+
+    press('ArrowDown');
+
+    await waitFor(() => expect(level()).toBe(90));
+    expect(video.volume).toBeCloseTo(0.9);
+  });
+
+  it('turns it back up on the up arrow', async () => {
+    const { video } = renderPlayer();
+    await waitFor(() => expect(video.paused).toBe(false));
+    press('ArrowDown');
+    press('ArrowDown');
+    await waitFor(() => expect(level()).toBe(80));
+
+    press('ArrowUp');
+
+    await waitFor(() => expect(level()).toBe(90));
+    expect(video.volume).toBeCloseTo(0.9);
+  });
+
+  it('silences the film on M, and the speaker says so', async () => {
+    const { video } = renderPlayer();
+    await waitFor(() => expect(video.paused).toBe(false));
+
+    press('m');
+
+    // The button's own name is the state: it offers to unmute only a film that
+    // was actually silenced.
+    expect(await screen.findByRole('button', { name: 'Unmute' })).toBeDefined();
+    expect(video.muted).toBe(true);
+  });
+
+  it('gives the sound back on a second M', async () => {
+    const { video } = renderPlayer();
+    await waitFor(() => expect(video.paused).toBe(false));
+    press('m');
+    await screen.findByRole('button', { name: 'Unmute' });
+
+    press('m');
+
+    expect(await screen.findByRole('button', { name: 'Mute' })).toBeDefined();
+    expect(video.muted).toBe(false);
+  });
+
+  it('turns captions on with C, exactly as the pill does', async () => {
+    answerWith({ movie: SUBTITLED, cues: CUES });
+    const { video } = renderPlayer();
+    await waitFor(() => expect(video.paused).toBe(false));
+    video.currentTime = 2;
+    emit(video, 'timeupdate');
+    await screen.findByRole('button', { name: 'Subtitles' });
+
+    press('c');
+
+    expect(await screen.findByText(FIRST_LINE)).toBeDefined();
+    expect(
+      screen
+        .getByRole('button', { name: 'Subtitles' })
+        .getAttribute('aria-pressed')
+    ).toBe('true');
+  });
+
+  it('takes them away again on a second C', async () => {
+    answerWith({ movie: SUBTITLED, cues: CUES });
+    const { video } = renderPlayer();
+    await waitFor(() => expect(video.paused).toBe(false));
+    video.currentTime = 2;
+    emit(video, 'timeupdate');
+    await screen.findByRole('button', { name: 'Subtitles' });
+    press('c');
+    await screen.findByText(FIRST_LINE);
+
+    press('c');
+
+    await waitFor(() => expect(screen.queryByText(FIRST_LINE)).toBeNull());
+  });
+
+  it('does nothing on C for a film with no subtitles, as the absent pill does', async () => {
+    // `NORTHWIND` has no subtitle rows, so there is no pill and nothing to
+    // press. The key has to be absent in the same way — and above all must not
+    // ask for a cue list that does not exist.
+    const { video } = renderPlayer();
+    await waitFor(() => expect(video.paused).toBe(false));
+
+    press('c');
+
+    await waitFor(() => expect(cueRequests()).toEqual([]));
+    expect(screen.queryByRole('button', { name: 'Subtitles' })).toBeNull();
+  });
+
+  it('still leaves the player on Escape', async () => {
+    // Story 26, which shipped before this map existed and now travels inside
+    // it. One listener for the screen, not two.
+    renderPlayer();
+    await screen.findByRole('button', { name: 'Back' });
+
+    press('Escape');
+
+    await waitFor(() => expect(pathname()).toBe('/movie/m1'));
+  });
+
+  it('does not follow the family to the next screen', async () => {
+    // The listener is on the window. Left behind, Space on the film's page
+    // would be reaching into a player that is no longer on screen.
+    const { video } = renderPlayer();
+    await waitFor(() => expect(video.paused).toBe(false));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+    await waitFor(() => expect(pathname()).toBe('/movie/m1'));
+    const writesOnLeaving = watchWrites().length;
+    press(SPACE);
+    press('ArrowRight');
+
+    expect(watchWrites()).toHaveLength(writesOnLeaving);
+  });
+});
+
+/**
+ * Fullscreen: the button `feat.PlayerControls.dc.html` draws and leaves inert,
+ * wired to something at last.
+ *
+ * The two claims worth the test are what goes up and what comes back. **The
+ * player's own surface** fills the screen, not the bare element — our chrome,
+ * our subtitle box and the picture together, which is the whole reason this
+ * player draws its own controls. And leaving finds the film exactly as it was:
+ * same position, still running, the same element. Nothing is remounted, which
+ * on this screen would mean both reads going out again and the film starting
+ * over.
+ */
+describe('Player — filling the screen', () => {
+  stubMediaElement();
+  stubFullscreen();
+
+  /** Every read the screen has made — a remount would make them all again. */
+  function reads(): string[] {
+    return fetchMock.mock.calls
+      .filter(([, init]) => init?.method?.toUpperCase() !== 'POST')
+      .map(([input]) => String(input));
+  }
+
+  it('sends the player’s whole surface up, not the bare video element', async () => {
+    const { video } = renderPlayer();
+    await waitFor(() => expect(video.paused).toBe(false));
+
+    fireEvent.keyDown(window, { key: 'f' });
+
+    await waitFor(() => expect(document.fullscreenElement).not.toBeNull());
+    // An element sent up on its own takes the browser's controls with it and
+    // leaves ours behind — the design this whole feature exists to avoid.
+    expect(document.fullscreenElement).not.toBe(video);
+    expect(document.fullscreenElement?.contains(video)).toBe(true);
+  });
+
+  it('does the same from the button as from the key', async () => {
+    const { video } = renderPlayer();
+    await waitFor(() => expect(video.paused).toBe(false));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Fullscreen' }));
+
+    await waitFor(() => expect(document.fullscreenElement).not.toBeNull());
+    expect(document.fullscreenElement?.contains(video)).toBe(true);
+  });
+
+  it('comes back out on the next press', async () => {
+    const { video } = renderPlayer();
+    await waitFor(() => expect(video.paused).toBe(false));
+    fireEvent.keyDown(window, { key: 'f' });
+    await waitFor(() => expect(document.fullscreenElement).not.toBeNull());
+
+    fireEvent.keyDown(window, { key: 'f' });
+
+    await waitFor(() => expect(document.fullscreenElement).toBeNull());
+  });
+
+  it('leaves fullscreen and finds the film exactly where it was, still running', async () => {
+    // The acceptance criterion in full: same position, same playing state, and
+    // — the part a screenshot could not tell you — nothing remounted. A
+    // remounted player would re-read the record and the **Playback read** and
+    // wind the film back to where the family left it hours ago.
+    const { video } = renderPlayer();
+    await waitFor(() => expect(video.paused).toBe(false));
+    video.currentTime = 2400;
+    emit(video, 'timeupdate');
+    const readsBefore = reads();
+
+    fireEvent.keyDown(window, { key: 'f' });
+    await waitFor(() => expect(document.fullscreenElement).not.toBeNull());
+    fireEvent.keyDown(window, { key: 'f' });
+    await waitFor(() => expect(document.fullscreenElement).toBeNull());
+
+    expect(picture(document.body)).toBe(video);
+    expect(video.currentTime).toBe(2400);
+    expect(video.paused).toBe(false);
+    expect(screen.getByText('40:00')).toBeDefined();
+    expect(reads()).toEqual(readsBefore);
+  });
+
+  it('follows the browser out when Escape leaves fullscreen rather than the player', async () => {
+    // Escape in fullscreen is the browser's, not ours: it takes the window down
+    // and never reaches the page. The player has to be left on screen, at the
+    // same second, rather than exited to the film's page.
+    const { video } = renderPlayer();
+    await waitFor(() => expect(video.paused).toBe(false));
+    fireEvent.keyDown(window, { key: 'f' });
+    await waitFor(() => expect(document.fullscreenElement).not.toBeNull());
+
+    await act(async () => {
+      await document.exitFullscreen();
+    });
+
+    expect(pathname()).toBe('/movie/m1/play');
+    expect(picture(document.body)).toBe(video);
+    expect(video.paused).toBe(false);
+  });
+});
+
+describe('Player — on a browser that refuses fullscreen', () => {
+  stubMediaElement();
+  stubFullscreen({ request: 'refused' });
+
+  it('goes on playing rather than falling over', async () => {
+    // A refusal is a real answer — a policy, an embedded view — and it reaches
+    // the family as a button that did nothing, never as a film that stopped.
+    const { video } = renderPlayer();
+    await waitFor(() => expect(video.paused).toBe(false));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Fullscreen' }));
+
+    await waitFor(() => expect(document.fullscreenElement).toBeNull());
+    expect(video.paused).toBe(false);
+    expect(screen.getByRole('button', { name: 'Fullscreen' })).toBeDefined();
+  });
+});
+
+/**
+ * The volume the family left. A **per-machine UI preference, not library
+ * data**: it belongs in `localStorage` rather than in the database, and it must
+ * not travel with a backup of the library to a machine whose speakers are
+ * nothing like this one's.
+ *
+ * `volumePreference.test.ts` pins what that key can hold and what it answers
+ * when it holds nonsense. What is pinned here is the loop the family actually
+ * sees: turn a film down, open the next one, and find it where it was left.
+ */
+describe('Player — the volume the family left', () => {
+  stubMediaElement();
+
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  afterEach(() => {
+    localStorage.clear();
+  });
+
+  /** The volume slider's level, 0–100, as the chrome reports it. */
+  function level(): number {
+    return Number(
+      screen
+        .getByRole('slider', { name: 'Volume' })
+        .getAttribute('aria-valuenow')
+    );
+  }
+
+  it('opens the next film at the level the last one was left at', async () => {
+    const first = renderPlayer();
+    await waitFor(() => expect(first.video.paused).toBe(false));
+    fireEvent.keyDown(window, { key: 'ArrowDown' });
+    fireEvent.keyDown(window, { key: 'ArrowDown' });
+    await waitFor(() => expect(level()).toBe(80));
+    first.unmount();
+
+    const next = renderPlayer();
+
+    await waitFor(() => expect(level()).toBe(80));
+    expect(next.video.volume).toBeCloseTo(0.8);
+  });
+
+  it('opens it silenced if that is how the last one was left', async () => {
+    const first = renderPlayer();
+    await waitFor(() => expect(first.video.paused).toBe(false));
+    fireEvent.keyDown(window, { key: 'm' });
+    await screen.findByRole('button', { name: 'Unmute' });
+    first.unmount();
+
+    const next = renderPlayer();
+
+    expect(await screen.findByRole('button', { name: 'Unmute' })).toBeDefined();
+    await waitFor(() => expect(next.video.muted).toBe(true));
+  });
+
+  it('remembers the level the slider was dragged to, not only the keyboard’s', async () => {
+    // The preference is written from the volume itself, so every way of
+    // changing it is remembered — otherwise the mouse and the keyboard would
+    // disagree about what the film is set to.
+    const first = renderPlayer();
+    await waitFor(() => expect(first.video.paused).toBe(false));
+    act(() => {
+      first.video.volume = 0.45;
+      first.video.dispatchEvent(new Event('volumechange'));
+    });
+    await waitFor(() => expect(level()).toBe(45));
+    first.unmount();
+
+    renderPlayer();
+
+    await waitFor(() => expect(level()).toBe(45));
+  });
+
+  it('opens at full volume on a machine that has never played one', async () => {
+    const { video } = renderPlayer();
+
+    await waitFor(() => expect(video.paused).toBe(false));
+
+    expect(level()).toBe(100);
+    expect(video.muted).toBe(false);
+  });
+
+  it('opens at full volume when the stored preference is nonsense', async () => {
+    // Anything at all can be under that key — an older build wrote it, a person
+    // edited it, something else claimed the name. None of it may reach the
+    // element, which throws on a volume outside 0–1.
+    vi.spyOn(Storage.prototype, 'getItem').mockReturnValue('{"volume":"loud"}');
+
+    const { video } = renderPlayer();
+
+    await waitFor(() => expect(video.paused).toBe(false));
+    expect(level()).toBe(100);
+    expect(video.volume).toBe(1);
+  });
+
+  it('plays on a browser with no usable storage at all', async () => {
+    // Storage disabled by policy, a refused quota, a partition without it. The
+    // film opens and plays at a sane level rather than the screen falling over
+    // on the way in.
+    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+      throw new DOMException('The operation is insecure.', 'SecurityError');
+    });
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new DOMException('The operation is insecure.', 'SecurityError');
+    });
+
+    const { video } = renderPlayer();
+    await waitFor(() => expect(video.paused).toBe(false));
+
+    fireEvent.keyDown(window, { key: 'ArrowDown' });
+
+    await waitFor(() => expect(level()).toBe(90));
+    expect(video.paused).toBe(false);
   });
 });
