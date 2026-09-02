@@ -1,5 +1,6 @@
 import {
   ChevronLeftIcon,
+  FullscreenIcon,
   PauseIcon,
   PlayIcon,
   SkipBackIcon,
@@ -65,6 +66,13 @@ export interface PlayerControlsProps {
    * rather than remembering it.
    */
   onToggleSubtitles: () => void;
+  /**
+   * Fill the screen with the player's surface, or come back out of it. One
+   * handler rather than two, and no `pressed` face: the prototype draws one
+   * glyph in one state, and the document is where the answer to "are we
+   * fullscreen" actually lives.
+   */
+  onToggleFullscreen: () => void;
 }
 
 /** What the ±10s buttons move the film by, in seconds. */
@@ -87,12 +95,13 @@ const BOTTOM_DRIFT = '12px';
  * gone — an invisible Back pill a keyboard can still land on is a control
  * nobody can see, and `pointer-events: none` alone would leave it exactly that.
  *
- * What it draws is `feat.PlayerControls.dc.html` less one control: fullscreen
- * arrives with the keyboard map, in the slice that can make it do something,
- * because a control that does nothing when a parent presses it is worse than one
- * that is not there yet. The CC pill obeys the same rule from the other
- * direction — it is drawn only for a film that has **Subtitles**, and absent
- * rather than disabled for one that does not.
+ * What it draws is `feat.PlayerControls.dc.html`, every control of it. The
+ * fullscreen button was the last one held back, on the rule that a control which
+ * does nothing when a parent presses it is worse than one that is not there yet;
+ * there is something behind it now. The CC pill obeys the same rule from the
+ * other direction — it is drawn only for a film that has **Subtitles**, and
+ * absent rather than disabled for one that does not, which is why fullscreen
+ * sits after it and is drawn for every film.
  */
 export function PlayerControls({
   title,
@@ -111,6 +120,7 @@ export function PlayerControls({
   onVolumeChange,
   onToggleMute,
   onToggleSubtitles,
+  onToggleFullscreen,
 }: PlayerControlsProps) {
   return (
     <>
@@ -179,6 +189,14 @@ export function PlayerControls({
                   CC
                 </SubtitleButton>
               ) : null}
+              <TransportButton
+                label="Fullscreen"
+                title="Fullscreen"
+                size={44}
+                onClick={onToggleFullscreen}
+              >
+                <FullscreenIcon size={22} />
+              </TransportButton>
             </TransportRow>
           </>
         ) : null}

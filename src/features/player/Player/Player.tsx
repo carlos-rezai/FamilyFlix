@@ -12,8 +12,14 @@ import type { PlayerNoticeKind } from '../PlayerNotice/PlayerNotice';
 import { preferredSubtitle } from '../preferredSubtitle/preferredSubtitle';
 import { SubtitleOverlay } from '../SubtitleOverlay/SubtitleOverlay';
 import { useControlsVisibility } from '../useControlsVisibility/useControlsVisibility';
+import { useFullscreen } from '../useFullscreen/useFullscreen';
 import { usePlayback } from '../usePlayback/usePlayback';
+import { usePlayerKeys } from '../usePlayerKeys/usePlayerKeys';
 import { useWatchReporter } from '../useWatchReporter/useWatchReporter';
+import {
+  readVolumePreference,
+  writeVolumePreference,
+} from '../volumePreference/volumePreference';
 import {
   ArtLayer,
   Backdrop,
@@ -124,15 +130,26 @@ function noticeFor(
  *
  * There is one way out, reached two ways: the Back pill and Escape both call
  * {@link leave}, because two ways out with two handlers are two behaviours to
- * keep in step forever.
+ * keep in step forever. The keyboard as a whole works the same way — every key
+ * is handed the very handler its button is handed, so a key and a button cannot
+ * drift apart.
  */
 export function Player({ movieId }: PlayerProps) {
   const navigate = useNavigate();
   const videoRef = useRef<HTMLVideoElement>(null);
+  // The whole surface — chrome, subtitle box and picture together — because
+  // that is what fills the screen, not the bare element inside it.
+  const stageRef = useRef<HTMLDivElement>(null);
 
   const [movie, setMovie] = useState<Movie | null>(null);
   const [playback, setPlayback] = useState<PlaybackRead | null>(null);
   const [fileMissing, setFileMissing] = useState(false);
+
+  // The level the film opens at, read once on the way in. A **per-machine UI
+  // preference, not library data**: it lives in `localStorage` rather than in
+  // the database, so it does not travel with a backup of the library to a
+  // machine whose speakers are nothing like this one's.
+  const [startVolume] = useState(readVolumePreference);
 
   // Subtitles start **off** on every film. The prototype's `playMovie()` sets
   // `subsOn: true`; we ship them off, and that is a recorded divergence rather
@@ -183,7 +200,27 @@ export function Player({ movieId }: PlayerProps) {
     skip,
     setVolume,
     toggleMute,
-  } = usePlayback(videoRef, playback, openAt(movie), streamUrl(movieId));
+  } = usePlayback(
+    videoRef,
+    playback,
+    openAt(movie),
+    streamUrl(movieId),
+    startVolume
+  );
+
+  // Remember where the volume was left, however it was changed — the keyboard,
+  // the slider, or the mute button — because all three arrive here as the same
+  // two numbers. The first run is the opening state rather than a change, and
+  // writing it would put a default over the very preference just read.
+  const volumeSettled = useRef(false);
+
+  useEffect(() => {
+    if (!volumeSettled.current) {
+      volumeSettled.current = true;
+      return;
+    }
+    writeVolumePreference({ volume, muted });
+  }, [volume, muted]);
 
   // Where the watching gets written down. The screen hands it what is true and
   // learns nothing back except the one thing only the screen knows: the second
@@ -261,21 +298,27 @@ export function Player({ movieId }: PlayerProps) {
     navigate(moviePath(movieId));
   }, [navigate, movieId]);
 
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        leave();
-      }
-    };
+  const { toggleFullscreen } = useFullscreen(stageRef);
 
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [leave]);
+  // The keyboard, handed the same handlers the chrome below is handed — which
+  // is what makes a key and its button one behaviour rather than two. C is
+  // `null` for a film with no **Subtitles**, so the key is absent exactly as
+  // the CC pill is.
+  usePlayerKeys({
+    volume,
+    onTogglePlay: toggle,
+    onSkip,
+    onVolumeChange: setVolume,
+    onToggleMute: toggleMute,
+    onToggleSubtitles: track === null ? null : toggleSubtitles,
+    onToggleFullscreen: toggleFullscreen,
+    onLeave: leave,
+  });
 
   const { g1, g2 } = gradientFromId(movieId);
 
   return (
-    <Stage $idle={!visible} onMouseMove={onMouseMove}>
+    <Stage ref={stageRef} $idle={!visible} onMouseMove={onMouseMove}>
       <ArtLayer aria-hidden="true">
         <Backdrop
           url={movie?.posterPath ? `${IMAGE_ROUTE}${movie.posterPath}` : null}
@@ -318,6 +361,7 @@ export function Player({ movieId }: PlayerProps) {
         onVolumeChange={setVolume}
         onToggleMute={toggleMute}
         onToggleSubtitles={toggleSubtitles}
+        onToggleFullscreen={toggleFullscreen}
       />
     </Stage>
   );

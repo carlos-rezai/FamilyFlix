@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { RefObject } from 'react';
 
 import type { PlaybackPath } from '@/types';
+import type { VolumePreference } from '../volumePreference/volumePreference';
 
 /**
  * What the hook needs to know about where the bytes are coming from. A
@@ -108,7 +109,11 @@ export function usePlayback(
   // Where the film's bytes come from, before any **Stream offset** is put on
   // it. The hook is handed the plain stream URL and answers with the one the
   // element should be pointed at.
-  streamSrc = ''
+  streamSrc = '',
+  // The level the film opens at — what the family left the last one at, read
+  // from `volumePreference` by the screen above. Like the **Resume position**
+  // it arrives from outside and reaches the element exactly once.
+  startVolume?: VolumePreference
 ): PlaybackState {
   const [playing, setPlaying] = useState(false);
   const [elementTime, setElementTime] = useState(0);
@@ -262,6 +267,37 @@ export function usePlayback(
     // having been lost.
     anchorElement(startAt);
   }, [videoRef, startAt, streaming, anchorStream, anchorElement]);
+
+  /**
+   * The level the film opens at, put on the element once and then left alone —
+   * the same shape as the **Resume position** above and for the same reason. A
+   * level re-applied on a later render would fight the slider: it would snap
+   * back to what the film opened at on the next thing that re-rendered the
+   * screen, which is the position ticking ten times a second.
+   *
+   * Both halves go on together. Muted with a level underneath is the state the
+   * mute button exists to give back, so a film left silenced at a quarter opens
+   * silenced at a quarter rather than waking the house up on the first unmute.
+   *
+   * Nothing to apply is a film at full volume, which is the element's own
+   * opening state — so there is nothing to write for it either.
+   */
+  const volumeApplied = useRef(false);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (video === null || volumeApplied.current || startVolume === undefined) {
+      return;
+    }
+    volumeApplied.current = true;
+
+    video.volume = startVolume.volume;
+    video.muted = startVolume.muted;
+    // The element fires no `volumechange` for a level it was handed in jsdom,
+    // and the chrome draws from this state rather than from the element.
+    setVolumeState(startVolume.volume);
+    setMutedState(startVolume.muted);
+  }, [videoRef, startVolume]);
 
   /**
    * Asked of the element rather than of our own `playing`, so a press can never

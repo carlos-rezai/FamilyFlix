@@ -108,6 +108,12 @@ beforeEach(() => {
   vi.stubGlobal('fetch', fetchMock);
   writeFails = false;
   answerWith({});
+  // Every test opens the film on a machine that has never played one. The
+  // volume is a real preference now — a film turned down in one test is still
+  // turned down in the next one, exactly as it is for the family — so each test
+  // has to say what it is starting from rather than inherit it from whichever
+  // test happened to run before it.
+  localStorage.clear();
 });
 
 afterEach(() => {

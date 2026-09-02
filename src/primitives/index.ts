@@ -24,3 +24,4 @@ export { SkipForwardIcon } from './Icon/SkipForwardIcon';
 export { VolumeIcon } from './Icon/VolumeIcon';
 export { VolumeMutedIcon } from './Icon/VolumeMutedIcon';
 export { SubtitlesIcon } from './Icon/SubtitlesIcon';
+export { FullscreenIcon } from './Icon/FullscreenIcon';
