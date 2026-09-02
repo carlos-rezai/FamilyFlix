@@ -64,7 +64,7 @@ describe('SubtitleOverlay', () => {
     // the prototype's `sc-if` prevents.
     const { container } = renderOverlay({ text: null });
 
-    expect(container).toBeEmptyDOMElement();
+    expect(container.innerHTML).toBe('');
   });
 
   it('draws nothing for a cue whose text is blank', () => {
@@ -72,7 +72,7 @@ describe('SubtitleOverlay', () => {
     // said.
     const { container } = renderOverlay({ text: '   ' });
 
-    expect(container).toBeEmptyDOMElement();
+    expect(container.innerHTML).toBe('');
   });
 
   it('is our own box, in the prototype’s styling', () => {

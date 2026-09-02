@@ -28,7 +28,7 @@ export type {
   HomePayload,
 } from './browse';
 export type { NewSubtitle, NewMovie, MoviePatch } from './write';
-export type { PlaybackPath, PlaybackRead } from './playback';
+export type { PlaybackPath, PlaybackRead, Cue } from './playback';
 export type {
   PosterCardMovie,
   ContinueCardMovie,

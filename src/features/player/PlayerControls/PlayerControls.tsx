@@ -4,6 +4,7 @@ import {
   PlayIcon,
   SkipBackIcon,
   SkipForwardIcon,
+  SubtitlesIcon,
 } from '@/primitives';
 
 import { PlayerScrubber } from '../PlayerScrubber/PlayerScrubber';
@@ -11,6 +12,8 @@ import { VolumeSlider } from '../VolumeSlider/VolumeSlider';
 import {
   BackPill,
   BottomBar,
+  RowSpacer,
+  SubtitleButton,
   Title,
   TopBar,
   TransportButton,
@@ -32,6 +35,14 @@ export interface PlayerControlsProps {
   volume: number;
   /** Whether the film is silenced. */
   muted: boolean;
+  /**
+   * Whether the film has any **Subtitles** beside it. A film with none gets no
+   * CC pill at all rather than a disabled one — a dead control on this screen is
+   * a question a parent has to ask someone.
+   */
+  hasSubtitles: boolean;
+  /** Whether the **Subtitle overlay** is showing, which is the pill's face. */
+  subtitlesOn: boolean;
   /** Leave the player, back to the film's page. */
   onBack: () => void;
   /** Stop a running film, or start a stopped one. */
@@ -48,6 +59,12 @@ export interface PlayerControlsProps {
   onVolumeChange: (value: number) => void;
   /** Silence the film, or give back the level it was at. */
   onToggleMute: () => void;
+  /**
+   * Turn subtitles on, or take them away again. One handler rather than an on
+   * and an off: the state is the screen's, and this component is handed it
+   * rather than remembering it.
+   */
+  onToggleSubtitles: () => void;
 }
 
 /** What the ±10s buttons move the film by, in seconds. */
@@ -70,11 +87,12 @@ const BOTTOM_DRIFT = '12px';
  * gone — an invisible Back pill a keyboard can still land on is a control
  * nobody can see, and `pointer-events: none` alone would leave it exactly that.
  *
- * What it draws is `feat.PlayerControls.dc.html` less two controls: the CC pill
- * arrives with subtitles, and only for a film that has any, and fullscreen
- * arrives with the keyboard map. Each is drawn in the slice that can make it do
- * something, because a control that does nothing when a parent presses it is
- * worse than one that is not there yet.
+ * What it draws is `feat.PlayerControls.dc.html` less one control: fullscreen
+ * arrives with the keyboard map, in the slice that can make it do something,
+ * because a control that does nothing when a parent presses it is worse than one
+ * that is not there yet. The CC pill obeys the same rule from the other
+ * direction — it is drawn only for a film that has **Subtitles**, and absent
+ * rather than disabled for one that does not.
  */
 export function PlayerControls({
   title,
@@ -84,12 +102,15 @@ export function PlayerControls({
   duration,
   volume,
   muted,
+  hasSubtitles,
+  subtitlesOn,
   onBack,
   onTogglePlay,
   onSeek,
   onSkip,
   onVolumeChange,
   onToggleMute,
+  onToggleSubtitles,
 }: PlayerControlsProps) {
   return (
     <>
@@ -145,6 +166,19 @@ export function PlayerControls({
                 onVolumeChange={onVolumeChange}
                 onToggleMute={onToggleMute}
               />
+              <RowSpacer />
+              {hasSubtitles ? (
+                <SubtitleButton
+                  type="button"
+                  aria-label="Subtitles"
+                  aria-pressed={subtitlesOn}
+                  $on={subtitlesOn}
+                  onClick={onToggleSubtitles}
+                >
+                  <SubtitlesIcon size={22} />
+                  CC
+                </SubtitleButton>
+              ) : null}
             </TransportRow>
           </>
         ) : null}

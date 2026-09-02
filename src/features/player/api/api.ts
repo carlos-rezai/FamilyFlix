@@ -1,5 +1,5 @@
 import { postValue, type PostOptions } from '@/api/postValue/postValue';
-import type { PlaybackRead } from '@/types';
+import type { Cue, PlaybackRead } from '@/types';
 
 /** Where one movie's playback read is fetched from. */
 const playbackEndpoint = (id: string) =>
@@ -8,6 +8,13 @@ const playbackEndpoint = (id: string) =>
 /** Where one movie's **Resume position** is saved. */
 const resumeEndpoint = (id: string) =>
   `/api/movies/${encodeURIComponent(id)}/resume`;
+
+/**
+ * Where one **Subtitle**'s **Cue list** is fetched from. Both ids are encoded:
+ * the pair is the address, and neither half may change the URL's shape.
+ */
+const cuesEndpoint = (id: string, subtitleId: string) =>
+  `/api/movies/${encodeURIComponent(id)}/subtitles/${encodeURIComponent(subtitleId)}`;
 
 /**
  * What the resume route accepts as an echo of what it stored — a number, and
@@ -70,4 +77,35 @@ export function saveResume(
   options?: PostOptions
 ): Promise<number> {
   return postValue(resumeEndpoint(id), seconds, isResumeEcho, options);
+}
+
+/**
+ * The **Cue list** for one **Subtitle**, fetched once when subtitles are
+ * switched on and held for the session — the film does not re-ask on a seek,
+ * because the cues are stamped in **Absolute position** and there is nothing
+ * about a seek for them to be re-stamped against.
+ *
+ * A 404 resolves as an empty list rather than rejecting: a subtitle row whose
+ * file has gone is a film that plays on without subtitles, which is the
+ * acceptance criterion in one sentence. Swallowing it here rather than in the
+ * screen leaves the screen with one path for "no cues" and no error state to
+ * draw. A 500 still rejects, exactly as `fetchPlayback` treats one — a backend
+ * hiccup is not a missing track, and collapsing them would hide a server
+ * falling over behind a film that quietly has no subtitles.
+ */
+export async function fetchSubtitleCues(
+  id: string,
+  subtitleId: string
+): Promise<Cue[]> {
+  const endpoint = cuesEndpoint(id, subtitleId);
+  const response = await fetch(endpoint);
+
+  if (response.status === 404) {
+    return [];
+  }
+  if (!response.ok) {
+    throw new Error(`GET ${endpoint} failed: ${response.status}`);
+  }
+
+  return (await response.json()) as Cue[];
 }

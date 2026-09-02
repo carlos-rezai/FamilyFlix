@@ -2,12 +2,15 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { fetchMovie } from '@/api/fetchMovie/fetchMovie';
-import type { Movie, PlaybackRead } from '@/types';
+import type { Cue, Movie, PlaybackRead } from '@/types';
 import { gradientFromId } from '@/utils';
-import { fetchPlayback } from '../api/api';
+import { fetchPlayback, fetchSubtitleCues } from '../api/api';
+import { cueAt } from '../cueAt/cueAt';
 import { PlayerControls } from '../PlayerControls/PlayerControls';
 import { PlayerNotice } from '../PlayerNotice/PlayerNotice';
 import type { PlayerNoticeKind } from '../PlayerNotice/PlayerNotice';
+import { preferredSubtitle } from '../preferredSubtitle/preferredSubtitle';
+import { SubtitleOverlay } from '../SubtitleOverlay/SubtitleOverlay';
 import { useControlsVisibility } from '../useControlsVisibility/useControlsVisibility';
 import { usePlayback } from '../usePlayback/usePlayback';
 import { useWatchReporter } from '../useWatchReporter/useWatchReporter';
@@ -115,6 +118,16 @@ export function Player({ movieId }: PlayerProps) {
   const [playback, setPlayback] = useState<PlaybackRead | null>(null);
   const [fileMissing, setFileMissing] = useState(false);
 
+  // Subtitles start **off** on every film. The prototype's `playMovie()` sets
+  // `subsOn: true`; we ship them off, and that is a recorded divergence rather
+  // than an oversight — auto-on subtitles are a roadmap item, and defaulting
+  // them on would implement it by accident.
+  const [subtitlesOn, setSubtitlesOn] = useState(false);
+  // `null` until the **Cue list** has been asked for, which is what keeps it to
+  // one request: `[]` is a real answer — the file would not parse, or the row's
+  // file has gone — and must not read as "not fetched yet".
+  const [cues, setCues] = useState<Cue[] | null>(null);
+
   useEffect(() => {
     let cancelled = false;
 
@@ -176,6 +189,44 @@ export function Player({ movieId }: PlayerProps) {
     [skip, reportSeek]
   );
 
+  // Which of the film's **Subtitles** is the **Subtitle track**. Nobody chooses
+  // — no picker ships — so it has to be the deterministic answer, and a film
+  // with no rows has none, which is what the CC pill's absence is decided from.
+  const track = preferredSubtitle(movie?.subtitles ?? []);
+
+  const toggleSubtitles = useCallback(() => setSubtitlesOn((on) => !on), []);
+
+  // The cue list is fetched the first time CC is pressed and held for the
+  // session. Turning subtitles off and on again does not re-ask, and neither
+  // does a seek: cues are stamped in **Absolute position**, so there is nothing
+  // about a jump for them to be re-stamped against.
+  useEffect(() => {
+    if (!subtitlesOn || cues !== null || track === null) {
+      return;
+    }
+
+    let cancelled = false;
+    void fetchSubtitleCues(movieId, track.id)
+      .then((list) => {
+        if (!cancelled) {
+          setCues(list);
+        }
+      })
+      // A cue list that failed outright is a film that plays on with no box.
+      // There is no error state here to draw, and a bad subtitle file must
+      // never be able to interrupt the film.
+      .catch(() => undefined);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [movieId, subtitlesOn, cues, track]);
+
+  // The line on screen right now, or nothing — which the overlay draws as no
+  // box at all rather than an empty one hovering over the picture.
+  const line =
+    subtitlesOn && cues !== null ? (cueAt(cues, position)?.text ?? null) : null;
+
   const notice = noticeFor(fileMissing, buffering, playing);
 
   // Two different things hold the chrome on screen, and only one of them is
@@ -224,6 +275,8 @@ export function Player({ movieId }: PlayerProps) {
         )}
       </PictureLayer>
 
+      <SubtitleOverlay text={line} lifted={visible} />
+
       <PlayerControls
         title={movie?.title ?? ''}
         visible={visible}
@@ -232,12 +285,15 @@ export function Player({ movieId }: PlayerProps) {
         duration={duration}
         volume={volume}
         muted={muted}
+        hasSubtitles={track !== null}
+        subtitlesOn={subtitlesOn}
         onBack={leave}
         onTogglePlay={toggle}
         onSeek={onSeek}
         onSkip={onSkip}
         onVolumeChange={setVolume}
         onToggleMute={toggleMute}
+        onToggleSubtitles={toggleSubtitles}
       />
     </Stage>
   );

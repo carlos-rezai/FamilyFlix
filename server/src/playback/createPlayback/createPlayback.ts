@@ -1,16 +1,23 @@
-import type { PlaybackRead } from '@/types';
+import { readFileSync } from 'node:fs';
+
+import type { Cue, PlaybackRead } from '@/types';
 
 import { mediaDuration } from '../mediaDuration/mediaDuration';
 import { mediaFilePath } from '../mediaFilePath/mediaFilePath';
+import { parseSubtitle } from '../parseSubtitle/parseSubtitle';
 
 /**
  * What the API layer can ask the playback domain for.
  *
- * It is two questions wide today, because direct play is two questions wide:
- * the probe, the path choice, the transcode and the subtitle parsing all arrive
- * in later slices behind this same object. The interface exists so the router's
- * shape is settled before those slices are written against it, and so a route
- * test can hand the router a component that never spawns a binary.
+ * Two questions about the film's own bytes, and two about a **Subtitle**'s. The
+ * probe, the path choice and the transcode arrive in later slices behind this
+ * same object. The interface exists so the router's shape is settled before
+ * those slices are written against it, and so a route test can hand the router
+ * a component that never spawns a binary.
+ *
+ * Both pairs are split the same way — resolve a stored path, then read the file
+ * that came back — so the containment check lives in exactly one place and
+ * every route that opens a file reaches it through a resolver.
  */
 export interface Playback {
   /**
@@ -37,6 +44,26 @@ export interface Playback {
    * whether the stream is anchored at nought or at the second it asked for.
    */
   read(file: string): PlaybackRead | null;
+
+  /**
+   * The absolute file behind a **Subtitle**'s stored path, or `null` when there
+   * is nothing to open — the same containment rule {@link videoFile} applies,
+   * on a row from a different table, because a subtitles table is not trusted
+   * any further than a video path is.
+   */
+  subtitleFile(storedPath: string): string | null;
+
+  /**
+   * The **Cue list** an already-resolved subtitle file parses to, in **Absolute
+   * position** seconds, with nothing in it saying which of the four formats the
+   * file was.
+   *
+   * A file that will not parse is an **empty list**, never a throw. The row was
+   * there and the file was there, so there is nothing missing to report: the
+   * film plays on with no subtitles, and a malformed `.ass` stays
+   * distinguishable from a deleted one.
+   */
+  cues(file: string): Cue[];
 }
 
 /**
@@ -55,6 +82,16 @@ export function createPlayback(mediaPath: string): Playback {
       return durationSeconds === null
         ? null
         : { path: 'direct', durationSeconds };
+    },
+    subtitleFile: (storedPath) => mediaFilePath(mediaPath, storedPath),
+    cues: (file) => {
+      try {
+        return parseSubtitle(file, readFileSync(file, 'utf8'));
+      } catch {
+        // A file that vanished between the containment check and the read, or
+        // one this process cannot open. Same silence: the film plays on.
+        return [];
+      }
     },
   };
 }

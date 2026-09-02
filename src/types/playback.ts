@@ -27,3 +27,18 @@ export interface PlaybackRead {
   /** The film's length in seconds, read from the file rather than the record. */
   durationSeconds: number;
 }
+
+/**
+ * One timed subtitle line — the single normalized shape every subtitle format
+ * is parsed into, in **Absolute position** seconds.
+ *
+ * `start` and `end` are seconds into the *film*, never into the stream, which
+ * is what lets a scrub be a pure lookup: the **Subtitle overlay** asks which
+ * cue covers the position it is at, and nothing has to be re-stamped when that
+ * position jumps.
+ */
+export interface Cue {
+  start: number;
+  end: number;
+  text: string;
+}

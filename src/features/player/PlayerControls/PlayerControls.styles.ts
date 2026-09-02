@@ -106,3 +106,42 @@ export const TransportButton = styled(IconButton)`
     color: #fff;
   }
 `;
+
+/**
+ * The CC pill, translated from `subBtn` in `FamilyFlix.dc.html`.
+ *
+ * Two faces rather than two controls: filled, brighter-bordered and
+ * white-inked when subtitles are showing, transparent and faint when they are
+ * not. The state has to be visible to a parent glancing at the row, not only to
+ * a screen reader reading `aria-pressed`.
+ *
+ * It is a plain button rather than an `IconButton`: the pill carries the letters
+ * `CC` beside the glyph, which is what makes it legible to someone who does not
+ * know the icon, and it is wider than the square the transport buttons sit in.
+ */
+export const SubtitleButton = styled.button<{ $on: boolean }>`
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  height: 40px;
+  padding: 0 14px;
+  background-color: ${({ $on }) =>
+    $on ? 'rgba(255, 255, 255, 0.16)' : 'transparent'};
+  border: 1px solid
+    ${({ $on }) =>
+      $on ? 'rgba(255, 255, 255, 0.3)' : 'rgba(255, 255, 255, 0.14)'};
+  border-radius: ${({ theme }) => theme.radius.sm};
+  color: ${({ $on }) => ($on ? '#fff' : 'rgba(255, 255, 255, 0.6)')};
+  font-family: ${({ theme }) => theme.fonts.sans};
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+`;
+
+/**
+ * The gap that pushes the CC pill to the far end of the transport row, the way
+ * the prototype's `flex: 1` spacer does.
+ */
+export const RowSpacer = styled.div`
+  flex: 1;
+`;

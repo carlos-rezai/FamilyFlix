@@ -187,12 +187,15 @@ describe('PlayerControls — the transport row', () => {
           duration={DURATION}
           volume={0.8}
           muted={false}
+          hasSubtitles
+          subtitlesOn={false}
           onBack={vi.fn()}
           onTogglePlay={vi.fn()}
           onSeek={vi.fn()}
           onSkip={vi.fn()}
           onVolumeChange={vi.fn()}
           onToggleMute={vi.fn()}
+          onToggleSubtitles={vi.fn()}
         />
       </ThemeProvider>
     );
@@ -200,15 +203,6 @@ describe('PlayerControls — the transport row', () => {
     expect(screen.queryByRole('slider', { name: 'Seek' })).toBeNull();
     expect(screen.queryByRole('slider', { name: 'Volume' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Back 10s' })).toBeNull();
-  });
-
-  it('draws no CC pill and no working fullscreen yet — later slices', () => {
-    // A guard against building the next slices' surface early. A control that
-    // does nothing when a parent presses it is worse than one that is not
-    // there yet.
-    renderControls();
-
-    expect(screen.queryByRole('button', { name: /CC|subtitle/i })).toBeNull();
   });
 });
 

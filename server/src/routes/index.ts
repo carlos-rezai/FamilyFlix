@@ -538,6 +538,55 @@ export function createApiRouter(
     });
   });
 
+  // One **Subtitle**'s **Cue list**, for the **Subtitle overlay**.
+  //
+  // The second route here that opens a file rather than serializing a row, and
+  // it addresses it the same way: a **movie id and a subtitle id, never a
+  // path**. The file is resolved from the subtitle row's stored `path` and
+  // checked to sit under the managed media directory before anything is read,
+  // because a subtitles table is not trusted any further than a video path is.
+  //
+  // The pair is the address, not the subtitle id alone: a track is looked up
+  // among *this* movie's rows, so an id belonging to another film opens nothing.
+  //
+  // What comes back says nothing about which of the four formats the file was.
+  // That is the whole point of the four parsers, and this is the seam a caller
+  // actually sees.
+  //
+  // The interesting status is the one that is *not* an error. A file that will
+  // not parse answers `200 []`: the row was there and the file was there, so
+  // there is nothing missing to report — the film simply plays on with no
+  // subtitles. Collapsing that into a 404 would make a malformed `.ass`
+  // indistinguishable from a deleted one, and the family would see the same
+  // nothing either way while the maintainer lost the difference.
+  router.get(
+    '/movies/:id/subtitles/:subtitleId',
+    (req: Request<{ id: string; subtitleId: string }>, res) => {
+      const { id, subtitleId } = req.params;
+      const movie = storage.getMovie(id);
+      if (!movie) {
+        res.status(404).json({ error: `Unknown movie: ${id}` });
+        return;
+      }
+
+      const subtitle = movie.subtitles.find((track) => track.id === subtitleId);
+      if (!subtitle) {
+        res.status(404).json({ error: `Unknown subtitle: ${subtitleId}` });
+        return;
+      }
+
+      const file = playback.subtitleFile(subtitle.path);
+      if (file === null) {
+        res
+          .status(404)
+          .json({ error: `No subtitle file for subtitle: ${subtitleId}` });
+        return;
+      }
+
+      res.json(playback.cues(file));
+    }
+  );
+
   // Posters and backdrops straight off disk. Serves nothing until an import
   // populates the managed media directory; cards fall back to their gradient
   // until then.

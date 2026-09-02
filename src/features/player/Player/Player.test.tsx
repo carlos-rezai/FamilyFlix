@@ -905,6 +905,10 @@ describe('Player — turning subtitles on and off', () => {
     answerWith({ movie: SUBTITLED, cues: CUES });
     const { video } = renderPlayer();
     await waitFor(() => expect(video.paused).toBe(false));
+    // Somewhere the first cue covers, so that the line coming back is what says
+    // the second switch-on drew from the list already in hand.
+    video.currentTime = 2;
+    emit(video, 'timeupdate');
     const pill = await screen.findByRole('button', { name: 'Subtitles' });
 
     fireEvent.click(pill);
