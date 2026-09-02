@@ -424,6 +424,39 @@ export function createApiRouter(
     );
   });
 
+  // The **Watch tick**: where the film had got to when the player last looked.
+  //
+  // The fourth write through `writeSignal`, and the first whose value is a
+  // number, so this route's own share is the shape of that number: a finite,
+  // non-negative count of seconds. Nought is in — a film wound back to the
+  // start is a real position to store — and everything else a `value` key can
+  // carry is out, rejected before anything is written.
+  //
+  // The rounding is the route's job rather than every caller's, because
+  // `resume_position_seconds` is an INTEGER column and a resume position is
+  // spoken in whole seconds (`Resume · 30:40`), while the player reports the
+  // **Absolute position** as the element gives it, fraction and all. What is
+  // echoed is therefore what was stored, not what was sent — the echo's whole
+  // purpose is to be the truth about the row.
+  //
+  // It dispatches to `setResumePosition`, which stamps `last_watched_at` and so
+  // reorders the Continue Watching row. That stamp is why the player writes
+  // nothing until the family has actually watched something: this route stores
+  // whatever it is told, and *when* to tell it is `useWatchReporter`'s.
+  router.post('/movies/:id/resume', (req: Request<{ id: string }>, res) => {
+    const { value } = req.body as { value?: unknown };
+    if (typeof value !== 'number' || !Number.isFinite(value) || value < 0) {
+      res
+        .status(400)
+        .json({ error: 'Body must be { value: number } — seconds, from 0' });
+      return;
+    }
+
+    writeSignal(storage, req, res, Math.round(value), (id, seconds) =>
+      storage.setResumePosition(id, seconds)
+    );
+  });
+
   // What the player is told before a byte arrives: which path the film takes,
   // and how long it runs.
   //

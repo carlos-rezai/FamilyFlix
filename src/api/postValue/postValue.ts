@@ -1,4 +1,20 @@
 /**
+ * How a save is sent, over and above the contract itself.
+ *
+ * One option, for one caller: the player's write on its way out of the screen,
+ * which has to outlive the page being torn down around it. Every other save
+ * happens while its screen is still there and asks for none of this.
+ */
+export interface PostOptions {
+  /**
+   * Whether the browser should finish the request even if the page goes away.
+   * Left unset on an ordinary save: the budget `keepalive` draws on is small,
+   * and spending it on writes nothing is racing is what would exhaust it.
+   */
+  keepalive?: boolean;
+}
+
+/**
  * The contract every single-signal save on the wire keeps: POST the value as
  * `{ value }`, reject anything but a 2xx, and answer with the value the route
  * echoed — falling back to what was sent only when the route says nothing
@@ -15,19 +31,22 @@
  * A *missing* `value` key is the fallback case in both readings, and stays so:
  * `undefined` satisfies no caller's guard.
  *
- * This lives above `features/` because three saves across two features keep the
- * contract — the detail page's watched flag and rating, and the shelf's
- * favorite heart — and neither feature should be importing the other's wire.
+ * This lives above `features/` because four saves across three features keep
+ * the contract — the shelf's favorite heart, the watched flag both it and the
+ * player set, the detail page's rating, and the player's resume position — and
+ * no feature should be importing another's wire.
  */
 export async function postValue<V>(
   endpoint: string,
   value: V,
-  isEcho: (echoed: unknown) => echoed is V
+  isEcho: (echoed: unknown) => echoed is V,
+  { keepalive }: PostOptions = {}
 ): Promise<V> {
   const response = await fetch(endpoint, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ value }),
+    keepalive,
   });
 
   if (!response.ok) {

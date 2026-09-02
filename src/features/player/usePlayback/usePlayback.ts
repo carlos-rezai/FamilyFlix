@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { RefObject } from 'react';
 
 import type { PlaybackPath } from '@/types';
@@ -40,10 +40,16 @@ export interface PlaybackState {
   muted: boolean;
   /** Stop a running film, or start a stopped one. */
   toggle: () => void;
-  /** Take the film to an **Absolute position**, clamped to the film's own ends. */
-  seek: (seconds: number) => void;
-  /** Move the film by a signed number of seconds from where it is now. */
-  skip: (deltaSeconds: number) => void;
+  /**
+   * Take the film to an **Absolute position**, clamped to the film's own ends,
+   * and answer with the second it actually landed on. The answer is what the
+   * **Watch tick** for a settled seek is written from: the position this hook
+   * reports has not caught up yet at the moment the knob is let go, so a
+   * reporter reading it would store the second the film was at before it moved.
+   */
+  seek: (seconds: number) => number;
+  /** Move the film by a signed number of seconds from where it is now, and answer with where that left it. */
+  skip: (deltaSeconds: number) => number;
   /** Set how loud the film is, 0–1. */
   setVolume: (value: number) => void;
   /** Silence the film, or give back the level it was at. */
@@ -85,7 +91,12 @@ export function usePlayback(
   // a stream begins somewhere other than the beginning, and it is on the wire
   // four slices early precisely so the payload does not change shape under
   // client code that has already read it.
-  source: PlaybackSource | null
+  source: PlaybackSource | null,
+  // The **Absolute position** the film opens at — its stored **Resume
+  // position**, or nought for a film nobody has watched and for a finished one.
+  // It arrives late, with the movie record, which is why it is applied by an
+  // effect rather than read once.
+  startAt = 0
 ): PlaybackState {
   const [playing, setPlaying] = useState(false);
   const [elementTime, setElementTime] = useState(0);
@@ -149,6 +160,35 @@ export function usePlayback(
   }, [videoRef]);
 
   /**
+   * Winding the film to where the family left it, which happens once and never
+   * again: the screen re-renders constantly — the position ticks ten times a
+   * second — and a resume that re-applied would pin the film to the second it
+   * opened at and make every seek snap back.
+   *
+   * It lives in this hook rather than in the screen above for the reason the
+   * hook exists: this is element state, and on a stream path it is the thing
+   * the **Stream offset** will re-anchor against. Silently, per the design log
+   * — no "Resume / Start over" dialog, which is UI the prototype does not draw.
+   *
+   * Nought is nothing to do rather than a wind to the beginning, which is also
+   * what keeps the moment before the movie record lands from counting as one.
+   */
+  const resumed = useRef(false);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (video === null || resumed.current || startAt <= 0) {
+      return;
+    }
+    resumed.current = true;
+    video.currentTime = startAt;
+    // The element fires no `timeupdate` for a position it was handed, and a
+    // scrubber drawn at nought for a frame before jumping reads as the film
+    // having been lost.
+    setElementTime(startAt);
+  }, [videoRef, startAt]);
+
+  /**
    * Asked of the element rather than of our own `playing`, so a press can never
    * act on a state that has drifted — whatever paused the film, the next press
    * starts it.
@@ -172,14 +212,15 @@ export function usePlayback(
    * does not have.
    */
   const seek = useCallback(
-    (seconds: number) => {
-      const video = videoRef.current;
-      if (video === null) {
-        return;
-      }
+    (seconds: number): number => {
       // On direct play the **Stream offset** is nought, so an **Absolute
       // position** is the element's own time.
-      video.currentTime = Math.min(duration, Math.max(0, seconds));
+      const landing = Math.min(duration, Math.max(0, seconds));
+      const video = videoRef.current;
+      if (video !== null) {
+        video.currentTime = landing;
+      }
+      return landing;
     },
     [videoRef, duration]
   );
@@ -190,14 +231,14 @@ export function usePlayback(
    * the film twenty seconds, not ten.
    */
   const skip = useCallback(
-    (deltaSeconds: number) => {
+    (deltaSeconds: number): number => {
       const video = videoRef.current;
       if (video === null) {
-        return;
+        return elementTime;
       }
-      seek(video.currentTime + deltaSeconds);
+      return seek(video.currentTime + deltaSeconds);
     },
-    [videoRef, seek]
+    [videoRef, seek, elementTime]
   );
 
   const setVolume = useCallback(

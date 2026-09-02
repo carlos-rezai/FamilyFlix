@@ -1,8 +1,22 @@
+import { postValue, type PostOptions } from '@/api/postValue/postValue';
 import type { PlaybackRead } from '@/types';
 
 /** Where one movie's playback read is fetched from. */
 const playbackEndpoint = (id: string) =>
   `/api/movies/${encodeURIComponent(id)}/playback`;
+
+/** Where one movie's **Resume position** is saved. */
+const resumeEndpoint = (id: string) =>
+  `/api/movies/${encodeURIComponent(id)}/resume`;
+
+/**
+ * What the resume route accepts as an echo of what it stored — a number, and
+ * not the one that was sent: the route stores whole seconds and the player
+ * reports the **Absolute position** with the fraction the element gave it.
+ */
+function isResumeEcho(echoed: unknown): echoed is number {
+  return typeof echoed === 'number';
+}
 
 /**
  * The **Playback read** for one film: which **Playback path** its bytes take,
@@ -33,4 +47,27 @@ export async function fetchPlayback(id: string): Promise<PlaybackRead | null> {
   }
 
   return (await response.json()) as PlaybackRead;
+}
+
+/**
+ * Saves where the film had got to — one **Watch tick** on the wire — and
+ * answers with the second the route says it stored. The same contract
+ * `saveFavorite` and `saveWatched` keep, with one addition nothing else needs:
+ * the caller may ask for `keepalive`, so the write the player makes on its way
+ * out survives the screen being torn down around it.
+ *
+ * It stays here rather than moving up beside `saveWatched`: the player is the
+ * only thing in the app that can know where a film is, which is CLAUDE.md's
+ * `api/` rule read the other way round.
+ *
+ * Rejects if the save did not succeed. Nothing above it acts on that — a
+ * backend hiccup must never interrupt the film — but a save that quietly
+ * resolved would make a broken write indistinguishable from a stored one.
+ */
+export function saveResume(
+  id: string,
+  seconds: number,
+  options?: PostOptions
+): Promise<number> {
+  return postValue(resumeEndpoint(id), seconds, isResumeEcho, options);
 }

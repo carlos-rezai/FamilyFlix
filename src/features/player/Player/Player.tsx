@@ -10,6 +10,7 @@ import { PlayerNotice } from '../PlayerNotice/PlayerNotice';
 import type { PlayerNoticeKind } from '../PlayerNotice/PlayerNotice';
 import { useControlsVisibility } from '../useControlsVisibility/useControlsVisibility';
 import { usePlayback } from '../usePlayback/usePlayback';
+import { useWatchReporter } from '../useWatchReporter/useWatchReporter';
 import {
   ArtLayer,
   Backdrop,
@@ -46,6 +47,21 @@ function moviePath(movieId: string): string {
 }
 
 /**
+ * The **Absolute position** a film opens at.
+ *
+ * An in-progress film starts where it was left; an unwatched one at the
+ * beginning; and a **watched** one at the beginning too — `markWatched` zeroes
+ * the resume position, so the flag is checked as well as the number, and a
+ * finished film is never stuck in its own credits.
+ */
+function openAt(movie: Movie | null): number {
+  if (movie === null || movie.watched) {
+    return 0;
+  }
+  return movie.resumePositionSeconds;
+}
+
+/**
  * What the centre of the picture is saying, or nothing at all when the film is
  * simply running.
  *
@@ -75,8 +91,12 @@ function noticeFor(
  * It owns the two reads the screen opens with — the movie record, for the name
  * and the artwork, and the **Playback read**, for the path and the duration —
  * and hands everything else to a hook: `usePlayback` binds the element,
+ * `useWatchReporter` decides when the watching gets written down,
  * `useControlsVisibility` decides whether the chrome is on screen, and the two
  * components below draw what they are told.
+ *
+ * The record is what the film opens at, which is why this screen reads one at
+ * all beyond the title: an in-progress film starts where it was left, silently.
  *
  * **The screen is never a flat black rectangle.** The blurred backdrop is drawn
  * from the id's own gradient before either read has landed, and a film whose
@@ -124,6 +144,7 @@ export function Player({ movieId }: PlayerProps) {
     playing,
     position,
     buffering,
+    ended,
     duration,
     volume,
     muted,
@@ -132,7 +153,28 @@ export function Player({ movieId }: PlayerProps) {
     skip,
     setVolume,
     toggleMute,
-  } = usePlayback(videoRef, playback);
+  } = usePlayback(videoRef, playback, openAt(movie));
+
+  // Where the watching gets written down. The screen hands it what is true and
+  // learns nothing back except the one thing only the screen knows: the second
+  // a settled seek asked for, which the position above has not caught up to yet.
+  const { reportSeek } = useWatchReporter({
+    movieId,
+    position,
+    playing,
+    ended,
+    duration,
+  });
+
+  const onSeek = useCallback(
+    (seconds: number) => reportSeek(seek(seconds)),
+    [seek, reportSeek]
+  );
+
+  const onSkip = useCallback(
+    (deltaSeconds: number) => reportSeek(skip(deltaSeconds)),
+    [skip, reportSeek]
+  );
 
   const notice = noticeFor(fileMissing, buffering, playing);
 
@@ -192,8 +234,8 @@ export function Player({ movieId }: PlayerProps) {
         muted={muted}
         onBack={leave}
         onTogglePlay={toggle}
-        onSeek={seek}
-        onSkip={skip}
+        onSeek={onSeek}
+        onSkip={onSkip}
         onVolumeChange={setVolume}
         onToggleMute={toggleMute}
       />

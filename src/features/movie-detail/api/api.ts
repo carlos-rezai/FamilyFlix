@@ -1,10 +1,5 @@
 import { postValue } from '@/api/postValue/postValue';
 
-/** What the watched route accepts as an echo of what it stored. */
-function isWatchedEcho(echoed: unknown): echoed is boolean {
-  return typeof echoed === 'boolean';
-}
-
 /**
  * What the rating route accepts. `null` is in, because `null` is a rating this
  * route can genuinely store — a cleared one — so an echoed `null` is an answer
@@ -15,27 +10,14 @@ function isRatingEcho(echoed: unknown): echoed is number | null {
 }
 
 /**
- * The movie both writes below hang off. The read that used to live here moved
- * to `src/api/fetchMovie/` when the player became its second caller; the two
- * saves have one caller each and stay.
+ * Where one movie's rating is saved — the last call this feature still owns.
+ * The read that used to live here moved to `src/api/fetchMovie/` when the
+ * player became its second caller, and `saveWatched` followed it up to
+ * `src/api/saveWatched/` when the player became *its* second caller. This one
+ * has a single caller and stays, until that changes.
  */
-const movieEndpoint = (id: string) => `/api/movies/${encodeURIComponent(id)}`;
-
-/** Where one movie's watched flag is saved. */
-const watchedEndpoint = (id: string) => `${movieEndpoint(id)}/watched`;
-
-/** Where one movie's rating is saved. */
-const ratingEndpoint = (id: string) => `${movieEndpoint(id)}/rating`;
-
-/**
- * Saves one movie's watched flag and answers with the value that was stored —
- * the wire contract in `postValue`, with a flag as its echo. Rejects if the
- * save did not succeed, which is the toggle's cue to revert rather than leave
- * the circle filled over nothing.
- */
-export function saveWatched(id: string, watched: boolean): Promise<boolean> {
-  return postValue(watchedEndpoint(id), watched, isWatchedEcho);
-}
+const ratingEndpoint = (id: string) =>
+  `/api/movies/${encodeURIComponent(id)}/rating`;
 
 /**
  * Saves one movie's rating in stored units — 0–10, or `null` to clear it — and

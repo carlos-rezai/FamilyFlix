@@ -149,8 +149,10 @@ describe('useWatchReporter — the tick', () => {
   });
 
   it('measures the threshold from the last position written, not the last tick', () => {
-    // Three skipped ticks in a row must not add up to nothing: the film has
-    // moved nine seconds since anything was stored, and that is what counts.
+    // Skipped ticks must not add up to nothing: measured from the last tick,
+    // the film has crawled three seconds and every one of these is skipped
+    // forever. Measured from the last position *written*, it has moved six
+    // seconds since anything was stored, and that is what counts.
     const { rerender } = renderReporter();
 
     rerender({ ...BASE, position: 30 });
@@ -162,7 +164,7 @@ describe('useWatchReporter — the tick', () => {
     rerender({ ...BASE, position: 39 });
     elapse(10);
 
-    expect(writtenValues()).toEqual([30, 39]);
+    expect(writtenValues()).toEqual([30, 36]);
   });
 });
 
