@@ -14,12 +14,15 @@
  * - `direct` — the file goes out untouched, and the element seeks by Range.
  * - `remux` — only the container was wrong, so it is rewrapped on the way out.
  * - `transcode` — a codec the browser cannot decode, re-encoded live.
+ * - `cannot-play` — nothing installed can make these bytes playable.
  *
- * Only `direct` is chosen today. The vocabulary is whole from the start because
- * it is what tells the player whether the stream is anchored at nought or at
- * the second it was requested from.
+ * The fourth is the one that is not a route at all: the file is there and the
+ * screen has to say so in different words from the ones it uses for a film it
+ * cannot find, because the two have different remedies. It travels on the same
+ * field as the other three so that a player asking "which path is this" gets
+ * one answer rather than an answer and an exception to it.
  */
-export type PlaybackPath = 'direct' | 'remux' | 'transcode';
+export type PlaybackPath = 'direct' | 'remux' | 'transcode' | 'cannot-play';
 
 /** The playback read's payload: which path, and how long the film runs. */
 export interface PlaybackRead {

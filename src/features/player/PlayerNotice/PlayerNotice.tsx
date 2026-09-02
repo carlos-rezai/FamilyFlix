@@ -11,7 +11,11 @@ import {
  * What the centre of the picture is saying. One value, because the circle can
  * only be one thing at a time.
  */
-export type PlayerNoticeKind = 'play' | 'buffering' | 'missing-file';
+export type PlayerNoticeKind =
+  | 'play'
+  | 'buffering'
+  | 'missing-file'
+  | 'cannot-play';
 
 export interface PlayerNoticeProps {
   kind: PlayerNoticeKind;
@@ -23,23 +27,30 @@ const MISSING_TITLE = 'This film’s file is missing';
 const MISSING_BODY =
   'FamilyFlix can’t find the video file for this title. It may have been ' +
   'moved or renamed outside the app.';
+const CANNOT_TITLE = 'This film can’t be played';
+const CANNOT_BODY =
+  'FamilyFlix can’t decode this file’s format. Adding a playback component in ' +
+  'Settings may fix it.';
 
 /**
  * The centre of the picture whenever the film is not simply running: the big
  * play circle over a stopped film, the buffering ring under "getting this film
  * ready", and the cross over a film whose file is not there.
  *
- * All three are drawn inside the **same** 96px circle. That is `COMPONENT-SPEC`'s
- * rule for this component and the reason the two notices were amended into
+ * All four are drawn inside the **same** 96px circle. That is `COMPONENT-SPEC`'s
+ * rule for this component and the reason the notices were amended into
  * `feat.PlayerControls.dc.html` rather than given an element of their own.
  *
- * **Neither notice carries its own way out.** The Back pill in the chrome is
- * the way out, and the chrome is held on screen for exactly as long as a notice
- * is showing, so a film that cannot be played is never a trap. A second Back
- * here would be a second thing to keep in step with the first.
+ * **No notice carries its own way out.** The Back pill in the chrome is the way
+ * out, and the chrome is held on screen for exactly as long as a notice is
+ * showing, so a film that cannot be played is never a trap. A second Back here
+ * would be a second thing to keep in step with the first.
  *
- * The third message — a film this build cannot decode — joins it with the
- * transcoding paths, which is where that answer becomes possible.
+ * The two unavailable states share the crossed circle and differ only in words,
+ * which is the prototype's own `showUnavailable`. The words are the whole
+ * point: a film that cannot be found and a film that cannot be decoded have
+ * different remedies, and one message for both would send the family looking
+ * for a disc that is on the shelf.
  */
 export function PlayerNotice({ kind }: PlayerNoticeProps) {
   if (kind === 'play') {
@@ -77,6 +88,11 @@ export function PlayerNotice({ kind }: PlayerNoticeProps) {
     );
   }
 
+  const unavailable =
+    kind === 'missing-file'
+      ? { title: MISSING_TITLE, body: MISSING_BODY }
+      : { title: CANNOT_TITLE, body: CANNOT_BODY };
+
   return (
     <Stack>
       <Circle>
@@ -91,8 +107,8 @@ export function PlayerNotice({ kind }: PlayerNoticeProps) {
         </svg>
       </Circle>
       <div>
-        <NoticeTitle>{MISSING_TITLE}</NoticeTitle>
-        <NoticeBody>{MISSING_BODY}</NoticeBody>
+        <NoticeTitle>{unavailable.title}</NoticeTitle>
+        <NoticeBody>{unavailable.body}</NoticeBody>
       </div>
     </Stack>
   );

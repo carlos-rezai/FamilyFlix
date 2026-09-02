@@ -69,17 +69,26 @@ function openAt(movie: Movie | null): number {
  * simply running.
  *
  * The order is the order the answers matter in: a film with no file behind it
- * is not buffering, and a film waiting for bytes is not stopped. `null` is the
- * only state that draws nothing, and it is the one the player is in for almost
- * all of its life.
+ * is not buffering, a film nothing can decode is not waiting for bytes, and a
+ * film waiting for bytes is not stopped. `null` is the only state that draws
+ * nothing, and it is the one the player is in for almost all of its life.
+ *
+ * The two unavailable answers stay apart all the way down to here. They are
+ * reached differently — one is the read's 404, the other is a 200 carrying the
+ * path that was actually chosen — because the family has to be told which of
+ * the two things went wrong.
  */
 function noticeFor(
   fileMissing: boolean,
+  cannotPlay: boolean,
   buffering: boolean,
   playing: boolean
 ): PlayerNoticeKind | null {
   if (fileMissing) {
     return 'missing-file';
+  }
+  if (cannotPlay) {
+    return 'cannot-play';
   }
   if (buffering) {
     return 'buffering';
@@ -227,7 +236,11 @@ export function Player({ movieId }: PlayerProps) {
   const line =
     subtitlesOn && cues !== null ? (cueAt(cues, position)?.text ?? null) : null;
 
-  const notice = noticeFor(fileMissing, buffering, playing);
+  // A film this build cannot decode. The read answered 200 — the file is right
+  // there — with the path it chose, and `cannot-play` is one of them.
+  const cannotPlay = playback?.path === 'cannot-play';
+
+  const notice = noticeFor(fileMissing, cannotPlay, buffering, playing);
 
   // Two different things hold the chrome on screen, and only one of them is
   // about playback: a paused film is someone deciding, and a notice's only way
@@ -265,7 +278,10 @@ export function Player({ movieId }: PlayerProps) {
       </ArtLayer>
 
       <PictureLayer onClick={toggle}>
-        {fileMissing ? null : (
+        {/* No element over bytes no browser can read: one left there stalls,
+            retries and logs a decode error behind a notice already saying what
+            happened. */}
+        {fileMissing || cannotPlay ? null : (
           <Picture ref={videoRef} src={streamUrl(movieId)} />
         )}
         {notice === null ? null : (

@@ -2,6 +2,8 @@ import express from 'express';
 
 import { createSqliteStorage } from './library';
 import { createPlayback } from './playback/createPlayback/createPlayback';
+import { ffmpegBinary } from './playback/ffmpegBinary/ffmpegBinary';
+import { ffmpegComponent } from './playback/ffmpegComponent/ffmpegComponent';
 import { createApiRouter } from './routes';
 
 /**
@@ -16,10 +18,19 @@ const MEDIA_PATH = process.env.FAMILYFLIX_MEDIA_PATH ?? './media';
 
 const storage = createSqliteStorage(DB_PATH);
 
+/**
+ * The **Playback component**, resolved once at startup:
+ * `FAMILYFLIX_FFMPEG_PATH`, then `PATH`, then **absent**. Absent is a state
+ * rather than an error — the app starts, the library browses, and MP4s still
+ * direct-play on a machine with no FFmpeg on it.
+ */
+const binaries = ffmpegBinary(process.env);
+const component = binaries === null ? null : ffmpegComponent(binaries);
+
 const app = express();
 app.use(
   '/api',
-  createApiRouter(storage, MEDIA_PATH, createPlayback(MEDIA_PATH))
+  createApiRouter(storage, MEDIA_PATH, createPlayback(MEDIA_PATH, component))
 );
 
 const server = app.listen(PORT);

@@ -1,3 +1,5 @@
+import { pipeline } from 'node:stream';
+
 import express, { type Request, type Response, type Router } from 'express';
 
 import type { LibraryStorage } from '../library';
@@ -172,10 +174,11 @@ function parseLimit(value: string): number | null {
  * under it, which is what makes `/api/images/<posterPath>` loadable by the
  * browser.
  *
- * `playback` is the playback domain, injected the way `storage` already is. It
- * answers one question in this slice — where a movie's video file really is —
- * and grows the probe, the path choice and the subtitle parsing behind the same
- * object, so the routes written against it do not change shape when it does.
+ * `playback` is the playback domain, injected the way `storage` already is —
+ * and with it the **Playback component**, which is why nothing in this file
+ * mentions FFmpeg. The routes ask where a file is, what path it takes, what to
+ * do with its bytes and what its subtitles say; which binary answers, or
+ * whether one is installed at all, is settled before the router is built.
  */
 export function createApiRouter(
   storage: LibraryStorage,
@@ -470,10 +473,14 @@ export function createApiRouter(
   // not there — or a stored path that escaped the managed media directory,
   // which gets deliberately the same answer — is the same 404 the stream route
   // gives, and it is what the missing-file notice is reached through. A file
-  // that is there but will not say how long it is is a different sentence: it
-  // is a film this build cannot make sense of, which is what the transcoding
-  // slice's second message is for. Collapsing them would tell the family a file
-  // is missing while it sits on the disk in front of them.
+  // that is there but that nothing installed can decode is a different
+  // sentence: a 200 carrying `cannot-play`, which is the notice that says so.
+  // Collapsing them would tell the family a file is missing while it sits on
+  // the disk in front of them.
+  //
+  // **Nothing about the path is written down.** The file is read every time, so
+  // installing a better component makes old films play with no re-import, no
+  // migration, and no stale row to invalidate.
   router.get('/movies/:id/playback', (req: Request<{ id: string }>, res) => {
     const { id } = req.params;
     const movie = storage.getMovie(id);
@@ -488,13 +495,7 @@ export function createApiRouter(
       return;
     }
 
-    const read = playback.read(file);
-    if (read === null) {
-      res.status(404).json({ error: `Cannot read playback for movie: ${id}` });
-      return;
-    }
-
-    res.json(read);
+    res.json(playback.read(file));
   });
 
   // The movie's bytes, for the player's `<video>`.
@@ -515,6 +516,17 @@ export function createApiRouter(
   // back. And a read that fails after the headers are gone is an answer too:
   // the connection ends, and the process stays up to serve the next request,
   // because a maintainer's library will have gaps.
+  //
+  // A film nothing installed can decode is a **415** rather than a 404: there is
+  // a file, and sending bytes no browser can read would leave the element
+  // stalling over a picture that never arrives.
+  //
+  // A converted film is a **live stream**. It is piped rather than sent, it is
+  // named `video/mp4` whatever the file on disk was called — an element told
+  // `video/x-matroska` refuses bytes it could have played — and **the child is
+  // killed the moment the client goes**, which is the one thing on this route
+  // with no HTTP answer to it: a family movie night must not leave transcodes
+  // running.
   router.get('/movies/:id/stream', (req: Request<{ id: string }>, res) => {
     const { id } = req.params;
     const movie = storage.getMovie(id);
@@ -529,13 +541,36 @@ export function createApiRouter(
       return;
     }
 
-    res.sendFile(file, (error) => {
-      if (error && !res.headersSent) {
-        res.status(404).json({ error: `No video file for movie: ${id}` });
-      } else if (error) {
-        res.end();
-      }
-    });
+    const plan = playback.stream(file);
+
+    if (plan.path === 'cannot-play') {
+      res
+        .status(415)
+        .json({ error: `Cannot play the video file for movie: ${id}` });
+      return;
+    }
+
+    if (plan.path === 'direct') {
+      res.sendFile(file, (error) => {
+        if (error && !res.headersSent) {
+          res.status(404).json({ error: `No video file for movie: ${id}` });
+        } else if (error) {
+          res.end();
+        }
+      });
+      return;
+    }
+
+    res.setHeader('Content-Type', 'video/mp4');
+    // `close` fires on a finished response as well as an abandoned one, which is
+    // why `kill` has to be safe to call twice. Registering it before a byte
+    // moves is what makes it true for a client that gives up immediately.
+    res.on('close', () => plan.conversion.kill());
+    // `pipeline` rather than `pipe`: it tears both ends down together and hands
+    // the failure here, where a client who walked away mid-film is a normal end
+    // to a request rather than an unhandled error that takes the process with
+    // it.
+    pipeline(plan.conversion.stdout, res, () => undefined);
   });
 
   // One **Subtitle**'s **Cue list**, for the **Subtitle overlay**.

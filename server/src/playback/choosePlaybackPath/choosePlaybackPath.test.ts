@@ -16,6 +16,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   choosePlaybackPath,
+  type ComponentAvailability,
   type PlaybackDecision,
 } from './choosePlaybackPath';
 import type { MediaProbe } from '../probe/probe';
@@ -26,10 +27,16 @@ const MP4 = '/media/Northwind (2018)/northwind.mp4';
 const AVI = '/media/Northwind (2018)/northwind.avi';
 
 /** A machine with a component and no hardware encoder — the common case. */
-const SOFTWARE = { available: true, hardwareEncoder: null };
+const SOFTWARE: ComponentAvailability = {
+  available: true,
+  hardwareEncoder: null,
+};
 
 /** A machine with nothing installed: the state the PRD makes first-class. */
-const ABSENT = { available: false, hardwareEncoder: null };
+const ABSENT: ComponentAvailability = {
+  available: false,
+  hardwareEncoder: null,
+};
 
 /**
  * A **ffprobe** read, defaulting to the one file Chromium needs no help with.
