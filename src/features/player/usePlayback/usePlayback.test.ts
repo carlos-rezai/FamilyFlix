@@ -4,6 +4,7 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { usePlayback } from './usePlayback';
+import type { PlaybackRead } from '@/types';
 import { stubMediaElement } from '@/test-support/stubMediaElement/stubMediaElement';
 
 /**
@@ -21,10 +22,19 @@ import { stubMediaElement } from '@/test-support/stubMediaElement/stubMediaEleme
  * rather than the arithmetic: on direct play the offset is nought, and the
  * position the hook reports is the position the film is at.
  */
-function renderPlayback() {
+
+/**
+ * The **Playback read** this hook is opened with. The duration is the file's,
+ * to a fraction of a second, and it is the only duration in the feature: it is
+ * what a seek clamps against and what the **Scrubber** draws, neither of which
+ * has anywhere else to get it from.
+ */
+const DIRECT_PLAY: PlaybackRead = { path: 'direct', durationSeconds: 6832.5 };
+
+function renderPlayback(read: PlaybackRead = DIRECT_PLAY) {
   const video = document.createElement('video');
   const ref = { current: video };
-  const view = renderHook(() => usePlayback(ref, { path: 'direct' }));
+  const view = renderHook(() => usePlayback(ref, read));
   return { video, ...view };
 }
 
@@ -154,6 +164,164 @@ describe('usePlayback — when the browser refuses to autoplay', () => {
 
     window.removeEventListener('unhandledrejection', onRejection);
     expect(rejections).toEqual([]);
+  });
+});
+
+/**
+ * 10 — Video player, Phase 4 (issue #86).
+ *
+ * Seeking joins the hook rather than the scrubber, for the reason the hook
+ * exists: nothing above it touches the element. The **Scrubber** hands it an
+ * **Absolute position** and learns nothing about which path is playing, and the
+ * clamp at the far end uses the same duration the scrubber draws, because there
+ * is only one — the **Playback read**'s.
+ */
+describe('usePlayback — seeking', () => {
+  stubMediaElement();
+
+  it('takes the film to the second it is given', async () => {
+    const { video, result } = renderPlayback();
+    await waitFor(() => expect(result.current.playing).toBe(true));
+
+    act(() => result.current.seek(1840));
+
+    expect(video.currentTime).toBe(1840);
+  });
+
+  it('reports the film’s length from the playback read', () => {
+    // Not `runtimeMinutes`, which is rounded and nullable, and not the
+    // element's, which is `NaN` on a live transcode.
+    const { result } = renderPlayback();
+
+    expect(result.current.duration).toBe(6832.5);
+  });
+
+  it('cannot be taken past either end of the film', async () => {
+    // A hand-thrown scalar, a knob overshot at the end of a drag, or a −10s at
+    // four seconds in: all three arrive here, and none of them may leave the
+    // element at a position the film does not have.
+    const { video, result } = renderPlayback();
+    await waitFor(() => expect(result.current.playing).toBe(true));
+
+    act(() => result.current.seek(-30));
+    expect(video.currentTime).toBe(0);
+
+    act(() => result.current.seek(99999));
+    expect(video.currentTime).toBe(6832.5);
+  });
+
+  it('skips exactly ten seconds, in both directions', async () => {
+    // Replaying a line of dialogue is the whole of what this is for, so ten
+    // seconds means ten — not "about ten, after rounding".
+    const { video, result } = renderPlayback();
+    await waitFor(() => expect(result.current.playing).toBe(true));
+    video.currentTime = 600;
+    emit(video, 'timeupdate');
+
+    act(() => result.current.skip(-10));
+    expect(video.currentTime).toBe(590);
+
+    emit(video, 'timeupdate');
+    act(() => result.current.skip(10));
+    expect(video.currentTime).toBe(600);
+  });
+
+  it('clamps a skip at the start and at the end rather than refusing it', async () => {
+    // Pressing −10s four seconds in goes to the beginning. Doing nothing at all
+    // would read as a broken button.
+    const { video, result } = renderPlayback();
+    await waitFor(() => expect(result.current.playing).toBe(true));
+    video.currentTime = 4;
+    emit(video, 'timeupdate');
+
+    act(() => result.current.skip(-10));
+    expect(video.currentTime).toBe(0);
+
+    video.currentTime = 6830;
+    emit(video, 'timeupdate');
+    act(() => result.current.skip(10));
+    expect(video.currentTime).toBe(6832.5);
+  });
+
+  it('skips from where the film is now, not from where it opened', async () => {
+    const { video, result } = renderPlayback();
+    await waitFor(() => expect(result.current.playing).toBe(true));
+
+    video.currentTime = 100;
+    emit(video, 'timeupdate');
+    act(() => result.current.skip(10));
+
+    expect(video.currentTime).toBe(110);
+  });
+});
+
+/**
+ * Volume lives here for the same reason seeking does — it is element state, and
+ * the hook is the one thing allowed to touch the element. Remembering it across
+ * films is not this slice's; it lands with the keyboard and fullscreen work.
+ */
+describe('usePlayback — volume and mute', () => {
+  stubMediaElement();
+
+  it('starts at the element’s full volume, unmuted', () => {
+    const { result } = renderPlayback();
+
+    expect(result.current.volume).toBe(1);
+    expect(result.current.muted).toBe(false);
+  });
+
+  it('changes the volume across the whole range', async () => {
+    const { video, result } = renderPlayback();
+    await waitFor(() => expect(result.current.playing).toBe(true));
+
+    act(() => result.current.setVolume(0.4));
+    expect(video.volume).toBeCloseTo(0.4);
+    expect(result.current.volume).toBeCloseTo(0.4);
+
+    act(() => result.current.setVolume(0));
+    expect(video.volume).toBe(0);
+
+    act(() => result.current.setVolume(1));
+    expect(video.volume).toBe(1);
+  });
+
+  it('silences the film the moment mute is pressed', async () => {
+    const { video, result } = renderPlayback();
+    await waitFor(() => expect(result.current.playing).toBe(true));
+
+    act(() => result.current.toggleMute());
+
+    expect(video.muted).toBe(true);
+    expect(result.current.muted).toBe(true);
+  });
+
+  it('gives back the level it was at rather than jumping to full', async () => {
+    // Unmuting a film that was turned down to a quarter and having it come back
+    // at full volume is the version of this that wakes the house up.
+    const { video, result } = renderPlayback();
+    await waitFor(() => expect(result.current.playing).toBe(true));
+    act(() => result.current.setVolume(0.25));
+
+    act(() => result.current.toggleMute());
+    act(() => result.current.toggleMute());
+
+    expect(video.muted).toBe(false);
+    expect(video.volume).toBeCloseTo(0.25);
+    expect(result.current.volume).toBeCloseTo(0.25);
+  });
+
+  it('follows the element when something else changes the volume', async () => {
+    // The element is the truth here too: an operating-system volume key or a
+    // second slider must leave the icon and the fill telling the truth.
+    const { video, result } = renderPlayback();
+    await waitFor(() => expect(result.current.playing).toBe(true));
+
+    act(() => {
+      video.volume = 0.15;
+      video.dispatchEvent(new Event('volumechange'));
+    });
+
+    expect(result.current.volume).toBeCloseTo(0.15);
   });
 });
 

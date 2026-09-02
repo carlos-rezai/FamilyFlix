@@ -402,3 +402,133 @@ describe('Player — when the browser refuses to autoplay', () => {
     expect(circle(container)).toBeUndefined();
   });
 });
+
+/**
+ * 10 — Video player, Phase 4 (issue #86).
+ *
+ * The screen can seek. What is asserted here is only what the screen adds over
+ * its parts: that the duration the **Scrubber** draws and clamps against came
+ * from the **Playback read** rather than from the movie record, and that a drag
+ * on it reaches the element. The drag arithmetic itself belongs to
+ * `useDragScalar`, and the "no seek until release" rule to `PlayerScrubber`.
+ */
+describe('Player — the scrubber over a real film', () => {
+  stubMediaElement();
+
+  const TRACK_LEFT = 100;
+  const TRACK_WIDTH = 200;
+
+  /** The scrubber, laid out — jsdom lays nothing out, so the rect is stubbed. */
+  async function seekBar(): Promise<HTMLElement> {
+    const track = await screen.findByRole('slider', { name: 'Seek' });
+    track.getBoundingClientRect = () =>
+      ({
+        x: TRACK_LEFT,
+        y: 0,
+        left: TRACK_LEFT,
+        right: TRACK_LEFT + TRACK_WIDTH,
+        top: 0,
+        bottom: 6,
+        width: TRACK_WIDTH,
+        height: 6,
+        toJSON: () => ({}),
+      }) as DOMRect;
+    return track;
+  }
+
+  /** Drag the knob to a fraction along the bar and let go of it there. */
+  function dragTo(track: HTMLElement, fraction: number): void {
+    const clientX = TRACK_LEFT + TRACK_WIDTH * fraction;
+    fireEvent.pointerDown(track, { clientX: TRACK_LEFT });
+    act(() => {
+      window.dispatchEvent(new MouseEvent('pointermove', { clientX }));
+    });
+    act(() => {
+      window.dispatchEvent(new MouseEvent('pointerup', { clientX }));
+    });
+  }
+
+  it('shows the film’s length as the file reports it, not as the record rounds it', async () => {
+    // The record says 128 minutes — `2:08:00`. The file says 6832.5 seconds —
+    // `1:53:52`. The second one is the truth, and it is the only one the
+    // scrubber is allowed to have come from.
+    renderPlayer();
+
+    expect(await screen.findByText('1:53:52')).toBeDefined();
+    expect(screen.queryByText('2:08:00')).toBeNull();
+  });
+
+  it('takes the film to where the knob was let go', async () => {
+    const { video } = renderPlayer();
+    await waitFor(() => expect(video.paused).toBe(false));
+
+    dragTo(await seekBar(), 0.5);
+
+    expect(video.currentTime).toBe(6832.5 / 2);
+  });
+
+  it('replays the last ten seconds, and clamps at the start of the film', async () => {
+    const { video } = renderPlayer();
+    await waitFor(() => expect(video.paused).toBe(false));
+    await screen.findByRole('button', { name: 'Back 10s' });
+
+    dragTo(await seekBar(), 0.5);
+    emit(video, 'timeupdate');
+    fireEvent.click(screen.getByRole('button', { name: 'Back 10s' }));
+    expect(video.currentTime).toBe(6832.5 / 2 - 10);
+
+    video.currentTime = 4;
+    emit(video, 'timeupdate');
+    fireEvent.click(screen.getByRole('button', { name: 'Back 10s' }));
+    expect(video.currentTime).toBe(0);
+  });
+
+  it('turns the film down, and silences it outright', async () => {
+    const { video } = renderPlayer();
+    await waitFor(() => expect(video.paused).toBe(false));
+
+    const bar = await screen.findByRole('slider', { name: 'Volume' });
+    bar.getBoundingClientRect = () =>
+      ({
+        x: 0,
+        y: 0,
+        left: 0,
+        right: 90,
+        top: 0,
+        bottom: 5,
+        width: 90,
+        height: 5,
+        toJSON: () => ({}),
+      }) as DOMRect;
+
+    fireEvent.pointerDown(bar, { clientX: 45 });
+    act(() => {
+      window.dispatchEvent(new MouseEvent('pointerup', { clientX: 45 }));
+    });
+    expect(video.volume).toBeCloseTo(0.5);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Mute' }));
+    expect(video.muted).toBe(true);
+    expect(await screen.findByRole('button', { name: 'Unmute' })).toBeDefined();
+  });
+
+  it('gives a film the catalogue knows no runtime for a real, seekable scrubber', async () => {
+    // User story 64. `runtimeMinutes` being blank is a metadata gap, and it
+    // costs the family nothing, because the duration never came from there.
+    answerWith({
+      movie: makeMovie({
+        id: 'm1',
+        title: FILM,
+        runtimeMinutes: null,
+        videoPath: 'Northwind (1994)/northwind.mp4',
+      }),
+    });
+    const { video } = renderPlayer();
+    await waitFor(() => expect(video.paused).toBe(false));
+
+    expect(await screen.findByText('1:53:52')).toBeDefined();
+    dragTo(await seekBar(), 0.25);
+
+    expect(video.currentTime).toBe(6832.5 / 4);
+  });
+});
