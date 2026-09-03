@@ -49,11 +49,17 @@ export interface PlaybackChoice {
 /** Containers Chromium demuxes on its own. */
 const NATIVE_CONTAINERS = ['mp4', 'webm'];
 
-/** Video codecs Chromium decodes on its own. */
-const NATIVE_VIDEO_CODECS = ['h264', 'vp8', 'vp9', 'av1'];
+/**
+ * Video codecs Chromium decodes on its own.
+ *
+ * Exported because `capabilities` reports the same set as **native**: this is
+ * the list that decides **Direct play**, so a second copy of it over there
+ * would be a codec screen giving a second opinion on what the player does.
+ */
+export const NATIVE_VIDEO_CODECS = ['h264', 'vp8', 'vp9', 'av1'];
 
-/** Audio codecs Chromium decodes on its own. */
-const NATIVE_AUDIO_CODECS = ['aac', 'mp3', 'opus', 'vorbis', 'flac'];
+/** Audio codecs Chromium decodes on its own — exported for the same reason. */
+export const NATIVE_AUDIO_CODECS = ['aac', 'mp3', 'opus', 'vorbis', 'flac'];
 
 /**
  * Extensions worth sending untouched when nothing read the file. The name is a
