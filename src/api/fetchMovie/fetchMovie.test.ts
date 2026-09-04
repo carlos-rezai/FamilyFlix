@@ -3,6 +3,11 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { fetchMovie } from './fetchMovie';
 import type { Movie } from '@/types';
 import { makeMovie } from '@/test-support/makeMovie/makeMovie';
+import {
+  notFoundResponse,
+  okResponse,
+  serverErrorResponse,
+} from '@/test-support/fakeResponse/fakeResponse';
 
 /**
  * 10 — Video player, Phase 3: the promotion (issue #85).
@@ -29,30 +34,6 @@ function makeQuietHarbor(overrides: Partial<Movie> = {}): Movie {
     videoPath: 'The Quiet Harbor (2016)/the-quiet-harbor.mkv',
     ...overrides,
   });
-}
-
-function okResponse(body: unknown): Response {
-  return {
-    ok: true,
-    status: 200,
-    json: () => Promise.resolve(body),
-  } as unknown as Response;
-}
-
-function notFoundResponse(): Response {
-  return {
-    ok: false,
-    status: 404,
-    json: () => Promise.resolve({ error: 'Unknown movie: gone' }),
-  } as unknown as Response;
-}
-
-function serverErrorResponse(): Response {
-  return {
-    ok: false,
-    status: 500,
-    json: () => Promise.resolve({ error: 'boom' }),
-  } as unknown as Response;
 }
 
 let fetchMock: ReturnType<
@@ -100,7 +81,7 @@ describe('fetchMovie', () => {
   });
 
   it('answers with no movie when the route says there is none', async () => {
-    fetchMock.mockResolvedValue(notFoundResponse());
+    fetchMock.mockResolvedValue(notFoundResponse('Unknown movie: gone'));
 
     // A movie that is gone is an outcome, not a failure — this resolution is
     // what makes the detail page's `not-found` state reachable, and it is what

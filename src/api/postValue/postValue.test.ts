@@ -1,14 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 import { postValue } from './postValue';
-
-function okResponse(body: unknown): Response {
-  return {
-    ok: true,
-    status: 200,
-    json: () => Promise.resolve(body),
-  } as unknown as Response;
-}
+import { okResponse } from '@/test-support/fakeResponse/fakeResponse';
 
 function errorResponse(status: number): Response {
   return {
