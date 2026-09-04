@@ -1,22 +1,51 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { RefObject } from 'react';
 
-import type { PlaybackPath } from '@/types';
+import type { PlaybackRead } from '@/types';
 import type { VolumePreference } from '../volumePreference/volumePreference';
 
 /**
- * What the hook needs to know about where the bytes are coming from. A
- * structural subset of the **Playback read**, so the payload the player fetched
- * can be handed straight over, and so nothing above the hook has to unpack it.
+ * What the hook has to be told. An options object, like every other hook in
+ * this feature takes — `useWatchReporter`, `useDragScalar`, `usePlayerKeys`,
+ * `useSubtitles` — because five positional parameters is a call site nobody can
+ * read at a glance and an argument nobody can add to in the middle.
  */
-export interface PlaybackSource {
-  path: PlaybackPath;
+export interface PlaybackOptions {
+  /** The media element to bind. Nothing above this hook touches it. */
+  videoRef: RefObject<HTMLVideoElement | null>;
   /**
-   * The film's length in seconds, read from the file. The one duration in the
-   * feature: it is what a seek clamps against and what the **Scrubber** draws,
-   * neither of which has anywhere else to get it from.
+   * Which **Playback path** the film takes, and how long it runs — the
+   * **Playback read** itself, handed straight over.
+   *
+   * The path is what says whether a seek can be a write to `currentTime` at
+   * all: on a **Remux** or a **Transcode** there is nothing in the element to
+   * seek to, so the film is restarted at a new **Stream offset** instead. The
+   * duration is the one length in the feature — what a seek clamps against and
+   * what the **Scrubber** draws, neither of which has anywhere else to get it
+   * from.
+   *
+   * `null` is the moment between the screen opening and the read landing.
    */
-  durationSeconds: number;
+  read: PlaybackRead | null;
+  /**
+   * The **Absolute position** the film opens at — its stored **Resume
+   * position**, or nought for a film nobody has watched and for a finished one.
+   * It arrives late, with the movie record, which is why it is applied by an
+   * effect rather than read once.
+   */
+  startAt: number;
+  /**
+   * Where the film's bytes come from, before any **Stream offset** is put on
+   * it. The hook is handed the plain stream URL and answers with the one the
+   * element should be pointed at.
+   */
+  streamSrc: string;
+  /**
+   * The level the film opens at — what the family left the last one at, read
+   * from `volumePreference` by the screen above. Like the **Resume position**
+   * it arrives from outside and reaches the element exactly once.
+   */
+  startVolume?: VolumePreference;
 }
 
 /** Everything the screen above knows about the film that is running. */
@@ -94,27 +123,13 @@ export interface PlaybackState {
  * clamped against one length while the bar was drawn to another would refuse
  * the last few seconds of every film.
  */
-export function usePlayback(
-  videoRef: RefObject<HTMLVideoElement | null>,
-  // Which **Playback path** the film takes, and how long it runs. The path is
-  // what says whether a seek can be a write to `currentTime` at all: on a
-  // **Remux** or a **Transcode** there is nothing in the element to seek to, so
-  // the film is restarted at a new **Stream offset** instead.
-  source: PlaybackSource | null,
-  // The **Absolute position** the film opens at — its stored **Resume
-  // position**, or nought for a film nobody has watched and for a finished one.
-  // It arrives late, with the movie record, which is why it is applied by an
-  // effect rather than read once.
-  startAt = 0,
-  // Where the film's bytes come from, before any **Stream offset** is put on
-  // it. The hook is handed the plain stream URL and answers with the one the
-  // element should be pointed at.
-  streamSrc = '',
-  // The level the film opens at — what the family left the last one at, read
-  // from `volumePreference` by the screen above. Like the **Resume position**
-  // it arrives from outside and reaches the element exactly once.
-  startVolume?: VolumePreference
-): PlaybackState {
+export function usePlayback({
+  videoRef,
+  read,
+  startAt,
+  streamSrc,
+  startVolume,
+}: PlaybackOptions): PlaybackState {
   const [playing, setPlaying] = useState(false);
   const [elementTime, setElementTime] = useState(0);
   const [offset, setOffset] = useState(0);
@@ -125,7 +140,7 @@ export function usePlayback(
 
   // A film with no read behind it has no length, which is the state the screen
   // is in for the moment between opening and the read landing.
-  const duration = source?.durationSeconds ?? 0;
+  const duration = read?.durationSeconds ?? 0;
 
   /**
    * Whether the film's bytes are being converted as they are sent. A stream has
@@ -136,7 +151,7 @@ export function usePlayback(
    * direct play: neither has a stream to re-point, and the element they would
    * re-point is not on the screen.
    */
-  const streaming = source?.path === 'remux' || source?.path === 'transcode';
+  const streaming = read?.path === 'remux' || read?.path === 'transcode';
 
   /**
    * The two halves of the **Absolute position**, kept as refs beside their

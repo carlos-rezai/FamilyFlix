@@ -160,13 +160,13 @@ export function Player({ movieId }: PlayerProps) {
     skip,
     setVolume,
     toggleMute,
-  } = usePlayback(
+  } = usePlayback({
     videoRef,
-    playback,
-    openAt(movie),
-    streamUrl(movieId),
-    startVolume
-  );
+    read: playback,
+    startAt: openAt(movie),
+    streamSrc: streamUrl(movieId),
+    startVolume,
+  });
 
   // Remember where the volume was left, however it was changed — the keyboard,
   // the slider, or the mute button — because all three arrive here as the same

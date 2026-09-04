@@ -47,7 +47,13 @@ function renderPlayback(
   const video = document.createElement('video');
   const ref = { current: video };
   const view = renderHook(() =>
-    usePlayback(ref, read, startAt, STREAM, startVolume)
+    usePlayback({
+      videoRef: ref,
+      read,
+      startAt,
+      streamSrc: STREAM,
+      startVolume,
+    })
   );
   return { video, ...view };
 }
