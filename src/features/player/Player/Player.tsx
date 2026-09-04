@@ -1,20 +1,18 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-import type { Cue, Movie } from '@/types';
+import type { Movie } from '@/types';
 import { gradientFromId } from '@/utils';
-import { fetchSubtitleCues } from '../api/api';
-import { cueAt } from '../cueAt/cueAt';
 import { PlayerControls } from '../PlayerControls/PlayerControls';
 import { PlayerNotice } from '../PlayerNotice/PlayerNotice';
 import type { PlayerNoticeKind } from '../PlayerNotice/PlayerNotice';
-import { preferredSubtitle } from '../preferredSubtitle/preferredSubtitle';
 import { SubtitleOverlay } from '../SubtitleOverlay/SubtitleOverlay';
 import { useControlsVisibility } from '../useControlsVisibility/useControlsVisibility';
 import { useFullscreen } from '../useFullscreen/useFullscreen';
 import { useOpeningReads } from '../useOpeningReads/useOpeningReads';
 import { usePlayback } from '../usePlayback/usePlayback';
 import { usePlayerKeys } from '../usePlayerKeys/usePlayerKeys';
+import { useSubtitles } from '../useSubtitles/useSubtitles';
 import { useWatchReporter } from '../useWatchReporter/useWatchReporter';
 import {
   readVolumePreference,
@@ -148,16 +146,6 @@ export function Player({ movieId }: PlayerProps) {
   // machine whose speakers are nothing like this one's.
   const [startVolume] = useState(readVolumePreference);
 
-  // Subtitles start **off** on every film. The prototype's `playMovie()` sets
-  // `subsOn: true`; we ship them off, and that is a recorded divergence rather
-  // than an oversight — auto-on subtitles are a roadmap item, and defaulting
-  // them on would implement it by accident.
-  const [subtitlesOn, setSubtitlesOn] = useState(false);
-  // `null` until the **Cue list** has been asked for, which is what keeps it to
-  // one request: `[]` is a real answer — the file would not parse, or the row's
-  // file has gone — and must not read as "not fetched yet".
-  const [cues, setCues] = useState<Cue[] | null>(null);
-
   const {
     src,
     playing,
@@ -215,43 +203,12 @@ export function Player({ movieId }: PlayerProps) {
     [skip, reportSeek]
   );
 
-  // Which of the film's **Subtitles** is the **Subtitle track**. Nobody chooses
-  // — no picker ships — so it has to be the deterministic answer, and a film
-  // with no rows has none, which is what the CC pill's absence is decided from.
-  const track = preferredSubtitle(movie?.subtitles ?? []);
-
-  const toggleSubtitles = useCallback(() => setSubtitlesOn((on) => !on), []);
-
-  // The cue list is fetched the first time CC is pressed and held for the
-  // session. Turning subtitles off and on again does not re-ask, and neither
-  // does a seek: cues are stamped in **Absolute position**, so there is nothing
-  // about a jump for them to be re-stamped against.
-  useEffect(() => {
-    if (!subtitlesOn || cues !== null || track === null) {
-      return;
-    }
-
-    let cancelled = false;
-    void fetchSubtitleCues(movieId, track.id)
-      .then((list) => {
-        if (!cancelled) {
-          setCues(list);
-        }
-      })
-      // A cue list that failed outright is a film that plays on with no box.
-      // There is no error state here to draw, and a bad subtitle file must
-      // never be able to interrupt the film.
-      .catch(() => undefined);
-
-    return () => {
-      cancelled = true;
-    };
-  }, [movieId, subtitlesOn, cues, track]);
-
-  // The line on screen right now, or nothing — which the overlay draws as no
-  // box at all rather than an empty one hovering over the picture.
-  const line =
-    subtitlesOn && cues !== null ? (cueAt(cues, position)?.text ?? null) : null;
+  // Which track, whether the box is showing, and the line that is on it.
+  const { track, subtitlesOn, line, toggleSubtitles } = useSubtitles({
+    movieId,
+    subtitles: movie?.subtitles ?? [],
+    position,
+  });
 
   // A film this build cannot decode. The read answered 200 — the file is right
   // there — with the path it chose, and `cannot-play` is one of them.
