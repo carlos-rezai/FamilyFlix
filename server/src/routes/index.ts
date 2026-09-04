@@ -408,10 +408,8 @@ export function createApiRouter(
   // the client reads that body to tell "this movie is gone" from "the request
   // went wrong", which is what makes the page's `not-found` state reachable.
   router.get('/movies/:id', (req: Request<{ id: string }>, res: Response) => {
-    const { id } = req.params;
-    const movie = storage.getMovie(id);
+    const movie = movieOr404(storage, req.params.id, res);
     if (!movie) {
-      res.status(404).json({ error: `Unknown movie: ${id}` });
       return;
     }
 
@@ -677,9 +675,8 @@ export function createApiRouter(
     '/movies/:id/subtitles/:subtitleId',
     (req: Request<{ id: string; subtitleId: string }>, res) => {
       const { id, subtitleId } = req.params;
-      const movie = storage.getMovie(id);
+      const movie = movieOr404(storage, id, res);
       if (!movie) {
-        res.status(404).json({ error: `Unknown movie: ${id}` });
         return;
       }
 
