@@ -31,7 +31,24 @@ export const Circle = styled.div`
   animation: ${pop} 0.2s ease;
 `;
 
-/** The circle and whatever it is captioned with, stacked and centred. */
+/**
+ * The circle and whatever it is captioned with, stacked and centred.
+ *
+ * **One stack where `feat.PlayerControls.dc.html` has two.** The prototype
+ * gives its buffering stack `gap: 20px` and nothing else, and its unavailable
+ * stack `gap: 20px; padding: 0 40px; text-align: center`. This applies the
+ * second to both, and that was measured in Chrome rather than assumed: the
+ * caption box comes out 163.42×20 either way, at the same offset from the
+ * centre line and the same distance down the screen, and so does the circle.
+ * Only the stack's own invisible box differs — 80px wider, symmetric, around a
+ * box that is centred — so nothing inside it moves.
+ *
+ * It holds because the stack is a max-content grid item and the caption is one
+ * short line: there is nothing for `text-align` to act on and nothing for the
+ * padding to push against. The unavailable state needs both, because
+ * `NoticeBody` wraps at 440px and must not run into the edge of a narrow
+ * window.
+ */
 export const Stack = styled.div`
   display: flex;
   flex-direction: column;
