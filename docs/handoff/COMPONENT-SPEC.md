@@ -126,7 +126,15 @@ Target: `primitives/ProgressBar/` · props: `percent` (0–100), `indeterminate`
 `height` (5), `track` (bool). Determinate fills to `percent`; **indeterminate** renders an
 animated sliding segment (no value) for unknown-total work — use it during a discovery/scan
 phase, then switch to determinate once the total is known. Used on poster cards (watch
-progress), the player scrubber base, and the Import scan/import phases.
+progress) and the Import scan/import phases.
+
+**Not the player scrubber.** This entry said "the player scrubber base" until the player
+shipped, and the build declined it correctly: `PlayerScrubber` is its own surface. Four
+things this primitive is right about are wrong for a seek bar — `overflow: hidden` clips a
+knob centred on the end of the fill; `transition: width 0.2s ease` lags a drag by a fifth
+of a second; the track is a dark `rgba(0,0,0,0.45)` where a bar over film needs
+`rgba(255,255,255,0.2)`; and `role="progressbar"` describes something you watch, where a
+seek bar is a `slider` you move. See `docs/design-logs/10-video-player.md`.
 
 ### StatusBadge — `prim.StatusBadge.dc.html`
 
