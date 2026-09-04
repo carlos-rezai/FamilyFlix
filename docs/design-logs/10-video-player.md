@@ -76,7 +76,11 @@ rather than transcribed.
    **ffmpeg.wasm / WebCodecs** — far too slow for 1080p in software on the
    machine my parents use.
 
-4. **Seeking on the remux/transcode paths?** ✅ **One endpoint,
+4. **Seeking on the remux/transcode paths?** ⚠️ **Superseded in part by
+   Q19.** The endpoint, the restart and the re-anchoring all stand. What did
+   not: the "somewhere other than the element" this answer rests on was the
+   movie record's `runtimeMinutes`, and Q19 replaced it with the **Playback
+   read**, which is why the sentence below now names the probe. ✅ **One endpoint,
    `GET /api/movies/:id/stream?t=<seconds>`, with a server-side restart.** The
    direct path seeks natively via Range. On the stream paths the response is a
    live stream — `video.duration` is unknown and byte ranges do not exist — so a
@@ -157,7 +161,9 @@ defaultLanguage)`** — a pure function, falling back to `position` order until
     the existing `POST /api/movies/:id/watched`, so `markWatched` zeroes the
     resume position as `04-movie-detail.md` Q11 already accepted.
 
-13. **New routes?** ✅ **One write** — `POST /api/movies/:id/resume` `{ value }`,
+13. **New routes?** ⚠️ **Superseded by Q19** — this answer named two reads
+    and one write; Q19 adds `GET /api/movies/:id/playback`, so what shipped is
+    **three reads and one write**. ✅ **One write** — `POST /api/movies/:id/resume` `{ value }`,
     through the existing `writeSignal` helper so it inherits 404-before-write
     and the echo an optimistic control reconciles against. Watched reuses the
     route that already exists. Plus the reads: `stream` and `subtitles` — and
@@ -201,7 +207,17 @@ defaultLanguage)`** — a pure function, falling back to `position` order until
 ### Settled during `write-a-prd` (issue 82)
 
 Three questions this log left standing, answered while the PRD was written. They
-amend Q4, Q5 and Q13 above rather than sitting beside them.
+amend Q4, Q5 and Q13 above rather than sitting beside them, and the two that
+were genuinely overturned carry a ⚠️ at their head rather than a footnote at the
+bottom of the file — a reader who stops at Q13 must not leave believing the
+shipped API has two reads on it.
+
+Which is which matters. **Q19 supersedes**: Q4's duration source and Q13's route
+list were answers that turned out to be wrong, and are marked ⚠️ above. **Q20
+does not supersede** — Q5 named the installer and the drop zone and then said in
+its own last sentence that "what resolves the binary in the meantime is Q20", so
+Q20 fills a gap Q5 deliberately left open rather than replacing anything Q5
+decided. Q5 stands as written.
 
 19. **Where does the scrubber's duration actually come from?** ✅ **A third read,
     `GET /api/movies/:id/playback` → `{ path, durationSeconds }`**, fetched once

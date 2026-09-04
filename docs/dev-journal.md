@@ -11,6 +11,167 @@ Newest entry first.
 
 ---
 
+## 2026-09-04 — Built-in video player and watch tracking (issues #83–#93)
+
+Nineteen commits across issues #83–#92, nine phases against the plan on #82,
+built from `docs/design-logs/10-video-player.md`. **2181 tests pass across 134
+files**, up from 1677 across 104 — the largest single increase the project has
+had, and the largest initiative it has run: a fourth backend domain, a frontend
+feature with fourteen units in it, three new reads, one new write, four subtitle
+parsers, two new `test-support/` doubles, and a seed that now writes files as
+well as rows.
+
+The screen that said "Playback for movie a1 lands here" now plays the film.
+`setResumePosition` and `markWatched` had existed and been tested since #75 with
+**no route and no caller**; the resume shelf, the progress bars and the
+in-progress badges were rendering a number only the dev seed could produce. They
+have a writer now, which is why the player and watch tracking were one
+initiative rather than two.
+
+### The three decisions that were taken before the build and paid off during it
+
+None of these were discovered by building. All three were settled in `grill-me`
+or `write-a-prd`, and the build's job was to find out whether they held.
+
+- **The scrubber never asks the element.** `usePlayback` hands back an
+  **Absolute position** that is **Stream offset** + element time, and the
+  duration comes from the **Playback read**. Because that rule was already in
+  place for the _duration_, restart-seeking on a transcode (#90) needed no new
+  concept — a drag re-points `video.src` at `?t=`, the offset moves, and the
+  scrubber, the subtitle overlay and the watch reporter all keep reading one
+  number. **Not one of the three changed in that slice.** That is what a
+  decision taken early buys.
+- **Absent is a state, not an error.** With no FFmpeg resolvable at all, an MP4
+  still direct-plays, everything else answers `cannot-play`, and `capabilities`
+  reports Chromium's native set alone. CI is a machine with no FFmpeg on it and
+  the whole suite passes there, which is the same property stated twice.
+- **Cues are stamped in absolute position.** A native `<track>` is timed against
+  _element_ time, so every transcode seek would desync it by exactly the seek
+  distance. Parsing server-side into one `{ start, end, text }[]` and rendering
+  it ourselves made that failure mode unreachable rather than fixed.
+
+### Four modules the design log did not name
+
+The backend design listed `ffmpegBinary`, `probe`, `choosePlaybackPath`,
+`streamMovie`, `capabilities` and the parsers. What shipped has four more, each
+for a reason found while building:
+
+- **`createPlayback`** is the injection seam. `streamMovie` as designed would
+  have put the spawn in the route's reach; instead `stream()` answers a **plan**
+  — send this file, pipe this conversion, 415, or 416 — and the route never
+  learns there is an FFmpeg. Every converting arm in `routes.test.ts` is
+  exercised through a fake, and no test spawns a binary.
+- **`ffmpegComponent`** is what `main.ts` hands over: the domain's view of what
+  this machine can be asked to do, rather than which binaries do it.
+- **`mediaFilePath`** is the under-media-root check, stated on the _resolved_
+  path so a directory symlink that leaves the tree is refused too.
+- **`mediaDuration`** was not foreseen at all. The playback read has to answer a
+  duration for a direct-play film on a machine with no FFmpeg — which is the
+  supported configuration, so "ask ffprobe" is not available. It reads the MP4's
+  own `moov`/`mvhd` box. A 32-bit duration of all ones is the container saying
+  it does not know, which is not a film that runs for 49 days.
+
+### What the build decided that nothing had ruled on
+
+Recorded here because they are product decisions taken mid-build, not
+implementation details:
+
+- **`.sub` is MicroDVD** — frame-based, fps from a leading `{1}{1}rate` record,
+  defaulting to 23.976, `|` as the line break. Neither the PRD nor the design log
+  pinned the dialect down, and `.sub` names more than one thing.
+- **A subtitle file that will not parse answers `200 []`**, not a 404. The row
+  was there and the file was there, so there is nothing missing to report; the
+  film plays on with no subtitles, and a malformed `.ass` stays distinguishable
+  from a deleted one.
+- **A present file whose length nothing can determine answers `cannot-play`**,
+  not 404. The duration is what a seek clamps against and what the finish
+  threshold is a fraction of, so a read with no duration has no playable film. A
+  missing file is still a 404.
+- **`h264` is listed once in `capabilities`, as native**, though both Chromium
+  and the component decode it. Two rows would be two rows for one format, and
+  reporting it via-component would cost a transcode that Direct play never
+  needed.
+
+### Three tests that were corrected rather than implemented against
+
+Worth naming, because "the test is wrong" is the claim that most needs
+justifying in writing:
+
+- **`useWatchReporter`'s coalescing arithmetic.** A test named for the ≥5s tick
+  threshold expected ticks at 30/33/36/39 to write `[30, 39]`. Under the rule the
+  test is named for they write `[30, 36]` — 36 has already moved six seconds from
+  the 30 that was _stored_, and the threshold is measured against the last write
+  rather than the last tick. The expectation changed; the rule did not.
+- **`SubtitleOverlay` used `toBeEmptyDOMElement`**, a jest-dom matcher this repo
+  does not install and has no setup file for. Same claim, restated as
+  `container.innerHTML`.
+- **`PlayerControls`' "draws no CC pill … later slices"** was Phase 4's guard
+  against building Phase 6 early. Phase 6 is that slice, so the guard was removed
+  and the CC-pill suite asserts the same surface positively.
+
+`Player.test.tsx` also gained a `localStorage.clear()` per test in Phase 8. Once
+the volume genuinely persists, a Phase 4 test that drags the slider to a half and
+mutes leaves that standing for every later test in the file. No assertion was
+weakened — it is isolation for a resource the suite had not shared before.
+
+### The seed had to stop being a lie
+
+The seed's own doc comment said nothing on disk backs its paths, "which is fine
+because nothing plays a seed movie" — a sentence this initiative makes false.
+Without a file, every seeded movie renders the `missing-file` notice and the
+player becomes the one feature in the app that cannot be checked by looking at
+it, which is the exact failure the seed exists to prevent. Ten seconds of colour
+bars, H.264 in an MP4, **23KB checked in**, copied under the reserved prefix for
+every fixture. Prefix-scoped and idempotent on disk exactly as it already was in
+the database, and deleted with the seed when bulk import ships.
+
+Pointing `FAMILYFLIX_MEDIA_PATH` at a real folder of the family's films stays
+the only way to exercise remux and transcode against actual MKVs.
+
+### Known and deliberately not fixed
+
+- **`npm run typecheck` has been red since issue #86** — two TS2769s in
+  `PlayerScrubber` and `VolumeSlider`, from `useDragScalar` typing its track as
+  `RefObject<HTMLElement | null>` against a styled `div`. It was noticed in
+  Phase 6, said so in that commit and the next, and **shipped four more times
+  after that**. Nothing else catches it: Vitest does not typecheck and ESLint is
+  clean, so 2181 green tests say nothing about it. Filed as **94**, along with
+  the separate question of whether `typecheck` belongs in the pre-commit hook —
+  the mechanism that let it ride is that no gate ran it.
+- **The read routes never got `writeSignal`'s counterpart.** The
+  `getMovie`-then-404 preamble is written five times in `routes/index.ts` and
+  the video-file-then-404 pair three times, all but two of them this build's.
+  Also 94.
+- **`capabilities` has no route, no `main.ts` wiring and no UI.** Deliberate:
+  the mechanism belongs with the format policy, the screen that renders it is
+  the Settings initiative's. It is the one thing in the repo built ahead of its
+  consumer, and it is covered by ten tests so that the consumer finds it working
+  rather than plausible.
+- **Hardware encoding is selected but not tested for.** `choosePlaybackPath`
+  asks the component what encoder it reports and uses it; whether a given machine
+  has one is not something a test can pin, so what is covered is the _selection_,
+  given an answer.
+- **The dev seed's `lastWatchedAt` stamps are still absolute dates**, carried
+  forward from #81 unchanged. Now that the player writes real positions, the
+  seeded ones are the ones that will read as wrong first.
+
+### An initiative this size left one defect, and it was one nothing was watching for
+
+Favorites left six undocumented decisions; Continue Watching left an accrued bill
+and four comments doing a compiler's job; both were preceded by a `grill-me` that
+answered the hard questions first, and both refactor rounds were mostly
+scaffolding. This one is four times the size of either and the pattern held —
+the format policy, the seek anchoring and the watch coalescing were all decided
+before a line was written, and none of the three needed revisiting.
+
+What it did leave is worth more than the tidy findings: **a failing typecheck,
+reported honestly in two commit messages and then carried by four more.** Saying
+it in a commit body is not the same as a gate refusing the commit, and this is
+the first time the project has produced enough commits in a row for that
+difference to show.
+
+---
+
 ## 2026-08-30 — Continue Watching refactor (issues #80, #81)
 
 Fourteen commits in five groups against

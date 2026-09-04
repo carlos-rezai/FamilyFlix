@@ -185,11 +185,12 @@ How a **Movie**'s video reaches the element. Backend vocabulary — `server/src/
 
 ## Watch reporting (new)
 
-| Term                       | Definition                                                                                                                                                       | Aliases to avoid                |
-| -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------- |
-| **Watch tick** (new)       | One write of the **Absolute position** through `POST /api/movies/:id/resume` — every 10s of playback, plus on pause, on seek-settle and on exit.                 | ping, heartbeat, autosave, sync |
-| **Tick threshold** (new)   | The ≥5s of movement below which a **Watch tick** is skipped, so a paused or nudged **Player** writes nothing and cannot reshuffle the **Continue Watching row**. | debounce, throttle, interval    |
-| **Finish threshold** (new) | `ended`, or ≥95% of duration on exit — where a **Movie** becomes **Watched** without anyone marking it, so credits do not leave a film **In-progress** forever.  | completion, end credits, done   |
+| Term                       | Definition                                                                                                                                                                                                                                                                             | Aliases to avoid                |
+| -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------- |
+| **Watch reporter** (new)   | The one thing in the app that decides when a **Watch tick** happens — `useWatchReporter`. It is handed what is true of the film (position, playing, ended, duration) and hands nothing back but a way to report a settled seek; no component ever writes a **Resume position** itself. | tracker, saver, sync, autosave  |
+| **Watch tick** (new)       | One write of the **Absolute position** through `POST /api/movies/:id/resume` — every 10s of playback, plus on pause, on seek-settle and on exit.                                                                                                                                       | ping, heartbeat, autosave, sync |
+| **Tick threshold** (new)   | The ≥5s of movement below which a **Watch tick** is skipped, so a paused or nudged **Player** writes nothing and cannot reshuffle the **Continue Watching row**.                                                                                                                       | debounce, throttle, interval    |
+| **Finish threshold** (new) | `ended`, or ≥95% of duration on exit — where a **Movie** becomes **Watched** without anyone marking it, so credits do not leave a film **In-progress** forever.                                                                                                                        | completion, end credits, done   |
 
 ## Relationships
 
@@ -238,6 +239,7 @@ How a **Movie**'s video reaches the element. Backend vocabulary — `server/src/
 - A **Subtitle** is a file on disk; a **Cue list** is what the server parses it into; a **Cue** is one line of that list. Nothing downstream of `parseSubtitle` knows whether the file was `.srt`, `.ass`, `.sub` or `.vtt`.
 - One **Movie** has zero-or-more **Subtitles**, of which at most one is the **Subtitle track** at a time, and it renders through exactly one **Subtitle overlay**.
 - **Format support** is derived — Chromium's native set ∪ what the **Playback component** reports — never a hand-maintained list, which is what makes the CodecManager rows true rather than decorative.
+- Exactly one **Watch reporter** runs per open **Player**, and every **Watch tick** and every crossing of the **Finish threshold** comes from it — the **Scrubber**, the ±10s buttons and the keyboard all report through the **Player** rather than writing anything themselves, which is what keeps "opening a film writes nothing" a single rule rather than one per control.
 - A **Watch tick** writes the **Resume position** and therefore stamps **Last watched at**; the first tick is the earliest moment opening the **Player** can affect the **Continue Watching row**.
 - Crossing the **Finish threshold** dispatches to `markWatched`, which clears the **Resume position** — so a finished **Movie** leaves the **Continue Watching row** by the same rule a manually-ticked one does.
 - **Chrome** and **Idle** are one state, not two: **Idle** _is_ **Chrome** hidden, and any mouse movement ends both.
@@ -573,12 +575,18 @@ How a **Movie**'s video reaches the element. Backend vocabulary — `server/src/
   **Description**, but the column, the model, and the **Movie detail page** all say
   `synopsis`. **Synopsis** is canonical; treat the form's label as UI copy only and
   do not introduce a `description` field.
-- **Marking Watched destroys the Resume position:** `markWatched` zeroes
-  `resume_position_seconds` by documented convention, so the **Movie detail page**'s
-  reversible watched toggle loses the position on a round trip. `inProgressOnly` is
-  `watched = 0 AND resume > 0`, so the flag alone already removes the **Movie** from
-  the **Continue Watching row** — the zeroing is no longer load-bearing. **Flagged
-  for the watch-tracking grill:** should `markWatched` preserve it?
+- **Marking Watched destroys the Resume position (resolved by `10-video-player`):**
+  `markWatched` zeroes `resume_position_seconds` by documented convention, so the
+  **Movie detail page**'s reversible watched toggle loses the position on a round
+  trip. `inProgressOnly` is `watched = 0 AND resume > 0`, so the flag alone already
+  removes the **Movie** from the **Continue Watching row** — the zeroing is not
+  load-bearing for the shelf. This was flagged for the watch-tracking grill, which
+  has now happened: **the zeroing stays** (`10-video-player` Q12). Crossing the
+  **Finish threshold** dispatches to the same `markWatched` a hand-tick uses, so a
+  film that finishes itself and one ticked by the maintainer leave the shelf by one
+  rule rather than two — and a preserved position on a finished film would be a
+  number nothing reads and the credits to sit in on the next play. Do not
+  re-open it without a grill of its own.
 - **"Filter" colloquially swallows sort:** **Sort order** is part of a
   **Library query** but changes _which order_, never _which_ **Movies**. The
   component holding all three dropdowns is `LibraryFilters` for layout reasons
