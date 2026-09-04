@@ -12,15 +12,8 @@ import {
 import MoviePage from './MoviePage';
 import { theme } from '@/styles/theme';
 import { LocationProbe } from '@/test-support/LocationProbe/LocationProbe';
+import { notFoundResponse } from '@/test-support/fakeResponse/fakeResponse';
 import { stubScrollMetrics } from '@/test-support/stubScrollMetrics/stubScrollMetrics';
-
-function notFoundResponse(): Response {
-  return {
-    ok: false,
-    status: 404,
-    json: () => Promise.resolve({ error: 'Movie not found' }),
-  } as unknown as Response;
-}
 
 let fetchMock: ReturnType<
   typeof vi.fn<

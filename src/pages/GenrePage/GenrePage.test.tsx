@@ -13,6 +13,7 @@ import GenrePage from './GenrePage';
 import { theme } from '@/styles/theme';
 import type { GenrePayload } from '@/types';
 import { makeMovie } from '@/test-support/makeMovie/makeMovie';
+import { okResponse } from '@/test-support/fakeResponse/fakeResponse';
 
 /** Action as the route answers it: two of the genre's 214 movies came back. */
 const ACTION: GenrePayload = {
@@ -23,14 +24,6 @@ const ACTION: GenrePayload = {
     makeMovie({ id: 'a2', title: 'Northern Star' }),
   ],
 };
-
-function okResponse(body: unknown): Response {
-  return {
-    ok: true,
-    status: 200,
-    json: () => Promise.resolve(body),
-  } as unknown as Response;
-}
 
 let fetchMock: ReturnType<
   typeof vi.fn<

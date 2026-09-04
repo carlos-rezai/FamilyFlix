@@ -7,6 +7,7 @@ import LibraryPage from './LibraryPage';
 import { theme } from '@/styles/theme';
 import type { HomePayload, HomeRow } from '@/types';
 import { makeMovie } from '@/test-support/makeMovie/makeMovie';
+import { okResponse } from '@/test-support/fakeResponse/fakeResponse';
 
 const HOME_PAYLOAD: HomeRow[] = [
   {
@@ -21,17 +22,13 @@ const HOME_PAYLOAD: HomeRow[] = [
  * with (issue #18). This page reads only `rows`; the continue section arrives
  * in the same request but has no surface here yet.
  */
-function okResponse(rows: HomeRow[]): Response {
+function homeResponse(rows: HomeRow[]): Response {
   const payload: HomePayload = {
     continueWatching: [],
     favorites: [],
     rows,
   };
-  return {
-    ok: true,
-    status: 200,
-    json: () => Promise.resolve(payload),
-  } as unknown as Response;
+  return okResponse(payload);
 }
 
 /**
@@ -40,15 +37,10 @@ function okResponse(rows: HomeRow[]): Response {
  * second endpoint with its own lifetime, and no test here is about it.
  */
 function genreListResponse(): Response {
-  return {
-    ok: true,
-    status: 200,
-    json: () =>
-      Promise.resolve({
-        total: 1,
-        genres: [{ id: 'g1', name: 'Action', count: 1 }],
-      }),
-  } as unknown as Response;
+  return okResponse({
+    total: 1,
+    genres: [{ id: 'g1', name: 'Action', count: 1 }],
+  });
 }
 
 let fetchMock: ReturnType<
@@ -89,7 +81,7 @@ afterEach(() => {
 
 /** Queue one successful home response. */
 function respondWithRows(rows: HomeRow[]) {
-  homeQueue.push(() => Promise.resolve(okResponse(rows)));
+  homeQueue.push(() => Promise.resolve(homeResponse(rows)));
 }
 
 /** Queue one failed home response, for the load the retry button comes back from. */
@@ -240,15 +232,10 @@ describe('LibraryPage — the genre dropdown in the header', () => {
 
   /** The genre list `GET /api/genres` answers with, as its own 200. */
   function genreListResponse(): Response {
-    return {
-      ok: true,
-      status: 200,
-      json: () =>
-        Promise.resolve({
-          total: 12,
-          genres: [{ id: 'g1', name: 'Action', count: 3 }],
-        }),
-    } as unknown as Response;
+    return okResponse({
+      total: 12,
+      genres: [{ id: 'g1', name: 'Action', count: 3 }],
+    });
   }
 
   /** The home payload and the genre list, each answered on its own endpoint. */
@@ -259,7 +246,7 @@ describe('LibraryPage — the genre dropdown in the header', () => {
         return Promise.resolve(genreListResponse());
       }
       if (url.includes('/api/home')) {
-        return Promise.resolve(okResponse(rows));
+        return Promise.resolve(homeResponse(rows));
       }
       return Promise.reject(new Error(`Unexpected request: ${url}`));
     });
@@ -304,7 +291,7 @@ describe('LibraryPage — the genre dropdown in the header', () => {
       if (url.includes('/api/genres')) {
         return Promise.reject(new Error('offline'));
       }
-      return Promise.resolve(okResponse(HOME_PAYLOAD));
+      return Promise.resolve(homeResponse(HOME_PAYLOAD));
     });
 
     renderPage();

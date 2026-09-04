@@ -13,6 +13,7 @@ import App from './App';
 import type { GenrePayload, HomePayload, HomeRow, Movie } from '@/types';
 import { LocationProbe } from '@/test-support/LocationProbe/LocationProbe';
 import { makeMovie } from '@/test-support/makeMovie/makeMovie';
+import { okResponse } from '@/test-support/fakeResponse/fakeResponse';
 import { stubMediaElement } from '@/test-support/stubMediaElement/stubMediaElement';
 import { stubScrollMetrics } from '@/test-support/stubScrollMetrics/stubScrollMetrics';
 
@@ -62,14 +63,6 @@ function homeRows(): HomeRow[] {
       movies: SCI_FI_SHIPPED,
     },
   ];
-}
-
-function okResponse(body: unknown): Response {
-  return {
-    ok: true,
-    status: 200,
-    json: () => Promise.resolve(body),
-  } as unknown as Response;
 }
 
 let fetchMock: ReturnType<
