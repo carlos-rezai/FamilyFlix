@@ -273,8 +273,8 @@ Builds the installer and publishes it to GitHub Releases automatically.
 | Ratings — 5-star display + half-star picker         | ✅ Done         |
 | Favorites — mark + dedicated row                    | ✅ Done         |
 | Continue Watching row                               | ✅ Done         |
-| Built-in video player (playback, subtitles)         | 🔜 Planned      |
-| Watch tracking (watched / in-progress / resume)     | 🔜 Planned      |
+| Built-in video player (playback, subtitles)         | ✅ Done         |
+| Watch tracking (watched / in-progress / resume)     | ✅ Done         |
 | Add Movie — manual file picker                      | 🔜 Planned      |
 | Edit / delete a movie                               | 🔜 Planned      |
 | Bulk import (Excel/CSV → library)                   | 🔜 Planned      |
