@@ -3,6 +3,7 @@ import { act, renderHook } from '@testing-library/react';
 
 import { useWatchReporter } from './useWatchReporter';
 import type { WatchReporterOptions } from './useWatchReporter';
+import { okResponse } from '@/test-support/fakeResponse/fakeResponse';
 
 /**
  * 10 — Video player, Phase 5: "watching writes" (issue #87).
@@ -39,14 +40,6 @@ const BASE: WatchReporterOptions = {
   ended: false,
   duration: DURATION,
 };
-
-function okResponse(body: unknown): Response {
-  return {
-    ok: true,
-    status: 200,
-    json: () => Promise.resolve(body),
-  } as unknown as Response;
-}
 
 let fetchMock: ReturnType<
   typeof vi.fn<

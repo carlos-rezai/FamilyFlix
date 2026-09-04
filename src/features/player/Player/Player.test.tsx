@@ -14,6 +14,11 @@ import { theme } from '@/styles/theme';
 import type { Cue, Movie, PlaybackRead } from '@/types';
 import { LocationProbe } from '@/test-support/LocationProbe/LocationProbe';
 import { makeMovie } from '@/test-support/makeMovie/makeMovie';
+import {
+  notFoundResponse,
+  okResponse,
+  serverErrorResponse,
+} from '@/test-support/fakeResponse/fakeResponse';
 import { stubFullscreen } from '@/test-support/stubFullscreen/stubFullscreen';
 import { stubMediaElement } from '@/test-support/stubMediaElement/stubMediaElement';
 
@@ -66,30 +71,6 @@ const CANNOT_TITLE = 'This film can’t be played';
 
 /** The prototype's circle, to the pixel — the one centred element. */
 const CIRCLE_SIZE = '96px';
-
-function okResponse(body: unknown): Response {
-  return {
-    ok: true,
-    status: 200,
-    json: () => Promise.resolve(body),
-  } as unknown as Response;
-}
-
-function notFoundResponse(error: string): Response {
-  return {
-    ok: false,
-    status: 404,
-    json: () => Promise.resolve({ error }),
-  } as unknown as Response;
-}
-
-function serverErrorResponse(): Response {
-  return {
-    ok: false,
-    status: 500,
-    json: () => Promise.resolve({ error: 'boom' }),
-  } as unknown as Response;
-}
 
 /** Whether the two watch writes are refused — a backend hiccup, mid-film. */
 let writeFails = false;

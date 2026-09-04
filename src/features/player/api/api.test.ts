@@ -2,6 +2,11 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 import { fetchPlayback, fetchSubtitleCues, saveResume } from './api';
 import type { Cue, PlaybackRead } from '@/types';
+import {
+  notFoundResponse,
+  okResponse,
+  serverErrorResponse,
+} from '@/test-support/fakeResponse/fakeResponse';
 
 /**
  * 10 — Video player, Phase 3: "the playback read" (issue #85).
@@ -18,30 +23,6 @@ import type { Cue, PlaybackRead } from '@/types';
  * `not-found` apart from `error`.
  */
 const DIRECT_PLAY: PlaybackRead = { path: 'direct', durationSeconds: 6832.5 };
-
-function okResponse(body: unknown): Response {
-  return {
-    ok: true,
-    status: 200,
-    json: () => Promise.resolve(body),
-  } as unknown as Response;
-}
-
-function notFoundResponse(): Response {
-  return {
-    ok: false,
-    status: 404,
-    json: () => Promise.resolve({ error: 'No video file for movie: m1' }),
-  } as unknown as Response;
-}
-
-function serverErrorResponse(): Response {
-  return {
-    ok: false,
-    status: 500,
-    json: () => Promise.resolve({ error: 'boom' }),
-  } as unknown as Response;
-}
 
 let fetchMock: ReturnType<
   typeof vi.fn<
@@ -87,7 +68,9 @@ describe('fetchPlayback', () => {
   });
 
   it('answers with nothing to play when the route says there is none', async () => {
-    fetchMock.mockResolvedValue(notFoundResponse());
+    fetchMock.mockResolvedValue(
+      notFoundResponse('No video file for movie: m1')
+    );
 
     // A film whose file is missing is a state the player draws, not a failure
     // it reports. `null` is what the missing-file notice is reached through.
@@ -239,7 +222,9 @@ describe('fetchSubtitleCues', () => {
   });
 
   it('answers an empty cue list when the route says there is no such subtitle', async () => {
-    fetchMock.mockResolvedValue(notFoundResponse());
+    fetchMock.mockResolvedValue(
+      notFoundResponse('No video file for movie: m1')
+    );
 
     // No subtitles is a thing the screen already draws — no box — so there is
     // nothing here for the film to trip over.
