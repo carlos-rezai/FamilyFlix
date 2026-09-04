@@ -5,7 +5,7 @@ import { useFullscreen } from './useFullscreen';
 import { stubFullscreen } from '@/test-support/stubFullscreen/stubFullscreen';
 
 /**
- * 10 — Video player, Phase 8 (issue #91).
+ * 10 — Video player, Phase 8 (issue #91), revised by the refactor round (#94).
  *
  * Fullscreen wires the button the prototype draws but leaves inert. The film
  * fills the television, and leaving finds the player exactly as it was.
@@ -13,9 +13,13 @@ import { stubFullscreen } from '@/test-support/stubFullscreen/stubFullscreen';
  * **The document is the truth, never our idea of it** — the same rule
  * `usePlayback` follows about the element, and for the same reason: fullscreen
  * can be left by Escape, by the browser's own chrome, by the window manager,
- * and by another page entering it. Every one of those has to leave the button
- * telling the truth, so the state is set from `fullscreenchange` and never from
- * having asked.
+ * and by another page entering it. None of those comes through the toggle, so
+ * the toggle asks the document every time and remembers nothing.
+ *
+ * That is why every assertion here is about `document.fullscreenElement` rather
+ * than about a flag the hook keeps. It kept one until #94 and nothing read it:
+ * the prototype draws this button with a single face, so there is no pressed
+ * state for it to feed.
  *
  * What it fills the screen with is **the player's own surface**, not the video
  * element: our chrome, our subtitle box and the picture go up together, which
@@ -45,9 +49,9 @@ describe('useFullscreen', () => {
   stubFullscreen();
 
   it('opens with the player in a window, as every film does', () => {
-    const { result } = renderFullscreen();
+    renderFullscreen();
 
-    expect(result.current.fullscreen).toBe(false);
+    expect(document.fullscreenElement).toBeNull();
   });
 
   it('puts the player’s own surface up, not the bare video element', async () => {
@@ -59,46 +63,32 @@ describe('useFullscreen', () => {
     act(() => result.current.toggleFullscreen());
 
     await waitFor(() => expect(document.fullscreenElement).toBe(stage));
-    expect(result.current.fullscreen).toBe(true);
   });
 
   it('comes back out on the next press', async () => {
-    const { result } = renderFullscreen();
+    const { stage, result } = renderFullscreen();
     act(() => result.current.toggleFullscreen());
-    await waitFor(() => expect(result.current.fullscreen).toBe(true));
+    await waitFor(() => expect(document.fullscreenElement).toBe(stage));
 
     act(() => result.current.toggleFullscreen());
 
-    await waitFor(() => expect(result.current.fullscreen).toBe(false));
-    expect(document.fullscreenElement).toBeNull();
-  });
-
-  it('follows the document when fullscreen is left from outside the app', async () => {
-    // The browser's own Escape, the window manager, a second page taking it.
-    // None of those comes through the toggle, and all of them have to leave the
-    // button showing what is actually on screen.
-    const { result } = renderFullscreen();
-    act(() => result.current.toggleFullscreen());
-    await waitFor(() => expect(result.current.fullscreen).toBe(true));
-
-    leftFromOutside();
-
-    await waitFor(() => expect(result.current.fullscreen).toBe(false));
+    await waitFor(() => expect(document.fullscreenElement).toBeNull());
   });
 
   it('asks to leave only a fullscreen it is actually in', async () => {
     // Leaving one nothing is in rejects in a real browser. A toggle that called
     // it blindly would log an unhandled rejection on the first press of every
-    // film.
-    const { result } = renderFullscreen();
+    // film. The document is asked each time, so a fullscreen left from outside
+    // the app cannot leave the next press acting on a stale idea of it.
+    const { stage, result } = renderFullscreen();
     act(() => result.current.toggleFullscreen());
-    await waitFor(() => expect(result.current.fullscreen).toBe(true));
+    await waitFor(() => expect(document.fullscreenElement).toBe(stage));
     leftFromOutside();
-    await waitFor(() => expect(result.current.fullscreen).toBe(false));
+    await waitFor(() => expect(document.fullscreenElement).toBeNull());
 
     act(() => result.current.toggleFullscreen());
 
-    await waitFor(() => expect(result.current.fullscreen).toBe(true));
+    await waitFor(() => expect(document.fullscreenElement).toBe(stage));
   });
 
   it('does nothing at all before the player has a surface to send', () => {
@@ -107,15 +97,15 @@ describe('useFullscreen', () => {
     const { result } = renderFullscreen(null);
 
     expect(() => act(() => result.current.toggleFullscreen())).not.toThrow();
-    expect(result.current.fullscreen).toBe(false);
+    expect(document.fullscreenElement).toBeNull();
   });
 
-  it('stops listening once the player is gone', async () => {
-    // The listener is on the document. Left behind, it would set state on an
-    // unmounted screen every time any later page entered fullscreen.
-    const { result, unmount } = renderFullscreen();
+  it('leaves nothing of itself behind once the player is gone', async () => {
+    // Fullscreen left from outside the app, after the screen has been closed:
+    // there is nothing of this hook still listening for it to reach.
+    const { stage, result, unmount } = renderFullscreen();
     act(() => result.current.toggleFullscreen());
-    await waitFor(() => expect(result.current.fullscreen).toBe(true));
+    await waitFor(() => expect(document.fullscreenElement).toBe(stage));
 
     unmount();
 
@@ -135,7 +125,6 @@ describe('useFullscreen — a browser that refuses the request', () => {
     act(() => result.current.toggleFullscreen());
 
     await waitFor(() => expect(document.fullscreenElement).toBeNull());
-    expect(result.current.fullscreen).toBe(false);
   });
 });
 
@@ -150,6 +139,5 @@ describe('useFullscreen — a browser with no fullscreen at all', () => {
     const { result } = renderFullscreen();
 
     expect(() => act(() => result.current.toggleFullscreen())).not.toThrow();
-    expect(result.current.fullscreen).toBe(false);
   });
 });

@@ -1,10 +1,8 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback } from 'react';
 import type { RefObject } from 'react';
 
-/** Whether the player is filling the screen, and how to change that. */
-export interface FullscreenState {
-  /** Whether the player is filling the screen, as **the document** reports it. */
-  fullscreen: boolean;
+/** How the player is sent up to fill the screen, and brought back out. */
+export interface Fullscreen {
   /** Fill the screen with the player's surface, or come back out of it. */
   toggleFullscreen: () => void;
 }
@@ -36,22 +34,17 @@ function ignore(answer: Promise<void> | undefined): void {
  * `usePlayback` follows about the element, and for the same reason. Fullscreen
  * can be left by the browser's own Escape, by its chrome, by the window
  * manager, and by another page taking it; none of those comes through the
- * toggle, and all of them have to leave the button telling the truth. So the
- * state is set from `fullscreenchange` and never from having asked.
+ * toggle. So the toggle asks the document every time and remembers nothing.
+ *
+ * It **used to remember**, in a `fullscreen` boolean maintained by a
+ * `fullscreenchange` listener, and nothing ever read it: the prototype draws
+ * the fullscreen button with one face, unlike the CC pill's two, so there is no
+ * pressed state for it to feed. State kept against a screen nobody has designed
+ * is a listener on every player mount and a second answer to a question the
+ * document already answers. When that button gains a face, this comes back —
+ * eight lines, and the rule above is why it would be written the same way.
  */
-export function useFullscreen(
-  ref: RefObject<HTMLElement | null>
-): FullscreenState {
-  const [fullscreen, setFullscreen] = useState(false);
-
-  useEffect(() => {
-    const onChange = () =>
-      setFullscreen((document.fullscreenElement ?? null) !== null);
-
-    document.addEventListener('fullscreenchange', onChange);
-    return () => document.removeEventListener('fullscreenchange', onChange);
-  }, []);
-
+export function useFullscreen(ref: RefObject<HTMLElement | null>): Fullscreen {
   const toggleFullscreen = useCallback(() => {
     const element = ref.current;
     if (element === null) {
@@ -70,5 +63,5 @@ export function useFullscreen(
     ignore(element.requestFullscreen?.());
   }, [ref]);
 
-  return { fullscreen, toggleFullscreen };
+  return { toggleFullscreen };
 }
