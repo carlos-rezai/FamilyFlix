@@ -46,7 +46,7 @@ export function VolumeSlider({
   onVolumeChange,
   onToggleMute,
 }: VolumeSliderProps) {
-  const { trackRef, onPointerDown } = useDragScalar({
+  const { trackRef, onPointerDown } = useDragScalar<HTMLDivElement>({
     onDrag: onVolumeChange,
     onCommit: onVolumeChange,
   });

@@ -17,10 +17,18 @@ export interface DragScalarOptions {
   onCommit?: (value: number) => void;
 }
 
-/** What a slider needs from the hook to be one. */
-export interface DragScalar {
+/**
+ * What a slider needs from the hook to be one.
+ *
+ * `E` is the element the slider actually attaches the ref to, so a caller
+ * naming its own — `HTMLDivElement`, here, twice — gets a `ref` React will
+ * accept. Widening it to `HTMLElement` for everyone is unsound in exactly the
+ * direction that matters: a `RefObject<HTMLElement | null>` handed to a `div`
+ * promises the hook would accept any element back.
+ */
+export interface DragScalar<E extends HTMLElement = HTMLElement> {
   /** Attach to the track. Its rect is what every scalar is measured against. */
-  trackRef: RefObject<HTMLElement | null>;
+  trackRef: RefObject<E | null>;
   /**
    * The scalar under the pointer, or `null` when nobody is pressing — which is
    * what lets a slider draw the real value rather than a stale drag.
@@ -54,11 +62,11 @@ function clamp01(value: number): number {
  * is released — anywhere — and when the slider unmounts, which the chrome does
  * every time it fades, mid-drag included.
  */
-export function useDragScalar({
+export function useDragScalar<E extends HTMLElement = HTMLElement>({
   onDrag,
   onCommit,
-}: DragScalarOptions): DragScalar {
-  const trackRef = useRef<HTMLElement | null>(null);
+}: DragScalarOptions): DragScalar<E> {
+  const trackRef = useRef<E | null>(null);
   const [value, setValue] = useState<number | null>(null);
   const [dragging, setDragging] = useState(false);
 

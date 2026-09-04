@@ -52,7 +52,7 @@ export function PlayerScrubber({
   duration,
   onSeek,
 }: PlayerScrubberProps) {
-  const { trackRef, value, onPointerDown } = useDragScalar({
+  const { trackRef, value, onPointerDown } = useDragScalar<HTMLDivElement>({
     onCommit: (fraction) => onSeek(fraction * duration),
   });
 
