@@ -59,15 +59,16 @@ const HARDWARE_ENCODERS = [
 const ENCODERS_BUFFER_BYTES = 4 * 1024 * 1024;
 
 /**
- * Which hardware encoder this build of ffmpeg was compiled with, if any.
- *
- * A build listing an encoder is not a machine that can run it — a laptop with
- * no NVIDIA card still gets `h264_nvenc` from a full build — so the fallback
- * that matters is at the other end: a conversion that will not start leaves the
- * film unplayable, and the next slice's error handling is where that is caught.
- * What is asserted here is the *selection*, and it is in the argv.
+ * What `ffmpeg -encoders` printed, or `null` for every way of not knowing —
+ * taken as an argument so the selection can be asked about a listing rather
+ * than about the machine running the test. `capabilities` takes its decoder
+ * listing the same way, and `probe` its output: one answer in this domain to
+ * how a spawning module is tested.
  */
-function detectHardwareEncoder(ffmpeg: string): string | null {
+export type EncoderListing = (ffmpeg: string) => string | null;
+
+/** Ask a build of ffmpeg what it can encode. */
+function ffmpegEncoders(ffmpeg: string): string | null {
   const result = spawnSync(ffmpeg, ['-hide_banner', '-encoders'], {
     encoding: 'utf8',
     maxBuffer: ENCODERS_BUFFER_BYTES,
@@ -78,7 +79,22 @@ function detectHardwareEncoder(ffmpeg: string): string | null {
     return null;
   }
 
-  const listed = result.stdout;
+  return result.stdout;
+}
+
+/**
+ * Which hardware encoder this build of ffmpeg was compiled with, if any.
+ *
+ * A build listing an encoder is not a machine that can run it — a laptop with
+ * no NVIDIA card still gets `h264_nvenc` from a full build — so the fallback
+ * that matters is at the other end: a conversion that will not start leaves the
+ * film unplayable, and the next slice's error handling is where that is caught.
+ * What is asserted here is the *selection*, and it is in the argv.
+ */
+function detectHardwareEncoder(listed: string | null): string | null {
+  if (listed === null) {
+    return null;
+  }
   return HARDWARE_ENCODERS.find((name) => listed.includes(name)) ?? null;
 }
 
@@ -89,10 +105,17 @@ function detectHardwareEncoder(ffmpeg: string): string | null {
  * and a stream nobody reads fills its pipe and stops the film. What matters
  * when a conversion fails is that the bytes stop, which the element sees on its
  * own.
+ *
+ * `listing` is the seam: what `ffmpeg -encoders` would have printed, defaulting
+ * to running it. It is what lets the encoder preference order be asserted on a
+ * machine that has no hardware encoder and no ffmpeg either.
  */
-export function ffmpegComponent(binaries: FfmpegBinaries): PlaybackComponent {
+export function ffmpegComponent(
+  binaries: FfmpegBinaries,
+  listing: EncoderListing = ffmpegEncoders
+): PlaybackComponent {
   return {
-    hardwareEncoder: detectHardwareEncoder(binaries.ffmpeg),
+    hardwareEncoder: detectHardwareEncoder(listing(binaries.ffmpeg)),
     probe: (file) => probeFile(binaries.ffprobe, file),
     spawn: (args) => {
       const child = spawn(binaries.ffmpeg, args, {
