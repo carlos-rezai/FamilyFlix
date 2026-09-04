@@ -1,4 +1,5 @@
 import { VolumeIcon, VolumeMutedIcon } from '@/primitives';
+import { toScalarPercent } from '@/utils';
 
 import { useDragScalar } from '../useDragScalar/useDragScalar';
 import { Fill, Group, MuteButton, Track } from './VolumeSlider.styles';
@@ -16,11 +17,6 @@ export interface VolumeSliderProps {
 
 /** Below this the speaker is drawn crossed out, as the prototype draws it. */
 const NEAR_SILENT = 0.05;
-
-/** How full the bar is, kept off the CSS's float noise. */
-function percentOf(fraction: number): string {
-  return `${Math.round(fraction * 1000) / 10}%`;
-}
 
 /**
  * The volume control: the speaker button and the 90px bar beside it.
@@ -72,7 +68,7 @@ export function VolumeSlider({
         aria-valuenow={Math.round(level * 100)}
         onPointerDown={onPointerDown}
       >
-        <Fill $percent={percentOf(level)} />
+        <Fill $percent={toScalarPercent(level)} />
       </Track>
     </Group>
   );

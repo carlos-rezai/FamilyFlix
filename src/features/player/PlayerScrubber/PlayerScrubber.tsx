@@ -1,4 +1,4 @@
-import { formatClock } from '@/utils';
+import { formatClock, toScalarPercent } from '@/utils';
 import { useDragScalar } from '../useDragScalar/useDragScalar';
 import {
   Clock,
@@ -22,11 +22,6 @@ export interface PlayerScrubberProps {
   duration: number;
   /** Take the film to a second. Called once, when the knob is let go. */
   onSeek: (seconds: number) => void;
-}
-
-/** How far along the bar a position sits, kept off the CSS's float noise. */
-function percentOf(fraction: number): string {
-  return `${Math.round(fraction * 1000) / 10}%`;
 }
 
 /**
@@ -60,7 +55,7 @@ export function PlayerScrubber({
   // playback read landing — is drawn empty rather than divided by nought.
   const played = duration > 0 ? position / duration : 0;
   const fraction = value ?? played;
-  const percent = percentOf(fraction);
+  const percent = toScalarPercent(fraction);
 
   return (
     <Row>

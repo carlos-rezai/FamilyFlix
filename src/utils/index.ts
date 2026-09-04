@@ -11,6 +11,7 @@ export {
   NOMINAL_SLIVER_PERCENT,
 } from './toProgressPercent/toProgressPercent';
 export { formatClock } from './formatClock/formatClock';
+export { toScalarPercent } from './toScalarPercent/toScalarPercent';
 export { toRuntimeSeconds } from './toRuntimeSeconds/toRuntimeSeconds';
 export { isMovieSort } from './isMovieSort/isMovieSort';
 export { range } from './range/range';
