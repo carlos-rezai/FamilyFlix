@@ -41,6 +41,15 @@ import { stubMediaElement } from '@/test-support/stubMediaElement/stubMediaEleme
  * Seeking, the volume slider, the subtitles and the keyboard all arrived in
  * later slices and are asserted here now, each from the same outside: the film
  * moves, the box appears, the write goes out.
+ *
+ * **On the size of this file** (re-taken in the #94 refactor round, at 1816
+ * lines). The candidate seams are the subtitles block and the keyboard block,
+ * and neither is a seam about *something*: both drive the same screen through
+ * the same ~270-line harness, and splitting them would put one component's
+ * tests in three files for no reason but length. What did come out of this
+ * screen in that round is two hooks with their own suites — `useOpeningReads`
+ * and `useSubtitles` — which is the split that was actually available, and it
+ * was made in the source rather than here.
  */
 const FILM = 'Northwind';
 

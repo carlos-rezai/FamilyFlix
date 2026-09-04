@@ -12,6 +12,25 @@
 // The seam is deliberately the endpoint rather than the handler function: what
 // this slice promises a caller is a URL, a status, and a body shape, and those
 // are the only things asserted.
+//
+// ---
+//
+// **On the size of this file** (re-taken in the #94 refactor round, at 3335
+// lines and thirty-five top-level describes — the largest file in the
+// repository).
+//
+// #81 refused to split `home.test.ts` "to hit a number", and that principle is
+// not what keeps this one whole. The question is whether there is a seam here
+// that is about *something*, and the honest answer is that the only real one is
+// not in this file: `routes/index.ts` serves four domains — library, genres,
+// watch, playback — and it is the router that has the seam, not its test.
+// Splitting the test alone would put one unit's tests in four files, which no
+// convention in this repo has and which CLAUDE.md's co-location rule argues
+// against; splitting the router is a change to shipping code and a question for
+// whoever adds the fifth domain.
+//
+// So it stays one file, and the thing to watch is the router rather than the
+// line count.
 
 import express from 'express';
 import type { AddressInfo } from 'node:net';
