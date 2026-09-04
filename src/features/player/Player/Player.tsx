@@ -172,6 +172,13 @@ export function Player({ movieId }: PlayerProps) {
   // the slider, or the mute button — because all three arrive here as the same
   // two numbers. The first run is the opening state rather than a change, and
   // writing it would put a default over the very preference just read.
+  //
+  // It stays here rather than becoming a hook beside the two above it, and the
+  // reason is the ordering: the preference is *read* into `startVolume`, which
+  // `usePlayback` needs before it can report a volume at all, and it is that
+  // report this writes back. A hook could own the write but not the read, which
+  // would put one preference in two files — and a hook owning both cannot be
+  // called before the values it persists exist.
   const volumeSettled = useRef(false);
 
   useEffect(() => {
