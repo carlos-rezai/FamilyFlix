@@ -17,17 +17,15 @@ import { afterEach, describe, expect, it } from 'vitest';
 import {
   existsSync,
   mkdirSync,
-  mkdtempSync,
   readdirSync,
   readFileSync,
-  realpathSync,
   rmSync,
   writeFileSync,
 } from 'node:fs';
-import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { createSqliteStorage } from '../../library';
+import { sandboxRoot } from '../../test-support/sandboxRoot/sandboxRoot';
 import {
   SEED_FIXTURE_VIDEO,
   SEED_MOVIES,
@@ -42,7 +40,6 @@ interface Closeable {
 }
 
 const closeables: Closeable[] = [];
-const sandboxes: string[] = [];
 
 /**
  * A fresh, fully-migrated in-memory repository and an empty managed media
@@ -51,9 +48,10 @@ const sandboxes: string[] = [];
  *
  * The media directory arrived with the player: the seed now copies a real
  * fixture video under the reserved prefix, so a run touches the disk as well as
- * the database and both halves have to be checkable. `realpathSync` because a
- * temporary directory is a symlink on macOS and an 8.3 short name on Windows,
- * and a path the seed resolved would otherwise disagree with the one built here.
+ * the database and both halves have to be checkable. It is `sandboxRoot`'s,
+ * which resolves the path and sweeps it — a temporary directory is a symlink on
+ * macOS and an 8.3 short name on Windows, and a path the seed resolved would
+ * otherwise disagree with the one built here.
  */
 function freshLibrary(): {
   storage: ReturnType<typeof createSqliteStorage>;
@@ -62,8 +60,7 @@ function freshLibrary(): {
   const storage = createSqliteStorage(':memory:');
   closeables.push(storage);
 
-  const media = realpathSync(mkdtempSync(join(tmpdir(), 'familyflix-seed-')));
-  sandboxes.push(media);
+  const media = sandboxRoot('familyflix-seed-');
 
   return { storage, media };
 }
@@ -75,9 +72,6 @@ afterEach(() => {
     } catch {
       // already closed by the test — fine.
     }
-  }
-  for (const root of sandboxes.splice(0)) {
-    rmSync(root, { recursive: true, force: true });
   }
 });
 

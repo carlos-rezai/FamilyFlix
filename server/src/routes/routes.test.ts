@@ -16,21 +16,14 @@
 import express from 'express';
 import type { AddressInfo } from 'node:net';
 import type { Server } from 'node:http';
-import {
-  copyFileSync,
-  mkdirSync,
-  mkdtempSync,
-  realpathSync,
-  rmSync,
-  writeFileSync,
-} from 'node:fs';
-import { tmpdir } from 'node:os';
+import { copyFileSync, mkdirSync, writeFileSync } from 'node:fs';
 import { isAbsolute, join } from 'node:path';
 import { Readable } from 'node:stream';
 import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { createApiRouter } from '.';
+import { sandboxRoot } from '../test-support/sandboxRoot/sandboxRoot';
 import { createPlayback } from '../playback/createPlayback/createPlayback';
 import type {
   PlaybackComponent,
@@ -49,7 +42,6 @@ import type {
 
 const storages: LibraryStorage[] = [];
 const servers: Server[] = [];
-const sandboxes: string[] = [];
 
 afterEach(async () => {
   for (const server of servers.splice(0)) {
@@ -57,9 +49,6 @@ afterEach(async () => {
   }
   for (const storage of storages.splice(0)) {
     storage.close();
-  }
-  for (const root of sandboxes.splice(0)) {
-    rmSync(root, { recursive: true, force: true });
   }
 });
 
@@ -73,9 +62,10 @@ afterEach(async () => {
  * The media directory used to be `./media`, a path that does not exist, because
  * nothing here opened a file. `/api/movies/:id/stream` does, so it is now a real
  * empty temporary directory removed afterwards — `outside` is its sibling, for
- * the tests that stage a stored path leaving the tree. Both are `realpathSync`d
- * for the same reason `mediaFilePath`'s own sandbox is: a temporary directory is
- * a symlink on macOS and an 8.3 short name on Windows.
+ * the tests that stage a stored path leaving the tree. Both sit under a
+ * `sandboxRoot`, which resolves the path for the same reason `mediaFilePath`'s
+ * own sandbox does: a temporary directory is a symlink on macOS and an 8.3
+ * short name on Windows.
  *
  * `component` is the **Playback component** the domain is composed over, and it
  * defaults to **absent** — the machine with no FFmpeg on it, which is the one
@@ -92,8 +82,7 @@ function freshApi(component: PlaybackComponent | null = null): {
   const storage = createSqliteStorage(':memory:');
   storages.push(storage);
 
-  const root = realpathSync(mkdtempSync(join(tmpdir(), 'familyflix-api-')));
-  sandboxes.push(root);
+  const root = sandboxRoot('familyflix-api-');
   const media = join(root, 'media');
   const outside = join(root, 'elsewhere');
   mkdirSync(media);

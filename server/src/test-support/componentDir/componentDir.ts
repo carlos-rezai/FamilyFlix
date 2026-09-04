@@ -1,7 +1,7 @@
-import { chmodSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { chmodSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { afterEach } from 'vitest';
+
+import { sandboxRoot } from '../sandboxRoot/sandboxRoot';
 
 /**
  * A **Playback component** on disk, for the two suites that ask where one is
@@ -14,23 +14,12 @@ import { afterEach } from 'vitest';
  * measurement `server/src/test-support/` exists for. It is a test double's
  * neighbour rather than backend logic, and nothing that ships imports it.
  *
- * The `afterEach` below is registered at module scope, which under Vitest's
- * default isolation means **once per importing test file** — each file gets its
- * own module registry, so each gets its own `sandboxes` array and its own
- * teardown. That is `freshStorage`'s recorded finding, and it is what lets the
- * cleanup move here rather than staying at the call site.
+ * The directory itself is `sandboxRoot`'s, so the sweep is written down once
+ * for every suite that needs a temporary tree rather than once per fixture.
  */
 
 /** What an executable is called here — the one difference Windows makes. */
 export const EXE = process.platform === 'win32' ? '.exe' : '';
-
-const sandboxes: string[] = [];
-
-afterEach(() => {
-  for (const root of sandboxes.splice(0)) {
-    rmSync(root, { recursive: true, force: true });
-  }
-});
 
 /**
  * A directory holding the named binaries, and nothing else. They are empty and
@@ -38,8 +27,7 @@ afterEach(() => {
  * would print — which is what an injected listing is for.
  */
 export function componentDir(names: string[] = ['ffmpeg', 'ffprobe']): string {
-  const dir = mkdtempSync(join(tmpdir(), 'familyflix-component-'));
-  sandboxes.push(dir);
+  const dir = sandboxRoot('familyflix-component-');
 
   for (const name of names) {
     const file = join(dir, `${name}${EXE}`);

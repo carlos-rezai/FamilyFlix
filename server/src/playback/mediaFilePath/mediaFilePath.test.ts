@@ -14,42 +14,26 @@
 // which never leaves, and accept a link that leaves without a `..` anywhere in
 // it.
 
-import { afterEach, describe, expect, it } from 'vitest';
-import {
-  mkdirSync,
-  mkdtempSync,
-  realpathSync,
-  rmSync,
-  symlinkSync,
-  writeFileSync,
-} from 'node:fs';
-import { tmpdir } from 'node:os';
+import { describe, expect, it } from 'vitest';
+import { mkdirSync, symlinkSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
+import { sandboxRoot } from '../../test-support/sandboxRoot/sandboxRoot';
+
 import { mediaFilePath } from './mediaFilePath';
-
-// --- per-test resource tracking ------------------------------------------------
-
-const sandboxes: string[] = [];
-
-afterEach(() => {
-  for (const root of sandboxes.splice(0)) {
-    rmSync(root, { recursive: true, force: true });
-  }
-});
 
 /**
  * A managed media directory with a sibling directory beside it, both inside a
  * temporary root that is removed afterwards.
  *
- * `realpathSync` on the root is not incidental. A temporary directory is a
- * symlink on macOS and an 8.3 short name on Windows, so a check that resolves
- * links — which this one has to, or a link inside the tree defeats it — would
- * otherwise disagree with the path the test built by hand.
+ * The root is `sandboxRoot`'s, which resolves it. That is not incidental here:
+ * a temporary directory is a symlink on macOS and an 8.3 short name on Windows,
+ * so a check that resolves links — which this one has to, or a link inside the
+ * tree defeats it — would otherwise disagree with the path the test built by
+ * hand.
  */
 function sandbox(): { media: string; outside: string } {
-  const root = realpathSync(mkdtempSync(join(tmpdir(), 'familyflix-media-')));
-  sandboxes.push(root);
+  const root = sandboxRoot('familyflix-media-');
 
   const media = join(root, 'media');
   const outside = join(root, 'elsewhere');
