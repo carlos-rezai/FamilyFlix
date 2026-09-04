@@ -94,6 +94,47 @@ function movieOr404(
 }
 
 /**
+ * The one answer for a movie whose row is there and whose file is not.
+ *
+ * Its own function because three call sites send it and one of them —
+ * `sendFile`'s failure callback on the direct path — cannot go through
+ * {@link videoFileOr404}: by then the file *did* resolve and the read failed
+ * afterwards. The status and the sentence are the same either way, and the
+ * client tells "gone" from "went wrong" by reading that body, so the two ways
+ * of having nothing to send must not drift into two different sentences.
+ */
+function noVideoFile(res: Response, id: string): void {
+  res.status(404).json({ error: `No video file for movie: ${id}` });
+}
+
+/**
+ * What every read of a movie's *bytes* does after {@link movieOr404}: resolve
+ * the stored path to a file under the managed media directory, and 404 if there
+ * is nothing there.
+ *
+ * The second half of the six-line preamble `/playback` and `/stream` open with
+ * identically. `null` from `videoFile` is both "no such file" and "a stored
+ * path that escaped the media root" — deliberately one answer, because what is
+ * or is not on this disk is not something the API reports back.
+ *
+ * Answers the file, or `null` having already sent the 404, which is
+ * {@link movieOr404}'s shape for the same reason.
+ */
+function videoFileOr404(
+  playback: Playback,
+  storedPath: string,
+  id: string,
+  res: Response
+): string | null {
+  const file = playback.videoFile(storedPath);
+  if (file === null) {
+    noVideoFile(res, id);
+    return null;
+  }
+  return file;
+}
+
+/**
  * The first value of a query parameter, or `undefined` when it is absent.
  * Express parses `?genre=a&genre=b` into an array and nested keys into objects;
  * this route layer only ever means the simple scalar case.
@@ -535,15 +576,13 @@ export function createApiRouter(
   // migration, and no stale row to invalidate.
   router.get('/movies/:id/playback', (req: Request<{ id: string }>, res) => {
     const { id } = req.params;
-    const movie = storage.getMovie(id);
+    const movie = movieOr404(storage, id, res);
     if (!movie) {
-      res.status(404).json({ error: `Unknown movie: ${id}` });
       return;
     }
 
-    const file = playback.videoFile(movie.videoPath);
+    const file = videoFileOr404(playback, movie.videoPath, id, res);
     if (file === null) {
-      res.status(404).json({ error: `No video file for movie: ${id}` });
       return;
     }
 
@@ -599,15 +638,13 @@ export function createApiRouter(
       return;
     }
 
-    const movie = storage.getMovie(id);
+    const movie = movieOr404(storage, id, res);
     if (!movie) {
-      res.status(404).json({ error: `Unknown movie: ${id}` });
       return;
     }
 
-    const file = playback.videoFile(movie.videoPath);
+    const file = videoFileOr404(playback, movie.videoPath, id, res);
     if (file === null) {
-      res.status(404).json({ error: `No video file for movie: ${id}` });
       return;
     }
 
@@ -630,7 +667,7 @@ export function createApiRouter(
     if (plan.path === 'direct') {
       res.sendFile(file, (error) => {
         if (error && !res.headersSent) {
-          res.status(404).json({ error: `No video file for movie: ${id}` });
+          noVideoFile(res, id);
         } else if (error) {
           res.end();
         }
