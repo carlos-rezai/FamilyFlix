@@ -13,6 +13,10 @@ import { GenreMoviesProvider, useGenreMovies } from './GenreMovies';
 import { gradientFromId } from '@/utils';
 import type { GenrePayload, PosterCardMovie } from '@/types';
 import { makeMovie } from '@/test-support/makeMovie/makeMovie';
+import {
+  okResponse,
+  serverErrorResponse,
+} from '@/test-support/fakeResponse/fakeResponse';
 
 /**
  * Action as the route answers it: 214 movies on the shelf and 214 in the
@@ -35,22 +39,6 @@ const NARROWED: GenrePayload = {
     makeMovie({ id: 'a2', title: 'Northern Star' }),
   ],
 };
-
-function okResponse(body: unknown): Response {
-  return {
-    ok: true,
-    status: 200,
-    json: () => Promise.resolve(body),
-  } as unknown as Response;
-}
-
-function serverErrorResponse(): Response {
-  return {
-    ok: false,
-    status: 500,
-    json: () => Promise.resolve({ error: 'boom' }),
-  } as unknown as Response;
-}
 
 let fetchMock: ReturnType<
   typeof vi.fn<

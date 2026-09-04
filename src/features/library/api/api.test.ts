@@ -9,6 +9,10 @@ import type {
   Movie,
 } from '@/types';
 import { makeMovie } from '@/test-support/makeMovie/makeMovie';
+import {
+  okResponse,
+  serverErrorResponse,
+} from '@/test-support/fakeResponse/fakeResponse';
 
 /** The query an unfiltered browse home asks with — every part at its default. */
 const UNFILTERED: LibraryQuery = { sort: 'recently-added' };
@@ -19,22 +23,6 @@ const HOME_PAYLOAD: HomePayload = {
   favorites: [],
   rows: [{ genre: 'Action', count: 3, movies: [] }],
 };
-
-function okResponse(body: unknown): Response {
-  return {
-    ok: true,
-    status: 200,
-    json: () => Promise.resolve(body),
-  } as unknown as Response;
-}
-
-function serverErrorResponse(): Response {
-  return {
-    ok: false,
-    status: 500,
-    json: () => Promise.resolve({ error: 'boom' }),
-  } as unknown as Response;
-}
 
 let fetchMock: ReturnType<
   typeof vi.fn<

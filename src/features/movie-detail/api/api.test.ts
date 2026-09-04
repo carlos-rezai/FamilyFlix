@@ -1,30 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 import { saveRating } from './api';
-
-function okResponse(body: unknown): Response {
-  return {
-    ok: true,
-    status: 200,
-    json: () => Promise.resolve(body),
-  } as unknown as Response;
-}
-
-function notFoundResponse(): Response {
-  return {
-    ok: false,
-    status: 404,
-    json: () => Promise.resolve({ error: 'Unknown movie: gone' }),
-  } as unknown as Response;
-}
-
-function serverErrorResponse(): Response {
-  return {
-    ok: false,
-    status: 500,
-    json: () => Promise.resolve({ error: 'boom' }),
-  } as unknown as Response;
-}
+import {
+  notFoundResponse,
+  okResponse,
+  serverErrorResponse,
+} from '@/test-support/fakeResponse/fakeResponse';
 
 let fetchMock: ReturnType<
   typeof vi.fn<
@@ -153,7 +134,7 @@ describe('saveRating', () => {
   });
 
   it('throws when the movie the rating was for is gone', async () => {
-    fetchMock.mockResolvedValue(notFoundResponse());
+    fetchMock.mockResolvedValue(notFoundResponse('Unknown movie: gone'));
 
     await expect(saveRating('gone', 8)).rejects.toThrow(/404/);
   });

@@ -5,6 +5,10 @@ import { MemoryRouter, useNavigate } from 'react-router-dom';
 
 import { useGenreList } from './useGenreList';
 import type { GenreListPayload } from '@/types';
+import {
+  okResponse,
+  serverErrorResponse,
+} from '@/test-support/fakeResponse/fakeResponse';
 
 /** The list `GET /api/genres` answers with — unfiltered, and fetched once. */
 const GENRE_LIST: GenreListPayload = {
@@ -17,22 +21,6 @@ const GENRE_LIST: GenreListPayload = {
 
 /** What the dropdown falls back to: no genres, and no library total to show. */
 const NO_GENRES: GenreListPayload = { total: 0, genres: [] };
-
-function okResponse(body: unknown): Response {
-  return {
-    ok: true,
-    status: 200,
-    json: () => Promise.resolve(body),
-  } as unknown as Response;
-}
-
-function serverErrorResponse(): Response {
-  return {
-    ok: false,
-    status: 500,
-    json: () => Promise.resolve({ error: 'boom' }),
-  } as unknown as Response;
-}
 
 let fetchMock: ReturnType<
   typeof vi.fn<(input: RequestInfo | URL) => Promise<Response>>

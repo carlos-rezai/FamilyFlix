@@ -15,6 +15,10 @@ import { theme } from '@/styles/theme';
 import type { Movie } from '@/types';
 import { LocationProbe } from '@/test-support/LocationProbe/LocationProbe';
 import { makeMovie } from '@/test-support/makeMovie/makeMovie';
+import {
+  notFoundResponse,
+  okResponse,
+} from '@/test-support/fakeResponse/fakeResponse';
 
 const SYNOPSIS =
   'A lighthouse keeper on a fading coast takes in a runaway girl, and the two ' +
@@ -41,22 +45,6 @@ function makeNorthwind(overrides: Partial<Movie> = {}): Movie {
     ],
     ...overrides,
   });
-}
-
-function okResponse(body: unknown): Response {
-  return {
-    ok: true,
-    status: 200,
-    json: () => Promise.resolve(body),
-  } as unknown as Response;
-}
-
-function notFoundResponse(): Response {
-  return {
-    ok: false,
-    status: 404,
-    json: () => Promise.resolve({ error: 'Movie not found' }),
-  } as unknown as Response;
 }
 
 let fetchMock: ReturnType<

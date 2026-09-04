@@ -8,6 +8,7 @@ import { GenreMoviesProvider } from '../GenreMovies/GenreMovies';
 import { theme } from '@/styles/theme';
 import type { GenrePayload } from '@/types';
 import { makeMovie } from '@/test-support/makeMovie/makeMovie';
+import { okResponse } from '@/test-support/fakeResponse/fakeResponse';
 
 /** A genre of `count` movies, as the route answers it, with `total` alongside. */
 function payload(genre: string, count: number, total = count): GenrePayload {
@@ -18,14 +19,6 @@ function payload(genre: string, count: number, total = count): GenrePayload {
       makeMovie({ id: `${genre}-${index}`, title: `${genre} ${index}` })
     ),
   };
-}
-
-function okResponse(body: unknown): Response {
-  return {
-    ok: true,
-    status: 200,
-    json: () => Promise.resolve(body),
-  } as unknown as Response;
 }
 
 let fetchMock: ReturnType<

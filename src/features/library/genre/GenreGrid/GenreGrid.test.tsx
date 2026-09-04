@@ -16,6 +16,10 @@ import { theme } from '@/styles/theme';
 import type { GenrePayload } from '@/types';
 import { LocationProbe } from '@/test-support/LocationProbe/LocationProbe';
 import { makeMovie } from '@/test-support/makeMovie/makeMovie';
+import {
+  okResponse,
+  serverErrorResponse,
+} from '@/test-support/fakeResponse/fakeResponse';
 
 /**
  * Eighteen movies in one genre — more than the fifteen a home row caps at, so
@@ -39,14 +43,6 @@ const NAMED: GenrePayload = {
     makeMovie({ id: 'a b/c', title: 'Deep Harbour' }),
   ],
 };
-
-function okResponse(body: unknown): Response {
-  return {
-    ok: true,
-    status: 200,
-    json: () => Promise.resolve(body),
-  } as unknown as Response;
-}
 
 let fetchMock: ReturnType<
   typeof vi.fn<
@@ -232,14 +228,6 @@ const HEARTS: GenrePayload = {
     makeMovie({ id: 'a2', title: 'Ironclad', isFavorite: true }),
   ],
 };
-
-function serverErrorResponse(): Response {
-  return {
-    ok: false,
-    status: 500,
-    json: () => Promise.resolve({ error: 'boom' }),
-  } as unknown as Response;
-}
 
 /** Every genre request the grid's provider has issued, as its URL. */
 function genreRequests(): string[] {

@@ -12,6 +12,7 @@ import { MemoryRouter, useLocation, useNavigate } from 'react-router-dom';
 
 import { LibraryFilters } from './LibraryFilters';
 import { theme } from '@/styles/theme';
+import { okResponse } from '@/test-support/fakeResponse/fakeResponse';
 
 /**
  * The prototype's option list, in the prototype's order — deliberately not the
@@ -47,14 +48,6 @@ const GENRE_ROWS = ['All Genres', 'Drama', 'Action', 'Adventure', 'Comedy'];
 let fetchMock: ReturnType<
   typeof vi.fn<(input: RequestInfo | URL) => Promise<Response>>
 >;
-
-function okResponse(body: unknown): Response {
-  return {
-    ok: true,
-    status: 200,
-    json: () => Promise.resolve(body),
-  } as unknown as Response;
-}
 
 /** Answer the genre list; anything else this component asks for is a mistake. */
 function serveGenres(body: unknown = GENRE_LIST) {

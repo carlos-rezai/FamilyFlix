@@ -7,6 +7,10 @@ import { useHomeRows } from './useHomeRows';
 import { gradientFromId, NOMINAL_SLIVER_PERCENT } from '@/utils';
 import type { GenreRowModel, HomePayload, PosterCardMovie } from '@/types';
 import { makeMovie } from '@/test-support/makeMovie/makeMovie';
+import {
+  okResponse,
+  serverErrorResponse,
+} from '@/test-support/fakeResponse/fakeResponse';
 
 /** One movie per row, so "the favorite in Action" is never ambiguous. */
 const HOME_PAYLOAD: HomePayload = {
@@ -140,22 +144,6 @@ const SHARED_MOVIE_PAYLOAD: HomePayload = {
     },
   ],
 };
-
-function okResponse(body: unknown): Response {
-  return {
-    ok: true,
-    status: 200,
-    json: () => Promise.resolve(body),
-  } as unknown as Response;
-}
-
-function serverErrorResponse(): Response {
-  return {
-    ok: false,
-    status: 500,
-    json: () => Promise.resolve({ error: 'boom' }),
-  } as unknown as Response;
-}
 
 let fetchMock: ReturnType<
   typeof vi.fn<

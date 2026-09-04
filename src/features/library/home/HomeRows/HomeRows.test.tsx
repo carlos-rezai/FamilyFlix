@@ -21,6 +21,10 @@ import {
 import { toGenreQueryParams } from '@/utils';
 import { LocationProbe } from '@/test-support/LocationProbe/LocationProbe';
 import { makeMovie } from '@/test-support/makeMovie/makeMovie';
+import {
+  okResponse,
+  serverErrorResponse,
+} from '@/test-support/fakeResponse/fakeResponse';
 
 /**
  * A library as `GET /api/home` returns it: alphabetical by genre, each row
@@ -125,14 +129,6 @@ const HOME_PAYLOAD: HomeRow[] = [
   },
 ];
 
-function okResponse(body: unknown): Response {
-  return {
-    ok: true,
-    status: 200,
-    json: () => Promise.resolve(body),
-  } as unknown as Response;
-}
-
 /**
  * The named-section envelope `GET /api/home` answers with — both sections of
  * the browse home in the one response the screen makes.
@@ -143,14 +139,6 @@ function homePayload(
   favorites: Movie[] = []
 ): HomePayload {
   return { continueWatching, favorites, rows };
-}
-
-function serverErrorResponse(): Response {
-  return {
-    ok: false,
-    status: 500,
-    json: () => Promise.resolve({ error: 'boom' }),
-  } as unknown as Response;
 }
 
 let fetchMock: ReturnType<
