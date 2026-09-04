@@ -1,5 +1,7 @@
 import { useEffect, useRef } from 'react';
 
+import { SKIP_SECONDS } from '../PlayerControls/PlayerControls';
+
 /**
  * What the film's own controls are handed, and therefore what the keys are
  * handed. Every one of these is the **same handler the matching button calls** —
@@ -28,9 +30,6 @@ export interface PlayerKeys {
   /** Leave the player, back to the film's page — Escape. */
   onLeave: () => void;
 }
-
-/** What the ±10s buttons move the film by, and therefore what ←/→ move it by. */
-const SKIP_SECONDS = 10;
 
 /** How far ↑/↓ move the volume — a tenth, so ten presses cross the range. */
 const VOLUME_STEP = 0.1;

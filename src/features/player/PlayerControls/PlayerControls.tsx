@@ -75,8 +75,14 @@ export interface PlayerControlsProps {
   onToggleFullscreen: () => void;
 }
 
-/** What the ±10s buttons move the film by, in seconds. */
-const SKIP_SECONDS = 10;
+/**
+ * What the ±10s buttons move the film by, in seconds — and therefore what ←/→
+ * move it by, because `usePlayerKeys` imports this one rather than declaring a
+ * second. The chrome is where the number lives: it is written on the buttons'
+ * own labels, and a keyboard that skipped by a different amount than the button
+ * beside it would be the exact drift the keyboard hook exists to prevent.
+ */
+export const SKIP_SECONDS = 10;
 
 /** How far each bar drifts as it fades — out the way it came in. */
 const TOP_DRIFT = '-12px';
