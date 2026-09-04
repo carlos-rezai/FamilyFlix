@@ -22,6 +22,14 @@ export interface MediaProbe {
   durationSeconds: number;
 }
 
+/**
+ * What `ffprobe` printed for a file, or `null` for every way of not knowing —
+ * taken as an argument so the parsing can be asked about output rather than
+ * about the machine running the test, which on CI has no FFmpeg on it. The
+ * seam is `capabilities`' own, in the same domain and the same shape.
+ */
+export type ProbeOutput = (ffprobe: string, file: string) => string | null;
+
 /** How long ffprobe is given before it is treated as having answered nothing. */
 const PROBE_TIMEOUT_MS = 15000;
 
@@ -72,18 +80,14 @@ function codecOf(streams: unknown[], kind: string): string | null {
 }
 
 /**
- * Ask the **Playback component** what a file is.
+ * Run the prober and hand back what it printed.
  *
- * `null` is every way of not knowing — no ffprobe there, a file it will not
- * open, output that will not parse — and they are deliberately one answer: a
- * caller cannot act differently on them, and `choosePlaybackPath` reads a
- * missing probe as "decide from the name alone", which is the honest thing to
- * do with a file nothing could read.
- *
- * It is synchronous, like `mediaDuration` beside it, because both routes that
- * ask are answering a request that cannot proceed without the answer.
+ * Every way of not knowing is `null` here rather than at the caller: a binary
+ * that will not start, a file ffprobe will not open, a run that timed out. The
+ * caller cannot act differently on them, and folding them here is what leaves
+ * {@link probe} as a parse over a string.
  */
-export function probe(ffprobe: string, file: string): MediaProbe | null {
+function ffprobeJson(ffprobe: string, file: string): string | null {
   const result = spawnSync(
     ffprobe,
     [
@@ -108,9 +112,40 @@ export function probe(ffprobe: string, file: string): MediaProbe | null {
     return null;
   }
 
+  return result.stdout;
+}
+
+/**
+ * Ask the **Playback component** what a file is.
+ *
+ * `null` is every way of not knowing — no ffprobe there, a file it will not
+ * open, output that will not parse — and they are deliberately one answer: a
+ * caller cannot act differently on them, and `choosePlaybackPath` reads a
+ * missing probe as "decide from the name alone", which is the honest thing to
+ * do with a file nothing could read.
+ *
+ * It is synchronous, like `mediaDuration` beside it, because both routes that
+ * ask are answering a request that cannot proceed without the answer.
+ *
+ * `output` is the seam: what the prober would have printed, defaulting to
+ * running it. `capabilities` takes its decoder listing the same way and for the
+ * same reason — the interesting rules here are the container normalization and
+ * the stream reading, and a test that had to spawn ffprobe to reach them could
+ * only ever ask about the machine it runs on.
+ */
+export function probe(
+  ffprobe: string,
+  file: string,
+  output: ProbeOutput = ffprobeJson
+): MediaProbe | null {
+  const printed = output(ffprobe, file);
+  if (printed === null) {
+    return null;
+  }
+
   let parsed: unknown;
   try {
-    parsed = JSON.parse(result.stdout) as unknown;
+    parsed = JSON.parse(printed) as unknown;
   } catch {
     return null;
   }
