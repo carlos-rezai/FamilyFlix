@@ -87,9 +87,14 @@ function ffmpegEncoders(ffmpeg: string): string | null {
  *
  * A build listing an encoder is not a machine that can run it — a laptop with
  * no NVIDIA card still gets `h264_nvenc` from a full build — so the fallback
- * that matters is at the other end: a conversion that will not start leaves the
- * film unplayable, and the next slice's error handling is where that is caught.
- * What is asserted here is the *selection*, and it is in the argv.
+ * that matters is at the other end.
+ *
+ * **There is no such fallback yet.** A conversion that will not start produces
+ * no bytes, the element never fires `playing`, and the buffering notice stays
+ * up for the rest of the evening. Telling the family instead needs a state the
+ * screen does not draw, so it is filed as 96 rather than fixed here.
+ *
+ * What is asserted in this file is the *selection*, and it is in the argv.
  */
 function detectHardwareEncoder(listed: string | null): string | null {
   if (listed === null) {

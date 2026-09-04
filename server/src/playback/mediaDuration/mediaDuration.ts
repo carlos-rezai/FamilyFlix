@@ -126,13 +126,15 @@ function readMovieHeader(
  * lie on a remux.
  *
  * It parses the MP4 / ISO base media `moov` → `mvhd` box, which is what direct
- * play sends and therefore the only container this slice can be asked about.
- * Anything it cannot parse answers `null` rather than a guess — a wrong
- * duration is a scrubber that lies about where the film is. The ffprobe read
- * that answers for every other container arrives with the transcoding paths,
- * behind the same `Playback` interface; until then this is also what a machine
- * with no FFmpeg on it falls back to, which is the state the PRD makes
- * first-class.
+ * play sends. Anything it cannot parse answers `null` rather than a guess — a
+ * wrong duration is a scrubber that lies about where the film is.
+ *
+ * Every other container is answered by `probe`, behind the same `Playback`
+ * interface, which is why this is reached only when there is no **Playback
+ * component** to ask: `createPlayback` takes the probe's duration when there
+ * was a probe and this when there was not. That is the machine with no FFmpeg
+ * on it reading the one format it can parse unaided, which is the state the PRD
+ * makes first-class.
  */
 export function mediaDuration(file: string): number | null {
   let fd: number;

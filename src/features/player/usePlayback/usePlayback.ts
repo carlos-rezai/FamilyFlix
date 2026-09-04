@@ -318,9 +318,9 @@ export function usePlayback(
 
   /**
    * The one place a position is written. Everything that moves the film — the
-   * **Scrubber**'s knob, the ±10s buttons, and the keyboard next slice —
-   * arrives here, so none of them can leave the element at a position the film
-   * does not have.
+   * **Scrubber**'s knob, the ±10s buttons, and the arrow keys — arrives here,
+   * so none of them can leave the element at a position the film does not
+   * have.
    */
   const seek = useCallback(
     (seconds: number): number => {
