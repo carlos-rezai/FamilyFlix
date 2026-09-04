@@ -17,7 +17,7 @@ import {
   SubtitleButton,
   Title,
   TopBar,
-  TransportButton,
+  ChromeIconButton,
   TransportRow,
 } from './PlayerControls.styles';
 
@@ -147,29 +147,29 @@ export function PlayerControls({
               onSeek={onSeek}
             />
             <TransportRow>
-              <TransportButton
+              <ChromeIconButton
                 label={playing ? 'Pause' : 'Play'}
                 size={48}
                 onClick={onTogglePlay}
               >
                 {playing ? <PauseIcon size={24} /> : <PlayIcon size={24} />}
-              </TransportButton>
-              <TransportButton
+              </ChromeIconButton>
+              <ChromeIconButton
                 label="Back 10s"
                 title="Back 10s"
                 size={44}
                 onClick={() => onSkip(-SKIP_SECONDS)}
               >
                 <SkipBackIcon size={22} />
-              </TransportButton>
-              <TransportButton
+              </ChromeIconButton>
+              <ChromeIconButton
                 label="Forward 10s"
                 title="Forward 10s"
                 size={44}
                 onClick={() => onSkip(SKIP_SECONDS)}
               >
                 <SkipForwardIcon size={22} />
-              </TransportButton>
+              </ChromeIconButton>
               <VolumeSlider
                 volume={volume}
                 muted={muted}
@@ -189,14 +189,14 @@ export function PlayerControls({
                   CC
                 </SubtitleButton>
               ) : null}
-              <TransportButton
+              <ChromeIconButton
                 label="Fullscreen"
                 title="Fullscreen"
                 size={44}
                 onClick={onToggleFullscreen}
               >
                 <FullscreenIcon size={22} />
-              </TransportButton>
+              </ChromeIconButton>
             </TransportRow>
           </>
         ) : null}

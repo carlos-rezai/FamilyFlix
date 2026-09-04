@@ -1,8 +1,9 @@
 import { VolumeIcon, VolumeMutedIcon } from '@/primitives';
 import { toScalarPercent } from '@/utils';
 
+import { ChromeIconButton } from '../PlayerControls/PlayerControls.styles';
 import { useDragScalar } from '../useDragScalar/useDragScalar';
-import { Fill, Group, MuteButton, Track } from './VolumeSlider.styles';
+import { Fill, Group, Track } from './VolumeSlider.styles';
 
 export interface VolumeSliderProps {
   /** How loud the film is, 0–1. */
@@ -52,13 +53,13 @@ export function VolumeSlider({
 
   return (
     <Group>
-      <MuteButton
+      <ChromeIconButton
         label={muted ? 'Unmute' : 'Mute'}
         size={44}
         onClick={onToggleMute}
       >
         {silenced ? <VolumeMutedIcon size={22} /> : <VolumeIcon size={22} />}
-      </MuteButton>
+      </ChromeIconButton>
       <Track
         ref={trackRef}
         role="slider"

@@ -91,12 +91,22 @@ export const TransportRow = styled.div`
 `;
 
 /**
- * Play and pause. `IconButton` owns the square, the pill corner and the
- * accessible name; the chrome over a picture is this call site's, because white
- * ink over film is not the app's `ghost` face — see `IconButton.styles`, which
- * is why both hover properties are replaced rather than one.
+ * The face every icon button on this screen wears: transparent over the film,
+ * white ink, and a faint white wash on hover. `IconButton` owns the square, the
+ * pill corner and the accessible name; the chrome over a picture is the call
+ * site's, because white ink over film is not the app's `ghost` face — see
+ * `IconButton.styles`, which is why both hover properties are replaced rather
+ * than one.
+ *
+ * **The primitive is not widened to carry this.** `IconButton.styles` argues
+ * that an over-artwork variant would make an API out of the three translucent
+ * call sites elsewhere in the app differing from each other by accident, and
+ * that argument is untouched: this is one face, shared inside one feature, by
+ * the transport buttons and the volume slider's speaker — which do not differ
+ * at all. Named for what it is rather than where it is used, because the second
+ * user is in the next folder over.
  */
-export const TransportButton = styled(IconButton)`
+export const ChromeIconButton = styled(IconButton)`
   background: transparent;
   border: none;
   color: #fff;
