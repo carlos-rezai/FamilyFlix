@@ -108,13 +108,13 @@ export function useDragScalar<E extends HTMLElement = HTMLElement>({
       return;
     }
 
-    const onMove = (event: MouseEvent) => {
+    const onMove = (event: PointerEvent) => {
       const next = scalarAt(event.clientX);
       setValue(next);
       latest.current.onDrag?.(next);
     };
 
-    const onUp = (event: MouseEvent) => {
+    const onUp = (event: PointerEvent) => {
       const next = scalarAt(event.clientX);
       setDragging(false);
       setValue(null);
