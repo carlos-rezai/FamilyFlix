@@ -15,11 +15,13 @@
 // shelled out could only ever be asked about the machine running the test, and
 // CI is a machine with no FFmpeg on it.
 
-import { chmodSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
+import {
+  componentDir,
+  ffmpegIn,
+  ffprobeIn,
+} from '../../test-support/componentDir/componentDir';
 import type { FfmpegBinaries } from '../ffmpegBinary/ffmpegBinary';
 
 import {
@@ -27,40 +29,6 @@ import {
   type CodecCapability,
   type PlaybackCapabilities,
 } from './capabilities';
-
-/** What an executable is called here — the one difference Windows makes. */
-const EXE = process.platform === 'win32' ? '.exe' : '';
-
-const sandboxes: string[] = [];
-
-afterEach(() => {
-  for (const root of sandboxes.splice(0)) {
-    rmSync(root, { recursive: true, force: true });
-  }
-});
-
-/**
- * A directory holding the named binaries, and nothing else. They are empty and
- * never run: what is being asked is which files the resolver finds, not what
- * they would print — which is what the listing argument is for.
- */
-function componentDir(names: string[] = ['ffmpeg', 'ffprobe']): string {
-  const dir = mkdtempSync(join(tmpdir(), 'familyflix-capabilities-'));
-  sandboxes.push(dir);
-
-  for (const name of names) {
-    const file = join(dir, `${name}${EXE}`);
-    writeFileSync(file, '');
-    if (process.platform !== 'win32') {
-      chmodSync(file, 0o755);
-    }
-  }
-
-  return dir;
-}
-
-const ffmpegIn = (dir: string) => join(dir, `ffmpeg${EXE}`);
-const ffprobeIn = (dir: string) => join(dir, `ffprobe${EXE}`);
 
 /**
  * What `ffmpeg -decoders` actually prints: a legend whose lines also begin with
@@ -252,7 +220,7 @@ describe('capabilities — resolving the component through ffmpegBinary', () => 
 
     capabilities(
       {
-        FAMILYFLIX_FFMPEG_PATH: join(componentDir([]), `ffmpeg${EXE}`),
+        FAMILYFLIX_FFMPEG_PATH: ffmpegIn(componentDir([])),
         PATH: onPath,
       },
       asked
