@@ -11,8 +11,9 @@ import { theme } from '@/styles/theme';
  *
  * The **Chrome**: the player's two overlaid bars — Back pill and serif title
  * above, the transport row below — which fade in and out together as one thing.
- * A 1:1 translation of `feat.PlayerControls.dc.html`, minus the **Scrubber**
- * and the volume slider, which are the next slice's.
+ * A 1:1 translation of `feat.PlayerControls.dc.html`. The **Scrubber** and the
+ * volume slider arrived in the next slice and are asserted further down this
+ * file.
  *
  * It is presentational: it is handed what is true and what to call, and decides
  * nothing. Whether the chrome may fade at all is `useControlsVisibility`'s
@@ -129,9 +130,9 @@ describe('PlayerControls', () => {
  * decides nothing — it is handed the position, the duration, the volume and
  * the mute state, and calls back.
  *
- * What is left inert after this slice is the CC pill (subtitles) and
- * fullscreen (the keyboard map), each drawn in the slice that can make it do
- * something.
+ * The CC pill and fullscreen were drawn inert here and made to do something in
+ * the slices that could — subtitles in issue 88, fullscreen in issue 91 — and
+ * both are asserted below.
  */
 describe('PlayerControls — the transport row', () => {
   it('shows how far in the film is and how long it runs', () => {

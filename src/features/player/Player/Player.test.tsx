@@ -38,9 +38,9 @@ import { stubMediaElement } from '@/test-support/stubMediaElement/stubMediaEleme
  * `play()` returns nothing and `paused` never moves, so not one of these
  * behaviours would be observable.
  *
- * What this slice cannot do yet is seek: the scrubber and the volume slider are
- * the next one's, which is the cost of reviewing the element binding apart from
- * the drag arithmetic.
+ * Seeking, the volume slider, the subtitles and the keyboard all arrived in
+ * later slices and are asserted here now, each from the same outside: the film
+ * moves, the box appears, the write goes out.
  */
 const FILM = 'Northwind';
 
