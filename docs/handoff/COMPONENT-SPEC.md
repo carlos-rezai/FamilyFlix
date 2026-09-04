@@ -218,8 +218,8 @@ Rules:
 | `CheckIcon`                        | stroke        | StatusBadge (watched), watched toggle, export success, "All done" |
 | `PlayIcon` / `PauseIcon`           | fill          | Play button, ContinueCard badge, player                           |
 | `SkipBackIcon` / `SkipForwardIcon` | stroke        | player ±10s                                                       |
-| `VolumeIcon` / `VolumeMuteIcon`    | stroke/fill   | player volume                                                     |
-| `CaptionsIcon` (CC)                | stroke        | player subtitles                                                  |
+| `VolumeIcon` / `VolumeMutedIcon`   | stroke/fill   | player volume                                                     |
+| `SubtitlesIcon` (CC)               | stroke        | player subtitles                                                  |
 | `FullscreenIcon`                   | stroke        | player                                                            |
 | `FolderIcon`                       | stroke        | Add-movie hint, Import root field                                 |
 | `SpreadsheetIcon`                  | stroke        | Import sheet field, Export filename                               |
@@ -230,6 +230,12 @@ Rules:
 
 (`heart` ships as two components — filled and outline — rather than a `filled` prop, since
 they're used independently; your call if you'd rather one component with a boolean.)
+
+(Two of these were renamed by the player build and the table has been corrected to the
+shipped names: `VolumeMuteIcon` → **`VolumeMutedIcon`**, matching the element's own
+`muted`, and `CaptionsIcon` → **`SubtitlesIcon`**, because **Subtitles** is the canonical
+term in `docs/ubiquitous-language.md` and "captions" is listed there as an alias to avoid.
+The glyphs are unchanged.)
 
 ### Consequence: `IconButton` takes the icon as a child, not a `name` enum
 
