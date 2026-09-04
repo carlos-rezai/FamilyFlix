@@ -11,6 +11,154 @@ Newest entry first.
 
 ---
 
+## 2026-09-04 — Video player refactor (issue #94)
+
+Twenty-nine commits against the plan in `docs/refactor-plans/10-video-player-refactor.md`,
+which found twenty-six things across ten groups. **2299 tests pass across 144 files**, up
+from 2181 across 134; `npm run typecheck` is green, `eslint src server` is clean, and
+**Built-in video player** and **Watch tracking** are ✅ at last.
+
+The largest thing the biggest build in the project left behind was not a duplication. It
+was a **failing gate that reported itself in two commit messages and was carried by six
+more commits anyway** — and the reason it could be is that nothing ran the script that
+reports it.
+
+### The finding that matters
+
+`npm run typecheck` had been red since issue #87. Two TS2769s, in `PlayerScrubber` and
+`VolumeSlider`, both from `useDragScalar` handing back a `RefObject<HTMLElement | null>`
+for a styled `div`. The `feat` commits for issues 88 and 89 each say, in their own bodies,
+"Two typecheck errors remain in PlayerScrubber and VolumeSlider, both predating this commit
+and untouched by it". Then three more commits landed on top.
+
+Nothing was ever going to catch it. `.husky/pre-commit` ran `lint-staged`, and
+`.lintstagedrc` runs Prettier and nothing else — no eslint, no `tsc`, no vitest. 2181 green
+tests say nothing about a type error, because Vitest does not typecheck.
+
+The fix was a type parameter on the hook, so each slider names the element it actually has
+(a cast would have silenced the compiler about something it had correct). The fix that
+matters is that `.husky/pre-commit` now runs `tsc -b tsconfig.json`.
+
+**It paid three commits later.** A `614_925_000n` BigInt literal in `mediaDuration`'s new
+test does not compile at the server's ES target; the hook stopped it before it landed.
+
+ESLint and the test suite were both considered for the hook and both left out. ESLint is
+clean and cheap to run by hand; a fifteen-second suite on every commit is the gate people
+route `--no-verify` around, which would take the typecheck down with it.
+
+### What moved
+
+- **Three duplications inside the player.** `percentOf`, byte-identical in two files, is
+  `src/utils/toScalarPercent/` with the test CLAUDE.md requires and neither copy had. The
+  chrome face of `IconButton`, written out twice with a comment in each pointing at the
+  other, is one `ChromeIconButton`. `SKIP_SECONDS` is declared once, in the chrome, where
+  the number is written on the buttons' own labels.
+- **The read routes got `writeSignal`'s counterpart.** `Unknown movie: <id>` was pasted in
+  five routes and `No video file for movie: <id>` in three. Now `movieOr404` and
+  `videoFileOr404`, both local to `routes/index.ts` on `writeSignal`'s own recorded
+  argument, and `noVideoFile` for the third copy that could not go through the resolver —
+  `sendFile`'s failure callback, where the file did resolve and the read failed after.
+- **The `Response` fake, in twenty-four files, is in one.** Measured before it was folded:
+  `okResponse` had 23 definitions and 22 identical bodies, `serverErrorResponse` 14 and 14,
+  `notFoundResponse` 7 with four bodies differing only in the message. So the message is
+  the one parameter. `LibraryPage`'s variant builds a whole `HomePayload` and is a
+  different thing: it became `homeResponse(rows)`, a thin wrapper over the shared one, and
+  was renamed because a factory that means "a home payload" should not be called after the
+  status code.
+- **`server/src/test-support/` gained two units.** `componentDir` (the fixture
+  `ffmpegBinary` and `capabilities` both carried verbatim) and `sandboxRoot`.
+- **Four playback modules that nothing named now have tests.** `mediaDuration`, `probe`,
+  `ffmpegComponent` and `createPlayback` — 84 tests, and not one of them spawns a binary,
+  which is the property CI depends on.
+- **`Player.tsx` lost two hooks and 62 lines**, as `useOpeningReads` and `useSubtitles`.
+
+### The rulings, re-taken
+
+- **The temp-directory sandbox, at eight call sites.** #81 declined a shared helper at
+  three, because three copies had three ownership models. At eight the measurement comes
+  out the other way: five carried one shape and became `sandboxRoot(prefix)`. The other
+  three (`db`, `write`, `genre`) mint database _file paths_ in a lazily-created directory
+  and their teardown is entangled with closing the connections that hold those files open
+  on Windows. They stay, and #81's reasoning still holds for them.
+- **File sizes, at 3335 and 1816.** The question was never the number. `routes.test.ts` has
+  a real seam — four domains — but it is in `routes/index.ts`, not in its test; splitting
+  the test alone would put one unit's tests in four files. `Player.test.tsx`'s candidates
+  both drive the same screen through the same harness. The split that was actually
+  available in that screen was made in the source instead. Both files now carry the ruling
+  in their own header.
+- **`useFullscreen`'s unread `fullscreen` goes.** The prototype draws that button with one
+  face, unlike the CC pill's two, so there was no pressed state for it to feed — state kept
+  against a screen nobody has designed, plus a `fullscreenchange` listener on every player
+  mount to maintain it. Its test now asserts `document.fullscreenElement` throughout, which
+  is what the rule was always about.
+- **`usePlayback` takes an options object**, like every other hook in the feature, and
+  `PlaybackSource` collapses into `PlaybackRead` — it restated the same two fields for a
+  hook handed the read whole.
+- **The volume-persistence effect stays in `Player.tsx`**, and the reason is written where
+  it is: the preference is _read_ into `startVolume`, which `usePlayback` needs before it
+  can report a volume, and it is that report the effect writes back. A hook could own the
+  write but not the read, which is one preference in two files; a hook owning both cannot
+  be called before the values it persists exist.
+
+### The prototype and the spec
+
+Four divergences from `docs/handoff/COMPONENT-SPEC.md`, and **all four commits are
+docs-only**, because in all four places the code is the half that is right and only the
+spec was never told. The spec was written before the player was designed;
+`docs/design-logs/10-video-player.md` supersedes it in each.
+
+- ProgressBar is not the scrubber base, and the entry now says why: `overflow: hidden`
+  clips a centred knob, a width transition lags a drag, the track colour is wrong over
+  film, and a seek bar is a `slider` rather than a `progressbar`.
+- The PlayerControls row is the shipped props, with a note recording the composition the
+  design log argued for and why each renamed prop is the domain's word.
+- `VolumeMuteIcon` → `VolumeMutedIcon`, `CaptionsIcon` → `SubtitlesIcon`, following the
+  glossary, where **Subtitles** is canonical and "captions" is an alias to avoid.
+- `PlayerNotice`'s one stack where the prototype has two was **settled by looking**, in
+  Chrome, both variants side by side at a player-sized frame: caption box 163.42×20 either
+  way, same offset from the centre line, same distance down the screen, circle identical.
+  Only the stack's own invisible box differs, by exactly the 80px of symmetric padding
+  around a centred box. A difference of nothing, and the measurement is on `Stack` so
+  nobody re-opens it.
+
+### Follow-ups this round filed
+
+- **95 — the media element is mounted for one frame before the playback read lands.** Both
+  flags the guard reads derive from that read, so on the first frame an element really is
+  pointed at the stream for a film with no file (404) or one nothing can decode (415). The
+  fix is one line in `Player.tsx` and a harness rewrite in `Player.test.tsx`, which takes
+  the element on the first render in eighty-two places. The comment now says what the code
+  does; the improvement is filed.
+- **96 — a conversion that fails to start leaves the buffering notice up forever.** This
+  one was pointed at by a comment: "the next slice's error handling is where that is
+  caught". No such error handling shipped. ffmpeg exits, no bytes arrive, the element never
+  fires `playing`, and the family watches "Getting this film ready…" for the rest of the
+  evening. Filed rather than fixed because telling them needs a fifth `PlayerNotice` state,
+  and CLAUDE.md's rule is that the prototype is amended first.
+
+### Six comments that outlived their slices
+
+`usePlayback` still called the keyboard "next slice"; `PlayerPage` still said `Player`
+would own the chrome "from the next slice"; `mediaDuration` made three claims about a
+transcoding path that had since arrived; `Player.tsx` carried a docblock with no
+declaration under it, so it read as documentation of the wrong function; and two suites
+narrated limitations they now have tests against.
+
+The build narrated itself honestly, phase by phase, and that is worth keeping — but a
+sentence about "the next slice" is a claim with an expiry date on it, and nothing expires
+it. **The next round should read every "next slice" in the diff before writing it**, or
+write "not yet" without saying when.
+
+### What this round is really about
+
+Favorites left six undocumented decisions. Continue Watching left an accrued bill. This
+initiative is four times the size of either and left neither — the format policy, the seek
+anchoring and the watch coalescing were all decided before a line was written and none
+needed revisiting. What it left instead is a **process** finding, and it is the only one of
+the twenty-six that changes what the _next_ initiative can get away with.
+
+---
+
 ## 2026-09-04 — Built-in video player and watch tracking (issues #83–#93)
 
 Nineteen commits across issues #83–#92, nine phases against the plan on #82,
