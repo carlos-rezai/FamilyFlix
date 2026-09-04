@@ -45,17 +45,15 @@ const IMAGE_ROUTE = '/api/images/';
  * segment however it is spelled. Ids are minted by the repository today, so
  * this is a guard rather than a case the app produces — but it is the kind of
  * guard that is free here and expensive once a route is live.
- */
-function streamUrl(movieId: string): string {
-  return `/api/movies/${encodeURIComponent(movieId)}/stream`;
-}
-
-/**
- * The **Stream offset** is not put on here. `usePlayback` owns it: on a
+ *
+ * **The Stream offset is not put on here.** `usePlayback` owns it: on a
  * converted film a seek *is* a change of source, so the URL the element is
  * pointed at and the position the screen reports are two halves of one thing,
  * and the hook hands back the src to use.
  */
+function streamUrl(movieId: string): string {
+  return `/api/movies/${encodeURIComponent(movieId)}/stream`;
+}
 
 /** Where the film's page is, which is where both ways out of the player land. */
 function moviePath(movieId: string): string {
