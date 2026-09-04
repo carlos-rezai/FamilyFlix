@@ -1,10 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-import { fetchMovie } from '@/api/fetchMovie/fetchMovie';
-import type { Cue, Movie, PlaybackRead } from '@/types';
+import type { Cue, Movie } from '@/types';
 import { gradientFromId } from '@/utils';
-import { fetchPlayback, fetchSubtitleCues } from '../api/api';
+import { fetchSubtitleCues } from '../api/api';
 import { cueAt } from '../cueAt/cueAt';
 import { PlayerControls } from '../PlayerControls/PlayerControls';
 import { PlayerNotice } from '../PlayerNotice/PlayerNotice';
@@ -13,6 +12,7 @@ import { preferredSubtitle } from '../preferredSubtitle/preferredSubtitle';
 import { SubtitleOverlay } from '../SubtitleOverlay/SubtitleOverlay';
 import { useControlsVisibility } from '../useControlsVisibility/useControlsVisibility';
 import { useFullscreen } from '../useFullscreen/useFullscreen';
+import { useOpeningReads } from '../useOpeningReads/useOpeningReads';
 import { usePlayback } from '../usePlayback/usePlayback';
 import { usePlayerKeys } from '../usePlayerKeys/usePlayerKeys';
 import { useWatchReporter } from '../useWatchReporter/useWatchReporter';
@@ -139,9 +139,8 @@ export function Player({ movieId }: PlayerProps) {
   // that is what fills the screen, not the bare element inside it.
   const stageRef = useRef<HTMLDivElement>(null);
 
-  const [movie, setMovie] = useState<Movie | null>(null);
-  const [playback, setPlayback] = useState<PlaybackRead | null>(null);
-  const [fileMissing, setFileMissing] = useState(false);
+  // The two reads the screen opens with.
+  const { movie, playback, fileMissing } = useOpeningReads(movieId);
 
   // The level the film opens at, read once on the way in. A **per-machine UI
   // preference, not library data**: it lives in `localStorage` rather than in
@@ -158,31 +157,6 @@ export function Player({ movieId }: PlayerProps) {
   // one request: `[]` is a real answer — the file would not parse, or the row's
   // file has gone — and must not read as "not fetched yet".
   const [cues, setCues] = useState<Cue[] | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    void Promise.all([fetchMovie(movieId), fetchPlayback(movieId)])
-      .then(([record, read]) => {
-        if (cancelled) {
-          return;
-        }
-        setMovie(record);
-        setPlayback(read);
-        // The playback read answers 404 for a film with no file behind it, and
-        // `fetchPlayback` resolves that as `null` precisely so it can be told
-        // apart from a request that went wrong.
-        setFileMissing(read === null);
-      })
-      // A read that failed outright is not a film with no file, and the notice
-      // for it arrives with the transcoding paths. Until then the screen keeps
-      // its backdrop rather than falling over.
-      .catch(() => undefined);
-
-    return () => {
-      cancelled = true;
-    };
-  }, [movieId]);
 
   const {
     src,
@@ -329,7 +303,16 @@ export function Player({ movieId }: PlayerProps) {
       <PictureLayer onClick={toggle}>
         {/* No element over bytes no browser can read: one left there stalls,
             retries and logs a decode error behind a notice already saying what
-            happened. */}
+            happened.
+
+            **From the moment the read lands**, which is what these two flags
+            are derived from. On the first frame both are false, so an element
+            is mounted and pointed at the stream for as long as the read takes
+            — a film with no file answers that 404 and one nothing can decode
+            415, and the element is gone again a moment later. Making it wait
+            instead is a real improvement and not a one-line one: the suite
+            takes the element on the first render in eighty-two places, so it
+            needs a harness that awaits. Filed as 95. */}
         {fileMissing || cannotPlay ? null : (
           <Picture ref={videoRef} src={src} />
         )}
