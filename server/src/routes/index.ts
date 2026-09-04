@@ -10,6 +10,7 @@ import {
   type GenreListPayload,
   type GenreQuery,
   type LibraryQuery,
+  type Movie,
   type MovieQuery,
   type MovieSort,
 } from '@/types';
@@ -57,6 +58,39 @@ function writeSignal<V>(
 
   mutate(id, value);
   res.json({ value });
+}
+
+/**
+ * What every read of one movie does first: look it up, and 404 if it is gone.
+ *
+ * `writeSignal`'s counterpart, and it exists for the same reason at one more
+ * call site. "A movie that is not there is a JSON 404 carrying
+ * `Unknown movie: <id>`, never Express's HTML page" is a rule the client
+ * depends on — it reads that body to tell "this movie is gone" from "the
+ * request went wrong", which is what makes the detail page's `not-found` state
+ * and the player's missing-film notice reachable at all — and it was upheld by
+ * five routes having remembered to paste the same four lines.
+ *
+ * It answers the movie, or `null` **having already sent the 404**. A caller
+ * that gets `null` has nothing left to do but return, which is the shape that
+ * makes the rule impossible to half-apply.
+ *
+ * It stays local to this file on `writeSignal`'s own recorded argument: the
+ * one-folder-per-unit trigger is companion files, and this has none — its
+ * behaviour is observable only through the router, which is where
+ * `routes.test.ts` already asserts it.
+ */
+function movieOr404(
+  storage: LibraryStorage,
+  id: string,
+  res: Response
+): Movie | null {
+  const movie = storage.getMovie(id);
+  if (!movie) {
+    res.status(404).json({ error: `Unknown movie: ${id}` });
+    return null;
+  }
+  return movie;
 }
 
 /**
