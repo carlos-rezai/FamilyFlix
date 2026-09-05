@@ -120,10 +120,18 @@ function answerWith({
   movie = NORTHWIND,
   playback = DIRECT_PLAY as PlaybackRead | null,
   cues = [] as Cue[] | null,
+  playbackFails = false,
 }: {
   movie?: Movie;
   playback?: PlaybackRead | null;
   cues?: Cue[] | null;
+  /**
+   * A **Playback read** that goes wrong rather than answering — which is a
+   * third thing, not a harsher `null`. A 404 says the film has no file and
+   * draws its own notice; a 500 says nothing at all, and the screen has no
+   * notice for it.
+   */
+  playbackFails?: boolean;
 }) {
   fetchMock.mockImplementation((input, init) => {
     const url = String(input);
@@ -131,6 +139,9 @@ function answerWith({
       return Promise.resolve(okResponse(movie));
     }
     if (url === '/api/movies/m1/playback') {
+      if (playbackFails) {
+        return Promise.resolve(serverErrorResponse());
+      }
       return Promise.resolve(
         playback === null
           ? notFoundResponse('No video file for movie: m1')
@@ -185,11 +196,19 @@ function watchWrites(): {
 }
 
 /**
- * The player, opened from the film's own page — which is what the Back pill has
- * to be able to step back to.
+ * The player screen at its **first frame** — rendered, and nothing waited on.
+ *
+ * Opened from the film's own page, which is what the Back pill has to be able
+ * to step back to.
+ *
+ * This is what the two notices are asserted from, and what the guard over the
+ * picture is asserted from, because both are about the frame before the
+ * **Playback read** has landed: on that frame there is no element at all, and a
+ * harness that waited for one would either hang or hide the thing being
+ * checked. Everything that drives a film uses {@link renderPlayer} instead.
  */
-function renderPlayer() {
-  const view = render(
+function renderScreen() {
+  return render(
     <ThemeProvider theme={theme}>
       <MemoryRouter
         initialEntries={['/movie/m1', '/movie/m1/play']}
@@ -204,8 +223,23 @@ function renderPlayer() {
       </MemoryRouter>
     </ThemeProvider>
   );
+}
 
-  return { ...view, video: picture(view.container) };
+/**
+ * The player with a film in it: rendered, and waited on until the picture has
+ * arrived.
+ *
+ * The element is not mounted until the **Playback read** has settled — a film
+ * with no file behind it and one nothing can decode must never be pointed at
+ * the stream, and both of those are only known once the read answers. So the
+ * element is not there on the first render, and every test that drives one has
+ * to wait for it rather than take it synchronously.
+ */
+async function renderPlayer() {
+  const view = renderScreen();
+  const video = await waitFor(() => picture(view.container));
+
+  return { ...view, video };
 }
 
 /** The element the film plays in. */
@@ -260,39 +294,62 @@ function emit(video: HTMLMediaElement, type: string): void {
 describe('Player — the picture', () => {
   stubMediaElement();
 
-  it('points the element at the film’s stream', () => {
-    const { video } = renderPlayer();
+  it('points the element at the film’s stream', async () => {
+    const { video } = await renderPlayer();
 
     expect(video.getAttribute('src')).toBe('/api/movies/m1/stream');
   });
 
+  it('points nothing at the stream until the read has landed', async () => {
+    // Issue #95. The element may not be given a film the screen does not yet
+    // know it can play: `fileMissing` and `cannotPlay` are both derived from
+    // the **Playback read**, and both are `false` until it answers, so a guard
+    // written on those two alone does not hold on the frame it is about.
+    //
+    // The other half of that rule is asserted here too, because "never mount
+    // it" would pass the first line on its own: a film that plays gets its
+    // element, pointed at its stream, the moment the read says so.
+    const { container } = renderScreen();
+
+    expect(container.querySelector('video')).toBeNull();
+
+    const video = await waitFor(() => picture(container));
+    expect(video.getAttribute('src')).toBe('/api/movies/m1/stream');
+  });
+
   it('starts the film when the screen opens, without a second press', async () => {
-    const { video } = renderPlayer();
+    const { video } = await renderPlayer();
 
     await waitFor(() => expect(video.paused).toBe(false));
   });
 
   it('names the film on screen', async () => {
-    renderPlayer();
+    await renderPlayer();
 
     expect(await screen.findByText(FILM)).toBeDefined();
   });
 
-  it('has the blurred backdrop behind the picture from the first frame', () => {
+  it('has the blurred backdrop behind the picture from the first frame', async () => {
     // Not after the record arrives and not after the first byte of video: the
     // screen must never be a flat black rectangle, and the gradient is
     // derivable from the id the URL already carried.
-    const { container, video } = renderPlayer();
+    //
+    // Rendered rather than opened, because the frame this is about is the one
+    // the picture is not on yet: the backdrop has to be there already, and the
+    // element arrives behind it a moment later.
+    const { container } = renderScreen();
 
     const backdrop = blurredLayer(container);
     expect(backdrop).toBeDefined();
+
+    const video = await waitFor(() => picture(container));
     const order = backdrop?.compareDocumentPosition(video) ?? 0;
     expect(order & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it('pauses when the picture is clicked, and resumes when it is clicked again', async () => {
     // Anywhere on the picture, so nobody has to aim at a small button.
-    const { video } = renderPlayer();
+    const { video } = await renderPlayer();
     await waitFor(() => expect(video.paused).toBe(false));
 
     fireEvent.click(video);
@@ -303,7 +360,7 @@ describe('Player — the picture', () => {
   });
 
   it('shows the big play circle exactly while the film is stopped', async () => {
-    const { container, video } = renderPlayer();
+    const { container, video } = await renderPlayer();
     await waitFor(() => expect(video.paused).toBe(false));
     expect(circle(container)).toBeUndefined();
 
@@ -317,7 +374,7 @@ describe('Player — leaving', () => {
   stubMediaElement();
 
   it('returns to the film’s page from the Back pill', async () => {
-    renderPlayer();
+    await renderPlayer();
     expect(pathname()).toBe('/movie/m1/play');
 
     fireEvent.click(await screen.findByRole('button', { name: 'Back' }));
@@ -328,7 +385,7 @@ describe('Player — leaving', () => {
   it('leaves the same way on Escape, which is the keyboard way out', async () => {
     // The same handler, not a second one: two ways out that can drift apart are
     // two behaviours to keep in step forever.
-    renderPlayer();
+    await renderPlayer();
     await screen.findByRole('button', { name: 'Back' });
 
     fireEvent.keyDown(window, { key: 'Escape' });
@@ -356,7 +413,7 @@ describe('Player — the chrome fading', () => {
     });
 
   it('takes the chrome and the cursor away after three seconds of stillness', async () => {
-    const { video } = renderPlayer();
+    const { video } = await renderPlayer();
     await waitFor(() => expect(video.paused).toBe(false));
     await screen.findByRole('button', { name: 'Back' });
 
@@ -367,7 +424,7 @@ describe('Player — the chrome fading', () => {
   });
 
   it('brings both back on a twitch of the mouse', async () => {
-    const { video } = renderPlayer();
+    const { video } = await renderPlayer();
     await waitFor(() => expect(video.paused).toBe(false));
     await screen.findByRole('button', { name: 'Back' });
     idleFor(3000);
@@ -380,7 +437,7 @@ describe('Player — the chrome fading', () => {
 
   it('holds the chrome on screen for as long as the film is paused', async () => {
     // A paused player is someone deciding, not someone watching.
-    const { video } = renderPlayer();
+    const { video } = await renderPlayer();
     await waitFor(() => expect(video.paused).toBe(false));
     fireEvent.click(video);
     await waitFor(() => expect(video.paused).toBe(true));
@@ -396,7 +453,7 @@ describe('Player — a film that is getting ready', () => {
   stubMediaElement();
 
   it('says so while the element is waiting, and stops when it plays', async () => {
-    const { video } = renderPlayer();
+    const { video } = await renderPlayer();
     await waitFor(() => expect(video.paused).toBe(false));
 
     emit(video, 'waiting');
@@ -415,14 +472,24 @@ describe('Player — a film whose file is missing', () => {
   });
 
   it('says what has happened rather than showing a black rectangle', async () => {
-    const { container } = renderPlayer();
+    const { container } = renderScreen();
 
     expect(await screen.findByText(MISSING_TITLE)).toBeDefined();
     expect(blurredLayer(container)).toBeDefined();
   });
 
+  it('points nothing at the stream on the frame before the read lands', () => {
+    // Issue #95. `fileMissing` is false until the read answers 404, so on the
+    // first frame the element was mounted and pointed at a stream that answers
+    // 404 as well — one wasted request and a console error behind a notice
+    // already saying what happened.
+    const { container } = renderScreen();
+
+    expect(container.querySelector('video')).toBeNull();
+  });
+
   it('leaves a way back, so a broken film is not a screen with no exit', async () => {
-    renderPlayer();
+    renderScreen();
     await screen.findByText(MISSING_TITLE);
 
     fireEvent.click(screen.getByRole('button', { name: 'Back' }));
@@ -433,7 +500,7 @@ describe('Player — a film whose file is missing', () => {
   it('does not idle its own way out away', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     try {
-      renderPlayer();
+      renderScreen();
       await screen.findByText(MISSING_TITLE);
 
       act(() => {
@@ -461,7 +528,7 @@ describe('Player — a film this build cannot play', () => {
   });
 
   it('says the film cannot be played, not that its file is missing', async () => {
-    const { container } = renderPlayer();
+    const { container } = renderScreen();
 
     expect(await screen.findByText(CANNOT_TITLE)).toBeDefined();
     expect(container.textContent).not.toContain(MISSING_TITLE);
@@ -470,14 +537,24 @@ describe('Player — a film this build cannot play', () => {
   it('does not sit an element over bytes no browser can read', async () => {
     // Leaving the `<video>` there means an element that stalls, retries, and
     // logs a decode error behind a notice already saying what happened.
-    const { container } = renderPlayer();
+    const { container } = renderScreen();
     await screen.findByText(CANNOT_TITLE);
 
     expect(container.querySelector('video')).toBeNull();
   });
 
+  it('points nothing at the stream on the frame before the read lands', () => {
+    // Issue #95, and the reason the guard was worth a follow-up. The existing
+    // test below takes the element away *after* the read lands; this one is
+    // about the frame before it, where `cannotPlay` is still false and the
+    // element was mounted over bytes no browser can read.
+    const { container } = renderScreen();
+
+    expect(container.querySelector('video')).toBeNull();
+  });
+
   it('leaves a way back, the same one the missing-file notice has', async () => {
-    renderPlayer();
+    renderScreen();
     await screen.findByText(CANNOT_TITLE);
 
     fireEvent.click(screen.getByRole('button', { name: 'Back' }));
@@ -489,7 +566,7 @@ describe('Player — a film this build cannot play', () => {
     // A notice whose only exit fades after three seconds is a trap.
     vi.useFakeTimers({ shouldAdvanceTime: true });
     try {
-      renderPlayer();
+      renderScreen();
       await screen.findByText(CANNOT_TITLE);
 
       act(() => {
@@ -503,10 +580,44 @@ describe('Player — a film this build cannot play', () => {
   });
 
   it('keeps its backdrop rather than going black', async () => {
-    const { container } = renderPlayer();
+    const { container } = renderScreen();
     await screen.findByText(CANNOT_TITLE);
 
     expect(blurredLayer(container)).toBeDefined();
+  });
+});
+
+describe('Player — a read that went wrong', () => {
+  // Issue #95. The gate over the element is "the reads have settled", not "the
+  // **Playback read** has a value" — the two look alike for every film that
+  // works, and come apart exactly here.
+  stubMediaElement();
+
+  beforeEach(() => {
+    answerWith({ playbackFails: true });
+  });
+
+  it('stops waiting rather than holding an empty screen all evening', async () => {
+    // A read that failed outright leaves `playback` null for good — the same
+    // null it holds before the read lands. There is no notice for it, so a
+    // screen that went on waiting would be a backdrop with nothing on it and
+    // nothing to say, for the rest of the evening.
+    const { container } = renderScreen();
+
+    expect(container.querySelector('video')).toBeNull();
+
+    const video = await waitFor(() => picture(container));
+    expect(video.getAttribute('src')).toBe('/api/movies/m1/stream');
+  });
+
+  it('draws neither notice, because neither of them is what happened', async () => {
+    // The distinction the `null`-for-404 arrangement exists to keep: a backend
+    // hiccup is not a missing file and not an undecodable one.
+    const { container } = renderScreen();
+    await waitFor(() => picture(container));
+
+    expect(container.textContent).not.toContain(MISSING_TITLE);
+    expect(container.textContent).not.toContain(CANNOT_TITLE);
   });
 });
 
@@ -514,14 +625,14 @@ describe('Player — when the browser refuses to autoplay', () => {
   stubMediaElement({ autoplay: 'refused' });
 
   it('offers the big play circle rather than failing silently', async () => {
-    const { container, video } = renderPlayer();
+    const { container, video } = await renderPlayer();
 
     await waitFor(() => expect(circle(container)).toBeDefined());
     expect(video.paused).toBe(true);
   });
 
   it('starts the film on one press', async () => {
-    const { container, video } = renderPlayer();
+    const { container, video } = await renderPlayer();
     await waitFor(() => expect(circle(container)).toBeDefined());
 
     fireEvent.click(video);
@@ -580,14 +691,14 @@ describe('Player — the scrubber over a real film', () => {
     // The record says 128 minutes — `2:08:00`. The file says 6832.5 seconds —
     // `1:53:52`. The second one is the truth, and it is the only one the
     // scrubber is allowed to have come from.
-    renderPlayer();
+    await renderPlayer();
 
     expect(await screen.findByText('1:53:52')).toBeDefined();
     expect(screen.queryByText('2:08:00')).toBeNull();
   });
 
   it('takes the film to where the knob was let go', async () => {
-    const { video } = renderPlayer();
+    const { video } = await renderPlayer();
     await waitFor(() => expect(video.paused).toBe(false));
 
     dragTo(await seekBar(), 0.5);
@@ -596,7 +707,7 @@ describe('Player — the scrubber over a real film', () => {
   });
 
   it('replays the last ten seconds, and clamps at the start of the film', async () => {
-    const { video } = renderPlayer();
+    const { video } = await renderPlayer();
     await waitFor(() => expect(video.paused).toBe(false));
     await screen.findByRole('button', { name: 'Back 10s' });
 
@@ -612,7 +723,7 @@ describe('Player — the scrubber over a real film', () => {
   });
 
   it('turns the film down, and silences it outright', async () => {
-    const { video } = renderPlayer();
+    const { video } = await renderPlayer();
     await waitFor(() => expect(video.paused).toBe(false));
 
     const bar = await screen.findByRole('slider', { name: 'Volume' });
@@ -651,7 +762,7 @@ describe('Player — the scrubber over a real film', () => {
         videoPath: 'Northwind (1994)/northwind.mp4',
       }),
     });
-    const { video } = renderPlayer();
+    const { video } = await renderPlayer();
     await waitFor(() => expect(video.paused).toBe(false));
 
     expect(await screen.findByText('1:53:52')).toBeDefined();
@@ -686,7 +797,7 @@ describe('Player — watching writes', () => {
         status: 'in-progress',
       }),
     });
-    const { video } = renderPlayer();
+    const { video } = await renderPlayer();
 
     // Silently, and with no "Resume / Start over" dialog — the prototype draws
     // none, and the film simply carries on.
@@ -695,7 +806,7 @@ describe('Player — watching writes', () => {
   });
 
   it('starts a film nobody has opened at the beginning', async () => {
-    const { video } = renderPlayer();
+    const { video } = await renderPlayer();
     await waitFor(() => expect(video.paused).toBe(false));
 
     expect(video.currentTime).toBe(0);
@@ -711,7 +822,7 @@ describe('Player — watching writes', () => {
         status: 'watched',
       }),
     });
-    const { video } = renderPlayer();
+    const { video } = await renderPlayer();
     await waitFor(() => expect(video.paused).toBe(false));
 
     expect(video.currentTime).toBe(0);
@@ -720,7 +831,7 @@ describe('Player — watching writes', () => {
   it('writes nothing when a film is opened and left again straight away', async () => {
     // Three seconds is not watching. If this wrote, the film would be sitting
     // at the front of the family's Continue Watching row over a glance.
-    const { video } = renderPlayer();
+    const { video } = await renderPlayer();
     await waitFor(() => expect(video.paused).toBe(false));
     video.currentTime = 3;
     emit(video, 'timeupdate');
@@ -731,7 +842,7 @@ describe('Player — watching writes', () => {
   });
 
   it('writes where the film was on the way out', async () => {
-    const { video } = renderPlayer();
+    const { video } = await renderPlayer();
     await waitFor(() => expect(video.paused).toBe(false));
     video.currentTime = 1200;
     emit(video, 'timeupdate');
@@ -744,7 +855,7 @@ describe('Player — watching writes', () => {
   });
 
   it('writes where the film was when it is paused', async () => {
-    const { video } = renderPlayer();
+    const { video } = await renderPlayer();
     await waitFor(() => expect(video.paused).toBe(false));
     video.currentTime = 900;
     emit(video, 'timeupdate');
@@ -762,7 +873,7 @@ describe('Player — watching writes', () => {
     // The second the film was taken to, not the one it was at before it moved:
     // the position prop has not caught up when the seek lands, and a reporter
     // reading it would store the wrong place every time.
-    const { video } = renderPlayer();
+    const { video } = await renderPlayer();
     await waitFor(() => expect(video.paused).toBe(false));
     video.currentTime = 900;
     emit(video, 'timeupdate');
@@ -777,7 +888,7 @@ describe('Player — watching writes', () => {
   });
 
   it('marks a film watched when it reaches its end', async () => {
-    const { video } = renderPlayer();
+    const { video } = await renderPlayer();
     await waitFor(() => expect(video.paused).toBe(false));
     video.currentTime = 6832.5;
     emit(video, 'timeupdate');
@@ -795,7 +906,7 @@ describe('Player — watching writes', () => {
     // A backend hiccup must never interrupt the film: no notice over the
     // picture, no pause, and the position exactly where it was.
     writeFails = true;
-    const { video } = renderPlayer();
+    const { video } = await renderPlayer();
     await waitFor(() => expect(video.paused).toBe(false));
     video.currentTime = 900;
     emit(video, 'timeupdate');
@@ -872,7 +983,7 @@ describe('Player — the CC pill', () => {
 
   it('is drawn for a film with subtitle files beside it', async () => {
     answerWith({ movie: SUBTITLED, cues: CUES });
-    renderPlayer();
+    await renderPlayer();
 
     expect(
       await screen.findByRole('button', { name: 'Subtitles' })
@@ -886,14 +997,14 @@ describe('Player — the CC pill', () => {
     // Stated against the subtitled film in the same test, because an absence on
     // its own is equally satisfied by a pill that was never built.
     answerWith({ movie: SUBTITLED, cues: CUES });
-    const subtitled = renderPlayer();
+    const subtitled = await renderPlayer();
     expect(
       await screen.findByRole('button', { name: 'Subtitles' })
     ).toBeDefined();
     subtitled.unmount();
 
     answerWith({ movie: NORTHWIND });
-    renderPlayer();
+    await renderPlayer();
 
     await screen.findByRole('button', { name: 'Back' });
     expect(screen.queryByRole('button', { name: 'Subtitles' })).toBeNull();
@@ -908,7 +1019,7 @@ describe('Player — turning subtitles on and off', () => {
     // is a recorded divergence, not an oversight — auto-on subtitles are a
     // roadmap item, and defaulting them on would implement it by accident.
     answerWith({ movie: SUBTITLED, cues: CUES });
-    renderPlayer();
+    await renderPlayer();
 
     const pill = await screen.findByRole('button', { name: 'Subtitles' });
     expect(pill.getAttribute('aria-pressed')).toBe('false');
@@ -919,7 +1030,7 @@ describe('Player — turning subtitles on and off', () => {
     // A film watched without subtitles should not fetch a file it will never
     // draw.
     answerWith({ movie: SUBTITLED, cues: CUES });
-    renderPlayer();
+    await renderPlayer();
 
     await screen.findByRole('button', { name: 'Subtitles' });
     expect(cueRequests()).toEqual([]);
@@ -927,7 +1038,7 @@ describe('Player — turning subtitles on and off', () => {
 
   it('puts the line for where the film is on screen when CC is pressed', async () => {
     answerWith({ movie: SUBTITLED, cues: CUES });
-    const { video } = renderPlayer();
+    const { video } = await renderPlayer();
     await waitFor(() => expect(video.paused).toBe(false));
     video.currentTime = 2;
     emit(video, 'timeupdate');
@@ -939,7 +1050,7 @@ describe('Player — turning subtitles on and off', () => {
 
   it('reads as switched on while they are showing', async () => {
     answerWith({ movie: SUBTITLED, cues: CUES });
-    const { video } = renderPlayer();
+    const { video } = await renderPlayer();
     await waitFor(() => expect(video.paused).toBe(false));
 
     fireEvent.click(await screen.findByRole('button', { name: 'Subtitles' }));
@@ -955,7 +1066,7 @@ describe('Player — turning subtitles on and off', () => {
 
   it('takes them away again on a second press', async () => {
     answerWith({ movie: SUBTITLED, cues: CUES });
-    const { video } = renderPlayer();
+    const { video } = await renderPlayer();
     await waitFor(() => expect(video.paused).toBe(false));
     video.currentTime = 2;
     emit(video, 'timeupdate');
@@ -974,7 +1085,7 @@ describe('Player — turning subtitles on and off', () => {
     // them off and on again — or about a seek — for them to be re-fetched
     // against.
     answerWith({ movie: SUBTITLED, cues: CUES });
-    const { video } = renderPlayer();
+    const { video } = await renderPlayer();
     await waitFor(() => expect(video.paused).toBe(false));
     // Somewhere the first cue covers, so that the line coming back is what says
     // the second switch-on drew from the list already in hand.
@@ -995,7 +1106,7 @@ describe('Player — turning subtitles on and off', () => {
     // The rows arrive Portuguese-first; `position` says English is track one.
     // Nobody chooses, so the choice has to be the deterministic one.
     answerWith({ movie: SUBTITLED, cues: CUES });
-    const { video } = renderPlayer();
+    const { video } = await renderPlayer();
     await waitFor(() => expect(video.paused).toBe(false));
 
     fireEvent.click(await screen.findByRole('button', { name: 'Subtitles' }));
@@ -1043,7 +1154,7 @@ describe('Player — which line is on screen', () => {
   /** Open the film, start it, and switch subtitles on. */
   async function withSubtitlesOn() {
     answerWith({ movie: SUBTITLED, cues: CUES });
-    const view = renderPlayer();
+    const view = await renderPlayer();
     await waitFor(() => expect(view.video.paused).toBe(false));
     fireEvent.click(await screen.findByRole('button', { name: 'Subtitles' }));
     await waitFor(() => expect(cueRequests()).toHaveLength(1));
@@ -1147,7 +1258,7 @@ describe('Player — the subtitle box and the chrome', () => {
 
   async function withSubtitlesOn() {
     answerWith({ movie: SUBTITLED, cues: CUES });
-    const view = renderPlayer();
+    const view = await renderPlayer();
     await waitFor(() => expect(view.video.paused).toBe(false));
     fireEvent.click(await screen.findByRole('button', { name: 'Subtitles' }));
     view.video.currentTime = 2;
@@ -1195,7 +1306,7 @@ describe('Player — a subtitle file that is no good', () => {
     // box never appears, and no notice is drawn — a bad subtitle file is not a
     // broken film.
     answerWith({ movie: SUBTITLED, cues: [] });
-    const { container, video } = renderPlayer();
+    const { container, video } = await renderPlayer();
     await waitFor(() => expect(video.paused).toBe(false));
 
     fireEvent.click(await screen.findByRole('button', { name: 'Subtitles' }));
@@ -1213,7 +1324,7 @@ describe('Player — a subtitle file that is no good', () => {
     // A 404 on the cue route: the row is in the database, the file is not on
     // disk. Same silence, same running film.
     answerWith({ movie: SUBTITLED, cues: null });
-    const { container, video } = renderPlayer();
+    const { container, video } = await renderPlayer();
     await waitFor(() => expect(video.paused).toBe(false));
 
     fireEvent.click(await screen.findByRole('button', { name: 'Subtitles' }));
@@ -1297,7 +1408,7 @@ describe('Player — a settled scrub on a film that is being converted', () => {
   /** The converted film, playing, an hour in, with subtitles switched on. */
   async function scrubbedAnHourIn() {
     answerWith({ movie: SUBTITLED, cues: CUES, playback: REMUX });
-    const view = renderPlayer();
+    const view = await renderPlayer();
     await waitFor(() => expect(view.video.paused).toBe(false));
     fireEvent.click(await screen.findByRole('button', { name: 'Subtitles' }));
     await waitFor(() => expect(cueRequests()).toHaveLength(1));
@@ -1391,7 +1502,7 @@ describe('Player — the keyboard', () => {
   }
 
   it('stops the film on Space and starts it again on the next press', async () => {
-    const { video } = renderPlayer();
+    const { video } = await renderPlayer();
     await waitFor(() => expect(video.paused).toBe(false));
 
     press(SPACE);
@@ -1402,7 +1513,7 @@ describe('Player — the keyboard', () => {
   });
 
   it('does the same on K', async () => {
-    const { video } = renderPlayer();
+    const { video } = await renderPlayer();
     await waitFor(() => expect(video.paused).toBe(false));
 
     press('k');
@@ -1413,7 +1524,7 @@ describe('Player — the keyboard', () => {
   it('shows the big-play circle on a film paused from the keyboard', async () => {
     // The picture and the keyboard cannot disagree about what state the film is
     // in, because neither of them is where that state lives.
-    const { video } = renderPlayer();
+    const { video } = await renderPlayer();
     await waitFor(() => expect(video.paused).toBe(false));
 
     press(SPACE);
@@ -1426,7 +1537,7 @@ describe('Player — the keyboard', () => {
     // only way it can be from outside: the same second on the element *and* the
     // same value on the wire. A keyboard that moved the film through a second
     // code path would move it and write nothing.
-    const first = renderPlayer();
+    const first = await renderPlayer();
     await waitFor(() => expect(first.video.paused).toBe(false));
     first.video.currentTime = 1200;
     emit(first.video, 'timeupdate');
@@ -1443,7 +1554,7 @@ describe('Player — the keyboard', () => {
     first.unmount();
 
     fetchMock.mockClear();
-    const second = renderPlayer();
+    const second = await renderPlayer();
     await waitFor(() => expect(second.video.paused).toBe(false));
     second.video.currentTime = 1200;
     emit(second.video, 'timeupdate');
@@ -1455,7 +1566,7 @@ describe('Player — the keyboard', () => {
   });
 
   it('replays the last ten seconds on the left arrow, the same way', async () => {
-    const { video } = renderPlayer();
+    const { video } = await renderPlayer();
     await waitFor(() => expect(video.paused).toBe(false));
     video.currentTime = 1200;
     emit(video, 'timeupdate');
@@ -1469,7 +1580,7 @@ describe('Player — the keyboard', () => {
   });
 
   it('turns the film down on the down arrow, and the slider follows', async () => {
-    const { video } = renderPlayer();
+    const { video } = await renderPlayer();
     await waitFor(() => expect(video.paused).toBe(false));
     expect(level()).toBe(100);
 
@@ -1480,7 +1591,7 @@ describe('Player — the keyboard', () => {
   });
 
   it('turns it back up on the up arrow', async () => {
-    const { video } = renderPlayer();
+    const { video } = await renderPlayer();
     await waitFor(() => expect(video.paused).toBe(false));
     press('ArrowDown');
     press('ArrowDown');
@@ -1493,7 +1604,7 @@ describe('Player — the keyboard', () => {
   });
 
   it('silences the film on M, and the speaker says so', async () => {
-    const { video } = renderPlayer();
+    const { video } = await renderPlayer();
     await waitFor(() => expect(video.paused).toBe(false));
 
     press('m');
@@ -1505,7 +1616,7 @@ describe('Player — the keyboard', () => {
   });
 
   it('gives the sound back on a second M', async () => {
-    const { video } = renderPlayer();
+    const { video } = await renderPlayer();
     await waitFor(() => expect(video.paused).toBe(false));
     press('m');
     await screen.findByRole('button', { name: 'Unmute' });
@@ -1518,7 +1629,7 @@ describe('Player — the keyboard', () => {
 
   it('turns captions on with C, exactly as the pill does', async () => {
     answerWith({ movie: SUBTITLED, cues: CUES });
-    const { video } = renderPlayer();
+    const { video } = await renderPlayer();
     await waitFor(() => expect(video.paused).toBe(false));
     video.currentTime = 2;
     emit(video, 'timeupdate');
@@ -1536,7 +1647,7 @@ describe('Player — the keyboard', () => {
 
   it('takes them away again on a second C', async () => {
     answerWith({ movie: SUBTITLED, cues: CUES });
-    const { video } = renderPlayer();
+    const { video } = await renderPlayer();
     await waitFor(() => expect(video.paused).toBe(false));
     video.currentTime = 2;
     emit(video, 'timeupdate');
@@ -1553,7 +1664,7 @@ describe('Player — the keyboard', () => {
     // `NORTHWIND` has no subtitle rows, so there is no pill and nothing to
     // press. The key has to be absent in the same way — and above all must not
     // ask for a cue list that does not exist.
-    const { video } = renderPlayer();
+    const { video } = await renderPlayer();
     await waitFor(() => expect(video.paused).toBe(false));
 
     press('c');
@@ -1565,7 +1676,7 @@ describe('Player — the keyboard', () => {
   it('still leaves the player on Escape', async () => {
     // Story 26, which shipped before this map existed and now travels inside
     // it. One listener for the screen, not two.
-    renderPlayer();
+    await renderPlayer();
     await screen.findByRole('button', { name: 'Back' });
 
     press('Escape');
@@ -1576,7 +1687,7 @@ describe('Player — the keyboard', () => {
   it('does not follow the family to the next screen', async () => {
     // The listener is on the window. Left behind, Space on the film's page
     // would be reaching into a player that is no longer on screen.
-    const { video } = renderPlayer();
+    const { video } = await renderPlayer();
     await waitFor(() => expect(video.paused).toBe(false));
 
     fireEvent.click(screen.getByRole('button', { name: 'Back' }));
@@ -1613,7 +1724,7 @@ describe('Player — filling the screen', () => {
   }
 
   it('sends the player’s whole surface up, not the bare video element', async () => {
-    const { video } = renderPlayer();
+    const { video } = await renderPlayer();
     await waitFor(() => expect(video.paused).toBe(false));
 
     fireEvent.keyDown(window, { key: 'f' });
@@ -1626,7 +1737,7 @@ describe('Player — filling the screen', () => {
   });
 
   it('does the same from the button as from the key', async () => {
-    const { video } = renderPlayer();
+    const { video } = await renderPlayer();
     await waitFor(() => expect(video.paused).toBe(false));
 
     fireEvent.click(screen.getByRole('button', { name: 'Fullscreen' }));
@@ -1636,7 +1747,7 @@ describe('Player — filling the screen', () => {
   });
 
   it('comes back out on the next press', async () => {
-    const { video } = renderPlayer();
+    const { video } = await renderPlayer();
     await waitFor(() => expect(video.paused).toBe(false));
     fireEvent.keyDown(window, { key: 'f' });
     await waitFor(() => expect(document.fullscreenElement).not.toBeNull());
@@ -1651,7 +1762,7 @@ describe('Player — filling the screen', () => {
     // — the part a screenshot could not tell you — nothing remounted. A
     // remounted player would re-read the record and the **Playback read** and
     // wind the film back to where the family left it hours ago.
-    const { video } = renderPlayer();
+    const { video } = await renderPlayer();
     await waitFor(() => expect(video.paused).toBe(false));
     video.currentTime = 2400;
     emit(video, 'timeupdate');
@@ -1673,7 +1784,7 @@ describe('Player — filling the screen', () => {
     // Escape in fullscreen is the browser's, not ours: it takes the window down
     // and never reaches the page. The player has to be left on screen, at the
     // same second, rather than exited to the film's page.
-    const { video } = renderPlayer();
+    const { video } = await renderPlayer();
     await waitFor(() => expect(video.paused).toBe(false));
     fireEvent.keyDown(window, { key: 'f' });
     await waitFor(() => expect(document.fullscreenElement).not.toBeNull());
@@ -1695,7 +1806,7 @@ describe('Player — on a browser that refuses fullscreen', () => {
   it('goes on playing rather than falling over', async () => {
     // A refusal is a real answer — a policy, an embedded view — and it reaches
     // the family as a button that did nothing, never as a film that stopped.
-    const { video } = renderPlayer();
+    const { video } = await renderPlayer();
     await waitFor(() => expect(video.paused).toBe(false));
 
     fireEvent.click(screen.getByRole('button', { name: 'Fullscreen' }));
@@ -1737,27 +1848,27 @@ describe('Player — the volume the family left', () => {
   }
 
   it('opens the next film at the level the last one was left at', async () => {
-    const first = renderPlayer();
+    const first = await renderPlayer();
     await waitFor(() => expect(first.video.paused).toBe(false));
     fireEvent.keyDown(window, { key: 'ArrowDown' });
     fireEvent.keyDown(window, { key: 'ArrowDown' });
     await waitFor(() => expect(level()).toBe(80));
     first.unmount();
 
-    const next = renderPlayer();
+    const next = await renderPlayer();
 
     await waitFor(() => expect(level()).toBe(80));
     expect(next.video.volume).toBeCloseTo(0.8);
   });
 
   it('opens it silenced if that is how the last one was left', async () => {
-    const first = renderPlayer();
+    const first = await renderPlayer();
     await waitFor(() => expect(first.video.paused).toBe(false));
     fireEvent.keyDown(window, { key: 'm' });
     await screen.findByRole('button', { name: 'Unmute' });
     first.unmount();
 
-    const next = renderPlayer();
+    const next = await renderPlayer();
 
     expect(await screen.findByRole('button', { name: 'Unmute' })).toBeDefined();
     await waitFor(() => expect(next.video.muted).toBe(true));
@@ -1767,7 +1878,7 @@ describe('Player — the volume the family left', () => {
     // The preference is written from the volume itself, so every way of
     // changing it is remembered — otherwise the mouse and the keyboard would
     // disagree about what the film is set to.
-    const first = renderPlayer();
+    const first = await renderPlayer();
     await waitFor(() => expect(first.video.paused).toBe(false));
     act(() => {
       first.video.volume = 0.45;
@@ -1776,13 +1887,13 @@ describe('Player — the volume the family left', () => {
     await waitFor(() => expect(level()).toBe(45));
     first.unmount();
 
-    renderPlayer();
+    await renderPlayer();
 
     await waitFor(() => expect(level()).toBe(45));
   });
 
   it('opens at full volume on a machine that has never played one', async () => {
-    const { video } = renderPlayer();
+    const { video } = await renderPlayer();
 
     await waitFor(() => expect(video.paused).toBe(false));
 
@@ -1796,7 +1907,7 @@ describe('Player — the volume the family left', () => {
     // element, which throws on a volume outside 0–1.
     vi.spyOn(Storage.prototype, 'getItem').mockReturnValue('{"volume":"loud"}');
 
-    const { video } = renderPlayer();
+    const { video } = await renderPlayer();
 
     await waitFor(() => expect(video.paused).toBe(false));
     expect(level()).toBe(100);
@@ -1814,7 +1925,7 @@ describe('Player — the volume the family left', () => {
       throw new DOMException('The operation is insecure.', 'SecurityError');
     });
 
-    const { video } = renderPlayer();
+    const { video } = await renderPlayer();
     await waitFor(() => expect(video.paused).toBe(false));
 
     fireEvent.keyDown(window, { key: 'ArrowDown' });

@@ -64,6 +64,7 @@ describe('useOpeningReads — both reads, as one moment', () => {
       movie: null,
       playback: null,
       fileMissing: false,
+      opened: false,
     });
 
     // Let the reads land before the test ends, so the state they set belongs
@@ -153,6 +154,86 @@ describe('useOpeningReads — a read that went wrong', () => {
     });
     expect(result.current.movie).toBeNull();
     expect(result.current.playback).toBeNull();
+  });
+});
+
+describe('useOpeningReads — whether the screen is still waiting', () => {
+  /**
+   * Issue #95. The **Player** may not point an element at the stream before it
+   * knows what it is pointing at: a film with no file behind it and one nothing
+   * can decode are both films the element must never be given, and both are
+   * only known once the **Playback read** answers.
+   *
+   * Neither flag can carry that on its own. Both are `false` before the read
+   * lands and `false` for a film that plays, so the screen cannot tell "not
+   * yet" from "fine". `opened` is the third thing: whether there is still an
+   * answer coming.
+   */
+
+  /** A playback read that answers only when the test says so. */
+  function servePending(): (value: Response) => void {
+    let answer: (value: Response) => void = () => undefined;
+    fetchMock.mockImplementation((input) =>
+      String(input).endsWith('/playback')
+        ? new Promise<Response>((resolve) => {
+            answer = resolve;
+          })
+        : Promise.resolve(okResponse(MOVIE))
+    );
+    return (value) => answer(value);
+  }
+
+  it('is not open while an answer is still coming', async () => {
+    const answer = servePending();
+
+    const { result } = renderHook(() => useOpeningReads('m1'));
+
+    expect(result.current.opened).toBe(false);
+
+    // Let the pair settle before the test ends, so the state it sets belongs to
+    // this test rather than arriving during the next one.
+    answer(okResponse(DIRECT));
+    await waitFor(() => {
+      expect(result.current.opened).toBe(true);
+    });
+  });
+
+  it('is open once both reads have landed', async () => {
+    serve(okResponse(MOVIE), okResponse(DIRECT));
+
+    const { result } = renderHook(() => useOpeningReads('m1'));
+
+    await waitFor(() => {
+      expect(result.current.opened).toBe(true);
+    });
+  });
+
+  it('is open for a film with no file behind it', async () => {
+    // The 404 is an answer. The screen has its notice and stops waiting.
+    serve(okResponse(MOVIE), notFoundResponse('No video file for movie: m1'));
+
+    const { result } = renderHook(() => useOpeningReads('m1'));
+
+    await waitFor(() => {
+      expect(result.current.opened).toBe(true);
+    });
+    expect(result.current.fileMissing).toBe(true);
+  });
+
+  it('is open when a read went wrong, because settled is settled', async () => {
+    // The one that matters most. A read that failed outright leaves `playback`
+    // null for good — the same null it holds before the read lands — so a
+    // screen gated on the read having a value would wait for the rest of the
+    // evening. However they settled, they have settled.
+    serve(okResponse(MOVIE), serverErrorResponse());
+
+    const { result } = renderHook(() => useOpeningReads('m1'));
+
+    await waitFor(() => {
+      expect(result.current.opened).toBe(true);
+    });
+    expect(result.current.playback).toBeNull();
+    expect(result.current.fileMissing).toBe(false);
   });
 });
 
