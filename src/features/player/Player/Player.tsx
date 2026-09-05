@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import type { Movie } from '@/types';
@@ -132,13 +132,20 @@ function noticeFor(
  */
 export function Player({ movieId }: PlayerProps) {
   const navigate = useNavigate();
-  const videoRef = useRef<HTMLVideoElement>(null);
+  // The element is held in state rather than in a plain ref, because it arrives
+  // late: the guard below keeps it off the screen until the reads have settled,
+  // and a ref object never changes identity, so a hook binding through one
+  // would look once — at nothing — and never look again. `setPicture` is the
+  // element's ref, and the object handed to `usePlayback` is remade whenever
+  // the element itself changes, which is the moment the hook has to bind.
+  const [picture, setPicture] = useState<HTMLVideoElement | null>(null);
+  const videoRef = useMemo(() => ({ current: picture }), [picture]);
   // The whole surface — chrome, subtitle box and picture together — because
   // that is what fills the screen, not the bare element inside it.
   const stageRef = useRef<HTMLDivElement>(null);
 
   // The two reads the screen opens with.
-  const { movie, playback, fileMissing } = useOpeningReads(movieId);
+  const { movie, playback, fileMissing, opened } = useOpeningReads(movieId);
 
   // The level the film opens at, read once on the way in. A **per-machine UI
   // preference, not library data**: it lives in `localStorage` rather than in
@@ -269,16 +276,16 @@ export function Player({ movieId }: PlayerProps) {
             retries and logs a decode error behind a notice already saying what
             happened.
 
-            **From the moment the read lands**, which is what these two flags
-            are derived from. On the first frame both are false, so an element
-            is mounted and pointed at the stream for as long as the read takes
-            — a film with no file answers that 404 and one nothing can decode
-            415, and the element is gone again a moment later. Making it wait
-            instead is a real improvement and not a one-line one: the suite
-            takes the element on the first render in eighty-two places, so it
-            needs a harness that awaits. Filed as 95. */}
-        {fileMissing || cannotPlay ? null : (
-          <Picture ref={videoRef} src={src} />
+            Which is why the wait is part of the guard. Both flags are derived
+            from the **Playback read** and both are false until it answers, so
+            the two on their own cannot tell "not yet" from "fine" — and an
+            element mounted on that first frame is pointed at a stream that
+            answers 404 for a film with no file and 415 for one nothing can
+            decode. `opened` is settled rather than answered: a read that went
+            wrong has no notice and no film, and the screen must stop waiting
+            on it all the same. */}
+        {!opened || fileMissing || cannotPlay ? null : (
+          <Picture ref={setPicture} src={src} />
         )}
         {notice === null ? null : (
           <Centre>
