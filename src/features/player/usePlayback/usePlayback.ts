@@ -65,6 +65,18 @@ export interface PlaybackState {
   position: number;
   /** Whether the element is waiting for bytes it does not have yet. */
   buffering: boolean;
+  /**
+   * Whether the element gave up on the film — its own `error`, which is what a
+   * **Failed conversion** reaches the screen as: the stream refused rather than
+   * answering with a picture.
+   *
+   * It is the element's report rather than the response's status, because the
+   * hook never sees the response. A conversion that produced nothing, a file
+   * pulled out from under a **Direct play** mid-film and a decode the browser
+   * abandoned all arrive here as the same event, and the family is owed the
+   * same sentence for all three.
+   */
+  failed: boolean;
   /** Whether the film has reached its end. */
   ended: boolean;
   /**
@@ -96,8 +108,8 @@ export interface PlaybackState {
 }
 
 /**
- * Binds a media element to React state: playing, position, buffering, ended,
- * and a refused autoplay.
+ * Binds a media element to React state: playing, position, buffering, failed,
+ * ended, and a refused autoplay.
  *
  * This is the deep module of the player — every media-element edge case behind
  * one hook, so that nothing above it ever touches the element. What it hands
@@ -134,6 +146,7 @@ export function usePlayback({
   const [elementTime, setElementTime] = useState(0);
   const [offset, setOffset] = useState(0);
   const [buffering, setBuffering] = useState(false);
+  const [failed, setFailed] = useState(false);
   const [ended, setEnded] = useState(false);
   const [volume, setVolumeState] = useState(1);
   const [muted, setMutedState] = useState(false);
@@ -207,6 +220,15 @@ export function usePlayback({
       setElementTime(video.currentTime);
     };
     const onWaiting = () => setBuffering(true);
+    // The film is not getting ready any more, and no further event is coming to
+    // say so: an element that has given up stays where it is. Leaving
+    // `buffering` true here is the whole of the defect this handler fixes — the
+    // spinner ran for the rest of the evening over a stream that had already
+    // refused.
+    const onError = () => {
+      setBuffering(false);
+      setFailed(true);
+    };
     const onPlaying = () => {
       setBuffering(false);
       setPlaying(true);
@@ -224,6 +246,7 @@ export function usePlayback({
     video.addEventListener('pause', onPause);
     video.addEventListener('timeupdate', onTimeUpdate);
     video.addEventListener('waiting', onWaiting);
+    video.addEventListener('error', onError);
     video.addEventListener('playing', onPlaying);
     video.addEventListener('ended', onEnded);
     video.addEventListener('volumechange', onVolumeChange);
@@ -238,6 +261,7 @@ export function usePlayback({
       video.removeEventListener('pause', onPause);
       video.removeEventListener('timeupdate', onTimeUpdate);
       video.removeEventListener('waiting', onWaiting);
+      video.removeEventListener('error', onError);
       video.removeEventListener('playing', onPlaying);
       video.removeEventListener('ended', onEnded);
       video.removeEventListener('volumechange', onVolumeChange);
@@ -410,6 +434,7 @@ export function usePlayback({
     // is where the conversion started plus how far into it the element is.
     position: offset + elementTime,
     buffering,
+    failed,
     ended,
     duration,
     volume,

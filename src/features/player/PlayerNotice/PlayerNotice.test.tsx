@@ -37,11 +37,27 @@ const CANNOT_BODY =
   'FamilyFlix can’t decode this file’s format. Adding a playback component in ' +
   'Settings may fix it.';
 
+/**
+ * The fourth message (issue #96) — the **Failed conversion**. It is reached
+ * *through* the buffering notice rather than instead of it: the film was
+ * decodable as far as the probe could tell, a conversion was begun, and it
+ * stopped without producing a frame. Prototype copy verbatim, as the rest are.
+ */
+const COULD_NOT_START_TITLE = 'This film could not be started';
+const COULD_NOT_START_BODY =
+  'FamilyFlix started getting this film ready and it stopped. Adding a ' +
+  'playback component in Settings may fix it.';
+
 /** The prototype's circle, to the pixel. */
 const CIRCLE_SIZE = '96px';
 
 function renderNotice(
-  kind: 'play' | 'buffering' | 'missing-file' | 'cannot-play'
+  kind:
+    | 'play'
+    | 'buffering'
+    | 'missing-file'
+    | 'cannot-play'
+    | 'could-not-start'
 ) {
   return render(
     <ThemeProvider theme={theme}>
@@ -106,13 +122,36 @@ describe('PlayerNotice', () => {
     expect(undecodable.container.textContent).not.toContain(MISSING_TITLE);
   });
 
+  it('says what has happened when a conversion begins and then stops', () => {
+    // Not the same sentence as `cannot-play`. That one is known before a byte
+    // is sent, from the probe; this one is known only after a conversion was
+    // attempted, and has to say the film was begun.
+    renderNotice('could-not-start');
+
+    expect(screen.getByText(COULD_NOT_START_TITLE)).toBeDefined();
+    expect(screen.getByText(COULD_NOT_START_BODY)).toBeDefined();
+  });
+
+  it('keeps a conversion that stopped apart from a format it cannot decode', () => {
+    // One message for both would tell a family their MKV is undecodable on the
+    // evening their graphics card happened to be busy.
+    const stopped = renderNotice('could-not-start');
+    const undecodable = renderNotice('cannot-play');
+
+    expect(stopped.container.textContent).not.toBe(
+      undecodable.container.textContent
+    );
+    expect(stopped.container.textContent).not.toContain(CANNOT_TITLE);
+  });
+
   it('draws every state inside the same circle', () => {
-    // One centred element with four faces, not four centred elements.
+    // One centred element with five faces, not five centred elements.
     for (const kind of [
       'play',
       'buffering',
       'missing-file',
       'cannot-play',
+      'could-not-start',
     ] as const) {
       const { container, unmount } = renderNotice(kind);
 

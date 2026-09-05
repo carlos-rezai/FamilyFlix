@@ -87,12 +87,10 @@ function ffmpegEncoders(ffmpeg: string): string | null {
  *
  * A build listing an encoder is not a machine that can run it — a laptop with
  * no NVIDIA card still gets `h264_nvenc` from a full build — so the fallback
- * that matters is at the other end.
- *
- * **There is no such fallback yet.** A conversion that will not start produces
- * no bytes, the element never fires `playing`, and the buffering notice stays
- * up for the rest of the evening. Telling the family instead needs a state the
- * screen does not draw, so it is filed as 96 rather than fixed here.
+ * that matters is at the other end: **the stream route**, which holds its
+ * headers until the conversion produces a byte and answers a 500 when it never
+ * does. The player draws that as the `could-not-start` notice rather than
+ * spinning for the rest of the evening.
  *
  * What is asserted in this file is the *selection*, and it is in the argv.
  */
@@ -108,8 +106,9 @@ function detectHardwareEncoder(listed: string | null): string | null {
  *
  * `stderr` is discarded rather than piped: ffmpeg narrates every conversion,
  * and a stream nobody reads fills its pipe and stops the film. What matters
- * when a conversion fails is that the bytes stop, which the element sees on its
- * own.
+ * when a conversion fails is that the bytes stop — and the route reads that off
+ * `stdout` alone, because a process that ends having written nothing is the one
+ * signal every way of failing has in common.
  *
  * `listing` is the seam: what `ffmpeg -encoders` would have printed, defaulting
  * to running it. It is what lets the encoder preference order be asserted on a

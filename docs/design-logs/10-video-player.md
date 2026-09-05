@@ -192,7 +192,10 @@ defaultLanguage)`** — a pure function, falling back to `position` order until
     **buffering** (a transcode takes a second or two to start, and a frozen
     black screen reads as a crash) and **unavailable** with two copies,
     `missing-file` and `cannot-play`. Recorded below as prototype amendments to
-    make **before** the build, per CLAUDE.md's "amend the prototype first" rule.
+    make **before** the build, per CLAUDE.md's "amend the prototype first" rule. A third
+    was found after the build, and is Q22 — it extends this answer rather than
+    overturning it: both copies named here are still right, and the new one is
+    a state neither of them covers.
 
 17. **Do the scrubber and the volume slider share a component?** ✅ **They share
     logic, not pixels** — one `useDragScalar` hook, two separate styled
@@ -266,6 +269,37 @@ decided. Q5 stands as written.
     of the family's films stays the way to exercise remux and transcode against
     actual MKVs. ❌ **leaving the seed alone** — realistic, but only on my
     machine, and only for as long as that folder is where I left it.
+
+### Settled during issue 96 — the conversion that fails to start
+
+One question this log never asked, found by the #94 refactor round reading a
+comment in `ffmpegComponent` that pointed at error handling no slice ever
+shipped. It extends Q16 rather than amending it.
+
+22. **What does the family see when a conversion begins and produces nothing?**
+    ✅ **A third notice, `could-not-start`, in the unavailable state's own
+    geometry — and the stream route holds its headers until the first byte so
+    there is something to see.** A hardware encoder a build lists but the
+    machine cannot run, a file ffmpeg gives up on, a component deleted between
+    the probe and the spawn: the process exits writing nothing, `pipeline` ends
+    the response, the element never fires `playing`, and **Getting this film
+    ready…** stays up for the rest of the evening. Holding the headers costs one
+    chunk of buffering and turns a 200 with an empty body into a `500` the
+    element fails its load on, which is the `error` event `usePlayback` now
+    binds. **It is not `cannot-play`.** That answer is known _before_ a byte is
+    sent — the probe said so — and its sentence is "FamilyFlix can't decode this
+    file's format". This one is known only after a conversion was attempted, and
+    its sentence has to say the film was begun: one message for both would tell
+    a family their MKV is undecodable on the evening their GPU was busy.
+    ❌ **a timeout on `buffering` with no `playing`** — no server change at all,
+    and it catches a conversion that hangs as well as one that dies, but it
+    picks an arbitrary number of seconds and fires it at a genuinely slow
+    spin-up on the machine least able to afford the insult. ❌ **collapsing it
+    into `cannot-play`'s 415** — one fewer state to draw, at the cost of the
+    distinction the whole entry is about. ❌ **reporting it on `stderr`** —
+    ffmpeg narrates every conversion, and a stream nobody reads fills its pipe
+    and stops the film; that is why `stderr` is discarded, and it stays
+    discarded.
 
 ## Design
 
@@ -365,6 +399,13 @@ api/                    fetchPlayback, fetchSubtitleCues, saveResume
    playback component. Geometry unchanged.
 2. `feat.PlayerControls.dc.html` — a **buffering** state and an **unavailable**
    state, both in the existing 96px big-play circle.
+3. `FamilyFlix.dc.html` — a third **Player notice**, `could-not-start`, drawn in
+   the unavailable state's own geometry (Q22). `feat.PlayerControls.dc.html`
+   needed no change at all: its unavailable block already draws whatever
+   `noticeTitle` / `noticeBody` it is handed, so the amendment is three lines of
+   the harness — a copy entry, `showUnavailable` including the new kind, and a
+   `playability` entry on a film that buffers _first_ and then fails. Geometry
+   unchanged.
 
 ### Not built
 

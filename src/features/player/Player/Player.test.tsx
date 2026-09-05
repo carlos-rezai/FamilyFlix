@@ -77,6 +77,15 @@ const CANNOT_PLAY: PlaybackRead = {
 const BUFFERING = 'Getting this film ready…';
 const MISSING_TITLE = 'This film’s file is missing';
 const CANNOT_TITLE = 'This film can’t be played';
+const COULD_NOT_START_TITLE = 'This film could not be started';
+
+/**
+ * A film arriving down a conversion — the **Playback path** a **Failed
+ * conversion** happens on. Nothing in this file can make FFmpeg fail; what it
+ * can do is what the browser does when the stream refuses, which is fire
+ * `error` at the element.
+ */
+const REMUX: PlaybackRead = { path: 'remux', durationSeconds: 5391.2 };
 
 /** The prototype's circle, to the pixel — the one centred element. */
 const CIRCLE_SIZE = '96px';
@@ -1932,5 +1941,107 @@ describe('Player — the volume the family left', () => {
 
     await waitFor(() => expect(level()).toBe(90));
     expect(video.paused).toBe(false);
+  });
+});
+
+describe('Player — a conversion that never started', () => {
+  // 10 — Video player: "a conversion that fails to start" (issue #96).
+  //
+  // The **Failed conversion**, from the only side the screen can see it: the
+  // film was decodable as far as the probe could tell, the element was pointed
+  // at the stream, and what came back was a refusal rather than a picture.
+  //
+  // Before this, the element fired `error` into nothing. `buffering` stayed
+  // true, **Getting this film ready…** stayed up for the rest of the evening,
+  // and the family's only way out was a Back pill with no explanation beside
+  // it.
+  stubMediaElement();
+
+  beforeEach(() => {
+    answerWith({ playback: REMUX });
+  });
+
+  it('stops saying the film is getting ready', async () => {
+    // The defect in one test: the spinner that never stopped.
+    const { video } = await renderPlayer();
+    emit(video, 'waiting');
+    expect(await screen.findByText(BUFFERING)).toBeDefined();
+
+    emit(video, 'error');
+
+    await waitFor(() => expect(screen.queryByText(BUFFERING)).toBeNull());
+  });
+
+  it('says what has happened instead', async () => {
+    const { video } = await renderPlayer();
+    emit(video, 'waiting');
+
+    emit(video, 'error');
+
+    expect(await screen.findByText(COULD_NOT_START_TITLE)).toBeDefined();
+  });
+
+  it('does not say the film cannot be played, or that its file is missing', async () => {
+    // Three different things have gone wrong across these three notices, and
+    // they have three different remedies. This one began and stopped.
+    const { container, video } = await renderPlayer();
+
+    emit(video, 'error');
+    await screen.findByText(COULD_NOT_START_TITLE);
+
+    expect(container.textContent).not.toContain(CANNOT_TITLE);
+    expect(container.textContent).not.toContain(MISSING_TITLE);
+  });
+
+  it('says so even while the element still calls itself playing', async () => {
+    // The refusal arrives without a `pause`: nothing about a stream that
+    // answered 500 makes the element stop calling itself started, so a screen
+    // that only drew notices over a stopped film would draw none at all here.
+    const { container, video } = await renderPlayer();
+    await waitFor(() => expect(video.paused).toBe(false));
+
+    emit(video, 'error');
+
+    expect(await screen.findByText(COULD_NOT_START_TITLE)).toBeDefined();
+    expect(circle(container)).toBeDefined();
+  });
+
+  it('leaves a way back, the same one the other notices have', async () => {
+    const { video } = await renderPlayer();
+
+    emit(video, 'error');
+    await screen.findByText(COULD_NOT_START_TITLE);
+    fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+
+    expect(pathname()).toBe('/movie/m1');
+  });
+
+  it('does not idle its own way out away', async () => {
+    // A notice whose only exit fades after three seconds is a trap — and this
+    // one arrives while the film is nominally playing, which is exactly the
+    // state the chrome fades in.
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      const { video } = await renderPlayer();
+      emit(video, 'error');
+      await screen.findByText(COULD_NOT_START_TITLE);
+
+      act(() => {
+        vi.advanceTimersByTime(30000);
+      });
+
+      expect(screen.getByRole('button', { name: 'Back' })).toBeDefined();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('keeps its backdrop rather than going black', async () => {
+    const { container, video } = await renderPlayer();
+
+    emit(video, 'error');
+    await screen.findByText(COULD_NOT_START_TITLE);
+
+    expect(blurredLayer(container)).toBeDefined();
   });
 });

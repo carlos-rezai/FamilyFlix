@@ -2820,6 +2820,12 @@ const NATIVE: MediaProbe = {
  * `endless` is the film that is still playing when the family walks out: the
  * stream never ends on its own, so the only thing that can close it is the
  * route noticing the client has gone.
+ *
+ * `producesNothing` is the **Failed conversion**: a process that exits the
+ * moment it is started, writing not one byte — a hardware encoder the build
+ * lists but the machine cannot run, a file FFmpeg gives up on, a component
+ * deleted between the probe and the spawn. All three look identical from here,
+ * which is the point: what the route can see is an empty stream that ended.
  */
 interface FakeComponent extends PlaybackComponent {
   /** Every argv the route asked to run, in order. */
@@ -2832,10 +2838,12 @@ function fakeComponent({
   probe = null,
   hardwareEncoder = null,
   endless = false,
+  producesNothing = false,
 }: {
   probe?: MediaProbe | null;
   hardwareEncoder?: string | null;
   endless?: boolean;
+  producesNothing?: boolean;
 } = {}): FakeComponent {
   const component: FakeComponent = {
     spawned: [],
@@ -2852,6 +2860,10 @@ function fakeComponent({
             return;
           }
           sent = true;
+          if (producesNothing) {
+            this.push(null);
+            return;
+          }
           this.push(CONVERTED_BYTES);
           if (!endless) {
             this.push(null);
@@ -3350,5 +3362,72 @@ describe('GET /api/movies/:id/stream — a t that is not a position', () => {
     const response = await fetch(streamAt(baseUrl, stored.id, 'abc'));
 
     expect(response.status).toBe(400);
+  });
+});
+
+// --- 10 — Video player: "a conversion that fails to start" (issue #96) --------
+//
+// The **Failed conversion**. Every converting test above is about a process
+// that produces bytes; this is the one that does not. A hardware encoder the
+// build lists but this machine cannot run, a file FFmpeg gives up on, a
+// component deleted between the probe and the spawn — from here they are one
+// thing, an empty stream that ended, and the route has to answer rather than
+// end a 200 with nothing in it.
+//
+// It is answerable at all only because the headers are **held until the first
+// byte**. `res.setHeader` does not send them; they go out on the first write.
+// So the moment the conversion is known to have produced none is still a moment
+// at which a status can be chosen — and the one chosen is a `500`, which the
+// element fails its load on and the `could-not-start` **Player notice** draws.
+//
+// This is not `cannot-play`'s 415. That answer is known *before* a byte is
+// sent, from the probe, and its sentence says the format cannot be decoded.
+// This one is known only after a conversion was attempted.
+
+describe('GET /api/movies/:id/stream — a conversion that produces nothing', () => {
+  it('answers rather than ending a 200 with an empty body', async () => {
+    const component = fakeComponent({
+      probe: REMUXABLE,
+      producesNothing: true,
+    });
+    const { storage, baseUrl, media } = freshApi(component);
+    const stored = addMkvMovie(storage, media);
+
+    const response = await fetch(streamUrl(baseUrl, stored.id));
+
+    expect(response.status).toBe(500);
+  });
+
+  it('says so in JSON, the way every other refusal on this route does', async () => {
+    const component = fakeComponent({
+      probe: TRANSCODABLE,
+      producesNothing: true,
+    });
+    const { storage, baseUrl, media } = freshApi(component);
+    const stored = addMkvMovie(storage, media);
+
+    const response = await fetch(streamUrl(baseUrl, stored.id));
+
+    expect(response.headers.get('content-type')).toContain('application/json');
+    const body = (await response.json()) as { error?: unknown };
+    expect(typeof body.error).toBe('string');
+    expect(body.error).toContain(stored.id);
+  });
+
+  it('does not name the answer video/mp4', async () => {
+    // The header that made this invisible: a `video/mp4` announced before a
+    // byte existed is what left the element waiting for a picture that was
+    // never coming.
+    const component = fakeComponent({
+      probe: REMUXABLE,
+      producesNothing: true,
+    });
+    const { storage, baseUrl, media } = freshApi(component);
+    const stored = addMkvMovie(storage, media);
+
+    const response = await fetch(streamUrl(baseUrl, stored.id));
+    await response.arrayBuffer();
+
+    expect(response.headers.get('content-type')).not.toContain('video/mp4');
   });
 });

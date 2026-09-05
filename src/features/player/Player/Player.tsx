@@ -78,18 +78,26 @@ function openAt(movie: Movie | null): number {
  * simply running.
  *
  * The order is the order the answers matter in: a film with no file behind it
- * is not buffering, a film nothing can decode is not waiting for bytes, and a
- * film waiting for bytes is not stopped. `null` is the only state that draws
- * nothing, and it is the one the player is in for almost all of its life.
+ * is not buffering, a film nothing can decode is not waiting for bytes, a film
+ * the element gave up on is not still getting ready, and a film waiting for
+ * bytes is not stopped. `null` is the only state that draws nothing, and it is
+ * the one the player is in for almost all of its life.
  *
- * The two unavailable answers stay apart all the way down to here. They are
- * reached differently — one is the read's 404, the other is a 200 carrying the
- * path that was actually chosen — because the family has to be told which of
- * the two things went wrong.
+ * The three unavailable answers stay apart all the way down to here. They are
+ * reached differently — the read's 404, a 200 carrying the path that was
+ * actually chosen, and the element's own `error` after the film was already
+ * under way — because the family has to be told which of the three things went
+ * wrong.
+ *
+ * `failed` is ahead of `playing` rather than behind it, and that is the whole
+ * of the fix: nothing about a stream that refused makes the element stop
+ * calling itself started, so a failure read after `playing` would draw no
+ * notice at all.
  */
 function noticeFor(
   fileMissing: boolean,
   cannotPlay: boolean,
+  failed: boolean,
   buffering: boolean,
   playing: boolean
 ): PlayerNoticeKind | null {
@@ -98,6 +106,9 @@ function noticeFor(
   }
   if (cannotPlay) {
     return 'cannot-play';
+  }
+  if (failed) {
+    return 'could-not-start';
   }
   if (buffering) {
     return 'buffering';
@@ -158,6 +169,7 @@ export function Player({ movieId }: PlayerProps) {
     playing,
     position,
     buffering,
+    failed,
     ended,
     duration,
     volume,
@@ -228,7 +240,7 @@ export function Player({ movieId }: PlayerProps) {
   // there — with the path it chose, and `cannot-play` is one of them.
   const cannotPlay = playback?.path === 'cannot-play';
 
-  const notice = noticeFor(fileMissing, cannotPlay, buffering, playing);
+  const notice = noticeFor(fileMissing, cannotPlay, failed, buffering, playing);
 
   // Two different things hold the chrome on screen, and only one of them is
   // about playback: a paused film is someone deciding, and a notice's only way

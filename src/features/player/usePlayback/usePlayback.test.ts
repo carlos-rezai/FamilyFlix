@@ -654,3 +654,72 @@ describe('usePlayback — the level the film opens at', () => {
     expect(result.current.volume).toBeCloseTo(0.8);
   });
 });
+
+/**
+ * 10 — Video player: "a conversion that fails to start" (issue #96).
+ *
+ * A **Failed conversion** is invisible from inside this hook — the element was
+ * pointed at a stream, and what came back was a refusal rather than a picture.
+ * The one thing the element does say is `error`, and until now nothing listened
+ * for it: the hook stayed `buffering` and the screen said **Getting this film
+ * ready…** for the rest of the evening.
+ *
+ * `failed` is the element's own report, exactly as `playing` and `buffering`
+ * are. It is deliberately not "the stream 500'd": a direct-play file whose
+ * bytes stop mid-film reaches the element the same way, and the family is owed
+ * the same sentence either way.
+ */
+describe('usePlayback — a film the element could not start', () => {
+  stubMediaElement();
+
+  /** A film arriving down a conversion, which is where this failure lives. */
+  const REMUXED: PlaybackRead = { path: 'remux', durationSeconds: 5391.2 };
+
+  it('reports the failure the element reported', async () => {
+    const { video, result } = renderPlayback();
+    await waitFor(() => expect(result.current.playing).toBe(true));
+
+    emit(video, 'error');
+
+    expect(result.current.failed).toBe(true);
+  });
+
+  it('stops waiting for bytes that are not coming', async () => {
+    // The whole defect in two lines: the element was waiting, and then the
+    // stream refused. A hook that stayed `buffering` here is a spinner that
+    // never stops.
+    const { video, result } = renderPlayback();
+    await waitFor(() => expect(result.current.playing).toBe(true));
+    emit(video, 'waiting');
+    expect(result.current.buffering).toBe(true);
+
+    emit(video, 'error');
+
+    expect(result.current.buffering).toBe(false);
+    expect(result.current.failed).toBe(true);
+  });
+
+  it('has not failed merely because it has just opened', async () => {
+    const { result } = renderPlayback();
+
+    await waitFor(() => expect(result.current.playing).toBe(true));
+
+    expect(result.current.failed).toBe(false);
+  });
+
+  it('reports it on a converted film the same way, whatever the offset', async () => {
+    // A stream path is where this actually happens — the conversion is what
+    // fails to start — and a film that failed an hour in must not be reported
+    // as one that never opened.
+    const { video, result } = renderPlayback(REMUXED, 0);
+    await waitFor(() => expect(result.current.playing).toBe(true));
+    act(() => {
+      result.current.seek(3600);
+    });
+
+    emit(video, 'error');
+
+    expect(result.current.failed).toBe(true);
+    expect(result.current.position).toBeCloseTo(3600);
+  });
+});

@@ -15,7 +15,8 @@ export type PlayerNoticeKind =
   | 'play'
   | 'buffering'
   | 'missing-file'
-  | 'cannot-play';
+  | 'cannot-play'
+  | 'could-not-start';
 
 export interface PlayerNoticeProps {
   kind: PlayerNoticeKind;
@@ -31,13 +32,36 @@ const CANNOT_TITLE = 'This film can’t be played';
 const CANNOT_BODY =
   'FamilyFlix can’t decode this file’s format. Adding a playback component in ' +
   'Settings may fix it.';
+const COULD_NOT_START_TITLE = 'This film could not be started';
+const COULD_NOT_START_BODY =
+  'FamilyFlix started getting this film ready and it stopped. Adding a ' +
+  'playback component in Settings may fix it.';
+
+/**
+ * What each unavailable state says, which is the only thing that differs
+ * between them — they share the crossed circle, the geometry and the absence of
+ * a way out. A record rather than a chain of ternaries: the point of the three
+ * is that they are peers, and a reader should be able to see all three
+ * sentences beside each other.
+ */
+const UNAVAILABLE: Record<
+  'missing-file' | 'cannot-play' | 'could-not-start',
+  { title: string; body: string }
+> = {
+  'missing-file': { title: MISSING_TITLE, body: MISSING_BODY },
+  'cannot-play': { title: CANNOT_TITLE, body: CANNOT_BODY },
+  'could-not-start': {
+    title: COULD_NOT_START_TITLE,
+    body: COULD_NOT_START_BODY,
+  },
+};
 
 /**
  * The centre of the picture whenever the film is not simply running: the big
  * play circle over a stopped film, the buffering ring under "getting this film
  * ready", and the cross over a film whose file is not there.
  *
- * All four are drawn inside the **same** 96px circle. That is `COMPONENT-SPEC`'s
+ * All five are drawn inside the **same** 96px circle. That is `COMPONENT-SPEC`'s
  * rule for this component and the reason the notices were amended into
  * `feat.PlayerControls.dc.html` rather than given an element of their own.
  *
@@ -46,11 +70,18 @@ const CANNOT_BODY =
  * showing, so a film that cannot be played is never a trap. A second Back here
  * would be a second thing to keep in step with the first.
  *
- * The two unavailable states share the crossed circle and differ only in words,
- * which is the prototype's own `showUnavailable`. The words are the whole
- * point: a film that cannot be found and a film that cannot be decoded have
- * different remedies, and one message for both would send the family looking
- * for a disc that is on the shelf.
+ * The three unavailable states share the crossed circle and differ only in
+ * words, which is the prototype's own `showUnavailable`. The words are the
+ * whole point: a film that cannot be found, a film that cannot be decoded and a
+ * film whose conversion began and stopped have three different remedies, and
+ * one message for all of them would send the family looking for a disc that is
+ * on the shelf.
+ *
+ * **`could-not-start` is not a harsher `cannot-play`.** That one is known
+ * *before* a byte is sent — the probe said the format cannot be decoded at all
+ * — and this one only after a conversion was attempted and produced nothing, so
+ * its sentence has to say the film was begun. Collapsing them would tell a
+ * family their MKV is undecodable on the evening their graphics card was busy.
  */
 export function PlayerNotice({ kind }: PlayerNoticeProps) {
   if (kind === 'play') {
@@ -88,10 +119,7 @@ export function PlayerNotice({ kind }: PlayerNoticeProps) {
     );
   }
 
-  const unavailable =
-    kind === 'missing-file'
-      ? { title: MISSING_TITLE, body: MISSING_BODY }
-      : { title: CANNOT_TITLE, body: CANNOT_BODY };
+  const unavailable = UNAVAILABLE[kind];
 
   return (
     <Stack>

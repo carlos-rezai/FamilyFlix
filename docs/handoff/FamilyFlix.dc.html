@@ -160,13 +160,20 @@
         sortDefs = [['recent','Recently Added'],['az','Title (A\u2013Z)'],['year','Year'],['unwatched','Unwatched First'],['rating','Highest Rated']];
         ratings = {1:90,2:80,3:70,4:60,5:80,6:90,7:50,8:70,9:60,10:80,11:70,12:90,13:50,14:40,15:80,16:70,17:60,18:50,19:70,20:60};
         ratingDefs = [['0','All ratings'],['80','4+ stars'],['60','3+ stars'],['40','2+ stars']];
-        // Simulated playability, so both Player notices are reachable by pressing Play.
+        // Simulated playability, so all three Player notices are reachable by pressing Play.
         // Every other title buffers briefly and then plays.
-        playability = {14:'cannot-play', 19:'missing-file'};
+        //
+        // 'could-not-start' is the one that is reached *through* the buffering
+        // notice rather than instead of it: the film was decodable as far as
+        // anything could tell, the conversion was begun, and it stopped without
+        // producing a frame. That is why it is not 'cannot-play' — that one is
+        // known before a byte is sent and has a different sentence.
+        playability = {11:'could-not-start', 14:'cannot-play', 19:'missing-file'};
         noticeCopy = {
           buffering:{title:'Getting this film ready…'},
           'missing-file':{title:'This film’s file is missing', body:'FamilyFlix can’t find the video file for this title. It may have been moved or renamed outside the app.'},
           'cannot-play':{title:'This film can’t be played', body:'FamilyFlix can’t decode this file’s format. Adding a playback component in Settings may fix it.'},
+          'could-not-start':{title:'This film could not be started', body:'FamilyFlix started getting this film ready and it stopped. Adding a playback component in Settings may fix it.'},
         };
         credits = {
           1:{dir:'Eleanor Past',cast:['Tomas Hale','Maeve Cole','Iris Bell']},
@@ -344,7 +351,7 @@
         toggleFavorite(){ const m=this.cur(); if(m) this.toggleFavById(m.id); }
         toggleEditMenu(){ this.setState(s=>({editMenuOpen:!s.editMenuOpen})); }
         editMovie(){ const m=this.cur(); if(!m)return; const cr=this.credits[m.id]||{dir:'',cast:[]}; this.setState({fTitle:m.title,fYear:String(m.year),fDirector:cr.dir,fCast:cr.cast.join(', '),fDescription:m.syn,fGenres:[...m.genres],fVideo:m.title.toLowerCase().replace(/[^a-z0-9]+/g,'-')+'.mp4',fPoster:'poster.jpg',fSubs:[{filename:'subtitles.en.srt',lang:'English'}],fRating:this.ratingOf(m),fRatingHover:null,addMode:'manual',scanned:true,screen:'add',editMenuOpen:false,addContext:'edit',resolveId:null}); }
-        playMovie(){ const m=this.cur(); if(!m)return; const resume=this.eff(m)==='progress'? m.runtime*60*m.prog/100 : 0; this.lastMove=Date.now(); const broken=this.playability[m.id]||null; clearTimeout(this._bufferTimer); this.setState({screen:'player',currentTime:resume,playing:false,controlsVisible:true,subsOn:true,playNotice:broken||'buffering'}); if(!broken) this._bufferTimer=setTimeout(()=>this.setState({playNotice:null,playing:true}), 1100); }
+        playMovie(){ const m=this.cur(); if(!m)return; const resume=this.eff(m)==='progress'? m.runtime*60*m.prog/100 : 0; this.lastMove=Date.now(); const broken=this.playability[m.id]||null; clearTimeout(this._bufferTimer); const opensBuffering = !broken || broken==='could-not-start'; this.setState({screen:'player',currentTime:resume,playing:false,controlsVisible:true,subsOn:true,playNotice:opensBuffering?'buffering':broken}); if(opensBuffering) this._bufferTimer=setTimeout(()=>this.setState(broken?{playNotice:broken}:{playNotice:null,playing:true}), 1100); }
 
         // ---- player ----
         onPlayerMove(){ this.lastMove=Date.now(); if(!this.state.controlsVisible) this.setState({controlsVisible:true}); }
@@ -566,7 +573,7 @@
               playPauseIcon:playIcon, volumeIcon:volIcon, subBtnStyle:subBtn, hasSubs,
               showBigPlay:!s.playing && !s.playNotice, showSubtitle:s.subsOn && hasSubs && !s.playNotice,
               subtitleLine:'— You can see the whole coast from up here.',
-              showBuffering:s.playNotice==='buffering', showUnavailable:s.playNotice==='missing-file' || s.playNotice==='cannot-play',
+              showBuffering:s.playNotice==='buffering', showUnavailable:s.playNotice==='missing-file' || s.playNotice==='cannot-play' || s.playNotice==='could-not-start',
               noticeTitle:notice.title, noticeBody:notice.body,
             },
             // add

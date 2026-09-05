@@ -619,6 +619,16 @@ export function createApiRouter(
   // with no HTTP answer to it: a family movie night must not leave transcodes
   // running.
   //
+  // Its headers are **held until the first byte**, which is what makes a
+  // **Failed conversion** answerable at all. `setHeader` does not send them —
+  // the first write does — so the moment the conversion is known to have
+  // produced nothing is still a moment at which a status can be chosen, and it
+  // gets a **500**. Without that hold the answer is a 200 with an empty body,
+  // the element never fires `playing`, and the player says "Getting this film
+  // ready…" for the rest of the evening. It is not the 415 below: that one is
+  // known *before* any bytes, from the probe, and says the format cannot be
+  // decoded at all.
+  //
   // `?t=` is the **Stream offset**: the second a converted film is wanted from,
   // because a live stream has no byte ranges for the element to seek in. It is
   // read **before the path is chosen**, so a URL that is not a position gets the
@@ -675,16 +685,48 @@ export function createApiRouter(
       return;
     }
 
-    res.setHeader('Content-Type', 'video/mp4');
+    const { stdout } = plan.conversion;
+
     // `close` fires on a finished response as well as an abandoned one, which is
     // why `kill` has to be safe to call twice. Registering it before a byte
     // moves is what makes it true for a client that gives up immediately.
     res.on('close', () => plan.conversion.kill());
-    // `pipeline` rather than `pipe`: it tears both ends down together and hands
-    // the failure here, where a client who walked away mid-film is a normal end
-    // to a request rather than an unhandled error that takes the process with
-    // it.
-    pipeline(plan.conversion.stdout, res, () => undefined);
+
+    // A **Failed conversion**: the process was started and produced nothing at
+    // all. `res.headersSent` is what makes the two cases one function — before
+    // the first byte there is still a status to choose, and after it the
+    // response is already a film and `pipeline` below owns the teardown.
+    const failedToStart = () => {
+      if (!res.headersSent) {
+        res
+          .status(500)
+          .json({ error: `Could not start playback for movie: ${id}` });
+      }
+    };
+
+    // Every way a conversion can die before it produces a frame arrives on one
+    // of these two events, and there is no third: the pipe broke, or the
+    // process ended having written nothing.
+    stdout.once('error', failedToStart);
+    stdout.once('readable', () => {
+      const first = stdout.read() as Buffer | null;
+
+      // `readable` fires at the end of a stream as well as on data, and `read`
+      // answers `null` for the end. That is the whole signal — the conversion
+      // ran and wrote nothing.
+      if (first === null) {
+        failedToStart();
+        return;
+      }
+
+      res.setHeader('Content-Type', 'video/mp4');
+      res.write(first);
+      // `pipeline` rather than `pipe`: it tears both ends down together and
+      // hands the failure here, where a client who walked away mid-film is a
+      // normal end to a request rather than an unhandled error that takes the
+      // process with it.
+      pipeline(stdout, res, () => undefined);
+    });
   });
 
   // One **Subtitle**'s **Cue list**, for the **Subtitle overlay**.
