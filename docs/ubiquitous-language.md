@@ -2,22 +2,22 @@
 
 ## Library entities
 
-| Term         | Definition                                                                                                             | Aliases to avoid                   |
-| ------------ | ---------------------------------------------------------------------------------------------------------------------- | ---------------------------------- |
-| **Movie**    | A single film in the library — the canonical domain entity, one row in `movies`, one poster card.                      | _film_ (informal synonym OK)       |
-| **Genre**    | A shared, queryable category a **Movie** belongs to; a real entity (junction table), used to browse.                   | category, tag                      |
-| **Subtitle** | A subtitle **file asset** owned by a **Movie** — a path + human language label + track order.                          | caption, sub track                 |
-| **Synopsis** | The **Movie**'s long-form plot summary (`synopsis`), shown clamped-and-expandable on the **Movie detail page**.        | description, plot, overview, blurb |
-| **Cast**     | The display-only ordered list of actor names on a **Movie** (JSON, never queried).                                     | actors list, credits               |
-| **Director** | The single display-only director name on a **Movie**.                                                                  | —                                  |
-| **Poster**   | The portrait cover image for a **Movie**, downloaded from **TMDB** into the **Managed image cache**.                   | cover, thumbnail                   |
-| **Backdrop** | The wide image behind the **Movie detail page**'s title block, from **TMDB**; falls back to the **Gradient fallback**. | banner, hero, background           |
+| Term                   | Definition                                                                                                                                                                                            | Aliases to avoid                   |
+| ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------- |
+| **Movie**              | A single film in the library — the canonical domain entity, one row in `movies`, one poster card.                                                                                                     | _film_ (informal synonym OK)       |
+| **Genre**              | A shared, queryable category a **Movie** belongs to; a real entity (junction table), used to browse.                                                                                                  | category, tag                      |
+| **Subtitle**           | A subtitle **file asset** owned by a **Movie** — a path + human language label + track order.                                                                                                         | caption, sub track                 |
+| **Synopsis**           | The **Movie**'s long-form plot summary (`synopsis`), shown clamped-and-expandable on the **Movie detail page**.                                                                                       | description, plot, overview, blurb |
+| **Cast**               | The display-only ordered list of actor names on a **Movie** (JSON, never queried).                                                                                                                    | actors list, credits               |
+| **Director**           | The single display-only director name on a **Movie**.                                                                                                                                                 | —                                  |
+| **Poster** (updated)   | The portrait cover image for a **Movie**, living in its **Movie folder** — a file the maintainer picks in the **Movie form**, or a **TMDB** download during bulk import.                              | cover, thumbnail                   |
+| **Backdrop** (updated) | The wide image behind the **Movie detail page**'s title block; from **TMDB** at bulk import only — the **Movie form** has no slot for one, so a hand-added **Movie** draws the **Gradient fallback**. | banner, hero, background           |
 
 ## Rating & watch state
 
 | Term                      | Definition                                                                                                                                                                                                                                                                                                                                                                                     | Aliases to avoid                      |
 | ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------- |
-| **Rating** (updated)      | Household 0–10 half-star score (10 = 5 stars), **seeded from TMDB** at import and set or cleared any time from the **Movie detail page**'s **Rating picker**. A stored `0` can only arrive from a seed — the picker sets 1–10 or clears to **Unrated**.                                                                                                                                        | review, score, vote                   |
+| **Rating** (updated)      | Household 0–10 half-star score (10 = 5 stars), set or cleared any time from a **Rating picker** — on the **Movie detail page** or in the **Movie form** — and **seeded from TMDB** during bulk import only. A stored `0` can only arrive from a seed; a picker sets 1–10 or clears to **Unrated**.                                                                                             | review, score, vote                   |
 | **Unrated** (updated)     | A **Movie** with no **Rating** (`NULL`) — distinct from a literal 0-star rating. Renders as five **empty, clickable** stars labelled `Not rated` on the **Movie detail page**, and as five empty stars with **no numeric value** on a **Poster card**.                                                                                                                                         | zero stars, unscored, 0 stars         |
 | **Status**                | A **Movie**'s **derived** watch state: `unwatched` \| `in-progress` \| `watched` (never stored).                                                                                                                                                                                                                                                                                               | state, watch status                   |
 | **Watched** (updated)     | Explicit boolean flag meaning the maintainer marked a **Movie** finished; setting it via `markWatched` also clears the **Resume position** and stamps **Last watched at**.                                                                                                                                                                                                                     | seen, completed                       |
@@ -40,15 +40,17 @@ half only, which lives in exactly one component.
 
 ## Storage & sourcing
 
-| Term                    | Definition                                                                                                    | Aliases to avoid            |
-| ----------------------- | ------------------------------------------------------------------------------------------------------------- | --------------------------- |
-| **TMDB**                | The Movie Database — external metadata source queried only at import; not AI.                                 | the API, metadata service   |
-| **Library root**        | The configured top folder (`FAMILYFLIX_LIBRARY_ROOT`) holding the user's movie folders; not owned by the app. | media folder, source folder |
-| **Reference in place**  | Storing a **path** to a video/subtitle where it already lives — the app never copies large media.             | import, copy, ingest        |
-| **Managed image cache** | App-owned directory (in OS user-data) holding **Posters**/**Backdrops** downloaded from **TMDB**.             | media store, managed media  |
-| **Library storage**     | The repository object from `createSqliteStorage(dbPath)` — the single seam over SQLite.                       | repo, DAO, service          |
-| **Edition**             | A specific physical release/cut of a **Movie** (4K, Director's Cut). **Roadmap only** — not modeled in v1.    | version, copy, variant      |
-| **Review step**         | The import stage where heuristic folder→**TMDB** matches are confirmed/corrected before committing.           | confirmation, preview       |
+| Term                              | Definition                                                                                                                                                                                                                                                                                                                                   | Aliases to avoid                    |
+| --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------- |
+| **TMDB** (updated)                | The Movie Database — external metadata source for **bulk import** only; never consulted by the **Movie form**, and not AI. A hand-added **Movie** has no `tmdb_id`.                                                                                                                                                                          | the API, metadata service           |
+| **Library root**                  | The configured top folder holding the family's own movie folders; **not owned by the app** and not where anything is read from — it is the place a maintainer picks files _from_.                                                                                                                                                            | media folder, source folder         |
+| **Managed media directory** (new) | The app-owned root (`FAMILYFLIX_MEDIA_PATH`, in OS user-data when packaged) holding every file the app can deliver — videos, **Subtitles**, **Posters**, **Backdrops**. Adding a **Movie** copies its files into here, and the app owns that copy: the source folder stops being the source of truth. Replaces **Managed image cache**.      | media store, media folder, cache    |
+| **Stored path** (new)             | A **Movie**'s path to one of its files, always **relative to the Managed media directory** and never absolute. `mediaFilePath` resolves one to an open file, refusing anything that leaves the root — including via a symlink — which is what makes it a boundary rather than a convention.                                                  | file path, absolute path, full path |
+| **Movie folder** (new)            | One **Movie**'s own directory under the **Managed media directory**, named from its title and year (`the-lantern-keeper-2019`), suffixed on collision. It is the first segment of every one of that **Movie**'s **Stored paths**, and it is never renamed when the title is edited.                                                          | slug dir, media dir, bucket         |
+| **Library storage**               | The repository object from `createSqliteStorage(dbPath)` — the single seam over SQLite.                                                                                                                                                                                                                                                      | repo, DAO, service                  |
+| **Edition**                       | A specific physical release/cut of a **Movie** (4K, Director's Cut). **Roadmap only** — not modeled in v1.                                                                                                                                                                                                                                   | version, copy, variant              |
+| **Review step**                   | The **bulk import** stage where heuristic folder→row matches are confirmed or corrected before committing.                                                                                                                                                                                                                                   | confirmation, preview               |
+| **Reference in place** (retired)  | ~~Storing a path to a video where it already lives.~~ **Retired** — `01-library-core.md` Q17 chose it over CLAUDE.md's managed copy, and `11-add-movie.md` Q3 reverses that: every read route the app shipped since resolves a **Stored path** under the **Managed media directory**, and a browser file picker cannot supply a path at all. | —                                   |
 
 ## Browse & display (frontend)
 
@@ -196,6 +198,26 @@ How a **Movie**'s video reaches the element. Backend vocabulary — `server/src/
 | **Tick threshold** (new)   | The ≥5s of movement below which a **Watch tick** is skipped, so a paused or nudged **Player** writes nothing and cannot reshuffle the **Continue Watching row**.                                                                                                                       | debounce, throttle, interval    |
 | **Finish threshold** (new) | `ended`, or ≥95% of duration on exit — where a **Movie** becomes **Watched** without anyone marking it, so credits do not leave a film **In-progress** forever.                                                                                                                        | completion, end credits, done   |
 
+## The Movie form (new)
+
+The vocabulary of adding and editing a **Movie** by hand. It is the maintainer's
+screen, not the family's — the only place in the app where a **Movie** is
+written whole rather than one signal at a time.
+
+| Term                    | Definition                                                                                                                                                                                                                                                                                                     | Aliases to avoid                           |
+| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------ |
+| **Maintainer** (new)    | The one person who fills the library — the author of this project, as distinct from the **Family** who only browse and watch. Every maintainer surface (the **Movie form**, Settings, bulk import) is reached through the gear; nothing on the **Browse home** leads to one.                                   | admin, owner, user, editor                 |
+| **Movie form** (new)    | The single screen at `/add` that writes a **Movie** whole — `MovieForm`, serving both an **Add context** and an **Edit context**. It is the only writer in the app that is not a **Single-signal write**.                                                                                                      | add screen, editor, movie editor, wizard   |
+| **Form context** (new)  | Which of its two jobs a **Movie form** is doing: **add** (blank, "Add a movie" / "Add to library", ends on the **Browse home**) or **edit** (pre-filled from `?movie=<id>`, "Edit details" / "Save changes", ends back on the **Movie detail page**). One screen, one URL, two contexts — there is no `/edit`. | mode, state, add/edit flag                 |
+| **File slot** (new)     | One of a **Movie form**'s file positions — video, **Poster**, or one **Subtitle**. A slot is empty, holds a **Stored file**, or holds a **Picked file**; those three states are the whole of what a save has to reason about.                                                                                  | field, upload, attachment                  |
+| **Stored file** (new)   | A **File slot** already living in the **Movie folder**, carried by its **Stored path**. On save it travels as that path and no bytes move — which is what makes editing a title cost nothing.                                                                                                                  | existing file, old file, saved file        |
+| **Picked file** (new)   | A **File slot** chosen this session from the **Library root** through a native file picker — a browser `File`, so **a name and bytes but never a path**. On save its bytes are copied into the **Movie folder** and it becomes a **Stored file**.                                                              | selected file, upload, local file, chosen  |
+| **File field** (new)    | The molecule drawing one **File slot** — `FileField`: a dashed "＋ Choose …" button when empty, a monospace filename row with a ✕ when filled. It owns the hidden `<input type="file">` and reports the **Picked file**; it never learns what a **Movie** is.                                                  | file input, picker, dropzone, uploader     |
+| **Subtitle row** (new)  | The molecule for one **Subtitle** **File slot** — `SubtitleRow`: filename, a language choice from the **Language pool**, and a remove. Its dropdown is a `Menu`, so only one is ever open.                                                                                                                     | sub row, track row, caption row            |
+| **Genre pool** (new)    | The 12 **Genre** names migration #1 seeds, in the prototype's order — the whole vocabulary a **Movie form** offers as chips, **including genres no Movie is tagged with yet**. Distinct from the **Genre list**, which is populated genres with counts and exists to draw a **Filter dropdown**.               | genres, genre list, categories, all genres |
+| **Language pool** (new) | The seven human languages a **Subtitle row** offers (English, Spanish, French, German, Portuguese, Italian, Dutch) — a display vocabulary, not an entity: a **Subtitle**'s language is stored as the chosen text.                                                                                              | locales, languages, i18n, lang codes       |
+| **Save gate** (new)     | The condition a **Movie form**'s Save is `disabled` until: a title, and a video **File slot** that is filled. It is a gate rather than a validation message because the prototype designs no error surface — the only "invalid" state the form can reach is one where Save cannot be pressed.                  | validation, form errors, required fields   |
+
 ## Relationships
 
 - A **Movie** has zero-or-more **Genres** (ordered; `genres[0]` is the primary tag) and zero-or-more **Subtitles**.
@@ -204,10 +226,11 @@ How a **Movie**'s video reaches the element. Backend vocabulary — `server/src/
 - A **Poster card** renders one **Movie** via its **Card view model**; it shows the **Poster** when present, else the **Gradient fallback**.
 - A **Continue card** renders one **In-progress** **Movie** via its **Continue view model**; it always draws the **Gradient fallback** (it has no image slot) and opens the **Movie detail page**, not the player.
 - A **Genre row**'s **View all** count is the **Genre**'s full **Movie** total (`listGenres()`), independent of the 15 cards shown; the **Continue Watching row** has no **View all**.
-- A **Movie** has exactly one **video path** (referenced in the **Library root**), and at most one **Poster** and one **Backdrop** (in the **Managed image cache**).
+- A **Movie** has exactly one video **Stored path**, and at most one **Poster** and one **Backdrop** — all three under its own **Movie folder** in the **Managed media directory**. (**Retracted**: they used to be **referenced in place** under the **Library root**.)
 - A **Movie**'s **Status** is derived from **Watched** + **Resume position** — never stored.
 - A **Resume label** is derived from **Resume position** + runtime; it is built in the mapper, never inside the **Continue card**.
-- A **Rating** belongs to exactly one **Movie**; it is **Unrated** until **TMDB** seeds it or someone sets it from the **Rating picker**.
+- A **Rating** belongs to exactly one **Movie**; it is **Unrated** until someone sets it from a **Rating picker** — on the **Movie detail page** or in the **Movie form** — or until **TMDB** seeds it during bulk import.
+- A **Rating picker** in the **Movie form** is the same control with a different destination: on the detail page it is a **Single-signal write**, in the form it is one field of the whole-record save. Same percent, same **Half-star segments**, same **Rating preview**.
 - A **Rating picker** writes exactly one **Movie**'s **Rating**, through `POST /api/movies/:id/rating` → `setRating` — a **Single-signal write** beside **Favorite**'s and **Watched**'s, never through `updateMovie`.
 - A **Half-star segment** is the unit a **Rating picker** sets in; ten of them cover the 0–10 scale, so the picker can express every **Rating** except a literal `0` — clicking the current value's segment means **Unrated**, not nought.
 - The out-of-five number beside either star strip is derived from the fill percent, never stored and never computed twice: `toStarLabel` rounds to the nearest **Half-star segment** and prints one decimal, so `StarRating` reading `4.0` and a **Rating picker** reading `4.0 / 5` can never disagree about the same **Movie**.
@@ -247,22 +270,46 @@ How a **Movie**'s video reaches the element. Backend vocabulary — `server/src/
 - A **Watch tick** writes the **Resume position** and therefore stamps **Last watched at**; the first tick is the earliest moment opening the **Player** can affect the **Continue Watching row**.
 - Crossing the **Finish threshold** dispatches to `markWatched`, which clears the **Resume position** — so a finished **Movie** leaves the **Continue Watching row** by the same rule a manually-ticked one does.
 - **Chrome** and **Idle** are one state, not two: **Idle** _is_ **Chrome** hidden, and any mouse movement ends both.
+- One **Movie form** save writes exactly one **Movie**, whole — every field and every **File slot** in one request. It is the only write in the app that is not a **Single-signal write**, and the only one that moves bytes.
+- A **Picked file** becomes a **Stored file** exactly once: on save, when its bytes land in the **Movie folder** and its **Stored path** is written to the **Movie**. A save that fails leaves neither — the files that request wrote are removed.
+- A **Movie folder** is named once, from the title and year at creation, and is reused by every later edit — so a renamed **Movie** keeps its folder, and the **Managed media directory**'s names can drift from the library's.
+- The **Genre pool** is what the **Movie form** offers; the **Genre list** is what the **Filter dropdown** offers. A **Genre** appears in the pool from the moment migration #1 seeds it and in the list only once a **Movie** is tagged with it.
+- A **Movie form** in an **Edit context** and the **Movie detail page**'s **Rating picker**, heart and **Watched** toggle can write the same **Movie**; the form's save goes through `updateMovie`, the three controls through their own mutators, and `updateMovie` deliberately applies none of their side-effect conventions.
 
 ## Example dialogue
 
-> **Dev:** "When the importer reads a folder named `Northwind (2018) 1080p BluRay`,
-> what becomes the **Movie**?"
-> **Maintainer:** "Strip the release tokens, search **TMDB** by title and year,
-> and that one **TMDB** entry is the **Movie**. The video stays where it is —
-> we **reference it in place** under the **Library root**, we never copy it."
-> **Dev:** "And the **Poster**?"
-> **Maintainer:** "That we download from **TMDB** into the **Managed image cache**,
-> because it isn't on my disk and I need it offline. Same for the **Backdrop** —
-> that's the one behind the title on the **Movie detail page**."
-> **Dev:** "If **TMDB** gives us neither?"
-> **Maintainer:** "Then both slots draw the **Gradient fallback**. It's the same
-> colors either way, hashed off the **Movie** id, so it looks deliberate rather
-> than broken."
+> **Dev:** "I'm adding `Northwind (2018)` by hand in the **Movie form**. I point
+> the video **File slot** at the file in my **Library root** — does the **Movie**
+> now point there too?"
+> **Maintainer:** "No. That's a **Picked file** — the browser gives me its name
+> and its bytes and flatly refuses to tell me where it is. On save we copy it
+> into its own **Movie folder** and store a **Stored path** relative to the
+> **Managed media directory**. After that the app owns its copy and my folder is
+> just where it came from."
+> **Dev:** "We used to say we **reference in place** and never copy."
+> **Maintainer:** "We did, and it's retired. Every read route we've shipped
+> resolves a **Stored path** under that one root and refuses anything outside it
+> — a symlink out included. Reference-in-place stopped being true the moment the
+> player could actually play something."
+> **Dev:** "Then what does **TMDB** do here?"
+> **Maintainer:** "Nothing. Not on this screen. I type the title, the year, the
+> director, the cast. **TMDB** was only ever the answer to 'I can't hand-type
+> twelve terabytes', which is a bulk-import problem — one film is thirty seconds
+> of typing."
+> **Dev:** "So the **Poster** is a **Picked file** too. And the **Backdrop**?"
+> **Maintainer:** "There's no slot for one, so it stays empty and the detail page
+> draws the **Gradient fallback**. Same colors either way, hashed off the
+> **Movie** id, so it looks deliberate rather than broken."
+> **Dev:** "The genre chips — do I only get genres that already have films in
+> them?"
+> **Maintainer:** "God, no — then nothing new could ever be the first of its
+> kind. The chips are the **Genre pool**, all twelve. The **Genre list** is the
+> other one, with the counts, and that's for the **Filter dropdown**."
+> **Dev:** "And if I open the same screen from the ⋯ menu on a film?"
+> **Maintainer:** "Same screen, **Edit context** — pre-filled, 'Save changes',
+> and it drops me back on the film rather than the **Browse home**. The video's a
+> **Stored file** at that point, so fixing a typo in the title moves no bytes at
+> all."
 > **Dev:** "On the detail page I've got a **Movie** with no year and no runtime.
 > What does the **Meta line** show?"
 > **Maintainer:** "Just the stars. A **Meta segment** we don't have doesn't get a
@@ -452,6 +499,24 @@ How a **Movie**'s video reaches the element. Backend vocabulary — `server/src/
   means, a favorites shelf has no intrinsic order — but two `listSection` calls
   passing different sorts look like an oversight to anyone who has not read
   `09-continue-watching` Q7.
+- **"Import" now names two unrelated things (new):** the **Movie form** copying
+  one film's files into its **Movie folder**, and **bulk import** reading a
+  spreadsheet and matching rows to folders. Only the second has a **Review
+  step**, a progress console, or any business with **TMDB**. Say **add a
+  Movie** for the first and **bulk import** for the second; never just
+  "import", and never "ingest" for either.
+- **Library root vs. Managed media directory (new):** both are folders full of
+  movies and only one is ours. The **Library root** is the family's own folder —
+  the app never reads it, and after Add Movie ships it is only the place a
+  **Picked file** is chosen _from_. The **Managed media directory** is the app's,
+  and it is the only place a **Stored path** can resolve to. A sentence about
+  "the media folder" is ambiguous between them; name which.
+- **The Movie form is the one whole-record write (new):** every other write in
+  the app is a **Single-signal write** that echoes one value back. The form's
+  save goes through `updateMovie`, which by design applies none of the
+  side-effect conventions the mutators do — patching `watched` there will not
+  clear a **Resume position**, and patching anything will not stamp **Last
+  watched at**. Two writers, one **Movie**, deliberately different rules.
 - **Last watched at is not `updated_at` (new):** both are ISO stamps on a
   **Movie** and only one of them means "watched". `updated_at` moves on any edit
   — a **Rating**, a **Favorite**, a metadata fix — so ordering the **Continue
