@@ -1,5 +1,6 @@
 import { pipeline } from 'node:stream';
 
+import busboy from 'busboy';
 import express, { type Request, type Response, type Router } from 'express';
 
 import type { LibraryStorage } from '../library';
@@ -250,6 +251,64 @@ function streamOffset(value: unknown): number | null {
   return Number.isFinite(seconds) && seconds >= 0 ? seconds : null;
 }
 
+/**
+ * The fields of a `multipart/form-data` body, by name.
+ *
+ * The one place in this file that reads a request body itself rather than
+ * through `express.json()`, because this is the one request shape that is not
+ * JSON. `busboy` parses the stream as it arrives, which is the whole reason it
+ * is here rather than `multer`: the **file parts** this route will grow are
+ * video files, and a 12 GB body must never be buffered to hand a route its
+ * `title`.
+ *
+ * **Fields only, for now.** A part is drained rather than read — not handled,
+ * just consumed, because `busboy` never reaches `close` while a part nobody
+ * listens to is still pending, and a hung request is a worse answer than an
+ * ignored file. Nothing in the app sends one yet; the media domain is what
+ * turns that `resume()` into a write to disk.
+ *
+ * A body that is not multipart at all rejects: `busboy` throws on the headers
+ * before a byte is read, and the promise carries that out.
+ *
+ * A last value wins for a repeated name. That is not a contract this route
+ * needs today — every field it reads is sent once — and the repeated-name case
+ * belongs to the genre pool, which is the first field that is genuinely a list.
+ */
+function readFields(req: Request): Promise<Record<string, string>> {
+  return new Promise((resolve, reject) => {
+    const fields: Record<string, string> = {};
+    const parser = busboy({ headers: req.headers });
+
+    parser.on('field', (name, value) => {
+      fields[name] = value;
+    });
+    parser.on('file', (_name, part) => part.resume());
+    parser.on('close', () => resolve(fields));
+    parser.on('error', reject);
+
+    req.pipe(parser);
+  });
+}
+
+/**
+ * The **year** a form field carries, or `undefined` for a film whose year the
+ * maintainer does not know.
+ *
+ * An empty string is the case worth naming: the Year field is optional, a
+ * cleared one arrives as `''` rather than as an absent field — that is what lets
+ * an edit say the year was *removed* — and `Number('')` is `0`, a value that
+ * would sort and display as a real year. Anything else that is not a whole
+ * number is no year either; the field itself accepts digits only, so this arm
+ * exists for a caller that is not the form.
+ */
+function optionalYear(value: string | undefined): number | undefined {
+  if (value === undefined || value.trim() === '') {
+    return undefined;
+  }
+  const year = Number(value);
+  return Number.isInteger(year) ? year : undefined;
+}
+
 /** Reject anything that is not a positive whole number of rows. */
 function parseLimit(value: string): number | null {
   const limit = Number(value);
@@ -455,6 +514,57 @@ export function createApiRouter(
     }
 
     res.json(movie);
+  });
+
+  // The **Movie form**'s save, and the first write of a whole record the API has:
+  // every other write above is a single-signal `{ value }` POST against a movie
+  // that already exists. `writeSignal` is deliberately not stretched to cover it
+  // — it exists for `{ value }` in and `{ value }` out — and what it calls is
+  // the transactional `addMovie` that has been built and unreachable since #3.
+  //
+  // The body is `multipart/form-data` **from this slice onward**, though it
+  // carries no file parts yet: parsing a fields-only multipart body is the same
+  // handler shape as parsing one with parts, so the wire contract is settled
+  // once rather than replaced under the client when the video, the poster and
+  // the subtitles arrive behind this same call.
+  //
+  // `videoPath` is `''`, and that is not a fiction being papered over. Nothing
+  // in the app can put a file anywhere until the `media/` domain lands, so a
+  // movie added here is a real library row — it browses, sorts, searches,
+  // favourites and rates correctly — that says it has no film behind it:
+  // `mediaFilePath` resolves `''` to the media root itself, fails its own
+  // containment test, and `/playback` and `/stream` give the JSON 404 they
+  // already give a missing file. No read route changes anywhere for it.
+  //
+  // A body with no title is a 400 rather than an untitled row. The form gates
+  // Save on a title, so this is unreachable from the app — but `title` is
+  // `NOT NULL` and `''` satisfies that column, which would make a corrupt row
+  // the cost of a client this route did not write.
+  router.post('/movies', async (req: Request, res: Response) => {
+    let fields: Record<string, string>;
+    try {
+      fields = await readFields(req);
+    } catch {
+      res.status(400).json({ error: 'Body must be multipart/form-data' });
+      return;
+    }
+
+    const title = fields.title?.trim() ?? '';
+    if (title === '') {
+      res.status(400).json({ error: 'Body must carry a title' });
+      return;
+    }
+
+    const year = optionalYear(fields.year);
+
+    res.status(201).json(
+      storage.addMovie({
+        title,
+        // No bytes have been copied anywhere, so there is no path to store.
+        videoPath: '',
+        ...(year === undefined ? {} : { year }),
+      })
+    );
   });
 
   // The Favorites toggle. What is left here is what this route alone decides:

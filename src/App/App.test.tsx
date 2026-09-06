@@ -156,8 +156,16 @@ beforeEach(() => {
   // The home aggregate always succeeds here; a favorite save always succeeds;
   // one movie by id resolves against the same fixtures the rows are built from.
   // Anything else is a request this screen has no business making.
-  fetchMock.mockImplementation((input) => {
+  fetchMock.mockImplementation((input, init) => {
     const url = String(input);
+    if (url.endsWith('/api/movies') && init?.method === 'POST') {
+      // The movie form's save. What it wrote is not what any test above is
+      // about — only that it succeeded, and that the screen it lands on is a
+      // *fresh* entry for `/`.
+      return Promise.resolve(
+        createdResponse(makeMovie({ id: 'n1', title: 'Saved Film' }))
+      );
+    }
     if (url.includes('/api/home')) {
       // The named-section envelope (issue #18); routing reads only `rows`.
       const payload: HomePayload = {
@@ -426,13 +434,20 @@ describe('App — returning the browse home to where the parent was', () => {
     await screen.findByRole('heading', { name: 'Action' });
     expect(homeBody().scrollTop).toBe(1240);
 
-    // Asking for the home screen — the gear, then the logo — is a fresh visit,
-    // a new history entry rather than the scrolled one, so it starts at the top.
+    // Being *sent* to the home screen is a fresh visit — a new history entry
+    // rather than the scrolled one — so it starts at the top. The vehicle is a
+    // finished save, because that is the only deliberate trip home the app has:
+    // this used to press the header logo on the Settings screen, and the real
+    // Settings screen (issue #98) has no app header for it to press.
     fireEvent.click(screen.getByRole('button', { name: 'Settings' }));
     await screen.findByRole('heading', { name: /settings/i });
-    fireEvent.click(screen.getByRole('button', { name: /familyflix/i }));
+    fireEvent.click(screen.getByRole('button', { name: /add a movie/i }));
+    fireEvent.change(await screen.findByRole('textbox', { name: /title/i }), {
+      target: { value: 'Saved Film' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /add to library/i }));
 
-    expect(currentPath()).toBe('/');
+    await waitFor(() => expect(currentPath()).toBe('/'));
     await screen.findByRole('heading', { name: 'Action' });
     expect(homeBody().scrollTop).toBe(0);
   });
@@ -728,7 +743,12 @@ describe('App — a typed title becomes a row on the home screen', () => {
     // Landing on the browse home is where the maintainer sees it worked, and
     // the row is there without a reload because the screen loads on arrival.
     await waitFor(() => expect(currentPath()).toBe('/'));
-    expect(await screen.findByText('Rear Window')).toBeDefined();
+    // By the card's own name rather than by its text: a movie with no poster
+    // draws its title twice — once over the gradient placeholder, once as the
+    // caption — and every film added by this slice is a film with no poster.
+    expect(
+      await screen.findByRole('button', { name: 'Rear Window' })
+    ).toBeDefined();
   });
 
   it('leaves the form by the back pill without writing anything', async () => {

@@ -29,6 +29,7 @@ export type {
 } from './browse';
 export type { NewSubtitle, NewMovie, MoviePatch } from './write';
 export type { PlaybackPath, PlaybackRead, Cue } from './playback';
+export type { MovieFormValues } from './form';
 export type {
   PosterCardMovie,
   ContinueCardMovie,

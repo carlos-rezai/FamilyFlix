@@ -3550,16 +3550,36 @@ describe('POST /api/movies', () => {
     expect(movie.year).toBeNull();
   });
 
-  it('puts the new movie on the browse home', async () => {
+  it('puts the new movie in the library', async () => {
     const { baseUrl } = freshApi();
 
     await createdMovie(baseUrl, { title: 'Rear Window', year: '1954' });
 
     // The whole point of the slice: the row the form wrote is a library row,
-    // read back by the same query the home screen uses.
+    // read back by the browse query every screen is built out of.
+    expect(await movieTitles(baseUrl, 'recently-added')).toContain(
+      'Rear Window'
+    );
+  });
+
+  it('earns no row on the browse home until it has a genre', async () => {
+    const { baseUrl } = freshApi();
+
+    await createdMovie(baseUrl, { title: 'Rear Window', year: '1954' });
+
+    // Not a gap in this route — a consequence of what the home *is*. Every
+    // section of `/home` is a genre row, the resume queue or the favorites
+    // shelf, and `listGenres` reports only *populated* genres, so a film with
+    // no genre is in the library and on no shelf. This slice has no genre
+    // control to give it one; the chips do (issue #99), and that is the slice
+    // whose acceptance criteria own the film appearing in each of its rows.
+    //
+    // Asserted rather than left unsaid, because "saved but invisible" is
+    // exactly the state a reader would otherwise assume was a bug here.
     const home = await getHomePayload(baseUrl);
-    const titles = home.rows.flatMap((row) => row.movies.map((m) => m.title));
-    expect(titles).toContain('Rear Window');
+    expect(home.rows).toEqual([]);
+    expect(home.continueWatching).toEqual([]);
+    expect(home.favorites).toEqual([]);
   });
 
   it('stores no video path, and says so on /playback', async () => {

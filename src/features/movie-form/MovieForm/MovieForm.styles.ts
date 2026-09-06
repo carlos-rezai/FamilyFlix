@@ -1,0 +1,96 @@
+import styled from 'styled-components';
+
+/**
+ * The screen's own scroll container, from `feat.MovieForm.dc.html`: the form is
+ * a sheet on the deeper background rather than a shelf on the app's gradient,
+ * and it is what scrolls once the remaining fields arrive under these two.
+ *
+ * `MainLayout` is deliberately not above it. The logo and the settings gear are
+ * app-wide navigation for the **Family**'s screens, and this is a **Maintainer**
+ * surface reached from Settings — the back pill is the only way out of it, which
+ * is the same call `MoviePage` and `GenreLayout` each made for their own reasons.
+ */
+export const Sheet = styled.div`
+  height: 100vh;
+  overflow-y: auto;
+  background: ${({ theme }) => theme.colors.bg2};
+`;
+
+/** The centred column everything sits in — the prototype's 760px measure. */
+export const Column = styled.div`
+  max-width: 760px;
+  margin: 0 auto;
+  padding: ${({ theme }) =>
+    `${theme.space.s6} ${theme.space.s6} ${theme.space.s8}`};
+`;
+
+/** The back pill and the heading, read as one group. */
+export const HeaderRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${({ theme }) => theme.space.s4};
+  margin-bottom: ${({ theme }) => theme.space.s2};
+`;
+
+/** Serif and large — the one heading on the screen. */
+export const Heading = styled.h1`
+  margin: 0;
+  font-family: ${({ theme }) => theme.fonts.serif};
+  font-size: 30px;
+  font-weight: 600;
+  color: ${({ theme }) => theme.colors.text};
+`;
+
+/**
+ * The stack of fields. `22px` is the prototype's own gap and is not a spacing
+ * token; the values it does share with the scale are written as tokens above.
+ */
+export const Fields = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  margin-top: 28px;
+`;
+
+/** Two fields side by side, the way the prototype pairs Title with Year. */
+export const FieldRow = styled.div`
+  display: flex;
+  gap: 18px;
+`;
+
+/**
+ * One captioned field. A `label` rather than a `div`, so the caption is part of
+ * the control: clicking "Year" puts the caret in the year box.
+ */
+export const Field = styled.label`
+  display: block;
+  flex: 1;
+`;
+
+/** Year is the one field with a fixed measure — a year is four characters wide. */
+export const NarrowField = styled(Field)`
+  flex: 0 0 150px;
+`;
+
+/** The caption above a field. */
+export const FieldLabel = styled.span`
+  display: block;
+  margin-bottom: ${({ theme }) => theme.space.s2};
+  font-family: ${({ theme }) => theme.fonts.sans};
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  color: ${({ theme }) => theme.colors.textDim};
+`;
+
+/**
+ * Where the form's buttons sit. One button stands in it for now — Cancel joins
+ * Save with the rest of the actions row (issue #101), and the row is here from
+ * the start so that arrival moves nothing already on the screen.
+ */
+export const Actions = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: ${({ theme }) => theme.space.s6};
+`;
