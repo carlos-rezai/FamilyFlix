@@ -384,3 +384,51 @@ describe('LibraryPage — the rating dropdown in the header', () => {
     expect(ratingPill()).toBeDefined();
   });
 });
+
+// --- 11 — Movie form, Phase 1: "the gear is the only door" (issue #98) --------
+
+/**
+ * The rule the **Maintainer** term is built on: every maintainer surface is
+ * reached through the gear, and nothing the **Family** sees on the **Browse
+ * home** leads to one. The Movie form is the first of those surfaces to become
+ * real, so this is the first slice where the rule can be broken by accident —
+ * a stray "Add a movie" on an empty shelf, a link on a card's menu — and this
+ * is where that would be caught.
+ */
+describe('LibraryPage — the gear is the only maintainer door', () => {
+  it('offers exactly one control that leads to Settings', async () => {
+    respondWithRows(HOME_PAYLOAD);
+
+    renderPage();
+    await screen.findByRole('region', { name: 'Action' });
+
+    expect(screen.getAllByRole('button', { name: 'Settings' })).toHaveLength(1);
+  });
+
+  it('offers no route to the movie form at all', async () => {
+    respondWithRows(HOME_PAYLOAD);
+
+    renderPage();
+    await screen.findByRole('region', { name: 'Action' });
+
+    expect(screen.queryByRole('button', { name: /add a movie/i })).toBeNull();
+    expect(screen.queryByRole('link', { name: /add a movie/i })).toBeNull();
+  });
+
+  it('links to neither /add nor /settings from anywhere in the body', async () => {
+    respondWithRows(HOME_PAYLOAD);
+
+    renderPage();
+    await screen.findByRole('region', { name: 'Action' });
+
+    // The gear navigates rather than linking, so any anchor pointing at a
+    // maintainer URL is a second door by definition.
+    const destinations = screen
+      .queryAllByRole('link')
+      .map((link) => link.getAttribute('href') ?? '');
+    for (const href of destinations) {
+      expect(href.startsWith('/add')).toBe(false);
+      expect(href.startsWith('/settings')).toBe(false);
+    }
+  });
+});

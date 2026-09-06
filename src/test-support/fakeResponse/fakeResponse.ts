@@ -24,6 +24,22 @@ export function okResponse(body: unknown): Response {
 }
 
 /**
+ * A 201 carrying `body` — what a route answers when it **created** something.
+ *
+ * `okResponse` would pass every `response.ok` check a caller makes, which is
+ * exactly why it is not enough here: `POST /api/movies` promises a 201, and a
+ * client written against a 200 would be asserting a contract the server does
+ * not have. The status is the thing under test at that call site.
+ */
+export function createdResponse(body: unknown): Response {
+  return {
+    ok: true,
+    status: 201,
+    json: () => Promise.resolve(body),
+  } as unknown as Response;
+}
+
+/**
  * A 500 with the suite's agreed body. A caller that reaches this is asserting
  * what it does when the server fell over, and never what the server said.
  */

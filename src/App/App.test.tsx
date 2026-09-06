@@ -13,7 +13,10 @@ import App from './App';
 import type { GenrePayload, HomePayload, HomeRow, Movie } from '@/types';
 import { LocationProbe } from '@/test-support/LocationProbe/LocationProbe';
 import { makeMovie } from '@/test-support/makeMovie/makeMovie';
-import { okResponse } from '@/test-support/fakeResponse/fakeResponse';
+import {
+  createdResponse,
+  okResponse,
+} from '@/test-support/fakeResponse/fakeResponse';
 import { stubMediaElement } from '@/test-support/stubMediaElement/stubMediaElement';
 import { stubScrollMetrics } from '@/test-support/stubScrollMetrics/stubScrollMetrics';
 
@@ -644,5 +647,100 @@ describe('App — the order carried from the home to the genre page', () => {
     expect(
       screen.getByRole('button', { name: 'Sort: Recently Added' })
     ).toBeDefined();
+  });
+});
+
+// --- 11 — Movie form, Phase 1: the tracer bullet (issue #98) ------------------
+
+/**
+ * The whole demoable path in one test: press the gear, press ＋ Add a movie,
+ * type a title, press Add to library, and the film is on the home screen.
+ *
+ * It is here rather than in any one unit's suite because none of them can prove
+ * it. The route table, the gear, the Settings header, the form, the wire call
+ * and the browse home's reload are six separate pieces, and a tracer bullet is
+ * a claim about them joining up — the same claim the acceptance criteria make,
+ * and the one thing that would still be broken with every unit test green.
+ *
+ * The stub stands in for the whole server: a library the POST appends to, and a
+ * home aggregate rebuilt from it on every read. Nothing here simulates
+ * multipart — that contract is `routes.test.ts`'s, over a real body.
+ */
+describe('App — a typed title becomes a row on the home screen', () => {
+  /** The server's library, as this test's stub keeps it. */
+  let library: Movie[];
+
+  beforeEach(() => {
+    library = [makeMovie({ id: 'a1', title: 'Northwind' })];
+    fetchMock.mockImplementation((input, init) => {
+      const url = String(input);
+
+      if (url.endsWith('/api/movies') && init?.method === 'POST') {
+        const fields = init.body as FormData;
+        const year = String(fields.get('year') ?? '');
+        const created = makeMovie({
+          id: `m${library.length + 1}`,
+          title: String(fields.get('title')),
+          year: year === '' ? null : Number(year),
+          videoPath: '',
+        });
+        library = [...library, created];
+        return Promise.resolve(createdResponse(created));
+      }
+
+      if (url.includes('/api/home')) {
+        const payload: HomePayload = {
+          continueWatching: [],
+          favorites: [],
+          rows: [{ genre: 'Action', count: library.length, movies: library }],
+        };
+        return Promise.resolve(okResponse(payload));
+      }
+
+      if (url.includes('/api/genres')) {
+        return Promise.resolve(okResponse({ total: 0, genres: [] }));
+      }
+
+      return Promise.reject(new Error(`Unexpected request: ${url}`));
+    });
+  });
+
+  it('walks the gear, the ＋, the form and the save through to the shelf', async () => {
+    renderApp();
+    await screen.findByRole('heading', { name: 'Action' });
+
+    // The gear is the only door to any maintainer surface.
+    fireEvent.click(screen.getByRole('button', { name: 'Settings' }));
+    expect(currentPath()).toBe('/settings');
+    await screen.findByRole('heading', { name: 'Settings' });
+
+    // And ＋ Add a movie is the only door from there to the form.
+    fireEvent.click(screen.getByRole('button', { name: /add a movie/i }));
+    expect(currentPath()).toBe('/add');
+
+    const title = await screen.findByRole('textbox', { name: /title/i });
+    fireEvent.change(title, { target: { value: 'Rear Window' } });
+    fireEvent.change(screen.getByRole('textbox', { name: /year/i }), {
+      target: { value: '1954' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /add to library/i }));
+
+    // Landing on the browse home is where the maintainer sees it worked, and
+    // the row is there without a reload because the screen loads on arrival.
+    await waitFor(() => expect(currentPath()).toBe('/'));
+    expect(await screen.findByText('Rear Window')).toBeDefined();
+  });
+
+  it('leaves the form by the back pill without writing anything', async () => {
+    renderApp();
+    await screen.findByRole('heading', { name: 'Action' });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Settings' }));
+    await screen.findByRole('heading', { name: 'Settings' });
+    fireEvent.click(screen.getByRole('button', { name: /back/i }));
+
+    expect(currentPath()).toBe('/');
+    await screen.findByRole('heading', { name: 'Action' });
+    expect(screen.queryByText('Rear Window')).toBeNull();
   });
 });

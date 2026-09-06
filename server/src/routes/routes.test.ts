@@ -3431,3 +3431,166 @@ describe('GET /api/movies/:id/stream — a conversion that produces nothing', ()
     expect(response.headers.get('content-type')).not.toContain('video/mp4');
   });
 });
+
+// --- 11 — Movie form, Phase 1: "a typed title becomes a row" (issue #98) ------
+//
+// The first write of a whole **record** over the wire. Every write route above
+// this line is a `{ value }` POST against a movie that already exists; this one
+// creates the movie, and it is the first request the API reads as
+// `multipart/form-data` rather than JSON.
+//
+// The body is built with the platform's own `FormData` and handed to `fetch`
+// unwrapped, which is exactly what the browser does from `MovieForm` — so the
+// boundary, the header and the encoding under test are the real ones, and no
+// helper here knows how a multipart body is spelled.
+//
+// **Fields only.** No part handling until the media domain lands, which is why
+// `videoPath` is `''`. That is not a fiction to paper over: the last two tests
+// assert what the empty path means downstream — the same JSON 404 `/playback`
+// and `/stream` already give a missing file, which is what the player draws its
+// missing-file notice from.
+
+/** A fields-only multipart POST to `/api/movies`, the way the form sends it. */
+function postMovie(
+  baseUrl: string,
+  fields: Record<string, string>
+): Promise<Response> {
+  const body = new FormData();
+  for (const [name, value] of Object.entries(fields)) {
+    body.append(name, value);
+  }
+  return fetch(`${baseUrl}/api/movies`, { method: 'POST', body });
+}
+
+/** The created movie, having asserted the status the route promises. */
+async function createdMovie(
+  baseUrl: string,
+  fields: Record<string, string>
+): Promise<Movie> {
+  const response = await postMovie(baseUrl, fields);
+  expect(response.status).toBe(201);
+  return (await response.json()) as Movie;
+}
+
+describe('POST /api/movies', () => {
+  it('accepts a fields-only multipart body and answers 201 with the movie', async () => {
+    const { baseUrl } = freshApi();
+
+    const response = await postMovie(baseUrl, {
+      title: 'Rear Window',
+      year: '1954',
+    });
+
+    expect(response.status).toBe(201);
+    expect(response.headers.get('content-type')).toContain('application/json');
+
+    const movie = (await response.json()) as Movie;
+    expect(movie.title).toBe('Rear Window');
+    expect(movie.year).toBe(1954);
+  });
+
+  it('answers with a whole Movie, not just the id it assigned', async () => {
+    const { baseUrl } = freshApi();
+
+    const movie = await createdMovie(baseUrl, {
+      title: 'Rear Window',
+      year: '1954',
+    });
+
+    // The record the browse home renders from, assembled the same way every
+    // read route assembles it — so the screen can put the new film on the shelf
+    // without a second request.
+    expect(typeof movie.id).toBe('string');
+    expect(movie.id.length).toBeGreaterThan(0);
+    expect(movie.genres).toEqual([]);
+    expect(movie.subtitles).toEqual([]);
+    expect(movie.cast).toEqual([]);
+    expect(movie.rating).toBeNull();
+    expect(movie.isFavorite).toBe(false);
+    expect(movie.watched).toBe(false);
+    expect(movie.status).toBe('unwatched');
+    expect(movie.resumePositionSeconds).toBe(0);
+    expect(typeof movie.createdAt).toBe('string');
+  });
+
+  it('creates a movie that reads back through GET /api/movies/:id', async () => {
+    const { baseUrl } = freshApi();
+
+    const created = await createdMovie(baseUrl, {
+      title: 'Rear Window',
+      year: '1954',
+    });
+
+    const response = await fetch(`${baseUrl}/api/movies/${created.id}`);
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual(created);
+  });
+
+  it('accepts a title with no year at all', async () => {
+    const { baseUrl } = freshApi();
+
+    const movie = await createdMovie(baseUrl, { title: 'Rear Window' });
+
+    // The Year field is optional on the form, and `year` is a nullable column —
+    // a film whose year the maintainer does not know is a normal row.
+    expect(movie.title).toBe('Rear Window');
+    expect(movie.year).toBeNull();
+  });
+
+  it('reads an empty year field as no year rather than as a zero', async () => {
+    const { baseUrl } = freshApi();
+
+    const movie = await createdMovie(baseUrl, {
+      title: 'Rear Window',
+      year: '',
+    });
+
+    // A field the maintainer cleared arrives as the empty string, not as an
+    // absent part. Year 0 would sort and display as a real year.
+    expect(movie.year).toBeNull();
+  });
+
+  it('puts the new movie on the browse home', async () => {
+    const { baseUrl } = freshApi();
+
+    await createdMovie(baseUrl, { title: 'Rear Window', year: '1954' });
+
+    // The whole point of the slice: the row the form wrote is a library row,
+    // read back by the same query the home screen uses.
+    const home = await getHomePayload(baseUrl);
+    const titles = home.rows.flatMap((row) => row.movies.map((m) => m.title));
+    expect(titles).toContain('Rear Window');
+  });
+
+  it('stores no video path, and says so on /playback', async () => {
+    const { baseUrl } = freshApi();
+
+    const movie = await createdMovie(baseUrl, { title: 'Rear Window' });
+    expect(movie.videoPath).toBe('');
+
+    const response = await fetch(`${baseUrl}/api/movies/${movie.id}/playback`);
+
+    // `mediaFilePath` resolves `''` to the media root itself, fails its own
+    // `file === root` containment test and answers `null` — so this is the
+    // route's existing missing-file answer, reached with no change to it. It is
+    // what the player draws the **missing-file** notice from.
+    expect(response.status).toBe(404);
+    expect(response.headers.get('content-type')).toContain('application/json');
+    expect(await response.json()).toEqual({
+      error: `No video file for movie: ${movie.id}`,
+    });
+  });
+
+  it('says the same thing on /stream', async () => {
+    const { baseUrl } = freshApi();
+
+    const movie = await createdMovie(baseUrl, { title: 'Rear Window' });
+
+    const response = await fetch(`${baseUrl}/api/movies/${movie.id}/stream`);
+
+    expect(response.status).toBe(404);
+    expect(await response.json()).toEqual({
+      error: `No video file for movie: ${movie.id}`,
+    });
+  });
+});
