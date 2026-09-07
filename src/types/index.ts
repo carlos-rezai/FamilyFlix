@@ -22,6 +22,7 @@ export type {
   LibraryQuery,
   GenreCount,
   GenreListPayload,
+  GenrePoolPayload,
   GenreQuery,
   GenrePayload,
   HomeRow,

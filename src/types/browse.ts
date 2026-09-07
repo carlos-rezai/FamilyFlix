@@ -4,7 +4,7 @@
  * different record.
  */
 
-import type { Movie } from './movie';
+import type { Genre, Movie } from './movie';
 
 /**
  * The **wire's** sort vocabulary: every order a URL may name, a route will
@@ -182,6 +182,25 @@ export interface HomePayload {
 export interface GenreListPayload {
   total: number;
   genres: GenreCount[];
+}
+
+/**
+ * The **genre pool** `GET /api/genres/pool` answers with — every genre a film
+ * may be filed under, in the order migration #1 seeded them, which is the order
+ * the **Movie form** draws its chips in.
+ *
+ * A second read of a different question from {@link GenreListPayload}, and the
+ * reason the two carry different names: that one answers what is on the shelves
+ * and how much of each, because it draws a Filter dropdown; this one answers
+ * what a film *may* be filed under, and it is what makes creating the library's
+ * first Documentary possible at all.
+ *
+ * The entries are plain {@link Genre} records rather than {@link GenreCount}s.
+ * Eleven of the twelve could carry a zero, and a number on a chip is a number
+ * the form would have to explain.
+ */
+export interface GenrePoolPayload {
+  genres: Genre[];
 }
 
 /**

@@ -11,13 +11,15 @@ const AFTER_SAVE = '/';
 const YEAR_LENGTH = 4;
 
 /** An empty form: what the **Add context** opens on. */
-const EMPTY: MovieFormValues = { title: '', year: '' };
+const EMPTY: MovieFormValues = { title: '', year: '', genres: [] };
 
 export interface UseMovieFormResult {
   /** What is in the fields right now. */
   values: MovieFormValues;
   setTitle: (title: string) => void;
   setYear: (year: string) => void;
+  /** Pick the named genre, or unpick it if it is already picked. */
+  toggleGenre: (name: string) => void;
   /** Whether Save can be pressed — the gate, not a validation message. */
   canSave: boolean;
   /** Whether the write is in flight. */
@@ -42,6 +44,13 @@ export interface UseMovieFormResult {
  * report — a half-typed `'19'` is a legitimate state of a field being filled in,
  * which is exactly why it is not held as a number.
  *
+ * **Genre is a set the maintainer orders.** A press adds a name to the end or
+ * removes it, so the order held is the order picked rather than the pool's —
+ * `genres[0]` is the primary tag the repository has preserved since #3, and
+ * this is the first caller in the app that can decide what it is. It is no part
+ * of the gate: a film may be saved unfiled, and a filed film with no title is
+ * still not a row this form can write.
+ *
  * **The destination is here rather than in the component**, because leaving is
  * part of what saving means: the browse home is the one place the maintainer can
  * see that the film is really in the library. A *refused* save is the mirror of
@@ -64,6 +73,15 @@ export function useMovieForm(): UseMovieFormResult {
     }));
   }, []);
 
+  const toggleGenre = useCallback((name: string) => {
+    setValues((current) => ({
+      ...current,
+      genres: current.genres.includes(name)
+        ? current.genres.filter((genre) => genre !== name)
+        : [...current.genres, name],
+    }));
+  }, []);
+
   const canSave = values.title.trim() !== '' && !saving;
 
   const save = useCallback(() => {
@@ -80,5 +98,5 @@ export function useMovieForm(): UseMovieFormResult {
       .catch(() => setSaving(false));
   }, [canSave, values, navigate]);
 
-  return { values, setTitle, setYear, canSave, saving, save };
+  return { values, setTitle, setYear, toggleGenre, canSave, saving, save };
 }

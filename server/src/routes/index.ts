@@ -9,6 +9,7 @@ import {
   DEFAULT_MOVIE_SORT,
   MOVIE_SORTS,
   type GenreListPayload,
+  type GenrePoolPayload,
   type GenreQuery,
   type LibraryQuery,
   type Movie,
@@ -270,17 +271,20 @@ function streamOffset(value: unknown): number | null {
  * A body that is not multipart at all rejects: `busboy` throws on the headers
  * before a byte is read, and the promise carries that out.
  *
- * A last value wins for a repeated name. That is not a contract this route
- * needs today — every field it reads is sent once — and the repeated-name case
- * belongs to the genre pool, which is the first field that is genuinely a list.
+ * **Every value of a repeated name is kept, in the order the parts arrived.**
+ * That is what a multipart body actually carries, and the genre chips are the
+ * first field that is genuinely a list: a set has always travelled as one part
+ * per entry under one name, the way an HTML checkbox group sends it. A field
+ * that is sent once is simply a list of one — {@link onlyField} is how the
+ * single-valued ones are read back.
  */
-function readFields(req: Request): Promise<Record<string, string>> {
+function readFields(req: Request): Promise<Record<string, string[]>> {
   return new Promise((resolve, reject) => {
-    const fields: Record<string, string> = {};
+    const fields: Record<string, string[]> = {};
     const parser = busboy({ headers: req.headers });
 
     parser.on('field', (name, value) => {
-      fields[name] = value;
+      (fields[name] ??= []).push(value);
     });
     parser.on('file', (_name, part) => part.resume());
     parser.on('close', () => resolve(fields));
@@ -288,6 +292,22 @@ function readFields(req: Request): Promise<Record<string, string>> {
 
     req.pipe(parser);
   });
+}
+
+/**
+ * The one value a single-valued field carries, or `undefined` if it was not
+ * sent at all.
+ *
+ * The last wins if a client sent several, which is the rule this function
+ * replaced an object assignment to keep. Nothing the app sends repeats a
+ * single-valued name; a client this route did not write might, and the last
+ * part is the one a form's own encoding would have left standing.
+ */
+function onlyField(
+  fields: Record<string, string[]>,
+  name: string
+): string | undefined {
+  return fields[name]?.at(-1);
 }
 
 /**
@@ -425,6 +445,29 @@ export function createApiRouter(
     res.json(payload);
   });
 
+  // The **Genre pool**: every genre a film may be filed under, in migration
+  // order — the row of chips on the Movie form, in the order it draws them.
+  //
+  // A second read of a different question from `/genres` directly above, and
+  // the reason the two carry different names in the glossary. That one answers
+  // what is on the shelves and how much of each, because it draws a Filter
+  // dropdown, so a genre with no movies never appears in it; this one answers
+  // what a film *may* be filed under, which is what makes creating the
+  // library's first Documentary possible at all. A form built on the first
+  // could never do it.
+  //
+  // `{ genres }` rather than a bare array, following every other read here: an
+  // envelope has somewhere to grow, a top-level array does not. There is no
+  // `total` — that number belongs to a dropdown counting a library, and the
+  // pool is the same twelve whatever the library holds.
+  //
+  // It sits under `/genres`, not `/genre/:name`: a pool served by that path
+  // parameter would be an empty genre page for a film called "pool".
+  router.get('/genres/pool', (_req: Request, res: Response) => {
+    const payload: GenrePoolPayload = { genres: storage.listGenrePool() };
+    res.json(payload);
+  });
+
   // One genre in full — the whole genre page in a single request: the name, the
   // genre's unfiltered total, and every movie tagged with it, uncapped. This is
   // what a genre row's "View all 214 →" opens, so a cap here would leave the
@@ -541,7 +584,7 @@ export function createApiRouter(
   // `NOT NULL` and `''` satisfies that column, which would make a corrupt row
   // the cost of a client this route did not write.
   router.post('/movies', async (req: Request, res: Response) => {
-    let fields: Record<string, string>;
+    let fields: Record<string, string[]>;
     try {
       fields = await readFields(req);
     } catch {
@@ -549,13 +592,33 @@ export function createApiRouter(
       return;
     }
 
-    const title = fields.title?.trim() ?? '';
+    const title = onlyField(fields, 'title')?.trim() ?? '';
     if (title === '') {
       res.status(400).json({ error: 'Body must carry a title' });
       return;
     }
 
-    const year = optionalYear(fields.year);
+    const year = optionalYear(onlyField(fields, 'year'));
+
+    // The genres arrive as one `genre` part per chip, in the order they were
+    // picked, and they stay in it: `genres[0]` is the primary tag `addMovie`
+    // has preserved since #3, and the form is the first caller in the app that
+    // can decide what it is. No part at all is a film the maintainer has not
+    // filed — a normal row, on no shelf.
+    const genres = fields.genre ?? [];
+
+    // Unreachable from the form, which can only send back names the pool handed
+    // it, and checked for the same reason the missing title is: this is the
+    // first route that forwards a client-supplied list into a transactional
+    // write, and `addMovie` answers an unknown name by throwing. Checked here
+    // rather than caught around the write, so the refusal is this route's own
+    // sentence rather than an exception's, and so nothing is attempted at all.
+    const pool = new Set(storage.listGenrePool().map((genre) => genre.name));
+    const unknown = genres.find((name) => !pool.has(name));
+    if (unknown !== undefined) {
+      res.status(400).json({ error: `Unknown genre: ${unknown}` });
+      return;
+    }
 
     res.status(201).json(
       storage.addMovie({
@@ -563,6 +626,7 @@ export function createApiRouter(
         // No bytes have been copied anywhere, so there is no path to store.
         videoPath: '',
         ...(year === undefined ? {} : { year }),
+        ...(genres.length === 0 ? {} : { genres }),
       })
     );
   });

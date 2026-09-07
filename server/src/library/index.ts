@@ -1,5 +1,6 @@
 import { openDatabase } from '../db';
 import type {
+  Genre,
   GenreCount,
   GenrePayload,
   GenreQuery,
@@ -66,6 +67,14 @@ export interface LibraryStorage {
   searchMovies(text: string): Movie[];
   /** List only genres with at least one movie, each with its movie count. */
   listGenres(): GenreCount[];
+  /**
+   * Every genre a film may be filed under — the whole seeded pool, in migration
+   * order, including the ones no movie carries. Deliberately a different answer
+   * from {@link listGenres}: that one draws a filter over what is on the
+   * shelves, this one draws the **Movie form**'s chips, and only the second can
+   * file a film under a genre that has no row yet.
+   */
+  listGenrePool(): Genre[];
   /**
    * How many movies the library holds — the "All Genres" tally behind the genre
    * dropdown. Deliberately not a sum of {@link listGenres}: a movie tagged with
@@ -159,6 +168,7 @@ export function createSqliteStorage(dbPath: string): LibraryStorage {
     listMovies: browse.listMovies,
     searchMovies: browse.searchMovies,
     listGenres: browse.listGenres,
+    listGenrePool: browse.listGenrePool,
     countMovies: browse.countMovies,
     getHome: home.getHome,
     getGenre: genre.getGenre,

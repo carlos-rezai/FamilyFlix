@@ -1,5 +1,7 @@
 import { useGoBack } from '@/hooks/useGoBack/useGoBack';
 import { Button, ChevronLeftIcon, IconButton, TextField } from '@/primitives';
+import { GenrePicker } from '../GenrePicker/GenrePicker';
+import { useGenrePool } from '../useGenrePool/useGenrePool';
 import { useMovieForm } from '../useMovieForm/useMovieForm';
 import {
   Sheet,
@@ -10,7 +12,10 @@ import {
   FieldRow,
   Field,
   NarrowField,
+  ChipField,
   FieldLabel,
+  FieldHint,
+  UnderCaption,
   Actions,
 } from './MovieForm.styles';
 
@@ -30,8 +35,8 @@ const SAVING_LABEL = 'Adding…';
  * **What of the prototype is deliberately not here yet**, so its absence reads as
  * a slice boundary rather than as a miss:
  *
- * - Director, Cast, Description, the genre chips and the rating picker — the rest
- *   of the metadata, and the Cancel button beside Save (issues #99 to #101).
+ * - Director, Cast, Description and the rating picker — the rest of the
+ *   metadata, and the Cancel button beside Save (issues #100 and #101).
  * - The Files panel, and with it the subtitle line under the heading: it reads
  *   "Pick the video, poster, and any subtitle files for this movie", which would
  *   be the screen describing three controls it does not have. It arrives with
@@ -43,7 +48,9 @@ const SAVING_LABEL = 'Adding…';
  */
 export function MovieForm() {
   const goBack = useGoBack();
-  const { values, setTitle, setYear, canSave, saving, save } = useMovieForm();
+  const genrePool = useGenrePool();
+  const { values, setTitle, setYear, toggleGenre, canSave, saving, save } =
+    useMovieForm();
 
   return (
     <Sheet>
@@ -82,6 +89,21 @@ export function MovieForm() {
               />
             </NarrowField>
           </FieldRow>
+
+          <ChipField>
+            <FieldLabel>
+              Genre <FieldHint>— pick one or more</FieldHint>
+            </FieldLabel>
+            {/* An empty pool draws an empty row: a broken endpoint is a caption
+                with nothing under it, and a form that still saves. */}
+            <UnderCaption>
+              <GenrePicker
+                genres={genrePool}
+                selected={values.genres}
+                onToggle={toggleGenre}
+              />
+            </UnderCaption>
+          </ChipField>
         </Fields>
 
         <Actions>

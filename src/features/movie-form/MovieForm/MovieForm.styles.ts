@@ -72,6 +72,16 @@ export const NarrowField = styled(Field)`
   flex: 0 0 150px;
 `;
 
+/**
+ * A field whose control is not a form element — the genre chips, and the rating
+ * picker beside them one slice from now. A `div` rather than the `label` above
+ * it: a label wrapping twelve buttons has no single control to hand a click to,
+ * and clicking its caption would activate the first chip.
+ */
+export const ChipField = styled.div`
+  display: block;
+`;
+
 /** The caption above a field. */
 export const FieldLabel = styled.span`
   display: block;
@@ -81,6 +91,26 @@ export const FieldLabel = styled.span`
   font-weight: 600;
   letter-spacing: 0.2px;
   color: ${({ theme }) => theme.colors.textDim};
+`;
+
+/**
+ * The lighter half of a caption — the prototype's "— pick one or more", and the
+ * hint on Cast and Your rating when those land. Faint and unbolded inside a
+ * caption that is neither, so it reads as an aside rather than as part of the
+ * field's name.
+ */
+export const FieldHint = styled.span`
+  font-weight: 400;
+  color: ${({ theme }) => theme.colors.textFaint};
+`;
+
+/**
+ * The gap the prototype leaves between a caption and a control that is not a
+ * field box — the chips sit `4px` under theirs, where a `TextField` carries its
+ * own spacing above it.
+ */
+export const UnderCaption = styled.div`
+  margin-top: 4px;
 `;
 
 /**

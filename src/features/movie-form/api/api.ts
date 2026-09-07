@@ -1,7 +1,10 @@
-import type { Movie, MovieFormValues } from '@/types';
+import type { Genre, GenrePoolPayload, Movie, MovieFormValues } from '@/types';
 
 /** Where a new movie is written. */
 const MOVIES_ENDPOINT = '/api/movies';
+
+/** Where the genres a film may be filed under are read — not the genre list. */
+const GENRE_POOL_ENDPOINT = '/api/genres/pool';
 
 /**
  * Writes one movie and answers with the record that was stored.
@@ -26,6 +29,13 @@ const MOVIES_ENDPOINT = '/api/movies';
  * year", and a field that vanished when it was cleared could not say a year had
  * been *removed* — the same request shape one slice from now.
  *
+ * The genres are the exception, and for the same reason read the other way:
+ * they travel as **one `genre` part per picked genre**, in the order they were
+ * picked, because that is what a set has always looked like on a form wire. An
+ * empty selection sends no part at all rather than an empty one — there is no
+ * genre named `''`, so a part carrying one would be a name the server would
+ * have to refuse.
+ *
  * Rejects if the save did not succeed. There is no snackbar yet, and the form's
  * honest answer to a refused save is to still be standing with everything typed
  * still in it, which it cannot do unless this rejects.
@@ -34,6 +44,9 @@ export async function createMovie(values: MovieFormValues): Promise<Movie> {
   const body = new FormData();
   body.append('title', values.title);
   body.append('year', values.year);
+  for (const genre of values.genres) {
+    body.append('genre', genre);
+  }
 
   const response = await fetch(MOVIES_ENDPOINT, { method: 'POST', body });
 
@@ -42,4 +55,28 @@ export async function createMovie(values: MovieFormValues): Promise<Movie> {
   }
 
   return (await response.json()) as Movie;
+}
+
+/**
+ * Loads the **Genre pool** — the whole seeded vocabulary the form draws as
+ * chips, in migration order, including the genres no movie is tagged with yet.
+ *
+ * Its own call against its own endpoint, deliberately not `fetchGenreList`'s:
+ * that one answers a **Filter dropdown**'s question — what is on the shelves,
+ * and how much of each — and a form built on it could never create the
+ * library's first Documentary.
+ *
+ * Asked with no query string: the pool is what may be picked, never a filtered
+ * answer. It resolves the genres themselves rather than the envelope, which is
+ * the route's business. Rejects if the pool could not be read; swallowing that
+ * is the hook's job, not this one's.
+ */
+export async function fetchGenrePool(): Promise<Genre[]> {
+  const response = await fetch(GENRE_POOL_ENDPOINT);
+
+  if (!response.ok) {
+    throw new Error(`GET ${GENRE_POOL_ENDPOINT} failed: ${response.status}`);
+  }
+
+  return ((await response.json()) as GenrePoolPayload).genres;
 }

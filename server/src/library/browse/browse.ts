@@ -1,5 +1,5 @@
 import type { SqliteDatabase } from '../../db';
-import type { GenreCount, ListSort, Movie, MovieQuery } from '@/types';
+import type { Genre, GenreCount, ListSort, Movie, MovieQuery } from '@/types';
 import type { MovieReader, MovieRow } from '../read/read';
 
 /**
@@ -114,6 +114,7 @@ export interface Browse {
   listMovies(query: MovieQuery): Movie[];
   searchMovies(text: string): Movie[];
   listGenres(): GenreCount[];
+  listGenrePool(): Genre[];
   countMovies(): number;
 }
 
@@ -125,6 +126,10 @@ export function createBrowse(db: SqliteDatabase, reader: MovieReader): Browse {
     GROUP BY g.id, g.name
     ORDER BY COUNT(mg.movie_id) DESC, g.name
   `);
+
+  const selectGenrePool = db.prepare(
+    'SELECT g.id AS id, g.name AS name FROM genres g ORDER BY g.rowid'
+  );
 
   const selectMovieCount = db.prepare('SELECT COUNT(*) AS count FROM movies');
 
@@ -158,6 +163,26 @@ export function createBrowse(db: SqliteDatabase, reader: MovieReader): Browse {
   }
 
   /**
+   * Every genre a film may be filed under — the whole seeded vocabulary, in the
+   * order migration #1 wrote it, which is the order the **Movie form** draws its
+   * chips in.
+   *
+   * A second read of a different question from {@link listGenres}, and it is
+   * meant to disagree with it: that one joins `movie_genres` and so reports only
+   * *populated* genres, busiest first, because it draws a Filter dropdown. This
+   * one never joins, so Documentary is offerable before a Documentary row
+   * exists — which is the only way the first one is ever made.
+   *
+   * `rowid` is the migration's own insert order, and the seed is the only thing
+   * that ever writes this table. Ordering by name would be alphabetical and
+   * ordering by count would reshuffle the chips as the library filled up, under
+   * a finger already reaching for one.
+   */
+  function listGenrePool(): Genre[] {
+    return selectGenrePool.all() as Genre[];
+  }
+
+  /**
    * How many movies the library holds — the "All Genres" tally. Its own query
    * rather than a sum of {@link listGenres}: that sum counts a movie once per
    * genre it carries and misses an untagged one entirely, and this is a count
@@ -167,5 +192,5 @@ export function createBrowse(db: SqliteDatabase, reader: MovieReader): Browse {
     return (selectMovieCount.get() as { count: number }).count;
   }
 
-  return { listMovies, searchMovies, listGenres, countMovies };
+  return { listMovies, searchMovies, listGenres, listGenrePool, countMovies };
 }
