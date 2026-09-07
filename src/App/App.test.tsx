@@ -764,3 +764,227 @@ describe('App — a typed title becomes a row on the home screen', () => {
     expect(screen.queryByText('Rear Window')).toBeNull();
   });
 });
+
+// --- 11 — Movie form, Phase 1: the chips (issue #99) --------------------------
+
+/** The **Genre pool** as `GET /api/genres/pool` sends it — the 12, in migration order. */
+const GENRE_POOL = [
+  'Action',
+  'Comedy',
+  'Drama',
+  'Horror',
+  'Thriller',
+  'Sci-Fi',
+  'Romance',
+  'Documentary',
+  'Animation',
+  'Family',
+  'Adventure',
+  'Crime',
+].map((name, index) => ({ id: `g${index + 1}`, name }));
+
+/**
+ * The acceptance criterion no unit test can prove: a film filed under two
+ * genres on the form is in **both** rows on the browse home, with no reload.
+ *
+ * The section above it walked the same path to a film that was in the library
+ * and on no shelf, because `listGenres` reports only *populated* genres and
+ * that slice had no genre control. This is the other half of that sentence, and
+ * it needs all of it at once — the pool endpoint, the chips, the repeated
+ * `genre` parts on the wire, the write, and a home aggregate rebuilt from what
+ * the library now holds.
+ *
+ * The stub stands in for the whole server, and it keeps the server's own rule
+ * about rows: a genre earns one by having a movie in it. Sci-Fi is not a row
+ * when the test starts, which is the entire point of a pool that offers the
+ * empty genres.
+ */
+describe('App — a film filed under two genres reaches both rows', () => {
+  /** The server's library, as this test's stub keeps it. */
+  let library: Movie[];
+
+  /** The rows `/api/home` builds: one per populated genre, in first-seen order. */
+  function rowsFrom(movies: Movie[]): HomeRow[] {
+    const rows: HomeRow[] = [];
+    for (const movie of movies) {
+      for (const genre of movie.genres) {
+        const row = rows.find((candidate) => candidate.genre === genre.name);
+        if (row) {
+          row.movies = [movie, ...row.movies];
+          row.count += 1;
+        } else {
+          rows.push({ genre: genre.name, count: 1, movies: [movie] });
+        }
+      }
+    }
+    return rows;
+  }
+
+  beforeEach(() => {
+    library = [
+      makeMovie({
+        id: 'a1',
+        title: 'North by Northwest',
+        genres: [{ id: 'g5', name: 'Thriller' }],
+      }),
+    ];
+
+    fetchMock.mockImplementation((input, init) => {
+      const url = String(input);
+
+      if (url.endsWith('/api/movies') && init?.method === 'POST') {
+        const fields = init.body as FormData;
+        const created = makeMovie({
+          id: `m${library.length + 1}`,
+          title: String(fields.get('title')),
+          videoPath: '',
+          genres: fields.getAll('genre').map((name) => ({
+            id: `g-${String(name)}`,
+            name: String(name),
+          })),
+        });
+        library = [created, ...library];
+        return Promise.resolve(createdResponse(created));
+      }
+
+      if (url.includes('/api/genres/pool')) {
+        return Promise.resolve(okResponse({ genres: GENRE_POOL }));
+      }
+
+      if (url.includes('/api/genres')) {
+        // The **Genre list** behind the home's filter pill — populated genres
+        // only, which is exactly why the form cannot be built on it.
+        return Promise.resolve(
+          okResponse({ total: library.length, genres: [] })
+        );
+      }
+
+      if (url.includes('/api/home')) {
+        const payload: HomePayload = {
+          continueWatching: [],
+          favorites: [],
+          rows: rowsFrom(library),
+        };
+        return Promise.resolve(okResponse(payload));
+      }
+
+      return Promise.reject(new Error(`Unexpected request: ${url}`));
+    });
+  });
+
+  /** Walk the gear and the ＋ to a form with its chips already loaded. */
+  async function openForm() {
+    renderApp();
+    await screen.findByRole('heading', { name: 'Thriller' });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Settings' }));
+    await screen.findByRole('heading', { name: 'Settings' });
+    fireEvent.click(screen.getByRole('button', { name: /add a movie/i }));
+
+    await screen.findByRole('button', { name: 'Documentary' });
+  }
+
+  /** The card for one film inside one genre row, or `null` if it is not there. */
+  function cardInRow(genre: string, title: string) {
+    return within(screen.getByRole('region', { name: genre })).queryByRole(
+      'button',
+      { name: title }
+    );
+  }
+
+  it('puts the film in both of the rows it was filed under', async () => {
+    await openForm();
+
+    fireEvent.change(screen.getByRole('textbox', { name: /title/i }), {
+      target: { value: 'Rear Window' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Thriller' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Sci-Fi' }));
+    fireEvent.click(screen.getByRole('button', { name: /add to library/i }));
+
+    await waitFor(() => expect(currentPath()).toBe('/'));
+    await screen.findByRole('region', { name: 'Sci-Fi' });
+
+    // Both shelves, with no reload — the browse home loads on arrival, and the
+    // film it loads is the one the save just wrote.
+    expect(cardInRow('Thriller', 'Rear Window')).not.toBeNull();
+    expect(cardInRow('Sci-Fi', 'Rear Window')).not.toBeNull();
+  });
+
+  it('draws a row for a genre that had none before the save', async () => {
+    await openForm();
+
+    // Sci-Fi is offerable while it is empty, which is the whole reason the pool
+    // is read separately from the genre list.
+    expect(screen.queryByRole('region', { name: 'Sci-Fi' })).toBeNull();
+
+    fireEvent.change(screen.getByRole('textbox', { name: /title/i }), {
+      target: { value: 'Rear Window' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Sci-Fi' }));
+    fireEvent.click(screen.getByRole('button', { name: /add to library/i }));
+
+    await waitFor(() => expect(currentPath()).toBe('/'));
+
+    expect(await screen.findByRole('region', { name: 'Sci-Fi' })).toBeDefined();
+  });
+
+  it('joins the film to a row that was already there', async () => {
+    await openForm();
+
+    fireEvent.change(screen.getByRole('textbox', { name: /title/i }), {
+      target: { value: 'Rear Window' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Thriller' }));
+    fireEvent.click(screen.getByRole('button', { name: /add to library/i }));
+
+    await waitFor(() => expect(currentPath()).toBe('/'));
+    await waitFor(() =>
+      expect(cardInRow('Thriller', 'Rear Window')).not.toBeNull()
+    );
+
+    // The film that was already on the shelf is still on it.
+    expect(cardInRow('Thriller', 'North by Northwest')).not.toBeNull();
+  });
+
+  it('sends the chips as the genres it was given, and no others', async () => {
+    await openForm();
+
+    fireEvent.change(screen.getByRole('textbox', { name: /title/i }), {
+      target: { value: 'Rear Window' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Sci-Fi' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Thriller' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Sci-Fi' }));
+    fireEvent.click(screen.getByRole('button', { name: /add to library/i }));
+
+    await waitFor(() => expect(currentPath()).toBe('/'));
+
+    // Picked, picked, unpicked — one genre reaches the wire, in the order it
+    // survived in.
+    const save = fetchMock.mock.calls.find(
+      ([input, init]) =>
+        String(input).endsWith('/api/movies') && init?.method === 'POST'
+    );
+    const fields = save?.[1]?.body as FormData;
+    expect(fields.getAll('genre')).toEqual(['Thriller']);
+  });
+
+  it('leaves a film with no genre picked on no shelf at all', async () => {
+    await openForm();
+
+    fireEvent.change(screen.getByRole('textbox', { name: /title/i }), {
+      target: { value: 'Rear Window' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /add to library/i }));
+
+    await waitFor(() => expect(currentPath()).toBe('/'));
+    await screen.findByRole('region', { name: 'Thriller' });
+
+    // Unchanged from Phase 1, and still not a bug: every section of the home is
+    // a genre row, the resume queue or the favorites shelf, so an unfiled film
+    // is in the library and on none of them.
+    expect(screen.queryAllByRole('region')).toHaveLength(1);
+    expect(cardInRow('Thriller', 'Rear Window')).toBeNull();
+  });
+});

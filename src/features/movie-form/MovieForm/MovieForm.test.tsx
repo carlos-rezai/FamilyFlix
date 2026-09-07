@@ -1,15 +1,22 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  act,
+} from '@testing-library/react';
 import { ThemeProvider } from 'styled-components';
 import { MemoryRouter } from 'react-router-dom';
 
 import { MovieForm } from './MovieForm';
 import { theme } from '@/styles/theme';
-import type { Movie } from '@/types';
+import type { Genre, Movie } from '@/types';
 import { LocationProbe } from '@/test-support/LocationProbe/LocationProbe';
 import { makeMovie } from '@/test-support/makeMovie/makeMovie';
 import {
   createdResponse,
+  okResponse,
   serverErrorResponse,
 } from '@/test-support/fakeResponse/fakeResponse';
 
@@ -27,12 +34,44 @@ const CREATED: Movie = makeMovie({
   videoPath: '',
 });
 
+/** The **Genre pool** as `GET /api/genres/pool` sends it: the 12, in migration order. */
+const POOL: Genre[] = [
+  'Action',
+  'Comedy',
+  'Drama',
+  'Horror',
+  'Thriller',
+  'Sci-Fi',
+  'Romance',
+  'Documentary',
+  'Animation',
+  'Family',
+  'Adventure',
+  'Crime',
+].map((name, index) => ({ id: `g${index + 1}`, name }));
+
+/**
+ * How each of the form's two requests answers, settled per test.
+ *
+ * The form now reads on mount as well as writing on Save, so the stub routes by
+ * URL rather than answering everything alike — and a test that is about a save
+ * in flight, or a pool that will not load, replaces one arm without touching
+ * the other.
+ */
+let answerPool: () => Promise<Response>;
+let answerSave: () => Promise<Response>;
+
 beforeEach(() => {
+  answerPool = () => Promise.resolve(okResponse({ genres: POOL }));
+  answerSave = () => Promise.resolve(createdResponse(CREATED));
+
   fetchMock =
     vi.fn<
       (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>
     >();
-  fetchMock.mockResolvedValue(createdResponse(CREATED));
+  fetchMock.mockImplementation((input) =>
+    String(input).includes('/api/genres/pool') ? answerPool() : answerSave()
+  );
   vi.stubGlobal('fetch', fetchMock);
 });
 
@@ -40,7 +79,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-function renderForm() {
+function mountForm() {
   return render(
     <MemoryRouter initialEntries={['/add']}>
       <ThemeProvider theme={theme}>
@@ -49,6 +88,19 @@ function renderForm() {
       </ThemeProvider>
     </MemoryRouter>
   );
+}
+
+/**
+ * The form, with the pool it loads on mount already settled into chips.
+ *
+ * The flush is what every test here waits on rather than only the ones about
+ * chips: a request answered after a test has finished is a state update outside
+ * `act`, and every test on this screen mounts a form that reads.
+ */
+async function renderForm() {
+  const view = mountForm();
+  await act(async () => undefined);
+  return view;
 }
 
 const titleField = () =>
@@ -61,18 +113,37 @@ const save = () =>
   }) as HTMLButtonElement;
 const currentPath = () => screen.getByTestId('pathname').textContent;
 
+/** Every genre chip on the form, in the order it is drawn. */
+function chips(): HTMLButtonElement[] {
+  return (screen.getAllByRole('button') as HTMLButtonElement[]).filter((el) =>
+    el.hasAttribute('aria-pressed')
+  );
+}
+
+const chip = (name: string) =>
+  screen.getByRole('button', { name }) as HTMLButtonElement;
+
+/** Whether the named genre is currently picked. */
+const picked = (name: string) => chip(name).getAttribute('aria-pressed');
+
+/** Every save the form has issued. */
+function saveRequests() {
+  return fetchMock.mock.calls.filter(
+    ([input, init]) =>
+      String(input).includes('/api/movies') && init?.method === 'POST'
+  );
+}
+
 /** The multipart body of the save, or `undefined` if nothing was ever sent. */
 function savedFields(): FormData | undefined {
-  const call = fetchMock.mock.calls.find(([input]) =>
-    String(input).includes('/api/movies')
-  );
-  return call?.[1]?.body as FormData | undefined;
+  return saveRequests()[0]?.[1]?.body as FormData | undefined;
 }
 
 /**
- * The **Movie form** in its **Add context**, holding the two fields this slice
- * gives it. It is the only writer in the app that is not a single-signal write,
- * and the first screen that creates a record rather than amending one.
+ * The **Movie form** in its **Add context**, holding the fields and the chips
+ * this slice gives it. It is the only writer in the app that is not a
+ * single-signal write, and the first screen that creates a record rather than
+ * amending one.
  *
  * The gate, the in-flight state and the destination are asserted here rather
  * than on `useMovieForm` directly: what the maintainer can press, and what the
@@ -81,16 +152,16 @@ function savedFields(): FormData | undefined {
  * lands.
  */
 describe('MovieForm', () => {
-  it('offers a Title and a Year to type into', () => {
-    renderForm();
+  it('offers a Title and a Year to type into', async () => {
+    await renderForm();
 
     expect(titleField().value).toBe('');
     expect(yearField().value).toBe('');
   });
 
   describe('the Year field', () => {
-    it('keeps the digits and drops everything else', () => {
-      renderForm();
+    it('keeps the digits and drops everything else', async () => {
+      await renderForm();
 
       fireEvent.change(yearField(), { target: { value: '19a5' } });
 
@@ -99,24 +170,24 @@ describe('MovieForm', () => {
       expect(yearField().value).toBe('195');
     });
 
-    it('stops at four characters', () => {
-      renderForm();
+    it('stops at four characters', async () => {
+      await renderForm();
 
       fireEvent.change(yearField(), { target: { value: '19544' } });
 
       expect(yearField().value).toBe('1954');
     });
 
-    it('takes a four-digit year unchanged', () => {
-      renderForm();
+    it('takes a four-digit year unchanged', async () => {
+      await renderForm();
 
       fireEvent.change(yearField(), { target: { value: '1954' } });
 
       expect(yearField().value).toBe('1954');
     });
 
-    it('can be cleared back to empty', () => {
-      renderForm();
+    it('can be cleared back to empty', async () => {
+      await renderForm();
 
       fireEvent.change(yearField(), { target: { value: '1954' } });
       fireEvent.change(yearField(), { target: { value: '' } });
@@ -125,15 +196,88 @@ describe('MovieForm', () => {
     });
   });
 
+  // --- 11 — Movie form, Phase 1: the genre chips (issue #99) -----------------
+
+  describe('the genre chips', () => {
+    it('offers the whole pool, in the order the route sent it', async () => {
+      await renderForm();
+
+      // Twelve, including the ones no movie is tagged with — which is what
+      // makes filing a film under Documentary before a Documentary row exists
+      // possible at all.
+      expect(chips().map((c) => c.textContent?.trim())).toEqual(
+        POOL.map((genre) => genre.name)
+      );
+    });
+
+    it('captions the row the way the prototype does', async () => {
+      await renderForm();
+
+      expect(screen.getByText(/pick one or more/i)).toBeDefined();
+    });
+
+    it('picks a genre when its chip is pressed', async () => {
+      await renderForm();
+
+      fireEvent.click(chip('Thriller'));
+
+      expect(picked('Thriller')).toBe('true');
+    });
+
+    it('unpicks it when the same chip is pressed again', async () => {
+      await renderForm();
+
+      fireEvent.click(chip('Thriller'));
+      fireEvent.click(chip('Thriller'));
+
+      // The chips are the only control on the form with no other way to undo
+      // it — a second press is the whole of "no, not that one".
+      expect(picked('Thriller')).toBe('false');
+    });
+
+    it('holds several genres at once', async () => {
+      await renderForm();
+
+      fireEvent.click(chip('Thriller'));
+      fireEvent.click(chip('Sci-Fi'));
+
+      expect(picked('Thriller')).toBe('true');
+      expect(picked('Sci-Fi')).toBe('true');
+      expect(picked('Drama')).toBe('false');
+    });
+
+    it('leaves the others alone when one is unpicked', async () => {
+      await renderForm();
+
+      fireEvent.click(chip('Thriller'));
+      fireEvent.click(chip('Sci-Fi'));
+      fireEvent.click(chip('Thriller'));
+
+      expect(picked('Thriller')).toBe('false');
+      expect(picked('Sci-Fi')).toBe('true');
+    });
+
+    it('starts with nothing picked', async () => {
+      await renderForm();
+
+      // The count is asserted alongside, so a row that failed to draw at all
+      // cannot pass this by having nothing to be pressed.
+      expect(chips()).toHaveLength(POOL.length);
+      expect(
+        chips().every((c) => c.getAttribute('aria-pressed') === 'false')
+      ).toBe(true);
+    });
+  });
+
   describe('the save gate', () => {
-    it('reads "Add to library"', () => {
-      renderForm();
+    it('reads "Add to library"', async () => {
+      await renderForm();
 
       expect(save().textContent).toContain('Add to library');
     });
 
-    it('is disabled while there is no title', () => {
-      renderForm();
+    it('is disabled while there is no title', async () => {
+      await renderForm();
 
       // A gate rather than a validation message: `title` is NOT NULL, and the
       // only "invalid" state this form can reach is one where Save cannot be
@@ -141,16 +285,16 @@ describe('MovieForm', () => {
       expect(save().disabled).toBe(true);
     });
 
-    it('opens once a title is typed', () => {
-      renderForm();
+    it('opens once a title is typed', async () => {
+      await renderForm();
 
       fireEvent.change(titleField(), { target: { value: 'Rear Window' } });
 
       expect(save().disabled).toBe(false);
     });
 
-    it('closes again if the title is deleted', () => {
-      renderForm();
+    it('closes again if the title is deleted', async () => {
+      await renderForm();
 
       fireEvent.change(titleField(), { target: { value: 'Rear Window' } });
       fireEvent.change(titleField(), { target: { value: '' } });
@@ -158,18 +302,28 @@ describe('MovieForm', () => {
       expect(save().disabled).toBe(true);
     });
 
-    it('does not open on a year alone', () => {
-      renderForm();
+    it('does not open on a year alone', async () => {
+      await renderForm();
 
       fireEvent.change(yearField(), { target: { value: '1954' } });
 
+      expect(save().disabled).toBe(true);
+    });
+
+    it('does not open on a genre alone', async () => {
+      await renderForm();
+
+      fireEvent.click(chip('Thriller'));
+
+      // Genre is optional, so it is no part of the gate — a filed film with no
+      // title is still not a row this form can write.
       expect(save().disabled).toBe(true);
     });
   });
 
   describe('saving', () => {
     it('sends the typed title and year', async () => {
-      renderForm();
+      await renderForm();
 
       fireEvent.change(titleField(), { target: { value: 'Rear Window' } });
       fireEvent.change(yearField(), { target: { value: '1954' } });
@@ -181,14 +335,55 @@ describe('MovieForm', () => {
       expect(fields.get('year')).toBe('1954');
     });
 
+    it('sends the picked genres, in the order they were picked', async () => {
+      await renderForm();
+
+      fireEvent.change(titleField(), { target: { value: 'Rear Window' } });
+      fireEvent.click(chip('Sci-Fi'));
+      fireEvent.click(chip('Thriller'));
+      fireEvent.click(save());
+
+      await waitFor(() => expect(savedFields()).toBeDefined());
+      // The maintainer's order, not the pool's: Sci-Fi is the sixth chip and
+      // the first genre, and `genres[0]` is the primary tag.
+      expect((savedFields() as FormData).getAll('genre')).toEqual([
+        'Sci-Fi',
+        'Thriller',
+      ]);
+    });
+
+    it('sends no genre that was picked and then unpicked', async () => {
+      await renderForm();
+
+      fireEvent.change(titleField(), { target: { value: 'Rear Window' } });
+      fireEvent.click(chip('Sci-Fi'));
+      fireEvent.click(chip('Thriller'));
+      fireEvent.click(chip('Sci-Fi'));
+      fireEvent.click(save());
+
+      await waitFor(() => expect(savedFields()).toBeDefined());
+      expect((savedFields() as FormData).getAll('genre')).toEqual(['Thriller']);
+    });
+
+    it('sends no genre at all when none was picked', async () => {
+      await renderForm();
+
+      fireEvent.change(titleField(), { target: { value: 'Rear Window' } });
+      fireEvent.click(save());
+
+      await waitFor(() => expect(savedFields()).toBeDefined());
+      // A film the maintainer has not filed is a normal row — in the library,
+      // and on no shelf.
+      expect((savedFields() as FormData).getAll('genre')).toEqual([]);
+    });
+
     it('reads "Adding…" and is disabled while the request is in flight', async () => {
       let settle: (response: Response) => void = () => undefined;
-      fetchMock.mockReturnValue(
+      answerSave = () =>
         new Promise<Response>((resolve) => {
           settle = resolve;
-        })
-      );
-      renderForm();
+        });
+      await renderForm();
 
       fireEvent.change(titleField(), { target: { value: 'Rear Window' } });
       fireEvent.click(save());
@@ -205,12 +400,11 @@ describe('MovieForm', () => {
 
     it('writes one movie however many times Save is pressed', async () => {
       let settle: (response: Response) => void = () => undefined;
-      fetchMock.mockReturnValue(
+      answerSave = () =>
         new Promise<Response>((resolve) => {
           settle = resolve;
-        })
-      );
-      renderForm();
+        });
+      await renderForm();
 
       fireEvent.change(titleField(), { target: { value: 'Rear Window' } });
       fireEvent.click(save());
@@ -219,11 +413,11 @@ describe('MovieForm', () => {
 
       settle(createdResponse(CREATED));
       await waitFor(() => expect(currentPath()).toBe('/'));
-      expect(fetchMock).toHaveBeenCalledTimes(1);
+      expect(saveRequests()).toHaveLength(1);
     });
 
     it('lands on the browse home once the movie is written', async () => {
-      renderForm();
+      await renderForm();
 
       fireEvent.change(titleField(), { target: { value: 'Rear Window' } });
       fireEvent.click(save());
@@ -235,19 +429,50 @@ describe('MovieForm', () => {
     });
 
     it('stays on the form and offers Save again when the save fails', async () => {
-      fetchMock.mockResolvedValue(serverErrorResponse());
-      renderForm();
+      answerSave = () => Promise.resolve(serverErrorResponse());
+      await renderForm();
 
       fireEvent.change(titleField(), { target: { value: 'Rear Window' } });
+      fireEvent.click(chip('Thriller'));
       fireEvent.click(save());
 
       // No snackbar in this slice, so the honest answer to a refused save is
-      // the form still standing with everything typed still in it, rather than
-      // a browse home with no new film on it.
+      // the form still standing with everything typed still in it — the chip
+      // included, since re-picking it is work the maintainer already did.
       await waitFor(() => expect(save().disabled).toBe(false));
       expect(currentPath()).toBe('/add');
       expect(titleField().value).toBe('Rear Window');
+      expect(picked('Thriller')).toBe('true');
       expect(save().textContent).toContain('Add to library');
+    });
+  });
+
+  describe('when the genre pool cannot be loaded', () => {
+    it('draws no chips rather than an error', async () => {
+      answerPool = () => Promise.resolve(serverErrorResponse());
+      mountForm();
+
+      // `useGenreList`'s recorded precedent: the prototype designs no error
+      // state here, so a broken endpoint is a caption with nothing under it.
+      await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+      expect(chips()).toEqual([]);
+    });
+
+    it('still saves the rest of the form', async () => {
+      answerPool = () => Promise.reject(new Error('offline'));
+      mountForm();
+      await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+
+      fireEvent.change(titleField(), { target: { value: 'Rear Window' } });
+      fireEvent.change(yearField(), { target: { value: '1954' } });
+      fireEvent.click(save());
+
+      // The acceptance criterion this slice is most easily got wrong: a
+      // maintainer with no chips has still lost nothing but the chips.
+      await waitFor(() => expect(currentPath()).toBe('/'));
+      const fields = savedFields() as FormData;
+      expect(fields.get('title')).toBe('Rear Window');
+      expect(fields.getAll('genre')).toEqual([]);
     });
   });
 });

@@ -53,6 +53,7 @@ import { createSqliteStorage, type LibraryStorage } from '../library';
 import type {
   GenreListPayload,
   GenrePayload,
+  GenrePoolPayload,
   HomePayload,
   Movie,
 } from '@/types';
@@ -1043,6 +1044,123 @@ describe('GET /api/genres', () => {
     const list = await getGenreList(baseUrl);
 
     expect(list.genres.map((genre) => genre.name)).toEqual(['Drama']);
+  });
+});
+
+// --- 11 — Movie form, Phase 1: the genre pool (issue #99) ----------------------
+
+/** `GET /api/genres/pool`, checked for a 200 and parsed. */
+async function getGenrePool(baseUrl: string): Promise<GenrePoolPayload> {
+  const response = await fetch(`${baseUrl}/api/genres/pool`);
+  expect(response.status).toBe(200);
+  return (await response.json()) as GenrePoolPayload;
+}
+
+/** The 12 names migration #1 seeds, in the order the form draws them as chips. */
+const GENRE_POOL = [
+  'Action',
+  'Comedy',
+  'Drama',
+  'Horror',
+  'Thriller',
+  'Sci-Fi',
+  'Romance',
+  'Documentary',
+  'Animation',
+  'Family',
+  'Adventure',
+  'Crime',
+];
+
+/**
+ * The **Genre pool** — a second read of a different question from the one
+ * directly above it, and the reason the two have separate names in the glossary.
+ *
+ * `/api/genres` answers what is on the shelves and how much of each, because it
+ * draws a **Filter dropdown**; this answers what a film may be filed under. The
+ * tests below assert that difference directly rather than implying it: an
+ * endpoint that quietly served the same list would be a form that cannot create
+ * the first Documentary.
+ */
+describe('GET /api/genres/pool', () => {
+  it('answers with all twelve genres, in migration order', async () => {
+    const { baseUrl } = freshApi();
+
+    const pool = await getGenrePool(baseUrl);
+
+    expect(pool.genres.map((genre) => genre.name)).toEqual(GENRE_POOL);
+  });
+
+  it('is JSON, wrapped in a payload rather than a bare array', async () => {
+    const { baseUrl } = freshApi();
+
+    const response = await fetch(`${baseUrl}/api/genres/pool`);
+
+    // `{ genres }` rather than `Genre[]`, following every other read in this
+    // router: an envelope has somewhere to grow, a top-level array does not.
+    expect(response.headers.get('content-type')).toContain('application/json');
+    expect(Object.keys((await response.json()) as object)).toEqual(['genres']);
+  });
+
+  it('gives every genre an id and a name, and no count', async () => {
+    const { storage, baseUrl } = freshApi();
+    addGenreCountedLibrary(storage);
+
+    const [genre] = (await getGenrePool(baseUrl)).genres;
+
+    // A `Genre`, not a `GenreCount`. Eleven of the twelve could carry a zero,
+    // and a number on a chip is a number the form would have to explain.
+    expect(typeof genre.id).toBe('string');
+    expect(genre.id).not.toBe('');
+    expect(Object.keys(genre).sort()).toEqual(['id', 'name']);
+  });
+
+  it('offers the whole pool to an empty library', async () => {
+    const { baseUrl } = freshApi();
+
+    // Where `/api/genres` answers `{ total: 0, genres: [] }` — nothing to draw
+    // a dropdown from — this answers the twelve it always answers. An empty
+    // library is still one a film can be filed into.
+    expect(await getGenreList(baseUrl)).toEqual({ total: 0, genres: [] });
+    expect((await getGenrePool(baseUrl)).genres).toHaveLength(12);
+  });
+
+  it('includes the genres no movie carries, where /api/genres leaves them out', async () => {
+    const { storage, baseUrl } = freshApi();
+    storage.addMovie({
+      title: 'Only Drama',
+      videoPath: 'Only Drama/only-drama.mkv',
+      genres: ['Drama'],
+    });
+
+    const list = await getGenreList(baseUrl);
+    const pool = await getGenrePool(baseUrl);
+
+    // The two endpoints, observably disagreeing, over the same library. This is
+    // the whole justification for the second route existing.
+    expect(list.genres.map((genre) => genre.name)).toEqual(['Drama']);
+    expect(pool.genres.map((genre) => genre.name)).toContain('Documentary');
+    expect(pool.genres).toHaveLength(12);
+  });
+
+  it('keeps its order however busy the library gets', async () => {
+    const { storage, baseUrl } = freshApi();
+    addGenreCountedLibrary(storage);
+
+    // Drama leads `/api/genres` by count and sits third here, where the order
+    // is the vocabulary's rather than the shelf's.
+    expect((await getGenrePool(baseUrl)).genres.map((g) => g.name)).toEqual(
+      GENRE_POOL
+    );
+  });
+
+  it('is not the movie called "pool" — /genres/pool is its own route', async () => {
+    const { baseUrl } = freshApi();
+
+    // Guarding the one collision this URL could have had: `/genre/:name` sits
+    // beside it, and a pool served by a path parameter would be an empty genre
+    // page rather than twelve chips.
+    expect((await getGenrePool(baseUrl)).genres).toHaveLength(12);
   });
 });
 
@@ -3450,14 +3568,24 @@ describe('GET /api/movies/:id/stream — a conversion that produces nothing', ()
 // and `/stream` already give a missing file, which is what the player draws its
 // missing-file notice from.
 
-/** A fields-only multipart POST to `/api/movies`, the way the form sends it. */
+/**
+ * A fields-only multipart POST to `/api/movies`, the way the form sends it.
+ *
+ * An array value is sent as one **part per entry, all under the same name** —
+ * which is what a repeated field is on this wire, and how the genre chips
+ * travel (issue #99). Nothing here spells a multipart body by hand: the
+ * platform's own `FormData` encodes it, so the repetition under test is the
+ * real one.
+ */
 function postMovie(
   baseUrl: string,
-  fields: Record<string, string>
+  fields: Record<string, string | string[]>
 ): Promise<Response> {
   const body = new FormData();
   for (const [name, value] of Object.entries(fields)) {
-    body.append(name, value);
+    for (const entry of Array.isArray(value) ? value : [value]) {
+      body.append(name, entry);
+    }
   }
   return fetch(`${baseUrl}/api/movies`, { method: 'POST', body });
 }
@@ -3465,7 +3593,7 @@ function postMovie(
 /** The created movie, having asserted the status the route promises. */
 async function createdMovie(
   baseUrl: string,
-  fields: Record<string, string>
+  fields: Record<string, string | string[]>
 ): Promise<Movie> {
   const response = await postMovie(baseUrl, fields);
   expect(response.status).toBe(201);
@@ -3612,5 +3740,159 @@ describe('POST /api/movies', () => {
     expect(await response.json()).toEqual({
       error: `No video file for movie: ${movie.id}`,
     });
+  });
+
+  // --- 11 — Movie form, Phase 1: the chips reach the row (issue #99) ----------
+  //
+  // The genres are the first field on this wire that is genuinely a **list**,
+  // and they are spelled as a repeated `genre` part — one name per part, the
+  // way an HTML checkbox group has always sent a set. `readFields`' "last value
+  // wins" note was written against the day this arrived.
+  //
+  // Order is the order they were sent, not the pool's and not the database's:
+  // `genres[0]` is the primary tag `addMovie` has preserved since #3, and the
+  // chips are the first caller in the app that can decide what it is.
+
+  it('files the movie under a genre it was given', async () => {
+    const { baseUrl } = freshApi();
+
+    const movie = await createdMovie(baseUrl, {
+      title: 'Rear Window',
+      genre: ['Thriller'],
+    });
+
+    expect(movie.genres.map((genre) => genre.name)).toEqual(['Thriller']);
+  });
+
+  it('takes several genres from repeated parts of the same name', async () => {
+    const { baseUrl } = freshApi();
+
+    const movie = await createdMovie(baseUrl, {
+      title: 'Rear Window',
+      genre: ['Thriller', 'Sci-Fi'],
+    });
+
+    expect(movie.genres.map((genre) => genre.name)).toEqual([
+      'Thriller',
+      'Sci-Fi',
+    ]);
+  });
+
+  it('reads the genres back through GET /api/movies/:id, in the order sent', async () => {
+    const { baseUrl } = freshApi();
+
+    const created = await createdMovie(baseUrl, {
+      title: 'Rear Window',
+      genre: ['Sci-Fi', 'Thriller'],
+    });
+
+    const response = await fetch(`${baseUrl}/api/movies/${created.id}`);
+    const read = (await response.json()) as Movie;
+
+    // The reverse of the test above, over the same two names: the order is the
+    // maintainer's, carried through the write and back out of the read, rather
+    // than the pool's order re-imposed somewhere in between.
+    expect(read.genres.map((genre) => genre.name)).toEqual([
+      'Sci-Fi',
+      'Thriller',
+    ]);
+  });
+
+  it('gives each genre the id the pool reports for it', async () => {
+    const { baseUrl } = freshApi();
+
+    const pool = (
+      (await (
+        await fetch(`${baseUrl}/api/genres/pool`)
+      ).json()) as GenrePoolPayload
+    ).genres;
+    const movie = await createdMovie(baseUrl, {
+      title: 'Rear Window',
+      genre: ['Thriller'],
+    });
+
+    // The chips send names and the row carries ids: one seeded vocabulary read
+    // by the form and written by the save, rather than two that could drift.
+    expect(movie.genres[0].id).toBe(
+      pool.find((genre) => genre.name === 'Thriller')?.id
+    );
+  });
+
+  it('creates a movie posted with no genres at all', async () => {
+    const { baseUrl } = freshApi();
+
+    const movie = await createdMovie(baseUrl, { title: 'Rear Window' });
+
+    // Genre is optional on the form and stays optional on the wire. A film the
+    // maintainer has not filed yet is a normal row — it is simply on no shelf,
+    // which is the state the whole of Phase 1 shipped in.
+    expect(movie.genres).toEqual([]);
+  });
+
+  it('refuses a genre the pool does not hold, and writes nothing', async () => {
+    const { baseUrl } = freshApi();
+
+    const response = await postMovie(baseUrl, {
+      title: 'Rear Window',
+      genre: ['Westerns'],
+    });
+
+    // Unreachable from the form — the chips can only send names the pool
+    // handed them — and guarded for the same reason the missing title is: this
+    // is the first route that forwards a client-supplied list into a
+    // transactional write, and `addMovie` answers an unknown name by throwing.
+    // A 400 is that refusal spelled out; an unhandled rejection is not an
+    // answer at all.
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: 'Unknown genre: Westerns' });
+    expect(await movieTitles(baseUrl, 'recently-added')).toEqual([]);
+  });
+
+  it('puts the movie in each of its genre rows on the browse home', async () => {
+    const { baseUrl } = freshApi();
+
+    await createdMovie(baseUrl, {
+      title: 'Rear Window',
+      genre: ['Thriller', 'Sci-Fi'],
+    });
+
+    // What Phase 1 could not do. `listGenres` reports only *populated* genres,
+    // so before the chips a film with no genre was in the library and on no
+    // shelf; a film with two is on two, both of them rows that did not exist a
+    // request ago.
+    const home = await getHomePayload(baseUrl);
+    const rows = new Map(home.rows.map((row) => [row.genre, row]));
+
+    expect([...rows.keys()].sort()).toEqual(['Sci-Fi', 'Thriller']);
+    expect(rows.get('Thriller')?.movies.map((movie) => movie.title)).toEqual([
+      'Rear Window',
+    ]);
+    expect(rows.get('Sci-Fi')?.movies.map((movie) => movie.title)).toEqual([
+      'Rear Window',
+    ]);
+    expect(rows.get('Thriller')?.count).toBe(1);
+  });
+
+  it('joins the genre rows a film is already filed under', async () => {
+    const { storage, baseUrl } = freshApi();
+    storage.addMovie({
+      title: 'North by Northwest',
+      videoPath: 'North by Northwest/nbnw.mkv',
+      genres: ['Thriller'],
+    });
+
+    await createdMovie(baseUrl, {
+      title: 'Rear Window',
+      genre: ['Thriller'],
+    });
+
+    const home = await getHomePayload(baseUrl);
+    const thriller = home.rows.find((row) => row.genre === 'Thriller');
+
+    expect(thriller?.count).toBe(2);
+    expect(thriller?.movies.map((movie) => movie.title)).toEqual([
+      'Rear Window',
+      'North by Northwest',
+    ]);
   });
 });

@@ -847,6 +847,121 @@ describe('library: listGenres', () => {
   });
 });
 
+// --- listGenrePool -------------------------------------------------------------
+//
+// 11 — Movie form, Phase 1: the genre pool (issue #99).
+//
+// A second read of a different question. `listGenres` above answers "what is on
+// the shelves, and how much of each" — populated genres, busiest first — because
+// it exists to draw a **Filter dropdown**. The **Genre pool** answers "what may a
+// film be filed under", which is the whole seeded vocabulary in the order
+// migration #1 wrote it, and it is what makes filing a film under Documentary
+// before a Documentary row exists possible at all.
+
+/** The 12 names migration #1 seeds, in the order it seeds them. */
+const GENRE_POOL = [
+  'Action',
+  'Comedy',
+  'Drama',
+  'Horror',
+  'Thriller',
+  'Sci-Fi',
+  'Romance',
+  'Documentary',
+  'Animation',
+  'Family',
+  'Adventure',
+  'Crime',
+];
+
+describe('library: listGenrePool', () => {
+  it('returns all twelve seeded genres, in migration order', () => {
+    const storage = freshStorage();
+
+    // The prototype's own chip order, which is migration #1's order — not
+    // alphabetical, and not by how busy a genre is. The form draws them in the
+    // order they arrive, so this list *is* the row of chips.
+    expect(storage.listGenrePool().map((genre) => genre.name)).toEqual(
+      GENRE_POOL
+    );
+  });
+
+  it('offers the whole pool to a library with nothing in it yet', () => {
+    const storage = freshStorage();
+
+    // Where `listGenres()` is `[]` — there are no rows to draw — the pool is
+    // the same twelve it always is. An empty library is still a library a film
+    // can be filed into.
+    expect(storage.listGenres()).toEqual([]);
+    expect(storage.listGenrePool()).toHaveLength(12);
+  });
+
+  it('includes genres no movie is tagged with', () => {
+    const storage = freshStorage();
+    storage.addMovie(newMovie({ title: 'Weepie', genres: ['Drama'] }));
+
+    const names = storage.listGenrePool().map((genre) => genre.name);
+
+    // The whole point of the read: Documentary is offerable before a
+    // Documentary row exists, which is the only way the first one is ever made.
+    expect(names).toContain('Documentary');
+    expect(names).toContain('Drama');
+  });
+
+  it('carries the same genre id listGenres reports for a populated one', () => {
+    const storage = freshStorage();
+    storage.addMovie(newMovie({ title: 'Weepie', genres: ['Drama'] }));
+
+    const fromPool = storage
+      .listGenrePool()
+      .find((genre) => genre.name === 'Drama');
+    const fromList = storage
+      .listGenres()
+      .find((genre) => genre.name === 'Drama');
+
+    // One seeded row read two ways, not two vocabularies that could drift.
+    expect(fromPool?.id).toBe(fromList?.id);
+  });
+
+  it('carries a genre and nothing else — no count on it', () => {
+    const storage = freshStorage();
+    storage.addMovie(newMovie({ title: 'Weepie', genres: ['Drama'] }));
+
+    const [first] = storage.listGenrePool();
+
+    // A `Genre`, not a `GenreCount`. There is no number to put on a chip, and a
+    // count that only some of the twelve could have would be a number the form
+    // would have to explain.
+    expect(Object.keys(first).sort()).toEqual(['id', 'name']);
+  });
+
+  it('keeps its order however the library fills up', () => {
+    const storage = freshStorage();
+    storage.addMovie(newMovie({ title: 'C1', genres: ['Crime'] }));
+    storage.addMovie(newMovie({ title: 'C2', genres: ['Crime'] }));
+    storage.addMovie(newMovie({ title: 'C3', genres: ['Crime'] }));
+    storage.addMovie(newMovie({ title: 'A1', genres: ['Action'] }));
+
+    // Crime is now the busiest genre in the library, and it is still last.
+    // Chips that reshuffled as the library grew would move under a finger
+    // already reaching for one; `listGenres` reorders because a *dropdown*
+    // wants the busiest first, and this is not that list.
+    expect(storage.listGenrePool().map((genre) => genre.name)).toEqual(
+      GENRE_POOL
+    );
+  });
+
+  it('answers a different question from listGenres', () => {
+    const storage = freshStorage();
+    storage.addMovie(newMovie({ title: 'Weepie', genres: ['Drama'] }));
+
+    // The two reads exist side by side precisely because they disagree: one
+    // genre is on a shelf, twelve can be chosen.
+    expect(storage.listGenres()).toHaveLength(1);
+    expect(storage.listGenrePool()).toHaveLength(12);
+  });
+});
+
 // --- empty results & full assembly ---------------------------------------------
 
 describe('library: empty results and full-model assembly', () => {
