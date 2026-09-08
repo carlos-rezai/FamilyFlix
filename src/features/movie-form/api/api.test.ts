@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 import { createMovie, fetchGenrePool } from './api';
-import type { Movie, MovieFormValues } from '@/types';
+import type { Movie, MovieFormFile, MovieFormValues } from '@/types';
 import { makeMovie } from '@/test-support/makeMovie/makeMovie';
 import {
   createdResponse,
@@ -69,6 +69,9 @@ function typed(values: Partial<MovieFormValues> = {}): MovieFormValues {
     description: '',
     genres: [],
     rating: null,
+    // An empty **File slot**, which is what the **Add context** opens on and
+    // what every test above this slice is about.
+    video: null,
     ...values,
   };
 }
@@ -399,5 +402,83 @@ describe('fetchGenrePool', () => {
     fetchMock.mockRejectedValue(new Error('offline'));
 
     await expect(fetchGenrePool()).rejects.toThrow();
+  });
+});
+
+// --- 11 — Movie form, Phase 3: the video part (issue #102) -------------------
+//
+// The first bytes this app ever sends. Everything above travels as a string in
+// a field; a **Picked file** travels as a `File` in a part, which is the whole
+// reason this call has been `multipart/form-data` since the tracer slice rather
+// than JSON that would have had to be replaced here.
+
+/** A film off the maintainer's own disk, as the browser hands it over. */
+const LANTERN = new File(['video bytes'], 'lantern.mp4', { type: 'video/mp4' });
+
+/** The video slot holding that film. */
+const PICKED: MovieFormFile = {
+  kind: 'picked',
+  file: LANTERN,
+  filename: 'lantern.mp4',
+};
+
+describe('createMovie — the video', () => {
+  it('sends the picked file as the video part', async () => {
+    fetchMock.mockResolvedValue(createdResponse(CREATED));
+
+    await createMovie(typed({ title: 'The Lantern Keeper', video: PICKED }));
+
+    // The `File` itself: a browser gives a name and bytes and never a path, so
+    // the bytes are the only thing there is to send — and sending them is what
+    // makes the managed copy possible at all.
+    expect(sentFields().get('video')).toBe(LANTERN);
+  });
+
+  it('sends it as one part, whatever the film weighs', async () => {
+    fetchMock.mockResolvedValue(createdResponse(CREATED));
+
+    await createMovie(typed({ title: 'The Lantern Keeper', video: PICKED }));
+
+    // One request per save. `FormData` streams the part rather than reading it
+    // into the body, which is what keeps a 12 GB film out of memory on both
+    // ends of the wire.
+    expect(sentFields().getAll('video')).toHaveLength(1);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('sends the video alongside the fields rather than in a second request', async () => {
+    fetchMock.mockResolvedValue(createdResponse(CREATED));
+
+    await createMovie(
+      typed({
+        title: 'The Lantern Keeper',
+        year: '2019',
+        genres: ['Drama'],
+        video: PICKED,
+      })
+    );
+
+    const fields = sentFields();
+    expect(fields.get('title')).toBe('The Lantern Keeper');
+    expect(fields.get('year')).toBe('2019');
+    expect(fields.getAll('genre')).toEqual(['Drama']);
+    expect(fields.get('video')).toBe(LANTERN);
+  });
+
+  it('sends a video part only when there is a film in the slot', async () => {
+    fetchMock.mockResolvedValue(createdResponse(CREATED));
+    await createMovie(typed({ title: 'Rear Window', video: null }));
+
+    // The lists' rule rather than the fields': there is no file with no bytes,
+    // so an empty slot sends nothing rather than an empty part the server
+    // would have to refuse. The **Save gate** makes an empty one unreachable
+    // from the form; a caller that is not the form can still ask for it, which
+    // is why the two halves are asserted against each other.
+    expect(sentFields().has('video')).toBe(false);
+
+    fetchMock.mockClear();
+    await createMovie(typed({ title: 'Rear Window', video: PICKED }));
+
+    expect(sentFields().has('video')).toBe(true);
   });
 });

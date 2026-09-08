@@ -35,7 +35,14 @@
 import express from 'express';
 import type { AddressInfo } from 'node:net';
 import type { Server } from 'node:http';
-import { copyFileSync, mkdirSync, writeFileSync } from 'node:fs';
+import {
+  copyFileSync,
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  writeFileSync,
+} from 'node:fs';
 import { isAbsolute, join } from 'node:path';
 import { Readable } from 'node:stream';
 import { fileURLToPath } from 'node:url';
@@ -4173,5 +4180,421 @@ describe('POST /api/movies', () => {
     expect(movie.genres.map((genre) => genre.name)).toEqual(['Thriller']);
     expect(movie.cast).toEqual(['Jane Doe', 'John Roe']);
     expect(movie.director).toBe('Alfred Hitchcock');
+  });
+});
+
+// --- 11 — Movie form, Phase 3: "the video arrives" (issue #102) --------------
+//
+// The first request the app ever *receives* bytes on. Every test above this
+// line moved bytes outward — the stream route reading a file the seed wrote —
+// and these are the ones that put a file there in the first place.
+//
+// The seam is unchanged and deliberately so: a real listener, a real multipart
+// body built by the platform's own `FormData`, a real `File` part, and a real
+// managed media directory the assertions then read off the disk. Nothing here
+// knows there is a `media/` domain behind the router — what a save promises a
+// caller is a status, a stored path, and a file at the end of it.
+//
+// **The last block is the point of the slice.** A movie added through this
+// route plays through `/stream` and answers `/playback`, with no change to
+// either: both already resolve a **Stored path** under the media root through
+// `mediaFilePath`, and this is simply the first code in the app that writes one
+// for them to resolve.
+
+/** The fixture's own bytes, as a part would carry them. */
+const FIXTURE_BYTES = readFileSync(FIXTURE_VIDEO);
+
+/**
+ * One file part, the way the browser hands `FileField`'s pick to `FormData`.
+ *
+ * A real `File` rather than a `Blob` with a name bolted on, because the
+ * filename is the whole of what this slice sanitises and it has to travel the
+ * way the form actually sends it.
+ */
+function filePart(
+  filename = 'lantern.mp4',
+  bytes: Buffer = FIXTURE_BYTES,
+  type = 'video/mp4'
+): File {
+  return new File([new Uint8Array(bytes)], filename, { type });
+}
+
+/**
+ * A multipart POST to `/api/movies` whose parts are given **in order**.
+ *
+ * `postMovie` above takes a record, which cannot say whether the video arrived
+ * before or after the fields — and for the rollback that is the whole question:
+ * a part streamed to disk before the route has read the genre it is going to
+ * refuse is the only way bytes can be left behind at all.
+ */
+function postParts(
+  baseUrl: string,
+  parts: [name: string, value: string | File][]
+): Promise<Response> {
+  const body = new FormData();
+  for (const [name, value] of parts) {
+    body.append(name, value);
+  }
+  return fetch(`${baseUrl}/api/movies`, { method: 'POST', body });
+}
+
+/** The created movie, having asserted the status the route promises. */
+async function createdFromParts(
+  baseUrl: string,
+  parts: [name: string, value: string | File][]
+): Promise<Movie> {
+  const response = await postParts(baseUrl, parts);
+  expect(response.status).toBe(201);
+  return (await response.json()) as Movie;
+}
+
+/** The title and year every test in this section adds under. */
+const KEEPER: [name: string, value: string][] = [
+  ['title', 'The Lantern Keeper'],
+  ['year', '2019'],
+];
+
+/** Everything directly under the managed media directory, sorted. */
+const folders = (media: string): string[] => readdirSync(media).sort();
+
+/** The absolute file a stored path names, joined the way a read route joins it. */
+const storedFile = (media: string, stored: string): string =>
+  join(media, stored);
+
+describe('POST /api/movies — the video part', () => {
+  it('stores a relative path under the managed media directory', async () => {
+    const { baseUrl } = freshApi();
+
+    const movie = await createdFromParts(baseUrl, [
+      ...KEEPER,
+      ['video', filePart()],
+    ]);
+
+    // The one rule every read route in the app already enforces, now produced
+    // rather than only consumed: relative, under the root, in the movie's own
+    // folder, named from its title and year.
+    expect(isAbsolute(movie.videoPath)).toBe(false);
+    expect(movie.videoPath).toBe('the-lantern-keeper-2019/lantern.mp4');
+  });
+
+  it('writes the bytes it was sent into that folder', async () => {
+    const { baseUrl, media } = freshApi();
+
+    const movie = await createdFromParts(baseUrl, [
+      ...KEEPER,
+      ['video', filePart()],
+    ]);
+
+    expect(readFileSync(storedFile(media, movie.videoPath))).toEqual(
+      FIXTURE_BYTES
+    );
+  });
+
+  it('keeps the filename the maintainer picked', async () => {
+    const { baseUrl } = freshApi();
+
+    const movie = await createdFromParts(baseUrl, [
+      ...KEEPER,
+      ['video', filePart('The Lantern Keeper (2019) 1080p.mp4')],
+    ]);
+
+    // The managed directory stays browsable by hand, which is the whole reason
+    // the file is not renamed to the slug on the way in.
+    expect(movie.videoPath).toBe(
+      'the-lantern-keeper-2019/The Lantern Keeper (2019) 1080p.mp4'
+    );
+  });
+
+  it('reads the stored path back through GET /api/movies/:id', async () => {
+    const { baseUrl } = freshApi();
+
+    const created = await createdFromParts(baseUrl, [
+      ...KEEPER,
+      ['video', filePart()],
+    ]);
+
+    const response = await fetch(`${baseUrl}/api/movies/${created.id}`);
+
+    // The path the save answered with is the path the row holds — the same
+    // string the player will be handed, rather than one the write invented for
+    // its own reply.
+    const read = (await response.json()) as Movie;
+    expect(read.videoPath).toBe('the-lantern-keeper-2019/lantern.mp4');
+    expect(read.videoPath).toBe(created.videoPath);
+  });
+
+  it('carries the video alongside every field the form sends', async () => {
+    const { baseUrl } = freshApi();
+
+    const movie = await createdFromParts(baseUrl, [
+      ...KEEPER,
+      ['director', 'Ana Sorensen'],
+      ['cast', 'Jane Doe'],
+      ['cast', 'John Roe'],
+      ['description', 'A lighthouse keeper takes in a runaway girl.'],
+      ['rating', '7'],
+      ['genre', 'Drama'],
+      ['video', filePart()],
+    ]);
+
+    // Fields and a part in one body: the parser reads both, and neither the
+    // repeated names nor the rating stop being what they were because a file
+    // arrived after them.
+    expect(movie.videoPath).toBe('the-lantern-keeper-2019/lantern.mp4');
+    expect(movie.director).toBe('Ana Sorensen');
+    expect(movie.cast).toEqual(['Jane Doe', 'John Roe']);
+    expect(movie.rating).toBe(7);
+    expect(movie.genres.map((genre) => genre.name)).toEqual(['Drama']);
+  });
+});
+
+describe('POST /api/movies — a filename this route did not write', () => {
+  it('writes a crafted name inside the movie folder and nowhere else', async () => {
+    const { baseUrl, media } = freshApi();
+
+    const movie = await createdFromParts(baseUrl, [
+      ...KEEPER,
+      ['video', filePart('../../evil.mp4')],
+    ]);
+
+    // Story 60. The client's filename is never trusted into a path: the walk
+    // is stripped, the file lands beside the movie's own, and the managed
+    // directory has exactly one thing in it.
+    expect(movie.videoPath).toBe('the-lantern-keeper-2019/evil.mp4');
+    expect(folders(media)).toEqual(['the-lantern-keeper-2019']);
+    expect(existsSync(join(media, '..', 'evil.mp4'))).toBe(false);
+  });
+
+  it('resolves that stored path back to the file it wrote', async () => {
+    const { baseUrl, media } = freshApi();
+
+    const movie = await createdFromParts(baseUrl, [
+      ...KEEPER,
+      ['video', filePart('..\\..\\windows\\evil.mp4')],
+    ]);
+
+    // The sanitised path is still a path a read route can open — the point is
+    // that it opens the file inside the folder rather than refusing it.
+    expect(readFileSync(storedFile(media, movie.videoPath))).toEqual(
+      FIXTURE_BYTES
+    );
+  });
+
+  it('gives a film with an unusable title a usable folder', async () => {
+    const { baseUrl, media } = freshApi();
+
+    const movie = await createdFromParts(baseUrl, [
+      ['title', '!!!'],
+      ['year', '2019'],
+      ['video', filePart()],
+    ]);
+
+    // Story 61, over the wire: a title of pure punctuation is a film that can
+    // be added, not a save that fails.
+    expect(movie.videoPath).toBe('movie-2019/lantern.mp4');
+    expect(readFileSync(storedFile(media, movie.videoPath))).toEqual(
+      FIXTURE_BYTES
+    );
+  });
+});
+
+describe('POST /api/movies — a container this machine may not decode', () => {
+  it('accepts an .mkv rather than refusing it at the door', async () => {
+    const { baseUrl, media } = freshApi();
+
+    const movie = await createdFromParts(baseUrl, [
+      ...KEEPER,
+      ['video', filePart('lantern.mkv', FIXTURE_BYTES, '')],
+    ]);
+
+    // Story 22. `cannot-play` is a designed `PlayerNotice` state and this
+    // machine has no FFmpeg on it, so refusing here would refuse most of the
+    // family folder to spare them a message the player already draws. Chromium
+    // gives an MKV no MIME type at all, which is why the part carries none.
+    expect(movie.videoPath).toBe('the-lantern-keeper-2019/lantern.mkv');
+    expect(existsSync(storedFile(media, movie.videoPath))).toBe(true);
+  });
+
+  it('accepts an .avi the same way', async () => {
+    const { baseUrl } = freshApi();
+
+    const movie = await createdFromParts(baseUrl, [
+      ...KEEPER,
+      ['video', filePart('lantern.avi', FIXTURE_BYTES, '')],
+    ]);
+
+    expect(movie.videoPath).toBe('the-lantern-keeper-2019/lantern.avi');
+  });
+
+  it('says so on /stream rather than pretending the file is missing', async () => {
+    const { baseUrl } = freshApi();
+
+    const movie = await createdFromParts(baseUrl, [
+      ...KEEPER,
+      ['video', filePart('lantern.mkv', FIXTURE_BYTES, '')],
+    ]);
+
+    const response = await fetch(streamUrl(baseUrl, movie.id));
+
+    // The two sentences the player tells apart: 404 is "the disc is gone", 415
+    // is "this build cannot read it". An added MKV on a machine with no
+    // component is the second — which is only reachable because the add
+    // succeeded.
+    expect(response.status).toBe(415);
+  });
+});
+
+describe('POST /api/movies — two films with the same title and year', () => {
+  it('gives the second one a folder of its own', async () => {
+    const { baseUrl } = freshApi();
+
+    const first = await createdFromParts(baseUrl, [
+      ...KEEPER,
+      ['video', filePart()],
+    ]);
+    const second = await createdFromParts(baseUrl, [
+      ...KEEPER,
+      ['video', filePart()],
+    ]);
+
+    // Story 59, over the wire: the same title, the same year and the same
+    // filename, and the second save must not overwrite the first.
+    expect(first.videoPath).toBe('the-lantern-keeper-2019/lantern.mp4');
+    expect(second.videoPath).toBe('the-lantern-keeper-2019-2/lantern.mp4');
+  });
+
+  it('leaves the first film’s bytes where they were', async () => {
+    const { baseUrl, media } = freshApi();
+    const first = await createdFromParts(baseUrl, [
+      ...KEEPER,
+      ['video', filePart('lantern.mp4', Buffer.from('the first film'))],
+    ]);
+
+    await createdFromParts(baseUrl, [
+      ...KEEPER,
+      ['video', filePart('lantern.mp4', Buffer.from('the second film'))],
+    ]);
+
+    expect(readFileSync(storedFile(media, first.videoPath), 'utf8')).toBe(
+      'the first film'
+    );
+  });
+});
+
+describe('POST /api/movies — what a save leaves on disk', () => {
+  it('creates a movie folder only when there are bytes to put in it', async () => {
+    const { baseUrl, media } = freshApi();
+
+    const noVideo = await createdFromParts(baseUrl, [['title', 'Rear Window']]);
+    expect(noVideo.videoPath).toBe('');
+    expect(folders(media)).toEqual([]);
+
+    await createdFromParts(baseUrl, [...KEEPER, ['video', filePart()]]);
+
+    // A movie added with no video is still a real library row that says it has
+    // no film behind it — the state Phases 1 and 2 shipped in — and it must not
+    // start leaving empty folders behind now that folders exist.
+    expect(folders(media)).toEqual(['the-lantern-keeper-2019']);
+  });
+
+  it('leaves no row and no bytes when the save is refused after the part arrived', async () => {
+    const { baseUrl, media } = freshApi();
+
+    const refused = await postParts(baseUrl, [
+      ['video', filePart()],
+      ...KEEPER,
+      ['genre', 'Westerns'],
+    ]);
+
+    // The video is appended first, so it is streamed to disk before the route
+    // has read the genre it is going to refuse — which is the only way bytes
+    // can be left behind at all, and the reason the rollback exists. Stories
+    // 36 and 37.
+    expect(refused.status).toBe(400);
+    expect(await movieTitles(baseUrl, 'recently-added')).toEqual([]);
+    expect(folders(media)).toEqual([]);
+
+    // The contrast is what makes that absence mean anything: the same body
+    // without the bad genre does leave a folder behind.
+    await createdFromParts(baseUrl, [
+      ['video', filePart()],
+      ...KEEPER,
+      ['genre', 'Drama'],
+    ]);
+    expect(folders(media)).toEqual(['the-lantern-keeper-2019']);
+  });
+
+  it('leaves nothing behind when the title is the thing refused', async () => {
+    const { baseUrl, media } = freshApi();
+
+    const refused = await postParts(baseUrl, [
+      ['video', filePart()],
+      ['title', '   '],
+    ]);
+
+    expect(refused.status).toBe(400);
+    expect(folders(media)).toEqual([]);
+
+    await createdFromParts(baseUrl, [['video', filePart()], ...KEEPER]);
+    expect(folders(media)).toEqual(['the-lantern-keeper-2019']);
+  });
+});
+
+describe('POST /api/movies — the added movie plays', () => {
+  it('answers its own bytes on the stream route that already existed', async () => {
+    const { baseUrl } = freshApi();
+    const movie = await createdFromParts(baseUrl, [
+      ...KEEPER,
+      ['video', filePart()],
+    ]);
+
+    const response = await fetch(streamUrl(baseUrl, movie.id));
+
+    // Story 40, and the demoable end of the slice: adding a film and watching
+    // it are the same library. Not one line of `/stream` changed for this — it
+    // resolves a **Stored path** under the media root, and the save wrote one
+    // that resolves.
+    expect(response.status).toBe(200);
+    expect(Buffer.from(await response.arrayBuffer())).toEqual(FIXTURE_BYTES);
+  });
+
+  it('tells the player how long it runs, off the file that was uploaded', async () => {
+    const { baseUrl } = freshApi();
+    const movie = await createdFromParts(baseUrl, [
+      ...KEEPER,
+      ['video', filePart()],
+    ]);
+
+    const response = await fetch(playbackUrl(baseUrl, movie.id));
+
+    // The missing-file 404 both these routes gave a Phase 1 movie is gone,
+    // because the row now points at a file. The duration is the fixture's own
+    // ten seconds, read out of the container by `mediaDuration` with no
+    // component installed anywhere.
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({
+      path: 'direct',
+      durationSeconds: FIXTURE_DURATION_SECONDS,
+    });
+  });
+
+  it('serves the added film through the same route a seeded one uses', async () => {
+    const { storage, baseUrl, media } = freshApi();
+    const seeded = addStreamableMovie(storage, media);
+    const added = await createdFromParts(baseUrl, [
+      ...KEEPER,
+      ['video', filePart()],
+    ]);
+
+    const seededResponse = await fetch(streamUrl(baseUrl, seeded.id));
+    const addedResponse = await fetch(streamUrl(baseUrl, added.id));
+
+    // One library, one delivery path: nothing downstream can tell a film the
+    // maintainer added from one the seed wrote, which is what "no read route
+    // changes anywhere" means when it is asserted rather than asserted about.
+    expect(seededResponse.status).toBe(addedResponse.status);
+    expect(seededResponse.headers.get('accept-ranges')).toBe(
+      addedResponse.headers.get('accept-ranges')
+    );
   });
 });

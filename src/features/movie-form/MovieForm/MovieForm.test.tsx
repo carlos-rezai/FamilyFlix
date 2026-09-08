@@ -6,6 +6,7 @@ import {
   waitFor,
   act,
 } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { ThemeProvider } from 'styled-components';
 import { MemoryRouter } from 'react-router-dom';
 
@@ -112,6 +113,31 @@ const save = () =>
     name: /add to library|adding/i,
   }) as HTMLButtonElement;
 const currentPath = () => screen.getByTestId('pathname').textContent;
+
+/** The video **File slot**'s own picker, offered while the slot is empty. */
+const videoPicker = () =>
+  screen.getByLabelText(/choose video file/i) as HTMLInputElement;
+
+/** A film off the maintainer's own disk, as the browser hands it over. */
+const videoFile = (name = 'lantern.mp4') =>
+  new File(['video bytes'], name, { type: 'video/mp4' });
+
+/**
+ * Fill the video half of the **Save gate**.
+ *
+ * Every test that presses Save has to do this now, which is the whole of what
+ * this slice changed about the gate: a title alone was the whole condition
+ * while there was no slot to check, and a form that can hold a video is a form
+ * that requires one.
+ *
+ * `applyAccept: false` because the accept list is asserted directly, on the
+ * attribute — leaving it on would test `user-event`'s own reading of it rather
+ * than what the form offers the file dialog.
+ */
+async function pickVideo(file: File = videoFile()): Promise<File> {
+  await userEvent.upload(videoPicker(), file, { applyAccept: false });
+  return file;
+}
 
 /** Every genre chip on the form, in the order it is drawn. */
 function chips(): HTMLButtonElement[] {
@@ -285,11 +311,15 @@ describe('MovieForm', () => {
       expect(save().disabled).toBe(true);
     });
 
-    it('opens once a title is typed', async () => {
+    it('opens once there is a title and a video', async () => {
       await renderForm();
 
       fireEvent.change(titleField(), { target: { value: 'Rear Window' } });
+      await pickVideo();
 
+      // Story 33, whole. The gate arrived in halves — the title half was all a
+      // form with no video slot could check — and this is the one condition
+      // both halves now belong to rather than two conditions in two places.
       expect(save().disabled).toBe(false);
     });
 
@@ -297,6 +327,7 @@ describe('MovieForm', () => {
       await renderForm();
 
       fireEvent.change(titleField(), { target: { value: 'Rear Window' } });
+      await pickVideo();
       fireEvent.change(titleField(), { target: { value: '' } });
 
       expect(save().disabled).toBe(true);
@@ -326,6 +357,7 @@ describe('MovieForm', () => {
       await renderForm();
 
       fireEvent.change(titleField(), { target: { value: 'Rear Window' } });
+      await pickVideo();
       fireEvent.change(yearField(), { target: { value: '1954' } });
       fireEvent.click(save());
 
@@ -339,6 +371,7 @@ describe('MovieForm', () => {
       await renderForm();
 
       fireEvent.change(titleField(), { target: { value: 'Rear Window' } });
+      await pickVideo();
       fireEvent.click(chip('Sci-Fi'));
       fireEvent.click(chip('Thriller'));
       fireEvent.click(save());
@@ -356,6 +389,7 @@ describe('MovieForm', () => {
       await renderForm();
 
       fireEvent.change(titleField(), { target: { value: 'Rear Window' } });
+      await pickVideo();
       fireEvent.click(chip('Sci-Fi'));
       fireEvent.click(chip('Thriller'));
       fireEvent.click(chip('Sci-Fi'));
@@ -369,6 +403,7 @@ describe('MovieForm', () => {
       await renderForm();
 
       fireEvent.change(titleField(), { target: { value: 'Rear Window' } });
+      await pickVideo();
       fireEvent.click(save());
 
       await waitFor(() => expect(savedFields()).toBeDefined());
@@ -386,6 +421,7 @@ describe('MovieForm', () => {
       await renderForm();
 
       fireEvent.change(titleField(), { target: { value: 'Rear Window' } });
+      await pickVideo();
       fireEvent.click(save());
 
       // The one place a large-file save will show its cost. The label says the
@@ -407,6 +443,7 @@ describe('MovieForm', () => {
       await renderForm();
 
       fireEvent.change(titleField(), { target: { value: 'Rear Window' } });
+      await pickVideo();
       fireEvent.click(save());
       fireEvent.click(save());
       fireEvent.click(save());
@@ -420,6 +457,7 @@ describe('MovieForm', () => {
       await renderForm();
 
       fireEvent.change(titleField(), { target: { value: 'Rear Window' } });
+      await pickVideo();
       fireEvent.click(save());
 
       // The **Add context** ends on the shelf the film just joined — the
@@ -433,6 +471,7 @@ describe('MovieForm', () => {
       await renderForm();
 
       fireEvent.change(titleField(), { target: { value: 'Rear Window' } });
+      await pickVideo();
       fireEvent.click(chip('Thriller'));
       fireEvent.click(save());
 
@@ -464,6 +503,7 @@ describe('MovieForm', () => {
       await waitFor(() => expect(fetchMock).toHaveBeenCalled());
 
       fireEvent.change(titleField(), { target: { value: 'Rear Window' } });
+      await pickVideo();
       fireEvent.change(yearField(), { target: { value: '1954' } });
       fireEvent.click(save());
 
@@ -604,6 +644,7 @@ describe('MovieForm — saving the credits fields', () => {
     await renderForm();
 
     fireEvent.change(titleField(), { target: { value: 'Rear Window' } });
+    await pickVideo();
     fireEvent.change(directorField(), {
       target: { value: 'Alfred Hitchcock' },
     });
@@ -624,6 +665,7 @@ describe('MovieForm — saving the credits fields', () => {
     await renderForm();
 
     fireEvent.change(titleField(), { target: { value: 'Rear Window' } });
+    await pickVideo();
     fireEvent.change(castField(), {
       target: { value: 'Jane Doe, John Roe, Ana Vega' },
     });
@@ -644,6 +686,7 @@ describe('MovieForm — saving the credits fields', () => {
     await renderForm();
 
     fireEvent.change(titleField(), { target: { value: 'Rear Window' } });
+    await pickVideo();
     fireEvent.click(save());
 
     await waitFor(() => expect(savedFields()).toBeDefined());
@@ -654,6 +697,7 @@ describe('MovieForm — saving the credits fields', () => {
     await renderForm();
 
     fireEvent.change(titleField(), { target: { value: 'Rear Window' } });
+    await pickVideo();
     fireEvent.click(save());
 
     await waitFor(() => expect(savedFields()).toBeDefined());
@@ -670,6 +714,7 @@ describe('MovieForm — saving the credits fields', () => {
     await renderForm();
 
     fireEvent.change(titleField(), { target: { value: 'Rear Window' } });
+    await pickVideo();
     fireEvent.change(directorField(), {
       target: { value: 'Alfred Hitchcock' },
     });
@@ -805,6 +850,7 @@ describe('MovieForm — saving the rating', () => {
     await renderForm();
 
     fireEvent.change(titleField(), { target: { value: 'Rear Window' } });
+    await pickVideo();
     fireEvent.click(segment('Rate 4 stars'));
     fireEvent.click(save());
 
@@ -819,6 +865,7 @@ describe('MovieForm — saving the rating', () => {
     await renderForm();
 
     fireEvent.change(titleField(), { target: { value: 'Rear Window' } });
+    await pickVideo();
     fireEvent.click(segment('Rate 3½ stars'));
     fireEvent.click(save());
 
@@ -830,6 +877,7 @@ describe('MovieForm — saving the rating', () => {
     await renderForm();
 
     fireEvent.change(titleField(), { target: { value: 'Rear Window' } });
+    await pickVideo();
     fireEvent.click(save());
 
     await waitFor(() => expect(savedFields()).toBeDefined());
@@ -845,6 +893,7 @@ describe('MovieForm — saving the rating', () => {
     await renderForm();
 
     fireEvent.change(titleField(), { target: { value: 'Rear Window' } });
+    await pickVideo();
     fireEvent.click(segment('Rate 3½ stars'));
     fireEvent.click(segment('Clear rating'));
     fireEvent.click(save());
@@ -860,6 +909,7 @@ describe('MovieForm — saving the rating', () => {
     await renderForm();
 
     fireEvent.change(titleField(), { target: { value: 'Rear Window' } });
+    await pickVideo();
     fireEvent.click(segment('Rate 3½ stars'));
     fireEvent.click(save());
 
@@ -938,5 +988,188 @@ describe('MovieForm — the actions row', () => {
 
     // Cancel is a way out, not a save. The typed title leaves with the screen.
     expect(saveRequests()).toEqual([]);
+  });
+});
+
+// --- 11 — Movie form, Phase 3: the video slot (issue #102) -------------------
+//
+// The first control on this form that is not a field: a **File slot**, which is
+// empty, holds a **Picked file**, or (from the edit slice) holds a **Stored
+// file**. What is asserted here is the screen — what the maintainer sees in the
+// slot, what Save does about it, and what goes out on the wire — while
+// `FileField` is where the molecule's own two states are asserted.
+//
+// The subtitle line under the heading is deliberately still absent: it reads
+// "Pick the video, poster, and any subtitle files for this movie", and two of
+// those three controls arrive in #103 and #104.
+
+/** The video slot's remove control, offered only while the slot is filled. */
+const removeVideo = () =>
+  screen.getByRole('button', { name: /remove video/i }) as HTMLButtonElement;
+
+/** The filename the slot is showing, or `null` while it is empty. */
+const pickedFilename = () => screen.queryByText('lantern.mp4');
+
+/** The video part of the save, or `undefined` if none was sent. */
+const savedVideo = () => savedFields()?.get('video');
+
+describe('MovieForm — the Files card', () => {
+  it('draws the Files card with the video slot in it', async () => {
+    await renderForm();
+
+    // The prototype's own card: an uppercase "Files" caption over the slots,
+    // and the video slot labelled beside its control.
+    expect(screen.getByText(/^files$/i)).toBeDefined();
+    expect(screen.getByText(/^video$/i)).toBeDefined();
+  });
+
+  it('offers an empty slot as a choose button', async () => {
+    await renderForm();
+
+    // Story 32: the empty state has to read as a button and say what it wants.
+    expect(videoPicker()).toBeDefined();
+    expect(pickedFilename()).toBeNull();
+  });
+
+  it('offers the container types a browser will not name', async () => {
+    await renderForm();
+
+    // Story 21. Chromium gives MKV and AVI no MIME type at all, so `video/*`
+    // alone would grey out most of the family folder in the file dialog. The
+    // server re-checks anyway — an accept list is a convenience, never a
+    // guarantee.
+    const accept = videoPicker().getAttribute('accept') ?? '';
+    expect(accept).toContain('video/*');
+    expect(accept).toContain('.mkv');
+    expect(accept).toContain('.avi');
+  });
+
+  it('shows the filename of the film that was picked', async () => {
+    await renderForm();
+
+    await pickVideo();
+
+    // Story 29: the filename is the only way to tell the right film from the
+    // one next to it in the folder, since a browser will not say where either
+    // came from.
+    expect(pickedFilename()).not.toBeNull();
+  });
+
+  it('returns the slot to empty when the remove is pressed', async () => {
+    await renderForm();
+    await pickVideo();
+
+    fireEvent.click(removeVideo());
+
+    // Story 30. A slot stuck with the wrong file would be a form the
+    // maintainer has to abandon and start again.
+    expect(pickedFilename()).toBeNull();
+    expect(videoPicker()).toBeDefined();
+  });
+
+  it('takes a different film once the wrong one is removed', async () => {
+    await renderForm();
+    await pickVideo(videoFile('the-wrong-film.mp4'));
+
+    fireEvent.click(removeVideo());
+    await pickVideo();
+
+    expect(screen.queryByText('the-wrong-film.mp4')).toBeNull();
+    expect(pickedFilename()).not.toBeNull();
+  });
+});
+
+describe('MovieForm — the save gate, with the video slot', () => {
+  it('does not open on a title alone', async () => {
+    await renderForm();
+
+    fireEvent.change(titleField(), { target: { value: 'Rear Window' } });
+
+    // What this slice changed. `video_path` is NOT NULL and a row with no film
+    // behind it is the state Phases 1 and 2 shipped in; now that the form can
+    // offer a film, saving without one is no longer a row worth writing.
+    expect(save().disabled).toBe(true);
+  });
+
+  it('does not open on a video alone', async () => {
+    await renderForm();
+
+    await pickVideo();
+
+    expect(save().disabled).toBe(true);
+  });
+
+  it('closes again if the video is removed', async () => {
+    await renderForm();
+    fireEvent.change(titleField(), { target: { value: 'Rear Window' } });
+    await pickVideo();
+
+    fireEvent.click(removeVideo());
+
+    // The gate is a condition, not a latch: the second half can be taken back
+    // exactly as the first one can.
+    expect(save().disabled).toBe(true);
+  });
+});
+
+describe('MovieForm — saving the video', () => {
+  it('sends the picked file as the video part', async () => {
+    await renderForm();
+    fireEvent.change(titleField(), { target: { value: 'The Lantern Keeper' } });
+    const file = await pickVideo();
+
+    fireEvent.click(save());
+
+    await waitFor(() => expect(savedFields()).toBeDefined());
+    // The file itself, not its name: a browser `File` is a name and bytes and
+    // never a path, so the bytes are the only thing there is to send.
+    expect(savedVideo()).toBe(file);
+  });
+
+  it('sends one video part however big the film is', async () => {
+    await renderForm();
+    fireEvent.change(titleField(), { target: { value: 'The Lantern Keeper' } });
+    await pickVideo();
+
+    fireEvent.click(save());
+
+    await waitFor(() => expect(savedFields()).toBeDefined());
+    // Story 36: one request per save. No upload-on-pick, no draft id, and
+    // nothing sent before Save was pressed.
+    expect(savedFields()?.getAll('video')).toHaveLength(1);
+    expect(saveRequests()).toHaveLength(1);
+  });
+
+  it('carries the video alongside every field that was typed', async () => {
+    await renderForm();
+    fireEvent.change(titleField(), { target: { value: 'The Lantern Keeper' } });
+    fireEvent.change(yearField(), { target: { value: '2019' } });
+    fireEvent.click(chip('Drama'));
+    await pickVideo();
+
+    fireEvent.click(save());
+
+    await waitFor(() => expect(savedFields()).toBeDefined());
+    const fields = savedFields() as FormData;
+    expect(fields.get('title')).toBe('The Lantern Keeper');
+    expect(fields.get('year')).toBe('2019');
+    expect(fields.getAll('genre')).toEqual(['Drama']);
+    expect(fields.get('video')).toBeInstanceOf(File);
+  });
+
+  it('leaves the film in the slot when the save fails', async () => {
+    answerSave = () => Promise.resolve(serverErrorResponse());
+    await renderForm();
+    fireEvent.change(titleField(), { target: { value: 'The Lantern Keeper' } });
+    await pickVideo();
+
+    fireEvent.click(save());
+
+    // The refused save leaves the form standing with everything in it — the
+    // film included, since re-finding the same file in a file dialog is the
+    // most tedious work on this screen to lose.
+    await waitFor(() => expect(save().disabled).toBe(false));
+    expect(currentPath()).toBe('/add');
+    expect(pickedFilename()).not.toBeNull();
   });
 });
