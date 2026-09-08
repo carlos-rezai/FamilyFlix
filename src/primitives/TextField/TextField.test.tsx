@@ -84,3 +84,77 @@ describe('TextField — the icon slot', () => {
     expect(container.querySelector('svg')).toBeNull();
   });
 });
+
+/** The box the field is drawn as — the input's own wrapper. */
+function box(name = 'Search your movies') {
+  return field(name).parentElement as HTMLElement;
+}
+
+/**
+ * The two props `prim.TextField.dc.html` declares and this primitive has been
+ * carrying an explanation for rather than an implementation of: "their
+ * non-default values arrive with MovieForm and ImportFlow". **MovieForm is that
+ * caller** — its metadata fields are the prototype's 48px box with a soft
+ * corner, not the 46px pill the search bar wears.
+ *
+ * Both defaults are asserted beside their non-defaults, because the whole risk
+ * of growing a shipped primitive is the caller that never asked for either:
+ * `SearchBar` passes neither prop and must be drawn today exactly as it was
+ * before these existed.
+ */
+describe('TextField — its height', () => {
+  it('is the prototype’s 46px when nothing is asked for', () => {
+    renderTextField();
+
+    expect(getComputedStyle(box()).height).toBe('46px');
+  });
+
+  it('is whatever height it is given', () => {
+    // 48 is the value the **Movie form** asks for, from the prototype's own
+    // `inputStyle`.
+    renderTextField({ height: 48 });
+
+    expect(getComputedStyle(box()).height).toBe('48px');
+  });
+});
+
+describe('TextField — its corners', () => {
+  it('is a pill when nothing is asked for', () => {
+    renderTextField();
+
+    expect(getComputedStyle(box()).borderRadius).toBe(theme.radius.pill);
+  });
+
+  it('takes the soft corner the form’s fields wear when asked not to be a pill', () => {
+    // The one deliberate deviation from the prototype in this slice: its inline
+    // `10px` becomes `radius.md` (12px), because COMPONENT-SPEC §1 says every
+    // visual value is a token and 10 is not one. Asserted as the token rather
+    // than as `'12px'`, so the rule is what is under test.
+    renderTextField({ rounded: false });
+
+    expect(getComputedStyle(box()).borderRadius).toBe(theme.radius.md);
+  });
+
+  it('is a pill again when explicitly asked to be one', () => {
+    renderTextField({ rounded: true });
+
+    expect(getComputedStyle(box()).borderRadius).toBe(theme.radius.pill);
+  });
+
+  it('takes a height and a corner together, the way the form asks for them', () => {
+    renderTextField({ height: 48, rounded: false });
+
+    expect(getComputedStyle(box()).height).toBe('48px');
+    expect(getComputedStyle(box()).borderRadius).toBe(theme.radius.md);
+  });
+
+  it('leaves an icon-led field drawn exactly as it was', () => {
+    // `SearchBar` passes neither prop. A primitive that grew two props and
+    // moved the one screen already built on it would be the failure this test
+    // exists to catch.
+    renderTextField({ icon: <SearchIcon size={18} /> });
+
+    expect(getComputedStyle(box()).height).toBe('46px');
+    expect(getComputedStyle(box()).borderRadius).toBe(theme.radius.pill);
+  });
+});

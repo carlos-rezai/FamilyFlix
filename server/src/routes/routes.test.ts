@@ -3895,4 +3895,154 @@ describe('POST /api/movies', () => {
       'North by Northwest',
     ]);
   });
+
+  // --- 11 — Movie form, Phase 2: the credits reach the row (issue #100) ------
+  //
+  // Three more fields, and one of them is the second genuine **list** on this
+  // wire: the cast travels as a repeated `cast` part, one name per part, the
+  // way the genres already do. The form resolved the maintainer's typed line
+  // into those names before sending them, which is why there is no comma rule
+  // anywhere in this route.
+  //
+  // `description` is the form's word and `synopsis` is the column's. The rename
+  // happens here, once — the part is named after the caption the maintainer
+  // typed under, and the row is named after what the detail page reads.
+
+  it('stores the director it is given', async () => {
+    const { baseUrl } = freshApi();
+
+    const movie = await createdMovie(baseUrl, {
+      title: 'Rear Window',
+      director: 'Alfred Hitchcock',
+    });
+
+    expect(movie.director).toBe('Alfred Hitchcock');
+  });
+
+  it('stores the description as the movie’s synopsis', async () => {
+    const { baseUrl } = freshApi();
+
+    const movie = await createdMovie(baseUrl, {
+      title: 'Rear Window',
+      description: 'A photographer watches his neighbours.',
+    });
+
+    // The one field on this form that is renamed on the way in. What the detail
+    // page's expandable synopsis reads is this column.
+    expect(movie.synopsis).toBe('A photographer watches his neighbours.');
+  });
+
+  it('stores the cast as a list of names, not as one string', async () => {
+    const { baseUrl } = freshApi();
+
+    const movie = await createdMovie(baseUrl, {
+      title: 'Rear Window',
+      cast: ['Jane Doe', 'John Roe'],
+    });
+
+    // The acceptance criterion of the slice. `cast` is a `string[]` column, and
+    // the credits line the detail page draws is those names joined — so a row
+    // holding the single string 'Jane Doe, John Roe' would render identically
+    // today and be wrong the moment anything counts or filters them.
+    expect(movie.cast).toEqual(['Jane Doe', 'John Roe']);
+  });
+
+  it('keeps the cast in the order the parts arrived', async () => {
+    const { baseUrl } = freshApi();
+
+    const movie = await createdMovie(baseUrl, {
+      title: 'Rear Window',
+      cast: ['Ana Vega', 'Tomas Bell', 'Ruth Kerr'],
+    });
+
+    // Billing order is the maintainer's, exactly as `genres[0]` is: neither the
+    // write nor the read sorts it.
+    expect(movie.cast).toEqual(['Ana Vega', 'Tomas Bell', 'Ruth Kerr']);
+  });
+
+  it('takes a cast of one from a single part', async () => {
+    const { baseUrl } = freshApi();
+
+    const movie = await createdMovie(baseUrl, {
+      title: 'Rear Window',
+      cast: ['Jane Doe'],
+    });
+
+    // A field sent once is a list of one — `readFields`' own rule, and the
+    // reason a one-name cast is not read back through `onlyField` as a string.
+    expect(movie.cast).toEqual(['Jane Doe']);
+  });
+
+  it('creates a movie posted with no cast at all', async () => {
+    const { baseUrl } = freshApi();
+
+    const movie = await createdMovie(baseUrl, { title: 'Rear Window' });
+
+    expect(movie.cast).toEqual([]);
+  });
+
+  it('reads an empty director field as no director rather than as an empty name', async () => {
+    const { baseUrl } = freshApi();
+
+    const movie = await createdMovie(baseUrl, {
+      title: 'Rear Window',
+      director: '',
+    });
+
+    // `optionalYear`'s case, over a text column: a field the maintainer cleared
+    // arrives as `''`, and `''` is not a director. The detail page's credits
+    // line draws "—" from `null`, and would draw an empty gap from `''`.
+    expect(movie.director).toBeNull();
+  });
+
+  it('reads an empty description field as no synopsis', async () => {
+    const { baseUrl } = freshApi();
+
+    const movie = await createdMovie(baseUrl, {
+      title: 'Rear Window',
+      description: '',
+    });
+
+    expect(movie.synopsis).toBeNull();
+  });
+
+  it('reads the whole credits back through GET /api/movies/:id', async () => {
+    const { baseUrl } = freshApi();
+
+    const created = await createdMovie(baseUrl, {
+      title: 'Rear Window',
+      year: '1954',
+      director: 'Alfred Hitchcock',
+      cast: ['Jane Doe', 'John Roe'],
+      description: 'A photographer watches his neighbours.',
+    });
+
+    const response = await fetch(`${baseUrl}/api/movies/${created.id}`);
+    const read = (await response.json()) as Movie;
+
+    // The demoable end of the slice: everything typed into the form is what the
+    // detail page reads back, in the shapes it reads them in.
+    expect(read.director).toBe('Alfred Hitchcock');
+    expect(read.cast).toEqual(['Jane Doe', 'John Roe']);
+    expect(read.synopsis).toBe('A photographer watches his neighbours.');
+  });
+
+  it('carries the credits alongside the genres in one save', async () => {
+    const { baseUrl } = freshApi();
+
+    const movie = await createdMovie(baseUrl, {
+      title: 'Rear Window',
+      year: '1954',
+      genre: ['Thriller'],
+      director: 'Alfred Hitchcock',
+      cast: ['Jane Doe', 'John Roe'],
+      description: 'A photographer watches his neighbours.',
+    });
+
+    // Two repeated fields in one body, each read as its own list. The one way
+    // this goes wrong is a route that reads whichever it looked for first.
+    expect(movie.genres.map((genre) => genre.name)).toEqual(['Thriller']);
+    expect(movie.cast).toEqual(['Jane Doe', 'John Roe']);
+    expect(movie.director).toBe('Alfred Hitchcock');
+  });
 });

@@ -476,3 +476,216 @@ describe('MovieForm', () => {
     });
   });
 });
+
+// --- 11 — Movie form, Phase 2: director, cast and description (issue #100) ---
+
+const directorField = () =>
+  screen.getByRole('textbox', { name: /director/i }) as HTMLInputElement;
+const castField = () =>
+  screen.getByRole('textbox', { name: /^cast$/i }) as HTMLInputElement;
+const descriptionField = () =>
+  screen.getByRole('textbox', { name: /description/i }) as HTMLTextAreaElement;
+
+/**
+ * The rest of the metadata the prototype collects: a **Director**, a **Cast**
+ * typed as one comma-separated line, and a **Description** long enough to be a
+ * paragraph.
+ *
+ * These are the first fields on this form whose typed shape and stored shape
+ * differ — the cast is one line in the box and a list in the row — so what is
+ * asserted here is the box, and what is asserted on the wire below is the list.
+ * `castNames` is the seam between them, and is tested on its own.
+ */
+describe('MovieForm — the credits fields', () => {
+  it('offers a Director, a Cast and a Description to type into', async () => {
+    await renderForm();
+
+    expect(directorField().value).toBe('');
+    expect(castField().value).toBe('');
+    expect(descriptionField().value).toBe('');
+  });
+
+  it('carries the prototype’s placeholders', async () => {
+    await renderForm();
+
+    expect(directorField().placeholder).toBe('Director name');
+    expect(castField().placeholder).toBe('e.g. Jane Doe, John Roe');
+    expect(descriptionField().placeholder).toBe(
+      'A short synopsis of the movie'
+    );
+  });
+
+  it('captions the Cast field the way the prototype does', async () => {
+    await renderForm();
+
+    // The whole of the cast's specification is in its caption: the comma is the
+    // separator because the screen says it is.
+    expect(screen.getByText(/separate with commas/i)).toBeDefined();
+  });
+
+  it('gives the Description a multi-line box rather than another line', async () => {
+    await renderForm();
+
+    // `prim.Textarea`'s reason for existing, from the one caller that has one.
+    expect(descriptionField().tagName).toBe('TEXTAREA');
+  });
+
+  it('holds what is typed into each of them', async () => {
+    await renderForm();
+
+    fireEvent.change(directorField(), {
+      target: { value: 'Alfred Hitchcock' },
+    });
+    fireEvent.change(castField(), { target: { value: 'Jane Doe, John Roe' } });
+    fireEvent.change(descriptionField(), {
+      target: { value: 'A photographer watches his neighbours.' },
+    });
+
+    expect(directorField().value).toBe('Alfred Hitchcock');
+    expect(castField().value).toBe('Jane Doe, John Roe');
+    expect(descriptionField().value).toBe(
+      'A photographer watches his neighbours.'
+    );
+  });
+
+  it('keeps the cast exactly as it is being typed, commas and all', async () => {
+    await renderForm();
+
+    // The split happens once, at the wire. A field that tidied itself while it
+    // was being typed into would delete the comma just pressed.
+    fireEvent.change(castField(), { target: { value: 'Jane Doe, ' } });
+
+    expect(castField().value).toBe('Jane Doe, ');
+  });
+});
+
+describe('MovieForm — the save gate, with the credits fields', () => {
+  it('does not open on a director alone', async () => {
+    await renderForm();
+
+    fireEvent.change(directorField(), {
+      target: { value: 'Alfred Hitchcock' },
+    });
+
+    // Every one of these three is optional, so none of them is part of the
+    // gate — `title` is still the only NOT NULL column this form can fill.
+    expect(save().disabled).toBe(true);
+  });
+
+  it('does not open on a cast alone', async () => {
+    await renderForm();
+
+    fireEvent.change(castField(), { target: { value: 'Jane Doe' } });
+
+    expect(save().disabled).toBe(true);
+  });
+
+  it('does not open on a description alone', async () => {
+    await renderForm();
+
+    fireEvent.change(descriptionField(), {
+      target: { value: 'A photographer watches his neighbours.' },
+    });
+
+    expect(save().disabled).toBe(true);
+  });
+
+  it('still opens on a title with none of them typed', async () => {
+    await renderForm();
+
+    fireEvent.change(titleField(), { target: { value: 'Rear Window' } });
+
+    expect(save().disabled).toBe(false);
+  });
+});
+
+describe('MovieForm — saving the credits fields', () => {
+  it('sends the typed director and description', async () => {
+    await renderForm();
+
+    fireEvent.change(titleField(), { target: { value: 'Rear Window' } });
+    fireEvent.change(directorField(), {
+      target: { value: 'Alfred Hitchcock' },
+    });
+    fireEvent.change(descriptionField(), {
+      target: { value: 'A photographer watches his neighbours.' },
+    });
+    fireEvent.click(save());
+
+    await waitFor(() => expect(savedFields()).toBeDefined());
+    const fields = savedFields() as FormData;
+    expect(fields.get('director')).toBe('Alfred Hitchcock');
+    expect(fields.get('description')).toBe(
+      'A photographer watches his neighbours.'
+    );
+  });
+
+  it('sends one cast part per name, in the order they were typed', async () => {
+    await renderForm();
+
+    fireEvent.change(titleField(), { target: { value: 'Rear Window' } });
+    fireEvent.change(castField(), {
+      target: { value: 'Jane Doe, John Roe, Ana Vega' },
+    });
+    fireEvent.click(save());
+
+    await waitFor(() => expect(savedFields()).toBeDefined());
+    // The genre chips' own spelling, for the same reason: a list on this wire
+    // has always been one part per entry under one name. The typed line is
+    // resolved here rather than re-split on the server.
+    expect((savedFields() as FormData).getAll('cast')).toEqual([
+      'Jane Doe',
+      'John Roe',
+      'Ana Vega',
+    ]);
+  });
+
+  it('sends no cast part at all when the field is empty', async () => {
+    await renderForm();
+
+    fireEvent.change(titleField(), { target: { value: 'Rear Window' } });
+    fireEvent.click(save());
+
+    await waitFor(() => expect(savedFields()).toBeDefined());
+    expect((savedFields() as FormData).getAll('cast')).toEqual([]);
+  });
+
+  it('sends an empty director and description rather than omitting them', async () => {
+    await renderForm();
+
+    fireEvent.change(titleField(), { target: { value: 'Rear Window' } });
+    fireEvent.click(save());
+
+    await waitFor(() => expect(savedFields()).toBeDefined());
+    // `year`'s rule, read over two more fields: a field that vanished when it
+    // was cleared could not say a director had been *removed* — the same
+    // request shape one slice from now.
+    const fields = savedFields() as FormData;
+    expect(fields.get('director')).toBe('');
+    expect(fields.get('description')).toBe('');
+  });
+
+  it('leaves all three still typed when the save fails', async () => {
+    answerSave = () => Promise.resolve(serverErrorResponse());
+    await renderForm();
+
+    fireEvent.change(titleField(), { target: { value: 'Rear Window' } });
+    fireEvent.change(directorField(), {
+      target: { value: 'Alfred Hitchcock' },
+    });
+    fireEvent.change(castField(), { target: { value: 'Jane Doe, John Roe' } });
+    fireEvent.change(descriptionField(), {
+      target: { value: 'A photographer watches his neighbours.' },
+    });
+    fireEvent.click(save());
+
+    // The synopsis is the most expensive thing on this screen to retype, which
+    // is what makes losing it on a refused save the worst version of that bug.
+    await waitFor(() => expect(save().disabled).toBe(false));
+    expect(directorField().value).toBe('Alfred Hitchcock');
+    expect(castField().value).toBe('Jane Doe, John Roe');
+    expect(descriptionField().value).toBe(
+      'A photographer watches his neighbours.'
+    );
+  });
+});

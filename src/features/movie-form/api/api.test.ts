@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 import { createMovie, fetchGenrePool } from './api';
-import type { Movie } from '@/types';
+import type { Movie, MovieFormValues } from '@/types';
 import { makeMovie } from '@/test-support/makeMovie/makeMovie';
 import {
   createdResponse,
@@ -54,6 +54,25 @@ const CREATED: Movie = makeMovie({
 });
 
 /**
+ * A form filled in, with only the fields a test is about actually typed.
+ *
+ * Every field travels on this wire, so a call spelled out in full would restate
+ * five empty strings at every call site to say something about one of them.
+ * What a test writes down is what it is asserting.
+ */
+function typed(values: Partial<MovieFormValues> = {}): MovieFormValues {
+  return {
+    title: '',
+    year: '',
+    director: '',
+    cast: '',
+    description: '',
+    genres: [],
+    ...values,
+  };
+}
+
+/**
  * The first write of a whole record the frontend makes. Every other write in
  * the app goes through `postValue` — `{ value }` in, `{ value }` out — and this
  * one deliberately does not: it sends `multipart/form-data` from the very first
@@ -64,7 +83,7 @@ describe('createMovie', () => {
   it('POSTs the form values as multipart to the movies route', async () => {
     fetchMock.mockResolvedValue(createdResponse(CREATED));
 
-    await createMovie({ title: 'Rear Window', year: '1954', genres: [] });
+    await createMovie(typed({ title: 'Rear Window', year: '1954' }));
 
     const request = onlyRequest();
     expect(request.url).toBe('/api/movies');
@@ -74,7 +93,7 @@ describe('createMovie', () => {
   it('carries the title and the year as form fields', async () => {
     fetchMock.mockResolvedValue(createdResponse(CREATED));
 
-    await createMovie({ title: 'Rear Window', year: '1954', genres: [] });
+    await createMovie(typed({ title: 'Rear Window', year: '1954' }));
 
     const fields = sentFields();
     expect(fields.get('title')).toBe('Rear Window');
@@ -84,7 +103,7 @@ describe('createMovie', () => {
   it('sends an empty year rather than omitting the field', async () => {
     fetchMock.mockResolvedValue(createdResponse(CREATED));
 
-    await createMovie({ title: 'Rear Window', year: '', genres: [] });
+    await createMovie(typed({ title: 'Rear Window', year: '' }));
 
     // The server reads an empty year as "no year"; a field that vanished when
     // it was cleared would make an edit unable to say the year was removed,
@@ -95,7 +114,7 @@ describe('createMovie', () => {
   it('sets no Content-Type of its own', async () => {
     fetchMock.mockResolvedValue(createdResponse(CREATED));
 
-    await createMovie({ title: 'Rear Window', year: '1954', genres: [] });
+    await createMovie(typed({ title: 'Rear Window', year: '1954' }));
 
     // A multipart body is nothing without its boundary, and only the platform
     // knows the boundary it generated. Naming the header here would send
@@ -110,11 +129,12 @@ describe('createMovie', () => {
   it('resolves the created movie the route answered with', async () => {
     fetchMock.mockResolvedValue(createdResponse(CREATED));
 
-    const movie = await createMovie({
-      title: 'Rear Window',
-      year: '1954',
-      genres: [],
-    });
+    const movie = await createMovie(
+      typed({
+        title: 'Rear Window',
+        year: '1954',
+      })
+    );
 
     // The whole record, so the screen it lands on has the film without a second
     // request.
@@ -125,7 +145,7 @@ describe('createMovie', () => {
     fetchMock.mockResolvedValue(serverErrorResponse());
 
     await expect(
-      createMovie({ title: 'Rear Window', year: '1954', genres: [] })
+      createMovie(typed({ title: 'Rear Window', year: '1954' }))
     ).rejects.toThrow();
   });
 
@@ -133,7 +153,7 @@ describe('createMovie', () => {
     fetchMock.mockRejectedValue(new Error('offline'));
 
     await expect(
-      createMovie({ title: 'Rear Window', year: '1954', genres: [] })
+      createMovie(typed({ title: 'Rear Window', year: '1954' }))
     ).rejects.toThrow();
   });
 
@@ -142,11 +162,13 @@ describe('createMovie', () => {
   it('sends one genre part per picked genre, in the order picked', async () => {
     fetchMock.mockResolvedValue(createdResponse(CREATED));
 
-    await createMovie({
-      title: 'Rear Window',
-      year: '1954',
-      genres: ['Thriller', 'Sci-Fi'],
-    });
+    await createMovie(
+      typed({
+        title: 'Rear Window',
+        year: '1954',
+        genres: ['Thriller', 'Sci-Fi'],
+      })
+    );
 
     // A repeated part under one name — what a set has always looked like on a
     // form wire, and what `getAll` reads back. `genres[0]` is the primary tag
@@ -157,11 +179,13 @@ describe('createMovie', () => {
   it('sends the genres in the order they are held, not the pool’s', async () => {
     fetchMock.mockResolvedValue(createdResponse(CREATED));
 
-    await createMovie({
-      title: 'Rear Window',
-      year: '1954',
-      genres: ['Sci-Fi', 'Thriller'],
-    });
+    await createMovie(
+      typed({
+        title: 'Rear Window',
+        year: '1954',
+        genres: ['Sci-Fi', 'Thriller'],
+      })
+    );
 
     // The same two names, sent the other way round. Nothing between the chips
     // and the row re-imposes the pool's order on them.
@@ -171,13 +195,102 @@ describe('createMovie', () => {
   it('sends no genre part at all when none is picked', async () => {
     fetchMock.mockResolvedValue(createdResponse(CREATED));
 
-    await createMovie({ title: 'Rear Window', year: '1954', genres: [] });
+    await createMovie(typed({ title: 'Rear Window', year: '1954' }));
 
     // Unlike `year`, an empty genre selection is an *absent* field rather than
     // an empty one: there is no such thing as a genre named `''`, so a part
     // carrying one would be a name the server would have to refuse.
     expect(sentFields().getAll('genre')).toEqual([]);
     expect(sentFields().has('genre')).toBe(false);
+  });
+
+  // --- 11 — Movie form, Phase 2: the credits on the wire (issue #100) --------
+  //
+  // The cast is the one value on this form whose typed shape and stored shape
+  // differ: one line in the box, a list in the row. It is resolved here, on the
+  // way out, by `castNames` — so the wire carries the names rather than the
+  // typing, and the comma rule lives in exactly one place.
+
+  it('carries the director and the description as form fields', async () => {
+    fetchMock.mockResolvedValue(createdResponse(CREATED));
+
+    await createMovie(
+      typed({
+        title: 'Rear Window',
+        director: 'Alfred Hitchcock',
+        description: 'A photographer watches his neighbours.',
+      })
+    );
+
+    // `description` is the form's word for it, and the column's is `synopsis`.
+    // The rename happens once, at the route — the field is named after the
+    // caption the maintainer typed under.
+    const fields = sentFields();
+    expect(fields.get('director')).toBe('Alfred Hitchcock');
+    expect(fields.get('description')).toBe(
+      'A photographer watches his neighbours.'
+    );
+  });
+
+  it('sends an empty director and description rather than omitting them', async () => {
+    fetchMock.mockResolvedValue(createdResponse(CREATED));
+
+    await createMovie(typed({ title: 'Rear Window' }));
+
+    // `year`'s rule, over two more nullable columns: a field that vanished when
+    // it was cleared could not say a director had been *removed*.
+    const fields = sentFields();
+    expect(fields.get('director')).toBe('');
+    expect(fields.get('description')).toBe('');
+  });
+
+  it('sends one cast part per name, in the order they were typed', async () => {
+    fetchMock.mockResolvedValue(createdResponse(CREATED));
+
+    await createMovie(
+      typed({ title: 'Rear Window', cast: 'Jane Doe, John Roe, Ana Vega' })
+    );
+
+    // The genres' own spelling, for the genres' own reason: a list on this wire
+    // is one part per entry under one name. The billing order is the
+    // maintainer's, and nothing between the box and the row re-sorts it.
+    expect(sentFields().getAll('cast')).toEqual([
+      'Jane Doe',
+      'John Roe',
+      'Ana Vega',
+    ]);
+  });
+
+  it('sends a carelessly typed cast as the names in it', async () => {
+    fetchMock.mockResolvedValue(createdResponse(CREATED));
+
+    await createMovie(
+      typed({ title: 'Rear Window', cast: ' Jane Doe ,, John Roe, ' })
+    );
+
+    // Trailing commas, doubled commas and stray spaces are what a field being
+    // typed into looks like. None of them is a cast member.
+    expect(sentFields().getAll('cast')).toEqual(['Jane Doe', 'John Roe']);
+  });
+
+  it('sends no cast part at all when the field is empty', async () => {
+    fetchMock.mockResolvedValue(createdResponse(CREATED));
+
+    await createMovie(typed({ title: 'Rear Window', cast: '' }));
+
+    // The genres' rule rather than the year's, because this is a list too: an
+    // untyped cast is an absent field, never one empty part that the row would
+    // have to read as a person with no name.
+    expect(sentFields().getAll('cast')).toEqual([]);
+    expect(sentFields().has('cast')).toBe(false);
+  });
+
+  it('sends no cast part for a field holding only commas and spaces', async () => {
+    fetchMock.mockResolvedValue(createdResponse(CREATED));
+
+    await createMovie(typed({ title: 'Rear Window', cast: ' , , ' }));
+
+    expect(sentFields().has('cast')).toBe(false);
   });
 });
 
