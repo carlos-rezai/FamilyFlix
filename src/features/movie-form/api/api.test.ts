@@ -68,6 +68,7 @@ function typed(values: Partial<MovieFormValues> = {}): MovieFormValues {
     cast: '',
     description: '',
     genres: [],
+    rating: null,
     ...values,
   };
 }
@@ -291,6 +292,46 @@ describe('createMovie', () => {
     await createMovie(typed({ title: 'Rear Window', cast: ' , , ' }));
 
     expect(sentFields().has('cast')).toBe(false);
+  });
+
+  // --- 11 — Movie form, Phase 2: the rating (issue #101) ---------------------
+
+  /**
+   * The one value on this form the two ends of the wire spell differently for a
+   * reason that is not a rename: the picker speaks the 0–100 percent every star
+   * strip in the app fills against, and the column stores 0–10 half-star units.
+   * `toRatingUnits` is the boundary, and this is the boundary — so no second
+   * rating representation is ever held anywhere between them.
+   */
+  it('carries the rating in the units the column stores, not the percent the picker speaks', async () => {
+    fetchMock.mockResolvedValue(createdResponse(CREATED));
+
+    await createMovie(typed({ title: 'Rear Window', rating: 80 }));
+
+    expect(sentFields().get('rating')).toBe('8');
+  });
+
+  it('carries a half star as the half unit it is', async () => {
+    fetchMock.mockResolvedValue(createdResponse(CREATED));
+
+    await createMovie(typed({ title: 'Rear Window', rating: 70 }));
+
+    // Three and a half stars is 7 of the 10 units, and it stays a whole number
+    // on the wire — which is what makes the half-star scale storable at all.
+    expect(sentFields().get('rating')).toBe('7');
+  });
+
+  it('sends an empty rating for an unrated movie rather than omitting the field', async () => {
+    fetchMock.mockResolvedValue(createdResponse(CREATED));
+
+    await createMovie(typed({ title: 'Rear Window', rating: null }));
+
+    // `year`'s rule over the one column where getting it wrong scores the film
+    // instead of erasing it: the field travels, empty, so a rating the
+    // maintainer *removed* is a thing this request shape can say one slice
+    // from now.
+    expect(sentFields().has('rating')).toBe(true);
+    expect(sentFields().get('rating')).toBe('');
   });
 });
 

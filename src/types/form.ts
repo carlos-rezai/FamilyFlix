@@ -9,9 +9,9 @@
  */
 
 /**
- * Every field the form collects. The metadata is all here now; the rating and
- * the three file slots join it as their slices land, and this stays the one
- * shape the form, its hook and its wire call agree on.
+ * Every field the form collects. The whole of the form's own surface is here
+ * now; the three file slots join it as their slices land, and this stays the
+ * one shape the form, its hook and its wire call agree on.
  */
 export interface MovieFormValues {
   title: string;
@@ -30,6 +30,16 @@ export interface MovieFormValues {
   /** The synopsis. `description` is the form's word for it; the column's is
    *  `synopsis`, and the rename happens once, at the route. */
   description: string;
+  /**
+   * The score, as the 0–100 percent `RatingPicker` speaks and every star strip
+   * in the app fills against — never the 0–10 units the column stores, which
+   * `toRatingUnits` converts to once, at the wire.
+   *
+   * `null` is **Unrated**, and it is emphatically not `0`: "I have not decided"
+   * and "nought out of five" are two different claims, and the distinction has
+   * to survive from the picker to the row.
+   */
+  rating: number | null;
   /**
    * The genres picked, by name, **in the order they were picked** — not the
    * pool's order. `genres[0]` is the primary tag the repository has preserved

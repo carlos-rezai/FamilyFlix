@@ -4045,4 +4045,133 @@ describe('POST /api/movies', () => {
     expect(movie.cast).toEqual(['Jane Doe', 'John Roe']);
     expect(movie.director).toBe('Alfred Hitchcock');
   });
+
+  // --- 11 — Movie form, Phase 2: the rating (issue #101) ----------------------
+  //
+  // The one field on this wire that is neither text nor a list, and the one
+  // where getting the empty case wrong scores the film rather than losing a
+  // word of it. The form sends the 0–10 units the column stores — it converts
+  // the picker's percent before the request — so what this route decides is
+  // only what an absent, an empty and an off-scale one mean.
+
+  it('stores the rating it is given', async () => {
+    const { baseUrl } = freshApi();
+
+    const movie = await createdMovie(baseUrl, {
+      title: 'Rear Window',
+      rating: '8',
+    });
+
+    expect(movie.rating).toBe(8);
+  });
+
+  it('stores a half-star rating as the odd unit it is', async () => {
+    const { baseUrl } = freshApi();
+
+    const movie = await createdMovie(baseUrl, {
+      title: 'Rear Window',
+      rating: '7',
+    });
+
+    // Three and a half stars. The scale is halves all the way down, which is
+    // why an odd number is a rating and not a rounding error.
+    expect(movie.rating).toBe(7);
+  });
+
+  it('tells an absent, an empty and a genuinely nought rating apart', async () => {
+    const { baseUrl } = freshApi();
+
+    const untouched = await createdMovie(baseUrl, { title: 'Rear Window' });
+    const cleared = await createdMovie(baseUrl, {
+      title: 'Vertigo',
+      rating: '',
+    });
+    const nought = await createdMovie(baseUrl, {
+      title: 'Marnie',
+      rating: '0',
+    });
+
+    // The acceptance criterion of the slice, and the whole of what this route
+    // decides about the field. `Number('')` is `0`, so an empty field is one
+    // careless conversion away from scoring a film nobody scored — and the
+    // three arms are asserted together because the fix for that is what breaks
+    // the third: `0` is a real point on the stored scale, unreachable from the
+    // picker but not from this API, and it must survive as itself rather than
+    // be swept into the absence with the other two.
+    expect(untouched.rating).toBeNull();
+    expect(cleared.rating).toBeNull();
+    expect(nought.rating).toBe(0);
+  });
+
+  it('refuses a rating off the stored scale', async () => {
+    const { baseUrl } = freshApi();
+
+    const response = await postMovie(baseUrl, {
+      title: 'Rear Window',
+      rating: '99',
+    });
+
+    // The unknown-genre refusal's own reasoning, over the one column where
+    // silence erases rather than drops: a value this route cannot store is
+    // refused, not quietly turned into "nobody scored it".
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: 'Invalid rating: "99"' });
+  });
+
+  it('refuses a rating that is not a number at all', async () => {
+    const { baseUrl } = freshApi();
+
+    const response = await postMovie(baseUrl, {
+      title: 'Rear Window',
+      rating: 'great',
+    });
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: 'Invalid rating: "great"' });
+  });
+
+  it('refuses a fractional rating', async () => {
+    const { baseUrl } = freshApi();
+
+    const response = await postMovie(baseUrl, {
+      title: 'Rear Window',
+      rating: '7.5',
+    });
+
+    // The half-star scale is already the halves: 7 *is* three and a half, and
+    // 7.5 is a point the column has no room for.
+    expect(response.status).toBe(400);
+  });
+
+  it('writes no movie at all when the rating is refused', async () => {
+    const { baseUrl } = freshApi();
+
+    await postMovie(baseUrl, { title: 'Rear Window', rating: '99' });
+
+    // The refusal is the route's own sentence, said before anything is
+    // attempted — the unknown genre's rule, and the reason neither needs a
+    // rollback.
+    expect(await movieTitles(baseUrl, 'recently-added')).toEqual([]);
+  });
+
+  it('carries the rating alongside the credits and the genres in one save', async () => {
+    const { baseUrl } = freshApi();
+
+    const movie = await createdMovie(baseUrl, {
+      title: 'Rear Window',
+      year: '1954',
+      genre: ['Thriller'],
+      director: 'Alfred Hitchcock',
+      cast: ['Jane Doe', 'John Roe'],
+      description: 'A photographer watches his neighbours.',
+      rating: '7',
+    });
+
+    // The whole of the form's own surface, in one body — the demoable end of
+    // Phase 2.
+    expect(movie.rating).toBe(7);
+    expect(movie.genres.map((genre) => genre.name)).toEqual(['Thriller']);
+    expect(movie.cast).toEqual(['Jane Doe', 'John Roe']);
+    expect(movie.director).toBe('Alfred Hitchcock');
+  });
 });

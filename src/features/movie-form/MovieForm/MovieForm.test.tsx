@@ -689,3 +689,254 @@ describe('MovieForm — saving the credits fields', () => {
     );
   });
 });
+
+// --- 11 — Movie form, Phase 2: the rating and the actions row (issue #101) ---
+
+/** The **Half-star segment** that asks for the rating named on it. */
+const segment = (name: string) =>
+  screen.getByRole('button', { name }) as HTMLButtonElement;
+
+/** What the strip says the movie is scored, beside the stars. */
+const ratingLabel = () =>
+  screen.getByRole('group', { name: /your rating/i }).parentElement
+    ?.textContent;
+
+const cancel = () =>
+  screen.getByRole('button', { name: /^cancel$/i }) as HTMLButtonElement;
+const backPill = () =>
+  screen.getByRole('button', { name: /^back$/i }) as HTMLButtonElement;
+
+/**
+ * The form as it is actually reached — from Settings, with somewhere behind it.
+ *
+ * `mountForm`'s single entry is the deep-linked case, where `useGoBack` falls
+ * back to the library; this is the case the maintainer is in every time, and
+ * the one where "the same way out" is a claim with two possible answers.
+ */
+async function renderFormFromSettings() {
+  const view = render(
+    <MemoryRouter initialEntries={['/settings', '/add']} initialIndex={1}>
+      <ThemeProvider theme={theme}>
+        <MovieForm />
+        <LocationProbe />
+      </ThemeProvider>
+    </MemoryRouter>
+  );
+  await act(async () => undefined);
+  return view;
+}
+
+/**
+ * The **Rating picker** in the **Movie form** — the same molecule the detail
+ * page's **Meta line** already renders, with a different destination: there it
+ * is a **Single-signal write**, here it is one field of the whole-record save.
+ *
+ * What is asserted here is the form holding a rating, not the picker working —
+ * `RatingPicker` owns its own **Half-star segments**, its **Rating preview**
+ * and its labels, and re-testing them here would test the molecule twice.
+ */
+describe('MovieForm — the rating picker', () => {
+  it('captions the picker the way the prototype does', async () => {
+    await renderForm();
+
+    expect(screen.getByText(/click a star \(or half\)/i)).toBeDefined();
+  });
+
+  it('opens on Unrated rather than on nought stars', async () => {
+    await renderForm();
+
+    // A form that opened on 0.0 / 5 would have every movie arrive scored
+    // nothing by a maintainer who never touched the stars.
+    expect(ratingLabel()).toContain('Not rated');
+  });
+
+  it('sets a whole star', async () => {
+    await renderForm();
+
+    fireEvent.click(segment('Rate 4 stars'));
+
+    expect(ratingLabel()).toContain('4.0 / 5');
+  });
+
+  it('sets a half star', async () => {
+    await renderForm();
+
+    fireEvent.click(segment('Rate 3½ stars'));
+
+    // The reason the picker exists rather than five whole stars: three and a
+    // half stops being something the maintainer has to round away from.
+    expect(ratingLabel()).toContain('3.5 / 5');
+  });
+
+  it('clears back to Unrated when the segment holding the value is pressed again', async () => {
+    await renderForm();
+
+    fireEvent.click(segment('Rate 3½ stars'));
+    fireEvent.click(segment('Clear rating'));
+
+    // The same gesture the detail page already answers to — a rating is
+    // removable the same way everywhere, and what it clears to is the absence
+    // rather than a nought.
+    expect(ratingLabel()).toContain('Not rated');
+  });
+
+  it('takes a second rating over the first', async () => {
+    await renderForm();
+
+    fireEvent.click(segment('Rate 2 stars'));
+    fireEvent.click(segment('Rate 4½ stars'));
+
+    expect(ratingLabel()).toContain('4.5 / 5');
+  });
+
+  it('does not open the save gate on a rating alone', async () => {
+    await renderForm();
+
+    fireEvent.click(segment('Rate 4 stars'));
+
+    // Optional like every other field but the title, and the gate does not
+    // move for it.
+    expect(save().disabled).toBe(true);
+  });
+});
+
+describe('MovieForm — saving the rating', () => {
+  it('sends the rating in the units the column stores', async () => {
+    await renderForm();
+
+    fireEvent.change(titleField(), { target: { value: 'Rear Window' } });
+    fireEvent.click(segment('Rate 4 stars'));
+    fireEvent.click(save());
+
+    await waitFor(() => expect(savedFields()).toBeDefined());
+    // The form holds the percent the picker speaks and `toRatingUnits`
+    // converts it once, at the wire — so no second rating representation
+    // enters the app.
+    expect((savedFields() as FormData).get('rating')).toBe('8');
+  });
+
+  it('sends a half star as the half unit it is', async () => {
+    await renderForm();
+
+    fireEvent.change(titleField(), { target: { value: 'Rear Window' } });
+    fireEvent.click(segment('Rate 3½ stars'));
+    fireEvent.click(save());
+
+    await waitFor(() => expect(savedFields()).toBeDefined());
+    expect((savedFields() as FormData).get('rating')).toBe('7');
+  });
+
+  it('sends an empty rating when the stars were never touched', async () => {
+    await renderForm();
+
+    fireEvent.change(titleField(), { target: { value: 'Rear Window' } });
+    fireEvent.click(save());
+
+    await waitFor(() => expect(savedFields()).toBeDefined());
+    // Unrated is a state this form can hold and send. The field travels empty
+    // rather than vanishing, for `year`'s reason, and it is emphatically not a
+    // nought: a movie nobody scored must not read back as one scored nothing.
+    const fields = savedFields() as FormData;
+    expect(fields.get('rating')).toBe('');
+    expect(fields.get('rating')).not.toBe('0');
+  });
+
+  it('sends an empty rating for one that was set and then cleared', async () => {
+    await renderForm();
+
+    fireEvent.change(titleField(), { target: { value: 'Rear Window' } });
+    fireEvent.click(segment('Rate 3½ stars'));
+    fireEvent.click(segment('Clear rating'));
+    fireEvent.click(save());
+
+    await waitFor(() => expect(savedFields()).toBeDefined());
+    // A cleared rating and an untouched one are the same claim, and the wire
+    // says it the same way.
+    expect((savedFields() as FormData).get('rating')).toBe('');
+  });
+
+  it('leaves the rating still set when the save fails', async () => {
+    answerSave = () => Promise.resolve(serverErrorResponse());
+    await renderForm();
+
+    fireEvent.change(titleField(), { target: { value: 'Rear Window' } });
+    fireEvent.click(segment('Rate 3½ stars'));
+    fireEvent.click(save());
+
+    // The refused save leaves the form standing with everything in it — the
+    // score included, since re-finding the same half star is work already done.
+    await waitFor(() => expect(save().disabled).toBe(false));
+    expect(ratingLabel()).toContain('3.5 / 5');
+  });
+});
+
+/**
+ * The **actions row** the tracer slice's lone Save button stood in for.
+ *
+ * Cancel and the back pill are one behaviour asserted twice, deliberately: two
+ * ways out of the same screen that behaved differently would be the bug, and it
+ * is only visible by driving both.
+ */
+describe('MovieForm — the actions row', () => {
+  it('offers Cancel beside Save', async () => {
+    await renderForm();
+
+    expect(save().textContent).toContain('Add to library');
+    expect(cancel().textContent).toContain('Cancel');
+  });
+
+  it('draws Save first and Cancel after it', async () => {
+    await renderForm();
+
+    // The prototype's order, and the one that puts the primary action where
+    // the eye lands first.
+    expect(
+      save().compareDocumentPosition(cancel()) &
+        Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
+  });
+
+  it('offers Cancel on a form too empty to save', async () => {
+    await renderForm();
+
+    // The gate closes Save, never the way out. A form the maintainer cannot
+    // finish is exactly the form they most need to leave.
+    expect(save().disabled).toBe(true);
+    expect(cancel().disabled).toBe(false);
+  });
+
+  it('leaves for the screen behind the form, exactly as the back pill does', async () => {
+    const { unmount } = await renderFormFromSettings();
+    fireEvent.click(cancel());
+    expect(currentPath()).toBe('/settings');
+    unmount();
+
+    // The same claim made through the other control, in one test rather than
+    // two, because the claim *is* that the two agree — asserted apart, they
+    // could drift and both still pass.
+    await renderFormFromSettings();
+    fireEvent.click(backPill());
+    expect(currentPath()).toBe('/settings');
+  });
+
+  it('falls back to the library from both, on a form with nothing behind it', async () => {
+    const { unmount } = await renderForm();
+    fireEvent.click(cancel());
+    expect(currentPath()).toBe('/');
+    unmount();
+
+    await renderForm();
+    fireEvent.click(backPill());
+    expect(currentPath()).toBe('/');
+  });
+
+  it('writes nothing when Cancel is pressed', async () => {
+    await renderForm();
+
+    fireEvent.change(titleField(), { target: { value: 'Rear Window' } });
+    fireEvent.click(cancel());
+
+    // Cancel is a way out, not a save. The typed title leaves with the screen.
+    expect(saveRequests()).toEqual([]);
+  });
+});

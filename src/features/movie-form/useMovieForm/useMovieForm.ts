@@ -18,6 +18,9 @@ const EMPTY: MovieFormValues = {
   cast: '',
   description: '',
   genres: [],
+  // **Unrated**, which is a state the form holds rather than the absence of
+  // one — and never `0`, which is a score.
+  rating: null,
 };
 
 export interface UseMovieFormResult {
