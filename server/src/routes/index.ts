@@ -1,9 +1,10 @@
-import { pipeline } from 'node:stream';
+import { pipeline, type Readable } from 'node:stream';
 
 import busboy from 'busboy';
 import express, { type Request, type Response, type Router } from 'express';
 
 import type { LibraryStorage } from '../library';
+import { createMedia, type Media } from '../media/createMedia/createMedia';
 import type { Playback } from '../playback/createPlayback/createPlayback';
 import {
   DEFAULT_MOVIE_SORT,
@@ -253,20 +254,39 @@ function streamOffset(value: unknown): number | null {
 }
 
 /**
- * The fields of a `multipart/form-data` body, by name.
+ * What a route is handed when a file part arrives: its field name, the name the
+ * client gave the file, the bytes themselves, and **the fields that arrived
+ * before it**.
+ *
+ * The last of those is the awkward one, and it is deliberately not hidden. A
+ * `FormData` carries its parts in the order the client appended them, and
+ * `busboy` will not reach the parts after a file until that file has been
+ * consumed — so a route that needs the title to decide where the bytes go can
+ * only ever be shown the title if it has already arrived. What to do about a
+ * body that named its film after it sent it is the route's problem to solve,
+ * and it can only solve it if the parser is honest about which fields it has.
+ */
+type OnFilePart = (
+  name: string,
+  filename: string,
+  part: Readable,
+  before: Record<string, string[]>
+) => Promise<void>;
+
+/**
+ * Read a `multipart/form-data` body: answer with its fields by name, having
+ * handed every file part to {@link OnFilePart} as it arrived.
  *
  * The one place in this file that reads a request body itself rather than
  * through `express.json()`, because this is the one request shape that is not
  * JSON. `busboy` parses the stream as it arrives, which is the whole reason it
- * is here rather than `multer`: the **file parts** this route will grow are
- * video files, and a 12 GB body must never be buffered to hand a route its
- * `title`.
+ * is here rather than `multer`: the file parts are video files, and a 12 GB
+ * body must never be buffered to hand a route its `title`.
  *
- * **Fields only, for now.** A part is drained rather than read — not handled,
- * just consumed, because `busboy` never reaches `close` while a part nobody
- * listens to is still pending, and a hung request is a worse answer than an
- * ignored file. Nothing in the app sends one yet; the media domain is what
- * turns that `resume()` into a write to disk.
+ * **Every part is consumed, handled or not.** `busboy` never reaches `close`
+ * while a part nobody listens to is still pending, so a handler that rejects
+ * drains what is left of its part before the rejection is carried out — a hung
+ * request is a worse answer than a failed one.
  *
  * A body that is not multipart at all rejects: `busboy` throws on the headers
  * before a byte is read, and the promise carries that out.
@@ -278,16 +298,32 @@ function streamOffset(value: unknown): number | null {
  * that is sent once is simply a list of one — {@link onlyField} is how the
  * single-valued ones are read back.
  */
-function readFields(req: Request): Promise<Record<string, string[]>> {
+function readBody(
+  req: Request,
+  onFile: OnFilePart
+): Promise<Record<string, string[]>> {
   return new Promise((resolve, reject) => {
     const fields: Record<string, string[]> = {};
+    const handled: Promise<void>[] = [];
     const parser = busboy({ headers: req.headers });
 
     parser.on('field', (name, value) => {
       (fields[name] ??= []).push(value);
     });
-    parser.on('file', (_name, part) => part.resume());
-    parser.on('close', () => resolve(fields));
+    parser.on('file', (name, part, info) => {
+      handled.push(
+        onFile(name, info.filename, part, fields).catch((error: unknown) => {
+          part.resume();
+          throw error;
+        })
+      );
+    });
+    // `close` says the body was parsed, not that it was stored: the last part's
+    // write is still in flight, and a row written before its bytes were on disk
+    // would point at a file that is not there yet.
+    parser.on('close', () => {
+      Promise.all(handled).then(() => resolve(fields), reject);
+    });
     parser.on('error', reject);
 
     req.pipe(parser);
@@ -397,11 +433,19 @@ function parseLimit(value: string): number | null {
  * mentions FFmpeg. The routes ask where a file is, what path it takes, what to
  * do with its bytes and what its subtitles say; which binary answers, or
  * whether one is installed at all, is settled before the router is built.
+ *
+ * `media` is the media domain, injected for the same reason: this file writes a
+ * movie's files by asking for somewhere to put them and handing over a part, and
+ * never by touching the filesystem itself. It defaults to the domain over
+ * `mediaPath`, which is the same object every caller would otherwise have to
+ * build — `main.ts` passes it explicitly all the same, so the composition root
+ * still says what the app is composed of.
  */
 export function createApiRouter(
   storage: LibraryStorage,
   mediaPath: string,
-  playback: Playback
+  playback: Playback,
+  media: Media = createMedia(mediaPath)
 ): Router {
   const router = express.Router();
 
@@ -609,35 +653,73 @@ export function createApiRouter(
   // — it exists for `{ value }` in and `{ value }` out — and what it calls is
   // the transactional `addMovie` that has been built and unreachable since #3.
   //
-  // The body is `multipart/form-data` **from this slice onward**, though it
-  // carries no file parts yet: parsing a fields-only multipart body is the same
-  // handler shape as parsing one with parts, so the wire contract is settled
-  // once rather than replaced under the client when the video, the poster and
-  // the subtitles arrive behind this same call.
+  // The body is `multipart/form-data`, and **this is the first request the app
+  // ever receives bytes on**: the video part is streamed straight to disk as it
+  // arrives, so a 12 GB film never sits in memory anywhere between the file
+  // dialog and the **Managed media directory**.
   //
-  // `videoPath` is `''`, and that is not a fiction being papered over. Nothing
-  // in the app can put a file anywhere until the `media/` domain lands, so a
-  // movie added here is a real library row — it browses, sorts, searches,
-  // favourites and rates correctly — that says it has no film behind it:
-  // `mediaFilePath` resolves `''` to the media root itself, fails its own
-  // containment test, and `/playback` and `/stream` give the JSON 404 they
-  // already give a missing file. No read route changes anywhere for it.
+  // `videoPath` is still `''` for a body that carries no video part, and that is
+  // not a fiction being papered over: `mediaFilePath` resolves `''` to the media
+  // root itself, fails its own containment test, and `/playback` and `/stream`
+  // give the JSON 404 they already give a missing file. The form's own **Save
+  // gate** makes it unreachable from the app; a client this route did not write
+  // can still ask for a row with no film behind it, and gets a real one.
+  //
+  // **An unplayable container is accepted, not refused.** `cannot-play` is a
+  // designed `PlayerNotice` state, and refusing an MKV at the door would refuse
+  // most of the family folder to spare the family a message the player already
+  // draws.
   //
   // A body with no title is a 400 rather than an untitled row. The form gates
   // Save on a title, so this is unreachable from the app — but `title` is
   // `NOT NULL` and `''` satisfies that column, which would make a corrupt row
   // the cost of a client this route did not write.
+  //
+  // **On any refusal the bytes this request wrote are removed**, so a failed add
+  // leaves no row *and* no folder. That is only reachable at all because a part
+  // can arrive before the field that refuses the save — which is also why the
+  // folder is named twice: reserved from what had arrived when the first byte
+  // needed somewhere to go, and given the title's own name once the whole body
+  // has been read.
   router.post('/movies', async (req: Request, res: Response) => {
+    // The movie's folder, reserved the moment there are bytes that need one, and
+    // what this request has written into it.
+    let folder: string | null = null;
+    let videoPath: string | undefined;
+
+    /** Take back everything this request put on disk. */
+    const rollback = (): void => {
+      if (folder !== null) {
+        media.removeFolder(folder);
+      }
+    };
+
     let fields: Record<string, string[]>;
     try {
-      fields = await readFields(req);
+      fields = await readBody(req, async (name, filename, part, before) => {
+        // Every other part is drained rather than stored: the poster and the
+        // subtitles are #103 and #104, and a part this slice does not know about
+        // is not a reason to refuse the save.
+        if (name !== 'video') {
+          part.resume();
+          return;
+        }
+
+        folder ??= media.reserveFolder(
+          onlyField(before, 'title')?.trim() ?? '',
+          optionalYear(onlyField(before, 'year')) ?? null
+        );
+        videoPath = await media.storeUpload(folder, filename, part);
+      });
     } catch {
+      rollback();
       res.status(400).json({ error: 'Body must be multipart/form-data' });
       return;
     }
 
     const title = onlyField(fields, 'title')?.trim() ?? '';
     if (title === '') {
+      rollback();
       res.status(400).json({ error: 'Body must carry a title' });
       return;
     }
@@ -657,6 +739,7 @@ export function createApiRouter(
     const postedRating = onlyField(fields, 'rating');
     const rating = optionalRating(postedRating);
     if (rating === INVALID_RATING) {
+      rollback();
       res
         .status(400)
         .json({ error: `Invalid rating: ${JSON.stringify(postedRating)}` });
@@ -685,23 +768,45 @@ export function createApiRouter(
     const pool = new Set(storage.listGenrePool().map((genre) => genre.name));
     const unknown = genres.find((name) => !pool.has(name));
     if (unknown !== undefined) {
+      rollback();
       res.status(400).json({ error: `Unknown genre: ${unknown}` });
       return;
     }
 
-    res.status(201).json(
-      storage.addMovie({
-        title,
-        // No bytes have been copied anywhere, so there is no path to store.
-        videoPath: '',
-        ...(year === undefined ? {} : { year }),
-        ...(director === undefined ? {} : { director }),
-        ...(synopsis === undefined ? {} : { synopsis }),
-        ...(rating === undefined ? {} : { rating }),
-        ...(cast.length === 0 ? {} : { cast }),
-        ...(genres.length === 0 ? {} : { genres }),
-      })
-    );
+    // Nothing is refused after this point, so this is where the folder stops
+    // being the one a part needed and becomes the one the movie is called. A
+    // body that named its film before it sent it — which is every body the form
+    // sends — is already there, and nothing moves.
+    if (folder !== null) {
+      const renamed = media.renameFolder(folder, title, year ?? null);
+      folder = renamed.folder;
+      if (videoPath !== undefined) {
+        videoPath = renamed.storedPath(videoPath);
+      }
+    }
+
+    try {
+      res.status(201).json(
+        storage.addMovie({
+          title,
+          // A body with no video part is a row that says it has no film behind
+          // it, rather than a save this route refuses.
+          videoPath: videoPath ?? '',
+          ...(year === undefined ? {} : { year }),
+          ...(director === undefined ? {} : { director }),
+          ...(synopsis === undefined ? {} : { synopsis }),
+          ...(rating === undefined ? {} : { rating }),
+          ...(cast.length === 0 ? {} : { cast }),
+          ...(genres.length === 0 ? {} : { genres }),
+        })
+      );
+    } catch {
+      // `addMovie` is transactional, so a throw here has left no row — and the
+      // bytes it would have pointed at go with it, for the same reason every
+      // refusal above takes them: a save that failed leaves nothing behind.
+      rollback();
+      res.status(500).json({ error: 'Could not add the movie' });
+    }
   });
 
   // The Favorites toggle. What is left here is what this route alone decides:

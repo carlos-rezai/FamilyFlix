@@ -8,6 +8,7 @@ import {
   TextField,
 } from '@/primitives';
 import { GenrePicker } from '../GenrePicker/GenrePicker';
+import { MovieFormFiles } from '../MovieFormFiles/MovieFormFiles';
 import { useGenrePool } from '../useGenrePool/useGenrePool';
 import { useMovieForm } from '../useMovieForm/useMovieForm';
 import {
@@ -45,10 +46,9 @@ const CANCEL_LABEL = 'Cancel';
  * The **Movie form** in its **Add context** — `feat.MovieForm.dc.html`, and the
  * only screen in the app that creates a record rather than amending one.
  *
- * It renders the form and nothing else: what may be typed, whether Save can be
- * pressed and where a finished save lands all belong to `useMovieForm`, which is
- * also where the second half of the gate lands when there is a video slot for it
- * to check.
+ * It renders the form and nothing else: what may be typed, what is in the
+ * **File slots**, whether Save can be pressed and where a finished save lands
+ * all belong to `useMovieForm`.
  *
  * **Cancel and the back pill are one behaviour, not two.** Both call the app's
  * one Back rule, so there are not two ways out of this screen that could drift
@@ -58,10 +58,10 @@ const CANCEL_LABEL = 'Cancel';
  * **What of the prototype is deliberately not here yet**, so its absence reads as
  * a slice boundary rather than as a miss:
  *
- * - The Files panel, and with it the subtitle line under the heading: it reads
- *   "Pick the video, poster, and any subtitle files for this movie", which would
- *   be the screen describing three controls it does not have. It arrives with
- *   them (issues #102 to #104).
+ * - The poster and subtitle slots of the Files card, and with them the subtitle
+ *   line under the heading: it reads "Pick the video, poster, and any subtitle
+ *   files for this movie", which would still be the screen describing two
+ *   controls it does not have. They arrive with issues #103 and #104.
  */
 export function MovieForm() {
   const goBack = useGoBack();
@@ -75,6 +75,8 @@ export function MovieForm() {
     setDescription,
     toggleGenre,
     setRating,
+    pickVideo,
+    removeVideo,
     canSave,
     saving,
     save,
@@ -187,6 +189,14 @@ export function MovieForm() {
               <RatingPicker value={values.rating} onChange={setRating} />
             </UnderCaption>
           </ChipField>
+
+          {/* The prototype's own place for it: under every metadata field, on a
+              card of its own. */}
+          <MovieFormFiles
+            video={values.video}
+            onPickVideo={pickVideo}
+            onRemoveVideo={removeVideo}
+          />
         </Fields>
 
         <Actions>

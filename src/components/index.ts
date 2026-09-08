@@ -21,6 +21,7 @@ export {
   FilterDropdown,
   type FilterDropdownProps,
 } from './FilterDropdown/FilterDropdown';
+export { FileField, type FileFieldProps } from './FileField/FileField';
 export {
   RatingPicker,
   type RatingPickerProps,

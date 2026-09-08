@@ -9,6 +9,25 @@
  */
 
 /**
+ * What is in one of the form's **File slots**: nothing, a **Stored file** the
+ * library already holds, or a **Picked file** the maintainer has just chosen off
+ * their own disk.
+ *
+ * A discriminated union rather than one shape with optional halves, because the
+ * two are genuinely different things on the way out: a stored file travels as
+ * the relative path it already has, and a picked one travels as bytes in a part.
+ * `filename` is what both of them show in the slot, and it is the only thing a
+ * browser will say about a `File` — there is no path, ever.
+ *
+ * The `stored` arm is unreachable from the **Add context** and arrives with the
+ * edit slice; it is here now because the slot's own type is what the two
+ * contexts share.
+ */
+export type MovieFormFile =
+  | { kind: 'stored'; path: string; filename: string }
+  | { kind: 'picked'; file: File; filename: string };
+
+/**
  * Every field the form collects. The whole of the form's own surface is here
  * now; the three file slots join it as their slices land, and this stays the
  * one shape the form, its hook and its wire call agree on.
@@ -40,6 +59,15 @@ export interface MovieFormValues {
    * to survive from the picker to the row.
    */
   rating: number | null;
+  /**
+   * The film itself, or `null` for an empty **File slot** — which is what the
+   * **Add context** opens on, and the half of the **Save gate** a title cannot
+   * satisfy on its own.
+   *
+   * `video_path` is `NOT NULL`, and now that the form can offer a film, a row
+   * with nothing behind it is no longer one this screen writes.
+   */
+  video: MovieFormFile | null;
   /**
    * The genres picked, by name, **in the order they were picked** — not the
    * pool's order. `genres[0]` is the primary tag the repository has preserved

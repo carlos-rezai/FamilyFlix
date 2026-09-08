@@ -21,6 +21,8 @@ const EMPTY: MovieFormValues = {
   // **Unrated**, which is a state the form holds rather than the absence of
   // one — and never `0`, which is a score.
   rating: null,
+  // An empty **File slot**, and the half of the gate a title cannot satisfy.
+  video: null,
 };
 
 export interface UseMovieFormResult {
@@ -36,6 +38,10 @@ export interface UseMovieFormResult {
   toggleGenre: (name: string) => void;
   /** Score the movie, as a percent, or `null` to put it back to **Unrated**. */
   setRating: (rating: number | null) => void;
+  /** Put a film the maintainer chose off their own disk into the video slot. */
+  pickVideo: (file: File) => void;
+  /** Empty the video slot again. */
+  removeVideo: () => void;
   /** Whether Save can be pressed — the gate, not a validation message. */
   canSave: boolean;
   /** Whether the write is in flight. */
@@ -52,8 +58,11 @@ export interface UseMovieFormResult {
  * the only invalid state this form can reach is one where Save cannot be
  * pressed — which is a state the prototype's own `disabled` prop already draws,
  * rather than an error surface nothing designed. It lives here, in one place,
- * because it arrives in halves: the title half is all a form with no video slot
- * can check, and the video half lands beside it when that slot exists.
+ * because it arrived in halves: the title half was all a form with no video slot
+ * could check, and the video half landed beside it the moment that slot existed.
+ * A title and a film are now one condition rather than two conditions in two
+ * places — and it is a condition rather than a latch, so either half can be
+ * taken back.
  *
  * **Year is text, and cannot be a non-year.** Non-digits are dropped and the
  * field stops at four characters, so there is nothing to validate and nothing to
@@ -119,6 +128,21 @@ export function useMovieForm(): UseMovieFormResult {
     setValues((current) => ({ ...current, rating }));
   }, []);
 
+  // A browser hands over a name and bytes and never a path, so the `File` is
+  // the whole of what there is to hold — and its own name is what the slot
+  // shows, because it is the only way to tell the right film from the one
+  // beside it in the folder.
+  const pickVideo = useCallback((file: File) => {
+    setValues((current) => ({
+      ...current,
+      video: { kind: 'picked', file, filename: file.name },
+    }));
+  }, []);
+
+  const removeVideo = useCallback(() => {
+    setValues((current) => ({ ...current, video: null }));
+  }, []);
+
   const toggleGenre = useCallback((name: string) => {
     setValues((current) => ({
       ...current,
@@ -128,7 +152,8 @@ export function useMovieForm(): UseMovieFormResult {
     }));
   }, []);
 
-  const canSave = values.title.trim() !== '' && !saving;
+  const canSave =
+    values.title.trim() !== '' && values.video !== null && !saving;
 
   const save = useCallback(() => {
     if (!canSave) {
@@ -153,6 +178,8 @@ export function useMovieForm(): UseMovieFormResult {
     setDescription,
     toggleGenre,
     setRating,
+    pickVideo,
+    removeVideo,
     canSave,
     saving,
     save,

@@ -634,6 +634,7 @@ describe('MovieForm — the save gate, with the credits fields', () => {
     await renderForm();
 
     fireEvent.change(titleField(), { target: { value: 'Rear Window' } });
+    await pickVideo();
 
     expect(save().disabled).toBe(false);
   });

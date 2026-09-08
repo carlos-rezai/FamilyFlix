@@ -7,6 +7,7 @@ import {
   within,
   act,
 } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter, useNavigate } from 'react-router-dom';
 
 import App from './App';
@@ -445,6 +446,7 @@ describe('App — returning the browse home to where the parent was', () => {
     fireEvent.change(await screen.findByRole('textbox', { name: /title/i }), {
       target: { value: 'Saved Film' },
     });
+    await pickVideo();
     fireEvent.click(screen.getByRole('button', { name: /add to library/i }));
 
     await waitFor(() => expect(currentPath()).toBe('/'));
@@ -665,6 +667,22 @@ describe('App — the order carried from the home to the genre page', () => {
   });
 });
 
+/**
+ * Fill the video half of the **Save gate** on the form that is on screen.
+ *
+ * Every walk through the form has to do this from #102 onward: a title alone
+ * was the whole gate while there was no video slot to check, and a form that
+ * can hold a film requires one. `applyAccept: false` because what the accept
+ * list offers is asserted on the attribute, in the form's own suite.
+ */
+async function pickVideo(): Promise<void> {
+  await userEvent.upload(
+    screen.getByLabelText(/choose video file/i),
+    new File(['video bytes'], 'lantern.mp4', { type: 'video/mp4' }),
+    { applyAccept: false }
+  );
+}
+
 // --- 11 — Movie form, Phase 1: the tracer bullet (issue #98) ------------------
 
 /**
@@ -738,6 +756,7 @@ describe('App — a typed title becomes a row on the home screen', () => {
     fireEvent.change(screen.getByRole('textbox', { name: /year/i }), {
       target: { value: '1954' },
     });
+    await pickVideo();
     fireEvent.click(screen.getByRole('button', { name: /add to library/i }));
 
     // Landing on the browse home is where the maintainer sees it worked, and
@@ -900,6 +919,7 @@ describe('App — a film filed under two genres reaches both rows', () => {
     });
     fireEvent.click(screen.getByRole('button', { name: 'Thriller' }));
     fireEvent.click(screen.getByRole('button', { name: 'Sci-Fi' }));
+    await pickVideo();
     fireEvent.click(screen.getByRole('button', { name: /add to library/i }));
 
     await waitFor(() => expect(currentPath()).toBe('/'));
@@ -922,6 +942,7 @@ describe('App — a film filed under two genres reaches both rows', () => {
       target: { value: 'Rear Window' },
     });
     fireEvent.click(screen.getByRole('button', { name: 'Sci-Fi' }));
+    await pickVideo();
     fireEvent.click(screen.getByRole('button', { name: /add to library/i }));
 
     await waitFor(() => expect(currentPath()).toBe('/'));
@@ -936,6 +957,7 @@ describe('App — a film filed under two genres reaches both rows', () => {
       target: { value: 'Rear Window' },
     });
     fireEvent.click(screen.getByRole('button', { name: 'Thriller' }));
+    await pickVideo();
     fireEvent.click(screen.getByRole('button', { name: /add to library/i }));
 
     await waitFor(() => expect(currentPath()).toBe('/'));
@@ -956,6 +978,7 @@ describe('App — a film filed under two genres reaches both rows', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Sci-Fi' }));
     fireEvent.click(screen.getByRole('button', { name: 'Thriller' }));
     fireEvent.click(screen.getByRole('button', { name: 'Sci-Fi' }));
+    await pickVideo();
     fireEvent.click(screen.getByRole('button', { name: /add to library/i }));
 
     await waitFor(() => expect(currentPath()).toBe('/'));
@@ -976,6 +999,7 @@ describe('App — a film filed under two genres reaches both rows', () => {
     fireEvent.change(screen.getByRole('textbox', { name: /title/i }), {
       target: { value: 'Rear Window' },
     });
+    await pickVideo();
     fireEvent.click(screen.getByRole('button', { name: /add to library/i }));
 
     await waitFor(() => expect(currentPath()).toBe('/'));

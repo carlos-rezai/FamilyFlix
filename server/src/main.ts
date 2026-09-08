@@ -1,6 +1,7 @@
 import express from 'express';
 
 import { createSqliteStorage } from './library';
+import { createMedia } from './media/createMedia/createMedia';
 import { createPlayback } from './playback/createPlayback/createPlayback';
 import { ffmpegBinary } from './playback/ffmpegBinary/ffmpegBinary';
 import { ffmpegComponent } from './playback/ffmpegComponent/ffmpegComponent';
@@ -30,7 +31,12 @@ const component = binaries === null ? null : ffmpegComponent(binaries);
 const app = express();
 app.use(
   '/api',
-  createApiRouter(storage, MEDIA_PATH, createPlayback(MEDIA_PATH, component))
+  createApiRouter(
+    storage,
+    MEDIA_PATH,
+    createPlayback(MEDIA_PATH, component),
+    createMedia(MEDIA_PATH)
+  )
 );
 
 const server = app.listen(PORT);
