@@ -2,6 +2,9 @@ import type { ReactNode } from 'react';
 
 import { Field, IconSlot, Input } from './TextField.styles';
 
+/** The prototype's own box height — what the search bar is drawn at. */
+const DEFAULT_HEIGHT = 46;
+
 export interface TextFieldProps {
   /** The text shown — the field is controlled by whoever holds the value. */
   value: string;
@@ -12,6 +15,16 @@ export interface TextFieldProps {
    * different one never widens this primitive.
    */
   icon?: ReactNode;
+  /**
+   * How tall the box is, in pixels — the prototype's own 46 unless a caller
+   * asks otherwise. The **Movie form** asks for 48.
+   */
+  height?: number;
+  /**
+   * Whether the box is a pill. `true` is the prototype's default and the search
+   * bar's shape; `false` is the soft corner the **Movie form**'s fields wear.
+   */
+  rounded?: boolean;
   /** Reports the new text, already unwrapped from the change event. */
   onChange: (value: string) => void;
   /**
@@ -27,18 +40,24 @@ export interface TextFieldProps {
  * glyph, and a chrome-less input. No business logic and no state of its own —
  * it draws the value it is handed and says what was typed.
  *
- * `mono` and the prototype's `folder` / `sheet` glyphs are absent by design:
- * they arrive with MovieForm and ImportFlow, the callers that need them.
+ * `height` and `rounded` are the prototype's own two box props, defaulted to
+ * the prototype's own values: a caller that asks for neither — `SearchBar` —
+ * is drawn exactly as it was before they existed.
+ *
+ * `mono` and the prototype's `folder` / `sheet` glyphs are still absent by
+ * design: they arrive with ImportFlow, the caller that needs them.
  */
 export function TextField({
   value,
   placeholder,
   icon,
+  height = DEFAULT_HEIGHT,
+  rounded = true,
   onChange,
   'aria-label': ariaLabel,
 }: TextFieldProps) {
   return (
-    <Field $hasIcon={Boolean(icon)}>
+    <Field $hasIcon={Boolean(icon)} $height={height} $rounded={rounded}>
       {/* Decorative: the icon atom hides itself from the accessibility tree
           unless it is given a title, so the field's name stays the label. */}
       {icon ? <IconSlot>{icon}</IconSlot> : null}

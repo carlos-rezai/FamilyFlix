@@ -6,21 +6,32 @@ import styled from 'styled-components';
  * icon-led field is padded 16px, a bare one 14px — the prototype's own two
  * values, so the glyph and a plain caption both start on the same optical edge.
  *
- * The prototype's `rounded` and `height` props are not here: their non-default
- * values arrive with MovieForm and ImportFlow, and building them now would be
- * two props nothing passes.
+ * The prototype's `height` and `rounded` are now props, because the caller
+ * their absence was waiting for has arrived: the **Movie form**'s metadata
+ * fields are the prototype's 48px box with a soft corner rather than the 46px
+ * pill the search bar wears. Both keep the prototype's own defaults, so the
+ * screen already built on this primitive is drawn exactly as it was.
+ *
+ * **One deliberate deviation, recorded here:** the non-pill corner is
+ * `radius.md` (12px) rather than the prototype's inline `10px`. COMPONENT-SPEC
+ * §1 says every visual value is a token, and 10 is not one.
  */
-export const Field = styled.div<{ $hasIcon: boolean }>`
+export const Field = styled.div<{
+  $hasIcon: boolean;
+  $height: number;
+  $rounded: boolean;
+}>`
   position: relative;
   display: flex;
   align-items: center;
   gap: 10px;
   width: 100%;
-  height: 46px;
+  height: ${({ $height }) => `${$height}px`};
   padding: ${({ $hasIcon }) => ($hasIcon ? '0 16px' : '0 14px')};
   background: ${({ theme }) => theme.colors.surface};
   border: 1px solid ${({ theme }) => theme.colors.border};
-  border-radius: ${({ theme }) => theme.radius.pill};
+  border-radius: ${({ theme, $rounded }) =>
+    $rounded ? theme.radius.pill : theme.radius.md};
 `;
 
 /** Holds the glyph at its own size, centred, in the faintest ink. */

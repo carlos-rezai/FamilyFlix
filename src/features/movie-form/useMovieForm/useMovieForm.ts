@@ -11,13 +11,24 @@ const AFTER_SAVE = '/';
 const YEAR_LENGTH = 4;
 
 /** An empty form: what the **Add context** opens on. */
-const EMPTY: MovieFormValues = { title: '', year: '', genres: [] };
+const EMPTY: MovieFormValues = {
+  title: '',
+  year: '',
+  director: '',
+  cast: '',
+  description: '',
+  genres: [],
+};
 
 export interface UseMovieFormResult {
   /** What is in the fields right now. */
   values: MovieFormValues;
   setTitle: (title: string) => void;
   setYear: (year: string) => void;
+  setDirector: (director: string) => void;
+  /** The **Cast** line as typed, commas and all — never the names in it. */
+  setCast: (cast: string) => void;
+  setDescription: (description: string) => void;
   /** Pick the named genre, or unpick it if it is already picked. */
   toggleGenre: (name: string) => void;
   /** Whether Save can be pressed — the gate, not a validation message. */
@@ -43,6 +54,10 @@ export interface UseMovieFormResult {
  * field stops at four characters, so there is nothing to validate and nothing to
  * report — a half-typed `'19'` is a legitimate state of a field being filled in,
  * which is exactly why it is not held as a number.
+ *
+ * **Every field but the title is optional, so none of them is the gate.** A
+ * director, a cast and a synopsis are all things a maintainer may not have to
+ * hand, and `title` stays the only `NOT NULL` column this form can fill.
  *
  * **Genre is a set the maintainer orders.** A press adds a name to the end or
  * removes it, so the order held is the order picked rather than the pool's —
@@ -73,6 +88,22 @@ export function useMovieForm(): UseMovieFormResult {
     }));
   }, []);
 
+  // Held exactly as typed, all three. Only `year` is filtered on its way in,
+  // because only `year` is a field that cannot hold a non-value — and the cast
+  // in particular must keep the comma just pressed, or the field would delete
+  // the separator while the next name is being typed.
+  const setDirector = useCallback((director: string) => {
+    setValues((current) => ({ ...current, director }));
+  }, []);
+
+  const setCast = useCallback((cast: string) => {
+    setValues((current) => ({ ...current, cast }));
+  }, []);
+
+  const setDescription = useCallback((description: string) => {
+    setValues((current) => ({ ...current, description }));
+  }, []);
+
   const toggleGenre = useCallback((name: string) => {
     setValues((current) => ({
       ...current,
@@ -98,5 +129,16 @@ export function useMovieForm(): UseMovieFormResult {
       .catch(() => setSaving(false));
   }, [canSave, values, navigate]);
 
-  return { values, setTitle, setYear, toggleGenre, canSave, saving, save };
+  return {
+    values,
+    setTitle,
+    setYear,
+    setDirector,
+    setCast,
+    setDescription,
+    toggleGenre,
+    canSave,
+    saving,
+    save,
+  };
 }

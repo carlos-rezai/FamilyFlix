@@ -73,6 +73,18 @@ export const NarrowField = styled(Field)`
 `;
 
 /**
+ * The one field that is a row of its own — the Description, which the prototype
+ * gives the full width of the column rather than a place in a pair.
+ *
+ * `Field`'s `flex: 1` is undone rather than inherited: that value is what makes
+ * two fields share a `FieldRow`, and this one's parent is the column itself, so
+ * growing into it would stretch the box past the 96px the textarea opens at.
+ */
+export const WideField = styled(Field)`
+  flex: 0 0 auto;
+`;
+
+/**
  * A field whose control is not a form element — the genre chips, and the rating
  * picker beside them one slice from now. A `div` rather than the `label` above
  * it: a label wrapping twelve buttons has no single control to hand a click to,

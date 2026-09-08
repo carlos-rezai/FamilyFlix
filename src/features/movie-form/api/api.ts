@@ -1,4 +1,5 @@
 import type { Genre, GenrePoolPayload, Movie, MovieFormValues } from '@/types';
+import { castNames } from '../castNames/castNames';
 
 /** Where a new movie is written. */
 const MOVIES_ENDPOINT = '/api/movies';
@@ -25,16 +26,25 @@ const GENRE_POOL_ENDPOINT = '/api/genres/pool';
  * generated, and naming the header by hand would send `multipart/form-data` with
  * no boundary at all — which `busboy` refuses.
  *
- * Every field travels, including an empty `year`: the server reads `''` as "no
- * year", and a field that vanished when it was cleared could not say a year had
- * been *removed* — the same request shape one slice from now.
+ * Every single-valued field travels, including an empty `year`, `director` or
+ * `description`: the server reads `''` as "not given", and a field that
+ * vanished when it was cleared could not say a year had been *removed* — the
+ * same request shape one slice from now. `description` is the form's word for
+ * the synopsis, and the part is named after the caption the maintainer typed
+ * under; the rename to the column's word happens once, at the route.
  *
- * The genres are the exception, and for the same reason read the other way:
- * they travel as **one `genre` part per picked genre**, in the order they were
- * picked, because that is what a set has always looked like on a form wire. An
- * empty selection sends no part at all rather than an empty one — there is no
- * genre named `''`, so a part carrying one would be a name the server would
- * have to refuse.
+ * The **lists** are the exception, and for the same reason read the other way:
+ * the genres travel as one `genre` part per picked genre, in the order they
+ * were picked, and the cast as one `cast` part per name, in the order they were
+ * typed — because that is what a set has always looked like on a form wire. An
+ * empty one sends no part at all rather than an empty one: there is no genre
+ * named `''` and no cast member with no name, so a part carrying one would be a
+ * value the server would have to refuse.
+ *
+ * The cast is the one value on this form whose typed shape and stored shape
+ * differ, and `castNames` resolves it **here**, on the way out — so the wire
+ * carries the names rather than the typing, and the comma rule exists in
+ * exactly one place rather than also in the route.
  *
  * Rejects if the save did not succeed. There is no snackbar yet, and the form's
  * honest answer to a refused save is to still be standing with everything typed
@@ -44,8 +54,13 @@ export async function createMovie(values: MovieFormValues): Promise<Movie> {
   const body = new FormData();
   body.append('title', values.title);
   body.append('year', values.year);
+  body.append('director', values.director);
+  body.append('description', values.description);
   for (const genre of values.genres) {
     body.append('genre', genre);
+  }
+  for (const name of castNames(values.cast)) {
+    body.append('cast', name);
   }
 
   const response = await fetch(MOVIES_ENDPOINT, { method: 'POST', body });

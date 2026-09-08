@@ -9,6 +9,7 @@ export { ProgressBar, type ProgressBarProps } from './ProgressBar/ProgressBar';
 export { Skeleton, type SkeletonProps } from './Skeleton/Skeleton';
 export { Artwork, type ArtworkProps } from './Artwork/Artwork';
 export { TextField, type TextFieldProps } from './TextField/TextField';
+export { Textarea, type TextareaProps } from './Textarea/Textarea';
 export { HeartIcon } from './Icon/HeartIcon';
 export { HeartOutlineIcon } from './Icon/HeartOutlineIcon';
 export { GearIcon } from './Icon/GearIcon';

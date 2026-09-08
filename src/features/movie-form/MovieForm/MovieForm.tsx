@@ -1,5 +1,11 @@
 import { useGoBack } from '@/hooks/useGoBack/useGoBack';
-import { Button, ChevronLeftIcon, IconButton, TextField } from '@/primitives';
+import {
+  Button,
+  ChevronLeftIcon,
+  IconButton,
+  Textarea,
+  TextField,
+} from '@/primitives';
 import { GenrePicker } from '../GenrePicker/GenrePicker';
 import { useGenrePool } from '../useGenrePool/useGenrePool';
 import { useMovieForm } from '../useMovieForm/useMovieForm';
@@ -12,12 +18,20 @@ import {
   FieldRow,
   Field,
   NarrowField,
+  WideField,
   ChipField,
   FieldLabel,
   FieldHint,
   UnderCaption,
   Actions,
 } from './MovieForm.styles';
+
+/**
+ * The box the prototype draws every field on this form in — 48px tall with a
+ * soft corner, rather than the 46px pill the search bar wears. Written once and
+ * spread onto each field, because they are all the same box.
+ */
+const FIELD_BOX = { height: 48, rounded: false } as const;
 
 /** What Save says, and what it says instead while the write is in flight. */
 const SAVE_LABEL = 'Add to library';
@@ -35,22 +49,27 @@ const SAVING_LABEL = 'Adding…';
  * **What of the prototype is deliberately not here yet**, so its absence reads as
  * a slice boundary rather than as a miss:
  *
- * - Director, Cast, Description and the rating picker — the rest of the
- *   metadata, and the Cancel button beside Save (issues #100 and #101).
+ * - The rating picker, and the Cancel button beside Save (issue #101).
  * - The Files panel, and with it the subtitle line under the heading: it reads
  *   "Pick the video, poster, and any subtitle files for this movie", which would
  *   be the screen describing three controls it does not have. It arrives with
  *   them (issues #102 to #104).
- * - The fields are `TextField` at its pill default rather than the prototype's
- *   48px/12px box: `height` and `rounded` are props that primitive's own styles
- *   file has been waiting to grow for this caller, and they arrive with the
- *   fields that need them (issue #100).
  */
 export function MovieForm() {
   const goBack = useGoBack();
   const genrePool = useGenrePool();
-  const { values, setTitle, setYear, toggleGenre, canSave, saving, save } =
-    useMovieForm();
+  const {
+    values,
+    setTitle,
+    setYear,
+    setDirector,
+    setCast,
+    setDescription,
+    toggleGenre,
+    canSave,
+    saving,
+    save,
+  } = useMovieForm();
 
   return (
     <Sheet>
@@ -73,6 +92,7 @@ export function MovieForm() {
             <Field>
               <FieldLabel>Title</FieldLabel>
               <TextField
+                {...FIELD_BOX}
                 value={values.title}
                 placeholder="Movie title"
                 aria-label="Title"
@@ -82,6 +102,7 @@ export function MovieForm() {
             <NarrowField>
               <FieldLabel>Year</FieldLabel>
               <TextField
+                {...FIELD_BOX}
                 value={values.year}
                 placeholder="2019"
                 aria-label="Year"
@@ -89,6 +110,45 @@ export function MovieForm() {
               />
             </NarrowField>
           </FieldRow>
+
+          <FieldRow>
+            <Field>
+              <FieldLabel>Director</FieldLabel>
+              <TextField
+                {...FIELD_BOX}
+                value={values.director}
+                placeholder="Director name"
+                aria-label="Director"
+                onChange={setDirector}
+              />
+            </Field>
+            <Field>
+              <FieldLabel>
+                Cast <FieldHint>— separate with commas</FieldHint>
+              </FieldLabel>
+              {/* The line is held exactly as it is typed, comma by comma. It is
+                  resolved into names once, on the way out — a field that tidied
+                  itself while it was being typed into would delete the comma
+                  just pressed. */}
+              <TextField
+                {...FIELD_BOX}
+                value={values.cast}
+                placeholder="e.g. Jane Doe, John Roe"
+                aria-label="Cast"
+                onChange={setCast}
+              />
+            </Field>
+          </FieldRow>
+
+          <WideField>
+            <FieldLabel>Description</FieldLabel>
+            <Textarea
+              value={values.description}
+              placeholder="A short synopsis of the movie"
+              aria-label="Description"
+              onChange={setDescription}
+            />
+          </WideField>
 
           <ChipField>
             <FieldLabel>

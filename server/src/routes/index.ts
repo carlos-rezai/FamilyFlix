@@ -329,6 +329,21 @@ function optionalYear(value: string | undefined): number | undefined {
   return Number.isInteger(year) ? year : undefined;
 }
 
+/**
+ * The text a single-valued optional field carries, or `undefined` if there is
+ * nothing in it.
+ *
+ * {@link optionalYear}'s case over a text column: an optional field the
+ * maintainer cleared arrives as `''` rather than as an absent field — that is
+ * what lets an edit say a director was *removed* — and `''` is not a director.
+ * The detail page draws its "—" from `null`, and would draw an empty gap from
+ * an empty string.
+ */
+function optionalText(value: string | undefined): string | undefined {
+  const text = value?.trim() ?? '';
+  return text === '' ? undefined : text;
+}
+
 /** Reject anything that is not a positive whole number of rows. */
 function parseLimit(value: string): number | null {
   const limit = Number(value);
@@ -599,6 +614,18 @@ export function createApiRouter(
     }
 
     const year = optionalYear(onlyField(fields, 'year'));
+    const director = optionalText(onlyField(fields, 'director'));
+
+    // `description` is the form's word for it and `synopsis` is the column's.
+    // The rename happens here, once: the part is named after the caption the
+    // maintainer typed under, and the row after what the detail page reads.
+    const synopsis = optionalText(onlyField(fields, 'description'));
+
+    // The second genuine list on this wire, and read exactly as the genres are:
+    // one `cast` part per name, in the order the parts arrived, because billing
+    // order is the maintainer's. The form resolved its typed line into these
+    // names before sending them, which is why no comma rule exists here.
+    const cast = fields.cast ?? [];
 
     // The genres arrive as one `genre` part per chip, in the order they were
     // picked, and they stay in it: `genres[0]` is the primary tag `addMovie`
@@ -626,6 +653,9 @@ export function createApiRouter(
         // No bytes have been copied anywhere, so there is no path to store.
         videoPath: '',
         ...(year === undefined ? {} : { year }),
+        ...(director === undefined ? {} : { director }),
+        ...(synopsis === undefined ? {} : { synopsis }),
+        ...(cast.length === 0 ? {} : { cast }),
         ...(genres.length === 0 ? {} : { genres }),
       })
     );

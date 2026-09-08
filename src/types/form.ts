@@ -9,15 +9,27 @@
  */
 
 /**
- * Every field the form collects. Title, Year and the picked genres are all it
- * holds today; the remaining metadata fields, the rating and the three file
- * slots join it as their slices land, and this stays the one shape the form,
- * its hook and its wire call agree on.
+ * Every field the form collects. The metadata is all here now; the rating and
+ * the three file slots join it as their slices land, and this stays the one
+ * shape the form, its hook and its wire call agree on.
  */
 export interface MovieFormValues {
   title: string;
   /** Digits only, at most four — the field cannot hold a non-year. */
   year: string;
+  director: string;
+  /**
+   * The cast **as it is being typed** — one line, names separated by commas,
+   * exactly as the field's own caption says. It is the one value here whose
+   * typed shape and stored shape differ, and it is deliberately held as the
+   * typing rather than as the names: a field that tidied itself mid-typing
+   * would delete the comma just pressed. `castNames` resolves it once, at the
+   * wire.
+   */
+  cast: string;
+  /** The synopsis. `description` is the form's word for it; the column's is
+   *  `synopsis`, and the rename happens once, at the route. */
+  description: string;
   /**
    * The genres picked, by name, **in the order they were picked** — not the
    * pool's order. `genres[0]` is the primary tag the repository has preserved
