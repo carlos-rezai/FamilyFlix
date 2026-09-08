@@ -86,9 +86,10 @@ export const WideField = styled(Field)`
 
 /**
  * A field whose control is not a form element — the genre chips, and the rating
- * picker beside them one slice from now. A `div` rather than the `label` above
- * it: a label wrapping twelve buttons has no single control to hand a click to,
- * and clicking its caption would activate the first chip.
+ * picker under them. A `div` rather than the `label` above it: a label wrapping
+ * twelve buttons has no single control to hand a click to, and clicking its
+ * caption would activate the first chip — or, on the strip, score the movie half
+ * a star.
  */
 export const ChipField = styled.div`
   display: block;
@@ -106,10 +107,10 @@ export const FieldLabel = styled.span`
 `;
 
 /**
- * The lighter half of a caption — the prototype's "— pick one or more", and the
- * hint on Cast and Your rating when those land. Faint and unbolded inside a
- * caption that is neither, so it reads as an aside rather than as part of the
- * field's name.
+ * The lighter half of a caption — the prototype's "— pick one or more", "—
+ * separate with commas" and "— click a star (or half)". Faint and unbolded
+ * inside a caption that is neither, so it reads as an aside rather than as part
+ * of the field's name.
  */
 export const FieldHint = styled.span`
   font-weight: 400;
@@ -126,9 +127,9 @@ export const UnderCaption = styled.div`
 `;
 
 /**
- * Where the form's buttons sit. One button stands in it for now — Cancel joins
- * Save with the rest of the actions row (issue #101), and the row is here from
- * the start so that arrival moves nothing already on the screen.
+ * Where the form's buttons sit: Save first, where the eye lands, and Cancel
+ * beside it. The gate closes Save and never the way out — a form the maintainer
+ * cannot finish is exactly the form they most need to leave.
  */
 export const Actions = styled.div`
   display: flex;

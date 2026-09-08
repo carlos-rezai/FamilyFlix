@@ -1,4 +1,5 @@
 import type { Genre, GenrePoolPayload, Movie, MovieFormValues } from '@/types';
+import { toRatingUnits } from '@/utils';
 import { castNames } from '../castNames/castNames';
 
 /** Where a new movie is written. */
@@ -46,6 +47,13 @@ const GENRE_POOL_ENDPOINT = '/api/genres/pool';
  * carries the names rather than the typing, and the comma rule exists in
  * exactly one place rather than also in the route.
  *
+ * The **rating** is the other, and the boundary is the same one: the form holds
+ * the 0–100 percent every star strip in the app fills against, `toRatingUnits`
+ * maps it to the 0–10 the column stores once, here, and no second rating
+ * representation is held anywhere between them. **Unrated** travels as an empty
+ * field rather than as no field, for `year`'s reason over the one column where
+ * getting it wrong scores the film instead of erasing it.
+ *
  * Rejects if the save did not succeed. There is no snackbar yet, and the form's
  * honest answer to a refused save is to still be standing with everything typed
  * still in it, which it cannot do unless this rejects.
@@ -56,6 +64,7 @@ export async function createMovie(values: MovieFormValues): Promise<Movie> {
   body.append('year', values.year);
   body.append('director', values.director);
   body.append('description', values.description);
+  body.append('rating', String(toRatingUnits(values.rating) ?? ''));
   for (const genre of values.genres) {
     body.append('genre', genre);
   }

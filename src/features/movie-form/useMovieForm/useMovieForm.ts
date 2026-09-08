@@ -34,6 +34,8 @@ export interface UseMovieFormResult {
   setDescription: (description: string) => void;
   /** Pick the named genre, or unpick it if it is already picked. */
   toggleGenre: (name: string) => void;
+  /** Score the movie, as a percent, or `null` to put it back to **Unrated**. */
+  setRating: (rating: number | null) => void;
   /** Whether Save can be pressed — the gate, not a validation message. */
   canSave: boolean;
   /** Whether the write is in flight. */
@@ -68,6 +70,12 @@ export interface UseMovieFormResult {
  * this is the first caller in the app that can decide what it is. It is no part
  * of the gate: a film may be saved unfiled, and a filed film with no title is
  * still not a row this form can write.
+ *
+ * **The rating is held as the percent the picker speaks**, and `null` when the
+ * stars have not been touched — never `0`, which is a score. The conversion to
+ * the units the column stores happens once, at the wire, so no second rating
+ * representation exists between the strip and the row. It is no part of the
+ * gate either: an unscored film is a normal row.
  *
  * **The destination is here rather than in the component**, because leaving is
  * part of what saving means: the browse home is the one place the maintainer can
@@ -107,6 +115,10 @@ export function useMovieForm(): UseMovieFormResult {
     setValues((current) => ({ ...current, description }));
   }, []);
 
+  const setRating = useCallback((rating: number | null) => {
+    setValues((current) => ({ ...current, rating }));
+  }, []);
+
   const toggleGenre = useCallback((name: string) => {
     setValues((current) => ({
       ...current,
@@ -140,6 +152,7 @@ export function useMovieForm(): UseMovieFormResult {
     setCast,
     setDescription,
     toggleGenre,
+    setRating,
     canSave,
     saving,
     save,

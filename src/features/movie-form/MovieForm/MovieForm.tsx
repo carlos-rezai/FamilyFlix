@@ -1,3 +1,4 @@
+import { RatingPicker } from '@/components';
 import { useGoBack } from '@/hooks/useGoBack/useGoBack';
 import {
   Button,
@@ -37,6 +38,9 @@ const FIELD_BOX = { height: 48, rounded: false } as const;
 const SAVE_LABEL = 'Add to library';
 const SAVING_LABEL = 'Adding…';
 
+/** The other way out, and the one the gate never closes. */
+const CANCEL_LABEL = 'Cancel';
+
 /**
  * The **Movie form** in its **Add context** — `feat.MovieForm.dc.html`, and the
  * only screen in the app that creates a record rather than amending one.
@@ -46,10 +50,14 @@ const SAVING_LABEL = 'Adding…';
  * also where the second half of the gate lands when there is a video slot for it
  * to check.
  *
+ * **Cancel and the back pill are one behaviour, not two.** Both call the app's
+ * one Back rule, so there are not two ways out of this screen that could drift
+ * apart — and neither writes anything: a maintainer who leaves a half-filled
+ * form leaves with it.
+ *
  * **What of the prototype is deliberately not here yet**, so its absence reads as
  * a slice boundary rather than as a miss:
  *
- * - The rating picker, and the Cancel button beside Save (issue #101).
  * - The Files panel, and with it the subtitle line under the heading: it reads
  *   "Pick the video, poster, and any subtitle files for this movie", which would
  *   be the screen describing three controls it does not have. It arrives with
@@ -66,6 +74,7 @@ export function MovieForm() {
     setCast,
     setDescription,
     toggleGenre,
+    setRating,
     canSave,
     saving,
     save,
@@ -164,6 +173,20 @@ export function MovieForm() {
               />
             </UnderCaption>
           </ChipField>
+
+          <ChipField>
+            <FieldLabel>
+              Your rating <FieldHint>— click a star (or half)</FieldHint>
+            </FieldLabel>
+            {/* The percent goes straight in and straight back out: the strip
+                speaks the scale the form holds, so there is nothing to convert
+                until the wire. Clicking the segment holding the value hands
+                back `null`, which is how a rating is removed everywhere in the
+                app. */}
+            <UnderCaption>
+              <RatingPicker value={values.rating} onChange={setRating} />
+            </UnderCaption>
+          </ChipField>
         </Fields>
 
         <Actions>
@@ -176,6 +199,12 @@ export function MovieForm() {
             size="md"
             disabled={!canSave}
             onClick={save}
+          />
+          <Button
+            label={CANCEL_LABEL}
+            variant="secondary"
+            size="md"
+            onClick={goBack}
           />
         </Actions>
       </Column>

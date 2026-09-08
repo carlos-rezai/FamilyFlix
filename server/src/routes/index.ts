@@ -344,6 +344,35 @@ function optionalText(value: string | undefined): string | undefined {
   return text === '' ? undefined : text;
 }
 
+/** What {@link optionalRating} answers with for a value the column has no room for. */
+const INVALID_RATING = Symbol('invalid rating');
+
+/**
+ * The **rating** a form field carries, in the 0–10 units the column stores —
+ * `undefined` for a movie nobody has scored, and {@link INVALID_RATING} for a
+ * value this route cannot store.
+ *
+ * {@link optionalYear}'s case over the one column where getting it wrong
+ * *scores* the film rather than losing a word of it. An empty field is a movie
+ * left **Unrated**, or one whose rating was removed — and `Number('')` is `0`,
+ * which is a real point on the half-star scale: unreachable from the picker,
+ * but not from this API, and it must survive as itself rather than be swept
+ * into the absence beside it.
+ *
+ * Anything else off the scale is refused rather than quietly read as unrated,
+ * following the unknown genre's reasoning: silence over this column erases a
+ * rating instead of dropping a word.
+ */
+function optionalRating(
+  value: string | undefined
+): number | undefined | typeof INVALID_RATING {
+  if (value === undefined || value.trim() === '') {
+    return undefined;
+  }
+  const rating = Number(value);
+  return isRatingValue(rating) && rating !== null ? rating : INVALID_RATING;
+}
+
 /** Reject anything that is not a positive whole number of rows. */
 function parseLimit(value: string): number | null {
   const limit = Number(value);
@@ -621,6 +650,19 @@ export function createApiRouter(
     // maintainer typed under, and the row after what the detail page reads.
     const synopsis = optionalText(onlyField(fields, 'description'));
 
+    // The one field on this wire that is neither text nor a list, and the one
+    // the form has already converted: it sends the units the column stores, not
+    // the percent its picker speaks. What is left to decide here is only what an
+    // absent, an empty and an off-scale one mean.
+    const postedRating = onlyField(fields, 'rating');
+    const rating = optionalRating(postedRating);
+    if (rating === INVALID_RATING) {
+      res
+        .status(400)
+        .json({ error: `Invalid rating: ${JSON.stringify(postedRating)}` });
+      return;
+    }
+
     // The second genuine list on this wire, and read exactly as the genres are:
     // one `cast` part per name, in the order the parts arrived, because billing
     // order is the maintainer's. The form resolved its typed line into these
@@ -655,6 +697,7 @@ export function createApiRouter(
         ...(year === undefined ? {} : { year }),
         ...(director === undefined ? {} : { director }),
         ...(synopsis === undefined ? {} : { synopsis }),
+        ...(rating === undefined ? {} : { rating }),
         ...(cast.length === 0 ? {} : { cast }),
         ...(genres.length === 0 ? {} : { genres }),
       })
