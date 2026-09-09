@@ -42,11 +42,12 @@ const GENRE_POOL_ENDPOINT = '/api/genres/pool';
  * named `''` and no cast member with no name, so a part carrying one would be a
  * value the server would have to refuse.
  *
- * The **video** is the one part that is not text at all, and the first bytes
- * this app ever sends. It travels in the same request as the fields — one
- * request per save, no upload-on-pick and no draft id — and it is the `File`
- * itself that is appended: a browser gives a name and bytes and never a path,
- * so the bytes are the only thing there is to send.
+ * The **video** and the **poster** are the parts that are not text at all, and
+ * the first bytes this app ever sends. They travel in the same request as the
+ * fields — one request per save, no upload-on-pick and no draft id, however many
+ * slots are filled — and it is the `File` itself that is appended: a browser
+ * gives a name and bytes and never a path, so the bytes are the only thing there
+ * is to send.
  *
  * The cast is the one value on this form whose typed shape and stored shape
  * differ, and `castNames` resolves it **here**, on the way out — so the wire
@@ -83,6 +84,13 @@ export async function createMovie(values: MovieFormValues): Promise<Movie> {
   // rule rather than the fields': there is no file with no bytes.
   if (values.video?.kind === 'picked') {
     body.append('video', values.video.file);
+  }
+  // The second file on the same wire, under its own name and on the same rule —
+  // one request per save however many slots are filled, and an empty one sends
+  // nothing. `poster_path` is nullable, so an absent part is a whole answer
+  // rather than a value the route would have to interpret.
+  if (values.poster?.kind === 'picked') {
+    body.append('poster', values.poster.file);
   }
 
   const response = await fetch(MOVIES_ENDPOINT, { method: 'POST', body });

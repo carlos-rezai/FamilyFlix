@@ -69,6 +69,17 @@ export interface MovieFormValues {
    */
   video: MovieFormFile | null;
   /**
+   * The artwork, or `null` for an empty **File slot** — and unlike the film, an
+   * empty one is a complete answer. `poster_path` is nullable, a film the
+   * maintainer has no artwork to hand for still belongs in the library, and its
+   * card draws the gradient `gradientFromId` already gives it.
+   *
+   * There is no backdrop beside it, and that is not a slot missing: the form
+   * collects the one image a maintainer actually has, and the detail page falls
+   * back to the same gradient for the one it does not.
+   */
+  poster: MovieFormFile | null;
+  /**
    * The genres picked, by name, **in the order they were picked** — not the
    * pool's order. `genres[0]` is the primary tag the repository has preserved
    * since #3, and the chips are the first caller in the app that can decide

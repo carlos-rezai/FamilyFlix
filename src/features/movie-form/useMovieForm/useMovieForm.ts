@@ -23,6 +23,9 @@ const EMPTY: MovieFormValues = {
   rating: null,
   // An empty **File slot**, and the half of the gate a title cannot satisfy.
   video: null,
+  // The other empty slot, and no part of the gate at all: a film with no
+  // artwork to hand still belongs in the library.
+  poster: null,
 };
 
 export interface UseMovieFormResult {
@@ -42,6 +45,10 @@ export interface UseMovieFormResult {
   pickVideo: (file: File) => void;
   /** Empty the video slot again. */
   removeVideo: () => void;
+  /** Put artwork the maintainer chose off their own disk into the poster slot. */
+  pickPoster: (file: File) => void;
+  /** Empty the poster slot again. */
+  removePoster: () => void;
   /** Whether Save can be pressed — the gate, not a validation message. */
   canSave: boolean;
   /** Whether the write is in flight. */
@@ -62,7 +69,8 @@ export interface UseMovieFormResult {
  * could check, and the video half landed beside it the moment that slot existed.
  * A title and a film are now one condition rather than two conditions in two
  * places — and it is a condition rather than a latch, so either half can be
- * taken back.
+ * taken back. **The poster is not a third half**: `poster_path` is nullable, and
+ * a film the maintainer has no artwork for still belongs in the library.
  *
  * **Year is text, and cannot be a non-year.** Non-digits are dropped and the
  * field stops at four characters, so there is nothing to validate and nothing to
@@ -143,6 +151,20 @@ export function useMovieForm(): UseMovieFormResult {
     setValues((current) => ({ ...current, video: null }));
   }, []);
 
+  // The same two lines for the second slot, because a slot is a slot — what
+  // differs between them is what the *route* does with the bytes, and neither
+  // this hook nor the card it draws needs to know that.
+  const pickPoster = useCallback((file: File) => {
+    setValues((current) => ({
+      ...current,
+      poster: { kind: 'picked', file, filename: file.name },
+    }));
+  }, []);
+
+  const removePoster = useCallback(() => {
+    setValues((current) => ({ ...current, poster: null }));
+  }, []);
+
   const toggleGenre = useCallback((name: string) => {
     setValues((current) => ({
       ...current,
@@ -180,6 +202,8 @@ export function useMovieForm(): UseMovieFormResult {
     setRating,
     pickVideo,
     removeVideo,
+    pickPoster,
+    removePoster,
     canSave,
     saving,
     save,

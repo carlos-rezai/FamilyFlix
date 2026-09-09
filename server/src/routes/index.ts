@@ -254,6 +254,28 @@ function streamOffset(value: unknown): number | null {
 }
 
 /**
+ * What a **poster** may be called, lowercased, dots included.
+ *
+ * The `accept` attribute on the picker is a convenience and never a guarantee —
+ * any client can post any part — and `GET /api/images` is `express.static` over
+ * the media root, which serves whatever is under there with the Content-Type its
+ * extension implies. So a stored `.html` would be a page served from the app's
+ * own origin, and what a poster may be called is decided here rather than
+ * trusted from the client.
+ *
+ * It is the extension rather than the part's own `Content-Type` because the
+ * extension is what `express.static` will read on the way back out; a file that
+ * claims one thing and is called another is served as what it is called.
+ */
+const POSTER_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp'];
+
+/** Whether a filename the client chose is one a poster may have. */
+function isPosterFilename(filename: string): boolean {
+  const lower = filename.toLowerCase();
+  return POSTER_EXTENSIONS.some((extension) => lower.endsWith(extension));
+}
+
+/**
  * What a route is handed when a file part arrives: its field name, the name the
  * client gave the file, the bytes themselves, and **the fields that arrived
  * before it**.
@@ -669,6 +691,11 @@ export function createApiRouter(
   // designed `PlayerNotice` state, and refusing an MKV at the door would refuse
   // most of the family folder to spare the family a message the player already
   // draws.
+
+  // **A poster is the one part whose name is re-checked**, and for the opposite
+  // reason: an unplayable film is a message the player draws, but a file under
+  // the media root is served back by `express.static` with the Content-Type its
+  // extension implies — so what a poster may be called is decided here.
   //
   // A body with no title is a 400 rather than an untitled row. The form gates
   // Save on a title, so this is unreachable from the app — but `title` is
@@ -686,6 +713,10 @@ export function createApiRouter(
     // what this request has written into it.
     let folder: string | null = null;
     let videoPath: string | undefined;
+    let posterPath: string | undefined;
+
+    /** The name of a poster part this route will not store, if one arrived. */
+    let rejectedPoster: string | undefined;
 
     /** Take back everything this request put on disk. */
     const rollback = (): void => {
@@ -697,11 +728,20 @@ export function createApiRouter(
     let fields: Record<string, string[]>;
     try {
       fields = await readBody(req, async (name, filename, part, before) => {
-        // Every other part is drained rather than stored: the poster and the
-        // subtitles are #103 and #104, and a part this slice does not know about
-        // is not a reason to refuse the save.
-        if (name !== 'video') {
+        // Every other part is drained rather than stored: the subtitles are
+        // #104, and a part this slice does not know about is not a reason to
+        // refuse the save.
+        if (name !== 'video' && name !== 'poster') {
           part.resume();
+          return;
+        }
+
+        // A poster this route will not serve is not written at all — its bytes
+        // are drained so the parser can reach `close`, and the refusal is
+        // carried out below with the rest of them, on the whole body.
+        if (name === 'poster' && !isPosterFilename(filename)) {
+          part.resume();
+          rejectedPoster = filename;
           return;
         }
 
@@ -709,7 +749,12 @@ export function createApiRouter(
           onlyField(before, 'title')?.trim() ?? '',
           optionalYear(onlyField(before, 'year')) ?? null
         );
-        videoPath = await media.storeUpload(folder, filename, part);
+        const stored = await media.storeUpload(folder, filename, part);
+        if (name === 'video') {
+          videoPath = stored;
+        } else {
+          posterPath = stored;
+        }
       });
     } catch {
       rollback();
@@ -721,6 +766,17 @@ export function createApiRouter(
     if (title === '') {
       rollback();
       res.status(400).json({ error: 'Body must carry a title' });
+      return;
+    }
+
+    // A refusal that can only happen once bytes are down: the video part is
+    // appended before the poster, so the rollback runs on a folder that is
+    // already on disk.
+    if (rejectedPoster !== undefined) {
+      rollback();
+      res.status(400).json({
+        error: `Not a poster image: ${JSON.stringify(rejectedPoster)}`,
+      });
       return;
     }
 
@@ -783,6 +839,9 @@ export function createApiRouter(
       if (videoPath !== undefined) {
         videoPath = renamed.storedPath(videoPath);
       }
+      if (posterPath !== undefined) {
+        posterPath = renamed.storedPath(posterPath);
+      }
     }
 
     try {
@@ -792,6 +851,11 @@ export function createApiRouter(
           // A body with no video part is a row that says it has no film behind
           // it, rather than a save this route refuses.
           videoPath: videoPath ?? '',
+          // No poster part is a film with no artwork, which is a normal row:
+          // `poster_path` stays null and the card draws its gradient. No
+          // backdrop is written either — the form does not collect one, and the
+          // detail page falls back to the same gradient.
+          ...(posterPath === undefined ? {} : { posterPath }),
           ...(year === undefined ? {} : { year }),
           ...(director === undefined ? {} : { director }),
           ...(synopsis === undefined ? {} : { synopsis }),

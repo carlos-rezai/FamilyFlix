@@ -26,4 +26,5 @@ export { VolumeIcon } from './Icon/VolumeIcon';
 export { VolumeMutedIcon } from './Icon/VolumeMutedIcon';
 export { SubtitlesIcon } from './Icon/SubtitlesIcon';
 export { VideoIcon } from './Icon/VideoIcon';
+export { ImageIcon } from './Icon/ImageIcon';
 export { FullscreenIcon } from './Icon/FullscreenIcon';

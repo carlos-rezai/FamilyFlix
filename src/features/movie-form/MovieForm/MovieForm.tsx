@@ -58,10 +58,10 @@ const CANCEL_LABEL = 'Cancel';
  * **What of the prototype is deliberately not here yet**, so its absence reads as
  * a slice boundary rather than as a miss:
  *
- * - The poster and subtitle slots of the Files card, and with them the subtitle
- *   line under the heading: it reads "Pick the video, poster, and any subtitle
- *   files for this movie", which would still be the screen describing two
- *   controls it does not have. They arrive with issues #103 and #104.
+ * - The subtitle rows of the Files card, and with them the line under the
+ *   heading: it reads "Pick the video, poster, and any subtitle files for this
+ *   movie", which would still be the screen describing a control it does not
+ *   have. They arrive with issue #104.
  */
 export function MovieForm() {
   const goBack = useGoBack();
@@ -77,6 +77,8 @@ export function MovieForm() {
     setRating,
     pickVideo,
     removeVideo,
+    pickPoster,
+    removePoster,
     canSave,
     saving,
     save,
@@ -196,6 +198,9 @@ export function MovieForm() {
             video={values.video}
             onPickVideo={pickVideo}
             onRemoveVideo={removeVideo}
+            poster={values.poster}
+            onPickPoster={pickPoster}
+            onRemovePoster={removePoster}
           />
         </Fields>
 
