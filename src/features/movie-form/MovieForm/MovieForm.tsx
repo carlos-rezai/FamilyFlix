@@ -37,20 +37,42 @@ import {
  */
 const FIELD_BOX = { height: 48, rounded: false } as const;
 
-/** What Save says, and what it says instead while the write is in flight. */
-const SAVE_LABEL = 'Add to library';
-const SAVING_LABEL = 'Adding…';
+/**
+ * What the screen calls itself, and what Save says on it — one pair per job,
+ * plus what each says instead while the write is in flight.
+ *
+ * The whole of what the maintainer sees of the difference between the two jobs
+ * is here: one URL, one component, and a heading and a button that say which of
+ * them is in front of them.
+ */
+const ADD = {
+  heading: 'Add a movie',
+  save: 'Add to library',
+  saving: 'Adding…',
+} as const;
+
+const EDIT = {
+  heading: 'Edit details',
+  save: 'Save changes',
+  saving: 'Saving…',
+} as const;
 
 /** The other way out, and the one the gate never closes. */
 const CANCEL_LABEL = 'Cancel';
 
 /**
- * The **Movie form** in its **Add context** — `feat.MovieForm.dc.html`, and the
- * only screen in the app that creates a record rather than amending one.
+ * The **Movie form** — `feat.MovieForm.dc.html`, and the only screen in the app
+ * that writes a whole record.
+ *
+ * **One screen, two jobs.** With no `?movie=` it creates a record; with one it
+ * amends the record that id names. There is no second component and no `/edit`
+ * route: what changes between the two contexts is the heading, the Save button
+ * and where a finished save lands, and the first two of those are the whole of
+ * what is decided here.
  *
  * It renders the form and nothing else: what may be typed, what is in the
- * **File slots**, whether Save can be pressed and where a finished save lands
- * all belong to `useMovieForm`.
+ * **File slots**, whether Save can be pressed, which job this is and where a
+ * finished save lands all belong to `useMovieForm`.
  *
  * **Cancel and the back pill are one behaviour, not two.** Both call the app's
  * one Back rule, so there are not two ways out of this screen that could drift
@@ -81,8 +103,11 @@ export function MovieForm() {
     removeSubtitle,
     canSave,
     saving,
+    editing,
     save,
   } = useMovieForm();
+
+  const copy = editing ? EDIT : ADD;
 
   return (
     <Sheet>
@@ -97,7 +122,7 @@ export function MovieForm() {
           >
             <ChevronLeftIcon size={18} />
           </IconButton>
-          <Heading>Add a movie</Heading>
+          <Heading>{copy.heading}</Heading>
         </HeaderRow>
 
         {/* The prototype's own line under the heading, held back through three
@@ -221,7 +246,7 @@ export function MovieForm() {
               started, and the disabled button is what stops an impatient second
               press writing a second row. */}
           <Button
-            label={saving ? SAVING_LABEL : SAVE_LABEL}
+            label={saving ? copy.saving : copy.save}
             variant="primary"
             size="md"
             disabled={!canSave}

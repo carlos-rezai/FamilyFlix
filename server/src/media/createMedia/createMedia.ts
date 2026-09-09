@@ -7,7 +7,7 @@ import {
   rmSync,
   unlinkSync,
 } from 'node:fs';
-import { basename, join, relative, resolve, sep } from 'node:path';
+import { basename, dirname, join, relative, resolve, sep } from 'node:path';
 import { pipeline } from 'node:stream/promises';
 import type { Readable } from 'node:stream';
 
@@ -54,6 +54,24 @@ export interface Media {
    * overwrite the first one's.
    */
   reserveFolder(title: string, year: number | null): string;
+
+  /**
+   * The **Movie folder** a **Stored path** already lives in, ready to be
+   * written into — or `null` for a path that names nothing under the managed
+   * media directory.
+   *
+   * What an *edit* uses instead of {@link reserveFolder}: a movie already has
+   * somewhere its files live, and giving it a second folder because its title
+   * was corrected would mean moving gigabytes to fix a spelling. The folder is
+   * the movie's, not the title's, so the managed directory's names are allowed
+   * to drift from the library's.
+   *
+   * It answers `null` for exactly what {@link mediaFilePath} answers `null` for
+   * — a path that escaped the root, a file that is not there, a media directory
+   * that does not exist — because it is that same check, asked one directory
+   * up. A caller with nothing here has no folder to reuse and must reserve one.
+   */
+  openFolder(storedPath: string): string | null;
 
   /**
    * Give a reserved folder the name its movie's title asks for, once that
@@ -152,6 +170,14 @@ export function createMedia(mediaPath: string): Media {
       const folder = freeFolder(title, year);
       mkdirSync(folder);
       return folder;
+    },
+
+    openFolder: (storedPath) => {
+      // The containment rule is `mediaFilePath`'s own rather than a second
+      // spelling of it: a stored path that escapes the media root names no
+      // folder here either, whatever it says.
+      const file = mediaFilePath(mediaPath, storedPath);
+      return file === null ? null : dirname(file);
     },
 
     renameFolder: (folder, title, year) => {

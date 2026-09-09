@@ -16,6 +16,7 @@ import {
   type Movie,
   type MovieQuery,
   type MovieSort,
+  type NewSubtitle,
 } from '@/types';
 
 /**
@@ -757,11 +758,17 @@ export function createApiRouter(
     let posterPath: string | undefined;
 
     /**
-     * The tracks this request wrote, in the order their parts arrived — which
-     * is the order they are stored in, because `position` is what
+     * The tracks this request wrote, in the order their **parts arrived** —
+     * which is the order they are stored in, because `position` is what
      * `preferredSubtitle` falls back through.
+     *
+     * The slot is taken when the part arrives and filled when its bytes land,
+     * rather than appended once the write resolves: two writes can be in flight
+     * at once, and the one that finishes first is not necessarily the one that
+     * started first — which would swap two tracks' positions on the family's
+     * player, intermittently and with nothing on screen to say why.
      */
-    const subtitlePaths: string[] = [];
+    const subtitlePaths: (string | undefined)[] = [];
 
     /** The name of a poster part this route will not store, if one arrived. */
     let rejectedPoster: string | undefined;
@@ -806,16 +813,18 @@ export function createApiRouter(
           onlyField(before, 'title')?.trim() ?? '',
           optionalYear(onlyField(before, 'year')) ?? null
         );
+        // The slot is taken here, before the write is awaited: this is the one
+        // part that arrives any number of times, and the order it arrives in is
+        // the track order the movie is stored with.
+        const slot =
+          name === 'subtitle' ? subtitlePaths.push(undefined) - 1 : -1;
         const stored = await media.storeUpload(folder, filename, part);
         if (name === 'video') {
           videoPath = stored;
         } else if (name === 'poster') {
           posterPath = stored;
         } else {
-          // Appended rather than assigned: this is the one part that arrives
-          // any number of times, and the order it arrives in is the track
-          // order the movie is stored with.
-          subtitlePaths.push(stored);
+          subtitlePaths[slot] = stored;
         }
       });
     } catch {
@@ -891,10 +900,17 @@ export function createApiRouter(
     // name — two repeated names travelling in step is what a form has always
     // sent a pair of columns as.
     const languages = fields.subtitleLanguage ?? [];
-    const subtitles = subtitlePaths.map((path, index) => ({
-      path,
-      language: languages[index] ?? DEFAULT_SUBTITLE_LANGUAGE,
-    }));
+    const subtitles: NewSubtitle[] = [];
+    subtitlePaths.forEach((path, index) => {
+      // A slot whose write never landed is no track; every one that arrived is
+      // filled by the time the body has been read.
+      if (path !== undefined) {
+        subtitles.push({
+          path,
+          language: languages[index] ?? DEFAULT_SUBTITLE_LANGUAGE,
+        });
+      }
+    });
 
     // Unreachable from the form, which can only send back names the pool handed
     // it, and checked for the same reason the missing title is: this is the
@@ -962,6 +978,256 @@ export function createApiRouter(
       res.status(500).json({ error: 'Could not add the movie' });
     }
   });
+
+  // The **Movie form**'s other save: the same screen, amending a record that
+  // already exists. There is no `/edit` screen and no second body shape —
+  // `movieFormData` builds this request and the POST above identically, because
+  // it is one form doing two jobs.
+  //
+  // **What is new is the passthrough.** A file the library already holds arrives
+  // as the relative path it already has — `videoPath`, `posterPath` and
+  // `subtitlePath` beside the `video`, `poster` and `subtitle` parts — and only
+  // a file the maintainer just picked arrives as bytes. That is what makes
+  // correcting a typo on a 12 GB film instant instead of minutes, and it is the
+  // whole acceptance criterion this slice is demoable on.
+  //
+  // **The folder is the movie's, never the title's.** An edit writes into the
+  // folder the movie's current `videoPath` already lives in, so renaming a film
+  // moves nothing — the managed directory's names are allowed to drift from the
+  // library's, which is the price of never moving gigabytes to fix a spelling.
+  // A row with no film behind it has no folder to reuse and gets one reserved,
+  // exactly as the POST would.
+  //
+  // **The body describes the whole record**, because the form always sends its
+  // whole state: an emptied field is `''` rather than an absent part, and a slot
+  // that arrives with neither a path nor a part is a slot the maintainer
+  // emptied. A path that arrives is stored exactly as it arrived — every read of
+  // one goes back through `mediaFilePath` or `express.static`, so a path naming
+  // nothing under the media root is a 404 later rather than a way out of the
+  // tree now.
+  //
+  // **A refusal must leave the film already in that folder untouched**, which is
+  // the one thing this route cannot borrow from the POST: rolling back a failed
+  // add removes the folder, and rolling back a failed *edit* can only remove the
+  // files this request itself wrote.
+  //
+  // `PATCH` rather than `PUT` because the row is larger than the form: the watch
+  // state, the favourite flag and the resume position are all columns this
+  // screen has no field for and must not silently reset.
+  router.patch(
+    '/movies/:id',
+    async (req: Request<{ id: string }>, res: Response) => {
+      const existing = movieOr404(storage, req.params.id, res);
+      if (!existing) {
+        // The body is still arriving and nothing here is going to read it.
+        // Draining it lets the connection finish rather than being torn down
+        // under a client that has already been answered.
+        req.resume();
+        return;
+      }
+
+      /** The movie's own folder, opened the moment there are bytes for it. */
+      let folder: string | null = null;
+
+      /** What this request wrote, as distinct from what the movie already had. */
+      let videoUpload: string | undefined;
+      let posterUpload: string | undefined;
+
+      /**
+       * The tracks this request wrote, in the order their **parts arrived**.
+       *
+       * The slot is taken when the part arrives and filled when its bytes land,
+       * rather than appended on the way out: two writes can be in flight at
+       * once, and the one that finishes first is not necessarily the one that
+       * started first — which would silently swap two tracks' positions, and
+       * `position` is what `preferredSubtitle` falls back through.
+       */
+      const subtitleUploads: (string | undefined)[] = [];
+
+      /** The name of a poster part this route will not store, if one arrived. */
+      let rejectedPoster: string | undefined;
+
+      /** The name of a subtitle part this route will not store, if one arrived. */
+      let rejectedSubtitle: string | undefined;
+
+      /**
+       * Take back the bytes this request put on disk — and nothing beside them.
+       *
+       * The POST's rollback removes the folder, because everything in it is
+       * this request's. Here the folder is the movie's own and full of files a
+       * refused edit has no business touching, so the rollback is file by file.
+       */
+      const rollback = (): void => {
+        for (const written of [videoUpload, posterUpload, ...subtitleUploads]) {
+          if (written !== undefined) {
+            media.removeFile(written);
+          }
+        }
+      };
+
+      let fields: Record<string, string[]>;
+      try {
+        fields = await readBody(req, async (name, filename, part, before) => {
+          if (name !== 'video' && name !== 'poster' && name !== 'subtitle') {
+            part.resume();
+            return;
+          }
+
+          // The POST's two name checks, unchanged and for the same reason: a
+          // file under the media root is served back by `express.static` with
+          // the Content-Type its extension implies.
+          if (name === 'poster' && !isPosterFilename(filename)) {
+            part.resume();
+            rejectedPoster = filename;
+            return;
+          }
+
+          if (name === 'subtitle' && !isSubtitleFilename(filename)) {
+            part.resume();
+            rejectedSubtitle = filename;
+            return;
+          }
+
+          // The movie's own folder, and only a reserved one for a row that has
+          // no film behind it to name one.
+          folder ??=
+            media.openFolder(existing.videoPath) ??
+            media.reserveFolder(
+              onlyField(before, 'title')?.trim() ?? existing.title,
+              optionalYear(onlyField(before, 'year')) ?? existing.year
+            );
+
+          const slot =
+            name === 'subtitle' ? subtitleUploads.push(undefined) - 1 : -1;
+          const stored = await media.storeUpload(folder, filename, part);
+
+          if (name === 'video') {
+            videoUpload = stored;
+          } else if (name === 'poster') {
+            posterUpload = stored;
+          } else {
+            subtitleUploads[slot] = stored;
+          }
+        });
+      } catch {
+        rollback();
+        res.status(400).json({ error: 'Body must be multipart/form-data' });
+        return;
+      }
+
+      const title = onlyField(fields, 'title')?.trim() ?? '';
+      if (title === '') {
+        rollback();
+        res.status(400).json({ error: 'Body must carry a title' });
+        return;
+      }
+
+      if (rejectedPoster !== undefined) {
+        rollback();
+        res.status(400).json({
+          error: `Not a poster image: ${JSON.stringify(rejectedPoster)}`,
+        });
+        return;
+      }
+
+      if (rejectedSubtitle !== undefined) {
+        rollback();
+        res.status(400).json({
+          error: `Not a subtitle file: ${JSON.stringify(rejectedSubtitle)}`,
+        });
+        return;
+      }
+
+      const year = optionalYear(onlyField(fields, 'year'));
+      const director = optionalText(onlyField(fields, 'director'));
+      const synopsis = optionalText(onlyField(fields, 'description'));
+
+      const postedRating = onlyField(fields, 'rating');
+      const rating = optionalRating(postedRating);
+      if (rating === INVALID_RATING) {
+        rollback();
+        res
+          .status(400)
+          .json({ error: `Invalid rating: ${JSON.stringify(postedRating)}` });
+        return;
+      }
+
+      const cast = fields.cast ?? [];
+      const genres = fields.genre ?? [];
+
+      const pool = new Set(storage.listGenrePool().map((genre) => genre.name));
+      const unknown = genres.find((name) => !pool.has(name));
+      if (unknown !== undefined) {
+        rollback();
+        res.status(400).json({ error: `Unknown genre: ${unknown}` });
+        return;
+      }
+
+      // A slot that said nothing at all is a slot the maintainer emptied — the
+      // form sends one of the two for every filled slot, so silence is the only
+      // way it can say "there is nothing here now".
+      const videoPath = videoUpload ?? onlyField(fields, 'videoPath') ?? '';
+      const posterPath =
+        posterUpload ?? onlyField(fields, 'posterPath') ?? null;
+
+      // The tracks, read pairwise off two fields with the parts threaded
+      // through them: the i-th language belongs to the i-th path, and an
+      // **empty path** is a row whose file arrived as bytes instead. Fields and
+      // file parts are read back separately, so that placeholder is the only
+      // thing keeping a mixed list in the order it was in on screen.
+      const languages = fields.subtitleLanguage ?? [];
+      const storedPaths = fields.subtitlePath ?? [];
+      const picked = subtitleUploads.filter(
+        (path): path is string => path !== undefined
+      );
+
+      const subtitles: NewSubtitle[] = [];
+      const rows = Math.max(
+        languages.length,
+        storedPaths.length,
+        picked.length
+      );
+      for (let row = 0; row < rows; row += 1) {
+        const stored = storedPaths[row];
+        const path =
+          stored === undefined || stored === '' ? picked.shift() : stored;
+        // A row that named no path and sent no bytes is not a track.
+        if (path === undefined) {
+          continue;
+        }
+        subtitles.push({
+          path,
+          language: languages[row] ?? DEFAULT_SUBTITLE_LANGUAGE,
+        });
+      }
+
+      try {
+        // `null` rather than an omitted key on every nullable column: an
+        // omitted key leaves the column untouched, which is the one thing an
+        // edit must not do with a field the maintainer cleared on purpose.
+        res.json(
+          storage.updateMovie(existing.id, {
+            title,
+            year: year ?? null,
+            director: director ?? null,
+            synopsis: synopsis ?? null,
+            rating: rating ?? null,
+            cast,
+            genres,
+            videoPath,
+            posterPath,
+            subtitles,
+          })
+        );
+      } catch {
+        // `updateMovie` is transactional, so a throw here has left the row as
+        // it was — and the bytes this request wrote go with the edit that did
+        // not happen.
+        rollback();
+        res.status(500).json({ error: 'Could not save the movie' });
+      }
+    }
+  );
 
   // The Favorites toggle. What is left here is what this route alone decides:
   // that a valid body is exactly a boolean, and that the write is `setFavorite`.

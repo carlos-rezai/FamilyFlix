@@ -1,11 +1,25 @@
-import { useCallback, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 
+import { fetchMovie } from '@/api/fetchMovie/fetchMovie';
 import type { MovieFormValues } from '@/types';
-import { createMovie } from '../api/api';
+import { createMovie, updateMovie } from '../api/api';
+import { movieFormValues } from '../formValues/formValues';
 
-/** Where a finished save lands — the shelf the film has just joined. */
-const AFTER_SAVE = '/';
+/** Where a finished add lands — the shelf the film has just joined. */
+const AFTER_ADD = '/';
+
+/** Where a finished edit lands — the page the correction is now visible on. */
+const afterEdit = (id: string) => `/movie/${id}`;
+
+/**
+ * The query parameter that says which movie this screen is amending.
+ *
+ * There is no `/edit` route: COMPONENT-SPEC §6's `editMovie()` reuses this
+ * screen, and the detail page's **Edit details** menu item has linked here
+ * since #26. One URL, two jobs.
+ */
+const MOVIE_PARAM = 'movie';
 
 /** The most digits a year can have. */
 const YEAR_LENGTH = 4;
@@ -72,7 +86,13 @@ export interface UseMovieFormResult {
   canSave: boolean;
   /** Whether the write is in flight. */
   saving: boolean;
-  /** Write the movie, and leave for {@link AFTER_SAVE} once it is stored. */
+  /**
+   * Whether this screen is amending a movie rather than creating one — which
+   * is what the heading and the Save button are named from, and where a
+   * finished save lands.
+   */
+  editing: boolean;
+  /** Write the movie, and leave for the screen it is now visible on. */
   save: () => void;
 }
 
@@ -124,14 +144,59 @@ export interface UseMovieFormResult {
  *
  * **The destination is here rather than in the component**, because leaving is
  * part of what saving means: the browse home is the one place the maintainer can
- * see that the film is really in the library. A *refused* save is the mirror of
- * that — the form stays put with everything still typed in it, which is the only
+ * see that the film is really in the library, and a *correction* is only visible
+ * on the detail page it was started from — so which screen a save lands on is
+ * decided by which job the screen is doing. A *refused* save is the mirror of
+ * both — the form stays put with everything still typed in it, which is the only
  * honest answer available until the snackbar system ships.
+ *
+ * **`?movie=<id>` is the whole of the difference between the two jobs.** With
+ * one, the record it names is read back into the fields and Save amends it; with
+ * none, the fields open empty and Save creates a row. An id that names no movie
+ * is not a record to amend, so the screen falls back to adding — which is also
+ * the only state in which its Save could do anything at all.
  */
 export function useMovieForm(): UseMovieFormResult {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [values, setValues] = useState<MovieFormValues>(EMPTY);
   const [saving, setSaving] = useState(false);
+
+  /** The movie this screen is amending, once its record has been read back. */
+  const [editing, setEditing] = useState<string | null>(null);
+
+  const requested = searchParams.get(MOVIE_PARAM);
+
+  // Read once per id, the way `useGenrePool` reads once per mount: the record
+  // is what fills the fields, and asking again would overwrite whatever the
+  // maintainer had typed since.
+  useEffect(() => {
+    if (requested === null) {
+      setEditing(null);
+      return;
+    }
+
+    let current = true;
+
+    fetchMovie(requested)
+      .then((movie) => {
+        // `null` is a 404 — a stale link rather than a failure — and the screen
+        // only knows there is nothing to edit because it looked.
+        if (!current || movie === null) {
+          return;
+        }
+        setValues(movieFormValues(movie));
+        setEditing(movie.id);
+      })
+      // A record that could not be read is a form that adds, on `useGenrePool`'s
+      // precedent: the prototype designs no error state on this screen, and a
+      // half-filled form would be worse than an empty one.
+      .catch(() => undefined);
+
+    return () => {
+      current = false;
+    };
+  }, [requested]);
 
   const setTitle = useCallback((title: string) => {
     setValues((current) => ({ ...current, title }));
@@ -252,13 +317,16 @@ export function useMovieForm(): UseMovieFormResult {
     }
 
     setSaving(true);
-    createMovie(values)
-      .then(() => navigate(AFTER_SAVE))
-      // The form is still on screen with everything typed still in it, and Save
-      // is offered again. Nothing else is said, because there is nothing yet to
-      // say it with.
-      .catch(() => setSaving(false));
-  }, [canSave, values, navigate]);
+    const written =
+      editing === null
+        ? createMovie(values).then(() => navigate(AFTER_ADD))
+        : updateMovie(editing, values).then(() => navigate(afterEdit(editing)));
+
+    // The form is still on screen with everything typed still in it, and Save
+    // is offered again. Nothing else is said, because there is nothing yet to
+    // say it with.
+    written.catch(() => setSaving(false));
+  }, [canSave, values, navigate, editing]);
 
   return {
     values,
@@ -278,6 +346,7 @@ export function useMovieForm(): UseMovieFormResult {
     removeSubtitle,
     canSave,
     saving,
+    editing: editing !== null,
     save,
   };
 }

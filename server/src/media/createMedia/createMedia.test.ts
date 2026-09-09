@@ -271,6 +271,76 @@ describe('createMedia — reserveFolder', () => {
   });
 });
 
+describe('createMedia — openFolder', () => {
+  it('answers the folder a stored path already lives in', async () => {
+    const { media, root } = sandbox();
+    const reserved = media.reserveFolder('The Lantern Keeper', 2019);
+    const stored = await media.storeUpload(
+      reserved,
+      'lantern.mp4',
+      part('video bytes')
+    );
+
+    // What an *edit* uses instead of `reserveFolder`: the movie already has
+    // somewhere its files live, and a second folder because a title was
+    // corrected would mean moving gigabytes to fix a spelling.
+    expect(media.openFolder(stored)).toBe(
+      join(root, 'the-lantern-keeper-2019')
+    );
+  });
+
+  it('is the folder a newly picked file lands in beside the old ones', async () => {
+    const { media, root } = sandbox();
+    const reserved = media.reserveFolder('The Lantern Keeper', 2019);
+    const film = await media.storeUpload(
+      reserved,
+      'lantern.mp4',
+      part('video bytes')
+    );
+
+    const folder = media.openFolder(film) as string;
+    const poster = await media.storeUpload(
+      folder,
+      'poster.jpg',
+      part('poster bytes')
+    );
+
+    // The round trip that matters: the path this answers is one `storeUpload`
+    // takes, and what comes back out of it resolves like every other stored
+    // path in the library.
+    expect(poster).toBe('the-lantern-keeper-2019/poster.jpg');
+    expect(readFileSync(join(root, poster), 'utf8')).toBe('poster bytes');
+  });
+
+  it('answers nothing for a path with no file behind it', () => {
+    const { media } = sandbox();
+
+    // A row pointing at bytes that are gone has no folder to reuse, and the
+    // caller reserves one rather than writing into a guess.
+    expect(media.openFolder('the-lantern-keeper-2019/lantern.mp4')).toBeNull();
+  });
+
+  it('answers nothing for the empty path a filmless row carries', () => {
+    const { media } = sandbox();
+
+    // `video_path` is `NOT NULL`, so a row written with no film behind it
+    // carries `''` — which resolves to the media root itself and is not a
+    // movie folder.
+    expect(media.openFolder('')).toBeNull();
+  });
+
+  it('answers nothing for a path that escapes the managed media directory', () => {
+    const { media, outside } = sandbox();
+    writeFileSync(join(outside, 'elsewhere.mp4'), 'not ours');
+
+    // `mediaFilePath`'s own rule, asked one directory up: the containment test
+    // is not spelled a second time here, because a second spelling is where
+    // the two drift apart.
+    expect(media.openFolder('../elsewhere/elsewhere.mp4')).toBeNull();
+    expect(media.openFolder(join(outside, 'elsewhere.mp4'))).toBeNull();
+  });
+});
+
 describe('createMedia — removeFolder', () => {
   it('removes the folder and everything one request wrote into it', async () => {
     const { media } = sandbox();

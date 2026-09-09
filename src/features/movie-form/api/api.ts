@@ -1,9 +1,13 @@
 import type { Genre, GenrePoolPayload, Movie, MovieFormValues } from '@/types';
-import { toRatingUnits } from '@/utils';
-import { castNames } from '../castNames/castNames';
+
+import { movieFormData } from '../formValues/formValues';
 
 /** Where a new movie is written. */
 const MOVIES_ENDPOINT = '/api/movies';
+
+/** Where one movie that already exists is amended. */
+const movieEndpoint = (id: string) =>
+  `${MOVIES_ENDPOINT}/${encodeURIComponent(id)}`;
 
 /** Where the genres a film may be filed under are read — not the genre list. */
 const GENRE_POOL_ENDPOINT = '/api/genres/pool';
@@ -17,109 +21,63 @@ const GENRE_POOL_ENDPOINT = '/api/genres/pool';
  * of a form. Stretching it to carry a record would make one route's shape
  * everybody's.
  *
- * The body is a `FormData`, so the request is `multipart/form-data` **from this
- * slice** — before there is a single file to put in it. That is the point: the
- * video, the poster and the subtitle parts arrive behind this same call, and a
- * contract settled now is not one replaced under its callers later.
+ * The body is `movieFormData`'s, so the request is `multipart/form-data` and
+ * every rule about what travels how lives in that one pure unit — the same body
+ * {@link updateMovie} sends, because it is the same form.
  *
  * No `Content-Type` header is set, and that is not an omission. A multipart body
  * is nothing without its boundary, only the platform knows the boundary it
  * generated, and naming the header by hand would send `multipart/form-data` with
  * no boundary at all — which `busboy` refuses.
  *
- * Every single-valued field travels, including an empty `year`, `director` or
- * `description`: the server reads `''` as "not given", and a field that
- * vanished when it was cleared could not say a year had been *removed* — the
- * same request shape one slice from now. `description` is the form's word for
- * the synopsis, and the part is named after the caption the maintainer typed
- * under; the rename to the column's word happens once, at the route.
- *
- * The **lists** are the exception, and for the same reason read the other way:
- * the genres travel as one `genre` part per picked genre, in the order they
- * were picked, and the cast as one `cast` part per name, in the order they were
- * typed — because that is what a set has always looked like on a form wire. An
- * empty one sends no part at all rather than an empty one: there is no genre
- * named `''` and no cast member with no name, so a part carrying one would be a
- * value the server would have to refuse.
- *
- * The **subtitles** are both of those at once — a list, and files — and they
- * travel as the two rules read together: one `subtitle` part per attached
- * track and one `subtitleLanguage` field beside it, in the order the rows are
- * held, so the i-th language belongs to the i-th file. The row's own `key`
- * never leaves the browser; the part order is what pairs a language with its
- * file, and what the track order is stored from.
- *
- * The **video** and the **poster** are the parts that are not text at all, and
- * the first bytes this app ever sends. They travel in the same request as the
- * fields — one request per save, no upload-on-pick and no draft id, however many
- * slots are filled — and it is the `File` itself that is appended: a browser
- * gives a name and bytes and never a path, so the bytes are the only thing there
- * is to send.
- *
- * The cast is the one value on this form whose typed shape and stored shape
- * differ, and `castNames` resolves it **here**, on the way out — so the wire
- * carries the names rather than the typing, and the comma rule exists in
- * exactly one place rather than also in the route.
- *
- * The **rating** is the other, and the boundary is the same one: the form holds
- * the 0–100 percent every star strip in the app fills against, `toRatingUnits`
- * maps it to the 0–10 the column stores once, here, and no second rating
- * representation is held anywhere between them. **Unrated** travels as an empty
- * field rather than as no field, for `year`'s reason over the one column where
- * getting it wrong scores the film instead of erasing it.
- *
  * Rejects if the save did not succeed. There is no snackbar yet, and the form's
  * honest answer to a refused save is to still be standing with everything typed
  * still in it, which it cannot do unless this rejects.
  */
 export async function createMovie(values: MovieFormValues): Promise<Movie> {
-  const body = new FormData();
-  body.append('title', values.title);
-  body.append('year', values.year);
-  body.append('director', values.director);
-  body.append('description', values.description);
-  body.append('rating', String(toRatingUnits(values.rating) ?? ''));
-  for (const genre of values.genres) {
-    body.append('genre', genre);
-  }
-  for (const name of castNames(values.cast)) {
-    body.append('cast', name);
-  }
-  // The **Picked file** itself, so the platform streams the part rather than
-  // reading it into the body — which is what keeps a 12 GB film out of memory
-  // on this end of the wire. An empty slot sends no part at all, on the lists'
-  // rule rather than the fields': there is no file with no bytes.
-  if (values.video?.kind === 'picked') {
-    body.append('video', values.video.file);
-  }
-  // The second file on the same wire, under its own name and on the same rule —
-  // one request per save however many slots are filled, and an empty one sends
-  // nothing. `poster_path` is nullable, so an absent part is a whole answer
-  // rather than a value the route would have to interpret.
-  if (values.poster?.kind === 'picked') {
-    body.append('poster', values.poster.file);
-  }
-  // The tracks, and the first thing on this wire that is a list *of files*: one
-  // `subtitle` part per row and one `subtitleLanguage` field per row, appended
-  // in step, so the i-th language belongs to the i-th file. That is the shape
-  // `genre` and `cast` already use, read pairwise — no index in a part name, no
-  // JSON smuggled into a field, and no second request.
-  //
-  // The order is not decoration: `position` is what `preferredSubtitle` falls
-  // back through, so the order the parts are sent in is the order the family
-  // gets. An empty list sends nothing at all, on the same rule as the two slots
-  // above and the genres beside them.
-  for (const subtitle of values.subtitles) {
-    if (subtitle.file.kind === 'picked') {
-      body.append('subtitle', subtitle.file.file);
-      body.append('subtitleLanguage', subtitle.language);
-    }
-  }
-
-  const response = await fetch(MOVIES_ENDPOINT, { method: 'POST', body });
+  const response = await fetch(MOVIES_ENDPOINT, {
+    method: 'POST',
+    body: movieFormData(values),
+  });
 
   if (!response.ok) {
     throw new Error(`POST ${MOVIES_ENDPOINT} failed: ${response.status}`);
+  }
+
+  return (await response.json()) as Movie;
+}
+
+/**
+ * Amends one movie that already exists, and answers with the record as it now
+ * stands.
+ *
+ * {@link createMovie}'s sibling in every respect but the verb and the id: the
+ * same screen sends it, so it sends the same body — which is what makes the
+ * **Stored file** passthrough work at all. A film, a poster and a set of tracks
+ * the library already holds travel as the paths they already have, so fixing a
+ * typo on a 12 GB film moves nothing on disk.
+ *
+ * A `PATCH` rather than a `PUT` because the record it amends is larger than the
+ * form that sends it: the watch state, the favourite flag and the resume
+ * position are all columns on this row that this screen has no field for and
+ * must not silently reset.
+ *
+ * Rejects on anything but success, for {@link createMovie}'s reason — and the
+ * refused edit is the one that most needs the form left standing, because the
+ * correction in it is the only copy there is.
+ */
+export async function updateMovie(
+  id: string,
+  values: MovieFormValues
+): Promise<Movie> {
+  const endpoint = movieEndpoint(id);
+  const response = await fetch(endpoint, {
+    method: 'PATCH',
+    body: movieFormData(values),
+  });
+
+  if (!response.ok) {
+    throw new Error(`PATCH ${endpoint} failed: ${response.status}`);
   }
 
   return (await response.json()) as Movie;
