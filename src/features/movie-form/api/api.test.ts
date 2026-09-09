@@ -72,6 +72,7 @@ function typed(values: Partial<MovieFormValues> = {}): MovieFormValues {
     // An empty **File slot**, which is what the **Add context** opens on and
     // what every test above this slice is about.
     video: null,
+    poster: null,
     ...values,
   };
 }
@@ -480,5 +481,70 @@ describe('createMovie — the video', () => {
     await createMovie(typed({ title: 'Rear Window', video: PICKED }));
 
     expect(sentFields().has('video')).toBe(true);
+  });
+});
+
+// --- 11 — Movie form, Phase 4: the poster part (issue #103) ------------------
+//
+// A second file on the same wire, and deliberately nothing new about it: it is
+// appended the way the video is, under its own name, and an empty slot sends no
+// part at all. What these tests are really guarding is that the contract
+// settled in the tracer slice absorbed a second file without changing shape.
+
+/** The artwork beside the film in the same folder. */
+const ARTWORK = new File(['image bytes'], 'lantern-poster.jpg', {
+  type: 'image/jpeg',
+});
+
+/** The poster slot holding it. */
+const PICKED_POSTER: MovieFormFile = {
+  kind: 'picked',
+  file: ARTWORK,
+  filename: 'lantern-poster.jpg',
+};
+
+describe('createMovie — the poster', () => {
+  it('sends the picked poster as the poster part', async () => {
+    fetchMock.mockResolvedValue(createdResponse(CREATED));
+
+    await createMovie(
+      typed({ title: 'The Lantern Keeper', poster: PICKED_POSTER })
+    );
+
+    expect(sentFields().get('poster')).toBe(ARTWORK);
+  });
+
+  it('sends a poster part only when there is artwork in the slot', async () => {
+    fetchMock.mockResolvedValue(createdResponse(CREATED));
+
+    await createMovie(typed({ title: 'Rear Window', poster: null }));
+
+    // The lists' rule rather than the fields': `year` travels empty so an edit
+    // can say a year was removed, but there is no file with no bytes — and
+    // `poster_path` is nullable, so an absent part is a complete answer.
+    expect(sentFields().has('poster')).toBe(false);
+  });
+
+  it('sends the film and its artwork in the same request', async () => {
+    fetchMock.mockResolvedValue(createdResponse(CREATED));
+
+    await createMovie(
+      typed({
+        title: 'The Lantern Keeper',
+        year: '2019',
+        genres: ['Drama'],
+        video: PICKED,
+        poster: PICKED_POSTER,
+      })
+    );
+
+    // Story 36 with two files in it. One request per save however many slots
+    // are filled, and the fields still travel beside them.
+    const fields = sentFields();
+    expect(fields.get('video')).toBe(LANTERN);
+    expect(fields.get('poster')).toBe(ARTWORK);
+    expect(fields.get('title')).toBe('The Lantern Keeper');
+    expect(fields.getAll('genre')).toEqual(['Drama']);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });

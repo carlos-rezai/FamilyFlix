@@ -4598,3 +4598,270 @@ describe('POST /api/movies — the added movie plays', () => {
     );
   });
 });
+
+// --- 11 — Movie form, Phase 4: the poster part (issue #103) ------------------
+//
+// The same route, the same domain, a second kind of file — and the point of the
+// slice is how little of either had to change. A poster lands in the movie's own
+// folder through the same `storeUpload`, the row remembers the same shape of
+// **Stored path**, and `GET /api/images` serves it **without one line of that
+// route changing**, because a relative path under the media root is the one rule
+// `express.static(mediaPath)` already enforces.
+//
+// The one genuinely new rule is the re-check. An accept list is a convenience on
+// the picker and never a guarantee, and `/api/images` will serve whatever is
+// under the root with the Content-Type its extension implies — so what a poster
+// may be called is decided here, on the server, by extension.
+
+/** Bytes that are not a film — the artwork beside it in the same folder. */
+const POSTER_BYTES = Buffer.from('poster bytes');
+
+/** One poster part, the way the browser hands `FileField`'s pick to `FormData`. */
+function posterPart(
+  filename = 'poster.jpg',
+  bytes: Buffer = POSTER_BYTES,
+  type = 'image/jpeg'
+): File {
+  return new File([new Uint8Array(bytes)], filename, { type });
+}
+
+/** Everything inside one movie's folder, sorted. */
+const filesIn = (media: string, folder: string): string[] =>
+  readdirSync(join(media, folder)).sort();
+
+describe('POST /api/movies — the poster part', () => {
+  it('stores a relative path in the movie’s own folder', async () => {
+    const { baseUrl } = freshApi();
+
+    const movie = await createdFromParts(baseUrl, [
+      ...KEEPER,
+      ['video', filePart()],
+      ['poster', posterPart()],
+    ]);
+
+    // The video part's rule, unchanged for a second kind of file: relative,
+    // under the root, beside the film it belongs to.
+    expect(isAbsolute(movie.posterPath ?? '')).toBe(false);
+    expect(movie.posterPath).toBe('the-lantern-keeper-2019/poster.jpg');
+  });
+
+  it('writes the bytes it was sent', async () => {
+    const { baseUrl, media } = freshApi();
+
+    const movie = await createdFromParts(baseUrl, [
+      ...KEEPER,
+      ['video', filePart()],
+      ['poster', posterPart()],
+    ]);
+
+    expect(readFileSync(storedFile(media, movie.posterPath ?? ''))).toEqual(
+      POSTER_BYTES
+    );
+  });
+
+  it('puts the film and its artwork in one folder from one request', async () => {
+    const { baseUrl, media } = freshApi();
+
+    await createdFromParts(baseUrl, [
+      ...KEEPER,
+      ['video', filePart()],
+      ['poster', posterPart()],
+    ]);
+
+    // The family's one-folder-per-movie convention, which is what the managed
+    // directory has been copying since the seed wrote it.
+    expect(folders(media)).toEqual(['the-lantern-keeper-2019']);
+    expect(filesIn(media, 'the-lantern-keeper-2019')).toEqual([
+      'lantern.mp4',
+      'poster.jpg',
+    ]);
+  });
+
+  it('reads the stored path back through GET /api/movies/:id', async () => {
+    const { baseUrl } = freshApi();
+
+    const created = await createdFromParts(baseUrl, [
+      ...KEEPER,
+      ['video', filePart()],
+      ['poster', posterPart()],
+    ]);
+
+    const response = await fetch(`${baseUrl}/api/movies/${created.id}`);
+
+    const read = (await response.json()) as Movie;
+    expect(read.posterPath).toBe(created.posterPath);
+    expect(read.posterPath).toBe('the-lantern-keeper-2019/poster.jpg');
+  });
+
+  it('keeps the filename the maintainer picked', async () => {
+    const { baseUrl } = freshApi();
+
+    const movie = await createdFromParts(baseUrl, [
+      ...KEEPER,
+      ['video', filePart()],
+      ['poster', posterPart('The Lantern Keeper (2019) poster.png')],
+    ]);
+
+    expect(movie.posterPath).toBe(
+      'the-lantern-keeper-2019/The Lantern Keeper (2019) poster.png'
+    );
+  });
+
+  it('accepts every extension the picker offers', async () => {
+    const { baseUrl } = freshApi();
+
+    for (const extension of ['.jpg', '.jpeg', '.png', '.webp']) {
+      const movie = await createdFromParts(baseUrl, [
+        ...KEEPER,
+        ['video', filePart()],
+        ['poster', posterPart(`poster${extension}`)],
+      ]);
+
+      expect(movie.posterPath).toContain(`poster${extension}`);
+    }
+  });
+
+  it('creates a movie with no poster at all', async () => {
+    const { baseUrl } = freshApi();
+
+    const movie = await createdFromParts(baseUrl, [
+      ...KEEPER,
+      ['video', filePart()],
+    ]);
+
+    // Story 63: a film the maintainer has no artwork for still gets into the
+    // library, and `null` is what the card draws its gradient from.
+    expect(movie.posterPath).toBeNull();
+  });
+});
+
+describe('POST /api/movies — the added poster is served', () => {
+  it('answers its own bytes on the images route that already existed', async () => {
+    const { baseUrl } = freshApi();
+    const movie = await createdFromParts(baseUrl, [
+      ...KEEPER,
+      ['video', filePart()],
+      ['poster', posterPart()],
+    ]);
+
+    const response = await fetch(`${baseUrl}/api/images/${movie.posterPath}`);
+
+    // Stories 23 and 41, and the demoable end of the slice: the URL the card
+    // and the detail page build from `posterPath` resolves to the file the save
+    // wrote. Not one line of `/api/images` changed for this — it is
+    // `express.static` over the media root, and the save stored a path relative
+    // under it.
+    expect(response.status).toBe(200);
+    expect(Buffer.from(await response.arrayBuffer())).toEqual(POSTER_BYTES);
+  });
+
+  it('leaves the movie without a backdrop of any kind', async () => {
+    const { baseUrl } = freshApi();
+
+    const movie = await createdFromParts(baseUrl, [
+      ...KEEPER,
+      ['video', filePart()],
+      ['poster', posterPart()],
+    ]);
+
+    // No backdrop field is invented on the form: `MoviePage` falls back to the
+    // gradient, which is the prototype's own answer for a movie without one.
+    expect(movie.backdropPath).toBeNull();
+  });
+});
+
+describe('POST /api/movies — a poster that is not a picture', () => {
+  it('refuses the save rather than storing it', async () => {
+    const { baseUrl } = freshApi();
+
+    const response = await postParts(baseUrl, [
+      ...KEEPER,
+      ['video', filePart()],
+      ['poster', posterPart('evil.html', POSTER_BYTES, 'text/html')],
+    ]);
+
+    // The accept list is a convenience on the picker; this is the rule. A file
+    // under the media root is served by `express.static` with the Content-Type
+    // its extension implies, so a stored `.html` would be a page served from
+    // the app's own origin — which is why the extension is re-checked here
+    // rather than trusted from the client.
+    expect(response.status).toBe(400);
+    const body = (await response.json()) as { error?: unknown };
+    expect(typeof body.error).toBe('string');
+    expect(body.error).not.toBe('');
+  });
+
+  it('leaves no row and no bytes behind', async () => {
+    const { baseUrl, media } = freshApi();
+
+    await postParts(baseUrl, [
+      ['video', filePart()],
+      ...KEEPER,
+      ['poster', posterPart('evil.html', POSTER_BYTES, 'text/html')],
+    ]);
+
+    // The video is appended first, so it is already streamed to disk when the
+    // poster is refused — the same rollback the unknown genre exercises, at a
+    // refusal that can only happen once bytes are down.
+    expect(await movieTitles(baseUrl, 'recently-added')).toEqual([]);
+    expect(folders(media)).toEqual([]);
+
+    // The contrast is what makes that absence mean anything: the same body with
+    // real artwork in it does leave a folder behind.
+    await createdFromParts(baseUrl, [
+      ['video', filePart()],
+      ...KEEPER,
+      ['poster', posterPart()],
+    ]);
+    expect(folders(media)).toEqual(['the-lantern-keeper-2019']);
+  });
+
+  it('refuses a poster with no extension at all', async () => {
+    const { baseUrl, media } = freshApi();
+
+    const response = await postParts(baseUrl, [
+      ...KEEPER,
+      ['video', filePart()],
+      ['poster', posterPart('poster', POSTER_BYTES, '')],
+    ]);
+
+    // There is nothing to re-check, which is a refusal rather than a pass: the
+    // check is on what the file is called, and a file called nothing in
+    // particular has not claimed to be a picture.
+    expect(response.status).toBe(400);
+    expect(folders(media)).toEqual([]);
+  });
+});
+
+describe('POST /api/movies — a poster filename this route did not write', () => {
+  it('writes a crafted name inside the movie folder and nowhere else', async () => {
+    const { baseUrl, media } = freshApi();
+
+    const movie = await createdFromParts(baseUrl, [
+      ...KEEPER,
+      ['video', filePart()],
+      ['poster', posterPart('../../evil.jpg')],
+    ]);
+
+    // Story 60, at the second slot. The client's filename is never trusted into
+    // a path, and the sanitising is `storeUpload`'s own rather than a second
+    // spelling of it beside the poster.
+    expect(movie.posterPath).toBe('the-lantern-keeper-2019/evil.jpg');
+    expect(folders(media)).toEqual(['the-lantern-keeper-2019']);
+    expect(existsSync(join(media, '..', 'evil.jpg'))).toBe(false);
+  });
+
+  it('resolves that stored path back to the file it wrote', async () => {
+    const { baseUrl, media } = freshApi();
+
+    const movie = await createdFromParts(baseUrl, [
+      ...KEEPER,
+      ['video', filePart()],
+      ['poster', posterPart('..\\..\\windows\\evil.png')],
+    ]);
+
+    expect(readFileSync(storedFile(media, movie.posterPath ?? ''))).toEqual(
+      POSTER_BYTES
+    );
+  });
+});

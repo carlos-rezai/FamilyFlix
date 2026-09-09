@@ -139,6 +139,26 @@ async function pickVideo(file: File = videoFile()): Promise<File> {
   return file;
 }
 
+/** The poster **File slot**'s own picker, offered while the slot is empty. */
+const posterPicker = () =>
+  screen.getByLabelText(/choose poster image/i) as HTMLInputElement;
+
+/** The artwork beside the film in the same folder. */
+const posterFile = (name = 'lantern-poster.jpg') =>
+  new File(['image bytes'], name, { type: 'image/jpeg' });
+
+/**
+ * Fill the poster slot.
+ *
+ * No test that presses Save has to call this, which is the whole of what this
+ * slice did *not* change about the gate: a film with no artwork to hand is a
+ * film that still gets into the library.
+ */
+async function pickPoster(file: File = posterFile()): Promise<File> {
+  await userEvent.upload(posterPicker(), file, { applyAccept: false });
+  return file;
+}
+
 /** Every genre chip on the form, in the order it is drawn. */
 function chips(): HTMLButtonElement[] {
   return (screen.getAllByRole('button') as HTMLButtonElement[]).filter((el) =>
@@ -1172,5 +1192,169 @@ describe('MovieForm — saving the video', () => {
     await waitFor(() => expect(save().disabled).toBe(false));
     expect(currentPath()).toBe('/add');
     expect(pickedFilename()).not.toBeNull();
+  });
+});
+
+// --- 11 — Movie form, Phase 4: the poster slot (issue #103) ------------------
+//
+// The second **File slot**, and the one the movie stops being a gradient over.
+// It is the same molecule the video slot introduced, standing in for a
+// different kind of file — so what is asserted here is only what the *screen*
+// does with a second slot: that the two are told apart, that the save carries
+// both, and that the gate did not quietly grow a third condition.
+//
+// **The poster is not part of the Save gate**, and the test that says so is the
+// point of story 63: `poster_path` is nullable, a film the maintainer has no
+// artwork for still belongs in the library, and its card draws the gradient
+// `gradientFromId` already gives it.
+
+/** The poster slot's remove control, offered only while the slot is filled. */
+const removePoster = () =>
+  screen.getByRole('button', { name: /remove poster/i }) as HTMLButtonElement;
+
+/** The poster filename the slot is showing, or `null` while it is empty. */
+const pickedPoster = () => screen.queryByText('lantern-poster.jpg');
+
+/** The poster part of the save, or `undefined` if none was sent. */
+const savedPoster = () => savedFields()?.get('poster');
+
+describe('MovieForm — the poster slot', () => {
+  it('draws the poster slot beside the video one', async () => {
+    await renderForm();
+
+    // Both slots of the prototype's Files card, in the order it draws them.
+    expect(screen.getByText(/^video$/i)).toBeDefined();
+    expect(screen.getByText(/^poster$/i)).toBeDefined();
+  });
+
+  it('offers pictures to the file dialog', async () => {
+    await renderForm();
+
+    // Story 23. Every image container a poster arrives in has a MIME type, so
+    // unlike the video slot's list this is the whole of what the picker has to
+    // say — and the server re-checks by extension either way.
+    expect(posterPicker().getAttribute('accept')).toBe('image/*');
+  });
+
+  it('shows the filename of the poster that was picked', async () => {
+    await renderForm();
+
+    await pickPoster();
+
+    expect(pickedPoster()).not.toBeNull();
+  });
+
+  it('keeps the two slots apart when both are filled', async () => {
+    await renderForm();
+
+    await pickVideo();
+    await pickPoster();
+
+    // Two files, two filenames, two named ✕s: a screen that showed one of them
+    // would leave the maintainer unable to tell which file went where.
+    expect(pickedFilename()).not.toBeNull();
+    expect(pickedPoster()).not.toBeNull();
+    expect(removeVideo()).toBeDefined();
+    expect(removePoster()).toBeDefined();
+  });
+
+  it('returns the poster slot to empty when its remove is pressed', async () => {
+    await renderForm();
+    await pickVideo();
+    await pickPoster();
+
+    fireEvent.click(removePoster());
+
+    // Story 30 again, at the second slot — and the film is untouched, because
+    // the ✕ pressed was the poster's.
+    expect(pickedPoster()).toBeNull();
+    expect(posterPicker()).toBeDefined();
+    expect(pickedFilename()).not.toBeNull();
+  });
+});
+
+describe('MovieForm — the save gate, unchanged by the poster', () => {
+  it('opens on a title and a film with no poster at all', async () => {
+    await renderForm();
+
+    fireEvent.change(titleField(), { target: { value: 'The Lantern Keeper' } });
+    await pickVideo();
+
+    // Story 63. `poster_path` is nullable and a film the maintainer has no
+    // artwork for still belongs in the library — so the gate is the two halves
+    // it already had, and this slot is not a third.
+    expect(save().disabled).toBe(false);
+  });
+
+  it('does not open on a poster alone', async () => {
+    await renderForm();
+
+    await pickPoster();
+
+    expect(save().disabled).toBe(true);
+  });
+});
+
+describe('MovieForm — saving the poster', () => {
+  it('sends the picked poster as the poster part', async () => {
+    await renderForm();
+    fireEvent.change(titleField(), { target: { value: 'The Lantern Keeper' } });
+    await pickVideo();
+    const artwork = await pickPoster();
+
+    fireEvent.click(save());
+
+    await waitFor(() => expect(savedFields()).toBeDefined());
+    // The file itself, on the video part's own rule: a browser `File` is a name
+    // and bytes and never a path.
+    expect(savedPoster()).toBe(artwork);
+  });
+
+  it('carries the film and its artwork in one request', async () => {
+    await renderForm();
+    fireEvent.change(titleField(), { target: { value: 'The Lantern Keeper' } });
+    await pickVideo();
+    await pickPoster();
+
+    fireEvent.click(save());
+
+    await waitFor(() => expect(savedFields()).toBeDefined());
+    // Story 36 with two files in it: still one request per save, no
+    // upload-on-pick and no draft id, however many slots are filled.
+    const fields = savedFields() as FormData;
+    expect(fields.get('video')).toBeInstanceOf(File);
+    expect(fields.get('poster')).toBeInstanceOf(File);
+    expect(saveRequests()).toHaveLength(1);
+  });
+
+  it('sends no poster part when the slot was left empty', async () => {
+    await renderForm();
+    fireEvent.change(titleField(), { target: { value: 'The Lantern Keeper' } });
+    await pickVideo();
+
+    fireEvent.click(save());
+
+    await waitFor(() => expect(savedFields()).toBeDefined());
+    // No part at all rather than an empty one — a file with no bytes is not a
+    // thing the server could store, and `poster_path` stays null.
+    expect(savedPoster()).toBeNull();
+  });
+
+  it('leaves the poster in the slot when the save fails', async () => {
+    answerSave = () => Promise.resolve(serverErrorResponse());
+    await renderForm();
+    fireEvent.change(titleField(), { target: { value: 'The Lantern Keeper' } });
+    await pickVideo();
+    await pickPoster();
+
+    fireEvent.click(save());
+
+    // The refused save leaves the form standing with everything in it, and
+    // re-finding a file in a file dialog is the most tedious work on this
+    // screen to lose — twice over now.
+    await waitFor(() => expect(save().disabled).toBe(false));
+    expect(currentPath()).toBe('/add');
+    expect(pickedFilename()).not.toBeNull();
+    expect(pickedPoster()).not.toBeNull();
   });
 });

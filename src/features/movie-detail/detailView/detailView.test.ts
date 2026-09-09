@@ -234,6 +234,28 @@ describe('detailView — artwork and the gradient fallback', () => {
     expect(vm.backdropUrl).toBeNull();
   });
 
+  // 11 - Movie form, Phase 4 (issue #103): the combination every movie added
+  // through the form is in. The **Movie form** collects a poster and no
+  // backdrop, and no backdrop field is invented on it - so this pair is not an
+  // odd record but the ordinary shape of a film the maintainer just added.
+  it('falls back to the gradient backdrop for a movie with a poster and no backdrop', () => {
+    const vm = detailView(
+      makeMovie({ id: 'm1', posterPath: 'abc/poster.jpg', backdropPath: null })
+    );
+
+    // Story 41. `Artwork` draws the gradient when it is handed no URL, which is
+    // the prototype's own answer for a movie without a backdrop - and the
+    // poster still resolves, so the page is finished rather than half-drawn.
+    expect(vm.backdropUrl).toBeNull();
+    expect(vm.g1).toBe(gradientFromId('m1').g1);
+    expect(vm.g2).toBe(gradientFromId('m1').g2);
+    expect(vm.posterUrl).toContain('/api/images/abc/poster.jpg');
+
+    // And it is artwork: the "no artwork" caption belongs to a film with
+    // neither image, not to one that simply has no backdrop.
+    expect(vm.hasArtwork).toBe(true);
+  });
+
   it('always carries the deterministic gradient stops its id hashes to — the same ones its card draws', () => {
     const vm = detailView(makeMovie({ id: 'm1' }));
     const { g1, g2 } = gradientFromId('m1');
