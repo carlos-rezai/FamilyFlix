@@ -389,16 +389,28 @@ describe('App — the movie page’s navigating actions', () => {
     );
   });
 
-  it('sends Edit details to the add screen carrying the movie id', async () => {
+  it('opens Edit details on the form, pre-filled with that movie', async () => {
     renderApp('/movie/a1');
     await screen.findByRole('heading', { level: 1, name: 'Northwind' });
 
     fireEvent.click(screen.getByRole('button', { name: /more options/i }));
     fireEvent.click(screen.getByRole('menuitem', { name: /edit details/i }));
 
+    // Story 5, end to end and through the real router: the menu item that has
+    // said "Edit details" since #26 now does what it says. There is no `/edit`
+    // route — `?movie=` is how the prototype edits, and the screen it lands on
+    // is the same one that adds, doing the other job.
     expect(currentPath()).toBe('/add');
     expect(currentSearch()).toBe('?movie=a1');
-    expect(await screen.findByRole('heading', { name: /add/i })).toBeDefined();
+    expect(
+      await screen.findByRole('heading', { name: 'Edit details' })
+    ).toBeDefined();
+    await waitFor(() =>
+      expect(
+        (screen.getByRole('textbox', { name: /title/i }) as HTMLInputElement)
+          .value
+      ).toBe('Northwind')
+    );
   });
 });
 

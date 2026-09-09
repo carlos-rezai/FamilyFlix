@@ -17,6 +17,7 @@ import { LocationProbe } from '@/test-support/LocationProbe/LocationProbe';
 import { makeMovie } from '@/test-support/makeMovie/makeMovie';
 import {
   createdResponse,
+  notFoundResponse,
   okResponse,
   serverErrorResponse,
 } from '@/test-support/fakeResponse/fakeResponse';
@@ -33,6 +34,41 @@ const CREATED: Movie = makeMovie({
   title: 'Rear Window',
   year: 1954,
   videoPath: '',
+});
+
+/**
+ * The film the **Edit context** opens on — a record with every field the form
+ * collects already filled in, and every **File slot** already holding a
+ * **Stored file**.
+ */
+const STORED: Movie = makeMovie({
+  id: 'a1',
+  title: 'The Lantern Keeper',
+  year: 2019,
+  director: 'Ana Sørensen',
+  cast: ['Marit Holt', 'Peder Vinge'],
+  synopsis: 'A keeper on a fading coast takes in a runaway girl.',
+  rating: 7,
+  videoPath: 'the-lantern-keeper-2019/lantern.mp4',
+  posterPath: 'the-lantern-keeper-2019/poster.jpg',
+  genres: [
+    { id: 'g3', name: 'Drama' },
+    { id: 'g1', name: 'Action' },
+  ],
+  subtitles: [
+    {
+      id: 's1',
+      path: 'the-lantern-keeper-2019/lantern.en.srt',
+      language: 'English',
+      position: 0,
+    },
+    {
+      id: 's2',
+      path: 'the-lantern-keeper-2019/lantern.pt.srt',
+      language: 'Portuguese',
+      position: 1,
+    },
+  ],
 });
 
 /** The **Genre pool** as `GET /api/genres/pool` sends it: the 12, in migration order. */
@@ -61,18 +97,28 @@ const POOL: Genre[] = [
  */
 let answerPool: () => Promise<Response>;
 let answerSave: () => Promise<Response>;
+let answerMovie: () => Promise<Response>;
 
 beforeEach(() => {
   answerPool = () => Promise.resolve(okResponse({ genres: POOL }));
   answerSave = () => Promise.resolve(createdResponse(CREATED));
+  // The third arm, and the one only the **Edit context** reaches: the record
+  // `?movie=` names, read back through the shared `fetchMovie` the detail page
+  // and the player already call.
+  answerMovie = () => Promise.resolve(okResponse(STORED));
 
   fetchMock =
     vi.fn<
       (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>
     >();
-  fetchMock.mockImplementation((input) =>
-    String(input).includes('/api/genres/pool') ? answerPool() : answerSave()
-  );
+  fetchMock.mockImplementation((input, init) => {
+    if (init?.method === 'POST' || init?.method === 'PATCH') {
+      return answerSave();
+    }
+    return String(input).includes('/api/genres/pool')
+      ? answerPool()
+      : answerMovie();
+  });
   vi.stubGlobal('fetch', fetchMock);
 });
 
@@ -1682,5 +1728,348 @@ describe('MovieForm — saving the subtitles', () => {
     expect(currentPath()).toBe('/add');
     expect(screen.getByText('lantern.en.srt')).toBeDefined();
     expect(languageOf('lantern.en.srt').textContent).toContain('Portuguese');
+  });
+});
+
+// --- 11 — Movie form, Phase 5: "the same screen edits" (issue #105) -----------
+//
+// The same screen doing the other job. There is no `/edit` route and no second
+// component: `/add?movie=<id>` pre-fills this form from the stored record, and
+// what changes is the heading, the button, and where a finished save lands.
+//
+// The tests below mount the same `MovieForm` the **Add context** ones do, at a
+// different URL — because that is the whole claim being made. A separate render
+// helper would only be hiding it.
+
+/** The form opened on a movie, the way **Edit details** opens it. */
+async function renderEdit(id = STORED.id) {
+  const view = render(
+    <MemoryRouter initialEntries={[`/add?movie=${id}`]}>
+      <ThemeProvider theme={theme}>
+        <MovieForm />
+        <LocationProbe />
+      </ThemeProvider>
+    </MemoryRouter>
+  );
+  // Two reads settle on mount here rather than one — the pool and the record —
+  // and both fill the screen this test is about.
+  await act(async () => undefined);
+  return view;
+}
+
+/** Save, in the **Edit context**, under whichever of its two labels it wears. */
+const saveChanges = () =>
+  screen.getByRole('button', {
+    name: /save changes|saving/i,
+  }) as HTMLButtonElement;
+
+/** Every edit the form has issued. */
+function patchRequests() {
+  return fetchMock.mock.calls.filter(([, init]) => init?.method === 'PATCH');
+}
+
+/** The multipart body of the edit, or `undefined` if nothing was ever sent. */
+function patchedFields(): FormData | undefined {
+  return patchRequests()[0]?.[1]?.body as FormData | undefined;
+}
+
+/**
+ * Every part of the edit that carried bytes rather than a value.
+ *
+ * The three names are named rather than the body walked: they are the only
+ * parts this form can put bytes in, so a fourth appearing is a change to the
+ * encoding rather than something to absorb quietly.
+ */
+const patchedFiles = (): File[] => {
+  const body = patchedFields();
+  return body === undefined
+    ? []
+    : ['video', 'poster', 'subtitle']
+        .flatMap((name) => body.getAll(name))
+        .filter((value): value is File => value instanceof File);
+};
+
+describe('MovieForm — the Edit context', () => {
+  it('pre-fills every metadata field from the stored record', async () => {
+    await renderEdit();
+
+    // Story 46: editing one field does not mean retyping the rest. The year is
+    // in the box as text, because the box is text.
+    expect(titleField().value).toBe('The Lantern Keeper');
+    expect(yearField().value).toBe('2019');
+    expect(directorField().value).toBe('Ana Sørensen');
+    expect(castField().value).toBe('Marit Holt, Peder Vinge');
+    expect(descriptionField().value).toBe(
+      'A keeper on a fading coast takes in a runaway girl.'
+    );
+  });
+
+  it('pre-fills the genres the movie is filed under, and nothing else', async () => {
+    await renderEdit();
+
+    expect(picked('Drama')).toBe('true');
+    expect(picked('Action')).toBe('true');
+    expect(picked('Comedy')).toBe('false');
+  });
+
+  it('pre-fills the rating as the stars the maintainer gave it', async () => {
+    await renderEdit();
+
+    // 7 units is 70%, which is three and a half stars: the column stores units
+    // and the strip speaks percent, and the conversion happens once at each
+    // end rather than being held twice in between.
+    expect(ratingLabel()).toContain('3.5 / 5');
+  });
+
+  it('opens an unrated movie on Unrated rather than on nought stars', async () => {
+    answerMovie = () =>
+      Promise.resolve(okResponse(makeMovie({ ...STORED, rating: null })));
+    await renderEdit();
+
+    // Story 58 read as a prefill: "I have not decided" and "nought out of five"
+    // are two different claims, and a form that opened one as the other would
+    // score every unrated film the moment its title was corrected.
+    expect(titleField().value).toBe('The Lantern Keeper');
+    expect(ratingLabel()).toContain('Not rated');
+  });
+
+  it('reads the movie the URL names, and only that one', async () => {
+    await renderEdit();
+
+    const reads = fetchMock.mock.calls.filter(
+      ([input, init]) =>
+        init?.method === undefined && String(input).includes('/api/movies/')
+    );
+    expect(reads).toHaveLength(1);
+    expect(String(reads[0][0])).toContain('/api/movies/a1');
+  });
+});
+
+describe('MovieForm — which of the two jobs the screen is doing', () => {
+  it('says Edit details and Save changes', async () => {
+    await renderEdit();
+
+    // Story 47. One screen, two jobs, and the maintainer can tell which one is
+    // in front of them from the heading and the button alone.
+    expect(screen.getByRole('heading', { name: 'Edit details' })).toBeDefined();
+    expect(saveChanges()).toBeDefined();
+  });
+
+  it('still says Add a movie and Add to library with no movie named', async () => {
+    await renderForm();
+
+    // The other half of the same claim: the **Add context** is unchanged, and a
+    // form reached with no `?movie=` is still the one that creates a record.
+    expect(screen.getByRole('heading', { name: 'Add a movie' })).toBeDefined();
+    expect(save()).toBeDefined();
+  });
+
+  it('falls back to adding when the id names no movie', async () => {
+    answerMovie = () =>
+      Promise.resolve(notFoundResponse('Unknown movie: nope'));
+    await renderEdit('nope');
+
+    // A stale link is not a record to amend. The id is asked about — a 404 is
+    // an answer, and the screen only knows there is nothing to edit because it
+    // looked — and then the screen is the one that adds, which is also the only
+    // state in which its Save can do anything at all.
+    expect(
+      fetchMock.mock.calls.some(([input]) =>
+        String(input).includes('/api/movies/nope')
+      )
+    ).toBe(true);
+    expect(screen.getByRole('heading', { name: 'Add a movie' })).toBeDefined();
+    expect(titleField().value).toBe('');
+  });
+});
+
+describe('MovieForm — the stored files', () => {
+  it('lists the movie’s own files by filename', async () => {
+    await renderEdit();
+
+    // Story 51: it is visible what is attached before anything changes. A
+    // browser never gives a path for a picked file either, so the basename is
+    // what both kinds of slot show.
+    expect(screen.getByText('lantern.mp4')).toBeDefined();
+    expect(screen.getByText('poster.jpg')).toBeDefined();
+    expect(screen.getByText('lantern.en.srt')).toBeDefined();
+    expect(screen.getByText('lantern.pt.srt')).toBeDefined();
+  });
+
+  it('shows each stored track in the language it was stored in', async () => {
+    await renderEdit();
+
+    expect(languageOf('lantern.en.srt').textContent).toContain('English');
+    expect(languageOf('lantern.pt.srt').textContent).toContain('Portuguese');
+  });
+
+  it('opens with Save already pressable, nothing re-picked', async () => {
+    await renderEdit();
+
+    // Story 50. The **Save gate** is a title and a film, and the film the
+    // library already holds is a film — demanding it be re-picked would mean
+    // re-uploading 12 GB to correct a typo.
+    expect(saveChanges().disabled).toBe(false);
+  });
+
+  it('closes the gate again if the title is emptied', async () => {
+    await renderEdit();
+
+    fireEvent.change(titleField(), { target: { value: '   ' } });
+
+    // The gate is a condition rather than a latch, in the **Edit context** as
+    // much as in the **Add** one: `title` is `NOT NULL`, and an edit cannot
+    // take that back.
+    expect(saveChanges().disabled).toBe(true);
+  });
+});
+
+describe('MovieForm — saving an edit', () => {
+  it('sends a PATCH against the movie the URL named', async () => {
+    await renderEdit();
+    fireEvent.change(titleField(), {
+      target: { value: 'The Lantern Keeper (restored)' },
+    });
+
+    fireEvent.click(saveChanges());
+
+    await waitFor(() => expect(patchRequests()).toHaveLength(1));
+    expect(String(patchRequests()[0][0])).toBe('/api/movies/a1');
+    expect(patchedFields()?.get('title')).toBe('The Lantern Keeper (restored)');
+  });
+
+  it('carries no bytes at all when nothing was re-picked', async () => {
+    await renderEdit();
+    fireEvent.change(titleField(), {
+      target: { value: 'The Lantern Keeper (restored)' },
+    });
+
+    fireEvent.click(saveChanges());
+
+    // Story 49, end to end from the screen: a film, a poster and two tracks
+    // already in the library travel as the paths they already have, so
+    // correcting a typo on a 12 GB film moves nothing.
+    await waitFor(() => expect(patchedFields()).toBeDefined());
+    expect(patchedFiles()).toEqual([]);
+    expect(patchedFields()?.get('videoPath')).toBe(
+      'the-lantern-keeper-2019/lantern.mp4'
+    );
+  });
+
+  it('carries only the file that was re-picked', async () => {
+    await renderEdit();
+    fireEvent.click(removePoster());
+    const replacement = await pickPoster(posterFile('better-poster.jpg'));
+
+    fireEvent.click(saveChanges());
+
+    // The contrast that makes the absence above mean something: one slot
+    // re-picked is one part on the wire, and the film beside it still does not
+    // move.
+    await waitFor(() => expect(patchedFields()).toBeDefined());
+    expect(patchedFiles()).toEqual([replacement]);
+    expect(patchedFields()?.get('videoPath')).toBe(
+      'the-lantern-keeper-2019/lantern.mp4'
+    );
+  });
+
+  it('lands on the movie’s own detail page', async () => {
+    answerSave = () => Promise.resolve(okResponse(STORED));
+    await renderEdit();
+    fireEvent.change(titleField(), {
+      target: { value: 'The Lantern Keeper (restored)' },
+    });
+
+    fireEvent.click(saveChanges());
+
+    // Story 48: the maintainer sees the change they just made, in context. The
+    // browse home is where a *new* film is seen for the first time; an edit
+    // belongs back on the page it was started from.
+    await waitFor(() => expect(currentPath()).toBe('/movie/a1'));
+  });
+
+  it('says Saving… and takes no second press while the edit is in flight', async () => {
+    let settle: (response: Response) => void = () => undefined;
+    answerSave = () =>
+      new Promise<Response>((resolve) => {
+        settle = resolve;
+      });
+    await renderEdit();
+
+    fireEvent.click(saveChanges());
+
+    // The mirror of the **Add context**'s "Adding…": the label is the whole of
+    // the in-flight state, and the disabled button is what stops an impatient
+    // second press writing the edit twice.
+    await waitFor(() => expect(saveChanges().disabled).toBe(true));
+    expect(saveChanges().textContent).toContain('Saving…');
+    expect(patchRequests()).toHaveLength(1);
+
+    fireEvent.click(saveChanges());
+    expect(patchRequests()).toHaveLength(1);
+
+    await act(async () => {
+      settle(okResponse(STORED));
+    });
+  });
+
+  it('stays put with everything in it when the edit is refused', async () => {
+    answerSave = () => Promise.resolve(serverErrorResponse());
+    await renderEdit();
+    fireEvent.change(titleField(), {
+      target: { value: 'The Lantern Keeper (restored)' },
+    });
+
+    fireEvent.click(saveChanges());
+
+    // The same honest answer the **Add context** gives, and for the same reason
+    // — there is no snackbar yet, so the form still standing with the
+    // correction still in it is the whole of what can be said.
+    await waitFor(() => expect(saveChanges().disabled).toBe(false));
+    expect(currentPath()).toBe('/add');
+    expect(titleField().value).toBe('The Lantern Keeper (restored)');
+  });
+
+  it('sends an unrated movie back as unrated rather than as nought', async () => {
+    answerMovie = () =>
+      Promise.resolve(okResponse(makeMovie({ ...STORED, rating: null })));
+    await renderEdit();
+
+    fireEvent.click(saveChanges());
+
+    // Story 58 read the other way round: a film nobody has scored survives a
+    // title correction unscored. `0` is a real point on the half-star scale,
+    // and an edit that flattened one into the other would score the library.
+    await waitFor(() => expect(patchedFields()).toBeDefined());
+    expect(patchedFields()?.get('rating')).toBe('');
+  });
+
+  it('sends a rating cleared on the picker as unrated', async () => {
+    await renderEdit();
+
+    // Pressing the segment already holding the value hands back `null`, which
+    // is how a rating is removed everywhere in the app — and story 58 is that
+    // **Unrated** is reachable from this form and not only from the detail
+    // page. The stored 7 is 70%, so that segment is the one wearing the label.
+    fireEvent.click(segment('Clear rating'));
+    expect(ratingLabel()).toContain('Not rated');
+
+    fireEvent.click(saveChanges());
+
+    await waitFor(() => expect(patchedFields()).toBeDefined());
+    expect(patchedFields()?.get('rating')).toBe('');
+  });
+
+  it('never creates a second movie', async () => {
+    answerSave = () => Promise.resolve(okResponse(STORED));
+    await renderEdit();
+
+    fireEvent.click(saveChanges());
+
+    // The whole of what "the same screen edits" has to mean: one URL, two jobs,
+    // and the wrong one would leave the library with two copies of the film
+    // whose title was corrected.
+    await waitFor(() => expect(patchRequests()).toHaveLength(1));
+    expect(saveRequests()).toEqual([]);
   });
 });

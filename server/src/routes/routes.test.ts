@@ -5234,3 +5234,465 @@ describe('POST /api/movies — the added subtitles reach the player', () => {
     }
   });
 });
+
+// --- 11 — Movie form, Phase 5: "the same screen edits" (issue #105) -----------
+//
+// The second write of a whole record, on the same wire as the first. Everything
+// the POST settled stands: a real listener, a real multipart body built by the
+// platform's own `FormData`, real `File` parts and a real managed media
+// directory the assertions read off the disk afterwards.
+//
+// **What is new is the passthrough.** An unchanged file travels as the relative
+// path it already has — `videoPath`, `posterPath`, `subtitlePath` beside the
+// `video`, `poster` and `subtitle` parts — so an edit that touches only the
+// title carries no bytes at all. That is the acceptance criterion the slice is
+// demoable on, and the assertions for it are made on the disk rather than on
+// the reply: the same filenames, the same bytes, in the same folder, with
+// nothing added beside them.
+//
+// **The folder is reused, never renamed.** An edit derives it from the dirname
+// of the movie's current `videoPath`, so renaming a film never moves gigabytes
+// and the managed directory's names are allowed to drift from the library's.
+//
+// **The body describes the whole record**, because the form always sends its
+// whole state: a slot that arrives with neither a path nor a part is a slot the
+// maintainer emptied. Unlinking the bytes a replacement supersedes is issue
+// 106's, and nothing here asserts one way or the other about the old file.
+
+/** The film every edit below is made against, already stored with everything on it. */
+async function storedMovie(baseUrl: string): Promise<Movie> {
+  return createdFromParts(baseUrl, [
+    ...KEEPER,
+    ['video', filePart()],
+    ['poster', posterPart()],
+    ['subtitle', subtitlePart('lantern.en.srt')],
+    ['subtitleLanguage', 'English'],
+    ['subtitle', subtitlePart('lantern.pt.srt')],
+    ['subtitleLanguage', 'Portuguese'],
+  ]);
+}
+
+/**
+ * A multipart PATCH whose parts are given **in order**, the way `movieFormData`
+ * appends them.
+ *
+ * `postParts`' counterpart, and deliberately the same shape: the order a part
+ * arrives in is what pairs a track with its language, and what decides whether
+ * bytes were already on disk when a refusal happened.
+ */
+function patchParts(
+  baseUrl: string,
+  id: string,
+  parts: [name: string, value: string | File][]
+): Promise<Response> {
+  const body = new FormData();
+  for (const [name, value] of parts) {
+    body.append(name, value);
+  }
+  return fetch(`${baseUrl}/api/movies/${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    body,
+  });
+}
+
+/** The amended movie, having asserted the status the route promises. */
+async function patchedMovie(
+  baseUrl: string,
+  id: string,
+  parts: [name: string, value: string | File][]
+): Promise<Movie> {
+  const response = await patchParts(baseUrl, id, parts);
+  expect(response.status).toBe(200);
+  return (await response.json()) as Movie;
+}
+
+/**
+ * The body the form sends for a movie nothing on it was re-picked in — every
+ * stored file as its own path, and not one part.
+ *
+ * Built from the record rather than written out, because that is what
+ * `movieFormValues` does: what is under test is that a body shaped like the
+ * form's own is understood, not that a hand-written one is.
+ */
+function unchangedParts(
+  movie: Movie,
+  overrides: Record<string, string> = {}
+): [name: string, value: string | File][] {
+  const parts: [name: string, value: string | File][] = [
+    ['title', overrides.title ?? movie.title],
+    ['year', overrides.year ?? String(movie.year ?? '')],
+    ['director', overrides.director ?? movie.director ?? ''],
+    ['description', overrides.description ?? movie.synopsis ?? ''],
+    ['rating', overrides.rating ?? String(movie.rating ?? '')],
+    ['videoPath', movie.videoPath],
+  ];
+  if (movie.posterPath !== null) {
+    parts.push(['posterPath', movie.posterPath]);
+  }
+  for (const name of movie.cast) {
+    parts.push(['cast', name]);
+  }
+  for (const genre of movie.genres) {
+    parts.push(['genre', genre.name]);
+  }
+  for (const track of [...movie.subtitles].sort(
+    (a, b) => a.position - b.position
+  )) {
+    parts.push(['subtitleLanguage', track.language]);
+    parts.push(['subtitlePath', track.path]);
+  }
+  return parts;
+}
+
+/** Every file under one movie's folder, by name and by content. */
+function folderContents(media: string, folder: string): Record<string, string> {
+  const contents: Record<string, string> = {};
+  for (const name of filesIn(media, folder)) {
+    contents[name] = readFileSync(join(media, folder, name), 'base64');
+  }
+  return contents;
+}
+
+/** The one folder the fixture movie's files live in. */
+const KEEPER_FOLDER = 'the-lantern-keeper-2019';
+
+describe('PATCH /api/movies/:id — a title-only edit', () => {
+  it('answers 200 with the amended movie', async () => {
+    const { baseUrl } = freshApi();
+    const movie = await storedMovie(baseUrl);
+
+    const response = await patchParts(
+      baseUrl,
+      movie.id,
+      unchangedParts(movie, { title: 'The Lantern Keeper (restored)' })
+    );
+
+    // A 200 rather than the POST's 201: this request amended a record that
+    // already existed, and the reply is the record as it now stands.
+    expect(response.status).toBe(200);
+    const amended = (await response.json()) as Movie;
+    expect(amended.id).toBe(movie.id);
+    expect(amended.title).toBe('The Lantern Keeper (restored)');
+  });
+
+  it('moves no bytes on disk', async () => {
+    const { baseUrl, media } = freshApi();
+    const movie = await storedMovie(baseUrl);
+    const before = folderContents(media, KEEPER_FOLDER);
+
+    await patchedMovie(
+      baseUrl,
+      movie.id,
+      unchangedParts(movie, { title: 'The Lantern Keeper (restored)' })
+    );
+
+    // Story 49, and the whole point of the slice. Every file the movie had is
+    // still there under the same name with the same bytes, and nothing has been
+    // written beside them — on a 12 GB film this is the difference between
+    // instant and minutes.
+    expect(folderContents(media, KEEPER_FOLDER)).toEqual(before);
+    expect(folders(media)).toEqual([KEEPER_FOLDER]);
+  });
+
+  it('leaves every stored path pointing where it did', async () => {
+    const { baseUrl } = freshApi();
+    const movie = await storedMovie(baseUrl);
+
+    const amended = await patchedMovie(
+      baseUrl,
+      movie.id,
+      unchangedParts(movie, { title: 'The Lantern Keeper (restored)' })
+    );
+
+    // The passthrough read off the row: a path that arrived as a field is the
+    // path that is still stored, so nothing downstream — the stream route, the
+    // cue route, `/api/images` — can tell that a save happened at all.
+    expect(amended.videoPath).toBe(movie.videoPath);
+    expect(amended.posterPath).toBe(movie.posterPath);
+    expect(trackOrder(amended).map((track) => track.path)).toEqual(
+      trackOrder(movie).map((track) => track.path)
+    );
+  });
+
+  it('leaves the film playable through the route that already served it', async () => {
+    const { baseUrl } = freshApi();
+    const movie = await storedMovie(baseUrl);
+
+    await patchedMovie(
+      baseUrl,
+      movie.id,
+      unchangedParts(movie, { title: 'The Lantern Keeper (restored)' })
+    );
+    const response = await fetch(`${baseUrl}/api/movies/${movie.id}/stream`);
+
+    // The end an edit is judged at: the film the family could watch before the
+    // typo was corrected is the film they can watch after it.
+    expect(response.status).toBe(200);
+    await response.arrayBuffer();
+  });
+});
+
+describe('PATCH /api/movies/:id — renaming a movie', () => {
+  it('leaves the movie folder exactly where it was', async () => {
+    const { baseUrl, media } = freshApi();
+    const movie = await storedMovie(baseUrl);
+
+    const amended = await patchedMovie(
+      baseUrl,
+      movie.id,
+      unchangedParts(movie, { title: 'A Completely Different Film' })
+    );
+
+    // Story 56. An edit reuses the folder the dirname of the current
+    // `videoPath` names, so the managed directory's names are allowed to drift
+    // from the library's — the alternative is moving gigabytes to correct a
+    // spelling.
+    expect(amended.title).toBe('A Completely Different Film');
+    expect(folders(media)).toEqual([KEEPER_FOLDER]);
+  });
+
+  it('writes a newly picked file into that same folder', async () => {
+    const { baseUrl, media } = freshApi();
+    const movie = await storedMovie(baseUrl);
+
+    const amended = await patchedMovie(baseUrl, movie.id, [
+      ...unchangedParts(movie, { title: 'A Completely Different Film' }).filter(
+        ([name]) => name !== 'posterPath'
+      ),
+      ['poster', posterPart('better-poster.jpg')],
+    ]);
+
+    // The folder is the movie's, not the title's: bytes picked during an edit
+    // land beside the ones already there rather than in a folder named after
+    // the new title.
+    expect(amended.posterPath).toBe(`${KEEPER_FOLDER}/better-poster.jpg`);
+    expect(folders(media)).toEqual([KEEPER_FOLDER]);
+    expect(filesIn(media, KEEPER_FOLDER)).toContain('better-poster.jpg');
+  });
+});
+
+describe('PATCH /api/movies/:id — the fields it amends', () => {
+  it('writes every metadata field the form sends', async () => {
+    const { baseUrl } = freshApi();
+    const movie = await storedMovie(baseUrl);
+
+    const amended = await patchedMovie(baseUrl, movie.id, [
+      ...unchangedParts(movie, {
+        title: 'The Lantern Keeper',
+        year: '2020',
+        director: 'Ana Sørensen',
+        description: 'A keeper on a fading coast.',
+        rating: '9',
+      }),
+      ['cast', 'Marit Holt'],
+      ['cast', 'Peder Vinge'],
+      ['genre', 'Drama'],
+    ]);
+
+    expect(amended.year).toBe(2020);
+    expect(amended.director).toBe('Ana Sørensen');
+    expect(amended.synopsis).toBe('A keeper on a fading coast.');
+    expect(amended.rating).toBe(9);
+    expect(amended.cast).toEqual(['Marit Holt', 'Peder Vinge']);
+    expect(amended.genres.map((genre) => genre.name)).toEqual(['Drama']);
+  });
+
+  it('reads a cleared field back as nothing rather than as an empty string', async () => {
+    const { baseUrl } = freshApi();
+    const stored = await storedMovie(baseUrl);
+
+    const filled = await patchedMovie(baseUrl, stored.id, [
+      ...unchangedParts(stored, {
+        director: 'Ana Sørensen',
+        description: 'A keeper on a fading coast.',
+      }),
+    ]);
+    expect(filled.director).toBe('Ana Sørensen');
+
+    const cleared = await patchedMovie(baseUrl, stored.id, [
+      ...unchangedParts(filled, {
+        year: '',
+        director: '',
+        description: '',
+      }),
+    ]);
+
+    // The detail page draws its "—" from `null` and would draw an empty gap
+    // from `''`. An emptied field is a column with nothing in it, which is what
+    // makes the empty part worth sending at all.
+    expect(cleared.year).toBeNull();
+    expect(cleared.director).toBeNull();
+    expect(cleared.synopsis).toBeNull();
+  });
+
+  it('clears a rating to unrated rather than to nought', async () => {
+    const { baseUrl } = freshApi();
+    const movie = await storedMovie(baseUrl);
+    const scored = await patchedMovie(
+      baseUrl,
+      movie.id,
+      unchangedParts(movie, { rating: '8' })
+    );
+    expect(scored.rating).toBe(8);
+
+    const unrated = await patchedMovie(
+      baseUrl,
+      movie.id,
+      unchangedParts(scored, { rating: '' })
+    );
+
+    // Story 58: **Unrated** is reachable from the form and not only from the
+    // detail page — and it is emphatically not `0`, which is a real point on
+    // the half-star scale.
+    expect(unrated.rating).toBeNull();
+  });
+});
+
+describe('PATCH /api/movies/:id — an unknown id', () => {
+  it('answers a JSON 404 carrying the id it could not find', async () => {
+    const { baseUrl } = freshApi();
+
+    const response = await patchParts(baseUrl, 'no-such-movie', [
+      ['title', 'The Lantern Keeper'],
+    ]);
+
+    // Story 57, through the same `movieOr404` the five existing single-movie
+    // routes share: the client tells "this movie is gone" from "the request
+    // went wrong" by reading this body, and a sixth spelling of the sentence is
+    // where the two would drift apart.
+    expect(response.status).toBe(404);
+    expect(await response.json()).toEqual({
+      error: 'Unknown movie: no-such-movie',
+    });
+  });
+});
+
+describe('PATCH /api/movies/:id — a body this route will not take', () => {
+  it('refuses a body that is not multipart at all', async () => {
+    const { baseUrl } = freshApi();
+    const movie = await storedMovie(baseUrl);
+
+    const response = await fetch(`${baseUrl}/api/movies/${movie.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: 'The Lantern Keeper' }),
+    });
+
+    // The POST's rule at the second write: this is a multipart route, and a
+    // JSON body is a 400 rather than an exception.
+    expect(response.status).toBe(400);
+  });
+
+  it('refuses an edit that would leave the movie untitled', async () => {
+    const { baseUrl } = freshApi();
+    const movie = await storedMovie(baseUrl);
+
+    const response = await patchParts(baseUrl, movie.id, [
+      ['title', '   '],
+      ['videoPath', movie.videoPath],
+    ]);
+
+    // `title` is `NOT NULL` and `''` satisfies that column — which would make a
+    // corrupt row the cost of a client this route did not write. The form gates
+    // Save on a title, so this is unreachable from the app.
+    expect(response.status).toBe(400);
+  });
+
+  it('refuses a genre the pool does not have, and changes nothing', async () => {
+    const { baseUrl, media } = freshApi();
+    const movie = await storedMovie(baseUrl);
+    const before = folderContents(media, KEEPER_FOLDER);
+
+    const response = await patchParts(baseUrl, movie.id, [
+      ...unchangedParts(movie, { title: 'The Lantern Keeper (restored)' }),
+      ['genre', 'Documentaries'],
+    ]);
+
+    expect(response.status).toBe(400);
+
+    // A refused edit is one that did not happen — and on this route that has a
+    // second half the POST never had: the folder it is working in is the
+    // movie's own, so a refusal must leave the film already in it exactly where
+    // it was.
+    const read = (await (
+      await fetch(`${baseUrl}/api/movies/${movie.id}`)
+    ).json()) as Movie;
+    expect(read.title).toBe('The Lantern Keeper');
+    expect(folderContents(media, KEEPER_FOLDER)).toEqual(before);
+  });
+});
+
+describe('PATCH /api/movies/:id — the tracks', () => {
+  it('keeps stored tracks in their order, with their languages', async () => {
+    const { baseUrl } = freshApi();
+    const movie = await storedMovie(baseUrl);
+
+    const amended = await patchedMovie(
+      baseUrl,
+      movie.id,
+      unchangedParts(movie, { title: 'The Lantern Keeper (restored)' })
+    );
+
+    // Read pairwise off the fields, in the order the parts arrived: the i-th
+    // language belongs to the i-th path, and `position` is the order they came
+    // in — which is what `preferredSubtitle` falls back through.
+    expect(
+      trackOrder(amended).map((track) => [track.language, track.path])
+    ).toEqual([
+      ['English', `${KEEPER_FOLDER}/lantern.en.srt`],
+      ['Portuguese', `${KEEPER_FOLDER}/lantern.pt.srt`],
+    ]);
+  });
+
+  it('takes a picked track in among the stored ones, in row order', async () => {
+    const { baseUrl } = freshApi();
+    const movie = await storedMovie(baseUrl);
+    const tracks = trackOrder(movie);
+
+    const amended = await patchedMovie(baseUrl, movie.id, [
+      ...unchangedParts(movie).filter(
+        ([name]) => name !== 'subtitleLanguage' && name !== 'subtitlePath'
+      ),
+      ['subtitleLanguage', tracks[0].language],
+      ['subtitlePath', tracks[0].path],
+      ['subtitleLanguage', 'Dutch'],
+      ['subtitlePath', ''],
+      ['subtitle', subtitlePart('lantern.nl.srt')],
+      ['subtitleLanguage', tracks[1].language],
+      ['subtitlePath', tracks[1].path],
+    ]);
+
+    // The empty path is what holds a picked row's place: fields and file parts
+    // are read back separately, so a mixed list can only keep its order if
+    // every row says something in the same list.
+    expect(
+      trackOrder(amended).map((track) => [track.language, track.path])
+    ).toEqual([
+      ['English', `${KEEPER_FOLDER}/lantern.en.srt`],
+      ['Dutch', `${KEEPER_FOLDER}/lantern.nl.srt`],
+      ['Portuguese', `${KEEPER_FOLDER}/lantern.pt.srt`],
+    ]);
+  });
+
+  it('reads a newly attached track back through the cue route', async () => {
+    const { baseUrl } = freshApi();
+    const movie = await storedMovie(baseUrl);
+
+    const amended = await patchedMovie(baseUrl, movie.id, [
+      ...unchangedParts(movie).filter(
+        ([name]) => name !== 'subtitleLanguage' && name !== 'subtitlePath'
+      ),
+      ['subtitleLanguage', 'Dutch'],
+      ['subtitlePath', ''],
+      ['subtitle', subtitlePart('lantern.nl.srt')],
+    ]);
+
+    const track = trackOrder(amended)[0];
+    const response = await fetch(cuesUrl(baseUrl, movie.id, track.id));
+
+    // Story 42 at the edit: a track attached while correcting a title is a
+    // track the family can turn on, with not one line of the cue route changed.
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual(SRT_CUES);
+  });
+});
