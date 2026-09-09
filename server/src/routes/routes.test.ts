@@ -4865,3 +4865,372 @@ describe('POST /api/movies — a poster filename this route did not write', () =
     );
   });
 });
+
+// --- 11 — Movie form, Phase 4: the subtitle parts (issue #104) ---------------
+//
+// The third kind of file on this route, and the first that arrives as a **list**
+// — which is the only thing genuinely new about it. A track is bytes plus the
+// language they are in, and the two travel as two repeated names in step: one
+// `subtitle` part per row and one `subtitleLanguage` field per row, in the same
+// order, so the i-th language belongs to the i-th file. That is the shape
+// `genre` and `cast` already use, read pairwise.
+//
+// The order is not decoration. `position` is what `preferredSubtitle` falls
+// back through when no language is preferred, so the order the parts were sent
+// in is the order the family gets — and it is asserted rather than assumed.
+//
+// **The re-check is the poster's rule at a third slot.** `GET /api/images` is
+// `express.static` over the media root, so a stored `.html` would be a page
+// served from the app's own origin whatever the picker's accept list said. What
+// a subtitle may be called is decided here, by extension, and it is the same
+// four `parseSubtitle/` dispatches on.
+//
+// **No migration ships with any of this.** `subtitles.language` and
+// `subtitles.position` have both existed since V1 — the seed and the cue route
+// have been reading them since #88 — and this is simply the first code in the
+// app that writes them from a request.
+//
+// The last block is the point of the slice: an attached track's cues come back
+// through the cue route with **not one line of it changed**.
+
+/** One subtitle part, the way the browser hands `SubtitleRow`'s pick to `FormData`. */
+function subtitlePart(
+  filename = 'lantern.en.srt',
+  contents: string = SRT_FIXTURE,
+  type = 'text/plain'
+): File {
+  return new File([contents], filename, { type });
+}
+
+/** The subtitle rows of a movie, in the track order they were stored in. */
+const trackOrder = (movie: Movie) =>
+  [...movie.subtitles].sort((a, b) => a.position - b.position);
+
+describe('POST /api/movies — the subtitle parts', () => {
+  it('stores a relative path in the movie’s own folder', async () => {
+    const { baseUrl } = freshApi();
+
+    const movie = await createdFromParts(baseUrl, [
+      ...KEEPER,
+      ['video', filePart()],
+      ['subtitle', subtitlePart()],
+      ['subtitleLanguage', 'English'],
+    ]);
+
+    // The video and poster rule, unchanged for a third kind of file: relative,
+    // under the root, beside the film it belongs to.
+    expect(movie.subtitles).toHaveLength(1);
+    expect(isAbsolute(movie.subtitles[0].path)).toBe(false);
+    expect(movie.subtitles[0].path).toBe(
+      'the-lantern-keeper-2019/lantern.en.srt'
+    );
+  });
+
+  it('writes the bytes it was sent', async () => {
+    const { baseUrl, media } = freshApi();
+
+    const movie = await createdFromParts(baseUrl, [
+      ...KEEPER,
+      ['video', filePart()],
+      ['subtitle', subtitlePart()],
+      ['subtitleLanguage', 'English'],
+    ]);
+
+    expect(
+      readFileSync(storedFile(media, movie.subtitles[0].path), 'utf8')
+    ).toBe(SRT_FIXTURE);
+  });
+
+  it('persists the language that was sent with it', async () => {
+    const { baseUrl } = freshApi();
+
+    const movie = await createdFromParts(baseUrl, [
+      ...KEEPER,
+      ['video', filePart()],
+      ['subtitle', subtitlePart('lantern.pt.srt')],
+      ['subtitleLanguage', 'Portuguese'],
+    ]);
+
+    // Story 26. The chosen text itself — the **Language pool** is a display
+    // vocabulary, and nothing on this route maps it to a locale code.
+    expect(movie.subtitles[0].language).toBe('Portuguese');
+  });
+
+  it('persists two tracks with their languages, in the order they were sent', async () => {
+    const { baseUrl } = freshApi();
+
+    const movie = await createdFromParts(baseUrl, [
+      ...KEEPER,
+      ['video', filePart()],
+      ['subtitle', subtitlePart('lantern.en.srt')],
+      ['subtitleLanguage', 'English'],
+      ['subtitle', subtitlePart('lantern.pt.srt')],
+      ['subtitleLanguage', 'Portuguese'],
+    ]);
+
+    // Story 25, and the pairing rule read back off the row: the i-th language
+    // landed on the i-th file, and `position` is the order they were sent in
+    // rather than whatever order the rows came back from SQLite.
+    expect(
+      trackOrder(movie).map((track) => [track.language, track.path])
+    ).toEqual([
+      ['English', 'the-lantern-keeper-2019/lantern.en.srt'],
+      ['Portuguese', 'the-lantern-keeper-2019/lantern.pt.srt'],
+    ]);
+    expect(trackOrder(movie).map((track) => track.position)).toEqual([0, 1]);
+  });
+
+  it('accepts every extension the picker offers', async () => {
+    const { baseUrl } = freshApi();
+
+    for (const extension of ['.srt', '.vtt', '.ass', '.sub']) {
+      const movie = await createdFromParts(baseUrl, [
+        ...KEEPER,
+        ['video', filePart()],
+        ['subtitle', subtitlePart(`lantern${extension}`)],
+        ['subtitleLanguage', 'English'],
+      ]);
+
+      // Story 28. The four `parseSubtitle/` dispatches on, and the same four
+      // the picker offers — one list, checked at the door it can be lied to at.
+      expect(movie.subtitles[0].path).toContain(`lantern${extension}`);
+    }
+  });
+
+  it('keeps the filename the maintainer picked', async () => {
+    const { baseUrl } = freshApi();
+
+    const movie = await createdFromParts(baseUrl, [
+      ...KEEPER,
+      ['video', filePart()],
+      ['subtitle', subtitlePart('The Lantern Keeper (2019) English.srt')],
+      ['subtitleLanguage', 'English'],
+    ]);
+
+    expect(movie.subtitles[0].path).toBe(
+      'the-lantern-keeper-2019/The Lantern Keeper (2019) English.srt'
+    );
+  });
+
+  it('puts the film, its artwork and both tracks in one folder from one request', async () => {
+    const { baseUrl, media } = freshApi();
+
+    await createdFromParts(baseUrl, [
+      ...KEEPER,
+      ['video', filePart()],
+      ['poster', posterPart()],
+      ['subtitle', subtitlePart('lantern.en.srt')],
+      ['subtitleLanguage', 'English'],
+      ['subtitle', subtitlePart('lantern.pt.srt')],
+      ['subtitleLanguage', 'Portuguese'],
+    ]);
+
+    // The family's one-folder-per-movie convention, now with everything the
+    // form can collect in it.
+    expect(folders(media)).toEqual(['the-lantern-keeper-2019']);
+    expect(filesIn(media, 'the-lantern-keeper-2019')).toEqual([
+      'lantern.en.srt',
+      'lantern.mp4',
+      'lantern.pt.srt',
+      'poster.jpg',
+    ]);
+  });
+
+  it('creates a movie with no subtitles at all', async () => {
+    const { baseUrl } = freshApi();
+
+    const movie = await createdFromParts(baseUrl, [
+      ...KEEPER,
+      ['video', filePart()],
+    ]);
+
+    // Story 64. A film in the family's own language needs no ceremony, and an
+    // empty track list is a complete answer rather than a save to refuse.
+    expect(movie.subtitles).toEqual([]);
+  });
+
+  it('defaults a track sent with no language of its own to English', async () => {
+    const { baseUrl } = freshApi();
+
+    const movie = await createdFromParts(baseUrl, [
+      ...KEEPER,
+      ['video', filePart()],
+      ['subtitle', subtitlePart()],
+    ]);
+
+    // Unreachable from the form, which sends a language with every row — and
+    // `subtitles.language` is `NOT NULL`, so a client this route did not write
+    // must not be able to make the column the reason a save fails. It is the
+    // same default the row lands in on screen.
+    expect(movie.subtitles[0].language).toBe('English');
+  });
+
+  it('reads the tracks back through GET /api/movies/:id', async () => {
+    const { baseUrl } = freshApi();
+
+    const created = await createdFromParts(baseUrl, [
+      ...KEEPER,
+      ['video', filePart()],
+      ['subtitle', subtitlePart('lantern.en.srt')],
+      ['subtitleLanguage', 'English'],
+      ['subtitle', subtitlePart('lantern.pt.srt')],
+      ['subtitleLanguage', 'Portuguese'],
+    ]);
+
+    const response = await fetch(`${baseUrl}/api/movies/${created.id}`);
+
+    // The rows the save answered with are the rows the movie holds — the same
+    // ids the player will ask the cue route for, rather than ones the write
+    // invented for its own reply.
+    const read = (await response.json()) as Movie;
+    expect(trackOrder(read)).toHaveLength(2);
+    expect(trackOrder(read)).toEqual(trackOrder(created));
+  });
+});
+
+describe('POST /api/movies — a subtitle that is not a subtitle', () => {
+  it('refuses the save rather than storing it', async () => {
+    const { baseUrl } = freshApi();
+
+    const response = await postParts(baseUrl, [
+      ...KEEPER,
+      ['video', filePart()],
+      ['subtitle', subtitlePart('evil.html', SRT_FIXTURE, 'text/html')],
+      ['subtitleLanguage', 'English'],
+    ]);
+
+    // The poster's rule at a third slot, and for the same reason: a file under
+    // the media root is served by `express.static` with the Content-Type its
+    // extension implies, so a stored `.html` would be a page served from the
+    // app's own origin. The accept list is a convenience on the picker; this is
+    // the rule.
+    expect(response.status).toBe(400);
+    const body = (await response.json()) as { error?: unknown };
+    expect(typeof body.error).toBe('string');
+    expect(body.error).not.toBe('');
+  });
+
+  it('leaves no row and no bytes behind', async () => {
+    const { baseUrl, media } = freshApi();
+
+    await postParts(baseUrl, [
+      ['video', filePart()],
+      ...KEEPER,
+      ['subtitle', subtitlePart('evil.html', SRT_FIXTURE, 'text/html')],
+      ['subtitleLanguage', 'English'],
+    ]);
+
+    // The video is appended first, so it is already streamed to disk when the
+    // track is refused — the same rollback the unknown genre and the bad poster
+    // exercise, at a refusal that can only happen once bytes are down.
+    expect(await movieTitles(baseUrl, 'recently-added')).toEqual([]);
+    expect(folders(media)).toEqual([]);
+
+    // The contrast is what makes that absence mean anything: the same body with
+    // a real track in it does leave a folder behind.
+    await createdFromParts(baseUrl, [
+      ['video', filePart()],
+      ...KEEPER,
+      ['subtitle', subtitlePart()],
+      ['subtitleLanguage', 'English'],
+    ]);
+    expect(folders(media)).toEqual(['the-lantern-keeper-2019']);
+  });
+
+  it('refuses a track with no extension at all', async () => {
+    const { baseUrl, media } = freshApi();
+
+    const response = await postParts(baseUrl, [
+      ...KEEPER,
+      ['video', filePart()],
+      ['subtitle', subtitlePart('subtitles', SRT_FIXTURE, '')],
+      ['subtitleLanguage', 'English'],
+    ]);
+
+    // There is nothing to re-check, which is a refusal rather than a pass: the
+    // check is on what the file is called, and a file called nothing in
+    // particular has not claimed to be a subtitle.
+    expect(response.status).toBe(400);
+    expect(folders(media)).toEqual([]);
+  });
+});
+
+describe('POST /api/movies — a subtitle filename this route did not write', () => {
+  it('writes a crafted name inside the movie folder and nowhere else', async () => {
+    const { baseUrl, media } = freshApi();
+
+    const movie = await createdFromParts(baseUrl, [
+      ...KEEPER,
+      ['video', filePart()],
+      ['subtitle', subtitlePart('../../evil.srt')],
+      ['subtitleLanguage', 'English'],
+    ]);
+
+    // Story 60, at the third slot. The client's filename is never trusted into
+    // a path, and the sanitising is `storeUpload`'s own rather than a third
+    // spelling of it beside the subtitles.
+    expect(movie.subtitles[0].path).toBe('the-lantern-keeper-2019/evil.srt');
+    expect(folders(media)).toEqual(['the-lantern-keeper-2019']);
+    expect(existsSync(join(media, '..', 'evil.srt'))).toBe(false);
+  });
+
+  it('resolves that stored path back to the file it wrote', async () => {
+    const { baseUrl, media } = freshApi();
+
+    const movie = await createdFromParts(baseUrl, [
+      ...KEEPER,
+      ['video', filePart()],
+      ['subtitle', subtitlePart('..\\..\\windows\\evil.vtt')],
+      ['subtitleLanguage', 'English'],
+    ]);
+
+    expect(
+      readFileSync(storedFile(media, movie.subtitles[0].path), 'utf8')
+    ).toBe(SRT_FIXTURE);
+  });
+});
+
+describe('POST /api/movies — the added subtitles reach the player', () => {
+  it('answers the cue list on the cue route that already existed', async () => {
+    const { baseUrl } = freshApi();
+    const movie = await createdFromParts(baseUrl, [
+      ...KEEPER,
+      ['video', filePart()],
+      ['subtitle', subtitlePart()],
+      ['subtitleLanguage', 'English'],
+    ]);
+
+    const response = await fetch(
+      cuesUrl(baseUrl, movie.id, movie.subtitles[0].id)
+    );
+
+    // Story 42, and the demoable end of the slice: attach a track, save, and
+    // the player reads its cues. Not one line of the cue route changed for
+    // this — it resolves a **Stored path** under the media root and parses on
+    // the extension, and the save wrote exactly that.
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual(SRT_CUES);
+  });
+
+  it('answers each of two tracks under its own id', async () => {
+    const { baseUrl } = freshApi();
+    const movie = await createdFromParts(baseUrl, [
+      ...KEEPER,
+      ['video', filePart()],
+      ['subtitle', subtitlePart('lantern.en.srt')],
+      ['subtitleLanguage', 'English'],
+      ['subtitle', subtitlePart('lantern.pt.srt')],
+      ['subtitleLanguage', 'Portuguese'],
+    ]);
+
+    expect(trackOrder(movie)).toHaveLength(2);
+    for (const track of trackOrder(movie)) {
+      const response = await fetch(cuesUrl(baseUrl, movie.id, track.id));
+
+      // Two tracks, two ids, two files — which is what makes switching between
+      // them in the player mean anything.
+      expect(response.status).toBe(200);
+      expect(await response.json()).toEqual(SRT_CUES);
+    }
+  });
+});

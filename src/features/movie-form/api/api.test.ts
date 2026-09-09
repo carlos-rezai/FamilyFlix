@@ -1,7 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 import { createMovie, fetchGenrePool } from './api';
-import type { Movie, MovieFormFile, MovieFormValues } from '@/types';
+import type {
+  Movie,
+  MovieFormFile,
+  MovieFormSubtitle,
+  MovieFormValues,
+} from '@/types';
 import { makeMovie } from '@/test-support/makeMovie/makeMovie';
 import {
   createdResponse,
@@ -73,6 +78,9 @@ function typed(values: Partial<MovieFormValues> = {}): MovieFormValues {
     // what every test above this slice is about.
     video: null,
     poster: null,
+    // No tracks attached, which is a complete answer: story 64's film with no
+    // subtitles is a normal row.
+    subtitles: [],
     ...values,
   };
 }
@@ -545,6 +553,148 @@ describe('createMovie — the poster', () => {
     expect(fields.get('poster')).toBe(ARTWORK);
     expect(fields.get('title')).toBe('The Lantern Keeper');
     expect(fields.getAll('genre')).toEqual(['Drama']);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+});
+
+// --- 11 — Movie form, Phase 4: the subtitle parts (issue #104) ---------------
+//
+// The first thing on this wire that is a **list of files**, which is what makes
+// it different from the video and the poster rather than a third copy of them.
+// A track is two things — bytes and the language they are in — and they travel
+// as two repeated names in step: one `subtitle` part per row and one
+// `subtitleLanguage` field per row, in the same order, so the i-th language
+// belongs to the i-th file.
+//
+// That is the shape a form has always sent a set in, and the one `genre` and
+// `cast` already use here. Nothing is invented for it: no index in a part name,
+// no JSON smuggled into a field, and no second request.
+
+/** An English track off the maintainer's own disk. */
+const EN_SRT = new File(['cue bytes'], 'lantern.en.srt', {
+  type: 'text/plain',
+});
+
+/** The Portuguese one beside it in the same folder. */
+const PT_SRT = new File(['cue bytes'], 'lantern.pt.srt', {
+  type: 'text/plain',
+});
+
+/**
+ * One attached **Subtitle**, as the form holds it: a **Picked file**, the
+ * language the maintainer chose, and the form's own stable `key`.
+ *
+ * The `key` never leaves the browser — it exists so a row survives its
+ * neighbours being removed, and the wire has the part order for that.
+ */
+function attached(
+  key: string,
+  file: File,
+  language = 'English'
+): MovieFormSubtitle {
+  return {
+    key,
+    file: { kind: 'picked', file, filename: file.name },
+    language,
+  };
+}
+
+describe('createMovie — the subtitles', () => {
+  it('sends one subtitle part per attached track, in the order held', async () => {
+    fetchMock.mockResolvedValue(createdResponse(CREATED));
+
+    await createMovie(
+      typed({
+        title: 'The Lantern Keeper',
+        video: PICKED,
+        subtitles: [
+          attached('s1', EN_SRT),
+          attached('s2', PT_SRT, 'Portuguese'),
+        ],
+      })
+    );
+
+    // The `File` itself, on the video part's own rule — and the order is the
+    // track order the row will be stored in.
+    expect(sentFields().getAll('subtitle')).toEqual([EN_SRT, PT_SRT]);
+  });
+
+  it('sends one language field per track, in the same order', async () => {
+    fetchMock.mockResolvedValue(createdResponse(CREATED));
+
+    await createMovie(
+      typed({
+        title: 'The Lantern Keeper',
+        video: PICKED,
+        subtitles: [
+          attached('s1', EN_SRT),
+          attached('s2', PT_SRT, 'Portuguese'),
+        ],
+      })
+    );
+
+    // Read pairwise against the parts above: two repeated names travelling in
+    // step is what pairs a language with its file, with nothing to parse.
+    expect(sentFields().getAll('subtitleLanguage')).toEqual([
+      'English',
+      'Portuguese',
+    ]);
+  });
+
+  it('sends the chosen language rather than a code for it', async () => {
+    fetchMock.mockResolvedValue(createdResponse(CREATED));
+
+    await createMovie(
+      typed({
+        title: 'The Lantern Keeper',
+        video: PICKED,
+        subtitles: [attached('s1', PT_SRT, 'Portuguese')],
+      })
+    );
+
+    // A **Subtitle**'s language is stored as the chosen text — the **Language
+    // pool** is a display vocabulary, not an entity, and nothing on either end
+    // of this wire maps it to a locale.
+    expect(sentFields().get('subtitleLanguage')).toBe('Portuguese');
+  });
+
+  it('sends no subtitle part at all when none is attached', async () => {
+    fetchMock.mockResolvedValue(createdResponse(CREATED));
+
+    await createMovie(typed({ title: 'Rear Window', subtitles: [] }));
+
+    // The lists' rule: an empty set sends no part rather than an empty one, the
+    // way an unpicked genre does. Story 64 is a row with no subtitles, not a
+    // row with one that is nothing.
+    const fields = sentFields();
+    expect(fields.has('subtitle')).toBe(false);
+    expect(fields.has('subtitleLanguage')).toBe(false);
+  });
+
+  it('sends the film, its artwork and its tracks in the same request', async () => {
+    fetchMock.mockResolvedValue(createdResponse(CREATED));
+
+    await createMovie(
+      typed({
+        title: 'The Lantern Keeper',
+        year: '2019',
+        genres: ['Drama'],
+        video: PICKED,
+        poster: PICKED_POSTER,
+        subtitles: [
+          attached('s1', EN_SRT),
+          attached('s2', PT_SRT, 'Portuguese'),
+        ],
+      })
+    );
+
+    // Story 36 with four files in it: one request per save, however many slots
+    // are filled, and the fields still travel beside them.
+    const fields = sentFields();
+    expect(fields.get('video')).toBe(LANTERN);
+    expect(fields.get('poster')).toBe(ARTWORK);
+    expect(fields.getAll('subtitle')).toHaveLength(2);
+    expect(fields.get('title')).toBe('The Lantern Keeper');
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });

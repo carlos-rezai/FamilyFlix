@@ -5,7 +5,7 @@ import { ThemeProvider } from 'styled-components';
 
 import { MovieFormFiles } from './MovieFormFiles';
 import { theme } from '@/styles/theme';
-import type { MovieFormFile } from '@/types';
+import type { MovieFormFile, MovieFormSubtitle } from '@/types';
 
 /** A film off the maintainer's own disk, as the browser hands it over. */
 const LANTERN = new File(['video bytes'], 'lantern.mp4', { type: 'video/mp4' });
@@ -33,6 +33,7 @@ const PICKED_POSTER: MovieFormFile = {
 interface Slots {
   video?: MovieFormFile | null;
   poster?: MovieFormFile | null;
+  subtitles?: MovieFormSubtitle[];
 }
 
 function renderFiles(slots: Slots = {}) {
@@ -40,21 +41,37 @@ function renderFiles(slots: Slots = {}) {
   const onRemoveVideo = vi.fn<() => void>();
   const onPickPoster = vi.fn<(file: File) => void>();
   const onRemovePoster = vi.fn<() => void>();
+  const onAddSubtitle = vi.fn<(file: File) => void>();
+  const onChangeSubtitleLanguage =
+    vi.fn<(key: string, language: string) => void>();
+  const onRemoveSubtitle = vi.fn<(key: string) => void>();
 
   render(
     <ThemeProvider theme={theme}>
       <MovieFormFiles
         video={slots.video ?? null}
         poster={slots.poster ?? null}
+        subtitles={slots.subtitles ?? []}
         onPickVideo={onPickVideo}
         onRemoveVideo={onRemoveVideo}
         onPickPoster={onPickPoster}
         onRemovePoster={onRemovePoster}
+        onAddSubtitle={onAddSubtitle}
+        onChangeSubtitleLanguage={onChangeSubtitleLanguage}
+        onRemoveSubtitle={onRemoveSubtitle}
       />
     </ThemeProvider>
   );
 
-  return { onPickVideo, onRemoveVideo, onPickPoster, onRemovePoster };
+  return {
+    onPickVideo,
+    onRemoveVideo,
+    onPickPoster,
+    onRemovePoster,
+    onAddSubtitle,
+    onChangeSubtitleLanguage,
+    onRemoveSubtitle,
+  };
 }
 
 const picker = () =>
@@ -72,8 +89,10 @@ const posterPicker = () =>
  * **Movie** has and what each of them offers a file dialog; `FileField` knows
  * how a slot looks, and neither knows what a save is.
  *
- * The **Subtitle** rows the prototype draws under these two arrive with #104.
- * Their absence here is the slice boundary, not a miss.
+ * With the **Subtitle** rows it also knows the **Language pool** — the seven
+ * languages a row offers. That is the same kind of knowledge as the accept
+ * lists beside it: a display vocabulary this screen owns, which is why
+ * `SubtitleRow` is handed the list rather than knowing it.
  */
 describe('MovieFormFiles', () => {
   it('draws the Files card the prototype captions', () => {
@@ -202,5 +221,204 @@ describe('MovieFormFiles', () => {
     // apart — which is what makes pressing the right one possible at all.
     expect(onRemovePoster).toHaveBeenCalledTimes(1);
     expect(onRemoveVideo).not.toHaveBeenCalled();
+  });
+});
+
+// --- 11 — Movie form, Phase 4: the subtitle rows (issue #104) -----------------
+//
+// The third kind of file, and the first slot that is a **list** rather than a
+// slot: "＋ Add subtitle file" appends a row, and a film can carry as many as
+// the family needs. What is new at this rung is only what the *card* knows —
+// that a **Movie** has any number of **Subtitles**, what that picker offers a
+// file dialog, and the **Language pool** each row chooses from. How one row
+// looks is `SubtitleRow.test.tsx`'s.
+//
+// **The one behaviour that can only be seen here is two rows at once.** A
+// single row cannot show that opening its language list shuts the other's —
+// and that is the whole argument for building `SubtitleRow` on `Menu`: it comes
+// out of `Menu`'s press-outside dismissal with no coordinating state in this
+// card and none in the row.
+
+/** The **Language pool** the prototype's own dropdown offers, in its order. */
+const LANGUAGE_POOL = [
+  'English',
+  'Spanish',
+  'French',
+  'German',
+  'Portuguese',
+  'Italian',
+  'Dutch',
+];
+
+/** An English track off the maintainer's own disk. */
+const EN_SRT = new File(['cue bytes'], 'lantern.en.srt', {
+  type: 'text/plain',
+});
+
+/** The Portuguese one beside it in the same folder. */
+const PT_SRT = new File(['cue bytes'], 'lantern.pt.srt', {
+  type: 'text/plain',
+});
+
+/**
+ * One attached **Subtitle**, as the form holds it.
+ *
+ * The `key` is the form's own and never the persisted subtitle id: rows are
+ * removed and re-ordered while the movie is being typed, and there is no id
+ * until the save lands.
+ */
+function attached(
+  key: string,
+  file: File,
+  language = 'English'
+): MovieFormSubtitle {
+  return {
+    key,
+    file: { kind: 'picked', file, filename: file.name },
+    language,
+  };
+}
+
+/** Two tracks in two languages — the demoable case of the whole slice. */
+const TWO_TRACKS: MovieFormSubtitle[] = [
+  attached('s1', EN_SRT, 'English'),
+  attached('s2', PT_SRT, 'Portuguese'),
+];
+
+/** The "＋ Add subtitle file" picker, offered however many rows already exist. */
+const subtitlePicker = () =>
+  screen.getByLabelText(/add subtitle file/i) as HTMLInputElement;
+
+/** One row's language control, named after the file it labels. */
+const languageOf = (filename: string) =>
+  screen.getByRole('button', {
+    name: new RegExp(`language for ${filename.replace(/\./g, '\\.')}`, 'i'),
+  });
+
+/** Every row of whichever language list is open, by its text. */
+const openLanguages = () =>
+  screen.queryAllByRole('menuitem').map((row) => row.textContent);
+
+describe('MovieFormFiles — the subtitle rows', () => {
+  it('names the subtitles section', () => {
+    renderFiles();
+
+    // The prototype's third caption in the Files card, beside Video and Poster.
+    expect(screen.getByText(/^subtitles$/i)).toBeDefined();
+  });
+
+  it('offers “＋ Add subtitle file” as a file picker', () => {
+    renderFiles();
+
+    // Story 24. A row is created by picking a file, so there is never an empty
+    // subtitle row to explain — the ＋ *is* the picker, on `FileField`'s own
+    // label-over-a-hidden-input design.
+    expect(subtitlePicker().type).toBe('file');
+  });
+
+  it('offers the four formats the parsers dispatch on', () => {
+    renderFiles();
+
+    // Story 28, and the client half of the rule: the same four
+    // `parseSubtitle/` knows, because a file the player could never read is not
+    // one the dialog should offer. The server re-checks by extension anyway.
+    const accept = subtitlePicker().getAttribute('accept') ?? '';
+    expect(accept).toContain('.srt');
+    expect(accept).toContain('.vtt');
+    expect(accept).toContain('.ass');
+    expect(accept).toContain('.sub');
+  });
+
+  it('reports the subtitle that was picked', async () => {
+    const { onAddSubtitle } = renderFiles();
+
+    await userEvent.upload(subtitlePicker(), EN_SRT, { applyAccept: false });
+
+    // The `File` itself, on the other two slots' rule — and what language it
+    // lands in is the form's decision, not this card's.
+    expect(onAddSubtitle).toHaveBeenCalledWith(EN_SRT);
+  });
+
+  it('draws no rows and still offers the picker when nothing is attached', () => {
+    renderFiles();
+
+    // Story 64: a film with no subtitles is a normal film, so the section is an
+    // add button and nothing else.
+    expect(screen.queryByText('lantern.en.srt')).toBeNull();
+    expect(subtitlePicker()).toBeDefined();
+  });
+
+  it('draws one row per attached subtitle', () => {
+    renderFiles({ subtitles: TWO_TRACKS });
+
+    // Story 25. Two files, two rows, two filenames — the maintainer has to be
+    // able to tell which track is which before labelling either.
+    expect(screen.getByText('lantern.en.srt')).toBeDefined();
+    expect(screen.getByText('lantern.pt.srt')).toBeDefined();
+  });
+
+  it('shows each row in its own language', () => {
+    renderFiles({ subtitles: TWO_TRACKS });
+
+    expect(languageOf('lantern.en.srt').textContent).toContain('English');
+    expect(languageOf('lantern.pt.srt').textContent).toContain('Portuguese');
+  });
+
+  it('offers the Language pool the prototype draws', () => {
+    renderFiles({ subtitles: [attached('s1', EN_SRT)] });
+
+    fireEvent.click(languageOf('lantern.en.srt'));
+
+    // Story 26. The seven are this card's to know — a display vocabulary, not
+    // an entity — and `SubtitleRow` is handed them.
+    expect(openLanguages()).toEqual(LANGUAGE_POOL);
+  });
+
+  it('reports a language change against the row it happened on', () => {
+    const { onChangeSubtitleLanguage } = renderFiles({ subtitles: TWO_TRACKS });
+
+    fireEvent.click(languageOf('lantern.pt.srt'));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'French' }));
+
+    // The row's own `key`, never its index: the form removes and re-orders
+    // rows, and an index would relabel the wrong track the moment one above it
+    // went away.
+    expect(onChangeSubtitleLanguage).toHaveBeenCalledWith('s2', 'French');
+    expect(onChangeSubtitleLanguage).toHaveBeenCalledTimes(1);
+  });
+
+  it('reports the removal of the row it happened on', () => {
+    const { onRemoveSubtitle } = renderFiles({ subtitles: TWO_TRACKS });
+
+    fireEvent.click(
+      screen.getByRole('button', { name: /remove lantern\.en\.srt/i })
+    );
+
+    expect(onRemoveSubtitle).toHaveBeenCalledWith('s1');
+    expect(onRemoveSubtitle).toHaveBeenCalledTimes(1);
+  });
+
+  it('shuts one row’s language list when the next one is opened', () => {
+    renderFiles({ subtitles: TWO_TRACKS });
+
+    fireEvent.click(languageOf('lantern.en.srt'));
+    expect(openLanguages()).toEqual(LANGUAGE_POOL);
+
+    // A real press: `Menu` dismisses on `pointerdown` rather than on the click,
+    // so the first list is gone before the press that dismissed it lands.
+    fireEvent.pointerDown(languageOf('lantern.pt.srt'));
+    fireEvent.click(languageOf('lantern.pt.srt'));
+
+    // Story 31, and the whole argument for building the row on `Menu`: opening
+    // the second list is a press outside the first, which is already what shuts
+    // it. Exactly one list is open, with no coordinating state anywhere — so
+    // there are seven rows on screen and not fourteen.
+    expect(openLanguages()).toEqual(LANGUAGE_POOL);
+    expect(languageOf('lantern.en.srt').getAttribute('aria-expanded')).toBe(
+      'false'
+    );
+    expect(languageOf('lantern.pt.srt').getAttribute('aria-expanded')).toBe(
+      'true'
+    );
   });
 });

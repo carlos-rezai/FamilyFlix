@@ -1358,3 +1358,329 @@ describe('MovieForm — saving the poster', () => {
     expect(pickedPoster()).not.toBeNull();
   });
 });
+
+// --- 11 — Movie form, Phase 4: the subtitle rows (issue #104) ----------------
+//
+// The third kind of file, and the first that is a **list**: a film carries as
+// many **Subtitles** as the family needs, each in a language the maintainer
+// chooses. What is asserted here is the screen and the wire — how many rows
+// there are, which one a change lands on, and what goes out on the save —
+// while `SubtitleRow` owns how one row looks and `MovieFormFiles` owns what the
+// card knows.
+//
+// **The rows are held by key, not by index.** The test that says so is the
+// point: removing the middle of three has to leave the other two exactly as
+// they were, and an index-keyed list is one where it silently does not.
+//
+// This is also the slice that finishes the line under the heading. It reads
+// "Pick the video, poster, and any subtitle files for this movie", and until
+// now it would have been the screen describing a control it did not have.
+
+/** The "＋ Add subtitle file" picker, offered however many rows already exist. */
+const subtitlePicker = () =>
+  screen.getByLabelText(/add subtitle file/i) as HTMLInputElement;
+
+/** A subtitle file off the maintainer's own disk. */
+const subtitleFile = (name = 'lantern.en.srt') =>
+  new File(['cue bytes'], name, { type: 'text/plain' });
+
+/**
+ * Attach one track, the way the maintainer does: pick a file, and a row
+ * appears. There is no empty subtitle row to fill in — the ＋ is the picker.
+ */
+async function attachSubtitle(file: File = subtitleFile()): Promise<File> {
+  await userEvent.upload(subtitlePicker(), file, { applyAccept: false });
+  return file;
+}
+
+/** One row's language control, named after the file it labels. */
+const languageOf = (filename: string) =>
+  screen.getByRole('button', {
+    name: new RegExp(`language for ${filename.replace(/\./g, '\\.')}`, 'i'),
+  });
+
+/** Sets one row's language through its own list. */
+function chooseLanguage(filename: string, language: string) {
+  fireEvent.click(languageOf(filename));
+  fireEvent.click(screen.getByRole('menuitem', { name: language }));
+}
+
+/** Every subtitle part of the save, in the order they were appended. */
+const savedSubtitles = () => savedFields()?.getAll('subtitle') ?? [];
+
+/** Every language field of the save, in the order they were appended. */
+const savedLanguages = () => savedFields()?.getAll('subtitleLanguage') ?? [];
+
+describe('MovieForm — the line under the heading', () => {
+  it('says the form takes subtitle files, now that it does', async () => {
+    await renderForm();
+
+    // The prototype's own caption, held back through three slices because it
+    // would have been the screen describing a control it did not have. This is
+    // the slice that makes it true.
+    expect(
+      screen.getByText(/pick the video, poster, and any subtitle files/i)
+    ).toBeDefined();
+  });
+});
+
+describe('MovieForm — the subtitle rows', () => {
+  it('offers the picker with no row under it to begin with', async () => {
+    await renderForm();
+
+    // Story 64: a film with no subtitles is a normal film, and the section
+    // opens as an add button and nothing else.
+    expect(subtitlePicker()).toBeDefined();
+    expect(screen.queryByText('lantern.en.srt')).toBeNull();
+  });
+
+  it('offers the four formats the parsers dispatch on', async () => {
+    await renderForm();
+
+    // Story 28. The same four `parseSubtitle/` knows — a file the player could
+    // never read is not one the dialog should offer — and the server re-checks
+    // by extension regardless.
+    const accept = subtitlePicker().getAttribute('accept') ?? '';
+    expect(accept).toContain('.srt');
+    expect(accept).toContain('.vtt');
+    expect(accept).toContain('.ass');
+    expect(accept).toContain('.sub');
+  });
+
+  it('adds a row when a subtitle file is picked', async () => {
+    await renderForm();
+
+    await attachSubtitle();
+
+    // Story 24, and the whole shape of this control: picking is what creates
+    // the row, so no row is ever waiting to be filled in.
+    expect(screen.getByText('lantern.en.srt')).toBeDefined();
+  });
+
+  it('lands a picked subtitle in English', async () => {
+    await renderForm();
+
+    await attachSubtitle();
+
+    // Story 27. Most of the family folder is English, so the common case is
+    // meant to need no second press — and the default is a real choice the
+    // maintainer can take back, not a locked value.
+    expect(languageOf('lantern.en.srt').textContent).toContain('English');
+  });
+
+  it('attaches several subtitle files', async () => {
+    await renderForm();
+
+    await attachSubtitle(subtitleFile('lantern.en.srt'));
+    await attachSubtitle(subtitleFile('lantern.pt.srt'));
+
+    // Story 25: a film shown to a family that does not all read the same
+    // language needs more than one track.
+    expect(screen.getByText('lantern.en.srt')).toBeDefined();
+    expect(screen.getByText('lantern.pt.srt')).toBeDefined();
+  });
+
+  it('still offers the picker once rows exist', async () => {
+    await renderForm();
+
+    await attachSubtitle();
+
+    // Unlike the video and poster slots, which swap their picker for the file
+    // they hold: this one is a list, and the ＋ is how it grows.
+    expect(subtitlePicker()).toBeDefined();
+  });
+
+  it('changes one row’s language and leaves the other alone', async () => {
+    await renderForm();
+    await attachSubtitle(subtitleFile('lantern.en.srt'));
+    await attachSubtitle(subtitleFile('lantern.pt.srt'));
+
+    chooseLanguage('lantern.pt.srt', 'Portuguese');
+
+    // Story 26. Two rows, two languages: a change that reached both would make
+    // a second track pointless.
+    expect(languageOf('lantern.pt.srt').textContent).toContain('Portuguese');
+    expect(languageOf('lantern.en.srt').textContent).toContain('English');
+  });
+
+  it('takes a second language over the first on the same row', async () => {
+    await renderForm();
+    await attachSubtitle();
+
+    chooseLanguage('lantern.en.srt', 'French');
+    chooseLanguage('lantern.en.srt', 'German');
+
+    expect(languageOf('lantern.en.srt').textContent).toContain('German');
+    expect(languageOf('lantern.en.srt').textContent).not.toContain('French');
+  });
+
+  it('removes the row whose ✕ was pressed', async () => {
+    await renderForm();
+    await attachSubtitle(subtitleFile('lantern.en.srt'));
+    await attachSubtitle(subtitleFile('lantern.pt.srt'));
+
+    fireEvent.click(
+      screen.getByRole('button', { name: /remove lantern\.en\.srt/i })
+    );
+
+    expect(screen.queryByText('lantern.en.srt')).toBeNull();
+    expect(screen.getByText('lantern.pt.srt')).toBeDefined();
+  });
+
+  it('leaves the surviving rows in the languages they were given', async () => {
+    await renderForm();
+    await attachSubtitle(subtitleFile('lantern.en.srt'));
+    await attachSubtitle(subtitleFile('lantern.pt.srt'));
+    await attachSubtitle(subtitleFile('lantern.fr.srt'));
+    chooseLanguage('lantern.pt.srt', 'Portuguese');
+    chooseLanguage('lantern.fr.srt', 'French');
+
+    fireEvent.click(
+      screen.getByRole('button', { name: /remove lantern\.pt\.srt/i })
+    );
+
+    // The rows are held by their own stable `key`, not by where they sit. An
+    // index-keyed list would quietly hand the French row's language to whatever
+    // moved up into its place, and the maintainer would have no way to see it
+    // had happened until the film was already in the library.
+    expect(screen.queryByText('lantern.pt.srt')).toBeNull();
+    expect(languageOf('lantern.en.srt').textContent).toContain('English');
+    expect(languageOf('lantern.fr.srt').textContent).toContain('French');
+  });
+
+  it('takes the same file again once the wrong one is removed', async () => {
+    await renderForm();
+    await attachSubtitle(subtitleFile('the-wrong-track.srt'));
+
+    fireEvent.click(
+      screen.getByRole('button', { name: /remove the-wrong-track\.srt/i })
+    );
+    await attachSubtitle();
+
+    expect(screen.queryByText('the-wrong-track.srt')).toBeNull();
+    expect(screen.getByText('lantern.en.srt')).toBeDefined();
+  });
+});
+
+describe('MovieForm — the save gate, unchanged by the subtitles', () => {
+  it('opens on a title and a film with no subtitles at all', async () => {
+    await renderForm();
+
+    fireEvent.change(titleField(), { target: { value: 'The Lantern Keeper' } });
+    await pickVideo();
+
+    // Story 64. The gate is the two halves it has had since the video slot
+    // landed, and neither the poster nor a subtitle is a third.
+    expect(save().disabled).toBe(false);
+  });
+
+  it('does not open on a subtitle alone', async () => {
+    await renderForm();
+
+    await attachSubtitle();
+
+    expect(save().disabled).toBe(true);
+  });
+});
+
+describe('MovieForm — saving the subtitles', () => {
+  it('sends one subtitle part per attached file, in the order attached', async () => {
+    await renderForm();
+    fireEvent.change(titleField(), { target: { value: 'The Lantern Keeper' } });
+    await pickVideo();
+    const english = await attachSubtitle(subtitleFile('lantern.en.srt'));
+    const portuguese = await attachSubtitle(subtitleFile('lantern.pt.srt'));
+
+    fireEvent.click(save());
+
+    await waitFor(() => expect(savedFields()).toBeDefined());
+    // The order the parts are sent in is the order the tracks are stored in,
+    // which is the order `preferredSubtitle` falls back through when no
+    // language is preferred.
+    expect(savedSubtitles()).toEqual([english, portuguese]);
+  });
+
+  it('sends each row’s language beside its file, in the same order', async () => {
+    await renderForm();
+    fireEvent.change(titleField(), { target: { value: 'The Lantern Keeper' } });
+    await pickVideo();
+    await attachSubtitle(subtitleFile('lantern.en.srt'));
+    await attachSubtitle(subtitleFile('lantern.pt.srt'));
+    chooseLanguage('lantern.pt.srt', 'Portuguese');
+
+    fireEvent.click(save());
+
+    await waitFor(() => expect(savedFields()).toBeDefined());
+    // Two repeated names travelling in step — the shape `genre` and `cast`
+    // already use, read pairwise: the i-th language belongs to the i-th file.
+    expect(savedLanguages()).toEqual(['English', 'Portuguese']);
+  });
+
+  it('carries the film, its artwork and its tracks in one request', async () => {
+    await renderForm();
+    fireEvent.change(titleField(), { target: { value: 'The Lantern Keeper' } });
+    await pickVideo();
+    await pickPoster();
+    await attachSubtitle();
+
+    fireEvent.click(save());
+
+    await waitFor(() => expect(savedFields()).toBeDefined());
+    // Story 36 with four files in it: still one request per save, no
+    // upload-on-pick and no draft id, however many slots are filled.
+    expect(savedFields()?.get('video')).toBeInstanceOf(File);
+    expect(savedFields()?.get('poster')).toBeInstanceOf(File);
+    expect(savedSubtitles()).toHaveLength(1);
+    expect(saveRequests()).toHaveLength(1);
+  });
+
+  it('sends no subtitle part at all when none was attached', async () => {
+    await renderForm();
+    fireEvent.change(titleField(), { target: { value: 'The Lantern Keeper' } });
+    await pickVideo();
+
+    fireEvent.click(save());
+
+    await waitFor(() => expect(savedFields()).toBeDefined());
+    // The lists' rule rather than the fields': there is no file with no bytes
+    // and no language belonging to nothing, so an empty list sends nothing.
+    expect(savedSubtitles()).toEqual([]);
+    expect(savedLanguages()).toEqual([]);
+  });
+
+  it('sends no part for a track that was attached and then removed', async () => {
+    await renderForm();
+    fireEvent.change(titleField(), { target: { value: 'The Lantern Keeper' } });
+    await pickVideo();
+    await attachSubtitle(subtitleFile('the-wrong-track.srt'));
+    await attachSubtitle(subtitleFile('lantern.en.srt'));
+    fireEvent.click(
+      screen.getByRole('button', { name: /remove the-wrong-track\.srt/i })
+    );
+
+    fireEvent.click(save());
+
+    await waitFor(() => expect(savedFields()).toBeDefined());
+    const sent = savedSubtitles() as File[];
+    expect(sent.map((file) => file.name)).toEqual(['lantern.en.srt']);
+  });
+
+  it('leaves the tracks attached when the save fails', async () => {
+    answerSave = () => Promise.resolve(serverErrorResponse());
+    await renderForm();
+    fireEvent.change(titleField(), { target: { value: 'The Lantern Keeper' } });
+    await pickVideo();
+    await attachSubtitle();
+    chooseLanguage('lantern.en.srt', 'Portuguese');
+
+    fireEvent.click(save());
+
+    // The refused save leaves the form standing with everything in it — the
+    // language chosen included, since re-labelling a track is work the
+    // maintainer did on purpose.
+    await waitFor(() => expect(save().disabled).toBe(false));
+    expect(currentPath()).toBe('/add');
+    expect(screen.getByText('lantern.en.srt')).toBeDefined();
+    expect(languageOf('lantern.en.srt').textContent).toContain('Portuguese');
+  });
+});
