@@ -87,4 +87,31 @@ export interface MovieFormValues {
    * name is what both ends of the wire already spell it with.
    */
   genres: string[];
+  /**
+   * The **Subtitles** attached, **in the order they were attached** — the first
+   * value here that is a list of files rather than a slot, and a complete
+   * answer when it is empty: a film in the family's own language needs no
+   * track.
+   */
+  subtitles: MovieFormSubtitle[];
+}
+
+/**
+ * One **Subtitle** attached to the form: the file itself, the language the
+ * maintainer chose for it, and the form's own key.
+ *
+ * The `key` is not the persisted subtitle id and never leaves the browser.
+ * There is no id until the save lands, and the rows are added, re-labelled and
+ * removed long before then — a list held by index would hand a removed row's
+ * language to whatever moved up into its place, with nothing on screen to say
+ * it had happened.
+ *
+ * The order of the list is the track order: `position` is what
+ * `preferredSubtitle` falls back through when no language is preferred, so the
+ * order the rows are in is the order the family gets.
+ */
+export interface MovieFormSubtitle {
+  key: string;
+  file: MovieFormFile;
+  language: string;
 }

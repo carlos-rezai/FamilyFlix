@@ -26,3 +26,4 @@ export {
   RatingPicker,
   type RatingPickerProps,
 } from './RatingPicker/RatingPicker';
+export { SubtitleRow, type SubtitleRowProps } from './SubtitleRow/SubtitleRow';

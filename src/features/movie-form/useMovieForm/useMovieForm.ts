@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import type { MovieFormValues } from '@/types';
@@ -9,6 +9,16 @@ const AFTER_SAVE = '/';
 
 /** The most digits a year can have. */
 const YEAR_LENGTH = 4;
+
+/**
+ * The language a picked track lands in.
+ *
+ * Story 27: most of the family folder is English, so the common case is meant
+ * to need no second press. It is a default the maintainer can take back on the
+ * row itself, never a locked value — and it is the form's decision rather than
+ * the card's, which is why it is here and the pool is there.
+ */
+const DEFAULT_LANGUAGE = 'English';
 
 /** An empty form: what the **Add context** opens on. */
 const EMPTY: MovieFormValues = {
@@ -26,6 +36,9 @@ const EMPTY: MovieFormValues = {
   // The other empty slot, and no part of the gate at all: a film with no
   // artwork to hand still belongs in the library.
   poster: null,
+  // No tracks, which is a complete answer rather than a slot left empty: a film
+  // in the family's own language needs none.
+  subtitles: [],
 };
 
 export interface UseMovieFormResult {
@@ -49,6 +62,12 @@ export interface UseMovieFormResult {
   pickPoster: (file: File) => void;
   /** Empty the poster slot again. */
   removePoster: () => void;
+  /** Append a row for a track the maintainer chose off their own disk. */
+  addSubtitle: (file: File) => void;
+  /** Put the row holding `key` into another language. */
+  changeSubtitleLanguage: (key: string, language: string) => void;
+  /** Take the row holding `key` off the movie. */
+  removeSubtitle: (key: string) => void;
   /** Whether Save can be pressed — the gate, not a validation message. */
   canSave: boolean;
   /** Whether the write is in flight. */
@@ -70,7 +89,9 @@ export interface UseMovieFormResult {
  * A title and a film are now one condition rather than two conditions in two
  * places — and it is a condition rather than a latch, so either half can be
  * taken back. **The poster is not a third half**: `poster_path` is nullable, and
- * a film the maintainer has no artwork for still belongs in the library.
+ * a film the maintainer has no artwork for still belongs in the library. Nor is
+ * a subtitle — a film with no track at all is a normal row, and one attached to
+ * nothing else is still not a row this form can write.
  *
  * **Year is text, and cannot be a non-year.** Non-digits are dropped and the
  * field stops at four characters, so there is nothing to validate and nothing to
@@ -93,6 +114,13 @@ export interface UseMovieFormResult {
  * the units the column stores happens once, at the wire, so no second rating
  * representation exists between the strip and the row. It is no part of the
  * gate either: an unscored film is a normal row.
+ *
+ * **The subtitles are a list the maintainer orders**, and the only value here
+ * held by key rather than by position: a picked file appends a row in English,
+ * the language is changed on the row itself, and a removal leaves every
+ * surviving row exactly as it was. The order is the track order — `position` is
+ * what `preferredSubtitle` falls back through — so the order they were attached
+ * in is the order the family gets.
  *
  * **The destination is here rather than in the component**, because leaving is
  * part of what saving means: the browse home is the one place the maintainer can
@@ -165,6 +193,47 @@ export function useMovieForm(): UseMovieFormResult {
     setValues((current) => ({ ...current, poster: null }));
   }, []);
 
+  // The rows are held by a key of the form's own, handed out here and never
+  // reused. Two files can share a name, a name can be picked again after the
+  // wrong row was removed, and there is no subtitle id until the save lands —
+  // so a counter is the only thing on this screen that is reliably unique.
+  const nextKey = useRef(0);
+
+  const addSubtitle = useCallback((file: File) => {
+    nextKey.current += 1;
+    const key = `subtitle-${nextKey.current}`;
+    setValues((current) => ({
+      ...current,
+      subtitles: [
+        ...current.subtitles,
+        {
+          key,
+          file: { kind: 'picked', file, filename: file.name },
+          language: DEFAULT_LANGUAGE,
+        },
+      ],
+    }));
+  }, []);
+
+  const changeSubtitleLanguage = useCallback(
+    (key: string, language: string) => {
+      setValues((current) => ({
+        ...current,
+        subtitles: current.subtitles.map((subtitle) =>
+          subtitle.key === key ? { ...subtitle, language } : subtitle
+        ),
+      }));
+    },
+    []
+  );
+
+  const removeSubtitle = useCallback((key: string) => {
+    setValues((current) => ({
+      ...current,
+      subtitles: current.subtitles.filter((subtitle) => subtitle.key !== key),
+    }));
+  }, []);
+
   const toggleGenre = useCallback((name: string) => {
     setValues((current) => ({
       ...current,
@@ -204,6 +273,9 @@ export function useMovieForm(): UseMovieFormResult {
     removeVideo,
     pickPoster,
     removePoster,
+    addSubtitle,
+    changeSubtitleLanguage,
+    removeSubtitle,
     canSave,
     saving,
     save,

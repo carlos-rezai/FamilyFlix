@@ -16,6 +16,8 @@ import {
   Column,
   HeaderRow,
   Heading,
+  Lede,
+  Emphasis,
   Fields,
   FieldRow,
   Field,
@@ -55,13 +57,8 @@ const CANCEL_LABEL = 'Cancel';
  * apart — and neither writes anything: a maintainer who leaves a half-filled
  * form leaves with it.
  *
- * **What of the prototype is deliberately not here yet**, so its absence reads as
- * a slice boundary rather than as a miss:
- *
- * - The subtitle rows of the Files card, and with them the line under the
- *   heading: it reads "Pick the video, poster, and any subtitle files for this
- *   movie", which would still be the screen describing a control it does not
- *   have. They arrive with issue #104.
+ * The line under the heading is now true of the screen it stands over: it names
+ * the video, the poster and the subtitle files, and all three are here.
  */
 export function MovieForm() {
   const goBack = useGoBack();
@@ -79,6 +76,9 @@ export function MovieForm() {
     removeVideo,
     pickPoster,
     removePoster,
+    addSubtitle,
+    changeSubtitleLanguage,
+    removeSubtitle,
     canSave,
     saving,
     save,
@@ -99,6 +99,14 @@ export function MovieForm() {
           </IconButton>
           <Heading>Add a movie</Heading>
         </HeaderRow>
+
+        {/* The prototype's own line under the heading, held back through three
+            slices because it names the subtitle files — until this one it would
+            have been the screen describing a control it did not have. */}
+        <Lede>
+          Pick the video, poster, and any subtitle files for this movie. To add
+          many at once, use <Emphasis>Import library</Emphasis>.
+        </Lede>
 
         <Fields>
           <FieldRow>
@@ -201,6 +209,10 @@ export function MovieForm() {
             poster={values.poster}
             onPickPoster={pickPoster}
             onRemovePoster={removePoster}
+            subtitles={values.subtitles}
+            onAddSubtitle={addSubtitle}
+            onChangeSubtitleLanguage={changeSubtitleLanguage}
+            onRemoveSubtitle={removeSubtitle}
           />
         </Fields>
 

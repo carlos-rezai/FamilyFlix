@@ -1,8 +1,16 @@
-import { FileField } from '@/components';
+import { FileField, SubtitleRow } from '@/components';
 import { ImageIcon, VideoIcon } from '@/primitives';
-import type { MovieFormFile } from '@/types';
+import type { MovieFormFile, MovieFormSubtitle } from '@/types';
 
-import { Caption, Card } from './MovieFormFiles.styles';
+import {
+  AddTrack,
+  Caption,
+  Card,
+  Subtitles,
+  SubtitlesLabel,
+  TrackPicker,
+  Tracks,
+} from './MovieFormFiles.styles';
 
 /**
  * What the video slot offers a file dialog.
@@ -28,12 +36,44 @@ const VIDEO_ACCEPT = 'video/*,.mkv,.avi';
  */
 const POSTER_ACCEPT = 'image/*';
 
+/**
+ * What the subtitle picker offers a file dialog: the same four extensions
+ * `parseSubtitle/` dispatches on, because a file the player could never read is
+ * not one the dialog should offer.
+ *
+ * No MIME type beside them, unlike the two slots above — a browser calls a
+ * `.srt` `text/plain` if it names it at all, and `text/plain` would offer the
+ * maintainer every note in the folder. The server re-checks by extension
+ * anyway, and refuses what this list is only asking for.
+ */
+const SUBTITLE_ACCEPT = '.srt,.vtt,.ass,.sub';
+
+/**
+ * The **Language pool** a **Subtitle row** chooses from, in the order the
+ * prototype's own dropdown draws it.
+ *
+ * The same kind of knowledge as the accept lists beside it: a display
+ * vocabulary this screen owns rather than an entity, which is why `SubtitleRow`
+ * is handed it. Nothing on either end of the wire maps a name here to a locale.
+ */
+const LANGUAGES = [
+  'English',
+  'Spanish',
+  'French',
+  'German',
+  'Portuguese',
+  'Italian',
+  'Dutch',
+];
+
 /** The caption over the card, and the names of its slots. */
 const CARD_LABEL = 'Files';
 const VIDEO_LABEL = 'Video';
 const VIDEO_CHOOSE = 'Choose video file';
 const POSTER_LABEL = 'Poster';
 const POSTER_CHOOSE = 'Choose poster image';
+const SUBTITLES_LABEL = 'Subtitles';
+const SUBTITLE_ADD = 'Add subtitle file';
 
 export interface MovieFormFilesProps {
   /** What is in the video slot, or `null` while it is empty. */
@@ -48,6 +88,15 @@ export interface MovieFormFilesProps {
   onPickPoster: (file: File) => void;
   /** Reports that the poster slot's ✕ was pressed. */
   onRemovePoster: () => void;
+  /** The tracks attached so far, in the order they will be stored in. */
+  subtitles: MovieFormSubtitle[];
+  /** Reports the track that was picked — the `File` itself. What language it
+   *  lands in is the form's decision, not this card's. */
+  onAddSubtitle: (file: File) => void;
+  /** Reports a language chosen on the row holding `key`. */
+  onChangeSubtitleLanguage: (key: string, language: string) => void;
+  /** Reports the ✕ pressed on the row holding `key`. */
+  onRemoveSubtitle: (key: string) => void;
 }
 
 /**
@@ -63,7 +112,15 @@ export interface MovieFormFilesProps {
  * rung: what is new here is only that a **Movie** has a second kind of file, and
  * what that one offers a file dialog.
  *
- * The **Subtitle** rows the prototype draws under these two arrive with #104.
+ * **The subtitles are a list rather than a slot**, and that is the whole of what
+ * is different about them: picking a file appends a row, the ＋ stays after it,
+ * and a film carries as many tracks as the family needs. With them this card
+ * also knows the **Language pool** — the same kind of knowledge as the accept
+ * lists, which is why `SubtitleRow` is handed it rather than knowing it.
+ *
+ * Only one row's language list can be open at a time, and there is no state
+ * here that arranges it: `SubtitleRow` is built on `Menu`, and opening the
+ * second list is a press outside the first, which is already what shuts it.
  */
 export function MovieFormFiles({
   video,
@@ -72,6 +129,10 @@ export function MovieFormFiles({
   poster,
   onPickPoster,
   onRemovePoster,
+  subtitles,
+  onAddSubtitle,
+  onChangeSubtitleLanguage,
+  onRemoveSubtitle,
 }: MovieFormFilesProps) {
   return (
     <Card>
@@ -94,6 +155,46 @@ export function MovieFormFiles({
         onPick={onPickPoster}
         onRemove={onRemovePoster}
       />
+      <Subtitles>
+        <SubtitlesLabel>{SUBTITLES_LABEL}</SubtitlesLabel>
+        <Tracks>
+          {subtitles.map((subtitle) => (
+            // The row's own key, never its index: a removal re-orders what is
+            // left, and an index-keyed list would hand a row's language to
+            // whatever moved up into its place.
+            <SubtitleRow
+              key={subtitle.key}
+              filename={subtitle.file.filename}
+              language={subtitle.language}
+              languages={LANGUAGES}
+              onLanguageChange={(language) =>
+                onChangeSubtitleLanguage(subtitle.key, language)
+              }
+              onRemove={() => onRemoveSubtitle(subtitle.key)}
+            />
+          ))}
+          <AddTrack>
+            ＋ {SUBTITLE_ADD}
+            <TrackPicker
+              type="file"
+              accept={SUBTITLE_ACCEPT}
+              onChange={(event) => {
+                // A cancelled dialog fires a change with nothing in it, and a
+                // row appended from one would be a track with no file.
+                const file: File | undefined = event.target.files?.[0];
+                if (file) {
+                  onAddSubtitle(file);
+                }
+                // Unlike a slot's picker, this one is still here after the
+                // pick — and an input still holding the last file reports
+                // nothing when the same one is chosen again, which is exactly
+                // what a maintainer does after removing the wrong row.
+                event.target.value = '';
+              }}
+            />
+          </AddTrack>
+        </Tracks>
+      </Subtitles>
     </Card>
   );
 }

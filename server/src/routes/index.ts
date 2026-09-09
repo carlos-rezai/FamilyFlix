@@ -276,6 +276,39 @@ function isPosterFilename(filename: string): boolean {
 }
 
 /**
+ * What a **subtitle** may be called — the same four `parseSubtitle/` dispatches
+ * on, and the same four the picker offers.
+ *
+ * {@link POSTER_EXTENSIONS}' rule at a third slot, and for the same reason: a
+ * file under the media root is served back by `express.static` with the
+ * Content-Type its extension implies, so a stored `.html` would be a page served
+ * from the app's own origin whatever the picker's accept list said. One list,
+ * checked at the door it can be lied to at.
+ *
+ * A file with no extension is refused rather than passed: the check is on what
+ * the file is called, and a file called nothing in particular has not claimed to
+ * be a subtitle.
+ */
+const SUBTITLE_EXTENSIONS = ['.srt', '.vtt', '.ass', '.sub'];
+
+/** Whether a filename the client chose is one a subtitle track may have. */
+function isSubtitleFilename(filename: string): boolean {
+  const lower = filename.toLowerCase();
+  return SUBTITLE_EXTENSIONS.some((extension) => lower.endsWith(extension));
+}
+
+/**
+ * The language a track arrives with — the one the client sent for it, or
+ * English for a track sent with none.
+ *
+ * Unreachable from the form, which sends a language with every row. It is here
+ * because `subtitles.language` is `NOT NULL`, and a client this route did not
+ * write must not be able to make the column the reason a save fails — the
+ * default is the same one the row lands in on screen.
+ */
+const DEFAULT_SUBTITLE_LANGUAGE = 'English';
+
+/**
  * What a route is handed when a file part arrives: its field name, the name the
  * client gave the file, the bytes themselves, and **the fields that arrived
  * before it**.
@@ -692,10 +725,18 @@ export function createApiRouter(
   // most of the family folder to spare the family a message the player already
   // draws.
 
-  // **A poster is the one part whose name is re-checked**, and for the opposite
-  // reason: an unplayable film is a message the player draws, but a file under
-  // the media root is served back by `express.static` with the Content-Type its
-  // extension implies — so what a poster may be called is decided here.
+  // **The poster and the subtitles are the parts whose names are re-checked**,
+  // and for the opposite reason: an unplayable film is a message the player
+  // draws, but a file under the media root is served back by `express.static`
+  // with the Content-Type its extension implies — so what each of those two may
+  // be called is decided here.
+  //
+  // **The subtitles are the one part that arrives any number of times**, and
+  // they arrive with a field each: one `subtitle` part per track and one
+  // `subtitleLanguage` field beside it, read pairwise in the order the parts
+  // came in. That order is the track order the row is written with, because
+  // `position` is what `preferredSubtitle` falls back through when the family
+  // has no preferred language.
   //
   // A body with no title is a 400 rather than an untitled row. The form gates
   // Save on a title, so this is unreachable from the app — but `title` is
@@ -715,8 +756,18 @@ export function createApiRouter(
     let videoPath: string | undefined;
     let posterPath: string | undefined;
 
+    /**
+     * The tracks this request wrote, in the order their parts arrived — which
+     * is the order they are stored in, because `position` is what
+     * `preferredSubtitle` falls back through.
+     */
+    const subtitlePaths: string[] = [];
+
     /** The name of a poster part this route will not store, if one arrived. */
     let rejectedPoster: string | undefined;
+
+    /** The name of a subtitle part this route will not store, if one arrived. */
+    let rejectedSubtitle: string | undefined;
 
     /** Take back everything this request put on disk. */
     const rollback = (): void => {
@@ -728,10 +779,9 @@ export function createApiRouter(
     let fields: Record<string, string[]>;
     try {
       fields = await readBody(req, async (name, filename, part, before) => {
-        // Every other part is drained rather than stored: the subtitles are
-        // #104, and a part this slice does not know about is not a reason to
-        // refuse the save.
-        if (name !== 'video' && name !== 'poster') {
+        // Every other part is drained rather than stored: a part this route
+        // does not know about is not a reason to refuse the save.
+        if (name !== 'video' && name !== 'poster' && name !== 'subtitle') {
           part.resume();
           return;
         }
@@ -745,6 +795,13 @@ export function createApiRouter(
           return;
         }
 
+        // The same rule at the third slot, for the same reason.
+        if (name === 'subtitle' && !isSubtitleFilename(filename)) {
+          part.resume();
+          rejectedSubtitle = filename;
+          return;
+        }
+
         folder ??= media.reserveFolder(
           onlyField(before, 'title')?.trim() ?? '',
           optionalYear(onlyField(before, 'year')) ?? null
@@ -752,8 +809,13 @@ export function createApiRouter(
         const stored = await media.storeUpload(folder, filename, part);
         if (name === 'video') {
           videoPath = stored;
-        } else {
+        } else if (name === 'poster') {
           posterPath = stored;
+        } else {
+          // Appended rather than assigned: this is the one part that arrives
+          // any number of times, and the order it arrives in is the track
+          // order the movie is stored with.
+          subtitlePaths.push(stored);
         }
       });
     } catch {
@@ -776,6 +838,14 @@ export function createApiRouter(
       rollback();
       res.status(400).json({
         error: `Not a poster image: ${JSON.stringify(rejectedPoster)}`,
+      });
+      return;
+    }
+
+    if (rejectedSubtitle !== undefined) {
+      rollback();
+      res.status(400).json({
+        error: `Not a subtitle file: ${JSON.stringify(rejectedSubtitle)}`,
       });
       return;
     }
@@ -815,6 +885,17 @@ export function createApiRouter(
     // filed — a normal row, on no shelf.
     const genres = fields.genre ?? [];
 
+    // The third list, and the one read pairwise: one `subtitleLanguage` field
+    // per `subtitle` part, in the same order, so the i-th language belongs to
+    // the i-th file. Nothing is parsed and no index is spelled into a part
+    // name — two repeated names travelling in step is what a form has always
+    // sent a pair of columns as.
+    const languages = fields.subtitleLanguage ?? [];
+    const subtitles = subtitlePaths.map((path, index) => ({
+      path,
+      language: languages[index] ?? DEFAULT_SUBTITLE_LANGUAGE,
+    }));
+
     // Unreachable from the form, which can only send back names the pool handed
     // it, and checked for the same reason the missing title is: this is the
     // first route that forwards a client-supplied list into a transactional
@@ -842,6 +923,9 @@ export function createApiRouter(
       if (posterPath !== undefined) {
         posterPath = renamed.storedPath(posterPath);
       }
+      for (const subtitle of subtitles) {
+        subtitle.path = renamed.storedPath(subtitle.path);
+      }
     }
 
     try {
@@ -862,6 +946,12 @@ export function createApiRouter(
           ...(rating === undefined ? {} : { rating }),
           ...(cast.length === 0 ? {} : { cast }),
           ...(genres.length === 0 ? {} : { genres }),
+          // No subtitle part is a film with no tracks, which is a normal row —
+          // `addMovie` writes the positions from this order, and the cue route
+          // has been reading them since #88. Nothing here is a migration:
+          // `language` and `position` have both existed since V1, and this is
+          // simply the first code in the app that writes them from a request.
+          ...(subtitles.length === 0 ? {} : { subtitles }),
         })
       );
     } catch {

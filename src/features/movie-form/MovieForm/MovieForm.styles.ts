@@ -42,6 +42,27 @@ export const Heading = styled.h1`
 `;
 
 /**
+ * The line under the heading — what this screen is for, said once, indented to
+ * clear the back pill the way the prototype sets it.
+ */
+export const Lede = styled.p`
+  margin: 0 0 28px 58px;
+  font-family: ${({ theme }) => theme.fonts.sans};
+  font-size: 15px;
+  color: ${({ theme }) => theme.colors.textFaint};
+`;
+
+/**
+ * The one phrase in that line that names another screen. Lifted out of the
+ * faint text around it, and deliberately not a link: **Import library** does
+ * not exist yet, and a link to nowhere is worse than a name.
+ */
+export const Emphasis = styled.span`
+  color: ${({ theme }) => theme.colors.textDim};
+  font-weight: 500;
+`;
+
+/**
  * The stack of fields. `22px` is the prototype's own gap and is not a spacing
  * token; the values it does share with the scale are written as tokens above.
  */

@@ -42,6 +42,13 @@ const GENRE_POOL_ENDPOINT = '/api/genres/pool';
  * named `''` and no cast member with no name, so a part carrying one would be a
  * value the server would have to refuse.
  *
+ * The **subtitles** are both of those at once — a list, and files — and they
+ * travel as the two rules read together: one `subtitle` part per attached
+ * track and one `subtitleLanguage` field beside it, in the order the rows are
+ * held, so the i-th language belongs to the i-th file. The row's own `key`
+ * never leaves the browser; the part order is what pairs a language with its
+ * file, and what the track order is stored from.
+ *
  * The **video** and the **poster** are the parts that are not text at all, and
  * the first bytes this app ever sends. They travel in the same request as the
  * fields — one request per save, no upload-on-pick and no draft id, however many
@@ -91,6 +98,22 @@ export async function createMovie(values: MovieFormValues): Promise<Movie> {
   // rather than a value the route would have to interpret.
   if (values.poster?.kind === 'picked') {
     body.append('poster', values.poster.file);
+  }
+  // The tracks, and the first thing on this wire that is a list *of files*: one
+  // `subtitle` part per row and one `subtitleLanguage` field per row, appended
+  // in step, so the i-th language belongs to the i-th file. That is the shape
+  // `genre` and `cast` already use, read pairwise — no index in a part name, no
+  // JSON smuggled into a field, and no second request.
+  //
+  // The order is not decoration: `position` is what `preferredSubtitle` falls
+  // back through, so the order the parts are sent in is the order the family
+  // gets. An empty list sends nothing at all, on the same rule as the two slots
+  // above and the genres beside them.
+  for (const subtitle of values.subtitles) {
+    if (subtitle.file.kind === 'picked') {
+      body.append('subtitle', subtitle.file.file);
+      body.append('subtitleLanguage', subtitle.language);
+    }
   }
 
   const response = await fetch(MOVIES_ENDPOINT, { method: 'POST', body });
