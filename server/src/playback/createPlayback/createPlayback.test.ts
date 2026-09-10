@@ -16,6 +16,14 @@
 //
 // Nothing here spawns anything. The component is a fake, which is the seam the
 // whole slice was built around.
+//
+// ---
+//
+// 12 — Movie form, Phase 6: "the runtime, derived" (issue #107) added the fifth,
+// which is a method rather than a rule: `duration` asks the same two sources
+// `read` asks and answers `null` where `read` answers a path with a nought on
+// it. A film this machine cannot decode still has a length, and the runtime
+// column is allowed to know it.
 
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -170,6 +178,52 @@ describe('createPlayback — the read, and a length that is not there', () => {
     expect(createPlayback(media, fakeComponent(MATROSKA)).read(file).path).toBe(
       'transcode'
     );
+  });
+});
+
+describe('createPlayback — the duration, derived best-effort', () => {
+  it('answers the seconds the probe reported', () => {
+    const { media, file } = mediaWith('Northwind (2018)/northwind.mkv');
+
+    expect(createPlayback(media, fakeComponent(MATROSKA)).duration(file)).toBe(
+      4102.5
+    );
+  });
+
+  it('reads the container’s own header when there is no component to probe', () => {
+    // The machine with no FFmpeg on it, reading the one format it can parse
+    // unaided — which is what lets a family who have not run the installer yet
+    // still get a runtime for most of the folder.
+    const { media, file } = mediaWith(
+      'Northwind (2018)/northwind.mp4',
+      mp4Of(600, 4_099_500)
+    );
+
+    expect(createPlayback(media, null).duration(file)).toBe(6832.5);
+  });
+
+  it('falls back to the header when the probe answered no duration', () => {
+    // The whole reason this is a method of its own rather than `read`'s
+    // `durationSeconds`: a probe that came back saying nothing about the length
+    // has not exhausted the ways of asking, and `read` would have collapsed the
+    // film to `cannot-play` with a nought on it.
+    const { media, file } = mediaWith(
+      'Northwind (2018)/northwind.mp4',
+      mp4Of(600, 4_099_500)
+    );
+    const component = fakeComponent({ ...NATIVE, durationSeconds: 0 });
+
+    expect(createPlayback(media, component).duration(file)).toBe(6832.5);
+  });
+
+  it('answers null, never nought, when neither can say', () => {
+    // Nought is a length. Null is the absence of one, and the runtime column
+    // this feeds draws a dash from it — which is the difference between the
+    // catalogue not knowing how long a film is and it claiming the film is
+    // instantaneous.
+    const { media, file } = mediaWith('Northwind (2018)/northwind.mkv');
+
+    expect(createPlayback(media, null).duration(file)).toBeNull();
   });
 });
 

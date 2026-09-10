@@ -5979,3 +5979,228 @@ describe('PATCH /api/movies/:id — a track taken off the movie', () => {
     expect(existsSync(storedFile(media, portuguese.path))).toBe(true);
   });
 });
+
+// --- 12 — Movie form, Phase 6: "the runtime, derived" (issue #107) -----------
+//
+// The one column the form has no field for, and the one every seeded movie
+// already shows. It is derived **after the copy**, from domains that shipped
+// with the player: the film's own `moov`/`mvhd` when there is no **Playback
+// component** on the machine at all, and the component's probe when there is
+// one.
+//
+// **The assertions are on the record rather than on a screen**, because that is
+// where this slice ends. `detailView` builds its **Runtime label** from
+// `runtimeMinutes` and `toProgressPercent` its bar, and both already draw a dash
+// for `null` — so "shows a runtime on the card and the detail page" is the
+// column being populated, with not one line of `src/` changed.
+//
+// **Absent beats wrong** (story 44). A film nothing on this machine can measure
+// stores `null`, a film shorter than the column's own resolution stores `null`,
+// and a component that fails mid-answer costs the add nothing — the movie is
+// already in the library and its bytes are already on disk.
+
+/**
+ * The bytes of an MP4 that reports a real film's length: `ftyp`, then a `moov`
+ * holding a version-0 `mvhd`.
+ *
+ * The seed fixture is ten seconds, which is the one length this feature has
+ * nothing to say about — so the film with a runtime has to be hand-built, the
+ * same way `mediaDuration`'s own fixtures are. What is being asked is what the
+ * route does with a length, not what some encoder on this machine produces.
+ */
+function mp4Of(seconds: number): Buffer {
+  const mvhd = Buffer.alloc(100);
+  mvhd.writeUInt8(0, 0);
+  mvhd.writeUInt32BE(1000, 12);
+  mvhd.writeUInt32BE(Math.round(seconds * 1000), 16);
+
+  const box = (type: string, payload: Buffer): Buffer => {
+    const header = Buffer.alloc(8);
+    header.writeUInt32BE(8 + payload.length, 0);
+    header.write(type, 4, 'latin1');
+    return Buffer.concat([header, payload]);
+  };
+
+  return Buffer.concat([
+    box('ftyp', Buffer.from('isom', 'latin1')),
+    box('moov', box('mvhd', mvhd)),
+  ]);
+}
+
+/** A video part carrying an MP4 that says how long it is. */
+const mp4Part = (seconds: number, filename = 'lantern.mp4'): File =>
+  filePart(filename, mp4Of(seconds), 'video/mp4');
+
+/**
+ * A video part carrying a container the header parser has no answer for.
+ * Whether it gets a runtime is then entirely a question of what component is
+ * installed, which is the second and third acceptance criteria.
+ */
+const mkvPart = (filename = 'lantern.mkv'): File =>
+  filePart(filename, MKV_BYTES, 'video/x-matroska');
+
+/** A **Playback component** that fails rather than answers, every time it is asked. */
+const brokenComponent = (): PlaybackComponent => ({
+  hardwareEncoder: null,
+  probe: () => {
+    throw new Error('the component died mid-probe');
+  },
+  spawn: () => {
+    throw new Error('the component died mid-spawn');
+  },
+});
+
+describe('POST /api/movies — the runtime, derived', () => {
+  it('takes the length from the film’s own header with no component installed', async () => {
+    const { storage, baseUrl } = freshApi();
+
+    const movie = await createdFromParts(baseUrl, [
+      ...KEEPER,
+      ['video', mp4Part(6832.5)],
+    ]);
+
+    // Story 43, on the machine the PRD makes first-class: no FFmpeg anywhere,
+    // and an MP4 still arrives with a runtime on it. 1h53m52.5s, rounded to the
+    // nearest minute — the half-minute the glossary already says the catalogue
+    // and the file are allowed to disagree by.
+    expect(movie.runtimeMinutes).toBe(114);
+    // On the row rather than only in the reply: the card and the detail page
+    // read the record back, and that is where a derived runtime has to be.
+    expect(storage.getMovie(movie.id)?.runtimeMinutes).toBe(114);
+  });
+
+  it('takes the probe’s length for a container only the component can read', async () => {
+    const { baseUrl } = freshApi(fakeComponent({ probe: REMUXABLE }));
+
+    const movie = await createdFromParts(baseUrl, [
+      ...KEEPER,
+      ['video', mkvPart()],
+    ]);
+
+    // The other half of best-effort: an MKV says nothing a header parser can
+    // read, and the component that was going to remux it anyway already knows
+    // how long it is. 5391.2s is 89m51s, which is 90 minutes.
+    expect(movie.runtimeMinutes).toBe(90);
+  });
+
+  it('stores no runtime at all when nothing on the machine can read one', async () => {
+    const { baseUrl } = freshApi();
+
+    const movie = await createdFromParts(baseUrl, [
+      ...KEEPER,
+      ['video', mkvPart()],
+    ]);
+
+    // Story 44: an MKV on a machine with no component is a film nothing here
+    // can measure, and the answer is a dash rather than a guess. The save is
+    // still a 201 — `createdFromParts` asserts it — and the film is in the
+    // library, which is what the save was for.
+    expect(movie.runtimeMinutes).toBeNull();
+  });
+
+  it('stores no runtime rather than a nought for a film shorter than half a minute', async () => {
+    const { baseUrl } = freshApi();
+
+    // The seed fixture: ten seconds of colour bars, and a real length the
+    // column simply has no room for. Nought is a number every reader in the app
+    // already treats as unknown, so writing it would be `null` wearing a
+    // different value — and 1 would be a fifty-second lie.
+    const movie = await createdFromParts(baseUrl, [
+      ...KEEPER,
+      ['video', filePart()],
+    ]);
+
+    expect(movie.runtimeMinutes).toBeNull();
+  });
+
+  it('adds the movie anyway when the component fails rather than answers', async () => {
+    const { baseUrl, media } = freshApi(brokenComponent());
+
+    const movie = await createdFromParts(baseUrl, [
+      ...KEEPER,
+      ['video', mp4Part(6832.5)],
+    ]);
+
+    // A component that throws is a component that answered nothing, and the
+    // ways of asking are not exhausted by it: the file's own header is still
+    // there, and a broken FFmpeg must not cost the maintainer a runtime the MP4
+    // was carrying all along.
+    expect(movie.runtimeMinutes).toBe(114);
+    // And the bytes are where the save promised, which is the acceptance
+    // criterion the whole best-effort rule exists to protect.
+    expect(existsSync(storedFile(media, movie.videoPath))).toBe(true);
+  });
+
+  it('adds a movie with no film behind it at all', async () => {
+    const { baseUrl } = freshApi();
+
+    const movie = await createdFromParts(baseUrl, KEEPER);
+
+    // There is no file to derive from, which is not a failure to derive — the
+    // row already says it has no film behind it, and a runtime is the least of
+    // what is missing.
+    expect(movie.runtimeMinutes).toBeNull();
+  });
+});
+
+describe('PATCH /api/movies/:id — the runtime of a film that changed', () => {
+  it('derives it again when the film itself is replaced', async () => {
+    const { baseUrl } = freshApi();
+    const movie = await createdFromParts(baseUrl, [
+      ...KEEPER,
+      ['video', mp4Part(6832.5)],
+    ]);
+    expect(movie.runtimeMinutes).toBe(114);
+
+    const amended = await patchedMovie(
+      baseUrl,
+      movie.id,
+      withNewVideo(movie, mp4Part(5400, 'lantern-remastered.mp4'))
+    );
+
+    // A new film in the slot is a new length. The row that kept the old one
+    // would be a **Resume label** counting towards a running time this film
+    // does not have.
+    expect(amended.runtimeMinutes).toBe(90);
+  });
+
+  it('leaves it alone when the film is passed through untouched', async () => {
+    const { baseUrl } = freshApi();
+    const movie = await createdFromParts(baseUrl, [
+      ...KEEPER,
+      ['video', mp4Part(6832.5)],
+    ]);
+    expect(movie.runtimeMinutes).toBe(114);
+
+    const amended = await patchedMovie(
+      baseUrl,
+      movie.id,
+      unchangedParts(movie, { title: 'The Lantern Keeper (restored)' })
+    );
+
+    // The passthrough is the whole point of the edit slice: an unchanged film
+    // is a path travelling as a field, and nothing about it — its bytes or its
+    // length — is worked out a second time to correct a typo.
+    expect(amended.runtimeMinutes).toBe(114);
+  });
+
+  it('clears it when the replacement film’s length cannot be read', async () => {
+    const { baseUrl } = freshApi();
+    const movie = await createdFromParts(baseUrl, [
+      ...KEEPER,
+      ['video', mp4Part(6832.5)],
+    ]);
+    expect(movie.runtimeMinutes).toBe(114);
+
+    const amended = await patchedMovie(
+      baseUrl,
+      movie.id,
+      withNewVideo(movie, mkvPart('lantern-remastered.mkv'))
+    );
+
+    // Story 44 read at the edit: the runtime the record keeps must be the
+    // runtime of the film the record points at. Carrying the old number over
+    // would be the only way this route could store one that is wrong.
+    expect(amended.runtimeMinutes).toBeNull();
+  });
+});
