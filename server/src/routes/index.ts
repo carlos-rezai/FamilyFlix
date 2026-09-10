@@ -6,6 +6,7 @@ import express, { type Request, type Response, type Router } from 'express';
 import type { LibraryStorage } from '../library';
 import { createMedia, type Media } from '../media/createMedia/createMedia';
 import type { Playback } from '../playback/createPlayback/createPlayback';
+import { onlyField } from './onlyField/onlyField';
 import {
   DEFAULT_MOVIE_SORT,
   MOVIE_SORTS,
@@ -384,22 +385,6 @@ function readBody(
 
     req.pipe(parser);
   });
-}
-
-/**
- * The one value a single-valued field carries, or `undefined` if it was not
- * sent at all.
- *
- * The last wins if a client sent several, which is the rule this function
- * replaced an object assignment to keep. Nothing the app sends repeats a
- * single-valued name; a client this route did not write might, and the last
- * part is the one a form's own encoding would have left standing.
- */
-function onlyField(
-  fields: Record<string, string[]>,
-  name: string
-): string | undefined {
-  return fields[name]?.at(-1);
 }
 
 /**
