@@ -7,6 +7,7 @@ import type { LibraryStorage } from '../library';
 import { createMedia, type Media } from '../media/createMedia/createMedia';
 import type { Playback } from '../playback/createPlayback/createPlayback';
 import { onlyField } from './onlyField/onlyField';
+import { optionalYear } from './optionalYear/optionalYear';
 import {
   DEFAULT_MOVIE_SORT,
   MOVIE_SORTS,
@@ -385,25 +386,6 @@ function readBody(
 
     req.pipe(parser);
   });
-}
-
-/**
- * The **year** a form field carries, or `undefined` for a film whose year the
- * maintainer does not know.
- *
- * An empty string is the case worth naming: the Year field is optional, a
- * cleared one arrives as `''` rather than as an absent field — that is what lets
- * an edit say the year was *removed* — and `Number('')` is `0`, a value that
- * would sort and display as a real year. Anything else that is not a whole
- * number is no year either; the field itself accepts digits only, so this arm
- * exists for a caller that is not the form.
- */
-function optionalYear(value: string | undefined): number | undefined {
-  if (value === undefined || value.trim() === '') {
-    return undefined;
-  }
-  const year = Number(value);
-  return Number.isInteger(year) ? year : undefined;
 }
 
 /**
