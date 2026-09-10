@@ -15,6 +15,10 @@ import {
 import { optionalText } from './optionalText/optionalText';
 import { optionalYear } from './optionalYear/optionalYear';
 import {
+  isPosterFilename,
+  isSubtitleFilename,
+} from './uploadKinds/uploadKinds';
+import {
   DEFAULT_MOVIE_SORT,
   MOVIE_SORTS,
   type GenreListPayload,
@@ -237,50 +241,6 @@ function streamOffset(value: unknown): number | null {
   }
   const seconds = Number(raw);
   return Number.isFinite(seconds) && seconds >= 0 ? seconds : null;
-}
-
-/**
- * What a **poster** may be called, lowercased, dots included.
- *
- * The `accept` attribute on the picker is a convenience and never a guarantee —
- * any client can post any part — and `GET /api/images` is `express.static` over
- * the media root, which serves whatever is under there with the Content-Type its
- * extension implies. So a stored `.html` would be a page served from the app's
- * own origin, and what a poster may be called is decided here rather than
- * trusted from the client.
- *
- * It is the extension rather than the part's own `Content-Type` because the
- * extension is what `express.static` will read on the way back out; a file that
- * claims one thing and is called another is served as what it is called.
- */
-const POSTER_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp'];
-
-/** Whether a filename the client chose is one a poster may have. */
-function isPosterFilename(filename: string): boolean {
-  const lower = filename.toLowerCase();
-  return POSTER_EXTENSIONS.some((extension) => lower.endsWith(extension));
-}
-
-/**
- * What a **subtitle** may be called — the same four `parseSubtitle/` dispatches
- * on, and the same four the picker offers.
- *
- * {@link POSTER_EXTENSIONS}' rule at a third slot, and for the same reason: a
- * file under the media root is served back by `express.static` with the
- * Content-Type its extension implies, so a stored `.html` would be a page served
- * from the app's own origin whatever the picker's accept list said. One list,
- * checked at the door it can be lied to at.
- *
- * A file with no extension is refused rather than passed: the check is on what
- * the file is called, and a file called nothing in particular has not claimed to
- * be a subtitle.
- */
-const SUBTITLE_EXTENSIONS = ['.srt', '.vtt', '.ass', '.sub'];
-
-/** Whether a filename the client chose is one a subtitle track may have. */
-function isSubtitleFilename(filename: string): boolean {
-  const lower = filename.toLowerCase();
-  return SUBTITLE_EXTENSIONS.some((extension) => lower.endsWith(extension));
 }
 
 /**
