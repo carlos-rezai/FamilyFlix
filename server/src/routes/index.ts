@@ -3,7 +3,7 @@ import { pipeline } from 'node:stream';
 import express, { type Request, type Response, type Router } from 'express';
 
 import type { LibraryStorage } from '../library';
-import { createMedia, type Media } from '../media/createMedia/createMedia';
+import type { Media } from '../media/createMedia/createMedia';
 import type { Playback } from '../playback/createPlayback/createPlayback';
 import { derivedRuntime } from './derivedRuntime/derivedRuntime';
 import { isRatingValue, MAX_RATING } from './isRatingValue/isRatingValue';
@@ -274,16 +274,20 @@ function parseLimit(value: string): number | null {
  *
  * `media` is the media domain, injected for the same reason: this file writes a
  * movie's files by asking for somewhere to put them and handing over a part, and
- * never by touching the filesystem itself. It defaults to the domain over
- * `mediaPath`, which is the same object every caller would otherwise have to
- * build — `main.ts` passes it explicitly all the same, so the composition root
- * still says what the app is composed of.
+ * never by touching the filesystem itself.
+ *
+ * All four are required, `media` included. It used to default to the domain over
+ * `mediaPath` so that a test could compose the router with three arguments —
+ * which made it a seam pointed at the tests rather than at the app, and left two
+ * places able to decide what the router is made of. `playback`, the seam this
+ * one was modelled on, never had one. The composition root is now the only
+ * answer to what this app is composed of.
  */
 export function createApiRouter(
   storage: LibraryStorage,
   mediaPath: string,
   playback: Playback,
-  media: Media = createMedia(mediaPath)
+  media: Media
 ): Router {
   const router = express.Router();
 

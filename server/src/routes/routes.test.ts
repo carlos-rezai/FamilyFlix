@@ -50,6 +50,7 @@ import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { createApiRouter } from '.';
+import { createMedia } from '../media/createMedia/createMedia';
 import { sandboxRoot } from '../test-support/sandboxRoot/sandboxRoot';
 import { createPlayback } from '../playback/createPlayback/createPlayback';
 import type {
@@ -119,7 +120,12 @@ function freshApi(component: PlaybackComponent | null = null): {
   const app = express();
   app.use(
     '/api',
-    createApiRouter(storage, media, createPlayback(media, component))
+    createApiRouter(
+      storage,
+      media,
+      createPlayback(media, component),
+      createMedia(media)
+    )
   );
 
   const server = app.listen(0);
@@ -3047,7 +3053,12 @@ function relisten(
   const app = express();
   app.use(
     '/api',
-    createApiRouter(storage, media, createPlayback(media, component))
+    createApiRouter(
+      storage,
+      media,
+      createPlayback(media, component),
+      createMedia(media)
+    )
   );
 
   const server = app.listen(0);
