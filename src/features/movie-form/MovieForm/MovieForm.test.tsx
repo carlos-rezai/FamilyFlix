@@ -2073,3 +2073,71 @@ describe('MovieForm — saving an edit', () => {
     expect(saveRequests()).toEqual([]);
   });
 });
+
+// --- 11 — Movie form, Phase 5: "replacing and removing stored files" (#106) ---
+//
+// The **Stored file** half of the same gesture the **Add context** already has:
+// a **Subtitle row**'s ✕ takes the track off the movie, and a row that was read
+// out of the record goes the same way as one picked five seconds ago. Nothing
+// on this screen distinguishes the two — the rows are held by a key of the
+// form's own — which is exactly the claim worth pinning, because the *wire*
+// does distinguish them and a track that stayed in the body would still be on
+// the film.
+
+describe('MovieForm — a stored track taken off the movie', () => {
+  it('takes the row off the screen and leaves the other one', async () => {
+    await renderEdit();
+
+    fireEvent.click(
+      screen.getByRole('button', { name: /remove lantern\.pt\.srt/i })
+    );
+
+    // Story 55: a track attached in error is detachable. The row came out of
+    // the record rather than off a picker, and it is removed the same way.
+    expect(screen.queryByText('lantern.pt.srt')).toBeNull();
+    expect(screen.getByText('lantern.en.srt')).toBeDefined();
+  });
+
+  it('sends no field at all for the track that was removed', async () => {
+    answerSave = () => Promise.resolve(okResponse(STORED));
+    await renderEdit();
+
+    fireEvent.click(
+      screen.getByRole('button', { name: /remove lantern\.pt\.srt/i })
+    );
+    fireEvent.click(saveChanges());
+
+    // The body is the whole of what the movie now has, so a removed track is
+    // one that says nothing — no path, no language, no part. The surviving row
+    // still travels as its own **Stored path**, so no bytes move for a removal
+    // either.
+    await waitFor(() => expect(patchedFields()).toBeDefined());
+    expect(patchedFields()?.getAll('subtitlePath')).toEqual([
+      'the-lantern-keeper-2019/lantern.en.srt',
+    ]);
+    expect(patchedFields()?.getAll('subtitleLanguage')).toEqual(['English']);
+    expect(patchedFiles()).toEqual([]);
+  });
+
+  it('takes every track off the movie when both rows are removed', async () => {
+    answerSave = () => Promise.resolve(okResponse(STORED));
+    await renderEdit();
+
+    fireEvent.click(
+      screen.getByRole('button', { name: /remove lantern\.en\.srt/i })
+    );
+    fireEvent.click(
+      screen.getByRole('button', { name: /remove lantern\.pt\.srt/i })
+    );
+
+    // A film with no tracks at all is a normal row — the **Save gate** is a
+    // title and a film — so an edit that empties the list is still a save
+    // rather than a state the form refuses.
+    expect(saveChanges().disabled).toBe(false);
+    fireEvent.click(saveChanges());
+
+    await waitFor(() => expect(patchedFields()).toBeDefined());
+    expect(patchedFields()?.getAll('subtitlePath')).toEqual([]);
+    expect(patchedFields()?.getAll('subtitleLanguage')).toEqual([]);
+  });
+});

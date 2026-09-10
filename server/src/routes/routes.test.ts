@@ -41,6 +41,7 @@ import {
   mkdirSync,
   readdirSync,
   readFileSync,
+  unlinkSync,
   writeFileSync,
 } from 'node:fs';
 import { isAbsolute, join } from 'node:path';
@@ -5694,5 +5695,287 @@ describe('PATCH /api/movies/:id — the tracks', () => {
     // track the family can turn on, with not one line of the cue route changed.
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual(SRT_CUES);
+  });
+});
+
+// --- 12 — Movie form, Phase 5: "replacing and removing stored files" (#106) ---
+//
+// The only place in the app that deletes media, and the assertions are made on
+// the disk rather than on the reply: what a replacement is *for* is the twelve
+// gigabytes it leaves behind if nobody takes them away.
+//
+// **The order is the whole rule.** The new bytes are written, the patch is
+// applied, and only a successful commit authorises the unlink — so a refused
+// edit is asserted to leave the *old* file exactly where it was, which is the
+// state a delete-then-write would have destroyed.
+//
+// **And it deletes exactly one file at a time.** Every replacement below is
+// checked against the files beside it: swapping a poster must not take the film
+// with it, and a track detached from the record is a record change rather than
+// a deletion.
+
+/** The bytes a replacement carries, so a swapped file can be told from the one it replaced. */
+const BETTER_POSTER_BYTES = Buffer.from('better poster bytes');
+
+/** The bytes a replacement film carries, for the same reason. */
+const BETTER_VIDEO_BYTES = Buffer.from(
+  'FAMILYFLIX replacement video bytes, a different film in the same slot.'
+);
+
+/** The parts of an edit with the poster slot re-picked rather than passed through. */
+function withNewPoster(
+  movie: Movie,
+  poster: File
+): [name: string, value: string | File][] {
+  return [
+    ...unchangedParts(movie).filter(([name]) => name !== 'posterPath'),
+    ['poster', poster],
+  ];
+}
+
+/** The same, for the video slot. */
+function withNewVideo(
+  movie: Movie,
+  video: File
+): [name: string, value: string | File][] {
+  return [
+    ...unchangedParts(movie).filter(([name]) => name !== 'videoPath'),
+    ['video', video],
+  ];
+}
+
+describe('PATCH /api/movies/:id — replacing a stored file', () => {
+  it('leaves the new poster on disk, the old one gone, and the row on the new one', async () => {
+    const { baseUrl, media } = freshApi();
+    const movie = await storedMovie(baseUrl);
+
+    const amended = await patchedMovie(
+      baseUrl,
+      movie.id,
+      withNewPoster(movie, posterPart('better-poster.jpg', BETTER_POSTER_BYTES))
+    );
+
+    // Story 53, and the three halves of one gesture: the artwork the row points
+    // at is the new one, its bytes are really there, and the superseded file is
+    // not still sitting in the folder taking up room nothing can reach.
+    expect(amended.posterPath).toBe(`${KEEPER_FOLDER}/better-poster.jpg`);
+    expect(
+      readFileSync(storedFile(media, amended.posterPath as string))
+    ).toEqual(BETTER_POSTER_BYTES);
+    expect(existsSync(storedFile(media, movie.posterPath as string))).toBe(
+      false
+    );
+  });
+
+  it('serves the new artwork on the images route, and no longer the old', async () => {
+    const { baseUrl } = freshApi();
+    const movie = await storedMovie(baseUrl);
+
+    const amended = await patchedMovie(
+      baseUrl,
+      movie.id,
+      withNewPoster(movie, posterPart('better-poster.jpg', BETTER_POSTER_BYTES))
+    );
+
+    // The demoable end of the slice: swap a bad poster for a good one and the
+    // card draws the new artwork, with the old file gone from the movie's own
+    // folder — read back through the same `express.static` the card builds its
+    // URL for, with not one line of that route changed.
+    const served = await fetch(`${baseUrl}/api/images/${amended.posterPath}`);
+    expect(served.status).toBe(200);
+    expect(Buffer.from(await served.arrayBuffer())).toEqual(
+      BETTER_POSTER_BYTES
+    );
+
+    const superseded = await fetch(`${baseUrl}/api/images/${movie.posterPath}`);
+    expect(superseded.status).toBe(404);
+  });
+
+  it('replaces the film the same way, in the folder it already had', async () => {
+    const { baseUrl, media } = freshApi();
+    const movie = await storedMovie(baseUrl);
+
+    const amended = await patchedMovie(
+      baseUrl,
+      movie.id,
+      withNewVideo(
+        movie,
+        filePart('lantern-remastered.mp4', BETTER_VIDEO_BYTES)
+      )
+    );
+
+    // The same rule at the slot where it is worth gigabytes rather than
+    // kilobytes — and the folder is still the movie's own, because an edit
+    // reuses it rather than naming a second one.
+    expect(amended.videoPath).toBe(`${KEEPER_FOLDER}/lantern-remastered.mp4`);
+    expect(readFileSync(storedFile(media, amended.videoPath))).toEqual(
+      BETTER_VIDEO_BYTES
+    );
+    expect(existsSync(storedFile(media, movie.videoPath))).toBe(false);
+    expect(folders(media)).toEqual([KEEPER_FOLDER]);
+  });
+
+  it('takes exactly one file, leaving everything else the movie has', async () => {
+    const { baseUrl, media } = freshApi();
+    const movie = await storedMovie(baseUrl);
+    const tracks = trackOrder(movie);
+
+    await patchedMovie(
+      baseUrl,
+      movie.id,
+      withNewPoster(movie, posterPart('better-poster.jpg', BETTER_POSTER_BYTES))
+    );
+
+    // The whole of what this deletion is allowed to be: one file per
+    // replacement. The film and both tracks share the folder the old poster was
+    // in, and a cleanup that reasoned about the folder rather than the file
+    // would have taken them with it.
+    expect(existsSync(storedFile(media, movie.videoPath))).toBe(true);
+    for (const track of tracks) {
+      expect(existsSync(storedFile(media, track.path))).toBe(true);
+    }
+    expect(filesIn(media, KEEPER_FOLDER)).toEqual([
+      'better-poster.jpg',
+      'lantern.en.srt',
+      'lantern.mp4',
+      'lantern.pt.srt',
+    ]);
+  });
+
+  it('keeps the new bytes when the replacement carries the old file’s name', async () => {
+    const { baseUrl, media } = freshApi();
+    const movie = await storedMovie(baseUrl);
+
+    const amended = await patchedMovie(
+      baseUrl,
+      movie.id,
+      withNewPoster(movie, posterPart('poster.jpg', BETTER_POSTER_BYTES))
+    );
+
+    // A replacement that happens to be called what the old one was called is
+    // written *over* it, so there is no superseded file left to unlink — and a
+    // cleanup that unlinked the old **Stored path** regardless would delete the
+    // artwork the row now points at.
+    expect(amended.posterPath).toBe(movie.posterPath);
+    expect(
+      readFileSync(storedFile(media, amended.posterPath as string))
+    ).toEqual(BETTER_POSTER_BYTES);
+  });
+});
+
+describe('PATCH /api/movies/:id — only a commit authorises the unlink', () => {
+  it('leaves the old poster where it was when the edit is refused', async () => {
+    const { baseUrl, media } = freshApi();
+    const movie = await storedMovie(baseUrl);
+
+    const response = await patchParts(baseUrl, movie.id, [
+      ...withNewPoster(
+        movie,
+        posterPart('better-poster.jpg', BETTER_POSTER_BYTES)
+      ),
+      ['genre', 'Documentaries'],
+    ]);
+    expect(response.status).toBe(400);
+
+    // The ordering rule read at the only moment it can be observed: a delete
+    // that ran ahead of a commit that then failed would have destroyed the file
+    // the record still points at, and the movie would be left with no artwork
+    // at all.
+    expect(readFileSync(storedFile(media, movie.posterPath as string))).toEqual(
+      POSTER_BYTES
+    );
+    const read = (await (
+      await fetch(`${baseUrl}/api/movies/${movie.id}`)
+    ).json()) as Movie;
+    expect(read.posterPath).toBe(movie.posterPath);
+
+    // And the bytes the refused request wrote go with the edit that did not
+    // happen — the rollback this route already had, unchanged by the cleanup.
+    expect(filesIn(media, KEEPER_FOLDER)).not.toContain('better-poster.jpg');
+  });
+
+  it('saves the edit even when the superseded file cannot be unlinked', async () => {
+    const { baseUrl, media } = freshApi();
+    const movie = await storedMovie(baseUrl);
+
+    // Gone from under the app between the save and the cleanup, which is the
+    // reachable half of "locked, or gone": either way the unlink throws.
+    unlinkSync(storedFile(media, movie.posterPath as string));
+
+    const amended = await patchedMovie(
+      baseUrl,
+      movie.id,
+      withNewPoster(movie, posterPart('better-poster.jpg', BETTER_POSTER_BYTES))
+    );
+
+    // Story 54. The save has already succeeded by the time the cleanup runs, so
+    // a throw there would lose a correction the maintainer has already been
+    // told was made — a stranded file is the smaller harm, and this route takes
+    // it.
+    expect(amended.posterPath).toBe(`${KEEPER_FOLDER}/better-poster.jpg`);
+    expect(existsSync(storedFile(media, amended.posterPath as string))).toBe(
+      true
+    );
+  });
+
+  it('leaves an emptied slot’s file alone rather than deleting it', async () => {
+    const { baseUrl, media } = freshApi();
+    const movie = await storedMovie(baseUrl);
+
+    const amended = await patchedMovie(
+      baseUrl,
+      movie.id,
+      unchangedParts(movie).filter(([name]) => name !== 'posterPath')
+    );
+
+    // Only a *replacement* authorises an unlink. A slot cleared with nothing
+    // put in its place is a column set to nothing, and the file it named stays
+    // on disk — the same trade as a detached track below.
+    expect(amended.posterPath).toBeNull();
+    expect(existsSync(storedFile(media, movie.posterPath as string))).toBe(
+      true
+    );
+  });
+});
+
+describe('PATCH /api/movies/:id — a track taken off the movie', () => {
+  it('drops a stored track left out of the body from the record', async () => {
+    const { baseUrl } = freshApi();
+    const movie = await storedMovie(baseUrl);
+    const [english] = trackOrder(movie);
+
+    const amended = await patchedMovie(baseUrl, movie.id, [
+      ...unchangedParts(movie).filter(
+        ([name]) => name !== 'subtitleLanguage' && name !== 'subtitlePath'
+      ),
+      ['subtitleLanguage', english.language],
+      ['subtitlePath', english.path],
+    ]);
+
+    // Story 55: a track attached in error is detached by removing its row, and
+    // the body the form sends is the whole of what the movie now has — so the
+    // track that is not in it is not on the movie.
+    expect(
+      trackOrder(amended).map((track) => [track.language, track.path])
+    ).toEqual([['English', `${KEEPER_FOLDER}/lantern.en.srt`]]);
+  });
+
+  it('leaves the detached track’s file on disk', async () => {
+    const { baseUrl, media } = freshApi();
+    const movie = await storedMovie(baseUrl);
+    const [english, portuguese] = trackOrder(movie);
+
+    await patchedMovie(baseUrl, movie.id, [
+      ...unchangedParts(movie).filter(
+        ([name]) => name !== 'subtitleLanguage' && name !== 'subtitlePath'
+      ),
+      ['subtitleLanguage', english.language],
+      ['subtitlePath', english.path],
+    ]);
+
+    // Detaching is a record change, not a deletion: this route removes a file
+    // only when a new one has taken its place, and one stranded `.srt` is a
+    // smaller harm than a rule with a second reason to delete in it.
+    expect(existsSync(storedFile(media, portuguese.path))).toBe(true);
   });
 });
