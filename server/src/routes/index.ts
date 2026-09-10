@@ -7,13 +7,8 @@ import { createMedia, type Media } from '../media/createMedia/createMedia';
 import type { Playback } from '../playback/createPlayback/createPlayback';
 import { isRatingValue, MAX_RATING } from './isRatingValue/isRatingValue';
 import { derivedRuntime } from './derivedRuntime/derivedRuntime';
-import { collectUploads } from './movieFormBody/movieFormBody';
+import { collectUploads, readMovieFields } from './movieFormBody/movieFormBody';
 import { onlyField } from './onlyField/onlyField';
-import {
-  INVALID_RATING,
-  optionalRating,
-} from './optionalRating/optionalRating';
-import { optionalText } from './optionalText/optionalText';
 import { optionalYear } from './optionalYear/optionalYear';
 import { readBody } from './readBody/readBody';
 import {
@@ -564,75 +559,26 @@ export function createApiRouter(
       return;
     }
 
-    const title = onlyField(fields, 'title')?.trim() ?? '';
-    if (title === '') {
+    const read = readMovieFields(
+      fields,
+      uploads,
+      new Set(storage.listGenrePool().map((genre) => genre.name))
+    );
+    if (!read.ok) {
+      // Every refusal takes the bytes this request wrote with it, so a failed
+      // add leaves no row *and* no folder. That is reachable at all only
+      // because a part can arrive before the field that refuses the save.
       rollback();
-      res.status(400).json({ error: 'Body must carry a title' });
+      res.status(read.status).json({ error: read.error });
       return;
     }
-
-    // A refusal that can only happen once bytes are down: the video part is
-    // appended before the poster, so the rollback runs on a folder that is
-    // already on disk.
-    if (uploads.rejectedPoster !== undefined) {
-      rollback();
-      res.status(400).json({
-        error: `Not a poster image: ${JSON.stringify(uploads.rejectedPoster)}`,
-      });
-      return;
-    }
-
-    if (uploads.rejectedSubtitle !== undefined) {
-      rollback();
-      res.status(400).json({
-        error: `Not a subtitle file: ${JSON.stringify(
-          uploads.rejectedSubtitle
-        )}`,
-      });
-      return;
-    }
-
-    const year = optionalYear(onlyField(fields, 'year'));
-    const director = optionalText(onlyField(fields, 'director'));
-
-    // `description` is the form's word for it and `synopsis` is the column's.
-    // The rename happens here, once: the part is named after the caption the
-    // maintainer typed under, and the row after what the detail page reads.
-    const synopsis = optionalText(onlyField(fields, 'description'));
-
-    // The one field on this wire that is neither text nor a list, and the one
-    // the form has already converted: it sends the units the column stores, not
-    // the percent its picker speaks. What is left to decide here is only what an
-    // absent, an empty and an off-scale one mean.
-    const postedRating = onlyField(fields, 'rating');
-    const rating = optionalRating(postedRating);
-    if (rating === INVALID_RATING) {
-      rollback();
-      res
-        .status(400)
-        .json({ error: `Invalid rating: ${JSON.stringify(postedRating)}` });
-      return;
-    }
-
-    // The second genuine list on this wire, and read exactly as the genres are:
-    // one `cast` part per name, in the order the parts arrived, because billing
-    // order is the maintainer's. The form resolved its typed line into these
-    // names before sending them, which is why no comma rule exists here.
-    const cast = fields.cast ?? [];
-
-    // The genres arrive as one `genre` part per chip, in the order they were
-    // picked, and they stay in it: `genres[0]` is the primary tag `addMovie`
-    // has preserved since #3, and the form is the first caller in the app that
-    // can decide what it is. No part at all is a film the maintainer has not
-    // filed — a normal row, on no shelf.
-    const genres = fields.genre ?? [];
+    const { title, year, director, synopsis, rating, cast, genres } = read;
 
     // The third list, and the one read pairwise: one `subtitleLanguage` field
     // per `subtitle` part, in the same order, so the i-th language belongs to
     // the i-th file. Nothing is parsed and no index is spelled into a part
     // name — two repeated names travelling in step is what a form has always
     // sent a pair of columns as.
-    const languages = fields.subtitleLanguage ?? [];
     const subtitles: NewSubtitle[] = [];
     uploads.subtitles.forEach((path, index) => {
       // A slot whose write never landed is no track; every one that arrived is
@@ -640,24 +586,10 @@ export function createApiRouter(
       if (path !== undefined) {
         subtitles.push({
           path,
-          language: languages[index] ?? DEFAULT_SUBTITLE_LANGUAGE,
+          language: read.languages[index] ?? DEFAULT_SUBTITLE_LANGUAGE,
         });
       }
     });
-
-    // Unreachable from the form, which can only send back names the pool handed
-    // it, and checked for the same reason the missing title is: this is the
-    // first route that forwards a client-supplied list into a transactional
-    // write, and `addMovie` answers an unknown name by throwing. Checked here
-    // rather than caught around the write, so the refusal is this route's own
-    // sentence rather than an exception's, and so nothing is attempted at all.
-    const pool = new Set(storage.listGenrePool().map((genre) => genre.name));
-    const unknown = genres.find((name) => !pool.has(name));
-    if (unknown !== undefined) {
-      rollback();
-      res.status(400).json({ error: `Unknown genre: ${unknown}` });
-      return;
-    }
 
     // Nothing is refused after this point, so this is where the folder stops
     // being the one a part needed and becomes the one the movie is called. A
@@ -814,57 +746,20 @@ export function createApiRouter(
         return;
       }
 
-      const title = onlyField(fields, 'title')?.trim() ?? '';
-      if (title === '') {
+      const read = readMovieFields(
+        fields,
+        uploads,
+        new Set(storage.listGenrePool().map((genre) => genre.name))
+      );
+      if (!read.ok) {
+        // A refusal takes back the bytes this request wrote and nothing
+        // beside them — the film already in that folder is not this edit's to
+        // remove.
         rollback();
-        res.status(400).json({ error: 'Body must carry a title' });
+        res.status(read.status).json({ error: read.error });
         return;
       }
-
-      if (uploads.rejectedPoster !== undefined) {
-        rollback();
-        res.status(400).json({
-          error: `Not a poster image: ${JSON.stringify(
-            uploads.rejectedPoster
-          )}`,
-        });
-        return;
-      }
-
-      if (uploads.rejectedSubtitle !== undefined) {
-        rollback();
-        res.status(400).json({
-          error: `Not a subtitle file: ${JSON.stringify(
-            uploads.rejectedSubtitle
-          )}`,
-        });
-        return;
-      }
-
-      const year = optionalYear(onlyField(fields, 'year'));
-      const director = optionalText(onlyField(fields, 'director'));
-      const synopsis = optionalText(onlyField(fields, 'description'));
-
-      const postedRating = onlyField(fields, 'rating');
-      const rating = optionalRating(postedRating);
-      if (rating === INVALID_RATING) {
-        rollback();
-        res
-          .status(400)
-          .json({ error: `Invalid rating: ${JSON.stringify(postedRating)}` });
-        return;
-      }
-
-      const cast = fields.cast ?? [];
-      const genres = fields.genre ?? [];
-
-      const pool = new Set(storage.listGenrePool().map((genre) => genre.name));
-      const unknown = genres.find((name) => !pool.has(name));
-      if (unknown !== undefined) {
-        rollback();
-        res.status(400).json({ error: `Unknown genre: ${unknown}` });
-        return;
-      }
+      const { title, year, director, synopsis, rating, cast, genres } = read;
 
       // A slot that said nothing at all is a slot the maintainer emptied — the
       // form sends one of the two for every filled slot, so silence is the only
@@ -878,7 +773,6 @@ export function createApiRouter(
       // **empty path** is a row whose file arrived as bytes instead. Fields and
       // file parts are read back separately, so that placeholder is the only
       // thing keeping a mixed list in the order it was in on screen.
-      const languages = fields.subtitleLanguage ?? [];
       const storedPaths = fields.subtitlePath ?? [];
       const picked = uploads.subtitles.filter(
         (path): path is string => path !== undefined
@@ -886,7 +780,7 @@ export function createApiRouter(
 
       const subtitles: NewSubtitle[] = [];
       const rows = Math.max(
-        languages.length,
+        read.languages.length,
         storedPaths.length,
         picked.length
       );
@@ -900,7 +794,7 @@ export function createApiRouter(
         }
         subtitles.push({
           path,
-          language: languages[row] ?? DEFAULT_SUBTITLE_LANGUAGE,
+          language: read.languages[row] ?? DEFAULT_SUBTITLE_LANGUAGE,
         });
       }
 
