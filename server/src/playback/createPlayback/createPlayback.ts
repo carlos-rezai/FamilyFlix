@@ -73,6 +73,30 @@ export interface Playback {
   read(file: string): PlaybackRead;
 
   /**
+   * How long the film in an already-resolved file runs, in seconds, or `null`
+   * when nothing on this machine can say — the probe's answer when there is a
+   * component to ask, and the container's own `moov`/`mvhd` when there is not.
+   *
+   * It is a method of its own rather than {@link read}'s `durationSeconds`
+   * because the two questions differ on exactly the films this one exists for.
+   * `read` answers a **player**, so a film it cannot decode is `cannot-play`
+   * with a nought on it — but a film this build cannot decode still has a
+   * length, and the **Runtime label** is allowed to know it. For the same
+   * reason a probe that came back saying nothing about the length has not
+   * exhausted the ways of asking here: the header is still there to read.
+   *
+   * **`null` rather than nought when neither can answer.** Nought is a length,
+   * and every reader of `runtimeMinutes` already draws a dash from `null` —
+   * which is the difference between the catalogue not knowing how long a film
+   * is and it claiming the film is instantaneous.
+   *
+   * A component that throws rather than answers is a component that answered
+   * nothing, and costs the caller only the probe: an FFmpeg that died
+   * mid-answer must not take away the length an MP4 was carrying all along.
+   */
+  duration(file: string): number | null;
+
+  /**
    * What to do with an already-resolved file's bytes — the same decision
    * {@link read} answered, made again from the file rather than remembered
    * from it, because a decision cached between two requests is the beginning
@@ -184,6 +208,24 @@ export function createPlayback(
       return decision.path === 'cannot-play' || durationSeconds <= 0
         ? { path: 'cannot-play', durationSeconds: 0 }
         : { path: decision.path, durationSeconds };
+    },
+    duration: (file) => {
+      // Guarded around the probe alone, so a component that died mid-answer
+      // still leaves the header below to be read.
+      let probed: number | null = null;
+      try {
+        probed = component?.probe(file)?.durationSeconds ?? null;
+      } catch {
+        probed = null;
+      }
+
+      if (probed !== null && probed > 0) {
+        return probed;
+      }
+
+      // `mediaDuration` already answers `null` for a file that will not say,
+      // which is every container but this one and this one truncated.
+      return mediaDuration(file);
     },
     stream: (file, offsetSeconds = 0) => {
       const { probe, decision } = decide(file, offsetSeconds);
