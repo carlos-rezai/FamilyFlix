@@ -16,6 +16,9 @@
   },
   "include": [
     "src/test-support/**/*",
+    "server/src/test-support/**/*",
+    "server/**/*.test.ts",
+    "server/**/*.spec.ts",
     "vite.config.ts",
     "vite.config.mts",
     "vitest.config.ts",
@@ -29,7 +32,6 @@
     "src/**/*.test.jsx",
     "src/**/*.spec.jsx",
     "src/**/*.d.ts",
-    ".husky/**/*.test.ts",
-    ".husky/**/*.mjs"
+    ".husky/**/*.ts"
   ]
 }

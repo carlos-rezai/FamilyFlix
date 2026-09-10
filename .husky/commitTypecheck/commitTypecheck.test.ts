@@ -30,7 +30,7 @@ import {
   ALL_PROJECTS,
   SHIPPING_PROJECTS,
   projectsFor,
-} from './commitTypecheck.mjs';
+} from './commitTypecheck';
 
 /** A commit message as git hands one to `commit-msg`: subject, blank, body. */
 const message = (subject: string, body = ''): string =>
@@ -50,9 +50,9 @@ const GIT_TEMPLATE = [
 
 describe('projectsFor — a RED test commit', () => {
   it('narrows the gate to the shipping projects', () => {
-    expect(projectsFor(message('test: [movie-form] issue #107 runtime, RED'))).toEqual(
-      SHIPPING_PROJECTS
-    );
+    expect(
+      projectsFor(message('test: [movie-form] issue #107 runtime, RED'))
+    ).toEqual(SHIPPING_PROJECTS);
   });
 
   it('names the frontend and the backend, and not the tests', () => {
@@ -67,7 +67,9 @@ describe('projectsFor — a RED test commit', () => {
 
   it('reads the subject past the comments git appends', () => {
     expect(
-      projectsFor(`test: [player] issue #7 the cue offset, RED\n\n${GIT_TEMPLATE}\n`)
+      projectsFor(
+        `test: [player] issue #7 the cue offset, RED\n\n${GIT_TEMPLATE}\n`
+      )
     ).toEqual(SHIPPING_PROJECTS);
   });
 
@@ -149,8 +151,8 @@ describe('projectsFor — what must not relax the gate', () => {
 
   it('refuses a commented-out subject that says test:', () => {
     // `# test: ...` is a line git throws away, so it names no commit.
-    expect(projectsFor('# test: [player] issue #7 RED\nfeat: something\n')).toEqual(
-      ALL_PROJECTS
-    );
+    expect(
+      projectsFor('# test: [player] issue #7 RED\nfeat: something\n')
+    ).toEqual(ALL_PROJECTS);
   });
 });

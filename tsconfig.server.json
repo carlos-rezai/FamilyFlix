@@ -4,5 +4,15 @@
     "noEmit": true,
     "types": ["node", "vitest"]
   },
-  "include": ["server/**/*.ts", "src/types/**/*.ts"]
+  "include": ["server/**/*.ts", "src/types/**/*.ts"],
+  // The tests belong to `tsconfig.spec.json`, the way the frontend's already
+  // do. Issue #111: this project is what a RED `test:` commit still has to
+  // compile, and a test written against a module that does not exist yet
+  // cannot — so "the backend's shipping code" and "the backend's tests" have to
+  // be two answerable questions rather than one.
+  "exclude": [
+    "server/src/test-support/**/*",
+    "server/**/*.spec.ts",
+    "server/**/*.test.ts"
+  ]
 }
