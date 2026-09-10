@@ -271,6 +271,173 @@ describe('createMedia — reserveFolder', () => {
   });
 });
 
+describe('createMedia — renameFolder', () => {
+  // 11 — Movie form refactor (issue #109), Group 4. `renameFolder` is the one
+  // method in this domain that was reachable only through the route, which
+  // `03761ca` named as a debt for this round. It exists because `busboy` will
+  // not reach a part that follows a file until that file is consumed, and
+  // buffering is out at 12 GB: so the folder is reserved from whatever fields
+  // had arrived, and given its real name once the title is known.
+
+  it('renames the folder to the one the title asks for', async () => {
+    const { media, root } = sandbox();
+    // The folder a body that sent its film before it named it gets: reserved
+    // with nothing known, so `movieFolder`'s fallback names it.
+    const reserved = media.reserveFolder('', null);
+    await media.storeUpload(reserved, 'lantern.mp4', part('the film'));
+
+    const renamed = media.renameFolder(reserved, 'The Lantern Keeper', 2019);
+
+    expect(renamed.folder).toBe(join(root, 'the-lantern-keeper-2019'));
+    expect(existsSync(reserved)).toBe(false);
+    expect(existsSync(renamed.folder)).toBe(true);
+  });
+
+  it('takes the files with it', async () => {
+    const { media } = sandbox();
+    const reserved = media.reserveFolder('', null);
+    await media.storeUpload(reserved, 'lantern.mp4', part('the film'));
+    await media.storeUpload(reserved, 'poster.png', part('the artwork'));
+
+    const renamed = media.renameFolder(reserved, 'The Lantern Keeper', 2019);
+
+    expect(readFileSync(join(renamed.folder, 'lantern.mp4'), 'utf8')).toBe(
+      'the film'
+    );
+    expect(readFileSync(join(renamed.folder, 'poster.png'), 'utf8')).toBe(
+      'the artwork'
+    );
+  });
+
+  // The assertion the route depends on: a path `storeUpload` already answered
+  // has to go on resolving afterwards, or the row points at nothing.
+  it('re-anchors the stored paths it already answered', async () => {
+    const { media, root } = sandbox();
+    const reserved = media.reserveFolder('', null);
+    const stored = await media.storeUpload(
+      reserved,
+      'lantern.mp4',
+      part('the film')
+    );
+
+    const renamed = media.renameFolder(reserved, 'The Lantern Keeper', 2019);
+    const after = renamed.storedPath(stored);
+
+    expect(after).toBe('the-lantern-keeper-2019/lantern.mp4');
+    expect(readFileSync(mediaFilePath(root, after) as string, 'utf8')).toBe(
+      'the film'
+    );
+  });
+
+  it('re-anchors a path whose filename the sanitiser changed', async () => {
+    const { media, root } = sandbox();
+    const reserved = media.reserveFolder('', null);
+    const stored = await media.storeUpload(
+      reserved,
+      '../../a lantern: keeper.mp4',
+      part('the film')
+    );
+
+    const after = media
+      .renameFolder(reserved, 'The Lantern Keeper', 2019)
+      .storedPath(stored);
+
+    // Only the first segment changes — how a filename is spelled was settled
+    // by `storeUpload` and is not this method's to revisit.
+    expect(after.split('/')[0]).toBe('the-lantern-keeper-2019');
+    expect(readFileSync(mediaFilePath(root, after) as string, 'utf8')).toBe(
+      'the film'
+    );
+  });
+
+  it('moves nothing when the folder already has the name it wants', async () => {
+    const { media } = sandbox();
+    // Every body the form sends is this case: the title arrives before the
+    // film, so the folder was reserved with its final name already.
+    const reserved = media.reserveFolder('The Lantern Keeper', 2019);
+    const stored = await media.storeUpload(
+      reserved,
+      'lantern.mp4',
+      part('the film')
+    );
+
+    const renamed = media.renameFolder(reserved, 'The Lantern Keeper', 2019);
+
+    expect(renamed.folder).toBe(reserved);
+    expect(renamed.storedPath(stored)).toBe(stored);
+    expect(readFileSync(join(reserved, 'lantern.mp4'), 'utf8')).toBe(
+      'the film'
+    );
+  });
+
+  it('leaves a suffixed folder alone — the suffix is this movie’s name', async () => {
+    const { media, root } = sandbox();
+    media.reserveFolder('The Lantern Keeper', 2019);
+    const second = media.reserveFolder('The Lantern Keeper', 2019);
+    const stored = await media.storeUpload(
+      second,
+      'lantern.mp4',
+      part('the second film')
+    );
+
+    const renamed = media.renameFolder(second, 'The Lantern Keeper', 2019);
+
+    // `-2` is not a stale name to be corrected: renaming it would collide with
+    // the first film, and re-suffixing it would move gigabytes for nothing.
+    expect(renamed.folder).toBe(join(root, 'the-lantern-keeper-2019-2'));
+    expect(renamed.storedPath(stored)).toBe(stored);
+  });
+
+  // The one that would destroy somebody else's film.
+  it('takes a free name rather than writing over the folder already there', async () => {
+    const { media, root } = sandbox();
+    const taken = media.reserveFolder('The Lantern Keeper', 2019);
+    const theirs = await media.storeUpload(
+      taken,
+      'lantern.mp4',
+      part('the first film')
+    );
+
+    const reserved = media.reserveFolder('', null);
+    const stored = await media.storeUpload(
+      reserved,
+      'lantern.mp4',
+      part('the second film')
+    );
+    const renamed = media.renameFolder(reserved, 'The Lantern Keeper', 2019);
+
+    expect(renamed.folder).toBe(join(root, 'the-lantern-keeper-2019-2'));
+    // Both films are still there, and each stored path still names its own.
+    expect(readFileSync(mediaFilePath(root, theirs) as string, 'utf8')).toBe(
+      'the first film'
+    );
+    expect(
+      readFileSync(
+        mediaFilePath(root, renamed.storedPath(stored)) as string,
+        'utf8'
+      )
+    ).toBe('the second film');
+  });
+
+  it('gives a film with an unusable title a usable folder', () => {
+    const { media, root } = sandbox();
+    const reserved = media.reserveFolder('', null);
+
+    expect(media.renameFolder(reserved, '!!!', 2019).folder).toBe(
+      join(root, 'movie-2019')
+    );
+  });
+
+  it('names it from the title alone when the movie has no year', () => {
+    const { media, root } = sandbox();
+    const reserved = media.reserveFolder('', null);
+
+    expect(
+      media.renameFolder(reserved, 'The Lantern Keeper', null).folder
+    ).toBe(join(root, 'the-lantern-keeper'));
+  });
+});
+
 describe('createMedia — openFolder', () => {
   it('answers the folder a stored path already lives in', async () => {
     const { media, root } = sandbox();
