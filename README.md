@@ -274,8 +274,9 @@ Builds the installer and publishes it to GitHub Releases automatically.
 | Continue Watching row                               | ✅ Done         |
 | Built-in video player (playback, subtitles)         | ✅ Done         |
 | Watch tracking (watched / in-progress / resume)     | ✅ Done         |
-| Add Movie — manual file picker                      | 🔜 Planned      |
-| Edit / delete a movie                               | 🔜 Planned      |
+| Add Movie — manual file picker                      | ✅ Done         |
+| Edit a movie — amend metadata and files             | ✅ Done         |
+| Delete a movie                                      | 🔜 Planned      |
 | Bulk import (Excel/CSV → library)                   | 🔜 Planned      |
 | Import progress console (scan/import, live log)     | 🔜 Planned      |
 | Export (library → CSV/Excel)                        | 🔜 Planned      |

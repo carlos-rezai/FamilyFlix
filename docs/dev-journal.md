@@ -11,6 +11,92 @@ Newest entry first.
 
 ---
 
+## 2026-09-10 — Movie form refactor (issue #109)
+
+Fourteen commits against `docs/refactor-plans/11-movie-form-refactor.md`.
+**3041 tests pass across 168 files**, up from 2920 across 159. `npm run
+typecheck` is green and `eslint src server` is clean on every commit.
+
+`server/src/routes/index.ts` is **1661 → 1186 lines**, back below where the
+`movie-form` initiative found it. `POST /api/movies` is 273 → 124 and
+`PATCH /api/movies/:id` is 261 → 137. Eight new units under `routes/`, each a
+folder with its test and no category barrel: `onlyField`, `optionalYear`,
+`optionalText`, `optionalRating`, `isRatingValue`, `uploadKinds`, `readBody`,
+`derivedRuntime`, and `movieFormBody` — the shared read the two saves now share.
+
+**Not one of the 288 route tests was edited to describe different behaviour.**
+The only edit any of them took was the two composition sites in commit 13, which
+now build `createMedia(dir)` themselves because the router's fourth argument
+stopped defaulting.
+
+### What the refactor found
+
+- **`readBody` could take the process down.** A rejecting `onFile` was only ever
+  answered at busboy's `close`, a later turn of the event loop, so the promise
+  spent that turn unhandled — which Node answers by exiting. Through the router
+  that throw was always somebody's failed save and the crash it also was had
+  nowhere to be seen; it took giving the function its own first test to make it
+  visible. Fixed in the same commit, with a second reaction on the same promise.
+  The rejection `Promise.all` carries out is unchanged, and so is every status
+  code on the wire.
+
+  The general lesson is the one the plan was written on: the eight helpers were
+  each _covered_ through 288 route tests and none of them was _examined_. Cover
+  and directness are different things, and this is what the difference bought.
+
+- **The refusal order was true by coincidence.** A body wrong in two ways has to
+  earn the same sentence whichever save it was sent to, and that held only
+  because two handlers had been written in the same sequence with nothing
+  anywhere saying so. It is now a describe block of its own in
+  `movieFormBody.test.ts`.
+
+### Decisions taken inside the plan
+
+- **`isRatingValue` and `MAX_RATING` got a unit the plan did not name.**
+  `optionalRating` needs the scale, and so do `/movies/:id/rating` and
+  `parseMinRating`. Duplicating a rule that guards the one write that _erases_ a
+  rating was the worse option, and so was importing it out of a folder named
+  after one of its callers.
+- **`isPosterFilename` and `isSubtitleFilename` are one `uploadKinds/` unit.**
+  The plan left the choice open. They are the same rule at two slots with one
+  argument for it, and splitting them across two folders would have split the
+  reason they exist. They are a security boundary — `/api/images` is
+  `express.static` over the media root — so their tests are mostly about what is
+  refused, `poster.png.html` first among them.
+- **The subtitle assembly stayed in each handler.** The edit's version is a
+  strict generalisation of the add's, so sharing it was tempting — and would have
+  been a wire change: a POST carrying a `subtitlePath` field, which it currently
+  ignores, would have started being honoured. The plan's own rule applied ("if a
+  third parameter appears, the extraction is being forced").
+- **`useMovieForm` keeps having no test file, and now says why.** Every member of
+  `UseMovieFormResult` is something a maintainer presses, and `MovieForm.test.tsx`
+  presses all of them across 129 tests. A `renderHook` suite would assert the
+  shape of a seam rather than anything observable. The header names the line to
+  watch: a second caller, or a branch no press can reach.
+
+### Follow-ups this refactor surfaced
+
+- **`routes.test.ts` has a latent flake, and it is not the one the plan warned
+  about.** "puts the film at the front of Continue Watching, and finishing takes
+  it off" fails roughly one run in twenty under parallel load: two `postResume`
+  calls landing in the same millisecond tie on `last_watched_at`, and the tail
+  order (`created_at DESC`, then id) can tie behind it, so the shelf comes back
+  in an arbitrary order. It predates this round — it reproduces with the refactor
+  stashed — and it is a test that does not control for a tie rather than a bug in
+  the shelf. Filed rather than fixed here, because editing one of the 288 was the
+  one thing this refactor was not allowed to do. Filed as 112.
+
+  The flake the plan _did_ warn about — the subtitle `position` swap from
+  `4abca01` — never appeared: `routes.test.ts` ran clean on the subtitle blocks
+  across roughly forty runs, including the two five-run checks the plan asked for
+  after commits 8 and 10.
+
+- **`deleteMovie` remains built, tested and unreachable.** It belongs to the
+  feature that ships delete. The feature table now says so in as many words
+  rather than carrying one "Edit / delete a movie" row that was half true.
+
+---
+
 ## 2026-09-10 — Movie form: add and edit a movie by hand (issues #98–#107)
 
 Twenty commits across issues #98–#107, seven phases against the plan on #97,
