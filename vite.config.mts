@@ -49,6 +49,11 @@ export default defineConfig(() => ({
     testTimeout: 20000,
     include: [
       '{src,server,tests}/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}',
+      // The commit hooks' own units. They are tooling rather than app code, so
+      // they live beside the hooks that run them — but a hook that decides what
+      // the typecheck gate does is exactly the thing that should not be the one
+      // file nobody tests.
+      '.husky/**/*.{test,spec}.{ts,mts}',
     ],
     reporters: ['default'],
     coverage: {
