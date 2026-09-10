@@ -5,8 +5,8 @@ import express, { type Request, type Response, type Router } from 'express';
 import type { LibraryStorage } from '../library';
 import { createMedia, type Media } from '../media/createMedia/createMedia';
 import type { Playback } from '../playback/createPlayback/createPlayback';
-import { isRatingValue, MAX_RATING } from './isRatingValue/isRatingValue';
 import { derivedRuntime } from './derivedRuntime/derivedRuntime';
+import { isRatingValue, MAX_RATING } from './isRatingValue/isRatingValue';
 import { collectUploads, readMovieFields } from './movieFormBody/movieFormBody';
 import { onlyField } from './onlyField/onlyField';
 import { optionalYear } from './optionalYear/optionalYear';
@@ -507,24 +507,12 @@ export function createApiRouter(
   // designed `PlayerNotice` state, and refusing an MKV at the door would refuse
   // most of the family folder to spare the family a message the player already
   // draws.
-
-  // **The poster and the subtitles are the parts whose names are re-checked**,
-  // and for the opposite reason: an unplayable film is a message the player
-  // draws, but a file under the media root is served back by `express.static`
-  // with the Content-Type its extension implies — so what each of those two may
-  // be called is decided here.
   //
-  // **The subtitles are the one part that arrives any number of times**, and
-  // they arrive with a field each: one `subtitle` part per track and one
-  // `subtitleLanguage` field beside it, read pairwise in the order the parts
-  // came in. That order is the track order the row is written with, because
-  // `position` is what `preferredSubtitle` falls back through when the family
-  // has no preferred language.
-  //
-  // A body with no title is a 400 rather than an untitled row. The form gates
-  // Save on a title, so this is unreachable from the app — but `title` is
-  // `NOT NULL` and `''` satisfies that column, which would make a corrupt row
-  // the cost of a client this route did not write.
+  // **How the body is read is `movieFormBody/`'s**, because the edit below reads
+  // it identically: the three-way part dispatch, the two name re-checks, the
+  // subtitle slot taken at arrival, and every field this form carries. What is
+  // left here is what an add alone decides — where the folder comes from, that a
+  // refusal takes the whole folder back, and that the row is a new one.
   //
   // **On any refusal the bytes this request wrote are removed**, so a failed add
   // leaves no row *and* no folder. That is only reachable at all because a part
