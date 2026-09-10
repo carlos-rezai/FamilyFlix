@@ -1,5 +1,17 @@
 # 11 — Add a movie (the Add/Edit form)
 
+> **Initiative:** `movie-form` — [issue #97](https://github.com/carlos-rezai/FamilyFlix/issues/97)
+> **PRD:** `docs/PRDs/11-add-movie.md`
+> **Plan:** `docs/PRDs/11-add-movie-plan.md` — seven build phases, filed as issues 98–108
+> **Shipped:** issues 98–107, 2026-09-05 → 2026-09-10. What the build actually
+> did, and where it departed from this log, is in `docs/dev-journal.md`.
+
+This log is the `grill-me` session that settled the feature **before** the PRD
+was written. It is an immutable snapshot of that moment rather than a record of
+what shipped — the questions below were answered against the prototype and the
+then-current code, and three of the documents it resolves were amended by the
+initiative it opened.
+
 ## Background
 
 `src/pages/AddMoviePage/AddMoviePage.tsx` is a stub that echoes `?movie=<id>`.

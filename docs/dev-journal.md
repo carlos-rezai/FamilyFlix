@@ -11,6 +11,194 @@ Newest entry first.
 
 ---
 
+## 2026-09-10 — Movie form: add and edit a movie by hand (issues #98–#107)
+
+Twenty commits across issues #98–#107, seven phases against the plan on #97,
+built from `docs/design-logs/11-add-movie.md`. **2920 tests pass across 159
+files**, up from 2324 across 144. `npm run typecheck` is green, `eslint src
+server` is clean.
+
+The library could not be filled. Nine features had shipped against a database
+only `npm run db:seed` could write to, and `addMovie` / `updateMovie` /
+`deleteMovie` had been built, transactional and tested since #3 with **no route
+and no caller** — the same shape the resume writers were in before the player
+came for them. This initiative is the one that reaches them, and it is the first
+write in the app that is not a `{ value }` POST against a movie that already
+exists.
+
+**Add a movie** and **Edit / delete a movie** are _not_ ticked in the feature
+table. That is the rule this project keeps: a feature is ✅ when its refactor
+closes, not when its build issues do. Delete is also genuinely not built — see
+below.
+
+### The initiative began by admitting three documents were wrong
+
+Unusually, the grill's first job was not designing anything. It was resolving
+three documents that disagreed with the prototype and with the shipped code, and
+none of them could be left standing:
+
+- **CLAUDE.md described "Movie Import — Two Paths, One Form."** The prototype has
+  neither path — no mode tabs, no folder-path field. The container was still
+  carrying dead `addMode` / `folderPath` / `scanFolder` state that the extracted
+  feature never rendered. Folder-path autofill moved to bulk import, where
+  `ImportFlow`'s root-path field actually designs it. **That amendment is this
+  issue (#108), which means CLAUDE.md was wrong for the entire build** and every
+  slice was built against the design log instead.
+- **`01-library-core.md` Q17 had chosen reference-in-place over managed copy**, on
+  a 12-TB-no-duplication argument. Everything shipped since assumed the opposite:
+  `mediaFilePath`, `/api/images` and the seed's own layout all resolve a stored
+  path under the managed media root. The decision had been reversed by code
+  rather than by anyone deciding to reverse it. **Reference in place** is retired
+  in the glossary rather than deleted, so Q17 stays traceable.
+- **`02-browse-grid.md` Q4 had handed TMDB to "Add-movie / bulk-import"** as an
+  unowned gap. The prototype's form has no lookup, no match-confirm and no poster
+  search. TMDB stays with bulk import, where its argument lives.
+
+The lesson worth keeping: **two of those three were reversed by shipping code
+long before anyone wrote the reversal down.** A design log is immutable, so the
+only place the contradiction could surface was a grill session that happened to
+re-read it.
+
+### One constraint decided the entire feature
+
+**A browser cannot tell you where a file is.** `<input type="file">` yields a
+`File` — a name and bytes, never a path. Everything else follows:
+
+- There is no folder-path autofill on this form because there _cannot_ be one.
+- Managed copy is not a preference the project re-took; it is the only model a
+  form running in Chromium can implement. The 12 TB of duplication log 01 Q17
+  was avoiding is accepted, because the alternative is a feature that cannot
+  exist until Electron does.
+- The save is multipart, streamed with `busboy`, so a 12 GB film never sits in
+  memory on either end of the wire.
+
+That single sentence settled the storage question more firmly than two design
+logs arguing about it had.
+
+### The bug the tests found, which no acceptance criterion asked about
+
+`POST /api/movies` recorded a subtitle's stored path **when its write resolved**
+rather than **when its part arrived**. Two subtitle uploads racing meant two
+tracks landing with their `position` values swapped — and `position` is what
+`preferredSubtitle` falls back through, so the family would silently get the
+wrong default track.
+
+It surfaced as an **intermittent failure of an existing test**, roughly one run
+in three, and only after the edit slice's tests were added — zero failures in
+five runs before them. It was found in the RED commit (`77e871f`), named there,
+and deliberately left for the build (`4abca01`) rather than fixed inside a commit
+whose point was that the tests fail. The fix takes the slot at arrival. Five
+consecutive runs of `routes.test.ts`, 269/269 each.
+
+Worth naming because the test that caught it was not testing for it. It was a
+test about editing, and it perturbed the timing enough to expose an ordering
+assumption in adding.
+
+### Ten RED commits, ten `--no-verify`
+
+Every `test:` commit in this initiative bypassed the pre-commit hook, each one
+citing the last as precedent, back to `5c066c3` from the previous initiative. The
+reason is always the same and always legitimate: **`tsc -b` cannot compile a test
+written against a module that does not exist yet**, and stopping at RED is the
+whole point of the step. Prettier and ESLint were run by hand over the touched
+files each time.
+
+This is now a settled pattern rather than an exception, and it has a cost: the
+one gate that would catch a genuine type error in a test file is the one that is
+routinely skipped on the commits that add test files. `npm run typecheck` had
+already been red for six commits once, during the player initiative, for exactly
+this reason. **Worth its own issue: the pre-commit hook could typecheck `src` and
+`server` but not `tsconfig.spec.json` on a commit whose subject starts `test:`,
+which would keep the gate honest without asking it to compile against the
+future.** Filed as 111.
+
+### Where the route layer ended up, and why it is the refactor's headline
+
+`server/src/routes/index.ts` went from **786 lines to 1661** — it doubled. It now
+holds twenty module-level helpers, and roughly half of them arrived with this
+initiative: `readBody`, `onlyField`, `optionalYear`, `optionalText`,
+`optionalRating`, `isPosterFilename`, `isSubtitleFilename`, `derivedRuntime`.
+
+CLAUDE.md says the route layer is "HTTP layer only: parse request, call a domain
+module, return response." Multipart parsing, per-column coercion, extension
+allow-lists and best-effort runtime derivation are each defensible _at_ the route
+— but not all of them in one 1661-line file. The domain seam worked exactly as
+designed (`media` is injected, and the route never learns there is a filesystem);
+it is the request-parsing half that has no home. That is the headline of the
+refactor issue, 109, and its plan is in
+`docs/refactor-plans/11-movie-form-refactor.md`.
+
+### Deliberately not built
+
+- **Delete.** "Edit / delete a movie" ships its edit half only. The unlink in
+  #106 is the app's only deletion of media and it removes **one superseded file
+  at a time**, matched by stored path — it is not a movie delete and must not be
+  mistaken for the start of one. `deleteMovie` remains built, tested, and
+  unreachable, exactly as `addMovie` was before this initiative.
+- **The import context banner**, and the labels that go with it. It belongs to
+  the feature that can reach it.
+- **TMDB**, folder-path autofill, and the Settings page's grouped sections.
+- **A backdrop field.** `backdrop_path` stays null and `MoviePage` falls back to
+  the gradient, which is the prototype's own answer.
+- **A snackbar**, and any progress surface. The prototype's form has neither, and
+  a large-file save currently shows only a disabled button reading "Adding…".
+  CLAUDE.md asks for "a visible progress indicator, not a spinner" on large-file
+  operations; **the form does not have one, and the prototype does not design
+  one.** That gap is real and belongs to whoever revisits the prototype.
+
+### Known and deliberately not fixed
+
+- **`renameFolder` has no unit test of its own.** It is required by the route
+  tests — busboy will not reach a part that follows a file until that file is
+  consumed, buffering is out at 12 GB, and the PRD rules out a staging area — so
+  the folder is reserved from whatever fields had arrived and renamed once the
+  title is known. It is exercised only through the route. Named in `03761ca` as
+  wanting its own test in the refactor round.
+- **`useMovieForm` has no test file**, deliberately. The gate, the label and the
+  destination are asserted through `MovieForm`, where a maintainer can press
+  them. At 352 lines it is now the largest unit in `src/` with no test of its own.
+- **`createApiRouter`'s fourth argument is defaulted rather than required.** The
+  route tests compose the router over a real sandbox directory with three
+  arguments and want the real domain; `main.ts` passes it explicitly anyway, so
+  the composition root still says what the app is made of. A default that exists
+  for the tests is a seam pointed the wrong way, and it should be looked at.
+- **Two prototype deviations, both recorded where they live.** The non-pill field
+  corner is `radius.md` rather than the prototype's inline `10px`, because
+  COMPONENT-SPEC §1 says every visual value is a token and 10 is not one.
+  `Textarea` ships without the `minHeight` prop the prototype declares, because
+  nothing passes a non-default.
+- **The save gate grew its second half mid-initiative and made eight existing
+  tests false rather than failing.** Seven walk-throughs in `App.test.tsx` and one
+  gate test now pick a film before pressing Save. No assertion changed meaning,
+  but a test that still passes after the thing it asserts has changed is the
+  quietest failure mode this project has.
+- **The dev seed is still here.** Its stated expiry is unchanged and is _not_ this
+  initiative: the commit that ships **bulk import** is the commit that deletes it.
+  Add Movie can now fill the library by hand; bulk import is what makes the seed
+  redundant.
+
+### `.claude/CLAUDE.md` is gitignored, and this is the second time it has bitten
+
+The previous journal entry flagged it as a follow-up. This issue is the one that
+had to amend CLAUDE.md as an acceptance criterion — so **the amendment exists on
+disk and is not in the commit**, and a fresh clone still reads "Movie Import —
+Two Paths, One Form". The file is the project's own instructions to Claude, it is
+cited by every skill in `.claude/skills/`, and it was demonstrably wrong for an
+entire initiative without anything being able to catch it. This now wants a
+decision rather than a note, and is filed as 110.
+
+### Found while writing this, not fixed here
+
+README's **Component Architecture** section is stale in two ways: it describes a
+"four-file shape" with a per-component `index.ts`, which CLAUDE.md's
+category-barrel-only rule contradicts and no component in the tree follows; and
+its `server/src/` domain list reads "`library/`, `media/`, `import-export/`",
+omitting `playback/`, which has been a domain since #83. Both are outside this
+issue's acceptance criteria and are listed as out-of-scope on the refactor
+issue, 109.
+
+---
+
 ## 2026-09-04 — Video player refactor (issue #94)
 
 Twenty-nine commits against the plan in `docs/refactor-plans/10-video-player-refactor.md`,

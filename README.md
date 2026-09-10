@@ -33,14 +33,13 @@ FamilyFlix is an offline-first desktop application for Windows. There is no clou
 
 ### Adding a movie
 
-The same Add Movie form works two ways:
+One screen adds a movie and edits one. You fill in the title, year, director, cast, description, genre and rating, then pick the files: the video, a poster, and as many subtitle files as the film has, each tagged with its language. A title and a video are all that's required to save — everything else can be filled in later by opening the same screen again. Running time isn't asked for at all; it's read off the video file after it's copied.
 
-- **Folder-path autofill** — point it at a movie's folder and it finds the video, subtitle, and poster files automatically (it isn't picky about subtitle format — `.srt`, `.vtt`, `.ass`, and `.sub` are all recognised). You still confirm the title, year, and genre.
-- **Manual mode** — pick the video, subtitle, and poster files individually and fill in the same fields by hand.
+Files are picked individually, from your machine's normal file dialog. FamilyFlix then **copies** what you gave it into its own media folder, so the app owns its copy and moving the original later can't break anything. On an edit, files you don't touch aren't re-uploaded — fixing a typo in a title doesn't move a 12 GB film.
 
 ### Migrating an existing library
 
-A bulk importer reads an existing spreadsheet (title, year, genre, …), matches each row to its movie folder, and runs the same autofill logic to build the whole library in one pass, with a review step before anything is committed. An exporter writes the library back out to CSV for backups or bulk edits.
+A bulk importer reads an existing spreadsheet (title, year, genre, …), matches each row to its movie folder, and scans that folder for the video, poster and subtitle files (it isn't picky about subtitle format — `.srt`, `.vtt`, `.ass`, and `.sub` are all recognised), building the whole library in one pass with a review step before anything is committed. Pointing at a folder is the bulk importer's job rather than the Add Movie form's: a file dialog hands over a file, never a folder path. An exporter writes the library back out to CSV for backups or bulk edits.
 
 ### Watching
 
@@ -162,7 +161,7 @@ familyflix/
 │   │   ├── library/        # browse grid, genre rows
 │   │   ├── search/          # search-as-you-type, filters
 │   │   ├── player/          # built-in video player, subtitles, resume
-│   │   ├── movie-form/      # Add Movie: autofill + manual modes
+│   │   ├── movie-form/      # Add/Edit a movie: one form, manual pickers
 │   │   ├── import-export/   # bulk importer, CSV exporter
 │   │   └── collections/     # playlists (roadmap)
 │   ├── layouts/         # Page chrome
@@ -228,7 +227,7 @@ Output: `release/FamilyFlix-Setup-x.x.x.exe`
 Examples:
 
 ```
-feat: [movie-form] issue #3 add folder-path autofill
+feat: [movie-form] issue #99 the genre pool
 fix: [player] issue #7 correct subtitle track offset
 refactor: [library] issue #9 extract genre-row hook
 ```
