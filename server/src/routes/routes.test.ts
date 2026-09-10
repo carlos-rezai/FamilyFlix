@@ -2462,6 +2462,34 @@ function postResume(baseUrl: string, id: string, body: unknown) {
   });
 }
 
+/**
+ * Wait until the clock has moved on, so two watch stamps cannot tie.
+ *
+ * `last_watched_at` is `new Date().toISOString()` and therefore has millisecond
+ * resolution, and two `POST /resume` calls over a loopback listener can land
+ * inside the same millisecond. When they do, `last-watched` falls through to
+ * its tail — `created_at DESC, m.id` — where two films added by the same test
+ * tie again on a creation instant they also shared, leaving a **random UUID**
+ * to decide what the shelf says.
+ *
+ * `seedByAge` writes this rule down for `recently-added` and solves it with
+ * fake timers. A route test cannot borrow that: the stamp has to be written by
+ * the request, and fake timers would stop the listener the request travels
+ * over. So the wait is real — and it is over as soon as the millisecond is,
+ * rather than after a fixed sleep guessed at.
+ *
+ * It is also the scenario rather than a workaround. The family watched one
+ * film, and then, later, watched another.
+ *
+ * Requires real timers, which every caller below has.
+ */
+async function clockMovesOn(): Promise<void> {
+  const started = Date.now();
+  while (Date.now() === started) {
+    await new Promise((resolve) => setTimeout(resolve, 1));
+  }
+}
+
 describe('POST /api/movies/:id/resume', () => {
   it('stores the position and echoes the value it stored', async () => {
     const { storage, baseUrl } = freshApi();
@@ -2538,6 +2566,10 @@ describe('POST /api/movies/:id/resume', () => {
     });
 
     await postResume(baseUrl, first.id, { value: 300 });
+    // The two stamps have to be distinguishable for "moved to the front" to
+    // mean anything — see `clockMovesOn`. Without this the shelf's order comes
+    // down to a UUID comparison about one run in twenty.
+    await clockMovesOn();
     await postResume(baseUrl, second.id, { value: 300 });
 
     const shelf = async () => {
