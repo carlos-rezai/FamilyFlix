@@ -42,7 +42,24 @@ Thumbs.db
 *.sw?
 
 # Claude Code
-.claude/
+#
+# The project's own instructions and the skill workflow are tracked: README
+# advertises them as part of what this repo is, every skill tells its reader to
+# consult CLAUDE.md, and a file git does not see is a file nothing reviews —
+# which is how CLAUDE.md's "Movie Import" section stayed wrong for the whole
+# `movie-form` initiative. Decided in issue 110.
+#
+# What stays out is machine-local state: the permission allow-list is full of
+# this machine's absolute paths, and the lock file is a running process's. The
+# git guardrail is a deny rule in that machine-local file rather than the hook
+# under `hooks/`, which is why that script carries a note saying it is inert.
+.claude/*
+!.claude/CLAUDE.md
+!.claude/skills/
+!.claude/hooks/
+!.claude/settings.json
+.claude/settings.local.json
+.claude/scheduled_tasks.lock
 
 # Code-signing certificates
 *.pfx
