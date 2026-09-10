@@ -11,6 +11,54 @@ Newest entry first.
 
 ---
 
+## 2026-09-10 — The Continue Watching flake (issue #112)
+
+The flake #109 found and would not fix. One test, `routes.test.ts`'s "puts the
+film at the front of Continue Watching, and finishing takes it off", posting two
+resume positions back to back and asserting the order that came back.
+
+`last_watched_at` is an ISO string, so the two calls could land in the same
+millisecond. When they did, `last-watched` fell through to its tail —
+`created_at DESC, m.id` — where the two films tied _again_ on a creation instant
+they also shared, because the same test added both. `m.id` is a `randomUUID()`.
+So about one run in twenty the shelf's order was settled by a coin toss between
+two random strings.
+
+**The fix is in the test, not the shelf.** The ordering rule is right: a family
+cannot watch two films in the same millisecond, and the rule that says the most
+recent comes first is the rule the feature means. What was wrong is a test that
+did not control its own inputs.
+
+`clockMovesOn` waits until the millisecond is over — not for a guessed sleep —
+between the two posts. That reads as the scenario rather than as a workaround,
+because it _is_ the scenario: the family watched one film and then, later,
+another.
+
+### The thing worth carrying forward
+
+**This project already knew about this failure mode and had written it down.**
+`server/src/test-support/seedByAge/` exists for exactly it, and its docblock says
+so in as many words: "seed a library any other way and every `recently-added`
+assertion in the suite becomes a coin toss between rows that share a timestamp."
+It solves it with fake timers.
+
+A route test cannot use that solution — the stamp has to be written by the
+request, and fake timers would stop the listener the request travels over — so
+the one test that had to use a real clock quietly opted out of the discipline
+without anybody noticing it had. The other multi-film order assertions in
+`routes.test.ts` all set `lastWatchedAt` explicitly and were never at risk.
+
+So the lesson is not "watch out for timestamp ties", which was already recorded.
+It is that **a shared helper stating a rule does not protect the cases that
+cannot call it**, and those are exactly the cases that need the rule spelled out
+locally. `clockMovesOn` carries `seedByAge`'s paragraph for the one place
+`seedByAge` cannot reach.
+
+Verified 20 consecutive single-file runs and 8 under the parallel load the flake
+actually preferred. No production code changed.
+
+---
+
 ## 2026-09-10 — The two process debts (issues #110, #111)
 
 The follow-ups #109 filed, taken in the same session. Neither is a feature; both
@@ -161,7 +209,8 @@ stopped defaulting.
   in an arbitrary order. It predates this round — it reproduces with the refactor
   stashed — and it is a test that does not control for a tie rather than a bug in
   the shelf. Filed rather than fixed here, because editing one of the 288 was the
-  one thing this refactor was not allowed to do. Filed as 112.
+  one thing this refactor was not allowed to do. Filed as 112, and fixed
+  there the same day.
 
   The flake the plan _did_ warn about — the subtitle `position` swap from
   `4abca01` — never appeared: `routes.test.ts` ran clean on the subtitle blocks
