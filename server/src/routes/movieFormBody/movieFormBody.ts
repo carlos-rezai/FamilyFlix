@@ -1,4 +1,11 @@
 import type { Media } from '../../media/createMedia/createMedia';
+import { onlyField } from '../onlyField/onlyField';
+import {
+  INVALID_RATING,
+  optionalRating,
+} from '../optionalRating/optionalRating';
+import { optionalText } from '../optionalText/optionalText';
+import { optionalYear } from '../optionalYear/optionalYear';
 import type { OnFilePart } from '../readBody/readBody';
 import {
   isPosterFilename,
@@ -122,4 +129,143 @@ export function collectUploads(
   };
 
   return { onFile, uploads };
+}
+
+/**
+ * The fields of a **Movie form** body, coerced into the shapes the two writes
+ * take — the add spreading the optional ones away and the edit sending `null`
+ * in their place, which is the one thing they still disagree about after this.
+ *
+ * `synopsis` rather than `description`: the part is named after the caption the
+ * maintainer typed under, and the row after what the detail page reads, and
+ * this is the one place the two names are translated.
+ */
+export interface MovieFormValues {
+  /** Never `''` — an untitled body is a refusal, not a record. */
+  title: string;
+  year?: number;
+  director?: string;
+  synopsis?: string;
+  rating?: number;
+
+  /**
+   * The **Cast**, in billing order, one `cast` part per name. The form resolved
+   * its typed line into these before sending them, which is why no comma rule
+   * exists here.
+   */
+  cast: string[];
+
+  /**
+   * The genres, one `genre` part per chip, in the order they were picked and
+   * staying in it: `genres[0]` is the primary tag. Every name is already known
+   * to the **Genre pool** — an unknown one is a refusal.
+   */
+  genres: string[];
+
+  /**
+   * One `subtitleLanguage` field per track, in the order the rows are on
+   * screen. The caller pairs them with paths, because what a path *is* differs
+   * between the two saves and a language does not.
+   */
+  languages: string[];
+}
+
+/**
+ * What the caller sends when a body cannot be turned into a record: a status
+ * and the sentence that goes with it.
+ *
+ * A status and a message rather than a response, deliberately. A parser that
+ * wrote to `res` could not be tested without a listener, and the status codes
+ * would stop being visible in the handler where a reader looks for them.
+ */
+export interface Refusal {
+  status: number;
+  error: string;
+}
+
+/** Either the record a body describes, or the refusal it earns. */
+export type MovieFormRead =
+  | ({ ok: true } & MovieFormValues)
+  | ({ ok: false } & Refusal);
+
+/**
+ * Read the fields of a **Movie form** body, having already read its parts.
+ *
+ * The whole of what the add and the edit agree about, in the order they agreed
+ * about it — and the order is load-bearing. **A missing title is refused before
+ * a rejected file**, so a body that is wrong in two ways gets the same sentence
+ * whichever save it was sent to.
+ *
+ * `uploads` is here for the two rejections, which are decided while the parts
+ * are still arriving and carried out only once the whole body has been read:
+ * the video part is appended before the poster, so a refusal over a poster
+ * always runs against bytes that are already on disk. That is what the caller's
+ * rollback is for.
+ *
+ * `pool` is the **Genre pool**, as a set of the names it holds. Unreachable
+ * from the form, which can only send back names the pool handed it, and checked
+ * for the same reason the missing title is: this is the layer that forwards a
+ * client-supplied list into a transactional write, and the write answers an
+ * unknown name by throwing. Checked here rather than caught around the write,
+ * so the refusal is a sentence rather than an exception, and so nothing is
+ * attempted at all.
+ */
+export function readMovieFields(
+  fields: Record<string, string[]>,
+  uploads: Uploads,
+  pool: ReadonlySet<string>
+): MovieFormRead {
+  const refuse = (error: string): MovieFormRead => ({
+    ok: false,
+    status: 400,
+    error,
+  });
+
+  const title = onlyField(fields, 'title')?.trim() ?? '';
+  if (title === '') {
+    // `title` is `NOT NULL` and `''` satisfies that column, which would make a
+    // corrupt row the cost of a client these routes did not write. The form's
+    // own **Save gate** makes this unreachable from the app.
+    return refuse('Body must carry a title');
+  }
+
+  if (uploads.rejectedPoster !== undefined) {
+    return refuse(
+      `Not a poster image: ${JSON.stringify(uploads.rejectedPoster)}`
+    );
+  }
+
+  if (uploads.rejectedSubtitle !== undefined) {
+    return refuse(
+      `Not a subtitle file: ${JSON.stringify(uploads.rejectedSubtitle)}`
+    );
+  }
+
+  // The one field on this wire that is neither text nor a list, and the one the
+  // form has already converted: it sends the units the column stores, not the
+  // percent its picker speaks. What is left to decide here is only what an
+  // absent, an empty and an off-scale one mean.
+  const postedRating = onlyField(fields, 'rating');
+  const rating = optionalRating(postedRating);
+  if (rating === INVALID_RATING) {
+    return refuse(`Invalid rating: ${JSON.stringify(postedRating)}`);
+  }
+
+  const genres = fields.genre ?? [];
+  const unknown = genres.find((name) => !pool.has(name));
+  if (unknown !== undefined) {
+    return refuse(`Unknown genre: ${unknown}`);
+  }
+
+  return {
+    ok: true,
+    title,
+    year: optionalYear(onlyField(fields, 'year')),
+    director: optionalText(onlyField(fields, 'director')),
+    synopsis: optionalText(onlyField(fields, 'description')),
+    rating,
+    cast: fields.cast ?? [],
+    genres,
+    languages: fields.subtitleLanguage ?? [],
+  };
 }
