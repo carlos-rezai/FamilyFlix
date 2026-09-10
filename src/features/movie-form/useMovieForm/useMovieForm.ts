@@ -155,6 +155,32 @@ export interface UseMovieFormResult {
  * none, the fields open empty and Save creates a row. An id that names no movie
  * is not a record to amend, so the screen falls back to adding — which is also
  * the only state in which its Save could do anything at all.
+ *
+ * ---
+ *
+ * **Why this file has no `useMovieForm.test.ts`**, asked and settled in the
+ * #109 refactor round rather than left unexamined. At 352 lines it is the
+ * largest unit in `src/` without a test of its own, which is a fair thing to
+ * notice and the wrong thing to fix here.
+ *
+ * Everything this hook returns is a thing a maintainer *presses*, and
+ * `MovieForm.test.tsx` presses all of it: 129 tests over 22 blocks covering
+ * every field and its save, the **Save gate** at each slot that could move it,
+ * the rating picker, the three kinds of file, both jobs the screen does, the
+ * **Stored file** passthrough, and a refused save leaving the form as it was.
+ * There is no member of {@link UseMovieFormResult} those do not reach.
+ *
+ * A test file here would have to drive the hook through `renderHook` and assert
+ * on the record it returns — which is asserting the shape of the seam between
+ * this file and one component, rather than anything the family or the
+ * maintainer can observe. That is the coupled kind of test: it would break on a
+ * rename that changed no behaviour, and it would not have caught anything the
+ * component's tests do not already catch.
+ *
+ * The line to watch is not the length. **If a second component ever calls this
+ * hook**, its behaviour stops being fully observable through `MovieForm` and it
+ * has earned a test file of its own — and so it would if a branch appeared here
+ * that no press can reach.
  */
 export function useMovieForm(): UseMovieFormResult {
   const navigate = useNavigate();
