@@ -7,6 +7,7 @@ import type { LibraryStorage } from '../library';
 import { createMedia, type Media } from '../media/createMedia/createMedia';
 import type { Playback } from '../playback/createPlayback/createPlayback';
 import { onlyField } from './onlyField/onlyField';
+import { optionalText } from './optionalText/optionalText';
 import { optionalYear } from './optionalYear/optionalYear';
 import {
   DEFAULT_MOVIE_SORT,
@@ -386,21 +387,6 @@ function readBody(
 
     req.pipe(parser);
   });
-}
-
-/**
- * The text a single-valued optional field carries, or `undefined` if there is
- * nothing in it.
- *
- * {@link optionalYear}'s case over a text column: an optional field the
- * maintainer cleared arrives as `''` rather than as an absent field — that is
- * what lets an edit say a director was *removed* — and `''` is not a director.
- * The detail page draws its "—" from `null`, and would draw an empty gap from
- * an empty string.
- */
-function optionalText(value: string | undefined): string | undefined {
-  const text = value?.trim() ?? '';
-  return text === '' ? undefined : text;
 }
 
 /** What {@link optionalRating} answers with for a value the column has no room for. */
