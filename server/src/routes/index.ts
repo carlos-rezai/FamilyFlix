@@ -6,7 +6,12 @@ import express, { type Request, type Response, type Router } from 'express';
 import type { LibraryStorage } from '../library';
 import { createMedia, type Media } from '../media/createMedia/createMedia';
 import type { Playback } from '../playback/createPlayback/createPlayback';
+import { isRatingValue, MAX_RATING } from './isRatingValue/isRatingValue';
 import { onlyField } from './onlyField/onlyField';
+import {
+  INVALID_RATING,
+  optionalRating,
+} from './optionalRating/optionalRating';
 import { optionalText } from './optionalText/optionalText';
 import { optionalYear } from './optionalYear/optionalYear';
 import {
@@ -201,9 +206,6 @@ function parseSearch(value: string | undefined): string | undefined {
   return value === undefined || value === '' ? undefined : value;
 }
 
-/** The top of the stored rating scale — 10 half-star units, five whole stars. */
-const MAX_RATING = 10;
-
 /**
  * Reject anything that is not a point on the stored 0–10 half-star scale. The
  * four cut-offs the dropdown offers are that control's vocabulary, not this
@@ -215,26 +217,6 @@ function parseMinRating(value: string): number | null {
     return null;
   }
   return minimum;
-}
-
-/**
- * Whether a posted rating is a value this API stores: exactly `null`, or an
- * integer on the 0–10 half-star scale.
- *
- * Stated as an allow-list rather than as a `typeof value !== 'number'`
- * rejection, because that test alone lets every non-numeric value through as a
- * clear — and a clear is the one write that erases a rating.
- */
-function isRatingValue(value: unknown): value is number | null {
-  if (value === null) {
-    return true;
-  }
-  return (
-    typeof value === 'number' &&
-    Number.isInteger(value) &&
-    value >= 0 &&
-    value <= MAX_RATING
-  );
 }
 
 /**
@@ -387,35 +369,6 @@ function readBody(
 
     req.pipe(parser);
   });
-}
-
-/** What {@link optionalRating} answers with for a value the column has no room for. */
-const INVALID_RATING = Symbol('invalid rating');
-
-/**
- * The **rating** a form field carries, in the 0–10 units the column stores —
- * `undefined` for a movie nobody has scored, and {@link INVALID_RATING} for a
- * value this route cannot store.
- *
- * {@link optionalYear}'s case over the one column where getting it wrong
- * *scores* the film rather than losing a word of it. An empty field is a movie
- * left **Unrated**, or one whose rating was removed — and `Number('')` is `0`,
- * which is a real point on the half-star scale: unreachable from the picker,
- * but not from this API, and it must survive as itself rather than be swept
- * into the absence beside it.
- *
- * Anything else off the scale is refused rather than quietly read as unrated,
- * following the unknown genre's reasoning: silence over this column erases a
- * rating instead of dropping a word.
- */
-function optionalRating(
-  value: string | undefined
-): number | undefined | typeof INVALID_RATING {
-  if (value === undefined || value.trim() === '') {
-    return undefined;
-  }
-  const rating = Number(value);
-  return isRatingValue(rating) && rating !== null ? rating : INVALID_RATING;
 }
 
 /** Reject anything that is not a positive whole number of rows. */
