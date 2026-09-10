@@ -1201,30 +1201,63 @@ export function createApiRouter(
         });
       }
 
+      let saved: Movie;
       try {
         // `null` rather than an omitted key on every nullable column: an
         // omitted key leaves the column untouched, which is the one thing an
         // edit must not do with a field the maintainer cleared on purpose.
-        res.json(
-          storage.updateMovie(existing.id, {
-            title,
-            year: year ?? null,
-            director: director ?? null,
-            synopsis: synopsis ?? null,
-            rating: rating ?? null,
-            cast,
-            genres,
-            videoPath,
-            posterPath,
-            subtitles,
-          })
-        );
+        saved = storage.updateMovie(existing.id, {
+          title,
+          year: year ?? null,
+          director: director ?? null,
+          synopsis: synopsis ?? null,
+          rating: rating ?? null,
+          cast,
+          genres,
+          videoPath,
+          posterPath,
+          subtitles,
+        });
       } catch {
         // `updateMovie` is transactional, so a throw here has left the row as
         // it was — and the bytes this request wrote go with the edit that did
         // not happen.
         rollback();
         res.status(500).json({ error: 'Could not save the movie' });
+        return;
+      }
+
+      res.json(saved);
+
+      // The only place in the app that deletes media, and it runs here rather
+      // than one line earlier because **only a successful commit authorises the
+      // unlink**: a delete that ran ahead of a save that then failed would have
+      // destroyed a file the record still points at.
+      //
+      // It takes the file a replacement superseded and nothing beside it — one
+      // file per replaced slot, reasoned about by path and never by folder, so
+      // swapping a poster cannot take the film or the tracks with it. A slot the
+      // maintainer merely emptied authorises nothing: without new bytes in its
+      // place there is no replacement, only a column set to nothing, and the
+      // same goes for a track detached from the record. A replacement carrying
+      // the old file's name was written *over* it, so the two paths are equal
+      // and there is nothing left to take away — unlinking the old path anyway
+      // would delete the file the row now points at.
+      for (const [replacement, superseded] of [
+        [videoUpload, existing.videoPath],
+        [posterUpload, existing.posterPath],
+      ] as const) {
+        if (
+          replacement !== undefined &&
+          superseded !== null &&
+          superseded !== '' &&
+          superseded !== replacement
+        ) {
+          // `removeFile` swallows its own failure: the edit has already
+          // committed and the maintainer has already been told it was made, so
+          // a stranded file is the smaller harm against a lost correction.
+          media.removeFile(superseded);
+        }
       }
     }
   );
