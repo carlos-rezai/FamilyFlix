@@ -70,10 +70,9 @@ This applies at every rung — a primitive like `Button/` and a feature
 component like `MovieForm/` both follow the exact same three-file shape.
 
 The same one-folder-per-unit rule extends beyond components: each `utils/`
-helper lives in its own folder with its test (`gradientFromId/gradientFromId.ts`
-
-- `gradientFromId.test.ts`), and a feature's non-component modules (e.g. a
-  `view` mapper) get a folder too. Keep source and test co-located in that folder.
+helper lives in its own folder with its test — `gradientFromId/gradientFromId.ts`
+beside `gradientFromId.test.ts` — and a feature's non-component modules (e.g. a
+`view` mapper) get a folder too. Keep source and test co-located in that folder.
 
 **The trigger is companion files, not files as such.** A unit gets its own
 folder when it has files that must travel together — a test, and for components
@@ -423,10 +422,47 @@ Always call the binary directly instead:
 | `npx nx <target>`  | `node_modules/.bin/nx <target>`  |
 
 The same rule applies to anything that spawns a tool on our behalf —
-`.husky/pre-commit` calls `node_modules/.bin/lint-staged`, and
-`.lintstagedrc` calls `node node_modules/prettier/bin/prettier.cjs`
-rather than a bare `prettier`, for exactly this reason. Don't "simplify"
-either back to a bare command name.
+`.husky/pre-commit` calls `node_modules/.bin/lint-staged`, `.lintstagedrc`
+calls `node node_modules/prettier/bin/prettier.cjs`, and
+`.husky/commitTypecheck/run.ts` spawns `node` on
+`node_modules/typescript/bin/tsc` with `shell: false`, all rather than a
+bare command name and for exactly this reason. Don't "simplify" any of
+them back.
+
+## The commit gate
+
+Two hooks, and the split between them is about _when the commit message
+exists_:
+
+- **`.husky/pre-commit`** runs `lint-staged`, which formats the staged
+  files with Prettier.
+- **`.husky/commit-msg`** runs the typecheck, because `pre-commit` fires
+  before git has written the message — `COMMIT_EDITMSG` there still holds
+  the _previous_ commit's.
+
+The typecheck reads the subject and narrows on one type only. A `test:`
+commit builds `tsconfig.app.json` and `tsconfig.server.json`; **every**
+other commit builds the whole solution file. That is issue #111: a test
+written against a module that does not exist yet cannot typecheck — which
+is the entire point of the RED step — so RED commits used to be made with
+`--no-verify`, which meant the one gate that would catch a real type error
+in a test file was skipped on exactly the commits that add test files.
+`npm run typecheck` was consequently red for six straight commits during
+the player initiative before anybody noticed.
+
+**Do not add `--no-verify` back to a RED commit.** It is no longer needed,
+and it is the habit this gate exists to end.
+
+The three tsconfig projects mean what their names say, and #111 is what
+made that true: `app` is the frontend's shipping code, `server` the
+backend's, and `spec` **all** the tests, frontend and backend both. Before
+that, `tsconfig.server.json` included `server/**/*.ts` tests and all, so
+there was no way to ask whether the backend's shipping code compiled
+without also asking about its tests.
+
+The decision itself is `.husky/commitTypecheck/`, a unit with its own
+tests — most of them about what must _not_ relax the gate, since it
+relaxes on the strength of a string the committer wrote.
 
 ### The other two focus stealers (measured 2026-08-12)
 

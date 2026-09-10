@@ -11,6 +11,83 @@ Newest entry first.
 
 ---
 
+## 2026-09-10 — The two process debts (issues #110, #111)
+
+The follow-ups #109 filed, taken in the same session. Neither is a feature; both
+are about the machinery the features are built with, and both had already cost
+something real.
+
+### #110 — the workflow is version-controlled now
+
+`.gitignore` ignored `.claude/` wholesale, which took the project's own
+instructions with it. **Decided: track `CLAUDE.md`, `skills/`, `hooks/` and
+`settings.json`; keep `settings.local.json` and `scheduled_tasks.lock` out.** The
+reasoning is written into `.gitignore` beside the rule rather than only here, so
+it is next to the thing it explains.
+
+The argument that settled it is README's own. Lines 56, 70 and 143 advertise the
+skill workflow as part of what this repository is, on a public repository where
+none of it was. The cost was concrete twice: an amendment that did not travel
+after the player refactor, and #108 having _amend CLAUDE.md_ as a literal
+acceptance criterion — the amendment was made, sat on disk, and was not in the
+commit, so a fresh clone read the wrong "Movie Import" section for the entire
+`movie-form` initiative. Nothing reviews a file git does not see.
+
+Two things found on the way in, both worth knowing:
+
+- **`.claude/hooks/block-dangerous-git.sh` is inert.** No `hooks` block
+  references it; the git guardrail is a `permissions.deny` list. It is tracked
+  with a header saying so, because on a public repo a script that looks like it
+  is guarding the tree and is not is worse than no script at all.
+- **Prettier mangled CLAUDE.md the moment it became a tracked file.** lint-staged
+  formatted it on the way in, and a `+` continuing a parenthetical at the start of
+  a line was read as a list marker and rewritten as `-`, breaking the sentence
+  about `utils/` co-location in half. Repaired, and the sentence reworded so
+  Prettier and it agree. **This is now a live hazard for every markdown file in
+  the repo** — a wrapped line beginning `+`, `-` or a digit-dot is a list to
+  Prettier, whatever it was to the author.
+
+### #111 — RED commits no longer need `--no-verify`
+
+A `test:` commit typechecks `tsconfig.app.json` and `tsconfig.server.json`; every
+other commit typechecks the whole solution file. Ten consecutive `movie-form`
+commits used `--no-verify`, each citing the last as precedent, back to `5c066c3`
+in the player initiative — and the gate they skipped is the only one that would
+catch a _genuine_ type error in a test file, skipped on exactly the commits that
+add test files. That is how `npm run typecheck` stayed red for six commits.
+
+**The gate moved to `commit-msg`.** The issue flagged this as worth checking and
+it was: `pre-commit` fires before git has written the message, so
+`COMMIT_EDITMSG` there holds the _previous_ commit's. `commit-msg` is the first
+hook the message exists for, and aborting from it refuses the commit identically.
+No environment variable was needed. `pre-commit` keeps lint-staged.
+
+**The issue's proposed shape did not work as written**, and this is the part
+worth carrying forward. It suggested typechecking `src` and `server` but not
+`tsconfig.spec.json` — except `tsconfig.server.json` included `server/**/*.ts`,
+tests and all, so a RED _server_ test would still have failed the narrowed gate.
+Most RED tests in this project are server tests. The fix was structural: the
+server's tests moved to `tsconfig.spec.json`, where the frontend's already were.
+**The three projects now mean what their names say** — `app` is the frontend's
+shipping code, `server` the backend's, `spec` all of the tests — and that was
+not true before.
+
+Verified against the real hook rather than argued: a RED `test:` commit went
+through with no bypass, a type error in `server/` blocked one, and a type error
+in a _test_ file blocked a `feat:` commit. The probe was reverted afterwards.
+
+The decision is a unit with tests, `.husky/commitTypecheck/`, and most of them
+are about what must **not** relax the gate: `testing:`, `Test:`, a `test:` in the
+body of a refactor commit, a commented-out subject, an empty message. A gate that
+relaxes on the strength of a string the committer wrote should be hard to relax
+by accident, and the failure direction that costs something is a gate that
+quietly stopped running.
+
+**Do not put `--no-verify` back on a RED commit.** It is the habit this exists to
+end, and CLAUDE.md now says so where the next session will read it.
+
+---
+
 ## 2026-09-10 — Movie form refactor (issue #109)
 
 Fourteen commits against `docs/refactor-plans/11-movie-form-refactor.md`.
