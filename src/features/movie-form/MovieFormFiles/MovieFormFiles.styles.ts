@@ -4,12 +4,18 @@ import styled from 'styled-components';
  * The Files card — the panel the prototype draws under the metadata fields, on
  * the surface colour rather than the sheet's, so the slots read as one group
  * separate from the boxes above them.
+ *
+ * `20px` is the prototype's own padding and is not a step on the spacing
+ * scale, so it is written literally — the same rule `MovieForm.styles.ts`
+ * states for its `22px` field gap: the values a screen shares with the scale
+ * are written as tokens, and the ones it does not are written as the prototype
+ * writes them.
  */
 export const Card = styled.div`
   display: flex;
   flex-direction: column;
   gap: 14px;
-  padding: ${({ theme }) => theme.space.s5};
+  padding: 20px;
   background: ${({ theme }) => theme.colors.surface};
   border: 1px solid ${({ theme }) => theme.colors.borderSoft};
   border-radius: ${({ theme }) => theme.radius.md};
