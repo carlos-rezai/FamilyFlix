@@ -67,12 +67,12 @@ export const Emphasis = styled.span`
 /**
  * The stack of fields. `22px` is the prototype's own gap and is not a spacing
  * token; the values it does share with the scale are written as tokens above.
+ * The gap above it is the lede's, as the prototype sets it, not this block's.
  */
 export const Fields = styled.div`
   display: flex;
   flex-direction: column;
   gap: 22px;
-  margin-top: 28px;
 `;
 
 /** Two fields side by side, the way the prototype pairs Title with Year. */
