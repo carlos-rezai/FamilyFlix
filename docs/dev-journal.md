@@ -11,6 +11,125 @@ Newest entry first.
 
 ---
 
+## 2026-09-11 — Movie form refactor, round two (issue #113)
+
+Twenty-two commits against `docs/refactor-plans/11b-movie-form-refactor.md` —
+eighteen code, four documents. **3072 tests pass across 173 files**, up from
+3060 across 169. `npm run typecheck` is green and `eslint src server` is clean
+on every commit. No wire changed; no test changed what it asserts.
+
+The round's instruction was the player's: a 1:1 translation of the prototype
+into our codebase, using our naming, conventions, patterns and architecture.
+What that bought, in the order the plan took it:
+
+- **Three pixels the prototype draws and the code did not.** Every text field
+  on the form takes the accent line while it has focus (`feat.MovieForm` is the
+  one file in the handoff that declares a `style-focus`, and it declares it
+  four times). The Files card is padded `20px`, not `s5`. The language list
+  wears `mol.SubtitleRow`'s own smaller face — 8px corner, 5px padding, the
+  lighter shadow, 13px items on `8px 12px` — rather than the filter dropdown's
+  that `Menu` was built from. All three checked in the browser against the
+  prototype's values, plus `Fields` losing a top margin the lede already owned.
+- **Two atoms and one piece of furniture.** `primitives/FilePicker/` is the
+  dashed "＋ …" box that owns the hidden `<input type="file">` — `FileField`
+  composes it empty and the Files card composes it for the ＋ under the rows,
+  and the value reset that only the list needed is simply what the atom does.
+  `primitives/RemoveButton/` is the ✕ with its name and title built from one
+  string. `components/fileRow.styles.ts` is the soft box, the glyph and the
+  filename both molecules were drawing character for character, flat beside the
+  folders on `layouts/chrome.styles.ts`'s precedent.
+- **The maintainer sheet, once.** `layouts/MaintainerLayout/` is the `bg2`
+  scroll container and the centred column that the form, Settings and the
+  coming import flow each opened with; `AddMoviePage` and `SettingsPage` are
+  now the layout around an organism, the way `GenrePage` is. The header row —
+  back pill, heading, lede — stays each screen's own, for the reason below.
+- **A page back on its rung.** `SettingsPage` had a 91-line styles file and a
+  `useNavigate`. The header, the ＋ and the lede are
+  `features/settings/SettingsHeader/` now, in the folder COMPONENT-SPEC already
+  names for the settings shell; the page is composition only and its styles
+  file is gone.
+- **Two small folds.** `pickedFile` beside `storedFile` in `formValues/`, called
+  three times from the hook; one `sendMovie` behind `createMovie` and
+  `updateMovie`, parameterised over the verb and the endpoint, which were the
+  only two things they disagreed about.
+- **Comments that describe the code as it is.** Nine sentences of slice
+  narration across five shipping files, the four the plan named in the form's
+  test, the placeholder name in `App.test.tsx`, and the deletion of
+  `AddMoviePage.test.tsx`'s "no longer echoes the placeholder's copy" — a test
+  that asserted the absence of words no shipping file has held since the stub
+  went, and so could not fail.
+- **The form's test file read by behaviour.** 2143 lines, 22 top-level blocks in
+  build order and helpers introduced at the line their slice reached, became the
+  same 129 tests under **eight** blocks — the fields, the chips, the rating
+  picker, the Files card, the save gate, saving, the actions row, the Edit
+  context — with every helper at the top. The five save-gate blocks are one; the
+  six saving blocks are one with a nested block per kind of value. The verbose
+  reporter diffed across the two commits shows the same 129 leaf names with
+  only their paths moved.
+
+### Where the twelve new tests came from
+
+`FilePicker` 6 (three moved off `FileField`, two of its own about the label and
+the accept list, one new: the same file picked twice in a row). `RemoveButton` 5. `MaintainerLayout` 3. `pickedFile` 1. `SettingsPage` 1, with its five moved
+unchanged to `SettingsHeader`. `FileField` 15 → 12 and `AddMoviePage` 2 → 1.
+Net +12.
+
+### Decisions taken inside the plan
+
+- **Which of `FileField`'s picker tests moved.** The three about the input's
+  own behaviour — that it is a file input, that it reports the `File`, that a
+  dismissed dialog says nothing. The two about the caption and the accept list
+  stayed, because they are the molecule handing its props through, and the atom
+  has its own two beside them.
+- **`Filled` is the furniture's `Row` re-exported under the slot's own name**,
+  not an empty `styled(Row)` extension. `GenreLayout` re-exports `Root` and
+  `Body` the same way; an extension with nothing in it is ceremony.
+- **`RemoveButton`'s one prop is `removes`.** It is the thing the press takes
+  away, and both the accessible name and the title are `Remove ${removes}`.
+- **`MaintainerLayout`'s width is asserted through `getComputedStyle`.** The
+  plan said the pixel commits have no automated test, and they have none; the
+  width is a prop, and `FilterDropdown.test.tsx` already reads a `minWidth` back
+  for the same reason — a geometry value the caller chooses is the one kind of
+  style worth reading.
+- **Two more comments than the plan listed were rewritten in the form's test.**
+  "The gate arrived in halves" inside the gate's own test, and four in-body
+  sentences that said "this slice", surfaced by the regrouping. Comments, not
+  assertions; the count did not move.
+- **`SettingsPage` keeps one test** — that it composes the header in the sheet —
+  rather than none, so the page's one composition decision has a reader.
+
+### Deliberately not changed
+
+- **The header row stays out of the layout.** The prototype draws the three
+  maintainer sheets a few pixels apart — 780 against 760 for the column, 6px
+  against 8px under the header row, 30px against 28px under the lede — and the
+  form's heading is its own hook's state. Both are settled by a prototype
+  amendment and a provider decision, not by a 1:1 round.
+- **`TextField.styles.ts`'s own `IconSlot`.** A primitive does not import from
+  `components/`, and one block is not a second furniture file.
+- **The two recorded deviations** — `radius.md` over the prototype's inline
+  `10px`, and `Textarea` without `minHeight` — and the browser focus ring beside
+  the new accent border.
+- **The `Textarea` gets no focus border**, because `prim.Textarea` declares
+  none and the form's prototype declares it only on its four inputs. A 1:1
+  translation carries the omission.
+
+### Follow-ups this refactor surfaced
+
+- **One sheet, three prototypes.** `page.SettingsPage`, `feat.MovieForm` and
+  `feat.ImportFlow` disagree by 20px in one place and 2px in two. To raise in
+  the settings shell's grill-me; when the prototype is amended to one sheet,
+  the header row becomes `MaintainerLayout`'s with a `heading` slot the way
+  `GenreLayout` already does it, and the form's heading gets there by a
+  provider or by being passed up.
+- **Does the synopsis box focus like the fields above it?** Almost certainly a
+  prototype oversight rather than a decision; one line in the same grill.
+- **`IconButton`'s glyph is 18 where the prototype's formula gives 20** at
+  42px, on every back pill in the app alike. For a round that owns the
+  primitive.
+
+---
+
 ## 2026-09-10 — The Continue Watching flake (issue #112)
 
 The flake #109 found and would not fix. One test, `routes.test.ts`'s "puts the
