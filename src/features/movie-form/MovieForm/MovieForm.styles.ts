@@ -1,5 +1,7 @@
 import styled from 'styled-components';
 
+import { Field as TextFieldBox } from '@/primitives/TextField/TextField.styles';
+
 /**
  * The screen's own scroll container, from `feat.MovieForm.dc.html`: the form is
  * a sheet on the deeper background rather than a shelf on the app's gradient,
@@ -82,10 +84,25 @@ export const FieldRow = styled.div`
 /**
  * One captioned field. A `label` rather than a `div`, so the caption is part of
  * the control: clicking "Year" puts the caret in the year box.
+ *
+ * The focus state is the form's, not the primitive's: `feat.MovieForm.dc.html`
+ * is the one file in the handoff that declares a `style-focus`, and it declares
+ * it on each of its four inputs — the box takes the accent line while it has
+ * focus. A component selector reaches `TextField`'s box on `SubtitleRow`'s
+ * precedent with `Menu`'s panel, and for the same reason: threading this
+ * through the primitive would put a prop on it that only one caller could set.
+ * `:focus-within` because the box is a `div` around the input, and the input is
+ * what focuses. The browser's ring stays beside it, per `TextField.styles.ts`.
+ * The Description under these is a `Textarea`, which the prototype gives no
+ * focus state — so this selector deliberately does not reach it.
  */
 export const Field = styled.label`
   display: block;
   flex: 1;
+
+  ${TextFieldBox}:focus-within {
+    border-color: ${({ theme }) => theme.colors.accentLine};
+  }
 `;
 
 /** Year is the one field with a fixed measure — a year is four characters wide. */
