@@ -6,40 +6,11 @@ import { Item, Panel } from '../Menu/Menu.styles';
 /**
  * The row itself, from `mol.SubtitleRow.dc.html` — the same soft box
  * `FileField` draws a filled slot in, because a track *is* a filled slot with a
- * language on it.
+ * language on it. That box, its glyph and its filename are the molecule rung's
+ * furniture (`fileRow.styles.ts`); what is this row's own is the language
+ * control, which follows.
  */
-export const Row = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 7px 10px;
-  background: ${({ theme }) => theme.colors.bg2};
-  border: 1px solid ${({ theme }) => theme.colors.borderSoft};
-  border-radius: ${({ theme }) => theme.radius.sm};
-`;
-
-/** The file glyph, dimmed beside the name. Decorative, and hidden as such. */
-export const IconSlot = styled.span`
-  flex: 0 0 auto;
-  display: grid;
-  place-items: center;
-  color: ${({ theme }) => theme.colors.textFaint};
-`;
-
-/**
- * The filename, in the mono face — and the ellipsis that keeps a 90-character
- * release name from pushing the language control off the row.
- */
-export const Filename = styled.span`
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-family: ${({ theme }) => theme.fonts.mono};
-  font-size: 13px;
-  color: ${({ theme }) => theme.colors.textDim};
-`;
+export { Row, IconSlot, Filename } from '../fileRow.styles';
 
 /**
  * The slot the language list hangs in, and what this row changes about

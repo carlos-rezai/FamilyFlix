@@ -1,5 +1,12 @@
 import styled from 'styled-components';
 
+/**
+ * The filled state: the file that is in the slot, on the soft box the molecule
+ * rung shares (`fileRow.styles.ts`) — nothing of its own to add, so the box,
+ * its glyph and its filename are the furniture's under this slot's own name.
+ */
+export { Row as Filled, IconSlot, Filename } from '../fileRow.styles';
+
 /** The slot: its name on the left, its one control filling the rest. */
 export const Row = styled.div`
   display: flex;
@@ -22,38 +29,4 @@ export const Label = styled.span`
 export const Control = styled.div`
   flex: 1;
   min-width: 0;
-`;
-
-/** The filled state: the file that is in the slot, on the prototype's soft box. */
-export const Filled = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 7px 10px;
-  background: ${({ theme }) => theme.colors.bg2};
-  border: 1px solid ${({ theme }) => theme.colors.borderSoft};
-  border-radius: ${({ theme }) => theme.radius.sm};
-`;
-
-/** The glyph the caller handed in, dimmed beside the name. */
-export const IconSlot = styled.span`
-  flex: 0 0 auto;
-  display: grid;
-  place-items: center;
-  color: ${({ theme }) => theme.colors.textFaint};
-`;
-
-/**
- * The filename, in the mono face — a filename is a filename, and the ellipsis
- * is what keeps a 90-character release name from pushing the ✕ off the row.
- */
-export const Filename = styled.span`
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-family: ${({ theme }) => theme.fonts.mono};
-  font-size: 13px;
-  color: ${({ theme }) => theme.colors.textDim};
 `;
