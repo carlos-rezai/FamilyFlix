@@ -1,15 +1,10 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import { ThemeProvider } from 'styled-components';
 
 // Through the category barrel — no per-unit barrel.
 import { FileField, type FileFieldProps } from '@/components';
 import { theme } from '@/styles/theme';
-
-/** A film off the maintainer's own disk, as the browser hands it over. */
-const someFile = (name = 'lantern.mp4', type = 'video/mp4') =>
-  new File(['video bytes'], name, { type });
 
 /** The glyph a caller passes in, marked so the test can find it again. */
 const ICON = <svg data-testid="slot-icon" />;
@@ -65,15 +60,6 @@ describe('FileField — an empty slot', () => {
     expect(screen.getByText('Video')).toBeDefined();
   });
 
-  it('offers a choose control that is the file input itself', () => {
-    renderField();
-
-    // The dashed button *is* the `<label>` of a visually-hidden input, rather
-    // than a button that reaches for one: a click has to open the file dialog,
-    // and only a real input can.
-    expect(picker().type).toBe('file');
-  });
-
   it('reads the caption it was given', () => {
     renderField({ chooseLabel: 'Choose poster image' });
 
@@ -94,27 +80,6 @@ describe('FileField — an empty slot', () => {
 
     expect(screen.queryByText('lantern.mp4')).toBeNull();
     expect(screen.queryByRole('button', { name: /remove/i })).toBeNull();
-  });
-
-  it('reports the file that was picked', async () => {
-    const file = someFile();
-    const { onPick } = renderField();
-
-    await userEvent.upload(picker(), file, { applyAccept: false });
-
-    // The `File` itself, not its name: a browser gives a name and bytes and
-    // never a path, so the bytes are the only thing there is to hand on.
-    expect(onPick).toHaveBeenCalledWith(file);
-  });
-
-  it('says nothing when a dialog is opened and dismissed', async () => {
-    const { onPick } = renderField();
-
-    fireEvent.change(picker(), { target: { files: [] } });
-
-    // A cancelled dialog fires a change with nothing in it, and a slot that
-    // emptied itself on one would lose the file already in it.
-    expect(onPick).not.toHaveBeenCalled();
   });
 });
 

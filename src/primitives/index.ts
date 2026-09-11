@@ -10,6 +10,7 @@ export { Skeleton, type SkeletonProps } from './Skeleton/Skeleton';
 export { Artwork, type ArtworkProps } from './Artwork/Artwork';
 export { TextField, type TextFieldProps } from './TextField/TextField';
 export { Textarea, type TextareaProps } from './Textarea/Textarea';
+export { FilePicker, type FilePickerProps } from './FilePicker/FilePicker';
 export { HeartIcon } from './Icon/HeartIcon';
 export { HeartOutlineIcon } from './Icon/HeartOutlineIcon';
 export { GearIcon } from './Icon/GearIcon';
