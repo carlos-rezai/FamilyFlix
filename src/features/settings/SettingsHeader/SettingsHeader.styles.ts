@@ -1,28 +1,5 @@
 import styled from 'styled-components';
 
-/**
- * The screen's own scroll container, from `page.SettingsPage.dc.html`: a sheet on
- * the deeper background, the same shape the **Movie form** the ＋ button opens
- * is drawn on.
- *
- * `MainLayout` is deliberately not above it. Its header carries the gear that
- * opens this very screen, and a gear on Settings is a control that does nothing;
- * the back pill is the way out, exactly as on `MoviePage`.
- */
-export const Sheet = styled.div`
-  height: 100vh;
-  overflow-y: auto;
-  background: ${({ theme }) => theme.colors.bg2};
-`;
-
-/** The centred column everything sits in — the prototype's 780px measure. */
-export const Column = styled.div`
-  max-width: 780px;
-  margin: 0 auto;
-  padding: ${({ theme }) =>
-    `${theme.space.s6} ${theme.space.s6} ${theme.space.s8}`};
-`;
-
 /** The back pill, the heading and the ＋ button on one line. */
 export const HeaderRow = styled.div`
   display: flex;
