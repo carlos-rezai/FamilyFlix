@@ -1,13 +1,13 @@
 import type { ReactNode } from 'react';
 
+import { FilePicker } from '@/primitives';
+
 import {
-  Choose,
   Control,
   Filename,
   Filled,
   IconSlot,
   Label,
-  Picker,
   Remove,
   Row,
 } from './FileField.styles';
@@ -46,10 +46,11 @@ export interface FileFieldProps {
  * button while the slot is empty, and a monospace filename row with a ✕ once it
  * is filled.
  *
- * It is the molecule that owns the `<input type="file">`, and that is the whole
- * of what it knows. Opening a file dialog is UI, so this never learns what a
- * **Movie** is, which slot it is standing in for, or what the file it reports
- * will be used for.
+ * The dashed button is the **File picker** atom, which owns the
+ * `<input type="file">`; this molecule puts a name beside it and draws the row
+ * that replaces it. Opening a file dialog is UI, so neither learns what a
+ * **Movie** is, which slot this is standing in for, or what the file it
+ * reports will be used for.
  *
  * **Filled and empty are two different controls, not one control in two
  * states.** The prototype's filled row is a row rather than a button, so the
@@ -91,22 +92,7 @@ export function FileField({
             </Remove>
           </Filled>
         ) : (
-          <Choose>
-            ＋ {chooseLabel}
-            <Picker
-              type="file"
-              accept={accept}
-              onChange={(event) => {
-                // A cancelled dialog fires a change with nothing in it, and a
-                // slot that emptied itself on one would lose the file already
-                // in it.
-                const file: File | undefined = event.target.files?.[0];
-                if (file) {
-                  onPick(file);
-                }
-              }}
-            />
-          </Choose>
+          <FilePicker label={chooseLabel} accept={accept} onPick={onPick} />
         )}
       </Control>
     </Row>

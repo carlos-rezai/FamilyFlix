@@ -42,11 +42,13 @@ const remove = () =>
  * draws it: a dashed "＋ Choose …" button while the slot is empty, and a
  * monospace filename row with a ✕ once it is filled.
  *
- * It is the molecule that owns the `<input type="file">`, and that is the whole
- * of what it knows: opening a file dialog is UI, so this never learns what a
- * **Movie** is, which slot it is, or what the file it reports will be used for.
- * `icon` is a `ReactNode` rather than a name to switch on — COMPONENT-SPEC §3a
- * names this component specifically, and `TextField` set the precedent.
+ * The dashed button is the **File picker** atom, and what that control does
+ * with a file dialog is tested at its own rung; what is tested here is that
+ * this molecule hands it the caption and the file types it was given. Opening
+ * a file dialog is UI, so this never learns what a **Movie** is, which slot it
+ * is, or what the file it reports will be used for. `icon` is a `ReactNode`
+ * rather than a name to switch on — COMPONENT-SPEC §3a names this component
+ * specifically, and `TextField` set the precedent.
  *
  * **Filled and empty are two different controls, not one control in two
  * states.** The prototype's filled row is not a button, so the picker is gone
