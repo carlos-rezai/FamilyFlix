@@ -83,17 +83,16 @@ Every piece of UI maps to a rung on the Atomic Design ladder, and nothing skips 
 | Templates | `layouts/`    | MainLayout                     |
 | Pages     | `pages/`      | LibraryPage, MoviePage         |
 
-Every component, at every rung, follows the same four-file shape:
+Every component, at every rung, follows the same three-file shape:
 
 ```
 ComponentName/
-├── index.ts
 ├── ComponentName.tsx
 ├── ComponentName.test.tsx
 └── ComponentName.styles.ts
 ```
 
-Category folders (`primitives/`, `components/`) also carry their own `index.ts` barrel file, so components are imported from the category, not from their individual folder.
+There is no per-component `index.ts`. Category folders (`primitives/`, `components/`, `utils/`, `tokens/`) carry the one barrel, re-exporting each unit straight from its file, so components are imported from the category, not from their individual folder.
 
 Three folders under `src/` sit outside the ladder, because what they hold is not UI:
 
@@ -104,9 +103,9 @@ Three folders under `src/` sit outside the ladder, because what they hold is not
 | `test-support/` | Shared test doubles  | Never imported by shipping code                                 |
 
 `server/src/` carries the mirror of the last of those. It is otherwise organised
-strictly by domain — `library/`, `media/`, `import-export/`, with `db/` as shared
-infrastructure and no miscellaneous catch-all — and that rule is about **backend
-logic** having a domain home. Test doubles are not backend logic, so
+strictly by domain — `library/`, `media/`, `import-export/`, `playback/`, with
+`db/` as shared infrastructure and no miscellaneous catch-all — and that rule is
+about **backend logic** having a domain home. Test doubles are not backend logic, so
 `server/src/test-support/` gets the same one-line rule the frontend's rung has:
 shared test doubles, one folder per unit with its test, never imported by
 shipping code.
@@ -148,6 +147,7 @@ familyflix/
 │       ├── library/        # movie CRUD, SQLite queries, watch-state + resume position
 │       ├── media/          # folder scanning, copying files into managed storage, subtitle detection
 │       ├── import-export/  # Excel/CSV parsing, row-to-folder matching, CSV export
+│       ├── playback/       # the Playback component, the path choice, streaming, subtitle parsing
 │       ├── db/             # SQLite connection + schema/migrations
 │       └── test-support/   # Shared test doubles — never imported by shipping code
 ├── src/                # React frontend
@@ -155,8 +155,8 @@ familyflix/
 │   ├── assets/         # Static images, fonts, icons
 │   ├── styles/         # Global CSS reset, themes
 │   ├── tokens/         # Colors, spacing, typography, breakpoints
-│   ├── primitives/     # Atomic UI elements (Button, Input, Text) — each with index.ts, .tsx, .test.tsx, .styles.ts
-│   ├── components/     # Composed UI blocks (PosterCard, Modal, ProgressBar) — same four-file shape
+│   ├── primitives/     # Atomic UI elements (Button, Input, Text) — each with .tsx, .test.tsx, .styles.ts
+│   ├── components/     # Composed UI blocks (PosterCard, Modal, ProgressBar) — same three-file shape
 │   ├── features/       # Domain UI + logic co-located
 │   │   ├── library/        # browse grid, genre rows
 │   │   ├── search/          # search-as-you-type, filters
