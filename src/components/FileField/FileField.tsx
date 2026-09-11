@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 
-import { FilePicker } from '@/primitives';
+import { FilePicker, RemoveButton } from '@/primitives';
 
 import {
   Control,
@@ -8,7 +8,6 @@ import {
   Filled,
   IconSlot,
   Label,
-  Remove,
   Row,
 } from './FileField.styles';
 
@@ -82,14 +81,7 @@ export function FileField({
                 filename. */}
             <IconSlot>{icon}</IconSlot>
             <Filename>{filename}</Filename>
-            <Remove
-              type="button"
-              aria-label={`Remove ${label}`}
-              title={`Remove ${label}`}
-              onClick={onRemove}
-            >
-              ✕
-            </Remove>
+            <RemoveButton removes={label} onClick={onRemove} />
           </Filled>
         ) : (
           <FilePicker label={chooseLabel} accept={accept} onPick={onPick} />

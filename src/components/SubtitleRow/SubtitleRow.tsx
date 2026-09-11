@@ -1,4 +1,4 @@
-import { FileIcon } from '@/primitives';
+import { FileIcon, RemoveButton } from '@/primitives';
 
 import { MenuItem } from '../Menu/Menu';
 import {
@@ -7,7 +7,6 @@ import {
   IconSlot,
   Language,
   LanguageMenu,
-  Remove,
   Row,
 } from './SubtitleRow.styles';
 
@@ -83,14 +82,7 @@ export function SubtitleRow({
           </MenuItem>
         ))}
       </LanguageMenu>
-      <Remove
-        type="button"
-        aria-label={`Remove ${filename}`}
-        title={`Remove ${filename}`}
-        onClick={onRemove}
-      >
-        ✕
-      </Remove>
+      <RemoveButton removes={filename} onClick={onRemove} />
     </Row>
   );
 }

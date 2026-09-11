@@ -57,26 +57,3 @@ export const Filename = styled.span`
   font-size: 13px;
   color: ${({ theme }) => theme.colors.textDim};
 `;
-
-/**
- * The ✕. A literal glyph rather than an icon atom, on `MenuItem`'s precedent —
- * and it turns the danger colour on hover, because emptying a slot is the one
- * destructive thing this row does.
- */
-export const Remove = styled.button`
-  display: grid;
-  place-items: center;
-  flex: 0 0 auto;
-  width: 32px;
-  height: 32px;
-  background: transparent;
-  border: none;
-  border-radius: 7px;
-  color: ${({ theme }) => theme.colors.textFaint};
-  cursor: pointer;
-
-  &:hover {
-    color: ${({ theme }) => theme.colors.danger};
-    background: rgba(201, 122, 106, 0.1);
-  }
-`;
