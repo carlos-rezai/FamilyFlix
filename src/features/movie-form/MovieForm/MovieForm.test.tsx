@@ -126,6 +126,8 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+// --- Rendering the form ---------------------------------------------------------
+
 function mountForm() {
   return render(
     <MemoryRouter initialEntries={['/add']}>
@@ -150,6 +152,44 @@ async function renderForm() {
   return view;
 }
 
+/**
+ * The form as it is actually reached — from Settings, with somewhere behind it.
+ *
+ * `mountForm`'s single entry is the deep-linked case, where `useGoBack` falls
+ * back to the library; this is the case the maintainer is in every time, and
+ * the one where "the same way out" is a claim with two possible answers.
+ */
+async function renderFormFromSettings() {
+  const view = render(
+    <MemoryRouter initialEntries={['/settings', '/add']} initialIndex={1}>
+      <ThemeProvider theme={theme}>
+        <MovieForm />
+        <LocationProbe />
+      </ThemeProvider>
+    </MemoryRouter>
+  );
+  await act(async () => undefined);
+  return view;
+}
+
+/** The form opened on a movie, the way **Edit details** opens it. */
+async function renderEdit(id = STORED.id) {
+  const view = render(
+    <MemoryRouter initialEntries={[`/add?movie=${id}`]}>
+      <ThemeProvider theme={theme}>
+        <MovieForm />
+        <LocationProbe />
+      </ThemeProvider>
+    </MemoryRouter>
+  );
+  // Two reads settle on mount here rather than one — the pool and the record —
+  // and both fill the screen this test is about.
+  await act(async () => undefined);
+  return view;
+}
+
+// --- The fields, the chips and the rating ---------------------------------------
+
 const titleField = () =>
   screen.getByRole('textbox', { name: /title/i }) as HTMLInputElement;
 const yearField = () =>
@@ -159,6 +199,47 @@ const save = () =>
     name: /add to library|adding/i,
   }) as HTMLButtonElement;
 const currentPath = () => screen.getByTestId('pathname').textContent;
+const directorField = () =>
+  screen.getByRole('textbox', { name: /director/i }) as HTMLInputElement;
+const castField = () =>
+  screen.getByRole('textbox', { name: /^cast$/i }) as HTMLInputElement;
+const descriptionField = () =>
+  screen.getByRole('textbox', { name: /description/i }) as HTMLTextAreaElement;
+
+/** Every genre chip on the form, in the order it is drawn. */
+function chips(): HTMLButtonElement[] {
+  return (screen.getAllByRole('button') as HTMLButtonElement[]).filter((el) =>
+    el.hasAttribute('aria-pressed')
+  );
+}
+
+const chip = (name: string) =>
+  screen.getByRole('button', { name }) as HTMLButtonElement;
+
+/** Whether the named genre is currently picked. */
+const picked = (name: string) => chip(name).getAttribute('aria-pressed');
+
+/** The **Half-star segment** that asks for the rating named on it. */
+const segment = (name: string) =>
+  screen.getByRole('button', { name }) as HTMLButtonElement;
+
+/** What the strip says the movie is scored, beside the stars. */
+const ratingLabel = () =>
+  screen.getByRole('group', { name: /your rating/i }).parentElement
+    ?.textContent;
+
+const cancel = () =>
+  screen.getByRole('button', { name: /^cancel$/i }) as HTMLButtonElement;
+const backPill = () =>
+  screen.getByRole('button', { name: /^back$/i }) as HTMLButtonElement;
+
+/** Save, in the **Edit context**, under whichever of its two labels it wears. */
+const saveChanges = () =>
+  screen.getByRole('button', {
+    name: /save changes|saving/i,
+  }) as HTMLButtonElement;
+
+// --- The file slots -------------------------------------------------------------
 
 /** The video **File slot**'s own picker, offered while the slot is empty. */
 const videoPicker = () =>
@@ -203,18 +284,50 @@ async function pickPoster(file: File = posterFile()): Promise<File> {
   return file;
 }
 
-/** Every genre chip on the form, in the order it is drawn. */
-function chips(): HTMLButtonElement[] {
-  return (screen.getAllByRole('button') as HTMLButtonElement[]).filter((el) =>
-    el.hasAttribute('aria-pressed')
-  );
+/** The video slot's remove control, offered only while the slot is filled. */
+const removeVideo = () =>
+  screen.getByRole('button', { name: /remove video/i }) as HTMLButtonElement;
+
+/** The filename the slot is showing, or `null` while it is empty. */
+const pickedFilename = () => screen.queryByText('lantern.mp4');
+
+/** The poster slot's remove control, offered only while the slot is filled. */
+const removePoster = () =>
+  screen.getByRole('button', { name: /remove poster/i }) as HTMLButtonElement;
+
+/** The poster filename the slot is showing, or `null` while it is empty. */
+const pickedPoster = () => screen.queryByText('lantern-poster.jpg');
+
+/** The "＋ Add subtitle file" picker, offered however many rows already exist. */
+const subtitlePicker = () =>
+  screen.getByLabelText(/add subtitle file/i) as HTMLInputElement;
+
+/** A subtitle file off the maintainer's own disk. */
+const subtitleFile = (name = 'lantern.en.srt') =>
+  new File(['cue bytes'], name, { type: 'text/plain' });
+
+/**
+ * Attach one track, the way the maintainer does: pick a file, and a row
+ * appears. There is no empty subtitle row to fill in — the ＋ is the picker.
+ */
+async function attachSubtitle(file: File = subtitleFile()): Promise<File> {
+  await userEvent.upload(subtitlePicker(), file, { applyAccept: false });
+  return file;
 }
 
-const chip = (name: string) =>
-  screen.getByRole('button', { name }) as HTMLButtonElement;
+/** One row's language control, named after the file it labels. */
+const languageOf = (filename: string) =>
+  screen.getByRole('button', {
+    name: new RegExp(`language for ${filename.replace(/\./g, '\\.')}`, 'i'),
+  });
 
-/** Whether the named genre is currently picked. */
-const picked = (name: string) => chip(name).getAttribute('aria-pressed');
+/** Sets one row's language through its own list. */
+function chooseLanguage(filename: string, language: string) {
+  fireEvent.click(languageOf(filename));
+  fireEvent.click(screen.getByRole('menuitem', { name: language }));
+}
+
+// --- What went out on the wire --------------------------------------------------
 
 /** Every save the form has issued. */
 function saveRequests() {
@@ -228,6 +341,44 @@ function saveRequests() {
 function savedFields(): FormData | undefined {
   return saveRequests()[0]?.[1]?.body as FormData | undefined;
 }
+
+/** The video part of the save, or `undefined` if none was sent. */
+const savedVideo = () => savedFields()?.get('video');
+
+/** The poster part of the save, or `undefined` if none was sent. */
+const savedPoster = () => savedFields()?.get('poster');
+
+/** Every subtitle part of the save, in the order they were appended. */
+const savedSubtitles = () => savedFields()?.getAll('subtitle') ?? [];
+
+/** Every language field of the save, in the order they were appended. */
+const savedLanguages = () => savedFields()?.getAll('subtitleLanguage') ?? [];
+
+/** Every edit the form has issued. */
+function patchRequests() {
+  return fetchMock.mock.calls.filter(([, init]) => init?.method === 'PATCH');
+}
+
+/** The multipart body of the edit, or `undefined` if nothing was ever sent. */
+function patchedFields(): FormData | undefined {
+  return patchRequests()[0]?.[1]?.body as FormData | undefined;
+}
+
+/**
+ * Every part of the edit that carried bytes rather than a value.
+ *
+ * The three names are named rather than the body walked: they are the only
+ * parts this form can put bytes in, so a fourth appearing is a change to the
+ * encoding rather than something to absorb quietly.
+ */
+const patchedFiles = (): File[] => {
+  const body = patchedFields();
+  return body === undefined
+    ? []
+    : ['video', 'poster', 'subtitle']
+        .flatMap((name) => body.getAll(name))
+        .filter((value): value is File => value instanceof File);
+};
 
 /**
  * The **Movie form** in its **Add context**: the fields, the chips, the rating
@@ -582,13 +733,6 @@ describe('MovieForm', () => {
 
 // --- 11 — Movie form, Phase 2: director, cast and description (issue #100) ---
 
-const directorField = () =>
-  screen.getByRole('textbox', { name: /director/i }) as HTMLInputElement;
-const castField = () =>
-  screen.getByRole('textbox', { name: /^cast$/i }) as HTMLInputElement;
-const descriptionField = () =>
-  screen.getByRole('textbox', { name: /description/i }) as HTMLTextAreaElement;
-
 /**
  * The rest of the metadata the prototype collects: a **Director**, a **Cast**
  * typed as one comma-separated line, and a **Description** long enough to be a
@@ -800,40 +944,6 @@ describe('MovieForm — saving the credits fields', () => {
 });
 
 // --- 11 — Movie form, Phase 2: the rating and the actions row (issue #101) ---
-
-/** The **Half-star segment** that asks for the rating named on it. */
-const segment = (name: string) =>
-  screen.getByRole('button', { name }) as HTMLButtonElement;
-
-/** What the strip says the movie is scored, beside the stars. */
-const ratingLabel = () =>
-  screen.getByRole('group', { name: /your rating/i }).parentElement
-    ?.textContent;
-
-const cancel = () =>
-  screen.getByRole('button', { name: /^cancel$/i }) as HTMLButtonElement;
-const backPill = () =>
-  screen.getByRole('button', { name: /^back$/i }) as HTMLButtonElement;
-
-/**
- * The form as it is actually reached — from Settings, with somewhere behind it.
- *
- * `mountForm`'s single entry is the deep-linked case, where `useGoBack` falls
- * back to the library; this is the case the maintainer is in every time, and
- * the one where "the same way out" is a claim with two possible answers.
- */
-async function renderFormFromSettings() {
-  const view = render(
-    <MemoryRouter initialEntries={['/settings', '/add']} initialIndex={1}>
-      <ThemeProvider theme={theme}>
-        <MovieForm />
-        <LocationProbe />
-      </ThemeProvider>
-    </MemoryRouter>
-  );
-  await act(async () => undefined);
-  return view;
-}
 
 /**
  * The **Rating picker** in the **Movie form** — the same molecule the detail
@@ -1067,16 +1177,6 @@ describe('MovieForm — the actions row', () => {
 // "Pick the video, poster, and any subtitle files for this movie", and two of
 // those three controls arrive in #103 and #104.
 
-/** The video slot's remove control, offered only while the slot is filled. */
-const removeVideo = () =>
-  screen.getByRole('button', { name: /remove video/i }) as HTMLButtonElement;
-
-/** The filename the slot is showing, or `null` while it is empty. */
-const pickedFilename = () => screen.queryByText('lantern.mp4');
-
-/** The video part of the save, or `undefined` if none was sent. */
-const savedVideo = () => savedFields()?.get('video');
-
 describe('MovieForm — the Files card', () => {
   it('draws the Files card with the video slot in it', async () => {
     await renderForm();
@@ -1250,16 +1350,6 @@ describe('MovieForm — saving the video', () => {
 // artwork for still belongs in the library, and its card draws the gradient
 // `gradientFromId` already gives it.
 
-/** The poster slot's remove control, offered only while the slot is filled. */
-const removePoster = () =>
-  screen.getByRole('button', { name: /remove poster/i }) as HTMLButtonElement;
-
-/** The poster filename the slot is showing, or `null` while it is empty. */
-const pickedPoster = () => screen.queryByText('lantern-poster.jpg');
-
-/** The poster part of the save, or `undefined` if none was sent. */
-const savedPoster = () => savedFields()?.get('poster');
-
 describe('MovieForm — the poster slot', () => {
   it('draws the poster slot beside the video one', async () => {
     await renderForm();
@@ -1417,41 +1507,6 @@ describe('MovieForm — saving the poster', () => {
 // This is also the slice that finishes the line under the heading. It reads
 // "Pick the video, poster, and any subtitle files for this movie", and until
 // now it would have been the screen describing a control it did not have.
-
-/** The "＋ Add subtitle file" picker, offered however many rows already exist. */
-const subtitlePicker = () =>
-  screen.getByLabelText(/add subtitle file/i) as HTMLInputElement;
-
-/** A subtitle file off the maintainer's own disk. */
-const subtitleFile = (name = 'lantern.en.srt') =>
-  new File(['cue bytes'], name, { type: 'text/plain' });
-
-/**
- * Attach one track, the way the maintainer does: pick a file, and a row
- * appears. There is no empty subtitle row to fill in — the ＋ is the picker.
- */
-async function attachSubtitle(file: File = subtitleFile()): Promise<File> {
-  await userEvent.upload(subtitlePicker(), file, { applyAccept: false });
-  return file;
-}
-
-/** One row's language control, named after the file it labels. */
-const languageOf = (filename: string) =>
-  screen.getByRole('button', {
-    name: new RegExp(`language for ${filename.replace(/\./g, '\\.')}`, 'i'),
-  });
-
-/** Sets one row's language through its own list. */
-function chooseLanguage(filename: string, language: string) {
-  fireEvent.click(languageOf(filename));
-  fireEvent.click(screen.getByRole('menuitem', { name: language }));
-}
-
-/** Every subtitle part of the save, in the order they were appended. */
-const savedSubtitles = () => savedFields()?.getAll('subtitle') ?? [];
-
-/** Every language field of the save, in the order they were appended. */
-const savedLanguages = () => savedFields()?.getAll('subtitleLanguage') ?? [];
 
 describe('MovieForm — the line under the heading', () => {
   it('says the form takes subtitle files, now that it does', async () => {
@@ -1736,54 +1791,6 @@ describe('MovieForm — saving the subtitles', () => {
 // The tests below mount the same `MovieForm` the **Add context** ones do, at a
 // different URL — because that is the whole claim being made. A separate render
 // helper would only be hiding it.
-
-/** The form opened on a movie, the way **Edit details** opens it. */
-async function renderEdit(id = STORED.id) {
-  const view = render(
-    <MemoryRouter initialEntries={[`/add?movie=${id}`]}>
-      <ThemeProvider theme={theme}>
-        <MovieForm />
-        <LocationProbe />
-      </ThemeProvider>
-    </MemoryRouter>
-  );
-  // Two reads settle on mount here rather than one — the pool and the record —
-  // and both fill the screen this test is about.
-  await act(async () => undefined);
-  return view;
-}
-
-/** Save, in the **Edit context**, under whichever of its two labels it wears. */
-const saveChanges = () =>
-  screen.getByRole('button', {
-    name: /save changes|saving/i,
-  }) as HTMLButtonElement;
-
-/** Every edit the form has issued. */
-function patchRequests() {
-  return fetchMock.mock.calls.filter(([, init]) => init?.method === 'PATCH');
-}
-
-/** The multipart body of the edit, or `undefined` if nothing was ever sent. */
-function patchedFields(): FormData | undefined {
-  return patchRequests()[0]?.[1]?.body as FormData | undefined;
-}
-
-/**
- * Every part of the edit that carried bytes rather than a value.
- *
- * The three names are named rather than the body walked: they are the only
- * parts this form can put bytes in, so a fourth appearing is a change to the
- * encoding rather than something to absorb quietly.
- */
-const patchedFiles = (): File[] => {
-  const body = patchedFields();
-  return body === undefined
-    ? []
-    : ['video', 'poster', 'subtitle']
-        .flatMap((name) => body.getAll(name))
-        .filter((value): value is File => value instanceof File);
-};
 
 describe('MovieForm — the Edit context', () => {
   it('pre-fills every metadata field from the stored record', async () => {
