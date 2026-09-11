@@ -1,14 +1,12 @@
 import { FileField, SubtitleRow } from '@/components';
-import { ImageIcon, VideoIcon } from '@/primitives';
+import { FilePicker, ImageIcon, VideoIcon } from '@/primitives';
 import type { MovieFormFile, MovieFormSubtitle } from '@/types';
 
 import {
-  AddTrack,
   Caption,
   Card,
   Subtitles,
   SubtitlesLabel,
-  TrackPicker,
   Tracks,
 } from './MovieFormFiles.styles';
 
@@ -173,26 +171,14 @@ export function MovieFormFiles({
               onRemove={() => onRemoveSubtitle(subtitle.key)}
             />
           ))}
-          <AddTrack>
-            ＋ {SUBTITLE_ADD}
-            <TrackPicker
-              type="file"
-              accept={SUBTITLE_ACCEPT}
-              onChange={(event) => {
-                // A cancelled dialog fires a change with nothing in it, and a
-                // row appended from one would be a track with no file.
-                const file: File | undefined = event.target.files?.[0];
-                if (file) {
-                  onAddSubtitle(file);
-                }
-                // Unlike a slot's picker, this one is still here after the
-                // pick — and an input still holding the last file reports
-                // nothing when the same one is chosen again, which is exactly
-                // what a maintainer does after removing the wrong row.
-                event.target.value = '';
-              }}
-            />
-          </AddTrack>
+          {/* The same picker a slot starts as — and unlike a slot's, it stays
+              after a file is picked. This is a list, and the ＋ is how it
+              grows. */}
+          <FilePicker
+            label={SUBTITLE_ADD}
+            accept={SUBTITLE_ACCEPT}
+            onPick={onAddSubtitle}
+          />
         </Tracks>
       </Subtitles>
     </Card>
