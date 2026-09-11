@@ -166,8 +166,13 @@ familyflix/
 │ │ │ └── api/ ← fetchPlayback, fetchSubtitleCues, saveResume
 │ │ ├── movie-form/ ← Add/Edit a movie: one form, manual file pickers
 │ │ ├── import-export/ ← bulk Excel/CSV importer, CSV exporter
+│ │ ├── settings/ ← the Maintainer's hub: SettingsHeader now, the grouped sections to come
 │ │ └── collections/ ← playlists/collections (roadmap, not MVP)
-│ ├── layouts/ ← page chrome (MainLayout)
+│ ├── layouts/ ← page chrome
+│ │ ├── chrome.styles.ts ← the furniture MainLayout and GenreLayout both extend
+│ │ ├── MainLayout/ ← the Family's screens: logo, gear, scrolling body
+│ │ ├── GenreLayout/ ← Back pill, heading slot, trailing controls, scrolling body
+│ │ └── MaintainerLayout/ ← the Maintainer surface: bg2 sheet + centred column, no header row
 │ ├── pages/ ← route-level views, composition only, no logic
 │ ├── api/ ← wire calls two or more features share (one folder per call + its test, no barrel)
 │ │ └── postValue/
