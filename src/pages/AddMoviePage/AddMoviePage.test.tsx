@@ -30,9 +30,8 @@ function renderPage(url = '/add') {
 }
 
 /**
- * `/add` — composition only. The stub body this page shipped as is gone, and
- * what stands behind the URL now is the **Movie form** itself. What the form
- * does once mounted is tested where it lives.
+ * `/add` — composition only: the **Movie form** in the **Maintainer surface**.
+ * What the form does once mounted is tested where it lives.
  */
 describe('AddMoviePage', () => {
   it('mounts the movie form', () => {
@@ -43,11 +42,5 @@ describe('AddMoviePage', () => {
     expect(
       screen.getByRole('button', { name: /add to library/i })
     ).toBeDefined();
-  });
-
-  it('no longer echoes the placeholder’s copy', () => {
-    renderPage();
-
-    expect(screen.queryByText(/lands here/i)).toBeNull();
   });
 });

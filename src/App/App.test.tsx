@@ -340,11 +340,11 @@ describe('App — routing the browse home to its destinations', () => {
 });
 
 /**
- * The movie page's two navigating actions. `/add` still lands on a registered
- * placeholder — the device that made `/movie/:id` itself an honest link two
- * features ago — and `/movie/:id/play` is the first of the two to have the real
- * screen behind it, arriving without a single link changing, which was the whole
- * point of registering the URL early.
+ * The movie page's two navigating actions. Both `/add` and `/movie/:id/play`
+ * were registered as placeholders before their screens existed — the device
+ * that made `/movie/:id` itself an honest link two features ago — and both
+ * now have the real screen behind them, which arrived without a single link
+ * changing, which was the whole point of registering the URL early.
  */
 describe('App — the movie page’s navigating actions', () => {
   // The player behind `/movie/:id/play` drives a media element, and jsdom
@@ -366,7 +366,7 @@ describe('App — the movie page’s navigating actions', () => {
     );
   });
 
-  it('renders the add-movie placeholder when /add is opened directly', async () => {
+  it('renders the movie form when /add is opened directly', async () => {
     renderApp('/add');
 
     expect(await screen.findByRole('heading', { name: /add/i })).toBeDefined();

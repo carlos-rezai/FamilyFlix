@@ -171,10 +171,8 @@ const videoFile = (name = 'lantern.mp4') =>
 /**
  * Fill the video half of the **Save gate**.
  *
- * Every test that presses Save has to do this now, which is the whole of what
- * this slice changed about the gate: a title alone was the whole condition
- * while there was no slot to check, and a form that can hold a video is a form
- * that requires one.
+ * Every test that presses Save has to do this: a form that can hold a video is
+ * a form that requires one.
  *
  * `applyAccept: false` because the accept list is asserted directly, on the
  * attribute — leaving it on would test `user-event`'s own reading of it rather
@@ -196,9 +194,9 @@ const posterFile = (name = 'lantern-poster.jpg') =>
 /**
  * Fill the poster slot.
  *
- * No test that presses Save has to call this, which is the whole of what this
- * slice did *not* change about the gate: a film with no artwork to hand is a
- * film that still gets into the library.
+ * No test that presses Save has to call this — the poster is not a half of the
+ * **Save gate**: a film with no artwork to hand is a film that still gets into
+ * the library.
  */
 async function pickPoster(file: File = posterFile()): Promise<File> {
   await userEvent.upload(posterPicker(), file, { applyAccept: false });
@@ -232,16 +230,15 @@ function savedFields(): FormData | undefined {
 }
 
 /**
- * The **Movie form** in its **Add context**, holding the fields and the chips
- * this slice gives it. It is the only writer in the app that is not a
- * single-signal write, and the first screen that creates a record rather than
- * amending one.
+ * The **Movie form** in its **Add context**: the fields, the chips, the rating
+ * picker and the three kinds of file. It is the only writer in the app that is
+ * not a single-signal write, and the one screen that creates a record rather
+ * than amending one.
  *
  * The gate, the in-flight state and the destination are asserted here rather
  * than on `useMovieForm` directly: what the maintainer can press, and what the
  * button says while they wait, is the behaviour — the hook is where it happens
- * to live, and it has one more half of the gate to grow when the video slot
- * lands.
+ * to live.
  */
 describe('MovieForm', () => {
   it('offers a Title and a Year to type into', async () => {
@@ -1152,9 +1149,8 @@ describe('MovieForm — the save gate, with the video slot', () => {
 
     fireEvent.change(titleField(), { target: { value: 'Rear Window' } });
 
-    // What this slice changed. `video_path` is NOT NULL and a row with no film
-    // behind it is the state Phases 1 and 2 shipped in; now that the form can
-    // offer a film, saving without one is no longer a row worth writing.
+    // `video_path` is NOT NULL, and a row with no film behind it is not a row
+    // worth writing.
     expect(save().disabled).toBe(true);
   });
 
