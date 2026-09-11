@@ -2,30 +2,6 @@ import styled from 'styled-components';
 
 import { Field as TextFieldBox } from '@/primitives/TextField/TextField.styles';
 
-/**
- * The screen's own scroll container, from `feat.MovieForm.dc.html`: the form is
- * a sheet on the deeper background rather than a shelf on the app's gradient,
- * and it is what scrolls once the remaining fields arrive under these two.
- *
- * `MainLayout` is deliberately not above it. The logo and the settings gear are
- * app-wide navigation for the **Family**'s screens, and this is a **Maintainer**
- * surface reached from Settings — the back pill is the only way out of it, which
- * is the same call `MoviePage` and `GenreLayout` each made for their own reasons.
- */
-export const Sheet = styled.div`
-  height: 100vh;
-  overflow-y: auto;
-  background: ${({ theme }) => theme.colors.bg2};
-`;
-
-/** The centred column everything sits in — the prototype's 760px measure. */
-export const Column = styled.div`
-  max-width: 760px;
-  margin: 0 auto;
-  padding: ${({ theme }) =>
-    `${theme.space.s6} ${theme.space.s6} ${theme.space.s8}`};
-`;
-
 /** The back pill and the heading, read as one group. */
 export const HeaderRow = styled.div`
   display: flex;

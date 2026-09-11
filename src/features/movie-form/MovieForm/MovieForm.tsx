@@ -12,8 +12,6 @@ import { MovieFormFiles } from '../MovieFormFiles/MovieFormFiles';
 import { useGenrePool } from '../useGenrePool/useGenrePool';
 import { useMovieForm } from '../useMovieForm/useMovieForm';
 import {
-  Sheet,
-  Column,
   HeaderRow,
   Heading,
   Lede,
@@ -70,9 +68,10 @@ const CANCEL_LABEL = 'Cancel';
  * and where a finished save lands, and the first two of those are the whole of
  * what is decided here.
  *
- * It renders the form and nothing else: what may be typed, what is in the
- * **File slots**, whether Save can be pressed, which job this is and where a
- * finished save lands all belong to `useMovieForm`.
+ * It renders the form and nothing else — the sheet it sits on is
+ * `MaintainerLayout`'s, composed by the page — and what may be typed, what is
+ * in the **File slots**, whether Save can be pressed, which job this is and
+ * where a finished save lands all belong to `useMovieForm`.
  *
  * **Cancel and the back pill are one behaviour, not two.** Both call the app's
  * one Back rule, so there are not two ways out of this screen that could drift
@@ -110,156 +109,154 @@ export function MovieForm() {
   const copy = editing ? EDIT : ADD;
 
   return (
-    <Sheet>
-      <Column>
-        <HeaderRow>
-          <IconButton
-            label="Back"
-            title="Back"
-            size={42}
-            variant="outline"
-            onClick={goBack}
-          >
-            <ChevronLeftIcon size={18} />
-          </IconButton>
-          <Heading>{copy.heading}</Heading>
-        </HeaderRow>
+    <>
+      <HeaderRow>
+        <IconButton
+          label="Back"
+          title="Back"
+          size={42}
+          variant="outline"
+          onClick={goBack}
+        >
+          <ChevronLeftIcon size={18} />
+        </IconButton>
+        <Heading>{copy.heading}</Heading>
+      </HeaderRow>
 
-        {/* The prototype's own line under the heading, held back through three
-            slices because it names the subtitle files — until this one it would
-            have been the screen describing a control it did not have. */}
-        <Lede>
-          Pick the video, poster, and any subtitle files for this movie. To add
-          many at once, use <Emphasis>Import library</Emphasis>.
-        </Lede>
+      {/* The prototype's own line under the heading, held back through three
+        slices because it names the subtitle files — until this one it would
+        have been the screen describing a control it did not have. */}
+      <Lede>
+        Pick the video, poster, and any subtitle files for this movie. To add
+        many at once, use <Emphasis>Import library</Emphasis>.
+      </Lede>
 
-        <Fields>
-          <FieldRow>
-            <Field>
-              <FieldLabel>Title</FieldLabel>
-              <TextField
-                {...FIELD_BOX}
-                value={values.title}
-                placeholder="Movie title"
-                aria-label="Title"
-                onChange={setTitle}
-              />
-            </Field>
-            <NarrowField>
-              <FieldLabel>Year</FieldLabel>
-              <TextField
-                {...FIELD_BOX}
-                value={values.year}
-                placeholder="2019"
-                aria-label="Year"
-                onChange={setYear}
-              />
-            </NarrowField>
-          </FieldRow>
-
-          <FieldRow>
-            <Field>
-              <FieldLabel>Director</FieldLabel>
-              <TextField
-                {...FIELD_BOX}
-                value={values.director}
-                placeholder="Director name"
-                aria-label="Director"
-                onChange={setDirector}
-              />
-            </Field>
-            <Field>
-              <FieldLabel>
-                Cast <FieldHint>— separate with commas</FieldHint>
-              </FieldLabel>
-              {/* The line is held exactly as it is typed, comma by comma. It is
-                  resolved into names once, on the way out — a field that tidied
-                  itself while it was being typed into would delete the comma
-                  just pressed. */}
-              <TextField
-                {...FIELD_BOX}
-                value={values.cast}
-                placeholder="e.g. Jane Doe, John Roe"
-                aria-label="Cast"
-                onChange={setCast}
-              />
-            </Field>
-          </FieldRow>
-
-          <WideField>
-            <FieldLabel>Description</FieldLabel>
-            <Textarea
-              value={values.description}
-              placeholder="A short synopsis of the movie"
-              aria-label="Description"
-              onChange={setDescription}
+      <Fields>
+        <FieldRow>
+          <Field>
+            <FieldLabel>Title</FieldLabel>
+            <TextField
+              {...FIELD_BOX}
+              value={values.title}
+              placeholder="Movie title"
+              aria-label="Title"
+              onChange={setTitle}
             />
-          </WideField>
+          </Field>
+          <NarrowField>
+            <FieldLabel>Year</FieldLabel>
+            <TextField
+              {...FIELD_BOX}
+              value={values.year}
+              placeholder="2019"
+              aria-label="Year"
+              onChange={setYear}
+            />
+          </NarrowField>
+        </FieldRow>
 
-          <ChipField>
+        <FieldRow>
+          <Field>
+            <FieldLabel>Director</FieldLabel>
+            <TextField
+              {...FIELD_BOX}
+              value={values.director}
+              placeholder="Director name"
+              aria-label="Director"
+              onChange={setDirector}
+            />
+          </Field>
+          <Field>
             <FieldLabel>
-              Genre <FieldHint>— pick one or more</FieldHint>
+              Cast <FieldHint>— separate with commas</FieldHint>
             </FieldLabel>
-            {/* An empty pool draws an empty row: a broken endpoint is a caption
-                with nothing under it, and a form that still saves. */}
-            <UnderCaption>
-              <GenrePicker
-                genres={genrePool}
-                selected={values.genres}
-                onToggle={toggleGenre}
-              />
-            </UnderCaption>
-          </ChipField>
+            {/* The line is held exactly as it is typed, comma by comma. It is
+              resolved into names once, on the way out — a field that tidied
+              itself while it was being typed into would delete the comma
+              just pressed. */}
+            <TextField
+              {...FIELD_BOX}
+              value={values.cast}
+              placeholder="e.g. Jane Doe, John Roe"
+              aria-label="Cast"
+              onChange={setCast}
+            />
+          </Field>
+        </FieldRow>
 
-          <ChipField>
-            <FieldLabel>
-              Your rating <FieldHint>— click a star (or half)</FieldHint>
-            </FieldLabel>
-            {/* The percent goes straight in and straight back out: the strip
-                speaks the scale the form holds, so there is nothing to convert
-                until the wire. Clicking the segment holding the value hands
-                back `null`, which is how a rating is removed everywhere in the
-                app. */}
-            <UnderCaption>
-              <RatingPicker value={values.rating} onChange={setRating} />
-            </UnderCaption>
-          </ChipField>
+        <WideField>
+          <FieldLabel>Description</FieldLabel>
+          <Textarea
+            value={values.description}
+            placeholder="A short synopsis of the movie"
+            aria-label="Description"
+            onChange={setDescription}
+          />
+        </WideField>
 
-          {/* The prototype's own place for it: under every metadata field, on a
-              card of its own. */}
-          <MovieFormFiles
-            video={values.video}
-            onPickVideo={pickVideo}
-            onRemoveVideo={removeVideo}
-            poster={values.poster}
-            onPickPoster={pickPoster}
-            onRemovePoster={removePoster}
-            subtitles={values.subtitles}
-            onAddSubtitle={addSubtitle}
-            onChangeSubtitleLanguage={changeSubtitleLanguage}
-            onRemoveSubtitle={removeSubtitle}
-          />
-        </Fields>
+        <ChipField>
+          <FieldLabel>
+            Genre <FieldHint>— pick one or more</FieldHint>
+          </FieldLabel>
+          {/* An empty pool draws an empty row: a broken endpoint is a caption
+            with nothing under it, and a form that still saves. */}
+          <UnderCaption>
+            <GenrePicker
+              genres={genrePool}
+              selected={values.genres}
+              onToggle={toggleGenre}
+            />
+          </UnderCaption>
+        </ChipField>
 
-        <Actions>
-          {/* The label is the whole of the in-flight state: it says the work
-              started, and the disabled button is what stops an impatient second
-              press writing a second row. */}
-          <Button
-            label={saving ? copy.saving : copy.save}
-            variant="primary"
-            size="md"
-            disabled={!canSave}
-            onClick={save}
-          />
-          <Button
-            label={CANCEL_LABEL}
-            variant="secondary"
-            size="md"
-            onClick={goBack}
-          />
-        </Actions>
-      </Column>
-    </Sheet>
+        <ChipField>
+          <FieldLabel>
+            Your rating <FieldHint>— click a star (or half)</FieldHint>
+          </FieldLabel>
+          {/* The percent goes straight in and straight back out: the strip
+            speaks the scale the form holds, so there is nothing to convert
+            until the wire. Clicking the segment holding the value hands
+            back `null`, which is how a rating is removed everywhere in the
+            app. */}
+          <UnderCaption>
+            <RatingPicker value={values.rating} onChange={setRating} />
+          </UnderCaption>
+        </ChipField>
+
+        {/* The prototype's own place for it: under every metadata field, on a
+          card of its own. */}
+        <MovieFormFiles
+          video={values.video}
+          onPickVideo={pickVideo}
+          onRemoveVideo={removeVideo}
+          poster={values.poster}
+          onPickPoster={pickPoster}
+          onRemovePoster={removePoster}
+          subtitles={values.subtitles}
+          onAddSubtitle={addSubtitle}
+          onChangeSubtitleLanguage={changeSubtitleLanguage}
+          onRemoveSubtitle={removeSubtitle}
+        />
+      </Fields>
+
+      <Actions>
+        {/* The label is the whole of the in-flight state: it says the work
+          started, and the disabled button is what stops an impatient second
+          press writing a second row. */}
+        <Button
+          label={saving ? copy.saving : copy.save}
+          variant="primary"
+          size="md"
+          disabled={!canSave}
+          onClick={save}
+        />
+        <Button
+          label={CANCEL_LABEL}
+          variant="secondary"
+          size="md"
+          onClick={goBack}
+        />
+      </Actions>
+    </>
   );
 }
