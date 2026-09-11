@@ -4,7 +4,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { fetchMovie } from '@/api/fetchMovie/fetchMovie';
 import type { MovieFormValues } from '@/types';
 import { createMovie, updateMovie } from '../api/api';
-import { movieFormValues } from '../formValues/formValues';
+import { movieFormValues, pickedFile } from '../formValues/formValues';
 
 /** Where a finished add lands — the shelf the film has just joined. */
 const AFTER_ADD = '/';
@@ -262,7 +262,7 @@ export function useMovieForm(): UseMovieFormResult {
   const pickVideo = useCallback((file: File) => {
     setValues((current) => ({
       ...current,
-      video: { kind: 'picked', file, filename: file.name },
+      video: pickedFile(file),
     }));
   }, []);
 
@@ -276,7 +276,7 @@ export function useMovieForm(): UseMovieFormResult {
   const pickPoster = useCallback((file: File) => {
     setValues((current) => ({
       ...current,
-      poster: { kind: 'picked', file, filename: file.name },
+      poster: pickedFile(file),
     }));
   }, []);
 
@@ -299,7 +299,7 @@ export function useMovieForm(): UseMovieFormResult {
         ...current.subtitles,
         {
           key,
-          file: { kind: 'picked', file, filename: file.name },
+          file: pickedFile(file),
           language: DEFAULT_LANGUAGE,
         },
       ],

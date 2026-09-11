@@ -39,6 +39,16 @@ function storedFile(path: string | null): MovieFormFile | null {
 }
 
 /**
+ * The **File slot** a **Picked file** fills — the other arm of the same union,
+ * built beside {@link storedFile} so the two constructors that decide what a
+ * slot holds live in one place. The name a browser gives the file is the name
+ * the slot shows; there is no path to take one from.
+ */
+export function pickedFile(file: File): MovieFormFile {
+  return { kind: 'picked', file, filename: file.name };
+}
+
+/**
  * A stored **Movie**, read back into the box it was typed into.
  *
  * Story 46: editing one field does not mean retyping the rest — and the fields

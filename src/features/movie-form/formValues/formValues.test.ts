@@ -3,7 +3,7 @@ import { describe, it, expect } from 'vitest';
 import type { Movie, MovieFormValues } from '@/types';
 import { makeMovie } from '@/test-support/makeMovie/makeMovie';
 
-import { movieFormValues, movieFormData } from './formValues';
+import { movieFormValues, movieFormData, pickedFile } from './formValues';
 
 /**
  * The round trip that makes editing correct: a **Movie** in, a
@@ -58,7 +58,7 @@ const STORED: Movie = makeMovie({
 });
 
 /** A film off the maintainer's own disk, as the browser hands it over. */
-const pickedFile = (name = 'new-lantern.mp4') =>
+const someFile = (name = 'new-lantern.mp4') =>
   new File(['video bytes'], name, { type: 'video/mp4' });
 
 /** Everything sent under one name, in the order the parts were appended. */
@@ -211,6 +211,21 @@ describe('movieFormValues', () => {
   });
 });
 
+describe('pickedFile', () => {
+  it('shows the file under the name the browser gave it', () => {
+    const file = someFile('new-lantern.mp4');
+
+    // The other arm of the union `storedFile` builds: a browser gives a name
+    // and bytes and never a path, so the name is the whole of what a slot can
+    // show and the bytes are what it holds.
+    expect(pickedFile(file)).toEqual({
+      kind: 'picked',
+      file,
+      filename: 'new-lantern.mp4',
+    });
+  });
+});
+
 describe('movieFormData', () => {
   /** The form as it stands after {@link STORED} has been read back into it. */
   const prefilled = (): MovieFormValues => movieFormValues(STORED);
@@ -278,7 +293,7 @@ describe('movieFormData', () => {
   });
 
   it('sends a picked film as bytes and no path', () => {
-    const file = pickedFile();
+    const file = someFile();
     const body = movieFormData({
       ...prefilled(),
       video: { kind: 'picked', file, filename: file.name },
@@ -297,7 +312,7 @@ describe('movieFormData', () => {
     );
     expect(sent(stored, 'poster')).toEqual([]);
 
-    const file = pickedFile('new-poster.jpg');
+    const file = someFile('new-poster.jpg');
     const picked = movieFormData({
       ...prefilled(),
       poster: { kind: 'picked', file, filename: file.name },
@@ -334,7 +349,7 @@ describe('movieFormData', () => {
 
   it('holds a picked row’s place with an empty path and sends its bytes in step', () => {
     const values = prefilled();
-    const file = pickedFile('lantern.nl.srt');
+    const file = someFile('lantern.nl.srt');
     const body = movieFormData({
       ...values,
       subtitles: [
@@ -387,7 +402,7 @@ describe('the round trip', () => {
 
   it('carries only what was re-picked when something was', () => {
     const values = movieFormValues(STORED);
-    const file = pickedFile('better-poster.jpg');
+    const file = someFile('better-poster.jpg');
     const body = movieFormData({
       ...values,
       poster: { kind: 'picked', file, filename: file.name },
