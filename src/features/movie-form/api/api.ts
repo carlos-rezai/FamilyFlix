@@ -12,6 +12,37 @@ const movieEndpoint = (id: string) =>
 /** Where the genres a film may be filed under are read — not the genre list. */
 const GENRE_POOL_ENDPOINT = '/api/genres/pool';
 
+/** The two verbs the form saves with, and the only two it ever will. */
+type SaveMethod = 'POST' | 'PATCH';
+
+/**
+ * The one send behind {@link createMovie} and {@link updateMovie}: the form's
+ * body, one verb, one endpoint, and the record that came back. The verb and
+ * the endpoint are the only two things the two saves disagree about, and if a
+ * third parameter ever appears here the extraction is being forced.
+ *
+ * No `Content-Type` header is set, and that is not an omission. A multipart body
+ * is nothing without its boundary, only the platform knows the boundary it
+ * generated, and naming the header by hand would send `multipart/form-data` with
+ * no boundary at all — which `busboy` refuses.
+ */
+async function sendMovie(
+  method: SaveMethod,
+  endpoint: string,
+  values: MovieFormValues
+): Promise<Movie> {
+  const response = await fetch(endpoint, {
+    method,
+    body: movieFormData(values),
+  });
+
+  if (!response.ok) {
+    throw new Error(`${method} ${endpoint} failed: ${response.status}`);
+  }
+
+  return (await response.json()) as Movie;
+}
+
 /**
  * Writes one movie and answers with the record that was stored.
  *
@@ -25,26 +56,12 @@ const GENRE_POOL_ENDPOINT = '/api/genres/pool';
  * every rule about what travels how lives in that one pure unit — the same body
  * {@link updateMovie} sends, because it is the same form.
  *
- * No `Content-Type` header is set, and that is not an omission. A multipart body
- * is nothing without its boundary, only the platform knows the boundary it
- * generated, and naming the header by hand would send `multipart/form-data` with
- * no boundary at all — which `busboy` refuses.
- *
  * Rejects if the save did not succeed. There is no snackbar yet, and the form's
  * honest answer to a refused save is to still be standing with everything typed
  * still in it, which it cannot do unless this rejects.
  */
-export async function createMovie(values: MovieFormValues): Promise<Movie> {
-  const response = await fetch(MOVIES_ENDPOINT, {
-    method: 'POST',
-    body: movieFormData(values),
-  });
-
-  if (!response.ok) {
-    throw new Error(`POST ${MOVIES_ENDPOINT} failed: ${response.status}`);
-  }
-
-  return (await response.json()) as Movie;
+export function createMovie(values: MovieFormValues): Promise<Movie> {
+  return sendMovie('POST', MOVIES_ENDPOINT, values);
 }
 
 /**
@@ -66,21 +83,11 @@ export async function createMovie(values: MovieFormValues): Promise<Movie> {
  * refused edit is the one that most needs the form left standing, because the
  * correction in it is the only copy there is.
  */
-export async function updateMovie(
+export function updateMovie(
   id: string,
   values: MovieFormValues
 ): Promise<Movie> {
-  const endpoint = movieEndpoint(id);
-  const response = await fetch(endpoint, {
-    method: 'PATCH',
-    body: movieFormData(values),
-  });
-
-  if (!response.ok) {
-    throw new Error(`PATCH ${endpoint} failed: ${response.status}`);
-  }
-
-  return (await response.json()) as Movie;
+  return sendMovie('PATCH', movieEndpoint(id), values);
 }
 
 /**
