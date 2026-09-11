@@ -103,10 +103,8 @@ export interface UseMovieFormResult {
  * **The gate is a disabled button, never a message.** `title` is `NOT NULL`, so
  * the only invalid state this form can reach is one where Save cannot be
  * pressed — which is a state the prototype's own `disabled` prop already draws,
- * rather than an error surface nothing designed. It lives here, in one place,
- * because it arrived in halves: the title half was all a form with no video slot
- * could check, and the video half landed beside it the moment that slot existed.
- * A title and a film are now one condition rather than two conditions in two
+ * rather than an error surface nothing designed. It lives here, in one place:
+ * a title and a film are one condition rather than two conditions in two
  * places — and it is a condition rather than a latch, so either half can be
  * taken back. **The poster is not a third half**: `poster_path` is nullable, and
  * a film the maintainer has no artwork for still belongs in the library. Nor is
@@ -159,9 +157,9 @@ export interface UseMovieFormResult {
  * ---
  *
  * **Why this file has no `useMovieForm.test.ts`**, asked and settled in the
- * #109 refactor round rather than left unexamined. At 352 lines it is the
- * largest unit in `src/` without a test of its own, which is a fair thing to
- * notice and the wrong thing to fix here.
+ * #109 refactor round rather than left unexamined. It is the largest unit in
+ * `src/` without a test of its own, which is a fair thing to notice and the
+ * wrong thing to fix here.
  *
  * Everything this hook returns is a thing a maintainer *presses*, and
  * `MovieForm.test.tsx` presses all of it: 129 tests over 22 blocks covering

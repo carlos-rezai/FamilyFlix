@@ -19,17 +19,15 @@
  * `filename` is what both of them show in the slot, and it is the only thing a
  * browser will say about a `File` — there is no path, ever.
  *
- * The `stored` arm is unreachable from the **Add context** and arrives with the
- * edit slice; it is here now because the slot's own type is what the two
- * contexts share.
+ * The `stored` arm is only ever reached from the **Edit context**; the slot's
+ * own type is what the two contexts share.
  */
 export type MovieFormFile =
   | { kind: 'stored'; path: string; filename: string }
   | { kind: 'picked'; file: File; filename: string };
 
 /**
- * Every field the form collects. The whole of the form's own surface is here
- * now; the three file slots join it as their slices land, and this stays the
+ * Every field the form collects — the whole of the form's own surface, and the
  * one shape the form, its hook and its wire call agree on.
  */
 export interface MovieFormValues {
@@ -64,8 +62,8 @@ export interface MovieFormValues {
    * **Add context** opens on, and the half of the **Save gate** a title cannot
    * satisfy on its own.
    *
-   * `video_path` is `NOT NULL`, and now that the form can offer a film, a row
-   * with nothing behind it is no longer one this screen writes.
+   * `video_path` is `NOT NULL`: a row with nothing behind it is not one this
+   * screen writes.
    */
   video: MovieFormFile | null;
   /**
@@ -88,7 +86,7 @@ export interface MovieFormValues {
    */
   genres: string[];
   /**
-   * The **Subtitles** attached, **in the order they were attached** — the first
+   * The **Subtitles** attached, **in the order they were attached** — the one
    * value here that is a list of files rather than a slot, and a complete
    * answer when it is empty: a film in the family's own language needs no
    * track.

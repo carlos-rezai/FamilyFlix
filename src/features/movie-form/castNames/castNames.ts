@@ -32,7 +32,7 @@ export function castNames(typed: string): string[] {
  * The line a stored cast was typed as — {@link castNames} read backwards.
  *
  * Both directions live in this one folder because the round trip is the unit:
- * the edit slice has to put a stored list back into the same box a maintainer
+ * the **Edit context** puts a stored list back into the same box a maintainer
  * typed it into, and two folders could disagree about what a comma means.
  *
  * An empty cast is an empty field, never a stray comma left for the maintainer

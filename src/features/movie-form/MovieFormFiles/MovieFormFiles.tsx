@@ -99,16 +99,15 @@ export interface MovieFormFilesProps {
 
 /**
  * The Files card of the **Movie form**: the panel the prototype draws under the
- * metadata fields, and the two slots this slice puts in it.
+ * metadata fields, with the video slot, the poster slot and the subtitle list
+ * in it.
  *
  * A feature sibling rather than a molecule, on the player's shape — the organism
  * owns the values and this draws what it is told. It knows which slots a
  * **Movie** has and what each of them offers a file dialog; `FileField` knows
- * how a slot looks, and neither of them knows what a save is.
- *
- * The poster is a second instance of that same molecule and nothing new at that
- * rung: what is new here is only that a **Movie** has a second kind of file, and
- * what that one offers a file dialog.
+ * how a slot looks, and neither of them knows what a save is. The video and
+ * the poster are two instances of that one molecule, differing only in what
+ * each offers a file dialog.
  *
  * **The subtitles are a list rather than a slot**, and that is the whole of what
  * is different about them: picking a file appends a row, the ＋ stays after it,

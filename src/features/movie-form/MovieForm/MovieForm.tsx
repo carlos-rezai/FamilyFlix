@@ -77,9 +77,6 @@ const CANCEL_LABEL = 'Cancel';
  * one Back rule, so there are not two ways out of this screen that could drift
  * apart — and neither writes anything: a maintainer who leaves a half-filled
  * form leaves with it.
- *
- * The line under the heading is now true of the screen it stands over: it names
- * the video, the poster and the subtitle files, and all three are here.
  */
 export function MovieForm() {
   const goBack = useGoBack();
@@ -123,9 +120,6 @@ export function MovieForm() {
         <Heading>{copy.heading}</Heading>
       </HeaderRow>
 
-      {/* The prototype's own line under the heading, held back through three
-        slices because it names the subtitle files — until this one it would
-        have been the screen describing a control it did not have. */}
       <Lede>
         Pick the video, poster, and any subtitle files for this movie. To add
         many at once, use <Emphasis>Import library</Emphasis>.
