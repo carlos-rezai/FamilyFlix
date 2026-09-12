@@ -508,6 +508,8 @@ the visible ones steal focus.
 4. `prd-to-issues` → individual issues
 5. `tdd` → failing tests (stops at RED)
 6. `build` → implement against the `docs/handoff/` prototype
+   — `issue-loop` drives 5–6 across every buildable slice unattended, one
+   subagent per step, and stops at the first HITL or docs-only issue
 7. `request-refactor-plan` → create issue
 8. `refactor` → clean up
 

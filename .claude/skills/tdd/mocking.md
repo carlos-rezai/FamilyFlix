@@ -1,16 +1,22 @@
 # When to Mock
 
-Mock at **system boundaries** only.
+Mock at **system boundaries** only. Your own modules and internal
+collaborators are tested through their public interface, never replaced.
 
-## Project boundaries to mock
+## This project's boundaries, and the double for each
 
-Check CLAUDE.md for the project's specific boundaries.
-Common examples:
+| Boundary                       | Double                                                                        |
+| ------------------------------ | ----------------------------------------------------------------------------- |
+| SQLite                         | `freshStorage` — the harness every `library/` test opens its database through |
+| The managed media directory    | `sandboxRoot` — a real temp dir, removed when the test ends                   |
+| Finding the Playback component | `componentDir` — a temp dir of empty fake binaries, for the resolution suites |
+| Running it                     | a `PlaybackComponent` handed to `createPlayback` — the seam is injected       |
+| `fetch` in the frontend        | `fakeResponse` — `okResponse`, `serverErrorResponse`, the 404                 |
+| The `<video>` element (jsdom)  | `stubMediaElement`, `stubFullscreen`                                          |
+| Time / randomness              | `vi.useFakeTimers`, `vi.spyOn(Math, 'random')`                                |
 
-- External APIs (payment, email, AI, etc.)
-- Databases (use in-memory or test DB)
-- Time / randomness
-- File system
+Both `test-support/` folders hold more (movie factories, a location probe);
+list them before writing a new one.
 
 ## Designing for Mockability
 
@@ -22,14 +28,11 @@ Pass external dependencies in rather than creating them internally:
 
 ```typescript
 // Easy to mock
-function processPayment(order, paymentClient) {
-  return paymentClient.charge(order.total);
-}
+function createPlayback(ffmpeg: FfmpegComponent, mediaRoot: string) {}
 
 // Hard to mock
-function processPayment(order) {
-  const client = new StripeClient(process.env.STRIPE_KEY);
-  return client.charge(order.total);
+function createPlayback() {
+  const ffmpeg = resolveFfmpegBinary(process.env.FAMILYFLIX_FFMPEG_PATH);
 }
 ```
 
@@ -41,10 +44,10 @@ one generic function with conditional logic:
 ```typescript
 // GOOD: Each function is independently mockable
 const api = {
-  searchMovies: (query) => fetch(`/api/tmdb/search?q=${query}`),
-  lookupBarcode: (upc) => fetch(`/api/upc/${upc}`),
-  getDiscs: () => fetch('/api/discs'),
-  addDisc: (data) => fetch('/api/discs', { method: 'POST', body: data }),
+  fetchMovie: (id) => fetch(`/api/movies/${id}`),
+  saveFavorite: (id, favorite) =>
+    postValue(`/api/movies/${id}/favorite`, favorite),
+  saveResume: (id, seconds) => postValue(`/api/movies/${id}/resume`, seconds),
 };
 
 // BAD: Mocking requires conditional logic inside the mock

@@ -39,7 +39,7 @@ Run the full test suite after each change to confirm nothing regresses.
 ## Definition of done
 
 - [ ] All tests pass
-- [ ] No TypeScript errors (if applicable): `npx tsc --noEmit`
+- [ ] No TypeScript errors (if applicable): `node_modules/.bin/tsc --noEmit`
 - [ ] ACs in the issue checked off
 - [ ] No console.log in code
 

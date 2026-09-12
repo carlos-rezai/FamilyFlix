@@ -10,19 +10,18 @@ user before any implementation begins.
 ## Before starting
 
 1. Read the GitHub issue with `gh issue view <number> --comments`
-2. Read `docs/ubiquitous-language.md` for correct terminology
-3. Use the acceptance criteria in the issue as the behaviors to test
-4. Do not invent behaviors not covered by the issue ACs
+2. Grep `docs/ubiquitous-language.md` for the terms the issue bolds — the
+   glossary is far too large to read whole
+3. The issue's acceptance criteria are the behaviours to test — every one,
+   and only those
 
 ## Project test setup
 
-- Test runner: Vitest
-- Run tests: `npx vitest run`
-- Test files: `src/lib/__tests__/` for lib modules,
-  `server/src/__tests__/` for server modules
-- Never call the Gemini API in tests — mock it
-- Never call MongoDB directly in tests — use in-memory or mock
-- Never call TMDB or UPC APIs in tests — mock the proxy layer
+- The runner, the never-`npx` rule and where a test lives (beside its unit)
+  are in CLAUDE.md
+- Doubles live in `src/test-support/` and `server/src/test-support/` — reach
+  for one before writing a mock; see [mocking.md](mocking.md) for the
+  boundaries they cover
 
 ## Philosophy
 
@@ -32,18 +31,15 @@ tests shouldn't.
 
 **Good tests** are integration-style: they exercise real code paths
 through public APIs. They describe _what_ the system does, not _how_
-it does it. A good test reads like a specification — "user can add a
-disc to their collection" tells you exactly what capability exists.
-These tests survive refactors because they don't care about internal
-structure.
+it does it. A good test reads like a specification — "the family can
+resume a film where they left it" tells you exactly what capability
+exists. These tests survive refactors because they don't care about
+internal structure.
 
 **Bad tests** are coupled to implementation. They mock internal
 collaborators, test private methods, or verify through external means.
 The warning sign: your test breaks when you refactor, but behavior
 hasn't changed.
-
-See [tests.md](tests.md) for examples and [mocking.md](mocking.md)
-for mocking guidelines.
 
 ## Workflow
 
@@ -85,7 +81,7 @@ Rules:
 After all tests are written and confirmed failing:
 
 - Report which test file(s) were created
-- Show the failure output from `npx vitest run`
+- Show the failure output from the run
 - Confirm each test fails for the right reason
 - Tell the user to run `/build` to implement
 
