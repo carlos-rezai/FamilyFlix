@@ -6,6 +6,8 @@
 > Filed as issue 121. Refined 2026-09-12 by a second `request-refactor-plan`
 > pass read with a 1:1 lens: one duplicate the first pass missed, one commit
 > that turned out to be already true, one import out of the siblings' order.
+> The fidelity sweep briefly filed as 122 is folded in as Group 4, so the
+> whole of it closes at once.
 
 ## Problem Statement
 
@@ -15,7 +17,8 @@ initiative driven end to end by `issue-loop`, with a fresh subagent per step and
 nobody watching between commits. The code that came out is close to the log's
 design and every acceptance criterion holds. What a read-through finds is the
 kind of debt an unattended loop leaves rather than the kind a rushed one does:
-nothing wrong, four things written twice or written in build order.
+nothing wrong, four things written twice or written in build order — and,
+once the fourth was named, three older files found breaking the same rule.
 
 ### 1. The containment rule is now spelled three times on the server
 
@@ -73,6 +76,25 @@ already has, which is the radius finding again in a different property.
 the `@/` imports, then the relative ones. One line, and the only place in the
 initiative where the shape of a file does not match its neighbours.
 
+### 5. The same keyframe rule, broken before this initiative
+
+Naming the rule in §2 is what made the older breaks visible. `Menu.styles.ts`
+animates every menu panel with a local `translateY(-4px)` pop where the
+prototype writes `ffPop .14s ease` — `scale(0.96)` in — for all three menus
+built on it (`page.MoviePage`'s ⋯ menu, `mol.FilterDropdown`,
+`mol.SubtitleRow`): a visible deviation, not just a duplicate.
+`PlayerNotice.styles.ts` redefines `ffPop` at `scale(0.9)` and `ffSpin`
+locally, where `feat.PlayerControls` writes `ffPop 0.2s ease` and
+`ffSpin 0.9s linear infinite`; and `GlobalStyle` registers every `ff*`
+keyframe from `tokens.css` except `ffSpin`. Beside them, the radius rule's two
+leftovers: `FilterDropdown`'s `border-radius: 999px` and `ProgressBar`'s
+conditional `'999px'` are both `radius.pill`.
+
+These belong to the movie-detail, player and search-filter rounds, and the
+first pass left them out on that discipline. They are taken here instead, as
+one group, because the rule is the one this round states and the fixes are
+four one-line files — a separate round for them would be ceremony.
+
 ### 3. Tests grouped by the slice that wrote them
 
 `DeleteMovieDialog.test.tsx` has seven top-level blocks. The first three are the
@@ -98,7 +120,9 @@ Three groups, each a working tree after every commit, in the order above:
 the server fold first because it is the one with a real duplicate on the wire,
 the prototype's own values second because every commit there is one or two
 lines that resolve to the same pixel, the test regroup last because it moves
-the most text and changes no assertion. Nine commits.
+the most text and changes no assertion — then the same keyframe and radius
+rules carried across the three older files, last, because they are the only
+commits that reach outside the initiative. Thirteen commits.
 
 ## Commits
 
@@ -157,10 +181,28 @@ the most text and changes no assertion. Nine commits.
    block named for what they check (the folder goes, another movie's stays,
    a locked file leaves the `204`). Leaf names unchanged.
 
-9. **The journal and the feature table.** `docs/dev-journal.md` gets the
-   round's paragraph; README and CLAUDE.md tick **Delete a movie** ✅, because
-   the rule is that a feature is Done when its refactor closes, not when its
-   build issues do. Closes 121.
+### Group 4 — the same rules, across the older files
+
+9. **`GlobalStyle` registers `ffSpin`.** The one keyframe `tokens.css` has
+   that the code side does not; body copied as it stands. Nothing reads it yet.
+
+10. **`Menu` pops by name.** `Menu.styles.ts` drops its local `pop` and the
+    `keyframes` import; `Panel` reads `animation: ffPop 0.14s ease`. Checked in
+    the browser on all three menus — ⋯, Filter, a subtitle row's language.
+
+11. **`PlayerNotice` pops and spins by name.** Drops `pop` and `spin`; the
+    notice reads `animation: ffPop 0.2s ease`, the spinner
+    `animation: ffSpin 0.9s linear infinite`. Checked in the browser against
+    `feat.PlayerControls`' buffering and cannot-play states.
+
+12. **Two pills read the token.** `FilterDropdown.styles.ts` and
+    `ProgressBar.styles.ts` read `theme.radius.pill` where they wrote `999px`.
+    Same pixel.
+
+13. **The journal and the feature table.** `docs/dev-journal.md` gets the
+    round's paragraph; README and CLAUDE.md tick **Delete a movie** ✅, because
+    the rule is that a feature is Done when its refactor closes, not when its
+    build issues do. Closes 121.
 
 ## Decision Document
 
@@ -201,9 +243,14 @@ the most text and changes no assertion. Nine commits.
   `ffSnackIn` and `ffIndeterminate` under the prototype's own names; a styled
   file that needs one writes the prototype's `animation:` line as it stands.
   A local `keyframes` call is for a motion the prototype does not name — and
-  `Modal`'s two were not that. This round applies the rule to the file the
-  initiative wrote; the two older files that break it are named under Out of
-  Scope.
+  `Modal`'s two were not that, and neither were `Menu`'s or `PlayerNotice`'s.
+  `Skeleton`'s `pulse` is: it has no `ff*` counterpart and stays local.
+- **Group 4 is the one place this round crosses initiatives**, and it does so
+  on purpose: the rule is stated here, the four fixes are one line each, and
+  a round of its own for them would be more filing than refactoring. The
+  precedent is not "a round may fix whatever it finds" — it is that a rule a
+  round states may be applied everywhere it is broken when doing so costs
+  nothing but the commit.
 - **`IconTile` stays one element.** The prototype nests a 22px span inside the
   44px tile; the build flattened it and said why in the docblock (the tile's
   grid already centres the glyph, and the size, line-height and ink are the
@@ -225,6 +272,11 @@ the most text and changes no assertion. Nine commits.
   not a behaviour, and neither is a keyframe reached by name rather than by
   reference. Checked in the browser; the import swap is checked by `eslint`
   and `tsc`.
+- Group 4 is on the same footing: no test asserts an animation or a corner, and
+  `Menu.test.tsx`, `PlayerNotice.test.tsx`, `FilterDropdown.test.tsx` and
+  `ProgressBar.test.tsx` run unchanged. The `Menu` change is the one that moves
+  pixels — a slide becomes a scale — and is the one to look at longest in the
+  browser.
 - Group 3 changes nothing but the path of each test's name.
 
 ## Out of Scope
@@ -245,20 +297,12 @@ the most text and changes no assertion. Nine commits.
   is the movie-form initiative's, missed by round two because that round was
   scoped to `src/`. One line for whoever next opens the file.
 
-- **The two older files that redefine a named keyframe.** `Menu.styles.ts`
-  animates every menu panel with a local `translateY(-4px)` pop where the
-  prototype writes `ffPop .14s` for all three of them (`page.MoviePage`,
-  `mol.FilterDropdown`, `mol.SubtitleRow`) — a visible deviation, not just a
-  duplicate — and `PlayerNotice.styles.ts` redefines `ffPop` at `scale(0.9)`
-  and `ffSpin` locally, while `GlobalStyle` does not register `ffSpin` at all.
-  The movie-detail and player rounds own those files; the rule this round
-  applies to `Modal` is the same one, and they are filed together with the
-  `999px` below as one fidelity sweep (issue 122) so the next person
-  does not re-find them.
-- **`FilterDropdown`'s `999px`** is `radius.pill` written out, in a file the
-  search-filter round owns; `ProgressBar`'s conditional `'999px'` is the same
-  token. Same rule, different initiative; noted, filed with the sweep above,
-  not taken here.
+- **Any keyframe the prototype does not name.** `Skeleton`'s `pulse` is the
+  one such, and a local `keyframes` is the right spelling for it.
+- **Any other pixel in the files Group 4 touches.** The round reaches into
+  `Menu`, `PlayerNotice`, `FilterDropdown` and `ProgressBar` for the two rules
+  it states and nothing else; whatever else those files might owe their
+  prototypes is their own rounds' business.
 
 ## Further Notes
 
