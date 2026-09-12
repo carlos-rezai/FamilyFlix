@@ -1,7 +1,7 @@
 # 12 — Delete a movie
 
 > **Initiative:** `delete-movie`
-> **PRD:** _(to be written — `write-a-prd`)_
+> **PRD:** [#114](https://github.com/carlos-rezai/FamilyFlix/issues/114) · `docs/PRDs/12-delete-movie.md`
 
 This log is the `grill-me` session that settled the feature before the PRD was
 written, run against the prototype and the code as they stood on 2026-09-12. It
