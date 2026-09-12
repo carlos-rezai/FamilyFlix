@@ -861,6 +861,23 @@ export function createApiRouter(
     }
   );
 
+  // The **Delete dialog**'s confirm. `204` with nothing in it, not `200 {}`:
+  // the single-signal routes echo because a client reconciles on the echo, and
+  // a delete reconciles on absence. The lookup and the JSON 404 are
+  // `movieOr404`'s, shared with every per-movie route, so a second delete of
+  // the same id answers exactly what a stepped-forward detail page reads. The
+  // row goes here and the cascade takes its genre tags and subtitles with it;
+  // the bytes under the movie folder are Phase 3's.
+  router.delete('/movies/:id', (req: Request<{ id: string }>, res) => {
+    const movie = movieOr404(storage, req.params.id, res);
+    if (!movie) {
+      return;
+    }
+
+    storage.deleteMovie(movie.id);
+    res.status(204).end();
+  });
+
   // The Favorites toggle. What is left here is what this route alone decides:
   // that a valid body is exactly a boolean, and that the write is `setFavorite`.
   // The lookup, the 404, and the echo are `writeSignal`'s.

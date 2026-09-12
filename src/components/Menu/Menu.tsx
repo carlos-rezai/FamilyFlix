@@ -97,6 +97,12 @@ export interface MenuItemProps {
    * the glyph, so it stays out of the accessible name.
    */
   trailing?: ReactNode;
+  /**
+   * The **Danger row** — the ⋯ menu's `🗑 Delete movie`: danger ink, and a
+   * `.12` tint of it on hover. A statement about the row's consequence, not a
+   * mode — it closes the menu and reports like any other row.
+   */
+  danger?: boolean;
   /** What the item does. The menu is already closing by the time this runs. */
   onSelect: () => void;
 }
@@ -120,6 +126,7 @@ export function MenuItem({
   glyph,
   selected = false,
   trailing,
+  danger = false,
   onSelect,
 }: MenuItemProps) {
   const close = useContext(CloseContext);
@@ -152,6 +159,7 @@ export function MenuItem({
       // Tab leaves it, and the arrow keys move about inside.
       tabIndex={active ? 0 : -1}
       $selected={selected}
+      $danger={danger}
       aria-current={selected ? 'true' : undefined}
       onClick={() => {
         // Close first: closing returns focus to the trigger, and a navigation

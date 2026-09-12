@@ -116,7 +116,7 @@ export function MovieDetail() {
         <Scrim />
       </ArtArea>
 
-      <EditMenu movieId={movie.id} />
+      <EditMenu movieId={movie.id} title={movie.title} />
 
       <Content>
         <PosterColumn>

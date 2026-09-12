@@ -38,8 +38,14 @@ export const Panel = styled.div`
   z-index: 30;
 `;
 
-/** A real button, so the menu is operable by keyboard like everything else. */
-export const Item = styled.button<{ $selected: boolean }>`
+/**
+ * A real button, so the menu is operable by keyboard like everything else.
+ *
+ * The danger ink and its `.12` hover tint are the prototype's own numbers for
+ * the ⋯ menu's Delete row (`page.MoviePage.dc.html`); the tint is written as
+ * the token's rgba rather than derived, so it matches the handoff byte for byte.
+ */
+export const Item = styled.button<{ $selected: boolean; $danger: boolean }>`
   display: flex;
   align-items: center;
   gap: 10px;
@@ -52,13 +58,18 @@ export const Item = styled.button<{ $selected: boolean }>`
   font-family: ${({ theme }) => theme.fonts.sans};
   font-size: 15px;
   font-weight: ${({ $selected }) => ($selected ? 600 : 400)};
-  color: ${({ theme, $selected }) =>
-    $selected ? theme.colors.accent : theme.colors.text};
+  color: ${({ theme, $selected, $danger }) =>
+    $danger
+      ? theme.colors.danger
+      : $selected
+        ? theme.colors.accent
+        : theme.colors.text};
   text-align: left;
   white-space: nowrap;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.surface3};
+    background: ${({ theme, $danger }) =>
+      $danger ? 'rgba(201, 122, 106, 0.12)' : theme.colors.surface3};
   }
 `;
 
