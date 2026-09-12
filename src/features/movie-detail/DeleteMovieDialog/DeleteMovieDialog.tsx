@@ -29,7 +29,7 @@ export function DeleteMovieDialog({
   open,
   onClose,
 }: DeleteMovieDialogProps) {
-  const { deleteMovie } = useDeleteMovie(movieId);
+  const { deleting, deleteMovie } = useDeleteMovie(movieId);
 
   return (
     <Modal
@@ -44,9 +44,15 @@ export function DeleteMovieDialog({
         FamilyFlix copied are deleted. The original files are not touched.
       </Copy>
       <Actions>
+        {/* The label is the whole of the in-flight state — the form's
+          "Adding…" precedent: it says the work started, and the disabled
+          button is what stops an impatient second press sending a second
+          request. Cancel and the ✕ stay live; dismissing does not cancel the
+          request, and a success after a dismissal still goes back. */}
         <Button
-          label="Delete movie"
+          label={deleting ? 'Deleting…' : 'Delete movie'}
           variant="danger"
+          disabled={deleting}
           onClick={() => {
             void deleteMovie().catch(() => undefined);
           }}
