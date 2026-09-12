@@ -93,6 +93,19 @@
           ></dc-import>
         </sc-if>
 
+        <!-- ============================= DELETE DIALOG (feat.DeleteMovieDialog) ============================= -->
+        <sc-if value="{{ deleteOpen }}" hint-placeholder-val="{{ false }}">
+          <dc-import
+            name="feat.DeleteMovieDialog"
+            open="{{ deleteOpen }}"
+            title="{{ deleteTitle }}"
+            on-confirm="{{ confirmDelete }}"
+            on-close="{{ closeDelete }}"
+            style="position: absolute; inset: 0; z-index: 90"
+            hint-size="100%,100%"
+          ></dc-import>
+        </sc-if>
+
         <!-- ============================= SNACKBAR HOST ============================= -->
         <sc-if value="{{ hasSnackbars }}" hint-placeholder-val="{{ false }}">
           <div
@@ -211,6 +224,7 @@
           impStep:'setup', impSheet:'', impRoot:'', impProgress:0, impMatched:0, impProblems:[],
           impPhase:'scan', impFound:0, impTotal:0, impDone:0, impCurrent:'', impLog:[], impStartTime:null,
           exportOpen:false, exportFormat:'csv', exportDone:false,
+          deleteOpen:false,
           settingsSubAuto:false, settingsSubLang:'English',
           codecs:[
             {id:1,name:'H.264 / AVC',exts:['.mp4','.mov','.m4v'],kind:'built-in',size:'—'},
@@ -350,6 +364,9 @@
         toggleFavById(id){ this.setState(s=>({favorites:s.favorites.includes(id)?s.favorites.filter(x=>x!==id):[...s.favorites,id]})); }
         toggleFavorite(){ const m=this.cur(); if(m) this.toggleFavById(m.id); }
         toggleEditMenu(){ this.setState(s=>({editMenuOpen:!s.editMenuOpen})); }
+        openDelete(){ this.setState({editMenuOpen:false,deleteOpen:true}); }
+        closeDelete(){ this.setState({deleteOpen:false}); }
+        confirmDelete(){ const m=this.cur(); if(m){ this.rawMovies=this.rawMovies.filter(x=>x.id!==m.id); } this.setState(s=>({deleteOpen:false,selectedId:null,favorites:s.favorites.filter(id=>!m||id!==m.id)})); this.goBrowse(); }
         editMovie(){ const m=this.cur(); if(!m)return; const cr=this.credits[m.id]||{dir:'',cast:[]}; this.setState({fTitle:m.title,fYear:String(m.year),fDirector:cr.dir,fCast:cr.cast.join(', '),fDescription:m.syn,fGenres:[...m.genres],fVideo:m.title.toLowerCase().replace(/[^a-z0-9]+/g,'-')+'.mp4',fPoster:'poster.jpg',fSubs:[{filename:'subtitles.en.srt',lang:'English'}],fRating:this.ratingOf(m),fRatingHover:null,addMode:'manual',scanned:true,screen:'add',editMenuOpen:false,addContext:'edit',resolveId:null}); }
         playMovie(){ const m=this.cur(); if(!m)return; const resume=this.eff(m)==='progress'? m.runtime*60*m.prog/100 : 0; this.lastMove=Date.now(); const broken=this.playability[m.id]||null; clearTimeout(this._bufferTimer); const opensBuffering = !broken || broken==='could-not-start'; this.setState({screen:'player',currentTime:resume,playing:false,controlsVisible:true,subsOn:true,playNotice:opensBuffering?'buffering':broken}); if(opensBuffering) this._bufferTimer=setTimeout(()=>this.setState(broken?{playNotice:broken}:{playNotice:null,playing:true}), 1100); }
 
@@ -558,7 +575,7 @@
             },
             // detail
             detail, toggleWatched:()=>this.toggleWatched(), toggleFavorite:()=>this.toggleFavorite(), playMovie:()=>this.playMovie(), toggleEditMenu:()=>this.toggleEditMenu(), editMenuOpen:s.editMenuOpen, editMovie:()=>this.editMovie(),
-            detailModel:{...detail, editMenuOpen:s.editMenuOpen, onBack:()=>this.backFromDetail(), onPlay:()=>this.playMovie(), onToggleWatched:()=>this.toggleWatched(), onToggleFavorite:()=>this.toggleFavorite(), onToggleEditMenu:()=>this.toggleEditMenu(), onEdit:()=>this.editMovie()},
+            detailModel:{...detail, editMenuOpen:s.editMenuOpen, onBack:()=>this.backFromDetail(), onPlay:()=>this.playMovie(), onToggleWatched:()=>this.toggleWatched(), onToggleFavorite:()=>this.toggleFavorite(), onToggleEditMenu:()=>this.toggleEditMenu(), onEdit:()=>this.editMovie(), onDelete:()=>this.openDelete()},
             // player
             playerModel:{
               posterStyle:detail.posterStyle, title:detail.title,
@@ -614,6 +631,8 @@
               hasProblems:s.impProblems.length>0, allResolved:s.impProblems.length===0,
               };
             })(),
+            // delete
+            deleteOpen:s.deleteOpen, deleteTitle:detail.title||'', confirmDelete:()=>this.confirmDelete(), closeDelete:()=>this.closeDelete(),
             // export
             exportOpen:s.exportOpen,
             exportModel:{

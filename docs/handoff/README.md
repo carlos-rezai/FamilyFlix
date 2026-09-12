@@ -15,7 +15,7 @@ and walk through Settings. Everything works.
 
 - **`FamilyFlix.dc.html`** — the entry point / router. Composes every screen and holds the
   app state (all the sample data and the per-screen model objects live in its one logic class).
-- **`prim.*` / `mol.*` / `feat.*` / `page.*`** — the 33 components, one file each. The prefix
+- **`prim.*` / `mol.*` / `feat.*` / `page.*`** — the 35 components, one file each. The prefix
   is the atomic layer and maps to a repo folder:
   | Prefix | Layer | Repo folder |
   | --- | --- | --- |

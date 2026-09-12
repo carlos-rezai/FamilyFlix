@@ -1,0 +1,157 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="tokens.css" />
+      </helmet>
+      <sc-if value="{{ isOpen }}" hint-placeholder-val="{{ true }}">
+        <div
+          onClick="{{ onClose }}"
+          style="
+            position: absolute;
+            inset: 0;
+            z-index: 90;
+            display: grid;
+            place-items: center;
+            background: var(--color-scrim);
+            backdrop-filter: blur(4px);
+            animation: ffFade 0.18s ease;
+            padding: 24px;
+          "
+        >
+          <div
+            onClick="{{ stopProp }}"
+            style="
+              width: 520px;
+              max-width: 100%;
+              background: var(--color-surface-2);
+              border: 1px solid var(--color-border);
+              border-radius: var(--radius-lg);
+              box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
+              overflow: hidden;
+              animation: ffPop 0.2s ease;
+            "
+          >
+            <div style="padding: 28px 28px 0">
+              <div style="display: flex; align-items: flex-start; gap: 14px">
+                <sc-if value="{{ hasIcon }}" hint-placeholder-val="{{ true }}">
+                  <div
+                    style="
+                      flex: 0 0 auto;
+                      width: 44px;
+                      height: 44px;
+                      border-radius: 12px;
+                      background: var(--color-accent-soft);
+                      border: 1px solid var(--color-accent-line);
+                      display: grid;
+                      place-items: center;
+                    "
+                  >
+                    <span
+                      style="
+                        display: grid;
+                        place-items: center;
+                        width: 22px;
+                        height: 22px;
+                        font-size: 22px;
+                        line-height: 1;
+                        color: var(--color-accent);
+                      "
+                      >{{ icon }}</span
+                    >
+                  </div>
+                </sc-if>
+                <div style="flex: 1; min-width: 0">
+                  <h2
+                    style="
+                      font-family: var(--font-serif);
+                      font-weight: 600;
+                      font-size: 24px;
+                      color: var(--color-text);
+                      margin: 0;
+                      overflow-wrap: anywhere;
+                    "
+                  >
+                    {{ title }}
+                  </h2>
+                  <sc-if
+                    value="{{ hasSubtitle }}"
+                    hint-placeholder-val="{{ true }}"
+                  >
+                    <p
+                      style="
+                        font-family: var(--font-sans);
+                        font-size: 14px;
+                        color: var(--color-text-faint);
+                        margin: 4px 0 0;
+                      "
+                    >
+                      {{ subtitle }}
+                    </p>
+                  </sc-if>
+                </div>
+                <button
+                  onClick="{{ onClose }}"
+                  aria-label="Close"
+                  style="
+                    flex: 0 0 auto;
+                    display: grid;
+                    place-items: center;
+                    width: 34px;
+                    height: 34px;
+                    background: transparent;
+                    border: none;
+                    border-radius: 8px;
+                    color: var(--color-text-faint);
+                    cursor: pointer;
+                    font-size: 16px;
+                  "
+                  style-hover="background:var(--color-surface-3);color:var(--color-text-dim)"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+
+            <div
+              style="
+                padding: 22px 28px 28px;
+                display: flex;
+                flex-direction: column;
+                gap: 20px;
+              "
+            >
+              {{ children }}
+            </div>
+          </div>
+        </div>
+      </sc-if>
+    </x-dc>
+    <script
+      type="text/x-dc"
+      data-dc-script
+      data-props='{"$preview":{"width":560,"height":300},"open":{"editor":"boolean","default":true,"tsType":"boolean"},"title":{"editor":"text","default":"Export library","tsType":"string"},"subtitle":{"editor":"text","default":"Save your whole collection as a spreadsheet.","tsType":"string"},"icon":{"editor":"text","default":"⬇","tsType":"ReactNode"},"onClose":{"editor":null,"tsType":"() =&gt; void"},"children":{"editor":null,"tsType":"ReactNode"}}'
+    >
+      class Component extends DCLogic {
+        renderVals(){
+          const icon=this.props.icon??'';
+          const subtitle=this.props.subtitle??'';
+          return {
+            isOpen:this.props.open!==false,
+            title:this.props.title??'',
+            subtitle, hasSubtitle:!!subtitle,
+            icon, hasIcon:icon!=='',
+            onClose:this.props.onClose||(()=>{}),
+            stopProp:(e)=>{ if(e&&e.stopPropagation)e.stopPropagation(); },
+          };
+        }
+      }
+    </script>
+  </body>
+</html>

@@ -1,0 +1,77 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="tokens.css" />
+      </helmet>
+      <dc-import
+        name="mol.Modal"
+        open="{{ isOpen }}"
+        title="{{ heading }}"
+        subtitle="This can’t be undone."
+        icon="🗑"
+        on-close="{{ onClose }}"
+        style="position: absolute; inset: 0"
+        hint-size="100%,100%"
+      >
+        <p
+          style="
+            font-family: var(--font-sans);
+            font-size: 15px;
+            line-height: 1.5;
+            color: var(--color-text-dim);
+            margin: 0;
+          "
+        >
+          The movie leaves your library, and the video, poster and subtitles
+          FamilyFlix copied are deleted. The original files are not touched.
+        </p>
+
+        <div
+          style="display: flex; align-items: center; gap: 12px; margin-top: 4px"
+        >
+          <dc-import
+            name="prim.Button"
+            label="Delete movie"
+            variant="danger"
+            size="md"
+            icon="none"
+            on-click="{{ onConfirm }}"
+            hint-size="160px,50px"
+          ></dc-import>
+          <dc-import
+            name="prim.Button"
+            label="Cancel"
+            variant="secondary"
+            size="md"
+            icon="none"
+            on-click="{{ onClose }}"
+            hint-size="100px,50px"
+          ></dc-import>
+        </div>
+      </dc-import>
+    </x-dc>
+    <script
+      type="text/x-dc"
+      data-dc-script
+      data-props='{"$preview":{"width":560,"height":360},"open":{"editor":"boolean","default":true,"tsType":"boolean"},"title":{"editor":"text","default":"The Lantern Keeper","tsType":"string"},"onConfirm":{"editor":null,"tsType":"() =&gt; void"},"onClose":{"editor":null,"tsType":"() =&gt; void"}}'
+    >
+      class Component extends DCLogic {
+        renderVals(){
+          return {
+            isOpen:this.props.open!==false,
+            heading:'Delete “'+(this.props.title??'')+'”?',
+            onConfirm:this.props.onConfirm||(()=>{}),
+            onClose:this.props.onClose||(()=>{}),
+          };
+        }
+      }
+    </script>
+  </body>
+</html>
