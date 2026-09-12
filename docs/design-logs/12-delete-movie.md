@@ -2,6 +2,10 @@
 
 > **Initiative:** `delete-movie`
 > **PRD:** [#114](https://github.com/carlos-rezai/FamilyFlix/issues/114) · `docs/PRDs/12-delete-movie.md`
+> **Plan:** `docs/PRDs/12-delete-movie-plan.md` — five phases, filed as issues 115–120
+> **Shipped:** issues 115–119, 2026-09-12, the four buildable slices driven by
+> `issue-loop`. What the build actually did is in `docs/dev-journal.md`; the
+> refactor it left is `docs/refactor-plans/12-delete-movie-refactor.md`, issue 121.
 
 This log is the `grill-me` session that settled the feature before the PRD was
 written, run against the prototype and the code as they stood on 2026-09-12. It

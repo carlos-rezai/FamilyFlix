@@ -11,6 +11,148 @@ Newest entry first.
 
 ---
 
+## 2026-09-12 — Delete a movie (issues #114–#120)
+
+Eleven commits across issues #114–#119 in one afternoon, five phases against
+the plan on #114, built from `docs/design-logs/12-delete-movie.md`. **3161 tests
+pass across 176 files**, up from 3072 across 173. `npm run typecheck` is green
+and `eslint src server` is clean on every commit.
+
+**Delete a movie is _not_ ticked** in the feature table. The rule holds: ✅
+when the refactor closes, not when the build issues do. The refactor is filed
+as 121.
+
+### The first initiative `issue-loop` drove
+
+The four buildable slices (#116–#119) were driven by `issue-loop`, the skill
+that landed in `661cab2` the same afternoon: for each slice a fresh subagent ran
+`tdd` and committed RED, a second ran `build` and committed GREEN, and the
+driver grabbed the next. Nobody was watching between commits; the issue stood
+in for every approval the two skills ask for. From the RED commit of #116 to
+the GREEN commit of #119 took three hours and twenty minutes, and the loop
+stopped where it was told to — at this issue, which binds nothing under `src/`.
+
+Two things worth keeping from that:
+
+- **Every RED commit went through the commit gate.** Four `test:` commits, no
+  `--no-verify`. This is what 111 was for — the gate narrows to `app` and
+  `server` on a `test:` subject — and the delete-movie initiative is the first
+  to have used it from start to finish. The habit the movie-form journal named
+  ("ten RED commits, ten `--no-verify`") ended here.
+- **What four fresh contexts leave behind is a different shape of debt.** Not
+  a rushed handler or a missing test: `removeMovieFolder`'s slice wrote a
+  `containedFolder` helper that `removeFolder`, written a fortnight earlier for
+  the form's rollback, spells inline one screen above it — and nobody was
+  holding the whole file in their head to notice. That, two radius literals,
+  and tests grouped by the slice that wrote them are the whole of 121.
+
+### The prototype was amended before a line of code
+
+The prototype's only Delete was a red row wired to `onToggleEditMenu` — it
+closed the menu and did nothing — and no confirmation existed anywhere in
+`docs/handoff/`. Log 04 had refused to ship that row twice. CLAUDE.md's rule
+for the case is "amend the prototype first," and #115 did exactly that, as one
+`docs:` commit: `mol.Modal` lifted verbatim from `feat.ExportModal`'s idle
+shell, `feat.DeleteMovieDialog` composed on top of it, `danger` added to
+`prim.Button`'s enum (its `renderVals` had implemented it all along), and the
+row rewired to open the dialog. Nothing in the dialog was designed from
+scratch; it is three pieces the prototype already had and had never put
+together. The build then translated the amended prototype like any other.
+
+### What shipped
+
+- **`DELETE /api/movies/:id`** → `204`, or the JSON `404` every per-movie
+  route sends. **Row first, then bytes, best-effort**: `storage.deleteMovie`
+  (the cascade takes genre tags and subtitles), then `media.removeMovieFolder`,
+  which swallows its own failure. A locked video — Windows will not unlink a
+  file the stream route still has open — leaves a **Stranded folder** and a
+  `204`, never a ghost row and a `500`.
+- **`Media.removeMovieFolder(storedPath)`** removes the **Movie folder** the
+  path's first segment _names_, whether or not the file is still in it.
+  Neither existing removal fitted: `openFolder` answers nothing for a missing
+  file (right for an edit, wrong here — a hand-deleted video would strand its
+  poster and subtitles forever), and `removeFolder` throws (right for a
+  rollback, wrong after a commit). Three removals, three stated contracts.
+- **`components/Modal`**, the molecule the 🔜 Export dialog will draw on: a
+  portal to the document body, mounting only when open, and the whole
+  dismissal contract in one place — ✕, Escape and the scrim all call
+  `onClose`; focus lands on the card itself so a reflexive Enter does nothing;
+  Tab wraps at both ends; focus returns to whatever had it on close. Bespoke
+  rather than `<dialog>`, because jsdom cannot drive `showModal()`.
+- **`MenuItem.danger`**, the **Danger row** — danger ink, a `.12` tint on
+  hover, and the only destructive row in the app. A statement about the row's
+  consequence, not a mode: it closes the menu and reports like any other.
+- **`DeleteMovieDialog`** with the fixed copy, `useDeleteMovie` going back
+  through `useGoBack` on resolution, and `api.deleteMovie` beside `saveRating`
+  — one caller, so CLAUDE.md's `api/` rule keeps it with the feature.
+  **Gone is gone**: a `204` and a `404` both resolve.
+- **`EditMenu`** gained `title` and owns the dialog's open state, because it
+  owns the row.
+
+### Decisions the build took inside the log
+
+- **Focus is captured as the card opens, not as it closes.** The ✕ that was
+  pressed is gone with the card by the time the close effect runs, and the
+  active element by then is the body — so `Modal` records `document.activeElement`
+  in the open effect and restores it from the cleanup.
+- **Shift+Tab from the card itself wraps to the last focusable.** The card
+  holds `tabIndex=-1` and is where focus starts; backwards from there is off
+  the top, and the ring closes on its last control.
+- **A press inside the card is not a way out.** The scrim's click handler
+  compares `target` to `currentTarget`, so a click that bubbles up from a
+  button in the card does nothing.
+- **The confirm swallows its own rejection.** `useDeleteMovie.deleteMovie`
+  rejects on a refused delete; the dialog catches it at the button and does
+  nothing else, on the form's precedent: the prototype designs no error state
+  on this screen. Dismissing mid-flight does not cancel the request, and a
+  success after a dismissal still goes back.
+- **`noContentResponse`** joined `fakeResponse`'s doubles for the `204` — a
+  real `Response` would throw on reading its empty body, which is why
+  `deleteMovie` never reads one.
+
+### Deliberately not built
+
+- **Undo, a snackbar, a trash.** Not designed; the snackbar system is its own
+  🔜 feature. "This can’t be undone" is true and stays true.
+- **Delete from a card, the browse grid, the player, or a keyboard shortcut.**
+  The prototype's only Delete is the detail page's ⋯ menu.
+- **A red icon tile.** It would need `dangerSoft` and `dangerLine` tokens the
+  prototype does not have; the tile stays the Modal pattern's brand tile.
+- **Scroll-locking behind the scrim.** Not in the prototype.
+- **Touching the Library root.** Never; the dialog says so.
+
+### Known and deliberately not fixed
+
+- **A Stranded folder is invisible.** Nothing surfaces it; the 🔜 Storage
+  section's "space used" is the first place it could. Named in the log's
+  trade-offs.
+- **The deleted movie's page stays in the forward stack.** Stepping onto it
+  lands on `MovieDetail`'s existing `not-found` state, which was written for
+  precisely this. Asserted in `MovieDetail.test.tsx`.
+- **`Menu` and `Modal` both listen for Escape on the document.** About ten
+  lines of overlap; the two contracts differ where it matters (trigger vs.
+  previous element, pointerdown-outside vs. scrim-click). Considered for 121
+  and left, with the reasoning written there so it is not re-derived.
+- **The dev seed is still here.** Delete can now empty a library by hand, but
+  the seed's stated expiry is unchanged: the commit that ships **bulk import**
+  deletes it.
+
+### Found while writing this, not fixed here
+
+- **Neither folder map knew `features/movie-detail/` existed.** The feature
+  has been in the tree since #25, eight initiatives ago, and neither
+  CLAUDE.md's map nor README's listed it. Both now do — CLAUDE.md with every
+  unit in the folder, the way it lists the player's, because a map that named
+  `DeleteMovieDialog` under a folder it had never mentioned would have been
+  stranger than the omission; README with the units this initiative added.
+- **`routes/index.ts`'s `PATCH` comment still says "this slice is demoable
+  on."** Movie-form narration that round two missed because it was scoped to
+  `src/`. One line; listed on 121 as out of scope.
+- **`FilterDropdown` writes `999px` where `radius.pill` exists.** Same rule as
+  121's two radii, different initiative's file. Listed on 121, not taken.
+
+---
+
 ## 2026-09-11 — Movie form refactor, round two (issue #113)
 
 Twenty-two commits against `docs/refactor-plans/11b-movie-form-refactor.md` —

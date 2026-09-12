@@ -107,7 +107,7 @@ familyflix/
 │ └── src/
 │ ├── routes/ ← HTTP layer only: parse request, call a domain module, return response
 │ ├── library/ ← movie CRUD, SQLite queries, watch-state + resume-position logic
-│ ├── media/ ← folder scanning, file copy into managed storage, subtitle detection
+│ ├── media/ ← folder scanning, file copy into managed storage, subtitle detection, the Movie folder’s removal after a Delete
 │ ├── import-export/ ← Excel/CSV parsing, row-to-folder matching, CSV export
 │ ├── playback/ ← the Playback component, the path choice, streaming, subtitle parsing
 │ │ ├── ffmpegBinary/ ← resolve the component: env var, then PATH, then absent
@@ -140,6 +140,7 @@ familyflix/
 │ │ └── Button.styles.ts
 │ ├── components/ ← composed primitives, no business logic (PosterCard, Modal, ProgressBar)
 │ │ ├── index.ts ← barrel: re-exports every component (only barrel at this rung)
+│ │ ├── Modal/ ← the scrimmed card every dialog is drawn on: portal, Escape/scrim/✕, focus in, Tab held, focus back
 │ │ └── PosterCard/
 │ │ ├── PosterCard.tsx
 │ │ ├── PosterCard.test.tsx
@@ -147,6 +148,16 @@ familyflix/
 │ ├── features/ ← business logic + UI co-located per domain
 │ │ ├── library/ ← genre rows, browse grid
 │ │ ├── search/ ← search-as-you-type, filters
+│ │ ├── movie-detail/ ← the movie page: art, credits, the signals, the ⋯ menu and what it opens
+│ │ │ ├── MovieDetail/ ← the organism: owns the hooks, renders the rest
+│ │ │ ├── EditMenu/ ← the ⋯ menu: Edit details, and the Danger row that opens the Delete dialog
+│ │ │ ├── DeleteMovieDialog/ ← the Delete dialog: Modal + the fixed copy + Delete movie / Cancel
+│ │ │ ├── useDeleteMovie/ ← { deleting, deleteMovie }; back through useGoBack once the movie is gone
+│ │ │ ├── useMovieDetail/ ← fetch one movie, or its not-found state
+│ │ │ ├── useOptimisticEdit/ ← a signal flipped on screen first, put back if the save refuses
+│ │ │ ├── CreditsRow/ MetaLine/ LoadingDetail/ ← the page’s own molecules
+│ │ │ ├── detailView/ ← pure: a Movie → what the page shows
+│ │ │ └── api/ ← saveRating, deleteMovie (one caller each, so they stay here)
 │ │ ├── player/ ← built-in video player, subtitle handling, resume position
 │ │ │ ├── Player/ ← the organism: owns the hooks, renders the rest
 │ │ │ ├── PlayerControls/ ← the top and bottom chrome bars
@@ -610,7 +621,7 @@ same layout, spacing, states, copy, and interaction.
 
 - ✅ **Add a movie** — manual file picker (video, poster, multiple subtitles with language).
 - ✅ **Edit a movie** — amend metadata and files; a file the library already holds travels as its path, only a freshly picked one as bytes.
-- 🔜 **Delete a movie** — remove a title. `deleteMovie` is built and tested; nothing reaches it yet.
+- 🔜 **Delete a movie** — the ⋯ menu’s Danger row, the Delete dialog, `DELETE /api/movies/:id`, then the Movie folder under best-effort cleanup. Built (issues 115–119); ticks when its refactor (121) closes.
 - 🔜 **Bulk import** — spreadsheet → folder matching → review of flagged rows.
 - 🔜 **Import progress console** — scan + import phases, live activity log, cancel (Windows-installer style).
 - 🔜 **Export** — write the library out to CSV / Excel.

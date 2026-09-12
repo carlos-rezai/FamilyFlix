@@ -145,7 +145,7 @@ familyflix/
 │   └── src/
 │       ├── routes/         # HTTP layer only — parses requests, calls a domain module
 │       ├── library/        # movie CRUD, SQLite queries, watch-state + resume position
-│       ├── media/          # folder scanning, copying files into managed storage, subtitle detection
+│       ├── media/          # folder scanning, copying files into managed storage, subtitle detection, removing a movie folder after a delete
 │       ├── import-export/  # Excel/CSV parsing, row-to-folder matching, CSV export
 │       ├── playback/       # the Playback component, the path choice, streaming, subtitle parsing
 │       ├── db/             # SQLite connection + schema/migrations
@@ -157,9 +157,15 @@ familyflix/
 │   ├── tokens/         # Colors, spacing, typography, breakpoints
 │   ├── primitives/     # Atomic UI elements (Button, Input, Text) — each with .tsx, .test.tsx, .styles.ts
 │   ├── components/     # Composed UI blocks (PosterCard, Modal, ProgressBar) — same three-file shape
+│   │   └── Modal/          # the scrimmed card every dialog is drawn on; owns its own dismissal and focus
 │   ├── features/       # Domain UI + logic co-located
 │   │   ├── library/        # browse grid, genre rows
 │   │   ├── search/          # search-as-you-type, filters
+│   │   ├── movie-detail/    # the movie page, its ⋯ menu, and the Delete dialog the menu opens
+│   │   │   ├── EditMenu/          # Edit details, and the red Delete row
+│   │   │   ├── DeleteMovieDialog/ # Modal + the fixed copy + Delete movie / Cancel
+│   │   │   ├── useDeleteMovie/    # sends the delete, then steps back through history
+│   │   │   └── api/               # saveRating, deleteMovie — one caller each
 │   │   ├── player/          # built-in video player, subtitles, resume
 │   │   ├── movie-form/      # Add/Edit a movie: one form, manual pickers
 │   │   ├── import-export/   # bulk importer, CSV exporter
@@ -276,7 +282,7 @@ Builds the installer and publishes it to GitHub Releases automatically.
 | Watch tracking (watched / in-progress / resume)     | ✅ Done         |
 | Add Movie — manual file picker                      | ✅ Done         |
 | Edit a movie — amend metadata and files             | ✅ Done         |
-| Delete a movie                                      | 🔜 Planned      |
+| Delete a movie — from the ⋯ menu, with confirmation | 🔜 Planned      |
 | Bulk import (Excel/CSV → library)                   | 🔜 Planned      |
 | Import progress console (scan/import, live log)     | 🔜 Planned      |
 | Export (library → CSV/Excel)                        | 🔜 Planned      |
