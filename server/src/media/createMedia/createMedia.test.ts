@@ -20,7 +20,16 @@
 // that produces a path for them to resolve.
 
 import { describe, expect, it } from 'vitest';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import {
+  closeSync,
+  constants,
+  existsSync,
+  mkdirSync,
+  openSync,
+  readFileSync,
+  unlinkSync,
+  writeFileSync,
+} from 'node:fs';
 import { isAbsolute, join, resolve } from 'node:path';
 import { Readable } from 'node:stream';
 
@@ -636,5 +645,132 @@ describe('createMedia — removeFile', () => {
     media.removeFile(resolve(theirs));
 
     expect(existsSync(theirs)).toBe(true);
+  });
+});
+
+// --- 12 — Delete movie, Phase 3: "the bytes" (issue #117) ---------------------
+
+/**
+ * libuv's `UV_FS_O_EXLOCK`, which Node's `fs.constants` does not spell on
+ * Windows: open with no share mode at all, so that nothing else — the removal
+ * under test included — can touch the file while the handle is held. This is
+ * what a video the stream route still has open looks like to a **Delete**, and
+ * the only way to stage a locked file from inside one process.
+ *
+ * Elsewhere the bit is unknown to `open(2)` and ignored, so the file is simply
+ * open — and the contract asserted through it (never throw) holds either way.
+ */
+const UV_FS_O_EXLOCK = 0x10000000;
+
+/** Hold a file the way the stream route does mid-Delete; answers the release. */
+function holdOpen(file: string): () => void {
+  const fd = openSync(file, constants.O_RDONLY | UV_FS_O_EXLOCK);
+  return () => closeSync(fd);
+}
+
+describe('createMedia — removeMovieFolder', () => {
+  it('removes the folder a stored path names and everything in it', async () => {
+    const { media, root } = sandbox();
+    const folder = media.reserveFolder('The Lantern Keeper', 2019);
+    const video = await media.storeUpload(
+      folder,
+      'lantern.mp4',
+      part('video bytes')
+    );
+    await media.storeUpload(folder, 'poster.jpg', part('poster bytes'));
+    await media.storeUpload(folder, 'lantern.en.srt', part('1\n'));
+
+    media.removeMovieFolder(video);
+
+    // The feature's point: the gigabytes come back. The folder is the first
+    // segment of the stored path, and it goes whole — video, poster,
+    // subtitles, and anything else that found its way in.
+    expect(existsSync(folder)).toBe(false);
+    expect(mediaFilePath(root, video)).toBeNull();
+  });
+
+  it('removes the folder when the named file is already gone but its siblings are not', async () => {
+    const { media } = sandbox();
+    const folder = media.reserveFolder('The Lantern Keeper', 2019);
+    const video = await media.storeUpload(
+      folder,
+      'lantern.mp4',
+      part('video bytes')
+    );
+    await media.storeUpload(folder, 'poster.jpg', part('poster bytes'));
+    unlinkSync(join(folder, 'lantern.mp4'));
+
+    media.removeMovieFolder(video);
+
+    // Why neither existing removal fits: `openFolder` answers nothing for a
+    // missing file, which here would leave the poster and subtitles on disk
+    // forever after a hand-deleted video. The folder is named by the path,
+    // not found through the file.
+    expect(existsSync(folder)).toBe(false);
+  });
+
+  it('leaves another movie’s folder alone and the managed media directory standing', async () => {
+    const { media, root } = sandbox();
+    const keeper = media.reserveFolder('The Lantern Keeper', 2019);
+    const video = await media.storeUpload(
+      keeper,
+      'lantern.mp4',
+      part('video bytes')
+    );
+    const other = media.reserveFolder('Rear Window', 1954);
+    const kept = await media.storeUpload(other, 'rear.mp4', part('rear bytes'));
+
+    media.removeMovieFolder(video);
+
+    expect(mediaFilePath(root, kept)).not.toBeNull();
+    expect(existsSync(other)).toBe(true);
+    expect(existsSync(root)).toBe(true);
+  });
+
+  it('says nothing about a folder that is already gone', () => {
+    const { media } = sandbox();
+
+    // Deleted by hand, or by a Delete that ran before this one — either way
+    // the row is what the route is answering for, and there is nothing here
+    // to fail over.
+    expect(() =>
+      media.removeMovieFolder('never-reserved-2019/lantern.mp4')
+    ).not.toThrow();
+  });
+
+  it('refuses a path that escapes the root — no files touched', () => {
+    const { media, outside } = sandbox();
+    const theirs = join(outside, 'family-photos.jpg');
+    writeFileSync(theirs, 'not ours');
+
+    media.removeMovieFolder('../elsewhere/family-photos.jpg');
+    media.removeMovieFolder(resolve(theirs));
+
+    // `mediaFilePath`'s rule, on the one removal that takes a whole directory:
+    // the **Library root** is never ours to remove from, and a stored path
+    // that names it is a path that names nothing here.
+    expect(existsSync(theirs)).toBe(true);
+    expect(existsSync(outside)).toBe(true);
+  });
+
+  it('swallows a removal failure rather than throwing', async () => {
+    const { media } = sandbox();
+    const folder = media.reserveFolder('The Lantern Keeper', 2019);
+    const video = await media.storeUpload(
+      folder,
+      'lantern.mp4',
+      part('video bytes')
+    );
+    await media.storeUpload(folder, 'poster.jpg', part('poster bytes'));
+
+    const release = holdOpen(join(folder, 'lantern.mp4'));
+    try {
+      // **Best-effort cleanup**: the row has already committed by the time
+      // this runs, and a locked video — the stream route still on it — leaves
+      // the Delete successful with a **Stranded folder**, not failed.
+      expect(() => media.removeMovieFolder(video)).not.toThrow();
+    } finally {
+      release();
+    }
   });
 });
