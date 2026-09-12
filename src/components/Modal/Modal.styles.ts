@@ -28,8 +28,13 @@ export const Scrim = styled.div`
   padding: 24px;
 `;
 
-/** The card itself — the prototype's 520px sheet on `surface-2`. */
+/**
+ * The card itself — the prototype's 520px sheet on `surface-2`. It takes
+ * focus as it opens (`tabIndex=-1`) and draws no ring for it: the prototype
+ * shows none, and the card is where focus starts, not a control.
+ */
 export const Card = styled.div`
+  outline: none;
   width: 520px;
   max-width: 100%;
   background: ${({ theme }) => theme.colors.surface2};
