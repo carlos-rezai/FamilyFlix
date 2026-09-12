@@ -131,6 +131,39 @@ describe('EditMenu — the Delete dialog', () => {
     expect(dialog()).toBeNull();
   });
 
+  it('leaves focus on the ⋯ trigger after Cancel', () => {
+    renderEditMenu();
+    const control = screen.getByRole('button', { name: 'More options' });
+    control.focus();
+    fireEvent.click(control);
+    selectDelete();
+
+    // Two dismissal contracts, and neither leaks: the menu has already given
+    // focus back to ⋯ before the dialog takes it, so the dialog's own return
+    // lands on ⋯ too — the Maintainer is back exactly where they started.
+    fireEvent.click(
+      within(dialog() as HTMLElement).getByRole('button', { name: 'Cancel' })
+    );
+
+    expect(dialog()).toBeNull();
+    expect(document.activeElement).toBe(control);
+  });
+
+  it('leaves focus on the ⋯ trigger after Escape', () => {
+    renderEditMenu();
+    const control = screen.getByRole('button', { name: 'More options' });
+    control.focus();
+    fireEvent.click(control);
+    selectDelete();
+
+    fireEvent.keyDown(document.activeElement ?? document.body, {
+      key: 'Escape',
+    });
+
+    expect(dialog()).toBeNull();
+    expect(document.activeElement).toBe(control);
+  });
+
   it('can open the dialog again after it was dismissed', () => {
     renderEditMenu();
     openMenu();
