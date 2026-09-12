@@ -866,8 +866,11 @@ export function createApiRouter(
   // a delete reconciles on absence. The lookup and the JSON 404 are
   // `movieOr404`'s, shared with every per-movie route, so a second delete of
   // the same id answers exactly what a stepped-forward detail page reads. The
-  // row goes here and the cascade takes its genre tags and subtitles with it;
-  // the bytes under the movie folder are Phase 3's.
+  // row goes first and the cascade takes its genre tags and subtitles with it;
+  // then the **Movie folder**, through the one `Media` method that removes a
+  // whole one. **Row first, then bytes, best-effort**: `removeMovieFolder`
+  // swallows its own failure, so a video the stream route still has open
+  // leaves a stranded folder and this `204`, never a ghost row and a `500`.
   router.delete('/movies/:id', (req: Request<{ id: string }>, res) => {
     const movie = movieOr404(storage, req.params.id, res);
     if (!movie) {
@@ -875,6 +878,7 @@ export function createApiRouter(
     }
 
     storage.deleteMovie(movie.id);
+    media.removeMovieFolder(movie.videoPath);
     res.status(204).end();
   });
 

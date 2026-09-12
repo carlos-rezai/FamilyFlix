@@ -5,9 +5,18 @@ import {
   realpathSync,
   renameSync,
   rmSync,
+  statSync,
   unlinkSync,
 } from 'node:fs';
-import { basename, dirname, join, relative, resolve, sep } from 'node:path';
+import {
+  basename,
+  dirname,
+  isAbsolute,
+  join,
+  relative,
+  resolve,
+  sep,
+} from 'node:path';
 import { pipeline } from 'node:stream/promises';
 import type { Readable } from 'node:stream';
 
@@ -117,6 +126,21 @@ export interface Media {
    * succeeded is the wrong trade against one stranded file.
    */
   removeFile(storedPath: string): void;
+
+  /**
+   * Remove the whole **Movie folder** a **Stored path** lives in — video,
+   * poster, subtitles, and anything else that found its way in — whether or
+   * not the named file is still there.
+   *
+   * The folder is the first segment of the path, named rather than found
+   * through the file: {@link openFolder} answers nothing for a missing file,
+   * which would leave a hand-deleted video's siblings on disk forever. What a
+   * **Delete** runs *after* the row has gone, so like {@link removeFile} it is
+   * **best-effort** and swallows its own failure — a locked video leaves a
+   * **Stranded folder**, not a failed delete. A path that escapes the managed
+   * media directory, or names a folder already gone, is nothing to do.
+   */
+  removeMovieFolder(storedPath: string): void;
 }
 
 /**
@@ -159,6 +183,33 @@ export function createMedia(mediaPath: string): Media {
     } catch {
       return null;
     }
+  };
+
+  /**
+   * A directory strictly inside the media root, as the filesystem spells it —
+   * or `null` for one that is not there, is the root itself, or escapes it.
+   * `mediaFilePath`'s rule, asked of a folder rather than a file.
+   */
+  const containedFolder = (candidate: string): string | null => {
+    const root = realRoot();
+    if (root === null) {
+      return null;
+    }
+
+    let target: string;
+    let isDirectory: boolean;
+    try {
+      target = realpathSync(resolve(root, candidate));
+      isDirectory = statSync(target).isDirectory();
+    } catch {
+      // Not there — or gone between the two calls, which is the same answer.
+      return null;
+    }
+
+    if (target === root || !target.startsWith(root + sep)) {
+      return null;
+    }
+    return isDirectory ? target : null;
   };
 
   return {
@@ -245,6 +296,27 @@ export function createMedia(mediaPath: string): Media {
       } catch {
         // A file that will not delete — locked, or gone between the check and
         // the unlink. The edit that authorised this has already committed.
+      }
+    },
+
+    removeMovieFolder: (storedPath) => {
+      // The folder is the first segment of every stored path under it. An
+      // absolute path is refused before anything is resolved, as
+      // `mediaFilePath` refuses it; a relative one that escapes the root, or
+      // names the root itself, is refused on the resolved path.
+      if (isAbsolute(storedPath)) {
+        return;
+      }
+      const folder = containedFolder(storedPath.split('/')[0]);
+      if (folder === null) {
+        return;
+      }
+
+      try {
+        rmSync(folder, { recursive: true, force: true });
+      } catch {
+        // A folder that will not go — a video the stream route still has open.
+        // The row is already gone, and a stranded folder beats a ghost row.
       }
     },
   };
