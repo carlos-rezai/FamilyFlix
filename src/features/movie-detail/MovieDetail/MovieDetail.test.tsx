@@ -8,7 +8,13 @@ import {
   act,
 } from '@testing-library/react';
 import { ThemeProvider } from 'styled-components';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import {
+  MemoryRouter,
+  Route,
+  Routes,
+  useNavigate,
+  type MemoryRouterProps,
+} from 'react-router-dom';
 
 import { MovieDetail } from './MovieDetail';
 import { theme } from '@/styles/theme';
@@ -16,6 +22,7 @@ import type { Movie } from '@/types';
 import { LocationProbe } from '@/test-support/LocationProbe/LocationProbe';
 import { makeMovie } from '@/test-support/makeMovie/makeMovie';
 import {
+  noContentResponse,
   notFoundResponse,
   okResponse,
 } from '@/test-support/fakeResponse/fakeResponse';
@@ -159,9 +166,28 @@ function currentSearch() {
   return screen.getByTestId('search').textContent;
 }
 
-function renderDetail(id = 'm1') {
+/**
+ * The one control `LocationProbe` does not offer: a step *forward* through
+ * history, for the test that walks back onto a page whose movie is gone.
+ */
+function ForwardProbe() {
+  const navigate = useNavigate();
+  return (
+    <button type="button" onClick={() => navigate(1)}>
+      Forward
+    </button>
+  );
+}
+
+function renderDetail(
+  id = 'm1',
+  initialEntries: MemoryRouterProps['initialEntries'] = [`/movie/${id}`]
+) {
   return render(
-    <MemoryRouter initialEntries={[`/movie/${id}`]}>
+    <MemoryRouter
+      initialEntries={initialEntries}
+      initialIndex={initialEntries.length - 1}
+    >
       <ThemeProvider theme={theme}>
         <Routes>
           <Route path="/" element={<h1>Your library</h1>} />
@@ -173,6 +199,7 @@ function renderDetail(id = 'm1') {
         </Routes>
       </ThemeProvider>
       <LocationProbe />
+      <ForwardProbe />
     </MemoryRouter>
   );
 }
@@ -932,7 +959,7 @@ describe('MovieDetail — the edit menu', () => {
     ).toBeDefined();
   });
 
-  it('holds only Edit details — no Delete row, disabled or otherwise', async () => {
+  it('holds Edit details and, after it, Delete movie', async () => {
     serveMovie();
 
     renderDetail();
@@ -942,7 +969,9 @@ describe('MovieDetail — the edit menu', () => {
     expect(
       screen.getByRole('menuitem', { name: /edit details/i })
     ).toBeDefined();
-    expect(screen.queryByText(/delete/i)).toBeNull();
+    expect(
+      screen.getByRole('menuitem', { name: 'Delete movie' })
+    ).toBeDefined();
   });
 
   it('sends Edit details to the add screen carrying this movie', async () => {
@@ -1032,6 +1061,106 @@ describe('MovieDetail — the edit menu', () => {
     play.focus();
 
     expect(document.activeElement).toBe(play);
+  });
+});
+
+/**
+ * The page's part in a Delete is small and exact: it hands the menu the title,
+ * so the dialog names the movie on the page. Everything else — the row, the
+ * dialog, the request, the Back rule — is tested where it lives. The last test
+ * is the one thing only this screen can show: what is on it once the movie is
+ * gone and the maintainer steps forward onto its page again.
+ */
+describe('MovieDetail — deleting the movie', () => {
+  function moreButton() {
+    return screen.getByRole('button', { name: /more options/i });
+  }
+
+  function openMenu() {
+    const more = moreButton();
+    more.focus();
+    fireEvent.click(more);
+    return more;
+  }
+
+  /** The ⋯ menu's danger row, then the dialog it opens. */
+  async function openDeleteDialog() {
+    await findTitle('Northwind');
+    openMenu();
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Delete movie' }));
+    return screen.getByRole('dialog');
+  }
+
+  /**
+   * Serve the movie until the delete lands, then answer its detail route with
+   * the 404 the server sends for a movie it no longer has.
+   */
+  function serveMovieUntilDeleted() {
+    let deleted = false;
+    fetchMock.mockImplementation((input, init) => {
+      const url = String(input);
+      if ((init?.method ?? 'GET').toUpperCase() === 'DELETE') {
+        deleted = true;
+        return Promise.resolve(noContentResponse());
+      }
+      if (url.includes('/api/movies/')) {
+        return Promise.resolve(
+          deleted
+            ? notFoundResponse('Unknown movie: m1')
+            : okResponse(makeNorthwind())
+        );
+      }
+      return Promise.reject(new Error(`Unexpected request: ${url}`));
+    });
+  }
+
+  it('opens a dialog that names the movie on the page', async () => {
+    serveMovie();
+    renderDetail();
+
+    const dialog = await openDeleteDialog();
+
+    expect(
+      screen.getByRole('dialog', { name: 'Delete “Northwind”?' })
+    ).toBeTruthy();
+    expect(
+      within(dialog).getByRole('button', { name: 'Delete movie' })
+    ).toBeTruthy();
+  });
+
+  it('names the movie that is actually on the page, not a specimen', async () => {
+    serveMovie({ title: 'The Quiet Harbor' });
+    renderDetail();
+    await findTitle('The Quiet Harbor');
+    openMenu();
+
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Delete movie' }));
+
+    expect(
+      screen.getByRole('dialog', { name: 'Delete “The Quiet Harbor”?' })
+    ).toBeTruthy();
+  });
+
+  it('shows the not-found copy when stepping forward onto the deleted page', async () => {
+    serveMovieUntilDeleted();
+    renderDetail('m1', ['/', '/movie/m1']);
+    const dialog = await openDeleteDialog();
+
+    fireEvent.click(
+      within(dialog).getByRole('button', { name: 'Delete movie' })
+    );
+    await waitFor(() => expect(currentPath()).toBe('/'));
+    expect(screen.getByRole('heading', { name: 'Your library' })).toBeTruthy();
+
+    // The deleted movie's entry is still in the forward stack. Stepping onto
+    // it lands on the detail page's own `not-found` state — written for
+    // precisely this — rather than a Retry that could never work.
+    fireEvent.click(screen.getByRole('button', { name: 'Forward' }));
+
+    expect(currentPath()).toBe('/movie/m1');
+    expect(await screen.findByText('That movie isn’t here')).toBeTruthy();
+    expect(screen.getByRole('link', { name: /back to library/i })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /retry/i })).toBeNull();
   });
 });
 

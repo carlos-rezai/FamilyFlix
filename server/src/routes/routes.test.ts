@@ -6247,3 +6247,111 @@ describe('PATCH /api/movies/:id — the runtime of a film that changed', () => {
     expect(amended.runtimeMinutes).toBeNull();
   });
 });
+
+// --- 12 — Delete movie, Phase 2: "the tracer bullet" (issue #116) -------------
+
+/** DELETE one movie, exactly as the Delete dialog's confirm does. */
+function deleteMovie(baseUrl: string, id: string): Promise<Response> {
+  return fetch(`${baseUrl}/api/movies/${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+  });
+}
+
+/**
+ * The wire contract is `204` with nothing in it, and the JSON `404` every
+ * per-movie route already sends for an id it cannot find. Not `200 {}`: the
+ * single-signal routes echo because a client reconciles on the echo, and a
+ * delete reconciles on absence — so what is asserted after the status is what
+ * the library no longer lists, not what the response said.
+ *
+ * The bytes under the movie folder are Phase 3's; nothing here looks at the
+ * sandbox.
+ */
+describe('DELETE /api/movies/:id', () => {
+  it('answers 204 with an empty body', async () => {
+    const { storage, baseUrl } = freshApi();
+    const stored = addFullMovie(storage);
+
+    const response = await deleteMovie(baseUrl, stored.id);
+
+    expect(response.status).toBe(204);
+    expect(await response.text()).toBe('');
+  });
+
+  it('leaves the movie absent from GET /api/movies, and its neighbours in place', async () => {
+    const { storage, baseUrl } = freshApi();
+    addBrowsableLibrary(storage);
+    const stored = addFullMovie(storage);
+
+    await deleteMovie(baseUrl, stored.id);
+
+    const listed = (await (
+      await moviesResponse(baseUrl, {})
+    ).json()) as Movie[];
+    expect(listed.map((movie) => movie.title)).not.toContain(
+      'The Quiet Harbor'
+    );
+    expect(listed.map((movie) => movie.title)).toEqual(
+      expect.arrayContaining(['Comic Caper', 'Weepie', 'Chiller'])
+    );
+  });
+
+  it('takes the movie out of its genre rows — the cascade, seen from the shelf', async () => {
+    const { storage, baseUrl } = freshApi();
+    addBrowsableLibrary(storage);
+    const stored = addFullMovie(storage);
+    expect((await getGenrePayload(baseUrl, 'Drama')).total).toBe(2);
+
+    await deleteMovie(baseUrl, stored.id);
+
+    // The row went, and the `movie_genres` cascade took its tags with it: the
+    // Drama shelf is down to Weepie, and Romance — which only this movie was
+    // in — has nothing left to show.
+    const drama = await getGenrePayload(baseUrl, 'Drama');
+    expect(drama.total).toBe(1);
+    expect(drama.movies.map((movie) => movie.title)).toEqual(['Weepie']);
+    const home = await getHomePayload(baseUrl);
+    expect(home.rows.map((row) => row.genre)).not.toContain('Romance');
+    expect(
+      home.rows.flatMap((row) => row.movies.map((movie) => movie.title))
+    ).not.toContain('The Quiet Harbor');
+  });
+
+  it('makes the movie’s own detail route answer 404 afterwards', async () => {
+    const { storage, baseUrl } = freshApi();
+    const stored = addFullMovie(storage);
+
+    await deleteMovie(baseUrl, stored.id);
+
+    // Stepping forward onto the deleted page is what reaches this: the detail
+    // page's `not-found` state is fed by exactly this answer.
+    const response = await fetch(`${baseUrl}/api/movies/${stored.id}`);
+    expect(response.status).toBe(404);
+  });
+
+  it('answers a JSON 404 carrying the id it could not find', async () => {
+    const { baseUrl } = freshApi();
+
+    const response = await deleteMovie(baseUrl, 'no-such-movie');
+
+    // Through the same `movieOr404` every per-movie route shares — the client
+    // reads this body to tell "gone" from "the request went wrong".
+    expect(response.status).toBe(404);
+    expect(await response.json()).toEqual({
+      error: 'Unknown movie: no-such-movie',
+    });
+  });
+
+  it('answers 404 to a second delete of the same id', async () => {
+    const { storage, baseUrl } = freshApi();
+    const stored = addFullMovie(storage);
+    expect((await deleteMovie(baseUrl, stored.id)).status).toBe(204);
+
+    const again = await deleteMovie(baseUrl, stored.id);
+
+    expect(again.status).toBe(404);
+    expect(await again.json()).toEqual({
+      error: `Unknown movie: ${stored.id}`,
+    });
+  });
+});

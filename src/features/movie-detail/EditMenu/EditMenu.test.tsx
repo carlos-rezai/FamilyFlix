@@ -1,17 +1,19 @@
 import { describe, it, expect } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { ThemeProvider } from 'styled-components';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 
 import { EditMenu } from './EditMenu';
 import { theme } from '@/styles/theme';
+import { comesBefore } from '@/test-support/comesBefore/comesBefore';
 
 /**
  * Opening, closing and focus return belong to `mol.Menu` and are tested there.
  * What is left for this file is the part that is this menu's own: which control
- * opens it, what it offers, and where that offer goes.
+ * opens it, what it offers, where that offer goes — and, since it owns the
+ * **Danger row**, whether the **Delete dialog** it opens is open.
  */
-function renderEditMenu(movieId = 'm1') {
+function renderEditMenu(movieId = 'm1', title = 'Northwind') {
   function Probe() {
     const location = useLocation();
     return (
@@ -22,7 +24,7 @@ function renderEditMenu(movieId = 'm1') {
   return render(
     <ThemeProvider theme={theme}>
       <MemoryRouter initialEntries={['/movie/m1']}>
-        <EditMenu movieId={movieId} />
+        <EditMenu movieId={movieId} title={title} />
         <Probe />
       </MemoryRouter>
     </ThemeProvider>
@@ -39,13 +41,18 @@ describe('EditMenu', () => {
     expect(screen.getByRole('button', { name: 'More options' })).toBeTruthy();
   });
 
-  it('holds only Edit details — no Delete row, disabled or otherwise', () => {
+  it('draws Delete movie after Edit details, as the danger row', () => {
     renderEditMenu();
 
     openMenu();
 
-    expect(screen.getByRole('menuitem', { name: 'Edit details' })).toBeTruthy();
-    expect(screen.queryByText(/delete/i)).toBeNull();
+    const edit = screen.getByRole('menuitem', { name: 'Edit details' });
+    const remove = screen.getByRole('menuitem', { name: 'Delete movie' });
+    expect(comesBefore(edit, remove)).toBe(true);
+    // The glyph is drawn and kept out of the name; the ink is the `danger`
+    // token, #c97a6a as jsdom reports it.
+    expect(remove.textContent).toContain('🗑');
+    expect(getComputedStyle(remove).color).toBe('rgb(201, 122, 106)');
   });
 
   it('sends Edit details to the add screen carrying this movie', () => {
@@ -57,5 +64,87 @@ describe('EditMenu', () => {
     expect(screen.getByTestId('destination').textContent).toBe(
       '/add?movie=northwind-1994'
     );
+  });
+});
+
+describe('EditMenu — the Delete dialog', () => {
+  const dialog = () => screen.queryByRole('dialog');
+  const selectDelete = () =>
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Delete movie' }));
+
+  it('keeps the dialog shut until the row is used', () => {
+    renderEditMenu();
+
+    openMenu();
+
+    expect(dialog()).toBeNull();
+  });
+
+  it('closes the menu and opens the dialog, titled with this movie’s name', () => {
+    renderEditMenu('m1', 'Northwind');
+    openMenu();
+
+    selectDelete();
+
+    expect(screen.queryByRole('menuitem', { name: 'Delete movie' })).toBeNull();
+    expect(
+      screen.getByRole('dialog', { name: 'Delete “Northwind”?' })
+    ).toBeTruthy();
+  });
+
+  it('titles the dialog with whichever movie the menu is for', () => {
+    renderEditMenu('harbor-2016', 'The Quiet Harbor');
+    openMenu();
+
+    selectDelete();
+
+    expect(
+      screen.getByRole('dialog', { name: 'Delete “The Quiet Harbor”?' })
+    ).toBeTruthy();
+  });
+
+  it('closes the dialog from Cancel', () => {
+    renderEditMenu();
+    openMenu();
+    selectDelete();
+    const open = dialog();
+    expect(open).not.toBeNull();
+
+    fireEvent.click(
+      within(open as HTMLElement).getByRole('button', { name: 'Cancel' })
+    );
+
+    expect(dialog()).toBeNull();
+  });
+
+  it('closes the dialog from the ✕', () => {
+    renderEditMenu();
+    openMenu();
+    selectDelete();
+    const open = dialog();
+    expect(open).not.toBeNull();
+
+    fireEvent.click(
+      within(open as HTMLElement).getByRole('button', { name: 'Close' })
+    );
+
+    expect(dialog()).toBeNull();
+  });
+
+  it('can open the dialog again after it was dismissed', () => {
+    renderEditMenu();
+    openMenu();
+    selectDelete();
+    fireEvent.click(
+      within(dialog() as HTMLElement).getByRole('button', { name: 'Cancel' })
+    );
+    expect(dialog()).toBeNull();
+
+    openMenu();
+    selectDelete();
+
+    expect(
+      screen.getByRole('dialog', { name: 'Delete “Northwind”?' })
+    ).toBeTruthy();
   });
 });

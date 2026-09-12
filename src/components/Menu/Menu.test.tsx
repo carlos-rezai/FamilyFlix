@@ -250,6 +250,75 @@ describe('MenuItem — the trailing count', () => {
   });
 });
 
+/**
+ * The **Danger row** — `danger` on a `MenuItem`: the danger colour for its ink
+ * and a `.12` tint of it on hover, as the ⋯ menu draws `🗑 Delete movie`. A
+ * statement about the row's consequence, not a mode: it closes the menu and
+ * reports like any other row. The hover tint is a visual fact checked by eye
+ * against `page.MoviePage.dc.html` — jsdom has no `:hover` — so what is
+ * asserted here is the resting ink and everything that must *not* change.
+ */
+function renderDangerMenu(onSelect: () => void = () => undefined) {
+  return render(
+    <ThemeProvider theme={theme}>
+      <Menu trigger={(props) => <button {...props}>Options</button>}>
+        <MenuItem glyph="✎" onSelect={() => undefined}>
+          Edit details
+        </MenuItem>
+        <MenuItem glyph="🗑" danger onSelect={onSelect}>
+          Delete movie
+        </MenuItem>
+      </Menu>
+    </ThemeProvider>
+  );
+}
+
+describe('MenuItem — the danger row', () => {
+  it('draws the row in danger ink', () => {
+    renderDangerMenu();
+    openMenu();
+
+    // #c97a6a, the `danger` token, as jsdom reports it.
+    expect(getComputedStyle(row('Delete movie')).color).toBe(
+      'rgb(201, 122, 106)'
+    );
+  });
+
+  it('leaves a row without danger in the ordinary ink', () => {
+    renderDangerMenu();
+    openMenu();
+
+    // #f3ece0, the `text` token: the flag changes the row it is on and nothing
+    // beside it.
+    expect(getComputedStyle(row('Edit details')).color).toBe(
+      'rgb(243, 236, 224)'
+    );
+  });
+
+  it('keeps the glyph out of the row’s accessible name', () => {
+    renderDangerMenu();
+    openMenu();
+
+    // Announced as "Delete movie", not "🗑 Delete movie" — the exact-name query
+    // is the assertion, and the glyph is still drawn.
+    const danger = row('Delete movie');
+    expect(danger.textContent).toContain('🗑');
+    expect(danger.getAttribute('aria-label')).toBeNull();
+  });
+
+  it('still shuts the menu and reports when a danger row is used', () => {
+    const onSelect = vi.fn();
+    renderDangerMenu(onSelect);
+    const control = openMenu();
+
+    fireEvent.click(row('Delete movie'));
+
+    expect(onSelect).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole('menuitem', { name: 'Delete movie' })).toBeNull();
+    expect(document.activeElement).toBe(control);
+  });
+});
+
 describe('Menu — how tall the panel gets', () => {
   /** The panel is the box the rows sit in — reached through the DOM, not a class. */
   const panelOf = (item: HTMLElement) => item.parentElement as HTMLElement;

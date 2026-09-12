@@ -67,3 +67,17 @@ export function notFoundResponse(error = 'Movie not found'): Response {
     json: () => Promise.resolve({ error }),
   } as unknown as Response;
 }
+
+/**
+ * A 204 — what a route answers when it did the thing and has nothing to say
+ * about it. `DELETE /api/movies/:id` is the first, and the one place a client
+ * must not reach for `json()`: there is no body, and a real `Response` would
+ * throw on the empty one. The rejection here is that same trap, kept.
+ */
+export function noContentResponse(): Response {
+  return {
+    ok: true,
+    status: 204,
+    json: () => Promise.reject(new SyntaxError('Unexpected end of JSON input')),
+  } as unknown as Response;
+}

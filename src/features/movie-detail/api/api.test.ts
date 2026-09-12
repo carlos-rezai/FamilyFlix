@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-import { saveRating } from './api';
+import { deleteMovie, saveRating } from './api';
 import {
+  noContentResponse,
   notFoundResponse,
   okResponse,
   serverErrorResponse,
@@ -143,5 +144,60 @@ describe('saveRating', () => {
     fetchMock.mockRejectedValue(new TypeError('Failed to fetch'));
 
     await expect(saveRating('m1', 8)).rejects.toThrow();
+  });
+});
+
+/**
+ * The delete, beside the rating write because it has one caller — the Delete
+ * dialog — and CLAUDE.md's `api/` rule keeps a single-caller call with its
+ * feature. What it promises is **gone is gone**: a `204` and a `404` both mean
+ * the movie is not in the library, which is the whole goal of a Delete, so
+ * both resolve. Anything else is a failure the dialog has to show.
+ */
+describe('deleteMovie', () => {
+  it('sends DELETE to the movie’s own route', async () => {
+    fetchMock.mockResolvedValue(noContentResponse());
+
+    await deleteMovie('m1');
+
+    const request = onlyRequest();
+    expect(request.url).toBe('/api/movies/m1');
+    expect(request.method?.toUpperCase()).toBe('DELETE');
+    expect(request.body).toBeUndefined();
+  });
+
+  it('encodes an id that would otherwise break the path', async () => {
+    fetchMock.mockResolvedValue(noContentResponse());
+
+    await deleteMovie('a/1 b');
+
+    expect(onlyRequestUrl()).toBe('/api/movies/a%2F1%20b');
+  });
+
+  it('resolves on 204', async () => {
+    fetchMock.mockResolvedValue(noContentResponse());
+
+    await expect(deleteMovie('m1')).resolves.toBeUndefined();
+  });
+
+  it('resolves on 404 too — gone is gone', async () => {
+    // A movie the server no longer has is a movie that is not in the library,
+    // which is what the caller asked for. Rejecting here would leave a stale
+    // page whose only working button re-asks a question already answered.
+    fetchMock.mockResolvedValue(notFoundResponse('Unknown movie: m1'));
+
+    await expect(deleteMovie('m1')).resolves.toBeUndefined();
+  });
+
+  it('rejects on 500', async () => {
+    fetchMock.mockResolvedValue(serverErrorResponse());
+
+    await expect(deleteMovie('m1')).rejects.toThrow(/500/);
+  });
+
+  it('rejects when the request itself cannot be made', async () => {
+    fetchMock.mockRejectedValue(new TypeError('Failed to fetch'));
+
+    await expect(deleteMovie('m1')).rejects.toThrow();
   });
 });
