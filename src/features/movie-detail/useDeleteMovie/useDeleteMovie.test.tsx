@@ -44,11 +44,12 @@ afterEach(() => {
  * screen matters — the hook is the unit, and what it does is move the router.
  */
 function Screen() {
-  const { deleteMovie } = useDeleteMovie('m1');
+  const { deleting, deleteMovie } = useDeleteMovie('m1');
 
   return (
     <>
       <span>Movie screen</span>
+      <span data-testid="deleting">{String(deleting)}</span>
       <button
         type="button"
         // Whether the hook swallows a refusal or rethrows it is the dialog's
@@ -140,5 +141,76 @@ describe('useDeleteMovie', () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(url()).toBe('/movie/m1');
     expect(screen.getByText('Movie screen')).toBeTruthy();
+  });
+});
+
+/**
+ * A delete the test settles by hand, so `deleting` can be read while the
+ * request is still running.
+ */
+function holdDelete() {
+  let settle: (response: Response) => void = () => undefined;
+  let refuse: (reason: Error) => void = () => undefined;
+  fetchMock.mockReturnValue(
+    new Promise<Response>((resolve, reject) => {
+      settle = resolve;
+      refuse = reject;
+    })
+  );
+  return {
+    settle: (response: Response) => settle(response),
+    refuse: (reason: Error) => refuse(reason),
+  };
+}
+
+const deleting = () => screen.getByTestId('deleting').textContent;
+
+describe('useDeleteMovie — deleting', () => {
+  it('is false before anything is asked', () => {
+    renderAt(['/', '/movie/m1'], 1);
+
+    expect(deleting()).toBe('false');
+  });
+
+  it('is true for the life of the request and false once it lands', async () => {
+    const request = holdDelete();
+    renderAt(['/', '/genre/Drama', '/movie/m1'], 2);
+
+    confirm();
+
+    await waitFor(() => expect(deleting()).toBe('true'));
+    // Still running: nothing has moved, and the flag holds.
+    expect(url()).toBe('/movie/m1');
+    expect(deleting()).toBe('true');
+
+    request.settle(noContentResponse());
+
+    await waitFor(() => expect(url()).toBe('/genre/Drama'));
+  });
+
+  it('is false again after a refusal, with the location untouched', async () => {
+    const request = holdDelete();
+    renderAt(['/', '/genre/Drama', '/movie/m1'], 2);
+
+    confirm();
+    await waitFor(() => expect(deleting()).toBe('true'));
+
+    request.settle(serverErrorResponse());
+
+    await waitFor(() => expect(deleting()).toBe('false'));
+    expect(url()).toBe('/movie/m1');
+  });
+
+  it('is false again when the request itself could not be made', async () => {
+    const request = holdDelete();
+    renderAt(['/', '/genre/Drama', '/movie/m1'], 2);
+
+    confirm();
+    await waitFor(() => expect(deleting()).toBe('true'));
+
+    request.refuse(new TypeError('Failed to fetch'));
+
+    await waitFor(() => expect(deleting()).toBe('false'));
+    expect(url()).toBe('/movie/m1');
   });
 });

@@ -18,7 +18,9 @@ import { LocationProbe } from '@/test-support/LocationProbe/LocationProbe';
 import { makeMovie } from '@/test-support/makeMovie/makeMovie';
 import {
   noContentResponse,
+  notFoundResponse,
   okResponse,
+  serverErrorResponse,
 } from '@/test-support/fakeResponse/fakeResponse';
 
 /**
@@ -267,5 +269,256 @@ describe('DeleteMovieDialog — afterwards', () => {
     expect(await screen.findByText('Weepie')).toBeTruthy();
     expect(screen.queryByText('Northwind')).toBeNull();
     expect(screen.queryByRole('dialog')).toBeNull();
+  });
+});
+
+/**
+ * A delete the test settles by hand, so the dialog can be looked at while the
+ * request is still running — the form's "Adding…" precedent.
+ */
+function holdDelete() {
+  let settle: (response: Response) => void = () => undefined;
+  let refuse: (reason: Error) => void = () => undefined;
+  fetchMock.mockReturnValue(
+    new Promise<Response>((resolve, reject) => {
+      settle = resolve;
+      refuse = reject;
+    })
+  );
+  return {
+    settle: (response: Response) => settle(response),
+    refuse: (reason: Error) => refuse(reason),
+  };
+}
+
+const deletingButton = () =>
+  within(dialog()).getByRole('button', { name: 'Deleting…' });
+
+describe('DeleteMovieDialog — in flight', () => {
+  it('reads "Deleting…" and is disabled while the request runs', async () => {
+    holdDelete();
+    renderDialog();
+
+    fireEvent.click(confirmButton());
+
+    // The one place the delete shows its cost. The label says the work
+    // started, and the disabled button is what stops a second request from an
+    // impatient second press.
+    await waitFor(() => expect(deletingButton()).toBeTruthy());
+    expect((deletingButton() as HTMLButtonElement).disabled).toBe(true);
+    expect(
+      within(dialog()).queryByRole('button', { name: 'Delete movie' })
+    ).toBeNull();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps Cancel enabled while the request runs', async () => {
+    holdDelete();
+    renderDialog();
+
+    fireEvent.click(confirmButton());
+
+    await waitFor(() => expect(deletingButton()).toBeTruthy());
+    expect((cancelButton() as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  it('still closes from Cancel while the request runs', async () => {
+    holdDelete();
+    const onClose = vi.fn();
+    renderDialog({ onClose });
+
+    fireEvent.click(confirmButton());
+    await waitFor(() => expect(deletingButton()).toBeTruthy());
+
+    fireEvent.click(cancelButton());
+
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('still closes from the ✕ while the request runs', async () => {
+    holdDelete();
+    const onClose = vi.fn();
+    renderDialog({ onClose });
+
+    fireEvent.click(confirmButton());
+    await waitFor(() => expect(deletingButton()).toBeTruthy());
+
+    fireEvent.click(within(dialog()).getByRole('button', { name: 'Close' }));
+
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('still closes from Escape while the request runs', async () => {
+    holdDelete();
+    const onClose = vi.fn();
+    renderDialog({ onClose });
+
+    fireEvent.click(confirmButton());
+    await waitFor(() => expect(deletingButton()).toBeTruthy());
+
+    fireEvent.keyDown(document.activeElement ?? document.body, {
+      key: 'Escape',
+    });
+
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+});
+
+/**
+ * The dialog as `EditMenu` hosts it: mounted for the life of the page, with
+ * `open` held above it and dropped by Cancel. Dismissing closes the Modal; it
+ * does not unmount the dialog, and so does not cancel the request it started.
+ */
+function Host() {
+  const [open, setOpen] = useState(true);
+
+  return (
+    <>
+      <h1>Northwind</h1>
+      <DeleteMovieDialog
+        movieId="m1"
+        title="Northwind"
+        open={open}
+        onClose={() => setOpen(false)}
+      />
+    </>
+  );
+}
+
+function renderHosted() {
+  return render(
+    <ThemeProvider theme={theme}>
+      <MemoryRouter
+        initialEntries={['/', '/genre/Drama?sort=az', '/movie/m1']}
+        initialIndex={2}
+      >
+        <LocationProbe />
+        <Routes>
+          <Route path="/" element={<h1>Your library</h1>} />
+          <Route path="/genre/:name" element={<h1>Drama</h1>} />
+          <Route path="/movie/:id" element={<Host />} />
+        </Routes>
+      </MemoryRouter>
+    </ThemeProvider>
+  );
+}
+
+const url = () => screen.getByTestId('url').textContent;
+
+describe('DeleteMovieDialog — dismissed mid-flight', () => {
+  it('still goes back when a 204 lands after the dialog was dismissed', async () => {
+    const request = holdDelete();
+    renderHosted();
+
+    fireEvent.click(confirmButton());
+    await waitFor(() => expect(deletingButton()).toBeTruthy());
+
+    // Dismissing closes the dialog and nothing more: the request keeps going,
+    // and once the movie is gone its page has nothing left to show.
+    fireEvent.click(cancelButton());
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(url()).toBe('/movie/m1');
+
+    request.settle(noContentResponse());
+
+    await waitFor(() => expect(url()).toBe('/genre/Drama?sort=az'));
+  });
+
+  it('still goes back when a 404 lands after the dialog was dismissed', async () => {
+    const request = holdDelete();
+    renderHosted();
+
+    fireEvent.click(confirmButton());
+    await waitFor(() => expect(deletingButton()).toBeTruthy());
+
+    fireEvent.click(cancelButton());
+    expect(screen.queryByRole('dialog')).toBeNull();
+
+    request.settle(notFoundResponse('Unknown movie: m1'));
+
+    await waitFor(() => expect(url()).toBe('/genre/Drama?sort=az'));
+  });
+});
+
+describe('DeleteMovieDialog — failure', () => {
+  it('re-enables Delete movie on a 500 and leaves the dialog open, in place', async () => {
+    const request = holdDelete();
+    renderHosted();
+
+    fireEvent.click(confirmButton());
+    await waitFor(() => expect(deletingButton()).toBeTruthy());
+
+    request.settle(serverErrorResponse());
+
+    // The form's precedent: the prototype designs no error state on this
+    // screen, so a refusal puts the button back and changes nothing else — no
+    // navigation, no snackbar, the dialog still up for a second try.
+    await waitFor(() => expect(confirmButton()).toBeTruthy());
+    expect((confirmButton() as HTMLButtonElement).disabled).toBe(false);
+    expect(screen.getByRole('dialog')).toBeTruthy();
+    expect(url()).toBe('/movie/m1');
+    expect(screen.queryByText(/error|failed|try again/i)).toBeNull();
+  });
+
+  it('re-enables Delete movie when there is no server, and stays put', async () => {
+    const request = holdDelete();
+    renderHosted();
+
+    fireEvent.click(confirmButton());
+    await waitFor(() => expect(deletingButton()).toBeTruthy());
+
+    request.refuse(new TypeError('Failed to fetch'));
+
+    await waitFor(() => expect(confirmButton()).toBeTruthy());
+    expect((confirmButton() as HTMLButtonElement).disabled).toBe(false);
+    expect(screen.getByRole('dialog')).toBeTruthy();
+    expect(url()).toBe('/movie/m1');
+  });
+
+  it('sends the delete again from the re-enabled button', async () => {
+    const request = holdDelete();
+    renderHosted();
+
+    fireEvent.click(confirmButton());
+    await waitFor(() => expect(deletingButton()).toBeTruthy());
+    request.settle(serverErrorResponse());
+    await waitFor(() => expect(confirmButton()).toBeTruthy());
+
+    fetchMock.mockResolvedValue(noContentResponse());
+    fireEvent.click(confirmButton());
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(url()).toBe('/genre/Drama?sort=az'));
+  });
+});
+
+describe('DeleteMovieDialog — the heading holds any title', () => {
+  it('names a title that carries its own quotation marks', () => {
+    renderDialog({ title: 'The "Great" Escape' });
+
+    expect(
+      within(dialog()).getByRole('heading', {
+        name: 'Delete “The "Great" Escape”?',
+      })
+    ).toBeTruthy();
+    expect(
+      screen.getByRole('dialog', { name: 'Delete “The "Great" Escape”?' })
+    ).toBeTruthy();
+  });
+
+  it('wraps a very long title inside the card rather than widening it', () => {
+    const long =
+      'The Extraordinarily Long And Frankly Unreasonable Title Of A Film ' +
+      'That Somebody In The Family Insisted On Keeping';
+    renderDialog({ title: long });
+
+    const heading = within(dialog()).getByRole('heading', {
+      name: `Delete “${long}”?`,
+    });
+
+    // jsdom lays nothing out, so what can be checked is the rule that keeps
+    // the card its 520px whatever the title: the heading breaks its words
+    // rather than pushing the ✕ off the edge.
+    expect(getComputedStyle(heading).overflowWrap).toBe('anywhere');
   });
 });
