@@ -221,7 +221,7 @@
           addMode:'folder', folderPath:'', scanned:false,
           fTitle:'', fYear:'', fDirector:'', fCast:'', fDescription:'', fGenres:[], fVideo:'', fPoster:'', fSubs:[], subLangOpen:null,
           addContext:null, resolveId:null,
-          impStep:'setup', impSheet:'', impRoot:'', impProgress:0, impMatched:0, impProblems:[],
+          impStep:'setup', impSheet:'', impRoot:'', impSheetError:'', impRootError:'', impProgress:0, impMatched:0, impProblems:[],
           impPhase:'scan', impFound:0, impTotal:0, impDone:0, impCurrent:'', impLog:[], impStartTime:null,
           exportOpen:false, exportFormat:'csv', exportDone:false,
           deleteOpen:false,
@@ -409,9 +409,15 @@
         saveMovie(){ if(this.state.addContext==='import'){ const id=this.state.resolveId; this.setState(s=>({screen:'import',impStep:'review',impProblems:s.impProblems.filter(p=>p.id!==id),impMatched:s.impMatched+1,addContext:null,resolveId:null})); } else if(this.state.addContext==='edit'){ this.setState({screen:'detail',addContext:null}); } else { this.goBrowse(); } }
 
         // ---- import ----
-        onImpSheet(e){ this.setState({impSheet:e.target.value}); }
-        onImpRoot(e){ this.setState({impRoot:e.target.value}); }
-        startImport(){ this.setState({impStep:'running',impPhase:'scan',impFound:0,impTotal:0,impDone:0,impCurrent:'',impLog:[{text:'Connecting to '+(this.state.impRoot||'E:\\Movies')+' …',kind:'info'}],impStartTime:Date.now()}); }
+        onImpSheet(e){ this.setState({impSheet:e.target.value, impSheetError:''}); }
+        onImpRoot(e){ this.setState({impRoot:e.target.value, impRootError:''}); }
+        startImport(){
+          // Stands in for POST /api/import's 400 { error, field }: one field refused, one line under it.
+          const sheet=this.state.impSheet.trim(), root=this.state.impRoot.trim();
+          const sheetError = !/\.(xlsx|csv)$/i.test(sheet) ? 'That isn\u2019t a spreadsheet \u2014 pick an .xlsx or .csv file.' : '';
+          const rootError = !/^[a-z]:\\/i.test(root) ? 'That folder can\u2019t be found.' : '';
+          if(sheetError||rootError){ this.setState({impSheetError:sheetError, impRootError:rootError}); return; }
+          this.setState({impStep:'running',impPhase:'scan',impFound:0,impTotal:0,impDone:0,impCurrent:'',impLog:[{text:'Connecting to '+(this.state.impRoot||'E:\\Movies')+' …',kind:'info'}],impStartTime:Date.now()}); }
         cancelImport(){ this.setState({impStep:'setup',impPhase:'scan',impFound:0,impTotal:0,impDone:0,impCurrent:'',impLog:[]}); }
         _logPool = ['The Lantern Keeper','Salt and Cedar','Northwind','Paper Moons','The Glasshouse','Orbit of Small Things','Marigold Avenue','The Quiet Tide','Hollow Creek','Comet Season','Grandfather\u2019s Clock','The Paper Aviator','Dust and Diamonds','Tin Can Symphony','The Far Meridian','Almond Blossom','Riverkeep','Nightjar','The Cartographer','Saturday\u2019s Children','Velvet Hour','Harbor Lights','Ironwood','Sundial','Blue Hour','The Tin Forest','Winter Apples','Lighthouse Road','Cedar and Ash','The Long Field'];
         fakeTitle(n){ const p=this._logPool; return p[n % p.length]+' ('+(1994+(n*7)%31)+')'; }
@@ -420,10 +426,12 @@
         seedProblems(){ return [
           {id:'p1',title:'The Velvet Hour',reason:'No folder found matching this spreadsheet row.',kind:'no-folder'},
           {id:'p2',title:'Harbor Lights',reason:'Two folders look like plausible matches \u2014 pick one.',kind:'ambiguous'},
-          {id:'p3',title:'Ironwood',reason:'Folder matched, but no subtitle file was found.',kind:'missing-file'},
-          {id:'p4',title:'Sundial',reason:'Spreadsheet row is missing a genre.',kind:'missing-meta'},
+          {id:'p3',title:'Ironwood',reason:'Folder matched, but no video file was found.',kind:'no-video'},
+          {id:'p4',title:'Blue.Hour.2019',reason:'Folder isn\u2019t in the spreadsheet.',kind:'no-row'},
+          {id:'p5',title:'The Tin Forest',reason:'Couldn\u2019t copy the video file: The device is not ready.',kind:'failed'},
+          {id:'p6',title:'Sundial',reason:'Imported, but the row has no genre \u2014 it won\u2019t appear in any genre row.',kind:'missing-meta'},
         ]; }
-        resolveProblem(p){ this.setState({screen:'add',addContext:'import',resolveId:p.id,addMode:'folder',scanned:true,folderPath:'C:\\\\Movies\\\\'+p.title,fTitle:p.title,fYear:p.kind==='missing-meta'?'2018':'2020',fGenres:[],fVideo:p.kind==='missing-file'?'matched-video.mkv':'matched-video.mkv',fPoster:'matched-poster.jpg',fSubs:p.kind==='missing-file'?[]:[{filename:'matched.en.srt',lang:'English'}]}); }
+        resolveProblem(p){ this.setState({screen:'add',addContext:'import',resolveId:p.id,addMode:'folder',scanned:true,folderPath:'C:\\\\Movies\\\\'+p.title,fTitle:p.title,fYear:p.kind==='missing-meta'?'2018':'2020',fGenres:[],fVideo:p.kind==='no-video'||p.kind==='no-folder'?'':'matched-video.mkv',fPoster:p.kind==='no-folder'?'':'matched-poster.jpg',fSubs:p.kind==='no-folder'?[]:[{filename:'matched.en.srt',lang:'English'}]}); }
         skipProblem(id){ this.setState(s=>({impProblems:s.impProblems.filter(p=>p.id!==id)})); }
 
         renderVals(){
@@ -513,7 +521,7 @@
           }));
 
           // import
-          const problems=s.impProblems.map(p=>{ const col=p.kind==='no-folder'?'#c97a6a':p.kind==='ambiguous'?accent:p.kind==='missing-file'?'#c9a86a':'#9a8a6b'; return {id:p.id,title:p.title,reason:p.reason,dotStyle:{flex:'0 0 auto',width:'10px',height:'10px',borderRadius:'99px',background:col},resolve:()=>this.resolveProblem(p),skip:()=>this.skipProblem(p.id)}; });
+          const problems=s.impProblems.map(p=>{ const col=p.kind==='ambiguous'?accent:(p.kind==='no-row'||p.kind==='missing-meta')?'var(--color-text-faint)':'var(--color-danger)'; return {id:p.id,title:p.title,reason:p.reason,dotStyle:{flex:'0 0 auto',width:'10px',height:'10px',borderRadius:'99px',background:col},resolve:()=>this.resolveProblem(p),skip:()=>this.skipProblem(p.id)}; });
 
           return {
             rootStyle, isBrowse:s.screen==='browse', isDetail:s.screen==='detail', isPlayer:s.screen==='player', isAdd:s.screen==='add', isImport:s.screen==='import', isGenre:s.screen==='genre', isSettings:s.screen==='settings',
@@ -617,6 +625,7 @@
               return {
               labelStyle, setup:s.impStep==='setup', running:s.impStep==='running', review:s.impStep==='review',
               sheet:s.impSheet, root:s.impRoot, onSheet:(e)=>this.onImpSheet(e), onRoot:(e)=>this.onImpRoot(e), onStart:()=>this.startImport(),
+              sheetError:s.impSheetError, hasSheetError:!!s.impSheetError, rootError:s.impRootError, hasRootError:!!s.impRootError,
               onBack:()=>this.goSettings(), onFinish:()=>this.goBrowse(), onCancel:()=>this.cancelImport(),
               scanning:s.impPhase==='scan', importing:s.impPhase==='import', indeterminate:s.impPhase==='scan', percent:pct,
               stepScanActive:s.impPhase==='scan', stepScanDone:s.impPhase==='import', stepImportActive:s.impPhase==='import',

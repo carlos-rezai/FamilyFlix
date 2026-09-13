@@ -269,8 +269,11 @@ features into a route.
   be checked by looking. It writes its fixtures through the ordinary
   `LibraryStorage` interface and marks them with a reserved video-path
   prefix, so a run is idempotent and can never delete a movie that
-  arrived any other way. The commit that ships bulk import is the
-  commit that deletes it
+  arrived any other way. **The seed goes with bulk import**: the
+  initiative's tracer-bullet commit deletes `db/seed/`, the `db:seed`
+  script and every paragraph naming them, and the importer's own
+  fixtures — a tiny sheet and folder tree under its tests — are how a
+  dev library gets filled from then on
 - `src/` never talks to SQLite directly
 - `src/` never reads or writes the filesystem directly — all file
   access (folder scanning, copying video/subtitle/poster files) goes
@@ -346,8 +349,18 @@ once via a bulk importer:
   also has. This is the _only_ place autofill lives: it needs a real
   folder path, which a browser file picker cannot supply and Electron's
   native dialog can
-- Surfaces a review step before committing — folder/row matching by
-  name is heuristic and can mismatch
+- Imports each confident match **during the run** — reserve a Movie
+  folder, copy the files in, add the movie — and shows the run in a
+  progress console; the **Review step** at the end lists only what the
+  run could not settle on its own, as **Problems** by kind (`no-folder`,
+  `ambiguous`, `no-video`, `no-row`, `failed`, and the one soft kind,
+  `missing-meta`), each with Resolve and Skip. Reviewing a thousand
+  confident matches is a list nobody reads; Edit and Delete already
+  exist for corrections — design log `13-bulk-import` Q16
+- Consults nothing outside the spreadsheet and the folder: **no TMDB**,
+  no network, `tmdbId` stays null. What a lookup would add is an
+  **Enrichment** pass over an already-imported library — a later
+  initiative with its own prototype, if ever — not part of bulk import
 - Copies all matched media into managed storage as part of the run
 
 An exporter writes the current library back out to CSV (title, year,
