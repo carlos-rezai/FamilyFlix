@@ -42,6 +42,9 @@ export const GlobalStyle = createGlobalStyle`
     from { opacity: 0; transform: scale(0.96); }
     to { opacity: 1; transform: none; }
   }
+  @keyframes ffSpin {
+    to { transform: rotate(360deg); }
+  }
   @keyframes ffBar {
     from { background-position: 0 0; }
     to { background-position: 32px 0; }
