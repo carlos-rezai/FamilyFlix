@@ -3,7 +3,13 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { ThemeProvider } from 'styled-components';
 
 // Through the category barrel — the path SearchBar imports it by.
-import { TextField, SearchIcon, type TextFieldProps } from '@/primitives';
+import {
+  TextField,
+  SearchIcon,
+  SheetIcon,
+  FolderIcon,
+  type TextFieldProps,
+} from '@/primitives';
 import { theme } from '@/styles/theme';
 
 function renderTextField(props: Partial<TextFieldProps> = {}) {
@@ -156,5 +162,97 @@ describe('TextField — its corners', () => {
 
     expect(getComputedStyle(box()).height).toBe('46px');
     expect(getComputedStyle(box()).borderRadius).toBe(theme.radius.pill);
+  });
+});
+
+// --- 13 — Bulk import, Phase 2: "the tracer bullet" (issue #125) ------------
+
+/**
+ * The last of `prim.TextField.dc.html`'s props, and the last two of its glyph
+ * enum, arriving with the caller log 11 Q7 said they would: the **Setup
+ * step**'s two path fields are the prototype's mono face — `font-mono` at
+ * 14px where every other field is sans at 16 — led by the `sheet` and the
+ * `folder` glyphs.
+ *
+ * As with `height` and `rounded`, the default is asserted beside the
+ * non-default, and the caller that asks for nothing — `SearchBar`, and the
+ * **Movie form**'s fields — must be drawn today exactly as it was.
+ */
+describe('TextField — mono', () => {
+  it('is the sans face at 16px when nothing is asked for', () => {
+    renderTextField();
+
+    expect(getComputedStyle(field()).fontFamily).toContain('Hanken Grotesk');
+    expect(getComputedStyle(field()).fontSize).toBe('16px');
+  });
+
+  it('takes the mono face at 14px when asked', () => {
+    renderTextField({ mono: true });
+
+    expect(getComputedStyle(field()).fontFamily).toContain('JetBrains Mono');
+    expect(getComputedStyle(field()).fontSize).toBe('14px');
+  });
+
+  it('is the sans face again when explicitly asked not to be mono', () => {
+    renderTextField({ mono: false });
+
+    expect(getComputedStyle(field()).fontFamily).toContain('Hanken Grotesk');
+    expect(getComputedStyle(field()).fontSize).toBe('16px');
+  });
+
+  it('takes mono, a height and a corner together, the way the setup step asks for them', () => {
+    renderTextField({ mono: true, height: 50, rounded: false });
+
+    expect(getComputedStyle(field()).fontFamily).toContain('JetBrains Mono');
+    expect(getComputedStyle(box()).height).toBe('50px');
+    expect(getComputedStyle(box()).borderRadius).toBe(theme.radius.md);
+  });
+
+  it('leaves an icon-led field that asks for nothing drawn exactly as it was', () => {
+    renderTextField({ icon: <SearchIcon size={18} /> });
+
+    expect(getComputedStyle(field()).fontFamily).toContain('Hanken Grotesk');
+    expect(getComputedStyle(field()).fontSize).toBe('16px');
+    expect(getComputedStyle(box()).height).toBe('46px');
+    expect(getComputedStyle(box()).borderRadius).toBe(theme.radius.pill);
+  });
+});
+
+describe('TextField — the sheet and folder glyphs', () => {
+  it('draws the sheet glyph it is handed', () => {
+    // Through the same slot as the magnifier: two more icon atoms, and the
+    // primitive itself is not widened by a name.
+    const { container } = renderTextField({ icon: <SheetIcon size={20} /> });
+
+    expect(container.querySelector('svg')).not.toBeNull();
+  });
+
+  it('draws the folder glyph it is handed', () => {
+    const { container } = renderTextField({ icon: <FolderIcon size={20} /> });
+
+    expect(container.querySelector('svg')).not.toBeNull();
+  });
+
+  it('keeps both decorative, out of the accessible name', () => {
+    renderTextField({
+      icon: <SheetIcon size={20} />,
+      'aria-label': 'Spreadsheet',
+    });
+
+    expect(screen.queryAllByRole('img')).toHaveLength(0);
+    expect(field('Spreadsheet')).toBeDefined();
+  });
+
+  it('draws the two as different glyphs', () => {
+    const sheet = renderTextField({ icon: <SheetIcon size={20} /> });
+    const sheetPath = sheet.container.querySelector('svg')?.innerHTML;
+    sheet.unmount();
+
+    const folder = renderTextField({ icon: <FolderIcon size={20} /> });
+    const folderPath = folder.container.querySelector('svg')?.innerHTML;
+
+    expect(sheetPath).toBeTruthy();
+    expect(folderPath).toBeTruthy();
+    expect(sheetPath).not.toBe(folderPath);
   });
 });

@@ -454,7 +454,7 @@ describe('App — returning the browse home to where the parent was', () => {
     // Settings screen (issue #98) has no app header for it to press.
     fireEvent.click(screen.getByRole('button', { name: 'Settings' }));
     await screen.findByRole('heading', { name: /settings/i });
-    fireEvent.click(screen.getByRole('button', { name: /add a movie/i }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add a movie' }));
     fireEvent.change(await screen.findByRole('textbox', { name: /title/i }), {
       target: { value: 'Saved Film' },
     });
@@ -760,7 +760,7 @@ describe('App — a typed title becomes a row on the home screen', () => {
     await screen.findByRole('heading', { name: 'Settings' });
 
     // And ＋ Add a movie is the only door from there to the form.
-    fireEvent.click(screen.getByRole('button', { name: /add a movie/i }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add a movie' }));
     expect(currentPath()).toBe('/add');
 
     const title = await screen.findByRole('textbox', { name: /title/i });
@@ -910,7 +910,7 @@ describe('App — a film filed under two genres reaches both rows', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Settings' }));
     await screen.findByRole('heading', { name: 'Settings' });
-    fireEvent.click(screen.getByRole('button', { name: /add a movie/i }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add a movie' }));
 
     await screen.findByRole('button', { name: 'Documentary' });
   }
@@ -1022,5 +1022,100 @@ describe('App — a film filed under two genres reaches both rows', () => {
     // is in the library and on none of them.
     expect(screen.queryAllByRole('region')).toHaveLength(1);
     expect(cardInRow('Thriller', 'Rear Window')).toBeNull();
+  });
+});
+
+// --- 13 — Bulk import, Phase 2: "the tracer bullet" (issue #125) ------------
+
+/**
+ * The second maintainer surface, reached the same way as the first: the gear,
+ * then the Library section's ⇪ Import from spreadsheet row. `/import` is a
+ * real route with the real screen behind it from its first commit — the
+ * device the movie form used, without the placeholder step.
+ *
+ * And the mirror of that: nothing the **Family** sees leads to an import. The
+ * browse home, a card, the movie page and the player carry no control that
+ * names one, which is asserted here because the route table and the family
+ * screens are only ever composed together in `App`.
+ */
+describe('App — the import flow behind the gear', () => {
+  it('renders the import screen at /import', async () => {
+    renderApp('/import');
+
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Import library' })
+    ).toBeDefined();
+    expect(screen.getByRole('textbox', { name: 'Spreadsheet' })).toBeDefined();
+    expect(currentPath()).toBe('/import');
+  });
+
+  it('walks the gear and ⇪ Import from spreadsheet to the import screen', async () => {
+    renderApp();
+    await screen.findByRole('heading', { name: 'Action' });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Settings' }));
+    await screen.findByRole('heading', { name: 'Settings' });
+    fireEvent.click(
+      screen.getByRole('button', { name: /import from spreadsheet/i })
+    );
+
+    expect(currentPath()).toBe('/import');
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Import library' })
+    ).toBeDefined();
+  });
+
+  it('returns to Settings from the import screen’s Back', async () => {
+    renderApp();
+    await screen.findByRole('heading', { name: 'Action' });
+    fireEvent.click(screen.getByRole('button', { name: 'Settings' }));
+    await screen.findByRole('heading', { name: 'Settings' });
+    fireEvent.click(
+      screen.getByRole('button', { name: /import from spreadsheet/i })
+    );
+    await screen.findByRole('heading', { level: 1, name: 'Import library' });
+
+    fireEvent.click(screen.getByRole('button', { name: /back/i }));
+
+    expect(currentPath()).toBe('/settings');
+    expect(
+      await screen.findByRole('heading', { name: 'Settings' })
+    ).toBeDefined();
+  });
+});
+
+describe('App — no import control on the family’s screens', () => {
+  // The player behind `/movie/:id/play` drives a media element, and jsdom
+  // has none.
+  stubMediaElement();
+
+  /** Any control or link that names an import, anywhere on the screen. */
+  const importControls = () => [
+    ...screen.queryAllByRole('button', { name: /import/i }),
+    ...screen.queryAllByRole('link', { name: /import/i }),
+  ];
+
+  it('offers none on the browse home or its cards', async () => {
+    renderApp();
+    await screen.findByRole('heading', { name: 'Action' });
+    await screen.findByRole('button', { name: 'Northwind' });
+
+    expect(importControls()).toHaveLength(0);
+  });
+
+  it('offers none on the movie page', async () => {
+    renderApp('/movie/a1');
+    await screen.findByRole('heading', { level: 1, name: 'Northwind' });
+
+    expect(importControls()).toHaveLength(0);
+  });
+
+  it('offers none in the player', async () => {
+    const { container } = renderApp('/movie/a1/play');
+    await waitFor(() =>
+      expect(container.querySelector('video')).not.toBeNull()
+    );
+
+    expect(importControls()).toHaveLength(0);
   });
 });

@@ -774,3 +774,121 @@ describe('createMedia — removeMovieFolder', () => {
     }
   });
 });
+
+// --- 13 — Bulk import, Phase 2: "the tracer bullet" (issue #125) ------------
+
+/**
+ * A film's file where it lies under the **Library root** — `outside` is that
+ * root here: the one tree the media domain reads from and never writes into.
+ */
+function sourceFile(outside: string, name: string, bytes: string): string {
+  const source = join(outside, name);
+  writeFileSync(source, bytes);
+  return source;
+}
+
+/**
+ * **Copy-in**: the **Bulk import** counterpart of `storeUpload` — the same
+ * **Managed copy**, from a path instead of a stream. What it promises a caller
+ * is the same thing too: a **Stored path**, and a file at the end of it.
+ */
+describe('createMedia — copyIn', () => {
+  it('copies the bytes into the movie folder', async () => {
+    const { media, outside } = sandbox();
+    const folder = media.reserveFolder('Die Hard', 1988);
+    const source = sourceFile(outside, 'die-hard.mkv', 'video bytes');
+
+    await media.copyIn(folder, source);
+
+    expect(readFileSync(join(folder, 'die-hard.mkv'), 'utf8')).toBe(
+      'video bytes'
+    );
+  });
+
+  it('answers the stored path — relative, forward-slashed, resolving to the copy', async () => {
+    const { media, root, outside } = sandbox();
+    const folder = media.reserveFolder('Die Hard', 1988);
+    const source = sourceFile(outside, 'die-hard.mkv', 'video bytes');
+
+    const stored = await media.copyIn(folder, source);
+
+    expect(isAbsolute(stored)).toBe(false);
+    expect(stored).toBe('die-hard-1988/die-hard.mkv');
+    expect(stored).not.toContain('\\');
+    expect(mediaFilePath(root, stored)).toBe(
+      resolve(join(root, 'die-hard-1988', 'die-hard.mkv'))
+    );
+  });
+
+  it('leaves the source exactly where and what it was', async () => {
+    const { media, outside } = sandbox();
+    const folder = media.reserveFolder('Die Hard', 1988);
+    const source = sourceFile(outside, 'die-hard.mkv', 'video bytes');
+
+    await media.copyIn(folder, source);
+
+    // Copy, never move: the originals under the **Library root** survive a bad
+    // run, and cancelling needs no undo.
+    expect(existsSync(source)).toBe(true);
+    expect(readFileSync(source, 'utf8')).toBe('video bytes');
+  });
+
+  it('takes several files into one movie folder', async () => {
+    const { media, outside } = sandbox();
+    const folder = media.reserveFolder('Die Hard', 1988);
+    const video = sourceFile(outside, 'die-hard.mkv', 'video bytes');
+    const poster = sourceFile(outside, 'poster.jpg', 'poster bytes');
+    const track = sourceFile(outside, 'die-hard.en.srt', 'subtitle bytes');
+
+    const stored = await Promise.all([
+      media.copyIn(folder, video),
+      media.copyIn(folder, poster),
+      media.copyIn(folder, track),
+    ]);
+
+    expect(stored).toEqual([
+      'die-hard-1988/die-hard.mkv',
+      'die-hard-1988/poster.jpg',
+      'die-hard-1988/die-hard.en.srt',
+    ]);
+    expect(readFileSync(join(folder, 'poster.jpg'), 'utf8')).toBe(
+      'poster bytes'
+    );
+  });
+
+  it('names the copy through the same sanitiser an upload goes through', async () => {
+    const { media, outside } = sandbox();
+    const folder = media.reserveFolder('Die Hard', 1988);
+    const source = sourceFile(outside, 'Die Hard (1988) [1080p].mkv', 'bytes');
+
+    const stored = await media.copyIn(folder, source);
+
+    // Whatever `safeFilename` makes of it, the path answered is the file
+    // written — the one promise `storeUpload` makes about a crafted name.
+    expect(existsSync(join(folder, stored.split('/')[1]))).toBe(true);
+    expect(stored.startsWith('die-hard-1988/')).toBe(true);
+  });
+
+  it('refuses a source that does not exist', async () => {
+    const { media, outside } = sandbox();
+    const folder = media.reserveFolder('Die Hard', 1988);
+
+    await expect(
+      media.copyIn(folder, join(outside, 'not-there.mkv'))
+    ).rejects.toThrow();
+    expect(existsSync(join(folder, 'not-there.mkv'))).toBe(false);
+  });
+
+  it('does not resolve until the bytes are on disk', async () => {
+    const { media, outside } = sandbox();
+    const folder = media.reserveFolder('Die Hard', 1988);
+    const source = sourceFile(outside, 'die-hard.mkv', 'x'.repeat(256 * 1024));
+
+    const stored = await media.copyIn(folder, source);
+
+    // The row that points at the copy is written straight after this resolves.
+    expect(readFileSync(join(folder, stored.split('/')[1])).length).toBe(
+      256 * 1024
+    );
+  });
+});
