@@ -3,6 +3,11 @@ import { pipeline } from 'node:stream';
 import express, { type Request, type Response, type Router } from 'express';
 
 import type { LibraryStorage } from '../library';
+import {
+  ImportBusyError,
+  ImportStartError,
+  type Importer,
+} from '../import-export/createImporter/createImporter';
 import type { Media } from '../media/createMedia/createMedia';
 import type { Playback } from '../playback/createPlayback/createPlayback';
 import { derivedRuntime } from './derivedRuntime/derivedRuntime';
@@ -276,7 +281,11 @@ function parseLimit(value: string): number | null {
  * movie's files by asking for somewhere to put them and handing over a part, and
  * never by touching the filesystem itself.
  *
- * All four are required, `media` included. It used to default to the domain over
+ * `importer` is the import domain, injected for the same reason again: the two
+ * import routes hand it a sheet path and a root path and answer with the
+ * snapshot it holds, and never learn there is a spreadsheet, a walker or a copy.
+ *
+ * All five are required, `media` included. It used to default to the domain over
  * `mediaPath` so that a test could compose the router with three arguments —
  * which made it a seam pointed at the tests rather than at the app, and left two
  * places able to decide what the router is made of. `playback`, the seam this
@@ -287,7 +296,8 @@ export function createApiRouter(
   storage: LibraryStorage,
   mediaPath: string,
   playback: Playback,
-  media: Media
+  media: Media,
+  importer: Importer
 ): Router {
   const router = express.Router();
 
@@ -1201,6 +1211,58 @@ export function createApiRouter(
       res.json(playback.cues(file));
     }
   );
+
+  // **Bulk import**'s start: the two paths the **Setup step** holds, as JSON,
+  // and the **Current run**'s first snapshot back. A refusal names the field
+  // it refuses on — `400 { error, field: 'sheet' | 'root' }` — because the
+  // screen has two fields and draws the reason under one of them; a run that
+  // already exists is a `409`. Both are decided by the importer; this route
+  // only tells the two kinds of refusal apart and answers a body that names
+  // no path at all before the domain is asked.
+  router.post('/import', async (req: Request, res: Response) => {
+    const body = (req.body ?? {}) as {
+      sheetPath?: unknown;
+      rootPath?: unknown;
+    };
+    const { sheetPath, rootPath } = body;
+
+    if (typeof sheetPath !== 'string' || sheetPath.trim() === '') {
+      res
+        .status(400)
+        .json({ error: 'No spreadsheet was given.', field: 'sheet' });
+      return;
+    }
+    if (typeof rootPath !== 'string' || rootPath.trim() === '') {
+      res.status(400).json({ error: 'No folder was given.', field: 'root' });
+      return;
+    }
+
+    try {
+      res.status(201).json(await importer.start(sheetPath, rootPath));
+    } catch (error) {
+      if (error instanceof ImportStartError) {
+        res.status(400).json({ error: error.message, field: error.field });
+        return;
+      }
+      if (error instanceof ImportBusyError) {
+        res.status(409).json({ error: error.message });
+        return;
+      }
+      res.status(500).json({ error: 'Could not start the import' });
+    }
+  });
+
+  // The **Current run**'s snapshot, polled every 500 ms by the **Run hook**
+  // while the run is scanning or importing. A `404` is a state rather than a
+  // failure: there has been no run yet.
+  router.get('/import/current', (_req: Request, res: Response) => {
+    const run = importer.current();
+    if (run === null) {
+      res.status(404).json({ error: 'No import is running' });
+      return;
+    }
+    res.json(run);
+  });
 
   // Posters and backdrops straight off disk. Serves nothing until an import
   // populates the managed media directory; cards fall back to their gradient

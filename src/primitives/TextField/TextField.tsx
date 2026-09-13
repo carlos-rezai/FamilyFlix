@@ -25,6 +25,12 @@ export interface TextFieldProps {
    * bar's shape; `false` is the soft corner the **Movie form**'s fields wear.
    */
   rounded?: boolean;
+  /**
+   * Whether the text is set on the mono face at 14px rather than the sans face
+   * at 16. A path is a path: the **Setup step**'s two fields ask for it, and
+   * nothing else does.
+   */
+  mono?: boolean;
   /** Reports the new text, already unwrapped from the change event. */
   onChange: (value: string) => void;
   /**
@@ -44,8 +50,9 @@ export interface TextFieldProps {
  * the prototype's own values: a caller that asks for neither — `SearchBar` —
  * is drawn exactly as it was before they existed.
  *
- * `mono` and the prototype's `folder` / `sheet` glyphs are still absent by
- * design: they arrive with ImportFlow, the caller that needs them.
+ * `mono` is the last of the prototype's props, and the `sheet` / `folder`
+ * glyphs the last two icon atoms — both arrived with ImportFlow, the caller
+ * that needed them, and both default off so every earlier caller is unchanged.
  */
 export function TextField({
   value,
@@ -53,6 +60,7 @@ export function TextField({
   icon,
   height = DEFAULT_HEIGHT,
   rounded = true,
+  mono = false,
   onChange,
   'aria-label': ariaLabel,
 }: TextFieldProps) {
@@ -62,6 +70,7 @@ export function TextField({
           unless it is given a title, so the field's name stays the label. */}
       {icon ? <IconSlot>{icon}</IconSlot> : null}
       <Input
+        $mono={mono}
         type="text"
         value={value}
         placeholder={placeholder}

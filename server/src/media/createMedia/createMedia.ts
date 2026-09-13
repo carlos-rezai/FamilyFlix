@@ -17,6 +17,7 @@ import {
   resolve,
   sep,
 } from 'node:path';
+import { copyFile } from 'node:fs/promises';
 import { pipeline } from 'node:stream/promises';
 import type { Readable } from 'node:stream';
 
@@ -106,6 +107,18 @@ export interface Media {
     filename: string,
     source: Readable
   ): Promise<string>;
+
+  /**
+   * **Copy-in**: {@link storeUpload}'s **Bulk import** counterpart — the same
+   * **Managed copy** into `<folder>/<safe name>`, from a file where it lies
+   * under the **Library root** instead of from a stream, answering the same
+   * **Stored path**. The name is the source's own, through the same sanitiser.
+   *
+   * Copy, never move: the originals under the root survive a bad run, and
+   * cancelling needs no undo. A source that is not there is refused rather
+   * than answered with a path to nothing.
+   */
+  copyIn(folder: string, sourcePath: string): Promise<string>;
 
   /**
    * Remove a folder and everything one request wrote into it — the rollback,
@@ -262,6 +275,17 @@ export function createMedia(mediaPath: string): Media {
       // this domain — the form, and the bulk importer after it — gets the
       // guarantee without having to remember it.
       await pipeline(source, createWriteStream(join(folder, safe)));
+
+      return storedIn(folder, safe);
+    },
+
+    copyIn: async (folder, sourcePath) => {
+      const safe = safeFilename(basename(sourcePath));
+
+      // `copyFile` refuses a source that is not there by throwing, before any
+      // byte lands — so a refused copy leaves no half-file behind for the row
+      // to point at.
+      await copyFile(sourcePath, join(folder, safe));
 
       return storedIn(folder, safe);
     },

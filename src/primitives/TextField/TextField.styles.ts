@@ -49,14 +49,18 @@ export const IconSlot = styled.span`
  * focus ring is left alone here, as it is on `Chip` and `ContinueCard`. It is
  * the only thing that tells a keyboard user where they are, and suppressing it
  * is not a token or a layout the prototype is the authority on.
+ *
+ * `$mono` is the **Setup step**'s face: a path is set on the mono font at 14px,
+ * as `feat.ImportFlow.dc.html` draws it, where every other field is sans at 16.
  */
-export const Input = styled.input`
+export const Input = styled.input<{ $mono: boolean }>`
   flex: 1;
   min-width: 0;
   height: 100%;
   background: transparent;
   border: none;
   color: ${({ theme }) => theme.colors.text};
-  font-family: ${({ theme }) => theme.fonts.sans};
-  font-size: 16px;
+  font-family: ${({ theme, $mono }) =>
+    $mono ? theme.fonts.mono : theme.fonts.sans};
+  font-size: ${({ $mono }) => ($mono ? '14px' : '16px')};
 `;

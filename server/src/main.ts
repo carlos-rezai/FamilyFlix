@@ -1,5 +1,6 @@
 import express from 'express';
 
+import { createImporter } from './import-export/createImporter/createImporter';
 import { createSqliteStorage } from './library';
 import { createMedia } from './media/createMedia/createMedia';
 import { createPlayback } from './playback/createPlayback/createPlayback';
@@ -28,14 +29,21 @@ const storage = createSqliteStorage(DB_PATH);
 const binaries = ffmpegBinary(process.env);
 const component = binaries === null ? null : ffmpegComponent(binaries);
 
+const playback = createPlayback(MEDIA_PATH, component);
+const media = createMedia(MEDIA_PATH);
+
 const app = express();
 app.use(
   '/api',
   createApiRouter(
     storage,
     MEDIA_PATH,
-    createPlayback(MEDIA_PATH, component),
-    createMedia(MEDIA_PATH)
+    playback,
+    media,
+    // The import domain over the same library and managed directory the
+    // routes write through, so an imported film is a hand-added one to every
+    // read in the app.
+    createImporter({ storage, media, playback })
   )
 );
 

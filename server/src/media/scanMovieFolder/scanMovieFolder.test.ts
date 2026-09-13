@@ -48,7 +48,7 @@ describe('scanMovieFolder — the video', () => {
 
     const scan = await scanMovieFolder(dir);
 
-    expect(scan.videos.map(basename).sort()).toEqual([
+    expect(scan.videos.map((video) => basename(video)).sort()).toEqual([
       'die-hard.mkv',
       'die-hard.mp4',
     ]);
@@ -174,7 +174,9 @@ describe('scanMovieFolder — the whole folder', () => {
 
     const scan = await scanMovieFolder(dir);
 
-    expect(scan.videos.map(basename)).toEqual(['Die.Hard.1988.1080p.mp4']);
+    expect(scan.videos.map((video) => basename(video))).toEqual([
+      'Die.Hard.1988.1080p.mp4',
+    ]);
     expect(name(scan.poster)).toBe('poster.jpg');
     expect(name(scan.backdrop)).toBe('fanart.jpg');
     expect(scan.subtitles.map((track) => track.language).sort()).toEqual([

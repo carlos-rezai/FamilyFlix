@@ -53,6 +53,7 @@ import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { createApiRouter } from '.';
+import { createImporter } from '../import-export/createImporter/createImporter';
 import { createMedia, type Media } from '../media/createMedia/createMedia';
 import { sandboxRoot } from '../test-support/sandboxRoot/sandboxRoot';
 import { createPlayback } from '../playback/createPlayback/createPlayback';
@@ -128,14 +129,17 @@ function freshApi(
   mkdirSync(media);
   mkdirSync(outside);
 
+  const playback = createPlayback(media, component);
+  const mediaDomain = seam(media);
   const app = express();
   app.use(
     '/api',
     createApiRouter(
       storage,
       media,
-      createPlayback(media, component),
-      seam(media)
+      playback,
+      mediaDomain,
+      createImporter({ storage, media: mediaDomain, playback })
     )
   );
 
@@ -3093,14 +3097,17 @@ function relisten(
   media: string,
   component: PlaybackComponent | null
 ): string {
+  const playback = createPlayback(media, component);
+  const mediaDomain = createMedia(media);
   const app = express();
   app.use(
     '/api',
     createApiRouter(
       storage,
       media,
-      createPlayback(media, component),
-      createMedia(media)
+      playback,
+      mediaDomain,
+      createImporter({ storage, media: mediaDomain, playback })
     )
   );
 

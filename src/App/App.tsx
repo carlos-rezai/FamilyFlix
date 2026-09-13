@@ -9,6 +9,7 @@ import PlayerPage from '@/pages/PlayerPage/PlayerPage';
 import AddMoviePage from '@/pages/AddMoviePage/AddMoviePage';
 import GenrePage from '@/pages/GenrePage/GenrePage';
 import SettingsPage from '@/pages/SettingsPage/SettingsPage';
+import ImportPage from '@/pages/ImportPage/ImportPage';
 
 /**
  * The app root: the theme and global reset every screen renders under, plus the
@@ -33,6 +34,7 @@ export default function App() {
         <Route path="/add" element={<AddMoviePage />} />
         <Route path="/genre/:name" element={<GenrePage />} />
         <Route path="/settings" element={<SettingsPage />} />
+        <Route path="/import" element={<ImportPage />} />
       </Routes>
     </ThemeProvider>
   );

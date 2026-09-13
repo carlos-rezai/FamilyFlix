@@ -33,4 +33,6 @@ export { SubtitlesIcon } from './Icon/SubtitlesIcon';
 export { VideoIcon } from './Icon/VideoIcon';
 export { ImageIcon } from './Icon/ImageIcon';
 export { FileIcon } from './Icon/FileIcon';
+export { SheetIcon } from './Icon/SheetIcon';
+export { FolderIcon } from './Icon/FolderIcon';
 export { FullscreenIcon } from './Icon/FullscreenIcon';
