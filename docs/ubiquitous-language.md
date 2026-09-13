@@ -2,22 +2,22 @@
 
 ## Library entities
 
-| Term                   | Definition                                                                                                                                                                                            | Aliases to avoid                   |
-| ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------- |
-| **Movie**              | A single film in the library — the canonical domain entity, one row in `movies`, one poster card.                                                                                                     | _film_ (informal synonym OK)       |
-| **Genre**              | A shared, queryable category a **Movie** belongs to; a real entity (junction table), used to browse.                                                                                                  | category, tag                      |
-| **Subtitle**           | A subtitle **file asset** owned by a **Movie** — a path + human language label + track order.                                                                                                         | caption, sub track                 |
-| **Synopsis**           | The **Movie**'s long-form plot summary (`synopsis`), shown clamped-and-expandable on the **Movie detail page**.                                                                                       | description, plot, overview, blurb |
-| **Cast**               | The display-only ordered list of actor names on a **Movie** (JSON, never queried).                                                                                                                    | actors list, credits               |
-| **Director**           | The single display-only director name on a **Movie**.                                                                                                                                                 | —                                  |
-| **Poster** (updated)   | The portrait cover image for a **Movie**, living in its **Movie folder** — a file the maintainer picks in the **Movie form**, or a **TMDB** download during bulk import.                              | cover, thumbnail                   |
-| **Backdrop** (updated) | The wide image behind the **Movie detail page**'s title block; from **TMDB** at bulk import only — the **Movie form** has no slot for one, so a hand-added **Movie** draws the **Gradient fallback**. | banner, hero, background           |
+| Term                   | Definition                                                                                                                                                                                                                                                         | Aliases to avoid                   |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------- |
+| **Movie**              | A single film in the library — the canonical domain entity, one row in `movies`, one poster card.                                                                                                                                                                  | _film_ (informal synonym OK)       |
+| **Genre**              | A shared, queryable category a **Movie** belongs to; a real entity (junction table), used to browse.                                                                                                                                                               | category, tag                      |
+| **Subtitle**           | A subtitle **file asset** owned by a **Movie** — a path + human language label + track order.                                                                                                                                                                      | caption, sub track                 |
+| **Synopsis**           | The **Movie**'s long-form plot summary (`synopsis`), shown clamped-and-expandable on the **Movie detail page**.                                                                                                                                                    | description, plot, overview, blurb |
+| **Cast**               | The display-only ordered list of actor names on a **Movie** (JSON, never queried).                                                                                                                                                                                 | actors list, credits               |
+| **Director**           | The single display-only director name on a **Movie**.                                                                                                                                                                                                              | —                                  |
+| **Poster** (updated)   | The portrait cover image for a **Movie**, living in its **Movie folder** — a file the maintainer picks in the **Movie form**, or the one **Bulk import** found in the **Source folder** (`poster.*`, `folder.*`, `cover.*`, else the first image).                 | cover, thumbnail                   |
+| **Backdrop** (updated) | The wide image behind the **Movie detail page**'s title block; filled only by **Bulk import** from a `fanart.*` / `backdrop.*` image in the **Source folder** — the **Movie form** has no slot for one, so a hand-added **Movie** draws the **Gradient fallback**. | banner, hero, background           |
 
 ## Rating & watch state
 
 | Term                      | Definition                                                                                                                                                                                                                                                                                                                                                                                     | Aliases to avoid                      |
 | ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------- |
-| **Rating** (updated)      | Household 0–10 half-star score (10 = 5 stars), set or cleared any time from a **Rating picker** — on the **Movie detail page** or in the **Movie form** — and **seeded from TMDB** during bulk import only. A stored `0` can only arrive from a seed; a picker sets 1–10 or clears to **Unrated**.                                                                                             | review, score, vote                   |
+| **Rating** (updated)      | Household 0–10 half-star score (10 = 5 stars), set or cleared any time from a **Rating picker** — on the **Movie detail page** or in the **Movie form** — or read from the spreadsheet's rating column by **Bulk import**. A stored `0` can only arrive from a sheet; a picker sets 1–10 or clears to **Unrated**.                                                                             | review, score, vote                   |
 | **Unrated** (updated)     | A **Movie** with no **Rating** (`NULL`) — distinct from a literal 0-star rating. Renders as five **empty, clickable** stars labelled `Not rated` on the **Movie detail page**, and as five empty stars with **no numeric value** on a **Poster card**.                                                                                                                                         | zero stars, unscored, 0 stars         |
 | **Status**                | A **Movie**'s **derived** watch state: `unwatched` \| `in-progress` \| `watched` (never stored).                                                                                                                                                                                                                                                                                               | state, watch status                   |
 | **Watched** (updated)     | Explicit boolean flag meaning the maintainer marked a **Movie** finished; setting it via `markWatched` also clears the **Resume position** and stamps **Last watched at**.                                                                                                                                                                                                                     | seen, completed                       |
@@ -42,14 +42,14 @@ half only, which lives in exactly one component.
 
 | Term                              | Definition                                                                                                                                                                                                                                                                                                                                                                                                                                                                      | Aliases to avoid                    |
 | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------- |
-| **TMDB** (updated)                | The Movie Database — external metadata source for **bulk import** only; never consulted by the **Movie form**, and not AI. A hand-added **Movie** has no `tmdb_id`.                                                                                                                                                                                                                                                                                                             | the API, metadata service           |
-| **Library root**                  | The configured top folder holding the family's own movie folders; **not owned by the app** and not where anything is read from — it is the place a maintainer picks files _from_.                                                                                                                                                                                                                                                                                               | media folder, source folder         |
+| **TMDB** (updated)                | The Movie Database — **not consulted by anything in the app**. `13-bulk-import.md` Q18 took it out of **Bulk import**: what it would add is an **Enrichment** pass over an already-filled library, a future initiative with its own prototype amendment, if ever. `tmdb_id` is `null` on every **Movie**.                                                                                                                                                                       | the API, metadata service           |
+| **Library root** (updated)        | The top folder holding the family's own **Source folders** — **not owned by the app**, never written to, and never served from. The **Movie form** picks files from it through a browser picker; **Bulk import** is handed its path and walks it, and copies out of it and nothing else.                                                                                                                                                                                        | media folder, source folder         |
 | **Managed media directory** (new) | The app-owned root (`FAMILYFLIX_MEDIA_PATH`, in OS user-data when packaged) holding every file the app can deliver — videos, **Subtitles**, **Posters**, **Backdrops**. Adding a **Movie** copies its files into here, and the app owns that copy: the source folder stops being the source of truth. Replaces **Managed image cache**.                                                                                                                                         | media store, media folder, cache    |
 | **Stored path** (new)             | A **Movie**'s path to one of its files, always **relative to the Managed media directory** and never absolute. `mediaFilePath` resolves one to an open file, refusing anything that leaves the root — including via a symlink — which is what makes it a boundary rather than a convention.                                                                                                                                                                                     | file path, absolute path, full path |
 | **Movie folder** (new)            | One **Movie**'s own directory under the **Managed media directory**, named from its title and year (`the-lantern-keeper-2019`), suffixed on collision. It is the first segment of every one of that **Movie**'s **Stored paths**, and it is never renamed when the title is edited. A **Delete** removes it by that name — `removeMovieFolder` — whether or not the video is still in it, so a film whose file was taken away by hand does not strand its poster and subtitles. | slug dir, media dir, bucket         |
 | **Library storage**               | The repository object from `createSqliteStorage(dbPath)` — the single seam over SQLite.                                                                                                                                                                                                                                                                                                                                                                                         | repo, DAO, service                  |
 | **Edition**                       | A specific physical release/cut of a **Movie** (4K, Director's Cut). **Roadmap only** — not modeled in v1.                                                                                                                                                                                                                                                                                                                                                                      | version, copy, variant              |
-| **Review step**                   | The **bulk import** stage where heuristic folder→row matches are confirmed or corrected before committing.                                                                                                                                                                                                                                                                                                                                                                      | confirmation, preview               |
+| **Review step** (updated)         | The third **Import phase**: the screen listing every **Problem** the **Current run** raised, each with **Resolve** and **Skip**, over the two stat tiles. Confident matches are already in the library by the time it shows — it reviews the flagged rows, not the run (`13-bulk-import.md` Q16).                                                                                                                                                                               | confirmation, preview               |
 | **Reference in place** (retired)  | ~~Storing a path to a video where it already lives.~~ **Retired** — `01-library-core.md` Q17 chose it over CLAUDE.md's **Managed copy**, and `11-add-movie.md` Q3 reverses that: every read route the app shipped since resolves a **Stored path** under the **Managed media directory**, and a browser file picker cannot supply a path at all.                                                                                                                                | —                                   |
 
 ## Browse & display (frontend)
@@ -239,6 +239,34 @@ and removes the record first and the bytes second.
 | **Best-effort cleanup** (new) | The order every deletion of media in the app follows: the row commits, _then_ the bytes go, and a failure to remove them is swallowed. **Superseded file** and **Delete** both keep it. The library is the source of truth: a stranded folder is a cost nobody can reach, a ghost row is a film the **Family** can open and fail on.                                                                                                                                                                                                                                                          | transactional delete, two-phase, rollback    |
 | **Stranded folder** (new)     | A **Movie folder** left under the **Managed media directory** after its row is gone — a locked file, most likely a video the stream route still had open when the **Delete** ran. Nothing surfaces it yet; the 🔜 Storage section's "space used" is the first place it could.                                                                                                                                                                                                                                                                                                                 | orphan folder, leak, leftover media          |
 
+## Bulk import (new)
+
+The one pass that fills the library from the family's spreadsheet and folder
+tree — `13-bulk-import.md`. It is the only place in the app the server is
+handed a folder to walk, which is why folder-path autofill lives here and
+nowhere else.
+
+| Term                         | Definition                                                                                                                                                                                                                                                                                                                                  | Aliases to avoid                              |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------- |
+| **Bulk import** (new)        | Reading a **Sheet**, walking a **Library root**, matching each **Sheet row** to a **Source folder**, and copying every confident match into the library as a **Movie** — the whole of `/import`, from _Start import_ to _Finish_. Initiative `bulk-import`.                                                                                 | import, ingest, migrate, the importer         |
+| **Sheet** (new)              | The spreadsheet a **Bulk import** reads — `.xlsx` or `.csv`, first worksheet, first row the header — whose columns are found by name through a synonym table; only a title column is required.                                                                                                                                              | spreadsheet, Excel, the list, CSV             |
+| **Sheet row** (new)          | One line of the **Sheet** as read: a title, and whatever else its recognised columns held (year, genres, director, cast, synopsis, rating, watched). A row with no title is skipped and logged, never a **Problem**.                                                                                                                        | record, entry, line                           |
+| **Source folder** (new)      | One film's own directory under the **Library root** — found by the scan rule _a folder holding a video file is a Source folder; one holding none is descended_. Never written to. Distinct from the **Movie folder**, which is the app's copy of it.                                                                                        | movie folder (wrong), film folder, the folder |
+| **Title key** (new)          | The normalised form of a title or a **Source folder** name that matching compares — lower-case, diacritics stripped, dots and underscores to spaces, a trailing year or quality tag dropped, letters, digits and single spaces only. `titleKey`, pure, in `import-export/`.                                                                 | slug, normalised title, fuzzy key             |
+| **Match** (new)              | A **Sheet row** paired with exactly one **Source folder** whose **Title key** equals its own (and whose year agrees, when both carry one). Matches import during the **Importing** phase without a human looking; anything short of one is a **Problem**.                                                                                   | hit, confident match, auto-match              |
+| **Current run** (new)        | The one **Bulk import** the server holds in memory at a time — `GET /api/import/current` — from _Start import_ until cancel or the next start. Its phases are **Scanning**, **Importing** and the **Review step**; a second start while one runs is `409`. A restart of the app forgets it; the **Movies** it added are real rows and stay. | session, job, import id                       |
+| **Import phase** (new)       | Where the **Current run** is: **Scanning** (walking the **Library root**, matching, the bar indeterminate), **Importing** (copying each **Match**, the bar counting `done / total`), or the **Review step**. The stepper's _Connect ✓ → Scan → Import_ draws it.                                                                            | step, stage, state                            |
+| **Activity log** (new)       | The **Current run**'s last 80 **Log lines**, drawn in the `LogConsole` molecule pinned to its bottom; a snapshot travels with every poll of `current`.                                                                                                                                                                                      | console, output, terminal                     |
+| **Log line** (new)           | One entry of the **Activity log** — text and a kind (`info`, `scan`, `path`, `success`, `warning`, `error`) that sets its colour. A **Warning line** is the `warning` kind: a missing subtitle or poster, an unknown genre name — noted, never a **Problem**.                                                                               | message, event                                |
+| **Problem** (new)            | A row or folder the **Current run** could not settle on its own, listed in the **Review step** with a kind, a title and a reason. **Hard** when the film is not in the library yet (`no-folder`, `ambiguous`, `no-video`, `no-row`, `failed`); **soft** when it is but wants a look (`missing-meta`, no genre).                             | issue, error, conflict, flagged row           |
+| **Resolve** (new)            | Opening a **Problem** on the **Movie form** in **Import context** — `/add?problem=<id>`, or `/add?movie=<id>&problem=<pid>` for a soft one — prefilled from the **Sheet row** and the **Source folder**'s **Found files**; _Save & continue_ imports it and closes the **Problem**.                                                         | fix, handle, edit the row                     |
+| **Dismiss** (new)            | Closing a **Problem** without importing anything — `DELETE /api/import/current/problems/:id`. The **Review step**'s _Skip_ and the form's _Skip this one_ both do exactly this, and so does the save after a soft **Resolve**.                                                                                                              | skip (as a verb in code), ignore, drop        |
+| **Import context** (new)     | The **Movie form** opened by **Resolve**: the accent banner "Resolving import · {title}", the fields prefilled, the labels _Save & continue_ / _Skip this one_, and a save that posts to the **Current run** rather than `/api/movies`. The third of the form's contexts beside add and **Edit context**.                                   | import mode, resolve mode                     |
+| **Found file** (new)         | A **File slot** filled from a **Source folder** during **Resolve** — `{ kind: 'found'; path; filename }`, an absolute path under the **Library root**. On save it travels as that path and the server copies it **only from under the Current run's root**; beside **Stored file** and **Picked file**, the third and last kind.            | scanned file, matched file, source file       |
+| **Copy-in** (new)            | `Media.copyIn(folder, sourcePath)`: a **Found file**'s bytes copied from the **Library root** into a **Movie folder** by `fs.copyFile`, answering its **Stored path**. The **Bulk import** counterpart of the form's `storeUpload`; **Managed copy** with a path for a source instead of a stream. Never a move.                            | move, link, ingest, transfer                  |
+| **Already in library** (new) | A **Sheet row** whose **Title key** and year match a **Movie** the library already holds — skipped with an `info` **Log line**, neither a **Match** nor a **Problem**. What makes cancelling and re-running a **Bulk import** harmless.                                                                                                     | duplicate, dupe, conflict                     |
+| **Enrichment** (new)         | The name reserved for a future pass that would fill synopsis, cast, director, a **Backdrop** or a rating seed over an already-imported library from an outside source such as **TMDB**. Not designed, not in the prototype, not part of **Bulk import**.                                                                                    | TMDB import, metadata fetch, lookup           |
+
 ## Relationships
 
 - A **Movie** has zero-or-more **Genres** (ordered; `genres[0]` is the primary tag) and zero-or-more **Subtitles**.
@@ -299,6 +327,14 @@ and removes the record first and the bytes second.
 - A **Delete** removes exactly one **Movie**: the row first (its **Genre** tags and **Subtitles** by cascade), then its **Movie folder** under **Best-effort cleanup**. It is opened only from the **Danger row** of the **Edit menu**, confirmed only in the **Delete dialog**, and lands the **Maintainer** one step back in history.
 - The **Delete dialog** is a **Modal**; the **Edit menu** owns whether it is open. **Menu** and **Modal** are the app’s two dismissal contracts, and neither leaks: the menu has closed and returned focus to ⋯ before the dialog takes it.
 - A **Library root** is never written by a **Delete**, an edit, or anything else — only the **Managed media directory** is ours to remove from.
+
+- A **Bulk import** reads exactly one **Sheet** and walks exactly one **Library root**; the server holds at most one **Current run**, and _Start import_ while one runs is refused.
+- A **Sheet row** ends as exactly one of: a **Match** (imported during **Importing**), **Already in library** (skipped), skipped for having no title, or a **Problem**. A **Source folder** no row claimed is a **Problem** too (`no-row`).
+- A **Match** becomes a **Movie** by the **Movie form**'s own sequence — reserve a **Movie folder**, **Copy-in** each file, **Derived runtime**, `addMovie` — and a throw partway rolls the folder back and files a `failed` **Problem**.
+- A **Problem** leaves the **Review step** exactly once: by **Resolve** (a hard one imports; a soft one is edited) or by **Dismiss**. _Skip_ and _Skip this one_ are both **Dismiss**.
+- A **Found file** exists only inside **Import context** and only under the **Current run**'s **Library root**; the resolve route refuses any path outside it, the way `mediaFilePath` refuses any **Stored path** outside the **Managed media directory**.
+- A **Source folder** is read and copied from, never written to or removed; a **Movie folder** is written to and removed, never read from as a source. The two never share a path.
+- **Bulk import** commits a **Match** the moment its copy finishes; the **Review step** never holds a confident match back — it lists **Problems** only.
 
 ## Example dialogue
 
@@ -518,6 +554,52 @@ and removes the record first and the bytes second.
 > **Maintainer:** "Never touched. That’s the one sentence the dialog exists to say."
 > **Dev:** "And if I press Delete twice from two windows, the second gets a 404."
 > **Maintainer:** "**Gone is gone.** A 404 on a delete is the answer we wanted."
+> **Dev:** "The Excel sheet. Mum's columns aren't going to be called what I
+> called them."
+> **Maintainer:** "They won't be, and I haven't looked either. Find the columns by
+> **name** through a little synonym table, and only insist on a title. Whatever
+> else is there is a bonus; whatever isn't recognised is ignored. If the first
+> real run needs one more synonym, that's one line."
+> **Dev:** "And the folder — do I walk the whole drive?"
+> **Maintainer:** "One rule: a folder with a video in it is a **Source folder**,
+> stop there. A folder with none, go down a level. That's how `Movies\Action\Die
+Hard` gets found and `Die Hard\extras` doesn't become a second film."
+> **Dev:** "Then I match rows to folders by name. 'The Lantern Keeper' against
+> 'The.Lantern.Keeper.2019.1080p'."
+> **Maintainer:** "By **Title key**, both sides. Strip the dots, the year, the
+> quality tag, the accents. Equal key and an agreeing year is a **Match**, and a
+> **Match** goes straight in. Two folders with that key, or only a folder that
+> _starts_ with it — that's a **Problem**, and I look at it."
+> **Dev:** "So the **Review step** isn't reviewing the import."
+> **Maintainer:** "It's reviewing what the import couldn't do. Twelve hundred
+> matches on a screen is a list nobody reads. Four **Problems** is a Saturday
+> morning. The tile says 'matched confidently _and imported_' — believe the tile."
+> **Dev:** "Ironwood has no subtitle file. Problem?"
+> **Maintainer:** "No. A **Warning line** in the **Activity log**. Subtitles are
+> optional on the form and half the collection has none — a **Problem** is a film
+> that _isn't in the library_ yet. Missing a genre is the one soft exception: it
+> goes in, and it's flagged, because a film with no genre is on no row of the
+> home screen."
+> **Dev:** "**Resolve** opens the form. But the form takes files from a picker —
+> it can't be given a path."
+> **Maintainer:** "It couldn't be, before. Now there's a run with a root, so a
+> **Found file** is a path _under that root_, and the server will copy from
+> there and from nowhere else. Same rule as **Stored path**, pointed at the other
+> folder."
+> **Dev:** "Copy. Twelve terabytes. Not move?"
+> **Maintainer:** "Copy. **Copy-in** — `copyFile`, not a stream, so the OS does
+> the work. A move is a second storage model, and a bug in it deletes my parents'
+> films. Put the managed directory on the big drive and delete the originals by
+> hand once you've clicked through the library."
+> **Dev:** "I cancel halfway. What's left?"
+> **Maintainer:** "Everything that finished is in. The run is gone, you're back at
+> setup, and when you run it again the rows already in are **Already in
+> library** — one log line each, no problem, no match. Cancelling costs nothing."
+> **Dev:** "And TMDB? Every log for a year has said 'at bulk import'."
+> **Maintainer:** "The prototype has no key field, no match step, no offline
+> state. The sheet holds what I couldn't type and the folder holds the poster.
+> Whatever TMDB adds on top is **Enrichment** — a later pass over a full
+> library, if it ever earns a prototype. `tmdb_id` stays null."
 
 ## Flagged ambiguities
 
@@ -846,3 +928,44 @@ and removes the record first and the bytes second.
   amendment** made first, in the handoff, before the build translates it. It is
   the same route the **Player notice** took, and the only route CLAUDE.md
   allows for a surface the prototype leaves blank.
+- **"Movie folder" was about to mean two folders (new):** the app's own copy
+  under the **Managed media directory** has been the **Movie folder** since log
+  11, and the family's per-film directory under the **Library root** had no
+  name — CLAUDE.md says "one folder per movie" for both. The family's is the
+  **Source folder**. Scan code walks **Source folders**; `Media` writes **Movie
+  folders**; nothing does both.
+- **"Import" now has a third meaning, and a context (updated):** beside the
+  form's add and **Bulk import** there is **Import context** — the form opened
+  by **Resolve**. Say **Bulk import** for the run, **Import context** for the
+  form's mode, and **add a Movie** for the form's ordinary save. The
+  `import-export/` folder and the `bulk-import` initiative are deliberately
+  spelled differently so a commit prefix cannot be misread as the folder.
+- **"Skip" is one action with two buttons (new):** the **Review step**'s _Skip_
+  and the form's _Skip this one_ both **Dismiss** the **Problem** through the
+  same `DELETE`. The prototype's labels stay; the code says `dismiss` and never
+  `skip`, which the player already uses for ±10 s.
+- **"Review step" changed meaning (updated):** it used to be defined as
+  confirming matches "before committing"; README and CLAUDE.md said the same.
+  Log 13 Q16 sides with the prototype — matches commit during the run, and the
+  step reviews **Problems** only. Both documents are amended with the log.
+- **"TMDB at bulk import" is retracted everywhere (updated):** logs 01, 02 and
+  11 and four rows of this glossary said it. Log 13 Q18 removes TMDB from the
+  initiative; the rows above are updated, the older logs stand as the snapshots
+  they are. Say **Enrichment** for the idea, and do not say "TMDB" as if it were
+  planned.
+- **Three file kinds, one form (new):** a **Stored file** travels as its
+  **Stored path** (under the managed directory), a **Picked file** as bytes, a
+  **Found file** as an absolute path under the **Current run**'s **Library
+  root**. The server tells the third from the first by which root the path
+  resolves under — a **Found file** that resolves under neither is refused, not
+  guessed at.
+- **The prototype's `missing-file` kind is retired (new — deviation):**
+  `seedProblems` flags "no subtitle file was found" as a **Problem**. A
+  subtitle is optional on the form the resolve shares, so that is a **Warning
+  line**; the kind that actually blocks is `no-video`. A **prototype
+  amendment**, made in `FamilyFlix.dc.html` before the build.
+- **One invented line (new — deviation):** the setup step needs to say that a
+  typed path would not open, and `prim.TextField` has no error affordance.
+  Log 13 Q7 draws one 13px `danger` line under the field — the problem row's
+  reason line, recoloured — and records it as a **prototype amendment** rather
+  than improvising it in code.
