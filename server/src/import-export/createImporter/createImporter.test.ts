@@ -18,9 +18,13 @@
 // runtime derivation reads on a machine with no FFmpeg — and nothing a player
 // could show.
 //
-// In this slice the importer exposes `start` and `current`; cancel, the
-// re-attach and the already-in-library skip are the next slice's, and a row
-// the matcher cannot settle is neither imported nor shown.
+// The tracer bullet gave the importer `start` and `current`; issue #126 adds
+// `cancel` — abort the in-flight copy, roll that one folder back, keep every
+// movie already added, discard the run — and the **Already in library** skip:
+// the library's titles are loaded once at start, and a row whose **Title key**
+// and year are already there is neither a **Match** nor a **Problem**, which
+// is what makes cancel-then-restart harmless. A row the matcher cannot settle
+// is still neither imported nor shown; the **Problems** are the review slice's.
 
 import {
   cpSync,
@@ -48,10 +52,17 @@ const FIXTURE = fileURLToPath(new URL('./fixture/', import.meta.url));
  * A fresh library, a managed media directory and a copy of the fixture tree
  * under one sandbox, and the importer composed over the first two.
  *
- * `seam` wraps the real `Media` for the one test that needs to see a copy
- * happen; every other test runs over the real one.
+ * `media` wraps the real `Media` for the tests that need to see or hold a
+ * copy; `storage` wraps the real library for the one that counts how often it
+ * is read. Every other test runs over the real ones.
  */
-function sandbox(seam: (real: Media) => Media = (real) => real): {
+function sandbox({
+  media: mediaSeam = (real) => real,
+  storage: storageSeam = (real) => real,
+}: {
+  media?: (real: Media) => Media;
+  storage?: (real: LibraryStorage) => LibraryStorage;
+} = {}): {
   storage: LibraryStorage;
   importer: Importer;
   media: string;
@@ -68,12 +79,54 @@ function sandbox(seam: (real: Media) => Media = (real) => real): {
 
   const storage = freshStorage();
   const importer = createImporter({
-    storage,
-    media: seam(createMedia(media)),
+    storage: storageSeam(storage),
+    media: mediaSeam(createMedia(media)),
     playback: createPlayback(media, null),
   });
   return { storage, importer, media, root, sheet };
 }
+
+/**
+ * A `Media` that holds the copy of one source file — the first whose path
+ * ends in `filename` — until the test lets it go, and says when it has got
+ * there. The one way to have a run reliably mid-copy when cancel is called.
+ *
+ * Every argument is forwarded as given, so a signal the importer hands its
+ * copies reaches the real one untouched.
+ */
+function holdCopyOf(filename: string): {
+  seam: (real: Media) => Media;
+  reached: Promise<void>;
+  release: () => void;
+} {
+  let release: () => void = () => undefined;
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  let arrive: () => void = () => undefined;
+  const reached = new Promise<void>((resolve) => {
+    arrive = resolve;
+  });
+  let held = false;
+  return {
+    reached,
+    release: () => release(),
+    seam: (real) => ({
+      ...real,
+      copyIn: async (...args) => {
+        if (!held && args[1].endsWith(filename)) {
+          held = true;
+          arrive();
+          await gate;
+        }
+        return real.copyIn(...args);
+      },
+    }),
+  };
+}
+
+/** The **Movie folders** under a managed directory, by name. */
+const folders = (media: string): string[] => readdirSync(media).sort();
 
 /** Every file under a tree, by relative path, with its size and its bytes. */
 function treeOf(dir: string): Record<string, { size: number; bytes: string }> {
@@ -353,13 +406,15 @@ describe('createImporter — the snapshot', () => {
   it('completes the scan before the first copy starts', async () => {
     const seen: (ImportRun | null)[] = [];
     let importer: Importer | null = null;
-    const box = sandbox((real) => ({
-      ...real,
-      copyIn: (folder, source) => {
-        seen.push(importer?.current() ?? null);
-        return real.copyIn(folder, source);
-      },
-    }));
+    const box = sandbox({
+      media: (real) => ({
+        ...real,
+        copyIn: (...args) => {
+          seen.push(importer?.current() ?? null);
+          return real.copyIn(...args);
+        },
+      }),
+    });
     importer = box.importer;
 
     await importer.start(box.sheet, box.root);
@@ -452,5 +507,223 @@ describe('createImporter — refusing to start', () => {
 
     await expect(importer.start(sheet, root)).rejects.toThrow();
     expect(importer.current()?.id).toBe(first.id);
+  });
+});
+
+/**
+ * Cancel, mid-copy: the run is held on Amélie's video — Die Hard already
+ * added, Amélie's folder reserved and its first byte not yet landed — and
+ * `cancel` is called there. What must be true afterwards: the run is gone,
+ * Die Hard is still in the library, Amélie never arrives, and the managed
+ * directory holds no half-folder for her.
+ *
+ * `cancel` resolves once the in-flight copy has been dealt with and its
+ * folder is gone; `current` answers `null` from then on. The gate is released
+ * after the call and before the await, so the test holds whether the importer
+ * aborts the copy or waits it out before rolling back.
+ */
+describe('createImporter — cancel', () => {
+  it('discards the run: current answers null afterwards', async () => {
+    const hold = holdCopyOf('Amelie.mp4');
+    const { importer, root, sheet } = sandbox({ media: hold.seam });
+    await importer.start(sheet, root);
+    await hold.reached;
+
+    const cancelled = importer.cancel();
+    hold.release();
+    await cancelled;
+
+    expect(importer.current()).toBeNull();
+  });
+
+  it('keeps every movie added before the cancel', async () => {
+    const hold = holdCopyOf('Amelie.mp4');
+    const { storage, importer, root, sheet } = sandbox({ media: hold.seam });
+    await importer.start(sheet, root);
+    await hold.reached;
+
+    const cancelled = importer.cancel();
+    hold.release();
+    await cancelled;
+
+    expect(Object.keys(byTitle(storage))).toEqual(['Die Hard']);
+    expect(byTitle(storage)['Die Hard'].videoPath).toBe(
+      'die-hard-1988/Die.Hard.1988.1080p.mp4'
+    );
+  });
+
+  it('aborts the in-flight copy and leaves no reserved folder behind for it', async () => {
+    const hold = holdCopyOf('Amelie.mp4');
+    const { storage, importer, media, root, sheet } = sandbox({
+      media: hold.seam,
+    });
+    await importer.start(sheet, root);
+    await hold.reached;
+    // The folder is reserved before the first byte is copied into it.
+    expect(folders(media)).toEqual(['amelie-2001', 'die-hard-1988']);
+
+    const cancelled = importer.cancel();
+    hold.release();
+    await cancelled;
+
+    expect(folders(media)).toEqual(['die-hard-1988']);
+    expect(byTitle(storage)['Amélie']).toBeUndefined();
+  });
+
+  it('does not go on to the next match once cancelled', async () => {
+    // Held on Die Hard's video, the first copy of the run: nothing has been
+    // added yet, and nothing may be added after the cancel either.
+    const hold = holdCopyOf('Die.Hard.1988.1080p.mp4');
+    const { storage, importer, media, root, sheet } = sandbox({
+      media: hold.seam,
+    });
+    await importer.start(sheet, root);
+    await hold.reached;
+
+    const cancelled = importer.cancel();
+    hold.release();
+    await cancelled;
+    // Room for a run that wrongly went on to reach Amélie.
+    await new Promise((resolve) => setTimeout(resolve, 200));
+
+    expect(Object.keys(byTitle(storage))).toEqual([]);
+    expect(folders(media)).toEqual([]);
+    expect(importer.current()).toBeNull();
+  });
+
+  it('changes nothing under the library root', async () => {
+    const hold = holdCopyOf('Amelie.mp4');
+    const { importer, root, sheet } = sandbox({ media: hold.seam });
+    const before = treeOf(root);
+    await importer.start(sheet, root);
+    await hold.reached;
+
+    const cancelled = importer.cancel();
+    hold.release();
+    await cancelled;
+
+    expect(treeOf(root)).toEqual(before);
+  });
+
+  it('discards a run that is already in review, so a new one can start', async () => {
+    const { importer, root, sheet } = sandbox();
+    const first = await importer.start(sheet, root);
+    await untilReview(importer);
+
+    await importer.cancel();
+
+    expect(importer.current()).toBeNull();
+    const second = await importer.start(sheet, root);
+    expect(second.id).not.toBe(first.id);
+    await untilReview(importer);
+  });
+});
+
+/**
+ * The **Already in library** skip: a row whose **Title key** and year are
+ * already a movie in the library is neither a **Match** nor a **Problem**. The
+ * titles are read once when the run starts, not once per row — a thousand-row
+ * sheet is a thousand lookups otherwise.
+ */
+describe('createImporter — a row already in the library', () => {
+  it('adds nothing on a second run of the same sheet', async () => {
+    const { storage, importer, root, sheet } = sandbox();
+    await importer.start(sheet, root);
+    await untilReview(importer);
+    await importer.cancel();
+
+    await importer.start(sheet, root);
+    const run = await untilReview(importer);
+
+    expect(Object.keys(byTitle(storage)).sort()).toEqual([
+      'Amélie',
+      'Die Hard',
+    ]);
+    // Skipped rows are counted as neither: nothing to import, nothing to fix.
+    expect(run).toMatchObject({
+      phase: 'review',
+      found: 2,
+      matched: 0,
+      total: 0,
+      done: 0,
+      problems: [],
+    });
+  });
+
+  it('leaves the managed directory as the first run left it', async () => {
+    const { importer, media, root, sheet } = sandbox();
+    await importer.start(sheet, root);
+    await untilReview(importer);
+    const after = treeOf(media);
+    await importer.cancel();
+
+    await importer.start(sheet, root);
+    await untilReview(importer);
+
+    expect(treeOf(media)).toEqual(after);
+  });
+
+  it('skips by title key and year: the same film under another spelling, not a remake', async () => {
+    const { storage, importer, root, sheet } = sandbox();
+    // The key of `Die.Hard` is the key of `Die Hard`, and the year agrees:
+    // the row is the film already there.
+    storage.addMovie({
+      title: 'Die.Hard',
+      year: 1988,
+      videoPath: 'elsewhere/die-hard.mp4',
+    });
+    // Key-equal, but another year: a different film, so the row imports.
+    storage.addMovie({
+      title: 'Amélie',
+      year: 1995,
+      videoPath: 'elsewhere/amelie-1995.mp4',
+    });
+
+    await importer.start(sheet, root);
+    const run = await untilReview(importer);
+
+    const films = storage
+      .listMovies({ sort: 'a-z' })
+      .map((movie) => [movie.title, movie.year])
+      .sort();
+    expect(films).toEqual([
+      ['Amélie', 1995],
+      ['Amélie', 2001],
+      ['Die.Hard', 1988],
+    ]);
+    expect(run).toMatchObject({ matched: 1, total: 1, done: 1, problems: [] });
+  });
+
+  it('reads the library once per run, not once per row', async () => {
+    const reads = { count: 0 };
+    const { importer, root } = sandbox({
+      storage: (real) => ({
+        ...real,
+        listMovies: (query) => {
+          reads.count += 1;
+          return real.listMovies(query);
+        },
+        searchMovies: (text) => {
+          reads.count += 1;
+          return real.searchMovies(text);
+        },
+        getHome: (query) => {
+          reads.count += 1;
+          return real.getHome(query);
+        },
+      }),
+    });
+    // Three rows, so a per-row lookup would show as three reads.
+    const sheet = join(root, '..', 'three.csv');
+    writeFileSync(
+      sheet,
+      'Title,Year\nDie Hard,1988\nAmélie,2001\nThe Lantern Keeper,2019\n',
+      'utf8'
+    );
+
+    await importer.start(sheet, root);
+    await untilReview(importer);
+
+    expect(reads.count).toBe(1);
   });
 });

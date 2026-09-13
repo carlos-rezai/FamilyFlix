@@ -8,7 +8,12 @@ import {
   afterEach,
 } from 'vitest';
 
-import { startImport, fetchCurrentImport } from './api';
+import {
+  startImport,
+  fetchCurrentImport,
+  cancelImport,
+  ImportBusyError,
+} from './api';
 import type {
   ImportPhase,
   ImportProblem,
@@ -21,6 +26,7 @@ import type {
 import { makeImportRun } from '@/test-support/makeImportRun/makeImportRun';
 import {
   createdResponse,
+  noContentResponse,
   notFoundResponse,
   okResponse,
   serverErrorResponse,
@@ -29,9 +35,10 @@ import {
 /**
  * 13 — Bulk import, Phase 2: "the tracer bullet" (issue #125).
  *
- * The two wire calls the **Run hook** makes in this slice — `startImport`
- * behind _Start import_ and `fetchCurrentImport` behind every poll. One caller
- * each, so they live with the feature rather than in `src/api/`.
+ * The wire calls the **Run hook** makes — `startImport` behind _Start
+ * import_, `fetchCurrentImport` behind every poll and the mount, and, from
+ * issue #126, `cancelImport` behind _Cancel import_. One caller each, so they
+ * live with the feature rather than in `src/api/`.
  *
  * In `saveRating`'s style: what was sent, and what the caller is handed back
  * for each status the route can answer. `startImport` is the one call in the
@@ -142,9 +149,8 @@ describe('startImport', () => {
   it('rejects on a 409 without naming a field', async () => {
     fetchMock.mockResolvedValue(conflictResponse());
 
-    // A run already exists; neither field is wrong. What the screen does with
-    // this is the next slice's — here it only has to not be drawn under a
-    // field.
+    // A run already exists; neither field is wrong, so nothing is drawn under
+    // one.
     const failure = await startImport(SHEET, ROOT).then(
       () => null,
       (error: unknown) => error
@@ -154,6 +160,29 @@ describe('startImport', () => {
     expect(['sheet', 'root']).not.toContain(
       (failure as { field?: unknown }).field
     );
+  });
+
+  it('rejects a 409 as ImportBusyError, so the screen can show the run already there', async () => {
+    fetchMock.mockResolvedValue(conflictResponse());
+
+    // The one failure the hook answers by reading `current` instead of
+    // reporting: a run exists, and the screen should be showing it. A `500`
+    // must not be told apart from a broken request, so it stays a plain Error.
+    await expect(startImport(SHEET, ROOT)).rejects.toBeInstanceOf(
+      ImportBusyError
+    );
+  });
+
+  it('does not reject a 500 as ImportBusyError', async () => {
+    fetchMock.mockResolvedValue(serverErrorResponse());
+
+    const failure = await startImport(SHEET, ROOT).then(
+      () => null,
+      (error: unknown) => error
+    );
+
+    expect(failure).toBeInstanceOf(Error);
+    expect(failure).not.toBeInstanceOf(ImportBusyError);
   });
 
   it('rejects when the server fell over', async () => {
@@ -211,6 +240,38 @@ describe('fetchCurrentImport', () => {
     fetchMock.mockRejectedValue(new Error('offline'));
 
     await expect(fetchCurrentImport()).rejects.toThrow();
+  });
+});
+
+describe('cancelImport', () => {
+  it('POSTs to the cancel route', async () => {
+    fetchMock.mockResolvedValue(noContentResponse());
+
+    await cancelImport();
+
+    const request = onlyRequest();
+    expect(request.url).toBe('/api/import/current/cancel');
+    expect(request.method?.toUpperCase()).toBe('POST');
+  });
+
+  it('resolves on the 204, reading no body', async () => {
+    // `noContentResponse` rejects on `json()`: a call that reached for the
+    // body would reject here.
+    fetchMock.mockResolvedValue(noContentResponse());
+
+    await expect(cancelImport()).resolves.toBeUndefined();
+  });
+
+  it('rejects when the server fell over', async () => {
+    fetchMock.mockResolvedValue(serverErrorResponse());
+
+    await expect(cancelImport()).rejects.toThrow();
+  });
+
+  it('rejects when the request could not be made at all', async () => {
+    fetchMock.mockRejectedValue(new Error('offline'));
+
+    await expect(cancelImport()).rejects.toThrow();
   });
 });
 

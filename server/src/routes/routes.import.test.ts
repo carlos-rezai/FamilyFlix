@@ -9,9 +9,11 @@
 // and `media` are, as the fifth argument, and these tests are the only thing
 // that ever composes it beside `main.ts`.
 //
-// Two routes in this slice — `POST /api/import` and `GET /api/import/current`
-// — and one guard on a route that already existed: `POST /api/movies` keeps
-// accepting bytes only, whatever a path field says.
+// Two routes from the tracer bullet — `POST /api/import` and
+// `GET /api/import/current` — a third from issue #126,
+// `POST /api/import/current/cancel`, and one guard on a route that already
+// existed: `POST /api/movies` keeps accepting bytes only, whatever a path
+// field says.
 
 import express from 'express';
 import { cpSync, mkdirSync, readdirSync, writeFileSync } from 'node:fs';
@@ -125,6 +127,9 @@ function postImport(baseUrl: string, body: unknown): Promise<Response> {
 }
 
 const getCurrent = (baseUrl: string) => fetch(`${baseUrl}/api/import/current`);
+
+const postCancel = (baseUrl: string) =>
+  fetch(`${baseUrl}/api/import/current/cancel`, { method: 'POST' });
 
 /** The snapshot once the run has reached review — or a failure if it never does. */
 async function untilReview(baseUrl: string): Promise<ImportRun> {
@@ -440,7 +445,69 @@ describe('GET /api/import/current', () => {
   });
 });
 
+/**
+ * Cancel, over the wire: `204` with nothing to say, and from then on
+ * `current` is a `404` — the run is discarded, not paused. The gate holds the
+ * run mid-copy so the cancel lands on a run that is actually going.
+ */
+describe('POST /api/import/current/cancel', () => {
+  it('answers 204 for a run that is going, and current answers 404 after it', async () => {
+    const { seam, release } = gatedSeam();
+    const { baseUrl, root, sheet } = freshApi({ seam });
+    await postImport(baseUrl, { sheetPath: sheet, rootPath: root });
+    expect((await getCurrent(baseUrl)).status).toBe(200);
+
+    const cancelled = postCancel(baseUrl);
+    release();
+    const response = await cancelled;
+
+    expect(response.status).toBe(204);
+    expect((await getCurrent(baseUrl)).status).toBe(404);
+  });
+
+  it('answers 204 for a run in review, and current answers 404 after it', async () => {
+    const { baseUrl, root, sheet } = freshApi();
+    await postImport(baseUrl, { sheetPath: sheet, rootPath: root });
+    await untilReview(baseUrl);
+
+    const response = await postCancel(baseUrl);
+
+    expect(response.status).toBe(204);
+    expect((await getCurrent(baseUrl)).status).toBe(404);
+  });
+
+  it('lets a new run start once the old one is cancelled', async () => {
+    const { baseUrl, root, sheet } = freshApi();
+    const first = (await (
+      await postImport(baseUrl, { sheetPath: sheet, rootPath: root })
+    ).json()) as ImportRun;
+    await untilReview(baseUrl);
+    await postCancel(baseUrl);
+
+    const response = await postImport(baseUrl, {
+      sheetPath: sheet,
+      rootPath: root,
+    });
+
+    expect(response.status).toBe(201);
+    expect(((await response.json()) as ImportRun).id).not.toBe(first.id);
+    await untilReview(baseUrl);
+  });
+});
+
 describe('the importer is injected, not imported', () => {
+  it('cancels through the injected importer’s own cancel', async () => {
+    const cancel = vi.fn<Importer['cancel']>().mockResolvedValue(undefined);
+    const { baseUrl } = freshApi({
+      importer: (composed) => ({ ...composed, cancel }),
+    });
+
+    const response = await postCancel(baseUrl);
+
+    expect(response.status).toBe(204);
+    expect(cancel).toHaveBeenCalledTimes(1);
+  });
+
   it('starts the run through the injected importer’s own start', async () => {
     const start = vi.fn<Importer['start']>();
     const { baseUrl, root, sheet } = freshApi({
