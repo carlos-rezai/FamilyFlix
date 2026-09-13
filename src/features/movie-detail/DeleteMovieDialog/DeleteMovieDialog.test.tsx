@@ -102,6 +102,35 @@ describe('DeleteMovieDialog — the copy', () => {
     ).toBeTruthy();
   });
 
+  it('names a title that carries its own quotation marks', () => {
+    renderDialog({ title: 'The "Great" Escape' });
+
+    expect(
+      within(dialog()).getByRole('heading', {
+        name: 'Delete “The "Great" Escape”?',
+      })
+    ).toBeTruthy();
+    expect(
+      screen.getByRole('dialog', { name: 'Delete “The "Great" Escape”?' })
+    ).toBeTruthy();
+  });
+
+  it('wraps a very long title inside the card rather than widening it', () => {
+    const long =
+      'The Extraordinarily Long And Frankly Unreasonable Title Of A Film ' +
+      'That Somebody In The Family Insisted On Keeping';
+    renderDialog({ title: long });
+
+    const heading = within(dialog()).getByRole('heading', {
+      name: `Delete “${long}”?`,
+    });
+
+    // jsdom lays nothing out, so what can be checked is the rule that keeps
+    // the card its 520px whatever the title: the heading breaks its words
+    // rather than pushing the ✕ off the edge.
+    expect(getComputedStyle(heading).overflowWrap).toBe('anywhere');
+  });
+
   it('says it can’t be undone, exactly', () => {
     renderDialog();
 
@@ -489,36 +518,5 @@ describe('DeleteMovieDialog — failure', () => {
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
     await waitFor(() => expect(url()).toBe('/genre/Drama?sort=az'));
-  });
-});
-
-describe('DeleteMovieDialog — the heading holds any title', () => {
-  it('names a title that carries its own quotation marks', () => {
-    renderDialog({ title: 'The "Great" Escape' });
-
-    expect(
-      within(dialog()).getByRole('heading', {
-        name: 'Delete “The "Great" Escape”?',
-      })
-    ).toBeTruthy();
-    expect(
-      screen.getByRole('dialog', { name: 'Delete “The "Great" Escape”?' })
-    ).toBeTruthy();
-  });
-
-  it('wraps a very long title inside the card rather than widening it', () => {
-    const long =
-      'The Extraordinarily Long And Frankly Unreasonable Title Of A Film ' +
-      'That Somebody In The Family Insisted On Keeping';
-    renderDialog({ title: long });
-
-    const heading = within(dialog()).getByRole('heading', {
-      name: `Delete “${long}”?`,
-    });
-
-    // jsdom lays nothing out, so what can be checked is the rule that keeps
-    // the card its 520px whatever the title: the heading breaks its words
-    // rather than pushing the ✕ off the edge.
-    expect(getComputedStyle(heading).overflowWrap).toBe('anywhere');
   });
 });
