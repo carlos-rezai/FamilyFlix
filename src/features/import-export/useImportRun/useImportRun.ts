@@ -1,6 +1,11 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { fetchCurrentImport, startImport } from '../api/api';
+import {
+  cancelImport,
+  fetchCurrentImport,
+  ImportBusyError,
+  startImport,
+} from '../api/api';
 import type { ImportRun } from '@/types';
 
 /** How often the **Current run** is read while it is still going. */
@@ -11,14 +16,25 @@ const isLive = (run: ImportRun | null): boolean =>
   run !== null && run.phase !== 'review';
 
 export interface ImportRunState {
-  /** The **Current run** as last read — `null` before one has started. */
+  /** The **Current run** as last read — `null` when there is none. */
   run: ImportRun | null;
   /**
+   * Whether the read made on mount has yet to answer. Until it has, the hook
+   * does not know whether a run exists, and a screen that offered the setup
+   * fields on a guess would be offering them while a run exists.
+   */
+  attaching: boolean;
+  /**
    * Start a run over the two paths and hold the snapshot the start answered.
-   * Rejects as `startImport` does — an `ImportRefusedError` names the field —
-   * so the caller can draw the reason where it belongs.
+   * A `409` — a run already exists — is answered by reading that run and
+   * holding it instead, so the start settles on exactly what the screen
+   * should be showing. Rejects as `startImport` does otherwise — an
+   * `ImportRefusedError` names the field — so the caller can draw the reason
+   * where it belongs.
    */
   start: (sheetPath: string, rootPath: string) => Promise<void>;
+  /** _Cancel import_: discard the run, and let it go from the screen. */
+  cancel: () => Promise<void>;
 }
 
 /**
@@ -27,15 +43,60 @@ export interface ImportRunState {
  * Transport is polling: `GET /api/import/current` every 500 ms while the
  * phase is scanning or importing, and not once more once the run is in the
  * **Review step** — a hook that kept polling in review would be a request
- * every half second for as long as the maintainer reads the list. Nothing is
- * read on mount: re-attaching to a run already going is the next slice's, and
- * in this one a fresh screen is a fresh screen.
+ * every half second for as long as the maintainer reads the list. The same
+ * endpoint is read once on mount, which is the re-attach: leaving the screen
+ * and returning, reloading, or arriving with a run already going all show
+ * the running step, and a `404` shows setup.
+ *
+ * Every read applies only if nothing has moved the run on since it was sent:
+ * a poll that lands after a cancel, or after the screen was left, must not
+ * put a snapshot back.
  */
 export function useImportRun(): ImportRunState {
   const [run, setRun] = useState<ImportRun | null>(null);
+  const [attaching, setAttaching] = useState(true);
+  /** Bumped by every start and cancel, so a read from before either is stale. */
+  const generation = useRef(0);
+
+  useEffect(() => {
+    let left = false;
+    const at = generation.current;
+    void fetchCurrentImport()
+      .then((current) => {
+        if (!left && at === generation.current) {
+          setRun(current);
+        }
+      })
+      .catch(() => {
+        // Nothing could be read: the screen has no run to show, and the
+        // maintainer can still start one.
+      })
+      .finally(() => {
+        if (!left) {
+          setAttaching(false);
+        }
+      });
+    return () => {
+      left = true;
+    };
+  }, []);
 
   const start = useCallback(async (sheetPath: string, rootPath: string) => {
-    setRun(await startImport(sheetPath, rootPath));
+    generation.current += 1;
+    try {
+      setRun(await startImport(sheetPath, rootPath));
+    } catch (error) {
+      if (!(error instanceof ImportBusyError)) {
+        throw error;
+      }
+      setRun(await fetchCurrentImport());
+    }
+  }, []);
+
+  const cancel = useCallback(async () => {
+    generation.current += 1;
+    await cancelImport();
+    setRun(null);
   }, []);
 
   const live = isLive(run);
@@ -46,11 +107,13 @@ export function useImportRun(): ImportRunState {
 
     let stopped = false;
     const timer = setInterval(async () => {
+      const at = generation.current;
       try {
         const next = await fetchCurrentImport();
-        // A poll that lands after the screen was left, or after a later poll
-        // already moved the run on, must not put a stale snapshot back.
-        if (!stopped) {
+        // A poll that lands after the screen was left, after a cancel, or
+        // after a later poll already moved the run on, must not put a stale
+        // snapshot back.
+        if (!stopped && at === generation.current) {
           setRun(next);
         }
       } catch {
@@ -65,5 +128,5 @@ export function useImportRun(): ImportRunState {
     };
   }, [live]);
 
-  return { run, start };
+  return { run, attaching, start, cancel };
 }

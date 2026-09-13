@@ -1264,6 +1264,22 @@ export function createApiRouter(
     res.json(run);
   });
 
+  // _Cancel import_: the run is discarded, not paused — `204` once the copy
+  // in flight has been stopped and its folder taken back, and `current` is a
+  // `404` from then on. With no run there is nothing to do, and that is still
+  // a `204`: the screen asked for a state, and the state is now so.
+  router.post(
+    '/import/current/cancel',
+    async (_req: Request, res: Response) => {
+      try {
+        await importer.cancel();
+        res.status(204).end();
+      } catch {
+        res.status(500).json({ error: 'Could not cancel the import' });
+      }
+    }
+  );
+
   // Posters and backdrops straight off disk. Serves nothing until an import
   // populates the managed media directory; cards fall back to their gradient
   // until then.

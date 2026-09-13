@@ -1,4 +1,5 @@
 import {
+  createReadStream,
   createWriteStream,
   existsSync,
   mkdirSync,
@@ -17,7 +18,6 @@ import {
   resolve,
   sep,
 } from 'node:path';
-import { copyFile } from 'node:fs/promises';
 import { pipeline } from 'node:stream/promises';
 import type { Readable } from 'node:stream';
 
@@ -117,8 +117,16 @@ export interface Media {
    * Copy, never move: the originals under the root survive a bad run, and
    * cancelling needs no undo. A source that is not there is refused rather
    * than answered with a path to nothing.
+   *
+   * `signal`, when given, is **Bulk import**'s cancel reaching the copy that
+   * is going: an aborted copy rejects and leaves no half-file behind for the
+   * folder's rollback to miss.
    */
-  copyIn(folder: string, sourcePath: string): Promise<string>;
+  copyIn(
+    folder: string,
+    sourcePath: string,
+    signal?: AbortSignal
+  ): Promise<string>;
 
   /**
    * Remove a folder and everything one request wrote into it — the rollback,
@@ -279,13 +287,24 @@ export function createMedia(mediaPath: string): Media {
       return storedIn(folder, safe);
     },
 
-    copyIn: async (folder, sourcePath) => {
+    copyIn: async (folder, sourcePath, signal) => {
       const safe = safeFilename(basename(sourcePath));
+      const target = join(folder, safe);
 
-      // `copyFile` refuses a source that is not there by throwing, before any
-      // byte lands — so a refused copy leaves no half-file behind for the row
-      // to point at.
-      await copyFile(sourcePath, join(folder, safe));
+      // A stream rather than `copyFile`, because a copy has to be stoppable:
+      // a 12 GB film that cancel could only wait out is not cancelled. A copy
+      // that did not finish — a source that is not there, or the signal —
+      // takes its half-file with it, so nothing is left for a row to point at.
+      try {
+        await pipeline(
+          createReadStream(sourcePath),
+          createWriteStream(target),
+          signal === undefined ? {} : { signal }
+        );
+      } catch (error) {
+        rmSync(target, { force: true });
+        throw error;
+      }
 
       return storedIn(folder, safe);
     },

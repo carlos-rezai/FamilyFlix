@@ -6,14 +6,15 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import ImportPage from './ImportPage';
 import { theme } from '@/styles/theme';
 import { LocationProbe } from '@/test-support/LocationProbe/LocationProbe';
+import { notFoundResponse } from '@/test-support/fakeResponse/fakeResponse';
 
 beforeEach(() => {
-  // The flow writes on Start import and reads nothing on mount in this slice;
-  // the stub is here so a page test never reaches the network if that ever
-  // changes.
+  // The flow asks for the current run on arrival and offers nothing until it
+  // is answered; a page test never reaches the network, so the stub answers
+  // it with the one state that lands on the setup step: no run.
   vi.stubGlobal(
     'fetch',
-    vi.fn(() => new Promise<Response>(() => undefined))
+    vi.fn(() => Promise.resolve(notFoundResponse('No import is running')))
   );
 });
 
@@ -63,13 +64,15 @@ function measuresAroundHeading(): string[] {
  * at. What the flow does once mounted is tested where it lives.
  */
 describe('ImportPage', () => {
-  it('mounts the import flow', () => {
+  it('mounts the import flow', async () => {
     renderPage();
 
     expect(
       screen.getByRole('heading', { level: 1, name: 'Import library' })
     ).toBeDefined();
-    expect(screen.getByRole('textbox', { name: 'Spreadsheet' })).toBeDefined();
+    expect(
+      await screen.findByRole('textbox', { name: 'Spreadsheet' })
+    ).toBeDefined();
     expect(
       screen.getByRole('textbox', { name: 'Movies root folder' })
     ).toBeDefined();
