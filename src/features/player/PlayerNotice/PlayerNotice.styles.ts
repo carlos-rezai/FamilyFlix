@@ -1,15 +1,4 @@
-import styled, { keyframes } from 'styled-components';
-
-/** The prototype's `ffPop` — the circle arriving rather than appearing. */
-const pop = keyframes`
-  from { opacity: 0; transform: scale(0.9); }
-  to   { opacity: 1; transform: scale(1); }
-`;
-
-/** The prototype's `ffSpin`, for the buffering ring. */
-const spin = keyframes`
-  to { transform: rotate(360deg); }
-`;
+import styled from 'styled-components';
 
 /**
  * The one element in the centre of the picture, at the prototype's 96px.
@@ -28,7 +17,7 @@ export const Circle = styled.div`
   border: 1px solid rgba(255, 255, 255, 0.2);
   display: grid;
   place-items: center;
-  animation: ${pop} 0.2s ease;
+  animation: ffPop 0.2s ease;
 `;
 
 /**
@@ -60,7 +49,7 @@ export const Stack = styled.div`
 
 /** The buffering ring, turning inside the circle. */
 export const Spinner = styled.svg`
-  animation: ${spin} 0.9s linear infinite;
+  animation: ffSpin 0.9s linear infinite;
 `;
 
 /** One sentence under the circle — what the film is doing while it gets ready. */
