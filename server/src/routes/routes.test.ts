@@ -6259,7 +6259,7 @@ describe('PATCH /api/movies/:id — the runtime of a film that changed', () => {
   });
 });
 
-// --- 12 — Delete movie, Phase 2: "the tracer bullet" (issue #116) -------------
+// --- 12 — Delete movie: the row (issue #116), then the bytes (issue #117) -----
 
 /** DELETE one movie, exactly as the Delete dialog's confirm does. */
 function deleteMovie(baseUrl: string, id: string): Promise<Response> {
@@ -6269,14 +6269,46 @@ function deleteMovie(baseUrl: string, id: string): Promise<Response> {
 }
 
 /**
+ * libuv's `UV_FS_O_EXLOCK`, which Node's `fs.constants` does not spell on
+ * Windows: open with no share mode at all, so that nothing else — the removal
+ * under test included — can touch the file while the handle is held. This is
+ * what a video the stream route still has open looks like to a **Delete**, and
+ * the only way to stage a locked file from inside one process.
+ *
+ * Elsewhere the bit is unknown to `open(2)` and ignored, so the file is simply
+ * open — and the contract asserted through it (the row goes regardless) holds
+ * either way.
+ */
+const UV_FS_O_EXLOCK = 0x10000000;
+
+/** Hold a file the way the stream route does mid-Delete; answers the release. */
+function holdOpen(file: string): () => void {
+  const fd = openSync(file, constants.O_RDONLY | UV_FS_O_EXLOCK);
+  return () => closeSync(fd);
+}
+
+/**
+ * A second film stored beside the fixture one, so a Delete has a neighbour to
+ * be asserted untouched — row and folder both.
+ */
+async function storedNeighbour(baseUrl: string): Promise<Movie> {
+  return createdFromParts(baseUrl, [
+    ['title', 'Rear Window'],
+    ['year', '1954'],
+    ['video', filePart('rear.mp4')],
+    ['poster', posterPart('rear.jpg')],
+  ]);
+}
+
+/**
  * The wire contract is `204` with nothing in it, and the JSON `404` every
  * per-movie route already sends for an id it cannot find. Not `200 {}`: the
  * single-signal routes echo because a client reconciles on the echo, and a
  * delete reconciles on absence — so what is asserted after the status is what
  * the library no longer lists, not what the response said.
  *
- * The bytes under the movie folder are Phase 3's; nothing here looks at the
- * sandbox.
+ * The bytes under the **Movie folder** are the nested block's; the row tests
+ * look at nothing in the sandbox.
  */
 describe('DELETE /api/movies/:id', () => {
   it('answers 204 with an empty body', async () => {
@@ -6365,123 +6397,89 @@ describe('DELETE /api/movies/:id', () => {
       error: `Unknown movie: ${stored.id}`,
     });
   });
-});
 
-// --- 12 — Delete movie, Phase 3: "the bytes" (issue #117) ---------------------
+  /**
+   * The bytes, **row first, then best-effort** — the same contract `removeFile`
+   * keeps after a replace. What a client can observe is exactly what #116 left:
+   * `204`, and the JSON `404` for an id the library does not hold. What changed
+   * is the sandbox afterwards.
+   */
+  describe('the Movie folder afterwards', () => {
+    it('leaves the movie’s folder gone from the sandbox once it has answered', async () => {
+      const { baseUrl, media } = freshApi();
+      const movie = await storedMovie(baseUrl);
+      expect(folders(media)).toEqual([KEEPER_FOLDER]);
 
-/**
- * libuv's `UV_FS_O_EXLOCK`, which Node's `fs.constants` does not spell on
- * Windows: open with no share mode at all, so that nothing else — the removal
- * under test included — can touch the file while the handle is held. This is
- * what a video the stream route still has open looks like to a **Delete**, and
- * the only way to stage a locked file from inside one process.
- *
- * Elsewhere the bit is unknown to `open(2)` and ignored, so the file is simply
- * open — and the contract asserted through it (the row goes regardless) holds
- * either way.
- */
-const UV_FS_O_EXLOCK = 0x10000000;
-
-/** Hold a file the way the stream route does mid-Delete; answers the release. */
-function holdOpen(file: string): () => void {
-  const fd = openSync(file, constants.O_RDONLY | UV_FS_O_EXLOCK);
-  return () => closeSync(fd);
-}
-
-/**
- * A second film stored beside the fixture one, so a Delete has a neighbour to
- * be asserted untouched — row and folder both.
- */
-async function storedNeighbour(baseUrl: string): Promise<Movie> {
-  return createdFromParts(baseUrl, [
-    ['title', 'Rear Window'],
-    ['year', '1954'],
-    ['video', filePart('rear.mp4')],
-    ['poster', posterPart('rear.jpg')],
-  ]);
-}
-
-/**
- * The bytes, **row first, then best-effort** — the same contract `removeFile`
- * keeps after a replace. What a client can observe is exactly what #116 left:
- * `204`, and the JSON `404` for an id the library does not hold. What changed
- * is the sandbox afterwards.
- */
-describe('DELETE /api/movies/:id — the bytes', () => {
-  it('leaves the movie’s folder gone from the sandbox once it has answered', async () => {
-    const { baseUrl, media } = freshApi();
-    const movie = await storedMovie(baseUrl);
-    expect(folders(media)).toEqual([KEEPER_FOLDER]);
-
-    const response = await deleteMovie(baseUrl, movie.id);
-
-    // Video, poster, both subtitles — the whole **Movie folder**, not the one
-    // file the row's `videoPath` names. Gone by the time the response is, so
-    // a Storage section reading "space used" straight afterwards is right.
-    expect(response.status).toBe(204);
-    expect(existsSync(join(media, KEEPER_FOLDER))).toBe(false);
-    expect(folders(media)).toEqual([]);
-  });
-
-  it('takes the row even when the folder removal fails', async () => {
-    const { baseUrl, media } = freshApi();
-    const movie = await storedMovie(baseUrl);
-
-    const release = holdOpen(join(media, KEEPER_FOLDER, 'lantern.mp4'));
-    try {
       const response = await deleteMovie(baseUrl, movie.id);
 
-      // **Best-effort cleanup**: a video the stream route still has open
-      // leaves a **Stranded folder**, not a ghost row the family can open and
-      // fail on. The library is the source of truth, and it says gone.
-      //
-      // Green before the bytes are wired, by construction — #116's route has
-      // no removal to fail. It is the guard that the removal, once added,
-      // never turns this `204` into a `500`.
+      // Video, poster, both subtitles — the whole **Movie folder**, not the one
+      // file the row's `videoPath` names. Gone by the time the response is, so
+      // a Storage section reading "space used" straight afterwards is right.
       expect(response.status).toBe(204);
-      const detail = await fetch(`${baseUrl}/api/movies/${movie.id}`);
-      expect(detail.status).toBe(404);
-    } finally {
-      release();
-    }
-  });
-
-  it('leaves another movie’s row and folder untouched', async () => {
-    const { baseUrl, media } = freshApi();
-    const movie = await storedMovie(baseUrl);
-    const neighbour = await storedNeighbour(baseUrl);
-    const before = folderContents(media, 'rear-window-1954');
-
-    await deleteMovie(baseUrl, movie.id);
-
-    expect(folders(media)).toEqual(['rear-window-1954']);
-    expect(folderContents(media, 'rear-window-1954')).toEqual(before);
-    const detail = await fetch(`${baseUrl}/api/movies/${neighbour.id}`);
-    expect(detail.status).toBe(200);
-    expect(((await detail.json()) as Movie).title).toBe('Rear Window');
-  });
-
-  it('reaches the bytes through the Media seam and nothing else', async () => {
-    const removed: string[] = [];
-    const recording = (mediaPath: string): Media => ({
-      ...createMedia(mediaPath),
-      removeMovieFolder: (storedPath) => {
-        removed.push(storedPath);
-      },
+      expect(existsSync(join(media, KEEPER_FOLDER))).toBe(false);
+      expect(folders(media)).toEqual([]);
     });
-    const { baseUrl, media } = freshApi(null, recording);
-    const movie = await storedMovie(baseUrl);
 
-    const response = await deleteMovie(baseUrl, movie.id);
+    it('takes the row even when the folder removal fails', async () => {
+      const { baseUrl, media } = freshApi();
+      const movie = await storedMovie(baseUrl);
 
-    // The route is thin — find the movie or 404, delete the row, remove the
-    // folder, end — and learns nothing about the filesystem beyond the one
-    // `Media` method it calls. A seam that removes nothing leaves the folder
-    // standing; if the route had its own `rmSync`, it would not.
-    expect(response.status).toBe(204);
-    expect(removed.map((stored) => stored.split('/')[0])).toEqual([
-      KEEPER_FOLDER,
-    ]);
-    expect(existsSync(join(media, KEEPER_FOLDER))).toBe(true);
+      const release = holdOpen(join(media, KEEPER_FOLDER, 'lantern.mp4'));
+      try {
+        const response = await deleteMovie(baseUrl, movie.id);
+
+        // **Best-effort cleanup**: a video the stream route still has open
+        // leaves a **Stranded folder**, not a ghost row the family can open and
+        // fail on. The library is the source of truth, and it says gone.
+        //
+        // Green before the bytes are wired, by construction — #116's route has
+        // no removal to fail. It is the guard that the removal, once added,
+        // never turns this `204` into a `500`.
+        expect(response.status).toBe(204);
+        const detail = await fetch(`${baseUrl}/api/movies/${movie.id}`);
+        expect(detail.status).toBe(404);
+      } finally {
+        release();
+      }
+    });
+
+    it('leaves another movie’s row and folder untouched', async () => {
+      const { baseUrl, media } = freshApi();
+      const movie = await storedMovie(baseUrl);
+      const neighbour = await storedNeighbour(baseUrl);
+      const before = folderContents(media, 'rear-window-1954');
+
+      await deleteMovie(baseUrl, movie.id);
+
+      expect(folders(media)).toEqual(['rear-window-1954']);
+      expect(folderContents(media, 'rear-window-1954')).toEqual(before);
+      const detail = await fetch(`${baseUrl}/api/movies/${neighbour.id}`);
+      expect(detail.status).toBe(200);
+      expect(((await detail.json()) as Movie).title).toBe('Rear Window');
+    });
+
+    it('reaches the bytes through the Media seam and nothing else', async () => {
+      const removed: string[] = [];
+      const recording = (mediaPath: string): Media => ({
+        ...createMedia(mediaPath),
+        removeMovieFolder: (storedPath) => {
+          removed.push(storedPath);
+        },
+      });
+      const { baseUrl, media } = freshApi(null, recording);
+      const movie = await storedMovie(baseUrl);
+
+      const response = await deleteMovie(baseUrl, movie.id);
+
+      // The route is thin — find the movie or 404, delete the row, remove the
+      // folder, end — and learns nothing about the filesystem beyond the one
+      // `Media` method it calls. A seam that removes nothing leaves the folder
+      // standing; if the route had its own `rmSync`, it would not.
+      expect(response.status).toBe(204);
+      expect(removed.map((stored) => stored.split('/')[0])).toEqual([
+        KEEPER_FOLDER,
+      ]);
+      expect(existsSync(join(media, KEEPER_FOLDER))).toBe(true);
+    });
   });
 });
