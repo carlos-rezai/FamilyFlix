@@ -1,14 +1,4 @@
-import styled, { keyframes } from 'styled-components';
-
-const fade = keyframes`
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: none; }
-`;
-
-const pop = keyframes`
-  from { opacity: 0; transform: scale(0.96); }
-  to { opacity: 1; transform: none; }
-`;
+import styled from 'styled-components';
 
 /**
  * The scrim: the whole viewport, dimmed and blurred, with the card centred in
@@ -24,7 +14,7 @@ export const Scrim = styled.div`
   place-items: center;
   background: ${({ theme }) => theme.colors.scrim};
   backdrop-filter: blur(4px);
-  animation: ${fade} 0.18s ease;
+  animation: ffFade 0.18s ease;
   padding: 24px;
 `;
 
@@ -42,7 +32,7 @@ export const Card = styled.div`
   border-radius: ${({ theme }) => theme.radius.lg};
   box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
   overflow: hidden;
-  animation: ${pop} 0.2s ease;
+  animation: ffPop 0.2s ease;
 `;
 
 export const Header = styled.div`
