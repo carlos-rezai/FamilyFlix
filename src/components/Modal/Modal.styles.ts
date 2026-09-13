@@ -65,7 +65,7 @@ export const IconTile = styled.div`
   flex: 0 0 auto;
   width: 44px;
   height: 44px;
-  border-radius: 12px;
+  border-radius: ${({ theme }) => theme.radius.md};
   background: ${({ theme }) => theme.colors.accentSoft};
   border: 1px solid ${({ theme }) => theme.colors.accentLine};
   display: grid;
