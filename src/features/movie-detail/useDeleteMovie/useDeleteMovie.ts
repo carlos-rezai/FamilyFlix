@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react';
 
-import { deleteMovie as sendDelete } from '../api/api';
 import { useGoBack } from '@/hooks/useGoBack/useGoBack';
+import { deleteMovie as sendDelete } from '../api/api';
 
 export interface DeleteMovie {
   /** True for the life of the request, false before and after. */
