@@ -188,7 +188,9 @@ export function createMedia(mediaPath: string): Media {
   /**
    * A directory strictly inside the media root, as the filesystem spells it —
    * or `null` for one that is not there, is the root itself, or escapes it.
-   * `mediaFilePath`'s rule, asked of a folder rather than a file.
+   * `mediaFilePath`'s rule, stated once for both removals of a folder:
+   * `removeFolder` hands it the absolute path `reserveFolder` made, and
+   * `removeMovieFolder` the first segment of a **Stored path**.
    */
   const containedFolder = (candidate: string): string | null => {
     const root = realRoot();
@@ -265,21 +267,12 @@ export function createMedia(mediaPath: string): Media {
     },
 
     removeFolder: (folder) => {
-      const root = realRoot();
-      if (root === null) {
-        return;
-      }
-
-      let target: string;
-      try {
-        target = realpathSync(resolve(folder));
-      } catch {
-        // Nothing there to remove — a save that failed before the first part
-        // arrived, or a folder something else has already taken away.
-        return;
-      }
-
-      if (target === root || !target.startsWith(root + sep)) {
+      // `null` is nothing to remove — a save that failed before the first part
+      // arrived, a folder something else has already taken away, or one that
+      // was never under the root. The `rmSync` itself is left to throw: this
+      // is a rollback, before any row has committed.
+      const target = containedFolder(folder);
+      if (target === null) {
         return;
       }
       rmSync(target, { recursive: true, force: true });
