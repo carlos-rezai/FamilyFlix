@@ -621,7 +621,7 @@ same layout, spacing, states, copy, and interaction.
 
 - ✅ **Add a movie** — manual file picker (video, poster, multiple subtitles with language).
 - ✅ **Edit a movie** — amend metadata and files; a file the library already holds travels as its path, only a freshly picked one as bytes.
-- 🔜 **Delete a movie** — the ⋯ menu’s Danger row, the Delete dialog, `DELETE /api/movies/:id`, then the Movie folder under best-effort cleanup. Built (issues 115–119); ticks when its refactor (121) closes.
+- ✅ **Delete a movie** — the ⋯ menu’s Danger row, the Delete dialog, `DELETE /api/movies/:id`, then the Movie folder under best-effort cleanup.
 - 🔜 **Bulk import** — spreadsheet → folder matching → review of flagged rows.
 - 🔜 **Import progress console** — scan + import phases, live activity log, cancel (Windows-installer style).
 - 🔜 **Export** — write the library out to CSV / Excel.

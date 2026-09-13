@@ -11,6 +11,90 @@ Newest entry first.
 
 ---
 
+## 2026-09-13 — Delete a movie refactor (issue #121)
+
+Thirteen commits against `docs/refactor-plans/12-delete-movie-refactor.md` —
+twelve code, one document. **3161 tests pass across 176 files**, the same
+count as before the round: no test was added, none removed, and none changed
+what it asserts. `npm run typecheck` is green and `eslint src server` is clean
+on every commit. No wire changed.
+
+The round was the first `issue-loop` initiative's, and its debt was the kind
+four fresh contexts leave rather than the kind a rush does: nothing wrong, a
+few things written twice or in build order. In the order the plan took it:
+
+- **One containment rule for both removals of a folder.** `removeFolder`, the
+  form's rollback, carried its own inline resolve-and-contain one screen above
+  the `containedFolder` the third slice wrote for `removeMovieFolder`. It asks
+  the helper now, and keeps its throw — a rollback runs before any row has
+  committed, and the log's three-contracts decision (Q17, Q18) is untouched.
+  The eleven `removeFolder` / `removeMovieFolder` tests against a real sandbox
+  ran unchanged.
+- **The prototype's own values in `Modal`.** The icon tile's `12px` and the
+  ✕'s `8px` read `radius.md` and `radius.sm`; the scrim and the card write
+  `animation: ffFade 0.18s ease` and `animation: ffPop 0.2s ease` by name, as
+  `mol.Modal` does, resolved by the `@keyframes` `GlobalStyle` already
+  registers. The local `fade` and `pop` and the `keyframes` import are gone.
+  Same pixels, same motion — read back from the open dialog in Chrome.
+- **One import line** in `useDeleteMovie`, so the hook reads like its siblings.
+- **The tests read by behaviour.** `DeleteMovieDialog.test.tsx`'s seven
+  top-level blocks are three: the copy (now holding the two "any title" tests),
+  the two buttons, and _confirming_ — afterwards, in flight, dismissed
+  mid-flight and failure nested under it, the helpers each leaned on hoisted
+  above in their existing order. `routes.test.ts` describes
+  `DELETE /api/movies/:id` once, the bytes' four tests nested under it as "the
+  Movie folder afterwards". The verbose reporter diffed across both commits
+  shows the same 22 and 410 leaf names with only their paths moved.
+- **The same two rules carried across the older files.** `GlobalStyle` now
+  registers `ffSpin`, the one keyframe `tokens.css` had that the code side did
+  not. `Menu` pops by name — the one commit that moved pixels, a 4px slide
+  becoming the prototype's `scale(0.96)` on all three menus. `PlayerNotice`
+  pops and spins by name. `FilterDropdown`'s pill and `ProgressBar`'s
+  conditional corner read `radius.pill`.
+
+### Decisions taken inside the plan
+
+- **The routes banner merged with the blocks.** The file marks its sections by
+  phase, and the two `DELETE` sections were one behaviour split by a build
+  boundary; one describe under two banners would have kept the split in the
+  furniture. It reads `12 — Delete movie: the row (issue #116), then the bytes
+(issue #117)` now. `createMedia.test.ts`'s banners are left as the plan left
+  them.
+- **The nested block is "the Movie folder afterwards"** — named for what the
+  four tests look at, the glossary's term for it, rather than the phase that
+  wrote them.
+- **`containedFolder`'s docblock names its two callers** and what each hands
+  it: the absolute path `reserveFolder` made, and the first segment of a
+  **Stored path**.
+
+### What the browser pass could and could not reach
+
+The Delete dialog, the ⋯ menu, the Filter menu and the player's missing-file
+notice were each read back with `getComputedStyle` in Chrome against the dev
+server: `ffPop 0.14s` on both menus, `ffPop 0.2s` / `ffFade 0.18s` on the
+dialog, `ffPop 0.2s` on the notice's circle, and every `ff*` name from
+`tokens.css` present in `document.styleSheets`. The buffering spinner itself
+was not seen turning — the seeded films have no bytes on this machine, so the
+player never buffers — and `ffSpin` is verified by its registration and the
+computed line on `Spinner`, not by eye.
+
+### Deliberately not changed
+
+Everything the plan's decision document names: the hook's rejection as its
+API, `Menu` and `Modal`'s separate dismissal contracts, `focusablesIn` in
+`Modal.tsx`, the danger tint as a literal, `Skeleton`'s local `pulse`, the
+cross-domain import of `mediaFilePath`, and `IconTile` as one element.
+
+### Follow-ups this refactor surfaced
+
+- **"Containment is checked on the resolved path, on both deletions."**
+  `createMedia`'s domain docblock still counts two; there have been three
+  since `removeMovieFolder` arrived. One word, for whoever next opens the
+  file — beside the `PATCH` handler's leftover slice sentence the plan already
+  lists.
+
+---
+
 ## 2026-09-12 — Delete a movie (issues #114–#120)
 
 Eleven commits across issues #114–#119 in one afternoon, five phases against

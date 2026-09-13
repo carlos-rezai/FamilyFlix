@@ -282,7 +282,7 @@ Builds the installer and publishes it to GitHub Releases automatically.
 | Watch tracking (watched / in-progress / resume)     | ✅ Done         |
 | Add Movie — manual file picker                      | ✅ Done         |
 | Edit a movie — amend metadata and files             | ✅ Done         |
-| Delete a movie — from the ⋯ menu, with confirmation | 🔜 Planned      |
+| Delete a movie — from the ⋯ menu, with confirmation | ✅ Done         |
 | Bulk import (Excel/CSV → library)                   | 🔜 Planned      |
 | Import progress console (scan/import, live log)     | 🔜 Planned      |
 | Export (library → CSV/Excel)                        | 🔜 Planned      |
