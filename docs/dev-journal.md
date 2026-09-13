@@ -11,6 +11,34 @@ Newest entry first.
 
 ---
 
+## 2026-09-13 — The seed goes (issue #127)
+
+The promise CLAUDE.md carried since library-core is kept: `server/src/db/seed/`,
+its test and `npm run db:seed` are deleted, one commit after the two slices
+that made it possible — #125 fills a library from the importer's own fixture,
+and #126's already-in-library skip makes a second run over the same sheet add
+nothing, which is what lets a fixture import stand in for an idempotent seed.
+Filling a dev library is now: run the app, Settings → Import from spreadsheet,
+type the paths under `server/src/import-export/createImporter/fixture/`, Start
+import.
+
+- **The ten-second MP4 outlived the seed**, as `routes.test.ts`'s docblock
+  predicted it would. It is now `server/src/test-support/fixtureVideo/`, a
+  unit with its own test, and the playback-read suite imports `FIXTURE_VIDEO`
+  and `FIXTURE_DURATION_SECONDS` from it instead of reaching into `db/seed/` by
+  path. The importer's fixture videos are hand-made `moov` headers (132 and 122
+  minutes of claimed runtime over 128 bytes), deliberately not films, so a dev
+  library filled from them renders its posters and runtimes but plays nothing
+  — the same as the seed before #85 gave it bytes. A dev who needs a playable
+  film adds one through Add Movie.
+- **The reserved `__seed__/` prefix is gone from source.** The one remaining
+  mention was a path literal in `mediaFilePath.test.ts`'s deep-directory test,
+  now an ordinary `Genre/Title (Year)/file.mp4`.
+- **No test counts changed by the removal itself**: the seed's own suite went,
+  `fixtureVideo`'s two tests came, everything else passes unchanged.
+
+---
+
 ## 2026-09-13 — Delete a movie refactor (issue #121)
 
 Thirteen commits against `docs/refactor-plans/12-delete-movie-refactor.md` —

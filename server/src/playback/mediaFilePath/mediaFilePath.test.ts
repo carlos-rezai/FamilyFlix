@@ -61,10 +61,12 @@ describe('mediaFilePath — a stored path that stays inside', () => {
   it('resolves a path several directories deep', () => {
     const { media } = sandbox();
     const file = writeFile(
-      join(media, '__seed__', 'cold-open', 'cold-open.mp4')
+      join(media, 'Action', 'Cold Open (2019)', 'cold-open.mp4')
     );
 
-    expect(mediaFilePath(media, '__seed__/cold-open/cold-open.mp4')).toBe(file);
+    expect(mediaFilePath(media, 'Action/Cold Open (2019)/cold-open.mp4')).toBe(
+      file
+    );
   });
 
   it('accepts a path whose `..` segments land back inside the tree', () => {

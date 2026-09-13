@@ -100,8 +100,8 @@ describe('createMedia — storeUpload', () => {
 
     // A stored path is also a URL segment: `/api/images/<posterPath>` is
     // `express.static`, and a backslash from a Windows `relative()` would be a
-    // path the browser cannot ask for and the seed's own `<slug>/<slug>.mp4`
-    // does not spell.
+    // path the browser cannot ask for and no stored `<folder>/<file>.mp4`
+    // spells.
     expect(stored).not.toContain('\\');
   });
 

@@ -120,7 +120,7 @@ familyflix/
 │ │ ├── capabilities/ ← Chromium native set ∪ `ffmpeg -decoders`
 │ │ ├── parseSrt/ parseVtt/ parseAss/ parseSub/ ← pure, one format each
 │ │ └── parseSubtitle/ ← dispatch on extension; the last place a format is known
-│ ├── db/ ← SQLite connection + schema/migrations + the dev seed (`npm run db:seed`), shared by every domain module above
+│ ├── db/ ← SQLite connection + schema/migrations, shared by every domain module above
 │ └── test-support/ ← test doubles shared across server tests, never imported by shipping code
 ├── src/
 │ ├── App/ ← the router and the app-level providers every page renders inside
@@ -261,19 +261,19 @@ features into a route.
   `db/` as the mirror of the frontend's rung — same one-line rule
   ("never imported by shipping code"), same one-folder-per-unit shape,
   same absence of a category barrel
-- `db/` holds the SQLite connection, schema/migrations, and the dev
-  seed (`db/seed/`) — shared infrastructure, not a domain itself. The
-  seed is temporary scaffolding: the library has no other way to be
-  filled until Add Movie and bulk import ship, and without it the
-  browse home renders "Your library is empty", so no UI work on it can
-  be checked by looking. It writes its fixtures through the ordinary
-  `LibraryStorage` interface and marks them with a reserved video-path
-  prefix, so a run is idempotent and can never delete a movie that
-  arrived any other way. **The seed goes with bulk import**: the
-  initiative's tracer-bullet commit deletes `db/seed/`, the `db:seed`
-  script and every paragraph naming them, and the importer's own
-  fixtures — a tiny sheet and folder tree under its tests — are how a
-  dev library gets filled from then on
+- `db/` holds the SQLite connection and schema/migrations — shared
+  infrastructure, not a domain itself. A fresh database holds twelve
+  genres and zero movies, so the browse home renders "Your library is
+  empty" until something fills it. **A dev library is filled by the
+  importer over its own fixture**: run the app, open Settings → Import
+  from spreadsheet, type the sheet and root paths under
+  `server/src/import-export/createImporter/fixture/` (`library.xlsx`
+  or `library.csv`, and `root/`), and press Start import. A second run
+  over the same sheet adds nothing, so re-running it is harmless. The
+  dev seed that did this job before bulk import shipped is gone (#127);
+  the ten-second MP4 it carried lives on as
+  `server/src/test-support/fixtureVideo/`, the one real film the
+  playback tests need
 - `src/` never talks to SQLite directly
 - `src/` never reads or writes the filesystem directly — all file
   access (folder scanning, copying video/subtitle/poster files) goes
@@ -576,8 +576,8 @@ write the bare number or the URL: "follow-ups filed as 39 and 40".
 
 PORT=3001
 VITE_API_BASE_URL=http://localhost:3001
-FAMILYFLIX_DB_PATH= # entrypoint reads it and passes the path to createSqliteStorage; defaults to ./familyflix.db. `npm run db:seed` reads the same variable and the same default, so the seed always writes the database the dev server opens. Electron main sets this to app.getPath('userData')/familyflix.db.
-FAMILYFLIX_MEDIA_PATH= # root directory for copied video/subtitle/poster files; defaults to ./media. `npm run db:seed` reads the same variable and the same default, so the fixture video behind every seeded movie lands in the directory the stream route reads. Electron main sets this to app.getPath('userData')/media.
+FAMILYFLIX_DB_PATH= # entrypoint reads it and passes the path to createSqliteStorage; defaults to ./familyflix.db. Electron main sets this to app.getPath('userData')/familyflix.db.
+FAMILYFLIX_MEDIA_PATH= # root directory for copied video/subtitle/poster files; defaults to ./media. Electron main sets this to app.getPath('userData')/media.
 FAMILYFLIX_FFMPEG_PATH= # absolute path to the ffmpeg binary of the Playback component; ffprobe is looked for beside it. Unset falls back to `ffmpeg`/`ffprobe` on PATH, and then to absent — a state, not an error: MP4s still direct-play and everything else answers `cannot-play`. The slot the installer fills and the maintainer's uploaded component replaces.
 DEBUG_SQL= # set to "1" to enable better-sqlite3 query tracing via console.info. Off by default; never on in packaged builds.
 

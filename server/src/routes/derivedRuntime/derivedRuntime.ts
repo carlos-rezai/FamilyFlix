@@ -8,7 +8,7 @@ const SECONDS_PER_MINUTE = 60;
  * `null` when this machine cannot say how long it is.
  *
  * The form has no runtime field and the prototype designs none, so an added
- * movie would render a dash where every seeded one shows a duration. Inventing
+ * movie would render a dash where every imported one shows a duration. Inventing
  * a field would be redesigning; deriving it from the bytes that just landed is
  * reusing what shipped with the player — `duration` asks the **Playback
  * component**'s probe first and the container's own header second, so a family

@@ -49,12 +49,15 @@ import {
 } from 'node:fs';
 import { isAbsolute, join } from 'node:path';
 import { Readable } from 'node:stream';
-import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { createApiRouter } from '.';
 import { createImporter } from '../import-export/createImporter/createImporter';
 import { createMedia, type Media } from '../media/createMedia/createMedia';
+import {
+  FIXTURE_DURATION_SECONDS,
+  FIXTURE_VIDEO,
+} from '../test-support/fixtureVideo/fixtureVideo';
 import { sandboxRoot } from '../test-support/sandboxRoot/sandboxRoot';
 import { createPlayback } from '../playback/createPlayback/createPlayback';
 import type {
@@ -2299,24 +2302,10 @@ describe('GET /api/movies/:id/stream — a stored path that leaves the media dir
 // --- 10 — Video player, Phase 3: "the playback read" (issue #85) --------------
 
 /**
- * The one file in the repository with a real duration in it: the seed's
- * fixture, ten seconds of colour bars, H.264 in an MP4.
+ * The playback read asks the one question a hand-made buffer has no answer to
+ * — how long is this film — so it needs a file that genuinely is a film:
+ * `test-support`'s ten seconds of colour bars.
  *
- * The stream suite above writes a hand-made buffer, because bytes going out
- * over a Range are all it asks about. The playback read asks the one question a
- * hand-made buffer has no answer to — how long is this film — so it needs a
- * file that genuinely is a film. Reached by path rather than by importing the
- * seed: the seed is scaffolding that gets deleted when bulk import ships, and
- * these tests outlive it.
- */
-const FIXTURE_VIDEO = fileURLToPath(
-  new URL('../db/seed/seed-fixture.mp4', import.meta.url)
-);
-
-/** What that fixture is: ten seconds, exactly, by its own container header. */
-const FIXTURE_DURATION_SECONDS = 10;
-
-/**
  * A movie with the fixture behind it, carrying whatever `runtimeMinutes` the
  * test wants — 111 minutes of stored metadata over ten seconds of video, or
  * none at all, which is the film whose runtime the library never learned.
