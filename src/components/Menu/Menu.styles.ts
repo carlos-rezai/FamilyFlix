@@ -1,4 +1,4 @@
-import styled, { keyframes } from 'styled-components';
+import styled from 'styled-components';
 
 /**
  * The box the panel is positioned against, and the box an outside pointerdown
@@ -8,11 +8,6 @@ import styled, { keyframes } from 'styled-components';
  */
 export const Slot = styled.div`
   position: relative;
-`;
-
-const pop = keyframes`
-  from { opacity: 0; transform: translateY(-4px); }
-  to { opacity: 1; transform: translateY(0); }
 `;
 
 /**
@@ -34,7 +29,7 @@ export const Panel = styled.div`
   max-height: 340px;
   overflow-y: auto;
   box-shadow: 0 18px 50px rgba(0, 0, 0, 0.5);
-  animation: ${pop} 0.14s ease;
+  animation: ffPop 0.14s ease;
   z-index: 30;
 `;
 
