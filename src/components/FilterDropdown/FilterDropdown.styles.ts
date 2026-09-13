@@ -31,7 +31,7 @@ export const Pill = styled.button`
   padding: 0 16px;
   background: ${({ theme }) => theme.colors.surface};
   border: 1px solid ${({ theme }) => theme.colors.border};
-  border-radius: 999px;
+  border-radius: ${({ theme }) => theme.radius.pill};
   color: ${({ theme }) => theme.colors.text};
   font-family: ${({ theme }) => theme.fonts.sans};
   font-size: 15px;

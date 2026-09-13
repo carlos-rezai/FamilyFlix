@@ -6,7 +6,8 @@ export const Track = styled.div<{ $height: number; $track: boolean }>`
   height: ${({ $height }) => $height}px;
   background: ${({ $track }) =>
     $track ? 'rgba(0, 0, 0, 0.45)' : 'transparent'};
-  border-radius: ${({ $height }) => ($height >= 6 ? '999px' : '0')};
+  border-radius: ${({ $height, theme }) =>
+    $height >= 6 ? theme.radius.pill : '0'};
   overflow: hidden;
 `;
 
