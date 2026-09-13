@@ -1,7 +1,7 @@
 # 13 — Bulk import
 
 > **Initiative:** `bulk-import`
-> **PRD:** to be written by `write-a-prd` from this log
+> **PRD:** [#123](https://github.com/carlos-rezai/FamilyFlix/issues/123) · `docs/PRDs/13-bulk-import.md`
 > **Plan:** to follow the PRD
 
 This log is the `grill-me` session that settled the feature before the PRD was
