@@ -109,7 +109,7 @@ export const CloseButton = styled.button`
   height: 34px;
   background: transparent;
   border: none;
-  border-radius: 8px;
+  border-radius: ${({ theme }) => theme.radius.sm};
   color: ${({ theme }) => theme.colors.textFaint};
   cursor: pointer;
   font-size: 16px;
