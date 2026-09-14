@@ -16,6 +16,7 @@ import {
   fetchProblem,
   resolveProblem,
   ImportBusyError,
+  ProblemGoneError,
 } from './api';
 import type {
   ImportPhase,
@@ -556,6 +557,28 @@ describe('resolveProblem', () => {
     fetchMock.mockResolvedValue(notFoundResponse('No such problem'));
 
     await expect(resolveProblem('p1', RESOLVED_VALUES)).rejects.toThrow();
+  });
+
+  it('rejects with ProblemGoneError on the 404, so the form can fall back to adding', async () => {
+    fetchMock.mockResolvedValue(notFoundResponse('No such problem'));
+
+    // Story 102: a problem already gone — dismissed, or the run gone — is a
+    // state the form must tell apart from a refusal it should stay standing
+    // for, on `startImport`'s precedent of a typed error per state.
+    await expect(resolveProblem('p1', RESOLVED_VALUES)).rejects.toBeInstanceOf(
+      ProblemGoneError
+    );
+  });
+
+  it('rejects with a plain Error, not ProblemGoneError, on anything else', async () => {
+    fetchMock.mockResolvedValue(serverErrorResponse());
+
+    const failure = await resolveProblem('p1', RESOLVED_VALUES).catch(
+      (error: unknown) => error
+    );
+
+    expect(failure).toBeInstanceOf(Error);
+    expect(failure).not.toBeInstanceOf(ProblemGoneError);
   });
 
   it('rejects when the server fell over', async () => {

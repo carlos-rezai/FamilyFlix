@@ -1834,6 +1834,78 @@ describe('createImporter — problem: the detail Resolve prefills from', () => {
   });
 });
 
+// --- 13 — Bulk import, Phase 5: the per-kind openings (issue #131) -------------
+//
+// A `no-row` **Problem** is a folder the sheet forgot: there is no **Sheet
+// row** to prefill from, so the detail offers the one title the folder can
+// suggest — its name with the **Title key**'s tail forms dropped, the way
+// `titleGuess` reads it — beside the folder's own **Found files**. The
+// snapshot's row keeps naming the folder as it is on disk; the guess is for
+// the title field.
+
+describe('createImporter — problem: a no-row opening', () => {
+  it('guesses the title from the folder name, with the tail forms dropped', async () => {
+    const { importer, root, sheet } = sandbox();
+    folderUnder(root, 'Harbor.Lights.2019', ['Harbor.Lights.2019.mp4']);
+    await importer.start(sheet, root);
+    const [problem] = ofKind(await untilReview(importer), 'no-row');
+
+    const detail = importer.problem(problem.id);
+
+    // Story 84: a film the sheet forgot is one title away from imported — and
+    // that title is already typed, not `Harbor.Lights.2019`.
+    expect(detail?.row).toEqual({ title: 'Harbor Lights', genres: [] });
+  });
+
+  it('keeps the review row naming the folder as it is on disk', async () => {
+    const { importer, root, sheet } = sandbox();
+    folderUnder(root, 'Harbor.Lights.2019', ['Harbor.Lights.2019.mp4']);
+    await importer.start(sheet, root);
+    const [problem] = ofKind(await untilReview(importer), 'no-row');
+
+    const detail = importer.problem(problem.id);
+
+    expect(problem.title).toBe('Harbor.Lights.2019');
+    expect(detail?.title).toBe('Harbor.Lights.2019');
+  });
+
+  it('answers the folder’s own files beside the guess', async () => {
+    const { importer, root, sheet } = sandbox();
+    const folder = folderUnder(root, 'Harbor.Lights.2019', [
+      'Harbor.Lights.2019.mp4',
+    ]);
+    writeFileSync(join(folder, 'poster.jpg'), '');
+    writeFileSync(join(folder, 'Harbor.Lights.2019.en.srt'), '');
+    await importer.start(sheet, root);
+    const [problem] = ofKind(await untilReview(importer), 'no-row');
+
+    const detail = importer.problem(problem.id);
+
+    expect(detail?.row.title).toBe('Harbor Lights');
+    expect(detail?.folder).toBe(folder);
+    expect(detail?.candidates).toEqual([]);
+    expect(detail?.files).toEqual({
+      video: join(folder, 'Harbor.Lights.2019.mp4'),
+      poster: join(folder, 'poster.jpg'),
+      subtitles: [
+        {
+          path: join(folder, 'Harbor.Lights.2019.en.srt'),
+          language: 'English',
+        },
+      ],
+    });
+  });
+
+  it('guesses from a name that carries no tail by leaving it as it is', async () => {
+    const { importer, root, sheet } = sandbox();
+    folderUnder(root, 'Ironwood', ['Ironwood.mp4']);
+    await importer.start(sheet, root);
+    const [problem] = ofKind(await untilReview(importer), 'no-row');
+
+    expect(importer.problem(problem.id)?.row.title).toBe('Ironwood');
+  });
+});
+
 describe('createImporter — resolve: Save & continue', () => {
   it('copies every found file into a movie folder and adds the movie', async () => {
     const { storage, importer, media, problem, dieHard } =

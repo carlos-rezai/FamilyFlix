@@ -2773,4 +2773,401 @@ describe('MovieForm — the Import context', () => {
       expect(resolveRequests()).toEqual([]);
     });
   });
+
+  // --- 13 — Bulk import, Phase 5: the per-kind openings (issue #131) -----------
+  //
+  // The same **Import context**, opened on the kinds #130 did not exercise:
+  // an `ambiguous` prefills from its first candidate and the banner names the
+  // rest; a `no-folder` opens with the row's fields and every slot empty; a
+  // `no-row` opens with the folder's files and a title guessed from its name.
+  // And the stale link: a problem that no longer exists — dismissed, or the
+  // run gone — is a `404` from the detail route, and the form is the plain Add
+  // context, banner-less, with the ordinary labels; a resolve that finds the
+  // problem gone falls back the same way.
+
+  /** The first of two key-equal folders: the one the detail prefills from. */
+  const HARBOR_FIRST = 'C:\\Movies\\Harbor Lights (2019)';
+  /** The second: the one the banner names. */
+  const HARBOR_SECOND = 'C:\\Movies\\Harbor.Lights.2019';
+  const HARBOR_THIRD = 'C:\\Movies\\Harbor Lights 1080p';
+
+  const HARBOR_AMBIGUOUS: ImportProblemDetail = {
+    id: 'p2',
+    kind: 'ambiguous',
+    title: 'Harbor Lights',
+    reason: 'Two folders look like plausible matches — pick one.',
+    row: { title: 'Harbor Lights', year: 2019, genres: ['Drama'] },
+    folder: HARBOR_FIRST,
+    candidates: [HARBOR_FIRST, HARBOR_SECOND],
+    files: {
+      video: `${HARBOR_FIRST}\\Harbor Lights.mp4`,
+      poster: `${HARBOR_FIRST}\\poster.jpg`,
+      subtitles: [
+        { path: `${HARBOR_FIRST}\\Harbor Lights.en.srt`, language: 'English' },
+      ],
+    },
+  };
+
+  const LANTERN_NO_FOLDER: ImportProblemDetail = {
+    id: 'p3',
+    kind: 'no-folder',
+    title: 'The Lantern Keeper',
+    reason: 'No folder found matching this spreadsheet row.',
+    row: {
+      title: 'The Lantern Keeper',
+      year: 2019,
+      genres: ['Drama'],
+      director: 'Mira Okafor',
+      cast: ['Ada Lin'],
+      synopsis: 'A keeper and a storm.',
+      rating: 7,
+    },
+    candidates: [],
+    files: { subtitles: [] },
+  };
+
+  const HARBOR_NO_ROW: ImportProblemDetail = {
+    id: 'p4',
+    kind: 'no-row',
+    title: 'Harbor.Lights.2019',
+    reason: 'Folder found, but no spreadsheet row names it.',
+    row: { title: 'Harbor Lights', genres: [] },
+    folder: HARBOR_SECOND,
+    candidates: [],
+    files: {
+      video: `${HARBOR_SECOND}\\Harbor.Lights.2019.mp4`,
+      poster: `${HARBOR_SECOND}\\poster.jpg`,
+      subtitles: [
+        {
+          path: `${HARBOR_SECOND}\\Harbor.Lights.2019.en.srt`,
+          language: 'English',
+        },
+      ],
+    },
+  };
+
+  /** The whitespace-collapsed text of an element. */
+  const textOf = (element: Element | null): string =>
+    element?.textContent?.replace(/\s+/g, ' ').trim() ?? '';
+
+  /**
+   * The accent banner's whole text, or `null` when there is none: the
+   * innermost element whose text starts with "Resolving import ·" — so a
+   * wrapper around the banner never answers for it.
+   */
+  const bannerText = (): string | null => {
+    const holders = screen.queryAllByText((_, element) =>
+      /^Resolving import ·/.test(textOf(element))
+    );
+    const innermost = holders.filter(
+      (element) =>
+        !holders.some((other) => other !== element && element.contains(other))
+    );
+    return innermost.length === 0 ? null : textOf(innermost[0]);
+  };
+
+  /** Every language control on the form — one per subtitle row. */
+  const languageControls = () =>
+    screen.queryAllByRole('button', { name: /language for /i });
+
+  describe('an ambiguous problem', () => {
+    beforeEach(() => {
+      answerProblem = () => Promise.resolve(okResponse(HARBOR_AMBIGUOUS));
+    });
+
+    it('names the other candidate in the banner, in the fixed phrasing', async () => {
+      await renderResolve(HARBOR_AMBIGUOUS.id);
+
+      // Story 82: the maintainer sees at once that the run was weighing
+      // another folder, and which — by its name, not its whole path.
+      expect(bannerText()).toBe(
+        'Resolving import · Harbor Lights — also matched: Harbor.Lights.2019'
+      );
+    });
+
+    it('names every other candidate when there are more, comma-separated', async () => {
+      answerProblem = () =>
+        Promise.resolve(
+          okResponse({
+            ...HARBOR_AMBIGUOUS,
+            candidates: [HARBOR_FIRST, HARBOR_SECOND, HARBOR_THIRD],
+          })
+        );
+      await renderResolve(HARBOR_AMBIGUOUS.id);
+
+      expect(bannerText()).toBe(
+        'Resolving import · Harbor Lights — also matched: Harbor.Lights.2019, Harbor Lights 1080p'
+      );
+    });
+
+    it('names a candidate by its folder name whichever way its path is spelt', async () => {
+      answerProblem = () =>
+        Promise.resolve(
+          okResponse({
+            ...HARBOR_AMBIGUOUS,
+            candidates: [HARBOR_FIRST, '/movies/Harbor.Lights.2019'],
+          })
+        );
+      await renderResolve(HARBOR_AMBIGUOUS.id);
+
+      expect(bannerText()).toBe(
+        'Resolving import · Harbor Lights — also matched: Harbor.Lights.2019'
+      );
+    });
+
+    it('prefills every slot from the first candidate’s files', async () => {
+      await renderResolve(HARBOR_AMBIGUOUS.id);
+
+      // A wrong first guess costs a Remove and a hand-pick, not a search.
+      expect(screen.getByText('Harbor Lights.mp4')).toBeDefined();
+      expect(screen.getByText('poster.jpg')).toBeDefined();
+      expect(screen.getByText('Harbor Lights.en.srt')).toBeDefined();
+      expect(screen.queryByText('Harbor.Lights.2019.mp4')).toBeNull();
+      expect(titleField().value).toBe('Harbor Lights');
+      expect(yearField().value).toBe('2019');
+      expect(saveAndContinue().disabled).toBe(false);
+    });
+
+    it('names nothing after the title when a problem has no other candidate', async () => {
+      answerProblem = () => Promise.resolve(okResponse(DIE_HARD));
+      await renderResolve();
+
+      expect(bannerText()).toBe('Resolving import · Die Hard');
+    });
+  });
+
+  describe('a no-folder problem', () => {
+    beforeEach(() => {
+      answerProblem = () => Promise.resolve(okResponse(LANTERN_NO_FOLDER));
+    });
+
+    it('opens with the row’s fields filled', async () => {
+      await renderResolve(LANTERN_NO_FOLDER.id);
+
+      // Story 83: the sheet said all this; only the file is missing.
+      expect(bannerText()).toBe('Resolving import · The Lantern Keeper');
+      expect(titleField().value).toBe('The Lantern Keeper');
+      expect(yearField().value).toBe('2019');
+      expect(directorField().value).toBe('Mira Okafor');
+      expect(castField().value).toBe('Ada Lin');
+      expect(descriptionField().value).toBe('A keeper and a storm.');
+      expect(picked('Drama')).toBe('true');
+      expect(ratingLabel()).toContain('3.5 / 5');
+    });
+
+    it('opens with every slot empty, so the file can be picked from wherever it is', async () => {
+      await renderResolve(LANTERN_NO_FOLDER.id);
+
+      expect(videoPicker().type).toBe('file');
+      expect(posterPicker().type).toBe('file');
+      expect(languageControls()).toEqual([]);
+      expect(
+        screen.queryByRole('button', { name: /remove video/i })
+      ).toBeNull();
+    });
+
+    it('keeps the gate shut until a film is picked', async () => {
+      await renderResolve(LANTERN_NO_FOLDER.id);
+
+      expect(saveAndContinue().disabled).toBe(true);
+      await pickVideo();
+      expect(saveAndContinue().disabled).toBe(false);
+    });
+  });
+
+  describe('a no-row problem', () => {
+    beforeEach(() => {
+      answerProblem = () => Promise.resolve(okResponse(HARBOR_NO_ROW));
+    });
+
+    it('opens with the title guessed from the folder name, tail forms dropped', async () => {
+      await renderResolve(HARBOR_NO_ROW.id);
+
+      // Story 84: a film the sheet forgot is one title away from imported —
+      // and the title is already typed, as the detail guessed it, not as the
+      // folder spells it.
+      expect(titleField().value).toBe('Harbor Lights');
+      expect(yearField().value).toBe('');
+      expect(
+        chips().filter((c) => c.getAttribute('aria-pressed') === 'true')
+      ).toEqual([]);
+    });
+
+    it('opens with the folder’s files as found files', async () => {
+      await renderResolve(HARBOR_NO_ROW.id);
+
+      expect(screen.getByText('Harbor.Lights.2019.mp4')).toBeDefined();
+      expect(screen.getByText('poster.jpg')).toBeDefined();
+      expect(screen.getByText('Harbor.Lights.2019.en.srt')).toBeDefined();
+      expect(languageOf('Harbor.Lights.2019.en.srt').textContent).toContain(
+        'English'
+      );
+      expect(screen.queryByLabelText(/choose video file/i)).toBeNull();
+    });
+
+    it('opens with the gate open: a found film and a guessed title', async () => {
+      await renderResolve(HARBOR_NO_ROW.id);
+
+      expect(saveAndContinue().disabled).toBe(false);
+    });
+
+    it('sends the guessed title and the found paths on Save & continue', async () => {
+      await renderResolve(HARBOR_NO_ROW.id);
+
+      fireEvent.click(saveAndContinue());
+
+      await waitFor(() => expect(resolvedFields()).toBeDefined());
+      expect(String(resolveRequests()[0][0])).toBe(
+        '/api/import/current/problems/p4/resolve'
+      );
+      expect(resolvedFields()?.get('title')).toBe('Harbor Lights');
+      expect(resolvedFields()?.get('videoPath')).toBe(
+        HARBOR_NO_ROW.files.video
+      );
+      expect(resolvedFiles()).toEqual([]);
+    });
+  });
+
+  /** What the plain Add context looks like: no banner, the ordinary labels. */
+  function expectPlainAddContext() {
+    expect(screen.queryByText(/resolving import/i)).toBeNull();
+    expect(screen.getByRole('heading', { name: 'Add a movie' })).toBeDefined();
+    expect(save().textContent).toContain('Add to library');
+    expect(cancel().textContent).toContain('Cancel');
+    expect(
+      screen.queryByRole('button', { name: /save & continue/i })
+    ).toBeNull();
+    expect(screen.queryByRole('button', { name: /skip this one/i })).toBeNull();
+  }
+
+  describe('the stale link', () => {
+    it('falls back to the plain Add context for a dismissed problem', async () => {
+      answerProblem = () =>
+        Promise.resolve(notFoundResponse('No such problem: p1'));
+      await renderResolve();
+
+      // Story 94: a stale link is never a dead page. The problem was looked
+      // for — once — and the form is the ordinary add, empty.
+      expect(problemReads()).toHaveLength(1);
+      expectPlainAddContext();
+      expect(titleField().value).toBe('');
+      expect(videoPicker().type).toBe('file');
+      expect(currentPath()).toBe('/add');
+    });
+
+    it('falls back to the plain Add context when there is no run', async () => {
+      answerProblem = () =>
+        Promise.resolve(notFoundResponse('No import is running'));
+      await renderResolve();
+
+      expect(problemReads()).toHaveLength(1);
+      expectPlainAddContext();
+      expect(titleField().value).toBe('');
+      expect(currentPath()).toBe('/add');
+    });
+
+    it('saves through POST /api/movies after the fallback, never the resolve route', async () => {
+      answerProblem = () =>
+        Promise.resolve(notFoundResponse('No such problem: p1'));
+      await renderResolve();
+      fireEvent.change(titleField(), { target: { value: 'Ironwood' } });
+      await pickVideo();
+
+      fireEvent.click(save());
+
+      await waitFor(() => expect(saveRequests()).toHaveLength(1));
+      expect(resolveRequests()).toEqual([]);
+    });
+
+    it('follows the app’s own Back rule after the fallback, not /import', async () => {
+      answerProblem = () =>
+        Promise.resolve(notFoundResponse('No such problem: p1'));
+      await renderResolve();
+
+      fireEvent.click(backPill());
+
+      expect(currentPath()).toBe('/settings');
+      expect(dismissRequests()).toEqual([]);
+    });
+  });
+
+  describe('Resolve on a problem already gone', () => {
+    beforeEach(() => {
+      answerResolve = () =>
+        Promise.resolve(notFoundResponse('No such problem: p1'));
+    });
+
+    it('falls back to the plain Add context on the 404', async () => {
+      await renderResolve();
+      expect(banner()).not.toBeNull();
+
+      fireEvent.click(saveAndContinue());
+
+      // Story 102: gone is gone. The run no longer knows this problem — it
+      // was dismissed meanwhile, or the run itself is gone — so there is
+      // nothing to resolve, and the form is the ordinary add, as the stale
+      // link's is.
+      await waitFor(() => expect(resolveRequests()).toHaveLength(1));
+      await waitFor(() => expectPlainAddContext());
+      expect(currentPath()).toBe('/add');
+    });
+
+    it('opens as an empty form, the found files gone from the slots', async () => {
+      await renderResolve();
+
+      fireEvent.click(saveAndContinue());
+
+      // A found file is a path under the run's root, and the plain add sends
+      // bytes only: nothing found can survive the fallback.
+      await waitFor(() => expect(foundVideo()).toBeNull());
+      expect(screen.queryByText('poster.jpg')).toBeNull();
+      expect(languageControls()).toEqual([]);
+      expect(titleField().value).toBe('');
+      expect(videoPicker().type).toBe('file');
+      expect(save().disabled).toBe(true);
+    });
+
+    it('dismisses nothing and lands nowhere', async () => {
+      await renderResolve();
+
+      fireEvent.click(saveAndContinue());
+
+      await waitFor(() => expectPlainAddContext());
+      expect(dismissRequests()).toEqual([]);
+      expect(currentPath()).toBe('/add');
+    });
+
+    it('stays standing with everything in it on any other refusal', async () => {
+      answerResolve = () => Promise.resolve(serverErrorResponse());
+      await renderResolve();
+
+      fireEvent.click(saveAndContinue());
+
+      await waitFor(() => expect(saveAndContinue().disabled).toBe(false));
+      expect(banner()).not.toBeNull();
+      expect(foundVideo()).not.toBeNull();
+    });
+  });
+
+  describe('/add without ?problem=', () => {
+    it('is unchanged: reads no problem, draws no banner, wears the ordinary labels', async () => {
+      await renderForm();
+
+      expect(problemReads()).toEqual([]);
+      expectPlainAddContext();
+      expect(titleField().value).toBe('');
+      expect(videoPicker().type).toBe('file');
+    });
+
+    it('still saves through POST /api/movies', async () => {
+      await renderForm();
+      fireEvent.change(titleField(), { target: { value: 'Ironwood' } });
+      await pickVideo();
+
+      fireEvent.click(save());
+
+      await waitFor(() => expect(saveRequests()).toHaveLength(1));
+      expect(resolveRequests()).toEqual([]);
+    });
+  });
 });
