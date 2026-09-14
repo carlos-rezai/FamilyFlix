@@ -1280,6 +1280,23 @@ export function createApiRouter(
     }
   );
 
+  // **Dismiss** — the **Review step**'s _Skip_ on a **Problem**: `204` with
+  // nothing to say once it is gone from `current`. A `404` for an id that is
+  // not there — a second Skip of the same one, an id that never was, or no
+  // run at all — is the route's own, with a reason, so the screen can tell it
+  // from a route that does not exist. The importer decides; this route only
+  // turns its `false` into the status.
+  router.delete(
+    '/import/current/problems/:id',
+    (req: Request<{ id: string }>, res: Response) => {
+      if (!importer.dismiss(req.params.id)) {
+        res.status(404).json({ error: `No such problem: ${req.params.id}` });
+        return;
+      }
+      res.status(204).end();
+    }
+  );
+
   // Posters and backdrops straight off disk. Serves nothing until an import
   // populates the managed media directory; cards fall back to their gradient
   // until then.

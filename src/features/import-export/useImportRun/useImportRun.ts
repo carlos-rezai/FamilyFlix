@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import {
   cancelImport,
+  dismissProblem,
   fetchCurrentImport,
   ImportBusyError,
   startImport,
@@ -35,6 +36,13 @@ export interface ImportRunState {
   start: (sheetPath: string, rootPath: string) => Promise<void>;
   /** _Cancel import_: discard the run, and let it go from the screen. */
   cancel: () => Promise<void>;
+  /**
+   * _Skip_ on a **Problem**: dismiss it, and take its row off the snapshot
+   * once the route has answered — on a `404` as on the `204`, because both
+   * mean the problem is not there. Rejects as `dismissProblem` does when the
+   * dismiss could not be made, and the row stays for another press.
+   */
+  skip: (id: string) => Promise<void>;
 }
 
 /**
@@ -51,6 +59,10 @@ export interface ImportRunState {
  * Every read applies only if nothing has moved the run on since it was sent:
  * a poll that lands after a cancel, or after the screen was left, must not
  * put a snapshot back.
+ *
+ * A skip in review edits the snapshot in place rather than reading it again:
+ * the run is not polled in review, and the route's answer already says the
+ * problem is gone.
  */
 export function useImportRun(): ImportRunState {
   const [run, setRun] = useState<ImportRun | null>(null);
@@ -99,6 +111,18 @@ export function useImportRun(): ImportRunState {
     setRun(null);
   }, []);
 
+  const skip = useCallback(async (id: string) => {
+    await dismissProblem(id);
+    setRun((current) =>
+      current === null
+        ? current
+        : {
+            ...current,
+            problems: current.problems.filter((problem) => problem.id !== id),
+          }
+    );
+  }, []);
+
   const live = isLive(run);
   useEffect(() => {
     if (!live) {
@@ -128,5 +152,5 @@ export function useImportRun(): ImportRunState {
     };
   }, [live]);
 
-  return { run, attaching, start, cancel };
+  return { run, attaching, start, cancel, skip };
 }

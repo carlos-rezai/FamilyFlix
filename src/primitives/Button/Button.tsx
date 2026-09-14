@@ -9,7 +9,7 @@ interface ButtonFace {
   label: string;
   /** primary = accent fill; secondary/danger = bordered; ghost = text-only. */
   variant?: ButtonVariant;
-  /** md = 50px / radius-md; lg = 58px / pill. */
+  /** sm = 40px / radius-sm; md = 50px / radius-md; lg = 58px / pill. */
   size?: ButtonSize;
   /** Optional leading glyph. */
   icon?: 'none' | 'play';

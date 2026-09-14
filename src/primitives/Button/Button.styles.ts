@@ -1,14 +1,27 @@
 import styled, { css } from 'styled-components';
 
 export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
-export type ButtonSize = 'md' | 'lg';
+export type ButtonSize = 'sm' | 'md' | 'lg';
 
 /**
  * Size is purely dimensional — height, horizontal padding, text size, and the
  * corner. `lg` is the hero action (MoviePage's Play), so it goes pill; `md` is
- * every form and dialog button, so it keeps the standard card radius.
+ * every form and dialog button, so it keeps the standard card radius; `sm` is
+ * the pair in a list row (ImportFlow's Resolve / Skip), one rung below `md`
+ * in every dimension, on the small radius.
  */
 const sizes = {
+  sm: css`
+    height: 40px;
+    padding: 0 18px;
+    font-size: 14px;
+    /* The one corner spelled out as its four longhands: jsdom's CSSOM never
+       expands the shorthand, and the review rows' tests read a corner. */
+    border-top-left-radius: ${({ theme }) => theme.radius.sm};
+    border-top-right-radius: ${({ theme }) => theme.radius.sm};
+    border-bottom-right-radius: ${({ theme }) => theme.radius.sm};
+    border-bottom-left-radius: ${({ theme }) => theme.radius.sm};
+  `,
   md: css`
     height: 50px;
     padding: 0 26px;

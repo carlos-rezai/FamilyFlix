@@ -1,5 +1,30 @@
 import styled from 'styled-components';
 
+/** The two tiles side by side, set the prototype's 28px over the list. */
+export const Tiles = styled.div`
+  display: flex;
+  gap: 16px;
+  margin-bottom: 28px;
+`;
+
+/** "Needs attention" — the list's small uppercase heading, in the faint ink. */
+export const ListHeading = styled.div`
+  margin-bottom: 12px;
+  font-family: ${({ theme }) => theme.fonts.sans};
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: ${({ theme }) => theme.colors.textFaint};
+`;
+
+/** The rows, stacked 10px apart. */
+export const List = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+`;
+
 /** The `✓ All done` card: centred, on the surface, with the soft border. */
 export const AllDone = styled.div`
   padding: 40px 20px;

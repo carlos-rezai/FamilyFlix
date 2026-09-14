@@ -30,11 +30,13 @@ import { HeaderRow, Heading, Lede } from './ImportFlow.styles';
  * start over.
  *
  * Back lands on `/settings`, the one route into this screen; Finish lands on
- * `/`, where the films now are.
+ * `/`, where the films now are. In review, _Skip_ goes through the hook,
+ * which takes the row off the snapshot once the route has answered, and
+ * _Resolve_ is the row's own link to the form.
  */
 export function ImportFlow() {
   const navigate = useNavigate();
-  const { run, attaching, start, cancel } = useImportRun();
+  const { run, attaching, start, cancel, skip } = useImportRun();
 
   const [sheet, setSheet] = useState('');
   const [root, setRoot] = useState('');
@@ -73,6 +75,16 @@ export function ImportFlow() {
     });
   }, [cancel]);
 
+  const onSkip = useCallback(
+    (id: string) => {
+      void skip(id).catch(() => {
+        // A skip that did not land leaves the row where it is, and the button
+        // is still there to press again.
+      });
+    },
+    [skip]
+  );
+
   return (
     <>
       <HeaderRow>
@@ -100,7 +112,11 @@ export function ImportFlow() {
           onStart={onStart}
         />
       ) : run.phase === 'review' ? (
-        <ImportReview run={run} onFinish={() => navigate('/')} />
+        <ImportReview
+          run={run}
+          onSkip={onSkip}
+          onFinish={() => navigate('/')}
+        />
       ) : (
         <ImportProgress run={run} onCancel={onCancel} />
       )}
