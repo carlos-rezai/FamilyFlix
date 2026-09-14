@@ -28,3 +28,4 @@ export {
 } from './RatingPicker/RatingPicker';
 export { SubtitleRow, type SubtitleRowProps } from './SubtitleRow/SubtitleRow';
 export { Modal, type ModalProps } from './Modal/Modal';
+export { LogConsole, type LogConsoleProps } from './LogConsole/LogConsole';

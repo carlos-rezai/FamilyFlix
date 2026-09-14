@@ -49,15 +49,15 @@ describe('LogConsole — the lines', () => {
     renderConsole({
       lines: [
         line('Connecting to D:\\Movies …'),
-        line('Scanning  Drama/Amelie (2001)', 'scan'),
-        line('✓ Imported  Amélie', 'success'),
+        line('Scanning Drama/Amelie (2001)', 'scan'),
+        line('✓ Imported Amélie', 'success'),
       ],
     });
 
     const shown = [
       'Connecting to D:\\Movies …',
-      'Scanning  Drama/Amelie (2001)',
-      '✓ Imported  Amélie',
+      'Scanning Drama/Amelie (2001)',
+      '✓ Imported Amélie',
     ].map((text) => screen.getByText(text));
     expect(shown).toHaveLength(3);
     expect(
@@ -101,14 +101,14 @@ describe('LogConsole — colours each kind', () => {
   it('inks each line by its own kind, not its neighbours', () => {
     renderConsole({
       lines: [
-        line('✓ Imported  Die Hard', 'success'),
+        line('✓ Imported Die Hard', 'success'),
         line('⚠ Amélie — no subtitle track found', 'warning'),
         line('✗ The copy failed', 'error'),
       ],
     });
 
     expect(
-      getComputedStyle(screen.getByText('✓ Imported  Die Hard')).color
+      getComputedStyle(screen.getByText('✓ Imported Die Hard')).color
     ).toBe(INK.success);
     expect(
       getComputedStyle(screen.getByText('⚠ Amélie — no subtitle track found'))
@@ -143,9 +143,7 @@ describe('LogConsole — pinned to the bottom', () => {
 
     rerender(
       <ThemeProvider theme={theme}>
-        <LogConsole
-          lines={[...eighty, line('✓ Imported  Amélie', 'success')]}
-        />
+        <LogConsole lines={[...eighty, line('✓ Imported Amélie', 'success')]} />
       </ThemeProvider>
     );
 

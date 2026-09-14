@@ -185,11 +185,13 @@ async function openWorkbook(
  * is matched through the synonym table case-insensitively. Only a title column
  * is required — a sheet with none is the one refusal the reader makes, and it
  * is the sheet field's `400` upstream. A column it does not recognise is
- * ignored; a row with a blank title is skipped.
+ * ignored; a row with a blank title is skipped, and `onBlankTitle` is told
+ * its row number so the skip can be a **Log line** rather than silence.
  */
 export async function readSheet(
   bytes: Buffer,
-  filename: string
+  filename: string,
+  onBlankTitle: (rowNumber: number) => void = () => undefined
 ): Promise<SheetRow[]> {
   const workbook = await openWorkbook(bytes, filename);
   const sheet = workbook.worksheets[0];
@@ -228,6 +230,7 @@ export async function readSheet(
     }
     const title = read(row, 'title');
     if (title === '') {
+      onBlankTitle(number);
       return;
     }
     rows.push({

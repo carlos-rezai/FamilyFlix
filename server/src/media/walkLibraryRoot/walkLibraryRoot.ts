@@ -1,3 +1,4 @@
+import type { Dirent } from 'node:fs';
 import { readdir } from 'node:fs/promises';
 import { join } from 'node:path';
 
@@ -21,10 +22,16 @@ import {
  * to decide whether to descend; the folder's full scan is the scanner's.
  * `onFound` is told of each Source folder as it is found, which is what lets
  * a run count "Found N movies so far" while the walk is still going.
+ *
+ * A folder under the root that cannot be read — permissions, most often — is
+ * told to `onUnreadable` and skipped, so one locked directory never ends the
+ * walk. The root itself is not skipped: a root that cannot be read is the
+ * caller's to refuse.
  */
 export async function walkLibraryRoot(
   root: string,
-  onFound: (scan: MovieFolderScan) => void = () => undefined
+  onFound: (scan: MovieFolderScan) => void = () => undefined,
+  onUnreadable: (dir: string) => void = () => undefined
 ): Promise<MovieFolderScan[]> {
   const scans: MovieFolderScan[] = [];
 
@@ -37,7 +44,13 @@ export async function walkLibraryRoot(
   };
 
   const visit = async (dir: string): Promise<void> => {
-    const entries = await readdir(dir, { withFileTypes: true });
+    let entries: Dirent[];
+    try {
+      entries = await readdir(dir, { withFileTypes: true });
+    } catch {
+      onUnreadable(dir);
+      return;
+    }
     const holdsVideo = entries.some(
       (entry) => entry.isFile() && isVideoFilename(entry.name)
     );

@@ -193,7 +193,7 @@ describe('POST /api/import — starting a run', () => {
       done: expect.any(Number),
       matched: expect.any(Number),
       currentItem: expect.any(String),
-      log: [],
+      log: expect.any(Array),
       problems: [],
     });
   });
@@ -414,7 +414,7 @@ describe('GET /api/import/current', () => {
       const run = (await response.json()) as ImportRun;
       expect(run.id).toBe(started.id);
       expect(run.phase).toMatch(/^(scanning|importing)$/);
-      expect(run).toMatchObject({ log: [], problems: [] });
+      expect(run).toMatchObject({ log: expect.any(Array), problems: [] });
     } finally {
       // Let the run finish before the listener and the library are closed
       // under it.
@@ -438,7 +438,7 @@ describe('GET /api/import/current', () => {
       total: 2,
       done: 2,
       matched: 2,
-      log: [],
+      log: expect.any(Array),
       problems: [],
     });
     expect((await getCurrent(baseUrl)).status).toBe(200);

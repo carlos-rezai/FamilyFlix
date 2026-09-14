@@ -1,9 +1,24 @@
+import { LogConsole } from '@/components';
 import { Button, ProgressBar } from '@/primitives';
 import type { ImportRun } from '@/types';
-import { Actions, Headline, Running, StatLine } from './ImportProgress.styles';
+import { importView } from '../importView/importView';
+import { PhaseStepper } from '../PhaseStepper/PhaseStepper';
+import {
+  Actions,
+  CurrentItem,
+  Headline,
+  LogHeading,
+  Running,
+  StatLine,
+  Timing,
+  UnderBar,
+} from './ImportProgress.styles';
 
 /** The bar's height on this screen — the prototype's own 10. */
 const BAR_HEIGHT = 10;
+
+/** The console's height on this screen — the prototype's own 220. */
+const LOG_HEIGHT = 220;
 
 export interface ImportProgressProps {
   /** The **Current run**, at the phase the step is drawn for. */
@@ -11,43 +26,46 @@ export interface ImportProgressProps {
   onCancel: () => void;
 }
 
-/** `done` over `total` as the percent the bar exposes — nought before there is a total. */
-const percentOf = ({ done, total }: ImportRun): number =>
-  total === 0 ? 0 : Math.round((done / total) * 100);
-
 /**
- * The **Running step**, from `feat.ImportFlow.dc.html`, at the width this
- * slice draws it: the headline, the stat line and the bar, each read off the
- * snapshot's phase, and _Cancel import_ in `danger`. The stepper, the current
- * item, elapsed, the ETA and the **Activity log** are the console slice's.
+ * The **Running step**, from `feat.ImportFlow.dc.html`: the `Connect ✓ →
+ * Scan → Import` stepper; the headline, the stat line and the bar, each read
+ * off the snapshot's phase; the current item in mono under the bar — the
+ * folder while scanning, the title while importing, straight off
+ * `currentItem`; "Elapsed m:ss" and, once more than 20 are done, "· About
+ * m:ss left"; the **Activity log** under its heading; and _Cancel import_ in
+ * `danger`.
  *
- * The copy is the prototype's verbatim, with the thousands separators its
- * `toLocaleString()` puts in: the real library is a thousand rows, and
- * "1200 of 1200" is a number nobody reads. The bar is indeterminate while
- * scanning — the walk has no known total — and `done / total` while importing.
- *
- * Cancel is drawn and does nothing yet: cancel is the next slice's, and a
- * button that is drawn is the prototype's surface whether or not it is wired.
+ * Everything the step prints is `importView`'s: the snapshot carries no clock,
+ * so elapsed and the ETA are worked out here against `new Date()` at render,
+ * and the poll that refreshes the snapshot every 500 ms is what keeps them
+ * moving.
  */
 export function ImportProgress({ run, onCancel }: ImportProgressProps) {
-  const scanning = run.phase === 'scanning';
+  const view = importView(run, new Date());
 
   return (
     <Running>
-      <Headline>
-        {scanning ? 'Scanning your library…' : 'Importing movies…'}
-      </Headline>
-      <StatLine>
-        {scanning
-          ? `Found ${run.found.toLocaleString('en-US')} movies so far`
-          : `${run.done.toLocaleString('en-US')} of ${run.total.toLocaleString('en-US')} imported`}
-      </StatLine>
+      <PhaseStepper phase={run.phase} />
+
+      <Headline>{view.headline}</Headline>
+      <StatLine>{view.statLine}</StatLine>
 
       <ProgressBar
-        percent={percentOf(run)}
-        indeterminate={scanning}
+        percent={view.percent}
+        indeterminate={view.indeterminate}
         height={BAR_HEIGHT}
       />
+
+      <UnderBar>
+        <CurrentItem>{run.currentItem}</CurrentItem>
+        <Timing>
+          {view.elapsed}
+          {view.eta === null ? null : ` · ${view.eta}`}
+        </Timing>
+      </UnderBar>
+
+      <LogHeading>Activity log</LogHeading>
+      <LogConsole lines={run.log} height={LOG_HEIGHT} />
 
       <Actions>
         <Button label="Cancel import" variant="danger" onClick={onCancel} />

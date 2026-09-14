@@ -271,7 +271,7 @@ describe('ImportProgress — the Activity log', () => {
         done: 1,
         log: [
           { text: 'Connecting to D:\\Movies …', kind: 'info' },
-          { text: '✓ Imported  Die Hard', kind: 'success' },
+          { text: '✓ Imported Die Hard', kind: 'success' },
         ],
       }),
     });
@@ -279,6 +279,6 @@ describe('ImportProgress — the Activity log', () => {
     expect(screen.getByText('Activity log')).toBeTruthy();
     const log = screen.getByRole('log');
     expect(within(log).getByText('Connecting to D:\\Movies …')).toBeTruthy();
-    expect(within(log).getByText('✓ Imported  Die Hard')).toBeTruthy();
+    expect(within(log).getByText('✓ Imported Die Hard')).toBeTruthy();
   });
 });

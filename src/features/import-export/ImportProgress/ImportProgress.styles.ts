@@ -26,3 +26,43 @@ export const StatLine = styled.div`
 export const Actions = styled.div`
   margin-top: 22px;
 `;
+
+/** The row under the bar: the current item at the left, the timing at the right. */
+export const UnderBar = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: ${({ theme }) => theme.space.s4};
+  margin: ${({ theme }) => theme.space.s3} 0 22px;
+`;
+
+/** The folder or title being worked on, in mono, cut with an ellipsis rather than wrapped. */
+export const CurrentItem = styled.div`
+  flex: 1;
+  min-width: 0;
+  font-family: ${({ theme }) => theme.fonts.mono};
+  font-size: 12.5px;
+  color: ${({ theme }) => theme.colors.textFaint};
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+`;
+
+/** "Elapsed m:ss · About m:ss left", never squeezed by the item beside it. */
+export const Timing = styled.div`
+  flex: 0 0 auto;
+  font-family: ${({ theme }) => theme.fonts.sans};
+  font-size: 13px;
+  color: ${({ theme }) => theme.colors.textFaint};
+`;
+
+/** "ACTIVITY LOG" — the small tracked caption over the console. */
+export const LogHeading = styled.div`
+  margin-bottom: ${({ theme }) => theme.space.s2};
+  font-family: ${({ theme }) => theme.fonts.sans};
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: ${({ theme }) => theme.colors.textFaint};
+`;
