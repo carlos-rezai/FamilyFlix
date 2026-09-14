@@ -9,9 +9,16 @@ export interface ProblemRowProps {
   onSkip: () => void;
 }
 
-/** Where _Resolve_ lands: the **Movie form** in import context, by the problem's id. */
-const resolveRoute = (id: string): string =>
-  `/add?problem=${encodeURIComponent(id)}`;
+/**
+ * Where _Resolve_ lands: the **Movie form** in import context, by the
+ * problem's id. A `missing-meta` problem is already in the library, so its
+ * Resolve names the movie too — the Edit job under the banner, rather than
+ * adding the film twice.
+ */
+const resolveRoute = ({ id, movieId }: ImportProblem): string =>
+  movieId === undefined
+    ? `/add?problem=${encodeURIComponent(id)}`
+    : `/add?movie=${encodeURIComponent(movieId)}&problem=${encodeURIComponent(id)}`;
 
 /**
  * One row of the **Review step**'s **Needs attention** list, from
@@ -19,7 +26,8 @@ const resolveRoute = (id: string): string =>
  * the title and the reason under it, and _Resolve_ and _Skip_ as `Button`
  * `secondary` `sm`.
  *
- * _Resolve_ is a navigation — `/add?problem=<id>` — so it is a link, which
+ * _Resolve_ is a navigation — `/add?problem=<id>`, or `/add?movie=<movieId>&problem=<id>`
+ * for the soft kind — so it is a link, which
  * the maintainer can middle-click; _Skip_ is an action, so it is a button.
  * Neither knows what happens next: the row draws a problem and reports a
  * press.
@@ -36,7 +44,7 @@ export function ProblemRow({ problem, onSkip }: ProblemRowProps) {
         label="Resolve"
         variant="secondary"
         size="sm"
-        to={resolveRoute(problem.id)}
+        to={resolveRoute(problem)}
       />
       <Button label="Skip" variant="secondary" size="sm" onClick={onSkip} />
     </Row>

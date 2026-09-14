@@ -67,6 +67,17 @@ const IMPORT = {
   saving: 'Saving…',
 } as const;
 
+/**
+ * The **Import context** over the **Edit job** (#132): a `missing-meta` row is
+ * already in the library, so the heading is the edit's — this is an amendment,
+ * reached from the review — and Save still says what it does to the run.
+ */
+const IMPORT_EDIT = {
+  heading: 'Edit details',
+  save: 'Save & continue',
+  saving: 'Saving…',
+} as const;
+
 /** The other way out, and the one the gate never closes. */
 const CANCEL_LABEL = 'Cancel';
 
@@ -132,7 +143,14 @@ export function MovieForm() {
     cancel,
   } = useMovieForm();
 
-  const copy = resolving !== null ? IMPORT : editing ? EDIT : ADD;
+  const copy =
+    resolving !== null
+      ? editing
+        ? IMPORT_EDIT
+        : IMPORT
+      : editing
+        ? EDIT
+        : ADD;
 
   return (
     <>

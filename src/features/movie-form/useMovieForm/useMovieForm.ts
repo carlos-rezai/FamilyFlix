@@ -218,6 +218,14 @@ export interface UseMovieFormResult {
  * and nowhere landed. The gate is the same gate: a title and a film, and a
  * found film is a film.
  *
+ * **`?movie=<id>&problem=<pid>` is the Import context over the Edit job**
+ * (#132): the one kind already in the library, `missing-meta`. The record
+ * fills the fields, as any edit's does, and the detail fills nothing — only
+ * the banner and the labels are its. _Save & continue_ is the edit's own
+ * `PATCH`, then the dismiss, then the review; _Skip this one_ dismisses and
+ * lands there too. A problem that is gone leaves the plain edit standing,
+ * which is what the URL's other half names.
+ *
  * ---
  *
  * **Why this file has no `useMovieForm.test.ts`**, asked and settled in the
@@ -297,6 +305,11 @@ export function useMovieForm(): UseMovieFormResult {
   // fields and the slots, once. A problem that is gone — `null`, the `404` —
   // is a stale link, and the screen falls back to adding, which is story 94;
   // so does a detail that could not be read, on the record's own precedent.
+  //
+  // Beside `?movie=` the detail fills nothing (#132): the film is in the
+  // library already, and what the record holds — the stored copies, by their
+  // own names — is what the fields show, never the folder the run scanned.
+  // The detail is still what the banner and the labels are decided from.
   useEffect(() => {
     if (problem === null) {
       setResolving(null);
@@ -310,7 +323,9 @@ export function useMovieForm(): UseMovieFormResult {
         if (!current || detail === null) {
           return;
         }
-        setValues(problemFormValues(detail));
+        if (requested === null) {
+          setValues(problemFormValues(detail));
+        }
         setResolving({
           id: detail.id,
           title: detail.title,
@@ -322,7 +337,7 @@ export function useMovieForm(): UseMovieFormResult {
     return () => {
       current = false;
     };
-  }, [problem]);
+  }, [problem, requested]);
 
   const setTitle = useCallback((title: string) => {
     setValues((current) => ({ ...current, title }));
@@ -446,11 +461,22 @@ export function useMovieForm(): UseMovieFormResult {
     // _Save & continue_ is the resolve route's, and the route dismisses the
     // problem on its own `201` — nothing here does. The review is where the
     // save lands, one row shorter.
+    //
+    // Over the **Edit job** (#132, story 93) it is the edit's own `PATCH`
+    // instead — the film is in the library already, and a resolve would put
+    // it there twice — and then the dismiss, in that order: a row leaves the
+    // list only once the amendment is in. A dismiss that failed still lands
+    // on the review, as _Skip this one_'s does — the row is still listed,
+    // which is the honest picture.
     const written =
       resolving !== null
-        ? resolveProblem(resolving.id, values).then(() =>
-            navigate(AFTER_RESOLVE)
-          )
+        ? editing === null
+          ? resolveProblem(resolving.id, values).then(() =>
+              navigate(AFTER_RESOLVE)
+            )
+          : updateMovie(editing, values)
+              .then(() => dismissProblem(resolving.id).catch(() => undefined))
+              .then(() => navigate(AFTER_RESOLVE))
         : editing === null
           ? createMovie(values).then(() => navigate(AFTER_ADD))
           : updateMovie(editing, values).then(() =>
