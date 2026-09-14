@@ -62,6 +62,33 @@ export function titleKey(name: string): string {
 }
 
 /**
+ * The separators a **Source folder** name uses in place of the spaces a title
+ * cannot carry on disk. Narrower than {@link SEPARATORS}: a hyphen stays,
+ * because `Spider-Man` is a title and the guess is for typing into a field.
+ */
+const SPACE_SEPARATORS = /[._]+/g;
+
+/**
+ * The title a `no-row` **Source folder** name suggests: the name with the
+ * **Title key**'s tail forms dropped — and only those. The key is for
+ * comparing and folds everything away; the guess is for the form's title
+ * field, so the case, the accents and the punctuation the folder kept are
+ * kept, and a dot or an underscore is read as the space it stands for.
+ * `Harbor.Lights.2019` guesses "Harbor Lights", and a guess and its folder
+ * name share one key.
+ */
+export function titleGuess(name: string): string {
+  let guess = name.replace(SPACE_SEPARATORS, ' ');
+
+  for (let stripped = guess.replace(TAIL, ''); stripped !== guess; ) {
+    guess = stripped;
+    stripped = guess.replace(TAIL, '');
+  }
+
+  return guess.replace(/\s+/g, ' ').trim();
+}
+
+/**
  * The year a **Source folder** name carries in its tail — `Die Hard (1988)`,
  * `Die.Hard.1988.1080p`, `Amelie [2001]` — or `null` for a name that carries
  * none. Read through the same tail forms {@link titleKey} strips, so a name

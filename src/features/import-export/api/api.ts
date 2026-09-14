@@ -38,6 +38,20 @@ export class ImportBusyError extends Error {
   }
 }
 
+/**
+ * A resolve the route refused because the **Problem** is gone — the `404`:
+ * dismissed meanwhile, or the run itself gone. The one refusal the form does
+ * not stay standing for, because there is nothing left to resolve: it falls
+ * back to the plain **Add context**, as the stale link does. Told apart from
+ * a `500` and a broken request, which stay plain errors.
+ */
+export class ProblemGoneError extends Error {
+  constructor(readonly id: string) {
+    super(`No such problem: ${id}`);
+    this.name = 'ProblemGoneError';
+  }
+}
+
 const IMPORT_ENDPOINT = '/api/import';
 const CURRENT_ENDPOINT = '/api/import/current';
 const CANCEL_ENDPOINT = '/api/import/current/cancel';
@@ -171,9 +185,11 @@ export async function fetchProblem(
  * /api/movies` accepts bytes only, and keeps doing so. No `Content-Type` is
  * set, for `sendMovie`'s reason — the boundary is the platform's.
  *
- * Rejects on anything but the `201` — a path outside the root, an untitled
- * body, a problem that is gone, a `500`, a request that could not be made —
- * and the form's honest answer to any of them is to still be standing with
+ * Rejects on anything but the `201`. A problem that is gone — the `404` —
+ * rejects with {@link ProblemGoneError}, the signal to fall back to adding;
+ * everything else — a path outside the root, an untitled body, a `500`, a
+ * request that could not be made — rejects with a plain `Error`, and the
+ * form's honest answer to any of those is to still be standing with
  * everything in it.
  */
 export async function resolveProblem(
@@ -186,6 +202,9 @@ export async function resolveProblem(
     body: movieFormData(values),
   });
 
+  if (response.status === 404) {
+    throw new ProblemGoneError(id);
+  }
   if (!response.ok) {
     throw new Error(`POST ${endpoint} failed: ${response.status}`);
   }

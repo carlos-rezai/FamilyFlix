@@ -7,11 +7,13 @@ import type { MovieFormValues } from '@/types';
 import {
   dismissProblem,
   fetchProblem,
+  ProblemGoneError,
   resolveProblem,
 } from '../../import-export/api/api';
 import { createMovie, updateMovie } from '../api/api';
 import {
   movieFormValues,
+  otherCandidates,
   pickedFile,
   problemFormValues,
 } from '../formValues/formValues';
@@ -80,6 +82,16 @@ const EMPTY: MovieFormValues = {
   subtitles: [],
 };
 
+/**
+ * The **Problem** this screen is resolving, as the accent banner names it:
+ * its title, and — for an `ambiguous` alone — the folders the run was
+ * weighing besides the one the slots were filled from, each by its name.
+ */
+export interface ResolvingProblem {
+  title: string;
+  alsoMatched: string[];
+}
+
 export interface UseMovieFormResult {
   /** What is in the fields right now. */
   values: MovieFormValues;
@@ -118,11 +130,11 @@ export interface UseMovieFormResult {
    */
   editing: boolean;
   /**
-   * The title of the **Problem** this screen is resolving, for the accent
-   * banner — or `null` outside the **Import context**. What the labels, the
-   * save's route and every exit's destination are decided from.
+   * The **Problem** this screen is resolving, for the accent banner — or
+   * `null` outside the **Import context**. What the labels, the save's route
+   * and every exit's destination are decided from.
    */
-  resolving: string | null;
+  resolving: ResolvingProblem | null;
   /** Write the movie, and leave for the screen it is now visible on. */
   save: () => void;
   /**
@@ -200,7 +212,10 @@ export interface UseMovieFormResult {
  * as **Found files**; Save is _Save & continue_ and posts to the problem's own
  * resolve route, the secondary button is _Skip this one_ and dismisses, and
  * every exit lands on the review. A problem that is gone falls back to adding,
- * as a gone movie does. The gate is the same gate: a title and a film, and a
+ * as a gone movie does — and so does a _Save & continue_ that finds it gone
+ * (#131, story 102): the run no longer knows the problem, so there is nothing
+ * to resolve, and the form is the ordinary add, empty, with nothing dismissed
+ * and nowhere landed. The gate is the same gate: a title and a film, and a
  * found film is a film.
  *
  * ---
@@ -240,10 +255,9 @@ export function useMovieForm(): UseMovieFormResult {
   const [editing, setEditing] = useState<string | null>(null);
 
   /** The problem this screen is resolving, once its detail has been read. */
-  const [resolving, setResolving] = useState<{
-    id: string;
-    title: string;
-  } | null>(null);
+  const [resolving, setResolving] = useState<
+    (ResolvingProblem & { id: string }) | null
+  >(null);
 
   const requested = searchParams.get(MOVIE_PARAM);
   const problem = searchParams.get(PROBLEM_PARAM);
@@ -297,7 +311,11 @@ export function useMovieForm(): UseMovieFormResult {
           return;
         }
         setValues(problemFormValues(detail));
-        setResolving({ id: detail.id, title: detail.title });
+        setResolving({
+          id: detail.id,
+          title: detail.title,
+          alsoMatched: otherCandidates(detail),
+        });
       })
       .catch(() => undefined);
 
@@ -441,8 +459,17 @@ export function useMovieForm(): UseMovieFormResult {
 
     // The form is still on screen with everything typed still in it, and Save
     // is offered again. Nothing else is said, because there is nothing yet to
-    // say it with.
-    written.catch(() => setSaving(false));
+    // say it with. The one exception is a problem that is gone: there is
+    // nothing left to resolve, so the form falls back to the plain add — and
+    // empty, because a found file is a path under the run's root, which the
+    // plain add can never send.
+    written.catch((error: unknown) => {
+      setSaving(false);
+      if (error instanceof ProblemGoneError) {
+        setResolving(null);
+        setValues(EMPTY);
+      }
+    });
   }, [canSave, values, navigate, editing, resolving]);
 
   // Back never writes and never dismisses: a maintainer stepping back from a
@@ -489,7 +516,10 @@ export function useMovieForm(): UseMovieFormResult {
     canSave,
     saving,
     editing: editing !== null,
-    resolving: resolving === null ? null : resolving.title,
+    resolving:
+      resolving === null
+        ? null
+        : { title: resolving.title, alsoMatched: resolving.alsoMatched },
     save,
     back,
     cancel,

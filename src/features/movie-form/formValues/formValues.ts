@@ -174,6 +174,18 @@ export function problemFormValues(
 }
 
 /**
+ * The folders an `ambiguous` **Problem** was weighing besides the one it
+ * prefills from — every candidate but the first, each by its folder name
+ * rather than its whole path, whichever way the path is spelt. Story 82: the
+ * banner names them ("also matched: Harbor.Lights.2019"), so a wrong first
+ * guess costs a Remove and a hand-pick, not a search. Empty for every other
+ * kind, which has no others to name.
+ */
+export function otherCandidates(detail: ImportProblemDetail): string[] {
+  return detail.candidates.slice(1).map(foundFilenameOf);
+}
+
+/**
  * Append one **File slot** to a body: a **Stored file** or a **Found file** as
  * the path it already has, a **Picked file** as its bytes, and an empty slot as
  * nothing at all.

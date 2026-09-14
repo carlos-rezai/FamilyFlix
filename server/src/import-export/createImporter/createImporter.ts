@@ -9,7 +9,7 @@ import { walkLibraryRoot } from '../../media/walkLibraryRoot/walkLibraryRoot';
 import type { Playback } from '../../playback/createPlayback/createPlayback';
 import { matchRows, type Match } from '../matchRows/matchRows';
 import { readSheet, type SheetRow } from '../readSheet/readSheet';
-import { titleKey } from '../titleKey/titleKey';
+import { titleGuess, titleKey } from '../titleKey/titleKey';
 import type {
   ImportProblem,
   ImportProblemDetail,
@@ -755,12 +755,13 @@ export function createImporter({
       const { folder } = source;
       return {
         ...listed,
-        // A folder no row claimed has only its name to offer as a title; the
-        // per-kind openings are the next slice's, and this is the row they
-        // will read.
+        // A folder no row claimed has only its name to offer as a title, and
+        // the guess is that name with the tail forms dropped — story 84: the
+        // title is already typed, as "Harbor Lights", not as the folder
+        // spells it. The snapshot's row keeps naming the folder as it is.
         row:
           source.row === null
-            ? { title: listed.title, genres: [] }
+            ? { title: titleGuess(listed.title), genres: [] }
             : rowDetail(source.row),
         ...(folder === null ? {} : { folder: folder.dir }),
         candidates: source.candidates.map((scan) => scan.dir),

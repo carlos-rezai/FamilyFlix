@@ -77,6 +77,12 @@ const SKIP_LABEL = 'Skip this one';
 const RESOLVING_LEAD = 'Resolving import';
 
 /**
+ * What the banner says after the title of an `ambiguous` problem, before the
+ * other folders the run was weighing — story 82's fixed phrasing.
+ */
+const ALSO_MATCHED_LEAD = ' — also matched: ';
+
+/**
  * The **Movie form** — `feat.MovieForm.dc.html`, and the only screen in the app
  * that writes a whole record.
  *
@@ -135,7 +141,11 @@ export function MovieForm() {
       {resolving !== null && (
         <Banner>
           <BannerLead>{RESOLVING_LEAD}</BannerLead>{' '}
-          <BannerTitle>· {resolving}</BannerTitle>
+          <BannerTitle>
+            · {resolving.title}
+            {resolving.alsoMatched.length > 0 &&
+              `${ALSO_MATCHED_LEAD}${resolving.alsoMatched.join(', ')}`}
+          </BannerTitle>
         </Banner>
       )}
 
