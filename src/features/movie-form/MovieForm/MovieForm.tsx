@@ -1,5 +1,4 @@
 import { RatingPicker } from '@/components';
-import { useGoBack } from '@/hooks/useGoBack/useGoBack';
 import {
   Button,
   ChevronLeftIcon,
@@ -12,6 +11,9 @@ import { MovieFormFiles } from '../MovieFormFiles/MovieFormFiles';
 import { useGenrePool } from '../useGenrePool/useGenrePool';
 import { useMovieForm } from '../useMovieForm/useMovieForm';
 import {
+  Banner,
+  BannerLead,
+  BannerTitle,
   HeaderRow,
   Heading,
   Lede,
@@ -55,31 +57,49 @@ const EDIT = {
   saving: 'Saving…',
 } as const;
 
+/**
+ * The **Import context**'s pair: the heading is still the add's — this is an
+ * add, with a head start — and Save says what it does to the run.
+ */
+const IMPORT = {
+  heading: 'Add a movie',
+  save: 'Save & continue',
+  saving: 'Saving…',
+} as const;
+
 /** The other way out, and the one the gate never closes. */
 const CANCEL_LABEL = 'Cancel';
+
+/** The other way out in the **Import context**: the review row's own Skip. */
+const SKIP_LABEL = 'Skip this one';
+
+/** What the accent banner says before the problem's title. */
+const RESOLVING_LEAD = 'Resolving import';
 
 /**
  * The **Movie form** — `feat.MovieForm.dc.html`, and the only screen in the app
  * that writes a whole record.
  *
- * **One screen, two jobs.** With no `?movie=` it creates a record; with one it
- * amends the record that id names. There is no second component and no `/edit`
- * route: what changes between the two contexts is the heading, the Save button
- * and where a finished save lands, and the first two of those are the whole of
- * what is decided here.
+ * **One screen, three jobs.** With no `?movie=` it creates a record; with one it
+ * amends the record that id names; with `?problem=` it resolves a flagged row
+ * of the **Current run** — the **Import context**, under the accent banner the
+ * prototype draws above the heading. There is no second component and no
+ * `/edit` route: what changes between the contexts is the banner, the heading,
+ * the two buttons' labels and where a finished save lands, and all but the
+ * last of those are the whole of what is decided here.
  *
  * It renders the form and nothing else — the sheet it sits on is
  * `MaintainerLayout`'s, composed by the page — and what may be typed, what is
  * in the **File slots**, whether Save can be pressed, which job this is and
  * where a finished save lands all belong to `useMovieForm`.
  *
- * **Cancel and the back pill are one behaviour, not two.** Both call the app's
- * one Back rule, so there are not two ways out of this screen that could drift
- * apart — and neither writes anything: a maintainer who leaves a half-filled
- * form leaves with it.
+ * **Cancel and the back pill are one behaviour, not two** — both are the hook's
+ * exits, so there are not two ways out of this screen that could drift apart,
+ * and neither writes anything: a maintainer who leaves a half-filled form
+ * leaves with it. The **Import context** is where they part: _Skip this one_
+ * dismisses the problem on its way to the review, and Back dismisses nothing.
  */
 export function MovieForm() {
-  const goBack = useGoBack();
   const genrePool = useGenrePool();
   const {
     values,
@@ -100,20 +120,32 @@ export function MovieForm() {
     canSave,
     saving,
     editing,
+    resolving,
     save,
+    back,
+    cancel,
   } = useMovieForm();
 
-  const copy = editing ? EDIT : ADD;
+  const copy = resolving !== null ? IMPORT : editing ? EDIT : ADD;
 
   return (
     <>
+      {/* The prototype's own place for it: above the heading, on the accent,
+        and only while a problem is being resolved. */}
+      {resolving !== null && (
+        <Banner>
+          <BannerLead>{RESOLVING_LEAD}</BannerLead>{' '}
+          <BannerTitle>· {resolving}</BannerTitle>
+        </Banner>
+      )}
+
       <HeaderRow>
         <IconButton
           label="Back"
           title="Back"
           size={42}
           variant="outline"
-          onClick={goBack}
+          onClick={back}
         >
           <ChevronLeftIcon size={18} />
         </IconButton>
@@ -245,10 +277,10 @@ export function MovieForm() {
           onClick={save}
         />
         <Button
-          label={CANCEL_LABEL}
+          label={resolving !== null ? SKIP_LABEL : CANCEL_LABEL}
           variant="secondary"
           size="md"
-          onClick={goBack}
+          onClick={cancel}
         />
       </Actions>
     </>

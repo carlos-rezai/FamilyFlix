@@ -2,6 +2,37 @@ import styled from 'styled-components';
 
 import { Field as TextFieldBox } from '@/primitives/TextField/TextField.styles';
 
+/**
+ * The accent banner the **Import context** draws above the heading —
+ * `feat.MovieForm.dc.html`'s `inImportContext` block: the accent's soft fill
+ * and line, on the mid radius, 20px above the header row. Its two spans are
+ * laid out with the prototype's own 12px gap.
+ */
+export const Banner = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  margin-bottom: 20px;
+  background: ${({ theme }) => theme.colors.accentSoft};
+  border: 1px solid ${({ theme }) => theme.colors.accentLine};
+  border-radius: ${({ theme }) => theme.radius.md};
+  font-family: ${({ theme }) => theme.fonts.sans};
+  font-size: 14px;
+  color: ${({ theme }) => theme.colors.text};
+`;
+
+/** "Resolving import" — the accent, bold. */
+export const BannerLead = styled.span`
+  color: ${({ theme }) => theme.colors.accent};
+  font-weight: 600;
+`;
+
+/** The problem's title, dimmed beside it. */
+export const BannerTitle = styled.span`
+  color: ${({ theme }) => theme.colors.textDim};
+`;
+
 /** The back pill and the heading, read as one group. */
 export const HeaderRow = styled.div`
   display: flex;

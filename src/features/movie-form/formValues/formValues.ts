@@ -1,4 +1,9 @@
-import type { Movie, MovieFormFile, MovieFormValues } from '@/types';
+import type {
+  ImportProblemDetail,
+  Movie,
+  MovieFormFile,
+  MovieFormValues,
+} from '@/types';
 import { toRatingPercent, toRatingUnits } from '@/utils';
 
 import { castNames, castText } from '../castNames/castNames';
@@ -20,9 +25,30 @@ const SEPARATOR = '/';
  */
 const STORED_KEY = 'stored-';
 
+/**
+ * What the form's own key for a **Found file**'s row is prefixed with — the
+ * row's place in the folder's list is what makes it unique, and the prefix is
+ * what keeps it clear of the counter and of the stored keys beside it.
+ */
+const FOUND_KEY = 'found-';
+
+/**
+ * How a **Found file**'s path may be separated: it is the absolute path the
+ * scan found it at, spelled the way the maintainer's own machine spells one,
+ * which on Windows is the backslash.
+ */
+const NATIVE_SEPARATOR = '\\';
+
 /** The name a **Stored path** shows in its slot — a browser gives no path either. */
 const filenameOf = (path: string): string =>
   path.slice(path.lastIndexOf(SEPARATOR) + 1);
+
+/** The name a **Found file** shows in its slot, after whichever separator is last. */
+const foundFilenameOf = (path: string): string =>
+  path.slice(
+    Math.max(path.lastIndexOf(SEPARATOR), path.lastIndexOf(NATIVE_SEPARATOR)) +
+      1
+  );
 
 /**
  * The **File slot** a stored path fills, or `null` for a slot with nothing in
@@ -101,11 +127,62 @@ export function movieFormValues(movie: Movie): MovieFormValues {
 }
 
 /**
- * Append one **File slot** to a body: a **Stored file** as the path it already
- * has, a **Picked file** as its bytes, and an empty slot as nothing at all.
+ * The **File slot** a **Found file** fills: the absolute path the scan found
+ * it at, and the name after its last separator — which is all the slot shows
+ * of it, exactly as it shows a stored file.
+ */
+function foundFile(path: string): MovieFormFile {
+  return { kind: 'found', path, filename: foundFilenameOf(path) };
+}
+
+/**
+ * A **Problem detail**, read into the box **Resolve** opens on.
+ *
+ * Stories 80 and 81: the **Sheet row** already said the title, the year, the
+ * genres, the director, the cast, the synopsis and the rating, and the scan
+ * already found the film, the artwork and the tracks — so the maintainer
+ * corrects rather than retypes, and picks only what the folder did not have.
+ * A row that carries no rating opens **Unrated**, for {@link movieFormValues}'s
+ * reason; a folder with no video — or two — leaves the slot empty for the
+ * maintainer to pick.
+ *
+ * Every filled **File slot** holds a **Found file**, which the wire sends as
+ * its path: nothing the scan found is read on this end.
+ */
+export function problemFormValues(
+  detail: ImportProblemDetail
+): MovieFormValues {
+  const { row, files } = detail;
+  return {
+    title: row.title,
+    year: row.year === undefined ? '' : String(row.year),
+    director: row.director ?? '',
+    description: row.synopsis ?? '',
+    cast: castText(row.cast ?? []),
+    genres: [...row.genres],
+    rating: toRatingPercent(row.rating ?? null),
+    video: files.video === undefined ? null : foundFile(files.video),
+    poster: files.poster === undefined ? null : foundFile(files.poster),
+    // In the folder's order, which is the order the run would have stored
+    // them in — and each in the language the scan read off its name.
+    subtitles: files.subtitles.map((track, index) => ({
+      key: `${FOUND_KEY}${index}`,
+      file: foundFile(track.path),
+      language: track.language,
+    })),
+  };
+}
+
+/**
+ * Append one **File slot** to a body: a **Stored file** or a **Found file** as
+ * the path it already has, a **Picked file** as its bytes, and an empty slot as
+ * nothing at all.
  *
  * The two names travel together because the slot is one thing — `video` and
- * `videoPath` are the same slot answering in the only two ways it can.
+ * `videoPath` are the same slot answering in the only two ways it can. A found
+ * file answers the way a stored one does: what the path *means* — a file the
+ * library holds, or one under the **Library root** the resolve route may copy
+ * from — is the route's to decide, and nothing about the encoding differs.
  */
 function appendFile(
   body: FormData,
@@ -115,7 +192,7 @@ function appendFile(
   if (slot === null) {
     return;
   }
-  if (slot.kind === 'stored') {
+  if (slot.kind !== 'picked') {
     body.append(`${name}Path`, slot.path);
   } else {
     // The `File` itself, so the platform streams the part rather than reading
@@ -130,8 +207,9 @@ function appendFile(
  * record and the one that amends it, because they are the same form.
  *
  * **The passthrough is the point.** A file the library already holds travels as
- * the relative path it already has, and only a file the maintainer just picked
- * travels as bytes. That is what makes an edit touching only the title carry no
+ * the relative path it already has — and from #130 a **Found file** travels as
+ * the absolute path the scan found it at, in the same field — and only a file
+ * the maintainer just picked travels as bytes. That is what makes an edit touching only the title carry no
  * bytes at all: on a 12 GB film, the difference between instant and minutes.
  *
  * No `Content-Type` is decided here and none should be: a multipart body is
@@ -183,7 +261,7 @@ export function movieFormData(values: MovieFormValues): FormData {
     body.append('subtitleLanguage', subtitle.language);
     body.append(
       'subtitlePath',
-      subtitle.file.kind === 'stored' ? subtitle.file.path : ''
+      subtitle.file.kind === 'picked' ? '' : subtitle.file.path
     );
     if (subtitle.file.kind === 'picked') {
       body.append('subtitle', subtitle.file.file);

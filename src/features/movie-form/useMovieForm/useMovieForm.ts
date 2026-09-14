@@ -2,15 +2,33 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import { fetchMovie } from '@/api/fetchMovie/fetchMovie';
+import { useGoBack } from '@/hooks/useGoBack/useGoBack';
 import type { MovieFormValues } from '@/types';
+import {
+  dismissProblem,
+  fetchProblem,
+  resolveProblem,
+} from '../../import-export/api/api';
 import { createMovie, updateMovie } from '../api/api';
-import { movieFormValues, pickedFile } from '../formValues/formValues';
+import {
+  movieFormValues,
+  pickedFile,
+  problemFormValues,
+} from '../formValues/formValues';
 
 /** Where a finished add lands — the shelf the film has just joined. */
 const AFTER_ADD = '/';
 
 /** Where a finished edit lands — the page the correction is now visible on. */
 const afterEdit = (id: string) => `/movie/${id}`;
+
+/**
+ * Where every exit from the **Import context** lands — _Save & continue_,
+ * _Skip this one_ and Back alike: the **Review step**, one row shorter or not.
+ * Never the screen behind the form, because the review is where the maintainer
+ * was and where the rest of the list still is.
+ */
+const AFTER_RESOLVE = '/import';
 
 /**
  * The query parameter that says which movie this screen is amending.
@@ -20,6 +38,13 @@ const afterEdit = (id: string) => `/movie/${id}`;
  * since #26. One URL, two jobs.
  */
 const MOVIE_PARAM = 'movie';
+
+/**
+ * The query parameter that says which **Problem** this screen is resolving —
+ * the **Review step**'s _Resolve_ lands on `/add?problem=<id>`. The third job
+ * of the same URL.
+ */
+const PROBLEM_PARAM = 'problem';
 
 /** The most digits a year can have. */
 const YEAR_LENGTH = 4;
@@ -92,8 +117,24 @@ export interface UseMovieFormResult {
    * finished save lands.
    */
   editing: boolean;
+  /**
+   * The title of the **Problem** this screen is resolving, for the accent
+   * banner — or `null` outside the **Import context**. What the labels, the
+   * save's route and every exit's destination are decided from.
+   */
+  resolving: string | null;
   /** Write the movie, and leave for the screen it is now visible on. */
   save: () => void;
+  /**
+   * The back pill: the app's one Back rule — except in the **Import context**,
+   * where it lands on the review. Writes nothing, dismisses nothing.
+   */
+  back: () => void;
+  /**
+   * The secondary button: Cancel, which is {@link back} — or, in the **Import
+   * context**, _Skip this one_: dismiss the problem, then land on the review.
+   */
+  cancel: () => void;
 }
 
 /**
@@ -154,6 +195,14 @@ export interface UseMovieFormResult {
  * is not a record to amend, so the screen falls back to adding — which is also
  * the only state in which its Save could do anything at all.
  *
+ * **`?problem=<id>` is the third job — the Import context** (#130). The
+ * **Problem detail** it names is read into the fields and the **File slots**
+ * as **Found files**; Save is _Save & continue_ and posts to the problem's own
+ * resolve route, the secondary button is _Skip this one_ and dismisses, and
+ * every exit lands on the review. A problem that is gone falls back to adding,
+ * as a gone movie does. The gate is the same gate: a title and a film, and a
+ * found film is a film.
+ *
  * ---
  *
  * **Why this file has no `useMovieForm.test.ts`**, asked and settled in the
@@ -182,6 +231,7 @@ export interface UseMovieFormResult {
  */
 export function useMovieForm(): UseMovieFormResult {
   const navigate = useNavigate();
+  const goBack = useGoBack();
   const [searchParams] = useSearchParams();
   const [values, setValues] = useState<MovieFormValues>(EMPTY);
   const [saving, setSaving] = useState(false);
@@ -189,7 +239,14 @@ export function useMovieForm(): UseMovieFormResult {
   /** The movie this screen is amending, once its record has been read back. */
   const [editing, setEditing] = useState<string | null>(null);
 
+  /** The problem this screen is resolving, once its detail has been read. */
+  const [resolving, setResolving] = useState<{
+    id: string;
+    title: string;
+  } | null>(null);
+
   const requested = searchParams.get(MOVIE_PARAM);
+  const problem = searchParams.get(PROBLEM_PARAM);
 
   // Read once per id, the way `useGenrePool` reads once per mount: the record
   // is what fills the fields, and asking again would overwrite whatever the
@@ -221,6 +278,33 @@ export function useMovieForm(): UseMovieFormResult {
       current = false;
     };
   }, [requested]);
+
+  // The **Import context**, read the same way: the detail is what fills the
+  // fields and the slots, once. A problem that is gone — `null`, the `404` —
+  // is a stale link, and the screen falls back to adding, which is story 94;
+  // so does a detail that could not be read, on the record's own precedent.
+  useEffect(() => {
+    if (problem === null) {
+      setResolving(null);
+      return;
+    }
+
+    let current = true;
+
+    fetchProblem(problem)
+      .then((detail) => {
+        if (!current || detail === null) {
+          return;
+        }
+        setValues(problemFormValues(detail));
+        setResolving({ id: detail.id, title: detail.title });
+      })
+      .catch(() => undefined);
+
+    return () => {
+      current = false;
+    };
+  }, [problem]);
 
   const setTitle = useCallback((title: string) => {
     setValues((current) => ({ ...current, title }));
@@ -341,16 +425,50 @@ export function useMovieForm(): UseMovieFormResult {
     }
 
     setSaving(true);
+    // _Save & continue_ is the resolve route's, and the route dismisses the
+    // problem on its own `201` — nothing here does. The review is where the
+    // save lands, one row shorter.
     const written =
-      editing === null
-        ? createMovie(values).then(() => navigate(AFTER_ADD))
-        : updateMovie(editing, values).then(() => navigate(afterEdit(editing)));
+      resolving !== null
+        ? resolveProblem(resolving.id, values).then(() =>
+            navigate(AFTER_RESOLVE)
+          )
+        : editing === null
+          ? createMovie(values).then(() => navigate(AFTER_ADD))
+          : updateMovie(editing, values).then(() =>
+              navigate(afterEdit(editing))
+            );
 
     // The form is still on screen with everything typed still in it, and Save
     // is offered again. Nothing else is said, because there is nothing yet to
     // say it with.
     written.catch(() => setSaving(false));
-  }, [canSave, values, navigate, editing]);
+  }, [canSave, values, navigate, editing, resolving]);
+
+  // Back never writes and never dismisses: a maintainer stepping back from a
+  // half-fixed row finds it still in the list. In the **Import context** the
+  // list is where they go — whatever the history says was behind the form.
+  const back = useCallback(() => {
+    if (resolving === null) {
+      goBack();
+      return;
+    }
+    navigate(AFTER_RESOLVE);
+  }, [resolving, goBack, navigate]);
+
+  // _Skip this one_ is the review row's own Skip, from the form: dismiss, then
+  // the review. A dismiss that failed still lands there — the row is still
+  // listed, which is the honest picture — and there is nothing yet to say it
+  // with.
+  const cancel = useCallback(() => {
+    if (resolving === null) {
+      goBack();
+      return;
+    }
+    dismissProblem(resolving.id)
+      .catch(() => undefined)
+      .then(() => navigate(AFTER_RESOLVE));
+  }, [resolving, goBack, navigate]);
 
   return {
     values,
@@ -371,6 +489,9 @@ export function useMovieForm(): UseMovieFormResult {
     canSave,
     saving,
     editing: editing !== null,
+    resolving: resolving === null ? null : resolving.title,
     save,
+    back,
+    cancel,
   };
 }

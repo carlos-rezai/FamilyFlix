@@ -2418,7 +2418,7 @@ describe('MovieForm — the Import context', () => {
       await renderResolve();
 
       // 8 on the column's 0–10 scale is four stars.
-      expect(ratingLabel()).toContain('4 / 5');
+      expect(ratingLabel()).toContain('4.0 / 5');
     });
 
     it('opens a row with no rating on Unrated', async () => {

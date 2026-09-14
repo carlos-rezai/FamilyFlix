@@ -1,4 +1,11 @@
-import type { ImportRun } from '@/types';
+import type {
+  ImportProblemDetail,
+  ImportRun,
+  Movie,
+  MovieFormValues,
+} from '@/types';
+
+import { movieFormData } from '../../movie-form/formValues/formValues';
 
 /** The two fields the **Setup step** has, and the one a refusal names. */
 export type ImportField = 'sheet' | 'root';
@@ -129,4 +136,59 @@ export async function dismissProblem(id: string): Promise<void> {
   if (!response.ok && response.status !== 404) {
     throw new Error(`DELETE ${endpoint} failed: ${response.status}`);
   }
+}
+
+/**
+ * The **Problem detail** _Resolve_ prefills the **Movie form** from — the
+ * problem, the **Sheet row**, the matched **Source folder** and its **Found
+ * files** — or `null` on the `404`. A problem that is gone — dismissed, or the
+ * run with it — is the signal to fall back to the plain **Add context**, not a
+ * failure; a `500` and a request that could not be made reject.
+ */
+export async function fetchProblem(
+  id: string
+): Promise<ImportProblemDetail | null> {
+  const endpoint = problemEndpoint(id);
+  const response = await fetch(endpoint);
+
+  if (response.status === 404) {
+    return null;
+  }
+  if (!response.ok) {
+    throw new Error(`GET ${endpoint} failed: ${response.status}`);
+  }
+
+  return (await response.json()) as ImportProblemDetail;
+}
+
+/**
+ * _Save & continue_: the form's own multipart encoding — `movieFormData`'s,
+ * with every **Found file** as its path and a picked one as bytes — posted to
+ * the problem's own resolve route, and the movie the `201` answers with.
+ *
+ * The one save in the app that is not `createMovie` or `updateMovie`, because
+ * it is the one route that may be handed a path: the general `POST
+ * /api/movies` accepts bytes only, and keeps doing so. No `Content-Type` is
+ * set, for `sendMovie`'s reason — the boundary is the platform's.
+ *
+ * Rejects on anything but the `201` — a path outside the root, an untitled
+ * body, a problem that is gone, a `500`, a request that could not be made —
+ * and the form's honest answer to any of them is to still be standing with
+ * everything in it.
+ */
+export async function resolveProblem(
+  id: string,
+  values: MovieFormValues
+): Promise<Movie> {
+  const endpoint = `${problemEndpoint(id)}/resolve`;
+  const response = await fetch(endpoint, {
+    method: 'POST',
+    body: movieFormData(values),
+  });
+
+  if (!response.ok) {
+    throw new Error(`POST ${endpoint} failed: ${response.status}`);
+  }
+
+  return (await response.json()) as Movie;
 }

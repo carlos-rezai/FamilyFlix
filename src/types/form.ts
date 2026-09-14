@@ -20,11 +20,19 @@
  * browser will say about a `File` — there is no path, ever.
  *
  * The `stored` arm is only ever reached from the **Edit context**; the slot's
- * own type is what the two contexts share.
+ * own type is what the contexts share.
+ *
+ * The third arm, `found`, is the **Import context**'s: a **Found file** under
+ * the **Source folder** the run matched, held as the absolute path the scan
+ * found it at. On the wire it travels exactly as a stored file does — as its
+ * path, in the same field — and the resolve route is the one place that reads
+ * such a path off the wire and copies from it, and only from under the run's
+ * root.
  */
 export type MovieFormFile =
   | { kind: 'stored'; path: string; filename: string }
-  | { kind: 'picked'; file: File; filename: string };
+  | { kind: 'picked'; file: File; filename: string }
+  | { kind: 'found'; path: string; filename: string };
 
 /**
  * Every field the form collects — the whole of the form's own surface, and the

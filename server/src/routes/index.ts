@@ -5,8 +5,12 @@ import express, { type Request, type Response, type Router } from 'express';
 import type { LibraryStorage } from '../library';
 import {
   ImportBusyError,
+  ImportPathError,
   ImportStartError,
+  ProblemNotFoundError,
   type Importer,
+  type ResolveFile,
+  type ResolveForm,
 } from '../import-export/createImporter/createImporter';
 import type { Media } from '../media/createMedia/createMedia';
 import type { Playback } from '../playback/createPlayback/createPlayback';
@@ -1294,6 +1298,176 @@ export function createApiRouter(
         return;
       }
       res.status(204).end();
+    }
+  );
+
+  // The **Problem detail** _Resolve_ opens the form on: the problem, the
+  // **Sheet row**, the matched **Source folder**, the candidates and the
+  // folder's **Found files** as absolute paths under the root. A `404` with a
+  // reason for an id that is not there — dismissed, never was, or no run —
+  // so the screen can tell it from a route that does not exist and fall back
+  // to the plain Add context. The importer decides; this route only turns
+  // its `null` into the status.
+  router.get(
+    '/import/current/problems/:id',
+    (req: Request<{ id: string }>, res: Response) => {
+      const detail = importer.problem(req.params.id);
+      if (detail === null) {
+        res.status(404).json({ error: `No such problem: ${req.params.id}` });
+        return;
+      }
+      res.json(detail);
+    }
+  );
+
+  // _Save & continue_: the **Movie form**'s own multipart encoding, read by
+  // the same reader the two movie routes use — and **the only route in the
+  // app that accepts a path**. A **Found file** arrives as the path field the
+  // edit route already reads for a **Stored file** (`videoPath`, `posterPath`,
+  // `subtitlePath`), a picked one as bytes in the part beside it; the two are
+  // told apart exactly as the edit tells them apart, so nothing about the
+  // encoding is this route's own. What is this route's own is where a path
+  // may point: the importer copies from under the **Current run**'s root and
+  // nowhere else, and a path outside it is a `400` with nothing copied — not
+  // the film named inside the root beside it either. `POST /api/movies` keeps
+  // accepting bytes only, whatever a path field says: a path-accepting field
+  // on the route anyone on the network can reach was ruled out in the PRD.
+  //
+  // **Every refusal takes the bytes this request wrote with it**, on the
+  // add's rule rather than the edit's: a resolve is a new movie, so the folder
+  // holds nothing older than this request. `201` with the movie once the
+  // importer has copied, added and dismissed; `404` for a problem that is not
+  // there, before the body is read where that is knowable and after it where
+  // the problem went during the upload.
+  router.post(
+    '/import/current/problems/:id/resolve',
+    async (req: Request<{ id: string }>, res: Response) => {
+      const { id } = req.params;
+      if (importer.problem(id) === null) {
+        // The body is still arriving and nothing here is going to read it.
+        req.resume();
+        res.status(404).json({ error: `No such problem: ${id}` });
+        return;
+      }
+
+      const { onFile, uploads } = collectUploads(media, (before) =>
+        media.reserveFolder(
+          onlyField(before, 'title')?.trim() ?? '',
+          optionalYear(onlyField(before, 'year')) ?? null
+        )
+      );
+
+      /** Take back everything this request put on disk. */
+      const rollback = (): void => {
+        if (uploads.folder !== null) {
+          media.removeFolder(uploads.folder);
+        }
+      };
+
+      let fields: Record<string, string[]>;
+      try {
+        fields = await readBody(req, onFile);
+      } catch {
+        rollback();
+        res.status(400).json({ error: 'Body must be multipart/form-data' });
+        return;
+      }
+
+      const read = readMovieFields(
+        fields,
+        uploads,
+        new Set(storage.listGenrePool().map((genre) => genre.name))
+      );
+      if (!read.ok) {
+        rollback();
+        res.status(read.status).json({ error: read.error });
+        return;
+      }
+      const { title, year, director, synopsis, rating, cast, genres } = read;
+
+      // A slot answers in one of two ways, as it does on the edit: bytes this
+      // request stored, or a path — which here is a **Found file** under the
+      // root rather than a file the library holds. Silence is an empty slot.
+      const slot = (
+        stored: string | undefined,
+        path: string | undefined
+      ): ResolveFile | null =>
+        stored !== undefined
+          ? { stored }
+          : path === undefined || path === ''
+            ? null
+            : { found: path };
+
+      const video = slot(uploads.video, onlyField(fields, 'videoPath'));
+      if (video === null) {
+        // The form's own gate, held on the wire: a title and a film. Unlike
+        // the add, a resolve with no film behind it is not a row this route
+        // writes — the whole point of the problem was a film to be found.
+        rollback();
+        res.status(400).json({ error: 'Body must carry a video' });
+        return;
+      }
+      const poster = slot(uploads.poster, onlyField(fields, 'posterPath'));
+
+      // The tracks, pairwise off the two fields with the parts threaded
+      // through them exactly as the edit reads them: the i-th language belongs
+      // to the i-th path, and an **empty path** is a row whose file arrived as
+      // bytes instead.
+      const foundPaths = fields.subtitlePath ?? [];
+      const picked = uploads.subtitles.filter(
+        (path): path is string => path !== undefined
+      );
+      const subtitles: ResolveForm['subtitles'] = [];
+      const rows = Math.max(
+        read.languages.length,
+        foundPaths.length,
+        picked.length
+      );
+      for (let row = 0; row < rows; row += 1) {
+        const found = foundPaths[row];
+        const file: ResolveFile | null =
+          found === undefined || found === ''
+            ? slot(picked.shift(), undefined)
+            : { found };
+        if (file === null) {
+          continue;
+        }
+        subtitles.push({
+          file,
+          language: read.languages[row] ?? DEFAULT_SUBTITLE_LANGUAGE,
+        });
+      }
+
+      try {
+        res.status(201).json(
+          await importer.resolve(id, {
+            title,
+            year: year ?? null,
+            director: director ?? null,
+            synopsis: synopsis ?? null,
+            rating: rating ?? null,
+            cast,
+            genres,
+            video,
+            poster,
+            subtitles,
+          })
+        );
+      } catch (error) {
+        // The importer has already taken its own folder back — which is this
+        // request's folder when it stored bytes — and the rollback here is
+        // for the case where it never got as far as opening one.
+        rollback();
+        if (error instanceof ImportPathError) {
+          res.status(400).json({ error: error.message });
+          return;
+        }
+        if (error instanceof ProblemNotFoundError) {
+          res.status(404).json({ error: error.message });
+          return;
+        }
+        res.status(500).json({ error: 'Could not resolve the problem' });
+      }
     }
   );
 
