@@ -18,6 +18,8 @@ import {
  * "problems and review" (issue #129) — `skip`, the **Review step**'s
  * **Dismiss**: the `DELETE` goes, and the row is gone from the snapshot on a
  * `204` and on a `404` alike, because both mean the problem is not there.
+ * Phase 7 (issue #133) adds the poll that fails: the last snapshot held, the
+ * next tick still fired.
  *
  * The **Run hook** — what holds the **Current run** on the screen. Transport
  * is polling: `GET /api/import/current` every 500 ms while the phase is
@@ -550,5 +552,91 @@ describe('useImportRun — skip', () => {
           init?.method?.toUpperCase() === 'POST'
       )
     ).toHaveLength(0);
+  });
+});
+
+/**
+ * Story 100 (issue #133): a poll that fails — the server gone for a moment —
+ * keeps the last snapshot on screen and keeps trying, so a blip never blanks
+ * the console. Whether the read answered `500` or could not be made at all,
+ * the hook holds what it had, the next tick still fires, and the first read
+ * that answers again replaces the snapshot as any poll would.
+ */
+describe('useImportRun — a poll that fails', () => {
+  const importing = (done: number): ImportRun =>
+    makeImportRun({ phase: 'importing', total: 4, done });
+
+  /** The next request the hook makes answers as `answer` says; every one after goes back to `serve`'s. */
+  const failNextRead = (answer: () => Promise<Response>) => {
+    fetchMock.mockImplementationOnce(answer);
+  };
+
+  it('keeps the last snapshot when a poll answers 500', async () => {
+    serve(createdResponse(importing(0)), [importing(1), importing(2)]);
+    const { result } = await startRun();
+    await elapse(500);
+    expect(result.current.run).toEqual(importing(1));
+
+    failNextRead(() => Promise.resolve(serverErrorResponse()));
+    await elapse(500);
+
+    expect(result.current.run).toEqual(importing(1));
+  });
+
+  it('keeps the last snapshot when the request cannot be made', async () => {
+    serve(createdResponse(importing(0)), [importing(1), importing(2)]);
+    const { result } = await startRun();
+    await elapse(500);
+
+    failNextRead(() => Promise.reject(new TypeError('Failed to fetch')));
+    await elapse(500);
+
+    expect(result.current.run).toEqual(importing(1));
+  });
+
+  it('still fires the next tick, and takes what it answers', async () => {
+    serve(createdResponse(importing(0)), [importing(1), importing(2)]);
+    const { result } = await startRun();
+    await elapse(500);
+    expect(polls()).toBe(1);
+
+    failNextRead(() => Promise.reject(new TypeError('Failed to fetch')));
+    await elapse(500);
+    expect(polls()).toBe(2);
+    expect(result.current.run).toEqual(importing(1));
+
+    await elapse(500);
+
+    expect(polls()).toBe(3);
+    expect(result.current.run).toEqual(importing(2));
+  });
+
+  it('keeps trying through a run of failures, every 500 ms', async () => {
+    serve(createdResponse(importing(0)), [importing(1), importing(2)]);
+    const { result } = await startRun();
+    await elapse(500);
+
+    failNextRead(() => Promise.reject(new TypeError('Failed to fetch')));
+    failNextRead(() => Promise.resolve(serverErrorResponse()));
+    failNextRead(() => Promise.reject(new TypeError('Failed to fetch')));
+    await elapse(1500);
+
+    expect(polls()).toBe(4);
+    expect(result.current.run).toEqual(importing(1));
+    expect(result.current.attaching).toBe(false);
+  });
+
+  it('never blanks the console: the run is a snapshot throughout, not null', async () => {
+    serve(createdResponse(importing(0)), [importing(1)]);
+    const { result } = await startRun();
+    const seen: (ImportRun | null)[] = [];
+
+    for (let tick = 0; tick < 4; tick += 1) {
+      failNextRead(() => Promise.reject(new TypeError('Failed to fetch')));
+      await elapse(500);
+      seen.push(result.current.run);
+    }
+
+    expect(seen.every((run) => run !== null)).toBe(true);
   });
 });

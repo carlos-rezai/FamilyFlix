@@ -29,7 +29,9 @@ import {
  * "problems and review" (issue #129) — the **Review step** with its tiles and
  * its **Needs attention** list: _Skip_ sends the `DELETE`, the row goes and
  * the tile counts down, on a `404` just the same; _Resolve_ lands on the form
- * in import context; `✓ All done` once the last row is gone.
+ * in import context; `✓ All done` once the last row is gone. Phase 7 (issue
+ * #133) adds the poll that fails: the running step stays, showing the last
+ * snapshot, until a poll answers again.
  *
  * The **Import flow** organism: the header row from `feat.ImportFlow.dc.html`
  * and one of three steps under it, driven by the **Run hook**. The seam is
@@ -879,5 +881,65 @@ describe('ImportFlow — the review of problems', () => {
     expect(tileNumber(MATCHED)).toBe('0');
     expect(tileNumber(ATTENTION)).toBe('0');
     expect(screen.queryByText('Needs attention')).toBeNull();
+  });
+});
+
+// --- 13 — Bulk import, Phase 7: a poll that fails (issue #133) ----------------
+
+/**
+ * Story 100: the server gone for a moment never blanks the console. The
+ * running step stays on screen through a poll that answers `500` and one
+ * that cannot be made at all, showing the last snapshot it had; the polling
+ * goes on; and the first poll that answers again refreshes the step.
+ */
+describe('ImportFlow — a poll that fails', () => {
+  const failNextRead = (answer: () => Promise<Response>) => {
+    fetchMock.mockImplementationOnce(answer);
+  };
+
+  it('keeps the running step on screen, showing the last snapshot', async () => {
+    serve(createdResponse(makeImportRun({ phase: 'scanning', found: 0 })), [
+      makeImportRun({ phase: 'importing', total: 4, done: 1, matched: 4 }),
+      makeImportRun({ phase: 'importing', total: 4, done: 2, matched: 4 }),
+    ]);
+    renderFlow();
+    await setupStep();
+    startRun();
+    expect(
+      await screen.findByText('1 of 4 imported', undefined, POLLING)
+    ).toBeDefined();
+    const seen = reads().length;
+
+    failNextRead(() => Promise.resolve(serverErrorResponse()));
+    failNextRead(() => Promise.reject(new TypeError('Failed to fetch')));
+    await waitFor(
+      () => expect(reads().length).toBeGreaterThanOrEqual(seen + 2),
+      POLLING
+    );
+
+    expect(screen.getByText('Importing movies…')).toBeDefined();
+    expect(screen.getByText('1 of 4 imported')).toBeDefined();
+    expect(screen.getByRole('button', { name: 'Cancel import' })).toBeDefined();
+    expect(screen.queryByRole('textbox', { name: 'Spreadsheet' })).toBeNull();
+  });
+
+  it('refreshes the step from the first poll that answers again', async () => {
+    serve(createdResponse(makeImportRun({ phase: 'scanning', found: 0 })), [
+      makeImportRun({ phase: 'importing', total: 4, done: 1, matched: 4 }),
+      makeImportRun({ phase: 'importing', total: 4, done: 3, matched: 4 }),
+    ]);
+    renderFlow();
+    await setupStep();
+    startRun();
+    expect(
+      await screen.findByText('1 of 4 imported', undefined, POLLING)
+    ).toBeDefined();
+
+    failNextRead(() => Promise.reject(new TypeError('Failed to fetch')));
+
+    expect(
+      await screen.findByText('3 of 4 imported', undefined, POLLING)
+    ).toBeDefined();
+    expect(screen.getByText('Importing movies…')).toBeDefined();
   });
 });

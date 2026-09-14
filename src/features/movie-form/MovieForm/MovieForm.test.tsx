@@ -2936,6 +2936,78 @@ describe('MovieForm — the Import context', () => {
     });
   });
 
+  // --- 13 — Bulk import, Phase 7: the awkward titles (issue #133) ------------
+
+  /**
+   * Story 96: a title with quotes, diacritics or two hundred characters sits
+   * in the banner whole, and prefills the Title field whole — the copy holds
+   * for any film in the collection. The banner is text, not an attribute, so
+   * a quote in it is a quote and nothing more.
+   */
+  describe('the banner on an awkward title', () => {
+    const LONG_TITLE =
+      'The Extraordinarily Long Title Of A Film Nobody Can Say In One Breath '
+        .repeat(3)
+        .slice(0, 200);
+
+    const failedAs = (title: string): ImportProblemDetail => ({
+      ...DIE_HARD,
+      title,
+      row: { ...DIE_HARD.row, title },
+    });
+
+    it('shows a title with quotes in it, whole', async () => {
+      const title = 'Zoë\'s "Lantern" Keeper';
+      answerProblem = () => Promise.resolve(okResponse(failedAs(title)));
+
+      await renderResolve();
+
+      expect(bannerText()).toBe(`Resolving import · ${title}`);
+      expect(titleField().value).toBe(title);
+    });
+
+    it('shows a title with diacritics, whole', async () => {
+      const title = "Ça, c'est Noël à Zürich";
+      answerProblem = () => Promise.resolve(okResponse(failedAs(title)));
+
+      await renderResolve();
+
+      expect(bannerText()).toBe(`Resolving import · ${title}`);
+      expect(titleField().value).toBe(title);
+    });
+
+    it('shows a two-hundred-character title whole, the form still standing under it', async () => {
+      answerProblem = () => Promise.resolve(okResponse(failedAs(LONG_TITLE)));
+
+      await renderResolve();
+
+      expect(LONG_TITLE).toHaveLength(200);
+      expect(bannerText()).toBe(`Resolving import · ${LONG_TITLE}`);
+      expect(titleField().value).toBe(LONG_TITLE);
+      expect(foundVideo()).not.toBeNull();
+      expect(saveAndContinue().disabled).toBe(false);
+    });
+
+    it('names an awkward candidate whole after an awkward title', async () => {
+      const title = "Ça, c'est Noël à Zürich";
+      answerProblem = () =>
+        Promise.resolve(
+          okResponse({
+            ...HARBOR_AMBIGUOUS,
+            title,
+            row: { ...HARBOR_AMBIGUOUS.row, title },
+            candidates: [HARBOR_FIRST, "C:\\Movies\\Ça c'est Noël (2019)"],
+          })
+        );
+
+      await renderResolve(HARBOR_AMBIGUOUS.id);
+
+      expect(bannerText()).toBe(
+        `Resolving import · ${title} — also matched: Ça c'est Noël (2019)`
+      );
+    });
+  });
+
   describe('a no-folder problem', () => {
     beforeEach(() => {
       answerProblem = () => Promise.resolve(okResponse(LANTERN_NO_FOLDER));

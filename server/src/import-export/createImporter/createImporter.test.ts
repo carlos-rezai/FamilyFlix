@@ -47,11 +47,21 @@
 // detail** — row, folder, candidates, **Found files** — and `resolve` is
 // _Save & continue_: copy the found files in from under the root and nowhere
 // else, add the movie, dismiss the problem.
+//
+// Issue #133 is the edges a twelve-hour run meets that the two-film fixture
+// does not: a title with quotes, diacritics or two hundred characters matches,
+// imports and sits in a **Problem** whole; two matches with the same title and
+// year land in two **Movie folders**, never one; a **Source folder** named
+// with characters no **Movie folder** may carry imports into one named by the
+// app's own rule; a subtitle tag the form does not know lands as English; and
+// an importer composed afresh over the storage of an interrupted run — the app
+// restarting mid-run — has no run and every movie already added.
 
 import { execFileSync } from 'node:child_process';
 import {
   chmodSync,
   cpSync,
+  existsSync,
   mkdirSync,
   readdirSync,
   readFileSync,
@@ -2052,5 +2062,469 @@ describe('createImporter — resolve: Save & continue', () => {
     await importer.resolve(problem.id, dieHardForm(dieHard));
 
     expect(treeOf(root)).toEqual(before);
+  });
+});
+
+// --- Phase 7: failure and the edges (issue #133) -------------------------------
+
+/** A title of exactly two hundred characters — a real film, a mouthful. */
+const LONG_TITLE =
+  'The Extraordinarily Long Title Of A Film Nobody Can Say In One Breath '
+    .repeat(3)
+    .slice(0, 200);
+
+/**
+ * A **Source folder** under the root holding a real film — Amélie's bytes
+ * under the video name given, so the copy has something to copy and the
+ * runtime derivation an `mvhd` to read — and whichever subtitle files the test
+ * names beside it, each Amélie's `.srt`.
+ */
+function filmUnder(
+  root: string,
+  name: string,
+  video: string,
+  subtitles: string[] = []
+): string {
+  const folder = join(root, name);
+  mkdirSync(folder);
+  const amelie = join(root, 'Drama', 'Amelie (2001)');
+  cpSync(join(amelie, 'Amelie.mp4'), join(folder, video));
+  for (const subtitle of subtitles) {
+    cpSync(join(amelie, 'Amelie.srt'), join(folder, subtitle));
+  }
+  return folder;
+}
+
+/** A CSV cell: quoted, with any quote in it doubled, as a spreadsheet writes one. */
+const cell = (text: string): string => `"${text.replace(/"/g, '""')}"`;
+
+const QUOTED = 'Zoë\'s "Lantern" Keeper';
+const ACCENTED = "Ça, c'est Noël à Zürich";
+
+/**
+ * Story 96: the copy holds for any film in the collection. The **Title key**
+ * folds quotes, diacritics and punctuation away for the match, and the row
+ * keeps the title exactly as the sheet spelt it — the family reads the sheet's
+ * spelling, not the folder's. A folder cannot carry a double quote on Windows,
+ * so the quoted title's folder spells the name without them, which is the case
+ * the match exists for.
+ */
+describe('createImporter — the awkward titles match and import', () => {
+  it('imports a title with quotes in it, kept whole on the row', async () => {
+    const { storage, importer, media, root } = sandbox();
+    filmUnder(root, "Zoë's Lantern Keeper (2020)", 'Zoe.mp4');
+    const sheet = sheetOf(root, `${FIXTURE_ROWS}${cell(QUOTED)},2020,Drama\n`);
+
+    await importer.start(sheet, root);
+    const run = await untilReview(importer);
+
+    expect(run.problems).toEqual([]);
+    expect(byTitle(storage)[QUOTED]).toMatchObject({
+      title: QUOTED,
+      year: 2020,
+      videoPath: 'zoes-lantern-keeper-2020/Zoe.mp4',
+    });
+    expect(folders(media)).toContain('zoes-lantern-keeper-2020');
+    expect(texts(run)).toContain(`✓ Imported   ${QUOTED}`);
+  });
+
+  it('imports a title with diacritics, matched to a folder spelt without them', async () => {
+    const { storage, importer, media, root } = sandbox();
+    filmUnder(root, "Ca c'est Noel a Zurich (2019)", 'Noel.mp4');
+    const sheet = sheetOf(
+      root,
+      `${FIXTURE_ROWS}${cell(ACCENTED)},2019,Comedy\n`
+    );
+
+    await importer.start(sheet, root);
+    const run = await untilReview(importer);
+
+    expect(run.problems).toEqual([]);
+    expect(byTitle(storage)[ACCENTED]).toMatchObject({
+      title: ACCENTED,
+      year: 2019,
+      videoPath: 'ca-cest-noel-a-zurich-2019/Noel.mp4',
+    });
+    expect(folders(media)).toContain('ca-cest-noel-a-zurich-2019');
+  });
+
+  it('imports a two-hundred-character title, its folder carrying the whole slug', async () => {
+    const { storage, importer, media, root } = sandbox();
+    filmUnder(root, `${LONG_TITLE} (2021)`, 'Long.mp4');
+    const sheet = sheetOf(
+      root,
+      `${FIXTURE_ROWS}${cell(LONG_TITLE)},2021,Drama\n`
+    );
+
+    await importer.start(sheet, root);
+    const run = await untilReview(importer);
+
+    expect(run.problems).toEqual([]);
+    const movie = byTitle(storage)[LONG_TITLE];
+    expect(movie.title).toHaveLength(200);
+    expect(movie.year).toBe(2021);
+    const [folder, file] = movie.videoPath.split('/');
+    expect(file).toBe('Long.mp4');
+    expect(folder).toBe(
+      `${LONG_TITLE.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-2021`
+    );
+    expect(folders(media)).toContain(folder);
+    expect(readFileSync(join(media, movie.videoPath))).toEqual(
+      readFileSync(join(root, 'Drama', 'Amelie (2001)', 'Amelie.mp4'))
+    );
+  });
+});
+
+/**
+ * The same three titles with no folder to answer to them: each sits in a
+ * **Problem** whole — the review list and the form's banner print
+ * `problem.title` and `row.title` as they are, so a quote or an accent that
+ * broke here would break on the screen.
+ */
+describe('createImporter — the awkward titles sit in a problem whole', () => {
+  it('files no-folder for each, the title exactly as the sheet spelt it', async () => {
+    const { importer, root } = sandbox();
+    const sheet = sheetOf(
+      root,
+      `${FIXTURE_ROWS}${cell(QUOTED)},2020,Drama\n` +
+        `${cell(ACCENTED)},2019,Comedy\n` +
+        `${cell(LONG_TITLE)},2021,Drama\n`
+    );
+
+    await importer.start(sheet, root);
+    const run = await untilReview(importer);
+
+    expect(
+      run.problems.map((problem) => [problem.kind, problem.title])
+    ).toEqual([
+      ['no-folder', QUOTED],
+      ['no-folder', ACCENTED],
+      ['no-folder', LONG_TITLE],
+    ]);
+  });
+
+  it('answers each problem’s detail with the row’s title whole', async () => {
+    const { importer, root } = sandbox();
+    const sheet = sheetOf(
+      root,
+      `${FIXTURE_ROWS}${cell(QUOTED)},2020,Drama\n` +
+        `${cell(LONG_TITLE)},2021,Drama\n`
+    );
+
+    await importer.start(sheet, root);
+    const run = await untilReview(importer);
+
+    const [quoted, long] = run.problems;
+    expect(importer.problem(quoted.id)).toMatchObject({
+      title: QUOTED,
+      row: { title: QUOTED, year: 2020 },
+    });
+    expect(importer.problem(long.id)).toMatchObject({
+      title: LONG_TITLE,
+      row: { title: LONG_TITLE, year: 2021 },
+    });
+  });
+});
+
+/** The form's **Resolve** of one of the two Heat rows, its film found in `folder`. */
+function heatForm(folder: string, video: string): ResolveForm {
+  return {
+    title: 'Heat',
+    year: 1995,
+    director: null,
+    synopsis: null,
+    rating: null,
+    cast: [],
+    genres: ['Action'],
+    video: { found: join(folder, video) },
+    poster: null,
+    subtitles: [],
+  };
+}
+
+/**
+ * Story 97: two films with the same title and year never share a **Movie
+ * folder**. The name is `movieFolder`'s — a slug and the year — and the slug
+ * folds more than the **Title key** does: two titles in a script the slug's
+ * alphabet has no letters for are two different keys, two different matches,
+ * and one folder name. `reserveFolder`'s suffix is what keeps them apart, in
+ * the run and in **Resolve** alike.
+ */
+describe('createImporter — two matches with the same title and year', () => {
+  it('lands two films the slug cannot tell apart in two folders, neither overwritten', async () => {
+    const { storage, importer, media, root } = sandbox();
+    // Throne of Blood and The Lower Depths, both Kurosawa, both 1957: two
+    // keys, one slug — `movie-1957` — once the slug has nothing to keep.
+    const throne = filmUnder(root, '蜘蛛巣城 (1957)', 'Throne.mp4');
+    const depths = join(root, 'どん底 (1957)');
+    mkdirSync(depths);
+    cpSync(
+      join(root, 'Die.Hard.1988.1080p', 'Die.Hard.1988.1080p.mp4'),
+      join(depths, 'Depths.mp4')
+    );
+    const sheet = sheetOf(
+      root,
+      `${FIXTURE_ROWS}蜘蛛巣城,1957,Drama\nどん底,1957,Drama\n`
+    );
+
+    await importer.start(sheet, root);
+    const run = await untilReview(importer);
+
+    expect(run.problems).toEqual([]);
+    expect(run.done).toBe(4);
+    const movies = byTitle(storage);
+    expect(movies['蜘蛛巣城'].videoPath).toBe('movie-1957/Throne.mp4');
+    expect(movies['どん底'].videoPath).toBe('movie-1957-2/Depths.mp4');
+    expect(folders(media)).toEqual([
+      'amelie-2001',
+      'die-hard-1988',
+      'movie-1957',
+      'movie-1957-2',
+    ]);
+    // Each folder holds its own film's bytes — the second did not land on
+    // the first.
+    expect(readFileSync(join(media, 'movie-1957', 'Throne.mp4'))).toEqual(
+      readFileSync(join(throne, 'Throne.mp4'))
+    );
+    expect(readFileSync(join(media, 'movie-1957-2', 'Depths.mp4'))).toEqual(
+      readFileSync(join(depths, 'Depths.mp4'))
+    );
+  });
+
+  it('suffixes the second of two resolves with the same title and year, as the form does', async () => {
+    const { storage, importer, media, root } = sandbox();
+    // Two rows for Heat and two folders for it: each row sees both, so each
+    // is `ambiguous`, and the maintainer resolves one onto each folder.
+    const first = filmUnder(root, 'Heat (1995)', 'Heat.mp4');
+    const second = filmUnder(root, 'Heat 1995 1080p', 'Heat.1995.1080p.mp4');
+    const sheet = sheetOf(
+      root,
+      `${FIXTURE_ROWS}Heat,1995,Action\nHeat,1995,Action\n`
+    );
+    await importer.start(sheet, root);
+    const run = await untilReview(importer);
+    expect(ofKind(run, 'ambiguous')).toHaveLength(2);
+    const [one, two] = ofKind(run, 'ambiguous');
+
+    const mann = await importer.resolve(one.id, heatForm(first, 'Heat.mp4'));
+    const other = await importer.resolve(
+      two.id,
+      heatForm(second, 'Heat.1995.1080p.mp4')
+    );
+
+    expect(mann.videoPath).toBe('heat-1995/Heat.mp4');
+    expect(other.videoPath).toBe('heat-1995-2/Heat.1995.1080p.mp4');
+    expect(folders(media)).toEqual([
+      'amelie-2001',
+      'die-hard-1988',
+      'heat-1995',
+      'heat-1995-2',
+    ]);
+    expect(
+      storage
+        .listMovies({ sort: 'a-z' })
+        .filter((movie) => movie.title === 'Heat')
+    ).toHaveLength(2);
+    expect(importer.current()?.problems).toEqual([]);
+  });
+});
+
+/**
+ * Story 104: the **Movie folder** is named by the app's own rule and never by
+ * the source. A **Source folder** may be called anything its filesystem
+ * allows — `#`, `!`, `%` and `&` are all legal on NTFS and all hostile to the
+ * URL `/api/images/<stored path>` — and none of it reaches the managed
+ * directory: the folder is `movieFolder`'s slug of the row's title.
+ */
+describe('createImporter — a source folder named with unsafe characters', () => {
+  const UNSAFE = '#The Lantern Keeper!# (2019)';
+
+  it('imports it into a folder named by the app’s rule, the source’s name nowhere under media', async () => {
+    const { storage, importer, media, root } = sandbox();
+    filmUnder(root, UNSAFE, 'The.Lantern.Keeper.mp4');
+    const sheet = sheetOf(
+      root,
+      `${FIXTURE_ROWS}The Lantern Keeper,2019,Drama\n`
+    );
+
+    await importer.start(sheet, root);
+    const run = await untilReview(importer);
+
+    expect(run.problems).toEqual([]);
+    expect(byTitle(storage)['The Lantern Keeper']).toMatchObject({
+      videoPath: 'the-lantern-keeper-2019/The.Lantern.Keeper.mp4',
+    });
+    expect(folders(media)).toEqual([
+      'amelie-2001',
+      'die-hard-1988',
+      'the-lantern-keeper-2019',
+    ]);
+    for (const name of Object.keys(treeOf(media))) {
+      expect(name).toMatch(/^[a-z0-9-]+\/[^/]+$/);
+    }
+    expect(texts(run)).toContain('✓ Imported   The Lantern Keeper');
+  });
+
+  it('names the folder as it is on disk in the scanning line, unsafe characters and all', async () => {
+    const { importer, root } = sandbox();
+    const folder = filmUnder(root, UNSAFE, 'The.Lantern.Keeper.mp4');
+    const sheet = sheetOf(
+      root,
+      `${FIXTURE_ROWS}The Lantern Keeper,2019,Drama\n`
+    );
+
+    await importer.start(sheet, root);
+    const run = await untilReview(importer);
+
+    // The log is the maintainer's map back to the source: a name the log
+    // sanitised would be a folder they could not find.
+    expect(linesMatching(run, /^Scanning/).map((line) => line.text)).toContain(
+      `Scanning   ${folder}`
+    );
+  });
+});
+
+/**
+ * Story 103: an odd filename never blocks a track. `detectSubtitleLanguage`
+ * answers English for a tag the form does not offer, and the importer takes
+ * that answer as it takes any other — the track is copied and filed, no
+ * problem raised, no warning logged, and the maintainer corrects the language
+ * on the form if it matters.
+ */
+describe('createImporter — a subtitle with an unknown language tag', () => {
+  it('lands the track as English, copied beside the film', async () => {
+    const { storage, importer, media, root } = sandbox();
+    filmUnder(root, 'The Lantern Keeper (2019)', 'The.Lantern.Keeper.mp4', [
+      'The.Lantern.Keeper.ja.srt',
+    ]);
+    const sheet = sheetOf(
+      root,
+      `${FIXTURE_ROWS}The Lantern Keeper,2019,Drama\n`
+    );
+
+    await importer.start(sheet, root);
+    const run = await untilReview(importer);
+
+    expect(run.problems).toEqual([]);
+    const movie = byTitle(storage)['The Lantern Keeper'];
+    expect(
+      movie.subtitles.map((track) => [track.path, track.language])
+    ).toEqual([
+      ['the-lantern-keeper-2019/The.Lantern.Keeper.ja.srt', 'English'],
+    ]);
+    expect(
+      existsSync(
+        join(media, 'the-lantern-keeper-2019', 'The.Lantern.Keeper.ja.srt')
+      )
+    ).toBe(true);
+    // No warning about the track: past the scan, the lines naming the film
+    // are its imported line and the one warning it earns, for no poster.
+    expect(
+      linesMatching(run, /^[^S].*Lantern Keeper/).map((line) => line.text)
+    ).toEqual([
+      '✓ Imported   The Lantern Keeper',
+      '⚠ The Lantern Keeper — no poster found',
+    ]);
+  });
+
+  it('keeps a known tag beside an unknown one on the same film', async () => {
+    const { storage, importer, root } = sandbox();
+    filmUnder(root, 'The Lantern Keeper (2019)', 'The.Lantern.Keeper.mp4', [
+      'The.Lantern.Keeper.ja.srt',
+      'The.Lantern.Keeper.pt.srt',
+    ]);
+    const sheet = sheetOf(
+      root,
+      `${FIXTURE_ROWS}The Lantern Keeper,2019,Drama\n`
+    );
+
+    await importer.start(sheet, root);
+    await untilReview(importer);
+
+    const movie = byTitle(storage)['The Lantern Keeper'];
+    expect(
+      [...movie.subtitles]
+        .sort((a, b) => a.path.localeCompare(b.path))
+        .map((track) => [track.path, track.language])
+    ).toEqual([
+      ['the-lantern-keeper-2019/The.Lantern.Keeper.ja.srt', 'English'],
+      ['the-lantern-keeper-2019/The.Lantern.Keeper.pt.srt', 'Portuguese'],
+    ]);
+  });
+});
+
+/**
+ * Story 99: the app restarting mid-run loses the run and keeps every movie
+ * already added — a crash costs a re-run and never a row. The **Current run**
+ * lives in the importer's memory and nowhere else; the movies live in the
+ * library. A run is interrupted here by holding its second copy for ever and
+ * composing a fresh importer over the same storage and managed directory, as
+ * a restarted process would.
+ */
+describe('createImporter — the importer restarting mid-run', () => {
+  async function interrupted(): Promise<{
+    storage: LibraryStorage;
+    media: string;
+    root: string;
+    sheet: string;
+    restarted: Importer;
+  }> {
+    const hold = holdCopyOf('Amelie.mp4');
+    const { storage, importer, media, root, sheet } = sandbox({
+      media: hold.seam,
+    });
+    await importer.start(sheet, root);
+    await hold.reached;
+    expect(importer.current()?.phase).toBe('importing');
+
+    const restarted = createImporter({
+      storage,
+      media: createMedia(media),
+      playback: createPlayback(media, null),
+    });
+    return { storage, media, root, sheet, restarted };
+  }
+
+  it('has no run', async () => {
+    const { restarted } = await interrupted();
+
+    expect(restarted.current()).toBeNull();
+  });
+
+  it('has every movie the interrupted run added, its file still under media', async () => {
+    const { storage, media, restarted } = await interrupted();
+
+    expect(restarted.current()).toBeNull();
+    const dieHard = byTitle(storage)['Die Hard'];
+    expect(dieHard).toMatchObject({
+      title: 'Die Hard',
+      year: 1988,
+      videoPath: 'die-hard-1988/Die.Hard.1988.1080p.mp4',
+    });
+    expect(existsSync(join(media, dieHard.videoPath))).toBe(true);
+    expect(byTitle(storage)['Amélie']).toBeUndefined();
+  });
+
+  it('can start again over the same sheet: the added film is skipped, the rest imported', async () => {
+    const { storage, media, root, sheet, restarted } = await interrupted();
+    const before = byTitle(storage)['Die Hard'];
+
+    await restarted.start(sheet, root);
+    const run = await untilReview(restarted);
+
+    expect(run.problems).toEqual([]);
+    expect(texts(run)).toContain('– Already in library Die Hard (1988)');
+    expect(
+      linesMatching(run, /^✓ Imported\s/).map((line) => line.text)
+    ).toEqual(['✓ Imported   Amélie']);
+    const after = byTitle(storage);
+    expect(Object.keys(after).sort()).toEqual(['Amélie', 'Die Hard']);
+    expect(after['Die Hard'].id).toBe(before.id);
+    // The interrupted run's reserved folder is still on disk, so the re-run
+    // takes the next name rather than writing over it.
+    expect(existsSync(join(media, after['Amélie'].videoPath))).toBe(true);
+    expect(readFileSync(join(media, after['Amélie'].videoPath))).toEqual(
+      readFileSync(join(root, 'Drama', 'Amelie (2001)', 'Amelie.mp4'))
+    );
   });
 });

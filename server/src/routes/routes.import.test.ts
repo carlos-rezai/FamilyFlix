@@ -19,6 +19,9 @@
 // `GET /api/import/current/problems/:id` (the **Problem detail**, or `404`)
 // and `POST /api/import/current/problems/:id/resolve` (_Save & continue_:
 // the form's multipart, a **Found file** copied only from under the root).
+// Issue #133 composes a second API over the library an interrupted run left
+// behind — the app restarting mid-run — and asks `current` for the `404` and
+// the movie routes for every film the old run had added.
 
 import express from 'express';
 import {
@@ -75,14 +78,23 @@ afterEach(async () => {
  *
  * `seam` wraps the real `Media` the importer is composed over; `importer`
  * replaces the importer altogether, for the one group that asks whether the
- * router reaches the domain through its argument and nowhere else.
+ * router reaches the domain through its argument and nowhere else; `resume`
+ * composes the API over an earlier one's library, managed directory and root
+ * — what a restarted process finds on disk — instead of fresh ones.
  */
 function freshApi({
   seam = (real) => real,
   importer,
+  resume,
 }: {
   seam?: (real: Media) => Media;
   importer?: (composed: Importer) => Importer;
+  resume?: {
+    storage: LibraryStorage;
+    media: string;
+    root: string;
+    sheet: string;
+  };
 } = {}): {
   storage: LibraryStorage;
   baseUrl: string;
@@ -91,18 +103,22 @@ function freshApi({
   sheet: string;
   scratch: string;
 } {
-  const storage = createSqliteStorage(':memory:');
-  storages.push(storage);
+  const storage = resume?.storage ?? createSqliteStorage(':memory:');
+  if (resume === undefined) {
+    storages.push(storage);
+  }
 
   const dir = sandboxRoot('familyflix-import-api-');
-  const media = join(dir, 'media');
-  const root = join(dir, 'root');
+  const media = resume?.media ?? join(dir, 'media');
+  const root = resume?.root ?? join(dir, 'root');
   const scratch = join(dir, 'scratch');
-  mkdirSync(media);
   mkdirSync(scratch);
-  cpSync(join(FIXTURE, 'root'), root, { recursive: true });
-  const sheet = join(dir, 'library.xlsx');
-  cpSync(join(FIXTURE, 'library.xlsx'), sheet);
+  const sheet = resume?.sheet ?? join(dir, 'library.xlsx');
+  if (resume === undefined) {
+    mkdirSync(media);
+    cpSync(join(FIXTURE, 'root'), root, { recursive: true });
+    cpSync(join(FIXTURE, 'library.xlsx'), sheet);
+  }
 
   const mediaDomain = seam(createMedia(media));
   const playback = createPlayback(media, null);
@@ -165,22 +181,33 @@ async function untilReview(baseUrl: string): Promise<ImportRun> {
 }
 
 /**
- * A `Media` whose first copy waits until the test lets it go — the one way to
- * hold a run in its importing phase for as long as an assertion needs.
+ * A `Media` whose first copy — or the first of the file named, when one is —
+ * waits until the test lets it go, and says when it has got there: the one
+ * way to hold a run in its importing phase for as long as an assertion needs.
  */
-function gatedSeam(): { seam: (real: Media) => Media; release: () => void } {
+function gatedSeam(filename = ''): {
+  seam: (real: Media) => Media;
+  release: () => void;
+  reached: Promise<void>;
+} {
   let release: () => void = () => undefined;
   const gate = new Promise<void>((resolve) => {
     release = resolve;
   });
+  let arrive: () => void = () => undefined;
+  const reached = new Promise<void>((resolve) => {
+    arrive = resolve;
+  });
   let held = false;
   return {
     release: () => release(),
+    reached,
     seam: (real) => ({
       ...real,
       copyIn: async (folder, source) => {
-        if (!held) {
+        if (!held && source.endsWith(filename)) {
           held = true;
+          arrive();
           await gate;
         }
         return real.copyIn(folder, source);
@@ -1122,5 +1149,85 @@ describe('POST /api/import/current/problems/:id/resolve', () => {
     );
 
     expect(response.status).toBe(400);
+  });
+});
+
+// --- Phase 7: the app restarting mid-run (issue #133) --------------------------
+
+/**
+ * Story 99: a crash costs a re-run and never a row. The **Current run** is the
+ * importer's memory and nowhere else; the movies are the library's. A run is
+ * interrupted here by holding its second copy for ever, and a second API is
+ * composed over the same library, managed directory and root — what the
+ * restarted process finds on disk — with an importer of its own.
+ */
+describe('a fresh API over the library of an interrupted run', () => {
+  async function interrupted(): Promise<{
+    baseUrl: string;
+    storage: LibraryStorage;
+    root: string;
+    sheet: string;
+  }> {
+    const { seam, reached } = gatedSeam('Amelie.mp4');
+    const before = freshApi({ seam });
+    const started = await postImport(before.baseUrl, {
+      sheetPath: before.sheet,
+      rootPath: before.root,
+    });
+    expect(started.status).toBe(201);
+    await reached;
+    expect((await getCurrent(before.baseUrl)).status).toBe(200);
+
+    const { baseUrl } = freshApi({ resume: before });
+    return {
+      baseUrl,
+      storage: before.storage,
+      root: before.root,
+      sheet: before.sheet,
+    };
+  }
+
+  it('answers 404 for current', async () => {
+    const { baseUrl } = await interrupted();
+
+    const response = await getCurrent(baseUrl);
+
+    expect(response.status).toBe(404);
+  });
+
+  it('still serves every movie the interrupted run added', async () => {
+    const { baseUrl, storage } = await interrupted();
+
+    const movies = (await (await fetch(`${baseUrl}/api/movies`)).json()) as {
+      title: string;
+    }[];
+    expect(movies.map((movie) => movie.title)).toEqual(['Die Hard']);
+
+    const dieHard = storage
+      .listMovies({ sort: 'a-z' })
+      .find((movie) => movie.title === 'Die Hard') as Movie;
+    const detail = await fetch(`${baseUrl}/api/movies/${dieHard.id}`);
+    const poster = await fetch(`${baseUrl}/api/images/${dieHard.posterPath}`);
+    expect(detail.status).toBe(200);
+    expect(poster.status).toBe(200);
+  });
+
+  it('lets a new run start over the same sheet, adding what the old one had not', async () => {
+    const { baseUrl, root, sheet } = await interrupted();
+
+    const response = await postImport(baseUrl, {
+      sheetPath: sheet,
+      rootPath: root,
+    });
+    expect(response.status).toBe(201);
+    await untilReview(baseUrl);
+
+    const movies = (await (await fetch(`${baseUrl}/api/movies`)).json()) as {
+      title: string;
+    }[];
+    expect(movies.map((movie) => movie.title).sort()).toEqual([
+      'Amélie',
+      'Die Hard',
+    ]);
   });
 });
