@@ -3170,4 +3170,448 @@ describe('MovieForm — the Import context', () => {
       expect(resolveRequests()).toEqual([]);
     });
   });
+
+  /**
+   * 13 — Bulk import, Phase 6: "Resolve — the soft kind" (issue #132).
+   *
+   * A `missing-meta` row is the one kind already in the library: the run
+   * imported it and filed it because its row left it in no genre. Its
+   * _Resolve_ therefore opens the **Edit job** — `/add?movie=<id>&problem=<pid>`,
+   * the record read back into the fields — under the import banner, with
+   * _Save & continue_ and _Skip this one_. Save is the Edit job's own
+   * `PATCH /api/movies/:id`, followed by the dismiss and the review; the film
+   * is amended rather than added twice (stories 92, 93).
+   */
+  describe('the soft kind — the Edit job in import context', () => {
+    const LANTERN_FOLDER = 'C:\\Movies\\The.Lantern.Keeper.2019';
+
+    /** The film the run imported unfiled: the stored record, in no genre. */
+    const UNFILED: Movie = { ...STORED, genres: [] };
+
+    /**
+     * What the run filed about it: the row it came from and the folder it was
+     * scanned in — the **Found files** the run has already copied in, not the
+     * ones the form must send.
+     */
+    const LANTERN_UNFILED: ImportProblemDetail = {
+      id: 'p9',
+      kind: 'missing-meta',
+      title: 'The Lantern Keeper',
+      reason:
+        "Imported, but the row has no genre — it won't appear in any genre row.",
+      movieId: UNFILED.id,
+      row: {
+        title: 'The Lantern Keeper',
+        year: 2019,
+        genres: [],
+      },
+      folder: LANTERN_FOLDER,
+      candidates: [],
+      files: {
+        video: `${LANTERN_FOLDER}\\The.Lantern.Keeper.2019.mkv`,
+        poster: `${LANTERN_FOLDER}\\folder.jpg`,
+        subtitles: [
+          {
+            path: `${LANTERN_FOLDER}\\The.Lantern.Keeper.2019.en.srt`,
+            language: 'English',
+          },
+        ],
+      },
+    };
+
+    beforeEach(() => {
+      answerProblem = () => Promise.resolve(okResponse(LANTERN_UNFILED));
+      answerMovie = () => Promise.resolve(okResponse(UNFILED));
+      // An edit answers `200` with the amended row, as the edit route does.
+      answerSave = () => Promise.resolve(okResponse(UNFILED));
+    });
+
+    /**
+     * The form opened on a soft problem, the way its _Resolve_ opens it — the
+     * movie and the problem both named, with Settings behind it so that
+     * "lands on `/import`" is about where the form goes.
+     */
+    async function renderSoftResolve(
+      movieId = UNFILED.id,
+      problemId = LANTERN_UNFILED.id
+    ) {
+      const view = render(
+        <MemoryRouter
+          initialEntries={[
+            '/settings',
+            `/add?movie=${encodeURIComponent(movieId)}&problem=${encodeURIComponent(problemId)}`,
+          ]}
+          initialIndex={1}
+        >
+          <ThemeProvider theme={theme}>
+            <MovieForm />
+            <LocationProbe />
+          </ThemeProvider>
+        </MemoryRouter>
+      );
+      // Three reads settle on mount: the pool, the record and the detail.
+      await act(async () => undefined);
+      return view;
+    }
+
+    /** The accent banner naming this row, or `null` when there is none. */
+    const lanternBanner = () =>
+      screen.queryAllByText(
+        (_, element) =>
+          element?.textContent?.replace(/\s+/g, ' ').trim() ===
+          'Resolving import · The Lantern Keeper'
+      )[0] ?? null;
+
+    /** Every movie read the form has issued. */
+    const movieReads = () =>
+      fetchMock.mock.calls.filter(
+        ([input, init]) =>
+          (init?.method ?? 'GET').toUpperCase() === 'GET' &&
+          String(input).includes('/api/movies/')
+      );
+
+    /** The position of the first request matching `test` in the wire's order. */
+    const orderOf = (test: (url: string, method: string) => boolean): number =>
+      fetchMock.mock.calls.findIndex(([input, init]) =>
+        test(String(input), (init?.method ?? 'GET').toUpperCase())
+      );
+
+    /** What the form looks like when it is the plain **Edit context**. */
+    function expectPlainEditContext() {
+      expect(screen.queryByText(/resolving import/i)).toBeNull();
+      expect(
+        screen.getByRole('heading', { name: 'Edit details' })
+      ).toBeDefined();
+      expect(saveChanges().textContent).toContain('Save changes');
+      expect(cancel().textContent).toContain('Cancel');
+      expect(
+        screen.queryByRole('button', { name: /save & continue/i })
+      ).toBeNull();
+      expect(
+        screen.queryByRole('button', { name: /skip this one/i })
+      ).toBeNull();
+    }
+
+    describe('opening on the movie and the problem', () => {
+      it('reads the movie the URL names, and the problem beside it', async () => {
+        await renderSoftResolve();
+
+        // Story 92: both halves of the URL are asked about — the record is
+        // what fills the fields, the problem is what the banner and the
+        // labels are decided from.
+        expect(movieReads()).toHaveLength(1);
+        expect(String(movieReads()[0][0])).toContain('/api/movies/a1');
+        expect(problemReads()).toHaveLength(1);
+        expect(String(problemReads()[0][0])).toBe(
+          '/api/import/current/problems/p9'
+        );
+      });
+
+      it('prefills every field from the movie’s own record, not from the row', async () => {
+        await renderSoftResolve();
+
+        // The row knows a title, a year and no genre; the record knows the
+        // rest, because the run already wrote it. What is in the fields is
+        // what is in the library.
+        expect(titleField().value).toBe('The Lantern Keeper');
+        expect(yearField().value).toBe('2019');
+        expect(directorField().value).toBe('Ana Sørensen');
+        expect(castField().value).toBe('Marit Holt, Peder Vinge');
+        expect(descriptionField().value).toBe(
+          'A keeper on a fading coast takes in a runaway girl.'
+        );
+        expect(ratingLabel()).toContain('3.5 / 5');
+        expect(
+          chips().filter((c) => c.getAttribute('aria-pressed') === 'true')
+        ).toEqual([]);
+      });
+
+      it('shows the files the library already holds, not the folder the run scanned', async () => {
+        await renderSoftResolve();
+
+        // The run copied the folder in already: the slots hold the stored
+        // copies, by their filenames, and the scan's originals are nowhere on
+        // the screen.
+        expect(screen.getByText('lantern.mp4')).toBeDefined();
+        expect(screen.getByText('poster.jpg')).toBeDefined();
+        expect(languageOf('lantern.en.srt').textContent).toContain('English');
+        expect(languageOf('lantern.pt.srt').textContent).toContain(
+          'Portuguese'
+        );
+        expect(screen.queryByText('The.Lantern.Keeper.2019.mkv')).toBeNull();
+        expect(screen.queryByText('folder.jpg')).toBeNull();
+        expect(screen.queryByText('The.Lantern.Keeper.2019.en.srt')).toBeNull();
+      });
+
+      it('draws the banner naming the row, over the Edit details heading', async () => {
+        await renderSoftResolve();
+
+        // The banner says which flagged row this is; the heading says which
+        // job the screen is doing. Both are true at once: this is an edit,
+        // reached from the review.
+        expect(lanternBanner()).not.toBeNull();
+        expect(
+          screen.getByRole('heading', { name: 'Edit details' })
+        ).toBeDefined();
+      });
+
+      it('wears Save & continue and Skip this one, not Save changes and Cancel', async () => {
+        await renderSoftResolve();
+
+        expect(saveAndContinue().textContent).toContain('Save & continue');
+        expect(skipThisOne().textContent).toContain('Skip this one');
+        expect(
+          screen.queryByRole('button', { name: /save changes/i })
+        ).toBeNull();
+        expect(screen.queryByRole('button', { name: /^cancel$/i })).toBeNull();
+      });
+
+      it('opens with Save & continue already pressable, the stored film counting as the film', async () => {
+        await renderSoftResolve();
+
+        expect(saveAndContinue().disabled).toBe(false);
+      });
+    });
+
+    describe('Save & continue', () => {
+      it('amends the movie through PATCH /api/movies/:id, never the resolve route or a POST', async () => {
+        await renderSoftResolve();
+        fireEvent.click(chip('Drama'));
+
+        fireEvent.click(saveAndContinue());
+
+        // Story 93: the Edit job's own save. The film is in the library
+        // already; a resolve or a POST would put it there twice.
+        await waitFor(() => expect(patchRequests()).toHaveLength(1));
+        expect(String(patchRequests()[0][0])).toBe('/api/movies/a1');
+        expect(resolveRequests()).toEqual([]);
+        expect(saveRequests()).toEqual([]);
+      });
+
+      it('sends the genre just picked, the held files as their stored paths, and no bytes', async () => {
+        await renderSoftResolve();
+        fireEvent.click(chip('Drama'));
+
+        fireEvent.click(saveAndContinue());
+
+        // Nothing about the Edit job's save changes: the 12 GB film the run
+        // copied in travels as the path it already has.
+        await waitFor(() => expect(patchedFields()).toBeDefined());
+        expect(patchedFields()?.getAll('genre')).toEqual(['Drama']);
+        expect(patchedFields()?.get('title')).toBe('The Lantern Keeper');
+        expect(patchedFields()?.get('videoPath')).toBe(
+          'the-lantern-keeper-2019/lantern.mp4'
+        );
+        expect(patchedFields()?.get('posterPath')).toBe(
+          'the-lantern-keeper-2019/poster.jpg'
+        );
+        expect(patchedFields()?.getAll('subtitlePath')).toEqual([
+          'the-lantern-keeper-2019/lantern.en.srt',
+          'the-lantern-keeper-2019/lantern.pt.srt',
+        ]);
+        expect(patchedFiles()).toEqual([]);
+      });
+
+      it('dismisses the problem once the PATCH has landed, and not before', async () => {
+        let settle: (response: Response) => void = () => undefined;
+        answerSave = () =>
+          new Promise<Response>((resolve) => {
+            settle = resolve;
+          });
+        await renderSoftResolve();
+
+        fireEvent.click(saveAndContinue());
+
+        // The row leaves the list only once the amendment is in the library:
+        // a dismiss ahead of a refused save would drop a row nothing fixed.
+        await waitFor(() => expect(patchRequests()).toHaveLength(1));
+        expect(dismissRequests()).toEqual([]);
+        expect(currentPath()).toBe('/add');
+
+        settle(okResponse(UNFILED));
+
+        await waitFor(() => expect(dismissRequests()).toHaveLength(1));
+        expect(String(dismissRequests()[0][0])).toBe(
+          '/api/import/current/problems/p9'
+        );
+        expect(
+          orderOf(
+            (url, method) =>
+              method === 'PATCH' && url.includes('/api/movies/a1')
+          )
+        ).toBeLessThan(
+          orderOf(
+            (url, method) => method === 'DELETE' && url.includes('/problems/p9')
+          )
+        );
+      });
+
+      it('lands on /import once the row is gone, not on the movie page', async () => {
+        let settle: (response: Response) => void = () => undefined;
+        answerDismiss = () =>
+          new Promise<Response>((resolve) => {
+            settle = resolve;
+          });
+        await renderSoftResolve();
+
+        fireEvent.click(saveAndContinue());
+
+        // Every exit from the import context lands on the review, and this
+        // one only once the review has one row fewer to show.
+        await waitFor(() => expect(dismissRequests()).toHaveLength(1));
+        expect(currentPath()).toBe('/add');
+
+        settle(noContentResponse());
+
+        await waitFor(() => expect(currentPath()).toBe('/import'));
+      });
+
+      it('says Saving… and takes no second press while the edit is in flight', async () => {
+        let settle: (response: Response) => void = () => undefined;
+        answerSave = () =>
+          new Promise<Response>((resolve) => {
+            settle = resolve;
+          });
+        await renderSoftResolve();
+
+        fireEvent.click(saveAndContinue());
+
+        await waitFor(() =>
+          expect(saveAndContinue().textContent).toContain('Saving…')
+        );
+        expect(saveAndContinue().disabled).toBe(true);
+        fireEvent.click(saveAndContinue());
+        expect(patchRequests()).toHaveLength(1);
+
+        settle(okResponse(UNFILED));
+        await waitFor(() => expect(currentPath()).toBe('/import'));
+      });
+
+      it('stays standing with everything in it, nothing dismissed, when the PATCH is refused', async () => {
+        answerSave = () => Promise.resolve(serverErrorResponse());
+        await renderSoftResolve();
+        fireEvent.click(chip('Drama'));
+
+        fireEvent.click(saveAndContinue());
+
+        // A refused amendment is still a row that wants a look: the problem
+        // stays listed, the form stays put with the genre still picked, and
+        // Save & continue is offered again.
+        await waitFor(() => expect(patchRequests()).toHaveLength(1));
+        await waitFor(() => expect(saveAndContinue().disabled).toBe(false));
+        expect(dismissRequests()).toEqual([]);
+        expect(currentPath()).toBe('/add');
+        expect(lanternBanner()).not.toBeNull();
+        expect(picked('Drama')).toBe('true');
+        expect(titleField().value).toBe('The Lantern Keeper');
+      });
+    });
+
+    describe('Skip this one', () => {
+      it('dismisses the problem and lands on /import', async () => {
+        await renderSoftResolve();
+
+        fireEvent.click(skipThisOne());
+
+        // The same Skip the review row offers, from the form — the film
+        // stays in the library as it is, only the row goes.
+        await waitFor(() => expect(dismissRequests()).toHaveLength(1));
+        expect(String(dismissRequests()[0][0])).toBe(
+          '/api/import/current/problems/p9'
+        );
+        await waitFor(() => expect(currentPath()).toBe('/import'));
+      });
+
+      it('writes nothing — no PATCH, no POST, no resolve', async () => {
+        await renderSoftResolve();
+        fireEvent.click(chip('Drama'));
+
+        fireEvent.click(skipThisOne());
+
+        await waitFor(() => expect(currentPath()).toBe('/import'));
+        expect(patchRequests()).toEqual([]);
+        expect(saveRequests()).toEqual([]);
+        expect(resolveRequests()).toEqual([]);
+      });
+    });
+
+    describe('a soft problem whose id is gone', () => {
+      beforeEach(() => {
+        answerProblem = () =>
+          Promise.resolve(notFoundResponse('No such problem: p9'));
+      });
+
+      it('falls back to the plain Edit context, the record still in the fields', async () => {
+        await renderSoftResolve();
+
+        // A stale link is never a dead page — and here the movie the link
+        // also names is a real record, so the fallback is the ordinary edit
+        // of it rather than an empty add.
+        expect(problemReads()).toHaveLength(1);
+        expectPlainEditContext();
+        expect(titleField().value).toBe('The Lantern Keeper');
+        expect(directorField().value).toBe('Ana Sørensen');
+        expect(screen.getByText('lantern.mp4')).toBeDefined();
+        expect(currentPath()).toBe('/add');
+      });
+
+      it('falls back the same way when there is no run at all', async () => {
+        answerProblem = () =>
+          Promise.resolve(notFoundResponse('No import is running'));
+        await renderSoftResolve();
+
+        expect(problemReads()).toHaveLength(1);
+        expectPlainEditContext();
+        expect(titleField().value).toBe('The Lantern Keeper');
+      });
+
+      it('saves through PATCH alone after the fallback, dismisses nothing, and lands on the movie page', async () => {
+        await renderSoftResolve();
+        fireEvent.click(chip('Drama'));
+
+        fireEvent.click(saveChanges());
+
+        // The plain Edit context's own save and its own destination: there
+        // is no row to take off a list, and no review to go back to.
+        await waitFor(() => expect(patchRequests()).toHaveLength(1));
+        expect(String(patchRequests()[0][0])).toBe('/api/movies/a1');
+        expect(resolveRequests()).toEqual([]);
+        await waitFor(() => expect(currentPath()).toBe('/movie/a1'));
+        expect(dismissRequests()).toEqual([]);
+      });
+
+      it('follows the app’s own Back rule after the fallback, not /import', async () => {
+        await renderSoftResolve();
+
+        fireEvent.click(cancel());
+
+        expect(currentPath()).toBe('/settings');
+        expect(dismissRequests()).toEqual([]);
+      });
+    });
+
+    describe('/add?movie= without ?problem=', () => {
+      it('is unchanged: reads no problem, draws no banner, wears Save changes and Cancel', async () => {
+        await renderEdit();
+
+        expect(problemReads()).toEqual([]);
+        expectPlainEditContext();
+        expect(titleField().value).toBe('The Lantern Keeper');
+      });
+
+      it('still saves through PATCH alone and lands on the movie page, dismissing nothing', async () => {
+        await renderEdit();
+        fireEvent.change(titleField(), {
+          target: { value: 'The Lantern Keeper (restored)' },
+        });
+
+        fireEvent.click(saveChanges());
+
+        await waitFor(() => expect(patchRequests()).toHaveLength(1));
+        await waitFor(() => expect(currentPath()).toBe('/movie/a1'));
+        expect(dismissRequests()).toEqual([]);
+        expect(resolveRequests()).toEqual([]);
+      });
+    });
+  });
 });

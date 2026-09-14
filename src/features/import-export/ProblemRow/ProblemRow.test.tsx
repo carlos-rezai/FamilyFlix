@@ -117,6 +117,29 @@ describe('ProblemRow — the two controls', () => {
     expect(resolveLink().getAttribute('href')).toBe('/add?problem=p%201%2Fx');
   });
 
+  it('links Resolve for the soft kind to the Edit job, the movie and the problem both named', () => {
+    // Issue #132, story 92: a `missing-meta` row is already in the library,
+    // so its Resolve amends that record rather than adding it twice —
+    // `/add?movie=<movieId>&problem=<id>`, the Edit job under the banner.
+    renderRow({
+      problem: problem({ id: 'p7', kind: 'missing-meta', movieId: 'm42' }),
+    });
+
+    expect(resolveLink().getAttribute('href')).toBe(
+      '/add?movie=m42&problem=p7'
+    );
+  });
+
+  it('encodes the movie id into the soft kind’s link', () => {
+    renderRow({
+      problem: problem({ id: 'p 1/x', kind: 'missing-meta', movieId: 'm 2/y' }),
+    });
+
+    expect(resolveLink().getAttribute('href')).toBe(
+      '/add?movie=m%202%2Fy&problem=p%201%2Fx'
+    );
+  });
+
   it('raises onSkip when Skip is pressed, and not before', () => {
     const onSkip = vi.fn();
     renderRow({ onSkip });
