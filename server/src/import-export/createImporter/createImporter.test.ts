@@ -34,6 +34,14 @@
 // lines** that never block (no subtitle, no poster). The log is capped at 80
 // lines, newest kept, so a snapshot stays small; and `currentItem` names the
 // film's title while it is being copied, the folder while it is being found.
+//
+// Issue #129 makes **Problems** data: the matcher's other verdicts land on the
+// snapshot — `no-folder`, `ambiguous` (two reasons), `no-video`, `no-row` — by
+// the time the bar turns determinate; a copy that fails partway rolls its
+// folder back and files `failed` with the OS's reason while the run goes on;
+// a genre-less row imports and is listed as the soft `missing-meta` with its
+// `movieId`; the complete line counts them all; and `dismiss` — the **Review
+// step**'s _Skip_ — removes one and answers false for one that is not there.
 
 import { execFileSync } from 'node:child_process';
 import {
@@ -56,7 +64,13 @@ import { createPlayback } from '../../playback/createPlayback/createPlayback';
 import { freshStorage } from '../../test-support/freshStorage/freshStorage';
 import { sandboxRoot } from '../../test-support/sandboxRoot/sandboxRoot';
 import type { LibraryStorage } from '../../library';
-import type { ImportRun, LogLine, Movie } from '@/types';
+import type {
+  ImportProblem,
+  ImportRun,
+  LogLine,
+  Movie,
+  ProblemKind,
+} from '@/types';
 
 const FIXTURE = fileURLToPath(new URL('./fixture/', import.meta.url));
 
@@ -936,7 +950,7 @@ describe('createImporter — the Activity log', () => {
     await importer.start(sheet, root);
     const run = await untilReview(importer);
 
-    // Nothing is flagged until the problems slice: P is zero.
+    // The fixture gives the run nothing to flag: P is zero.
     expect(run.log[run.log.length - 1]).toEqual({
       text: '✓ Import complete — 2 imported, 0 need attention.',
       kind: 'success',
@@ -1135,7 +1149,8 @@ describe('createImporter — a match with no subtitle, and one with no poster', 
 describe('createImporter — the log is capped at 80 lines', () => {
   it('never exceeds 80 lines and keeps the newest', async () => {
     const { importer, root, sheet } = sandbox();
-    // A hundred scanning lines, and nothing to import for them.
+    // A hundred scanning lines, and nothing to import for them — and a
+    // problem each, which is the list's business, not the log's.
     aHundredFolders(root);
 
     await importer.start(sheet, root);
@@ -1143,12 +1158,469 @@ describe('createImporter — the log is capped at 80 lines', () => {
 
     expect(run.found).toBe(102);
     expect(run.log).toHaveLength(80);
+    // A hundred folders the sheet does not name: a hundred `no-row` problems.
     expect(run.log[run.log.length - 1]).toEqual({
-      text: '✓ Import complete — 2 imported, 0 need attention.',
+      text: '✓ Import complete — 2 imported, 100 need attention.',
       kind: 'success',
     });
     // The oldest lines are the ones that went.
     expect(linesMatching(run, /^Connecting to /)).toHaveLength(0);
     expect(linesMatching(run, /^Scanning\s+.*Film 001$/)).toHaveLength(0);
+  });
+});
+
+/** The reason strings the review slice fixes, verbatim from the prototype. */
+const REASON = {
+  noFolder: 'No folder found matching this spreadsheet row.',
+  twoFolders: 'Two folders look like plausible matches — pick one.',
+  nearName: "One folder looks like a match, but the name isn't exact.",
+  manyVideos: 'Folder matched, but it holds more than one video file.',
+  noRow: "Folder isn't in the spreadsheet.",
+  missingMeta:
+    "Imported, but the row has no genre — it won't appear in any genre row.",
+} as const;
+
+/** A sheet beside the root, with whatever rows the test names under the header. */
+function sheetOf(
+  root: string,
+  rows: string,
+  header = 'Title,Year,Genre'
+): string {
+  const sheet = join(root, '..', 'sheet.csv');
+  writeFileSync(sheet, `${header}\n${rows}`, 'utf8');
+  return sheet;
+}
+
+/** The fixture's two rows, as a sheet a test can add a row to. */
+const FIXTURE_ROWS = 'Die Hard,1988,Action\nAmélie,2001,Comedy\n';
+
+/**
+ * A **Source folder** under the root holding the video files it names — empty
+ * files, because nothing here is ever copied: a folder the sheet does not
+ * name, a second folder for a row that already has one, a folder with two
+ * videos, are all things the run declines to import.
+ */
+function folderUnder(root: string, name: string, videos: string[]): string {
+  const folder = join(root, name);
+  mkdirSync(folder);
+  for (const video of videos) {
+    writeFileSync(join(folder, video), '');
+  }
+  return folder;
+}
+
+/**
+ * A `Media` whose copy of the one source file whose path ends in `filename`
+ * throws with `message` — a locked or vanishing file, as the OS reports it.
+ * Every other copy goes through to the real one.
+ */
+function failCopyOf(filename: string, message: string): (real: Media) => Media {
+  return (real) => ({
+    ...real,
+    copyIn: async (...args) => {
+      if (args[1].endsWith(filename)) {
+        throw new Error(message);
+      }
+      return real.copyIn(...args);
+    },
+  });
+}
+
+/** The run's problems of one kind. */
+const ofKind = (run: ImportRun, kind: ProblemKind): ImportProblem[] =>
+  run.problems.filter((problem) => problem.kind === kind);
+
+/**
+ * The matcher's other verdicts, on the snapshot as **Problems**: what the run
+ * could not settle on its own, each with its kind, the title it is about and
+ * the fixed reason. A row the run files is not imported; the rest of the sheet
+ * still is.
+ */
+describe('createImporter — the matcher’s verdicts become problems', () => {
+  it('files no-row for a folder the sheet does not name, and imports the rest', async () => {
+    const { storage, importer, media, root, sheet } = sandbox();
+    folderUnder(root, 'Ironwood (2018)', ['Ironwood.mp4']);
+
+    await importer.start(sheet, root);
+    const run = await untilReview(importer);
+
+    expect(run.problems).toEqual([
+      {
+        id: expect.any(String),
+        kind: 'no-row',
+        title: 'Ironwood (2018)',
+        reason: REASON.noRow,
+      },
+    ]);
+    expect(Object.keys(byTitle(storage)).sort()).toEqual([
+      'Amélie',
+      'Die Hard',
+    ]);
+    expect(folders(media)).toEqual(['amelie-2001', 'die-hard-1988']);
+  });
+
+  it('files no-folder for a row no folder answers to', async () => {
+    const { storage, importer, root } = sandbox();
+    const sheet = sheetOf(
+      root,
+      `${FIXTURE_ROWS}The Lantern Keeper,2019,Drama\n`
+    );
+
+    await importer.start(sheet, root);
+    const run = await untilReview(importer);
+
+    expect(run.problems).toEqual([
+      {
+        id: expect.any(String),
+        kind: 'no-folder',
+        title: 'The Lantern Keeper',
+        reason: REASON.noFolder,
+      },
+    ]);
+    expect(byTitle(storage)['The Lantern Keeper']).toBeUndefined();
+    expect(Object.keys(byTitle(storage))).toHaveLength(2);
+  });
+
+  it('files ambiguous for a row two folders answer to, and imports neither', async () => {
+    const { storage, importer, media, root, sheet } = sandbox();
+    folderUnder(root, 'Die Hard (1988)', ['Die Hard.mp4']);
+
+    await importer.start(sheet, root);
+    const run = await untilReview(importer);
+
+    expect(run.problems).toEqual([
+      {
+        id: expect.any(String),
+        kind: 'ambiguous',
+        title: 'Die Hard',
+        reason: REASON.twoFolders,
+      },
+    ]);
+    expect(Object.keys(byTitle(storage))).toEqual(['Amélie']);
+    expect(folders(media)).toEqual(['amelie-2001']);
+  });
+
+  it('files ambiguous, with the near-name reason, for a folder whose name only starts with the row’s', async () => {
+    const { storage, importer, root } = sandbox();
+    folderUnder(root, 'Aliens (1986)', ['Aliens.mp4']);
+    const sheet = sheetOf(root, `${FIXTURE_ROWS}Alien,1979,Horror\n`);
+
+    await importer.start(sheet, root);
+    const run = await untilReview(importer);
+
+    expect(run.problems).toEqual([
+      {
+        id: expect.any(String),
+        kind: 'ambiguous',
+        title: 'Alien',
+        reason: REASON.nearName,
+      },
+    ]);
+    expect(byTitle(storage)['Alien']).toBeUndefined();
+  });
+
+  it('gives every problem an id of its own', async () => {
+    const { importer, root } = sandbox();
+    folderUnder(root, 'Ironwood (2018)', ['Ironwood.mp4']);
+    folderUnder(root, 'Aliens (1986)', ['Aliens.mp4']);
+    const sheet = sheetOf(
+      root,
+      `${FIXTURE_ROWS}The Lantern Keeper,2019,Drama\nAlien,1979,Horror\n`
+    );
+
+    await importer.start(sheet, root);
+    const run = await untilReview(importer);
+
+    expect(run.problems).toHaveLength(3);
+    const ids = run.problems.map((problem) => problem.id);
+    expect(new Set(ids).size).toBe(3);
+    for (const id of ids) {
+      expect(id).not.toBe('');
+    }
+  });
+
+  it('has every match-time problem on the snapshot by the time the bar turns determinate', async () => {
+    const hold = holdCopyOf('Die.Hard.1988.1080p.mp4');
+    const { importer, root } = sandbox({ media: hold.seam });
+    folderUnder(root, 'Ironwood (2018)', ['Ironwood.mp4']);
+    const sheet = sheetOf(
+      root,
+      `${FIXTURE_ROWS}The Lantern Keeper,2019,Drama\n`
+    );
+
+    await importer.start(sheet, root);
+    await hold.reached;
+    const during = importer.current();
+    hold.release();
+    await untilReview(importer);
+
+    // Held on the first byte of the first copy: the scan is over, the total
+    // is known, and both problems are already there to be counted.
+    expect(during).toMatchObject({ phase: 'importing', total: 2 });
+    expect(during?.problems.map((problem) => problem.kind).sort()).toEqual([
+      'no-folder',
+      'no-row',
+    ]);
+  });
+});
+
+/**
+ * `no-video`: the folder matched, but it holds more than one video file, and
+ * the run will not guess which is the film. The zero case is the matcher's
+ * table test — a walked folder always holds at least one.
+ */
+describe('createImporter — a matched folder holding two videos', () => {
+  it('files no-video with the more-than-one reason, and imports nothing from it', async () => {
+    const { storage, importer, media, root, sheet } = sandbox();
+    const dieHard = join(root, 'Die.Hard.1988.1080p');
+    cpSync(
+      join(dieHard, 'Die.Hard.1988.1080p.mp4'),
+      join(dieHard, 'Die.Hard.1988.1080p.mkv')
+    );
+
+    await importer.start(sheet, root);
+    const run = await untilReview(importer);
+
+    expect(run.problems).toEqual([
+      {
+        id: expect.any(String),
+        kind: 'no-video',
+        title: 'Die Hard',
+        reason: REASON.manyVideos,
+      },
+    ]);
+    expect(Object.keys(byTitle(storage))).toEqual(['Amélie']);
+    expect(folders(media)).toEqual(['amelie-2001']);
+  });
+});
+
+/**
+ * A copy that fails partway — a locked or vanishing file: the reserved
+ * **Movie folder** is rolled back, `failed` is filed with the OS's reason, and
+ * the run goes on to the next match rather than stopping there.
+ */
+describe('createImporter — a copy that fails partway', () => {
+  it('leaves no folder behind, files failed with the reason, and still imports the next match', async () => {
+    const { storage, importer, media, root, sheet } = sandbox({
+      media: failCopyOf(
+        'Die.Hard.1988.1080p.mp4',
+        'EBUSY: resource busy or locked'
+      ),
+    });
+
+    await importer.start(sheet, root);
+    const run = await untilReview(importer);
+
+    expect(run.problems).toEqual([
+      {
+        id: expect.any(String),
+        kind: 'failed',
+        title: 'Die Hard',
+        reason: "Couldn't copy the video file: EBUSY: resource busy or locked.",
+      },
+    ]);
+    expect(folders(media)).toEqual(['amelie-2001']);
+    expect(Object.keys(byTitle(storage))).toEqual(['Amélie']);
+  });
+
+  it('files failed for a copy that fails on a file after the video, too', async () => {
+    const { storage, importer, media, root, sheet } = sandbox({
+      media: failCopyOf('poster.jpg', 'ENOENT: no such file or directory'),
+    });
+
+    await importer.start(sheet, root);
+    const run = await untilReview(importer);
+
+    expect(ofKind(run, 'failed')).toHaveLength(1);
+    expect(ofKind(run, 'failed')[0].title).toBe('Die Hard');
+    expect(folders(media)).toEqual(['amelie-2001']);
+    expect(Object.keys(byTitle(storage))).toEqual(['Amélie']);
+  });
+
+  it('counts the failure in the complete line and still reaches review', async () => {
+    const { importer, root, sheet } = sandbox({
+      media: failCopyOf(
+        'Die.Hard.1988.1080p.mp4',
+        'EBUSY: resource busy or locked'
+      ),
+    });
+
+    await importer.start(sheet, root);
+    const run = await untilReview(importer);
+
+    expect(run.phase).toBe('review');
+    expect(run.log[run.log.length - 1]).toEqual({
+      text: '✓ Import complete — 1 imported, 1 need attention.',
+      kind: 'success',
+    });
+  });
+});
+
+/**
+ * The one soft kind: a row with no genre imports — nothing about the film is
+ * missing — and is then listed, carrying the `movieId` the library gave it,
+ * because a film in no genre row is a film the family will not find.
+ */
+describe('createImporter — a genre-less row', () => {
+  it('imports it and files missing-meta with its movieId', async () => {
+    const { storage, importer, root } = sandbox();
+    const sheet = sheetOf(root, 'Die Hard,1988,Action\nAmélie,2001,\n');
+
+    await importer.start(sheet, root);
+    const run = await untilReview(importer);
+
+    // Imported as any match is — counted, logged, done — and then listed.
+    const amelie = byTitle(storage)['Amélie'];
+    expect(amelie).toBeDefined();
+    expect(amelie.genres).toEqual([]);
+    expect(run).toMatchObject({ matched: 2, total: 2, done: 2 });
+    expect(linesMatching(run, /^✓ Imported\s+Amélie$/)).toHaveLength(1);
+    expect(run.problems).toEqual([
+      {
+        id: expect.any(String),
+        kind: 'missing-meta',
+        title: 'Amélie',
+        reason: REASON.missingMeta,
+        movieId: amelie.id,
+      },
+    ]);
+  });
+
+  it('files it for every row when the sheet has no genre column at all', async () => {
+    const { storage, importer, root } = sandbox();
+    const sheet = sheetOf(root, 'Die Hard,1988\nAmélie,2001\n', 'Title,Year');
+
+    await importer.start(sheet, root);
+    const run = await untilReview(importer);
+
+    expect(Object.keys(byTitle(storage)).sort()).toEqual([
+      'Amélie',
+      'Die Hard',
+    ]);
+    expect(run.problems.map((problem) => problem.kind)).toEqual([
+      'missing-meta',
+      'missing-meta',
+    ]);
+    expect(run.problems.map((problem) => problem.movieId).sort()).toEqual(
+      [byTitle(storage)['Amélie'].id, byTitle(storage)['Die Hard'].id].sort()
+    );
+  });
+});
+
+describe('createImporter — the complete line counts the problems', () => {
+  it('counts a no-row folder and a no-folder row as needing attention', async () => {
+    const { importer, root } = sandbox();
+    folderUnder(root, 'Ironwood (2018)', ['Ironwood.mp4']);
+    const sheet = sheetOf(
+      root,
+      `${FIXTURE_ROWS}The Lantern Keeper,2019,Drama\n`
+    );
+
+    await importer.start(sheet, root);
+    const run = await untilReview(importer);
+
+    expect(run.problems).toHaveLength(2);
+    expect(run.log[run.log.length - 1]).toEqual({
+      text: '✓ Import complete — 2 imported, 2 need attention.',
+      kind: 'success',
+    });
+  });
+
+  it('counts the soft kind too — it is listed, so it is counted', async () => {
+    const { importer, root } = sandbox();
+    const sheet = sheetOf(root, 'Die Hard,1988,Action\nAmélie,2001,\n');
+
+    await importer.start(sheet, root);
+    const run = await untilReview(importer);
+
+    expect(run.log[run.log.length - 1]).toEqual({
+      text: '✓ Import complete — 2 imported, 1 need attention.',
+      kind: 'success',
+    });
+  });
+});
+
+/**
+ * **Dismiss** — the **Review step**'s _Skip_: the problem is gone from the
+ * snapshot, and nothing was imported for it. Gone is gone: a second dismiss of
+ * the same id, an id that never was, and a dismiss with no run all answer
+ * false, which the route turns into its `404`.
+ */
+describe('createImporter — dismiss', () => {
+  it('removes the problem from the snapshot and answers true, importing nothing', async () => {
+    const { storage, importer, media, root } = sandbox();
+    const sheet = sheetOf(
+      root,
+      `${FIXTURE_ROWS}The Lantern Keeper,2019,Drama\n`
+    );
+    await importer.start(sheet, root);
+    const run = await untilReview(importer);
+    const [problem] = run.problems;
+
+    expect(importer.dismiss(problem.id)).toBe(true);
+
+    expect(importer.current()?.problems).toEqual([]);
+    expect(byTitle(storage)['The Lantern Keeper']).toBeUndefined();
+    expect(folders(media)).toEqual(['amelie-2001', 'die-hard-1988']);
+  });
+
+  it('removes only the problem named, keeping the others', async () => {
+    const { importer, root } = sandbox();
+    folderUnder(root, 'Ironwood (2018)', ['Ironwood.mp4']);
+    const sheet = sheetOf(
+      root,
+      `${FIXTURE_ROWS}The Lantern Keeper,2019,Drama\n`
+    );
+    await importer.start(sheet, root);
+    const run = await untilReview(importer);
+    const noRow = ofKind(run, 'no-row')[0];
+    const noFolder = ofKind(run, 'no-folder')[0];
+
+    importer.dismiss(noRow.id);
+
+    expect(importer.current()?.problems).toEqual([noFolder]);
+  });
+
+  it('answers false for a problem already dismissed', async () => {
+    const { importer, root } = sandbox();
+    const sheet = sheetOf(
+      root,
+      `${FIXTURE_ROWS}The Lantern Keeper,2019,Drama\n`
+    );
+    await importer.start(sheet, root);
+    const [problem] = (await untilReview(importer)).problems;
+    importer.dismiss(problem.id);
+
+    expect(importer.dismiss(problem.id)).toBe(false);
+    expect(importer.current()?.problems).toEqual([]);
+  });
+
+  it('answers false for an id that never was', async () => {
+    const { importer, root, sheet } = sandbox();
+    await importer.start(sheet, root);
+    await untilReview(importer);
+
+    expect(importer.dismiss('no-such-problem')).toBe(false);
+  });
+
+  it('answers false when there is no run', () => {
+    const { importer } = sandbox();
+
+    expect(importer.dismiss('p1')).toBe(false);
+  });
+
+  it('leaves the snapshot a copy: a dismissed problem is gone from the next read, not from the last', async () => {
+    const { importer, root } = sandbox();
+    const sheet = sheetOf(
+      root,
+      `${FIXTURE_ROWS}The Lantern Keeper,2019,Drama\n`
+    );
+    await importer.start(sheet, root);
+    const before = await untilReview(importer);
+
+    importer.dismiss(before.problems[0].id);
+
+    expect(before.problems).toHaveLength(1);
+    expect(importer.current()?.problems).toHaveLength(0);
   });
 });

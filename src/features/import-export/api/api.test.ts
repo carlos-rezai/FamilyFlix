@@ -12,6 +12,7 @@ import {
   startImport,
   fetchCurrentImport,
   cancelImport,
+  dismissProblem,
   ImportBusyError,
 } from './api';
 import type {
@@ -36,9 +37,10 @@ import {
  * 13 — Bulk import, Phase 2: "the tracer bullet" (issue #125).
  *
  * The wire calls the **Run hook** makes — `startImport` behind _Start
- * import_, `fetchCurrentImport` behind every poll and the mount, and, from
- * issue #126, `cancelImport` behind _Cancel import_. One caller each, so they
- * live with the feature rather than in `src/api/`.
+ * import_, `fetchCurrentImport` behind every poll and the mount, from issue
+ * #126 `cancelImport` behind _Cancel import_, and from issue #129
+ * `dismissProblem` behind the **Review step**'s _Skip_. One caller each, so
+ * they live with the feature rather than in `src/api/`.
  *
  * In `saveRating`'s style: what was sent, and what the caller is handed back
  * for each status the route can answer. `startImport` is the one call in the
@@ -272,6 +274,60 @@ describe('cancelImport', () => {
     fetchMock.mockRejectedValue(new Error('offline'));
 
     await expect(cancelImport()).rejects.toThrow();
+  });
+});
+
+/**
+ * **Dismiss** — _Skip_ on a **Problem**: `DELETE` to the problem's own route.
+ * The `204` and the `404` both resolve, because both mean the same thing to
+ * the screen — the problem is not there any more, and the row goes. A `500`
+ * and a request that could not be made reject, and the row stays.
+ */
+describe('dismissProblem', () => {
+  it('DELETEs the problem’s route, by id', async () => {
+    fetchMock.mockResolvedValue(noContentResponse());
+
+    await dismissProblem('p1');
+
+    const request = onlyRequest();
+    expect(request.url).toBe('/api/import/current/problems/p1');
+    expect(request.method?.toUpperCase()).toBe('DELETE');
+  });
+
+  it('encodes the id into the path', async () => {
+    fetchMock.mockResolvedValue(noContentResponse());
+
+    await dismissProblem('p 1/x?y');
+
+    expect(onlyRequest().url).toBe(
+      '/api/import/current/problems/p%201%2Fx%3Fy'
+    );
+  });
+
+  it('resolves on the 204, reading no body', async () => {
+    // `noContentResponse` rejects on `json()`: a call that reached for the
+    // body would reject here.
+    fetchMock.mockResolvedValue(noContentResponse());
+
+    await expect(dismissProblem('p1')).resolves.toBeUndefined();
+  });
+
+  it('resolves on a 404 too — a problem already gone is gone', async () => {
+    fetchMock.mockResolvedValue(notFoundResponse('No such problem'));
+
+    await expect(dismissProblem('p1')).resolves.toBeUndefined();
+  });
+
+  it('rejects when the server fell over', async () => {
+    fetchMock.mockResolvedValue(serverErrorResponse());
+
+    await expect(dismissProblem('p1')).rejects.toThrow();
+  });
+
+  it('rejects when the request could not be made at all', async () => {
+    fetchMock.mockRejectedValue(new Error('offline'));
+
+    await expect(dismissProblem('p1')).rejects.toThrow();
   });
 });
 

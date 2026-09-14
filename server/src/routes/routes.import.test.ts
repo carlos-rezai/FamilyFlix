@@ -11,7 +11,9 @@
 //
 // Two routes from the tracer bullet — `POST /api/import` and
 // `GET /api/import/current` — a third from issue #126,
-// `POST /api/import/current/cancel`, and one guard on a route that already
+// `POST /api/import/current/cancel`, a fourth from issue #129,
+// `DELETE /api/import/current/problems/:id` (the **Review step**'s _Skip_:
+// `204`, then `404` for the same id), and one guard on a route that already
 // existed: `POST /api/movies` keeps accepting bytes only, whatever a path
 // field says.
 
@@ -583,5 +585,124 @@ describe('POST /api/movies — bytes only', () => {
       const movie = (await response.json()) as Movie;
       expect(movie.videoPath).toBe('');
     }
+  });
+});
+
+const deleteProblem = (baseUrl: string, id: string) =>
+  fetch(`${baseUrl}/api/import/current/problems/${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+  });
+
+/**
+ * A **Source folder** under the root the fixture sheet does not name — the
+ * one sure way to give a run a **Problem** (`no-row`) without touching the
+ * fixture. An empty video file, because a folder no row claims is never
+ * copied.
+ */
+function unlistedFolder(root: string, name = 'Ironwood (2018)'): void {
+  mkdirSync(join(root, name));
+  writeFileSync(join(root, name, 'Ironwood.mp4'), '');
+}
+
+/**
+ * **Dismiss** over the wire — the **Review step**'s _Skip_: `204` with nothing
+ * to say and the problem gone from `current`; `404` for an id that is not
+ * there, which a second dismiss of the same id is. Gone is gone.
+ */
+describe('DELETE /api/import/current/problems/:id', () => {
+  it('answers 204 and the problem is gone from current', async () => {
+    const { baseUrl, root, sheet } = freshApi();
+    unlistedFolder(root);
+    await postImport(baseUrl, { sheetPath: sheet, rootPath: root });
+    const run = await untilReview(baseUrl);
+    expect(run.problems).toHaveLength(1);
+
+    const response = await deleteProblem(baseUrl, run.problems[0].id);
+
+    expect(response.status).toBe(204);
+    const after = (await (await getCurrent(baseUrl)).json()) as ImportRun;
+    expect(after.problems).toEqual([]);
+  });
+
+  it('answers 404 for the same id a second time', async () => {
+    const { baseUrl, root, sheet } = freshApi();
+    unlistedFolder(root);
+    await postImport(baseUrl, { sheetPath: sheet, rootPath: root });
+    const run = await untilReview(baseUrl);
+    await deleteProblem(baseUrl, run.problems[0].id);
+
+    const response = await deleteProblem(baseUrl, run.problems[0].id);
+
+    expect(response.status).toBe(404);
+    expect(await response.json()).toMatchObject({ error: expect.any(String) });
+  });
+
+  it('answers 404 for an id that never was, and leaves the problems alone', async () => {
+    const { baseUrl, root, sheet } = freshApi();
+    unlistedFolder(root);
+    await postImport(baseUrl, { sheetPath: sheet, rootPath: root });
+    await untilReview(baseUrl);
+
+    const response = await deleteProblem(baseUrl, 'no-such-problem');
+
+    expect(response.status).toBe(404);
+    const after = (await (await getCurrent(baseUrl)).json()) as ImportRun;
+    expect(after.problems).toHaveLength(1);
+  });
+
+  it('answers 404 when there is no run', async () => {
+    const { baseUrl } = freshApi();
+
+    const response = await deleteProblem(baseUrl, 'p1');
+
+    // The route's own 404, with a reason — not Express's page for a route
+    // that does not exist.
+    expect(response.status).toBe(404);
+    expect(await response.json()).toMatchObject({ error: expect.any(String) });
+  });
+
+  it('imports nothing for the dismissed problem', async () => {
+    const { baseUrl, media, root, sheet } = freshApi();
+    unlistedFolder(root);
+    await postImport(baseUrl, { sheetPath: sheet, rootPath: root });
+    const run = await untilReview(baseUrl);
+
+    await deleteProblem(baseUrl, run.problems[0].id);
+
+    // The two fixture films and nothing else: no folder was reserved for the
+    // dismissed one, and no row was written.
+    expect(readdirSync(media).sort()).toEqual(['amelie-2001', 'die-hard-1988']);
+    const movies = (await (await fetch(`${baseUrl}/api/movies`)).json()) as {
+      title: string;
+    }[];
+    expect(movies.map((movie) => movie.title).sort()).toEqual([
+      'Amélie',
+      'Die Hard',
+    ]);
+  });
+
+  it('dismisses through the injected importer’s own dismiss, by the id in the path', async () => {
+    const dismiss = vi.fn<Importer['dismiss']>().mockReturnValue(true);
+    const { baseUrl } = freshApi({
+      importer: (composed) => ({ ...composed, dismiss }),
+    });
+
+    const response = await deleteProblem(baseUrl, 'p 1/x');
+
+    expect(response.status).toBe(204);
+    expect(dismiss).toHaveBeenCalledWith('p 1/x');
+  });
+
+  it('turns the injected importer’s false into the 404', async () => {
+    const dismiss = vi.fn<Importer['dismiss']>().mockReturnValue(false);
+    const { baseUrl } = freshApi({
+      importer: (composed) => ({ ...composed, dismiss }),
+    });
+
+    const response = await deleteProblem(baseUrl, 'p1');
+
+    expect(response.status).toBe(404);
+    expect(await response.json()).toMatchObject({ error: expect.any(String) });
+    expect(dismiss).toHaveBeenCalledWith('p1');
   });
 });

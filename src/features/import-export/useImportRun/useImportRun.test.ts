@@ -9,11 +9,15 @@ import {
   noContentResponse,
   notFoundResponse,
   okResponse,
+  serverErrorResponse,
 } from '@/test-support/fakeResponse/fakeResponse';
 
 /**
- * 13 — Bulk import, Phase 2: "the tracer bullet" (issue #125) and "cancel,
- * re-attach and the already-in-library skip" (issue #126).
+ * 13 — Bulk import, Phase 2: "the tracer bullet" (issue #125), "cancel,
+ * re-attach and the already-in-library skip" (issue #126), and Phase 4:
+ * "problems and review" (issue #129) — `skip`, the **Review step**'s
+ * **Dismiss**: the `DELETE` goes, and the row is gone from the snapshot on a
+ * `204` and on a `404` alike, because both mean the problem is not there.
  *
  * The **Run hook** — what holds the **Current run** on the screen. Transport
  * is polling: `GET /api/import/current` every 500 ms while the phase is
@@ -62,6 +66,9 @@ const isStart = ([input, init]: [RequestInfo | URL, RequestInit?]) =>
 const isCancel = ([input, init]: [RequestInfo | URL, RequestInit?]) =>
   String(input).endsWith('/api/import/current/cancel') &&
   init?.method?.toUpperCase() === 'POST';
+const isDismiss = ([input, init]: [RequestInfo | URL, RequestInit?]) =>
+  /\/api\/import\/current\/problems\/[^/]+$/.test(String(input)) &&
+  init?.method?.toUpperCase() === 'DELETE';
 
 /** Every read of the current route so far — the mount's included. */
 function reads(): number {
@@ -102,7 +109,10 @@ function conflictResponse(): Response {
 function serve(
   started: Response = createdResponse(makeImportRun()),
   then: ImportRun[] = [makeImportRun()],
-  { onArrival = false }: { onArrival?: boolean } = {}
+  {
+    onArrival = false,
+    dismiss = () => noContentResponse(),
+  }: { onArrival?: boolean; dismiss?: () => Response } = {}
 ) {
   let read = 0;
   let running = onArrival;
@@ -111,6 +121,9 @@ function serve(
     if (isCancel(call)) {
       running = false;
       return Promise.resolve(noContentResponse());
+    }
+    if (isDismiss(call)) {
+      return Promise.resolve(dismiss());
     }
     if (isStart(call)) {
       if (started.status === 201 || started.status === 409) {
@@ -402,5 +415,140 @@ describe('useImportRun — cancel', () => {
 
     expect(fetchMock.mock.calls.filter(isStart)).toHaveLength(2);
     expect(result.current.run).toMatchObject({ id: 'run-1' });
+  });
+});
+
+/** A run in review with the three problems the tests skip from. */
+const inReview = (): ImportRun =>
+  makeImportRun({
+    phase: 'review',
+    found: 5,
+    total: 2,
+    done: 2,
+    matched: 2,
+    problems: [
+      {
+        id: 'p1',
+        kind: 'no-row',
+        title: 'Ironwood (2018)',
+        reason: "Folder isn't in the spreadsheet.",
+      },
+      {
+        id: 'p2',
+        kind: 'no-folder',
+        title: 'The Lantern Keeper',
+        reason: 'No folder found matching this spreadsheet row.',
+      },
+      {
+        id: 'p3',
+        kind: 'missing-meta',
+        title: 'Amélie',
+        reason:
+          "Imported, but the row has no genre — it won't appear in any genre row.",
+        movieId: 'm9',
+      },
+    ],
+  });
+
+/** Mount onto a run already in review, the state _Skip_ is pressed in. */
+async function mountInReview(dismiss?: () => Response) {
+  serve(createdResponse(inReview()), [inReview()], {
+    onArrival: true,
+    dismiss,
+  });
+  return mount();
+}
+
+describe('useImportRun — skip', () => {
+  it('sends the DELETE for the problem, and removes it from the snapshot', async () => {
+    const { result } = await mountInReview();
+
+    await act(async () => {
+      await result.current.skip('p2');
+    });
+
+    const sent = fetchMock.mock.calls.filter(isDismiss);
+    expect(sent).toHaveLength(1);
+    expect(String(sent[0][0])).toBe('/api/import/current/problems/p2');
+    expect(result.current.run?.problems.map((problem) => problem.id)).toEqual([
+      'p1',
+      'p3',
+    ]);
+  });
+
+  it('removes the row on a 404 just the same — gone is gone', async () => {
+    const { result } = await mountInReview(() =>
+      notFoundResponse('No such problem')
+    );
+
+    await act(async () => {
+      await result.current.skip('p1');
+    });
+
+    expect(result.current.run?.problems.map((problem) => problem.id)).toEqual([
+      'p2',
+      'p3',
+    ]);
+  });
+
+  it('keeps the row when the dismiss could not be made', async () => {
+    const { result } = await mountInReview(() => serverErrorResponse());
+
+    await expect(
+      act(async () => {
+        await result.current.skip('p1');
+      })
+    ).rejects.toThrow();
+
+    // The DELETE was sent and refused: the row stays for another press.
+    expect(fetchMock.mock.calls.filter(isDismiss)).toHaveLength(1);
+    expect(result.current.run?.problems).toHaveLength(3);
+  });
+
+  it('leaves the rest of the snapshot as it was', async () => {
+    const { result } = await mountInReview();
+
+    await act(async () => {
+      await result.current.skip('p3');
+    });
+
+    expect(result.current.run).toMatchObject({
+      id: 'run-1',
+      phase: 'review',
+      matched: 2,
+      done: 2,
+    });
+  });
+
+  it('can skip every problem, one after another', async () => {
+    const { result } = await mountInReview();
+
+    for (const id of ['p1', 'p2', 'p3']) {
+      await act(async () => {
+        await result.current.skip(id);
+      });
+    }
+
+    expect(result.current.run?.problems).toEqual([]);
+    expect(fetchMock.mock.calls.filter(isDismiss)).toHaveLength(3);
+  });
+
+  it('imports nothing and polls nothing for a skip', async () => {
+    const { result } = await mountInReview();
+    const before = reads();
+
+    await act(async () => {
+      await result.current.skip('p1');
+    });
+    await elapse(2000);
+
+    expect(reads()).toBe(before);
+    expect(
+      fetchMock.mock.calls.filter(
+        ([input, init]) =>
+          String(input).endsWith('/api/movies') &&
+          init?.method?.toUpperCase() === 'POST'
+      )
+    ).toHaveLength(0);
   });
 });

@@ -56,12 +56,28 @@ describe('Button — the full spec surface', () => {
     expect(onClick).toHaveBeenCalledTimes(1);
   });
 
-  it.each(['md', 'lg'] as const)('keeps its label at size %s', (size) => {
+  it.each(['sm', 'md', 'lg'] as const)('keeps its label at size %s', (size) => {
     renderButton({ label: 'Check for updates', size });
 
     expect(
       screen.getByRole('button', { name: 'Check for updates' })
     ).toBeTruthy();
+  });
+
+  it('draws sm at the prototype’s 40px, 18px sides, 14px text and the small radius', () => {
+    // The third size, from `prim.Button.dc.html`'s enum: what the **Review
+    // step**'s _Resolve_ and _Skip_ are drawn at (issue #129). One rung
+    // below `md` in every dimension, and the `sm` radius rather than `md`'s.
+    renderButton({ label: 'Skip', size: 'sm' });
+
+    const style = getComputedStyle(
+      screen.getByRole('button', { name: 'Skip' })
+    );
+    expect(style.height).toBe('40px');
+    expect(style.paddingLeft).toBe('18px');
+    expect(style.paddingRight).toBe('18px');
+    expect(style.fontSize).toBe('14px');
+    expect(style.borderTopLeftRadius).toBe('8px');
   });
 
   it('is unchanged as a control when stretched to its container', () => {

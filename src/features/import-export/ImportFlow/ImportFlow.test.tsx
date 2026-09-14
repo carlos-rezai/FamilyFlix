@@ -1,10 +1,16 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  within,
+} from '@testing-library/react';
 import { ThemeProvider } from 'styled-components';
 import { MemoryRouter, Route, Routes, useNavigate } from 'react-router-dom';
 
 import { ImportFlow } from './ImportFlow';
-import type { ImportRun } from '@/types';
+import type { ImportProblem, ImportRun } from '@/types';
 import { theme } from '@/styles/theme';
 import { LocationProbe } from '@/test-support/LocationProbe/LocationProbe';
 import { comesBefore } from '@/test-support/comesBefore/comesBefore';
@@ -14,11 +20,16 @@ import {
   noContentResponse,
   notFoundResponse,
   okResponse,
+  serverErrorResponse,
 } from '@/test-support/fakeResponse/fakeResponse';
 
 /**
- * 13 — Bulk import, Phase 2: "the tracer bullet" (issue #125) and "cancel,
- * re-attach and the already-in-library skip" (issue #126).
+ * 13 — Bulk import, Phase 2: "the tracer bullet" (issue #125), "cancel,
+ * re-attach and the already-in-library skip" (issue #126), and Phase 4:
+ * "problems and review" (issue #129) — the **Review step** with its tiles and
+ * its **Needs attention** list: _Skip_ sends the `DELETE`, the row goes and
+ * the tile counts down, on a `404` just the same; _Resolve_ lands on the form
+ * in import context; `✓ All done` once the last row is gone.
  *
  * The **Import flow** organism: the header row from `feat.ImportFlow.dc.html`
  * and one of three steps under it, driven by the **Run hook**. The seam is
@@ -84,6 +95,9 @@ const isStart = (input: RequestInfo | URL, init?: RequestInit) =>
 const isCancel = (input: RequestInfo | URL, init?: RequestInit) =>
   String(input).endsWith('/api/import/current/cancel') &&
   init?.method?.toUpperCase() === 'POST';
+const isDismiss = (input: RequestInfo | URL, init?: RequestInit) =>
+  /\/api\/import\/current\/problems\/[^/]+$/.test(String(input)) &&
+  init?.method?.toUpperCase() === 'DELETE';
 
 /** The reads of the current route so far. */
 const reads = () => fetchMock.mock.calls.filter(([i, n]) => isCurrent(i, n));
@@ -103,7 +117,13 @@ function serve(
   {
     onArrival = false,
     hold,
-  }: { onArrival?: boolean; hold?: Promise<void> } = {}
+    dismiss = () => noContentResponse(),
+  }: {
+    onArrival?: boolean;
+    hold?: Promise<void>;
+    /** What a `DELETE` of a problem answers — `204` unless a test says. */
+    dismiss?: () => Response;
+  } = {}
 ) {
   let read = 0;
   let running = onArrival;
@@ -111,6 +131,9 @@ function serve(
     if (isCancel(input, init)) {
       running = false;
       return noContentResponse();
+    }
+    if (isDismiss(input, init)) {
+      return dismiss();
     }
     if (isStart(input, init)) {
       if (started.status === 201 || started.status === 409) {
@@ -158,6 +181,7 @@ function renderFlow(history: string[] = ['/', '/settings', '/import']) {
           <Route path="/" element={<p>the browse home</p>} />
           <Route path="/settings" element={<SettingsStub />} />
           <Route path="/import" element={<ImportFlow />} />
+          <Route path="/add" element={<p>the add form</p>} />
         </Routes>
         <LocationProbe />
       </ThemeProvider>
@@ -650,5 +674,210 @@ describe('ImportFlow — reaching review', () => {
     // the home is where the maintainer sees that it worked.
     expect(currentPath()).toBe('/');
     expect(screen.getByText('the browse home')).toBeDefined();
+  });
+});
+
+/** The problems a review arrives with, in these tests. */
+const PROBLEMS: ImportProblem[] = [
+  {
+    id: 'p1',
+    kind: 'no-row',
+    title: 'Ironwood (2018)',
+    reason: "Folder isn't in the spreadsheet.",
+  },
+  {
+    id: 'p2',
+    kind: 'no-folder',
+    title: 'The Lantern Keeper',
+    reason: 'No folder found matching this spreadsheet row.',
+  },
+];
+
+/** A run already in review with `problems`, for the screen to attach to. */
+const reviewOf = (problems: ImportProblem[], matched = 2): ImportRun =>
+  makeImportRun({
+    phase: 'review',
+    found: 4,
+    total: matched,
+    done: matched,
+    matched,
+    problems,
+  });
+
+/** A tile is its label's parent; the number is the one other thing in it. */
+const tileNumber = (label: RegExp): string =>
+  within(screen.getByText(label).parentElement as HTMLElement).getByText(
+    /^[\d,]+$/
+  ).textContent ?? '';
+
+const ATTENTION = /need your\s*attention/;
+const MATCHED = /matched confidently\s*and imported/;
+
+/** The row a problem's title is in: the text block's parent. */
+const rowOf = (title: string): HTMLElement =>
+  screen.getByText(title).parentElement?.parentElement as HTMLElement;
+
+/** The DELETEs sent so far, by url. */
+const dismissals = () =>
+  fetchMock.mock.calls
+    .filter(([input, init]) => isDismiss(input, init))
+    .map(([input]) => String(input));
+
+/** Arrive on a run already in review, and wait for its list. */
+async function arriveInReview(
+  problems: ImportProblem[] = PROBLEMS,
+  options: { dismiss?: () => Response } = {}
+) {
+  serve(createdResponse(reviewOf(problems)), [reviewOf(problems)], {
+    onArrival: true,
+    ...options,
+  });
+  renderFlow();
+  await screen.findByText(ATTENTION);
+}
+
+describe('ImportFlow — the review of problems', () => {
+  it('shows the two tiles and the list once the polling sees the run in review', async () => {
+    serve(createdResponse(makeImportRun({ phase: 'scanning' })), [
+      makeImportRun({ phase: 'importing', total: 2, done: 1, matched: 2 }),
+      reviewOf(PROBLEMS),
+    ]);
+    renderFlow();
+    await setupStep();
+
+    startRun();
+
+    expect(
+      await screen.findByText(ATTENTION, undefined, POLLING)
+    ).toBeDefined();
+    expect(tileNumber(MATCHED)).toBe('2');
+    expect(tileNumber(ATTENTION)).toBe('2');
+    expect(screen.getByText('Needs attention')).toBeDefined();
+    expect(screen.getByText('Ironwood (2018)')).toBeDefined();
+    expect(screen.getByText('The Lantern Keeper')).toBeDefined();
+    expect(screen.queryByText('✓ All done')).toBeNull();
+    expect(screen.queryByText('Importing movies…')).toBeNull();
+  });
+
+  it('sends the DELETE on Skip, drops the row and counts the tile down', async () => {
+    await arriveInReview();
+
+    fireEvent.click(
+      within(rowOf('The Lantern Keeper')).getByRole('button', { name: 'Skip' })
+    );
+
+    await waitFor(() =>
+      expect(screen.queryByText('The Lantern Keeper')).toBeNull()
+    );
+    expect(dismissals()).toEqual(['/api/import/current/problems/p2']);
+    expect(screen.getByText('Ironwood (2018)')).toBeDefined();
+    expect(tileNumber(ATTENTION)).toBe('1');
+    expect(tileNumber(MATCHED)).toBe('2');
+  });
+
+  it('imports nothing for a Skip', async () => {
+    await arriveInReview();
+
+    fireEvent.click(
+      within(rowOf('The Lantern Keeper')).getByRole('button', { name: 'Skip' })
+    );
+    await waitFor(() =>
+      expect(screen.queryByText('The Lantern Keeper')).toBeNull()
+    );
+
+    const requests = fetchMock.mock.calls.map(
+      ([input, init]) =>
+        `${(init?.method ?? 'GET').toUpperCase()} ${String(input)}`
+    );
+    expect(requests.filter((request) => /\/api\/movies/.test(request))).toEqual(
+      []
+    );
+    expect(requests.filter((request) => request.startsWith('POST'))).toEqual(
+      []
+    );
+  });
+
+  it('drops the row on a 404 just the same — a problem already gone is gone', async () => {
+    await arriveInReview(PROBLEMS, {
+      dismiss: () => notFoundResponse('No such problem'),
+    });
+
+    fireEvent.click(
+      within(rowOf('Ironwood (2018)')).getByRole('button', { name: 'Skip' })
+    );
+
+    await waitFor(() =>
+      expect(screen.queryByText('Ironwood (2018)')).toBeNull()
+    );
+    expect(dismissals()).toEqual(['/api/import/current/problems/p1']);
+    expect(tileNumber(ATTENTION)).toBe('1');
+  });
+
+  it('keeps the row when the Skip could not be made', async () => {
+    await arriveInReview(PROBLEMS, { dismiss: () => serverErrorResponse() });
+
+    fireEvent.click(
+      within(rowOf('Ironwood (2018)')).getByRole('button', { name: 'Skip' })
+    );
+
+    await waitFor(() => expect(dismissals()).toHaveLength(1));
+    expect(screen.getByText('Ironwood (2018)')).toBeDefined();
+    expect(tileNumber(ATTENTION)).toBe('2');
+  });
+
+  it('shows All done once the last row is skipped, with Finish still there', async () => {
+    await arriveInReview([PROBLEMS[0]]);
+    expect(screen.queryByText('✓ All done')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Skip' }));
+
+    expect(await screen.findByText('✓ All done')).toBeDefined();
+    expect(
+      screen.getByText('Every flagged movie has been handled.')
+    ).toBeDefined();
+    expect(screen.queryByText('Needs attention')).toBeNull();
+    expect(tileNumber(ATTENTION)).toBe('0');
+    expect(
+      screen.getByRole('button', { name: 'Finish — go to library' })
+    ).toBeDefined();
+  });
+
+  it('lands on the form in import context from Resolve', async () => {
+    await arriveInReview();
+
+    fireEvent.click(
+      within(rowOf('The Lantern Keeper')).getByRole('link', { name: 'Resolve' })
+    );
+
+    expect(screen.getByTestId('url').textContent).toBe('/add?problem=p2');
+    expect(screen.getByText('the add form')).toBeDefined();
+  });
+
+  it('lands on the browse home from Finish while problems remain', async () => {
+    await arriveInReview();
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Finish — go to library' })
+    );
+
+    expect(currentPath()).toBe('/');
+    expect(screen.getByText('the browse home')).toBeDefined();
+  });
+
+  it('reaches review with zeros and the card for a run over an empty root', async () => {
+    serve(createdResponse(makeImportRun({ phase: 'scanning' })), [
+      reviewOf([], 0),
+    ]);
+    renderFlow();
+    await setupStep();
+
+    startRun();
+
+    expect(
+      await screen.findByText('✓ All done', undefined, POLLING)
+    ).toBeDefined();
+    expect(tileNumber(MATCHED)).toBe('0');
+    expect(tileNumber(ATTENTION)).toBe('0');
+    expect(screen.queryByText('Needs attention')).toBeNull();
   });
 });
