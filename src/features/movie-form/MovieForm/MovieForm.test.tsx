@@ -12,11 +12,12 @@ import { MemoryRouter } from 'react-router-dom';
 
 import { MovieForm } from './MovieForm';
 import { theme } from '@/styles/theme';
-import type { Genre, Movie } from '@/types';
+import type { Genre, ImportProblemDetail, Movie } from '@/types';
 import { LocationProbe } from '@/test-support/LocationProbe/LocationProbe';
 import { makeMovie } from '@/test-support/makeMovie/makeMovie';
 import {
   createdResponse,
+  noContentResponse,
   notFoundResponse,
   okResponse,
   serverErrorResponse,
@@ -2164,6 +2165,612 @@ describe('MovieForm — the Edit context', () => {
       await waitFor(() => expect(patchedFields()).toBeDefined());
       expect(patchedFields()?.getAll('subtitlePath')).toEqual([]);
       expect(patchedFields()?.getAll('subtitleLanguage')).toEqual([]);
+    });
+  });
+});
+
+// --- 13 — Bulk import, Phase 5: the Import context (issue #130) ---------------
+//
+// The third of the form's contexts. `/add?problem=<id>` is where the **Review
+// step**'s _Resolve_ lands: the same `MovieForm`, prefilled from the **Problem
+// detail** — the **Sheet row**'s fields, and every file the **Source folder**
+// holds as a **Found file** in its slot — under the accent banner "Resolving
+// import · {title}". The save reads _Save & continue_ and posts to the
+// problem's own resolve route, found paths as text and a picked file as
+// bytes; the cancel reads _Skip this one_ and dismisses; both land on
+// `/import`, and so does Back — never on whatever screen was behind the form.
+// The **Save gate** is unchanged: a title and a film, and a found film is a
+// film.
+
+/**
+ * The detail `GET /api/import/current/problems/:id` answers for a `failed`
+ * Die Hard: the row with every column filled, the matched folder, and every
+ * file in it found.
+ */
+const DIE_HARD_FOLDER = 'C:\\Movies\\Die.Hard.1988.1080p';
+
+const DIE_HARD: ImportProblemDetail = {
+  id: 'p1',
+  kind: 'failed',
+  title: 'Die Hard',
+  reason: "Couldn't copy the video file: EBUSY: resource busy or locked.",
+  row: {
+    title: 'Die Hard',
+    year: 1988,
+    genres: ['Action', 'Thriller'],
+    director: 'John McTiernan',
+    cast: ['Bruce Willis', 'Alan Rickman'],
+    synopsis:
+      'A New York cop takes on a tower full of thieves on Christmas Eve.',
+    rating: 8,
+  },
+  folder: DIE_HARD_FOLDER,
+  candidates: [],
+  files: {
+    video: `${DIE_HARD_FOLDER}\\Die.Hard.1988.1080p.mp4`,
+    poster: `${DIE_HARD_FOLDER}\\poster.jpg`,
+    backdrop: `${DIE_HARD_FOLDER}\\fanart.jpg`,
+    subtitles: [
+      {
+        path: `${DIE_HARD_FOLDER}\\Die.Hard.1988.1080p.en.srt`,
+        language: 'English',
+      },
+      {
+        path: `${DIE_HARD_FOLDER}\\Die.Hard.1988.1080p.pt.srt`,
+        language: 'Portuguese',
+      },
+    ],
+  },
+};
+
+/** The movie the resolve route answers its 201 with. */
+const RESOLVED: Movie = makeMovie({
+  id: 'm-die-hard',
+  title: 'Die Hard',
+  year: 1988,
+  videoPath: 'die-hard-1988/Die.Hard.1988.1080p.mp4',
+});
+
+describe('MovieForm — the Import context', () => {
+  let answerProblem: () => Promise<Response>;
+  let answerResolve: () => Promise<Response>;
+  let answerDismiss: () => Promise<Response>;
+
+  beforeEach(() => {
+    answerProblem = () => Promise.resolve(okResponse(DIE_HARD));
+    answerResolve = () => Promise.resolve(createdResponse(RESOLVED));
+    answerDismiss = () => Promise.resolve(noContentResponse());
+
+    // Three more arms, all under the problem's own route: the detail on
+    // mount, the resolve on Save & continue, the dismiss on Skip this one.
+    fetchMock.mockImplementation((input, init) => {
+      const url = String(input);
+      const method = init?.method?.toUpperCase() ?? 'GET';
+      if (url.includes('/api/import/current/problems/')) {
+        if (method === 'POST') {
+          return answerResolve();
+        }
+        if (method === 'DELETE') {
+          return answerDismiss();
+        }
+        return answerProblem();
+      }
+      if (method === 'POST' || method === 'PATCH') {
+        return answerSave();
+      }
+      return url.includes('/api/genres/pool') ? answerPool() : answerMovie();
+    });
+  });
+
+  /**
+   * The form opened on a problem, the way _Resolve_ opens it — with the
+   * Settings screen behind it, so that "lands on `/import`" is a claim about
+   * where the form goes and not about where it came from.
+   */
+  async function renderResolve(id = DIE_HARD.id) {
+    const view = render(
+      <MemoryRouter
+        initialEntries={['/settings', `/add?problem=${encodeURIComponent(id)}`]}
+        initialIndex={1}
+      >
+        <ThemeProvider theme={theme}>
+          <MovieForm />
+          <LocationProbe />
+        </ThemeProvider>
+      </MemoryRouter>
+    );
+    await act(async () => undefined);
+    return view;
+  }
+
+  /** The accent banner, or `null` when the form is not resolving anything. */
+  const banner = () =>
+    screen.queryAllByText(
+      (_, element) =>
+        element?.textContent?.replace(/\s+/g, ' ').trim() ===
+        'Resolving import · Die Hard'
+    )[0] ?? null;
+
+  /** Save, in the **Import context**, under whichever label it wears. */
+  const saveAndContinue = () =>
+    screen.getByRole('button', {
+      name: /save & continue|saving/i,
+    }) as HTMLButtonElement;
+
+  const skipThisOne = () =>
+    screen.getByRole('button', {
+      name: /^skip this one$/i,
+    }) as HTMLButtonElement;
+
+  /** Every problem read the form has issued. */
+  const problemReads = () =>
+    fetchMock.mock.calls.filter(
+      ([input, init]) =>
+        (init?.method ?? 'GET').toUpperCase() === 'GET' &&
+        String(input).includes('/api/import/current/problems/')
+    );
+
+  /** Every resolve the form has issued. */
+  const resolveRequests = () =>
+    fetchMock.mock.calls.filter(
+      ([input, init]) =>
+        init?.method?.toUpperCase() === 'POST' &&
+        String(input).includes('/api/import/current/problems/')
+    );
+
+  /** The multipart body of the resolve, or `undefined` if none was sent. */
+  const resolvedFields = (): FormData | undefined =>
+    resolveRequests()[0]?.[1]?.body as FormData | undefined;
+
+  /** Every part of the resolve that carried bytes rather than a value. */
+  const resolvedFiles = (): File[] => {
+    const body = resolvedFields();
+    return body === undefined
+      ? []
+      : ['video', 'poster', 'subtitle']
+          .flatMap((name) => body.getAll(name))
+          .filter((value): value is File => value instanceof File);
+  };
+
+  /** Every dismiss the form has issued. */
+  const dismissRequests = () =>
+    fetchMock.mock.calls.filter(
+      ([input, init]) =>
+        init?.method?.toUpperCase() === 'DELETE' &&
+        String(input).includes('/api/import/current/problems/')
+    );
+
+  const foundVideo = () => screen.queryByText('Die.Hard.1988.1080p.mp4');
+
+  describe('the banner', () => {
+    it('reads Resolving import · the problem’s title, under the Add a movie heading', async () => {
+      await renderResolve();
+
+      // Story 79: the maintainer can tell this form is fixing a flagged row
+      // rather than adding a film from scratch, and which row. The heading is
+      // still the add's — this is an add, with a head start.
+      expect(banner()).not.toBeNull();
+      expect(
+        screen.getByRole('heading', { name: 'Add a movie' })
+      ).toBeDefined();
+    });
+
+    it('draws the banner only when resolving — not in the Add or the Edit context', async () => {
+      const resolving = await renderResolve();
+      expect(banner()).not.toBeNull();
+      resolving.unmount();
+
+      const adding = await renderForm();
+      expect(screen.queryByText(/resolving import/i)).toBeNull();
+      adding.unmount();
+
+      await renderEdit();
+      expect(screen.queryByText(/resolving import/i)).toBeNull();
+    });
+  });
+
+  describe('pre-filling from the problem detail', () => {
+    it('reads the problem the URL names, and no movie', async () => {
+      await renderResolve();
+
+      expect(problemReads()).toHaveLength(1);
+      expect(String(problemReads()[0][0])).toContain(
+        '/api/import/current/problems/p1'
+      );
+      expect(
+        fetchMock.mock.calls.some(([input]) =>
+          String(input).includes('/api/movies/')
+        )
+      ).toBe(false);
+    });
+
+    it('encodes the id into the path', async () => {
+      await renderResolve('p 1/x');
+
+      expect(String(problemReads()[0][0])).toContain(
+        '/api/import/current/problems/p%201%2Fx'
+      );
+    });
+
+    it('pre-fills every metadata field the row carries', async () => {
+      await renderResolve();
+
+      // Story 80: the sheet already said all this; the maintainer corrects,
+      // never retypes. The year is in the box as text, because the box is.
+      expect(titleField().value).toBe('Die Hard');
+      expect(yearField().value).toBe('1988');
+      expect(directorField().value).toBe('John McTiernan');
+      expect(castField().value).toBe('Bruce Willis, Alan Rickman');
+      expect(descriptionField().value).toBe(
+        'A New York cop takes on a tower full of thieves on Christmas Eve.'
+      );
+    });
+
+    it('pre-fills the genres the row names, and nothing else', async () => {
+      await renderResolve();
+
+      expect(picked('Action')).toBe('true');
+      expect(picked('Thriller')).toBe('true');
+      expect(picked('Comedy')).toBe('false');
+    });
+
+    it('pre-fills the rating as the stars the sheet gave it', async () => {
+      await renderResolve();
+
+      // 8 on the column's 0–10 scale is four stars.
+      expect(ratingLabel()).toContain('4 / 5');
+    });
+
+    it('opens a row with no rating on Unrated', async () => {
+      answerProblem = () =>
+        Promise.resolve(
+          okResponse({
+            ...DIE_HARD,
+            row: { ...DIE_HARD.row, rating: undefined },
+          })
+        );
+      await renderResolve();
+
+      // The row was read — the title says so — and "no rating" stayed "no
+      // rating" rather than becoming nought stars.
+      expect(titleField().value).toBe('Die Hard');
+      expect(ratingLabel()).toContain('Not rated');
+    });
+
+    it('leaves the fields the row does not carry empty', async () => {
+      answerProblem = () =>
+        Promise.resolve(
+          okResponse({
+            ...DIE_HARD,
+            row: { title: 'Die Hard', genres: [] },
+          })
+        );
+      await renderResolve();
+
+      expect(titleField().value).toBe('Die Hard');
+      expect(yearField().value).toBe('');
+      expect(directorField().value).toBe('');
+      expect(castField().value).toBe('');
+      expect(descriptionField().value).toBe('');
+      expect(
+        chips().filter((c) => c.getAttribute('aria-pressed') === 'true')
+      ).toEqual([]);
+    });
+  });
+
+  describe('the found files', () => {
+    it('fills every slot the folder has, by filename', async () => {
+      await renderResolve();
+
+      // Story 81: what the scan found is already in the slots, shown the way
+      // a stored file is — by its name, the only thing a slot ever shows.
+      expect(foundVideo()).not.toBeNull();
+      expect(screen.getByText('poster.jpg')).toBeDefined();
+      expect(screen.getByText('Die.Hard.1988.1080p.en.srt')).toBeDefined();
+      expect(screen.getByText('Die.Hard.1988.1080p.pt.srt')).toBeDefined();
+    });
+
+    it('shows each found track in the language the scan detected', async () => {
+      await renderResolve();
+
+      expect(languageOf('Die.Hard.1988.1080p.en.srt').textContent).toContain(
+        'English'
+      );
+      expect(languageOf('Die.Hard.1988.1080p.pt.srt').textContent).toContain(
+        'Portuguese'
+      );
+    });
+
+    it('offers no picker for a slot that is filled', async () => {
+      await renderResolve();
+
+      expect(screen.queryByLabelText(/choose video file/i)).toBeNull();
+      expect(screen.queryByLabelText(/choose poster image/i)).toBeNull();
+    });
+
+    it('leaves the video slot empty when the folder holds two videos', async () => {
+      answerProblem = () =>
+        Promise.resolve(
+          okResponse({
+            ...DIE_HARD,
+            kind: 'no-video',
+            reason: 'Folder matched, but it holds more than one video file.',
+            files: { ...DIE_HARD.files, video: undefined },
+          })
+        );
+      await renderResolve();
+
+      // A `no-video` folder with two videos: the run would not guess, and the
+      // form does not either — the picker is offered, and the rest is filled.
+      expect(foundVideo()).toBeNull();
+      expect(videoPicker().type).toBe('file');
+      expect(screen.getByText('poster.jpg')).toBeDefined();
+    });
+
+    it('empties the slot when Remove is pressed on a found file', async () => {
+      await renderResolve();
+
+      fireEvent.click(removeVideo());
+
+      // Story 85: a found file is treated as any other slot. Gone from the
+      // slot, the picker is back.
+      expect(foundVideo()).toBeNull();
+      expect(videoPicker().type).toBe('file');
+    });
+
+    it('replaces a found file with a picked one', async () => {
+      await renderResolve();
+
+      fireEvent.click(removeVideo());
+      await pickVideo(videoFile('better-rip.mp4'));
+
+      expect(foundVideo()).toBeNull();
+      expect(screen.getByText('better-rip.mp4')).toBeDefined();
+    });
+
+    it('takes a found track off with its ✕ and leaves the other', async () => {
+      await renderResolve();
+
+      fireEvent.click(
+        screen.getByRole('button', {
+          name: /remove Die\.Hard\.1988\.1080p\.pt\.srt/i,
+        })
+      );
+
+      expect(screen.queryByText('Die.Hard.1988.1080p.pt.srt')).toBeNull();
+      expect(screen.getByText('Die.Hard.1988.1080p.en.srt')).toBeDefined();
+    });
+  });
+
+  describe('the labels', () => {
+    it('says Save & continue and Skip this one', async () => {
+      await renderResolve();
+
+      // Stories 86 and 87: the two actions read as what they do to the run.
+      expect(saveAndContinue().textContent).toContain('Save & continue');
+      expect(skipThisOne().textContent).toContain('Skip this one');
+      expect(
+        screen.queryByRole('button', { name: /add to library/i })
+      ).toBeNull();
+      expect(screen.queryByRole('button', { name: /^cancel$/i })).toBeNull();
+    });
+
+    it('draws Save & continue first and Skip this one after it', async () => {
+      await renderResolve();
+
+      expect(
+        saveAndContinue().compareDocumentPosition(skipThisOne()) &
+          Node.DOCUMENT_POSITION_FOLLOWING
+      ).toBeTruthy();
+    });
+  });
+
+  describe('the save gate', () => {
+    it('opens on the found film and the row’s title, nothing picked', async () => {
+      await renderResolve();
+
+      // Story 89: the gate is still a title and a film, and a found film is a
+      // film.
+      expect(saveAndContinue().disabled).toBe(false);
+    });
+
+    it('closes again if the title is emptied', async () => {
+      await renderResolve();
+
+      fireEvent.change(titleField(), { target: { value: '   ' } });
+
+      expect(saveAndContinue().disabled).toBe(true);
+    });
+
+    it('closes again if the found film is removed, and opens on a picked one', async () => {
+      await renderResolve();
+
+      fireEvent.click(removeVideo());
+      expect(saveAndContinue().disabled).toBe(true);
+
+      await pickVideo();
+      expect(saveAndContinue().disabled).toBe(false);
+    });
+
+    it('stays shut on a no-video problem until a film is picked', async () => {
+      answerProblem = () =>
+        Promise.resolve(
+          okResponse({
+            ...DIE_HARD,
+            kind: 'no-video',
+            files: { ...DIE_HARD.files, video: undefined },
+          })
+        );
+      await renderResolve();
+
+      expect(saveAndContinue().disabled).toBe(true);
+      await pickVideo();
+      expect(saveAndContinue().disabled).toBe(false);
+    });
+
+    it('offers Skip this one however empty the form is', async () => {
+      await renderResolve();
+      fireEvent.change(titleField(), { target: { value: '' } });
+
+      expect(skipThisOne().disabled).toBe(false);
+    });
+  });
+
+  describe('Save & continue', () => {
+    it('posts to the problem’s own resolve route, never to /api/movies', async () => {
+      await renderResolve();
+
+      fireEvent.click(saveAndContinue());
+
+      await waitFor(() => expect(resolveRequests()).toHaveLength(1));
+      expect(String(resolveRequests()[0][0])).toBe(
+        '/api/import/current/problems/p1/resolve'
+      );
+      expect(saveRequests()).toEqual([]);
+      expect(patchRequests()).toEqual([]);
+    });
+
+    it('sends the fields as the form holds them', async () => {
+      await renderResolve();
+      fireEvent.change(titleField(), { target: { value: 'Die Hard (1988)' } });
+
+      fireEvent.click(saveAndContinue());
+
+      await waitFor(() => expect(resolvedFields()).toBeDefined());
+      const body = resolvedFields();
+      expect(body?.get('title')).toBe('Die Hard (1988)');
+      expect(body?.get('year')).toBe('1988');
+      expect(body?.get('director')).toBe('John McTiernan');
+      expect(body?.getAll('cast')).toEqual(['Bruce Willis', 'Alan Rickman']);
+      expect(body?.getAll('genre')).toEqual(['Action', 'Thriller']);
+      expect(body?.get('rating')).toBe('8');
+    });
+
+    it('sends every found file as its path and no bytes at all', async () => {
+      await renderResolve();
+
+      fireEvent.click(saveAndContinue());
+
+      // Story 90 from the screen: nothing the scan found is re-uploaded. The
+      // paths travel in the fields the edit route already reads, and the
+      // server copies from them.
+      await waitFor(() => expect(resolvedFields()).toBeDefined());
+      expect(resolvedFiles()).toEqual([]);
+      expect(resolvedFields()?.get('videoPath')).toBe(DIE_HARD.files.video);
+      expect(resolvedFields()?.get('posterPath')).toBe(DIE_HARD.files.poster);
+      expect(resolvedFields()?.getAll('subtitlePath')).toEqual(
+        DIE_HARD.files.subtitles.map((track) => track.path)
+      );
+      expect(resolvedFields()?.getAll('subtitleLanguage')).toEqual([
+        'English',
+        'Portuguese',
+      ]);
+    });
+
+    it('sends a picked replacement as bytes beside the found paths', async () => {
+      await renderResolve();
+      fireEvent.click(removePoster());
+      const replacement = await pickPoster(posterFile('better-poster.jpg'));
+
+      fireEvent.click(saveAndContinue());
+
+      await waitFor(() => expect(resolvedFields()).toBeDefined());
+      expect(resolvedFiles()).toEqual([replacement]);
+      expect(resolvedFields()?.get('posterPath')).toBeNull();
+      expect(resolvedFields()?.get('videoPath')).toBe(DIE_HARD.files.video);
+    });
+
+    it('lands on /import once the movie is written', async () => {
+      await renderResolve();
+
+      fireEvent.click(saveAndContinue());
+
+      // Story 95: back to the review, one row shorter — not to the browse
+      // home, and not to whatever was behind the form.
+      await waitFor(() => expect(currentPath()).toBe('/import'));
+    });
+
+    it('takes no second press while the resolve is in flight', async () => {
+      let settle: (response: Response) => void = () => undefined;
+      answerResolve = () =>
+        new Promise<Response>((resolve) => {
+          settle = resolve;
+        });
+      await renderResolve();
+
+      fireEvent.click(saveAndContinue());
+      await waitFor(() => expect(saveAndContinue().disabled).toBe(true));
+      fireEvent.click(saveAndContinue());
+
+      expect(resolveRequests()).toHaveLength(1);
+      await act(async () => {
+        settle(createdResponse(RESOLVED));
+      });
+    });
+
+    it('stays put with everything in it when the resolve is refused', async () => {
+      answerResolve = () => Promise.resolve(serverErrorResponse());
+      await renderResolve();
+
+      fireEvent.click(saveAndContinue());
+
+      await waitFor(() => expect(resolveRequests()).toHaveLength(1));
+      await waitFor(() => expect(saveAndContinue().disabled).toBe(false));
+      expect(currentPath()).toBe('/add');
+      expect(titleField().value).toBe('Die Hard');
+      expect(foundVideo()).not.toBeNull();
+      expect(banner()).not.toBeNull();
+    });
+
+    it('dismisses nothing itself — the route does that on its 201', async () => {
+      await renderResolve();
+
+      fireEvent.click(saveAndContinue());
+
+      await waitFor(() => expect(currentPath()).toBe('/import'));
+      expect(dismissRequests()).toEqual([]);
+    });
+  });
+
+  describe('Skip this one', () => {
+    it('dismisses the problem and lands on /import', async () => {
+      await renderResolve();
+
+      fireEvent.click(skipThisOne());
+
+      // Story 88: the same Skip the review row offers, from the form.
+      await waitFor(() => expect(dismissRequests()).toHaveLength(1));
+      expect(String(dismissRequests()[0][0])).toBe(
+        '/api/import/current/problems/p1'
+      );
+      await waitFor(() => expect(currentPath()).toBe('/import'));
+    });
+
+    it('writes nothing', async () => {
+      await renderResolve();
+
+      fireEvent.click(skipThisOne());
+
+      await waitFor(() => expect(currentPath()).toBe('/import'));
+      expect(resolveRequests()).toEqual([]);
+      expect(saveRequests()).toEqual([]);
+    });
+  });
+
+  describe('Back', () => {
+    it('lands on /import, not on the screen behind the form', async () => {
+      await renderResolve();
+
+      fireEvent.click(backPill());
+
+      // Story 95. The form was reached from the review, and the review is
+      // where a maintainer stepping back expects to be — whatever the history
+      // says. And nothing was dismissed: the row is still there to come back
+      // to.
+      expect(currentPath()).toBe('/import');
+      await act(async () => undefined);
+      expect(dismissRequests()).toEqual([]);
+      expect(resolveRequests()).toEqual([]);
     });
   });
 });

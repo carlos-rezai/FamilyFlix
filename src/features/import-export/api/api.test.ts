@@ -13,6 +13,8 @@ import {
   fetchCurrentImport,
   cancelImport,
   dismissProblem,
+  fetchProblem,
+  resolveProblem,
   ImportBusyError,
 } from './api';
 import type {
@@ -22,9 +24,12 @@ import type {
   ImportRun,
   LogKind,
   LogLine,
+  Movie,
+  MovieFormValues,
   ProblemKind,
 } from '@/types';
 import { makeImportRun } from '@/test-support/makeImportRun/makeImportRun';
+import { makeMovie } from '@/test-support/makeMovie/makeMovie';
 import {
   createdResponse,
   noContentResponse,
@@ -39,7 +44,8 @@ import {
  * The wire calls the **Run hook** makes — `startImport` behind _Start
  * import_, `fetchCurrentImport` behind every poll and the mount, from issue
  * #126 `cancelImport` behind _Cancel import_, and from issue #129
- * `dismissProblem` behind the **Review step**'s _Skip_. One caller each, so
+ * `dismissProblem` behind the **Review step**'s _Skip_, and from issue #130
+ * `fetchProblem` and `resolveProblem` behind **Resolve**. One caller each, so
  * they live with the feature rather than in `src/api/`.
  *
  * In `saveRating`'s style: what was sent, and what the caller is handed back
@@ -328,6 +334,240 @@ describe('dismissProblem', () => {
     fetchMock.mockRejectedValue(new Error('offline'));
 
     await expect(dismissProblem('p1')).rejects.toThrow();
+  });
+});
+
+// --- 13 — Bulk import, Phase 5: Resolve — the found file and the resolve route (issue #130)
+//
+// The two calls behind **Resolve**: `fetchProblem` reads the **Problem
+// detail** the form prefills from — `null` on a `404`, because a problem that
+// is gone is the signal to fall back to the plain **Add context**, not an
+// error — and `resolveProblem` is _Save & continue_: the form's own multipart
+// encoding, `movieFormData`'s, posted to the problem's resolve route, and the
+// movie the `201` answers with.
+
+/** A **Problem detail** as the route answers it, with every slot found. */
+const DETAIL: ImportProblemDetail = {
+  id: 'p1',
+  kind: 'failed',
+  title: 'Die Hard',
+  reason: "Couldn't copy the video file: EBUSY: resource busy or locked.",
+  row: {
+    title: 'Die Hard',
+    year: 1988,
+    genres: ['Action', 'Thriller'],
+    director: 'John McTiernan',
+    cast: ['Bruce Willis', 'Alan Rickman'],
+    synopsis:
+      'A New York cop takes on a tower full of thieves on Christmas Eve.',
+    rating: 8,
+  },
+  folder: 'C:\\Movies\\Die.Hard.1988.1080p',
+  candidates: [],
+  files: {
+    video: 'C:\\Movies\\Die.Hard.1988.1080p\\Die.Hard.1988.1080p.mp4',
+    poster: 'C:\\Movies\\Die.Hard.1988.1080p\\poster.jpg',
+    subtitles: [
+      {
+        path: 'C:\\Movies\\Die.Hard.1988.1080p\\Die.Hard.1988.1080p.en.srt',
+        language: 'English',
+      },
+    ],
+  },
+};
+
+describe('fetchProblem', () => {
+  it('GETs the problem’s route, by id', async () => {
+    fetchMock.mockResolvedValue(okResponse(DETAIL));
+
+    await fetchProblem('p1');
+
+    const request = onlyRequest();
+    expect(request.url).toBe('/api/import/current/problems/p1');
+    expect(request.method ?? 'GET').toBe('GET');
+  });
+
+  it('encodes the id into the path', async () => {
+    fetchMock.mockResolvedValue(okResponse(DETAIL));
+
+    await fetchProblem('p 1/x?y');
+
+    expect(onlyRequest().url).toBe(
+      '/api/import/current/problems/p%201%2Fx%3Fy'
+    );
+  });
+
+  it('resolves the detail the route answered its 200 with', async () => {
+    fetchMock.mockResolvedValue(okResponse(DETAIL));
+
+    await expect(fetchProblem('p1')).resolves.toEqual(DETAIL);
+  });
+
+  it('resolves null on a 404 — a problem that is gone is the fallback, not a failure', async () => {
+    fetchMock.mockResolvedValue(notFoundResponse('No such problem'));
+
+    await expect(fetchProblem('p1')).resolves.toBeNull();
+  });
+
+  it('rejects when the server fell over', async () => {
+    fetchMock.mockResolvedValue(serverErrorResponse());
+
+    await expect(fetchProblem('p1')).rejects.toThrow();
+  });
+
+  it('rejects when the request could not be made at all', async () => {
+    fetchMock.mockRejectedValue(new Error('offline'));
+
+    await expect(fetchProblem('p1')).rejects.toThrow();
+  });
+});
+
+/** The form as Resolve opens it on {@link DETAIL}, with nothing re-picked. */
+const RESOLVED_VALUES: MovieFormValues = {
+  title: 'Die Hard',
+  year: '1988',
+  director: 'John McTiernan',
+  cast: 'Bruce Willis, Alan Rickman',
+  description:
+    'A New York cop takes on a tower full of thieves on Christmas Eve.',
+  genres: ['Action', 'Thriller'],
+  rating: 80,
+  video: {
+    kind: 'found',
+    path: 'C:\\Movies\\Die.Hard.1988.1080p\\Die.Hard.1988.1080p.mp4',
+    filename: 'Die.Hard.1988.1080p.mp4',
+  },
+  poster: {
+    kind: 'found',
+    path: 'C:\\Movies\\Die.Hard.1988.1080p\\poster.jpg',
+    filename: 'poster.jpg',
+  },
+  subtitles: [
+    {
+      key: 'f1',
+      file: {
+        kind: 'found',
+        path: 'C:\\Movies\\Die.Hard.1988.1080p\\Die.Hard.1988.1080p.en.srt',
+        filename: 'Die.Hard.1988.1080p.en.srt',
+      },
+      language: 'English',
+    },
+  ],
+};
+
+/** The movie the resolve route answers its 201 with. */
+const RESOLVED: Movie = makeMovie({
+  id: 'm-die-hard',
+  title: 'Die Hard',
+  year: 1988,
+  videoPath: 'die-hard-1988/Die.Hard.1988.1080p.mp4',
+});
+
+describe('resolveProblem', () => {
+  it('POSTs the form as multipart to the problem’s resolve route', async () => {
+    fetchMock.mockResolvedValue(createdResponse(RESOLVED));
+
+    await resolveProblem('p1', RESOLVED_VALUES);
+
+    const request = onlyRequest();
+    expect(request.url).toBe('/api/import/current/problems/p1/resolve');
+    expect(request.method?.toUpperCase()).toBe('POST');
+    expect(request.body).toBeInstanceOf(FormData);
+  });
+
+  it('encodes the id into the path', async () => {
+    fetchMock.mockResolvedValue(createdResponse(RESOLVED));
+
+    await resolveProblem('p 1/x', RESOLVED_VALUES);
+
+    expect(onlyRequest().url).toBe(
+      '/api/import/current/problems/p%201%2Fx/resolve'
+    );
+  });
+
+  it('sends the form’s own encoding: found files as paths, the fields beside them', async () => {
+    fetchMock.mockResolvedValue(createdResponse(RESOLVED));
+
+    await resolveProblem('p1', RESOLVED_VALUES);
+
+    const body = onlyRequest().body as FormData;
+    expect(body.get('title')).toBe('Die Hard');
+    expect(body.get('year')).toBe('1988');
+    expect(body.get('rating')).toBe('8');
+    expect(body.getAll('genre')).toEqual(['Action', 'Thriller']);
+    expect(body.get('videoPath')).toBe(
+      'C:\\Movies\\Die.Hard.1988.1080p\\Die.Hard.1988.1080p.mp4'
+    );
+    expect(body.get('posterPath')).toBe(
+      'C:\\Movies\\Die.Hard.1988.1080p\\poster.jpg'
+    );
+    expect(body.getAll('subtitlePath')).toEqual([
+      'C:\\Movies\\Die.Hard.1988.1080p\\Die.Hard.1988.1080p.en.srt',
+    ]);
+    expect(body.getAll('subtitleLanguage')).toEqual(['English']);
+    expect(body.getAll('video')).toEqual([]);
+    expect(body.getAll('poster')).toEqual([]);
+    expect(body.getAll('subtitle')).toEqual([]);
+  });
+
+  it('sends a picked file as bytes', async () => {
+    fetchMock.mockResolvedValue(createdResponse(RESOLVED));
+    const file = new File(['image bytes'], 'better-poster.jpg', {
+      type: 'image/jpeg',
+    });
+
+    await resolveProblem('p1', {
+      ...RESOLVED_VALUES,
+      poster: { kind: 'picked', file, filename: file.name },
+    });
+
+    const body = onlyRequest().body as FormData;
+    expect(body.getAll('poster')).toEqual([file]);
+    expect(body.get('posterPath')).toBeNull();
+  });
+
+  it('sets no Content-Type of its own, so the boundary is the platform’s', async () => {
+    fetchMock.mockResolvedValue(createdResponse(RESOLVED));
+
+    await resolveProblem('p1', RESOLVED_VALUES);
+
+    expect(onlyRequest().headers?.['Content-Type']).toBeUndefined();
+  });
+
+  it('resolves the movie the route answered its 201 with', async () => {
+    fetchMock.mockResolvedValue(createdResponse(RESOLVED));
+
+    await expect(resolveProblem('p1', RESOLVED_VALUES)).resolves.toEqual(
+      RESOLVED
+    );
+  });
+
+  it('rejects on a 400 — a path outside the root, or an untitled body', async () => {
+    fetchMock.mockResolvedValue({
+      ok: false,
+      status: 400,
+      json: () => Promise.resolve({ error: 'Not under the import root' }),
+    } as unknown as Response);
+
+    await expect(resolveProblem('p1', RESOLVED_VALUES)).rejects.toThrow();
+  });
+
+  it('rejects on a 404 — the problem is gone', async () => {
+    fetchMock.mockResolvedValue(notFoundResponse('No such problem'));
+
+    await expect(resolveProblem('p1', RESOLVED_VALUES)).rejects.toThrow();
+  });
+
+  it('rejects when the server fell over', async () => {
+    fetchMock.mockResolvedValue(serverErrorResponse());
+
+    await expect(resolveProblem('p1', RESOLVED_VALUES)).rejects.toThrow();
+  });
+
+  it('rejects when the request could not be made at all', async () => {
+    fetchMock.mockRejectedValue(new Error('offline'));
+
+    await expect(resolveProblem('p1', RESOLVED_VALUES)).rejects.toThrow();
   });
 });
 

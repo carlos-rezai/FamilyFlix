@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 
-import type { Movie, MovieFormValues } from '@/types';
+import type { Movie, MovieFormFile, MovieFormValues } from '@/types';
 import { makeMovie } from '@/test-support/makeMovie/makeMovie';
 
 import { movieFormValues, movieFormData, pickedFile } from './formValues';
@@ -386,6 +386,112 @@ describe('movieFormData', () => {
     expect(sent(body, 'subtitleLanguage')).toEqual([]);
     expect(sent(body, 'subtitlePath')).toEqual([]);
     expect(sent(body, 'subtitle')).toEqual([]);
+  });
+});
+
+// --- 13 — Bulk import, Phase 5: the Found file (issue #130) --------------------
+//
+// The third and last kind of **File slot**: a **Found file** — an absolute path
+// under the **Library root**, put in the slot by **Resolve** from the **Source
+// folder**. On the wire it is the other arm of the passthrough: it travels as
+// its path in the very field a **Stored file** travels in, so the resolve
+// route reads it with the reader the edit route already has, and a picked
+// file beside it still travels as bytes. That the server copies from that path
+// only when it lies under the **Current run**'s root is the route's rule; this
+// end only has to send the path.
+
+describe('movieFormData — the found file', () => {
+  const ROOT = 'C:\\Movies\\Die.Hard.1988.1080p';
+
+  /** A slot filled by Resolve from the folder the run matched. */
+  const found = (filename: string): MovieFormFile => ({
+    kind: 'found',
+    path: `${ROOT}\\${filename}`,
+    filename,
+  });
+
+  /** The form as Resolve opens it: every slot found, nothing picked. */
+  const resolved = (): MovieFormValues => ({
+    ...movieFormValues(STORED),
+    video: found('Die.Hard.1988.1080p.mp4'),
+    poster: found('poster.jpg'),
+    subtitles: [
+      {
+        key: 'f1',
+        file: found('Die.Hard.1988.1080p.en.srt'),
+        language: 'English',
+      },
+      {
+        key: 'f2',
+        file: found('Die.Hard.1988.1080p.pt.srt'),
+        language: 'Portuguese',
+      },
+    ],
+  });
+
+  it('sends a found film as its path in the field a stored film uses, and no bytes', () => {
+    const body = movieFormData(resolved());
+
+    expect(field(body, 'videoPath')).toBe(`${ROOT}\\Die.Hard.1988.1080p.mp4`);
+    expect(sent(body, 'video')).toEqual([]);
+    expect(fileParts(body)).toEqual([]);
+  });
+
+  it('sends a found poster the same way', () => {
+    const body = movieFormData(resolved());
+
+    expect(field(body, 'posterPath')).toBe(`${ROOT}\\poster.jpg`);
+    expect(sent(body, 'poster')).toEqual([]);
+  });
+
+  it('sends a found track as its path beside its language, in row order', () => {
+    const body = movieFormData(resolved());
+
+    expect(sent(body, 'subtitleLanguage')).toEqual(['English', 'Portuguese']);
+    expect(sent(body, 'subtitlePath')).toEqual([
+      `${ROOT}\\Die.Hard.1988.1080p.en.srt`,
+      `${ROOT}\\Die.Hard.1988.1080p.pt.srt`,
+    ]);
+    expect(sent(body, 'subtitle')).toEqual([]);
+  });
+
+  it('sends a picked file as bytes beside the found ones as paths', () => {
+    const file = someFile('better-poster.jpg');
+    const body = movieFormData({
+      ...resolved(),
+      poster: { kind: 'picked', file, filename: file.name },
+    });
+
+    // The maintainer replaced the folder's artwork with one off their own
+    // disk: that slot is the one part on the wire, and the film beside it is
+    // still a path.
+    expect(fileParts(body)).toEqual([file]);
+    expect(field(body, 'posterPath')).toBeNull();
+    expect(field(body, 'videoPath')).toBe(`${ROOT}\\Die.Hard.1988.1080p.mp4`);
+  });
+
+  it('holds a picked track’s place among found ones with the empty path', () => {
+    const values = resolved();
+    const file = someFile('Die.Hard.1988.1080p.nl.srt');
+    const body = movieFormData({
+      ...values,
+      subtitles: [
+        values.subtitles[0],
+        {
+          key: 'k-new',
+          file: { kind: 'picked', file, filename: file.name },
+          language: 'Dutch',
+        },
+        values.subtitles[1],
+      ],
+    });
+
+    expect(sent(body, 'subtitlePath')).toEqual([
+      `${ROOT}\\Die.Hard.1988.1080p.en.srt`,
+      '',
+      `${ROOT}\\Die.Hard.1988.1080p.pt.srt`,
+    ]);
+    expect(sent(body, 'subtitle')).toEqual([file]);
   });
 });
 

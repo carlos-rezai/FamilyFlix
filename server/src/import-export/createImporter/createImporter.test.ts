@@ -42,6 +42,11 @@
 // a genre-less row imports and is listed as the soft `missing-meta` with its
 // `movieId`; the complete line counts them all; and `dismiss` — the **Review
 // step**'s _Skip_ — removes one and answers false for one that is not there.
+//
+// Issue #130 opens a **Problem** on the form: `problem` answers the **Problem
+// detail** — row, folder, candidates, **Found files** — and `resolve` is
+// _Save & continue_: copy the found files in from under the root and nowhere
+// else, add the movie, dismiss the problem.
 
 import { execFileSync } from 'node:child_process';
 import {
@@ -58,7 +63,13 @@ import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { createImporter, type Importer } from './createImporter';
+import {
+  createImporter,
+  ImportPathError,
+  ProblemNotFoundError,
+  type Importer,
+  type ResolveForm,
+} from './createImporter';
 import { createMedia, type Media } from '../../media/createMedia/createMedia';
 import { createPlayback } from '../../playback/createPlayback/createPlayback';
 import { freshStorage } from '../../test-support/freshStorage/freshStorage';
@@ -1622,5 +1633,352 @@ describe('createImporter — dismiss', () => {
 
     expect(before.problems).toHaveLength(1);
     expect(importer.current()?.problems).toHaveLength(0);
+  });
+});
+
+// --- 13 — Bulk import, Phase 5: Resolve — the found file and the resolve route (issue #130)
+//
+// Two more things the API layer can ask the domain for. `problem(id)` answers
+// the **Problem detail** the form prefills from — the problem, the **Sheet
+// row**, the matched **Source folder**, the candidates and the folder's
+// **Found files** as absolute paths under the root — or `null` for an id that
+// is not there. `resolve(id, form)` is _Save & continue_: the form's fields
+// with each **File slot** as a **Found file** (`{ found }`, an absolute path)
+// or a file the route already stored from bytes (`{ stored }`), copied in by
+// the form's sequence, added as a movie, and the problem dismissed. A found
+// path outside the **Current run**'s root is refused before anything is
+// copied — the `mediaFilePath` boundary rule aimed at the **Library root**.
+
+/**
+ * A `Media` whose copy of the one source file whose path ends in `filename`
+ * throws **once** — the first time only — and goes through to the real one
+ * from then on. What turns the fixture's Die Hard into a `failed` problem the
+ * run leaves behind, and lets Resolve copy the very same file afterwards.
+ */
+function failCopyOnce(
+  filename: string,
+  message: string
+): (real: Media) => Media {
+  let failed = false;
+  return (real) => ({
+    ...real,
+    copyIn: async (...args) => {
+      if (!failed && args[1].endsWith(filename)) {
+        failed = true;
+        throw new Error(message);
+      }
+      return real.copyIn(...args);
+    },
+  });
+}
+
+/** A sandbox whose run leaves Die Hard behind as a `failed` problem. */
+async function failedDieHard(): Promise<
+  ReturnType<typeof sandbox> & { problem: ImportProblem; dieHard: string }
+> {
+  const box = sandbox({
+    media: failCopyOnce(
+      'Die.Hard.1988.1080p.mp4',
+      'EBUSY: resource busy or locked'
+    ),
+  });
+  await box.importer.start(box.sheet, box.root);
+  const run = await untilReview(box.importer);
+  const [problem] = ofKind(run, 'failed');
+  return { ...box, problem, dieHard: join(box.root, 'Die.Hard.1988.1080p') };
+}
+
+/** The fixture's Die Hard, as the form sends it back with every slot found. */
+function dieHardForm(dieHard: string): ResolveForm {
+  return {
+    title: 'Die Hard',
+    year: 1988,
+    director: 'John McTiernan',
+    synopsis:
+      'A New York cop takes on a tower full of thieves on Christmas Eve.',
+    rating: 8,
+    cast: ['Bruce Willis', 'Alan Rickman'],
+    genres: ['Action', 'Thriller'],
+    video: { found: join(dieHard, 'Die.Hard.1988.1080p.mp4') },
+    poster: { found: join(dieHard, 'poster.jpg') },
+    subtitles: [
+      {
+        file: { found: join(dieHard, 'Die.Hard.1988.1080p.en.srt') },
+        language: 'English',
+      },
+      {
+        file: { found: join(dieHard, 'Die.Hard.1988.1080p.pt.srt') },
+        language: 'Portuguese',
+      },
+    ],
+  };
+}
+
+describe('createImporter — problem: the detail Resolve prefills from', () => {
+  it('answers a failed problem with its row, its folder and every found file', async () => {
+    const { importer, problem, dieHard } = await failedDieHard();
+
+    const detail = importer.problem(problem.id);
+
+    expect(detail).toMatchObject({
+      id: problem.id,
+      kind: 'failed',
+      title: 'Die Hard',
+      reason: problem.reason,
+      row: {
+        title: 'Die Hard',
+        year: 1988,
+        genres: ['Action', 'Thriller'],
+        director: 'John McTiernan',
+        cast: ['Bruce Willis', 'Alan Rickman'],
+        synopsis:
+          'A New York cop takes on a tower full of thieves on Christmas Eve.',
+        rating: 8,
+      },
+      folder: dieHard,
+      files: {
+        video: join(dieHard, 'Die.Hard.1988.1080p.mp4'),
+        poster: join(dieHard, 'poster.jpg'),
+        backdrop: join(dieHard, 'fanart.jpg'),
+        subtitles: [
+          {
+            path: join(dieHard, 'Die.Hard.1988.1080p.en.srt'),
+            language: 'English',
+          },
+          {
+            path: join(dieHard, 'Die.Hard.1988.1080p.pt.srt'),
+            language: 'Portuguese',
+          },
+        ],
+      },
+    });
+    expect(detail?.candidates).toEqual([]);
+  });
+
+  it('leaves the video slot of a no-video problem empty, and fills the rest from the folder', async () => {
+    const { importer, root, sheet } = sandbox();
+    const dieHard = join(root, 'Die.Hard.1988.1080p');
+    cpSync(
+      join(dieHard, 'Die.Hard.1988.1080p.mp4'),
+      join(dieHard, 'Die.Hard.1988.1080p.mkv')
+    );
+    await importer.start(sheet, root);
+    const [problem] = ofKind(await untilReview(importer), 'no-video');
+
+    const detail = importer.problem(problem.id);
+
+    // Two videos is no video: the run will not guess which is the film, and
+    // neither does the detail — the maintainer picks. The artwork and the
+    // tracks are not in doubt.
+    expect(detail?.folder).toBe(dieHard);
+    expect(detail?.files.video).toBeUndefined();
+    expect(detail?.files.poster).toBe(join(dieHard, 'poster.jpg'));
+    expect(detail?.files.subtitles).toHaveLength(2);
+    expect(detail?.row.title).toBe('Die Hard');
+  });
+
+  it('names every candidate folder of an ambiguous problem', async () => {
+    const { importer, root, sheet } = sandbox();
+    const second = folderUnder(root, 'Die Hard (1988)', ['Die Hard.mp4']);
+    await importer.start(sheet, root);
+    const [problem] = ofKind(await untilReview(importer), 'ambiguous');
+
+    const detail = importer.problem(problem.id);
+
+    expect([...(detail?.candidates ?? [])].sort()).toEqual(
+      [join(root, 'Die.Hard.1988.1080p'), second].sort()
+    );
+    expect(detail?.row).toMatchObject({ title: 'Die Hard', year: 1988 });
+  });
+
+  it('answers the row with no folder and no files for a no-folder problem', async () => {
+    const { importer, root } = sandbox();
+    const sheet = sheetOf(
+      root,
+      `${FIXTURE_ROWS}The Lantern Keeper,2019,Drama\n`
+    );
+    await importer.start(sheet, root);
+    const [problem] = ofKind(await untilReview(importer), 'no-folder');
+
+    const detail = importer.problem(problem.id);
+
+    expect(detail?.row).toMatchObject({
+      title: 'The Lantern Keeper',
+      year: 2019,
+      genres: ['Drama'],
+    });
+    expect(detail?.folder).toBeUndefined();
+    expect(detail?.candidates).toEqual([]);
+    expect(detail?.files).toEqual({ subtitles: [] });
+  });
+
+  it('answers null for an id that never was', async () => {
+    const { importer, root, sheet } = sandbox();
+    await importer.start(sheet, root);
+    await untilReview(importer);
+
+    expect(importer.problem('no-such-problem')).toBeNull();
+  });
+
+  it('answers null for a problem already dismissed', async () => {
+    const { importer, problem } = await failedDieHard();
+    importer.dismiss(problem.id);
+
+    expect(importer.problem(problem.id)).toBeNull();
+  });
+
+  it('answers null when there is no run', () => {
+    const { importer } = sandbox();
+
+    expect(importer.problem('p1')).toBeNull();
+  });
+});
+
+describe('createImporter — resolve: Save & continue', () => {
+  it('copies every found file into a movie folder and adds the movie', async () => {
+    const { storage, importer, media, problem, dieHard } =
+      await failedDieHard();
+
+    const movie = await importer.resolve(problem.id, dieHardForm(dieHard));
+
+    expect(movie.title).toBe('Die Hard');
+    expect(movie.videoPath).toBe('die-hard-1988/Die.Hard.1988.1080p.mp4');
+    expect(movie.posterPath).toBe('die-hard-1988/poster.jpg');
+    expect(
+      [...movie.subtitles]
+        .sort((a, b) => a.position - b.position)
+        .map((track) => [track.path, track.language])
+    ).toEqual([
+      ['die-hard-1988/Die.Hard.1988.1080p.en.srt', 'English'],
+      ['die-hard-1988/Die.Hard.1988.1080p.pt.srt', 'Portuguese'],
+    ]);
+    expect(readFileSync(join(media, movie.videoPath))).toEqual(
+      readFileSync(join(dieHard, 'Die.Hard.1988.1080p.mp4'))
+    );
+    expect(byTitle(storage)['Die Hard']).toMatchObject({ id: movie.id });
+    expect(folders(media)).toEqual(['amelie-2001', 'die-hard-1988']);
+  });
+
+  it('writes the form’s fields onto the row, not the sheet’s', async () => {
+    const { storage, importer, problem, dieHard } = await failedDieHard();
+
+    await importer.resolve(problem.id, {
+      ...dieHardForm(dieHard),
+      title: 'Die Hard (restored)',
+      year: null,
+      director: null,
+      synopsis: null,
+      rating: null,
+      cast: [],
+      genres: ['Action'],
+      poster: null,
+      subtitles: [],
+    });
+
+    // What the maintainer left the form saying is what is written — the sheet
+    // row only prefilled it.
+    const restored = byTitle(storage)['Die Hard (restored)'];
+    expect(restored).toMatchObject({
+      year: null,
+      director: null,
+      synopsis: null,
+      rating: null,
+      cast: [],
+      posterPath: null,
+      subtitles: [],
+    });
+    expect(restored.genres.map((genre) => genre.name)).toEqual(['Action']);
+  });
+
+  it('derives the runtime from the copied video', async () => {
+    const { storage, importer, problem, dieHard } = await failedDieHard();
+
+    await importer.resolve(problem.id, dieHardForm(dieHard));
+
+    expect(byTitle(storage)['Die Hard'].runtimeMinutes).toBe(132);
+  });
+
+  it('dismisses the problem once the movie is added', async () => {
+    const { importer, problem, dieHard } = await failedDieHard();
+
+    await importer.resolve(problem.id, dieHardForm(dieHard));
+
+    expect(importer.current()?.problems).toEqual([]);
+    expect(importer.problem(problem.id)).toBeNull();
+  });
+
+  it('refuses a found path outside the root, before anything is copied', async () => {
+    const { storage, importer, media, problem, dieHard } =
+      await failedDieHard();
+    const outside = join(media, '..', 'elsewhere.mp4');
+    writeFileSync(outside, 'not the family’s');
+
+    await expect(
+      importer.resolve(problem.id, {
+        ...dieHardForm(dieHard),
+        video: { found: outside },
+      })
+    ).rejects.toBeInstanceOf(ImportPathError);
+
+    // Nothing copied — not the film named outside, and not the poster and
+    // tracks named inside beside it — no row, and the problem still there.
+    expect(folders(media)).toEqual(['amelie-2001']);
+    expect(byTitle(storage)['Die Hard']).toBeUndefined();
+    expect(importer.current()?.problems).toEqual([problem]);
+  });
+
+  it('refuses a path that climbs out of the root through ..', async () => {
+    const { importer, media, problem, dieHard } = await failedDieHard();
+
+    await expect(
+      importer.resolve(problem.id, {
+        ...dieHardForm(dieHard),
+        poster: { found: join(dieHard, '..', '..', 'elsewhere.jpg') },
+      })
+    ).rejects.toBeInstanceOf(ImportPathError);
+
+    expect(folders(media)).toEqual(['amelie-2001']);
+  });
+
+  it('rejects for a problem that is not there, adding nothing', async () => {
+    const { storage, importer, problem, dieHard } = await failedDieHard();
+    importer.dismiss(problem.id);
+
+    await expect(
+      importer.resolve(problem.id, dieHardForm(dieHard))
+    ).rejects.toBeInstanceOf(ProblemNotFoundError);
+
+    expect(byTitle(storage)['Die Hard']).toBeUndefined();
+  });
+
+  it('rejects when there is no run', async () => {
+    const { importer, root } = sandbox();
+
+    await expect(
+      importer.resolve('p1', dieHardForm(join(root, 'Die.Hard.1988.1080p')))
+    ).rejects.toBeInstanceOf(ProblemNotFoundError);
+  });
+
+  it('leaves no folder behind and keeps the problem when the copy fails', async () => {
+    const { importer, media, problem, dieHard } = await failedDieHard();
+
+    await expect(
+      importer.resolve(problem.id, {
+        ...dieHardForm(dieHard),
+        poster: { found: join(dieHard, 'no-such-poster.jpg') },
+      })
+    ).rejects.toThrow();
+
+    expect(folders(media)).toEqual(['amelie-2001']);
+    expect(importer.current()?.problems).toEqual([problem]);
+  });
+
+  it('changes nothing under the library root', async () => {
+    const { importer, root, problem, dieHard } = await failedDieHard();
+    const before = treeOf(root);
+
+    await importer.resolve(problem.id, dieHardForm(dieHard));
+
+    expect(treeOf(root)).toEqual(before);
   });
 });

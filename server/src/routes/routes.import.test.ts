@@ -15,10 +15,19 @@
 // `DELETE /api/import/current/problems/:id` (the **Review step**'s _Skip_:
 // `204`, then `404` for the same id), and one guard on a route that already
 // existed: `POST /api/movies` keeps accepting bytes only, whatever a path
-// field says.
+// field says. Issue #130 adds the two routes of **Resolve**:
+// `GET /api/import/current/problems/:id` (the **Problem detail**, or `404`)
+// and `POST /api/import/current/problems/:id/resolve` (_Save & continue_:
+// the form's multipart, a **Found file** copied only from under the root).
 
 import express from 'express';
-import { cpSync, mkdirSync, readdirSync, writeFileSync } from 'node:fs';
+import {
+  cpSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  writeFileSync,
+} from 'node:fs';
 import type { Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { join } from 'node:path';
@@ -34,7 +43,12 @@ import { createMedia, type Media } from '../media/createMedia/createMedia';
 import { createPlayback } from '../playback/createPlayback/createPlayback';
 import { createSqliteStorage, type LibraryStorage } from '../library';
 import { sandboxRoot } from '../test-support/sandboxRoot/sandboxRoot';
-import type { ImportRun, Movie } from '@/types';
+import type {
+  ImportProblem,
+  ImportProblemDetail,
+  ImportRun,
+  Movie,
+} from '@/types';
 
 const FIXTURE = fileURLToPath(
   new URL('../import-export/createImporter/fixture/', import.meta.url)
@@ -704,5 +718,379 @@ describe('DELETE /api/import/current/problems/:id', () => {
     expect(response.status).toBe(404);
     expect(await response.json()).toMatchObject({ error: expect.any(String) });
     expect(dismiss).toHaveBeenCalledWith('p1');
+  });
+});
+
+// --- 13 — Bulk import, Phase 5: Resolve — the found file and the resolve route (issue #130)
+//
+// Two routes for one **Problem**. `GET …/problems/:id` answers the **Problem
+// detail** the form prefills from, or `404`. `POST …/problems/:id/resolve` is
+// _Save & continue_: the form's own multipart encoding, parsed by the same
+// reader the movie routes use, a **Found file** arriving as the path field
+// the edit route already reads for a **Stored file** and a picked one as
+// bytes. It is the only route in the app that accepts a path — and it copies
+// from under the **Current run**'s root and nowhere else: a path outside it
+// is a `400` with nothing copied. `201` with the movie, and the problem gone
+// from `current`.
+
+const getProblem = (baseUrl: string, id: string) =>
+  fetch(`${baseUrl}/api/import/current/problems/${encodeURIComponent(id)}`);
+
+/** _Save & continue_ over the wire: the parts as the form appends them, in order. */
+function postResolve(
+  baseUrl: string,
+  id: string,
+  parts: [name: string, value: string | File][]
+): Promise<Response> {
+  const body = new FormData();
+  for (const [name, value] of parts) {
+    body.append(name, value);
+  }
+  return fetch(
+    `${baseUrl}/api/import/current/problems/${encodeURIComponent(id)}/resolve`,
+    { method: 'POST', body }
+  );
+}
+
+/**
+ * A `Media` whose copy of the one source file whose path ends in `filename`
+ * throws once, then goes through — what leaves Die Hard behind as a `failed`
+ * problem and still lets Resolve copy the same file afterwards.
+ */
+function failOnceSeam(filename: string): (real: Media) => Media {
+  let failed = false;
+  return (real) => ({
+    ...real,
+    copyIn: async (folder, source) => {
+      if (!failed && source.endsWith(filename)) {
+        failed = true;
+        throw new Error('EBUSY: resource busy or locked');
+      }
+      return real.copyIn(folder, source);
+    },
+  });
+}
+
+/** An API whose run has left Die Hard behind as a `failed` problem. */
+async function failedDieHardApi(): Promise<
+  ReturnType<typeof freshApi> & { problem: ImportProblem; dieHard: string }
+> {
+  const api = freshApi({ seam: failOnceSeam('Die.Hard.1988.1080p.mp4') });
+  await postImport(api.baseUrl, { sheetPath: api.sheet, rootPath: api.root });
+  const run = await untilReview(api.baseUrl);
+  const problem = run.problems.find((p) => p.kind === 'failed');
+  if (problem === undefined) {
+    throw new Error(`no failed problem: ${JSON.stringify(run.problems)}`);
+  }
+  return { ...api, problem, dieHard: join(api.root, 'Die.Hard.1988.1080p') };
+}
+
+/** The fields of the form, as `movieFormData` sends them for the fixture's Die Hard. */
+const dieHardFields = (): [string, string][] => [
+  ['title', 'Die Hard'],
+  ['year', '1988'],
+  ['director', 'John McTiernan'],
+  [
+    'description',
+    'A New York cop takes on a tower full of thieves on Christmas Eve.',
+  ],
+  ['rating', '8'],
+  ['genre', 'Action'],
+  ['genre', 'Thriller'],
+  ['cast', 'Bruce Willis'],
+  ['cast', 'Alan Rickman'],
+];
+
+/** Every file under the managed directory, by name, in any folder. */
+const managedFiles = (media: string): string[] =>
+  readdirSync(media, { recursive: true })
+    .map((entry) => String(entry).split('\\').join('/'))
+    .filter((entry) => entry.includes('/'))
+    .sort();
+
+describe('GET /api/import/current/problems/:id', () => {
+  it('answers 200 with the detail: row, folder, candidates and files', async () => {
+    const { baseUrl, problem, dieHard } = await failedDieHardApi();
+
+    const response = await getProblem(baseUrl, problem.id);
+
+    expect(response.status).toBe(200);
+    const detail = (await response.json()) as ImportProblemDetail;
+    expect(detail).toMatchObject({
+      id: problem.id,
+      kind: 'failed',
+      title: 'Die Hard',
+      row: {
+        title: 'Die Hard',
+        year: 1988,
+        genres: ['Action', 'Thriller'],
+        director: 'John McTiernan',
+        cast: ['Bruce Willis', 'Alan Rickman'],
+        rating: 8,
+      },
+      folder: dieHard,
+      candidates: [],
+      files: {
+        video: join(dieHard, 'Die.Hard.1988.1080p.mp4'),
+        poster: join(dieHard, 'poster.jpg'),
+        backdrop: join(dieHard, 'fanart.jpg'),
+        subtitles: [
+          {
+            path: join(dieHard, 'Die.Hard.1988.1080p.en.srt'),
+            language: 'English',
+          },
+          {
+            path: join(dieHard, 'Die.Hard.1988.1080p.pt.srt'),
+            language: 'Portuguese',
+          },
+        ],
+      },
+    });
+  });
+
+  it('answers 404 for an id that never was', async () => {
+    const { baseUrl } = await failedDieHardApi();
+
+    const response = await getProblem(baseUrl, 'no-such-problem');
+
+    expect(response.status).toBe(404);
+    expect(await response.json()).toMatchObject({ error: expect.any(String) });
+  });
+
+  it('answers 404 for a problem already dismissed', async () => {
+    const { baseUrl, problem } = await failedDieHardApi();
+    await deleteProblem(baseUrl, problem.id);
+
+    const response = await getProblem(baseUrl, problem.id);
+
+    expect(response.status).toBe(404);
+    expect(await response.json()).toMatchObject({ error: expect.any(String) });
+  });
+
+  it('answers 404 when there is no run', async () => {
+    const { baseUrl } = freshApi();
+
+    const response = await getProblem(baseUrl, 'p1');
+
+    // The route's own 404, with a reason — not Express's page for a route
+    // that does not exist.
+    expect(response.status).toBe(404);
+    expect(await response.json()).toMatchObject({ error: expect.any(String) });
+  });
+
+  it('answers the detail from the injected importer’s own problem, by the id in the path', async () => {
+    const detail: ImportProblemDetail = {
+      id: 'p 1/x',
+      kind: 'no-folder',
+      title: 'The Lantern Keeper',
+      reason: 'No folder found matching this spreadsheet row.',
+      row: { title: 'The Lantern Keeper', year: 2019, genres: ['Drama'] },
+      candidates: [],
+      files: { subtitles: [] },
+    };
+    const problem = vi.fn<Importer['problem']>().mockReturnValue(detail);
+    const { baseUrl } = freshApi({
+      importer: (composed) => ({ ...composed, problem }),
+    });
+
+    const response = await getProblem(baseUrl, 'p 1/x');
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual(detail);
+    expect(problem).toHaveBeenCalledWith('p 1/x');
+  });
+});
+
+describe('POST /api/import/current/problems/:id/resolve', () => {
+  it('answers 201 with the movie, and the found file is in the managed directory', async () => {
+    const { baseUrl, media, problem, dieHard } = await failedDieHardApi();
+
+    const response = await postResolve(baseUrl, problem.id, [
+      ...dieHardFields(),
+      ['videoPath', join(dieHard, 'Die.Hard.1988.1080p.mp4')],
+      ['posterPath', join(dieHard, 'poster.jpg')],
+      ['subtitleLanguage', 'English'],
+      ['subtitlePath', join(dieHard, 'Die.Hard.1988.1080p.en.srt')],
+      ['subtitleLanguage', 'Portuguese'],
+      ['subtitlePath', join(dieHard, 'Die.Hard.1988.1080p.pt.srt')],
+    ]);
+
+    expect(response.status).toBe(201);
+    const movie = (await response.json()) as Movie;
+    expect(movie).toMatchObject({
+      title: 'Die Hard',
+      year: 1988,
+      director: 'John McTiernan',
+      cast: ['Bruce Willis', 'Alan Rickman'],
+      rating: 8,
+      videoPath: 'die-hard-1988/Die.Hard.1988.1080p.mp4',
+      posterPath: 'die-hard-1988/poster.jpg',
+    });
+    expect(movie.genres.map((genre) => genre.name).sort()).toEqual([
+      'Action',
+      'Thriller',
+    ]);
+    expect(
+      movie.subtitles.map((track) => [track.path, track.language])
+    ).toEqual([
+      ['die-hard-1988/Die.Hard.1988.1080p.en.srt', 'English'],
+      ['die-hard-1988/Die.Hard.1988.1080p.pt.srt', 'Portuguese'],
+    ]);
+    expect(readFileSync(join(media, movie.videoPath))).toEqual(
+      readFileSync(join(dieHard, 'Die.Hard.1988.1080p.mp4'))
+    );
+    expect(managedFiles(media)).toContain('die-hard-1988/poster.jpg');
+  });
+
+  it('serves the resolved film off the same wire as every other one', async () => {
+    const { baseUrl, problem, dieHard } = await failedDieHardApi();
+    const created = (await (
+      await postResolve(baseUrl, problem.id, [
+        ...dieHardFields(),
+        ['videoPath', join(dieHard, 'Die.Hard.1988.1080p.mp4')],
+      ])
+    ).json()) as Movie;
+
+    const detail = await fetch(`${baseUrl}/api/movies/${created.id}`);
+
+    expect(detail.status).toBe(200);
+    expect(((await detail.json()) as Movie).title).toBe('Die Hard');
+  });
+
+  it('takes a picked file as bytes beside a found one as a path', async () => {
+    const { baseUrl, media, problem, dieHard } = await failedDieHardApi();
+
+    const response = await postResolve(baseUrl, problem.id, [
+      ...dieHardFields(),
+      ['videoPath', join(dieHard, 'Die.Hard.1988.1080p.mp4')],
+      [
+        'poster',
+        new File([new Uint8Array([0xff, 0xd8, 0xff])], 'better-poster.jpg', {
+          type: 'image/jpeg',
+        }),
+      ],
+    ]);
+
+    expect(response.status).toBe(201);
+    const movie = (await response.json()) as Movie;
+    expect(movie.videoPath).toBe('die-hard-1988/Die.Hard.1988.1080p.mp4');
+    expect(movie.posterPath).toBe('die-hard-1988/better-poster.jpg');
+    expect(readFileSync(join(media, movie.posterPath ?? ''))).toEqual(
+      Buffer.from([0xff, 0xd8, 0xff])
+    );
+  });
+
+  it('answers 400 for a found path outside the root, with nothing copied', async () => {
+    const { baseUrl, media, problem, scratch } = await failedDieHardApi();
+    const outside = join(scratch, 'elsewhere.mp4');
+    writeFileSync(outside, 'not the family’s');
+
+    const response = await postResolve(baseUrl, problem.id, [
+      ...dieHardFields(),
+      ['videoPath', outside],
+    ]);
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toMatchObject({ error: expect.any(String) });
+    expect(readdirSync(media).sort()).toEqual(['amelie-2001']);
+    const movies = (await (await fetch(`${baseUrl}/api/movies`)).json()) as {
+      title: string;
+    }[];
+    expect(movies.map((movie) => movie.title)).toEqual(['Amélie']);
+    // And the problem is still listed: a refused save is a save not made.
+    const after = (await (await getCurrent(baseUrl)).json()) as ImportRun;
+    expect(after.problems.map((p) => p.id)).toEqual([problem.id]);
+  });
+
+  it('refuses a poster or a subtitle outside the root as firmly as the video', async () => {
+    const { baseUrl, media, problem, dieHard, scratch } =
+      await failedDieHardApi();
+    writeFileSync(join(scratch, 'elsewhere.srt'), '');
+
+    const response = await postResolve(baseUrl, problem.id, [
+      ...dieHardFields(),
+      ['videoPath', join(dieHard, 'Die.Hard.1988.1080p.mp4')],
+      ['subtitleLanguage', 'English'],
+      ['subtitlePath', join(scratch, 'elsewhere.srt')],
+    ]);
+
+    // The film named inside the root is not copied either: a refusal copies
+    // nothing at all.
+    expect(response.status).toBe(400);
+    expect(readdirSync(media).sort()).toEqual(['amelie-2001']);
+  });
+
+  it('dismisses the problem on 201: current no longer lists it', async () => {
+    const { baseUrl, problem, dieHard } = await failedDieHardApi();
+
+    const response = await postResolve(baseUrl, problem.id, [
+      ...dieHardFields(),
+      ['videoPath', join(dieHard, 'Die.Hard.1988.1080p.mp4')],
+    ]);
+
+    expect(response.status).toBe(201);
+    const after = (await (await getCurrent(baseUrl)).json()) as ImportRun;
+    expect(after.problems).toEqual([]);
+    expect((await getProblem(baseUrl, problem.id)).status).toBe(404);
+  });
+
+  it('answers 400 on the form’s own refusals — an untitled body', async () => {
+    const { baseUrl, media, problem, dieHard } = await failedDieHardApi();
+
+    const response = await postResolve(baseUrl, problem.id, [
+      ['title', '   '],
+      ['videoPath', join(dieHard, 'Die.Hard.1988.1080p.mp4')],
+    ]);
+
+    // The gate is still a title and a film, read by the same reader the
+    // movie routes use; and a refused save copies nothing.
+    expect(response.status).toBe(400);
+    expect(readdirSync(media).sort()).toEqual(['amelie-2001']);
+  });
+
+  it('answers 404 for a problem that is not there, copying nothing', async () => {
+    const { baseUrl, media, problem, dieHard } = await failedDieHardApi();
+    await deleteProblem(baseUrl, problem.id);
+
+    const response = await postResolve(baseUrl, problem.id, [
+      ...dieHardFields(),
+      ['videoPath', join(dieHard, 'Die.Hard.1988.1080p.mp4')],
+    ]);
+
+    expect(response.status).toBe(404);
+    expect(await response.json()).toMatchObject({ error: expect.any(String) });
+    expect(readdirSync(media).sort()).toEqual(['amelie-2001']);
+  });
+
+  it('answers 404 when there is no run', async () => {
+    const { baseUrl, root } = freshApi();
+
+    const response = await postResolve(baseUrl, 'p1', [
+      ...dieHardFields(),
+      [
+        'videoPath',
+        join(root, 'Die.Hard.1988.1080p', 'Die.Hard.1988.1080p.mp4'),
+      ],
+    ]);
+
+    // The route's own 404, with a reason — not Express's page for a route
+    // that does not exist.
+    expect(response.status).toBe(404);
+    expect(await response.json()).toMatchObject({ error: expect.any(String) });
+  });
+
+  it('answers 400 for a body that is not multipart', async () => {
+    const { baseUrl, problem } = await failedDieHardApi();
+
+    const response = await fetch(
+      `${baseUrl}/api/import/current/problems/${problem.id}/resolve`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: 'Die Hard' }),
+      }
+    );
+
+    expect(response.status).toBe(400);
   });
 });
