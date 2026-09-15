@@ -290,8 +290,8 @@ Builds the installer and publishes it to GitHub Releases automatically.
 | Add Movie — manual file picker                      | ✅ Done         |
 | Edit a movie — amend metadata and files             | ✅ Done         |
 | Delete a movie — from the ⋯ menu, with confirmation | ✅ Done         |
-| Bulk import (Excel/CSV → library)                   | 🔜 Planned      |
-| Import progress console (scan/import, live log)     | 🔜 Planned      |
+| Bulk import (Excel/CSV → library)                   | ✅ Done         |
+| Import progress console (scan/import, live log)     | ✅ Done         |
 | Export (library → CSV/Excel)                        | 🔜 Planned      |
 | Settings hub (Library / Playback / Storage / About) | 🔜 Planned      |
 | Codec manager (view + add codec packs)              | 🔜 Planned      |

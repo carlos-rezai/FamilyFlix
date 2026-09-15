@@ -674,8 +674,8 @@ same layout, spacing, states, copy, and interaction.
 - ✅ **Add a movie** — manual file picker (video, poster, multiple subtitles with language).
 - ✅ **Edit a movie** — amend metadata and files; a file the library already holds travels as its path, only a freshly picked one as bytes.
 - ✅ **Delete a movie** — the ⋯ menu’s Danger row, the Delete dialog, `DELETE /api/movies/:id`, then the Movie folder under best-effort cleanup.
-- 🔜 **Bulk import** — spreadsheet → folder matching → review of flagged rows.
-- 🔜 **Import progress console** — scan + import phases, live activity log, cancel (Windows-installer style).
+- ✅ **Bulk import** — a Sheet and a Library root become Movies during the run; the Review step lists only the Problems the run could not settle, each with Resolve (the Movie form in Import context) and Skip.
+- ✅ **Import progress console** — the Connect ✓ → Scan → Import stepper, the bar, the current item, elapsed and ETA, the Activity log, and Cancel; a server run polled every 500 ms, re-attachable.
 - 🔜 **Export** — write the library out to CSV / Excel.
 
 ### Settings hub
