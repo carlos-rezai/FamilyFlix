@@ -18,7 +18,6 @@ import { derivedRuntime } from '../playback/derivedRuntime/derivedRuntime';
 import { isRatingValue, MAX_RATING } from './isRatingValue/isRatingValue';
 import {
   collectUploads,
-  DEFAULT_SUBTITLE_LANGUAGE,
   readMovieFields,
   subtitleRows,
 } from './movieFormBody/movieFormBody';
@@ -574,22 +573,17 @@ export function createApiRouter(
     }
     const { title, year, director, synopsis, rating, cast, genres } = read;
 
-    // The third list, and the one read pairwise: one `subtitleLanguage` field
-    // per `subtitle` part, in the same order, so the i-th language belongs to
-    // the i-th file. Nothing is parsed and no index is spelled into a part
-    // name — two repeated names travelling in step is what a form has always
-    // sent a pair of columns as.
+    // The third list, paired by the body reader as the edit's is: the form
+    // sends an empty `subtitlePath` for every picked track on the add as on
+    // the edit, so it is the same read with the path column always empty.
+    // **Bytes only**, on this route: a row that named a path instead is not a
+    // track here, whatever the path says, and is left out rather than read.
     const subtitles: NewSubtitle[] = [];
-    uploads.subtitles.forEach((path, index) => {
-      // A slot whose write never landed is no track; every one that arrived is
-      // filled by the time the body has been read.
-      if (path !== undefined) {
-        subtitles.push({
-          path,
-          language: read.languages[index] ?? DEFAULT_SUBTITLE_LANGUAGE,
-        });
+    for (const row of subtitleRows(fields, uploads, read.languages)) {
+      if ('stored' in row) {
+        subtitles.push({ path: row.stored, language: row.language });
       }
-    });
+    }
 
     // Nothing is refused after this point, so this is where the folder stops
     // being the one a part needed and becomes the one the movie is called. A
