@@ -1385,34 +1385,17 @@ export function createApiRouter(
       }
       const poster = slot(uploads.poster, onlyField(fields, 'posterPath'));
 
-      // The tracks, pairwise off the two fields with the parts threaded
-      // through them exactly as the edit reads them: the i-th language belongs
-      // to the i-th path, and an **empty path** is a row whose file arrived as
-      // bytes instead.
-      const foundPaths = fields.subtitlePath ?? [];
-      const picked = uploads.subtitles.filter(
-        (path): path is string => path !== undefined
-      );
-      const subtitles: ResolveForm['subtitles'] = [];
-      const rows = Math.max(
-        read.languages.length,
-        foundPaths.length,
-        picked.length
-      );
-      for (let row = 0; row < rows; row += 1) {
-        const found = foundPaths[row];
-        const file: ResolveFile | null =
-          found === undefined || found === ''
-            ? slot(picked.shift(), undefined)
-            : { found };
-        if (file === null) {
-          continue;
-        }
-        subtitles.push({
-          file,
-          language: read.languages[row] ?? DEFAULT_SUBTITLE_LANGUAGE,
-        });
-      }
+      // The tracks, paired by the body reader exactly as the edit's are — and
+      // read the other way: a path here is a **Found file** under the root,
+      // not a file the library holds.
+      const subtitles: ResolveForm['subtitles'] = subtitleRows(
+        fields,
+        uploads,
+        read.languages
+      ).map((row) => ({
+        file: 'stored' in row ? { stored: row.stored } : { found: row.path },
+        language: row.language,
+      }));
 
       try {
         res.status(201).json(
