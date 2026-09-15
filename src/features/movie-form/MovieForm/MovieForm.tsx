@@ -38,44 +38,28 @@ import {
 const FIELD_BOX = { height: 48, rounded: false } as const;
 
 /**
- * What the screen calls itself, and what Save says on it — one pair per job,
- * plus what each says instead while the write is in flight.
+ * What the screen calls itself, and what Save says on it, on two independent
+ * axes. The **heading** is the job's alone: an add — with or without the
+ * import's head start — is "Add a movie", and an amendment — a movie the
+ * library already holds, whether opened from its page or from the review's
+ * soft `missing-meta` row — is "Edit details". The **Save pair** is the
+ * context's first: in **Import context** it says what it does to the run,
+ * and outside it the job's own, plus what each says while the write is in
+ * flight.
  *
- * The whole of what the maintainer sees of the difference between the two jobs
- * is here: one URL, one component, and a heading and a button that say which of
- * them is in front of them.
+ * The whole of what the maintainer sees of the difference between the jobs
+ * and the contexts is here: one URL, one component, and a heading and a
+ * button that say which is in front of them.
  */
-const ADD = {
-  heading: 'Add a movie',
-  save: 'Add to library',
-  saving: 'Adding…',
+const HEADING = {
+  add: 'Add a movie',
+  edit: 'Edit details',
 } as const;
 
-const EDIT = {
-  heading: 'Edit details',
-  save: 'Save changes',
-  saving: 'Saving…',
-} as const;
-
-/**
- * The **Import context**'s pair: the heading is still the add's — this is an
- * add, with a head start — and Save says what it does to the run.
- */
-const IMPORT = {
-  heading: 'Add a movie',
-  save: 'Save & continue',
-  saving: 'Saving…',
-} as const;
-
-/**
- * The **Import context** over the **Edit job** (#132): a `missing-meta` row is
- * already in the library, so the heading is the edit's — this is an amendment,
- * reached from the review — and Save still says what it does to the run.
- */
-const IMPORT_EDIT = {
-  heading: 'Edit details',
-  save: 'Save & continue',
-  saving: 'Saving…',
+const SAVE = {
+  add: { save: 'Add to library', saving: 'Adding…' },
+  edit: { save: 'Save changes', saving: 'Saving…' },
+  import: { save: 'Save & continue', saving: 'Saving…' },
 } as const;
 
 /** The other way out, and the one the gate never closes. */
@@ -143,14 +127,8 @@ export function MovieForm() {
     cancel,
   } = useMovieForm();
 
-  const copy =
-    resolving !== null
-      ? editing
-        ? IMPORT_EDIT
-        : IMPORT
-      : editing
-        ? EDIT
-        : ADD;
+  const heading = HEADING[editing ? 'edit' : 'add'];
+  const copy = SAVE[resolving !== null ? 'import' : editing ? 'edit' : 'add'];
 
   return (
     <>
@@ -177,7 +155,7 @@ export function MovieForm() {
         >
           <ChevronLeftIcon size={18} />
         </IconButton>
-        <Heading>{copy.heading}</Heading>
+        <Heading>{heading}</Heading>
       </HeaderRow>
 
       <Lede>
