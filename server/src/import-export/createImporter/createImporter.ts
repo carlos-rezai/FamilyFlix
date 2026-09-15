@@ -288,12 +288,21 @@ async function checkRoot(rootPath: string): Promise<void> {
 }
 
 /**
+ * What joins the two halves of a {@link filmKey}: NUL, because a title key
+ * holds letters, digits and single spaces and a year holds digits, so nothing
+ * in either half can collide with it. Spelled as the escape rather than typed
+ * as the byte, so the source stays text to `grep` and to any editor that
+ * folds control characters.
+ */
+const KEY_SEPARATOR = '\0';
+
+/**
  * What tells a film already in the library apart from a row: its **Title
  * key** and its year, together. The same film under another spelling is the
  * same film; a key-equal film from another year is a remake, and imports.
  */
 const filmKey = (title: string, year: number | null): string =>
-  `${titleKey(title)} ${year ?? ''}`;
+  [titleKey(title), String(year ?? '')].join(KEY_SEPARATOR);
 
 /** A title as the log names it: with its year when the row has one. */
 const titleWithYear = (title: string, year: number | null): string =>
