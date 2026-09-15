@@ -1,4 +1,5 @@
 import type {
+  ImportField,
   ImportProblemDetail,
   ImportRun,
   Movie,
@@ -6,9 +7,6 @@ import type {
 } from '@/types';
 
 import { movieFormData } from '../../movie-form/formValues/formValues';
-
-/** The two fields the **Setup step** has, and the one a refusal names. */
-export type ImportField = 'sheet' | 'root';
 
 /**
  * A start the route refused before any run existed — `400 { error, field }`

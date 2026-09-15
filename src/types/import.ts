@@ -5,6 +5,13 @@
  * `docs/design-logs/13-bulk-import.md`.
  */
 
+/**
+ * The two fields the **Setup step** has, and the one a refusal names: a start
+ * the route refuses before any run exists answers `400 { error, field }`, and
+ * the screen draws the reason under that field.
+ */
+export type ImportField = 'sheet' | 'root';
+
 /** Where a run is: walking the root, copying matches in, or waiting on review. */
 export type ImportPhase = 'scanning' | 'importing' | 'review';
 

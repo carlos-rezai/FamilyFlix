@@ -12,6 +12,7 @@ import { matchRows, type Match } from '../matchRows/matchRows';
 import { readSheet, type SheetRow } from '../readSheet/readSheet';
 import { titleGuess, titleKey } from '../titleKey/titleKey';
 import type {
+  ImportField,
   ImportProblem,
   ImportProblemDetail,
   ImportRun,
@@ -21,9 +22,6 @@ import type {
   NewSubtitle,
   ProblemKind,
 } from '@/types';
-
-/** The two fields the **Setup step** has, and the one a refusal names. */
-export type ImportField = 'sheet' | 'root';
 
 /**
  * A start refused before any run exists, naming the field it refuses on — the

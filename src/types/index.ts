@@ -32,6 +32,7 @@ export type { NewSubtitle, NewMovie, MoviePatch } from './write';
 export type { PlaybackPath, PlaybackRead, Cue } from './playback';
 export type { MovieFormFile, MovieFormSubtitle, MovieFormValues } from './form';
 export type {
+  ImportField,
   ImportPhase,
   LogKind,
   LogLine,
