@@ -11,6 +11,134 @@ Newest entry first.
 
 ---
 
+## 2026-09-15 — Bulk import refactor (issue #135)
+
+Twenty-nine commits against `docs/refactor-plans/13-bulk-import-refactor.md`
+— twenty-two code, seven documents. **3866 tests pass across 202 files**, from
+3857 across 199: six type-shape assertions removed, six added for the subtitle
+pairing, and nine for the two new `test-support/` units. Every other leaf name
+is unchanged — the verbose reporter's list before and after, diffed, shows
+exactly those twenty-one lines. `npm run typecheck` is green and
+`eslint src server` is clean on every commit. No wire changed.
+
+The round was the second `issue-loop` initiative's, and its debt was the kind
+the delete round named at ten times the size: nothing wrong, several things
+spelled twice because two slices each needed them and neither saw the other,
+two wire calls in the wrong feature, and one byte nobody could see. In the
+order the plan took it:
+
+- **The server: one rule spelled once.** `derivedRuntime` moved from
+  `routes/` to `playback/` — a function over `Playback` lives where `Playback`
+  lives — and the importer, which had carried the same eleven lines with a
+  docblock asking for exactly this, now asks it. The three extension lists
+  in two folders became `media/fileKinds`, security docblock and all, with
+  `isPosterFilename` renamed `isImageFilename` because a backdrop is an image
+  the poster slot never sees; the scanner and the walker read it, and one
+  `extname`-based `hasExtension` serves all three. The subtitle pairing left
+  `routes/index.ts` for `movieFormBody` as `subtitleRows`, answering each row
+  as `{ language, stored }` or `{ language, path }` and interpreting neither —
+  the edit reads a path as a **Stored path**, the resolve as a **Found file**,
+  and the add takes only the stored rows, so **bytes only** holds there. The
+  add's subtitle tests passed unchanged, which was the condition the plan set
+  for keeping that commit. `ImportField` is a shared type; `filmKey`'s
+  separator is `'\0'`, and `grep` calls the importer text again.
+- **The frontend: each wire call with its caller.** `dismissProblem` is the
+  fourth call to earn `src/api/`, sent by the Review step's _Skip_ and the
+  form's _Skip this one_. `fetchProblem` and `resolveProblem` moved to
+  `movie-form/api` beside `createMovie` and `updateMovie`, so `movieFormData`
+  is a local import and neither feature reaches into the other's wire any
+  more. `features/maintainer.styles.ts` holds the header row, heading and lede
+  the form and the import flow had spelled identically and Settings nearly so,
+  and the captioned field the form and the setup step had spelled identically;
+  each feature re-exports or extends it. The header, lede and field values
+  were read off the rendered `/add`, `/import` and `/settings` in the browser
+  afterwards — same pixels.
+- **The prototype's own values.** `Button`'s `sm` corner is one shorthand,
+  as `md` and `lg` spell theirs; the longhands' premise (that jsdom never
+  expands the shorthand) was false, and the test reads `borderRadius`. The
+  stepper's dot ink is `colors.bg`. The form's four copy tables are a heading
+  chosen by the job and a Save pair chosen by the context. Five files stopped
+  naming the slice that made them true.
+- **Tests read by behaviour, doubles written once.** `heldCopy` is the seam
+  both import suites had written, forwarding every argument — the route
+  suite's copy dropped the cancel signal, which its own test now pins.
+  `libraryFixture` copies the importer's fixture under a sandbox for both.
+  The two `no-row` blocks joined the blocks they belong to, and the
+  `expectTypeOf` block whose `expect`s compared literals to themselves went.
+
+### Decisions taken inside the plan
+
+- **`subtitleRows` answers a discriminated union, not `{ stored?, path? }`.**
+  The plan spelled the row with two optional fields; a union of two required
+  ones says the same thing and lets the resolve's map be a one-line
+  `'stored' in row`, with no `!` or fallback for a row that could be neither.
+- **The add filters to `stored` rows rather than trusting the path column
+  empty.** `movieFormData` always sends it empty on the add, but "bytes only"
+  is a rule about clients this route did not write, and a `subtitlePath` on
+  `POST /api/movies` now produces no track rather than a stored path.
+- **`libraryFixture` takes the sandbox directory rather than minting one.**
+  Both suites already mint a `sandboxRoot` and put a managed directory and a
+  scratch folder beside the root; a helper that minted its own would have put
+  the root in a second temp directory for no reason.
+- **`hasExtension` is `extname`-based for the route's two predicates too.**
+  The scanner's spelling, not the route's `endsWith`: a bare dotfile called
+  `.png` is now refused rather than passed, which is the stricter reading of
+  "what the file is called" and is what the double-extension test was already
+  saying.
+
+### What the browser pass reached
+
+The three furniture commits have no automated test, on every pixel round's
+footing. After the third, `/add`, `/import` and `/settings` were opened in the
+browser and the heading (serif, 30px, 600), the header row (flex, 16px gap,
+8px below — Settings' own 6px), the lede (`0 0 28px 58px`, 15px) and the
+captioned field (a `label`, 13px/600/0.2px caption, 8px under) read off the
+computed styles. Every value matched.
+
+### Deliberately not changed
+
+- **`importRun/` is not extracted**, for the reason the build entry gives and
+  the plan's decision document restates.
+- **`isUnder` stays lexical.** A symlink under the library root pointing
+  outside it would be copied from; tightening it is a behaviour change with
+  its own test, and lifting the containment rule into one module both domains
+  import is a round that owns both. Filed below.
+- **The language pool stays spelled on both sides** — the seven names in
+  `MovieFormFiles` and in `detectSubtitleLanguage`, `'English'` in three
+  places — until the settings hub's subtitle preference makes it a wire value
+  and a runtime import across build targets is taken deliberately.
+- **`useMovieForm` keeps its four-way save**, one expression with four
+  one-line arms; the copy tables were different because two axes had been
+  written out as their product.
+- **The phase banners in the test files stay**; what moved was behaviour
+  split across two `describe`s by a build boundary.
+- **The example dialogue in the glossary** still has the maintainer asking
+  for `copyFile`; the **Copy-in** row says what the build chose and why. The
+  dialogue is a record of what was said.
+
+### Follow-ups this refactor surfaced
+
+- **A backdrop on a resolved movie.** The problem detail carries
+  `files.backdrop`, the form has no backdrop slot, and the resolve route reads
+  none — a film the run would have given a backdrop loses it when resolved by
+  hand. A behaviour gap for the user to file.
+- **`isUnder`'s symlink leniency**, above.
+- **A shared listening-API harness.** `routes.test.ts` and
+  `routes.import.test.ts` each build an Express app on an ephemeral port with
+  their own `servers` array and `afterEach`. A project-wide round, like the
+  fetch double the delete plan declined and this one declines again.
+- **`routes/index.ts` at ~1430 lines.** This round took the pairing out and
+  added nothing; the next cut is a routes round.
+- **CLAUDE.md is tracked**, since #110. Two earlier journal entries say it is
+  gitignored, and the folder-map commit in this round repeated it before
+  `git ls-files` said otherwise — the map landed in the following commit. The
+  earlier entries are left as they were written.
+- **A lint for control characters in string literals.** The NUL byte is the
+  one finding no rule predicts: nothing in the toolchain objected, only
+  `grep`. Worth a `no-control-regex`-style rule for literals if one exists.
+
+---
+
 ## 2026-09-14 — Bulk import (issues #124–#133)
 
 Seventeen commits across issues #124–#133 over two days, ten slices against
