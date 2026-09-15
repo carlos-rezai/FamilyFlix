@@ -11,6 +11,116 @@ Newest entry first.
 
 ---
 
+## 2026-09-14 — Bulk import (issues #124–#133)
+
+Seventeen commits across issues #124–#133 over two days, ten slices against
+the plan on #123, built from `docs/design-logs/13-bulk-import.md`. **3857
+tests pass across 199 files**, up from 3161 across 176. `npm run typecheck` is
+green and `eslint src server` is clean on every commit. The largest initiative
+so far, and the second driven end to end by `issue-loop`: one fresh subagent
+per step, six RED commits through the commit gate without `--no-verify`, and
+the loop stopping where it was told to — at 134, the docs slice, which is
+folded into the refactor filed as 135.
+
+**Bulk import is _not_ ticked** in the feature table, and neither is the
+import progress console. The rule holds: ✅ when the refactor closes, not when
+the build issues do.
+
+### What shipped
+
+- **`server/src/import-export/`, the domain CLAUDE.md had given a job to and
+  nothing had built.** Four units: `readSheet` (`.xlsx` and `.csv` by
+  extension, the first worksheet, headers through a synonym table), `titleKey`
+  (pure: the normalised form matching compares, and `titleGuess` for a folder
+  with no row), `matchRows` (pure: rows × folder scans → matches, problems by
+  kind, unclaimed folders) and `createImporter` — the injected domain, fifth
+  router argument after `media`, holding one **Current run** in memory:
+  `start`, `current`, `cancel`, `problem`, `resolve`, `dismiss`.
+- **Three `media/` units and one method.** `walkLibraryRoot` (a folder holding
+  a video is a **Source folder** and is not descended; one holding none is;
+  an unreadable one is reported and skipped), `scanMovieFolder` (every video,
+  the poster by name over the first image, the backdrop by name only, every
+  subtitle with its language), `detectSubtitleLanguage` (the tag table), and
+  `Media.copyIn(folder, sourcePath, signal)` — a stream piped under the cancel
+  signal rather than `fs.copyFile`, so a 12 GB copy can be stopped partway
+  and the folder rolled back.
+- **Six routes**: `POST /api/import` (`400 { error, field }` naming the
+  **Setup step**'s field, `409` while a run exists), `GET /api/import/current`
+  (the snapshot every 500 ms poll reads), `POST …/cancel`, and under
+  `…/problems/:id` a `GET` for the **Problem detail**, a `DELETE` for _Skip_
+  and a `POST …/resolve` — the one route in the app that accepts a path, and
+  only a path under the Current run's root.
+- **The screen.** `pages/ImportPage` on `MaintainerLayout`;
+  `features/import-export/` with `ImportFlow` owning `useImportRun` and
+  rendering one of `ImportSetup`, `ImportProgress` and `ImportReview`; the
+  molecules `PhaseStepper`, `StatTile` and `ProblemRow`; the pure
+  `importView`; and `components/LogConsole`, the pinned-to-bottom activity
+  log. `TextField` gained `mono` and the sheet and folder glyphs; `Button`
+  gained `sm` for the review rows.
+- **The Settings entry.** `LibrarySection` with its two `ActionRow`s — _Add a
+  movie_ and _Import from spreadsheet_ — owning its routes as `SettingsHeader`
+  owns its one. No export row until export ships.
+- **The Movie form's third job.** **Import context**: `/add?problem=<id>`
+  prefilled from the **Sheet row** and the **Source folder**'s **Found
+  files**, the accent banner, _Save & continue_ and _Skip this one_; and for
+  the soft kind, `/add?movie=<id>&problem=<pid>` — an edit of the movie the
+  run already added, closing the problem on save. A **Found file** is the
+  third kind of slot after **Stored** and **Picked**, and travels as an
+  absolute path the server refuses unless it is under the root.
+- **The seed went** in #127, the commit after the two slices that made a
+  fixture import stand in for it. Its own journal entry is below.
+
+### Decisions the build took inside the log
+
+- **The domain is four units, not the five the log sketched.** `importRun/`
+  — the state machine one run walks — became closures inside
+  `createImporter` over the run, the sources map and the abort controller,
+  rather than a unit of its own. Pulling it out would pass all three across a
+  seam nobody else uses, to be tested through the same `start` → `current`
+  walk it is tested through now. The refactor plan rules the same way, with
+  the reasoning written there.
+- **The Problem detail is not on the snapshot.** What the run knew when it
+  filed a problem — the row, the folder, an `ambiguous`'s candidates — sits
+  beside the snapshot and is read by `GET …/problems/:id` once, when a form
+  opens. A thousand scans on every poll would have been the wire cost of a
+  detail one form reads.
+- **`ambiguous` prefills the first candidate**, as the log's trade-offs
+  accepted; a wrong first guess costs a Remove and a hand-pick.
+- **A `no-video` folder holding two videos reports both** and the detail
+  guesses neither; the maintainer picks.
+- **A cancel resolves once the run has stopped and its folder is gone**, so
+  a start after it never races a rollback. The route suite holds one copy
+  open to prove it.
+
+### Deliberately not built
+
+- **A backdrop on a resolved movie.** The detail carries `files.backdrop`,
+  but the form has no backdrop slot, so a film the run would have given a
+  backdrop loses it when resolved by hand. A behaviour gap the prototype does
+  not design a slot for; named for the user to file.
+- **A chooser for `ambiguous`**, a native folder dialog, SSE, a snackbar for a
+  backgrounded run, TMDB or any network, a move — every one ruled out in the
+  log and left ruled out.
+- **`isUnder` as a real-path check.** The resolve route's containment uses
+  `path.relative`, lexically, so a symlink under the library root pointing
+  outside it would be copied from. `mediaFilePath` and `containedFolder`
+  resolve real paths. A tightening is a behaviour change with its own test,
+  and lifting the containment rule into one module both domains import is a
+  round that owns both; left, and named on 135.
+
+### Follow-ups
+
+The refactor plan, filed as 135 and folding 134 in: the runtime derivation
+spelled twice with a docblock asking for the fold, three extension lists in
+two folders, the subtitle pairing spelled twice in `routes/index.ts`, a
+literal U+0000 in `filmKey` that makes `grep` call the importer binary, two
+wire calls in the wrong feature, the Maintainer's header and field styled
+three times, and the two test suites that each wrote the same two doubles.
+Nothing wrong; several things spelled twice because two slices each needed
+them and neither saw the other.
+
+---
+
 ## 2026-09-13 — The seed goes (issue #127)
 
 The promise CLAUDE.md carried since library-core is kept: `server/src/db/seed/`,
