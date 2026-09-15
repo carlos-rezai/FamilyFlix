@@ -878,34 +878,32 @@ describe('GET /api/import/current/problems/:id', () => {
     expect(await response.json()).toEqual(detail);
     expect(problem).toHaveBeenCalledWith('p 1/x');
   });
-});
 
-// --- 13 — Bulk import, Phase 5: the per-kind openings (issue #131) -------------
+  describe('a no-row problem', () => {
+    it('answers the title guessed from the folder name beside the folder’s files', async () => {
+      const { baseUrl, root, sheet } = freshApi();
+      unlistedFolder(root, 'Harbor.Lights.2019');
+      await postImport(baseUrl, { sheetPath: sheet, rootPath: root });
+      const run = await untilReview(baseUrl);
+      const [problem] = run.problems.filter(({ kind }) => kind === 'no-row');
 
-describe('GET /api/import/current/problems/:id — a no-row problem', () => {
-  it('answers the title guessed from the folder name beside the folder’s files', async () => {
-    const { baseUrl, root, sheet } = freshApi();
-    unlistedFolder(root, 'Harbor.Lights.2019');
-    await postImport(baseUrl, { sheetPath: sheet, rootPath: root });
-    const run = await untilReview(baseUrl);
-    const [problem] = run.problems.filter(({ kind }) => kind === 'no-row');
+      const response = await getProblem(baseUrl, problem.id);
 
-    const response = await getProblem(baseUrl, problem.id);
-
-    // Story 84 over the wire: the form reads this row into its title field,
-    // and the folder's one video into its slot.
-    expect(response.status).toBe(200);
-    const detail = (await response.json()) as ImportProblemDetail;
-    expect(detail).toMatchObject({
-      kind: 'no-row',
-      title: 'Harbor.Lights.2019',
-      row: { title: 'Harbor Lights', genres: [] },
-      folder: join(root, 'Harbor.Lights.2019'),
-      candidates: [],
-      files: {
-        video: join(root, 'Harbor.Lights.2019', 'Ironwood.mp4'),
-        subtitles: [],
-      },
+      // Story 84 over the wire: the form reads this row into its title field,
+      // and the folder's one video into its slot.
+      expect(response.status).toBe(200);
+      const detail = (await response.json()) as ImportProblemDetail;
+      expect(detail).toMatchObject({
+        kind: 'no-row',
+        title: 'Harbor.Lights.2019',
+        row: { title: 'Harbor Lights', genres: [] },
+        folder: join(root, 'Harbor.Lights.2019'),
+        candidates: [],
+        files: {
+          video: join(root, 'Harbor.Lights.2019', 'Ironwood.mp4'),
+          subtitles: [],
+        },
+      });
     });
   });
 });
