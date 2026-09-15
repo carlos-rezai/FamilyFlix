@@ -3,9 +3,6 @@ import styled, { css } from 'styled-components';
 /** Where a step is: ticked behind the run, the one the run is on, or still ahead. */
 export type StepState = 'done' | 'active' | 'pending';
 
-/** The prototype's ink on a coloured dot: `bg`, so the tick reads on green and accent alike. */
-const DOT_INK = '#14110d';
-
 /** The row of three, set the prototype's 26px over the headline. */
 export const Steps = styled.div`
   display: flex;
@@ -36,12 +33,14 @@ export const Dot = styled.div<{ $state: StepState }>`
       case 'done':
         return css`
           background: ${theme.colors.watched};
-          color: ${DOT_INK};
+          /* The ink on a coloured dot is the page background, so the tick
+             reads on green and accent alike. */
+          color: ${theme.colors.bg};
         `;
       case 'active':
         return css`
           background: ${theme.colors.accent};
-          color: ${DOT_INK};
+          color: ${theme.colors.bg};
         `;
       case 'pending':
         return css`
