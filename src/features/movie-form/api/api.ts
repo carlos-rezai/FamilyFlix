@@ -1,4 +1,10 @@
-import type { Genre, GenrePoolPayload, Movie, MovieFormValues } from '@/types';
+import type {
+  Genre,
+  GenrePoolPayload,
+  ImportProblemDetail,
+  Movie,
+  MovieFormValues,
+} from '@/types';
 
 import { movieFormData } from '../formValues/formValues';
 
@@ -11,6 +17,20 @@ const movieEndpoint = (id: string) =>
 
 /** Where the genres a film may be filed under are read — not the genre list. */
 const GENRE_POOL_ENDPOINT = '/api/genres/pool';
+
+/**
+ * A resolve the route refused because the **Problem** is gone — the `404`:
+ * dismissed meanwhile, or the run itself gone. The one refusal the form does
+ * not stay standing for, because there is nothing left to resolve: it falls
+ * back to the plain **Add context**, as the stale link does. Told apart from
+ * a `500` and a broken request, which stay plain errors.
+ */
+export class ProblemGoneError extends Error {
+  constructor(readonly id: string) {
+    super(`No such problem: ${id}`);
+    this.name = 'ProblemGoneError';
+  }
+}
 
 /** The two verbs the form saves with, and the only two it ever will. */
 type SaveMethod = 'POST' | 'PATCH';
@@ -112,4 +132,68 @@ export async function fetchGenrePool(): Promise<Genre[]> {
   }
 
   return ((await response.json()) as GenrePoolPayload).genres;
+}
+
+/** The route of one **Problem**, its id encoded into the path. */
+const problemEndpoint = (id: string): string =>
+  `/api/import/current/problems/${encodeURIComponent(id)}`;
+
+/**
+ * The **Problem detail** _Resolve_ prefills the **Movie form** from — the
+ * problem, the **Sheet row**, the matched **Source folder** and its **Found
+ * files** — or `null` on the `404`. A problem that is gone — dismissed, or the
+ * run with it — is the signal to fall back to the plain **Add context**, not a
+ * failure; a `500` and a request that could not be made reject.
+ */
+export async function fetchProblem(
+  id: string
+): Promise<ImportProblemDetail | null> {
+  const endpoint = problemEndpoint(id);
+  const response = await fetch(endpoint);
+
+  if (response.status === 404) {
+    return null;
+  }
+  if (!response.ok) {
+    throw new Error(`GET ${endpoint} failed: ${response.status}`);
+  }
+
+  return (await response.json()) as ImportProblemDetail;
+}
+
+/**
+ * _Save & continue_: the form's own multipart encoding — `movieFormData`'s,
+ * with every **Found file** as its path and a picked one as bytes — posted to
+ * the problem's own resolve route, and the movie the `201` answers with.
+ *
+ * The one save in the app that is not `createMovie` or `updateMovie`, because
+ * it is the one route that may be handed a path: the general `POST
+ * /api/movies` accepts bytes only, and keeps doing so. No `Content-Type` is
+ * set, for `sendMovie`'s reason — the boundary is the platform's.
+ *
+ * Rejects on anything but the `201`. A problem that is gone — the `404` —
+ * rejects with {@link ProblemGoneError}, the signal to fall back to adding;
+ * everything else — a path outside the root, an untitled body, a `500`, a
+ * request that could not be made — rejects with a plain `Error`, and the
+ * form's honest answer to any of those is to still be standing with
+ * everything in it.
+ */
+export async function resolveProblem(
+  id: string,
+  values: MovieFormValues
+): Promise<Movie> {
+  const endpoint = `${problemEndpoint(id)}/resolve`;
+  const response = await fetch(endpoint, {
+    method: 'POST',
+    body: movieFormData(values),
+  });
+
+  if (response.status === 404) {
+    throw new ProblemGoneError(id);
+  }
+  if (!response.ok) {
+    throw new Error(`POST ${endpoint} failed: ${response.status}`);
+  }
+
+  return (await response.json()) as Movie;
 }

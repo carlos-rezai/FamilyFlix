@@ -6,11 +6,12 @@ import { fetchMovie } from '@/api/fetchMovie/fetchMovie';
 import { useGoBack } from '@/hooks/useGoBack/useGoBack';
 import type { MovieFormValues } from '@/types';
 import {
+  createMovie,
   fetchProblem,
   ProblemGoneError,
   resolveProblem,
-} from '../../import-export/api/api';
-import { createMovie, updateMovie } from '../api/api';
+  updateMovie,
+} from '../api/api';
 import {
   movieFormValues,
   otherCandidates,
