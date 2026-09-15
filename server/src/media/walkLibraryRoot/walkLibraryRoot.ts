@@ -2,8 +2,8 @@ import type { Dirent } from 'node:fs';
 import { readdir } from 'node:fs/promises';
 import { join } from 'node:path';
 
+import { isVideoFilename } from '../fileKinds/fileKinds';
 import {
-  isVideoFilename,
   scanMovieFolder,
   type MovieFolderScan,
 } from '../scanMovieFolder/scanMovieFolder';

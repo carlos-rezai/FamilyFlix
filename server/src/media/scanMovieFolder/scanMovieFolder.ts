@@ -2,21 +2,11 @@ import { readdir } from 'node:fs/promises';
 import { basename, extname, join } from 'node:path';
 
 import { detectSubtitleLanguage } from '../detectSubtitleLanguage/detectSubtitleLanguage';
-
-/**
- * What makes a folder a **Source folder**: a file with one of these
- * extensions in it. The list lives here and not in `uploadKinds`, because it is
- * a different rule with a different reason — the form's video slot accepts
- * anything so that `cannot-play` can be a state the player draws, while a
- * scanner deciding which folder on the shelf is a film has to draw a line.
- */
-const VIDEO_EXTENSIONS = ['.mp4', '.mkv', '.avi', '.mov', '.webm'];
-
-/** What an image on the shelf may be called — the same four a **Poster** may. */
-const IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp'];
-
-/** The same four `parseSubtitle/` dispatches on and the picker offers. */
-const SUBTITLE_EXTENSIONS = ['.srt', '.vtt', '.ass', '.sub'];
+import {
+  isImageFilename,
+  isSubtitleFilename,
+  isVideoFilename,
+} from '../fileKinds/fileKinds';
 
 /** The names a folder gives its **Poster**, taken over the first image. */
 const POSTER_NAMES = ['poster', 'folder', 'cover'];
@@ -47,17 +37,9 @@ export interface MovieFolderScan {
   subtitles: SubtitleFound[];
 }
 
-const hasExtension = (filename: string, extensions: string[]): boolean =>
-  extensions.includes(extname(filename).toLowerCase());
-
 /** The name before the extension, lowercased — what `poster.JPG` is called. */
 const stem = (filename: string): string =>
   basename(filename, extname(filename)).toLowerCase();
-
-/** Whether a filename is one the scanner takes for a video. */
-export function isVideoFilename(filename: string): boolean {
-  return hasExtension(filename, VIDEO_EXTENSIONS);
-}
 
 /**
  * Scan one directory for what of a film is in it. Only the files directly
@@ -78,7 +60,7 @@ export async function scanMovieFolder(dir: string): Promise<MovieFolderScan> {
     .map((entry) => entry.name)
     .sort((a, b) => a.localeCompare(b));
 
-  const images = files.filter((file) => hasExtension(file, IMAGE_EXTENSIONS));
+  const images = files.filter(isImageFilename);
   const named = images.find((file) => POSTER_NAMES.includes(stem(file)));
   const backdrop = images.find((file) => BACKDROP_NAMES.includes(stem(file)));
   const poster =
@@ -93,11 +75,9 @@ export async function scanMovieFolder(dir: string): Promise<MovieFolderScan> {
     videos: files.filter(isVideoFilename).map((file) => join(dir, file)),
     poster: at(poster),
     backdrop: at(backdrop),
-    subtitles: files
-      .filter((file) => hasExtension(file, SUBTITLE_EXTENSIONS))
-      .map((file) => ({
-        path: join(dir, file),
-        language: detectSubtitleLanguage(file),
-      })),
+    subtitles: files.filter(isSubtitleFilename).map((file) => ({
+      path: join(dir, file),
+      language: detectSubtitleLanguage(file),
+    })),
   };
 }
