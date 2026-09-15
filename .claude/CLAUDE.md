@@ -108,7 +108,18 @@ familyflix/
 │ ├── routes/ ← HTTP layer only: parse request, call a domain module, return response
 │ ├── library/ ← movie CRUD, SQLite queries, watch-state + resume-position logic
 │ ├── media/ ← folder scanning, file copy into managed storage, subtitle detection, the Movie folder’s removal after a Delete
-│ ├── import-export/ ← Excel/CSV parsing, row-to-folder matching, CSV export
+│ │ ├── createMedia/ ← the injected domain: reserve a Movie folder, storeUpload, copyIn (a stream under the cancel signal), the three removals
+│ │ ├── fileKinds/ ← what an image, a subtitle and a video may be called — the store’s security boundary, and the scanner’s line
+│ │ ├── walkLibraryRoot/ ← a Library root → its Source folders: a folder holding a video is one and is not descended
+│ │ ├── scanMovieFolder/ ← one Source folder → every video, the poster by name, the backdrop by name only, every subtitle
+│ │ ├── detectSubtitleLanguage/ ← the language tag in a subtitle’s name → its language
+│ │ └── movieFolder/ safeFilename/ ← pure: the folder a title and year name; a filename the store will take
+│ ├── import-export/ ← the bulk importer: Excel/CSV parsing, row-to-folder matching, the Current run (CSV export to come)
+│ │ ├── readSheet/ ← .xlsx or .csv by extension, first worksheet, headers through a synonym table → Sheet rows
+│ │ ├── titleKey/ ← pure: the Title key matching compares, and titleGuess for a folder no row names
+│ │ ├── matchRows/ ← pure: rows × folder scans → matches, problems by kind, unclaimed folders
+│ │ ├── createImporter/ ← the injected domain: start, current, cancel, problem, resolve, dismiss — one run in memory, its state machine as closures
+│ │ │ └── fixture/ ← the two-film sheet (.xlsx and .csv) and folder tree the tests run over, and a dev library is filled from
 │ ├── playback/ ← the Playback component, the path choice, streaming, subtitle parsing
 │ │ ├── ffmpegBinary/ ← resolve the component: env var, then PATH, then absent
 │ │ ├── probe/ ← ffprobe wrapper → MediaProbe (container, codecs, duration)
@@ -117,11 +128,14 @@ familyflix/
 │ │ ├── createPlayback/ ← the injected domain: videoFile, read, stream, subtitleFile, cues
 │ │ ├── ffmpegComponent/ ← the injected seam: what this machine can be asked to do
 │ │ ├── mediaFilePath/ ← the under-media-root check between a stored string and an open file
+│ │ ├── derivedRuntime/ ← a Playback and a stored path → the runtime minutes off the bytes, never throwing; the form’s save and the importer both ask it
 │ │ ├── capabilities/ ← Chromium native set ∪ `ffmpeg -decoders`
 │ │ ├── parseSrt/ parseVtt/ parseAss/ parseSub/ ← pure, one format each
 │ │ └── parseSubtitle/ ← dispatch on extension; the last place a format is known
 │ ├── db/ ← SQLite connection + schema/migrations, shared by every domain module above
 │ └── test-support/ ← test doubles shared across server tests, never imported by shipping code
+│ ├── heldCopy/ ← a Media whose first copy waits until released, forwarding the cancel signal
+│ └── libraryFixture/ ← the importer’s fixture copied under a sandbox → { root, sheet }
 ├── src/
 │ ├── App/ ← the router and the app-level providers every page renders inside
 │ ├── assets/ ← images, fonts, icons (static)
@@ -134,13 +148,15 @@ familyflix/
 │ │ └── index.ts
 │ ├── primitives/ ← dumb, reusable UI atoms (Button, Input, Text, Icon, Badge)
 │ │ ├── index.ts ← barrel: re-exports every primitive (only barrel at this rung)
-│ │ └── Button/
+│ │ ├── TextField/ ← the boxed input: a glyph slot (the sheet and folder glyphs among them) and `mono` for a path
+│ │ └── Button/ ← primary / secondary / ghost / danger, at sm (a list row’s pair) / md / lg
 │ │ ├── Button.tsx
 │ │ ├── Button.test.tsx
 │ │ └── Button.styles.ts
 │ ├── components/ ← composed primitives, no business logic (PosterCard, Modal, ProgressBar)
 │ │ ├── index.ts ← barrel: re-exports every component (only barrel at this rung)
 │ │ ├── Modal/ ← the scrimmed card every dialog is drawn on: portal, Escape/scrim/✕, focus in, Tab held, focus back
+│ │ ├── LogConsole/ ← the Activity log: the last lines by kind, pinned to the bottom
 │ │ └── PosterCard/
 │ │ ├── PosterCard.tsx
 │ │ ├── PosterCard.test.tsx
@@ -175,22 +191,34 @@ familyflix/
 │ │ │ ├── preferredSubtitle/ ← pure: default language, then track order
 │ │ │ ├── volumePreference/ ← the level and mute, in localStorage
 │ │ │ └── api/ ← fetchPlayback, fetchSubtitleCues, saveResume
-│ │ ├── movie-form/ ← Add/Edit a movie: one form, manual file pickers
-│ │ ├── import-export/ ← bulk Excel/CSV importer, CSV exporter
-│ │ ├── settings/ ← the Maintainer's hub: SettingsHeader now, the grouped sections to come
+│ │ ├── maintainer.styles.ts ← the furniture the Maintainer’s screens extend: the header row, heading and lede; the captioned field
+│ │ ├── movie-form/ ← Add/Edit a movie: one form, manual file pickers; and Resolve, the Import context over either job
+│ │ │ └── api/ ← createMovie, updateMovie, fetchGenrePool, fetchProblem, resolveProblem (one caller each)
+│ │ ├── import-export/ ← the bulk importer’s screen (CSV export to come)
+│ │ │ ├── ImportFlow/ ← the organism: owns useImportRun, renders one of the three steps
+│ │ │ ├── ImportSetup/ ImportProgress/ ImportReview/ ← the three steps: the two path fields; the stepper, bar and log; the tiles and the Needs attention list
+│ │ │ ├── PhaseStepper/ StatTile/ ProblemRow/ ← the flow’s own molecules
+│ │ │ ├── useImportRun/ ← start, poll at 500 ms while running, cancel, skip
+│ │ │ ├── importView/ ← pure: an ImportRun → headline, stat line, percent, elapsed, ETA
+│ │ │ └── api/ ← startImport, fetchCurrentImport, cancelImport (one caller each)
+│ │ ├── settings/ ← the Maintainer’s hub
+│ │ │ ├── SettingsHeader/ ← Back, the heading, ＋ Add a movie
+│ │ │ ├── LibrarySection/ ← the Library group: Add a movie and Import from spreadsheet, owning their routes
+│ │ │ └── ActionRow/ ← one glyph + label + description row of a settings group
 │ │ └── collections/ ← playlists/collections (roadmap, not MVP)
 │ ├── layouts/ ← page chrome
 │ │ ├── chrome.styles.ts ← the furniture MainLayout and GenreLayout both extend
 │ │ ├── MainLayout/ ← the Family's screens: logo, gear, scrolling body
 │ │ ├── GenreLayout/ ← Back pill, heading slot, trailing controls, scrolling body
 │ │ └── MaintainerLayout/ ← the Maintainer surface: bg2 sheet + centred column, no header row
-│ ├── pages/ ← route-level views, composition only, no logic
+│ ├── pages/ ← route-level views, composition only, no logic (ImportPage is MaintainerLayout around ImportFlow)
 │ ├── api/ ← wire calls two or more features share (one folder per call + its test, no barrel)
+│ │ ├── saveFavorite/ fetchMovie/ saveWatched/ dismissProblem/ ← the four that earned it
 │ │ └── postValue/
 │ │ ├── postValue.ts
 │ │ └── postValue.test.ts
 │ ├── hooks/ ← global shared hooks only (useMediaQuery, useTheme)
-│ ├── types/ ← shared TypeScript interfaces
+│ ├── types/ ← shared TypeScript interfaces (import.ts: ImportRun, ImportProblem, ImportProblemDetail, ImportField, both build targets)
 │ ├── utils/ ← pure helper functions (one folder per helper + its test)
 │ │ ├── index.ts ← barrel: re-exports every helper
 │ │ └── gradientFromId/
@@ -227,10 +255,13 @@ feature asks for it — `saveFavorite` did, because the browse shelf and the mov
 detail page both save the same heart; `fetchMovie` did when the player needed
 the record the detail page reads; and `saveWatched` did when the player began
 marking a film watched at the finish threshold that the detail page's toggle
-already set by hand. `saveRating` has one caller and stays with the feature that
-makes it, and so does the player's own `saveResume` — the player is the only
-thing in the app that can know where a film is, which is the same rule read the
-other way round. Either moves if and when that changes. One folder per call with
+already set by hand; and `dismissProblem` did, because the Review step's Skip
+and the Movie form's Skip this one both send the same `DELETE`. `saveRating`
+has one caller and stays with the feature that makes it, and so does the
+player's own `saveResume` — the player is the only thing in the app that can
+know where a film is, which is the same rule read the other way round — and so
+do `fetchProblem` and `resolveProblem`, whose one caller is the form. Any of
+them moves if and when that changes. One folder per call with
 its test, imported by path (`@/api/postValue/postValue`), following
 `test-support/`'s precedent — a barrel over a handful of functions nobody
 imports as a set would be ceremony.
@@ -361,7 +392,15 @@ once via a bulk importer:
   no network, `tmdbId` stays null. What a lookup would add is an
   **Enrichment** pass over an already-imported library — a later
   initiative with its own prototype, if ever — not part of bulk import
-- Copies all matched media into managed storage as part of the run
+- Copies all matched media into managed storage as part of the run —
+  `Media.copyIn`, a stream piped under the cancel signal rather than
+  `fs.copyFile`, so a 12 GB copy can be stopped partway and the folder
+  rolled back
+- The domain is four units — `readSheet`, `titleKey`, `matchRows` and
+  `createImporter` — not the five the design log sketched: the run's
+  state machine lives as closures inside `createImporter` over the run,
+  the sources map and the abort controller, because pulling it out would
+  pass all three across a seam nobody else uses
 
 An exporter writes the current library back out to CSV (title, year,
 genre, watched status, etc.) for backup or for bulk-editing externally
