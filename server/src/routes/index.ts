@@ -16,7 +16,12 @@ import type { Media } from '../media/createMedia/createMedia';
 import type { Playback } from '../playback/createPlayback/createPlayback';
 import { derivedRuntime } from '../playback/derivedRuntime/derivedRuntime';
 import { isRatingValue, MAX_RATING } from './isRatingValue/isRatingValue';
-import { collectUploads, readMovieFields } from './movieFormBody/movieFormBody';
+import {
+  collectUploads,
+  DEFAULT_SUBTITLE_LANGUAGE,
+  readMovieFields,
+  subtitleRows,
+} from './movieFormBody/movieFormBody';
 import { onlyField } from './onlyField/onlyField';
 import { optionalYear } from './optionalYear/optionalYear';
 import { readBody } from './readBody/readBody';
@@ -244,17 +249,6 @@ function streamOffset(value: unknown): number | null {
   const seconds = Number(raw);
   return Number.isFinite(seconds) && seconds >= 0 ? seconds : null;
 }
-
-/**
- * The language a track arrives with — the one the client sent for it, or
- * English for a track sent with none.
- *
- * Unreachable from the form, which sends a language with every row. It is here
- * because `subtitles.language` is `NOT NULL`, and a client this route did not
- * write must not be able to make the column the reason a save fails — the
- * default is the same one the row lands in on screen.
- */
-const DEFAULT_SUBTITLE_LANGUAGE = 'English';
 
 /** Reject anything that is not a positive whole number of rows. */
 function parseLimit(value: string): number | null {
@@ -774,35 +768,17 @@ export function createApiRouter(
       const posterPath =
         uploads.poster ?? onlyField(fields, 'posterPath') ?? null;
 
-      // The tracks, read pairwise off two fields with the parts threaded
-      // through them: the i-th language belongs to the i-th path, and an
-      // **empty path** is a row whose file arrived as bytes instead. Fields and
-      // file parts are read back separately, so that placeholder is the only
-      // thing keeping a mixed list in the order it was in on screen.
-      const storedPaths = fields.subtitlePath ?? [];
-      const picked = uploads.subtitles.filter(
-        (path): path is string => path !== undefined
-      );
-
-      const subtitles: NewSubtitle[] = [];
-      const rows = Math.max(
-        read.languages.length,
-        storedPaths.length,
-        picked.length
-      );
-      for (let row = 0; row < rows; row += 1) {
-        const stored = storedPaths[row];
-        const path =
-          stored === undefined || stored === '' ? picked.shift() : stored;
-        // A row that named no path and sent no bytes is not a track.
-        if (path === undefined) {
-          continue;
-        }
-        subtitles.push({
-          path,
-          language: read.languages[row] ?? DEFAULT_SUBTITLE_LANGUAGE,
-        });
-      }
+      // The tracks, paired by the body reader: a path here is a **Stored
+      // path** the library already holds, and a part is a track the maintainer
+      // just picked — both land in the same column.
+      const subtitles: NewSubtitle[] = subtitleRows(
+        fields,
+        uploads,
+        read.languages
+      ).map((row) => ({
+        path: 'stored' in row ? row.stored : row.path,
+        language: row.language,
+      }));
 
       let saved: Movie;
       try {

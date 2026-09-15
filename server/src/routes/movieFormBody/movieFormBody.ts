@@ -269,3 +269,66 @@ export function readMovieFields(
     languages: fields.subtitleLanguage ?? [],
   };
 }
+
+/**
+ * The language a track arrives with — the one the client sent for it, or
+ * English for a track sent with none.
+ *
+ * Unreachable from the form, which sends a language with every row. It is here
+ * because `subtitles.language` is `NOT NULL`, and a client these routes did not
+ * write must not be able to make the column the reason a save fails — the
+ * default is the same one the row lands in on screen.
+ */
+export const DEFAULT_SUBTITLE_LANGUAGE = 'English';
+
+/**
+ * One subtitle row of a **Movie form** body, as the pairing answers it: the
+ * row's language and the one way its file arrived — `stored`, the **Stored
+ * path** of the part this request wrote, or `path`, the `subtitlePath` field
+ * exactly as it came.
+ *
+ * Both columns are answered and neither is interpreted, because what a path
+ * *is* differs between the saves: the edit reads it as a **Stored path** the
+ * library already holds, the resolve as a **Found file** under the **Current
+ * run**'s root. The pairing does not know which and should not.
+ */
+export type SubtitleRow =
+  | { language: string; stored: string }
+  | { language: string; path: string };
+
+/**
+ * The tracks of a **Movie form** body, read pairwise off two fields with the
+ * parts threaded through them: the i-th language belongs to the i-th
+ * `subtitlePath`, and an **empty path** is a row whose file arrived as bytes
+ * instead — the next `subtitle` part, in arrival order. Fields and file parts
+ * are read back separately, so that placeholder is the only thing keeping a
+ * mixed list in the order it was in on screen.
+ *
+ * A row that named no path and sent no bytes is not a track, and is left out.
+ */
+export function subtitleRows(
+  fields: Record<string, string[]>,
+  uploads: Uploads,
+  languages: string[]
+): SubtitleRow[] {
+  const paths = fields.subtitlePath ?? [];
+  const picked = uploads.subtitles.filter(
+    (stored): stored is string => stored !== undefined
+  );
+
+  const rows: SubtitleRow[] = [];
+  const count = Math.max(languages.length, paths.length, picked.length);
+  for (let row = 0; row < count; row += 1) {
+    const language = languages[row] ?? DEFAULT_SUBTITLE_LANGUAGE;
+    const path = paths[row];
+    if (path !== undefined && path !== '') {
+      rows.push({ language, path });
+      continue;
+    }
+    const stored = picked.shift();
+    if (stored !== undefined) {
+      rows.push({ language, stored });
+    }
+  }
+  return rows;
+}

@@ -26,7 +26,7 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { readMovieFields, type Uploads } from './movieFormBody';
+import { readMovieFields, subtitleRows, type Uploads } from './movieFormBody';
 
 /** The **Genre pool** as these routes read it: the names it holds. */
 const POOL = new Set(['Drama', 'Romance', 'Thriller']);
@@ -373,5 +373,93 @@ describe('readMovieFields — a client these routes did not write', () => {
     // Losing a word is not the same harm as inventing a rating, which is why
     // this one is dropped and that one is a 400.
     expect(read).toMatchObject({ ok: true, year: undefined });
+  });
+});
+
+// The pairing the edit and the resolve both read: the i-th language belongs to
+// the i-th `subtitlePath`, and an empty path is a row whose file arrived as
+// bytes. What a path *means* is the caller's — the rows below answer both
+// columns and interpret neither.
+describe('subtitleRows — the tracks, paired off two fields and the parts', () => {
+  /** A request that wrote these tracks, in arrival order. */
+  const wrote = (...stored: string[]): Uploads => ({
+    folder: 'northwind-2018',
+    subtitles: stored,
+  });
+
+  it('pairs each language with the path at the same index', () => {
+    const rows = subtitleRows(
+      body([
+        ['subtitlePath', 'northwind-2018/en.srt'],
+        ['subtitlePath', 'northwind-2018/fr.srt'],
+      ]),
+      NOTHING_WRITTEN,
+      ['English', 'French']
+    );
+
+    expect(rows).toEqual([
+      { language: 'English', path: 'northwind-2018/en.srt' },
+      { language: 'French', path: 'northwind-2018/fr.srt' },
+    ]);
+  });
+
+  it('reads an empty path as a row whose file arrived as bytes', () => {
+    const rows = subtitleRows(
+      body([['subtitlePath', '']]),
+      wrote('northwind-2018/en.srt'),
+      ['English']
+    );
+
+    expect(rows).toEqual([
+      { language: 'English', stored: 'northwind-2018/en.srt' },
+    ]);
+  });
+
+  // The whole reason for the placeholder: fields and parts come back
+  // separately, and the order on screen is the order `position` is written
+  // from.
+  it('keeps a mixed list in the order it was on screen', () => {
+    const rows = subtitleRows(
+      body([
+        ['subtitlePath', ''],
+        ['subtitlePath', 'northwind-2018/fr.srt'],
+        ['subtitlePath', ''],
+      ]),
+      wrote('northwind-2018/en.srt', 'northwind-2018/de.srt'),
+      ['English', 'French', 'German']
+    );
+
+    expect(rows).toEqual([
+      { language: 'English', stored: 'northwind-2018/en.srt' },
+      { language: 'French', path: 'northwind-2018/fr.srt' },
+      { language: 'German', stored: 'northwind-2018/de.srt' },
+    ]);
+  });
+
+  it('leaves out a row that named no path and sent no bytes', () => {
+    const rows = subtitleRows(
+      body([
+        ['subtitlePath', 'northwind-2018/en.srt'],
+        ['subtitlePath', ''],
+      ]),
+      NOTHING_WRITTEN,
+      ['English', 'French']
+    );
+
+    expect(rows).toEqual([
+      { language: 'English', path: 'northwind-2018/en.srt' },
+    ]);
+  });
+
+  it('gives a track sent with no language the default', () => {
+    const rows = subtitleRows(body([]), wrote('northwind-2018/en.srt'), []);
+
+    expect(rows).toEqual([
+      { language: 'English', stored: 'northwind-2018/en.srt' },
+    ]);
+  });
+
+  it('answers no rows for a body with no tracks', () => {
+    expect(subtitleRows(TITLED, NOTHING_WRITTEN, [])).toEqual([]);
   });
 });
