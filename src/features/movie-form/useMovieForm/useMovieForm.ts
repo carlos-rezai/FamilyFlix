@@ -208,19 +208,19 @@ export interface UseMovieFormResult {
  * is not a record to amend, so the screen falls back to adding — which is also
  * the only state in which its Save could do anything at all.
  *
- * **`?problem=<id>` is the third job — the Import context** (#130). The
+ * **`?problem=<id>` is the third job — the Import context.** The
  * **Problem detail** it names is read into the fields and the **File slots**
  * as **Found files**; Save is _Save & continue_ and posts to the problem's own
  * resolve route, the secondary button is _Skip this one_ and dismisses, and
  * every exit lands on the review. A problem that is gone falls back to adding,
- * as a gone movie does — and so does a _Save & continue_ that finds it gone
- * (#131, story 102): the run no longer knows the problem, so there is nothing
+ * as a gone movie does — and so does a _Save & continue_ that finds it gone:
+ * the run no longer knows the problem, so there is nothing
  * to resolve, and the form is the ordinary add, empty, with nothing dismissed
  * and nowhere landed. The gate is the same gate: a title and a film, and a
  * found film is a film.
  *
- * **`?movie=<id>&problem=<pid>` is the Import context over the Edit job**
- * (#132): the one kind already in the library, `missing-meta`. The record
+ * **`?movie=<id>&problem=<pid>` is the Import context over the Edit job**:
+ * the one kind already in the library, `missing-meta`. The record
  * fills the fields, as any edit's does, and the detail fills nothing — only
  * the banner and the labels are its. _Save & continue_ is the edit's own
  * `PATCH`, then the dismiss, then the review; _Skip this one_ dismisses and
@@ -304,10 +304,10 @@ export function useMovieForm(): UseMovieFormResult {
 
   // The **Import context**, read the same way: the detail is what fills the
   // fields and the slots, once. A problem that is gone — `null`, the `404` —
-  // is a stale link, and the screen falls back to adding, which is story 94;
-  // so does a detail that could not be read, on the record's own precedent.
+  // is a stale link, and the screen falls back to adding; so does a detail
+  // that could not be read, on the record's own precedent.
   //
-  // Beside `?movie=` the detail fills nothing (#132): the film is in the
+  // Beside `?movie=` the detail fills nothing: the film is in the
   // library already, and what the record holds — the stored copies, by their
   // own names — is what the fields show, never the folder the run scanned.
   // The detail is still what the banner and the labels are decided from.
@@ -463,7 +463,7 @@ export function useMovieForm(): UseMovieFormResult {
     // problem on its own `201` — nothing here does. The review is where the
     // save lands, one row shorter.
     //
-    // Over the **Edit job** (#132, story 93) it is the edit's own `PATCH`
+    // Over the **Edit job** it is the edit's own `PATCH`
     // instead — the film is in the library already, and a resolve would put
     // it there twice — and then the dismiss, in that order: a row leaves the
     // list only once the amendment is in. A dismiss that failed still lands

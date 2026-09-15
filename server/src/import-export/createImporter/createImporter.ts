@@ -735,9 +735,9 @@ export function createImporter({
       return {
         ...listed,
         // A folder no row claimed has only its name to offer as a title, and
-        // the guess is that name with the tail forms dropped — story 84: the
-        // title is already typed, as "Harbor Lights", not as the folder
-        // spells it. The snapshot's row keeps naming the folder as it is.
+        // the guess is that name with the tail forms dropped, so the title
+        // is already typed, as "Harbor Lights", not as the folder spells it.
+        // The snapshot's row keeps naming the folder as it is.
         row:
           source.row === null
             ? { title: titleGuess(listed.title), genres: [] }

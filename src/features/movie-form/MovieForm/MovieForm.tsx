@@ -73,7 +73,7 @@ const RESOLVING_LEAD = 'Resolving import';
 
 /**
  * What the banner says after the title of an `ambiguous` problem, before the
- * other folders the run was weighing — story 82's fixed phrasing.
+ * other folders the run was weighing — the prototype's fixed phrasing.
  */
 const ALSO_MATCHED_LEAD = ' — also matched: ';
 

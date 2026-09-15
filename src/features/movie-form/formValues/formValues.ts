@@ -219,10 +219,11 @@ function appendFile(
  * record and the one that amends it, because they are the same form.
  *
  * **The passthrough is the point.** A file the library already holds travels as
- * the relative path it already has — and from #130 a **Found file** travels as
- * the absolute path the scan found it at, in the same field — and only a file
- * the maintainer just picked travels as bytes. That is what makes an edit touching only the title carry no
- * bytes at all: on a 12 GB film, the difference between instant and minutes.
+ * the relative path it already has — and a **Found file** travels as the
+ * absolute path the scan found it at, in the same field — and only a file the
+ * maintainer just picked travels as bytes. That is what makes an edit touching
+ * only the title carry no bytes at all: on a 12 GB film, the difference
+ * between instant and minutes.
  *
  * No `Content-Type` is decided here and none should be: a multipart body is
  * nothing without its boundary, and only the platform knows the boundary it

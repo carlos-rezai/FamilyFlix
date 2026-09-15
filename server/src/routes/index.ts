@@ -660,8 +660,7 @@ export function createApiRouter(
   // as the relative path it already has — `videoPath`, `posterPath` and
   // `subtitlePath` beside the `video`, `poster` and `subtitle` parts — and only
   // a file the maintainer just picked arrives as bytes. That is what makes
-  // correcting a typo on a 12 GB film instant instead of minutes, and it is the
-  // whole acceptance criterion this slice is demoable on.
+  // correcting a typo on a 12 GB film instant instead of minutes.
   //
   // **The folder is the movie's, never the title's.** An edit writes into the
   // folder the movie's current `videoPath` already lives in, so renaming a film

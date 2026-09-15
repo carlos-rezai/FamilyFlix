@@ -22,8 +22,8 @@ export interface SubtitleFound {
 
 /**
  * What of a film is in one **Source folder**: every video by the fixed
- * extension list — more than one is the `no-video` **Problem** of the review
- * slice, so all are reported rather than one picked — the **Poster**, the
+ * extension list — more than one is a `no-video` **Problem**, so all are
+ * reported rather than one picked — the **Poster**, the
  * **Backdrop**, and every subtitle with its language.
  */
 export interface MovieFolderScan {
