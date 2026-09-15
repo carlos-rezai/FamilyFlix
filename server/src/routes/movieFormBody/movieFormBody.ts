@@ -1,4 +1,8 @@
 import type { Media } from '../../media/createMedia/createMedia';
+import {
+  isImageFilename,
+  isSubtitleFilename,
+} from '../../media/fileKinds/fileKinds';
 import { onlyField } from '../onlyField/onlyField';
 import {
   INVALID_RATING,
@@ -7,10 +11,6 @@ import {
 import { optionalText } from '../optionalText/optionalText';
 import { optionalYear } from '../optionalYear/optionalYear';
 import type { OnFilePart } from '../readBody/readBody';
-import {
-  isPosterFilename,
-  isSubtitleFilename,
-} from '../uploadKinds/uploadKinds';
 
 /**
  * Where the bytes of this request go — the **Movie folder** the two saves
@@ -97,7 +97,7 @@ export function collectUploads(
     // A poster this route will not serve is not written at all — its bytes are
     // drained so the parser can reach `close`, and the refusal is carried out
     // on the whole body.
-    if (name === 'poster' && !isPosterFilename(filename)) {
+    if (name === 'poster' && !isImageFilename(filename)) {
       part.resume();
       uploads.rejectedPoster = filename;
       return;

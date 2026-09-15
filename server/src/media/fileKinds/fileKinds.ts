@@ -1,5 +1,5 @@
 /**
- * What a file the maintainer picked may be **called**, at the two slots where
+ * What a file the store will hold may be **called**, at the two slots where
  * the answer is not "anything".
  *
  * One unit rather than two because there is one argument and it is made once.
@@ -9,7 +9,9 @@
  * its extension implies. So a stored `.html` would be a page served from the
  * app's own origin, and what these two slots may hold is decided here rather
  * than trusted from the client. This is a security boundary, and splitting it
- * across two folders would split the reason it exists along with it.
+ * across two folders would split the reason it exists along with it. It lives
+ * in `media/` because the argument is about the media root — the store decides
+ * what it will hold — and the routes read it from here as they read `Media`.
  *
  * The **video** slot has no such list, and its absence is deliberate rather
  * than missing: an unplayable container is a `PlayerNotice` the player already
@@ -24,8 +26,8 @@
  * called.
  */
 
-/** What a **poster** may be called, lowercased, dots included. */
-const POSTER_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp'];
+/** What an **image** — a **Poster** or **Backdrop** — may be called, lowercased. */
+const IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp'];
 
 /**
  * What a **subtitle** may be called — the same four `parseSubtitle/` dispatches
@@ -45,9 +47,9 @@ function hasExtension(filename: string, extensions: string[]): boolean {
   return extensions.some((extension) => lower.endsWith(extension));
 }
 
-/** Whether a filename the client chose is one a poster may have. */
-export function isPosterFilename(filename: string): boolean {
-  return hasExtension(filename, POSTER_EXTENSIONS);
+/** Whether a filename is one an image — a **Poster**, a **Backdrop** — may have. */
+export function isImageFilename(filename: string): boolean {
+  return hasExtension(filename, IMAGE_EXTENSIONS);
 }
 
 /** Whether a filename the client chose is one a subtitle track may have. */

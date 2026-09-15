@@ -17,46 +17,46 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { isPosterFilename, isSubtitleFilename } from './uploadKinds';
+import { isImageFilename, isSubtitleFilename } from './fileKinds';
 
-describe('isPosterFilename', () => {
+describe('isImageFilename', () => {
   it.each(['poster.jpg', 'poster.jpeg', 'poster.png', 'poster.webp'])(
     'accepts %s',
     (filename) => {
-      expect(isPosterFilename(filename)).toBe(true);
+      expect(isImageFilename(filename)).toBe(true);
     }
   );
 
   it('accepts a name the operating system upper-cased', () => {
-    expect(isPosterFilename('POSTER.JPG')).toBe(true);
+    expect(isImageFilename('POSTER.JPG')).toBe(true);
   });
 
   it('accepts a name with dots and spaces in it', () => {
-    expect(isPosterFilename('Northwind (2018).poster.final.png')).toBe(true);
+    expect(isImageFilename('Northwind (2018).poster.final.png')).toBe(true);
   });
 
   it('refuses a name with no extension at all', () => {
-    expect(isPosterFilename('poster')).toBe(false);
+    expect(isImageFilename('poster')).toBe(false);
   });
 
   // The one that would be served from the app's own origin.
   it('refuses a double extension ending in one express.static would serve as a page', () => {
-    expect(isPosterFilename('poster.png.html')).toBe(false);
+    expect(isImageFilename('poster.png.html')).toBe(false);
   });
 
   it.each(['poster.html', 'poster.svg', 'poster.gif', 'poster.exe'])(
     'refuses %s',
     (filename) => {
-      expect(isPosterFilename(filename)).toBe(false);
+      expect(isImageFilename(filename)).toBe(false);
     }
   );
 
   it('refuses a subtitle offered as a poster', () => {
-    expect(isPosterFilename('northwind.srt')).toBe(false);
+    expect(isImageFilename('northwind.srt')).toBe(false);
   });
 
   it('refuses a name that merely contains an allowed extension', () => {
-    expect(isPosterFilename('.png.evil')).toBe(false);
+    expect(isImageFilename('.png.evil')).toBe(false);
   });
 });
 
