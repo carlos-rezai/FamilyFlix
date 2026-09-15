@@ -15,12 +15,7 @@ const sizes = {
     height: 40px;
     padding: 0 18px;
     font-size: 14px;
-    /* The one corner spelled out as its four longhands: jsdom's CSSOM never
-       expands the shorthand, and the review rows' tests read a corner. */
-    border-top-left-radius: ${({ theme }) => theme.radius.sm};
-    border-top-right-radius: ${({ theme }) => theme.radius.sm};
-    border-bottom-right-radius: ${({ theme }) => theme.radius.sm};
-    border-bottom-left-radius: ${({ theme }) => theme.radius.sm};
+    border-radius: ${({ theme }) => theme.radius.sm};
   `,
   md: css`
     height: 50px;

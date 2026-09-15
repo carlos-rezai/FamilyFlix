@@ -77,7 +77,7 @@ describe('Button — the full spec surface', () => {
     expect(style.paddingLeft).toBe('18px');
     expect(style.paddingRight).toBe('18px');
     expect(style.fontSize).toBe('14px');
-    expect(style.borderTopLeftRadius).toBe('8px');
+    expect(style.borderRadius).toBe('8px');
   });
 
   it('is unchanged as a control when stretched to its container', () => {
