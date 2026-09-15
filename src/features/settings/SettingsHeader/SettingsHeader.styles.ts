@@ -1,21 +1,22 @@
 import styled from 'styled-components';
 
-/** The back pill, the heading and the ＋ button on one line. */
-export const HeaderRow = styled.div`
-  display: flex;
-  align-items: center;
-  gap: ${({ theme }) => theme.space.s4};
+import {
+  HeaderRow as MaintainerHeaderRow,
+  Heading as MaintainerHeading,
+} from '../../maintainer.styles';
+
+/**
+ * The back pill, the heading and the ＋ button on one line — the Maintainer's
+ * header row, set the prototype's own 6px above the subtitle rather than the
+ * furniture's 8.
+ */
+export const HeaderRow = styled(MaintainerHeaderRow)`
   margin-bottom: 6px;
 `;
 
 /** Serif and large, and it takes the width the two controls do not. */
-export const Heading = styled.h1`
+export const Heading = styled(MaintainerHeading)`
   flex: 1;
-  margin: 0;
-  font-family: ${({ theme }) => theme.fonts.serif};
-  font-size: 30px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.text};
 `;
 
 /**
