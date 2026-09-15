@@ -70,7 +70,6 @@ import {
 } from 'node:fs';
 import { userInfo } from 'node:os';
 import { join, relative } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import {
@@ -84,6 +83,10 @@ import { createMedia, type Media } from '../../media/createMedia/createMedia';
 import { createPlayback } from '../../playback/createPlayback/createPlayback';
 import { freshStorage } from '../../test-support/freshStorage/freshStorage';
 import { heldCopy } from '../../test-support/heldCopy/heldCopy';
+import {
+  LIBRARY_FIXTURE,
+  libraryFixture,
+} from '../../test-support/libraryFixture/libraryFixture';
 import { sandboxRoot } from '../../test-support/sandboxRoot/sandboxRoot';
 import type { LibraryStorage } from '../../library';
 import type {
@@ -93,8 +96,6 @@ import type {
   Movie,
   ProblemKind,
 } from '@/types';
-
-const FIXTURE = fileURLToPath(new URL('./fixture/', import.meta.url));
 
 /**
  * A fresh library, a managed media directory and a copy of the fixture tree
@@ -119,11 +120,8 @@ function sandbox({
 } {
   const dir = sandboxRoot('familyflix-import-');
   const media = join(dir, 'media');
-  const root = join(dir, 'root');
   mkdirSync(media);
-  cpSync(join(FIXTURE, 'root'), root, { recursive: true });
-  const sheet = join(dir, 'library.xlsx');
-  cpSync(join(FIXTURE, 'library.xlsx'), sheet);
+  const { root, sheet } = libraryFixture(dir);
 
   const storage = freshStorage();
   const importer = createImporter({
@@ -313,7 +311,7 @@ describe('createImporter — the fixture becomes two movies', () => {
   it('reads the .csv spelling of the sheet to the same library', async () => {
     const { storage, importer, root } = sandbox();
     const csv = join(root, '..', 'library.csv');
-    cpSync(join(FIXTURE, 'library.csv'), csv);
+    cpSync(join(LIBRARY_FIXTURE, 'library.csv'), csv);
 
     await importer.start(csv, root);
     await untilReview(importer);

@@ -24,17 +24,10 @@
 // the movie routes for every film the old run had added.
 
 import express from 'express';
-import {
-  cpSync,
-  mkdirSync,
-  readdirSync,
-  readFileSync,
-  writeFileSync,
-} from 'node:fs';
+import { mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import type { Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { join } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { createApiRouter } from '.';
@@ -46,6 +39,7 @@ import { createMedia, type Media } from '../media/createMedia/createMedia';
 import { createPlayback } from '../playback/createPlayback/createPlayback';
 import { createSqliteStorage, type LibraryStorage } from '../library';
 import { heldCopy } from '../test-support/heldCopy/heldCopy';
+import { libraryFixture } from '../test-support/libraryFixture/libraryFixture';
 import { sandboxRoot } from '../test-support/sandboxRoot/sandboxRoot';
 import type {
   ImportProblem,
@@ -53,10 +47,6 @@ import type {
   ImportRun,
   Movie,
 } from '@/types';
-
-const FIXTURE = fileURLToPath(
-  new URL('../import-export/createImporter/fixture/', import.meta.url)
-);
 
 // --- per-test resource tracking ------------------------------------------------
 
@@ -111,15 +101,12 @@ function freshApi({
 
   const dir = sandboxRoot('familyflix-import-api-');
   const media = resume?.media ?? join(dir, 'media');
-  const root = resume?.root ?? join(dir, 'root');
   const scratch = join(dir, 'scratch');
   mkdirSync(scratch);
-  const sheet = resume?.sheet ?? join(dir, 'library.xlsx');
   if (resume === undefined) {
     mkdirSync(media);
-    cpSync(join(FIXTURE, 'root'), root, { recursive: true });
-    cpSync(join(FIXTURE, 'library.xlsx'), sheet);
   }
+  const { root, sheet } = resume ?? libraryFixture(dir);
 
   const mediaDomain = seam(createMedia(media));
   const playback = createPlayback(media, null);
