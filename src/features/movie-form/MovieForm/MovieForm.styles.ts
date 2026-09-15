@@ -1,6 +1,6 @@
 import styled from 'styled-components';
 
-import { Field as TextFieldBox } from '@/primitives/TextField/TextField.styles';
+import { Field as MaintainerField, FieldLabel } from '../../maintainer.styles';
 
 /**
  * The accent banner the **Import context** draws above the heading —
@@ -64,27 +64,12 @@ export const FieldRow = styled.div`
 `;
 
 /**
- * One captioned field. A `label` rather than a `div`, so the caption is part of
- * the control: clicking "Year" puts the caret in the year box.
- *
- * The focus state is the form's, not the primitive's: `feat.MovieForm.dc.html`
- * is the one file in the handoff that declares a `style-focus`, and it declares
- * it on each of its four inputs — the box takes the accent line while it has
- * focus. A component selector reaches `TextField`'s box on `SubtitleRow`'s
- * precedent with `Menu`'s panel, and for the same reason: threading this
- * through the primitive would put a prop on it that only one caller could set.
- * `:focus-within` because the box is a `div` around the input, and the input is
- * what focuses. The browser's ring stays beside it, per `TextField.styles.ts`.
- * The Description under these is a `Textarea`, which the prototype gives no
- * focus state — so this selector deliberately does not reach it.
+ * The Maintainer's captioned field, which here shares a `FieldRow` with a
+ * sibling: `flex: 1` is what makes Title and Director take the width Year
+ * and the column edge leave them.
  */
-export const Field = styled.label`
-  display: block;
+export const Field = styled(MaintainerField)`
   flex: 1;
-
-  ${TextFieldBox}:focus-within {
-    border-color: ${({ theme }) => theme.colors.accentLine};
-  }
 `;
 
 /** Year is the one field with a fixed measure — a year is four characters wide. */
@@ -115,16 +100,8 @@ export const ChipField = styled.div`
   display: block;
 `;
 
-/** The caption above a field. */
-export const FieldLabel = styled.span`
-  display: block;
-  margin-bottom: ${({ theme }) => theme.space.s2};
-  font-family: ${({ theme }) => theme.fonts.sans};
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 0.2px;
-  color: ${({ theme }) => theme.colors.textDim};
-`;
+/** The caption is the furniture's; the hint inside it is the form's own. */
+export { FieldLabel };
 
 /**
  * The lighter half of a caption — the prototype's "— pick one or more", "—
