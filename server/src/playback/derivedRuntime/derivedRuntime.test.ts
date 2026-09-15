@@ -17,7 +17,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { derivedRuntime } from './derivedRuntime';
-import type { Playback } from '../../playback/createPlayback/createPlayback';
+import type { Playback } from '../createPlayback/createPlayback';
 
 /** The stored path a freshly copied film is written under. */
 const STORED = 'The Lantern Keeper (2019)/lantern.mp4';

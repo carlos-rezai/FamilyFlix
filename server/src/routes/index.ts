@@ -14,7 +14,7 @@ import {
 } from '../import-export/createImporter/createImporter';
 import type { Media } from '../media/createMedia/createMedia';
 import type { Playback } from '../playback/createPlayback/createPlayback';
-import { derivedRuntime } from './derivedRuntime/derivedRuntime';
+import { derivedRuntime } from '../playback/derivedRuntime/derivedRuntime';
 import { isRatingValue, MAX_RATING } from './isRatingValue/isRatingValue';
 import { collectUploads, readMovieFields } from './movieFormBody/movieFormBody';
 import { onlyField } from './onlyField/onlyField';
