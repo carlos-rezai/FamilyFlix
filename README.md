@@ -146,10 +146,14 @@ familyflix/
 │       ├── routes/         # HTTP layer only — parses requests, calls a domain module
 │       ├── library/        # movie CRUD, SQLite queries, watch-state + resume position
 │       ├── media/          # folder scanning, copying files into managed storage, subtitle detection, removing a movie folder after a delete
-│       ├── import-export/  # Excel/CSV parsing, row-to-folder matching, CSV export
-│       ├── playback/       # the Playback component, the path choice, streaming, subtitle parsing
+│       │   ├── walkLibraryRoot/       # a Library root → its Source folders
+│       │   ├── scanMovieFolder/       # one folder → its video, poster, backdrop, subtitles
+│       │   ├── detectSubtitleLanguage/ # the language tag in a subtitle's name
+│       │   └── fileKinds/             # what an image, a subtitle and a video may be called
+│       ├── import-export/  # the bulk importer: readSheet, titleKey, matchRows, createImporter (+ its fixture); CSV export to come
+│       ├── playback/       # the Playback component, the path choice, streaming, subtitle parsing, derivedRuntime
 │       ├── db/             # SQLite connection + schema/migrations
-│       └── test-support/   # Shared test doubles — never imported by shipping code
+│       └── test-support/   # Shared test doubles — never imported by shipping code (heldCopy, libraryFixture, …)
 ├── src/                # React frontend
 │   ├── App/            # Router and app-level providers
 │   ├── assets/         # Static images, fonts, icons
@@ -157,7 +161,8 @@ familyflix/
 │   ├── tokens/         # Colors, spacing, typography, breakpoints
 │   ├── primitives/     # Atomic UI elements (Button, Input, Text) — each with .tsx, .test.tsx, .styles.ts
 │   ├── components/     # Composed UI blocks (PosterCard, Modal, ProgressBar) — same three-file shape
-│   │   └── Modal/          # the scrimmed card every dialog is drawn on; owns its own dismissal and focus
+│   │   ├── Modal/          # the scrimmed card every dialog is drawn on; owns its own dismissal and focus
+│   │   └── LogConsole/     # the import's Activity log, pinned to its bottom
 │   ├── features/       # Domain UI + logic co-located
 │   │   ├── library/        # browse grid, genre rows
 │   │   ├── search/          # search-as-you-type, filters
@@ -167,12 +172,14 @@ familyflix/
 │   │   │   ├── useDeleteMovie/    # sends the delete, then steps back through history
 │   │   │   └── api/               # saveRating, deleteMovie — one caller each
 │   │   ├── player/          # built-in video player, subtitles, resume
-│   │   ├── movie-form/      # Add/Edit a movie: one form, manual pickers
-│   │   ├── import-export/   # bulk importer, CSV exporter
+│   │   ├── movie-form/      # Add/Edit a movie: one form, manual pickers — and Resolve, the Import context
+│   │   ├── import-export/   # the bulk importer's screen: ImportFlow and its three steps, useImportRun, importView
+│   │   ├── settings/        # SettingsHeader, LibrarySection (Add a movie / Import from spreadsheet), ActionRow
+│   │   ├── maintainer.styles.ts # the header and the captioned field the Maintainer's screens share
 │   │   └── collections/     # playlists (roadmap)
 │   ├── layouts/         # Page chrome
-│   ├── pages/           # Route-level views, composition only
-│   ├── api/             # Wire calls two or more features share
+│   ├── pages/           # Route-level views, composition only (ImportPage among them)
+│   ├── api/             # Wire calls two or more features share (saveFavorite, fetchMovie, saveWatched, dismissProblem)
 │   ├── hooks/            # Global shared hooks
 │   ├── types/            # Shared TypeScript interfaces
 │   ├── utils/            # Pure helper functions
