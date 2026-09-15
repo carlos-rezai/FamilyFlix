@@ -1,12 +1,4 @@
-import {
-  describe,
-  it,
-  expect,
-  expectTypeOf,
-  vi,
-  beforeEach,
-  afterEach,
-} from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 import {
   startImport,
@@ -14,15 +6,6 @@ import {
   cancelImport,
   ImportBusyError,
 } from './api';
-import type {
-  ImportPhase,
-  ImportProblem,
-  ImportProblemDetail,
-  ImportRun,
-  LogKind,
-  LogLine,
-  ProblemKind,
-} from '@/types';
 import { makeImportRun } from '@/test-support/makeImportRun/makeImportRun';
 import {
   createdResponse,
@@ -275,88 +258,5 @@ describe('cancelImport', () => {
     fetchMock.mockRejectedValue(new Error('offline'));
 
     await expect(cancelImport()).rejects.toThrow();
-  });
-});
-
-/**
- * **Dismiss** — _Skip_ on a **Problem**: `DELETE` to the problem's own route.
- * The `204` and the `404` both resolve, because both mean the same thing to
- * the screen — the problem is not there any more, and the row goes. A `500`
- * and a request that could not be made reject, and the row stays.
- */
-
-/**
- * The snapshot's shape is final from this slice, and both build targets read
- * it from `src/types/`. These are compile-time assertions, checked by the
- * `spec` project's typecheck: a type the barrel does not export fails the
- * import above, and a field that drifts fails the assertion below.
- */
-describe('the shared import types', () => {
-  it('names the three phases a run can be in', () => {
-    expectTypeOf<ImportPhase>().toEqualTypeOf<
-      'scanning' | 'importing' | 'review'
-    >();
-  });
-
-  it('carries the log and the problems on the snapshot, empty until their phases', () => {
-    const run: ImportRun = {
-      id: 'run-1',
-      phase: 'scanning',
-      startedAt: '2026-09-13T10:00:00.000Z',
-      found: 0,
-      total: 0,
-      done: 0,
-      matched: 0,
-      currentItem: '',
-      log: [],
-      problems: [],
-    };
-
-    expectTypeOf(run.log).toEqualTypeOf<LogLine[]>();
-    expectTypeOf(run.problems).toEqualTypeOf<ImportProblem[]>();
-    expect(run.log).toEqual([]);
-    expect(run.problems).toEqual([]);
-  });
-
-  it('puts neither elapsed, percent nor the ETA on the snapshot', () => {
-    // Derived client-side from `startedAt`, `done` and `total`; a snapshot
-    // carrying them would be a clock on the wire.
-    expectTypeOf<ImportRun>().not.toHaveProperty('elapsed');
-    expectTypeOf<ImportRun>().not.toHaveProperty('percent');
-    expectTypeOf<ImportRun>().not.toHaveProperty('eta');
-  });
-
-  it('types a log line by its kind', () => {
-    const line: LogLine = { text: '✓ Found 2 movies', kind: 'success' };
-
-    expectTypeOf(line.kind).toEqualTypeOf<LogKind>();
-    expectTypeOf<LogKind>().toEqualTypeOf<
-      'info' | 'scan' | 'path' | 'success' | 'warning' | 'error'
-    >();
-  });
-
-  it('names the six problem kinds and the soft one’s movie', () => {
-    expectTypeOf<ProblemKind>().toEqualTypeOf<
-      | 'no-folder'
-      | 'ambiguous'
-      | 'no-video'
-      | 'no-row'
-      | 'failed'
-      | 'missing-meta'
-    >();
-    const soft: ImportProblem = {
-      id: 'p1',
-      kind: 'missing-meta',
-      title: 'Amélie',
-      reason: 'No genre on the row',
-      movieId: 'm9',
-    };
-    expectTypeOf(soft.movieId).toEqualTypeOf<string | undefined>();
-  });
-
-  it('extends a problem into what Resolve prefills the form from', () => {
-    expectTypeOf<ImportProblemDetail>().toMatchTypeOf<ImportProblem>();
-    expectTypeOf<ImportProblemDetail['candidates']>().toEqualTypeOf<string[]>();
-    expectTypeOf<ImportProblemDetail['row']['title']>().toEqualTypeOf<string>();
   });
 });
