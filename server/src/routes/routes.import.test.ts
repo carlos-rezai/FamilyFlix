@@ -45,6 +45,7 @@ import {
 import { createMedia, type Media } from '../media/createMedia/createMedia';
 import { createPlayback } from '../playback/createPlayback/createPlayback';
 import { createSqliteStorage, type LibraryStorage } from '../library';
+import { heldCopy } from '../test-support/heldCopy/heldCopy';
 import { sandboxRoot } from '../test-support/sandboxRoot/sandboxRoot';
 import type {
   ImportProblem,
@@ -180,42 +181,6 @@ async function untilReview(baseUrl: string): Promise<ImportRun> {
   }
 }
 
-/**
- * A `Media` whose first copy — or the first of the file named, when one is —
- * waits until the test lets it go, and says when it has got there: the one
- * way to hold a run in its importing phase for as long as an assertion needs.
- */
-function gatedSeam(filename = ''): {
-  seam: (real: Media) => Media;
-  release: () => void;
-  reached: Promise<void>;
-} {
-  let release: () => void = () => undefined;
-  const gate = new Promise<void>((resolve) => {
-    release = resolve;
-  });
-  let arrive: () => void = () => undefined;
-  const reached = new Promise<void>((resolve) => {
-    arrive = resolve;
-  });
-  let held = false;
-  return {
-    release: () => release(),
-    reached,
-    seam: (real) => ({
-      ...real,
-      copyIn: async (folder, source) => {
-        if (!held && source.endsWith(filename)) {
-          held = true;
-          arrive();
-          await gate;
-        }
-        return real.copyIn(folder, source);
-      },
-    }),
-  };
-}
-
 describe('POST /api/import — starting a run', () => {
   it('answers 201 with the snapshot', async () => {
     const { baseUrl, root, sheet } = freshApi();
@@ -280,7 +245,7 @@ describe('POST /api/import — starting a run', () => {
   });
 
   it('answers 409 while a run exists', async () => {
-    const { seam, release } = gatedSeam();
+    const { seam, release } = heldCopy();
     const { baseUrl, root, sheet } = freshApi({ seam });
     try {
       const first = await postImport(baseUrl, {
@@ -444,7 +409,7 @@ describe('GET /api/import/current', () => {
   });
 
   it('answers 200 with the snapshot while the run is going', async () => {
-    const { seam, release } = gatedSeam();
+    const { seam, release } = heldCopy();
     const { baseUrl, root, sheet } = freshApi({ seam });
     try {
       const started = (await (
@@ -495,7 +460,7 @@ describe('GET /api/import/current', () => {
  */
 describe('POST /api/import/current/cancel', () => {
   it('answers 204 for a run that is going, and current answers 404 after it', async () => {
-    const { seam, release } = gatedSeam();
+    const { seam, release } = heldCopy();
     const { baseUrl, root, sheet } = freshApi({ seam });
     await postImport(baseUrl, { sheetPath: sheet, rootPath: root });
     expect((await getCurrent(baseUrl)).status).toBe(200);
@@ -1168,7 +1133,7 @@ describe('a fresh API over the library of an interrupted run', () => {
     root: string;
     sheet: string;
   }> {
-    const { seam, reached } = gatedSeam('Amelie.mp4');
+    const { seam, reached } = heldCopy('Amelie.mp4');
     const before = freshApi({ seam });
     const started = await postImport(before.baseUrl, {
       sheetPath: before.sheet,

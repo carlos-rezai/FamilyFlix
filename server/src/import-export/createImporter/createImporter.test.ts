@@ -83,6 +83,7 @@ import {
 import { createMedia, type Media } from '../../media/createMedia/createMedia';
 import { createPlayback } from '../../playback/createPlayback/createPlayback';
 import { freshStorage } from '../../test-support/freshStorage/freshStorage';
+import { heldCopy } from '../../test-support/heldCopy/heldCopy';
 import { sandboxRoot } from '../../test-support/sandboxRoot/sandboxRoot';
 import type { LibraryStorage } from '../../library';
 import type {
@@ -131,45 +132,6 @@ function sandbox({
     playback: createPlayback(media, null),
   });
   return { storage, importer, media, root, sheet };
-}
-
-/**
- * A `Media` that holds the copy of one source file — the first whose path
- * ends in `filename` — until the test lets it go, and says when it has got
- * there. The one way to have a run reliably mid-copy when cancel is called.
- *
- * Every argument is forwarded as given, so a signal the importer hands its
- * copies reaches the real one untouched.
- */
-function holdCopyOf(filename: string): {
-  seam: (real: Media) => Media;
-  reached: Promise<void>;
-  release: () => void;
-} {
-  let release: () => void = () => undefined;
-  const gate = new Promise<void>((resolve) => {
-    release = resolve;
-  });
-  let arrive: () => void = () => undefined;
-  const reached = new Promise<void>((resolve) => {
-    arrive = resolve;
-  });
-  let held = false;
-  return {
-    reached,
-    release: () => release(),
-    seam: (real) => ({
-      ...real,
-      copyIn: async (...args) => {
-        if (!held && args[1].endsWith(filename)) {
-          held = true;
-          arrive();
-          await gate;
-        }
-        return real.copyIn(...args);
-      },
-    }),
-  };
 }
 
 /** The **Movie folders** under a managed directory, by name. */
@@ -475,7 +437,7 @@ describe('createImporter — the snapshot', () => {
   it('names the title being imported under currentItem', async () => {
     // Held on Amélie's video, mid-copy: what the running step shows under the
     // bar while importing is the film's title, not the folder it comes from.
-    const hold = holdCopyOf('Amelie.mp4');
+    const hold = heldCopy('Amelie.mp4');
     const { importer, root, sheet } = sandbox({ media: hold.seam });
     await importer.start(sheet, root);
     await hold.reached;
@@ -613,7 +575,7 @@ describe('createImporter — refusing to start', () => {
  */
 describe('createImporter — cancel', () => {
   it('discards the run: current answers null afterwards', async () => {
-    const hold = holdCopyOf('Amelie.mp4');
+    const hold = heldCopy('Amelie.mp4');
     const { importer, root, sheet } = sandbox({ media: hold.seam });
     await importer.start(sheet, root);
     await hold.reached;
@@ -626,7 +588,7 @@ describe('createImporter — cancel', () => {
   });
 
   it('keeps every movie added before the cancel', async () => {
-    const hold = holdCopyOf('Amelie.mp4');
+    const hold = heldCopy('Amelie.mp4');
     const { storage, importer, root, sheet } = sandbox({ media: hold.seam });
     await importer.start(sheet, root);
     await hold.reached;
@@ -642,7 +604,7 @@ describe('createImporter — cancel', () => {
   });
 
   it('aborts the in-flight copy and leaves no reserved folder behind for it', async () => {
-    const hold = holdCopyOf('Amelie.mp4');
+    const hold = heldCopy('Amelie.mp4');
     const { storage, importer, media, root, sheet } = sandbox({
       media: hold.seam,
     });
@@ -662,7 +624,7 @@ describe('createImporter — cancel', () => {
   it('does not go on to the next match once cancelled', async () => {
     // Held on Die Hard's video, the first copy of the run: nothing has been
     // added yet, and nothing may be added after the cancel either.
-    const hold = holdCopyOf('Die.Hard.1988.1080p.mp4');
+    const hold = heldCopy('Die.Hard.1988.1080p.mp4');
     const { storage, importer, media, root, sheet } = sandbox({
       media: hold.seam,
     });
@@ -681,7 +643,7 @@ describe('createImporter — cancel', () => {
   });
 
   it('changes nothing under the library root', async () => {
-    const hold = holdCopyOf('Amelie.mp4');
+    const hold = heldCopy('Amelie.mp4');
     const { importer, root, sheet } = sandbox({ media: hold.seam });
     const before = treeOf(root);
     await importer.start(sheet, root);
@@ -1361,7 +1323,7 @@ describe('createImporter — the matcher’s verdicts become problems', () => {
   });
 
   it('has every match-time problem on the snapshot by the time the bar turns determinate', async () => {
-    const hold = holdCopyOf('Die.Hard.1988.1080p.mp4');
+    const hold = heldCopy('Die.Hard.1988.1080p.mp4');
     const { importer, root } = sandbox({ media: hold.seam });
     folderUnder(root, 'Ironwood (2018)', ['Ironwood.mp4']);
     const sheet = sheetOf(
@@ -2469,7 +2431,7 @@ describe('createImporter — the importer restarting mid-run', () => {
     sheet: string;
     restarted: Importer;
   }> {
-    const hold = holdCopyOf('Amelie.mp4');
+    const hold = heldCopy('Amelie.mp4');
     const { storage, importer, media, root, sheet } = sandbox({
       media: hold.seam,
     });
