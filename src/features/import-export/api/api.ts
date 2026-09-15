@@ -136,21 +136,6 @@ const problemEndpoint = (id: string): string =>
   `${CURRENT_ENDPOINT}/problems/${encodeURIComponent(id)}`;
 
 /**
- * **Dismiss** — _Skip_ on a **Problem**: `DELETE` to the problem's own route.
- * The `204` and the `404` both resolve, because both mean the same thing to
- * the screen — the problem is not there any more, and the row goes. Anything
- * else rejects, and so does a request that could not be made; the row stays.
- */
-export async function dismissProblem(id: string): Promise<void> {
-  const endpoint = problemEndpoint(id);
-  const response = await fetch(endpoint, { method: 'DELETE' });
-
-  if (!response.ok && response.status !== 404) {
-    throw new Error(`DELETE ${endpoint} failed: ${response.status}`);
-  }
-}
-
-/**
  * The **Problem detail** _Resolve_ prefills the **Movie form** from — the
  * problem, the **Sheet row**, the matched **Source folder** and its **Found
  * files** — or `null` on the `404`. A problem that is gone — dismissed, or the

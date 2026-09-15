@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import { dismissProblem } from '@/api/dismissProblem/dismissProblem';
+import type { ImportRun } from '@/types';
 import {
   cancelImport,
-  dismissProblem,
   fetchCurrentImport,
   ImportBusyError,
   startImport,
 } from '../api/api';
-import type { ImportRun } from '@/types';
 
 /** How often the **Current run** is read while it is still going. */
 const POLL_INTERVAL_MS = 500;

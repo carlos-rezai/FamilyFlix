@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
+import { dismissProblem } from '@/api/dismissProblem/dismissProblem';
 import { fetchMovie } from '@/api/fetchMovie/fetchMovie';
 import { useGoBack } from '@/hooks/useGoBack/useGoBack';
 import type { MovieFormValues } from '@/types';
 import {
-  dismissProblem,
   fetchProblem,
   ProblemGoneError,
   resolveProblem,
