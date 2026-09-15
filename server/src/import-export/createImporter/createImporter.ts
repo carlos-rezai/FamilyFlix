@@ -7,6 +7,7 @@ import type { Media } from '../../media/createMedia/createMedia';
 import type { MovieFolderScan } from '../../media/scanMovieFolder/scanMovieFolder';
 import { walkLibraryRoot } from '../../media/walkLibraryRoot/walkLibraryRoot';
 import type { Playback } from '../../playback/createPlayback/createPlayback';
+import { derivedRuntime } from '../../playback/derivedRuntime/derivedRuntime';
 import { matchRows, type Match } from '../matchRows/matchRows';
 import { readSheet, type SheetRow } from '../readSheet/readSheet';
 import { titleGuess, titleKey } from '../titleKey/titleKey';
@@ -156,9 +157,6 @@ export interface Importer {
 /** The sheet formats the reader opens, by extension. */
 const SHEET_EXTENSIONS = ['.xlsx', '.csv'];
 
-/** The units the `runtime_minutes` column stores, and the film's own. */
-const SECONDS_PER_MINUTE = 60;
-
 /**
  * How many **Log lines** a snapshot carries, newest kept: a thousand-film run
  * would put a thousand scanning lines on every poll otherwise.
@@ -227,32 +225,6 @@ const filesOf = (scan: MovieFolderScan): ImportProblemDetail['files'] => ({
 
 /** A count as the prototype prints it: `1,234`. */
 const count = (n: number): string => n.toLocaleString('en-US');
-
-/**
- * The **Runtime label**'s minutes for a film that has just been copied in, or
- * `null` when this machine cannot say. `duration` asks the **Playback
- * component**'s probe first and the container's own header second, so a
- * machine with no FFmpeg still measures an MP4. It never throws — a runtime is
- * the least of what the import was for.
- *
- * The same derivation `routes/derivedRuntime` makes for the form's save; it is
- * spelled here rather than imported because a domain must not reach into the
- * HTTP layer, and lifting the one helper into `playback/` is the refactor
- * step's, not this slice's.
- */
-function runtimeMinutes(playback: Playback, storedPath: string): number | null {
-  try {
-    const file = playback.videoFile(storedPath);
-    const seconds = file === null ? null : playback.duration(file);
-    if (seconds === null) {
-      return null;
-    }
-    const minutes = Math.round(seconds / SECONDS_PER_MINUTE);
-    return minutes > 0 ? minutes : null;
-  } catch {
-    return null;
-  }
-}
 
 /** What the sheet check answers: the rows, and the rows it left out for a blank title. */
 interface SheetRead {
@@ -505,7 +477,7 @@ export function createImporter({
       // A cancel that landed between the last copy and the row: the folder
       // goes, the row is never written, and nothing half-done is left.
       signal.throwIfAborted();
-      const runtime = runtimeMinutes(playback, videoPath);
+      const runtime = derivedRuntime(playback, videoPath);
       const genres = knownGenres(row.genres, pool, warnedGenres, current);
 
       const movie: NewMovie = {
@@ -823,7 +795,7 @@ export function createImporter({
             language: track.language,
           });
         }
-        const runtime = runtimeMinutes(playback, videoPath);
+        const runtime = derivedRuntime(playback, videoPath);
 
         // The form's fields, not the sheet's: the row only prefilled them.
         // What the sheet alone knows — whether the family has seen it — is
