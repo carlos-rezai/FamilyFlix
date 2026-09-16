@@ -377,3 +377,215 @@ describe('Modal — reopening', () => {
     expect(document.activeElement).toBe(trigger());
   });
 });
+
+// --- 14 — Export, Phase 1: "the tracer bullet" (issue #137) -------------------
+//
+// `bare`: the card is the children — no header, no ✕, no body padding — and
+// `title` becomes the card's `aria-label` instead of the heading it labelled.
+// The **Export dialog**'s done face is the app's one **Bare modal**: it swaps
+// its content inside the same card so the pop-in runs once, and the prototype
+// draws that face with no header at all. Everything else the Modal owns —
+// Escape, the scrim, focus in and back out, Tab held — is unchanged, and so is
+// a caller that does not ask for it.
+
+function renderBare({
+  onClose = () => undefined,
+  children = (
+    <>
+      <h2>Export ready</h2>
+      <p>Saved family-library.csv with 3 movies to your computer.</p>
+      <button type="button">Done</button>
+    </>
+  ),
+}: { onClose?: () => void; children?: ReactNode } = {}) {
+  return render(
+    <ThemeProvider theme={theme}>
+      <Modal open bare title="Export ready" onClose={onClose}>
+        {children}
+      </Modal>
+    </ThemeProvider>
+  );
+}
+
+const bareDialog = () => screen.getByRole('dialog', { name: 'Export ready' });
+
+describe('Modal bare — the card is the children', () => {
+  it('draws no heading of its own', () => {
+    renderBare({ children: <p>Only this.</p> });
+
+    // The card's name is the `title`, but nothing on screen spells it: a
+    // heading drawn above the done face would be the header the prototype
+    // does not have.
+    expect(within(bareDialog()).queryByRole('heading')).toBeNull();
+    expect(screen.queryByText('Export ready')).toBeNull();
+  });
+
+  it('draws no ✕', () => {
+    renderBare();
+
+    expect(
+      within(bareDialog()).queryByRole('button', { name: 'Close' })
+    ).toBeNull();
+    expect(within(bareDialog()).queryByText('✕')).toBeNull();
+  });
+
+  it('shows the children as the whole card', () => {
+    renderBare();
+
+    const card = bareDialog();
+    expect(
+      within(card).getByRole('heading', { name: 'Export ready' })
+    ).toBeTruthy();
+    expect(
+      within(card).getByText(
+        'Saved family-library.csv with 3 movies to your computer.'
+      )
+    ).toBeTruthy();
+    expect(within(card).getByRole('button', { name: 'Done' })).toBeTruthy();
+  });
+
+  it('carries the title as the card’s accessible name, by aria-label', () => {
+    renderBare();
+
+    const card = bareDialog();
+    expect(card.getAttribute('aria-label')).toBe('Export ready');
+    expect(card.getAttribute('aria-labelledby')).toBeNull();
+    expect(card.getAttribute('aria-modal')).toBe('true');
+  });
+
+  it('draws the children with no body padding', () => {
+    renderBare({ children: <p data-testid="only">Only this.</p> });
+
+    // The card's own inner box is the prototype's: 36px 32px on the done face,
+    // drawn by the children. Nothing between the card and the children adds
+    // padding of its own.
+    const card = bareDialog();
+    const child = screen.getByTestId('only');
+    let node = child.parentElement;
+    while (node !== null && node !== card) {
+      const style = getComputedStyle(node);
+      expect(style.paddingTop).toMatch(/^(0px|)$/);
+      expect(style.paddingLeft).toMatch(/^(0px|)$/);
+      node = node.parentElement;
+    }
+    expect(node).toBe(card);
+  });
+});
+
+describe('Modal bare — the ways out that remain', () => {
+  it('calls onClose on Escape', () => {
+    const onClose = vi.fn();
+    renderBare({ onClose });
+
+    press('Escape');
+
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('calls onClose for a press on the scrim', () => {
+    const onClose = vi.fn();
+    renderBare({ onClose });
+
+    fireEvent.click(bareDialog().parentElement as HTMLElement);
+
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not call onClose for a press inside the card', () => {
+    const onClose = vi.fn();
+    renderBare({ onClose });
+
+    fireEvent.click(within(bareDialog()).getByText('Export ready'));
+
+    expect(onClose).not.toHaveBeenCalled();
+  });
+});
+
+/** A bare modal as the Export dialog holds it: opened from a row, shut by Done. */
+function BareHost() {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <ThemeProvider theme={theme}>
+      <button type="button" onClick={() => setOpen(true)}>
+        Export to CSV
+      </button>
+      <Modal
+        open={open}
+        bare
+        title="Export ready"
+        onClose={() => setOpen(false)}
+      >
+        <h2>Export ready</h2>
+        <button type="button" onClick={() => setOpen(false)}>
+          Done
+        </button>
+      </Modal>
+    </ThemeProvider>
+  );
+}
+
+describe('Modal bare — focus', () => {
+  it('moves focus onto the card when it opens', () => {
+    render(<BareHost />);
+    const row = screen.getByRole('button', { name: 'Export to CSV' });
+    row.focus();
+
+    fireEvent.click(row);
+
+    expect(document.activeElement).toBe(bareDialog());
+  });
+
+  it('moves focus back to the element that had it, after Done', () => {
+    render(<BareHost />);
+    const row = screen.getByRole('button', { name: 'Export to CSV' });
+    row.focus();
+    fireEvent.click(row);
+
+    const done = within(bareDialog()).getByRole('button', { name: 'Done' });
+    done.focus();
+    fireEvent.click(done);
+
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(document.activeElement).toBe(row);
+  });
+
+  it('moves focus back after Escape', () => {
+    render(<BareHost />);
+    const row = screen.getByRole('button', { name: 'Export to CSV' });
+    row.focus();
+    fireEvent.click(row);
+
+    press('Escape');
+
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(document.activeElement).toBe(row);
+  });
+
+  it('holds Tab inside the card', () => {
+    renderBare();
+    const done = within(bareDialog()).getByRole('button', { name: 'Done' });
+
+    // Done is the only focusable, so Tab off it wraps back onto it.
+    done.focus();
+    press('Tab');
+    expect(document.activeElement).toBe(done);
+
+    press('Tab', { shiftKey: true });
+    expect(document.activeElement).toBe(done);
+  });
+});
+
+describe('Modal — a caller that does not ask for bare', () => {
+  it('still draws the header, the ✕ and the labelled heading', () => {
+    renderModal();
+
+    const card = dialog();
+    expect(
+      within(card).getByRole('heading', { name: 'Export library' })
+    ).toBeTruthy();
+    expect(within(card).getByRole('button', { name: 'Close' })).toBeTruthy();
+    expect(card.getAttribute('aria-labelledby')).toBeTruthy();
+    expect(card.getAttribute('aria-label')).toBeNull();
+  });
+});

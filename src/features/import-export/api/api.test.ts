@@ -4,11 +4,14 @@ import {
   startImport,
   fetchCurrentImport,
   cancelImport,
+  fetchExportSummary,
+  exportLibrary,
   ImportBusyError,
 } from './api';
 import { makeImportRun } from '@/test-support/makeImportRun/makeImportRun';
 import {
   createdResponse,
+  fileResponse,
   noContentResponse,
   notFoundResponse,
   okResponse,
@@ -30,6 +33,12 @@ import {
  * for each status the route can answer. `startImport` is the one call in the
  * app whose refusal names a field, because the screen has two fields and has
  * to know which one to draw the danger line under.
+ *
+ * 14 — Export, Phase 1: "the tracer bullet" (issue #137) adds the two calls
+ * the **Export dialog** makes — `fetchExportSummary` on open, for the count
+ * the filename row shows, and `exportLibrary` behind _Export as CSV_, the one
+ * call in the app that resolves bytes rather than JSON. One caller each, so
+ * they stay here too.
  */
 
 let fetchMock: ReturnType<
@@ -258,5 +267,106 @@ describe('cancelImport', () => {
     fetchMock.mockRejectedValue(new Error('offline'));
 
     await expect(cancelImport()).rejects.toThrow();
+  });
+});
+
+describe('fetchExportSummary', () => {
+  it('GETs the summary route', async () => {
+    fetchMock.mockResolvedValue(okResponse({ movieCount: 3 }));
+
+    await fetchExportSummary();
+
+    const request = onlyRequest();
+    expect(request.url).toBe('/api/export');
+    expect(request.method === undefined || request.method === 'GET').toBe(true);
+  });
+
+  it('resolves the summary the route answered', async () => {
+    fetchMock.mockResolvedValue(okResponse({ movieCount: 3 }));
+
+    await expect(fetchExportSummary()).resolves.toEqual({ movieCount: 3 });
+  });
+
+  it('resolves a count of 0 for an empty library', async () => {
+    fetchMock.mockResolvedValue(okResponse({ movieCount: 0 }));
+
+    await expect(fetchExportSummary()).resolves.toEqual({ movieCount: 0 });
+  });
+
+  it('rejects when the server fell over', async () => {
+    fetchMock.mockResolvedValue(serverErrorResponse());
+
+    await expect(fetchExportSummary()).rejects.toThrow();
+  });
+
+  it('rejects on any non-OK status', async () => {
+    fetchMock.mockResolvedValue(notFoundResponse('Not found'));
+
+    await expect(fetchExportSummary()).rejects.toThrow();
+  });
+
+  it('rejects when the request could not be made at all', async () => {
+    fetchMock.mockRejectedValue(new Error('offline'));
+
+    await expect(fetchExportSummary()).rejects.toThrow();
+  });
+});
+
+describe('exportLibrary', () => {
+  const csv = () =>
+    new Blob(['\uFEFFTitle,Year\nDie Hard,1988\n'], {
+      type: 'text/csv; charset=utf-8',
+    });
+
+  it('GETs the CSV route for csv', async () => {
+    fetchMock.mockResolvedValue(fileResponse(csv()));
+
+    await exportLibrary('csv');
+
+    const request = onlyRequest();
+    expect(request.url).toBe('/api/export/csv');
+    expect(request.method === undefined || request.method === 'GET').toBe(true);
+  });
+
+  it('GETs the Excel route for xlsx', async () => {
+    fetchMock.mockResolvedValue(fileResponse(csv()));
+
+    await exportLibrary('xlsx');
+
+    expect(onlyRequest().url).toBe('/api/export/xlsx');
+  });
+
+  it('resolves the bytes as a Blob, reading no JSON', async () => {
+    // `fileResponse` rejects on `json()`: a call that parsed the body as a
+    // document would reject here.
+    const blob = csv();
+    fetchMock.mockResolvedValue(fileResponse(blob));
+
+    const result = await exportLibrary('csv');
+
+    expect(result).toBeInstanceOf(Blob);
+    expect(result).toBe(blob);
+  });
+
+  it('rejects when the server fell over', async () => {
+    fetchMock.mockResolvedValue(serverErrorResponse());
+
+    await expect(exportLibrary('csv')).rejects.toThrow();
+  });
+
+  it('rejects when the route refuses the format', async () => {
+    fetchMock.mockResolvedValue({
+      ok: false,
+      status: 400,
+      json: () => Promise.resolve({ error: 'Unknown export format: xlsx' }),
+    } as unknown as Response);
+
+    await expect(exportLibrary('xlsx')).rejects.toThrow();
+  });
+
+  it('rejects when the request could not be made at all', async () => {
+    fetchMock.mockRejectedValue(new Error('offline'));
+
+    await expect(exportLibrary('csv')).rejects.toThrow();
   });
 });

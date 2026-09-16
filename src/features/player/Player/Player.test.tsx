@@ -391,6 +391,15 @@ describe('Player — leaving', () => {
     expect(pathname()).toBe('/movie/m1');
   });
 
+  // 14 — Export (issue #137): the export is the maintainer's, behind the gear.
+  it('offers no export control', async () => {
+    await renderPlayer();
+    await screen.findByRole('button', { name: 'Back' });
+
+    expect(screen.queryByRole('button', { name: /export/i })).toBeNull();
+    expect(screen.queryByText(/export/i)).toBeNull();
+  });
+
   it('leaves the same way on Escape, which is the keyboard way out', async () => {
     // The same handler, not a second one: two ways out that can drift apart are
     // two behaviours to keep in step forever.

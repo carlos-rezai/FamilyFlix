@@ -431,4 +431,15 @@ describe('LibraryPage — the gear is the only maintainer door', () => {
       expect(href.startsWith('/settings')).toBe(false);
     }
   });
+
+  // 14 — Export (issue #137): the export is the maintainer's, behind the gear.
+  it('offers no export control', async () => {
+    respondWithRows(HOME_PAYLOAD);
+
+    renderPage();
+    await screen.findByRole('region', { name: 'Action' });
+
+    expect(screen.queryByRole('button', { name: /export/i })).toBeNull();
+    expect(screen.queryByText(/export/i)).toBeNull();
+  });
 });

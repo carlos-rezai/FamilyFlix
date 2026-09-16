@@ -959,6 +959,20 @@ describe('MovieDetail — the edit menu', () => {
     ).toBeDefined();
   });
 
+  // 14 — Export (issue #137): the export is the maintainer's, behind the gear
+  // — not on the page and not in its menu.
+  it('offers no export control, on the page or in the menu', async () => {
+    serveMovie();
+
+    renderDetail();
+    await findTitle('Northwind');
+    expect(screen.queryByText(/export/i)).toBeNull();
+    openMenu();
+
+    expect(screen.queryByRole('menuitem', { name: /export/i })).toBeNull();
+    expect(screen.queryByText(/export/i)).toBeNull();
+  });
+
   it('holds Edit details and, after it, Delete movie', async () => {
     serveMovie();
 

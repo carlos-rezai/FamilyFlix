@@ -269,3 +269,111 @@ describe('readSheet — the cells', () => {
     });
   });
 });
+
+// --- 14 — Export, Phase 1: "the tracer bullet" (issue #137) -------------------
+//
+// The **Sheet writer** is this reader's mirror, and it writes the watch state
+// under a `Status` header as `Watched` / `In progress` / `Unwatched` — the
+// three derived states, not a yes/no. For an untouched **Export file** to read
+// back as the library it came from, `Status` joins the watched column's
+// synonyms, `Watched` joins the truthy values, and the two other states fall
+// through to `false`. The `watched` header and its old values still read: the
+// maintainer's own sheet is not rewritten by the export shipping.
+
+describe('readSheet — the Status column an export writes', () => {
+  it('reads a Status header as the watched column', async () => {
+    const rows = await oneRow('Title,Status', 'Die Hard,Watched');
+
+    expect(rows[0].watched).toBe(true);
+  });
+
+  it.each(['Watched', 'watched', 'WATCHED'])(
+    'reads “%s” as watched',
+    async (cell) => {
+      const rows = await oneRow('Title,Status', `Die Hard,${cell}`);
+
+      expect(rows[0].watched).toBe(true);
+    }
+  );
+
+  it.each(['In progress', 'in progress', 'Unwatched', 'unwatched'])(
+    'reads “%s” as not watched',
+    async (cell) => {
+      const rows = await oneRow('Title,Status', `Die Hard,${cell}`);
+
+      expect(rows[0].watched).toBe(false);
+    }
+  );
+
+  it('still reads the watched header and its old values', async () => {
+    const rows = await readSheet(
+      csv(
+        'Title,Watched\nDie Hard,yes\nAmélie,true\nNorthwind,1\nZephyr,✓\nMeridian,no\n'
+      ),
+      'library.csv'
+    );
+
+    expect(rows.map((row) => row.watched)).toEqual([
+      true,
+      true,
+      true,
+      true,
+      false,
+    ]);
+  });
+
+  it('reads the export’s own value under the old header too', async () => {
+    const rows = await oneRow('Title,Watched', 'Die Hard,Watched');
+
+    expect(rows[0].watched).toBe(true);
+  });
+
+  it('takes the first of Status and Watched when a sheet carries both', async () => {
+    // Two headers for one column: the leftmost wins, as it does for every
+    // other synonym pair, rather than the later one overwriting.
+    const rows = await oneRow('Title,Status,Watched', 'Die Hard,Watched,no');
+
+    expect(rows[0].watched).toBe(true);
+  });
+});
+
+describe('readSheet — a CSV that begins with a BOM', () => {
+  /** The bytes Excel — and the **Sheet writer** — put ahead of a UTF-8 CSV. */
+  const BOM = '\uFEFF';
+
+  it('strips the BOM, so the first header is still the title column', async () => {
+    const rows = await readSheet(
+      csv(`${BOM}Title,Year\nDie Hard,1988\n`),
+      'library.csv'
+    );
+
+    expect(rows).toEqual([
+      {
+        title: 'Die Hard',
+        year: 1988,
+        genres: [],
+        director: null,
+        cast: [],
+        synopsis: null,
+        rating: null,
+        watched: false,
+      },
+    ]);
+  });
+
+  it('does not refuse a BOM-led sheet as one with no title column', async () => {
+    await expect(
+      readSheet(csv(`${BOM}Title\nDie Hard\n`), 'library.csv')
+    ).resolves.toHaveLength(1);
+  });
+
+  it('keeps a BOM out of the title when Title is the first column', async () => {
+    const rows = await readSheet(
+      csv(`${BOM}Title,Status\nDie Hard,Watched\n`),
+      'library.csv'
+    );
+
+    expect(rows[0].title).toBe('Die Hard');
+    expect(rows[0].title.charCodeAt(0)).not.toBe(0xfeff);
+  });
+});

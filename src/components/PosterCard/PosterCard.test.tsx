@@ -187,6 +187,14 @@ describe('PosterCard — what it deliberately does not offer', () => {
     // display-only, so the only button inside it is the heart.
     expect(screen.queryAllByRole('button', { name: '' })).toHaveLength(0);
   });
+
+  // 14 — Export (issue #137): the export is the maintainer's, behind the gear.
+  it('offers no export control', () => {
+    renderCard();
+
+    expect(screen.queryByRole('button', { name: /export/i })).toBeNull();
+    expect(screen.queryByText(/export/i)).toBeNull();
+  });
 });
 
 /**

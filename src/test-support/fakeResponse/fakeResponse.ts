@@ -69,6 +69,22 @@ export function notFoundResponse(error = 'Movie not found'): Response {
 }
 
 /**
+ * A 200 carrying a file rather than JSON — what `GET /api/export/:format`
+ * answers. The one double whose caller reads `blob()` and never `json()`: a
+ * client that reached for `json()` on a CSV would be parsing a header row as a
+ * document, and the rejection here is that trap, kept.
+ */
+export function fileResponse(blob: Blob): Response {
+  return {
+    ok: true,
+    status: 200,
+    blob: () => Promise.resolve(blob),
+    json: () =>
+      Promise.reject(new SyntaxError('Unexpected token in JSON at position 0')),
+  } as unknown as Response;
+}
+
+/**
  * A 204 — what a route answers when it did the thing and has nothing to say
  * about it. `DELETE /api/movies/:id` is the first, and the one place a client
  * must not reach for `json()`: there is no body, and a real `Response` would
