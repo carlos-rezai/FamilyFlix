@@ -545,15 +545,8 @@ describe('ExportModal — a request the server refuses', () => {
     expect(browser.downloads()).toHaveLength(0);
   });
 
-  it('keeps the format — the 400 Export as Excel meets in this slice', async () => {
-    serve({
-      file: () =>
-        ({
-          ok: false,
-          status: 400,
-          json: () => Promise.resolve({ error: 'Unknown export format: xlsx' }),
-        }) as unknown as Response,
-    });
+  it('keeps the format when Export as Excel is refused', async () => {
+    serve({ file: () => serverErrorResponse() });
     renderDialog();
     fireEvent.click(excelCard());
 

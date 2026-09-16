@@ -8,6 +8,7 @@ import {
   exportLibrary,
   ImportBusyError,
 } from './api';
+import type { ExportFormat } from '@/types';
 import { makeImportRun } from '@/test-support/makeImportRun/makeImportRun';
 import {
   createdResponse,
@@ -328,12 +329,17 @@ describe('exportLibrary', () => {
     expect(request.method === undefined || request.method === 'GET').toBe(true);
   });
 
-  it('GETs the Excel route for xlsx', async () => {
-    fetchMock.mockResolvedValue(fileResponse(csv()));
+  it('GETs the Excel route for xlsx and resolves the workbook as a Blob', async () => {
+    const workbook = new Blob(['PK'], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    });
+    fetchMock.mockResolvedValue(fileResponse(workbook));
 
-    await exportLibrary('xlsx');
+    const result = await exportLibrary('xlsx');
 
     expect(onlyRequest().url).toBe('/api/export/xlsx');
+    expect(result).toBeInstanceOf(Blob);
+    expect(result).toBe(workbook);
   });
 
   it('resolves the bytes as a Blob, reading no JSON', async () => {
@@ -358,10 +364,12 @@ describe('exportLibrary', () => {
     fetchMock.mockResolvedValue({
       ok: false,
       status: 400,
-      json: () => Promise.resolve({ error: 'Unknown export format: xlsx' }),
+      json: () => Promise.resolve({ error: 'Unknown export format: pdf' }),
     } as unknown as Response);
 
-    await expect(exportLibrary('xlsx')).rejects.toThrow();
+    // The two formats are the wire's own names; the type keeps a third out of
+    // the call, so the refusal is reached the one way it still can be.
+    await expect(exportLibrary('pdf' as ExportFormat)).rejects.toThrow();
   });
 
   it('rejects when the request could not be made at all', async () => {

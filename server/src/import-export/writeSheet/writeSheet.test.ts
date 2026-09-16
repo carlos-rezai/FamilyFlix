@@ -13,6 +13,13 @@
 // export a backup rather than a listing: an untouched **Export file** fed to
 // **Bulk import** must read as one **Sheet row** per movie with every field
 // equal, so the run adds nothing.
+//
+// 14 — Export, Phase 2: "Excel" (issue #138) gives the writer its second arm.
+// The shape, the eight cell rules and the round trip are the same promise in
+// both **Export formats**, so those groups run once per format; what is the
+// CSV's own — the BOM — and what is the workbook's own — one worksheet, a
+// number where a number was stored, and no styling — each keep a group of
+// their own.
 
 import ExcelJS from 'exceljs';
 import { Readable } from 'node:stream';
@@ -20,9 +27,12 @@ import { describe, expect, it } from 'vitest';
 
 import { writeSheet } from './writeSheet';
 import { readSheet } from '../readSheet/readSheet';
-import { EXPORT_COLUMNS } from '@/types';
-import type { Movie, Subtitle } from '@/types';
+import { EXPORT_COLUMNS, EXPORT_FORMATS } from '@/types';
+import type { ExportFormat, Movie, Subtitle } from '@/types';
 import { makeMovie } from '@/test-support/makeMovie/makeMovie';
+
+/** The two formats, as `describe.each` cases. */
+const FORMATS = [...EXPORT_FORMATS];
 
 /** The header row, in the prototype's eight names and order. */
 const HEADER = [
@@ -71,18 +81,37 @@ function fullMovie(overrides: Partial<Movie> = {}): Movie {
 }
 
 /**
- * The CSV read back as text cells, row by row, through `exceljs`'s own CSV
- * parser — the same one the reader opens the bytes with — with the BOM taken
- * off first, so a test about a cell is not also a test about the BOM. Every
- * cell is coerced to text, and a row is padded to the header's width, so an
- * empty trailing cell reads as `''` rather than as a shorter row.
+ * The bytes opened as the workbook they are, through `exceljs` — the same
+ * library the reader opens them with. A CSV is parsed as text with the BOM
+ * taken off first, so a test about a cell is not also a test about the BOM;
+ * a workbook is loaded as the zip it is.
  */
-async function cells(bytes: Buffer): Promise<string[][]> {
-  const text = bytes.toString('utf8').replace(/^\uFEFF/, '');
+async function open(
+  bytes: Buffer,
+  format: ExportFormat
+): Promise<ExcelJS.Workbook> {
   const workbook = new ExcelJS.Workbook();
+  if (format === 'xlsx') {
+    // `exceljs` declares its own `Buffer` — a bare `ArrayBuffer` shape — for
+    // what is a Node `Buffer` at runtime, the same mismatch the reader notes.
+    await workbook.xlsx.load(bytes as unknown as ArrayBuffer);
+    return workbook;
+  }
+  const text = bytes.toString('utf8').replace(/^\uFEFF/, '');
   await workbook.csv.read(Readable.from([text]), {
     map: (value: string) => value,
   });
+  return workbook;
+}
+
+/**
+ * The sheet read back as text cells, row by row. Every cell is coerced to
+ * text — a workbook's `1988` is a number, a CSV's the digits — and a row is
+ * padded to the header's width, so an empty trailing cell reads as `''`
+ * rather than as a shorter row.
+ */
+async function cells(bytes: Buffer, format: ExportFormat): Promise<string[][]> {
+  const workbook = await open(bytes, format);
   const rows: string[][] = [];
   workbook.worksheets[0].eachRow({ includeEmpty: true }, (row) => {
     rows.push(
@@ -96,38 +125,43 @@ async function cells(bytes: Buffer): Promise<string[][]> {
 }
 
 /** The row under the header, by column name. */
-async function firstRow(bytes: Buffer): Promise<Record<string, string>> {
-  const [header, row] = await cells(bytes);
+async function firstRow(
+  bytes: Buffer,
+  format: ExportFormat
+): Promise<Record<string, string>> {
+  const [header, row] = await cells(bytes, format);
   expect(header).toEqual(HEADER);
   return Object.fromEntries(HEADER.map((name, index) => [name, row[index]]));
 }
 
-describe('writeSheet — the shape of the sheet', () => {
+describe('writeSheet — the export columns', () => {
   it('spells the export columns once, in the prototype’s order', () => {
     // The writer's header row and the dialog's pills both read this list.
     expect(EXPORT_COLUMNS).toEqual(HEADER);
   });
+});
 
+describe.each(FORMATS)('writeSheet — the shape of the sheet (%s)', (format) => {
   it('writes the header row in the eight names and order', async () => {
-    const bytes = await writeSheet([fullMovie()], 'csv');
+    const bytes = await writeSheet([fullMovie()], format);
 
-    const [header] = await cells(bytes);
+    const [header] = await cells(bytes, format);
     expect(header).toEqual(HEADER);
   });
 
   it('writes a header-only sheet for an empty library', async () => {
-    const bytes = await writeSheet([], 'csv');
+    const bytes = await writeSheet([], format);
 
-    expect(await cells(bytes)).toEqual([HEADER]);
+    expect(await cells(bytes, format)).toEqual([HEADER]);
   });
 
   it('writes one row per movie', async () => {
     const bytes = await writeSheet(
       [fullMovie({ id: 'm1' }), fullMovie({ id: 'm2', title: 'Amélie' })],
-      'csv'
+      format
     );
 
-    expect(await cells(bytes)).toHaveLength(3);
+    expect(await cells(bytes, format)).toHaveLength(3);
   });
 
   it('writes the movies in the order it was given, sorting nothing', async () => {
@@ -137,10 +171,10 @@ describe('writeSheet — the shape of the sheet', () => {
         fullMovie({ id: 'm2', title: 'Amélie' }),
         fullMovie({ id: 'm3', title: 'Meridian' }),
       ],
-      'csv'
+      format
     );
 
-    const rows = await cells(bytes);
+    const rows = await cells(bytes, format);
     expect(rows.slice(1).map((row) => row[0])).toEqual([
       'Zephyr',
       'Amélie',
@@ -149,9 +183,9 @@ describe('writeSheet — the shape of the sheet', () => {
   });
 });
 
-describe('writeSheet — the eight cell rules', () => {
+describe.each(FORMATS)('writeSheet — the eight cell rules (%s)', (format) => {
   it('writes every column of a fully populated movie', async () => {
-    const row = await firstRow(await writeSheet([fullMovie()], 'csv'));
+    const row = await firstRow(await writeSheet([fullMovie()], format), format);
 
     expect(row).toEqual({
       Title: 'Die Hard',
@@ -167,7 +201,8 @@ describe('writeSheet — the eight cell rules', () => {
 
   it('writes the title as stored', async () => {
     const row = await firstRow(
-      await writeSheet([fullMovie({ title: '  Die.Hard  ' })], 'csv')
+      await writeSheet([fullMovie({ title: '  Die.Hard  ' })], format),
+      format
     );
 
     expect(row.Title).toBe('  Die.Hard  ');
@@ -177,8 +212,9 @@ describe('writeSheet — the eight cell rules', () => {
     const row = await firstRow(
       await writeSheet(
         [fullMovie({ year: null, director: null, rating: null })],
-        'csv'
-      )
+        format
+      ),
+      format
     );
 
     expect(row.Year).toBe('');
@@ -198,8 +234,9 @@ describe('writeSheet — the eight cell rules', () => {
             ],
           }),
         ],
-        'csv'
-      )
+        format
+      ),
+      format
     );
 
     expect(row.Genres).toBe('Thriller, Action, Comedy');
@@ -207,7 +244,8 @@ describe('writeSheet — the eight cell rules', () => {
 
   it('leaves the genres empty for an ungenred movie', async () => {
     const row = await firstRow(
-      await writeSheet([fullMovie({ genres: [] })], 'csv')
+      await writeSheet([fullMovie({ genres: [] })], format),
+      format
     );
 
     expect(row.Genres).toBe('');
@@ -221,8 +259,9 @@ describe('writeSheet — the eight cell rules', () => {
             cast: ['Alan Rickman', 'Bruce Willis', 'Bonnie Bedelia'],
           }),
         ],
-        'csv'
-      )
+        format
+      ),
+      format
     );
 
     expect(row.Cast).toBe('Alan Rickman, Bruce Willis, Bonnie Bedelia');
@@ -230,7 +269,8 @@ describe('writeSheet — the eight cell rules', () => {
 
   it('leaves the cast empty for a movie with none', async () => {
     const row = await firstRow(
-      await writeSheet([fullMovie({ cast: [] })], 'csv')
+      await writeSheet([fullMovie({ cast: [] })], format),
+      format
     );
 
     expect(row.Cast).toBe('');
@@ -244,8 +284,9 @@ describe('writeSheet — the eight cell rules', () => {
           fullMovie({ id: 'm2', rating: 0 }),
           fullMovie({ id: 'm3', rating: 7 }),
         ],
-        'csv'
-      )
+        format
+      ),
+      format
     );
 
     expect(rows.slice(1).map((row) => row[5])).toEqual(['10', '0', '7']);
@@ -265,8 +306,9 @@ describe('writeSheet — the eight cell rules', () => {
             resumePositionSeconds: status === 'in-progress' ? 600 : 0,
           }),
         ],
-        'csv'
-      )
+        format
+      ),
+      format
     );
 
     expect(row.Status).toBe(cell);
@@ -281,8 +323,9 @@ describe('writeSheet — the eight cell rules', () => {
             subtitles: [track('fr', 2), track('en', 0), track('de', 1)],
           }),
         ],
-        'csv'
-      )
+        format
+      ),
+      format
     );
 
     expect(row.Subtitles).toBe('en, de, fr');
@@ -290,7 +333,8 @@ describe('writeSheet — the eight cell rules', () => {
 
   it('leaves the subtitles empty for a movie with no tracks', async () => {
     const row = await firstRow(
-      await writeSheet([fullMovie({ subtitles: [] })], 'csv')
+      await writeSheet([fullMovie({ subtitles: [] })], format),
+      format
     );
 
     expect(row.Subtitles).toBe('');
@@ -303,8 +347,10 @@ describe('writeSheet — the eight cell rules', () => {
       backdropPath: 'Die Hard (1988)/backdrop.jpg',
     });
 
-    const text = (await writeSheet([movie], 'csv')).toString('utf8');
+    const rows = await cells(await writeSheet([movie], format), format);
+    const text = rows.flat().join('\n');
 
+    expect(rows[1]).toHaveLength(HEADER.length);
     expect(text).not.toContain(movie.synopsis);
     expect(text).not.toContain('137');
     expect(text).not.toContain('die-hard.mkv');
@@ -330,108 +376,193 @@ describe('writeSheet — the CSV bytes', () => {
   });
 });
 
-describe('writeSheet — the round trip through the Sheet reader', () => {
-  /** The three states, and every kind of empty, as a library the reader has to read back whole. */
-  const LIBRARY: Movie[] = [
-    fullMovie({ id: 'm1' }),
-    fullMovie({
-      id: 'm2',
-      title: 'Amélie',
-      year: 2001,
-      director: 'Jean-Pierre Jeunet',
-      cast: ['Audrey Tautou'],
-      rating: 7,
-      genres: [
-        { id: 'g4', name: 'Romance' },
-        { id: 'g3', name: 'Comedy' },
-      ],
-      watched: false,
-      resumePositionSeconds: 1200,
-      status: 'in-progress',
-      subtitles: [track('fr', 0)],
-    }),
-    fullMovie({
-      id: 'm3',
-      title: 'Northwind',
-      year: null,
-      director: null,
-      cast: [],
-      rating: null,
-      genres: [],
-      watched: false,
-      status: 'unwatched',
-      subtitles: [],
-    }),
-  ];
+describe('writeSheet — the Excel bytes', () => {
+  it('writes a workbook — the zip an .xlsx is, opened by exceljs as one', async () => {
+    const bytes = await writeSheet([fullMovie()], 'xlsx');
 
-  it('reads back one Sheet row per movie, in order', async () => {
-    const bytes = await writeSheet(LIBRARY, 'csv');
-
-    const rows = await readSheet(bytes, 'family-library.csv');
-
-    expect(rows.map((row) => row.title)).toEqual([
-      'Die Hard',
-      'Amélie',
-      'Northwind',
-    ]);
+    // An OpenXML workbook is a zip, and a zip begins with `PK`.
+    expect(bytes.subarray(0, 2).toString('latin1')).toBe('PK');
+    const workbook = await open(bytes, 'xlsx');
+    expect(workbook.worksheets[0].rowCount).toBe(2);
   });
 
-  it('reads back the title, year, genres, director, cast and rating equal', async () => {
-    const bytes = await writeSheet(LIBRARY, 'csv');
+  it('writes one worksheet', async () => {
+    const bytes = await writeSheet([fullMovie()], 'xlsx');
 
-    const rows = await readSheet(bytes, 'family-library.csv');
-
-    expect(rows).toEqual(
-      LIBRARY.map((movie) => ({
-        title: movie.title,
-        year: movie.year,
-        genres: movie.genres.map((genre) => genre.name),
-        director: movie.director,
-        cast: movie.cast,
-        // Not exported, so not read back — the one field the mirror drops.
-        synopsis: null,
-        rating: movie.rating,
-        watched: movie.status === 'watched',
-      }))
-    );
+    const workbook = await open(bytes, 'xlsx');
+    expect(workbook.worksheets).toHaveLength(1);
   });
 
-  it('reads Watched back as watched, and the other two states as not', async () => {
-    const bytes = await writeSheet(LIBRARY, 'csv');
-
-    const rows = await readSheet(bytes, 'family-library.csv');
-
-    expect(rows.map((row) => row.watched)).toEqual([true, false, false]);
-  });
-
-  it('survives a title with a comma, a quote and a diacritic', async () => {
-    const title = 'Léon: "The Professional", Director’s Cut';
-    const bytes = await writeSheet([fullMovie({ title })], 'csv');
-
-    const rows = await readSheet(bytes, 'family-library.csv');
-
-    expect(rows).toHaveLength(1);
-    expect(rows[0].title).toBe(title);
-    expect(rows[0].director).toBe('John McTiernan');
-  });
-
-  it('survives a cast member and a genre carrying diacritics', async () => {
+  it('writes the year and the rating as number cells, so Excel sorts them as numbers', async () => {
     const bytes = await writeSheet(
-      [
-        fullMovie({
-          cast: ['Jean Reno', 'Gérard Depardieu'],
-          genres: [{ id: 'g9', name: 'Comédie' }],
-        }),
-      ],
-      'csv'
+      [fullMovie({ year: 1988, rating: 8 })],
+      'xlsx'
     );
 
-    const rows = await readSheet(bytes, 'family-library.csv');
-
-    expect(rows[0].cast).toEqual(['Jean Reno', 'Gérard Depardieu']);
-    expect(rows[0].genres).toEqual(['Comédie']);
+    const row = (await open(bytes, 'xlsx')).worksheets[0].getRow(2);
+    expect(row.getCell(HEADER.indexOf('Year') + 1).value).toBe(1988);
+    expect(row.getCell(HEADER.indexOf('Rating') + 1).value).toBe(8);
   });
 
+  it('leaves a null year and rating as empty cells, not the word null', async () => {
+    const bytes = await writeSheet(
+      [fullMovie({ year: null, rating: null })],
+      'xlsx'
+    );
+
+    const row = (await open(bytes, 'xlsx')).worksheets[0].getRow(2);
+    expect(row.getCell(HEADER.indexOf('Year') + 1).value ?? null).toBeNull();
+    expect(row.getCell(HEADER.indexOf('Rating') + 1).value ?? null).toBeNull();
+  });
+
+  it('carries no BOM — a workbook is a zip, not text', async () => {
+    const bytes = await writeSheet([fullMovie()], 'xlsx');
+
+    expect(bytes.subarray(0, 3)).not.toEqual(Buffer.from([0xef, 0xbb, 0xbf]));
+  });
+
+  // The prototype promises "an .xlsx workbook with a header row" and no more:
+  // no bold header, no column widths, no frozen panes.
+  describe('no styling', () => {
+    it('writes the header row in the default font, not bold', async () => {
+      const bytes = await writeSheet([fullMovie()], 'xlsx');
+
+      const header = (await open(bytes, 'xlsx')).worksheets[0].getRow(1);
+      HEADER.forEach((_, index) => {
+        const { font } = header.getCell(index + 1);
+        expect(font?.bold ?? false).toBe(false);
+      });
+    });
+
+    it('sets no column widths', async () => {
+      const bytes = await writeSheet([fullMovie()], 'xlsx');
+
+      const sheet = (await open(bytes, 'xlsx')).worksheets[0];
+      HEADER.forEach((_, index) => {
+        expect(sheet.getColumn(index + 1).width).toBeUndefined();
+      });
+    });
+
+    it('freezes no panes', async () => {
+      const bytes = await writeSheet([fullMovie()], 'xlsx');
+
+      const sheet = (await open(bytes, 'xlsx')).worksheets[0];
+      expect((sheet.views ?? []).some((view) => view.state === 'frozen')).toBe(
+        false
+      );
+    });
+  });
+});
+
+describe.each(FORMATS)(
+  'writeSheet — the round trip through the Sheet reader (%s)',
+  (format) => {
+    const filename = `family-library.${format}`;
+
+    /** The three states, and every kind of empty, as a library the reader has to read back whole. */
+    const LIBRARY: Movie[] = [
+      fullMovie({ id: 'm1' }),
+      fullMovie({
+        id: 'm2',
+        title: 'Amélie',
+        year: 2001,
+        director: 'Jean-Pierre Jeunet',
+        cast: ['Audrey Tautou'],
+        rating: 7,
+        genres: [
+          { id: 'g4', name: 'Romance' },
+          { id: 'g3', name: 'Comedy' },
+        ],
+        watched: false,
+        resumePositionSeconds: 1200,
+        status: 'in-progress',
+        subtitles: [track('fr', 0)],
+      }),
+      fullMovie({
+        id: 'm3',
+        title: 'Northwind',
+        year: null,
+        director: null,
+        cast: [],
+        rating: null,
+        genres: [],
+        watched: false,
+        status: 'unwatched',
+        subtitles: [],
+      }),
+    ];
+
+    it('reads back one Sheet row per movie, in order', async () => {
+      const bytes = await writeSheet(LIBRARY, format);
+
+      const rows = await readSheet(bytes, filename);
+
+      expect(rows.map((row) => row.title)).toEqual([
+        'Die Hard',
+        'Amélie',
+        'Northwind',
+      ]);
+    });
+
+    it('reads back the title, year, genres, director, cast and rating equal', async () => {
+      const bytes = await writeSheet(LIBRARY, format);
+
+      const rows = await readSheet(bytes, filename);
+
+      expect(rows).toEqual(
+        LIBRARY.map((movie) => ({
+          title: movie.title,
+          year: movie.year,
+          genres: movie.genres.map((genre) => genre.name),
+          director: movie.director,
+          cast: movie.cast,
+          // Not exported, so not read back — the one field the mirror drops.
+          synopsis: null,
+          rating: movie.rating,
+          watched: movie.status === 'watched',
+        }))
+      );
+    });
+
+    it('reads Watched back as watched, and the other two states as not', async () => {
+      const bytes = await writeSheet(LIBRARY, format);
+
+      const rows = await readSheet(bytes, filename);
+
+      expect(rows.map((row) => row.watched)).toEqual([true, false, false]);
+    });
+
+    it('survives a title with a comma, a quote and a diacritic', async () => {
+      const title = 'Léon: "The Professional", Director’s Cut';
+      const bytes = await writeSheet([fullMovie({ title })], format);
+
+      const rows = await readSheet(bytes, filename);
+
+      expect(rows).toHaveLength(1);
+      expect(rows[0].title).toBe(title);
+      expect(rows[0].director).toBe('John McTiernan');
+    });
+
+    it('survives a cast member and a genre carrying diacritics', async () => {
+      const bytes = await writeSheet(
+        [
+          fullMovie({
+            cast: ['Jean Reno', 'Gérard Depardieu'],
+            genres: [{ id: 'g9', name: 'Comédie' }],
+          }),
+        ],
+        format
+      );
+
+      const rows = await readSheet(bytes, filename);
+
+      expect(rows[0].cast).toEqual(['Jean Reno', 'Gérard Depardieu']);
+      expect(rows[0].genres).toEqual(['Comédie']);
+    });
+  }
+);
+
+describe('writeSheet — the round trip through the BOM', () => {
   it('reads back clean through the BOM the writer put first', async () => {
     const bytes = await writeSheet([fullMovie()], 'csv');
 

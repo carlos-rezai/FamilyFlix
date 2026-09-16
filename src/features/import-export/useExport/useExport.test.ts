@@ -21,9 +21,11 @@ import {
  * computer** under the format's filename, and only then sets `done`.
  *
  * A rejected fetch clears `exporting` and changes nothing else — the Delete
- * dialog's rule, and the hook's shape from its first commit: in this slice it
- * is what a press on _Export as Excel_ meets, because the route answers `400`
- * for `xlsx` until the writer's second arm exists.
+ * dialog's rule, and the hook's shape from its first commit. Phase 1 (#137)
+ * had _Export as Excel_ meet that rule on every press, because the route
+ * answered `400` for `xlsx` until the writer's second arm existed; Phase 2
+ * (#138) gave it the arm, and the hook never told the formats apart, so
+ * nothing here changed but the story the refusal tells.
  *
  * Everything is asserted as requests against a stubbed `fetch`, and as what
  * the browser was handed through `stubDownload`.
@@ -68,8 +70,8 @@ const csv = () =>
 
 /**
  * A server with a library of `movieCount` movies. The summary answers the
- * count (or falls over); the file route answers `file` — the bytes, or the
- * refusal `xlsx` meets in this slice.
+ * count (or falls over); the file route answers `file` — the bytes, or a
+ * refusal.
  */
 function serve({
   movieCount = 3,
@@ -365,15 +367,8 @@ describe('useExport — a request the server refuses', () => {
     expect(browser.downloads()).toHaveLength(0);
   });
 
-  it('keeps the format the maintainer chose — the 400 xlsx meets in this slice', async () => {
-    serve({
-      file: () =>
-        ({
-          ok: false,
-          status: 400,
-          json: () => Promise.resolve({ error: 'Unknown export format: xlsx' }),
-        }) as unknown as Response,
-    });
+  it('keeps the format the maintainer chose when the Excel request is refused', async () => {
+    serve({ file: () => serverErrorResponse() });
     const { result } = renderExport();
     act(() => result.current.chooseFormat('xlsx'));
 
