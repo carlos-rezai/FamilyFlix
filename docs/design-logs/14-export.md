@@ -1,7 +1,7 @@
 # 14 — Export
 
 > **Initiative:** `export`
-> **PRD:** to follow (`write-a-prd`)
+> **PRD:** [#136](https://github.com/carlos-rezai/FamilyFlix/issues/136) · `docs/PRDs/14-export.md`
 > **Plan:** to follow the PRD
 
 This log is the `grill-me` session that settled the feature before the PRD was
