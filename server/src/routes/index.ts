@@ -28,7 +28,9 @@ import { readBody } from './readBody/readBody';
 import {
   DEFAULT_MOVIE_SORT,
   EXPORT_FILENAME,
+  EXPORT_FORMATS,
   MOVIE_SORTS,
+  type ExportFormat,
   type ExportSummary,
   type GenreListPayload,
   type GenrePoolPayload,
@@ -187,6 +189,17 @@ function queryString(value: unknown): string | undefined {
 function isMovieSort(value: string): value is MovieSort {
   return (MOVIE_SORTS as readonly string[]).includes(value);
 }
+
+/** The format `GET /api/export/:format` was asked for, if it is one of the two. */
+function isExportFormat(value: string): value is ExportFormat {
+  return (EXPORT_FORMATS as readonly string[]).includes(value);
+}
+
+/** The content type each **Export file** is sent under. */
+const EXPORT_CONTENT_TYPE: Record<ExportFormat, string> = {
+  csv: 'text/csv; charset=utf-8',
+  xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+};
 
 /**
  * The order a request is asking for, read the one way every browse endpoint
@@ -1436,17 +1449,16 @@ export function createApiRouter(
   });
 
   // The **Export file**: every movie A–Z through the **Sheet writer**, sent as
-  // an attachment under the format's own filename. A format that is not one
-  // of the two is a `400`, and so is `xlsx` in this slice — the writer has no
-  // Excel arm until Phase 2, and a refusal named is better than a page. A
-  // failing file route answers a status and a JSON body, never a page: the
-  // dialog reads the status, and a body the browser would open as the file
-  // is the one thing it must not be handed.
+  // an attachment under the format's own content type and filename. A format
+  // that is not one of the two is a `400`. A failing file route answers a
+  // status and a JSON body, never a page: the dialog reads the status, and a
+  // body the browser would open as the file is the one thing it must not be
+  // handed.
   router.get(
     '/export/:format',
     async (req: Request<{ format: string }>, res: Response) => {
       const { format } = req.params;
-      if (format !== 'csv') {
+      if (!isExportFormat(format)) {
         res.status(400).json({ error: `Unknown export format: ${format}` });
         return;
       }
@@ -1458,7 +1470,7 @@ export function createApiRouter(
         );
         res
           .status(200)
-          .type('text/csv; charset=utf-8')
+          .type(EXPORT_CONTENT_TYPE[format])
           .setHeader(
             'Content-Disposition',
             `attachment; filename="${EXPORT_FILENAME[format]}"`

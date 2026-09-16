@@ -55,19 +55,18 @@ const CELL_RULES: Record<ExportColumn, (movie: Movie) => Cell> = {
  * so the order written is the order given.
  *
  * The header row is {@link EXPORT_COLUMNS} in its own order, then one row per
- * movie under the eight cell rules above. The CSV arm begins with a UTF-8 BOM,
- * which is what makes Excel open `Amélie` as `Amélie`; the reader strips it
- * on the way back in. The Excel arm is Phase 2's — until it exists the writer
- * refuses `xlsx`, and the route refuses it before asking.
+ * movie under the eight cell rules above — the same worksheet in both arms,
+ * serialised two ways. The CSV arm begins with a UTF-8 BOM, which is what
+ * makes Excel open `Amélie` as `Amélie`; the reader strips it on the way back
+ * in. The Excel arm writes that worksheet as an OpenXML workbook — a zip, so
+ * no BOM — with a number where a number was stored and no styling: no bold
+ * header, no column widths, no frozen panes, because "an .xlsx workbook with
+ * a header row" is all the prototype promises.
  */
 export async function writeSheet(
   movies: Movie[],
   format: ExportFormat
 ): Promise<Buffer> {
-  if (format !== 'csv') {
-    throw new Error(`The Sheet writer has no ${format} arm yet.`);
-  }
-
   const workbook = new ExcelJS.Workbook();
   const sheet = workbook.addWorksheet('Library');
   sheet.addRow([...EXPORT_COLUMNS]);
@@ -77,6 +76,9 @@ export async function writeSheet(
 
   // `exceljs` declares its own `Buffer` — a bare `ArrayBuffer` shape — for
   // what is a Node `Buffer` at runtime, the same mismatch the reader notes.
+  if (format === 'xlsx') {
+    return (await workbook.xlsx.writeBuffer()) as unknown as Buffer;
+  }
   const csv = (await workbook.csv.writeBuffer()) as unknown as Buffer;
   return Buffer.concat([UTF8_BOM, csv]);
 }

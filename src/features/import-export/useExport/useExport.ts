@@ -42,9 +42,7 @@ export interface ExportState {
  *
  * A refused export is the Delete dialog's rule: the prototype designs no error
  * face, so the button comes back and the format and the count are kept, the
- * dialog still up for a second try. In this slice that is what a press on
- * _Export as Excel_ meets, because the route answers `400` for `xlsx` until
- * the writer's second arm exists.
+ * dialog still up for a second try.
  */
 export function useExport(open: boolean): ExportState {
   const [format, setFormat] = useState<ExportFormat>('csv');
