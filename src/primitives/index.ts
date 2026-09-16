@@ -36,3 +36,4 @@ export { FileIcon } from './Icon/FileIcon';
 export { SheetIcon } from './Icon/SheetIcon';
 export { FolderIcon } from './Icon/FolderIcon';
 export { FullscreenIcon } from './Icon/FullscreenIcon';
+export { DownloadIcon } from './Icon/DownloadIcon';

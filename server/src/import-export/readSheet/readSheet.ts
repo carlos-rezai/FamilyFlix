@@ -47,7 +47,9 @@ const SYNONYMS: Record<Column, string[]> = {
   cast: ['cast', 'actors'],
   synopsis: ['description', 'synopsis'],
   rating: ['rating'],
-  watched: ['watched'],
+  // `status` is the header the **Sheet writer** puts over the watch state, so
+  // an untouched **Export file** reads back as the library it came from.
+  watched: ['watched', 'status'],
 };
 
 /** What separates one genre from the next inside a cell — a comma, a slash or a semicolon. */
@@ -56,8 +58,13 @@ const GENRE_SEPARATORS = /[,/;]/;
 /** What separates one name from the next in a cast cell. */
 const CAST_SEPARATORS = /,/;
 
-/** The cell values that say a film has been watched, case folded. */
-const WATCHED = new Set(['yes', 'true', '1', '✓']);
+/**
+ * The cell values that say a film has been watched, case folded. `watched` is
+ * the word the **Sheet writer** writes under `Status`; its other two —
+ * `In progress` and `Unwatched` — fall through to `false`, as does every value
+ * not listed here.
+ */
+const WATCHED = new Set(['yes', 'true', '1', '✓', 'watched']);
 
 /** The rating column's own scale — the same ten the library stores. */
 const MAX_RATING = 10;
@@ -99,8 +106,17 @@ function cellText(value: ExcelJS.CellValue): string {
   return String(value).trim();
 }
 
-/** The header cell's name, the way the synonym table spells it. */
-const headerKey = (text: string): string => text.trim().toLowerCase();
+/**
+ * The header cell's name, the way the synonym table spells it. A BOM is
+ * stripped: Excel — and the **Sheet writer** — put one ahead of a UTF-8 CSV,
+ * and `exceljs`'s CSV parser hands it back glued to the first header, where
+ * it would turn `Title` into no title column at all.
+ */
+const headerKey = (text: string): string =>
+  text
+    .replace(/^\uFEFF/, '')
+    .trim()
+    .toLowerCase();
 
 /**
  * A number in a cell, or `null` for a cell that is not one — `unknown`,

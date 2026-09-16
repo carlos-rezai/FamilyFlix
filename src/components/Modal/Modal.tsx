@@ -34,7 +34,16 @@ export interface ModalProps {
   icon?: ReactNode;
   /** What the ✕, Escape and a press on the scrim all ask for. */
   onClose: () => void;
-  /** The card's body, below the header. */
+  /**
+   * The card is the children: no header, no ✕, no body padding, and `title`
+   * becomes the card's `aria-label` rather than a heading on screen. For a
+   * face the prototype draws with no header at all — the **Export dialog**'s
+   * **Export ready** — swapped inside the same card so the pop-in runs once.
+   * Escape and the scrim still ask `onClose`, and focus still moves in and
+   * back out.
+   */
+  bare?: boolean;
+  /** The card's body, below the header — or, `bare`, the whole card. */
   children: ReactNode;
 }
 
@@ -76,6 +85,7 @@ export function Modal({
   subtitle,
   icon,
   onClose,
+  bare = false,
   children,
 }: ModalProps) {
   const titleId = useId();
@@ -165,24 +175,33 @@ export function Modal({
         ref={cardRef}
         role="dialog"
         aria-modal="true"
-        aria-labelledby={titleId}
+        aria-label={bare ? title : undefined}
+        aria-labelledby={bare ? undefined : titleId}
         tabIndex={-1}
       >
-        <Header>
-          <HeaderRow>
-            {icon === undefined ? null : (
-              <IconTile aria-hidden="true">{icon}</IconTile>
-            )}
-            <Heading>
-              <Title id={titleId}>{title}</Title>
-              {subtitle === undefined ? null : <Subtitle>{subtitle}</Subtitle>}
-            </Heading>
-            <CloseButton type="button" aria-label="Close" onClick={onClose}>
-              ✕
-            </CloseButton>
-          </HeaderRow>
-        </Header>
-        <Body>{children}</Body>
+        {bare ? (
+          children
+        ) : (
+          <>
+            <Header>
+              <HeaderRow>
+                {icon === undefined ? null : (
+                  <IconTile aria-hidden="true">{icon}</IconTile>
+                )}
+                <Heading>
+                  <Title id={titleId}>{title}</Title>
+                  {subtitle === undefined ? null : (
+                    <Subtitle>{subtitle}</Subtitle>
+                  )}
+                </Heading>
+                <CloseButton type="button" aria-label="Close" onClick={onClose}>
+                  ✕
+                </CloseButton>
+              </HeaderRow>
+            </Header>
+            <Body>{children}</Body>
+          </>
+        )}
       </Card>
     </Scrim>,
     document.body

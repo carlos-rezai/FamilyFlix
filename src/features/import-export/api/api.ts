@@ -1,4 +1,9 @@
-import type { ImportField, ImportRun } from '@/types';
+import type {
+  ExportFormat,
+  ExportSummary,
+  ImportField,
+  ImportRun,
+} from '@/types';
 
 /**
  * A start the route refused before any run existed — `400 { error, field }`
@@ -107,4 +112,40 @@ export async function cancelImport(): Promise<void> {
   if (!response.ok) {
     throw new Error(`POST ${CANCEL_ENDPOINT} failed: ${response.status}`);
   }
+}
+
+const EXPORT_ENDPOINT = '/api/export';
+
+/**
+ * The **Export summary** — the count the **Export dialog** shows beside the
+ * filename, read on open. Any status but a `200` rejects, and so does a
+ * request that could not be made; the hook answers both with no count, never
+ * with a blocked export.
+ */
+export async function fetchExportSummary(): Promise<ExportSummary> {
+  const response = await fetch(EXPORT_ENDPOINT);
+
+  if (!response.ok) {
+    throw new Error(`GET ${EXPORT_ENDPOINT} failed: ${response.status}`);
+  }
+
+  return (await response.json()) as ExportSummary;
+}
+
+/**
+ * The **Export file** in the format asked for — the one call in the app that
+ * resolves bytes rather than JSON. The route answers the file under an
+ * attachment disposition; a refusal — the `400` a format it does not write
+ * meets, a `500` — is a status and a JSON body, so anything but a `200`
+ * rejects without reading the body as a file.
+ */
+export async function exportLibrary(format: ExportFormat): Promise<Blob> {
+  const endpoint = `${EXPORT_ENDPOINT}/${format}`;
+  const response = await fetch(endpoint);
+
+  if (!response.ok) {
+    throw new Error(`GET ${endpoint} failed: ${response.status}`);
+  }
+
+  return response.blob();
 }

@@ -12,6 +12,7 @@ import {
   type ResolveFile,
   type ResolveForm,
 } from '../import-export/createImporter/createImporter';
+import { writeSheet } from '../import-export/writeSheet/writeSheet';
 import type { Media } from '../media/createMedia/createMedia';
 import type { Playback } from '../playback/createPlayback/createPlayback';
 import { derivedRuntime } from '../playback/derivedRuntime/derivedRuntime';
@@ -26,7 +27,9 @@ import { optionalYear } from './optionalYear/optionalYear';
 import { readBody } from './readBody/readBody';
 import {
   DEFAULT_MOVIE_SORT,
+  EXPORT_FILENAME,
   MOVIE_SORTS,
+  type ExportSummary,
   type GenreListPayload,
   type GenrePoolPayload,
   type GenreQuery,
@@ -1419,6 +1422,50 @@ export function createApiRouter(
           return;
         }
         res.status(500).json({ error: 'Could not resolve the problem' });
+      }
+    }
+  );
+
+  // The **Export summary**: how many movies an export would carry, read on
+  // the **Export dialog**'s open for the count beside the filename. Nothing is
+  // injected for the export — there is no run, no state and no cancel — so
+  // the two routes sit on `storage` directly.
+  router.get('/export', (_req: Request, res: Response) => {
+    const summary: ExportSummary = { movieCount: storage.countMovies() };
+    res.json(summary);
+  });
+
+  // The **Export file**: every movie A–Z through the **Sheet writer**, sent as
+  // an attachment under the format's own filename. A format that is not one
+  // of the two is a `400`, and so is `xlsx` in this slice — the writer has no
+  // Excel arm until Phase 2, and a refusal named is better than a page. A
+  // failing file route answers a status and a JSON body, never a page: the
+  // dialog reads the status, and a body the browser would open as the file
+  // is the one thing it must not be handed.
+  router.get(
+    '/export/:format',
+    async (req: Request<{ format: string }>, res: Response) => {
+      const { format } = req.params;
+      if (format !== 'csv') {
+        res.status(400).json({ error: `Unknown export format: ${format}` });
+        return;
+      }
+
+      try {
+        const bytes = await writeSheet(
+          storage.listMovies({ sort: 'a-z' }),
+          format
+        );
+        res
+          .status(200)
+          .type('text/csv; charset=utf-8')
+          .setHeader(
+            'Content-Disposition',
+            `attachment; filename="${EXPORT_FILENAME[format]}"`
+          )
+          .send(bytes);
+      } catch {
+        res.status(500).json({ error: 'Could not write the export' });
       }
     }
   );

@@ -7,12 +7,14 @@
  * redefining their own. See `docs/PRDs/01-library-core.md` and
  * `docs/design-logs/01-library-core.md`.
  *
- * Almost everything here is a type. The exception is the sort vocabulary — an
- * `as const` list that its own union is derived from, so that the names a sort
- * can have and the names a sort can be checked against are one declaration.
- * Both build targets import it as a value.
+ * Almost everything here is a type. The exceptions are the vocabularies — the
+ * sorts, and the export's formats, columns and filenames — each an `as const`
+ * list that its own union is derived from, so that the names a sort or a
+ * format can have and the names it can be checked against are one
+ * declaration. Both build targets import them as values.
  */
 export { MOVIE_SORTS, DEFAULT_MOVIE_SORT } from './browse';
+export { EXPORT_FORMATS, EXPORT_COLUMNS, EXPORT_FILENAME } from './export';
 
 export type { WatchStatus, Genre, Subtitle, Movie } from './movie';
 export type {
@@ -41,6 +43,7 @@ export type {
   ImportRun,
   ImportProblemDetail,
 } from './import';
+export type { ExportFormat, ExportColumn, ExportSummary } from './export';
 export type {
   PosterCardMovie,
   ContinueCardMovie,

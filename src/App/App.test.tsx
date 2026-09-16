@@ -788,7 +788,9 @@ describe('App — a typed title becomes a row on the home screen', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Settings' }));
     await screen.findByRole('heading', { name: 'Settings' });
-    fireEvent.click(screen.getByRole('button', { name: /back/i }));
+    // Exact: the Export row's line ends in "backup", and `/back/i` would find
+    // it too.
+    fireEvent.click(screen.getByRole('button', { name: 'Back' }));
 
     expect(currentPath()).toBe('/');
     await screen.findByRole('heading', { name: 'Action' });

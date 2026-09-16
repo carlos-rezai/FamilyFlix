@@ -1,21 +1,29 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
+import { ExportModal } from '@/features/import-export/ExportModal/ExportModal';
 import { ActionRow } from '../ActionRow/ActionRow';
 import { GroupHeading, Rows } from './LibrarySection.styles';
 
 /**
  * The Settings hub's **Library section**, from `page.SettingsPage.dc.html`:
- * the `Library` group heading over the `＋ Add a movie` and `⇪ Import from
- * spreadsheet` rows. Exactly two — the prototype draws a third, `⬇ Export to
- * CSV`, and a row whose destination does not exist is not drawn. Export is
- * its own initiative.
+ * the `Library` group heading over the `＋ Add a movie`, `⇪ Import from
+ * spreadsheet` and `⬇ Export to CSV` rows — the third's label kept as drawn,
+ * though the dialog it opens offers Excel too.
  *
  * Like `SettingsHeader`, the section owns where its rows lead: the maintainer
- * surface's only doors are here, and a page is composition only. Playback,
- * Storage and About are the settings-shell initiative's.
+ * surface's only doors are here, and a page is composition only. The first
+ * two are routes; the third is an overlay — the section holds whether the
+ * **Export dialog** is open and mounts it beside its rows, so closing it
+ * leaves the page where it was, scroll and all, with focus back on the row.
+ * The app's first import of one feature's organism by another: a section
+ * composing a dialog is fine; a feature importing another's hook or wire
+ * would not be. Playback, Storage and About are the settings-shell
+ * initiative's.
  */
 export function LibrarySection() {
   const navigate = useNavigate();
+  const [exportOpen, setExportOpen] = useState(false);
 
   return (
     <>
@@ -33,7 +41,14 @@ export function LibrarySection() {
           desc="Bulk-migrate a spreadsheet + movie folders in one pass."
           onClick={() => navigate('/import')}
         />
+        <ActionRow
+          glyph="⬇"
+          label="Export to CSV"
+          desc="Save your whole library out as a spreadsheet backup."
+          onClick={() => setExportOpen(true)}
+        />
       </Rows>
+      <ExportModal open={exportOpen} onClose={() => setExportOpen(false)} />
     </>
   );
 }
