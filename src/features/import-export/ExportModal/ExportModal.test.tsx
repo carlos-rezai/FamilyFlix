@@ -36,6 +36,13 @@ import {
  * dialog owns `useExport`, so it is read through its buttons and its copy, in
  * the Delete dialog's style, with `fetch` stubbed and the browser's download
  * read through `stubDownload`.
+ *
+ * 14 — Export, Phase 3: "the edges" (issue #139) adds what a real library
+ * meets that the fixture does not, read through the dialog itself: a library
+ * of none, a summary that never arrives, the done face's two remaining exits,
+ * and every open being a new export. Nothing new is drawn — no error face, no
+ * snackbar, no save-location dialog — so each edge is asserted as the idle
+ * face, the done face, or the browser's download, and nothing else.
  */
 
 let fetchMock: ReturnType<
@@ -631,47 +638,6 @@ describe('ExportModal — the ways out of the idle face', () => {
   });
 });
 
-describe('ExportModal — reopening', () => {
-  stubDownload();
-
-  it('opens on CSV and the idle face again, with a fresh count', async () => {
-    serve({ movieCount: 3 });
-    const { rerender } = renderDialog();
-    await within(dialog()).findByText('3 movies');
-    fireEvent.click(excelCard());
-    fireEvent.click(exportButton('Excel'));
-    await waitFor(() => expect(doneButton()).toBeDefined());
-
-    rerender(
-      <ThemeProvider theme={theme}>
-        <ExportModal open={false} onClose={() => undefined} />
-      </ThemeProvider>
-    );
-    expect(screen.queryByRole('dialog')).toBeNull();
-    serve({ movieCount: 4 });
-    rerender(
-      <ThemeProvider theme={theme}>
-        <ExportModal open onClose={() => undefined} />
-      </ThemeProvider>
-    );
-
-    expect(idleDialog()).toBeDefined();
-    expect(csvCard().getAttribute('aria-checked')).toBe('true');
-    expect(within(dialog()).getByText('family-library.csv')).toBeDefined();
-    expect(exportButton('CSV')).toBeDefined();
-    expect(await within(dialog()).findByText('4 movies')).toBeDefined();
-  });
-});
-
-// --- the edges (issue #139) ----------------------------------------------------
-//
-// 14 — Export, Phase 3: "the edges" (issue #139). What a real library meets
-// that the fixture does not, read through the dialog itself: a library of
-// none, a summary that never arrives, the done face's two remaining exits,
-// and every open being a new export. Nothing new is drawn — no error face, no
-// snackbar, no save-location dialog — so each edge is asserted as the idle
-// face, the done face, or the browser's download, and nothing else.
-
 /**
  * A host that owns `open` the way `LibrarySection` does — a row to open the
  * dialog, and the dialog's own `onClose` to shut it — so a reopen after _Done_
@@ -987,6 +953,36 @@ describe('ExportModal — every open is a new export', () => {
       'family-library.csv',
       'family-library.xlsx',
     ]);
+  });
+
+  it('resets on the prop alone — a host that closes it without Done', async () => {
+    serve({ movieCount: 3 });
+    const { rerender } = renderDialog();
+    await within(dialog()).findByText('3 movies');
+    fireEvent.click(excelCard());
+    fireEvent.click(exportButton('Excel'));
+    await waitFor(() => expect(doneButton()).toBeDefined());
+
+    // `open` is the reset, not the dialog's own exits: a host that flips the
+    // prop for a reason of its own gets the same fresh opening.
+    rerender(
+      <ThemeProvider theme={theme}>
+        <ExportModal open={false} onClose={() => undefined} />
+      </ThemeProvider>
+    );
+    expect(screen.queryByRole('dialog')).toBeNull();
+    serve({ movieCount: 4 });
+    rerender(
+      <ThemeProvider theme={theme}>
+        <ExportModal open onClose={() => undefined} />
+      </ThemeProvider>
+    );
+
+    expect(idleDialog()).toBeDefined();
+    expect(csvCard().getAttribute('aria-checked')).toBe('true');
+    expect(within(dialog()).getByText('family-library.csv')).toBeDefined();
+    expect(exportButton('CSV')).toBeDefined();
+    expect(await within(dialog()).findByText('4 movies')).toBeDefined();
   });
 });
 
