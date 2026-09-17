@@ -11,6 +11,116 @@ Newest entry first.
 
 ---
 
+## 2026-09-17 — Export refactor (issue #141)
+
+Fifteen commits against `docs/refactor-plans/14-export-refactor.md` —
+nine code, six documents. **4132 tests pass across 210 files**, from 4135
+across 210: two cases added (a close mid-request; the done copy with and
+without a count), four removed with named twins, one duplicate leaf dropped.
+`npm run typecheck` is green and `eslint src server` is clean on every commit.
+The smallest round yet, done in one sitting under a standing approval, one
+commit per resolved item; the docs slice filed as 140 is folded in as the
+first and last groups, on 135's precedent, so the initiative has one closing
+issue.
+
+**Export is ticked** in the feature table by this round's last commit. The
+rule holds: ✅ when the refactor closes, not when the build issues do.
+
+### What changed
+
+- **The wire and the hook.** `exportLibrary(format) → Promise<Blob>` in the
+  feature's `api/` is `fetchExportFile` — the name its one import already
+  gave it, and what every other reading call is called. The hook's action
+  keeps `exportLibrary`: a wire call is named for the request, a hook action
+  for the intent, and the button's verb is the dialog's contract.
+  `useExport`'s docblock now says what the code does — a close mid-request
+  drops the **Export ready** redraw and not the file — and a test pins it:
+  `open` flipped false while the bytes are on their way, the browser handed
+  one download, `done` never set.
+- **The one behaviour change.** The done face with no count read _Saved
+  `family-library.csv`⏎with to your computer._ — the `{count}` slot as a
+  hole in a sentence built around it, which the edges slice's "no `null`,
+  `undefined` or `NaN`" assertion could not see. It now reads _Saved
+  `family-library.csv` to your computer._ — the clause left out. One
+  conditional in the dialog; both arms pinned through `squashed()`.
+- **`GET /api/movies` is gone**, with `parseLimit` and its four-leaf block.
+  The genre-page glossary held it "for the exporter"; the exporter reads
+  `storage.listMovies` on the server. Before the route went, its thirteen
+  test-suite readers moved to the repository — `movieTitles(storage, sort)`
+  in `routes.test.ts`, four bare reads in `routes.import.test.ts`, the
+  delete suite's neighbours check — each asking "what does the library hold
+  now", which is the repository's question. The four sort leaves were
+  verified against their twins on `/home?sort=`, `/genre/:name` and
+  `browse.test.ts` before filing and again before removal; none moved.
+  `MovieQuery.limit` stays — `/home`'s rows are capped through it.
+- **Tests read by behaviour.** The dialog's two reopening blocks are one,
+  on the `Host` harness, with the `rerender` case kept as its last leaf
+  because it asserts the one thing the Host cases do not — the reset keys on
+  `open`, not on the dialog's own exits. The route suite's per-format
+  "header-only" leaves live in the `describe.each` "a library of none", the
+  plain BOM leaf in "the BOM through the route and the reader", and the leaf
+  about "the intermediate 400 from #137" — a state that existed for one
+  commit — is gone. Two `writeSheet` leaves and two mid-file banners stopped
+  narrating the slice they arrived in; the top-of-file phase banners stay,
+  as round 12 ruled.
+- **The docs.** COMPONENT-SPEC's `ExportModal` row is `{ open, onClose }`
+  over `Modal` (`bare`), `FormatCard` ×2 and `Button`, and `LibrarySection`'s
+  is three rows and the overlay it mounts; `Modal` has `bare` in its table.
+  CLAUDE.md's map and README's tree name `writeSheet`, the four dialog units,
+  the two `test-support` additions, `types/export.ts`, `Icon/` and `Modal`'s
+  flag, and "CSV export to come" is gone from the three places it stood. The
+  glossary's two `GET /api/movies` notes are marked resolved by this round,
+  **Sheet reader** has its third parameter, **Export dialog** and **Save to
+  computer** say what a close mid-request does, **Export ready** has the copy
+  without a count, and **Export file** names `fetchExportFile`.
+
+### Deliberately not changed
+
+- **`Modal`'s `bare` stays a boolean.** Two arrangements do not earn the
+  `ModalHeader` / `ModalBody` composition; the log and the PRD both file it
+  when a third dialog wants a third arrangement.
+- **`EXPORT_CONTENT_TYPE` stays in the router.** The wire's own concern; the
+  client never reads it. `types/export.ts` holds what both targets read.
+- **The prototype's literals stay literal** — the tick circle's
+  `rgba(138, 154, 107, 0.16)` has no token, and the `99px` circles are drawn
+  with `radius.pill` as everywhere else. Nothing in this round touches a
+  styles file.
+- **The `COLUMNS` list in the dialog's test stays spelled**, as the writer's
+  does: a test that imported `EXPORT_COLUMNS` would prove the pills read the
+  constant, not that the constant is the prototype's eight.
+- **The cross-feature import stays, and stays the only one.** `LibrarySection`
+  → `ExportModal` by path — a section composing a dialog, the log's
+  precedent. No hook and no wire crosses.
+- **`stubDownload` stays a `test-support` unit** — three callers, the
+  folder's own bar — and is recorded in the build entry as the one thing the
+  PRD's testing section got wrong.
+- **Cancelling an export in flight** stays out of scope; commit 3 pins the
+  consequence rather than changing it.
+
+### Follow-ups this refactor surfaced
+
+- **A sketch's names are shapes, not names.** The design log's sketch spelled
+  the wire call `exportLibrary`, the build followed it to the letter, and the
+  convention it broke was in the folder next door. When a design section
+  sketches a signature, check the name against the rung's neighbours before
+  it becomes the build's.
+- **A copy assertion should read the copy.** The edges slice guarded the
+  done sentence against `null`, `undefined` and `NaN` — the right thing to
+  guard — and did not read the sentence, so a slot the sample data never
+  emptied went unseen. `squashed()` was in the file for exactly this.
+- **`routes/index.ts` at ~1450 lines.** This round took ~35 out and added
+  none; the routes round is still its own round.
+- **A shared listening-API harness and a shared fetch double** — still
+  project-wide rounds, still not this one.
+- **Node 24 and `\u` in a scratch script.** A `node -e` / scratch-file
+  rewrite of a test that contains the literal characters `﻿` in a regex
+  found the escape resolved to the BOM character itself under this Node,
+  whatever the quoting; the cause was not chased and the workaround was
+  `String.fromCharCode(92)`. Not a project concern — nothing shipped is affected — but worth knowing before
+  the next scripted edit of a file that spells a BOM.
+
+---
+
 ## 2026-09-17 — Export (issues #137–#139)
 
 Five commits across issues #137–#139, three slices against the plan on #136,
