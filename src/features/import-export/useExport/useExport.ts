@@ -1,10 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { EXPORT_FILENAME, type ExportFormat } from '@/types';
-import {
-  exportLibrary as fetchExportFile,
-  fetchExportSummary,
-} from '../api/api';
+import { fetchExportFile, fetchExportSummary } from '../api/api';
 import { saveToComputer } from '../saveToComputer/saveToComputer';
 
 export interface ExportState {

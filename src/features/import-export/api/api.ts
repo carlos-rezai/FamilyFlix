@@ -139,7 +139,7 @@ export async function fetchExportSummary(): Promise<ExportSummary> {
  * meets, a `500` — is a status and a JSON body, so anything but a `200`
  * rejects without reading the body as a file.
  */
-export async function exportLibrary(format: ExportFormat): Promise<Blob> {
+export async function fetchExportFile(format: ExportFormat): Promise<Blob> {
   const endpoint = `${EXPORT_ENDPOINT}/${format}`;
   const response = await fetch(endpoint);
 

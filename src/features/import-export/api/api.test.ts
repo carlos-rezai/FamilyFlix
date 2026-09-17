@@ -5,7 +5,7 @@ import {
   fetchCurrentImport,
   cancelImport,
   fetchExportSummary,
-  exportLibrary,
+  fetchExportFile,
   ImportBusyError,
 } from './api';
 import type { ExportFormat } from '@/types';
@@ -37,7 +37,7 @@ import {
  *
  * 14 — Export, Phase 1: "the tracer bullet" (issue #137) adds the two calls
  * the **Export dialog** makes — `fetchExportSummary` on open, for the count
- * the filename row shows, and `exportLibrary` behind _Export as CSV_, the one
+ * the filename row shows, and `fetchExportFile` behind _Export as CSV_, the one
  * call in the app that resolves bytes rather than JSON. One caller each, so
  * they stay here too.
  */
@@ -313,7 +313,7 @@ describe('fetchExportSummary', () => {
   });
 });
 
-describe('exportLibrary', () => {
+describe('fetchExportFile', () => {
   const csv = () =>
     new Blob(['\uFEFFTitle,Year\nDie Hard,1988\n'], {
       type: 'text/csv; charset=utf-8',
@@ -322,7 +322,7 @@ describe('exportLibrary', () => {
   it('GETs the CSV route for csv', async () => {
     fetchMock.mockResolvedValue(fileResponse(csv()));
 
-    await exportLibrary('csv');
+    await fetchExportFile('csv');
 
     const request = onlyRequest();
     expect(request.url).toBe('/api/export/csv');
@@ -335,7 +335,7 @@ describe('exportLibrary', () => {
     });
     fetchMock.mockResolvedValue(fileResponse(workbook));
 
-    const result = await exportLibrary('xlsx');
+    const result = await fetchExportFile('xlsx');
 
     expect(onlyRequest().url).toBe('/api/export/xlsx');
     expect(result).toBeInstanceOf(Blob);
@@ -348,7 +348,7 @@ describe('exportLibrary', () => {
     const blob = csv();
     fetchMock.mockResolvedValue(fileResponse(blob));
 
-    const result = await exportLibrary('csv');
+    const result = await fetchExportFile('csv');
 
     expect(result).toBeInstanceOf(Blob);
     expect(result).toBe(blob);
@@ -357,7 +357,7 @@ describe('exportLibrary', () => {
   it('rejects when the server fell over', async () => {
     fetchMock.mockResolvedValue(serverErrorResponse());
 
-    await expect(exportLibrary('csv')).rejects.toThrow();
+    await expect(fetchExportFile('csv')).rejects.toThrow();
   });
 
   it('rejects when the route refuses the format', async () => {
@@ -369,12 +369,12 @@ describe('exportLibrary', () => {
 
     // The two formats are the wire's own names; the type keeps a third out of
     // the call, so the refusal is reached the one way it still can be.
-    await expect(exportLibrary('pdf' as ExportFormat)).rejects.toThrow();
+    await expect(fetchExportFile('pdf' as ExportFormat)).rejects.toThrow();
   });
 
   it('rejects when the request could not be made at all', async () => {
     fetchMock.mockRejectedValue(new Error('offline'));
 
-    await expect(exportLibrary('csv')).rejects.toThrow();
+    await expect(fetchExportFile('csv')).rejects.toThrow();
   });
 });
