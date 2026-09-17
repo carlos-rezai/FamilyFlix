@@ -20,9 +20,14 @@
 // Phase 1 named into a `200` under the OpenXML spreadsheet type, and runs the
 // round trip in both formats.
 //
-// 14 — Export, Phase 3: "the edges" (issue #139) closes the file: the awkward
-// title, the BOM through the route and the reader, and a library of none, each
-// in both formats.
+// 14 — Export, Phase 3: "the edges" (issue #139) closes the file with what a
+// real library meets that the fixture does not, asserted through the route in
+// both formats: the two titles the issue names — _Amélie_, a diacritic;
+// _"Whatever," she said_, a comma and a double quote — write and read back
+// identically through the writer, the route and the reader; the CSV's BOM
+// survives the route and the reader strips it, so the file opens in Excel with
+// the diacritics intact and no import wizard; and a library of none lands a
+// header-only file in both formats rather than an error.
 //
 // The two Bulk-import groups are the initiative’s promise end to end, in both
 // directions of the README's: a library the importer filled from its fixture,
@@ -641,16 +646,7 @@ describe.each(FORMATS)(
   }
 );
 
-// --- the edges (issue #139) ------------------------------------------------------
-//
-// 14 — Export, Phase 3: "the edges" (issue #139). What a real library meets
-// that the fixture does not, asserted through the route in both formats: the
-// two titles the issue names — _Amélie_, a diacritic; _"Whatever," she said_,
-// a comma and a double quote — write and read back identically through the
-// writer, the route and the reader; the CSV's BOM survives the route and the
-// reader strips it, so the file opens in Excel with the diacritics intact and
-// no import wizard; and a library of none lands a header-only file in both
-// formats rather than an error.
+// --- the edges -------------------------------------------------------------------
 
 /** The two titles the issue names, and the awkward cells beside them. */
 function addAwkwardLibrary(storage: LibraryStorage): void {

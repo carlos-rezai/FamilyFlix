@@ -564,7 +564,7 @@ describe.each(FORMATS)(
       expect(rows[0].genres).toEqual(['Comédie']);
     });
 
-    it('survives the two titles the edges name, side by side (issue #139)', async () => {
+    it('survives the two titles the edges name, side by side', async () => {
       // _Amélie_ is the diacritic; _"Whatever," she said_ is the comma and the
       // double quote — the two cells a CSV has to quote and escape, and a
       // workbook has to store as text, for the family's machine to read back.
@@ -609,7 +609,7 @@ describe('writeSheet — the round trip through the BOM', () => {
     expect(rows[0].title).toBe('Die Hard');
   });
 
-  it('quotes the awkward title as CSV quotes it, behind the BOM (issue #139)', async () => {
+  it('quotes the awkward title as CSV quotes it, behind the BOM', async () => {
     const bytes = await writeSheet(
       [fullMovie({ title: '"Whatever," she said' })],
       'csv'
