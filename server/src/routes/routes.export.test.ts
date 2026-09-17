@@ -257,28 +257,6 @@ describe('GET /api/export/csv — the file', () => {
       watched: true,
     });
   });
-
-  it('begins with a UTF-8 BOM', async () => {
-    const { storage, baseUrl } = freshApi();
-    addLibrary(storage);
-
-    const response = await getFile(baseUrl, 'csv');
-    const bytes = Buffer.from(await response.arrayBuffer());
-
-    expect(bytes.subarray(0, 3)).toEqual(Buffer.from([0xef, 0xbb, 0xbf]));
-  });
-
-  it('sends a header-only file for an empty library', async () => {
-    const { baseUrl } = freshApi();
-
-    const response = await getFile(baseUrl, 'csv');
-    const text = Buffer.from(await response.arrayBuffer()).toString('utf8');
-
-    expect(response.status).toBe(200);
-    expect(text.replace(/^\uFEFF/, '').trim()).toBe(
-      'Title,Year,Genres,Director,Cast,Rating,Status,Subtitles'
-    );
-  });
 });
 
 describe('GET /api/export/:format — a format the route refuses', () => {
@@ -335,20 +313,6 @@ describe('GET /api/export/xlsx — the file', () => {
 
     expect(response.headers.get('content-disposition')).toBe(
       'attachment; filename="family-library.xlsx"'
-    );
-  });
-
-  it('sends a workbook, not a JSON refusal — the intermediate 400 from #137 is gone', async () => {
-    const { storage, baseUrl } = freshApi();
-    addLibrary(storage);
-
-    const response = await getFile(baseUrl, 'xlsx');
-    const bytes = Buffer.from(await response.arrayBuffer());
-
-    // An OpenXML workbook is a zip, and a zip begins with `PK`.
-    expect(bytes.subarray(0, 2).toString('latin1')).toBe('PK');
-    expect(response.headers.get('content-type')).not.toContain(
-      'application/json'
     );
   });
 
@@ -426,19 +390,6 @@ describe('GET /api/export/xlsx — the file', () => {
     expect((sheet.views ?? []).some((view) => view.state === 'frozen')).toBe(
       false
     );
-  });
-
-  it('sends a header-only workbook for an empty library', async () => {
-    const { baseUrl } = freshApi();
-
-    const response = await getFile(baseUrl, 'xlsx');
-    const bytes = Buffer.from(await response.arrayBuffer());
-
-    expect(response.status).toBe(200);
-    const workbook = new ExcelJS.Workbook();
-    await workbook.xlsx.load(bytes as unknown as ArrayBuffer);
-    expect(workbook.worksheets[0].rowCount).toBe(1);
-    expect(await readSheet(bytes, 'family-library.xlsx')).toEqual([]);
   });
 });
 
@@ -793,6 +744,16 @@ describe.each(FORMATS)('GET /api/export/%s — the awkward title', (format) => {
 });
 
 describe('GET /api/export/csv — the BOM through the route and the reader', () => {
+  it('begins with a UTF-8 BOM', async () => {
+    const { storage, baseUrl } = freshApi();
+    addLibrary(storage);
+
+    const response = await getFile(baseUrl, 'csv');
+    const bytes = Buffer.from(await response.arrayBuffer());
+
+    expect(bytes.subarray(0, 3)).toEqual(Buffer.from([0xef, 0xbb, 0xbf]));
+  });
+
   it('sends the BOM ahead of the awkward titles, quoted as CSV quotes them', async () => {
     const { storage, baseUrl } = freshApi();
     addAwkwardLibrary(storage);
@@ -848,6 +809,28 @@ describe.each(FORMATS)('GET /api/export/%s — a library of none', (format) => {
     expect(response.headers.get('content-disposition')).toBe(
       `attachment; filename="${filename}"`
     );
+    expect(await readSheet(bytes, filename)).toEqual([]);
+  });
+
+  it('sends a header-only file for an empty library', async () => {
+    const { baseUrl } = freshApi();
+
+    const response = await getFile(baseUrl, format);
+    const bytes = Buffer.from(await response.arrayBuffer());
+
+    expect(response.status).toBe(200);
+    if (format === 'csv') {
+      expect(
+        bytes
+          .toString('utf8')
+          .replace(/^\uFEFF/, '')
+          .trim()
+      ).toBe('Title,Year,Genres,Director,Cast,Rating,Status,Subtitles');
+    } else {
+      const workbook = new ExcelJS.Workbook();
+      await workbook.xlsx.load(bytes as unknown as ArrayBuffer);
+      expect(workbook.worksheets[0].rowCount).toBe(1);
+    }
     expect(await readSheet(bytes, filename)).toEqual([]);
   });
 
