@@ -292,7 +292,7 @@ Builds the installer and publishes it to GitHub Releases automatically.
 | Delete a movie — from the ⋯ menu, with confirmation | ✅ Done         |
 | Bulk import (Excel/CSV → library)                   | ✅ Done         |
 | Import progress console (scan/import, live log)     | ✅ Done         |
-| Export (library → CSV/Excel)                        | 🔜 Planned      |
+| Export (library → CSV/Excel)                        | ✅ Done         |
 | Settings hub (Library / Playback / Storage / About) | 🔜 Planned      |
 | Codec manager (view + add codec packs)              | 🔜 Planned      |
 | Subtitle preferences (default language)             | 🔜 Planned      |
