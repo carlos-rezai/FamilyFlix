@@ -39,7 +39,7 @@ Files are picked individually, from your machine's normal file dialog. FamilyFli
 
 ### Migrating an existing library
 
-A bulk importer reads an existing spreadsheet (title, year, genre, …), matches each row to its movie folder, and scans that folder for the video, poster and subtitle files (it isn't picky about subtitle format — `.srt`, `.vtt`, `.ass`, and `.sub` are all recognised), building the whole library in one pass. A row whose folder is a confident match is imported as the run goes, with a live progress console showing what's happening; the review step at the end lists only what the run couldn't settle on its own — a row with no folder, two folders for one row, a folder no row names, a copy that failed — each with a Resolve that opens the ordinary Add Movie form prefilled, and a Skip. Nothing is looked up online: the spreadsheet and the folder are all the importer reads, so there is no TMDB key to enter and no network to be on. Pointing at a folder is the bulk importer's job rather than the Add Movie form's: a file dialog hands over a file, never a folder path. It is also how a development library gets filled — the importer's own test fixtures replace the dev seed the app carried until it shipped. An exporter writes the library back out to CSV for backups or bulk edits.
+A bulk importer reads an existing spreadsheet (title, year, genre, …), matches each row to its movie folder, and scans that folder for the video, poster and subtitle files (it isn't picky about subtitle format — `.srt`, `.vtt`, `.ass`, and `.sub` are all recognised), building the whole library in one pass. A row whose folder is a confident match is imported as the run goes, with a live progress console showing what's happening; the review step at the end lists only what the run couldn't settle on its own — a row with no folder, two folders for one row, a folder no row names, a copy that failed — each with a Resolve that opens the ordinary Add Movie form prefilled, and a Skip. Nothing is looked up online: the spreadsheet and the folder are all the importer reads, so there is no TMDB key to enter and no network to be on. Pointing at a folder is the bulk importer's job rather than the Add Movie form's: a file dialog hands over a file, never a folder path. It is also how a development library gets filled — the importer's own test fixtures replace the dev seed the app carried until it shipped. An exporter writes the library back out as CSV or Excel — every movie, A–Z, under the same columns the importer reads — for backups or bulk edits, and an export fed back to the importer adds nothing.
 
 ### Watching
 
@@ -150,7 +150,7 @@ familyflix/
 │       │   ├── scanMovieFolder/       # one folder → its video, poster, backdrop, subtitles
 │       │   ├── detectSubtitleLanguage/ # the language tag in a subtitle's name
 │       │   └── fileKinds/             # what an image, a subtitle and a video may be called
-│       ├── import-export/  # the bulk importer: readSheet, titleKey, matchRows, createImporter (+ its fixture); CSV export to come
+│       ├── import-export/  # the bulk importer and the exporter: readSheet, titleKey, matchRows, createImporter (+ its fixture), writeSheet
 │       ├── playback/       # the Playback component, the path choice, streaming, subtitle parsing, derivedRuntime
 │       ├── db/             # SQLite connection + schema/migrations
 │       └── test-support/   # Shared test doubles — never imported by shipping code (heldCopy, libraryFixture, …)
@@ -161,7 +161,7 @@ familyflix/
 │   ├── tokens/         # Colors, spacing, typography, breakpoints
 │   ├── primitives/     # Atomic UI elements (Button, Input, Text) — each with .tsx, .test.tsx, .styles.ts
 │   ├── components/     # Composed UI blocks (PosterCard, Modal, ProgressBar) — same three-file shape
-│   │   ├── Modal/          # the scrimmed card every dialog is drawn on; owns its own dismissal and focus
+│   │   ├── Modal/          # the scrimmed card every dialog is drawn on; owns its own dismissal and focus; `bare` for a card that is its children alone
 │   │   └── LogConsole/     # the import's Activity log, pinned to its bottom
 │   ├── features/       # Domain UI + logic co-located
 │   │   ├── library/        # browse grid, genre rows
@@ -173,17 +173,17 @@ familyflix/
 │   │   │   └── api/               # saveRating, deleteMovie — one caller each
 │   │   ├── player/          # built-in video player, subtitles, resume
 │   │   ├── movie-form/      # Add/Edit a movie: one form, manual pickers — and Resolve, the Import context
-│   │   ├── import-export/   # the bulk importer's screen: ImportFlow and its three steps, useImportRun, importView
-│   │   ├── settings/        # SettingsHeader, LibrarySection (Add a movie / Import from spreadsheet), ActionRow
+│   │   ├── import-export/   # the bulk importer's screen: ImportFlow and its three steps, useImportRun, importView — and the Export dialog: ExportModal, FormatCard, useExport, saveToComputer
+│   │   ├── settings/        # SettingsHeader, LibrarySection (Add a movie / Import from spreadsheet / Export to CSV), ActionRow
 │   │   ├── maintainer.styles.ts # the header and the captioned field the Maintainer's screens share
 │   │   └── collections/     # playlists (roadmap)
 │   ├── layouts/         # Page chrome
 │   ├── pages/           # Route-level views, composition only (ImportPage among them)
 │   ├── api/             # Wire calls two or more features share (saveFavorite, fetchMovie, saveWatched, dismissProblem)
 │   ├── hooks/            # Global shared hooks
-│   ├── types/            # Shared TypeScript interfaces
+│   ├── types/            # Shared TypeScript interfaces (import.ts, export.ts — read by both build targets)
 │   ├── utils/            # Pure helper functions
-│   └── test-support/     # Shared test doubles
+│   └── test-support/     # Shared test doubles (fakeResponse, stubDownload, …)
 └── docs/
     ├── design-logs/    # Immutable feature design snapshots
     ├── PRDs/           # Product requirements and implementation plans

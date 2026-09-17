@@ -114,8 +114,9 @@ familyflix/
 │ │ ├── scanMovieFolder/ ← one Source folder → every video, the poster by name, the backdrop by name only, every subtitle
 │ │ ├── detectSubtitleLanguage/ ← the language tag in a subtitle’s name → its language
 │ │ └── movieFolder/ safeFilename/ ← pure: the folder a title and year name; a filename the store will take
-│ ├── import-export/ ← the bulk importer: Excel/CSV parsing, row-to-folder matching, the Current run (CSV export to come)
-│ │ ├── readSheet/ ← .xlsx or .csv by extension, first worksheet, headers through a synonym table → Sheet rows
+│ ├── import-export/ ← the bulk importer and the exporter: Excel/CSV parsing and writing, row-to-folder matching, the Current run
+│ │ ├── readSheet/ ← .xlsx or .csv by extension, first worksheet, headers through a synonym table → Sheet rows; a Status column reads as watched, a BOM is stripped
+│ │ ├── writeSheet/ ← the reader’s mirror: the eight Export columns as a header row, one row per movie in the order given, .csv behind a BOM or .xlsx unstyled — pure over the list, no storage, no sorting
 │ │ ├── titleKey/ ← pure: the Title key matching compares, and titleGuess for a folder no row names
 │ │ ├── matchRows/ ← pure: rows × folder scans → matches, problems by kind, unclaimed folders
 │ │ ├── createImporter/ ← the injected domain: start, current, cancel, problem, resolve, dismiss — one run in memory, its state machine as closures
@@ -148,6 +149,7 @@ familyflix/
 │ │ └── index.ts
 │ ├── primitives/ ← dumb, reusable UI atoms (Button, Input, Text, Icon, Badge)
 │ │ ├── index.ts ← barrel: re-exports every primitive (only barrel at this rung)
+│ │ ├── Icon/ ← one file per glyph on IconBase (DownloadIcon, SheetIcon, CheckIcon, …), `currentColor`, sized by the caller
 │ │ ├── TextField/ ← the boxed input: a glyph slot (the sheet and folder glyphs among them) and `mono` for a path
 │ │ └── Button/ ← primary / secondary / ghost / danger, at sm (a list row’s pair) / md / lg
 │ │ ├── Button.tsx
@@ -155,7 +157,7 @@ familyflix/
 │ │ └── Button.styles.ts
 │ ├── components/ ← composed primitives, no business logic (PosterCard, Modal, ProgressBar)
 │ │ ├── index.ts ← barrel: re-exports every component (only barrel at this rung)
-│ │ ├── Modal/ ← the scrimmed card every dialog is drawn on: portal, Escape/scrim/✕, focus in, Tab held, focus back
+│ │ ├── Modal/ ← the scrimmed card every dialog is drawn on: portal, Escape/scrim/✕, focus in, Tab held, focus back; `bare` makes the card its children alone, `title` its aria-label
 │ │ ├── LogConsole/ ← the Activity log: the last lines by kind, pinned to the bottom
 │ │ └── PosterCard/
 │ │ ├── PosterCard.tsx
@@ -194,16 +196,20 @@ familyflix/
 │ │ ├── maintainer.styles.ts ← the furniture the Maintainer’s screens extend: the header row, heading and lede; the captioned field
 │ │ ├── movie-form/ ← Add/Edit a movie: one form, manual file pickers; and Resolve, the Import context over either job
 │ │ │ └── api/ ← createMovie, updateMovie, fetchGenrePool, fetchProblem, resolveProblem (one caller each)
-│ │ ├── import-export/ ← the bulk importer’s screen (CSV export to come)
+│ │ ├── import-export/ ← the bulk importer’s screen, and the Export dialog
 │ │ │ ├── ImportFlow/ ← the organism: owns useImportRun, renders one of the three steps
 │ │ │ ├── ImportSetup/ ImportProgress/ ImportReview/ ← the three steps: the two path fields; the stepper, bar and log; the tiles and the Needs attention list
 │ │ │ ├── PhaseStepper/ StatTile/ ProblemRow/ ← the flow’s own molecules
 │ │ │ ├── useImportRun/ ← start, poll at 500 ms while running, cancel, skip
 │ │ │ ├── importView/ ← pure: an ImportRun → headline, stat line, percent, elapsed, ETA
-│ │ │ └── api/ ← startImport, fetchCurrentImport, cancelImport (one caller each)
+│ │ │ ├── ExportModal/ ← the Export dialog: owns useExport; the idle face over Modal, and Export ready over the bare one — the same card, so the pop-in runs once
+│ │ │ ├── FormatCard/ ← one Format card: a role="radio" button with a label and a line, the pair in a radiogroup
+│ │ │ ├── useExport/ ← csv and idle on every open, the summary fetched fresh; exportLibrary fetches the file, hands it to saveToComputer, then done. A close mid-request drops the redraw, not the file
+│ │ │ ├── saveToComputer/ ← a blob → the browser’s Downloads under a filename: an object URL on an anchor carrying `download`, clicked, revoked. A DOM side effect, so a feature unit rather than a util
+│ │ │ └── api/ ← startImport, fetchCurrentImport, cancelImport, fetchExportSummary, fetchExportFile (one caller each)
 │ │ ├── settings/ ← the Maintainer’s hub
 │ │ │ ├── SettingsHeader/ ← Back, the heading, ＋ Add a movie
-│ │ │ ├── LibrarySection/ ← the Library group: Add a movie and Import from spreadsheet, owning their routes
+│ │ │ ├── LibrarySection/ ← the Library group: Add a movie and Import from spreadsheet owning their routes, and Export to CSV owning the Export dialog it mounts — the one place a section composes another feature’s organism
 │ │ │ └── ActionRow/ ← one glyph + label + description row of a settings group
 │ │ └── collections/ ← playlists/collections (roadmap, not MVP)
 │ ├── layouts/ ← page chrome
@@ -218,13 +224,15 @@ familyflix/
 │ │ ├── postValue.ts
 │ │ └── postValue.test.ts
 │ ├── hooks/ ← global shared hooks only (useMediaQuery, useTheme)
-│ ├── types/ ← shared TypeScript interfaces (import.ts: ImportRun, ImportProblem, ImportProblemDetail, ImportField, both build targets)
+│ ├── types/ ← shared TypeScript interfaces (import.ts: ImportRun, ImportProblem, ImportProblemDetail, ImportField; export.ts: EXPORT_FORMATS, EXPORT_COLUMNS, EXPORT_FILENAME, ExportSummary — both build targets)
 │ ├── utils/ ← pure helper functions (one folder per helper + its test)
 │ │ ├── index.ts ← barrel: re-exports every helper
 │ │ └── gradientFromId/
 │ │ ├── gradientFromId.ts
 │ │ └── gradientFromId.test.ts
 │ └── test-support/ ← test doubles shared across features, never imported by shipping code
+│ ├── fakeResponse/ ← a Response by status; `fileResponse` the one whose caller reads `blob()`, its `json()` rejecting
+│ └── stubDownload/ ← object URLs and an anchor’s click() for a jsdom that has neither: what the page handed the browser to save, in order
 └── docs/
 ├── design-logs/
 ├── PRDs/
@@ -402,9 +410,18 @@ once via a bulk importer:
   the sources map and the abort controller, because pulling it out would
   pass all three across a seam nobody else uses
 
-An exporter writes the current library back out to CSV (title, year,
-genre, watched status, etc.) for backup or for bulk-editing externally
-and re-importing.
+The exporter writes the current library back out as one **Export file**,
+CSV or Excel, from the Settings hub's third row: every movie A–Z under
+the eight **Export columns** — Title, Year, Genres, Director, Cast,
+Rating, Status, Subtitles — for backup or for bulk-editing externally and
+re-importing. It is the reader's mirror: `writeSheet` in
+`server/src/import-export/` behind `GET /api/export/:format`, with
+`GET /api/export` answering the count the dialog shows. The round trip
+holds in both formats and both directions — an untouched export fed back
+to Bulk import adds nothing, and one with a row edited imports the edit —
+which is why the reader learned to read a `Status` column as the watched
+state when export shipped. No synopsis, runtime or path travels, and no
+column is optional: the pills in the dialog are a list, not a picker.
 
 Both bulk import and single Add Movie are large-file operations (video
 files are big) — neither should block the UI. Both need a visible
