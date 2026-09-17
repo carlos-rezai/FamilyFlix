@@ -788,7 +788,7 @@ describe('GET /api/home?sort=', () => {
     ]);
   });
 
-  it('rejects a sort it does not recognise, the way /api/movies does', async () => {
+  it('rejects a sort it does not recognise, the way /genre/:name does', async () => {
     const { storage, baseUrl } = freshApi();
     addSortableLibrary(storage);
 
@@ -887,76 +887,6 @@ async function getGenreList(baseUrl: string): Promise<GenreListPayload> {
   expect(response.status).toBe(200);
   return (await response.json()) as GenreListPayload;
 }
-
-/** `GET /api/movies` with whatever parameters, unchecked — status included. */
-function moviesResponse(
-  baseUrl: string,
-  query: Record<string, string>
-): Promise<Response> {
-  return fetch(`${baseUrl}/api/movies?${new URLSearchParams(query)}`);
-}
-
-/**
- * The generic browse endpoint reads `?sort=` by the same rules `/home` and
- * `/genre/:name` do. It read an empty value differently until issue #55 — a
- * 400 where the other two answered the default order — which was a drift rather
- * than a contract: no client sends one, nothing tested it, and all three
- * endpoints' comments already claimed the rule they now share.
- */
-describe('GET /api/movies?sort=', () => {
-  it('treats an empty ?sort= as the default order, not as a bad request', async () => {
-    const { storage, baseUrl } = freshApi();
-    addSortableLibrary(storage);
-
-    const response = await moviesResponse(baseUrl, { sort: '' });
-
-    expect(response.status).toBe(200);
-    expect(await response.json()).toEqual(
-      await (await moviesResponse(baseUrl, {})).json()
-    );
-  });
-
-  it('rejects a sort it does not recognise, the way /home and /genre do', async () => {
-    const { storage, baseUrl } = freshApi();
-    addSortableLibrary(storage);
-
-    const response = await moviesResponse(baseUrl, { sort: 'by-vibes' });
-
-    expect(response.status).toBe(400);
-    expect((await response.json()) as { error: string }).toEqual({
-      error: 'Unknown sort: by-vibes',
-    });
-  });
-
-  // See `/home`'s note above: `last-watched` reaches `listMovies` and nothing
-  // else, and this is the endpoint that would hand a URL straight to it.
-  it('rejects last-watched, an order the repository has but the wire does not', async () => {
-    const { storage, baseUrl } = freshApi();
-    addSortableLibrary(storage);
-
-    const response = await moviesResponse(baseUrl, { sort: 'last-watched' });
-
-    expect(response.status).toBe(400);
-    expect((await response.json()) as { error: string }).toEqual({
-      error: 'Unknown sort: last-watched',
-    });
-  });
-
-  it('orders by the sort it was given, so an empty value is the only default', async () => {
-    const { storage, baseUrl } = freshApi();
-    addSortableLibrary(storage);
-
-    const response = await moviesResponse(baseUrl, { sort: 'a-z' });
-    const movies = (await response.json()) as Movie[];
-
-    expect(movies.map((movie) => movie.title)).toEqual([
-      'apple Grove',
-      'Backwater',
-      'Meridian',
-      'Zephyr',
-    ]);
-  });
-});
 
 describe('GET /api/genres', () => {
   it('answers with the library total and every populated genre', async () => {

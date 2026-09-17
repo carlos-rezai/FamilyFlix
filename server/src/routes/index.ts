@@ -37,7 +37,6 @@ import {
   type GenreQuery,
   type LibraryQuery,
   type Movie,
-  type MovieQuery,
   type MovieSort,
   type NewSubtitle,
 } from '@/types';
@@ -265,15 +264,6 @@ function streamOffset(value: unknown): number | null {
   return Number.isFinite(seconds) && seconds >= 0 ? seconds : null;
 }
 
-/** Reject anything that is not a positive whole number of rows. */
-function parseLimit(value: string): number | null {
-  const limit = Number(value);
-  if (!Number.isInteger(limit) || limit < 1) {
-    return null;
-  }
-  return limit;
-}
-
 /**
  * Mount the JSON API over a {@link LibraryStorage}. Handlers stay thin — parse
  * the request, call one repository method, serialize the result — so the
@@ -465,37 +455,6 @@ export function createApiRouter(
       res.json(storage.getGenre(req.params.name, query));
     }
   );
-
-  // The generic browse endpoint the CSV exporter will read the library through,
-  // and any later filtered view. Not used by the home screen — that one call is
-  // `/home` — nor by the genre page, which has `/genre/:name` above.
-  router.get('/movies', (req: Request, res: Response) => {
-    const sortParam = queryString(req.query.sort);
-    const sort = parseSort(sortParam);
-    if (sort === null) {
-      res.status(400).json({ error: `Unknown sort: ${sortParam}` });
-      return;
-    }
-
-    const query: MovieQuery = { sort };
-
-    const genre = queryString(req.query.genre);
-    if (genre !== undefined && genre !== '') {
-      query.genre = genre;
-    }
-
-    const limitParam = queryString(req.query.limit);
-    if (limitParam !== undefined && limitParam !== '') {
-      const limit = parseLimit(limitParam);
-      if (limit === null) {
-        res.status(400).json({ error: `Invalid limit: ${limitParam}` });
-        return;
-      }
-      query.limit = limit;
-    }
-
-    res.json(storage.listMovies(query));
-  });
 
   // One movie by id, for the detail page's URL. The repository already
   // assembles every field that screen renders — synopsis, director, cast,
