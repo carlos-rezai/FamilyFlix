@@ -448,6 +448,33 @@ describe('useExport — a request the server refuses', () => {
   });
 });
 
+describe('useExport — a close mid-request', () => {
+  const browser = stubDownload();
+
+  it('still lands the file, and never reaches done', async () => {
+    const request = holdFile();
+    serve({ file: request.file });
+    const { result, rerender } = renderExport();
+
+    act(() => {
+      void result.current.exportLibrary();
+    });
+    await waitFor(() => expect(result.current.exporting).toBe(true));
+
+    // Cancel while the bytes are on their way. The maintainer asked for the
+    // file, and a download the browser has been handed cannot be recalled, so
+    // it lands; what the close drops is the Export ready face.
+    rerender({ open: false });
+    await act(async () => {
+      request.settle(fileResponse(csv()));
+    });
+
+    expect(browser.downloads()).toHaveLength(1);
+    expect(browser.downloads()[0].filename).toBe('family-library.csv');
+    expect(result.current.done).toBe(false);
+  });
+});
+
 describe('useExport — reopening', () => {
   stubDownload();
 

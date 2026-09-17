@@ -35,7 +35,11 @@ export interface ExportState {
  * fetches a fresh summary, so a dialog closed on **Export ready** reopens on
  * its idle face with the library's count as it stands now. A summary or an
  * export that lands after the dialog has closed — or after it has been opened
- * again — is dropped, so a stale answer never redraws a newer opening.
+ * again — redraws nothing, so a stale answer never touches a newer opening.
+ * The file itself still lands: the maintainer asked for it, cancelling an
+ * export in flight is out of scope, and a download the browser has been
+ * handed cannot be recalled from a page anyway. What a close drops is the
+ * **Export ready** face, not the file.
  *
  * A refused export is the Delete dialog's rule: the prototype designs no error
  * face, so the button comes back and the format and the count are kept, the
