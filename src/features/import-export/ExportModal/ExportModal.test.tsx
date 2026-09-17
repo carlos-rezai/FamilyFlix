@@ -766,8 +766,24 @@ describe('ExportModal — a summary that never arrives', () => {
     expect(
       within(dialog()).getByRole('heading', { name: 'Export ready' })
     ).toBeDefined();
-    expect(squashed()).toContain('Savedfamily-library.csv');
+    // Blank rather than wrong, for a sentence, is the clause left out: no
+    // 'with' with nothing after it.
+    expect(squashed()).toContain('Savedfamily-library.csvtoyourcomputer.');
+    expect(squashed()).not.toContain('with');
     expect(within(dialog()).queryByText(/null|undefined|NaN/)).toBeNull();
+  });
+
+  it('says the count on the done face when the summary did land', async () => {
+    serve({ movieCount: 3 });
+    renderDialog();
+    await within(dialog()).findByText('3 movies');
+
+    fireEvent.click(exportButton('CSV'));
+
+    await waitFor(() => expect(doneButton()).toBeDefined());
+    expect(squashed()).toContain(
+      'Savedfamily-library.csvwith3moviestoyourcomputer.'
+    );
   });
 
   it('leaves the count blank and still exports when the summary cannot be requested at all', async () => {

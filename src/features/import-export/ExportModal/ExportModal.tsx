@@ -67,7 +67,9 @@ const movieLabel = (count: number): string =>
  * the filename and the count in the copy, and _Done_.
  *
  * The dialog owns `useExport`. The count is `null` until the summary lands
- * and blank on screen while so — it never blocks the export. The button reads
+ * and blank on screen while so — it never blocks the export, and a done face
+ * reached without one leaves the clause out rather than a hole in: _Saved
+ * `family-library.csv` to your computer._ The button reads
  * _Exporting…_ and is disabled for the life of the request; the cards and
  * _Cancel_ are left alone. A request the server refuses leaves the idle face
  * exactly as it was — the Delete dialog's rule, since the prototype designs
@@ -91,7 +93,9 @@ export function ExportModal({ open, onClose }: ExportModalProps) {
           <DoneLine>
             Saved <DoneFilename>{filename}</DoneFilename>
             <br />
-            with {count} to your computer.
+            {count === null
+              ? 'to your computer.'
+              : `with ${count} to your computer.`}
           </DoneLine>
           <DoneActions>
             <Button label="Done" variant="secondary" onClick={onClose} />
