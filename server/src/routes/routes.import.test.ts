@@ -655,7 +655,7 @@ describe('DELETE /api/import/current/problems/:id', () => {
   });
 
   it('imports nothing for the dismissed problem', async () => {
-    const { baseUrl, media, root, sheet } = freshApi();
+    const { baseUrl, storage, media, root, sheet } = freshApi();
     unlistedFolder(root);
     await postImport(baseUrl, { sheetPath: sheet, rootPath: root });
     const run = await untilReview(baseUrl);
@@ -665,9 +665,7 @@ describe('DELETE /api/import/current/problems/:id', () => {
     // The two fixture films and nothing else: no folder was reserved for the
     // dismissed one, and no row was written.
     expect(readdirSync(media).sort()).toEqual(['amelie-2001', 'die-hard-1988']);
-    const movies = (await (await fetch(`${baseUrl}/api/movies`)).json()) as {
-      title: string;
-    }[];
+    const movies = storage.listMovies({ sort: 'a-z' });
     expect(movies.map((movie) => movie.title).sort()).toEqual([
       'Amélie',
       'Die Hard',
@@ -988,7 +986,8 @@ describe('POST /api/import/current/problems/:id/resolve', () => {
   });
 
   it('answers 400 for a found path outside the root, with nothing copied', async () => {
-    const { baseUrl, media, problem, scratch } = await failedDieHardApi();
+    const { baseUrl, storage, media, problem, scratch } =
+      await failedDieHardApi();
     const outside = join(scratch, 'elsewhere.mp4');
     writeFileSync(outside, 'not the family’s');
 
@@ -1000,9 +999,7 @@ describe('POST /api/import/current/problems/:id/resolve', () => {
     expect(response.status).toBe(400);
     expect(await response.json()).toMatchObject({ error: expect.any(String) });
     expect(readdirSync(media).sort()).toEqual(['amelie-2001']);
-    const movies = (await (await fetch(`${baseUrl}/api/movies`)).json()) as {
-      title: string;
-    }[];
+    const movies = storage.listMovies({ sort: 'a-z' });
     expect(movies.map((movie) => movie.title)).toEqual(['Amélie']);
     // And the problem is still listed: a refused save is a save not made.
     const after = (await (await getCurrent(baseUrl)).json()) as ImportRun;
@@ -1148,9 +1145,7 @@ describe('a fresh API over the library of an interrupted run', () => {
   it('still serves every movie the interrupted run added', async () => {
     const { baseUrl, storage } = await interrupted();
 
-    const movies = (await (await fetch(`${baseUrl}/api/movies`)).json()) as {
-      title: string;
-    }[];
+    const movies = storage.listMovies({ sort: 'a-z' });
     expect(movies.map((movie) => movie.title)).toEqual(['Die Hard']);
 
     const dieHard = storage
@@ -1163,7 +1158,7 @@ describe('a fresh API over the library of an interrupted run', () => {
   });
 
   it('lets a new run start over the same sheet, adding what the old one had not', async () => {
-    const { baseUrl, root, sheet } = await interrupted();
+    const { baseUrl, storage, root, sheet } = await interrupted();
 
     const response = await postImport(baseUrl, {
       sheetPath: sheet,
@@ -1172,9 +1167,7 @@ describe('a fresh API over the library of an interrupted run', () => {
     expect(response.status).toBe(201);
     await untilReview(baseUrl);
 
-    const movies = (await (await fetch(`${baseUrl}/api/movies`)).json()) as {
-      title: string;
-    }[];
+    const movies = storage.listMovies({ sort: 'a-z' });
     expect(movies.map((movie) => movie.title).sort()).toEqual([
       'Amélie',
       'Die Hard',
