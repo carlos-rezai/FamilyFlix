@@ -72,6 +72,7 @@ import type {
   GenrePoolPayload,
   HomePayload,
   Movie,
+  MovieSort,
 } from '@/types';
 
 // --- per-test resource tracking ------------------------------------------------
@@ -1826,12 +1827,14 @@ function postRating(baseUrl: string, id: string, body: unknown) {
   });
 }
 
-/** The titles of `GET /api/movies`, in whatever order the endpoint sends them. */
-async function movieTitles(baseUrl: string, sort: string): Promise<string[]> {
-  const response = await fetch(`${baseUrl}/api/movies?sort=${sort}`);
-  expect(response.status).toBe(200);
-  const movies = (await response.json()) as Movie[];
-  return movies.map((movie) => movie.title);
+/**
+ * The titles the library holds, in the order `sort` gives them — read at the
+ * repository, the seam the router's own docblock says the query logic is
+ * tested at. What these tests ask is what an add or a refusal left behind,
+ * which is the repository's question, not a route's.
+ */
+function movieTitles(storage: LibraryStorage, sort: MovieSort): string[] {
+  return storage.listMovies({ sort }).map((movie) => movie.title);
 }
 
 describe('POST /api/movies/:id/rating', () => {
@@ -1976,7 +1979,7 @@ describe('POST /api/movies/:id/rating', () => {
     });
     vi.useRealTimers();
 
-    expect(await movieTitles(baseUrl, 'recently-added')).toEqual([
+    expect(movieTitles(storage, 'recently-added')).toEqual([
       'New Harbor',
       'Old Harbor',
     ]);
@@ -1988,7 +1991,7 @@ describe('POST /api/movies/:id/rating', () => {
     expect(after?.rating).toBe(10);
     expect(after?.updatedAt).toBe(older.updatedAt);
     // Top-rated in the library, and still the older of the two on the shelf.
-    expect(await movieTitles(baseUrl, 'recently-added')).toEqual([
+    expect(movieTitles(storage, 'recently-added')).toEqual([
       'New Harbor',
       'Old Harbor',
     ]);
@@ -3737,15 +3740,13 @@ describe('POST /api/movies', () => {
   });
 
   it('puts the new movie in the library', async () => {
-    const { baseUrl } = freshApi();
+    const { storage, baseUrl } = freshApi();
 
     await createdMovie(baseUrl, { title: 'Rear Window', year: '1954' });
 
     // The whole point of the slice: the row the form wrote is a library row,
     // read back by the browse query every screen is built out of.
-    expect(await movieTitles(baseUrl, 'recently-added')).toContain(
-      'Rear Window'
-    );
+    expect(movieTitles(storage, 'recently-added')).toContain('Rear Window');
   });
 
   it('earns no row on the browse home until it has a genre', async () => {
@@ -3888,7 +3889,7 @@ describe('POST /api/movies', () => {
   });
 
   it('refuses a genre the pool does not hold, and writes nothing', async () => {
-    const { baseUrl } = freshApi();
+    const { storage, baseUrl } = freshApi();
 
     const response = await postMovie(baseUrl, {
       title: 'Rear Window',
@@ -3903,7 +3904,7 @@ describe('POST /api/movies', () => {
     // answer at all.
     expect(response.status).toBe(400);
     expect(await response.json()).toEqual({ error: 'Unknown genre: Westerns' });
-    expect(await movieTitles(baseUrl, 'recently-added')).toEqual([]);
+    expect(movieTitles(storage, 'recently-added')).toEqual([]);
   });
 
   it('puts the movie in each of its genre rows on the browse home', async () => {
@@ -4202,14 +4203,14 @@ describe('POST /api/movies', () => {
   });
 
   it('writes no movie at all when the rating is refused', async () => {
-    const { baseUrl } = freshApi();
+    const { storage, baseUrl } = freshApi();
 
     await postMovie(baseUrl, { title: 'Rear Window', rating: '99' });
 
     // The refusal is the route's own sentence, said before anything is
     // attempted — the unknown genre's rule, and the reason neither needs a
     // rollback.
-    expect(await movieTitles(baseUrl, 'recently-added')).toEqual([]);
+    expect(movieTitles(storage, 'recently-added')).toEqual([]);
   });
 
   it('carries the rating alongside the credits and the genres in one save', async () => {
@@ -4549,7 +4550,7 @@ describe('POST /api/movies — what a save leaves on disk', () => {
   });
 
   it('leaves no row and no bytes when the save is refused after the part arrived', async () => {
-    const { baseUrl, media } = freshApi();
+    const { storage, baseUrl, media } = freshApi();
 
     const refused = await postParts(baseUrl, [
       ['video', filePart()],
@@ -4562,7 +4563,7 @@ describe('POST /api/movies — what a save leaves on disk', () => {
     // can be left behind at all, and the reason the rollback exists. Stories
     // 36 and 37.
     expect(refused.status).toBe(400);
-    expect(await movieTitles(baseUrl, 'recently-added')).toEqual([]);
+    expect(movieTitles(storage, 'recently-added')).toEqual([]);
     expect(folders(media)).toEqual([]);
 
     // The contrast is what makes that absence mean anything: the same body
@@ -4843,7 +4844,7 @@ describe('POST /api/movies — a poster that is not a picture', () => {
   });
 
   it('leaves no row and no bytes behind', async () => {
-    const { baseUrl, media } = freshApi();
+    const { storage, baseUrl, media } = freshApi();
 
     await postParts(baseUrl, [
       ['video', filePart()],
@@ -4854,7 +4855,7 @@ describe('POST /api/movies — a poster that is not a picture', () => {
     // The video is appended first, so it is already streamed to disk when the
     // poster is refused — the same rollback the unknown genre exercises, at a
     // refusal that can only happen once bytes are down.
-    expect(await movieTitles(baseUrl, 'recently-added')).toEqual([]);
+    expect(movieTitles(storage, 'recently-added')).toEqual([]);
     expect(folders(media)).toEqual([]);
 
     // The contrast is what makes that absence mean anything: the same body with
@@ -5162,7 +5163,7 @@ describe('POST /api/movies — a subtitle that is not a subtitle', () => {
   });
 
   it('leaves no row and no bytes behind', async () => {
-    const { baseUrl, media } = freshApi();
+    const { storage, baseUrl, media } = freshApi();
 
     await postParts(baseUrl, [
       ['video', filePart()],
@@ -5174,7 +5175,7 @@ describe('POST /api/movies — a subtitle that is not a subtitle', () => {
     // The video is appended first, so it is already streamed to disk when the
     // track is refused — the same rollback the unknown genre and the bad poster
     // exercise, at a refusal that can only happen once bytes are down.
-    expect(await movieTitles(baseUrl, 'recently-added')).toEqual([]);
+    expect(movieTitles(storage, 'recently-added')).toEqual([]);
     expect(folders(media)).toEqual([]);
 
     // The contrast is what makes that absence mean anything: the same body with
@@ -6317,20 +6318,16 @@ describe('DELETE /api/movies/:id', () => {
     expect(await response.text()).toBe('');
   });
 
-  it('leaves the movie absent from GET /api/movies, and its neighbours in place', async () => {
+  it('leaves the movie absent from the library, and its neighbours in place', async () => {
     const { storage, baseUrl } = freshApi();
     addBrowsableLibrary(storage);
     const stored = addFullMovie(storage);
 
     await deleteMovie(baseUrl, stored.id);
 
-    const listed = (await (
-      await moviesResponse(baseUrl, {})
-    ).json()) as Movie[];
-    expect(listed.map((movie) => movie.title)).not.toContain(
-      'The Quiet Harbor'
-    );
-    expect(listed.map((movie) => movie.title)).toEqual(
+    const listed = movieTitles(storage, 'recently-added');
+    expect(listed).not.toContain('The Quiet Harbor');
+    expect(listed).toEqual(
       expect.arrayContaining(['Comic Caper', 'Weepie', 'Chiller'])
     );
   });
