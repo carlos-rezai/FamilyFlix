@@ -11,6 +11,113 @@ Newest entry first.
 
 ---
 
+## 2026-09-17 — Export (issues #137–#139)
+
+Five commits across issues #137–#139, three slices against the plan on #136,
+built from `docs/design-logs/14-export.md`. **4135 tests pass across 210
+files**, up from 3866 across 202. `npm run typecheck` is green and
+`eslint src server` is clean on every commit. The smallest initiative since
+Delete, and the third slice, #139, driven by `issue-loop`: its forty edge
+tests went through the commit gate as a RED commit without `--no-verify` —
+and were green on arrival, so the slice has no build commit. What it named,
+the first two slices had already built.
+
+**Export is _not_ ticked** in the feature table. The rule holds: ✅ when the
+refactor closes, not when the build issues do.
+
+### What shipped
+
+- **`server/src/import-export/writeSheet/`, the reader's mirror.**
+  `writeSheet(movies, format) → Promise<Buffer>` over `exceljs`: pure over
+  the list it is given, no storage, no sorting. The header row in the eight
+  **Export columns**, one row per movie in the order given, the eight cell
+  rules inside it and nowhere else — Year, Director and Rating empty when
+  null; Genres, Cast and Subtitles joined with `, `, subtitles in track order;
+  Status `Watched` / `In progress` / `Unwatched` off the derived state. The
+  CSV arm writes a UTF-8 BOM so Excel opens an `é` as an `é` with no import
+  wizard; the `xlsx` arm writes one worksheet and no styling.
+- **The Sheet reader amended**, in the same slice because the round trip is
+  what proves it: `Status` joins the watched column's synonyms, `Watched` the
+  truthy values, `In progress` and `Unwatched` fall through to `false`, and
+  the CSV parser strips a BOM. The `watched` header and `yes / true / 1 / ✓`
+  still read.
+- **Two routes**, nothing new injected: `GET /api/export` → `200 { movieCount }`
+  off `storage.countMovies()`, and `GET /api/export/:format` →
+  `storage.listMovies({ sort: 'a-z' })` → `writeSheet` → the bytes under the
+  format's content type and `Content-Disposition: attachment;
+filename="family-library.<format>"`; `400 { error }` for any format that is
+  not one of the two. A failing file route answers a status, never a page.
+- **`src/types/export.ts`**, read by both build targets: `EXPORT_FORMATS`,
+  `EXPORT_COLUMNS`, `EXPORT_FILENAME`, `ExportSummary`.
+- **The dialog.** `features/import-export/ExportModal` owning `useExport(open)`
+  — `csv` and idle on every open, the **Export summary** fetched fresh, the
+  count `null` until it lands and never blocking the export; `FormatCard`, a
+  `role="radio"` button on the `StatTile` pattern; `saveToComputer`, an
+  object URL on an anchor carrying `download`, clicked and revoked — a DOM
+  side effect, so a feature unit and not a `utils/` helper; and the two calls
+  in the feature's `api/`. `Modal` gained `bare` for the **Export ready** face
+  — no header, no ✕, `title` as the card's `aria-label` — so the done face
+  swaps inside the same card and the pop-in runs once. `DownloadIcon` joined
+  the Icon primitives.
+- **The third row.** `LibrarySection`'s _⬇ Export to CSV_ — the label kept as
+  drawn though the dialog offers Excel (log Q15) — opening an overlay rather
+  than a route: the page keeps its scroll, focus returns to the row. The
+  app's first import of one feature's organism by another; the log's line is
+  that a section composing a dialog is fine and a feature importing another's
+  hook or wire would not be.
+- **The round trip, in both formats and both directions of the README's
+  promise**: a library the importer filled, exported and fed back to the
+  importer over the same root adds nothing; the same export with one row's
+  Year and Genres edited, imported onto a fresh library, yields a movie
+  carrying the edited values.
+
+### What arrived that the PRD said would not
+
+The PRD's testing section anticipated no new frontend `test-support/` unit.
+Two arrived, and both were needed:
+
+- **`stubDownload`.** jsdom has no object URLs — `URL.createObjectURL` is not
+  its own, and Node's underneath refuses a jsdom blob — and an anchor's
+  `click()` is a "navigation not implemented" error on the console. A unit
+  that hands a blob to the browser through an anchor cannot be observed at
+  all without one, and would throw before it was. Used by the
+  `saveToComputer`, `useExport` and `ExportModal` suites — three callers, the
+  folder's own bar — and shaped on `stubFullscreen`, cleanup included.
+- **`fileResponse`** in `fakeResponse`: a `200` carrying a file rather than
+  JSON, the one double whose caller reads `blob()`. Its `json()` rejects, so
+  a client that parsed a CSV as a document would fail here rather than read
+  a header row as one.
+
+### Deliberately not built
+
+- **An error face.** A refused export puts the button back and changes
+  nothing else — the Delete dialog's rule; the prototype designs no error
+  face and none was invented.
+- **A column picker** (the pills are a list, not controls), **Excel styling**
+  (a bold header, column widths, frozen panes — "a header row" and no more),
+  **a save-location dialog** (the Electron shell's, when it ships), **a
+  snackbar on done** (the done face is the confirmation), a Description
+  column or the stored paths — the log's ruled-out list, left ruled out.
+- **The `ModalHeader` / `ModalBody` composition.** `bare` is a boolean; two
+  arrangements do not earn the composition. Filed when a third dialog wants a
+  third arrangement, per the log and the PRD.
+- **Cancelling an export in flight.** One request, no run; nothing to cancel
+  that a browser could recall.
+
+### Follow-ups
+
+The refactor plan, filed as 141 and folding the docs slice 140 in: the one
+reading call not named `fetch*`, already aliased to the right name at its one
+import; `GET /api/movies`, which the genre-page glossary said to delete "when
+export ships" and which nothing but the test suite reads; the done copy's
+`{count}` slot rendered as a hole when the summary never landed — the one
+behaviour change; `useExport`'s docblock promising to drop an export the code
+lands; and test blocks split where the slice boundary was. Nothing wrong;
+one name copied from a sketch, one endpoint outlived, one sentence the
+prototype's sample data never emptied.
+
+---
+
 ## 2026-09-15 — Bulk import refactor (issue #135)
 
 Twenty-nine commits against `docs/refactor-plans/13-bulk-import-refactor.md`
