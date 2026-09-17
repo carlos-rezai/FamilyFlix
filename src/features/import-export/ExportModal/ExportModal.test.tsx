@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
   render,
@@ -659,5 +660,354 @@ describe('ExportModal — reopening', () => {
     expect(within(dialog()).getByText('family-library.csv')).toBeDefined();
     expect(exportButton('CSV')).toBeDefined();
     expect(await within(dialog()).findByText('4 movies')).toBeDefined();
+  });
+});
+
+// --- the edges (issue #139) ----------------------------------------------------
+//
+// 14 — Export, Phase 3: "the edges" (issue #139). What a real library meets
+// that the fixture does not, read through the dialog itself: a library of
+// none, a summary that never arrives, the done face's two remaining exits,
+// and every open being a new export. Nothing new is drawn — no error face, no
+// snackbar, no save-location dialog — so each edge is asserted as the idle
+// face, the done face, or the browser's download, and nothing else.
+
+/**
+ * A host that owns `open` the way `LibrarySection` does — a row to open the
+ * dialog, and the dialog's own `onClose` to shut it — so a reopen after _Done_
+ * goes through the same prop the section flips, not through a `rerender`.
+ */
+function Host() {
+  const [open, setOpen] = useState(false);
+  return (
+    <ThemeProvider theme={theme}>
+      <button type="button" onClick={() => setOpen(true)}>
+        Export to CSV
+      </button>
+      <ExportModal open={open} onClose={() => setOpen(false)} />
+    </ThemeProvider>
+  );
+}
+
+const openFromHost = () =>
+  fireEvent.click(screen.getByRole('button', { name: 'Export to CSV' }));
+
+const summaryCalls = () =>
+  fetchMock.mock.calls.filter(([input]) => isSummary(input));
+
+describe('ExportModal — a library of none', () => {
+  const browser = stubDownload();
+
+  it('reads 0 movies on the filename row and keeps Export as CSV live', async () => {
+    serve({ movieCount: 0 });
+
+    renderDialog();
+
+    expect(await within(dialog()).findByText('0 movies')).toBeDefined();
+    expect((exportButton('CSV') as HTMLButtonElement).disabled).toBe(false);
+    expect(within(dialog()).queryByText(/empty|nothing to export/i)).toBeNull();
+  });
+
+  it('exports all the same, and the done face says 0 movies', async () => {
+    serve({ movieCount: 0 });
+    renderDialog();
+    await within(dialog()).findByText('0 movies');
+
+    fireEvent.click(exportButton('CSV'));
+
+    await waitFor(() => expect(doneButton()).toBeDefined());
+    expect(browser.downloads()).toHaveLength(1);
+    expect(browser.downloads()[0].filename).toBe('family-library.csv');
+    expect(squashed()).toContain(
+      'Savedfamily-library.csvwith0moviestoyourcomputer.'
+    );
+  });
+
+  it('exports an empty library as Excel too', async () => {
+    serve({ movieCount: 0 });
+    renderDialog();
+    await within(dialog()).findByText('0 movies');
+    fireEvent.click(excelCard());
+
+    fireEvent.click(exportButton('Excel'));
+
+    await waitFor(() => expect(doneButton()).toBeDefined());
+    expect(browser.downloads()[0].filename).toBe('family-library.xlsx');
+    expect(squashed()).toContain(
+      'Savedfamily-library.xlsxwith0moviestoyourcomputer.'
+    );
+  });
+});
+
+describe('ExportModal — a summary that never arrives', () => {
+  const browser = stubDownload();
+
+  it('leaves the count blank and Export as CSV enabled when the summary is refused', async () => {
+    serve({ summary: 'failing' });
+
+    renderDialog();
+
+    await waitFor(() => expect(summaryCalls()).toHaveLength(1));
+    expect(countLabel()).toBeNull();
+    expect((exportButton('CSV') as HTMLButtonElement).disabled).toBe(false);
+    expect(within(dialog()).getByText('family-library.csv')).toBeDefined();
+  });
+
+  it('still lands the export when the summary was refused — the count never gates it', async () => {
+    serve({ summary: 'failing' });
+    renderDialog();
+    await waitFor(() => expect(summaryCalls()).toHaveLength(1));
+
+    fireEvent.click(exportButton('CSV'));
+
+    await waitFor(() => expect(doneButton()).toBeDefined());
+    expect(browser.downloads()).toHaveLength(1);
+    expect(browser.downloads()[0].filename).toBe('family-library.csv');
+    expect(
+      within(dialog()).getByRole('heading', { name: 'Export ready' })
+    ).toBeDefined();
+    expect(squashed()).toContain('Savedfamily-library.csv');
+    expect(within(dialog()).queryByText(/null|undefined|NaN/)).toBeNull();
+  });
+
+  it('leaves the count blank and still exports when the summary cannot be requested at all', async () => {
+    fetchMock.mockImplementation((input) =>
+      isSummary(input)
+        ? Promise.reject(new Error('offline'))
+        : Promise.resolve(fileResponse(csv()))
+    );
+    renderDialog();
+    await waitFor(() => expect(summaryCalls()).toHaveLength(1));
+
+    expect(countLabel()).toBeNull();
+    expect((exportButton('CSV') as HTMLButtonElement).disabled).toBe(false);
+    fireEvent.click(exportButton('CSV'));
+
+    await waitFor(() => expect(doneButton()).toBeDefined());
+    expect(browser.downloads()).toHaveLength(1);
+  });
+
+  it('exports while the summary is still in flight', async () => {
+    serve({ summary: 'pending' });
+    renderDialog();
+
+    expect(countLabel()).toBeNull();
+    fireEvent.click(exportButton('CSV'));
+
+    await waitFor(() => expect(doneButton()).toBeDefined());
+    expect(browser.downloads()).toHaveLength(1);
+    expect(countLabel()).toBeNull();
+  });
+
+  it('asks for the summary once — a refusal is not retried on a choice', async () => {
+    serve({ summary: 'failing' });
+    renderDialog();
+
+    await waitFor(() => expect(summaryCalls()).toHaveLength(1));
+    fireEvent.click(excelCard());
+    fireEvent.click(csvCard());
+
+    expect(summaryCalls()).toHaveLength(1);
+  });
+});
+
+describe('ExportModal — the done face’s exits', () => {
+  const browser = stubDownload();
+
+  async function reachDone(onClose: () => void) {
+    serve();
+    renderDialog({ onClose });
+    fireEvent.click(exportButton('CSV'));
+    await waitFor(() => expect(doneButton()).toBeDefined());
+  }
+
+  it('closes on Escape, once', async () => {
+    const onClose = vi.fn();
+    await reachDone(onClose);
+
+    fireEvent.keyDown(document.activeElement ?? document.body, {
+      key: 'Escape',
+    });
+
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('closes on the scrim, once', async () => {
+    const onClose = vi.fn();
+    await reachDone(onClose);
+
+    fireEvent.click(dialog().parentElement as HTMLElement);
+
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not close for a press inside the done card', async () => {
+    const onClose = vi.fn();
+    await reachDone(onClose);
+
+    fireEvent.click(
+      within(dialog()).getByRole('heading', { name: 'Export ready' })
+    );
+
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it('has no ✕ — Done, Escape and the scrim are its three ways out', async () => {
+    await reachDone(() => undefined);
+
+    expect(
+      within(dialog()).queryByRole('button', { name: 'Close' })
+    ).toBeNull();
+    expect(within(dialog()).getAllByRole('button')).toHaveLength(1);
+  });
+
+  it('exports nothing more on the way out', async () => {
+    const onClose = vi.fn();
+    await reachDone(onClose);
+
+    fireEvent.keyDown(document.activeElement ?? document.body, {
+      key: 'Escape',
+    });
+
+    expect(browser.downloads()).toHaveLength(1);
+    expect(
+      fetchMock.mock.calls.filter(([input]) => !isSummary(input))
+    ).toHaveLength(1);
+  });
+});
+
+describe('ExportModal — every open is a new export', () => {
+  const browser = stubDownload();
+
+  it('reopens on the idle face, CSV checked, after Done', async () => {
+    serve({ movieCount: 3 });
+    render(<Host />);
+    openFromHost();
+    await within(dialog()).findByText('3 movies');
+    fireEvent.click(excelCard());
+    fireEvent.click(exportButton('Excel'));
+    await waitFor(() => expect(doneButton()).toBeDefined());
+
+    fireEvent.click(doneButton());
+    expect(screen.queryByRole('dialog')).toBeNull();
+    openFromHost();
+
+    expect(idleDialog()).toBeDefined();
+    expect(csvCard().getAttribute('aria-checked')).toBe('true');
+    expect(excelCard().getAttribute('aria-checked')).toBe('false');
+    expect(within(dialog()).getByText('family-library.csv')).toBeDefined();
+    expect(exportButton('CSV')).toBeDefined();
+    expect(
+      within(dialog()).queryByRole('heading', { name: 'Export ready' })
+    ).toBeNull();
+    expect(await within(dialog()).findByText('3 movies')).toBeDefined();
+  });
+
+  it('fetches the count afresh on the reopen', async () => {
+    serve({ movieCount: 3 });
+    render(<Host />);
+    openFromHost();
+    await within(dialog()).findByText('3 movies');
+    fireEvent.click(exportButton('CSV'));
+    await waitFor(() => expect(doneButton()).toBeDefined());
+    fireEvent.click(doneButton());
+
+    serve({ movieCount: 5 });
+    openFromHost();
+
+    expect(await within(dialog()).findByText('5 movies')).toBeDefined();
+    expect(summaryCalls()).toHaveLength(2);
+  });
+
+  it('reopens on the idle face after the done face was left by Escape', async () => {
+    serve();
+    render(<Host />);
+    openFromHost();
+    fireEvent.click(exportButton('CSV'));
+    await waitFor(() => expect(doneButton()).toBeDefined());
+
+    fireEvent.keyDown(document.activeElement ?? document.body, {
+      key: 'Escape',
+    });
+    expect(screen.queryByRole('dialog')).toBeNull();
+    openFromHost();
+
+    expect(idleDialog()).toBeDefined();
+    expect(exportButton('CSV')).toBeDefined();
+    expect(browser.downloads()).toHaveLength(1);
+    expect(await within(dialog()).findByText('3 movies')).toBeDefined();
+  });
+
+  it('forgets Excel when the dialog was cancelled with it chosen', async () => {
+    serve();
+    render(<Host />);
+    openFromHost();
+    fireEvent.click(excelCard());
+    expect(within(dialog()).getByText('family-library.xlsx')).toBeDefined();
+
+    fireEvent.click(cancelButton());
+    openFromHost();
+
+    expect(csvCard().getAttribute('aria-checked')).toBe('true');
+    expect(within(dialog()).getByText('family-library.csv')).toBeDefined();
+    expect(browser.downloads()).toHaveLength(0);
+    expect(await within(dialog()).findByText('3 movies')).toBeDefined();
+  });
+
+  it('is a second export, not a repeat — the browser is handed a second file', async () => {
+    serve();
+    render(<Host />);
+    openFromHost();
+    fireEvent.click(exportButton('CSV'));
+    await waitFor(() => expect(doneButton()).toBeDefined());
+    fireEvent.click(doneButton());
+
+    openFromHost();
+    fireEvent.click(excelCard());
+    fireEvent.click(exportButton('Excel'));
+
+    await waitFor(() => expect(doneButton()).toBeDefined());
+    expect(browser.downloads().map((download) => download.filename)).toEqual([
+      'family-library.csv',
+      'family-library.xlsx',
+    ]);
+  });
+});
+
+describe('ExportModal — nothing new is drawn', () => {
+  stubDownload();
+
+  it('raises no alert and no status line when the export is refused', async () => {
+    serve({ file: () => serverErrorResponse() });
+    renderDialog();
+
+    fireEvent.click(exportButton('CSV'));
+
+    await waitFor(() => expect(exportButton('CSV')).toBeDefined());
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.queryByRole('status')).toBeNull();
+    expect(screen.queryByText(/error|failed|try again|could not/i)).toBeNull();
+  });
+
+  it('raises no alert when the summary is refused', async () => {
+    serve({ summary: 'failing' });
+    renderDialog();
+
+    await waitFor(() => expect(summaryCalls()).toHaveLength(1));
+
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.queryByText(/error|failed|try again|could not/i)).toBeNull();
+  });
+
+  it('offers no column picker — the pills are a list, every one always in', async () => {
+    serve();
+    renderDialog();
+    await within(dialog()).findByText('3 movies');
+
+    expect(within(dialog()).queryAllByRole('checkbox')).toHaveLength(0);
+    expect(within(dialog()).getAllByRole('radio')).toHaveLength(2);
+    for (const column of COLUMNS) {
+      expect(within(dialog()).getByText(column)).toBeDefined();
+    }
   });
 });

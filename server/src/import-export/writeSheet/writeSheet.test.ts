@@ -20,6 +20,10 @@
 // CSV's own — the BOM — and what is the workbook's own — one worksheet, a
 // number where a number was stored, and no styling — each keep a group of
 // their own.
+//
+// 14 — Export, Phase 3: "the edges" (issue #139) pins the two titles the issue
+// names — _Amélie_ and _"Whatever," she said_ — through the round trip in
+// both formats, and the CSV's quoting of them behind the BOM.
 
 import ExcelJS from 'exceljs';
 import { Readable } from 'node:stream';
@@ -559,6 +563,38 @@ describe.each(FORMATS)(
       expect(rows[0].cast).toEqual(['Jean Reno', 'Gérard Depardieu']);
       expect(rows[0].genres).toEqual(['Comédie']);
     });
+
+    it('survives the two titles the edges name, side by side (issue #139)', async () => {
+      // _Amélie_ is the diacritic; _"Whatever," she said_ is the comma and the
+      // double quote — the two cells a CSV has to quote and escape, and a
+      // workbook has to store as text, for the family's machine to read back.
+      const titles = ['Amélie', '"Whatever," she said'];
+      const bytes = await writeSheet(
+        titles.map((title, index) => fullMovie({ id: `m${index}`, title })),
+        format
+      );
+
+      const rows = await readSheet(bytes, filename);
+
+      expect(rows.map((row) => row.title)).toEqual(titles);
+    });
+
+    it('survives a director and a cast member carrying the comma and the quote', async () => {
+      const bytes = await writeSheet(
+        [
+          fullMovie({
+            director: 'Zoë "Zed" Ríos',
+            cast: ['Peder "Pete" Vinge', 'Ana Sørensen'],
+          }),
+        ],
+        format
+      );
+
+      const rows = await readSheet(bytes, filename);
+
+      expect(rows[0].director).toBe('Zoë "Zed" Ríos');
+      expect(rows[0].cast).toEqual(['Peder "Pete" Vinge', 'Ana Sørensen']);
+    });
   }
 );
 
@@ -571,5 +607,26 @@ describe('writeSheet — the round trip through the BOM', () => {
     // A reader that kept the BOM would see a header of `\uFEFFTitle`, find no
     // title column, and refuse the file it was handed by its own mirror.
     expect(rows[0].title).toBe('Die Hard');
+  });
+
+  it('quotes the awkward title as CSV quotes it, behind the BOM (issue #139)', async () => {
+    const bytes = await writeSheet(
+      [fullMovie({ title: '"Whatever," she said' })],
+      'csv'
+    );
+
+    const text = bytes.toString('utf8');
+
+    // The cell is wrapped in quotes for its comma, and each quote inside it
+    // is doubled — RFC 4180, which is what Excel reads without a wizard.
+    expect(text.startsWith('\uFEFFTitle,')).toBe(true);
+    expect(text).toContain('\n"""Whatever,"" she said"');
+  });
+
+  it('reads back a header-only CSV as no rows, through the BOM', async () => {
+    const bytes = await writeSheet([], 'csv');
+
+    expect(bytes.toString('utf8').startsWith('\uFEFFTitle,')).toBe(true);
+    expect(await readSheet(bytes, 'family-library.csv')).toEqual([]);
   });
 });

@@ -20,7 +20,11 @@
 // Phase 1 named into a `200` under the OpenXML spreadsheet type, and runs the
 // round trip in both formats.
 //
-// The last two groups are the initiative's promise end to end, in both
+// 14 — Export, Phase 3: "the edges" (issue #139) closes the file: the awkward
+// title, the BOM through the route and the reader, and a library of none, each
+// in both formats.
+//
+// The two Bulk-import groups are the initiative’s promise end to end, in both
 // directions of the README's: a library the importer filled from its fixture,
 // exported, and the export fed back to the importer over the same root — and
 // nothing added; then the same export with one row edited, imported onto a
@@ -685,3 +689,194 @@ describe.each(FORMATS)(
     });
   }
 );
+
+// --- the edges (issue #139) ------------------------------------------------------
+//
+// 14 — Export, Phase 3: "the edges" (issue #139). What a real library meets
+// that the fixture does not, asserted through the route in both formats: the
+// two titles the issue names — _Amélie_, a diacritic; _"Whatever," she said_,
+// a comma and a double quote — write and read back identically through the
+// writer, the route and the reader; the CSV's BOM survives the route and the
+// reader strips it, so the file opens in Excel with the diacritics intact and
+// no import wizard; and a library of none lands a header-only file in both
+// formats rather than an error.
+
+/** The two titles the issue names, and the awkward cells beside them. */
+function addAwkwardLibrary(storage: LibraryStorage): void {
+  storage.addMovie(
+    newMovie({
+      title: 'Amélie',
+      videoPath: 'Amélie (2001)/amelie.mkv',
+      year: 2001,
+      director: 'Jean-Pierre Jeunet',
+      cast: ['Audrey Tautou'],
+      rating: 7,
+      genres: ['Romance', 'Comedy'],
+      watched: true,
+    })
+  );
+  storage.addMovie(
+    newMovie({
+      title: '"Whatever," she said',
+      videoPath: 'Whatever she said (2015)/whatever.mkv',
+      year: 2015,
+      director: 'Zoë "Zed" Ríos',
+      cast: ['Ana Sørensen', 'Peder "Pete" Vinge'],
+      genres: ['Drama'],
+    })
+  );
+}
+
+/** The route's bytes, as the file the family's Downloads folder would hold. */
+async function download(
+  baseUrl: string,
+  format: ExportFormat
+): Promise<Buffer> {
+  const response = await getFile(baseUrl, format);
+  expect(response.status).toBe(200);
+  return Buffer.from(await response.arrayBuffer());
+}
+
+describe.each(FORMATS)('GET /api/export/%s — the awkward title', (format) => {
+  const filename = `family-library.${format}`;
+
+  it('reads back a diacritic, a comma and a double quote identically', async () => {
+    const { storage, baseUrl } = freshApi();
+    addAwkwardLibrary(storage);
+
+    const rows = await readSheet(await download(baseUrl, format), filename);
+
+    expect(rows.map((row) => row.title).sort()).toEqual(
+      ['"Whatever," she said', 'Amélie'].sort()
+    );
+  });
+
+  it('reads back every awkward cell of the row, not the title alone', async () => {
+    const { storage, baseUrl } = freshApi();
+    addAwkwardLibrary(storage);
+
+    const rows = await readSheet(await download(baseUrl, format), filename);
+
+    expect(rows.find((row) => row.title === '"Whatever," she said')).toEqual({
+      title: '"Whatever," she said',
+      year: 2015,
+      genres: ['Drama'],
+      director: 'Zoë "Zed" Ríos',
+      cast: ['Ana Sørensen', 'Peder "Pete" Vinge'],
+      synopsis: null,
+      rating: null,
+      watched: false,
+    });
+    expect(rows.find((row) => row.title === 'Amélie')).toEqual({
+      title: 'Amélie',
+      year: 2001,
+      genres: ['Romance', 'Comedy'],
+      director: 'Jean-Pierre Jeunet',
+      cast: ['Audrey Tautou'],
+      synopsis: null,
+      rating: 7,
+      watched: true,
+    });
+  });
+
+  it('keeps the two in the A–Z the route promises, the quote before the letter', async () => {
+    const { storage, baseUrl } = freshApi();
+    addAwkwardLibrary(storage);
+
+    const rows = await readSheet(await download(baseUrl, format), filename);
+
+    expect(rows.map((row) => row.title)).toEqual([
+      '"Whatever," she said',
+      'Amélie',
+    ]);
+  });
+});
+
+describe('GET /api/export/csv — the BOM through the route and the reader', () => {
+  it('sends the BOM ahead of the awkward titles, quoted as CSV quotes them', async () => {
+    const { storage, baseUrl } = freshApi();
+    addAwkwardLibrary(storage);
+
+    const bytes = await download(baseUrl, 'csv');
+    const text = bytes.toString('utf8');
+
+    expect(bytes.subarray(0, 3)).toEqual(Buffer.from([0xef, 0xbb, 0xbf]));
+    // Excel reads the BOM as "this is UTF-8" and opens the é as an é, with no
+    // import wizard; a comma and a quote inside a cell are what the quoting is for.
+    expect(text).toContain('Amélie');
+    expect(text).toContain('"""Whatever,"" she said"');
+  });
+
+  it('is stripped by the reader, so no title carries it', async () => {
+    const { storage, baseUrl } = freshApi();
+    addAwkwardLibrary(storage);
+
+    const rows = await readSheet(
+      await download(baseUrl, 'csv'),
+      'family-library.csv'
+    );
+
+    expect(rows).toHaveLength(2);
+    for (const row of rows) {
+      expect(row.title).not.toContain('\uFEFF');
+    }
+  });
+
+  it('sends the BOM once, ahead of a header-only file too', async () => {
+    const { baseUrl } = freshApi();
+
+    const text = (await download(baseUrl, 'csv')).toString('utf8');
+
+    expect(text.startsWith('\uFEFF')).toBe(true);
+    expect(text.indexOf('\uFEFF', 1)).toBe(-1);
+  });
+});
+
+describe.each(FORMATS)('GET /api/export/%s — a library of none', (format) => {
+  const filename = `family-library.${format}`;
+
+  it('answers a summary of 0 and lands a file the reader reads as no rows', async () => {
+    const { baseUrl } = freshApi();
+
+    const summary = (await (await getSummary(baseUrl)).json()) as ExportSummary;
+    const response = await getFile(baseUrl, format);
+    const bytes = Buffer.from(await response.arrayBuffer());
+
+    expect(summary).toEqual({ movieCount: 0 });
+    expect(response.status).toBe(200);
+    expect(response.headers.get('content-type')).toBe(CONTENT_TYPE[format]);
+    expect(response.headers.get('content-disposition')).toBe(
+      `attachment; filename="${filename}"`
+    );
+    expect(await readSheet(bytes, filename)).toEqual([]);
+  });
+
+  it('is the header row alone — the eight names, nothing under them', async () => {
+    const { baseUrl } = freshApi();
+
+    const bytes = await download(baseUrl, format);
+
+    const workbook = new ExcelJS.Workbook();
+    if (format === 'xlsx') {
+      await workbook.xlsx.load(bytes as unknown as ArrayBuffer);
+    } else {
+      await workbook.csv.read(
+        Readable.from([bytes.toString('utf8').replace(/^\uFEFF/, '')]),
+        { map: (value: string) => value }
+      );
+    }
+    const sheet = workbook.worksheets[0];
+    expect(sheet.rowCount).toBe(1);
+    expect(sheet.getRow(1).values).toEqual([
+      undefined,
+      'Title',
+      'Year',
+      'Genres',
+      'Director',
+      'Cast',
+      'Rating',
+      'Status',
+      'Subtitles',
+    ]);
+  });
+});
