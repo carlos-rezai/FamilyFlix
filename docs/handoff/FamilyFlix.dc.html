@@ -562,7 +562,7 @@
                 {key:'export',glyph:'⬇',label:'Export to CSV',desc:'Save your whole library out as a spreadsheet backup.',onClick:()=>this.openExport()},
               ],
               codec:{
-                summaryLabel:s.codecs.length+' formats enabled · '+s.codecs.filter(c=>c.kind==='installed').length+' added by you',
+                summaryLabel:s.codecs.length+' formats enabled · '+s.codecs.filter(c=>c.kind==='installed').length+' from the playback component',
                 onBrowse:()=>this.uploadCodec(),
                 codecs:s.codecs.map(c=>{ const built=c.kind==='built-in'; return {
                   id:c.id, name:c.name, exts:c.exts, size:c.size, builtIn:built, notBuiltIn:!built, justAdded:s.codecJustAdded===c.id,
