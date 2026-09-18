@@ -11,6 +11,144 @@ Newest entry first.
 
 ---
 
+## 2026-09-18 — Settings hub (issues #143–#147)
+
+Ten commits across issues #143–#147, five slices against the plan on #142,
+built from `docs/design-logs/15-settings-hub.md`. **4399 tests pass across
+228 files**, up from 4132 across 210. `npm run typecheck` is green and
+`eslint src server` is clean on every commit. The first initiative driven
+wholly by `issue-loop`: every RED and every GREEN was a subagent's, and the
+maintainer's one instruction was the scope the grill session ran under —
+translate the prototype 1:1 into the codebase, in its naming, conventions,
+patterns and architecture. Nobody read a diff between the commits; the
+refactor round is where that reading happens.
+
+**The Settings hub is _not_ ticked** in the feature table. The rule holds:
+✅ when the refactor closes, not when the build issues do.
+
+### What shipped
+
+- **#143, the tracer bullet — a true codec row on the page.** The **Codec
+  report** moves behind the **Playback component** seam: the component
+  gains `decoders()`, `ffmpegComponent`'s listing becomes an
+  encoders/decoders pair, `capabilities(component)` reads the listing off
+  the one `main.ts` composed and consults nothing else — not the
+  environment, not a binary on PATH — and `Playback.capabilities()` exposes
+  it to `GET /api/playback/capabilities`. The codec types move to
+  `src/types/playback.ts` for both build targets. On the screen: the
+  **Format catalogue** in `codecView`, `fetchCapabilities` and
+  `useCapabilities` (blank until it lands), `MicrochipIcon`, `CodecRow`,
+  `CodecManager`, `PlaybackSection` over the new `section.styles.ts` — the
+  **Section card**, divider, item title and lede, and the **Group heading**
+  moved out of `LibrarySection.styles.ts` — and `SettingsPage` composing
+  LIBRARY then PLAYBACK. The prototype's `summaryLabel` copy was amended
+  first (`5db8da0`): the rows it counts are what the bundled component
+  decodes, which the family never "added".
+- **#144, the Subtitles rows — the preference kept and shown.**
+  `src/types/settings.ts` (`SUBTITLE_LANGUAGES`, `SubtitleLanguage`,
+  `DEFAULT_SUBTITLE_LANGUAGE`, `Settings`, `StorageReport`), the **Language
+  pool** spelled once and read by the form's **Subtitle row**, the scanner's
+  tags and the _Preferred language_ pill; migration 3, the `settings` table,
+  and `settings()` / `setSubtitleLanguage()` on `LibraryStorage` under
+  `library/settings/`; `GET /api/settings` and
+  `POST /api/settings/subtitle-language`, a **Single-signal write**;
+  `fetchSettings` in the shared `api/` (the player asks for it too),
+  `saveSubtitleLanguage` and `useSettings` with its optimistic
+  choose-and-revert; the `Toggle` primitive; and the Playback card's second
+  half under the divider — _Turn on automatically_ with the **Coming soon
+  pill** and a disabled switch, and the _Preferred language_ pill over
+  `FilterDropdown`.
+- **#145, the player honours the preference.** `useSubtitles` reads the
+  household's **Preferred subtitle language** through the shared
+  `fetchSettings` once per open and hands it to `preferredSubtitle`, which
+  has known what to do with one since log 10 wrote it. Track order until the
+  settings land and when the read is refused; the **Cue list** held against
+  the row it came from, so CC pressed before the settings land does not
+  leave the first row's lines under a later-chosen track.
+- **#146, the Storage card.** `spaceUsed(root)` in `server/src/media/` — a
+  walk summing every file's size, `0` for a missing root, an entry gone
+  mid-walk skipped, never throwing; `GET /api/storage` →
+  `{ mediaPath, bytesUsed, movieCount }`, the path resolved to absolute at
+  request time, the walk read afresh on every visit; `formatBytes` in
+  `utils/`, 1024-based; `fetchStorageReport`, `useStorageReport`,
+  `StorageSection` — no _Change…_, blank until the report lands.
+- **#147, the About card.** `AboutSection` under STORAGE: the brand row,
+  the **App version** in mono beside it, the tagline pushed to the far end.
+  `__APP_VERSION__` declared once in `src/types/appVersion.d.ts` and defined
+  by Vite from `package.json`'s `version`, real under vitest too. No
+  _Software update_ row.
+
+### The loop, measured
+
+The two slices the design log's own phases sized — the tracer bullet, which
+carried the server seam, the types promotion, the shared furniture and five
+frontend units; and the Subtitles rows, which carried a migration, a route
+pair, a new primitive, a hook and a scanner change — ran every step over the
+loop's 100k-token budget. The three later slices ran under it. Both heavy
+slices were the log's phases taken whole, and both would have been two
+issues each. For the next `prd-to-issues`: a slice that names a new
+primitive _and_ a migration is two slices.
+
+### Two judgment calls the subagents made alone
+
+- **A decoder name begins with a letter.** The RED fixture for
+  `capabilities` listed `012v` — a real, uncompressed ffmpeg decoder — and
+  its exact-set assertion excluded it. The build's `DECODER_LINE` regex
+  makes a name begin with a letter, which is also what keeps the legend's
+  ` V..... = Video` from being reported as a codec called `=`. The
+  digit-named decoders ffmpeg has — `012v`, `4xm`, `8bps` — are none the
+  **Format catalogue** names, so no row is lost. Documented in the regex's
+  docblock; the one parsing decision nobody was present to confirm.
+- **`windBackToV1` drops `settings`; migration 3 stays strict.** The
+  pre-existing helper in `db.test.ts` wound a database back to v1 by
+  dropping what migration 2 added; once migration 3 existed, a "v1"
+  database still held a `settings` table and re-opening failed. The
+  subagent chose to make the helper drop the table rather than give the
+  migration `IF NOT EXISTS`: a migration that tolerates its own table
+  already existing cannot tell a fresh database from a half-run one.
+
+### What no subagent could exercise
+
+Each slice's last acceptance criterion was a hands-on check, ticked on the
+strength of the tests rather than driven: a live machine with ffmpeg on PATH
+and one without (#143); choosing Spanish against a dev library, reloading,
+and reading the `settings` row in `familyflix.db` (#144); the track a film
+opens on (#145); Explorer's Properties dialog against the managed media
+folder (#146); the version in the running app (#147). The route and hook
+tests cover both faces over a fake component and a real SQLite file; the
+looking is the maintainer's.
+
+### Deliberately not built
+
+- **The _Add a codec pack_ drop zone and the per-row ✕** — the **Playback
+  component upload** initiative, with its own grill. The size cell is a
+  column of dashes until that initiative decides what a component's size
+  means on a row.
+- **_Change…_ on the Storage card and the _Software update_ row** — the
+  Electron shell's, and the Snackbar system's. Neither is drawn: the rule
+  that held the Export row back until its dialog existed.
+- **Auto-on subtitles** — still 🧭; the **Auto-on toggle** ships disabled
+  under its Coming soon pill.
+- **A skeleton, an error face, a snackbar** on any of the three reads — the
+  Export summary's rule: `null` until it lands, `null` if it never does,
+  nothing drawn while so.
+- **A "not supported" row**, **validating the preference against the pool**,
+  **memoising `capabilities()` or `spaceUsed`** — the log's ruled-out list,
+  left ruled out.
+
+### Follow-ups
+
+The refactor plan, filed as 149 and folding the docs slice 148 in: the About
+card's inherited group gap, the one pixel; a `LibrarySection` docblock still
+scheduling phases that shipped; a tuple copied to shed a `readonly` the prop
+should take; a second route suite where the first's banner says one; and
+leaves that count the page's buttons three times because three slices each
+asked "and did I add one?". Nothing wrong, nothing the tests would catch — a
+thing a human reading the whole feature notices and a subagent reading one
+issue does not.
+
+---
+
 ## 2026-09-17 — Export refactor (issue #141)
 
 Fifteen commits against `docs/refactor-plans/14-export-refactor.md` —
