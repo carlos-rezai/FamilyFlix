@@ -6,12 +6,17 @@ import { Card } from '../section.styles';
  * The About card is its brand row and nothing else, so the row's own inset —
  * the prototype's `16px 20px` — is the card's, and the row's flex is the
  * card's: the brand, the version, then the tagline pushed to the far end.
+ *
+ * The last card on the page carries no group gap: `Card` sets the 32px the
+ * Playback and Storage cards need under them, and the prototype's About card
+ * has none — the column's own bottom padding is what follows it.
  */
 export const AboutCard = styled(Card)`
   display: flex;
   align-items: center;
   gap: 12px;
   padding: 16px 20px;
+  margin-bottom: 0;
 `;
 
 /** **Family** run straight into **Flix**, on one baseline. */
