@@ -1,3 +1,4 @@
+import { resolve } from 'node:path';
 import { pipeline } from 'node:stream';
 
 import express, { type Request, type Response, type Router } from 'express';
@@ -14,6 +15,7 @@ import {
 } from '../import-export/createImporter/createImporter';
 import { writeSheet } from '../import-export/writeSheet/writeSheet';
 import type { Media } from '../media/createMedia/createMedia';
+import { spaceUsed } from '../media/spaceUsed/spaceUsed';
 import type { Playback } from '../playback/createPlayback/createPlayback';
 import { derivedRuntime } from '../playback/derivedRuntime/derivedRuntime';
 import { isRatingValue, MAX_RATING } from './isRatingValue/isRatingValue';
@@ -40,6 +42,7 @@ import {
   type MovieSort,
   type NewSubtitle,
   type Settings,
+  type StorageReport,
 } from '@/types';
 
 /**
@@ -975,6 +978,25 @@ export function createApiRouter(
 
     storage.setSubtitleLanguage(value);
     res.json({ value });
+  });
+
+  // The **Storage report** — `{ mediaPath, bytesUsed, movieCount }` — three
+  // reads the router already holds, composed; nothing new is injected. The
+  // media path is resolved to absolute at request time — even one the server
+  // was started with as `./media` — so the card names a place on the disk and
+  // not a place relative to a process. **Space used** is walked afresh on every
+  // visit, never memoised: a directory walk per Settings visit, on the
+  // maintainer's screen, is the price of a number that is never stale. The two
+  // counts of one library disagree by exactly a **Stranded folder** — its
+  // bytes count, its title does not.
+  router.get('/storage', async (_req: Request, res: Response) => {
+    const absoluteMediaPath = resolve(mediaPath);
+    const report: StorageReport = {
+      mediaPath: absoluteMediaPath,
+      bytesUsed: await spaceUsed(absoluteMediaPath),
+      movieCount: storage.countMovies(),
+    };
+    res.json(report);
   });
 
   // What the player is told before a byte arrives: which path the film takes,

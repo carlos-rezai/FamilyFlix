@@ -1,4 +1,4 @@
-import type { PlaybackCapabilities } from '@/types';
+import type { PlaybackCapabilities, StorageReport } from '@/types';
 import { postValue } from '@/api/postValue/postValue';
 
 const CAPABILITIES_ENDPOINT = '/api/playback/capabilities';
@@ -18,6 +18,25 @@ export async function fetchCapabilities(): Promise<PlaybackCapabilities> {
   }
 
   return (await response.json()) as PlaybackCapabilities;
+}
+
+const STORAGE_ENDPOINT = '/api/storage';
+
+/**
+ * The **Storage report** — `GET /api/storage`, the raw
+ * `{ mediaPath, bytesUsed, movieCount }` the Storage card draws from.
+ * `fetchCapabilities`'s shape repeated: the payload as it came, and a
+ * rejection on any status that is not OK, which its one caller,
+ * `useStorageReport`, answers by keeping `null`.
+ */
+export async function fetchStorageReport(): Promise<StorageReport> {
+  const response = await fetch(STORAGE_ENDPOINT);
+
+  if (!response.ok) {
+    throw new Error(`GET ${STORAGE_ENDPOINT} failed: ${response.status}`);
+  }
+
+  return (await response.json()) as StorageReport;
 }
 
 /** Where the preferred subtitle language is saved. */
