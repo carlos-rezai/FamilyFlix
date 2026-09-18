@@ -110,8 +110,8 @@ describe('SettingsPage', () => {
   it('composes the Playback section under the Library section', () => {
     renderPage();
 
-    // 15 — Settings hub, Phase 1 (issue #143): the second of the grouped
-    // sections, a Section card headed Codecs over the Codec report.
+    // The second of the grouped sections, a Section card headed Codecs over
+    // the Codec report.
     expect(screen.getByText('Playback')).toBeDefined();
     expect(screen.getByText('Codecs')).toBeDefined();
     expect(
@@ -151,8 +151,8 @@ describe('SettingsPage', () => {
   it('composes the Storage section under the Playback section', () => {
     renderPage();
 
-    // 15 — Settings hub, Phase 4 (issue #146): the third of the grouped
-    // sections, a Section card headed Managed media folder over the report.
+    // The third of the grouped sections, a Section card headed Managed media
+    // folder over the report.
     expect(screen.getByText('Storage')).toBeDefined();
     expect(screen.getByText('Managed media folder')).toBeDefined();
     expect(
@@ -190,28 +190,11 @@ describe('SettingsPage', () => {
     expect(screen.getByText(/12 titles/)).toBeDefined();
   });
 
-  it('adds no button of its own with the Storage card — no Change…', async () => {
-    renderPage();
-
-    await waitFor(() =>
-      expect(screen.getByText(STORAGE.mediaPath)).toBeDefined()
-    );
-    expect(screen.queryByRole('button', { name: /change/i })).toBeNull();
-    // Back, two "Add a movie"s, Import, Export — and the Preferred language
-    // pill once the settings land; the Storage card adds none.
-    await waitFor(() =>
-      expect(
-        screen.getByRole('button', { name: /^Preferred language: / })
-      ).toBeDefined()
-    );
-    expect(screen.getAllByRole('button')).toHaveLength(6);
-  });
-
   it('composes the About section under the Storage section', () => {
     renderPage();
 
-    // 15 — Settings hub, Phase 5 (issue #147): the fourth and last of the
-    // grouped sections, a Section card holding the brand row.
+    // The fourth and last of the grouped sections, a Section card holding the
+    // brand row.
     expect(screen.getByText('About')).toBeDefined();
     expect(screen.getByText('Family')).toBeDefined();
     expect(screen.getByText('Flix')).toBeDefined();
@@ -236,13 +219,17 @@ describe('SettingsPage', () => {
   it('composes the five sections and nothing else', async () => {
     renderPage();
 
-    // No Software update row: the About card adds no button and no copy
-    // about an updater the app does not have.
+    // No Change… on the Storage card, and no Software update row: neither
+    // card adds a button or copy about a mechanism the app does not have.
+    await waitFor(() =>
+      expect(screen.getByText(STORAGE.mediaPath)).toBeDefined()
+    );
+    expect(screen.queryByRole('button', { name: /change/i })).toBeNull();
     expect(screen.queryByText(/software update/i)).toBeNull();
     expect(screen.queryByText(/up to date/i)).toBeNull();
     expect(screen.queryByRole('button', { name: /update/i })).toBeNull();
     // Back, two "Add a movie"s, Import, Export — and the Preferred language
-    // pill once the settings land; About adds none.
+    // pill once the settings land; Storage and About add none.
     await waitFor(() =>
       expect(
         screen.getByRole('button', { name: /^Preferred language: / })
