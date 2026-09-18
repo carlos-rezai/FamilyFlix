@@ -1,7 +1,7 @@
 # 15 — Settings hub
 
 > **Initiative:** `settings-hub`
-> **PRD:** to follow
+> **PRD:** [#142](https://github.com/carlos-rezai/FamilyFlix/issues/142) · `docs/PRDs/15-settings-hub.md`
 > **Plan:** to follow the PRD
 
 This log is the `grill-me` session that settled the feature before the PRD was
