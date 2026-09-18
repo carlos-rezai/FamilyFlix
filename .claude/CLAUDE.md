@@ -107,12 +107,14 @@ familyflix/
 │ └── src/
 │ ├── routes/ ← HTTP layer only: parse request, call a domain module, return response
 │ ├── library/ ← movie CRUD, SQLite queries, watch-state + resume-position logic
+│ │ └── settings/ ← the household's Settings: `settings()` with the default applied when the row is absent, `setSubtitleLanguage()` as an upsert
 │ ├── media/ ← folder scanning, file copy into managed storage, subtitle detection, the Movie folder’s removal after a Delete
 │ │ ├── createMedia/ ← the injected domain: reserve a Movie folder, storeUpload, copyIn (a stream under the cancel signal), the three removals
 │ │ ├── fileKinds/ ← what an image, a subtitle and a video may be called — the store’s security boundary, and the scanner’s line
 │ │ ├── walkLibraryRoot/ ← a Library root → its Source folders: a folder holding a video is one and is not descended
 │ │ ├── scanMovieFolder/ ← one Source folder → every video, the poster by name, the backdrop by name only, every subtitle
-│ │ ├── detectSubtitleLanguage/ ← the language tag in a subtitle’s name → its language
+│ │ ├── detectSubtitleLanguage/ ← the language tag in a subtitle’s name → its language, off the shared Language pool
+│ │ ├── spaceUsed/ ← Space used: a walk summing every file under the media root, 0 for a missing root, an entry gone mid-walk skipped, never throwing — a function, not a createMedia member
 │ │ └── movieFolder/ safeFilename/ ← pure: the folder a title and year name; a filename the store will take
 │ ├── import-export/ ← the bulk importer and the exporter: Excel/CSV parsing and writing, row-to-folder matching, the Current run
 │ │ ├── readSheet/ ← .xlsx or .csv by extension, first worksheet, headers through a synonym table → Sheet rows; a Status column reads as watched, a BOM is stripped
@@ -127,13 +129,13 @@ familyflix/
 │ │ ├── mediaDuration/ ← an MP4’s own moov/mvhd, so a direct play needs no component
 │ │ ├── choosePlaybackPath/ ← pure: MediaProbe → direct / remux / transcode / cannot-play + argv
 │ │ ├── createPlayback/ ← the injected domain: videoFile, read, stream, subtitleFile, cues
-│ │ ├── ffmpegComponent/ ← the injected seam: what this machine can be asked to do
+│ │ ├── ffmpegComponent/ ← the injected seam: what this machine can be asked to do — probe, spawn, the hardware encoder, and `decoders()`, the raw `ffmpeg -decoders` listing (an encoders/decoders listing pair behind it)
 │ │ ├── mediaFilePath/ ← the under-media-root check between a stored string and an open file
 │ │ ├── derivedRuntime/ ← a Playback and a stored path → the runtime minutes off the bytes, never throwing; the form’s save and the importer both ask it
-│ │ ├── capabilities/ ← Chromium native set ∪ `ffmpeg -decoders`
+│ │ ├── capabilities/ ← the Codec report: Chromium native set ∪ what `capabilities(component)` reads off the one component main.ts composed — never the environment, never a binary on PATH; a decoder name begins with a letter
 │ │ ├── parseSrt/ parseVtt/ parseAss/ parseSub/ ← pure, one format each
 │ │ └── parseSubtitle/ ← dispatch on extension; the last place a format is known
-│ ├── db/ ← SQLite connection + schema/migrations, shared by every domain module above
+│ ├── db/ ← SQLite connection + schema/migrations (1 the schema and the genre seed, 2 last_watched_at, 3 the `settings` table — nothing seeded), shared by every domain module above
 │ └── test-support/ ← test doubles shared across server tests, never imported by shipping code
 │ ├── heldCopy/ ← a Media whose first copy waits until released, forwarding the cancel signal
 │ └── libraryFixture/ ← the importer’s fixture copied under a sandbox → { root, sheet }
@@ -149,8 +151,9 @@ familyflix/
 │ │ └── index.ts
 │ ├── primitives/ ← dumb, reusable UI atoms (Button, Input, Text, Icon, Badge)
 │ │ ├── index.ts ← barrel: re-exports every primitive (only barrel at this rung)
-│ │ ├── Icon/ ← one file per glyph on IconBase (DownloadIcon, SheetIcon, CheckIcon, …), `currentColor`, sized by the caller
+│ │ ├── Icon/ ← one file per glyph on IconBase (DownloadIcon, SheetIcon, CheckIcon, MicrochipIcon, …), `currentColor`, sized by the caller
 │ │ ├── TextField/ ← the boxed input: a glyph slot (the sheet and folder glyphs among them) and `mono` for a path
+│ │ ├── Toggle/ ← the switch: `{ checked, disabled?, onToggle, label }`, `role="switch"`, `aria-disabled` rather than `disabled` so it stays in the tab order
 │ │ └── Button/ ← primary / secondary / ghost / danger, at sm (a list row’s pair) / md / lg
 │ │ ├── Button.tsx
 │ │ ├── Button.test.tsx
@@ -184,6 +187,7 @@ familyflix/
 │ │ │ ├── SubtitleOverlay/ ← the styled cue box, ours rather than ::cue
 │ │ │ ├── PlayerNotice/ ← buffering / missing-file / cannot-play, in the play circle
 │ │ │ ├── usePlayback/ ← element state ↔ React state, offset re-anchoring
+│ │ │ ├── useSubtitles/ ← which track (the Preferred subtitle language read through fetchSettings once per open, then track order), the box, the line on it; the Cue list held against the row it came from
 │ │ │ ├── useWatchReporter/ ← tick, coalesce, finish
 │ │ │ ├── useControlsVisibility/ ← 3s idle, hidden cursor
 │ │ │ ├── usePlayerKeys/ ← the keyboard map, onto the buttons’ own handlers
@@ -207,10 +211,20 @@ familyflix/
 │ │ │ ├── useExport/ ← csv and idle on every open, the summary fetched fresh; exportLibrary fetches the file, hands it to saveToComputer, then done. A close mid-request drops the redraw, not the file
 │ │ │ ├── saveToComputer/ ← a blob → the browser’s Downloads under a filename: an object URL on an anchor carrying `download`, clicked, revoked. A DOM side effect, so a feature unit rather than a util
 │ │ │ └── api/ ← startImport, fetchCurrentImport, cancelImport, fetchExportSummary, fetchExportFile (one caller each)
-│ │ ├── settings/ ← the Maintainer’s hub
+│ │ ├── settings/ ← the Maintainer’s hub: four Settings groups under one header
+│ │ │ ├── section.styles.ts ← the furniture every Settings group draws with: the Group heading, the Section card (with the 32px group gap under it), the divider, an item’s title and lede
 │ │ │ ├── SettingsHeader/ ← Back, the heading, ＋ Add a movie
 │ │ │ ├── LibrarySection/ ← the Library group: Add a movie and Import from spreadsheet owning their routes, and Export to CSV owning the Export dialog it mounts — the one place a section composes another feature’s organism
-│ │ │ └── ActionRow/ ← one glyph + label + description row of a settings group
+│ │ │ ├── ActionRow/ ← one glyph + label + description row of the Library group
+│ │ │ ├── PlaybackSection/ ← the Playback card: Codecs over CodecManager, the divider, Subtitles — the Auto-on toggle under its Coming soon pill, and Preferred language over FilterDropdown, shown at once and put back on refusal
+│ │ │ ├── CodecManager/ ← the Codec report organism: owns useCapabilities, the Codec summary over one CodecRow per catalogued codec; no drop zone, no ✕ — a report, not a manager
+│ │ │ ├── CodecRow/ ← the tile, the name, the Container chips, a — for the size, the Status pill (Built-in / Installed), the spacer where a ✕ would sit
+│ │ │ ├── codecView/ ← pure: the Format catalogue, `codecRows` (catalogue order, uncatalogued decoders absent) and `codecSummary`
+│ │ │ ├── StorageSection/ ← the Storage card: the path in mono, the space line off formatBytes and the title count; no Change… until the Electron shell
+│ │ │ ├── AboutSection/ ← the About card: the brand row, the App version in mono, the tagline; no Software update row; the last card, so no group gap
+│ │ │ ├── useCapabilities/ useStorageReport/ ← one fetch on mount, `null` until it lands and `null` still if it never does — nothing drawn while so
+│ │ │ ├── useSettings/ ← the read half the same; `chooseSubtitleLanguage` flips the pill first and puts it back if the save refuses, never rejecting
+│ │ │ └── api/ ← fetchCapabilities, saveSubtitleLanguage, fetchStorageReport (one caller each)
 │ │ └── collections/ ← playlists/collections (roadmap, not MVP)
 │ ├── layouts/ ← page chrome
 │ │ ├── chrome.styles.ts ← the furniture MainLayout and GenreLayout both extend
@@ -219,14 +233,15 @@ familyflix/
 │ │ └── MaintainerLayout/ ← the Maintainer surface: bg2 sheet + centred column, no header row
 │ ├── pages/ ← route-level views, composition only, no logic (ImportPage is MaintainerLayout around ImportFlow)
 │ ├── api/ ← wire calls two or more features share (one folder per call + its test, no barrel)
-│ │ ├── saveFavorite/ fetchMovie/ saveWatched/ dismissProblem/ ← the four that earned it
+│ │ ├── saveFavorite/ fetchMovie/ saveWatched/ dismissProblem/ fetchSettings/ ← the five that earned it
 │ │ └── postValue/
 │ │ ├── postValue.ts
 │ │ └── postValue.test.ts
 │ ├── hooks/ ← global shared hooks only (useMediaQuery, useTheme)
-│ ├── types/ ← shared TypeScript interfaces (import.ts: ImportRun, ImportProblem, ImportProblemDetail, ImportField; export.ts: EXPORT_FORMATS, EXPORT_COLUMNS, EXPORT_FILENAME, ExportSummary — both build targets)
+│ ├── types/ ← shared TypeScript interfaces (import.ts: ImportRun, ImportProblem, ImportProblemDetail, ImportField; export.ts: EXPORT_FORMATS, EXPORT_COLUMNS, EXPORT_FILENAME, ExportSummary; settings.ts: SUBTITLE_LANGUAGES, SubtitleLanguage, DEFAULT_SUBTITLE_LANGUAGE, Settings, StorageReport; playback.ts: CodecKind, CodecSupport, CodecCapability, PlaybackCapabilities — both build targets; appVersion.d.ts: `__APP_VERSION__`, defined by Vite from package.json)
 │ ├── utils/ ← pure helper functions (one folder per helper + its test)
 │ │ ├── index.ts ← barrel: re-exports every helper
+│ │ ├── formatBytes/ ← 1024-based, one decimal from KB up: `18.4 GB`
 │ │ └── gradientFromId/
 │ │ ├── gradientFromId.ts
 │ │ └── gradientFromId.test.ts
@@ -264,7 +279,9 @@ detail page both save the same heart; `fetchMovie` did when the player needed
 the record the detail page reads; and `saveWatched` did when the player began
 marking a film watched at the finish threshold that the detail page's toggle
 already set by hand; and `dismissProblem` did, because the Review step's Skip
-and the Movie form's Skip this one both send the same `DELETE`. `saveRating`
+and the Movie form's Skip this one both send the same `DELETE`; and
+`fetchSettings` did, because the Settings hub's _Preferred language_ pill and
+the player's `useSubtitles` both read the same household preference. `saveRating`
 has one caller and stays with the feature that makes it, and so does the
 player's own `saveResume` — the player is the only thing in the app that can
 know where a film is, which is the same rule read the other way round — and so
@@ -426,6 +443,39 @@ column is optional: the pills in the dialog are a list, not a picker.
 Both bulk import and single Add Movie are large-file operations (video
 files are big) — neither should block the UI. Both need a visible
 progress indicator, not a spinner.
+
+## Settings Hub
+
+`/settings` is four **Settings groups** under one header — Library,
+Playback, Storage, About — each a **Section card** on the feature's shared
+`section.styles.ts` except Library, which draws rows. Every number on the
+page is a read the app can truthfully answer now, over four routes and
+nothing new injected:
+
+- `GET /api/playback/capabilities` → `{ component, codecs }`, the **Codec
+  report**, reached through `Playback.capabilities()` alone — a property
+  of the component `main.ts` composed, never a second resolution of the
+  slot, so the report and pressing Play cannot disagree. The screen keeps
+  the **Format catalogue**: a decoder the catalogue does not name is not a
+  row.
+- `GET /api/settings` → `{ subtitleLanguage }` with the default applied,
+  and `POST /api/settings/subtitle-language { value }` → `{ value }`, a
+  **Single-signal write** on the favorite / watched / rating precedent;
+  `400` for a missing, empty or non-string value. Membership in the
+  **Language pool** is not checked — a vocabulary, not a constraint. The
+  player's `useSubtitles` reads the same preference through the shared
+  `fetchSettings` once per open.
+- `GET /api/storage` → `{ mediaPath, bytesUsed, movieCount }`, the
+  **Storage report**: the path resolved to absolute at request time, the
+  walk read afresh on every visit, the count off the database.
+
+Every read on the page is `null` until it lands and `null` still if it
+never does, and nothing is drawn while so — no skeleton, no error face.
+The three controls whose mechanism does not exist — the _Add a codec pack_
+zone and per-row ✕ (the **Playback component upload** initiative),
+_Change…_ (the Electron shell) and _Software update_ (the Snackbar system)
+— are not drawn, the rule that held the Export row back until its dialog
+existed.
 
 ## Watch Tracking
 
@@ -697,10 +747,11 @@ same layout, spacing, states, copy, and interaction.
 
 ### Settings hub
 
-- 🔜 **Settings shell** — grouped Library / Playback / Storage / About sections.
-- 🔜 **Codec manager** — view installed codecs and add codec packs.
-- 🔜 **Subtitle preferences** — default subtitle language (auto-on toggle built but disabled until shipped).
-- 🔜 **Storage** — managed media folder location and space used.
+- 🔜 **Settings shell** — the Library, Playback, Storage and About groups on one page, each a Section card on the shared furniture.
+- 🔜 **Codec manager — view installed codecs** — the Codec report off the component the player uses: one row per catalogued format, Built-in or Installed.
+- 🔜 **Codec manager — add a playback component** — the drop zone and the per-row ✕; the Playback component upload initiative.
+- 🔜 **Subtitle preferences** — the household's Preferred subtitle language, kept in the library's database and honoured by the player; the Auto-on toggle built but disabled until shipped.
+- 🔜 **Storage** — the managed media folder's location and space used, agreeing with Explorer; _Change…_ is the Electron shell's.
 - 🔜 **Software update** — check for and install updates.
 
 ### System

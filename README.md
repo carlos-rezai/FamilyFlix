@@ -144,22 +144,23 @@ familyflix/
 ├── server/             # Express backend
 │   └── src/
 │       ├── routes/         # HTTP layer only — parses requests, calls a domain module
-│       ├── library/        # movie CRUD, SQLite queries, watch-state + resume position
-│       ├── media/          # folder scanning, copying files into managed storage, subtitle detection, removing a movie folder after a delete
+│       ├── library/        # movie CRUD, SQLite queries, watch-state + resume position, the household's settings
+│       ├── media/          # folder scanning, copying files into managed storage, subtitle detection, removing a movie folder after a delete, space used
 │       │   ├── walkLibraryRoot/       # a Library root → its Source folders
 │       │   ├── scanMovieFolder/       # one folder → its video, poster, backdrop, subtitles
 │       │   ├── detectSubtitleLanguage/ # the language tag in a subtitle's name
+│       │   ├── spaceUsed/             # the bytes under the media root, never throwing
 │       │   └── fileKinds/             # what an image, a subtitle and a video may be called
 │       ├── import-export/  # the bulk importer and the exporter: readSheet, titleKey, matchRows, createImporter (+ its fixture), writeSheet
-│       ├── playback/       # the Playback component, the path choice, streaming, subtitle parsing, derivedRuntime
-│       ├── db/             # SQLite connection + schema/migrations
+│       ├── playback/       # the Playback component (probe, spawn, decoders), the path choice, streaming, subtitle parsing, derivedRuntime, capabilities(component)
+│       ├── db/             # SQLite connection + schema/migrations (3: the settings table)
 │       └── test-support/   # Shared test doubles — never imported by shipping code (heldCopy, libraryFixture, …)
 ├── src/                # React frontend
 │   ├── App/            # Router and app-level providers
 │   ├── assets/         # Static images, fonts, icons
 │   ├── styles/         # Global CSS reset, themes
 │   ├── tokens/         # Colors, spacing, typography, breakpoints
-│   ├── primitives/     # Atomic UI elements (Button, Input, Text) — each with .tsx, .test.tsx, .styles.ts
+│   ├── primitives/     # Atomic UI elements (Button, Input, Text, Toggle, the Icon glyphs) — each with .tsx, .test.tsx, .styles.ts
 │   ├── components/     # Composed UI blocks (PosterCard, Modal, ProgressBar) — same three-file shape
 │   │   ├── Modal/          # the scrimmed card every dialog is drawn on; owns its own dismissal and focus; `bare` for a card that is its children alone
 │   │   └── LogConsole/     # the import's Activity log, pinned to its bottom
@@ -171,18 +172,19 @@ familyflix/
 │   │   │   ├── DeleteMovieDialog/ # Modal + the fixed copy + Delete movie / Cancel
 │   │   │   ├── useDeleteMovie/    # sends the delete, then steps back through history
 │   │   │   └── api/               # saveRating, deleteMovie — one caller each
-│   │   ├── player/          # built-in video player, subtitles, resume
+│   │   ├── player/          # built-in video player, subtitles (useSubtitles reads the preferred language), resume
 │   │   ├── movie-form/      # Add/Edit a movie: one form, manual pickers — and Resolve, the Import context
 │   │   ├── import-export/   # the bulk importer's screen: ImportFlow and its three steps, useImportRun, importView — and the Export dialog: ExportModal, FormatCard, useExport, saveToComputer
-│   │   ├── settings/        # SettingsHeader, LibrarySection (Add a movie / Import from spreadsheet / Export to CSV), ActionRow
+│   │   ├── settings/        # the Maintainer's hub: SettingsHeader; LibrarySection + ActionRow; PlaybackSection over CodecManager, CodecRow, codecView; StorageSection; AboutSection; useCapabilities, useSettings, useStorageReport; and its api/
+│   │   │   └── section.styles.ts # the Group heading, the Section card, the divider, an item's title and lede — what every group draws with
 │   │   ├── maintainer.styles.ts # the header and the captioned field the Maintainer's screens share
 │   │   └── collections/     # playlists (roadmap)
 │   ├── layouts/         # Page chrome
 │   ├── pages/           # Route-level views, composition only (ImportPage among them)
-│   ├── api/             # Wire calls two or more features share (saveFavorite, fetchMovie, saveWatched, dismissProblem)
+│   ├── api/             # Wire calls two or more features share (saveFavorite, fetchMovie, saveWatched, dismissProblem, fetchSettings)
 │   ├── hooks/            # Global shared hooks
-│   ├── types/            # Shared TypeScript interfaces (import.ts, export.ts — read by both build targets)
-│   ├── utils/            # Pure helper functions
+│   ├── types/            # Shared TypeScript interfaces (import.ts, export.ts, settings.ts, playback.ts — read by both build targets; appVersion.d.ts)
+│   ├── utils/            # Pure helper functions (formatBytes among them)
 │   └── test-support/     # Shared test doubles (fakeResponse, stubDownload, …)
 └── docs/
     ├── design-logs/    # Immutable feature design snapshots
