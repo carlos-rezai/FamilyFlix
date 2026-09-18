@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 
 import type { Cue, Subtitle } from '@/types';
+import { fetchSettings } from '@/api/fetchSettings/fetchSettings';
 
 import { fetchSubtitleCues } from '../api/api';
 import { cueAt } from '../cueAt/cueAt';
@@ -30,14 +31,27 @@ export interface SubtitlesOptions {
   position: number;
 }
 
+/** The **Cue list** held for the session, stamped with the row it belongs to. */
+interface HeldCues {
+  trackId: string;
+  list: Cue[];
+}
+
 /**
  * The whole of the **Player**'s subtitles: which track, whether it is showing,
  * and what line is on screen.
  *
  * Four pieces of state serving one feature, which is why they are one hook. The
  * track is chosen rather than picked — no picker ships — so it is the
- * deterministic answer `preferredSubtitle` gives from the default language then
- * track order.
+ * deterministic answer `preferredSubtitle` gives from the household's
+ * **Preferred subtitle language** then track order.
+ *
+ * **The preference is read once per open, and never waited for.** The settings
+ * go out through the shared `fetchSettings` when the film opens; until they
+ * land, and if they never do — refused, unreachable — the track is the first
+ * in track order, exactly as before there was a preference to read. A
+ * preference changed mid-film applies to the next film rather than switching
+ * tracks under the family, which is what reading it once buys.
  *
  * **They start off on every film.** The prototype's `playMovie()` sets
  * `subsOn: true`; we ship them off, and that is a recorded divergence rather
@@ -49,7 +63,9 @@ export interface SubtitlesOptions {
  * in **Absolute position**, so there is nothing about a jump for them to be
  * re-stamped against. `null` until the list has been asked for is what keeps it
  * to one request — `[]` is a real answer, the file would not parse or the row's
- * file has gone, and it must not read as "not fetched yet".
+ * file has gone, and it must not read as "not fetched yet". The list is held
+ * against the row it came from, so CC pressed before the settings land does not
+ * leave the first row's lines under a later-chosen track.
  *
  * A fetch that fails outright is a film that plays on with no box. There is no
  * error state here to draw, and a bad subtitle file must never be able to
@@ -61,14 +77,31 @@ export function useSubtitles({
   position,
 }: SubtitlesOptions): Subtitles {
   const [subtitlesOn, setSubtitlesOn] = useState(false);
-  const [cues, setCues] = useState<Cue[] | null>(null);
+  const [cues, setCues] = useState<HeldCues | null>(null);
+  const [language, setLanguage] = useState<string | undefined>(undefined);
 
-  const track = preferredSubtitle(subtitles);
+  const track = preferredSubtitle(subtitles, language);
 
   const toggleSubtitles = useCallback(() => setSubtitlesOn((on) => !on), []);
 
+  // Once per open: a preference changed mid-film is the next film's.
   useEffect(() => {
-    if (!subtitlesOn || cues !== null || track === null) {
+    let cancelled = false;
+    void fetchSettings()
+      .then((settings) => {
+        if (!cancelled) {
+          setLanguage(settings.subtitleLanguage);
+        }
+      })
+      .catch(() => undefined);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [movieId]);
+
+  useEffect(() => {
+    if (!subtitlesOn || track === null || cues?.trackId === track.id) {
       return;
     }
 
@@ -76,7 +109,7 @@ export function useSubtitles({
     void fetchSubtitleCues(movieId, track.id)
       .then((list) => {
         if (!cancelled) {
-          setCues(list);
+          setCues({ trackId: track.id, list });
         }
       })
       .catch(() => undefined);
@@ -89,7 +122,9 @@ export function useSubtitles({
   // The line on screen right now, or nothing — which the overlay draws as no
   // box at all rather than an empty one hovering over the picture.
   const line =
-    subtitlesOn && cues !== null ? (cueAt(cues, position)?.text ?? null) : null;
+    subtitlesOn && track !== null && cues?.trackId === track.id
+      ? (cueAt(cues.list, position)?.text ?? null)
+      : null;
 
   return { track, subtitlesOn, line, toggleSubtitles };
 }
