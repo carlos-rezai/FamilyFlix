@@ -1,11 +1,25 @@
 /// <reference types='vitest' />
+import { readFileSync } from 'node:fs';
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { nxViteTsPaths } from '@nx/vite/plugins/nx-tsconfig-paths.plugin';
 import { nxCopyAssetsPlugin } from '@nx/vite/plugins/nx-copy-assets.plugin';
 
+/**
+ * `package.json`'s `version`, read at config time: what `define` bakes into the
+ * bundle as `__APP_VERSION__` (declared in `src/types/appVersion.d.ts`), so
+ * the About card and the installer can never disagree. Under vitest the same
+ * `define` makes it real for the tests.
+ */
+const { version } = JSON.parse(
+  readFileSync(new URL('./package.json', import.meta.url), 'utf8')
+) as { version: string };
+
 export default defineConfig(() => ({
   root: import.meta.dirname,
+  define: {
+    __APP_VERSION__: JSON.stringify(version),
+  },
   cacheDir: './node_modules/.vite/familyflix',
   server: {
     port: 4200,
