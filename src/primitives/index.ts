@@ -37,3 +37,4 @@ export { SheetIcon } from './Icon/SheetIcon';
 export { FolderIcon } from './Icon/FolderIcon';
 export { FullscreenIcon } from './Icon/FullscreenIcon';
 export { DownloadIcon } from './Icon/DownloadIcon';
+export { MicrochipIcon } from './Icon/MicrochipIcon';

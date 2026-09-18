@@ -936,6 +936,19 @@ export function createApiRouter(
     );
   });
 
+  // The **Codec report**: what this machine can decode, and whether a
+  // **Playback component** is part of the answer — `{ component, codecs }`,
+  // one `{ codec, kind, support }` per row. Raw: the **Format catalogue** that
+  // names and orders the rows lives on the screen that draws them.
+  //
+  // Read off `playback` and nothing else. The route never resolves a binary
+  // of its own, so what Settings lists is what pressing Play does — and the
+  // domain is asked afresh on every request, so a component replaced from
+  // Settings is described on the very next read.
+  router.get('/playback/capabilities', (_req, res) => {
+    res.json(playback.capabilities());
+  });
+
   // What the player is told before a byte arrives: which path the film takes,
   // and how long it runs.
   //

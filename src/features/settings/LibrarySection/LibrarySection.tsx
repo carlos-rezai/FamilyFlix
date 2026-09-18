@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 
 import { ExportModal } from '@/features/import-export/ExportModal/ExportModal';
 import { ActionRow } from '../ActionRow/ActionRow';
-import { GroupHeading, Rows } from './LibrarySection.styles';
+import { GroupHeading } from '../section.styles';
+import { Rows } from './LibrarySection.styles';
 
 /**
  * The Settings hub's **Library section**, from `page.SettingsPage.dc.html`:
@@ -18,8 +19,9 @@ import { GroupHeading, Rows } from './LibrarySection.styles';
  * leaves the page where it was, scroll and all, with focus back on the row.
  * The app's first import of one feature's organism by another: a section
  * composing a dialog is fine; a feature importing another's hook or wire
- * would not be. Playback, Storage and About are the settings-shell
- * initiative's.
+ * would not be. The **Group heading** is the feature's shared furniture, so
+ * this group's heading and the Playback card's are one styled component;
+ * Storage and About are later phases of the settings-hub initiative.
  */
 export function LibrarySection() {
   const navigate = useNavigate();

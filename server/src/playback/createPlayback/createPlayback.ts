@@ -1,7 +1,8 @@
 import { readFileSync } from 'node:fs';
 
-import type { Cue, PlaybackRead } from '@/types';
+import type { Cue, PlaybackCapabilities, PlaybackRead } from '@/types';
 
+import { capabilities } from '../capabilities/capabilities';
 import {
   choosePlaybackPath,
   type ComponentAvailability,
@@ -33,7 +34,8 @@ export type StreamPlan =
 /**
  * What the API layer can ask the playback domain for.
  *
- * Three questions about the film's own bytes, and two about a **Subtitle**'s.
+ * Three questions about the film's own bytes, two about a **Subtitle**'s, and
+ * one about the machine.
  * The **Playback component** lives behind this object rather than beside it,
  * which is what lets a route test hand the router a component that never spawns
  * a binary — and what keeps every route ignorant of there being an FFmpeg.
@@ -134,6 +136,16 @@ export interface Playback {
    * distinguishable from a deleted one.
    */
   cues(file: string): Cue[];
+
+  /**
+   * The **Codec report**: what this machine can decode, over the component
+   * this domain was composed with and no other — so what Settings lists and
+   * what pressing Play does cannot disagree.
+   *
+   * Nothing is memoised: the component is asked afresh on every read, so the
+   * day the live component is replaced the next read describes the new one.
+   */
+  capabilities(): PlaybackCapabilities;
 }
 
 /**
@@ -259,5 +271,6 @@ export function createPlayback(
         return [];
       }
     },
+    capabilities: () => capabilities(component),
   };
 }

@@ -45,3 +45,39 @@ export interface Cue {
   end: number;
   text: string;
 }
+
+/**
+ * Which stream a codec belongs to. Subtitle decoders are deliberately not one
+ * of these: **Format support** is about what the family can watch, and every
+ * subtitle format the app understands is parsed by us rather than decoded.
+ */
+export type CodecKind = 'video' | 'audio';
+
+/**
+ * How a codec is decoded — **native** or **via component**, and never
+ * "unsupported": a codec nothing on this machine decodes is not reported at
+ * all, because the absence of a row is the honest way to say so.
+ */
+export type CodecSupport = 'native' | 'via-component';
+
+/** One row of the **Codec report**, as the machine actually is. */
+export interface CodecCapability {
+  codec: string;
+  kind: CodecKind;
+  support: CodecSupport;
+}
+
+/**
+ * What this machine can decode, and whether a **Playback component** is part
+ * of the answer — the contract of `GET /api/playback/capabilities`, read by
+ * both build targets: the server answers it and the Settings page draws it.
+ *
+ * `component` is reported separately from the rows because the two are not
+ * the same claim: a component that is installed and will not say what it
+ * decodes adds no rows and is still installed, and a family told otherwise
+ * would go looking for an installer they already ran.
+ */
+export interface PlaybackCapabilities {
+  component: boolean;
+  codecs: CodecCapability[];
+}

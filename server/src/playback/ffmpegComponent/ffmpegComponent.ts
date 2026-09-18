@@ -36,6 +36,15 @@ export interface PlaybackComponent {
    * than the film it would be asked about.
    */
   hardwareEncoder: string | null;
+  /**
+   * What `ffmpeg -decoders` printed, raw, or `null` for every way of not
+   * knowing — a binary that will not start, a build that answers nothing.
+   * Raw rather than parsed, the way {@link probe} hands over raw output: the
+   * parsing is `capabilities`', which is asked about a string rather than
+   * about the machine running the test. Asked afresh on every call, so the
+   * day the live component is replaced the next read describes the new one.
+   */
+  decoders(): string | null;
   /** What a file is, or `null` for every way of not knowing. */
   probe(file: string): MediaProbe | null;
   /** Start a conversion over the given argv. */
@@ -55,32 +64,51 @@ const HARDWARE_ENCODERS = [
   'h264_vaapi',
 ];
 
-/** ffmpeg's encoder list is a few hundred lines; this is a ceiling. */
-const ENCODERS_BUFFER_BYTES = 4 * 1024 * 1024;
+/** ffmpeg's encoder and decoder lists are a few hundred lines; a ceiling. */
+const LISTING_BUFFER_BYTES = 4 * 1024 * 1024;
 
 /**
- * What `ffmpeg -encoders` printed, or `null` for every way of not knowing —
- * taken as an argument so the selection can be asked about a listing rather
- * than about the machine running the test. `capabilities` takes its decoder
- * listing the same way, and `probe` its output: one answer in this domain to
- * how a spawning module is tested.
+ * What one of ffmpeg's listings printed, or `null` for every way of not
+ * knowing — taken as an argument so the selection can be asked about a
+ * listing rather than about the machine running the test, the way `probe`
+ * takes its output: one answer in this domain to how a spawning module is
+ * tested.
  */
-export type EncoderListing = (ffmpeg: string) => string | null;
+export type Listing = (ffmpeg: string) => string | null;
 
-/** Ask a build of ffmpeg what it can encode. */
-function ffmpegEncoders(ffmpeg: string): string | null {
-  const result = spawnSync(ffmpeg, ['-hide_banner', '-encoders'], {
-    encoding: 'utf8',
-    maxBuffer: ENCODERS_BUFFER_BYTES,
-    windowsHide: true,
-  });
-
-  if (result.error !== undefined || typeof result.stdout !== 'string') {
-    return null;
-  }
-
-  return result.stdout;
+/**
+ * The two listings a component is composed over — `ffmpeg -encoders`, read
+ * once for the hardware encoder, and `ffmpeg -decoders`, read on demand for
+ * the **Codec report**. One seam for both spawns, and neither answer stands
+ * in for the other.
+ */
+export interface FfmpegListing {
+  encoders: Listing;
+  decoders: Listing;
 }
+
+/** Ask a build of ffmpeg for one of its listings. */
+function listing(flag: '-encoders' | '-decoders'): Listing {
+  return (ffmpeg) => {
+    const result = spawnSync(ffmpeg, ['-hide_banner', flag], {
+      encoding: 'utf8',
+      maxBuffer: LISTING_BUFFER_BYTES,
+      windowsHide: true,
+    });
+
+    if (result.error !== undefined || typeof result.stdout !== 'string') {
+      return null;
+    }
+
+    return result.stdout;
+  };
+}
+
+/** The pair that actually runs ffmpeg: what `main.ts` composes over. */
+const FFMPEG_LISTING: FfmpegListing = {
+  encoders: listing('-encoders'),
+  decoders: listing('-decoders'),
+};
 
 /**
  * Which hardware encoder this build of ffmpeg was compiled with, if any.
@@ -110,16 +138,18 @@ function detectHardwareEncoder(listed: string | null): string | null {
  * `stdout` alone, because a process that ends having written nothing is the one
  * signal every way of failing has in common.
  *
- * `listing` is the seam: what `ffmpeg -encoders` would have printed, defaulting
- * to running it. It is what lets the encoder preference order be asserted on a
- * machine that has no hardware encoder and no ffmpeg either.
+ * `listed` is the seam: what `ffmpeg -encoders` and `ffmpeg -decoders` would
+ * have printed, defaulting to running them. It is what lets the encoder
+ * preference order be asserted on a machine that has no hardware encoder and
+ * no ffmpeg either, and the **Codec report** on one with no FFmpeg at all.
  */
 export function ffmpegComponent(
   binaries: FfmpegBinaries,
-  listing: EncoderListing = ffmpegEncoders
+  listed: FfmpegListing = FFMPEG_LISTING
 ): PlaybackComponent {
   return {
-    hardwareEncoder: detectHardwareEncoder(listing(binaries.ffmpeg)),
+    hardwareEncoder: detectHardwareEncoder(listed.encoders(binaries.ffmpeg)),
+    decoders: () => listed.decoders(binaries.ffmpeg),
     probe: (file) => probeFile(binaries.ffprobe, file),
     spawn: (args) => {
       const child = spawn(binaries.ffmpeg, args, {

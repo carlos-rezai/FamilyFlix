@@ -31,7 +31,15 @@ export type {
   HomePayload,
 } from './browse';
 export type { NewSubtitle, NewMovie, MoviePatch } from './write';
-export type { PlaybackPath, PlaybackRead, Cue } from './playback';
+export type {
+  PlaybackPath,
+  PlaybackRead,
+  Cue,
+  CodecKind,
+  CodecSupport,
+  CodecCapability,
+  PlaybackCapabilities,
+} from './playback';
 export type { MovieFormFile, MovieFormSubtitle, MovieFormValues } from './form';
 export type {
   ImportField,

@@ -6026,6 +6026,9 @@ const mkvPart = (filename = 'lantern.mkv'): File =>
 /** A **Playback component** that fails rather than answers, every time it is asked. */
 const brokenComponent = (): PlaybackComponent => ({
   hardwareEncoder: null,
+  decoders: () => {
+    throw new Error('the component died mid-listing');
+  },
   probe: () => {
     throw new Error('the component died mid-probe');
   },

@@ -26,7 +26,7 @@ export interface MediaProbe {
  * What `ffprobe` printed for a file, or `null` for every way of not knowing —
  * taken as an argument so the parsing can be asked about output rather than
  * about the machine running the test, which on CI has no FFmpeg on it. The
- * seam is `capabilities`' own, in the same domain and the same shape.
+ * seam is `ffmpegComponent`'s own, in the same domain and the same shape.
  */
 export type ProbeOutput = (ffprobe: string, file: string) => string | null;
 
@@ -128,7 +128,7 @@ function ffprobeJson(ffprobe: string, file: string): string | null {
  * ask are answering a request that cannot proceed without the answer.
  *
  * `output` is the seam: what the prober would have printed, defaulting to
- * running it. `capabilities` takes its decoder listing the same way and for the
+ * running it. `ffmpegComponent` takes its two listings the same way and for the
  * same reason — the interesting rules here are the container normalization and
  * the stream reading, and a test that had to spawn ffprobe to reach them could
  * only ever ask about the machine it runs on.
