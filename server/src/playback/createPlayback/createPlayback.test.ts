@@ -24,11 +24,20 @@
 // `read` asks and answers `null` where `read` answers a path with a nought on
 // it. A film this machine cannot decode still has a length, and the runtime
 // column is allowed to know it.
+//
+// ---
+//
+// 15 — Settings hub, Phase 1: "the tracer bullet" (issue #143) added the sixth,
+// `capabilities()`: what `capabilities` answers over the component this domain
+// was composed with, so the route reads the one `main.ts` composed and never
+// resolves a binary of its own. The fake gains `decoders()` — what
+// `ffmpeg -decoders` would have printed — and answers `null` unless a test
+// says otherwise.
 
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { Readable } from 'node:stream';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { sandboxRoot } from '../../test-support/sandboxRoot/sandboxRoot';
 import type {
@@ -64,10 +73,14 @@ interface FakeComponent extends PlaybackComponent {
   spawned: string[][];
 }
 
-function fakeComponent(probe: MediaProbe | null): FakeComponent {
+function fakeComponent(
+  probe: MediaProbe | null,
+  decoders: string | null = null
+): FakeComponent {
   const component: FakeComponent = {
     spawned: [],
     hardwareEncoder: null,
+    decoders: () => decoders,
     probe: () => probe,
     spawn: (args: string[]): PlaybackProcess => {
       component.spawned.push(args);
@@ -313,6 +326,87 @@ describe('createPlayback — the cues, and the file that will not parse', () => 
     expect(createPlayback(media, null).cues(join(media, 'gone.srt'))).toEqual(
       []
     );
+  });
+});
+
+/** What `ffmpeg -decoders` prints, trimmed to the lines these tests read. */
+const DECODERS = [
+  'Decoders:',
+  ' V..... = Video',
+  ' A..... = Audio',
+  ' ------',
+  ' VFS..D h264                 H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10',
+  ' VFS..D hevc                 HEVC (High Efficiency Video Coding)',
+  ' A....D ac3                  ATSC A/52A (AC-3)',
+].join('\n');
+
+describe('createPlayback — the capabilities, over the component it was composed with', () => {
+  it('reports no component and the native rows alone when composed over none', () => {
+    const { media } = mediaWith('Northwind (2018)/northwind.mp4');
+
+    const reported = createPlayback(media, null).capabilities();
+
+    expect(reported.component).toBe(false);
+    expect(reported.codecs.length).toBeGreaterThan(0);
+    expect(reported.codecs.every((entry) => entry.support === 'native')).toBe(
+      true
+    );
+    expect(reported.codecs.map((entry) => entry.codec)).toContain('h264');
+  });
+
+  it('reports the component and what its decoders add when composed over one', () => {
+    // The rule this group exists for: the report is a property of the
+    // component the player uses, so what Settings lists and what pressing
+    // Play does cannot disagree.
+    const { media } = mediaWith('Northwind (2018)/northwind.mkv');
+
+    const reported = createPlayback(
+      media,
+      fakeComponent(MATROSKA, DECODERS)
+    ).capabilities();
+
+    expect(reported.component).toBe(true);
+    expect(reported.codecs).toContainEqual({
+      codec: 'hevc',
+      kind: 'video',
+      support: 'via-component',
+    });
+    expect(reported.codecs).toContainEqual({
+      codec: 'ac3',
+      kind: 'audio',
+      support: 'via-component',
+    });
+    expect(
+      reported.codecs.filter((entry) => entry.codec === 'h264')
+    ).toHaveLength(1);
+  });
+
+  it('reports the component present over the native rows when it will not say', () => {
+    const { media } = mediaWith('Northwind (2018)/northwind.mkv');
+
+    const reported = createPlayback(
+      media,
+      fakeComponent(MATROSKA, null)
+    ).capabilities();
+
+    expect(reported.component).toBe(true);
+    expect(reported.codecs.every((entry) => entry.support === 'native')).toBe(
+      true
+    );
+  });
+
+  it('asks the component afresh on every read', () => {
+    // Nothing is memoised: the day the upload initiative replaces the live
+    // component, the next read must describe the new one.
+    const { media } = mediaWith('Northwind (2018)/northwind.mkv');
+    const component = fakeComponent(MATROSKA, DECODERS);
+    const asked = vi.spyOn(component, 'decoders');
+    const playback = createPlayback(media, component);
+
+    playback.capabilities();
+    playback.capabilities();
+
+    expect(asked).toHaveBeenCalledTimes(2);
   });
 });
 

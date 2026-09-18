@@ -5,30 +5,33 @@
 // The read that makes the CodecManager stop being decorative: what this machine
 // can *actually* decode, which is Chromium's native set on its own when there is
 // no **Playback component**, and that set ∪ what `ffmpeg -decoders` reports when
-// there is one. **No screen renders it in this initiative** — it is built here
-// because the mechanism belongs with the rest of the format policy, and the
-// Settings initiative is what will consume it.
+// there is one.
 //
-// Nothing here spawns anything. The component is resolved from empty files in a
-// temporary directory, exactly as `ffmpegBinary`'s own suite does, and what
-// `ffmpeg -decoders` would have printed arrives as a string — a listing that
-// shelled out could only ever be asked about the machine running the test, and
-// CI is a machine with no FFmpeg on it.
+// 15 — Settings hub, Phase 1: "the tracer bullet" (issue #143) moves the report
+// behind the seam. `capabilities` used to resolve the binary itself — the
+// three-step `ffmpegBinary` lookup a second time — and would have been wrong the
+// day the upload initiative makes the live component replaceable: two
+// resolutions of one slot, disagreeing. Now it is asked about a
+// `PlaybackComponent | null`, the one `main.ts` composed, and reads the listing
+// off its `decoders()`. The environment is never consulted here again.
+//
+// Nothing here spawns anything. The component is a fake whose `decoders()`
+// answers a string — a listing that shelled out could only ever be asked about
+// the machine running the test, and CI is a machine with no FFmpeg on it. The
+// types come from `@/types`, where both build targets now read them.
 
-import { describe, expect, it, vi } from 'vitest';
+import { Readable } from 'node:stream';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import {
-  componentDir,
-  ffmpegIn,
-  ffprobeIn,
-} from '../../test-support/componentDir/componentDir';
-import type { FfmpegBinaries } from '../ffmpegBinary/ffmpegBinary';
+import type { CodecCapability, PlaybackCapabilities } from '@/types';
 
-import {
-  capabilities,
-  type CodecCapability,
-  type PlaybackCapabilities,
-} from './capabilities';
+import { componentDir } from '../../test-support/componentDir/componentDir';
+import type {
+  PlaybackComponent,
+  PlaybackProcess,
+} from '../ffmpegComponent/ffmpegComponent';
+
+import { capabilities } from './capabilities';
 
 /**
  * What `ffmpeg -decoders` actually prints: a legend whose lines also begin with
@@ -57,12 +60,22 @@ const DECODERS = [
   '',
 ].join('\n');
 
-/** A listing that answers the same thing whatever binaries it is handed. */
-const listing = (output: string | null) => () => output;
-
-/** A listing a test can ask what it was handed, and whether it was asked at all. */
-const spyListing = (output: string | null = DECODERS) =>
-  vi.fn<(binaries: FfmpegBinaries) => string | null>(() => output);
+/**
+ * A **Playback component** that answers a fixed decoder listing — `null` for
+ * one that is there and will not say — and can be asked nothing else that
+ * matters here.
+ */
+function fakeComponent(decoders: string | null): PlaybackComponent {
+  return {
+    hardwareEncoder: null,
+    decoders: () => decoders,
+    probe: () => null,
+    spawn: (): PlaybackProcess => ({
+      stdout: Readable.from([]),
+      kill: () => undefined,
+    }),
+  };
+}
 
 /** The codecs reported, by name, in an order no assertion has to know. */
 const names = (reported: PlaybackCapabilities): string[] =>
@@ -92,23 +105,23 @@ const CHROMIUM_NATIVE = [
   'vp9',
 ];
 
+afterEach(() => {
+  vi.unstubAllEnvs();
+});
+
 describe('capabilities — the machine with no Playback component', () => {
   it('reports Chromium’s native set alone, and says there is no component', () => {
     // The whole point of the absent state: a family whose installer has not run
     // yet still has a codec screen that tells them the truth, and the truth is
-    // that MP4s play and nothing else does. The listing here would have plenty
-    // to add — it is never asked, because there is nothing to ask.
-    const reported = capabilities(
-      { PATH: componentDir([]) },
-      listing(DECODERS)
-    );
+    // that MP4s play and nothing else does.
+    const reported = capabilities(null);
 
     expect(reported.component).toBe(false);
     expect(names(reported)).toEqual(CHROMIUM_NATIVE);
   });
 
   it('marks every one of them native, and knows video from audio', () => {
-    const reported = capabilities({}, listing(DECODERS));
+    const reported = capabilities(null);
 
     expect(reported.codecs.every((entry) => entry.support === 'native')).toBe(
       true
@@ -117,18 +130,16 @@ describe('capabilities — the machine with no Playback component', () => {
     expect(entryFor(reported, 'aac')?.kind).toBe('audio');
   });
 
-  it('answers rather than throwing when the environment says nothing at all', () => {
+  it('answers rather than throwing', () => {
     // CI is this machine, and so is my parents' before the installer runs. A
     // throw here would be a Settings screen that takes the app down with it.
-    expect(() => capabilities({})).not.toThrow();
+    expect(() => capabilities(null)).not.toThrow();
   });
 });
 
-describe('capabilities — the union with a resolved component', () => {
+describe('capabilities — the union with the component it was handed', () => {
   it('reports the codecs the component adds, marked as coming from it', () => {
-    const dir = componentDir();
-
-    const reported = capabilities({ PATH: dir }, listing(DECODERS));
+    const reported = capabilities(fakeComponent(DECODERS));
 
     expect(reported.component).toBe(true);
     expect(entryFor(reported, 'hevc')).toEqual({
@@ -141,14 +152,23 @@ describe('capabilities — the union with a resolved component', () => {
     expect(entryFor(reported, 'mpeg4')?.support).toBe('via-component');
   });
 
+  it('knows video from audio among the added rows', () => {
+    const reported = capabilities(fakeComponent(DECODERS));
+
+    expect(entryFor(reported, 'hevc')?.kind).toBe('video');
+    expect(entryFor(reported, 'ac3')?.kind).toBe('audio');
+  });
+
   it('keeps the whole native set alongside them', () => {
-    const dir = componentDir();
+    const reported = capabilities(fakeComponent(DECODERS));
 
-    const reported = capabilities({ PATH: dir }, listing(DECODERS));
-
+    expect(reported.component).toBe(true);
     for (const codec of CHROMIUM_NATIVE) {
       expect(entryFor(reported, codec)).toBeDefined();
     }
+    expect(names(reported)).toEqual(
+      [...CHROMIUM_NATIVE, 'ac3', 'dts', 'hevc', 'mpeg4'].sort()
+    );
   });
 
   it('lists a codec both can decode once, as native', () => {
@@ -156,10 +176,9 @@ describe('capabilities — the union with a resolved component', () => {
     // would be two rows for one format; reporting it as via-component would be
     // a lie that costs the family a transcode they never needed — **Direct
     // play** wants no component at all.
-    const dir = componentDir();
+    const reported = capabilities(fakeComponent(DECODERS));
 
-    const reported = capabilities({ PATH: dir }, listing(DECODERS));
-
+    expect(reported.component).toBe(true);
     expect(
       reported.codecs.filter((entry) => entry.codec === 'h264')
     ).toHaveLength(1);
@@ -171,10 +190,9 @@ describe('capabilities — the union with a resolved component', () => {
     // decoder lines do, so `= Video` is the shape a careless parser invents a
     // codec from. `subrip` is a real decoder and still not one of these: this
     // read is about what the family can watch, and subtitles are parsed by us.
-    const dir = componentDir();
+    const reported = capabilities(fakeComponent(DECODERS));
 
-    const reported = capabilities({ PATH: dir }, listing(DECODERS));
-
+    expect(reported.component).toBe(true);
     expect(names(reported)).not.toContain('subrip');
     expect(names(reported)).not.toContain('=');
     expect(names(reported)).not.toContain('Decoders:');
@@ -185,62 +203,42 @@ describe('capabilities — the union with a resolved component', () => {
     // A binary that is there and answers nothing — a broken build, a listing
     // that timed out. It is still installed, so the report must not claim it is
     // missing; it added no formats, so it must not claim it did.
-    const dir = componentDir();
+    const reported = capabilities(fakeComponent(null));
 
-    const reported = capabilities({ PATH: dir }, listing(null));
+    expect(reported.component).toBe(true);
+    expect(names(reported)).toEqual(CHROMIUM_NATIVE);
+  });
+
+  it('reports the component present over the native rows for an empty listing', () => {
+    const reported = capabilities(fakeComponent(''));
 
     expect(reported.component).toBe(true);
     expect(names(reported)).toEqual(CHROMIUM_NATIVE);
   });
 });
 
-describe('capabilities — resolving the component through ffmpegBinary', () => {
-  it('asks the component the three-step lookup chose, ffprobe and all', () => {
+describe('capabilities — the component handed over is the only one asked', () => {
+  it('asks the component it was given what it decodes', () => {
+    const component = fakeComponent(DECODERS);
+    const asked = vi.spyOn(component, 'decoders');
+
+    capabilities(component);
+
+    expect(asked).toHaveBeenCalled();
+  });
+
+  it('reads nothing off the environment and resolves no binary of its own', () => {
     // Asserted rather than assumed: a second copy of the lookup here is a
     // second place for the installer's slot to stop being honoured, and
-    // replacing the component in Settings would quietly change nothing.
-    const chosen = componentDir();
-    const ignored = componentDir();
-    const asked = spyListing();
+    // replacing the component in Settings would quietly change nothing. A
+    // complete component sits on PATH and in the variable; `null` still means
+    // there is none.
+    const dir = componentDir();
+    vi.stubEnv('FAMILYFLIX_FFMPEG_PATH', `${dir}/ffmpeg`);
+    vi.stubEnv('PATH', dir);
 
-    capabilities(
-      { FAMILYFLIX_FFMPEG_PATH: ffmpegIn(chosen), PATH: ignored },
-      asked
-    );
+    const reported = capabilities(null);
 
-    expect(asked).toHaveBeenCalledWith({
-      ffmpeg: ffmpegIn(chosen),
-      ffprobe: ffprobeIn(chosen),
-    });
-  });
-
-  it('falls through a variable naming a binary that is not there', () => {
-    const onPath = componentDir();
-    const asked = spyListing();
-
-    capabilities(
-      {
-        FAMILYFLIX_FFMPEG_PATH: ffmpegIn(componentDir([])),
-        PATH: onPath,
-      },
-      asked
-    );
-
-    expect(asked).toHaveBeenCalledWith({
-      ffmpeg: ffmpegIn(onPath),
-      ffprobe: ffprobeIn(onPath),
-    });
-  });
-
-  it('treats half a component as none, and never asks it anything', () => {
-    // ffmpeg with no ffprobe beside it cannot say what a file is, so it is not
-    // a component — and a report that asked it anyway would list formats the
-    // player will still refuse.
-    const asked = spyListing();
-
-    const reported = capabilities({ PATH: componentDir(['ffmpeg']) }, asked);
-
-    expect(asked).not.toHaveBeenCalled();
     expect(reported.component).toBe(false);
     expect(names(reported)).toEqual(CHROMIUM_NATIVE);
   });

@@ -2950,6 +2950,9 @@ function fakeComponent({
     spawned: [],
     killed: false,
     hardwareEncoder,
+    // 15 — Settings hub (issue #143): the report is read off the component;
+    // nothing in this file asks for it. `routes.settings.test.ts` does.
+    decoders: () => null,
     probe: () => probe,
     spawn: (args: string[]): PlaybackProcess => {
       component.spawned.push(args);

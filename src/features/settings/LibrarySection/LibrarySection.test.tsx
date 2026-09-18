@@ -4,6 +4,7 @@ import { ThemeProvider } from 'styled-components';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 
 import { LibrarySection } from './LibrarySection';
+import { GroupHeading } from '../section.styles';
 import { theme } from '@/styles/theme';
 import { LocationProbe } from '@/test-support/LocationProbe/LocationProbe';
 import { comesBefore } from '@/test-support/comesBefore/comesBefore';
@@ -27,6 +28,12 @@ import { okResponse } from '@/test-support/fakeResponse/fakeResponse';
  *
  * Like `SettingsHeader`, the section owns where its rows lead: the maintainer
  * surface's only doors are here, and a page is composition only.
+ *
+ * 15 — Settings hub, Phase 1: "the tracer bullet" (issue #143) moves the
+ * **Group heading** into the feature's shared `section.styles.ts`, the
+ * furniture every **Settings group** draws with, so the Playback card's
+ * heading and this one are one styled component rather than two copies.
+ * The three rows are exactly as before.
  */
 let fetchMock: ReturnType<
   typeof vi.fn<
@@ -75,6 +82,23 @@ describe('LibrarySection', () => {
     renderSection();
 
     expect(screen.getByText('Library')).toBeDefined();
+  });
+
+  it('draws its heading with the shared section furniture', () => {
+    // The same styled component the other groups' headings are: rendered on
+    // its own beside the section, it carries the same class.
+    renderSection();
+    const { container } = render(
+      <ThemeProvider theme={theme}>
+        <GroupHeading>Elsewhere</GroupHeading>
+      </ThemeProvider>
+    );
+    const shared = container.firstElementChild as HTMLElement;
+
+    const heading = screen.getByText('Library');
+    expect(shared.className.length).toBeGreaterThan(0);
+    expect(heading.className).toBe(shared.className);
+    expect(getComputedStyle(heading).textTransform).toBe('uppercase');
   });
 
   it('draws exactly three rows: Add a movie, Import from spreadsheet, Export to CSV', () => {
