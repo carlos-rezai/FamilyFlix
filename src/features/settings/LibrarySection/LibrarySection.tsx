@@ -19,9 +19,10 @@ import { Rows } from './LibrarySection.styles';
  * leaves the page where it was, scroll and all, with focus back on the row.
  * The app's first import of one feature's organism by another: a section
  * composing a dialog is fine; a feature importing another's hook or wire
- * would not be. The **Group heading** is the feature's shared furniture, so
- * this group's heading and the Playback card's are one styled component;
- * Storage and About are later phases of the settings-hub initiative.
+ * would not be. The **Group heading** is the feature's shared furniture in
+ * `section.styles.ts`, so the four groups' headings are one styled component;
+ * this one draws rows under it where Playback, Storage and About draw a
+ * **Section card**.
  */
 export function LibrarySection() {
   const navigate = useNavigate();
