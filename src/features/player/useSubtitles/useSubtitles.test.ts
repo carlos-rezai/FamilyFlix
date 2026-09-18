@@ -20,6 +20,16 @@ import { useSubtitles } from './useSubtitles';
  * session, however many times the pill is pressed and however far the film is
  * scrubbed; and that a film with no rows has no track, which is what the
  * pill's absence and the C key's are decided from.
+ *
+ * 15 — Settings hub, Phase 3: "the player honours the preference" (issue
+ * #145) closes the slot log 10 left: the hook reads the household's
+ * **Preferred subtitle language** through the shared `fetchSettings` when a
+ * film opens and hands it to `preferredSubtitle`, which has known what to do
+ * with one since it was written. The preference chooses; nobody picks — no
+ * track picker ships. Never in the way of a film: until the settings land,
+ * and if they never do, track order as before. The track is chosen once per
+ * open, so a preference changed mid-film applies to the next film rather than
+ * switching tracks under the family.
  */
 
 const ENGLISH: Subtitle = {
@@ -261,19 +271,6 @@ describe('useSubtitles — a fetch that goes wrong', () => {
   });
 });
 
-/**
- * 15 — Settings hub, Phase 3 (issue #145).
- *
- * The slot log 10 left closes: the hook reads the household's **Preferred
- * subtitle language** through the shared `fetchSettings` when a film opens and
- * hands it to `preferredSubtitle`, which has known what to do with one since it
- * was written. The preference chooses; nobody picks — no track picker ships.
- *
- * Never in the way of a film: until the settings land, and if they never do,
- * track order as before. The track is chosen once per open, so a preference
- * changed mid-film applies to the next film rather than switching tracks under
- * the family.
- */
 describe('useSubtitles — the Preferred subtitle language', () => {
   it('opens on the Spanish row when the household prefers Spanish', async () => {
     settingsAnswer = () =>

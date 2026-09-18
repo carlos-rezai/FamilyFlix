@@ -10,6 +10,13 @@
 // `LibraryStorage` interface (`listGenres()` only returns genres with >= 1
 // movie). The verification seam is therefore `openDatabase(dbPath)` from
 // `server/src/db`, which returns the migrated raw handle.
+//
+// 15 — Settings hub, Phase 2: "the Subtitles rows" (issue #144) adds
+// migration #3. The household's one preference lives in the library's
+// database beside the movies, so it travels with the backup: a `settings`
+// table of `key TEXT PRIMARY KEY, value TEXT NOT NULL`, one row today
+// (`subtitle-language`). Nothing is seeded — the default is applied by the
+// repository when the row is absent, not written down as if someone chose it.
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { existsSync, mkdtempSync, rmSync } from 'node:fs';
@@ -392,13 +399,6 @@ describe('db: migration #2 — last_watched_at', () => {
   });
 });
 
-// 15 — Settings hub, Phase 2: "the Subtitles rows" (issue #144).
-//
-// The household's one preference lives in the library's database beside the
-// movies, so it travels with the backup: a `settings` table of
-// `key TEXT PRIMARY KEY, value TEXT NOT NULL`, one row today
-// (`subtitle-language`). Nothing is seeded — the default is applied by the
-// repository when the row is absent, not written down as if someone chose it.
 describe('db: migration #3 — settings', () => {
   it('creates the settings table', () => {
     const db = track(open(':memory:'));

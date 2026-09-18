@@ -12,17 +12,24 @@ import {
 } from '@/test-support/fakeResponse/fakeResponse';
 
 /**
- * 15 — Settings hub, Phase 1: "the tracer bullet" (issue #143).
+ * 15 — Settings hub (issues #143, #144, #146).
  *
- * The wire calls the Settings hub makes. `fetchCapabilities` reads the
- * **Codec report** — `GET /api/playback/capabilities`, the raw
- * `{ component, codecs }` — for `useCapabilities`, its one caller, so it
- * lives with the feature rather than in `src/api/`.
+ * The wire calls the Settings hub makes, each with one caller in the feature,
+ * so each lives here rather than in `src/api/`:
  *
- * In `fetchExportSummary`'s style: what was asked for, what the caller is
- * handed back, and a rejection on any status that is not OK — the hook keeps
- * `null` on that and draws nothing, so the rejection is the whole of what the
- * screen needs to know.
+ * - `fetchCapabilities` reads the **Codec report** — `GET
+ *   /api/playback/capabilities`, the raw `{ component, codecs }` — for
+ *   `useCapabilities`. In `fetchExportSummary`'s style: what was asked for,
+ *   what the caller is handed back, and a rejection on any status that is
+ *   not OK — the hook keeps `null` on that and draws nothing, so the
+ *   rejection is the whole of what the screen needs to know.
+ * - `saveSubtitleLanguage` — the **Single-signal write** on the favorite /
+ *   watched / rating precedent, through `postValue` with a string `isEcho`,
+ *   for `useSettings`. The read it pairs with, `fetchSettings`, moved up to
+ *   `src/api/` because the player asks for it too.
+ * - `fetchStorageReport` reads the **Storage report** — `GET /api/storage`,
+ *   the raw `{ mediaPath, bytesUsed, movieCount }` — for `useStorageReport`.
+ *   `fetchCapabilities`'s shape repeated.
  */
 
 let fetchMock: ReturnType<
@@ -99,14 +106,6 @@ describe('fetchCapabilities', () => {
   });
 });
 
-/**
- * 15 — Settings hub, Phase 2: "the Subtitles rows" (issue #144).
- *
- * `saveSubtitleLanguage` — the **Single-signal write** on the favorite /
- * watched / rating precedent, through `postValue` with a string `isEcho`. One
- * caller, `useSettings`, so it stays here; the read it pairs with,
- * `fetchSettings`, moved up to `src/api/` because the player asks for it too.
- */
 describe('saveSubtitleLanguage', () => {
   it('POSTs the language as { value } to the subtitle-language route', async () => {
     fetchMock.mockResolvedValue(okResponse({ value: 'Spanish' }));
@@ -173,14 +172,6 @@ describe('saveSubtitleLanguage', () => {
   });
 });
 
-/**
- * 15 — Settings hub, Phase 4: "the Storage card" (issue #146).
- *
- * `fetchStorageReport` reads the **Storage report** — `GET /api/storage`, the
- * raw `{ mediaPath, bytesUsed, movieCount }` — for `useStorageReport`, its one
- * caller, so it lives here. `fetchCapabilities`'s shape repeated: the payload
- * as it came, and a rejection on any status that is not OK.
- */
 describe('fetchStorageReport', () => {
   const STORAGE: StorageReport = {
     mediaPath: 'D:\\FamilyFlix\\media',
