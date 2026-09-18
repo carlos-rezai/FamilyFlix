@@ -11,6 +11,104 @@ Newest entry first.
 
 ---
 
+## 2026-09-18 — Settings hub refactor (issue #149)
+
+Twelve commits against `docs/refactor-plans/15-settings-hub-refactor.md` —
+six code, six documents. **4398 tests pass across 227 files**, from 4399
+across 228: one leaf folded into another with its one distinct query carried,
+twelve moved between files with their names and assertions untouched, none
+changed. `npm run typecheck` is green and `eslint src server` is clean on
+every commit. Done in one sitting under a standing approval, one commit per
+resolved item; the docs slice filed as 148 is folded in as the first and last
+groups, on 141's precedent, so the initiative has one closing issue.
+
+**The Settings hub is ticked** in the feature table by this round's last
+commit, in the shape the design log's Q24 named: **Settings shell**,
+**Subtitle preferences** and **Storage** ✅, **Codec manager** split into
+_view installed codecs_ ✅ and _add a playback component_ 🔜, **Software
+update** still 🔜. The rule holds: ✅ when the refactor closes, not when the
+build issues do.
+
+### What changed
+
+- **Group 0 — the record.** The journal's entry for the build, above,
+  written before anything moved so it describes what the five slices left.
+- **Group 1 — the pixel and two cleanups.** `AboutCard` sets `margin-bottom:
+0` over the 32px `Card` carries for the two cards that need a group gap
+  under them; the prototype's last card has none. The one styles change of
+  the round, and a subtraction. `LibrarySection`'s docblock stopped saying
+  Storage and About were "later phases". `SubtitleRow`'s `languages` prop
+  became `readonly string[]`, so `MovieFormFiles` hands `SUBTITLE_LANGUAGES`
+  through by name the way `PlaybackSection` already maps it, and the local
+  copy that existed to shed the `readonly` went; `detectSubtitleLanguage`'s
+  `DEFAULT_LANGUAGE` alias went the same way.
+- **Group 2 — one route suite.** `routes.storage.test.ts` folded into
+  `routes.settings.test.ts` under one `freshApi({ component, mediaPath,
+exists })` that returns the media directory; the twelve storage leaves
+  moved with their `chdir` restore. The banner now names the initiative's
+  four routes rather than "one route in this phase".
+- **Group 3 — tests read by behaviour.** `SettingsPage.test.tsx` counts its
+  six buttons once: the Storage card's leaf folded into "composes the five
+  sections and nothing else", which gained the `/change/i` query it lacked;
+  the three settings-hub leaves lost their inline phase comments. The
+  mid-file phase banners in the settings feature's `api.test.ts`,
+  `useSubtitles.test.ts` and `db.test.ts` folded into their files' top
+  banners, on `LibrarySection.test.tsx`'s precedent.
+- **Group 4 — the docs.** COMPONENT-SPEC's `CodecManager` row (no props,
+  owns `useCapabilities`, composes `CodecRow`; no zone and no ✕), `Toggle`
+  row (four props, `aria-disabled`, the name required), `SettingsPage` row
+  (five sections) and Icons table (`MicrochipIcon`). CLAUDE.md's folder map
+  and README's tree naming every unit the initiative added, and a **Settings
+  Hub** section in CLAUDE.md carrying the four routes. The glossary's one
+  amendment: **Codec report** says `CodecRowModel`, the code's name, where it
+  said "Format row model".
+
+### Deliberately not changed
+
+- **Three fetch-once hooks stay three.** `useCapabilities`,
+  `useStorageReport` and the read half of `useSettings` are the same twenty
+  lines under different names, and a `useRead(fetcher)` was rejected: each
+  hook's name is what its test and its organism read, each docblock says
+  which report and why it is blank until it lands, and a generic would move
+  that "why" into a parameter. `useSubtitles`' settings read is the same
+  shape with a `movieId` dependency — the case a generic would have to grow
+  an argument for.
+- **The hand-rolled `fetch*` calls stay hand-rolled**, and so does the
+  listening-API harness the two route suites (now one) share with the
+  import's and the export's. A shared JSON-GET helper, a shared read hook,
+  a shared harness and a shared fetch double are project-wide rounds, named
+  as such since round 13.
+- **`chooseSubtitleLanguage` keeps its `Promise<void>`.** The log's sketch
+  wrote `void`; the build returns the settled promise so a test can await
+  the revert. It never rejects, a leaf pins that, and the section calls it
+  with `void`.
+- **`Toggle`'s `onToggle` stays required.** A disabled switch passing
+  `() => undefined` is one line in one place; an optional handler on a
+  control that exists to be pressed would be the wrong default the day
+  auto-on ships.
+- **`DECODER_LINE` keeps its letter-first rule** and **`windBackToV1` keeps
+  dropping `settings`** — the two calls the build entry records, both read
+  and both right.
+- **The `ItemDesc` under _Subtitles_ keeps its 440px cap**, **`RowRule` and
+  `Divider` stay two**, and **the prototype's literals stay literal** —
+  `#1a1109`, `rgba(138, 154, 107, 0.16)`, `0.3` — on the `Button`,
+  `ExportModal` and `MetaLine` precedents.
+- **`routes/index.ts` at ~1510 lines** — the routes round, still its own.
+
+### What this round was for
+
+The first initiative built wholly by `issue-loop`, and every finding in
+Groups 1–3 is of one kind: nothing wrong, nothing the tests would catch, a
+thing a human reading the whole feature notices and a subagent reading one
+issue does not. #146 and #147 amended `SettingsPage` and its test and never
+opened `LibrarySection`, so a sentence about "later phases" sat there for two
+slices; #146 wrote its route suite beside #143's rather than inside it,
+because "the settings suite" was a file it had not been told about. The
+refactor round is where the reading back happens, which is the argument for
+keeping it even when it is short.
+
+---
+
 ## 2026-09-18 — Settings hub (issues #143–#147)
 
 Ten commits across issues #143–#147, five slices against the plan on #142,

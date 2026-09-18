@@ -747,11 +747,11 @@ same layout, spacing, states, copy, and interaction.
 
 ### Settings hub
 
-- 🔜 **Settings shell** — the Library, Playback, Storage and About groups on one page, each a Section card on the shared furniture.
-- 🔜 **Codec manager — view installed codecs** — the Codec report off the component the player uses: one row per catalogued format, Built-in or Installed.
+- ✅ **Settings shell** — the Library, Playback, Storage and About groups on one page, each a Section card on the shared furniture.
+- ✅ **Codec manager — view installed codecs** — the Codec report off the component the player uses: one row per catalogued format, Built-in or Installed.
 - 🔜 **Codec manager — add a playback component** — the drop zone and the per-row ✕; the Playback component upload initiative.
-- 🔜 **Subtitle preferences** — the household's Preferred subtitle language, kept in the library's database and honoured by the player; the Auto-on toggle built but disabled until shipped.
-- 🔜 **Storage** — the managed media folder's location and space used, agreeing with Explorer; _Change…_ is the Electron shell's.
+- ✅ **Subtitle preferences** — the household's Preferred subtitle language, kept in the library's database and honoured by the player; the Auto-on toggle built but disabled until shipped.
+- ✅ **Storage** — the managed media folder's location and space used, agreeing with Explorer; _Change…_ is the Electron shell's.
 - 🔜 **Software update** — check for and install updates.
 
 ### System

@@ -295,9 +295,11 @@ Builds the installer and publishes it to GitHub Releases automatically.
 | Bulk import (Excel/CSV → library)                   | ✅ Done         |
 | Import progress console (scan/import, live log)     | ✅ Done         |
 | Export (library → CSV/Excel)                        | ✅ Done         |
-| Settings hub (Library / Playback / Storage / About) | 🔜 Planned      |
-| Codec manager (view + add codec packs)              | 🔜 Planned      |
-| Subtitle preferences (default language)             | 🔜 Planned      |
+| Settings hub (Library / Playback / Storage / About) | ✅ Done         |
+| Codec manager — view installed codecs               | ✅ Done         |
+| Codec manager — add a playback component            | 🔜 Planned      |
+| Subtitle preferences (preferred language)           | ✅ Done         |
+| Storage (media folder location, space used)         | ✅ Done         |
 | Software update (check / install)                   | 🔜 Planned      |
 | Snackbar system (info / success / warning / error)  | 🔜 Planned      |
 | Back-to-top FAB                                     | 🔜 Planned      |
