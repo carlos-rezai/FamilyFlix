@@ -10,6 +10,7 @@ import type {
   MoviePatch,
   MovieQuery,
   NewMovie,
+  Settings,
 } from '@/types';
 import { createMovieReader } from './read/read';
 import { createBrowse } from './browse/browse';
@@ -18,6 +19,7 @@ import { createGenre } from './genre/genre';
 import { createWrite } from './write/write';
 import { createWatch } from './watch/watch';
 import { createCuration } from './curation/curation';
+import { createSettings } from './settings/settings';
 
 /**
  * The repository seam every consumer (routes, importer, player) reads and writes
@@ -140,6 +142,20 @@ export interface LibraryStorage {
    * and never persisted.
    */
   setRating(id: string, units: number | null): void;
+  /**
+   * The household's settings, the default applied where a row is absent, so
+   * no caller has to know what it is. Reading never writes the default down.
+   * `library/` is the one SQLite door: two methods over one table is not a
+   * domain, and `localStorage` is a device's, not the household's.
+   */
+  settings(): Settings;
+  /**
+   * Store the preferred subtitle language — an upsert, so the second write
+   * replaces the first. Membership in the **Language pool** is not checked: a
+   * display vocabulary, not a constraint, the rule a **Subtitle**'s own
+   * language follows.
+   */
+  setSubtitleLanguage(language: string): void;
   /** Close the underlying database connection. */
   close(): void;
 }
@@ -159,6 +175,7 @@ export function createSqliteStorage(dbPath: string): LibraryStorage {
   const write = createWrite(db, reader);
   const watch = createWatch(db);
   const curation = createCuration(db);
+  const settingsRepository = createSettings(db);
 
   return {
     addMovie: write.addMovie,
@@ -177,6 +194,8 @@ export function createSqliteStorage(dbPath: string): LibraryStorage {
     markUnwatched: watch.markUnwatched,
     setFavorite: curation.setFavorite,
     setRating: curation.setRating,
+    settings: settingsRepository.settings,
+    setSubtitleLanguage: settingsRepository.setSubtitleLanguage,
     close() {
       db.close();
     },

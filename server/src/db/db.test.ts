@@ -175,12 +175,14 @@ function indexesReferencing(db: TestDb, column: string): string[] {
  * `migrations[0].up` by hand keeps this file's rule that the only seam it knows
  * is `openDatabase`. Re-opening the file afterwards is the exact upgrade path a
  * developer's existing dev database takes — and because the version is wound
- * back to 1, not 0, the runner applies only migration #2, so anything that
- * reappears demonstrably came from #2 rather than from `V1_SCHEMA`.
+ * back to 1, not 0, the runner applies only migrations #2 and #3, so anything
+ * that reappears demonstrably came from those rather than from `V1_SCHEMA`.
  */
 function windBackToV1(path: string): void {
   const db = open(path);
   try {
+    // What #3 added: a v1 database has no settings table.
+    db.prepare('DROP TABLE settings').run();
     for (const name of indexesReferencing(db, 'last_watched_at')) {
       db.prepare(`DROP INDEX ${name}`).run();
     }

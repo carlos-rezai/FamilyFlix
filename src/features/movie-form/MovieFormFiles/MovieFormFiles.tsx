@@ -1,6 +1,10 @@
 import { FileField, SubtitleRow } from '@/components';
 import { FilePicker, ImageIcon, VideoIcon } from '@/primitives';
-import type { MovieFormFile, MovieFormSubtitle } from '@/types';
+import {
+  SUBTITLE_LANGUAGES,
+  type MovieFormFile,
+  type MovieFormSubtitle,
+} from '@/types';
 
 import {
   Caption,
@@ -48,21 +52,14 @@ const SUBTITLE_ACCEPT = '.srt,.vtt,.ass,.sub';
 
 /**
  * The **Language pool** a **Subtitle row** chooses from, in the order the
- * prototype's own dropdown draws it.
+ * prototype's own dropdown draws it — the shared `SUBTITLE_LANGUAGES` tuple,
+ * spelled once so this row, the scanner's tags and the Settings hub's
+ * _Preferred language_ pill cannot drift.
  *
- * The same kind of knowledge as the accept lists beside it: a display
- * vocabulary this screen owns rather than an entity, which is why `SubtitleRow`
- * is handed it. Nothing on either end of the wire maps a name here to a locale.
+ * A display vocabulary this screen hands `SubtitleRow`, not an entity: nothing
+ * on either end of the wire maps a name here to a locale.
  */
-const LANGUAGES = [
-  'English',
-  'Spanish',
-  'French',
-  'German',
-  'Portuguese',
-  'Italian',
-  'Dutch',
-];
+const LANGUAGES = [...SUBTITLE_LANGUAGES];
 
 /** The caption over the card, and the names of its slots. */
 const CARD_LABEL = 'Files';

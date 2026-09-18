@@ -39,6 +39,7 @@ import {
   type Movie,
   type MovieSort,
   type NewSubtitle,
+  type Settings,
 } from '@/types';
 
 /**
@@ -947,6 +948,33 @@ export function createApiRouter(
   // Settings is described on the very next read.
   router.get('/playback/capabilities', (_req, res) => {
     res.json(playback.capabilities());
+  });
+
+  // The household's settings, the default already applied by the repository,
+  // so no client has to know what it is. Read by the Settings hub's
+  // _Preferred language_ pill and by the player when it picks a track.
+  router.get('/settings', (_req: Request, res: Response) => {
+    const settings: Settings = storage.settings();
+    res.json(settings);
+  });
+
+  // The preferred subtitle language — a **Single-signal write** on the
+  // favorite / watched / rating precedent, one route per setting so the
+  // roadmap's auto-on adds a sibling and not a shape. Not through
+  // `writeSignal`: there is no movie to look up and no 404 to answer. A
+  // valid body is exactly a non-empty string; membership in the **Language
+  // pool** is not checked — a display vocabulary, not a constraint — and
+  // writing the value already held is a harmless `200`. The echo is what was
+  // stored, so an optimistic pill reconciles against the row.
+  router.post('/settings/subtitle-language', (req: Request, res: Response) => {
+    const { value } = req.body as { value?: unknown };
+    if (typeof value !== 'string' || value.length === 0) {
+      res.status(400).json({ error: 'Body must be { value: string }' });
+      return;
+    }
+
+    storage.setSubtitleLanguage(value);
+    res.json({ value });
   });
 
   // What the player is told before a byte arrives: which path the film takes,

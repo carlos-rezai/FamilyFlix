@@ -115,4 +115,22 @@ export const migrations: readonly Migration[] = [
       `);
     },
   },
+  {
+    // The household's settings — one preference today, `subtitle-language`.
+    // A key/value table rather than a column per setting, so the roadmap's
+    // auto-on adds a row and not a migration; in the library's own database
+    // rather than `localStorage`, because this is the household's choice and
+    // must travel with the backup. Nothing is seeded: the default is applied
+    // by the repository when the row is absent, not written down as if
+    // someone chose it.
+    version: 3,
+    up(db) {
+      db.exec(`
+        CREATE TABLE settings (
+          key   TEXT PRIMARY KEY,
+          value TEXT NOT NULL
+        );
+      `);
+    },
+  },
 ];

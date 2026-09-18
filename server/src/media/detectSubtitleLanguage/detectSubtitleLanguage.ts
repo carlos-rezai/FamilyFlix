@@ -1,20 +1,34 @@
-/**
- * The **Movie form**'s seven languages — the **Language pool** its dropdown
- * offers — each with the tags a subtitle filename spells it by: the ISO 639-1
- * and 639-2 codes and the English name.
- */
-const LANGUAGE_TAGS: [language: string, tags: string[]][] = [
-  ['English', ['en', 'eng', 'english']],
-  ['Spanish', ['es', 'spa', 'spanish']],
-  ['French', ['fr', 'fre', 'fra', 'french']],
-  ['German', ['de', 'ger', 'deu', 'german']],
-  ['Portuguese', ['pt', 'por', 'portuguese']],
-  ['Italian', ['it', 'ita', 'italian']],
-  ['Dutch', ['nl', 'dut', 'nld', 'dutch']],
-];
+import {
+  DEFAULT_SUBTITLE_LANGUAGE,
+  SUBTITLE_LANGUAGES,
+  type SubtitleLanguage,
+} from '@/types';
 
-/** The language an untagged track is filed under — the form's own default. */
-const DEFAULT_LANGUAGE = 'English';
+/**
+ * The tags a subtitle filename spells each of the **Language pool**'s names
+ * by: the ISO 639-1 and 639-2 codes. The English name itself is a tag too,
+ * added below off the tuple rather than spelled here, so the seven names are
+ * `SUBTITLE_LANGUAGES`' and this map cannot name an eighth or miss one.
+ */
+const CODES: Record<SubtitleLanguage, readonly string[]> = {
+  English: ['en', 'eng'],
+  Spanish: ['es', 'spa'],
+  French: ['fr', 'fre', 'fra'],
+  German: ['de', 'ger', 'deu'],
+  Portuguese: ['pt', 'por'],
+  Italian: ['it', 'ita'],
+  Dutch: ['nl', 'dut', 'nld'],
+};
+
+/** Each language of the pool with every tag that spells it. */
+const LANGUAGE_TAGS: [language: SubtitleLanguage, tags: string[]][] =
+  SUBTITLE_LANGUAGES.map((language) => [
+    language,
+    [...CODES[language], language.toLowerCase()],
+  ]);
+
+/** The language an untagged track is filed under — the shared default. */
+const DEFAULT_LANGUAGE: string = DEFAULT_SUBTITLE_LANGUAGE;
 
 /** The tag, lowercased, onto its language. */
 const BY_TAG = new Map<string, string>(
