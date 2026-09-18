@@ -27,9 +27,6 @@ const LANGUAGE_TAGS: [language: SubtitleLanguage, tags: string[]][] =
     [...CODES[language], language.toLowerCase()],
   ]);
 
-/** The language an untagged track is filed under — the shared default. */
-const DEFAULT_LANGUAGE: string = DEFAULT_SUBTITLE_LANGUAGE;
-
 /** The tag, lowercased, onto its language. */
 const BY_TAG = new Map<string, string>(
   LANGUAGE_TAGS.flatMap(([language, tags]) =>
@@ -52,5 +49,5 @@ export function detectSubtitleLanguage(filename: string): string {
   const name = filename.split(/[/\\]/).pop() ?? '';
   const stem = name.slice(0, name.lastIndexOf('.'));
   const tag = stem.split(/[._-]/).pop()?.toLowerCase() ?? '';
-  return BY_TAG.get(tag) ?? DEFAULT_LANGUAGE;
+  return BY_TAG.get(tag) ?? DEFAULT_SUBTITLE_LANGUAGE;
 }

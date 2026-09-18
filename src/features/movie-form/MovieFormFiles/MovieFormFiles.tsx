@@ -50,17 +50,6 @@ const POSTER_ACCEPT = 'image/*';
  */
 const SUBTITLE_ACCEPT = '.srt,.vtt,.ass,.sub';
 
-/**
- * The **Language pool** a **Subtitle row** chooses from, in the order the
- * prototype's own dropdown draws it — the shared `SUBTITLE_LANGUAGES` tuple,
- * spelled once so this row, the scanner's tags and the Settings hub's
- * _Preferred language_ pill cannot drift.
- *
- * A display vocabulary this screen hands `SubtitleRow`, not an entity: nothing
- * on either end of the wire maps a name here to a locale.
- */
-const LANGUAGES = [...SUBTITLE_LANGUAGES];
-
 /** The caption over the card, and the names of its slots. */
 const CARD_LABEL = 'Files';
 const VIDEO_LABEL = 'Video';
@@ -160,7 +149,7 @@ export function MovieFormFiles({
               key={subtitle.key}
               filename={subtitle.file.filename}
               language={subtitle.language}
-              languages={LANGUAGES}
+              languages={SUBTITLE_LANGUAGES}
               onLanguageChange={(language) =>
                 onChangeSubtitleLanguage(subtitle.key, language)
               }

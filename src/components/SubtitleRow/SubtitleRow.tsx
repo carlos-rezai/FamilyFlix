@@ -16,8 +16,13 @@ export interface SubtitleRowProps {
   filename: string;
   /** The language the track is currently in, as the control shows it. */
   language: string;
-  /** The **Language pool** the list offers, in the order it should appear. */
-  languages: string[];
+  /**
+   * The **Language pool** the list offers, in the order it should appear — a
+   * display vocabulary, not an entity: nothing on either end of the wire maps
+   * a name here to a locale. Read and never written, so the shared
+   * `SUBTITLE_LANGUAGES` tuple is handed through as it is.
+   */
+  languages: readonly string[];
   /** Reports the language that was chosen — the name itself, never an index. */
   onLanguageChange: (language: string) => void;
   /** Reports that the ✕ was pressed. What that takes off is the caller's business. */
