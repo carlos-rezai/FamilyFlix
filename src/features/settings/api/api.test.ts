@@ -1,7 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-import { fetchCapabilities, saveSubtitleLanguage } from './api';
-import type { PlaybackCapabilities } from '@/types';
+import {
+  fetchCapabilities,
+  fetchStorageReport,
+  saveSubtitleLanguage,
+} from './api';
+import type { PlaybackCapabilities, StorageReport } from '@/types';
 import {
   okResponse,
   serverErrorResponse,
@@ -166,5 +170,60 @@ describe('saveSubtitleLanguage', () => {
     fetchMock.mockRejectedValue(new Error('offline'));
 
     await expect(saveSubtitleLanguage('Spanish')).rejects.toThrow('offline');
+  });
+});
+
+/**
+ * 15 — Settings hub, Phase 4: "the Storage card" (issue #146).
+ *
+ * `fetchStorageReport` reads the **Storage report** — `GET /api/storage`, the
+ * raw `{ mediaPath, bytesUsed, movieCount }` — for `useStorageReport`, its one
+ * caller, so it lives here. `fetchCapabilities`'s shape repeated: the payload
+ * as it came, and a rejection on any status that is not OK.
+ */
+describe('fetchStorageReport', () => {
+  const STORAGE: StorageReport = {
+    mediaPath: 'D:\\FamilyFlix\\media',
+    bytesUsed: 19_756_849_562,
+    movieCount: 12,
+  };
+
+  it('GETs the storage route', async () => {
+    fetchMock.mockResolvedValue(okResponse(STORAGE));
+
+    await fetchStorageReport();
+
+    const request = onlyRequest();
+    expect(request.url).toBe('/api/storage');
+    expect(request.method === undefined || request.method === 'GET').toBe(true);
+  });
+
+  it('resolves the report the route answered', async () => {
+    fetchMock.mockResolvedValue(okResponse(STORAGE));
+
+    await expect(fetchStorageReport()).resolves.toEqual(STORAGE);
+  });
+
+  it('resolves a fresh install’s report as it came — zero bytes, zero titles', async () => {
+    const fresh: StorageReport = {
+      mediaPath: 'C:\\Users\\Family\\AppData\\Roaming\\FamilyFlix\\media',
+      bytesUsed: 0,
+      movieCount: 0,
+    };
+    fetchMock.mockResolvedValue(okResponse(fresh));
+
+    await expect(fetchStorageReport()).resolves.toEqual(fresh);
+  });
+
+  it('rejects when the route answers a status that is not OK', async () => {
+    fetchMock.mockResolvedValue(serverErrorResponse());
+
+    await expect(fetchStorageReport()).rejects.toThrow();
+  });
+
+  it('rejects when the request itself fails', async () => {
+    fetchMock.mockRejectedValue(new Error('offline'));
+
+    await expect(fetchStorageReport()).rejects.toThrow('offline');
   });
 });

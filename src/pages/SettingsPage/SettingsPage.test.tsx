@@ -4,7 +4,7 @@ import { ThemeProvider } from 'styled-components';
 import { MemoryRouter } from 'react-router-dom';
 
 import SettingsPage from './SettingsPage';
-import type { PlaybackCapabilities } from '@/types';
+import type { PlaybackCapabilities, Settings, StorageReport } from '@/types';
 import { theme } from '@/styles/theme';
 import { comesBefore } from '@/test-support/comesBefore/comesBefore';
 import { okResponse } from '@/test-support/fakeResponse/fakeResponse';
@@ -18,6 +18,16 @@ const REPORT: PlaybackCapabilities = {
   ],
 };
 
+/** The household's settings the Playback card's Subtitles half reads. */
+const SETTINGS: Settings = { subtitleLanguage: 'English' };
+
+/** The **Storage report** the Storage card reads on mount. */
+const STORAGE: StorageReport = {
+  mediaPath: 'D:\\FamilyFlix\\media',
+  bytesUsed: 19_756_849_562,
+  movieCount: 12,
+};
+
 let fetchMock: ReturnType<
   typeof vi.fn<
     (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>
@@ -25,11 +35,20 @@ let fetchMock: ReturnType<
 >;
 
 beforeEach(() => {
-  // The Playback card asks for the report on mount; the page's tests are
-  // not about what it says, so every read answers a small one.
+  // The cards ask for their reads on mount; the page's tests are not about
+  // what they say, so every route answers a small one, by URL.
   fetchMock = vi
     .fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>()
-    .mockResolvedValue(okResponse(REPORT));
+    .mockImplementation((input) => {
+      const url = String(input);
+      if (url === '/api/settings') {
+        return Promise.resolve(okResponse(SETTINGS));
+      }
+      if (url === '/api/storage') {
+        return Promise.resolve(okResponse(STORAGE));
+      }
+      return Promise.resolve(okResponse(REPORT));
+    });
   vi.stubGlobal('fetch', fetchMock);
 });
 
@@ -60,7 +79,9 @@ const importRow = () =>
  *
  * 15 — Settings hub, Phase 1: "the tracer bullet" (issue #143) composes the
  * second **Settings group**: `Playback` under `Library`, at the same measure,
- * with the Library rows exactly as before.
+ * with the Library rows exactly as before. Phase 4: "the Storage card" (issue
+ * #146) composes the third, `Storage` under `Playback` — LIBRARY, PLAYBACK,
+ * STORAGE in order; what the card draws is `features/settings/StorageSection`'s.
  */
 describe('SettingsPage', () => {
   it('composes the settings header in the maintainer sheet', () => {
@@ -125,12 +146,68 @@ describe('SettingsPage', () => {
     expect(screen.getAllByRole('button')).toHaveLength(5);
   });
 
-  it('builds none of the other sections yet', () => {
+  it('composes the Storage section under the Playback section', () => {
     renderPage();
 
-    // Storage and About are later phases of the settings-hub initiative.
-    for (const section of ['Storage', 'About']) {
-      expect(screen.queryByText(section)).toBeNull();
+    // 15 — Settings hub, Phase 4 (issue #146): the third of the grouped
+    // sections, a Section card headed Managed media folder over the report.
+    expect(screen.getByText('Storage')).toBeDefined();
+    expect(screen.getByText('Managed media folder')).toBeDefined();
+    expect(
+      comesBefore(screen.getByText('Playback'), screen.getByText('Storage'))
+    ).toBe(true);
+    expect(
+      comesBefore(
+        screen.getByText('Preferred language'),
+        screen.getByText('Storage')
+      )
+    ).toBe(true);
+  });
+
+  it('shows LIBRARY, PLAYBACK, STORAGE in order', () => {
+    renderPage();
+
+    const headings = ['Library', 'Playback', 'Storage'].map((name) =>
+      screen.getByText(name)
+    );
+    for (const heading of headings) {
+      expect(getComputedStyle(heading).textTransform).toBe('uppercase');
     }
+    expect(comesBefore(headings[0], headings[1])).toBe(true);
+    expect(comesBefore(headings[1], headings[2])).toBe(true);
+  });
+
+  it('draws the storage report on the page once it lands', async () => {
+    renderPage();
+
+    await waitFor(() =>
+      expect(screen.getByText(STORAGE.mediaPath)).toBeDefined()
+    );
+    expect(screen.getByText('18.4 GB')).toBeDefined();
+    expect(screen.getByText(/12 titles/)).toBeDefined();
+  });
+
+  it('adds no button of its own with the Storage card — no Change…', async () => {
+    renderPage();
+
+    await waitFor(() =>
+      expect(screen.getByText(STORAGE.mediaPath)).toBeDefined()
+    );
+    expect(screen.queryByRole('button', { name: /change/i })).toBeNull();
+    // Back, two "Add a movie"s, Import, Export — and the Preferred language
+    // pill once the settings land; the Storage card adds none.
+    await waitFor(() =>
+      expect(
+        screen.getByRole('button', { name: /^Preferred language: / })
+      ).toBeDefined()
+    );
+    expect(screen.getAllByRole('button')).toHaveLength(6);
+  });
+
+  it('builds no About section yet', () => {
+    renderPage();
+
+    // About is the last phase of the settings-hub initiative.
+    expect(screen.queryByText('About')).toBeNull();
   });
 });
