@@ -82,6 +82,8 @@ const importRow = () =>
  * with the Library rows exactly as before. Phase 4: "the Storage card" (issue
  * #146) composes the third, `Storage` under `Playback` — LIBRARY, PLAYBACK,
  * STORAGE in order; what the card draws is `features/settings/StorageSection`'s.
+ * Phase 5: "the About card" (issue #147) composes the fourth and last, `About`
+ * under `Storage` — the whole page the prototype draws, and nothing else.
  */
 describe('SettingsPage', () => {
   it('composes the settings header in the maintainer sheet', () => {
@@ -164,10 +166,10 @@ describe('SettingsPage', () => {
     ).toBe(true);
   });
 
-  it('shows LIBRARY, PLAYBACK, STORAGE in order', () => {
+  it('shows LIBRARY, PLAYBACK, STORAGE, ABOUT in order', () => {
     renderPage();
 
-    const headings = ['Library', 'Playback', 'Storage'].map((name) =>
+    const headings = ['Library', 'Playback', 'Storage', 'About'].map((name) =>
       screen.getByText(name)
     );
     for (const heading of headings) {
@@ -175,6 +177,7 @@ describe('SettingsPage', () => {
     }
     expect(comesBefore(headings[0], headings[1])).toBe(true);
     expect(comesBefore(headings[1], headings[2])).toBe(true);
+    expect(comesBefore(headings[2], headings[3])).toBe(true);
   });
 
   it('draws the storage report on the page once it lands', async () => {
@@ -204,10 +207,57 @@ describe('SettingsPage', () => {
     expect(screen.getAllByRole('button')).toHaveLength(6);
   });
 
-  it('builds no About section yet', () => {
+  it('composes the About section under the Storage section', () => {
     renderPage();
 
-    // About is the last phase of the settings-hub initiative.
-    expect(screen.queryByText('About')).toBeNull();
+    // 15 — Settings hub, Phase 5 (issue #147): the fourth and last of the
+    // grouped sections, a Section card holding the brand row.
+    expect(screen.getByText('About')).toBeDefined();
+    expect(screen.getByText('Family')).toBeDefined();
+    expect(screen.getByText('Flix')).toBeDefined();
+    expect(
+      comesBefore(screen.getByText('Storage'), screen.getByText('About'))
+    ).toBe(true);
+    expect(
+      comesBefore(
+        screen.getByText('Managed media folder'),
+        screen.getByText('About')
+      )
+    ).toBe(true);
+  });
+
+  it('draws the defined version and the tagline on the page', () => {
+    renderPage();
+
+    expect(screen.getByText(__APP_VERSION__)).toBeDefined();
+    expect(screen.getByText('Offline · local-only · no account')).toBeDefined();
+  });
+
+  it('composes the five sections and nothing else', async () => {
+    renderPage();
+
+    // No Software update row: the About card adds no button and no copy
+    // about an updater the app does not have.
+    expect(screen.queryByText(/software update/i)).toBeNull();
+    expect(screen.queryByText(/up to date/i)).toBeNull();
+    expect(screen.queryByRole('button', { name: /update/i })).toBeNull();
+    // Back, two "Add a movie"s, Import, Export — and the Preferred language
+    // pill once the settings land; About adds none.
+    await waitFor(() =>
+      expect(
+        screen.getByRole('button', { name: /^Preferred language: / })
+      ).toBeDefined()
+    );
+    expect(screen.getAllByRole('button')).toHaveLength(6);
+    // Four Group headings, and only four.
+    const groupHeadings = ['Library', 'Playback', 'Storage', 'About'].map(
+      (name) => screen.getByText(name)
+    );
+    const uppercased = Array.from(document.body.querySelectorAll('div')).filter(
+      (element) =>
+        getComputedStyle(element).textTransform === 'uppercase' &&
+        element.children.length === 0
+    );
+    expect(uppercased).toEqual(groupHeadings);
   });
 });
