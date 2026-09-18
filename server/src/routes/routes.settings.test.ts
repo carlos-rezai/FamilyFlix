@@ -39,7 +39,12 @@ import {
   ffmpegIn,
 } from '../test-support/componentDir/componentDir';
 import { sandboxRoot } from '../test-support/sandboxRoot/sandboxRoot';
-import type { CodecCapability, PlaybackCapabilities } from '@/types';
+import {
+  DEFAULT_SUBTITLE_LANGUAGE,
+  type CodecCapability,
+  type PlaybackCapabilities,
+  type Settings,
+} from '@/types';
 
 // --- per-test resource tracking ------------------------------------------------
 
@@ -227,5 +232,134 @@ describe('GET /api/playback/capabilities — the component the domain was compos
     const reported = await readCapabilities(baseUrl);
 
     expect(reported.component).toBe(false);
+  });
+});
+
+// --- 15 — Settings hub, Phase 2: "the Subtitles rows" (issue #144) ------------
+//
+// The household's one preference on the wire. `GET /api/settings` → `200
+// { subtitleLanguage }` with the default already applied, so no client has to
+// know what it is. `POST /api/settings/subtitle-language { value }` → `200
+// { value }` — a **Single-signal write** on the favorite / watched / rating
+// precedent, one route per setting so the roadmap's auto-on adds a sibling and
+// not a shape; `400 { error }` for a missing, empty or non-string value,
+// storing nothing. Membership in the **Language pool** is not checked, and
+// writing the value already held is a harmless `200`.
+
+const getSettings = (baseUrl: string) => fetch(`${baseUrl}/api/settings`);
+
+const readSettings = async (baseUrl: string): Promise<Settings> =>
+  (await (await getSettings(baseUrl)).json()) as Settings;
+
+/** The write, with whatever body the test wants on the wire. */
+const postSubtitleLanguage = (baseUrl: string, body: unknown) =>
+  fetch(`${baseUrl}/api/settings/subtitle-language`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+
+describe('GET /api/settings', () => {
+  it('answers 200 with the settings as JSON', async () => {
+    const { baseUrl } = freshApi();
+
+    const response = await getSettings(baseUrl);
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get('content-type')).toContain('application/json');
+  });
+
+  it('answers English on a fresh database — the default already applied', async () => {
+    const { baseUrl } = freshApi();
+
+    expect(await readSettings(baseUrl)).toEqual({
+      subtitleLanguage: DEFAULT_SUBTITLE_LANGUAGE,
+    });
+    expect(DEFAULT_SUBTITLE_LANGUAGE).toBe('English');
+  });
+
+  it('answers the stored value after a write', async () => {
+    const { storage, baseUrl } = freshApi();
+    storage.setSubtitleLanguage('French');
+
+    expect(await readSettings(baseUrl)).toEqual({ subtitleLanguage: 'French' });
+  });
+});
+
+describe('POST /api/settings/subtitle-language', () => {
+  it('echoes the value it stored', async () => {
+    const { baseUrl } = freshApi();
+
+    const response = await postSubtitleLanguage(baseUrl, { value: 'Spanish' });
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get('content-type')).toContain('application/json');
+    expect(await response.json()).toEqual({ value: 'Spanish' });
+  });
+
+  it('persists — the repository and the read route both answer it', async () => {
+    const { storage, baseUrl } = freshApi();
+
+    await postSubtitleLanguage(baseUrl, { value: 'Spanish' });
+
+    expect(storage.settings().subtitleLanguage).toBe('Spanish');
+    expect(await readSettings(baseUrl)).toEqual({
+      subtitleLanguage: 'Spanish',
+    });
+  });
+
+  it('replaces a value already stored — the write is an upsert', async () => {
+    const { baseUrl } = freshApi();
+    await postSubtitleLanguage(baseUrl, { value: 'Spanish' });
+
+    const response = await postSubtitleLanguage(baseUrl, { value: 'German' });
+
+    expect(response.status).toBe(200);
+    expect(await readSettings(baseUrl)).toEqual({ subtitleLanguage: 'German' });
+  });
+
+  it('takes the value already held as a harmless 200', async () => {
+    const { baseUrl } = freshApi();
+    await postSubtitleLanguage(baseUrl, { value: 'Spanish' });
+
+    const response = await postSubtitleLanguage(baseUrl, { value: 'Spanish' });
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ value: 'Spanish' });
+    expect(await readSettings(baseUrl)).toEqual({
+      subtitleLanguage: 'Spanish',
+    });
+  });
+
+  it('accepts a value outside the pool — a vocabulary, not a constraint', async () => {
+    const { baseUrl } = freshApi();
+
+    const response = await postSubtitleLanguage(baseUrl, { value: 'Japanese' });
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ value: 'Japanese' });
+    expect(await readSettings(baseUrl)).toEqual({
+      subtitleLanguage: 'Japanese',
+    });
+  });
+
+  it.each([
+    ['a missing value', {}],
+    ['an empty value', { value: '' }],
+    ['a number', { value: 3 }],
+    ['a boolean', { value: true }],
+    ['a null', { value: null }],
+    ['an object', { value: { name: 'Spanish' } }],
+  ])('answers 400 with an error for %s, storing nothing', async (_, body) => {
+    const { storage, baseUrl } = freshApi();
+    storage.setSubtitleLanguage('French');
+
+    const response = await postSubtitleLanguage(baseUrl, body);
+
+    expect(response.status).toBe(400);
+    const payload = (await response.json()) as { error: unknown };
+    expect(typeof payload.error).toBe('string');
+    expect((payload.error as string).length).toBeGreaterThan(0);
+    expect(storage.settings().subtitleLanguage).toBe('French');
   });
 });

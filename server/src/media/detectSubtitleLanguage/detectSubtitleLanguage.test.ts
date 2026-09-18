@@ -10,6 +10,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { detectSubtitleLanguage } from './detectSubtitleLanguage';
+import { DEFAULT_SUBTITLE_LANGUAGE, SUBTITLE_LANGUAGES } from '@/types';
 
 /** The seven names, each with the tags a filename spells them by. */
 const TAGS: [language: string, tags: string[]][] = [
@@ -76,5 +77,39 @@ describe('detectSubtitleLanguage — the English fallback', () => {
     // last piece before the extension here.
     expect(detectSubtitleLanguage('it-follows.srt')).toBe('English');
     expect(detectSubtitleLanguage('de-lift.1983.srt')).toBe('English');
+  });
+});
+
+// 15 — Settings hub, Phase 2 (issue #144), story 70: the languages spelled
+// once. The scanner's `LANGUAGE_TAGS` read the shared `SUBTITLE_LANGUAGES`
+// tuple instead of spelling their own seven names, so the form's row, the
+// Settings hub's Preferred language pill and this cannot drift — and the
+// scanner still detects every language it detected.
+describe('detectSubtitleLanguage — the shared tuple', () => {
+  it('detects every language in the tuple from its own name as the tag', () => {
+    for (const language of SUBTITLE_LANGUAGES) {
+      expect(
+        detectSubtitleLanguage(`die-hard.${language.toLowerCase()}.srt`)
+      ).toBe(language);
+    }
+  });
+
+  it('answers a name that is in the tuple, whatever the tag', () => {
+    const names: readonly string[] = SUBTITLE_LANGUAGES;
+    for (const [, tags] of TAGS) {
+      for (const tag of tags) {
+        expect(names).toContain(detectSubtitleLanguage(`die-hard.${tag}.srt`));
+      }
+    }
+  });
+
+  it('spells the same seven the tuple does — no eighth name, none missing', () => {
+    expect(TAGS.map(([language]) => language)).toEqual([...SUBTITLE_LANGUAGES]);
+  });
+
+  it('falls back to the shared default', () => {
+    expect(detectSubtitleLanguage('die-hard.srt')).toBe(
+      DEFAULT_SUBTITLE_LANGUAGE
+    );
   });
 });

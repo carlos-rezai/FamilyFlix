@@ -193,6 +193,35 @@ function windBackToV1(path: string): void {
   }
 }
 
+/**
+ * Leave the database at `path` looking exactly like one written before
+ * migration #3 existed: open it (which migrates it to the latest), drop what
+ * #3 added and wind `user_version` back to 2. Re-opening it afterwards is the
+ * upgrade every dev database from the export slice takes.
+ */
+function windBackToV2(path: string): void {
+  const db = open(path);
+  try {
+    db.prepare('DROP TABLE settings').run();
+    db.pragma('user_version = 2');
+  } finally {
+    db.close();
+  }
+}
+
+/** One table's declared columns as `table_info` reports them. */
+function columnInfo(
+  db: TestDb,
+  table: string
+): Array<{ name: string; type: string; notnull: number; pk: number }> {
+  return db.pragma(`table_info(${table})`) as Array<{
+    name: string;
+    type: string;
+    notnull: number;
+    pk: number;
+  }>;
+}
+
 // --- tests ---------------------------------------------------------------------
 
 describe('db: connection pragmas', () => {
@@ -212,7 +241,7 @@ describe('db: connection pragmas', () => {
 describe('db: migration runner', () => {
   it('migrates a fresh :memory: database to the latest user_version', () => {
     const db = track(open(':memory:'));
-    expect(userVersion(db)).toBe(2);
+    expect(userVersion(db)).toBe(3);
   });
 
   it('seeds exactly the 12 canonical genres', () => {
@@ -227,13 +256,13 @@ describe('db: migration runner', () => {
     const path = tempDbPath();
 
     const first = track(open(path));
-    expect(userVersion(first)).toBe(2);
+    expect(userVersion(first)).toBe(3);
     first.close();
 
     // Re-opening the same file runs the migration runner again; it must detect
     // the DB is already current and apply nothing.
     const second = track(open(path));
-    expect(userVersion(second)).toBe(2);
+    expect(userVersion(second)).toBe(3);
 
     const names = genreNames(second);
     expect(names).toHaveLength(12);
@@ -302,13 +331,13 @@ describe('db: migration #2 — last_watched_at', () => {
     expect(stampIndex).toBeDefined();
   });
 
-  it('is a migration of its own — a fresh database reaching version 2 proves V1_SCHEMA never declared the column', () => {
+  it('is a migration of its own — a fresh database reaching the latest version proves V1_SCHEMA never declared the column', () => {
     // If the column were added to V1_SCHEMA instead, migration #2's
     // `ALTER TABLE ... ADD COLUMN` would fail as a duplicate on every fresh
     // database and the runner would leave the version at 1.
     const db = track(open(':memory:'));
 
-    expect(userVersion(db)).toBe(2);
+    expect(userVersion(db)).toBeGreaterThanOrEqual(2);
     expect(columnNames(db, 'movies')).toContain('last_watched_at');
   });
 
@@ -326,7 +355,7 @@ describe('db: migration #2 — last_watched_at', () => {
 
     const upgraded = track(open(path));
 
-    expect(userVersion(upgraded)).toBe(2);
+    expect(userVersion(upgraded)).toBe(3);
     expect(columnNames(upgraded, 'movies')).toContain('last_watched_at');
     // Migration #1 is skipped rather than re-run: the genre pool is seeded once.
     expect(genreNames(upgraded)).toHaveLength(12);
@@ -358,6 +387,101 @@ describe('db: migration #2 — last_watched_at', () => {
     expect(
       storage.listMovies({ sort: 'a-z' }).map((m) => m.lastWatchedAt)
     ).toEqual([null]);
+  });
+});
+
+// 15 — Settings hub, Phase 2: "the Subtitles rows" (issue #144).
+//
+// The household's one preference lives in the library's database beside the
+// movies, so it travels with the backup: a `settings` table of
+// `key TEXT PRIMARY KEY, value TEXT NOT NULL`, one row today
+// (`subtitle-language`). Nothing is seeded — the default is applied by the
+// repository when the row is absent, not written down as if someone chose it.
+describe('db: migration #3 — settings', () => {
+  it('creates the settings table', () => {
+    const db = track(open(':memory:'));
+
+    expect(tableNames(db)).toContain('settings');
+  });
+
+  it('keys the table on a TEXT primary key with a TEXT value that cannot be null', () => {
+    const db = track(open(':memory:'));
+    const columns = columnInfo(db, 'settings');
+
+    expect(columns.map((column) => column.name)).toEqual(['key', 'value']);
+    expect(columns.find((column) => column.name === 'key')).toMatchObject({
+      type: 'TEXT',
+      pk: 1,
+    });
+    expect(columns.find((column) => column.name === 'value')).toMatchObject({
+      type: 'TEXT',
+      notnull: 1,
+      pk: 0,
+    });
+  });
+
+  it('seeds no row — a fresh table is empty', () => {
+    const db = track(open(':memory:'));
+    const rows = db.prepare('SELECT key, value FROM settings').all();
+
+    expect(rows).toEqual([]);
+  });
+
+  it('is a migration of its own — a fresh database lands at version 3', () => {
+    const db = track(open(':memory:'));
+
+    expect(userVersion(db)).toBe(3);
+    expect(tableNames(db)).toContain('settings');
+  });
+
+  it('upgrades a database already at version 2 in place, keeping its rows', () => {
+    const path = tempDbPath();
+
+    const before = trackStorage(createSqliteStorage(path));
+    const added = before.addMovie({
+      title: 'Northwind',
+      videoPath: 'Northwind (2018)/northwind.mkv',
+      genres: ['Drama'],
+    });
+    before.markWatched(added.id);
+    before.close();
+    windBackToV2(path);
+
+    const upgraded = track(open(path));
+
+    expect(userVersion(upgraded)).toBe(3);
+    expect(tableNames(upgraded)).toContain('settings');
+    // Migrations #1 and #2 are skipped rather than re-run: the pool is seeded
+    // once and the stamp column is added once.
+    expect(genreNames(upgraded)).toHaveLength(12);
+    expect(columnNames(upgraded, 'movies')).toContain('last_watched_at');
+    upgraded.close();
+
+    const storage = trackStorage(createSqliteStorage(path));
+    const movie = storage.getMovie(added.id);
+    expect(movie?.title).toBe('Northwind');
+    expect(movie?.status).toBe('watched');
+    expect(movie?.lastWatchedAt).not.toBeNull();
+  });
+
+  it('refuses a second row under the same key — the shape an upsert relies on', () => {
+    const db = track(open(':memory:'));
+    const insert = db.prepare(
+      'INSERT INTO settings (key, value) VALUES (?, ?)'
+    );
+    insert.run('subtitle-language', 'English');
+
+    expect(() => insert.run('subtitle-language', 'Spanish')).toThrow();
+  });
+
+  it('refuses a null value', () => {
+    const db = track(open(':memory:'));
+
+    expect(() =>
+      db
+        .prepare('INSERT INTO settings (key, value) VALUES (?, ?)')
+        .run('subtitle-language', null)
+    ).toThrow(/NOT NULL/);
   });
 });
 
