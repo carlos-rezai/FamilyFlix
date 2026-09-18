@@ -1,21 +1,41 @@
 // @vitest-environment node
 //
-// 15 — Settings hub, Phase 1: "the tracer bullet" (issue #143).
+// 15 — Settings hub (issues #143, #144, #146).
 //
 // The Settings hub's slice of the router's tests, beside the import's and the
 // export's — the seam `routes.test.ts`'s header names and that file is too
 // large to take: a real listener, a real `fetch`, real status codes and bodies,
-// over a real `:memory:` library. Nothing new is injected: the capability
-// route reads the `playback` the router already holds.
+// over a real `:memory:` library and a real media directory under
+// `sandboxRoot`. Nothing new is injected: every route here reads what the
+// router already holds — the `playback` it was composed over, `storage`, and
+// the `mediaPath` it was handed.
 //
-// One route in this phase: `GET /api/playback/capabilities` → `200 { component,
-// codecs }`, the raw **Codec report** — `{ codec, kind, support }` per row,
-// `support` one of `native | via-component` — with the **Format catalogue**
-// left to the screen that draws it. The route reaches the report through
-// `Playback.capabilities()` and nothing else, which is what the fake
-// component handed to `createPlayback` asserts: what the route answers is what
-// that component's `decoders()` said, and neither the environment nor a
-// binary on PATH has a say.
+// The initiative's four routes, one suite:
+//
+// - `GET /api/playback/capabilities` → `200 { component, codecs }`, the raw
+//   **Codec report** — `{ codec, kind, support }` per row, `support` one of
+//   `native | via-component` — with the **Format catalogue** left to the
+//   screen that draws it. The route reaches the report through
+//   `Playback.capabilities()` and nothing else, which is what the fake
+//   component handed to `createPlayback` asserts: what the route answers is
+//   what that component's `decoders()` said, and neither the environment nor
+//   a binary on PATH has a say.
+// - `GET /api/settings` → `200 { subtitleLanguage }`, the household's one
+//   preference with the default already applied, so no client has to know
+//   what it is.
+// - `POST /api/settings/subtitle-language { value }` → `200 { value }` — a
+//   **Single-signal write** on the favorite / watched / rating precedent, one
+//   route per setting so the roadmap's auto-on adds a sibling and not a
+//   shape; `400 { error }` for a missing, empty or non-string value, storing
+//   nothing. Membership in the **Language pool** is not checked, and writing
+//   the value already held is a harmless `200`.
+// - `GET /api/storage` → `200 { mediaPath, bytesUsed, movieCount }`, the
+//   **Storage report**: the `mediaPath` the router was composed with,
+//   resolved to absolute — the card names a place on the disk, not a place
+//   relative to a process; **Space used** over it, `0` when the root is not
+//   there yet, so a fresh install has a Storage card and not an error; and
+//   `storage.countMovies()`. The two counts of one library disagree by
+//   exactly a **Stranded folder**: its bytes count, its title does not.
 
 import express from 'express';
 import { mkdirSync, writeFileSync } from 'node:fs';
@@ -255,16 +275,7 @@ describe('GET /api/playback/capabilities — the component the domain was compos
   });
 });
 
-// --- 15 — Settings hub, Phase 2: "the Subtitles rows" (issue #144) ------------
-//
-// The household's one preference on the wire. `GET /api/settings` → `200
-// { subtitleLanguage }` with the default already applied, so no client has to
-// know what it is. `POST /api/settings/subtitle-language { value }` → `200
-// { value }` — a **Single-signal write** on the favorite / watched / rating
-// precedent, one route per setting so the roadmap's auto-on adds a sibling and
-// not a shape; `400 { error }` for a missing, empty or non-string value,
-// storing nothing. Membership in the **Language pool** is not checked, and
-// writing the value already held is a harmless `200`.
+// --- the settings pair -----------------------------------------------------------
 
 const getSettings = (baseUrl: string) => fetch(`${baseUrl}/api/settings`);
 
@@ -384,19 +395,7 @@ describe('POST /api/settings/subtitle-language', () => {
   });
 });
 
-// --- GET /api/storage ------------------------------------------------------------
-//
-// The **Storage report** on the wire — `GET /api/storage` → `200 { mediaPath,
-// bytesUsed, movieCount }`. Nothing new is injected: the route composes three
-// reads the router already holds — the `mediaPath` it was composed with,
-// resolved to absolute; **Space used** over it; and `storage.countMovies()`.
-//
-// Absolute even when the server was started with `./media`: the card names a
-// place on the disk, not a place relative to a process. `bytesUsed` is the
-// bytes under the root, `0` when the root is not there yet, so a fresh
-// install has a Storage card and not an error. And the two counts of one
-// library disagree by exactly a **Stranded folder**: its bytes count, its
-// title does not.
+// --- the storage report ----------------------------------------------------------
 
 /** A file under the media directory holding exactly `size` bytes. */
 function fileOf(media: string, path: string, size: number): void {
