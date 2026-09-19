@@ -11,6 +11,139 @@ Newest entry first.
 
 ---
 
+## 2026-09-19 — Playback component upload (issues #151–#155)
+
+Ten commits across issues #151–#155, five slices against the plan on #150,
+built from `docs/design-logs/16-component-upload.md`. **4597 tests pass across
+233 files**, up from 4398 across 227. `npm run typecheck` is green and
+`eslint src server` is clean on every commit. The second initiative driven
+wholly by `issue-loop`: every RED and every GREEN was a subagent's, and the
+maintainer's one instruction was the scope the grill session ran under —
+translate the prototype 1:1 into the codebase, in its naming, conventions,
+patterns and architecture. Nobody read a diff between the commits; the
+refactor round is where that reading happens.
+
+**Codec manager — add a playback component is _not_ ticked** in the feature
+table. The rule holds: ✅ when the refactor closes, not when the build issues
+do.
+
+### What shipped
+
+- **#151, the prototype amended first.** `FamilyFlix.dc.html`'s `codecs`
+  model gains the **Component row** as its last entry — `Playback component`,
+  the two binary names, a real size, and a `source` of `default` / `uploaded`
+  that decides the pill's colouring and whether the ✕ is drawn at all;
+  `uploadCodec()` flips it to uploaded and `removeCodec` on it flips it back.
+  `feat.CodecManager.dc.html`'s zone reads `zoneTitle`, `zoneLine`,
+  `zoneBusy` and `zoneRefused` instead of literals, so the busy and refused
+  faces are on the prototype the way the player's buffering and unavailable
+  states are. Geometry unchanged in both. The initiative's own rule,
+  exercised: amend the prototype, then build to the amendment.
+- **#152, the tracer bullet — the slot resolves what is live, and it has a
+  row.** `createComponentSlot(slotDir, env, seams)` is the **Component
+  slot**: `current/` read ahead of `FAMILYFLIX_FFMPEG_PATH` and ahead of
+  `PATH`, with `incoming/` and `previous/` swept on startup, and
+  `PlaybackComponentInfo` — the **Component info** the screen draws — off
+  whichever won. `createPlayback(mediaPath, slot)` takes the slot rather than
+  a component and reads it per request, so the next press of Play decides
+  over whatever is live with nothing cached to clear; that is the signature
+  change, and the thirty-odd test call sites moved onto
+  `test-support/fixedSlot/` with it — the widest edit the initiative makes,
+  and entirely mechanical. `capabilities(component)` answers rows alone. On
+  the screen: `codecView`'s reshaped model and `componentRow`, and `CodecRow`
+  1:1 with the two props of the row template that were idle — a real size and
+  an `onRemove`.
+- **#153, an upload changes what the next Play decides.** `componentBinary`
+  is the feature's security boundary the way `fileKinds` is media's: a file
+  part is `ffmpeg`, `ffprobe`, or nothing, by its name alone.
+  `verifyComponent` runs the staged pair before anything moves. The
+  **Component swap** is three directory renames — `current/` → `previous/`,
+  `incoming/` → `current/`, `previous/` removed — so a Windows lock on a
+  running `ffmpeg.exe` fails the _first_ rename with nothing moved and
+  answers the **In-use refusal** rather than leaving a mixed pair behind.
+  `POST /api/playback/component` on the wire, echoing the whole **Codec
+  report** after the write so the screen redraws from the echo.
+- **#154, the zone.** `visuallyHidden`, `UploadIcon`, and
+  `ComponentDropZone` — a `<label>` over a clipped multiple file input, with
+  drag-over drawn as the prototype's hover and the three faces the
+  prototype's author never wrote. `installComponent` and
+  `ComponentRefusedError` in the feature's `api/`, `upload` state on
+  `useCapabilities`, and `CodecManager` composing the zone under the rows.
+  The first thing the maintainer can see work: drop the pair, watch the
+  **Installed** rows appear.
+- **#155, the ✕ takes it back.** `removeComponent` on the slot — the same
+  rename, the same lock classification, the same echo — behind
+  `DELETE /api/playback/component`, on the hook, and wired to the **Component
+  row**'s ✕, which is drawn only when the live component is the maintainer's.
+  A remove falls back to whatever the installer or PATH offers, which is the
+  slot's resolution order read the other way round.
+
+### The calls the subagents made alone
+
+The design log named three install refusals and did not name any of these.
+All five are in the code, all five are right, and the refactor round's
+Group 3 exists because the first of them was asserted by nothing.
+
+- **A fourth refusal, `failed`, on both outcome unions.** A swap can stop for
+  something that is neither the lock nor the pair — a full disk, a directory
+  gone from under it. It is a value rather than a throw "because an install
+  that threw would be the one outcome the route could not answer", and it is
+  not `in-use` because "sending the maintainer to stop a film that is not the
+  problem would be worse than saying nothing useful". `RemoveRefusal` gained
+  the same fourth and `routes/index.ts` maps both to `500` with a sentence
+  each.
+- **`componentBinary` accepts a `-` suffix.** A build downloaded from a build
+  site is called `ffmpeg-7.1.exe` as often as `ffmpeg`, so the name,
+  lowercased, is the binary's own word, optionally followed by a `-` and
+  whatever the build called itself, optionally under a `.exe` — and nothing
+  else. `myffmpeg.exe` and `ffmpeg.dll` are halves of nothing.
+- **`EACCES` joins `EBUSY` and `EPERM`** in the lock set, because the three
+  are what a held handle answers as depending on who is holding it.
+- **A `rename` seam beside `verify`**, injected for the reason the
+  environment is: a unit that spawns or renames must be assertable on a
+  machine that has neither an FFmpeg on it nor a Windows lock to reproduce.
+- **The swap rolls back a first rename that succeeded.** If `incoming/` →
+  `current/` fails after `current/` has already moved to `previous/`, the code
+  renames `previous/` back, because the live component is the one thing that
+  must be where it was.
+
+### What only a human can accept
+
+Three criteria no subagent could exercise, and none of them run in CI:
+
+- drop a real `ffmpeg`/`ffprobe` pair on the zone and watch the **Installed**
+  rows appear;
+- press the ✕ and watch them go back to **Built-in**;
+- start a transcode, drop mid-conversion on Windows, and get the **In-use
+  refusal** with the previous pair still live.
+
+### Deliberately not built
+
+A zip upload; an Electron folder dialog for the pair; a confirm on remove; an
+upload progress bar; a success flash or snackbar after a swap (log 16 Q13
+rules it out for good — the redrawn rows are the feedback); a per-row ✕ or
+size on codec rows (log 15 Q7 and log 16 Q9, also for good); memoising
+`decoders()` or `capabilities()`, because the component is asked afresh on
+purpose so the report and the next Play cannot disagree; killing running
+conversions to free a locked binary; a version string parsed off
+`ffmpeg -version` for the row's name.
+
+`FAMILYFLIX_COMPONENT_PATH` defaults to a repo-local `./playback-component`
+and is the slot until the Electron shell points it at
+`app.getPath('userData')`. That, and _Change…_ and _Software update_, are
+still their own initiatives.
+
+### Follow-ups
+
+The refactor round, filed as 157 with the docs slice 156 folded into it: the
+**Component row** drawing the `RemoveButton` atom rather than a local copy of
+it two properties out from the prototype, the zone's three faces as a pure
+`zoneFace` mapper on `importView`'s precedent, the leaves nobody wrote for the
+fourth refusal and the swap's rollback, the mid-file phase banners, and the
+docs.
+
+---
+
 ## 2026-09-18 — Settings hub refactor (issue #149)
 
 Twelve commits against `docs/refactor-plans/15-settings-hub-refactor.md` —
