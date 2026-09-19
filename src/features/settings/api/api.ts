@@ -39,6 +39,71 @@ export async function fetchStorageReport(): Promise<StorageReport> {
   return (await response.json()) as StorageReport;
 }
 
+/**
+ * A write the **Component route** refused and named a reason for — the `400`
+ * of a stray or missing part, the `422` of a pair that will not run, and the
+ * `409` of the **In-use refusal**. It carries the server's own `error`, on the
+ * `ImportRefusedError` precedent: the words a family reads are the words the
+ * thing that refused chose. Everything else — a `500`, a body that will not
+ * parse — rejects plainly, and the hook substitutes its fixed line.
+ */
+export class ComponentRefusedError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'ComponentRefusedError';
+  }
+}
+
+/** Where a **Playback component** is installed. */
+const COMPONENT_ENDPOINT = '/api/playback/component';
+
+/** The three statuses that carry a sentence worth drawing in the zone. */
+const REFUSAL_STATUSES = [400, 409, 422];
+
+/** What a refusing **Component route** answers with, when it says why. */
+function namesAReason(body: unknown): body is { error: string } {
+  if (typeof body !== 'object' || body === null) {
+    return false;
+  }
+  return typeof (body as { error?: unknown }).error === 'string';
+}
+
+/**
+ * Install a **Playback component**: `POST /api/playback/component` carrying
+ * **one `component` part per file** and nothing else, answering the **Codec
+ * report** after the swap — so the screen redraws from the echo rather than
+ * reading again.
+ *
+ * It sorts nothing and labels nothing. The route tells the two **Component
+ * binaries** apart by filename, and a client that said which half a file was
+ * would be a client the route trusted.
+ */
+export async function installComponent(
+  files: File[]
+): Promise<PlaybackCapabilities> {
+  const form = new FormData();
+  for (const file of files) {
+    form.append('component', file);
+  }
+
+  const response = await fetch(COMPONENT_ENDPOINT, {
+    method: 'POST',
+    body: form,
+  });
+
+  if (!response.ok) {
+    if (REFUSAL_STATUSES.includes(response.status)) {
+      const body: unknown = await response.json().catch(() => null);
+      if (namesAReason(body)) {
+        throw new ComponentRefusedError(body.error);
+      }
+    }
+    throw new Error(`POST ${COMPONENT_ENDPOINT} failed: ${response.status}`);
+  }
+
+  return (await response.json()) as PlaybackCapabilities;
+}
+
 /** Where the preferred subtitle language is saved. */
 const SUBTITLE_LANGUAGE_ENDPOINT = '/api/settings/subtitle-language';
 

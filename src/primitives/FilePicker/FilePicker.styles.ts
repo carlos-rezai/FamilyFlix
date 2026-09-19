@@ -1,5 +1,7 @@
 import styled from 'styled-components';
 
+import { visuallyHidden } from '@/styles/visuallyHidden';
+
 /**
  * The dashed box that reads as a button and says what it wants — the empty
  * state of `mol.FileField.dc.html`, and the ＋ under the subtitle rows in
@@ -36,18 +38,12 @@ export const Box = styled.label`
  * The input itself: present to every screen reader and every file dialog, and
  * invisible to everyone else.
  *
- * Hidden by clipping rather than by `display: none`, which would take it out of
- * the accessibility tree along with the label naming it — and out of reach of a
- * keyboard, which is the one way this control is operated without a mouse.
+ * Hidden by the shared clipping rule rather than by `display: none`, which
+ * would take it out of the accessibility tree along with the label naming it —
+ * and out of reach of a keyboard, which is the one way this control is operated
+ * without a mouse. The **Component drop zone** hides its input with the same
+ * rule, which is why the rule is `src/styles/visuallyHidden` and not this file.
  */
 export const Input = styled.input`
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
-  border: 0;
+  ${visuallyHidden}
 `;
