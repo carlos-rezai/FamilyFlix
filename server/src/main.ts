@@ -3,9 +3,8 @@ import express from 'express';
 import { createImporter } from './import-export/createImporter/createImporter';
 import { createSqliteStorage } from './library';
 import { createMedia } from './media/createMedia/createMedia';
+import { createComponentSlot } from './playback/componentSlot/componentSlot';
 import { createPlayback } from './playback/createPlayback/createPlayback';
-import { ffmpegBinary } from './playback/ffmpegBinary/ffmpegBinary';
-import { ffmpegComponent } from './playback/ffmpegComponent/ffmpegComponent';
 import { createApiRouter } from './routes';
 
 /**
@@ -17,19 +16,25 @@ import { createApiRouter } from './routes';
 const PORT = Number(process.env.PORT ?? 3001);
 const DB_PATH = process.env.FAMILYFLIX_DB_PATH ?? './familyflix.db';
 const MEDIA_PATH = process.env.FAMILYFLIX_MEDIA_PATH ?? './media';
+const COMPONENT_PATH =
+  process.env.FAMILYFLIX_COMPONENT_PATH ?? './playback-component';
 
 const storage = createSqliteStorage(DB_PATH);
 
 /**
- * The **Playback component**, resolved once at startup:
- * `FAMILYFLIX_FFMPEG_PATH`, then `PATH`, then **absent**. Absent is a state
- * rather than an error — the app starts, the library browses, and MP4s still
- * direct-play on a machine with no FFmpeg on it.
+ * The **Component slot**: the writable directory an **Uploaded component**
+ * lives in, read ahead of `FAMILYFLIX_FFMPEG_PATH` and ahead of `PATH`. It
+ * resolves the live **Playback component** — `ffmpegBinary` and
+ * `ffmpegComponent` are called by the slot rather than here — and clears what
+ * a crashed upload left behind.
+ *
+ * Absent is a state rather than an error: a machine with no FFmpeg on it at
+ * all still starts, still browses the library, and still direct-plays its
+ * MP4s.
  */
-const binaries = ffmpegBinary(process.env);
-const component = binaries === null ? null : ffmpegComponent(binaries);
+const slot = createComponentSlot(COMPONENT_PATH, process.env);
 
-const playback = createPlayback(MEDIA_PATH, component);
+const playback = createPlayback(MEDIA_PATH, slot);
 const media = createMedia(MEDIA_PATH);
 
 const app = express();

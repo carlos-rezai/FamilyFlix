@@ -39,8 +39,12 @@ function isFile(candidate: string): boolean {
 /**
  * The pair in `directory`, if both halves of it are there. Half a component is
  * not a component, so this answers `null` rather than the half it found.
+ *
+ * Exported for the **Component slot**, which looks in its own `current/` by
+ * exactly this rule — what a pair is, and what a platform calls its halves, is
+ * one answer rather than the resolver's and the slot's.
  */
-function pairIn(directory: string): FfmpegBinaries | null {
+export function pairIn(directory: string): FfmpegBinaries | null {
   const ffmpeg = join(directory, `ffmpeg${EXE}`);
   const ffprobe = join(directory, `ffprobe${EXE}`);
 

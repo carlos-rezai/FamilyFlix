@@ -7,6 +7,7 @@ import {
   choosePlaybackPath,
   type ComponentAvailability,
 } from '../choosePlaybackPath/choosePlaybackPath';
+import type { ComponentSlot } from '../componentSlot/componentSlot';
 import type {
   PlaybackComponent,
   PlaybackProcess,
@@ -138,12 +139,14 @@ export interface Playback {
   cues(file: string): Cue[];
 
   /**
-   * The **Codec report**: what this machine can decode, over the component
-   * this domain was composed with and no other — so what Settings lists and
-   * what pressing Play does cannot disagree.
+   * The **Codec report**, assembled from both halves of the slot: the rows
+   * `capabilities` reads off the live component, and the **Component info**
+   * the slot says about it — over the component this domain resolves through
+   * and no other, so what Settings lists and what pressing Play does cannot
+   * disagree.
    *
-   * Nothing is memoised: the component is asked afresh on every read, so the
-   * day the live component is replaced the next read describes the new one.
+   * Nothing is memoised: the slot is asked afresh on every read, so the day
+   * the live component is replaced the next read describes the new one.
    */
   capabilities(): PlaybackCapabilities;
 }
@@ -164,31 +167,39 @@ function availabilityOf(
 }
 
 /**
- * Compose the playback domain over a managed media directory and whatever
- * **Playback component** this machine resolved.
+ * Compose the playback domain over a managed media directory and the
+ * **Component slot** this machine resolves its **Playback component** through.
  *
  * The directory is bound here rather than passed per call, so every route
  * reaches the same tree and none of them can be handed a different root by a
- * request. `main.ts` composes it from `FAMILYFLIX_MEDIA_PATH` and
- * `ffmpegBinary`; the tests compose it from a temporary directory and a fake
- * that never spawns anything.
+ * request. `main.ts` composes it from `FAMILYFLIX_MEDIA_PATH` and the slot over
+ * `FAMILYFLIX_COMPONENT_PATH`; the tests compose it from a temporary directory
+ * and `fixedSlot` over a fake that never spawns anything.
  *
- * `component` is `null` for a machine with no FFmpeg on it — CI is that
+ * **The slot rather than a component**, and read inside every method rather
+ * than closed over here: that is the whole of what makes a component installed
+ * from Settings while the app runs honoured by the next press of Play, with
+ * nothing to invalidate and no restart. A domain that closed over one would
+ * answer the startup machine for the rest of the evening.
+ *
+ * A slot answering `null` is a machine with no FFmpeg on it — CI is that
  * machine, and so is a family whose installer has not run yet.
  */
 export function createPlayback(
   mediaPath: string,
-  component: PlaybackComponent | null
+  slot: ComponentSlot
 ): Playback {
   /**
    * Probe the file and decide, which is the one thing both `read` and `stream`
    * do. Neither remembers the answer: the decision is made per request from the
-   * file, which is what lets a film that could not be played this morning play
-   * this afternoon.
+   * file and from whatever the slot holds now, which is what lets a film that
+   * could not be played this morning play this afternoon.
    */
   const decide = (file: string, offsetSeconds = 0) => {
+    const component = slot.current();
     const probe = component === null ? null : component.probe(file);
     return {
+      component,
       probe,
       decision: choosePlaybackPath({
         file,
@@ -226,7 +237,7 @@ export function createPlayback(
       // still leaves the header below to be read.
       let probed: number | null = null;
       try {
-        probed = component?.probe(file)?.durationSeconds ?? null;
+        probed = slot.current()?.probe(file)?.durationSeconds ?? null;
       } catch {
         probed = null;
       }
@@ -240,7 +251,7 @@ export function createPlayback(
       return mediaDuration(file);
     },
     stream: (file, offsetSeconds = 0) => {
-      const { probe, decision } = decide(file, offsetSeconds);
+      const { component, probe, decision } = decide(file, offsetSeconds);
 
       if (decision.path === 'direct') {
         return { path: 'direct' };
@@ -271,6 +282,9 @@ export function createPlayback(
         return [];
       }
     },
-    capabilities: () => capabilities(component),
+    capabilities: () => ({
+      component: slot.info(),
+      codecs: capabilities(slot.current()),
+    }),
   };
 }

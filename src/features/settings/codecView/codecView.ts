@@ -1,19 +1,31 @@
-import type {
-  CodecCapability,
-  CodecSupport,
-  PlaybackCapabilities,
-} from '@/types';
+import type { CodecCapability, PlaybackCapabilities } from '@/types';
+import { formatBytes } from '@/utils';
 
-/** One **Codec row** as the screen draws it. */
+/**
+ * What the **Status pill** says, as a word rather than as a support: the two
+ * a codec row can be, and the two the **Component row** can be. One template
+ * serves both kinds of row, so the word is the model's rather than the
+ * molecule's to work out.
+ */
+export type CodecRowStatus = 'built-in' | 'installed' | 'default' | 'uploaded';
+
+/** One row of the **Codec report** as the screen draws it — of either kind. */
 export interface CodecRowModel {
-  /** The decoder's name on the wire — `h264`, `hevc`, `ac3`. */
-  codec: string;
-  /** The prototype's display name — _H.264 / AVC_. */
+  /** What the row is about: a decoder's wire name, or `component`. */
+  key: string;
+  /** The prototype's display name — _H.264 / AVC_, _Playback component_. */
   name: string;
-  /** The **Container chips**, display only. */
-  exts: string[];
-  support: CodecSupport;
+  /** The **Container chips**, or the pair's basenames. Display only. */
+  chips: string[];
+  /** The size cell: `—` for a codec, the pair's weight for the component. */
+  size: string;
+  status: CodecRowStatus;
+  /** Whether there is anything here the maintainer can take back out. */
+  removable: boolean;
 }
+
+/** The size cell of a row that has no size of its own. */
+const NO_SIZE = '—';
 
 /** One entry of the **Format catalogue**: a decoder, named and chipped. */
 interface CatalogueEntry {
@@ -70,13 +82,53 @@ export function codecRows(report: PlaybackCapabilities): CodecRowModel[] {
       ? []
       : [
           {
-            codec: entry.codec,
+            key: entry.codec,
             name: entry.name,
-            exts: [...entry.exts],
-            support: capability.support,
+            chips: [...entry.exts],
+            // Every **Installed** row exists because of the one **Playback
+            // component**: none is a thing that can be taken out on its own,
+            // and none has a weight of its own.
+            size: NO_SIZE,
+            status:
+              capability.support === 'native'
+                ? ('built-in' as const)
+                : ('installed' as const),
+            removable: false,
           },
         ];
   });
+}
+
+/**
+ * The **Component row**: the one row that has a size and a source — the pair
+ * the player actually converts with, named _Playback component_, chipped with
+ * its two basenames and weighed the way the Storage card weighs the media
+ * folder.
+ *
+ * `null` for a machine with no component at all. No row rather than an empty
+ * one: there is nothing to name, weigh or remove, and the absence of a row is
+ * how this screen says so — the rule the codec rows already keep.
+ *
+ * Only an **Uploaded component** is removable. The **Default component** is
+ * the installer's rather than the maintainer's, and it is what a remove falls
+ * back to.
+ */
+export function componentRow(
+  report: PlaybackCapabilities
+): CodecRowModel | null {
+  const component = report.component;
+  if (component === null) {
+    return null;
+  }
+
+  return {
+    key: 'component',
+    name: 'Playback component',
+    chips: [...component.files],
+    size: formatBytes(component.bytes),
+    status: component.source,
+    removable: component.source === 'uploaded',
+  };
 }
 
 /**
@@ -84,13 +136,18 @@ export function codecRows(report: PlaybackCapabilities): CodecRowModel[] {
  * how many the **Playback component** added — or that there is none. It
  * counts the rows rather than the report, so two hundred decoders the
  * catalogue does not name are not two hundred formats enabled.
+ *
+ * **It counts the codec rows alone.** The **Component row** never enters the
+ * count: a family reading "20 formats enabled" is reading how many films play,
+ * and the ffmpeg pair is not a film format.
  */
 export function codecSummary(report: PlaybackCapabilities): string {
   const rows = codecRows(report);
-  const added = rows.filter((row) => row.support === 'via-component').length;
-  const tail = report.component
-    ? `${added} from the playback component`
-    : 'no playback component';
+  const added = rows.filter((row) => row.status === 'installed').length;
+  const tail =
+    report.component !== null
+      ? `${added} from the playback component`
+      : 'no playback component';
 
   return `${rows.length} formats enabled · ${tail}`;
 }

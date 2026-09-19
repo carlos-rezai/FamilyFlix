@@ -1,4 +1,4 @@
-import type { CodecCapability, PlaybackCapabilities } from '@/types';
+import type { CodecCapability } from '@/types';
 
 import {
   NATIVE_AUDIO_CODECS,
@@ -53,18 +53,22 @@ function parseDecoders(listed: string): CodecCapability[] {
 }
 
 /**
- * What this machine can actually decode: Chromium's native set on its own when
- * there is no **Playback component**, and that set ∪ what the component's
- * `ffmpeg -decoders` reports when there is one.
+ * What this machine can actually decode, as rows: Chromium's native set on its
+ * own when there is no **Playback component**, and that set ∪ what the
+ * component's `ffmpeg -decoders` reports when there is one.
+ *
+ * The rows alone, and not the whole **Codec report**: which component is live
+ * — its source, its size, its two basenames — is the **Component slot**'s
+ * answer and not something this function could know, so the report is
+ * assembled in one place, `Playback.capabilities()`, from both halves.
  *
  * The native set is imported from `choosePlaybackPath` rather than listed again
- * here, and the component is the one handed over — the one `main.ts` composed
- * and the player converts with — rather than a second resolution of the slot.
- * Both are the same rule: this report is the truth about what the player will
- * do, not a second opinion about it. A separate list would drift, and a
- * separate lookup would quietly stop honouring the slot the installer fills
- * the day the live component is replaced from Settings. Nothing here reads the
- * environment.
+ * here, and the component is the one handed over — the one the slot says is
+ * live and the player converts with — rather than a second resolution of the
+ * slot. Both are the same rule: this report is the truth about what the player
+ * will do, not a second opinion about it. A separate list would drift, and a
+ * separate lookup would quietly stop honouring the slot the day the live
+ * component is replaced from Settings. Nothing here reads the environment.
  *
  * A codec both can decode is reported **once, as native**. Two rows would be
  * two rows for one format, and calling it via-component would be a lie that
@@ -75,13 +79,13 @@ function parseDecoders(listed: string): CodecCapability[] {
  * `choosePlaybackPath` rests on — so a machine whose installer has not run yet
  * gets a codec screen that says MP4s play and nothing else does, rather than a
  * Settings page that takes the app down with it. A component that is there
- * and will not say adds no rows and is still reported present.
+ * and will not say adds no rows.
  */
 export function capabilities(
   component: PlaybackComponent | null
-): PlaybackCapabilities {
+): CodecCapability[] {
   if (component === null) {
-    return { component: false, codecs: nativeRows() };
+    return nativeRows();
   }
 
   const listed = component.decoders();
@@ -96,5 +100,5 @@ export function capabilities(
     codecs.push(row);
   }
 
-  return { component: true, codecs };
+  return codecs;
 }

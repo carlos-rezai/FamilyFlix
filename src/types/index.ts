@@ -40,6 +40,8 @@ export type {
   CodecKind,
   CodecSupport,
   CodecCapability,
+  ComponentSource,
+  PlaybackComponentInfo,
   PlaybackCapabilities,
 } from './playback';
 export type { MovieFormFile, MovieFormSubtitle, MovieFormValues } from './form';

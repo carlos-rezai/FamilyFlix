@@ -68,16 +68,48 @@ export interface CodecCapability {
 }
 
 /**
- * What this machine can decode, and whether a **Playback component** is part
- * of the answer — the contract of `GET /api/playback/capabilities`, read by
- * both build targets: the server answers it and the Settings page draws it.
+ * Where the live **Playback component** came from: the one the installer left
+ * on the machine, or the one the maintainer uploaded from Settings.
+ *
+ * The two are not two components in a list — only one is live at a time, and
+ * an **Uploaded component** is live *instead of* the default rather than
+ * beside it. What the word buys is the **Status pill**'s word and the answer
+ * to whether there is anything to take back out: the default is the
+ * installer's and not the maintainer's, so only an uploaded pair is
+ * removable.
+ */
+export type ComponentSource = 'default' | 'uploaded';
+
+/**
+ * The **Component info**: what the **Component row** draws about the pair the
+ * player actually converts with — where it came from, what the two files
+ * weigh together, and what they are called.
+ *
+ * It is the **Component slot**'s answer rather than anything the codec report
+ * could work out, which is why it travels as its own half of
+ * {@link PlaybackCapabilities} rather than as a row among the codecs. The
+ * bytes are the pair's summed, so the row can be read against Explorer.
+ */
+export interface PlaybackComponentInfo {
+  source: ComponentSource;
+  /** The two files' sizes added together, in bytes. */
+  bytes: number;
+  /** Their basenames, in the order the row chips them: ffmpeg, then ffprobe. */
+  files: string[];
+}
+
+/**
+ * What this machine can decode, and which **Playback component** is part of
+ * the answer — the contract of `GET /api/playback/capabilities`, read by both
+ * build targets: the server answers it and the Settings page draws it.
  *
  * `component` is reported separately from the rows because the two are not
  * the same claim: a component that is installed and will not say what it
  * decodes adds no rows and is still installed, and a family told otherwise
- * would go looking for an installer they already ran.
+ * would go looking for an installer they already ran. `null` is a machine
+ * with no component at all — the fresh install before its installer has run.
  */
 export interface PlaybackCapabilities {
-  component: boolean;
+  component: PlaybackComponentInfo | null;
   codecs: CodecCapability[];
 }

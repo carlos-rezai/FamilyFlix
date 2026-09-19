@@ -685,6 +685,7 @@ VITE_API_BASE_URL=http://localhost:3001
 FAMILYFLIX_DB_PATH= # entrypoint reads it and passes the path to createSqliteStorage; defaults to ./familyflix.db. Electron main sets this to app.getPath('userData')/familyflix.db.
 FAMILYFLIX_MEDIA_PATH= # root directory for copied video/subtitle/poster files; defaults to ./media. Electron main sets this to app.getPath('userData')/media.
 FAMILYFLIX_FFMPEG_PATH= # absolute path to the ffmpeg binary of the Playback component; ffprobe is looked for beside it. Unset falls back to `ffmpeg`/`ffprobe` on PATH, and then to absent — a state, not an error: MP4s still direct-play and everything else answers `cannot-play`. The slot the installer fills and the maintainer's uploaded component replaces.
+FAMILYFLIX_COMPONENT_PATH= # the Component slot: the writable directory an uploaded Playback component lives in (`current/`, with `incoming/` and `previous/` swept on startup); defaults to ./playback-component. Read ahead of FAMILYFLIX_FFMPEG_PATH and ahead of PATH, so an uploaded pair is what the next Play converts with. Electron main will set it to app.getPath('userData')/playback-component.
 DEBUG_SQL= # set to "1" to enable better-sqlite3 query tracing via console.info. Off by default; never on in packaged builds.
 
 ## The prototype is the spec
