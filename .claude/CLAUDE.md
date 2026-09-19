@@ -735,12 +735,31 @@ same layout, spacing, states, copy, and interaction.
 > Status legend: ✅ Done · 🔜 Planned · 🧭 Roadmap · 🚫 Out of scope
 > Every 🔜 item builds against its prototype in `docs/handoff/` — translate, don't redesign.
 
+**Build order — the five that are left.** The groups below say what the app
+_is_; this says what to build _next_, and it is a chain rather than a
+preference. Each 🔜 entry carries its step number.
+
+1. **Snackbar system** — nothing under it, so it is the only thing buildable
+   today. Also the **Software update** flow's only way to speak when a check
+   is refused, which is why it goes first rather than beside it
+   (`17-software-update` Q32).
+2. **Back-to-top FAB** — nothing under it either, and nothing above it; the
+   last renderer-only slice before the shell.
+3. **Electron desktop shell** — unblocks everything after it. `Change…` in the
+   Storage group and folder-path autofill in the **Movie form** are both
+   waiting on this one, and both stay undrawn until it lands.
+4. **Desktop packaging** — needs 3; produces the installer that 5 publishes.
+5. **Software update** — needs 1, 3 and 4. Designed in full already
+   (`docs/design-logs/17-software-update.md`); its PRD waits on 3.
+
+A 🧭 Roadmap item is not in this chain — it is after all five, if ever.
+
 ### Foundation
 
 - ✅ **Nx + Vite + React workspace scaffold** — monorepo, tooling, lint/format.
 - ✅ **Claude design handoff prototype** — full interactive design system, the build spec.
 - ✅ **Library core** — movie model, SQLite schema, repository layer.
-- 🔜 **Electron desktop shell** — main process, window, file-system access.
+- 🔜 **Electron desktop shell** _(step 3)_ — main process, window, file-system access. The gate every remaining Maintainer control sits behind.
 
 ### Browse & discover (parent-facing)
 
@@ -775,13 +794,13 @@ same layout, spacing, states, copy, and interaction.
 - ✅ **Codec manager — add a playback component** — the Component drop zone under the rows and the ✕ on the Component row: a pair dropped is staged, verified and sworn into the Component slot, and the next press of Play converts with it.
 - ✅ **Subtitle preferences** — the household's Preferred subtitle language, kept in the library's database and honoured by the player; the Auto-on toggle built but disabled until shipped.
 - ✅ **Storage** — the managed media folder's location and space used, agreeing with Explorer; _Change…_ is the Electron shell's.
-- 🔜 **Software update** — check for and install updates.
+- 🔜 **Software update** _(step 5)_ — the About card's first row: an Update offer downloaded at launch, Update now, and Check for updates. Needs steps 1, 3 and 4; designed in `17-software-update`.
 
 ### System
 
-- 🔜 **Snackbar system** — info / success / warning / error notifications.
-- 🔜 **Back-to-top FAB** — appears on long scroll on the home screen.
-- 🔜 **Desktop packaging** — Windows installer build.
+- 🔜 **Snackbar system** _(step 1 — next)_ — info / success / warning / error notices in the bottom-right Snackbar stack; an actionable one persists, a confirmation dies at 5s. Buildable today.
+- 🔜 **Back-to-top FAB** _(step 2)_ — appears on long scroll on the home screen. Buildable today.
+- 🔜 **Desktop packaging** _(step 4)_ — Windows installer build via electron-builder; needs step 3.
 
 ### Roadmap
 
