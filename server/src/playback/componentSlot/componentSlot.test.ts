@@ -266,19 +266,23 @@ async function stage(
 }
 
 /**
- * A rename whose **first** call fails the way a Windows lock on a running
- * `ffmpeg.exe` fails, and which does the real thing afterwards — so a test can
- * assert that the first failure stopped the swap dead rather than that renaming
- * is broken here.
+ * A rename whose `nth` call fails with `code` and which does the real thing on
+ * every other — so a test can assert that a failure stopped the swap where it
+ * stopped it, rather than that renaming is broken here.
+ *
+ * The **first** call is the one a Windows lock on a running `ffmpeg.exe`
+ * fails, with nothing moved. The **second** is the one that fails with
+ * `current/` already in `previous/`, which is the only thing the rollback
+ * exists for.
  */
-function lockedRename(code: string) {
+function renameFailing(code: string, nth = 1) {
   const attempts: [from: string, to: string][] = [];
 
   return {
     attempts,
     rename: (from: string, to: string): void => {
       attempts.push([from, to]);
-      if (attempts.length === 1) {
+      if (attempts.length === nth) {
         throw Object.assign(new Error(`${code}: rename '${from}' -> '${to}'`), {
           code,
         });
@@ -287,6 +291,9 @@ function lockedRename(code: string) {
     },
   };
 }
+
+/** The rename a lock fails: the first call, and the real thing after it. */
+const lockedRename = (code: string) => renameFailing(code);
 
 describe('createComponentSlot — an upload begun', () => {
   it('stages each half under the platform’s own name', async () => {
@@ -439,6 +446,27 @@ describe('createComponentSlot — the component swap', () => {
     expect((await stage(slot, 400, 600)).install()).toEqual({ ok: true });
 
     expect(slot.info()).toMatchObject({ source: 'uploaded', bytes: 1000 });
+  });
+
+  it('puts the live pair back when a swap stops after current/ moved', async () => {
+    // The second rename is the one that fails with the live component already
+    // in `previous/`. It goes back: the drop is lost, and the family's films
+    // are not — which is the whole reason the rollback is there.
+    const dir = slotWithUploaded(3, 5);
+    const stopped = renameFailing('ENOSPC', 2);
+    const slot = slotOver(dir, { rename: stopped.rename });
+    const live = slot.current();
+
+    expect((await stage(slot, 400, 600)).install()).toEqual({
+      ok: false,
+      reason: 'failed',
+    });
+
+    expect(readFileSync(join(dir, 'current', `ffmpeg${EXE}`))).toHaveLength(3);
+    expect(slot.info()).toMatchObject({ source: 'uploaded', bytes: 8 });
+    expect(slot.current()).toBe(live);
+    expect(existsSync(join(dir, 'incoming'))).toBe(false);
+    expect(existsSync(join(dir, 'previous'))).toBe(false);
   });
 });
 
