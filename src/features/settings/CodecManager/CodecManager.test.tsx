@@ -1,5 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { act, render, screen, waitFor } from '@testing-library/react';
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from '@testing-library/react';
 import { ThemeProvider } from 'styled-components';
 
 import { CodecManager } from './CodecManager';
@@ -308,14 +314,206 @@ describe('CodecManager — once the report lands', () => {
     expect(screen.getAllByText(/Built-in|Installed|Default/)).toHaveLength(6);
   });
 
-  it('offers no control — no Add a codec pack zone, no ✕', async () => {
+  it('offers the zone under the rows, and still no ✕', async () => {
     fetchMock.mockResolvedValue(okResponse(WITH_COMPONENT));
     renderManager();
 
     await waitFor(() => expect(summary()).not.toBeNull());
 
-    expect(screen.queryAllByRole('button')).toHaveLength(0);
-    expect(screen.queryByText(/add a codec pack/i)).toBeNull();
+    // The **Default component** is the installer's rather than the
+    // maintainer's: the ✕ is Phase 4's, and nothing here passes a handler.
+    expect(screen.getByText('Add a codec pack')).toBeDefined();
     expect(screen.queryByText('✕')).toBeNull();
+  });
+});
+
+/**
+ * 16 — Playback component upload, Phase 3: "the zone" (issue #154).
+ *
+ * The organism grows the control it has so far only described: the
+ * **Component drop zone**, composed **under** the rows, and the write behind
+ * it. Drop the two **Component binaries** and the _Installed_ rows appear, the
+ * **Codec summary** recounts, and the **Component row**'s pill reads
+ * **Uploaded** — all from the report the route echoed, with no second read and
+ * no reload.
+ *
+ * **Replaced is not a face**: there is no success flash to assert, because the
+ * redrawn rows are the feedback. A refusal is drawn in the zone and nowhere
+ * else, and the rows stay exactly as they were.
+ */
+
+/** The report after the swap: the pair is the maintainer's, and it adds more. */
+const AFTER_UPLOAD: PlaybackCapabilities = {
+  component: {
+    source: 'uploaded',
+    bytes: 101_000_000,
+    files: ['ffmpeg.exe', 'ffprobe.exe'],
+  },
+  codecs: [
+    native('h264', 'video'),
+    native('vp9', 'video'),
+    native('aac', 'audio'),
+    added('hevc', 'video'),
+    added('ac3', 'audio'),
+    added('dts', 'audio'),
+    added('av1', 'video'),
+  ],
+};
+
+/** The two halves, as a drop hands them over. */
+const PAIR = [new File(['MZ'], 'ffmpeg.exe'), new File(['MZ'], 'ffprobe.exe')];
+
+/** A refusal the route named a reason for. */
+function refusedResponse(status: number, error: string): Response {
+  return {
+    ok: false,
+    status,
+    json: () => Promise.resolve({ error }),
+  } as unknown as Response;
+}
+
+/** The zone itself — the `<label>` the hidden input sits under. */
+function zone(container: HTMLElement): HTMLElement {
+  const label = container.querySelector('label');
+  if (label === null) {
+    throw new Error('CodecManager drew no drop zone');
+  }
+  return label;
+}
+
+/** Drop the pair on the zone, the one gesture the whole feature is for. */
+async function dropPair(container: HTMLElement) {
+  await act(async () => {
+    fireEvent.drop(zone(container), {
+      dataTransfer: { files: PAIR, types: ['Files'] },
+    });
+  });
+}
+
+describe('CodecManager — the zone under the rows', () => {
+  it('draws the zone last, under the Component row', async () => {
+    fetchMock.mockResolvedValue(okResponse(WITH_COMPONENT));
+    renderManager();
+
+    await waitFor(() => expect(summary()).not.toBeNull());
+
+    expect(
+      comesBefore(
+        screen.getByText('Playback component'),
+        screen.getByText('Add a codec pack')
+      )
+    ).toBe(true);
+  });
+
+  it('takes a drop and posts the pair to the component route', async () => {
+    fetchMock.mockResolvedValue(okResponse(WITH_COMPONENT));
+    const { container } = renderManager();
+    await waitFor(() => expect(summary()).not.toBeNull());
+
+    fetchMock.mockResolvedValue(okResponse(AFTER_UPLOAD));
+    await dropPair(container);
+
+    expect(String(fetchMock.mock.calls[1][0])).toBe('/api/playback/component');
+    expect(fetchMock.mock.calls[1][1]?.method).toBe('POST');
+  });
+
+  it('shows the Installed rows the component added, with no reload', async () => {
+    fetchMock.mockResolvedValue(okResponse(WITH_COMPONENT));
+    const { container } = renderManager();
+    await waitFor(() => expect(summary()).not.toBeNull());
+    expect(screen.queryByText('DTS Audio')).toBeNull();
+
+    fetchMock.mockResolvedValue(okResponse(AFTER_UPLOAD));
+    await dropPair(container);
+
+    await waitFor(() => expect(screen.getByText('DTS Audio')).toBeDefined());
+    expect(screen.getByText('AV1')).toBeDefined();
+  });
+
+  it('recounts the summary, so the line and the rows never disagree', async () => {
+    fetchMock.mockResolvedValue(okResponse(WITH_COMPONENT));
+    const { container } = renderManager();
+    await waitFor(() =>
+      expect(
+        screen.getByText('5 formats enabled · 2 from the playback component')
+      ).toBeDefined()
+    );
+
+    fetchMock.mockResolvedValue(okResponse(AFTER_UPLOAD));
+    await dropPair(container);
+
+    await waitFor(() =>
+      expect(
+        screen.getByText('7 formats enabled · 4 from the playback component')
+      ).toBeDefined()
+    );
+  });
+
+  it('flips the Component row’s pill to Uploaded from the echo alone', async () => {
+    fetchMock.mockResolvedValue(okResponse(WITH_COMPONENT));
+    const { container } = renderManager();
+    await waitFor(() => expect(screen.getByText('Default')).toBeDefined());
+
+    fetchMock.mockResolvedValue(okResponse(AFTER_UPLOAD));
+    await dropPair(container);
+
+    await waitFor(() => expect(screen.getByText('Uploaded')).toBeDefined());
+    expect(screen.queryByText('Default')).toBeNull();
+    // The read on mount and the write: no re-fetch, and no success flash.
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('reads the busy copy while the copy and the check run', async () => {
+    fetchMock.mockResolvedValue(okResponse(WITH_COMPONENT));
+    const { container } = renderManager();
+    await waitFor(() => expect(summary()).not.toBeNull());
+
+    let settle: (response: Response) => void = () => undefined;
+    fetchMock.mockImplementation(
+      () =>
+        new Promise<Response>((resolve) => {
+          settle = resolve;
+        })
+    );
+    await dropPair(container);
+
+    expect(screen.getByText('Adding the playback component…')).toBeDefined();
+
+    await act(async () => {
+      settle(okResponse(AFTER_UPLOAD));
+    });
+    await waitFor(() => expect(screen.getByText('Uploaded')).toBeDefined());
+  });
+
+  it('draws a refusal in the zone and leaves the rows as they were', async () => {
+    const said = "That isn't a working ffmpeg build.";
+    fetchMock.mockResolvedValue(okResponse(WITH_COMPONENT));
+    const { container } = renderManager();
+    await waitFor(() => expect(summary()).not.toBeNull());
+
+    fetchMock.mockResolvedValue(refusedResponse(422, said));
+    await dropPair(container);
+
+    await waitFor(() => expect(screen.getByText(said)).toBeDefined());
+    expect(
+      screen.getByText('5 formats enabled · 2 from the playback component')
+    ).toBeDefined();
+    expect(screen.getByText('Default')).toBeDefined();
+    expect(screen.queryByText('DTS Audio')).toBeNull();
+  });
+
+  it('draws the fixed line when the route named no reason', async () => {
+    fetchMock.mockResolvedValue(okResponse(WITH_COMPONENT));
+    const { container } = renderManager();
+    await waitFor(() => expect(summary()).not.toBeNull());
+
+    fetchMock.mockResolvedValue(serverErrorResponse());
+    await dropPair(container);
+
+    await waitFor(() =>
+      expect(
+        screen.getByText("Couldn't add the playback component.")
+      ).toBeDefined()
+    );
   });
 });

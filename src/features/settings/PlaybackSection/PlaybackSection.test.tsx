@@ -231,15 +231,14 @@ describe('PlaybackSection — the report under the header', () => {
     ).toBe(true);
   });
 
-  it('draws no Add a codec pack zone', async () => {
+  it('draws the Add a codec pack zone the lede points at', async () => {
+    // 16 — Playback component upload, Phase 3 (issue #154): the second
+    // sentence of the lede now points at something, and the copy never moved.
     renderSection();
 
     await reportLanded();
-    expect(screen.queryByText(/add a codec pack/i)).toBeNull();
-    expect(screen.queryByText(/drop a playback component/i)).toBeNull();
-    expect(
-      screen.queryByRole('button', { name: /add a codec pack|browse/i })
-    ).toBeNull();
+    expect(screen.getByText('Add a codec pack')).toBeDefined();
+    expect(screen.getByText(/drop a playback component/i)).toBeDefined();
   });
 });
 

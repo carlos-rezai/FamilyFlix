@@ -1,8 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 import {
+  ComponentRefusedError,
   fetchCapabilities,
   fetchStorageReport,
+  installComponent,
   saveSubtitleLanguage,
 } from './api';
 import type { PlaybackCapabilities, StorageReport } from '@/types';
@@ -220,5 +222,176 @@ describe('fetchStorageReport', () => {
     fetchMock.mockRejectedValue(new Error('offline'));
 
     await expect(fetchStorageReport()).rejects.toThrow('offline');
+  });
+});
+
+/**
+ * 16 — Playback component upload, Phase 3: "the zone" (issue #154).
+ *
+ * `installComponent(files)` — the one write the **Codec report** makes:
+ * `POST /api/playback/component`, `multipart/form-data`, **one `component`
+ * part per file** and nothing else. The client sorts nothing and labels
+ * nothing: the route tells the two **Component binaries** apart by filename,
+ * and a client that said which half a file was would be a client the route
+ * trusted.
+ *
+ * It answers the **Codec report** after the swap, so the screen redraws from
+ * the echo rather than reading again — the precedent every write in the app
+ * keeps.
+ *
+ * Three statuses carry a sentence worth drawing: `400` (a stray part, a
+ * second of either, a missing half), `422` (a pair that will not run) and
+ * `409` (the **In-use refusal**). Each rejects with
+ * {@link ComponentRefusedError} carrying **the server's own `error`**, on the
+ * `ImportRefusedError` precedent — the words a family reads are the words the
+ * thing that refused chose. Everything else rejects plainly, and the hook
+ * substitutes its fixed line, so a `500` is not silence either.
+ */
+
+/** The two halves, as a file dialog or a drop hands them over. */
+const FFMPEG = new File(['MZ'], 'ffmpeg.exe', {
+  type: 'application/octet-stream',
+});
+const FFPROBE = new File(['MZ'], 'ffprobe.exe', {
+  type: 'application/octet-stream',
+});
+
+/** A refusal the route named a reason for, at the status it chose. */
+function refusedResponse(status: number, error: string): Response {
+  return {
+    ok: false,
+    status,
+    json: () => Promise.resolve({ error }),
+  } as unknown as Response;
+}
+
+/** A refusal whose body is not JSON at all — a proxy's HTML, a truncation. */
+function unreadableResponse(status: number): Response {
+  return {
+    ok: false,
+    status,
+    json: () => Promise.reject(new SyntaxError('Unexpected token < in JSON')),
+  } as unknown as Response;
+}
+
+/** What the route answers once the **Component swap** has happened. */
+const INSTALLED: PlaybackCapabilities = {
+  component: {
+    source: 'uploaded',
+    bytes: 98_765_432,
+    files: ['ffmpeg.exe', 'ffprobe.exe'],
+  },
+  codecs: [
+    { codec: 'h264', kind: 'video', support: 'native' },
+    { codec: 'hevc', kind: 'video', support: 'via-component' },
+  ],
+};
+
+/** The multipart body of the one request that was issued. */
+function sentForm(): FormData {
+  expect(fetchMock).toHaveBeenCalledTimes(1);
+  const body = fetchMock.mock.calls[0][1]?.body;
+  if (!(body instanceof FormData)) {
+    throw new Error('installComponent sent no multipart body');
+  }
+  return body;
+}
+
+describe('installComponent', () => {
+  it('posts the pair to the component route', async () => {
+    fetchMock.mockResolvedValue(okResponse(INSTALLED));
+
+    await installComponent([FFMPEG, FFPROBE]);
+
+    const { url, method } = onlyRequest();
+    expect(url).toBe('/api/playback/component');
+    expect(method).toBe('POST');
+  });
+
+  it('sends one `component` part per file, in the order they came', async () => {
+    fetchMock.mockResolvedValue(okResponse(INSTALLED));
+
+    await installComponent([FFMPEG, FFPROBE]);
+
+    expect(sentForm().getAll('component')).toEqual([FFMPEG, FFPROBE]);
+  });
+
+  it('sends whatever was dropped, sorting and naming nothing', async () => {
+    // One file, in the wrong order, or something that is neither half: the
+    // route is what refuses, because it is the only side that can be trusted
+    // to.
+    fetchMock.mockResolvedValue(okResponse(INSTALLED));
+    const stray = new File(['dll'], 'codec.dll');
+
+    await installComponent([FFPROBE, stray]).catch(() => undefined);
+
+    expect(sentForm().getAll('component')).toEqual([FFPROBE, stray]);
+  });
+
+  it('resolves the report the route echoed after the swap', async () => {
+    fetchMock.mockResolvedValue(okResponse(INSTALLED));
+
+    await expect(installComponent([FFMPEG, FFPROBE])).resolves.toEqual(
+      INSTALLED
+    );
+  });
+
+  it('rejects a 400 with the server’s own sentence', async () => {
+    const said = 'Both ffmpeg and ffprobe are needed.';
+    fetchMock.mockResolvedValue(refusedResponse(400, said));
+
+    await expect(installComponent([FFMPEG])).rejects.toThrow(said);
+    await expect(installComponent([FFMPEG])).rejects.toBeInstanceOf(
+      ComponentRefusedError
+    );
+  });
+
+  it('rejects a 422 with the server’s own sentence', async () => {
+    const said = "That isn't a working ffmpeg build.";
+    fetchMock.mockResolvedValue(refusedResponse(422, said));
+
+    await expect(installComponent([FFMPEG, FFPROBE])).rejects.toThrow(said);
+    await expect(installComponent([FFMPEG, FFPROBE])).rejects.toBeInstanceOf(
+      ComponentRefusedError
+    );
+  });
+
+  it('rejects a 409 with the server’s own sentence', async () => {
+    // The **In-use refusal**: the family's film is not stopped by the
+    // maintainer's drop, and the line that says so is the route's.
+    const said =
+      "The playback component is in use. Stop the film that's playing and try again.";
+    fetchMock.mockResolvedValue(refusedResponse(409, said));
+
+    await expect(installComponent([FFMPEG, FFPROBE])).rejects.toThrow(said);
+    await expect(installComponent([FFMPEG, FFPROBE])).rejects.toBeInstanceOf(
+      ComponentRefusedError
+    );
+  });
+
+  it('rejects a 500 plainly, with nothing to quote', async () => {
+    fetchMock.mockResolvedValue(serverErrorResponse());
+
+    const refusal = installComponent([FFMPEG, FFPROBE]);
+
+    await expect(refusal).rejects.toThrow();
+    await expect(refusal).rejects.not.toBeInstanceOf(ComponentRefusedError);
+  });
+
+  it('rejects plainly when a refusal’s body cannot be read', async () => {
+    fetchMock.mockResolvedValue(unreadableResponse(400));
+
+    const refusal = installComponent([FFMPEG, FFPROBE]);
+
+    await expect(refusal).rejects.toThrow();
+    await expect(refusal).rejects.not.toBeInstanceOf(ComponentRefusedError);
+  });
+
+  it('rejects when the request could not be made at all', async () => {
+    fetchMock.mockRejectedValue(new Error('offline'));
+
+    await expect(installComponent([FFMPEG, FFPROBE])).rejects.toThrow(
+      'offline'
+    );
   });
 });

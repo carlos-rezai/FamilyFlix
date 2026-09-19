@@ -1,11 +1,12 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { ThemeProvider } from 'styled-components';
+import styled, { ThemeProvider } from 'styled-components';
 
 // Through the category barrel — no per-unit barrel.
 import { FilePicker, type FilePickerProps } from '@/primitives';
 import { theme } from '@/styles/theme';
+import { visuallyHidden } from '@/styles/visuallyHidden';
 
 /** A film off the maintainer's own disk, as the browser hands it over. */
 const someFile = (name = 'lantern.mp4', type = 'video/mp4') =>
@@ -102,5 +103,58 @@ describe('FilePicker', () => {
     // the second choice is heard.
     expect(picker().value).toBe('');
     expect(onPick).toHaveBeenCalledTimes(2);
+  });
+});
+
+/**
+ * 16 — Playback component upload, Phase 3: "the zone" (issue #154).
+ *
+ * The clipping rule this atom spelled inline is now `src/styles/visuallyHidden`,
+ * because the **Component drop zone** needs the same bargain: an input that is
+ * invisible and still in the accessibility tree, still named by its label, and
+ * still in the tab order. `display: none` takes all three away, and two copies
+ * of the rule is two chances for one of them to drift.
+ *
+ * Asserted against the rule itself rather than against a transcription of it:
+ * a picker that kept its own copy would pass a list of literals and fail this.
+ */
+const Probe = styled.input`
+  ${visuallyHidden}
+`;
+
+/** The declarations that make the difference between hidden and gone. */
+const CLIPPED = [
+  'position',
+  'width',
+  'height',
+  'overflow',
+  'whiteSpace',
+  'clipPath',
+] as const;
+
+describe('FilePicker — the hidden input', () => {
+  it('hides it with the shared rule rather than with display: none', () => {
+    renderPicker();
+    const { container } = render(
+      <ThemeProvider theme={theme}>
+        <Probe />
+      </ThemeProvider>
+    );
+    const probe = container.querySelector('input');
+    if (probe === null) {
+      throw new Error('the probe drew no input');
+    }
+
+    const hidden = getComputedStyle(picker());
+    const shared = getComputedStyle(probe);
+    for (const property of CLIPPED) {
+      expect(hidden[property]).toBe(shared[property]);
+    }
+
+    // The point of clipping: the input is still there to be named and
+    // reached.
+    expect(hidden.display).not.toBe('none');
+    expect(hidden.position).toBe('absolute');
+    expect(hidden.width).toBe('1px');
   });
 });
