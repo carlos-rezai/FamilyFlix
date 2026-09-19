@@ -5,6 +5,7 @@ import {
   fetchCapabilities,
   fetchStorageReport,
   installComponent,
+  removeComponent,
   saveSubtitleLanguage,
 } from './api';
 import type { PlaybackCapabilities, StorageReport } from '@/types';
@@ -393,5 +394,109 @@ describe('installComponent', () => {
     await expect(installComponent([FFMPEG, FFPROBE])).rejects.toThrow(
       'offline'
     );
+  });
+});
+
+/**
+ * 16 — Playback component upload, Phase 4: "the ✕ takes it back" (issue #155).
+ *
+ * `removeComponent()` — `installComponent`'s inverse and its mirror:
+ * `DELETE /api/playback/component`, no body at all, answering the **Codec
+ * report** after the fall-back so the screen redraws from the echo rather
+ * than reading again.
+ *
+ * The statuses that carry a sentence worth drawing are the remove's own:
+ * `400`, `404` — the **Default component** is not removable, a fact about
+ * ownership rather than an error — and `409`, the **In-use refusal**. Each
+ * rejects with {@link ComponentRefusedError} carrying the server's own
+ * `error`; everything else rejects plainly, and the hook substitutes its
+ * fixed line.
+ */
+
+/** What the route answers once the upload has been taken back. */
+const REMOVED: PlaybackCapabilities = {
+  component: {
+    source: 'default',
+    bytes: 98_765_432,
+    files: ['ffmpeg.exe', 'ffprobe.exe'],
+  },
+  codecs: [{ codec: 'h264', kind: 'video', support: 'native' }],
+};
+
+describe('removeComponent', () => {
+  it('asks the component route to take the pair back', async () => {
+    fetchMock.mockResolvedValue(okResponse(REMOVED));
+
+    await removeComponent();
+
+    expect(onlyRequest()).toEqual({
+      url: '/api/playback/component',
+      method: 'DELETE',
+    });
+  });
+
+  it('sends nothing with it', async () => {
+    // There is one uploaded component and the server knows which: a body here
+    // would be the client naming something it cannot know better.
+    fetchMock.mockResolvedValue(okResponse(REMOVED));
+
+    await removeComponent();
+
+    expect(fetchMock.mock.calls[0][1]?.body).toBeUndefined();
+  });
+
+  it('answers the report the route echoed', async () => {
+    fetchMock.mockResolvedValue(okResponse(REMOVED));
+
+    await expect(removeComponent()).resolves.toEqual(REMOVED);
+  });
+
+  it('rejects a 404 with the route’s own words', async () => {
+    const said = 'The default playback component is not removable.';
+    fetchMock.mockResolvedValue(refusedResponse(404, said));
+
+    await expect(removeComponent()).rejects.toThrow(said);
+    await expect(removeComponent()).rejects.toBeInstanceOf(
+      ComponentRefusedError
+    );
+  });
+
+  it('rejects a 409 the same way', async () => {
+    const said =
+      "The playback component is in use. Stop the film that's playing and try again.";
+    fetchMock.mockResolvedValue(refusedResponse(409, said));
+
+    await expect(removeComponent()).rejects.toThrow(said);
+    await expect(removeComponent()).rejects.toBeInstanceOf(
+      ComponentRefusedError
+    );
+  });
+
+  it('rejects a 400 the same way', async () => {
+    const said = 'That request made no sense.';
+    fetchMock.mockResolvedValue(refusedResponse(400, said));
+
+    await expect(removeComponent()).rejects.toBeInstanceOf(
+      ComponentRefusedError
+    );
+    await expect(removeComponent()).rejects.toThrow(said);
+  });
+
+  it('rejects plainly on anything else', async () => {
+    fetchMock.mockResolvedValue(serverErrorResponse());
+
+    const refusal = removeComponent();
+
+    await expect(refusal).rejects.toThrow();
+    await expect(refusal).rejects.not.toBeInstanceOf(ComponentRefusedError);
+  });
+
+  it('rejects plainly when a refusal’s body cannot be read', async () => {
+    fetchMock.mockResolvedValue(unreadableResponse(409));
+
+    const refusal = removeComponent();
+
+    await expect(refusal).rejects.toThrow();
+    await expect(refusal).rejects.not.toBeInstanceOf(ComponentRefusedError);
   });
 });

@@ -314,14 +314,15 @@ describe('CodecManager — once the report lands', () => {
     expect(screen.getAllByText(/Built-in|Installed|Default/)).toHaveLength(6);
   });
 
-  it('offers the zone under the rows, and still no ✕', async () => {
+  it('offers the zone under the rows, and no ✕ on a default component', async () => {
     fetchMock.mockResolvedValue(okResponse(WITH_COMPONENT));
     renderManager();
 
     await waitFor(() => expect(summary()).not.toBeNull());
 
     // The **Default component** is the installer's rather than the
-    // maintainer's: the ✕ is Phase 4's, and nothing here passes a handler.
+    // maintainer's, so no handler is passed and the 32px spacer stands where
+    // the ✕ would — the negative half of Phase 4's rule.
     expect(screen.getByText('Add a codec pack')).toBeDefined();
     expect(screen.queryByText('✕')).toBeNull();
   });
@@ -513,6 +514,175 @@ describe('CodecManager — the zone under the rows', () => {
     await waitFor(() =>
       expect(
         screen.getByText("Couldn't add the playback component.")
+      ).toBeDefined()
+    );
+  });
+});
+
+/**
+ * 16 — Playback component upload, Phase 4: "the ✕ takes it back" (issue #155).
+ *
+ * The other half of the **Component row**. The organism passes `onRemove` into
+ * the optional prop the molecule already has **exactly when the report says
+ * the component is removable** — an **Uploaded component** and nothing else,
+ * because the **Default component** is the installer's rather than the
+ * maintainer's.
+ *
+ * Pressing it removes immediately: **no confirmation dialog**. The action is
+ * reversible by a drop, the files are the maintainer's own download, and the
+ * default comes back underneath.
+ *
+ * **Removed is not a face** either: the echoed report is the whole of the
+ * redraw — the _Installed_ rows the component added go, the **Codec summary**
+ * recounts, and the pill reads **Default** again, or the row goes with the
+ * pair on a machine that has no default either.
+ */
+
+/** The report after the fall-back, with nothing underneath the upload. */
+const NOTHING_LEFT: PlaybackCapabilities = WITHOUT_COMPONENT;
+
+/** The ✕ on the **Component row**, by the name that says what it removes. */
+const removeButton = () =>
+  screen.queryByRole('button', { name: 'Remove Playback component' });
+
+/** The manager with the report given already landed. */
+async function mountedWith(report: PlaybackCapabilities) {
+  fetchMock.mockResolvedValue(okResponse(report));
+  const view = renderManager();
+  await waitFor(() => expect(summary()).not.toBeNull());
+  return view;
+}
+
+/** The one press this whole slice is for. */
+async function pressRemove() {
+  const button = removeButton();
+  if (button === null) {
+    throw new Error('the Component row carried no ✕');
+  }
+  await act(async () => {
+    fireEvent.click(button);
+  });
+}
+
+describe('CodecManager — the ✕ on the Component row', () => {
+  it('carries a ✕ on an uploaded component, named for what it removes', async () => {
+    await mountedWith(AFTER_UPLOAD);
+
+    expect(removeButton()).not.toBeNull();
+  });
+
+  it('removes as soon as it is pressed, with nothing to confirm', async () => {
+    await mountedWith(AFTER_UPLOAD);
+
+    let settle: (response: Response) => void = () => undefined;
+    fetchMock.mockImplementation(
+      () =>
+        new Promise<Response>((resolve) => {
+          settle = resolve;
+        })
+    );
+    await pressRemove();
+
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(String(fetchMock.mock.calls[1][0])).toBe('/api/playback/component');
+    expect(fetchMock.mock.calls[1][1]?.method).toBe('DELETE');
+
+    await act(async () => {
+      settle(okResponse(WITH_COMPONENT));
+    });
+  });
+
+  it('reads the removing copy in the zone while the write runs', async () => {
+    await mountedWith(AFTER_UPLOAD);
+
+    let settle: (response: Response) => void = () => undefined;
+    fetchMock.mockImplementation(
+      () =>
+        new Promise<Response>((resolve) => {
+          settle = resolve;
+        })
+    );
+    await pressRemove();
+
+    expect(screen.getByText('Removing the playback component…')).toBeDefined();
+    expect(screen.getByText('The formats it added go with it')).toBeDefined();
+
+    await act(async () => {
+      settle(okResponse(WITH_COMPONENT));
+    });
+    await waitFor(() => expect(screen.getByText('Default')).toBeDefined());
+  });
+});
+
+describe('CodecManager — the fall-back redrawn', () => {
+  it('drops the rows the component added and recounts the summary', async () => {
+    await mountedWith(AFTER_UPLOAD);
+    expect(screen.getByText('DTS Audio')).toBeDefined();
+
+    fetchMock.mockResolvedValue(okResponse(WITH_COMPONENT));
+    await pressRemove();
+
+    await waitFor(() => expect(screen.queryByText('DTS Audio')).toBeNull());
+    expect(screen.queryByText('AV1')).toBeNull();
+    expect(
+      screen.getByText('5 formats enabled · 2 from the playback component')
+    ).toBeDefined();
+  });
+
+  it('reads Default again, from the echoed report alone', async () => {
+    await mountedWith(AFTER_UPLOAD);
+    expect(screen.getByText('Uploaded')).toBeDefined();
+
+    fetchMock.mockResolvedValue(okResponse(WITH_COMPONENT));
+    await pressRemove();
+
+    await waitFor(() => expect(screen.getByText('Default')).toBeDefined());
+    expect(screen.queryByText('Uploaded')).toBeNull();
+    expect(removeButton()).toBeNull();
+    // The read on mount and the write: no re-fetch, and no removed face.
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('leaves no Component row at all when there was no default underneath', async () => {
+    // The whole row goes with the pair, the rule the codec rows already keep:
+    // nothing to name, weigh or remove.
+    await mountedWith(AFTER_UPLOAD);
+
+    fetchMock.mockResolvedValue(okResponse(NOTHING_LEFT));
+    await pressRemove();
+
+    await waitFor(() =>
+      expect(screen.queryByText('Playback component')).toBeNull()
+    );
+    expect(
+      screen.getByText('3 formats enabled · no playback component')
+    ).toBeDefined();
+    expect(screen.getAllByText('Built-in')).toHaveLength(3);
+  });
+
+  it('draws a refused remove in the zone, the pair still live', async () => {
+    const said =
+      "The playback component is in use. Stop the film that's playing and try again.";
+    await mountedWith(AFTER_UPLOAD);
+
+    fetchMock.mockResolvedValue(refusedResponse(409, said));
+    await pressRemove();
+
+    await waitFor(() => expect(screen.getByText(said)).toBeDefined());
+    expect(screen.getByText('Uploaded')).toBeDefined();
+    expect(screen.getByText('DTS Audio')).toBeDefined();
+    expect(removeButton()).not.toBeNull();
+  });
+
+  it('draws the remove’s own fixed line when the route named no reason', async () => {
+    await mountedWith(AFTER_UPLOAD);
+
+    fetchMock.mockResolvedValue(serverErrorResponse());
+    await pressRemove();
+
+    await waitFor(() =>
+      expect(
+        screen.getByText("Couldn't remove the playback component.")
       ).toBeDefined()
     );
   });

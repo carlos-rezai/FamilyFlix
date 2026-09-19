@@ -51,6 +51,7 @@ const FFPROBE = binary('ffprobe.exe');
 
 const IDLE: UploadState = { kind: 'idle' };
 const INSTALLING: UploadState = { kind: 'busy', action: 'install' };
+const REMOVING: UploadState = { kind: 'busy', action: 'remove' };
 const refused = (reason: string): UploadState => ({ kind: 'refused', reason });
 
 /** #c97a6a, the `danger` token, as jsdom reports it. */
@@ -257,5 +258,41 @@ describe('ComponentDropZone — the refused face', () => {
     drop(zone, [FFMPEG, FFPROBE]);
 
     expect(onFiles).toHaveBeenCalledTimes(1);
+  });
+});
+
+/**
+ * 16 — Playback component upload, Phase 4: "the ✕ takes it back" (issue #155).
+ *
+ * The busy face gains the second thing it can be busy doing. The **Upload
+ * state**'s `action` is what tells them apart, and the zone is where both are
+ * said — the ✕ is pressed on the **Component row**, but the row has nowhere to
+ * put a sentence, and the zone already owns the one that says what is
+ * happening.
+ *
+ * The prototype's own copy: _Removing the playback component…_ over _The
+ * formats it added go with it_ — which is the warning, said as a fact.
+ */
+
+describe('ComponentDropZone — the removing face', () => {
+  it('reads the prototype’s removing copy rather than the install’s', () => {
+    const { zone } = renderZone(REMOVING);
+
+    expect(zone.textContent).toContain('Removing the playback component…');
+    expect(zone.textContent).toContain('The formats it added go with it');
+    expect(zone.textContent).not.toContain('Adding the playback component…');
+    expect(zone.textContent).not.toContain('Add a codec pack');
+  });
+
+  it('is as closed as the installing face while it runs', () => {
+    const { zone, input, onFiles } = renderZone(REMOVING);
+
+    drop(zone, [FFMPEG, FFPROBE]);
+
+    // One slot, one write at a time: a drop landing on a removal would be two
+    // answers for one component.
+    expect(zone.textContent).toContain('Removing the playback component…');
+    expect(input.disabled).toBe(true);
+    expect(onFiles).not.toHaveBeenCalled();
   });
 });

@@ -1,15 +1,17 @@
 // @vitest-environment node
 //
 // 16 — Playback component upload, Phase 1: "the slot resolves what is live,
-// and it has a row" (issue #152), and Phase 2: "an upload changes what the
-// next Play decides" (issue #153).
+// and it has a row" (issue #152), Phase 2: "an upload changes what the
+// next Play decides" (issue #153), and Phase 4: "the ✕ takes it back"
+// (issue #155).
 //
 // The **Component slot**: the writable directory an **Uploaded component**
 // lives in, and the object over it. Phase 1 is its **read** half —
 // `current()`, the component the player actually converts with, and `info()`,
 // what the **Component row** draws. Phase 2, from _an upload begun_ below, is
 // its **write** half: the **Incoming component**, the **Verified component**
-// and the **Component swap**.
+// and the **Component swap**. Phase 4, from _the uploaded pair taken back_, is
+// that write half's inverse: `remove()` and the fall-back under it.
 //
 // The rule the whole initiative rests on is a resolution order: the slot is
 // read **first**, ahead of `FAMILYFLIX_FFMPEG_PATH` and ahead of `PATH`. An
@@ -39,7 +41,10 @@ import {
   ffmpegIn,
 } from '../../test-support/componentDir/componentDir';
 import { sandboxRoot } from '../../test-support/sandboxRoot/sandboxRoot';
-import type { FfmpegBinaries } from '../ffmpegBinary/ffmpegBinary';
+import type {
+  FfmpegBinaries,
+  FfmpegEnvironment,
+} from '../ffmpegBinary/ffmpegBinary';
 
 import { createComponentSlot, type ComponentSlot } from './componentSlot';
 
@@ -232,15 +237,20 @@ describe('createComponentSlot — the leftovers of a crashed run', () => {
 const partOf = (size: number, fill = 1): Readable =>
   Readable.from([Buffer.alloc(size, fill)]);
 
-/** A slot over `dir` whose verification and renaming the test decides. */
+/**
+ * A slot over `dir` whose verification and renaming the test decides, on a
+ * machine with no component of its own unless the test names one — which is
+ * what a remove falls back to.
+ */
 function slotOver(
   dir: string,
   seams: {
     verify?: (pair: FfmpegBinaries) => boolean;
     rename?: (from: string, to: string) => void;
-  } = {}
+  } = {},
+  env: FfmpegEnvironment = {}
 ): ComponentSlot {
-  return createComponentSlot(dir, {}, { verify: () => true, ...seams });
+  return createComponentSlot(dir, env, { verify: () => true, ...seams });
 }
 
 /** A pair staged through the slot, ready to install. */
@@ -472,6 +482,139 @@ describe('createComponentSlot — the in-use refusal', () => {
       outcome = error;
     }
 
+    expect(outcome).not.toEqual({ ok: false, reason: 'in-use' });
+  });
+});
+
+// --- the remove half: the ✕ takes the upload back -----------------------------
+//
+// Phase 4. `remove()` is the inverse of the **Component swap**: the
+// **Uploaded component** goes out of `current/` and the **Default component**
+// is resolved again underneath it — which is the whole reason the default was
+// never overwritten. On a machine that never had one, what comes back is
+// `null`, and that is a state rather than a failure: MP4s still direct-play.
+//
+// Outcomes are values here too — `{ ok: true }`, or `nothing-uploaded` for a
+// slot holding no upload to take back, or `in-use` for a pair a conversion is
+// holding open. The **In-use refusal** is the same single failing rename the
+// install classifies, asked of the one syscall that moved the live pair.
+
+describe('createComponentSlot — the uploaded pair taken back', () => {
+  it('falls back to the default component', () => {
+    // The point of the fall-back: the installer's build is still there, so
+    // the machine converts films a moment after the upload is gone.
+    const installed = defaultPair(120, 80);
+    const dir = slotWithUploaded(400, 600);
+    const slot = slotOver(
+      dir,
+      {},
+      { FAMILYFLIX_FFMPEG_PATH: ffmpegIn(installed) }
+    );
+    const uploaded = slot.current();
+
+    expect(slot.remove()).toEqual({ ok: true });
+
+    expect(slot.info()).toEqual({
+      source: 'default',
+      bytes: 200,
+      files: [`ffmpeg${EXE}`, `ffprobe${EXE}`],
+    });
+    expect(slot.current()).not.toBe(uploaded);
+    expect(slot.current()).not.toBeNull();
+  });
+
+  it('takes the pair out of the slot directory, leaving no staging behind', () => {
+    const dir = slotWithUploaded(400, 600);
+
+    expect(slotOver(dir).remove()).toEqual({ ok: true });
+
+    expect(existsSync(join(dir, 'current', `ffmpeg${EXE}`))).toBe(false);
+    expect(existsSync(join(dir, 'previous'))).toBe(false);
+  });
+
+  it('answers null on a machine whose only component was the upload', () => {
+    // There is no default underneath: the **Component row** goes with the
+    // pair, and the app is the reduced one it was before the drop.
+    const slot = slotOver(slotWithUploaded(400, 600), {}, { PATH: '' });
+
+    expect(slot.remove()).toEqual({ ok: true });
+
+    expect(slot.current()).toBeNull();
+    expect(slot.info()).toBeNull();
+  });
+
+  it('is not blocked by a previous/ a crash left behind', () => {
+    const dir = slotWithUploaded(400, 600);
+    mkdirSync(join(dir, 'previous'), { recursive: true });
+    writeFileSync(join(dir, 'previous', `ffmpeg${EXE}`), Buffer.alloc(9, 1));
+
+    expect(slotOver(dir).remove()).toEqual({ ok: true });
+
+    expect(slotOver(dir).info()).toBeNull();
+  });
+});
+
+describe('createComponentSlot — nothing to take back', () => {
+  it('refuses to remove the default component', () => {
+    // A fact about ownership rather than an error: the **Default component**
+    // is the installer's, not the maintainer's to take away. The row that
+    // offers no ✕ and the slot that refuses say the same thing.
+    const installed = defaultPair(120, 80);
+    const slot = slotOver(
+      emptySlot(),
+      {},
+      {
+        FAMILYFLIX_FFMPEG_PATH: ffmpegIn(installed),
+      }
+    );
+
+    expect(slot.remove()).toEqual({ ok: false, reason: 'nothing-uploaded' });
+
+    expect(slot.info()?.source).toBe('default');
+  });
+
+  it('refuses the same way on a machine with no component at all', () => {
+    const slot = slotOver(emptySlot(), {}, { PATH: '' });
+
+    expect(slot.remove()).toEqual({ ok: false, reason: 'nothing-uploaded' });
+
+    expect(slot.current()).toBeNull();
+  });
+});
+
+describe('createComponentSlot — a remove the lock refuses', () => {
+  for (const code of ['EBUSY', 'EPERM', 'EACCES']) {
+    it(`calls a rename failing with ${code} in use, the pair still live`, async () => {
+      // A conversion is holding the live `ffmpeg.exe` open. The maintainer's
+      // ✕ does not stop the family's film — the same refusal the drop gets,
+      // off the same one failing syscall.
+      const dir = slotWithUploaded(400, 600);
+      const locked = lockedRename(code);
+      const slot = slotOver(dir, { rename: locked.rename });
+      const live = slot.current();
+
+      expect(slot.remove()).toEqual({ ok: false, reason: 'in-use' });
+
+      expect(locked.attempts).toHaveLength(1);
+      expect(readFileSync(join(dir, 'current', `ffmpeg${EXE}`))).toHaveLength(
+        400
+      );
+      expect(slot.info()).toMatchObject({ source: 'uploaded', bytes: 1000 });
+      expect(slot.current()).toBe(live);
+    });
+  }
+
+  it('does not call an unrelated errno in use', async () => {
+    // A full disk is not a lock, and sending the maintainer to stop a film
+    // that is not the problem would be worse than saying nothing useful.
+    const dir = slotWithUploaded(400, 600);
+    const slot = slotOver(dir, { rename: lockedRename('ENOSPC').rename });
+
+    const outcome: unknown = slot.remove();
+
+    // A value, never a throw — the rule the install keeps, and the reason
+    // nothing above the slot reasons about errno.
+    expect(outcome).toMatchObject({ ok: false });
     expect(outcome).not.toEqual({ ok: false, reason: 'in-use' });
   });
 });

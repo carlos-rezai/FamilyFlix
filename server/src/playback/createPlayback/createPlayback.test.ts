@@ -579,6 +579,51 @@ describe('createPlayback — the slot’s write half, forwarded', () => {
 
     expect(createPlayback(media, slot).receiveComponent()).toBe(incoming);
   });
+
+  it('hands back the outcome the slot answered for a remove', () => {
+    // Phase 4. `removeComponent` is as thin as its inverse: the slot decides
+    // whether there was anything to take back and whether a conversion is
+    // holding it open, and the route maps that reason to a status.
+    const { media } = mediaWith('Northwind (2018)/northwind.mkv');
+    const outcome = { ok: false, reason: 'in-use' } as const;
+    const slot: ComponentSlot = {
+      current: () => null,
+      info: () => null,
+      receive: () => {
+        throw new Error('the removing slot does not receive');
+      },
+      remove: () => outcome,
+    };
+
+    expect(createPlayback(media, slot).removeComponent()).toEqual(outcome);
+  });
+
+  it('describes the fallen-back component the next time it is asked', () => {
+    // Nothing is memoised: the report after a remove is the slot read afresh,
+    // which is what lets the screen redraw from the echo alone.
+    const { media } = mediaWith('Northwind (2018)/northwind.mkv');
+    let uploaded = true;
+    const slot: ComponentSlot = {
+      current: () => null,
+      info: () =>
+        uploaded
+          ? { source: 'uploaded', bytes: 1000, files: ['ffmpeg', 'ffprobe'] }
+          : null,
+      receive: () => {
+        throw new Error('the removing slot does not receive');
+      },
+      remove: () => {
+        uploaded = false;
+        return { ok: true };
+      },
+    };
+    const playback = createPlayback(media, slot);
+
+    expect(playback.capabilities().component?.source).toBe('uploaded');
+    playback.removeComponent();
+
+    expect(playback.capabilities().component).toBeNull();
+  });
 });
 
 /**

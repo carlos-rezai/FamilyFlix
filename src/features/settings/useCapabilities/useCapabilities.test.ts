@@ -379,3 +379,202 @@ describe('useCapabilities — the screen left mid-upload', () => {
     expect(result.current.capabilities).toEqual(REPORT);
   });
 });
+
+/**
+ * 16 — Playback component upload, Phase 4: "the ✕ takes it back" (issue #155).
+ *
+ * The hook's second write, and the first one's inverse:
+ * `{ capabilities, upload, installComponent, removeComponent }`. It behaves
+ * the way the install does in every respect the **Upload state** can see —
+ * `busy('remove')` rather than `busy('install')` while it runs, the echoed
+ * report as the whole of the redraw, the route's own words on a refusal and
+ * the fixed line when it named none, a call while busy ignored, and **no
+ * rejection out of the hook**.
+ *
+ * **No confirmation** is asked anywhere: the ✕ removes immediately. The
+ * action is reversible by a drop, the files are the maintainer's own
+ * download, and the **Default component** comes back underneath.
+ */
+
+/** The report after the fall-back: the default pair, and fewer formats. */
+const AFTER_REMOVE: PlaybackCapabilities = {
+  component: {
+    source: 'default',
+    bytes: 98_765_432,
+    files: ['ffmpeg.exe', 'ffprobe.exe'],
+  },
+  codecs: [{ codec: 'h264', kind: 'video', support: 'native' }],
+};
+
+/** The fixed line the hook substitutes when a refused remove named no reason. */
+const REMOVE_FALLBACK = "Couldn't remove the playback component.";
+
+describe('useCapabilities — removing a component', () => {
+  it('asks the component route to take the pair back', async () => {
+    const { result } = await mounted();
+    fetchMock.mockResolvedValue(okResponse(AFTER_REMOVE));
+
+    await act(async () => {
+      await result.current.removeComponent();
+    });
+
+    expect(String(fetchMock.mock.calls[1][0])).toBe('/api/playback/component');
+    expect(fetchMock.mock.calls[1][1]?.method).toBe('DELETE');
+  });
+
+  it('redraws from the echo, without reading again', async () => {
+    const { result } = await mounted();
+    fetchMock.mockResolvedValue(okResponse(AFTER_REMOVE));
+
+    await act(async () => {
+      await result.current.removeComponent();
+    });
+
+    expect(result.current.capabilities).toEqual(AFTER_REMOVE);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(result.current.upload).toEqual({ kind: 'idle' });
+  });
+
+  it('is busy removing while the write is in flight', async () => {
+    const { result } = await mounted();
+    const write = holdWrite();
+
+    act(() => {
+      void result.current.removeComponent();
+    });
+
+    await waitFor(() =>
+      expect(result.current.upload).toEqual({ kind: 'busy', action: 'remove' })
+    );
+
+    await act(async () => {
+      write.settle(okResponse(AFTER_REMOVE));
+    });
+    await waitFor(() =>
+      expect(result.current.upload).toEqual({ kind: 'idle' })
+    );
+  });
+
+  it('ignores a second press while the removal is in flight', async () => {
+    const { result } = await mounted();
+    holdWrite();
+
+    act(() => {
+      void result.current.removeComponent();
+    });
+    await waitFor(() =>
+      expect(result.current.upload).toEqual({ kind: 'busy', action: 'remove' })
+    );
+    await act(async () => {
+      await result.current.removeComponent();
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('ignores a press while an install is still running', async () => {
+    // One slot, one write at a time: a remove racing an install would be two
+    // answers for one component.
+    const { result } = await mounted();
+    holdWrite();
+
+    act(() => {
+      void result.current.installComponent(PAIR);
+    });
+    await waitFor(() =>
+      expect(result.current.upload).toEqual({ kind: 'busy', action: 'install' })
+    );
+    await act(async () => {
+      await result.current.removeComponent();
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(result.current.upload).toEqual({ kind: 'busy', action: 'install' });
+  });
+
+  it('never rejects out of the hook', async () => {
+    const { result } = await mounted();
+    fetchMock.mockResolvedValue(refusedResponse(409, 'In use.'));
+
+    await act(async () => {
+      await expect(result.current.removeComponent()).resolves.toBeUndefined();
+    });
+  });
+});
+
+describe('useCapabilities — a refused remove', () => {
+  it('keeps the route’s own words as the reason', async () => {
+    const said =
+      "The playback component is in use. Stop the film that's playing and try again.";
+    const { result } = await mounted();
+    fetchMock.mockResolvedValue(refusedResponse(409, said));
+
+    await act(async () => {
+      await result.current.removeComponent();
+    });
+
+    expect(result.current.upload).toEqual({ kind: 'refused', reason: said });
+  });
+
+  it('leaves the report exactly as it was', async () => {
+    // Nothing was taken out: the **Component row** still says what it said.
+    const { result } = await mounted();
+    fetchMock.mockResolvedValue(
+      refusedResponse(404, 'The default playback component is not removable.')
+    );
+
+    await act(async () => {
+      await result.current.removeComponent();
+    });
+
+    expect(result.current.capabilities).toEqual(REPORT);
+  });
+
+  it('substitutes the remove line when the route named no reason', async () => {
+    // Its own line, not the install's: a `500` is not silence, and it is not
+    // the wrong sentence either.
+    const { result } = await mounted();
+    fetchMock.mockResolvedValue(serverErrorResponse());
+
+    await act(async () => {
+      await result.current.removeComponent();
+    });
+
+    expect(result.current.upload).toEqual({
+      kind: 'refused',
+      reason: REMOVE_FALLBACK,
+    });
+  });
+
+  it('substitutes it when the request never left either', async () => {
+    const { result } = await mounted();
+    fetchMock.mockRejectedValue(new Error('offline'));
+
+    await act(async () => {
+      await result.current.removeComponent();
+    });
+
+    expect(result.current.upload).toEqual({
+      kind: 'refused',
+      reason: REMOVE_FALLBACK,
+    });
+  });
+});
+
+describe('useCapabilities — the screen left mid-remove', () => {
+  it('redraws nothing when the answer lands after the unmount', async () => {
+    const { result, unmount } = await mounted();
+    const write = holdWrite();
+
+    act(() => {
+      void result.current.removeComponent();
+    });
+    unmount();
+
+    await act(async () => {
+      write.settle(okResponse(AFTER_REMOVE));
+    });
+
+    expect(result.current.capabilities).toEqual(REPORT);
+  });
+});

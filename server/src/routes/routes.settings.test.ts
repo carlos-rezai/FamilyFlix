@@ -32,6 +32,13 @@
 //   missing half; `422` for a pair that will not run; `409` for the
 //   **In-use refusal**. Nothing new is injected: the route reaches the
 //   **Component slot** through the `playback` the router already holds.
+// - `DELETE /api/playback/component` → `200 PlaybackCapabilities`, the report
+//   **after the fall-back** — the ✕ on the **Component row**, added by
+//   `16-component-upload` Phase 4 (issue #155). The same shape the capability
+//   read answers, because the screen redraws from the echo rather than
+//   reading again; `404` when there is nothing uploaded, the **Default
+//   component** being the installer's rather than the maintainer's; `409` for
+//   the **In-use refusal**, word for word the one the upload gives.
 // - `GET /api/settings` → `200 { subtitleLanguage }`, the household's one
 //   preference with the default already applied, so no client has to know
 //   what it is.
@@ -932,5 +939,182 @@ describe('POST /api/playback/component — what the router was composed with', (
     // resolution of the component, and the report and pressing Play could
     // then disagree.
     expect(createApiRouter).toHaveLength(5);
+  });
+});
+
+// --- the remove: DELETE /api/playback/component --------------------------------
+//
+// Phase 4 (issue #155), the upload route's inverse. The ✕ on the **Component
+// row** sends this, the **Component slot** takes the **Uploaded component**
+// out and resolves the **Default component** again, and the route answers the
+// report **after** the fall-back — the same shape
+// `GET /api/playback/capabilities` answers, because the screen redraws from
+// the echo rather than reading again, and a second read is a second chance to
+// disagree with it. A `204` was rejected for exactly that reason.
+//
+// Two refusals, and one of them is not an error at heart: the `404` says the
+// **Default component** is not removable, which is a fact about ownership —
+// it is the installer's, not the maintainer's to take away, and the row that
+// offers no ✕ and the route that refuses agree. The `409` is the **In-use
+// refusal**, word for word the one the upload gives.
+
+/** The **Component info** of an upload waiting to be taken back. */
+const UPLOADED: PlaybackComponentInfo = {
+  source: 'uploaded',
+  bytes: 101_000_000,
+  files: ['ffmpeg.exe', 'ffprobe.exe'],
+};
+
+/** What the slot falls back to: the installer's build, weighed. */
+const FELL_BACK: PlaybackComponentInfo = {
+  source: 'default',
+  bytes: 98_765_432,
+  files: ['ffmpeg.exe', 'ffprobe.exe'],
+};
+
+/**
+ * A **Component slot** holding an upload, which a remove takes back.
+ *
+ * A successful remove leaves the component the machine fell back to — the
+ * resolver's, which decodes nothing beyond Chromium's own set, or none at all
+ * on a machine that never had one. A refused remove changes nothing, which is
+ * what "the pair is still live" is asserted through.
+ */
+function removableSlot({
+  outcome = { ok: true },
+  fallback = 'default',
+}: {
+  outcome?: { ok: true } | { ok: false; reason: 'nothing-uploaded' | 'in-use' };
+  fallback?: 'default' | 'none';
+} = {}) {
+  let component: PlaybackComponent | null = fakeComponent(DECODERS);
+  let info: PlaybackComponentInfo | null = UPLOADED;
+
+  const slot: ComponentSlot = {
+    current: () => component,
+    info: () => info,
+    receive: () => {
+      throw new Error('the removable slot does not receive');
+    },
+    remove: () => {
+      if (outcome.ok) {
+        component = fallback === 'default' ? fakeComponent(null) : null;
+        info = fallback === 'default' ? FELL_BACK : null;
+      }
+      return outcome;
+    },
+  };
+
+  return { slot };
+}
+
+/** The ✕, on the wire. */
+const deleteComponent = (baseUrl: string): Promise<Response> =>
+  fetch(`${baseUrl}/api/playback/component`, { method: 'DELETE' });
+
+describe('DELETE /api/playback/component — the pair taken back', () => {
+  it('answers 200 with the report after the fall-back', async () => {
+    const { baseUrl } = freshApi({ slot: removableSlot().slot });
+
+    const response = await deleteComponent(baseUrl);
+
+    expect(response.status).toBe(200);
+    const reported = (await response.json()) as PlaybackCapabilities;
+    expect(reported.component).toEqual(FELL_BACK);
+  });
+
+  it('drops the rows the uploaded component added', async () => {
+    const { baseUrl } = freshApi({ slot: removableSlot().slot });
+
+    const reported = (await (
+      await deleteComponent(baseUrl)
+    ).json()) as PlaybackCapabilities;
+
+    expect(entryFor(reported, 'hevc')).toBeUndefined();
+    expect(entryFor(reported, 'ac3')).toBeUndefined();
+    expect(reported.codecs.every((entry) => entry.support === 'native')).toBe(
+      true
+    );
+  });
+
+  it('echoes exactly what the capability read answers next', async () => {
+    // The whole reason this is a `200` and not a `204`: the screen redraws
+    // from truth, and the two reads cannot disagree.
+    const { baseUrl } = freshApi({ slot: removableSlot().slot });
+
+    const echoed = (await (
+      await deleteComponent(baseUrl)
+    ).json()) as PlaybackCapabilities;
+
+    expect(echoed).toEqual(await readCapabilities(baseUrl));
+  });
+
+  it('answers a null component when the upload was the only one', async () => {
+    // There is no default underneath: the **Component row** goes with the
+    // pair, and what is left is the machine Chromium alone can play.
+    const { baseUrl } = freshApi({
+      slot: removableSlot({ fallback: 'none' }).slot,
+    });
+
+    const reported = (await (
+      await deleteComponent(baseUrl)
+    ).json()) as PlaybackCapabilities;
+
+    expect(reported.component).toBeNull();
+    expect(reported.codecs.length).toBeGreaterThan(0);
+    expect(reported.codecs.every((entry) => entry.support === 'native')).toBe(
+      true
+    );
+  });
+});
+
+describe('DELETE /api/playback/component — what the slot refuses', () => {
+  it('answers 404 when there is nothing uploaded to take back', async () => {
+    // Ownership rather than an error: the **Default component** is the
+    // installer's, and the row that offers no ✕ says the same thing.
+    const { baseUrl } = freshApi({
+      slot: removableSlot({
+        outcome: { ok: false, reason: 'nothing-uploaded' },
+      }).slot,
+    });
+
+    const response = await deleteComponent(baseUrl);
+
+    expect(response.status).toBe(404);
+    const said = await errorOf(response);
+    expect(said).toMatch(/default/i);
+    expect(said).toMatch(/not removable/i);
+    expect((await readCapabilities(baseUrl)).component).toEqual(UPLOADED);
+  });
+
+  it('answers 409 for a component a conversion is holding open', async () => {
+    // The **In-use refusal**: a refusal, never a kill. The maintainer's ✕
+    // does not stop the family's film.
+    const { baseUrl } = freshApi({
+      slot: removableSlot({ outcome: { ok: false, reason: 'in-use' } }).slot,
+    });
+
+    const response = await deleteComponent(baseUrl);
+
+    expect(response.status).toBe(409);
+    expect(await errorOf(response)).toBe(
+      "The playback component is in use. Stop the film that's playing and try again."
+    );
+    expect((await readCapabilities(baseUrl)).component).toEqual(UPLOADED);
+  });
+
+  it('says what the upload says when the pair is in use', async () => {
+    // One sentence for one condition: the drop and the ✕ are refused in the
+    // same words, because they are refused by the same lock.
+    const removing = freshApi({
+      slot: removableSlot({ outcome: { ok: false, reason: 'in-use' } }).slot,
+    });
+    const installing = freshApi({
+      slot: uploadableSlot({ ok: false, reason: 'in-use' }).slot,
+    });
+
+    expect(await errorOf(await deleteComponent(removing.baseUrl))).toBe(
+      await errorOf(await postComponent(installing.baseUrl, PAIR()))
+    );
   });
 });
