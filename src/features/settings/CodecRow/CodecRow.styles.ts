@@ -106,29 +106,12 @@ export const Pill = styled.span<{ $status: CodecRowStatus }>`
       CAME_WITH.includes($status) ? theme.colors.border : INSTALLED_LINE};
 `;
 
-/** The 32px the ✕ takes, kept as a spacer so the pills line up without one. */
+/**
+ * The 32px the ✕ takes, kept as a spacer so the pills line up without one.
+ * The ✕ itself is `primitives/RemoveButton`, which is this same 32px square on
+ * the prototype's 7px corner — the atom two molecules already share.
+ */
 export const Spacer = styled.span`
   flex: 0 0 auto;
   width: 32px;
-`;
-
-/** The ✕ itself, in the same 32px, reddening on hover. */
-export const RemoveButton = styled.button`
-  flex: 0 0 auto;
-  display: grid;
-  place-items: center;
-  width: 32px;
-  height: 32px;
-  background: transparent;
-  border: none;
-  border-radius: 7px;
-  font-family: ${({ theme }) => theme.fonts.sans};
-  font-size: 13px;
-  color: ${({ theme }) => theme.colors.textFaint};
-  cursor: pointer;
-
-  &:hover {
-    color: ${({ theme }) => theme.colors.danger};
-    background: rgba(201, 122, 106, 0.1);
-  }
 `;

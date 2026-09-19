@@ -1,11 +1,10 @@
-import { MicrochipIcon } from '@/primitives';
+import { MicrochipIcon, RemoveButton } from '@/primitives';
 import type { CodecRowModel, CodecRowStatus } from '../codecView/codecView';
 import {
   Chip,
   Chips,
   Name,
   Pill,
-  RemoveButton,
   Row,
   Size,
   Spacer,
@@ -64,13 +63,7 @@ export function CodecRow({ row, onRemove }: CodecRowProps) {
       {onRemove === undefined ? (
         <Spacer />
       ) : (
-        <RemoveButton
-          type="button"
-          aria-label={`Remove ${row.name}`}
-          onClick={onRemove}
-        >
-          ✕
-        </RemoveButton>
+        <RemoveButton removes={row.name} onClick={onRemove} />
       )}
     </Row>
   );
