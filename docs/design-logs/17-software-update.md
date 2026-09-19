@@ -332,6 +332,21 @@ has not been built yet?
     and `page.SettingsPage` rows — all of it **after the refactor**, not when
     the build issues close.
 
+### Build order
+
+32. **Doesn't the Snackbar have to be built first?** ✅ **Yes — the plan below
+    was reordered for it**, after the maintainer asked. Two things had been
+    under-weighted. The row's four faces are self-contained, which is why the
+    bridge looked like the thinner first slice — but two of the four **Update
+    check** outcomes, `refused` and `unavailable`, have nowhere to go except a
+    **Snackbar**, so a bridge-first phase 1 would ship a **Check for updates**
+    button that does nothing visible with the network down: exactly what Q9
+    ruled out. And the Snackbar is the one part of this initiative that needs
+    no Electron at all, so putting it first is what stops the only unblocked
+    phase from waiting behind a gate it does not share. This does not reopen
+    Q2: the Snackbar is still this initiative's, still arrives with a caller,
+    and the caller is one phase behind it rather than one phase ahead.
+
 ## Design
 
 ### The contract — `src/types/update.ts`
@@ -512,21 +527,27 @@ itself (packaging's); the shell (its own initiative).
 
 ## Implementation Plan
 
-> Gated: every phase below needs the **Electron desktop shell** initiative, and
-> phase 4 needs the **Desktop packaging** one. Phase 1 is the thinnest
-> end-to-end path _through the shell that exists by then_.
+> Gated unevenly, which is what sets the order (Q32): **phase 1 needs nothing
+> that does not already exist**, phases 2 and 3 need the **Electron desktop
+> shell** initiative, and phase 4 needs the **Desktop packaging** one.
 
-1. **The bridge, end to end.** `src/types/update.ts`; `electron/updates/` with
-   `channels.ts` and `createUpdates/`; `main.ts`'s startup check and its IPC;
-   `preload.ts`'s `window.familyflix.updates`; `updateBridge/`,
-   `useSoftwareUpdate/`, `updateFace/`, `SoftwareUpdateRow/` and the About
-   card's geometry. The thinnest slice that works: the maintainer opens
-   Settings in the installed app, reads _You're up to date_, presses the button
-   and watches _Last checked just now_ appear.
-2. **The Snackbar system.** `components/Snackbar/` 1:1, `App/SnackbarProvider/`
-   with the portal stack and the 5s rule, `App/useSnackbar/`, the host mounted
-   in `App`; the row's three pressed-check answers pushed through it. The first
-   thing that proves the queue: press the button with the network off.
+1. **The Snackbar system.** `components/Snackbar/` 1:1 with the molecule,
+   `App/SnackbarProvider/` with the portal stack, the queue and the 5s rule,
+   `App/useSnackbar/`, the host mounted in `App`. The only phase with no shell
+   under it, so it is the only one buildable today; its caller arrives in
+   phase 2, inside this same initiative. Proven by its own tests: a notice with
+   an action outlives 5s, one without does not, and the stack orders
+   newest-nearest-the-corner.
+2. **The bridge and the row, fully voiced.** `src/types/update.ts`;
+   `electron/updates/` with `channels.ts` and `createUpdates/`; `main.ts`'s
+   startup check and its IPC; `preload.ts`'s `window.familyflix.updates`;
+   `updateBridge/`, `useSoftwareUpdate/`, `updateFace/`, `SoftwareUpdateRow/`
+   and the About card's geometry — **and the row's three pressed-check answers
+   pushed through phase 1's stack**, because a check that is refused has
+   nowhere else to speak. The slice that works: the maintainer opens Settings
+   in the installed app, reads _You're up to date_, presses the button and
+   watches _Last checked just now_ appear — then pulls the network out and
+   presses again, and is told so.
 3. **The offer and the congratulation.** `SoftwareUpdateNotice/` mounted in
    `App`, `seenVersion/`, the offer snackbar at launch with **Update now**
    wired to `install()` from either surface, and the success line on the next
@@ -553,7 +574,7 @@ browser's `undefined` is answered once. And the Snackbar arrives with a caller,
 and arrives designed — four variants against four tokens that have sat unused
 since the theme was written.
 
-**Harder.** The whole initiative is gated on a shell that does not exist, and
+**Harder.** Everything but phase 1 is gated on a shell that does not exist, and
 this log will be read months after it was written — Q12 is the part that has to
 survive that, because the shell's grill has to carry a member it did not
 design. `localStorage` is now load-bearing for one snackbar (Q25); it was
