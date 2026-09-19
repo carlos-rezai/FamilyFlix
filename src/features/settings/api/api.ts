@@ -41,11 +41,12 @@ export async function fetchStorageReport(): Promise<StorageReport> {
 
 /**
  * A write the **Component route** refused and named a reason for — the `400`
- * of a stray or missing part, the `422` of a pair that will not run, and the
- * `409` of the **In-use refusal**. It carries the server's own `error`, on the
- * `ImportRefusedError` precedent: the words a family reads are the words the
- * thing that refused chose. Everything else — a `500`, a body that will not
- * parse — rejects plainly, and the hook substitutes its fixed line.
+ * of a stray or missing part, the `422` of a pair that will not run, the `409`
+ * of the **In-use refusal**, and the remove's own `404`, which says the
+ * **Default component** is not removable. It carries the server's own `error`,
+ * on the `ImportRefusedError` precedent: the words a family reads are the
+ * words the thing that refused chose. Everything else — a `500`, a body that
+ * will not parse — rejects plainly, and the hook substitutes its fixed line.
  */
 export class ComponentRefusedError extends Error {
   constructor(message: string) {
@@ -57,8 +58,11 @@ export class ComponentRefusedError extends Error {
 /** Where a **Playback component** is installed. */
 const COMPONENT_ENDPOINT = '/api/playback/component';
 
-/** The three statuses that carry a sentence worth drawing in the zone. */
-const REFUSAL_STATUSES = [400, 409, 422];
+/**
+ * The four statuses that carry a sentence worth drawing in the zone — the
+ * install's three, and the remove's `404`.
+ */
+const REFUSAL_STATUSES = [400, 404, 409, 422];
 
 /** What a refusing **Component route** answers with, when it says why. */
 function namesAReason(body: unknown): body is { error: string } {
@@ -66,6 +70,27 @@ function namesAReason(body: unknown): body is { error: string } {
     return false;
   }
   return typeof (body as { error?: unknown }).error === 'string';
+}
+
+/**
+ * What to reject a refused **Component route** with: the route's own sentence
+ * when it named one on a status that carries one, and a plain `Error`
+ * otherwise — which is the hook's cue to substitute its own fixed line.
+ *
+ * Both writes read a refusal the same way, because both are refused by the
+ * same route over the same slot.
+ */
+async function componentRefusal(
+  response: Response,
+  what: string
+): Promise<Error> {
+  if (REFUSAL_STATUSES.includes(response.status)) {
+    const body: unknown = await response.json().catch(() => null);
+    if (namesAReason(body)) {
+      return new ComponentRefusedError(body.error);
+    }
+  }
+  return new Error(`${what} failed: ${response.status}`);
 }
 
 /**
@@ -92,13 +117,26 @@ export async function installComponent(
   });
 
   if (!response.ok) {
-    if (REFUSAL_STATUSES.includes(response.status)) {
-      const body: unknown = await response.json().catch(() => null);
-      if (namesAReason(body)) {
-        throw new ComponentRefusedError(body.error);
-      }
-    }
-    throw new Error(`POST ${COMPONENT_ENDPOINT} failed: ${response.status}`);
+    throw await componentRefusal(response, `POST ${COMPONENT_ENDPOINT}`);
+  }
+
+  return (await response.json()) as PlaybackCapabilities;
+}
+
+/**
+ * Remove the **Playback component**: `DELETE /api/playback/component` with no
+ * body at all, answering the **Codec report** after the fall-back — so the
+ * screen redraws from the echo rather than reading again, exactly as the
+ * install does.
+ *
+ * There is one uploaded component and the server knows which. A body here
+ * would be the client naming something it cannot know better.
+ */
+export async function removeComponent(): Promise<PlaybackCapabilities> {
+  const response = await fetch(COMPONENT_ENDPOINT, { method: 'DELETE' });
+
+  if (!response.ok) {
+    throw await componentRefusal(response, `DELETE ${COMPONENT_ENDPOINT}`);
   }
 
   return (await response.json()) as PlaybackCapabilities;

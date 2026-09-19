@@ -30,12 +30,14 @@ export interface ComponentDropZoneProps {
  * was would be a client the server trusted.
  *
  * **Three faces**, the three the **Upload state** has: **idle** as drawn;
- * **busy**, with the input disabled and a second drop reporting nothing, so
- * two uploads cannot race into the same slot; and **refused**, which keeps the
- * title and puts the route's own reason in the danger ink on the second line,
- * where it stays until the next attempt replaces it — silence on a refusal was
- * rejected, because a `.dll` dropped by a parent following the old copy must
- * not do nothing.
+ * **busy**, which says which of the two writes is running — _Adding_ over
+ * _Copying it in and checking it runs_, or _Removing_ over _The formats it
+ * added go with it_ — with the input disabled and a second drop reporting
+ * nothing, so two writes cannot race into the same slot; and **refused**,
+ * which keeps the title and puts the route's own reason in the danger ink on
+ * the second line, where it stays until the next attempt replaces it — silence
+ * on a refusal was rejected, because a `.dll` dropped by a parent following the
+ * old copy must not do nothing.
  *
  * **Replaced is not a face**: the write echoes the **Codec report** and the
  * screen redraws from it — no success flash, no snackbar.
@@ -48,6 +50,9 @@ export function ComponentDropZone({ upload, onFiles }: ComponentDropZoneProps) {
 
   const busy = upload.kind === 'busy';
   const refused = upload.kind === 'refused';
+  // The ✕ is pressed on the **Component row**, but the row has nowhere to put
+  // a sentence and the zone already owns the one that says what is happening.
+  const removing = upload.kind === 'busy' && upload.action === 'remove';
 
   const report = (files: FileList | null) => {
     // A cancelled dialog and an empty drop are both nothing at all.
@@ -92,9 +97,19 @@ export function ComponentDropZone({ upload, onFiles }: ComponentDropZoneProps) {
         <UploadIcon size={24} />
       </Glyph>
       <Title>
-        {busy ? 'Adding the playback component…' : 'Add a codec pack'}
+        {busy
+          ? removing
+            ? 'Removing the playback component…'
+            : 'Adding the playback component…'
+          : 'Add a codec pack'}
       </Title>
-      {busy && <Line $refused={false}>Copying it in and checking it runs</Line>}
+      {busy && (
+        <Line $refused={false}>
+          {removing
+            ? 'The formats it added go with it'
+            : 'Copying it in and checking it runs'}
+        </Line>
+      )}
       {refused && <Line $refused>{upload.reason}</Line>}
       {!busy && !refused && (
         <Line $refused={false}>

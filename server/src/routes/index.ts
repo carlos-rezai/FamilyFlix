@@ -17,7 +17,10 @@ import { writeSheet } from '../import-export/writeSheet/writeSheet';
 import type { Media } from '../media/createMedia/createMedia';
 import { spaceUsed } from '../media/spaceUsed/spaceUsed';
 import { componentBinary } from '../playback/componentBinary/componentBinary';
-import type { InstallRefusal } from '../playback/componentSlot/componentSlot';
+import type {
+  InstallRefusal,
+  RemoveRefusal,
+} from '../playback/componentSlot/componentSlot';
 import type { Playback } from '../playback/createPlayback/createPlayback';
 import { derivedRuntime } from '../playback/derivedRuntime/derivedRuntime';
 import { isRatingValue, MAX_RATING } from './isRatingValue/isRatingValue';
@@ -105,6 +108,30 @@ const REFUSALS: Record<InstallRefusal, { status: number; error: string }> = {
   failed: {
     status: 500,
     error: 'The playback component could not be replaced.',
+  },
+};
+
+/**
+ * What the **Component slot** refused a remove for, read the same way.
+ *
+ * `nothing-uploaded` is a `404` because it is a fact about ownership rather
+ * than an error: the **Default component** is the installer's, not the
+ * maintainer's to take away, and the row that offers no ✕ and this refusal
+ * say the same thing. `in-use` is the install's sentence exactly — one
+ * condition, one set of words, because it is the same lock.
+ */
+const REMOVE_REFUSALS: Record<
+  RemoveRefusal,
+  { status: number; error: string }
+> = {
+  'nothing-uploaded': {
+    status: 404,
+    error: 'The default playback component is not removable.',
+  },
+  'in-use': REFUSALS['in-use'],
+  failed: {
+    status: 500,
+    error: 'The playback component could not be removed.',
   },
 };
 
@@ -1049,6 +1076,29 @@ export function createApiRouter(
     const outcome = incoming.install();
     if (!outcome.ok) {
       const refused = REFUSALS[outcome.reason];
+      res.status(refused.status).json({ error: refused.error });
+      return;
+    }
+
+    res.json(playback.capabilities());
+  });
+
+  // The ✕ on the **Component row**: the **Uploaded component** taken back out
+  // and the **Default component** resolved again underneath it.
+  //
+  // It **echoes the same shape the capability read answers**, with the
+  // fallen-back report in it. A `204` was rejected for exactly that reason:
+  // the screen redraws from truth rather than re-fetching, and the two reads
+  // cannot disagree. No body travels the other way either — there is one
+  // uploaded component and the server knows which.
+  //
+  // Nothing new is injected here either, and nothing reasons about directories
+  // or errno: the slot answers a reason through `playback` and this maps it to
+  // a status.
+  router.delete('/playback/component', (_req: Request, res: Response) => {
+    const outcome = playback.removeComponent();
+    if (!outcome.ok) {
+      const refused = REMOVE_REFUSALS[outcome.reason];
       res.status(refused.status).json({ error: refused.error });
       return;
     }

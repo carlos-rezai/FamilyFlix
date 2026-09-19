@@ -5,6 +5,7 @@ import {
   ComponentRefusedError,
   fetchCapabilities,
   installComponent as postComponent,
+  removeComponent as deleteComponent,
 } from '../api/api';
 
 /**
@@ -17,8 +18,8 @@ import {
  */
 export type UploadState =
   | { kind: 'idle' }
-  /** A write is in flight. `remove` joins `install` when the ✕ ships. */
-  | { kind: 'busy'; action: 'install' }
+  /** A write is in flight, and which of the two the zone says it is. */
+  | { kind: 'busy'; action: 'install' | 'remove' }
   | { kind: 'refused'; reason: string };
 
 export interface CapabilitiesState {
@@ -31,16 +32,28 @@ export interface CapabilitiesState {
   upload: UploadState;
   /** Install the two **Component binaries** as they were dropped or picked. */
   installComponent: (files: File[]) => Promise<void>;
+  /**
+   * Take the uploaded pair back out, the **Default component** coming back
+   * underneath it. **Nothing is confirmed**: the ✕ removes immediately.
+   */
+  removeComponent: () => Promise<void>;
 }
 
-/** What the zone says when the route refused and named no reason of its own. */
-const FALLBACK_REASON = "Couldn't add the playback component.";
+/**
+ * What the zone says when the route refused and named no reason of its own —
+ * one line per write, because a `500` is not silence and it is not the wrong
+ * sentence either.
+ */
+const FALLBACK_REASON: Record<'install' | 'remove', string> = {
+  install: "Couldn't add the playback component.",
+  remove: "Couldn't remove the playback component.",
+};
 
 /** The sentence to draw for a refusal: the route's own, or the fixed line. */
-function reasonFor(refusal: unknown): string {
+function reasonFor(refusal: unknown, action: 'install' | 'remove'): string {
   return refusal instanceof ComponentRefusedError
     ? refusal.message
-    : FALLBACK_REASON;
+    : FALLBACK_REASON[action];
 }
 
 /**
@@ -52,15 +65,17 @@ function reasonFor(refusal: unknown): string {
  * read on the Settings page repeats: no skeleton, no error face, no snackbar.
  * A refused read is a report that never arrived.
  *
- * Nothing re-fetches after a write: `POST /api/playback/component` answers the
- * report after the swap, and that echo *is* the redraw — a second `GET` would
- * be a second chance to disagree with it.
+ * Nothing re-fetches after a write: both halves of `/api/playback/component`
+ * answer the report after the write, and that echo *is* the redraw — a second
+ * `GET` would be a second chance to disagree with it. **No confirmation** is
+ * asked before a remove either: the action is reversible by a drop, and the
+ * **Default component** comes back underneath.
  *
- * **The write never rejects.** The organism draws a refusal from state and
+ * **The writes never reject.** The organism draws a refusal from state and
  * never from a caught exception, so a caller that forgot to `catch` cannot
  * turn a `409` into an unhandled rejection. A call made while one is in flight
- * is ignored — two uploads cannot race into the same slot — and an answer
- * landing after the screen has gone redraws nothing.
+ * is ignored — one slot, one write at a time — and an answer landing after the
+ * screen has gone redraws nothing.
  */
 export function useCapabilities(): CapabilitiesState {
   const [capabilities, setCapabilities] = useState<PlaybackCapabilities | null>(
@@ -94,28 +109,56 @@ export function useCapabilities(): CapabilitiesState {
     };
   }, []);
 
-  const install = useCallback(async (files: File[]): Promise<void> => {
-    if (inFlight.current) {
-      return;
-    }
-    inFlight.current = true;
-    setUpload({ kind: 'busy', action: 'install' });
-
-    try {
-      const report = await postComponent(files);
-      if (onScreen.current) {
-        setCapabilities(report);
-        setUpload({ kind: 'idle' });
+  /**
+   * The one shape both writes have: busy, then the echoed report or the
+   * reason it was refused — and never a rejection out of the hook. Only the
+   * action and the request itself differ, which is the whole of why there is
+   * one of these rather than two.
+   */
+  const write = useCallback(
+    async (
+      action: 'install' | 'remove',
+      request: () => Promise<PlaybackCapabilities>
+    ): Promise<void> => {
+      if (inFlight.current) {
+        return;
       }
-    } catch (refusal) {
-      if (onScreen.current) {
-        // The report stays exactly as it was: nothing was swapped.
-        setUpload({ kind: 'refused', reason: reasonFor(refusal) });
-      }
-    } finally {
-      inFlight.current = false;
-    }
-  }, []);
+      inFlight.current = true;
+      setUpload({ kind: 'busy', action });
 
-  return { capabilities, upload, installComponent: install };
+      try {
+        const report = await request();
+        if (onScreen.current) {
+          setCapabilities(report);
+          setUpload({ kind: 'idle' });
+        }
+      } catch (refusal) {
+        if (onScreen.current) {
+          // The report stays exactly as it was: nothing was swapped or taken.
+          setUpload({ kind: 'refused', reason: reasonFor(refusal, action) });
+        }
+      } finally {
+        inFlight.current = false;
+      }
+    },
+    []
+  );
+
+  const install = useCallback(
+    (files: File[]): Promise<void> =>
+      write('install', () => postComponent(files)),
+    [write]
+  );
+
+  const remove = useCallback(
+    (): Promise<void> => write('remove', deleteComponent),
+    [write]
+  );
+
+  return {
+    capabilities,
+    upload,
+    installComponent: install,
+    removeComponent: remove,
+  };
 }

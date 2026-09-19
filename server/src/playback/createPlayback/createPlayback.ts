@@ -10,6 +10,7 @@ import {
 import type {
   ComponentSlot,
   IncomingComponent,
+  RemoveOutcome,
 } from '../componentSlot/componentSlot';
 import type {
   PlaybackComponent,
@@ -165,6 +166,18 @@ export interface Playback {
    * one.
    */
   receiveComponent(): IncomingComponent;
+
+  /**
+   * Take the **Uploaded component** back out, the slot falling back to the
+   * **Default component** underneath it.
+   *
+   * As thin as its inverse, and for the same reason: the slot decides whether
+   * there was anything to take back and whether a conversion is holding it
+   * open, and the route maps that reason to a status. Nothing is memoised
+   * here either, so the report the route echoes afterwards is the slot read
+   * afresh — which is what lets the screen redraw from the echo alone.
+   */
+  removeComponent(): RemoveOutcome;
 }
 
 /**
@@ -303,5 +316,6 @@ export function createPlayback(
       codecs: capabilities(slot.current()),
     }),
     receiveComponent: () => slot.receive(),
+    removeComponent: () => slot.remove(),
   };
 }

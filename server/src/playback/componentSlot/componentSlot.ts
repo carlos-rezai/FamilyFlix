@@ -55,6 +55,25 @@ export type InstallRefusal =
   | 'failed';
 
 /**
+ * What a remove answered. The install's shape exactly, and for the same
+ * reason: **a value, never a throw**, so the route maps a reason to a status
+ * and nothing above the slot reasons about errno.
+ */
+export type RemoveOutcome = { ok: true } | { ok: false; reason: RemoveRefusal };
+
+/**
+ * Why the **Uploaded component** did not come back out.
+ *
+ * `nothing-uploaded` is not an error at heart: the **Default component** is
+ * the installer's rather than the maintainer's, and the row that offers no ✕
+ * and the slot that refuses say the same thing. `in-use` is the **In-use
+ * refusal**, the same single failing rename the install classifies. `failed`
+ * is the honest fourth the install already has — a full disk, a directory
+ * gone from under it — which is neither the lock nor the maintainer's to fix.
+ */
+export type RemoveRefusal = 'nothing-uploaded' | 'in-use' | 'failed';
+
+/**
  * A drop being staged: the **Incoming component**, under `<slot>/incoming/`
  * and nowhere near the component the family's films are playing through.
  *
@@ -126,13 +145,14 @@ export interface ComponentSlot {
   receive(): IncomingComponent;
 
   /**
-   * The remove half, which is Phase 4's of `16-component-upload`. It is
-   * declared here because the contract is one object rather than two, and
-   * `never` is the honest return until that half exists: nothing may call it
-   * yet, and the doubles that stand in for a slot refuse it for the same
-   * reason.
+   * Take the **Uploaded component** out and resolve the **Default component**
+   * again underneath it — the **Component swap**'s inverse, and the whole
+   * reason the default was never overwritten.
+   *
+   * `null` is what comes back on a machine that never had one, and that is a
+   * state rather than a failure: MP4s still direct-play.
    */
-  remove(): never;
+  remove(): RemoveOutcome;
 }
 
 /**
@@ -321,7 +341,29 @@ export function createComponentSlot(
       };
     },
     remove: () => {
-      throw new Error('the component slot cannot be removed from yet');
+      // Half a pair in `current/` is not an **Uploaded component** — the rule
+      // `resolveLive` already read, asked here by the same function so the
+      // slot cannot refuse a remove it would have described as uploaded.
+      if (pairIn(currentDir) === null) {
+        return { ok: false, reason: 'nothing-uploaded' };
+      }
+
+      // A `previous/` a crash left behind is in the way of this rename, and
+      // it is the component *before* the live one — nothing to keep.
+      rmSync(previousDir, { recursive: true, force: true });
+
+      try {
+        rename(currentDir, previousDir);
+      } catch (error) {
+        // One syscall, one classification: the lock means a conversion is
+        // holding the live `ffmpeg.exe` open, and anything else is not a film
+        // to go and stop. Either way the pair is still exactly where it was.
+        return { ok: false, reason: isLocked(error) ? 'in-use' : 'failed' };
+      }
+
+      rmSync(previousDir, { recursive: true, force: true });
+      resolveLive();
+      return { ok: true };
     },
   };
 }

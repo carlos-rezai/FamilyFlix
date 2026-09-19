@@ -23,7 +23,14 @@ import { Report, Rows, Summary } from './CodecManager.styles';
  * **Uploaded**, with no second read and no success flash. A refusal is drawn
  * in the zone and nowhere else, and the rows stay exactly as they were.
  *
- * Still no ✕: removing is Phase 4's, so nothing here passes a remove handler.
+ * The ✕ goes on the **Component row** **exactly when the report says the
+ * component is removable** — an **Uploaded component** and nothing else,
+ * because the **Default component** is the installer's rather than the
+ * maintainer's. It removes immediately, with no confirmation dialog: the
+ * action is reversible by a drop and the default comes back underneath. The
+ * echoed report is the whole of the redraw there too — the rows the component
+ * added go, the summary recounts, and the pill reads **Default** again.
+ *
  * The spec's `{ summaryLabel, codecs, onBrowse }` props collapse the way
  * `ExportModal`'s did — the organism reads the wire itself.
  *
@@ -31,7 +38,8 @@ import { Report, Rows, Summary } from './CodecManager.styles';
  * nothing still on a refused read. No skeleton, no error face.
  */
 export function CodecManager() {
-  const { capabilities, upload, installComponent } = useCapabilities();
+  const { capabilities, upload, installComponent, removeComponent } =
+    useCapabilities();
 
   if (capabilities === null) {
     return null;
@@ -46,7 +54,19 @@ export function CodecManager() {
         {codecRows(capabilities).map((row) => (
           <CodecRow key={row.key} row={row} />
         ))}
-        {component !== null && <CodecRow key={component.key} row={component} />}
+        {component !== null && (
+          <CodecRow
+            key={component.key}
+            row={component}
+            onRemove={
+              component.removable
+                ? () => {
+                    void removeComponent();
+                  }
+                : undefined
+            }
+          />
+        )}
       </Rows>
       <ComponentDropZone
         upload={upload}
