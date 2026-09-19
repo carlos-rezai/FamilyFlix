@@ -113,7 +113,7 @@
               >
               <span style="{{ c.statusStyle }}">{{ c.statusLabel }}</span>
               <sc-if
-                value="{{ c.notBuiltIn }}"
+                value="{{ c.removable }}"
                 hint-placeholder-val="{{ false }}"
               >
                 <button
@@ -136,60 +136,59 @@
                   ✕
                 </button>
               </sc-if>
-              <sc-if value="{{ c.builtIn }}" hint-placeholder-val="{{ true }}">
+              <sc-if
+                value="{{ c.notRemovable }}"
+                hint-placeholder-val="{{ true }}"
+              >
                 <span style="width: 32px; flex: 0 0 auto"></span>
               </sc-if>
             </div>
           </sc-for>
         </div>
 
-        <button
-          onClick="{{ cdc.onBrowse }}"
-          style="
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            gap: 6px;
-            width: 100%;
-            padding: 22px;
-            background: transparent;
-            border: 1.5px dashed var(--color-border);
-            border-radius: var(--radius-md);
-            cursor: pointer;
-          "
-          style-hover="border-color:var(--color-accent-line);background:var(--color-accent-soft)"
-        >
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-            <path
-              d="M12 16V4m0 0L8 8m4-4l4 4M5 20h14"
-              stroke="var(--color-accent)"
-              stroke-width="1.8"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            />
-          </svg>
-          <span
+        <div style="{{ cdc.zoneWrapStyle }}">
+          <button
+            onClick="{{ cdc.onBrowse }}"
             style="
-              font-family: var(--font-sans);
-              font-size: 14px;
-              font-weight: 600;
-              color: var(--color-text);
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              justify-content: center;
+              gap: 6px;
+              width: 100%;
+              padding: 22px;
+              background: transparent;
+              border: 1.5px dashed var(--color-border);
+              border-radius: var(--radius-md);
+              cursor: pointer;
             "
-            >Add a codec pack</span
+            style-hover="border-color:var(--color-accent-line);background:var(--color-accent-soft)"
           >
-          <span
-            style="
-              font-family: var(--font-sans);
-              font-size: 12.5px;
-              color: var(--color-text-faint);
-            "
-            >Drop a playback component (<span
-              style="font-family: var(--font-mono)"
-              >ffmpeg</span
-            >) here, or browse</span
-          >
-        </button>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+              <path
+                d="M12 16V4m0 0L8 8m4-4l4 4M5 20h14"
+                stroke="var(--color-accent)"
+                stroke-width="1.8"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
+            <span
+              style="
+                font-family: var(--font-sans);
+                font-size: 14px;
+                font-weight: 600;
+                color: var(--color-text);
+              "
+              >{{ cdc.zoneTitle }}</span
+            >
+            <span style="{{ cdc.zoneLineStyle }}"
+              >{{ cdc.zoneLine }}<span style="font-family: var(--font-mono)"
+                >{{ cdc.zoneLineMono }}</span
+              >{{ cdc.zoneLineTail }}</span
+            >
+          </button>
+        </div>
       </div>
     </x-dc>
     <script

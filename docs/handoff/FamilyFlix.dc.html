@@ -233,8 +233,9 @@
             {id:4,name:'H.265 / HEVC',exts:['.mkv','.mp4'],kind:'installed',size:'4.2 MB'},
             {id:5,name:'AV1',exts:['.mkv','.webm'],kind:'installed',size:'6.8 MB'},
             {id:6,name:'AC-3 / Dolby Digital',exts:['.mkv','.avi'],kind:'installed',size:'1.1 MB'},
+            {id:7,name:'Playback component',exts:['ffmpeg.exe','ffprobe.exe'],kind:'component',source:'default',size:'94.3 MB'},
           ],
-          codecJustAdded:null,
+          codecJustAdded:null, codecZone:'idle', codecZoneAction:'add', codecZoneReason:'', codecAttempts:0,
           snackbars:[], updateAvailable:true, updateVersion:'1.1.0', currentVersion:'1.0.0', updating:false, lastChecked:null,
         };
         _snackSeq = 0;
@@ -281,7 +282,7 @@
             }
           },220);
         }
-        componentWillUnmount(){ clearInterval(this.timer); clearTimeout(this._bufferTimer); }
+        componentWillUnmount(){ clearInterval(this.timer); clearTimeout(this._bufferTimer); clearTimeout(this._codecTimer); }
 
         // ---- helpers ----
         eff(m){ return this.state.overrides[m.id]!=null ? this.state.overrides[m.id] : m.st; }
@@ -314,8 +315,9 @@
         goAdd(){ this.resetForm(); this.setState({screen:'add',gearOpen:false,addContext:'settings',resolveId:null}); }
         goImport(){ this.setState({screen:'import',gearOpen:false,impStep:'setup',impProgress:0}); }
         goSettings(){ this.setState({screen:'settings',gearOpen:false,openDrop:null}); }
-        uploadCodec(){ this.setState(s=>{ const id=Math.max(0,...s.codecs.map(c=>c.id))+1; const packs=[{name:'DTS Audio',exts:['.mkv','.dts'],size:'2.3 MB'},{name:'ProRes',exts:['.mov'],size:'9.4 MB'},{name:'FLAC Audio',exts:['.mkv','.flac'],size:'0.8 MB'},{name:'Theora',exts:['.ogv'],size:'1.6 MB'}]; const p=packs[s.codecs.filter(c=>c.kind==='installed').length % packs.length]; return {codecs:[...s.codecs,{id,name:p.name,exts:p.exts,kind:'installed',size:p.size}],codecJustAdded:id}; }); }
-        removeCodec(id){ this.setState(s=>({codecs:s.codecs.filter(c=>c.id!==id),codecJustAdded:s.codecJustAdded===id?null:s.codecJustAdded})); }
+        uploadCodec(){ if(this.state.codecZone==='busy') return; this.setState(s=>({codecZone:'busy',codecZoneAction:'add',codecAttempts:s.codecAttempts+1})); clearTimeout(this._codecTimer); this._codecTimer=setTimeout(()=>this.finishUploadCodec(),1200); }
+        finishUploadCodec(){ this.setState(s=>{ if(s.codecAttempts%3===0) return {codecZone:'refused',codecZoneReason:'ffmpeg and ffprobe go together — add both.'}; const id=Math.max(0,...s.codecs.map(c=>c.id))+1; const packs=[{name:'DTS Audio',exts:['.mkv','.dts'],size:'2.3 MB'},{name:'ProRes',exts:['.mov'],size:'9.4 MB'},{name:'FLAC Audio',exts:['.mkv','.flac'],size:'0.8 MB'},{name:'Theora',exts:['.ogv'],size:'1.6 MB'}]; const p=packs[s.codecs.filter(c=>c.kind==='installed').length % packs.length]; const rows=s.codecs.filter(c=>c.kind!=='component'); const comp=s.codecs.filter(c=>c.kind==='component').map(c=>({...c,source:'uploaded'})); return {codecs:[...rows,{id,name:p.name,exts:p.exts,kind:'installed',size:p.size},...comp],codecJustAdded:id,codecZone:'idle',codecZoneReason:''}; }); }
+        removeCodec(id){ if(this.state.codecZone==='busy') return; const row=this.state.codecs.find(c=>c.id===id); if(row&&row.kind==='component'){ this.setState({codecZone:'busy',codecZoneAction:'remove'}); clearTimeout(this._codecTimer); this._codecTimer=setTimeout(()=>this.setState(s=>({codecs:s.codecs.map(c=>c.kind==='component'?{...c,source:'default'}:c),codecZone:'idle',codecZoneReason:''})),900); return; } this.setState(s=>({codecs:s.codecs.filter(c=>c.id!==id),codecJustAdded:s.codecJustAdded===id?null:s.codecJustAdded})); }
         setSubLang(v){ this.setState({settingsSubLang:v,openDrop:null}); }
         toggleSubAuto(){ this.setState(s=>({settingsSubAuto:!s.settingsSubAuto})); }
 
@@ -520,6 +522,30 @@
             onLangChange:(l)=>this.setSubLang(i,l),
           }));
 
+          // codecs — the format rows, then the Component row last
+          const codecZoneBusy=s.codecZone==='busy', codecZoneRefused=s.codecZone==='refused', codecRemoving=s.codecZoneAction==='remove';
+          const codecFormats=s.codecs.filter(c=>c.kind!=='component');
+          const pill=(soft)=>({flex:'0 0 auto',fontFamily:'var(--font-sans)',fontSize:'12px',fontWeight:'600',padding:'4px 11px',borderRadius:'var(--radius-pill)',color:soft?'var(--color-text-faint)':'var(--color-watched)',background:soft?'var(--color-surface-3)':'rgba(138,154,107,.16)',border:'1px solid '+(soft?'var(--color-border)':'rgba(138,154,107,.3)')});
+          const codecModel={
+            summaryLabel:codecFormats.length+' formats enabled · '+codecFormats.filter(c=>c.kind==='installed').length+' from the playback component',
+            onBrowse:()=>this.uploadCodec(),
+            zoneBusy:codecZoneBusy, zoneRefused:codecZoneRefused,
+            zoneTitle:codecZoneBusy?(codecRemoving?'Removing the playback component…':'Adding the playback component…'):'Add a codec pack',
+            zoneLine:codecZoneBusy?(codecRemoving?'The formats it added go with it':'Copying it in and checking it runs'):(codecZoneRefused?s.codecZoneReason:'Drop a playback component ('),
+            zoneLineMono:(codecZoneBusy||codecZoneRefused)?'':'ffmpeg',
+            zoneLineTail:(codecZoneBusy||codecZoneRefused)?'':') here, or browse',
+            zoneWrapStyle:{cursor:codecZoneBusy?'default':'pointer',pointerEvents:codecZoneBusy?'none':'auto'},
+            zoneLineStyle:{fontFamily:'var(--font-sans)',fontSize:'12.5px',color:codecZoneRefused?'var(--color-danger)':'var(--color-text-faint)'},
+            codecs:s.codecs.map(c=>{ const component=c.kind==='component'; const uploaded=component&&c.source==='uploaded';
+              return {
+                id:c.id, name:c.name, exts:c.exts, size:component?c.size:'—',
+                removable:uploaded, notRemovable:!uploaded, justAdded:s.codecJustAdded===c.id,
+                statusLabel:component?(uploaded?'Uploaded':'Default'):(c.kind==='built-in'?'Built-in':'Installed'),
+                statusStyle:pill(component?!uploaded:c.kind==='built-in'),
+                onRemove:()=>this.removeCodec(c.id),
+              }; }),
+          };
+
           // import
           const problems=s.impProblems.map(p=>{ const col=p.kind==='ambiguous'?accent:(p.kind==='no-row'||p.kind==='missing-meta')?'var(--color-text-faint)':'var(--color-danger)'; return {id:p.id,title:p.title,reason:p.reason,dotStyle:{flex:'0 0 auto',width:'10px',height:'10px',borderRadius:'99px',background:col},resolve:()=>this.resolveProblem(p),skip:()=>this.skipProblem(p.id)}; });
 
@@ -561,16 +587,7 @@
                 {key:'import',glyph:'⇪',label:'Import from spreadsheet',desc:'Bulk-migrate a spreadsheet + movie folders in one pass.',onClick:()=>this.goImport()},
                 {key:'export',glyph:'⬇',label:'Export to CSV',desc:'Save your whole library out as a spreadsheet backup.',onClick:()=>this.openExport()},
               ],
-              codec:{
-                summaryLabel:s.codecs.length+' formats enabled · '+s.codecs.filter(c=>c.kind==='installed').length+' from the playback component',
-                onBrowse:()=>this.uploadCodec(),
-                codecs:s.codecs.map(c=>{ const built=c.kind==='built-in'; return {
-                  id:c.id, name:c.name, exts:c.exts, size:c.size, builtIn:built, notBuiltIn:!built, justAdded:s.codecJustAdded===c.id,
-                  statusLabel:built?'Built-in':'Installed',
-                  statusStyle:{flex:'0 0 auto',fontFamily:'var(--font-sans)',fontSize:'12px',fontWeight:'600',padding:'4px 11px',borderRadius:'var(--radius-pill)',color:built?'var(--color-text-faint)':'var(--color-watched)',background:built?'var(--color-surface-3)':'rgba(138,154,107,.16)',border:'1px solid '+(built?'var(--color-border)':'rgba(138,154,107,.3)')},
-                  onRemove:()=>this.removeCodec(c.id),
-                }; }),
-              },
+              codec:codecModel,
               subAutoOn:s.settingsSubAuto, onToggleSubAuto:()=>this.toggleSubAuto(),
               subLang:s.settingsSubLang, subLangOpen:s.openDrop==='subLang', onToggleSubLang:()=>this.setState(st=>({openDrop:st.openDrop==='subLang'?null:'subLang'})),
               subLangOptions:['English','Spanish','French','German'].map(l=>({label:l,selected:l===s.settingsSubLang,onSelect:()=>this.setSubLang(l)})),
