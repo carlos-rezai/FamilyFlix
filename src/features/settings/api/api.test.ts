@@ -33,6 +33,33 @@ import {
  * - `fetchStorageReport` reads the **Storage report** — `GET /api/storage`,
  *   the raw `{ mediaPath, bytesUsed, movieCount }` — for `useStorageReport`.
  *   `fetchCapabilities`'s shape repeated.
+ *
+ * 16 — Playback component upload, Phase 3: "the zone" (issue #154) adds the
+ * one write the **Codec report** makes. `installComponent(files)` —
+ * `POST /api/playback/component`, `multipart/form-data`, **one `component`
+ * part per file** and nothing else. The client sorts nothing and labels
+ * nothing: the route tells the two **Component binaries** apart by filename,
+ * and a client that said which half a file was would be a client the route
+ * trusted. It answers the **Codec report** after the swap, so the screen
+ * redraws from the echo rather than reading again — the precedent every write
+ * in the app keeps.
+ *
+ * Three statuses carry a sentence worth drawing: `400` (a stray part, a
+ * second of either, a missing half), `422` (a pair that will not run) and
+ * `409` (the **In-use refusal**). Each rejects with
+ * {@link ComponentRefusedError} carrying **the server's own `error`**, on the
+ * `ImportRefusedError` precedent — the words a family reads are the words the
+ * thing that refused chose. Everything else rejects plainly, and the hook
+ * substitutes its fixed line, so a `500` is not silence either.
+ *
+ * 16 — Playback component upload, Phase 4: "the ✕ takes it back" (issue #155)
+ * adds that write's inverse and its mirror. `removeComponent()` —
+ * `DELETE /api/playback/component`, no body at all, answering the **Codec
+ * report** after the fall-back so the screen redraws from the echo rather
+ * than reading again. The statuses that carry a sentence worth drawing are
+ * the remove's own: `400`, `404` — the **Default component** is not
+ * removable, a fact about ownership rather than an error — and `409`, the
+ * **In-use refusal**.
  */
 
 let fetchMock: ReturnType<
@@ -226,29 +253,6 @@ describe('fetchStorageReport', () => {
   });
 });
 
-/**
- * 16 — Playback component upload, Phase 3: "the zone" (issue #154).
- *
- * `installComponent(files)` — the one write the **Codec report** makes:
- * `POST /api/playback/component`, `multipart/form-data`, **one `component`
- * part per file** and nothing else. The client sorts nothing and labels
- * nothing: the route tells the two **Component binaries** apart by filename,
- * and a client that said which half a file was would be a client the route
- * trusted.
- *
- * It answers the **Codec report** after the swap, so the screen redraws from
- * the echo rather than reading again — the precedent every write in the app
- * keeps.
- *
- * Three statuses carry a sentence worth drawing: `400` (a stray part, a
- * second of either, a missing half), `422` (a pair that will not run) and
- * `409` (the **In-use refusal**). Each rejects with
- * {@link ComponentRefusedError} carrying **the server's own `error`**, on the
- * `ImportRefusedError` precedent — the words a family reads are the words the
- * thing that refused chose. Everything else rejects plainly, and the hook
- * substitutes its fixed line, so a `500` is not silence either.
- */
-
 /** The two halves, as a file dialog or a drop hands them over. */
 const FFMPEG = new File(['MZ'], 'ffmpeg.exe', {
   type: 'application/octet-stream',
@@ -396,22 +400,6 @@ describe('installComponent', () => {
     );
   });
 });
-
-/**
- * 16 — Playback component upload, Phase 4: "the ✕ takes it back" (issue #155).
- *
- * `removeComponent()` — `installComponent`'s inverse and its mirror:
- * `DELETE /api/playback/component`, no body at all, answering the **Codec
- * report** after the fall-back so the screen redraws from the echo rather
- * than reading again.
- *
- * The statuses that carry a sentence worth drawing are the remove's own:
- * `400`, `404` — the **Default component** is not removable, a fact about
- * ownership rather than an error — and `409`, the **In-use refusal**. Each
- * rejects with {@link ComponentRefusedError} carrying the server's own
- * `error`; everything else rejects plainly, and the hook substitutes its
- * fixed line.
- */
 
 /** What the route answers once the upload has been taken back. */
 const REMOVED: PlaybackCapabilities = {

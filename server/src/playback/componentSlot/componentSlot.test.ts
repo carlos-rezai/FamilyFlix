@@ -216,7 +216,7 @@ describe('createComponentSlot — the leftovers of a crashed run', () => {
 
 // --- the write half: an upload begun, verified, and sworn in -------------------
 //
-// Phase 2. The **Incoming component** stages a drop under `<slot>/incoming/`,
+// The **Incoming component** stages a drop under `<slot>/incoming/`,
 // the **Verified component** is the only test applied before anything moves,
 // and the **Component swap** is three directory renames — `current/` →
 // `previous/`, `incoming/` → `current/`, `previous/` removed. A rename rather
@@ -511,16 +511,17 @@ describe('createComponentSlot — the in-use refusal', () => {
 
 // --- the remove half: the ✕ takes the upload back -----------------------------
 //
-// Phase 4. `remove()` is the inverse of the **Component swap**: the
+// `remove()` is the inverse of the **Component swap**: the
 // **Uploaded component** goes out of `current/` and the **Default component**
 // is resolved again underneath it — which is the whole reason the default was
 // never overwritten. On a machine that never had one, what comes back is
 // `null`, and that is a state rather than a failure: MP4s still direct-play.
 //
 // Outcomes are values here too — `{ ok: true }`, or `nothing-uploaded` for a
-// slot holding no upload to take back, or `in-use` for a pair a conversion is
-// holding open. The **In-use refusal** is the same single failing rename the
-// install classifies, asked of the one syscall that moved the live pair.
+// slot holding no upload to take back, `in-use` for a pair a conversion is
+// holding open, or `failed` for a rename stopped by neither. The **In-use
+// refusal** is the same single failing rename the install classifies, asked
+// of the one syscall that moved the live pair.
 
 describe('createComponentSlot — the uploaded pair taken back', () => {
   it('falls back to the default component', () => {

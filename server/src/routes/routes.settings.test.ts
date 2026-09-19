@@ -30,15 +30,17 @@
 //   file part named `component` and told apart by `componentBinary`; `400`
 //   for a body that is not multipart, a stray part, a second of either or a
 //   missing half; `422` for a pair that will not run; `409` for the
-//   **In-use refusal**. Nothing new is injected: the route reaches the
-//   **Component slot** through the `playback` the router already holds.
+//   **In-use refusal**; `500` for a swap stopped by neither. Nothing new is
+//   injected: the route reaches the **Component slot** through the `playback`
+//   the router already holds.
 // - `DELETE /api/playback/component` → `200 PlaybackCapabilities`, the report
 //   **after the fall-back** — the ✕ on the **Component row**, added by
 //   `16-component-upload` Phase 4 (issue #155). The same shape the capability
 //   read answers, because the screen redraws from the echo rather than
 //   reading again; `404` when there is nothing uploaded, the **Default
 //   component** being the installer's rather than the maintainer's; `409` for
-//   the **In-use refusal**, word for word the one the upload gives.
+//   the **In-use refusal**, word for word the one the upload gives; `500` for
+//   the slot's fourth outcome.
 // - `GET /api/settings` → `200 { subtitleLanguage }`, the household's one
 //   preference with the default already applied, so no client has to know
 //   what it is.
@@ -963,19 +965,21 @@ describe('POST /api/playback/component — what the router was composed with', (
 
 // --- the remove: DELETE /api/playback/component --------------------------------
 //
-// Phase 4 (issue #155), the upload route's inverse. The ✕ on the **Component
-// row** sends this, the **Component slot** takes the **Uploaded component**
-// out and resolves the **Default component** again, and the route answers the
-// report **after** the fall-back — the same shape
+// The upload route's inverse. The ✕ on the **Component row** sends this, the
+// **Component slot** takes the **Uploaded component** out and resolves the
+// **Default component** again, and the route answers the report **after** the
+// fall-back — the same shape
 // `GET /api/playback/capabilities` answers, because the screen redraws from
 // the echo rather than reading again, and a second read is a second chance to
 // disagree with it. A `204` was rejected for exactly that reason.
 //
-// Two refusals, and one of them is not an error at heart: the `404` says the
+// Three refusals, and one of them is not an error at heart: the `404` says the
 // **Default component** is not removable, which is a fact about ownership —
 // it is the installer's, not the maintainer's to take away, and the row that
 // offers no ✕ and the route that refuses agree. The `409` is the **In-use
-// refusal**, word for word the one the upload gives.
+// refusal**, word for word the one the upload gives. The `500` is the slot's
+// fourth outcome — a swap stopped by neither the lock nor the pair, answered
+// as a value precisely so the route has something to say about it.
 
 /** The **Component info** of an upload waiting to be taken back. */
 const UPLOADED: PlaybackComponentInfo = {

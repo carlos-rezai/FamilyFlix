@@ -40,6 +40,15 @@ import { theme } from '@/styles/theme';
  *
  * **Replaced is not a face.** The write echoes the **Codec report** and the
  * screen redraws from it — no success flash, no snackbar.
+ *
+ * 16 — Playback component upload, Phase 4: "the ✕ takes it back" (issue
+ * #155). The busy face gains the second thing it can be busy doing. The
+ * **Upload state**'s `action` is what tells them apart, and the zone is where
+ * both are said — the ✕ is pressed on the **Component row**, but the row has
+ * nowhere to put a sentence, and the zone already owns the one that says what
+ * is happening. The prototype's own copy: _Removing the playback component…_
+ * over _The formats it added go with it_ — which is the warning, said as a
+ * fact.
  */
 
 /** One half of a **Playback component**, as a browser hands it over. */
@@ -260,19 +269,6 @@ describe('ComponentDropZone — the refused face', () => {
     expect(onFiles).toHaveBeenCalledTimes(1);
   });
 });
-
-/**
- * 16 — Playback component upload, Phase 4: "the ✕ takes it back" (issue #155).
- *
- * The busy face gains the second thing it can be busy doing. The **Upload
- * state**'s `action` is what tells them apart, and the zone is where both are
- * said — the ✕ is pressed on the **Component row**, but the row has nowhere to
- * put a sentence, and the zone already owns the one that says what is
- * happening.
- *
- * The prototype's own copy: _Removing the playback component…_ over _The
- * formats it added go with it_ — which is the warning, said as a fact.
- */
 
 describe('ComponentDropZone — the removing face', () => {
   it('reads the prototype’s removing copy rather than the install’s', () => {

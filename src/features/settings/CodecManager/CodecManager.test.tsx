@@ -45,6 +45,29 @@ import {
  * row — and absent on a machine with no component at all. The **Codec
  * summary** counts the codec rows only; the ffmpeg pair is not a film format.
  * Still no zone and still no ✕: nothing passes a remove handler until Phase 4.
+ *
+ * 16 — Playback component upload, Phase 3: "the zone" (issue #154). The
+ * organism grows the control it has so far only described: the **Component
+ * drop zone**, composed **under** the rows, and the write behind it. Drop the
+ * two **Component binaries** and the _Installed_ rows appear, the **Codec
+ * summary** recounts, and the **Component row**'s pill reads **Uploaded** —
+ * all from the report the route echoed, with no second read and no reload.
+ * **Replaced is not a face**: there is no success flash to assert, because
+ * the redrawn rows are the feedback. A refusal is drawn in the zone and
+ * nowhere else, and the rows stay exactly as they were.
+ *
+ * 16 — Playback component upload, Phase 4: "the ✕ takes it back" (issue
+ * #155). The other half of the **Component row**. The organism passes
+ * `onRemove` into the optional prop the molecule already has **exactly when
+ * the report says the component is removable** — an **Uploaded component**
+ * and nothing else, because the **Default component** is the installer's
+ * rather than the maintainer's. Pressing it removes immediately: **no
+ * confirmation dialog**. The action is reversible by a drop, the files are
+ * the maintainer's own download, and the default comes back underneath.
+ * **Removed is not a face** either: the echoed report is the whole of the
+ * redraw — the _Installed_ rows the component added go, the **Codec summary**
+ * recounts, and the pill reads **Default** again, or the row goes with the
+ * pair on a machine that has no default either.
  */
 
 let fetchMock: ReturnType<
@@ -328,21 +351,6 @@ describe('CodecManager — once the report lands', () => {
   });
 });
 
-/**
- * 16 — Playback component upload, Phase 3: "the zone" (issue #154).
- *
- * The organism grows the control it has so far only described: the
- * **Component drop zone**, composed **under** the rows, and the write behind
- * it. Drop the two **Component binaries** and the _Installed_ rows appear, the
- * **Codec summary** recounts, and the **Component row**'s pill reads
- * **Uploaded** — all from the report the route echoed, with no second read and
- * no reload.
- *
- * **Replaced is not a face**: there is no success flash to assert, because the
- * redrawn rows are the feedback. A refusal is drawn in the zone and nowhere
- * else, and the rows stay exactly as they were.
- */
-
 /** The report after the swap: the pair is the maintainer's, and it adds more. */
 const AFTER_UPLOAD: PlaybackCapabilities = {
   component: {
@@ -518,25 +526,6 @@ describe('CodecManager — the zone under the rows', () => {
     );
   });
 });
-
-/**
- * 16 — Playback component upload, Phase 4: "the ✕ takes it back" (issue #155).
- *
- * The other half of the **Component row**. The organism passes `onRemove` into
- * the optional prop the molecule already has **exactly when the report says
- * the component is removable** — an **Uploaded component** and nothing else,
- * because the **Default component** is the installer's rather than the
- * maintainer's.
- *
- * Pressing it removes immediately: **no confirmation dialog**. The action is
- * reversible by a drop, the files are the maintainer's own download, and the
- * default comes back underneath.
- *
- * **Removed is not a face** either: the echoed report is the whole of the
- * redraw — the _Installed_ rows the component added go, the **Codec summary**
- * recounts, and the pill reads **Default** again, or the row goes with the
- * pair on a machine that has no default either.
- */
 
 /** The report after the fall-back, with nothing underneath the upload. */
 const NOTHING_LEFT: PlaybackCapabilities = WITHOUT_COMPONENT;

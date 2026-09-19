@@ -20,6 +20,36 @@ import {
  *
  * Everything is asserted as requests against a stubbed `fetch` and what the
  * hook hands back.
+ *
+ * 16 — Playback component upload, Phase 3: "the zone" (issue #154). The hook
+ * grows the write that changes what it read:
+ * `{ capabilities, upload, installComponent }` — the read and the write in one
+ * hook, on the `useSettings` precedent, so the state the write echoes is the
+ * state the read holds. Nothing re-fetches: `POST /api/playback/component`
+ * answers the **Codec report** after the swap, and that echo *is* the redraw.
+ * The **Upload state** is `idle | busy(action) | refused(reason)`. _Replaced_
+ * is not one of them: the rows, the summary and the **Component row**'s pill
+ * changing is the whole of the feedback, and a success flash would be a fourth
+ * state saying what the third already showed.
+ *
+ * **Neither write rejects.** The organism draws a refusal from state and never
+ * from a caught exception, so a caller that forgot to `catch` cannot turn a
+ * `409` into an unhandled rejection. A refusal the route named a reason for
+ * carries the route's own words; anything else — a `500`, a body that would
+ * not parse, a request that never left — carries the fixed line, so silence is
+ * not one of the possible answers.
+ *
+ * 16 — Playback component upload, Phase 4: "the ✕ takes it back" (issue
+ * #155). The hook's second write, and the first one's inverse:
+ * `{ capabilities, upload, installComponent, removeComponent }`. It behaves
+ * the way the install does in every respect the **Upload state** can see —
+ * `busy('remove')` rather than `busy('install')` while it runs, the echoed
+ * report as the whole of the redraw, the route's own words on a refusal and
+ * the fixed line when it named none, a call while busy ignored, and **no
+ * rejection out of the hook**. **No confirmation** is asked anywhere: the ✕
+ * removes immediately. The action is reversible by a drop, the files are the
+ * maintainer's own download, and the **Default component** comes back
+ * underneath.
  */
 
 let fetchMock: ReturnType<
@@ -127,28 +157,6 @@ describe('useCapabilities', () => {
     expect(result.current.capabilities).toBeNull();
   });
 });
-
-/**
- * 16 — Playback component upload, Phase 3: "the zone" (issue #154).
- *
- * The hook grows the write that changes what it read:
- * `{ capabilities, upload, installComponent }` — the read and the write in one
- * hook, on the `useSettings` precedent, so the state the write echoes is the
- * state the read holds. Nothing re-fetches: `POST /api/playback/component`
- * answers the **Codec report** after the swap, and that echo *is* the redraw.
- *
- * The **Upload state** is `idle | busy(action) | refused(reason)`. _Replaced_
- * is not one of them: the rows, the summary and the **Component row**'s pill
- * changing is the whole of the feedback, and a success flash would be a fourth
- * state saying what the third already showed.
- *
- * **Neither write rejects.** The organism draws a refusal from state and never
- * from a caught exception, so a caller that forgot to `catch` cannot turn a
- * `409` into an unhandled rejection. A refusal the route named a reason for
- * carries the route's own words; anything else — a `500`, a body that would
- * not parse, a request that never left — carries the fixed line, so silence is
- * not one of the possible answers.
- */
 
 /** The two halves, as the zone reports them. */
 const FFMPEG = new File(['MZ'], 'ffmpeg.exe');
@@ -379,22 +387,6 @@ describe('useCapabilities — the screen left mid-upload', () => {
     expect(result.current.capabilities).toEqual(REPORT);
   });
 });
-
-/**
- * 16 — Playback component upload, Phase 4: "the ✕ takes it back" (issue #155).
- *
- * The hook's second write, and the first one's inverse:
- * `{ capabilities, upload, installComponent, removeComponent }`. It behaves
- * the way the install does in every respect the **Upload state** can see —
- * `busy('remove')` rather than `busy('install')` while it runs, the echoed
- * report as the whole of the redraw, the route's own words on a refusal and
- * the fixed line when it named none, a call while busy ignored, and **no
- * rejection out of the hook**.
- *
- * **No confirmation** is asked anywhere: the ✕ removes immediately. The
- * action is reversible by a drop, the files are the maintainer's own
- * download, and the **Default component** comes back underneath.
- */
 
 /** The report after the fall-back: the default pair, and fewer formats. */
 const AFTER_REMOVE: PlaybackCapabilities = {
