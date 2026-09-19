@@ -23,8 +23,15 @@ export interface FfmpegEnvironment {
   PATH?: string;
 }
 
-/** What an executable is called here — the one difference Windows makes. */
-const EXE = process.platform === 'win32' ? '.exe' : '';
+/**
+ * What an executable is called here — the one difference Windows makes.
+ *
+ * Exported for the **Component slot**, which stages an uploaded half under the
+ * platform's own name rather than the client's: what a pair is called is one
+ * answer rather than the resolver's and the slot's, which is what makes a
+ * build dropped as `ffmpeg-7.1.exe` resolve as a component once it is live.
+ */
+export const EXE = process.platform === 'win32' ? '.exe' : '';
 
 /** Whether there is a file at `candidate` — a directory is not a binary. */
 function isFile(candidate: string): boolean {

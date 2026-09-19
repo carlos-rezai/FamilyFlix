@@ -7,7 +7,10 @@ import {
   choosePlaybackPath,
   type ComponentAvailability,
 } from '../choosePlaybackPath/choosePlaybackPath';
-import type { ComponentSlot } from '../componentSlot/componentSlot';
+import type {
+  ComponentSlot,
+  IncomingComponent,
+} from '../componentSlot/componentSlot';
 import type {
   PlaybackComponent,
   PlaybackProcess,
@@ -149,6 +152,19 @@ export interface Playback {
    * the live component is replaced the next read describes the new one.
    */
   capabilities(): PlaybackCapabilities;
+
+  /**
+   * Begin a **Playback component upload**: the **Incoming component** the
+   * slot stages it in.
+   *
+   * Deliberately thin over the slot. The upload route reaches the **Component
+   * slot** through the `playback` the router already holds, so nothing new is
+   * injected into `createApiRouter` and no route learns there is a staging
+   * directory behind any of it — which is also what keeps the component the
+   * report describes and the component pressing Play converts through the same
+   * one.
+   */
+  receiveComponent(): IncomingComponent;
 }
 
 /**
@@ -286,5 +302,6 @@ export function createPlayback(
       component: slot.info(),
       codecs: capabilities(slot.current()),
     }),
+    receiveComponent: () => slot.receive(),
   };
 }

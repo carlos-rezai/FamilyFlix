@@ -16,6 +16,8 @@ import {
 import { writeSheet } from '../import-export/writeSheet/writeSheet';
 import type { Media } from '../media/createMedia/createMedia';
 import { spaceUsed } from '../media/spaceUsed/spaceUsed';
+import { componentBinary } from '../playback/componentBinary/componentBinary';
+import type { InstallRefusal } from '../playback/componentSlot/componentSlot';
 import type { Playback } from '../playback/createPlayback/createPlayback';
 import { derivedRuntime } from '../playback/derivedRuntime/derivedRuntime';
 import { isRatingValue, MAX_RATING } from './isRatingValue/isRatingValue';
@@ -26,7 +28,7 @@ import {
 } from './movieFormBody/movieFormBody';
 import { onlyField } from './onlyField/onlyField';
 import { optionalYear } from './optionalYear/optionalYear';
-import { readBody } from './readBody/readBody';
+import { readBody, type OnFilePart } from './readBody/readBody';
 import {
   DEFAULT_MOVIE_SORT,
   EXPORT_FILENAME,
@@ -73,6 +75,39 @@ import {
  * routes it drained are shorter, and the rule it holds is written down once
  * instead of pasted three times, which was the point rather than the volume.
  */
+/** A drop missing one of its two halves — the route's own check, and the slot's. */
+const MISSING_HALF = 'ffmpeg and ffprobe go together — add both.';
+
+/** A part that is neither half, or a second of one that already arrived. */
+const STRAY_PART = 'Only ffmpeg and ffprobe can be added.';
+
+/**
+ * What the **Component slot** refused a drop for, as a status and a sentence.
+ *
+ * The slot names a reason and this names the answer — which is the whole of
+ * what keeps errno out of the HTTP layer. `incomplete` says what the
+ * missing-half case says, because it *is* that case seen from the other side.
+ * `failed` is the swap stopped by something that is neither the lock nor the
+ * pair; there is nothing for the maintainer to do about it and nothing true to
+ * say beyond that it did not happen, which is what a 500 already means.
+ */
+const REFUSALS: Record<InstallRefusal, { status: number; error: string }> = {
+  incomplete: { status: 400, error: MISSING_HALF },
+  'not-a-component': {
+    status: 422,
+    error: "That isn't a working ffmpeg build.",
+  },
+  'in-use': {
+    status: 409,
+    error:
+      "The playback component is in use. Stop the film that's playing and try again.",
+  },
+  failed: {
+    status: 500,
+    error: 'The playback component could not be replaced.',
+  },
+};
+
 function writeSignal<V>(
   storage: LibraryStorage,
   req: Request<{ id: string }>,
@@ -950,6 +985,74 @@ export function createApiRouter(
   // domain is asked afresh on every request, so a component replaced from
   // Settings is described on the very next read.
   router.get('/playback/capabilities', (_req, res) => {
+    res.json(playback.capabilities());
+  });
+
+  // The **Playback component upload**: a pair posted here becomes the live
+  // component, and the next press of Play decides over it with no restart.
+  //
+  // `multipart/form-data`, **every file part named `component`** and told
+  // apart by `componentBinary` — the client sorts nothing and labels nothing,
+  // because a client that said which half a file was would be a client this
+  // route trusted. Every part is consumed whether it is handled or not: busboy
+  // never reaches `close` while a part nobody listened to is pending, and a
+  // hung request is a worse answer than a refused one.
+  //
+  // Nothing new is injected for this route. It reaches the **Component slot**
+  // through the `playback` the router was composed with, so the report and
+  // pressing Play cannot disagree about which component is live — and nothing
+  // here reasons about directories or errno: the slot answers a reason and
+  // this maps it to a status.
+  //
+  // **Every refusal leaves the staged folder gone**, so a retry is a fresh
+  // attempt and not a repair. Success echoes the whole report, the precedent
+  // every write in the app keeps, so the screen redraws from truth rather than
+  // re-fetching.
+  router.post('/playback/component', async (req: Request, res: Response) => {
+    const incoming = playback.receiveComponent();
+    const taken = new Set<string>();
+    /** A part that is neither half, or a second of one that already arrived. */
+    let stray = false;
+
+    const onFile: OnFilePart = async (_name, filename, part) => {
+      const binary = componentBinary(filename);
+      if (binary === null || taken.has(binary)) {
+        stray = true;
+        part.resume();
+        return;
+      }
+      taken.add(binary);
+      await incoming.take(binary, part);
+    };
+
+    try {
+      await readBody(req, onFile);
+    } catch {
+      incoming.discard();
+      res.status(400).json({ error: 'Body must be multipart/form-data' });
+      return;
+    }
+
+    if (stray) {
+      incoming.discard();
+      res.status(400).json({ error: STRAY_PART });
+      return;
+    }
+    if (taken.size < 2) {
+      incoming.discard();
+      res.status(400).json({ error: MISSING_HALF });
+      return;
+    }
+
+    // The slot discards its own staging folder on every refusal, which is why
+    // there is nothing to take back here.
+    const outcome = incoming.install();
+    if (!outcome.ok) {
+      const refused = REFUSALS[outcome.reason];
+      res.status(refused.status).json({ error: refused.error });
+      return;
+    }
+
     res.json(playback.capabilities());
   });
 
