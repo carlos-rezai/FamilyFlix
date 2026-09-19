@@ -152,13 +152,13 @@ familyflix/
 │       │   ├── spaceUsed/             # the bytes under the media root, never throwing
 │       │   └── fileKinds/             # what an image, a subtitle and a video may be called
 │       ├── import-export/  # the bulk importer and the exporter: readSheet, titleKey, matchRows, createImporter (+ its fixture), writeSheet
-│       ├── playback/       # the Playback component (probe, spawn, decoders), the path choice, streaming, subtitle parsing, derivedRuntime, capabilities(component)
+│       ├── playback/       # the Playback component (probe, spawn, decoders), the Component slot it lives in (componentSlot, componentBinary, verifyComponent), the path choice, streaming, subtitle parsing, derivedRuntime, capabilities(component)
 │       ├── db/             # SQLite connection + schema/migrations (3: the settings table)
-│       └── test-support/   # Shared test doubles — never imported by shipping code (heldCopy, libraryFixture, …)
+│       └── test-support/   # Shared test doubles — never imported by shipping code (heldCopy, libraryFixture, fixedSlot, componentDir, …)
 ├── src/                # React frontend
 │   ├── App/            # Router and app-level providers
 │   ├── assets/         # Static images, fonts, icons
-│   ├── styles/         # Global CSS reset, themes
+│   ├── styles/         # Global CSS reset, themes, visuallyHidden
 │   ├── tokens/         # Colors, spacing, typography, breakpoints
 │   ├── primitives/     # Atomic UI elements (Button, Input, Text, Toggle, the Icon glyphs) — each with .tsx, .test.tsx, .styles.ts
 │   ├── components/     # Composed UI blocks (PosterCard, Modal, ProgressBar) — same three-file shape
@@ -175,7 +175,7 @@ familyflix/
 │   │   ├── player/          # built-in video player, subtitles (useSubtitles reads the preferred language), resume
 │   │   ├── movie-form/      # Add/Edit a movie: one form, manual pickers — and Resolve, the Import context
 │   │   ├── import-export/   # the bulk importer's screen: ImportFlow and its three steps, useImportRun, importView — and the Export dialog: ExportModal, FormatCard, useExport, saveToComputer
-│   │   ├── settings/        # the Maintainer's hub: SettingsHeader; LibrarySection + ActionRow; PlaybackSection over CodecManager, CodecRow, codecView; StorageSection; AboutSection; useCapabilities, useSettings, useStorageReport; and its api/
+│   │   ├── settings/        # the Maintainer's hub: SettingsHeader; LibrarySection + ActionRow; PlaybackSection over CodecManager, CodecRow, ComponentDropZone, codecView, zoneFace; StorageSection; AboutSection; useCapabilities, useSettings, useStorageReport; and its api/
 │   │   │   └── section.styles.ts # the Group heading, the Section card, the divider, an item's title and lede — what every group draws with
 │   │   ├── maintainer.styles.ts # the header and the captioned field the Maintainer's screens share
 │   │   └── collections/     # playlists (roadmap)

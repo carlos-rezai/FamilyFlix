@@ -32,7 +32,10 @@ desktop app development, and Claude Code workflow.
   `server/src/playback/`. Chromium reads MP4/WebM only, so every `.mkv`
   and `.avi` in the family folder is remuxed or transcoded on the way to
   the element. No uploaded `.dll` can change what a browser decodes —
-  Settings' "codec pack" replaces this binary
+  Settings' "codec pack" replaces this binary, which it does: a drop on
+  the **Component drop zone** is two binaries staged, verified and sworn
+  into the **Component slot**, and the next press of Play converts with
+  them
 - **Testing:** Vitest + @testing-library/react
 - **Linting:** ESLint + Prettier + Husky
 
@@ -123,26 +126,31 @@ familyflix/
 │ │ ├── matchRows/ ← pure: rows × folder scans → matches, problems by kind, unclaimed folders
 │ │ ├── createImporter/ ← the injected domain: start, current, cancel, problem, resolve, dismiss — one run in memory, its state machine as closures
 │ │ │ └── fixture/ ← the two-film sheet (.xlsx and .csv) and folder tree the tests run over, and a dev library is filled from
-│ ├── playback/ ← the Playback component, the path choice, streaming, subtitle parsing
-│ │ ├── ffmpegBinary/ ← resolve the component: env var, then PATH, then absent
+│ ├── playback/ ← the Playback component, the slot it lives in, the path choice, streaming, subtitle parsing
+│ │ ├── ffmpegBinary/ ← resolve the component: the Component slot, then env var, then PATH, then absent; exports `pairIn` (a directory → its pair) and `EXE` (what a platform calls a binary, the one answer the slot and the tests read too)
+│ │ ├── componentSlot/ ← the Component slot: `createComponentSlot(slotDir, env, { verify, rename })` — `current/` read ahead of everything, `incoming/` and `previous/` swept on startup, `receive()`/`take`/`install()`/`discard()`, `remove()`, and the Component swap's three renames with the In-use refusal off the first one that fails like a lock. Outcomes are values, never throws: four install refusals, three remove
+│ │ ├── componentBinary/ ← pure: a filename → `ffmpeg` / `ffprobe` / null — this feature's security boundary, the way `fileKinds` is media's; the binary's own word, optionally a `-` and whatever the build called itself, optionally `.exe`
+│ │ ├── verifyComponent/ ← the Verified component: run the staged pair before anything moves
 │ │ ├── probe/ ← ffprobe wrapper → MediaProbe (container, codecs, duration)
 │ │ ├── mediaDuration/ ← an MP4’s own moov/mvhd, so a direct play needs no component
 │ │ ├── choosePlaybackPath/ ← pure: MediaProbe → direct / remux / transcode / cannot-play + argv
-│ │ ├── createPlayback/ ← the injected domain: videoFile, read, stream, subtitleFile, cues
+│ │ ├── createPlayback/ ← the injected domain: `createPlayback(mediaPath, slot)` — videoFile, read, stream, subtitleFile, cues, capabilities, receiveComponent, removeComponent. It takes the slot rather than a component and reads it per request, so the next press of Play decides over whatever is live with nothing cached to clear
 │ │ ├── ffmpegComponent/ ← the injected seam: what this machine can be asked to do — probe, spawn, the hardware encoder, and `decoders()`, the raw `ffmpeg -decoders` listing (an encoders/decoders listing pair behind it)
 │ │ ├── mediaFilePath/ ← the under-media-root check between a stored string and an open file
 │ │ ├── derivedRuntime/ ← a Playback and a stored path → the runtime minutes off the bytes, never throwing; the form’s save and the importer both ask it
-│ │ ├── capabilities/ ← the Codec report: Chromium native set ∪ what `capabilities(component)` reads off the one component main.ts composed — never the environment, never a binary on PATH; a decoder name begins with a letter
+│ │ ├── capabilities/ ← the Codec report: Chromium native set ∪ what `capabilities(component)` reads off whichever component the slot holds now — never the environment, never a binary on PATH; a decoder name begins with a letter
 │ │ ├── parseSrt/ parseVtt/ parseAss/ parseSub/ ← pure, one format each
 │ │ └── parseSubtitle/ ← dispatch on extension; the last place a format is known
 │ ├── db/ ← SQLite connection + schema/migrations (1 the schema and the genre seed, 2 last_watched_at, 3 the `settings` table — nothing seeded), shared by every domain module above
 │ └── test-support/ ← test doubles shared across server tests, never imported by shipping code
 │ ├── heldCopy/ ← a Media whose first copy waits until released, forwarding the cancel signal
+│ ├── fixedSlot/ ← a Component slot over one fixed component, for the thirty-odd suites that compose a Playback and never write to the slot
+│ ├── componentDir/ ← a component's two files in a sandbox, and `ffmpegIn` / `ffprobeIn` / `EXE` (re-exported from the resolver that owns it)
 │ └── libraryFixture/ ← the importer’s fixture copied under a sandbox → { root, sheet }
 ├── src/
 │ ├── App/ ← the router and the app-level providers every page renders inside
 │ ├── assets/ ← images, fonts, icons (static)
-│ ├── styles/ ← global CSS reset, themes
+│ ├── styles/ ← global CSS reset, themes, and visuallyHidden.ts — the clip that hides an input without taking it out of the tab order
 │ ├── tokens/ ← colors, spacing, typography, breakpoints
 │ │ ├── colors.ts
 │ │ ├── spacing.ts
@@ -151,7 +159,7 @@ familyflix/
 │ │ └── index.ts
 │ ├── primitives/ ← dumb, reusable UI atoms (Button, Input, Text, Icon, Badge)
 │ │ ├── index.ts ← barrel: re-exports every primitive (only barrel at this rung)
-│ │ ├── Icon/ ← one file per glyph on IconBase (DownloadIcon, SheetIcon, CheckIcon, MicrochipIcon, …), `currentColor`, sized by the caller
+│ │ ├── Icon/ ← one file per glyph on IconBase (DownloadIcon, SheetIcon, CheckIcon, MicrochipIcon, UploadIcon, …), `currentColor`, sized by the caller
 │ │ ├── TextField/ ← the boxed input: a glyph slot (the sheet and folder glyphs among them) and `mono` for a path
 │ │ ├── Toggle/ ← the switch: `{ checked, disabled?, onToggle, label }`, `role="switch"`, `aria-disabled` rather than `disabled` so it stays in the tab order
 │ │ └── Button/ ← primary / secondary / ghost / danger, at sm (a list row’s pair) / md / lg
@@ -217,14 +225,17 @@ familyflix/
 │ │ │ ├── LibrarySection/ ← the Library group: Add a movie and Import from spreadsheet owning their routes, and Export to CSV owning the Export dialog it mounts — the one place a section composes another feature’s organism
 │ │ │ ├── ActionRow/ ← one glyph + label + description row of the Library group
 │ │ │ ├── PlaybackSection/ ← the Playback card: Codecs over CodecManager, the divider, Subtitles — the Auto-on toggle under its Coming soon pill, and Preferred language over FilterDropdown, shown at once and put back on refusal
-│ │ │ ├── CodecManager/ ← the Codec report organism: owns useCapabilities, the Codec summary over one CodecRow per catalogued codec; no drop zone, no ✕ — a report, not a manager
-│ │ │ ├── CodecRow/ ← the tile, the name, the Container chips, a — for the size, the Status pill (Built-in / Installed), the spacer where a ✕ would sit
-│ │ │ ├── codecView/ ← pure: the Format catalogue, `codecRows` (catalogue order, uncatalogued decoders absent) and `codecSummary`
+│ │ │ ├── CodecManager/ ← the Codec report organism: owns useCapabilities, the Codec summary over one CodecRow per catalogued codec, then the Component row last, then the drop zone under all of it; the ✕ passed only when the report says the component is removable
+│ │ │ ├── CodecRow/ ← one template for both kinds of row: the tile, the name, the Container chips, the size (— on a codec, a weight on the Component row), the Status pill (Built-in / Installed / Default / Uploaded), and either the RemoveButton primitive or the 32px where it would sit
+│ │ │ ├── ComponentDropZone/ ← the Component drop zone: a label over a clipped multiple file input, drag-over as the prototype's hover, the three faces read off zoneFace; it sorts nothing and labels nothing — the route tells the two binaries apart
+│ │ │ ├── zoneFace/ ← pure: an Upload state → `{ title, line, refused }`, importView's precedent; the invitation's line is `null` because its `ffmpeg` is a Mono span the molecule composes
+│ │ │ ├── codecView/ ← pure: the Format catalogue, `codecRows` (catalogue order, uncatalogued decoders absent), `componentRow` (the one row with a size and a source) and `codecSummary` (which counts formats, not the component)
 │ │ │ ├── StorageSection/ ← the Storage card: the path in mono, the space line off formatBytes and the title count; no Change… until the Electron shell
 │ │ │ ├── AboutSection/ ← the About card: the brand row, the App version in mono, the tagline; no Software update row; the last card, so no group gap
-│ │ │ ├── useCapabilities/ useStorageReport/ ← one fetch on mount, `null` until it lands and `null` still if it never does — nothing drawn while so
+│ │ │ ├── useCapabilities/ ← the read on mount, plus the two writes that change it: `{ capabilities, upload, installComponent, removeComponent }`. Neither write rejects, and neither re-fetches — both routes echo the report after the write, and that echo is the redraw
+│ │ │ ├── useStorageReport/ ← one fetch on mount, `null` until it lands and `null` still if it never does — nothing drawn while so
 │ │ │ ├── useSettings/ ← the read half the same; `chooseSubtitleLanguage` flips the pill first and puts it back if the save refuses, never rejecting
-│ │ │ └── api/ ← fetchCapabilities, saveSubtitleLanguage, fetchStorageReport (one caller each)
+│ │ │ └── api/ ← fetchCapabilities, installComponent, removeComponent (both rejecting with ComponentRefusedError carrying the route's own words), saveSubtitleLanguage, fetchStorageReport (one caller each)
 │ │ └── collections/ ← playlists/collections (roadmap, not MVP)
 │ ├── layouts/ ← page chrome
 │ │ ├── chrome.styles.ts ← the furniture MainLayout and GenreLayout both extend
@@ -238,7 +249,7 @@ familyflix/
 │ │ ├── postValue.ts
 │ │ └── postValue.test.ts
 │ ├── hooks/ ← global shared hooks only (useMediaQuery, useTheme)
-│ ├── types/ ← shared TypeScript interfaces (import.ts: ImportRun, ImportProblem, ImportProblemDetail, ImportField; export.ts: EXPORT_FORMATS, EXPORT_COLUMNS, EXPORT_FILENAME, ExportSummary; settings.ts: SUBTITLE_LANGUAGES, SubtitleLanguage, DEFAULT_SUBTITLE_LANGUAGE, Settings, StorageReport; playback.ts: CodecKind, CodecSupport, CodecCapability, PlaybackCapabilities — both build targets; appVersion.d.ts: `__APP_VERSION__`, defined by Vite from package.json)
+│ ├── types/ ← shared TypeScript interfaces (import.ts: ImportRun, ImportProblem, ImportProblemDetail, ImportField; export.ts: EXPORT_FORMATS, EXPORT_COLUMNS, EXPORT_FILENAME, ExportSummary; settings.ts: SUBTITLE_LANGUAGES, SubtitleLanguage, DEFAULT_SUBTITLE_LANGUAGE, Settings, StorageReport; playback.ts: CodecKind, CodecSupport, CodecCapability, ComponentSource, PlaybackComponentInfo, PlaybackCapabilities — both build targets; appVersion.d.ts: `__APP_VERSION__`, defined by Vite from package.json)
 │ ├── utils/ ← pure helper functions (one folder per helper + its test)
 │ │ ├── index.ts ← barrel: re-exports every helper
 │ │ ├── formatBytes/ ← 1024-based, one decimal from KB up: `18.4 GB`
@@ -449,15 +460,26 @@ progress indicator, not a spinner.
 `/settings` is four **Settings groups** under one header — Library,
 Playback, Storage, About — each a **Section card** on the feature's shared
 `section.styles.ts` except Library, which draws rows. Every number on the
-page is a read the app can truthfully answer now, over four routes and
+page is a read the app can truthfully answer now, over six routes and
 nothing new injected:
 
 - `GET /api/playback/capabilities` → `{ component, codecs }`, the **Codec
   report**, reached through `Playback.capabilities()` alone — a property
-  of the component `main.ts` composed, never a second resolution of the
-  slot, so the report and pressing Play cannot disagree. The screen keeps
+  of the **Component slot** `main.ts` composed, never a second resolution
+  of it, so the report and pressing Play cannot disagree. The screen keeps
   the **Format catalogue**: a decoder the catalogue does not name is not a
   row.
+- `POST /api/playback/component` → `200 PlaybackCapabilities`, the report
+  **after the swap**: `multipart/form-data`, every file part named
+  `component` and told apart by `componentBinary` — the client sorts
+  nothing and labels nothing. `400` for a body that is not multipart, a
+  stray part, a second of either or a missing half; `422` for a pair that
+  will not run; `409` for the **In-use refusal**; `500` for a swap stopped
+  by neither. And `DELETE /api/playback/component` → the report **after
+  the fall-back**, the ✕ on the **Component row**: `404` when there is
+  nothing uploaded to take back, `409` in the upload's own words, `500`
+  the same. Both echo the whole report, so the screen redraws from the
+  echo rather than reading again.
 - `GET /api/settings` → `{ subtitleLanguage }` with the default applied,
   and `POST /api/settings/subtitle-language { value }` → `{ value }`, a
   **Single-signal write** on the favorite / watched / rating precedent;
@@ -471,11 +493,11 @@ nothing new injected:
 
 Every read on the page is `null` until it lands and `null` still if it
 never does, and nothing is drawn while so — no skeleton, no error face.
-The three controls whose mechanism does not exist — the _Add a codec pack_
-zone and per-row ✕ (the **Playback component upload** initiative),
-_Change…_ (the Electron shell) and _Software update_ (the Snackbar system)
-— are not drawn, the rule that held the Export row back until its dialog
-existed.
+The two controls whose mechanism does not exist — _Change…_ (the Electron
+shell) and _Software update_ (the Snackbar system) — are not drawn, the
+rule that held the Export row back until its dialog existed. The _Add a
+codec pack_ zone and the ✕ were the third; the **Playback component
+upload** built their mechanism, so both are drawn now.
 
 ## Watch Tracking
 
