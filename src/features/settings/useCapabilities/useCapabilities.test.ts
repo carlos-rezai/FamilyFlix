@@ -41,7 +41,11 @@ afterEach(() => {
 });
 
 const REPORT: PlaybackCapabilities = {
-  component: true,
+  component: {
+    source: 'default',
+    bytes: 98_765_432,
+    files: ['ffmpeg.exe', 'ffprobe.exe'],
+  },
   codecs: [
     { codec: 'h264', kind: 'video', support: 'native' },
     { codec: 'hevc', kind: 'video', support: 'via-component' },

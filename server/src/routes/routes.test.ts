@@ -58,6 +58,7 @@ import {
   FIXTURE_DURATION_SECONDS,
   FIXTURE_VIDEO,
 } from '../test-support/fixtureVideo/fixtureVideo';
+import { fixedSlot } from '../test-support/fixedSlot/fixedSlot';
 import { sandboxRoot } from '../test-support/sandboxRoot/sandboxRoot';
 import { createPlayback } from '../playback/createPlayback/createPlayback';
 import type {
@@ -133,7 +134,7 @@ function freshApi(
   mkdirSync(media);
   mkdirSync(outside);
 
-  const playback = createPlayback(media, component);
+  const playback = createPlayback(media, fixedSlot(component));
   const mediaDomain = seam(media);
   const app = express();
   app.use(
@@ -3022,7 +3023,7 @@ function relisten(
   media: string,
   component: PlaybackComponent | null
 ): string {
-  const playback = createPlayback(media, component);
+  const playback = createPlayback(media, fixedSlot(component));
   const mediaDomain = createMedia(media);
   const app = express();
   app.use(

@@ -15,6 +15,14 @@
 // `PlaybackComponent | null`, the one `main.ts` composed, and reads the listing
 // off its `decoders()`. The environment is never consulted here again.
 //
+// 16 — Playback component upload, Phase 1: "the slot resolves what is live,
+// and it has a row" (issue #152) narrows it again. `capabilities` answers
+// `CodecCapability[]` — the rows alone — because the `component` half of the
+// **Codec report** is now the **Component slot**'s answer, a source, a size and
+// two basenames, and not a boolean this function could know. The report is
+// assembled in one place, `Playback.capabilities()`, and what used to be
+// asserted here as `component: true` is asserted there.
+//
 // Nothing here spawns anything. The component is a fake whose `decoders()`
 // answers a string — a listing that shelled out could only ever be asked about
 // the machine running the test, and CI is a machine with no FFmpeg on it. The
@@ -23,7 +31,7 @@
 import { Readable } from 'node:stream';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import type { CodecCapability, PlaybackCapabilities } from '@/types';
+import type { CodecCapability } from '@/types';
 
 import { componentDir } from '../../test-support/componentDir/componentDir';
 import type {
@@ -78,15 +86,15 @@ function fakeComponent(decoders: string | null): PlaybackComponent {
 }
 
 /** The codecs reported, by name, in an order no assertion has to know. */
-const names = (reported: PlaybackCapabilities): string[] =>
-  reported.codecs.map((entry) => entry.codec).sort();
+const names = (rows: CodecCapability[]): string[] =>
+  rows.map((entry) => entry.codec).sort();
 
 /** The one entry for a codec, or `undefined` when it is not reported at all. */
 const entryFor = (
-  reported: PlaybackCapabilities,
+  rows: CodecCapability[],
   codec: string
 ): CodecCapability | undefined =>
-  reported.codecs.find((candidate) => candidate.codec === codec);
+  rows.find((candidate) => candidate.codec === codec);
 
 /**
  * Everything Chromium decodes unaided — the same set `choosePlaybackPath` calls
@@ -110,22 +118,19 @@ afterEach(() => {
 });
 
 describe('capabilities — the machine with no Playback component', () => {
-  it('reports Chromium’s native set alone, and says there is no component', () => {
+  it('reports Chromium’s native set alone', () => {
     // The whole point of the absent state: a family whose installer has not run
     // yet still has a codec screen that tells them the truth, and the truth is
     // that MP4s play and nothing else does.
     const reported = capabilities(null);
 
-    expect(reported.component).toBe(false);
     expect(names(reported)).toEqual(CHROMIUM_NATIVE);
   });
 
   it('marks every one of them native, and knows video from audio', () => {
     const reported = capabilities(null);
 
-    expect(reported.codecs.every((entry) => entry.support === 'native')).toBe(
-      true
-    );
+    expect(reported.every((entry) => entry.support === 'native')).toBe(true);
     expect(entryFor(reported, 'h264')?.kind).toBe('video');
     expect(entryFor(reported, 'aac')?.kind).toBe('audio');
   });
@@ -141,7 +146,6 @@ describe('capabilities — the union with the component it was handed', () => {
   it('reports the codecs the component adds, marked as coming from it', () => {
     const reported = capabilities(fakeComponent(DECODERS));
 
-    expect(reported.component).toBe(true);
     expect(entryFor(reported, 'hevc')).toEqual({
       codec: 'hevc',
       kind: 'video',
@@ -162,7 +166,6 @@ describe('capabilities — the union with the component it was handed', () => {
   it('keeps the whole native set alongside them', () => {
     const reported = capabilities(fakeComponent(DECODERS));
 
-    expect(reported.component).toBe(true);
     for (const codec of CHROMIUM_NATIVE) {
       expect(entryFor(reported, codec)).toBeDefined();
     }
@@ -178,10 +181,7 @@ describe('capabilities — the union with the component it was handed', () => {
     // play** wants no component at all.
     const reported = capabilities(fakeComponent(DECODERS));
 
-    expect(reported.component).toBe(true);
-    expect(
-      reported.codecs.filter((entry) => entry.codec === 'h264')
-    ).toHaveLength(1);
+    expect(reported.filter((entry) => entry.codec === 'h264')).toHaveLength(1);
     expect(entryFor(reported, 'h264')?.support).toBe('native');
   });
 
@@ -192,27 +192,24 @@ describe('capabilities — the union with the component it was handed', () => {
     // read is about what the family can watch, and subtitles are parsed by us.
     const reported = capabilities(fakeComponent(DECODERS));
 
-    expect(reported.component).toBe(true);
     expect(names(reported)).not.toContain('subrip');
     expect(names(reported)).not.toContain('=');
     expect(names(reported)).not.toContain('Decoders:');
     expect(names(reported)).not.toContain('------');
   });
 
-  it('reports the component present but adds nothing when it will not say', () => {
+  it('adds nothing when the component will not say', () => {
     // A binary that is there and answers nothing — a broken build, a listing
     // that timed out. It is still installed, so the report must not claim it is
     // missing; it added no formats, so it must not claim it did.
     const reported = capabilities(fakeComponent(null));
 
-    expect(reported.component).toBe(true);
     expect(names(reported)).toEqual(CHROMIUM_NATIVE);
   });
 
-  it('reports the component present over the native rows for an empty listing', () => {
+  it('answers the native rows for an empty listing', () => {
     const reported = capabilities(fakeComponent(''));
 
-    expect(reported.component).toBe(true);
     expect(names(reported)).toEqual(CHROMIUM_NATIVE);
   });
 });
@@ -239,7 +236,6 @@ describe('capabilities — the component handed over is the only one asked', () 
 
     const reported = capabilities(null);
 
-    expect(reported.component).toBe(false);
     expect(names(reported)).toEqual(CHROMIUM_NATIVE);
   });
 });

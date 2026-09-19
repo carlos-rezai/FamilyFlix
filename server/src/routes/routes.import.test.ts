@@ -38,6 +38,7 @@ import {
 import { createMedia, type Media } from '../media/createMedia/createMedia';
 import { createPlayback } from '../playback/createPlayback/createPlayback';
 import { createSqliteStorage, type LibraryStorage } from '../library';
+import { fixedSlot } from '../test-support/fixedSlot/fixedSlot';
 import { heldCopy } from '../test-support/heldCopy/heldCopy';
 import { libraryFixture } from '../test-support/libraryFixture/libraryFixture';
 import { sandboxRoot } from '../test-support/sandboxRoot/sandboxRoot';
@@ -109,7 +110,7 @@ function freshApi({
   const { root, sheet } = resume ?? libraryFixture(dir);
 
   const mediaDomain = seam(createMedia(media));
-  const playback = createPlayback(media, null);
+  const playback = createPlayback(media, fixedSlot(null));
   const composed = createImporter({ storage, media: mediaDomain, playback });
 
   const app = express();

@@ -3,7 +3,11 @@ import { act, render, screen, waitFor } from '@testing-library/react';
 import { ThemeProvider } from 'styled-components';
 
 import { CodecManager } from './CodecManager';
-import type { CodecCapability, PlaybackCapabilities } from '@/types';
+import type {
+  CodecCapability,
+  PlaybackCapabilities,
+  PlaybackComponentInfo,
+} from '@/types';
 import { theme } from '@/styles/theme';
 import { comesBefore } from '@/test-support/comesBefore/comesBefore';
 import {
@@ -26,6 +30,15 @@ import {
  *
  * Read through what is on screen, the `ExportModal` precedent, over a stubbed
  * `fetch`.
+ *
+ * ---
+ *
+ * 16 — Playback component upload, Phase 1: "the slot resolves what is live,
+ * and it has a row" (issue #152). The organism grows the one row that has a
+ * size and a source: the **Component row**, drawn **last**, under every codec
+ * row — and absent on a machine with no component at all. The **Codec
+ * summary** counts the codec rows only; the ffmpeg pair is not a film format.
+ * Still no zone and still no ✕: nothing passes a remove handler until Phase 4.
  */
 
 let fetchMock: ReturnType<
@@ -58,9 +71,16 @@ const added = (codec: string, kind: 'video' | 'audio'): CodecCapability => ({
   support: 'via-component',
 });
 
+/** The **Default component**: what `ffmpegBinary` resolved on this machine. */
+const DEFAULT_COMPONENT: PlaybackComponentInfo = {
+  source: 'default',
+  bytes: 98_765_432,
+  files: ['ffmpeg.exe', 'ffprobe.exe'],
+};
+
 /** A machine with a component: Chromium's set, plus what ffmpeg adds. */
 const WITH_COMPONENT: PlaybackCapabilities = {
-  component: true,
+  component: DEFAULT_COMPONENT,
   codecs: [
     native('h264', 'video'),
     native('vp9', 'video'),
@@ -72,9 +92,9 @@ const WITH_COMPONENT: PlaybackCapabilities = {
   ],
 };
 
-/** A machine with none: the native rows alone. */
+/** A machine with none: the native rows alone, and no Component row. */
 const WITHOUT_COMPONENT: PlaybackCapabilities = {
-  component: false,
+  component: null,
   codecs: [
     native('h264', 'video'),
     native('vp9', 'video'),
@@ -220,6 +240,72 @@ describe('CodecManager — once the report lands', () => {
     );
     expect(screen.getAllByText('Built-in')).toHaveLength(3);
     expect(screen.queryByText('Installed')).toBeNull();
+  });
+
+  it('draws no Component row for a machine with none', async () => {
+    // Nothing to name, weigh or remove: the absence of the row is how the
+    // screen says so, the rule the codec rows already keep.
+    fetchMock.mockResolvedValue(okResponse(WITHOUT_COMPONENT));
+    renderManager();
+
+    await waitFor(() => expect(summary()).not.toBeNull());
+
+    expect(screen.queryByText('Playback component')).toBeNull();
+    expect(screen.queryByText('Default')).toBeNull();
+  });
+
+  it('draws the Component row last, under every codec row', async () => {
+    fetchMock.mockResolvedValue(okResponse(WITH_COMPONENT));
+    renderManager();
+
+    await waitFor(() => expect(summary()).not.toBeNull());
+
+    const componentRow = screen.getByText('Playback component');
+    for (const name of [
+      'H.264 / AVC',
+      'H.265 / HEVC',
+      'VP9',
+      'AAC Audio',
+      'AC-3 / Dolby Digital',
+    ]) {
+      expect(comesBefore(screen.getByText(name), componentRow)).toBe(true);
+    }
+  });
+
+  it('draws the pair’s basenames and its size on that row', async () => {
+    fetchMock.mockResolvedValue(okResponse(WITH_COMPONENT));
+    renderManager();
+
+    await waitFor(() => expect(summary()).not.toBeNull());
+
+    expect(screen.getByText('ffmpeg.exe')).toBeDefined();
+    expect(screen.getByText('ffprobe.exe')).toBeDefined();
+    expect(screen.getByText('94.2 MB')).toBeDefined();
+  });
+
+  it('says Default for the component the machine came with', async () => {
+    fetchMock.mockResolvedValue(okResponse(WITH_COMPONENT));
+    renderManager();
+
+    await waitFor(() => expect(summary()).not.toBeNull());
+
+    expect(screen.getByText('Default')).toBeDefined();
+    expect(screen.queryByText('Uploaded')).toBeNull();
+  });
+
+  it('counts the codec rows alone in the summary', async () => {
+    // Six rows are drawn and five formats are enabled: the ffmpeg pair is not
+    // a film format, and a family reading the line is reading how many films
+    // play.
+    fetchMock.mockResolvedValue(okResponse(WITH_COMPONENT));
+    renderManager();
+
+    await waitFor(() =>
+      expect(
+        screen.getByText('5 formats enabled · 2 from the playback component')
+      ).toBeDefined()
+    );
+    expect(screen.getAllByText(/Built-in|Installed|Default/)).toHaveLength(6);
   });
 
   it('offers no control — no Add a codec pack zone, no ✕', async () => {

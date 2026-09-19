@@ -50,6 +50,7 @@ import { readSheet } from '../import-export/readSheet/readSheet';
 import { createMedia } from '../media/createMedia/createMedia';
 import { createPlayback } from '../playback/createPlayback/createPlayback';
 import { createSqliteStorage, type LibraryStorage } from '../library';
+import { fixedSlot } from '../test-support/fixedSlot/fixedSlot';
 import { libraryFixture } from '../test-support/libraryFixture/libraryFixture';
 import { newMovie } from '../test-support/newMovie/newMovie';
 import { sandboxRoot } from '../test-support/sandboxRoot/sandboxRoot';
@@ -102,7 +103,7 @@ function freshApi(): {
   const { root, sheet } = libraryFixture(dir, 'library.csv');
 
   const mediaDomain = createMedia(media);
-  const playback = createPlayback(media, null);
+  const playback = createPlayback(media, fixedSlot(null));
   const app = express();
   app.use(
     '/api',

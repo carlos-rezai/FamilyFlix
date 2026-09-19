@@ -58,7 +58,11 @@ function onlyRequest() {
 }
 
 const REPORT: PlaybackCapabilities = {
-  component: true,
+  component: {
+    source: 'default',
+    bytes: 98_765_432,
+    files: ['ffmpeg.exe', 'ffprobe.exe'],
+  },
   codecs: [
     { codec: 'h264', kind: 'video', support: 'native' },
     { codec: 'hevc', kind: 'video', support: 'via-component' },
@@ -85,7 +89,7 @@ describe('fetchCapabilities', () => {
 
   it('resolves a report with no component as it came', async () => {
     const absent: PlaybackCapabilities = {
-      component: false,
+      component: null,
       codecs: [{ codec: 'h264', kind: 'video', support: 'native' }],
     };
     fetchMock.mockResolvedValue(okResponse(absent));

@@ -19,7 +19,10 @@
 //   `Playback.capabilities()` and nothing else, which is what the fake
 //   component handed to `createPlayback` asserts: what the route answers is
 //   what that component's `decoders()` said, and neither the environment nor
-//   a binary on PATH has a say.
+//   a binary on PATH has a say. Since `16-component-upload` Phase 1 the
+//   domain is composed over a **Component slot** rather than a component —
+//   `fixedSlot` here — and `component` is the **Component info** it describes,
+//   `{ source, bytes, files }` or `null` for a machine with none.
 // - `GET /api/settings` → `200 { subtitleLanguage }`, the household's one
 //   preference with the default already applied, so no client has to know
 //   what it is.
@@ -58,12 +61,14 @@ import {
   componentDir,
   ffmpegIn,
 } from '../test-support/componentDir/componentDir';
+import { fixedSlot } from '../test-support/fixedSlot/fixedSlot';
 import { newMovie } from '../test-support/newMovie/newMovie';
 import { sandboxRoot } from '../test-support/sandboxRoot/sandboxRoot';
 import {
   DEFAULT_SUBTITLE_LANGUAGE,
   type CodecCapability,
   type PlaybackCapabilities,
+  type PlaybackComponentInfo,
   type Settings,
   type StorageReport,
 } from '@/types';
@@ -101,10 +106,13 @@ interface Api {
  */
 function freshApi({
   component = null,
+  componentInfo,
   mediaPath,
   exists = true,
 }: {
   component?: PlaybackComponent | null;
+  /** What the slot says about that component — the **Component info**. */
+  componentInfo?: PlaybackComponentInfo;
   mediaPath?: string;
   exists?: boolean;
 } = {}): Api {
@@ -118,7 +126,7 @@ function freshApi({
   }
 
   const mediaDomain = createMedia(media);
-  const playback = createPlayback(media, component);
+  const playback = createPlayback(media, fixedSlot(component, componentInfo));
   const app = express();
   app.use(
     '/api',
@@ -192,10 +200,12 @@ describe('GET /api/playback/capabilities — the machine with no Playback compon
     expect(response.headers.get('content-type')).toContain('application/json');
   });
 
-  it('answers component false over the native rows alone', async () => {
+  it('answers a null component over the native rows alone', async () => {
+    // `null` is a machine with no component at all — the fresh install before
+    // its installer has run, and CI.
     const reported = await readCapabilities(freshApi().baseUrl);
 
-    expect(reported.component).toBe(false);
+    expect(reported.component).toBeNull();
     expect(reported.codecs.length).toBeGreaterThan(0);
     expect(reported.codecs.every((entry) => entry.support === 'native')).toBe(
       true
@@ -222,12 +232,12 @@ describe('GET /api/playback/capabilities — the machine with no Playback compon
 });
 
 describe('GET /api/playback/capabilities — the component the domain was composed with', () => {
-  it('answers component true and what the fake component’s decoders add', async () => {
+  it('answers the component the slot describes and what its decoders add', async () => {
     const { baseUrl } = freshApi({ component: fakeComponent(DECODERS) });
 
     const reported = await readCapabilities(baseUrl);
 
-    expect(reported.component).toBe(true);
+    expect(reported.component).not.toBeNull();
     expect(entryFor(reported, 'hevc')).toEqual({
       codec: 'hevc',
       kind: 'video',
@@ -249,12 +259,12 @@ describe('GET /api/playback/capabilities — the component the domain was compos
     expect(entryFor(reported, 'h264')?.support).toBe('native');
   });
 
-  it('answers component true over the native rows for a component that will not say', async () => {
+  it('answers the component over the native rows for one that will not say', async () => {
     const { baseUrl } = freshApi({ component: fakeComponent(null) });
 
     const reported = await readCapabilities(baseUrl);
 
-    expect(reported.component).toBe(true);
+    expect(reported.component).not.toBeNull();
     expect(reported.codecs.every((entry) => entry.support === 'native')).toBe(
       true
     );
@@ -271,7 +281,29 @@ describe('GET /api/playback/capabilities — the component the domain was compos
 
     const reported = await readCapabilities(baseUrl);
 
-    expect(reported.component).toBe(false);
+    expect(reported.component).toBeNull();
+  });
+
+  it('carries the source, the pair’s bytes and their basenames', async () => {
+    // What the **Component row** draws, straight off the slot: where the live
+    // component came from, what the pair weighs, and what its two files are
+    // called. The route assembles nothing — `Playback.capabilities()` does.
+    const { baseUrl } = freshApi({
+      component: fakeComponent(DECODERS),
+      componentInfo: {
+        source: 'uploaded',
+        bytes: 98_765_432,
+        files: ['ffmpeg.exe', 'ffprobe.exe'],
+      },
+    });
+
+    const reported = await readCapabilities(baseUrl);
+
+    expect(reported.component).toEqual({
+      source: 'uploaded',
+      bytes: 98_765_432,
+      files: ['ffmpeg.exe', 'ffprobe.exe'],
+    });
   });
 });
 

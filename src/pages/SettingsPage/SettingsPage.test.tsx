@@ -11,7 +11,11 @@ import { okResponse } from '@/test-support/fakeResponse/fakeResponse';
 
 /** The **Codec report** the Playback card reads on mount. */
 const REPORT: PlaybackCapabilities = {
-  component: true,
+  component: {
+    source: 'default',
+    bytes: 98_765_432,
+    files: ['ffmpeg.exe', 'ffprobe.exe'],
+  },
   codecs: [
     { codec: 'h264', kind: 'video', support: 'native' },
     { codec: 'hevc', kind: 'video', support: 'via-component' },

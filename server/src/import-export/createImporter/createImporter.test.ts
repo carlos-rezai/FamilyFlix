@@ -81,6 +81,7 @@ import {
 } from './createImporter';
 import { createMedia, type Media } from '../../media/createMedia/createMedia';
 import { createPlayback } from '../../playback/createPlayback/createPlayback';
+import { fixedSlot } from '../../test-support/fixedSlot/fixedSlot';
 import { freshStorage } from '../../test-support/freshStorage/freshStorage';
 import { heldCopy } from '../../test-support/heldCopy/heldCopy';
 import {
@@ -127,7 +128,7 @@ function sandbox({
   const importer = createImporter({
     storage: storageSeam(storage),
     media: mediaSeam(createMedia(media)),
-    playback: createPlayback(media, null),
+    playback: createPlayback(media, fixedSlot(null)),
   });
   return { storage, importer, media, root, sheet };
 }
@@ -2437,7 +2438,7 @@ describe('createImporter — the importer restarting mid-run', () => {
     const restarted = createImporter({
       storage,
       media: createMedia(media),
-      playback: createPlayback(media, null),
+      playback: createPlayback(media, fixedSlot(null)),
     });
     return { storage, media, root, sheet, restarted };
   }

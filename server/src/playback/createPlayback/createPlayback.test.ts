@@ -27,6 +27,17 @@
 //
 // ---
 //
+// 16 — Playback component upload, Phase 1: "the slot resolves what is live,
+// and it has a row" (issue #152) changes what the domain is composed over. It
+// is handed a **Component slot** rather than a component, and reads
+// `slot.current()` inside `decide`, `duration` and `stream` — so a component
+// swapped while the app runs is honoured by the next Play with nothing to
+// invalidate. Every case below reaches it through `fixedSlot`, the double that
+// answers one component and refuses to receive or remove; the cases that are
+// *about* the swap use a slot whose component the test replaces between two
+// calls. `capabilities()` assembles `{ component: slot.info(), codecs }`, so
+// the `component` half is what the slot says rather than a boolean.
+//
 // 15 — Settings hub, Phase 1: "the tracer bullet" (issue #143) added the sixth,
 // `capabilities()`: what `capabilities` answers over the component this domain
 // was composed with, so the route reads the one `main.ts` composed and never
@@ -39,7 +50,9 @@ import { join } from 'node:path';
 import { Readable } from 'node:stream';
 import { describe, expect, it, vi } from 'vitest';
 
+import { fixedSlot } from '../../test-support/fixedSlot/fixedSlot';
 import { sandboxRoot } from '../../test-support/sandboxRoot/sandboxRoot';
+import type { ComponentSlot } from '../componentSlot/componentSlot';
 import type {
   PlaybackComponent,
   PlaybackProcess,
@@ -90,6 +103,37 @@ function fakeComponent(
   return component;
 }
 
+/**
+ * A **Component slot** whose live component the test replaces between two
+ * calls — the machine an upload or a remove happened on while the app ran.
+ * It receives and removes nothing: what is being asked here is what the domain
+ * does with whatever `current()` says now.
+ */
+function changingSlot(): {
+  slot: ComponentSlot;
+  put(next: PlaybackComponent | null): void;
+} {
+  let live: PlaybackComponent | null = null;
+  const refuse = (): never => {
+    throw new Error('the changing slot neither receives nor removes');
+  };
+
+  return {
+    slot: {
+      current: () => live,
+      info: () =>
+        live === null
+          ? null
+          : { source: 'uploaded', bytes: 1000, files: ['ffmpeg', 'ffprobe'] },
+      receive: refuse,
+      remove: refuse,
+    },
+    put: (next) => {
+      live = next;
+    },
+  };
+}
+
 /** A managed media directory with the named file in it, and its path. */
 function mediaWith(
   relativePath: string,
@@ -107,14 +151,18 @@ describe('createPlayback — resolving a stored path', () => {
     const { media, file } = mediaWith('Northwind (2018)/northwind.mkv');
 
     expect(
-      createPlayback(media, null).videoFile('Northwind (2018)/northwind.mkv')
+      createPlayback(media, fixedSlot(null)).videoFile(
+        'Northwind (2018)/northwind.mkv'
+      )
     ).toBe(file);
   });
 
   it('answers null for a file that is not there', () => {
     const { media } = mediaWith('Northwind (2018)/northwind.mkv');
 
-    expect(createPlayback(media, null).videoFile('Gone/gone.mkv')).toBeNull();
+    expect(
+      createPlayback(media, fixedSlot(null)).videoFile('Gone/gone.mkv')
+    ).toBeNull();
   });
 
   it('answers null for a stored path that leaves the tree', () => {
@@ -122,13 +170,15 @@ describe('createPlayback — resolving a stored path', () => {
     const { media } = mediaWith('Northwind (2018)/northwind.mkv');
 
     expect(
-      createPlayback(media, null).videoFile('../elsewhere/secrets.mkv')
+      createPlayback(media, fixedSlot(null)).videoFile(
+        '../elsewhere/secrets.mkv'
+      )
     ).toBeNull();
   });
 
   it('resolves a subtitle by the same rule, on a row from a different table', () => {
     const { media, file } = mediaWith('Northwind (2018)/northwind.srt', '');
-    const playback = createPlayback(media, null);
+    const playback = createPlayback(media, fixedSlot(null));
 
     expect(playback.subtitleFile('Northwind (2018)/northwind.srt')).toBe(file);
     expect(playback.subtitleFile('../elsewhere/notes.srt')).toBeNull();
@@ -139,7 +189,9 @@ describe('createPlayback — the read, and a length that is not there', () => {
   it('answers the path and the length the probe reported', () => {
     const { media, file } = mediaWith('Northwind (2018)/northwind.mkv');
 
-    expect(createPlayback(media, fakeComponent(MATROSKA)).read(file)).toEqual({
+    expect(
+      createPlayback(media, fixedSlot(fakeComponent(MATROSKA))).read(file)
+    ).toEqual({
       path: 'transcode',
       durationSeconds: 4102.5,
     });
@@ -153,7 +205,7 @@ describe('createPlayback — the read, and a length that is not there', () => {
     const { media, file } = mediaWith('Northwind (2018)/northwind.mp4');
     const component = fakeComponent({ ...NATIVE, durationSeconds: 0 });
 
-    expect(createPlayback(media, component).read(file)).toEqual({
+    expect(createPlayback(media, fixedSlot(component)).read(file)).toEqual({
       path: 'cannot-play',
       durationSeconds: 0,
     });
@@ -164,7 +216,7 @@ describe('createPlayback — the read, and a length that is not there', () => {
 
     // No component: an MKV is not something Chromium reads, and there is
     // nothing here that could convert it.
-    expect(createPlayback(media, null).read(file)).toEqual({
+    expect(createPlayback(media, fixedSlot(null)).read(file)).toEqual({
       path: 'cannot-play',
       durationSeconds: 0,
     });
@@ -178,7 +230,7 @@ describe('createPlayback — the read, and a length that is not there', () => {
       mp4Of(600, 4_099_500)
     );
 
-    expect(createPlayback(media, null).read(file)).toEqual({
+    expect(createPlayback(media, fixedSlot(null)).read(file)).toEqual({
       path: 'direct',
       durationSeconds: 6832.5,
     });
@@ -187,10 +239,12 @@ describe('createPlayback — the read, and a length that is not there', () => {
   it('decides afresh rather than remembering, so a new component changes the answer', () => {
     const { media, file } = mediaWith('Northwind (2018)/northwind.mkv');
 
-    expect(createPlayback(media, null).read(file).path).toBe('cannot-play');
-    expect(createPlayback(media, fakeComponent(MATROSKA)).read(file).path).toBe(
-      'transcode'
+    expect(createPlayback(media, fixedSlot(null)).read(file).path).toBe(
+      'cannot-play'
     );
+    expect(
+      createPlayback(media, fixedSlot(fakeComponent(MATROSKA))).read(file).path
+    ).toBe('transcode');
   });
 });
 
@@ -198,9 +252,9 @@ describe('createPlayback — the duration, derived best-effort', () => {
   it('answers the seconds the probe reported', () => {
     const { media, file } = mediaWith('Northwind (2018)/northwind.mkv');
 
-    expect(createPlayback(media, fakeComponent(MATROSKA)).duration(file)).toBe(
-      4102.5
-    );
+    expect(
+      createPlayback(media, fixedSlot(fakeComponent(MATROSKA))).duration(file)
+    ).toBe(4102.5);
   });
 
   it('reads the container’s own header when there is no component to probe', () => {
@@ -212,7 +266,7 @@ describe('createPlayback — the duration, derived best-effort', () => {
       mp4Of(600, 4_099_500)
     );
 
-    expect(createPlayback(media, null).duration(file)).toBe(6832.5);
+    expect(createPlayback(media, fixedSlot(null)).duration(file)).toBe(6832.5);
   });
 
   it('falls back to the header when the probe answered no duration', () => {
@@ -226,7 +280,9 @@ describe('createPlayback — the duration, derived best-effort', () => {
     );
     const component = fakeComponent({ ...NATIVE, durationSeconds: 0 });
 
-    expect(createPlayback(media, component).duration(file)).toBe(6832.5);
+    expect(createPlayback(media, fixedSlot(component)).duration(file)).toBe(
+      6832.5
+    );
   });
 
   it('answers null, never nought, when neither can say', () => {
@@ -236,7 +292,7 @@ describe('createPlayback — the duration, derived best-effort', () => {
     // instantaneous.
     const { media, file } = mediaWith('Northwind (2018)/northwind.mkv');
 
-    expect(createPlayback(media, null).duration(file)).toBeNull();
+    expect(createPlayback(media, fixedSlot(null)).duration(file)).toBeNull();
   });
 });
 
@@ -248,7 +304,7 @@ describe('createPlayback — the stream, and the second the film does not have',
     );
     const component = fakeComponent(NATIVE);
 
-    expect(createPlayback(media, component).stream(file)).toEqual({
+    expect(createPlayback(media, fixedSlot(component)).stream(file)).toEqual({
       path: 'direct',
     });
     expect(component.spawned).toEqual([]);
@@ -258,7 +314,7 @@ describe('createPlayback — the stream, and the second the film does not have',
     const { media, file } = mediaWith('Northwind (2018)/northwind.mkv');
     const component = fakeComponent(MATROSKA);
 
-    const plan = createPlayback(media, component).stream(file);
+    const plan = createPlayback(media, fixedSlot(component)).stream(file);
 
     expect(plan.path).toBe('converted');
     expect(component.spawned).toHaveLength(1);
@@ -270,7 +326,9 @@ describe('createPlayback — the stream, and the second the film does not have',
     const { media, file } = mediaWith('Northwind (2018)/northwind.mkv');
     const component = fakeComponent(MATROSKA);
 
-    expect(createPlayback(media, component).stream(file, 4102.6)).toEqual({
+    expect(
+      createPlayback(media, fixedSlot(component)).stream(file, 4102.6)
+    ).toEqual({
       path: 'past-end',
     });
     expect(component.spawned).toEqual([]);
@@ -282,15 +340,15 @@ describe('createPlayback — the stream, and the second the film does not have',
     const { media, file } = mediaWith('Northwind (2018)/northwind.mkv');
     const component = fakeComponent(MATROSKA);
 
-    expect(createPlayback(media, component).stream(file, 4102.5).path).toBe(
-      'converted'
-    );
+    expect(
+      createPlayback(media, fixedSlot(component)).stream(file, 4102.5).path
+    ).toBe('converted');
   });
 
   it('answers cannot-play rather than asking a component that is not there', () => {
     const { media, file } = mediaWith('Northwind (2018)/northwind.mkv');
 
-    expect(createPlayback(media, null).stream(file)).toEqual({
+    expect(createPlayback(media, fixedSlot(null)).stream(file)).toEqual({
       path: 'cannot-play',
     });
   });
@@ -303,7 +361,7 @@ describe('createPlayback — the cues, and the file that will not parse', () => 
       '1\n00:00:01,000 --> 00:00:03,500\nGood evening.\n'
     );
 
-    expect(createPlayback(media, null).cues(file)).toEqual([
+    expect(createPlayback(media, fixedSlot(null)).cues(file)).toEqual([
       { start: 1, end: 3.5, text: 'Good evening.' },
     ]);
   });
@@ -317,15 +375,15 @@ describe('createPlayback — the cues, and the file that will not parse', () => 
       'this is not a subtitle file'
     );
 
-    expect(createPlayback(media, null).cues(file)).toEqual([]);
+    expect(createPlayback(media, fixedSlot(null)).cues(file)).toEqual([]);
   });
 
   it('answers an empty list for a file that vanished before the read', () => {
     const { media } = mediaWith('Northwind (2018)/northwind.srt', '');
 
-    expect(createPlayback(media, null).cues(join(media, 'gone.srt'))).toEqual(
-      []
-    );
+    expect(
+      createPlayback(media, fixedSlot(null)).cues(join(media, 'gone.srt'))
+    ).toEqual([]);
   });
 });
 
@@ -340,13 +398,13 @@ const DECODERS = [
   ' A....D ac3                  ATSC A/52A (AC-3)',
 ].join('\n');
 
-describe('createPlayback — the capabilities, over the component it was composed with', () => {
-  it('reports no component and the native rows alone when composed over none', () => {
+describe('createPlayback — the capabilities, assembled over the slot', () => {
+  it('reports no component and the native rows alone for a slot holding none', () => {
     const { media } = mediaWith('Northwind (2018)/northwind.mp4');
 
-    const reported = createPlayback(media, null).capabilities();
+    const reported = createPlayback(media, fixedSlot(null)).capabilities();
 
-    expect(reported.component).toBe(false);
+    expect(reported.component).toBeNull();
     expect(reported.codecs.length).toBeGreaterThan(0);
     expect(reported.codecs.every((entry) => entry.support === 'native')).toBe(
       true
@@ -362,10 +420,10 @@ describe('createPlayback — the capabilities, over the component it was compose
 
     const reported = createPlayback(
       media,
-      fakeComponent(MATROSKA, DECODERS)
+      fixedSlot(fakeComponent(MATROSKA, DECODERS))
     ).capabilities();
 
-    expect(reported.component).toBe(true);
+    expect(reported.component).not.toBeNull();
     expect(reported.codecs).toContainEqual({
       codec: 'hevc',
       kind: 'video',
@@ -386,13 +444,33 @@ describe('createPlayback — the capabilities, over the component it was compose
 
     const reported = createPlayback(
       media,
-      fakeComponent(MATROSKA, null)
+      fixedSlot(fakeComponent(MATROSKA, null))
     ).capabilities();
 
-    expect(reported.component).toBe(true);
+    expect(reported.component).not.toBeNull();
     expect(reported.codecs.every((entry) => entry.support === 'native')).toBe(
       true
     );
+  });
+
+  it('answers the component the slot describes, whatever it describes', () => {
+    // The `component` half of the report is the slot's answer rather than
+    // anything `capabilities` could know: where the live component came from,
+    // what the pair weighs, and what its two files are called. It is what the
+    // **Component row** draws.
+    const { media } = mediaWith('Northwind (2018)/northwind.mkv');
+    const info = {
+      source: 'uploaded' as const,
+      bytes: 98_765_432,
+      files: ['ffmpeg.exe', 'ffprobe.exe'],
+    };
+
+    const reported = createPlayback(
+      media,
+      fixedSlot(fakeComponent(MATROSKA, DECODERS), info)
+    ).capabilities();
+
+    expect(reported.component).toEqual(info);
   });
 
   it('asks the component afresh on every read', () => {
@@ -401,12 +479,79 @@ describe('createPlayback — the capabilities, over the component it was compose
     const { media } = mediaWith('Northwind (2018)/northwind.mkv');
     const component = fakeComponent(MATROSKA, DECODERS);
     const asked = vi.spyOn(component, 'decoders');
-    const playback = createPlayback(media, component);
+    const playback = createPlayback(media, fixedSlot(component));
 
     playback.capabilities();
     playback.capabilities();
 
     expect(asked).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('createPlayback — deciding over the slot at the time of the call', () => {
+  it('answers cannot-play, then converted, for the same file', () => {
+    // The whole of what the change is for: a component installed from Settings
+    // while the app runs is honoured by the next press of Play, with nothing
+    // to invalidate and no restart. The domain closed over a component could
+    // not do this — it would answer the startup machine for the rest of the
+    // evening.
+    const { media, file } = mediaWith('Northwind (2018)/northwind.mkv');
+    const slot = changingSlot();
+    const playback = createPlayback(media, slot.slot);
+
+    expect(playback.stream(file)).toEqual({ path: 'cannot-play' });
+
+    slot.put(fakeComponent(MATROSKA));
+
+    expect(playback.stream(file).path).toBe('converted');
+  });
+
+  it('reads the film again over whatever the slot holds now', () => {
+    const { media, file } = mediaWith('Northwind (2018)/northwind.mkv');
+    const slot = changingSlot();
+    const playback = createPlayback(media, slot.slot);
+
+    expect(playback.read(file)).toEqual({
+      path: 'cannot-play',
+      durationSeconds: 0,
+    });
+
+    slot.put(fakeComponent(MATROSKA));
+
+    expect(playback.read(file)).toEqual({
+      path: 'transcode',
+      durationSeconds: 4102.5,
+    });
+  });
+
+  it('derives the runtime over whatever the slot holds now', () => {
+    // The form's save and the importer both ask `duration`, and a film
+    // imported after the upload must get the length the new component can
+    // read off it.
+    const { media, file } = mediaWith('Northwind (2018)/northwind.mkv');
+    const slot = changingSlot();
+    const playback = createPlayback(media, slot.slot);
+
+    expect(playback.duration(file)).toBeNull();
+
+    slot.put(fakeComponent(MATROSKA));
+
+    expect(playback.duration(file)).toBe(4102.5);
+  });
+
+  it('falls back to cannot-play when the slot loses its component', () => {
+    // The other direction: a remove puts the machine back, and the next Play
+    // says so rather than spawning a conversion through a binary that is gone.
+    const { media, file } = mediaWith('Northwind (2018)/northwind.mkv');
+    const slot = changingSlot();
+    slot.put(fakeComponent(MATROSKA));
+    const playback = createPlayback(media, slot.slot);
+
+    expect(playback.stream(file).path).toBe('converted');
+
+    slot.put(null);
+
+    expect(playback.stream(file)).toEqual({ path: 'cannot-play' });
   });
 });
 
