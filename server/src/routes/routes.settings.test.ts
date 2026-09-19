@@ -67,7 +67,11 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createApiRouter } from '.';
 import { createImporter } from '../import-export/createImporter/createImporter';
 import { createMedia } from '../media/createMedia/createMedia';
-import type { ComponentSlot } from '../playback/componentSlot/componentSlot';
+import type {
+  ComponentSlot,
+  InstallOutcome,
+  RemoveOutcome,
+} from '../playback/componentSlot/componentSlot';
 import { createPlayback } from '../playback/createPlayback/createPlayback';
 import type {
   PlaybackComponent,
@@ -614,14 +618,12 @@ describe('GET /api/storage — movieCount', () => {
  * `open()` is the staging folder nobody took back — the invariant behind
  * "every refusal discards `incoming/`", asked without caring whether the
  * route staged before it parsed or after.
+ *
+ * The outcome is the slot's own `InstallOutcome` rather than a hand-copied
+ * union: a reason added to the real one is then a compile error here until
+ * this suite covers it, which is exactly how `failed` went untested.
  */
-function uploadableSlot(
-  outcome:
-    | { ok: true }
-    | { ok: false; reason: 'incomplete' | 'not-a-component' | 'in-use' } = {
-    ok: true,
-  }
-) {
+function uploadableSlot(outcome: InstallOutcome = { ok: true }) {
   let component: PlaybackComponent | null = null;
   let info: PlaybackComponentInfo | null = null;
   const taken: { binary: string; bytes: string }[] = [];
@@ -930,6 +932,23 @@ describe('POST /api/playback/component — what the slot refuses', () => {
     expect(response.status).toBe(400);
     expect(fake.open()).toBe(0);
   });
+
+  it('answers 500 for a swap that stopped for neither the lock nor the pair', async () => {
+    // A full disk, a directory gone from under it: the slot answers `failed`
+    // rather than throwing, precisely so the route has something to say — and
+    // it does not say `in-use`, because there is no film to go and stop.
+    const fake = uploadableSlot({ ok: false, reason: 'failed' });
+    const { baseUrl } = freshApi({ slot: fake.slot });
+
+    const response = await postComponent(baseUrl, PAIR());
+
+    expect(response.status).toBe(500);
+    expect(await errorOf(response)).toBe(
+      'The playback component could not be replaced.'
+    );
+    expect(fake.open()).toBe(0);
+    expect((await readCapabilities(baseUrl)).component).toBeNull();
+  });
 });
 
 describe('POST /api/playback/component — what the router was composed with', () => {
@@ -979,12 +998,15 @@ const FELL_BACK: PlaybackComponentInfo = {
  * resolver's, which decodes nothing beyond Chromium's own set, or none at all
  * on a machine that never had one. A refused remove changes nothing, which is
  * what "the pair is still live" is asserted through.
+ *
+ * The outcome is the slot's own `RemoveOutcome`, for the reason the upload's
+ * is: a hand-copied union is what let one refusal be unreachable from here.
  */
 function removableSlot({
   outcome = { ok: true },
   fallback = 'default',
 }: {
-  outcome?: { ok: true } | { ok: false; reason: 'nothing-uploaded' | 'in-use' };
+  outcome?: RemoveOutcome;
   fallback?: 'default' | 'none';
 } = {}) {
   let component: PlaybackComponent | null = fakeComponent(DECODERS);
@@ -1099,6 +1121,22 @@ describe('DELETE /api/playback/component — what the slot refuses', () => {
     expect(response.status).toBe(409);
     expect(await errorOf(response)).toBe(
       "The playback component is in use. Stop the film that's playing and try again."
+    );
+    expect((await readCapabilities(baseUrl)).component).toEqual(UPLOADED);
+  });
+
+  it('answers 500 for a remove that stopped for neither the lock nor the pair', async () => {
+    // The install's fourth refusal, read the other way round, and with its
+    // own sentence: what failed was a removal, not a replacement.
+    const { baseUrl } = freshApi({
+      slot: removableSlot({ outcome: { ok: false, reason: 'failed' } }).slot,
+    });
+
+    const response = await deleteComponent(baseUrl);
+
+    expect(response.status).toBe(500);
+    expect(await errorOf(response)).toBe(
+      'The playback component could not be removed.'
     );
     expect((await readCapabilities(baseUrl)).component).toEqual(UPLOADED);
   });
