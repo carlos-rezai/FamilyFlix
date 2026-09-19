@@ -340,6 +340,31 @@ cannot half-happen, and one row that says which one is live.
 | **Upload state** (new)        | `UploadState` on `useCapabilities`: `idle`, `busy` (with `install` or `remove` as its action), or `refused` with the reason the route gave — the server's `error` on `400` / `409` / `422`, a fixed line otherwise. Replaced and removed are not states: the report the route echoes is the feedback.                                                                                                                                                                                                                                         | upload status, progress, error state          |
 | **Refused face** (new)        | The zone's third face: the title as drawn and the line in the danger ink carrying the reason — the **Setup step**'s danger line in the zone's own geometry, a prototype amendment. It stays until the next attempt. Silence on a refusal was rejected: a `.dll` dropped by a parent following the old copy must not do nothing.                                                                                                                                                                                                               | error message, validation error, toast        |
 
+## Software update (new)
+
+The `software-update` initiative — `17-software-update.md`. The row the About
+card has never drawn, the notifications it pushes, and the feed behind both. The
+vocabulary separates three things the word "update" runs together: the
+**Release** that exists on GitHub, the **Update offer** that has already been
+downloaded onto this machine, and the **Install** that replaces the running
+app.
+
+| Term                       | Definition                                                                                                                                                                                                                                                                                             | Aliases to avoid                     |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------ |
+| **Software update** (new)  | The About card's first row — the state of this machine's copy of FamilyFlix against the **Release feed**, in four faces: offered, installing, checking, idle. `SoftwareUpdateRow` in `features/software-update/`, mounted by `AboutSection`; absent entirely when there is no **Update bridge**.       | upgrade, patch, version check        |
+| **Update offer** (new)     | A **Release** newer than the **App version** that has **already been downloaded** to this machine and is waiting to be installed. The only kind of update any surface announces — auto-download is on, so "available" never means "found but not fetched".                                             | available update, pending update     |
+| **Offered version** (new)  | The version string of an **Update offer**, from the updater's own event. Drawn in the row's accent line and the offer snackbar, and never interchanged with the **App version**.                                                                                                                       | new version, latest version          |
+| **App version** (updated)  | `__APP_VERSION__`, `package.json`'s version baked in at build by Vite's `define`, in mono on the About card. `0.0.0` until the packaging initiative sets one. What is **running** — the **Offered version** is what is waiting.                                                                        | build number, release, semver        |
+| **Update check** (new)     | One ask of the **Release feed**, answering `none` / `found` / `refused` / `unavailable`. Runs once per launch, silently, and again whenever **Check for updates** is pressed — a pressed check always gets an answer, a launch check never speaks.                                                     | poll, sync, refresh                  |
+| **Last checked** (new)     | `lastCheckedAt` — an ISO stamp advanced only by an **Update check** that got an answer, so the row's _Last checked just now_ can never mean _last tried_. `null`, and the label absent, until one does.                                                                                                | last sync, last poll                 |
+| **Update bridge** (new)    | `window.familyflix.updates` — `current()`, `onOffered()`, `check()`, `install()`: the only way the renderer reaches the updater, read in one unit (`updateBridge/`). `null` in a browser, which is a state and not an error. The shell owns the global; this initiative owns the member.               | IPC, preload API, electron api       |
+| **Release feed** (new)     | The GitHub Releases of `carlos-rezai/FamilyFlix`, published by a tag-triggered workflow and read by `electron-updater`. Public, so nothing authenticates; the only network FamilyFlix ever makes, and failing to reach it is silence.                                                                  | update server, CDN, channel          |
+| **Seen version** (new)     | The **App version** this machine last ran, kept in `localStorage` (`seenVersion/`) so the launch after an install can say _FamilyFlix updated to 1.1.0._ once. Absent on a fresh install, where there is nothing to have changed from.                                                                 | previous version, last version       |
+| **Snackbar** (new)         | The transient bottom-right notice — `components/Snackbar/`, one variant, an optional title, a message, an optional action, a ✕. Presentational: it owns none of its own timing. The app's one channel for something that happened away from where the family is looking.                               | toast, notification, alert, banner   |
+| **Snackbar variant** (new) | Which of `info` / `success` / `warning` / `error` a **Snackbar** is, drawn as its bar, glyph and action colour off the matching status token — and as its role: `status` for the first two, `alert` for the last two.                                                                                  | severity, level, type                |
+| **Snackbar stack** (new)   | The fixed bottom-right column the **Snackbars** queue in, newest nearest the corner — `App/SnackbarProvider/`, which owns the queue and the one timing rule: a **Snackbar** with an action persists until actioned or dismissed, one without dies at 5s. Pushed through `App/useSnackbar/`'s `notify`. | toast host, snackbar queue, notifier |
+| **Update offer snackbar**  | The one actionable **Snackbar** the app pushes: _Update available · FamilyFlix 1.1.0 is ready to install._ with **Update now**, once per launch, anywhere in the app. It reaches the family, which is safe because installing at quit is what would have happened anyway.                              | update banner, update prompt         |
+
 ## Relationships
 
 - A **Movie** has zero-or-more **Genres** (ordered; `genres[0]` is the primary tag) and zero-or-more **Subtitles**.
@@ -424,6 +449,13 @@ cannot half-happen, and one row that says which one is live.
 - A **Playback component** arrives as two **Component binaries** in one gesture and is refused as a whole if either is missing, stray, or will not run; the **Component swap** happens only for a **Verified component**, and only when nothing is running the pair on its way out.
 - `createPlayback(mediaPath, slot)` reads `slot.current()` per request, so the next Play after a **Component swap** decides over the new component with nothing cached to clear; `Playback.capabilities()` reports `slot.info()` beside the rows, and both component routes echo that report.
 - The **Codec report** draws the codec rows, then one **Component row**, then the **Component drop zone**; the **Codec summary** counts the codec rows only. The row and the zone are inverses: the zone puts an **Uploaded component** in, the row's ✕ takes it out.
+
+- An **Update check** runs once per launch and on every press of _Check for updates_; only the pressed one ever speaks, and only one that got an answer advances **Last checked**.
+- An **Update check** does not produce an **Update offer** — it reports that one is coming. The offer exists when the bytes have landed, which is what `onOffered` announces and what `current()` still says on the next mount.
+- The **Software update** row and the **Update offer snackbar** are two views of one **Update offer**: the row is where the maintainer goes, the snackbar is what finds the family. Both press the same `install()`.
+- Every **Snackbar** the app pushes today belongs to the **Software update** flow; the **Snackbar stack** is app-level regardless, because the next feature to need one will not be in Settings either.
+- The **Offered version** names an **Update offer**; the **App version** names the running build; the **Seen version** names the one before it. Only the middle one is baked into the bundle.
+- **Software update** cannot be drawn without an **Update bridge**, and the bridge cannot exist without the Electron shell — the same rule that kept _Change…_ and the _Add a codec pack_ zone off the page, read one initiative ahead.
 
 ## Example dialogue
 
@@ -1260,3 +1292,30 @@ Hard` gets found and `Die Hard\extras` doesn't become a second film."
   the updated **Playback component**, **Codec report**, **Codec row** and
   **Playback component upload** rows hold. **Component row** already said
   `RemoveButton`; the refactor made that true rather than correcting it.
+
+- **"Update" said three ways (new):** a **Release** is what exists on the
+  **Release feed**; an **Update offer** is one that has already been
+  downloaded onto this machine; an install is what replaces the running app.
+  The prototype's copy is careful about this and so is the code — "available
+  to install" and "ready to install" both mean the bytes are here. Never write
+  "an update is available" for a release nobody has fetched, because with
+  auto-download on there is no moment at which that is what the app means.
+- **"Available" is not a fourth face (new):** `electron-updater`'s
+  `update-available` fires before the download and draws nothing. The
+  **Update check**'s `'found'` is the same news, and the row answers it by
+  advancing **Last checked** and waiting. The only thing that changes a face
+  is `onOffered`.
+- **The row is not the snackbar's fallback (new):** the **Software update**
+  row answers the maintainer who went looking; the **Update offer snackbar**
+  finds whoever did not. Neither is a degraded version of the other, and
+  suppressing the snackbar outside Settings was rejected for exactly that.
+- **"Up to date" is a claim, and an empty Last checked is the hedge (new):**
+  the idle face says _You're up to date_ whether or not a check has ever
+  answered — it is the absence of the **Last checked** label that says so. A
+  fourth "never checked" face was rejected: the prototype already spells this
+  with an empty `lastCheckedLabel`.
+- **Snackbar, not toast or banner (new):** the prototype's file is
+  `mol.Snackbar`, COMPONENT-SPEC calls the context `useSnackbar()`, and
+  Horizon's own `UpdateBanner` is the name to avoid here — nothing in
+  FamilyFlix is a banner, and a **Snackbar** that persists is still a
+  **Snackbar**.
