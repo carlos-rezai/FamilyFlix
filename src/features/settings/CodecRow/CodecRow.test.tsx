@@ -22,11 +22,13 @@ import { theme } from '@/styles/theme';
  * and it has a row" (issue #152) draws the prototype's row template 1:1, for
  * both kinds of row it serves. `{ row, onRemove? }`: the size cell says
  * whatever the model says — `—` for a codec, a weight for the **Component
- * row** — the pill has four words rather than two, and `RemoveButton` is drawn
- * exactly when a handler is given and the 32px spacer when it is not.
+ * row** — the pill has four words rather than two, and the `RemoveButton`
+ * primitive is drawn exactly when a handler is given and the 32px spacer when
+ * it is not.
  *
  * One molecule, not two: a second `ComponentRow` would be two copies of one
- * template, and nothing in this phase passes a handler — Phase 4 does.
+ * template. The organism that passes a handler is `CodecManager`, and it
+ * passes one for the **Component row** alone.
  */
 
 const row = (overrides: Partial<CodecRowModel> = {}): CodecRowModel => ({

@@ -26,10 +26,10 @@ import {
  *
  * The **Codec report**, `feat.CodecManager.dc.html` → `CodecManager`: the
  * organism that owns `useCapabilities` and draws the **Codec summary** over
- * one **Codec row** per catalogued codec the report contains. A report, not a
- * manager: no _Add a codec pack_ zone and no ✕ until the **Playback component
- * upload** ships. The spec's `{ summaryLabel, codecs, onBrowse }` props
- * collapse the way `ExportModal`'s did — the organism reads the wire itself.
+ * one **Codec row** per catalogued codec the report contains. A report rather
+ * than a manager, as this phase left it: no _Add a codec pack_ zone and no ✕.
+ * The spec's `{ summaryLabel, codecs, onBrowse }` props collapse the way
+ * `ExportModal`'s did — the organism reads the wire itself.
  *
  * **Blank until it lands**: nothing at all while the report is `null`, and
  * nothing still on a refused read. No skeleton, no error face.
@@ -44,7 +44,7 @@ import {
  * size and a source: the **Component row**, drawn **last**, under every codec
  * row — and absent on a machine with no component at all. The **Codec
  * summary** counts the codec rows only; the ffmpeg pair is not a film format.
- * Still no zone and still no ✕: nothing passes a remove handler until Phase 4.
+ * The zone and the ✕ arrive in the two phases below.
  *
  * 16 — Playback component upload, Phase 3: "the zone" (issue #154). The
  * organism grows the control it has so far only described: the **Component
