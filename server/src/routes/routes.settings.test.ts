@@ -10,7 +10,8 @@
 // router already holds — the `playback` it was composed over, `storage`, and
 // the `mediaPath` it was handed.
 //
-// The initiative's four routes, one suite:
+// The Settings hub's four routes and the upload `16-component-upload` adds
+// beside them, one suite:
 //
 // - `GET /api/playback/capabilities` → `200 { component, codecs }`, the raw
 //   **Codec report** — `{ codec, kind, support }` per row, `support` one of
@@ -23,6 +24,14 @@
 //   domain is composed over a **Component slot** rather than a component —
 //   `fixedSlot` here — and `component` is the **Component info** it describes,
 //   `{ source, bytes, files }` or `null` for a machine with none.
+// - `POST /api/playback/component` → `200 PlaybackCapabilities`, the report
+//   **after the swap** — the **Playback component upload**, added by
+//   `16-component-upload` Phase 2 (issue #153). `multipart/form-data`, every
+//   file part named `component` and told apart by `componentBinary`; `400`
+//   for a body that is not multipart, a stray part, a second of either or a
+//   missing half; `422` for a pair that will not run; `409` for the
+//   **In-use refusal**. Nothing new is injected: the route reaches the
+//   **Component slot** through the `playback` the router already holds.
 // - `GET /api/settings` → `200 { subtitleLanguage }`, the household's one
 //   preference with the default already applied, so no client has to know
 //   what it is.
@@ -51,6 +60,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createApiRouter } from '.';
 import { createImporter } from '../import-export/createImporter/createImporter';
 import { createMedia } from '../media/createMedia/createMedia';
+import type { ComponentSlot } from '../playback/componentSlot/componentSlot';
 import { createPlayback } from '../playback/createPlayback/createPlayback';
 import type {
   PlaybackComponent,
@@ -107,12 +117,19 @@ interface Api {
 function freshApi({
   component = null,
   componentInfo,
+  slot,
   mediaPath,
   exists = true,
 }: {
   component?: PlaybackComponent | null;
   /** What the slot says about that component — the **Component info**. */
   componentInfo?: PlaybackComponentInfo;
+  /**
+   * The **Component slot** itself, for the upload route — the one thing on
+   * this page that writes, and the one case where a slot that never changes
+   * cannot say what happened.
+   */
+  slot?: ComponentSlot;
   mediaPath?: string;
   exists?: boolean;
 } = {}): Api {
@@ -126,7 +143,10 @@ function freshApi({
   }
 
   const mediaDomain = createMedia(media);
-  const playback = createPlayback(media, fixedSlot(component, componentInfo));
+  const playback = createPlayback(
+    media,
+    slot ?? fixedSlot(component, componentInfo)
+  );
   const app = express();
   app.use(
     '/api',
@@ -563,5 +583,354 @@ describe('GET /api/storage — movieCount', () => {
 
     expect(report.movieCount).toBe(1);
     expect(report.bytesUsed).toBe(7_234);
+  });
+});
+
+// --- the upload: POST /api/playback/component --------------------------------------
+//
+// The **Playback component upload** on the wire. The route's whole job is to
+// tell the two halves apart by filename, hand each one's bytes to the
+// **Component slot**, and map the slot's refusal to a status — every refusal
+// leaving no staged folder behind, so a retry is a fresh attempt.
+//
+// The slot here is a fake rather than `fixedSlot`, because this is the one
+// route on the page that writes: what is being asked is which half the route
+// said each part was, what it did with a refusal, and that the body it echoes
+// is the report **after** the swap rather than the one from before it.
+
+/**
+ * A **Component slot** that accepts an upload and says what it was told.
+ *
+ * `install()` answers the outcome the test chose; a successful one makes the
+ * slot live over a component that decodes what `DECODERS` lists, so the
+ * echoed report can be read for rows that were not there a moment earlier.
+ * `open()` is the staging folder nobody took back — the invariant behind
+ * "every refusal discards `incoming/`", asked without caring whether the
+ * route staged before it parsed or after.
+ */
+function uploadableSlot(
+  outcome:
+    | { ok: true }
+    | { ok: false; reason: 'incomplete' | 'not-a-component' | 'in-use' } = {
+    ok: true,
+  }
+) {
+  let component: PlaybackComponent | null = null;
+  let info: PlaybackComponentInfo | null = null;
+  const taken: { binary: string; bytes: string }[] = [];
+  /** One entry per `receive()`, true while nobody has settled it. */
+  const staged: { open: boolean }[] = [];
+
+  const slot: ComponentSlot = {
+    current: () => component,
+    info: () => info,
+    receive: () => {
+      const folder = { open: true };
+      staged.push(folder);
+
+      return {
+        take: async (binary: string, bytes: Readable) => {
+          taken.push({ binary, bytes: await textOf(bytes) });
+        },
+        install: () => {
+          folder.open = false;
+          if (outcome.ok) {
+            component = fakeComponent(DECODERS);
+            info = {
+              source: 'uploaded',
+              bytes: 98_765_432,
+              files: ['ffmpeg.exe', 'ffprobe.exe'],
+            };
+          }
+          return outcome;
+        },
+        // Settling twice is a refusal followed by a route being careful, not
+        // a second folder: the real slot's discard is as idempotent as `rm -f`.
+        discard: () => {
+          folder.open = false;
+        },
+      };
+    },
+    remove: () => {
+      throw new Error('the uploadable slot does not remove');
+    },
+  };
+
+  return {
+    slot,
+    taken,
+    open: () => staged.filter((folder) => folder.open).length,
+  };
+}
+
+/** What a part carried, read the way the slot reads it. */
+async function textOf(bytes: Readable): Promise<string> {
+  const chunks: Buffer[] = [];
+  for await (const chunk of bytes) {
+    chunks.push(Buffer.from(chunk as Buffer));
+  }
+  return Buffer.concat(chunks).toString();
+}
+
+/** One file part, the way the zone hands a dropped binary to `FormData`. */
+function componentPart(filename: string, contents = 'binary bytes'): File {
+  return new File([contents], filename, { type: 'application/octet-stream' });
+}
+
+/** The upload, every file part under the one name the route reads. */
+function postComponent(baseUrl: string, files: File[]): Promise<Response> {
+  const body = new FormData();
+  for (const file of files) {
+    body.append('component', file);
+  }
+  return fetch(`${baseUrl}/api/playback/component`, { method: 'POST', body });
+}
+
+/** The pair a working upload carries. */
+const PAIR = () => [componentPart('ffmpeg.exe'), componentPart('ffprobe.exe')];
+
+/** The `{ error }` a refusal carries. */
+const errorOf = async (response: Response): Promise<string> =>
+  ((await response.json()) as { error: string }).error;
+
+describe('POST /api/playback/component — the pair goes live', () => {
+  it('answers 200 with the whole report, after the swap', async () => {
+    // The echo precedent every write in the app keeps: the screen redraws
+    // from truth rather than re-fetching, so the two reads cannot disagree.
+    const fake = uploadableSlot();
+    const { baseUrl } = freshApi({ slot: fake.slot });
+
+    const response = await postComponent(baseUrl, PAIR());
+
+    expect(response.status).toBe(200);
+    const reported = (await response.json()) as PlaybackCapabilities;
+    expect(reported.component).toEqual({
+      source: 'uploaded',
+      bytes: 98_765_432,
+      files: ['ffmpeg.exe', 'ffprobe.exe'],
+    });
+  });
+
+  it('carries the rows the new component decodes', async () => {
+    const { baseUrl } = freshApi({ slot: uploadableSlot().slot });
+
+    const reported = (await (
+      await postComponent(baseUrl, PAIR())
+    ).json()) as PlaybackCapabilities;
+
+    expect(entryFor(reported, 'hevc')?.support).toBe('via-component');
+    expect(entryFor(reported, 'ac3')?.support).toBe('via-component');
+  });
+
+  it('echoes exactly what the capability read answers next', async () => {
+    const { baseUrl } = freshApi({ slot: uploadableSlot().slot });
+
+    const echoed = (await (
+      await postComponent(baseUrl, PAIR())
+    ).json()) as PlaybackCapabilities;
+
+    expect(echoed).toEqual(await readCapabilities(baseUrl));
+  });
+
+  it('tells the halves apart by filename, whatever the client called them', async () => {
+    // The client sorts nothing. A build downloaded as `ffmpeg-7.1.exe` is an
+    // ffmpeg, and the bytes are stored under the platform's own name — which
+    // is what makes it resolve as a component afterwards.
+    const fake = uploadableSlot();
+    const { baseUrl } = freshApi({ slot: fake.slot });
+
+    await postComponent(baseUrl, [
+      componentPart('ffmpeg-7.1.exe', 'the converter'),
+      componentPart('FFPROBE.EXE', 'the prober'),
+    ]);
+
+    expect(fake.taken).toEqual([
+      { binary: 'ffmpeg', bytes: 'the converter' },
+      { binary: 'ffprobe', bytes: 'the prober' },
+    ]);
+  });
+
+  it('leaves nothing staged behind it', async () => {
+    const fake = uploadableSlot();
+    const { baseUrl } = freshApi({ slot: fake.slot });
+
+    expect((await postComponent(baseUrl, PAIR())).status).toBe(200);
+
+    expect(fake.open()).toBe(0);
+  });
+
+  it('serves the upload through the five things the router already holds', async () => {
+    // Nothing new is injected for this route: it reaches the **Component
+    // slot** through the `playback` the router was composed with. A sixth
+    // argument here would be a second resolution of the component, and the
+    // report and pressing Play could then disagree.
+    expect(createApiRouter).toHaveLength(5);
+
+    const { baseUrl } = freshApi({ slot: uploadableSlot().slot });
+
+    expect((await postComponent(baseUrl, PAIR())).status).toBe(200);
+  });
+});
+
+describe('POST /api/playback/component — what is refused at the door', () => {
+  it('refuses one half alone with the line that says they go together', async () => {
+    const fake = uploadableSlot();
+    const { baseUrl } = freshApi({ slot: fake.slot });
+
+    const response = await postComponent(baseUrl, [
+      componentPart('ffmpeg.exe'),
+    ]);
+
+    expect(response.status).toBe(400);
+    expect(await errorOf(response)).toBe(
+      'ffmpeg and ffprobe go together — add both.'
+    );
+    expect(fake.open()).toBe(0);
+  });
+
+  it('refuses a file that is neither half', async () => {
+    // The parent's mistake: a `.dll` is what a codec pack used to be, and
+    // nothing this app can run.
+    const fake = uploadableSlot();
+    const { baseUrl } = freshApi({ slot: fake.slot });
+
+    const response = await postComponent(baseUrl, [
+      componentPart('avcodec-60.dll'),
+      ...PAIR(),
+    ]);
+
+    expect(response.status).toBe(400);
+    expect(await errorOf(response)).toBe(
+      'Only ffmpeg and ffprobe can be added.'
+    );
+    expect(fake.open()).toBe(0);
+  });
+
+  it('refuses a second of either half', async () => {
+    const fake = uploadableSlot();
+    const { baseUrl } = freshApi({ slot: fake.slot });
+
+    const response = await postComponent(baseUrl, [
+      componentPart('ffmpeg.exe'),
+      componentPart('ffmpeg-7.1.exe'),
+      componentPart('ffprobe.exe'),
+    ]);
+
+    expect(response.status).toBe(400);
+    expect(await errorOf(response)).toBe(
+      'Only ffmpeg and ffprobe can be added.'
+    );
+  });
+
+  it('refuses a body that is not multipart at all', async () => {
+    const fake = uploadableSlot();
+    const { baseUrl } = freshApi({ slot: fake.slot });
+
+    const response = await fetch(`${baseUrl}/api/playback/component`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ component: 'ffmpeg.exe' }),
+    });
+
+    expect(response.status).toBe(400);
+    expect(await errorOf(response)).toEqual(expect.any(String));
+    expect(fake.open()).toBe(0);
+  });
+
+  it('consumes every file part, handled or not', async () => {
+    // `busboy` never reaches `close` while a part nobody listened to is still
+    // pending, and a hung request is a worse answer than a refused one. The
+    // stray part here is the one nothing will take.
+    const { baseUrl } = freshApi({ slot: uploadableSlot().slot });
+
+    const response = await postComponent(baseUrl, [
+      componentPart('notes.txt', 'x'.repeat(200_000)),
+      ...PAIR(),
+    ]);
+
+    expect(response.status).toBe(400);
+  });
+
+  it('leaves the component that is live where it is', async () => {
+    // The refusal costs the family nothing: what was playing films a moment
+    // ago is still what the next press of Play converts through.
+    const fake = uploadableSlot();
+    const { baseUrl } = freshApi({ slot: fake.slot });
+    await postComponent(baseUrl, PAIR());
+
+    await postComponent(baseUrl, [componentPart('avcodec-60.dll')]);
+
+    expect((await readCapabilities(baseUrl)).component).toEqual({
+      source: 'uploaded',
+      bytes: 98_765_432,
+      files: ['ffmpeg.exe', 'ffprobe.exe'],
+    });
+  });
+});
+
+describe('POST /api/playback/component — what the slot refuses', () => {
+  it('answers 422 for a pair that will not run', async () => {
+    // A `.dll`, a renamed text file, a macOS build on a Windows machine, a
+    // binary that will not start at all: one sentence for all of them, and
+    // the live component never moved.
+    const fake = uploadableSlot({ ok: false, reason: 'not-a-component' });
+    const { baseUrl } = freshApi({ slot: fake.slot });
+
+    const response = await postComponent(baseUrl, PAIR());
+
+    expect(response.status).toBe(422);
+    expect(await errorOf(response)).toBe("That isn't a working ffmpeg build.");
+    expect((await readCapabilities(baseUrl)).component).toBeNull();
+  });
+
+  it('answers 409 for a component in use', async () => {
+    // The **In-use refusal**: a refusal, never a kill. The family's film is
+    // not stopped by the maintainer's drop.
+    const fake = uploadableSlot({ ok: false, reason: 'in-use' });
+    const { baseUrl } = freshApi({ slot: fake.slot });
+
+    const response = await postComponent(baseUrl, PAIR());
+
+    expect(response.status).toBe(409);
+    expect(await errorOf(response)).toBe(
+      "The playback component is in use. Stop the film that's playing and try again."
+    );
+    expect((await readCapabilities(baseUrl)).component).toBeNull();
+  });
+
+  it('discards the staged folder on either refusal', async () => {
+    // A retry is a fresh attempt and not a repair.
+    const refused = uploadableSlot({ ok: false, reason: 'not-a-component' });
+    const locked = uploadableSlot({ ok: false, reason: 'in-use' });
+
+    await postComponent(freshApi({ slot: refused.slot }).baseUrl, PAIR());
+    await postComponent(freshApi({ slot: locked.slot }).baseUrl, PAIR());
+
+    expect(refused.taken).toHaveLength(2);
+    expect(locked.taken).toHaveLength(2);
+    expect(refused.open()).toBe(0);
+    expect(locked.open()).toBe(0);
+  });
+
+  it('answers 400 for a slot that calls the drop incomplete', async () => {
+    // The slot says `incomplete` for a half it never received; the route says
+    // the same thing the missing-half case says, because it is that case.
+    const fake = uploadableSlot({ ok: false, reason: 'incomplete' });
+    const { baseUrl } = freshApi({ slot: fake.slot });
+
+    const response = await postComponent(baseUrl, PAIR());
+
+    expect(response.status).toBe(400);
+    expect(fake.open()).toBe(0);
+  });
+});
+
+describe('POST /api/playback/component — what the router was composed with', () => {
+  it('takes no new argument for the upload', () => {
+    // The route reaches the **Component slot** through the `playback` the
+    // router already holds. A fifth thing injected here would be a second
+    // resolution of the component, and the report and pressing Play could
+    // then disagree.
+    expect(createApiRouter).toHaveLength(5);
   });
 });

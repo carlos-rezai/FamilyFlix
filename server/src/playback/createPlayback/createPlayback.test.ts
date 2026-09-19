@@ -555,6 +555,32 @@ describe('createPlayback — deciding over the slot at the time of the call', ()
   });
 });
 
+describe('createPlayback — the slot’s write half, forwarded', () => {
+  it('hands back the incoming component the slot answered', () => {
+    // Phase 2 of `16-component-upload`. `receiveComponent` is deliberately
+    // thin over the slot: the upload route reaches the **Component slot**
+    // through the `playback` the router already holds, so nothing new is
+    // injected into `createApiRouter` and no route learns there is a staging
+    // directory behind any of it.
+    const { media } = mediaWith('Northwind (2018)/northwind.mkv');
+    const incoming = {
+      take: () => Promise.resolve(),
+      install: () => ({ ok: true }) as const,
+      discard: () => undefined,
+    };
+    const slot: ComponentSlot = {
+      current: () => null,
+      info: () => null,
+      receive: () => incoming,
+      remove: () => {
+        throw new Error('the receiving slot does not remove');
+      },
+    };
+
+    expect(createPlayback(media, slot).receiveComponent()).toBe(incoming);
+  });
+});
+
 /**
  * The bytes of an MP4 that reports a length: `ftyp`, then a `moov` holding a
  * version-0 `mvhd`. Hand-built for the same reason `mediaDuration`'s fixtures
