@@ -185,14 +185,6 @@ describe('CodecRow — the status pill', () => {
 });
 
 describe('CodecRow — the remove, when there is one', () => {
-  it('draws no button when no handler is given', () => {
-    // Nothing in this phase passes one: a codec cannot be removed on its own,
-    // and the component's ✕ is Phase 4's.
-    renderRow({ row: installed() });
-
-    expect(screen.queryAllByRole('button')).toHaveLength(0);
-  });
-
   it('keeps the 32px spacer where the ✕ would sit', () => {
     const { container } = renderRow({ row: installed() });
 
@@ -228,6 +220,8 @@ describe('CodecRow — the remove, when there is one', () => {
   });
 
   it('draws no link and nothing else clickable on a codec row', () => {
+    // A codec cannot be removed on its own, so nothing passes a handler for
+    // one and there is nothing on the row to press.
     renderRow();
 
     expect(screen.queryAllByRole('button')).toHaveLength(0);
