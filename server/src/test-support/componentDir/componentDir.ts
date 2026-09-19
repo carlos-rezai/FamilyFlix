@@ -1,6 +1,7 @@
 import { chmodSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
+import { EXE } from '../../playback/ffmpegBinary/ffmpegBinary';
 import { sandboxRoot } from '../sandboxRoot/sandboxRoot';
 
 /**
@@ -8,8 +9,8 @@ import { sandboxRoot } from '../sandboxRoot/sandboxRoot';
  * and what it can do.
  *
  * `ffmpegBinary.test.ts` and `capabilities.test.ts` carried this verbatim: the
- * same `EXE` constant with the same comment on it, the same tracked array and
- * `afterEach`, the same factory, and the same `ffmpegIn` / `ffprobeIn`. They
+ * same tracked array and `afterEach`, the same factory, and the same
+ * `ffmpegIn` / `ffprobeIn`. They
  * differed in the `mkdtemp` prefix and one word of a docblock — which is the
  * measurement `server/src/test-support/` exists for. It is a test double's
  * neighbour rather than backend logic, and nothing that ships imports it.
@@ -18,8 +19,14 @@ import { sandboxRoot } from '../sandboxRoot/sandboxRoot';
  * for every suite that needs a temporary tree rather than once per fixture.
  */
 
-/** What an executable is called here — the one difference Windows makes. */
-export const EXE = process.platform === 'win32' ? '.exe' : '';
+/**
+ * What an executable is called here, re-exported from the resolver that owns
+ * it: what a platform calls a binary is one answer, which is what
+ * `ffmpegBinary`'s `EXE` and the **Component slot**'s `pairIn` already claim.
+ * A fixture writing files the resolver would not look for is the one way this
+ * helper could lie.
+ */
+export { EXE };
 
 /**
  * A directory holding the named binaries, and nothing else. They are empty and
