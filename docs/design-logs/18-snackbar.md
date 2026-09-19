@@ -1,7 +1,7 @@
 # 18 — Snackbar system
 
 > **Initiative:** `snackbar`
-> **PRD:** to follow this log
+> **PRD:** [#158](https://github.com/carlos-rezai/FamilyFlix/issues/158) · `docs/PRDs/18-snackbar.md`
 > **Plan:** to follow the PRD
 
 This log is the `grill-me` session that settled the feature before the PRD was
