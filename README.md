@@ -297,7 +297,7 @@ Builds the installer and publishes it to GitHub Releases automatically.
 | Export (library → CSV/Excel)                        | ✅ Done         |
 | Settings hub (Library / Playback / Storage / About) | ✅ Done         |
 | Codec manager — view installed codecs               | ✅ Done         |
-| Codec manager — add a playback component            | 🔜 Planned      |
+| Codec manager — add a playback component            | ✅ Done         |
 | Subtitle preferences (preferred language)           | ✅ Done         |
 | Storage (media folder location, space used)         | ✅ Done         |
 | Software update (check / install)                   | 🔜 Planned      |

@@ -11,6 +11,140 @@ Newest entry first.
 
 ---
 
+## 2026-09-19 — Playback component upload refactor (issue #157)
+
+Sixteen commits against `docs/refactor-plans/16-component-upload-refactor.md` —
+nine code and test, four documents, and the three that only move a comment.
+**4603 tests pass across 234 files**, from 4597 across 233: `zoneFace`'s five
+are new, Group 3 adds three that cover behaviour nothing asserted, two leaves
+fold into their neighbours, and two are rewritten rather than added. `npm run
+typecheck` is green and `eslint src server` is clean on every commit. Done in
+one sitting under a standing approval, one commit per resolved item; the docs
+slice filed as 156 is folded in as the first and last groups, on 141's and
+149's precedent, so the initiative has one closing issue.
+
+**Codec manager — add a playback component is ticked** in the feature table by
+this round's last commit, which completes the Settings hub's five rows. The
+rule holds: ✅ when the refactor closes, not when the build issues do.
+
+### What changed
+
+- **Group 0 — the record.** The journal's entry for the build, above, written
+  before anything moved so it describes what the five slices left — including
+  the five judgment calls the subagents made that no issue asked for.
+- **Group 1 — the prototype's own ✕.** `feat.CodecManager.dc.html`'s
+  `title="Remove codec"` became `title="Remove playback component"`, since
+  #151's amendment made the component row the only row a ✕ is drawn on, and
+  "codec" is the word that row exists to stop the screen saying. Then
+  `CodecRow` was built to it: the local styled `RemoveButton` went from
+  `CodecRow.styles.ts` and the molecule draws
+  `primitives/RemoveButton`, which builds the same accessible name it built by
+  hand and adds the `title` the prototype draws. The local copy was the
+  primitive's rule character for character **plus** `font-family: sans` and
+  `font-size: 13px`, two properties the prototype writes on neither of its ✕s
+  — so this is the one pixel the round moves, and it moves onto the prototype.
+  `PlaybackSection`'s docblock stopped saying the zone it points at "is not
+  drawn".
+- **Group 2 — the zone's faces as a table.** `zoneFace/` is a new pure unit on
+  `importView`'s precedent: an **Upload state** in, `{ title, line, refused }`
+  out. `ComponentDropZone`'s nested ternary and three guarded `{cond && …}`
+  blocks became one `<Line>` reading the mapper. `busy` stayed on the molecule
+  — it disables the input, kills the hover and makes a second drop report
+  nothing, which is behaviour rather than copy. The invitation's `line` is
+  `null`, recorded on the prop rather than hidden, because its `ffmpeg` is a
+  `<Mono>` span the molecule composes.
+- **Group 3 — the refusal nobody asserted.** The build's fourth install
+  refusal, `failed`, had two paragraphs of reasoning and no leaf; the two
+  nearest asserted a negative, and the install's wrapped the call in a
+  `try/catch` so a **throw would have passed** — on the one path whose whole
+  design decision is "a value, never a throw". Both now assert
+  `{ ok: false, reason: 'failed' }`. A third leaf covers the swap's rollback:
+  a second rename that fails with `current/` already in `previous/` puts the
+  live pair back — checked by mutation, since removing the rollback turns it
+  red. And the two route fakes' outcome unions are now the slot's own
+  `InstallOutcome` and `RemoveOutcome` rather than hand-copied lists, with a
+  `500` leaf each, so `REFUSALS` and `REMOVE_REFUSALS` are exhaustively
+  covered and the next reason added to either union will not compile in the
+  suite that has to cover it.
+- **Group 4 — the tests read by behaviour.** The mid-file phase banners in
+  `CodecManager.test.tsx`, `useCapabilities.test.ts`, the settings feature's
+  `api.test.ts`, `ComponentDropZone.test.tsx` and `routes.settings.test.ts`
+  folded into their files' top banners, and `componentSlot.test.ts`'s two
+  section banners kept their prose and lost their dating.
+  `CodecManager.test.tsx` counts the zone once — its old leaf's zone half is
+  what `draws the zone last` already asserts in a stronger form, and its
+  distinct `✕` query joined the ✕ describe's positive — and
+  `CodecRow.test.tsx` counts its buttons once. `test-support/componentDir`
+  re-exports `EXE` from the resolver that owns it rather than declaring a
+  second copy.
+- **Group 5 — the docs.** COMPONENT-SPEC's `CodecManager` row rewritten and
+  `CodecRow` and `ComponentDropZone` given rows of their own, the Icons table
+  gaining `UploadIcon`. CLAUDE.md's folder map naming the three new
+  `playback/` units, `test-support/fixedSlot/` and `componentDir/`,
+  `ComponentDropZone/` and `zoneFace/`, `visuallyHidden`, and the amended
+  `createPlayback`, `capabilities`, `CodecManager`, `CodecRow`, `codecView`,
+  `useCapabilities` and `api/` lines; its Settings Hub section carrying the
+  two component routes, its "not drawn" list down to two, and the Tech Stack
+  paragraph's "Settings' codec pack replaces this binary" now true. README's
+  tree in the same places. The glossary's three amendments, by bare number.
+
+### Deliberately not changed
+
+- **The route keeps its own "both halves" check.** `taken.size < 2` at the
+  door and `pairIn(incomingDir) === null` in `install()` are the same rule
+  twice, and dropping the route's would answer identically through
+  `REFUSALS.incomplete`. It stays: the route's check is the sibling of
+  `stray`, which only the route can make, and removing it would push the rule
+  into the route suite's fake slots, which would then have to model `pairIn`.
+  One rule written twice beats one rule simulated in a double.
+- **`routes.settings.test.ts` keeps both initiatives' routes.** Round 15's
+  rule was one suite per initiative, and its reasoning was that a second
+  listener and sandbox for routes that share a page is scaffolding duplicated
+  for nothing. The two component routes are the Settings page's wire. A
+  `routes.component.test.ts` would copy ~130 lines of setup to move ~460 of
+  leaves.
+- **`useCapabilities` keeps its three guards.** `wanted`, `onScreen` and
+  `inFlight` are three mechanisms for two questions where `useExport` uses one
+  epoch ref. `wanted` is the shape every fetch-once hook on this page uses,
+  `inFlight` cannot be state because the callback closes over the render it
+  was made in, and `onScreen` is what makes a write landing after the page has
+  gone redraw nothing. Considered and kept.
+- **`componentSlot.ts` stays one unit** at 340 lines, owning resolution,
+  staging, verification-dispatch and the swap — which is what the design log
+  said it would own. Splitting the swap out would put the rename
+  classification on one side of a seam and the recomposition on the other.
+- **`bytesOf` and `spaceUsed` stay two**, and **the four `readBody` catches
+  keep their one sentence** — the latter is project-wide and belongs with the
+  routes round, not this one.
+- **Per-test `File` fixtures stay per-test**, with the shared-fetch-double and
+  shared-listening-harness rounds named since round 13.
+- **`routes/index.ts` at ~1666 lines** — the routes round, still its own.
+
+### What this round was for
+
+The second `issue-loop` initiative, and Groups 1, 2 and 4 are round 15's
+finding again, in the same feature one round later: #154 amended the card
+`PlaybackSection` describes and never opened it; #152 built a ✕-shaped hole
+and #155 filled it without looking for the atom the design log's own
+background section names; each slice wrote its banner under the last one's
+rather than into it. A build that does not read back leaves exactly that.
+
+Group 3 is the new thing. The `failed` refusal is good engineering nobody
+asked for — a subagent saw that `renameSync` fails for reasons that are
+neither the lock nor the pair, decided a throw would be the one outcome the
+route could not answer, added a fourth reason to both unions, mapped both to
+`500`, and wrote two paragraphs explaining why. It then wrote no test for any
+of it, because the acceptance criteria it was working from named three
+refusals. **An issue's acceptance criteria are a floor, and a build that adds
+a state must add its leaf in the same commit** — the RED step cannot cover a
+state that does not exist until GREEN, so the only place it can be caught is
+the build writing its own. Worth a line in the `build` skill. The durable half
+of the fix is the smaller one: the route fakes now import the unions instead
+of copying them, so the next reason added will not compile until it is
+covered.
+
+---
+
 ## 2026-09-19 — Playback component upload (issues #151–#155)
 
 Ten commits across issues #151–#155, five slices against the plan on #150,
