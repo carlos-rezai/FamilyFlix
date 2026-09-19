@@ -3,6 +3,7 @@ import { useState, type ChangeEvent, type DragEvent } from 'react';
 import { UploadIcon } from '@/primitives';
 
 import type { UploadState } from '../useCapabilities/useCapabilities';
+import { zoneFace } from '../zoneFace/zoneFace';
 import {
   Glyph,
   Input,
@@ -29,15 +30,17 @@ export interface ComponentDropZoneProps {
  * route tells them apart by filename. A zone that decided which half a file
  * was would be a client the server trusted.
  *
- * **Three faces**, the three the **Upload state** has: **idle** as drawn;
- * **busy**, which says which of the two writes is running — _Adding_ over
- * _Copying it in and checking it runs_, or _Removing_ over _The formats it
- * added go with it_ — with the input disabled and a second drop reporting
- * nothing, so two writes cannot race into the same slot; and **refused**,
- * which keeps the title and puts the route's own reason in the danger ink on
- * the second line, where it stays until the next attempt replaces it — silence
- * on a refusal was rejected, because a `.dll` dropped by a parent following the
- * old copy must not do nothing.
+ * **Three faces**, the three the **Upload state** has, and `zoneFace` is the
+ * table of what each one says — including the refusal's, which keeps the title
+ * and puts the route's own reason in the danger ink, where it stays until the
+ * next attempt replaces it; silence on a refusal was rejected, because a `.dll`
+ * dropped by a parent following the old copy must not do nothing. The
+ * invitation's line is the one this composes itself, its `ffmpeg` being a
+ * `<Mono>` span rather than a word.
+ *
+ * What the faces do *not* carry is `busy`, which stays here: it disables the
+ * input, kills the hover, and makes a second drop report nothing, so two
+ * writes cannot race into the same slot. That is behaviour, not copy.
  *
  * **Replaced is not a face**: the write echoes the **Codec report** and the
  * screen redraws from it — no success flash, no snackbar.
@@ -49,10 +52,9 @@ export function ComponentDropZone({ upload, onFiles }: ComponentDropZoneProps) {
   const [over, setOver] = useState(false);
 
   const busy = upload.kind === 'busy';
-  const refused = upload.kind === 'refused';
   // The ✕ is pressed on the **Component row**, but the row has nowhere to put
   // a sentence and the zone already owns the one that says what is happening.
-  const removing = upload.kind === 'busy' && upload.action === 'remove';
+  const face = zoneFace(upload);
 
   const report = (files: FileList | null) => {
     // A cancelled dialog and an empty drop are both nothing at all.
@@ -96,26 +98,14 @@ export function ComponentDropZone({ upload, onFiles }: ComponentDropZoneProps) {
       <Glyph>
         <UploadIcon size={24} />
       </Glyph>
-      <Title>
-        {busy
-          ? removing
-            ? 'Removing the playback component…'
-            : 'Adding the playback component…'
-          : 'Add a codec pack'}
-      </Title>
-      {busy && (
-        <Line $refused={false}>
-          {removing
-            ? 'The formats it added go with it'
-            : 'Copying it in and checking it runs'}
-        </Line>
-      )}
-      {refused && <Line $refused>{upload.reason}</Line>}
-      {!busy && !refused && (
-        <Line $refused={false}>
-          Drop a playback component (<Mono>ffmpeg</Mono>) here, or browse
-        </Line>
-      )}
+      <Title>{face.title}</Title>
+      <Line $refused={face.refused}>
+        {face.line ?? (
+          <>
+            Drop a playback component (<Mono>ffmpeg</Mono>) here, or browse
+          </>
+        )}
+      </Line>
       <Input type="file" multiple disabled={busy} onChange={onChange} />
     </Zone>
   );
