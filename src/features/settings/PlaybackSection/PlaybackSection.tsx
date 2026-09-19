@@ -28,9 +28,8 @@ import {
  * **Section card** that opens with _Codecs_ and its lede, over the **Codec
  * report**.
  *
- * The lede keeps both of the prototype's sentences though the _Add a codec
- * pack_ zone the second one points at is not drawn — so the copy does not
- * move when the **Playback component upload** lands.
+ * The lede is both of the prototype's sentences, and the second one points at
+ * the _Add a codec pack_ zone `CodecManager` draws under the rows.
  *
  * Under the report, the second half of the card: the divider; _Subtitles_ with
  * its lede; _Turn on automatically_ beside a **Coming soon** pill over a
