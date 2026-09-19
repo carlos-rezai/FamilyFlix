@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
   act,
+  cleanup,
   fireEvent,
   render,
   screen,
@@ -336,19 +337,6 @@ describe('CodecManager — once the report lands', () => {
     );
     expect(screen.getAllByText(/Built-in|Installed|Default/)).toHaveLength(6);
   });
-
-  it('offers the zone under the rows, and no ✕ on a default component', async () => {
-    fetchMock.mockResolvedValue(okResponse(WITH_COMPONENT));
-    renderManager();
-
-    await waitFor(() => expect(summary()).not.toBeNull());
-
-    // The **Default component** is the installer's rather than the
-    // maintainer's, so no handler is passed and the 32px spacer stands where
-    // the ✕ would — the negative half of Phase 4's rule.
-    expect(screen.getByText('Add a codec pack')).toBeDefined();
-    expect(screen.queryByText('✕')).toBeNull();
-  });
 });
 
 /** The report after the swap: the pair is the maintainer's, and it adds more. */
@@ -554,10 +542,16 @@ async function pressRemove() {
 }
 
 describe('CodecManager — the ✕ on the Component row', () => {
-  it('carries a ✕ on an uploaded component, named for what it removes', async () => {
+  it('carries a ✕ on an uploaded component and none on a default one', async () => {
+    // Named for what it removes when it is there; and when it is not, the
+    // **Default component** is the installer's rather than the maintainer's,
+    // so no handler is passed and the 32px spacer stands where the ✕ would.
     await mountedWith(AFTER_UPLOAD);
-
     expect(removeButton()).not.toBeNull();
+
+    cleanup();
+    await mountedWith(WITH_COMPONENT);
+    expect(screen.queryByText('✕')).toBeNull();
   });
 
   it('removes as soon as it is pressed, with nothing to confirm', async () => {
