@@ -468,21 +468,16 @@ describe('createComponentSlot — the in-use refusal', () => {
     });
   }
 
-  it('does not call an unrelated errno in use', async () => {
+  it('answers a full disk as failed, not as in use', async () => {
     // A full disk is not a lock, and answering the in-use line for it would
-    // send the maintainer to stop a film that is not the problem.
+    // send the maintainer to stop a film that is not the problem. It is a
+    // value rather than a throw — the rule the route depends on, since an
+    // install that threw would be the one outcome it could not answer.
     const dir = slotWithUploaded(3, 5);
     const slot = slotOver(dir, { rename: lockedRename('ENOSPC').rename });
     const incoming = await stage(slot, 400, 600);
 
-    let outcome: unknown;
-    try {
-      outcome = incoming.install();
-    } catch (error) {
-      outcome = error;
-    }
-
-    expect(outcome).not.toEqual({ ok: false, reason: 'in-use' });
+    expect(incoming.install()).toEqual({ ok: false, reason: 'failed' });
   });
 });
 
@@ -604,17 +599,14 @@ describe('createComponentSlot — a remove the lock refuses', () => {
     });
   }
 
-  it('does not call an unrelated errno in use', async () => {
+  it('answers a full disk as failed, not as in use', async () => {
     // A full disk is not a lock, and sending the maintainer to stop a film
-    // that is not the problem would be worse than saying nothing useful.
+    // that is not the problem would be worse than saying nothing useful. A
+    // value, never a throw — the rule the install keeps, and the reason
+    // nothing above the slot reasons about errno.
     const dir = slotWithUploaded(400, 600);
     const slot = slotOver(dir, { rename: lockedRename('ENOSPC').rename });
 
-    const outcome: unknown = slot.remove();
-
-    // A value, never a throw — the rule the install keeps, and the reason
-    // nothing above the slot reasons about errno.
-    expect(outcome).toMatchObject({ ok: false });
-    expect(outcome).not.toEqual({ ok: false, reason: 'in-use' });
+    expect(slot.remove()).toEqual({ ok: false, reason: 'failed' });
   });
 });
