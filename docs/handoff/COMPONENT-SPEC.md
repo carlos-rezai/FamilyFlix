@@ -236,6 +236,10 @@ Rules:
 | `DownloadIcon`                     | stroke        | Export dialog header                                              |
 | `MicrochipIcon`                    | stroke        | CodecRow tile                                                     |
 | `UploadIcon`                       | stroke        | ComponentDropZone glyph                                           |
+| `InfoCircleIcon`                   | stroke        | Snackbar glyph (`info`)                                           |
+| `CheckCircleIcon`                  | stroke        | Snackbar glyph (`success`)                                        |
+| `BangTriangleIcon`                 | stroke        | Snackbar glyph (`warning`)                                        |
+| `CrossCircleIcon`                  | stroke        | Snackbar glyph (`error`)                                          |
 
 (`heart` ships as two components — filled and outline — rather than a `filled` prop, since
 they're used independently; your call if you'd rather one component with a boolean.)
@@ -345,17 +349,30 @@ variable-length copy. In code, `useState` + a `ResizeObserver`/`useLayoutEffect`
 
 ### Snackbar — `mol.Snackbar.dc.html`
 
-Target: `components/Snackbar/` · transient bottom-right notification, **4 semantic
-variants** (`info` `success` `warning` `error`) mapped to status tokens
-(`--color-info/success/warning/danger`). Props: `variant`, `title` (optional bold line),
-`message`, `actionLabel` + `onAction` (optional button), `dismissible` + `onDismiss`.
-Presentational — colored left bar + icon per variant, optional action, ✕ dismiss; enters
-via the `ffSnackIn` keyframe. **The stack/queue/auto-dismiss timers live in the container**
-(`pushSnack`/`dismissSnack`), which renders a `column-reverse` stack above all routes. In
-code this becomes a `SnackbarProvider` + `useSnackbar()` context. Convention: actionable
-snackbars (info + Update button) **persist** until actioned/dismissed; confirmations
-(success) **auto-dismiss at 5s**. Used by the software-update flow (Settings → About);
-reuse for any app-level feedback.
+Target: `components/Snackbar/` · the transient bottom-right card, **4 Snackbar variants**
+(`info` `success` `warning` `error`) mapped to the status tokens — `error` reads
+`--color-danger`, because the prototype's own map does. Props flat and in the prototype's
+order: `variant`, `title` (optional bold line), `message`, `actionLabel` + `onAction`
+(optional bordered button in the variant's colour), `dismissible` (default true; the stack
+never passes false) + `onDismiss`. Presentational to the last prop — the 4px accent bar,
+the glyph and the action in the variant's colour, the card's own 28px ✕ announcing itself
+as **Dismiss** (not `RemoveButton`), `ffSnackIn` on entry; **no timer and no effect in
+it**. One amendment of the prototype's flat `role="status"`: the role is **by variant** —
+`status` for `info` / `success`, `alert` for `warning` / `error` (design log 17 Q20).
+
+**The stack, the queue and the timers live above the route table**, as the prototype's
+`pushSnack` / `dismissSnack` did in the container, split in code across two units imported
+by path (no barrel): `App/SnackbarProvider/` owns the queue, the ids off a counter, one
+timer per plain notice, the fixed bottom-right `column-reverse` **Snackbar stack** (newest
+nearest the corner, `pointer-events: none` with each card's wrapper taking them back,
+always mounted, no portal, no cap, no dedupe) and the dismiss-then-run action;
+`App/useSnackbar/` owns the context, the `useSnackbar()` hook — `{ notify, dismiss }`,
+throwing outside the provider — and `SnackbarNotice` (`{ variant, title?, message,
+action? }`, `action` nesting `{ label, onClick }`). **The one timing rule:** a notice with
+an `action` persists until actioned or dismissed; every other notice dies at **5s**; no
+per-notice override. **No caller yet** — the first is the **Update offer snackbar** of the
+software-update flow (Settings → About, design log 17), which waits on the Electron shell
+and the packaging.
 
 ### LogConsole — `mol.LogConsole.dc.html`
 
@@ -461,15 +478,15 @@ needs.
 > pure router** — seven `<sc-if>` → `<dc-import>` mounts, with the logic class as the sole
 > state container. Each page receives one typed model object built in `renderVals()`.
 
-| Page (prototype file)    | Target               | Composition                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
-| ------------------------ | -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `page.LibraryPage` ✅    | `pages/LibraryPage`  | browse header (SearchBar + FilterDropdown ×3 + gear → Settings) + ContinueCard row + Favorites row + `GenreRow` ×n                                                                                                                                                                                                                                                                                                                                                                        |
-| `page.GenrePage` ✅      | `pages/GenrePage`    | genre header (SearchBar + Sort FilterDropdown) + `LibraryGrid`                                                                                                                                                                                                                                                                                                                                                                                                                            |
-| `page.MoviePage` ✅      | `pages/MoviePage`    | backdrop + poster + meta (RatingPicker, Chip tags, director/cast) + actions + the ⋯ menu (✎ Edit details, 🗑 Delete movie → `DeleteMovieDialog`)                                                                                                                                                                                                                                                                                                                                          |
-| `page.SettingsPage` ✅   | `pages/SettingsPage` | `MaintainerLayout` around five sections: `SettingsHeader` · `LibrarySection` (Add / Import / Export rows) · `PlaybackSection` (**Codecs** over `CodecManager`, the divider, **Subtitles**: the **Auto-on toggle** under its Coming soon pill and _Preferred language_ over `FilterDropdown`) · `StorageSection` (the path and the space line; no _Change…_ — the Electron shell's) · `AboutSection` (the brand row and the **App version**; no _Software update_ — the Snackbar system's) |
-| `feat.PlayerControls` ✅ | `pages/PlayerPage`   | `Player` (organism) — picture + `PlayerControls` + `PlayerScrubber` + `VolumeSlider` + `SubtitleOverlay` + `PlayerNotice`; the player is one self-contained screen                                                                                                                                                                                                                                                                                                                        |
-| `feat.MovieForm` ✅      | `pages/AddMoviePage` | the Add/Edit form (also resolves an import row)                                                                                                                                                                                                                                                                                                                                                                                                                                           |
-| `feat.ImportFlow` ✅     | `pages/ImportPage`   | `MaintainerLayout` around `ImportFlow`: the import setup → running → review flow. Confident matches import during the run; review lists only what the run could not settle                                                                                                                                                                                                                                                                                                                |
+| Page (prototype file)    | Target               | Composition                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| ------------------------ | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `page.LibraryPage` ✅    | `pages/LibraryPage`  | browse header (SearchBar + FilterDropdown ×3 + gear → Settings) + ContinueCard row + Favorites row + `GenreRow` ×n                                                                                                                                                                                                                                                                                                                                                                                           |
+| `page.GenrePage` ✅      | `pages/GenrePage`    | genre header (SearchBar + Sort FilterDropdown) + `LibraryGrid`                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| `page.MoviePage` ✅      | `pages/MoviePage`    | backdrop + poster + meta (RatingPicker, Chip tags, director/cast) + actions + the ⋯ menu (✎ Edit details, 🗑 Delete movie → `DeleteMovieDialog`)                                                                                                                                                                                                                                                                                                                                                             |
+| `page.SettingsPage` ✅   | `pages/SettingsPage` | `MaintainerLayout` around five sections: `SettingsHeader` · `LibrarySection` (Add / Import / Export rows) · `PlaybackSection` (**Codecs** over `CodecManager`, the divider, **Subtitles**: the **Auto-on toggle** under its Coming soon pill and _Preferred language_ over `FilterDropdown`) · `StorageSection` (the path and the space line; no _Change…_ — the Electron shell's) · `AboutSection` (the brand row and the **App version**; no _Software update_ — the Electron shell's and the packaging's) |
+| `feat.PlayerControls` ✅ | `pages/PlayerPage`   | `Player` (organism) — picture + `PlayerControls` + `PlayerScrubber` + `VolumeSlider` + `SubtitleOverlay` + `PlayerNotice`; the player is one self-contained screen                                                                                                                                                                                                                                                                                                                                           |
+| `feat.MovieForm` ✅      | `pages/AddMoviePage` | the Add/Edit form (also resolves an import row)                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| `feat.ImportFlow` ✅     | `pages/ImportPage`   | `MaintainerLayout` around `ImportFlow`: the import setup → running → review flow. Confident matches import during the run; review lists only what the run could not settle                                                                                                                                                                                                                                                                                                                                   |
 
 The gear icon now opens **`page.SettingsPage`** (a full route), not a dropdown — the old
 maintenance menu's actions (Add / Import / Export) are the Library section there, so tasks
