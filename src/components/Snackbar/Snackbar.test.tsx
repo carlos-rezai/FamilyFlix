@@ -21,10 +21,11 @@ import { theme } from '@/styles/theme';
  * Q20). An optional bold title over the dim message, an optional bordered
  * action, and the card's own 28px ✕ announcing itself as **Dismiss**.
  *
- * Presentational to the last prop: it owns no timer and no effect, and the
- * thing that unmounts it is the **Snackbar stack**, which the next slice
- * builds. The specimen is the prototype's own — the **Update offer snackbar**'s
- * copy — and nothing here reaches for a class or a state variable.
+ * Presentational to the last prop: it owns no timer and no effect. The thing
+ * that unmounts it — and that dismisses it on the action — is the **Snackbar
+ * stack**, `App/SnackbarProvider/`, which has its own suite. The specimen is
+ * the prototype's own — the **Update offer snackbar**'s copy — and nothing
+ * here reaches for a class or a state variable.
  */
 const TITLE = 'Update available';
 const MESSAGE = 'FamilyFlix 1.1.0 is ready to install.';
