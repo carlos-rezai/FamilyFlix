@@ -368,13 +368,13 @@ The app's one channel for something that happened away from where the family is
 looking — its own initiative (`snackbar`, design log 18), built before its first
 caller because that caller waits on Electron and this does not.
 
-| Term                           | Definition                                                                                                                                                                                                                                                                                                                                   | Aliases to avoid                     |
-| ------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------ |
-| **Snackbar** (updated)         | The transient bottom-right card — `components/Snackbar/`, one **Snackbar variant**, an optional title, a message, an optional action, a ✕. Presentational to the last prop: it owns no timer and no state, and the thing that unmounts it is the **Snackbar stack**.                                                                         | toast, notification, alert, banner   |
-| **Snackbar variant** (updated) | Which of `info` / `success` / `warning` / `error` a **Snackbar** is, drawn as its bar, glyph and action colour off the matching status token — and as its role: `status` for the first two, `alert` for the last two. All four ship, because the prototype declares four.                                                                    | severity, level, type                |
-| **Snackbar stack** (updated)   | The fixed bottom-right `column-reverse` column the **Snackbars** queue in, newest nearest the corner — `App/SnackbarProvider/`, which owns the queue, the ids and every timer. Always mounted, empty or not, so a live region precedes its content. Nothing in it is capped, deduped or coalesced.                                           | toast host, snackbar queue, notifier |
-| **Snackbar notice** (new)      | What a caller hands `notify` — `{ variant, title?, message, action? }`, `SnackbarNotice` in code, answered with the id it can be retracted by. Named in full because **Player notice** is already a term; the two never share a word. It carries no duration and no `dismissible`: one rule covers the first, and the second is always true. | notice, snack, payload, toast data   |
-| **Actionable snackbar** (new)  | A **Snackbar notice** carrying an `action` — the one kind that **persists** until it is actioned or dismissed. Every other notice dies at **5s**. That is the whole timing rule, and there is no per-notice override of it.                                                                                                                  | persistent toast, sticky snackbar    |
+| Term                           | Definition                                                                                                                                                                                                                                                                                                                                               | Aliases to avoid                     |
+| ------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------ |
+| **Snackbar** (updated)         | The transient bottom-right card — `components/Snackbar/`, one **Snackbar variant**, an optional title, a message, an optional action, a ✕. Presentational to the last prop: it owns no timer and no state, and the thing that unmounts it is the **Snackbar stack**.                                                                                     | toast, notification, alert, banner   |
+| **Snackbar variant** (updated) | Which of `info` / `success` / `warning` / `error` a **Snackbar** is, drawn as its bar, glyph and action colour off the matching status token — and as its role: `status` for the first two, `alert` for the last two. All four ship, because the prototype declares four.                                                                                | severity, level, type                |
+| **Snackbar stack** (updated)   | The fixed bottom-right `column-reverse` column the **Snackbars** queue in, newest nearest the corner — `App/SnackbarProvider/`, which owns the queue, the ids and every timer. Always mounted, empty or not — invisible either way, and one branch fewer; the live regions are the cards, not the column. Nothing in it is capped, deduped or coalesced. | toast host, snackbar queue, notifier |
+| **Snackbar notice** (new)      | What a caller hands `notify` — `{ variant, title?, message, action? }`, `SnackbarNotice` in code, answered with the id it can be retracted by. Named in full because **Player notice** is already a term; the two never share a word. It carries no duration and no `dismissible`: one rule covers the first, and the second is always true.             | notice, snack, payload, toast data   |
+| **Actionable snackbar** (new)  | A **Snackbar notice** carrying an `action` — the one kind that **persists** until it is actioned or dismissed. Every other notice dies at **5s**. That is the whole timing rule, and there is no per-notice override of it.                                                                                                                              | persistent toast, sticky snackbar    |
 
 ## Relationships
 
@@ -1371,3 +1371,24 @@ Hard` gets found and `Die Hard\extras` doesn't become a second film."
   all written down. What was missing was Electron, which the **Snackbar stack**
   does not use. Read the other way: the rule still forbids inventing the
   caller — which is why no existing screen gained one.
+- **One sentence the code never carried (resolved by the snackbar refactor,
+  164):** every row of _The Snackbar system_ was read against the code for
+  that round, and one lost to it. **Snackbar stack** said the column is
+  always mounted "so a live region precedes its content", and the stack is
+  not a live region: the roles are on the cards (log 18 Q9, the prototype's
+  own `role="status"`), each of which mounts carrying its content, and the
+  provider's own suite asserts the column has none. The stack stays mounted
+  for the reason that holds — an empty flex column paints nothing, and a
+  conditional mount is a branch with nothing behind it — and the row now says
+  so. The reliability gap the sentence was reaching for is recorded in the
+  journal as known and not fixed, for an accessibility pass over every live
+  region in the app. Two things the build named that the log did not, kept
+  and recorded rather than corrected: the glyphs are `InfoCircleIcon`,
+  `CheckCircleIcon`, `BangTriangleIcon` and `CrossCircleIcon` — Q10's rule,
+  "named for what they draw", followed more faithfully than Q10's own
+  `InfoIcon` and `WarningIcon`, the second of which names the notice — and the
+  hook's answer is `SnackbarApi` where the log's sketch wrote `Snackbars`,
+  because a plural of the molecule's name reads as a list of cards and
+  `{ notify, dismiss }` is not one. **Snackbar**, **Snackbar variant**,
+  **Snackbar notice** and **Actionable snackbar**, and the three relationship
+  lines, hold as written.
