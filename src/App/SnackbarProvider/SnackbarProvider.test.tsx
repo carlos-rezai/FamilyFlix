@@ -12,6 +12,7 @@ import {
 import { theme } from '@/styles/theme';
 import { comesBefore } from '@/test-support/comesBefore/comesBefore';
 import { LocationProbe } from '@/test-support/LocationProbe/LocationProbe';
+import { snackbarStack } from '@/test-support/snackbarStack/snackbarStack';
 
 /**
  * 18 — Snackbar system, Phase 2: "the tracer bullet" (issue #161).
@@ -81,7 +82,7 @@ function renderStack() {
 }
 
 /** The stack's node: always in the tree, empty or not. */
-const stack = (): HTMLElement => screen.getByTestId('snackbar-stack');
+const stack = (): HTMLElement => snackbarStack();
 
 /** Every card in the stack, in document order. */
 const cards = (): HTMLElement[] => [

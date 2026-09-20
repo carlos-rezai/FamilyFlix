@@ -19,6 +19,7 @@ import {
   okResponse,
 } from '@/test-support/fakeResponse/fakeResponse';
 import { stubMediaElement } from '@/test-support/stubMediaElement/stubMediaElement';
+import { snackbarStack } from '@/test-support/snackbarStack/snackbarStack';
 import { stubScrollMetrics } from '@/test-support/stubScrollMetrics/stubScrollMetrics';
 
 /** The two of Action the home row ships, of however many the genre holds. */
@@ -1131,21 +1132,21 @@ describe('App — the Snackbar stack above the route table', () => {
   it('mounts the stack’s node on /, /movie/:id, /settings and /import alike', async () => {
     const home = renderApp();
     await screen.findByRole('heading', { name: 'Action' });
-    expect(screen.getByTestId('snackbar-stack')).toBeDefined();
+    expect(snackbarStack()).toBeDefined();
     home.unmount();
 
     const movie = renderApp('/movie/a1');
     await screen.findByRole('heading', { level: 1, name: 'Northwind' });
-    expect(screen.getByTestId('snackbar-stack')).toBeDefined();
+    expect(snackbarStack()).toBeDefined();
     movie.unmount();
 
     const settings = renderApp('/settings');
     await screen.findByRole('heading', { name: /settings/i });
-    expect(screen.getByTestId('snackbar-stack')).toBeDefined();
+    expect(snackbarStack()).toBeDefined();
     settings.unmount();
 
     renderApp('/import');
     await screen.findByRole('heading', { level: 1, name: 'Import library' });
-    expect(screen.getByTestId('snackbar-stack')).toBeDefined();
+    expect(snackbarStack()).toBeDefined();
   });
 });

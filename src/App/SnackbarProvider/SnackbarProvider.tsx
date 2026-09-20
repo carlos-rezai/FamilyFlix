@@ -100,7 +100,7 @@ export function SnackbarProvider({ children }: SnackbarProviderProps) {
   return (
     <SnackbarContext.Provider value={api}>
       {children}
-      <Stack data-testid="snackbar-stack">
+      <Stack>
         {queue.map(({ id, notice: { variant, title, message, action } }) => (
           <Slot key={id}>
             <Snackbar
