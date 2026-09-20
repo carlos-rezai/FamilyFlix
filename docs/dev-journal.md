@@ -11,6 +11,117 @@ Newest entry first.
 
 ---
 
+## 2026-09-20 — Snackbar system (issues #159–#162)
+
+Seven commits across issues #159–#162, four slices against the plan on #158,
+built from `docs/design-logs/18-snackbar.md`. **4699 tests pass across 241
+files**, up from 4603 across 234. `npm run typecheck` is green and
+`eslint src server` is clean on every commit. The third initiative driven
+wholly by `issue-loop`, and the first in FamilyFlix that ships with no caller
+— by design: log 17 Q32 ruled that two of the four **Update check** outcomes
+have nowhere to go but a Snackbar, so the update flow's bridge cannot go
+first; log 18 Q2 that a component specified to the word by a named consumer
+(the **Update offer snackbar**, log 17's copy table) is not the speculative
+one this project refuses; Q3 that none of the six screens which refused a
+snackbar on their own merits would be reopened to give it work; and Q4 that
+its own tests are the whole proof until the **Software update** flow lands
+three initiatives from now. The maintainer's one instruction was the scope
+the grill ran under: translate the prototype 1:1 into the codebase, in its
+naming, conventions, patterns and architecture.
+
+**Snackbar system is _not_ ticked** in the feature table. The rule holds: ✅
+when the refactor closes, not when the build issues do.
+
+### What shipped
+
+- **#159, the prototype amended first.** `FamilyFlix.dc.html`'s
+  `checkForUpdates()` confirmation `duration: 4000` → `5000` — log 17's
+  amendment 2, inherited because it is the Snackbar's timing rule that it
+  makes consistent. `mol.Snackbar.dc.html` and the container's `pushSnack` /
+  `dismissSnack` untouched.
+- **#160, the molecule and its four glyphs.** `InfoCircleIcon`,
+  `CheckCircleIcon`, `BangTriangleIcon` and `CrossCircleIcon` on `IconBase`,
+  in `currentColor`, each carrying the prototype's own path data. Then
+  `components/Snackbar/`, `mol.Snackbar.dc.html` cell for cell: the 360px
+  card on `surface2` under the prototype's literal shadow, the 4px accent
+  bar, the glyph seated 1px down, the 15/600 title over the 14px dim message,
+  the bordered action written in the variant's colour, the 28px ✕ pulled into
+  the padding announcing itself as **Dismiss**, `ffSnackIn` on entry. Props
+  flat and in the `data-props` order, `dismissible` included. Two deviations
+  the log rules: `error` reads `danger` because the prototype's own map does,
+  and the prototype's flat `role="status"` becomes `status` for `info` /
+  `success` and `alert` for `warning` / `error`. Presentational to the last
+  prop — no timer, no effect.
+- **#161, the stack, the hook and the mount.** `App/useSnackbar/` owns the
+  context, the hook and `SnackbarNotice`, and throws outside a provider,
+  naming itself. `App/SnackbarProvider/` owns the queue, the ids off a
+  counter, one `setTimeout` per notice in a ref keyed by id, and the
+  **Snackbar stack**: the container's host at `position: fixed` (Q20),
+  `column-reverse` so an array appended to puts the newest nearest the corner,
+  `pointer-events: none` with each card's wrapper taking them back, always
+  mounted, no portal, no cap, no dedupe. `notify` and `dismiss` never change
+  identity. Mounted in `App` between `GlobalStyle` and `Routes`, so a notice
+  raised on one route is still in the corner on the next.
+- **#162, the actionable notice.** The one timing rule in one place: a notice
+  with an `action` arms no timer and persists; every other notice dies at
+  5s; pressing the action takes its own notice off first and then runs
+  `onClick`; the ✕ takes it off without running it; `dismiss(id)` retracts one
+  nobody pressed and does nothing against one already gone.
+
+### The calls the subagents made alone
+
+The log named none of these; all four are in the code.
+
+- **The glyph names.** Q10 wrote `InfoIcon` and `WarningIcon` and ruled the
+  four "named for what they draw". The build named them `InfoCircleIcon` and
+  `BangTriangleIcon`, which follows the rule better than its own examples:
+  `WarningIcon` names the notice it sits on, `BangTriangleIcon` names the
+  picture.
+- **Four icon tests.** Q10 said "no tests — `Icon/` is flat and untested but
+  for the three that earned one". The build gave all four a test on the
+  precedent of the three most recent glyphs (`DownloadIcon`, `MicrochipIcon`,
+  `UploadIcon`): the prototype's path data, the `currentColor` ink, the 24×24
+  frame and the decorative default.
+- **`SnackbarApi` for the hook's answer**, where the log's contract sketch
+  wrote `Snackbars`. A plural of the molecule's name reads as a list of cards,
+  and `{ notify, dismiss }` is not one.
+- **A `data-testid="snackbar-stack"` on the stack**, the only one in shipping
+  code — there because the stack has no role of its own (the roles are on the
+  cards) and four leaves need to find it empty. The refactor round takes it
+  off.
+
+### Deliberately not built
+
+A caller in any of the six refusing screens (ratings, add, delete, import,
+export, the codec manager); `duration` or `dismissible` on the notice; a cap,
+a dedupe, coalescing; a portal; an exit animation; `prefers-reduced-motion`
+(now unhonoured across six animations rather than five, to be fixed in
+`GlobalStyle` for all of them at once); Escape-to-dismiss; hover-to-pause; a
+`types/snackbar.ts`; a `test-support/` double for the stack; `App.tsx` moved
+into a folder of its own.
+
+### Known and not fixed
+
+- **The stack is not a live region.** Q19 keeps it mounted when empty "so a
+  live region precedes its content", but the roles are on the cards (Q9, the
+  prototype), each of which mounts carrying its content — the case the
+  sentence warns about. The always-mounted stack is right for a reason that
+  holds (an empty flex column paints nothing, and a conditional mount is a
+  branch with nothing behind it); the reliability gap is real and is an
+  accessibility pass over every live region in the app, not this feature's.
+- **A notice raised under a fullscreen player is unseen until fullscreen
+  exits** (Q33). An actionable one is waiting on the other side; a 5s
+  confirmation about something the family did not do is no loss.
+
+### Follow-ups
+
+The refactor round, filed as 164 with the docs slice 163 folded into it: the
+stack found by its geometry rather than the `data-testid`, the glossary's
+live-region sentence corrected, the two comments that still schedule, and the
+docs that close the initiative.
+
+---
+
 ## 2026-09-19 — Playback component upload refactor (issue #157)
 
 Sixteen commits against `docs/refactor-plans/16-component-upload-refactor.md` —
