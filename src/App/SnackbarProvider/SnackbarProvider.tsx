@@ -35,12 +35,21 @@ export interface SnackbarProviderProps {
  *
  * The queue is an array appended to, so DOM order is oldest-first and the
  * stack's `column-reverse` puts the newest nearest the corner. Ids come off a
- * counter, monotonically increasing; one `setTimeout` per notice is held in a
- * ref keyed by id. `notify` pushes and answers the id; `dismiss(id)` filters
- * and clears the timer, harmless when the filter finds nothing. Both update
- * through functional `setState` and close over no state, so the memoised
- * context value never changes identity. Nothing caps, dedupes or coalesces;
- * every outstanding timer is cleared on unmount.
+ * counter, monotonically increasing; one `setTimeout` per plain notice is held
+ * in a ref keyed by id. `notify` pushes and answers the id; `dismiss(id)`
+ * filters and clears the timer, harmless when the filter finds nothing. Both
+ * update through functional `setState` and close over no state, so the
+ * memoised context value never changes identity. Nothing caps, dedupes or
+ * coalesces; every outstanding timer is cleared on unmount.
+ *
+ * The one exception to the timer rule is the **Actionable snackbar**: a notice
+ * whose `action` is present arms no timer and persists until it is actioned or
+ * dismissed. The action's presence is the whole of the timing — the notice
+ * carries no `duration` and no `dismissible`. Pressing the action is the one
+ * thing the stack does on a caller's behalf: it takes the notice off first,
+ * then runs `onClick`, so no caller has to remember the step. The ✕ takes an
+ * actionable notice off without running `onClick`, and `dismiss(id)` retracts
+ * one nobody pressed.
  *
  * The stack is always mounted, empty or not, and carries no live region and no
  * role of its own: the roles are on the cards alone.
@@ -64,10 +73,12 @@ export function SnackbarProvider({ children }: SnackbarProviderProps) {
       const id = nextId.current;
       nextId.current += 1;
       setQueue((current) => [...current, { id, notice }]);
-      timers.current.set(
-        id,
-        setTimeout(() => dismiss(id), NOTICE_LIFETIME_MS)
-      );
+      if (notice.action === undefined) {
+        timers.current.set(
+          id,
+          setTimeout(() => dismiss(id), NOTICE_LIFETIME_MS)
+        );
+      }
       return id;
     },
     [dismiss]
@@ -90,14 +101,20 @@ export function SnackbarProvider({ children }: SnackbarProviderProps) {
     <SnackbarContext.Provider value={api}>
       {children}
       <Stack data-testid="snackbar-stack">
-        {queue.map(({ id, notice }) => (
+        {queue.map(({ id, notice: { variant, title, message, action } }) => (
           <Slot key={id}>
             <Snackbar
-              variant={notice.variant}
-              title={notice.title}
-              message={notice.message}
-              actionLabel={notice.action?.label}
-              onAction={notice.action?.onClick}
+              variant={variant}
+              title={title}
+              message={message}
+              actionLabel={action?.label}
+              onAction={
+                action &&
+                (() => {
+                  dismiss(id);
+                  action.onClick();
+                })
+              }
               onDismiss={() => dismiss(id)}
             />
           </Slot>
