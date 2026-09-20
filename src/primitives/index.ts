@@ -40,3 +40,7 @@ export { FullscreenIcon } from './Icon/FullscreenIcon';
 export { DownloadIcon } from './Icon/DownloadIcon';
 export { MicrochipIcon } from './Icon/MicrochipIcon';
 export { UploadIcon } from './Icon/UploadIcon';
+export { InfoCircleIcon } from './Icon/InfoCircleIcon';
+export { CheckCircleIcon } from './Icon/CheckCircleIcon';
+export { BangTriangleIcon } from './Icon/BangTriangleIcon';
+export { CrossCircleIcon } from './Icon/CrossCircleIcon';
