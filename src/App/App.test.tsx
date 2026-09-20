@@ -1121,3 +1121,31 @@ describe('App — no import control on the family’s screens', () => {
     expect(importControls()).toHaveLength(0);
   });
 });
+
+describe('App — the Snackbar stack above the route table', () => {
+  /**
+   * Present on every screen means the provider is mounted above the routes
+   * rather than inside one of them — the single failure mode no other test can
+   * see. What the stack does when a notice lands is the provider's own suite.
+   */
+  it('mounts the stack’s node on /, /movie/:id, /settings and /import alike', async () => {
+    const home = renderApp();
+    await screen.findByRole('heading', { name: 'Action' });
+    expect(screen.getByTestId('snackbar-stack')).toBeDefined();
+    home.unmount();
+
+    const movie = renderApp('/movie/a1');
+    await screen.findByRole('heading', { level: 1, name: 'Northwind' });
+    expect(screen.getByTestId('snackbar-stack')).toBeDefined();
+    movie.unmount();
+
+    const settings = renderApp('/settings');
+    await screen.findByRole('heading', { name: /settings/i });
+    expect(screen.getByTestId('snackbar-stack')).toBeDefined();
+    settings.unmount();
+
+    renderApp('/import');
+    await screen.findByRole('heading', { level: 1, name: 'Import library' });
+    expect(screen.getByTestId('snackbar-stack')).toBeDefined();
+  });
+});
