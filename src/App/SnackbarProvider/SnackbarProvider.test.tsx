@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, act, fireEvent, within } from '@testing-library/react';
 import { ThemeProvider } from 'styled-components';
 import { MemoryRouter, Route, Routes, Link } from 'react-router-dom';
+import { useState } from 'react';
 
 import { SnackbarProvider } from '@/App/SnackbarProvider/SnackbarProvider';
 import {
@@ -30,11 +31,18 @@ import { LocationProbe } from '@/test-support/LocationProbe/LocationProbe';
  * cards alone. No portal: it renders where the provider sits, above the route
  * table, so a notice raised on one route is still there on the next.
  *
- * In this slice the timer rule is uniform: an `action` is accepted and its
- * label passed through, but the persistence it implies is the next slice's,
- * so nothing here asserts either way on a notice that carries one.
+ * Phase 3, "the action persists, and pressing it dismisses then runs" (issue
+ * #162), is the one exception to the timer rule and the one thing the stack
+ * does on a caller's behalf. An **Actionable snackbar** — a notice whose
+ * `action` is present — gets no timer and persists until it is actioned or
+ * dismissed; every other notice still dies at 5s. Pressing the action takes
+ * its own notice off first, then runs `onClick`; the ✕ takes it off without
+ * running `onClick`; `dismiss(id)` retracts one nobody pressed and does
+ * nothing against one already actioned. The action's presence is the whole of
+ * the timing: `SnackbarNotice` carries no `duration` and no `dismissible`.
  */
 const FIVE_SECONDS = 5_000;
+const WELL_BEYOND = 10 * 60_000;
 
 const SAVED: SnackbarNotice = { variant: 'success', message: 'Saved.' };
 const REFUSED: SnackbarNotice = {
@@ -42,6 +50,17 @@ const REFUSED: SnackbarNotice = {
   title: 'Could not save',
   message: 'The folder is read-only.',
 };
+
+/** The one actionable notice the app will ever push, the Update offer. */
+const OFFER_MESSAGE = 'FamilyFlix 1.1.0 is ready to install.';
+function offer(onClick: () => void = () => undefined): SnackbarNotice {
+  return {
+    variant: 'info',
+    title: 'Update available',
+    message: OFFER_MESSAGE,
+    action: { label: 'Update now', onClick },
+  };
+}
 
 /** The hook's answer, captured off the last render of a consumer under it. */
 let api: ReturnType<typeof useSnackbar>;
@@ -343,6 +362,209 @@ describe('SnackbarProvider — the timers', () => {
     });
 
     expect(vi.getTimerCount()).toBe(0);
+  });
+});
+
+describe('SnackbarProvider — an actionable notice persists', () => {
+  it('keeps a notice with an action on screen at 5s', () => {
+    renderStack();
+    raise(offer());
+
+    elapse(FIVE_SECONDS);
+
+    expect(screen.getByText(OFFER_MESSAGE)).toBeDefined();
+    expect(
+      within(stack()).getByRole('button', { name: 'Update now' })
+    ).toBeDefined();
+  });
+
+  it('keeps it well beyond: still up ten minutes later', () => {
+    renderStack();
+    raise(offer());
+
+    elapse(WELL_BEYOND);
+
+    expect(screen.getByText(OFFER_MESSAGE)).toBeDefined();
+    expect(cards()).toHaveLength(1);
+  });
+
+  it('arms no timer for it: the action’s presence is the timing', () => {
+    renderStack();
+
+    raise(offer());
+
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it('still takes a notice without an action off at 5s, beside one that stays', () => {
+    renderStack();
+    raise(SAVED);
+    raise(offer());
+
+    elapse(FIVE_SECONDS);
+
+    expect(screen.queryByText('Saved.')).toBeNull();
+    expect(screen.getByText(OFFER_MESSAGE)).toBeDefined();
+    expect(cards()).toHaveLength(1);
+  });
+
+  it('has no duration and no dismissible: a stray one changes nothing', () => {
+    renderStack();
+    const hurried: SnackbarNotice = {
+      variant: 'info',
+      message: 'Hurried',
+      // @ts-expect-error — a SnackbarNotice carries no `duration`
+      duration: 100,
+    };
+    const locked: SnackbarNotice = {
+      ...offer(),
+      // @ts-expect-error — a SnackbarNotice carries no `dismissible`
+      dismissible: false,
+    };
+    raise(hurried);
+    raise(locked);
+
+    elapse(100);
+    expect(screen.getByText('Hurried')).toBeDefined();
+
+    elapse(FIVE_SECONDS - 100);
+    expect(screen.queryByText('Hurried')).toBeNull();
+    expect(screen.getByText(OFFER_MESSAGE)).toBeDefined();
+    expect(
+      within(cardSaying(OFFER_MESSAGE)).getByRole('button', {
+        name: 'Dismiss',
+      })
+    ).toBeDefined();
+  });
+});
+
+describe('SnackbarProvider — pressing the action', () => {
+  /** What the action does, captured off the last render of a consumer. */
+  let install: () => void;
+
+  /** A consumer whose action has a visible effect on screen. */
+  function Installer() {
+    api = useSnackbar();
+    const [installing, setInstalling] = useState(false);
+    install = () => setInstalling(true);
+    return installing ? <p>Installing and restarting…</p> : null;
+  }
+
+  function renderInstaller() {
+    return render(
+      <ThemeProvider theme={theme}>
+        <SnackbarProvider>
+          <Installer />
+        </SnackbarProvider>
+      </ThemeProvider>
+    );
+  }
+
+  it('takes its own notice off first, then runs onClick: gone by the time the effect shows', () => {
+    renderInstaller();
+    const onClick = vi.fn(() => install());
+    raise(offer(onClick));
+    elapse(FIVE_SECONDS * 2);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Update now' }));
+
+    expect(screen.getByText('Installing and restarting…')).toBeDefined();
+    expect(screen.queryByText(OFFER_MESSAGE)).toBeNull();
+    expect(cards()).toHaveLength(0);
+    expect(onClick).toHaveBeenCalledTimes(1);
+  });
+
+  it('takes only its own notice off, leaving the other', () => {
+    renderStack();
+    const onClick = vi.fn();
+    raise(offer(onClick));
+    raise({
+      ...offer(),
+      message: 'Another offer.',
+      action: { label: 'Later', onClick: () => undefined },
+    });
+    elapse(FIVE_SECONDS * 2);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Update now' }));
+
+    expect(screen.queryByText(OFFER_MESSAGE)).toBeNull();
+    expect(screen.getByText('Another offer.')).toBeDefined();
+    expect(onClick).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('SnackbarProvider — taking an actionable notice off', () => {
+  it('takes it off by its ✕, past the 5s a plain one dies at, without running onClick', () => {
+    renderStack();
+    const onClick = vi.fn();
+    raise(offer(onClick));
+    elapse(FIVE_SECONDS * 2);
+
+    fireEvent.click(
+      within(cardSaying(OFFER_MESSAGE)).getByRole('button', {
+        name: 'Dismiss',
+      })
+    );
+
+    expect(screen.queryByText(OFFER_MESSAGE)).toBeNull();
+    expect(cards()).toHaveLength(0);
+    elapse(WELL_BEYOND);
+    expect(onClick).not.toHaveBeenCalled();
+  });
+
+  it('retracts one nobody pressed through dismiss(id)', () => {
+    renderStack();
+    const onClick = vi.fn();
+    const id = raise(offer(onClick));
+    elapse(FIVE_SECONDS * 2);
+    expect(screen.getByText(OFFER_MESSAGE)).toBeDefined();
+
+    act(() => {
+      api.dismiss(id);
+    });
+
+    expect(screen.queryByText(OFFER_MESSAGE)).toBeNull();
+    expect(cards()).toHaveLength(0);
+    expect(onClick).not.toHaveBeenCalled();
+  });
+
+  it('does nothing through dismiss(id) against one already actioned', () => {
+    renderStack();
+    const onClick = vi.fn();
+    const id = raise(offer(onClick));
+    raise({
+      ...offer(),
+      message: 'Another offer.',
+      action: { label: 'Later', onClick: () => undefined },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Update now' }));
+    expect(screen.queryByText(OFFER_MESSAGE)).toBeNull();
+    expect(cards()).toHaveLength(1);
+
+    expect(() =>
+      act(() => {
+        api.dismiss(id);
+      })
+    ).not.toThrow();
+
+    expect(cards()).toHaveLength(1);
+    expect(screen.getByText('Another offer.')).toBeDefined();
+    expect(onClick).toHaveBeenCalledTimes(1);
+  });
+
+  it('leaks nothing when the provider unmounts with one up', () => {
+    const { unmount } = renderStack();
+    const onClick = vi.fn();
+    raise(offer(onClick));
+    elapse(FIVE_SECONDS * 2);
+    expect(screen.getByText(OFFER_MESSAGE)).toBeDefined();
+
+    unmount();
+
+    expect(vi.getTimerCount()).toBe(0);
+    expect(() => elapse(WELL_BEYOND)).not.toThrow();
+    expect(screen.queryByText(OFFER_MESSAGE)).toBeNull();
+    expect(onClick).not.toHaveBeenCalled();
   });
 });
 
