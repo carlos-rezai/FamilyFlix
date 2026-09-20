@@ -148,7 +148,9 @@ familyflix/
 │ ├── componentDir/ ← a component's two files in a sandbox, and `ffmpegIn` / `ffprobeIn` / `EXE` (re-exported from the resolver that owns it)
 │ └── libraryFixture/ ← the importer’s fixture copied under a sandbox → { root, sheet }
 ├── src/
-│ ├── App/ ← the router and the app-level providers every page renders inside
+│ ├── App/ ← the router and the app-level providers every page renders inside; `App.tsx` stays flat here (log 18 Q16), and the two units below are imported by path, no barrel
+│ │ ├── SnackbarProvider/ ← the Snackbar stack: the queue, the ids off a counter, one timer per plain notice, the fixed bottom-right `column-reverse` column (newest nearest the corner, `pointer-events: none` with each card's wrapper taking them back, always mounted, no portal, no cap, no dedupe), and the action that takes its own notice off first and then runs
+│ │ └── useSnackbar/ ← the context, `useSnackbar()` → `{ notify, dismiss }` (throwing outside the provider, naming itself), and `SnackbarNotice` — `{ variant, title?, message, action? }`; no `duration`, no `dismissible`: an action persists, everything else dies at 5s
 │ ├── assets/ ← images, fonts, icons (static)
 │ ├── styles/ ← global CSS reset, themes, and visuallyHidden.ts — the clip that hides an input without taking it out of the tab order
 │ ├── tokens/ ← colors, spacing, typography, breakpoints
@@ -159,7 +161,7 @@ familyflix/
 │ │ └── index.ts
 │ ├── primitives/ ← dumb, reusable UI atoms (Button, Input, Text, Icon, Badge)
 │ │ ├── index.ts ← barrel: re-exports every primitive (only barrel at this rung)
-│ │ ├── Icon/ ← one file per glyph on IconBase (DownloadIcon, SheetIcon, CheckIcon, MicrochipIcon, UploadIcon, …), `currentColor`, sized by the caller
+│ │ ├── Icon/ ← one file per glyph on IconBase (DownloadIcon, SheetIcon, CheckIcon, MicrochipIcon, UploadIcon, and the Snackbar's four — InfoCircleIcon, CheckCircleIcon, BangTriangleIcon, CrossCircleIcon — named for what they draw, …), `currentColor`, sized by the caller
 │ │ ├── TextField/ ← the boxed input: a glyph slot (the sheet and folder glyphs among them) and `mono` for a path
 │ │ ├── Toggle/ ← the switch: `{ checked, disabled?, onToggle, label }`, `role="switch"`, `aria-disabled` rather than `disabled` so it stays in the tab order
 │ │ └── Button/ ← primary / secondary / ghost / danger, at sm (a list row’s pair) / md / lg
@@ -170,6 +172,7 @@ familyflix/
 │ │ ├── index.ts ← barrel: re-exports every component (only barrel at this rung)
 │ │ ├── Modal/ ← the scrimmed card every dialog is drawn on: portal, Escape/scrim/✕, focus in, Tab held, focus back; `bare` makes the card its children alone, `title` its aria-label
 │ │ ├── LogConsole/ ← the Activity log: the last lines by kind, pinned to the bottom
+│ │ ├── Snackbar/ ← the transient bottom-right card, `mol.Snackbar.dc.html` 1:1: one Snackbar variant drawn as the accent bar, the glyph, the action's colour and the role (`status` for info/success, `alert` for warning/error; `error` reads `danger`), an optional title, the message, an optional action, the card's own ✕ named Dismiss. Presentational to the last prop — no timer, no effect
 │ │ └── PosterCard/
 │ │ ├── PosterCard.tsx
 │ │ ├── PosterCard.test.tsx
@@ -258,6 +261,8 @@ familyflix/
 │ │ └── gradientFromId.test.ts
 │ └── test-support/ ← test doubles shared across features, never imported by shipping code
 │ ├── fakeResponse/ ← a Response by status; `fileResponse` the one whose caller reads `blob()`, its `json()` rejecting
+│ ├── comesBefore/ ← document order between two elements, for a slot's contract
+│ ├── snackbarStack/ ← the Snackbar stack's node, reached by what the prototype draws — the one fixed, reversed column — because it carries no role and no `data-testid`; throws when there is none
 │ └── stubDownload/ ← object URLs and an anchor’s click() for a jsdom that has neither: what the page handed the browser to save, in order
 └── docs/
 ├── design-logs/
@@ -494,10 +499,19 @@ nothing new injected:
 Every read on the page is `null` until it lands and `null` still if it
 never does, and nothing is drawn while so — no skeleton, no error face.
 The two controls whose mechanism does not exist — _Change…_ (the Electron
-shell) and _Software update_ (the Snackbar system) — are not drawn, the
-rule that held the Export row back until its dialog existed. The _Add a
-codec pack_ zone and the ✕ were the third; the **Playback component
-upload** built their mechanism, so both are drawn now.
+shell) and _Software update_ (the Electron shell and the packaging) — are
+not drawn, the rule that held the Export row back until its dialog
+existed. The _Add a codec pack_ zone and the ✕ were the third; the
+**Playback component upload** built their mechanism, so both are drawn
+now.
+
+The **Snackbar stack** ships first and empty: it is mounted in `App` above
+the route table, and no screen in the app raises a **Snackbar notice**
+today. Six logs refused a snackbar on their own merits — a refused rating
+save, add, delete, a backgrounded import, export done, a refused language
+save, a replaced component — and none was reopened to give the stack
+work, because the prototype still draws none on any of those paths. The
+first caller is the **Update offer snackbar** of the Software update flow.
 
 ## Watch Tracking
 

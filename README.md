@@ -157,13 +157,16 @@ familyflix/
 │       └── test-support/   # Shared test doubles — never imported by shipping code (heldCopy, libraryFixture, fixedSlot, componentDir, …)
 ├── src/                # React frontend
 │   ├── App/            # Router and app-level providers
+│   │   ├── SnackbarProvider/ # the Snackbar stack: the queue, the timers, the fixed bottom-right column; an action persists, everything else dies at 5s
+│   │   └── useSnackbar/      # `{ notify, dismiss }` off the stack, and SnackbarNotice
 │   ├── assets/         # Static images, fonts, icons
 │   ├── styles/         # Global CSS reset, themes, visuallyHidden
 │   ├── tokens/         # Colors, spacing, typography, breakpoints
-│   ├── primitives/     # Atomic UI elements (Button, Input, Text, Toggle, the Icon glyphs) — each with .tsx, .test.tsx, .styles.ts
+│   ├── primitives/     # Atomic UI elements (Button, Input, Text, Toggle, the Icon glyphs — the Snackbar's four among them) — each with .tsx, .test.tsx, .styles.ts
 │   ├── components/     # Composed UI blocks (PosterCard, Modal, ProgressBar) — same three-file shape
 │   │   ├── Modal/          # the scrimmed card every dialog is drawn on; owns its own dismissal and focus; `bare` for a card that is its children alone
-│   │   └── LogConsole/     # the import's Activity log, pinned to its bottom
+│   │   ├── LogConsole/     # the import's Activity log, pinned to its bottom
+│   │   └── Snackbar/       # the transient bottom-right card, one of four variants; presentational — the stack above owns the timing
 │   ├── features/       # Domain UI + logic co-located
 │   │   ├── library/        # browse grid, genre rows
 │   │   ├── search/          # search-as-you-type, filters
@@ -185,7 +188,7 @@ familyflix/
 │   ├── hooks/            # Global shared hooks
 │   ├── types/            # Shared TypeScript interfaces (import.ts, export.ts, settings.ts, playback.ts — read by both build targets; appVersion.d.ts)
 │   ├── utils/            # Pure helper functions (formatBytes among them)
-│   └── test-support/     # Shared test doubles (fakeResponse, stubDownload, …)
+│   └── test-support/     # Shared test doubles (fakeResponse, stubDownload, comesBefore, snackbarStack, …)
 └── docs/
     ├── design-logs/    # Immutable feature design snapshots
     ├── PRDs/           # Product requirements and implementation plans
