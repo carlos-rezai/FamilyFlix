@@ -328,7 +328,7 @@
         // ---- software update ----
         offerUpdate(){ if(!this.state.updateAvailable || this._updateOffered) return; this._updateOffered=true; this._updateSnackId = this.pushSnack({variant:'info', title:'Update available', message:'FamilyFlix '+this.state.updateVersion+' is ready to install.', actionLabel:'Update now', action:()=>this.runUpdate(), dismissible:true}); }
         runUpdate(){ if(this.state.updating) return; if(this._updateSnackId) this.dismissSnack(this._updateSnackId); this.setState({updating:true}); setTimeout(()=>{ const v=this.state.updateVersion; this.setState({currentVersion:v, updateAvailable:false, updating:false, lastChecked:'just now'}); this.pushSnack({variant:'success', message:'FamilyFlix updated to '+v+'.', duration:5000, dismissible:true}); }, 1700); }
-        checkForUpdates(){ this.setState({lastChecked:'just now'}); if(this.state.updateAvailable){ this.offerUpdate(); } else { this.pushSnack({variant:'success', message:'You’re on the latest version.', duration:4000, dismissible:true}); } }
+        checkForUpdates(){ this.setState({lastChecked:'just now'}); if(this.state.updateAvailable){ this.offerUpdate(); } else { this.pushSnack({variant:'success', message:'You’re on the latest version.', duration:5000, dismissible:true}); } }
         openExport(){ this.setState({gearOpen:false,exportOpen:true,exportDone:false,exportFormat:'csv'}); }
         closeExport(){ this.setState({exportOpen:false,exportDone:false}); }
         setExportFormat(f){ this.setState({exportFormat:f,exportDone:false}); }
