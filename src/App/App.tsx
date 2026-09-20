@@ -19,11 +19,14 @@ import { SnackbarProvider } from '@/App/SnackbarProvider/SnackbarProvider';
  * entry URL. The **Snackbar stack** sits here too, above the route table, so a
  * notice raised on one screen is still in the corner on the next.
  *
- * `/movie/:id` and `/genre/:name` are the browse home's two destinations and
- * both real screens; `/movie/:id/play` and `/add` are placeholders. The URLs are
- * the stable part — each real screen lands behind the one already pointed at,
- * without any link changing, which is why every link in the app can be honest
- * before the screen behind it exists.
+ * Seven routes, seven real screens: the browse home at `/`, the movie page at
+ * `/movie/:id` and the genre page at `/genre/:name` (the home's two
+ * destinations), the player at `/movie/:id/play`, the movie form at `/add`
+ * (with `?movie=<id>` to edit), the Settings hub at `/settings` and the bulk
+ * importer at `/import`. The URLs were the stable part all along — each screen
+ * landed behind the link already pointed at it, without any link changing,
+ * which is how every link in the app could be honest before the screen behind
+ * it existed.
  */
 export default function App() {
   return (
