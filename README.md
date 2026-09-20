@@ -303,8 +303,8 @@ Builds the installer and publishes it to GitHub Releases automatically.
 | Codec manager — add a playback component            | ✅ Done         |
 | Subtitle preferences (preferred language)           | ✅ Done         |
 | Storage (media folder location, space used)         | ✅ Done         |
-| Snackbar system (info / success / warning / error)  | 🔜 1 — next     |
-| Back-to-top FAB                                     | 🔜 2            |
+| Snackbar system (info / success / warning / error)  | ✅ Done         |
+| Back-to-top FAB                                     | 🔜 2 — next     |
 | Electron desktop shell                              | 🔜 3            |
 | Desktop packaging (Windows installer)               | 🔜 4            |
 | Software update (check / install)                   | 🔜 5            |
@@ -313,21 +313,19 @@ Builds the installer and publishes it to GitHub Releases automatically.
 | Backgroundable import                               | 🧭 Roadmap      |
 | User accounts / multi-profile                       | 🚫 Out of scope |
 
-Everything above the line is done. The five that are left are numbered in
-**build order**, because they are a chain rather than a preference:
+Everything above the line is done. The four that are left are numbered in
+**build order**, because they are a chain rather than a preference; step 1,
+the Snackbar system, is done, and the rest keep their numbers:
 
-1. **Snackbar system** — nothing under it, so it is the only one buildable
-   today, and it is how **Software update** speaks when a check is refused
-   ([17-software-update](./docs/design-logs/17-software-update.md) Q32).
 2. **Back-to-top FAB** — the last renderer-only slice before the shell.
 3. **Electron desktop shell** — unblocks everything after it. _Change…_ in
    Settings → Storage and folder-path autofill in the Movie form are both
    waiting on it, and both stay undrawn until it lands.
 4. **Desktop packaging** — needs 3, and produces the installer 5 publishes.
-5. **Software update** — needs 1, 3 and 4. Already designed in full; its PRD
-   waits on the shell.
+5. **Software update** — needs 3 and 4 (and 1, which is done). Already
+   designed in full; its PRD waits on the shell.
 
-A 🧭 Roadmap item is not in the chain — it comes after all five, if ever.
+A 🧭 Roadmap item is not in the chain — it comes after all four, if ever.
 
 ---
 

@@ -11,6 +11,124 @@ Newest entry first.
 
 ---
 
+## 2026-09-20 — Snackbar system refactor (issue #164)
+
+Nine commits against `docs/refactor-plans/18-snackbar-refactor.md` — two
+code and test, two that only move a comment, five documents. **4702 tests
+pass across 242 files**, from 4699 across 241: `snackbarStack`'s three are
+new and nothing else moved — the verbose reporter's leaf names before and
+after, diffed, show those three added and none gone or renamed. `tsc -b` is
+green and `eslint src server` is clean on every commit. Done in one sitting
+under a standing approval, one commit per resolved item; the docs slice filed
+as 163 is folded in as the first and last groups, on 141's, 149's and 157's
+precedent, so the initiative has one closing issue.
+
+**Snackbar system is ticked** in the feature table by this round's last
+commit, and the build-order chain in README and CLAUDE.md loses step 1; the
+remaining four keep their numbers and their gates, and the Back-to-top FAB is
+now "next". The rule holds: ✅ when the refactor closes, not when the build
+issues do.
+
+### What changed
+
+- **Group 0 — the record.** The journal's entry for the build, below, written
+  before anything moved so it describes the tree the four slices left — the
+  `data-testid` and the two scheduling comments included.
+- **Group 1 — the stack found by its geometry.** `test-support/snackbarStack/`
+  is a new unit on `comesBefore`'s shape: the one element whose computed style
+  is `position: fixed` and `flex-direction: column-reverse` — the container's
+  host as the prototype draws it and log 18 Q20 rules it — throwing, naming
+  itself, when there is none. `SnackbarProvider.test`'s `stack()` and
+  `App.test`'s four reads moved onto it and `data-testid="snackbar-stack"`
+  came off the provider: the one attribute shipping code carried for its
+  tests alone, and the round's only change to a shipping file. Every leaf
+  kept its name and its assertions; the geometry leaf still asserts `right`,
+  `bottom`, `z-index`, `gap` and `align-items`, which the helper does not
+  select by, so it is a test and not a tautology.
+- **Group 2 — the comments that scheduled.** `Snackbar.test.tsx`'s banner
+  stopped saying the stack is "what the next slice builds" and names
+  `App/SnackbarProvider/`. `App.tsx`'s docblock stopped calling
+  `/movie/:id/play` and `/add` placeholders — the player shipped in round 10
+  and the form in round 11 — and lists seven routes as seven real screens,
+  keeping the sentence about the URLs being the stable part in the past tense
+  it has earned. Nobody had opened `App.tsx` for anything but a mount since
+  round 9.
+- **Group 3 — the docs.** COMPONENT-SPEC's `mol.Snackbar` row rewritten to
+  what shipped — the flat props, the role by variant, `error` reading
+  `danger`, the card's own ✕, the provider/hook split, the one timing rule,
+  no caller yet — its Icons table gaining the four glyphs, and its
+  `page.SettingsPage` row waiting on the shell and the packaging rather than
+  the Snackbar system. CLAUDE.md's folder map naming `App/SnackbarProvider/`,
+  `App/useSnackbar/`, `components/Snackbar/`, the four glyphs and
+  `test-support/snackbarStack/`, its Settings Hub section saying the stack
+  ships first and empty and that none of the six refusing screens was
+  reopened; README's tree in the same places. The glossary's **Snackbar
+  stack** row corrected and a _Flagged ambiguities_ entry recording why, by
+  bare number.
+
+### The sentence the code never carried
+
+Log 18 Q19 keeps the stack mounted when empty "so a live region precedes its
+content", and the glossary repeated it. The stack is not a live region: the
+roles are on the cards (Q9, the prototype's own `role="status"`), each of
+which mounts carrying its content — the case the sentence warns about — and
+the provider's own suite asserts the column has none. So the always-mounted
+stack was kept for a reason that holds and described by one that does not.
+The row now gives the reason that holds: an empty flex column paints nothing,
+and a conditional mount is a branch with nothing behind it. No `aria-live`
+was added to the stack — a behaviour change off the prototype, and an `alert`
+card inside a polite region is a nesting screen readers disagree about. **The
+gap is real and is not fixed:** a card inserted with its content may be
+announced less reliably than a persistent region would announce an insertion.
+That is an accessibility pass over every live region in the app, not a
+refactor's change to one.
+
+### Deliberately not changed
+
+- **The glyph names and their tests.** `InfoCircleIcon` and `BangTriangleIcon`
+  follow Q10's "named for what they draw" more faithfully than Q10's own
+  `InfoIcon` and `WarningIcon`, the second of which names the notice. The four
+  tests follow the three most recent glyphs; leaving the four newest the only
+  recent ones without a test would be the odd convention out.
+- **`SnackbarApi`** keeps its name where the log's sketch wrote `Snackbars`: a
+  plural of the molecule's name reads as a list of cards, and
+  `{ notify, dismiss }` is not one. Recorded in the glossary, not corrected.
+- **`App.tsx` stays flat** in `App/` (Q16): co-located with its test, which is
+  what the one-folder-per-unit rule asks for, and `App/` is simultaneously the
+  category the two units join. No barrel; both imported by path.
+- **The stack reads `space.s5` and `space.s3` where the molecule writes
+  literals.** On-scale values reading the token is the more common spelling
+  across fifty reads of `theme.space`; `14px`, `18px`, `360px` and `28px` are
+  off the scale and stay literal.
+- **`variantColour` stays exported** from the styles file with no reader
+  outside it; the styles file is the one place a variant becomes a colour.
+- **The molecule keeps `dismissible`** (Q23): the prop is the prototype's
+  `data-props`. The notice does not carry it and the stack never passes
+  `false`.
+- **The four icon tests and the molecule's `it.each` are not folded.** Each
+  variant leaf asserts one thing; a fold would be one leaf asserting twelve.
+- **Q19, Q20, Q23, Q24, Q25 and Q26** were each checked against the code for
+  the plan and hold; the plan's decision document names them so the next
+  round can read that they were checked rather than check them again.
+
+### What this round was for
+
+The third `issue-loop` initiative, and the smallest round yet — nothing moved
+a pixel, nothing changed a wire. The debt is the kind rounds 15 and 16 found:
+a subagent reading one issue cannot see that a `data-testid` is the first
+attribute in shipping code that exists for a test, or that the banner it
+writes "for the next slice" will be stale two commits later. The new thing is
+the glossary: written by the grill ahead of the build, it carried a rationale
+the code never did, and the rule that settled it is 163's — where the code and
+the glossary disagree, the code wins, and the glossary says so in the entry
+that corrects it.
+
+The plan's own note stands: folding the docs issue into the refactor is now
+the fourth time. If a fifth initiative does the same, `prd-to-issues` should
+stop filing the docs slice as its own issue and fold it at planning time.
+
+---
+
 ## 2026-09-20 — Snackbar system (issues #159–#162)
 
 Seven commits across issues #159–#162, four slices against the plan on #158,

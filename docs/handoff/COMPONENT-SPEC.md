@@ -347,7 +347,7 @@ text actually overflows** — short copy shows no button. Clamp via `-webkit-lin
 (cuts at a line boundary with ellipsis). Used for the MoviePage synopsis; reuse for any
 variable-length copy. In code, `useState` + a `ResizeObserver`/`useLayoutEffect` measure.
 
-### Snackbar — `mol.Snackbar.dc.html`
+### Snackbar — `mol.Snackbar.dc.html` ✅
 
 Target: `components/Snackbar/` · the transient bottom-right card, **4 Snackbar variants**
 (`info` `success` `warning` `error`) mapped to the status tokens — `error` reads

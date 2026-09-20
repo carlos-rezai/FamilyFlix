@@ -749,24 +749,22 @@ same layout, spacing, states, copy, and interaction.
 > Status legend: ✅ Done · 🔜 Planned · 🧭 Roadmap · 🚫 Out of scope
 > Every 🔜 item builds against its prototype in `docs/handoff/` — translate, don't redesign.
 
-**Build order — the five that are left.** The groups below say what the app
+**Build order — the four that are left.** The groups below say what the app
 _is_; this says what to build _next_, and it is a chain rather than a
-preference. Each 🔜 entry carries its step number.
+preference. Each 🔜 entry carries its step number; step 1, the **Snackbar
+system**, is done, and the rest keep their numbers and their gates.
 
-1. **Snackbar system** — nothing under it, so it is the only thing buildable
-   today. Also the **Software update** flow's only way to speak when a check
-   is refused, which is why it goes first rather than beside it
-   (`17-software-update` Q32).
-2. **Back-to-top FAB** — nothing under it either, and nothing above it; the
-   last renderer-only slice before the shell.
+2. **Back-to-top FAB** — nothing under it, and nothing above it; the last
+   renderer-only slice before the shell.
 3. **Electron desktop shell** — unblocks everything after it. `Change…` in the
    Storage group and folder-path autofill in the **Movie form** are both
    waiting on this one, and both stay undrawn until it lands.
 4. **Desktop packaging** — needs 3; produces the installer that 5 publishes.
-5. **Software update** — needs 1, 3 and 4. Designed in full already
-   (`docs/design-logs/17-software-update.md`); its PRD waits on 3.
+5. **Software update** — needs 3 and 4 (and 1, which is done). Designed in
+   full already (`docs/design-logs/17-software-update.md`); its PRD waits
+   on 3.
 
-A 🧭 Roadmap item is not in this chain — it is after all five, if ever.
+A 🧭 Roadmap item is not in this chain — it is after all four, if ever.
 
 ### Foundation
 
@@ -812,8 +810,8 @@ A 🧭 Roadmap item is not in this chain — it is after all five, if ever.
 
 ### System
 
-- 🔜 **Snackbar system** _(step 1 — next)_ — info / success / warning / error notices in the bottom-right Snackbar stack; an actionable one persists, a confirmation dies at 5s. Buildable today.
-- 🔜 **Back-to-top FAB** _(step 2)_ — appears on long scroll on the home screen. Buildable today.
+- ✅ **Snackbar system** — info / success / warning / error notices in the bottom-right Snackbar stack; an actionable one persists, a confirmation dies at 5s. Ships with no caller: the first is the Software update flow's Update offer.
+- 🔜 **Back-to-top FAB** _(step 2 — next)_ — appears on long scroll on the home screen. Buildable today.
 - 🔜 **Desktop packaging** _(step 4)_ — Windows installer build via electron-builder; needs step 3.
 
 ### Roadmap
