@@ -11,6 +11,143 @@ Newest entry first.
 
 ---
 
+## 2026-09-21 — Back-to-top FAB (issues #166–#167)
+
+Four commits across issues #166–#167, two slices against the plan on #165,
+built from `docs/design-logs/19-back-to-top-fab.md`. **4742 tests pass across
+246 files**, up from 4702 across 242. `npm run typecheck` is green and
+`eslint src server` is clean on every commit. The fourth initiative driven
+wholly by `issue-loop`, and the smallest FamilyFlix has run: two glyphs, one
+molecule, one control, one line in the layout. It is its own initiative rather
+than a tail on the Snackbar's because log 18 Q5 said so in advance — _two
+unblocked slices are not one initiative because they are both unblocked_ — and
+log 19 Q1 held to it. The maintainer's one instruction was the scope the grill
+ran under: translate the prototype 1:1 into the codebase, in its naming,
+conventions, patterns and architecture.
+
+**Back-to-top FAB is _not_ ticked** in the feature table. The rule holds: ✅
+when the refactor closes, not when the build issues do.
+
+### What shipped
+
+- **#166, the molecule and its two glyphs.** `ArrowUpIcon` and `PlusIcon` on
+  `IconBase`, stroke 2.2, `currentColor`, decorative, each carrying
+  `mol.Fab.dc.html`'s own path data and named for what it draws. Then
+  `components/Fab/`, the prototype's circle cell for cell: `styled(IconButton)`
+  — one more face beside the favorite heart, the carousel arrows, the ⋯
+  trigger and the detail page's circles — absolute at 28px from the
+  bottom-right corner at `z-index: 60`, the accent fill under the near-black
+  ink, no border, the literal accent shadow, the `:hover:enabled` lift
+  replacing both `background` and `color` so nothing leaks up from the ghost
+  face, no `transition`. Named by a required `label`, choosing the glyph by
+  `icon` at the molecule's own sizes — 24 for the arrow, 26 for the plus — and
+  owning no state, no listener and no effect.
+- **#167, the control and the mount.** `components/BackToTop/`, two files and
+  no styles because it draws nothing of its own: it takes the scrolling
+  container as a ref, reads its `scrollTop` on every passive `scroll` and once
+  on attach, holds one boolean written only when the answer changes, mounts
+  the **FAB** past `scrollTop > 420` — strictly — and asks the container alone
+  for the top, smoothly. `MainLayout` renders it in one line after the body it
+  already owns, handed the ref `useRestoredScroll` attached, with no state and
+  no prop; its docblock no longer says the FAB "still lands with the feature
+  that owns it".
+
+### The ladder, and who mounts it
+
+The maintainer's sketch was three rungs: a **FAB** made of _our button
+component_, and a **Back-to-top** made of the FAB. The bottom rung is
+`IconButton`, not `Button` (Q5) — `Button`'s `label` is visible text and its
+sizes are heights with side padding, so a 52px accent circle around a glyph
+would fight every rule in it, where `IconButton` already owns the square, the
+centring, the pill corner, `type="button"` and the accessible name. The FAB is
+that primitive wearing a face, exactly as the five faces before it are.
+
+The prototype's page holds `showFab` because the page holds the body ref. In
+the codebase that page was split three ways — chrome to `MainLayout`, rows to
+`HomeRows`, composition to `LibraryPage` — and the body ref lives in the
+chrome, attached by `useRestoredScroll`. So the chrome mounts the control
+(Q12), on the argument that put scroll restoration there: the body is where
+the scrolling happens, so the chrome is what knows how far it has gone. A
+component rather than a hook (Q13), because a `useBackToTop(body)` would have
+one caller and would leave the layout holding `visible`; two files in
+`components/` rather than a sub-unit of the layout (Q14), because no layout
+has sub-units and a control that takes any container is reusable the day a
+grill says so.
+
+### The one thing not in the prototype
+
+The read on attach (Q16). The prototype reads only on `scroll`; here a screen
+returned to by Back is put to its remembered position by `useRestoredScroll`
+before the family touches anything, and the FAB must already be there when
+the rows land. The restore's writes do fire `scroll` in a browser, but the
+read on attach is what the tests can hold to.
+
+### The calls the subagents made alone
+
+The log named none of these; all five are in the code.
+
+- **`label` first in the props.** Q6 rules the props _"1:1 with the
+  prototype's `data-props`, in its order"_ — `icon`, `label`, `size`,
+  `onClick`. The build declared `label` first, the likeliest reason being that
+  a required prop was put ahead of the optional ones. Reasonable, and not the
+  convention; the refactor round puts the prototype's order back.
+- **`Circle` for the face's styled export**, where the log's contract sketch
+  wrote `Root`. The five other `styled(IconButton)` faces are named for what
+  they are — `FavoriteButton`, `Arrow`, `MoreButton`, `CircleToggle`,
+  `ChromeIconButton` — and `Root` is what a styles file calls its outermost
+  element when it has several. `Circle` follows the faces.
+- **Five suites where the log said three.** Q23 named `Fab.test.tsx`,
+  `BackToTop.test.tsx` and the extension to `MainLayout.test.tsx`; the PRD
+  amended that to one test file per glyph as well, on the `UploadIcon` /
+  `DownloadIcon` precedent — the prototype's path data, the `currentColor`
+  ink, the 24×24 frame and the decorative default.
+- **A `stubScrollTo` written twice.** jsdom implements `scrollTo` on no
+  element, and the PRD said nothing lands in `test-support/`, citing the
+  carousel suite's per-test `scrollBy` stub. The control's suite stubbed it
+  that way; the mount suite, two commits later, copied the same four lines
+  and the same docblock. Each copy assigns onto an element and never takes it
+  back — nothing for the container the test creates and removes, but the
+  press leaves stub `document.documentElement` and `document.body` too, to
+  prove the control asks nothing of them, and those outlive the test.
+- **`FRESH_HOME` in the mount suite.** `MemoryRouter` keys its first entry
+  `default` on every render and `useRestoredScroll`'s module-level map had
+  already remembered that key at 1240 from the restoration test above, so a
+  body meant to start at its top was truthfully put back past the line before
+  the control attached. The suite renders the home as a history entry of its
+  own (`['/settings', '/']`), which is order-independent and documented at the
+  constant.
+
+### Deliberately not built
+
+A FAB on any screen but the home; a `GenreLayout` mount, even though the
+214-card shelf is the longer scroll; an opt-out or a threshold prop; a
+`useBackToTop` hook; a transition on hover or on mount; `prefers-reduced-motion`;
+focus management after the press; a fix for the corner the FAB shares with
+the Snackbar stack; a `types/` entry; a `test-support/` double.
+
+### Known and not fixed
+
+- **Focus drops to `document.body` after the press** (Q19). The button
+  unmounts the moment the ride drops the body under 420. Accepted as the
+  prototype's own behaviour; moving focus to the header or the first card is
+  a bigger surprise than letting it go.
+- **A Snackbar notice covers the FAB while it is up** (Q21). The stack is at
+  24/24 and `z-index: 200`, the FAB at 28/28 and 60, as the prototype draws
+  both. No screen raises a notice today; solving it is a prototype amendment
+  for the day it is a problem on screen.
+- **`prefers-reduced-motion` is now unhonoured across eight motions** (Q20),
+  the smooth scroll joining the seven. The pass belongs to `GlobalStyle` and
+  every motion at once.
+
+### Follow-ups
+
+The refactor round, filed as 169 with the docs slice 168 folded into it: the
+props in the prototype's order, the one stub two suites wrote moved to
+`test-support/` and made to leave the document as it found it, and the docs
+that close the initiative.
+
+---
+
 ## 2026-09-20 — Snackbar system refactor (issue #164)
 
 Nine commits against `docs/refactor-plans/18-snackbar-refactor.md` — two
