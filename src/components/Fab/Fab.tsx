@@ -5,14 +5,14 @@ import { Circle } from './Fab.styles';
 export type FabIcon = 'arrow-up' | 'plus';
 
 export interface FabProps {
+  /** Which glyph the circle draws. The arrow when omitted. */
+  icon?: FabIcon;
   /**
    * The accessible name. Required rather than defaulted to the prototype's
    * _Back to top_, for `IconButton`'s reason: a default right for one icon and
    * wrong for the other is not a default.
    */
   label: string;
-  /** Which glyph the circle draws. The arrow when omitted. */
-  icon?: FabIcon;
   /** The square's edge, in px. */
   size?: number;
   onClick: () => void;
@@ -37,8 +37,8 @@ const GLYPH: Record<FabIcon, { Icon: typeof ArrowUpIcon; size: number }> = {
  * mounts it decides whether it is on screen.
  */
 export function Fab({
-  label,
   icon = 'arrow-up',
+  label,
   size = 52,
   onClick,
 }: FabProps) {
