@@ -307,27 +307,36 @@ Builds the installer and publishes it to GitHub Releases automatically.
 | Storage (media folder location, space used)         | ✅ Done         |
 | Snackbar system (info / success / warning / error)  | ✅ Done         |
 | Back-to-top FAB                                     | ✅ Done         |
-| Electron desktop shell                              | 🔜 3 — next     |
-| Desktop packaging (Windows installer)               | 🔜 4            |
-| Software update (check / install)                   | 🔜 5            |
+| Back navigation — one Back rule on every screen     | 🔜 3 — next     |
+| Electron desktop shell                              | 🔜 4            |
+| Desktop packaging (Windows installer)               | 🔜 5            |
+| Software update (check / install)                   | 🔜 6            |
 | Collections / playlists                             | 🧭 Roadmap      |
 | Auto-on subtitles                                   | 🧭 Roadmap      |
 | Backgroundable import                               | 🧭 Roadmap      |
 | User accounts / multi-profile                       | 🚫 Out of scope |
 
-Everything above the line is done. The three that are left are numbered in
+Everything above the line is done. The four that are left are numbered in
 **build order**, because they are a chain rather than a preference; steps 1
-and 2, the Snackbar system and the Back-to-top FAB, are done, and the rest
-keep their numbers:
+and 2, the Snackbar system and the Back-to-top FAB, are done. Step 3 came out
+of auditing the build against the prototype (2026-09-21) and goes ahead of
+the shell, since it is a fix to what is built rather than anything Electron
+adds; the three behind it moved down one number.
 
-3. **Electron desktop shell** — unblocks everything after it. _Change…_ in
+3. **Back navigation** — one Back rule on every screen. The app steps
+   history on Back, but the player's exit, the edit save and the Import
+   screen's landings push a route instead, so the next Back walks into the
+   duplicate: Play → Back → Back reopens the player, Settings → Import → Back
+   → Back reopens Import, and the detail page loses its scroll position on
+   the way back from the player. Needs nothing.
+4. **Electron desktop shell** — unblocks everything after it. _Change…_ in
    Settings → Storage and folder-path autofill in the Movie form are both
    waiting on it, and both stay undrawn until it lands.
-4. **Desktop packaging** — needs 3, and produces the installer 5 publishes.
-5. **Software update** — needs 3 and 4 (and 1, which is done). Already
+5. **Desktop packaging** — needs 4, and produces the installer 6 publishes.
+6. **Software update** — needs 4 and 5 (and 1, which is done). Already
    designed in full; its PRD waits on the shell.
 
-A 🧭 Roadmap item is not in the chain — it comes after all three, if ever.
+A 🧭 Roadmap item is not in the chain — it comes after all four, if ever.
 
 ---
 

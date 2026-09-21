@@ -753,28 +753,32 @@ same layout, spacing, states, copy, and interaction.
 > Status legend: ✅ Done · 🔜 Planned · 🧭 Roadmap · 🚫 Out of scope
 > Every 🔜 item builds against its prototype in `docs/handoff/` — translate, don't redesign.
 
-**Build order — the three that are left.** The groups below say what the app
+**Build order — the four that are left.** The groups below say what the app
 _is_; this says what to build _next_, and it is a chain rather than a
 preference. Each 🔜 entry carries its step number; steps 1 and 2, the
-**Snackbar system** and the **Back-to-top FAB**, are done, and the rest keep
-their numbers and their gates.
+**Snackbar system** and the **Back-to-top FAB**, are done. Step 3 was found
+by the prototype audit of 2026-09-21 and goes ahead of the shell, because it
+is the app's own seams rather than anything Electron adds; the three behind
+it moved down one number and keep their gates.
 
-3. **Electron desktop shell** — unblocks everything after it. `Change…` in the
+3. **Back navigation** — one Back rule on every screen. Needs nothing; a fix
+   to what is built, and the shell would ship the bug otherwise.
+4. **Electron desktop shell** — unblocks everything after it. `Change…` in the
    Storage group and folder-path autofill in the **Movie form** are both
    waiting on this one, and both stay undrawn until it lands.
-4. **Desktop packaging** — needs 3; produces the installer that 5 publishes.
-5. **Software update** — needs 3 and 4 (and 1, which is done). Designed in
+5. **Desktop packaging** — needs 4; produces the installer that 6 publishes.
+6. **Software update** — needs 4 and 5 (and 1, which is done). Designed in
    full already (`docs/design-logs/17-software-update.md`); its PRD waits
-   on 3.
+   on 4.
 
-A 🧭 Roadmap item is not in this chain — it is after all three, if ever.
+A 🧭 Roadmap item is not in this chain — it is after all four, if ever.
 
 ### Foundation
 
 - ✅ **Nx + Vite + React workspace scaffold** — monorepo, tooling, lint/format.
 - ✅ **Claude design handoff prototype** — full interactive design system, the build spec.
 - ✅ **Library core** — movie model, SQLite schema, repository layer.
-- 🔜 **Electron desktop shell** _(step 3 — next)_ — main process, window, file-system access. The gate every remaining Maintainer control sits behind.
+- 🔜 **Electron desktop shell** _(step 4)_ — main process, window, file-system access. The gate every remaining Maintainer control sits behind.
 
 ### Browse & discover (parent-facing)
 
@@ -809,13 +813,14 @@ A 🧭 Roadmap item is not in this chain — it is after all three, if ever.
 - ✅ **Codec manager — add a playback component** — the Component drop zone under the rows and the ✕ on the Component row: a pair dropped is staged, verified and sworn into the Component slot, and the next press of Play converts with it.
 - ✅ **Subtitle preferences** — the household's Preferred subtitle language, kept in the library's database and honoured by the player; the Auto-on toggle built but disabled until shipped.
 - ✅ **Storage** — the managed media folder's location and space used, agreeing with Explorer; _Change…_ is the Electron shell's.
-- 🔜 **Software update** _(step 5)_ — the About card's first row: an Update offer downloaded at launch, Update now, and Check for updates. Needs steps 1, 3 and 4; designed in `17-software-update`.
+- 🔜 **Software update** _(step 6)_ — the About card's first row: an Update offer downloaded at launch, Update now, and Check for updates. Needs steps 1, 4 and 5; designed in `17-software-update`.
 
 ### System
 
 - ✅ **Snackbar system** — info / success / warning / error notices in the bottom-right Snackbar stack; an actionable one persists, a confirmation dies at 5s. Ships with no caller: the first is the Software update flow's Update offer.
 - ✅ **Back-to-top FAB** — the accent circle in the home screen's bottom-right corner once the body is past 420px, riding it back to the top on a press; mounted by the chrome over the body it already owns, and gone again under the line.
-- 🔜 **Desktop packaging** _(step 4)_ — Windows installer build via electron-builder; needs step 3.
+- 🔜 **Back navigation** _(step 3 — next)_ — one Back rule on every screen. The app has one already — `useGoBack`, a history step with `/` as the no-history fallback (log 04 Q13) — but four places push a route instead: the player's Back (`/movie/:id`), the edit save (`/movie/:id`), Import's Back (`/settings`), and Resolve's Save / Skip / Back (`/import`). Each push leaves a duplicate entry behind, and the next Back walks into it: Play → Back → Back lands in the player, not the library; Settings → Import → Back → Back lands on Import; a Delete after a Play visit lands in the player of a deleted movie; and the detail page comes back from the player at the top, because `useRestoredScroll` keys on the entry the push replaced. Every leaving becomes a history step, with a screen's own fallback for the no-history case (the player's is its movie, Import's is Settings, the form's is where its job came from); Add's save and Import's Finish keep the prototype's `goBrowse`. Reproduced in the browser 2026-09-21; the prototype needs no amendment — its `exitPlayer`, `backFromAdd` and `backFromDetail` already say where each one lands.
+- 🔜 **Desktop packaging** _(step 5)_ — Windows installer build via electron-builder; needs step 4.
 
 ### Roadmap
 
