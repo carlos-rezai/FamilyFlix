@@ -7,6 +7,7 @@ import { ThemeProvider } from 'styled-components';
 import { BackToTop, type BackToTopProps } from '@/components';
 import { theme } from '@/styles/theme';
 import { stubScrollMetrics } from '@/test-support/stubScrollMetrics/stubScrollMetrics';
+import { stubScrollTo } from '@/test-support/stubScrollTo/stubScrollTo';
 
 /**
  * 19 — Back-to-top FAB, Phase 2: "the control" (issue #167).
@@ -19,10 +20,10 @@ import { stubScrollMetrics } from '@/test-support/stubScrollMetrics/stubScrollMe
  *
  * The container is a plain element the test appends to the document, handed
  * in as the ref the control takes; `stubScrollMetrics` gives it the writable
- * `scrollTop` jsdom lacks, and `scrollTo` — which jsdom has on no element — is
- * stubbed per test on the carousel suite's `scrollBy` precedent. Nothing here
- * reaches for the control's state or its listener's handle: what it knows is
- * read off the screen, and what it does off the stubs.
+ * `scrollTop` jsdom lacks, and `stubScrollTo` gives every element the
+ * `scrollTo` jsdom has on none, recording who was asked for what. Nothing
+ * here reaches for the control's state or its listener's handle: what it
+ * knows is read off the screen, and what it does off the stubs.
  */
 stubScrollMetrics(6390);
 
@@ -47,16 +48,6 @@ afterEach(() => {
 function scrollTo(top: number) {
   container.scrollTop = top;
   fireEvent.scroll(container);
-}
-
-/**
- * jsdom implements `scrollTo` on no element; give the container one that
- * records the options form, the only form the control ever calls.
- */
-function stubScrollTo(element: HTMLElement) {
-  const scrollTo = vi.fn<(options: ScrollToOptions) => void>();
-  element.scrollTo = scrollTo as unknown as HTMLElement['scrollTo'];
-  return scrollTo;
 }
 
 function renderControl(onRender?: () => void) {
@@ -123,26 +114,23 @@ describe('BackToTop — the Scroll threshold', () => {
 });
 
 describe('BackToTop — the press', () => {
+  const scrolling = stubScrollTo();
+
   it('asks the container for the top, smoothly, and nothing on window or document', () => {
-    const containerScrollTo = stubScrollTo(container);
     const windowScrollTo = vi
       .spyOn(window, 'scrollTo')
       .mockImplementation(() => undefined);
-    const documentScrollTo = stubScrollTo(document.documentElement);
-    const bodyScrollTo = stubScrollTo(document.body);
     renderControl();
     scrollTo(1240);
 
     fireEvent.click(fab() as HTMLElement);
 
-    expect(containerScrollTo).toHaveBeenCalledTimes(1);
-    expect(containerScrollTo).toHaveBeenCalledWith({
-      top: 0,
-      behavior: 'smooth',
-    });
+    // One request, and it was the container's — not the document element's,
+    // not the body's.
+    expect(scrolling.requests()).toEqual([
+      { element: container, options: { top: 0, behavior: 'smooth' } },
+    ]);
     expect(windowScrollTo).not.toHaveBeenCalled();
-    expect(documentScrollTo).not.toHaveBeenCalled();
-    expect(bodyScrollTo).not.toHaveBeenCalled();
   });
 });
 

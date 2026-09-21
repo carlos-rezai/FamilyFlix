@@ -9,6 +9,7 @@ import { comesBefore } from '@/test-support/comesBefore/comesBefore';
 import { headerSpacer } from '@/test-support/headerSpacer/headerSpacer';
 import { LocationProbe } from '@/test-support/LocationProbe/LocationProbe';
 import { stubScrollMetrics } from '@/test-support/stubScrollMetrics/stubScrollMetrics';
+import { stubScrollTo } from '@/test-support/stubScrollTo/stubScrollTo';
 
 stubScrollMetrics(6390);
 
@@ -248,17 +249,9 @@ const fab = () => screen.queryByRole('button', { name: 'Back to top' });
  */
 const FRESH_HOME = ['/settings', '/'];
 
-/**
- * jsdom implements `scrollTo` on no element; give the body one that records
- * the options form, the only form the control ever calls.
- */
-function stubScrollTo(element: HTMLElement) {
-  const scrollTo = vi.fn<(options: ScrollToOptions) => void>();
-  element.scrollTo = scrollTo as unknown as HTMLElement['scrollTo'];
-  return scrollTo;
-}
-
 describe('MainLayout — the back-to-top FAB over its body', () => {
+  const scrolling = stubScrollTo();
+
   afterEach(() => {
     vi.restoreAllMocks();
   });
@@ -282,18 +275,17 @@ describe('MainLayout — the back-to-top FAB over its body', () => {
   it('asks its own body for the top on a press — never the document', () => {
     renderLayout(<p>the library goes here</p>, FRESH_HOME);
     const body = scrollingBody();
-    const bodyScrollTo = stubScrollTo(body);
     const windowScrollTo = vi
       .spyOn(window, 'scrollTo')
       .mockImplementation(() => undefined);
-    const documentScrollTo = stubScrollTo(document.documentElement);
     scrollTo(body, 1240);
 
     fireEvent.click(fab() as HTMLElement);
 
-    expect(bodyScrollTo).toHaveBeenCalledTimes(1);
-    expect(bodyScrollTo).toHaveBeenCalledWith({ top: 0, behavior: 'smooth' });
+    // One request, and it was the body's — not the document element's.
+    expect(scrolling.requests()).toEqual([
+      { element: body, options: { top: 0, behavior: 'smooth' } },
+    ]);
     expect(windowScrollTo).not.toHaveBeenCalled();
-    expect(documentScrollTo).not.toHaveBeenCalled();
   });
 });
