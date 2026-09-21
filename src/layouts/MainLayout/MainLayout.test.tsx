@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import { ThemeProvider } from 'styled-components';
 import { MemoryRouter, Route, Routes, useNavigate } from 'react-router-dom';
@@ -223,5 +223,67 @@ describe('MainLayout — returning to where the screen was left', () => {
     step('history step back');
 
     expect(scrollingBody().scrollTop).toBe(1240);
+  });
+});
+
+/**
+ * 19 — Back-to-top FAB, Phase 2: "the mount" (issue #167).
+ *
+ * The body is where the scrolling happens, so the chrome is what knows how far
+ * it has gone — and the chrome is what mounts **Back-to-top**, handed the same
+ * body `useRestoredScroll` attached. The layout holds no state for it and
+ * gains no prop: the FAB's own suite proves the **Scroll threshold**; this one
+ * proves whose body the control is riding.
+ */
+
+const fab = () => screen.queryByRole('button', { name: 'Back to top' });
+
+/**
+ * jsdom implements `scrollTo` on no element; give the body one that records
+ * the options form, the only form the control ever calls.
+ */
+function stubScrollTo(element: HTMLElement) {
+  const scrollTo = vi.fn<(options: ScrollToOptions) => void>();
+  element.scrollTo = scrollTo as unknown as HTMLElement['scrollTo'];
+  return scrollTo;
+}
+
+describe('MainLayout — the back-to-top FAB over its body', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('mounts the FAB after its own body once that body is past the threshold, and not before', () => {
+    renderLayout(<p>the library goes here</p>);
+    const body = scrollingBody();
+    expect(fab()).toBeNull();
+
+    scrollTo(body, 1240);
+
+    const button = fab();
+    expect(button).not.toBeNull();
+    // Over the body, not inside it, and not in the header.
+    expect(body.contains(button)).toBe(false);
+    expect(screen.getByRole('banner').contains(button)).toBe(false);
+    expect(body.parentElement?.contains(button)).toBe(true);
+    expect(comesBefore(body, button as HTMLElement)).toBe(true);
+  });
+
+  it('asks its own body for the top on a press — never the document', () => {
+    renderLayout(<p>the library goes here</p>);
+    const body = scrollingBody();
+    const bodyScrollTo = stubScrollTo(body);
+    const windowScrollTo = vi
+      .spyOn(window, 'scrollTo')
+      .mockImplementation(() => undefined);
+    const documentScrollTo = stubScrollTo(document.documentElement);
+    scrollTo(body, 1240);
+
+    fireEvent.click(fab() as HTMLElement);
+
+    expect(bodyScrollTo).toHaveBeenCalledTimes(1);
+    expect(bodyScrollTo).toHaveBeenCalledWith({ top: 0, behavior: 'smooth' });
+    expect(windowScrollTo).not.toHaveBeenCalled();
+    expect(documentScrollTo).not.toHaveBeenCalled();
   });
 });
