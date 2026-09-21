@@ -11,6 +11,79 @@ Newest entry first.
 
 ---
 
+## 2026-09-21 — Back-to-top FAB refactor (issue #169)
+
+Eight commits against `docs/refactor-plans/19-back-to-top-refactor.md` — one
+to a shipping file, two to tests, five to documents. **4748 tests pass across
+247 files**, from 4742 across 246: `stubScrollTo`'s six are new and nothing
+else moved — the verbose reporter's leaf names before and after, diffed, show
+those six added and none gone or renamed. `tsc -b` is clean and `eslint src
+server` is clean on every commit. Nothing moved a pixel and nothing changed a
+wire: the one change to a shipping file reorders four lines of a type. The
+smallest round yet, after the smallest build — the debt an `issue-loop` build
+leaves is of a kind, and made of what a subagent reading one issue cannot
+see.
+
+### What changed
+
+- **Group 0, the record.** The build's own journal entry, written before the
+  round touched the tree it describes, so it says `label` first and the stub
+  twice.
+- **Group 1, the props in the prototype's order.** `FabProps` and the
+  destructuring read `icon`, `label`, `size`, `onClick` — the `data-props`
+  order, per log 19 Q6 and the `mol.Snackbar` precedent. Each prop kept its
+  docblock; the `@ts-expect-error` guard that `label` is required still had
+  an error to swallow.
+- **Group 2, one stub, leaving the document as it found it.**
+  `test-support/stubScrollTo/` on `stubFullscreen`'s shape: called inside a
+  `describe`, it installs `scrollTo` on `Element.prototype` — which jsdom
+  leaves `undefined`, having it on `window` alone — for the length of that
+  block, records every request as the element asked and the options it was
+  asked for, in order, and deletes what was absent on cleanup. Then
+  `BackToTop.test` and `MainLayout.test` read it and dropped their two
+  identical copies, which assigned onto `document.documentElement` and
+  `document.body` and never took it back. The two press leaves kept their
+  names and their meaning, now read as _one request, and it was the
+  container's_; the `window.scrollTo` spy stayed as it was.
+- **Group 3, the docs.** COMPONENT-SPEC's Icons table gained `ArrowUpIcon`
+  and told the truth about `PlusIcon`; its `mol.Fab` row got the tick and its
+  _what shipped_ note, and `page.LibraryPage`'s composition names the mount.
+  CLAUDE.md's folder map and README's tree gained `Fab/`, `BackToTop/`, the
+  two glyphs, the `MainLayout` line that says what it mounts and why, and
+  `stubScrollTo/`; the `hooks/` line beside `MainLayout`'s names the two
+  hooks that exist. The glossary's three rows and three relationship lines
+  held as written, and a _Flagged ambiguities_ entry records `Circle` for
+  `Root` (a decision) and `label` ahead of `icon` (a slip, put back). And the
+  tick: **Back-to-top FAB** ✅ in both feature lists, step 2 gone from the
+  build-order chain, the Electron desktop shell now "next".
+
+### Deliberately left
+
+The two-line wheel helper in three suites, because it is not a stub for
+something jsdom lacks; the ref beside `BackToTop`'s state, because a leaf
+that counts commits should not rest on a `useState` bail-out React does not
+promise everywhere; `Circle`'s name; the mount suite's `FRESH_HOME` entry,
+because a reset affordance on `useRestoredScroll` would be a hook carrying
+something for its tests; the `Fab` test's local hover reader, the only one
+in the app; `BackToTop` importing `Fab` by relative path, as `FilterDropdown`
+and `SubtitleRow` reach `MenuItem`; the four literals on the face; the
+carousel suite's `scrollBy` stub, one suite and horizontal, which joins the
+new unit if a second suite ever needs it. Every log-19 ruling the plan lists
+was checked against the code and holds.
+
+### Follow-ups
+
+- **`prd-to-issues` stops filing the docs slice as its own issue.** Folding
+  it into the refactor plan is now 140→141, 148→149, 156→157, 163→164 and
+  168→169; round 18 said a fifth would be the signal, and this is the fifth.
+  A process change with its own small issue, to be filed before the Electron
+  shell's PRD is broken into issues, so the shell is the first initiative
+  planned under the amended rule.
+- **The Electron desktop shell** is step 3 and next. `Change…` in the
+  Storage group and folder-path autofill in the Movie form both wait on it.
+
+---
+
 ## 2026-09-21 — Back-to-top FAB (issues #166–#167)
 
 Four commits across issues #166–#167, two slices against the plan on #165,

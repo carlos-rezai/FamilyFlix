@@ -753,13 +753,12 @@ same layout, spacing, states, copy, and interaction.
 > Status legend: ✅ Done · 🔜 Planned · 🧭 Roadmap · 🚫 Out of scope
 > Every 🔜 item builds against its prototype in `docs/handoff/` — translate, don't redesign.
 
-**Build order — the four that are left.** The groups below say what the app
+**Build order — the three that are left.** The groups below say what the app
 _is_; this says what to build _next_, and it is a chain rather than a
-preference. Each 🔜 entry carries its step number; step 1, the **Snackbar
-system**, is done, and the rest keep their numbers and their gates.
+preference. Each 🔜 entry carries its step number; steps 1 and 2, the
+**Snackbar system** and the **Back-to-top FAB**, are done, and the rest keep
+their numbers and their gates.
 
-2. **Back-to-top FAB** — nothing under it, and nothing above it; the last
-   renderer-only slice before the shell.
 3. **Electron desktop shell** — unblocks everything after it. `Change…` in the
    Storage group and folder-path autofill in the **Movie form** are both
    waiting on this one, and both stay undrawn until it lands.
@@ -768,14 +767,14 @@ system**, is done, and the rest keep their numbers and their gates.
    full already (`docs/design-logs/17-software-update.md`); its PRD waits
    on 3.
 
-A 🧭 Roadmap item is not in this chain — it is after all four, if ever.
+A 🧭 Roadmap item is not in this chain — it is after all three, if ever.
 
 ### Foundation
 
 - ✅ **Nx + Vite + React workspace scaffold** — monorepo, tooling, lint/format.
 - ✅ **Claude design handoff prototype** — full interactive design system, the build spec.
 - ✅ **Library core** — movie model, SQLite schema, repository layer.
-- 🔜 **Electron desktop shell** _(step 3)_ — main process, window, file-system access. The gate every remaining Maintainer control sits behind.
+- 🔜 **Electron desktop shell** _(step 3 — next)_ — main process, window, file-system access. The gate every remaining Maintainer control sits behind.
 
 ### Browse & discover (parent-facing)
 
@@ -815,7 +814,7 @@ A 🧭 Roadmap item is not in this chain — it is after all four, if ever.
 ### System
 
 - ✅ **Snackbar system** — info / success / warning / error notices in the bottom-right Snackbar stack; an actionable one persists, a confirmation dies at 5s. Ships with no caller: the first is the Software update flow's Update offer.
-- 🔜 **Back-to-top FAB** _(step 2 — next)_ — appears on long scroll on the home screen. Buildable today.
+- ✅ **Back-to-top FAB** — the accent circle in the home screen's bottom-right corner once the body is past 420px, riding it back to the top on a press; mounted by the chrome over the body it already owns, and gone again under the line.
 - 🔜 **Desktop packaging** _(step 4)_ — Windows installer build via electron-builder; needs step 3.
 
 ### Roadmap

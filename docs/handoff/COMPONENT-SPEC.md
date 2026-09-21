@@ -328,7 +328,7 @@ contract — `role="dialog"`, `aria-modal`, labelled by the title; focus to the 
 and back to the opener on close; Tab and Shift+Tab held inside; a portal to `document.body`
 so the scrim never scrolls with a page — see design log `12-delete-movie` Q9.
 
-### Fab — `mol.Fab.dc.html`
+### Fab — `mol.Fab.dc.html` ✅
 
 Target: `components/Fab/` · reusable floating action button — fixed bottom-right, circular,
 accent, elevated. Props: `icon` (`'arrow-up' | 'plus'`), `label` (a11y), `size` (52),
@@ -337,6 +337,20 @@ conditionally. In the prototype, `page.LibraryPage` shows it once its scroll bod
 ~420px and calls `scrollTo({top:0, behavior:'smooth'})` on click (back-to-top). Note: keep
 it transition/animation-free on mount — driving an opacity/transform entrance from a
 prop-fed inline style is unreliable across re-renders; mount/unmount it instead.
+
+**What shipped** (design log 19): the circle is `styled(IconButton)` — one more face
+beside the favorite heart, the carousel arrows, the ⋯ trigger and the detail page's
+circles — at `position: absolute` over `MainLayout.Root`'s `position: relative` rather
+than the prose's _fixed_, the same box inside a `100vh` root, as the `.dc.html` writes it.
+Props flat and in the prototype's order, with one deviation: `label` is **required**, not
+defaulted to _Back to top_ — a default right for one icon and wrong for the other is not a
+default, and an icon-only button without a name announces as "button". Both glyphs ship
+(`ArrowUpIcon` at 24, `PlusIcon` at 26). **The layout, not the page, mounts it**, through
+`components/BackToTop/` — the control that takes the scrolling body as a ref and owns the
+**Scroll threshold** (`scrollTop > 420`, strictly, read on every passive `scroll` and once
+on attach, for `useRestoredScroll`'s sake) and the press (`scrollTo({ top: 0, behavior:
+'smooth' })` on the body, never the document). Mount and unmount, no transition. The home
+only; no other page mounts one.
 
 ### ExpandableText — `mol.ExpandableText.dc.html`
 
@@ -481,7 +495,7 @@ needs.
 
 | Page (prototype file)    | Target               | Composition                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 | ------------------------ | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `page.LibraryPage` ✅    | `pages/LibraryPage`  | browse header (SearchBar + FilterDropdown ×3 + gear → Settings) + ContinueCard row + Favorites row + `GenreRow` ×n                                                                                                                                                                                                                                                                                                                                                                                           |
+| `page.LibraryPage` ✅    | `pages/LibraryPage`  | browse header (SearchBar + FilterDropdown ×3 + gear → Settings) + ContinueCard row + Favorites row + `GenreRow` ×n; `MainLayout` mounts `BackToTop` over the body                                                                                                                                                                                                                                                                                                                                            |
 | `page.GenrePage` ✅      | `pages/GenrePage`    | genre header (SearchBar + Sort FilterDropdown) + `LibraryGrid`                                                                                                                                                                                                                                                                                                                                                                                                                                               |
 | `page.MoviePage` ✅      | `pages/MoviePage`    | backdrop + poster + meta (RatingPicker, Chip tags, director/cast) + actions + the ⋯ menu (✎ Edit details, 🗑 Delete movie → `DeleteMovieDialog`)                                                                                                                                                                                                                                                                                                                                                             |
 | `page.SettingsPage` ✅   | `pages/SettingsPage` | `MaintainerLayout` around five sections: `SettingsHeader` · `LibrarySection` (Add / Import / Export rows) · `PlaybackSection` (**Codecs** over `CodecManager`, the divider, **Subtitles**: the **Auto-on toggle** under its Coming soon pill and _Preferred language_ over `FilterDropdown`) · `StorageSection` (the path and the space line; no _Change…_ — the Electron shell's) · `AboutSection` (the brand row and the **App version**; no _Software update_ — the Electron shell's and the packaging's) |

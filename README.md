@@ -306,8 +306,8 @@ Builds the installer and publishes it to GitHub Releases automatically.
 | Subtitle preferences (preferred language)           | ✅ Done         |
 | Storage (media folder location, space used)         | ✅ Done         |
 | Snackbar system (info / success / warning / error)  | ✅ Done         |
-| Back-to-top FAB                                     | 🔜 2 — next     |
-| Electron desktop shell                              | 🔜 3            |
+| Back-to-top FAB                                     | ✅ Done         |
+| Electron desktop shell                              | 🔜 3 — next     |
 | Desktop packaging (Windows installer)               | 🔜 4            |
 | Software update (check / install)                   | 🔜 5            |
 | Collections / playlists                             | 🧭 Roadmap      |
@@ -315,11 +315,11 @@ Builds the installer and publishes it to GitHub Releases automatically.
 | Backgroundable import                               | 🧭 Roadmap      |
 | User accounts / multi-profile                       | 🚫 Out of scope |
 
-Everything above the line is done. The four that are left are numbered in
-**build order**, because they are a chain rather than a preference; step 1,
-the Snackbar system, is done, and the rest keep their numbers:
+Everything above the line is done. The three that are left are numbered in
+**build order**, because they are a chain rather than a preference; steps 1
+and 2, the Snackbar system and the Back-to-top FAB, are done, and the rest
+keep their numbers:
 
-2. **Back-to-top FAB** — the last renderer-only slice before the shell.
 3. **Electron desktop shell** — unblocks everything after it. _Change…_ in
    Settings → Storage and folder-path autofill in the Movie form are both
    waiting on it, and both stay undrawn until it lands.
@@ -327,7 +327,7 @@ the Snackbar system, is done, and the rest keep their numbers:
 5. **Software update** — needs 3 and 4 (and 1, which is done). Already
    designed in full; its PRD waits on the shell.
 
-A 🧭 Roadmap item is not in the chain — it comes after all four, if ever.
+A 🧭 Roadmap item is not in the chain — it comes after all three, if ever.
 
 ---
 
