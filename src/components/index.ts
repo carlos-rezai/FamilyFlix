@@ -34,3 +34,4 @@ export {
   type SnackbarProps,
   type SnackbarVariant,
 } from './Snackbar/Snackbar';
+export { Fab, type FabProps, type FabIcon } from './Fab/Fab';

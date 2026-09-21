@@ -44,3 +44,5 @@ export { InfoCircleIcon } from './Icon/InfoCircleIcon';
 export { CheckCircleIcon } from './Icon/CheckCircleIcon';
 export { BangTriangleIcon } from './Icon/BangTriangleIcon';
 export { CrossCircleIcon } from './Icon/CrossCircleIcon';
+export { ArrowUpIcon } from './Icon/ArrowUpIcon';
+export { PlusIcon } from './Icon/PlusIcon';
