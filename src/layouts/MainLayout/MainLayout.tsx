@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 
+import { BackToTop } from '@/components';
 import { useRestoredScroll } from '@/hooks/useRestoredScroll/useRestoredScroll';
 import { GearIcon, IconButton } from '@/primitives';
 import {
@@ -36,12 +37,15 @@ export interface MainLayoutProps {
  * dropdowns after it, so the chrome offers a `headerStart` and a `headerEnd`
  * and renders whatever a page hands in. They are structure — the layout learns
  * nothing about the library from them — and a page that passes neither gets the
- * header it always had. The back-to-top FAB still lands with the feature that
- * owns it.
+ * header it always had.
  *
  * The body is also where the scrolling happens — the document never scrolls —
  * so the chrome is what remembers where a screen was left, and every page it
- * wraps returns to that place on Back without wiring anything itself.
+ * wraps returns to that place on Back without wiring anything itself. For the
+ * same reason the chrome is what mounts the back-to-top FAB: the body is what
+ * knows how far it has gone, so `BackToTop` rides the same ref the restoration
+ * attached, rendered right after the body and over it. The layout holds no
+ * state for it and gains no prop — the control reads the body itself.
  */
 export function MainLayout({
   children,
@@ -68,6 +72,7 @@ export function MainLayout({
         </IconButton>
       </Header>
       <Body ref={body}>{children}</Body>
+      <BackToTop container={body} />
     </Root>
   );
 }

@@ -14,11 +14,11 @@ stubScrollMetrics(6390);
 
 function renderLayout(
   children: React.ReactNode,
-  entry = '/',
+  entry: string | string[] = '/',
   slots: Omit<Partial<MainLayoutProps>, 'children'> = {}
 ) {
   return render(
-    <MemoryRouter initialEntries={[entry]}>
+    <MemoryRouter initialEntries={[entry].flat()}>
       <ThemeProvider theme={theme}>
         <MainLayout {...slots}>{children}</MainLayout>
       </ThemeProvider>
@@ -239,6 +239,16 @@ describe('MainLayout — returning to where the screen was left', () => {
 const fab = () => screen.queryByRole('button', { name: 'Back to top' });
 
 /**
+ * A home that is a history entry of its own. `MemoryRouter` keys its first
+ * entry `default` on every render, and `useRestoredScroll` remembers where
+ * that entry was left for as long as the module lives — which, after the
+ * history test above, is 1240. Landing on `/` as the second entry gives the
+ * body a key nothing has scrolled, so it starts at its top as the family's
+ * first visit does.
+ */
+const FRESH_HOME = ['/settings', '/'];
+
+/**
  * jsdom implements `scrollTo` on no element; give the body one that records
  * the options form, the only form the control ever calls.
  */
@@ -254,7 +264,7 @@ describe('MainLayout — the back-to-top FAB over its body', () => {
   });
 
   it('mounts the FAB after its own body once that body is past the threshold, and not before', () => {
-    renderLayout(<p>the library goes here</p>);
+    renderLayout(<p>the library goes here</p>, FRESH_HOME);
     const body = scrollingBody();
     expect(fab()).toBeNull();
 
@@ -270,7 +280,7 @@ describe('MainLayout — the back-to-top FAB over its body', () => {
   });
 
   it('asks its own body for the top on a press — never the document', () => {
-    renderLayout(<p>the library goes here</p>);
+    renderLayout(<p>the library goes here</p>, FRESH_HOME);
     const body = scrollingBody();
     const bodyScrollTo = stubScrollTo(body);
     const windowScrollTo = vi
