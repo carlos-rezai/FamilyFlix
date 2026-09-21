@@ -162,11 +162,13 @@ familyflix/
 │   ├── assets/         # Static images, fonts, icons
 │   ├── styles/         # Global CSS reset, themes, visuallyHidden
 │   ├── tokens/         # Colors, spacing, typography, breakpoints
-│   ├── primitives/     # Atomic UI elements (Button, Input, Text, Toggle, the Icon glyphs — the Snackbar's four among them) — each with .tsx, .test.tsx, .styles.ts
+│   ├── primitives/     # Atomic UI elements (Button, Input, Text, Toggle, the Icon glyphs — the Snackbar's four and the FAB's two among them) — each with .tsx, .test.tsx, .styles.ts
 │   ├── components/     # Composed UI blocks (PosterCard, Modal, ProgressBar) — same three-file shape
 │   │   ├── Modal/          # the scrimmed card every dialog is drawn on; owns its own dismissal and focus; `bare` for a card that is its children alone
 │   │   ├── LogConsole/     # the import's Activity log, pinned to its bottom
-│   │   └── Snackbar/       # the transient bottom-right card, one of four variants; presentational — the stack above owns the timing
+│   │   ├── Snackbar/       # the transient bottom-right card, one of four variants; presentational — the stack above owns the timing
+│   │   ├── Fab/            # the FAB: the accent circle in the bottom-right corner, one of two glyphs; presentational — it does not know there is a threshold
+│   │   └── BackToTop/      # the control over a scrolling container: the Scroll threshold, the passive listener, the read on attach, the press; mounts the FAB or nothing
 │   ├── features/       # Domain UI + logic co-located
 │   │   ├── library/        # browse grid, genre rows
 │   │   ├── search/          # search-as-you-type, filters
@@ -182,13 +184,13 @@ familyflix/
 │   │   │   └── section.styles.ts # the Group heading, the Section card, the divider, an item's title and lede — what every group draws with
 │   │   ├── maintainer.styles.ts # the header and the captioned field the Maintainer's screens share
 │   │   └── collections/     # playlists (roadmap)
-│   ├── layouts/         # Page chrome
+│   ├── layouts/         # Page chrome (MainLayout mounts Back-to-top over its body, on the ref useRestoredScroll attached)
 │   ├── pages/           # Route-level views, composition only (ImportPage among them)
 │   ├── api/             # Wire calls two or more features share (saveFavorite, fetchMovie, saveWatched, dismissProblem, fetchSettings)
-│   ├── hooks/            # Global shared hooks
+│   ├── hooks/            # Global shared hooks (useGoBack, useRestoredScroll)
 │   ├── types/            # Shared TypeScript interfaces (import.ts, export.ts, settings.ts, playback.ts — read by both build targets; appVersion.d.ts)
 │   ├── utils/            # Pure helper functions (formatBytes among them)
-│   └── test-support/     # Shared test doubles (fakeResponse, stubDownload, comesBefore, snackbarStack, …)
+│   └── test-support/     # Shared test doubles (fakeResponse, stubDownload, stubScrollMetrics, stubScrollTo, comesBefore, snackbarStack, …)
 └── docs/
     ├── design-logs/    # Immutable feature design snapshots
     ├── PRDs/           # Product requirements and implementation plans
