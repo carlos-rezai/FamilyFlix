@@ -218,7 +218,7 @@ Rules:
 | `ChevronLeftIcon` (back)           | stroke        | page headers, MoviePage, player, import, form                     |
 | `ChevronDownIcon` (caret ▾)        | text/stroke   | FilterDropdown, SubtitleRow (currently the `▾` glyph)             |
 | `GearIcon`                         | fill          | LibraryPage maintenance menu                                      |
-| `PlusIcon`                         | stroke        | "Add" affordances                                                 |
+| `PlusIcon`                         | stroke        | `mol.Fab`'s `plus` glyph — shipped, drawn by no screen yet        |
 | `CloseIcon` (✕)                    | stroke        | modal close, remove-row buttons                                   |
 | `MoreIcon` (3-dot)                 | fill          | MoviePage edit/delete menu                                        |
 | `HeartIcon` / `HeartOutlineIcon`   | fill / stroke | PosterCard fav, MoviePage fav, Favorites header                   |
@@ -240,6 +240,7 @@ Rules:
 | `CheckCircleIcon`                  | stroke        | Snackbar glyph (`success`)                                        |
 | `BangTriangleIcon`                 | stroke        | Snackbar glyph (`warning`)                                        |
 | `CrossCircleIcon`                  | stroke        | Snackbar glyph (`error`)                                          |
+| `ArrowUpIcon`                      | stroke        | `mol.Fab`'s `arrow-up` glyph — the **Back-to-top**                |
 
 (`heart` ships as two components — filled and outline — rather than a `filled` prop, since
 they're used independently; your call if you'd rather one component with a boolean.)
