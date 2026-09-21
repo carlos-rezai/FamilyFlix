@@ -376,6 +376,19 @@ caller because that caller waits on Electron and this does not.
 | **Snackbar notice** (new)      | What a caller hands `notify` — `{ variant, title?, message, action? }`, `SnackbarNotice` in code, answered with the id it can be retracted by. Named in full because **Player notice** is already a term; the two never share a word. It carries no duration and no `dismissible`: one rule covers the first, and the second is always true.             | notice, snack, payload, toast data   |
 | **Actionable snackbar** (new)  | A **Snackbar notice** carrying an `action` — the one kind that **persists** until it is actioned or dismissed. Every other notice dies at **5s**. That is the whole timing rule, and there is no per-notice override of it.                                                                                                                              | persistent toast, sticky snackbar    |
 
+## The Back-to-top FAB (new)
+
+The one press that returns the **Browse home** to its top — its own initiative
+(`back-to-top`, design log 19), the last renderer-only slice before the
+Electron shell. Three units: a glyph-holding circle, the control that mounts
+it, and the line it appears past.
+
+| Term                       | Definition                                                                                                                                                                                                                                                                                                                                                                                                    | Aliases to avoid                                 |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ |
+| **FAB** (new)              | The floating action button — `components/Fab/`, a `styled(IconButton)` face: an accent circle at 28px from the bottom-right corner, the near-black ink, the accent shadow, and a lift on hover. Holds one of two glyphs (`arrow-up`, `plus`), is named by a required `label`, and owns no state: it does not know there is a threshold, and the thing that mounts it decides. Say _FAB_, not _Fab_, in prose. | floating button, action button, round button     |
+| **Back-to-top** (new)      | The control that mounts a **FAB** over `MainLayout`'s body once it is past the **Scroll threshold** and rides it back to the top on a press — `components/BackToTop/`, given the body as a ref. Mounted by the **Chrome**, not by a feature or the page: the body is where the scrolling happens, so the chrome is what knows how far it has gone. Mounts and unmounts; never fades.                          | scroll-to-top, jump to top, the arrow, up button |
+| **Scroll threshold** (new) | The one line on the body past which **Back-to-top** shows its **FAB**: `scrollTop > 420`, strictly, the prototype's number. Read on every scroll and once on attach, because a screen returned to by Back is already past it before anyone touches the wheel.                                                                                                                                                 | fold, offset, trigger point, show-at             |
+
 ## Relationships
 
 - A **Movie** has zero-or-more **Genres** (ordered; `genres[0]` is the primary tag) and zero-or-more **Subtitles**.
@@ -468,6 +481,10 @@ caller because that caller waits on Electron and this does not.
 - A **Snackbar notice** goes on the **Snackbar stack** and comes off it three ways: its ✕, its own action (which dismisses before it runs), or `dismiss(id)` from the caller that raised it. An **Actionable snackbar** comes off no other way; everything else also comes off at 5s.
 - The **Offered version** names an **Update offer**; the **App version** names the running build; the **Seen version** names the one before it. Only the middle one is baked into the bundle.
 - **Software update** cannot be drawn without an **Update bridge**, and the bridge cannot exist without the Electron shell — the same rule that kept _Change…_ and the _Add a codec pack_ zone off the page, read one initiative ahead.
+
+- A **Back-to-top** is made of a **FAB**, and a **FAB** is made of an `IconButton` — three rungs, none skipped. Only the middle one is presentational to the last prop; the top one owns the **Scroll threshold**, the listener and the press.
+- **Back-to-top** belongs to the **Chrome**, not to the **Browse home**'s feature: `MainLayout` lends it the body's ref the way it already lends the same ref to scroll restoration, and holds no state for either.
+- The **FAB** and the **Snackbar stack** share the bottom-right corner, and the stack is above; a **Snackbar notice** covers the **FAB** while it is up, as the prototype draws both. Nothing raises a notice on the home today.
 
 ## Example dialogue
 
@@ -850,6 +867,21 @@ Hard` gets found and `Die Hard\extras` doesn't become a second film."
 > **Maintainer:** "The **Snackbar stack** takes it off and then runs the
 > handler. `dismiss(id)` is still there for the other case — the maintainer
 > installs from the row while the offer's still sitting in the corner."
+>
+> **Dev:** "Next is the **Back-to-top** button. I was going to build it on
+> `Button` — you said the FAB consists of our button component."
+> **Maintainer:** "The button that fits is `IconButton` — it's a circle with a
+> glyph and a name, not a label with padding. Every round icon-only control in
+> the app is `IconButton` wearing a face. The **FAB** is one more face."
+> **Dev:** "And who decides when it shows? The prototype's page does."
+> **Maintainer:** "The page we split. The body lives in `MainLayout`, so the
+> **Chrome** mounts **Back-to-top** and lends it the body's ref — the same ref
+> scroll restoration already borrows. Not a feature; there's no movie in it."
+> **Dev:** "So `BackToTop` owns the **Scroll threshold** and the **FAB** owns
+> nothing?"
+> **Maintainer:** "Past 420 it's mounted, under it it's gone. The **FAB** never
+> hears the number. And when the family press it, the body rides to the top
+> and it unmounts on the way — no fade, no transition. The prototype draws none."
 
 ## Flagged ambiguities
 
@@ -1392,3 +1424,16 @@ Hard` gets found and `Die Hard\extras` doesn't become a second film."
   `{ notify, dismiss }` is not one. **Snackbar**, **Snackbar variant**,
   **Snackbar notice** and **Actionable snackbar**, and the three relationship
   lines, hold as written.
+- **"Our button component" named the wrong primitive (new):** the maintainer's
+  sketch for the **FAB** said it consists of _our button component_, and the
+  app has two — `Button`, whose `label` is visible text, and `IconButton`, the
+  round icon-only one every `styled(IconButton)` face extends. Log 19 Q5 reads
+  the instruction as the second: a 52px accent circle around a glyph is an
+  `IconButton` wearing a face, and would fight every rule in `Button`. The
+  ladder the maintainer drew holds — `IconButton` → **FAB** → **Back-to-top** —
+  only the bottom rung is renamed. Flagged so it can be overruled rather than
+  discovered.
+- **"Fab" and "FAB" (new):** the prototype file and the component are `Fab`
+  (`mol.Fab.dc.html`, `components/Fab/`); the term in prose, in README and
+  CLAUDE.md's feature lists, and in this glossary is **FAB**. One thing, two
+  casings — code follows the component convention, prose follows the acronym.
