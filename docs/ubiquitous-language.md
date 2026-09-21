@@ -1437,3 +1437,19 @@ Hard` gets found and `Die Hard\extras` doesn't become a second film."
   (`mol.Fab.dc.html`, `components/Fab/`); the term in prose, in README and
   CLAUDE.md's feature lists, and in this glossary is **FAB**. One thing, two
   casings — code follows the component convention, prose follows the acronym.
+- **Two differences between log 19's contract sketch and the code (checked by
+  the back-to-top refactor, 169):** every row of _The Back-to-top FAB_ —
+  **FAB**, **Back-to-top**, **Scroll threshold** — and the three relationship
+  lines were read against the code for that round, and all hold as written;
+  nothing is corrected. Two things the code says differently from the log's
+  sketch, so the next reader of the sketch knows which is a decision and
+  which was a slip. The face's styled export is `Circle` where the sketch
+  wrote `Root` — kept: the five other `styled(IconButton)` faces are named
+  for what they are (`FavoriteButton`, `Arrow`, `MoreButton`, `CircleToggle`,
+  `ChromeIconButton`), and `Root` is what a styles file calls its outermost
+  element when it has several. And the build declared `label` ahead of
+  `icon` in `FabProps` where Q6 rules the props are the prototype's
+  `data-props` in its order — a slip, the likeliest reason being a required
+  prop put ahead of the optional ones, and the refactor put `icon`, `label`,
+  `size`, `onClick` back. The glossary never named either, so neither row
+  changes.
