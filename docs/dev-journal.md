@@ -11,6 +11,75 @@ Newest entry first.
 
 ---
 
+## 2026-09-22 — Back navigation refactor (issue #177)
+
+Thirteen commits against `docs/refactor-plans/20-back-navigation-refactor.md`
+— three to shipping files, five to tests, five to documents. **4789 tests pass
+across 249 files**, from 4783 across 247: `moviePath`'s three and
+`shippingSources`' five are new, the probe's suite gained one, and the three
+per-file source scans are gone. `tsc -b` is clean and `eslint src server` is
+clean on every commit. Nothing moved a pixel, changed a wire or changed what
+any press does.
+
+### What changed
+
+- **Group 0, the record.** The build's own journal entry, written before the
+  round touched the tree it describes.
+- **Group 1, one spelling of the film's route.** `utils/moviePath/` on
+  `toGenreQueryParams`'s shape, encoding the id for consistency rather than
+  need, with its own test and a line in the barrel. Then the four callers:
+  `Player`'s private copy went and its **Landing** paragraph moved onto
+  `leave`, `useMovieForm`'s `afterEdit` went, `HomeRows` and `GenreGrid` open a
+  card through it, and `MovieDetail`'s Play builds the player's route on it —
+  the last unencoded id in a path. `HomeRows`' `genrePath` stayed: one caller.
+- **Group 2, the form in the glossary's words.** `FRESH_HOME`, `ADD_LANDING`,
+  `REVIEW_LANDING`, and the edit's **Landing** is `moviePath(movie)`;
+  `REVIEW_LANDING`'s docblock lost the sentence apologising for its old name.
+  `const back = goBack;` went, and the returned member is `back: goBack` with
+  the docblock on it.
+- **Group 3, one structural guard on a shared walk.**
+  `test-support/shippingSources/` — `shippingSources`, `withoutComments` and
+  `shippingSourcesMatching`, run in its own suite over a sandbox so no edit
+  elsewhere can move an answer. The hook suite's two guards and the player's
+  duration rule read it, and both hand-rolled walkers went; the hook's guards
+  are comment-blind now. The three per-file scans in `Player`, `ImportFlow` and
+  `MovieForm` tests went, each suite's docblock naming the presses that carry
+  the claim instead. `LocationProbe` exports `navigationType()`, and the four
+  suites dropped their copies. `App.test.tsx`'s `pressBack` moved up beside
+  `renderApp` and `cardFor`, and the Import, edit and Resolve journeys use it.
+- **Group 4, the docs.** The glossary's five rows and three relationship lines
+  held as written; a _Flagged ambiguities_ entry records `formLanding` for the
+  sketch's `landingFor`, the journeys in `App.test.tsx` as well, and `fallback`
+  kept. CLAUDE.md's map and README's tree gained the hook's parameter,
+  `moviePath/`, `LocationProbe/` and `shippingSources/`. And the tick: **Back
+  navigation** ✅ in both feature lists, step 3 gone from the build-order
+  chain, **Motion & interaction states** now "next".
+
+### One departure from the plan
+
+Group 2's rename was to change no test, but the `MovieForm` scan matched
+`navigate(AFTER_ADD)` in the source by name, so the commit that renamed the
+constant carried its regex along with it. The scan was deleted four commits
+later with the other two — which is the round's argument against them made
+once more, by the round itself.
+
+### Deliberately left
+
+The probe's three older spellings, read by hand in twenty-four suites; the
+two unencoded query parameters, `?movie=` and `?problem=`; the hook's
+`fallback` parameter name; the historical phase docblocks in the screens'
+suites, which describe what each slice changed at the time; `HomeRows`'
+`genrePath` and the player's `/play` suffix, one caller each. Every log-20
+ruling the plan lists was checked against the code and holds.
+
+### Follow-ups
+
+- **The probe's three older readers**, filed as 178.
+- **Encoding the two query parameters**, filed as 179.
+- **Motion & interaction states** is step 4 and next.
+
+---
+
 ## 2026-09-22 — Back navigation (issues #171–#175)
 
 Ten commits across issues #171–#175, five slices against the plan on #170,

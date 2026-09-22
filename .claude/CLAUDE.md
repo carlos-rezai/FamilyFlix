@@ -760,12 +760,13 @@ same layout, spacing, states, copy, and interaction.
 > Status legend: ✅ Done · 🔜 Planned · 🧭 Roadmap · 🚫 Out of scope
 > Every 🔜 item builds against its prototype in `docs/handoff/` — translate, don't redesign.
 
-**Build order — the seven that are left.** The groups below say what the app
+**Build order — the six that are left.** The groups below say what the app
 _is_; this says what to build _next_, and it is a chain rather than a
-preference. Each 🔜 entry carries its step number; steps 1 and 2, the
-**Snackbar system** and the **Back-to-top FAB**, are done. Step 3 was found
-by the prototype audit of 2026-09-21 and goes ahead of the shell, because it
-is the app's own seams rather than anything Electron adds. Steps 4–6 arrived
+preference. Each 🔜 entry carries its step number; steps 1–3, the
+**Snackbar system**, the **Back-to-top FAB** and **Back navigation**, are
+done — step 3 was found by the prototype audit of 2026-09-21 and went ahead
+of the shell, because it was the app's own seams rather than anything
+Electron adds. Steps 4–6 arrived
 with the prototype revision of 2026-09-22 (`docs/handoff/` — three new
 components, two new pages, one new organism, and a motion contract) and
 go ahead of the shell for the same reason: none of the three needs anything
@@ -773,15 +774,13 @@ Electron adds, and each is built against a prototype that already exists.
 The shell, the packaging and the update moved down three numbers and keep
 their gates.
 
-3. **Back navigation** — one Back rule on every screen. Needs nothing; a fix
-   to what is built, and the shell would ship the bug otherwise.
 4. **Motion & interaction states** — the prototype's §2a contract laid over
    every control and card that is already built. Needs nothing, and goes
    ahead of 5 because Series draws new cards and rows that must be born on
    the contract rather than retrofitted to it.
 5. **Series (TV)** — a Series tab beside Movies, a series page, a season
    page, episode watch state, and the importer and player learning what an
-   episode is. Needs nothing outside the app; the largest of the seven.
+   episode is. Needs nothing outside the app; the largest of the six.
 6. **Enrichment (TMDB)** — the one feature that goes online: a Network
    group in Settings, and a sync run that fills what the sheet left blank.
    Needs nothing of Electron; goes after 5 so it enriches series too.
@@ -793,7 +792,7 @@ their gates.
    full already (`docs/design-logs/17-software-update.md`); its PRD waits
    on 7.
 
-A 🧭 Roadmap item is not in this chain — it is after all seven, if ever.
+A 🧭 Roadmap item is not in this chain — it is after all six, if ever.
 
 ### Foundation
 
@@ -846,8 +845,8 @@ A 🧭 Roadmap item is not in this chain — it is after all seven, if ever.
 
 - ✅ **Snackbar system** — info / success / warning / error notices in the bottom-right Snackbar stack; an actionable one persists, a confirmation dies at 5s. Ships with no caller: the first is the Software update flow's Update offer.
 - ✅ **Back-to-top FAB** — the accent circle in the home screen's bottom-right corner once the body is past 420px, riding it back to the top on a press; mounted by the chrome over the body it already owns, and gone again under the line.
-- 🔜 **Back navigation** _(step 3 — next)_ — one Back rule on every screen. The app has one already — `useGoBack`, a history step with `/` as the no-history fallback (log 04 Q13) — but four places push a route instead: the player's Back (`/movie/:id`), the edit save (`/movie/:id`), Import's Back (`/settings`), and Resolve's Save / Skip / Back (`/import`). Each push leaves a duplicate entry behind, and the next Back walks into it: Play → Back → Back lands in the player, not the library; Settings → Import → Back → Back lands on Import; a Delete after a Play visit lands in the player of a deleted movie; and the detail page comes back from the player at the top, because `useRestoredScroll` keys on the entry the push replaced. Every leaving becomes a history step, with a screen's own fallback for the no-history case (the player's is its movie, Import's is Settings, the form's is where its job came from); Add's save and Import's Finish keep the prototype's `goBrowse`. Reproduced in the browser 2026-09-21; the prototype needs no amendment — its `exitPlayer`, `backFromAdd` and `backFromDetail` already say where each one lands.
-- 🔜 **Motion & interaction states** _(step 4)_ — the prototype's **interaction & motion contract** (`COMPONENT-SPEC.md` §2a) over every interactive surface, one three-state model with no per-component variations. **Buttons signal with colour, cards signal with elevation**, and the two vocabularies never mix: a Button, Chip, IconButton or FilterDropdown lightens on hover (no lift, no shadow), darkens and goes `scale(.98)` on press (`.92–.94` for an IconButton or checkbox), and wears a 3px `--color-focus-ring` on `:focus-visible` only; a PosterCard, ContinueCard, SeasonCard or EpisodeRow lifts `translateY(-4px)` with a deeper shadow and a `--color-accent-line` border on hover, settles to `-1px` on press, and takes a 2px outline at 4px offset for focus. Four new tokens — `--dur-fast` 120 ms, `--dur-base` 180 ms, `--dur-slow` 280 ms, `--ease-out cubic-bezier(.2,.7,.3,1)` — become `tokens/motion.ts`, and no duration or curve is ever re-typed inline. Hover in is `fast`, a card's transform `base`, and **press is 60–70 ms, always faster than hover** — the asymmetry is what makes a control feel physical. The accent's five derivatives (`-hover` +18% to white, `-press` −12% to black, `-soft` 14% alpha, `-line` 32% alpha, `focus-ring` hover at 55%) are computed in the theme factory from the one accent, never aliased — alias hover to the base and every primary button silently loses its hover. Hover never carries information alone (the EpisodeRow's play overlay has the clickable row), and one global `prefers-reduced-motion: reduce` block collapses every duration, ported once rather than per component.
+- ✅ **Back navigation** — one **Back rule** on every screen: `useGoBack(fallback)`, a **History step**, or the screen's own **Landing** pushed when there is nothing behind it — the player's is its movie, Import's is Settings, the **Movie form**'s is where its job came from. Every **Leaving** is a step except the two **Fresh homes**, _Add to library_ and Import's _Finish_; Play → Back → Back reaches the library, the shelf comes back filtered and scrolled, and a Delete after a Play lands on the library.
+- 🔜 **Motion & interaction states** _(step 4 — next)_ — the prototype's **interaction & motion contract** (`COMPONENT-SPEC.md` §2a) over every interactive surface, one three-state model with no per-component variations. **Buttons signal with colour, cards signal with elevation**, and the two vocabularies never mix: a Button, Chip, IconButton or FilterDropdown lightens on hover (no lift, no shadow), darkens and goes `scale(.98)` on press (`.92–.94` for an IconButton or checkbox), and wears a 3px `--color-focus-ring` on `:focus-visible` only; a PosterCard, ContinueCard, SeasonCard or EpisodeRow lifts `translateY(-4px)` with a deeper shadow and a `--color-accent-line` border on hover, settles to `-1px` on press, and takes a 2px outline at 4px offset for focus. Four new tokens — `--dur-fast` 120 ms, `--dur-base` 180 ms, `--dur-slow` 280 ms, `--ease-out cubic-bezier(.2,.7,.3,1)` — become `tokens/motion.ts`, and no duration or curve is ever re-typed inline. Hover in is `fast`, a card's transform `base`, and **press is 60–70 ms, always faster than hover** — the asymmetry is what makes a control feel physical. The accent's five derivatives (`-hover` +18% to white, `-press` −12% to black, `-soft` 14% alpha, `-line` 32% alpha, `focus-ring` hover at 55%) are computed in the theme factory from the one accent, never aliased — alias hover to the base and every primary button silently loses its hover. Hover never carries information alone (the EpisodeRow's play overlay has the clickable row), and one global `prefers-reduced-motion: reduce` block collapses every duration, ported once rather than per component.
 - 🔜 **Desktop packaging** _(step 8)_ — Windows installer build via electron-builder; needs step 7.
 
 ### Roadmap
