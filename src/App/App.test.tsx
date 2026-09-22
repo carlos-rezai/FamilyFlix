@@ -1246,3 +1246,43 @@ describe('App — coming back out of the player', () => {
     await waitFor(() => expect(currentPath()).toBe('/'));
   });
 });
+
+/**
+ * 20 — Back navigation, Phase 3: "the Import steps" (issue #173).
+ *
+ * The maintainer's journey as they actually make it: the gear, Import from
+ * spreadsheet, and back out again. Both Backs are real screens' own — Import's
+ * pill and the Settings header's — which is why this lives here rather than
+ * beside `ImportFlow`: the duplicate `/settings` entry Import's push leaves
+ * behind is only ever pressed by the *hub's* Back, and the two are only ever
+ * composed together in `App`.
+ *
+ * Reproduced in the browser on 2026-09-21: the second Back walked back into
+ * Import instead of out to the library.
+ */
+describe('App — coming back out of Import', () => {
+  it('walks back out to the library the gear was pressed on', async () => {
+    renderApp('/?q=north&sort=a-z');
+    await screen.findByRole('heading', { name: 'Action' });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Settings' }));
+    await screen.findByRole('heading', { name: 'Settings' });
+    fireEvent.click(
+      screen.getByRole('button', { name: /import from spreadsheet/i })
+    );
+    await screen.findByRole('heading', { level: 1, name: 'Import library' });
+
+    // Named exactly: the Library rows carry their own descriptions, and
+    // "…spreadsheet backup." answers to /back/i.
+    fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+    await screen.findByRole('heading', { name: 'Settings' });
+    fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+
+    await waitFor(() => expect(currentPath()).toBe('/'));
+    // The shelf as the maintainer left it: Settings' Back was always a step,
+    // and now it steps onto the entry the gear was pressed from rather than
+    // onto the second `/settings` Import's push had left behind.
+    expect(currentSearch()).toBe('?q=north&sort=a-z');
+    await screen.findByRole('heading', { name: 'Action' });
+  });
+});

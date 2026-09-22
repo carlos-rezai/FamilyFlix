@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { readFileSync } from 'node:fs';
 import {
   render,
   screen,
@@ -12,6 +13,7 @@ import { MemoryRouter, Route, Routes, useNavigate } from 'react-router-dom';
 import { ImportFlow } from './ImportFlow';
 import type { ImportProblem, ImportRun } from '@/types';
 import { theme } from '@/styles/theme';
+import { useGoBack } from '@/hooks/useGoBack/useGoBack';
 import { LocationProbe } from '@/test-support/LocationProbe/LocationProbe';
 import { comesBefore } from '@/test-support/comesBefore/comesBefore';
 import { makeImportRun } from '@/test-support/makeImportRun/makeImportRun';
@@ -158,14 +160,23 @@ function serve(
   });
 }
 
-/** The settings hub, with the one row that leads into this screen. */
+/**
+ * The settings hub, with the one row that leads into this screen — and a Back
+ * of its own on the app's one rule, because a journey out of Import is two
+ * presses and the second one is the hub's. Only one route renders at a time,
+ * so this pill and Import's never answer the same query.
+ */
 function SettingsStub() {
   const navigate = useNavigate();
+  const goBack = useGoBack();
   return (
     <>
       <p>the settings hub</p>
       <button type="button" onClick={() => navigate('/import')}>
         Import library
+      </button>
+      <button type="button" onClick={goBack}>
+        Back
       </button>
     </>
   );
@@ -941,5 +952,164 @@ describe('ImportFlow — a poll that fails', () => {
       await screen.findByText('3 of 4 imported', undefined, POLLING)
     ).toBeDefined();
     expect(screen.getByText('Importing movies…')).toBeDefined();
+  });
+});
+
+/**
+ * 20 — Back navigation, Phase 3: "the Import steps" (issue #173).
+ *
+ * Back on Import stops pushing `/settings` and becomes the app's one **Back
+ * rule** — a **History step**, with Settings as the **Landing** for an Import
+ * nothing opened. _Finish_ is untouched: it stays a push to `/`, the **Fresh
+ * home** that puts the films the run just added on their shelves.
+ *
+ * The header's existing test above landed on `/settings` and was right about
+ * it — and would have been right about it whichever way the screen got there.
+ * Which is why these tests read `navigationType` and press Back **twice**: the
+ * duplicate `/settings` entry the push left behind is only visible on the
+ * second press, when the maintainer walks back into Import instead of out to
+ * the library.
+ *
+ * Nothing here goes near the **Run hook**. A Back mid-run leaves the run where
+ * it is — it is the server's **Current run**, re-attached on the next visit —
+ * so the one thing to assert about it is the request that must *not* be made.
+ */
+describe('ImportFlow — leaving is a history step', () => {
+  /** How the router got where it is: `POP` after a step, `PUSH` after a push. */
+  const navigationType = () => screen.getByTestId('navigationType').textContent;
+
+  /** The cancels sent so far — the run's life, asserted by its absence. */
+  const cancels = () => fetchMock.mock.calls.filter(([i, n]) => isCancel(i, n));
+
+  const pressBack = () =>
+    fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+
+  it('steps back onto Settings rather than pushing a second entry for it', () => {
+    serve(createdResponse(makeImportRun()));
+    renderFlow();
+
+    pressBack();
+
+    expect(currentPath()).toBe('/settings');
+    expect(navigationType()).toBe('POP');
+  });
+
+  it('lands on the browse home when Back is pressed again, not back on Import', async () => {
+    // The journey reproduced in the browser on 2026-09-21: the gear, Import
+    // from spreadsheet, Back, Back. The first press was always right, and the
+    // second one walked into the duplicate entry the first had left behind.
+    serve(createdResponse(makeImportRun()));
+    renderFlow(['/', '/settings']);
+    fireEvent.click(screen.getByRole('button', { name: 'Import library' }));
+    await setupStep();
+
+    pressBack();
+    expect(currentPath()).toBe('/settings');
+
+    pressBack();
+
+    expect(currentPath()).toBe('/');
+    expect(screen.getByText('the browse home')).toBeDefined();
+  });
+
+  it('pushes Settings for an Import opened by deep link, so Settings has a Back of its own', async () => {
+    // Nothing behind Import — a reload, or the URL opened cold. The **Landing**
+    // is pushed rather than stepped onto, and pushed rather than replaced, so
+    // the hub it lands on is not left with a dead button.
+    //
+    // The one journey the push already got right, and so the one test here that
+    // is green before the change: with no history behind it the **Back rule**
+    // pushes the landing too, which is the same navigation by accident. It is
+    // written as a guard — a step taken here, or a `replace`, would strand the
+    // maintainer, and nothing else in this file would notice.
+    serve(createdResponse(makeImportRun()));
+    renderFlow(['/import']);
+    await setupStep();
+
+    pressBack();
+
+    expect(currentPath()).toBe('/settings');
+    expect(navigationType()).toBe('PUSH');
+  });
+
+  it('leaves a running import exactly where it is, sending no cancel', async () => {
+    // Back is not _Cancel import_. The run belongs to the server, and the next
+    // visit re-attaches to it — which is why this slice never touches the
+    // **Run hook**, and why the assertion is a request that was not made.
+    serve(
+      createdResponse(makeImportRun({ phase: 'scanning' })),
+      [makeImportRun({ phase: 'importing', total: 2, done: 1, matched: 2 })],
+      { onArrival: true }
+    );
+    renderFlow();
+    await runningStep();
+
+    pressBack();
+
+    expect(currentPath()).toBe('/settings');
+    expect(navigationType()).toBe('POP');
+    expect(cancels()).toHaveLength(0);
+  });
+
+  it('finds the same run still going on the way back in', async () => {
+    // The other half of the same promise: the **Current run** is the server's,
+    // so a step out and a fresh push back in draws the running step again,
+    // exactly as the push did. `useImportRun` is unedited by this slice and
+    // this is what says so from the outside.
+    serve(
+      createdResponse(makeImportRun({ phase: 'scanning' })),
+      [makeImportRun({ phase: 'importing', total: 2, done: 1, matched: 2 })],
+      { onArrival: true }
+    );
+    renderFlow();
+    await runningStep();
+
+    pressBack();
+    fireEvent.click(screen.getByRole('button', { name: 'Import library' }));
+
+    expect(currentPath()).toBe('/import');
+    expect(await runningStep()).toBeDefined();
+    expect(screen.getByText('1 of 2 imported')).toBeDefined();
+    expect(cancels()).toHaveLength(0);
+  });
+
+  it('keeps Finish a push onto a fresh browse home', async () => {
+    // The **Fresh home**, untouched: a new entry at the top of an unfiltered
+    // library, where the films the run just added are on their shelves. A step
+    // here would land on whatever shelf the maintainer left, which is the one
+    // thing Finish is not.
+    serve(createdResponse(makeImportRun({ phase: 'scanning' })), [
+      makeImportRun({
+        phase: 'review',
+        found: 2,
+        total: 2,
+        done: 2,
+        matched: 2,
+      }),
+    ]);
+    renderFlow();
+    await setupStep();
+    startRun();
+    await screen.findByText('✓ All done', undefined, POLLING);
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Finish — go to library' })
+    );
+
+    expect(currentPath()).toBe('/');
+    expect(navigationType()).toBe('PUSH');
+  });
+
+  it('navigates on its own for Finish alone', () => {
+    // One `navigate` left in the organism, and it is the **Fresh home**'s. A
+    // second one is a second Back rule, which is what the initiative exists to
+    // end.
+    const source = readFileSync(
+      'src/features/import-export/ImportFlow/ImportFlow.tsx',
+      'utf8'
+    );
+
+    expect(source.match(/navigate\(/g)).toEqual(['navigate(']);
+    expect(source).toMatch(/navigate\('\/'\)/);
   });
 });
