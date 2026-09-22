@@ -39,7 +39,7 @@ Files are picked individually, from your machine's normal file dialog. FamilyFli
 
 ### Migrating an existing library
 
-A bulk importer reads an existing spreadsheet (title, year, genre, …), matches each row to its movie folder, and scans that folder for the video, poster and subtitle files (it isn't picky about subtitle format — `.srt`, `.vtt`, `.ass`, and `.sub` are all recognised), building the whole library in one pass. A row whose folder is a confident match is imported as the run goes, with a live progress console showing what's happening; the review step at the end lists only what the run couldn't settle on its own — a row with no folder, two folders for one row, a folder no row names, a copy that failed — each with a Resolve that opens the ordinary Add Movie form prefilled, and a Skip. Nothing is looked up online: the spreadsheet and the folder are all the importer reads, so there is no TMDB key to enter and no network to be on. Pointing at a folder is the bulk importer's job rather than the Add Movie form's: a file dialog hands over a file, never a folder path. It is also how a development library gets filled — the importer's own test fixtures replace the dev seed the app carried until it shipped. An exporter writes the library back out as CSV or Excel — every movie, A–Z, under the same columns the importer reads — for backups or bulk edits, and an export fed back to the importer adds nothing.
+A bulk importer reads an existing spreadsheet (title, year, genre, …), matches each row to its movie folder, and scans that folder for the video, poster and subtitle files (it isn't picky about subtitle format — `.srt`, `.vtt`, `.ass`, and `.sub` are all recognised), building the whole library in one pass. A row whose folder is a confident match is imported as the run goes, with a live progress console showing what's happening; the review step at the end lists only what the run couldn't settle on its own — a row with no folder, two folders for one row, a folder no row names, a copy that failed — each with a Resolve that opens the ordinary Add Movie form prefilled, and a Skip. Nothing is looked up online: the spreadsheet and the folder are all the importer reads, so there is no TMDB key to enter and no network to be on. Filling in what the sheet left blank — synopses, posters, runtimes — is a separate, opt-in Enrichment pass over the finished library (planned, see Build Status), which is the one and only place FamilyFlix goes online. Pointing at a folder is the bulk importer's job rather than the Add Movie form's: a file dialog hands over a file, never a folder path. It is also how a development library gets filled — the importer's own test fixtures replace the dev seed the app carried until it shipped. An exporter writes the library back out as CSV or Excel — every movie, A–Z, under the same columns the importer reads — for backups or bulk edits, and an export fed back to the importer adds nothing.
 
 ### Watching
 
@@ -308,20 +308,26 @@ Builds the installer and publishes it to GitHub Releases automatically.
 | Snackbar system (info / success / warning / error)  | ✅ Done         |
 | Back-to-top FAB                                     | ✅ Done         |
 | Back navigation — one Back rule on every screen     | 🔜 3 — next     |
-| Electron desktop shell                              | 🔜 4            |
-| Desktop packaging (Windows installer)               | 🔜 5            |
-| Software update (check / install)                   | 🔜 6            |
+| Motion & interaction states (hover / press / focus) | 🔜 4            |
+| Series (TV) — tab, series page, seasons, episodes   | 🔜 5            |
+| Enrichment — TMDB metadata & posters sync           | 🔜 6            |
+| Electron desktop shell                              | 🔜 7            |
+| Desktop packaging (Windows installer)               | 🔜 8            |
+| Software update (check / install)                   | 🔜 9            |
 | Collections / playlists                             | 🧭 Roadmap      |
 | Auto-on subtitles                                   | 🧭 Roadmap      |
 | Backgroundable import                               | 🧭 Roadmap      |
 | User accounts / multi-profile                       | 🚫 Out of scope |
 
-Everything above the line is done. The four that are left are numbered in
+Everything above the line is done. The seven that are left are numbered in
 **build order**, because they are a chain rather than a preference; steps 1
 and 2, the Snackbar system and the Back-to-top FAB, are done. Step 3 came out
 of auditing the build against the prototype (2026-09-21) and goes ahead of
 the shell, since it is a fix to what is built rather than anything Electron
-adds; the three behind it moved down one number.
+adds. Steps 4–6 came with the prototype revision of 2026-09-22 and go ahead
+of the shell for the same reason — none of them needs anything Electron adds,
+and each has its prototype already; the three behind them moved down three
+numbers.
 
 3. **Back navigation** — one Back rule on every screen. The app steps
    history on Back, but the player's exit, the edit save and the Import
@@ -329,14 +335,34 @@ adds; the three behind it moved down one number.
    duplicate: Play → Back → Back reopens the player, Settings → Import → Back
    → Back reopens Import, and the detail page loses its scroll position on
    the way back from the player. Needs nothing.
-4. **Electron desktop shell** — unblocks everything after it. _Change…_ in
+4. **Motion & interaction states** — the prototype's interaction contract
+   over everything already built: buttons signal with colour (lighten on
+   hover, darken and shrink a hair on press, a ring on keyboard focus),
+   cards signal with elevation (lift, deeper shadow, accent border), press
+   always faster than hover, one set of motion tokens, and a global
+   reduced-motion switch. Needs nothing; goes before Series so its new
+   cards are born on the contract.
+5. **Series (TV)** — a Series tab beside Movies: a series page with its
+   seasons, a season page with its episodes (thumbnail, `S02E04` + title,
+   air date, watched check, resume bar), Continue Watching holding episode
+   cards, the importer reading `Show/Season 01/S01E03.mkv`, and the player
+   offering _Up next_ with a countdown in the last 15 seconds. Needs
+   nothing outside the app; the largest of the seven.
+6. **Enrichment (TMDB)** — the one feature that goes online, and opt-in: a
+   Network group in Settings holds the API key and _Test connection_; a
+   sync run fills synopsis, poster, backdrop, runtime, year, genres,
+   director and cast for what the sheet left blank, asks per movie when
+   TMDB disagrees, and never touches the household's own rating. Reachable
+   from Settings, from an Import's Finish, and from a movie's ⋯ menu. Goes
+   after 5 so it enriches series too.
+7. **Electron desktop shell** — unblocks everything after it. _Change…_ in
    Settings → Storage and folder-path autofill in the Movie form are both
    waiting on it, and both stay undrawn until it lands.
-5. **Desktop packaging** — needs 4, and produces the installer 6 publishes.
-6. **Software update** — needs 4 and 5 (and 1, which is done). Already
+8. **Desktop packaging** — needs 7, and produces the installer 9 publishes.
+9. **Software update** — needs 7 and 8 (and 1, which is done). Already
    designed in full; its PRD waits on the shell.
 
-A 🧭 Roadmap item is not in the chain — it comes after all four, if ever.
+A 🧭 Roadmap item is not in the chain — it comes after all seven, if ever.
 
 ---
 

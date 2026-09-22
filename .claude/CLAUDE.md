@@ -435,8 +435,12 @@ once via a bulk importer:
   exist for corrections — design log `13-bulk-import` Q16
 - Consults nothing outside the spreadsheet and the folder: **no TMDB**,
   no network, `tmdbId` stays null. What a lookup would add is an
-  **Enrichment** pass over an already-imported library — a later
-  initiative with its own prototype, if ever — not part of bulk import
+  **Enrichment** pass over an already-imported library — its own
+  initiative with its own prototype (`feat.EnrichmentFlow`, build step 6),
+  not part of bulk import. The one seam between them is Import setup's
+  _Also fetch metadata and posters from TMDB_ checkbox, which hands Finish
+  off to an Enrichment run over the library the import just built; the
+  importer itself still reads nothing online
 - Copies all matched media into managed storage as part of the run —
   `Media.copyIn`, a stream piped under the cancel signal rather than
   `fs.copyFile`, so a 12 GB copy can be stopped partway and the folder
@@ -753,32 +757,47 @@ same layout, spacing, states, copy, and interaction.
 > Status legend: ✅ Done · 🔜 Planned · 🧭 Roadmap · 🚫 Out of scope
 > Every 🔜 item builds against its prototype in `docs/handoff/` — translate, don't redesign.
 
-**Build order — the four that are left.** The groups below say what the app
+**Build order — the seven that are left.** The groups below say what the app
 _is_; this says what to build _next_, and it is a chain rather than a
 preference. Each 🔜 entry carries its step number; steps 1 and 2, the
 **Snackbar system** and the **Back-to-top FAB**, are done. Step 3 was found
 by the prototype audit of 2026-09-21 and goes ahead of the shell, because it
-is the app's own seams rather than anything Electron adds; the three behind
-it moved down one number and keep their gates.
+is the app's own seams rather than anything Electron adds. Steps 4–6 arrived
+with the prototype revision of 2026-09-22 (`docs/handoff/` — three new
+components, two new pages, one new organism, and a motion contract) and
+go ahead of the shell for the same reason: none of the three needs anything
+Electron adds, and each is built against a prototype that already exists.
+The shell, the packaging and the update moved down three numbers and keep
+their gates.
 
 3. **Back navigation** — one Back rule on every screen. Needs nothing; a fix
    to what is built, and the shell would ship the bug otherwise.
-4. **Electron desktop shell** — unblocks everything after it. `Change…` in the
+4. **Motion & interaction states** — the prototype's §2a contract laid over
+   every control and card that is already built. Needs nothing, and goes
+   ahead of 5 because Series draws new cards and rows that must be born on
+   the contract rather than retrofitted to it.
+5. **Series (TV)** — a Series tab beside Movies, a series page, a season
+   page, episode watch state, and the importer and player learning what an
+   episode is. Needs nothing outside the app; the largest of the seven.
+6. **Enrichment (TMDB)** — the one feature that goes online: a Network
+   group in Settings, and a sync run that fills what the sheet left blank.
+   Needs nothing of Electron; goes after 5 so it enriches series too.
+7. **Electron desktop shell** — unblocks everything after it. `Change…` in the
    Storage group and folder-path autofill in the **Movie form** are both
    waiting on this one, and both stay undrawn until it lands.
-5. **Desktop packaging** — needs 4; produces the installer that 6 publishes.
-6. **Software update** — needs 4 and 5 (and 1, which is done). Designed in
+8. **Desktop packaging** — needs 7; produces the installer that 9 publishes.
+9. **Software update** — needs 7 and 8 (and 1, which is done). Designed in
    full already (`docs/design-logs/17-software-update.md`); its PRD waits
-   on 4.
+   on 7.
 
-A 🧭 Roadmap item is not in this chain — it is after all four, if ever.
+A 🧭 Roadmap item is not in this chain — it is after all seven, if ever.
 
 ### Foundation
 
 - ✅ **Nx + Vite + React workspace scaffold** — monorepo, tooling, lint/format.
 - ✅ **Claude design handoff prototype** — full interactive design system, the build spec.
 - ✅ **Library core** — movie model, SQLite schema, repository layer.
-- 🔜 **Electron desktop shell** _(step 4)_ — main process, window, file-system access. The gate every remaining Maintainer control sits behind.
+- 🔜 **Electron desktop shell** _(step 7)_ — main process, window, file-system access. The gate every remaining Maintainer control sits behind.
 
 ### Browse & discover (parent-facing)
 
@@ -791,11 +810,13 @@ A 🧭 Roadmap item is not in this chain — it is after all four, if ever.
 - ✅ **Ratings** — 5-star display with a half-star picker.
 - ✅ **Favorites** — mark from card and detail; dedicated Favorites row.
 - ✅ **Continue Watching row** — resume in-progress titles from the home screen, ordered by when the family last watched them.
+- 🔜 **Series (TV)** _(step 5)_ — a separate top-level tab, not mixed into the movie rows: a segmented Movies / Series control in the library header; the Series tab is a Continue Watching row of **episode** cards (never one card per series) over an "All series" grid on the same `LibraryGrid` + `PosterCard`. The **Series page** (`page.SeriesPage`) is the movie page's hero shape — poster, year range, season and episode count, rating, genres, synopsis, creator and cast — over a Seasons grid of `SeasonCard` (a 2:3 tile: StatusBadge when the season is fully watched, ProgressBar when partly; its line reads "8 episodes" or "3 of 8 watched"). A season poster opens the **Season page** (`page.SeasonPage`): the series → season header, _Resume Enn_, Mark season watched, one `EpisodeRow` per episode — a 16:9 thumbnail with a hover play affordance and a resume bar, `S02E04` and the title, the air date, the resume label, and a watched checkbox that stops propagation (the row opens the episode, the box only marks it) — and an "Other seasons" pill row. No synopsis, runtime or filename on a row; no tabs or accordion for seasons. Resume on the series and Continue Watching both follow `nextEpisodeOf`: the part-watched episode, else the first unwatched. In SQLite this is a `series`, `season`, `episode` trio carrying the same watch-state columns the movie table has. Everything is additive; the movie flow is untouched. Spec §5aa.
 
 ### Playback
 
 - ✅ **Built-in video player** — local playback, subtitle tracks, transport controls.
 - ✅ **Watch tracking** — watched / in-progress / unwatched states and resume position.
+- 🔜 **Episode playback** _(part of step 5)_ — the player unchanged for movies; for an episode the title reads `Show · S02E04 · Episode title`, and an **Up next** card appears in the last 15 s with a countdown, Play now and Cancel — auto-play next is the player's only addition. No skip-intro, no in-player episode list.
 
 ### Maintainer tools
 
@@ -805,6 +826,8 @@ A 🧭 Roadmap item is not in this chain — it is after all four, if ever.
 - ✅ **Bulk import** — a Sheet and a Library root become Movies during the run; the Review step lists only the Problems the run could not settle, each with Resolve (the Movie form in Import context) and Skip.
 - ✅ **Import progress console** — the Connect ✓ → Scan → Import stepper, the bar, the current item, elapsed and ETA, the Activity log, and Cancel; a server run polled every 500 ms, re-attachable.
 - ✅ **Export** — the Settings hub’s third row opens the Export dialog; `family-library.csv` or `.xlsx` lands in Downloads with every movie A–Z under the eight Export columns, and an untouched export fed back to Bulk import adds nothing.
+- 🔜 **Series import** _(part of step 5)_ — the Library root may hold shows beside movies: `Show Name/Season 01/S01E03.mkv`, or loose episodes at the show root. Season and episode numbers come from the folder first, then the filename (`S01E03`, `1x03`); anything unparsed lands in the existing Review list. The accepted shapes are shown verbatim in Import setup.
+- 🔜 **Enrichment (TMDB)** _(step 6)_ — the first and only feature that touches the network; everything else stays offline-first. One organism, `EnrichmentFlow` (`features/enrichment/`), mirroring ImportFlow's three steps so the two read as siblings: **setup** (the key and offline banners, three scope cards — _Only what's missing_ / _Everything_ / _Just this movie_ — the field chips, and the write-target list; Start is `secondary` and inert until the key is tested and the machine is online), **running** (a determinate bar, because the count is known up front; LogConsole; elapsed and ETA; _Stop_ keeps what was already fetched), and **review** (two stat tiles over the rows that need a human: `ambiguous` with a horizontal poster picker of candidates and their % match, `conflict` as a field-by-field _Yours | TMDB_ diff with per-field choice then _Apply choices_ / _Keep all mine_, `missing` with a manual search box; every row has Skip). Three ways in: Settings → Network → _Sync metadata & posters_ (the primary), the Import setup's _Also fetch metadata and posters from TMDB_ checkbox (Finish hands the review straight to a full-library run), and the movie page's ⋯ menu → _Fetch from TMDB_ (a single-title run that returns to the movie). Fields: synopsis, poster, backdrop, runtime, year, genres, director, cast, original title, TMDB score. **The household rating is untouched** — TMDB's score is a separate field beside it. Conflicts are asked per movie in the review, never silently overwritten. The run is a pass over the already-imported library keyed by title + year, not a second scanner — `walkLibraryRoot` / `scanMovieFolder` are untouched, and `tmdbId` finally gets a value. The library database is the source of truth, and optionally a `familyflix-metadata.csv` in the collection root and a `poster.jpg` in each movie folder, each toggleable and neither overwriting a file that exists — the only place the app writes back into the source folders, so it needs its own permission check and a dry-run log line. Spec §5a.
 
 ### Settings hub
 
@@ -813,14 +836,16 @@ A 🧭 Roadmap item is not in this chain — it is after all four, if ever.
 - ✅ **Codec manager — add a playback component** — the Component drop zone under the rows and the ✕ on the Component row: a pair dropped is staged, verified and sworn into the Component slot, and the next press of Play converts with it.
 - ✅ **Subtitle preferences** — the household's Preferred subtitle language, kept in the library's database and honoured by the player; the Auto-on toggle built but disabled until shipped.
 - ✅ **Storage** — the managed media folder's location and space used, agreeing with Explorer; _Change…_ is the Electron shell's.
-- 🔜 **Software update** _(step 6)_ — the About card's first row: an Update offer downloaded at launch, Update now, and Check for updates. Needs steps 1, 4 and 5; designed in `17-software-update`.
+- 🔜 **Network group** _(part of step 6)_ — a fifth Settings group between Playback and Storage, the one place FamilyFlix goes online: _The Movie Database (TMDB)_ with a status pill, the lede ("Nothing is sent about your household — just movie titles, to look up posters and synopses"), the API-key field in mono with _Test connection_ beside it, and the _Sync metadata & posters_ row that opens the Enrichment flow.
+- 🔜 **Software update** _(step 9)_ — the About card's first row: an Update offer downloaded at launch, Update now, and Check for updates. Needs steps 1, 7 and 8; designed in `17-software-update`.
 
 ### System
 
 - ✅ **Snackbar system** — info / success / warning / error notices in the bottom-right Snackbar stack; an actionable one persists, a confirmation dies at 5s. Ships with no caller: the first is the Software update flow's Update offer.
 - ✅ **Back-to-top FAB** — the accent circle in the home screen's bottom-right corner once the body is past 420px, riding it back to the top on a press; mounted by the chrome over the body it already owns, and gone again under the line.
 - 🔜 **Back navigation** _(step 3 — next)_ — one Back rule on every screen. The app has one already — `useGoBack`, a history step with `/` as the no-history fallback (log 04 Q13) — but four places push a route instead: the player's Back (`/movie/:id`), the edit save (`/movie/:id`), Import's Back (`/settings`), and Resolve's Save / Skip / Back (`/import`). Each push leaves a duplicate entry behind, and the next Back walks into it: Play → Back → Back lands in the player, not the library; Settings → Import → Back → Back lands on Import; a Delete after a Play visit lands in the player of a deleted movie; and the detail page comes back from the player at the top, because `useRestoredScroll` keys on the entry the push replaced. Every leaving becomes a history step, with a screen's own fallback for the no-history case (the player's is its movie, Import's is Settings, the form's is where its job came from); Add's save and Import's Finish keep the prototype's `goBrowse`. Reproduced in the browser 2026-09-21; the prototype needs no amendment — its `exitPlayer`, `backFromAdd` and `backFromDetail` already say where each one lands.
-- 🔜 **Desktop packaging** _(step 5)_ — Windows installer build via electron-builder; needs step 4.
+- 🔜 **Motion & interaction states** _(step 4)_ — the prototype's **interaction & motion contract** (`COMPONENT-SPEC.md` §2a) over every interactive surface, one three-state model with no per-component variations. **Buttons signal with colour, cards signal with elevation**, and the two vocabularies never mix: a Button, Chip, IconButton or FilterDropdown lightens on hover (no lift, no shadow), darkens and goes `scale(.98)` on press (`.92–.94` for an IconButton or checkbox), and wears a 3px `--color-focus-ring` on `:focus-visible` only; a PosterCard, ContinueCard, SeasonCard or EpisodeRow lifts `translateY(-4px)` with a deeper shadow and a `--color-accent-line` border on hover, settles to `-1px` on press, and takes a 2px outline at 4px offset for focus. Four new tokens — `--dur-fast` 120 ms, `--dur-base` 180 ms, `--dur-slow` 280 ms, `--ease-out cubic-bezier(.2,.7,.3,1)` — become `tokens/motion.ts`, and no duration or curve is ever re-typed inline. Hover in is `fast`, a card's transform `base`, and **press is 60–70 ms, always faster than hover** — the asymmetry is what makes a control feel physical. The accent's five derivatives (`-hover` +18% to white, `-press` −12% to black, `-soft` 14% alpha, `-line` 32% alpha, `focus-ring` hover at 55%) are computed in the theme factory from the one accent, never aliased — alias hover to the base and every primary button silently loses its hover. Hover never carries information alone (the EpisodeRow's play overlay has the clickable row), and one global `prefers-reduced-motion: reduce` block collapses every duration, ported once rather than per component.
+- 🔜 **Desktop packaging** _(step 8)_ — Windows installer build via electron-builder; needs step 7.
 
 ### Roadmap
 
