@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 
+import { useGoBack } from '@/hooks/useGoBack/useGoBack';
 import type { Movie } from '@/types';
 import { gradientFromId } from '@/utils';
 import { PlayerControls } from '../PlayerControls/PlayerControls';
@@ -53,7 +53,12 @@ function streamUrl(movieId: string): string {
   return `/api/movies/${encodeURIComponent(movieId)}/stream`;
 }
 
-/** Where the film's page is, which is where both ways out of the player land. */
+/**
+ * The player's **Landing**: where a parent is put when there is no history to
+ * step back through, because the player was deep-linked or reloaded. A step
+ * back is what both ways out do whenever there *is* something behind them, and
+ * the film's page is the only sensible place to arrive otherwise.
+ */
 function moviePath(movieId: string): string {
   return `/movie/${encodeURIComponent(movieId)}`;
 }
@@ -142,7 +147,6 @@ function noticeFor(
  * drift apart.
  */
 export function Player({ movieId }: PlayerProps) {
-  const navigate = useNavigate();
   // The element is held in state rather than in a plain ref, because it arrives
   // late: the guard below keeps it off the screen until the reads have settled,
   // and a ref object never changes identity, so a hook binding through one
@@ -249,9 +253,12 @@ export function Player({ movieId }: PlayerProps) {
     playing && notice === null
   );
 
-  const leave = useCallback(() => {
-    navigate(moviePath(movieId));
-  }, [navigate, movieId]);
+  // The one **Back rule**, not a navigate of this screen's own: a **History
+  // step**, so the entry the parent came from is the entry they return to —
+  // the film's page still scrolled where they left it, and the shelf behind
+  // that still filtered. Pushing the film's page instead left a duplicate
+  // entry, and the next Back walked straight back into the player.
+  const leave = useGoBack(moviePath(movieId));
 
   const { toggleFullscreen } = useFullscreen(stageRef);
 
