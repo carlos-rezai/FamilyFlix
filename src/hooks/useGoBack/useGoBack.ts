@@ -19,20 +19,23 @@ const NO_HISTORY = 'default';
  *
  * The fallback is for the screen with nothing behind it — deep-linked or
  * reloaded — where a history step would leave the parent stranded on the very
- * screen they asked to leave, looking at a dead button.
+ * screen they asked to leave, looking at a dead button. A screen may name its
+ * own in place of the library — the player's is its movie page, Import's is
+ * Settings — and it is pushed rather than replaced, so the screen it lands on
+ * has history behind it and its own Back is not a dead button in turn.
  *
  * A global hook rather than a feature module: `GenreLayout`'s Back pill and
  * `MoviePage`'s both call it, and the rule must not exist twice.
  */
-export function useGoBack() {
+export function useGoBack(fallback = '/') {
   const navigate = useNavigate();
   const { key } = useLocation();
 
   return useCallback(() => {
     if (key === NO_HISTORY) {
-      navigate('/');
+      navigate(fallback);
       return;
     }
     navigate(-1);
-  }, [key, navigate]);
+  }, [fallback, key, navigate]);
 }
