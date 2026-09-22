@@ -404,6 +404,25 @@ switcher translated onto the router's real history.
 | **Landing** (new)      | A screen's own destination for the no-history case — `location.key === 'default'`, a deep link or a reload — pushed so the screen it lands on has a Back of its own. The library by default; the player's is its **Movie detail page**, Import's is Settings, the **Movie form**'s is where its **Form context** came from: the **Review step** in **Import context**, the movie for an edit, Settings for an add. Read off the URL, never off fetched state. | fallback route, default route, home for, origin |
 | **Fresh home** (new)   | The two **Leavings** that are pushes and not steps: the **Movie form**'s _Add to library_ and Bulk import's Finish — the prototype's `goBrowse()`, a new entry on the **Browse home** at the top with nothing filtered, the film just added on its shelf. A push rather than a replace: nothing the app draws can tell the two apart, and one rule with a third shape is two rules.                                                                           | go home, browse, reset, replace                 |
 
+## Motion & interaction states (new)
+
+How a control or a card answers the pointer and the keyboard — its own
+initiative (`motion`, design log 21), step 4 of the build order, the
+prototype's COMPONENT-SPEC §2a laid over the surfaces already built.
+
+| Term                           | Definition                                                                                                                                                                                                                                                                                                                                                                 | Aliases to avoid                                 |
+| ------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ |
+| **Interaction contract** (new) | The one three-state model — **Hover**, **Press**, **Keyboard focus** — every interactive surface follows, in one of two disjoint vocabularies: **Controls** signal with colour, **Cards** signal with elevation. COMPONENT-SPEC §2a; in code the fragments of `styles/interactionStates/`. A new state is added to the contract first, never to one component.             | motion spec, hover rules, interaction guidelines |
+| **Control** (new)              | A surface in the colour vocabulary — `Button`, `Chip`'s selectable shape, `IconButton` and every `styled(IconButton)`, the **Filter dropdown**'s trigger. Its **Hover** changes fill (and border), its **Press** darkens and shrinks, its **Keyboard focus** is a **Focus ring**. Composes `controlStates(press)`.                                                         | button (for the class), clickable, widget        |
+| **Card** (new)                 | A surface in the elevation vocabulary — the **Poster card**, the **Continue card**, and in Series the season card and episode row. Its **Hover** lifts 4px with a deeper shadow and the accent line, its **Press** settles to 1px, its **Keyboard focus** is a 2px outline 4px out. Never recolours its fill. Composes `cardLift` on the tile and `cardFocus` on the root. | tile (for the class), item                       |
+| **Hover** (new)                | The pointer's state over a surface, entered at `durFast` on a **Control** and `durBase` for a **Card**'s transform. Never the only carrier of information: whatever it reveals has a non-hover way in.                                                                                                                                                                     | mouse-over, highlight                            |
+| **Press** (new)                | The `:active` state, always faster than **Hover** — `60ms` on a **Control**, `70ms` on a **Card**, each written once in its fragment; never equalised. A **Control**'s press transform is its own (`scale(.98)`, `.97`, `.94`, `.92`); an extension that positions with `transform` composes it in.                                                                        | click state, active state, tap                   |
+| **Keyboard focus** (new)       | `:focus-visible` only — what a keyboard user sees and a mouse click never draws: a **Focus ring** on a **Control**, a 2px outline at 4px offset on a **Card**.                                                                                                                                                                                                             | focus, outline, selection                        |
+| **Focus ring** (new)           | The 3px `box-shadow` in `focusRing` a **Control** wears under **Keyboard focus** — the accent's hover shade at 55% alpha, one of the **Accent scale**.                                                                                                                                                                                                                     | focus outline, glow, halo                        |
+| **Accent scale** (new)         | The accent's five derivatives — `accentHover` (+18% toward white), `accentPress` (−12% toward black), `accentSoft` (14% alpha), `accentLine` (32% alpha), `focusRing` (hover at 55%) — computed by `accentScale(accent)` inside the theme factory `createTheme`; never spelled as literals, never aliased to the accent.                                                   | accent variants, accent palette, tints           |
+| **Motion tokens** (new)        | `tokens/motion.ts` — `durFast` 120ms, `durBase` 180ms, `durSlow` 280ms and `easeOut` `cubic-bezier(.2,.7,.3,1)`, read as `theme.motion`; the only file that spells them. The **Press** durations are not tokens.                                                                                                                                                           | timings, animation constants, easings            |
+| **Reduced motion** (new)       | The one global `prefers-reduced-motion: reduce` block in `GlobalStyle` that collapses every transition and animation to ~0 — ported once, never per component.                                                                                                                                                                                                             | motion off, a11y mode                            |
+
 ## Relationships
 
 - A **Movie** has zero-or-more **Genres** (ordered; `genres[0]` is the primary tag) and zero-or-more **Subtitles**.
@@ -504,6 +523,9 @@ switcher translated onto the router's real history.
 - Every screen leaves by the **Back rule**, and the **Back rule** is one hook: `useGoBack(fallback)`. A **Leaving** is a **History step** unless it is a **Fresh home**; a **Landing** is taken only when there is no history to step through.
 - The **Player** lands on its **Movie detail page**; Bulk import lands on the **Settings hub**; the **Movie form** lands where its **Form context** came from — the **Review step**, the movie, or Settings. Three callers pass a **Landing**; the rest take the library.
 - A **History step** is what makes `useRestoredScroll` hold across a **Leaving**: the entry stepped onto is the entry remembered. A push of the same URL would be a new entry with nothing remembered.
+- Every interactive surface is a **Control** or a **Card**, never both: a **Control** never lifts off the page on its own account, a **Card** never recolours its fill. The **Chip**'s 1px rise and the `IconButton`'s 1.06 swell are the prototype files' own, and make neither a **Card**.
+- An `IconButton` extension inherits its primitive's **Press**, **Focus ring** and transition, and draws its own **Hover**; if it positions with `transform`, it restates that transform in its **Hover** and composes it into its **Press**.
+- The **Accent scale** is derived from the one accent in `colors.ts`: `theme.colors` carries all six names, `colors.ts` spells one.
 
 ## Example dialogue
 
@@ -1514,3 +1536,18 @@ Hard` gets found and `Die Hard\extras` doesn't become a second film."
   has both. And `fallback` remains the hook's parameter against **Landing** as
   the concept's name, which the entry above already rules and this round does
   not reopen.
+- **"Buttons never lift" against two files that do (new):** COMPONENT-SPEC
+  §2a's table says a **Control** gets _no lift_, yet `prim.Chip` hovers up
+  1px and `prim.IconButton` scales to 1.06. Log 21 Q14 ports the files; the
+  table is corrected at the `motion` refactor. Say **Control** for the colour
+  vocabulary even where its **Hover** moves a pixel — what makes a **Card** is
+  elevation plus the accent line, not motion alone.
+- **"Button" is a component and a class (new):** `Button` is the primitive;
+  §2a's _buttons_ are the whole colour vocabulary, `Chip` and the **Filter
+  dropdown** among them. In prose the class is **Control**, and _Button_ means
+  only `primitives/Button/`.
+- **The accent's hover had two values (new):** `tokens.css` shipped
+  `#e58e63` where the formula the prototype's app root applies gives
+  `#e0926e` (press `#c46a41` against `#bf6b45`, the ring likewise). Log 21
+  Q8 made the derivation win and amended `tokens.css`; the **Accent scale** is
+  the formula, and a literal that disagrees with it is stale.
