@@ -9,6 +9,7 @@ import {
   HeartIcon,
   HeartOutlineIcon,
 } from '@/primitives';
+import { moviePath } from '@/utils';
 import { CreditsRow } from '../CreditsRow/CreditsRow';
 import { EditMenu } from '../EditMenu/EditMenu';
 import { LoadingDetail } from '../LoadingDetail/LoadingDetail';
@@ -158,7 +159,7 @@ export function MovieDetail() {
               variant="primary"
               size="lg"
               icon="play"
-              onClick={() => navigate(`/movie/${movie.id}/play`)}
+              onClick={() => navigate(`${moviePath(movie.id)}/play`)}
             />
 
             {/* Both circles fill on the click rather than on the save: a toggle

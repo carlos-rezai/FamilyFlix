@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 
 import { LoadMessage } from '@/components';
-import { range } from '@/utils';
+import { moviePath, range } from '@/utils';
 import { LibraryGrid } from '../../LibraryGrid/LibraryGrid';
 import { useGenreMovies } from '../GenreMovies/GenreMovies';
 import { RetryableFailure } from '../../RetryableFailure/RetryableFailure';
@@ -88,7 +88,7 @@ export function GenreGrid() {
     <LibraryGrid
       movies={movies}
       // A movie id is data on its way into a URL — encode it.
-      onOpenMovie={(id) => navigate(`/movie/${encodeURIComponent(id)}`)}
+      onOpenMovie={(id) => navigate(moviePath(id))}
       onToggleFavorite={toggleFavorite}
     />
   );

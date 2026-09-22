@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 
 import { LoadMessage } from '@/components';
-import { range, toGenreQueryParams } from '@/utils';
+import { moviePath, range, toGenreQueryParams } from '@/utils';
 import { ContinueRow } from '../ContinueRow/ContinueRow';
 import { FavoritesRow } from '../FavoritesRow/FavoritesRow';
 import { GenreRow } from '../GenreRow/GenreRow';
@@ -135,8 +135,7 @@ export function HomeRows() {
     );
   }
 
-  const openMovie = (id: string) =>
-    navigate(`/movie/${encodeURIComponent(id)}`);
+  const openMovie = (id: string) => navigate(moviePath(id));
 
   // The order the rows are actually in, spelled the way the genre page reads it
   // back — through the same serializer, so the two screens can never disagree

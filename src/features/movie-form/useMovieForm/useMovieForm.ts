@@ -5,6 +5,7 @@ import { dismissProblem } from '@/api/dismissProblem/dismissProblem';
 import { fetchMovie } from '@/api/fetchMovie/fetchMovie';
 import { useGoBack } from '@/hooks/useGoBack/useGoBack';
 import type { MovieFormValues } from '@/types';
+import { moviePath } from '@/utils';
 import {
   createMovie,
   fetchProblem,
@@ -21,9 +22,6 @@ import {
 
 /** Where a finished add lands — the shelf the film has just joined. */
 const AFTER_ADD = '/';
-
-/** The page a correction is visible on — the **Edit context**'s **Landing**. */
-const afterEdit = (id: string) => `/movie/${id}`;
 
 /**
  * The **Add context**'s **Landing** — the hub the ＋ that opens this screen
@@ -81,7 +79,8 @@ function formLanding(movie: string | null, problem: string | null): string {
     return AFTER_RESOLVE;
   }
   if (movie !== null) {
-    return afterEdit(movie);
+    // The page a correction is visible on — the **Edit context**'s **Landing**.
+    return moviePath(movie);
   }
   return AFTER_ADD_FALLBACK;
 }
