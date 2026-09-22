@@ -14,7 +14,10 @@ import { GenreGrid } from './GenreGrid';
 import { GenreMoviesProvider } from '../GenreMovies/GenreMovies';
 import { theme } from '@/styles/theme';
 import type { GenrePayload } from '@/types';
-import { LocationProbe } from '@/test-support/LocationProbe/LocationProbe';
+import {
+  LocationProbe,
+  pathname,
+} from '@/test-support/LocationProbe/LocationProbe';
 import { makeMovie } from '@/test-support/makeMovie/makeMovie';
 import {
   okResponse,
@@ -77,10 +80,6 @@ function Navigator() {
   const navigate = useNavigate();
   goTo = (url) => navigate(url, { replace: true });
   return null;
-}
-
-function currentPath() {
-  return screen.getByTestId('pathname').textContent;
 }
 
 /**
@@ -195,7 +194,7 @@ describe('GenreGrid — opening a movie', () => {
 
     fireEvent.click(await screen.findByRole('button', { name: 'Ironclad' }));
 
-    expect(currentPath()).toBe('/movie/a2');
+    expect(pathname()).toBe('/movie/a2');
     expect(screen.getByText('the movie detail page')).toBeDefined();
   });
 
@@ -208,7 +207,7 @@ describe('GenreGrid — opening a movie', () => {
       await screen.findByRole('button', { name: 'Deep Harbour' })
     );
 
-    expect(currentPath()).toBe('/movie/a%20b%2Fc');
+    expect(pathname()).toBe('/movie/a%20b%2Fc');
     expect(screen.getByText('the movie detail page')).toBeDefined();
   });
 });
@@ -467,6 +466,6 @@ describe('GenreGrid — the favorite heart', () => {
 
     fireEvent.click(heartOn('Northwind'));
 
-    expect(currentPath()).toBe('/genre/Action');
+    expect(pathname()).toBe('/genre/Action');
   });
 });

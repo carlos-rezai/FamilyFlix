@@ -16,6 +16,7 @@ import type { Genre, ImportProblemDetail, Movie } from '@/types';
 import {
   LocationProbe,
   navigationType,
+  pathname,
 } from '@/test-support/LocationProbe/LocationProbe';
 import { makeMovie } from '@/test-support/makeMovie/makeMovie';
 import {
@@ -202,7 +203,6 @@ const save = () =>
   screen.getByRole('button', {
     name: /add to library|adding/i,
   }) as HTMLButtonElement;
-const currentPath = () => screen.getByTestId('pathname').textContent;
 const directorField = () =>
   screen.getByRole('textbox', { name: /director/i }) as HTMLInputElement;
 const castField = () =>
@@ -617,7 +617,7 @@ describe('MovieForm — the genre chips', () => {
 
       // The acceptance criterion most easily got wrong: a maintainer with no
       // chips has still lost nothing but the chips.
-      await waitFor(() => expect(currentPath()).toBe('/'));
+      await waitFor(() => expect(pathname()).toBe('/'));
       const fields = savedFields() as FormData;
       expect(fields.get('title')).toBe('Rear Window');
       expect(fields.getAll('genre')).toEqual([]);
@@ -1250,7 +1250,7 @@ describe('MovieForm — saving', () => {
     expect(save().disabled).toBe(true);
 
     settle(createdResponse(CREATED));
-    await waitFor(() => expect(currentPath()).toBe('/'));
+    await waitFor(() => expect(pathname()).toBe('/'));
   });
 
   it('writes one movie however many times Save is pressed', async () => {
@@ -1268,7 +1268,7 @@ describe('MovieForm — saving', () => {
     fireEvent.click(save());
 
     settle(createdResponse(CREATED));
-    await waitFor(() => expect(currentPath()).toBe('/'));
+    await waitFor(() => expect(pathname()).toBe('/'));
     expect(saveRequests()).toHaveLength(1);
   });
 
@@ -1282,7 +1282,7 @@ describe('MovieForm — saving', () => {
     // The **Add context** ends on the shelf the film just joined — the
     // prototype's `goBrowse()`, and the one place the maintainer can see the
     // save worked.
-    await waitFor(() => expect(currentPath()).toBe('/'));
+    await waitFor(() => expect(pathname()).toBe('/'));
   });
 
   it('stays on the form and offers Save again when the save fails', async () => {
@@ -1298,7 +1298,7 @@ describe('MovieForm — saving', () => {
     // the form still standing with everything typed still in it — the chip
     // included, since re-picking it is work the maintainer already did.
     await waitFor(() => expect(save().disabled).toBe(false));
-    expect(currentPath()).toBe('/add');
+    expect(pathname()).toBe('/add');
     expect(titleField().value).toBe('Rear Window');
     expect(picked('Thriller')).toBe('true');
     expect(save().textContent).toContain('Add to library');
@@ -1542,7 +1542,7 @@ describe('MovieForm — saving', () => {
       // film included, since re-finding the same file in a file dialog is the
       // most tedious work on this screen to lose.
       await waitFor(() => expect(save().disabled).toBe(false));
-      expect(currentPath()).toBe('/add');
+      expect(pathname()).toBe('/add');
       expect(pickedFilename()).not.toBeNull();
     });
   });
@@ -1613,7 +1613,7 @@ describe('MovieForm — saving', () => {
       // re-finding a file in a file dialog is the most tedious work on this
       // screen to lose — twice over now.
       await waitFor(() => expect(save().disabled).toBe(false));
-      expect(currentPath()).toBe('/add');
+      expect(pathname()).toBe('/add');
       expect(pickedFilename()).not.toBeNull();
       expect(pickedPoster()).not.toBeNull();
     });
@@ -1727,7 +1727,7 @@ describe('MovieForm — saving', () => {
       // language chosen included, since re-labelling a track is work the
       // maintainer did on purpose.
       await waitFor(() => expect(save().disabled).toBe(false));
-      expect(currentPath()).toBe('/add');
+      expect(pathname()).toBe('/add');
       expect(screen.getByText('lantern.en.srt')).toBeDefined();
       expect(languageOf('lantern.en.srt').textContent).toContain('Portuguese');
     });
@@ -1772,7 +1772,7 @@ describe('MovieForm — the actions row', () => {
   it('leaves for the screen behind the form, exactly as the back pill does', async () => {
     const { unmount } = await renderFormFromSettings();
     fireEvent.click(cancel());
-    expect(currentPath()).toBe('/settings');
+    expect(pathname()).toBe('/settings');
     unmount();
 
     // The same claim made through the other control, in one test rather than
@@ -1780,7 +1780,7 @@ describe('MovieForm — the actions row', () => {
     // could drift and both still pass.
     await renderFormFromSettings();
     fireEvent.click(backPill());
-    expect(currentPath()).toBe('/settings');
+    expect(pathname()).toBe('/settings');
   });
 
   it('falls back to Settings from both, on a form with nothing behind it', async () => {
@@ -1791,12 +1791,12 @@ describe('MovieForm — the actions row', () => {
     // *finished* add goes, not where an abandoned one belongs.
     const { unmount } = await renderForm();
     fireEvent.click(cancel());
-    expect(currentPath()).toBe('/settings');
+    expect(pathname()).toBe('/settings');
     unmount();
 
     await renderForm();
     fireEvent.click(backPill());
-    expect(currentPath()).toBe('/settings');
+    expect(pathname()).toBe('/settings');
   });
 
   it('writes nothing when Cancel is pressed', async () => {
@@ -2029,7 +2029,7 @@ describe('MovieForm — the Edit context', () => {
       // Story 48: the maintainer sees the change they just made, in context. The
       // browse home is where a *new* film is seen for the first time; an edit
       // belongs back on the page it was started from.
-      await waitFor(() => expect(currentPath()).toBe('/movie/a1'));
+      await waitFor(() => expect(pathname()).toBe('/movie/a1'));
     });
 
     it('says Saving… and takes no second press while the edit is in flight', async () => {
@@ -2070,7 +2070,7 @@ describe('MovieForm — the Edit context', () => {
       // — there is no snackbar yet, so the form still standing with the
       // correction still in it is the whole of what can be said.
       await waitFor(() => expect(saveChanges().disabled).toBe(false));
-      expect(currentPath()).toBe('/add');
+      expect(pathname()).toBe('/add');
       expect(titleField().value).toBe('The Lantern Keeper (restored)');
     });
 
@@ -2709,7 +2709,7 @@ describe('MovieForm — the Import context', () => {
       // Story 95: back to the review, one row shorter — not to the browse
       // home. (The "not to whatever was behind the form" half of this went
       // with issue #175: the review *is* what is behind the form.)
-      await waitFor(() => expect(currentPath()).toBe('/import'));
+      await waitFor(() => expect(pathname()).toBe('/import'));
     });
 
     // --- 20 — Back navigation, Phase 5: the form in Import context (#175) ----
@@ -2726,7 +2726,7 @@ describe('MovieForm — the Import context', () => {
 
       fireEvent.click(saveAndContinue());
 
-      await waitFor(() => expect(currentPath()).toBe('/import'));
+      await waitFor(() => expect(pathname()).toBe('/import'));
       expect(navigationType()).toBe('POP');
     });
 
@@ -2756,7 +2756,7 @@ describe('MovieForm — the Import context', () => {
 
       await waitFor(() => expect(resolveRequests()).toHaveLength(1));
       await waitFor(() => expect(saveAndContinue().disabled).toBe(false));
-      expect(currentPath()).toBe('/add');
+      expect(pathname()).toBe('/add');
       expect(titleField().value).toBe('Die Hard');
       expect(foundVideo()).not.toBeNull();
       expect(banner()).not.toBeNull();
@@ -2767,7 +2767,7 @@ describe('MovieForm — the Import context', () => {
 
       fireEvent.click(saveAndContinue());
 
-      await waitFor(() => expect(currentPath()).toBe('/import'));
+      await waitFor(() => expect(pathname()).toBe('/import'));
       expect(dismissRequests()).toEqual([]);
     });
   });
@@ -2783,7 +2783,7 @@ describe('MovieForm — the Import context', () => {
       expect(String(dismissRequests()[0][0])).toBe(
         '/api/import/current/problems/p1'
       );
-      await waitFor(() => expect(currentPath()).toBe('/import'));
+      await waitFor(() => expect(pathname()).toBe('/import'));
     });
 
     // 20 — Back navigation, Phase 5 (#175). The same press, read for how it
@@ -2795,7 +2795,7 @@ describe('MovieForm — the Import context', () => {
 
       fireEvent.click(skipThisOne());
 
-      await waitFor(() => expect(currentPath()).toBe('/import'));
+      await waitFor(() => expect(pathname()).toBe('/import'));
       expect(navigationType()).toBe('POP');
     });
 
@@ -2804,7 +2804,7 @@ describe('MovieForm — the Import context', () => {
 
       fireEvent.click(skipThisOne());
 
-      await waitFor(() => expect(currentPath()).toBe('/import'));
+      await waitFor(() => expect(pathname()).toBe('/import'));
       expect(resolveRequests()).toEqual([]);
       expect(saveRequests()).toEqual([]);
     });
@@ -2825,7 +2825,7 @@ describe('MovieForm — the Import context', () => {
       // the form — _Resolve_ is a link from it and nothing else opens this
       // URL — so the same destination is reached by stepping, and the
       // duplicate entry the push left behind is gone.
-      expect(currentPath()).toBe('/import');
+      expect(pathname()).toBe('/import');
       expect(navigationType()).toBe('POP');
       // And nothing was written: the row is still there to come back to,
       // which is the whole difference between Back and _Skip this one_.
@@ -3185,7 +3185,7 @@ describe('MovieForm — the Import context', () => {
       expectPlainAddContext();
       expect(titleField().value).toBe('');
       expect(videoPicker().type).toBe('file');
-      expect(currentPath()).toBe('/add');
+      expect(pathname()).toBe('/add');
     });
 
     it('falls back to the plain Add context when there is no run', async () => {
@@ -3196,7 +3196,7 @@ describe('MovieForm — the Import context', () => {
       expect(problemReads()).toHaveLength(1);
       expectPlainAddContext();
       expect(titleField().value).toBe('');
-      expect(currentPath()).toBe('/add');
+      expect(pathname()).toBe('/add');
     });
 
     it('saves through POST /api/movies after the fallback, never the resolve route', async () => {
@@ -3224,7 +3224,7 @@ describe('MovieForm — the Import context', () => {
       // context pushed. Both step now, so the distinction the name drew is
       // gone — what is left to assert is that the fallback is still a step
       // rather than a landing pushed on top of the screen behind it.
-      expect(currentPath()).toBe('/import');
+      expect(pathname()).toBe('/import');
       expect(navigationType()).toBe('POP');
       expect(dismissRequests()).toEqual([]);
     });
@@ -3248,7 +3248,7 @@ describe('MovieForm — the Import context', () => {
       // link's is.
       await waitFor(() => expect(resolveRequests()).toHaveLength(1));
       await waitFor(() => expectPlainAddContext());
-      expect(currentPath()).toBe('/add');
+      expect(pathname()).toBe('/add');
     });
 
     it('opens as an empty form, the found files gone from the slots', async () => {
@@ -3273,7 +3273,7 @@ describe('MovieForm — the Import context', () => {
 
       await waitFor(() => expectPlainAddContext());
       expect(dismissRequests()).toEqual([]);
-      expect(currentPath()).toBe('/add');
+      expect(pathname()).toBe('/add');
     });
 
     it('stays standing with everything in it on any other refusal', async () => {
@@ -3570,7 +3570,7 @@ describe('MovieForm — the Import context', () => {
         // a dismiss ahead of a refused save would drop a row nothing fixed.
         await waitFor(() => expect(patchRequests()).toHaveLength(1));
         expect(dismissRequests()).toEqual([]);
-        expect(currentPath()).toBe('/add');
+        expect(pathname()).toBe('/add');
 
         settle(okResponse(UNFILED));
 
@@ -3603,11 +3603,11 @@ describe('MovieForm — the Import context', () => {
         // Every exit from the import context lands on the review, and this
         // one only once the review has one row fewer to show.
         await waitFor(() => expect(dismissRequests()).toHaveLength(1));
-        expect(currentPath()).toBe('/add');
+        expect(pathname()).toBe('/add');
 
         settle(noContentResponse());
 
-        await waitFor(() => expect(currentPath()).toBe('/import'));
+        await waitFor(() => expect(pathname()).toBe('/import'));
       });
 
       // 20 — Back navigation, Phase 5 (#175). The second of _Save & continue_'s
@@ -3620,7 +3620,7 @@ describe('MovieForm — the Import context', () => {
 
         fireEvent.click(saveAndContinue());
 
-        await waitFor(() => expect(currentPath()).toBe('/import'));
+        await waitFor(() => expect(pathname()).toBe('/import'));
         expect(navigationType()).toBe('POP');
       });
 
@@ -3642,7 +3642,7 @@ describe('MovieForm — the Import context', () => {
         expect(patchRequests()).toHaveLength(1);
 
         settle(okResponse(UNFILED));
-        await waitFor(() => expect(currentPath()).toBe('/import'));
+        await waitFor(() => expect(pathname()).toBe('/import'));
       });
 
       it('stays standing with everything in it, nothing dismissed, when the PATCH is refused', async () => {
@@ -3658,7 +3658,7 @@ describe('MovieForm — the Import context', () => {
         await waitFor(() => expect(patchRequests()).toHaveLength(1));
         await waitFor(() => expect(saveAndContinue().disabled).toBe(false));
         expect(dismissRequests()).toEqual([]);
-        expect(currentPath()).toBe('/add');
+        expect(pathname()).toBe('/add');
         expect(lanternBanner()).not.toBeNull();
         expect(picked('Drama')).toBe('true');
         expect(titleField().value).toBe('The Lantern Keeper');
@@ -3677,7 +3677,7 @@ describe('MovieForm — the Import context', () => {
         expect(String(dismissRequests()[0][0])).toBe(
           '/api/import/current/problems/p9'
         );
-        await waitFor(() => expect(currentPath()).toBe('/import'));
+        await waitFor(() => expect(pathname()).toBe('/import'));
       });
 
       it('writes nothing — no PATCH, no POST, no resolve', async () => {
@@ -3686,7 +3686,7 @@ describe('MovieForm — the Import context', () => {
 
         fireEvent.click(skipThisOne());
 
-        await waitFor(() => expect(currentPath()).toBe('/import'));
+        await waitFor(() => expect(pathname()).toBe('/import'));
         expect(patchRequests()).toEqual([]);
         expect(saveRequests()).toEqual([]);
         expect(resolveRequests()).toEqual([]);
@@ -3710,7 +3710,7 @@ describe('MovieForm — the Import context', () => {
         expect(titleField().value).toBe('The Lantern Keeper');
         expect(directorField().value).toBe('Ana Sørensen');
         expect(screen.getByText('lantern.mp4')).toBeDefined();
-        expect(currentPath()).toBe('/add');
+        expect(pathname()).toBe('/add');
       });
 
       it('falls back the same way when there is no run at all', async () => {
@@ -3740,7 +3740,7 @@ describe('MovieForm — the Import context', () => {
         // on the entry this helper put behind the form. The **Landing** is
         // only for the form nothing opened. Phase 5 (issue #175) moved that
         // entry to `/import`, which is what a Resolve really has behind it.
-        await waitFor(() => expect(currentPath()).toBe('/import'));
+        await waitFor(() => expect(pathname()).toBe('/import'));
         expect(navigationType()).toBe('POP');
         expect(dismissRequests()).toEqual([]);
       });
@@ -3754,7 +3754,7 @@ describe('MovieForm — the Import context', () => {
         // /import" was the claim while the Import context pushed and the
         // fallback stepped. Both step now, onto the review the form was
         // opened from — and a step is still what this asserts.
-        expect(currentPath()).toBe('/import');
+        expect(pathname()).toBe('/import');
         expect(navigationType()).toBe('POP');
         expect(dismissRequests()).toEqual([]);
       });
@@ -3778,7 +3778,7 @@ describe('MovieForm — the Import context', () => {
         fireEvent.click(saveChanges());
 
         await waitFor(() => expect(patchRequests()).toHaveLength(1));
-        await waitFor(() => expect(currentPath()).toBe('/movie/a1'));
+        await waitFor(() => expect(pathname()).toBe('/movie/a1'));
         expect(dismissRequests()).toEqual([]);
         expect(resolveRequests()).toEqual([]);
       });
@@ -3862,7 +3862,7 @@ describe('MovieForm — the landing, and leaving an edit', () => {
     // that it is the entry the form was opened from rather than a second copy
     // of it, so the page comes back scrolled where it was left and its own Back
     // still leads out of the film rather than back into the form.
-    await waitFor(() => expect(currentPath()).toBe('/movie/a1'));
+    await waitFor(() => expect(pathname()).toBe('/movie/a1'));
     expect(navigationType()).toBe('POP');
   });
 
@@ -3874,13 +3874,13 @@ describe('MovieForm — the landing, and leaving an edit', () => {
     // _Save changes_ used to, with nothing else in this file noticing.
     const { unmount } = await renderAt(['/movie/a1', '/add?movie=a1']);
     fireEvent.click(backPill());
-    expect(currentPath()).toBe('/movie/a1');
+    expect(pathname()).toBe('/movie/a1');
     expect(navigationType()).toBe('POP');
     unmount();
 
     await renderAt(['/movie/a1', '/add?movie=a1']);
     fireEvent.click(cancel());
-    expect(currentPath()).toBe('/movie/a1');
+    expect(pathname()).toBe('/movie/a1');
     expect(navigationType()).toBe('POP');
   });
 
@@ -3894,7 +3894,7 @@ describe('MovieForm — the landing, and leaving an edit', () => {
     expect(titleField().value).toBe('');
     fireEvent.click(backPill());
 
-    expect(currentPath()).toBe('/movie/a1');
+    expect(pathname()).toBe('/movie/a1');
     // Pushed rather than stepped, as every **Landing** is: the page it lands on
     // has history behind it, so its own Back is not a dead button in turn.
     expect(navigationType()).toBe('PUSH');
@@ -3908,7 +3908,7 @@ describe('MovieForm — the landing, and leaving an edit', () => {
     // Where the ＋ is — the Library group's first row — rather than the
     // library, which is where _Add to library_ goes and is a different
     // journey's end.
-    expect(currentPath()).toBe('/settings');
+    expect(pathname()).toBe('/settings');
     expect(navigationType()).toBe('PUSH');
   });
 
@@ -3924,7 +3924,7 @@ describe('MovieForm — the landing, and leaving an edit', () => {
 
     fireEvent.click(backPill());
 
-    expect(currentPath()).toBe('/import');
+    expect(pathname()).toBe('/import');
     expect(navigationType()).toBe('PUSH');
   });
 
@@ -3939,7 +3939,7 @@ describe('MovieForm — the landing, and leaving an edit', () => {
 
     fireEvent.click(save());
 
-    await waitFor(() => expect(currentPath()).toBe('/'));
+    await waitFor(() => expect(pathname()).toBe('/'));
     expect(navigationType()).toBe('PUSH');
   });
 });

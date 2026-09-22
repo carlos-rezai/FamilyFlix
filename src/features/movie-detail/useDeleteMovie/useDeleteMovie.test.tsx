@@ -8,7 +8,7 @@ import {
 } from 'react-router-dom';
 
 import { useDeleteMovie } from './useDeleteMovie';
-import { LocationProbe } from '@/test-support/LocationProbe/LocationProbe';
+import { LocationProbe, url } from '@/test-support/LocationProbe/LocationProbe';
 import {
   noContentResponse,
   notFoundResponse,
@@ -82,8 +82,6 @@ function renderAt(
 
 const confirm = () =>
   fireEvent.click(screen.getByRole('button', { name: 'Delete movie' }));
-
-const url = () => screen.getByTestId('url').textContent;
 
 describe('useDeleteMovie', () => {
   it('sends DELETE to the movie’s route', async () => {

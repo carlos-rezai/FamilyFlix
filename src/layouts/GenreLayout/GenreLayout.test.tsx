@@ -13,7 +13,10 @@ import { GenreLayout, type GenreLayoutProps } from './GenreLayout';
 import { theme } from '@/styles/theme';
 import { comesBefore } from '@/test-support/comesBefore/comesBefore';
 import { headerSpacer } from '@/test-support/headerSpacer/headerSpacer';
-import { LocationProbe } from '@/test-support/LocationProbe/LocationProbe';
+import {
+  LocationProbe,
+  pathname,
+} from '@/test-support/LocationProbe/LocationProbe';
 import { stubScrollMetrics } from '@/test-support/stubScrollMetrics/stubScrollMetrics';
 
 stubScrollMetrics(9400);
@@ -33,8 +36,6 @@ function renderLayout(
     </MemoryRouter>
   );
 }
-
-const pathname = () => screen.getByTestId('pathname').textContent;
 
 const back = () => screen.getByRole('button', { name: 'Back' });
 

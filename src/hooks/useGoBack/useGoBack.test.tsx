@@ -11,6 +11,7 @@ import { useGoBack } from './useGoBack';
 import {
   LocationProbe,
   navigationType,
+  pathname,
 } from '@/test-support/LocationProbe/LocationProbe';
 import { shippingSourcesMatching } from '@/test-support/shippingSources/shippingSources';
 
@@ -49,8 +50,6 @@ function renderAt(
 
 const clickBack = () =>
   fireEvent.click(screen.getByRole('button', { name: 'Back' }));
-
-const pathname = () => screen.getByTestId('pathname').textContent;
 
 describe('useGoBack', () => {
   it('steps back through history when there is history behind the screen', () => {

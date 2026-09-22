@@ -14,7 +14,7 @@ import { DeleteMovieDialog } from './DeleteMovieDialog';
 import { theme } from '@/styles/theme';
 import type { GenrePayload } from '@/types';
 import { comesBefore } from '@/test-support/comesBefore/comesBefore';
-import { LocationProbe } from '@/test-support/LocationProbe/LocationProbe';
+import { LocationProbe, url } from '@/test-support/LocationProbe/LocationProbe';
 import { makeMovie } from '@/test-support/makeMovie/makeMovie';
 import {
   noContentResponse,
@@ -344,8 +344,6 @@ function renderHosted() {
   );
 }
 
-const url = () => screen.getByTestId('url').textContent;
-
 /**
  * What confirming does: where it lands, what it reads while the request runs,
  * that a dismissal does not cancel it, and what a refusal leaves behind.
@@ -360,11 +358,7 @@ describe('DeleteMovieDialog — confirming', () => {
 
       // One step back, not a fresh `/`: the shelf keeps the sort it was left with,
       // and it refetches on the way in, so the deleted card is not on it.
-      await waitFor(() =>
-        expect(screen.getByTestId('url').textContent).toBe(
-          '/genre/Drama?sort=az'
-        )
-      );
+      await waitFor(() => expect(url()).toBe('/genre/Drama?sort=az'));
       expect(await screen.findByText('Weepie')).toBeTruthy();
       expect(screen.queryByText('Northwind')).toBeNull();
       expect(screen.queryByRole('dialog')).toBeNull();

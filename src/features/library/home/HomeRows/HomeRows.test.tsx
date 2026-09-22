@@ -19,7 +19,11 @@ import {
   type Movie,
 } from '@/types';
 import { toGenreQueryParams } from '@/utils';
-import { LocationProbe } from '@/test-support/LocationProbe/LocationProbe';
+import {
+  LocationProbe,
+  pathname,
+  search,
+} from '@/test-support/LocationProbe/LocationProbe';
 import { makeMovie } from '@/test-support/makeMovie/makeMovie';
 import {
   okResponse,
@@ -200,15 +204,6 @@ function respondWithRows(
   });
 }
 
-function currentPath() {
-  return screen.getByTestId('pathname').textContent;
-}
-
-/** The query string the router currently carries, `?sort=a-z` and the like. */
-function currentSearch() {
-  return screen.getByTestId('search').textContent;
-}
-
 function renderRows(url = '/') {
   return render(
     <MemoryRouter initialEntries={[url]}>
@@ -384,7 +379,7 @@ describe('HomeRows — the Continue Watching row', () => {
     );
     fireEvent.click(started.getByText('Quiet Harbor'));
 
-    expect(currentPath()).toBe('/movie/d1');
+    expect(pathname()).toBe('/movie/d1');
   });
 
   it('leaves a started movie in its genre row as well', async () => {
@@ -449,7 +444,7 @@ describe('HomeRows — the Favorites row', () => {
     const shelf = within(screen.getByRole('region', { name: 'Favorites' }));
     fireEvent.click(shelf.getByRole('button', { name: 'Lantern Road' }));
 
-    expect(currentPath()).toBe('/movie/f2');
+    expect(pathname()).toBe('/movie/f2');
   });
 
   it('leaves a favorite in its genre row as well', async () => {
@@ -880,8 +875,8 @@ describe('HomeRows — the carried sort on View all', () => {
   it('carries the order the library is in into the genre page', async () => {
     await openAll('/?sort=a-z', 'Action');
 
-    expect(currentPath()).toBe('/genre/Action');
-    expect(currentSearch()).toBe('?sort=a-z');
+    expect(pathname()).toBe('/genre/Action');
+    expect(search()).toBe('?sort=a-z');
   });
 
   it('goes to a clean path, with no query string at all, at the default order', async () => {
@@ -889,8 +884,8 @@ describe('HomeRows — the carried sort on View all', () => {
     // looking at, not a longhand of it.
     await openAll('/', 'Action');
 
-    expect(currentPath()).toBe('/genre/Action');
-    expect(currentSearch()).toBe('');
+    expect(pathname()).toBe('/genre/Action');
+    expect(search()).toBe('');
   });
 
   it('still goes clean when the URL spells the default order out', async () => {
@@ -898,7 +893,7 @@ describe('HomeRows — the carried sort on View all', () => {
     // are the same destination.
     await openAll('/?sort=recently-added', 'Action');
 
-    expect(currentSearch()).toBe('');
+    expect(search()).toBe('');
   });
 
   it('never carries an order the rows are not actually in', async () => {
@@ -906,8 +901,8 @@ describe('HomeRows — the carried sort on View all', () => {
     // default order; the link must say what the rows say, not what the URL did.
     await openAll('/?sort=nonsense', 'Action');
 
-    expect(currentPath()).toBe('/genre/Action');
-    expect(currentSearch()).toBe('');
+    expect(pathname()).toBe('/genre/Action');
+    expect(search()).toBe('');
   });
 
   it.each(MOVIE_SORTS)(
@@ -919,7 +914,7 @@ describe('HomeRows — the carried sort on View all', () => {
 
       await openAll(`/?sort=${sort}`, 'Action');
 
-      expect(currentSearch()).toBe(expected === '' ? '' : `?${expected}`);
+      expect(search()).toBe(expected === '' ? '' : `?${expected}`);
     }
   );
 
@@ -928,7 +923,7 @@ describe('HomeRows — the carried sort on View all', () => {
     // box is what covers that.
     await openAll('/?q=comet&sort=a-z', 'Action');
 
-    expect(currentSearch()).toBe('?sort=a-z');
+    expect(search()).toBe('?sort=a-z');
   });
 
   it('leaves the home’s genre and rating filters behind', async () => {
@@ -936,15 +931,15 @@ describe('HomeRows — the carried sort on View all', () => {
     // a parameter it cannot show is one it must never be handed.
     await openAll('/?genre=Action&rating=8&sort=a-z', 'Action');
 
-    expect(currentPath()).toBe('/genre/Action');
-    expect(currentSearch()).toBe('?sort=a-z');
+    expect(pathname()).toBe('/genre/Action');
+    expect(search()).toBe('?sort=a-z');
   });
 
   it('encodes a genre name with a space in it and carries the order alongside', async () => {
     await openAll('/?sort=a-z', 'Science Fiction', SPACED);
 
-    expect(currentPath()).toBe('/genre/Science%20Fiction');
-    expect(currentSearch()).toBe('?sort=a-z');
+    expect(pathname()).toBe('/genre/Science%20Fiction');
+    expect(search()).toBe('?sort=a-z');
   });
 });
 
@@ -1136,7 +1131,7 @@ describe('HomeRows — pruning the shelf', () => {
     fireEvent.keyDown(heart, { key: 'Enter' });
     fireEvent.click(heart);
 
-    expect(currentPath()).toBe('/');
+    expect(pathname()).toBe('/');
     await waitFor(() => expect(favoriteSaves()).toEqual(['a1']));
   });
 });

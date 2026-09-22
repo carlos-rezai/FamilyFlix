@@ -20,7 +20,11 @@ import type {
   ImportRun,
   Movie,
 } from '@/types';
-import { LocationProbe } from '@/test-support/LocationProbe/LocationProbe';
+import {
+  LocationProbe,
+  pathname,
+  search,
+} from '@/test-support/LocationProbe/LocationProbe';
 import { makeMovie } from '@/test-support/makeMovie/makeMovie';
 import {
   createdResponse,
@@ -234,15 +238,6 @@ function renderApp(entry = '/') {
   );
 }
 
-function currentPath() {
-  return screen.getByTestId('pathname').textContent;
-}
-
-/** The query string the router currently carries, `?movie=a1` and the like. */
-function currentSearch() {
-  return screen.getByTestId('search').textContent;
-}
-
 /** The card for one movie — clicking its title bubbles to the card itself. */
 function cardFor(title: string) {
   return screen.getAllByText(title)[0];
@@ -264,7 +259,7 @@ describe('App — routing the browse home to its destinations', () => {
     expect(
       await screen.findByRole('heading', { name: 'Action' })
     ).toBeDefined();
-    expect(currentPath()).toBe('/');
+    expect(pathname()).toBe('/');
   });
 
   it('navigates to /movie/:id when a poster card is clicked, and that movie’s page renders', async () => {
@@ -273,7 +268,7 @@ describe('App — routing the browse home to its destinations', () => {
 
     fireEvent.click(cardFor('Northwind'));
 
-    expect(currentPath()).toBe('/movie/a1');
+    expect(pathname()).toBe('/movie/a1');
     expect(
       await screen.findByRole('heading', { level: 1, name: 'Northwind' })
     ).toBeDefined();
@@ -287,7 +282,7 @@ describe('App — routing the browse home to its destinations', () => {
     const action = within(screen.getByRole('region', { name: 'Action' }));
     fireEvent.click(action.getByRole('button', { name: /view all/i }));
 
-    expect(currentPath()).toBe('/genre/Action');
+    expect(pathname()).toBe('/genre/Action');
     expect(
       await screen.findByRole('heading', { name: /Action/ })
     ).toBeDefined();
@@ -302,7 +297,7 @@ describe('App — routing the browse home to its destinations', () => {
     );
     fireEvent.click(sciFi.getByRole('button', { name: /view all 4/i }));
 
-    expect(currentPath()).toBe('/genre/Science%20Fiction');
+    expect(pathname()).toBe('/genre/Science%20Fiction');
     expect(
       await screen.findByRole('heading', { name: /Science Fiction/ })
     ).toBeDefined();
@@ -337,7 +332,7 @@ describe('App — routing the browse home to its destinations', () => {
 
     fireEvent.click(back);
 
-    expect(currentPath()).toBe('/');
+    expect(pathname()).toBe('/');
     // Back lands on the browse home, which loads. Wait for the rows the trip
     // was for, rather than leaving the fetch to resolve into a tree the next
     // test has already torn down.
@@ -351,7 +346,7 @@ describe('App — routing the browse home to its destinations', () => {
     const action = within(screen.getByRole('region', { name: 'Action' }));
     fireEvent.click(action.getAllByRole('button', { name: /favorite/i })[0]);
 
-    expect(currentPath()).toBe('/');
+    expect(pathname()).toBe('/');
     expect(screen.queryByRole('heading', { name: /a1/ })).toBeNull();
     expect(screen.getByRole('heading', { name: 'Action' })).toBeDefined();
   });
@@ -396,7 +391,7 @@ describe('App — the movie page’s navigating actions', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Play' }));
 
-    expect(currentPath()).toBe('/movie/a1/play');
+    expect(pathname()).toBe('/movie/a1/play');
     // Pressing Play on Northwind plays Northwind: the button, the URL and the
     // stream all name the same film.
     await waitFor(() =>
@@ -418,8 +413,8 @@ describe('App — the movie page’s navigating actions', () => {
     // said "Edit details" since #26 now does what it says. There is no `/edit`
     // route — `?movie=` is how the prototype edits, and the screen it lands on
     // is the same one that adds, doing the other job.
-    expect(currentPath()).toBe('/add');
-    expect(currentSearch()).toBe('?movie=a1');
+    expect(pathname()).toBe('/add');
+    expect(search()).toBe('?movie=a1');
     expect(
       await screen.findByRole('heading', { name: 'Edit details' })
     ).toBeDefined();
@@ -461,7 +456,7 @@ describe('App — returning the browse home to where the parent was', () => {
     await screen.findByRole('heading', { level: 1, name: 'Northwind' });
     fireEvent.click(screen.getByRole('button', { name: 'Back' }));
 
-    expect(currentPath()).toBe('/');
+    expect(pathname()).toBe('/');
     await screen.findByRole('heading', { name: 'Action' });
     expect(homeBody().scrollTop).toBe(1240);
 
@@ -479,7 +474,7 @@ describe('App — returning the browse home to where the parent was', () => {
     await pickVideo();
     fireEvent.click(screen.getByRole('button', { name: /add to library/i }));
 
-    await waitFor(() => expect(currentPath()).toBe('/'));
+    await waitFor(() => expect(pathname()).toBe('/'));
     await screen.findByRole('heading', { name: 'Action' });
     expect(homeBody().scrollTop).toBe(0);
   });
@@ -494,7 +489,7 @@ describe('App — returning the browse home to where the parent was', () => {
     await screen.findByRole('heading', { name: /Action/ });
     fireEvent.click(screen.getByRole('button', { name: 'history step' }));
 
-    expect(currentPath()).toBe('/');
+    expect(pathname()).toBe('/');
     await screen.findByRole('heading', { name: 'Action' });
     expect(homeBody().scrollTop).toBe(860);
   });
@@ -548,7 +543,7 @@ describe('App — the genre screen behind “View all”', () => {
     const action = within(screen.getByRole('region', { name: 'Action' }));
     fireEvent.click(action.getByRole('button', { name: /view all 214/i }));
 
-    expect(currentPath()).toBe('/genre/Action');
+    expect(pathname()).toBe('/genre/Action');
     await screen.findByRole('heading', { level: 1, name: 'Action' });
     // The count line is the payload landing; the name was on screen before it.
     await screen.findByText('214 titles');
@@ -577,7 +572,7 @@ describe('App — the genre screen behind “View all”', () => {
 
     fireEvent.click(cardFor('Northwind'));
 
-    expect(currentPath()).toBe('/movie/a1');
+    expect(pathname()).toBe('/movie/a1');
     expect(
       await screen.findByRole('heading', { level: 1, name: 'Northwind' })
     ).toBeDefined();
@@ -594,8 +589,8 @@ describe('App — the genre screen behind “View all”', () => {
     await screen.findByRole('heading', { level: 1, name: 'Northwind' });
     fireEvent.click(screen.getByRole('button', { name: 'Back' }));
 
-    expect(currentPath()).toBe('/genre/Action');
-    expect(currentSearch()).toBe('?q=north&sort=a-z');
+    expect(pathname()).toBe('/genre/Action');
+    expect(search()).toBe('?q=north&sort=a-z');
     await screen.findByText('1 of 8 titles');
     expect(screenBody().scrollTop).toBe(1240);
   });
@@ -658,8 +653,8 @@ describe('App — the order carried from the home to the genre page', () => {
     );
     fireEvent.click(sciFi.getByRole('button', { name: /view all 4/i }));
 
-    expect(currentPath()).toBe('/genre/Science%20Fiction');
-    expect(currentSearch()).toBe('?sort=a-z');
+    expect(pathname()).toBe('/genre/Science%20Fiction');
+    expect(search()).toBe('?sort=a-z');
     await screen.findByText('4 titles');
     // The server owns the order; the grid renders the answer it gave.
     expect(cardTitles()).toEqual([
@@ -682,8 +677,8 @@ describe('App — the order carried from the home to the genre page', () => {
     );
     fireEvent.click(sciFi.getByRole('button', { name: /view all 4/i }));
 
-    expect(currentPath()).toBe('/genre/Science%20Fiction');
-    expect(currentSearch()).toBe('');
+    expect(pathname()).toBe('/genre/Science%20Fiction');
+    expect(search()).toBe('');
     await screen.findByText('4 titles');
     expect(cardTitles()).toEqual([
       'Quiet Harbor',
@@ -774,12 +769,12 @@ describe('App — a typed title becomes a row on the home screen', () => {
 
     // The gear is the only door to any maintainer surface.
     fireEvent.click(screen.getByRole('button', { name: 'Settings' }));
-    expect(currentPath()).toBe('/settings');
+    expect(pathname()).toBe('/settings');
     await screen.findByRole('heading', { name: 'Settings' });
 
     // And ＋ Add a movie is the only door from there to the form.
     fireEvent.click(screen.getByRole('button', { name: 'Add a movie' }));
-    expect(currentPath()).toBe('/add');
+    expect(pathname()).toBe('/add');
 
     const title = await screen.findByRole('textbox', { name: /title/i });
     fireEvent.change(title, { target: { value: 'Rear Window' } });
@@ -791,7 +786,7 @@ describe('App — a typed title becomes a row on the home screen', () => {
 
     // Landing on the browse home is where the maintainer sees it worked, and
     // the row is there without a reload because the screen loads on arrival.
-    await waitFor(() => expect(currentPath()).toBe('/'));
+    await waitFor(() => expect(pathname()).toBe('/'));
     // By the card's own name rather than by its text: a movie with no poster
     // draws its title twice — once over the gradient placeholder, once as the
     // caption — and every film added by this slice is a film with no poster.
@@ -810,7 +805,7 @@ describe('App — a typed title becomes a row on the home screen', () => {
     // it too.
     fireEvent.click(screen.getByRole('button', { name: 'Back' }));
 
-    expect(currentPath()).toBe('/');
+    expect(pathname()).toBe('/');
     await screen.findByRole('heading', { name: 'Action' });
     expect(screen.queryByText('Rear Window')).toBeNull();
   });
@@ -954,7 +949,7 @@ describe('App — a film filed under two genres reaches both rows', () => {
     await pickVideo();
     fireEvent.click(screen.getByRole('button', { name: /add to library/i }));
 
-    await waitFor(() => expect(currentPath()).toBe('/'));
+    await waitFor(() => expect(pathname()).toBe('/'));
     await screen.findByRole('region', { name: 'Sci-Fi' });
 
     // Both shelves, with no reload — the browse home loads on arrival, and the
@@ -977,7 +972,7 @@ describe('App — a film filed under two genres reaches both rows', () => {
     await pickVideo();
     fireEvent.click(screen.getByRole('button', { name: /add to library/i }));
 
-    await waitFor(() => expect(currentPath()).toBe('/'));
+    await waitFor(() => expect(pathname()).toBe('/'));
 
     expect(await screen.findByRole('region', { name: 'Sci-Fi' })).toBeDefined();
   });
@@ -992,7 +987,7 @@ describe('App — a film filed under two genres reaches both rows', () => {
     await pickVideo();
     fireEvent.click(screen.getByRole('button', { name: /add to library/i }));
 
-    await waitFor(() => expect(currentPath()).toBe('/'));
+    await waitFor(() => expect(pathname()).toBe('/'));
     await waitFor(() =>
       expect(cardInRow('Thriller', 'Rear Window')).not.toBeNull()
     );
@@ -1013,7 +1008,7 @@ describe('App — a film filed under two genres reaches both rows', () => {
     await pickVideo();
     fireEvent.click(screen.getByRole('button', { name: /add to library/i }));
 
-    await waitFor(() => expect(currentPath()).toBe('/'));
+    await waitFor(() => expect(pathname()).toBe('/'));
 
     // Picked, picked, unpicked — one genre reaches the wire, in the order it
     // survived in.
@@ -1034,7 +1029,7 @@ describe('App — a film filed under two genres reaches both rows', () => {
     await pickVideo();
     fireEvent.click(screen.getByRole('button', { name: /add to library/i }));
 
-    await waitFor(() => expect(currentPath()).toBe('/'));
+    await waitFor(() => expect(pathname()).toBe('/'));
     await screen.findByRole('region', { name: 'Thriller' });
 
     // Unchanged from Phase 1, and still not a bug: every section of the home is
@@ -1066,7 +1061,7 @@ describe('App — the import flow behind the gear', () => {
       await screen.findByRole('heading', { level: 1, name: 'Import library' })
     ).toBeDefined();
     expect(screen.getByRole('textbox', { name: 'Spreadsheet' })).toBeDefined();
-    expect(currentPath()).toBe('/import');
+    expect(pathname()).toBe('/import');
   });
 
   it('walks the gear and ⇪ Import from spreadsheet to the import screen', async () => {
@@ -1079,7 +1074,7 @@ describe('App — the import flow behind the gear', () => {
       screen.getByRole('button', { name: /import from spreadsheet/i })
     );
 
-    expect(currentPath()).toBe('/import');
+    expect(pathname()).toBe('/import');
     expect(
       await screen.findByRole('heading', { level: 1, name: 'Import library' })
     ).toBeDefined();
@@ -1097,7 +1092,7 @@ describe('App — the import flow behind the gear', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /back/i }));
 
-    expect(currentPath()).toBe('/settings');
+    expect(pathname()).toBe('/settings');
     expect(
       await screen.findByRole('heading', { name: 'Settings' })
     ).toBeDefined();
@@ -1210,7 +1205,7 @@ describe('App — coming back out of the player', () => {
     scrollTo(detailBody(), 720);
 
     fireEvent.click(screen.getByRole('button', { name: 'Play' }));
-    expect(currentPath()).toBe('/movie/a1/play');
+    expect(pathname()).toBe('/movie/a1/play');
     await pressBack();
 
     await screen.findByRole('heading', { level: 1, name: 'Northwind' });
@@ -1232,8 +1227,8 @@ describe('App — coming back out of the player', () => {
     await screen.findByRole('heading', { level: 1, name: 'Northwind' });
     await pressBack();
 
-    await waitFor(() => expect(currentPath()).toBe('/'));
-    expect(currentSearch()).toBe('?q=north&sort=a-z');
+    await waitFor(() => expect(pathname()).toBe('/'));
+    expect(search()).toBe('?q=north&sort=a-z');
     await screen.findByRole('heading', { name: 'Action' });
     expect(homeBody().scrollTop).toBe(1240);
   });
@@ -1255,7 +1250,7 @@ describe('App — coming back out of the player', () => {
     // `useDeleteMovie` is untouched: its own step lands on the library because
     // the entry behind the film's page is the library again, rather than the
     // player the push used to leave there.
-    await waitFor(() => expect(currentPath()).toBe('/'));
+    await waitFor(() => expect(pathname()).toBe('/'));
   });
 });
 
@@ -1288,11 +1283,11 @@ describe('App — coming back out of Import', () => {
     await screen.findByRole('heading', { name: 'Settings' });
     await pressBack();
 
-    await waitFor(() => expect(currentPath()).toBe('/'));
+    await waitFor(() => expect(pathname()).toBe('/'));
     // The shelf as the maintainer left it: Settings' Back was always a step,
     // and now it steps onto the entry the gear was pressed from rather than
     // onto the second `/settings` Import's push had left behind.
-    expect(currentSearch()).toBe('?q=north&sort=a-z');
+    expect(search()).toBe('?q=north&sort=a-z');
     await screen.findByRole('heading', { name: 'Action' });
   });
 });
@@ -1336,15 +1331,15 @@ describe('App — coming back out of an edit', () => {
     // The save lands where it always did — the page the correction is visible
     // on — and now by stepping onto the entry the form was opened from.
     await screen.findByRole('heading', { level: 1, name: 'Northwind' });
-    expect(currentPath()).toBe('/movie/a1');
+    expect(pathname()).toBe('/movie/a1');
 
     await pressBack();
 
     // The press that used to walk back into the form. The shelf comes back as
     // the maintainer left it, filtered and sorted, because a step returns the
     // entry rather than making a new one.
-    await waitFor(() => expect(currentPath()).toBe('/'));
-    expect(currentSearch()).toBe('?q=north&sort=a-z');
+    await waitFor(() => expect(pathname()).toBe('/'));
+    expect(search()).toBe('?q=north&sort=a-z');
     await screen.findByRole('heading', { name: 'Action' });
   });
 });
@@ -1452,7 +1447,7 @@ describe('App — coming back out of a Resolve', () => {
     const saveAndContinue = await screen.findByRole('button', {
       name: /save & continue/i,
     });
-    expect(currentPath()).toBe('/add');
+    expect(pathname()).toBe('/add');
 
     fireEvent.click(saveAndContinue);
 
@@ -1460,13 +1455,13 @@ describe('App — coming back out of a Resolve', () => {
     // second copy of it — and the row that was fixed is gone from the list
     // without the screen asking anyone where it had been.
     await screen.findByRole('heading', { level: 1, name: 'Import library' });
-    expect(currentPath()).toBe('/import');
+    expect(pathname()).toBe('/import');
     await waitFor(() => expect(resolveLink()).toBeNull());
 
     await pressBack();
 
     // The press that used to walk back into the form of a row already fixed.
     await screen.findByRole('heading', { name: 'Settings' });
-    expect(currentPath()).toBe('/settings');
+    expect(pathname()).toBe('/settings');
   });
 });

@@ -11,7 +11,10 @@ import {
 } from '@/App/useSnackbar/useSnackbar';
 import { theme } from '@/styles/theme';
 import { comesBefore } from '@/test-support/comesBefore/comesBefore';
-import { LocationProbe } from '@/test-support/LocationProbe/LocationProbe';
+import {
+  LocationProbe,
+  pathname,
+} from '@/test-support/LocationProbe/LocationProbe';
 import { snackbarStack } from '@/test-support/snackbarStack/snackbarStack';
 
 /**
@@ -658,7 +661,7 @@ describe('SnackbarProvider — above the route table', () => {
 
     fireEvent.click(screen.getByRole('link', { name: 'go' }));
 
-    expect(screen.getByTestId('pathname').textContent).toBe('/settings');
+    expect(pathname()).toBe('/settings');
     expect(screen.getByRole('heading', { name: 'Settings' })).toBeDefined();
     expect(screen.getByText('Saved.')).toBeDefined();
   });

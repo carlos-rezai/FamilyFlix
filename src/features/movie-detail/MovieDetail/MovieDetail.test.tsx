@@ -19,7 +19,11 @@ import {
 import { MovieDetail } from './MovieDetail';
 import { theme } from '@/styles/theme';
 import type { Movie } from '@/types';
-import { LocationProbe } from '@/test-support/LocationProbe/LocationProbe';
+import {
+  LocationProbe,
+  pathname,
+  search,
+} from '@/test-support/LocationProbe/LocationProbe';
 import { makeMovie } from '@/test-support/makeMovie/makeMovie';
 import {
   noContentResponse,
@@ -155,15 +159,6 @@ function writes() {
       url: String(input),
       body: JSON.parse(String(init?.body)) as unknown,
     }));
-}
-
-function currentPath() {
-  return screen.getByTestId('pathname').textContent;
-}
-
-/** The query string the router currently carries, `?movie=m1` and the like. */
-function currentSearch() {
-  return screen.getByTestId('search').textContent;
 }
 
 /**
@@ -537,7 +532,7 @@ describe('MovieDetail — the action row', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Play' }));
 
-    expect(currentPath()).toBe('/movie/m1/play');
+    expect(pathname()).toBe('/movie/m1/play');
   });
 
   it('writes nothing when Play is clicked — no watch state, no resume position', async () => {
@@ -997,8 +992,8 @@ describe('MovieDetail — the edit menu', () => {
 
     fireEvent.click(screen.getByRole('menuitem', { name: /edit details/i }));
 
-    expect(currentPath()).toBe('/add');
-    expect(currentSearch()).toBe('?movie=m1');
+    expect(pathname()).toBe('/add');
+    expect(search()).toBe('?movie=m1');
   });
 
   it('closes on Escape and gives focus back to the trigger', async () => {
@@ -1163,7 +1158,7 @@ describe('MovieDetail — deleting the movie', () => {
     fireEvent.click(
       within(dialog).getByRole('button', { name: 'Delete movie' })
     );
-    await waitFor(() => expect(currentPath()).toBe('/'));
+    await waitFor(() => expect(pathname()).toBe('/'));
     expect(screen.getByRole('heading', { name: 'Your library' })).toBeTruthy();
 
     // The deleted movie's entry is still in the forward stack. Stepping onto
@@ -1171,7 +1166,7 @@ describe('MovieDetail — deleting the movie', () => {
     // precisely this — rather than a Retry that could never work.
     fireEvent.click(screen.getByRole('button', { name: 'Forward' }));
 
-    expect(currentPath()).toBe('/movie/m1');
+    expect(pathname()).toBe('/movie/m1');
     expect(await screen.findByText('That movie isn’t here')).toBeTruthy();
     expect(screen.getByRole('link', { name: /back to library/i })).toBeTruthy();
     expect(screen.queryByRole('button', { name: /retry/i })).toBeNull();
@@ -1202,7 +1197,7 @@ describe('MovieDetail — the load states', () => {
 
     fireEvent.click(back);
 
-    expect(currentPath()).toBe('/');
+    expect(pathname()).toBe('/');
   });
 
   it('offers a Retry, and no dead 404 link, when the movie fails to load', async () => {

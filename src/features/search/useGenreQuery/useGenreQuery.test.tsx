@@ -4,14 +4,10 @@ import { renderHook, act, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 
 import { useGenreQuery } from './useGenreQuery';
-import { LocationProbe } from '@/test-support/LocationProbe/LocationProbe';
-
-function currentUrl() {
-  return screen.getByTestId('url').textContent;
-}
+import { LocationProbe, url } from '@/test-support/LocationProbe/LocationProbe';
 
 function writtenParams() {
-  return new URLSearchParams(String(currentUrl()).split('?')[1]);
+  return new URLSearchParams(String(url()).split('?')[1]);
 }
 
 function goBack() {
@@ -77,7 +73,7 @@ describe('useGenreQuery — writing the search text', () => {
 
     act(() => result.current.setSearch('lighthouse'));
 
-    expect(currentUrl()).toBe('/genre/Drama?q=lighthouse');
+    expect(url()).toBe('/genre/Drama?q=lighthouse');
   });
 
   it('reports the new query once the URL has changed', () => {
@@ -106,7 +102,7 @@ describe('useGenreQuery — writing the search text', () => {
 
     act(() => result.current.setSearch(''));
 
-    expect(currentUrl()).toBe('/genre/Drama');
+    expect(url()).toBe('/genre/Drama');
   });
 
   it('removes only its own parameter when the search is cleared', () => {
@@ -114,7 +110,7 @@ describe('useGenreQuery — writing the search text', () => {
 
     act(() => result.current.setSearch(''));
 
-    expect(currentUrl()).toBe('/genre/Drama?sort=a-z');
+    expect(url()).toBe('/genre/Drama?sort=a-z');
   });
 
   it('encodes a term that would otherwise break the URL', () => {
@@ -123,7 +119,7 @@ describe('useGenreQuery — writing the search text', () => {
     act(() => result.current.setSearch('comet & season'));
 
     expect(result.current.query.search).toBe('comet & season');
-    expect(String(currentUrl())).not.toContain('comet & season');
+    expect(String(url())).not.toContain('comet & season');
   });
 });
 
@@ -133,7 +129,7 @@ describe('useGenreQuery — writing the sort order', () => {
 
     act(() => result.current.setSort('a-z'));
 
-    expect(currentUrl()).toBe('/genre/Drama?sort=a-z');
+    expect(url()).toBe('/genre/Drama?sort=a-z');
   });
 
   it('reports the new order once the URL has changed', () => {
@@ -151,7 +147,7 @@ describe('useGenreQuery — writing the sort order', () => {
 
     act(() => result.current.setSort('recently-added'));
 
-    expect(currentUrl()).toBe('/genre/Drama');
+    expect(url()).toBe('/genre/Drama');
   });
 
   it('leaves the search text exactly as it found it', () => {
@@ -168,7 +164,7 @@ describe('useGenreQuery — writing the sort order', () => {
 
     act(() => result.current.setSort('recently-added'));
 
-    expect(currentUrl()).toBe('/genre/Drama?q=lighthouse');
+    expect(url()).toBe('/genre/Drama?q=lighthouse');
   });
 
   it('replaces the order rather than stacking a second one', () => {
@@ -176,7 +172,7 @@ describe('useGenreQuery — writing the sort order', () => {
 
     act(() => result.current.setSort('year'));
 
-    expect(currentUrl()).toBe('/genre/Drama?sort=year');
+    expect(url()).toBe('/genre/Drama?sort=year');
   });
 });
 
@@ -191,7 +187,7 @@ describe('useGenreQuery — what the writes do to history', () => {
 
     goBack();
 
-    expect(currentUrl()).toBe('/');
+    expect(url()).toBe('/');
   });
 
   it('leaves nothing of the abandoned terms behind to go back through', () => {
@@ -202,7 +198,7 @@ describe('useGenreQuery — what the writes do to history', () => {
 
     goBack();
 
-    expect(currentUrl()).toBe('/');
+    expect(url()).toBe('/');
   });
 
   it('costs no history when the order changes either', () => {
@@ -214,7 +210,7 @@ describe('useGenreQuery — what the writes do to history', () => {
 
     goBack();
 
-    expect(currentUrl()).toBe('/');
+    expect(url()).toBe('/');
   });
 
   it('costs no history across both controls together', () => {
@@ -226,6 +222,6 @@ describe('useGenreQuery — what the writes do to history', () => {
 
     goBack();
 
-    expect(currentUrl()).toBe('/');
+    expect(url()).toBe('/');
   });
 });

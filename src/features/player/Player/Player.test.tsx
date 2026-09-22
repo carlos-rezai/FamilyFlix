@@ -16,6 +16,7 @@ import type { Cue, Movie, PlaybackRead } from '@/types';
 import {
   LocationProbe,
   navigationType,
+  pathname,
 } from '@/test-support/LocationProbe/LocationProbe';
 import { makeMovie } from '@/test-support/makeMovie/makeMovie';
 import {
@@ -263,8 +264,6 @@ function picture(container: HTMLElement): HTMLVideoElement {
   }
   return video;
 }
-
-const pathname = () => screen.getByTestId('pathname').textContent;
 
 /** The one 96px circle, when the centre of the picture is showing anything. */
 function circle(container: HTMLElement): HTMLElement | undefined {

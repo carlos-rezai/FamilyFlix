@@ -5,7 +5,10 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 
 import ImportPage from './ImportPage';
 import { theme } from '@/styles/theme';
-import { LocationProbe } from '@/test-support/LocationProbe/LocationProbe';
+import {
+  LocationProbe,
+  pathname,
+} from '@/test-support/LocationProbe/LocationProbe';
 import { notFoundResponse } from '@/test-support/fakeResponse/fakeResponse';
 
 beforeEach(() => {
@@ -94,7 +97,7 @@ describe('ImportPage', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /back/i }));
 
-    expect(screen.getByTestId('pathname').textContent).toBe('/settings');
+    expect(pathname()).toBe('/settings');
     expect(screen.getByText('the settings hub')).toBeDefined();
   });
 });

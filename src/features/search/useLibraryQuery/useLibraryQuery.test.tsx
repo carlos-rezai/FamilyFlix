@@ -4,11 +4,7 @@ import { renderHook, act, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 
 import { useLibraryQuery } from './useLibraryQuery';
-import { LocationProbe } from '@/test-support/LocationProbe/LocationProbe';
-
-function currentUrl() {
-  return screen.getByTestId('url').textContent;
-}
+import { LocationProbe, url } from '@/test-support/LocationProbe/LocationProbe';
 
 function goBack() {
   act(() => {
@@ -58,7 +54,7 @@ describe('useLibraryQuery — writing the search text', () => {
 
     act(() => result.current.setSearch('lighthouse'));
 
-    expect(currentUrl()).toBe('/?q=lighthouse');
+    expect(url()).toBe('/?q=lighthouse');
   });
 
   it('leaves the other parameters in the URL exactly as it found them', () => {
@@ -68,7 +64,7 @@ describe('useLibraryQuery — writing the search text', () => {
 
     act(() => result.current.setSearch('lighthouse'));
 
-    const written = new URLSearchParams(String(currentUrl()).split('?')[1]);
+    const written = new URLSearchParams(String(url()).split('?')[1]);
     expect(written.get('sort')).toBe('a-z');
     expect(written.get('q')).toBe('lighthouse');
   });
@@ -80,7 +76,7 @@ describe('useLibraryQuery — writing the search text', () => {
 
     act(() => result.current.setSearch(''));
 
-    expect(currentUrl()).toBe('/');
+    expect(url()).toBe('/');
   });
 
   it('removes only its own parameter when the search is cleared', () => {
@@ -88,7 +84,7 @@ describe('useLibraryQuery — writing the search text', () => {
 
     act(() => result.current.setSearch(''));
 
-    expect(currentUrl()).toBe('/?sort=a-z');
+    expect(url()).toBe('/?sort=a-z');
   });
 
   it('encodes a term that would otherwise break the URL', () => {
@@ -97,7 +93,7 @@ describe('useLibraryQuery — writing the search text', () => {
     act(() => result.current.setSearch('comet & season'));
 
     expect(result.current.query.search).toBe('comet & season');
-    expect(String(currentUrl())).not.toContain('comet & season');
+    expect(String(url())).not.toContain('comet & season');
   });
 });
 
@@ -112,7 +108,7 @@ describe('useLibraryQuery — what the writes do to history', () => {
 
     goBack();
 
-    expect(currentUrl()).toBe('/movie/a1');
+    expect(url()).toBe('/movie/a1');
   });
 
   it('leaves nothing of the abandoned terms behind to go back through', () => {
@@ -123,7 +119,7 @@ describe('useLibraryQuery — what the writes do to history', () => {
 
     goBack();
 
-    expect(currentUrl()).toBe('/movie/a1');
+    expect(url()).toBe('/movie/a1');
   });
 });
 
@@ -155,7 +151,7 @@ describe('useLibraryQuery — writing the sort order', () => {
 
     act(() => result.current.setSort('a-z'));
 
-    expect(currentUrl()).toBe('/?sort=a-z');
+    expect(url()).toBe('/?sort=a-z');
   });
 
   it('removes “sort” at the default order, so an unsorted home is a clean “/”', () => {
@@ -165,7 +161,7 @@ describe('useLibraryQuery — writing the sort order', () => {
 
     act(() => result.current.setSort('recently-added'));
 
-    expect(currentUrl()).toBe('/');
+    expect(url()).toBe('/');
   });
 
   it('leaves the search text exactly as it found it', () => {
@@ -175,7 +171,7 @@ describe('useLibraryQuery — writing the sort order', () => {
 
     act(() => result.current.setSort('year'));
 
-    const written = new URLSearchParams(String(currentUrl()).split('?')[1]);
+    const written = new URLSearchParams(String(url()).split('?')[1]);
     expect(written.get('q')).toBe('lighthouse');
     expect(written.get('sort')).toBe('year');
   });
@@ -185,7 +181,7 @@ describe('useLibraryQuery — writing the sort order', () => {
 
     act(() => result.current.setSort('recently-added'));
 
-    expect(currentUrl()).toBe('/?q=lighthouse');
+    expect(url()).toBe('/?q=lighthouse');
   });
 
   it('replaces the order rather than stacking a second one', () => {
@@ -193,7 +189,7 @@ describe('useLibraryQuery — writing the sort order', () => {
 
     act(() => result.current.setSort('year'));
 
-    expect(currentUrl()).toBe('/?sort=year');
+    expect(url()).toBe('/?sort=year');
   });
 
   it('costs no history, so one Back still escapes the whole screen', () => {
@@ -205,7 +201,7 @@ describe('useLibraryQuery — writing the sort order', () => {
 
     goBack();
 
-    expect(currentUrl()).toBe('/movie/a1');
+    expect(url()).toBe('/movie/a1');
   });
 });
 
@@ -237,7 +233,7 @@ describe('useLibraryQuery — writing the genre', () => {
 
     act(() => result.current.setGenre('Drama'));
 
-    expect(currentUrl()).toBe('/?genre=Drama');
+    expect(url()).toBe('/?genre=Drama');
   });
 
   it('removes “genre” for the empty string, so “All Genres” is a clean “/”', () => {
@@ -245,7 +241,7 @@ describe('useLibraryQuery — writing the genre', () => {
 
     act(() => result.current.setGenre(''));
 
-    expect(currentUrl()).toBe('/');
+    expect(url()).toBe('/');
   });
 
   it('encodes a genre name that would otherwise break the query string', () => {
@@ -254,7 +250,7 @@ describe('useLibraryQuery — writing the genre', () => {
     act(() => result.current.setGenre('Science Fiction'));
 
     expect(result.current.query.genre).toBe('Science Fiction');
-    expect(currentUrl()).not.toContain('Science Fiction');
+    expect(url()).not.toContain('Science Fiction');
   });
 
   it('leaves the search text and the order exactly as it found them', () => {
@@ -262,7 +258,7 @@ describe('useLibraryQuery — writing the genre', () => {
 
     act(() => result.current.setGenre('Drama'));
 
-    const written = new URLSearchParams(String(currentUrl()).split('?')[1]);
+    const written = new URLSearchParams(String(url()).split('?')[1]);
     expect(written.get('q')).toBe('lighthouse');
     expect(written.get('sort')).toBe('a-z');
     expect(written.get('genre')).toBe('Drama');
@@ -273,7 +269,7 @@ describe('useLibraryQuery — writing the genre', () => {
 
     act(() => result.current.setGenre(''));
 
-    const written = new URLSearchParams(String(currentUrl()).split('?')[1]);
+    const written = new URLSearchParams(String(url()).split('?')[1]);
     expect(written.has('genre')).toBe(false);
     expect(written.get('q')).toBe('lighthouse');
     expect(written.get('sort')).toBe('a-z');
@@ -284,7 +280,7 @@ describe('useLibraryQuery — writing the genre', () => {
 
     act(() => result.current.setGenre('Action'));
 
-    expect(currentUrl()).toBe('/?genre=Action');
+    expect(url()).toBe('/?genre=Action');
   });
 
   it('costs no history, so one Back still escapes the whole screen', () => {
@@ -296,7 +292,7 @@ describe('useLibraryQuery — writing the genre', () => {
 
     goBack();
 
-    expect(currentUrl()).toBe('/movie/a1');
+    expect(url()).toBe('/movie/a1');
   });
 });
 
@@ -338,7 +334,7 @@ describe('useLibraryQuery — writing the minimum rating', () => {
 
     act(() => result.current.setRating(6));
 
-    expect(currentUrl()).toBe('/?rating=6');
+    expect(url()).toBe('/?rating=6');
   });
 
   it('removes “rating” for nought, so “All ratings” is a clean “/”', () => {
@@ -346,7 +342,7 @@ describe('useLibraryQuery — writing the minimum rating', () => {
 
     act(() => result.current.setRating(0));
 
-    expect(currentUrl()).toBe('/');
+    expect(url()).toBe('/');
   });
 
   it('leaves the search text, the genre and the order exactly as it found them', () => {
@@ -354,7 +350,7 @@ describe('useLibraryQuery — writing the minimum rating', () => {
 
     act(() => result.current.setRating(8));
 
-    const written = new URLSearchParams(String(currentUrl()).split('?')[1]);
+    const written = new URLSearchParams(String(url()).split('?')[1]);
     expect(written.get('q')).toBe('lighthouse');
     expect(written.get('genre')).toBe('Drama');
     expect(written.get('sort')).toBe('a-z');
@@ -366,7 +362,7 @@ describe('useLibraryQuery — writing the minimum rating', () => {
 
     act(() => result.current.setRating(0));
 
-    const written = new URLSearchParams(String(currentUrl()).split('?')[1]);
+    const written = new URLSearchParams(String(url()).split('?')[1]);
     expect(written.has('rating')).toBe(false);
     expect(written.get('q')).toBe('lighthouse');
     expect(written.get('genre')).toBe('Drama');
@@ -377,7 +373,7 @@ describe('useLibraryQuery — writing the minimum rating', () => {
 
     act(() => result.current.setRating(4));
 
-    expect(currentUrl()).toBe('/?rating=4');
+    expect(url()).toBe('/?rating=4');
   });
 
   it('costs no history, so one Back still escapes the whole screen', () => {
@@ -389,6 +385,6 @@ describe('useLibraryQuery — writing the minimum rating', () => {
 
     goBack();
 
-    expect(currentUrl()).toBe('/movie/a1');
+    expect(url()).toBe('/movie/a1');
   });
 });

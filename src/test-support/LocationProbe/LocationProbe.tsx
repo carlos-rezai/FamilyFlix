@@ -42,6 +42,21 @@ export function LocationProbe({ withBack = false }: LocationProbeProps) {
   );
 }
 
+/** Where the router is, without its query — read off the probe on screen. */
+export function pathname(): string | null {
+  return screen.getByTestId('pathname').textContent;
+}
+
+/** The query string, `?` and all, or empty — read off the probe on screen. */
+export function search(): string | null {
+  return screen.getByTestId('search').textContent;
+}
+
+/** `pathname` and `search` joined — read off the probe on screen. */
+export function url(): string | null {
+  return screen.getByTestId('url').textContent;
+}
+
 /**
  * How the router got where the probe says it is — `POP` after a **History
  * step**, `PUSH` after a push — read off the probe on screen. Handed out

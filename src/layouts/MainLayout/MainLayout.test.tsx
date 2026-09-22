@@ -7,7 +7,10 @@ import { MainLayout, type MainLayoutProps } from './MainLayout';
 import { theme } from '@/styles/theme';
 import { comesBefore } from '@/test-support/comesBefore/comesBefore';
 import { headerSpacer } from '@/test-support/headerSpacer/headerSpacer';
-import { LocationProbe } from '@/test-support/LocationProbe/LocationProbe';
+import {
+  LocationProbe,
+  pathname,
+} from '@/test-support/LocationProbe/LocationProbe';
 import { stubScrollMetrics } from '@/test-support/stubScrollMetrics/stubScrollMetrics';
 import { stubScrollTo } from '@/test-support/stubScrollTo/stubScrollTo';
 
@@ -26,10 +29,6 @@ function renderLayout(
       <LocationProbe />
     </MemoryRouter>
   );
-}
-
-function currentPath() {
-  return screen.getByTestId('pathname').textContent;
 }
 
 const logo = () => screen.getByRole('button', { name: /familyflix/i });
@@ -62,7 +61,7 @@ describe('MainLayout', () => {
 
     fireEvent.click(logo());
 
-    expect(currentPath()).toBe('/');
+    expect(pathname()).toBe('/');
   });
 
   it('navigates to settings when the gear is clicked', () => {
@@ -70,7 +69,7 @@ describe('MainLayout', () => {
 
     fireEvent.click(gear());
 
-    expect(currentPath()).toBe('/settings');
+    expect(pathname()).toBe('/settings');
   });
 
   it('labels the gear by the action it performs, not the glyph it draws', () => {

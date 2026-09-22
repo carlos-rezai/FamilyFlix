@@ -11,7 +11,10 @@ import {
 
 import MoviePage from './MoviePage';
 import { theme } from '@/styles/theme';
-import { LocationProbe } from '@/test-support/LocationProbe/LocationProbe';
+import {
+  LocationProbe,
+  pathname,
+} from '@/test-support/LocationProbe/LocationProbe';
 import { notFoundResponse } from '@/test-support/fakeResponse/fakeResponse';
 import { stubScrollMetrics } from '@/test-support/stubScrollMetrics/stubScrollMetrics';
 
@@ -61,8 +64,6 @@ function renderAt(
 
 const clickBack = () =>
   fireEvent.click(screen.getByRole('button', { name: 'Back' }));
-
-const pathname = () => screen.getByTestId('pathname').textContent;
 
 describe('MoviePage — Back', () => {
   it('offers a Back control', async () => {

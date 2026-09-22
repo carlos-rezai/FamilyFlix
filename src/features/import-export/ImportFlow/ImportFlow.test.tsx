@@ -16,6 +16,8 @@ import { useGoBack } from '@/hooks/useGoBack/useGoBack';
 import {
   LocationProbe,
   navigationType,
+  pathname,
+  url,
 } from '@/test-support/LocationProbe/LocationProbe';
 import { comesBefore } from '@/test-support/comesBefore/comesBefore';
 import { makeImportRun } from '@/test-support/makeImportRun/makeImportRun';
@@ -211,8 +213,6 @@ const rootField = () =>
     name: 'Movies root folder',
   }) as HTMLInputElement;
 const startButton = () => screen.getByRole('button', { name: 'Start import' });
-const currentPath = () => screen.getByTestId('pathname').textContent;
-
 /** Type both paths and press Start import. */
 function startRun(sheet = SHEET, root = ROOT) {
   fireEvent.change(sheetField(), { target: { value: sheet } });
@@ -251,7 +251,7 @@ describe('ImportFlow — the header', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /back/i }));
 
-    expect(currentPath()).toBe('/settings');
+    expect(pathname()).toBe('/settings');
   });
 });
 
@@ -376,7 +376,7 @@ describe('ImportFlow — a run already in progress', () => {
     expect(screen.getByText('the settings hub')).toBeDefined();
     fireEvent.click(screen.getByRole('button', { name: 'Import library' }));
 
-    expect(currentPath()).toBe('/import');
+    expect(pathname()).toBe('/import');
     expect(await runningStep()).toBeDefined();
     expect(screen.getByText('1 of 2 imported')).toBeDefined();
     expect(screen.queryByRole('textbox', { name: 'Spreadsheet' })).toBeNull();
@@ -687,7 +687,7 @@ describe('ImportFlow — reaching review', () => {
 
     // A navigation to `/`, not a history step: the films are on the shelf and
     // the home is where the maintainer sees that it worked.
-    expect(currentPath()).toBe('/');
+    expect(pathname()).toBe('/');
     expect(screen.getByText('the browse home')).toBeDefined();
   });
 });
@@ -864,7 +864,7 @@ describe('ImportFlow — the review of problems', () => {
       within(rowOf('The Lantern Keeper')).getByRole('link', { name: 'Resolve' })
     );
 
-    expect(screen.getByTestId('url').textContent).toBe('/add?problem=p2');
+    expect(url()).toBe('/add?problem=p2');
     expect(screen.getByText('the add form')).toBeDefined();
   });
 
@@ -875,7 +875,7 @@ describe('ImportFlow — the review of problems', () => {
       screen.getByRole('button', { name: 'Finish — go to library' })
     );
 
-    expect(currentPath()).toBe('/');
+    expect(pathname()).toBe('/');
     expect(screen.getByText('the browse home')).toBeDefined();
   });
 
@@ -994,7 +994,7 @@ describe('ImportFlow — leaving is a history step', () => {
 
     pressBack();
 
-    expect(currentPath()).toBe('/settings');
+    expect(pathname()).toBe('/settings');
     expect(navigationType()).toBe('POP');
   });
 
@@ -1008,11 +1008,11 @@ describe('ImportFlow — leaving is a history step', () => {
     await setupStep();
 
     pressBack();
-    expect(currentPath()).toBe('/settings');
+    expect(pathname()).toBe('/settings');
 
     pressBack();
 
-    expect(currentPath()).toBe('/');
+    expect(pathname()).toBe('/');
     expect(screen.getByText('the browse home')).toBeDefined();
   });
 
@@ -1032,7 +1032,7 @@ describe('ImportFlow — leaving is a history step', () => {
 
     pressBack();
 
-    expect(currentPath()).toBe('/settings');
+    expect(pathname()).toBe('/settings');
     expect(navigationType()).toBe('PUSH');
   });
 
@@ -1050,7 +1050,7 @@ describe('ImportFlow — leaving is a history step', () => {
 
     pressBack();
 
-    expect(currentPath()).toBe('/settings');
+    expect(pathname()).toBe('/settings');
     expect(navigationType()).toBe('POP');
     expect(cancels()).toHaveLength(0);
   });
@@ -1071,7 +1071,7 @@ describe('ImportFlow — leaving is a history step', () => {
     pressBack();
     fireEvent.click(screen.getByRole('button', { name: 'Import library' }));
 
-    expect(currentPath()).toBe('/import');
+    expect(pathname()).toBe('/import');
     expect(await runningStep()).toBeDefined();
     expect(screen.getByText('1 of 2 imported')).toBeDefined();
     expect(cancels()).toHaveLength(0);
@@ -1100,7 +1100,7 @@ describe('ImportFlow — leaving is a history step', () => {
       screen.getByRole('button', { name: 'Finish — go to library' })
     );
 
-    expect(currentPath()).toBe('/');
+    expect(pathname()).toBe('/');
     expect(navigationType()).toBe('PUSH');
   });
 });

@@ -6,7 +6,10 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { LibrarySection } from './LibrarySection';
 import { GroupHeading } from '../section.styles';
 import { theme } from '@/styles/theme';
-import { LocationProbe } from '@/test-support/LocationProbe/LocationProbe';
+import {
+  LocationProbe,
+  pathname,
+} from '@/test-support/LocationProbe/LocationProbe';
 import { comesBefore } from '@/test-support/comesBefore/comesBefore';
 import { okResponse } from '@/test-support/fakeResponse/fakeResponse';
 
@@ -73,7 +76,6 @@ const addRow = () => screen.getByRole('button', { name: /add a movie/i });
 const importRow = () =>
   screen.getByRole('button', { name: /import from spreadsheet/i });
 const exportRow = () => screen.getByRole('button', { name: /export to csv/i });
-const currentPath = () => screen.getByTestId('pathname').textContent;
 const exportDialog = () =>
   screen.queryByRole('dialog', { name: 'Export library' });
 
@@ -148,7 +150,7 @@ describe('LibrarySection', () => {
 
     fireEvent.click(addRow());
 
-    expect(currentPath()).toBe('/add');
+    expect(pathname()).toBe('/add');
     expect(screen.getByText('the movie form')).toBeDefined();
   });
 
@@ -157,7 +159,7 @@ describe('LibrarySection', () => {
 
     fireEvent.click(importRow());
 
-    expect(currentPath()).toBe('/import');
+    expect(pathname()).toBe('/import');
     expect(screen.getByText('the import flow')).toBeDefined();
   });
 });
@@ -181,7 +183,7 @@ describe('LibrarySection — the Export row', () => {
 
     fireEvent.click(exportRow());
 
-    expect(currentPath()).toBe('/settings');
+    expect(pathname()).toBe('/settings');
     expect(screen.getByText('Library')).toBeDefined();
     expect(addRow()).toBeDefined();
   });
@@ -197,7 +199,7 @@ describe('LibrarySection — the Export row', () => {
     );
 
     expect(exportDialog()).toBeNull();
-    expect(currentPath()).toBe('/settings');
+    expect(pathname()).toBe('/settings');
     expect(screen.getAllByRole('button')).toHaveLength(3);
   });
 

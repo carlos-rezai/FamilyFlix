@@ -5,7 +5,10 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 
 import { SettingsHeader } from './SettingsHeader';
 import { theme } from '@/styles/theme';
-import { LocationProbe } from '@/test-support/LocationProbe/LocationProbe';
+import {
+  LocationProbe,
+  pathname,
+} from '@/test-support/LocationProbe/LocationProbe';
 
 /**
  * Settings opened from the browse home, so Back has somewhere to go — the state
@@ -29,8 +32,6 @@ function renderPage(history: string[] = ['/', '/settings']) {
 
 const back = () => screen.getByRole('button', { name: /back/i });
 const addMovie = () => screen.getByRole('button', { name: /add a movie/i });
-const currentPath = () => screen.getByTestId('pathname').textContent;
-
 /**
  * The header of the **Maintainer**'s hub, and the reason the movie form was a
  * tracer bullet rather than a URL typed into the address bar: the gear is the
@@ -61,7 +62,7 @@ describe('SettingsHeader', () => {
     // A history step, not a navigation to `/` — the browse home the maintainer
     // had already filtered and scrolled, returned to as they left it. The one
     // Back rule the app has.
-    expect(currentPath()).toBe('/');
+    expect(pathname()).toBe('/');
   });
 
   it('returns to the browse home when there is no history behind it', () => {
@@ -71,7 +72,7 @@ describe('SettingsHeader', () => {
 
     // Reloaded or deep-linked: a history step would strand the maintainer on
     // the screen they asked to leave.
-    expect(currentPath()).toBe('/');
+    expect(pathname()).toBe('/');
   });
 
   it('opens the movie form from ＋ Add a movie', () => {
@@ -79,7 +80,7 @@ describe('SettingsHeader', () => {
 
     fireEvent.click(addMovie());
 
-    expect(currentPath()).toBe('/add');
+    expect(pathname()).toBe('/add');
   });
 
   it('builds nothing below the header', () => {
