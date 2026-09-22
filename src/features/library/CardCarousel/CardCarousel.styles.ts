@@ -29,6 +29,10 @@ export const Item = styled.div<{ $width: number }>`
  * card it happens to be sitting on — a near-opaque fill, a blur, and a shadow
  * to lift it off the artwork.
  *
+ * The transform is its centring, so the hover restates it over the face's
+ * scale and the press composes the primitive's shrink onto it — the arrow
+ * never jumps off its line (IconButton's rule 3).
+ *
  * `$top` is passed rather than fixed, because a poster row and a Continue row
  * are different heights and the arrow reads as centred on the tile in both.
  */
@@ -47,6 +51,11 @@ const Arrow = styled(IconButton)<{ $top: number }>`
     background: ${({ theme }) => theme.colors.surface3};
     border-color: ${({ theme }) => theme.colors.accentLine};
     color: ${({ theme }) => theme.colors.accent};
+    transform: translateY(-50%);
+  }
+
+  &:active:enabled {
+    transform: translateY(-50%) scale(0.94);
   }
 `;
 

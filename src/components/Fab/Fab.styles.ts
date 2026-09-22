@@ -13,10 +13,12 @@ const INK = '#1a1109';
  * the centring, the pill corner (50% on a square) and `type="button"` are
  * `IconButton`'s.
  *
- * The hover is written `&:hover:enabled` and replaces both `background` and
- * `color`, the primitive's two rules: a disabled circle never lights up, and
- * nothing leaks up from the ghost face underneath. No `transition` — the lift
- * snaps, as the prototype's does.
+ * The hover is written `&:hover:enabled` and replaces `background`, `color`
+ * and `transform`, the primitive's rules: a disabled circle never lights up,
+ * and nothing leaks up from the ghost face underneath. The lift eases in on
+ * the primitive's transition rather than snapping, and because the hover
+ * writes `transform` it writes its own press too, or the lift would hold
+ * through it.
  */
 export const Circle = styled(IconButton)`
   position: absolute;
@@ -32,5 +34,9 @@ export const Circle = styled(IconButton)`
     background: ${({ theme }) => theme.colors.accentHover};
     color: ${INK};
     transform: translateY(-2px) scale(1.05);
+  }
+
+  &:active:enabled {
+    transform: scale(0.94);
   }
 `;

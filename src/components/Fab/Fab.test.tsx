@@ -241,10 +241,12 @@ describe('Fab — the face, 1:1', () => {
     expect(hover.transform).toBe('translateY(-2px) scale(1.05)');
   });
 
-  it('declares no transition: the lift snaps, as the prototype’s does', () => {
+  // Superseded by #184: the lift no longer snaps — it eases on IconButton's
+  // transition (see "Fab — hover, press and keyboard focus" below), so the
+  // hover declares none of its own.
+  it('declares no transition of its own on hover: the ease is IconButton’s', () => {
     renderFab();
 
-    expect(getComputedStyle(fab()).transition).toBe('');
     expect(hoverDeclarations().transition).toBeUndefined();
   });
 });

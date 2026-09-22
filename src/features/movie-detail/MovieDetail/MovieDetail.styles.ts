@@ -128,12 +128,19 @@ export const CircleToggle = styled(IconButton)<{ $on: boolean }>`
     $on ? theme.colors.accent : theme.colors.textDim};
 
   /* Hovering brightens the outline, never the fill — a circle that is off must
-     not preview the filled state it would take on. */
+     not preview the filled state it would take on. It draws no scale either,
+     so the transform is restated and the press written here (IconButton's
+     rules 2 and 3). */
   &:hover:enabled {
     background: ${({ theme, $on }) =>
       $on ? theme.colors.accentSoft : 'transparent'};
     border-color: ${({ theme }) => theme.colors.accentLine};
     color: ${({ theme }) => theme.colors.accent};
+    transform: none;
+  }
+
+  &:active:enabled {
+    transform: scale(0.94);
   }
 `;
 

@@ -1,5 +1,7 @@
 import styled, { css } from 'styled-components';
 
+import { controlStates } from '@/styles/interactionStates/interactionStates';
+
 export type IconButtonVariant = 'ghost' | 'outline';
 
 /**
@@ -17,6 +19,7 @@ const variants = {
     &:hover:enabled {
       background: ${({ theme }) => theme.colors.surface};
       color: ${({ theme }) => theme.colors.textDim};
+      transform: scale(1.06);
     }
   `,
   outline: css`
@@ -24,10 +27,12 @@ const variants = {
     border: 1px solid ${({ theme }) => theme.colors.borderSoft};
     color: ${({ theme }) => theme.colors.textDim};
 
-    /* Both faces move the same two properties on hover — see the note below. */
+    /* The faces move the properties rule 2 below names — see the note there. */
     &:hover:enabled {
       background: transparent;
       color: ${({ theme }) => theme.colors.text};
+      border-color: ${({ theme }) => theme.colors.textFaint};
+      transform: scale(1.06);
     }
   `,
 } as const;
@@ -38,15 +43,27 @@ const variants = {
  * layered on by a `styled(IconButton)` at the call site — which is why the
  * variant block comes first in the cascade, so an extension's declarations win.
  *
- * Two rules for those extensions, both consequences of the cascade rather than
- * of anything this file invents:
+ * The transition, the press (`scale(.94)`, in 60ms) and the keyboard Focus
+ * ring are the Control's, from `controlStates`, and come after the faces — so
+ * every extension inherits all three without writing a line.
+ *
+ * Three rules for those extensions, all consequences of the cascade rather
+ * than of anything this file invents:
  *
  * 1. Write `&:hover:enabled`, not `&:hover`. The faces above are guarded that
  *    way so a disabled control never lights up, and a bare `&:hover` is one
  *    selector shorter — it would lose to the face it was meant to replace.
- * 2. Replace the hover *completely*. Both faces move exactly `background` and
- *    `color`, so an extension that sets only one of them inherits the other
- *    from the face underneath.
+ * 2. Replace the hover *completely*. The faces move `background`, `color`,
+ *    `border-color` and `transform` (the hover's `scale(1.06)`), so an
+ *    extension that sets only some of them inherits the rest from the face
+ *    underneath — an extension that draws no scale restates `transform: none`.
+ * 3. An extension's `&:hover:enabled` ranks equal to the press here and comes
+ *    later, so a hover that writes `transform` — even `none` — would hold
+ *    through a press. Such an extension writes its own `&:active:enabled`
+ *    press as well. One that positions with `transform` (the carousel's
+ *    `translateY(-50%)`) must also restate it on hover, since the face's scale
+ *    out-ranks a plain `transform`, and compose it into the press:
+ *    `translateY(-50%) scale(.94)`.
  */
 export const Root = styled.button<{
   $size: number;
@@ -62,6 +79,8 @@ export const Root = styled.button<{
   cursor: pointer;
 
   ${({ $variant }) => variants[$variant]}
+
+  ${controlStates('scale(.94)')}
 
   &:disabled {
     cursor: default;
