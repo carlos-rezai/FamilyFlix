@@ -1286,3 +1286,55 @@ describe('App — coming back out of Import', () => {
     await screen.findByRole('heading', { name: 'Action' });
   });
 });
+
+/**
+ * 20 — Back navigation, Phase 4: "the form's landing, and the edit and add
+ * contexts" (issue #174).
+ *
+ * The maintainer's correction, as they actually make it: a film off the shelf,
+ * _Edit details_, _Save changes_, and back out. The film's page is the entry
+ * behind the form already, so the push _Save changes_ used to make left a
+ * second copy of it — and the next Back walked into the form the correction was
+ * just finished in.
+ *
+ * It lives here rather than beside `MovieForm` because the second press is the
+ * *movie page's* Back, and the two screens are only ever composed together in
+ * `App`.
+ */
+describe('App — coming back out of an edit', () => {
+  it('walks back out to the shelf the film was opened from', async () => {
+    renderApp('/?q=north&sort=a-z');
+    await screen.findByRole('heading', { name: 'Action' });
+
+    fireEvent.click(cardFor('Northwind'));
+    await screen.findByRole('heading', { level: 1, name: 'Northwind' });
+    fireEvent.click(screen.getByRole('button', { name: /more options/i }));
+    fireEvent.click(screen.getByRole('menuitem', { name: /edit details/i }));
+    await screen.findByRole('heading', { name: 'Edit details' });
+    await waitFor(() =>
+      expect(
+        (screen.getByRole('textbox', { name: /title/i }) as HTMLInputElement)
+          .value
+      ).toBe('Northwind')
+    );
+
+    fireEvent.change(screen.getByRole('textbox', { name: /title/i }), {
+      target: { value: 'Northwind (restored)' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /save changes/i }));
+
+    // The save lands where it always did — the page the correction is visible
+    // on — and now by stepping onto the entry the form was opened from.
+    await screen.findByRole('heading', { level: 1, name: 'Northwind' });
+    expect(currentPath()).toBe('/movie/a1');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+
+    // The press that used to walk back into the form. The shelf comes back as
+    // the maintainer left it, filtered and sorted, because a step returns the
+    // entry rather than making a new one.
+    await waitFor(() => expect(currentPath()).toBe('/'));
+    expect(currentSearch()).toBe('?q=north&sort=a-z');
+    await screen.findByRole('heading', { name: 'Action' });
+  });
+});

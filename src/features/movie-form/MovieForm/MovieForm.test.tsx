@@ -1780,15 +1780,20 @@ describe('MovieForm — the actions row', () => {
     expect(currentPath()).toBe('/settings');
   });
 
-  it('falls back to the library from both, on a form with nothing behind it', async () => {
+  it('falls back to Settings from both, on a form with nothing behind it', async () => {
+    // Amended by 20 — Back navigation, Phase 4 (issue #174): the fallback is
+    // no longer the hook's default. The **Add context**'s **Landing** is
+    // Settings — where the ＋ that opens this screen lives — because a
+    // deep-linked add has nothing behind it and the library is where a
+    // *finished* add goes, not where an abandoned one belongs.
     const { unmount } = await renderForm();
     fireEvent.click(cancel());
-    expect(currentPath()).toBe('/');
+    expect(currentPath()).toBe('/settings');
     unmount();
 
     await renderForm();
     fireEvent.click(backPill());
-    expect(currentPath()).toBe('/');
+    expect(currentPath()).toBe('/settings');
   });
 
   it('writes nothing when Cancel is pressed', async () => {
@@ -3685,5 +3690,157 @@ describe('MovieForm — the Import context', () => {
         expect(resolveRequests()).toEqual([]);
       });
     });
+  });
+});
+
+/**
+ * 20 — Back navigation, Phase 4: "the form's landing, and the edit and add
+ * contexts" (issue #174).
+ *
+ * The form is the one screen in the app with three ways in, so it is the one
+ * screen whose **Landing** is not a constant: the **Review step** when
+ * `?problem=` is present, the movie's page when `?movie=` is, Settings
+ * otherwise. The mapping is read off the URL on the first render — never off
+ * `editing` or `resolving`, which are `null` until a read lands, so a Back
+ * pressed early on a deep-linked edit would otherwise fall back to Settings and
+ * strand the maintainer somewhere they were never coming from.
+ *
+ * With the landing behind it, _Save changes_ stops pushing `/movie/:id` and
+ * steps instead: the entry behind the form is the film's page already, and the
+ * push left a duplicate of it that the *next* Back walked into. That is why
+ * these tests read `navigationType` — landing on the right URL was never the
+ * symptom.
+ *
+ * The **Import context**'s own leavings are untouched here and still push
+ * `/import`; #175 is where they stop. Only its landing is this slice's, because
+ * the landing is one mapping over the two query parameters and cannot be built
+ * in halves.
+ */
+describe('MovieForm — the landing, and leaving an edit', () => {
+  /** How the router got where it is: `POP` after a step, `PUSH` after a push. */
+  const navigationType = () => screen.getByTestId('navigationType').textContent;
+
+  /** The form at the end of the entries a real journey would have left. */
+  function mountAt(entries: string[]) {
+    return render(
+      <MemoryRouter initialEntries={entries} initialIndex={entries.length - 1}>
+        <ThemeProvider theme={theme}>
+          <MovieForm />
+          <LocationProbe />
+        </ThemeProvider>
+      </MemoryRouter>
+    );
+  }
+
+  /** The same, with every read on mount settled into the screen. */
+  async function renderAt(entries: string[]) {
+    const view = mountAt(entries);
+    await act(async () => undefined);
+    return view;
+  }
+
+  /**
+   * The form on its very first render — deep-linked, with every read still in
+   * flight and nothing settled behind it.
+   *
+   * This is the state the landing has to be right in: `editing` and
+   * `resolving` are both `null` here and will stay `null`, so a landing read
+   * off either of them can only be the add's.
+   */
+  function renderUnread(entry: string) {
+    answerPool = () => new Promise<Response>(() => undefined);
+    answerMovie = () => new Promise<Response>(() => undefined);
+    return mountAt([entry]);
+  }
+
+  it('steps onto the movie’s page when Save changes lands', async () => {
+    answerSave = () => Promise.resolve(okResponse(STORED));
+    await renderAt(['/movie/a1', '/add?movie=a1']);
+    fireEvent.change(titleField(), {
+      target: { value: 'The Lantern Keeper (restored)' },
+    });
+
+    fireEvent.click(saveChanges());
+
+    // The destination is the one the Edit context always had — what changes is
+    // that it is the entry the form was opened from rather than a second copy
+    // of it, so the page comes back scrolled where it was left and its own Back
+    // still leads out of the film rather than back into the form.
+    await waitFor(() => expect(currentPath()).toBe('/movie/a1'));
+    expect(navigationType()).toBe('POP');
+  });
+
+  it('steps onto the movie’s page from Back and from Cancel alike', async () => {
+    // Green before the change: both already go through `goBack`, and with the
+    // film's page behind the form a step lands there on its own. Written as a
+    // guard — the landing arrives on the same two controls, and a landing
+    // *pushed* here instead of stepped would leave the same duplicate entry
+    // _Save changes_ used to, with nothing else in this file noticing.
+    const { unmount } = await renderAt(['/movie/a1', '/add?movie=a1']);
+    fireEvent.click(backPill());
+    expect(currentPath()).toBe('/movie/a1');
+    expect(navigationType()).toBe('POP');
+    unmount();
+
+    await renderAt(['/movie/a1', '/add?movie=a1']);
+    fireEvent.click(cancel());
+    expect(currentPath()).toBe('/movie/a1');
+    expect(navigationType()).toBe('POP');
+  });
+
+  it('lands a deep-linked edit on its movie’s page, pressed before the record has been read', () => {
+    renderUnread('/add?movie=a1');
+
+    // Nothing has been read: the fields are empty and the screen is still
+    // wearing the Add context's own labels, because the record that would
+    // change either is still in flight. The URL is the whole of what the
+    // landing can be built from here.
+    expect(titleField().value).toBe('');
+    fireEvent.click(backPill());
+
+    expect(currentPath()).toBe('/movie/a1');
+    // Pushed rather than stepped, as every **Landing** is: the page it lands on
+    // has history behind it, so its own Back is not a dead button in turn.
+    expect(navigationType()).toBe('PUSH');
+  });
+
+  it('lands a deep-linked add on Settings', () => {
+    renderUnread('/add');
+
+    fireEvent.click(backPill());
+
+    // Where the ＋ is — the Library group's first row — rather than the
+    // library, which is where _Add to library_ goes and is a different
+    // journey's end.
+    expect(currentPath()).toBe('/settings');
+    expect(navigationType()).toBe('PUSH');
+  });
+
+  it('lands a deep-linked Resolve on the Review step, before the detail has been read', () => {
+    // The third arm of the same mapping. The Import context's *leavings* are
+    // #175's and still push `/import` of their own accord once the detail has
+    // landed — but the mapping is one function over the two query parameters,
+    // and this is the state where only the URL can answer.
+    renderUnread('/add?problem=p1');
+
+    fireEvent.click(backPill());
+
+    expect(currentPath()).toBe('/import');
+    expect(navigationType()).toBe('PUSH');
+  });
+
+  it('keeps Add to library a push onto a fresh browse home', async () => {
+    // The **Fresh home**, untouched and the only push the form has left: a new
+    // entry at the top of an unfiltered library, where the film just added is
+    // on its shelf. A step here would land on whatever screen the maintainer
+    // came from, which is the one thing this button is not.
+    await renderAt(['/settings', '/add']);
+    fireEvent.change(titleField(), { target: { value: 'Rear Window' } });
+    await pickVideo();
+
+    fireEvent.click(save());
+
+    await waitFor(() => expect(currentPath()).toBe('/'));
+    expect(navigationType()).toBe('PUSH');
   });
 });
