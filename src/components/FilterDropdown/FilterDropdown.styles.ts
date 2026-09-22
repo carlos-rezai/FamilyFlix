@@ -1,7 +1,9 @@
 import styled from 'styled-components';
 
+import { controlStates } from '@/styles/interactionStates/interactionStates';
+
 import { Menu } from '../Menu/Menu';
-import { Panel } from '../Menu/Menu.styles';
+import { Item, Panel } from '../Menu/Menu.styles';
 
 /**
  * The slot, and the only thing this dropdown changes about `Menu`'s panel: how
@@ -16,6 +18,17 @@ export const Root = styled(Menu)<{ $menuWidth: number }>`
     top: 54px;
     min-width: ${({ $menuWidth }) => `${$menuWidth}px`};
     z-index: 50;
+  }
+
+  /* The option rows ease into their surface3 hover. Through this slot rather
+     than on Menu's Item: the ⋯ menu's rows are outside the motion contract
+     (PRD #180, Out of Scope), and only the filter list is drawn easing. */
+  ${Item} {
+    transition:
+      background ${({ theme }) => theme.motion.durFast}
+        ${({ theme }) => theme.motion.easeOut},
+      color ${({ theme }) => theme.motion.durFast}
+        ${({ theme }) => theme.motion.easeOut};
   }
 `;
 
@@ -39,8 +52,11 @@ export const Pill = styled.button`
   cursor: pointer;
   white-space: nowrap;
 
+  ${controlStates('scale(.98)')}
+
   &:hover {
     border-color: ${({ theme }) => theme.colors.accentLine};
+    background: ${({ theme }) => theme.colors.surface2};
   }
 `;
 

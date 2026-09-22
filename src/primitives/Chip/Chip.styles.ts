@@ -1,5 +1,7 @@
 import styled, { css } from 'styled-components';
 
+import { controlStates } from '@/styles/interactionStates/interactionStates';
+
 export type ChipSize = 'sm' | 'md';
 
 interface FaceProps {
@@ -35,9 +37,12 @@ export const Tag = styled.span<FaceProps>`
 `;
 
 /**
- * The selectable form — MovieForm's genre picker. Everything above `${face}` is
- * undoing the UA's button chrome so the two shapes render identically; the
- * focus ring is deliberately left alone.
+ * The selectable form — MovieForm's genre picker and the library's filters.
+ * Everything above `${face}` is undoing the UA's button chrome so the two shapes
+ * render identically. The states are the Control's, as `prim.Chip` draws them:
+ * a 1px lift on hover (the prototype file wins over §2a's "buttons never lift"),
+ * pressed back down and in. A selected chip keeps its accent-soft fill under the
+ * pointer, so only an unselected one takes the surface2 hover.
  */
 export const Control = styled.button<FaceProps>`
   appearance: none;
@@ -45,7 +50,13 @@ export const Control = styled.button<FaceProps>`
   ${face}
   cursor: pointer;
 
-  &:hover {
+  &:hover:not(:disabled) {
     border-color: ${({ theme }) => theme.colors.accentLine};
+    ${({ theme, $selected }) =>
+      $selected ? '' : `background: ${theme.colors.surface2};`}
+    transform: translateY(-1px);
   }
+
+  /* After the hover, so a press — which is always also a hover — wins it. */
+  ${controlStates('translateY(0) scale(.97)')}
 `;
