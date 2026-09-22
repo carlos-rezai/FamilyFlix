@@ -1,12 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import { act, renderHook, waitFor } from '@testing-library/react';
-import { readFileSync, readdirSync } from 'node:fs';
-import { join } from 'node:path';
 
 import { usePlayback } from './usePlayback';
 import type { VolumePreference } from '../volumePreference/volumePreference';
 import type { PlaybackRead } from '@/types';
 import { stubMediaElement } from '@/test-support/stubMediaElement/stubMediaElement';
+import { shippingSourcesMatching } from '@/test-support/shippingSources/shippingSources';
 
 /**
  * 10 — Video player, Phase 3 (issue #85).
@@ -355,27 +354,16 @@ describe('usePlayback — volume and mute', () => {
  */
 describe('the player feature’s duration rule', () => {
   it('reads no duration off the media element, anywhere in the feature', () => {
-    const offenders = sourceFiles('src/features/player').filter((file) =>
-      /\.duration\b/.test(withoutComments(readFileSync(file, 'utf8')))
+    // Comments are stripped before the match — prose about `video.duration` is
+    // not a read of it.
+    const offenders = shippingSourcesMatching(
+      'src/features/player',
+      /\.duration\b/
     );
 
     expect(offenders).toEqual([]);
   });
 });
-
-/** The file with its comments removed — prose about `video.duration` is not a read of it. */
-function withoutComments(source: string): string {
-  return source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
-}
-
-/** Every `.ts`/`.tsx` file under `root` that ships — tests excluded. */
-function sourceFiles(root: string): string[] {
-  return readdirSync(root, { recursive: true, encoding: 'utf8' })
-    .map((entry) => join(root, entry))
-    .filter(
-      (file) => /\.tsx?$/.test(file) && !/\.(test|spec)\.tsx?$/.test(file)
-    );
-}
 
 /**
  * 10 — Video player, Phase 5 (issue #87).

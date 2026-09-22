@@ -1,5 +1,3 @@
-import { readdirSync, readFileSync } from 'node:fs';
-
 import { describe, it, expect } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import {
@@ -11,6 +9,7 @@ import {
 
 import { useGoBack } from './useGoBack';
 import { LocationProbe } from '@/test-support/LocationProbe/LocationProbe';
+import { shippingSourcesMatching } from '@/test-support/shippingSources/shippingSources';
 
 /**
  * A screen whose only control is the one this hook returns. Nothing about the
@@ -181,22 +180,14 @@ describe('useGoBack — the only Back rule in the app', () => {
   const THE_HOOK = 'src/hooks/useGoBack/useGoBack.ts';
 
   /**
-   * Every shipping source file under `src/`. Tests are not shipping code and
-   * neither is `test-support/` — the probe's own Back button and the suites'
-   * stand-ins for browser chrome are history steps on purpose.
+   * The shipping files under `src/` whose code matches — by path, so a failure
+   * names them. Tests and `test-support/` are not shipping code: the probe's
+   * own Back button and the suites' stand-ins for browser chrome are history
+   * steps on purpose. Comments are not code either, so a docblock may say
+   * `navigate(-1)` without failing a test about calls.
    */
-  function shippingSources(): string[] {
-    return readdirSync('src', { recursive: true, encoding: 'utf8' })
-      .map((name) => `src/${name}`.replace(/\\/g, '/'))
-      .filter((path) => /\.tsx?$/.test(path) && !/\.test\.tsx?$/.test(path))
-      .filter((path) => !path.includes('/test-support/'));
-  }
-
-  /** The shipping files whose text matches — by path, so a failure names them. */
   const filesMatching = (pattern: RegExp): string[] =>
-    shippingSources().filter((path) =>
-      pattern.test(readFileSync(path, 'utf8'))
-    );
+    shippingSourcesMatching('src', pattern);
 
   it('is the only shipping file that steps back through history', () => {
     expect(filesMatching(/navigate\(-1\)/)).toEqual([THE_HOOK]);
