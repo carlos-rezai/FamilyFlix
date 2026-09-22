@@ -1150,3 +1150,99 @@ describe('App — the Snackbar stack above the route table', () => {
     expect(snackbarStack()).toBeDefined();
   });
 });
+
+/**
+ * 20 — Back navigation, Phase 2: "the player steps" (issue #172).
+ *
+ * The three symptoms reproduced in the browser on 2026-09-21, as the journeys
+ * a parent and a maintainer actually make: the film's page comes back where it
+ * was left, the shelf behind it comes back filtered and scrolled, and a delete
+ * after a visit to the player lands on the library rather than on the player of
+ * a film that no longer exists.
+ *
+ * They live here rather than beside the player because the screens they are
+ * about are the real ones: `MoviePage`'s own scroll container, `MainLayout`'s
+ * body, `useDeleteMovie`'s own step. Two of those three are untouched by this
+ * slice, which is the point — the player's leaving is the only thing that
+ * changes, and everything downstream of it comes right on its own.
+ */
+describe('App — coming back out of the player', () => {
+  // jsdom has no media, so the player dies inside its hook without this.
+  stubMediaElement();
+
+  /** What a parent does with a wheel: the body moves, and it says so. */
+  function scrollTo(element: HTMLElement, top: number) {
+    element.scrollTop = top;
+    fireEvent.scroll(element);
+  }
+
+  /** The browse home's scrolling body: the one thing the header is followed by. */
+  function homeBody() {
+    return screen.getByRole('banner').nextElementSibling as HTMLElement;
+  }
+
+  /** The movie page's scroller — the element its Back pill sits inside. */
+  function detailBody() {
+    return screen.getByRole('button', { name: 'Back' })
+      .parentElement as HTMLElement;
+  }
+
+  /** Whichever Back is on screen: the movie page's pill, or the player's. */
+  async function pressBack() {
+    fireEvent.click(await screen.findByRole('button', { name: 'Back' }));
+  }
+
+  it('returns the film’s page to where it was left', async () => {
+    renderApp('/movie/a1');
+    await screen.findByRole('heading', { level: 1, name: 'Northwind' });
+    scrollTo(detailBody(), 720);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Play' }));
+    expect(currentPath()).toBe('/movie/a1/play');
+    await pressBack();
+
+    await screen.findByRole('heading', { level: 1, name: 'Northwind' });
+    // `useRestoredScroll` is not touched by this slice and does not need to be:
+    // it keys on the history entry, and a step lands on the entry it
+    // remembered, while the push it replaces was a fresh one starting at 0.
+    expect(detailBody().scrollTop).toBe(720);
+  });
+
+  it('lands back on the library still filtered and still scrolled, two Backs later', async () => {
+    renderApp('/?q=north&sort=a-z');
+    await screen.findByRole('heading', { name: 'Action' });
+    scrollTo(homeBody(), 1240);
+
+    fireEvent.click(cardFor('Northwind'));
+    await screen.findByRole('heading', { level: 1, name: 'Northwind' });
+    fireEvent.click(screen.getByRole('button', { name: 'Play' }));
+    await pressBack();
+    await screen.findByRole('heading', { level: 1, name: 'Northwind' });
+    await pressBack();
+
+    await waitFor(() => expect(currentPath()).toBe('/'));
+    expect(currentSearch()).toBe('?q=north&sort=a-z');
+    await screen.findByRole('heading', { name: 'Action' });
+    expect(homeBody().scrollTop).toBe(1240);
+  });
+
+  it('takes a delete after a visit to the player back to the library', async () => {
+    renderApp();
+    await screen.findByRole('heading', { name: 'Action' });
+
+    fireEvent.click(cardFor('Northwind'));
+    await screen.findByRole('heading', { level: 1, name: 'Northwind' });
+    fireEvent.click(screen.getByRole('button', { name: 'Play' }));
+    await pressBack();
+    await screen.findByRole('heading', { level: 1, name: 'Northwind' });
+
+    fireEvent.click(screen.getByRole('button', { name: /more options/i }));
+    fireEvent.click(screen.getByRole('menuitem', { name: /delete movie/i }));
+    fireEvent.click(screen.getByRole('button', { name: 'Delete movie' }));
+
+    // `useDeleteMovie` is untouched: its own step lands on the library because
+    // the entry behind the film's page is the library again, rather than the
+    // player the push used to leave there.
+    await waitFor(() => expect(currentPath()).toBe('/'));
+  });
+});

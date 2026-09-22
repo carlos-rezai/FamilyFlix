@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { readFileSync } from 'node:fs';
 import {
   render,
   screen,
@@ -11,6 +12,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 
 import { Player } from './Player';
 import { theme } from '@/styles/theme';
+import { useGoBack } from '@/hooks/useGoBack/useGoBack';
 import type { Cue, Movie, PlaybackRead } from '@/types';
 import { LocationProbe } from '@/test-support/LocationProbe/LocationProbe';
 import { makeMovie } from '@/test-support/makeMovie/makeMovie';
@@ -2052,5 +2054,145 @@ describe('Player — a conversion that never started', () => {
     await screen.findByText(COULD_NOT_START_TITLE);
 
     expect(blurredLayer(container)).toBeDefined();
+  });
+});
+
+/**
+ * 20 — Back navigation, Phase 2: "the player steps" (issue #172).
+ *
+ * Leaving the player stops pushing the film's page and becomes the app's one
+ * **Back rule** — a **History step**, with the movie's page as the **Landing**
+ * for a player nothing opened.
+ *
+ * The bug this closes was invisible to every assertion above: Back always
+ * landed on `/movie/m1`, and it landed there on a *second* entry for it, so the
+ * next Back walked straight back into the player. Which is why these tests
+ * press Back twice, and read `navigationType` — the difference between a step
+ * and a push of the same URL is the one thing a pathname cannot tell.
+ */
+describe('Player — leaving is a history step', () => {
+  stubMediaElement();
+
+  /** How the router got where it is: `POP` after a step, `PUSH` after a push. */
+  const navigationType = () => screen.getByTestId('navigationType').textContent;
+
+  /**
+   * The film's page as a journey needs it: the app's own Back rule behind a
+   * pill named the way the real `MoviePage` names it. One route is mounted at
+   * a time, so this pill and the player's never answer the same query.
+   */
+  function MoviePageStub() {
+    const goBack = useGoBack();
+
+    return (
+      <>
+        <span>Movie page</span>
+        <button type="button" onClick={goBack}>
+          Back
+        </button>
+      </>
+    );
+  }
+
+  /**
+   * The player over a whole history rather than the two entries the harness
+   * above renders: the shelf a parent was on, the film they opened, the Play
+   * they pressed — or nothing at all behind it, which is the deep link.
+   */
+  async function renderJourney(entries: string[]) {
+    const view = render(
+      <ThemeProvider theme={theme}>
+        <MemoryRouter
+          initialEntries={entries}
+          initialIndex={entries.length - 1}
+        >
+          <LocationProbe />
+          <Routes>
+            <Route path="/" element={<span>Browse home</span>} />
+            <Route path="/movie/:id" element={<MoviePageStub />} />
+            <Route path="/movie/:id/play" element={<Player movieId="m1" />} />
+          </Routes>
+        </MemoryRouter>
+      </ThemeProvider>
+    );
+    await waitFor(() => picture(view.container));
+
+    return view;
+  }
+
+  /** Press whichever Back is on screen — the player's pill, or the film page's. */
+  async function pressBack() {
+    fireEvent.click(await screen.findByRole('button', { name: 'Back' }));
+  }
+
+  it('steps back onto the film’s page rather than pushing a second entry for it', async () => {
+    await renderPlayer();
+
+    await pressBack();
+
+    expect(pathname()).toBe('/movie/m1');
+    expect(navigationType()).toBe('POP');
+  });
+
+  it('lands on the library when Back is pressed again, not back in the player', async () => {
+    // The journey reproduced in the browser on 2026-09-21: Play, Back, Back.
+    // The first press was always right, and the second one walked into the
+    // duplicate entry the first had left behind.
+    await renderJourney(['/', '/movie/m1', '/movie/m1/play']);
+
+    await pressBack();
+    expect(pathname()).toBe('/movie/m1');
+
+    await pressBack();
+
+    expect(pathname()).toBe('/');
+  });
+
+  it('leaves on Escape by the very same step', async () => {
+    // The same handler, not a second one: the keyboard way out and the pill
+    // are one behaviour, so the step has to reach both at once.
+    await renderPlayer();
+    await screen.findByRole('button', { name: 'Back' });
+
+    fireEvent.keyDown(window, { key: 'Escape' });
+
+    await waitFor(() => expect(pathname()).toBe('/movie/m1'));
+    expect(navigationType()).toBe('POP');
+  });
+
+  it('pushes the film’s page for a player opened by deep link, so that page has a Back of its own', async () => {
+    // Nothing behind the player — a reload, or a URL opened cold. The landing
+    // is pushed rather than stepped onto, and pushed rather than replaced, so
+    // the page it lands on is not left with a dead button.
+    //
+    // The one journey the push already got right, and so the one test here
+    // that is green before the change: with no history behind it the **Back
+    // rule** pushes the **Landing** too, which is the same navigation by
+    // accident. It is written as a guard rather than as a symptom — a step
+    // taken here, or a `replace`, would strand the deep-linked parent, and
+    // nothing else in this file would notice.
+    await renderJourney(['/movie/m1/play']);
+
+    await pressBack();
+
+    expect(pathname()).toBe('/movie/m1');
+    expect(navigationType()).toBe('PUSH');
+
+    await pressBack();
+
+    expect(pathname()).toBe('/movie/m1/play');
+    expect(navigationType()).toBe('POP');
+  });
+
+  it('leaves through the one rule rather than a navigate of its own', () => {
+    // Leaving is the only navigating this screen does, so the whole call is
+    // what must be gone: a `navigate(` left here is a second Back rule, and a
+    // second Back rule is what the initiative exists to end.
+    const source = readFileSync(
+      'src/features/player/Player/Player.tsx',
+      'utf8'
+    );
+
+    expect(source).not.toMatch(/navigate\(/);
   });
 });
