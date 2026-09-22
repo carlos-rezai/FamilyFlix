@@ -253,17 +253,20 @@ familyflix/
 │ │ └── postValue/
 │ │ ├── postValue.ts
 │ │ └── postValue.test.ts
-│ ├── hooks/ ← global shared hooks only (useGoBack, useRestoredScroll)
+│ ├── hooks/ ← global shared hooks only: `useGoBack(fallback)` — the one **Back rule**, a **History step** with the screen's own **Landing** behind it (the library by default) — and `useRestoredScroll`
 │ ├── types/ ← shared TypeScript interfaces (import.ts: ImportRun, ImportProblem, ImportProblemDetail, ImportField; export.ts: EXPORT_FORMATS, EXPORT_COLUMNS, EXPORT_FILENAME, ExportSummary; settings.ts: SUBTITLE_LANGUAGES, SubtitleLanguage, DEFAULT_SUBTITLE_LANGUAGE, Settings, StorageReport; playback.ts: CodecKind, CodecSupport, CodecCapability, ComponentSource, PlaybackComponentInfo, PlaybackCapabilities — both build targets; appVersion.d.ts: `__APP_VERSION__`, defined by Vite from package.json)
 │ ├── utils/ ← pure helper functions (one folder per helper + its test)
 │ │ ├── index.ts ← barrel: re-exports every helper
 │ │ ├── formatBytes/ ← 1024-based, one decimal from KB up: `18.4 GB`
+│ │ ├── moviePath/ ← the film's page as a route, `/movie/<id>`, the id encoded: the cards open it, and it is the player's and the edit's **Landing**
 │ │ └── gradientFromId/
 │ │ ├── gradientFromId.ts
 │ │ └── gradientFromId.test.ts
 │ └── test-support/ ← test doubles shared across features, never imported by shipping code
 │ ├── fakeResponse/ ← a Response by status; `fileResponse` the one whose caller reads `blob()`, its `json()` rejecting
 │ ├── comesBefore/ ← document order between two elements, for a slot's contract
+│ ├── LocationProbe/ ← where the router is, in four spellings — `pathname`, `search`, `url` and `navigationType` (`POP` after a step, `PUSH` after a push) — with an optional Back of its own, and `navigationType()`, the reader of the fourth
+│ ├── shippingSources/ ← the shipping-source walk the structural guards read: every `.ts`/`.tsx` under a root that is neither a test nor `test-support/`, matched with its comments stripped, by path
 │ ├── snackbarStack/ ← the Snackbar stack's node, reached by what the prototype draws — the one fixed, reversed column — because it carries no role and no `data-testid`; throws when there is none
 │ ├── stubScrollMetrics/ ← a writable `scrollTop` and a real overflow on every element, for a jsdom that does no layout
 │ ├── stubScrollTo/ ← `scrollTo` on every element, for a jsdom that has it on `window` alone: who was asked for what, in order; deleted after the block

@@ -187,10 +187,10 @@ familyflix/
 │   ├── layouts/         # Page chrome (MainLayout mounts Back-to-top over its body, on the ref useRestoredScroll attached)
 │   ├── pages/           # Route-level views, composition only (ImportPage among them)
 │   ├── api/             # Wire calls two or more features share (saveFavorite, fetchMovie, saveWatched, dismissProblem, fetchSettings)
-│   ├── hooks/            # Global shared hooks (useGoBack, useRestoredScroll)
+│   ├── hooks/            # Global shared hooks (useGoBack(fallback) — the one Back rule, a history step with the screen's own landing behind it — and useRestoredScroll)
 │   ├── types/            # Shared TypeScript interfaces (import.ts, export.ts, settings.ts, playback.ts — read by both build targets; appVersion.d.ts)
-│   ├── utils/            # Pure helper functions (formatBytes among them)
-│   └── test-support/     # Shared test doubles (fakeResponse, stubDownload, stubScrollMetrics, stubScrollTo, comesBefore, snackbarStack, …)
+│   ├── utils/            # Pure helper functions (formatBytes and moviePath among them)
+│   └── test-support/     # Shared test doubles (fakeResponse, stubDownload, stubScrollMetrics, stubScrollTo, comesBefore, snackbarStack, LocationProbe and its navigationType reader, shippingSources, …)
 └── docs/
     ├── design-logs/    # Immutable feature design snapshots
     ├── PRDs/           # Product requirements and implementation plans
