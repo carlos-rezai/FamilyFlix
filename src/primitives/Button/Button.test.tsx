@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-import { ThemeProvider } from 'styled-components';
+import { renderToString } from 'react-dom/server';
+import { ServerStyleSheet, ThemeProvider } from 'styled-components';
 import { MemoryRouter } from 'react-router-dom';
 
 // Imported through the category barrel, the way every consumer will import it
@@ -170,5 +171,187 @@ describe('Button — disabled', () => {
     // alone would leave it keyboard-reachable and apparently live.
     const button = screen.getByRole('button', { name: 'Finish' });
     expect((button as HTMLButtonElement).disabled).toBe(true);
+  });
+});
+
+/**
+ * 21 — Motion & interaction states, Phase 2 (issue #182): Button, the first
+ * **Control** on `controlStates`.
+ *
+ * jsdom computes no `:hover`, `:active` or `:focus-visible`, so each state is
+ * read as the rule Button writes for it — off the CSS styled-components
+ * produces for one rendered Button, whitespace aside — against the values
+ * `prim.Button.dc.html` draws.
+ */
+describe('Button — hover, press and keyboard focus', () => {
+  interface Rule {
+    selector: string;
+    body: string;
+  }
+
+  const squash = (css: string) => css.replace(/\s+/g, '');
+  /** `0.12` and `.12` are the same number; compare them as one. */
+  const norm = (css: string) => squash(css).replace(/([(,:])0\./g, '$1.');
+
+  function rulesOf(tree: JSX.Element): Rule[] {
+    const sheet = new ServerStyleSheet();
+    try {
+      renderToString(
+        sheet.collectStyles(
+          <ThemeProvider theme={theme}>
+            <MemoryRouter>{tree}</MemoryRouter>
+          </ThemeProvider>
+        )
+      );
+      const css = norm(
+        sheet
+          .getStyleTags()
+          .replace(/<\/?style[^>]*>/g, '')
+          .replace(/\/\*!sc\*\//g, '')
+      );
+      return [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)].map((m) => ({
+        selector: m[1],
+        body: m[2],
+      }));
+    } finally {
+      sheet.seal();
+    }
+  }
+
+  function state(rules: Rule[], suffix: string): string {
+    return rules
+      .filter((rule) => rule.selector.endsWith(suffix))
+      .map((rule) => rule.body)
+      .join(';');
+  }
+
+  const HOVER = ':hover:not(:disabled)';
+  const PRESS = ':active:not(:disabled)';
+
+  const c = theme.colors;
+  const drawn = {
+    primary: {
+      hover: [`background:${c.accentHover}`],
+      press: [`background:${c.accentPress}`],
+    },
+    secondary: {
+      hover: [`background:${c.surface2}`, `border-color:${c.textFaint}`],
+      press: [`background:${c.surface3}`],
+    },
+    ghost: {
+      hover: [`background:${c.surface}`],
+      press: [`background:${c.surface2}`],
+    },
+    danger: {
+      hover: ['background:rgba(201,122,106,.12)', `border-color:${c.danger}`],
+      press: ['background:rgba(201,122,106,.2)'],
+    },
+  } as const;
+
+  const cases = (['primary', 'secondary', 'ghost', 'danger'] as const).flatMap(
+    (variant) => (['sm', 'md'] as const).map((size) => [variant, size] as const)
+  );
+
+  it.each(cases)('%s at %s hovers as prim.Button draws it', (variant, size) => {
+    const hover = state(
+      rulesOf(<Button label="Export" variant={variant} size={size} />),
+      HOVER
+    );
+
+    for (const declaration of drawn[variant].hover) {
+      expect(hover).toContain(norm(declaration));
+    }
+    // A Control signals with colour: its hover never lifts it.
+    expect(hover).not.toContain('transform');
+  });
+
+  it.each(cases)(
+    '%s at %s presses as prim.Button draws it, at scale(.98)',
+    (variant, size) => {
+      const press = state(
+        rulesOf(<Button label="Export" variant={variant} size={size} />),
+        PRESS
+      );
+
+      for (const declaration of drawn[variant].press) {
+        expect(press).toContain(norm(declaration));
+      }
+      expect(press).toContain('transform:scale(.98)');
+    }
+  );
+
+  it.each(cases)(
+    '%s at %s presses faster than its hover eases in',
+    (variant, size) => {
+      const rules = rulesOf(
+        <Button label="Export" variant={variant} size={size} />
+      );
+      const ms = (value: string) =>
+        [...value.matchAll(/(\d*\.?\d+)(ms|s)\b/g)].map(([, n, unit]) =>
+          unit === 's' ? Number(n) * 1000 : Number(n)
+        );
+      const resting = rules
+        .filter((rule) => !rule.selector.includes(':'))
+        .map((rule) => rule.body)
+        .join(';');
+
+      const press = ms(
+        /transition-duration:([^;]*)/.exec(state(rules, PRESS))?.[1] ?? ''
+      );
+      const hover = ms(/transition:([^;]*)/.exec(resting)?.[1] ?? '');
+
+      expect(press.length).toBeGreaterThan(0);
+      expect(hover.length).toBeGreaterThan(0);
+      expect(Math.max(...press)).toBeLessThan(Math.min(...hover));
+    }
+  );
+
+  it('shows no hover and no press when disabled: every state is guarded by :not(:disabled)', () => {
+    const rules = rulesOf(<Button label="Finish" disabled />);
+    const stateful = rules.filter((rule) =>
+      /:(hover|active)/.test(rule.selector)
+    );
+
+    expect(stateful.length).toBeGreaterThan(0);
+    for (const rule of stateful) {
+      expect(rule.selector).toContain(':not(:disabled)');
+    }
+    // `:enabled` is what an anchor never matches; the guard is not it.
+    expect(rules.some((rule) => rule.selector.includes(':enabled'))).toBe(
+      false
+    );
+  });
+
+  it('gives the link face — Back to library — a hover, a press and the ring', () => {
+    const rules = rulesOf(
+      <Button label="Back to library" to="/" variant="secondary" />
+    );
+
+    expect(state(rules, HOVER)).toContain(norm(`background:${c.surface2}`));
+    expect(state(rules, PRESS)).toContain('transform:scale(.98)');
+    expect(state(rules, ':focus-visible')).toContain(
+      norm(`box-shadow:0 0 0 3px ${c.focusRing}`)
+    );
+  });
+
+  it.each(cases)(
+    '%s at %s draws the accent Focus ring under Tab, as a shadow that follows its corners',
+    (variant, size) => {
+      const rules = rulesOf(
+        <Button label="Export" variant={variant} size={size} />
+      );
+
+      const focus = state(rules, ':focus-visible');
+      expect(focus).toContain(norm(`box-shadow:0 0 0 3px ${c.focusRing}`));
+      expect(focus).toContain('outline:none');
+    }
+  );
+
+  it('draws no ring for a click: nothing styles plain :focus', () => {
+    const rules = rulesOf(<Button label="Export" />);
+
+    expect(
+      rules.filter((rule) => /:focus(?!-visible)/.test(rule.selector))
+    ).toEqual([]);
   });
 });
