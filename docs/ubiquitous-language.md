@@ -389,6 +389,21 @@ it, and the line it appears past.
 | **Back-to-top** (new)      | The control that mounts a **FAB** over `MainLayout`'s body once it is past the **Scroll threshold** and rides it back to the top on a press — `components/BackToTop/`, given the body as a ref. Mounted by the **Chrome**, not by a feature or the page: the body is where the scrolling happens, so the chrome is what knows how far it has gone. Mounts and unmounts; never fades.                          | scroll-to-top, jump to top, the arrow, up button |
 | **Scroll threshold** (new) | The one line on the body past which **Back-to-top** shows its **FAB**: `scrollTop > 420`, strictly, the prototype's number. Read on every scroll and once on attach, because a screen returned to by Back is already past it before anyone touches the wheel.                                                                                                                                                 | fold, offset, trigger point, show-at             |
 
+## Back navigation (new)
+
+How a screen is left — its own initiative (`back-navigation`, design log 20),
+step 3 of the build order, ahead of the Electron shell because it is the app's
+own seams. One rule over every screen, and the prototype's stateless screen
+switcher translated onto the router's real history.
+
+| Term                   | Definition                                                                                                                                                                                                                                                                                                                                                                                                                                                    | Aliases to avoid                                |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- |
+| **Back rule** (new)    | The one way any screen is left — `useGoBack(fallback)` in `src/hooks/`: a **History step**, or the screen's **Landing** when there is no history behind it. In a line: _arriving pushes, leaving steps_. Every way onto a screen is a push; every way off it that means "done here" — Back, Escape, a save, a Skip, a Delete — is a step. No screen has a rule of its own.                                                                                    | back logic, exit handling, navigation rule      |
+| **History step** (new) | `navigate(-1)`: returning to the entry behind, as it was left — sort, filters and scroll intact, because `useRestoredScroll` keys on the entry. What a **Leaving** is; a push of the same URL is a different entry and a fresh screen, and leaves a duplicate the next Back walks into.                                                                                                                                                                       | go back, pop, navigate back, return             |
+| **Leaving** (new)      | Any control that takes the family or the maintainer off the screen they are on: the Back pill, Escape in the player, _Save changes_, _Save & continue_, _Skip this one_, Cancel, the Delete dialog's confirm. All of them are **History steps** except the two **Fresh homes**.                                                                                                                                                                               | exit, navigate away, close, dismiss             |
+| **Landing** (new)      | A screen's own destination for the no-history case — `location.key === 'default'`, a deep link or a reload — pushed so the screen it lands on has a Back of its own. The library by default; the player's is its **Movie detail page**, Import's is Settings, the **Movie form**'s is where its **Form context** came from: the **Review step** in **Import context**, the movie for an edit, Settings for an add. Read off the URL, never off fetched state. | fallback route, default route, home for, origin |
+| **Fresh home** (new)   | The two **Leavings** that are pushes and not steps: the **Movie form**'s _Add to library_ and Bulk import's Finish — the prototype's `goBrowse()`, a new entry on the **Browse home** at the top with nothing filtered, the film just added on its shelf. A push rather than a replace: nothing the app draws can tell the two apart, and one rule with a third shape is two rules.                                                                           | go home, browse, reset, replace                 |
+
 ## Relationships
 
 - A **Movie** has zero-or-more **Genres** (ordered; `genres[0]` is the primary tag) and zero-or-more **Subtitles**.
@@ -485,6 +500,10 @@ it, and the line it appears past.
 - A **Back-to-top** is made of a **FAB**, and a **FAB** is made of an `IconButton` — three rungs, none skipped. Only the middle one is presentational to the last prop; the top one owns the **Scroll threshold**, the listener and the press.
 - **Back-to-top** belongs to the **Chrome**, not to the **Browse home**'s feature: `MainLayout` lends it the body's ref the way it already lends the same ref to scroll restoration, and holds no state for either.
 - The **FAB** and the **Snackbar stack** share the bottom-right corner, and the stack is above; a **Snackbar notice** covers the **FAB** while it is up, as the prototype draws both. Nothing raises a notice on the home today.
+
+- Every screen leaves by the **Back rule**, and the **Back rule** is one hook: `useGoBack(fallback)`. A **Leaving** is a **History step** unless it is a **Fresh home**; a **Landing** is taken only when there is no history to step through.
+- The **Player** lands on its **Movie detail page**; Bulk import lands on the **Settings hub**; the **Movie form** lands where its **Form context** came from — the **Review step**, the movie, or Settings. Three callers pass a **Landing**; the rest take the library.
+- A **History step** is what makes `useRestoredScroll` hold across a **Leaving**: the entry stepped onto is the entry remembered. A push of the same URL would be a new entry with nothing remembered.
 
 ## Example dialogue
 
@@ -882,6 +901,20 @@ Hard` gets found and `Die Hard\extras` doesn't become a second film."
 > **Maintainer:** "Past 420 it's mounted, under it it's gone. The **FAB** never
 > hears the number. And when the family press it, the body rides to the top
 > and it unmounts on the way — no fade, no transition. The prototype draws none."
+>
+> **Dev:** "The player's Back pushes `/movie/:id`. Play, Back, Back — and
+> I'm in the player again. I'll push with `replace` instead."
+> **Maintainer:** "That still lands on a fresh entry. The **Back rule** is a
+> **History step**: the entry behind, as it was left, scroll and all. Every
+> **Leaving** is one — Back, Escape, a save, a Skip — through `useGoBack`."
+> **Dev:** "And a deep-linked player, with nothing behind it?"
+> **Maintainer:** "Then the screen's **Landing** — its movie. Pushed, so the
+> movie has a Back of its own. The library's the default; the player, Import
+> and the form pass their own."
+> **Dev:** "Import's Finish and _Add to library_ go to `/` today. Steps too?"
+> **Maintainer:** "No — those are the two **Fresh homes**. The prototype's
+> `goBrowse()`: a new home at the top, the film on its shelf. They stay
+> pushes. Two exceptions, named, and nothing else."
 
 ## Flagged ambiguities
 
@@ -1453,3 +1486,11 @@ Hard` gets found and `Die Hard\extras` doesn't become a second film."
   prop put ahead of the optional ones, and the refactor put `icon`, `label`,
   `size`, `onClick` back. The glossary never named either, so neither row
   changes.
+- **"Fallback" means two things (new):** `useGoBack`'s docblock has said
+  _fall back to the library_ since log 04, and the **Movie form** says a
+  problem that is gone _falls back to the plain add_; log 20 adds a third —
+  the per-screen route the hook pushes when there is no history. In prose
+  that third one is the **Landing**; `fallback` stays the parameter's name
+  in code because it is what the hook has always called it. Say **Landing**
+  when talking about where a screen goes, _fallback_ only when reading the
+  signature.
