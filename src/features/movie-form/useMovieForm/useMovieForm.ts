@@ -547,15 +547,6 @@ export function useMovieForm(): UseMovieFormResult {
     });
   }, [canSave, values, navigate, goBack, editing, resolving]);
 
-  // Back never writes and never dismisses: a maintainer stepping back from a
-  // half-fixed row finds it still in the list. The **Import context** is no
-  // exception to the app's one Back rule — _Resolve_ is a link from the
-  // review, so the entry behind the form *is* the list, and a step reaches it
-  // without leaving a second copy for Import's own Back to walk into. The
-  // deep link, which has no such entry, reaches the same place through the
-  // **Landing**.
-  const back = goBack;
-
   // _Skip this one_ is the review row's own Skip, from the form: dismiss, then
   // the step back onto the review. A dismiss that failed still lands there —
   // the row is still listed, which is the honest picture — and there is
@@ -594,7 +585,14 @@ export function useMovieForm(): UseMovieFormResult {
         ? null
         : { title: resolving.title, alsoMatched: resolving.alsoMatched },
     save,
-    back,
+    // Back never writes and never dismisses: a maintainer stepping back from a
+    // half-fixed row finds it still in the list. The **Import context** is no
+    // exception to the app's one Back rule — _Resolve_ is a link from the
+    // review, so the entry behind the form *is* the list, and a step reaches it
+    // without leaving a second copy for Import's own Back to walk into. The
+    // deep link, which has no such entry, reaches the same place through the
+    // **Landing**.
+    back: goBack,
     cancel,
   };
 }
