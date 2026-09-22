@@ -1,5 +1,7 @@
 import styled, { css } from 'styled-components';
 
+import { controlStates } from '@/styles/interactionStates/interactionStates';
+
 export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
 export type ButtonSize = 'sm' | 'md' | 'lg';
 
@@ -33,7 +35,9 @@ const sizes = {
 
 /**
  * Variant is purely chromatic — fill, text color, border, and weight, plus the
- * hover each one shifts. Only `primary` carries a fill; the other three sit on
+ * hover and press each one shifts. The press's scale, its speed and the Focus
+ * ring are the Control's, from `controlStates`; `sm` and `lg` share every state
+ * with `md`. Only `primary` carries a fill; the other three sit on
  * whatever surface they are dropped onto.
  */
 const variants = {
@@ -45,8 +49,12 @@ const variants = {
     border: none;
     font-weight: 700;
 
-    &:hover:enabled {
+    &:hover:not(:disabled) {
       background: ${({ theme }) => theme.colors.accentHover};
+    }
+
+    &:active:not(:disabled) {
+      background: ${({ theme }) => theme.colors.accentPress};
     }
   `,
   secondary: css`
@@ -55,8 +63,13 @@ const variants = {
     border: 1px solid ${({ theme }) => theme.colors.border};
     font-weight: 500;
 
-    &:hover:enabled {
+    &:hover:not(:disabled) {
+      background: ${({ theme }) => theme.colors.surface2};
       border-color: ${({ theme }) => theme.colors.textFaint};
+    }
+
+    &:active:not(:disabled) {
+      background: ${({ theme }) => theme.colors.surface3};
     }
   `,
   ghost: css`
@@ -65,8 +78,12 @@ const variants = {
     border: none;
     font-weight: 600;
 
-    &:hover:enabled {
+    &:hover:not(:disabled) {
       background: ${({ theme }) => theme.colors.surface};
+    }
+
+    &:active:not(:disabled) {
+      background: ${({ theme }) => theme.colors.surface2};
     }
   `,
   danger: css`
@@ -75,8 +92,16 @@ const variants = {
     border: 1px solid ${({ theme }) => theme.colors.border};
     font-weight: 600;
 
-    &:hover:enabled {
+    /* The danger tints are the two literals prim.Button writes: the
+       danger colour (201, 122, 106) at 12% under hover and 20% under press.
+       No --color-* token carries a danger alpha. */
+    &:hover:not(:disabled) {
+      background: rgba(201, 122, 106, 0.12);
       border-color: ${({ theme }) => theme.colors.danger};
+    }
+
+    &:active:not(:disabled) {
+      background: rgba(201, 122, 106, 0.2);
     }
   `,
 } as const;
@@ -108,6 +133,7 @@ export const Root = styled.button<{
      button face nothing and saves the anchor face from being a second copy. */
   text-decoration: none;
 
+  ${controlStates('scale(.98)')}
   ${({ $size }) => sizes[$size]}
   ${({ $variant }) => variants[$variant]}
 

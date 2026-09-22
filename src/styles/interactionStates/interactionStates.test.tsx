@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import type { ReactElement } from 'react';
 import { renderToString } from 'react-dom/server';
 import styled, { ServerStyleSheet, ThemeProvider } from 'styled-components';
 
@@ -32,7 +33,7 @@ interface Rule {
 }
 
 /** Every flat rule in the CSS a styled tree produces. */
-function renderedRules(tree: JSX.Element): Rule[] {
+function renderedRules(tree: ReactElement): Rule[] {
   const sheet = new ServerStyleSheet();
   try {
     renderToString(
@@ -78,8 +79,12 @@ function restingBody(rules: Rule[]): string {
     .join(';');
 }
 
+/**
+ * Every duration in a squashed value. No `\b` after the unit: with the
+ * whitespace gone, `120ms cubic-bezier(` reads `120mscubic-bezier(`.
+ */
 function milliseconds(value: string): number[] {
-  return [...value.matchAll(/(\d*\.?\d+)(ms|s)\b/g)].map(([, n, unit]) =>
+  return [...value.matchAll(/(\d*\.?\d+)(ms|s)/g)].map(([, n, unit]) =>
     unit === 's' ? Number(n) * 1000 : Number(n)
   );
 }

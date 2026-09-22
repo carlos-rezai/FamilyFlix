@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
+import type { ReactElement } from 'react';
 import { renderToString } from 'react-dom/server';
 import { ServerStyleSheet, ThemeProvider } from 'styled-components';
 import { MemoryRouter } from 'react-router-dom';
@@ -193,7 +194,7 @@ describe('Button — hover, press and keyboard focus', () => {
   /** `0.12` and `.12` are the same number; compare them as one. */
   const norm = (css: string) => squash(css).replace(/([(,:])0\./g, '$1.');
 
-  function rulesOf(tree: JSX.Element): Rule[] {
+  function rulesOf(tree: ReactElement): Rule[] {
     const sheet = new ServerStyleSheet();
     try {
       renderToString(
@@ -286,8 +287,9 @@ describe('Button — hover, press and keyboard focus', () => {
       const rules = rulesOf(
         <Button label="Export" variant={variant} size={size} />
       );
+      // No `\b` after the unit: squashed, `120ms cubic-bezier(` is one word.
       const ms = (value: string) =>
-        [...value.matchAll(/(\d*\.?\d+)(ms|s)\b/g)].map(([, n, unit]) =>
+        [...value.matchAll(/(\d*\.?\d+)(ms|s)/g)].map(([, n, unit]) =>
           unit === 's' ? Number(n) * 1000 : Number(n)
         );
       const resting = rules
