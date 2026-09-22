@@ -1,6 +1,7 @@
 /**
  * Color tokens — translated 1:1 from `docs/handoff/tokens.css` (`--color-*`).
- * Dark, warm, cinematic palette. No React, no logic — pure values.
+ * Dark, warm, cinematic palette. No React, no logic — pure values. The
+ * accent's derivatives are not spelled here: `createTheme` computes them.
  */
 export const colors = {
   bg: '#14110d',
@@ -14,9 +15,6 @@ export const colors = {
   textDim: '#b6a994',
   textFaint: '#857a68',
   accent: '#d97a4e',
-  accentHover: '#e58e63',
-  accentSoft: 'rgba(217, 122, 78, 0.14)',
-  accentLine: 'rgba(217, 122, 78, 0.32)',
   watched: '#8a9a6b',
   scrim: 'rgba(10, 8, 5, 0.72)',
   info: '#6b8aa8',

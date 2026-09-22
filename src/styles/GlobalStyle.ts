@@ -34,6 +34,16 @@ export const GlobalStyle = createGlobalStyle`
     background: transparent;
   }
 
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+
   @keyframes ffFade {
     from { opacity: 0; transform: translateY(8px); }
     to { opacity: 1; transform: none; }

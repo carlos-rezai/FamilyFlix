@@ -26,3 +26,4 @@ export { parseGenreQuery } from './parseGenreQuery/parseGenreQuery';
 export { toGenreQueryParams } from './toGenreQueryParams/toGenreQueryParams';
 export { moviePath } from './moviePath/moviePath';
 export { movieFormPath } from './movieFormPath/movieFormPath';
+export { accentScale, type AccentScale } from './accentScale/accentScale';

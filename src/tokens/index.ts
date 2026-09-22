@@ -4,3 +4,4 @@ export { spacing } from './spacing';
 export { typography } from './typography';
 export { radius } from './radius';
 export { breakpoints } from './breakpoints';
+export { motion } from './motion';
