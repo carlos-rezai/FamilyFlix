@@ -102,3 +102,23 @@ describe('LocationProbe — the Back control', () => {
     expect(screen.getByTestId('url').textContent).toBe('/?q=lighthouse');
   });
 });
+
+describe('LocationProbe — how the router got where it is', () => {
+  it('reports a push as PUSH', () => {
+    renderProbe(<LocationProbe />, ['/']);
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Go to /genre/action?sort=year' })
+    );
+
+    expect(screen.getByTestId('navigationType').textContent).toBe('PUSH');
+  });
+
+  it('reports a history step as POP', () => {
+    renderProbe(<LocationProbe withBack />, ['/one', '/two']);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+
+    expect(screen.getByTestId('navigationType').textContent).toBe('POP');
+  });
+});
