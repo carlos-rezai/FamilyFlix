@@ -1,5 +1,6 @@
 import { Button } from '@/primitives';
 import type { ImportProblem } from '@/types';
+import { movieFormPath } from '@/utils';
 import { DOT_TONE, Dot, Reason, Row, Text, Title } from './ProblemRow.styles';
 
 export interface ProblemRowProps {
@@ -16,9 +17,7 @@ export interface ProblemRowProps {
  * adding the film twice.
  */
 const resolveRoute = ({ id, movieId }: ImportProblem): string =>
-  movieId === undefined
-    ? `/add?problem=${encodeURIComponent(id)}`
-    : `/add?movie=${encodeURIComponent(movieId)}&problem=${encodeURIComponent(id)}`;
+  movieFormPath({ movie: movieId, problem: id });
 
 /**
  * One row of the **Review step**'s **Needs attention** list, from

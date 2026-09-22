@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 
 import { MenuItem } from '@/components';
 import { MoreIcon } from '@/primitives';
+import { movieFormPath } from '@/utils';
 import { DeleteMovieDialog } from '../DeleteMovieDialog/DeleteMovieDialog';
 import { CornerMenu, MoreButton } from './EditMenu.styles';
 
@@ -44,7 +45,10 @@ export function EditMenu({ movieId, title }: EditMenuProps) {
           </MoreButton>
         )}
       >
-        <MenuItem glyph="✎" onSelect={() => navigate(`/add?movie=${movieId}`)}>
+        <MenuItem
+          glyph="✎"
+          onSelect={() => navigate(movieFormPath({ movie: movieId }))}
+        >
           Edit details
         </MenuItem>
         <MenuItem glyph="🗑" danger onSelect={() => setDeleteOpen(true)}>

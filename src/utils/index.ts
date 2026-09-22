@@ -25,3 +25,4 @@ export { toLibraryQueryParams } from './toLibraryQueryParams/toLibraryQueryParam
 export { parseGenreQuery } from './parseGenreQuery/parseGenreQuery';
 export { toGenreQueryParams } from './toGenreQueryParams/toGenreQueryParams';
 export { moviePath } from './moviePath/moviePath';
+export { movieFormPath } from './movieFormPath/movieFormPath';
