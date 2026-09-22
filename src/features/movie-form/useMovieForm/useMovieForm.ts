@@ -20,27 +20,30 @@ import {
   problemFormValues,
 } from '../formValues/formValues';
 
-/** Where a finished add lands — the shelf the film has just joined. */
-const AFTER_ADD = '/';
+/**
+ * The **Fresh home** a finished add lands on — the shelf the film has just
+ * joined, at the top and unfiltered. A push rather than a step, and the one
+ * leaving on this screen that is.
+ */
+const FRESH_HOME = '/';
 
 /**
  * The **Add context**'s **Landing** — the hub the ＋ that opens this screen
  * lives on, rather than the library, which is where a *finished* add goes and
  * is a different journey's end.
  */
-const AFTER_ADD_FALLBACK = '/settings';
+const ADD_LANDING = '/settings';
 
 /**
  * The **Import context**'s **Landing**: the **Review step**, where the rest of
  * the list still is.
  *
- * It is a landing and nothing else. Every exit from this context —
- * _Save & continue_, _Skip this one_ and Back alike — is a **History step**
- * onto the review the form was opened from, because _Resolve_ is a link from
- * that review and nothing else opens this URL. This constant is reached on its
- * own only by the deep link, which has no such entry behind it to step onto.
+ * Every leaving from this context — _Save & continue_, _Skip this one_ and
+ * Back alike — is a **History step** onto the review the form was opened from,
+ * because _Resolve_ is a link from that review and nothing else opens this
+ * URL. Only the deep link, which has no such entry behind it, arrives here.
  */
-const AFTER_RESOLVE = '/import';
+const REVIEW_LANDING = '/import';
 
 /**
  * The query parameter that says which movie this screen is amending.
@@ -76,13 +79,13 @@ const PROBLEM_PARAM = 'problem';
  */
 function formLanding(movie: string | null, problem: string | null): string {
   if (problem !== null) {
-    return AFTER_RESOLVE;
+    return REVIEW_LANDING;
   }
   if (movie !== null) {
     // The page a correction is visible on — the **Edit context**'s **Landing**.
     return moviePath(movie);
   }
-  return AFTER_ADD_FALLBACK;
+  return ADD_LANDING;
 }
 
 /** The most digits a year can have. */
@@ -520,7 +523,7 @@ export function useMovieForm(): UseMovieFormResult {
               .then(() => dismissProblem(resolving.id).catch(() => undefined))
               .then(() => goBack())
         : editing === null
-          ? createMovie(values).then(() => navigate(AFTER_ADD))
+          ? createMovie(values).then(() => navigate(FRESH_HOME))
           : // A correction is only visible on the film's page — which is the
             // entry the form was opened from, so a *step* is what lands there.
             // The push this used to be left a second copy of that page behind,

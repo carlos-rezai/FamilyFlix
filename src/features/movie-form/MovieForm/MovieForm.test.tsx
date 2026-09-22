@@ -3942,7 +3942,7 @@ describe('MovieForm — the landing, and leaving an edit', () => {
    * 20 — Back navigation, Phase 5 (issue #175). The count is the claim: one
    * `navigate` left in the hook, and it is the **Fresh home**'s. Every other
    * leaving — Back, Cancel, _Skip this one_, _Save changes_, _Save & continue_
-   * in both its shapes — goes through the one `goBack`, so `AFTER_RESOLVE`
+   * in both its shapes — goes through the one `goBack`, so `REVIEW_LANDING`
    * survives as the **Import context**'s **Landing** and as nothing else.
    *
    * `ImportFlow.test.tsx` set the precedent in #173, for the same reason: a
@@ -3956,6 +3956,6 @@ describe('MovieForm — the landing, and leaving an edit', () => {
     );
 
     expect(source.match(/navigate\(/g)).toEqual(['navigate(']);
-    expect(source).toMatch(/navigate\(AFTER_ADD\)/);
+    expect(source).toMatch(/navigate\(FRESH_HOME\)/);
   });
 });
