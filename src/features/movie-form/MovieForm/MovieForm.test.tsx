@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
   render,
@@ -200,6 +202,8 @@ const save = () =>
     name: /add to library|adding/i,
   }) as HTMLButtonElement;
 const currentPath = () => screen.getByTestId('pathname').textContent;
+/** How the router got where it is: `POP` after a step, `PUSH` after a push. */
+const navigationType = () => screen.getByTestId('navigationType').textContent;
 const directorField = () =>
   screen.getByRole('textbox', { name: /director/i }) as HTMLInputElement;
 const castField = () =>
@@ -2268,15 +2272,28 @@ describe('MovieForm — the Import context', () => {
   });
 
   /**
-   * The form opened on a problem, the way _Resolve_ opens it — with the
-   * Settings screen behind it, so that "lands on `/import`" is a claim about
-   * where the form goes and not about where it came from.
+   * The form opened on a problem, over the history _Resolve_ actually leaves:
+   * the gear, Import from spreadsheet, and the review's own link — so the
+   * entry behind the form is `/import`.
+   *
+   * Amended by 20 — Back navigation, Phase 5 (issue #175). It used to put
+   * Settings behind the form on purpose, so that "lands on `/import`" was a
+   * claim about where the form goes rather than where it came from. That
+   * premise is what this slice reverses: _Resolve_ is a link from the review
+   * and nothing else opens this URL, so the screen behind the form *is* the
+   * review, and every leaving steps onto it rather than pushing a second copy
+   * of it. A stack with Settings behind the form is a journey no maintainer
+   * can make.
    */
   async function renderResolve(id = DIE_HARD.id) {
     const view = render(
       <MemoryRouter
-        initialEntries={['/settings', `/add?problem=${encodeURIComponent(id)}`]}
-        initialIndex={1}
+        initialEntries={[
+          '/settings',
+          '/import',
+          `/add?problem=${encodeURIComponent(id)}`,
+        ]}
+        initialIndex={2}
       >
         <ThemeProvider theme={theme}>
           <MovieForm />
@@ -2691,8 +2708,27 @@ describe('MovieForm — the Import context', () => {
       fireEvent.click(saveAndContinue());
 
       // Story 95: back to the review, one row shorter — not to the browse
-      // home, and not to whatever was behind the form.
+      // home. (The "not to whatever was behind the form" half of this went
+      // with issue #175: the review *is* what is behind the form.)
       await waitFor(() => expect(currentPath()).toBe('/import'));
+    });
+
+    // --- 20 — Back navigation, Phase 5: the form in Import context (#175) ----
+    //
+    // The destination above never moved; how the screen reaches it does. A
+    // push left a second `/import` entry on the stack, and Import's own Back
+    // then stepped into the form the maintainer had just finished in. The
+    // review survives a step because it is the **Current run**'s state rather
+    // than the entry's — `useImportRun` re-attaches on mount — so the row that
+    // was fixed is gone either way, and only `navigationType` can tell the two
+    // apart.
+    it('steps onto the Review step rather than pushing a second copy of it', async () => {
+      await renderResolve();
+
+      fireEvent.click(saveAndContinue());
+
+      await waitFor(() => expect(currentPath()).toBe('/import'));
+      expect(navigationType()).toBe('POP');
     });
 
     it('takes no second press while the resolve is in flight', async () => {
@@ -2751,6 +2787,19 @@ describe('MovieForm — the Import context', () => {
       await waitFor(() => expect(currentPath()).toBe('/import'));
     });
 
+    // 20 — Back navigation, Phase 5 (#175). The same press, read for how it
+    // travels: the dismiss first, then a step onto the review the form was
+    // opened from — never a push, which would leave the maintainer's next
+    // Back walking into a form for a row that is no longer listed.
+    it('steps onto the Review step once the dismiss has answered', async () => {
+      await renderResolve();
+
+      fireEvent.click(skipThisOne());
+
+      await waitFor(() => expect(currentPath()).toBe('/import'));
+      expect(navigationType()).toBe('POP');
+    });
+
     it('writes nothing', async () => {
       await renderResolve();
 
@@ -2763,16 +2812,24 @@ describe('MovieForm — the Import context', () => {
   });
 
   describe('Back', () => {
-    it('lands on /import, not on the screen behind the form', async () => {
+    it('steps onto the Review step, with the row still listed', async () => {
       await renderResolve();
 
       fireEvent.click(backPill());
 
       // Story 95. The form was reached from the review, and the review is
-      // where a maintainer stepping back expects to be — whatever the history
-      // says. And nothing was dismissed: the row is still there to come back
-      // to.
+      // where a maintainer stepping back expects to be.
+      //
+      // Amended by 20 — Back navigation, Phase 5 (issue #175): the name used
+      // to read "not on the screen behind the form", because Back pushed
+      // `/import` whatever the history said. The review *is* the screen behind
+      // the form — _Resolve_ is a link from it and nothing else opens this
+      // URL — so the same destination is reached by stepping, and the
+      // duplicate entry the push left behind is gone.
       expect(currentPath()).toBe('/import');
+      expect(navigationType()).toBe('POP');
+      // And nothing was written: the row is still there to come back to,
+      // which is the whole difference between Back and _Skip this one_.
       await act(async () => undefined);
       expect(dismissRequests()).toEqual([]);
       expect(resolveRequests()).toEqual([]);
@@ -3156,14 +3213,20 @@ describe('MovieForm — the Import context', () => {
       expect(resolveRequests()).toEqual([]);
     });
 
-    it('follows the app’s own Back rule after the fallback, not /import', async () => {
+    it('follows the app’s own Back rule after the fallback', async () => {
       answerProblem = () =>
         Promise.resolve(notFoundResponse('No such problem: p1'));
       await renderResolve();
 
       fireEvent.click(backPill());
 
-      expect(currentPath()).toBe('/settings');
+      // Amended by 20 — Back navigation, Phase 5 (issue #175): this used to
+      // read "not /import", because the fallback stepped while the Import
+      // context pushed. Both step now, so the distinction the name drew is
+      // gone — what is left to assert is that the fallback is still a step
+      // rather than a landing pushed on top of the screen behind it.
+      expect(currentPath()).toBe('/import');
+      expect(navigationType()).toBe('POP');
       expect(dismissRequests()).toEqual([]);
     });
   });
@@ -3305,8 +3368,12 @@ describe('MovieForm — the Import context', () => {
 
     /**
      * The form opened on a soft problem, the way its _Resolve_ opens it — the
-     * movie and the problem both named, with Settings behind it so that
-     * "lands on `/import`" is about where the form goes.
+     * movie and the problem both named, over the history the review's link
+     * leaves behind it.
+     *
+     * Amended by 20 — Back navigation, Phase 5 (issue #175), for
+     * `renderResolve`'s reason: the entry behind a Resolve is `/import`,
+     * always, so that is the stack a leaving has to be read over.
      */
     async function renderSoftResolve(
       movieId = UNFILED.id,
@@ -3316,9 +3383,10 @@ describe('MovieForm — the Import context', () => {
         <MemoryRouter
           initialEntries={[
             '/settings',
+            '/import',
             `/add?movie=${encodeURIComponent(movieId)}&problem=${encodeURIComponent(problemId)}`,
           ]}
-          initialIndex={1}
+          initialIndex={2}
         >
           <ThemeProvider theme={theme}>
             <MovieForm />
@@ -3543,6 +3611,20 @@ describe('MovieForm — the Import context', () => {
         await waitFor(() => expect(currentPath()).toBe('/import'));
       });
 
+      // 20 — Back navigation, Phase 5 (#175). The second of _Save & continue_'s
+      // two shapes, and the one with a third request in it: the `PATCH`, then
+      // the dismiss, then the leaving. The leaving is the same **History step**
+      // the plain resolve makes — a `PATCH` in front of it changes what the row
+      // is, never how the screen is left.
+      it('steps onto the Review step after the edit and its dismiss', async () => {
+        await renderSoftResolve();
+
+        fireEvent.click(saveAndContinue());
+
+        await waitFor(() => expect(currentPath()).toBe('/import'));
+        expect(navigationType()).toBe('POP');
+      });
+
       it('says Saving… and takes no second press while the edit is in flight', async () => {
         let settle: (response: Response) => void = () => undefined;
         answerSave = () =>
@@ -3657,17 +3739,24 @@ describe('MovieForm — the Import context', () => {
         // changes_ is a **History step** now rather than a push at
         // `/movie/:id`, so it lands where Cancel does in the test below —
         // on the entry this helper put behind the form. The **Landing** is
-        // only for the form nothing opened.
-        await waitFor(() => expect(currentPath()).toBe('/settings'));
+        // only for the form nothing opened. Phase 5 (issue #175) moved that
+        // entry to `/import`, which is what a Resolve really has behind it.
+        await waitFor(() => expect(currentPath()).toBe('/import'));
+        expect(navigationType()).toBe('POP');
         expect(dismissRequests()).toEqual([]);
       });
 
-      it('follows the app’s own Back rule after the fallback, not /import', async () => {
+      it('follows the app’s own Back rule after the fallback', async () => {
         await renderSoftResolve();
 
         fireEvent.click(cancel());
 
-        expect(currentPath()).toBe('/settings');
+        // Amended by 20 — Back navigation, Phase 5 (issue #175): "not
+        // /import" was the claim while the Import context pushed and the
+        // fallback stepped. Both step now, onto the review the form was
+        // opened from — and a step is still what this asserts.
+        expect(currentPath()).toBe('/import');
+        expect(navigationType()).toBe('POP');
         expect(dismissRequests()).toEqual([]);
       });
     });
@@ -3722,9 +3811,6 @@ describe('MovieForm — the Import context', () => {
  * in halves.
  */
 describe('MovieForm — the landing, and leaving an edit', () => {
-  /** How the router got where it is: `POP` after a step, `PUSH` after a push. */
-  const navigationType = () => screen.getByTestId('navigationType').textContent;
-
   /** The form at the end of the entries a real journey would have left. */
   function mountAt(entries: string[]) {
     return render(
@@ -3822,10 +3908,13 @@ describe('MovieForm — the landing, and leaving an edit', () => {
   });
 
   it('lands a deep-linked Resolve on the Review step, before the detail has been read', () => {
-    // The third arm of the same mapping. The Import context's *leavings* are
-    // #175's and still push `/import` of their own accord once the detail has
-    // landed — but the mapping is one function over the two query parameters,
-    // and this is the state where only the URL can answer.
+    // The third arm of the same mapping, and — since 20 — Back navigation,
+    // Phase 5 (issue #175) took the last three pushes out of the Import
+    // context — the *only* way the form reaches `/import` without a history
+    // step. Green from the day it was written: the landing was #174's, and
+    // this press has always gone through it because `resolving` is still
+    // `null` here. It stays as the guard on the deep-linked case, where there
+    // is no review entry to step onto and the URL is all there is to read.
     renderUnread('/add?problem=p1');
 
     fireEvent.click(backPill());
@@ -3847,5 +3936,26 @@ describe('MovieForm — the landing, and leaving an edit', () => {
 
     await waitFor(() => expect(currentPath()).toBe('/'));
     expect(navigationType()).toBe('PUSH');
+  });
+
+  /**
+   * 20 — Back navigation, Phase 5 (issue #175). The count is the claim: one
+   * `navigate` left in the hook, and it is the **Fresh home**'s. Every other
+   * leaving — Back, Cancel, _Skip this one_, _Save changes_, _Save & continue_
+   * in both its shapes — goes through the one `goBack`, so `AFTER_RESOLVE`
+   * survives as the **Import context**'s **Landing** and as nothing else.
+   *
+   * `ImportFlow.test.tsx` set the precedent in #173, for the same reason: a
+   * second `navigate` on a screen is a second Back rule, and no press can be
+   * arranged to notice one that is merely redundant with the hook.
+   */
+  it('navigates on its own for Add to library alone', () => {
+    const source = readFileSync(
+      'src/features/movie-form/useMovieForm/useMovieForm.ts',
+      'utf8'
+    );
+
+    expect(source.match(/navigate\(/g)).toEqual(['navigate(']);
+    expect(source).toMatch(/navigate\(AFTER_ADD\)/);
   });
 });

@@ -1,3 +1,5 @@
+import { readdirSync, readFileSync } from 'node:fs';
+
 import { describe, it, expect } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import {
@@ -151,5 +153,59 @@ describe('useGoBack — a screen that names its own Landing', () => {
 
     expect(pathname()).toBe('/genre/Drama');
     expect(navigationType()).toBe('POP');
+  });
+});
+
+/**
+ * 20 — Back navigation, Phase 5: "the form in Import context" (issue #175).
+ *
+ * The initiative's closing claim, and the only one no single screen can make:
+ * there is **one Back rule**, and this file holds it. Every screen reaches a
+ * **History step** through this hook, so a second `navigate(-1)` anywhere in
+ * shipping code is a second Back rule — the thing the initiative exists to
+ * end — and a `from` in route state is the other way of building one, a screen
+ * remembering where it came from instead of letting the router remember.
+ *
+ * Green by design on the day it was written: no shipping file has held either
+ * since #171. It is a guard rather than a discovery — the pressure is on the
+ * next screen, Series' `backFromSeason` among them, to arrive through the hook
+ * rather than beside it.
+ *
+ * It reads source rather than pressing a button because that is what the claim
+ * is about: not what any one screen does, but what no file contains.
+ * `ImportFlow.test.tsx` set the precedent in #173 with its one-`navigate`
+ * count.
+ */
+describe('useGoBack — the only Back rule in the app', () => {
+  /** This hook's own file, the one place a history step is allowed to live. */
+  const THE_HOOK = 'src/hooks/useGoBack/useGoBack.ts';
+
+  /**
+   * Every shipping source file under `src/`. Tests are not shipping code and
+   * neither is `test-support/` — the probe's own Back button and the suites'
+   * stand-ins for browser chrome are history steps on purpose.
+   */
+  function shippingSources(): string[] {
+    return readdirSync('src', { recursive: true, encoding: 'utf8' })
+      .map((name) => `src/${name}`.replace(/\\/g, '/'))
+      .filter((path) => /\.tsx?$/.test(path) && !/\.test\.tsx?$/.test(path))
+      .filter((path) => !path.includes('/test-support/'));
+  }
+
+  /** The shipping files whose text matches — by path, so a failure names them. */
+  const filesMatching = (pattern: RegExp): string[] =>
+    shippingSources().filter((path) =>
+      pattern.test(readFileSync(path, 'utf8'))
+    );
+
+  it('is the only shipping file that steps back through history', () => {
+    expect(filesMatching(/navigate\(-1\)/)).toEqual([THE_HOOK]);
+  });
+
+  it('leaves the router to remember where a screen came from', () => {
+    // No `from` in location state, anywhere: the history stack already holds
+    // it, and a screen carrying its own answer is a Back rule that disagrees
+    // with the browser's.
+    expect(filesMatching(/state:\s*\{[^}]*\bfrom\b/)).toEqual([]);
   });
 });

@@ -11,7 +11,15 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter, useNavigate } from 'react-router-dom';
 
 import App from './App';
-import type { GenrePayload, HomePayload, HomeRow, Movie } from '@/types';
+import type {
+  GenrePayload,
+  HomePayload,
+  HomeRow,
+  ImportProblem,
+  ImportProblemDetail,
+  ImportRun,
+  Movie,
+} from '@/types';
 import { LocationProbe } from '@/test-support/LocationProbe/LocationProbe';
 import { makeMovie } from '@/test-support/makeMovie/makeMovie';
 import {
@@ -1336,5 +1344,127 @@ describe('App — coming back out of an edit', () => {
     await waitFor(() => expect(currentPath()).toBe('/'));
     expect(currentSearch()).toBe('?q=north&sort=a-z');
     await screen.findByRole('heading', { name: 'Action' });
+  });
+});
+
+/**
+ * 20 — Back navigation, Phase 5: "the form in Import context" (issue #175).
+ *
+ * The maintainer's longest journey, as they actually make it: the gear, Import
+ * from spreadsheet, a row in **Needs attention**, _Resolve_, _Save & continue_,
+ * and back out. Four screens, three of them real, and the two presses that
+ * matter are a whole screen apart — which is why this lives here rather than
+ * beside `MovieForm`: the duplicate `/import` entry the form's push left behind
+ * is only ever pressed by *Import's* own Back.
+ *
+ * It is also the one place the **Review step**'s survival can be read. The step
+ * lands on the `/import` entry the maintainer already visited, and the row it
+ * just fixed is gone from the list anyway — because the review is the **Current
+ * run**'s state rather than the entry's, and `useImportRun` re-attaches on
+ * mount.
+ */
+describe('App — coming back out of a Resolve', () => {
+  /** The one row the run could not settle, as the Review step lists it. */
+  const PROBLEM: ImportProblem = {
+    id: 'p1',
+    kind: 'no-video',
+    title: 'Die Hard',
+    reason: 'No video file under the folder.',
+  };
+
+  /** The same row as _Resolve_ reads it, with a film to fill the gate. */
+  const DETAIL: ImportProblemDetail = {
+    ...PROBLEM,
+    row: { title: 'Die Hard', year: 1988, genres: [] },
+    folder: 'C:\\Movies\\Die Hard (1988)',
+    candidates: [],
+    files: {
+      video: 'C:\\Movies\\Die Hard (1988)\\Die.Hard.1988.mp4',
+      subtitles: [],
+    },
+  };
+
+  /** The **Current run** in review, holding whatever is still unsettled. */
+  const reviewRun = (problems: ImportProblem[]): ImportRun => ({
+    id: 'run-1',
+    phase: 'review',
+    startedAt: '2026-09-22T10:00:00.000Z',
+    found: 2,
+    total: 2,
+    done: 2,
+    matched: 1,
+    currentItem: '',
+    log: [],
+    problems,
+  });
+
+  /** Whether the resolve has been made: the run answers differently after it. */
+  let resolved: boolean;
+
+  beforeEach(() => {
+    resolved = false;
+    const base = fetchMock.getMockImplementation();
+    // Three more arms in front of the file's own: the current run on every
+    // visit to `/import`, the problem detail the form prefills from, and the
+    // resolve. Everything else — the hub's four reads, the genre pool — is a
+    // request this journey has no business answering, and every screen on it
+    // draws nothing while a read has not landed.
+    fetchMock.mockImplementation((input, init) => {
+      const url = String(input);
+      const method = init?.method?.toUpperCase() ?? 'GET';
+      if (url.includes('/api/import/current/problems/')) {
+        if (method === 'POST') {
+          resolved = true;
+          return Promise.resolve(
+            createdResponse(makeMovie({ id: 'd1', title: 'Die Hard' }))
+          );
+        }
+        return Promise.resolve(okResponse(DETAIL));
+      }
+      if (url.includes('/api/import/current')) {
+        return Promise.resolve(
+          okResponse(reviewRun(resolved ? [] : [PROBLEM]))
+        );
+      }
+      return base === undefined
+        ? Promise.reject(new Error(`Unexpected request: ${url}`))
+        : base(input, init);
+    });
+  });
+
+  const resolveLink = () => screen.queryByRole('link', { name: 'Resolve' });
+
+  it('walks back out to the hub the import was started from', async () => {
+    renderApp('/');
+    await screen.findByRole('heading', { name: 'Action' });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Settings' }));
+    await screen.findByRole('heading', { name: 'Settings' });
+    fireEvent.click(
+      screen.getByRole('button', { name: /import from spreadsheet/i })
+    );
+    await screen.findByRole('heading', { level: 1, name: 'Import library' });
+
+    // The Review step, with the one row the run could not settle.
+    fireEvent.click(await screen.findByRole('link', { name: 'Resolve' }));
+    const saveAndContinue = await screen.findByRole('button', {
+      name: /save & continue/i,
+    });
+    expect(currentPath()).toBe('/add');
+
+    fireEvent.click(saveAndContinue);
+
+    // Back on the review — the entry the form was opened from, rather than a
+    // second copy of it — and the row that was fixed is gone from the list
+    // without the screen asking anyone where it had been.
+    await screen.findByRole('heading', { level: 1, name: 'Import library' });
+    expect(currentPath()).toBe('/import');
+    await waitFor(() => expect(resolveLink()).toBeNull());
+
+    fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+
+    // The press that used to walk back into the form of a row already fixed.
+    await screen.findByRole('heading', { name: 'Settings' });
+    expect(currentPath()).toBe('/settings');
   });
 });
