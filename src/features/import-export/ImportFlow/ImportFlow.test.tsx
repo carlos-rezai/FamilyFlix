@@ -1,5 +1,4 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { readFileSync } from 'node:fs';
 import {
   render,
   screen,
@@ -973,6 +972,11 @@ describe('ImportFlow — a poll that fails', () => {
  * Nothing here goes near the **Run hook**. A Back mid-run leaves the run where
  * it is — it is the server's **Current run**, re-attached on the next visit —
  * so the one thing to assert about it is the request that must *not* be made.
+ *
+ * That Finish is the one push left is carried by the presses, not by reading
+ * the file: Back is a `POP` and a second Back reaches the library, and Finish
+ * is a `PUSH` onto `/`. That no file but the hook steps through history at all
+ * is the hook suite's guard.
  */
 describe('ImportFlow — leaving is a history step', () => {
   /** How the router got where it is: `POP` after a step, `PUSH` after a push. */
@@ -1098,18 +1102,5 @@ describe('ImportFlow — leaving is a history step', () => {
 
     expect(currentPath()).toBe('/');
     expect(navigationType()).toBe('PUSH');
-  });
-
-  it('navigates on its own for Finish alone', () => {
-    // One `navigate` left in the organism, and it is the **Fresh home**'s. A
-    // second one is a second Back rule, which is what the initiative exists to
-    // end.
-    const source = readFileSync(
-      'src/features/import-export/ImportFlow/ImportFlow.tsx',
-      'utf8'
-    );
-
-    expect(source.match(/navigate\(/g)).toEqual(['navigate(']);
-    expect(source).toMatch(/navigate\('\/'\)/);
   });
 });

@@ -1,5 +1,3 @@
-import { readFileSync } from 'node:fs';
-
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
   render,
@@ -3809,6 +3807,12 @@ describe('MovieForm — the Import context', () => {
  * `/import`; #175 is where they stop. Only its landing is this slice's, because
  * the landing is one mapping over the two query parameters and cannot be built
  * in halves.
+ *
+ * That _Add to library_ is the form's one push left is carried by the presses,
+ * not by reading the file: it is a `PUSH` onto `/` below, and every other
+ * leaving — Back, Cancel, _Save changes_ here, _Skip this one_ and _Save &
+ * continue_ in the Import context's blocks — is a `POP` onto a named URL. That
+ * no file but the hook steps through history at all is the hook suite's guard.
  */
 describe('MovieForm — the landing, and leaving an edit', () => {
   /** The form at the end of the entries a real journey would have left. */
@@ -3936,26 +3940,5 @@ describe('MovieForm — the landing, and leaving an edit', () => {
 
     await waitFor(() => expect(currentPath()).toBe('/'));
     expect(navigationType()).toBe('PUSH');
-  });
-
-  /**
-   * 20 — Back navigation, Phase 5 (issue #175). The count is the claim: one
-   * `navigate` left in the hook, and it is the **Fresh home**'s. Every other
-   * leaving — Back, Cancel, _Skip this one_, _Save changes_, _Save & continue_
-   * in both its shapes — goes through the one `goBack`, so `REVIEW_LANDING`
-   * survives as the **Import context**'s **Landing** and as nothing else.
-   *
-   * `ImportFlow.test.tsx` set the precedent in #173, for the same reason: a
-   * second `navigate` on a screen is a second Back rule, and no press can be
-   * arranged to notice one that is merely redundant with the hook.
-   */
-  it('navigates on its own for Add to library alone', () => {
-    const source = readFileSync(
-      'src/features/movie-form/useMovieForm/useMovieForm.ts',
-      'utf8'
-    );
-
-    expect(source.match(/navigate\(/g)).toEqual(['navigate(']);
-    expect(source).toMatch(/navigate\(FRESH_HOME\)/);
   });
 });

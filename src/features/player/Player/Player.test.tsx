@@ -1,5 +1,4 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { readFileSync } from 'node:fs';
 import {
   render,
   screen,
@@ -2069,6 +2068,11 @@ describe('Player — a conversion that never started', () => {
  * next Back walked straight back into the player. Which is why these tests
  * press Back twice, and read `navigationType` — the difference between a step
  * and a push of the same URL is the one thing a pathname cannot tell.
+ *
+ * That the player has no Back rule of its own is carried by the presses, not
+ * by reading the file: the pill is a `POP`, Escape is the very same `POP`, and
+ * a second Back lands on the library rather than back in the player. That no
+ * file but the hook steps through history at all is the hook suite's guard.
  */
 describe('Player — leaving is a history step', () => {
   stubMediaElement();
@@ -2182,17 +2186,5 @@ describe('Player — leaving is a history step', () => {
 
     expect(pathname()).toBe('/movie/m1/play');
     expect(navigationType()).toBe('POP');
-  });
-
-  it('leaves through the one rule rather than a navigate of its own', () => {
-    // Leaving is the only navigating this screen does, so the whole call is
-    // what must be gone: a `navigate(` left here is a second Back rule, and a
-    // second Back rule is what the initiative exists to end.
-    const source = readFileSync(
-      'src/features/player/Player/Player.tsx',
-      'utf8'
-    );
-
-    expect(source).not.toMatch(/navigate\(/);
   });
 });

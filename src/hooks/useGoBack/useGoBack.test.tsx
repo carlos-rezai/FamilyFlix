@@ -171,9 +171,9 @@ describe('useGoBack — a screen that names its own Landing', () => {
  * rather than beside it.
  *
  * It reads source rather than pressing a button because that is what the claim
- * is about: not what any one screen does, but what no file contains.
- * `ImportFlow.test.tsx` set the precedent in #173 with its one-`navigate`
- * count.
+ * is about: not what any one screen does, but what no file contains. What a
+ * screen does is its own suite's to press — each of the player's, Import's and
+ * the form's leavings is asserted there as a `POP` or a `PUSH`.
  */
 describe('useGoBack — the only Back rule in the app', () => {
   /** This hook's own file, the one place a history step is allowed to live. */
