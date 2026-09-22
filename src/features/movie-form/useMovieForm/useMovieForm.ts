@@ -33,10 +33,14 @@ const afterEdit = (id: string) => `/movie/${id}`;
 const AFTER_ADD_FALLBACK = '/settings';
 
 /**
- * Where every exit from the **Import context** lands — _Save & continue_,
- * _Skip this one_ and Back alike: the **Review step**, one row shorter or not.
- * Never the screen behind the form, because the review is where the maintainer
- * was and where the rest of the list still is.
+ * The **Import context**'s **Landing**: the **Review step**, where the rest of
+ * the list still is.
+ *
+ * It is a landing and nothing else. Every exit from this context —
+ * _Save & continue_, _Skip this one_ and Back alike — is a **History step**
+ * onto the review the form was opened from, because _Resolve_ is a link from
+ * that review and nothing else opens this URL. This constant is reached on its
+ * own only by the deep link, which has no such entry behind it to step onto.
  */
 const AFTER_RESOLVE = '/import';
 
@@ -172,13 +176,13 @@ export interface UseMovieFormResult {
   /** Write the movie, and leave for the screen it is now visible on. */
   save: () => void;
   /**
-   * The back pill: the app's one Back rule — except in the **Import context**,
-   * where it lands on the review. Writes nothing, dismisses nothing.
+   * The back pill: the app's one Back rule, in every context this screen has.
+   * Writes nothing, dismisses nothing.
    */
   back: () => void;
   /**
    * The secondary button: Cancel, which is {@link back} — or, in the **Import
-   * context**, _Skip this one_: dismiss the problem, then land on the review.
+   * context**, _Skip this one_: dismiss the problem, then step back.
    */
   cancel: () => void;
 }
@@ -498,7 +502,10 @@ export function useMovieForm(): UseMovieFormResult {
     setSaving(true);
     // _Save & continue_ is the resolve route's, and the route dismisses the
     // problem on its own `201` — nothing here does. The review is where the
-    // save lands, one row shorter.
+    // save lands, one row shorter, and it lands there by *stepping*: the
+    // review is the entry the form was opened from, and the row it fixed is
+    // gone from the list anyway, because the list is the **Current run**'s
+    // state rather than the entry's.
     //
     // Over the **Edit job** it is the edit's own `PATCH`
     // instead — the film is in the library already, and a resolve would put
@@ -509,12 +516,10 @@ export function useMovieForm(): UseMovieFormResult {
     const written =
       resolving !== null
         ? editing === null
-          ? resolveProblem(resolving.id, values).then(() =>
-              navigate(AFTER_RESOLVE)
-            )
+          ? resolveProblem(resolving.id, values).then(() => goBack())
           : updateMovie(editing, values)
               .then(() => dismissProblem(resolving.id).catch(() => undefined))
-              .then(() => navigate(AFTER_RESOLVE))
+              .then(() => goBack())
         : editing === null
           ? createMovie(values).then(() => navigate(AFTER_ADD))
           : // A correction is only visible on the film's page — which is the
@@ -541,20 +546,18 @@ export function useMovieForm(): UseMovieFormResult {
   }, [canSave, values, navigate, goBack, editing, resolving]);
 
   // Back never writes and never dismisses: a maintainer stepping back from a
-  // half-fixed row finds it still in the list. In the **Import context** the
-  // list is where they go — whatever the history says was behind the form.
-  const back = useCallback(() => {
-    if (resolving === null) {
-      goBack();
-      return;
-    }
-    navigate(AFTER_RESOLVE);
-  }, [resolving, goBack, navigate]);
+  // half-fixed row finds it still in the list. The **Import context** is no
+  // exception to the app's one Back rule — _Resolve_ is a link from the
+  // review, so the entry behind the form *is* the list, and a step reaches it
+  // without leaving a second copy for Import's own Back to walk into. The
+  // deep link, which has no such entry, reaches the same place through the
+  // **Landing**.
+  const back = goBack;
 
   // _Skip this one_ is the review row's own Skip, from the form: dismiss, then
-  // the review. A dismiss that failed still lands there — the row is still
-  // listed, which is the honest picture — and there is nothing yet to say it
-  // with.
+  // the step back onto the review. A dismiss that failed still lands there —
+  // the row is still listed, which is the honest picture — and there is
+  // nothing yet to say it with.
   const cancel = useCallback(() => {
     if (resolving === null) {
       goBack();
@@ -562,8 +565,8 @@ export function useMovieForm(): UseMovieFormResult {
     }
     dismissProblem(resolving.id)
       .catch(() => undefined)
-      .then(() => navigate(AFTER_RESOLVE));
-  }, [resolving, goBack, navigate]);
+      .then(() => goBack());
+  }, [resolving, goBack]);
 
   return {
     values,
