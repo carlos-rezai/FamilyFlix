@@ -3642,18 +3642,23 @@ describe('MovieForm — the Import context', () => {
         expect(titleField().value).toBe('The Lantern Keeper');
       });
 
-      it('saves through PATCH alone after the fallback, dismisses nothing, and lands on the movie page', async () => {
+      it('saves through PATCH alone after the fallback, dismisses nothing, and follows the app’s own Back rule', async () => {
         await renderSoftResolve();
         fireEvent.click(chip('Drama'));
 
         fireEvent.click(saveChanges());
 
-        // The plain Edit context's own save and its own destination: there
-        // is no row to take off a list, and no review to go back to.
+        // The plain Edit context's own save: there is no row to take off a
+        // list, and no review to go back to.
         await waitFor(() => expect(patchRequests()).toHaveLength(1));
         expect(String(patchRequests()[0][0])).toBe('/api/movies/a1');
         expect(resolveRequests()).toEqual([]);
-        await waitFor(() => expect(currentPath()).toBe('/movie/a1'));
+        // Amended by 20 — Back navigation, Phase 4 (issue #174): _Save
+        // changes_ is a **History step** now rather than a push at
+        // `/movie/:id`, so it lands where Cancel does in the test below —
+        // on the entry this helper put behind the form. The **Landing** is
+        // only for the form nothing opened.
+        await waitFor(() => expect(currentPath()).toBe('/settings'));
         expect(dismissRequests()).toEqual([]);
       });
 

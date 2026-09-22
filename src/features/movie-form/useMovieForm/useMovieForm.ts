@@ -22,8 +22,15 @@ import {
 /** Where a finished add lands — the shelf the film has just joined. */
 const AFTER_ADD = '/';
 
-/** Where a finished edit lands — the page the correction is now visible on. */
+/** The page a correction is visible on — the **Edit context**'s **Landing**. */
 const afterEdit = (id: string) => `/movie/${id}`;
+
+/**
+ * The **Add context**'s **Landing** — the hub the ＋ that opens this screen
+ * lives on, rather than the library, which is where a *finished* add goes and
+ * is a different journey's end.
+ */
+const AFTER_ADD_FALLBACK = '/settings';
 
 /**
  * Where every exit from the **Import context** lands — _Save & continue_,
@@ -48,6 +55,32 @@ const MOVIE_PARAM = 'movie';
  * of the same URL.
  */
 const PROBLEM_PARAM = 'problem';
+
+/**
+ * The **Landing** of the one screen in the app with three ways in: the
+ * **Review step** when `?problem=` is present, the movie's page when `?movie=`
+ * is, Settings otherwise.
+ *
+ * **It is the URL's two query parameters and nothing else.** Reading it off
+ * `editing` or `resolving` would be reading it off a fetch: both are `null`
+ * until a record lands, so a Back pressed on a deep-linked edit before the read
+ * answered would fall back to Settings and strand the maintainer on a screen
+ * they were never coming from. The URL is complete on the first render, which
+ * is when the landing has to be right.
+ *
+ * `?problem=` wins over `?movie=` because the pair is one kind — the
+ * **Import context** over the **Edit job** — and the review is where that
+ * maintainer was.
+ */
+function formLanding(movie: string | null, problem: string | null): string {
+  if (problem !== null) {
+    return AFTER_RESOLVE;
+  }
+  if (movie !== null) {
+    return afterEdit(movie);
+  }
+  return AFTER_ADD_FALLBACK;
+}
 
 /** The most digits a year can have. */
 const YEAR_LENGTH = 4;
@@ -255,7 +288,6 @@ export interface UseMovieFormResult {
  */
 export function useMovieForm(): UseMovieFormResult {
   const navigate = useNavigate();
-  const goBack = useGoBack();
   const [searchParams] = useSearchParams();
   const [values, setValues] = useState<MovieFormValues>(EMPTY);
   const [saving, setSaving] = useState(false);
@@ -270,6 +302,11 @@ export function useMovieForm(): UseMovieFormResult {
 
   const requested = searchParams.get(MOVIE_PARAM);
   const problem = searchParams.get(PROBLEM_PARAM);
+
+  // The app's one **Back rule**, with this screen's own **Landing** behind it
+  // for the deep-linked case. Built from the URL on the first render, before
+  // either read above has answered — see {@link formLanding}.
+  const goBack = useGoBack(formLanding(requested, problem));
 
   // Read once per id, the way `useGenrePool` reads once per mount: the record
   // is what fills the fields, and asking again would overwrite whatever the
@@ -480,9 +517,13 @@ export function useMovieForm(): UseMovieFormResult {
               .then(() => navigate(AFTER_RESOLVE))
         : editing === null
           ? createMovie(values).then(() => navigate(AFTER_ADD))
-          : updateMovie(editing, values).then(() =>
-              navigate(afterEdit(editing))
-            );
+          : // A correction is only visible on the film's page — which is the
+            // entry the form was opened from, so a *step* is what lands there.
+            // The push this used to be left a second copy of that page behind,
+            // and the next Back walked into the form the correction had just
+            // been finished in. The **Landing** is the same URL, for the
+            // deep-linked edit that has no such entry to step onto.
+            updateMovie(editing, values).then(() => goBack());
 
     // The form is still on screen with everything typed still in it, and Save
     // is offered again. Nothing else is said, because there is nothing yet to
@@ -497,7 +538,7 @@ export function useMovieForm(): UseMovieFormResult {
         setValues(EMPTY);
       }
     });
-  }, [canSave, values, navigate, editing, resolving]);
+  }, [canSave, values, navigate, goBack, editing, resolving]);
 
   // Back never writes and never dismisses: a maintainer stepping back from a
   // half-fixed row finds it still in the list. In the **Import context** the
