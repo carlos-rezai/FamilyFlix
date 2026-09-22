@@ -1,11 +1,16 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import styled, { ThemeProvider } from 'styled-components';
+import { readFileSync } from 'node:fs';
 
 // Through the category barrel — the path MainLayout, CardCarousel, PosterCard
 // and the movie detail page all import it by.
 import { IconButton, GearIcon, type IconButtonProps } from '@/primitives';
 import { theme } from '@/styles/theme';
+import {
+  normCss,
+  resolvedStyle,
+} from '@/test-support/resolvedStyle/resolvedStyle';
 
 function renderIconButton(props: Partial<IconButtonProps> = {}) {
   return render(
@@ -166,5 +171,101 @@ describe('IconButton — the ref', () => {
     );
 
     expect(captured).toBe(screen.getByRole('button', { name: 'More options' }));
+  });
+});
+
+/**
+ * 21 — Motion & interaction states, Phase 4 (issue #184): IconButton on the
+ * Control fragment, as `prim.IconButton.dc.html` draws it.
+ *
+ * jsdom computes no `:hover`, `:active` or `:focus-visible`, so each state is
+ * what the injected stylesheet resolves to for the rendered button in that
+ * state — the cascade run by `resolvedStyle` — never a computed style.
+ */
+describe('IconButton — hover, press and keyboard focus', () => {
+  const c = theme.colors;
+
+  it.each(['ghost', 'outline'] as const)(
+    'grows the %s face to scale(1.06) under the pointer',
+    (variant) => {
+      renderIconButton({ variant });
+
+      expect(
+        resolvedStyle(screen.getByRole('button'), { hover: true }).transform
+      ).toBe(normCss('scale(1.06)'));
+    }
+  );
+
+  it('moves the outline face’s border to textFaint under the pointer', () => {
+    renderIconButton({ variant: 'outline' });
+
+    expect(
+      resolvedStyle(screen.getByRole('button'), { hover: true })['border-color']
+    ).toBe(normCss(c.textFaint));
+  });
+
+  it('shrinks to scale(.94) when pressed, in 60ms', () => {
+    renderIconButton();
+
+    const press = resolvedStyle(screen.getByRole('button'), {
+      hover: true,
+      active: true,
+    });
+    expect(press.transform).toBe(normCss('scale(.94)'));
+    expect(press['transition-duration']).toBe('60ms');
+  });
+
+  it('eases its transform in at durFast on easeOut', () => {
+    renderIconButton();
+
+    expect(
+      resolvedStyle(screen.getByRole('button')).transition ?? ''
+    ).toContain(
+      normCss(`transform ${theme.motion.durFast} ${theme.motion.easeOut}`)
+    );
+  });
+
+  it('takes the accent Focus ring under Tab', () => {
+    renderIconButton();
+
+    expect(
+      resolvedStyle(screen.getByRole('button'), { focusVisible: true })[
+        'box-shadow'
+      ]
+    ).toBe(normCss(`0 0 0 3px ${c.focusRing}`));
+  });
+});
+
+describe('IconButton — the rules its docblock sets its extensions', () => {
+  /** The docblock over `Root`: the rules every `styled(IconButton)` follows. */
+  function docblock(): string {
+    const source = readFileSync(
+      'src/primitives/IconButton/IconButton.styles.ts',
+      'utf8'
+    );
+    const before = source.slice(0, source.indexOf('export const Root'));
+    const block = before.slice(before.lastIndexOf('/**'));
+    return block.replace(/^\s*\*\/?\s?/gm, ' ').replace(/\s+/g, ' ');
+  }
+
+  it('widens rule 2 to background, color, border-color and transform', () => {
+    const rule2 = /\s2\.\s(.*?)(?:\s3\.\s|$)/.exec(docblock())?.[1] ?? '';
+
+    for (const property of [
+      'background',
+      'color',
+      'border-color',
+      'transform',
+    ]) {
+      expect(rule2).toContain(`\`${property}\``);
+    }
+  });
+
+  it('tells an extension that positions with transform to restate it on hover and compose it into the press', () => {
+    const text = docblock();
+
+    expect(text).toMatch(/position[^.]*`transform`/i);
+    expect(text).toMatch(/restate[^.]*hover/i);
+    expect(text).toMatch(/compose[^.]*press/i);
   });
 });

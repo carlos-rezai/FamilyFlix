@@ -9,6 +9,11 @@ import {
   type ContinueCarouselItem,
 } from './CardCarousel';
 import { theme } from '@/styles/theme';
+import { LeftArrow, RightArrow } from './CardCarousel.styles';
+import {
+  normCss,
+  resolvedStyle,
+} from '@/test-support/resolvedStyle/resolvedStyle';
 import type { ContinueCardMovie, PosterCardMovie } from '@/types';
 import { makePosterCardMovie } from '@/test-support/makePosterCardMovie/makePosterCardMovie';
 
@@ -486,4 +491,39 @@ describe('CardCarousel — illegal item and variant combinations do not compile'
 
     expect(props.items).toHaveLength(1);
   });
+});
+
+/**
+ * 21 — Motion & interaction states, Phase 4 (issue #184): the carousel's
+ * arrows, which position with `transform`, on IconButton's Control states.
+ *
+ * jsdom computes no `:hover`, `:active` or `:focus-visible`, so each state is
+ * what the injected stylesheet resolves to for the rendered button in that
+ * state — the cascade run by `resolvedStyle` — never a computed style.
+ */
+describe('CardCarousel — the arrows through hover and press', () => {
+  it.each([
+    ['prev', LeftArrow],
+    ['next', RightArrow],
+  ] as const)(
+    'keeps the %s arrow vertically centred through hover and press',
+    (_, Arrow) => {
+      render(
+        <ThemeProvider theme={theme}>
+          <Arrow label="Scroll" $top={120}>
+            <span />
+          </Arrow>
+        </ThemeProvider>
+      );
+      const arrow = screen.getByRole('button', { name: 'Scroll' });
+
+      expect(resolvedStyle(arrow).transform).toBe(normCss('translateY(-50%)'));
+      expect(resolvedStyle(arrow, { hover: true }).transform).toBe(
+        normCss('translateY(-50%)')
+      );
+      const press = resolvedStyle(arrow, { hover: true, active: true });
+      expect(press.transform).toBe(normCss('translateY(-50%) scale(.94)'));
+      expect(press['transition-duration']).toBe('60ms');
+    }
+  );
 });

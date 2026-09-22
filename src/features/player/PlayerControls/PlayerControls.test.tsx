@@ -5,6 +5,11 @@ import { readFileSync } from 'node:fs';
 
 import { PlayerControls } from './PlayerControls';
 import { theme } from '@/styles/theme';
+import { ChromeIconButton } from './PlayerControls.styles';
+import {
+  normCss,
+  resolvedStyle,
+} from '@/test-support/resolvedStyle/resolvedStyle';
 
 /**
  * 10 — Video player, Phase 3 (issue #85).
@@ -455,5 +460,36 @@ describe('PlayerControls — the fullscreen button', () => {
     renderControls({ visible: false });
 
     expect(screen.queryByRole('button', { name: 'Fullscreen' })).toBeNull();
+  });
+});
+
+/**
+ * 21 — Motion & interaction states, Phase 4 (issue #184): the transport and
+ * chrome buttons on IconButton's Control states; their file draws no scale.
+ *
+ * jsdom computes no `:hover`, `:active` or `:focus-visible`, so each state is
+ * what the injected stylesheet resolves to for the rendered button in that
+ * state — the cascade run by `resolvedStyle` — never a computed style.
+ */
+describe('PlayerControls — the chrome icon button through hover, press and focus', () => {
+  it('shows a press and the ring, and does not scale on hover', () => {
+    render(
+      <ThemeProvider theme={theme}>
+        <ChromeIconButton label="Play">
+          <span />
+        </ChromeIconButton>
+      </ThemeProvider>
+    );
+    const button = screen.getByRole('button', { name: 'Play' });
+
+    expect(resolvedStyle(button, { hover: true }).transform ?? 'none').toBe(
+      'none'
+    );
+    const press = resolvedStyle(button, { hover: true, active: true });
+    expect(press.transform).toBe(normCss('scale(.94)'));
+    expect(press['transition-duration']).toBe('60ms');
+    expect(resolvedStyle(button, { focusVisible: true })['box-shadow']).toBe(
+      normCss(`0 0 0 3px ${theme.colors.focusRing}`)
+    );
   });
 });

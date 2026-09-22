@@ -5,6 +5,10 @@ import { ThemeProvider } from 'styled-components';
 
 import { Fab, type FabProps, type FabIcon } from '@/components';
 import { theme } from '@/styles/theme';
+import {
+  normCss,
+  resolvedStyle,
+} from '@/test-support/resolvedStyle/resolvedStyle';
 
 /**
  * 19 — Back-to-top FAB, Phase 1: "the molecule" (issue #166).
@@ -274,5 +278,42 @@ describe('Fab — no state, no listener, no effect', () => {
     expect(fab()).toBeInstanceOf(HTMLButtonElement);
     expect(strokes()).toContain(GLYPH_STROKE['arrow-up']);
     expect(onClick).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * 21 — Motion & interaction states, Phase 4 (issue #184): the FAB on
+ * IconButton's Control states. It keeps its lift, now eased, and presses.
+ *
+ * jsdom computes no `:hover`, `:active` or `:focus-visible`, so each state is
+ * what the injected stylesheet resolves to for the rendered button in that
+ * state — the cascade run by `resolvedStyle` — never a computed style.
+ */
+describe('Fab — hover, press and keyboard focus', () => {
+  it('keeps its lift on hover, easing it in at durFast on easeOut rather than snapping', () => {
+    renderFab();
+
+    expect(resolvedStyle(fab(), { hover: true }).transform).toBe(
+      normCss('translateY(-2px) scale(1.05)')
+    );
+    expect(resolvedStyle(fab()).transition ?? '').toContain(
+      normCss(`transform ${theme.motion.durFast} ${theme.motion.easeOut}`)
+    );
+  });
+
+  it('gives a press: scale(.94), in 60ms', () => {
+    renderFab();
+
+    const press = resolvedStyle(fab(), { hover: true, active: true });
+    expect(press.transform).toBe(normCss('scale(.94)'));
+    expect(press['transition-duration']).toBe('60ms');
+  });
+
+  it('takes the accent Focus ring under Tab', () => {
+    renderFab();
+
+    expect(resolvedStyle(fab(), { focusVisible: true })['box-shadow']).toBe(
+      normCss(`0 0 0 3px ${theme.colors.focusRing}`)
+    );
   });
 });

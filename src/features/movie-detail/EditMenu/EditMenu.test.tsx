@@ -5,6 +5,11 @@ import { MemoryRouter, useLocation } from 'react-router-dom';
 
 import { EditMenu } from './EditMenu';
 import { theme } from '@/styles/theme';
+import { MoreButton } from './EditMenu.styles';
+import {
+  normCss,
+  resolvedStyle,
+} from '@/test-support/resolvedStyle/resolvedStyle';
 import { comesBefore } from '@/test-support/comesBefore/comesBefore';
 
 /**
@@ -193,5 +198,36 @@ describe('EditMenu — the Delete dialog', () => {
     expect(
       screen.getByRole('dialog', { name: 'Delete “Northwind”?' })
     ).toBeTruthy();
+  });
+});
+
+/**
+ * 21 — Motion & interaction states, Phase 4 (issue #184): the ⋯ button on
+ * IconButton's Control states; its file draws no scale.
+ *
+ * jsdom computes no `:hover`, `:active` or `:focus-visible`, so each state is
+ * what the injected stylesheet resolves to for the rendered button in that
+ * state — the cascade run by `resolvedStyle` — never a computed style.
+ */
+describe('EditMenu — the ⋯ button through hover, press and focus', () => {
+  it('shows a press and the ring, and does not scale on hover', () => {
+    render(
+      <ThemeProvider theme={theme}>
+        <MoreButton label="More options">
+          <span />
+        </MoreButton>
+      </ThemeProvider>
+    );
+    const button = screen.getByRole('button', { name: 'More options' });
+
+    expect(resolvedStyle(button, { hover: true }).transform ?? 'none').toBe(
+      'none'
+    );
+    const press = resolvedStyle(button, { hover: true, active: true });
+    expect(press.transform).toBe(normCss('scale(.94)'));
+    expect(press['transition-duration']).toBe('60ms');
+    expect(resolvedStyle(button, { focusVisible: true })['box-shadow']).toBe(
+      normCss(`0 0 0 3px ${theme.colors.focusRing}`)
+    );
   });
 });

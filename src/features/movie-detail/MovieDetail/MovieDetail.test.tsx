@@ -18,6 +18,11 @@ import {
 
 import { MovieDetail } from './MovieDetail';
 import { theme } from '@/styles/theme';
+import { CircleToggle } from './MovieDetail.styles';
+import {
+  normCss,
+  resolvedStyle,
+} from '@/test-support/resolvedStyle/resolvedStyle';
 import type { Movie } from '@/types';
 import {
   LocationProbe,
@@ -1220,5 +1225,38 @@ describe('MovieDetail — the load states', () => {
 
     expect(await findTitle('Northwind')).toBeDefined();
     expect(screen.queryByRole('button', { name: /retry/i })).toBeNull();
+  });
+});
+
+/**
+ * 21 — Motion & interaction states, Phase 4 (issue #184): the circle toggles
+ * on IconButton's Control states; their file draws no scale.
+ *
+ * jsdom computes no `:hover`, `:active` or `:focus-visible`, so each state is
+ * what the injected stylesheet resolves to for the rendered button in that
+ * state — the cascade run by `resolvedStyle` — never a computed style.
+ */
+describe('MovieDetail — the circle toggles through hover, press and focus', () => {
+  describe.each([false, true])('on: %s', (on) => {
+    it('shows a press and the ring, and does not scale on hover', () => {
+      render(
+        <ThemeProvider theme={theme}>
+          <CircleToggle label="Favorite" $on={on}>
+            <span />
+          </CircleToggle>
+        </ThemeProvider>
+      );
+      const button = screen.getByRole('button', { name: 'Favorite' });
+
+      expect(resolvedStyle(button, { hover: true }).transform ?? 'none').toBe(
+        'none'
+      );
+      const press = resolvedStyle(button, { hover: true, active: true });
+      expect(press.transform).toBe(normCss('scale(.94)'));
+      expect(press['transition-duration']).toBe('60ms');
+      expect(resolvedStyle(button, { focusVisible: true })['box-shadow']).toBe(
+        normCss(`0 0 0 3px ${theme.colors.focusRing}`)
+      );
+    });
   });
 });
