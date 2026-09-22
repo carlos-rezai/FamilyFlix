@@ -1494,3 +1494,23 @@ Hard` gets found and `Die Hard\extras` doesn't become a second film."
   in code because it is what the hook has always called it. Say **Landing**
   when talking about where a screen goes, _fallback_ only when reading the
   signature.
+- **Three differences between log 20's design sketch and the code (checked by
+  the back-navigation refactor, 177):** every row of the Back rule's five —
+  **Back rule**, **History step**, **Leaving**, **Landing**, **Fresh home** —
+  and the three relationship lines that name them were read against the code
+  for that round, and all hold as written; nothing is corrected. The code now
+  says them too: `useMovieForm`'s routes are `FRESH_HOME`, `ADD_LANDING` and
+  `REVIEW_LANDING`, where the build had inherited `AFTER_ADD`,
+  `AFTER_ADD_FALLBACK` and `AFTER_RESOLVE` from before the vocabulary existed,
+  and the edit's **Landing** is the shared `moviePath` the player's is. Three
+  things the code says differently from the log's sketch, so the next reader
+  of the sketch knows which is a decision. The form's mapping is
+  `formLanding(movie, problem)` where the sketch wrote
+  `landingFor(searchParams)` — kept: it names the concept, reads as the
+  form's own, and takes the two parameters the hook already reads. Q11 put
+  the three reproduced journeys "in the screens' own suites"; the build put
+  them in `App.test.tsx` as well — kept, because in each of them the second
+  press belongs to a different screen, and only the router composed in `App`
+  has both. And `fallback` remains the hook's parameter against **Landing** as
+  the concept's name, which the entry above already rules and this round does
+  not reopen.
