@@ -248,6 +248,15 @@ function cardFor(title: string) {
   return screen.getAllByText(title)[0];
 }
 
+/**
+ * Whichever Back is on screen — one route renders at a time, so there is only
+ * ever one. Named exactly: the Library rows carry their own descriptions, and
+ * "…spreadsheet backup." answers to /back/i.
+ */
+async function pressBack() {
+  fireEvent.click(await screen.findByRole('button', { name: 'Back' }));
+}
+
 describe('App — routing the browse home to its destinations', () => {
   it('renders the browse home at /', async () => {
     renderApp();
@@ -1195,11 +1204,6 @@ describe('App — coming back out of the player', () => {
       .parentElement as HTMLElement;
   }
 
-  /** Whichever Back is on screen: the movie page's pill, or the player's. */
-  async function pressBack() {
-    fireEvent.click(await screen.findByRole('button', { name: 'Back' }));
-  }
-
   it('returns the film’s page to where it was left', async () => {
     renderApp('/movie/a1');
     await screen.findByRole('heading', { level: 1, name: 'Northwind' });
@@ -1280,11 +1284,9 @@ describe('App — coming back out of Import', () => {
     );
     await screen.findByRole('heading', { level: 1, name: 'Import library' });
 
-    // Named exactly: the Library rows carry their own descriptions, and
-    // "…spreadsheet backup." answers to /back/i.
-    fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+    await pressBack();
     await screen.findByRole('heading', { name: 'Settings' });
-    fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+    await pressBack();
 
     await waitFor(() => expect(currentPath()).toBe('/'));
     // The shelf as the maintainer left it: Settings' Back was always a step,
@@ -1336,7 +1338,7 @@ describe('App — coming back out of an edit', () => {
     await screen.findByRole('heading', { level: 1, name: 'Northwind' });
     expect(currentPath()).toBe('/movie/a1');
 
-    fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+    await pressBack();
 
     // The press that used to walk back into the form. The shelf comes back as
     // the maintainer left it, filtered and sorted, because a step returns the
@@ -1461,7 +1463,7 @@ describe('App — coming back out of a Resolve', () => {
     expect(currentPath()).toBe('/import');
     await waitFor(() => expect(resolveLink()).toBeNull());
 
-    fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+    await pressBack();
 
     // The press that used to walk back into the form of a row already fixed.
     await screen.findByRole('heading', { name: 'Settings' });
