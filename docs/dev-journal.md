@@ -11,6 +11,123 @@ Newest entry first.
 
 ---
 
+## 2026-09-22 — Back navigation (issues #171–#175)
+
+Ten commits across issues #171–#175, five slices against the plan on #170,
+built from `docs/design-logs/20-back-navigation.md`. **4783 tests pass across
+247 files**, up from 4748 across 247. `tsc -b` and `eslint src server` are
+clean on every commit. The fifth initiative driven wholly by `issue-loop`, and
+the first found by auditing the build against the prototype rather than by
+reading the prototype for something new: nothing in `docs/handoff/` was drawn
+for it, and nothing there was amended. The maintainer's one instruction was the
+scope the grill ran under: translate the prototype 1:1 into the codebase, in
+its naming, conventions, patterns and architecture.
+
+**Back navigation is _not_ ticked** in the feature table. The rule holds: ✅
+when the refactor closes, not when the build issues do.
+
+### What shipped
+
+- **#171, the Landing and the probe.** `useGoBack(fallback = '/')` — the one
+  **Back rule** grows one parameter, the screen's own **Landing** for the
+  no-history case, still pushed rather than replaced so the screen it lands on
+  has a Back of its own (Q3). `LocationProbe` gains a fourth spelling,
+  `navigationType`, off `useNavigationType()`: `POP` after a **History step**,
+  `PUSH` after a push. Nothing on screen changed.
+- **#172, the player.** `leave` is `useGoBack(moviePath(movieId))`. The Back
+  pill and Escape already shared it, so both became steps in one line (Q4).
+- **#173, Import.** Back is `useGoBack('/settings')`; _Finish_ is still the
+  push to `/` the prototype's `goBrowse()` is. `useImportRun` is untouched — a
+  Back mid-run leaves the server's **Current run** where it is (Q5).
+- **#174, the form's Landing.** `formLanding(movie, problem)`, read off the
+  URL's two query parameters on the first render — `?problem=` → `/import`,
+  `?movie=` → the film's page, else `/settings` — never off `editing` or
+  `resolving`, which are `null` until a fetch lands (Q6). Back, Cancel and
+  _Save changes_ are one `goBack`; _Add to library_ stays the push to `/`. One
+  older test was amended: the soft-problem fallback's _Save changes_ asserted
+  the push.
+- **#175, the Import context.** _Save & continue_, _Skip this one_ and Back
+  step onto the **Review step** instead of pushing a second `/import`. The
+  review survives the step because it is the **Current run**'s state, not the
+  entry's: `ImportFlow` re-attaches on mount (Q7).
+
+### Why it outlived three initiatives
+
+Every one of the four pushes landed on the right URL. The bug was only ever
+visible on the _second_ press — Play → Back → Back in the player, Settings →
+Import → Back → Back on Import — and every suite in the app asserted where one
+press landed, never how the router got there. A push onto the right URL and a
+step onto it read the same through `pathname`, `search` and `url`. The probe's
+fourth spelling is what makes the difference assertable, and it is the reason
+#171 had to land before any screen changed.
+
+The journeys reproduced in the browser on 2026-09-21 are tests now: Play →
+Back → Back in `Player.test.tsx` and `App.test.tsx`; Settings → Import → Back →
+Back in `ImportFlow.test.tsx` and `App.test.tsx`; movie → _Edit details_ →
+_Save changes_ → Back in `App.test.tsx`, with `MovieForm.test.tsx` holding the
+first half of it — _Save changes_ is a `POP` onto the film's page — and a
+fourth, the Resolve round trip, in `App.test.tsx` alone. The fourth symptom — a Delete after a Play visit landing in the player
+of a deleted movie — and the fifth — the detail page coming back from the
+player at the top — were fixed by not touching `useDeleteMovie` or
+`useRestoredScroll`: with the player's leave a step, the entry behind the
+delete is `/`, and the entry the detail page returns to is the one the scroll
+was remembered against (Q8).
+
+### No prototype amendment
+
+`FamilyFlix.dc.html` is a stateless screen switcher: `exitPlayer`,
+`backFromAdd`, `saveMovie`, `goSettings` and `goBrowse` say where each leaving
+lands, and nothing can say whether it pushes or steps, because there is no
+history to push onto. Log 04 Q13 had already read the prototype's
+`detailReturn` flag as a hand-rolled history stack and translated it to the
+router's real one; this initiative finished that reading on the four screens
+that never got it (Q12). The prototype's landings are the **Landings**, and its
+two surviving `goBrowse()` calls are the two **Fresh homes**.
+
+### The calls the subagents made alone
+
+The log named none of these; all three are in the code.
+
+- **`formLanding`**, where the log's design sketch wrote `landingFor`. It takes
+  the two parameters rather than the `searchParams` the sketch passed, because
+  `useMovieForm` already reads both, and the name reads as the form's own.
+- **The journeys in `App.test.tsx` as well as in the screens' suites.** Q11
+  placed them in the screens' own suites. In each of them the second press
+  belongs to a different screen — the detail page's Back, Settings' Back — and
+  only the router composed in `App` has both, so the builds wrote them at App
+  level against the real screens, and kept a screen-level version against a
+  stand-in route where the screen's suite could hold one.
+- **Three per-file source scans.** `Player.test.tsx`, `ImportFlow.test.tsx`
+  and `MovieForm.test.tsx` each end with a test that reads its own shipping
+  file off disk and counts `navigate(`. Each slice was asked to prove its
+  screen no longer pushed, and reading the file was the most direct proof
+  inside that slice; from above, the presses in the same files already say it.
+
+### Deliberately not built
+
+A second hook (`useLeave`); a `from` in route state; a replace anywhere — on
+the **Landing** or on the two **Fresh homes**; any handling of browser-chrome
+Back, which the app draws none of; any prototype edit; any change to
+`useDeleteMovie`, `useRestoredScroll`, `GenreLayout`, `MoviePage` or
+`SettingsHeader`.
+
+### Known and not fixed
+
+- **A deep-linked player loops once** (Q3): `/movie/1/play` → Back →
+  `/movie/1` → Back → the player again, because the **Landing** is pushed.
+  Accepted — the parent is never stranded, and the packaged app opens at `/`.
+- **A wrong Landing is visible only on a deep link.** The deep-link tests in
+  each screen's suite are the only thing keeping the three strings honest.
+
+### Follow-ups
+
+The refactor round, filed as 177 with the docs slice 176 folded into it: one
+spelling of the film's route, the form's constants in the glossary's words, one
+structural guard on a shared walker in place of four, the probe's reader, and
+the documents that close the initiative.
+
+---
+
 ## 2026-09-21 — Back-to-top FAB refactor (issue #169)
 
 Eight commits against `docs/refactor-plans/19-back-to-top-refactor.md` — one
