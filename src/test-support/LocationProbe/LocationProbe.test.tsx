@@ -6,7 +6,13 @@ import {
   type MemoryRouterProps,
 } from 'react-router-dom';
 
-import { LocationProbe, navigationType } from './LocationProbe';
+import {
+  LocationProbe,
+  navigationType,
+  pathname,
+  search,
+  url,
+} from './LocationProbe';
 
 /**
  * The probe is the one thing under test here, so nothing else is on screen
@@ -76,6 +82,39 @@ describe('LocationProbe — what it reports', () => {
     expect(screen.getByTestId('url').textContent).toBe(
       '/genre/action?sort=year'
     );
+  });
+});
+
+describe('LocationProbe — the readers it hands out', () => {
+  it('hands out a pathname reader that says what the probe on screen says', () => {
+    renderProbe(<LocationProbe />, ['/movie/12']);
+    expect(pathname()).toBe('/movie/12');
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Go to /genre/action?sort=year' })
+    );
+
+    expect(pathname()).toBe('/genre/action');
+  });
+
+  it('hands out a search reader that says what the probe on screen says', () => {
+    renderProbe(<LocationProbe />, ['/movie/12']);
+    expect(search()).toBe('');
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Go to /genre/action?sort=year' })
+    );
+
+    expect(search()).toBe('?sort=year');
+  });
+
+  it('hands out a url reader that says what the probe on screen says', () => {
+    renderProbe(<LocationProbe withBack />, ['/?q=lighthouse', '/movie/12']);
+    expect(url()).toBe('/movie/12');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+
+    expect(url()).toBe('/?q=lighthouse');
   });
 });
 
