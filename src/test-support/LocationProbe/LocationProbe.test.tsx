@@ -6,7 +6,7 @@ import {
   type MemoryRouterProps,
 } from 'react-router-dom';
 
-import { LocationProbe } from './LocationProbe';
+import { LocationProbe, navigationType } from './LocationProbe';
 
 /**
  * The probe is the one thing under test here, so nothing else is on screen
@@ -120,5 +120,16 @@ describe('LocationProbe — how the router got where it is', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Back' }));
 
     expect(screen.getByTestId('navigationType').textContent).toBe('POP');
+  });
+
+  it('hands out a reader that says what the probe on screen says', () => {
+    renderProbe(<LocationProbe withBack />, ['/one', '/two']);
+    expect(navigationType()).toBe('POP');
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Go to /genre/action?sort=year' })
+    );
+
+    expect(navigationType()).toBe('PUSH');
   });
 });

@@ -13,7 +13,10 @@ import { MemoryRouter } from 'react-router-dom';
 import { MovieForm } from './MovieForm';
 import { theme } from '@/styles/theme';
 import type { Genre, ImportProblemDetail, Movie } from '@/types';
-import { LocationProbe } from '@/test-support/LocationProbe/LocationProbe';
+import {
+  LocationProbe,
+  navigationType,
+} from '@/test-support/LocationProbe/LocationProbe';
 import { makeMovie } from '@/test-support/makeMovie/makeMovie';
 import {
   createdResponse,
@@ -200,8 +203,6 @@ const save = () =>
     name: /add to library|adding/i,
   }) as HTMLButtonElement;
 const currentPath = () => screen.getByTestId('pathname').textContent;
-/** How the router got where it is: `POP` after a step, `PUSH` after a push. */
-const navigationType = () => screen.getByTestId('navigationType').textContent;
 const directorField = () =>
   screen.getByRole('textbox', { name: /director/i }) as HTMLInputElement;
 const castField = () =>

@@ -8,7 +8,10 @@ import {
 } from 'react-router-dom';
 
 import { useGoBack } from './useGoBack';
-import { LocationProbe } from '@/test-support/LocationProbe/LocationProbe';
+import {
+  LocationProbe,
+  navigationType,
+} from '@/test-support/LocationProbe/LocationProbe';
 import { shippingSourcesMatching } from '@/test-support/shippingSources/shippingSources';
 
 /**
@@ -116,8 +119,6 @@ function renderWithLanding(
     </MemoryRouter>
   );
 }
-
-const navigationType = () => screen.getByTestId('navigationType').textContent;
 
 describe('useGoBack — a screen that names its own Landing', () => {
   it('takes the screen to its own Landing when there is no history behind it', () => {

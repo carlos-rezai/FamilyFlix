@@ -13,7 +13,10 @@ import { ImportFlow } from './ImportFlow';
 import type { ImportProblem, ImportRun } from '@/types';
 import { theme } from '@/styles/theme';
 import { useGoBack } from '@/hooks/useGoBack/useGoBack';
-import { LocationProbe } from '@/test-support/LocationProbe/LocationProbe';
+import {
+  LocationProbe,
+  navigationType,
+} from '@/test-support/LocationProbe/LocationProbe';
 import { comesBefore } from '@/test-support/comesBefore/comesBefore';
 import { makeImportRun } from '@/test-support/makeImportRun/makeImportRun';
 import {
@@ -979,9 +982,6 @@ describe('ImportFlow — a poll that fails', () => {
  * is the hook suite's guard.
  */
 describe('ImportFlow — leaving is a history step', () => {
-  /** How the router got where it is: `POP` after a step, `PUSH` after a push. */
-  const navigationType = () => screen.getByTestId('navigationType').textContent;
-
   /** The cancels sent so far — the run's life, asserted by its absence. */
   const cancels = () => fetchMock.mock.calls.filter(([i, n]) => isCancel(i, n));
 

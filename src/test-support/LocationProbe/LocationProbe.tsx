@@ -1,3 +1,4 @@
+import { screen } from '@testing-library/react';
 import { useLocation, useNavigate, useNavigationType } from 'react-router-dom';
 
 export interface LocationProbeProps {
@@ -39,4 +40,14 @@ export function LocationProbe({ withBack = false }: LocationProbeProps) {
       )}
     </>
   );
+}
+
+/**
+ * How the router got where the probe says it is — `POP` after a **History
+ * step**, `PUSH` after a push — read off the probe on screen. Handed out
+ * beside the component, on `fakeResponse`'s precedent of a unit with a second
+ * export, because every suite that asserts a leaving reads the same line.
+ */
+export function navigationType(): string | null {
+  return screen.getByTestId('navigationType').textContent;
 }

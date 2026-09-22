@@ -13,7 +13,10 @@ import { Player } from './Player';
 import { theme } from '@/styles/theme';
 import { useGoBack } from '@/hooks/useGoBack/useGoBack';
 import type { Cue, Movie, PlaybackRead } from '@/types';
-import { LocationProbe } from '@/test-support/LocationProbe/LocationProbe';
+import {
+  LocationProbe,
+  navigationType,
+} from '@/test-support/LocationProbe/LocationProbe';
 import { makeMovie } from '@/test-support/makeMovie/makeMovie';
 import {
   notFoundResponse,
@@ -2076,9 +2079,6 @@ describe('Player — a conversion that never started', () => {
  */
 describe('Player — leaving is a history step', () => {
   stubMediaElement();
-
-  /** How the router got where it is: `POP` after a step, `PUSH` after a push. */
-  const navigationType = () => screen.getByTestId('navigationType').textContent;
 
   /**
    * The film's page as a journey needs it: the app's own Back rule behind a
