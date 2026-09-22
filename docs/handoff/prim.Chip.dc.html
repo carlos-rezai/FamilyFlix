@@ -13,7 +13,9 @@
       <button
         onClick="{{ onClick }}"
         style="{{ rootStyle }}"
-        style-hover="{{ hoverStyle }}"
+        style-hover="border-color:var(--hbd);background:var(--hbg);transform:translateY(var(--hty))"
+        style-active="transform:translateY(0) scale(.97);transition-duration:60ms"
+        style-focus-visible="outline:none;box-shadow:0 0 0 3px var(--color-focus-ring)"
       >
         {{ label }}
       </button>
@@ -30,8 +32,7 @@
           const interactive=!!this.props.onClick;
           return {
             label:this.props.label??'Chip', onClick:this.props.onClick,
-            rootStyle:{padding:pad,background:sel?'var(--color-accent-soft)':'var(--color-surface)',border:'1px solid '+(sel?'var(--color-accent-line)':'var(--color-border)'),borderRadius:'999px',color:sel?'var(--color-accent)':'var(--color-text-dim)',fontFamily:'var(--font-sans)',fontSize:'14px',fontWeight:sel?'600':'400',cursor:interactive?'pointer':'default'},
-            hoverStyle: interactive?{borderColor:'var(--color-accent-line)'}:{},
+            rootStyle:{padding:pad,background:sel?'var(--color-accent-soft)':'var(--color-surface)',border:'1px solid '+(sel?'var(--color-accent-line)':'var(--color-border)'),borderRadius:'999px',color:sel?'var(--color-accent)':'var(--color-text-dim)',fontFamily:'var(--font-sans)',fontSize:'14px',fontWeight:sel?'600':'400',cursor:interactive?'pointer':'default',transition:'background var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out)','--hbd':interactive?'var(--color-accent-line)':(sel?'var(--color-accent-line)':'var(--color-border)'),'--hbg':interactive&&!sel?'var(--color-surface-2)':(sel?'var(--color-accent-soft)':'var(--color-surface)'),'--hty':interactive?'-1px':'0px'},
           };
         }
       }

@@ -10,15 +10,26 @@
       <helmet>
         <link rel="stylesheet" href="tokens.css" />
       </helmet>
-      <div onClick="{{ onOpen }}" style="{{ rootStyle }}">
-        <div style="{{ posterStyle }}" style-hover="{{ posterHover }}">
+      <div
+        onClick="{{ onOpen }}"
+        tabindex="0"
+        style="{{ rootStyle }}"
+        style-focus-visible="outline:2px solid var(--color-focus-ring);outline-offset:4px;border-radius:var(--poster-radius)"
+      >
+        <div
+          style="{{ posterStyle }}"
+          style-hover="transform:translateY(-4px);box-shadow:0 14px 34px rgba(0,0,0,.5);border-color:var(--color-accent-line)"
+          style-active="transform:translateY(-1px);transition-duration:70ms"
+        >
           <div style="{{ gradientStyle }}"></div>
           <div style="{{ innerBorder }}"></div>
           <button
             onClick="{{ onFav }}"
             title="Favorite"
             style="{{ favBtnStyle }}"
-            style-hover="{{ favHover }}"
+            style-hover="background:rgba(18,14,10,.82);border-color:rgba(255,255,255,.45);transform:scale(1.08)"
+            style-active="transform:scale(.92);transition-duration:60ms"
+            style-focus-visible="outline:none;box-shadow:0 0 0 3px var(--color-focus-ring)"
           >
             <sc-if value="{{ favorite }}" hint-placeholder-val="{{ false }}"
               ><svg
@@ -92,11 +103,11 @@
             title:m.title??'Untitled', rating:m.rating??0,
             favorite:fav, notFavorite:!fav, watched, inProgress, progress,
             rootStyle:{width:'100%',cursor:'pointer'},
-            posterStyle:{position:'relative',width:'100%',aspectRatio:'2 / 3',borderRadius:'var(--poster-radius)',overflow:'hidden',border:'1px solid var(--color-border-soft)',boxShadow:'0 6px 20px rgba(0,0,0,.35)',transition:'transform .18s ease, box-shadow .18s ease'},
-            posterHover:{transform:'translateY(-4px)',boxShadow:'0 14px 34px rgba(0,0,0,.5)'},
+            posterStyle:{position:'relative',width:'100%',aspectRatio:'2 / 3',borderRadius:'var(--poster-radius)',overflow:'hidden',border:'1px solid var(--color-border-soft)',boxShadow:'0 6px 20px rgba(0,0,0,.35)',transition:'transform var(--dur-base) var(--ease-out), box-shadow var(--dur-base) var(--ease-out), border-color var(--dur-base) var(--ease-out)'},
+            posterHover:{transform:'translateY(-4px)',boxShadow:'0 14px 34px rgba(0,0,0,.5)',borderColor:'var(--color-accent-line)'},
             gradientStyle:{position:'absolute',inset:0,background:`linear-gradient(155deg, ${m.g1||'#2a241f'} 0%, ${m.g2||'#7a5a34'} 100%)`},
             innerBorder:{position:'absolute',inset:0,border:'1px solid rgba(255,255,255,.08)',borderRadius:'var(--poster-radius)',pointerEvents:'none'},
-            favBtnStyle:{position:'absolute',top:'10px',left:'10px',width:'34px',height:'34px',borderRadius:'999px',border:'1px solid rgba(255,255,255,.22)',background:'rgba(18,14,10,.5)',backdropFilter:'blur(4px)',display:'grid',placeItems:'center',cursor:'pointer',padding:0,zIndex:3},
+            favBtnStyle:{position:'absolute',top:'10px',left:'10px',width:'34px',height:'34px',borderRadius:'999px',border:'1px solid rgba(255,255,255,.22)',background:'rgba(18,14,10,.5)',backdropFilter:'blur(4px)',transition:'background var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out)',display:'grid',placeItems:'center',cursor:'pointer',padding:0,zIndex:3},
             favHover:{background:'rgba(18,14,10,.82)'},
             titleOverlay:{position:'absolute',left:'14px',right:'14px',bottom:'18px',fontFamily:'var(--font-serif)',fontWeight:600,fontSize:'21px',lineHeight:1.12,color:'#fff',textShadow:'0 1px 8px rgba(0,0,0,.55)'},
             badgeWrap:{position:'absolute',top:'10px',right:'10px'},

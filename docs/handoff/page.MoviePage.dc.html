@@ -133,7 +133,31 @@
                 ✎ Edit details
               </div>
               <div
-                onClick="{{ detail.onDelete }}"
+                onClick="{{ detail.onFetchTmdb }}"
+                style="
+                  display: flex;
+                  align-items: center;
+                  gap: 10px;
+                  padding: 10px 12px;
+                  border-radius: 8px;
+                  cursor: pointer;
+                  font-family: var(--font-sans);
+                  font-size: 15px;
+                  color: var(--color-text);
+                "
+                style-hover="background:var(--color-surface-3)"
+              >
+                ⟳ Fetch from TMDB
+              </div>
+              <div
+                style="
+                  height: 1px;
+                  background: var(--color-border-soft);
+                  margin: 4px 6px;
+                "
+              ></div>
+              <div
+                onClick="{{ detail.onToggleEditMenu }}"
                 style="
                   display: flex;
                   align-items: center;
@@ -265,11 +289,11 @@
                 "
               >
                 <dc-import
-                  name="mol.RatingPicker"
-                  value="{{ detail.ratingPct }}"
+                  name="prim.StarRating"
+                  rating="{{ detail.ratingPct }}"
                   size="20"
-                  on-change="{{ detail.onRate }}"
-                  hint-size="182px,24px"
+                  show-value="{{ true }}"
+                  hint-size="120px,24px"
                 ></dc-import>
               </span>
               <sc-if

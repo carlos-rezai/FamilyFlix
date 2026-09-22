@@ -14,7 +14,9 @@
         onClick="{{ onClick }}"
         title="{{ title }}"
         style="{{ rootStyle }}"
-        style-hover="{{ hoverStyle }}"
+        style-hover="background:var(--hbg);color:var(--hcol);border-color:var(--hbd);transform:scale(1.06)"
+        style-active="transform:scale(.94);transition-duration:60ms"
+        style-focus-visible="outline:none;box-shadow:0 0 0 3px var(--color-focus-ring)"
       >
         {{ iconEl }}
       </button>
@@ -42,12 +44,12 @@
             'close':mk(P('M6 6l12 12M18 6L6 18',{strokeWidth:2})),
             'plus':mk(P('M12 5v14M5 12h14',{strokeWidth:2})),
           };
+          const trans='background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out)';
           const chrome={'ghost':{bg:'transparent',col:'var(--color-text-faint)',bd:'transparent',hbg:'var(--color-surface)',hcol:'var(--color-text-dim)'},
                         'outline':{bg:'transparent',col:'var(--color-text-dim)',bd:'var(--color-border-soft)',hbg:'transparent',hcol:'var(--color-text)'}}[variant];
           return {
             iconEl:icons[name]||icons['more'], onClick:this.props.onClick, title:this.props.title||'',
-            rootStyle:{display:'grid',placeItems:'center',width:size+'px',height:size+'px',background:active?'var(--color-surface)':chrome.bg,border:'1px solid '+chrome.bd,borderRadius:'999px',color:active?'var(--color-text-dim)':chrome.col,cursor:'pointer',padding:0},
-            hoverStyle:{background:chrome.hbg,color:chrome.hcol},
+            rootStyle:{display:'grid',placeItems:'center',width:size+'px',height:size+'px',background:active?'var(--color-surface)':chrome.bg,border:'1px solid '+chrome.bd,borderRadius:'999px',color:active?'var(--color-text-dim)':chrome.col,cursor:'pointer',padding:0,transition:trans,'--hbg':chrome.hbg,'--hcol':chrome.hcol,'--hbd':variant==='outline'?'var(--color-text-faint)':'transparent'},
           };
         }
       }

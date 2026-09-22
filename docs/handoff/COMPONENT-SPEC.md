@@ -19,11 +19,9 @@ in `src/`.
   **styled-components `ThemeProvider`** theme; a `.styles.ts` file per component holds the
   styled blocks. No inline styles in the codebase — the prototype uses inline styles only
   because that is its authoring constraint.
-- **Three-file shape:** each component →
-  `Name/{Name.tsx, Name.test.tsx, Name.styles.ts}` — no per-component barrel.
-  Only the category folders (`primitives/`, `components/`) get an `index.ts`,
-  re-exporting each component directly from its file
-  (`export { Button } from './Button/Button'`).
+- **Four-file shape:** each component →
+  `Name/{index.ts, Name.tsx, Name.test.tsx, Name.styles.ts}`. Category folders
+  (`primitives/`, `components/`) get a barrel `index.ts`.
 - **Props:** each prototype component declares a typed `data-props` interface (the
   **Props** tables below are generated from those). `editor: null` props are
   data/callbacks (no design-time control); the rest are design knobs.
@@ -39,16 +37,68 @@ in `src/`.
 
 ## 2. Tokens — `tokens.css` → `src/tokens/`
 
-| Group      | Prototype vars                                                                                                                                                                                         | Target                 |
-| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------- |
-| Color      | `--color-bg`, `--color-bg-2`, `--color-surface`(`-2`,`-3`), `--color-border`(`-soft`), `--color-text`(`-dim`,`-faint`), `--color-accent`(`-hover`,`-soft`,`-line`), `--color-watched`, `--color-scrim` | `tokens/colors.ts`     |
-| Typography | `--font-serif` (Source Serif 4), `--font-sans` (Hanken Grotesk), `--font-mono` (JetBrains Mono)                                                                                                        | `tokens/typography.ts` |
-| Spacing    | `--space-1..8` → 4/8/12/16/24/32/48/64 px                                                                                                                                                              | `tokens/spacing.ts`    |
-| Radius     | `--radius-sm` 8, `--radius-md` 12, `--radius-lg` 18, `--radius-pill` 999                                                                                                                               | `tokens/radius.ts`     |
-| Runtime    | `--card-w`, `--poster-radius` (set per-render from props/tweaks)                                                                                                                                       | component props        |
+| Group      | Prototype vars                                                                                                                                                                                                                        | Target                 |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------- |
+| Color      | `--color-bg`, `--color-bg-2`, `--color-surface`(`-2`,`-3`), `--color-border`(`-soft`), `--color-text`(`-dim`,`-faint`), `--color-accent`(`-hover`,`-press`,`-soft`,`-line`), `--color-focus-ring`, `--color-watched`, `--color-scrim` | `tokens/colors.ts`     |
+| Typography | `--font-serif` (Source Serif 4), `--font-sans` (Hanken Grotesk), `--font-mono` (JetBrains Mono)                                                                                                                                       | `tokens/typography.ts` |
+| Spacing    | `--space-1..8` → 4/8/12/16/24/32/48/64 px                                                                                                                                                                                             | `tokens/spacing.ts`    |
+| Radius     | `--radius-sm` 8, `--radius-md` 12, `--radius-lg` 18, `--radius-pill` 999                                                                                                                                                              | `tokens/radius.ts`     |
+| Motion     | `--dur-fast` 120ms, `--dur-base` 180ms, `--dur-slow` 280ms, `--ease-out` `cubic-bezier(.2,.7,.3,1)`                                                                                                                                   | `tokens/motion.ts`     |
+| Runtime    | `--card-w`, `--poster-radius` (set per-render from props/tweaks)                                                                                                                                                                      | component props        |
 
 Assemble these into one `theme` object passed to `<ThemeProvider>`. Keep the names — they
 already read as a semantic scale.
+
+---
+
+## 2a. Interaction & motion contract
+
+Every interactive component follows the same three-state model. Do not invent per-component
+variations — if a new component needs a state, extend this section first.
+
+### The rule: buttons signal with colour, cards signal with elevation
+
+| Surface                                                      | Hover                                                             | Press                                                             | Focus (keyboard)              |
+| ------------------------------------------------------------ | ----------------------------------------------------------------- | ----------------------------------------------------------------- | ----------------------------- |
+| **Buttons** (Button, Chip, IconButton, FilterDropdown)       | background lightens; **no lift, no shadow**                       | background darkens + `scale(.98)` (IconButton/checkbox `.92–.94`) | 3px `--color-focus-ring` ring |
+| **Cards** (PosterCard, ContinueCard, SeasonCard, EpisodeRow) | `translateY(-4px)` + deeper shadow + `--color-accent-line` border | settles to `translateY(-1px)`                                     | 2px outline, 4px offset       |
+
+The two vocabularies are deliberately disjoint. Buttons never lift; cards never recolour their
+fill. This is what keeps a dense grid of posters readable next to a row of controls.
+
+### Timing
+
+- Hover in: `--dur-fast` (120ms). Card transforms: `--dur-base` (180ms).
+- **Press: 60–70ms.** Press is always faster than hover — the asymmetry is what makes a control
+  feel physical rather than laggy. Do not equalise them.
+- Easing is always `--ease-out`. Never `linear` (reads cheap), never `ease-in` on an
+  entrance.
+
+### Accent derivation — important
+
+`--color-accent` is **themeable** (the `accentColor` prop on the app root). The hover, press,
+soft, line and focus-ring values are **derived from it at runtime**, not hardcoded:
+
+| Var                    | Derivation                        |
+| ---------------------- | --------------------------------- |
+| `--color-accent-hover` | accent lightened 18% toward white |
+| `--color-accent-press` | accent darkened 12% toward black  |
+| `--color-accent-soft`  | accent at 14% alpha               |
+| `--color-accent-line`  | accent at 32% alpha               |
+| `--color-focus-ring`   | hover value at 55% alpha          |
+
+`tokens.css` ships the defaults for the stock accent (`#d97a4e`); `FamilyFlix.dc.html`
+recomputes all five from the themed accent and sets them on the app root. **In code, do the
+same in the theme factory** — if you alias hover to the base accent, every primary button
+silently loses its hover state.
+
+### Accessibility
+
+- Focus rings use `:focus-visible` only (no ring on mouse click).
+- Hover is never the sole carrier of information — every hover-revealed affordance
+  (e.g. the EpisodeRow play overlay) has a non-hover equivalent (the row is clickable).
+- `tokens.css` carries a global `prefers-reduced-motion: reduce` block that collapses all
+  durations to ~0. Port it; don't reimplement per component.
 
 ---
 
@@ -57,20 +107,20 @@ already read as a semantic scale.
 ### Button — `prim.Button.dc.html`
 
 Target: `primitives/Button/` · **used** by MovieForm (Save/Cancel), MoviePage (Play),
-SettingsPage (Update/Check), ImportFlow (Start/Cancel/Finish, and Resolve/Skip on every
-problem row — the one `sm` use), ExportModal (Export/Cancel/Done), DeleteMovieDialog
-(Delete movie/Cancel — the one `danger` use).
+SettingsPage (Update/Check), ImportFlow (Start/Cancel/Finish), ExportModal (Export/Cancel/Done).
 | Prop | Type | Default | Notes |
 | --- | --- | --- | --- |
 | `label` | string | "Button" | |
 | `variant` | `'primary' \| 'secondary' \| 'ghost' \| 'danger'` | primary | primary = accent fill; secondary = bordered; ghost = text-only; danger = bordered, danger-colored |
-| `size` | `'sm' \| 'md' \| 'lg'` | md | sm = 40px/8px radius/14px text, the problem row's control; md = 50px/radius-md; lg = 58px/radius-pill |
+| `size` | `'md' \| 'lg'` | md | md = 50px/radius-md; lg = 58px/radius-pill |
 | `icon` | `'none' \| 'play'` | none | optional leading glyph |
 | `fullWidth` | boolean | false | stretch to container |
 | `disabled` | boolean | false | muted fill, no hover/click |
 | `onClick` | () => void | — | |
 
-States: hover (variant-specific), disabled.
+States: hover (background lightens per variant), press (darkens + `scale(.98)`),
+focus-visible (accent ring), disabled (muted fill, no state changes). **No hover lift or
+shadow** — see §2a. Primary hover/press come from `--color-accent-hover` / `-press`.
 
 ### IconButton — `prim.IconButton.dc.html`
 
@@ -118,7 +168,7 @@ MovieForm/SettingsPage/ImportFlow.
 Target: `primitives/StarRating/` · **display only** (0–100% → 5 stars, half-star steps).
 | Prop | Type | Default | Notes |
 | --- | --- | --- | --- |
-| `rating` | number \| null (0–100) | 80 | percent; `null` is unrated — five empty stars, and no numeric value even when `showValue` is set |
+| `rating` | number (0–100) | 80 | percent |
 | `size` | number | 14 | star px |
 | `showValue` | boolean | false | append "4.0" |
 
@@ -128,15 +178,7 @@ Target: `primitives/ProgressBar/` · props: `percent` (0–100), `indeterminate`
 `height` (5), `track` (bool). Determinate fills to `percent`; **indeterminate** renders an
 animated sliding segment (no value) for unknown-total work — use it during a discovery/scan
 phase, then switch to determinate once the total is known. Used on poster cards (watch
-progress) and the Import scan/import phases.
-
-**Not the player scrubber.** This entry said "the player scrubber base" until the player
-shipped, and the build declined it correctly: `PlayerScrubber` is its own surface. Four
-things this primitive is right about are wrong for a seek bar — `overflow: hidden` clips a
-knob centred on the end of the fill; `transition: width 0.2s ease` lags a drag by a fifth
-of a second; the track is a dark `rgba(0,0,0,0.45)` where a bar over film needs
-`rgba(255,255,255,0.2)`; and `role="progressbar"` describes something you watch, where a
-seek bar is a `slider` you move. See `docs/design-logs/10-video-player.md`.
+progress), the player scrubber base, and the Import scan/import phases.
 
 ### StatusBadge — `prim.StatusBadge.dc.html`
 
@@ -145,15 +187,10 @@ check badge. In-progress state is shown by `ProgressBar`, not a badge.
 
 ### Toggle — `prim.Toggle.dc.html`
 
-Target: `primitives/Toggle/` · a switch atom. Props: `checked` (boolean), `disabled?`
-(boolean), `onToggle` (callback, required — the prototype defaults it to a no-op; a
-control that exists to be pressed does not), `label` (string, required — the accessible
-name the prototype's bare button lacks). `role="switch"` + `aria-checked`; knob slides,
-track fills accent when on. `disabled` draws it faded under `not-allowed` and makes a
-press do nothing, carried as `aria-disabled` rather than the `disabled` attribute so the
-switch stays in the tab order and announces itself. Used in Settings → Subtitles ("Turn
-on automatically", shipped off and disabled under its **Coming soon** pill); reuse for any
-on/off setting.
+Target: `primitives/Toggle/` · a switch atom. Props: `checked` (boolean),
+`onToggle` (callback). `role="switch"` + `aria-checked`; knob slides, track fills accent
+when on. Used in Settings → Subtitles ("Turn on automatically"); reuse for any on/off
+setting.
 
 ---
 
@@ -218,38 +255,25 @@ Rules:
 | `ChevronLeftIcon` (back)           | stroke        | page headers, MoviePage, player, import, form                     |
 | `ChevronDownIcon` (caret ▾)        | text/stroke   | FilterDropdown, SubtitleRow (currently the `▾` glyph)             |
 | `GearIcon`                         | fill          | LibraryPage maintenance menu                                      |
-| `PlusIcon`                         | stroke        | `mol.Fab`'s `plus` glyph — shipped, drawn by no screen yet        |
+| `PlusIcon`                         | stroke        | "Add" affordances                                                 |
 | `CloseIcon` (✕)                    | stroke        | modal close, remove-row buttons                                   |
 | `MoreIcon` (3-dot)                 | fill          | MoviePage edit/delete menu                                        |
 | `HeartIcon` / `HeartOutlineIcon`   | fill / stroke | PosterCard fav, MoviePage fav, Favorites header                   |
 | `CheckIcon`                        | stroke        | StatusBadge (watched), watched toggle, export success, "All done" |
 | `PlayIcon` / `PauseIcon`           | fill          | Play button, ContinueCard badge, player                           |
 | `SkipBackIcon` / `SkipForwardIcon` | stroke        | player ±10s                                                       |
-| `VolumeIcon` / `VolumeMutedIcon`   | stroke/fill   | player volume                                                     |
-| `SubtitlesIcon` (CC)               | stroke        | player subtitles                                                  |
+| `VolumeIcon` / `VolumeMuteIcon`    | stroke/fill   | player volume                                                     |
+| `CaptionsIcon` (CC)                | stroke        | player subtitles                                                  |
 | `FullscreenIcon`                   | stroke        | player                                                            |
 | `FolderIcon`                       | stroke        | Add-movie hint, Import root field                                 |
-| `SpreadsheetIcon` (`SheetIcon`)    | stroke        | Import sheet field, Export filename                               |
+| `SpreadsheetIcon`                  | stroke        | Import sheet field, Export filename                               |
 | `VideoIcon`                        | stroke        | FileField (video)                                                 |
 | `ImageIcon` (poster)               | stroke        | FileField (poster)                                                |
 | `FileIcon`                         | stroke        | FileField (generic), SubtitleRow                                  |
 | `DownloadIcon`                     | stroke        | Export dialog header                                              |
-| `MicrochipIcon`                    | stroke        | CodecRow tile                                                     |
-| `UploadIcon`                       | stroke        | ComponentDropZone glyph                                           |
-| `InfoCircleIcon`                   | stroke        | Snackbar glyph (`info`)                                           |
-| `CheckCircleIcon`                  | stroke        | Snackbar glyph (`success`)                                        |
-| `BangTriangleIcon`                 | stroke        | Snackbar glyph (`warning`)                                        |
-| `CrossCircleIcon`                  | stroke        | Snackbar glyph (`error`)                                          |
-| `ArrowUpIcon`                      | stroke        | `mol.Fab`'s `arrow-up` glyph — the **Back-to-top**                |
 
 (`heart` ships as two components — filled and outline — rather than a `filled` prop, since
 they're used independently; your call if you'd rather one component with a boolean.)
-
-(Two of these were renamed by the player build and the table has been corrected to the
-shipped names: `VolumeMuteIcon` → **`VolumeMutedIcon`**, matching the element's own
-`muted`, and `CaptionsIcon` → **`SubtitlesIcon`**, because **Subtitles** is the canonical
-term in `docs/ubiquitous-language.md` and "captions" is listed there as an alias to avoid.
-The glyphs are unchanged.)
 
 ### Consequence: `IconButton` takes the icon as a child, not a `name` enum
 
@@ -280,7 +304,9 @@ favorite toggle. The library's primary tile.
 | `onOpen` | () => void | navigate to detail |
 | `onToggleFav` | () => void | stops propagation internally |
 
-States: hover (lift), watched (badge), in-progress (bottom bar), favorite (filled heart).
+States: hover (lift −4px + deeper shadow + accent-line border, §2a), press (settles to −1px),
+focus-visible (offset outline on the card root), watched (badge), in-progress (bottom bar),
+favorite (filled heart; the heart button has its own scale hover/press).
 
 ### ContinueCard — `mol.ContinueCard.dc.html`
 
@@ -305,30 +331,13 @@ Target: `components/FilterDropdown/`
 | `menuWidth` | number | |
 | `onToggle` | () => void | |
 
-### Modal — `mol.Modal.dc.html`
+### Modal — `mol.Modal.dc.html` (pattern)
 
-Target: `components/Modal/` · scrim + centered card + header (icon tile, title, subtitle,
-✕) + body slot. The shell `feat.ExportModal` draws inline in its idle state, lifted into a
-molecule so `feat.DeleteMovieDialog` can compose it; the Export dialog is its second
-customer, translated onto it with one addition — `bare`, under which the card is the
-children alone (no header, no ✕, no body padding) and `title` becomes the card's
-`aria-label`, so the **Export ready** face can swap inside the same card.
-| Prop | Type | Notes |
-| --- | --- | --- |
-| `open` | boolean | renders nothing when false — a mount, so `ffPop` runs fresh on every open |
-| `title` | string | serif 600 24px; labels the dialog |
-| `subtitle` | string | 14px faint line under the title; omitted when empty |
-| `icon` | ReactNode | sits in the 44px accent tile; the tile is omitted when absent (§3a: pass the node, not a name) |
-| `onClose` | () => void | ✕ (labelled "Close"), a press on the scrim, and Escape |
-| `bare` | boolean | the card is the children: no header, no ✕, no body padding; `title` labels the card; Escape and the scrim still close it |
-| `children` | ReactNode | the body slot, padded `22px 28px 28px`, a `gap 20` column |
+Target: `components/Modal/` · scrim + centered card + title/subtitle/icon/close. In the
+prototype the Export dialog uses this shell directly (see ExportModal). Props:
+`open`, `title`, `subtitle`, `icon`, `onClose`, and a body slot (`children`).
 
-The prototype draws the surface only. In code the molecule owns the whole dismissal
-contract — `role="dialog"`, `aria-modal`, labelled by the title; focus to the card on open
-and back to the opener on close; Tab and Shift+Tab held inside; a portal to `document.body`
-so the scrim never scrolls with a page — see design log `12-delete-movie` Q9.
-
-### Fab — `mol.Fab.dc.html` ✅
+### Fab — `mol.Fab.dc.html`
 
 Target: `components/Fab/` · reusable floating action button — fixed bottom-right, circular,
 accent, elevated. Props: `icon` (`'arrow-up' | 'plus'`), `label` (a11y), `size` (52),
@@ -337,20 +346,6 @@ conditionally. In the prototype, `page.LibraryPage` shows it once its scroll bod
 ~420px and calls `scrollTo({top:0, behavior:'smooth'})` on click (back-to-top). Note: keep
 it transition/animation-free on mount — driving an opacity/transform entrance from a
 prop-fed inline style is unreliable across re-renders; mount/unmount it instead.
-
-**What shipped** (design log 19): the circle is `styled(IconButton)` — one more face
-beside the favorite heart, the carousel arrows, the ⋯ trigger and the detail page's
-circles — at `position: absolute` over `MainLayout.Root`'s `position: relative` rather
-than the prose's _fixed_, the same box inside a `100vh` root, as the `.dc.html` writes it.
-Props flat and in the prototype's order, with one deviation: `label` is **required**, not
-defaulted to _Back to top_ — a default right for one icon and wrong for the other is not a
-default, and an icon-only button without a name announces as "button". Both glyphs ship
-(`ArrowUpIcon` at 24, `PlusIcon` at 26). **The layout, not the page, mounts it**, through
-`components/BackToTop/` — the control that takes the scrolling body as a ref and owns the
-**Scroll threshold** (`scrollTop > 420`, strictly, read on every passive `scroll` and once
-on attach, for `useRestoredScroll`'s sake) and the press (`scrollTo({ top: 0, behavior:
-'smooth' })` on the body, never the document). Mount and unmount, no transition. The home
-only; no other page mounts one.
 
 ### ExpandableText — `mol.ExpandableText.dc.html`
 
@@ -362,32 +357,19 @@ text actually overflows** — short copy shows no button. Clamp via `-webkit-lin
 (cuts at a line boundary with ellipsis). Used for the MoviePage synopsis; reuse for any
 variable-length copy. In code, `useState` + a `ResizeObserver`/`useLayoutEffect` measure.
 
-### Snackbar — `mol.Snackbar.dc.html` ✅
+### Snackbar — `mol.Snackbar.dc.html`
 
-Target: `components/Snackbar/` · the transient bottom-right card, **4 Snackbar variants**
-(`info` `success` `warning` `error`) mapped to the status tokens — `error` reads
-`--color-danger`, because the prototype's own map does. Props flat and in the prototype's
-order: `variant`, `title` (optional bold line), `message`, `actionLabel` + `onAction`
-(optional bordered button in the variant's colour), `dismissible` (default true; the stack
-never passes false) + `onDismiss`. Presentational to the last prop — the 4px accent bar,
-the glyph and the action in the variant's colour, the card's own 28px ✕ announcing itself
-as **Dismiss** (not `RemoveButton`), `ffSnackIn` on entry; **no timer and no effect in
-it**. One amendment of the prototype's flat `role="status"`: the role is **by variant** —
-`status` for `info` / `success`, `alert` for `warning` / `error` (design log 17 Q20).
-
-**The stack, the queue and the timers live above the route table**, as the prototype's
-`pushSnack` / `dismissSnack` did in the container, split in code across two units imported
-by path (no barrel): `App/SnackbarProvider/` owns the queue, the ids off a counter, one
-timer per plain notice, the fixed bottom-right `column-reverse` **Snackbar stack** (newest
-nearest the corner, `pointer-events: none` with each card's wrapper taking them back,
-always mounted, no portal, no cap, no dedupe) and the dismiss-then-run action;
-`App/useSnackbar/` owns the context, the `useSnackbar()` hook — `{ notify, dismiss }`,
-throwing outside the provider — and `SnackbarNotice` (`{ variant, title?, message,
-action? }`, `action` nesting `{ label, onClick }`). **The one timing rule:** a notice with
-an `action` persists until actioned or dismissed; every other notice dies at **5s**; no
-per-notice override. **No caller yet** — the first is the **Update offer snackbar** of the
-software-update flow (Settings → About, design log 17), which waits on the Electron shell
-and the packaging.
+Target: `components/Snackbar/` · transient bottom-right notification, **4 semantic
+variants** (`info` `success` `warning` `error`) mapped to status tokens
+(`--color-info/success/warning/danger`). Props: `variant`, `title` (optional bold line),
+`message`, `actionLabel` + `onAction` (optional button), `dismissible` + `onDismiss`.
+Presentational — colored left bar + icon per variant, optional action, ✕ dismiss; enters
+via the `ffSnackIn` keyframe. **The stack/queue/auto-dismiss timers live in the container**
+(`pushSnack`/`dismissSnack`), which renders a `column-reverse` stack above all routes. In
+code this becomes a `SnackbarProvider` + `useSnackbar()` context. Convention: actionable
+snackbars (info + Update button) **persist** until actioned/dismissed; confirmations
+(success) **auto-dismiss at 5s**. Used by the software-update flow (Settings → About);
+reuse for any app-level feedback.
 
 ### LogConsole — `mol.LogConsole.dc.html`
 
@@ -399,45 +381,42 @@ Monospace, dark terminal background, **auto-follows to the newest line** on upda
 Used in the Import progress console; reuse for any streamed task output (re-scan, codec
 install). In code, a `ResizeObserver`/`useEffect` keeps it pinned to the bottom.
 
+### SeasonCard — `mol.SeasonCard.dc.html`
+
+Target: `components/SeasonCard/` · 2:3 season tile for the series page. Composes StatusBadge
+(season fully watched) + ProgressBar (partially watched).
+Props: `season { number, label?, episodeCount, watchedCount, g1, g2 }`, `onOpen`.
+Sub-label switches between "8 episodes" and "3 of 8 watched".
+
+### EpisodeRow — `mol.EpisodeRow.dc.html`
+
+Target: `components/EpisodeRow/` · one row in a season's episode list: 16:9 thumbnail (hover
+play affordance + resume ProgressBar), `S02E04` + title, air date, resume label, and a
+watched checkbox. Props: `episode { season, number, title, airDate, watched, progress,
+resumeLabel?, g1, g2 }`, `onOpen`, `onToggleWatched`.
+The checkbox stops propagation — the row opens the episode, the box only marks it.
+
 ### RatingPicker — `mol.RatingPicker.dc.html`
 
 Target: `components/RatingPicker/` · **interactive** half-star input (local hover state).
-| Prop | Type | Default | Notes |
-| --- | --- | --- | --- |
-| `value` | number \| null (0–100) | 70 | percent; `null` is unrated, and the label reads "Not rated" |
-| `size` | number | 30 | star px; gaps and hit areas scale off it, so the MoviePage meta line's 20px instance is a smaller picker rather than a broken one |
-| `onChange` | (percent: number \| null) => void | — | clicking the segment that already holds the current value emits `null` |
+Props: `value` (0–100), `onChange(percent)`.
 
 ### SubtitleRow — `mol.SubtitleRow.dc.html`
 
-Target: `components/SubtitleRow/` · filename + language dropdown + remove.
-Props: `filename`, `language`, `languages`, `onLanguageChange(language)`, `onRemove`.
-
-The dropdown is a `Menu`, not the prototype's local `open` state — design log
-`11-add-movie` Q12: `Menu` already owns Escape, a press outside, select-to-close
-and focus return, and taking it means only one row's list is ever open at a time
-for free. The prop names are the glossary's (**Language pool**), not the
-prototype's `lang`/`langOptions`. The ✕ is the `RemoveButton` atom; the box, the
-glyph and the filename are the molecule rung's shared `fileRow.styles.ts`.
+Target: `components/SubtitleRow/` · filename + language dropdown (local open state) + remove.
+Props: `filename`, `lang`, `langOptions`, `onLangChange(lang)`, `onRemove`.
 
 ### FileField — `mol.FileField.dc.html`
 
 Target: `components/FileField/` · labelled file slot: filled row (icon + name + remove) or
 dashed "choose" button.
-Props: `label`, `filename`, `chooseLabel`, `accept`, `icon` (`ReactNode`), `onPick(file)`, `onRemove`.
-
-`icon` is a node, not a name to switch on — design log `11-add-movie` Q11, on
-§3a's own rule: pass the component. `accept` is the `<input type="file">`'s
-accept list, which the prototype's fake picker had no need of. The dashed
-"choose" button is the `FilePicker` atom (`primitives/FilePicker/`), which owns
-the hidden input and is also the ＋ under the subtitle rows; the ✕ is the
-`RemoveButton` atom.
+Props: `label`, `filename`, `chooseLabel`, `icon` (`'video'|'poster'|'file'`), `onPick`, `onRemove`.
 
 ---
 
 ## 5. Features (organisms) → `src/features/`
 
-> Status: **all 6 features are extracted and wired** as `feat.*.dc.html` files. Each
+> Status: **all 7 features are extracted and wired** as `feat.*.dc.html` files. Each
 > receives a single typed model object from the container and composes the molecules above
 > (App → feature → molecule → primitive — proven 4 levels deep). The container builds the
 > model object in `renderVals()` and mounts the feature via `<dc-import>`.
@@ -446,38 +425,18 @@ the hidden input and is also the ＋ under the subtitle rows; the ✕ is the
 > via GenreRow + LibraryGrid), ContinueCard (resume row), SearchBar + FilterDropdown ×3
 > (header), RatingPicker + FileField ×2 + SubtitleRow (inside MovieForm).
 
-| Feature               | Target                                    | Composes                                                                                              | Model (props)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
-| --------------------- | ----------------------------------------- | ----------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **LibraryHeader**     | `features/library/LibraryHeader`          | SearchBar, FilterDropdown ×3, IconButton (gear menu)                                                  | `{ search, onSearch, genre/sort/rating filter models, onAdd, onImport, onExport }`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
-| **CardCarousel**      | `features/library/CardCarousel`           | PosterCard / ContinueCard                                                                             | `{ items, variant: 'poster' \| 'continue' }` — horizontal scroller with **paged left/right arrow buttons**. Arrows auto-hide at the start/end and when the row doesn't overflow; mouse/trackpad scroll still works. Rows are capped (15 cards) by the container, with "View all" → GenrePage for the full set. Used by GenreRow, Favorites, and Continue rows.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
-| **GenreRow**          | `features/library/GenreRow`               | CardCarousel (poster)                                                                                 | `{ name, count, movies: PosterCardMovie[] (≤15), onOpenAll, onOpenMovie, onToggleFav }` — title + "View all {count}" header above a CardCarousel                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
-| **LibraryGrid**       | `features/library/LibraryGrid`            | PosterCard                                                                                            | `{ movies, onOpenMovie, onToggleFav }` (genre page grid, full set)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
-| **MovieForm**         | `features/movie-form/MovieForm`           | IconButton, TextField, Textarea, Chip, RatingPicker, FileField ×2, FilePicker, SubtitleRow ×n, Button | `{ title, year, director, cast, description, genres[], rating, video, poster, subtitles[], + onChange handlers, onSave }` — no `onCancel`: Cancel and the back pill (an `IconButton`) are one call to the app's Back rule, design log `11-add-movie` Q21. The organism owns the hooks (Q13); the page is `MaintainerLayout` around it.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
-| **PlayerControls**    | `features/player/PlayerControls`          | PlayerScrubber, VolumeSlider, IconButton                                                              | `{ title, visible, playing, position, duration, volume, muted, hasSubtitles, subtitlesOn, + handlers }` — the two chrome bars only. The centre of the picture is `PlayerNotice`, taking one `kind` (`buffering` \| `missing-file` \| `cannot-play` \| `play`), composed beside this by `Player` — see the note below the table. The Back pill never idles away behind a notice, so neither message is a trap.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
-| **ImportFlow**        | `features/import-export/ImportFlow`       | TextField ×2, Button, ProgressBar, LogConsole                                                         | `{ sheet, root, sheetError, rootError, onSheet, onRoot, onStart, run: ImportRun \| null, onCancel, onResolve, onSkip, onBack, onFinish }` — one of three steps: **setup** (two `mono` TextFields; a refused one carries a 13px `danger` line under it, the problem row's reason geometry recoloured, cleared on edit), **running** (`phase: 'scanning' \| 'importing'`, the stepper, headline, ProgressBar, current item, elapsed/ETA, LogConsole, Cancel) and **review** (the two tiles, the **Needs attention** list, All done, Finish). The model is `ImportRun` — `{ id, phase: 'scanning' \| 'importing' \| 'review', startedAt, found, total, done, matched, currentItem, log: LogLine[], problems: ImportProblem[] }` — with elapsed, percent and the ETA derived client-side. Each `ImportProblem` is `{ id, kind, title, reason, movieId? }`, its dot coloured by kind: `danger` for `no-folder` / `no-video` / `failed`, `accent` for `ambiguous`, `text-faint` for `no-row` / `missing-meta` (the one soft kind, imported already and carrying its `movieId`). Resolve and Skip on a row are `Button` `secondary` `sm`. In code the organism owns `useImportRun` and renders `ImportSetup` / `ImportProgress` / `ImportReview` — design log `13-bulk-import`. |
-| **LibrarySection**    | `features/settings/LibrarySection`        | ActionRow ×3, ExportModal                                                                             | No props — the Settings hub's **Library** group: the `＋ Add a movie`, `⇪ Import from spreadsheet` and `⬇ Export to CSV` rows, each an `ActionRow` `{ glyph, label, desc, onClick }` drawn as `page.SettingsPage` draws them. The section owns two routes (`/add`, `/import`) as `SettingsHeader` owns its one, and one overlay: it holds `exportOpen` and mounts `<ExportModal open onClose />` beside its rows, so the third row leads to a dialog rather than a route and the page keeps its scroll. The one place a feature composes another feature's organism — a section composing a dialog; a hook or a wire crossing would not be (design log `14-export`).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
-| **ExportModal**       | `features/import-export/ExportModal`      | Modal (`bare` for the done face), FormatCard ×2, Button                                               | `{ open, onClose }` — the dialog owns `useExport(open)` the way `DeleteMovieDialog` owns its hook: the format, the count, `exporting` and `done` are the hook's, not props. The idle face: the download glyph in the tile, `Export library` and its line, `Format` over two **Format cards** (`role="radio"` buttons in a `radiogroup`, on the `StatTile` pattern — not `Chip`, not a segmented control), the filename row with the summary's count, `Columns included` over the eight pills as a list, `Export as CSV` / `Export as Excel` beside `Cancel`. The done face swaps inside the same card as a `bare` Modal: the tick, `Export ready`, the filename and the count in the copy, `Done`. `feat.ExportModal.dc.html`; design log `14-export`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
-| **DeleteMovieDialog** | `features/movie-detail/DeleteMovieDialog` | Modal, Button ×2 (`danger` + `secondary`)                                                             | `{ open, title, onConfirm, onClose }` — the Modal with 🗑 in its tile, title `Delete “{title}”?`, subtitle `This can’t be undone.`, one 15px dim paragraph, then **Delete movie** / **Cancel** in that order. Opened by the ⋯ menu's `🗑 Delete movie` row on `page.MoviePage`; the container drops the movie on confirm and returns to browse. In code `onConfirm` is not a prop: the dialog takes `movieId` and owns `useDeleteMovie`, whose done-state is the app's Back rule — design log `12-delete-movie`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
-| **CodecManager**      | `features/settings/CodecManager`          | CodecRow ×n, ComponentDropZone                                                                        | No props — the **Codec report**: the organism owns `useCapabilities` and draws the **Codec summary** (`N formats enabled · M from the playback component`, the copy amended in `5db8da0` — the rows it counts are what the component decodes, which the family never added) over one `CodecRow` per catalogued codec the report contains, in **Format catalogue** order, then the **Component row** last, then `ComponentDropZone` under all of it. The **Component row** is the one row with a real size and a ✕: the organism passes `onRemove` exactly when the report says the component is removable — an **Uploaded component** and nothing else, because the **Default component** is the installer's rather than the maintainer's. The zone takes a **playback component** (the FFmpeg pair), never a `.dll` — no uploaded library changes what a browser decodes, so the copy must not promise it. Both writes redraw from the report the route echoes: no second read, no success flash, no snackbar. The spec's `{ summaryLabel, codecs, onBrowse }` collapsed the way `ExportModal`'s did — the organism reads the wire itself. Blank until the report lands, and blank still on a refused read.                                                             |
-| **CodecRow**          | `features/settings/CodecRow`              | MicrochipIcon, RemoveButton                                                                           | `{ row: CodecRowModel, onRemove? }` — one row of the **Codec report**, and **one template for both kinds**: the tile with `MicrochipIcon`, the display name, the **Container chips**, the size cell (`—` on a codec row, the pair's weight on the **Component row**), the **Status pill**, and either the ✕ or the 32px where it would sit. The pill has four words over two colourings: `Built-in` and `Default` — what the machine came with — in the faint ink on the third surface, `Installed` and `Uploaded` in the watched green on its own tint. The ✕ is drawn **exactly when `onRemove` is given** and is `primitives/RemoveButton`, whose accessible name and `title` are both built from what the row removes. A second `ComponentRow` molecule would be two copies of this one.                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
-| **ComponentDropZone** | `features/settings/ComponentDropZone`     | UploadIcon                                                                                            | `{ upload: UploadState, onFiles }` — the dashed _Add a codec pack_ box under the rows: a `<label>` over a `multiple` file input hidden by **clipping rather than `display: none`**, which would take it out of the tab order, the one way this control is operated without a mouse. It sorts nothing and labels nothing — both files go up as they came and the route tells the two **Component binaries** apart by filename. Drag-over paints the prototype's own hover. **Three faces**, `zoneFace(upload)` being the table of what each says: **idle**, the invitation the molecule composes because its `ffmpeg` is a `<Mono>` span; **busy**, naming which write runs, with the input disabled so two cannot race; and **refused**, the title kept with the route's own reason under it in the danger ink, until the next attempt replaces it. _Replaced_ is not a face: the echoed report is the feedback.                                                                                                                                                                                                                                                                                                                                                         |
-
-**The player is an organism with five components beside it, not one component.** The
-prototype's own view model — `currentTime`, `subsOn`, `controlsVisible`, `showBigPlay`,
-`showBuffering`, `showUnavailable`, `noticeTitle`, `noticeBody`, all on `PlayerControls`
-and mapped straight to `pages/PlayerPage` — is what this table said until the player
-shipped. What shipped is what `docs/design-logs/10-video-player.md` argued for: `Player`
-owns the hooks and the state, and `PlayerControls`, `PlayerScrubber`, `VolumeSlider`,
-`SubtitleOverlay` and `PlayerNotice` each draw one thing they are told. `pages/PlayerPage`
-composes nothing but `Player`, the way every other page composes nothing but its feature.
-
-Three prop names changed with it, and each is the domain's word rather than the
-prototype's: `currentTime` → **`position`** (the **Absolute position**, which on a
-converted film is not the element's own time), `subsOn` → **`subtitlesOn`**, and
-`controlsVisible` → **`visible`**, since a component called `PlayerControls` does not
-need the word twice. The three `show*` booleans and the two notice strings collapse into
-`PlayerNotice`'s one `kind`, because they were never independent: only one of them is ever
-true, and three booleans that must not disagree are a state with three names.
+| Feature            | Target                               | Composes                                                                      | Model (props)                                                                                                                                                                                                                                                                                                                                                  |
+| ------------------ | ------------------------------------ | ----------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **LibraryHeader**  | `features/library/LibraryHeader`     | SearchBar, FilterDropdown ×3, IconButton (gear menu)                          | `{ search, onSearch, genre/sort/rating filter models, onAdd, onImport, onExport }`                                                                                                                                                                                                                                                                             |
+| **CardCarousel**   | `features/library/CardCarousel`      | PosterCard / ContinueCard                                                     | `{ items, variant: 'poster' \| 'continue' }` — horizontal scroller with **paged left/right arrow buttons**. Arrows auto-hide at the start/end and when the row doesn't overflow; mouse/trackpad scroll still works. Rows are capped (15 cards) by the container, with "View all" → GenrePage for the full set. Used by GenreRow, Favorites, and Continue rows. |
+| **GenreRow**       | `features/library/GenreRow`          | CardCarousel (poster)                                                         | `{ name, count, movies: PosterCardMovie[] (≤15), onOpenAll, onOpenMovie, onToggleFav }` — title + "View all {count}" header above a CardCarousel                                                                                                                                                                                                               |
+| **LibraryGrid**    | `features/library/LibraryGrid`       | PosterCard                                                                    | `{ movies, onOpenMovie, onToggleFav }` (genre page grid, full set)                                                                                                                                                                                                                                                                                             |
+| **MovieForm**      | `features/movie-form/MovieForm`      | TextField, Textarea, Chip, RatingPicker, FileField ×2, SubtitleRow ×n, Button | `{ title, year, director, cast, description, genres[], rating, video, poster, subtitles[], + onChange handlers, onSave, onCancel }`                                                                                                                                                                                                                            |
+| **PlayerControls** | `features/player/PlayerControls`     | ProgressBar (scrubber), IconButton                                            | `{ playing, currentTime, duration, volume, muted, subsOn, controlsVisible, + handlers }`                                                                                                                                                                                                                                                                       |
+| **ImportFlow**     | `features/import-export/ImportFlow`  | TextField, Button, ProgressBar                                                | `{ step, sheetPath, rootPath, progress, matched, problems[], + handlers }`                                                                                                                                                                                                                                                                                     |
+| **ExportModal**    | `features/import-export/ExportModal` | Modal, Chip/segmented, Button                                                 | `{ open, format, filename, rowCount, columns[], onFormat, onExport, onClose }`                                                                                                                                                                                                                                                                                 |
+| **EnrichmentFlow** | `features/enrichment/EnrichmentFlow` | Chip ×10, Toggle ×2, Button, ProgressBar, LogConsole                          | `{ step: 'setup'                                                                                                                                                                                                                                                                                                                                               | 'running' | 'review', needsKey, offline, scope, fields[], writeSheet, writePosters, sheetPath, posterPathExample, percent, log[], matched, pending: PendingRow[], + handlers }` — the TMDB sync surface (see §5a) |
+| **CodecManager**   | `features/settings/CodecManager`     | (list rows + dashed upload zone)                                              | `{ summaryLabel, codecs: CodecItem[], onBrowse }` — each `CodecItem`: `{ id, name, exts[], size, builtIn, statusLabel, onRemove }`                                                                                                                                                                                                                             |
 
 Domain model — `PosterCardMovie` and the form/import/player models — should be promoted to
 `src/types/`. The canonical movie record (id, title, year, genres[], runtime, rating,
@@ -487,29 +446,118 @@ needs.
 
 ---
 
+## 5aa. Series (TV) — new in this revision
+
+Series are a **separate top-level tab**, not mixed into the movie rows. Everything below is
+additive; the movie flow is untouched.
+
+**Screens**
+| Surface | File | Notes |
+| --- | --- | --- |
+| Library → Series tab | `page.LibraryPage` | segmented Movies/Series control in the header; Series tab = episode Continue Watching row + an "All series" grid (reuses `LibraryGrid` + `PosterCard`) |
+| Series detail | `page.SeriesPage` | same hero shape as MoviePage (poster, year range, season/episode count, rating, genres, synopsis, creator/cast) + a **Seasons** grid of `SeasonCard` |
+| Season episodes | `page.SeasonPage` | header (series → season), _Resume Enn_, "Mark season watched", the `EpisodeRow` list, and an "Other seasons" pill row |
+| Player | `feat.PlayerControls` | unchanged for movies; for episodes the title reads `Show · S02E04 · Episode title` and an **Up next** card appears in the last 15s |
+
+**Decisions** (settled with the user): separate tabs · season posters → its own episode page
+(not tabs or an accordion) · episode row shows thumbnail, number+title, air date, watched
+check, resume bar (no synopsis, no runtime, no filename) · Continue Watching holds **episode**
+cards, not one card per series · the only player addition is **auto-play next with a
+countdown** (Play now / Cancel) — no skip-intro, no in-player episode list.
+
+**On-disk shapes the importer accepts** (shown verbatim in the Import setup):
+
+```
+Movie Title (2019)/ movie.mkv · subs.en.srt
+Show Name/ Season 01/ S01E03.mkv
+Show Name/ S01E03.mkv          ← loose episodes at the show root are fine
+```
+
+Season/episode numbers come from the **folder first**, then the filename (`S01E03`, `1x03`).
+Anything unparsed lands in the existing import review list.
+
+**Data notes for implementers:** the prototype models episodes as
+`{ key: '<seriesId>-<season>-<episode>', season, number, title, airDate, runtime, watched,
+progress, g1, g2 }` with watch state in one flat `epState` map keyed by that string — in SQLite
+this is a `series`, `season`, `episode` trio plus the same `watch_state` columns the movie
+table already has. `nextEpisodeOf(seriesId)` (resume the part-watched one, else the first
+unwatched) is the reference for both the series **Resume** button and Continue Watching.
+
+---
+
+## 5a. Enrichment (TMDB) — `src/features/enrichment/`
+
+**New in this revision.** The first and only feature that touches the network; everything
+else stays offline-first. Three surfaces, one flow component.
+
+**Entry points**
+
+1. **Settings → Network → "Sync metadata & posters"** — the primary route. The Network
+   section also owns the API-key field and _Test connection_.
+2. **Import setup → "Also fetch metadata and posters from TMDB"** checkbox — opt-in; on
+   _Finish_ the import review hands straight off to a full-library run.
+3. **Movie detail → ⋯ menu → "Fetch from TMDB"** — single-title run (`scope: 'single'`),
+   returns to the movie when done.
+
+**Three steps** (`setup` → `running` → `review`), mirroring ImportFlow so the two read
+as siblings:
+
+- **setup** — key/offline banners, scope radio cards (_Only what's missing_ | _Everything_ |
+  _Just this movie_), the field chips, and the write-target list. Start is `secondary` +
+  inert until `tmdbConnected && online`.
+- **running** — determinate ProgressBar (count is known up front, unlike the import scan),
+  LogConsole, elapsed/ETA, _Stop_ (keeps what was already fetched).
+- **review** — two stat tiles + a list of rows that need a human. Three row kinds:
+  `ambiguous` (horizontal poster-picker of candidates + % match + "Search by title"),
+  `conflict` (field-by-field **Yours | TMDB** two-column diff, per-field selection, then
+  _Apply choices_ / _Keep all mine_), `missing` (manual TMDB search box). Every row has _Skip_.
+
+**Decisions this encodes** (settled with the user before design):
+
+| Question       | Decision                                                                                                                                                                                |
+| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Where it lives | Settings row + own screen; Import checkbox; per-movie action                                                                                                                            |
+| Storage        | Library DB is the source of truth **and** a `familyflix-metadata.csv` in the collection root + `poster.jpg` in each movie folder — both toggleable, neither overwrites an existing file |
+| Fields         | Synopsis, Poster, Backdrop, Runtime, Year, Genres, Director, Cast, Original title, TMDB score                                                                                           |
+| Rating         | **Untouched.** TMDB's score is a _separate_ field beside the household rating                                                                                                           |
+| Conflicts      | Ask per movie in the review step — never a silent overwrite                                                                                                                             |
+| Matching       | Post-run review with a poster picker; no mid-run interruption                                                                                                                           |
+| API key        | Settings → **Network**: key field + _Test connection_; enrichment sits under it                                                                                                         |
+| Offline        | Explicit banner + Retry; the rest of the app is unaffected                                                                                                                              |
+
+**Server-side note for the implementers:** the run is a pass over the _already-imported_
+library keyed by title + year — not a second filesystem scanner. The existing
+`walkLibraryRoot`/`scanMovieFolder` path is untouched; the `tmdb_id` column finally gets
+a value. Poster/CSV writes are the only place the app writes back into the source folders,
+so they need their own permission check and a dry-run log line.
+
+---
+
 ## 6. Layout + Pages → `src/layouts/`, `src/pages/`
 
 > Status: **all screens are extracted as `page.*.dc.html` files and the root template is a
-> pure router** — seven `<sc-if>` → `<dc-import>` mounts, with the logic class as the sole
+> pure router** — ten `<sc-if>` → `<dc-import>` mounts, with the logic class as the sole
 > state container. Each page receives one typed model object built in `renderVals()`.
 
-| Page (prototype file)    | Target               | Composition                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
-| ------------------------ | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `page.LibraryPage` ✅    | `pages/LibraryPage`  | browse header (SearchBar + FilterDropdown ×3 + gear → Settings) + ContinueCard row + Favorites row + `GenreRow` ×n; `MainLayout` mounts `BackToTop` over the body                                                                                                                                                                                                                                                                                                                                            |
-| `page.GenrePage` ✅      | `pages/GenrePage`    | genre header (SearchBar + Sort FilterDropdown) + `LibraryGrid`                                                                                                                                                                                                                                                                                                                                                                                                                                               |
-| `page.MoviePage` ✅      | `pages/MoviePage`    | backdrop + poster + meta (RatingPicker, Chip tags, director/cast) + actions + the ⋯ menu (✎ Edit details, 🗑 Delete movie → `DeleteMovieDialog`)                                                                                                                                                                                                                                                                                                                                                             |
-| `page.SettingsPage` ✅   | `pages/SettingsPage` | `MaintainerLayout` around five sections: `SettingsHeader` · `LibrarySection` (Add / Import / Export rows) · `PlaybackSection` (**Codecs** over `CodecManager`, the divider, **Subtitles**: the **Auto-on toggle** under its Coming soon pill and _Preferred language_ over `FilterDropdown`) · `StorageSection` (the path and the space line; no _Change…_ — the Electron shell's) · `AboutSection` (the brand row and the **App version**; no _Software update_ — the Electron shell's and the packaging's) |
-| `feat.PlayerControls` ✅ | `pages/PlayerPage`   | `Player` (organism) — picture + `PlayerControls` + `PlayerScrubber` + `VolumeSlider` + `SubtitleOverlay` + `PlayerNotice`; the player is one self-contained screen                                                                                                                                                                                                                                                                                                                                           |
-| `feat.MovieForm` ✅      | `pages/AddMoviePage` | the Add/Edit form (also resolves an import row)                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
-| `feat.ImportFlow` ✅     | `pages/ImportPage`   | `MaintainerLayout` around `ImportFlow`: the import setup → running → review flow. Confident matches import during the run; review lists only what the run could not settle                                                                                                                                                                                                                                                                                                                                   |
+| Page (prototype file)    | Target                 | Composition                                                                                                                                                                     |
+| ------------------------ | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `page.LibraryPage` ✅    | `pages/LibraryPage`    | browse header (SearchBar + FilterDropdown ×3 + gear → Settings) + ContinueCard row + Favorites row + `GenreRow` ×n                                                              |
+| `page.GenrePage` ✅      | `pages/GenrePage`      | genre header (SearchBar + Sort FilterDropdown) + `LibraryGrid`                                                                                                                  |
+| `page.MoviePage` ✅      | `pages/MoviePage`      | backdrop + poster + meta (StarRating, Chip tags, director/cast) + actions                                                                                                       |
+| `page.SettingsPage` ✅   | `pages/SettingsPage`   | grouped settings hub: **Library** (Add/Import/Export actions) · **Playback** (`CodecManager` + default-subtitle FilterDropdown) · **Storage** (media folder, space) · **About** |
+| `feat.PlayerControls` ✅ | `pages/PlayerPage`     | full player surface + subtitle overlay (player is one self-contained screen)                                                                                                    |
+| `feat.MovieForm` ✅      | `pages/AddMoviePage`   | the Add/Edit form (also resolves an import row)                                                                                                                                 |
+| `feat.ImportFlow` ✅     | `pages/ImportPage`     | the import setup → running → review flow                                                                                                                                        |
+| `feat.EnrichmentFlow` ✅ | `pages/EnrichmentPage` | TMDB sync setup → running → review (see §5a)                                                                                                                                    |
+| `page.SeriesPage` ✅     | `pages/SeriesPage`     | series hero + Seasons grid (see §5aa)                                                                                                                                           |
+| `page.SeasonPage` ✅     | `pages/SeasonPage`     | episode list for one season                                                                                                                                                     |
 
 The gear icon now opens **`page.SettingsPage`** (a full route), not a dropdown — the old
 maintenance menu's actions (Add / Import / Export) are the Library section there, so tasks
 and configuration share one home and the menu scales as settings grow. The browse and genre
 headers differ, so each page owns its header rather than sharing a `MainLayout` chrome; in
 code, factor the shared bits (logo, gear button) into `layouts/` as desired. The Export
-dialog (`feat.ExportModal`) and the Delete dialog (`feat.DeleteMovieDialog`) render as
-overlays above the current route.
+dialog (`feat.ExportModal`) renders as an overlay above the current route.
 
 Routing: `react-router-dom` v6. The prototype's `screen` state enumerates the routes
 (`/`, `/genre/:name`, `/movie/:id`, `/movie/:id/play`, `/add`, `/import`). The Export
@@ -528,4 +576,4 @@ dialog is an overlay rendered above the current route.
 7. Container/store wiring; then the server (`library`, `media`, `import-export`, `db`).
 
 Each component's prototype file is the visual + behavioral reference; match spacing,
-radii, hover states, and copy exactly.
+radii, interaction states (§2a), and copy exactly.

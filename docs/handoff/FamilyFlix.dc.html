@@ -73,6 +73,36 @@
           ></dc-import>
         </sc-if>
 
+        <!-- ============================= SERIES ============================= -->
+        <sc-if value="{{ isSeries }}" hint-placeholder-val="{{ false }}">
+          <dc-import
+            name="page.SeriesPage"
+            sr="{{ seriesModel }}"
+            style="position: absolute; inset: 0"
+            hint-size="100%,100%"
+          ></dc-import>
+        </sc-if>
+
+        <!-- ============================= SEASON ============================= -->
+        <sc-if value="{{ isSeason }}" hint-placeholder-val="{{ false }}">
+          <dc-import
+            name="page.SeasonPage"
+            sn="{{ seasonModel }}"
+            style="position: absolute; inset: 0"
+            hint-size="100%,100%"
+          ></dc-import>
+        </sc-if>
+
+        <!-- ============================= TMDB ENRICHMENT ============================= -->
+        <sc-if value="{{ isEnrich }}" hint-placeholder-val="{{ false }}">
+          <dc-import
+            name="feat.EnrichmentFlow"
+            en="{{ enrichModel }}"
+            style="position: absolute; inset: 0"
+            hint-size="100%,100%"
+          ></dc-import>
+        </sc-if>
+
         <!-- ============================= SETTINGS ============================= -->
         <sc-if value="{{ isSettings }}" hint-placeholder-val="{{ false }}">
           <dc-import
@@ -88,19 +118,6 @@
           <dc-import
             name="feat.ExportModal"
             data="{{ exportModel }}"
-            style="position: absolute; inset: 0; z-index: 90"
-            hint-size="100%,100%"
-          ></dc-import>
-        </sc-if>
-
-        <!-- ============================= DELETE DIALOG (feat.DeleteMovieDialog) ============================= -->
-        <sc-if value="{{ deleteOpen }}" hint-placeholder-val="{{ false }}">
-          <dc-import
-            name="feat.DeleteMovieDialog"
-            open="{{ deleteOpen }}"
-            title="{{ deleteTitle }}"
-            on-confirm="{{ confirmDelete }}"
-            on-close="{{ closeDelete }}"
             style="position: absolute; inset: 0; z-index: 90"
             hint-size="100%,100%"
           ></dc-import>
@@ -168,26 +185,24 @@
           {id:19,title:'The Cartographer',year:2021,genres:['Documentary'],runtime:88,st:'unwatched',prog:0,g1:'#2f2a20',g2:'#7a6a3a',syn:'A portrait of the last man hand-drawing maps of places that no longer match their own coastlines.',added:19},
           {id:20,title:'Saturday\u2019s Children',year:2017,genres:['Drama','Comedy'],runtime:99,st:'unwatched',prog:0,g1:'#332a2a',g2:'#7a5a4a',syn:'Five siblings reunite in their childhood home for one chaotic, tender weekend of unfinished arguments.',added:20},
         ];
+        rawSeries = [
+          {id:'s1',title:'Harbor & Vine',ys:2019,ye:2023,genres:['Drama','Family'],g1:'#243a36',g2:'#5e7a6a',rating:80,creator:'Ingrid Sø',cast:['Anders Lund','Mira Holt','Jonas Vea'],runtime:48,
+            syn:'Three generations of a fishing family keep a harbour town alive across four turning seasons. As the boats get older and the young leave for the city, the Vine sisters take over a business none of them wanted — and find that the town has been holding its breath for them. Quiet, warm, and unhurried, it is a series about inheritance in every sense: the debts, the grudges, the recipes, and the light on the water at five in the morning.',
+            seasons:[8,8,6],titles:['The Long Way In','Salt Air','Low Water','What the Nets Bring','Sunday Boats','The Quiet Berth','Weatherglass','Homecoming','Spring Tide','Rope and Rust','The Auction','Old Charts','Neap','Two Hulls','Gull Season','The Last Run','Off Season','Deep Winter','Cold Store','Ice Out','The Mooring','Vine & Vine']},
+          {id:'s2',title:'The Tin Forest',ys:2021,ye:null,genres:['Adventure','Family','Animation'],g1:'#3a2f24',g2:'#84603f',rating:90,creator:'Felix Aubin',cast:['Noa Kell','Wren Tasso','Milo Frye'],runtime:26,
+            syn:'A scrapyard at the edge of a grey town turns out to be a forest in disguise, and the two children who find it are the only ones who can keep it growing.',
+            seasons:[6,6],titles:['The Gate in the Fence','Copper Leaves','What the Crane Saw','Rainwater','The Quiet Machine','First Green','Second Spring','The Collector','Wire and Moss','Night Shift','The Far Gate','Everything Grows']},
+          {id:'s3',title:'Nightjar: After Dark',ys:2022,ye:2022,genres:['Crime','Thriller'],g1:'#23211f',g2:'#544c3e',rating:70,creator:'Noor Khalid',cast:['Greta Onn','Dom Vesper','Asa Quinn'],runtime:52,
+            syn:'Eight nights in one city, told from the passenger seat of a cab that keeps arriving a minute too late.',
+            seasons:[8],titles:['Fare One','The Ring Road','Two in the Morning','Meter Running','The Long Fare','Dead Air','Last Call','Dawn Shift']},
+        ];
+        seriesFavorites = ['s2'];
+
         genrePool = ['Action','Comedy','Drama','Horror','Thriller','Sci-Fi','Romance','Documentary','Animation','Family','Adventure','Crime'];
         langPool = ['English','Spanish','French','German','Portuguese','Italian','Dutch'];
         sortDefs = [['recent','Recently Added'],['az','Title (A\u2013Z)'],['year','Year'],['unwatched','Unwatched First'],['rating','Highest Rated']];
         ratings = {1:90,2:80,3:70,4:60,5:80,6:90,7:50,8:70,9:60,10:80,11:70,12:90,13:50,14:40,15:80,16:70,17:60,18:50,19:70,20:60};
         ratingDefs = [['0','All ratings'],['80','4+ stars'],['60','3+ stars'],['40','2+ stars']];
-        // Simulated playability, so all three Player notices are reachable by pressing Play.
-        // Every other title buffers briefly and then plays.
-        //
-        // 'could-not-start' is the one that is reached *through* the buffering
-        // notice rather than instead of it: the film was decodable as far as
-        // anything could tell, the conversion was begun, and it stopped without
-        // producing a frame. That is why it is not 'cannot-play' — that one is
-        // known before a byte is sent and has a different sentence.
-        playability = {11:'could-not-start', 14:'cannot-play', 19:'missing-file'};
-        noticeCopy = {
-          buffering:{title:'Getting this film ready…'},
-          'missing-file':{title:'This film’s file is missing', body:'FamilyFlix can’t find the video file for this title. It may have been moved or renamed outside the app.'},
-          'cannot-play':{title:'This film can’t be played', body:'FamilyFlix can’t decode this file’s format. Adding a playback component in Settings may fix it.'},
-          'could-not-start':{title:'This film could not be started', body:'FamilyFlix started getting this film ready and it stopped. Adding a playback component in Settings may fix it.'},
-        };
         credits = {
           1:{dir:'Eleanor Past',cast:['Tomas Hale','Maeve Cole','Iris Bell']},
           2:{dir:'Júlia Renning',cast:['Andre Sol','Nina Voss','Peter Ahl']},
@@ -217,14 +232,13 @@
           fRating:0, fRatingHover:null,
           openDrop:null, gearOpen:false, editMenuOpen:false, overrides:{}, favorites:[4,12,16],
           genreView:null, genreSearch:'', detailReturn:'browse',
-          playing:true, currentTime:0, subsOn:true, muted:false, volume:0.8, controlsVisible:true, playNotice:null,
+          playing:true, currentTime:0, subsOn:true, muted:false, volume:0.8, controlsVisible:true,
           addMode:'folder', folderPath:'', scanned:false,
           fTitle:'', fYear:'', fDirector:'', fCast:'', fDescription:'', fGenres:[], fVideo:'', fPoster:'', fSubs:[], subLangOpen:null,
           addContext:null, resolveId:null,
-          impStep:'setup', impSheet:'', impRoot:'', impSheetError:'', impRootError:'', impProgress:0, impMatched:0, impProblems:[],
+          impStep:'setup', impSheet:'', impRoot:'', impProgress:0, impMatched:0, impProblems:[],
           impPhase:'scan', impFound:0, impTotal:0, impDone:0, impCurrent:'', impLog:[], impStartTime:null,
           exportOpen:false, exportFormat:'csv', exportDone:false,
-          deleteOpen:false,
           settingsSubAuto:false, settingsSubLang:'English',
           codecs:[
             {id:1,name:'H.264 / AVC',exts:['.mp4','.mov','.m4v'],kind:'built-in',size:'—'},
@@ -233,9 +247,16 @@
             {id:4,name:'H.265 / HEVC',exts:['.mkv','.mp4'],kind:'installed',size:'4.2 MB'},
             {id:5,name:'AV1',exts:['.mkv','.webm'],kind:'installed',size:'6.8 MB'},
             {id:6,name:'AC-3 / Dolby Digital',exts:['.mkv','.avi'],kind:'installed',size:'1.1 MB'},
-            {id:7,name:'Playback component',exts:['ffmpeg.exe','ffprobe.exe'],kind:'component',source:'default',size:'94.3 MB'},
           ],
-          codecJustAdded:null, codecZone:'idle', codecZoneAction:'add', codecZoneReason:'', codecAttempts:0,
+          codecJustAdded:null,
+          tab:'movies', seriesId:null, seasonN:null, playingEp:null, autoNextCancelled:false, seriesFavs:['s2'],
+          epState:{'s1-1-1':{watched:true},'s1-1-2':{watched:true},'s1-1-3':{watched:true},'s1-1-4':{watched:true},'s1-1-5':{watched:true},'s1-1-6':{watched:true},'s1-1-7':{watched:true},'s1-1-8':{watched:true},
+            's1-2-1':{watched:true},'s1-2-2':{watched:true},'s1-2-3':{watched:true},'s1-2-4':{watched:false,progress:45},
+            's2-1-1':{watched:true},'s2-1-2':{watched:true},'s3-1-1':{watched:false,progress:22}},
+          tmdbKey:'', tmdbConnected:false, tmdbTesting:false, online:true, lastSync:null, enrichedCount:8,
+          enStep:'setup', enScope:'missing', enFieldsOff:[], enWriteSheet:true, enWritePosters:true,
+          enDone:0, enTotal:0, enCurrent:'', enLog:[], enStartTime:null, enMatched:0, enPending:[], enReturn:'settings', enSingleTitle:null,
+          impEnrich:false,
           snackbars:[], updateAvailable:true, updateVersion:'1.1.0', currentVersion:'1.0.0', updating:false, lastChecked:null,
         };
         _snackSeq = 0;
@@ -248,9 +269,25 @@
             if(s.screen==='player'){
               const dur=this.durationOf(); const patch={};
               if(s.playing && s.currentTime<dur) patch.currentTime=Math.min(dur,s.currentTime+0.25);
-              // Chrome never idles away behind a notice — Back stays reachable (story 62).
-              if(s.playing && !s.playNotice && Date.now()-this.lastMove>3000 && s.controlsVisible) patch.controlsVisible=false;
+              if(s.playing && Date.now()-this.lastMove>3000 && s.controlsVisible) patch.controlsVisible=false;
+              if(s.playingEp && s.playing && dur>0 && s.currentTime>=dur-0.3){ this.playNextEpisode(); return; }
               if(Object.keys(patch).length) this.setState(patch);
+            } else if(s.screen==='enrich' && s.enStep==='running'){
+              const done=Math.min(s.enTotal, s.enDone + (1+Math.floor(Math.random()*3)));
+              const item=this.fakeTitle(done+3);
+              let kind='success', text='✓ Matched   '+item;
+              const r=Math.random();
+              if(r<0.08){ kind='warning'; text='⚠ '+item+' — several possible matches'; }
+              else if(r<0.12){ kind='warning'; text='⚠ '+item+' — no result on TMDB'; }
+              else if(r<0.2){ kind='scan'; text='↓ poster.jpg  →  '+this.fakePath(s.impRoot, done+3); }
+              const log=this.appendLog(s.enLog, {text, kind});
+              if(done>=s.enTotal){
+                const pend=this.seedEnrichPending();
+                this.setState({enDone:s.enTotal, enStep:'review', enMatched:s.enTotal-pend.length, enPending:pend, enrichedCount:s.enrichedCount+(s.enTotal-pend.length), lastSync:'just now',
+                  enLog:this.appendLog(log, {text:'✓ Sync complete — '+(s.enTotal-pend.length)+' enriched, '+pend.length+' need a decision.', kind:'success'})});
+              } else {
+                this.setState({enDone:done, enCurrent:item, enLog:log});
+              }
             } else if(s.screen==='import' && s.impStep==='running'){
               if(s.impPhase==='scan'){
                 const target=1240;
@@ -282,11 +319,11 @@
             }
           },220);
         }
-        componentWillUnmount(){ clearInterval(this.timer); clearTimeout(this._bufferTimer); clearTimeout(this._codecTimer); }
+        componentWillUnmount(){ clearInterval(this.timer); }
 
         // ---- helpers ----
         eff(m){ return this.state.overrides[m.id]!=null ? this.state.overrides[m.id] : m.st; }
-        durationOf(){ const m=this.cur(); return m? m.runtime*60 : 0; }
+        durationOf(){ const ep=this.state.playingEp; if(ep) return ep.runtime*60; const m=this.cur(); return m? m.runtime*60 : 0; }
         cur(){ return this.rawMovies.find(m=>m.id===this.state.selectedId)||null; }
         fmtClock(sec){ sec=Math.max(0,Math.floor(sec)); const h=Math.floor(sec/3600),mm=Math.floor(sec%3600/60),ss=sec%60; const p=n=>String(n).padStart(2,'0'); return h>0?`${h}:${p(mm)}:${p(ss)}`:`${mm}:${p(ss)}`; }
         posterStyleOf(m){ return {position:'absolute',inset:0,background:`linear-gradient(155deg, ${m.g1} 0%, ${m.g2} 100%)`}; }
@@ -315,9 +352,8 @@
         goAdd(){ this.resetForm(); this.setState({screen:'add',gearOpen:false,addContext:'settings',resolveId:null}); }
         goImport(){ this.setState({screen:'import',gearOpen:false,impStep:'setup',impProgress:0}); }
         goSettings(){ this.setState({screen:'settings',gearOpen:false,openDrop:null}); }
-        uploadCodec(){ if(this.state.codecZone==='busy') return; this.setState(s=>({codecZone:'busy',codecZoneAction:'add',codecAttempts:s.codecAttempts+1})); clearTimeout(this._codecTimer); this._codecTimer=setTimeout(()=>this.finishUploadCodec(),1200); }
-        finishUploadCodec(){ this.setState(s=>{ if(s.codecAttempts%3===0) return {codecZone:'refused',codecZoneReason:'ffmpeg and ffprobe go together — add both.'}; const id=Math.max(0,...s.codecs.map(c=>c.id))+1; const packs=[{name:'DTS Audio',exts:['.mkv','.dts'],size:'2.3 MB'},{name:'ProRes',exts:['.mov'],size:'9.4 MB'},{name:'FLAC Audio',exts:['.mkv','.flac'],size:'0.8 MB'},{name:'Theora',exts:['.ogv'],size:'1.6 MB'}]; const p=packs[s.codecs.filter(c=>c.kind==='installed').length % packs.length]; const rows=s.codecs.filter(c=>c.kind!=='component'); const comp=s.codecs.filter(c=>c.kind==='component').map(c=>({...c,source:'uploaded'})); return {codecs:[...rows,{id,name:p.name,exts:p.exts,kind:'installed',size:p.size},...comp],codecJustAdded:id,codecZone:'idle',codecZoneReason:''}; }); }
-        removeCodec(id){ if(this.state.codecZone==='busy') return; const row=this.state.codecs.find(c=>c.id===id); if(row&&row.kind==='component'){ this.setState({codecZone:'busy',codecZoneAction:'remove'}); clearTimeout(this._codecTimer); this._codecTimer=setTimeout(()=>this.setState(s=>({codecs:s.codecs.map(c=>c.kind==='component'?{...c,source:'default'}:c),codecZone:'idle',codecZoneReason:''})),900); return; } this.setState(s=>({codecs:s.codecs.filter(c=>c.id!==id),codecJustAdded:s.codecJustAdded===id?null:s.codecJustAdded})); }
+        uploadCodec(){ this.setState(s=>{ const id=Math.max(0,...s.codecs.map(c=>c.id))+1; const packs=[{name:'DTS Audio',exts:['.mkv','.dts'],size:'2.3 MB'},{name:'ProRes',exts:['.mov'],size:'9.4 MB'},{name:'FLAC Audio',exts:['.mkv','.flac'],size:'0.8 MB'},{name:'Theora',exts:['.ogv'],size:'1.6 MB'}]; const p=packs[s.codecs.filter(c=>c.kind==='installed').length % packs.length]; return {codecs:[...s.codecs,{id,name:p.name,exts:p.exts,kind:'installed',size:p.size}],codecJustAdded:id}; }); }
+        removeCodec(id){ this.setState(s=>({codecs:s.codecs.filter(c=>c.id!==id),codecJustAdded:s.codecJustAdded===id?null:s.codecJustAdded})); }
         setSubLang(v){ this.setState({settingsSubLang:v,openDrop:null}); }
         toggleSubAuto(){ this.setState(s=>({settingsSubAuto:!s.settingsSubAuto})); }
 
@@ -328,7 +364,7 @@
         // ---- software update ----
         offerUpdate(){ if(!this.state.updateAvailable || this._updateOffered) return; this._updateOffered=true; this._updateSnackId = this.pushSnack({variant:'info', title:'Update available', message:'FamilyFlix '+this.state.updateVersion+' is ready to install.', actionLabel:'Update now', action:()=>this.runUpdate(), dismissible:true}); }
         runUpdate(){ if(this.state.updating) return; if(this._updateSnackId) this.dismissSnack(this._updateSnackId); this.setState({updating:true}); setTimeout(()=>{ const v=this.state.updateVersion; this.setState({currentVersion:v, updateAvailable:false, updating:false, lastChecked:'just now'}); this.pushSnack({variant:'success', message:'FamilyFlix updated to '+v+'.', duration:5000, dismissible:true}); }, 1700); }
-        checkForUpdates(){ this.setState({lastChecked:'just now'}); if(this.state.updateAvailable){ this.offerUpdate(); } else { this.pushSnack({variant:'success', message:'You’re on the latest version.', duration:5000, dismissible:true}); } }
+        checkForUpdates(){ this.setState({lastChecked:'just now'}); if(this.state.updateAvailable){ this.offerUpdate(); } else { this.pushSnack({variant:'success', message:'You’re on the latest version.', duration:4000, dismissible:true}); } }
         openExport(){ this.setState({gearOpen:false,exportOpen:true,exportDone:false,exportFormat:'csv'}); }
         closeExport(){ this.setState({exportOpen:false,exportDone:false}); }
         setExportFormat(f){ this.setState({exportFormat:f,exportDone:false}); }
@@ -366,20 +402,17 @@
         toggleFavById(id){ this.setState(s=>({favorites:s.favorites.includes(id)?s.favorites.filter(x=>x!==id):[...s.favorites,id]})); }
         toggleFavorite(){ const m=this.cur(); if(m) this.toggleFavById(m.id); }
         toggleEditMenu(){ this.setState(s=>({editMenuOpen:!s.editMenuOpen})); }
-        openDelete(){ this.setState({editMenuOpen:false,deleteOpen:true}); }
-        closeDelete(){ this.setState({deleteOpen:false}); }
-        confirmDelete(){ const m=this.cur(); if(m){ this.rawMovies=this.rawMovies.filter(x=>x.id!==m.id); } this.setState(s=>({deleteOpen:false,selectedId:null,favorites:s.favorites.filter(id=>!m||id!==m.id)})); this.goBrowse(); }
         editMovie(){ const m=this.cur(); if(!m)return; const cr=this.credits[m.id]||{dir:'',cast:[]}; this.setState({fTitle:m.title,fYear:String(m.year),fDirector:cr.dir,fCast:cr.cast.join(', '),fDescription:m.syn,fGenres:[...m.genres],fVideo:m.title.toLowerCase().replace(/[^a-z0-9]+/g,'-')+'.mp4',fPoster:'poster.jpg',fSubs:[{filename:'subtitles.en.srt',lang:'English'}],fRating:this.ratingOf(m),fRatingHover:null,addMode:'manual',scanned:true,screen:'add',editMenuOpen:false,addContext:'edit',resolveId:null}); }
-        playMovie(){ const m=this.cur(); if(!m)return; const resume=this.eff(m)==='progress'? m.runtime*60*m.prog/100 : 0; this.lastMove=Date.now(); const broken=this.playability[m.id]||null; clearTimeout(this._bufferTimer); const opensBuffering = !broken || broken==='could-not-start'; this.setState({screen:'player',currentTime:resume,playing:false,controlsVisible:true,subsOn:true,playNotice:opensBuffering?'buffering':broken}); if(opensBuffering) this._bufferTimer=setTimeout(()=>this.setState(broken?{playNotice:broken}:{playNotice:null,playing:true}), 1100); }
+        playMovie(){ const m=this.cur(); if(!m)return; const resume=this.eff(m)==='progress'? m.runtime*60*m.prog/100 : 0; this.lastMove=Date.now(); this.setState({screen:'player',playingEp:null,currentTime:resume,playing:true,controlsVisible:true,subsOn:true}); }
 
         // ---- player ----
         onPlayerMove(){ this.lastMove=Date.now(); if(!this.state.controlsVisible) this.setState({controlsVisible:true}); }
-        togglePlay(){ this.lastMove=Date.now(); this.setState(s=>s.playNotice?{controlsVisible:true}:({playing:!s.playing,controlsVisible:true})); }
+        togglePlay(){ this.lastMove=Date.now(); this.setState(s=>({playing:!s.playing,controlsVisible:true})); }
         skipBack(){ this.lastMove=Date.now(); this.setState(s=>({currentTime:Math.max(0,s.currentTime-10),controlsVisible:true})); }
         skipFwd(){ this.lastMove=Date.now(); this.setState(s=>({currentTime:Math.min(this.durationOf(),s.currentTime+10),controlsVisible:true})); }
         toggleMute(){ this.setState(s=>({muted:!s.muted})); }
         toggleSubs(){ this.setState(s=>({subsOn:!s.subsOn})); }
-        exitPlayer(){ clearTimeout(this._bufferTimer); this.setState({screen:'detail',playing:false,playNotice:null}); }
+        exitPlayer(){ if(this.state.playingEp){ this.setState({screen:'season',playing:false,playingEp:null}); return; } this.setState({screen:'detail',playing:false}); }
         onSeekClick(e){ const r=e.currentTarget.getBoundingClientRect(); const p=(e.clientX-r.left)/r.width; this.lastMove=Date.now(); this.setState({currentTime:Math.max(0,Math.min(1,p))*this.durationOf(),controlsVisible:true}); }
         onVolClick(e){ const r=e.currentTarget.getBoundingClientRect(); const p=Math.max(0,Math.min(1,(e.clientX-r.left)/r.width)); this.setState({volume:p,muted:p===0}); }
 
@@ -410,16 +443,94 @@
         backFromAdd(){ if(this.state.addContext==='import') this.setState({screen:'import',impStep:'review',addContext:null,resolveId:null}); else if(this.state.addContext==='edit') this.setState({screen:'detail',addContext:null}); else if(this.state.addContext==='settings') this.setState({screen:'settings',addContext:null,gearOpen:false,openDrop:null}); else this.goBrowse(); }
         saveMovie(){ if(this.state.addContext==='import'){ const id=this.state.resolveId; this.setState(s=>({screen:'import',impStep:'review',impProblems:s.impProblems.filter(p=>p.id!==id),impMatched:s.impMatched+1,addContext:null,resolveId:null})); } else if(this.state.addContext==='edit'){ this.setState({screen:'detail',addContext:null}); } else { this.goBrowse(); } }
 
+        // ---- series ----
+        seriesById(id){ return this.rawSeries.find(x=>x.id===id)||null; }
+        episodesOf(sid, seasonN){
+          const s=this.seriesById(sid); if(!s) return [];
+          const before=s.seasons.slice(0,seasonN-1).reduce((a,b)=>a+b,0);
+          const count=s.seasons[seasonN-1]||0;
+          const out=[];
+          for(let i=0;i<count;i++){
+            const idx=before+i;
+            const key=sid+'-'+seasonN+'-'+(i+1);
+            const st=this.state.epState[key]||{};
+            out.push({key,sid,season:seasonN,number:i+1,title:s.titles[idx%s.titles.length],runtime:s.runtime,
+              airDate:this.epAirDate(s,seasonN,i),watched:!!st.watched,progress:st.progress||0,g1:s.g1,g2:s.g2});
+          }
+          return out;
+        }
+        epAirDate(s,seasonN,i){
+          const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+          const year=s.ys+(seasonN-1);
+          const week=i*7+12; const m=Math.min(11,Math.floor(week/30)+1); const d=Math.max(1,(week%28)+1);
+          return months[m]+' '+d+', '+year;
+        }
+        allEpisodes(sid){ const s=this.seriesById(sid); if(!s) return []; let out=[]; for(let n=1;n<=s.seasons.length;n++) out=out.concat(this.episodesOf(sid,n)); return out; }
+        seriesProgress(sid){ const eps=this.allEpisodes(sid); const w=eps.filter(e=>e.watched).length; return {total:eps.length,watched:w}; }
+        nextEpisodeOf(sid){ const eps=this.allEpisodes(sid); return eps.find(e=>e.progress>0&&e.progress<100) || eps.find(e=>!e.watched) || eps[0] || null; }
+        episodeAfter(ep){ if(!ep) return null; const eps=this.allEpisodes(ep.sid); const i=eps.findIndex(e=>e.key===ep.key); return i>=0&&i<eps.length-1?eps[i+1]:null; }
+        seriesView(s){
+          const pr=this.seriesProgress(s.id);
+          return {id:s.id,title:s.title,
+            card:{title:s.title,g1:s.g1,g2:s.g2,rating:s.rating,watched:pr.total>0&&pr.watched>=pr.total,progress:0,favorite:this.state.seriesFavs.includes(s.id)},
+            open:()=>this.openSeries(s.id),
+            toggleFav:(ev)=>{ if(ev&&ev.stopPropagation)ev.stopPropagation(); this.toggleSeriesFav(s.id); }};
+        }
+        toggleSeriesFav(id){ this.setState(st=>({seriesFavs:st.seriesFavs.includes(id)?st.seriesFavs.filter(x=>x!==id):[...st.seriesFavs,id]})); }
+        setTab(t){ this.setState({tab:t,search:'',openDrop:null,gearOpen:false}); }
+        openSeries(id){ this.setState({screen:'series',seriesId:id,gearOpen:false,openDrop:null}); }
+        openSeason(n){ this.setState({screen:'season',seasonN:n}); }
+        backFromSeries(){ this.setState({screen:'browse',tab:'series'}); }
+        backFromSeason(){ this.setState({screen:'series'}); }
+        toggleEpWatched(ep){ this.setState(st=>{ const cur=st.epState[ep.key]||{}; const now=!cur.watched; return {epState:{...st.epState,[ep.key]:{watched:now,progress:now?0:cur.progress||0}}}; }); }
+        toggleSeasonAll(){ const eps=this.episodesOf(this.state.seriesId,this.state.seasonN); const allW=eps.every(e=>e.watched);
+          this.setState(st=>{ const next={...st.epState}; eps.forEach(e=>{ next[e.key]={watched:!allW,progress:0}; }); return {epState:next}; }); }
+        playEpisode(ep){ if(!ep) return; const resume=ep.progress>0&&ep.progress<100 ? ep.runtime*60*ep.progress/100 : 0;
+          this.lastMove=Date.now(); this.setState({screen:'player',playingEp:ep,currentTime:resume,playing:true,controlsVisible:true,subsOn:true,autoNextCancelled:false}); }
+        playNextEpisode(){ const nx=this.episodeAfter(this.state.playingEp);
+          this.setState(st=>{ const cur=st.playingEp; const patch={...st.epState}; if(cur) patch[cur.key]={watched:true,progress:0}; return {epState:patch}; });
+          if(nx) setTimeout(()=>this.playEpisode(nx),0); else this.setState({screen:'season',playingEp:null,playing:false}); }
+        cancelAutoNext(){ this.setState({autoNextCancelled:true}); }
+
+        // ---- tmdb enrichment ----
+        enrichFieldDefs = ['Synopsis','Poster','Backdrop','Runtime','Year','Genres','Director','Cast','Original title','TMDB score'];
+        goEnrich(from){ this.setState(s=>({screen:'enrich', enReturn:from||'settings', enStep:'setup', enSingleTitle:null, gearOpen:false, openDrop:null})); }
+        enrichOne(){ const m=this.cur(); if(!m) return; this.setState({screen:'enrich',enReturn:'detail',enStep:'setup',enSingleTitle:m.title,enScope:'single',editMenuOpen:false}); }
+        backFromEnrich(){ const r=this.state.enReturn; this.setState({screen:r==='detail'?'detail':r==='import'?'import':'settings', enStep:'setup'}); }
+        onTmdbKey(e){ const v=e.target.value; this.setState({tmdbKey:v, tmdbConnected:false}); }
+        testTmdbKey(){ if(!this.state.tmdbKey.trim()){ this.pushSnack({variant:'warning',message:'Paste a key first.',duration:3500,dismissible:true}); return; }
+          this.setState({tmdbTesting:true});
+          setTimeout(()=>{ this.setState({tmdbTesting:false,tmdbConnected:true}); this.pushSnack({variant:'success',message:'Connected to TMDB.',duration:4000,dismissible:true}); }, 1100); }
+        toggleEnrichField(f){ this.setState(s=>({enFieldsOff: s.enFieldsOff.includes(f) ? s.enFieldsOff.filter(x=>x!==f) : [...s.enFieldsOff,f]})); }
+        setEnrichScope(v){ this.setState({enScope:v}); }
+        toggleEnrichSheet(){ this.setState(s=>({enWriteSheet:!s.enWriteSheet})); }
+        toggleEnrichPosters(){ this.setState(s=>({enWritePosters:!s.enWritePosters})); }
+        toggleImpEnrich(){ this.setState(s=>({impEnrich:!s.impEnrich})); }
+        enrichTarget(){ const s=this.state; return s.enScope==='single'?1:s.enScope==='all'?this.rawMovies.length:12; }
+        startEnrich(){ if(!this.state.tmdbConnected){ this.goSettings(); this.pushSnack({variant:'info',message:'Add your TMDB key here first.',duration:4500,dismissible:true}); return; }
+          if(!this.state.online) return;
+          const n=this.enrichTarget();
+          this.setState({enStep:'running',enDone:0,enTotal:n,enCurrent:'',enStartTime:Date.now(),enMatched:0,enPending:[],
+            enLog:[{text:'Contacting api.themoviedb.org …',kind:'info'},{text:'Looking up '+n+' title'+(n===1?'':'s')+' by name and year.',kind:'info'}]}); }
+        cancelEnrich(){ this.setState({enStep:'setup',enDone:0,enTotal:0,enCurrent:'',enLog:[]}); }
+        retryOnline(){ this.setState({online:true}); }
+        seedEnrichPending(){ return [
+          {id:'e1',kind:'ambiguous',title:'Harbor Lights',path:'E:\\Movies\\Harbor.Lights.1080p\\',reason:'Three releases share this title — pick the right one.',query:'Harbor Lights',
+            candidates:[{t:'Harbor Lights',y:1963,c:'Drama · US',s:82,g1:'#2a3540',g2:'#5f93a8'},{t:'Harbor Lights',y:2019,c:'Drama · IE',s:74,g1:'#243a36',g2:'#5e7a6a'},{t:'The Harbor Light',y:2005,c:'Doc · NO',s:51,g1:'#3a2f24',g2:'#84603f'}]},
+          {id:'e2',kind:'conflict',title:'The Lantern Keeper',path:'E:\\Movies\\The.Lantern.Keeper.2019\\',reason:'TMDB has different values for fields you already filled in.',
+            fields:[{key:'year',label:'Year',mine:'2019',tmdb:'2018'},{key:'director',label:'Director',mine:'Eleanor Past',tmdb:'Eleanor Past-Whitlock'},{key:'synopsis',label:'Synopsis',mine:'A lighthouse keeper on a fading coast takes in a runaway girl…',tmdb:'On a storm-battered coast, a solitary lighthouse keeper shelters a runaway and finds a family in the wreckage of winter.'}]},
+          {id:'e3',kind:'missing',title:'Sundial',path:'E:\\Movies\\Sundial\\',reason:'Nothing on TMDB matched this folder name.',query:'Sundial'},
+        ]; }
+        pickCandidate(rowId){ this.setState(s=>({enPending:s.enPending.filter(p=>p.id!==rowId), enMatched:s.enMatched+1, enrichedCount:s.enrichedCount+1})); this.pushSnack({variant:'success',message:'Match saved.',duration:3000,dismissible:true}); }
+        skipEnrichRow(id){ this.setState(s=>({enPending:s.enPending.filter(p=>p.id!==id)})); }
+        setFieldChoice(rowId,key,which){ this.setState(s=>({enPending:s.enPending.map(p=>p.id===rowId?{...p,choices:{...(p.choices||{}),[key]:which}}:p)})); }
+        applyConflict(rowId){ this.setState(s=>({enPending:s.enPending.filter(p=>p.id!==rowId), enMatched:s.enMatched+1, enrichedCount:s.enrichedCount+1})); this.pushSnack({variant:'success',message:'Details updated.',duration:3000,dismissible:true}); }
+        searchEnrich(rowId){ this.pushSnack({variant:'info',message:'Searching TMDB…',duration:2500,dismissible:true}); }
+
         // ---- import ----
-        onImpSheet(e){ this.setState({impSheet:e.target.value, impSheetError:''}); }
-        onImpRoot(e){ this.setState({impRoot:e.target.value, impRootError:''}); }
-        startImport(){
-          // Stands in for POST /api/import's 400 { error, field }: one field refused, one line under it.
-          const sheet=this.state.impSheet.trim(), root=this.state.impRoot.trim();
-          const sheetError = !/\.(xlsx|csv)$/i.test(sheet) ? 'That isn\u2019t a spreadsheet \u2014 pick an .xlsx or .csv file.' : '';
-          const rootError = !/^[a-z]:\\/i.test(root) ? 'That folder can\u2019t be found.' : '';
-          if(sheetError||rootError){ this.setState({impSheetError:sheetError, impRootError:rootError}); return; }
-          this.setState({impStep:'running',impPhase:'scan',impFound:0,impTotal:0,impDone:0,impCurrent:'',impLog:[{text:'Connecting to '+(this.state.impRoot||'E:\\Movies')+' …',kind:'info'}],impStartTime:Date.now()}); }
+        onImpSheet(e){ this.setState({impSheet:e.target.value}); }
+        onImpRoot(e){ this.setState({impRoot:e.target.value}); }
+        startImport(){ this.setState({impStep:'running',impPhase:'scan',impFound:0,impTotal:0,impDone:0,impCurrent:'',impLog:[{text:'Connecting to '+(this.state.impRoot||'E:\\Movies')+' …',kind:'info'}],impStartTime:Date.now()}); }
         cancelImport(){ this.setState({impStep:'setup',impPhase:'scan',impFound:0,impTotal:0,impDone:0,impCurrent:'',impLog:[]}); }
         _logPool = ['The Lantern Keeper','Salt and Cedar','Northwind','Paper Moons','The Glasshouse','Orbit of Small Things','Marigold Avenue','The Quiet Tide','Hollow Creek','Comet Season','Grandfather\u2019s Clock','The Paper Aviator','Dust and Diamonds','Tin Can Symphony','The Far Meridian','Almond Blossom','Riverkeep','Nightjar','The Cartographer','Saturday\u2019s Children','Velvet Hour','Harbor Lights','Ironwood','Sundial','Blue Hour','The Tin Forest','Winter Apples','Lighthouse Road','Cedar and Ash','The Long Field'];
         fakeTitle(n){ const p=this._logPool; return p[n % p.length]+' ('+(1994+(n*7)%31)+')'; }
@@ -428,20 +539,25 @@
         seedProblems(){ return [
           {id:'p1',title:'The Velvet Hour',reason:'No folder found matching this spreadsheet row.',kind:'no-folder'},
           {id:'p2',title:'Harbor Lights',reason:'Two folders look like plausible matches \u2014 pick one.',kind:'ambiguous'},
-          {id:'p3',title:'Ironwood',reason:'Folder matched, but no video file was found.',kind:'no-video'},
-          {id:'p4',title:'Blue.Hour.2019',reason:'Folder isn\u2019t in the spreadsheet.',kind:'no-row'},
-          {id:'p5',title:'The Tin Forest',reason:'Couldn\u2019t copy the video file: The device is not ready.',kind:'failed'},
-          {id:'p6',title:'Sundial',reason:'Imported, but the row has no genre \u2014 it won\u2019t appear in any genre row.',kind:'missing-meta'},
+          {id:'p3',title:'Ironwood',reason:'Folder matched, but no subtitle file was found.',kind:'missing-file'},
+          {id:'p4',title:'Sundial',reason:'Spreadsheet row is missing a genre.',kind:'missing-meta'},
         ]; }
-        resolveProblem(p){ this.setState({screen:'add',addContext:'import',resolveId:p.id,addMode:'folder',scanned:true,folderPath:'C:\\\\Movies\\\\'+p.title,fTitle:p.title,fYear:p.kind==='missing-meta'?'2018':'2020',fGenres:[],fVideo:p.kind==='no-video'||p.kind==='no-folder'?'':'matched-video.mkv',fPoster:p.kind==='no-folder'?'':'matched-poster.jpg',fSubs:p.kind==='no-folder'?[]:[{filename:'matched.en.srt',lang:'English'}]}); }
+        resolveProblem(p){ this.setState({screen:'add',addContext:'import',resolveId:p.id,addMode:'folder',scanned:true,folderPath:'C:\\\\Movies\\\\'+p.title,fTitle:p.title,fYear:p.kind==='missing-meta'?'2018':'2020',fGenres:[],fVideo:p.kind==='missing-file'?'matched-video.mkv':'matched-video.mkv',fPoster:'matched-poster.jpg',fSubs:p.kind==='missing-file'?[]:[{filename:'matched.en.srt',lang:'English'}]}); }
         skipProblem(id){ this.setState(s=>({impProblems:s.impProblems.filter(p=>p.id!==id)})); }
+
+        _rgb(hex){ let h=String(hex||'').trim().replace('#',''); if(h.length===3) h=h.split('').map(c=>c+c).join('');
+          const n=parseInt(h,16); return Number.isFinite(n)&&h.length===6 ? [(n>>16)&255,(n>>8)&255,n&255] : [217,122,78]; }
+        // amt > 0 lightens toward white, amt < 0 darkens toward black
+        shade(hex,amt){ const [r,g,b]=this._rgb(hex); const t=amt>=0?255:0; const p=Math.abs(amt);
+          const mix=c=>Math.round(c+(t-c)*p); return '#'+[mix(r),mix(g),mix(b)].map(c=>c.toString(16).padStart(2,'0')).join(''); }
+        rgba(hex,a){ const [r,g,b]=this._rgb(hex); return 'rgba('+r+','+g+','+b+','+a+')'; }
 
         renderVals(){
           const s=this.state;
           const accent=this.props.accentColor||'#d97a4e';
           const cardW=(this.props.posterSize==='Medium')?176:212;
           const radius=(this.props.cornerStyle==='Sharp')?'3px':'12px';
-          const rootStyle={position:'relative',width:'100%',height:'100vh',minHeight:'600px',overflow:'hidden',background:'var(--color-bg)',color:'var(--color-text)',fontFamily:'var(--font-sans)','--color-accent':accent,'--color-accent-hover':accent,'--card-w':cardW+'px','--poster-radius':radius};
+          const rootStyle={position:'relative',width:'100%',height:'100vh',minHeight:'600px',overflow:'hidden',background:'var(--color-bg)',color:'var(--color-text)',fontFamily:'var(--font-sans)','--color-accent':accent,'--color-accent-hover':this.shade(accent,0.18),'--color-accent-press':this.shade(accent,-0.12),'--color-accent-soft':this.rgba(accent,0.14),'--color-accent-line':this.rgba(accent,0.32),'--color-focus-ring':this.rgba(this.shade(accent,0.18),0.55),'--card-w':cardW+'px','--poster-radius':radius};
 
           // browse
           const rows=this.buildRows();
@@ -455,6 +571,18 @@
           const sortLabel=(this.sortDefs.find(d=>d[0]===s.sort)||['','Recently Added'])[1];
           const ratingOptions=this.ratingDefs.map(([v,l])=>({label:l,selected:v===s.ratingFilter,onSelect:()=>this.setRatingFilter(v)}));
           const ratingFilterLabel=(this.ratingDefs.find(d=>d[0]===s.ratingFilter)||['','All ratings'])[1];
+
+          // series
+          const tabStyle=on=>({height:'38px',padding:'0 20px',background:on?'var(--color-accent)':'transparent',border:'none',borderRadius:'var(--radius-pill)',color:on?'#1a1109':'var(--color-text-faint)',fontFamily:'var(--font-sans)',fontSize:'15px',fontWeight:on?'700':'500',cursor:'pointer'});
+          const sq=s.search.trim().toLowerCase();
+          const seriesFiltered=this.rawSeries.filter(x=>!sq||x.title.toLowerCase().includes(sq)||x.syn.toLowerCase().includes(sq)||x.genres.join(' ').toLowerCase().includes(sq));
+          const seriesList=seriesFiltered.map(x=>this.seriesView(x));
+          const totalEpisodes=this.rawSeries.reduce((a,x)=>a+x.seasons.reduce((p,q)=>p+q,0),0);
+          const episodeContinueList=[];
+          this.rawSeries.forEach(x=>{ this.allEpisodes(x.id).forEach(e=>{ if(e.progress>0&&e.progress<100) episodeContinueList.push({
+            continueCard:{title:x.title+' · S'+String(e.season).padStart(2,'0')+'E'+String(e.number).padStart(2,'0'),g1:e.g1,g2:e.g2,progress:e.progress,
+              resumeLabel:'Resume · '+this.fmtClock(e.runtime*60*e.progress/100)+' of '+this.fmtClock(e.runtime*60)},
+            open:()=>this.playEpisode(e)}); }); });
 
           // detail / player
           const m=this.cur();
@@ -488,8 +616,12 @@
           const volPct=s.muted?0:s.volume*100;
           const playIcon=React.createElement('svg',{width:24,height:24,viewBox:'0 0 24 24',fill:'#fff'},s.playing?React.createElement('path',{d:'M7 4h4v16H7zM13 4h4v16h-4z'}):React.createElement('path',{d:'M7 5l12 7-12 7z'}));
           const volIcon=React.createElement('svg',{width:22,height:22,viewBox:'0 0 24 24',fill:'none'},React.createElement('path',{d:'M4 9v6h4l5 4V5L8 9H4z',fill:'#fff'}),(s.muted||s.volume<0.05)?React.createElement('path',{d:'M17 9l4 6M21 9l-4 6',stroke:'#fff',strokeWidth:1.8,strokeLinecap:'round'}):React.createElement('path',{d:'M16.5 8.5a5 5 0 010 7',stroke:'#fff',strokeWidth:1.8,strokeLinecap:'round'}));
-          const hasSubs = m ? true : false;
-          const notice = this.noticeCopy[s.playNotice] || {title:'', body:''};
+          const hasSubs = !!(m || s.playingEp);
+          const pep=s.playingEp;
+          const pseries=pep?this.seriesById(pep.sid):null;
+          const nextEp=pep?this.episodeAfter(pep):null;
+          const playerTitle=pep&&pseries ? (pseries.title+'  \u00b7  S'+String(pep.season).padStart(2,'0')+'E'+String(pep.number).padStart(2,'0')+'  \u00b7  '+pep.title) : detail.title;
+          const playerPoster=pep ? {position:'absolute',inset:0,background:'linear-gradient(155deg, '+pep.g1+' 0%, '+pep.g2+' 100%)'} : detail.posterStyle;
 
           // add form
           const labelStyle={display:'block',fontFamily:'var(--font-sans)',fontSize:'13px',fontWeight:'600',color:'var(--color-text-dim)',marginBottom:'8px',letterSpacing:'.2px'};
@@ -522,43 +654,19 @@
             onLangChange:(l)=>this.setSubLang(i,l),
           }));
 
-          // codecs — the format rows, then the Component row last
-          const codecZoneBusy=s.codecZone==='busy', codecZoneRefused=s.codecZone==='refused', codecRemoving=s.codecZoneAction==='remove';
-          const codecFormats=s.codecs.filter(c=>c.kind!=='component');
-          const pill=(soft)=>({flex:'0 0 auto',fontFamily:'var(--font-sans)',fontSize:'12px',fontWeight:'600',padding:'4px 11px',borderRadius:'var(--radius-pill)',color:soft?'var(--color-text-faint)':'var(--color-watched)',background:soft?'var(--color-surface-3)':'rgba(138,154,107,.16)',border:'1px solid '+(soft?'var(--color-border)':'rgba(138,154,107,.3)')});
-          const codecModel={
-            summaryLabel:codecFormats.length+' formats enabled · '+codecFormats.filter(c=>c.kind==='installed').length+' from the playback component',
-            onBrowse:()=>this.uploadCodec(),
-            zoneBusy:codecZoneBusy, zoneRefused:codecZoneRefused,
-            zoneTitle:codecZoneBusy?(codecRemoving?'Removing the playback component…':'Adding the playback component…'):'Add a codec pack',
-            zoneLine:codecZoneBusy?(codecRemoving?'The formats it added go with it':'Copying it in and checking it runs'):(codecZoneRefused?s.codecZoneReason:'Drop a playback component ('),
-            zoneLineMono:(codecZoneBusy||codecZoneRefused)?'':'ffmpeg',
-            zoneLineTail:(codecZoneBusy||codecZoneRefused)?'':') here, or browse',
-            zoneWrapStyle:{cursor:codecZoneBusy?'default':'pointer',pointerEvents:codecZoneBusy?'none':'auto'},
-            zoneLineStyle:{fontFamily:'var(--font-sans)',fontSize:'12.5px',color:codecZoneRefused?'var(--color-danger)':'var(--color-text-faint)'},
-            codecs:s.codecs.map(c=>{ const component=c.kind==='component'; const uploaded=component&&c.source==='uploaded';
-              return {
-                id:c.id, name:c.name, exts:c.exts, size:component?c.size:'—',
-                removable:uploaded, notRemovable:!uploaded, justAdded:s.codecJustAdded===c.id,
-                statusLabel:component?(uploaded?'Uploaded':'Default'):(c.kind==='built-in'?'Built-in':'Installed'),
-                statusStyle:pill(component?!uploaded:c.kind==='built-in'),
-                onRemove:()=>this.removeCodec(c.id),
-              }; }),
-          };
-
           // import
-          const problems=s.impProblems.map(p=>{ const col=p.kind==='ambiguous'?accent:(p.kind==='no-row'||p.kind==='missing-meta')?'var(--color-text-faint)':'var(--color-danger)'; return {id:p.id,title:p.title,reason:p.reason,dotStyle:{flex:'0 0 auto',width:'10px',height:'10px',borderRadius:'99px',background:col},resolve:()=>this.resolveProblem(p),skip:()=>this.skipProblem(p.id)}; });
+          const problems=s.impProblems.map(p=>{ const col=p.kind==='no-folder'?'#c97a6a':p.kind==='ambiguous'?accent:p.kind==='missing-file'?'#c9a86a':'#9a8a6b'; return {id:p.id,title:p.title,reason:p.reason,dotStyle:{flex:'0 0 auto',width:'10px',height:'10px',borderRadius:'99px',background:col},resolve:()=>this.resolveProblem(p),skip:()=>this.skipProblem(p.id)}; });
 
           return {
-            rootStyle, isBrowse:s.screen==='browse', isDetail:s.screen==='detail', isPlayer:s.screen==='player', isAdd:s.screen==='add', isImport:s.screen==='import', isGenre:s.screen==='genre', isSettings:s.screen==='settings',
+            rootStyle, isBrowse:s.screen==='browse', isDetail:s.screen==='detail', isPlayer:s.screen==='player', isAdd:s.screen==='add', isImport:s.screen==='import', isGenre:s.screen==='genre', isSettings:s.screen==='settings', isEnrich:s.screen==='enrich', isSeries:s.screen==='series', isSeason:s.screen==='season',
             snackbars: s.snackbars.map(n=>({ ...n, onDismiss:()=>this.dismissSnack(n.id) })), hasSnackbars: s.snackbars.length>0,
             goBrowse:()=>this.goBrowse(), backFromDetail:()=>this.backFromDetail(),
             genreView:s.genreView, genrePageList:this.genrePageMovies().map(m=>this.view(m)), genreNoResults:this.genrePageMovies().length===0,
             genreSearch:s.genreSearch, onGenreSearch:(e)=>this.onGenreSearch(e),
-            genreCountLabel:(function(self){ if(!s.genreView) return ''; const all=self.rawMovies.filter(m=>m.genres.includes(s.genreView)).length; const shown=self.genrePageMovies().length; const noun=all===1?' title':' titles'; return shown===all? all+noun : shown+' of '+all+noun; })(this),
+            genreCountLabel:(function(self){ if(!s.genreView) return ''; const all=self.rawMovies.filter(m=>m.genres.includes(s.genreView)).length; const shown=self.genrePageMovies().length; return shown===all? all+' titles' : shown+' of '+all+' titles'; })(this),
             genreModel:{
               onBack:()=>this.goBrowse(), name:s.genreView,
-              countLabel:(function(self){ if(!s.genreView) return ''; const all=self.rawMovies.filter(m=>m.genres.includes(s.genreView)).length; const shown=self.genrePageMovies().length; const noun=all===1?' title':' titles'; return shown===all? all+noun : shown+' of '+all+noun; })(this),
+              countLabel:(function(self){ if(!s.genreView) return ''; const all=self.rawMovies.filter(m=>m.genres.includes(s.genreView)).length; const shown=self.genrePageMovies().length; return shown===all? all+' titles' : shown+' of '+all+' titles'; })(this),
               search:s.genreSearch, onSearch:(e)=>this.onGenreSearch(e), searchPlaceholder:'Search in '+(s.genreView||''),
               sortValue:sortLabel, sortOpen:s.openDrop==='sort', onToggleSort:()=>this.toggleSort(), sortOptions,
               movies:this.genrePageMovies().map(m=>this.view(m)), noResults:this.genrePageMovies().length===0,
@@ -573,6 +681,12 @@
             showContinue:continueList.length>0, continueList, showFavorites:favoritesList.length>0, favoritesList, genreRows:rows, noResults:rows.length===0,
             libModel:{
               onLogo:()=>this.goBrowse(), search:s.search, onSearch:(e)=>this.onSearch(e),
+              isMoviesTab:s.tab==='movies', isSeriesTab:s.tab==='series',
+              onMoviesTab:()=>this.setTab('movies'), onSeriesTab:()=>this.setTab('series'),
+              moviesTabStyle:tabStyle(s.tab==='movies'), seriesTabStyle:tabStyle(s.tab==='series'),
+              searchPlaceholder:s.tab==='series'?'Search your series':'Search your movies',
+              seriesList, seriesCountLabel:seriesList.length+' series · '+totalEpisodes+' episodes', seriesNoResults:seriesList.length===0,
+              episodeContinueList, showEpisodeContinue:episodeContinueList.length>0,
               genreLabel:s.genre, genreOptions, genreOpen:s.openDrop==='genre', onToggleGenre:()=>this.toggleGenre(),
               ratingLabel:ratingFilterLabel, ratingOptions, ratingOpen:s.openDrop==='rating', onToggleRating:()=>this.toggleRating(),
               sortLabel, sortOptions, sortOpen:s.openDrop==='sort', onToggleSort:()=>this.toggleSort(),
@@ -582,12 +696,30 @@
             },
             settingsModel:{
               onBack:()=>this.goBrowse(), onAddMovie:()=>this.goAdd(),
+              net:{
+                key:s.tmdbKey, onKey:(e)=>this.onTmdbKey(e), onTest:()=>this.testTmdbKey(),
+                testLabel:s.tmdbTesting?'Testing…':s.tmdbConnected?'Test again':'Test connection',
+                statusLabel:s.tmdbConnected?'Connected':'Not set up',
+                statusStyle:{fontFamily:'var(--font-sans)',fontSize:'11px',fontWeight:'600',letterSpacing:'.4px',textTransform:'uppercase',padding:'2px 9px',borderRadius:'var(--radius-pill)',color:s.tmdbConnected?'var(--color-watched)':'var(--color-text-faint)',background:s.tmdbConnected?'rgba(138,154,107,.16)':'var(--color-surface-3)',border:'1px solid '+(s.tmdbConnected?'rgba(138,154,107,.3)':'var(--color-border)')},
+                keyHint:s.tmdbConnected?'Key saved on this machine. It is never shared or uploaded anywhere else.':'Get a free key at themoviedb.org → Settings → API.',
+                onSync:()=>this.goEnrich('settings'),
+                syncDesc:s.lastSync?('Last synced '+s.lastSync+' · '+s.enrichedCount+' of '+this.rawMovies.length+' titles have full details.'):(s.enrichedCount+' of '+this.rawMovies.length+' titles have full details.'),
+              },
               libraryActions:[
                 {key:'add',glyph:'＋',label:'Add a movie',desc:'Pick the video, poster, and subtitle files for one title.',onClick:()=>this.goAdd()},
                 {key:'import',glyph:'⇪',label:'Import from spreadsheet',desc:'Bulk-migrate a spreadsheet + movie folders in one pass.',onClick:()=>this.goImport()},
                 {key:'export',glyph:'⬇',label:'Export to CSV',desc:'Save your whole library out as a spreadsheet backup.',onClick:()=>this.openExport()},
               ],
-              codec:codecModel,
+              codec:{
+                summaryLabel:s.codecs.length+' formats enabled · '+s.codecs.filter(c=>c.kind==='installed').length+' added by you',
+                onBrowse:()=>this.uploadCodec(),
+                codecs:s.codecs.map(c=>{ const built=c.kind==='built-in'; return {
+                  id:c.id, name:c.name, exts:c.exts, size:c.size, builtIn:built, notBuiltIn:!built, justAdded:s.codecJustAdded===c.id,
+                  statusLabel:built?'Built-in':'Installed',
+                  statusStyle:{flex:'0 0 auto',fontFamily:'var(--font-sans)',fontSize:'12px',fontWeight:'600',padding:'4px 11px',borderRadius:'var(--radius-pill)',color:built?'var(--color-text-faint)':'var(--color-watched)',background:built?'var(--color-surface-3)':'rgba(138,154,107,.16)',border:'1px solid '+(built?'var(--color-border)':'rgba(138,154,107,.3)')},
+                  onRemove:()=>this.removeCodec(c.id),
+                }; }),
+              },
               subAutoOn:s.settingsSubAuto, onToggleSubAuto:()=>this.toggleSubAuto(),
               subLang:s.settingsSubLang, subLangOpen:s.openDrop==='subLang', onToggleSubLang:()=>this.setState(st=>({openDrop:st.openDrop==='subLang'?null:'subLang'})),
               subLangOptions:['English','Spanish','French','German'].map(l=>({label:l,selected:l===s.settingsSubLang,onSelect:()=>this.setSubLang(l)})),
@@ -600,10 +732,10 @@
             },
             // detail
             detail, toggleWatched:()=>this.toggleWatched(), toggleFavorite:()=>this.toggleFavorite(), playMovie:()=>this.playMovie(), toggleEditMenu:()=>this.toggleEditMenu(), editMenuOpen:s.editMenuOpen, editMovie:()=>this.editMovie(),
-            detailModel:{...detail, editMenuOpen:s.editMenuOpen, onBack:()=>this.backFromDetail(), onPlay:()=>this.playMovie(), onToggleWatched:()=>this.toggleWatched(), onToggleFavorite:()=>this.toggleFavorite(), onToggleEditMenu:()=>this.toggleEditMenu(), onEdit:()=>this.editMovie(), onDelete:()=>this.openDelete()},
+            detailModel:{...detail, editMenuOpen:s.editMenuOpen, onBack:()=>this.backFromDetail(), onPlay:()=>this.playMovie(), onToggleWatched:()=>this.toggleWatched(), onToggleFavorite:()=>this.toggleFavorite(), onToggleEditMenu:()=>this.toggleEditMenu(), onEdit:()=>this.editMovie(), onFetchTmdb:()=>this.enrichOne()},
             // player
             playerModel:{
-              posterStyle:detail.posterStyle, title:detail.title,
+              posterStyle:playerPoster, title:playerTitle,
               wrapStyle:playerWrap, chromeTop:chromeT, chromeBot:chromeB,
               onMove:()=>this.onPlayerMove(), togglePlay:()=>this.togglePlay(), onExit:()=>this.exitPlayer(),
               skipBack:()=>this.skipBack(), skipFwd:()=>this.skipFwd(), toggleMute:()=>this.toggleMute(), toggleSubs:()=>this.toggleSubs(),
@@ -613,10 +745,14 @@
               seekKnob:{position:'absolute',top:'50%',left:pct+'%',width:'14px',height:'14px',borderRadius:'99px',background:'#fff',transform:'translate(-50%,-50%)',boxShadow:'0 1px 4px rgba(0,0,0,.5)'},
               volStyle:{height:'100%',width:volPct+'%',background:'#fff',borderRadius:'99px'},
               playPauseIcon:playIcon, volumeIcon:volIcon, subBtnStyle:subBtn, hasSubs,
-              showBigPlay:!s.playing && !s.playNotice, showSubtitle:s.subsOn && hasSubs && !s.playNotice,
+              showNextEp:!!nextEp && !s.autoNextCancelled && dur>0 && (dur-ct)<=15,
+              nextCountdown:Math.max(0,Math.ceil(dur-ct)),
+              nextEpLabel: nextEp ? ('S'+String(nextEp.season).padStart(2,'0')+'E'+String(nextEp.number).padStart(2,'0')) : '',
+              nextEpTitle: nextEp ? nextEp.title : '',
+              nextThumbStyle: nextEp ? {flex:'0 0 auto',width:'104px',aspectRatio:'16 / 9',borderRadius:'7px',background:'linear-gradient(150deg, '+nextEp.g1+' 0%, '+nextEp.g2+' 100%)'} : {},
+              onPlayNext:()=>this.playNextEpisode(), onCancelNext:()=>this.cancelAutoNext(),
+              showBigPlay:!s.playing, showSubtitle:s.subsOn && hasSubs,
               subtitleLine:'— You can see the whole coast from up here.',
-              showBuffering:s.playNotice==='buffering', showUnavailable:s.playNotice==='missing-file' || s.playNotice==='cannot-play' || s.playNotice==='could-not-start',
-              noticeTitle:notice.title, noticeBody:notice.body,
             },
             // add
             formModel:{
@@ -642,8 +778,7 @@
               return {
               labelStyle, setup:s.impStep==='setup', running:s.impStep==='running', review:s.impStep==='review',
               sheet:s.impSheet, root:s.impRoot, onSheet:(e)=>this.onImpSheet(e), onRoot:(e)=>this.onImpRoot(e), onStart:()=>this.startImport(),
-              sheetError:s.impSheetError, hasSheetError:!!s.impSheetError, rootError:s.impRootError, hasRootError:!!s.impRootError,
-              onBack:()=>this.goSettings(), onFinish:()=>this.goBrowse(), onCancel:()=>this.cancelImport(),
+              onBack:()=>this.goSettings(), onFinish:()=>{ if(s.impEnrich){ this.setState({enScope:'all'}); this.goEnrich('browse'); } else { this.goBrowse(); } }, onCancel:()=>this.cancelImport(),
               scanning:s.impPhase==='scan', importing:s.impPhase==='import', indeterminate:s.impPhase==='scan', percent:pct,
               stepScanActive:s.impPhase==='scan', stepScanDone:s.impPhase==='import', stepImportActive:s.impPhase==='import',
               importStepDotStyle:{display:'grid',placeItems:'center',width:'24px',height:'24px',borderRadius:'50%',fontFamily:'var(--font-sans)',fontSize:'12px',fontWeight:'700',background:s.impPhase==='import'?'var(--color-accent)':'var(--color-surface-3)',color:s.impPhase==='import'?'#14110d':'var(--color-text-faint)'},
@@ -654,11 +789,121 @@
               elapsedLabel:'Elapsed '+fmt(elapsed), etaLabel: etaSec>0 ? ('About '+fmt(etaSec)+' left') : '', hasEta: etaSec>0,
               log:s.impLog,
               matched:s.impMatched, problemCount:s.impProblems.length, problems,
+              enrich:s.impEnrich, onToggleEnrich:()=>this.toggleImpEnrich(),
+              enrichCheck:s.impEnrich?'✓':'',
+              enrichBoxStyle:{flex:'0 0 auto',display:'grid',placeItems:'center',width:'22px',height:'22px',marginTop:'1px',borderRadius:'6px',border:'2px solid '+(s.impEnrich?accent:'var(--color-text-faint)'),background:s.impEnrich?accent:'transparent',color:'#1a1109',fontSize:'14px',fontWeight:'700'},
+              enrichHint:s.tmdbConnected?'Runs straight after the import, over everything it brings in. Needs the internet.':'Needs a TMDB key — add one under Settings → Network first.',
               hasProblems:s.impProblems.length>0, allResolved:s.impProblems.length===0,
               };
             })(),
-            // delete
-            deleteOpen:s.deleteOpen, deleteTitle:detail.title||'', confirmDelete:()=>this.confirmDelete(), closeDelete:()=>this.closeDelete(),
+            // series
+            seriesModel:(()=>{
+              const x=this.seriesById(s.seriesId); if(!x) return {seasons:[],genres:[]};
+              const pr=this.seriesProgress(x.id); const nx=this.nextEpisodeOf(x.id);
+              const isFav=s.seriesFavs.includes(x.id);
+              return {
+                title:x.title, genres:x.genres, synopsis:x.syn, creator:x.creator, castText:x.cast.join(', '),
+                topTag:x.genres[0]+' \u00b7 Series', yearLabel:x.ye?(x.ys===x.ye?String(x.ys):x.ys+'\u2013'+x.ye):(x.ys+'\u2013'),
+                countLabel:x.seasons.length+' season'+(x.seasons.length===1?'':'s')+' \u00b7 '+pr.total+' episodes',
+                ratingPct:x.rating,
+                posterStyle:{position:'absolute',inset:0,background:'linear-gradient(155deg, '+x.g1+' 0%, '+x.g2+' 100%)'},
+                backdropStyle:{position:'absolute',inset:0,background:'linear-gradient(120deg, '+x.g1+' 0%, '+x.g2+' 100%)',filter:'blur(2px)',transform:'scale(1.05)'},
+                playLabel: nx ? ((nx.progress>0?'Resume ':'Play ')+'S'+String(nx.season).padStart(2,'0')+'E'+String(nx.number).padStart(2,'0')) : 'Play',
+                onPlayNext:()=>this.playEpisode(nx), onBack:()=>this.backFromSeries(),
+                progressLabel: pr.watched===0 ? 'Not started' : pr.watched>=pr.total ? 'All '+pr.total+' episodes watched' : pr.watched+' of '+pr.total+' episodes watched',
+                isFavorite:isFav, favTip:isFav?'In Favorites \u2014 click to remove':'Add to Favorites',
+                onToggleFavorite:()=>this.toggleSeriesFav(x.id),
+                favIconStyle:{display:'grid',placeItems:'center',width:'58px',height:'58px',flex:'0 0 auto',background:isFav?'var(--color-accent-soft)':'transparent',border:'1px solid '+(isFav?'var(--color-accent-line)':'var(--color-border)'),borderRadius:'50%',color:isFav?accent:'var(--color-text-dim)',cursor:'pointer'},
+                seasons:x.seasons.map((count,i)=>{ const n=i+1; const eps=this.episodesOf(x.id,n);
+                  return {card:{number:n,episodeCount:count,watchedCount:eps.filter(e=>e.watched).length,g1:x.g1,g2:x.g2},open:()=>this.openSeason(n)}; }),
+              };
+            })(),
+            seasonModel:(()=>{
+              const x=this.seriesById(s.seriesId); const n=s.seasonN;
+              if(!x||!n) return {episodes:[],otherSeasons:[]};
+              const eps=this.episodesOf(x.id,n);
+              const w=eps.filter(e=>e.watched).length;
+              const nx=eps.find(e=>e.progress>0&&e.progress<100)||eps.find(e=>!e.watched)||eps[0];
+              const allW=eps.length>0&&eps.every(e=>e.watched);
+              return {
+                seriesTitle:x.title, seasonLabel:'Season '+n,
+                countLabel:eps.length+' episodes', watchedLabel:w+' watched',
+                playLabel: nx ? ((nx.progress>0?'Resume ':'Play ')+'E'+String(nx.number).padStart(2,'0')) : 'Play',
+                onPlayNext:()=>this.playEpisode(nx), onBack:()=>this.backFromSeason(),
+                toggleAllLabel: allW ? 'Mark season unwatched' : 'Mark season watched',
+                onToggleAll:()=>this.toggleSeasonAll(),
+                episodes:eps.map(e=>({data:{...e,resumeLabel:'Resume \u00b7 '+this.fmtClock(e.runtime*60*e.progress/100)+' of '+this.fmtClock(e.runtime*60)},
+                  open:()=>this.playEpisode(e), toggleWatched:(ev)=>{ if(ev&&ev.stopPropagation)ev.stopPropagation(); this.toggleEpWatched(e); }})),
+                hasOtherSeasons:x.seasons.length>1,
+                otherSeasons:x.seasons.map((c,i)=>i+1).filter(i=>i!==n).map(i=>({label:'Season '+i,open:()=>this.openSeason(i)})),
+              };
+            })(),
+            // enrichment
+            enrichModel:(()=>{
+              const elapsed = s.enStartTime ? (Date.now()-s.enStartTime)/1000 : 0;
+              const fmt = (sec)=>{ sec=Math.max(0,Math.round(sec)); return Math.floor(sec/60)+':'+String(sec%60).padStart(2,'0'); };
+              const pct = s.enTotal ? Math.round(s.enDone/s.enTotal*100) : 0;
+              const etaSec = (s.enDone>2) ? elapsed*(s.enTotal-s.enDone)/s.enDone : 0;
+              const missing = 12;
+              const scopeDefs = s.enSingleTitle
+                ? [['single','Just this movie',s.enSingleTitle]]
+                : [['missing','Only what\u2019s missing',missing+' titles have no synopsis or artwork'],['all','Everything',this.rawMovies.length+' titles \u2014 re-checks ones already filled in']];
+              const scopeCard=sel=>({flex:'1 1 260px',textAlign:'left',padding:'16px 18px',background:sel?'var(--color-accent-soft)':'var(--color-surface)',border:'1px solid '+(sel?'var(--color-accent-line)':'var(--color-border-soft)'),borderRadius:'var(--radius-md)',cursor:'pointer'});
+              const scopeDot=sel=>({display:'block',width:'18px',height:'18px',flex:'0 0 auto',borderRadius:'99px',border:'2px solid '+(sel?accent:'var(--color-text-faint)'),background:sel?accent:'transparent',boxShadow:sel?'inset 0 0 0 3px var(--color-surface-2)':'none'});
+              const ready = s.tmdbConnected && s.online;
+              const pending = s.enPending.map(p=>{
+                const col = p.kind==='ambiguous'?accent:p.kind==='conflict'?'#c9a86a':'#c97a6a';
+                const choiceOf=(k)=>((p.choices||{})[k]||'tmdb');
+                const sideStyle=(on)=>({flex:1,textAlign:'left',padding:'12px 14px',background:on?'var(--color-accent-soft)':'transparent',border:'none',borderLeft:'1px solid var(--color-border-soft)',boxShadow:on?'inset 0 0 0 1px var(--color-accent-line)':'none',cursor:'pointer'});
+                return {
+                  id:p.id, title:p.title, reason:p.reason, path:p.path, query:p.query||'',
+                  isAmbiguous:p.kind==='ambiguous', isConflict:p.kind==='conflict', isMissing:p.kind==='missing',
+                  dotStyle:{flex:'0 0 auto',width:'10px',height:'10px',marginTop:'7px',borderRadius:'99px',background:col},
+                  onSkip:()=>this.skipEnrichRow(p.id), onSearch:()=>this.searchEnrich(p.id), onQuery:()=>{},
+                  onApply:()=>this.applyConflict(p.id), onKeepAll:()=>this.skipEnrichRow(p.id),
+                  candidates:(p.candidates||[]).map(c=>({
+                    title:c.t, meta:c.y+' \u00b7 '+c.c, scoreLabel:c.s+'% match', onPick:()=>this.pickCandidate(p.id),
+                    cardStyle:{flex:'0 0 auto',width:'132px',textAlign:'left',padding:'10px',background:'var(--color-surface-2)',border:'1px solid var(--color-border-soft)',borderRadius:'var(--radius-md)',cursor:'pointer'},
+                    posterStyle:{display:'block',width:'100%',height:'160px',borderRadius:'8px',background:'linear-gradient(155deg, '+c.g1+' 0%, '+c.g2+' 100%)'},
+                    scoreStyle:{display:'inline-block',marginTop:'8px',fontFamily:'var(--font-sans)',fontSize:'11px',fontWeight:'700',letterSpacing:'.3px',padding:'3px 8px',borderRadius:'var(--radius-pill)',color:c.s>70?'var(--color-watched)':'var(--color-text-faint)',background:c.s>70?'rgba(138,154,107,.16)':'var(--color-surface-3)'},
+                  })),
+                  fields:(p.fields||[]).map(f=>({
+                    label:f.label, mine:f.mine, tmdb:f.tmdb,
+                    onKeepMine:()=>this.setFieldChoice(p.id,f.key,'mine'), onUseTmdb:()=>this.setFieldChoice(p.id,f.key,'tmdb'),
+                    mineStyle:sideStyle(choiceOf(f.key)==='mine'), tmdbStyle:sideStyle(choiceOf(f.key)==='tmdb'),
+                  })),
+                };
+              });
+              const targets = ['your library', s.enWriteSheet?'the sheet in your collection root':null, s.enWritePosters?'a poster.jpg in each movie folder':null].filter(Boolean);
+              return {
+                setup:s.enStep==='setup', running:s.enStep==='running', review:s.enStep==='review',
+                onBack:()=>this.backFromEnrich(), onCancel:()=>this.cancelEnrich(), onRetry:()=>this.retryOnline(),
+                onOpenKeySettings:()=>this.goSettings(), onStart:()=>this.startEnrich(),
+                needsKey:!s.tmdbConnected, offline:!s.online,
+                keyBadgeLabel:s.tmdbConnected?'TMDB connected':'No key yet',
+                keyBadgeStyle:{flex:'0 0 auto',fontFamily:'var(--font-sans)',fontSize:'12px',fontWeight:'600',padding:'5px 12px',borderRadius:'var(--radius-pill)',color:s.tmdbConnected?'var(--color-watched)':'var(--color-text-faint)',background:s.tmdbConnected?'rgba(138,154,107,.16)':'var(--color-surface-3)',border:'1px solid '+(s.tmdbConnected?'rgba(138,154,107,.3)':'var(--color-border)')},
+                scopes:scopeDefs.map(([v,label,desc])=>({label,desc,onSelect:()=>this.setEnrichScope(v),cardStyle:scopeCard(s.enScope===v),dotStyle:scopeDot(s.enScope===v)})),
+                fields:this.enrichFieldDefs.map(f=>({label:f,on:!s.enFieldsOff.includes(f),toggle:()=>this.toggleEnrichField(f)})),
+                writeSheet:s.enWriteSheet, onToggleSheet:()=>this.toggleEnrichSheet(),
+                writePosters:s.enWritePosters, onTogglePosters:()=>this.toggleEnrichPosters(),
+                writesToSource:s.enWriteSheet||s.enWritePosters,
+                sheetPath:(s.impRoot||'E:\\Movies')+'\\familyflix-metadata.csv',
+                posterPathExample:(s.impRoot||'E:\\Movies')+'\\<movie folder>\\poster.jpg',
+                startLabel:s.enSingleTitle?'Fetch details':'Start sync',
+                startVariant:ready?'primary':'secondary',
+                startDisabled:!ready,
+                estimateLabel: !s.online ? 'Waiting for a connection' : !s.tmdbConnected ? 'A key is needed before this can run' : 'About '+Math.max(1,Math.round(this.enrichTarget()*0.4))+'s for '+this.enrichTarget()+' title'+(this.enrichTarget()===1?'':'s'),
+                headline:'Fetching from TMDB\u2026', indeterminate:false, percent:pct,
+                statLine:s.enDone.toLocaleString()+' of '+s.enTotal.toLocaleString()+' looked up',
+                currentItem:s.enCurrent, elapsedLabel:'Elapsed '+fmt(elapsed),
+                etaLabel: etaSec>0 ? ('About '+fmt(etaSec)+' left') : '',
+                log:s.enLog, matched:s.enMatched, pendingCount:s.enPending.length, pending,
+                hasPending:s.enPending.length>0, allResolved:s.enPending.length===0,
+                writtenSummary:'Saved to '+targets.join(', ')+'.',
+                finishLabel:s.enReturn==='detail'?'Back to the movie':'Done',
+                onFinish:()=>this.backFromEnrich(), onAgain:()=>this.setState({enStep:'setup'}),
+              };
+            })(),
             // export
             exportOpen:s.exportOpen,
             exportModel:{

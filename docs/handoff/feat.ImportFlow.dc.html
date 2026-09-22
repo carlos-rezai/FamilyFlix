@@ -109,21 +109,6 @@
                     "
                   />
                 </div>
-                <sc-if
-                  value="{{ imp.hasSheetError }}"
-                  hint-placeholder-val="{{ false }}"
-                >
-                  <div
-                    style="
-                      font-family: var(--font-sans);
-                      font-size: 13px;
-                      color: var(--color-danger);
-                      margin-top: 6px;
-                    "
-                  >
-                    {{ imp.sheetError }}
-                  </div>
-                </sc-if>
               </label>
               <label style="display: block">
                 <span style="{{ imp.labelStyle }}">Movies root folder</span>
@@ -161,21 +146,121 @@
                     "
                   />
                 </div>
-                <sc-if
-                  value="{{ imp.hasRootError }}"
-                  hint-placeholder-val="{{ false }}"
-                >
-                  <div
+              </label>
+              <div
+                style="
+                  display: flex;
+                  gap: 14px;
+                  padding: 14px 16px;
+                  background: var(--color-bg-2);
+                  border: 1px solid var(--color-border-soft);
+                  border-radius: 10px;
+                "
+              >
+                <span
+                  style="
+                    flex: 0 0 auto;
+                    color: var(--color-text-faint);
+                    margin-top: 1px;
+                  "
+                  ><svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                    <path
+                      d="M12 3a9 9 0 100 18 9 9 0 000-18zM12 11v6M12 7.5v.5"
+                      stroke="currentColor"
+                      stroke-width="1.7"
+                      stroke-linecap="round"
+                    /></svg
+                ></span>
+                <span style="flex: 1; min-width: 0">
+                  <span
                     style="
+                      display: block;
                       font-family: var(--font-sans);
                       font-size: 13px;
-                      color: var(--color-danger);
-                      margin-top: 6px;
+                      font-weight: 600;
+                      color: var(--color-text-dim);
+                      margin-bottom: 6px;
                     "
+                    >What the scanner accepts</span
                   >
-                    {{ imp.rootError }}
-                  </div>
-                </sc-if>
+                  <span
+                    style="
+                      display: block;
+                      font-family: var(--font-mono);
+                      font-size: 12px;
+                      color: var(--color-text-faint);
+                      line-height: 1.8;
+                    "
+                    >Movie Title (2019)\ movie.mkv · subs.en.srt<br />Show Name\
+                    Season 01\ S01E03.mkv<br />Show Name\ S01E03.mkv
+                    <span style="font-family: var(--font-sans)"
+                      >— loose episodes at the show root are fine</span
+                    ></span
+                  >
+                  <span
+                    style="
+                      display: block;
+                      font-family: var(--font-sans);
+                      font-size: 13px;
+                      color: var(--color-text-faint);
+                      margin-top: 8px;
+                      line-height: 1.5;
+                      text-wrap: pretty;
+                    "
+                    >Season and episode numbers come from the folder first, then
+                    the filename (<span style="font-family: var(--font-mono)"
+                      >S01E03</span
+                    >, <span style="font-family: var(--font-mono)">1x03</span>).
+                    Anything it can’t place lands in the review list.</span
+                  >
+                </span>
+              </div>
+              <label
+                style="
+                  display: flex;
+                  align-items: flex-start;
+                  gap: 12px;
+                  padding: 14px 16px;
+                  background: var(--color-surface);
+                  border: 1px solid var(--color-border-soft);
+                  border-radius: 10px;
+                  cursor: pointer;
+                  margin-top: 4px;
+                "
+              >
+                <span style="{{ imp.enrichBoxStyle }}"
+                  >{{ imp.enrichCheck }}</span
+                >
+                <input
+                  type="checkbox"
+                  checked="{{ imp.enrich }}"
+                  onChange="{{ imp.onToggleEnrich }}"
+                  style="position: absolute; opacity: 0; width: 0; height: 0"
+                />
+                <span style="flex: 1; min-width: 0">
+                  <span
+                    style="
+                      display: block;
+                      font-family: var(--font-sans);
+                      font-size: 15px;
+                      font-weight: 600;
+                      color: var(--color-text);
+                    "
+                    >Also fetch metadata and posters from TMDB</span
+                  >
+                  <span
+                    style="
+                      display: block;
+                      font-family: var(--font-sans);
+                      font-size: 13px;
+                      color: var(--color-text-faint);
+                      margin-top: 2px;
+                      line-height: 1.45;
+                      text-wrap: pretty;
+                    "
+                    >{{ imp.enrichHint }}</span
+                  >
+                </span>
               </label>
               <div style="margin-top: 8px">
                 <dc-import
@@ -527,24 +612,40 @@
                         {{ p.reason }}
                       </div>
                     </div>
-                    <dc-import
-                      name="prim.Button"
-                      label="Resolve"
-                      variant="secondary"
-                      size="sm"
-                      icon="none"
-                      on-click="{{ p.resolve }}"
-                      hint-size="96px,40px"
-                    ></dc-import>
-                    <dc-import
-                      name="prim.Button"
-                      label="Skip"
-                      variant="secondary"
-                      size="sm"
-                      icon="none"
-                      on-click="{{ p.skip }}"
-                      hint-size="72px,40px"
-                    ></dc-import>
+                    <button
+                      onClick="{{ p.resolve }}"
+                      style="
+                        height: 40px;
+                        padding: 0 18px;
+                        background: var(--color-surface-3);
+                        border: 1px solid var(--color-border);
+                        border-radius: 8px;
+                        color: var(--color-text);
+                        font-family: var(--font-sans);
+                        font-size: 14px;
+                        font-weight: 600;
+                        cursor: pointer;
+                      "
+                      style-hover="background:var(--color-border)"
+                    >
+                      Resolve
+                    </button>
+                    <button
+                      onClick="{{ p.skip }}"
+                      style="
+                        height: 40px;
+                        padding: 0 14px;
+                        background: transparent;
+                        border: none;
+                        color: var(--color-text-faint);
+                        font-family: var(--font-sans);
+                        font-size: 14px;
+                        cursor: pointer;
+                      "
+                      style-hover="color:var(--color-text-dim)"
+                    >
+                      Skip
+                    </button>
                   </div>
                 </sc-for>
               </div>

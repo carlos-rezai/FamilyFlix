@@ -1,0 +1,94 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="tokens.css" />
+      </helmet>
+      <button onClick="{{ onOpen }}" style="{{ rootStyle }}">
+        <span
+          style="{{ posterStyle }}"
+          style-hover="transform:translateY(-4px);box-shadow:0 14px 34px rgba(0,0,0,.5);border-color:var(--color-accent-line)"
+          style-active="transform:translateY(-1px);transition-duration:70ms"
+        >
+          <span style="{{ numStyle }}">{{ numLabel }}</span>
+          <sc-if value="{{ complete }}" hint-placeholder-val="{{ false }}">
+            <span style="position: absolute; top: 10px; right: 10px"
+              ><dc-import
+                name="prim.StatusBadge"
+                kind="watched"
+                size="26"
+                hint-size="26px,26px"
+              ></dc-import
+            ></span>
+          </sc-if>
+          <sc-if value="{{ inProgress }}" hint-placeholder-val="{{ false }}">
+            <span style="position: absolute; left: 0; right: 0; bottom: 0"
+              ><dc-import
+                name="prim.ProgressBar"
+                percent="{{ percent }}"
+                height="4"
+                track="{{ true }}"
+                hint-size="100%,4px"
+              ></dc-import
+            ></span>
+          </sc-if>
+        </span>
+        <span
+          style="
+            display: block;
+            font-family: var(--font-sans);
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--color-text);
+            margin-top: 10px;
+          "
+          >{{ label }}</span
+        >
+        <span
+          style="
+            display: block;
+            font-family: var(--font-sans);
+            font-size: 13px;
+            color: var(--color-text-faint);
+            margin-top: 2px;
+          "
+          >{{ subLabel }}</span
+        >
+      </button>
+    </x-dc>
+    <script
+      type="text/x-dc"
+      data-dc-script
+      data-props='{"$preview":{"width":220,"height":400},"season":{"editor":null,"tsType":"{ number: number; label?: string; episodeCount: number; watchedCount: number; g1: string; g2: string }"},"onOpen":{"editor":null,"tsType":"() =&gt; void"}}'
+    >
+      class Component extends DCLogic {
+        renderVals(){
+          const s = this.props.season || {};
+          const n = s.number ?? 1;
+          const total = s.episodeCount ?? 0;
+          const watched = s.watchedCount ?? 0;
+          const pct = total ? Math.round(watched/total*100) : 0;
+          return {
+            onOpen: this.props.onOpen,
+            numLabel: 'S' + String(n).padStart(2,'0'),
+            label: s.label || ('Season ' + n),
+            subLabel: watched>0 && watched<total ? (watched + ' of ' + total + ' watched') : (total + ' episode' + (total===1?'':'s')),
+            complete: total>0 && watched>=total,
+            inProgress: watched>0 && watched<total,
+            percent: pct,
+            rootStyle:{display:'block',width:'100%',textAlign:'left',background:'transparent',border:'none',padding:0,cursor:'pointer'},
+            posterStyle:{position:'relative',display:'block',width:'100%',aspectRatio:'2 / 3',borderRadius:'var(--poster-radius, 12px)',overflow:'hidden',background:'linear-gradient(155deg, '+(s.g1||'#2a2620')+' 0%, '+(s.g2||'#5e4c38')+' 100%)',border:'1px solid var(--color-border-soft)',boxShadow:'0 6px 20px rgba(0,0,0,.35)',transition:'transform var(--dur-base) var(--ease-out), box-shadow var(--dur-base) var(--ease-out), border-color var(--dur-base) var(--ease-out)'},
+            posterHover:{transform:'translateY(-4px)',boxShadow:'0 14px 34px rgba(0,0,0,.5)',borderColor:'var(--color-accent-line)'},
+            numStyle:{position:'absolute',left:'14px',bottom:'12px',fontFamily:'var(--font-serif)',fontSize:'30px',fontWeight:'700',color:'rgba(255,255,255,.92)',textShadow:'0 2px 12px rgba(0,0,0,.6)'},
+          };
+        }
+      }
+    </script>
+  </body>
+</html>

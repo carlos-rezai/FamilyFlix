@@ -1,0 +1,369 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="tokens.css" />
+      </helmet>
+      <div
+        data-screen-label="Series detail"
+        style="
+          position: relative;
+          height: 100%;
+          overflow-y: auto;
+          background: var(--color-bg);
+        "
+      >
+        <div
+          style="
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 520px;
+            overflow: hidden;
+          "
+        >
+          <div style="{{ sr.backdropStyle }}"></div>
+          <div
+            style="
+              position: absolute;
+              inset: 0;
+              background: linear-gradient(
+                180deg,
+                rgba(20, 17, 13, 0.35) 0%,
+                rgba(20, 17, 13, 0.8) 55%,
+                var(--color-bg) 100%
+              );
+            "
+          ></div>
+        </div>
+
+        <div style="position: fixed; top: 24px; left: 24px; z-index: 30">
+          <button
+            onClick="{{ sr.onBack }}"
+            title="Back"
+            style="
+              display: grid;
+              place-items: center;
+              width: 44px;
+              height: 44px;
+              background: rgba(20, 17, 13, 0.6);
+              backdrop-filter: blur(10px);
+              border: 1px solid rgba(255, 255, 255, 0.14);
+              border-radius: var(--radius-pill);
+              color: #fff;
+              cursor: pointer;
+            "
+            style-hover="background:rgba(40,34,27,.85)"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+              <path
+                d="M15 5l-7 7 7 7"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              ></path>
+            </svg>
+          </button>
+        </div>
+
+        <div
+          style="
+            position: relative;
+            z-index: 10;
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 130px var(--space-6) var(--space-8);
+          "
+        >
+          <div
+            style="display: flex; gap: var(--space-7); align-items: flex-start"
+          >
+            <div style="flex: 0 0 260px">
+              <div
+                style="
+                  position: relative;
+                  width: 260px;
+                  aspect-ratio: 2/3;
+                  border-radius: var(--radius-lg);
+                  overflow: hidden;
+                  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6);
+                  border: 1px solid var(--color-border);
+                "
+              >
+                <div style="{{ sr.posterStyle }}"></div>
+                <div
+                  style="
+                    position: absolute;
+                    left: 18px;
+                    right: 18px;
+                    top: 18px;
+                    font-family: var(--font-sans);
+                    font-size: 11px;
+                    font-weight: 600;
+                    letter-spacing: 1.5px;
+                    text-transform: uppercase;
+                    color: rgba(255, 255, 255, 0.6);
+                  "
+                >
+                  {{ sr.topTag }}
+                </div>
+                <div
+                  style="
+                    position: absolute;
+                    left: 18px;
+                    right: 18px;
+                    bottom: 22px;
+                    font-family: var(--font-serif);
+                    font-weight: 600;
+                    font-size: 25px;
+                    line-height: 1.1;
+                    color: #fff;
+                    text-shadow: 0 1px 10px rgba(0, 0, 0, 0.6);
+                  "
+                >
+                  {{ sr.title }}
+                </div>
+              </div>
+            </div>
+
+            <div style="flex: 1 1 auto; min-width: 0; padding-top: 6px">
+              <h1
+                style="
+                  font-family: var(--font-serif);
+                  font-weight: 700;
+                  font-size: 46px;
+                  line-height: 1.04;
+                  color: var(--color-text);
+                  margin: 0;
+                "
+              >
+                {{ sr.title }}
+              </h1>
+
+              <div
+                style="
+                  display: flex;
+                  align-items: center;
+                  gap: 14px;
+                  margin-top: 14px;
+                  flex-wrap: wrap;
+                "
+              >
+                <span
+                  style="
+                    white-space: nowrap;
+                    font-family: var(--font-sans);
+                    font-size: 17px;
+                    color: var(--color-text-dim);
+                  "
+                  >{{ sr.yearLabel }}</span
+                >
+                <span style="color: var(--color-text-faint)">•</span>
+                <span
+                  style="
+                    white-space: nowrap;
+                    font-family: var(--font-sans);
+                    font-size: 17px;
+                    color: var(--color-text-dim);
+                  "
+                  >{{ sr.countLabel }}</span
+                >
+                <span style="color: var(--color-text-faint)">•</span>
+                <dc-import
+                  name="prim.StarRating"
+                  rating="{{ sr.ratingPct }}"
+                  size="20"
+                  show-value="{{ true }}"
+                  hint-size="120px,24px"
+                ></dc-import>
+              </div>
+
+              <div
+                style="
+                  display: flex;
+                  gap: 10px;
+                  margin-top: 18px;
+                  flex-wrap: wrap;
+                "
+              >
+                <sc-for
+                  list="{{ sr.genres }}"
+                  as="g"
+                  hint-placeholder-count="2"
+                >
+                  <dc-import
+                    name="prim.Chip"
+                    label="{{ g }}"
+                    size="sm"
+                    hint-size="80px,32px"
+                  ></dc-import>
+                </sc-for>
+              </div>
+
+              <div
+                style="
+                  display: flex;
+                  align-items: center;
+                  gap: 14px;
+                  margin-top: 28px;
+                  flex-wrap: wrap;
+                "
+              >
+                <dc-import
+                  name="prim.Button"
+                  label="{{ sr.playLabel }}"
+                  variant="primary"
+                  size="lg"
+                  icon="play"
+                  on-click="{{ sr.onPlayNext }}"
+                  hint-size="230px,58px"
+                ></dc-import>
+                <button
+                  onClick="{{ sr.onToggleFavorite }}"
+                  title="{{ sr.favTip }}"
+                  aria-label="{{ sr.favTip }}"
+                  style="{{ sr.favIconStyle }}"
+                  style-hover="border-color:var(--color-accent-line);color:var(--color-accent)"
+                >
+                  <svg
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                  >
+                    <path
+                      d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"
+                    ></path>
+                  </svg>
+                </button>
+                <span
+                  style="
+                    font-family: var(--font-sans);
+                    font-size: 14px;
+                    color: var(--color-text-faint);
+                  "
+                  >{{ sr.progressLabel }}</span
+                >
+              </div>
+
+              <div style="margin-top: 26px; max-width: 640px">
+                <dc-import
+                  name="mol.ExpandableText"
+                  text="{{ sr.synopsis }}"
+                  lines="4"
+                  font-size="17"
+                  hint-size="100%,120px"
+                ></dc-import>
+              </div>
+
+              <div
+                style="
+                  display: flex;
+                  gap: 40px;
+                  margin-top: 26px;
+                  flex-wrap: wrap;
+                "
+              >
+                <div>
+                  <div
+                    style="
+                      font-family: var(--font-sans);
+                      font-size: 12px;
+                      font-weight: 700;
+                      letter-spacing: 0.9px;
+                      text-transform: uppercase;
+                      color: var(--color-text-faint);
+                      margin-bottom: 6px;
+                    "
+                  >
+                    Created by
+                  </div>
+                  <div
+                    style="
+                      font-family: var(--font-sans);
+                      font-size: 16px;
+                      color: var(--color-text);
+                    "
+                  >
+                    {{ sr.creator }}
+                  </div>
+                </div>
+                <div style="min-width: 0">
+                  <div
+                    style="
+                      font-family: var(--font-sans);
+                      font-size: 12px;
+                      font-weight: 700;
+                      letter-spacing: 0.9px;
+                      text-transform: uppercase;
+                      color: var(--color-text-faint);
+                      margin-bottom: 6px;
+                    "
+                  >
+                    Starring
+                  </div>
+                  <div
+                    style="
+                      font-family: var(--font-sans);
+                      font-size: 16px;
+                      color: var(--color-text);
+                    "
+                  >
+                    {{ sr.castText }}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div style="margin-top: var(--space-8)">
+            <h2
+              style="
+                font-family: var(--font-serif);
+                font-weight: 600;
+                font-size: 24px;
+                color: var(--color-text);
+                margin: 0 0 var(--space-4);
+              "
+            >
+              Seasons
+            </h2>
+            <div
+              style="
+                display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+                gap: var(--space-5);
+              "
+            >
+              <sc-for
+                list="{{ sr.seasons }}"
+                as="sn"
+                hint-placeholder-count="3"
+              >
+                <dc-import
+                  name="mol.SeasonCard"
+                  season="{{ sn.card }}"
+                  on-open="{{ sn.open }}"
+                  hint-size="100%,340px"
+                ></dc-import>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+      </div>
+    </x-dc>
+    <script
+      type="text/x-dc"
+      data-dc-script
+      data-props='{"$preview":{"width":1280,"height":860},"sr":{"editor":null,"tsType":"SeriesPageModel"}}'
+    ></script>
+  </body>
+</html>

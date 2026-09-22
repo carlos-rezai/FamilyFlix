@@ -1,0 +1,149 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="tokens.css" />
+      </helmet>
+      <div
+        onClick="{{ onOpen }}"
+        style="{{ rootStyle }}"
+        style-hover="background:var(--color-surface-2);border-color:var(--color-accent-line);transform:translateY(-2px);box-shadow:0 10px 24px rgba(0,0,0,.34)"
+        style-active="transform:translateY(0);transition-duration:70ms"
+      >
+        <div style="{{ thumbStyle }}">
+          <div
+            style="
+              position: absolute;
+              inset: 0;
+              display: grid;
+              place-items: center;
+              opacity: 0;
+              transition: opacity 0.16s ease;
+            "
+            style-hover="opacity:1"
+          >
+            <div
+              style="
+                width: 44px;
+                height: 44px;
+                border-radius: 99px;
+                background: rgba(20, 17, 13, 0.6);
+                display: grid;
+                place-items: center;
+              "
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="#fff">
+                <path d="M7 5l12 7-12 7z"></path>
+              </svg>
+            </div>
+          </div>
+          <sc-if value="{{ inProgress }}" hint-placeholder-val="{{ false }}">
+            <div style="position: absolute; left: 0; right: 0; bottom: 0">
+              <dc-import
+                name="prim.ProgressBar"
+                percent="{{ percent }}"
+                height="4"
+                track="{{ true }}"
+                hint-size="100%,4px"
+              ></dc-import>
+            </div>
+          </sc-if>
+        </div>
+
+        <div style="flex: 1; min-width: 0">
+          <div style="display: flex; align-items: baseline; gap: 9px">
+            <span
+              style="
+                flex: 0 0 auto;
+                font-family: var(--font-mono);
+                font-size: 13px;
+                color: var(--color-text-faint);
+              "
+              >{{ epLabel }}</span
+            >
+            <span
+              style="
+                font-family: var(--font-sans);
+                font-size: 16px;
+                font-weight: 600;
+                color: var(--color-text);
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+              "
+              >{{ title }}</span
+            >
+          </div>
+          <div
+            style="
+              font-family: var(--font-sans);
+              font-size: 13px;
+              color: var(--color-text-faint);
+              margin-top: 4px;
+            "
+          >
+            {{ airDate }}
+          </div>
+          <sc-if value="{{ inProgress }}" hint-placeholder-val="{{ false }}">
+            <div
+              style="
+                font-family: var(--font-sans);
+                font-size: 13px;
+                color: var(--color-accent);
+                margin-top: 4px;
+              "
+            >
+              {{ resumeLabel }}
+            </div>
+          </sc-if>
+        </div>
+
+        <button
+          onClick="{{ onToggleWatched }}"
+          title="{{ watchedTip }}"
+          style="{{ checkStyle }}"
+          style-hover="border-color:var(--color-accent);transform:scale(1.08)"
+          style-active="transform:scale(.92);transition-duration:60ms"
+          style-focus-visible="outline:none;box-shadow:0 0 0 3px var(--color-focus-ring)"
+        >
+          {{ checkMark }}
+        </button>
+      </div>
+    </x-dc>
+    <script
+      type="text/x-dc"
+      data-dc-script
+      data-props='{"$preview":{"width":720,"height":140},"episode":{"editor":null,"tsType":"{ season: number; number: number; title: string; airDate: string; watched: boolean; progress: number; resumeLabel?: string; g1: string; g2: string }"},"onOpen":{"editor":null,"tsType":"() =&gt; void"},"onToggleWatched":{"editor":null,"tsType":"() =&gt; void"}}'
+    >
+      class Component extends DCLogic {
+        renderVals(){
+          const e = this.props.episode || {};
+          const watched = !!e.watched;
+          const prog = e.progress || 0;
+          return {
+            onOpen: this.props.onOpen,
+            onToggleWatched: this.props.onToggleWatched,
+            epLabel: 'S' + String(e.season ?? 1).padStart(2,'0') + 'E' + String(e.number ?? 1).padStart(2,'0'),
+            title: e.title || 'Untitled episode',
+            airDate: e.airDate || '',
+            inProgress: prog > 0 && prog < 100,
+            percent: prog,
+            resumeLabel: e.resumeLabel || '',
+            watched, checkMark: watched ? '✓' : '',
+            watchedTip: watched ? 'Watched — click to unmark' : 'Mark as watched',
+            rootStyle:{display:'flex',alignItems:'center',gap:'16px',padding:'12px',background:'var(--color-surface)',border:'1px solid var(--color-border-soft)',borderRadius:'var(--radius-md)',cursor:'pointer',transition:'background var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out), transform var(--dur-base) var(--ease-out), box-shadow var(--dur-base) var(--ease-out)'},
+            thumbStyle:{position:'relative',flex:'0 0 auto',width:'168px',aspectRatio:'16 / 9',borderRadius:'8px',overflow:'hidden',background:'linear-gradient(150deg, '+(e.g1||'#2a2620')+' 0%, '+(e.g2||'#5e4c38')+' 100%)'},
+            checkStyle:{flex:'0 0 auto',display:'grid',placeItems:'center',width:'30px',height:'30px',borderRadius:'8px',border:'2px solid '+(watched?'var(--color-accent)':'var(--color-text-faint)'),background:watched?'var(--color-accent)':'transparent',color:'#1a1109',fontSize:'16px',fontWeight:'700',cursor:'pointer',transition:'border-color var(--dur-fast) var(--ease-out), background var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out)'},
+            checkHover:{borderColor:'var(--color-accent)',transform:'scale(1.08)'},
+          };
+        }
+      }
+    </script>
+  </body>
+</html>

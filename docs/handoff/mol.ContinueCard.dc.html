@@ -10,12 +10,12 @@
       <helmet>
         <link rel="stylesheet" href="tokens.css" />
       </helmet>
-      <div
-        onClick="{{ onOpen }}"
-        style="{{ rootStyle }}"
-        style-hover="{{ rootHover }}"
-      >
-        <div style="{{ posterStyle }}">
+      <div onClick="{{ onOpen }}" style="{{ rootStyle }}">
+        <div
+          style="{{ posterStyle }}"
+          style-hover="transform:translateY(-4px);box-shadow:0 14px 34px rgba(0,0,0,.5);border-color:var(--color-accent-line)"
+          style-active="transform:translateY(-1px);transition-duration:70ms"
+        >
           <div style="{{ gradientStyle }}"></div>
           <div style="{{ scrimStyle }}"></div>
           <div style="{{ textWrap }}">
@@ -45,8 +45,8 @@
           return {
             onOpen:this.props.onOpen, title:m.title, resumeLabel:m.resumeLabel,
             rootStyle:{width:'100%',cursor:'pointer'},
-            rootHover:{opacity:.94},
-            posterStyle:{position:'relative',width:'100%',aspectRatio:'16 / 10',borderRadius:'var(--poster-radius)',overflow:'hidden',border:'1px solid var(--color-border-soft)'},
+            posterHover:{transform:'translateY(-4px)',boxShadow:'0 14px 34px rgba(0,0,0,.5)',borderColor:'var(--color-accent-line)'},
+            posterStyle:{position:'relative',width:'100%',aspectRatio:'16 / 10',borderRadius:'var(--poster-radius)',overflow:'hidden',border:'1px solid var(--color-border-soft)',boxShadow:'0 6px 20px rgba(0,0,0,.35)',transition:'transform var(--dur-base) var(--ease-out), box-shadow var(--dur-base) var(--ease-out), border-color var(--dur-base) var(--ease-out)'},
             gradientStyle:{position:'absolute',inset:0,background:`linear-gradient(155deg, ${m.g1||'#1f2a3a'} 0%, ${m.g2||'#3a6a8a'} 100%)`},
             scrimStyle:{position:'absolute',inset:0,background:'linear-gradient(180deg,rgba(0,0,0,0) 35%,rgba(0,0,0,.78) 100%)'},
             textWrap:{position:'absolute',left:'16px',right:'16px',bottom:'14px'},

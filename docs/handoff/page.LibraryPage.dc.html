@@ -71,12 +71,37 @@
             >
           </div>
 
+          <div
+            style="
+              flex: 0 0 auto;
+              display: flex;
+              gap: 4px;
+              padding: 4px;
+              background: var(--color-surface);
+              border: 1px solid var(--color-border-soft);
+              border-radius: var(--radius-pill);
+            "
+          >
+            <button
+              onClick="{{ lib.onMoviesTab }}"
+              style="{{ lib.moviesTabStyle }}"
+            >
+              Movies
+            </button>
+            <button
+              onClick="{{ lib.onSeriesTab }}"
+              style="{{ lib.seriesTabStyle }}"
+            >
+              Series
+            </button>
+          </div>
+
           <dc-import
             name="mol.SearchBar"
             value="{{ lib.search }}"
             on-input="{{ lib.onSearch }}"
-            placeholder="Search your movies"
-            hint-size="460px,46px"
+            placeholder="{{ lib.searchPlaceholder }}"
+            hint-size="400px,46px"
           ></dc-import>
 
           <div style="flex: 1 1 auto"></div>
@@ -155,106 +180,201 @@
           "
         >
           <sc-if
-            value="{{ lib.showContinue }}"
+            value="{{ lib.isSeriesTab }}"
             hint-placeholder-val="{{ false }}"
           >
-            <section style="margin-bottom: var(--space-7)">
+            <sc-if
+              value="{{ lib.showEpisodeContinue }}"
+              hint-placeholder-val="{{ false }}"
+            >
+              <section style="margin-bottom: var(--space-7)">
+                <h2
+                  style="
+                    font-family: var(--font-serif);
+                    font-weight: 600;
+                    font-size: 24px;
+                    color: var(--color-text);
+                    margin: 0 0 var(--space-4);
+                    padding: 0 var(--space-6);
+                  "
+                >
+                  Continue Watching
+                </h2>
+                <dc-import
+                  name="feat.CardCarousel"
+                  items="{{ lib.episodeContinueList }}"
+                  variant="continue"
+                  hint-size="100%,210px"
+                ></dc-import>
+              </section>
+            </sc-if>
+            <section>
               <h2
                 style="
                   font-family: var(--font-serif);
                   font-weight: 600;
                   font-size: 24px;
                   color: var(--color-text);
-                  margin: 0 0 var(--space-4);
+                  margin: 0 0 var(--space-3);
                   padding: 0 var(--space-6);
                 "
               >
-                Continue Watching
+                All series
               </h2>
-              <dc-import
-                name="feat.CardCarousel"
-                items="{{ lib.continueList }}"
-                variant="continue"
-                hint-size="100%,210px"
-              ></dc-import>
-            </section>
-          </sc-if>
-
-          <sc-if
-            value="{{ lib.showFavorites }}"
-            hint-placeholder-val="{{ false }}"
-          >
-            <section style="margin-bottom: var(--space-7)">
-              <h2
+              <div
                 style="
-                  display: flex;
-                  align-items: center;
-                  gap: 10px;
-                  font-family: var(--font-serif);
-                  font-weight: 600;
-                  font-size: 22px;
-                  color: var(--color-text);
-                  margin: 0 0 var(--space-4);
+                  font-family: var(--font-sans);
+                  font-size: 15px;
+                  color: var(--color-text-faint);
                   padding: 0 var(--space-6);
                 "
               >
-                <svg
-                  width="20"
-                  height="20"
-                  viewBox="0 0 24 24"
-                  fill="var(--color-accent)"
-                  style="margin-top: 2px"
-                >
-                  <path
-                    d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"
-                  /></svg
-                >Favorites
-              </h2>
+                {{ lib.seriesCountLabel }}
+              </div>
               <dc-import
-                name="feat.CardCarousel"
-                items="{{ lib.favoritesList }}"
-                variant="poster"
-                hint-size="100%,360px"
+                name="feat.LibraryGrid"
+                movies="{{ lib.seriesList }}"
+                hint-size="100%,600px"
               ></dc-import>
             </section>
-          </sc-if>
-
-          <sc-for
-            list="{{ lib.genreRows }}"
-            as="row"
-            hint-placeholder-count="4"
-          >
-            <dc-import
-              name="feat.GenreRow"
-              row="{{ row }}"
-              hint-size="100%,430px"
-            ></dc-import>
-          </sc-for>
-
-          <sc-if value="{{ lib.noResults }}" hint-placeholder-val="{{ false }}">
-            <div
-              style="
-                text-align: center;
-                padding: var(--space-8) var(--space-6);
-                color: var(--color-text-faint);
-                font-family: var(--font-sans);
-              "
+            <sc-if
+              value="{{ lib.seriesNoResults }}"
+              hint-placeholder-val="{{ false }}"
             >
               <div
                 style="
-                  font-family: var(--font-serif);
-                  font-size: 26px;
-                  color: var(--color-text-dim);
-                  margin-bottom: 8px;
+                  text-align: center;
+                  padding: var(--space-8) var(--space-6);
+                  color: var(--color-text-faint);
+                  font-family: var(--font-sans);
                 "
               >
-                Nothing here
+                <div
+                  style="
+                    font-family: var(--font-serif);
+                    font-size: 26px;
+                    color: var(--color-text-dim);
+                    margin-bottom: 8px;
+                  "
+                >
+                  Nothing here
+                </div>
+                <div style="font-size: 16px">
+                  No series match “{{ lib.search }}”.
+                </div>
               </div>
-              <div style="font-size: 16px">
-                No movies match “{{ lib.search }}”. Try a different search or
-                genre.
+            </sc-if>
+          </sc-if>
+
+          <sc-if
+            value="{{ lib.isMoviesTab }}"
+            hint-placeholder-val="{{ true }}"
+          >
+            <sc-if
+              value="{{ lib.showContinue }}"
+              hint-placeholder-val="{{ false }}"
+            >
+              <section style="margin-bottom: var(--space-7)">
+                <h2
+                  style="
+                    font-family: var(--font-serif);
+                    font-weight: 600;
+                    font-size: 24px;
+                    color: var(--color-text);
+                    margin: 0 0 var(--space-4);
+                    padding: 0 var(--space-6);
+                  "
+                >
+                  Continue Watching
+                </h2>
+                <dc-import
+                  name="feat.CardCarousel"
+                  items="{{ lib.continueList }}"
+                  variant="continue"
+                  hint-size="100%,210px"
+                ></dc-import>
+              </section>
+            </sc-if>
+
+            <sc-if
+              value="{{ lib.showFavorites }}"
+              hint-placeholder-val="{{ false }}"
+            >
+              <section style="margin-bottom: var(--space-7)">
+                <h2
+                  style="
+                    display: flex;
+                    align-items: center;
+                    gap: 10px;
+                    font-family: var(--font-serif);
+                    font-weight: 600;
+                    font-size: 22px;
+                    color: var(--color-text);
+                    margin: 0 0 var(--space-4);
+                    padding: 0 var(--space-6);
+                  "
+                >
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="var(--color-accent)"
+                    style="margin-top: 2px"
+                  >
+                    <path
+                      d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"
+                    /></svg
+                  >Favorites
+                </h2>
+                <dc-import
+                  name="feat.CardCarousel"
+                  items="{{ lib.favoritesList }}"
+                  variant="poster"
+                  hint-size="100%,360px"
+                ></dc-import>
+              </section>
+            </sc-if>
+
+            <sc-for
+              list="{{ lib.genreRows }}"
+              as="row"
+              hint-placeholder-count="4"
+            >
+              <dc-import
+                name="feat.GenreRow"
+                row="{{ row }}"
+                hint-size="100%,430px"
+              ></dc-import>
+            </sc-for>
+
+            <sc-if
+              value="{{ lib.noResults }}"
+              hint-placeholder-val="{{ false }}"
+            >
+              <div
+                style="
+                  text-align: center;
+                  padding: var(--space-8) var(--space-6);
+                  color: var(--color-text-faint);
+                  font-family: var(--font-sans);
+                "
+              >
+                <div
+                  style="
+                    font-family: var(--font-serif);
+                    font-size: 26px;
+                    color: var(--color-text-dim);
+                    margin-bottom: 8px;
+                  "
+                >
+                  Nothing here
+                </div>
+                <div style="font-size: 16px">
+                  No movies match “{{ lib.search }}”. Try a different search or
+                  genre.
+                </div>
               </div>
-            </div>
+            </sc-if>
           </sc-if>
         </div>
 

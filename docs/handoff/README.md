@@ -9,13 +9,13 @@ component-by-component contract and the repo folder mapping.
 
 Open `FamilyFlix.dc.html` in any modern browser (no build step, no server). It's a fully
 interactive prototype — browse, search, sort, filter, open a movie, play it, add/import/export,
-and walk through Settings. Everything works.
+browse series by season and episode, walk through Settings, and run a TMDB sync (key → run → match/conflict review). Everything works.
 
 ## What's here
 
 - **`FamilyFlix.dc.html`** — the entry point / router. Composes every screen and holds the
   app state (all the sample data and the per-screen model objects live in its one logic class).
-- **`prim.*` / `mol.*` / `feat.*` / `page.*`** — the 35 components, one file each. The prefix
+- **`prim.*` / `mol.*` / `feat.*` / `page.*`** — the 38 components, one file each. The prefix
   is the atomic layer and maps to a repo folder:
   | Prefix | Layer | Repo folder |
   | --- | --- | --- |
@@ -24,11 +24,12 @@ and walk through Settings. Everything works.
   | `feat.*` | organisms | `src/features/` |
   | `page.*` | pages | `src/pages/` |
 - **`tokens.css`** — the single source of design tokens (`--color-*`, `--font-*`, `--space-*`,
-  `--radius-*`). Translates to `src/tokens/` + the styled-components theme.
+  `--radius-*`, `--dur-*`, `--ease-out`). Translates to `src/tokens/` + the styled-components theme.
 - **`support.js`** — the prototype runtime (renders the `.dc.html` components in the browser).
   **Not** part of the translation — it's only here so the prototype runs. Do not port it.
 - **`COMPONENT-SPEC.md`** — prop tables, variants, states, and the target path for every
-  component. Read this alongside each file when translating.
+  component. Read this alongside each file when translating. §2a is the **interaction &
+  motion contract** — read it before building any interactive component.
 
 ## Translating to code
 
@@ -36,6 +37,7 @@ and walk through Settings. Everything works.
    tag) is the **prop interface**; the template markup is the JSX; the logic class is the
    component logic.
 2. Inline `var(--token)` values become styled-components reading the theme — don't hardcode.
+   This includes the motion tokens: never re-type a duration or easing curve inline.
 3. The container (`FamilyFlix.dc.html`) builds a typed **model object** per screen and passes
    it down. In code this becomes the page/route + its hooks/state; the child components keep
    the same prop shapes.

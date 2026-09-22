@@ -1,0 +1,191 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="tokens.css" />
+      </helmet>
+      <div
+        data-screen-label="Season episodes"
+        style="height: 100%; overflow-y: auto; background: var(--color-bg-2)"
+      >
+        <div
+          style="
+            max-width: 980px;
+            margin: 0 auto;
+            padding: var(--space-6) var(--space-6) var(--space-8);
+          "
+        >
+          <div
+            style="
+              display: flex;
+              align-items: center;
+              gap: 16px;
+              margin-bottom: 8px;
+            "
+          >
+            <dc-import
+              name="prim.IconButton"
+              icon="back"
+              variant="outline"
+              size="42"
+              title="Back to series"
+              on-click="{{ sn.onBack }}"
+              hint-size="42px,42px"
+            ></dc-import>
+            <div style="flex: 1; min-width: 0">
+              <div
+                style="
+                  font-family: var(--font-sans);
+                  font-size: 13px;
+                  font-weight: 600;
+                  letter-spacing: 0.4px;
+                  text-transform: uppercase;
+                  color: var(--color-text-faint);
+                "
+              >
+                {{ sn.seriesTitle }}
+              </div>
+              <h1
+                style="
+                  font-family: var(--font-serif);
+                  font-weight: 600;
+                  font-size: 30px;
+                  color: var(--color-text);
+                  margin: 2px 0 0;
+                "
+              >
+                {{ sn.seasonLabel }}
+              </h1>
+            </div>
+            <dc-import
+              name="prim.Button"
+              label="{{ sn.playLabel }}"
+              variant="primary"
+              size="md"
+              icon="play"
+              on-click="{{ sn.onPlayNext }}"
+              hint-size="200px,50px"
+            ></dc-import>
+          </div>
+
+          <div
+            style="
+              display: flex;
+              align-items: center;
+              gap: 12px;
+              margin: 0 0 22px 58px;
+              flex-wrap: wrap;
+            "
+          >
+            <span
+              style="
+                font-family: var(--font-sans);
+                font-size: 15px;
+                color: var(--color-text-faint);
+              "
+              >{{ sn.countLabel }}</span
+            >
+            <span style="color: var(--color-text-faint)">·</span>
+            <span
+              style="
+                font-family: var(--font-sans);
+                font-size: 15px;
+                color: var(--color-text-faint);
+              "
+              >{{ sn.watchedLabel }}</span
+            >
+            <span style="flex: 1"></span>
+            <button
+              onClick="{{ sn.onToggleAll }}"
+              style="
+                height: 38px;
+                padding: 0 16px;
+                background: transparent;
+                border: 1px solid var(--color-border);
+                border-radius: 9px;
+                color: var(--color-text-dim);
+                font-family: var(--font-sans);
+                font-size: 14px;
+                font-weight: 500;
+                cursor: pointer;
+              "
+              style-hover="border-color:var(--color-text-faint);color:var(--color-text)"
+            >
+              {{ sn.toggleAllLabel }}
+            </button>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 10px">
+            <sc-for list="{{ sn.episodes }}" as="ep" hint-placeholder-count="8">
+              <dc-import
+                name="mol.EpisodeRow"
+                episode="{{ ep.data }}"
+                on-open="{{ ep.open }}"
+                on-toggle-watched="{{ ep.toggleWatched }}"
+                hint-size="100%,118px"
+              ></dc-import>
+            </sc-for>
+          </div>
+
+          <sc-if
+            value="{{ sn.hasOtherSeasons }}"
+            hint-placeholder-val="{{ false }}"
+          >
+            <div style="margin-top: var(--space-7)">
+              <div
+                style="
+                  font-family: var(--font-sans);
+                  font-size: 12px;
+                  font-weight: 700;
+                  letter-spacing: 0.9px;
+                  text-transform: uppercase;
+                  color: var(--color-text-faint);
+                  margin: 0 0 12px 2px;
+                "
+              >
+                Other seasons
+              </div>
+              <div style="display: flex; gap: 10px; flex-wrap: wrap">
+                <sc-for
+                  list="{{ sn.otherSeasons }}"
+                  as="o"
+                  hint-placeholder-count="2"
+                >
+                  <button
+                    onClick="{{ o.open }}"
+                    style="
+                      height: 44px;
+                      padding: 0 18px;
+                      background: var(--color-surface);
+                      border: 1px solid var(--color-border-soft);
+                      border-radius: var(--radius-pill);
+                      color: var(--color-text-dim);
+                      font-family: var(--font-sans);
+                      font-size: 15px;
+                      font-weight: 500;
+                      cursor: pointer;
+                    "
+                    style-hover="border-color:var(--color-accent-line);color:var(--color-text)"
+                  >
+                    {{ o.label }}
+                  </button>
+                </sc-for>
+              </div>
+            </div>
+          </sc-if>
+        </div>
+      </div>
+    </x-dc>
+    <script
+      type="text/x-dc"
+      data-dc-script
+      data-props='{"$preview":{"width":1100,"height":860},"sn":{"editor":null,"tsType":"SeasonPageModel"}}'
+    ></script>
+  </body>
+</html>
