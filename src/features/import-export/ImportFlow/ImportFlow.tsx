@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
+import { useGoBack } from '@/hooks/useGoBack/useGoBack';
 import { ChevronLeftIcon, IconButton } from '@/primitives';
 import { ImportRefusedError } from '../api/api';
 import { ImportProgress } from '../ImportProgress/ImportProgress';
@@ -29,14 +30,24 @@ import { HeaderRow, Heading, Lede } from './ImportFlow.styles';
  * cancel — the maintainer pressed _Cancel import_ to fix something, not to
  * start over.
  *
- * Back lands on `/settings`, the one route into this screen; Finish lands on
- * `/`, where the films now are. In review, _Skip_ goes through the hook,
+ * Back is the app's one **Back rule** — a **History step**, with Settings as
+ * the **Landing** for an Import nothing opened, because the hub is the one
+ * route into this screen. Finish is not: it pushes `/`, the **Fresh home**
+ * where the films the run just added are on their shelves, at the top and
+ * unfiltered, which is the one thing a step back could never be. In review,
+ * _Skip_ goes through the hook,
  * which takes the row off the snapshot once the route has answered, and
  * _Resolve_ is the row's own link to the form.
  */
 export function ImportFlow() {
   const navigate = useNavigate();
   const { run, attaching, start, cancel, skip } = useImportRun();
+
+  // Leaving is a step, not a push at Settings: the hub's own Back then steps
+  // onto the screen the gear was pressed from, rather than onto the duplicate
+  // `/settings` entry a push left behind. A Back mid-run cancels nothing — the
+  // run is the server's, and the next visit re-attaches to it.
+  const goBack = useGoBack('/settings');
 
   const [sheet, setSheet] = useState('');
   const [root, setRoot] = useState('');
@@ -93,7 +104,7 @@ export function ImportFlow() {
           title="Back"
           size={42}
           variant="outline"
-          onClick={() => navigate('/settings')}
+          onClick={goBack}
         >
           <ChevronLeftIcon size={18} />
         </IconButton>
