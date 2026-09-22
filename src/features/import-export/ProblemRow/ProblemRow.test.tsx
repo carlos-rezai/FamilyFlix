@@ -49,6 +49,9 @@ const dotOf = (title: string): HTMLElement =>
   screen.getByText(title).parentElement?.previousElementSibling as HTMLElement;
 
 const resolveLink = () => screen.getByRole('link', { name: 'Resolve' });
+/** Resolve's query, read back the way the **Movie form** reads it. */
+const resolveQuery = () =>
+  new URLSearchParams(resolveLink().getAttribute('href')?.split('?')[1] ?? '');
 const skipButton = () => screen.getByRole('button', { name: 'Skip' });
 
 const DANGER = 'rgb(201, 122, 106)';
@@ -111,10 +114,12 @@ describe('ProblemRow — the two controls', () => {
     expect(resolveLink().getAttribute('href')).toBe('/add?problem=p7');
   });
 
-  it('encodes the id into the link', () => {
-    renderRow({ problem: problem({ id: 'p 1/x' }) });
+  it('encodes the id into the link, so it reads back whole', () => {
+    renderRow({ problem: problem({ id: 'p 1/x&movie=m9' }) });
 
-    expect(resolveLink().getAttribute('href')).toBe('/add?problem=p%201%2Fx');
+    const query = resolveQuery();
+    expect(query.get('problem')).toBe('p 1/x&movie=m9');
+    expect(query.has('movie')).toBe(false);
   });
 
   it('links Resolve for the soft kind to the Edit job, the movie and the problem both named', () => {
@@ -132,12 +137,16 @@ describe('ProblemRow — the two controls', () => {
 
   it('encodes the movie id into the soft kind’s link', () => {
     renderRow({
-      problem: problem({ id: 'p 1/x', kind: 'missing-meta', movieId: 'm 2/y' }),
+      problem: problem({
+        id: 'p 1/x',
+        kind: 'missing-meta',
+        movieId: 'm 2/y&',
+      }),
     });
 
-    expect(resolveLink().getAttribute('href')).toBe(
-      '/add?movie=m%202%2Fy&problem=p%201%2Fx'
-    );
+    const query = resolveQuery();
+    expect(query.get('movie')).toBe('m 2/y&');
+    expect(query.get('problem')).toBe('p 1/x');
   });
 
   it('raises onSkip when Skip is pressed, and not before', () => {

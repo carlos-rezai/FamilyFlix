@@ -65,6 +65,20 @@ describe('EditMenu', () => {
       '/add?movie=northwind-1994'
     );
   });
+
+  it('encodes the movie’s id into the query, so it reads back whole', () => {
+    // A raw `&` would end `movie` early and start a parameter of its own.
+    renderEditMenu('m 2/y&problem=p1');
+
+    openMenu();
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Edit details' }));
+
+    const destination = screen.getByTestId('destination').textContent ?? '';
+    const query = new URLSearchParams(destination.split('?')[1] ?? '');
+    expect(destination.startsWith('/add?')).toBe(true);
+    expect(query.get('movie')).toBe('m 2/y&problem=p1');
+    expect(query.has('problem')).toBe(false);
+  });
 });
 
 describe('EditMenu — the Delete dialog', () => {
