@@ -1,13 +1,17 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { cleanup, render, screen, fireEvent } from '@testing-library/react';
 import type { ReactElement } from 'react';
-import { renderToString } from 'react-dom/server';
-import { ServerStyleSheet, ThemeProvider } from 'styled-components';
+import { ThemeProvider } from 'styled-components';
 
 // Through the category barrel — the import path MovieForm, ExportModal and the
 // movie detail page's genre tags will all use.
 import { Chip, type ChipProps } from '@/primitives';
 import { theme } from '@/styles/theme';
+import {
+  normCss,
+  resolvedStyle,
+  type StyleState,
+} from '@/test-support/resolvedStyle/resolvedStyle';
 
 function renderChip(props: Partial<ChipProps> = {}) {
   return render(
@@ -79,124 +83,97 @@ describe('Chip — as a static tag', () => {
  * 21 — Motion & interaction states, Phase 3 (issue #183): the selectable Chip
  * on `controlStates`, as `prim.Chip.dc.html` draws it.
  *
- * jsdom computes no `:hover`, `:active` or `:focus-visible`, so each state is
- * read as the rule the Chip writes for it — off the CSS styled-components
- * produces for one rendered Chip, whitespace aside — the way Button's are.
+ * jsdom computes no `:hover`, `:active` or `:focus-visible`, so each Chip is
+ * rendered into the document and `resolvedStyle` runs the cascade for the
+ * named state — what wins there, the way Button's are. A press is always also
+ * a hover, so a press is resolved as both.
  */
 describe('Chip — hover, press and keyboard focus', () => {
-  interface Rule {
-    selector: string;
-    body: string;
-  }
+  const HOVER: StyleState = { hover: true };
+  const PRESS: StyleState = { hover: true, active: true };
 
-  const squash = (css: string) => css.replace(/\s+/g, '');
-  /** `0.32` and `.32` are the same number; compare them as one. */
-  const norm = (css: string) => squash(css).replace(/([(,:])0\./g, '$1.');
-
-  function rulesOf(tree: ReactElement): Rule[] {
-    const sheet = new ServerStyleSheet();
-    try {
-      renderToString(
-        sheet.collectStyles(<ThemeProvider theme={theme}>{tree}</ThemeProvider>)
-      );
-      const css = norm(
-        sheet
-          .getStyleTags()
-          .replace(/<\/?style[^>]*>/g, '')
-          .replace(/\/\*!sc\*\//g, '')
-      );
-      return [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)].map((m) => ({
-        selector: m[1],
-        body: m[2],
-      }));
-    } finally {
-      sheet.seal();
+  /** One Chip, rendered afresh, as the element its face is drawn on. */
+  function face(tree: ReactElement): Element {
+    cleanup();
+    render(<ThemeProvider theme={theme}>{tree}</ThemeProvider>);
+    const element = screen.getByText('Drama').closest('button, span');
+    if (element === null) {
+      throw new Error('the chip drew no face');
     }
-  }
-
-  /** Every declaration written under a selector naming this pseudo-class. */
-  function state(rules: Rule[], pseudo: string): string {
-    return rules
-      .filter((rule) => rule.selector.includes(pseudo))
-      .map((rule) => rule.body)
-      .join(';');
+    return element;
   }
 
   const c = theme.colors;
   const select = () => undefined;
 
   it('hovers an unselected chip to the accent line, the surface2 fill and a 1px lift', () => {
-    const hover = state(
-      rulesOf(<Chip label="Drama" onClick={select} />),
-      ':hover'
+    const hover = resolvedStyle(
+      face(<Chip label="Drama" onClick={select} />),
+      HOVER
     );
 
-    expect(hover).toContain(norm(`border-color:${c.accentLine}`));
-    expect(hover).toContain(norm(`background:${c.surface2}`));
-    expect(hover).toContain('transform:translateY(-1px)');
+    expect(hover['border-color']).toBe(normCss(c.accentLine));
+    expect(hover.background).toBe(normCss(c.surface2));
+    expect(hover.transform).toBe('translateY(-1px)');
   });
 
   it('presses back down and in, at translateY(0) scale(.97), in 60ms', () => {
-    const press = state(
-      rulesOf(<Chip label="Drama" onClick={select} />),
-      ':active'
+    const press = resolvedStyle(
+      face(<Chip label="Drama" onClick={select} />),
+      PRESS
     );
 
-    expect(press).toContain('transform:translateY(0)scale(.97)');
-    expect(press).toContain('transition-duration:60ms');
+    expect(press.transform).toBe(normCss('translateY(0) scale(.97)'));
+    expect(press['transition-duration']).toBe('60ms');
   });
 
   it('eases its states in at durFast on easeOut', () => {
-    const resting = rulesOf(<Chip label="Drama" onClick={select} />)
-      .filter((rule) => !rule.selector.includes(':'))
-      .map((rule) => rule.body)
-      .join(';');
+    const transition =
+      resolvedStyle(face(<Chip label="Drama" onClick={select} />)).transition ??
+      '';
 
-    const eased = norm(`${theme.motion.durFast} ${theme.motion.easeOut}`);
     for (const property of [
       'background',
       'border-color',
       'color',
       'transform',
     ]) {
-      expect(resting).toContain(`${property}${eased}`);
+      expect(transition).toContain(
+        normCss(`${property} ${theme.motion.durFast} ${theme.motion.easeOut}`)
+      );
     }
   });
 
   it('draws the accent Focus ring under Tab, and none for a click', () => {
-    const rules = rulesOf(<Chip label="Drama" onClick={select} />);
+    const chip = face(<Chip label="Drama" onClick={select} />);
 
-    expect(state(rules, ':focus-visible')).toContain(
-      norm(`box-shadow:0 0 0 3px ${c.focusRing}`)
+    expect(resolvedStyle(chip, { focusVisible: true })['box-shadow']).toBe(
+      normCss(`0 0 0 3px ${c.focusRing}`)
     );
-    expect(
-      rules.filter((rule) => /:focus(?!-visible)/.test(rule.selector))
-    ).toEqual([]);
+    expect(resolvedStyle(chip, { focus: true })).toEqual(resolvedStyle(chip));
   });
 
   it('keeps a selected chip’s accent-soft fill under the pointer, and still lifts it', () => {
-    const rules = rulesOf(<Chip label="Drama" selected onClick={select} />);
-    const hover = state(rules, ':hover');
+    const hover = resolvedStyle(
+      face(<Chip label="Drama" selected onClick={select} />),
+      HOVER
+    );
 
-    expect(hover).not.toContain(norm(`background:${c.surface2}`));
-    expect(hover).toContain('transform:translateY(-1px)');
-    const fills = [...hover.matchAll(/background:([^;]*)/g)].map((m) => m[1]);
-    for (const fill of fills) {
-      expect(fill).toBe(norm(c.accentSoft));
-    }
+    expect(hover.background).toBe(normCss(c.accentSoft));
+    expect(hover.transform).toBe('translateY(-1px)');
   });
 
   it.each([false, true])(
     'gives a Tag (selected: %s) no hover, no press and no ring',
     (selected) => {
-      const rules = rulesOf(<Chip label="Drama" selected={selected} />);
+      const tag = face(<Chip label="Drama" selected={selected} />);
+      const resting = resolvedStyle(tag);
 
-      expect(
-        rules.filter((rule) => /:(hover|active|focus)/.test(rule.selector))
-      ).toEqual([]);
-      expect(rules.map((rule) => rule.body).join(';')).not.toContain(
-        'transform'
-      );
+      expect(tag.tagName).not.toBe('BUTTON');
+      expect(resolvedStyle(tag, HOVER)).toEqual(resting);
+      expect(resolvedStyle(tag, PRESS)).toEqual(resting);
+      expect(resolvedStyle(tag, { focusVisible: true })).toEqual(resting);
+      expect(resting.transform).toBeUndefined();
     }
   );
 });
