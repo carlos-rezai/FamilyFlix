@@ -410,18 +410,18 @@ How a control or a card answers the pointer and the keyboard — its own
 initiative (`motion`, design log 21), step 4 of the build order, the
 prototype's COMPONENT-SPEC §2a laid over the surfaces already built.
 
-| Term                           | Definition                                                                                                                                                                                                                                                                                                                                                                 | Aliases to avoid                                 |
-| ------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ |
-| **Interaction contract** (new) | The one three-state model — **Hover**, **Press**, **Keyboard focus** — every interactive surface follows, in one of two disjoint vocabularies: **Controls** signal with colour, **Cards** signal with elevation. COMPONENT-SPEC §2a; in code the fragments of `styles/interactionStates/`. A new state is added to the contract first, never to one component.             | motion spec, hover rules, interaction guidelines |
-| **Control** (new)              | A surface in the colour vocabulary — `Button`, `Chip`'s selectable shape, `IconButton` and every `styled(IconButton)`, the **Filter dropdown**'s trigger. Its **Hover** changes fill (and border), its **Press** darkens and shrinks, its **Keyboard focus** is a **Focus ring**. Composes `controlStates(press)`.                                                         | button (for the class), clickable, widget        |
-| **Card** (new)                 | A surface in the elevation vocabulary — the **Poster card**, the **Continue card**, and in Series the season card and episode row. Its **Hover** lifts 4px with a deeper shadow and the accent line, its **Press** settles to 1px, its **Keyboard focus** is a 2px outline 4px out. Never recolours its fill. Composes `cardLift` on the tile and `cardFocus` on the root. | tile (for the class), item                       |
-| **Hover** (new)                | The pointer's state over a surface, entered at `durFast` on a **Control** and `durBase` for a **Card**'s transform. Never the only carrier of information: whatever it reveals has a non-hover way in.                                                                                                                                                                     | mouse-over, highlight                            |
-| **Press** (new)                | The `:active` state, always faster than **Hover** — `60ms` on a **Control**, `70ms` on a **Card**, each written once in its fragment; never equalised. A **Control**'s press transform is its own (`scale(.98)`, `.97`, `.94`, `.92`); an extension that positions with `transform` composes it in.                                                                        | click state, active state, tap                   |
-| **Keyboard focus** (new)       | `:focus-visible` only — what a keyboard user sees and a mouse click never draws: a **Focus ring** on a **Control**, a 2px outline at 4px offset on a **Card**.                                                                                                                                                                                                             | focus, outline, selection                        |
-| **Focus ring** (new)           | The 3px `box-shadow` in `focusRing` a **Control** wears under **Keyboard focus** — the accent's hover shade at 55% alpha, one of the **Accent scale**.                                                                                                                                                                                                                     | focus outline, glow, halo                        |
-| **Accent scale** (new)         | The accent's five derivatives — `accentHover` (+18% toward white), `accentPress` (−12% toward black), `accentSoft` (14% alpha), `accentLine` (32% alpha), `focusRing` (hover at 55%) — computed by `accentScale(accent)` inside the theme factory `createTheme`; never spelled as literals, never aliased to the accent.                                                   | accent variants, accent palette, tints           |
-| **Motion tokens** (new)        | `tokens/motion.ts` — `durFast` 120ms, `durBase` 180ms, `durSlow` 280ms and `easeOut` `cubic-bezier(.2,.7,.3,1)`, read as `theme.motion`; the only file that spells them. The **Press** durations are not tokens.                                                                                                                                                           | timings, animation constants, easings            |
-| **Reduced motion** (new)       | The one global `prefers-reduced-motion: reduce` block in `GlobalStyle` that collapses every transition and animation to ~0 — ported once, never per component.                                                                                                                                                                                                             | motion off, a11y mode                            |
+| Term                           | Definition                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | Aliases to avoid                                 |
+| ------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ |
+| **Interaction contract** (new) | The one three-state model — **Hover**, **Press**, **Keyboard focus** — every interactive surface follows, in one of two disjoint vocabularies: **Controls** signal with colour, **Cards** signal with elevation. COMPONENT-SPEC §2a; in code the fragments of `styles/interactionStates/`. A new state is added to the contract first, never to one component.                                                                                                                   | motion spec, hover rules, interaction guidelines |
+| **Control** (new)              | A surface in the colour vocabulary — `Button`, `Chip`'s selectable shape, `IconButton` and every `styled(IconButton)`, the **Filter dropdown**'s trigger. Its **Hover** changes fill (and border) and never adds a shadow, its **Press** shrinks (a `Button`'s darkens as well), its **Keyboard focus** is a **Focus ring**. Composes `controlStates(press)`.                                                                                                                    | button (for the class), clickable, widget        |
+| **Card** (new)                 | A surface in the elevation vocabulary — the **Poster card**, the **Continue card**, and in Series the season card and episode row. Its **Hover** lifts 4px with a deeper shadow and the accent line, its **Press** settles to 1px, its **Keyboard focus** is a 2px outline 4px out. Never recolours its fill. Composes `cardLift` on the tile and `cardFocus` on the root.                                                                                                       | tile (for the class), item                       |
+| **Hover** (new)                | The pointer's state over a surface, entered at `durFast` on a **Control** and `durBase` for a **Card**'s transform. Never the only carrier of information: whatever it reveals has a non-hover way in.                                                                                                                                                                                                                                                                           | mouse-over, highlight                            |
+| **Press** (new)                | The `:active` state, always faster than **Hover** — `60ms` on a **Control**, `70ms` on a **Card**, each written once in its fragment; never equalised. A **Control**'s press transform is its own (`scale(.98)`, `.97`, `.94`, `.92`), written at doubled specificity (`&&`) so no **Hover** out-ranks it — a press is always also a hover. An `IconButton` extension inherits it; one whose press differs, or that positions with `transform`, writes its own at the same rank. | click state, active state, tap                   |
+| **Keyboard focus** (new)       | `:focus-visible` only — what a keyboard user sees and a mouse click never draws: a **Focus ring** on a **Control**, a 2px outline at 4px offset on a **Card**.                                                                                                                                                                                                                                                                                                                   | focus, outline, selection                        |
+| **Focus ring** (new)           | The 3px `box-shadow` in `focusRing` a **Control** wears under **Keyboard focus** — the accent's hover shade at 55% alpha, one of the **Accent scale**.                                                                                                                                                                                                                                                                                                                           | focus outline, glow, halo                        |
+| **Accent scale** (new)         | The accent's five derivatives — `accentHover` (+18% toward white), `accentPress` (−12% toward black), `accentSoft` (14% alpha), `accentLine` (32% alpha), `focusRing` (hover at 55%) — computed by `accentScale(accent)` inside the theme factory `createTheme`; never spelled as literals, never aliased to the accent.                                                                                                                                                         | accent variants, accent palette, tints           |
+| **Motion tokens** (new)        | `tokens/motion.ts` — `durFast` 120ms, `durBase` 180ms, `durSlow` 280ms and `easeOut` `cubic-bezier(.2,.7,.3,1)`, read as `theme.motion`; the only file that spells them. The **Press** durations are not tokens.                                                                                                                                                                                                                                                                 | timings, animation constants, easings            |
+| **Reduced motion** (new)       | The one global `prefers-reduced-motion: reduce` block in `GlobalStyle` that collapses every transition and animation to ~0 — ported once, never per component.                                                                                                                                                                                                                                                                                                                   | motion off, a11y mode                            |
 
 ## Relationships
 
@@ -523,8 +523,8 @@ prototype's COMPONENT-SPEC §2a laid over the surfaces already built.
 - Every screen leaves by the **Back rule**, and the **Back rule** is one hook: `useGoBack(fallback)`. A **Leaving** is a **History step** unless it is a **Fresh home**; a **Landing** is taken only when there is no history to step through.
 - The **Player** lands on its **Movie detail page**; Bulk import lands on the **Settings hub**; the **Movie form** lands where its **Form context** came from — the **Review step**, the movie, or Settings. Three callers pass a **Landing**; the rest take the library.
 - A **History step** is what makes `useRestoredScroll` hold across a **Leaving**: the entry stepped onto is the entry remembered. A push of the same URL would be a new entry with nothing remembered.
-- Every interactive surface is a **Control** or a **Card**, never both: a **Control** never lifts off the page on its own account, a **Card** never recolours its fill. The **Chip**'s 1px rise and the `IconButton`'s 1.06 swell are the prototype files' own, and make neither a **Card**.
-- An `IconButton` extension inherits its primitive's **Press**, **Focus ring** and transition, and draws its own **Hover**; if it positions with `transform`, it restates that transform in its **Hover** and composes it into its **Press**.
+- Every interactive surface is a **Control** or a **Card**, never both: a **Control**'s **Hover** never adds a shadow, a **Card** never recolours its fill. The **Chip**'s 1px rise, the `IconButton`'s 1.06 swell and the **FAB**'s lift are the prototype files' own, and make none of them a **Card**.
+- An `IconButton` extension inherits its primitive's **Press**, **Focus ring** and transition, and draws its own **Hover** — writing none of the three, even when its **Hover** writes `transform`, because the **Press** out-ranks any **Hover**. Only one whose press differs (the poster heart's `scale(.92)`) or that positions with `transform` (the carousel arrow, which also restates it in its **Hover**) writes its own **Press**, at the primitive's doubled rank.
 - The **Accent scale** is derived from the one accent in `colors.ts`: `theme.colors` carries all six names, `colors.ts` spells one.
 
 ## Example dialogue
@@ -1536,12 +1536,17 @@ Hard` gets found and `Die Hard\extras` doesn't become a second film."
   has both. And `fallback` remains the hook's parameter against **Landing** as
   the concept's name, which the entry above already rules and this round does
   not reopen.
-- **"Buttons never lift" against two files that do (new):** COMPONENT-SPEC
-  §2a's table says a **Control** gets _no lift_, yet `prim.Chip` hovers up
-  1px and `prim.IconButton` scales to 1.06. Log 21 Q14 ports the files; the
-  table is corrected at the `motion` refactor. Say **Control** for the colour
-  vocabulary even where its **Hover** moves a pixel — what makes a **Card** is
-  elevation plus the accent line, not motion alone.
+- **"Buttons never lift" against two files that do:** COMPONENT-SPEC §2a's
+  table said a **Control** gets _no lift_, yet `prim.Chip` hovers up 1px and
+  `prim.IconButton` scales to 1.06. Log 21 Q14 ported the files, and the
+  `motion` refactor corrected the table: its first row is **Controls** now,
+  its hover column names the two files' own motion, and the sentence under it
+  reads "a Control's hover never adds a shadow; a Card never recolours its
+  fill". The refactor plan's wording, "never takes a shadow or the accent
+  edge", was not used — `Chip` and the **Filter dropdown** hover to the
+  accent line. Say **Control** for the colour vocabulary even where its
+  **Hover** moves a pixel — what makes a **Card** is elevation, not motion
+  alone.
 - **"Button" is a component and a class (new):** `Button` is the primitive;
   §2a's _buttons_ are the whole colour vocabulary, `Chip` and the **Filter
   dropdown** among them. In prose the class is **Control**, and _Button_ means
@@ -1551,3 +1556,25 @@ Hard` gets found and `Die Hard\extras` doesn't become a second film."
   `#e0926e` (press `#c46a41` against `#bf6b45`, the ring likewise). Log 21
   Q8 made the derivation win and amended `tokens.css`; the **Accent scale** is
   the formula, and a literal that disagrees with it is stale.
+- **`resolvedStyle` against "nothing they cannot observe" (new):** log 21
+  Q16 said the surfaces' suites would gain nothing they could not observe,
+  and ruled out `jest-styled-components`. The build asserted every surface's
+  hover, press and ring anyway, and at #184 wrote
+  `test-support/resolvedStyle/` — the cascade by hand for a named state. Kept,
+  and at the refactor every surface suite reads it: the rejection was aimed at
+  a dependency that checks the CSS says what the CSS file says, and the double
+  checks which rule _wins_ — whether a **Hover** out-ranks a **Press**, and
+  whether an extension's transform survives the primitive's. Nothing else
+  could catch the trap the refactor's doubled **Press** closes. `GlobalStyle`'s
+  suite is the one exception: its subject is an at-rule on a global, which the
+  double deliberately does not read.
+- **`ffSpin`, dropped by the prototype and kept by the code (new):** the
+  revision behind log 21 removed the keyframe from `tokens.css`;
+  `PlayerNotice`'s buffering spinner still turns on it (Q10). A known gap
+  between the prototype and the code, for the player's next revision to
+  settle — not a keyframe to delete on sight.
+- **The FAB's lift eases where log 19 said it snaps (new):** log 19 recorded
+  the lift as snapping, "as the prototype's does". Log 21 Q15 put the **FAB**
+  on the **Interaction contract** with every other `IconButton`, so the lift
+  eases at `durFast` on the primitive's transition. Log 19 is a snapshot of
+  the moment before the contract existed.
