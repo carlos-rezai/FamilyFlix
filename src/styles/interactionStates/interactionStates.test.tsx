@@ -6,7 +6,7 @@ import styled, { ServerStyleSheet, ThemeProvider } from 'styled-components';
 import { shippingSourcesMatching } from '@/test-support/shippingSources/shippingSources';
 import { theme } from '@/styles/theme';
 
-import { controlStates } from './interactionStates';
+import { cardFocus, cardLift, controlStates } from './interactionStates';
 
 /**
  * 21 — Motion & interaction states, Phase 2 (issue #182).
@@ -22,6 +22,8 @@ import { controlStates } from './interactionStates';
 const MOTION_LITERAL = /(?<![\d.])(120|180|280)ms|cubic-bezier\(/;
 /** The Control's press, spelled anywhere but the fragment. */
 const CONTROL_PRESS = /(?<![\d.])60ms/;
+/** The Card's press, spelled anywhere but the fragment (issue #185). */
+const CARD_PRESS = /(?<![\d.])70ms/;
 
 function squash(css: string): string {
   return css.replace(/\s+/g, '');
@@ -110,6 +112,14 @@ describe('the structural guard — its patterns', () => {
   });
 });
 
+describe('the structural guard — its 70ms clause (issue #185)', () => {
+  it('catches the 70ms press, and not 170ms or 0.7s', () => {
+    expect(CARD_PRESS.test('transition-duration: 70ms')).toBe(true);
+    expect(CARD_PRESS.test('transition-duration: 170ms')).toBe(false);
+    expect(CARD_PRESS.test('transition-duration: 0.7s')).toBe(false);
+  });
+});
+
 describe('the structural guard — over the shipping tree', () => {
   it('lets no shipping file but the motion tokens spell a duration or the curve', () => {
     expect(shippingSourcesMatching('src', MOTION_LITERAL)).toEqual([
@@ -119,6 +129,12 @@ describe('the structural guard — over the shipping tree', () => {
 
   it('lets no shipping file but the fragment spell the 60ms press', () => {
     expect(shippingSourcesMatching('src', CONTROL_PRESS)).toEqual([
+      'src/styles/interactionStates/interactionStates.ts',
+    ]);
+  });
+
+  it('lets no shipping file but the fragment spell the 70ms press', () => {
+    expect(shippingSourcesMatching('src', CARD_PRESS)).toEqual([
       'src/styles/interactionStates/interactionStates.ts',
     ]);
   });
@@ -180,5 +196,92 @@ describe('controlStates — the Control vocabulary', () => {
     );
 
     expect(plainFocus).toEqual([]);
+  });
+});
+
+/** Squashed, and a leading `0.` written `.`, so `0.35` and `.35` are one number. */
+function tight(css: string): string {
+  return squash(css).replace(/(^|[(,:])0\./g, '$1.');
+}
+
+/**
+ * 21 — Motion & interaction states, Phase 5 (issue #185).
+ *
+ * The **Card** vocabulary: a Card signals with elevation, never with colour.
+ * Two fragments, because the prototype puts the lift on the tile and the
+ * focus on the root — hovering the title under a poster does not lift it.
+ */
+const TileProbe = styled.div`
+  ${cardLift}
+`;
+
+const RootProbe = styled.div`
+  ${cardFocus}
+`;
+
+function tileRules(): Rule[] {
+  return renderedRules(<TileProbe />);
+}
+
+function rootRules(): Rule[] {
+  return renderedRules(<RootProbe tabIndex={0} />);
+}
+
+describe('cardLift — the Card vocabulary, on the tile', () => {
+  it('rests on the 0 6px 20px shadow', () => {
+    expect(tight(restingBody(tileRules()))).toContain(
+      tight('box-shadow: 0 6px 20px rgba(0,0,0,.35)')
+    );
+  });
+
+  it('eases transform, shadow and border at durBase on easeOut', () => {
+    const transition =
+      /transition:([^;]*)/.exec(restingBody(tileRules()))?.[1] ?? '';
+
+    for (const property of ['transform', 'box-shadow', 'border-color']) {
+      expect(transition).toContain(
+        squash(`${property} ${theme.motion.durBase} ${theme.motion.easeOut}`)
+      );
+    }
+  });
+
+  it('lifts 4px on hover, with the deeper shadow and the accentLine border', () => {
+    const hover = tight(declarations(tileRules(), ':hover'));
+
+    expect(hover).toContain('transform:translateY(-4px)');
+    expect(hover).toContain(tight('box-shadow: 0 14px 34px rgba(0,0,0,.5)'));
+    expect(hover).toContain(tight(`border-color: ${theme.colors.accentLine}`));
+  });
+
+  it('settles to translateY(-1px) on press, in 70ms', () => {
+    const press = tileRules()
+      .filter((rule) => rule.selector.includes(':active'))
+      .map((rule) => rule.body)
+      .join(';');
+
+    expect(press).toContain('transform:translateY(-1px)');
+    expect(press).toContain('transition-duration:70ms');
+  });
+});
+
+describe('cardFocus — the Card vocabulary, on the focusable root', () => {
+  it('draws a 2px focusRing outline 4px out under keyboard focus', () => {
+    const focus = declarations(rootRules(), ':focus-visible');
+
+    expect(focus).toContain(
+      squash(`outline: 2px solid ${theme.colors.focusRing}`)
+    );
+    expect(focus).toContain('outline-offset:4px');
+  });
+
+  it('leaves the radius to the caller', () => {
+    const rules = rootRules();
+
+    expect(declarations(rules, ':focus-visible')).toContain(
+      'outline-offset:4px'
+    );
+    expect(rules.map((rule) => rule.body).join(';')).not.toContain(
+      'border-radius'
+    );
   });
 });

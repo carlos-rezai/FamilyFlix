@@ -5,6 +5,10 @@ import { ThemeProvider } from 'styled-components';
 import { PosterCard } from './PosterCard';
 import { theme } from '@/styles/theme';
 import type { PosterCardMovie } from '@/types';
+import {
+  normCss,
+  resolvedStyle,
+} from '@/test-support/resolvedStyle/resolvedStyle';
 
 const movie: PosterCardMovie = {
   id: 'm1',
@@ -231,5 +235,134 @@ describe('PosterCard — an unrated movie is not a zero-rated one', () => {
 
     expect(starsIn(unrated).length).toBeGreaterThan(0);
     expect(starsIn(unrated)).toHaveLength(starsIn(rated).length);
+  });
+});
+
+/**
+ * 21 — Motion & interaction states, Phase 5 (issue #185): the poster on the
+ * Card vocabulary — `cardLift` on the tile, `cardFocus` on the root — and the
+ * heart on the Control's, as `mol.PosterCard.dc.html` draws them.
+ *
+ * jsdom computes no `:hover`, `:active` or `:focus-visible`, so each state is
+ * what the injected stylesheet resolves to for the element in that state — the
+ * cascade run by `resolvedStyle` — never a computed style.
+ */
+describe('PosterCard — hover, press and keyboard focus', () => {
+  const c = theme.colors;
+
+  /** The focusable root: the one element named for the movie. */
+  function card(): HTMLElement {
+    return screen.getByRole('button', { name: movie.title });
+  }
+
+  /** The 2:3 poster tile — the root's first child, the art's frame. */
+  function tile(): Element {
+    const first = card().firstElementChild;
+    if (first === null) throw new Error('the card has no tile');
+    return first;
+  }
+
+  function heart(): HTMLElement {
+    return screen.getByRole('button', { name: 'Favorite' });
+  }
+
+  /**
+   * Every rule that styles an element because an *ancestor* is hovered —
+   * `:hover` followed by a combinator. `resolvedStyle` reads no combinator,
+   * so a lift written that way is found here instead.
+   */
+  function descendantHoverRules(): string[] {
+    const css = Array.from(document.querySelectorAll('style'))
+      .map((tag) => tag.textContent ?? '')
+      .join('\n');
+    return [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)]
+      .filter(([, selector]) => /:hover[^,{]*?[\s>+~]\S/.test(selector.trim()))
+      .map(([rule]) => rule);
+  }
+
+  it('rests the tile on the 0 6px 20px shadow, easing at durBase on easeOut', () => {
+    renderCard();
+
+    const resting = resolvedStyle(tile());
+    expect(resting['box-shadow']).toBe(normCss('0 6px 20px rgba(0,0,0,.35)'));
+    expect(resting.transition ?? '').toContain(
+      normCss(`transform ${theme.motion.durBase} ${theme.motion.easeOut}`)
+    );
+    expect(resting.transition ?? '').not.toContain('.18s');
+  });
+
+  it('lifts the poster 4px on hover, with the deeper shadow and an accent edge', () => {
+    renderCard();
+
+    const hover = resolvedStyle(tile(), { hover: true });
+    expect(hover.transform).toBe(normCss('translateY(-4px)'));
+    expect(hover['box-shadow']).toBe(normCss('0 14px 34px rgba(0,0,0,.5)'));
+    expect(hover['border-color']).toBe(normCss(c.accentLine));
+  });
+
+  it('settles the poster to translateY(-1px) on press, in 70ms', () => {
+    renderCard();
+
+    const press = resolvedStyle(tile(), { hover: true, active: true });
+    expect(press.transform).toBe(normCss('translateY(-1px)'));
+    expect(press['transition-duration']).toBe('70ms');
+  });
+
+  it('does not lift the poster when only its title is hovered', () => {
+    renderCard();
+
+    // The poster lifts under its own hover…
+    expect(resolvedStyle(tile(), { hover: true })['border-color']).toBe(
+      normCss(c.accentLine)
+    );
+    // …but the pointer on the title below hovers the root, not the tile: the
+    // root and the title draw no lift, and no rule lifts the tile off an
+    // ancestor's hover.
+    const titles = screen.getAllByText(movie.title);
+    const titleBelow = titles[titles.length - 1];
+    expect(resolvedStyle(card(), { hover: true }).transform).toBeUndefined();
+    expect(
+      resolvedStyle(titleBelow, { hover: true }).transform
+    ).toBeUndefined();
+    expect(descendantHoverRules()).toEqual([]);
+  });
+
+  it('draws the card outline clear of the artwork under Tab, on the poster’s radius', () => {
+    renderCard();
+
+    const focus = resolvedStyle(card(), { focusVisible: true });
+    expect(focus.outline).toBe(normCss(`2px solid ${c.focusRing}`));
+    expect(focus['outline-offset']).toBe('4px');
+    expect(focus['border-radius']).toBe(theme.radius.md);
+  });
+
+  it('draws the control ring, not the card outline, when Tab lands on the heart', () => {
+    renderCard();
+
+    // The card's own outline is there to be told apart from…
+    expect(resolvedStyle(card(), { focusVisible: true }).outline).toBe(
+      normCss(`2px solid ${c.focusRing}`)
+    );
+    // …and the heart wears the Control's ring instead.
+    const focus = resolvedStyle(heart(), { focusVisible: true });
+    expect(focus['box-shadow']).toBe(normCss(`0 0 0 3px ${c.focusRing}`));
+    expect(focus.outline).toBe('none');
+  });
+
+  it('grows the heart and darkens its backing on hover', () => {
+    renderCard();
+
+    const hover = resolvedStyle(heart(), { hover: true });
+    expect(hover.background).toBe(normCss('rgba(18,14,10,.82)'));
+    expect(hover['border-color']).toBe(normCss('rgba(255,255,255,.45)'));
+    expect(hover.transform).toBe(normCss('scale(1.08)'));
+  });
+
+  it('shrinks the heart to scale(.92) on press, in 60ms', () => {
+    renderCard();
+
+    const press = resolvedStyle(heart(), { hover: true, active: true });
+    expect(press.transform).toBe(normCss('scale(.92)'));
+    expect(press['transition-duration']).toBe('60ms');
   });
 });

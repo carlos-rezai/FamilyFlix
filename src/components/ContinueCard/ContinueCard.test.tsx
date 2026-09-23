@@ -5,6 +5,10 @@ import { ThemeProvider } from 'styled-components';
 import { ContinueCard } from './ContinueCard';
 import { theme } from '@/styles/theme';
 import type { ContinueCardMovie } from '@/types';
+import {
+  normCss,
+  resolvedStyle,
+} from '@/test-support/resolvedStyle/resolvedStyle';
 
 const movie: ContinueCardMovie = {
   id: 'm1',
@@ -111,5 +115,73 @@ describe('ContinueCard — opening it without a mouse', () => {
 
     fireEvent.click(tile);
     expect(onOpen).toHaveBeenCalledTimes(1);
+  });
+});
+
+/**
+ * 21 — Motion & interaction states, Phase 5 (issue #185): the Continue card on
+ * the same two Card fragments as the poster — `cardLift` on the tile,
+ * `cardFocus` on the root — so it lifts, settles and outlines exactly as a
+ * poster does, and no longer fades.
+ *
+ * jsdom computes no `:hover`, `:active` or `:focus-visible`, so each state is
+ * what the injected stylesheet resolves to for the element in that state — the
+ * cascade run by `resolvedStyle` — never a computed style.
+ */
+describe('ContinueCard — hover, press and keyboard focus', () => {
+  const c = theme.colors;
+
+  function card(): HTMLElement {
+    return screen.getByRole('button', { name: movie.title });
+  }
+
+  /** The 16:10 tile — the button's one child. */
+  function tile(): Element {
+    const first = card().firstElementChild;
+    if (first === null) throw new Error('the card has no tile');
+    return first;
+  }
+
+  it('gives the tile the resting shadow it never had, easing at durBase on easeOut', () => {
+    renderCard();
+
+    const resting = resolvedStyle(tile());
+    expect(resting['box-shadow']).toBe(normCss('0 6px 20px rgba(0,0,0,.35)'));
+    expect(resting.transition ?? '').toContain(
+      normCss(`transform ${theme.motion.durBase} ${theme.motion.easeOut}`)
+    );
+  });
+
+  it('lifts the tile 4px on hover, with the deeper shadow and an accent edge', () => {
+    renderCard();
+
+    const hover = resolvedStyle(tile(), { hover: true });
+    expect(hover.transform).toBe(normCss('translateY(-4px)'));
+    expect(hover['box-shadow']).toBe(normCss('0 14px 34px rgba(0,0,0,.5)'));
+    expect(hover['border-color']).toBe(normCss(c.accentLine));
+  });
+
+  it('settles the tile to translateY(-1px) on press, in 70ms', () => {
+    renderCard();
+
+    const press = resolvedStyle(tile(), { hover: true, active: true });
+    expect(press.transform).toBe(normCss('translateY(-1px)'));
+    expect(press['transition-duration']).toBe('70ms');
+  });
+
+  it('no longer fades on hover', () => {
+    renderCard();
+
+    expect(resolvedStyle(card(), { hover: true }).opacity).toBeUndefined();
+    expect(resolvedStyle(tile(), { hover: true }).opacity).toBeUndefined();
+  });
+
+  it('draws the card outline clear of the tile under Tab, on the tile’s radius', () => {
+    renderCard();
+
+    const focus = resolvedStyle(card(), { focusVisible: true });
+    expect(focus.outline).toBe(normCss(`2px solid ${c.focusRing}`));
+    expect(focus['outline-offset']).toBe('4px');
+    expect(focus['border-radius']).toBe(theme.radius.md);
   });
 });
