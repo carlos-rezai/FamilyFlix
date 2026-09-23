@@ -46,9 +46,10 @@ export const InnerBorder = styled.div`
  *
  * The hover repeats the ink deliberately: the heart darkens its backing,
  * brightens its hairline and grows on hover while keeping its colour, so the
- * primitive's ghost face has to be answered on every count. Because that hover
- * writes `transform`, the heart writes its own press as well; the 60ms and the
- * keyboard ring stay the Control's.
+ * primitive's ghost face has to be answered on every count. Its press is its
+ * own, `scale(.92)` against the primitive's `.94`, so it is written at the
+ * primitive's doubled rank (`&&`) — anything less loses to the Control's
+ * press. The 60ms and the keyboard ring stay the Control's.
  */
 export const FavoriteButton = styled(IconButton)<{ $favorite: boolean }>`
   position: absolute;
@@ -69,7 +70,7 @@ export const FavoriteButton = styled(IconButton)<{ $favorite: boolean }>`
     transform: scale(1.08);
   }
 
-  &:active:enabled {
+  &&:active:enabled {
     transform: scale(0.92);
   }
 `;

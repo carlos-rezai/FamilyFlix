@@ -9,6 +9,11 @@ import { css } from 'styled-components';
  * - The transition eases in at `durFast` on `easeOut`.
  * - The press answers in 60ms, always faster than the hover: that asymmetry is
  *   what makes a control feel physical. The one place 60ms is spelled.
+ * - The press is written at doubled specificity (`&&`). A press is always also
+ *   a hover, so it has to win against any hover that writes `transform` —
+ *   the caller's own, and a `styled()` extension's, which would otherwise rank
+ *   equal and come later. A caller whose press differs writes it at the same
+ *   doubled rank.
  * - The ring is a 3px shadow rather than an outline, so it follows the
  *   control's radius, and it is drawn under `:focus-visible` only — a click
  *   draws none.
@@ -30,7 +35,7 @@ export function controlStates(pressTransform: string) {
       box-shadow ${({ theme }) => theme.motion.durFast}
         ${({ theme }) => theme.motion.easeOut};
 
-    &:active:not(:disabled) {
+    &&:active:not(:disabled) {
       transform: ${pressTransform};
       transition-duration: 60ms;
     }

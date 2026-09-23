@@ -30,8 +30,9 @@ export const Item = styled.div<{ $width: number }>`
  * to lift it off the artwork.
  *
  * The transform is its centring, so the hover restates it over the face's
- * scale and the press composes the primitive's shrink onto it — the arrow
- * never jumps off its line (IconButton's rule 3).
+ * scale and the press composes the primitive's shrink onto it, at the
+ * primitive's doubled rank (`&&`) — the arrow never jumps off its line
+ * (IconButton's rule 3).
  *
  * `$top` is passed rather than fixed, because a poster row and a Continue row
  * are different heights and the arrow reads as centred on the tile in both.
@@ -54,7 +55,7 @@ const Arrow = styled(IconButton)<{ $top: number }>`
     transform: translateY(-50%);
   }
 
-  &:active:enabled {
+  &&:active:enabled {
     transform: translateY(-50%) scale(0.94);
   }
 `;
