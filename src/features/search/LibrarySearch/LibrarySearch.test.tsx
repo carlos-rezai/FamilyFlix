@@ -216,3 +216,22 @@ describe('LibrarySearch — the search and the Back button', () => {
     expect(currentUrl()).toBe('/?q=lighthousekeep');
   });
 });
+
+/**
+ * 22 — Series (TV), Phase 1 (issue #190): the box names what it searches. On
+ * the Series tab its caption — and so its accessible name — reads _Search your
+ * series_; everywhere else it stays _Search your movies_.
+ */
+describe('LibrarySearch — the Series tab', () => {
+  it('reads Search your series on the Series tab', () => {
+    renderSearch(['/?tab=series']);
+
+    const seriesBox = screen.getByRole('textbox', {
+      name: 'Search your series',
+    }) as HTMLInputElement;
+    expect(seriesBox.placeholder).toBe('Search your series');
+    expect(
+      screen.queryByRole('textbox', { name: 'Search your movies' })
+    ).toBeNull();
+  });
+});

@@ -168,3 +168,43 @@ describe('GET /api/series', () => {
     expect(body.episodeCount).toBe(0);
   });
 });
+
+// 22 — Series (TV), Phase 1 (issue #190): the Series tab draws the watched
+// badge on a series whose every episode is watched, so each series answers
+// `watched` — derived, never stored. Episodes are marked through the
+// library's `markEpisodeWatched`, the movie's `markWatched` over an episode.
+describe('GET /api/series — watched', () => {
+  it('answers a series watched when every episode is watched', async () => {
+    const { storage, baseUrl } = freshApi();
+    seedSeries(storage, 'Harbor & Vine', 2);
+    const [series] = storage.getSeriesHome().series;
+    for (const episode of storage.listEpisodes(series.id)) {
+      storage.markEpisodeWatched(episode.id);
+    }
+
+    const { body } = await getSeries(baseUrl);
+
+    expect(body.series[0].watched).toBe(true);
+  });
+
+  it('answers a series with one episode left not watched', async () => {
+    const { storage, baseUrl } = freshApi();
+    seedSeries(storage, 'Harbor & Vine', 2);
+    const [series] = storage.getSeriesHome().series;
+    const [first] = storage.listEpisodes(series.id);
+    storage.markEpisodeWatched(first.id);
+
+    const { body } = await getSeries(baseUrl);
+
+    expect(body.series[0].watched).toBe(false);
+  });
+
+  it('answers a series nobody has started not watched', async () => {
+    const { storage, baseUrl } = freshApi();
+    seedSeries(storage, 'Harbor & Vine', 2);
+
+    const { body } = await getSeries(baseUrl);
+
+    expect(body.series[0].watched).toBe(false);
+  });
+});

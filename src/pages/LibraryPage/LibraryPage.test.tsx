@@ -1,13 +1,21 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import {
+  act,
+  render,
+  screen,
+  waitFor,
+  fireEvent,
+  within,
+} from '@testing-library/react';
 import { ThemeProvider } from 'styled-components';
 import { MemoryRouter } from 'react-router-dom';
 
 import LibraryPage from './LibraryPage';
 import { theme } from '@/styles/theme';
-import type { HomePayload, HomeRow } from '@/types';
+import type { HomePayload, HomeRow, SeriesHomePayload } from '@/types';
 import { makeMovie } from '@/test-support/makeMovie/makeMovie';
 import { okResponse } from '@/test-support/fakeResponse/fakeResponse';
+import { comesBefore } from '@/test-support/comesBefore/comesBefore';
 
 const HOME_PAYLOAD: HomeRow[] = [
   {
@@ -441,5 +449,106 @@ describe('LibraryPage — the gear is the only maintainer door', () => {
 
     expect(screen.queryByRole('button', { name: /export/i })).toBeNull();
     expect(screen.queryByText(/export/i)).toBeNull();
+  });
+});
+
+/**
+ * 22 — Series (TV), Phase 1 (issue #190): the Movies / Series switch and the
+ * _All series_ grid. The page stays composition only: the switch is first in
+ * the header's start slot, and which body stands under it is chosen off `tab`
+ * inside the library feature.
+ */
+describe('LibraryPage — the Series tab', () => {
+  const SERIES_PAYLOAD: SeriesHomePayload = {
+    series: [
+      {
+        id: 's1',
+        tmdbId: null,
+        title: 'Harbor & Vine',
+        year: 2021,
+        endYear: null,
+        synopsis: null,
+        creator: 'Mara Quinn',
+        cast: [],
+        rating: 8,
+        isFavorite: false,
+        posterPath: null,
+        backdropPath: null,
+        genres: [],
+        watched: false,
+        createdAt: '2026-09-23T00:00:00.000Z',
+        updatedAt: '2026-09-23T00:00:00.000Z',
+      },
+    ],
+    episodeCount: 2,
+  };
+
+  beforeEach(() => {
+    // The Series tab reads its own endpoint; the Movies tab keeps its queue.
+    fetchMock.mockImplementation((input) => {
+      const url = String(input);
+      if (url.includes('/api/genres')) {
+        return Promise.resolve(genreListResponse());
+      }
+      if (url.includes('/api/series')) {
+        return Promise.resolve(okResponse(SERIES_PAYLOAD));
+      }
+      if (url.includes('/api/home')) {
+        const next = homeQueue.shift();
+        return next
+          ? next()
+          : Promise.reject(new Error(`Unqueued home request: ${url}`));
+      }
+      return Promise.reject(new Error(`Unexpected request: ${url}`));
+    });
+  });
+
+  const tabs = () => screen.getByRole('group', { name: 'Library' });
+  const seriesBox = () =>
+    screen.getByRole('textbox', {
+      name: 'Search your series',
+    }) as HTMLInputElement;
+
+  it('mounts the switch first in the header, ahead of the search box', async () => {
+    respondWithRows(HOME_PAYLOAD);
+
+    renderPage();
+
+    expect(comesBefore(tabs(), searchBox())).toBe(true);
+    expect(
+      within(tabs())
+        .getByRole('button', { name: 'Movies' })
+        .getAttribute('aria-pressed')
+    ).toBe('true');
+    await screen.findByRole('region', { name: 'Action' });
+  });
+
+  it('draws All series under the Series tab, and no genre rows', async () => {
+    renderPage('/?tab=series');
+
+    expect(
+      await screen.findByRole('heading', { name: 'All series' })
+    ).toBeDefined();
+    expect(
+      await screen.findByRole('button', { name: 'Harbor & Vine' })
+    ).toBeDefined();
+    expect(screen.getByText('1 series · 2 episodes')).toBeDefined();
+    expect(screen.queryByRole('region', { name: 'Action' })).toBeNull();
+  });
+
+  it('switches to Series, clearing the search box and renaming it', async () => {
+    respondWithRows(HOME_PAYLOAD);
+
+    renderPage('/?q=northwind');
+    expect(searchBox().value).toBe('northwind');
+
+    act(() => {
+      within(tabs()).getByRole('button', { name: 'Series' }).click();
+    });
+
+    expect(
+      await screen.findByRole('heading', { name: 'All series' })
+    ).toBeDefined();
+    expect(seriesBox().value).toBe('');
   });
 });
