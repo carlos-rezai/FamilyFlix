@@ -75,25 +75,30 @@ function pseudoMatches(
   }
 }
 
+const COMPOUND =
+  /\.(-?[_a-zA-Z][\w-]*)|:not\(:([\w-]+)\)|:([\w-]+)|(\[[^\]]*\])|^([a-zA-Z][\w-]*)|(\*)/g;
+
+/** The states `StyleState` names, which the DOM's own `matches` cannot see. */
+const STATE_PSEUDO =
+  /:(hover|active|focus|focus-visible|focus-within)(?![\w-])/;
+
 /**
  * The specificity of one compound selector if it applies to `element` in
- * `state`, or `null` if it does not. A selector with a combinator is about
- * some other element, and never applies here.
+ * `state`, or `null` if it does not — or if it holds anything the tokens
+ * below do not read.
  */
-function specificityIfMatching(
-  selector: string,
+function compoundSpecificity(
+  compound: string,
   element: Element,
   state: StyleState
 ): number | null {
-  if (selector === '' || /[\s>+~]/.test(selector) || selector.includes('::')) {
+  if (compound === '') {
     return null;
   }
-  const token =
-    /\.(-?[_a-zA-Z][\w-]*)|:not\(:([\w-]+)\)|:([\w-]+)|(\[[^\]]*\])|^([a-zA-Z][\w-]*)|(\*)/g;
   let consumed = 0;
   let classes = 0;
   let types = 0;
-  for (const match of selector.matchAll(token)) {
+  for (const match of compound.matchAll(COMPOUND)) {
     if (match.index !== consumed) {
       return null;
     }
@@ -116,10 +121,66 @@ function specificityIfMatching(
       types += 1;
     }
   }
-  if (consumed !== selector.length) {
+  if (consumed !== compound.length) {
     return null;
   }
   return classes * 1000 + types;
+}
+
+/**
+ * The specificity of the part of a selector before its last compound, counted
+ * without matching — whether it matches is the DOM's question, not this one.
+ */
+function contextSpecificity(context: string): number {
+  let classes = 0;
+  let types = 0;
+  for (const compound of context.split(/[\s>+~]+/)) {
+    for (const match of compound.matchAll(COMPOUND)) {
+      if (match[5] !== undefined) {
+        types += 1;
+      } else if (match[6] === undefined) {
+        classes += 1;
+      }
+    }
+  }
+  return classes * 1000 + types;
+}
+
+/**
+ * The specificity of one selector if it applies to `element` in `state`, or
+ * `null` if it does not.
+ *
+ * A selector with a combinator applies when its last compound matches the
+ * element in `state` and the part before it matches the element's ancestors or
+ * siblings — asked of the DOM's own `matches`, since those carry no state; the
+ * specificity is the two parts summed. A state on that part
+ * (`.row:hover .overlay`) is not modelled, and such a rule is left out rather
+ * than guessed at.
+ */
+function specificityIfMatching(
+  selector: string,
+  element: Element,
+  state: StyleState
+): number | null {
+  if (selector.includes('::')) {
+    return null;
+  }
+  const tidy = selector.replace(/\s*([>+~])\s*/g, '$1').trim();
+  const split = /^(.*[\s>+~])([^\s>+~]+)$/.exec(tidy);
+  if (split === null) {
+    return compoundSpecificity(tidy, element, state);
+  }
+  const [, context, subject] = split;
+  const own = compoundSpecificity(subject, element, state);
+  if (own === null || STATE_PSEUDO.test(context)) {
+    return null;
+  }
+  try {
+    if (!element.matches(`${context}*`)) return null;
+  } catch {
+    return null;
+  }
+  return own + contextSpecificity(context);
 }
 
 /**
