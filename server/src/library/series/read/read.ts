@@ -45,7 +45,11 @@ interface GenreRowWithSeries extends GenreRow {
   series_id: string;
 }
 
-const mapRowToSeries = (row: SeriesRow, genres: Genre[]): Series => ({
+const mapRowToSeries = (
+  row: SeriesRow,
+  genres: Genre[],
+  watched: boolean
+): Series => ({
   id: row.id,
   tmdbId: row.tmdb_id,
   title: row.title,
@@ -59,6 +63,7 @@ const mapRowToSeries = (row: SeriesRow, genres: Genre[]): Series => ({
   posterPath: row.poster_path,
   backdropPath: row.backdrop_path,
   genres,
+  watched,
   createdAt: row.created_at,
   updatedAt: row.updated_at,
 });
@@ -129,6 +134,17 @@ export function createSeriesReader(db: SqliteDatabase): SeriesReader {
     ORDER BY position
   `);
   const countEpisodes = db.prepare('SELECT COUNT(*) AS n FROM episodes');
+  // A series is watched when it has episodes and none of them is unwatched —
+  // derived on every read, never stored, so it cannot drift from its episodes.
+  const selectWatchedSeries = db.prepare(`
+    SELECT series_id AS id FROM episodes
+    GROUP BY series_id
+    HAVING MIN(watched) = 1
+  `);
+  const selectSeriesWatched = db.prepare(`
+    SELECT COUNT(*) > 0 AND MIN(watched) = 1 AS watched
+    FROM episodes WHERE series_id = ?
+  `);
 
   const assembleEpisode = (row: EpisodeRow): Episode =>
     mapRowToEpisode(row, selectEpisodeSubtitles.all(row.id) as SubtitleRow[]);
@@ -138,7 +154,11 @@ export function createSeriesReader(db: SqliteDatabase): SeriesReader {
       const row = selectSeries.get(id) as SeriesRow | undefined;
       return row === undefined
         ? null
-        : mapRowToSeries(row, selectSeriesGenres.all(id) as GenreRow[]);
+        : mapRowToSeries(
+            row,
+            selectSeriesGenres.all(id) as GenreRow[],
+            (selectSeriesWatched.get(id) as { watched: number }).watched === 1
+          );
     },
 
     getEpisode: (id) => {
@@ -157,8 +177,15 @@ export function createSeriesReader(db: SqliteDatabase): SeriesReader {
           genresBySeries.set(row.series_id, [genre]);
         }
       }
+      const watched = new Set(
+        (selectWatchedSeries.all() as { id: string }[]).map(({ id }) => id)
+      );
       const series = (selectAllSeries.all() as SeriesRow[]).map((row) =>
-        mapRowToSeries(row, genresBySeries.get(row.id) ?? [])
+        mapRowToSeries(
+          row,
+          genresBySeries.get(row.id) ?? [],
+          watched.has(row.id)
+        )
       );
       const { n } = countEpisodes.get() as { n: number };
       return { series, episodeCount: n };

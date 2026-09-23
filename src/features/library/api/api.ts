@@ -3,6 +3,7 @@ import type {
   GenreQuery,
   HomePayload,
   LibraryQuery,
+  SeriesHomePayload,
 } from '@/types';
 import { toGenreQueryParams, toLibraryQueryParams } from '@/utils';
 
@@ -78,4 +79,20 @@ export async function fetchGenrePayload(
     throw new Error(`GET ${genreEndpoint(name)} failed: ${response.status}`);
   }
   return (await response.json()) as GenrePayload;
+}
+
+/** The Series tab in one payload: every series, and the episode total. */
+const SERIES_ENDPOINT = '/api/series';
+
+/**
+ * Loads the Series tab: every series by title, and the episode total across
+ * all of them — the tab's `N series · M episodes`. Rejects if the route
+ * answers with anything but a 2xx.
+ */
+export async function fetchSeriesHome(): Promise<SeriesHomePayload> {
+  const response = await fetch(SERIES_ENDPOINT);
+  if (!response.ok) {
+    throw new Error(`GET ${SERIES_ENDPOINT} failed: ${response.status}`);
+  }
+  return (await response.json()) as SeriesHomePayload;
 }

@@ -6,6 +6,7 @@ export interface Watch {
   setResumePosition(id: string, seconds: number): void;
   markWatched(id: string): void;
   markUnwatched(id: string): void;
+  markEpisodeWatched(id: string): void;
 }
 
 export function createWatch(db: SqliteDatabase): Watch {
@@ -14,6 +15,9 @@ export function createWatch(db: SqliteDatabase): Watch {
   );
   const updateMarkWatched = db.prepare(
     'UPDATE movies SET watched = 1, resume_position_seconds = 0, last_watched_at = ? WHERE id = ?'
+  );
+  const updateMarkEpisodeWatched = db.prepare(
+    'UPDATE episodes SET watched = 1, resume_position_seconds = 0, last_watched_at = ? WHERE id = ?'
   );
   const updateMarkUnwatched = db.prepare(
     'UPDATE movies SET watched = 0 WHERE id = ?'
@@ -34,6 +38,11 @@ export function createWatch(db: SqliteDatabase): Watch {
     updateMarkWatched.run(watchedNow(), id);
   }
 
+  // The movie's markWatched over an episode: finishing it is watching it.
+  function markEpisodeWatched(id: string): void {
+    updateMarkEpisodeWatched.run(watchedNow(), id);
+  }
+
   // Deliberately does not stamp: un-marking is not watching. It leaves any
   // existing stamp exactly as it was, so correcting a mis-tap reshuffles
   // nothing, and it leaves the resume position at 0 so the movie cannot
@@ -42,5 +51,5 @@ export function createWatch(db: SqliteDatabase): Watch {
     updateMarkUnwatched.run(id);
   }
 
-  return { setResumePosition, markWatched, markUnwatched };
+  return { setResumePosition, markWatched, markUnwatched, markEpisodeWatched };
 }

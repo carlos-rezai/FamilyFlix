@@ -10,11 +10,15 @@ import { useSearchParams } from 'react-router-dom';
  * @param omitAt The value that means "absent": at it, the parameter is removed
  *   rather than written, so a default state is a clean URL with no query
  *   string to explain.
+ * @param clearing Other parameters to take off the URL in the same write —
+ *   one step, so a switch that changes one parameter and drops another never
+ *   lands between the two.
  */
 export type QueryParamWriter = (
   name: string,
   value: string,
-  omitAt: string
+  omitAt: string,
+  clearing?: readonly string[]
 ) => void;
 
 /**
@@ -40,10 +44,18 @@ export function useQueryParamWriter(): QueryParamWriter {
   const [, setSearchParams] = useSearchParams();
 
   return useCallback(
-    (name: string, value: string, omitAt: string) => {
+    (
+      name: string,
+      value: string,
+      omitAt: string,
+      clearing: readonly string[] = []
+    ) => {
       setSearchParams(
         (current) => {
           const next = new URLSearchParams(current);
+          for (const cleared of clearing) {
+            next.delete(cleared);
+          }
           if (value === omitAt) {
             next.delete(name);
           } else {

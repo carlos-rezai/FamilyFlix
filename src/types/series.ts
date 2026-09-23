@@ -1,7 +1,7 @@
 /**
  * The **Series** and its **Episodes** — the second kind of thing on the
- * shelves, beside the {@link ./movie.ts Movie}. A series carries no watch
- * state of its own; each episode carries the movie's watch trio exactly, so
+ * shelves, beside the {@link ./movie.ts Movie}. A series stores no watch
+ * state of its own — its `watched` is derived from its episodes; each episode carries the movie's watch trio exactly, so
  * its `status` is the movie's derivation. A season is not a record: it is the
  * `season` number on its episodes.
  */
@@ -24,6 +24,8 @@ export interface Series {
   posterPath: string | null;
   backdropPath: string | null;
   genres: Genre[];
+  /** True only when every episode is watched; derived, never stored. */
+  watched: boolean;
   createdAt: string;
   updatedAt: string;
 }

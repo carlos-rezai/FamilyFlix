@@ -138,6 +138,8 @@ export interface LibraryStorage {
   markWatched(id: string): void;
   /** Clear the watched flag, leaving any resume position untouched. */
   markUnwatched(id: string): void;
+  /** `markWatched` over an **Episode**: watched, resume zeroed, stamped. */
+  markEpisodeWatched(id: string): void;
   /**
    * Toggle the favorite flag, surfaced through the partial `is_favorite` index
    * that powers the Favorites row.
@@ -216,6 +218,7 @@ export function createSqliteStorage(dbPath: string): LibraryStorage {
     setResumePosition: watch.setResumePosition,
     markWatched: watch.markWatched,
     markUnwatched: watch.markUnwatched,
+    markEpisodeWatched: watch.markEpisodeWatched,
     setFavorite: curation.setFavorite,
     setRating: curation.setRating,
     settings: settingsRepository.settings,

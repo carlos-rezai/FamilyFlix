@@ -1,3 +1,5 @@
+import { useSearchParams } from 'react-router-dom';
+
 import { SearchBar } from '@/components';
 import { useLibraryQuery } from '../useLibraryQuery/useLibraryQuery';
 import { useSettledText } from '../useSettledText/useSettledText';
@@ -20,6 +22,14 @@ import { useSettledText } from '../useSettledText/useSettledText';
 export function LibrarySearch() {
   const { query, setSearch } = useLibraryQuery();
   const [text, setText] = useSettledText(query.search ?? '', setSearch);
+  // The box names what it searches: the Series tab's caption is its own.
+  const [searchParams] = useSearchParams();
+  const placeholder =
+    searchParams.get('tab') === 'series'
+      ? 'Search your series'
+      : 'Search your movies';
 
-  return <SearchBar value={text} onChange={setText} />;
+  return (
+    <SearchBar value={text} placeholder={placeholder} onChange={setText} />
+  );
 }
