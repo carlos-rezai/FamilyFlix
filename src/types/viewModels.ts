@@ -121,3 +121,39 @@ export interface FilterOption {
   /** What choosing the row does. The panel is already closing by then. */
   onSelect: () => void;
 }
+
+/** What the **Series page**'s hero draws — `seriesView`'s output. */
+export interface SeriesDetailModel {
+  id: string;
+  title: string;
+  /** The **Year range** — `2022`, `2019–2023`, `2021–` — or `null` with no year. */
+  yearLabel: string | null;
+  /** `2 seasons · 22 episodes`. */
+  countLabel: string;
+  /** 0–100 percent the read-only stars fill against; `null` when unrated. */
+  ratingPercent: number | null;
+  /** Genre names, in the order the record holds them. */
+  genres: string[];
+  /** `Resume S02E04` / `Play S01E01`, or a bare `Play` with no episodes. */
+  playLabel: string;
+  /** `Not started` / `5 of 22 episodes watched` / `All 22 episodes watched`. */
+  progressLabel: string;
+  /** The synopsis, or `null` when there is none to clamp. */
+  synopsis: string | null;
+  /** False only when **both** the creator and the cast are missing. */
+  hasCredits: boolean;
+  /** The creator, or "—" when there is none. */
+  creator: string;
+  /** The cast on one readable line, or "—" when there is none. */
+  castText: string;
+  /** Ready image-route URLs, or `null` → the gradient fallback. */
+  posterUrl: string | null;
+  backdropUrl: string | null;
+  /** True when either artwork exists; the overlays are drawn only without it. */
+  hasArtwork: boolean;
+  /** The placeholder gradient stops — the same ones the series' card draws. */
+  g1: string;
+  g2: string;
+  /** The uppercase caption over the gradient; `null` when there is artwork. */
+  topTag: string | null;
+}

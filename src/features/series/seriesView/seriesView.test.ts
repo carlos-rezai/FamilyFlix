@@ -38,7 +38,7 @@ function makeSeries(overrides: Partial<Series> = {}): Series {
     isFavorite: false,
     posterPath: null,
     backdropPath: null,
-    genres: [{ id: 1, name: 'Drama' }],
+    genres: [{ id: 'g1', name: 'Drama' }],
     watched: false,
     createdAt: '2026-09-23T00:00:00.000Z',
     updatedAt: '2026-09-23T00:00:00.000Z',

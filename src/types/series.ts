@@ -56,6 +56,22 @@ export interface SeriesHomePayload {
   episodeCount: number;
 }
 
+/** One season of a series: its episodes in order, and its own next episode. */
+export interface SeasonSummary {
+  number: number;
+  episodes: Episode[];
+  /** The season's **Next episode**, derived on the server. */
+  next: Episode | null;
+}
+
+/** The series page in one read: the series, its seasons, its next episode. */
+export interface SeriesDetail {
+  series: Series;
+  seasons: SeasonSummary[];
+  /** The series' **Next episode** across every season; `null` for none. */
+  next: Episode | null;
+}
+
 /** A series as the library is given it; everything but the title optional. */
 export interface NewSeries {
   title: string;

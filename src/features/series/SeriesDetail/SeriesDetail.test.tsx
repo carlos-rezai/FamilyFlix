@@ -101,8 +101,8 @@ function makeSeries(overrides: Partial<Series> = {}): Series {
     posterPath: null,
     backdropPath: null,
     genres: [
-      { id: 1, name: 'Drama' },
-      { id: 2, name: 'Comedy' },
+      { id: 'g1', name: 'Drama' },
+      { id: 'g2', name: 'Comedy' },
     ],
     watched: false,
     createdAt: '2026-09-23T00:00:00.000Z',

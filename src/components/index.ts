@@ -36,3 +36,4 @@ export {
 } from './Snackbar/Snackbar';
 export { Fab, type FabProps, type FabIcon } from './Fab/Fab';
 export { BackToTop, type BackToTopProps } from './BackToTop/BackToTop';
+export { CreditsRow, type CreditsRowProps } from './CreditsRow/CreditsRow';

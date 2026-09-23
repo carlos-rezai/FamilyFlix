@@ -1,6 +1,6 @@
 import { useNavigate, useParams } from 'react-router-dom';
 
-import { ExpandableText } from '@/components';
+import { CreditsRow, ExpandableText } from '@/components';
 import {
   Artwork,
   Button,
@@ -10,7 +10,6 @@ import {
   HeartOutlineIcon,
 } from '@/primitives';
 import { moviePath } from '@/utils';
-import { CreditsRow } from '../CreditsRow/CreditsRow';
 import { EditMenu } from '../EditMenu/EditMenu';
 import { LoadingDetail } from '../LoadingDetail/LoadingDetail';
 import { MetaLine } from '../MetaLine/MetaLine';
@@ -204,7 +203,8 @@ export function MovieDetail() {
           )}
 
           <CreditsRow
-            director={movie.director}
+            leadLabel="Director"
+            lead={movie.director}
             castText={movie.castText}
             hasCredits={movie.hasCredits}
           />

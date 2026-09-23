@@ -5,6 +5,7 @@ import { GlobalStyle } from '@/styles/GlobalStyle';
 import { theme } from '@/styles/theme';
 import LibraryPage from '@/pages/LibraryPage/LibraryPage';
 import MoviePage from '@/pages/MoviePage/MoviePage';
+import SeriesPage from '@/pages/SeriesPage/SeriesPage';
 import PlayerPage from '@/pages/PlayerPage/PlayerPage';
 import AddMoviePage from '@/pages/AddMoviePage/AddMoviePage';
 import GenrePage from '@/pages/GenrePage/GenrePage';
@@ -19,10 +20,11 @@ import { SnackbarProvider } from '@/App/SnackbarProvider/SnackbarProvider';
  * entry URL. The **Snackbar stack** sits here too, above the route table, so a
  * notice raised on one screen is still in the corner on the next.
  *
- * Seven routes, seven real screens: the browse home at `/`, the movie page at
+ * Eight routes, eight real screens: the browse home at `/`, the movie page at
  * `/movie/:id` and the genre page at `/genre/:name` (the home's two
  * destinations), the player at `/movie/:id/play`, the movie form at `/add`
- * (with `?movie=<id>` to edit), the Settings hub at `/settings` and the bulk
+ * (with `?movie=<id>` to edit), the series page at `/series/:id`, the Settings
+ * hub at `/settings` and the bulk
  * importer at `/import`. The URLs were the stable part all along — each screen
  * landed behind the link already pointed at it, without any link changing,
  * which is how every link in the app could be honest before the screen behind
@@ -37,6 +39,7 @@ export default function App() {
           <Route path="/" element={<LibraryPage />} />
           <Route path="/movie/:id" element={<MoviePage />} />
           <Route path="/movie/:id/play" element={<PlayerPage />} />
+          <Route path="/series/:id" element={<SeriesPage />} />
           <Route path="/add" element={<AddMoviePage />} />
           <Route path="/genre/:name" element={<GenrePage />} />
           <Route path="/settings" element={<SettingsPage />} />

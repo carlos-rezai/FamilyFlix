@@ -11,7 +11,7 @@ export const Credit = styled.div`
   min-width: 0;
 `;
 
-/** The cast takes the leftover width; the director hugs its name. */
+/** The cast takes the leftover width; the lead credit hugs its name. */
 export const CastCredit = styled(Credit)`
   flex: 1 1 280px;
 `;

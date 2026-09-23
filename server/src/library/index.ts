@@ -14,6 +14,7 @@ import type {
   NewMovie,
   NewSeries,
   Series,
+  SeriesDetail,
   SeriesHomePayload,
   Settings,
 } from '@/types';
@@ -180,6 +181,12 @@ export interface LibraryStorage {
   getSeriesHome(): SeriesHomePayload;
   /** A series' episodes in season, then episode order; `[]` for none. */
   listEpisodes(seriesId: string): Episode[];
+  /**
+   * The series page in one read: the series, its seasons in order each with
+   * its episodes and its **Next episode**, and the series' own — or `null`
+   * for an id the library does not hold as a series.
+   */
+  getSeriesDetail(id: string): SeriesDetail | null;
   /** Close the underlying database connection. */
   close(): void;
 }
@@ -227,6 +234,7 @@ export function createSqliteStorage(dbPath: string): LibraryStorage {
     addEpisode: seriesWrite.addEpisode,
     getSeriesHome: seriesReader.getSeriesHome,
     listEpisodes: seriesReader.listEpisodes,
+    getSeriesDetail: seriesReader.getSeriesDetail,
     close() {
       db.close();
     },

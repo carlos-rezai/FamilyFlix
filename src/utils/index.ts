@@ -25,5 +25,6 @@ export { toLibraryQueryParams } from './toLibraryQueryParams/toLibraryQueryParam
 export { parseGenreQuery } from './parseGenreQuery/parseGenreQuery';
 export { toGenreQueryParams } from './toGenreQueryParams/toGenreQueryParams';
 export { moviePath } from './moviePath/moviePath';
+export { seriesPath } from './seriesPath/seriesPath';
 export { movieFormPath } from './movieFormPath/movieFormPath';
 export { accentScale, type AccentScale } from './accentScale/accentScale';

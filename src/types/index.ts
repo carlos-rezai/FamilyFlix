@@ -23,6 +23,8 @@ export type {
   Series,
   Episode,
   SeriesHomePayload,
+  SeriesDetail,
+  SeasonSummary,
   NewSeries,
   NewEpisode,
 } from './series';
@@ -68,6 +70,7 @@ export type {
   PosterCardMovie,
   ContinueCardMovie,
   MovieDetailModel,
+  SeriesDetailModel,
   GenreRowModel,
   FilterOption,
 } from './viewModels';

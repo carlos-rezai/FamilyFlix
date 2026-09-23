@@ -1,6 +1,8 @@
 import { useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 import type { SeriesHomePayload } from '@/types';
+import { seriesPath } from '@/utils';
 import { fetchSeriesHome } from '../../api/api';
 import { LibraryGrid } from '../../LibraryGrid/LibraryGrid';
 import { RetryableFailure } from '../../RetryableFailure/RetryableFailure';
@@ -24,6 +26,7 @@ function seriesCountLabel({ series, episodeCount }: SeriesHomePayload): string {
  * until the payload lands.
  */
 export function SeriesHome() {
+  const navigate = useNavigate();
   const { status, data, retry } = useBrowseLoad(fetchSeriesHome, SERIES_KEY);
 
   const cards = useMemo(() => data?.series.map(seriesCardView) ?? [], [data]);
@@ -46,7 +49,10 @@ export function SeriesHome() {
     <section>
       <Heading>All series</Heading>
       <Count>{seriesCountLabel(data)}</Count>
-      <LibraryGrid movies={cards} />
+      <LibraryGrid
+        movies={cards}
+        onOpenMovie={(id) => navigate(seriesPath(id))}
+      />
     </section>
   );
 }

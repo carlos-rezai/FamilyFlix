@@ -3,9 +3,12 @@ import type {
   Episode,
   Genre,
   Series,
+  SeasonSummary,
+  SeriesDetail,
   SeriesHomePayload,
   Subtitle,
 } from '@/types';
+import { nextEpisodeOf } from '../nextEpisodeOf/nextEpisodeOf';
 import { deriveStatus, type GenreRow, type SubtitleRow } from '../../read/read';
 
 export interface SeriesRow {
@@ -96,6 +99,8 @@ export interface SeriesReader {
   getSeriesHome(): SeriesHomePayload;
   /** A series' episodes in season, then episode order; `[]` for none. */
   listEpisodes(seriesId: string): Episode[];
+  /** The series page's read — its seasons and next episodes — or `null`. */
+  getSeriesDetail(id: string): SeriesDetail | null;
 }
 
 /**
@@ -149,16 +154,48 @@ export function createSeriesReader(db: SqliteDatabase): SeriesReader {
   const assembleEpisode = (row: EpisodeRow): Episode =>
     mapRowToEpisode(row, selectEpisodeSubtitles.all(row.id) as SubtitleRow[]);
 
+  const getSeries = (id: string): Series | null => {
+    const row = selectSeries.get(id) as SeriesRow | undefined;
+    return row === undefined
+      ? null
+      : mapRowToSeries(
+          row,
+          selectSeriesGenres.all(id) as GenreRow[],
+          (selectSeriesWatched.get(id) as { watched: number }).watched === 1
+        );
+  };
+
+  const listEpisodes = (seriesId: string): Episode[] =>
+    (selectEpisodes.all(seriesId) as EpisodeRow[]).map(assembleEpisode);
+
   return {
-    getSeries: (id) => {
-      const row = selectSeries.get(id) as SeriesRow | undefined;
-      return row === undefined
-        ? null
-        : mapRowToSeries(
-            row,
-            selectSeriesGenres.all(id) as GenreRow[],
-            (selectSeriesWatched.get(id) as { watched: number }).watched === 1
-          );
+    getSeries,
+
+    getSeriesDetail: (id) => {
+      const series = getSeries(id);
+      if (series === null) {
+        return null;
+      }
+      const episodes = listEpisodes(id);
+      // Already in season, then episode order: a season is each run of one
+      // `season` number, and its next episode is asked of that run alone.
+      const seasons: SeasonSummary[] = [];
+      for (const episode of episodes) {
+        const last = seasons[seasons.length - 1];
+        if (last !== undefined && last.number === episode.season) {
+          last.episodes.push(episode);
+        } else {
+          seasons.push({
+            number: episode.season,
+            episodes: [episode],
+            next: null,
+          });
+        }
+      }
+      for (const season of seasons) {
+        season.next = nextEpisodeOf(season.episodes);
+      }
+      return { series, seasons, next: nextEpisodeOf(episodes) };
     },
 
     getEpisode: (id) => {
@@ -191,7 +228,6 @@ export function createSeriesReader(db: SqliteDatabase): SeriesReader {
       return { series, episodeCount: n };
     },
 
-    listEpisodes: (seriesId) =>
-      (selectEpisodes.all(seriesId) as EpisodeRow[]).map(assembleEpisode),
+    listEpisodes,
   };
 }

@@ -46,6 +46,7 @@ import {
   type Movie,
   type MovieSort,
   type NewSubtitle,
+  type SeriesDetail,
   type SeriesHomePayload,
   type Settings,
   type StorageReport,
@@ -484,6 +485,18 @@ export function createApiRouter(
   router.get('/series', (_req: Request, res: Response) => {
     const payload: SeriesHomePayload = storage.getSeriesHome();
     res.json(payload);
+  });
+
+  // The series page in one read: the series, its seasons with their episodes
+  // and **Next episode**, and the series' own — derived on the server, so the
+  // screen has no copy of `nextEpisodeOf`. A movie's id is not a series: 404.
+  router.get('/series/:id', (req: Request<{ id: string }>, res: Response) => {
+    const detail: SeriesDetail | null = storage.getSeriesDetail(req.params.id);
+    if (!detail) {
+      res.status(404).json({ error: `Unknown series: ${req.params.id}` });
+      return;
+    }
+    res.json(detail);
   });
 
   // One genre in full — the whole genre page in a single request: the name, the
