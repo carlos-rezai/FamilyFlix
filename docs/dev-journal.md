@@ -11,6 +11,84 @@ Newest entry first.
 
 ---
 
+## 2026-09-23 — Motion & interaction states refactor (issue #187)
+
+Fourteen commits against `docs/refactor-plans/21-motion-refactor.md` — three
+to shipping files, six to tests, five to documents; the docs slice filed as 186
+was folded in. **4928 tests pass across 255 files**, from 4920 across 255: the
+eight new leaves are all `resolvedStyle`'s own, and every migrated suite kept
+its leaf names. `tsc -b` is clean and `eslint src server` is clean on every
+commit. Nothing the family or the maintainer can see changed: every surface
+resolves to the hover, press and ring it did before the round.
+
+### What changed
+
+- **Group 0, the record.** The build's own journal entry, written before the
+  round touched the tree it describes.
+- **Group 1, one press and one guard.** `controlStates` writes its press at
+  doubled specificity, `&&:active:not(:disabled)`, so a press — always also a
+  hover — out-ranks any hover that writes `transform`, an extension's
+  included. The poster heart's `scale(.92)` and the carousel `Arrow`'s
+  `translateY(-50%) scale(.94)` moved up to the same rank; `Fab`,
+  `MoreButton`, `CircleToggle` and `ChromeIconButton` dropped the press they
+  had each restated. `IconButton`'s docblock rule 3 says the press is the
+  primitive's now. Then `:enabled` went: `IconButton`'s two faces, the six
+  extensions' hovers and the two remaining presses write `:not(:disabled)`,
+  the spelling `controlStates` and `Button` use, and rule 1 says so.
+- **Group 2, one cascade reader.** `resolvedStyle` learned the two cases it
+  got wrong: `focus`, a click's focus that `:focus-visible` does not match,
+  with `focusVisible` still implying `:focus`; and a selector with a
+  combinator, applying when its last compound matches in the named state and
+  the part before it matches through the DOM's own `matches`, specificity
+  summed — a state on an ancestor still "does not apply", for Series'
+  `EpisodeRow` to teach it. Then `interactionStates`, `Button`, `Chip` and the
+  Filter dropdown dropped their four hand-rolled readers and ask it what
+  _wins_; a press is resolved as hover and active together. The option rows'
+  ease now resolves through the dropdown's descendant rule, and
+  `GlobalStyle`'s docblock says why it alone keeps a `ServerStyleSheet` read.
+- **Group 3, the docs.** COMPONENT-SPEC §2a's first row is **Controls**, its
+  hover column names `Chip`'s rise and `IconButton`'s swell. The glossary's
+  **Control**, **Press** and the two relationship lines follow Group 1; the
+  _"Buttons never lift"_ entry is past tense, and three entries are new —
+  `resolvedStyle` against Q16, `ffSpin`, and the FAB's eased lift. CLAUDE.md's
+  map and README's tree gained `motion.ts`, the theme factory,
+  `interactionStates/`, `accentScale/` and `resolvedStyle/`. And the tick.
+
+### Three departures from the plan
+
+- **Group 1 changed one test.** `Fab.test.tsx` has a hover reader of its own
+  from log 19 — a fifth, which the plan's list of four missed — keyed on the
+  `:hover:enabled` spelling. The guard commit carried its regex to
+  `:not(:disabled)`. It stays: its one reason to exist is the leaf _declares
+  no transition of its own on hover_, a question about what was written,
+  which `resolvedStyle` answers with the winner instead.
+- **§2a's sentence is half the plan's.** The plan wrote "a Control never
+  takes a shadow or the accent edge"; `Chip` and the Filter dropdown hover to
+  the accent line, so the spec says "a Control's hover never adds a shadow; a
+  Card never recolours its fill".
+- **The combinator got six leaves, not three.** Beyond the plan's applies /
+  ancestor absent / ancestor with a state: the ancestor's weight out-ranking a
+  bare class, a sibling combinator, and the last compound still asked for its
+  state.
+
+### Deliberately left
+
+The Fab's own hover reader, above; `IconButton`'s suite reading its docblock
+for the rules' wording, which constrained rule 3's rewrite and was not the
+round's to change; `resolvedStyle` reading a state on an ancestor; the literals
+outside the contract (`Toggle`'s `.18s ease`, `ProgressBar`'s `.2s ease`,
+`ffPop`, the chrome's fade); `ffSpin`; every surface the revision did not
+touch. Every log-21 ruling the plan lists was checked against the code and
+holds.
+
+### Follow-ups
+
+None filed. **Series (TV)** is step 5 and next: `SeasonCard` and `EpisodeRow`
+compose `cardLift` and `cardFocus` as they stand, and the row's hover overlay
+is the first ancestor-state selector `resolvedStyle` will need.
+
+---
+
 ## 2026-09-23 — Motion & interaction states (issues #181–#185)
 
 Ten commits across issues #181–#185, five slices against the plan on #180,

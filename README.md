@@ -308,8 +308,8 @@ Builds the installer and publishes it to GitHub Releases automatically.
 | Snackbar system (info / success / warning / error)  | ✅ Done         |
 | Back-to-top FAB                                     | ✅ Done         |
 | Back navigation — one Back rule on every screen     | ✅ Done         |
-| Motion & interaction states (hover / press / focus) | 🔜 4 — next     |
-| Series (TV) — tab, series page, seasons, episodes   | 🔜 5            |
+| Motion & interaction states (hover / press / focus) | ✅ Done         |
+| Series (TV) — tab, series page, seasons, episodes   | 🔜 5 — next     |
 | Enrichment — TMDB metadata & posters sync           | 🔜 6            |
 | Electron desktop shell                              | 🔜 7            |
 | Desktop packaging (Windows installer)               | 🔜 8            |
@@ -319,29 +319,22 @@ Builds the installer and publishes it to GitHub Releases automatically.
 | Backgroundable import                               | 🧭 Roadmap      |
 | User accounts / multi-profile                       | 🚫 Out of scope |
 
-Everything above the line is done. The six that are left are numbered in
-**build order**, because they are a chain rather than a preference; steps 1–3,
-the Snackbar system, the Back-to-top FAB and Back navigation, are done — step
-3 came out of auditing the build against the prototype (2026-09-21) and went
-ahead of the shell, since it was a fix to what is built rather than anything
-Electron adds. Steps 4–6 came with the prototype revision of 2026-09-22 and go ahead
-of the shell for the same reason — none of them needs anything Electron adds,
-and each has its prototype already; the three behind them moved down three
-numbers.
+Everything above the line is done. The five that are left are numbered in
+**build order**, because they are a chain rather than a preference; steps 1–4,
+the Snackbar system, the Back-to-top FAB, Back navigation and Motion &
+interaction states, are done — step 3 came out of auditing the build against
+the prototype (2026-09-21) and went ahead of the shell, since it was a fix to
+what is built rather than anything Electron adds. Steps 4–6 came with the
+prototype revision of 2026-09-22 and go ahead of the shell for the same reason
+— none of them needs anything Electron adds, and each has its prototype
+already; the three behind them moved down three numbers.
 
-4. **Motion & interaction states** — the prototype's interaction contract
-   over everything already built: buttons signal with colour (lighten on
-   hover, darken and shrink a hair on press, a ring on keyboard focus),
-   cards signal with elevation (lift, deeper shadow, accent border), press
-   always faster than hover, one set of motion tokens, and a global
-   reduced-motion switch. Needs nothing; goes before Series so its new
-   cards are born on the contract.
 5. **Series (TV)** — a Series tab beside Movies: a series page with its
    seasons, a season page with its episodes (thumbnail, `S02E04` + title,
    air date, watched check, resume bar), Continue Watching holding episode
    cards, the importer reading `Show/Season 01/S01E03.mkv`, and the player
    offering _Up next_ with a countdown in the last 15 seconds. Needs
-   nothing outside the app; the largest of the six.
+   nothing outside the app; the largest of the five.
 6. **Enrichment (TMDB)** — the one feature that goes online, and opt-in: a
    Network group in Settings holds the API key and _Test connection_; a
    sync run fills synopsis, poster, backdrop, runtime, year, genres,
@@ -356,7 +349,7 @@ numbers.
 9. **Software update** — needs 7 and 8 (and 1, which is done). Already
    designed in full; its PRD waits on the shell.
 
-A 🧭 Roadmap item is not in the chain — it comes after all six, if ever.
+A 🧭 Roadmap item is not in the chain — it comes after all five, if ever.
 
 ---
 
