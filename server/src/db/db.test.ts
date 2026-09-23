@@ -43,6 +43,20 @@ const EXPECTED_GENRES = [
   'Crime',
 ];
 
+// The version a fresh database migrates to — migration #4, the series tables
+// (issue #189). Every "at the latest version" assertion reads it, so the next
+// migration moves one number rather than seven.
+const LATEST_VERSION = 4;
+
+// The four tables migration #4 adds, children first — the order they can be
+// dropped in without a foreign key refusing.
+const SERIES_TABLES = [
+  'episode_subtitles',
+  'series_genres',
+  'episodes',
+  'series',
+] as const;
+
 // Minimal structural view of the better-sqlite3 handle the db layer returns.
 // Declared locally so the test never imports better-sqlite3 directly and never
 // uses `any`.
@@ -188,6 +202,7 @@ function indexesReferencing(db: TestDb, column: string): string[] {
 function windBackToV1(path: string): void {
   const db = open(path);
   try {
+    dropSeriesTables(db);
     // What #3 added: a v1 database has no settings table.
     db.prepare('DROP TABLE settings').run();
     for (const name of indexesReferencing(db, 'last_watched_at')) {
@@ -211,8 +226,35 @@ function windBackToV1(path: string): void {
 function windBackToV2(path: string): void {
   const db = open(path);
   try {
+    dropSeriesTables(db);
     db.prepare('DROP TABLE settings').run();
     db.pragma('user_version = 2');
+  } finally {
+    db.close();
+  }
+}
+
+/**
+ * What migration #4 added, dropped. `IF EXISTS`, so the wind-backs above read
+ * the same on a database from before #4 was written as on one after.
+ */
+function dropSeriesTables(db: TestDb): void {
+  for (const table of SERIES_TABLES) {
+    db.prepare(`DROP TABLE IF EXISTS ${table}`).run();
+  }
+}
+
+/**
+ * Leave the database at `path` looking exactly like one written before
+ * migration #4 existed: drop the series tables and wind `user_version` back to
+ * 3. Re-opening it is the upgrade every dev database from the motion slice
+ * takes.
+ */
+function windBackToV3(path: string): void {
+  const db = open(path);
+  try {
+    dropSeriesTables(db);
+    db.pragma('user_version = 3');
   } finally {
     db.close();
   }
@@ -250,7 +292,7 @@ describe('db: connection pragmas', () => {
 describe('db: migration runner', () => {
   it('migrates a fresh :memory: database to the latest user_version', () => {
     const db = track(open(':memory:'));
-    expect(userVersion(db)).toBe(3);
+    expect(userVersion(db)).toBe(LATEST_VERSION);
   });
 
   it('seeds exactly the 12 canonical genres', () => {
@@ -265,13 +307,13 @@ describe('db: migration runner', () => {
     const path = tempDbPath();
 
     const first = track(open(path));
-    expect(userVersion(first)).toBe(3);
+    expect(userVersion(first)).toBe(LATEST_VERSION);
     first.close();
 
     // Re-opening the same file runs the migration runner again; it must detect
     // the DB is already current and apply nothing.
     const second = track(open(path));
-    expect(userVersion(second)).toBe(3);
+    expect(userVersion(second)).toBe(LATEST_VERSION);
 
     const names = genreNames(second);
     expect(names).toHaveLength(12);
@@ -364,7 +406,7 @@ describe('db: migration #2 — last_watched_at', () => {
 
     const upgraded = track(open(path));
 
-    expect(userVersion(upgraded)).toBe(3);
+    expect(userVersion(upgraded)).toBe(LATEST_VERSION);
     expect(columnNames(upgraded, 'movies')).toContain('last_watched_at');
     // Migration #1 is skipped rather than re-run: the genre pool is seeded once.
     expect(genreNames(upgraded)).toHaveLength(12);
@@ -429,10 +471,10 @@ describe('db: migration #3 — settings', () => {
     expect(rows).toEqual([]);
   });
 
-  it('is a migration of its own — a fresh database lands at version 3', () => {
+  it('is a migration of its own — a fresh database lands at the latest version', () => {
     const db = track(open(':memory:'));
 
-    expect(userVersion(db)).toBe(3);
+    expect(userVersion(db)).toBe(LATEST_VERSION);
     expect(tableNames(db)).toContain('settings');
   });
 
@@ -451,7 +493,7 @@ describe('db: migration #3 — settings', () => {
 
     const upgraded = track(open(path));
 
-    expect(userVersion(upgraded)).toBe(3);
+    expect(userVersion(upgraded)).toBe(LATEST_VERSION);
     expect(tableNames(upgraded)).toContain('settings');
     // Migrations #1 and #2 are skipped rather than re-run: the pool is seeded
     // once and the stamp column is added once.
@@ -484,6 +526,222 @@ describe('db: migration #3 — settings', () => {
         .prepare('INSERT INTO settings (key, value) VALUES (?, ?)')
         .run('subtitle-language', null)
     ).toThrow(/NOT NULL/);
+  });
+});
+
+// 22 — Series (TV), Phase 1 (issue #189) adds migration #4: a `series`, its
+// `episodes` carrying the movie's watch trio exactly, and the two children
+// that mirror the movie's — `series_genres` and `episode_subtitles`. There is
+// no `seasons` table: a season is `season_number` on its episodes. `movies`
+// is not touched, which is the proof the whole initiative is additive.
+
+/** The columns `movies` had before migration #4 — V1_SCHEMA plus #2's stamp. */
+const MOVIE_COLUMNS = [
+  'id',
+  'tmdb_id',
+  'title',
+  'year',
+  'runtime_minutes',
+  'synopsis',
+  'director',
+  'cast',
+  'rating',
+  'is_favorite',
+  'watched',
+  'resume_position_seconds',
+  'video_path',
+  'poster_path',
+  'backdrop_path',
+  'created_at',
+  'updated_at',
+  'last_watched_at',
+];
+
+const NOW = '2026-09-23T12:00:00.000Z';
+
+/** A series row with every NOT NULL column the test does not care about. */
+function insertSeries(db: TestDb, id: string, rating: number | null = null) {
+  db.prepare(
+    'INSERT INTO series (id, title, rating, created_at, updated_at) VALUES (?, ?, ?, ?, ?)'
+  ).run(id, `Series ${id}`, rating, NOW, NOW);
+}
+
+/** An episode row of `seriesId`, numbered. */
+function insertEpisode(
+  db: TestDb,
+  id: string,
+  seriesId: string,
+  season: number,
+  episode: number
+) {
+  db.prepare(
+    `INSERT INTO episodes
+       (id, series_id, season_number, episode_number, video_path, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`
+  ).run(id, seriesId, season, episode, `s/${id}.mkv`, NOW, NOW);
+}
+
+describe('db: migration #4 — series', () => {
+  it('creates the series, episodes, series_genres and episode_subtitles tables', () => {
+    const db = track(open(':memory:'));
+
+    expect(tableNames(db)).toEqual(expect.arrayContaining([...SERIES_TABLES]));
+  });
+
+  it('creates no seasons table — a season is a number on its episodes', () => {
+    const db = track(open(':memory:'));
+
+    expect(tableNames(db)).not.toContain('seasons');
+  });
+
+  it('gives series its columns, and no watch columns', () => {
+    const db = track(open(':memory:'));
+
+    expect([...columnNames(db, 'series')].sort()).toEqual(
+      [
+        'id',
+        'tmdb_id',
+        'title',
+        'year',
+        'end_year',
+        'synopsis',
+        'creator',
+        'cast',
+        'rating',
+        'is_favorite',
+        'poster_path',
+        'backdrop_path',
+        'created_at',
+        'updated_at',
+      ].sort()
+    );
+  });
+
+  it('gives episodes the movie’s watch trio', () => {
+    const db = track(open(':memory:'));
+
+    expect([...columnNames(db, 'episodes')].sort()).toEqual(
+      [
+        'id',
+        'series_id',
+        'season_number',
+        'episode_number',
+        'title',
+        'air_date',
+        'runtime_minutes',
+        'watched',
+        'resume_position_seconds',
+        'last_watched_at',
+        'video_path',
+        'created_at',
+        'updated_at',
+      ].sort()
+    );
+  });
+
+  it('mirrors the movie’s children in series_genres and episode_subtitles', () => {
+    const db = track(open(':memory:'));
+
+    expect([...columnNames(db, 'series_genres')].sort()).toEqual(
+      ['series_id', 'genre_id', 'position'].sort()
+    );
+    expect([...columnNames(db, 'episode_subtitles')].sort()).toEqual(
+      ['id', 'episode_id', 'path', 'language', 'position'].sort()
+    );
+  });
+
+  it('holds a series rating to the movie’s 0–10', () => {
+    const db = track(open(':memory:'));
+
+    insertSeries(db, 'rated', 10);
+    expect(() => insertSeries(db, 'over', 11)).toThrow(/CHECK/);
+  });
+
+  it('refuses a second episode under one series, season and number', () => {
+    const db = track(open(':memory:'));
+    insertSeries(db, 'a');
+    insertEpisode(db, 'e1', 'a', 1, 3);
+
+    expect(() => insertEpisode(db, 'e2', 'a', 1, 3)).toThrow(/UNIQUE/);
+    // The same number in another season, or another series, is its own.
+    insertSeries(db, 'b');
+    insertEpisode(db, 'e3', 'a', 2, 3);
+    insertEpisode(db, 'e4', 'b', 1, 3);
+  });
+
+  it('starts an episode unwatched at zero, never watched', () => {
+    const db = track(open(':memory:'));
+    insertSeries(db, 'a');
+    insertEpisode(db, 'e1', 'a', 1, 1);
+
+    expect(
+      db
+        .prepare(
+          'SELECT watched, resume_position_seconds, last_watched_at FROM episodes'
+        )
+        .get()
+    ).toEqual({
+      watched: 0,
+      resume_position_seconds: 0,
+      last_watched_at: null,
+    });
+  });
+
+  it('takes a series’ episodes and their subtitles with it when it goes', () => {
+    const db = track(open(':memory:'));
+    insertSeries(db, 'a');
+    insertEpisode(db, 'e1', 'a', 1, 1);
+    db.prepare(
+      'INSERT INTO episode_subtitles (id, episode_id, path, language, position) VALUES (?, ?, ?, ?, ?)'
+    ).run('t1', 'e1', 's/e1.en.srt', 'English', 0);
+
+    db.prepare('DELETE FROM series WHERE id = ?').run('a');
+
+    expect(db.prepare('SELECT id FROM episodes').all()).toEqual([]);
+    expect(db.prepare('SELECT id FROM episode_subtitles').all()).toEqual([]);
+  });
+
+  it('leaves movies exactly as it was', () => {
+    const db = track(open(':memory:'));
+
+    expect(columnNames(db, 'movies')).toEqual(MOVIE_COLUMNS);
+  });
+
+  it('lands a fresh database at version 4', () => {
+    const db = track(open(':memory:'));
+
+    expect(userVersion(db)).toBe(4);
+  });
+
+  it('upgrades a database already at version 3 in place, keeping its rows', () => {
+    const path = tempDbPath();
+
+    const before = trackStorage(createSqliteStorage(path));
+    const added = before.addMovie({
+      title: 'Northwind',
+      videoPath: 'Northwind (2018)/northwind.mkv',
+      genres: ['Drama'],
+    });
+    before.markWatched(added.id);
+    before.setSubtitleLanguage('Spanish');
+    before.close();
+    windBackToV3(path);
+
+    const upgraded = track(open(path));
+
+    expect(userVersion(upgraded)).toBe(4);
+    expect(tableNames(upgraded)).toEqual(
+      expect.arrayContaining([...SERIES_TABLES])
+    );
+    expect(genreNames(upgraded)).toHaveLength(12);
+    expect(columnNames(upgraded, 'movies')).toEqual(MOVIE_COLUMNS);
+    upgraded.close();
+
+    const storage = trackStorage(createSqliteStorage(path));
+    const movie = storage.getMovie(added.id);
+    expect(movie?.title).toBe('Northwind');
+    expect(movie?.status).toBe('watched');
+    expect(storage.settings().subtitleLanguage).toBe('Spanish');
   });
 });
 
