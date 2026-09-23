@@ -1,8 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import type { ReactElement } from 'react';
-import { renderToString } from 'react-dom/server';
-import styled, { ServerStyleSheet, ThemeProvider } from 'styled-components';
+import { cleanup, render, screen } from '@testing-library/react';
+import styled, { ThemeProvider } from 'styled-components';
 
+import {
+  normCss,
+  resolvedStyle,
+  type StyleState,
+} from '@/test-support/resolvedStyle/resolvedStyle';
 import { shippingSourcesMatching } from '@/test-support/shippingSources/shippingSources';
 import { theme } from '@/styles/theme';
 
@@ -13,9 +17,9 @@ import { cardFocus, cardLift, controlStates } from './interactionStates';
  *
  * The **Control** vocabulary's fragment, and the **structural guard** that
  * keeps every duration and curve in one place. jsdom computes no `:hover`,
- * `:active` or `:focus-visible`, so what is held here is the rule the fragment
- * writes — read off the CSS styled-components produces, whitespace aside —
- * never a computed style.
+ * `:active` or `:focus-visible`, so each probe is rendered into the document
+ * and `resolvedStyle` runs the cascade for the named state — what wins, never
+ * a computed style and never merely what was written.
  */
 
 /** The three motion durations and the curve, spelled anywhere but the tokens. */
@@ -25,69 +29,26 @@ const CONTROL_PRESS = /(?<![\d.])60ms/;
 /** The Card's press, spelled anywhere but the fragment (issue #185). */
 const CARD_PRESS = /(?<![\d.])70ms/;
 
-function squash(css: string): string {
-  return css.replace(/\s+/g, '');
-}
-
-interface Rule {
-  selector: string;
-  body: string;
-}
-
-/** Every flat rule in the CSS a styled tree produces. */
-function renderedRules(tree: ReactElement): Rule[] {
-  const sheet = new ServerStyleSheet();
-  try {
-    renderToString(
-      sheet.collectStyles(<ThemeProvider theme={theme}>{tree}</ThemeProvider>)
-    );
-    const css = squash(
-      sheet
-        .getStyleTags()
-        .replace(/<\/?style[^>]*>/g, '')
-        .replace(/\/\*!sc\*\//g, '')
-    );
-    return [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)].map((m) => ({
-      selector: m[1],
-      body: m[2],
-    }));
-  } finally {
-    sheet.seal();
-  }
-}
-
-/** The declarations of every rule whose selector ends with `suffix`. */
-function declarations(rules: Rule[], suffix: string): string {
-  return rules
-    .filter((rule) => rule.selector.endsWith(suffix))
-    .map((rule) => rule.body)
-    .join(';');
-}
-
-/** The rules a plain element on the fragment gets, pressing at `press`. */
+/** A plain element on the fragment, pressing at `scale(.98)`. */
 const Probe = styled.button`
   ${controlStates('scale(.98)')}
 `;
 
-function probeRules(): Rule[] {
-  return renderedRules(<Probe type="button">Probe</Probe>);
+/** What the probe resolves to in `state`, rendered afresh each time. */
+function probe(state: StyleState = {}): Record<string, string> {
+  cleanup();
+  render(
+    <ThemeProvider theme={theme}>
+      <Probe type="button">Probe</Probe>
+    </ThemeProvider>
+  );
+  return resolvedStyle(screen.getByRole('button', { name: 'Probe' }), state);
 }
 
-/** The resting rule: the one selector with no pseudo-class on it. */
-function restingBody(rules: Rule[]): string {
-  return rules
-    .filter((rule) => !rule.selector.includes(':'))
-    .map((rule) => rule.body)
-    .join(';');
-}
-
-/**
- * Every duration in a squashed value. No `\b` after the unit: with the
- * whitespace gone, `120ms cubic-bezier(` reads `120mscubic-bezier(`.
- */
+/** Every duration in a value `normCss` has tidied. */
 function milliseconds(value: string): number[] {
-  return [...value.matchAll(/(\d*\.?\d+)(ms|s)/g)].map(([, n, unit]) =>
-    unit === 's' ? Number(n) * 1000 : Number(n)
+  return [...value.matchAll(/(\d*\.?\d+)(ms|s)(?![\w-])/g)].map(
+    ([, n, unit]) => (unit === 's' ? Number(n) * 1000 : Number(n))
   );
 }
 
@@ -142,8 +103,7 @@ describe('the structural guard — over the shipping tree', () => {
 
 describe('controlStates — the Control vocabulary', () => {
   it('eases background, border, colour, transform and shadow at durFast on easeOut', () => {
-    const resting = restingBody(probeRules());
-    const transition = /transition:([^;]*)/.exec(resting)?.[1] ?? '';
+    const transition = probe().transition ?? '';
 
     for (const property of [
       'background',
@@ -153,28 +113,21 @@ describe('controlStates — the Control vocabulary', () => {
       'box-shadow',
     ]) {
       expect(transition).toContain(
-        squash(`${property} ${theme.motion.durFast} ${theme.motion.easeOut}`)
+        normCss(`${property} ${theme.motion.durFast} ${theme.motion.easeOut}`)
       );
     }
   });
 
   it('presses anything not disabled at the given transform, in 60ms', () => {
-    const press = declarations(probeRules(), ':active:not(:disabled)');
+    const press = probe({ active: true });
 
-    expect(press).toContain('transform:scale(.98)');
-    expect(press).toContain('transition-duration:60ms');
+    expect(press.transform).toBe(normCss('scale(.98)'));
+    expect(press['transition-duration']).toBe('60ms');
   });
 
   it('presses visibly faster than the hover eases in', () => {
-    const rules = probeRules();
-    const press = milliseconds(
-      /transition-duration:([^;]*)/.exec(
-        declarations(rules, ':active:not(:disabled)')
-      )?.[1] ?? ''
-    );
-    const hover = milliseconds(
-      /transition:([^;]*)/.exec(restingBody(rules))?.[1] ?? ''
-    );
+    const press = milliseconds(probe({ active: true })['transition-duration']);
+    const hover = milliseconds(probe().transition ?? '');
 
     expect(press).toHaveLength(1);
     expect(hover.length).toBeGreaterThan(0);
@@ -182,27 +135,21 @@ describe('controlStates — the Control vocabulary', () => {
   });
 
   it('draws the 3px Focus ring as a shadow under keyboard focus, so it follows the corners', () => {
-    const focus = declarations(probeRules(), ':focus-visible');
+    const focus = probe({ focusVisible: true });
 
-    expect(focus).toContain('outline:none');
-    expect(focus).toContain(
-      squash(`box-shadow: 0 0 0 3px ${theme.colors.focusRing}`)
+    expect(focus.outline).toBe('none');
+    expect(focus['box-shadow']).toBe(
+      normCss(`0 0 0 3px ${theme.colors.focusRing}`)
     );
   });
 
   it('draws no ring for a click: nothing styles plain :focus', () => {
-    const plainFocus = probeRules().filter((rule) =>
-      /:focus(?!-visible)/.test(rule.selector)
-    );
+    const click = probe({ focus: true });
 
-    expect(plainFocus).toEqual([]);
+    expect(click['box-shadow']).toBeUndefined();
+    expect(click.outline).toBeUndefined();
   });
 });
-
-/** Squashed, and a leading `0.` written `.`, so `0.35` and `.35` are one number. */
-function tight(css: string): string {
-  return squash(css).replace(/(^|[(,:])0\./g, '$1.');
-}
 
 /**
  * 21 — Motion & interaction states, Phase 5 (issue #185).
@@ -219,69 +166,70 @@ const RootProbe = styled.div`
   ${cardFocus}
 `;
 
-function tileRules(): Rule[] {
-  return renderedRules(<TileProbe />);
+function tile(state: StyleState = {}): Record<string, string> {
+  cleanup();
+  render(
+    <ThemeProvider theme={theme}>
+      <TileProbe data-testid="tile" />
+    </ThemeProvider>
+  );
+  return resolvedStyle(screen.getByTestId('tile'), state);
 }
 
-function rootRules(): Rule[] {
-  return renderedRules(<RootProbe tabIndex={0} />);
+function root(state: StyleState = {}): Record<string, string> {
+  cleanup();
+  render(
+    <ThemeProvider theme={theme}>
+      <RootProbe data-testid="root" tabIndex={0} />
+    </ThemeProvider>
+  );
+  return resolvedStyle(screen.getByTestId('root'), state);
 }
 
 describe('cardLift — the Card vocabulary, on the tile', () => {
   it('rests on the 0 6px 20px shadow', () => {
-    expect(tight(restingBody(tileRules()))).toContain(
-      tight('box-shadow: 0 6px 20px rgba(0,0,0,.35)')
-    );
+    expect(tile()['box-shadow']).toBe(normCss('0 6px 20px rgba(0,0,0,.35)'));
   });
 
   it('eases transform, shadow and border at durBase on easeOut', () => {
-    const transition =
-      /transition:([^;]*)/.exec(restingBody(tileRules()))?.[1] ?? '';
+    const transition = tile().transition ?? '';
 
     for (const property of ['transform', 'box-shadow', 'border-color']) {
       expect(transition).toContain(
-        squash(`${property} ${theme.motion.durBase} ${theme.motion.easeOut}`)
+        normCss(`${property} ${theme.motion.durBase} ${theme.motion.easeOut}`)
       );
     }
   });
 
   it('lifts 4px on hover, with the deeper shadow and the accentLine border', () => {
-    const hover = tight(declarations(tileRules(), ':hover'));
+    const hover = tile({ hover: true });
 
-    expect(hover).toContain('transform:translateY(-4px)');
-    expect(hover).toContain(tight('box-shadow: 0 14px 34px rgba(0,0,0,.5)'));
-    expect(hover).toContain(tight(`border-color: ${theme.colors.accentLine}`));
+    expect(hover.transform).toBe('translateY(-4px)');
+    expect(hover['box-shadow']).toBe(normCss('0 14px 34px rgba(0,0,0,.5)'));
+    expect(hover['border-color']).toBe(normCss(theme.colors.accentLine));
   });
 
   it('settles to translateY(-1px) on press, in 70ms', () => {
-    const press = tileRules()
-      .filter((rule) => rule.selector.includes(':active'))
-      .map((rule) => rule.body)
-      .join(';');
+    const press = tile({ hover: true, active: true });
 
-    expect(press).toContain('transform:translateY(-1px)');
-    expect(press).toContain('transition-duration:70ms');
+    expect(press.transform).toBe('translateY(-1px)');
+    expect(press['transition-duration']).toBe('70ms');
   });
 });
 
 describe('cardFocus — the Card vocabulary, on the focusable root', () => {
   it('draws a 2px focusRing outline 4px out under keyboard focus', () => {
-    const focus = declarations(rootRules(), ':focus-visible');
+    const focus = root({ focusVisible: true });
 
-    expect(focus).toContain(
-      squash(`outline: 2px solid ${theme.colors.focusRing}`)
-    );
-    expect(focus).toContain('outline-offset:4px');
+    expect(focus.outline).toBe(normCss(`2px solid ${theme.colors.focusRing}`));
+    expect(focus['outline-offset']).toBe('4px');
   });
 
   it('leaves the radius to the caller', () => {
-    const rules = rootRules();
+    const focus = root({ focusVisible: true });
 
-    expect(declarations(rules, ':focus-visible')).toContain(
-      'outline-offset:4px'
-    );
-    expect(rules.map((rule) => rule.body).join(';')).not.toContain(
-      'border-radius'
-    );
+    expect(focus['outline-offset']).toBe('4px');
+    expect(focus['border-radius']).toBeUndefined();
+    expect(root()['border-radius']).toBeUndefined();
   });
 });
