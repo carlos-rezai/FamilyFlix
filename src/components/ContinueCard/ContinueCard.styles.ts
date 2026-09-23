@@ -1,5 +1,10 @@
 import styled from 'styled-components';
 
+import {
+  cardFocus,
+  cardLift,
+} from '@/styles/interactionStates/interactionStates';
+
 /**
  * The whole tile is one control, so it is a real `<button>` rather than a div
  * with a click handler: that is what makes it a tab stop and what gets Enter
@@ -10,8 +15,8 @@ import styled from 'styled-components';
  * pixels are the same as the div's were: buttons come with a border, a padded
  * grey background, a centred text alignment that would shift the title and
  * resume label inside their absolutely-positioned wrapper, and their own font.
- * The focus ring is deliberately left alone — it is the visible half of what
- * this change is for.
+ * The keyboard outline is the Card's, rounded to the tile's radius; the lift
+ * is the tile's, so the card signals with elevation and never fades.
  */
 export const Root = styled.button`
   appearance: none;
@@ -24,10 +29,9 @@ export const Root = styled.button`
   display: block;
   width: 100%;
   cursor: pointer;
+  border-radius: ${({ theme }) => theme.radius.md};
 
-  &:hover {
-    opacity: 0.94;
-  }
+  ${cardFocus}
 `;
 
 export const Tile = styled.div`
@@ -37,6 +41,8 @@ export const Tile = styled.div`
   border-radius: ${({ theme }) => theme.radius.md};
   overflow: hidden;
   border: 1px solid ${({ theme }) => theme.colors.borderSoft};
+
+  ${cardLift}
 `;
 
 export const Scrim = styled.div`

@@ -1,10 +1,22 @@
 import styled from 'styled-components';
 
 import { IconButton } from '@/primitives';
+import {
+  cardFocus,
+  cardLift,
+} from '@/styles/interactionStates/interactionStates';
 
+/**
+ * The focusable root carries the Card's keyboard outline, rounded to the
+ * poster's radius; the lift is the tile's alone, so a pointer on the title
+ * below does not raise the art.
+ */
 export const Root = styled.div`
   width: 100%;
   cursor: pointer;
+  border-radius: ${({ theme }) => theme.radius.md};
+
+  ${cardFocus}
 `;
 
 export const Poster = styled.div`
@@ -14,15 +26,8 @@ export const Poster = styled.div`
   border-radius: ${({ theme }) => theme.radius.md};
   overflow: hidden;
   border: 1px solid ${({ theme }) => theme.colors.borderSoft};
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
-  transition:
-    transform 0.18s ease,
-    box-shadow 0.18s ease;
 
-  &:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 14px 34px rgba(0, 0, 0, 0.5);
-  }
+  ${cardLift}
 `;
 
 export const InnerBorder = styled.div`
@@ -39,9 +44,11 @@ export const InnerBorder = styled.div`
  * chrome that lets it read over artwork — a translucent fill, a blur, and a
  * hairline that survives against a bright poster.
  *
- * The hover repeats the ink deliberately: the heart brightens its fill on hover
- * and keeps its colour, so the primitive's ghost face — which shifts both —
- * has to be answered on both counts.
+ * The hover repeats the ink deliberately: the heart darkens its backing,
+ * brightens its hairline and grows on hover while keeping its colour, so the
+ * primitive's ghost face has to be answered on every count. Because that hover
+ * writes `transform`, the heart writes its own press as well; the 60ms and the
+ * keyboard ring stay the Control's.
  */
 export const FavoriteButton = styled(IconButton)<{ $favorite: boolean }>`
   position: absolute;
@@ -56,8 +63,14 @@ export const FavoriteButton = styled(IconButton)<{ $favorite: boolean }>`
 
   &:hover:enabled {
     background: rgba(18, 14, 10, 0.82);
+    border-color: rgba(255, 255, 255, 0.45);
     color: ${({ theme, $favorite }) =>
       $favorite ? theme.colors.accent : '#fff'};
+    transform: scale(1.08);
+  }
+
+  &:active:enabled {
+    transform: scale(0.92);
   }
 `;
 
