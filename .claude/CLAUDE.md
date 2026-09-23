@@ -152,12 +152,15 @@ familyflix/
 │ │ ├── SnackbarProvider/ ← the Snackbar stack: the queue, the ids off a counter, one timer per plain notice, the fixed bottom-right `column-reverse` column (newest nearest the corner, `pointer-events: none` with each card's wrapper taking them back, always mounted, no portal, no cap, no dedupe), and the action that takes its own notice off first and then runs
 │ │ └── useSnackbar/ ← the context, `useSnackbar()` → `{ notify, dismiss }` (throwing outside the provider, naming itself), and `SnackbarNotice` — `{ variant, title?, message, action? }`; no `duration`, no `dismissible`: an action persists, everything else dies at 5s
 │ ├── assets/ ← images, fonts, icons (static)
-│ ├── styles/ ← global CSS reset, themes, and visuallyHidden.ts — the clip that hides an input without taking it out of the tab order
-│ ├── tokens/ ← colors, spacing, typography, breakpoints
-│ │ ├── colors.ts
+│ ├── styles/ ← global CSS reset (and the one **Reduced motion** block), themes, and visuallyHidden.ts — the clip that hides an input without taking it out of the tab order
+│ │ ├── theme.ts ← the factory: `createTheme(accent = colors.accent)` spreads the **Accent scale** over `colors` and mounts `motion`; `theme = createTheme()`
+│ │ └── interactionStates/ ← the **Interaction contract** as three fragments: `controlStates(press)` — the transition, the **Press** at doubled rank in 60ms, the 3px **Focus ring** — and `cardLift` (tile) and `cardFocus` (root) for a **Card**; its test carries the structural guard: no shipping file but `tokens/motion.ts` spells a duration or the curve, none but the fragment a press
+│ ├── tokens/ ← colors, spacing, typography, breakpoints, motion
+│ │ ├── colors.ts ← one accent; its five derivatives are the theme factory's
 │ │ ├── spacing.ts
 │ │ ├── typography.ts
 │ │ ├── breakpoints.ts
+│ │ ├── motion.ts ← `durFast` 120ms, `durBase` 180ms, `durSlow` 280ms, `easeOut` — the only file that spells them
 │ │ └── index.ts
 │ ├── primitives/ ← dumb, reusable UI atoms (Button, Input, Text, Icon, Badge)
 │ │ ├── index.ts ← barrel: re-exports every primitive (only barrel at this rung)
@@ -258,6 +261,7 @@ familyflix/
 │ ├── utils/ ← pure helper functions (one folder per helper + its test)
 │ │ ├── index.ts ← barrel: re-exports every helper
 │ │ ├── formatBytes/ ← 1024-based, one decimal from KB up: `18.4 GB`
+│ │ ├── accentScale/ ← the accent → its five: `accentHover`, `accentPress`, `accentSoft`, `accentLine`, `focusRing`
 │ │ ├── moviePath/ ← the film's page as a route, `/movie/<id>`, the id encoded: the cards open it, and it is the player's and the edit's **Landing**
 │ │ └── gradientFromId/
 │ │ ├── gradientFromId.ts
@@ -269,6 +273,7 @@ familyflix/
 │ ├── shippingSources/ ← the shipping-source walk the structural guards read: every `.ts`/`.tsx` under a root that is neither a test nor `test-support/`, matched with its comments stripped, by path
 │ ├── snackbarStack/ ← the Snackbar stack's node, reached by what the prototype draws — the one fixed, reversed column — because it carries no role and no `data-testid`; throws when there is none
 │ ├── stubScrollMetrics/ ← a writable `scrollTop` and a real overflow on every element, for a jsdom that does no layout
+│ ├── resolvedStyle/ ← the cascade by hand for a named state jsdom cannot enter — hover, press, a click's focus, the keyboard's — `!important`, then specificity, then order; reads a combinator whose ancestors carry no state; `normCss` beside it
 │ ├── stubScrollTo/ ← `scrollTo` on every element, for a jsdom that has it on `window` alone: who was asked for what, in order; deleted after the block
 │ └── stubDownload/ ← object URLs and an anchor’s click() for a jsdom that has neither: what the page handed the browser to save, in order
 └── docs/

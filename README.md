@@ -160,8 +160,8 @@ familyflix/
 │   │   ├── SnackbarProvider/ # the Snackbar stack: the queue, the timers, the fixed bottom-right column; an action persists, everything else dies at 5s
 │   │   └── useSnackbar/      # `{ notify, dismiss }` off the stack, and SnackbarNotice
 │   ├── assets/         # Static images, fonts, icons
-│   ├── styles/         # Global CSS reset, themes, visuallyHidden
-│   ├── tokens/         # Colors, spacing, typography, breakpoints
+│   ├── styles/         # Global CSS reset and Reduced motion, visuallyHidden; theme.ts, the createTheme(accent) factory spreading the Accent scale; interactionStates/ — controlStates(press), cardLift, cardFocus, and the structural guard in its test
+│   ├── tokens/         # Colors, spacing, typography, breakpoints, motion
 │   ├── primitives/     # Atomic UI elements (Button, Input, Text, Toggle, the Icon glyphs — the Snackbar's four and the FAB's two among them) — each with .tsx, .test.tsx, .styles.ts
 │   ├── components/     # Composed UI blocks (PosterCard, Modal, ProgressBar) — same three-file shape
 │   │   ├── Modal/          # the scrimmed card every dialog is drawn on; owns its own dismissal and focus; `bare` for a card that is its children alone
@@ -189,8 +189,8 @@ familyflix/
 │   ├── api/             # Wire calls two or more features share (saveFavorite, fetchMovie, saveWatched, dismissProblem, fetchSettings)
 │   ├── hooks/            # Global shared hooks (useGoBack(fallback) — the one Back rule, a history step with the screen's own landing behind it — and useRestoredScroll)
 │   ├── types/            # Shared TypeScript interfaces (import.ts, export.ts, settings.ts, playback.ts — read by both build targets; appVersion.d.ts)
-│   ├── utils/            # Pure helper functions (formatBytes and moviePath among them)
-│   └── test-support/     # Shared test doubles (fakeResponse, stubDownload, stubScrollMetrics, stubScrollTo, comesBefore, snackbarStack, LocationProbe and its navigationType reader, shippingSources, …)
+│   ├── utils/            # Pure helper functions (formatBytes, moviePath and accentScale among them)
+│   └── test-support/     # Shared test doubles (fakeResponse, stubDownload, stubScrollMetrics, stubScrollTo, comesBefore, snackbarStack, LocationProbe and its navigationType reader, shippingSources, resolvedStyle and normCss, …)
 └── docs/
     ├── design-logs/    # Immutable feature design snapshots
     ├── PRDs/           # Product requirements and implementation plans
