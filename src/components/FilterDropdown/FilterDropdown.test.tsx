@@ -1,13 +1,16 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
-import type { ReactElement } from 'react';
-import { renderToString } from 'react-dom/server';
-import { ServerStyleSheet, ThemeProvider } from 'styled-components';
+import { cleanup, render, screen, fireEvent } from '@testing-library/react';
+import { ThemeProvider } from 'styled-components';
 
 // Through the category barrel — no per-unit barrel.
 import { FilterDropdown, type FilterDropdownProps } from '@/components';
 import type { FilterOption } from '@/types';
 import { theme } from '@/styles/theme';
+import {
+  normCss,
+  resolvedStyle,
+  type StyleState,
+} from '@/test-support/resolvedStyle/resolvedStyle';
 
 /**
  * The simplest list that exercises every shape a `FilterOption` comes in: the
@@ -342,120 +345,72 @@ describe('FilterDropdown — how wide the panel is', () => {
  * `mol.FilterDropdown.dc.html` draws them. The library's sort and genre
  * dropdowns are both this pill.
  *
- * jsdom computes no `:hover`, `:active` or `:focus-visible`, so each state is
- * read as the rule written for it, whitespace aside — the way Button's are.
+ * jsdom computes no `:hover`, `:active` or `:focus-visible`, so each pill is
+ * rendered into the document and `resolvedStyle` runs the cascade for the
+ * named state — what wins there, the way Button's are. The option rows' ease
+ * reaches them through a descendant rule in the dropdown's slot, which the
+ * double reads because the slot's ancestor carries no state.
  */
 describe('FilterDropdown — hover, press and keyboard focus', () => {
-  interface Rule {
-    selector: string;
-    body: string;
-  }
-
-  const squash = (css: string) => css.replace(/\s+/g, '');
-  /** `0.32` and `.32` are the same number; compare them as one. */
-  const norm = (css: string) => squash(css).replace(/([(,:])0\./g, '$1.');
-
-  function parse(css: string): Rule[] {
-    return [...norm(css).matchAll(/([^{}]+)\{([^{}]*)\}/g)].map((m) => ({
-      selector: m[1],
-      body: m[2],
-    }));
-  }
-
-  function rulesOf(tree: ReactElement): Rule[] {
-    const sheet = new ServerStyleSheet();
-    try {
-      renderToString(
-        sheet.collectStyles(<ThemeProvider theme={theme}>{tree}</ThemeProvider>)
-      );
-      return parse(
-        sheet
-          .getStyleTags()
-          .replace(/<\/?style[^>]*>/g, '')
-          .replace(/\/\*!sc\*\//g, '')
-      );
-    } finally {
-      sheet.seal();
-    }
-  }
-
-  /**
-   * The rules the live document holds for one mounted element — an option row
-   * only exists once the panel is open, which a server render never draws.
-   */
-  function rulesFor(element: Element): Rule[] {
-    const css = Array.from(document.querySelectorAll('style'))
-      .map((tag) => tag.textContent ?? '')
-      .join('\n');
-    const classes = Array.from(element.classList);
-    return parse(css).filter((rule) =>
-      classes.some((name) => rule.selector.includes(`.${name}`))
-    );
-  }
-
-  function state(rules: Rule[], pseudo: string): string {
-    return rules
-      .filter((rule) => rule.selector.includes(pseudo))
-      .map((rule) => rule.body)
-      .join(';');
-  }
+  const HOVER: StyleState = { hover: true };
+  const PRESS: StyleState = { hover: true, active: true };
 
   const c = theme.colors;
-  const eased = () => norm(`${theme.motion.durFast} ${theme.motion.easeOut}`);
+  const eased = (property: string) =>
+    normCss(`${property} ${theme.motion.durFast} ${theme.motion.easeOut}`);
 
   const triggers = [
     ['Genre', 'All Genres'],
     ['Sort', 'Recently added'],
   ] as const;
 
-  function dropdown(label: string, value: string) {
-    return (
-      <FilterDropdown label={label} value={value} options={genreOptions()} />
-    );
+  /** One dropdown, rendered afresh, as its pill. */
+  function trigger(label: string, value: string): HTMLElement {
+    cleanup();
+    renderDropdown({ label, value });
+    return pill(`${label}: ${value}`);
   }
 
   it.each(triggers)(
     'hovers the %s trigger to the accent line and the surface2 fill',
     (label, value) => {
-      const hover = state(rulesOf(dropdown(label, value)), ':hover');
+      const hover = resolvedStyle(trigger(label, value), HOVER);
 
-      expect(hover).toContain(norm(`border-color:${c.accentLine}`));
-      expect(hover).toContain(norm(`background:${c.surface2}`));
+      expect(hover['border-color']).toBe(normCss(c.accentLine));
+      expect(hover.background).toBe(normCss(c.surface2));
     }
   );
 
   it.each(triggers)(
     'presses the %s trigger at scale(.98), in 60ms, like a Button',
     (label, value) => {
-      const press = state(rulesOf(dropdown(label, value)), ':active');
+      const press = resolvedStyle(trigger(label, value), PRESS);
 
-      expect(press).toContain('transform:scale(.98)');
-      expect(press).toContain('transition-duration:60ms');
+      expect(press.transform).toBe(normCss('scale(.98)'));
+      expect(press['transition-duration']).toBe('60ms');
     }
   );
 
   it.each(triggers)(
     'rings the %s trigger with the accent Focus ring under Tab, and not for a click',
     (label, value) => {
-      const rules = rulesOf(dropdown(label, value));
+      const control = trigger(label, value);
 
-      const focus = state(rules, ':focus-visible');
-      expect(focus).toContain(norm(`box-shadow:0 0 0 3px ${c.focusRing}`));
-      expect(focus).toContain('outline:none');
-      expect(
-        rules.filter((rule) => /:focus(?!-visible)/.test(rule.selector))
-      ).toEqual([]);
+      const focus = resolvedStyle(control, { focusVisible: true });
+      expect(focus['box-shadow']).toBe(normCss(`0 0 0 3px ${c.focusRing}`));
+      expect(focus.outline).toBe('none');
+      expect(resolvedStyle(control, { focus: true })).toEqual(
+        resolvedStyle(control)
+      );
     }
   );
 
   it('eases the trigger’s states in at durFast on easeOut', () => {
-    const resting = rulesOf(dropdown('Genre', 'All Genres'))
-      .filter((rule) => !rule.selector.includes(':'))
-      .map((rule) => rule.body)
-      .join(';');
+    const transition =
+      resolvedStyle(trigger('Genre', 'All Genres')).transition ?? '';
 
     for (const property of ['background', 'border-color', 'transform']) {
-      expect(resting).toContain(`${property}${eased()}`);
+      expect(transition).toContain(eased(property));
     }
   });
 
@@ -463,14 +418,11 @@ describe('FilterDropdown — hover, press and keyboard focus', () => {
     renderDropdown();
     openDropdown();
 
-    const rules = rulesFor(option('Comedy'));
-    const resting = rules
-      .filter((rule) => !rule.selector.includes(':'))
-      .map((rule) => rule.body)
-      .join(';');
+    const row = option('Comedy');
+    const transition = resolvedStyle(row).transition ?? '';
 
-    expect(state(rules, ':hover')).toContain(norm(`background:${c.surface3}`));
-    expect(resting).toContain(`background${eased()}`);
-    expect(resting).toContain(`color${eased()}`);
+    expect(resolvedStyle(row, HOVER).background).toBe(normCss(c.surface3));
+    expect(transition).toContain(eased('background'));
+    expect(transition).toContain(eased('color'));
   });
 });

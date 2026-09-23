@@ -20,7 +20,10 @@ import { theme } from './theme';
  * `ffSpin` stays, and with motion allowed the spinner still turns.
  *
  * jsdom evaluates no media query, so the rule is read off the CSS
- * styled-components produces, whitespace aside.
+ * styled-components produces, whitespace aside. The one suite that does not
+ * ask `resolvedStyle`: its subject is an at-rule on a global, which the double
+ * deliberately does not read — it drops every at-rule, and a global's rules
+ * never reach the document it reads.
  */
 
 const REDUCED_MOTION = `
