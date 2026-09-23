@@ -4,12 +4,17 @@ import type {
   GenreCount,
   GenrePayload,
   GenreQuery,
+  Episode,
   HomePayload,
   LibraryQuery,
   Movie,
   MoviePatch,
   MovieQuery,
+  NewEpisode,
   NewMovie,
+  NewSeries,
+  Series,
+  SeriesHomePayload,
   Settings,
 } from '@/types';
 import { createMovieReader } from './read/read';
@@ -20,6 +25,8 @@ import { createWrite } from './write/write';
 import { createWatch } from './watch/watch';
 import { createCuration } from './curation/curation';
 import { createSettings } from './settings/settings';
+import { createSeriesReader } from './series/read/read';
+import { createSeriesWrite } from './series/write/write';
 
 /**
  * The repository seam every consumer (routes, importer, player) reads and writes
@@ -156,6 +163,21 @@ export interface LibraryStorage {
    * language follows.
    */
   setSubtitleLanguage(language: string): void;
+  /**
+   * Insert a **Series** and its genres (ordered) in one transaction, and
+   * return the assembled model. It carries no watch state: that lives on its
+   * episodes.
+   */
+  addSeries(input: NewSeries): Series;
+  /**
+   * Insert one **Episode** under a held series, unwatched at zero. A second
+   * episode under one series, season and number is refused by the schema.
+   */
+  addEpisode(seriesId: string, input: NewEpisode): Episode;
+  /** Every series by title, and the episode total across all of them. */
+  getSeriesHome(): SeriesHomePayload;
+  /** A series' episodes in season, then episode order; `[]` for none. */
+  listEpisodes(seriesId: string): Episode[];
   /** Close the underlying database connection. */
   close(): void;
 }
@@ -176,6 +198,8 @@ export function createSqliteStorage(dbPath: string): LibraryStorage {
   const watch = createWatch(db);
   const curation = createCuration(db);
   const settingsRepository = createSettings(db);
+  const seriesReader = createSeriesReader(db);
+  const seriesWrite = createSeriesWrite(db, seriesReader);
 
   return {
     addMovie: write.addMovie,
@@ -196,6 +220,10 @@ export function createSqliteStorage(dbPath: string): LibraryStorage {
     setRating: curation.setRating,
     settings: settingsRepository.settings,
     setSubtitleLanguage: settingsRepository.setSubtitleLanguage,
+    addSeries: seriesWrite.addSeries,
+    addEpisode: seriesWrite.addEpisode,
+    getSeriesHome: seriesReader.getSeriesHome,
+    listEpisodes: seriesReader.listEpisodes,
     close() {
       db.close();
     },

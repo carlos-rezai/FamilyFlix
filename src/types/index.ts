@@ -20,6 +20,13 @@ export { SUBTITLE_LANGUAGES, DEFAULT_SUBTITLE_LANGUAGE } from './settings';
 
 export type { WatchStatus, Genre, Subtitle, Movie } from './movie';
 export type {
+  Series,
+  Episode,
+  SeriesHomePayload,
+  NewSeries,
+  NewEpisode,
+} from './series';
+export type {
   MovieSort,
   ListSort,
   MovieQuery,

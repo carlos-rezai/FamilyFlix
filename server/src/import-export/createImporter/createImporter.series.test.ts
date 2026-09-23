@@ -28,8 +28,10 @@
 // The root is built here rather than taken from the checked-in fixture, so the
 // counts below do not move when the fixture does. The episode videos are
 // copies of the fixture's Die Hard header, so each derives 132 minutes. The
-// last suite is the fixture's own: once it carries its show, a dev library
-// filled from it has a series on the tab.
+// last suite is the series fixture's own — a checked-in sheet and root of
+// their own beside the movie fixture, so the movie suites' counts over the
+// two-film library never move — and a dev library filled from it has a
+// series on the tab.
 
 import { cpSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -41,11 +43,9 @@ import { createPlayback } from '../../playback/createPlayback/createPlayback';
 import { fixedSlot } from '../../test-support/fixedSlot/fixedSlot';
 import { freshStorage } from '../../test-support/freshStorage/freshStorage';
 import { heldCopy } from '../../test-support/heldCopy/heldCopy';
-import {
-  LIBRARY_FIXTURE,
-  libraryFixture,
-} from '../../test-support/libraryFixture/libraryFixture';
+import { LIBRARY_FIXTURE } from '../../test-support/libraryFixture/libraryFixture';
 import { sandboxRoot } from '../../test-support/sandboxRoot/sandboxRoot';
+import { seriesFixture } from '../../test-support/seriesFixture/seriesFixture';
 import type { LibraryStorage } from '../../library';
 import type { Episode, ImportRun, LogLine, Series } from '@/types';
 
@@ -359,14 +359,14 @@ describe('createImporter — each episode is one item on the bar', () => {
   });
 });
 
-describe('createImporter — the checked-in fixture carries a show', () => {
+describe('createImporter — the checked-in series fixture', () => {
   it.each([['library.xlsx' as const], ['library.csv' as const]])(
     'imports Harbor & Vine as one series from %s',
     async (spelling) => {
       const dir = sandboxRoot('familyflix-import-fixture-');
       const media = join(dir, 'media');
       mkdirSync(media);
-      const { root, sheet } = libraryFixture(dir, spelling);
+      const { root, sheet } = seriesFixture(dir, spelling);
       const storage = freshStorage();
       const importer = createImporter({
         storage,
@@ -392,13 +392,8 @@ describe('createImporter — the checked-in fixture carries a show', () => {
         episodes.map((_, index) => index + 1)
       );
 
-      // The two films are still the two films.
-      expect(
-        storage
-          .listMovies({ sort: 'a-z' })
-          .map((movie) => movie.title)
-          .sort()
-      ).toEqual(['Amélie', 'Die Hard']);
+      // The show is not a movie.
+      expect(storage.listMovies({ sort: 'a-z' })).toEqual([]);
     }
   );
 });

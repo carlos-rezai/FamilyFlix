@@ -46,6 +46,7 @@ import {
   type Movie,
   type MovieSort,
   type NewSubtitle,
+  type SeriesHomePayload,
   type Settings,
   type StorageReport,
 } from '@/types';
@@ -474,6 +475,14 @@ export function createApiRouter(
   // parameter would be an empty genre page for a film called "pool".
   router.get('/genres/pool', (_req: Request, res: Response) => {
     const payload: GenrePoolPayload = { genres: storage.listGenrePool() };
+    res.json(payload);
+  });
+
+  // The Series tab in one read: every series the library holds, and the
+  // episode total across them — the tab's `N series · M episodes` line. No
+  // filters yet; the library-query parser joins it with the tab's search.
+  router.get('/series', (_req: Request, res: Response) => {
+    const payload: SeriesHomePayload = storage.getSeriesHome();
     res.json(payload);
   });
 

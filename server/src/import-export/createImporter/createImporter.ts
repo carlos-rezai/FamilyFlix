@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
-import { readFile, stat } from 'node:fs/promises';
-import { dirname, extname, isAbsolute, relative } from 'node:path';
+import { mkdir, readFile, stat } from 'node:fs/promises';
+import { dirname, extname, isAbsolute, join, relative } from 'node:path';
 
 import type { LibraryStorage } from '../../library';
 import type { Media } from '../../media/createMedia/createMedia';
@@ -8,6 +8,11 @@ import type { MovieFolderScan } from '../../media/scanMovieFolder/scanMovieFolde
 import { walkLibraryRoot } from '../../media/walkLibraryRoot/walkLibraryRoot';
 import type { Playback } from '../../playback/createPlayback/createPlayback';
 import { derivedRuntime } from '../../playback/derivedRuntime/derivedRuntime';
+import {
+  groupShows,
+  type ShowEpisode,
+  type ShowScan,
+} from '../groupShows/groupShows';
 import { matchRows, type Match } from '../matchRows/matchRows';
 import { readSheet, type SheetRow } from '../readSheet/readSheet';
 import { titleGuess, titleKey } from '../titleKey/titleKey';
@@ -19,8 +24,10 @@ import type {
   LogKind,
   Movie,
   NewMovie,
+  NewSeries,
   NewSubtitle,
   ProblemKind,
+  Series,
 } from '@/types';
 
 /**
@@ -308,6 +315,38 @@ const filmKey = (title: string, year: number | null): string =>
 const titleWithYear = (title: string, year: number | null): string =>
   year === null ? title : `${title} (${year})`;
 
+/** Two digits at least: `1` is `01`, as a tag and a folder spell it. */
+const twoDigits = (n: number): string => String(n).padStart(2, '0');
+
+/** An episode as the console names it: `Harbor & Vine · S01E03`. */
+const episodeLabel = (title: string, { season, episode }: ShowEpisode) =>
+  `${title} · S${twoDigits(season)}E${twoDigits(episode)}`;
+
+/** The folder a season's episodes are copied into, under the Series folder. */
+const seasonFolderName = (season: number): string =>
+  `season-${twoDigits(season)}`;
+
+/**
+ * A **Show folder** as the matcher weighs it: a scan under the show's own
+ * name and folder, holding its first episode, so the **Match rule** a film
+ * is held to is the one a show is held to — and a show with no episode is
+ * the film rule's `no-video`.
+ */
+const asMatchable = (show: ShowScan): MovieFolderScan => ({
+  dir: show.dir,
+  name: show.name,
+  videos: show.episodes.slice(0, 1).map((episode) => episode.video),
+  poster: null,
+  backdrop: null,
+  subtitles: [],
+});
+
+/** A matched show: the row that named it, and the show. */
+interface ShowMatch {
+  row: SheetRow;
+  show: ShowScan;
+}
+
 /**
  * Whether `path` lies strictly under `root` — not the root itself, not a path
  * climbing out of it through `..`, and not one on another drive, which
@@ -535,6 +574,85 @@ export function createImporter({
   };
 
   /**
+   * Import one matched show as a **Series**: one **Series folder** reserved
+   * from the row's title and year, every episode copied under its
+   * `season-NN/`, its runtime derived after the copy. Each episode is one item
+   * on the bar — the current item and its `success` line read `Show · SnnEnn`
+   * — and is written as it lands, so a cancel keeps the episodes already
+   * copied, as it keeps the films. The series is written with its first
+   * episode, from the row: title, year, genres, synopsis, rating and cast,
+   * its _Director_ the creator; its _Status_ is not applied. An episode whose
+   * copy fails is filed as `failed` and the show goes on; a show that ends
+   * with no episode leaves no folder behind.
+   */
+  const importShow = async (
+    { row, show }: ShowMatch,
+    pool: Map<string, string>,
+    warnedGenres: Set<string>,
+    current: ImportRun,
+    signal: AbortSignal
+  ): Promise<void> => {
+    const folder = media.reserveFolder(row.title, row.year);
+    let series: Series | null = null;
+
+    for (const episode of show.episodes) {
+      const label = episodeLabel(row.title, episode);
+      current.currentItem = label;
+      try {
+        const into = join(folder, seasonFolderName(episode.season));
+        await mkdir(into, { recursive: true });
+        const videoPath = await media.copyIn(into, episode.video, signal);
+        signal.throwIfAborted();
+        const runtime = derivedRuntime(playback, videoPath);
+
+        if (series === null) {
+          const genres = knownGenres(row.genres, pool, warnedGenres, current);
+          const input: NewSeries = {
+            title: row.title,
+            ...(row.year === null ? {} : { year: row.year }),
+            ...(row.director === null ? {} : { creator: row.director }),
+            ...(row.synopsis === null ? {} : { synopsis: row.synopsis }),
+            ...(row.rating === null ? {} : { rating: row.rating }),
+            ...(row.cast.length === 0 ? {} : { cast: row.cast }),
+            ...(genres.length === 0 ? {} : { genres }),
+          };
+          series = storage.addSeries(input);
+        }
+        storage.addEpisode(series.id, {
+          season: episode.season,
+          number: episode.episode,
+          videoPath,
+          ...(episode.title === null ? {} : { title: episode.title }),
+          ...(runtime === null ? {} : { runtimeMinutes: runtime }),
+        });
+        log(current, `✓ Imported   ${label}`, 'success');
+      } catch (error) {
+        if (signal.aborted) {
+          break;
+        }
+        const reason = error instanceof Error ? error.message : String(error);
+        file(
+          current,
+          problemOf(
+            'failed',
+            label,
+            `Couldn't copy the video file: ${reason}.`
+          ),
+          { row, folder: asMatchable(show), candidates: [] }
+        );
+      }
+      if (signal.aborted) {
+        break;
+      }
+      current.done += 1;
+    }
+
+    if (series === null) {
+      media.removeFolder(folder);
+    }
+  };
+
+  /**
    * The two **Warning lines** that never block: subtitles and posters are
    * optional on the form this run shares its save with, so their absence is
    * noted under the imported line rather than held against the match.
@@ -601,10 +719,22 @@ export function createImporter({
       'success'
     );
 
-    const verdicts = matchRows(rows, scans);
+    // Season folders gather under their Show folder; every other scan is a
+    // film, exactly as it came. A show is matched by the film's own rule, over
+    // a scan standing for it — and told apart again once matched.
+    const { shows, films } = groupShows(scans);
+    const showOf = new Map<MovieFolderScan, ShowScan>(
+      shows.map((show) => [asMatchable(show), show])
+    );
+
+    const verdicts = matchRows(rows, [...films, ...showOf.keys()]);
     const matched: Match[] = [];
+    const matchedShows: ShowMatch[] = [];
     for (const match of verdicts.matched) {
-      if (already.has(filmKey(match.row.title, match.row.year))) {
+      const show = showOf.get(match.folder);
+      if (show !== undefined) {
+        matchedShows.push({ row: match.row, show });
+      } else if (already.has(filmKey(match.row.title, match.row.year))) {
         log(
           current,
           `– Already in library ${titleWithYear(match.row.title, match.row.year)}`,
@@ -637,8 +767,11 @@ export function createImporter({
         candidates: [],
       });
     }
-    current.matched = matched.length;
-    current.total = matched.length;
+    current.matched = matched.length + matchedShows.length;
+    // Each episode is one item on the bar, as each film is.
+    current.total =
+      matched.length +
+      matchedShows.reduce((sum, { show }) => sum + show.episodes.length, 0);
     current.phase = 'importing';
 
     let imported = 0;
@@ -660,6 +793,13 @@ export function createImporter({
         warnOfMissingFiles(current, match);
       }
       current.done += 1;
+    }
+
+    for (const match of matchedShows) {
+      await importShow(match, pool, warnedGenres, current, signal);
+      if (signal.aborted) {
+        return;
+      }
     }
 
     current.currentItem = '';

@@ -133,4 +133,70 @@ export const migrations: readonly Migration[] = [
       `);
     },
   },
+  {
+    // Series (TV): a `series`, its `episodes` carrying the movie's watch trio
+    // exactly — so the watch rules transfer untouched — and the two children
+    // mirroring the movie's. No `seasons` table: a season is `season_number`
+    // on its episodes, and nothing about one is stored. `movies` is not
+    // touched; the whole initiative is additive.
+    version: 4,
+    up(db) {
+      db.exec(`
+        CREATE TABLE series (
+          id            TEXT PRIMARY KEY,
+          tmdb_id       INTEGER,
+          title         TEXT NOT NULL,
+          year          INTEGER,
+          end_year      INTEGER,
+          synopsis      TEXT,
+          creator       TEXT,
+          cast          TEXT,
+          rating        INTEGER CHECK (rating BETWEEN 0 AND 10),
+          is_favorite   INTEGER NOT NULL DEFAULT 0,
+          poster_path   TEXT,
+          backdrop_path TEXT,
+          created_at    TEXT NOT NULL,
+          updated_at    TEXT NOT NULL
+        );
+
+        CREATE TABLE episodes (
+          id                      TEXT PRIMARY KEY,
+          series_id               TEXT NOT NULL REFERENCES series(id) ON DELETE CASCADE,
+          season_number           INTEGER NOT NULL,
+          episode_number          INTEGER NOT NULL,
+          title                   TEXT,
+          air_date                TEXT,
+          runtime_minutes         INTEGER,
+          watched                 INTEGER NOT NULL DEFAULT 0,
+          resume_position_seconds INTEGER NOT NULL DEFAULT 0,
+          last_watched_at         TEXT,
+          video_path              TEXT NOT NULL,
+          created_at              TEXT NOT NULL,
+          updated_at              TEXT NOT NULL,
+          UNIQUE (series_id, season_number, episode_number)
+        );
+
+        CREATE TABLE series_genres (
+          series_id TEXT NOT NULL REFERENCES series(id) ON DELETE CASCADE,
+          genre_id  TEXT NOT NULL REFERENCES genres(id),
+          position  INTEGER NOT NULL,
+          PRIMARY KEY (series_id, genre_id)
+        );
+
+        CREATE TABLE episode_subtitles (
+          id         TEXT PRIMARY KEY,
+          episode_id TEXT NOT NULL REFERENCES episodes(id) ON DELETE CASCADE,
+          path       TEXT NOT NULL,
+          language   TEXT NOT NULL,
+          position   INTEGER NOT NULL
+        );
+
+        CREATE INDEX idx_series_title ON series(title);
+        CREATE INDEX idx_series_genres_genre_id ON series_genres(genre_id);
+        CREATE INDEX idx_episode_subtitles_episode_id ON episode_subtitles(episode_id);
+        CREATE INDEX idx_episodes_last_watched_at ON episodes(last_watched_at)
+          WHERE last_watched_at IS NOT NULL;
+      `);
+    },
+  },
 ];
