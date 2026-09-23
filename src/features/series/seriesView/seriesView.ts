@@ -112,5 +112,13 @@ export function seriesView(detail: SeriesDetail): SeriesDetailModel {
     g1,
     g2,
     topTag: toTopTag(detail, yearLabel, hasArtwork),
+    isFavorite: series.isFavorite,
+    seasons: seasons.map((season) => ({
+      number: season.number,
+      episodeCount: season.episodes.length,
+      watchedCount: season.episodes.filter((episode) => episode.watched).length,
+      g1,
+      g2,
+    })),
   };
 }

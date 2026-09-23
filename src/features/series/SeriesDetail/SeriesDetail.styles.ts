@@ -1,7 +1,7 @@
 import styled from 'styled-components';
 
 import { LoadMessage } from '@/components';
-import { Skeleton } from '@/primitives';
+import { IconButton, Skeleton } from '@/primitives';
 
 /** The art area behind the top of the page — 520px, `page.SeriesPage`'s. */
 export const ArtArea = styled.div`
@@ -129,6 +129,29 @@ export const ActionRow = styled.div`
   flex-wrap: wrap;
 `;
 
+/**
+ * The series' heart beside the button — the movie page's circle: filled in
+ * the accent when the series is a favorite, a bare outline when not. Hovering
+ * brightens the outline, never the fill, and draws no scale; the press, the
+ * square and `aria-pressed` are `IconButton`'s.
+ */
+export const CircleToggle = styled(IconButton)<{ $on: boolean }>`
+  background: ${({ theme, $on }) =>
+    $on ? theme.colors.accentSoft : 'transparent'};
+  border: 1px solid
+    ${({ theme, $on }) => ($on ? theme.colors.accentLine : theme.colors.border)};
+  color: ${({ theme, $on }) =>
+    $on ? theme.colors.accent : theme.colors.textDim};
+
+  &:hover:not(:disabled) {
+    background: ${({ theme, $on }) =>
+      $on ? theme.colors.accentSoft : 'transparent'};
+    border-color: ${({ theme }) => theme.colors.accentLine};
+    color: ${({ theme }) => theme.colors.accent};
+    transform: none;
+  }
+`;
+
 export const Progress = styled.span`
   font-family: ${({ theme }) => theme.fonts.sans};
   font-size: 14px;
@@ -162,4 +185,24 @@ export const SkeletonLine = styled(Skeleton)`
   max-width: 560px;
   height: 16px;
   margin-top: 14px;
+`;
+
+/** The Seasons grid under the hero, `page.SeriesPage`'s. */
+export const SeasonsSection = styled.section`
+  position: relative;
+  margin-top: ${({ theme }) => theme.space.s8};
+`;
+
+export const SeasonsHeading = styled.h2`
+  font-family: ${({ theme }) => theme.fonts.serif};
+  font-weight: 600;
+  font-size: 24px;
+  color: ${({ theme }) => theme.colors.text};
+  margin: 0 0 ${({ theme }) => theme.space.s4};
+`;
+
+export const SeasonsGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: ${({ theme }) => theme.space.s5};
 `;

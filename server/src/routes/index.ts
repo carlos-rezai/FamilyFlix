@@ -499,6 +499,25 @@ export function createApiRouter(
     res.json(detail);
   });
 
+  // The series' heart, a **Single-signal write** on the movie favorite's
+  // precedent: exactly a boolean or 400, a series the library does not hold a
+  // JSON 404 — a movie's id among them — and the echo of what was stored.
+  router.post(
+    '/series/:id/favorite',
+    (req: Request<{ id: string }>, res: Response) => {
+      const { value } = req.body as { value?: unknown };
+      if (typeof value !== 'boolean') {
+        res.status(400).json({ error: 'Body must be { value: boolean }' });
+        return;
+      }
+      if (!storage.setSeriesFavorite(req.params.id, value)) {
+        res.status(404).json({ error: `Unknown series: ${req.params.id}` });
+        return;
+      }
+      res.json({ value });
+    }
+  );
+
   // One genre in full — the whole genre page in a single request: the name, the
   // genre's unfiltered total, and every movie tagged with it, uncapped. This is
   // what a genre row's "View all 214 →" opens, so a cap here would leave the

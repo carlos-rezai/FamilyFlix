@@ -122,6 +122,17 @@ export interface FilterOption {
   onSelect: () => void;
 }
 
+/** One Season card on the series page: `mol.SeasonCard`'s `season`. */
+export interface SeasonCardModel {
+  number: number;
+  episodeCount: number;
+  /** Whole episodes watched — a part-watched one is not counted. */
+  watchedCount: number;
+  /** The series' gradient stops. */
+  g1: string;
+  g2: string;
+}
+
 /** What the **Series page**'s hero draws — `seriesView`'s output. */
 export interface SeriesDetailModel {
   id: string;
@@ -156,4 +167,8 @@ export interface SeriesDetailModel {
   g2: string;
   /** The uppercase caption over the gradient; `null` when there is artwork. */
   topTag: string | null;
+  /** The series' heart. */
+  isFavorite: boolean;
+  /** The Seasons grid, one card per season in order. */
+  seasons: SeasonCardModel[];
 }

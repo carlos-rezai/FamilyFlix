@@ -436,7 +436,7 @@ describe('SeriesDetail — the load states', () => {
 describe('SeriesDetail — the Seasons grid', () => {
   /** A season's card, named for its season. */
   const seasonCard = (number: number) =>
-    screen.getByRole('button', { name: new RegExp(`\bSeason ${number}\b`) });
+    screen.getByRole('button', { name: new RegExp(`\\bSeason ${number}\\b`) });
 
   it('draws the Seasons heading and one card per season', async () => {
     serve({

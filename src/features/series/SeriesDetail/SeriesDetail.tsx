@@ -1,10 +1,17 @@
 import { Fragment, type ReactNode } from 'react';
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 
-import { CreditsRow, ExpandableText } from '@/components';
-import { Artwork, Button, Chip, StarRating } from '@/primitives';
+import { CreditsRow, ExpandableText, SeasonCard } from '@/components';
+import {
+  Artwork,
+  Button,
+  Chip,
+  HeartIcon,
+  HeartOutlineIcon,
+  StarRating,
+} from '@/primitives';
 import type { SeriesDetailModel } from '@/types';
-import { range } from '@/utils';
+import { range, seasonPath } from '@/utils';
 import { useSeriesDetail } from '../useSeriesDetail/useSeriesDetail';
 import {
   ArtArea,
@@ -22,12 +29,16 @@ import {
   Separator,
   Genres,
   ActionRow,
+  CircleToggle,
   Progress,
   SynopsisWrap,
   DetailMessage,
   SkeletonPoster,
   SkeletonTitle,
   SkeletonLine,
+  SeasonsSection,
+  SeasonsHeading,
+  SeasonsGrid,
 } from './SeriesDetail.styles';
 
 /** The synopsis measure, from `page.SeriesPage.dc.html`. */
@@ -40,6 +51,16 @@ const STAR_SIZE = 20;
 
 /** Drawn between two surviving **Meta segments**, never beside a missing one. */
 const META_SEPARATOR = '•';
+
+/** The heart's circle and glyph, from `page.SeriesPage.dc.html`. */
+const CIRCLE_SIZE = 58;
+const HEART_SIZE = 24;
+
+/** The heart's tip and name, the movie page's words. */
+const FAVORITE_TIP = {
+  on: 'In Favorites — click to remove',
+  off: 'Add to Favorites',
+};
 
 /** Placeholder lines held while the series loads. */
 const SKELETON_LINES = 3;
@@ -92,10 +113,13 @@ function LoadingSeries() {
  * Play button, the progress line, the synopsis and the credits. Everything it
  * draws was decided by `seriesView`.
  *
- * The button is inert: episode playback does not exist yet, so it goes
- * nowhere and writes nothing.
+ * Under the hero, the Seasons grid: one Season card per season, each opening
+ * its season page. Beside the button, the series' heart — shown at once, put
+ * back if the save is refused. The button is inert: episode playback does not
+ * exist yet, so it goes nowhere and writes nothing.
  */
 export function SeriesDetail() {
+  const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const detail = useSeriesDetail(id ?? '');
 
@@ -174,6 +198,20 @@ export function SeriesDetail() {
                 size="lg"
                 icon="play"
               />
+              <CircleToggle
+                label={series.isFavorite ? FAVORITE_TIP.on : FAVORITE_TIP.off}
+                title={series.isFavorite ? FAVORITE_TIP.on : FAVORITE_TIP.off}
+                size={CIRCLE_SIZE}
+                pressed={series.isFavorite}
+                $on={series.isFavorite}
+                onClick={detail.toggleFavorite}
+              >
+                {series.isFavorite ? (
+                  <HeartIcon size={HEART_SIZE} />
+                ) : (
+                  <HeartOutlineIcon size={HEART_SIZE} />
+                )}
+              </CircleToggle>
               <Progress>{series.progressLabel}</Progress>
             </ActionRow>
 
@@ -197,6 +235,19 @@ export function SeriesDetail() {
             />
           </Main>
         </Hero>
+
+        <SeasonsSection>
+          <SeasonsHeading>Seasons</SeasonsHeading>
+          <SeasonsGrid>
+            {series.seasons.map((season) => (
+              <SeasonCard
+                key={season.number}
+                season={season}
+                onOpen={() => navigate(seasonPath(series.id, season.number))}
+              />
+            ))}
+          </SeasonsGrid>
+        </SeasonsSection>
       </Content>
     </>
   );

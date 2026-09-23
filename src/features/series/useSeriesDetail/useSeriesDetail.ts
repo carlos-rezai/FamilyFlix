@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 
 import type { SeriesDetailModel } from '@/types';
+import { saveSeriesFavorite } from '@/api/saveSeriesFavorite/saveSeriesFavorite';
 import { fetchSeriesDetail } from '../api/api';
 import { seriesView } from '../seriesView/seriesView';
 
@@ -14,12 +15,15 @@ type SeriesDetailState =
 export type UseSeriesDetailResult = SeriesDetailState & {
   /** Re-run the load after a failure. */
   retry: () => void;
+  /** Flip the series' heart: shown at once, put back if the save is refused. */
+  toggleFavorite: () => void;
 };
 
 /**
  * Loads one series by the id in the page's URL and hands it back mapped for
- * the screen — `useMovieDetail`'s load, without its edits: this slice writes
- * nothing. A 404 is `not-found`, anything else that fails is `error`.
+ * the screen — `useMovieDetail`'s load. A 404 is `not-found`, anything else
+ * that fails is `error`. Its one edit is the heart, optimistic and put back
+ * on refusal.
  */
 export function useSeriesDetail(id: string): UseSeriesDetailResult {
   const [state, setState] = useState<SeriesDetailState>({
@@ -57,5 +61,33 @@ export function useSeriesDetail(id: string): UseSeriesDetailResult {
 
   const retry = useCallback(() => setAttempt((n) => n + 1), []);
 
-  return { ...state, retry };
+  /** Writes a favorite value into the series on screen, if it still holds one. */
+  const applyFavorite = useCallback((isFavorite: boolean) => {
+    setState((current) =>
+      current.status === 'ready'
+        ? { ...current, series: { ...current.series, isFavorite } }
+        : current
+    );
+  }, []);
+
+  const seriesId = state.series?.id ?? null;
+  const isFavorite = state.series?.isFavorite ?? false;
+
+  const toggleFavorite = useCallback(() => {
+    if (seriesId === null) {
+      return;
+    }
+    const next = !isFavorite;
+    applyFavorite(next);
+    saveSeriesFavorite(seriesId, next)
+      // The route echoes what it stored; trust that over what we assumed.
+      .then((saved) => {
+        if (saved !== next) {
+          applyFavorite(saved);
+        }
+      })
+      .catch(() => applyFavorite(!next));
+  }, [seriesId, isFavorite, applyFavorite]);
+
+  return { ...state, retry, toggleFavorite };
 }

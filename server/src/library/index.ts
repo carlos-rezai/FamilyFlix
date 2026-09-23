@@ -177,6 +177,11 @@ export interface LibraryStorage {
    * episode under one series, season and number is refused by the schema.
    */
   addEpisode(seriesId: string, input: NewEpisode): Episode;
+  /**
+   * The series' Favorites toggle — `setFavorite` over the series table.
+   * Answers whether the library holds that series; a movie's id is not one.
+   */
+  setSeriesFavorite(id: string, value: boolean): boolean;
   /** Every series by title, and the episode total across all of them. */
   getSeriesHome(): SeriesHomePayload;
   /** A series' episodes in season, then episode order; `[]` for none. */
@@ -232,6 +237,7 @@ export function createSqliteStorage(dbPath: string): LibraryStorage {
     setSubtitleLanguage: settingsRepository.setSubtitleLanguage,
     addSeries: seriesWrite.addSeries,
     addEpisode: seriesWrite.addEpisode,
+    setSeriesFavorite: seriesWrite.setSeriesFavorite,
     getSeriesHome: seriesReader.getSeriesHome,
     listEpisodes: seriesReader.listEpisodes,
     getSeriesDetail: seriesReader.getSeriesDetail,

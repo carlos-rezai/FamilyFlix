@@ -16,12 +16,13 @@ export interface StyleState {
 
 /**
  * One CSS value as the cascade tests compare it: whitespace collapsed, and a
- * leading `0.` written `.`, so `scale(0.94)` and `scale(.94)` are one number.
+ * leading `0.` written `.`, so `scale(0.94)` and `scale(.94)` are one number,
+ * and no space around a `/` — stylis prints `2 / 3` as `2/3`.
  */
 export function normCss(value: string): string {
   return value
     .replace(/\s+/g, ' ')
-    .replace(/\s*([(),])\s*/g, '$1')
+    .replace(/\s*([(),/])\s*/g, '$1')
     .replace(/(^|[(, :])0\./g, '$1.')
     .trim();
 }
