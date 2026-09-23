@@ -1594,3 +1594,91 @@ describe('App — the series page', () => {
     ).toBeDefined();
   });
 });
+
+/**
+ * 22 — Series (TV), Phase 3 (issue #193): the season page. `/series/:id/season/:n`
+ * is a route of its own; a Season card on the series page opens it, and its
+ * _Back to series_ steps back to that page.
+ */
+describe('App — the season page', () => {
+  const DETAIL: SeriesDetail = {
+    series: {
+      id: 'sv1',
+      tmdbId: null,
+      title: 'Harbor & Vine',
+      year: 2019,
+      endYear: 2023,
+      synopsis: null,
+      creator: 'Mara Quinn',
+      cast: [],
+      rating: 8,
+      isFavorite: false,
+      posterPath: null,
+      backdropPath: null,
+      genres: [],
+      watched: false,
+      createdAt: '2026-09-23T00:00:00.000Z',
+      updatedAt: '2026-09-23T00:00:00.000Z',
+    },
+    seasons: [1, 2].map((number) => {
+      const episode = {
+        id: `s${number}e1`,
+        seriesId: 'sv1',
+        season: number,
+        number: 1,
+        title: null,
+        airDate: null,
+        runtimeMinutes: null,
+        watched: false,
+        resumePositionSeconds: 0,
+        status: 'unwatched' as const,
+        videoPath: `harbor-2019/season-0${number}/e1.mp4`,
+        subtitles: [],
+        lastWatchedAt: null,
+      };
+      return { number, episodes: [episode], next: episode };
+    }),
+    next: null,
+  };
+
+  beforeEach(() => {
+    const movies = fetchMock.getMockImplementation();
+    fetchMock.mockImplementation((input, init) => {
+      const url = String(input);
+      if (url === '/api/series/sv1') {
+        return Promise.resolve(okResponse(DETAIL));
+      }
+      if (movies === undefined) {
+        return Promise.reject(new Error(`Unexpected request: ${url}`));
+      }
+      return movies(input, init);
+    });
+  });
+
+  it('renders the season itself when /series/:id/season/:n is opened directly', async () => {
+    renderApp('/series/sv1/season/2');
+
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Season 2' })
+    ).toBeDefined();
+    expect(screen.getByRole('button', { name: /^S02E01\b/ })).toBeDefined();
+  });
+
+  it('opens a season from its card on the series page, and steps back to it', async () => {
+    renderApp('/series/sv1');
+    await screen.findByRole('heading', { level: 1, name: 'Harbor & Vine' });
+
+    fireEvent.click(screen.getByRole('button', { name: /\bSeason 2\b/ }));
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Season 2' })
+    ).toBeDefined();
+    expect(pathname()).toBe('/series/sv1/season/2');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Back to series' }));
+
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Harbor & Vine' })
+    ).toBeDefined();
+    expect(pathname()).toBe('/series/sv1');
+  });
+});
