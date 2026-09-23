@@ -19,6 +19,9 @@ import type {
   ImportProblemDetail,
   ImportRun,
   Movie,
+  Series,
+  SeriesDetail,
+  SeriesHomePayload,
 } from '@/types';
 import {
   LocationProbe,
@@ -1463,5 +1466,131 @@ describe('App — coming back out of a Resolve', () => {
     // The press that used to walk back into the form of a row already fixed.
     await screen.findByRole('heading', { name: 'Settings' });
     expect(pathname()).toBe('/settings');
+  });
+});
+
+/**
+ * 22 — Series (TV), Phase 2 (issue #191): the series page. `/series/:id` is a
+ * route of its own; a Series tab poster opens it, and Back from it reaches the
+ * Series tab filtered and scrolled as it was left — the movie page's rule, the
+ * History step landing on the entry `useRestoredScroll` remembered.
+ */
+describe('App — the series page', () => {
+  function makeSeries(overrides: Partial<Series> = {}): Series {
+    return {
+      id: 'sv1',
+      tmdbId: null,
+      title: 'Harbor & Vine',
+      year: 2019,
+      endYear: 2023,
+      synopsis: null,
+      creator: 'Mara Quinn',
+      cast: [],
+      rating: 8,
+      isFavorite: false,
+      posterPath: null,
+      backdropPath: null,
+      genres: [],
+      watched: false,
+      createdAt: '2026-09-23T00:00:00.000Z',
+      updatedAt: '2026-09-23T00:00:00.000Z',
+      ...overrides,
+    };
+  }
+
+  const SERIES: Series[] = [
+    makeSeries({ id: 'sv1', title: 'Harbor & Vine' }),
+    makeSeries({ id: 'sv2', title: 'Lighthouse Keepers' }),
+  ];
+
+  /** The Series tab and each series' detail, over whatever else the file serves. */
+  beforeEach(() => {
+    const movies = fetchMock.getMockImplementation();
+    fetchMock.mockImplementation((input, init) => {
+      const url = String(input);
+      const detail = url.match(/\/api\/series\/([^/?]+)$/);
+      if (detail) {
+        const series = SERIES.find((candidate) => candidate.id === detail[1]);
+        const payload: SeriesDetail | undefined = series && {
+          series,
+          seasons: [],
+          next: null,
+        };
+        return Promise.resolve(
+          payload ? okResponse(payload) : new Response(null, { status: 404 })
+        );
+      }
+      if (url.includes('/api/series')) {
+        const payload: SeriesHomePayload = { series: SERIES, episodeCount: 0 };
+        return Promise.resolve(okResponse(payload));
+      }
+      if (movies === undefined) {
+        return Promise.reject(new Error(`Unexpected request: ${url}`));
+      }
+      return movies(input, init);
+    });
+  });
+
+  /** What a parent does with a wheel: the body moves, and it says so. */
+  function scrollTo(element: HTMLElement, top: number) {
+    element.scrollTop = top;
+    fireEvent.scroll(element);
+  }
+
+  /** The browse home's scrolling body: the one thing the header is followed by. */
+  function homeBody() {
+    return screen.getByRole('banner').nextElementSibling as HTMLElement;
+  }
+
+  it('renders the series itself when /series/:id is opened directly', async () => {
+    renderApp('/series/sv1');
+
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Harbor & Vine' })
+    ).toBeDefined();
+  });
+
+  it('opens a series’ page from its poster on the Series tab', async () => {
+    renderApp('/?tab=series');
+
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Lighthouse Keepers' })
+    );
+
+    expect(
+      await screen.findByRole('heading', {
+        level: 1,
+        name: 'Lighthouse Keepers',
+      })
+    ).toBeDefined();
+    expect(pathname()).toBe('/series/sv2');
+  });
+
+  it('lands back on the Series tab still filtered and still scrolled', async () => {
+    renderApp('/?tab=series&sort=a-z');
+    await screen.findByRole('heading', { name: 'All series' });
+    scrollTo(homeBody(), 1240);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Harbor & Vine' }));
+    await screen.findByRole('heading', { level: 1, name: 'Harbor & Vine' });
+    await pressBack();
+
+    await waitFor(() => expect(pathname()).toBe('/'));
+    expect(search()).toBe('?tab=series&sort=a-z');
+    await screen.findByRole('heading', { name: 'All series' });
+    expect(homeBody().scrollTop).toBe(1240);
+  });
+
+  it('lands on the Series tab from a series opened by deep link', async () => {
+    renderApp('/series/sv1');
+    await screen.findByRole('heading', { level: 1, name: 'Harbor & Vine' });
+
+    await pressBack();
+
+    await waitFor(() => expect(pathname()).toBe('/'));
+    expect(search()).toBe('?tab=series');
+    expect(
+      await screen.findByRole('heading', { name: 'All series' })
+    ).toBeDefined();
   });
 });

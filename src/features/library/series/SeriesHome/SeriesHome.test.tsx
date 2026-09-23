@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { ThemeProvider } from 'styled-components';
 import { MemoryRouter } from 'react-router-dom';
 
@@ -7,6 +7,10 @@ import { SeriesHome } from './SeriesHome';
 import { theme } from '@/styles/theme';
 import type { Series, SeriesHomePayload } from '@/types';
 import { okResponse } from '@/test-support/fakeResponse/fakeResponse';
+import {
+  LocationProbe,
+  pathname,
+} from '@/test-support/LocationProbe/LocationProbe';
 
 /**
  * 22 — Series (TV), Phase 1 (issue #190): the Series tab's body.
@@ -162,5 +166,33 @@ describe('SeriesHome — All series', () => {
     expect(screen.queryAllByRole('button')).toEqual([]);
     expect(screen.queryByText(/nothing here/i)).toBeNull();
     expect(container.textContent).toBe('All series0 series · 0 episodes');
+  });
+});
+
+// 22 — Series (TV), Phase 2 (issue #191): a Series tab poster opens its
+// **Series page**, `/series/<id>` — the route `seriesPath` names.
+describe('SeriesHome — opening a series', () => {
+  it('opens the series page when its poster is pressed', async () => {
+    serve({
+      series: [
+        makeSeries({ id: 's1', title: 'Harbor & Vine' }),
+        makeSeries({ id: 's2', title: 'Lighthouse Keepers' }),
+      ],
+      episodeCount: 5,
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/?tab=series']}>
+        <ThemeProvider theme={theme}>
+          <SeriesHome />
+        </ThemeProvider>
+        <LocationProbe />
+      </MemoryRouter>
+    );
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Lighthouse Keepers' })
+    );
+
+    expect(pathname()).toBe('/series/s2');
   });
 });

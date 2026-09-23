@@ -29,7 +29,7 @@ import { createPlayback } from '../playback/createPlayback/createPlayback';
 import { createSqliteStorage, type LibraryStorage } from '../library';
 import { fixedSlot } from '../test-support/fixedSlot/fixedSlot';
 import { sandboxRoot } from '../test-support/sandboxRoot/sandboxRoot';
-import type { SeriesHomePayload } from '@/types';
+import type { SeriesDetail, SeriesHomePayload } from '@/types';
 
 const storages: LibraryStorage[] = [];
 const servers: Server[] = [];
@@ -206,5 +206,220 @@ describe('GET /api/series — watched', () => {
     const { body } = await getSeries(baseUrl);
 
     expect(body.series[0].watched).toBe(false);
+  });
+});
+
+// 22 — Series (TV), Phase 2 (issue #191): the series page reads one series in
+// full. `GET /api/series/:id` answers a `SeriesDetail` — the series, its
+// seasons in order each with its episodes in order and its own **Next
+// episode**, and the series' Next episode — all derived on the server through
+// `nextEpisodeOf`, never stored. An id the library does not hold is `404`.
+describe('GET /api/series/:id', () => {
+  /** Harbor & Vine: two episodes in season 1, three in season 2. */
+  function seedHarbor(storage: LibraryStorage): string {
+    const series = storage.addSeries({
+      title: 'Harbor & Vine',
+      year: 2019,
+      endYear: 2023,
+      creator: 'Mara Quinn',
+      cast: ['Ana Vega', 'Tomas Bell'],
+      synopsis: 'Two families, one vineyard.',
+      rating: 8,
+      genres: ['Drama', 'Comedy'],
+    });
+    for (const [season, number] of [
+      [2, 1],
+      [1, 2],
+      [2, 3],
+      [1, 1],
+      [2, 2],
+    ]) {
+      storage.addEpisode(series.id, {
+        season,
+        number,
+        videoPath: `harbor-vine-2019/season-0${season}/e${number}.mp4`,
+      });
+    }
+    return series.id;
+  }
+
+  async function getDetail(
+    baseUrl: string,
+    id: string
+  ): Promise<{ status: number; body: SeriesDetail }> {
+    const response = await fetch(`${baseUrl}/api/series/${id}`);
+    return {
+      status: response.status,
+      body: (await response.json()) as SeriesDetail,
+    };
+  }
+
+  /** `S01E02`, the way the assertions below read an episode. */
+  const tag = (episode: { season: number; number: number } | null) =>
+    episode === null
+      ? null
+      : `S${String(episode.season).padStart(2, '0')}E${String(
+          episode.number
+        ).padStart(2, '0')}`;
+
+  it('answers 200 with the series record, its genres, creator and cast on it', async () => {
+    const { storage, baseUrl } = freshApi();
+    const id = seedHarbor(storage);
+
+    const { status, body } = await getDetail(baseUrl, id);
+
+    expect(status).toBe(200);
+    expect(body.series).toMatchObject({
+      id,
+      title: 'Harbor & Vine',
+      year: 2019,
+      endYear: 2023,
+      creator: 'Mara Quinn',
+      cast: ['Ana Vega', 'Tomas Bell'],
+      synopsis: 'Two families, one vineyard.',
+      rating: 8,
+    });
+    expect(body.series.genres.map((genre) => genre.name)).toEqual([
+      'Drama',
+      'Comedy',
+    ]);
+  });
+
+  it('answers the seasons in order, each with its episodes in order', async () => {
+    const { storage, baseUrl } = freshApi();
+    const id = seedHarbor(storage);
+
+    const { body } = await getDetail(baseUrl, id);
+
+    expect(body.seasons.map((season) => season.number)).toEqual([1, 2]);
+    expect(body.seasons[0].episodes.map(tag)).toEqual(['S01E01', 'S01E02']);
+    expect(body.seasons[1].episodes.map(tag)).toEqual([
+      'S02E01',
+      'S02E02',
+      'S02E03',
+    ]);
+  });
+
+  it('answers each episode with its derived watch status', async () => {
+    const { storage, baseUrl } = freshApi();
+    const id = seedHarbor(storage);
+    storage.markEpisodeWatched(storage.listEpisodes(id)[0].id);
+
+    const { body } = await getDetail(baseUrl, id);
+
+    expect(body.seasons[0].episodes.map((episode) => episode.status)).toEqual([
+      'watched',
+      'unwatched',
+    ]);
+  });
+
+  it('answers the first episode as next for a show nobody has started', async () => {
+    const { storage, baseUrl } = freshApi();
+    const id = seedHarbor(storage);
+
+    const { body } = await getDetail(baseUrl, id);
+
+    expect(tag(body.next)).toBe('S01E01');
+    expect(body.seasons.map((season) => tag(season.next))).toEqual([
+      'S01E01',
+      'S02E01',
+    ]);
+  });
+
+  it('answers the series’ next episode across seasons once one is finished', async () => {
+    const { storage, baseUrl } = freshApi();
+    const id = seedHarbor(storage);
+    const [s1e1, s1e2, s2e1] = storage.listEpisodes(id);
+    for (const episode of [s1e1, s1e2, s2e1]) {
+      storage.markEpisodeWatched(episode.id);
+    }
+
+    const { body } = await getDetail(baseUrl, id);
+
+    expect(tag(body.next)).toBe('S02E02');
+  });
+
+  it('answers each season’s own next episode', async () => {
+    const { storage, baseUrl } = freshApi();
+    const id = seedHarbor(storage);
+    const [s1e1, s1e2, s2e1] = storage.listEpisodes(id);
+    for (const episode of [s1e1, s1e2, s2e1]) {
+      storage.markEpisodeWatched(episode.id);
+    }
+
+    const { body } = await getDetail(baseUrl, id);
+
+    // Season 1 is finished, so its next is its first; season 2 picks up at E02.
+    expect(body.seasons.map((season) => tag(season.next))).toEqual([
+      'S01E01',
+      'S02E02',
+    ]);
+  });
+
+  it('answers the series watched once every episode is, and not before', async () => {
+    const { storage, baseUrl } = freshApi();
+    const id = seedHarbor(storage);
+    const episodes = storage.listEpisodes(id);
+    for (const episode of episodes.slice(0, -1)) {
+      storage.markEpisodeWatched(episode.id);
+    }
+
+    expect((await getDetail(baseUrl, id)).body.series.watched).toBe(false);
+
+    storage.markEpisodeWatched(episodes[episodes.length - 1].id);
+
+    const { body } = await getDetail(baseUrl, id);
+    expect(body.series.watched).toBe(true);
+    expect(tag(body.next)).toBe('S01E01');
+  });
+
+  it('answers a series with no episodes as no seasons and no next episode', async () => {
+    const { storage, baseUrl } = freshApi();
+    const series = storage.addSeries({ title: 'Lighthouse Keepers' });
+
+    const { status, body } = await getDetail(baseUrl, series.id);
+
+    expect(status).toBe(200);
+    expect(body.seasons).toEqual([]);
+    expect(body.next).toBeNull();
+  });
+
+  it('answers only the series asked for', async () => {
+    const { storage, baseUrl } = freshApi();
+    const id = seedHarbor(storage);
+    seedSeries(storage, 'Lighthouse Keepers', 4);
+
+    const { body } = await getDetail(baseUrl, id);
+
+    expect(body.series.title).toBe('Harbor & Vine');
+    expect(
+      body.seasons.flatMap((season) => season.episodes).map((e) => e.seriesId)
+    ).toEqual([id, id, id, id, id]);
+  });
+
+  it('answers 404 for a series the library does not hold', async () => {
+    const { baseUrl } = freshApi();
+
+    const response = await fetch(`${baseUrl}/api/series/no-such-series`);
+
+    expect(response.status).toBe(404);
+    // A JSON error, not Express's default HTML page — the movie's 404.
+    const body = (await response.json()) as { error?: unknown };
+    expect(typeof body.error).toBe('string');
+    expect(body.error).not.toBe('');
+  });
+
+  it('answers 404 for a movie’s id — a movie is not a series', async () => {
+    const { storage, baseUrl } = freshApi();
+    const movie = storage.addMovie({
+      title: 'Die Hard',
+      videoPath: 'die-hard/dh.mp4',
+    });
+
+    const response = await fetch(`${baseUrl}/api/series/${movie.id}`);
+
+    expect(response.status).toBe(404);
+    const body = (await response.json()) as { error?: unknown };
+    expect(typeof body.error).toBe('string');
   });
 });
