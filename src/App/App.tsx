@@ -6,6 +6,7 @@ import { theme } from '@/styles/theme';
 import LibraryPage from '@/pages/LibraryPage/LibraryPage';
 import MoviePage from '@/pages/MoviePage/MoviePage';
 import SeriesPage from '@/pages/SeriesPage/SeriesPage';
+import SeasonPage from '@/pages/SeasonPage/SeasonPage';
 import PlayerPage from '@/pages/PlayerPage/PlayerPage';
 import AddMoviePage from '@/pages/AddMoviePage/AddMoviePage';
 import GenrePage from '@/pages/GenrePage/GenrePage';
@@ -40,6 +41,7 @@ export default function App() {
           <Route path="/movie/:id" element={<MoviePage />} />
           <Route path="/movie/:id/play" element={<PlayerPage />} />
           <Route path="/series/:id" element={<SeriesPage />} />
+          <Route path="/series/:id/season/:n" element={<SeasonPage />} />
           <Route path="/add" element={<AddMoviePage />} />
           <Route path="/genre/:name" element={<GenrePage />} />
           <Route path="/settings" element={<SettingsPage />} />

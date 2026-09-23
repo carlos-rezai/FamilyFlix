@@ -141,6 +141,19 @@ export interface LibraryStorage {
   markUnwatched(id: string): void;
   /** `markWatched` over an **Episode**: watched, resume zeroed, stamped. */
   markEpisodeWatched(id: string): void;
+  /** `setResumePosition` over an **Episode**: the position, stamped. */
+  setEpisodeResumePosition(id: string, seconds: number): void;
+  /**
+   * The movie's watched toggle over one **Episode** — watched zeroes the resume
+   * position, unwatched keeps it. Answers whether the library holds it.
+   */
+  setEpisodeWatched(id: string, value: boolean): boolean;
+  /**
+   * {@link setEpisodeWatched} over every episode of one season. Answers
+   * whether the series holds that season — `false` for an unknown series, a
+   * movie's id among them, or a season with no episodes.
+   */
+  setSeasonWatched(seriesId: string, season: number, value: boolean): boolean;
   /**
    * Toggle the favorite flag, surfaced through the partial `is_favorite` index
    * that powers the Favorites row.
@@ -231,6 +244,9 @@ export function createSqliteStorage(dbPath: string): LibraryStorage {
     markWatched: watch.markWatched,
     markUnwatched: watch.markUnwatched,
     markEpisodeWatched: watch.markEpisodeWatched,
+    setEpisodeResumePosition: watch.setEpisodeResumePosition,
+    setEpisodeWatched: watch.setEpisodeWatched,
+    setSeasonWatched: watch.setSeasonWatched,
     setFavorite: curation.setFavorite,
     setRating: curation.setRating,
     settings: settingsRepository.settings,

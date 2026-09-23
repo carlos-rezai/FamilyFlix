@@ -518,6 +518,50 @@ export function createApiRouter(
     }
   );
 
+  // A season's watched mark, the movie's watched toggle over every episode of
+  // one season: exactly a boolean or 400, a series or season the library does
+  // not hold a JSON 404 — a movie's id among them — and the echo.
+  router.post(
+    '/series/:id/seasons/:n/watched',
+    (req: Request<{ id: string; n: string }>, res: Response) => {
+      const { value } = req.body as { value?: unknown };
+      if (typeof value !== 'boolean') {
+        res.status(400).json({ error: 'Body must be { value: boolean }' });
+        return;
+      }
+      const season = Number(req.params.n);
+      if (
+        !Number.isInteger(season) ||
+        !storage.setSeasonWatched(req.params.id, season, value)
+      ) {
+        res.status(404).json({
+          error: `Unknown season: ${req.params.id} season ${req.params.n}`,
+        });
+        return;
+      }
+      res.json({ value });
+    }
+  );
+
+  // One episode's watched mark — the season page's box and the player's
+  // _Play now_ both write through it. The movie's rule: watched forgets the
+  // resume position, unwatched keeps it.
+  router.post(
+    '/episodes/:id/watched',
+    (req: Request<{ id: string }>, res: Response) => {
+      const { value } = req.body as { value?: unknown };
+      if (typeof value !== 'boolean') {
+        res.status(400).json({ error: 'Body must be { value: boolean }' });
+        return;
+      }
+      if (!storage.setEpisodeWatched(req.params.id, value)) {
+        res.status(404).json({ error: `Unknown episode: ${req.params.id}` });
+        return;
+      }
+      res.json({ value });
+    }
+  );
+
   // One genre in full — the whole genre page in a single request: the name, the
   // genre's unfiltered total, and every movie tagged with it, uncapped. This is
   // what a genre row's "View all 214 →" opens, so a cap here would leave the

@@ -42,3 +42,8 @@ export {
   type SeasonCardProps,
   type SeasonCardSeason,
 } from './SeasonCard/SeasonCard';
+export {
+  EpisodeRow,
+  type EpisodeRowProps,
+  type EpisodeRowEpisode,
+} from './EpisodeRow/EpisodeRow';
