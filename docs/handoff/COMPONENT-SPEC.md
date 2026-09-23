@@ -58,13 +58,13 @@ variations — if a new component needs a state, extend this section first.
 
 ### The rule: buttons signal with colour, cards signal with elevation
 
-| Surface                                                      | Hover                                                             | Press                                                             | Focus (keyboard)              |
-| ------------------------------------------------------------ | ----------------------------------------------------------------- | ----------------------------------------------------------------- | ----------------------------- |
-| **Buttons** (Button, Chip, IconButton, FilterDropdown)       | background lightens; **no lift, no shadow**                       | background darkens + `scale(.98)` (IconButton/checkbox `.92–.94`) | 3px `--color-focus-ring` ring |
-| **Cards** (PosterCard, ContinueCard, SeasonCard, EpisodeRow) | `translateY(-4px)` + deeper shadow + `--color-accent-line` border | settles to `translateY(-1px)`                                     | 2px outline, 4px offset       |
+| Surface                                                      | Hover                                                                                                      | Press                                                             | Focus (keyboard)              |
+| ------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- | ----------------------------- |
+| **Controls** (Button, Chip, IconButton, FilterDropdown)      | fill (and border) shift, **no shadow**; `Chip` rises 1px and `IconButton` swells to `1.06`, the files' own | background darkens + `scale(.98)` (IconButton/checkbox `.92–.94`) | 3px `--color-focus-ring` ring |
+| **Cards** (PosterCard, ContinueCard, SeasonCard, EpisodeRow) | `translateY(-4px)` + deeper shadow + `--color-accent-line` border                                          | settles to `translateY(-1px)`                                     | 2px outline, 4px offset       |
 
-The two vocabularies are deliberately disjoint. Buttons never lift; cards never recolour their
-fill. This is what keeps a dense grid of posters readable next to a row of controls.
+The two vocabularies are deliberately disjoint. A Control's hover never adds a shadow; a Card
+never recolours its fill. This is what keeps a dense grid of posters readable next to a row of controls.
 
 ### Timing
 
