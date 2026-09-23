@@ -1,12 +1,21 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react';
 import { ThemeProvider } from 'styled-components';
 import { MemoryRouter } from 'react-router-dom';
 
 import { SeriesHome } from './SeriesHome';
 import { theme } from '@/styles/theme';
 import type { Series, SeriesHomePayload } from '@/types';
-import { okResponse } from '@/test-support/fakeResponse/fakeResponse';
+import {
+  okResponse,
+  serverErrorResponse,
+} from '@/test-support/fakeResponse/fakeResponse';
 import {
   LocationProbe,
   pathname,
@@ -194,5 +203,122 @@ describe('SeriesHome — opening a series', () => {
     );
 
     expect(pathname()).toBe('/series/s2');
+  });
+});
+
+/**
+ * 22 — Series (TV), Phase 2 (issue #192): the heart on a Series tab poster
+ * saves the series' favorite through the shared `saveSeriesFavorite` —
+ * `POST /api/series/:id/favorite { value }`, never the movie's route. It fills
+ * before the save is confirmed and is put back if the save is refused.
+ */
+describe('SeriesHome — the heart', () => {
+  let saveFetch: ReturnType<
+    typeof vi.fn<
+      (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>
+    >
+  >;
+
+  /** Serve the tab; answer every write with its echo, or refuse it. */
+  function serveWithSaves(payload: SeriesHomePayload, refuse = false) {
+    saveFetch = vi.fn<
+      (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>
+    >((input, init) => {
+      const url = String(input);
+      const method = (init?.method ?? 'GET').toUpperCase();
+      if (method !== 'GET') {
+        if (refuse) {
+          return Promise.resolve(serverErrorResponse());
+        }
+        const body = JSON.parse(String(init?.body)) as { value: unknown };
+        return Promise.resolve(okResponse({ value: body.value }));
+      }
+      if (url.includes('/api/series')) {
+        return Promise.resolve(okResponse(payload));
+      }
+      return Promise.reject(new Error(`Unexpected request: ${url}`));
+    });
+    vi.stubGlobal('fetch', saveFetch);
+  }
+
+  /** Every write issued, as url and parsed body. */
+  function savedWrites() {
+    return saveFetch.mock.calls
+      .filter(([, init]) => (init?.method ?? 'GET').toUpperCase() !== 'GET')
+      .map(([input, init]) => ({
+        url: String(input),
+        body: JSON.parse(String(init?.body)) as unknown,
+      }));
+  }
+
+  /** The heart on one series' poster. */
+  async function heartOn(title: string) {
+    const poster = await screen.findByRole('button', { name: title });
+    return within(poster).getByRole('button', { name: 'Favorite' });
+  }
+
+  const twoSeries = (favorite = false): SeriesHomePayload => ({
+    series: [
+      makeSeries({ id: 's1', title: 'Harbor & Vine', isFavorite: favorite }),
+      makeSeries({ id: 's2', title: 'Lighthouse Keepers' }),
+    ],
+    episodeCount: 5,
+  });
+
+  it('fills the heart the moment it is pressed, and opens nothing', async () => {
+    serveWithSaves(twoSeries());
+
+    render(
+      <MemoryRouter initialEntries={['/?tab=series']}>
+        <ThemeProvider theme={theme}>
+          <SeriesHome />
+        </ThemeProvider>
+        <LocationProbe />
+      </MemoryRouter>
+    );
+    fireEvent.click(await heartOn('Harbor & Vine'));
+
+    expect((await heartOn('Harbor & Vine')).getAttribute('aria-pressed')).toBe(
+      'true'
+    );
+    expect(pathname()).toBe('/');
+  });
+
+  it('saves the favorite to the series’ own route', async () => {
+    serveWithSaves(twoSeries());
+
+    renderHome();
+    fireEvent.click(await heartOn('Harbor & Vine'));
+
+    await waitFor(() => expect(savedWrites()).toHaveLength(1));
+    expect(savedWrites()[0]).toEqual({
+      url: '/api/series/s1/favorite',
+      body: { value: true },
+    });
+  });
+
+  it('takes a series back out of Favorites', async () => {
+    serveWithSaves(twoSeries(true));
+
+    renderHome();
+    fireEvent.click(await heartOn('Harbor & Vine'));
+
+    await waitFor(() =>
+      expect(savedWrites()[0]?.body).toEqual({ value: false })
+    );
+  });
+
+  it('puts the heart back when the save is refused', async () => {
+    serveWithSaves(twoSeries(), true);
+
+    renderHome();
+    fireEvent.click(await heartOn('Harbor & Vine'));
+
+    await waitFor(() => expect(savedWrites()).toHaveLength(1));
+    await waitFor(async () =>
+      expect(
+        (await heartOn('Harbor & Vine')).getAttribute('aria-pressed')
+      ).toBe('false')
+    );
   });
 });

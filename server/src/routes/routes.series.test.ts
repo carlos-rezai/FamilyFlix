@@ -423,3 +423,128 @@ describe('GET /api/series/:id', () => {
     expect(typeof body.error).toBe('string');
   });
 });
+
+// 22 — Series (TV), Phase 2 (issue #192): the series heart.
+// `POST /api/series/:id/favorite { value }` is a **Single-signal write** on the
+// movie's precedent: exactly a boolean or `400`, a series the library does not
+// hold `404` with a JSON error, and on success `200 { value }` — the echo of
+// what was stored, which the next read of the series agrees with.
+describe('POST /api/series/:id/favorite', () => {
+  async function postFavorite(
+    baseUrl: string,
+    id: string,
+    body: unknown
+  ): Promise<{ status: number; body: { value?: unknown; error?: unknown } }> {
+    const response = await fetch(`${baseUrl}/api/series/${id}/favorite`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    // Read as text first: a route that does not exist answers Express's HTML.
+    const text = await response.text();
+    let parsed: { value?: unknown; error?: unknown } = {};
+    try {
+      parsed = JSON.parse(text) as { value?: unknown; error?: unknown };
+    } catch {
+      parsed = {};
+    }
+    return { status: response.status, body: parsed };
+  }
+
+  async function isFavorite(baseUrl: string, id: string): Promise<boolean> {
+    const response = await fetch(`${baseUrl}/api/series/${id}`);
+    return ((await response.json()) as SeriesDetail).series.isFavorite;
+  }
+
+  it('answers 200 with the value it stored', async () => {
+    const { storage, baseUrl } = freshApi();
+    const series = storage.addSeries({ title: 'Harbor & Vine' });
+
+    const { status, body } = await postFavorite(baseUrl, series.id, {
+      value: true,
+    });
+
+    expect(status).toBe(200);
+    expect(body).toEqual({ value: true });
+  });
+
+  it('keeps the favorite, so the series page and the tab read it back', async () => {
+    const { storage, baseUrl } = freshApi();
+    const series = storage.addSeries({ title: 'Harbor & Vine' });
+
+    await postFavorite(baseUrl, series.id, { value: true });
+
+    expect(await isFavorite(baseUrl, series.id)).toBe(true);
+    const { body } = await getSeries(baseUrl);
+    expect(body.series[0].isFavorite).toBe(true);
+  });
+
+  it('takes a series back out of Favorites', async () => {
+    const { storage, baseUrl } = freshApi();
+    const series = storage.addSeries({ title: 'Harbor & Vine' });
+    await postFavorite(baseUrl, series.id, { value: true });
+
+    const { status, body } = await postFavorite(baseUrl, series.id, {
+      value: false,
+    });
+
+    expect(status).toBe(200);
+    expect(body).toEqual({ value: false });
+    expect(await isFavorite(baseUrl, series.id)).toBe(false);
+  });
+
+  it('touches only the series asked for', async () => {
+    const { storage, baseUrl } = freshApi();
+    const harbor = storage.addSeries({ title: 'Harbor & Vine' });
+    const keepers = storage.addSeries({ title: 'Lighthouse Keepers' });
+
+    await postFavorite(baseUrl, harbor.id, { value: true });
+
+    expect(await isFavorite(baseUrl, harbor.id)).toBe(true);
+    expect(await isFavorite(baseUrl, keepers.id)).toBe(false);
+  });
+
+  it.each([
+    ['a string', { value: 'true' }],
+    ['a number', { value: 1 }],
+    ['null', { value: null }],
+    ['a missing value', {}],
+  ])('answers 400 for %s, and stores nothing', async (_label, body) => {
+    const { storage, baseUrl } = freshApi();
+    const series = storage.addSeries({ title: 'Harbor & Vine' });
+
+    const response = await postFavorite(baseUrl, series.id, body);
+
+    expect(response.status).toBe(400);
+    expect(typeof response.body.error).toBe('string');
+    expect(await isFavorite(baseUrl, series.id)).toBe(false);
+  });
+
+  it('answers 404 with a JSON error for a series the library does not hold', async () => {
+    const { baseUrl } = freshApi();
+
+    const { status, body } = await postFavorite(baseUrl, 'no-such-series', {
+      value: true,
+    });
+
+    expect(status).toBe(404);
+    expect(typeof body.error).toBe('string');
+    expect(body.error).not.toBe('');
+  });
+
+  it('answers 404 for a movie’s id — a movie is not a series', async () => {
+    const { storage, baseUrl } = freshApi();
+    const movie = storage.addMovie({
+      title: 'Die Hard',
+      videoPath: 'die-hard/dh.mp4',
+    });
+
+    const { status, body } = await postFavorite(baseUrl, movie.id, {
+      value: true,
+    });
+
+    expect(status).toBe(404);
+    expect(typeof body.error).toBe('string');
+    expect(storage.getMovie(movie.id)?.isFavorite).toBe(false);
+  });
+});

@@ -1,5 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  within,
+} from '@testing-library/react';
 import { ThemeProvider } from 'styled-components';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 
@@ -19,6 +25,7 @@ import {
 import {
   notFoundResponse,
   okResponse,
+  serverErrorResponse,
 } from '@/test-support/fakeResponse/fakeResponse';
 
 /**
@@ -417,5 +424,197 @@ describe('SeriesDetail — the load states', () => {
     fireEvent.click(retry);
 
     expect(await findTitle('Harbor & Vine')).toBeDefined();
+  });
+});
+
+/**
+ * 22 — Series (TV), Phase 2 (issue #192): the **Seasons grid** under the hero —
+ * one `SeasonCard` per season, in order, each in its own state: the badge on a
+ * finished season, the bar on one part-way through, neither on one nobody has
+ * started. Opening a card goes to `/series/:id/season/:n` through `seasonPath`.
+ */
+describe('SeriesDetail — the Seasons grid', () => {
+  /** A season's card, named for its season. */
+  const seasonCard = (number: number) =>
+    screen.getByRole('button', { name: new RegExp(`\bSeason ${number}\b`) });
+
+  it('draws the Seasons heading and one card per season', async () => {
+    serve({
+      series: makeSeries(),
+      seasons: [makeSeason(1, 10), makeSeason(2, 12), makeSeason(3, 8)],
+      next: makeEpisode(1, 1),
+    });
+
+    renderDetail();
+    await findTitle('Harbor & Vine');
+
+    expect(
+      screen.getByRole('heading', { level: 2, name: 'Seasons' })
+    ).toBeDefined();
+    expect(seasonCard(1)).toBeDefined();
+    expect(seasonCard(2)).toBeDefined();
+    expect(seasonCard(3)).toBeDefined();
+    expect(
+      screen.queryAllByRole('button', { name: /\bSeason \d+\b/ })
+    ).toHaveLength(3);
+  });
+
+  it('draws a season nobody has started with its episode count, and no badge or bar', async () => {
+    serve(unstarted());
+
+    renderDetail();
+    await findTitle('Harbor & Vine');
+
+    const first = seasonCard(1);
+    expect(within(first).getByText('10 episodes')).toBeDefined();
+    expect(within(first).queryByRole('img', { name: 'Watched' })).toBeNull();
+    expect(within(first).queryByRole('progressbar')).toBeNull();
+  });
+
+  it('draws the badge on a finished season and the bar on one part-way through', async () => {
+    serve(midway());
+
+    renderDetail();
+    await findTitle('Harbor & Vine');
+
+    const done = seasonCard(1);
+    expect(within(done).getByRole('img', { name: 'Watched' })).toBeDefined();
+    expect(within(done).getByText('10 episodes')).toBeDefined();
+    expect(within(done).queryByRole('progressbar')).toBeNull();
+
+    // Three whole episodes of twelve: the part-watched fourth is not counted.
+    const going = seasonCard(2);
+    expect(within(going).getByText('3 of 12 watched')).toBeDefined();
+    expect(
+      within(going).getByRole('progressbar').getAttribute('aria-valuenow')
+    ).toBe('25');
+    expect(within(going).queryByRole('img', { name: 'Watched' })).toBeNull();
+  });
+
+  it('opens the season page when a card is pressed', async () => {
+    serve(unstarted());
+
+    renderDetail('harbor');
+    await findTitle('Harbor & Vine');
+    fireEvent.click(seasonCard(2));
+
+    expect(pathname()).toBe('/series/harbor/season/2');
+  });
+});
+
+/**
+ * 22 — Series (TV), Phase 2 (issue #192): the series heart beside the button —
+ * the movie page's circle, named by the prototype's own tips. It fills before
+ * the save is confirmed and is put back if the save is refused, through the
+ * shared `saveSeriesFavorite`: `POST /api/series/:id/favorite { value }`.
+ */
+describe('SeriesDetail — the heart', () => {
+  const ADD_FAVORITE = /add to favorites/i;
+  const REMOVE_FAVORITE = /in favorites — click to remove/i;
+
+  /** Answer the read with `detail`; answer every write with its echo, or refuse it. */
+  function serveWithSaves(detail: SeriesDetailPayload, refuse = false) {
+    fetchMock.mockImplementation((input, init) => {
+      const url = String(input);
+      const method = (init?.method ?? 'GET').toUpperCase();
+      if (method !== 'GET') {
+        if (refuse) {
+          return Promise.resolve(serverErrorResponse());
+        }
+        const body = JSON.parse(String(init?.body)) as { value: unknown };
+        return Promise.resolve(okResponse({ value: body.value }));
+      }
+      if (url.includes('/api/series/')) {
+        return Promise.resolve(okResponse(detail));
+      }
+      return Promise.reject(new Error(`Unexpected request: ${url}`));
+    });
+  }
+
+  /** Every write issued, as url and parsed body. */
+  function savedWrites() {
+    return writes().map(([input, init]) => ({
+      url: String(input),
+      body: JSON.parse(String(init?.body)) as unknown,
+    }));
+  }
+
+  it('offers to add a series nobody has favorited', async () => {
+    serveWithSaves(unstarted({ isFavorite: false }));
+
+    renderDetail();
+    await findTitle('Harbor & Vine');
+
+    const heart = screen.getByRole('button', { name: ADD_FAVORITE });
+    expect(heart.getAttribute('aria-pressed')).toBe('false');
+  });
+
+  it('arrives filled for a series already in Favorites', async () => {
+    serveWithSaves(unstarted({ isFavorite: true }));
+
+    renderDetail();
+    await findTitle('Harbor & Vine');
+
+    const heart = screen.getByRole('button', { name: REMOVE_FAVORITE });
+    expect(heart.getAttribute('aria-pressed')).toBe('true');
+  });
+
+  it('fills the heart the moment it is pressed', async () => {
+    serveWithSaves(unstarted({ isFavorite: false }));
+
+    renderDetail();
+    await findTitle('Harbor & Vine');
+    fireEvent.click(screen.getByRole('button', { name: ADD_FAVORITE }));
+
+    const heart = screen.getByRole('button', { name: REMOVE_FAVORITE });
+    expect(heart.getAttribute('aria-pressed')).toBe('true');
+  });
+
+  it('saves the favorite to the series’ own route', async () => {
+    serveWithSaves(unstarted({ isFavorite: false }));
+
+    renderDetail('harbor');
+    await findTitle('Harbor & Vine');
+    fireEvent.click(screen.getByRole('button', { name: ADD_FAVORITE }));
+
+    await waitFor(() => expect(savedWrites()).toHaveLength(1));
+    expect(savedWrites()[0]).toEqual({
+      url: '/api/series/harbor/favorite',
+      body: { value: true },
+    });
+  });
+
+  it('takes a series back out of Favorites', async () => {
+    serveWithSaves(unstarted({ isFavorite: true }));
+
+    renderDetail();
+    await findTitle('Harbor & Vine');
+    fireEvent.click(screen.getByRole('button', { name: REMOVE_FAVORITE }));
+
+    await waitFor(() =>
+      expect(savedWrites()[0]?.body).toEqual({ value: false })
+    );
+    expect(screen.getByRole('button', { name: ADD_FAVORITE })).toBeDefined();
+  });
+
+  it('puts the heart back when the save is refused, and keeps the page', async () => {
+    serveWithSaves(unstarted({ isFavorite: false }), true);
+
+    renderDetail();
+    await findTitle('Harbor & Vine');
+    fireEvent.click(screen.getByRole('button', { name: ADD_FAVORITE }));
+
+    await waitFor(() => expect(savedWrites()).toHaveLength(1));
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: ADD_FAVORITE })).toBeDefined()
+    );
+    expect(
+      screen
+        .getByRole('button', { name: ADD_FAVORITE })
+        .getAttribute('aria-pressed')
+    ).toBe('false');
+    expect(
+      screen.getByRole('heading', { level: 1, name: 'Harbor & Vine' })
+    ).toBeDefined();
   });
 });
