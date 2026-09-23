@@ -48,14 +48,14 @@ const Arrow = styled(IconButton)<{ $top: number }>`
   color: ${({ theme }) => theme.colors.text};
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
 
-  &:hover:enabled {
+  &:hover:not(:disabled) {
     background: ${({ theme }) => theme.colors.surface3};
     border-color: ${({ theme }) => theme.colors.accentLine};
     color: ${({ theme }) => theme.colors.accent};
     transform: translateY(-50%);
   }
 
-  &&:active:enabled {
+  &&:active:not(:disabled) {
     transform: translateY(-50%) scale(0.94);
   }
 `;

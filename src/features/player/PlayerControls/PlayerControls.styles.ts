@@ -112,7 +112,7 @@ export const ChromeIconButton = styled(IconButton)`
   border: none;
   color: #fff;
 
-  &:hover:enabled {
+  &:hover:not(:disabled) {
     background: rgba(255, 255, 255, 0.12);
     color: #fff;
     transform: none;

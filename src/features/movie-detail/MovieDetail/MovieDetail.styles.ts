@@ -131,7 +131,7 @@ export const CircleToggle = styled(IconButton)<{ $on: boolean }>`
      not preview the filled state it would take on. It draws no scale either,
      so the transform is restated (IconButton's rule 2); the press is the
      primitive's. */
-  &:hover:enabled {
+  &:hover:not(:disabled) {
     background: ${({ theme, $on }) =>
       $on ? theme.colors.accentSoft : 'transparent'};
     border-color: ${({ theme }) => theme.colors.accentLine};

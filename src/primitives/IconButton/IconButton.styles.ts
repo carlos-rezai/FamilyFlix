@@ -16,7 +16,7 @@ const variants = {
     border: 1px solid transparent;
     color: ${({ theme }) => theme.colors.textFaint};
 
-    &:hover:enabled {
+    &:hover:not(:disabled) {
       background: ${({ theme }) => theme.colors.surface};
       color: ${({ theme }) => theme.colors.textDim};
       transform: scale(1.06);
@@ -28,7 +28,7 @@ const variants = {
     color: ${({ theme }) => theme.colors.textDim};
 
     /* The faces move the properties rule 2 below names — see the note there. */
-    &:hover:enabled {
+    &:hover:not(:disabled) {
       background: transparent;
       color: ${({ theme }) => theme.colors.text};
       border-color: ${({ theme }) => theme.colors.textFaint};
@@ -50,9 +50,11 @@ const variants = {
  * Three rules for those extensions, all consequences of the cascade rather
  * than of anything this file invents:
  *
- * 1. Write `&:hover:enabled`, not `&:hover`. The faces above are guarded that
- *    way so a disabled control never lights up, and a bare `&:hover` is one
- *    selector shorter — it would lose to the face it was meant to replace.
+ * 1. Write `&:hover:not(:disabled)`, not `&:hover`. The faces above are
+ *    guarded that way so a disabled control never lights up — the spelling
+ *    `controlStates` uses, and the one an anchor matches — and a bare
+ *    `&:hover` is one selector shorter: it would lose to the face it was
+ *    meant to replace.
  * 2. Replace the hover *completely*. The faces move `background`, `color`,
  *    `border-color` and `transform` (the hover's `scale(1.06)`), so an
  *    extension that sets only some of them inherits the rest from the face

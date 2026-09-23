@@ -13,8 +13,8 @@ const INK = '#1a1109';
  * the centring, the pill corner (50% on a square) and `type="button"` are
  * `IconButton`'s.
  *
- * The hover is written `&:hover:enabled` and replaces `background`, `color`
- * and `transform`, the primitive's rules: a disabled circle never lights up,
+ * The hover is written `&:hover:not(:disabled)` and replaces `background`,
+ * `color` and `transform`, the primitive's rules: a disabled circle never lights up,
  * and nothing leaks up from the ghost face underneath. The lift eases in on
  * the primitive's transition rather than snapping, and the press is the
  * primitive's, which out-ranks the lift.
@@ -29,7 +29,7 @@ export const Circle = styled(IconButton)`
   border: none;
   box-shadow: 0 8px 28px rgba(217, 122, 78, 0.42);
 
-  &:hover:enabled {
+  &:hover:not(:disabled) {
     background: ${({ theme }) => theme.colors.accentHover};
     color: ${INK};
     transform: translateY(-2px) scale(1.05);

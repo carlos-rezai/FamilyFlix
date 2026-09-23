@@ -62,7 +62,7 @@ export const FavoriteButton = styled(IconButton)<{ $favorite: boolean }>`
   color: ${({ theme, $favorite }) =>
     $favorite ? theme.colors.accent : '#fff'};
 
-  &:hover:enabled {
+  &:hover:not(:disabled) {
     background: rgba(18, 14, 10, 0.82);
     border-color: rgba(255, 255, 255, 0.45);
     color: ${({ theme, $favorite }) =>
@@ -70,7 +70,7 @@ export const FavoriteButton = styled(IconButton)<{ $favorite: boolean }>`
     transform: scale(1.08);
   }
 
-  &&:active:enabled {
+  &&:active:not(:disabled) {
     transform: scale(0.92);
   }
 `;

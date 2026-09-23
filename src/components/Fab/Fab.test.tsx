@@ -72,8 +72,8 @@ const INK = '#1a1109';
 
 /**
  * What the button's hover resolves to, read off the injected stylesheet since
- * jsdom has no `:hover`: every `:hover:enabled` rule for any class the button
- * wears, merged in stylesheet order so a later face replaces an earlier one
+ * jsdom has no `:hover`: every `:hover:not(:disabled)` rule for any class the
+ * button wears, merged in stylesheet order so a later face replaces an earlier one
  * exactly as the cascade would. Only the declarations come back, never the
  * class names — the test asks what a hover *paints*, not what it is called.
  */
@@ -83,7 +83,10 @@ function hoverDeclarations(): Record<string, string> {
     .join('\n');
   const merged: Record<string, string> = {};
   for (const className of Array.from(fab().classList)) {
-    const rule = new RegExp(`\\.${className}:hover:enabled\\{([^}]*)\\}`, 'g');
+    const rule = new RegExp(
+      `\\.${className}:hover:not\\(:disabled\\)\\{([^}]*)\\}`,
+      'g'
+    );
     for (const match of css.matchAll(rule)) {
       for (const declaration of match[1].split(';')) {
         const colon = declaration.indexOf(':');

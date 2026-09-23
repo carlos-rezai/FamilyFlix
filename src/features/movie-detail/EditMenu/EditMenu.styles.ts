@@ -27,7 +27,7 @@ export const MoreButton = styled(IconButton)`
   border: 1px solid ${({ theme }) => theme.colors.border};
   color: ${({ theme }) => theme.colors.textDim};
 
-  &:hover:enabled {
+  &:hover:not(:disabled) {
     color: ${({ theme }) => theme.colors.text};
     background: ${({ theme }) => theme.colors.surface2};
     transform: none;
