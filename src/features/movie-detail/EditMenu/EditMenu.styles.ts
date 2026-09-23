@@ -18,8 +18,8 @@ export const CornerMenu = styled(Menu)`
 
 /**
  * Translucent over artwork, like the Back pill it sits opposite. It draws no
- * scale, so the hover restates `transform: none` and writes its own press
- * (IconButton's rules 2 and 3).
+ * scale, so the hover restates `transform: none` (IconButton's rule 2); the
+ * press is the primitive's.
  */
 export const MoreButton = styled(IconButton)`
   background: rgba(20, 17, 13, 0.6);
@@ -31,9 +31,5 @@ export const MoreButton = styled(IconButton)`
     color: ${({ theme }) => theme.colors.text};
     background: ${({ theme }) => theme.colors.surface2};
     transform: none;
-  }
-
-  &:active:enabled {
-    transform: scale(0.94);
   }
 `;

@@ -57,13 +57,14 @@ const variants = {
  *    `border-color` and `transform` (the hover's `scale(1.06)`), so an
  *    extension that sets only some of them inherits the rest from the face
  *    underneath — an extension that draws no scale restates `transform: none`.
- * 3. An extension's `&:hover:enabled` ranks equal to the press here and comes
- *    later, so a hover that writes `transform` — even `none` — would hold
- *    through a press. Such an extension writes its own `&:active:enabled`
- *    press as well. One that positions with `transform` (the carousel's
- *    `translateY(-50%)`) must also restate it on hover, since the face's scale
- *    out-ranks a plain `transform`, and compose it into the press:
- *    `translateY(-50%) scale(.94)`.
+ * 3. The press is the primitive's, and no hover out-ranks it: `controlStates`
+ *    writes it at doubled specificity (`&&`), so an extension inherits it
+ *    even when its own hover writes `transform`. Only an extension whose press
+ *    differs (the poster heart's `scale(.92)`), or that positions with
+ *    `transform` (the carousel's `translateY(-50%)`, which must also restate
+ *    it on hover, since the face's scale out-ranks a plain `transform`),
+ *    writes its own at the same doubled rank, `&&:active`, and composes the
+ *    shrink into its press: `translateY(-50%) scale(.94)`.
  */
 export const Root = styled.button<{
   $size: number;

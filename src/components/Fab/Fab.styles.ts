@@ -16,9 +16,8 @@ const INK = '#1a1109';
  * The hover is written `&:hover:enabled` and replaces `background`, `color`
  * and `transform`, the primitive's rules: a disabled circle never lights up,
  * and nothing leaks up from the ghost face underneath. The lift eases in on
- * the primitive's transition rather than snapping, and because the hover
- * writes `transform` it writes its own press too, or the lift would hold
- * through it.
+ * the primitive's transition rather than snapping, and the press is the
+ * primitive's, which out-ranks the lift.
  */
 export const Circle = styled(IconButton)`
   position: absolute;
@@ -34,9 +33,5 @@ export const Circle = styled(IconButton)`
     background: ${({ theme }) => theme.colors.accentHover};
     color: ${INK};
     transform: translateY(-2px) scale(1.05);
-  }
-
-  &:active:enabled {
-    transform: scale(0.94);
   }
 `;

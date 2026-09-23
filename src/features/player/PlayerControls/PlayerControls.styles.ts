@@ -96,8 +96,8 @@ export const TransportRow = styled.div`
  * pill corner and the accessible name; the chrome over a picture is the call
  * site's, because white ink over film is not the app's `ghost` face — see
  * `IconButton.styles`, which is why every hover property is replaced — the
- * transform included, since this chrome draws no scale, and so the press is
- * written here too.
+ * transform included, since this chrome draws no scale. The press is the
+ * primitive's.
  *
  * **The primitive is not widened to carry this.** `IconButton.styles` argues
  * that an over-artwork variant would make an API out of the three translucent
@@ -116,10 +116,6 @@ export const ChromeIconButton = styled(IconButton)`
     background: rgba(255, 255, 255, 0.12);
     color: #fff;
     transform: none;
-  }
-
-  &:active:enabled {
-    transform: scale(0.94);
   }
 `;
 
