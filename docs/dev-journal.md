@@ -11,6 +11,117 @@ Newest entry first.
 
 ---
 
+## 2026-09-23 — Motion & interaction states (issues #181–#185)
+
+Ten commits across issues #181–#185, five slices against the plan on #180,
+built from `docs/design-logs/21-motion-interaction-states.md`. **4920 tests
+pass across 255 files**, up from 250 files before the grill: `accentScale`,
+`theme`, `GlobalStyle`, `interactionStates` and `resolvedStyle` are the five
+new suites, and every surface on the contract gained leaves in its own. `tsc
+-b` and `eslint src server` are clean on every commit. The first initiative
+that changed how existing surfaces _feel_ rather than what they do, and the
+sixth driven wholly by `issue-loop`. The maintainer's one instruction was the
+scope the grill ran under: translate the prototype 1:1 into the codebase, in
+its naming, conventions, patterns and architecture — and COMPONENT-SPEC §2a
+said the same in one sentence, _do not invent per-component variations_.
+
+**Motion & interaction states is _not_ ticked** in the feature table. The rule
+holds: ✅ when the refactor closes, not when the build issues do.
+
+### What shipped
+
+- **#181, the tokens, the scale, the factory and reduced motion.**
+  `tokens/motion.ts` — `durFast`, `durBase`, `durSlow`, `easeOut`, flat and
+  `as const`, mounted as `theme.motion`, `durSlow` with no caller (Q4).
+  `utils/accentScale/` derives the accent's five — hover, press, soft, line and
+  the focus ring — and `createTheme(accent = colors.accent)` spreads them over
+  `colors`, so `colors.ts` spells one accent and the eighteen readers of the
+  old three names did not change (Q6, Q7). `GlobalStyle` carries the one
+  `prefers-reduced-motion` block, verbatim, which honours for free the seven
+  motions log 19 had left unhonoured (Q9).
+- **#182, the control vocabulary on `Button`.**
+  `styles/interactionStates/` with `controlStates(press)` — the transition, the
+  press at 60ms, the 3px keyboard ring — and the **structural guard** in its
+  suite: no shipping file but the tokens spells `120ms`, `180ms`, `280ms` or the
+  curve, none but the fragment spells a `60ms` or `70ms` press (Q11, Q16).
+  `Button`'s guards moved from `:enabled` to `:not(:disabled)`, so **the link
+  face gained a hover, a press and a ring it had lacked since it shipped** — an
+  anchor never matches `:enabled` (Q13).
+- **#183, `Chip` and the Filter dropdown.** The `Control` shape only — `Tag` is
+  not a control and gets nothing — with the file's own 1px rise and
+  `translateY(0) scale(.97)` press; the dropdown's trigger on the fragment, and
+  its option rows on a `durFast` transition of their own.
+- **#184, `IconButton` and its five extensions.** The primitive composes the
+  fragment at `scale(.94)` and swells to 1.06 on hover; `Fab`, the carousel
+  `Arrow`, `MoreButton`, `CircleToggle` and `ChromeIconButton` keep their own
+  hovers (Q15). **The Fab's lift now eases at `durFast` instead of snapping** —
+  log 19's "snaps, as the prototype's does" predates the contract, which covers
+  every interactive component.
+- **#185, the card vocabulary.** `cardLift` on the tile and `cardFocus` on the
+  focusable root, split because the prototype puts them there: hovering a title
+  under a poster does not lift it (Q12). `PosterCard` and `ContinueCard` compose
+  both; `ContinueCard` gains the resting shadow it never had and loses its
+  `opacity: .94` hover; the poster heart presses at `scale(.92)`.
+
+### The prototype was amended in the grill
+
+`tokens.css` shipped hover, press and ring values its own formula does not
+produce for the stock `#d97a4e`. The whole-app prototype already rendered the
+derived ones, so the literals were the stale side: the three values in
+`tokens.css` became the derived `#e0926e`, `#bf6b45` and
+`rgba(224, 146, 110, 0.55)` in the grill session, and standalone previews and
+the app agree (Q8).
+
+### `ffSpin` was kept
+
+The revision dropped the keyframe from `tokens.css`; `PlayerNotice`'s buffering
+spinner still turns on it. Removing a keyframe a shipped component uses was not
+this initiative's to do (Q10) — a known prototype/code gap for the player's next
+revision.
+
+### The calls the subagents made alone
+
+The log named none of these; all three are in the code.
+
+- **`test-support/resolvedStyle/`, at #184, against the PRD's testing
+  decision.** Q16 said the surfaces' suites would gain _nothing they cannot
+  observe_ and ruled out `toHaveStyleRule`. From #182 on, every surface suite
+  asserted its hover, press and focus rules anyway — about 700 lines — and the
+  first three slices each hand-rolled a stylesheet reader to do it (in
+  `interactionStates`, `Button`, `Chip` and `FilterDropdown`). #184 needed to
+  know which rule _wins_, not which was written, and built the double: the
+  cascade by hand for a named state — `!important`, then specificity, then
+  order — with a suite of its own.
+- **Four extensions restated a press they should have inherited.** An
+  extension's `&:hover:enabled` ranks equal to the primitive's press and comes
+  later, so a hover that writes `transform` — even `none` — holds through the
+  press. Each slice was given one extension and a failing press leaf, and
+  `&:active:enabled { transform: scale(0.94) }` was the smallest change that
+  passed it; `IconButton`'s docblock rule 3 wrote the trap down for the next
+  one. Five slices, the same line.
+- **The option rows' transition reaches them through the dropdown's slot**, a
+  `${Item}` rule inside the dropdown's own `Root`, rather than through `Menu`'s
+  `Item` — the ⋯ menu shares the component and is outside the contract (Q2).
+
+### Deliberately not built
+
+Per Q17: no token beyond the four motion values and the five derivatives; no
+press token (Q5); no state on `Toggle`, `TextField`, `Textarea`, the menus,
+`SubtitleRow`, `ActionRow`, _View all_, the Modal's ✕, the Snackbar, the Back
+pill or `SettingsHeader` — zero changed lines on each since `ef1dc27`; no Series
+cards; no accent picker; no tokenising of the literals the revision left alone
+(`Toggle`'s `.18s ease`, `ProgressBar`'s `.2s ease`, `ffPop`, the player
+chrome's fade), because `ease` is not `easeOut` (Q3).
+
+### Follow-ups
+
+The refactor round, filed as 187 with the docs slice 186 folded into it: one
+press every extension inherits, one spelling of the guard, one cascade reader
+in place of four, §2a corrected to what shipped, and the documents that close
+the initiative.
+
+---
+
 ## 2026-09-22 — Back navigation refactor (issue #177)
 
 Thirteen commits against `docs/refactor-plans/20-back-navigation-refactor.md`
