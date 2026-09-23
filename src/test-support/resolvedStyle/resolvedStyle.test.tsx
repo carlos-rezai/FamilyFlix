@@ -58,6 +58,20 @@ describe('resolvedStyle', () => {
     expect(resolvedStyle(button).color).toBe('red');
   });
 
+  it('applies a :focus rule under a click’s focus and under the keyboard’s', () => {
+    const button = withSheet('.a{color:red}.a:focus{color:blue}');
+
+    expect(resolvedStyle(button, { focus: true }).color).toBe('blue');
+    expect(resolvedStyle(button, { focusVisible: true }).color).toBe('blue');
+  });
+
+  it('applies a :focus-visible rule under the keyboard’s focus only, never a click’s', () => {
+    const button = withSheet('.a{color:red}.a:focus-visible{color:blue}');
+
+    expect(resolvedStyle(button, { focus: true }).color).toBe('red');
+    expect(resolvedStyle(button, { focusVisible: true }).color).toBe('blue');
+  });
+
   it('puts !important ahead of specificity', () => {
     const button = withSheet('.a{color:red!important}.a.b{color:blue}');
 

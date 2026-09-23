@@ -2,10 +2,15 @@
  * The states jsdom cannot put an element in. It computes no `:hover`,
  * `:active` or `:focus-visible`, so a suite that has to know what a press or a
  * hover *paints* names the state here instead.
+ *
+ * Focus comes in the two kinds a browser tells apart: `focus` is a click's —
+ * `:focus` matches and `:focus-visible` does not — and `focusVisible` is the
+ * keyboard's, which matches both, as a browser's does.
  */
 export interface StyleState {
   hover?: boolean;
   active?: boolean;
+  focus?: boolean;
   focusVisible?: boolean;
 }
 
@@ -55,8 +60,9 @@ function pseudoMatches(
     case 'active':
       return state.active === true;
     case 'focus-visible':
-    case 'focus':
       return state.focusVisible === true;
+    case 'focus':
+      return state.focus === true || state.focusVisible === true;
     case 'enabled':
       return !disabled;
     case 'disabled':
