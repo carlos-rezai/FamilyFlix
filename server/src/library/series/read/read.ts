@@ -1,6 +1,7 @@
 import type { SqliteDatabase } from '../../../db';
 import type {
   Episode,
+  EpisodeRead,
   Genre,
   Series,
   SeasonSummary,
@@ -95,6 +96,12 @@ export interface SeriesReader {
   getSeries(id: string): Series | null;
   /** One episode, assembled, or `null` for an unknown id. */
   getEpisode(id: string): Episode | null;
+  /**
+   * The player's read of one episode: the episode, its series' id and title,
+   * and the next episode its series holds in season, then episode order —
+   * watched or not — or `null` for an unknown id.
+   */
+  getEpisodeRead(id: string): EpisodeRead | null;
   /** Every series by title, and the episode total across all of them. */
   getSeriesHome(): SeriesHomePayload;
   /** A series' episodes in season, then episode order; `[]` for none. */
@@ -137,6 +144,13 @@ export function createSeriesReader(db: SqliteDatabase): SeriesReader {
     FROM episode_subtitles
     WHERE episode_id = ?
     ORDER BY position
+  `);
+  const selectNextEpisode = db.prepare(`
+    SELECT id, season_number, episode_number, title FROM episodes
+    WHERE series_id = ?
+      AND (season_number > ? OR (season_number = ? AND episode_number > ?))
+    ORDER BY season_number, episode_number
+    LIMIT 1
   `);
   const countEpisodes = db.prepare('SELECT COUNT(*) AS n FROM episodes');
   // A series is watched when it has episodes and none of them is unwatched —
@@ -201,6 +215,35 @@ export function createSeriesReader(db: SqliteDatabase): SeriesReader {
     getEpisode: (id) => {
       const row = selectEpisode.get(id) as EpisodeRow | undefined;
       return row === undefined ? null : assembleEpisode(row);
+    },
+
+    getEpisodeRead: (id) => {
+      const row = selectEpisode.get(id) as EpisodeRow | undefined;
+      if (row === undefined) {
+        return null;
+      }
+      const series = selectSeries.get(row.series_id) as SeriesRow;
+      const next = selectNextEpisode.get(
+        row.series_id,
+        row.season_number,
+        row.season_number,
+        row.episode_number
+      ) as
+        | Pick<EpisodeRow, 'id' | 'season_number' | 'episode_number' | 'title'>
+        | undefined;
+      return {
+        episode: assembleEpisode(row),
+        series: { id: series.id, title: series.title },
+        next:
+          next === undefined
+            ? null
+            : {
+                id: next.id,
+                season: next.season_number,
+                number: next.episode_number,
+                title: next.title,
+              },
+      };
     },
 
     getSeriesHome: () => {

@@ -26,6 +26,8 @@ export interface SeasonViewModel {
   seasonLabel: string;
   /** _Resume E04_ / _Play E01_. */
   playLabel: string;
+  /** The episode that button plays, or `null` for a season with none. */
+  playEpisodeId: string | null;
   /** `8 episodes`. */
   countLabel: string;
   /** `3 watched`. */
@@ -72,9 +74,14 @@ function toAirDateLabel(airDate: string | null): string | null {
   return `${month} ${Number(match[3])}, ${match[1]}`;
 }
 
+/** The episode the play button plays: the season's **Next episode**, else E01. */
+function playEpisodeOf(season: SeasonSummary): Episode | null {
+  return season.next ?? season.episodes[0] ?? null;
+}
+
 /** The play button off the season's **Next episode**. */
 function toPlayLabel(season: SeasonSummary): string {
-  const next = season.next ?? season.episodes[0] ?? null;
+  const next = playEpisodeOf(season);
   if (next === null) {
     return 'Play';
   }
@@ -140,6 +147,7 @@ export function seasonView(
     seasonNumber: season.number,
     seasonLabel: seasonLabelOf(season.number),
     playLabel: toPlayLabel(season),
+    playEpisodeId: playEpisodeOf(season)?.id ?? null,
     countLabel: `${total} ${total === 1 ? 'episode' : 'episodes'}`,
     watchedLabel: `${watched} watched`,
     allWatched,

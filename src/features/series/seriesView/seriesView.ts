@@ -99,6 +99,7 @@ export function seriesView(detail: SeriesDetail): SeriesDetailModel {
     ratingPercent: toRatingPercent(series.rating),
     genres: series.genres.map((genre) => genre.name),
     playLabel: toPlayLabel(next),
+    playEpisodeId: next?.id ?? null,
     progressLabel: toProgressLabel(watched, episodes.length),
     synopsis: series.synopsis,
     hasCredits: hasCreator || hasCast,

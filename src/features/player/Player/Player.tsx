@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useGoBack } from '@/hooks/useGoBack/useGoBack';
-import type { Movie } from '@/types';
-import { gradientFromId, moviePath } from '@/utils';
+import type { Episode, EpisodeRead, Movie, Playable } from '@/types';
+import { gradientFromId, moviePath, seasonPath } from '@/utils';
+import { addressOf, type Addressed } from '../api/api';
 import { PlayerControls } from '../PlayerControls/PlayerControls';
 import { PlayerNotice } from '../PlayerNotice/PlayerNotice';
 import type { PlayerNoticeKind } from '../PlayerNotice/PlayerNotice';
@@ -28,10 +29,12 @@ import {
   Stage,
 } from './Player.styles';
 
-interface PlayerProps {
-  /** The movie to play. The URL carries an id; the server resolves the path. */
-  movieId: string;
-}
+/**
+ * What to play: a movie by id, as the player always took one, or a
+ * **Playable** — a movie or an episode. The URL carries an id; the server
+ * resolves the path.
+ */
+type PlayerProps = Addressed;
 
 /** Path prefix for the Express route that streams managed poster images. */
 const IMAGE_ROUTE = '/api/images/';
@@ -49,8 +52,22 @@ const IMAGE_ROUTE = '/api/images/';
  * pointed at and the position the screen reports are two halves of one thing,
  * and the hook hands back the src to use.
  */
-function streamUrl(movieId: string): string {
-  return `/api/movies/${encodeURIComponent(movieId)}/stream`;
+function streamUrl({ kind, id }: Playable): string {
+  return `/api/${kind}s/${encodeURIComponent(id)}/stream`;
+}
+
+/** Two digits, as an episode code spells a season and an episode. */
+const pad = (value: number) => String(value).padStart(2, '0');
+
+/**
+ * An episode's title line: `Harbor & Vine · S02E04 · The Auction`, or
+ * `Harbor & Vine · S02E04` for an episode with no title.
+ */
+function episodeTitle({ series, episode }: EpisodeRead): string {
+  const code = `S${pad(episode.season)}E${pad(episode.number)}`;
+  return [series.title, code, episode.title]
+    .filter((part) => part !== null && part !== '')
+    .join(' · ');
 }
 
 /**
@@ -61,7 +78,7 @@ function streamUrl(movieId: string): string {
  * the resume position, so the flag is checked as well as the number, and a
  * finished film is never stuck in its own credits.
  */
-function openAt(movie: Movie | null): number {
+function openAt(movie: Movie | Episode | null): number {
   if (movie === null || movie.watched) {
     return 0;
   }
@@ -136,7 +153,9 @@ function noticeFor(
  * is handed the very handler its button is handed, so a key and a button cannot
  * drift apart.
  */
-export function Player({ movieId }: PlayerProps) {
+export function Player(props: PlayerProps) {
+  const playable = addressOf(props);
+  const { kind, id } = playable;
   // The element is held in state rather than in a plain ref, because it arrives
   // late: the guard below keeps it off the screen until the reads have settled,
   // and a ref object never changes identity, so a hook binding through one
@@ -150,7 +169,12 @@ export function Player({ movieId }: PlayerProps) {
   const stageRef = useRef<HTMLDivElement>(null);
 
   // The two reads the screen opens with.
-  const { movie, playback, fileMissing, opened } = useOpeningReads(movieId);
+  const { movie, episode, playback, fileMissing, opened } = useOpeningReads(
+    useMemo(() => ({ kind, id }), [kind, id])
+  );
+  // What is playing, whichever kind it is: the watch state and the tracks are
+  // the same trio on a movie and an episode.
+  const record = movie ?? episode?.episode ?? null;
 
   // The level the film opens at, read once on the way in. A **per-machine UI
   // preference, not library data**: it lives in `localStorage` rather than in
@@ -176,8 +200,8 @@ export function Player({ movieId }: PlayerProps) {
   } = usePlayback({
     videoRef,
     read: playback,
-    startAt: openAt(movie),
-    streamSrc: streamUrl(movieId),
+    startAt: openAt(record),
+    streamSrc: streamUrl(playable),
     startVolume,
   });
 
@@ -206,7 +230,7 @@ export function Player({ movieId }: PlayerProps) {
   // learns nothing back except the one thing only the screen knows: the second
   // a settled seek asked for, which the position above has not caught up to yet.
   const { reportSeek } = useWatchReporter({
-    movieId,
+    playable,
     position,
     playing,
     ended,
@@ -225,8 +249,8 @@ export function Player({ movieId }: PlayerProps) {
 
   // Which track, whether the box is showing, and the line that is on it.
   const { track, subtitlesOn, line, toggleSubtitles } = useSubtitles({
-    movieId,
-    subtitles: movie?.subtitles ?? [],
+    playable,
+    subtitles: record?.subtitles ?? [],
     position,
   });
 
@@ -252,7 +276,15 @@ export function Player({ movieId }: PlayerProps) {
   // The film's page is the player's **Landing**: where a parent is put when
   // there is no history to step back through, because the player was
   // deep-linked or reloaded, and the only sensible place to arrive otherwise.
-  const leave = useGoBack(moviePath(movieId));
+  //
+  // An episode's Landing is its season page, known once its read has landed.
+  const leave = useGoBack(
+    kind === 'movie'
+      ? moviePath(id)
+      : episode === undefined
+        ? '/'
+        : seasonPath(episode.series.id, episode.episode.season)
+  );
 
   const { toggleFullscreen } = useFullscreen(stageRef);
 
@@ -271,7 +303,7 @@ export function Player({ movieId }: PlayerProps) {
     onLeave: leave,
   });
 
-  const { g1, g2 } = gradientFromId(movieId);
+  const { g1, g2 } = gradientFromId(id);
 
   return (
     <Stage ref={stageRef} $idle={!visible} onMouseMove={onMouseMove}>
@@ -310,7 +342,13 @@ export function Player({ movieId }: PlayerProps) {
       <SubtitleOverlay text={line} lifted={visible} />
 
       <PlayerControls
-        title={movie?.title ?? ''}
+        title={
+          movie !== null
+            ? movie.title
+            : episode !== undefined
+              ? episodeTitle(episode)
+              : ''
+        }
         visible={visible}
         playing={playing}
         position={position}

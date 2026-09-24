@@ -38,6 +38,7 @@ import {
   EXPORT_FORMATS,
   MOVIE_SORTS,
   type ExportFormat,
+  type EpisodeRead,
   type ExportSummary,
   type GenreListPayload,
   type GenrePoolPayload,
@@ -50,7 +51,25 @@ import {
   type SeriesHomePayload,
   type Settings,
   type StorageReport,
+  type Subtitle,
 } from '@/types';
+
+/** The two kinds of thing the player plays — each a path segment, `/<kind>s`. */
+type PlayableKind = 'movie' | 'episode';
+
+/**
+ * What a playback route needs of a row, and all it needs: its **Stored path**
+ * and its **Subtitle** rows. A movie and an episode are both one, which is how
+ * the episode routes share the movie routes' handlers — and how `playback/`
+ * never learns there are episodes.
+ */
+interface PlayableRow {
+  videoPath: string;
+  subtitles: Subtitle[];
+}
+
+/** Look a row up by id, or answer its JSON 404 and `null` — `movieOr404`'s shape. */
+type PlayableOr404 = (id: string, res: Response) => PlayableRow | null;
 
 /**
  * What every single-signal write does once its body has been read and found
@@ -197,8 +216,8 @@ function movieOr404(
  * client tells "gone" from "went wrong" by reading that body, so the two ways
  * of having nothing to send must not drift into two different sentences.
  */
-function noVideoFile(res: Response, id: string): void {
-  res.status(404).json({ error: `No video file for movie: ${id}` });
+function noVideoFile(res: Response, kind: PlayableKind, id: string): void {
+  res.status(404).json({ error: `No video file for ${kind}: ${id}` });
 }
 
 /**
@@ -217,12 +236,13 @@ function noVideoFile(res: Response, id: string): void {
 function videoFileOr404(
   playback: Playback,
   storedPath: string,
+  kind: PlayableKind,
   id: string,
   res: Response
 ): string | null {
   const file = playback.videoFile(storedPath);
   if (file === null) {
-    noVideoFile(res, id);
+    noVideoFile(res, kind, id);
     return null;
   }
   return file;
@@ -1087,6 +1107,39 @@ export function createApiRouter(
     );
   });
 
+  // The episode's resume position: the movie's route over the episodes table —
+  // the same body, the same rounding, the same stamp, the same echo — and a
+  // movie's id is an unknown episode.
+  router.post('/episodes/:id/resume', (req: Request<{ id: string }>, res) => {
+    const { value } = req.body as { value?: unknown };
+    if (typeof value !== 'number' || !Number.isFinite(value) || value < 0) {
+      res
+        .status(400)
+        .json({ error: 'Body must be { value: number } — seconds, from 0' });
+      return;
+    }
+    const { id } = req.params;
+    if (!storage.getEpisodeRead(id)) {
+      res.status(404).json({ error: `Unknown episode: ${id}` });
+      return;
+    }
+    const seconds = Math.round(value);
+    storage.setEpisodeResumePosition(id, seconds);
+    res.json({ value: seconds });
+  });
+
+  // One **Episode** as the player opens it — the `EpisodeRead`: the episode,
+  // its series' id and title, and the next episode the series holds, or
+  // `null`. A movie's id is not an episode: a JSON 404.
+  router.get('/episodes/:id', (req: Request<{ id: string }>, res: Response) => {
+    const read: EpisodeRead | null = storage.getEpisodeRead(req.params.id);
+    if (!read) {
+      res.status(404).json({ error: `Unknown episode: ${req.params.id}` });
+      return;
+    }
+    res.json(read);
+  });
+
   // The **Codec report**: what this machine can decode, and whether a
   // **Playback component** is part of the answer — `{ component, codecs }`,
   // one `{ codec, kind, support }` per row. Raw: the **Format catalogue** that
@@ -1258,208 +1311,234 @@ export function createApiRouter(
   // **Nothing about the path is written down.** The file is read every time, so
   // installing a better component makes old films play with no re-import, no
   // migration, and no stale row to invalidate.
-  router.get('/movies/:id/playback', (req: Request<{ id: string }>, res) => {
-    const { id } = req.params;
-    const movie = movieOr404(storage, id, res);
-    if (!movie) {
-      return;
-    }
-
-    const file = videoFileOr404(playback, movie.videoPath, id, res);
-    if (file === null) {
-      return;
-    }
-
-    res.json(playback.read(file));
-  });
-
-  // The movie's bytes, for the player's `<video>`.
   //
-  // The URL carries an **id, never a path**: the file is resolved from the
-  // movie's stored `videoPath` and verified to sit under the managed media
-  // directory before anything is opened, so a row is trusted no further than a
-  // URL would be. `sendFile` is what serves it — it answers a `Range` request
-  // with a 206 and a `Content-Range`, which is the whole of the seeking the
-  // browser's own transport needs, and it names the content type from the
-  // extension so the element can decide it can play it.
-  //
-  // Both ways of having nothing to send answer a JSON 404 rather than Express's
-  // HTML page, for the reason `/movies/:id` does: the client reads that body to
-  // tell "gone" from "went wrong". A stored path that escaped the media
-  // directory gets deliberately the same answer as a file that is simply
-  // absent — what is or is not on this disk is not something the API reports
-  // back. And a read that fails after the headers are gone is an answer too:
-  // the connection ends, and the process stays up to serve the next request,
-  // because a maintainer's library will have gaps.
-  //
-  // A film nothing installed can decode is a **415** rather than a 404: there is
-  // a file, and sending bytes no browser can read would leave the element
-  // stalling over a picture that never arrives.
-  //
-  // A converted film is a **live stream**. It is piped rather than sent, it is
-  // named `video/mp4` whatever the file on disk was called — an element told
-  // `video/x-matroska` refuses bytes it could have played — and **the child is
-  // killed the moment the client goes**, which is the one thing on this route
-  // with no HTTP answer to it: a family movie night must not leave transcodes
-  // running.
-  //
-  // Its headers are **held until the first byte**, which is what makes a
-  // **Failed conversion** answerable at all. `setHeader` does not send them —
-  // the first write does — so the moment the conversion is known to have
-  // produced nothing is still a moment at which a status can be chosen, and it
-  // gets a **500**. Without that hold the answer is a 200 with an empty body,
-  // the element never fires `playing`, and the player says "Getting this film
-  // ready…" for the rest of the evening. It is not the 415 below: that one is
-  // known *before* any bytes, from the probe, and says the format cannot be
-  // decoded at all.
-  //
-  // `?t=` is the **Stream offset**: the second a converted film is wanted from,
-  // because a live stream has no byte ranges for the element to seek in. It is
-  // read **before the path is chosen**, so a URL that is not a position gets the
-  // same 400 whatever the film turns out to be — "direct play ignores `?t=`" is
-  // about a position it has no use for, not about accepting a value that is not
-  // one. A second the film does not have is a **416**, and neither refusal
-  // spawns anything: a conversion started over an unreachable second produces
-  // no bytes and never ends.
-  router.get('/movies/:id/stream', (req: Request<{ id: string }>, res) => {
-    const { id } = req.params;
-
-    const offsetSeconds = streamOffset(req.query.t);
-    if (offsetSeconds === null) {
-      res
-        .status(400)
-        .json({ error: 'Query t must be a position in seconds, from 0' });
-      return;
-    }
-
-    const movie = movieOr404(storage, id, res);
-    if (!movie) {
-      return;
-    }
-
-    const file = videoFileOr404(playback, movie.videoPath, id, res);
-    if (file === null) {
-      return;
-    }
-
-    const plan = playback.stream(file, offsetSeconds);
-
-    if (plan.path === 'cannot-play') {
-      res
-        .status(415)
-        .json({ error: `Cannot play the video file for movie: ${id}` });
-      return;
-    }
-
-    if (plan.path === 'past-end') {
-      res
-        .status(416)
-        .json({ error: `The film ends before ${offsetSeconds}s: ${id}` });
-      return;
-    }
-
-    if (plan.path === 'direct') {
-      res.sendFile(file, (error) => {
-        if (error && !res.headersSent) {
-          noVideoFile(res, id);
-        } else if (error) {
-          res.end();
+  // The three routes that open a file — `/playback`, `/stream` and
+  // `/subtitles/:subtitleId` — are one set of handlers mounted twice, under
+  // `/movies` and `/episodes`, over a lookup of the **Stored path**. Only
+  // the lookup and the noun in a refusal differ.
+  const playables: [PlayableKind, PlayableOr404][] = [
+    ['movie', (id, res) => movieOr404(storage, id, res)],
+    [
+      'episode',
+      (id, res) => {
+        const read = storage.getEpisodeRead(id);
+        if (!read) {
+          res.status(404).json({ error: `Unknown episode: ${id}` });
+          return null;
         }
-      });
-      return;
-    }
+        return read.episode;
+      },
+    ],
+  ];
+  for (const [kind, playableOr404] of playables) {
+    router.get(
+      `/${kind}s/:id/playback`,
+      (req: Request<{ id: string }>, res) => {
+        const { id } = req.params;
+        const movie = playableOr404(id, res);
+        if (!movie) {
+          return;
+        }
 
-    const { stdout } = plan.conversion;
+        const file = videoFileOr404(playback, movie.videoPath, kind, id, res);
+        if (file === null) {
+          return;
+        }
 
-    // `close` fires on a finished response as well as an abandoned one, which is
-    // why `kill` has to be safe to call twice. Registering it before a byte
-    // moves is what makes it true for a client that gives up immediately.
-    res.on('close', () => plan.conversion.kill());
-
-    // A **Failed conversion**: the process was started and produced nothing at
-    // all. `res.headersSent` is what makes the two cases one function — before
-    // the first byte there is still a status to choose, and after it the
-    // response is already a film and `pipeline` below owns the teardown.
-    const failedToStart = () => {
-      if (!res.headersSent) {
-        res
-          .status(500)
-          .json({ error: `Could not start playback for movie: ${id}` });
+        res.json(playback.read(file));
       }
-    };
+    );
 
-    // Every way a conversion can die before it produces a frame arrives on one
-    // of these two events, and there is no third: the pipe broke, or the
-    // process ended having written nothing.
-    stdout.once('error', failedToStart);
-    stdout.once('readable', () => {
-      const first = stdout.read() as Buffer | null;
+    // The movie's bytes, for the player's `<video>`.
+    //
+    // The URL carries an **id, never a path**: the file is resolved from the
+    // movie's stored `videoPath` and verified to sit under the managed media
+    // directory before anything is opened, so a row is trusted no further than a
+    // URL would be. `sendFile` is what serves it — it answers a `Range` request
+    // with a 206 and a `Content-Range`, which is the whole of the seeking the
+    // browser's own transport needs, and it names the content type from the
+    // extension so the element can decide it can play it.
+    //
+    // Both ways of having nothing to send answer a JSON 404 rather than Express's
+    // HTML page, for the reason `/movies/:id` does: the client reads that body to
+    // tell "gone" from "went wrong". A stored path that escaped the media
+    // directory gets deliberately the same answer as a file that is simply
+    // absent — what is or is not on this disk is not something the API reports
+    // back. And a read that fails after the headers are gone is an answer too:
+    // the connection ends, and the process stays up to serve the next request,
+    // because a maintainer's library will have gaps.
+    //
+    // A film nothing installed can decode is a **415** rather than a 404: there is
+    // a file, and sending bytes no browser can read would leave the element
+    // stalling over a picture that never arrives.
+    //
+    // A converted film is a **live stream**. It is piped rather than sent, it is
+    // named `video/mp4` whatever the file on disk was called — an element told
+    // `video/x-matroska` refuses bytes it could have played — and **the child is
+    // killed the moment the client goes**, which is the one thing on this route
+    // with no HTTP answer to it: a family movie night must not leave transcodes
+    // running.
+    //
+    // Its headers are **held until the first byte**, which is what makes a
+    // **Failed conversion** answerable at all. `setHeader` does not send them —
+    // the first write does — so the moment the conversion is known to have
+    // produced nothing is still a moment at which a status can be chosen, and it
+    // gets a **500**. Without that hold the answer is a 200 with an empty body,
+    // the element never fires `playing`, and the player says "Getting this film
+    // ready…" for the rest of the evening. It is not the 415 below: that one is
+    // known *before* any bytes, from the probe, and says the format cannot be
+    // decoded at all.
+    //
+    // `?t=` is the **Stream offset**: the second a converted film is wanted from,
+    // because a live stream has no byte ranges for the element to seek in. It is
+    // read **before the path is chosen**, so a URL that is not a position gets the
+    // same 400 whatever the film turns out to be — "direct play ignores `?t=`" is
+    // about a position it has no use for, not about accepting a value that is not
+    // one. A second the film does not have is a **416**, and neither refusal
+    // spawns anything: a conversion started over an unreachable second produces
+    // no bytes and never ends.
+    router.get(`/${kind}s/:id/stream`, (req: Request<{ id: string }>, res) => {
+      const { id } = req.params;
 
-      // `readable` fires at the end of a stream as well as on data, and `read`
-      // answers `null` for the end. That is the whole signal — the conversion
-      // ran and wrote nothing.
-      if (first === null) {
-        failedToStart();
+      const offsetSeconds = streamOffset(req.query.t);
+      if (offsetSeconds === null) {
+        res
+          .status(400)
+          .json({ error: 'Query t must be a position in seconds, from 0' });
         return;
       }
 
-      res.setHeader('Content-Type', 'video/mp4');
-      res.write(first);
-      // `pipeline` rather than `pipe`: it tears both ends down together and
-      // hands the failure here, where a client who walked away mid-film is a
-      // normal end to a request rather than an unhandled error that takes the
-      // process with it.
-      pipeline(stdout, res, () => undefined);
-    });
-  });
-
-  // One **Subtitle**'s **Cue list**, for the **Subtitle overlay**.
-  //
-  // The second route here that opens a file rather than serializing a row, and
-  // it addresses it the same way: a **movie id and a subtitle id, never a
-  // path**. The file is resolved from the subtitle row's stored `path` and
-  // checked to sit under the managed media directory before anything is read,
-  // because a subtitles table is not trusted any further than a video path is.
-  //
-  // The pair is the address, not the subtitle id alone: a track is looked up
-  // among *this* movie's rows, so an id belonging to another film opens nothing.
-  //
-  // What comes back says nothing about which of the four formats the file was.
-  // That is the whole point of the four parsers, and this is the seam a caller
-  // actually sees.
-  //
-  // The interesting status is the one that is *not* an error. A file that will
-  // not parse answers `200 []`: the row was there and the file was there, so
-  // there is nothing missing to report — the film simply plays on with no
-  // subtitles. Collapsing that into a 404 would make a malformed `.ass`
-  // indistinguishable from a deleted one, and the family would see the same
-  // nothing either way while the maintainer lost the difference.
-  router.get(
-    '/movies/:id/subtitles/:subtitleId',
-    (req: Request<{ id: string; subtitleId: string }>, res) => {
-      const { id, subtitleId } = req.params;
-      const movie = movieOr404(storage, id, res);
+      const movie = playableOr404(id, res);
       if (!movie) {
         return;
       }
 
-      const subtitle = movie.subtitles.find((track) => track.id === subtitleId);
-      if (!subtitle) {
-        res.status(404).json({ error: `Unknown subtitle: ${subtitleId}` });
-        return;
-      }
-
-      const file = playback.subtitleFile(subtitle.path);
+      const file = videoFileOr404(playback, movie.videoPath, kind, id, res);
       if (file === null) {
-        res
-          .status(404)
-          .json({ error: `No subtitle file for subtitle: ${subtitleId}` });
         return;
       }
 
-      res.json(playback.cues(file));
-    }
-  );
+      const plan = playback.stream(file, offsetSeconds);
+
+      if (plan.path === 'cannot-play') {
+        res
+          .status(415)
+          .json({ error: `Cannot play the video file for ${kind}: ${id}` });
+        return;
+      }
+
+      if (plan.path === 'past-end') {
+        res
+          .status(416)
+          .json({ error: `The film ends before ${offsetSeconds}s: ${id}` });
+        return;
+      }
+
+      if (plan.path === 'direct') {
+        res.sendFile(file, (error) => {
+          if (error && !res.headersSent) {
+            noVideoFile(res, kind, id);
+          } else if (error) {
+            res.end();
+          }
+        });
+        return;
+      }
+
+      const { stdout } = plan.conversion;
+
+      // `close` fires on a finished response as well as an abandoned one, which is
+      // why `kill` has to be safe to call twice. Registering it before a byte
+      // moves is what makes it true for a client that gives up immediately.
+      res.on('close', () => plan.conversion.kill());
+
+      // A **Failed conversion**: the process was started and produced nothing at
+      // all. `res.headersSent` is what makes the two cases one function — before
+      // the first byte there is still a status to choose, and after it the
+      // response is already a film and `pipeline` below owns the teardown.
+      const failedToStart = () => {
+        if (!res.headersSent) {
+          res
+            .status(500)
+            .json({ error: `Could not start playback for ${kind}: ${id}` });
+        }
+      };
+
+      // Every way a conversion can die before it produces a frame arrives on one
+      // of these two events, and there is no third: the pipe broke, or the
+      // process ended having written nothing.
+      stdout.once('error', failedToStart);
+      stdout.once('readable', () => {
+        const first = stdout.read() as Buffer | null;
+
+        // `readable` fires at the end of a stream as well as on data, and `read`
+        // answers `null` for the end. That is the whole signal — the conversion
+        // ran and wrote nothing.
+        if (first === null) {
+          failedToStart();
+          return;
+        }
+
+        res.setHeader('Content-Type', 'video/mp4');
+        res.write(first);
+        // `pipeline` rather than `pipe`: it tears both ends down together and
+        // hands the failure here, where a client who walked away mid-film is a
+        // normal end to a request rather than an unhandled error that takes the
+        // process with it.
+        pipeline(stdout, res, () => undefined);
+      });
+    });
+
+    // One **Subtitle**'s **Cue list**, for the **Subtitle overlay**.
+    //
+    // The second route here that opens a file rather than serializing a row, and
+    // it addresses it the same way: a **movie id and a subtitle id, never a
+    // path**. The file is resolved from the subtitle row's stored `path` and
+    // checked to sit under the managed media directory before anything is read,
+    // because a subtitles table is not trusted any further than a video path is.
+    //
+    // The pair is the address, not the subtitle id alone: a track is looked up
+    // among *this* movie's rows, so an id belonging to another film opens nothing.
+    //
+    // What comes back says nothing about which of the four formats the file was.
+    // That is the whole point of the four parsers, and this is the seam a caller
+    // actually sees.
+    //
+    // The interesting status is the one that is *not* an error. A file that will
+    // not parse answers `200 []`: the row was there and the file was there, so
+    // there is nothing missing to report — the film simply plays on with no
+    // subtitles. Collapsing that into a 404 would make a malformed `.ass`
+    // indistinguishable from a deleted one, and the family would see the same
+    // nothing either way while the maintainer lost the difference.
+    router.get(
+      `/${kind}s/:id/subtitles/:subtitleId`,
+      (req: Request<{ id: string; subtitleId: string }>, res) => {
+        const { id, subtitleId } = req.params;
+        const movie = playableOr404(id, res);
+        if (!movie) {
+          return;
+        }
+
+        const subtitle = movie.subtitles.find(
+          (track) => track.id === subtitleId
+        );
+        if (!subtitle) {
+          res.status(404).json({ error: `Unknown subtitle: ${subtitleId}` });
+          return;
+        }
+
+        const file = playback.subtitleFile(subtitle.path);
+        if (file === null) {
+          res
+            .status(404)
+            .json({ error: `No subtitle file for subtitle: ${subtitleId}` });
+          return;
+        }
+
+        res.json(playback.cues(file));
+      }
+    );
+  }
 
   // **Bulk import**'s start: the two paths the **Setup step** holds, as JSON,
   // and the **Current run**'s first snapshot back. A refusal names the field

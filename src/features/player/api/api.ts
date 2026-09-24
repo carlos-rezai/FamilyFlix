@@ -1,20 +1,49 @@
 import { postValue, type PostOptions } from '@/api/postValue/postValue';
-import type { Cue, PlaybackRead } from '@/types';
+import type { Cue, EpisodeRead, PlaybackRead, Playable } from '@/types';
 
-/** Where one movie's playback read is fetched from. */
-const playbackEndpoint = (id: string) =>
-  `/api/movies/${encodeURIComponent(id)}/playback`;
+/**
+ * What the player's wire is addressed to: a **Playable**, or a bare id — a
+ * movie's, which is how every caller addressed one before episodes played.
+ */
+export type PlayableTarget = Playable | string;
 
-/** Where one movie's **Resume position** is saved. */
-const resumeEndpoint = (id: string) =>
-  `/api/movies/${encodeURIComponent(id)}/resume`;
+/**
+ * How a player hook is told what is playing: a movie by id, as it always was,
+ * or any **Playable**.
+ */
+export type Addressed = { movieId: string } | { playable: Playable };
+
+/** The {@link Playable} an {@link Addressed} names. */
+export function addressOf(addressed: Addressed): Playable {
+  return 'playable' in addressed
+    ? addressed.playable
+    : { kind: 'movie', id: addressed.movieId };
+}
+
+/**
+ * The route a Playable's reads and writes hang off — `/api/movies/<id>` or
+ * `/api/episodes/<id>`, the two sharing the server's handlers. The id is
+ * encoded: it has to arrive as one path segment however it is spelled.
+ */
+function routeOf(target: PlayableTarget): string {
+  const { kind, id } =
+    typeof target === 'string' ? { kind: 'movie', id: target } : target;
+  return `/api/${kind}s/${encodeURIComponent(id)}`;
+}
+
+/** Where one playable's playback read is fetched from. */
+const playbackEndpoint = (target: PlayableTarget) =>
+  `${routeOf(target)}/playback`;
+
+/** Where one playable's **Resume position** is saved. */
+const resumeEndpoint = (target: PlayableTarget) => `${routeOf(target)}/resume`;
 
 /**
  * Where one **Subtitle**'s **Cue list** is fetched from. Both ids are encoded:
  * the pair is the address, and neither half may change the URL's shape.
  */
-const cuesEndpoint = (id: string, subtitleId: string) =>
-  `/api/movies/${encodeURIComponent(id)}/subtitles/${encodeURIComponent(subtitleId)}`;
+const cuesEndpoint = (target: PlayableTarget, subtitleId: string) =>
+  `${routeOf(target)}/subtitles/${encodeURIComponent(subtitleId)}`;
 
 /**
  * What the resume route accepts as an echo of what it stored — a number, and
@@ -42,7 +71,9 @@ function isResumeEcho(echoed: unknown): echoed is number {
  * It stays with the player rather than moving up to `src/api/`: this is the one
  * feature that asks, which is the same rule read the other way round.
  */
-export async function fetchPlayback(id: string): Promise<PlaybackRead | null> {
+export async function fetchPlayback(
+  id: PlayableTarget
+): Promise<PlaybackRead | null> {
   const endpoint = playbackEndpoint(id);
   const response = await fetch(endpoint);
 
@@ -72,7 +103,7 @@ export async function fetchPlayback(id: string): Promise<PlaybackRead | null> {
  * resolved would make a broken write indistinguishable from a stored one.
  */
 export function saveResume(
-  id: string,
+  id: PlayableTarget,
   seconds: number,
   options?: PostOptions
 ): Promise<number> {
@@ -94,7 +125,7 @@ export function saveResume(
  * falling over behind a film that quietly has no subtitles.
  */
 export async function fetchSubtitleCues(
-  id: string,
+  id: PlayableTarget,
   subtitleId: string
 ): Promise<Cue[]> {
   const endpoint = cuesEndpoint(id, subtitleId);
@@ -108,4 +139,24 @@ export async function fetchSubtitleCues(
   }
 
   return (await response.json()) as Cue[];
+}
+
+/**
+ * The `EpisodeRead` the player opens an episode with — the episode, its
+ * series' id and title, and the next episode. `fetchMovie`'s contract: a 404
+ * resolves `null`, anything else not ok rejects. It stays with the player,
+ * its one caller.
+ */
+export async function fetchEpisode(id: string): Promise<EpisodeRead | null> {
+  const endpoint = routeOf({ kind: 'episode', id });
+  const response = await fetch(endpoint);
+
+  if (response.status === 404) {
+    return null;
+  }
+  if (!response.ok) {
+    throw new Error(`GET ${endpoint} failed: ${response.status}`);
+  }
+
+  return (await response.json()) as EpisodeRead;
 }

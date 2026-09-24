@@ -5,6 +5,7 @@ import type {
   GenrePayload,
   GenreQuery,
   Episode,
+  EpisodeRead,
   HomePayload,
   LibraryQuery,
   Movie,
@@ -195,6 +196,12 @@ export interface LibraryStorage {
    * Answers whether the library holds that series; a movie's id is not one.
    */
   setSeriesFavorite(id: string, value: boolean): boolean;
+  /**
+   * One **Episode** as the player opens it: the episode, its series' id and
+   * title, and the next episode the series holds — or `null` for an id the
+   * library does not hold as an episode, a movie's among them.
+   */
+  getEpisodeRead(id: string): EpisodeRead | null;
   /** Every series by title, and the episode total across all of them. */
   getSeriesHome(): SeriesHomePayload;
   /** A series' episodes in season, then episode order; `[]` for none. */
@@ -254,6 +261,7 @@ export function createSqliteStorage(dbPath: string): LibraryStorage {
     addSeries: seriesWrite.addSeries,
     addEpisode: seriesWrite.addEpisode,
     setSeriesFavorite: seriesWrite.setSeriesFavorite,
+    getEpisodeRead: seriesReader.getEpisodeRead,
     getSeriesHome: seriesReader.getSeriesHome,
     listEpisodes: seriesReader.listEpisodes,
     getSeriesDetail: seriesReader.getSeriesDetail,

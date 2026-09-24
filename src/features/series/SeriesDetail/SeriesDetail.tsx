@@ -11,7 +11,7 @@ import {
   StarRating,
 } from '@/primitives';
 import type { SeriesDetailModel } from '@/types';
-import { range, seasonPath } from '@/utils';
+import { episodePlayPath, range, seasonPath } from '@/utils';
 import { useSeriesDetail } from '../useSeriesDetail/useSeriesDetail';
 import {
   ArtArea,
@@ -115,8 +115,8 @@ function LoadingSeries() {
  *
  * Under the hero, the Seasons grid: one Season card per season, each opening
  * its season page. Beside the button, the series' heart — shown at once, put
- * back if the save is refused. The button is inert: episode playback does not
- * exist yet, so it goes nowhere and writes nothing.
+ * back if the save is refused. The button opens the player on the episode it
+ * names, as a push.
  */
 export function SeriesDetail() {
   const navigate = useNavigate();
@@ -149,6 +149,7 @@ export function SeriesDetail() {
   }
 
   const { series } = detail;
+  const playId = series.playEpisodeId;
 
   return (
     <>
@@ -197,6 +198,11 @@ export function SeriesDetail() {
                 variant="primary"
                 size="lg"
                 icon="play"
+                onClick={
+                  playId === null
+                    ? undefined
+                    : () => navigate(episodePlayPath(playId))
+                }
               />
               <CircleToggle
                 label={series.isFavorite ? FAVORITE_TIP.on : FAVORITE_TIP.off}

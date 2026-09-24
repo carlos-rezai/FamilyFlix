@@ -3,7 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 import type { Cue, Subtitle } from '@/types';
 import { fetchSettings } from '@/api/fetchSettings/fetchSettings';
 
-import { fetchSubtitleCues } from '../api/api';
+import { addressOf, fetchSubtitleCues, type Addressed } from '../api/api';
 import { cueAt } from '../cueAt/cueAt';
 import { preferredSubtitle } from '../preferredSubtitle/preferredSubtitle';
 
@@ -23,13 +23,12 @@ export interface Subtitles {
 }
 
 /** What the hook has to be told: which film, which rows, and where it is. */
-export interface SubtitlesOptions {
-  movieId: string;
+export type SubtitlesOptions = Addressed & {
   /** The film's **Subtitles**, from the record. */
   subtitles: Subtitle[];
   /** The **Absolute position**, which is what a **Cue** is chosen against. */
   position: number;
-}
+};
 
 /** The **Cue list** held for the session, stamped with the row it belongs to. */
 interface HeldCues {
@@ -71,11 +70,9 @@ interface HeldCues {
  * error state here to draw, and a bad subtitle file must never be able to
  * interrupt the film.
  */
-export function useSubtitles({
-  movieId,
-  subtitles,
-  position,
-}: SubtitlesOptions): Subtitles {
+export function useSubtitles(options: SubtitlesOptions): Subtitles {
+  const { subtitles, position } = options;
+  const { kind, id } = addressOf(options);
   const [subtitlesOn, setSubtitlesOn] = useState(false);
   const [cues, setCues] = useState<HeldCues | null>(null);
   const [language, setLanguage] = useState<string | undefined>(undefined);
@@ -98,7 +95,7 @@ export function useSubtitles({
     return () => {
       cancelled = true;
     };
-  }, [movieId]);
+  }, [kind, id]);
 
   useEffect(() => {
     if (!subtitlesOn || track === null || cues?.trackId === track.id) {
@@ -106,7 +103,7 @@ export function useSubtitles({
     }
 
     let cancelled = false;
-    void fetchSubtitleCues(movieId, track.id)
+    void fetchSubtitleCues({ kind, id }, track.id)
       .then((list) => {
         if (!cancelled) {
           setCues({ trackId: track.id, list });
@@ -117,7 +114,7 @@ export function useSubtitles({
     return () => {
       cancelled = true;
     };
-  }, [movieId, subtitlesOn, cues, track]);
+  }, [kind, id, subtitlesOn, cues, track]);
 
   // The line on screen right now, or nothing — which the overlay draws as no
   // box at all rather than an empty one hovering over the picture.

@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef } from 'react';
 
+import { saveEpisodeWatched } from '@/api/saveEpisodeWatched/saveEpisodeWatched';
 import { saveWatched } from '@/api/saveWatched/saveWatched';
-import { saveResume } from '../api/api';
+import { addressOf, saveResume, type Addressed } from '../api/api';
 
 /** How often a running film is looked at, in milliseconds. */
 const TICK_MS = 10_000;
@@ -18,9 +19,7 @@ const TICK_THRESHOLD_SECONDS = 5;
 const FINISH_FRACTION = 0.95;
 
 /** Everything the reporter needs to know about the film that is running. */
-export interface WatchReporterOptions {
-  /** The film being watched, which is what both writes are addressed to. */
-  movieId: string;
+export type WatchReporterOptions = Addressed & {
   /** The **Absolute position**, as `usePlayback` reports it. */
   position: number;
   /** Whether the film is running. A paused player writes nothing. */
@@ -29,7 +28,7 @@ export interface WatchReporterOptions {
   ended: boolean;
   /** How long the film runs, from the **Playback read**. */
   duration: number;
-}
+};
 
 /** The one thing the screen has to tell the reporter itself. */
 export interface WatchReporter {
@@ -72,13 +71,10 @@ export interface WatchReporter {
  * no retry, no state, no rejection reaching the element. A backend hiccup is
  * not something the family should watch happen.
  */
-export function useWatchReporter({
-  movieId,
-  position,
-  playing,
-  ended,
-  duration,
-}: WatchReporterOptions): WatchReporter {
+export function useWatchReporter(options: WatchReporterOptions): WatchReporter {
+  const { position, playing, ended, duration } = options;
+  // The film being watched, which is what both writes are addressed to.
+  const playable = addressOf(options);
   /**
    * What the film's movement is measured against: where it started playing, and
    * then wherever it was last written. `null` until the film plays at all,
@@ -94,8 +90,8 @@ export function useWatchReporter({
    * What the film is doing right now, for the two readers that run outside a
    * render — the tick and the cleanup on the way out.
    */
-  const latest = useRef({ movieId, position, duration });
-  latest.current = { movieId, position, duration };
+  const latest = useRef({ playable, position, duration });
+  latest.current = { playable, position, duration };
 
   /** Whether the film has moved far enough for a write to be worth making. */
   const worthWriting = useCallback((seconds: number): boolean => {
@@ -114,7 +110,7 @@ export function useWatchReporter({
         return;
       }
       measuredFrom.current = seconds;
-      void saveResume(latest.current.movieId, seconds, { keepalive }).catch(
+      void saveResume(latest.current.playable, seconds, { keepalive }).catch(
         () => undefined
       );
     },
@@ -127,9 +123,9 @@ export function useWatchReporter({
       return;
     }
     finished.current = true;
-    void saveWatched(latest.current.movieId, true, { keepalive }).catch(
-      () => undefined
-    );
+    const { kind, id } = latest.current.playable;
+    const save = kind === 'episode' ? saveEpisodeWatched : saveWatched;
+    void save(id, true, { keepalive }).catch(() => undefined);
   }, []);
 
   // The tick. It starts when the film starts, which is also where the film's

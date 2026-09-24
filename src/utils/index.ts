@@ -27,5 +27,6 @@ export { toGenreQueryParams } from './toGenreQueryParams/toGenreQueryParams';
 export { moviePath } from './moviePath/moviePath';
 export { seriesPath } from './seriesPath/seriesPath';
 export { seasonPath } from './seasonPath/seasonPath';
+export { episodePlayPath } from './episodePlayPath/episodePlayPath';
 export { movieFormPath } from './movieFormPath/movieFormPath';
 export { accentScale, type AccentScale } from './accentScale/accentScale';

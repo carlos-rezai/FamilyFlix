@@ -147,6 +147,8 @@ export interface SeriesDetailModel {
   genres: string[];
   /** `Resume S02E04` / `Play S01E01`, or a bare `Play` with no episodes. */
   playLabel: string;
+  /** The episode the button plays — the series' **Next episode** — or `null`. */
+  playEpisodeId: string | null;
   /** `Not started` / `5 of 22 episodes watched` / `All 22 episodes watched`. */
   progressLabel: string;
   /** The synopsis, or `null` when there is none to clamp. */

@@ -1,14 +1,19 @@
 import { useEffect, useState } from 'react';
 
 import { fetchMovie } from '@/api/fetchMovie/fetchMovie';
-import type { Movie, PlaybackRead } from '@/types';
+import type { EpisodeRead, Movie, PlaybackRead } from '@/types';
 
-import { fetchPlayback } from '../api/api';
+import { fetchEpisode, fetchPlayback, type PlayableTarget } from '../api/api';
 
 /** What the **Player** knows about the film before a byte of it arrives. */
 export interface OpeningReads {
   /** The record — the name, the artwork, and where the film was left. */
   movie: Movie | null;
+  /**
+   * The episode's record in its place when an **Episode** is playing — the
+   * episode, its series, its next — and absent for a movie, or until it lands.
+   */
+  episode?: EpisodeRead;
   /** The **Playback read** — the path the film takes and how long it runs. */
   playback: PlaybackRead | null;
   /** Whether there is no file behind the row, which is its own notice. */
@@ -42,8 +47,13 @@ export interface OpeningReads {
  * It is nonetheless {@link OpeningReads.opened} — settled is settled, and the
  * screen has to stop waiting on an answer that is never coming.
  */
-export function useOpeningReads(movieId: string): OpeningReads {
+export function useOpeningReads(target: PlayableTarget): OpeningReads {
+  const { kind, id } =
+    typeof target === 'string'
+      ? { kind: 'movie' as const, id: target }
+      : target;
   const [movie, setMovie] = useState<Movie | null>(null);
+  const [episode, setEpisode] = useState<EpisodeRead | undefined>(undefined);
   const [playback, setPlayback] = useState<PlaybackRead | null>(null);
   const [fileMissing, setFileMissing] = useState(false);
   const [opened, setOpened] = useState(false);
@@ -52,12 +62,23 @@ export function useOpeningReads(movieId: string): OpeningReads {
     let cancelled = false;
     setOpened(false);
 
-    void Promise.all([fetchMovie(movieId), fetchPlayback(movieId)])
-      .then(([record, read]) => {
+    // The record comes off the playable's own wire: a movie's, or an
+    // episode's read with its series beside it.
+    const record =
+      kind === 'episode'
+        ? fetchEpisode(id).then((read) => ({
+            movie: null,
+            episode: read ?? undefined,
+          }))
+        : fetchMovie(id).then((read) => ({ movie: read, episode: undefined }));
+
+    void Promise.all([record, fetchPlayback({ kind, id })])
+      .then(([records, read]) => {
         if (cancelled) {
           return;
         }
-        setMovie(record);
+        setMovie(records.movie);
+        setEpisode(records.episode);
         setPlayback(read);
         // The playback read answers 404 for a film with no file behind it, and
         // `fetchPlayback` resolves that as `null` precisely so it can be told
@@ -80,7 +101,7 @@ export function useOpeningReads(movieId: string): OpeningReads {
     return () => {
       cancelled = true;
     };
-  }, [movieId]);
+  }, [kind, id]);
 
-  return { movie, playback, fileMissing, opened };
+  return { movie, episode, playback, fileMissing, opened };
 }

@@ -27,6 +27,9 @@ export type {
   SeasonSummary,
   NewSeries,
   NewEpisode,
+  NextEpisodeRef,
+  EpisodeRead,
+  Playable,
 } from './series';
 export type {
   MovieSort,

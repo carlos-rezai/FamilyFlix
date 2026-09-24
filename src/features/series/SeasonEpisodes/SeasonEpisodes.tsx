@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { EpisodeRow } from '@/components';
 import { Button, ChevronLeftIcon, IconButton } from '@/primitives';
 import { useGoBack } from '@/hooks/useGoBack/useGoBack';
-import { range, seasonPath, seriesPath } from '@/utils';
+import { episodePlayPath, range, seasonPath, seriesPath } from '@/utils';
 import { useSeasonEpisodes } from '../useSeasonEpisodes/useSeasonEpisodes';
 import {
   Column,
@@ -36,8 +36,8 @@ const SKELETON_ROWS = 4;
  *
  * The box and the season button flip at once and flip back on refusal. The
  * pills are a **Sideways move** — a `replace` — so Back is one step to the
- * series page, which is also the page's **Landing**. The play button and the
- * rows are inert until episode playback exists.
+ * series page, which is also the page's **Landing**. The play button and a
+ * row open the player on their episode, as a push.
  */
 export function SeasonEpisodes() {
   const navigate = useNavigate();
@@ -89,6 +89,7 @@ export function SeasonEpisodes() {
   }
 
   const { season } = view;
+  const playId = season.playEpisodeId;
 
   return (
     <Column>
@@ -111,6 +112,11 @@ export function SeasonEpisodes() {
           variant="primary"
           size="md"
           icon="play"
+          onClick={
+            playId === null
+              ? undefined
+              : () => navigate(episodePlayPath(playId))
+          }
         />
       </HeaderRow>
 
@@ -129,7 +135,7 @@ export function SeasonEpisodes() {
           <EpisodeRow
             key={episode.id}
             episode={episode}
-            onOpen={() => undefined}
+            onOpen={() => navigate(episodePlayPath(episode.id))}
             onToggleWatched={() => view.toggleEpisode(episode.id)}
           />
         ))}

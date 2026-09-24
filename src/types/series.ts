@@ -96,3 +96,28 @@ export interface NewEpisode {
   airDate?: string;
   runtimeMinutes?: number;
 }
+
+/** The episode after one, in its own series — what _Up next_ names. */
+export interface NextEpisodeRef {
+  id: string;
+  season: number;
+  number: number;
+  title: string | null;
+}
+
+/**
+ * `GET /api/episodes/:id` — what the player opens an episode with: the
+ * episode, its series' id and title for the title line and the Landing, and
+ * the next episode the library holds, or `null` after the show's last.
+ */
+export interface EpisodeRead {
+  episode: Episode;
+  series: { id: string; title: string };
+  next: NextEpisodeRef | null;
+}
+
+/** What the player is given: a movie or an episode, by id. */
+export interface Playable {
+  kind: 'movie' | 'episode';
+  id: string;
+}

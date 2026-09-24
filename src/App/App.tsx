@@ -23,7 +23,7 @@ import { SnackbarProvider } from '@/App/SnackbarProvider/SnackbarProvider';
  *
  * Eight routes, eight real screens: the browse home at `/`, the movie page at
  * `/movie/:id` and the genre page at `/genre/:name` (the home's two
- * destinations), the player at `/movie/:id/play`, the movie form at `/add`
+ * destinations), the player at `/movie/:id/play` (and on an episode at `/episode/:id/play`), the movie form at `/add`
  * (with `?movie=<id>` to edit), the series page at `/series/:id`, the Settings
  * hub at `/settings` and the bulk
  * importer at `/import`. The URLs were the stable part all along — each screen
@@ -40,6 +40,10 @@ export default function App() {
           <Route path="/" element={<LibraryPage />} />
           <Route path="/movie/:id" element={<MoviePage />} />
           <Route path="/movie/:id/play" element={<PlayerPage />} />
+          <Route
+            path="/episode/:id/play"
+            element={<PlayerPage kind="episode" />}
+          />
           <Route path="/series/:id" element={<SeriesPage />} />
           <Route path="/series/:id/season/:n" element={<SeasonPage />} />
           <Route path="/add" element={<AddMoviePage />} />
