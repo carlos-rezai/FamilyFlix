@@ -230,9 +230,9 @@ describe('ImportSetup — what the scanner accepts', () => {
   }
 
   const SHAPES = [
-    'Movie Title (2019)\ movie.mkv · subs.en.srt',
-    'Show Name\ Season 01\ S01E03.mkv',
-    'Show Name\ S01E03.mkv',
+    'Movie Title (2019)\\ movie.mkv · subs.en.srt',
+    'Show Name\\ Season 01\\ S01E03.mkv',
+    'Show Name\\ S01E03.mkv',
   ];
   const LOOSE_NOTE = '— loose episodes at the show root are fine';
   const RULE =

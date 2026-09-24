@@ -249,6 +249,7 @@ describe('GET /api/export/csv — the file', () => {
     expect(appleGrove).toEqual({
       title: 'apple Grove',
       year: 2019,
+      endYear: 2019,
       genres: ['Comedy', 'Romance'],
       director: 'Ana Sørensen',
       cast: ['Marit Holt', 'Peder Vinge'],
@@ -352,6 +353,7 @@ describe('GET /api/export/xlsx — the file', () => {
     expect(appleGrove).toEqual({
       title: 'apple Grove',
       year: 2019,
+      endYear: 2019,
       genres: ['Comedy', 'Romance'],
       director: 'Ana Sørensen',
       cast: ['Marit Holt', 'Peder Vinge'],
@@ -708,6 +710,7 @@ describe.each(FORMATS)('GET /api/export/%s — the awkward title', (format) => {
     expect(rows.find((row) => row.title === '"Whatever," she said')).toEqual({
       title: '"Whatever," she said',
       year: 2015,
+      endYear: 2015,
       genres: ['Drama'],
       director: 'Zoë "Zed" Ríos',
       cast: ['Ana Sørensen', 'Peder "Pete" Vinge'],
@@ -718,6 +721,7 @@ describe.each(FORMATS)('GET /api/export/%s — the awkward title', (format) => {
     expect(rows.find((row) => row.title === 'Amélie')).toEqual({
       title: 'Amélie',
       year: 2001,
+      endYear: 2001,
       genres: ['Romance', 'Comedy'],
       director: 'Jean-Pierre Jeunet',
       cast: ['Audrey Tautou'],

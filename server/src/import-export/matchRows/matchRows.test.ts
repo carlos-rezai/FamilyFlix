@@ -28,6 +28,7 @@ function row(title: string, year: number | null = null): SheetRow {
   return {
     title,
     year,
+    endYear: year,
     genres: [],
     director: null,
     cast: [],

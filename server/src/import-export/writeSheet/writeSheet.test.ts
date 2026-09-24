@@ -517,6 +517,8 @@ describe.each(FORMATS)(
         LIBRARY.map((movie) => ({
           title: movie.title,
           year: movie.year,
+          // A lone year reads back as a finished run of one year.
+          endYear: movie.year,
           genres: movie.genres.map((genre) => genre.name),
           director: movie.director,
           cast: movie.cast,

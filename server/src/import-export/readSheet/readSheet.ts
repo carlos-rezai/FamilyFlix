@@ -14,6 +14,8 @@ import { Readable } from 'node:stream';
 export interface SheetRow {
   title: string;
   year: number | null;
+  /** The last year of a run: `year` itself for a lone year, `null` for an open range or no year. */
+  endYear: number | null;
   genres: string[];
   director: string | null;
   cast: string[];
@@ -129,9 +131,24 @@ function cellNumber(text: string): number | null {
   return Number(text);
 }
 
-/** A year, or `null` for anything that is not four digits. */
-function cellYear(text: string): number | null {
-  return /^\d{4}$/.test(text) ? Number(text) : null;
+/**
+ * A Year cell's first and last year: `2022` is a finished run of one year,
+ * `2019–2023` (or `2019-2023`) a range, `2021–` a run still going. Anything
+ * else is neither year.
+ */
+function cellYears(text: string): Pick<SheetRow, 'year' | 'endYear'> {
+  const lone = /^(\d{4})$/.exec(text);
+  if (lone) {
+    return { year: Number(lone[1]), endYear: Number(lone[1]) };
+  }
+  const range = /^(\d{4})\s*[–-]\s*(\d{4})?$/.exec(text);
+  if (range) {
+    return {
+      year: Number(range[1]),
+      endYear: range[2] === undefined ? null : Number(range[2]),
+    };
+  }
+  return { year: null, endYear: null };
 }
 
 /**
@@ -251,7 +268,7 @@ export async function readSheet(
     }
     rows.push({
       title,
-      year: cellYear(read(row, 'year')),
+      ...cellYears(read(row, 'year')),
       genres: cellList(read(row, 'genres'), GENRE_SEPARATORS),
       director: cellOptional(read(row, 'director')),
       cast: cellList(read(row, 'cast'), CAST_SEPARATORS),

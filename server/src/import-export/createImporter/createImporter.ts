@@ -23,7 +23,7 @@ import {
 } from '../groupShows/groupShows';
 import { matchRows, type Match } from '../matchRows/matchRows';
 import { readSheet, type SheetRow } from '../readSheet/readSheet';
-import { titleGuess, titleKey } from '../titleKey/titleKey';
+import { titleGuess, titleKey, yearInName } from '../titleKey/titleKey';
 import type {
   ImportField,
   ImportProblem,
@@ -377,11 +377,33 @@ const asMatchable = (show: ShowScan): MovieFolderScan => ({
   subtitles: [],
 });
 
-/** A matched show: the row that named it, and the show. */
+/**
+ * A matched show: the row that named it, and the show — and, when the show is
+ * **Already in library**, the series it joins. `episodes` are the ones this
+ * run imports: every numbered episode, less those the held series has.
+ */
 interface ShowMatch {
   row: SheetRow;
   show: ShowScan;
+  held: Series | null;
+  episodes: ShowEpisode[];
 }
+
+/**
+ * The row a show no row names imports under: its title guessed from the Show
+ * folder's name, its year the one the name carries, and nothing else.
+ */
+const guessedRow = (show: ShowScan): SheetRow => ({
+  title: titleGuess(show.name),
+  year: yearInName(show.name),
+  endYear: null,
+  genres: [],
+  director: null,
+  cast: [],
+  synopsis: null,
+  rating: null,
+  watched: false,
+});
 
 /**
  * Whether `path` lies strictly under `root` — not the root itself, not a path
@@ -622,9 +644,14 @@ export function createImporter({
    * with no episode leaves no folder behind, and one with none to import
    * reserves none. Each episode's subtitles are copied in beside its video;
    * a subtitle that begins with no episode's stem is a **Warning line**.
+   *
+   * A show **Already in library** joins the series it matched: only its
+   * `episodes` — those with no held `(season, episode)` — are copied, into
+   * the Series folder the held episodes already live in, and the held
+   * metadata is left as it is. One with nothing new says so and adds nothing.
    */
   const importShow = async (
-    { row, show }: ShowMatch,
+    { row, show, held, episodes }: ShowMatch,
     pool: Map<string, string>,
     warnedGenres: Set<string>,
     current: ImportRun,
@@ -637,13 +664,22 @@ export function createImporter({
         'warning'
       );
     }
-    if (show.episodes.length === 0) {
+    if (episodes.length === 0) {
+      if (held !== null) {
+        log(
+          current,
+          `– Already in library ${titleWithYear(row.title, row.year)}`,
+          'info'
+        );
+      }
       return;
     }
-    const folder = media.reserveFolder(row.title, row.year);
-    let series: Series | null = null;
+    const folder =
+      (held === null ? null : heldFolder(held)) ??
+      media.reserveFolder(row.title, row.year);
+    let series: Series | null = held;
 
-    for (const episode of show.episodes) {
+    for (const episode of episodes) {
       const label = episodeLabel(row.title, episode);
       current.currentItem = label;
       try {
@@ -665,6 +701,7 @@ export function createImporter({
           const input: NewSeries = {
             title: row.title,
             ...(row.year === null ? {} : { year: row.year }),
+            ...(row.endYear === null ? {} : { endYear: row.endYear }),
             ...(row.director === null ? {} : { creator: row.director }),
             ...(row.synopsis === null ? {} : { synopsis: row.synopsis }),
             ...(row.rating === null ? {} : { rating: row.rating }),
@@ -721,6 +758,56 @@ export function createImporter({
       log(current, `⚠ ${row.title} — no poster found`, 'warning');
     }
   };
+
+  /**
+   * The **Series folder** a held series' episodes live in — one up from an
+   * episode's season folder — or `null` when none of them names one.
+   */
+  const heldFolder = (series: Series): string | null => {
+    for (const episode of storage.listEpisodes(series.id)) {
+      const season = media.openFolder(episode.videoPath);
+      if (season !== null) {
+        return dirname(season);
+      }
+    }
+    return null;
+  };
+
+  /**
+   * A show as this run imports it: joined to the held series of its key and
+   * year, if there is one, with only the episodes that series lacks.
+   */
+  const showMatch = (
+    row: SheetRow,
+    show: ShowScan,
+    heldSeries: Map<string, Series>
+  ): ShowMatch => {
+    const held = heldSeries.get(filmKey(row.title, row.year)) ?? null;
+    if (held === null) {
+      return { row, show, held, episodes: show.episodes };
+    }
+    const numbers = new Set(
+      storage
+        .listEpisodes(held.id)
+        .map((episode) => tagOf(episode.season, episode.number))
+    );
+    return {
+      row,
+      show,
+      held,
+      episodes: show.episodes.filter(
+        (episode) => !numbers.has(tagOf(episode.season, episode.episode))
+      ),
+    };
+  };
+
+  /** Every series the library holds, by key and year — read once per run. */
+  const seriesInLibrary = (): Map<string, Series> =>
+    new Map(
+      storage
+        .getSeriesHome()
+        .series.map((series) => [filmKey(series.title, series.year), series])
+    );
 
   /** Every film the library holds, by key and year — read once per run. */
   const inLibrary = (): Set<string> =>
@@ -784,12 +871,13 @@ export function createImporter({
     );
 
     const verdicts = matchRows(rows, [...films, ...showOf.keys()]);
+    const heldSeries = seriesInLibrary();
     const matched: Match[] = [];
     const matchedShows: ShowMatch[] = [];
     for (const match of verdicts.matched) {
       const show = showOf.get(match.folder);
       if (show !== undefined) {
-        matchedShows.push({ row: match.row, show });
+        matchedShows.push(showMatch(match.row, show, heldSeries));
       } else if (already.has(filmKey(match.row.title, match.row.year))) {
         log(
           current,
@@ -818,7 +906,7 @@ export function createImporter({
     }
     // A matched show's **Unplaced** videos: hard, and Skip alone — there is
     // no form an episode is resolved in; the reason names the rename.
-    for (const { row, show } of matchedShows) {
+    const fileUnplaced = ({ row, show }: ShowMatch) => {
       for (const video of show.unplaced) {
         file(
           current,
@@ -830,8 +918,25 @@ export function createImporter({
           { row, folder: asMatchable(show), candidates: [] }
         );
       }
-    }
+    };
+    matchedShows.forEach(fileUnplaced);
     for (const folder of verdicts.unclaimed) {
+      // A show no row names imports anyway, under the title its folder
+      // suggests: a `no-row` Problem would open a form that cannot take a
+      // series.
+      const show = showOf.get(folder);
+      if (show !== undefined) {
+        const row = guessedRow(show);
+        log(
+          current,
+          `⚠ ${titleWithYear(row.title, row.year)} — not in the spreadsheet, imported under its folder’s name`,
+          'warning'
+        );
+        const unnamed = showMatch(row, show, heldSeries);
+        fileUnplaced(unnamed);
+        matchedShows.push(unnamed);
+        continue;
+      }
       file(current, problemOf('no-row', folder.name, REASON.noRow), {
         row: null,
         folder,
@@ -842,7 +947,7 @@ export function createImporter({
     // Each episode is one item on the bar, as each film is.
     current.total =
       matched.length +
-      matchedShows.reduce((sum, { show }) => sum + show.episodes.length, 0);
+      matchedShows.reduce((sum, { episodes }) => sum + episodes.length, 0);
     current.phase = 'importing';
 
     let imported = 0;
