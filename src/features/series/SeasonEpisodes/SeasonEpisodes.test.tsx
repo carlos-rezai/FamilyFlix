@@ -193,6 +193,7 @@ function renderSeason(
           <Route path="/" element={<h1>Your library</h1>} />
           <Route path="/series/:id" element={<h1>Series page</h1>} />
           <Route path="/series/:id/season/:n" element={<SeasonEpisodes />} />
+          <Route path="/episode/:id/play" element={<h1>Player</h1>} />
         </Routes>
       </ThemeProvider>
       <LocationProbe />
@@ -266,15 +267,27 @@ describe('SeasonEpisodes — the header', () => {
     expect(screen.getByRole('button', { name: 'Play E01' })).toBeDefined();
   });
 
-  it('goes nowhere and writes nothing when the play button is pressed — episode playback is not built', async () => {
+  // 22 — Series (TV), Phase 4 (issue #194): the button is no longer inert.
+  it('opens the player on the season’s part-watched episode, as a push', async () => {
     serve(harbor());
 
     renderSeason();
     await findSeasonHeading();
     fireEvent.click(screen.getByRole('button', { name: 'Resume E04' }));
 
-    expect(pathname()).toBe('/series/harbor/season/2');
+    expect(pathname()).toBe('/episode/s2e4/play');
+    expect(navigationType()).toBe('PUSH');
     expect(writes()).toEqual([]);
+  });
+
+  it('opens the player on E01 of a season nobody has started', async () => {
+    serve(harbor([uniform(1, 3)]));
+
+    renderSeason(['/series/harbor/season/1']);
+    await findSeasonHeading('Season 1');
+    fireEvent.click(screen.getByRole('button', { name: 'Play E01' }));
+
+    expect(pathname()).toBe('/episode/s1e1/play');
   });
 
   it('reads the count line as 8 episodes · 3 watched', async () => {
@@ -354,17 +367,31 @@ describe('SeasonEpisodes — the episode rows', () => {
     ]);
   });
 
-  it('goes nowhere and writes nothing when a row is pressed — episode playback is not built', async () => {
+  // 22 — Series (TV), Phase 4 (issue #194): a row now plays its episode.
+  it('opens the player on the row’s own episode when the row is clicked', async () => {
     serve(harbor());
 
     renderSeason();
     await findSeasonHeading();
     fireEvent.click(episodeRow('S02E05'));
-    fireEvent.keyDown(episodeRow('S02E05'), { key: 'Enter' });
 
-    expect(pathname()).toBe('/series/harbor/season/2');
+    expect(pathname()).toBe('/episode/s2e5/play');
+    expect(navigationType()).toBe('PUSH');
     expect(writes()).toEqual([]);
   });
+
+  it.each(['Enter', ' '])(
+    'opens the player on the row’s episode from the keyboard (%j)',
+    async (key) => {
+      serve(harbor());
+
+      renderSeason();
+      await findSeasonHeading();
+      fireEvent.keyDown(episodeRow('S02E06'), { key });
+
+      expect(pathname()).toBe('/episode/s2e6/play');
+    }
+  );
 });
 
 describe('SeasonEpisodes — the episode box', () => {

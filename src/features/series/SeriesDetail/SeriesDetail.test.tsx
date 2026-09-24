@@ -20,6 +20,7 @@ import type {
 } from '@/types';
 import {
   LocationProbe,
+  navigationType,
   pathname,
 } from '@/test-support/LocationProbe/LocationProbe';
 import {
@@ -195,6 +196,7 @@ function renderDetail(id = 'harbor') {
         <Routes>
           <Route path="/" element={<h1>Your library</h1>} />
           <Route path="/series/:id" element={<SeriesDetail />} />
+          <Route path="/episode/:id/play" element={<h1>Player</h1>} />
         </Routes>
       </ThemeProvider>
       <LocationProbe />
@@ -369,7 +371,8 @@ describe('SeriesDetail — the button and the progress line', () => {
     expect(screen.getByRole('button', { name: 'Play S01E01' })).toBeDefined();
   });
 
-  it('goes nowhere and writes nothing when pressed — episode playback is not built', async () => {
+  // 22 — Series (TV), Phase 4 (issue #194): the button is no longer inert.
+  it('opens the player on the part-watched episode it names, as a push', async () => {
     serve(midway());
 
     renderDetail();
@@ -377,8 +380,20 @@ describe('SeriesDetail — the button and the progress line', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Resume S02E04' }));
 
-    expect(pathname()).toBe('/series/harbor');
+    expect(pathname()).toBe('/episode/s2e4/play');
+    expect(navigationType()).toBe('PUSH');
     expect(writes()).toHaveLength(0);
+  });
+
+  it('opens the player on S01E01 for a show nobody has started', async () => {
+    serve(unstarted());
+
+    renderDetail();
+    await findTitle('Harbor & Vine');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Play S01E01' }));
+
+    expect(pathname()).toBe('/episode/s1e1/play');
   });
 });
 

@@ -382,6 +382,58 @@ describe('App — the movie page’s navigating actions', () => {
     );
   });
 
+  it('renders the player on the episode when /episode/:id/play is opened directly', async () => {
+    // 22 — Series (TV), Phase 4 (issue #194): the route table hands the same
+    // `PlayerPage` `kind="episode"`, so the stream is the episode's own.
+    const fallThrough = fetchMock.getMockImplementation();
+    fetchMock.mockImplementation((input, init) => {
+      const url = String(input);
+      if (url === '/api/episodes/e24/playback') {
+        return Promise.resolve(
+          okResponse({ path: 'direct', durationSeconds: 2640 })
+        );
+      }
+      if (url === '/api/episodes/e24') {
+        return Promise.resolve(
+          okResponse({
+            episode: {
+              id: 'e24',
+              seriesId: 'harbor',
+              season: 2,
+              number: 4,
+              title: 'The Auction',
+              airDate: null,
+              runtimeMinutes: 44,
+              watched: false,
+              resumePositionSeconds: 0,
+              status: 'unwatched',
+              videoPath: 'harbor/S02E04.mp4',
+              subtitles: [],
+              lastWatchedAt: null,
+            },
+            series: { id: 'harbor', title: 'Harbor & Vine' },
+            next: null,
+          })
+        );
+      }
+      return fallThrough
+        ? fallThrough(input, init)
+        : Promise.reject(new Error(`Unexpected request: ${url}`));
+    });
+
+    const { container } = renderApp('/episode/e24/play');
+
+    await waitFor(() =>
+      expect(container.querySelector('video')).not.toBeNull()
+    );
+    expect(container.querySelector('video')?.getAttribute('src')).toBe(
+      '/api/episodes/e24/stream'
+    );
+    expect(
+      await screen.findByText('Harbor & Vine · S02E04 · The Auction')
+    ).toBeDefined();
+  });
+
   it('renders the movie form when /add is opened directly', async () => {
     renderApp('/add');
 
