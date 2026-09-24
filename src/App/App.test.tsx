@@ -1573,7 +1573,11 @@ describe('App — the series page', () => {
         );
       }
       if (url.includes('/api/series')) {
-        const payload: SeriesHomePayload = { series: SERIES, episodeCount: 0 };
+        const payload: SeriesHomePayload = {
+          series: SERIES,
+          episodeCount: 0,
+          continueWatching: [],
+        };
         return Promise.resolve(okResponse(payload));
       }
       if (movies === undefined) {

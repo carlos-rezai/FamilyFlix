@@ -94,7 +94,7 @@ const heading = () =>
 
 describe('SeriesHome — All series', () => {
   it('asks GET /api/series for the tab', async () => {
-    serve({ series: [], episodeCount: 0 });
+    serve({ series: [], episodeCount: 0, continueWatching: [] });
 
     renderHome();
     await heading();
@@ -111,6 +111,7 @@ describe('SeriesHome — All series', () => {
         makeSeries({ id: 's2', title: 'Lighthouse Keepers' }),
       ],
       episodeCount: 5,
+      continueWatching: [],
     });
 
     renderHome();
@@ -131,6 +132,7 @@ describe('SeriesHome — All series', () => {
         makeSeries({ id: 's2', title: 'Lighthouse Keepers', watched: false }),
       ],
       episodeCount: 5,
+      continueWatching: [],
     });
 
     renderHome();
@@ -148,6 +150,7 @@ describe('SeriesHome — All series', () => {
         makeSeries({ id: 's2', title: 'Lighthouse Keepers' }),
       ],
       episodeCount: 5,
+      continueWatching: [],
     });
 
     renderHome();
@@ -159,6 +162,7 @@ describe('SeriesHome — All series', () => {
     serve({
       series: [makeSeries({ id: 's1', title: 'Harbor & Vine' })],
       episodeCount: 1,
+      continueWatching: [],
     });
 
     renderHome();
@@ -167,7 +171,7 @@ describe('SeriesHome — All series', () => {
   });
 
   it('draws an empty library as the heading and 0 series · 0 episodes, and nothing else', async () => {
-    serve({ series: [], episodeCount: 0 });
+    serve({ series: [], episodeCount: 0, continueWatching: [] });
 
     const { container } = renderHome();
     await heading();
@@ -189,6 +193,7 @@ describe('SeriesHome — opening a series', () => {
         makeSeries({ id: 's2', title: 'Lighthouse Keepers' }),
       ],
       episodeCount: 5,
+      continueWatching: [],
     });
 
     render(
@@ -264,6 +269,7 @@ describe('SeriesHome — the heart', () => {
       makeSeries({ id: 's2', title: 'Lighthouse Keepers' }),
     ],
     episodeCount: 5,
+    continueWatching: [],
   });
 
   it('fills the heart the moment it is pressed, and opens nothing', async () => {

@@ -49,11 +49,26 @@ export interface Episode {
   lastWatchedAt: string | null;
 }
 
-/** The Series tab in one call: every series, and the episode total. */
+/**
+ * One entry of the Series tab's Continue Watching: a series' earliest
+ * part-watched episode, and the series' id and title — {@link EpisodeRead}'s
+ * two halves, without the next.
+ */
+export interface EpisodeContinueEntry {
+  series: { id: string; title: string };
+  episode: Episode;
+}
+
+/**
+ * The Series tab in one call: every series, the episode total, and Continue
+ * Watching — one entry per series with a part-watched episode, most recently
+ * watched first, at most 15.
+ */
 export interface SeriesHomePayload {
   series: Series[];
   /** Episodes across every series — the tab's `N series · M episodes`. */
   episodeCount: number;
+  continueWatching: EpisodeContinueEntry[];
 }
 
 /** One season of a series: its episodes in order, and its own next episode. */

@@ -481,6 +481,7 @@ describe('LibraryPage — the Series tab', () => {
       },
     ],
     episodeCount: 2,
+    continueWatching: [],
   };
 
   beforeEach(() => {

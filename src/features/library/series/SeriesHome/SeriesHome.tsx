@@ -2,13 +2,15 @@ import { useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import type { SeriesHomePayload } from '@/types';
-import { seriesPath } from '@/utils';
+import { episodePlayPath, seriesPath } from '@/utils';
 import { saveSeriesFavorite } from '@/api/saveSeriesFavorite/saveSeriesFavorite';
 import { fetchSeriesHome } from '../../api/api';
 import { LibraryGrid } from '../../LibraryGrid/LibraryGrid';
 import { RetryableFailure } from '../../RetryableFailure/RetryableFailure';
+import { ContinueRow } from '../../home/ContinueRow/ContinueRow';
 import { useBrowseLoad } from '../../useBrowseLoad/useBrowseLoad';
 import { useOptimisticSave } from '../../useOptimisticSave/useOptimisticSave';
+import { episodeContinueView } from '../episodeContinueView/episodeContinueView';
 import { seriesCardView } from '../seriesCardView/seriesCardView';
 import { Count, Heading } from './SeriesHome.styles';
 
@@ -22,7 +24,9 @@ function seriesCountLabel({ series, episodeCount }: SeriesHomePayload): string {
 }
 
 /**
- * The Series tab's body: _All series_, the count line, and the Library grid of
+ * The Series tab's body: a Continue Watching row of **Episode continue cards**
+ * — each opening the player on its episode, and the row not drawn when nothing
+ * is part-watched — then _All series_, the count line, and the Library grid of
  * unchanged Poster cards over `GET /api/series`. An empty library is the
  * heading and `0 series · 0 episodes`, and nothing else. Nothing is drawn
  * until the payload lands. A poster's heart saves the series' favorite through
@@ -54,6 +58,10 @@ export function SeriesHome() {
   const toggleFavorite = useOptimisticSave(applyFavorite, saveSeriesFavorite);
 
   const cards = useMemo(() => data?.series.map(seriesCardView) ?? [], [data]);
+  const continueCards = useMemo(
+    () => data?.continueWatching.map(episodeContinueView) ?? [],
+    [data]
+  );
 
   if (status === 'error') {
     return (
@@ -71,6 +79,10 @@ export function SeriesHome() {
 
   return (
     <section>
+      <ContinueRow
+        movies={continueCards}
+        onOpenMovie={(id) => navigate(episodePlayPath(id))}
+      />
       <Heading>All series</Heading>
       <Count>{seriesCountLabel(data)}</Count>
       <LibraryGrid

@@ -23,6 +23,7 @@ export type {
   Series,
   Episode,
   SeriesHomePayload,
+  EpisodeContinueEntry,
   SeriesDetail,
   SeasonSummary,
   NewSeries,

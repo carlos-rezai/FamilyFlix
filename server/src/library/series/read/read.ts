@@ -1,6 +1,7 @@
 import type { SqliteDatabase } from '../../../db';
 import type {
   Episode,
+  EpisodeContinueEntry,
   EpisodeRead,
   Genre,
   Series,
@@ -91,6 +92,9 @@ const mapRowToEpisode = (row: EpisodeRow, subtitles: Subtitle[]): Episode => {
   };
 };
 
+/** The Series tab's Continue Watching row holds at most this many entries. */
+const CONTINUE_LIMIT = 15;
+
 export interface SeriesReader {
   /** One series, assembled, or `null` for an unknown id. */
   getSeries(id: string): Series | null;
@@ -102,7 +106,10 @@ export interface SeriesReader {
    * watched or not — or `null` for an unknown id.
    */
   getEpisodeRead(id: string): EpisodeRead | null;
-  /** Every series by title, and the episode total across all of them. */
+  /**
+   * Every series by title, the episode total across all of them, and the
+   * Continue Watching entries.
+   */
   getSeriesHome(): SeriesHomePayload;
   /** A series' episodes in season, then episode order; `[]` for none. */
   listEpisodes(seriesId: string): Episode[];
@@ -151,6 +158,24 @@ export function createSeriesReader(db: SqliteDatabase): SeriesReader {
       AND (season_number > ? OR (season_number = ? AND episode_number > ?))
     ORDER BY season_number, episode_number
     LIMIT 1
+  `);
+  // Continue Watching: per series, its earliest part-watched episode — not
+  // watched, a resume position — most recently watched first, at most 15.
+  const selectContinueEpisodes = db.prepare(`
+    SELECT e.*, s.title AS series_title
+    FROM episodes e
+    JOIN series s ON s.id = e.series_id
+    WHERE e.watched = 0 AND e.resume_position_seconds > 0
+      AND NOT EXISTS (
+        SELECT 1 FROM episodes p
+        WHERE p.series_id = e.series_id
+          AND p.watched = 0 AND p.resume_position_seconds > 0
+          AND (p.season_number < e.season_number
+            OR (p.season_number = e.season_number
+              AND p.episode_number < e.episode_number))
+      )
+    ORDER BY e.last_watched_at IS NULL, e.last_watched_at DESC, e.id
+    LIMIT ${CONTINUE_LIMIT}
   `);
   const countEpisodes = db.prepare('SELECT COUNT(*) AS n FROM episodes');
   // A series is watched when it has episodes and none of them is unwatched —
@@ -268,7 +293,15 @@ export function createSeriesReader(db: SqliteDatabase): SeriesReader {
         )
       );
       const { n } = countEpisodes.get() as { n: number };
-      return { series, episodeCount: n };
+      const continueWatching: EpisodeContinueEntry[] = (
+        selectContinueEpisodes.all() as (EpisodeRow & {
+          series_title: string;
+        })[]
+      ).map((row) => ({
+        series: { id: row.series_id, title: row.series_title },
+        episode: assembleEpisode(row),
+      }));
+      return { series, episodeCount: n, continueWatching };
     },
 
     listEpisodes,
