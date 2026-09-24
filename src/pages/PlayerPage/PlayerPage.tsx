@@ -24,5 +24,9 @@ interface PlayerPageProps {
 export default function PlayerPage({ kind = 'movie' }: PlayerPageProps) {
   const { id } = useParams<{ id: string }>();
 
-  return <Player playable={{ kind, id: id ?? '' }} />;
+  // Keyed on what it plays, so a **Sideways move** to the next episode is a
+  // fresh player rather than the last one's state carried over.
+  return (
+    <Player key={`${kind}:${id ?? ''}`} playable={{ kind, id: id ?? '' }} />
+  );
 }
