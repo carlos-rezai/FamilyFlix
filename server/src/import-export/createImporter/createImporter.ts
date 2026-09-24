@@ -25,6 +25,7 @@ import { matchRows, type Match } from '../matchRows/matchRows';
 import { readSheet, type SheetRow } from '../readSheet/readSheet';
 import { titleGuess, titleKey, yearInName } from '../titleKey/titleKey';
 import type {
+  Episode,
   ImportField,
   ImportProblem,
   ImportProblemDetail,
@@ -385,8 +386,19 @@ const asMatchable = (show: ShowScan): MovieFolderScan => ({
 interface ShowMatch {
   row: SheetRow;
   show: ShowScan;
-  held: Series | null;
+  held: HeldSeries | null;
   episodes: ShowEpisode[];
+}
+
+/**
+ * A series the library already holds, as a run needs it: the series, the
+ * `(season, episode)` tags it has, and the **Series folder** they live in —
+ * or `null` when none of them names one.
+ */
+interface HeldSeries {
+  series: Series;
+  tags: Set<string>;
+  folder: string | null;
 }
 
 /**
@@ -674,10 +686,8 @@ export function createImporter({
       }
       return;
     }
-    const folder =
-      (held === null ? null : heldFolder(held)) ??
-      media.reserveFolder(row.title, row.year);
-    let series: Series | null = held;
+    const folder = held?.folder ?? media.reserveFolder(row.title, row.year);
+    let series: Series | null = held?.series ?? null;
 
     for (const episode of episodes) {
       const label = episodeLabel(row.title, episode);
@@ -763,8 +773,8 @@ export function createImporter({
    * The **Series folder** a held series' episodes live in — one up from an
    * episode's season folder — or `null` when none of them names one.
    */
-  const heldFolder = (series: Series): string | null => {
-    for (const episode of storage.listEpisodes(series.id)) {
+  const heldFolder = (episodes: Episode[]): string | null => {
+    for (const episode of episodes) {
       const season = media.openFolder(episode.videoPath);
       if (season !== null) {
         return dirname(season);
@@ -780,33 +790,43 @@ export function createImporter({
   const showMatch = (
     row: SheetRow,
     show: ShowScan,
-    heldSeries: Map<string, Series>
+    heldSeries: Map<string, HeldSeries>
   ): ShowMatch => {
     const held = heldSeries.get(filmKey(row.title, row.year)) ?? null;
-    if (held === null) {
-      return { row, show, held, episodes: show.episodes };
-    }
-    const numbers = new Set(
-      storage
-        .listEpisodes(held.id)
-        .map((episode) => tagOf(episode.season, episode.number))
-    );
     return {
       row,
       show,
       held,
-      episodes: show.episodes.filter(
-        (episode) => !numbers.has(tagOf(episode.season, episode.episode))
-      ),
+      episodes:
+        held === null
+          ? show.episodes
+          : show.episodes.filter(
+              (episode) =>
+                !held.tags.has(tagOf(episode.season, episode.episode))
+            ),
     };
   };
 
-  /** Every series the library holds, by key and year — read once per run. */
-  const seriesInLibrary = (): Map<string, Series> =>
+  /**
+   * Every series the library holds, by key and year, with its episodes' tags
+   * and folder — read once per run, before its first `await`, as `inLibrary`
+   * is: a storage read after the walk would sit outside every catch.
+   */
+  const seriesInLibrary = (): Map<string, HeldSeries> =>
     new Map(
-      storage
-        .getSeriesHome()
-        .series.map((series) => [filmKey(series.title, series.year), series])
+      storage.getSeriesHome().series.map((series) => {
+        const episodes = storage.listEpisodes(series.id);
+        return [
+          filmKey(series.title, series.year),
+          {
+            series,
+            tags: new Set(
+              episodes.map((episode) => tagOf(episode.season, episode.number))
+            ),
+            folder: heldFolder(episodes),
+          },
+        ];
+      })
     );
 
   /** Every film the library holds, by key and year — read once per run. */
@@ -829,6 +849,7 @@ export function createImporter({
         .map((genre) => [genre.name.toLowerCase(), genre.name])
     );
     const already = inLibrary();
+    const heldSeries = seriesInLibrary();
     const warnedGenres = new Set<string>();
 
     log(current, `Connecting to ${rootPath} …`, 'info');
@@ -871,7 +892,6 @@ export function createImporter({
     );
 
     const verdicts = matchRows(rows, [...films, ...showOf.keys()]);
-    const heldSeries = seriesInLibrary();
     const matched: Match[] = [];
     const matchedShows: ShowMatch[] = [];
     for (const match of verdicts.matched) {
