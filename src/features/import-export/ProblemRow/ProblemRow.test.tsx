@@ -63,6 +63,7 @@ const DOT: Record<ProblemKind, string> = {
   'no-folder': DANGER,
   'no-video': DANGER,
   failed: DANGER,
+  unplaced: DANGER,
   ambiguous: ACCENT,
   'no-row': TEXT_FAINT,
   'missing-meta': TEXT_FAINT,
@@ -201,5 +202,46 @@ describe('ProblemRow — the awkward titles', () => {
     );
     expect(resolveLink()).toBeDefined();
     expect(skipButton()).toBeDefined();
+  });
+});
+
+/**
+ * 22 — Series (TV), Phase 7 (issue #197): the `unplaced` **Problem** is hard,
+ * and there is nothing to resolve it _in_ — no form takes an episode — so its
+ * row draws _Skip_ alone. Its reason already names the fix: rename the file
+ * and import again.
+ */
+describe('ProblemRow — an unplaced episode', () => {
+  const unplaced = problem({
+    kind: 'unplaced',
+    title: 'Lighthouse Keepers · Behind the Scenes.mp4',
+    reason: 'No episode number — rename it S01E03 and import again.',
+  });
+
+  it('shows its title and its reason', () => {
+    renderRow({ problem: unplaced });
+
+    expect(
+      screen.getByText('Lighthouse Keepers · Behind the Scenes.mp4')
+    ).toBeDefined();
+    expect(
+      screen.getByText('No episode number — rename it S01E03 and import again.')
+    ).toBeDefined();
+  });
+
+  it('offers no Resolve', () => {
+    renderRow({ problem: unplaced });
+
+    expect(screen.queryByRole('link', { name: 'Resolve' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Resolve' })).toBeNull();
+  });
+
+  it('offers Skip, and raises onSkip when it is pressed', () => {
+    const onSkip = vi.fn();
+    renderRow({ problem: unplaced, onSkip });
+
+    fireEvent.click(skipButton());
+
+    expect(onSkip).toHaveBeenCalledTimes(1);
   });
 });

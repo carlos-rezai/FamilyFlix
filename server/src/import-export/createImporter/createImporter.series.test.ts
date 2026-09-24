@@ -33,7 +33,13 @@
 // two-film library never move — and a dev library filled from it has a
 // series on the tab.
 
-import { cpSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import {
+  cpSync,
+  mkdirSync,
+  readFileSync,
+  readdirSync,
+  writeFileSync,
+} from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
@@ -360,25 +366,37 @@ describe('createImporter — each episode is one item on the bar', () => {
 });
 
 describe('createImporter — the checked-in series fixture', () => {
+  /** The fixture imported from one of its two sheets, over a fresh library. */
+  async function importFixture(
+    spelling: 'library.xlsx' | 'library.csv'
+  ): Promise<{ storage: LibraryStorage; root: string }> {
+    const dir = sandboxRoot('familyflix-import-fixture-');
+    const media = join(dir, 'media');
+    mkdirSync(media);
+    const { root, sheet } = seriesFixture(dir, spelling);
+    const storage = freshStorage();
+    const importer = createImporter({
+      storage,
+      media: createMedia(media),
+      playback: createPlayback(media, fixedSlot(null)),
+    });
+
+    await importer.start(sheet, root);
+    await untilReview(importer);
+    return { storage, root };
+  }
+
   it.each([['library.xlsx' as const], ['library.csv' as const]])(
     'imports Harbor & Vine as one series from %s',
     async (spelling) => {
-      const dir = sandboxRoot('familyflix-import-fixture-');
-      const media = join(dir, 'media');
-      mkdirSync(media);
-      const { root, sheet } = seriesFixture(dir, spelling);
-      const storage = freshStorage();
-      const importer = createImporter({
-        storage,
-        media: createMedia(media),
-        playback: createPlayback(media, fixedSlot(null)),
-      });
+      const { storage } = await importFixture(spelling);
 
-      await importer.start(sheet, root);
-      await untilReview(importer);
-
-      const series = theSeries(storage);
-      expect(series.title).toBe('Harbor & Vine');
+      const series = allSeries(storage).find(
+        (held) => held.title === 'Harbor & Vine'
+      );
+      if (series === undefined) {
+        throw new Error('the fixture imported no Harbor & Vine');
+      }
       expect(series.creator).not.toBeNull();
 
       const episodes = episodesOf(storage, series);
@@ -392,8 +410,351 @@ describe('createImporter — the checked-in series fixture', () => {
         episodes.map((_, index) => index + 1)
       );
 
-      // The show is not a movie.
+      // The shows are not movies.
       expect(storage.listMovies({ sort: 'a-z' })).toEqual([]);
     }
   );
+
+  it.each([['library.xlsx' as const], ['library.csv' as const]])(
+    'imports a second show, laid out loose, as its own series from %s',
+    async (spelling) => {
+      const { storage, root } = await importFixture(spelling);
+
+      // The fixture's second shape: a Show folder holding tagged videos at
+      // its own root, with no Season folder between.
+      const loose = readdirSync(root, { withFileTypes: true }).filter(
+        (entry) =>
+          entry.isDirectory() &&
+          readdirSync(join(root, entry.name)).some((file) =>
+            /S\d\dE\d\d.*\.(mp4|mkv)$/i.test(file)
+          )
+      );
+      expect(loose).toHaveLength(1);
+
+      const series = allSeries(storage);
+      expect(series).toHaveLength(2);
+      const other = series.find((held) => held.title !== 'Harbor & Vine');
+      if (other === undefined) {
+        throw new Error('the fixture imported no second series');
+      }
+      // Named by its row, not guessed from the folder.
+      expect(other.creator).not.toBeNull();
+      const episodes = episodesOf(storage, other);
+      expect(episodes.length).toBeGreaterThan(0);
+      for (const episode of episodes) {
+        expect(episode.runtimeMinutes).not.toBeNull();
+      }
+    }
+  );
+});
+
+// 22 — Series (TV), Phase 7: "loose episodes, subtitles and the unplaced
+// problem" (issue #197).
+//
+// The scanner's second shape end to end: a **Show folder** whose videos sit
+// loose at its root, beside the film. Built per test from a layout — a
+// relative folder onto the files in it, every video a copy of the fixture's
+// header and every subtitle a line of text — over the same two-row sheet, so
+// each suite below reads as the tree it is about.
+
+/** A root laid out from `layout` under a fresh sandbox, and the importer over it. */
+function looseSandbox(layout: Record<string, string[]>): {
+  storage: LibraryStorage;
+  importer: Importer;
+  media: string;
+  root: string;
+  sheet: string;
+} {
+  const dir = sandboxRoot('familyflix-import-loose-');
+  const media = join(dir, 'media');
+  mkdirSync(media);
+
+  const root = join(dir, 'root');
+  cpSync(
+    join(LIBRARY_FIXTURE, 'root', 'Die.Hard.1988.1080p'),
+    join(root, 'Die.Hard.1988.1080p'),
+    { recursive: true }
+  );
+  for (const [folder, files] of Object.entries(layout)) {
+    const at = join(root, folder);
+    mkdirSync(at, { recursive: true });
+    for (const file of files) {
+      if (file.endsWith('.srt')) {
+        writeFileSync(join(at, file), '1\n00:00:01,000 --> 00:00:02,000\nHi\n');
+      } else {
+        cpSync(HEADER, join(at, file));
+      }
+    }
+  }
+
+  const sheet = join(dir, 'library.csv');
+  writeFileSync(sheet, SHEET);
+
+  const storage = freshStorage();
+  const importer = createImporter({
+    storage,
+    media: createMedia(media),
+    playback: createPlayback(media, fixedSlot(null)),
+  });
+  return { storage, importer, media, root, sheet };
+}
+
+const LOOSE = {
+  [SHOW]: [
+    'Lighthouse.Keepers.S01E01.First.Light.mp4',
+    'Lighthouse.Keepers.S01E01.First.Light.en.srt',
+    'Lighthouse.Keepers.S01E01.First.Light.pt.srt',
+    'Lighthouse.Keepers.S01E02.The.Storm.mp4',
+    'Lighthouse.Keepers.S02E01E02.Spring.Tide.mp4',
+  ],
+};
+
+const unplacedOf = (run: ImportRun) =>
+  run.problems.filter((problem) => problem.kind === 'unplaced');
+
+describe('createImporter — a folder of loose episodes becomes one series', () => {
+  it('writes the loose folder as one series from its row', async () => {
+    const { storage, importer, root, sheet } = looseSandbox(LOOSE);
+
+    await importer.start(sheet, root);
+    const run = await untilReview(importer);
+
+    expect(theSeries(storage)).toMatchObject({
+      title: 'Lighthouse Keepers',
+      year: 2019,
+      creator: 'Mara Quinn',
+    });
+    expect(run.problems).toEqual([]);
+  });
+
+  it('numbers loose episodes off their tags, a multi-episode file taking its first number', async () => {
+    const { storage, importer, root, sheet } = looseSandbox(LOOSE);
+
+    await importer.start(sheet, root);
+    await untilReview(importer);
+
+    expect(
+      episodesOf(storage, theSeries(storage)).map((episode) => [
+        episode.season,
+        episode.number,
+        episode.title,
+        episode.videoPath,
+      ])
+    ).toEqual([
+      [
+        1,
+        1,
+        'First Light',
+        'lighthouse-keepers-2019/season-01/Lighthouse.Keepers.S01E01.First.Light.mp4',
+      ],
+      [
+        1,
+        2,
+        'The Storm',
+        'lighthouse-keepers-2019/season-01/Lighthouse.Keepers.S01E02.The.Storm.mp4',
+      ],
+      [
+        2,
+        1,
+        'Spring Tide',
+        'lighthouse-keepers-2019/season-02/Lighthouse.Keepers.S02E01E02.Spring.Tide.mp4',
+      ],
+    ]);
+  });
+
+  it('lets a Season folder’s number win over the tag’s', async () => {
+    const { storage, importer, root, sheet } = looseSandbox({
+      [join(SHOW, 'Season 03')]: ['Lighthouse.Keepers.S01E05.Misfiled.mp4'],
+    });
+
+    await importer.start(sheet, root);
+    await untilReview(importer);
+
+    expect(
+      episodesOf(storage, theSeries(storage)).map((episode) => [
+        episode.season,
+        episode.number,
+      ])
+    ).toEqual([[3, 5]]);
+  });
+
+  it('keeps the film beside it a movie', async () => {
+    const { storage, importer, root, sheet } = looseSandbox(LOOSE);
+
+    await importer.start(sheet, root);
+    await untilReview(importer);
+
+    expect(
+      storage.listMovies({ sort: 'a-z' }).map((movie) => movie.title)
+    ).toEqual(['Die Hard']);
+  });
+});
+
+describe('createImporter — episode subtitles', () => {
+  it('attaches each subtitle to the episode whose stem it begins with, in its detected language', async () => {
+    const { storage, importer, media, root, sheet } = looseSandbox(LOOSE);
+
+    await importer.start(sheet, root);
+    await untilReview(importer);
+
+    const [first, second] = episodesOf(storage, theSeries(storage));
+    expect(
+      first.subtitles
+        .map((track) => [track.path, track.language])
+        .sort(([a], [b]) => a.localeCompare(b))
+    ).toEqual([
+      [
+        'lighthouse-keepers-2019/season-01/Lighthouse.Keepers.S01E01.First.Light.en.srt',
+        'English',
+      ],
+      [
+        'lighthouse-keepers-2019/season-01/Lighthouse.Keepers.S01E01.First.Light.pt.srt',
+        'Portuguese',
+      ],
+    ]);
+    expect(second.subtitles).toEqual([]);
+
+    // The tracks are copied in, not referenced where they lay.
+    for (const track of first.subtitles) {
+      expect(readFileSync(join(media, track.path), 'utf8')).toContain('Hi');
+    }
+  });
+
+  it('logs a subtitle that matches no episode as a Warning line, not a Problem', async () => {
+    const { storage, importer, root, sheet } = looseSandbox({
+      [SHOW]: [...LOOSE[SHOW], 'Directors.Commentary.en.srt'],
+    });
+
+    await importer.start(sheet, root);
+    const run = await untilReview(importer);
+
+    const lines = linesMatching(run, /Directors\.Commentary\.en\.srt/);
+    expect(lines.map((line) => line.kind)).toEqual(['warning']);
+    expect(run.problems).toEqual([]);
+    for (const episode of episodesOf(storage, theSeries(storage))) {
+      expect(
+        episode.subtitles.map((track) => track.path).join(' ')
+      ).not.toContain('Commentary');
+    }
+  });
+});
+
+describe('createImporter — unplaced episodes', () => {
+  const WITH_STRAYS = {
+    [SHOW]: [
+      ...LOOSE[SHOW],
+      'Lighthouse Keepers - Behind the Scenes.mp4',
+      'Lighthouse.Keepers.S01E02.Storm.Copy.mp4',
+    ],
+  };
+
+  it('files an unnumbered video and a second claim on a number as unplaced Problems', async () => {
+    const { importer, root, sheet } = looseSandbox(WITH_STRAYS);
+
+    await importer.start(sheet, root);
+    const run = await untilReview(importer);
+
+    const unplaced = unplacedOf(run);
+    expect(unplaced).toHaveLength(2);
+    expect(run.problems).toHaveLength(2);
+    expect(unplaced.map((problem) => problem.title).join(' | ')).toContain(
+      'Behind the Scenes'
+    );
+  });
+
+  it('names the fix in the reason: rename it and import again', async () => {
+    const { importer, root, sheet } = looseSandbox(WITH_STRAYS);
+
+    await importer.start(sheet, root);
+    const run = await untilReview(importer);
+
+    expect(unplacedOf(run)).not.toEqual([]);
+    for (const problem of unplacedOf(run)) {
+      expect(problem.reason).toMatch(
+        /rename it .*S\d\dE\d\d.* and import again/i
+      );
+    }
+  });
+
+  it('imports every placed episode of the show all the same, one file per number', async () => {
+    const { storage, importer, root, sheet } = looseSandbox(WITH_STRAYS);
+
+    await importer.start(sheet, root);
+    await untilReview(importer);
+
+    expect(
+      episodesOf(storage, theSeries(storage)).map((episode) => [
+        episode.season,
+        episode.number,
+      ])
+    ).toEqual([
+      [1, 1],
+      [1, 2],
+      [2, 1],
+    ]);
+  });
+
+  it('files an unnumbered video in a Season folder as unplaced', async () => {
+    const { importer, root, sheet } = looseSandbox({
+      [join(SHOW, 'Season 01')]: [
+        'Lighthouse.Keepers.S01E01.First.Light.mp4',
+        'Bonus Feature.mp4',
+      ],
+    });
+
+    await importer.start(sheet, root);
+    const run = await untilReview(importer);
+
+    expect(run.problems.map((problem) => problem.kind)).toEqual(['unplaced']);
+    expect(run.problems[0].title).toContain('Bonus Feature');
+  });
+
+  it('lets Skip dismiss an unplaced Problem', async () => {
+    const { importer, root, sheet } = looseSandbox(WITH_STRAYS);
+
+    await importer.start(sheet, root);
+    const run = await untilReview(importer);
+    const [first] = unplacedOf(run);
+
+    expect(importer.dismiss(first.id)).toBe(true);
+    expect(
+      importer.current()?.problems.map((problem) => problem.id)
+    ).not.toContain(first.id);
+  });
+
+  it('creates no series for a show whose every video is unplaced, and files only those Problems', async () => {
+    const { storage, importer, media, root, sheet } = looseSandbox({
+      [join(SHOW, 'Season 01')]: ['Episode One.mp4', 'Episode Two.mp4'],
+    });
+
+    await importer.start(sheet, root);
+    const run = await untilReview(importer);
+
+    expect(allSeries(storage)).toEqual([]);
+    expect(run.problems.map((problem) => problem.kind)).toEqual([
+      'unplaced',
+      'unplaced',
+    ]);
+    // Nothing reserved for it either — the film's is the one folder.
+    expect(readdirSync(media)).toEqual(['die-hard-1988']);
+  });
+});
+
+describe('createImporter — two Show folders with one Title key', () => {
+  it('files the row as ambiguous and imports neither', async () => {
+    const { storage, importer, root, sheet } = looseSandbox({
+      [SHOW]: ['Lighthouse.Keepers.S01E01.First.Light.mp4'],
+      [join('TV', SHOW, 'Season 01')]: [
+        'Lighthouse.Keepers.S01E01.First.Light.mp4',
+      ],
+    });
+
+    await importer.start(sheet, root);
+    const run = await untilReview(importer);
+
+    expect(allSeries(storage)).toEqual([]);
+    expect(
+      run.problems.map((problem) => [problem.kind, problem.title])
+    ).toEqual([['ambiguous', 'Lighthouse Keepers']]);
+  });
 });

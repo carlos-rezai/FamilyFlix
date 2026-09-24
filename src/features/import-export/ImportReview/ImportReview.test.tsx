@@ -275,3 +275,45 @@ describe('ImportReview — all done', () => {
     expect(screen.queryByRole('button', { name: 'Cancel import' })).toBeNull();
   });
 });
+
+/**
+ * 22 — Series (TV), Phase 7 (issue #197): the **Review step** draws the new
+ * hard `unplaced` **Problem** among the rest — counted in the second tile,
+ * its row carrying _Skip_ and no _Resolve_, the rows around it unchanged.
+ */
+describe('ImportReview — an unplaced episode', () => {
+  const UNPLACED: ImportProblem = {
+    id: 'p4',
+    kind: 'unplaced',
+    title: 'Lighthouse Keepers · Behind the Scenes.mp4',
+    reason: 'No episode number — rename it S01E03 and import again.',
+  };
+
+  it('lists it with its title and reason, and counts it', () => {
+    renderReview({ run: inReview([...PROBLEMS, UNPLACED]) });
+
+    expect(screen.getByText(UNPLACED.title)).toBeDefined();
+    expect(screen.getByText(UNPLACED.reason)).toBeDefined();
+    expect(tileNumber(ATTENTION)).toBe('4');
+  });
+
+  it('gives its row Skip and no Resolve, and leaves the others theirs', () => {
+    renderReview({ run: inReview([...PROBLEMS, UNPLACED]) });
+
+    const row = within(rowOf(UNPLACED.title));
+    expect(row.queryByRole('link', { name: 'Resolve' })).toBeNull();
+    expect(row.getByRole('button', { name: 'Skip' })).toBeDefined();
+    expect(screen.getAllByRole('link', { name: 'Resolve' })).toHaveLength(3);
+  });
+
+  it('reports its Skip with its id', () => {
+    const onSkip = vi.fn();
+    renderReview({ run: inReview([...PROBLEMS, UNPLACED]), onSkip });
+
+    fireEvent.click(
+      within(rowOf(UNPLACED.title)).getByRole('button', { name: 'Skip' })
+    );
+
+    expect(onSkip).toHaveBeenCalledWith('p4');
+  });
+});
