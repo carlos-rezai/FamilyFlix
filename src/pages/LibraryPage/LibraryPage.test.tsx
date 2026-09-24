@@ -488,7 +488,7 @@ describe('LibraryPage — the Series tab', () => {
     // The Series tab reads its own endpoint; the Movies tab keeps its queue.
     fetchMock.mockImplementation((input) => {
       const url = String(input);
-      if (url.includes('/api/genres')) {
+      if (url.includes('/api/genres') || url.includes('/api/series/genres')) {
         return Promise.resolve(genreListResponse());
       }
       if (url.includes('/api/series')) {

@@ -19,3 +19,20 @@ export async function fetchGenreList(): Promise<GenreListPayload> {
   }
   return (await response.json()) as GenreListPayload;
 }
+
+/** The Series tab's list: the same shape, counted in series. */
+const SERIES_GENRES_ENDPOINT = '/api/series/genres';
+
+/**
+ * Loads the Series tab's genre list: every genre series carry, counted in
+ * series, and the series total for the "All Genres" row — `fetchGenreList`'s
+ * contract over the other shelf. Rejects if the route answers with anything
+ * but a 2xx.
+ */
+export async function fetchSeriesGenreList(): Promise<GenreListPayload> {
+  const response = await fetch(SERIES_GENRES_ENDPOINT);
+  if (!response.ok) {
+    throw new Error(`GET ${SERIES_GENRES_ENDPOINT} failed: ${response.status}`);
+  }
+  return (await response.json()) as GenreListPayload;
+}

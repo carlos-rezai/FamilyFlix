@@ -1,13 +1,16 @@
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 
 import type { GenreListPayload } from '@/types';
-import { fetchGenreList } from '../api/api';
+import { fetchGenreList, fetchSeriesGenreList } from '../api/api';
 
 /** What the dropdown draws before — or instead of — a list: "All Genres" alone. */
 const NO_GENRES: GenreListPayload = { total: 0, genres: [] };
 
 /**
- * Loads the genre list the Genre dropdown is built from, **once per mount**.
+ * Loads the genre list the Genre dropdown is built from, **once per mount** —
+ * and once per tab: the Series tab's list is counted in series, off its own
+ * endpoint, so switching tabs is the one change that asks again.
  *
  * It deliberately does not read the settled query, so it cannot refetch as the
  * search settles or the sort changes: the counts describe the whole library,
@@ -22,12 +25,14 @@ const NO_GENRES: GenreListPayload = { total: 0, genres: [] };
  * second try, and hammering a broken endpoint helps no one.
  */
 export function useGenreList(): GenreListPayload {
+  const [searchParams] = useSearchParams();
+  const series = searchParams.get('tab') === 'series';
   const [list, setList] = useState<GenreListPayload>(NO_GENRES);
 
   useEffect(() => {
     let current = true;
 
-    fetchGenreList()
+    (series ? fetchSeriesGenreList : fetchGenreList)()
       .then((loaded) => {
         if (current) {
           setList(loaded);
@@ -42,7 +47,7 @@ export function useGenreList(): GenreListPayload {
     return () => {
       current = false;
     };
-  }, []);
+  }, [series]);
 
   return list;
 }

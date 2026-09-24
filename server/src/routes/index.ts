@@ -333,6 +333,48 @@ function parseMinRating(value: string): number | null {
 }
 
 /**
+ * The **Library query** a request carries — `q`, `genre`, `rating`, `sort` —
+ * read once for every screen that takes it, `/home` and `/series` alike; or
+ * `null` once a 400 has been answered for an unknown sort or an off-scale
+ * minimum. An empty value is no parameter at all, and a minimum of `0` is no
+ * minimum.
+ */
+function libraryQueryOr400(req: Request, res: Response): LibraryQuery | null {
+  const sortParam = queryString(req.query.sort);
+  const sort = parseSort(sortParam);
+  if (sort === null) {
+    res.status(400).json({ error: `Unknown sort: ${sortParam}` });
+    return null;
+  }
+
+  const query: LibraryQuery = { sort };
+
+  const search = parseSearch(queryString(req.query.q));
+  if (search !== undefined) {
+    query.search = search;
+  }
+
+  const genre = queryString(req.query.genre);
+  if (genre !== undefined && genre !== '') {
+    query.genre = genre;
+  }
+
+  const ratingParam = queryString(req.query.rating);
+  if (ratingParam !== undefined && ratingParam !== '') {
+    const minimum = parseMinRating(ratingParam);
+    if (minimum === null) {
+      res.status(400).json({ error: `Invalid rating: ${ratingParam}` });
+      return null;
+    }
+    if (minimum > 0) {
+      query.minRating = minimum;
+    }
+  }
+
+  return query;
+}
+
+/**
  * The **Stream offset** a stream URL carries, in seconds — nought for a URL
  * with no `?t=` on it at all, and `null` for a `t` that is not a position.
  *
@@ -422,38 +464,10 @@ export function createApiRouter(
   // is, but `0` and an empty value are no minimum at all rather than a floor of
   // nought, which would throw away every unrated movie in the library.
   router.get('/home', (req: Request, res: Response) => {
-    const sortParam = queryString(req.query.sort);
-    const sort = parseSort(sortParam);
-    if (sort === null) {
-      res.status(400).json({ error: `Unknown sort: ${sortParam}` });
-      return;
+    const query = libraryQueryOr400(req, res);
+    if (query) {
+      res.json(storage.getHome(query));
     }
-
-    const query: LibraryQuery = { sort };
-
-    const search = parseSearch(queryString(req.query.q));
-    if (search !== undefined) {
-      query.search = search;
-    }
-
-    const genre = queryString(req.query.genre);
-    if (genre !== undefined && genre !== '') {
-      query.genre = genre;
-    }
-
-    const ratingParam = queryString(req.query.rating);
-    if (ratingParam !== undefined && ratingParam !== '') {
-      const minimum = parseMinRating(ratingParam);
-      if (minimum === null) {
-        res.status(400).json({ error: `Invalid rating: ${ratingParam}` });
-        return;
-      }
-      if (minimum > 0) {
-        query.minRating = minimum;
-      }
-    }
-
-    res.json(storage.getHome(query));
   });
 
   // The Genre dropdown's list: every populated genre with its count, and the
@@ -499,11 +513,23 @@ export function createApiRouter(
     res.json(payload);
   });
 
-  // The Series tab in one read: every series the library holds, and the
-  // episode total across them — the tab's `N series · M episodes` line. No
-  // filters yet; the library-query parser joins it with the tab's search.
-  router.get('/series', (_req: Request, res: Response) => {
-    const payload: SeriesHomePayload = storage.getSeriesHome();
+  // The Series tab in one read: the series the **Library query** keeps, the
+  // episode total across them — the tab's `N series · M episodes` line — and
+  // the Continue row, all narrowed by the one query `/home` reads, through the
+  // same parser and with the same 400s.
+  router.get('/series', (req: Request, res: Response) => {
+    const query = libraryQueryOr400(req, res);
+    if (query) {
+      const payload: SeriesHomePayload = storage.getSeriesHome(query);
+      res.json(payload);
+    }
+  });
+
+  // The Series tab's Genre dropdown: `/genres`' shape counted in series, with
+  // the series total. Registered ahead of `/series/:id`, which would otherwise
+  // read "genres" as a series id.
+  router.get('/series/genres', (_req: Request, res: Response) => {
+    const payload: GenreListPayload = storage.listSeriesGenres();
     res.json(payload);
   });
 

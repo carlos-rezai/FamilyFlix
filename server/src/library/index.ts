@@ -2,6 +2,7 @@ import { openDatabase } from '../db';
 import type {
   Genre,
   GenreCount,
+  GenreListPayload,
   GenrePayload,
   GenreQuery,
   Episode,
@@ -202,8 +203,13 @@ export interface LibraryStorage {
    * library does not hold as an episode, a movie's among them.
    */
   getEpisodeRead(id: string): EpisodeRead | null;
-  /** Every series by title, and the episode total across all of them. */
-  getSeriesHome(): SeriesHomePayload;
+  /**
+   * The series the **Library query** keeps, in its sort; the episode total
+   * across them; and the Continue row narrowed by the same filters.
+   */
+  getSeriesHome(query?: LibraryQuery): SeriesHomePayload;
+  /** Each genre series carry, counted in series, with the series total. */
+  listSeriesGenres(): GenreListPayload;
   /** A series' episodes in season, then episode order; `[]` for none. */
   listEpisodes(seriesId: string): Episode[];
   /**
@@ -263,6 +269,7 @@ export function createSqliteStorage(dbPath: string): LibraryStorage {
     setSeriesFavorite: seriesWrite.setSeriesFavorite,
     getEpisodeRead: seriesReader.getEpisodeRead,
     getSeriesHome: seriesReader.getSeriesHome,
+    listSeriesGenres: seriesReader.listSeriesGenres,
     listEpisodes: seriesReader.listEpisodes,
     getSeriesDetail: seriesReader.getSeriesDetail,
     close() {

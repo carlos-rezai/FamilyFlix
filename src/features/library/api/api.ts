@@ -85,12 +85,18 @@ export async function fetchGenrePayload(
 const SERIES_ENDPOINT = '/api/series';
 
 /**
- * Loads the Series tab: every series by title, and the episode total across
- * all of them — the tab's `N series · M episodes`. Rejects if the route
- * answers with anything but a 2xx.
+ * Loads the Series tab for one **Library query**: the series it keeps, the
+ * episode total across them — the tab's `N series · M episodes` — and the
+ * Continue row, all narrowed alike. The parameters are written by the util the
+ * app URL is, so an unfiltered tab asks a clean `/api/series`. Rejects if the
+ * route answers with anything but a 2xx.
  */
-export async function fetchSeriesHome(): Promise<SeriesHomePayload> {
-  const response = await fetch(SERIES_ENDPOINT);
+export async function fetchSeriesHome(
+  query: LibraryQuery
+): Promise<SeriesHomePayload> {
+  const search = toLibraryQueryParams(query).toString();
+  const url = search === '' ? SERIES_ENDPOINT : `${SERIES_ENDPOINT}?${search}`;
+  const response = await fetch(url);
   if (!response.ok) {
     throw new Error(`GET ${SERIES_ENDPOINT} failed: ${response.status}`);
   }
