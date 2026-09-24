@@ -59,6 +59,7 @@ describe('readSheet — the two formats', () => {
     expect(rows[0]).toEqual({
       title: 'Die Hard',
       year: 1988,
+      endYear: 1988,
       genres: ['Action', 'Thriller'],
       director: 'John McTiernan',
       cast: ['Bruce Willis', 'Alan Rickman'],
@@ -70,6 +71,7 @@ describe('readSheet — the two formats', () => {
     expect(rows[1]).toEqual({
       title: 'Amélie',
       year: 2001,
+      endYear: 2001,
       genres: ['Romance', 'Comedy'],
       director: 'Jean-Pierre Jeunet',
       cast: ['Audrey Tautou'],
@@ -101,6 +103,7 @@ describe('readSheet — finding the columns', () => {
       {
         title: 'Die Hard',
         year: 1988,
+        endYear: 1988,
         genres: ['Action'],
         director: null,
         cast: [],
@@ -351,6 +354,7 @@ describe('readSheet — a CSV that begins with a BOM', () => {
       {
         title: 'Die Hard',
         year: 1988,
+        endYear: 1988,
         genres: [],
         director: null,
         cast: [],
@@ -375,5 +379,47 @@ describe('readSheet — a CSV that begins with a BOM', () => {
 
     expect(rows[0].title).toBe('Die Hard');
     expect(rows[0].title.charCodeAt(0)).not.toBe(0xfeff);
+  });
+});
+
+// 22 — Series (TV), Phase 8: "re-runs, year ranges, unnamed shows, the setup
+// panel" (issue #198).
+//
+// A show's row spans years, so the Year cell learns four shapes: a lone year,
+// a range with an en dash or a hyphen, and an open range for a show still
+// running. A lone year is a finished run — its end is itself — and a film's
+// row is read the same way, so a film given a range keeps its first year.
+describe('readSheet — a Year cell that spans years', () => {
+  it.each([
+    ['a lone year', '2022', 2022, 2022],
+    ['a range with an en dash', '2019–2023', 2019, 2023],
+    ['a range with a hyphen', '2019-2023', 2019, 2023],
+    ['an open range', '2021–', 2021, null],
+  ])('reads %s', async (_, cell, year, endYear) => {
+    const rows = await oneRow('Title,Year', `Harbor & Vine,${cell}`);
+
+    expect(rows[0]).toMatchObject({ year, endYear });
+  });
+
+  it('reads a blank or unreadable Year as neither year', async () => {
+    const rows = await readSheet(
+      csv('Title,Year\nDie Hard,\nAmélie,unknown\nBrazil,2019–20x3\n'),
+      'library.csv'
+    );
+
+    expect(rows.map((row) => [row.year, row.endYear])).toEqual([
+      [null, null],
+      [null, null],
+      [null, null],
+    ]);
+  });
+
+  it('keeps a film row’s first year when its Year cell is a range', async () => {
+    const rows = await oneRow(
+      'Title,Year,Director',
+      'Die Hard,1988–1990,John McTiernan'
+    );
+
+    expect(rows[0].year).toBe(1988);
   });
 });

@@ -758,3 +758,372 @@ describe('createImporter — two Show folders with one Title key', () => {
     ).toEqual([['ambiguous', 'Lighthouse Keepers']]);
   });
 });
+
+// 22 — Series (TV), Phase 8: "re-runs, year ranges, unnamed shows, the setup
+// panel" (issue #198).
+//
+// The run's rules for a show once the shapes are read. A show whose **Title
+// key** and year match a held series is **Already in library**: only the
+// episodes with no held `(season, episode)` are copied in, into the Series
+// folder it already has, and its held metadata is left alone — which is how a
+// new season joins. A row's Year cell may span years. A show no row names
+// imports under its guessed title with a **Warning line**, never a `no-row`
+// Problem. And a row's _Status_ is never applied to an episode, on the first
+// run or on the run that brings a new season.
+//
+// Each sandbox here is a layout and a sheet of its own, and the layout can be
+// grown between runs — the tree a maintainer adds a season to.
+
+/** The sheet's header, and the film row every sheet below carries. */
+const HEAD = 'Title,Year,Genre,Director,Actors,Description,Rating,Watched';
+const DIE_HARD =
+  'Die Hard,1988,Action / Thriller,John McTiernan,"Bruce Willis, Alan Rickman",A New York cop takes on a tower full of thieves on Christmas Eve.,8,yes';
+
+/** The show's row, with its Year cell, Description, Rating and Watched given. */
+const showRow = ({
+  year = '2019',
+  description = 'Two sisters keep the last manned light on the coast.',
+  rating = '9',
+  watched = '',
+}: {
+  year?: string;
+  description?: string;
+  rating?: string;
+  watched?: string;
+} = {}) =>
+  `Lighthouse Keepers,${year},Drama / Family,Mara Quinn,"Lena Ortiz, Tom Adeyemi",${description},${rating},${watched}`;
+
+/** Lay `layout` out under `root` — videos as the fixture's header, subtitles as a line. */
+function layOut(root: string, layout: Record<string, string[]>): void {
+  for (const [folder, files] of Object.entries(layout)) {
+    const at = join(root, folder);
+    mkdirSync(at, { recursive: true });
+    for (const file of files) {
+      if (file.endsWith('.srt')) {
+        writeFileSync(join(at, file), '1\n00:00:01,000 --> 00:00:02,000\nHi\n');
+      } else {
+        cpSync(HEADER, join(at, file));
+      }
+    }
+  }
+}
+
+/**
+ * A root holding Die Hard's folder and `layout`, a sheet of `rows` under the
+ * header, and the importer over a fresh library — with `grow` to add to the
+ * tree and `rewrite` to replace the sheet's rows between runs.
+ */
+function rerunSandbox(
+  layout: Record<string, string[]>,
+  rows: string[] = [DIE_HARD, showRow()]
+): {
+  storage: LibraryStorage;
+  importer: Importer;
+  media: string;
+  root: string;
+  sheet: string;
+  grow: (more: Record<string, string[]>) => void;
+  rewrite: (next: string[]) => void;
+} {
+  const dir = sandboxRoot('familyflix-import-rerun-');
+  const media = join(dir, 'media');
+  mkdirSync(media);
+
+  const root = join(dir, 'root');
+  cpSync(
+    join(LIBRARY_FIXTURE, 'root', 'Die.Hard.1988.1080p'),
+    join(root, 'Die.Hard.1988.1080p'),
+    { recursive: true }
+  );
+  layOut(root, layout);
+
+  const sheet = join(dir, 'library.csv');
+  const rewrite = (next: string[]) =>
+    writeFileSync(sheet, [HEAD, ...next].join('\n'));
+  rewrite(rows);
+
+  const storage = freshStorage();
+  const importer = createImporter({
+    storage,
+    media: createMedia(media),
+    playback: createPlayback(media, fixedSlot(null)),
+  });
+  return {
+    storage,
+    importer,
+    media,
+    root,
+    sheet,
+    grow: (more) => layOut(root, more),
+    rewrite,
+  };
+}
+
+/** Every file under `dir`, as sorted paths relative to it. */
+function treeOf(dir: string, prefix = ''): string[] {
+  return readdirSync(dir, { withFileTypes: true })
+    .flatMap((entry) =>
+      entry.isDirectory()
+        ? treeOf(join(dir, entry.name), `${prefix}${entry.name}/`)
+        : [`${prefix}${entry.name}`]
+    )
+    .sort();
+}
+
+/** Run the importer to review, then close the run so another can start. */
+async function runOnce(
+  importer: Importer,
+  sheet: string,
+  root: string
+): Promise<ImportRun> {
+  await importer.start(sheet, root);
+  const run = await untilReview(importer);
+  await importer.cancel();
+  return run;
+}
+
+const SEASON_ONE = {
+  [join(SHOW, 'Season 01')]: [
+    'Lighthouse.Keepers.S01E01.First.Light.mp4',
+    'Lighthouse.Keepers.S01E02.The.Storm.mp4',
+  ],
+};
+const SEASON_TWO = {
+  [join(SHOW, 'Season 02')]: ['Lighthouse.Keepers.S02E01.Spring.Tide.mp4'],
+};
+
+const numbersOf = (episodes: Episode[]) =>
+  episodes.map((episode) => [episode.season, episode.number]);
+
+describe('createImporter — a show already in the library', () => {
+  it('adds only the episodes it does not hold: a new season joins the held series', async () => {
+    const { storage, importer, root, sheet, grow } = rerunSandbox(SEASON_ONE);
+    await runOnce(importer, sheet, root);
+    const held = theSeries(storage);
+
+    grow(SEASON_TWO);
+    await runOnce(importer, sheet, root);
+
+    const series = theSeries(storage);
+    expect(series.id).toBe(held.id);
+    expect(numbersOf(episodesOf(storage, series))).toEqual([
+      [1, 1],
+      [1, 2],
+      [2, 1],
+    ]);
+  });
+
+  it('copies the new season into the Series folder it already has, and nothing else', async () => {
+    const { importer, media, root, sheet, grow } = rerunSandbox(SEASON_ONE);
+    await runOnce(importer, sheet, root);
+    const before = treeOf(media);
+
+    grow(SEASON_TWO);
+    await runOnce(importer, sheet, root);
+
+    expect(treeOf(media)).toEqual(
+      [
+        ...before,
+        'lighthouse-keepers-2019/season-02/Lighthouse.Keepers.S02E01.Spring.Tide.mp4',
+      ].sort()
+    );
+  });
+
+  it('counts only the new episode on the bar', async () => {
+    const { importer, root, sheet, grow } = rerunSandbox(SEASON_ONE);
+    await runOnce(importer, sheet, root);
+
+    grow(SEASON_TWO);
+    const run = await runOnce(importer, sheet, root);
+
+    expect(run).toMatchObject({ total: 1, done: 1, problems: [] });
+    expect(
+      linesMatching(run, /^✓ Imported\s+Lighthouse Keepers/).map(
+        (line) => line.text
+      )
+    ).toEqual([expect.stringMatching(/Lighthouse Keepers · S02E01$/)]);
+  });
+
+  it('leaves the held metadata as it was, whatever the row now says', async () => {
+    const { storage, importer, root, sheet, grow, rewrite } =
+      rerunSandbox(SEASON_ONE);
+    await runOnce(importer, sheet, root);
+    const held = theSeries(storage);
+
+    grow(SEASON_TWO);
+    rewrite([
+      DIE_HARD,
+      showRow({ description: 'A rewritten synopsis.', rating: '3' }),
+    ]);
+    await runOnce(importer, sheet, root);
+
+    expect(theSeries(storage)).toMatchObject({
+      title: held.title,
+      year: held.year,
+      endYear: held.endYear,
+      synopsis: 'Two sisters keep the last manned light on the coast.',
+      rating: 9,
+      creator: 'Mara Quinn',
+    });
+  });
+
+  it('keeps the held episodes’ watch state', async () => {
+    const { storage, importer, root, sheet, grow } = rerunSandbox(SEASON_ONE);
+    await runOnce(importer, sheet, root);
+    const [first] = episodesOf(storage, theSeries(storage));
+    storage.setEpisodeWatched(first.id, true);
+
+    grow(SEASON_TWO);
+    await runOnce(importer, sheet, root);
+
+    const [again] = episodesOf(storage, theSeries(storage));
+    expect(again).toMatchObject({ id: first.id, watched: true });
+  });
+
+  it('is a different show when the year differs: a held series of another year is not joined', async () => {
+    const { storage, importer, root, sheet } = rerunSandbox(SEASON_ONE);
+    storage.addSeries({ title: 'Lighthouse Keepers', year: 1999 });
+
+    await runOnce(importer, sheet, root);
+
+    expect(
+      allSeries(storage)
+        .map((series) => series.year)
+        .sort()
+    ).toEqual([1999, 2019]);
+  });
+
+  it.each([['library.xlsx' as const], ['library.csv' as const]])(
+    'adds nothing on a second run over the unchanged series fixture from %s',
+    async (spelling) => {
+      const dir = sandboxRoot('familyflix-import-fixture-rerun-');
+      const media = join(dir, 'media');
+      mkdirSync(media);
+      const { root, sheet } = seriesFixture(dir, spelling);
+      const storage = freshStorage();
+      const importer = createImporter({
+        storage,
+        media: createMedia(media),
+        playback: createPlayback(media, fixedSlot(null)),
+      });
+
+      await runOnce(importer, sheet, root);
+      const series = allSeries(storage);
+      const episodes = series.map((held) => episodesOf(storage, held));
+      const tree = treeOf(media);
+
+      const run = await runOnce(importer, sheet, root);
+
+      expect(allSeries(storage).map((held) => held.id)).toEqual(
+        series.map((held) => held.id)
+      );
+      expect(series.map((held) => episodesOf(storage, held))).toEqual(episodes);
+      expect(treeOf(media)).toEqual(tree);
+      expect(run).toMatchObject({ total: 0, done: 0, problems: [] });
+    }
+  );
+});
+
+describe('createImporter — a show’s Year cell', () => {
+  it.each([
+    ['a lone year, a finished run', '2019', 2019, 2019],
+    ['a range with an en dash', '2019–2023', 2019, 2023],
+    ['a range with a hyphen', '2019-2023', 2019, 2023],
+    ['an open range, still running', '2019–', 2019, null],
+  ])('writes %s as the series’ years', async (_, cell, year, endYear) => {
+    const { storage, importer, root, sheet } = rerunSandbox(SEASON_ONE, [
+      DIE_HARD,
+      showRow({ year: cell }),
+    ]);
+
+    await runOnce(importer, sheet, root);
+
+    expect(theSeries(storage)).toMatchObject({ year, endYear });
+  });
+
+  it('keeps a film row’s first year when its Year cell is a range', async () => {
+    const { storage, importer, root, sheet } = rerunSandbox(SEASON_ONE, [
+      DIE_HARD.replace(',1988,', ',1988–1990,'),
+      showRow(),
+    ]);
+
+    await runOnce(importer, sheet, root);
+
+    expect(storage.listMovies({ sort: 'a-z' })).toMatchObject([
+      { title: 'Die Hard', year: 1988 },
+    ]);
+  });
+});
+
+describe('createImporter — a show no row names', () => {
+  it('imports it under the title its folder suggests', async () => {
+    const { storage, importer, root, sheet } = rerunSandbox(LOOSE, [DIE_HARD]);
+
+    await runOnce(importer, sheet, root);
+
+    const series = theSeries(storage);
+    expect(series.title).toBe('Lighthouse Keepers');
+    expect(numbersOf(episodesOf(storage, series))).toEqual([
+      [1, 1],
+      [1, 2],
+      [2, 1],
+    ]);
+  });
+
+  it('says so in a Warning line, and files no Problem for it', async () => {
+    const { importer, root, sheet } = rerunSandbox(SEASON_ONE, [DIE_HARD]);
+
+    const run = await runOnce(importer, sheet, root);
+
+    expect(run.problems).toEqual([]);
+    expect(
+      linesMatching(run, /Lighthouse Keepers/).filter(
+        (line) => line.kind === 'warning'
+      )
+    ).toHaveLength(1);
+  });
+
+  it('still imports the film the sheet does name', async () => {
+    const { storage, importer, root, sheet } = rerunSandbox(SEASON_ONE, [
+      DIE_HARD,
+    ]);
+
+    await runOnce(importer, sheet, root);
+
+    expect(
+      storage.listMovies({ sort: 'a-z' }).map((movie) => movie.title)
+    ).toEqual(['Die Hard']);
+  });
+});
+
+describe('createImporter — a show row’s Status', () => {
+  it.each([['yes'], ['Watched']])(
+    'marks no episode when the row’s Status says %s',
+    async (watched) => {
+      const { storage, importer, root, sheet } = rerunSandbox(SEASON_ONE, [
+        DIE_HARD,
+        showRow({ watched }),
+      ]);
+
+      await runOnce(importer, sheet, root);
+
+      for (const episode of episodesOf(storage, theSeries(storage))) {
+        expect(episode).toMatchObject({ watched: false, status: 'unwatched' });
+      }
+    }
+  );
+
+  it('marks none of the episodes a later run adds either', async () => {
+    const { storage, importer, root, sheet, grow, rewrite } =
+      rerunSandbox(SEASON_ONE);
+    await runOnce(importer, sheet, root);
+
+    grow(SEASON_TWO);
+    rewrite([DIE_HARD, showRow({ watched: 'yes' })]);
+    await runOnce(importer, sheet, root);
+
+    for (const episode of episodesOf(storage, theSeries(storage))) {
+      expect(episode).toMatchObject({ watched: false, status: 'unwatched' });
+    }
+  });
+});

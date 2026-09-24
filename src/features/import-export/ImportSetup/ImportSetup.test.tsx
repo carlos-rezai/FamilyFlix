@@ -198,3 +198,92 @@ describe('ImportSetup — the refusal line', () => {
     expect(rootField().value).toBe(FILLED.root);
   });
 });
+
+/**
+ * 22 — Series (TV), Phase 8: "re-runs, year ranges, unnamed shows, the setup
+ * panel" (issue #198).
+ *
+ * _What the scanner accepts_, word for word from `feat.ImportFlow.dc.html`:
+ * the three shapes in mono with the prototype's backslashes — the loose
+ * shape's note in the sans face — and the folder-first rule, its two tags in
+ * mono. It sits under the root field, above _Start import_.
+ */
+describe('ImportSetup — what the scanner accepts', () => {
+  const normalized = (text: string | null) =>
+    (text ?? '').replace(/\s+/g, ' ').trim();
+
+  /** The deepest element whose text holds `text` — whatever it is nested in. */
+  function innermost(text: string): HTMLElement {
+    const holding = Array.from(document.body.querySelectorAll('*')).filter(
+      (element) => normalized(element.textContent).includes(text)
+    );
+    const deepest = holding.filter(
+      (element) =>
+        !holding.some((other) => other !== element && element.contains(other))
+    );
+    if (deepest.length !== 1) {
+      throw new Error(
+        `expected one element holding "${text}", found ${deepest.length}`
+      );
+    }
+    return deepest[0] as HTMLElement;
+  }
+
+  const SHAPES = [
+    'Movie Title (2019)\ movie.mkv · subs.en.srt',
+    'Show Name\ Season 01\ S01E03.mkv',
+    'Show Name\ S01E03.mkv',
+  ];
+  const LOOSE_NOTE = '— loose episodes at the show root are fine';
+  const RULE =
+    'Season and episode numbers come from the folder first, then the filename (S01E03, 1x03). Anything it can’t place lands in the review list.';
+
+  it('draws its heading under the root field, above Start import', () => {
+    renderSetup();
+
+    const heading = screen.getByText('What the scanner accepts');
+    expect(comesBefore(rootField(), heading)).toBe(true);
+    expect(comesBefore(heading, startButton())).toBe(true);
+  });
+
+  it('lists the three shapes, in order, with the prototype’s backslashes', () => {
+    renderSetup();
+
+    const text = normalized(document.body.textContent);
+    const at = SHAPES.map((shape) => text.indexOf(shape));
+    expect(at.every((index) => index >= 0)).toBe(true);
+    expect([...at].sort((a, b) => a - b)).toEqual(at);
+    expect(text).toContain(`${SHAPES[2]} ${LOOSE_NOTE}`);
+  });
+
+  it('sets the shapes in mono and the loose shape’s note in the sans face', () => {
+    renderSetup();
+
+    for (const shape of SHAPES) {
+      expect(getComputedStyle(innermost(shape)).fontFamily).toContain(
+        'JetBrains Mono'
+      );
+    }
+    expect(getComputedStyle(innermost(LOOSE_NOTE)).fontFamily).toContain(
+      'Hanken Grotesk'
+    );
+  });
+
+  it('states the folder-first rule word for word, after the shapes', () => {
+    renderSetup();
+
+    const text = normalized(document.body.textContent);
+    expect(text).toContain(RULE);
+    expect(text.indexOf(SHAPES[2])).toBeLessThan(text.indexOf(RULE));
+  });
+
+  it('sets the rule’s two tags in mono', () => {
+    renderSetup();
+
+    for (const tag of ['S01E03', '1x03']) {
+      expect(getComputedStyle(screen.getByText(tag)).fontFamily).toContain(
+        'JetBrains Mono'
+      );
+    }
+  });
+});
