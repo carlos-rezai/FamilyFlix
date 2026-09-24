@@ -20,6 +20,7 @@ import {
   LocationProbe,
   pathname,
 } from '@/test-support/LocationProbe/LocationProbe';
+import { comesBefore } from '@/test-support/comesBefore/comesBefore';
 
 /**
  * 22 — Series (TV), Phase 1 (issue #190): the Series tab's body.
@@ -320,5 +321,158 @@ describe('SeriesHome — the heart', () => {
         (await heartOn('Harbor & Vine')).getAttribute('aria-pressed')
       ).toBe('false')
     );
+  });
+});
+
+/**
+ * 22 — Series (TV), Phase 5 (issue #195): Continue Watching on the Series tab.
+ *
+ * Above _All series_, a Continue Watching row of **Episode continue cards** —
+ * one per entry of the payload's `continueWatching`, each reading
+ * `Series · SnnEnn` over the **Resume label** and opening the player at
+ * `/episode/:id/play`, not a page. Nothing is drawn when nothing is
+ * part-watched.
+ */
+type ContinueEntry = SeriesHomePayload['continueWatching'][number];
+
+function makeEntry(
+  overrides: Partial<ContinueEntry['episode']> = {},
+  series: ContinueEntry['series'] = { id: 's1', title: 'Harbor & Vine' }
+): ContinueEntry {
+  return {
+    series,
+    episode: {
+      id: 'e24',
+      seriesId: series.id,
+      season: 2,
+      number: 4,
+      title: 'Low Tide',
+      airDate: null,
+      runtimeMinutes: 45,
+      watched: false,
+      resumePositionSeconds: 720,
+      status: 'in-progress',
+      videoPath: 'harbor-vine-2019/season-02/e04.mp4',
+      subtitles: [],
+      lastWatchedAt: '2026-09-20T00:00:00.000Z',
+      ...overrides,
+    },
+  };
+}
+
+const continueRegion = () =>
+  screen.findByRole('region', { name: 'Continue Watching' });
+
+describe('SeriesHome — Continue Watching', () => {
+  it('draws a Continue Watching row above All series', async () => {
+    serve({
+      continueWatching: [makeEntry()],
+      series: [makeSeries()],
+      episodeCount: 8,
+    });
+
+    renderHome();
+
+    const region = await continueRegion();
+    expect(comesBefore(region, await heading())).toBe(true);
+  });
+
+  it('reads each card as Series · SnnEnn over the Resume label', async () => {
+    serve({
+      continueWatching: [
+        makeEntry(),
+        makeEntry(
+          {
+            id: 'l9',
+            season: 1,
+            number: 9,
+            runtimeMinutes: null,
+            resumePositionSeconds: 300,
+          },
+          { id: 's2', title: 'Lighthouse Keepers' }
+        ),
+      ],
+      series: [
+        makeSeries(),
+        makeSeries({ id: 's2', title: 'Lighthouse Keepers' }),
+      ],
+      episodeCount: 12,
+    });
+
+    renderHome();
+
+    const region = await continueRegion();
+    expect(within(region).getByText('Harbor & Vine · S02E04')).toBeDefined();
+    expect(within(region).getByText('Resume · 12:00 of 45:00')).toBeDefined();
+    expect(
+      within(region).getByText('Lighthouse Keepers · S01E09')
+    ).toBeDefined();
+    expect(within(region).getByText('Resume · 5:00')).toBeDefined();
+  });
+
+  it('draws the cards in the order the payload gives them', async () => {
+    serve({
+      continueWatching: [
+        makeEntry(
+          { id: 'l9', season: 1, number: 9 },
+          { id: 's2', title: 'Lighthouse Keepers' }
+        ),
+        makeEntry(),
+      ],
+      series: [
+        makeSeries(),
+        makeSeries({ id: 's2', title: 'Lighthouse Keepers' }),
+      ],
+      episodeCount: 12,
+    });
+
+    renderHome();
+
+    const region = await continueRegion();
+    expect(
+      comesBefore(
+        within(region).getByText('Lighthouse Keepers · S01E09'),
+        within(region).getByText('Harbor & Vine · S02E04')
+      )
+    ).toBe(true);
+  });
+
+  it('opens the player on the episode when its card is pressed', async () => {
+    serve({
+      continueWatching: [makeEntry()],
+      series: [makeSeries()],
+      episodeCount: 8,
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/?tab=series']}>
+        <ThemeProvider theme={theme}>
+          <SeriesHome />
+        </ThemeProvider>
+        <LocationProbe />
+      </MemoryRouter>
+    );
+    const region = await continueRegion();
+    fireEvent.click(within(region).getByText('Harbor & Vine · S02E04'));
+
+    expect(pathname()).toBe('/episode/e24/play');
+  });
+
+  it('draws no Continue Watching row when nothing is part-watched', async () => {
+    serve({
+      continueWatching: [],
+      series: [makeSeries()],
+      episodeCount: 8,
+    });
+
+    renderHome();
+    await heading();
+
+    expect(
+      screen.queryByRole('region', { name: 'Continue Watching' })
+    ).toBeNull();
+    expect(
+      screen.queryByRole('heading', { name: 'Continue Watching' })
+    ).toBeNull();
   });
 });

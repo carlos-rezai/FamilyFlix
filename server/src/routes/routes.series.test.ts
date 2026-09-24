@@ -20,7 +20,7 @@ import { mkdirSync } from 'node:fs';
 import type { Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { join } from 'node:path';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { createApiRouter } from '.';
 import { createImporter } from '../import-export/createImporter/createImporter';
@@ -29,7 +29,7 @@ import { createPlayback } from '../playback/createPlayback/createPlayback';
 import { createSqliteStorage, type LibraryStorage } from '../library';
 import { fixedSlot } from '../test-support/fixedSlot/fixedSlot';
 import { sandboxRoot } from '../test-support/sandboxRoot/sandboxRoot';
-import type { SeriesDetail, SeriesHomePayload } from '@/types';
+import type { HomePayload, SeriesDetail, SeriesHomePayload } from '@/types';
 
 const storages: LibraryStorage[] = [];
 const servers: Server[] = [];
@@ -878,5 +878,223 @@ describe('POST /api/episodes/:id/watched', () => {
     expect(status).toBe(404);
     expect(typeof body.error).toBe('string');
     expect(storage.getMovie(movie.id)?.watched).toBe(false);
+  });
+});
+
+// 22 — Series (TV), Phase 5 (issue #195): Continue Watching on the Series tab.
+// `GET /api/series` answers `continueWatching` — one entry per series, for its
+// earliest part-watched episode (season, then episode order), each carrying the
+// episode and its series' id and title; ordered by `last_watched_at`, most
+// recent first, and capped at 15. A part-watched episode is the movie's
+// in-progress: a resume position and not watched. The Movies tab's
+// `GET /api/home` Continue row stays films only.
+describe('GET /api/series — continue watching', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  /** Stamp a resume position at a fixed instant, so the order is told apart. */
+  function resumeAt(
+    storage: LibraryStorage,
+    episodeId: string,
+    seconds: number,
+    at: string
+  ): void {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(at));
+    storage.setEpisodeResumePosition(episodeId, seconds);
+    vi.useRealTimers();
+  }
+
+  /** The series by title, and its episodes in season, then episode order. */
+  function episodesOf(storage: LibraryStorage, title: string) {
+    const series = storage
+      .getSeriesHome()
+      .series.find((candidate) => candidate.title === title);
+    if (series === undefined) {
+      throw new Error(`No series ${title}`);
+    }
+    return { series, episodes: storage.listEpisodes(series.id) };
+  }
+
+  /** Harbor & Vine: three episodes in season 1, two in season 2. */
+  function seedTwoSeasons(storage: LibraryStorage): void {
+    const series = storage.addSeries({ title: 'Harbor & Vine', year: 2019 });
+    for (const [season, number] of [
+      [1, 1],
+      [1, 2],
+      [1, 3],
+      [2, 1],
+      [2, 2],
+    ]) {
+      storage.addEpisode(series.id, {
+        season,
+        number,
+        videoPath: `harbor-vine-2019/season-0${season}/e${number}.mp4`,
+      });
+    }
+  }
+
+  it('answers an entry for a series with a part-watched episode, carrying the episode and its series', async () => {
+    const { storage, baseUrl } = freshApi();
+    seedSeries(storage, 'Harbor & Vine', 3);
+    const { series, episodes } = episodesOf(storage, 'Harbor & Vine');
+    resumeAt(storage, episodes[1].id, 600, '2026-06-01T00:00:00.000Z');
+
+    const { body } = await getSeries(baseUrl);
+
+    expect(body.continueWatching).toHaveLength(1);
+    const [entry] = body.continueWatching;
+    expect(entry.series).toEqual({ id: series.id, title: 'Harbor & Vine' });
+    expect(entry.episode.id).toBe(episodes[1].id);
+    expect(entry.episode.season).toBe(1);
+    expect(entry.episode.number).toBe(2);
+    expect(entry.episode.resumePositionSeconds).toBe(600);
+  });
+
+  it('answers one entry per series, for its earliest part-watched episode', async () => {
+    const { storage, baseUrl } = freshApi();
+    seedTwoSeasons(storage);
+    const { episodes } = episodesOf(storage, 'Harbor & Vine');
+    // S01E01 finished; S01E03 and S02E01 both part-watched, S02E01 the later.
+    storage.markEpisodeWatched(episodes[0].id);
+    resumeAt(storage, episodes[2].id, 300, '2026-06-01T00:00:00.000Z');
+    resumeAt(storage, episodes[3].id, 120, '2026-06-02T00:00:00.000Z');
+
+    const { body } = await getSeries(baseUrl);
+
+    expect(body.continueWatching).toHaveLength(1);
+    const [{ episode }] = body.continueWatching;
+    expect([episode.season, episode.number]).toEqual([1, 3]);
+  });
+
+  it('answers no entry for a series with nothing part-watched', async () => {
+    const { storage, baseUrl } = freshApi();
+    seedSeries(storage, 'Harbor & Vine', 2);
+    seedSeries(storage, 'Lighthouse Keepers', 2);
+    // A finished episode is nothing to continue; nor is an unstarted one.
+    const { episodes } = episodesOf(storage, 'Harbor & Vine');
+    storage.markEpisodeWatched(episodes[0].id);
+
+    const { body } = await getSeries(baseUrl);
+
+    expect(body.continueWatching).toEqual([]);
+  });
+
+  it('drops an episode from the row once it is marked watched', async () => {
+    const { storage, baseUrl } = freshApi();
+    seedSeries(storage, 'Harbor & Vine', 2);
+    const { episodes } = episodesOf(storage, 'Harbor & Vine');
+    resumeAt(storage, episodes[0].id, 600, '2026-06-01T00:00:00.000Z');
+    storage.markEpisodeWatched(episodes[0].id);
+
+    const { body } = await getSeries(baseUrl);
+
+    expect(body.continueWatching).toEqual([]);
+  });
+
+  it('orders the entries by when the family last watched, most recent first', async () => {
+    const { storage, baseUrl } = freshApi();
+    seedSeries(storage, 'Alder Street', 2);
+    seedSeries(storage, 'Harbor & Vine', 2);
+    seedSeries(storage, 'Lighthouse Keepers', 2);
+    const firstOf = (title: string) => episodesOf(storage, title).episodes[0];
+    resumeAt(
+      storage,
+      firstOf('Harbor & Vine').id,
+      60,
+      '2026-06-01T00:00:00.000Z'
+    );
+    resumeAt(
+      storage,
+      firstOf('Lighthouse Keepers').id,
+      60,
+      '2026-06-03T00:00:00.000Z'
+    );
+    resumeAt(
+      storage,
+      firstOf('Alder Street').id,
+      60,
+      '2026-06-02T00:00:00.000Z'
+    );
+
+    const { body } = await getSeries(baseUrl);
+
+    expect(body.continueWatching.map((entry) => entry.series.title)).toEqual([
+      'Lighthouse Keepers',
+      'Alder Street',
+      'Harbor & Vine',
+    ]);
+  });
+
+  it('caps the row at 15, keeping the most recently watched', async () => {
+    const { storage, baseUrl } = freshApi();
+    for (let n = 1; n <= 20; n += 1) {
+      const title = `Show ${String(n).padStart(2, '0')}`;
+      seedSeries(storage, title, 1);
+      resumeAt(
+        storage,
+        episodesOf(storage, title).episodes[0].id,
+        60,
+        new Date(Date.UTC(2026, 5, n)).toISOString()
+      );
+    }
+
+    const { body } = await getSeries(baseUrl);
+
+    expect(body.continueWatching).toHaveLength(15);
+    expect(body.continueWatching.map((entry) => entry.series.title)).toEqual(
+      Array.from(
+        { length: 15 },
+        (_, index) => `Show ${String(20 - index).padStart(2, '0')}`
+      )
+    );
+  });
+
+  it('answers no in-progress movie among the series’ entries', async () => {
+    const { storage, baseUrl } = freshApi();
+    storage.addMovie({
+      title: 'Halfway',
+      videoPath: 'Halfway/halfway.mp4',
+      resumePositionSeconds: 600,
+      lastWatchedAt: '2026-06-09T00:00:00.000Z',
+    });
+    seedSeries(storage, 'Harbor & Vine', 2);
+    resumeAt(
+      storage,
+      episodesOf(storage, 'Harbor & Vine').episodes[0].id,
+      60,
+      '2026-06-01T00:00:00.000Z'
+    );
+
+    const { body } = await getSeries(baseUrl);
+
+    expect(body.continueWatching.map((entry) => entry.series.title)).toEqual([
+      'Harbor & Vine',
+    ]);
+  });
+
+  it('keeps the Movies tab’s Continue row films only', async () => {
+    const { storage, baseUrl } = freshApi();
+    storage.addMovie({
+      title: 'Halfway',
+      videoPath: 'Halfway/halfway.mp4',
+      resumePositionSeconds: 600,
+      lastWatchedAt: '2026-06-01T00:00:00.000Z',
+    });
+    seedSeries(storage, 'Harbor & Vine', 2);
+    resumeAt(
+      storage,
+      episodesOf(storage, 'Harbor & Vine').episodes[0].id,
+      60,
+      '2026-06-09T00:00:00.000Z'
+    );
+
+    const response = await fetch(`${baseUrl}/api/home`);
+    const body = (await response.json()) as HomePayload;
+
+    expect(body.continueWatching.map((movie) => movie.title)).toEqual([
+      'Halfway',
+    ]);
   });
 });
