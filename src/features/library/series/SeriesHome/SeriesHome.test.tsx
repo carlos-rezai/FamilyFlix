@@ -482,3 +482,94 @@ describe('SeriesHome — Continue Watching', () => {
     ).toBeNull();
   });
 });
+
+// 22 — Series (TV), Phase 9 (issue #199): the Series tab's filters. The tab
+// reads the header's **Library query** off the URL — search, genre, minimum
+// rating, sort — and asks `GET /api/series` for exactly it, so the grid, the
+// count line and the Continue row are all what the query keeps. A query that
+// keeps nothing is one of the prototype's two no-results faces.
+describe('SeriesHome — the query', () => {
+  /** Every `/api/series` request the tab issued, as its parameters. */
+  function seriesRequests(): URLSearchParams[] {
+    return fetchMock.mock.calls
+      .map(([input]) => String(input))
+      .filter((url) => url.includes('/api/series'))
+      .map((url) => new URLSearchParams(url.split('?')[1] ?? ''));
+  }
+
+  it('asks GET /api/series for the search, genre, rating and sort the URL carries', async () => {
+    serve({ series: [], episodeCount: 0, continueWatching: [] });
+
+    renderHome('/?tab=series&q=harbor&genre=Drama&rating=8&sort=a-z');
+    await waitFor(() => expect(seriesRequests()).toHaveLength(1));
+
+    const [params] = seriesRequests();
+    expect(params.get('q')).toBe('harbor');
+    expect(params.get('genre')).toBe('Drama');
+    expect(params.get('rating')).toBe('8');
+    expect(params.get('sort')).toBe('a-z');
+  });
+
+  it('carries no tab to the wire — the route is already the Series tab', async () => {
+    serve({ series: [], episodeCount: 0, continueWatching: [] });
+
+    renderHome('/?tab=series&q=harbor');
+    await waitFor(() => expect(seriesRequests()).toHaveLength(1));
+
+    expect(seriesRequests()[0].has('tab')).toBe(false);
+  });
+
+  it('reads the count line off what the filtered grid shows', async () => {
+    serve({
+      series: [makeSeries({ id: 's1', title: 'Harbor & Vine' })],
+      episodeCount: 3,
+      continueWatching: [],
+    });
+
+    renderHome('/?tab=series&genre=Drama');
+
+    expect(await screen.findByText('1 series · 3 episodes')).toBeDefined();
+  });
+
+  it('reads a search that finds nothing as No series match “q”.', async () => {
+    serve({ series: [], episodeCount: 0, continueWatching: [] });
+
+    renderHome('/?tab=series&q=zzz');
+
+    expect(await screen.findByText('Nothing here')).toBeDefined();
+    expect(screen.getByText('No series match “zzz”.')).toBeDefined();
+    expect(screen.queryByText(/0 series/)).toBeNull();
+  });
+
+  it('reads filters that find nothing as No series match these filters', async () => {
+    serve({ series: [], episodeCount: 0, continueWatching: [] });
+
+    renderHome('/?tab=series&genre=Western&rating=8');
+
+    expect(await screen.findByText('Nothing here')).toBeDefined();
+    expect(
+      screen.getByText(
+        'No series match these filters. Try a different genre or rating.'
+      )
+    ).toBeDefined();
+    expect(screen.queryByText(/0 series/)).toBeNull();
+  });
+
+  it('names the search, not the filters, when both find nothing', async () => {
+    serve({ series: [], episodeCount: 0, continueWatching: [] });
+
+    renderHome('/?tab=series&q=zzz&genre=Drama');
+
+    expect(await screen.findByText('No series match “zzz”.')).toBeDefined();
+    expect(screen.queryByText(/these filters/)).toBeNull();
+  });
+
+  it('keeps a sort alone out of the no-results faces — an empty library is still empty', async () => {
+    serve({ series: [], episodeCount: 0, continueWatching: [] });
+
+    renderHome('/?tab=series&sort=a-z');
+
+    expect(await screen.findByText('0 series · 0 episodes')).toBeDefined();
+    expect(screen.queryByText(/nothing here/i)).toBeNull();
+  });
+});

@@ -29,7 +29,12 @@ import { createPlayback } from '../playback/createPlayback/createPlayback';
 import { createSqliteStorage, type LibraryStorage } from '../library';
 import { fixedSlot } from '../test-support/fixedSlot/fixedSlot';
 import { sandboxRoot } from '../test-support/sandboxRoot/sandboxRoot';
-import type { HomePayload, SeriesDetail, SeriesHomePayload } from '@/types';
+import type {
+  GenreListPayload,
+  HomePayload,
+  SeriesDetail,
+  SeriesHomePayload,
+} from '@/types';
 
 const storages: LibraryStorage[] = [];
 const servers: Server[] = [];
@@ -1096,5 +1101,340 @@ describe('GET /api/series — continue watching', () => {
     expect(body.continueWatching.map((movie) => movie.title)).toEqual([
       'Halfway',
     ]);
+  });
+});
+
+// 22 — Series (TV), Phase 9 (issue #199): the Series tab's filters.
+//
+// `GET /api/series` reads the movie home's own query — `q`, `genre`, `rating`,
+// `sort` — through the same parser, and applies it to the grid, the count line
+// and the Continue row alike. `GET /api/series/genres` is the Series tab's
+// Genre dropdown: genres counted in series, with the series total.
+
+/** A series added at a fixed instant, so `recently-added` is told apart. */
+function addSeriesAt(
+  storage: LibraryStorage,
+  at: string,
+  input: Parameters<LibraryStorage['addSeries']>[0],
+  episodes = 1
+) {
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(new Date(at));
+  const series = storage.addSeries(input);
+  vi.useRealTimers();
+  const slug = input.title.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+  for (let number = 1; number <= episodes; number += 1) {
+    storage.addEpisode(series.id, {
+      season: 1,
+      number,
+      videoPath: `${slug}/season-01/e${number}.mp4`,
+    });
+  }
+  return series;
+}
+
+/** Three series told apart by every key a sort or filter reads. */
+function seedShelf(storage: LibraryStorage) {
+  const alder = addSeriesAt(
+    storage,
+    '2026-01-02T00:00:00.000Z',
+    { title: 'Alder Street', year: 2015, rating: 6, genres: ['Comedy'] },
+    2
+  );
+  const harbor = addSeriesAt(
+    storage,
+    '2026-01-03T00:00:00.000Z',
+    { title: 'Harbor & Vine', year: 2019, rating: 9, genres: ['Drama'] },
+    3
+  );
+  const lighthouse = addSeriesAt(
+    storage,
+    '2026-01-01T00:00:00.000Z',
+    {
+      title: 'Lighthouse Keepers',
+      year: 2022,
+      rating: 7,
+      genres: ['Drama', 'Family'],
+    },
+    4
+  );
+  return { alder, harbor, lighthouse };
+}
+
+async function getSeriesAt(
+  baseUrl: string,
+  search: string
+): Promise<{ status: number; body: SeriesHomePayload }> {
+  const response = await fetch(`${baseUrl}/api/series${search}`);
+  return {
+    status: response.status,
+    body: (await response.json()) as SeriesHomePayload,
+  };
+}
+
+const titles = (body: SeriesHomePayload) =>
+  body.series.map((series) => series.title);
+
+describe('GET /api/series — the query', () => {
+  it('narrows the series to a title search', async () => {
+    const { storage, baseUrl } = freshApi();
+    seedShelf(storage);
+
+    const { status, body } = await getSeriesAt(baseUrl, '?q=harbor');
+
+    expect(status).toBe(200);
+    expect(titles(body)).toEqual(['Harbor & Vine']);
+  });
+
+  it('answers a search that finds nothing as no series and no episodes', async () => {
+    const { storage, baseUrl } = freshApi();
+    seedShelf(storage);
+
+    const { status, body } = await getSeriesAt(baseUrl, '?q=zzz');
+
+    expect(status).toBe(200);
+    expect(body).toEqual({
+      series: [],
+      episodeCount: 0,
+      continueWatching: [],
+    });
+  });
+
+  it('narrows the series to one genre', async () => {
+    const { storage, baseUrl } = freshApi();
+    seedShelf(storage);
+
+    const { body } = await getSeriesAt(baseUrl, '?genre=Drama&sort=a-z');
+
+    expect(titles(body)).toEqual(['Harbor & Vine', 'Lighthouse Keepers']);
+  });
+
+  it('keeps only the series rated at or above the minimum', async () => {
+    const { storage, baseUrl } = freshApi();
+    seedShelf(storage);
+    addSeriesAt(storage, '2026-01-04T00:00:00.000Z', {
+      title: 'Unrated Show',
+    });
+
+    const { body } = await getSeriesAt(baseUrl, '?rating=7&sort=a-z');
+
+    expect(titles(body)).toEqual(['Harbor & Vine', 'Lighthouse Keepers']);
+  });
+
+  it('orders by recently added when no sort is asked for', async () => {
+    const { storage, baseUrl } = freshApi();
+    seedShelf(storage);
+
+    const { body } = await getSeriesAt(baseUrl, '');
+
+    expect(titles(body)).toEqual([
+      'Harbor & Vine',
+      'Alder Street',
+      'Lighthouse Keepers',
+    ]);
+  });
+
+  it('orders by title for a-z', async () => {
+    const { storage, baseUrl } = freshApi();
+    seedShelf(storage);
+
+    const { body } = await getSeriesAt(baseUrl, '?sort=a-z');
+
+    expect(titles(body)).toEqual([
+      'Alder Street',
+      'Harbor & Vine',
+      'Lighthouse Keepers',
+    ]);
+  });
+
+  it('orders by year, newest first, for year', async () => {
+    const { storage, baseUrl } = freshApi();
+    seedShelf(storage);
+
+    const { body } = await getSeriesAt(baseUrl, '?sort=year');
+
+    expect(titles(body)).toEqual([
+      'Lighthouse Keepers',
+      'Harbor & Vine',
+      'Alder Street',
+    ]);
+  });
+
+  it('orders by rating, highest first, for highest-rated', async () => {
+    const { storage, baseUrl } = freshApi();
+    seedShelf(storage);
+
+    const { body } = await getSeriesAt(baseUrl, '?sort=highest-rated');
+
+    expect(titles(body)).toEqual([
+      'Harbor & Vine',
+      'Lighthouse Keepers',
+      'Alder Street',
+    ]);
+  });
+
+  it('puts the series not fully watched first for unwatched-first', async () => {
+    const { storage, baseUrl } = freshApi();
+    const { alder, harbor } = seedShelf(storage);
+    // Alder Street fully watched; Harbor & Vine one episode in — still not
+    // fully watched, so it stays ahead of Alder Street.
+    for (const episode of storage.listEpisodes(alder.id)) {
+      storage.markEpisodeWatched(episode.id);
+    }
+    storage.markEpisodeWatched(storage.listEpisodes(harbor.id)[0].id);
+
+    const { body } = await getSeriesAt(baseUrl, '?sort=unwatched-first');
+
+    expect(titles(body)).toEqual([
+      'Harbor & Vine',
+      'Lighthouse Keepers',
+      'Alder Street',
+    ]);
+  });
+
+  it('answers 400 for a sort it does not know', async () => {
+    const { baseUrl } = freshApi();
+
+    const { status } = await getSeriesAt(baseUrl, '?sort=sideways');
+
+    expect(status).toBe(400);
+  });
+
+  it('answers 400 for a minimum rating off the scale', async () => {
+    const { baseUrl } = freshApi();
+
+    const { status } = await getSeriesAt(baseUrl, '?rating=11');
+
+    expect(status).toBe(400);
+  });
+
+  it('counts the episodes of the series the query keeps, and no others', async () => {
+    const { storage, baseUrl } = freshApi();
+    seedShelf(storage);
+
+    const { body } = await getSeriesAt(baseUrl, '?genre=Drama');
+
+    // Harbor & Vine's 3 and Lighthouse Keepers' 4; Alder Street's 2 are out.
+    expect(body.series).toHaveLength(2);
+    expect(body.episodeCount).toBe(7);
+  });
+
+  it('narrows the Continue row by the search', async () => {
+    const { storage, baseUrl } = freshApi();
+    const { alder, harbor } = seedShelf(storage);
+    storage.setEpisodeResumePosition(storage.listEpisodes(alder.id)[0].id, 60);
+    storage.setEpisodeResumePosition(storage.listEpisodes(harbor.id)[0].id, 60);
+
+    const { body } = await getSeriesAt(baseUrl, '?q=harbor');
+
+    expect(body.continueWatching.map((entry) => entry.series.title)).toEqual([
+      'Harbor & Vine',
+    ]);
+  });
+
+  it('narrows the Continue row by the genre and the minimum rating', async () => {
+    const { storage, baseUrl } = freshApi();
+    const { alder, harbor, lighthouse } = seedShelf(storage);
+    for (const series of [alder, harbor, lighthouse]) {
+      storage.setEpisodeResumePosition(
+        storage.listEpisodes(series.id)[0].id,
+        60
+      );
+    }
+
+    const { body } = await getSeriesAt(baseUrl, '?genre=Drama&rating=8');
+
+    expect(body.continueWatching.map((entry) => entry.series.title)).toEqual([
+      'Harbor & Vine',
+    ]);
+  });
+});
+
+describe('GET /api/series/genres', () => {
+  it('answers each genre series carry, counted in series, with the series total', async () => {
+    const { storage, baseUrl } = freshApi();
+    seedShelf(storage);
+    addSeriesAt(storage, '2026-01-04T00:00:00.000Z', {
+      title: 'Untagged Show',
+    });
+
+    const response = await fetch(`${baseUrl}/api/series/genres`);
+    const body = (await response.json()) as GenreListPayload;
+
+    expect(response.status).toBe(200);
+    // Four series; Lighthouse Keepers is tagged twice, Untagged Show not at all.
+    expect(body.total).toBe(4);
+    expect(
+      Object.fromEntries(body.genres.map((genre) => [genre.name, genre.count]))
+    ).toEqual({ Comedy: 1, Drama: 2, Family: 1 });
+  });
+
+  it('counts no movie’s genre', async () => {
+    const { storage, baseUrl } = freshApi();
+    storage.addMovie({
+      title: 'Halfway',
+      videoPath: 'Halfway/halfway.mp4',
+      genres: ['Action'],
+    });
+    addSeriesAt(storage, '2026-01-01T00:00:00.000Z', {
+      title: 'Harbor & Vine',
+      genres: ['Drama'],
+    });
+
+    const response = await fetch(`${baseUrl}/api/series/genres`);
+    const body = (await response.json()) as GenreListPayload;
+
+    expect(body.total).toBe(1);
+    expect(body.genres.map((genre) => genre.name)).toEqual(['Drama']);
+  });
+
+  it('answers an empty library as no series and no genres', async () => {
+    const { baseUrl } = freshApi();
+
+    const response = await fetch(`${baseUrl}/api/series/genres`);
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ total: 0, genres: [] });
+  });
+});
+
+describe('the Movies tab beside the Series tab’s filters', () => {
+  it('keeps GET /api/genres counting movies only', async () => {
+    const { storage, baseUrl } = freshApi();
+    storage.addMovie({
+      title: 'Halfway',
+      videoPath: 'Halfway/halfway.mp4',
+      genres: ['Action'],
+    });
+    addSeriesAt(storage, '2026-01-01T00:00:00.000Z', {
+      title: 'Harbor & Vine',
+      genres: ['Drama'],
+    });
+
+    const response = await fetch(`${baseUrl}/api/genres`);
+    const body = (await response.json()) as GenreListPayload;
+
+    expect(body.total).toBe(1);
+    expect(body.genres.map((genre) => genre.name)).toEqual(['Action']);
+  });
+
+  it('keeps GET /api/home narrowed to films only under the same query', async () => {
+    const { storage, baseUrl } = freshApi();
+    storage.addMovie({
+      title: 'Harbor Lights',
+      videoPath: 'Harbor Lights/harbor.mp4',
+      genres: ['Drama'],
+    });
+    addSeriesAt(storage, '2026-01-01T00:00:00.000Z', {
+      title: 'Harbor & Vine',
+      genres: ['Drama'],
+    });
+
+    const response = await fetch(`${baseUrl}/api/home?q=harbor&genre=Drama`);
+    const body = (await response.json()) as HomePayload;
+
+    expect(
+      body.rows.flatMap((row) => row.movies.map((movie) => movie.title))
+    ).toEqual(['Harbor Lights']);
   });
 });

@@ -881,3 +881,81 @@ describe('LibraryFilters — three pills in one header', () => {
     expect(currentUrl()).toBe('/?rating=8');
   });
 });
+
+// 22 — Series (TV), Phase 9 (issue #199): on the Series tab the Genre pill
+// lists the genres series carry, counted in series, off `GET /api/series/genres`
+// — the same list shape as the movies', so the same pill draws it. The Movies
+// tab keeps `/api/genres`.
+describe('LibraryFilters — the Series tab’s genre list', () => {
+  /** Counted in series; the total is a count of series. */
+  const SERIES_GENRE_LIST = {
+    total: 5,
+    genres: [
+      { id: 'g3', name: 'Drama', count: 3 },
+      { id: 'g5', name: 'Family', count: 2 },
+    ],
+  };
+
+  /** Answer each tab's list at its own endpoint. */
+  function serveBothLists() {
+    fetchMock.mockImplementation((input) => {
+      const url = String(input);
+      if (url.includes('/api/series/genres')) {
+        return Promise.resolve(okResponse(SERIES_GENRE_LIST));
+      }
+      if (url.includes('/api/genres')) {
+        return Promise.resolve(okResponse(GENRE_LIST));
+      }
+      return Promise.reject(new Error(`Unexpected request: ${url}`));
+    });
+  }
+
+  const requested = () => fetchMock.mock.calls.map(([input]) => String(input));
+
+  it('asks GET /api/series/genres on the Series tab, and not the movies’ list', async () => {
+    serveBothLists();
+
+    await renderFilters('/?tab=series');
+
+    await waitFor(() =>
+      expect(
+        requested().some((url) => url.includes('/api/series/genres'))
+      ).toBe(true)
+    );
+    expect(requested().some((url) => /\/api\/genres(\?|$)/.test(url))).toBe(
+      false
+    );
+  });
+
+  it('lists the series genres by count, under “All Genres”', async () => {
+    serveBothLists();
+    await renderFilters('/?tab=series');
+
+    const control = await openGenre();
+
+    expect(panelRowLabels(control)).toEqual(['All Genres', 'Drama', 'Family']);
+  });
+
+  it('shows each genre counted in series, and the series total beside “All Genres”', async () => {
+    serveBothLists();
+    await renderFilters('/?tab=series');
+
+    await openGenre();
+
+    expect(optionRow('Drama').textContent).toContain('3');
+    expect(optionRow('Family').textContent).toContain('2');
+    expect(optionRow('All Genres').textContent).toContain('5');
+  });
+
+  it('keeps the movies’ list on the Movies tab', async () => {
+    serveBothLists();
+    await renderFilters('/');
+
+    const control = await openGenre();
+
+    expect(panelRowLabels(control)).toEqual(GENRE_ROWS);
+    expect(requested().some((url) => url.includes('/api/series/genres'))).toBe(
+      false
+    );
+  });
+});
