@@ -1,7 +1,7 @@
 // @vitest-environment node
 //
 // The series fixture copy the importer's series suite starts its runs on,
-// tested for what that suite relies on: a root holding the one Show folder, a
+// tested for what that suite relies on: a root holding the two Show folders, a
 // sheet beside it in the spelling asked for, and a copy — so writing into it
 // touches nothing checked in.
 
@@ -19,7 +19,10 @@ describe('seriesFixture', () => {
     const { root } = seriesFixture(dir);
 
     expect(root).toBe(join(dir, 'root'));
-    expect(readdirSync(root)).toEqual(['Harbor & Vine (2021)']);
+    expect(readdirSync(root).sort()).toEqual([
+      'Harbor & Vine (2021)',
+      'Tidewater (2018)',
+    ]);
   });
 
   it('copies the xlsx sheet beside the root by default', () => {

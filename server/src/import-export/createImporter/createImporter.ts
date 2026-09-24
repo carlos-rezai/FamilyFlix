@@ -1,12 +1,20 @@
 import { randomUUID } from 'node:crypto';
 import { mkdir, readFile, stat } from 'node:fs/promises';
-import { dirname, extname, isAbsolute, join, relative } from 'node:path';
+import {
+  basename,
+  dirname,
+  extname,
+  isAbsolute,
+  join,
+  relative,
+} from 'node:path';
 
 import type { LibraryStorage } from '../../library';
 import type { Media } from '../../media/createMedia/createMedia';
 import type { MovieFolderScan } from '../../media/scanMovieFolder/scanMovieFolder';
 import { walkLibraryRoot } from '../../media/walkLibraryRoot/walkLibraryRoot';
 import type { Playback } from '../../playback/createPlayback/createPlayback';
+import { episodeTag } from '../../media/episodeTag/episodeTag';
 import { derivedRuntime } from '../../playback/derivedRuntime/derivedRuntime';
 import {
   groupShows,
@@ -320,7 +328,31 @@ const twoDigits = (n: number): string => String(n).padStart(2, '0');
 
 /** An episode as the console names it: `Harbor & Vine · S01E03`. */
 const episodeLabel = (title: string, { season, episode }: ShowEpisode) =>
-  `${title} · S${twoDigits(season)}E${twoDigits(episode)}`;
+  `${title} · ${tagOf(season, episode)}`;
+
+/** An **Episode tag** as a file is renamed to carry it: `S01E03`. */
+const tagOf = (season: number, episode: number): string =>
+  `S${twoDigits(season)}E${twoDigits(episode)}`;
+
+/**
+ * The reason an **Unplaced** video is filed with, naming the fix: the number
+ * to rename it to — the next free one in the season its tag names, or in the
+ * show's first season when it carries none — and to import again.
+ */
+function unplacedReason(show: ShowScan, video: string): string {
+  const tag = episodeTag(basename(video));
+  const season = tag?.season ?? show.episodes[0]?.season ?? 1;
+  const last = Math.max(
+    0,
+    ...show.episodes
+      .filter((episode) => episode.season === season)
+      .map((episode) => episode.episode)
+  );
+  const fix = `rename it ${tagOf(season, last + 1)} and import again.`;
+  return tag === null
+    ? `No episode number — ${fix}`
+    : `${tagOf(tag.season, tag.episode)} is already another file — ${fix}`;
+}
 
 /** The folder a season's episodes are copied into, under the Series folder. */
 const seasonFolderName = (season: number): string =>
@@ -328,14 +360,18 @@ const seasonFolderName = (season: number): string =>
 
 /**
  * A **Show folder** as the matcher weighs it: a scan under the show's own
- * name and folder, holding its first episode, so the **Match rule** a film
- * is held to is the one a show is held to — and a show with no episode is
- * the film rule's `no-video`.
+ * name and folder, holding its first episode — or its first **Unplaced**
+ * video, so a show whose every video is unplaced still matches its row and
+ * files only those — so the **Match rule** a film is held to is the one a
+ * show is held to.
  */
 const asMatchable = (show: ShowScan): MovieFolderScan => ({
   dir: show.dir,
   name: show.name,
-  videos: show.episodes.slice(0, 1).map((episode) => episode.video),
+  videos: [
+    ...show.episodes.map((episode) => episode.video),
+    ...show.unplaced,
+  ].slice(0, 1),
   poster: null,
   backdrop: null,
   subtitles: [],
@@ -583,7 +619,9 @@ export function createImporter({
    * episode, from the row: title, year, genres, synopsis, rating and cast,
    * its _Director_ the creator; its _Status_ is not applied. An episode whose
    * copy fails is filed as `failed` and the show goes on; a show that ends
-   * with no episode leaves no folder behind.
+   * with no episode leaves no folder behind, and one with none to import
+   * reserves none. Each episode's subtitles are copied in beside its video;
+   * a subtitle that begins with no episode's stem is a **Warning line**.
    */
   const importShow = async (
     { row, show }: ShowMatch,
@@ -592,6 +630,16 @@ export function createImporter({
     current: ImportRun,
     signal: AbortSignal
   ): Promise<void> => {
+    for (const stray of show.straySubtitles) {
+      log(
+        current,
+        `⚠ ${row.title} — ${basename(stray)} matches no episode — skipped`,
+        'warning'
+      );
+    }
+    if (show.episodes.length === 0) {
+      return;
+    }
     const folder = media.reserveFolder(row.title, row.year);
     let series: Series | null = null;
 
@@ -602,6 +650,13 @@ export function createImporter({
         const into = join(folder, seasonFolderName(episode.season));
         await mkdir(into, { recursive: true });
         const videoPath = await media.copyIn(into, episode.video, signal);
+        const subtitles: NewSubtitle[] = [];
+        for (const track of episode.subtitles) {
+          subtitles.push({
+            path: await media.copyIn(into, track.path, signal),
+            language: track.language,
+          });
+        }
         signal.throwIfAborted();
         const runtime = derivedRuntime(playback, videoPath);
 
@@ -624,6 +679,7 @@ export function createImporter({
           videoPath,
           ...(episode.title === null ? {} : { title: episode.title }),
           ...(runtime === null ? {} : { runtimeMinutes: runtime }),
+          ...(subtitles.length === 0 ? {} : { subtitles }),
         });
         log(current, `✓ Imported   ${label}`, 'success');
       } catch (error) {
@@ -758,6 +814,21 @@ export function createImporter({
           folder: candidates[0] ?? null,
           candidates: kind === 'ambiguous' ? candidates : [],
         });
+      }
+    }
+    // A matched show's **Unplaced** videos: hard, and Skip alone — there is
+    // no form an episode is resolved in; the reason names the rename.
+    for (const { row, show } of matchedShows) {
+      for (const video of show.unplaced) {
+        file(
+          current,
+          problemOf(
+            'unplaced',
+            `${row.title} · ${basename(video)}`,
+            unplacedReason(show, video)
+          ),
+          { row, folder: asMatchable(show), candidates: [] }
+        );
       }
     }
     for (const folder of verdicts.unclaimed) {

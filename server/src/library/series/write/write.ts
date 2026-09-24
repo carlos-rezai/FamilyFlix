@@ -12,7 +12,8 @@ export interface SeriesWrite {
   addSeries(input: NewSeries): Series;
   /**
    * Insert one episode under a series the library holds, unwatched at zero,
-   * returning the assembled model. A second episode under one series, season
+   * returning the assembled model, its subtitle tracks written with it in one
+   * transaction. A second episode under one series, season
    * and number is refused by the schema.
    */
   addEpisode(seriesId: string, input: NewEpisode): Episode;
@@ -52,6 +53,10 @@ export function createSeriesWrite(
       @runtime_minutes, @video_path, @created_at, @updated_at
     )
   `);
+  const insertEpisodeSubtitle = db.prepare(`
+    INSERT INTO episode_subtitles (id, episode_id, path, language, position)
+    VALUES (@id, @episode_id, @path, @language, @position)
+  `);
 
   const updateFavorite = db.prepare(
     'UPDATE series SET is_favorite = ? WHERE id = ?'
@@ -83,15 +88,8 @@ export function createSeriesWrite(
     });
   });
 
-  return {
-    addSeries: (input) => {
-      const id = randomUUID();
-      insertSeriesGraph(id, input);
-      return reader.getSeries(id) as Series;
-    },
-
-    addEpisode: (seriesId, input) => {
-      const id = randomUUID();
+  const insertEpisodeGraph = db.transaction(
+    (id: string, seriesId: string, input: NewEpisode) => {
       const now = new Date().toISOString();
       insertEpisode.run({
         id,
@@ -105,6 +103,28 @@ export function createSeriesWrite(
         created_at: now,
         updated_at: now,
       });
+      input.subtitles?.forEach((track, position) => {
+        insertEpisodeSubtitle.run({
+          id: randomUUID(),
+          episode_id: id,
+          path: track.path,
+          language: track.language,
+          position,
+        });
+      });
+    }
+  );
+
+  return {
+    addSeries: (input) => {
+      const id = randomUUID();
+      insertSeriesGraph(id, input);
+      return reader.getSeries(id) as Series;
+    },
+
+    addEpisode: (seriesId, input) => {
+      const id = randomUUID();
+      insertEpisodeGraph(id, seriesId, input);
       return reader.getEpisode(id) as Episode;
     },
 

@@ -11,10 +11,11 @@ export interface EpisodeTag {
 /**
  * The two shapes a tag is written in — `S01E03` and `1x03` — either case,
  * standing as a word of its own: bounded by the start, the end, or a
- * separator, so a year or a resolution is never read as one.
+ * separator, so a year or a resolution is never read as one. A
+ * multi-episode tag — `S01E01E02` — is read whole and answers its first number.
  */
 const TAG_SHAPES = [
-  /(?:^|[\s._-])s(\d{1,3})e(\d{1,4})(?=$|[\s._-]|e\d)/i,
+  /(?:^|[\s._-])s(\d{1,3})e(\d{1,4})(?:-?e\d{1,4})*(?=$|[\s._-])/i,
   /(?:^|[\s._-])(\d{1,2})x(\d{1,3})(?=$|[\s._-])/i,
 ];
 

@@ -41,6 +41,7 @@ export type ProblemKind =
   | 'no-video'
   | 'no-row'
   | 'failed'
+  | 'unplaced'
   | 'missing-meta';
 
 /** A row or folder the run could not settle on its own, for the **Review step**. */

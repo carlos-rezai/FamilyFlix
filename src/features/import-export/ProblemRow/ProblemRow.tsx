@@ -20,6 +20,13 @@ const resolveRoute = ({ id, movieId }: ImportProblem): string =>
   movieFormPath({ movie: movieId, problem: id });
 
 /**
+ * Whether a kind can be resolved in a form. An `unplaced` episode cannot: no
+ * form takes an episode, and its reason already names the fix — rename the
+ * file and import again — so its row draws _Skip_ alone.
+ */
+const resolvable = ({ kind }: ImportProblem): boolean => kind !== 'unplaced';
+
+/**
  * One row of the **Review step**'s **Needs attention** list, from
  * `feat.ImportFlow.dc.html`: a 10px dot coloured by the **Problem**'s kind,
  * the title and the reason under it, and _Resolve_ and _Skip_ as `Button`
@@ -39,12 +46,14 @@ export function ProblemRow({ problem, onSkip }: ProblemRowProps) {
         <Title>{problem.title}</Title>
         <Reason>{problem.reason}</Reason>
       </Text>
-      <Button
-        label="Resolve"
-        variant="secondary"
-        size="sm"
-        to={resolveRoute(problem)}
-      />
+      {resolvable(problem) && (
+        <Button
+          label="Resolve"
+          variant="secondary"
+          size="sm"
+          to={resolveRoute(problem)}
+        />
+      )}
       <Button label="Skip" variant="secondary" size="sm" onClick={onSkip} />
     </Row>
   );

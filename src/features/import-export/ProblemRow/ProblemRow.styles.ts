@@ -7,7 +7,8 @@ export type DotTone = 'danger' | 'accent' | 'textFaint';
 
 /**
  * The dot's colour by kind: `danger` for the film that is not there and cannot
- * be got without a hand — `no-folder`, `no-video`, `failed`; `accent` for
+ * be got without a hand — `no-folder`, `no-video`, `failed`, and the episode
+ * that is `unplaced`; `accent` for
  * `ambiguous`, a choice to make; `text-faint` for `no-row` and the soft
  * `missing-meta`, which the library can live with.
  */
@@ -15,6 +16,7 @@ export const DOT_TONE: Record<ProblemKind, DotTone> = {
   'no-folder': 'danger',
   'no-video': 'danger',
   failed: 'danger',
+  unplaced: 'danger',
   ambiguous: 'accent',
   'no-row': 'textFaint',
   'missing-meta': 'textFaint',

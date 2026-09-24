@@ -3,9 +3,10 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 /**
- * Where the importer's series fixture lives: a one-show sheet in both
- * spellings — `Harbor & Vine`, its _Director_ the creator — and the tree it
- * names, one **Show folder** holding `Season 01/` with two episodes. Its own
+ * Where the importer's series fixture lives: a two-show sheet in both
+ * spellings — `Harbor & Vine` and `Tidewater`, each _Director_ the creator —
+ * and the tree it names: one **Show folder** holding `Season 01/` with two
+ * episodes, and one holding its two episodes loose at its own root. Its own
  * fixture beside `fixture/` rather than a third row in it, so the movie
  * suites' counts over the two-film library never move when shows arrive.
  */

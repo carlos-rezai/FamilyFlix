@@ -6,6 +6,7 @@
  * `season` number on its episodes.
  */
 import type { Genre, Subtitle, WatchStatus } from './movie';
+import type { NewSubtitle } from './write';
 
 /** The fully-assembled series model returned by repository reads. */
 export interface Series {
@@ -110,6 +111,8 @@ export interface NewEpisode {
   title?: string;
   airDate?: string;
   runtimeMinutes?: number;
+  /** Its subtitle tracks, in order, already stored under the Series folder. */
+  subtitles?: NewSubtitle[];
 }
 
 /** The episode after one, in its own series — what _Up next_ names. */
