@@ -72,6 +72,17 @@ interface PlayableRow {
 type PlayableOr404 = (id: string, res: Response) => PlayableRow | null;
 
 /**
+ * One kind of **Playable** as the per-kind routes mount it: its path segment,
+ * its lookup, and the two watch writes over its own table.
+ */
+interface PlayableRoutes {
+  kind: PlayableKind;
+  or404: PlayableOr404;
+  setResumePosition(id: string, seconds: number): void;
+  setWatched(id: string, value: boolean): void;
+}
+
+/**
  * What every single-signal write does once its body has been read and found
  * valid: look the movie up, 404 if it is gone, mutate, and echo `{ value }`
  * back.
@@ -608,25 +619,6 @@ export function createApiRouter(
     }
   );
 
-  // One episode's watched mark — the season page's box and the player's
-  // _Play now_ both write through it. The movie's rule: watched forgets the
-  // resume position, unwatched keeps it.
-  router.post(
-    '/episodes/:id/watched',
-    (req: Request<{ id: string }>, res: Response) => {
-      const { value } = req.body as { value?: unknown };
-      if (typeof value !== 'boolean') {
-        res.status(400).json({ error: 'Body must be { value: boolean }' });
-        return;
-      }
-      if (!episodeOr404(storage, req.params.id, res)) {
-        return;
-      }
-      storage.setEpisodeWatched(req.params.id, value);
-      res.json({ value });
-    }
-  );
-
   // One genre in full — the whole genre page in a single request: the name, the
   // genre's unfiltered total, and every movie tagged with it, uncapped. This is
   // what a genre row's "View all 214 →" opens, so a cap here would leave the
@@ -1071,26 +1063,6 @@ export function createApiRouter(
     );
   });
 
-  // The watched toggle. It dispatches to the dedicated mutators rather than
-  // `updateMovie`, so this page gets the same watch semantics as every other
-  // caller: `markWatched` also zeroes the resume position by documented
-  // convention, and un-marking does not hand it back.
-  router.post('/movies/:id/watched', (req: Request<{ id: string }>, res) => {
-    const { value } = req.body as { value?: unknown };
-    if (typeof value !== 'boolean') {
-      res.status(400).json({ error: 'Body must be { value: boolean }' });
-      return;
-    }
-
-    writeSignal(storage, req, res, value, (id, watched) => {
-      if (watched) {
-        storage.markWatched(id);
-      } else {
-        storage.markUnwatched(id);
-      }
-    });
-  });
-
   // The rating write. Its two 400s are distinct on purpose and stay that way:
   // a body with no `value` key is a 400 rather than a clear — a malformed
   // request and a deliberate `null` must not be the same wire message, since one
@@ -1117,59 +1089,6 @@ export function createApiRouter(
     writeSignal(storage, req, res, value, (id, units) =>
       storage.setRating(id, units)
     );
-  });
-
-  // The **Watch tick**: where the film had got to when the player last looked.
-  //
-  // The fourth write through `writeSignal`, and the first whose value is a
-  // number, so this route's own share is the shape of that number: a finite,
-  // non-negative count of seconds. Nought is in — a film wound back to the
-  // start is a real position to store — and everything else a `value` key can
-  // carry is out, rejected before anything is written.
-  //
-  // The rounding is the route's job rather than every caller's, because
-  // `resume_position_seconds` is an INTEGER column and a resume position is
-  // spoken in whole seconds (`Resume · 30:40`), while the player reports the
-  // **Absolute position** as the element gives it, fraction and all. What is
-  // echoed is therefore what was stored, not what was sent — the echo's whole
-  // purpose is to be the truth about the row.
-  //
-  // It dispatches to `setResumePosition`, which stamps `last_watched_at` and so
-  // reorders the Continue Watching row. That stamp is why the player writes
-  // nothing until the family has actually watched something: this route stores
-  // whatever it is told, and *when* to tell it is `useWatchReporter`'s.
-  router.post('/movies/:id/resume', (req: Request<{ id: string }>, res) => {
-    const { value } = req.body as { value?: unknown };
-    if (typeof value !== 'number' || !Number.isFinite(value) || value < 0) {
-      res
-        .status(400)
-        .json({ error: 'Body must be { value: number } — seconds, from 0' });
-      return;
-    }
-
-    writeSignal(storage, req, res, Math.round(value), (id, seconds) =>
-      storage.setResumePosition(id, seconds)
-    );
-  });
-
-  // The episode's resume position: the movie's route over the episodes table —
-  // the same body, the same rounding, the same stamp, the same echo — and a
-  // movie's id is an unknown episode.
-  router.post('/episodes/:id/resume', (req: Request<{ id: string }>, res) => {
-    const { value } = req.body as { value?: unknown };
-    if (typeof value !== 'number' || !Number.isFinite(value) || value < 0) {
-      res
-        .status(400)
-        .json({ error: 'Body must be { value: number } — seconds, from 0' });
-      return;
-    }
-    const { id } = req.params;
-    if (!episodeOr404(storage, id, res)) {
-      return;
-    }
-    const seconds = Math.round(value);
-    storage.setEpisodeResumePosition(id, seconds);
-    res.json({ value: seconds });
   });
 
   // One **Episode** as the player opens it — the `EpisodeRead`: the episode,
@@ -1358,11 +1277,38 @@ export function createApiRouter(
   // `/subtitles/:subtitleId` — are one set of handlers mounted twice, under
   // `/movies` and `/episodes`, over a lookup of the **Stored path**. Only
   // the lookup and the noun in a refusal differ.
-  const playables: [PlayableKind, PlayableOr404][] = [
-    ['movie', (id, res) => movieOr404(storage, id, res)],
-    ['episode', (id, res) => episodeOr404(storage, id, res)?.episode ?? null],
+  //
+  // The two watch writes — `/resume` and `/watched` — are mounted the same
+  // way: the body check, the rounding and the echo are written once below, and
+  // only the lookup and the mutators differ per kind.
+  const playables: PlayableRoutes[] = [
+    {
+      kind: 'movie',
+      or404: (id, res) => movieOr404(storage, id, res),
+      setResumePosition: (id, seconds) =>
+        storage.setResumePosition(id, seconds),
+      // The dedicated mutators rather than `updateMovie`: `markWatched` also
+      // zeroes the resume position by documented convention, and un-marking
+      // does not hand it back.
+      setWatched: (id, value) =>
+        value ? storage.markWatched(id) : storage.markUnwatched(id),
+    },
+    {
+      kind: 'episode',
+      or404: (id, res) => episodeOr404(storage, id, res)?.episode ?? null,
+      setResumePosition: (id, seconds) =>
+        storage.setEpisodeResumePosition(id, seconds),
+      setWatched: (id, value) => {
+        storage.setEpisodeWatched(id, value);
+      },
+    },
   ];
-  for (const [kind, playableOr404] of playables) {
+  for (const {
+    kind,
+    or404: playableOr404,
+    setResumePosition,
+    setWatched,
+  } of playables) {
     router.get(
       `/${kind}s/:id/playback`,
       (req: Request<{ id: string }>, res) => {
@@ -1574,6 +1520,64 @@ export function createApiRouter(
         }
 
         res.json(playback.cues(file));
+      }
+    );
+
+    // The **Watch tick**: where the film had got to when the player last looked.
+    //
+    // A single-signal write whose value is a number, so this route's own share
+    // is the shape of that number: a finite, non-negative count of seconds. Nought is in — a film wound back to the
+    // start is a real position to store — and everything else a `value` key can
+    // carry is out, rejected before anything is written.
+    //
+    // The rounding is the route's job rather than every caller's, because
+    // `resume_position_seconds` is an INTEGER column and a resume position is
+    // spoken in whole seconds (`Resume · 30:40`), while the player reports the
+    // **Absolute position** as the element gives it, fraction and all. What is
+    // echoed is therefore what was stored, not what was sent — the echo's whole
+    // purpose is to be the truth about the row.
+    //
+    // It dispatches to `setResumePosition`, which stamps `last_watched_at` and so
+    // reorders the Continue Watching row. That stamp is why the player writes
+    // nothing until the family has actually watched something: this route stores
+    // whatever it is told, and *when* to tell it is `useWatchReporter`'s.
+    //
+    // An episode's is the same rule over the episodes table, and a movie's id
+    // is an unknown episode.
+    router.post(`/${kind}s/:id/resume`, (req: Request<{ id: string }>, res) => {
+      const { value } = req.body as { value?: unknown };
+      if (typeof value !== 'number' || !Number.isFinite(value) || value < 0) {
+        res
+          .status(400)
+          .json({ error: 'Body must be { value: number } — seconds, from 0' });
+        return;
+      }
+      const { id } = req.params;
+      if (!playableOr404(id, res)) {
+        return;
+      }
+      const seconds = Math.round(value);
+      setResumePosition(id, seconds);
+      res.json({ value: seconds });
+    });
+
+    // The watched toggle — the detail page's badge, the season page's box and
+    // the player's finish and _Play now_ all write through it. Watched forgets
+    // the resume position, unwatched keeps it.
+    router.post(
+      `/${kind}s/:id/watched`,
+      (req: Request<{ id: string }>, res) => {
+        const { value } = req.body as { value?: unknown };
+        if (typeof value !== 'boolean') {
+          res.status(400).json({ error: 'Body must be { value: boolean }' });
+          return;
+        }
+        const { id } = req.params;
+        if (!playableOr404(id, res)) {
+          return;
+        }
+        setWatched(id, value);
+        res.json({ value });
       }
     );
   }
