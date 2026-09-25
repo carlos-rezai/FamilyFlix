@@ -207,6 +207,25 @@ function movieOr404(
 }
 
 /**
+ * {@link movieOr404} for an **Episode**: the player's read of it, or `null`
+ * having already sent the JSON 404 carrying `Unknown episode: <id>`. A movie's
+ * id is not an episode. The sentence is written here once, so every episode
+ * route refuses in the same words.
+ */
+function episodeOr404(
+  storage: LibraryStorage,
+  id: string,
+  res: Response
+): EpisodeRead | null {
+  const read = storage.getEpisodeRead(id);
+  if (!read) {
+    res.status(404).json({ error: `Unknown episode: ${id}` });
+    return null;
+  }
+  return read;
+}
+
+/**
  * The one answer for a movie whose row is there and whose file is not.
  *
  * Its own function because three call sites send it and one of them —
@@ -600,10 +619,10 @@ export function createApiRouter(
         res.status(400).json({ error: 'Body must be { value: boolean }' });
         return;
       }
-      if (!storage.setEpisodeWatched(req.params.id, value)) {
-        res.status(404).json({ error: `Unknown episode: ${req.params.id}` });
+      if (!episodeOr404(storage, req.params.id, res)) {
         return;
       }
+      storage.setEpisodeWatched(req.params.id, value);
       res.json({ value });
     }
   );
@@ -1145,8 +1164,7 @@ export function createApiRouter(
       return;
     }
     const { id } = req.params;
-    if (!storage.getEpisodeRead(id)) {
-      res.status(404).json({ error: `Unknown episode: ${id}` });
+    if (!episodeOr404(storage, id, res)) {
       return;
     }
     const seconds = Math.round(value);
@@ -1158,12 +1176,10 @@ export function createApiRouter(
   // its series' id and title, and the next episode the series holds, or
   // `null`. A movie's id is not an episode: a JSON 404.
   router.get('/episodes/:id', (req: Request<{ id: string }>, res: Response) => {
-    const read: EpisodeRead | null = storage.getEpisodeRead(req.params.id);
-    if (!read) {
-      res.status(404).json({ error: `Unknown episode: ${req.params.id}` });
-      return;
+    const read = episodeOr404(storage, req.params.id, res);
+    if (read) {
+      res.json(read);
     }
-    res.json(read);
   });
 
   // The **Codec report**: what this machine can decode, and whether a
@@ -1344,29 +1360,25 @@ export function createApiRouter(
   // the lookup and the noun in a refusal differ.
   const playables: [PlayableKind, PlayableOr404][] = [
     ['movie', (id, res) => movieOr404(storage, id, res)],
-    [
-      'episode',
-      (id, res) => {
-        const read = storage.getEpisodeRead(id);
-        if (!read) {
-          res.status(404).json({ error: `Unknown episode: ${id}` });
-          return null;
-        }
-        return read.episode;
-      },
-    ],
+    ['episode', (id, res) => episodeOr404(storage, id, res)?.episode ?? null],
   ];
   for (const [kind, playableOr404] of playables) {
     router.get(
       `/${kind}s/:id/playback`,
       (req: Request<{ id: string }>, res) => {
         const { id } = req.params;
-        const movie = playableOr404(id, res);
-        if (!movie) {
+        const playable = playableOr404(id, res);
+        if (!playable) {
           return;
         }
 
-        const file = videoFileOr404(playback, movie.videoPath, kind, id, res);
+        const file = videoFileOr404(
+          playback,
+          playable.videoPath,
+          kind,
+          id,
+          res
+        );
         if (file === null) {
           return;
         }
@@ -1434,12 +1446,12 @@ export function createApiRouter(
         return;
       }
 
-      const movie = playableOr404(id, res);
-      if (!movie) {
+      const playable = playableOr404(id, res);
+      if (!playable) {
         return;
       }
 
-      const file = videoFileOr404(playback, movie.videoPath, kind, id, res);
+      const file = videoFileOr404(playback, playable.videoPath, kind, id, res);
       if (file === null) {
         return;
       }
@@ -1540,12 +1552,12 @@ export function createApiRouter(
       `/${kind}s/:id/subtitles/:subtitleId`,
       (req: Request<{ id: string; subtitleId: string }>, res) => {
         const { id, subtitleId } = req.params;
-        const movie = playableOr404(id, res);
-        if (!movie) {
+        const playable = playableOr404(id, res);
+        if (!playable) {
           return;
         }
 
-        const subtitle = movie.subtitles.find(
+        const subtitle = playable.subtitles.find(
           (track) => track.id === subtitleId
         );
         if (!subtitle) {
