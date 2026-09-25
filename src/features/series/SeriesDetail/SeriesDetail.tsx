@@ -10,7 +10,7 @@ import {
   HeartOutlineIcon,
   StarRating,
 } from '@/primitives';
-import type { SeriesDetailModel } from '@/types';
+import type { SeriesPageModel } from '@/types';
 import { episodePlayPath, range, seasonPath } from '@/utils';
 import { useSeriesDetail } from '../useSeriesDetail/useSeriesDetail';
 import {
@@ -66,7 +66,7 @@ const FAVORITE_TIP = {
 const SKELETON_LINES = 3;
 
 /** The line's surviving segments; the separators are generated between them. */
-function metaSegments(series: SeriesDetailModel) {
+function metaSegments(series: SeriesPageModel) {
   const segments: { key: string; node: ReactNode }[] = [];
   if (series.yearLabel !== null) {
     segments.push({

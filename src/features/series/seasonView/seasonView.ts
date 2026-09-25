@@ -1,6 +1,7 @@
 import type {
   Episode,
-  EpisodeRowEpisode,
+  SeasonEpisodeModel,
+  SeasonPageModel,
   SeasonSummary,
   SeriesDetail,
 } from '@/types';
@@ -11,38 +12,6 @@ import {
   toProgressPercent,
   toRuntimeSeconds,
 } from '@/utils';
-
-/** One **Episode row**'s model: what `EpisodeRow` draws, and whose it is. */
-export interface SeasonEpisodeModel extends EpisodeRowEpisode {
-  id: string;
-}
-
-/** One _Other seasons_ pill. */
-export interface OtherSeasonModel {
-  number: number;
-  label: string;
-}
-
-/** What `page.SeasonPage` draws for one season. */
-export interface SeasonViewModel {
-  seriesId: string;
-  seriesTitle: string;
-  seasonNumber: number;
-  seasonLabel: string;
-  /** _Resume E04_ / _Play E01_. */
-  playLabel: string;
-  /** The episode that button plays, or `null` for a season with none. */
-  playEpisodeId: string | null;
-  /** `8 episodes`. */
-  countLabel: string;
-  /** `3 watched`. */
-  watchedLabel: string;
-  allWatched: boolean;
-  /** _Mark season watched_ / _Mark season unwatched_. */
-  toggleAllLabel: string;
-  episodes: SeasonEpisodeModel[];
-  otherSeasons: OtherSeasonModel[];
-}
 
 const MONTHS = [
   'Jan',
@@ -131,7 +100,7 @@ function toEpisodeModel(
 export function seasonView(
   detail: SeriesDetail,
   number: number
-): SeasonViewModel | null {
+): SeasonPageModel | null {
   const season = detail.seasons.find(
     (candidate) => candidate.number === number
   );

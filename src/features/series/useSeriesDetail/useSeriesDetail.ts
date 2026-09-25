@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 
-import type { SeriesDetailModel } from '@/types';
+import type { SeriesPageModel } from '@/types';
 import { saveSeriesFavorite } from '@/api/saveSeriesFavorite/saveSeriesFavorite';
 import { fetchSeriesDetail } from '../api/api';
 import { seriesView } from '../seriesView/seriesView';
@@ -10,7 +10,7 @@ type SeriesDetailState =
   | { status: 'loading'; series: null }
   | { status: 'not-found'; series: null }
   | { status: 'error'; series: null }
-  | { status: 'ready'; series: SeriesDetailModel };
+  | { status: 'ready'; series: SeriesPageModel };
 
 export type UseSeriesDetailResult = SeriesDetailState & {
   /** Re-run the load after a failure. */

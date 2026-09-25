@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
-import type { Episode, SeriesDetail } from '@/types';
+import type { Episode, SeasonPageModel, SeriesDetail } from '@/types';
 import { saveEpisodeWatched } from '@/api/saveEpisodeWatched/saveEpisodeWatched';
 import { fetchSeriesDetail, saveSeasonWatched } from '../api/api';
-import { seasonView, type SeasonViewModel } from '../seasonView/seasonView';
+import { seasonView } from '../seasonView/seasonView';
 
 /** The series read's **Load state**; the season is picked from it per render. */
 type SeriesReadState =
@@ -16,7 +16,7 @@ type SeasonState =
   | { status: 'loading'; season: null }
   | { status: 'error'; season: null }
   | { status: 'not-found'; season: null; seriesFound: boolean }
-  | { status: 'ready'; season: SeasonViewModel };
+  | { status: 'ready'; season: SeasonPageModel };
 
 export type UseSeasonEpisodesResult = SeasonState & {
   /** Re-run the read after a failure. */

@@ -1,4 +1,4 @@
-import type { Episode, SeriesDetail, SeriesDetailModel } from '@/types';
+import type { Episode, SeriesDetail, SeriesPageModel } from '@/types';
 import { formatEpisodeTag, gradientFromId, toRatingPercent } from '@/utils';
 
 /** Path prefix for the Express route that streams managed artwork. */
@@ -75,7 +75,7 @@ function toTopTag(
  * precedent, so the hero is left with nothing to decide. Watched counts are
  * whole episodes: a part-watched one is not a watched one.
  */
-export function seriesView(detail: SeriesDetail): SeriesDetailModel {
+export function seriesView(detail: SeriesDetail): SeriesPageModel {
   const { series, seasons, next } = detail;
   const { g1, g2 } = gradientFromId(series.id);
   const episodes = seasons.flatMap((season) => season.episodes);

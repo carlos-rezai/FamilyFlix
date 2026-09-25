@@ -153,8 +153,11 @@ export interface EpisodeRowEpisode {
   g2: string;
 }
 
-/** What the **Series page**'s hero draws — `seriesView`'s output. */
-export interface SeriesDetailModel {
+/**
+ * What the **Series page** draws — `seriesView`'s output, and
+ * `page.SeriesPage`'s data-props `tsType`.
+ */
+export interface SeriesPageModel {
   id: string;
   title: string;
   /** The **Year range** — `2022`, `2019–2023`, `2021–` — or `null` with no year. */
@@ -193,4 +196,39 @@ export interface SeriesDetailModel {
   isFavorite: boolean;
   /** The Seasons grid, one card per season in order. */
   seasons: SeasonCardSeason[];
+}
+
+/** One **Episode row**'s model: what `EpisodeRow` draws, and whose it is. */
+export interface SeasonEpisodeModel extends EpisodeRowEpisode {
+  id: string;
+}
+
+/** One _Other seasons_ pill. */
+export interface OtherSeasonModel {
+  number: number;
+  label: string;
+}
+
+/**
+ * What the **Season page** draws for one season — `seasonView`'s output, and
+ * `page.SeasonPage`'s data-props `tsType`.
+ */
+export interface SeasonPageModel {
+  seriesId: string;
+  seriesTitle: string;
+  seasonNumber: number;
+  seasonLabel: string;
+  /** _Resume E04_ / _Play E01_. */
+  playLabel: string;
+  /** The episode that button plays, or `null` for a season with none. */
+  playEpisodeId: string | null;
+  /** `8 episodes`. */
+  countLabel: string;
+  /** `3 watched`. */
+  watchedLabel: string;
+  allWatched: boolean;
+  /** _Mark season watched_ / _Mark season unwatched_. */
+  toggleAllLabel: string;
+  episodes: SeasonEpisodeModel[];
+  otherSeasons: OtherSeasonModel[];
 }
