@@ -8,7 +8,8 @@ import {
   HeartIcon,
   HeartOutlineIcon,
 } from '@/primitives';
-import { episodePlayPath, range, seasonPath } from '@/utils';
+import { episodePlayPath, seasonPath } from '@/utils';
+import { LoadingSeries } from '../LoadingSeries/LoadingSeries';
 import { SeriesMetaLine } from '../SeriesMetaLine/SeriesMetaLine';
 import { useSeriesDetail } from '../useSeriesDetail/useSeriesDetail';
 import {
@@ -28,9 +29,6 @@ import {
   Progress,
   SynopsisWrap,
   DetailMessage,
-  SkeletonPoster,
-  SkeletonTitle,
-  SkeletonLine,
   SeasonsSection,
   SeasonsHeading,
   SeasonsGrid,
@@ -50,28 +48,6 @@ const FAVORITE_TIP = {
   on: 'In Favorites — click to remove',
   off: 'Add to Favorites',
 };
-
-/** Placeholder lines held while the series loads. */
-const SKELETON_LINES = 3;
-
-/** The page's shape, held while the series loads. */
-function LoadingSeries() {
-  return (
-    <Content role="status" aria-label="Loading series">
-      <Hero aria-hidden="true">
-        <PosterColumn>
-          <SkeletonPoster />
-        </PosterColumn>
-        <Main>
-          <SkeletonTitle />
-          {range(SKELETON_LINES).map((line) => (
-            <SkeletonLine key={line} />
-          ))}
-        </Main>
-      </Hero>
-    </Content>
-  );
-}
 
 /**
  * The series page's organism: `page.SeriesPage`'s hero over one read of
