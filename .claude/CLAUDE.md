@@ -110,13 +110,15 @@ familyflix/
 │ └── src/
 │ ├── routes/ ← HTTP layer only: parse request, call a domain module, return response
 │ ├── library/ ← movie CRUD, SQLite queries, watch-state + resume-position logic
-│ │ └── settings/ ← the household's Settings: `settings()` with the default applied when the row is absent, `setSubtitleLanguage()` as an upsert
+│ │ ├── settings/ ← the household's Settings: `settings()` with the default applied when the row is absent, `setSubtitleLanguage()` as an upsert
+│ │ └── series/ ← series storage, one unit per concern as the movie's is, each with its own suite: `read` (the series page, the player's episode read, the episode list), `browse` (the Series tab and its genres), `write` (the two inserts), `watch` (the resume write, the episode and season marks), `curation` (the heart), and `nextEpisodeOf`, pure
 │ ├── media/ ← folder scanning, file copy into managed storage, subtitle detection, the Movie folder’s removal after a Delete
-│ │ ├── createMedia/ ← the injected domain: reserve a Movie folder, storeUpload, copyIn (a stream under the cancel signal), the three removals
+│ │ ├── createMedia/ ← the injected domain: reserve a Movie folder, `seasonFolder` (a Series folder’s `season-NN/`), storeUpload, copyIn (a stream under the cancel signal), the three removals
 │ │ ├── fileKinds/ ← what an image, a subtitle and a video may be called — the store’s security boundary, and the scanner’s line
 │ │ ├── walkLibraryRoot/ ← a Library root → its Source folders: a folder holding a video is one and is not descended
 │ │ ├── scanMovieFolder/ ← one Source folder → every video, the poster by name, the backdrop by name only, every subtitle
 │ │ ├── detectSubtitleLanguage/ ← the language tag in a subtitle’s name → its language, off the shared Language pool
+│ │ ├── episodeTag/ ← the Episode tag: `episodeTag` reads `S01E03` / `1x03` and the title after it off a filename, `spellEpisodeTag` writes one back — the server’s one spelling
 │ │ ├── spaceUsed/ ← Space used: a walk summing every file under the media root, 0 for a missing root, an entry gone mid-walk skipped, never throwing — a function, not a createMedia member
 │ │ └── movieFolder/ safeFilename/ ← pure: the folder a title and year name; a filename the store will take
 │ ├── import-export/ ← the bulk importer and the exporter: Excel/CSV parsing and writing, row-to-folder matching, the Current run
@@ -124,8 +126,10 @@ familyflix/
 │ │ ├── writeSheet/ ← the reader’s mirror: the eight Export columns as a header row, one row per movie in the order given, .csv behind a BOM or .xlsx unstyled — pure over the list, no storage, no sorting
 │ │ ├── titleKey/ ← pure: the Title key matching compares, and titleGuess for a folder no row names
 │ │ ├── matchRows/ ← pure: rows × folder scans → matches, problems by kind, unclaimed folders
+│ │ ├── groupShows/ ← pure: the walk’s Source folders → Show folders (Season folders under one, or loose tagged episodes) and the films left over
 │ │ ├── createImporter/ ← the injected domain: start, current, cancel, problem, resolve, dismiss — one run in memory, its state machine as closures
-│ │ │ └── fixture/ ← the two-film sheet (.xlsx and .csv) and folder tree the tests run over, and a dev library is filled from
+│ │ │ ├── fixture/ ← the two-film sheet (.xlsx and .csv) and folder tree the tests run over, and a dev library is filled from
+│ │ │ └── seriesFixture/ ← the two-show sheet and tree — one Season-folder show, one of loose episodes — kept apart so the film suites’ counts never move
 │ ├── playback/ ← the Playback component, the slot it lives in, the path choice, streaming, subtitle parsing
 │ │ ├── ffmpegBinary/ ← resolve the component: the Component slot, then env var, then PATH, then absent; exports `pairIn` (a directory → its pair) and `EXE` (what a platform calls a binary, the one answer the slot and the tests read too)
 │ │ ├── componentSlot/ ← the Component slot: `createComponentSlot(slotDir, env, { verify, rename })` — `current/` read ahead of everything, `incoming/` and `previous/` swept on startup, `receive()`/`take`/`install()`/`discard()`, `remove()`, and the Component swap's three renames with the In-use refusal off the first one that fails like a lock. Outcomes are values, never throws: four install refusals, three remove
@@ -141,11 +145,12 @@ familyflix/
 │ │ ├── capabilities/ ← the Codec report: Chromium native set ∪ what `capabilities(component)` reads off whichever component the slot holds now — never the environment, never a binary on PATH; a decoder name begins with a letter
 │ │ ├── parseSrt/ parseVtt/ parseAss/ parseSub/ ← pure, one format each
 │ │ └── parseSubtitle/ ← dispatch on extension; the last place a format is known
-│ ├── db/ ← SQLite connection + schema/migrations (1 the schema and the genre seed, 2 last_watched_at, 3 the `settings` table — nothing seeded), shared by every domain module above
+│ ├── db/ ← SQLite connection + schema/migrations (1 the schema and the genre seed, 2 `last_watched_at`, 3 the `settings` table — nothing seeded, 4 `series` and `episodes` with their two joins, `series_genres` and `episode_subtitles` — no `seasons` table), shared by every domain module above
 │ └── test-support/ ← test doubles shared across server tests, never imported by shipping code
 │ ├── heldCopy/ ← a Media whose first copy waits until released, forwarding the cancel signal
 │ ├── fixedSlot/ ← a Component slot over one fixed component, for the thirty-odd suites that compose a Playback and never write to the slot
 │ ├── componentDir/ ← a component's two files in a sandbox, and `ffmpegIn` / `ffprobeIn` / `EXE` (re-exported from the resolver that owns it)
+│ ├── seriesFixture/ ← the importer’s series fixture copied under a sandbox → { root, sheet }
 │ └── libraryFixture/ ← the importer’s fixture copied under a sandbox → { root, sheet }
 ├── src/
 │ ├── App/ ← the router and the app-level providers every page renders inside; `App.tsx` stays flat here (log 18 Q16), and the two units below are imported by path, no barrel
@@ -178,12 +183,17 @@ familyflix/
 │ │ ├── Snackbar/ ← the transient bottom-right card, `mol.Snackbar.dc.html` 1:1: one Snackbar variant drawn as the accent bar, the glyph, the action's colour and the role (`status` for info/success, `alert` for warning/error; `error` reads `danger`), an optional title, the message, an optional action, the card's own ✕ named Dismiss. Presentational to the last prop — no timer, no effect
 │ │ ├── Fab/ ← the FAB, `mol.Fab.dc.html` 1:1: one more `styled(IconButton)` face — the accent circle at 28px from the bottom-right corner, one of two glyphs by `icon`, named by a required `label`. Presentational to the last prop — no state, no listener, no effect; it does not know there is a threshold
 │ │ ├── BackToTop/ ← the control: given the scrolling container as a ref, it owns the Scroll threshold (`scrollTop > 420`, strictly), the passive listener, the read on attach and the press, and mounts the FAB or nothing. Two files, no styles — it draws nothing of its own
+│ │ ├── CreditsRow/ ← the lead credit and Starring: graduated from `movie-detail/` when the series page drew it too, its lead label a prop
+│ │ ├── SeasonCard/ ← `mol.SeasonCard` 1:1: the 2:3 **Card**, `S02` over the gradient, the badge when complete, the bar when part-watched
+│ │ ├── EpisodeRow/ ← `mol.EpisodeRow` 1:1: the 16:9 thumbnail, `S02E04` and the title, the air date, the Resume label, the watched box that only marks; a **Card**, its box a **Control**
 │ │ └── PosterCard/
 │ │ ├── PosterCard.tsx
 │ │ ├── PosterCard.test.tsx
 │ │ └── PosterCard.styles.ts
 │ ├── features/ ← business logic + UI co-located per domain
 │ │ ├── library/ ← genre rows, browse grid
+│ │ │ ├── LibraryTabs/ LibraryBody/ ← the Movies / Series switch, writing `tab` as a replace, and the body it chooses
+│ │ │ └── series/ ← the Series tab: SeriesHome over the same LibraryGrid and ContinueRow, seriesCardView and episodeContinueView
 │ │ ├── search/ ← search-as-you-type, filters
 │ │ ├── movie-detail/ ← the movie page: art, credits, the signals, the ⋯ menu and what it opens
 │ │ │ ├── MovieDetail/ ← the organism: owns the hooks, renders the rest
@@ -191,20 +201,30 @@ familyflix/
 │ │ │ ├── DeleteMovieDialog/ ← the Delete dialog: Modal + the fixed copy + Delete movie / Cancel
 │ │ │ ├── useDeleteMovie/ ← { deleting, deleteMovie }; back through useGoBack once the movie is gone
 │ │ │ ├── useMovieDetail/ ← fetch one movie, or its not-found state
-│ │ │ ├── useOptimisticEdit/ ← a signal flipped on screen first, put back if the save refuses
-│ │ │ ├── CreditsRow/ MetaLine/ LoadingDetail/ ← the page’s own molecules
+│ │ │ ├── MetaLine/ LoadingDetail/ ← the page’s own molecules
 │ │ │ ├── detailView/ ← pure: a Movie → what the page shows
 │ │ │ └── api/ ← saveRating, deleteMovie (one caller each, so they stay here)
-│ │ ├── player/ ← built-in video player, subtitle handling, resume position
+│ │ ├── series/ ← the Series page and the Season page
+│ │ │ ├── SeriesDetail/ ← the series page’s organism: the hero, the heart, the Seasons grid
+│ │ │ ├── SeasonEpisodes/ ← the season page’s organism: the Episode rows, the marks, _Other seasons_
+│ │ │ ├── SeriesMetaLine/ LoadingSeries/ ← the series page’s own molecules: the Year range, counts and read-only stars; the hero’s shape while it loads
+│ │ │ ├── useSeriesRead/ ← the one load both pages read: the Load state, the stale-response guard, retry, and `editSeries`
+│ │ │ ├── useSeriesDetail/ useSeasonEpisodes/ ← each page’s read mapped per render, and its writes on `useOptimisticEdit`
+│ │ │ ├── seriesView/ seasonView/ ← pure: a SeriesDetail → SeriesPageModel, and → SeasonPageModel for one season
+│ │ │ └── api/ ← fetchSeriesDetail, saveSeasonWatched (one caller each)
+│ │ ├── player/ ← built-in video player, subtitle handling, resume position — for any **Playable**, a movie or an episode
 │ │ │ ├── Player/ ← the organism: owns the hooks, renders the rest
 │ │ │ ├── PlayerControls/ ← the top and bottom chrome bars
 │ │ │ ├── PlayerScrubber/ ← the seek bar
 │ │ │ ├── VolumeSlider/ ← the volume bar (shares logic with the scrubber, not pixels)
 │ │ │ ├── SubtitleOverlay/ ← the styled cue box, ours rather than ::cue
 │ │ │ ├── PlayerNotice/ ← buffering / missing-file / cannot-play, in the play circle
+│ │ │ ├── UpNextCard/ ← the Up next card: the next episode, the countdown, _Play now_ and _Cancel_
 │ │ │ ├── usePlayback/ ← element state ↔ React state, offset re-anchoring
 │ │ │ ├── useSubtitles/ ← which track (the Preferred subtitle language read through fetchSettings once per open, then track order), the box, the line on it; the Cue list held against the row it came from
 │ │ │ ├── useWatchReporter/ ← tick, coalesce, finish
+│ │ │ ├── useUpNext/ ← the Up next rules: the 15-second window, _Play now_, _Cancel_ for this episode, and what the end of the file does
+│ │ │ ├── useOpeningReads/ ← the record and the Playback read, together
 │ │ │ ├── useControlsVisibility/ ← 3s idle, hidden cursor
 │ │ │ ├── usePlayerKeys/ ← the keyboard map, onto the buttons’ own handlers
 │ │ │ ├── useFullscreen/ ← the whole surface up, never the bare element
@@ -212,7 +232,7 @@ familyflix/
 │ │ │ ├── cueAt/ ← pure: the line covering a position
 │ │ │ ├── preferredSubtitle/ ← pure: default language, then track order
 │ │ │ ├── volumePreference/ ← the level and mute, in localStorage
-│ │ │ └── api/ ← fetchPlayback, fetchSubtitleCues, saveResume
+│ │ │ └── api/ ← fetchPlayback, fetchSubtitleCues, saveResume, fetchEpisode — each addressed by a Playable
 │ │ ├── maintainer.styles.ts ← the furniture the Maintainer’s screens extend: the header row, heading and lede; the captioned field
 │ │ ├── movie-form/ ← Add/Edit a movie: one form, manual file pickers; and Resolve, the Import context over either job
 │ │ │ └── api/ ← createMovie, updateMovie, fetchGenrePool, fetchProblem, resolveProblem (one caller each)
@@ -250,24 +270,27 @@ familyflix/
 │ │ ├── MainLayout/ ← the Family's screens: logo, gear, scrolling body — and Back-to-top mounted over the body, because the body is where the scrolling happens, so the chrome is what knows how far it has gone; it lends the control the same ref `useRestoredScroll` attached, and holds no state for either
 │ │ ├── GenreLayout/ ← Back pill, heading slot, trailing controls, scrolling body
 │ │ └── MaintainerLayout/ ← the Maintainer surface: bg2 sheet + centred column, no header row
-│ ├── pages/ ← route-level views, composition only, no logic (ImportPage is MaintainerLayout around ImportFlow)
+│ ├── pages/ ← route-level views, composition only, no logic (ImportPage is MaintainerLayout around ImportFlow; SeriesPage and SeasonPage own a scroll container and Back each, MoviePage’s precedent)
 │ ├── api/ ← wire calls two or more features share (one folder per call + its test, no barrel)
-│ │ ├── saveFavorite/ fetchMovie/ saveWatched/ dismissProblem/ fetchSettings/ ← the five that earned it
+│ │ ├── saveFavorite/ fetchMovie/ saveWatched/ dismissProblem/ fetchSettings/ saveSeriesFavorite/ saveEpisodeWatched/ ← the seven that earned it
 │ │ └── postValue/
 │ │ ├── postValue.ts
 │ │ └── postValue.test.ts
-│ ├── hooks/ ← global shared hooks only: `useGoBack(fallback)` — the one **Back rule**, a **History step** with the screen's own **Landing** behind it (the library by default) — and `useRestoredScroll`
-│ ├── types/ ← shared TypeScript interfaces (import.ts: ImportRun, ImportProblem, ImportProblemDetail, ImportField; export.ts: EXPORT_FORMATS, EXPORT_COLUMNS, EXPORT_FILENAME, ExportSummary; settings.ts: SUBTITLE_LANGUAGES, SubtitleLanguage, DEFAULT_SUBTITLE_LANGUAGE, Settings, StorageReport; playback.ts: CodecKind, CodecSupport, CodecCapability, ComponentSource, PlaybackComponentInfo, PlaybackCapabilities — both build targets; appVersion.d.ts: `__APP_VERSION__`, defined by Vite from package.json)
+│ ├── hooks/ ← global shared hooks only: `useGoBack(fallback)` — the one **Back rule**, a **History step** with the screen's own **Landing** behind it (the library by default) — `useRestoredScroll`, and `useOptimisticEdit`, the one bargain a detail page's edit keeps, over whatever record the page holds
+│ ├── types/ ← shared TypeScript interfaces (import.ts: ImportRun, ImportProblem, ImportProblemDetail, ImportField; export.ts: EXPORT_FORMATS, EXPORT_COLUMNS, EXPORT_FILENAME, ExportSummary; settings.ts: SUBTITLE_LANGUAGES, SubtitleLanguage, DEFAULT_SUBTITLE_LANGUAGE, Settings, StorageReport; playback.ts: CodecKind, CodecSupport, CodecCapability, ComponentSource, PlaybackComponentInfo, PlaybackCapabilities — both build targets; series.ts: Series, Episode, SeasonSummary, SeriesDetail, EpisodeRead, NextEpisodeRef, EpisodeContinueEntry, SeriesHomePayload, NewSeries, NewEpisode, Playable — both build targets; viewModels.ts carries the series’ SeriesPageModel, SeasonPageModel, SeasonCardSeason and EpisodeRowEpisode beside the movie’s; appVersion.d.ts: `__APP_VERSION__`, defined by Vite from package.json)
 │ ├── utils/ ← pure helper functions (one folder per helper + its test)
 │ │ ├── index.ts ← barrel: re-exports every helper
 │ │ ├── formatBytes/ ← 1024-based, one decimal from KB up: `18.4 GB`
 │ │ ├── accentScale/ ← the accent → its five: `accentHover`, `accentPress`, `accentSoft`, `accentLine`, `focusRing`
 │ │ ├── moviePath/ ← the film's page as a route, `/movie/<id>`, the id encoded: the cards open it, and it is the player's and the edit's **Landing**
+│ │ ├── seriesPath/ seasonPath/ episodePlayPath/ ← the three series routes, `/series/<id>`, `/series/<id>/season/<n>`, `/episode/<id>/play`, the ids encoded
+│ │ ├── formatEpisodeTag/ ← the client’s one spelling of the Episode tag: `S02E04`, `S02` or `E04`, two digits a side
 │ │ └── gradientFromId/
 │ │ ├── gradientFromId.ts
 │ │ └── gradientFromId.test.ts
 │ └── test-support/ ← test doubles shared across features, never imported by shipping code
 │ ├── fakeResponse/ ← a Response by status; `fileResponse` the one whose caller reads `blob()`, its `json()` rejecting
+│ ├── makeSeriesDetail/ ← a SeriesDetail by its seasons’ watch states, `makeMovie`’s rule; `makeSeries` and `makeEpisode` beside it
 │ ├── comesBefore/ ← document order between two elements, for a slot's contract
 │ ├── LocationProbe/ ← where the router is, in four spellings — `pathname`, `search`, `url` and `navigationType` (`POP` after a step, `PUSH` after a push) — with an optional Back of its own, and `navigationType()`, the reader of the fourth
 │ ├── shippingSources/ ← the shipping-source walk the structural guards read: every `.ts`/`.tsx` under a root that is neither a test nor `test-support/`, matched with its comments stripped, by path
@@ -309,7 +332,10 @@ marking a film watched at the finish threshold that the detail page's toggle
 already set by hand; and `dismissProblem` did, because the Review step's Skip
 and the Movie form's Skip this one both send the same `DELETE`; and
 `fetchSettings` did, because the Settings hub's _Preferred language_ pill and
-the player's `useSubtitles` both read the same household preference. `saveRating`
+the player's `useSubtitles` both read the same household preference; and
+`saveSeriesFavorite` did, because the Series tab's card and the series page
+both save the same series heart; and `saveEpisodeWatched` did, because the
+season page's box and the player's _Play now_ both mark the same episode. `saveRating`
 has one caller and stays with the feature that makes it, and so does the
 player's own `saveResume` — the player is the only thing in the app that can
 know where a film is, which is the same rule read the other way round — and so

@@ -145,16 +145,18 @@ familyflix/
 │   └── src/
 │       ├── routes/         # HTTP layer only — parses requests, calls a domain module
 │       ├── library/        # movie CRUD, SQLite queries, watch-state + resume position, the household's settings
-│       ├── media/          # folder scanning, copying files into managed storage, subtitle detection, removing a movie folder after a delete, space used
+│       │   └── series/            # series storage, one unit per concern: read, browse, write, watch, curation, nextEpisodeOf
+│       ├── media/          # folder scanning, copying files into managed storage (a season's folder among them), subtitle detection, removing a movie folder after a delete, space used
 │       │   ├── walkLibraryRoot/       # a Library root → its Source folders
 │       │   ├── scanMovieFolder/       # one folder → its video, poster, backdrop, subtitles
 │       │   ├── detectSubtitleLanguage/ # the language tag in a subtitle's name
+│       │   ├── episodeTag/            # the Episode tag: read off a filename, and spelled back as S01E03
 │       │   ├── spaceUsed/             # the bytes under the media root, never throwing
 │       │   └── fileKinds/             # what an image, a subtitle and a video may be called
-│       ├── import-export/  # the bulk importer and the exporter: readSheet, titleKey, matchRows, createImporter (+ its fixture), writeSheet
+│       ├── import-export/  # the bulk importer and the exporter: readSheet, titleKey, matchRows, groupShows, createImporter (+ its film and series fixtures), writeSheet
 │       ├── playback/       # the Playback component (probe, spawn, decoders), the Component slot it lives in (componentSlot, componentBinary, verifyComponent), the path choice, streaming, subtitle parsing, derivedRuntime, capabilities(component)
-│       ├── db/             # SQLite connection + schema/migrations (3: the settings table)
-│       └── test-support/   # Shared test doubles — never imported by shipping code (heldCopy, libraryFixture, fixedSlot, componentDir, …)
+│       ├── db/             # SQLite connection + schema/migrations (3: the settings table; 4: series and episodes)
+│       └── test-support/   # Shared test doubles — never imported by shipping code (heldCopy, libraryFixture, seriesFixture, fixedSlot, componentDir, …)
 ├── src/                # React frontend
 │   ├── App/            # Router and app-level providers
 │   │   ├── SnackbarProvider/ # the Snackbar stack: the queue, the timers, the fixed bottom-right column; an action persists, everything else dies at 5s
@@ -163,21 +165,22 @@ familyflix/
 │   ├── styles/         # Global CSS reset and Reduced motion, visuallyHidden; theme.ts, the createTheme(accent) factory spreading the Accent scale; interactionStates/ — controlStates(press), cardLift, cardFocus, and the structural guard in its test
 │   ├── tokens/         # Colors, spacing, typography, breakpoints, motion
 │   ├── primitives/     # Atomic UI elements (Button, Input, Text, Toggle, the Icon glyphs — the Snackbar's four and the FAB's two among them) — each with .tsx, .test.tsx, .styles.ts
-│   ├── components/     # Composed UI blocks (PosterCard, Modal, ProgressBar) — same three-file shape
+│   ├── components/     # Composed UI blocks (PosterCard, Modal, ProgressBar, CreditsRow, SeasonCard, EpisodeRow) — same three-file shape
 │   │   ├── Modal/          # the scrimmed card every dialog is drawn on; owns its own dismissal and focus; `bare` for a card that is its children alone
 │   │   ├── LogConsole/     # the import's Activity log, pinned to its bottom
 │   │   ├── Snackbar/       # the transient bottom-right card, one of four variants; presentational — the stack above owns the timing
 │   │   ├── Fab/            # the FAB: the accent circle in the bottom-right corner, one of two glyphs; presentational — it does not know there is a threshold
 │   │   └── BackToTop/      # the control over a scrolling container: the Scroll threshold, the passive listener, the read on attach, the press; mounts the FAB or nothing
 │   ├── features/       # Domain UI + logic co-located
-│   │   ├── library/        # browse grid, genre rows
+│   │   ├── library/        # browse grid, genre rows — and the Movies / Series tabs, with the Series tab under series/
 │   │   ├── search/          # search-as-you-type, filters
 │   │   ├── movie-detail/    # the movie page, its ⋯ menu, and the Delete dialog the menu opens
 │   │   │   ├── EditMenu/          # Edit details, and the red Delete row
 │   │   │   ├── DeleteMovieDialog/ # Modal + the fixed copy + Delete movie / Cancel
 │   │   │   ├── useDeleteMovie/    # sends the delete, then steps back through history
 │   │   │   └── api/               # saveRating, deleteMovie — one caller each
-│   │   ├── player/          # built-in video player, subtitles (useSubtitles reads the preferred language), resume
+│   │   ├── series/          # the Series page and the Season page: SeriesDetail, SeasonEpisodes, SeriesMetaLine, LoadingSeries, useSeriesRead and the two page hooks, seriesView, seasonView
+│   │   ├── player/          # built-in video player for any Playable, subtitles (useSubtitles reads the preferred language), resume, and Up next (UpNextCard, useUpNext)
 │   │   ├── movie-form/      # Add/Edit a movie: one form, manual pickers — and Resolve, the Import context
 │   │   ├── import-export/   # the bulk importer's screen: ImportFlow and its three steps, useImportRun, importView — and the Export dialog: ExportModal, FormatCard, useExport, saveToComputer
 │   │   ├── settings/        # the Maintainer's hub: SettingsHeader; LibrarySection + ActionRow; PlaybackSection over CodecManager, CodecRow, ComponentDropZone, codecView, zoneFace; StorageSection; AboutSection; useCapabilities, useSettings, useStorageReport; and its api/
@@ -186,11 +189,11 @@ familyflix/
 │   │   └── collections/     # playlists (roadmap)
 │   ├── layouts/         # Page chrome (MainLayout mounts Back-to-top over its body, on the ref useRestoredScroll attached)
 │   ├── pages/           # Route-level views, composition only (ImportPage among them)
-│   ├── api/             # Wire calls two or more features share (saveFavorite, fetchMovie, saveWatched, dismissProblem, fetchSettings)
-│   ├── hooks/            # Global shared hooks (useGoBack(fallback) — the one Back rule, a history step with the screen's own landing behind it — and useRestoredScroll)
-│   ├── types/            # Shared TypeScript interfaces (import.ts, export.ts, settings.ts, playback.ts — read by both build targets; appVersion.d.ts)
-│   ├── utils/            # Pure helper functions (formatBytes, moviePath and accentScale among them)
-│   └── test-support/     # Shared test doubles (fakeResponse, stubDownload, stubScrollMetrics, stubScrollTo, comesBefore, snackbarStack, LocationProbe and its navigationType reader, shippingSources, resolvedStyle and normCss, …)
+│   ├── api/             # Wire calls two or more features share (saveFavorite, fetchMovie, saveWatched, dismissProblem, fetchSettings, saveSeriesFavorite, saveEpisodeWatched)
+│   ├── hooks/            # Global shared hooks (useGoBack(fallback) — the one Back rule, a history step with the screen's own landing behind it — useRestoredScroll, and useOptimisticEdit)
+│   ├── types/            # Shared TypeScript interfaces (import.ts, export.ts, settings.ts, playback.ts, series.ts — read by both build targets; appVersion.d.ts)
+│   ├── utils/            # Pure helper functions (formatBytes, formatEpisodeTag, moviePath, seriesPath, seasonPath, episodePlayPath and accentScale among them)
+│   └── test-support/     # Shared test doubles (fakeResponse, makeSeriesDetail, stubDownload, stubScrollMetrics, stubScrollTo, comesBefore, snackbarStack, LocationProbe and its navigationType reader, shippingSources, resolvedStyle and normCss, …)
 └── docs/
     ├── design-logs/    # Immutable feature design snapshots
     ├── PRDs/           # Product requirements and implementation plans
