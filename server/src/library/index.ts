@@ -32,6 +32,7 @@ import { createSeriesReader } from './series/read/read';
 import { createSeriesBrowse } from './series/browse/browse';
 import { createSeriesWrite } from './series/write/write';
 import { createSeriesCuration } from './series/curation/curation';
+import { createSeriesWatch } from './series/watch/watch';
 
 /**
  * The repository seam every consumer (routes, importer, player) reads and writes
@@ -143,8 +144,6 @@ export interface LibraryStorage {
   markWatched(id: string): void;
   /** Clear the watched flag, leaving any resume position untouched. */
   markUnwatched(id: string): void;
-  /** `markWatched` over an **Episode**: watched, resume zeroed, stamped. */
-  markEpisodeWatched(id: string): void;
   /** `setResumePosition` over an **Episode**: the position, stamped. */
   setEpisodeResumePosition(id: string, seconds: number): void;
   /**
@@ -244,6 +243,7 @@ export function createSqliteStorage(dbPath: string): LibraryStorage {
   const seriesBrowse = createSeriesBrowse(db, seriesReader);
   const seriesWrite = createSeriesWrite(db, seriesReader);
   const seriesCuration = createSeriesCuration(db);
+  const seriesWatch = createSeriesWatch(db);
 
   return {
     addMovie: write.addMovie,
@@ -260,10 +260,9 @@ export function createSqliteStorage(dbPath: string): LibraryStorage {
     setResumePosition: watch.setResumePosition,
     markWatched: watch.markWatched,
     markUnwatched: watch.markUnwatched,
-    markEpisodeWatched: watch.markEpisodeWatched,
-    setEpisodeResumePosition: watch.setEpisodeResumePosition,
-    setEpisodeWatched: watch.setEpisodeWatched,
-    setSeasonWatched: watch.setSeasonWatched,
+    setEpisodeResumePosition: seriesWatch.setEpisodeResumePosition,
+    setEpisodeWatched: seriesWatch.setEpisodeWatched,
+    setSeasonWatched: seriesWatch.setSeasonWatched,
     setFavorite: curation.setFavorite,
     setRating: curation.setRating,
     settings: settingsRepository.settings,
