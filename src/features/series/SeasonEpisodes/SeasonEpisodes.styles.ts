@@ -75,7 +75,7 @@ export const ToggleAllButton = styled.button`
 
   ${controlStates('scale(.98)')}
 
-  &:hover {
+  &:hover:not(:disabled) {
     border-color: ${({ theme }) => theme.colors.textFaint};
     color: ${({ theme }) => theme.colors.text};
   }
@@ -122,7 +122,7 @@ export const SeasonPill = styled.button`
 
   ${controlStates('scale(.97)')}
 
-  &:hover {
+  &:hover:not(:disabled) {
     border-color: ${({ theme }) => theme.colors.accentLine};
     color: ${({ theme }) => theme.colors.text};
   }

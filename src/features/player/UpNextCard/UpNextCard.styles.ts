@@ -92,7 +92,7 @@ export const PlayNow = styled.button`
   cursor: pointer;
   ${controlStates('scale(.98)')}
 
-  &:hover {
+  &:hover:not(:disabled) {
     background: ${({ theme }) => theme.colors.accentHover};
   }
 `;
@@ -110,7 +110,7 @@ export const Cancel = styled.button`
   cursor: pointer;
   ${controlStates('scale(.98)')}
 
-  &:hover {
+  &:hover:not(:disabled) {
     background: rgba(255, 255, 255, 0.1);
   }
 `;

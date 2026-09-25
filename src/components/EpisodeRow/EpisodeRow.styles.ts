@@ -129,7 +129,7 @@ export const WatchedBox = styled.button<{ $watched: boolean }>`
 
   ${controlStates('scale(.92)')}
 
-  &:hover {
+  &:hover:not(:disabled) {
     border-color: ${({ theme }) => theme.colors.accent};
     transform: scale(1.08);
   }
