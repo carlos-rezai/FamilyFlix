@@ -294,46 +294,6 @@ describe('SeriesDetail — the meta line', () => {
     expect(screen.getByText('4.0')).toBeDefined();
     expect(separators()).toHaveLength(2);
   });
-
-  it('draws a show still running as an open range', async () => {
-    serve(unstarted({ year: 2021, endYear: null }));
-
-    renderDetail();
-    await findTitle('Harbor & Vine');
-
-    expect(screen.getByText('2021–')).toBeDefined();
-  });
-
-  it('draws a one-year run as the year alone', async () => {
-    serve(unstarted({ year: 2022, endYear: 2022 }));
-
-    renderDetail();
-    await findTitle('Harbor & Vine');
-
-    expect(screen.getByText('2022')).toBeDefined();
-  });
-
-  it('drops the year segment and its separator when there is no year', async () => {
-    serve(unstarted({ year: null, endYear: null }));
-
-    renderDetail();
-    await findTitle('Harbor & Vine');
-
-    expect(screen.getByText('2 seasons · 22 episodes')).toBeDefined();
-    expect(separators()).toHaveLength(1);
-  });
-
-  it('draws the stars read-only — nothing to click, no rating picker', async () => {
-    serve(unstarted());
-
-    renderDetail();
-    await findTitle('Harbor & Vine');
-
-    expect(screen.queryByRole('group', { name: 'Your rating' })).toBeNull();
-    expect(
-      screen.queryAllByRole('button', { name: /star|rate|rating/i })
-    ).toHaveLength(0);
-  });
 });
 
 describe('SeriesDetail — the button and the progress line', () => {

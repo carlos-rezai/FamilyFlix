@@ -1,4 +1,3 @@
-import { Fragment, type ReactNode } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
 import { CreditsRow, ExpandableText, SeasonCard } from '@/components';
@@ -8,10 +7,9 @@ import {
   Chip,
   HeartIcon,
   HeartOutlineIcon,
-  StarRating,
 } from '@/primitives';
-import type { SeriesPageModel } from '@/types';
 import { episodePlayPath, range, seasonPath } from '@/utils';
+import { SeriesMetaLine } from '../SeriesMetaLine/SeriesMetaLine';
 import { useSeriesDetail } from '../useSeriesDetail/useSeriesDetail';
 import {
   ArtArea,
@@ -24,9 +22,6 @@ import {
   PosterTitle,
   Main,
   Title,
-  Meta,
-  MetaText,
-  Separator,
   Genres,
   ActionRow,
   CircleToggle,
@@ -46,12 +41,6 @@ const SYNOPSIS_LINES = 4;
 const SYNOPSIS_FONT_SIZE = 17;
 const SYNOPSIS_MAX_WIDTH = 640;
 
-/** The read-only stars sit at 20px on this page, the movie page's size. */
-const STAR_SIZE = 20;
-
-/** Drawn between two surviving **Meta segments**, never beside a missing one. */
-const META_SEPARATOR = '•';
-
 /** The heart's circle and glyph, from `page.SeriesPage.dc.html`. */
 const CIRCLE_SIZE = 58;
 const HEART_SIZE = 24;
@@ -64,28 +53,6 @@ const FAVORITE_TIP = {
 
 /** Placeholder lines held while the series loads. */
 const SKELETON_LINES = 3;
-
-/** The line's surviving segments; the separators are generated between them. */
-function metaSegments(series: SeriesPageModel) {
-  const segments: { key: string; node: ReactNode }[] = [];
-  if (series.yearLabel !== null) {
-    segments.push({
-      key: 'year',
-      node: <MetaText>{series.yearLabel}</MetaText>,
-    });
-  }
-  segments.push({
-    key: 'count',
-    node: <MetaText>{series.countLabel}</MetaText>,
-  });
-  segments.push({
-    key: 'rating',
-    node: (
-      <StarRating rating={series.ratingPercent} size={STAR_SIZE} showValue />
-    ),
-  });
-  return segments;
-}
 
 /** The page's shape, held while the series loads. */
 function LoadingSeries() {
@@ -177,14 +144,11 @@ export function SeriesDetail() {
           <Main>
             <Title>{series.title}</Title>
 
-            <Meta>
-              {metaSegments(series).map((segment, index) => (
-                <Fragment key={segment.key}>
-                  {index > 0 ? <Separator>{META_SEPARATOR}</Separator> : null}
-                  {segment.node}
-                </Fragment>
-              ))}
-            </Meta>
+            <SeriesMetaLine
+              yearLabel={series.yearLabel}
+              countLabel={series.countLabel}
+              ratingPercent={series.ratingPercent}
+            />
 
             <Genres>
               {series.genres.map((genre) => (
