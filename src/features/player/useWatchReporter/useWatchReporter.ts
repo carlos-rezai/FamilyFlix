@@ -2,7 +2,8 @@ import { useCallback, useEffect, useRef } from 'react';
 
 import { saveEpisodeWatched } from '@/api/saveEpisodeWatched/saveEpisodeWatched';
 import { saveWatched } from '@/api/saveWatched/saveWatched';
-import { addressOf, saveResume, type Addressed } from '../api/api';
+import type { Playable } from '@/types';
+import { saveResume } from '../api/api';
 
 /** How often a running film is looked at, in milliseconds. */
 const TICK_MS = 10_000;
@@ -19,7 +20,9 @@ const TICK_THRESHOLD_SECONDS = 5;
 const FINISH_FRACTION = 0.95;
 
 /** Everything the reporter needs to know about the film that is running. */
-export type WatchReporterOptions = Addressed & {
+export interface WatchReporterOptions {
+  /** The film or the episode being watched — what both writes address. */
+  playable: Playable;
   /** The **Absolute position**, as `usePlayback` reports it. */
   position: number;
   /** Whether the film is running. A paused player writes nothing. */
@@ -28,7 +31,7 @@ export type WatchReporterOptions = Addressed & {
   ended: boolean;
   /** How long the film runs, from the **Playback read**. */
   duration: number;
-};
+}
 
 /** The one thing the screen has to tell the reporter itself. */
 export interface WatchReporter {
@@ -72,9 +75,7 @@ export interface WatchReporter {
  * not something the family should watch happen.
  */
 export function useWatchReporter(options: WatchReporterOptions): WatchReporter {
-  const { position, playing, ended, duration } = options;
-  // The film being watched, which is what both writes are addressed to.
-  const playable = addressOf(options);
+  const { playable, position, playing, ended, duration } = options;
   /**
    * What the film's movement is measured against: where it started playing, and
    * then wherever it was last written. `null` until the film plays at all,

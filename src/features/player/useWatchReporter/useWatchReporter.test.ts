@@ -34,7 +34,7 @@ const DURATION = 1800;
 
 /** Where the tests start a film that was never watched. */
 const BASE: WatchReporterOptions = {
-  movieId: 'm1',
+  playable: { kind: 'movie', id: 'm1' },
   position: 0,
   playing: true,
   ended: false,
