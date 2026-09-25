@@ -17,6 +17,10 @@ import {
 } from '@/test-support/LocationProbe/LocationProbe';
 import { notFoundResponse } from '@/test-support/fakeResponse/fakeResponse';
 import { stubScrollMetrics } from '@/test-support/stubScrollMetrics/stubScrollMetrics';
+import {
+  normCss,
+  resolvedStyle,
+} from '@/test-support/resolvedStyle/resolvedStyle';
 
 /**
  * 22 — Series (TV), Phase 2 (issue #191): `/series/:id`, composition only —
@@ -99,5 +103,50 @@ describe('SeriesPage — Back', () => {
 
     await waitFor(() => expect(pathname()).toBe('/'));
     expect(search()).toBe('?tab=series');
+  });
+});
+
+/**
+ * The circle as `page.SeriesPage` draws it — icon-only, and the prototype's
+ * glass in each state — read through the cascade `resolvedStyle` runs, the
+ * motion round's way of asserting a `styled(IconButton)` face.
+ */
+describe('SeriesPage — the Back circle', () => {
+  const back = () => screen.getByRole('button', { name: 'Back' });
+
+  it('is icon-only: named Back by its label and its title, with no text', async () => {
+    renderAt(['/series/harbor']);
+    await waitFor(() => expect(back()).toBeTruthy());
+
+    expect(back().textContent).toBe('');
+    expect(back().getAttribute('title')).toBe('Back');
+    expect(back().querySelector('svg')?.getAttribute('width')).toBe('20');
+  });
+
+  it('is the prototype’s 44px glass circle, fixed at 24/24', async () => {
+    renderAt(['/series/harbor']);
+    await waitFor(() => expect(back()).toBeTruthy());
+
+    const rest = resolvedStyle(back());
+    expect(rest).toMatchObject({
+      position: 'fixed',
+      top: '24px',
+      left: '24px',
+      width: '44px',
+      height: '44px',
+      background: normCss('rgba(20, 17, 13, 0.6)'),
+      'backdrop-filter': normCss('blur(10px)'),
+      border: normCss('1px solid rgba(255, 255, 255, 0.14)'),
+      color: '#fff',
+    });
+  });
+
+  it('darkens to the prototype’s hover, and keeps its white glyph', async () => {
+    renderAt(['/series/harbor']);
+    await waitFor(() => expect(back()).toBeTruthy());
+
+    const hover = resolvedStyle(back(), { hover: true });
+    expect(hover.background).toBe(normCss('rgba(40, 34, 27, 0.85)'));
+    expect(hover.color).toBe('#fff');
   });
 });
