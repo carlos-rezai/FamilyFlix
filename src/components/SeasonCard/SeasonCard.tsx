@@ -1,4 +1,5 @@
 import { Artwork, ProgressBar, StatusBadge } from '@/primitives';
+import type { SeasonCardSeason } from '@/types';
 import { formatEpisodeTag } from '@/utils';
 import {
   Root,
@@ -9,18 +10,6 @@ import {
   Label,
   SubLabel,
 } from './SeasonCard.styles';
-
-/** What a Season card draws: `mol.SeasonCard`'s `season` prop. */
-export interface SeasonCardSeason {
-  number: number;
-  /** Read in place of _Season N_ when given — "Specials", say. */
-  label?: string;
-  episodeCount: number;
-  watchedCount: number;
-  /** The series' **Gradient fallback** stops. */
-  g1: string;
-  g2: string;
-}
 
 export interface SeasonCardProps {
   season: SeasonCardSeason;

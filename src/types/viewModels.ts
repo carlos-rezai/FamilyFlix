@@ -122,13 +122,33 @@ export interface FilterOption {
   onSelect: () => void;
 }
 
-/** One Season card on the series page: `mol.SeasonCard`'s `season`. */
-export interface SeasonCardModel {
+/** What a Season card draws: `mol.SeasonCard`'s `season` prop. */
+export interface SeasonCardSeason {
   number: number;
+  /** Read in place of _Season N_ when given — "Specials", say. */
+  label?: string;
   episodeCount: number;
   /** Whole episodes watched — a part-watched one is not counted. */
   watchedCount: number;
-  /** The series' gradient stops. */
+  /** The series' **Gradient fallback** stops. */
+  g1: string;
+  g2: string;
+}
+
+/** What an Episode row draws: `mol.EpisodeRow`'s `episode` prop. */
+export interface EpisodeRowEpisode {
+  season: number;
+  number: number;
+  /** `null` reads _Untitled episode_. */
+  title: string | null;
+  /** Already formatted; `null` draws no line. */
+  airDate: string | null;
+  watched: boolean;
+  /** 0–100 into the episode; the bar is drawn strictly between. */
+  progress: number;
+  /** The **Resume label**, or `null` when there is nothing to resume. */
+  resumeLabel: string | null;
+  /** The series' **Gradient fallback** stops. */
   g1: string;
   g2: string;
 }
@@ -172,5 +192,5 @@ export interface SeriesDetailModel {
   /** The series' heart. */
   isFavorite: boolean;
   /** The Seasons grid, one card per season in order. */
-  seasons: SeasonCardModel[];
+  seasons: SeasonCardSeason[];
 }

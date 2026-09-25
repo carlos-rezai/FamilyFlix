@@ -1,6 +1,7 @@
 import type { KeyboardEvent, MouseEvent } from 'react';
 
 import { PlayIcon, ProgressBar } from '@/primitives';
+import type { EpisodeRowEpisode } from '@/types';
 import { formatEpisodeTag } from '@/utils';
 import {
   Root,
@@ -16,24 +17,6 @@ import {
   ResumeLine,
   WatchedBox,
 } from './EpisodeRow.styles';
-
-/** What an Episode row draws: `mol.EpisodeRow`'s `episode` prop. */
-export interface EpisodeRowEpisode {
-  season: number;
-  number: number;
-  /** `null` reads _Untitled episode_. */
-  title: string | null;
-  /** Already formatted; `null` draws no line. */
-  airDate: string | null;
-  watched: boolean;
-  /** 0–100 into the episode; the bar is drawn strictly between. */
-  progress: number;
-  /** The **Resume label**, or `null` when there is nothing to resume. */
-  resumeLabel: string | null;
-  /** The series' **Gradient fallback** stops. */
-  g1: string;
-  g2: string;
-}
 
 export interface EpisodeRowProps {
   episode: EpisodeRowEpisode;

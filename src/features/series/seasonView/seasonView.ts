@@ -1,5 +1,9 @@
-import type { EpisodeRowEpisode } from '@/components';
-import type { Episode, SeasonSummary, SeriesDetail } from '@/types';
+import type {
+  Episode,
+  EpisodeRowEpisode,
+  SeasonSummary,
+  SeriesDetail,
+} from '@/types';
 import {
   formatClock,
   formatEpisodeTag,

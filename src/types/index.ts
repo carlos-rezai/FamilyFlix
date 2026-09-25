@@ -75,7 +75,8 @@ export type {
   ContinueCardMovie,
   MovieDetailModel,
   SeriesDetailModel,
-  SeasonCardModel,
+  SeasonCardSeason,
+  EpisodeRowEpisode,
   GenreRowModel,
   FilterOption,
 } from './viewModels';
