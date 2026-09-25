@@ -1,16 +1,10 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo } from 'react';
 
-import type { Episode, SeasonPageModel, SeriesDetail } from '@/types';
+import type { Episode, SeasonPageModel } from '@/types';
 import { saveEpisodeWatched } from '@/api/saveEpisodeWatched/saveEpisodeWatched';
-import { fetchSeriesDetail, saveSeasonWatched } from '../api/api';
+import { saveSeasonWatched } from '../api/api';
 import { seasonView } from '../seasonView/seasonView';
-
-/** The series read's **Load state**; the season is picked from it per render. */
-type SeriesReadState =
-  | { status: 'loading'; detail: null }
-  | { status: 'not-found'; detail: null }
-  | { status: 'error'; detail: null }
-  | { status: 'ready'; detail: SeriesDetail };
+import { useSeriesRead, type HeldSeries } from '../useSeriesRead/useSeriesRead';
 
 type SeasonState =
   | { status: 'loading'; season: null }
@@ -47,11 +41,11 @@ function marked(episode: Episode, watched: boolean): Episode {
   };
 }
 
-/** The detail with each episode `patch` answers for replaced. */
+/** The held read with each episode `patch` answers for replaced. */
 function patchEpisodes(
-  detail: SeriesDetail,
+  detail: HeldSeries,
   patch: (episode: Episode) => Episode
-): SeriesDetail {
+): HeldSeries {
   return {
     ...detail,
     seasons: detail.seasons.map((season) => ({
@@ -62,9 +56,9 @@ function patchEpisodes(
 }
 
 /**
- * Loads the series named by the URL — the series page's own read — and hands
- * back season `number` mapped by `seasonView`, or `not-found` for a series or
- * season the library does not hold. Its two writes are optimistic: the raw
+ * The series named by the URL through `useSeriesRead` — the series page's own
+ * load — and season `number` picked from it per render by `seasonView`, or
+ * `not-found` for a series or season the library does not hold. Its two writes are optimistic: the raw
  * episodes are marked on screen at once and put back from a snapshot if the
  * save is refused.
  */
@@ -72,48 +66,15 @@ export function useSeasonEpisodes(
   seriesId: string,
   number: number
 ): UseSeasonEpisodesResult {
-  const [read, setRead] = useState<SeriesReadState>({
-    status: 'loading',
-    detail: null,
-  });
-  const [attempt, setAttempt] = useState(0);
-
-  useEffect(() => {
-    let current = true;
-    setRead({ status: 'loading', detail: null });
-
-    fetchSeriesDetail(seriesId)
-      .then((detail) => {
-        if (!current) {
-          return;
-        }
-        setRead(
-          detail === null
-            ? { status: 'not-found', detail: null }
-            : { status: 'ready', detail }
-        );
-      })
-      .catch(() => {
-        if (current) {
-          setRead({ status: 'error', detail: null });
-        }
-      });
-
-    return () => {
-      current = false;
-    };
-  }, [seriesId, attempt]);
-
-  const retry = useCallback(() => setAttempt((n) => n + 1), []);
+  const read = useSeriesRead(seriesId);
+  const { retry, editSeries } = read;
 
   /** Apply a patch to the episodes on screen, if a series is still held. */
-  const applyPatch = useCallback((patch: (episode: Episode) => Episode) => {
-    setRead((current) =>
-      current.status === 'ready'
-        ? { ...current, detail: patchEpisodes(current.detail, patch) }
-        : current
-    );
-  }, []);
+  const applyPatch = useCallback(
+    (patch: (episode: Episode) => Episode) =>
+      editSeries((held) => patchEpisodes(held, patch)),
+    [editSeries]
+  );
 
   /** Put the snapshotted episodes back exactly as they were. */
   const restore = useCallback(
