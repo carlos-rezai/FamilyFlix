@@ -11,6 +11,110 @@ Newest entry first.
 
 ---
 
+## 2026-09-25 — Series (TV) (issues #189–#199)
+
+Twenty-three commits across issues #189–#199 — eleven RED/GREEN pairs and one
+fix — against the plan on #188, built from `docs/design-logs/22-series.md`.
+**5486 tests pass across 282 files**, from 4928 across 255 at the end of the
+motion round. `tsc -b` and `eslint src server` are clean. The largest
+initiative the app has had — about 120 files and 15,000 lines — and the first
+entity that is not a **Movie**. It carries all three parts of build step 5,
+**Series (TV)**, **Episode playback** and **Series import**, because none is
+usable alone. The maintainer's instruction was the scope: translate the
+prototype 1:1 into the codebase, in its naming, conventions, patterns and
+architecture.
+
+**None of the three is ticked** in the feature table. ✅ when the refactor
+closes, not when the build issues do.
+
+### What shipped
+
+The log's six slices became the plan's nine phases, and the nine became
+eleven issues: Phase 1 split into the import (#189) and the tab (#190), and
+Phase 2 into the hero (#191) and the season cards (#192).
+
+- **#189, a Season-folder show imports as one series.** Migration 4 — the
+  `series` and `episodes` tables and their two joins, `series_genres` and
+  `episode_subtitles`; `movies` untouched. `media/episodeTag` reads
+  `S01E03` and `1x03`; `import-export/groupShows` gathers a Library root's
+  `Season NN/` folders under their show; the importer's episode loop copies
+  each episode into a **Series folder**'s `season-NN/`. `library/series/read`
+  and `series/write` behind `LibraryStorage`. The fixture is
+  `createImporter/seriesFixture/`, beside the film fixture.
+- **#190, the Movies / Series switch and the All series grid.**
+  `LibraryTabs` and `LibraryBody` on the library page, `?tab=series` written
+  as a replace by the existing query-param writer; `SeriesHome` over the same
+  `LibraryGrid` and `PosterCard`, through `seriesCardView`.
+- **#191, the series page hero and the next episode.** `series/nextEpisodeOf`,
+  `GET /api/series/:id`, the `/series/:id` page over `seriesView`, and
+  `CreditsRow` graduated from `movie-detail/` to `components/` with its lead
+  label as a prop.
+- **#192, season cards and the series heart.** `SeasonCard` on the card
+  fragments, `seasonPath`, the Seasons grid, and the heart on the page and on
+  the tab through the shared `saveSeriesFavorite`.
+- **#193, the season page.** `EpisodeRow`, `SeasonEpisodes`,
+  `useSeasonEpisodes`, `seasonView`, the episode box and _Mark season
+  watched_ through the shared `saveEpisodeWatched` and the season write.
+- **#194, episode playback on a Playable.** `GET /api/episodes/:id` and the
+  movie routes' file handlers mounted again under `/episodes` over a
+  `playables` lookup of the **Stored path**, so `playback/` never learned
+  there are episodes. The player's hooks and wire take a **Playable**;
+  `episodePlayPath`; the title line reads `Show · S02E04 · Episode title`.
+- **#195, Continue Watching on the Series tab.** One card per series, on the
+  episode `nextEpisodeOf` answers, through `episodeContinueView`.
+- **#196, Up next.** `UpNextCard` in the last 15 seconds, its countdown,
+  _Play now_ and _Cancel_, and auto-play at the end of the file — a
+  **Sideways move**, so Back from the next episode still reaches the season.
+- **#197, loose episodes and unplaced.** Episodes at a show's root, episode
+  subtitles, and the `unplaced` Problem for an episode whose numbers cannot
+  be read.
+- **#198, re-runs, year ranges, unnamed shows, the setup panel.** A second
+  run adds only the episodes it does not hold; a show's **Year range**; a
+  folder with no row still imports under its guessed title; Import setup
+  shows the accepted shapes verbatim, under `InfoRingIcon`. Its fix commit
+  moved the held-series read ahead of the walk's first `await` — it had run
+  outside every catch, so a run whose storage closed mid-walk rejected
+  unhandled and vitest exited 1 with every test green.
+- **#199, the Series tab's filters.** Search, genre, rating and sort over
+  `GET /api/series`, and `GET /api/series/genres` counted in series.
+
+### Judgment calls the slices made on their own
+
+- **Reuse over the log's sketch.** The Series tab's Continue row is the
+  movie's `ContinueRow`, and its load is `useBrowseLoad`, where the log
+  sketched `EpisodeContinueRow` and `useSeriesHome`.
+- **Two storage files, not four units.** Q12 named `read`, `browse`, `watch`
+  and `curation` under `library/series/`. What shipped is `series/read` —
+  detail, episode, list, home and genres, 384 lines — and `series/write`,
+  neither with a suite of its own; every assertion is in the router suites.
+- **The episode watch writes went into the movie's `watch/`**, because that is
+  where the statements were. It carries seven methods over two tables, one of
+  them, `markEpisodeWatched`, with no shipping caller.
+- **The `movieId | playable` shim.** The plan made "the movie suites stay
+  green without edits" its proof that the build was additive, so the player's
+  hooks accept both addresses and `addressOf` / `routeOf` normalise them.
+- **`SeriesMetaLine` and the loading face left inline** in the `SeriesDetail`
+  organism, where Q35 and Q49 named the first as its own unit.
+- **The series page's Back copied from the movie page** — the text pill,
+  down to the styles' docblock — where `page.SeriesPage` draws a glass circle.
+- **`resolvedStyle` learned one thing.** `normCss` drops the spaces around a
+  `/`, because stylis prints `2 / 3` as `2/3`. It did not learn the
+  ancestor-state selector the motion round expected `EpisodeRow` to need: the
+  row's hover rules resolve without it.
+
+### Deliberately not built (Q2)
+
+A series form, series delete, series in Export, season posters and specials.
+The form and Export are flagged for a prototype amendment rather than
+improvised.
+
+### Follow-ups
+
+The refactor is 201. The docs-and-checks slice, 200, was folded into it and
+closed at filing.
+
+---
+
 ## 2026-09-23 — Motion & interaction states refactor (issue #187)
 
 Fourteen commits against `docs/refactor-plans/21-motion-refactor.md` — three
