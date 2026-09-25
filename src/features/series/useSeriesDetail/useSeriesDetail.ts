@@ -2,8 +2,9 @@ import { useCallback } from 'react';
 
 import type { SeriesPageModel } from '@/types';
 import { saveSeriesFavorite } from '@/api/saveSeriesFavorite/saveSeriesFavorite';
+import { useOptimisticEdit } from '@/hooks/useOptimisticEdit/useOptimisticEdit';
 import { seriesView } from '../seriesView/seriesView';
-import { useSeriesRead } from '../useSeriesRead/useSeriesRead';
+import { useSeriesRead, type HeldSeries } from '../useSeriesRead/useSeriesRead';
 
 /** The movie page's **Load state**: status and series move together. */
 type SeriesDetailState =
@@ -19,42 +20,36 @@ export type UseSeriesDetailResult = SeriesDetailState & {
   toggleFavorite: () => void;
 };
 
+/** The held read with the series' heart set to `isFavorite`. */
+const withFavorite = (held: HeldSeries, isFavorite: boolean): HeldSeries => ({
+  ...held,
+  series: { ...held.series, isFavorite },
+});
+
 /**
  * The series page's read — `useSeriesRead`'s load, mapped by `seriesView` per
- * render — and its one edit, the heart, optimistic and put back on refusal.
+ * render — and its one edit, the heart, on `useOptimisticEdit`: shown at once,
+ * the route's echo taken over what was assumed, put back on refusal.
  */
 export function useSeriesDetail(id: string): UseSeriesDetailResult {
   const read = useSeriesRead(id);
   const { detail, retry, editSeries } = read;
 
-  /** Writes a favorite value into the series on screen, if it still holds one. */
-  const applyFavorite = useCallback(
-    (isFavorite: boolean) =>
-      editSeries((held) => ({
-        ...held,
-        series: { ...held.series, isFavorite },
-      })),
-    [editSeries]
-  );
+  const edit = useOptimisticEdit(detail, editSeries);
 
-  const seriesId = detail?.id ?? null;
-  const isFavorite = detail?.series.isFavorite ?? false;
-
+  /** The heart — the movie page's heart, on the one bargain it keeps. */
   const toggleFavorite = useCallback(() => {
-    if (seriesId === null) {
+    if (detail === null) {
       return;
     }
-    const next = !isFavorite;
-    applyFavorite(next);
-    saveSeriesFavorite(seriesId, next)
-      // The route echoes what it stored; trust that over what we assumed.
-      .then((saved) => {
-        if (saved !== next) {
-          applyFavorite(saved);
-        }
-      })
-      .catch(() => applyFavorite(!next));
-  }, [seriesId, isFavorite, applyFavorite]);
+    edit({
+      next: !detail.series.isFavorite,
+      capture: (held) => held.series.isFavorite,
+      apply: withFavorite,
+      restore: withFavorite,
+      save: saveSeriesFavorite,
+    });
+  }, [detail, edit]);
 
   const handlers = { retry, toggleFavorite };
   return read.status === 'ready'
