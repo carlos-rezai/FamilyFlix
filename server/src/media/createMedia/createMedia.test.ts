@@ -197,6 +197,34 @@ describe('createMedia — storeUpload', () => {
   });
 });
 
+describe('createMedia — seasonFolder', () => {
+  it('makes season-NN under the Series folder, two digits, and answers its path', () => {
+    const { media } = sandbox();
+    const series = media.reserveFolder('Harbor & Vine', 2021);
+
+    const folder = media.seasonFolder(series, 2);
+
+    expect(folder).toBe(join(series, 'season-02'));
+    expect(existsSync(folder)).toBe(true);
+  });
+
+  it('is harmless asked twice, and keeps what the season already holds', async () => {
+    const { media, root } = sandbox();
+    const series = media.reserveFolder('Harbor & Vine', 2021);
+    const first = media.seasonFolder(series, 1);
+    const stored = await media.storeUpload(
+      first,
+      'e1.mp4',
+      part('episode one')
+    );
+
+    expect(media.seasonFolder(series, 1)).toBe(first);
+    expect(readFileSync(mediaFilePath(root, stored) as string, 'utf8')).toBe(
+      'episode one'
+    );
+  });
+});
+
 describe('createMedia — reserveFolder', () => {
   it('creates the movie folder under the managed media directory', () => {
     const { media, root } = sandbox();

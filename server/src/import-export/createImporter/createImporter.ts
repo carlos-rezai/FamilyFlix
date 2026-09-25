@@ -1,13 +1,6 @@
 import { randomUUID } from 'node:crypto';
-import { mkdir, readFile, stat } from 'node:fs/promises';
-import {
-  basename,
-  dirname,
-  extname,
-  isAbsolute,
-  join,
-  relative,
-} from 'node:path';
+import { readFile, stat } from 'node:fs/promises';
+import { basename, dirname, extname, isAbsolute, relative } from 'node:path';
 
 import type { LibraryStorage } from '../../library';
 import type { Media } from '../../media/createMedia/createMedia';
@@ -355,10 +348,6 @@ function unplacedReason(show: ShowScan, video: string): string {
     : `${tagOf(tag.season, tag.episode)} is already another file — ${fix}`;
 }
 
-/** The folder a season's episodes are copied into, under the Series folder. */
-const seasonFolderName = (season: number): string =>
-  `season-${twoDigits(season)}`;
-
 /**
  * A **Show folder** as the matcher weighs it: a scan under the show's own
  * name and folder, holding its first episode — or its first **Unplaced**
@@ -693,8 +682,7 @@ export function createImporter({
       const label = episodeLabel(row.title, episode);
       current.currentItem = label;
       try {
-        const into = join(folder, seasonFolderName(episode.season));
-        await mkdir(into, { recursive: true });
+        const into = media.seasonFolder(folder, episode.season);
         const videoPath = await media.copyIn(into, episode.video, signal);
         const subtitles: NewSubtitle[] = [];
         for (const track of episode.subtitles) {

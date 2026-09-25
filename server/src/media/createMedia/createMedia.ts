@@ -84,6 +84,14 @@ export interface Media {
   openFolder(storedPath: string): string | null;
 
   /**
+   * The `season-NN/` directory under a reserved **Series folder**, created if
+   * it is not there yet, and its path — where one season's episodes are copied
+   * in. Two digits, so the seasons list in order; asking again for a season
+   * already made is harmless.
+   */
+  seasonFolder(seriesFolder: string, season: number): string;
+
+  /**
    * Give a reserved folder the name its movie's title asks for, once that
    * title is known — and leave it exactly where it is when it already has one.
    */
@@ -252,6 +260,15 @@ export function createMedia(mediaPath: string): Media {
       // folder here either, whatever it says.
       const file = mediaFilePath(mediaPath, storedPath);
       return file === null ? null : dirname(file);
+    },
+
+    seasonFolder: (seriesFolder, season) => {
+      const folder = join(
+        seriesFolder,
+        `season-${String(season).padStart(2, '0')}`
+      );
+      mkdirSync(folder, { recursive: true });
+      return folder;
     },
 
     renameFolder: (folder, title, year) => {
