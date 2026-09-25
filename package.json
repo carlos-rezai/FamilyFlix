@@ -12,6 +12,7 @@
     "build": "nx build",
     "test": "nx test",
     "typecheck": "tsc -b tsconfig.json",
+    "db:seed-series": "tsx server/src/db/seriesSeed/seriesSeed.ts",
     "prepare": "husky"
   },
   "nx": {

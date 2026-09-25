@@ -145,7 +145,7 @@ familyflix/
 │ │ ├── capabilities/ ← the Codec report: Chromium native set ∪ what `capabilities(component)` reads off whichever component the slot holds now — never the environment, never a binary on PATH; a decoder name begins with a letter
 │ │ ├── parseSrt/ parseVtt/ parseAss/ parseSub/ ← pure, one format each
 │ │ └── parseSubtitle/ ← dispatch on extension; the last place a format is known
-│ ├── db/ ← SQLite connection + schema/migrations (1 the schema and the genre seed, 2 `last_watched_at`, 3 the `settings` table — nothing seeded, 4 `series` and `episodes` with their two joins, `series_genres` and `episode_subtitles` — no `seasons` table), shared by every domain module above
+│ ├── db/ ← SQLite connection + schema/migrations (1 the schema and the genre seed, 2 `last_watched_at`, 3 the `settings` table — nothing seeded, 4 `series` and `episodes` with their two joins, `series_genres` and `episode_subtitles` — no `seasons` table), shared by every domain module above; and `seriesSeed/`, the dev library's mock series
 │ └── test-support/ ← test doubles shared across server tests, never imported by shipping code
 │ ├── heldCopy/ ← a Media whose first copy waits until released, forwarding the cancel signal
 │ ├── fixedSlot/ ← a Component slot over one fixed component, for the thirty-odd suites that compose a Playback and never write to the slot
@@ -383,7 +383,12 @@ features into a route.
   dev seed that did this job before bulk import shipped is gone (#127);
   the ten-second MP4 it carried lives on as
   `server/src/test-support/fixtureVideo/`, the one real film the
-  playback tests need
+  playback tests need. **Series are the exception**: `npm run
+db:seed-series` (`server/src/db/seriesSeed/`) writes eight mock shows
+  under the reserved `__seed__/series/` prefix, part-watched episodes
+  included, because no import can set a resume position and so none can
+  fill the Series tab's Continue Watching. Re-running replaces only its
+  own rows and files
 - `src/` never talks to SQLite directly
 - `src/` never reads or writes the filesystem directly — all file
   access (folder scanning, copying video/subtitle/poster files) goes
