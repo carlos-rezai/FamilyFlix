@@ -31,6 +31,7 @@ import { createSettings } from './settings/settings';
 import { createSeriesReader } from './series/read/read';
 import { createSeriesBrowse } from './series/browse/browse';
 import { createSeriesWrite } from './series/write/write';
+import { createSeriesCuration } from './series/curation/curation';
 
 /**
  * The repository seam every consumer (routes, importer, player) reads and writes
@@ -242,6 +243,7 @@ export function createSqliteStorage(dbPath: string): LibraryStorage {
   const seriesReader = createSeriesReader(db);
   const seriesBrowse = createSeriesBrowse(db, seriesReader);
   const seriesWrite = createSeriesWrite(db, seriesReader);
+  const seriesCuration = createSeriesCuration(db);
 
   return {
     addMovie: write.addMovie,
@@ -268,7 +270,7 @@ export function createSqliteStorage(dbPath: string): LibraryStorage {
     setSubtitleLanguage: settingsRepository.setSubtitleLanguage,
     addSeries: seriesWrite.addSeries,
     addEpisode: seriesWrite.addEpisode,
-    setSeriesFavorite: seriesWrite.setSeriesFavorite,
+    setSeriesFavorite: seriesCuration.setSeriesFavorite,
     getEpisodeRead: seriesReader.getEpisodeRead,
     getSeriesHome: seriesBrowse.getSeriesHome,
     listSeriesGenres: seriesBrowse.listSeriesGenres,

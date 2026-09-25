@@ -17,11 +17,6 @@ export interface SeriesWrite {
    * and number is refused by the schema.
    */
   addEpisode(seriesId: string, input: NewEpisode): Episode;
-  /**
-   * Set one series' favorite flag. Answers whether the library holds that
-   * series — `false` for an unknown id, a movie's among them, touching nothing.
-   */
-  setSeriesFavorite(id: string, value: boolean): boolean;
 }
 
 /** The series' writes — the movie's `addMovie` over the series tables. */
@@ -57,10 +52,6 @@ export function createSeriesWrite(
     INSERT INTO episode_subtitles (id, episode_id, path, language, position)
     VALUES (@id, @episode_id, @path, @language, @position)
   `);
-
-  const updateFavorite = db.prepare(
-    'UPDATE series SET is_favorite = ? WHERE id = ?'
-  );
 
   const insertSeriesGraph = db.transaction((id: string, input: NewSeries) => {
     const now = new Date().toISOString();
@@ -127,8 +118,5 @@ export function createSeriesWrite(
       insertEpisodeGraph(id, seriesId, input);
       return reader.getEpisode(id) as Episode;
     },
-
-    setSeriesFavorite: (id, value) =>
-      updateFavorite.run(value ? 1 : 0, id).changes > 0,
   };
 }
