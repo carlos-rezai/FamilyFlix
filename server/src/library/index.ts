@@ -29,6 +29,7 @@ import { createWatch } from './watch/watch';
 import { createCuration } from './curation/curation';
 import { createSettings } from './settings/settings';
 import { createSeriesReader } from './series/read/read';
+import { createSeriesBrowse } from './series/browse/browse';
 import { createSeriesWrite } from './series/write/write';
 
 /**
@@ -239,6 +240,7 @@ export function createSqliteStorage(dbPath: string): LibraryStorage {
   const curation = createCuration(db);
   const settingsRepository = createSettings(db);
   const seriesReader = createSeriesReader(db);
+  const seriesBrowse = createSeriesBrowse(db, seriesReader);
   const seriesWrite = createSeriesWrite(db, seriesReader);
 
   return {
@@ -268,8 +270,8 @@ export function createSqliteStorage(dbPath: string): LibraryStorage {
     addEpisode: seriesWrite.addEpisode,
     setSeriesFavorite: seriesWrite.setSeriesFavorite,
     getEpisodeRead: seriesReader.getEpisodeRead,
-    getSeriesHome: seriesReader.getSeriesHome,
-    listSeriesGenres: seriesReader.listSeriesGenres,
+    getSeriesHome: seriesBrowse.getSeriesHome,
+    listSeriesGenres: seriesBrowse.listSeriesGenres,
     listEpisodes: seriesReader.listEpisodes,
     getSeriesDetail: seriesReader.getSeriesDetail,
     close() {
