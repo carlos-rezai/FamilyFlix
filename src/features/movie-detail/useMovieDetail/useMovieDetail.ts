@@ -7,7 +7,7 @@ import { saveWatched } from '@/api/saveWatched/saveWatched';
 import { toRatingPercent, toRatingUnits } from '@/utils';
 import { saveRating } from '../api/api';
 import { detailView } from '../detailView/detailView';
-import { useOptimisticEdit } from '../useOptimisticEdit/useOptimisticEdit';
+import { useOptimisticEdit } from '@/hooks/useOptimisticEdit/useOptimisticEdit';
 
 /**
  * Where the load is. Four, not three: a movie that is gone and a movie that
