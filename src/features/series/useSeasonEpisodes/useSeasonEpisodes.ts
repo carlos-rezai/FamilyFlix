@@ -2,6 +2,7 @@ import { useCallback, useMemo } from 'react';
 
 import type { Episode, SeasonPageModel } from '@/types';
 import { saveEpisodeWatched } from '@/api/saveEpisodeWatched/saveEpisodeWatched';
+import { useOptimisticEdit } from '@/hooks/useOptimisticEdit/useOptimisticEdit';
 import { saveSeasonWatched } from '../api/api';
 import { seasonView } from '../seasonView/seasonView';
 import { useSeriesRead, type HeldSeries } from '../useSeriesRead/useSeriesRead';
@@ -58,9 +59,9 @@ function patchEpisodes(
 /**
  * The series named by the URL through `useSeriesRead` — the series page's own
  * load — and season `number` picked from it per render by `seasonView`, or
- * `not-found` for a series or season the library does not hold. Its two writes are optimistic: the raw
- * episodes are marked on screen at once and put back from a snapshot if the
- * save is refused.
+ * `not-found` for a series or season the library does not hold. Its two
+ * writes, the episode box and the season mark, keep the heart's bargain
+ * through `useOptimisticEdit`.
  */
 export function useSeasonEpisodes(
   seriesId: string,
@@ -69,28 +70,48 @@ export function useSeasonEpisodes(
   const read = useSeriesRead(seriesId);
   const { retry, editSeries } = read;
 
-  /** Apply a patch to the episodes on screen, if a series is still held. */
-  const applyPatch = useCallback(
-    (patch: (episode: Episode) => Episode) =>
-      editSeries((held) => patchEpisodes(held, patch)),
-    [editSeries]
-  );
-
-  /** Put the snapshotted episodes back exactly as they were. */
-  const restore = useCallback(
-    (snapshot: Episode[]) => {
-      const byId = new Map(snapshot.map((episode) => [episode.id, episode]));
-      applyPatch((episode) => byId.get(episode.id) ?? episode);
-    },
-    [applyPatch]
-  );
-
   const detail = read.detail;
+  const edit = useOptimisticEdit(detail, editSeries);
   const seasonEpisodes = useMemo(
     () =>
       detail?.seasons.find((season) => season.number === number)?.episodes ??
       [],
     [detail, number]
+  );
+
+  /**
+   * One mark over `touched`, on the movie page's bargain: the episodes it
+   * touches are captured, marked on screen at once by the movie's watched
+   * rule, marked again by the route's echo if it differs, and put back from
+   * the capture if the save is refused.
+   */
+  const mark = useCallback(
+    (
+      touched: Episode[],
+      next: boolean,
+      save: (seriesId: string, value: boolean) => Promise<boolean>
+    ) => {
+      const ids = new Set(touched.map((episode) => episode.id));
+      edit({
+        next,
+        capture: () => touched,
+        apply: (held, value) =>
+          patchEpisodes(held, (episode) =>
+            ids.has(episode.id) ? marked(episode, value) : episode
+          ),
+        restore: (held, snapshot) => {
+          const byId = new Map(
+            snapshot.map((episode) => [episode.id, episode])
+          );
+          return patchEpisodes(
+            held,
+            (episode) => byId.get(episode.id) ?? episode
+          );
+        },
+        save,
+      });
+    },
+    [edit]
   );
 
   const toggleEpisode = useCallback(
@@ -101,28 +122,23 @@ export function useSeasonEpisodes(
       if (episode === undefined) {
         return;
       }
-      const next = !episode.watched;
-      applyPatch((candidate) =>
-        candidate.id === episodeId ? marked(candidate, next) : candidate
+      mark([episode], !episode.watched, (_seriesId, value) =>
+        saveEpisodeWatched(episodeId, value)
       );
-      saveEpisodeWatched(episodeId, next).catch(() => restore([episode]));
     },
-    [seasonEpisodes, applyPatch, restore]
+    [seasonEpisodes, mark]
   );
 
   const toggleSeason = useCallback(() => {
-    if (detail === null || seasonEpisodes.length === 0) {
+    if (seasonEpisodes.length === 0) {
       return;
     }
-    const next = !seasonEpisodes.every((episode) => episode.watched);
-    const ids = new Set(seasonEpisodes.map((episode) => episode.id));
-    applyPatch((candidate) =>
-      ids.has(candidate.id) ? marked(candidate, next) : candidate
+    mark(
+      seasonEpisodes,
+      !seasonEpisodes.every((episode) => episode.watched),
+      (seriesId, value) => saveSeasonWatched(seriesId, number, value)
     );
-    saveSeasonWatched(detail.series.id, number, next).catch(() =>
-      restore(seasonEpisodes)
-    );
-  }, [detail, seasonEpisodes, number, applyPatch, restore]);
+  }, [seasonEpisodes, number, mark]);
 
   const handlers = { retry, toggleEpisode, toggleSeason };
 
