@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 
 import { fetchMovie } from '@/api/fetchMovie/fetchMovie';
-import type { EpisodeRead, Movie, PlaybackRead } from '@/types';
+import type { EpisodeRead, Movie, PlaybackRead, Playable } from '@/types';
 
-import { fetchEpisode, fetchPlayback, type PlayableTarget } from '../api/api';
+import { fetchEpisode, fetchPlayback } from '../api/api';
 
 /** What the **Player** knows about the film before a byte of it arrives. */
 export interface OpeningReads {
@@ -47,11 +47,7 @@ export interface OpeningReads {
  * It is nonetheless {@link OpeningReads.opened} — settled is settled, and the
  * screen has to stop waiting on an answer that is never coming.
  */
-export function useOpeningReads(target: PlayableTarget): OpeningReads {
-  const { kind, id } =
-    typeof target === 'string'
-      ? { kind: 'movie' as const, id: target }
-      : target;
+export function useOpeningReads({ kind, id }: Playable): OpeningReads {
   const [movie, setMovie] = useState<Movie | null>(null);
   const [episode, setEpisode] = useState<EpisodeRead | undefined>(undefined);
   const [playback, setPlayback] = useState<PlaybackRead | null>(null);

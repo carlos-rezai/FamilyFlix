@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
 
-import type { Cue, Subtitle } from '@/types';
+import type { Cue, Playable, Subtitle } from '@/types';
 import { fetchSettings } from '@/api/fetchSettings/fetchSettings';
 
-import { addressOf, fetchSubtitleCues, type Addressed } from '../api/api';
+import { fetchSubtitleCues } from '../api/api';
 import { cueAt } from '../cueAt/cueAt';
 import { preferredSubtitle } from '../preferredSubtitle/preferredSubtitle';
 
@@ -23,12 +23,14 @@ export interface Subtitles {
 }
 
 /** What the hook has to be told: which film, which rows, and where it is. */
-export type SubtitlesOptions = Addressed & {
+export interface SubtitlesOptions {
+  /** The film or the episode playing — whose subtitle route the cues come off. */
+  playable: Playable;
   /** The film's **Subtitles**, from the record. */
   subtitles: Subtitle[];
   /** The **Absolute position**, which is what a **Cue** is chosen against. */
   position: number;
-};
+}
 
 /** The **Cue list** held for the session, stamped with the row it belongs to. */
 interface HeldCues {
@@ -71,8 +73,11 @@ interface HeldCues {
  * interrupt the film.
  */
 export function useSubtitles(options: SubtitlesOptions): Subtitles {
-  const { subtitles, position } = options;
-  const { kind, id } = addressOf(options);
+  const {
+    playable: { kind, id },
+    subtitles,
+    position,
+  } = options;
   const [subtitlesOn, setSubtitlesOn] = useState(false);
   const [cues, setCues] = useState<HeldCues | null>(null);
   const [language, setLanguage] = useState<string | undefined>(undefined);

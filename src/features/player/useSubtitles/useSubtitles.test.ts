@@ -111,7 +111,12 @@ async function settled(): Promise<void> {
 /** The hook, over a film's rows, at a position the test can move. */
 function renderSubtitles(subtitles: Subtitle[] = [ENGLISH], position = 0) {
   return renderHook(
-    ({ at }) => useSubtitles({ movieId: 'm1', subtitles, position: at }),
+    ({ at }) =>
+      useSubtitles({
+        playable: { kind: 'movie', id: 'm1' },
+        subtitles,
+        position: at,
+      }),
     { initialProps: { at: position } }
   );
 }

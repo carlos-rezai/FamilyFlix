@@ -58,7 +58,9 @@ describe('useOpeningReads — both reads, as one moment', () => {
   it('has nothing to report before either read lands', async () => {
     serve(okResponse(MOVIE), okResponse(DIRECT));
 
-    const { result } = renderHook(() => useOpeningReads('m1'));
+    const { result } = renderHook(() =>
+      useOpeningReads({ kind: 'movie', id: 'm1' })
+    );
 
     expect(result.current).toEqual({
       movie: null,
@@ -77,7 +79,9 @@ describe('useOpeningReads — both reads, as one moment', () => {
   it('reports the record and the playback read together', async () => {
     serve(okResponse(MOVIE), okResponse(DIRECT));
 
-    const { result } = renderHook(() => useOpeningReads('m1'));
+    const { result } = renderHook(() =>
+      useOpeningReads({ kind: 'movie', id: 'm1' })
+    );
 
     await waitFor(() => {
       expect(result.current.movie).toEqual(MOVIE);
@@ -89,7 +93,9 @@ describe('useOpeningReads — both reads, as one moment', () => {
   it('asks for the film it was given, once each', async () => {
     serve(okResponse(MOVIE), okResponse(DIRECT));
 
-    const { result } = renderHook(() => useOpeningReads('m1'));
+    const { result } = renderHook(() =>
+      useOpeningReads({ kind: 'movie', id: 'm1' })
+    );
     await waitFor(() => {
       expect(result.current.movie).not.toBeNull();
     });
@@ -107,7 +113,9 @@ describe('useOpeningReads — a film with no file behind it', () => {
   it('reports it as missing rather than as a failure', async () => {
     serve(okResponse(MOVIE), notFoundResponse('No video file for movie: m1'));
 
-    const { result } = renderHook(() => useOpeningReads('m1'));
+    const { result } = renderHook(() =>
+      useOpeningReads({ kind: 'movie', id: 'm1' })
+    );
 
     await waitFor(() => {
       expect(result.current.fileMissing).toBe(true);
@@ -119,7 +127,9 @@ describe('useOpeningReads — a film with no file behind it', () => {
     // title in it.
     serve(okResponse(MOVIE), notFoundResponse('No video file for movie: m1'));
 
-    const { result } = renderHook(() => useOpeningReads('m1'));
+    const { result } = renderHook(() =>
+      useOpeningReads({ kind: 'movie', id: 'm1' })
+    );
 
     await waitFor(() => {
       expect(result.current.movie).toEqual(MOVIE);
@@ -133,7 +143,9 @@ describe('useOpeningReads — a read that went wrong', () => {
     // backend hiccup must not draw the notice that says the disc is gone.
     serve(okResponse(MOVIE), serverErrorResponse());
 
-    const { result } = renderHook(() => useOpeningReads('m1'));
+    const { result } = renderHook(() =>
+      useOpeningReads({ kind: 'movie', id: 'm1' })
+    );
 
     await waitFor(() => {
       expect(fetchMock).toHaveBeenCalledTimes(2);
@@ -147,7 +159,9 @@ describe('useOpeningReads — a read that went wrong', () => {
     // never draws a title beside a duration that belongs to nothing.
     serve(serverErrorResponse(), okResponse(DIRECT));
 
-    const { result } = renderHook(() => useOpeningReads('m1'));
+    const { result } = renderHook(() =>
+      useOpeningReads({ kind: 'movie', id: 'm1' })
+    );
 
     await waitFor(() => {
       expect(fetchMock).toHaveBeenCalledTimes(2);
@@ -186,7 +200,9 @@ describe('useOpeningReads — whether the screen is still waiting', () => {
   it('is not open while an answer is still coming', async () => {
     const answer = servePending();
 
-    const { result } = renderHook(() => useOpeningReads('m1'));
+    const { result } = renderHook(() =>
+      useOpeningReads({ kind: 'movie', id: 'm1' })
+    );
 
     expect(result.current.opened).toBe(false);
 
@@ -201,7 +217,9 @@ describe('useOpeningReads — whether the screen is still waiting', () => {
   it('is open once both reads have landed', async () => {
     serve(okResponse(MOVIE), okResponse(DIRECT));
 
-    const { result } = renderHook(() => useOpeningReads('m1'));
+    const { result } = renderHook(() =>
+      useOpeningReads({ kind: 'movie', id: 'm1' })
+    );
 
     await waitFor(() => {
       expect(result.current.opened).toBe(true);
@@ -212,7 +230,9 @@ describe('useOpeningReads — whether the screen is still waiting', () => {
     // The 404 is an answer. The screen has its notice and stops waiting.
     serve(okResponse(MOVIE), notFoundResponse('No video file for movie: m1'));
 
-    const { result } = renderHook(() => useOpeningReads('m1'));
+    const { result } = renderHook(() =>
+      useOpeningReads({ kind: 'movie', id: 'm1' })
+    );
 
     await waitFor(() => {
       expect(result.current.opened).toBe(true);
@@ -227,7 +247,9 @@ describe('useOpeningReads — whether the screen is still waiting', () => {
     // evening. However they settled, they have settled.
     serve(okResponse(MOVIE), serverErrorResponse());
 
-    const { result } = renderHook(() => useOpeningReads('m1'));
+    const { result } = renderHook(() =>
+      useOpeningReads({ kind: 'movie', id: 'm1' })
+    );
 
     await waitFor(() => {
       expect(result.current.opened).toBe(true);
@@ -250,7 +272,9 @@ describe('useOpeningReads — leaving before the answer arrives', () => {
         : Promise.resolve(okResponse(MOVIE))
     );
 
-    const { result, unmount } = renderHook(() => useOpeningReads('m1'));
+    const { result, unmount } = renderHook(() =>
+      useOpeningReads({ kind: 'movie', id: 'm1' })
+    );
     unmount();
     answer(okResponse(DIRECT));
 
