@@ -11,6 +11,94 @@ Newest entry first.
 
 ---
 
+## 2026-09-25 — Series (TV) refactor (issue #201)
+
+Twenty-six commits against `docs/refactor-plans/22-series-refactor.md`, the
+docs-and-checks slice filed as 200 folded in. **5584 tests pass across 295
+files**, from 5486 across 282: thirteen new suites — the five series storage
+units, `useSeriesRead`, `useSeriesDetail`, `useSeasonEpisodes`,
+`SeriesMetaLine`, `LoadingSeries`, `useUpNext`, `formatEpisodeTag` and the
+`makeSeriesDetail` fixture — and the router suites trimmed to what is HTTP.
+`tsc -b` and `eslint src server` are clean on every commit. Two things changed
+on screen, the two the plan named: the series page's Back is the prototype's
+glass circle, and a season-page mark takes the route's echo, as the heart
+already did.
+
+**Series (TV)**, **Episode playback** and **Series import** are ticked ✅.
+**Enrichment (TMDB)** is next.
+
+### What changed
+
+- **Group 0, the record.** The build's own journal entry, written before the
+  round touched the tree it describes.
+- **Group 1, the server.** Series storage became one unit per concern under
+  `library/series/` — `read`, `browse`, `write`, `curation`, `watch`, beside
+  `nextEpisodeOf` — each created from the reader the way the movie's are, each
+  with a suite over `freshStorage`; the router suites kept status, parsing and
+  payload. The movie's `watch/` is back to its three methods, and the dead
+  `markEpisodeWatched` is gone from the seam. `episodeOr404` sits beside
+  `movieOr404`; `/resume` and `/watched` are one handler each, mounted per kind
+  through the `playables` table with the file routes. `Media.seasonFolder`
+  makes `season-NN/`, so the importer no longer imports `mkdir`; and
+  `spellEpisodeTag` is `episodeTag`'s inverse, with a round-trip suite.
+- **Group 2, the shared client units.** `formatEpisodeTag` replaced seven
+  spellings and five local `pad`s. `SeasonCardSeason` and `EpisodeRowEpisode`
+  live in `types/viewModels` and `SeasonCardModel` is gone; the page models
+  are `SeriesPageModel` and `SeasonPageModel`, the prototype's `tsType`s.
+  `useOptimisticEdit` moved to `hooks/`, generic over `T extends { id }`.
+- **Group 3, the series feature.** `useSeriesRead` is the one load both pages
+  read; the series heart and the season page's two marks are
+  `useOptimisticEdit` calls. `SeriesMetaLine` and `LoadingSeries` are units.
+  The Back is a `styled(IconButton)` circle, 1:1 with `page.SeriesPage`. The
+  five bare hovers wear `:not(:disabled)`.
+- **Group 4, the player.** The **Playable** is the only address — the
+  reporter, the subtitles, the opening reads, the wire and `Player` — and
+  `Addressed`, `addressOf` and `PlayableTarget` are gone. **Up next** is
+  `useUpNext`, its end-of-file effect keyed on `ended` through a ref, with no
+  `exhaustive-deps` suppression left in the Player.
+- **Group 5, the documents.** The folder map, the README tree, the `api/`
+  paragraph (seven calls now), the glossary's **Playable**, **Episode tag**,
+  **Series page** and **Optimistic save**, one new flagged ambiguity, and the
+  tick.
+
+### Departures from the plan
+
+- **A test fixture the plan did not name.** Three new hook suites needed the
+  same `SeriesDetail`, so `test-support/makeSeriesDetail/` was added on
+  `makeMovie`'s precedent, with a suite of its own.
+- **`HeldSeries`.** `useOptimisticEdit` needs a record with an `id`, and a
+  `SeriesDetail` has none at its top, so `useSeriesRead` holds the read as
+  `SeriesDetail & { id }`, the series' id lifted onto it.
+- **Up next cancels by episode id.** `useUpNext` holds a _Cancel_ against the
+  episode it was pressed on, so "this episode only" holds whether or not the
+  screen is remounted for the next one; the Player still is, by its key.
+- **One season-mark leaf dropped.** "touches no other season" cannot be
+  observed through one page's hook; `series/watch`'s suite asserts it.
+- **The flagged list gained one entry, not four.** The one-card-per-series
+  Continue row and `PosterCardMovie` were already flagged by the build; the
+  second was reworded to say this round left it. The series form and Export
+  are the new entry. CLAUDE.md's Series entry also lost "never one card per
+  series", which Q29 had overruled.
+- **The fixture's path.** The plan put `seriesFixture` under
+  `test-support/`; the tree is at `createImporter/seriesFixture/` beside the
+  film fixture, and `test-support/seriesFixture/` is the copier. The map says
+  both.
+
+### Deliberately left
+
+Everything in the plan's Out of Scope: the `PosterCardMovie` rename, a series
+form, delete and Export, a shared detail-page scroll container, `EpisodeRow`'s
+own lift and empty air-date line, the `importMatch` / `importShow` parallel,
+and `seriesInLibrary` reading through `getSeriesHome`. `writeSignal`'s docblock
+still counts the routes it once drained; two of its four callers now go
+through the per-kind handlers.
+
+### Follow-ups
+
+None filed. 188 is closed with this one, by comment.
+
+---
+
 ## 2026-09-25 — Series (TV) (issues #189–#199)
 
 Twenty-three commits across issues #189–#199 — eleven RED/GREEN pairs and one

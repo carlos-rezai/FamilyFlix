@@ -791,11 +791,11 @@ same layout, spacing, states, copy, and interaction.
 > Status legend: ✅ Done · 🔜 Planned · 🧭 Roadmap · 🚫 Out of scope
 > Every 🔜 item builds against its prototype in `docs/handoff/` — translate, don't redesign.
 
-**Build order — the five that are left.** The groups below say what the app
+**Build order — the four that are left.** The groups below say what the app
 _is_; this says what to build _next_, and it is a chain rather than a
-preference. Each 🔜 entry carries its step number; steps 1–4, the
-**Snackbar system**, the **Back-to-top FAB**, **Back navigation** and
-**Motion & interaction states**, are done — step 3 was found by the prototype audit of 2026-09-21 and went ahead
+preference. Each 🔜 entry carries its step number; steps 1–5, the
+**Snackbar system**, the **Back-to-top FAB**, **Back navigation**,
+**Motion & interaction states** and **Series (TV)**, are done — step 3 was found by the prototype audit of 2026-09-21 and went ahead
 of the shell, because it was the app's own seams rather than anything
 Electron adds. Steps 4–6 arrived
 with the prototype revision of 2026-09-22 (`docs/handoff/` — three new
@@ -805,12 +805,9 @@ Electron adds, and each is built against a prototype that already exists.
 The shell, the packaging and the update moved down three numbers and keep
 their gates.
 
-5. **Series (TV)** — a Series tab beside Movies, a series page, a season
-   page, episode watch state, and the importer and player learning what an
-   episode is. Needs nothing outside the app; the largest of the five.
-6. **Enrichment (TMDB)** — the one feature that goes online: a Network
+6. **Enrichment (TMDB)** _(next)_ — the one feature that goes online: a Network
    group in Settings, and a sync run that fills what the sheet left blank.
-   Needs nothing of Electron; goes after 5 so it enriches series too.
+   Needs nothing of Electron; goes after Series so it enriches series too.
 7. **Electron desktop shell** — unblocks everything after it. `Change…` in the
    Storage group and folder-path autofill in the **Movie form** are both
    waiting on this one, and both stay undrawn until it lands.
@@ -819,7 +816,7 @@ their gates.
    full already (`docs/design-logs/17-software-update.md`); its PRD waits
    on 7.
 
-A 🧭 Roadmap item is not in this chain — it is after all five, if ever.
+A 🧭 Roadmap item is not in this chain — it is after all four, if ever.
 
 ### Foundation
 
@@ -839,13 +836,13 @@ A 🧭 Roadmap item is not in this chain — it is after all five, if ever.
 - ✅ **Ratings** — 5-star display with a half-star picker.
 - ✅ **Favorites** — mark from card and detail; dedicated Favorites row.
 - ✅ **Continue Watching row** — resume in-progress titles from the home screen, ordered by when the family last watched them.
-- 🔜 **Series (TV)** _(step 5 — next)_ — a separate top-level tab, not mixed into the movie rows: a segmented Movies / Series control in the library header; the Series tab is a Continue Watching row of **episode** cards (never one card per series) over an "All series" grid on the same `LibraryGrid` + `PosterCard`. The **Series page** (`page.SeriesPage`) is the movie page's hero shape — poster, year range, season and episode count, rating, genres, synopsis, creator and cast — over a Seasons grid of `SeasonCard` (a 2:3 tile: StatusBadge when the season is fully watched, ProgressBar when partly; its line reads "8 episodes" or "3 of 8 watched"). A season poster opens the **Season page** (`page.SeasonPage`): the series → season header, _Resume Enn_, Mark season watched, one `EpisodeRow` per episode — a 16:9 thumbnail with a hover play affordance and a resume bar, `S02E04` and the title, the air date, the resume label, and a watched checkbox that stops propagation (the row opens the episode, the box only marks it) — and an "Other seasons" pill row. No synopsis, runtime or filename on a row; no tabs or accordion for seasons. Resume on the series and Continue Watching both follow `nextEpisodeOf`: the part-watched episode, else the first unwatched. In SQLite this is a `series`, `season`, `episode` trio carrying the same watch-state columns the movie table has. Everything is additive; the movie flow is untouched. Spec §5aa.
+- ✅ **Series (TV)** — a separate top-level tab, not mixed into the movie rows: a segmented Movies / Series control in the library header; the Series tab is a Continue Watching row of **episode** cards — one per series, on its earliest part-watched episode (log 22 Q29) — over an "All series" grid on the same `LibraryGrid` + `PosterCard`. The **Series page** (`page.SeriesPage`) is the movie page's hero shape — poster, year range, season and episode count, rating, genres, synopsis, creator and cast — over a Seasons grid of `SeasonCard` (a 2:3 tile: StatusBadge when the season is fully watched, ProgressBar when partly; its line reads "8 episodes" or "3 of 8 watched"). A season poster opens the **Season page** (`page.SeasonPage`): the series → season header, _Resume Enn_, Mark season watched, one `EpisodeRow` per episode — a 16:9 thumbnail with a hover play affordance and a resume bar, `S02E04` and the title, the air date, the resume label, and a watched checkbox that stops propagation (the row opens the episode, the box only marks it) — and an "Other seasons" pill row. No synopsis, runtime or filename on a row; no tabs or accordion for seasons. Resume on the series and Continue Watching both follow `nextEpisodeOf`: the part-watched episode, else the first unwatched. In SQLite this is two tables and two joins — `series`, `episodes` (carrying the same watch-state columns the movie table has), `series_genres` and `episode_subtitles` — and no `seasons` table: a season is a number (log 22 Q3). Everything is additive; the movie flow is untouched. Spec §5aa.
 
 ### Playback
 
 - ✅ **Built-in video player** — local playback, subtitle tracks, transport controls.
 - ✅ **Watch tracking** — watched / in-progress / unwatched states and resume position.
-- 🔜 **Episode playback** _(part of step 5)_ — the player unchanged for movies; for an episode the title reads `Show · S02E04 · Episode title`, and an **Up next** card appears in the last 15 s with a countdown, Play now and Cancel — auto-play next is the player's only addition. No skip-intro, no in-player episode list.
+- ✅ **Episode playback** — the player unchanged for movies; for an episode the title reads `Show · S02E04 · Episode title`, and an **Up next** card appears in the last 15 s with a countdown, Play now and Cancel — auto-play next is the player's only addition. No skip-intro, no in-player episode list.
 
 ### Maintainer tools
 
@@ -855,8 +852,8 @@ A 🧭 Roadmap item is not in this chain — it is after all five, if ever.
 - ✅ **Bulk import** — a Sheet and a Library root become Movies during the run; the Review step lists only the Problems the run could not settle, each with Resolve (the Movie form in Import context) and Skip.
 - ✅ **Import progress console** — the Connect ✓ → Scan → Import stepper, the bar, the current item, elapsed and ETA, the Activity log, and Cancel; a server run polled every 500 ms, re-attachable.
 - ✅ **Export** — the Settings hub’s third row opens the Export dialog; `family-library.csv` or `.xlsx` lands in Downloads with every movie A–Z under the eight Export columns, and an untouched export fed back to Bulk import adds nothing.
-- 🔜 **Series import** _(part of step 5)_ — the Library root may hold shows beside movies: `Show Name/Season 01/S01E03.mkv`, or loose episodes at the show root. Season and episode numbers come from the folder first, then the filename (`S01E03`, `1x03`); anything unparsed lands in the existing Review list. The accepted shapes are shown verbatim in Import setup.
-- 🔜 **Enrichment (TMDB)** _(step 6)_ — the first and only feature that touches the network; everything else stays offline-first. One organism, `EnrichmentFlow` (`features/enrichment/`), mirroring ImportFlow's three steps so the two read as siblings: **setup** (the key and offline banners, three scope cards — _Only what's missing_ / _Everything_ / _Just this movie_ — the field chips, and the write-target list; Start is `secondary` and inert until the key is tested and the machine is online), **running** (a determinate bar, because the count is known up front; LogConsole; elapsed and ETA; _Stop_ keeps what was already fetched), and **review** (two stat tiles over the rows that need a human: `ambiguous` with a horizontal poster picker of candidates and their % match, `conflict` as a field-by-field _Yours | TMDB_ diff with per-field choice then _Apply choices_ / _Keep all mine_, `missing` with a manual search box; every row has Skip). Three ways in: Settings → Network → _Sync metadata & posters_ (the primary), the Import setup's _Also fetch metadata and posters from TMDB_ checkbox (Finish hands the review straight to a full-library run), and the movie page's ⋯ menu → _Fetch from TMDB_ (a single-title run that returns to the movie). Fields: synopsis, poster, backdrop, runtime, year, genres, director, cast, original title, TMDB score. **The household rating is untouched** — TMDB's score is a separate field beside it. Conflicts are asked per movie in the review, never silently overwritten. The run is a pass over the already-imported library keyed by title + year, not a second scanner — `walkLibraryRoot` / `scanMovieFolder` are untouched, and `tmdbId` finally gets a value. The library database is the source of truth, and optionally a `familyflix-metadata.csv` in the collection root and a `poster.jpg` in each movie folder, each toggleable and neither overwriting a file that exists — the only place the app writes back into the source folders, so it needs its own permission check and a dry-run log line. Spec §5a.
+- ✅ **Series import** — the Library root may hold shows beside movies: `Show Name/Season 01/S01E03.mkv`, or loose episodes at the show root. Season and episode numbers come from the folder first, then the filename (`S01E03`, `1x03`); anything unparsed lands in the existing Review list. The accepted shapes are shown verbatim in Import setup.
+- 🔜 **Enrichment (TMDB)** _(step 6 — next)_ — the first and only feature that touches the network; everything else stays offline-first. One organism, `EnrichmentFlow` (`features/enrichment/`), mirroring ImportFlow's three steps so the two read as siblings: **setup** (the key and offline banners, three scope cards — _Only what's missing_ / _Everything_ / _Just this movie_ — the field chips, and the write-target list; Start is `secondary` and inert until the key is tested and the machine is online), **running** (a determinate bar, because the count is known up front; LogConsole; elapsed and ETA; _Stop_ keeps what was already fetched), and **review** (two stat tiles over the rows that need a human: `ambiguous` with a horizontal poster picker of candidates and their % match, `conflict` as a field-by-field _Yours | TMDB_ diff with per-field choice then _Apply choices_ / _Keep all mine_, `missing` with a manual search box; every row has Skip). Three ways in: Settings → Network → _Sync metadata & posters_ (the primary), the Import setup's _Also fetch metadata and posters from TMDB_ checkbox (Finish hands the review straight to a full-library run), and the movie page's ⋯ menu → _Fetch from TMDB_ (a single-title run that returns to the movie). Fields: synopsis, poster, backdrop, runtime, year, genres, director, cast, original title, TMDB score. **The household rating is untouched** — TMDB's score is a separate field beside it. Conflicts are asked per movie in the review, never silently overwritten. The run is a pass over the already-imported library keyed by title + year, not a second scanner — `walkLibraryRoot` / `scanMovieFolder` are untouched, and `tmdbId` finally gets a value. The library database is the source of truth, and optionally a `familyflix-metadata.csv` in the collection root and a `poster.jpg` in each movie folder, each toggleable and neither overwriting a file that exists — the only place the app writes back into the source folders, so it needs its own permission check and a dry-run log line. Spec §5a.
 
 ### Settings hub
 

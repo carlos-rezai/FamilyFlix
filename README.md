@@ -312,8 +312,8 @@ Builds the installer and publishes it to GitHub Releases automatically.
 | Back-to-top FAB                                     | ✅ Done         |
 | Back navigation — one Back rule on every screen     | ✅ Done         |
 | Motion & interaction states (hover / press / focus) | ✅ Done         |
-| Series (TV) — tab, series page, seasons, episodes   | 🔜 5 — next     |
-| Enrichment — TMDB metadata & posters sync           | 🔜 6            |
+| Series (TV) — tab, series page, seasons, episodes   | ✅ Done         |
+| Enrichment — TMDB metadata & posters sync           | 🔜 6 — next     |
 | Electron desktop shell                              | 🔜 7            |
 | Desktop packaging (Windows installer)               | 🔜 8            |
 | Software update (check / install)                   | 🔜 9            |
@@ -322,29 +322,23 @@ Builds the installer and publishes it to GitHub Releases automatically.
 | Backgroundable import                               | 🧭 Roadmap      |
 | User accounts / multi-profile                       | 🚫 Out of scope |
 
-Everything above the line is done. The five that are left are numbered in
-**build order**, because they are a chain rather than a preference; steps 1–4,
-the Snackbar system, the Back-to-top FAB, Back navigation and Motion &
-interaction states, are done — step 3 came out of auditing the build against
+Everything above the line is done. The four that are left are numbered in
+**build order**, because they are a chain rather than a preference; steps 1–5,
+the Snackbar system, the Back-to-top FAB, Back navigation, Motion &
+interaction states and Series (TV), are done — step 3 came out of auditing the build against
 the prototype (2026-09-21) and went ahead of the shell, since it was a fix to
 what is built rather than anything Electron adds. Steps 4–6 came with the
 prototype revision of 2026-09-22 and go ahead of the shell for the same reason
 — none of them needs anything Electron adds, and each has its prototype
 already; the three behind them moved down three numbers.
 
-5. **Series (TV)** — a Series tab beside Movies: a series page with its
-   seasons, a season page with its episodes (thumbnail, `S02E04` + title,
-   air date, watched check, resume bar), Continue Watching holding episode
-   cards, the importer reading `Show/Season 01/S01E03.mkv`, and the player
-   offering _Up next_ with a countdown in the last 15 seconds. Needs
-   nothing outside the app; the largest of the five.
-6. **Enrichment (TMDB)** — the one feature that goes online, and opt-in: a
+6. **Enrichment (TMDB)** _(next)_ — the one feature that goes online, and opt-in: a
    Network group in Settings holds the API key and _Test connection_; a
    sync run fills synopsis, poster, backdrop, runtime, year, genres,
    director and cast for what the sheet left blank, asks per movie when
    TMDB disagrees, and never touches the household's own rating. Reachable
    from Settings, from an Import's Finish, and from a movie's ⋯ menu. Goes
-   after 5 so it enriches series too.
+   after Series so it enriches series too.
 7. **Electron desktop shell** — unblocks everything after it. _Change…_ in
    Settings → Storage and folder-path autofill in the Movie form are both
    waiting on it, and both stay undrawn until it lands.
@@ -352,7 +346,7 @@ already; the three behind them moved down three numbers.
 9. **Software update** — needs 7 and 8 (and 1, which is done). Already
    designed in full; its PRD waits on the shell.
 
-A 🧭 Roadmap item is not in the chain — it comes after all five, if ever.
+A 🧭 Roadmap item is not in the chain — it comes after all four, if ever.
 
 ---
 
