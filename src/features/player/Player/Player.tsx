@@ -1,12 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-import { saveEpisodeWatched } from '@/api/saveEpisodeWatched/saveEpisodeWatched';
-
 import { useGoBack } from '@/hooks/useGoBack/useGoBack';
 import type { Episode, EpisodeRead, Movie, Playable } from '@/types';
 import {
-  episodePlayPath,
   formatEpisodeTag,
   gradientFromId,
   moviePath,
@@ -23,6 +20,7 @@ import { useOpeningReads } from '../useOpeningReads/useOpeningReads';
 import { usePlayback } from '../usePlayback/usePlayback';
 import { usePlayerKeys } from '../usePlayerKeys/usePlayerKeys';
 import { useSubtitles } from '../useSubtitles/useSubtitles';
+import { useUpNext } from '../useUpNext/useUpNext';
 import { useWatchReporter } from '../useWatchReporter/useWatchReporter';
 import {
   readVolumePreference,
@@ -65,9 +63,6 @@ const IMAGE_ROUTE = '/api/images/';
 function streamUrl({ kind, id }: Playable): string {
   return `/api/${kind}s/${encodeURIComponent(id)}/stream`;
 }
-
-/** How close to the end of an episode the **Up next card** appears. */
-const UP_NEXT_SECONDS = 15;
 
 /**
  * An episode's title line: `Harbor & Vine · S02E04 · The Auction`, or
@@ -297,53 +292,17 @@ export function Player({ playable }: PlayerProps) {
 
   const { toggleFullscreen } = useFullscreen(stageRef);
 
-  // **Up next**: the episode after this one, unless the family cancelled it
-  // for this episode. Moving on is a **Sideways move** — a `replace` — so a
-  // run of episodes leaves one entry behind and Back reaches the season page.
+  // **Up next**: the card in an episode's last 15 seconds and what the end of
+  // its file does — the rules are the hook's; the screen draws its answer.
   const navigate = useNavigate();
-  const next = episode?.next ?? null;
-  const [cancelled, setCancelled] = useState(false);
-  const upNext = cancelled ? null : next;
-  const secondsLeft = Math.ceil(duration - position);
-  const showUpNext =
-    upNext !== null &&
-    duration > 0 &&
-    secondsLeft > 0 &&
-    secondsLeft <= UP_NEXT_SECONDS;
-
-  const playNext = useCallback(
-    (nextId: string) => navigate(episodePlayPath(nextId), { replace: true }),
-    [navigate]
-  );
-
-  const onPlayNow = useCallback(() => {
-    if (upNext === null) {
-      return;
-    }
-    // Best-effort: the family has already moved on, and a refused write
-    // leaves nothing on this screen to put back.
-    saveEpisodeWatched(id, true).catch(() => undefined);
-    playNext(upNext.id);
-  }, [id, upNext, playNext]);
-
-  const onCancelUpNext = useCallback(() => setCancelled(true), []);
-
-  // The end of an episode: the next one plays unless it was cancelled, and
-  // the last one leaves to its season page by the Back rule.
-  useEffect(() => {
-    if (!ended || kind !== 'episode' || episode === undefined) {
-      return;
-    }
-    if (next === null) {
-      leave();
-      return;
-    }
-    if (!cancelled) {
-      playNext(next.id);
-    }
-    // Only the moment the file ends decides; a later change of mind does not.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ended]);
+  const { upNext, secondsLeft, showUpNext, playNow, cancel } = useUpNext({
+    episode,
+    position,
+    duration,
+    ended,
+    navigate,
+    leave,
+  });
 
   // The keyboard, handed the same handlers the chrome below is handed — which
   // is what makes a key and its button one behaviour rather than two. C is
@@ -402,8 +361,8 @@ export function Player({ playable }: PlayerProps) {
         <UpNextCard
           next={upNext}
           secondsLeft={secondsLeft}
-          onPlayNow={onPlayNow}
-          onCancel={onCancelUpNext}
+          onPlayNow={playNow}
+          onCancel={cancel}
         />
       ) : null}
 
