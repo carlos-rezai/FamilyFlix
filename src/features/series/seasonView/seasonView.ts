@@ -2,6 +2,7 @@ import type { EpisodeRowEpisode } from '@/components';
 import type { Episode, SeasonSummary, SeriesDetail } from '@/types';
 import {
   formatClock,
+  formatEpisodeTag,
   gradientFromId,
   toProgressPercent,
   toRuntimeSeconds,
@@ -54,8 +55,6 @@ const MONTHS = [
   'Dec',
 ];
 
-const pad = (value: number) => String(value).padStart(2, '0');
-
 const seasonLabelOf = (number: number) => `Season ${number}`;
 
 /**
@@ -86,7 +85,7 @@ function toPlayLabel(season: SeasonSummary): string {
     return 'Play';
   }
   const verb = next.status === 'in-progress' ? 'Resume' : 'Play';
-  return `${verb} E${pad(next.number)}`;
+  return `${verb} ${formatEpisodeTag({ number: next.number })}`;
 }
 
 /** One row: progress and the **Resume label** only while part watched. */

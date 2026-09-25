@@ -7,6 +7,7 @@ import { useGoBack } from '@/hooks/useGoBack/useGoBack';
 import type { Episode, EpisodeRead, Movie, Playable } from '@/types';
 import {
   episodePlayPath,
+  formatEpisodeTag,
   gradientFromId,
   moviePath,
   seasonPath,
@@ -68,15 +69,12 @@ function streamUrl({ kind, id }: Playable): string {
 /** How close to the end of an episode the **Up next card** appears. */
 const UP_NEXT_SECONDS = 15;
 
-/** Two digits, as an episode code spells a season and an episode. */
-const pad = (value: number) => String(value).padStart(2, '0');
-
 /**
  * An episode's title line: `Harbor & Vine · S02E04 · The Auction`, or
  * `Harbor & Vine · S02E04` for an episode with no title.
  */
 function episodeTitle({ series, episode }: EpisodeRead): string {
-  const code = `S${pad(episode.season)}E${pad(episode.number)}`;
+  const code = formatEpisodeTag(episode);
   return [series.title, code, episode.title]
     .filter((part) => part !== null && part !== '')
     .join(' · ');

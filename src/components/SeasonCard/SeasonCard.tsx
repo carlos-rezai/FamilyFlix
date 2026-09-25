@@ -1,4 +1,5 @@
 import { Artwork, ProgressBar, StatusBadge } from '@/primitives';
+import { formatEpisodeTag } from '@/utils';
 import {
   Root,
   Tile,
@@ -47,7 +48,7 @@ export function SeasonCard({ season, onOpen }: SeasonCardProps) {
     <Root type="button" onClick={onOpen}>
       <Tile>
         <Artwork g1={season.g1} g2={season.g2} />
-        <Numeral>S{String(number).padStart(2, '0')}</Numeral>
+        <Numeral>{formatEpisodeTag({ season: number })}</Numeral>
         {complete ? (
           <BadgeWrap>
             <StatusBadge size={26} />

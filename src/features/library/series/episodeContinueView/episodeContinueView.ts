@@ -1,13 +1,11 @@
 import type { ContinueCardMovie, EpisodeContinueEntry } from '@/types';
 import {
   formatClock,
+  formatEpisodeTag,
   gradientFromId,
   toProgressPercent,
   toRuntimeSeconds,
 } from '@/utils';
-
-/** Two digits at least: `S02E04`, `S12E12`. */
-const pad = (value: number) => String(value).padStart(2, '0');
 
 /**
  * Maps a Continue Watching entry to the `ContinueCardMovie` an unchanged
@@ -26,7 +24,7 @@ export function episodeContinueView({
 
   return {
     id: episode.id,
-    title: `${series.title} · S${pad(episode.season)}E${pad(episode.number)}`,
+    title: `${series.title} · ${formatEpisodeTag(episode)}`,
     g1,
     g2,
     resumeLabel:

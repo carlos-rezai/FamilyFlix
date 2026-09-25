@@ -1,5 +1,5 @@
 import type { Episode, SeriesDetail, SeriesDetailModel } from '@/types';
-import { gradientFromId, toRatingPercent } from '@/utils';
+import { formatEpisodeTag, gradientFromId, toRatingPercent } from '@/utils';
 
 /** Path prefix for the Express route that streams managed artwork. */
 const IMAGE_ROUTE = '/api/images/';
@@ -10,9 +10,6 @@ const MISSING_CREDIT = '—';
 /** `1 season` / `2 seasons`. */
 const plural = (count: number, word: string) =>
   `${count} ${count === 1 ? word : `${word}s`}`;
-
-/** Two digits at least: `S02E04`, `S12E12`. */
-const pad = (value: number) => String(value).padStart(2, '0');
 
 /**
  * The **Year range**: `2022` for a run inside one year, `2019–2023` for a
@@ -40,7 +37,7 @@ function toPlayLabel(next: Episode | null): string {
     return 'Play';
   }
   const verb = next.status === 'in-progress' ? 'Resume' : 'Play';
-  return `${verb} S${pad(next.season)}E${pad(next.number)}`;
+  return `${verb} ${formatEpisodeTag(next)}`;
 }
 
 /** `Not started` / `5 of 22 episodes watched` / `All 22 episodes watched`. */

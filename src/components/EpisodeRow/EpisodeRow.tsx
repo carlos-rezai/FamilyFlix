@@ -1,6 +1,7 @@
 import type { KeyboardEvent, MouseEvent } from 'react';
 
 import { PlayIcon, ProgressBar } from '@/primitives';
+import { formatEpisodeTag } from '@/utils';
 import {
   Root,
   Thumb,
@@ -44,11 +45,6 @@ export interface EpisodeRowProps {
 
 const ACTIVATION_KEYS = ['Enter', ' '];
 
-/** `S02E04` — both numbers padded to two digits. */
-function episodeCode(season: number, number: number): string {
-  return `S${String(season).padStart(2, '0')}E${String(number).padStart(2, '0')}`;
-}
-
 /**
  * One episode on the season page — `mol.EpisodeRow` 1:1. The 16:9 thumbnail
  * in the series' gradient with a hover play glyph and the resume bar, the
@@ -62,7 +58,7 @@ export function EpisodeRow({
   onOpen,
   onToggleWatched,
 }: EpisodeRowProps) {
-  const code = episodeCode(episode.season, episode.number);
+  const code = formatEpisodeTag(episode);
   const title = episode.title || 'Untitled episode';
   const inProgress =
     !episode.watched && episode.progress > 0 && episode.progress < 100;
