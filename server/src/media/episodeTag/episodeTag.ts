@@ -52,3 +52,14 @@ export function episodeTag(filename: string): EpisodeTag | null {
   }
   return null;
 }
+
+/**
+ * Spell an **Episode tag** from its numbers — `S01E03`, two digits a side at
+ * least — the inverse of {@link episodeTag}: whatever shape a tag was read
+ * from, this is the one it is written back in, in the console, in a Problem's
+ * reason and in the set of tags a held show already carries.
+ */
+export function spellEpisodeTag(season: number, episode: number): string {
+  const twoDigits = (n: number): string => String(n).padStart(2, '0');
+  return `S${twoDigits(season)}E${twoDigits(episode)}`;
+}

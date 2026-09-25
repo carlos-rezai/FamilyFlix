@@ -15,7 +15,7 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { episodeTag } from './episodeTag';
+import { episodeTag, spellEpisodeTag } from './episodeTag';
 
 describe('episodeTag — the S01E03 shape', () => {
   it('reads the season and the episode', () => {
@@ -126,5 +126,38 @@ describe('episodeTag — a name with no tag', () => {
     ['Season 01.mp4'],
   ])('answers null for %s', (filename) => {
     expect(episodeTag(filename)).toBeNull();
+  });
+});
+
+/** A tag read off a filename, then spelled back — `null` if none was read. */
+function respelled(written: string): string | null {
+  const read = episodeTag(`Harbor.and.Vine.${written}.mkv`);
+  return read === null ? null : spellEpisodeTag(read.season, read.episode);
+}
+
+describe('spellEpisodeTag — the tag written back', () => {
+  it('spells S, the season, E and the episode, two digits a side', () => {
+    expect(spellEpisodeTag(1, 3)).toBe('S01E03');
+    expect(spellEpisodeTag(12, 24)).toBe('S12E24');
+  });
+
+  it('keeps a number past two digits whole', () => {
+    expect(spellEpisodeTag(1, 120)).toBe('S01E120');
+  });
+
+  it.each([['S01E03'], ['S02E10'], ['S12E24'], ['S01E120']])(
+    'spells %s back unchanged from what the parser reads',
+    (tag) => {
+      expect(respelled(tag)).toBe(tag);
+    }
+  );
+
+  it.each([
+    ['s1e3', 'S01E03'],
+    ['1x03', 'S01E03'],
+    ['2X11', 'S02E11'],
+    ['S01E01E02', 'S01E01'],
+  ])('spells %s, read in another shape, as %s', (written, tag) => {
+    expect(respelled(written)).toBe(tag);
   });
 });

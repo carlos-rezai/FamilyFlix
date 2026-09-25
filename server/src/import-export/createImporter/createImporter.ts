@@ -7,7 +7,7 @@ import type { Media } from '../../media/createMedia/createMedia';
 import type { MovieFolderScan } from '../../media/scanMovieFolder/scanMovieFolder';
 import { walkLibraryRoot } from '../../media/walkLibraryRoot/walkLibraryRoot';
 import type { Playback } from '../../playback/createPlayback/createPlayback';
-import { episodeTag } from '../../media/episodeTag/episodeTag';
+import { episodeTag, spellEpisodeTag } from '../../media/episodeTag/episodeTag';
 import { derivedRuntime } from '../../playback/derivedRuntime/derivedRuntime';
 import {
   groupShows,
@@ -317,16 +317,9 @@ const filmKey = (title: string, year: number | null): string =>
 const titleWithYear = (title: string, year: number | null): string =>
   year === null ? title : `${title} (${year})`;
 
-/** Two digits at least: `1` is `01`, as a tag and a folder spell it. */
-const twoDigits = (n: number): string => String(n).padStart(2, '0');
-
 /** An episode as the console names it: `Harbor & Vine · S01E03`. */
 const episodeLabel = (title: string, { season, episode }: ShowEpisode) =>
-  `${title} · ${tagOf(season, episode)}`;
-
-/** An **Episode tag** as a file is renamed to carry it: `S01E03`. */
-const tagOf = (season: number, episode: number): string =>
-  `S${twoDigits(season)}E${twoDigits(episode)}`;
+  `${title} · ${spellEpisodeTag(season, episode)}`;
 
 /**
  * The reason an **Unplaced** video is filed with, naming the fix: the number
@@ -342,10 +335,10 @@ function unplacedReason(show: ShowScan, video: string): string {
       .filter((episode) => episode.season === season)
       .map((episode) => episode.episode)
   );
-  const fix = `rename it ${tagOf(season, last + 1)} and import again.`;
+  const fix = `rename it ${spellEpisodeTag(season, last + 1)} and import again.`;
   return tag === null
     ? `No episode number — ${fix}`
-    : `${tagOf(tag.season, tag.episode)} is already another file — ${fix}`;
+    : `${spellEpisodeTag(tag.season, tag.episode)} is already another file — ${fix}`;
 }
 
 /**
@@ -790,7 +783,7 @@ export function createImporter({
           ? show.episodes
           : show.episodes.filter(
               (episode) =>
-                !held.tags.has(tagOf(episode.season, episode.episode))
+                !held.tags.has(spellEpisodeTag(episode.season, episode.episode))
             ),
     };
   };
@@ -809,7 +802,9 @@ export function createImporter({
           {
             series,
             tags: new Set(
-              episodes.map((episode) => tagOf(episode.season, episode.number))
+              episodes.map((episode) =>
+                spellEpisodeTag(episode.season, episode.number)
+              )
             ),
             folder: heldFolder(episodes),
           },
