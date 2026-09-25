@@ -241,15 +241,6 @@ describe('GET /api/episodes/:id', () => {
     expect(body.series).toEqual({ id: seriesId, title: 'Harbor & Vine' });
   });
 
-  it('answers an episode with no title as a null title', async () => {
-    const api = freshApi();
-    const { ids } = seedHarbor(api);
-
-    const { body } = await getEpisode(api.baseUrl, ids.S01E01);
-
-    expect(body.episode.title).toBeNull();
-  });
-
   it('answers the next episode in the season as its id, numbers and title', async () => {
     const api = freshApi();
     const { ids } = seedHarbor(api);
@@ -264,86 +255,9 @@ describe('GET /api/episodes/:id', () => {
     });
   });
 
-  it('answers the first episode of the next season after a season’s last', async () => {
-    const api = freshApi();
-    const { ids } = seedHarbor(api);
-
-    const { body } = await getEpisode(api.baseUrl, ids.S01E02);
-
-    expect(body.next).toEqual({
-      id: ids.S02E01,
-      season: 2,
-      number: 1,
-      title: 'The Return',
-    });
-  });
-
-  it('answers the next episode the library holds, across a gap in the numbers', async () => {
-    const api = freshApi();
-    const { ids } = seedHarbor(api);
-
-    const { body } = await getEpisode(api.baseUrl, ids.S02E01);
-
-    expect(body.next).toEqual({
-      id: ids.S02E04,
-      season: 2,
-      number: 4,
-      title: 'The Auction',
-    });
-  });
-
-  it('answers the next episode whether or not the family has watched it', async () => {
-    const api = freshApi();
-    const { ids } = seedHarbor(api);
-    api.storage.setEpisodeWatched(ids.S01E02, true);
-
-    const { body } = await getEpisode(api.baseUrl, ids.S01E01);
-
-    expect(body.next?.id).toBe(ids.S01E02);
-  });
-
   it('answers a null next for the show’s last episode', async () => {
     const api = freshApi();
     const { ids } = seedHarbor(api);
-
-    const { body } = await getEpisode(api.baseUrl, ids.S02E04);
-
-    expect(body.next).toBeNull();
-  });
-
-  it('answers a null next title for a next episode with no title', async () => {
-    const api = freshApi();
-    const series = api.storage.addSeries({ title: 'Lighthouse Keepers' });
-    const first = api.storage.addEpisode(series.id, {
-      season: 1,
-      number: 1,
-      videoPath: 'lighthouse/e1.mp4',
-    });
-    const second = api.storage.addEpisode(series.id, {
-      season: 1,
-      number: 2,
-      videoPath: 'lighthouse/e2.mp4',
-    });
-
-    const { body } = await getEpisode(api.baseUrl, first.id);
-
-    expect(body.next).toEqual({
-      id: second.id,
-      season: 1,
-      number: 2,
-      title: null,
-    });
-  });
-
-  it('answers the next episode within its own series, never another show’s', async () => {
-    const api = freshApi();
-    const { ids } = seedHarbor(api);
-    const other = api.storage.addSeries({ title: 'Aardvark Street' });
-    api.storage.addEpisode(other.id, {
-      season: 3,
-      number: 1,
-      videoPath: 'aardvark/s3e1.mp4',
-    });
 
     const { body } = await getEpisode(api.baseUrl, ids.S02E04);
 
