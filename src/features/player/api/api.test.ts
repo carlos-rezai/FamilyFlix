@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 import { fetchPlayback, fetchSubtitleCues, saveResume } from './api';
-import type { Cue, PlaybackRead } from '@/types';
+import type { Cue, PlaybackRead, Playable } from '@/types';
 import {
   notFoundResponse,
   okResponse,
@@ -22,6 +22,9 @@ import {
  * "the request went wrong", the same way `fetchMovie`'s `null` keeps
  * `not-found` apart from `error`.
  */
+/** The film every leaf addresses, unless it is asking about the encoding. */
+const MOVIE: Playable = { kind: 'movie', id: 'm1' };
+
 const DIRECT_PLAY: PlaybackRead = { path: 'direct', durationSeconds: 6832.5 };
 
 let fetchMock: ReturnType<
@@ -53,7 +56,7 @@ describe('fetchPlayback', () => {
   it('GETs the film’s playback read and returns what it answers', async () => {
     fetchMock.mockResolvedValue(okResponse(DIRECT_PLAY));
 
-    const read = await fetchPlayback('m1');
+    const read = await fetchPlayback(MOVIE);
 
     expect(onlyRequestUrl()).toBe('/api/movies/m1/playback');
     expect(read).toEqual(DIRECT_PLAY);
@@ -62,7 +65,7 @@ describe('fetchPlayback', () => {
   it('encodes an id that would otherwise change the URL’s shape', async () => {
     fetchMock.mockResolvedValue(okResponse(DIRECT_PLAY));
 
-    await fetchPlayback('a/1 b');
+    await fetchPlayback({ kind: 'movie', id: 'a/1 b' });
 
     expect(onlyRequestUrl()).toBe('/api/movies/a%2F1%20b/playback');
   });
@@ -74,7 +77,7 @@ describe('fetchPlayback', () => {
 
     // A film whose file is missing is a state the player draws, not a failure
     // it reports. `null` is what the missing-file notice is reached through.
-    await expect(fetchPlayback('m1')).resolves.toBeNull();
+    await expect(fetchPlayback(MOVIE)).resolves.toBeNull();
   });
 
   it('fails on any other unsuccessful response, rather than reading as absent', async () => {
@@ -82,13 +85,13 @@ describe('fetchPlayback', () => {
 
     // A 500 is not a film with no file. Collapsing the two would tell the
     // family their film is missing every time the server hiccups.
-    await expect(fetchPlayback('m1')).rejects.toThrow(/500/);
+    await expect(fetchPlayback(MOVIE)).rejects.toThrow(/500/);
   });
 
   it('fails when the request itself cannot be made', async () => {
     fetchMock.mockRejectedValue(new TypeError('Failed to fetch'));
 
-    await expect(fetchPlayback('m1')).rejects.toThrow();
+    await expect(fetchPlayback(MOVIE)).rejects.toThrow();
   });
 });
 
@@ -125,7 +128,7 @@ describe('saveResume', () => {
   it('POSTs the position as JSON to the movie’s resume route', async () => {
     fetchMock.mockResolvedValue(okResponse({ value: 1840 }));
 
-    await saveResume('m1', 1840);
+    await saveResume(MOVIE, 1840);
 
     const request = onlyRequest();
     expect(request.url).toBe('/api/movies/m1/resume');
@@ -137,7 +140,7 @@ describe('saveResume', () => {
   it('encodes an id that would otherwise break the path', async () => {
     fetchMock.mockResolvedValue(okResponse({ value: 1840 }));
 
-    await saveResume('a/1 b', 1840);
+    await saveResume({ kind: 'movie', id: 'a/1 b' }, 1840);
 
     expect(onlyRequest().url).toBe('/api/movies/a%2F1%20b/resume');
   });
@@ -147,19 +150,19 @@ describe('saveResume', () => {
     // fraction the element gave it. The echo is the row's truth.
     fetchMock.mockResolvedValue(okResponse({ value: 1841 }));
 
-    await expect(saveResume('m1', 1840.6)).resolves.toBe(1841);
+    await expect(saveResume(MOVIE, 1840.6)).resolves.toBe(1841);
   });
 
   it('falls back to the requested position when the route echoes nothing usable', async () => {
     fetchMock.mockResolvedValue(okResponse({}));
 
-    await expect(saveResume('m1', 1840)).resolves.toBe(1840);
+    await expect(saveResume(MOVIE, 1840)).resolves.toBe(1840);
   });
 
   it('is an ordinary request unless the caller says otherwise', async () => {
     fetchMock.mockResolvedValue(okResponse({ value: 1840 }));
 
-    await saveResume('m1', 1840);
+    await saveResume(MOVIE, 1840);
 
     // Every tick during playback is a normal fetch. `keepalive` is for the one
     // write that has to outlive the page, and asking for it on all of them
@@ -170,7 +173,7 @@ describe('saveResume', () => {
   it('survives the screen going away when the exit write asks it to', async () => {
     fetchMock.mockResolvedValue(okResponse({ value: 1840 }));
 
-    await saveResume('m1', 1840, { keepalive: true });
+    await saveResume(MOVIE, 1840, { keepalive: true });
 
     expect(onlyRequest().keepalive).toBe(true);
   });
@@ -178,7 +181,7 @@ describe('saveResume', () => {
   it('throws when the save does not succeed', async () => {
     fetchMock.mockResolvedValue(serverErrorResponse());
 
-    await expect(saveResume('m1', 1840)).rejects.toThrow(/500/);
+    await expect(saveResume(MOVIE, 1840)).rejects.toThrow(/500/);
   });
 });
 
@@ -207,7 +210,7 @@ describe('fetchSubtitleCues', () => {
   it('GETs the subtitle’s cue list and returns what it answers', async () => {
     fetchMock.mockResolvedValue(okResponse(CUES));
 
-    const cues = await fetchSubtitleCues('m1', 's2');
+    const cues = await fetchSubtitleCues(MOVIE, 's2');
 
     expect(onlyRequestUrl()).toBe('/api/movies/m1/subtitles/s2');
     expect(cues).toEqual(CUES);
@@ -216,7 +219,7 @@ describe('fetchSubtitleCues', () => {
   it('encodes both ids, so neither can change the URL’s shape', async () => {
     fetchMock.mockResolvedValue(okResponse(CUES));
 
-    await fetchSubtitleCues('a/1 b', 's/2');
+    await fetchSubtitleCues({ kind: 'movie', id: 'a/1 b' }, 's/2');
 
     expect(onlyRequestUrl()).toBe('/api/movies/a%2F1%20b/subtitles/s%2F2');
   });
@@ -228,7 +231,7 @@ describe('fetchSubtitleCues', () => {
 
     // No subtitles is a thing the screen already draws — no box — so there is
     // nothing here for the film to trip over.
-    await expect(fetchSubtitleCues('m1', 's2')).resolves.toEqual([]);
+    await expect(fetchSubtitleCues(MOVIE, 's2')).resolves.toEqual([]);
   });
 
   it('passes through the empty list a file that would not parse answers with', async () => {
@@ -236,18 +239,18 @@ describe('fetchSubtitleCues', () => {
     // this call has nothing to add: same empty list, same silent film.
     fetchMock.mockResolvedValue(okResponse([]));
 
-    await expect(fetchSubtitleCues('m1', 's2')).resolves.toEqual([]);
+    await expect(fetchSubtitleCues(MOVIE, 's2')).resolves.toEqual([]);
   });
 
   it('fails on any other unsuccessful response, rather than reading as absent', async () => {
     fetchMock.mockResolvedValue(serverErrorResponse());
 
-    await expect(fetchSubtitleCues('m1', 's2')).rejects.toThrow(/500/);
+    await expect(fetchSubtitleCues(MOVIE, 's2')).rejects.toThrow(/500/);
   });
 
   it('fails when the request itself cannot be made', async () => {
     fetchMock.mockRejectedValue(new TypeError('Failed to fetch'));
 
-    await expect(fetchSubtitleCues('m1', 's2')).rejects.toThrow();
+    await expect(fetchSubtitleCues(MOVIE, 's2')).rejects.toThrow();
   });
 });

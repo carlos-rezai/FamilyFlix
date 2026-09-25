@@ -12,7 +12,6 @@ import {
   moviePath,
   seasonPath,
 } from '@/utils';
-import { addressOf, type Addressed } from '../api/api';
 import { PlayerControls } from '../PlayerControls/PlayerControls';
 import { PlayerNotice } from '../PlayerNotice/PlayerNotice';
 import type { PlayerNoticeKind } from '../PlayerNotice/PlayerNotice';
@@ -40,11 +39,12 @@ import {
 } from './Player.styles';
 
 /**
- * What to play: a movie by id, as the player always took one, or a
- * **Playable** — a movie or an episode. The URL carries an id; the server
- * resolves the path.
+ * What to play: a **Playable** — a movie or an episode. The URL carries an
+ * id; the server resolves the path.
  */
-type PlayerProps = Addressed;
+interface PlayerProps {
+  playable: Playable;
+}
 
 /** Path prefix for the Express route that streams managed poster images. */
 const IMAGE_ROUTE = '/api/images/';
@@ -163,8 +163,7 @@ function noticeFor(
  * is handed the very handler its button is handed, so a key and a button cannot
  * drift apart.
  */
-export function Player(props: PlayerProps) {
-  const playable = addressOf(props);
+export function Player({ playable }: PlayerProps) {
   const { kind, id } = playable;
   // The element is held in state rather than in a plain ref, because it arrives
   // late: the guard below keeps it off the screen until the reads have settled,

@@ -2,47 +2,25 @@ import { postValue, type PostOptions } from '@/api/postValue/postValue';
 import type { Cue, EpisodeRead, PlaybackRead, Playable } from '@/types';
 
 /**
- * What the player's wire is addressed to: a **Playable**, or a bare id — a
- * movie's, which is how every caller addressed one before episodes played.
- */
-export type PlayableTarget = Playable | string;
-
-/**
- * How a player hook is told what is playing: a movie by id, as it always was,
- * or any **Playable**.
- */
-export type Addressed = { movieId: string } | { playable: Playable };
-
-/** The {@link Playable} an {@link Addressed} names. */
-export function addressOf(addressed: Addressed): Playable {
-  return 'playable' in addressed
-    ? addressed.playable
-    : { kind: 'movie', id: addressed.movieId };
-}
-
-/**
  * The route a Playable's reads and writes hang off — `/api/movies/<id>` or
  * `/api/episodes/<id>`, the two sharing the server's handlers. The id is
  * encoded: it has to arrive as one path segment however it is spelled.
  */
-function routeOf(target: PlayableTarget): string {
-  const { kind, id } =
-    typeof target === 'string' ? { kind: 'movie', id: target } : target;
+function routeOf({ kind, id }: Playable): string {
   return `/api/${kind}s/${encodeURIComponent(id)}`;
 }
 
 /** Where one playable's playback read is fetched from. */
-const playbackEndpoint = (target: PlayableTarget) =>
-  `${routeOf(target)}/playback`;
+const playbackEndpoint = (target: Playable) => `${routeOf(target)}/playback`;
 
 /** Where one playable's **Resume position** is saved. */
-const resumeEndpoint = (target: PlayableTarget) => `${routeOf(target)}/resume`;
+const resumeEndpoint = (target: Playable) => `${routeOf(target)}/resume`;
 
 /**
  * Where one **Subtitle**'s **Cue list** is fetched from. Both ids are encoded:
  * the pair is the address, and neither half may change the URL's shape.
  */
-const cuesEndpoint = (target: PlayableTarget, subtitleId: string) =>
+const cuesEndpoint = (target: Playable, subtitleId: string) =>
   `${routeOf(target)}/subtitles/${encodeURIComponent(subtitleId)}`;
 
 /**
@@ -72,9 +50,9 @@ function isResumeEcho(echoed: unknown): echoed is number {
  * feature that asks, which is the same rule read the other way round.
  */
 export async function fetchPlayback(
-  id: PlayableTarget
+  playable: Playable
 ): Promise<PlaybackRead | null> {
-  const endpoint = playbackEndpoint(id);
+  const endpoint = playbackEndpoint(playable);
   const response = await fetch(endpoint);
 
   if (response.status === 404) {
@@ -103,11 +81,11 @@ export async function fetchPlayback(
  * resolved would make a broken write indistinguishable from a stored one.
  */
 export function saveResume(
-  id: PlayableTarget,
+  playable: Playable,
   seconds: number,
   options?: PostOptions
 ): Promise<number> {
-  return postValue(resumeEndpoint(id), seconds, isResumeEcho, options);
+  return postValue(resumeEndpoint(playable), seconds, isResumeEcho, options);
 }
 
 /**
@@ -125,10 +103,10 @@ export function saveResume(
  * falling over behind a film that quietly has no subtitles.
  */
 export async function fetchSubtitleCues(
-  id: PlayableTarget,
+  playable: Playable,
   subtitleId: string
 ): Promise<Cue[]> {
-  const endpoint = cuesEndpoint(id, subtitleId);
+  const endpoint = cuesEndpoint(playable, subtitleId);
   const response = await fetch(endpoint);
 
   if (response.status === 404) {

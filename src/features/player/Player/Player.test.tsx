@@ -232,7 +232,10 @@ function renderScreen() {
         <Routes>
           <Route path="/" element={<span>Browse home</span>} />
           <Route path="/movie/:id" element={<span>Movie page</span>} />
-          <Route path="/movie/:id/play" element={<Player movieId="m1" />} />
+          <Route
+            path="/movie/:id/play"
+            element={<Player playable={{ kind: 'movie', id: 'm1' }} />}
+          />
         </Routes>
       </MemoryRouter>
     </ThemeProvider>
@@ -2113,7 +2116,10 @@ describe('Player — leaving is a history step', () => {
           <Routes>
             <Route path="/" element={<span>Browse home</span>} />
             <Route path="/movie/:id" element={<MoviePageStub />} />
-            <Route path="/movie/:id/play" element={<Player movieId="m1" />} />
+            <Route
+              path="/movie/:id/play"
+              element={<Player playable={{ kind: 'movie', id: 'm1' }} />}
+            />
           </Routes>
         </MemoryRouter>
       </ThemeProvider>
