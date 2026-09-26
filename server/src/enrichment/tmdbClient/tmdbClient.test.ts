@@ -324,3 +324,73 @@ describe('tmdbClient: image — the bytes as a stream', () => {
     expect(outcome).toEqual({ kind: 'unreachable' });
   });
 });
+
+// 23 — Enrichment, Phase 3 (issue #205): _Stop_ aborts the requests in flight.
+// `searchMovie`, `movie` and `image` each take an optional `AbortSignal` last;
+// aborting it aborts the request the client sent, and the call still answers
+// a value rather than throwing.
+describe('tmdbClient: a caller’s signal aborts the request in flight', () => {
+  /** A `fetch` that never answers until its own signal aborts it. */
+  function hanging() {
+    return vi.fn<Fetch>(
+      (_input, init) =>
+        new Promise<Response>((_resolve, reject) => {
+          init?.signal?.addEventListener('abort', () =>
+            reject(new DOMException('aborted', 'AbortError'))
+          );
+        })
+    );
+  }
+
+  /** The signal the client handed its `fetch`. */
+  const sentSignal = (fetchMock: ReturnType<typeof vi.fn<Fetch>>) =>
+    fetchMock.mock.calls[0]?.[1]?.signal;
+
+  it('aborts a search', async () => {
+    const fetchMock = hanging();
+    const controller = new AbortController();
+
+    const outcome = createTmdbClient(fetchMock).searchMovie(
+      V3_KEY,
+      'Northwind',
+      null,
+      controller.signal
+    );
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    controller.abort();
+
+    expect(sentSignal(fetchMock)?.aborted).toBe(true);
+    await expect(outcome).resolves.toEqual({ kind: 'unreachable' });
+  });
+
+  it('aborts a detail read', async () => {
+    const fetchMock = hanging();
+    const controller = new AbortController();
+
+    const outcome = createTmdbClient(fetchMock).movie(
+      V3_KEY,
+      550123,
+      controller.signal
+    );
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    controller.abort();
+
+    expect(sentSignal(fetchMock)?.aborted).toBe(true);
+    await expect(outcome).resolves.toEqual({ kind: 'unreachable' });
+  });
+
+  it('aborts an image', async () => {
+    const fetchMock = hanging();
+    const controller = new AbortController();
+
+    const outcome = createTmdbClient(fetchMock).image(
+      '/lantern-poster.jpg',
+      controller.signal
+    );
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    controller.abort();
+
+    expect(sentSignal(fetchMock)?.aborted).toBe(true);
+    await expect(outcome).resolves.toEqual({ kind: 'unreachable' });
+  });
+});

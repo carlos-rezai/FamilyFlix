@@ -188,3 +188,42 @@ describe('library: tmdbKey / setTmdbKey — the TMDB key', () => {
     expect(second.tmdbKey()).toBe('kept-across-restarts');
   });
 });
+
+// 23 — Enrichment, Phase 3 (issue #205): reaching review stamps
+// `enrichment-last-synced-at`, an ISO string in the same `settings` table —
+// the library's, not a household preference, so `settings()` never carries it.
+describe('library: enrichmentLastSyncedAt — when the library last synced', () => {
+  it('answers null on a library never synced', () => {
+    const storage = freshStorage();
+
+    expect(storage.enrichmentLastSyncedAt()).toBeNull();
+  });
+
+  it('stores the ISO stamp and reads it back', () => {
+    const storage = freshStorage();
+
+    storage.setEnrichmentLastSyncedAt('2026-09-26T12:00:00.000Z');
+
+    expect(storage.enrichmentLastSyncedAt()).toBe('2026-09-26T12:00:00.000Z');
+  });
+
+  it('replaces the stamp already held', () => {
+    const storage = freshStorage();
+    storage.setEnrichmentLastSyncedAt('2026-09-26T12:00:00.000Z');
+
+    storage.setEnrichmentLastSyncedAt('2026-09-27T08:30:00.000Z');
+
+    expect(storage.enrichmentLastSyncedAt()).toBe('2026-09-27T08:30:00.000Z');
+  });
+
+  it('leaves the household settings and the key exactly as they were', () => {
+    const storage = freshStorage();
+    storage.setSubtitleLanguage('French');
+    storage.setTmdbKey('kept-key');
+
+    storage.setEnrichmentLastSyncedAt('2026-09-26T12:00:00.000Z');
+
+    expect(storage.settings()).toEqual({ subtitleLanguage: 'French' });
+    expect(storage.tmdbKey()).toBe('kept-key');
+  });
+});

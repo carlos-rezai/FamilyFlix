@@ -282,3 +282,131 @@ describe('POST /api/enrichment — a single-title Sync', () => {
     }
   });
 });
+
+// 23 — Enrichment, Phase 3: "the whole library" (issue #205).
+//
+// - `POST /api/enrichment` takes the two library scopes, `missing` and `all`,
+//   with no `movieId`.
+// - A second start while one runs answers `409`.
+// - `POST /api/enrichment/current/cancel` → `204`: the run is dropped
+//   (`GET /api/enrichment/current` answers `404` after it), and every row it
+//   already wrote stays.
+
+const startLibrarySync = (baseUrl: string, scope: 'missing' | 'all') =>
+  fetch(`${baseUrl}/api/enrichment`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      scope,
+      fields: ALL_FIELDS,
+      writeSheet: false,
+      writePosters: false,
+    }),
+  });
+
+/** Hold TMDB's next search unanswered until the test lets it go. */
+function holdNextSearch(tmdbFetch: ReturnType<typeof fakeTmdb>) {
+  let release: () => void = () => undefined;
+  const answered = new Promise<Response>((resolve) => {
+    release = () => resolve(new Response('{}', { status: 404 }));
+  });
+  const real = tmdbFetch.getMockImplementation();
+  tmdbFetch.mockImplementation((input, init) => {
+    const url = new URL(input instanceof Request ? input.url : String(input));
+    if (url.pathname === '/3/search/movie') {
+      tmdbFetch.mockImplementation(real ?? (() => answered));
+      return answered;
+    }
+    return real ? real(input, init) : answered;
+  });
+  return release;
+}
+
+describe('POST /api/enrichment — the whole library', () => {
+  it('answers 201 for Only what’s missing, the film without details in it', async () => {
+    const { baseUrl } = await freshApi();
+
+    const response = await startLibrarySync(baseUrl, 'missing');
+
+    expect(response.status).toBe(201);
+    const run = (await response.json()) as EnrichmentRun;
+    expect(run.scope).toBe('missing');
+    expect(run.total).toBe(1);
+  });
+
+  it('answers 201 for Everything, and reaches review with the film enriched', async () => {
+    const { baseUrl, movieId, storage } = await freshApi();
+
+    const response = await startLibrarySync(baseUrl, 'all');
+    const run = await reviewedRun(baseUrl);
+
+    expect(response.status).toBe(201);
+    expect(run.scope).toBe('all');
+    expect(run.enriched).toBe(1);
+    expect(storage.getMovie(movieId)?.tmdbId).toBe(550123);
+  });
+
+  it('answers 409 to a second start while one runs', async () => {
+    const { baseUrl, tmdbFetch } = await freshApi();
+    const release = holdNextSearch(tmdbFetch);
+
+    const first = await startLibrarySync(baseUrl, 'all');
+    const second = await startLibrarySync(baseUrl, 'missing');
+    release();
+
+    expect(first.status).toBe(201);
+    expect(second.status).toBe(409);
+  });
+});
+
+describe('POST /api/enrichment/current/cancel', () => {
+  it('answers 204 and drops the run', async () => {
+    const { baseUrl, tmdbFetch } = await freshApi();
+    const release = holdNextSearch(tmdbFetch);
+    await startLibrarySync(baseUrl, 'all');
+
+    const response = await fetch(`${baseUrl}/api/enrichment/current/cancel`, {
+      method: 'POST',
+    });
+    release();
+
+    expect(response.status).toBe(204);
+    expect((await fetch(`${baseUrl}/api/enrichment/current`)).status).toBe(404);
+  });
+
+  it('answers 204 with no run held', async () => {
+    const { baseUrl } = await freshApi();
+
+    const response = await fetch(`${baseUrl}/api/enrichment/current/cancel`, {
+      method: 'POST',
+    });
+
+    expect(response.status).toBe(204);
+  });
+
+  it('drops a finished run too, keeping what it wrote', async () => {
+    const { baseUrl, movieId, storage } = await freshApi();
+    await startLibrarySync(baseUrl, 'all');
+    await reviewedRun(baseUrl);
+
+    const response = await fetch(`${baseUrl}/api/enrichment/current/cancel`, {
+      method: 'POST',
+    });
+
+    expect(response.status).toBe(204);
+    expect((await fetch(`${baseUrl}/api/enrichment/current`)).status).toBe(404);
+    expect(storage.getMovie(movieId)?.tmdbId).toBe(550123);
+  });
+
+  it('lets a new start begin after it', async () => {
+    const { baseUrl, tmdbFetch } = await freshApi();
+    const release = holdNextSearch(tmdbFetch);
+    await startLibrarySync(baseUrl, 'all');
+
+    await fetch(`${baseUrl}/api/enrichment/current/cancel`, { method: 'POST' });
+    release();
+    const again = await startLibrarySync(baseUrl, 'all');
+
+    expect(again.status).toBe(201);
+  });
+});

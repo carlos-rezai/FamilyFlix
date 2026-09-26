@@ -144,3 +144,99 @@ describe('library: enrichMovie — the household’s own signals', () => {
     expect(storage.getMovie(id)?.status).toBe('watched');
   });
 });
+
+// 23 — Enrichment, Phase 3: "the whole library" (issue #205).
+//
+// `moviesInScope(scope)` — the titles a library-wide **Sync** snapshots, with
+// their current values: _Only what's missing_ (`missing`) is every film
+// without **Full details** — no synopsis, or no poster — and _Everything_
+// (`all`) is every film in the library.
+
+/** The titles a scope answers, sorted, so order is no part of the promise. */
+const titlesIn = (
+  storage: ReturnType<typeof freshStorage>,
+  scope: 'missing' | 'all'
+) =>
+  storage
+    .moviesInScope(scope)
+    .map((movie) => movie.title)
+    .sort();
+
+/** A library of four: one complete, one without a poster, one without a synopsis, one bare. */
+function fourFilms() {
+  const storage = freshStorage();
+  storage.addMovie(
+    newMovie({
+      title: 'Complete',
+      synopsis: 'Has everything.',
+      posterPath: 'complete/poster.jpg',
+    })
+  );
+  storage.addMovie(
+    newMovie({ title: 'No Poster', synopsis: 'Has only words.' })
+  );
+  storage.addMovie(
+    newMovie({ title: 'No Synopsis', posterPath: 'no-synopsis/poster.jpg' })
+  );
+  storage.addMovie(newMovie({ title: 'Bare' }));
+  return storage;
+}
+
+describe('library: moviesInScope — Only what’s missing', () => {
+  it('answers every film without a synopsis or without a poster', () => {
+    const storage = fourFilms();
+
+    expect(titlesIn(storage, 'missing')).toEqual([
+      'Bare',
+      'No Poster',
+      'No Synopsis',
+    ]);
+  });
+
+  it('leaves out a film with Full details', () => {
+    const storage = fourFilms();
+
+    expect(titlesIn(storage, 'missing')).not.toContain('Complete');
+  });
+
+  it('answers nothing when every film has Full details', () => {
+    const storage = freshStorage();
+    storage.addMovie(
+      newMovie({
+        title: 'Complete',
+        synopsis: 'Has everything.',
+        posterPath: 'complete/poster.jpg',
+      })
+    );
+
+    expect(storage.moviesInScope('missing')).toEqual([]);
+  });
+});
+
+describe('library: moviesInScope — Everything', () => {
+  it('answers every film in the library', () => {
+    const storage = fourFilms();
+
+    expect(titlesIn(storage, 'all')).toEqual([
+      'Bare',
+      'Complete',
+      'No Poster',
+      'No Synopsis',
+    ]);
+  });
+
+  it('answers each film with its current values', () => {
+    const storage = freshStorage();
+    const { id } = storage.addMovie(
+      newMovie({
+        title: 'Complete',
+        year: 2019,
+        synopsis: 'Has everything.',
+        posterPath: 'complete/poster.jpg',
+        director: 'Paul Verhoek',
+      })
+    );
+
+    expect(storage.moviesInScope('all')).toEqual([storage.getMovie(id)]);
+  });
+});
