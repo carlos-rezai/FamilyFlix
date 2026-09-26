@@ -57,12 +57,21 @@ export interface TmdbClient {
   searchMovie(
     key: string,
     title: string,
-    year: number | null
+    year: number | null,
+    signal?: AbortSignal
   ): Promise<TmdbOutcome<TmdbMovieResult[]>>;
   /** `/3/movie/{id}` with its credits appended. */
-  movie(key: string, id: number): Promise<TmdbOutcome<TmdbMovieDetail>>;
-  /** An image's bytes off `image.tmdb.org`, as a stream. */
-  image(path: string): Promise<TmdbOutcome<Readable>>;
+  movie(
+    key: string,
+    id: number,
+    signal?: AbortSignal
+  ): Promise<TmdbOutcome<TmdbMovieDetail>>;
+  /**
+   * An image's bytes off `image.tmdb.org`, as a stream. Each of the three
+   * takes the caller's signal last: aborting it aborts the request in flight,
+   * and the call still answers a value.
+   */
+  image(path: string, signal?: AbortSignal): Promise<TmdbOutcome<Readable>>;
 }
 
 export interface TmdbClientOptions {
@@ -88,7 +97,8 @@ export function createTmdbClient(
   async function get(
     path: string,
     key: string,
-    params: Record<string, string> = {}
+    params: Record<string, string> = {},
+    signal?: AbortSignal
   ): Promise<Response | null> {
     const url = new URL(path, TMDB_ORIGIN);
     for (const [name, value] of Object.entries(params)) {
@@ -102,19 +112,30 @@ export function createTmdbClient(
       url.searchParams.set('api_key', auth.apiKey);
     }
 
-    return send(url, headers);
+    return send(url, headers, signal);
   }
 
   /** One request under the timeout; `null` when nothing answered. */
-  async function send(url: URL, headers: Headers): Promise<Response | null> {
+  async function send(
+    url: URL,
+    headers: Headers,
+    signal?: AbortSignal
+  ): Promise<Response | null> {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
+    const onAbort = () => controller.abort();
+    if (signal?.aborted) {
+      controller.abort();
+    } else {
+      signal?.addEventListener('abort', onAbort, { once: true });
+    }
     try {
       return await fetchImpl(url, { headers, signal: controller.signal });
     } catch {
       return null;
     } finally {
       clearTimeout(timer);
+      signal?.removeEventListener('abort', onAbort);
     }
   }
 
@@ -133,14 +154,15 @@ export function createTmdbClient(
   async function searchMovie(
     key: string,
     title: string,
-    year: number | null
+    year: number | null,
+    signal?: AbortSignal
   ): Promise<TmdbOutcome<TmdbMovieResult[]>> {
     const params: Record<string, string> = { query: title, language: LANGUAGE };
     if (year !== null) {
       params.year = String(year);
     }
     const outcome = await json<{ results: TmdbMovieResult[] }>(
-      await get('/3/search/movie', key, params)
+      await get('/3/search/movie', key, params, signal)
     );
     return outcome.kind === 'ok'
       ? { kind: 'ok', value: outcome.value.results }
@@ -149,18 +171,28 @@ export function createTmdbClient(
 
   async function movie(
     key: string,
-    id: number
+    id: number,
+    signal?: AbortSignal
   ): Promise<TmdbOutcome<TmdbMovieDetail>> {
     return json<TmdbMovieDetail>(
-      await get(`/3/movie/${id}`, key, {
-        append_to_response: 'credits',
-        language: LANGUAGE,
-      })
+      await get(
+        `/3/movie/${id}`,
+        key,
+        { append_to_response: 'credits', language: LANGUAGE },
+        signal
+      )
     );
   }
 
-  async function image(path: string): Promise<TmdbOutcome<Readable>> {
-    const response = await send(new URL(`${IMAGE_BASE}${path}`), new Headers());
+  async function image(
+    path: string,
+    signal?: AbortSignal
+  ): Promise<TmdbOutcome<Readable>> {
+    const response = await send(
+      new URL(`${IMAGE_BASE}${path}`),
+      new Headers(),
+      signal
+    );
     if (response === null || !response.ok || response.body === null) {
       return { kind: 'unreachable' };
     }

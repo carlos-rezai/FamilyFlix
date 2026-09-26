@@ -54,3 +54,17 @@ export async function fetchCurrentEnrichment(): Promise<EnrichmentRun | null> {
 
   return (await response.json()) as EnrichmentRun;
 }
+
+const CANCEL_ENDPOINT = '/api/enrichment/current/cancel';
+
+/**
+ * _Stop_ and _Sync again_: drop the **Current enrichment run**, aborting its
+ * requests in flight. The route answers `204` whether or not one was held.
+ */
+export async function cancelEnrichment(): Promise<void> {
+  const response = await fetch(CANCEL_ENDPOINT, { method: 'POST' });
+
+  if (!response.ok) {
+    throw new Error(`POST ${CANCEL_ENDPOINT} failed: ${response.status}`);
+  }
+}

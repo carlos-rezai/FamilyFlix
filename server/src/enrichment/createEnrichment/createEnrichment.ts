@@ -56,6 +56,11 @@ export interface Enrichment {
   start(options: unknown): Promise<StartEnrichmentOutcome>;
   /** The **Current enrichment run**'s snapshot, or `null` when none is held. */
   current(): EnrichmentRun | null;
+  /**
+   * _Stop_: abort the request in flight and drop the run, running or
+   * finished. Every row already written stays. Harmless with no run held.
+   */
+  cancel(): void;
 }
 
 export interface EnrichmentDeps {
@@ -77,8 +82,8 @@ const FIELDS: readonly EnrichField[] = [
   'tmdbScore',
 ];
 
-/** The scopes this slice runs: one film at a time. */
-const SCOPES: readonly EnrichScope[] = ['single'];
+/** The three scopes: the library's gaps, all of it, or one film. */
+const SCOPES: readonly EnrichScope[] = ['missing', 'all', 'single'];
 
 /** The last lines of the log a snapshot carries, the importer's cap. */
 const LOG_CAP = 80;
@@ -97,8 +102,14 @@ function readOptions(
   if (!SCOPES.includes(scope as EnrichScope)) {
     return { ok: false, error: 'Unknown scope' };
   }
-  if (typeof movieId !== 'string' || movieId.length === 0) {
+  if (
+    scope === 'single' &&
+    (typeof movieId !== 'string' || movieId.length === 0)
+  ) {
     return { ok: false, error: 'A single-title Sync names its movie' };
+  }
+  if (scope !== 'single' && movieId !== undefined) {
+    return { ok: false, error: 'Only a single-title Sync names a movie' };
   }
   if (
     !Array.isArray(fields) ||
@@ -113,7 +124,7 @@ function readOptions(
     ok: true,
     options: {
       scope: scope as EnrichScope,
-      movieId,
+      ...(typeof movieId === 'string' ? { movieId } : {}),
       fields: fields as EnrichField[],
       writeSheet,
       writePosters,
@@ -175,6 +186,8 @@ export function createEnrichment({
   media,
 }: EnrichmentDeps): Enrichment {
   let run: EnrichmentRun | null = null;
+  /** Aborts the Current run's requests in flight — _Stop_'s handle. */
+  let abort: AbortController | null = null;
 
   function key(): string | null {
     return storage.tmdbKey();
@@ -204,7 +217,8 @@ export function createEnrichment({
   /** TMDB's detail for a movie: by its `tmdb_id`, else a Confident search. */
   async function lookUp(
     apiKey: string,
-    movie: Movie
+    movie: Movie,
+    signal: AbortSignal
   ): Promise<
     | { kind: 'found'; detail: TmdbMovieDetail }
     | { kind: 'unsettled'; reason: string }
@@ -212,7 +226,12 @@ export function createEnrichment({
   > {
     let id = movie.tmdbId;
     if (id === null) {
-      const search = await client.searchMovie(apiKey, movie.title, movie.year);
+      const search = await client.searchMovie(
+        apiKey,
+        movie.title,
+        movie.year,
+        signal
+      );
       if (search.kind !== 'ok') {
         return { kind: 'stop', stop: search.kind };
       }
@@ -227,7 +246,7 @@ export function createEnrichment({
         };
       }
     }
-    const detail = await client.movie(apiKey, id);
+    const detail = await client.movie(apiKey, id, signal);
     if (detail.kind !== 'ok') {
       return { kind: 'stop', stop: detail.kind };
     }
@@ -239,10 +258,11 @@ export function createEnrichment({
     current: EnrichmentRun,
     movie: Movie,
     path: string,
-    name: string
+    name: string,
+    signal: AbortSignal
   ): Promise<string | null> {
-    const image = await client.image(path);
-    if (image.kind !== 'ok') {
+    const image = await client.image(path, signal);
+    if (image.kind !== 'ok' || signal.aborted) {
       return null;
     }
     try {
@@ -259,7 +279,8 @@ export function createEnrichment({
     current: EnrichmentRun,
     movie: Movie,
     detail: TmdbMovieDetail,
-    fields: readonly EnrichField[]
+    fields: readonly EnrichField[],
+    signal: AbortSignal
   ): Promise<void> {
     const { fill } = planFields({
       current: currentFields(movie),
@@ -284,7 +305,8 @@ export function createEnrichment({
         current,
         movie,
         fill.poster,
-        'poster.jpg'
+        'poster.jpg',
+        signal
       );
       if (stored !== null) enrichment.posterPath = stored;
     }
@@ -293,12 +315,31 @@ export function createEnrichment({
         current,
         movie,
         fill.backdrop,
-        'backdrop.jpg'
+        'backdrop.jpg',
+        signal
       );
       if (stored !== null) enrichment.backdropPath = stored;
     }
 
+    // A Stop while the images streamed writes nothing more.
+    if (signal.aborted) return;
     storage.enrichMovie(movie.id, enrichment);
+  }
+
+  /** A title as the log names it: `Title (Year)`, or the title alone. */
+  function named(movie: Movie): string {
+    return movie.year === null ? movie.title : `${movie.title} (${movie.year})`;
+  }
+
+  /** The run ends into review, and the library remembers when it synced. */
+  function reachReview(current: EnrichmentRun): void {
+    current.currentItem = null;
+    current.phase = 'review';
+    try {
+      storage.setEnrichmentLastSyncedAt(new Date().toISOString());
+    } catch {
+      // A stamp that cannot be written never keeps a run from its review.
+    }
   }
 
   /** The run behind `start`: one title at a time, then review. */
@@ -306,36 +347,54 @@ export function createEnrichment({
     current: EnrichmentRun,
     apiKey: string,
     movies: readonly Movie[],
-    fields: readonly EnrichField[]
+    fields: readonly EnrichField[],
+    signal: AbortSignal
   ): Promise<void> {
+    let stopped = false;
     for (const movie of movies) {
       current.currentItem = movie.title;
-      const found = await lookUp(apiKey, movie);
+      const found = await lookUp(apiKey, movie, signal);
+      // A Stop dropped the run: nothing more is written or logged.
+      if (signal.aborted) return;
       if (found.kind === 'stop') {
         log(current, STOP_LINES[found.stop], 'error');
+        stopped = true;
         break;
       }
       if (found.kind === 'unsettled') {
         log(current, `⚠ ${movie.title} — ${found.reason}`, 'warning');
       } else {
         try {
-          await write(current, movie, found.detail, fields);
+          await write(current, movie, found.detail, fields, signal);
+          if (signal.aborted) return;
           current.enriched += 1;
-          log(current, `✓ Matched   ${movie.title}`, 'success');
+          log(current, `✓ Matched   ${named(movie)}`, 'success');
         } catch {
+          if (signal.aborted) return;
           log(current, `⚠ ${movie.title} — could not be saved`, 'warning');
         }
       }
       current.done += 1;
     }
 
-    current.currentItem = null;
-    log(
-      current,
-      `✓ Sync complete — ${current.enriched} enriched, ${current.decisions.length} need a decision.`,
-      'success'
-    );
-    current.phase = 'review';
+    if (!stopped) {
+      log(
+        current,
+        `✓ Sync complete — ${current.enriched} enriched, ${current.decisions.length} need a decision.`,
+        'success'
+      );
+    }
+    reachReview(current);
+  }
+
+  /** The titles a start's options name, snapshotted; `null` for no movie. */
+  function titlesFor(options: StartEnrichment): Movie[] | null {
+    if (options.scope !== 'single') {
+      return storage.moviesInScope(options.scope);
+    }
+    const movie =
+      options.movieId === undefined ? null : storage.getMovie(options.movieId);
+    return movie === null ? null : [movie];
   }
 
   async function start(body: unknown): Promise<StartEnrichmentOutcome> {
@@ -351,13 +410,11 @@ export function createEnrichment({
       return { kind: 'no-key' };
     }
     const { options } = read;
-    const movie =
-      options.movieId === undefined ? null : storage.getMovie(options.movieId);
-    if (movie === null) {
+    const movies = titlesFor(options);
+    if (movies === null) {
       return { kind: 'bad-body', error: 'No such movie' };
     }
 
-    const movies = [movie];
     const current: EnrichmentRun = {
       id: randomUUID(),
       phase: 'running',
@@ -378,12 +435,15 @@ export function createEnrichment({
       'info'
     );
     run = current;
+    const controller = new AbortController();
+    abort = controller;
     const snapshot = structuredClone(current);
 
-    void go(current, apiKey, movies, options.fields).catch(() => {
-      current.currentItem = null;
-      current.phase = 'review';
-    });
+    void go(current, apiKey, movies, options.fields, controller.signal).catch(
+      () => {
+        if (!controller.signal.aborted) reachReview(current);
+      }
+    );
 
     return { kind: 'started', run: snapshot };
   }
@@ -392,5 +452,11 @@ export function createEnrichment({
     return run === null ? null : structuredClone(run);
   }
 
-  return { key, saveKey, start, current };
+  function cancel(): void {
+    abort?.abort();
+    abort = null;
+    run = null;
+  }
+
+  return { key, saveKey, start, current, cancel };
 }

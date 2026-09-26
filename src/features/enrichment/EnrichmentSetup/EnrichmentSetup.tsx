@@ -1,4 +1,4 @@
-import type { EnrichField } from '@/types';
+import type { EnrichField, EnrichScope } from '@/types';
 import { Button, Chip } from '@/primitives';
 import {
   Chips,
@@ -33,38 +33,85 @@ export const ENRICH_FIELDS: ReadonlyArray<{
   { field: 'tmdbScore', label: 'TMDB score' },
 ];
 
+/** The two library scopes, as the prototype's `scopeDefs` names them. */
+const LIBRARY_SCOPES: ReadonlyArray<{
+  scope: Exclude<EnrichScope, 'single'>;
+  label: string;
+  description: string;
+}> = [
+  {
+    scope: 'missing',
+    label: 'Only what’s missing',
+    description: 'Titles with no synopsis or artwork',
+  },
+  {
+    scope: 'all',
+    label: 'Everything',
+    description: 'Every title — re-checks ones already filled in',
+  },
+];
+
 export interface EnrichmentSetupProps {
+  /** The scope chosen — `single` draws _Just this movie_ alone. */
+  scope: EnrichScope;
   /** The film's title, once read — the _Just this movie_ card's line. */
   title: string | null;
   /** The chips that are on. */
   fields: readonly EnrichField[];
+  onChooseScope: (scope: EnrichScope) => void;
   onToggleField: (field: EnrichField) => void;
   onStart: () => void;
 }
 
 /**
- * The **Setup step** for one film, from `feat.EnrichmentFlow.dc.html`: the
- * _Just this movie_ card in place of the two library scopes, the field chips
- * with the rating note, and Start — _Fetch details_ — with its estimate.
+ * The **Setup step**, from `feat.EnrichmentFlow.dc.html`: the scope cards —
+ * _Only what's missing_ and _Everything_ for the library, or _Just this
+ * movie_ in their place for one film — the field chips with the rating note,
+ * and Start: _Start sync_, or _Fetch details_ with its estimate for one film.
  */
 export function EnrichmentSetup({
+  scope,
   title,
   fields,
+  onChooseScope,
   onToggleField,
   onStart,
 }: EnrichmentSetupProps) {
+  const single = scope === 'single';
   return (
     <Stack>
       <div>
         <GroupLabel>What to sync</GroupLabel>
         <Scopes role="radiogroup" aria-label="What to sync">
-          <ScopeCard type="button" role="radio" aria-checked $selected>
-            <ScopeTitle>
-              <ScopeDot aria-hidden="true" $selected />
-              <ScopeLabel>Just this movie</ScopeLabel>
-            </ScopeTitle>
-            <ScopeDescription>{title ?? ''}</ScopeDescription>
-          </ScopeCard>
+          {single ? (
+            <ScopeCard type="button" role="radio" aria-checked $selected>
+              <ScopeTitle>
+                <ScopeDot aria-hidden="true" $selected />
+                <ScopeLabel>Just this movie</ScopeLabel>
+              </ScopeTitle>
+              <ScopeDescription>{title ?? ''}</ScopeDescription>
+            </ScopeCard>
+          ) : (
+            LIBRARY_SCOPES.map((each) => {
+              const selected = each.scope === scope;
+              return (
+                <ScopeCard
+                  key={each.scope}
+                  type="button"
+                  role="radio"
+                  aria-checked={selected}
+                  $selected={selected}
+                  onClick={() => onChooseScope(each.scope)}
+                >
+                  <ScopeTitle>
+                    <ScopeDot aria-hidden="true" $selected={selected} />
+                    <ScopeLabel>{each.label}</ScopeLabel>
+                  </ScopeTitle>
+                  <ScopeDescription>{each.description}</ScopeDescription>
+                </ScopeCard>
+              );
+            })
+          )}
         </Scopes>
       </div>
 
@@ -87,8 +134,12 @@ export function EnrichmentSetup({
       </div>
 
       <StartRow>
-        <Button label="Fetch details" variant="primary" onClick={onStart} />
-        <Estimate>About 1s for 1 title</Estimate>
+        <Button
+          label={single ? 'Fetch details' : 'Start sync'}
+          variant="primary"
+          onClick={onStart}
+        />
+        {single ? <Estimate>About 1s for 1 title</Estimate> : null}
       </StartRow>
     </Stack>
   );

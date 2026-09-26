@@ -69,6 +69,11 @@ export interface LibraryStorage {
    */
   enrichMovie(id: string, fields: MovieEnrichment): void;
   /**
+   * The titles a library-wide **Sync** snapshots, with their current values:
+   * `missing` — every film without a synopsis or without a poster — or `all`.
+   */
+  moviesInScope(scope: 'missing' | 'all'): Movie[];
+  /**
    * Delete a movie, cascading to its `movie_genres` and `subtitles` rows so no
    * orphans remain. A silent, idempotent no-op for an unknown id.
    */
@@ -198,6 +203,10 @@ export interface LibraryStorage {
   tmdbKey(): string | null;
   /** Store the TMDB key — an upsert, so the second write replaces the first. */
   setTmdbKey(key: string): void;
+  /** When a Sync last reached review, as an ISO string; `null` for never. */
+  enrichmentLastSyncedAt(): string | null;
+  /** Stamp when a Sync reached review — an upsert, like the key. */
+  setEnrichmentLastSyncedAt(at: string): void;
   /**
    * Insert a **Series** and its genres (ordered) in one transaction, and
    * return the assembled model. It carries no watch state: that lives on its
@@ -255,7 +264,7 @@ export function createSqliteStorage(dbPath: string): LibraryStorage {
   const watch = createWatch(db);
   const curation = createCuration(db);
   const settingsRepository = createSettings(db);
-  const enrich = createEnrich(db);
+  const enrich = createEnrich(db, reader);
   const seriesReader = createSeriesReader(db);
   const seriesBrowse = createSeriesBrowse(db, seriesReader);
   const seriesWrite = createSeriesWrite(db, seriesReader);
@@ -266,6 +275,7 @@ export function createSqliteStorage(dbPath: string): LibraryStorage {
     addMovie: write.addMovie,
     updateMovie: write.updateMovie,
     enrichMovie: enrich.enrichMovie,
+    moviesInScope: enrich.moviesInScope,
     deleteMovie: write.deleteMovie,
     getMovie: reader.getMovie,
     listMovies: browse.listMovies,
@@ -287,6 +297,8 @@ export function createSqliteStorage(dbPath: string): LibraryStorage {
     setSubtitleLanguage: settingsRepository.setSubtitleLanguage,
     tmdbKey: settingsRepository.tmdbKey,
     setTmdbKey: settingsRepository.setTmdbKey,
+    enrichmentLastSyncedAt: settingsRepository.enrichmentLastSyncedAt,
+    setEnrichmentLastSyncedAt: settingsRepository.setEnrichmentLastSyncedAt,
     addSeries: seriesWrite.addSeries,
     addEpisode: seriesWrite.addEpisode,
     setSeriesFavorite: seriesCuration.setSeriesFavorite,

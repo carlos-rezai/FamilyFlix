@@ -4,7 +4,7 @@ import { useSearchParams } from 'react-router-dom';
 import { fetchMovie } from '@/api/fetchMovie/fetchMovie';
 import { useGoBack } from '@/hooks/useGoBack/useGoBack';
 import { ChevronLeftIcon, IconButton } from '@/primitives';
-import type { EnrichField } from '@/types';
+import type { EnrichField, EnrichScope } from '@/types';
 import { moviePath } from '@/utils';
 import { EnrichmentProgress } from '../EnrichmentProgress/EnrichmentProgress';
 import { EnrichmentReview } from '../EnrichmentReview/EnrichmentReview';
@@ -23,6 +23,10 @@ const ALL_FIELDS: EnrichField[] = ENRICH_FIELDS.map(({ field }) => field);
  * header row — Back, _Sync with TMDB_, the lede — over one of three steps,
  * `ImportFlow`'s shape.
  *
+ * Opened with no movie it is a library-wide Sync: setup offers _Only what's
+ * missing_ (the default) and _Everything_, Start reads _Start sync_, and Back
+ * lands on Settings. _Stop_ and _Sync again_ both drop the run and show setup.
+ *
  * Opened with `?movie=<id>` it is the `single` **Enrichment scope**: setup
  * names the film under _Just this movie_, Start reads _Fetch details_, and
  * review's Finish is _Back to the movie_. Back and Finish both follow the
@@ -33,10 +37,12 @@ export function EnrichmentFlow() {
   const [params] = useSearchParams();
   const movieId = params.get('movie');
   const goBack = useGoBack(movieId === null ? '/settings' : moviePath(movieId));
-  const { run, start, reset } = useEnrichmentRun();
+  const { run, start, cancel } = useEnrichmentRun();
 
   const [title, setTitle] = useState<string | null>(null);
   const [fields, setFields] = useState<EnrichField[]>(ALL_FIELDS);
+  const [libraryScope, setLibraryScope] = useState<EnrichScope>('missing');
+  const scope: EnrichScope = movieId === null ? libraryScope : 'single';
 
   useEffect(() => {
     if (movieId === null) {
@@ -66,19 +72,16 @@ export function EnrichmentFlow() {
   }, []);
 
   const onStart = useCallback(() => {
-    if (movieId === null) {
-      return;
-    }
     void start({
-      scope: 'single',
-      movieId,
+      scope,
+      ...(scope === 'single' && movieId !== null ? { movieId } : {}),
       fields,
       writeSheet: false,
       writePosters: false,
     }).catch(() => {
       // A refused start leaves the setup where it is, to press again.
     });
-  }, [start, movieId, fields]);
+  }, [start, scope, movieId, fields]);
 
   return (
     <>
@@ -101,8 +104,10 @@ export function EnrichmentFlow() {
 
       {run === null ? (
         <EnrichmentSetup
+          scope={scope}
           title={title}
           fields={fields}
+          onChooseScope={setLibraryScope}
           onToggleField={onToggleField}
           onStart={onStart}
         />
@@ -111,10 +116,10 @@ export function EnrichmentFlow() {
           run={run}
           finishLabel={movieId === null ? 'Done' : 'Back to the movie'}
           onFinish={goBack}
-          onAgain={reset}
+          onAgain={cancel}
         />
       ) : (
-        <EnrichmentProgress run={run} />
+        <EnrichmentProgress run={run} onStop={cancel} />
       )}
     </>
   );

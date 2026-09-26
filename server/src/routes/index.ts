@@ -1306,6 +1306,13 @@ export function createApiRouter(
     res.json(run);
   });
 
+  // _Stop_: `204` whether or not a run is held — the requests in flight are
+  // aborted and the run dropped; every row already written stays.
+  router.post('/enrichment/current/cancel', (_req: Request, res: Response) => {
+    enrichment.cancel();
+    res.status(204).end();
+  });
+
   // The **Storage report** — `{ mediaPath, bytesUsed, movieCount }` — three
   // reads the router already holds, composed; nothing new is injected. The
   // media path is resolved to absolute at request time — even one the server

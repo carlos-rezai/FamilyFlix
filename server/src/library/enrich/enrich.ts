@@ -1,4 +1,6 @@
 import type { SqliteDatabase } from '../../db';
+import type { EnrichScope, Movie } from '@/types';
+import type { MovieReader, MovieRow } from '../read/read';
 
 /**
  * What a **Sync** may write on a **Movie**, and nothing else: no `rating`, no
@@ -45,9 +47,19 @@ export interface Enrich {
    * is narrower.
    */
   enrichMovie(id: string, fields: MovieEnrichment): void;
+  /**
+   * The titles a library-wide Sync snapshots, with their current values:
+   * `missing` is every film without **Full details** (a synopsis and a
+   * poster), `all` every film.
+   */
+  moviesInScope(scope: Exclude<EnrichScope, 'single'>): Movie[];
 }
 
-export function createEnrich(db: SqliteDatabase): Enrich {
+/** No synopsis or no poster: a film without **Full details**. */
+const MISSING_WHERE =
+  "WHERE m.synopsis IS NULL OR m.synopsis = '' OR m.poster_path IS NULL OR m.poster_path = ''";
+
+export function createEnrich(db: SqliteDatabase, reader: MovieReader): Enrich {
   const selectGenreIdByName = db.prepare(
     'SELECT id FROM genres WHERE name = ?'
   );
@@ -88,5 +100,15 @@ export function createEnrich(db: SqliteDatabase): Enrich {
     }
   });
 
-  return { enrichMovie };
+  function moviesInScope(scope: Exclude<EnrichScope, 'single'>): Movie[] {
+    const where = scope === 'missing' ? MISSING_WHERE : '';
+    const rows = db
+      .prepare(
+        `SELECT m.* FROM movies m ${where} ORDER BY m.title COLLATE NOCASE, m.id`
+      )
+      .all() as MovieRow[];
+    return reader.assembleMany(rows, where, []);
+  }
+
+  return { enrichMovie, moviesInScope };
 }
