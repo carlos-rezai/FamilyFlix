@@ -127,3 +127,64 @@ describe('library: setSubtitleLanguage — the upsert', () => {
     expect(second.settings()).toEqual({ subtitleLanguage: 'Portuguese' });
   });
 });
+
+// 23 — Enrichment, Phase 1: "the TMDB key" (issue #203).
+//
+// The maintainer's TMDB key lives in the same `settings` table under
+// `tmdb-api-key`, read and written through the same repository. It is not a
+// household preference: `settings()` — which the player reads through
+// `GET /api/settings` — never carries it, and it reads `null` when absent
+// rather than any default.
+describe('library: tmdbKey / setTmdbKey — the TMDB key', () => {
+  it('answers null on a fresh database', () => {
+    const storage = freshStorage();
+
+    expect(storage.tmdbKey()).toBeNull();
+  });
+
+  it('stores the key and reads it back', () => {
+    const storage = freshStorage();
+
+    storage.setTmdbKey('0123456789abcdef0123456789abcdef');
+
+    expect(storage.tmdbKey()).toBe('0123456789abcdef0123456789abcdef');
+  });
+
+  it('replaces the key already held rather than refusing the key', () => {
+    const storage = freshStorage();
+    storage.setTmdbKey('first-key');
+
+    storage.setTmdbKey('second-key');
+
+    expect(storage.tmdbKey()).toBe('second-key');
+  });
+
+  it('leaves the household settings exactly as they were', () => {
+    const storage = freshStorage();
+    storage.setSubtitleLanguage('French');
+
+    storage.setTmdbKey('0123456789abcdef0123456789abcdef');
+
+    expect(storage.settings()).toEqual({ subtitleLanguage: 'French' });
+  });
+
+  it('is untouched by a subtitle language write', () => {
+    const storage = freshStorage();
+    storage.setTmdbKey('kept-key');
+
+    storage.setSubtitleLanguage('German');
+
+    expect(storage.tmdbKey()).toBe('kept-key');
+  });
+
+  it('survives closing and reopening the database', () => {
+    const path = tempDbPath();
+    const first = track(createSqliteStorage(path));
+    first.setTmdbKey('kept-across-restarts');
+    first.close();
+
+    const second = track(createSqliteStorage(path));
+
+    expect(second.tmdbKey()).toBe('kept-across-restarts');
+  });
+});

@@ -8,6 +8,7 @@ import type { PlaybackCapabilities, Settings, StorageReport } from '@/types';
 import { theme } from '@/styles/theme';
 import { comesBefore } from '@/test-support/comesBefore/comesBefore';
 import { okResponse } from '@/test-support/fakeResponse/fakeResponse';
+import { SnackbarProvider } from '@/App/SnackbarProvider/SnackbarProvider';
 
 /** The **Codec report** the Playback card reads on mount. */
 const REPORT: PlaybackCapabilities = {
@@ -51,6 +52,9 @@ beforeEach(() => {
       if (url === '/api/storage') {
         return Promise.resolve(okResponse(STORAGE));
       }
+      if (url === '/api/tmdb/key') {
+        return Promise.resolve(okResponse({ key: null }));
+      }
       return Promise.resolve(okResponse(REPORT));
     });
   vi.stubGlobal('fetch', fetchMock);
@@ -64,7 +68,9 @@ function renderPage() {
   return render(
     <MemoryRouter initialEntries={['/settings']}>
       <ThemeProvider theme={theme}>
-        <SettingsPage />
+        <SnackbarProvider>
+          <SettingsPage />
+        </SnackbarProvider>
       </ThemeProvider>
     </MemoryRouter>
   );
@@ -149,7 +155,9 @@ describe('SettingsPage', () => {
     expect(
       screen.getByRole('button', { name: /export to csv/i })
     ).toBeDefined();
-    expect(screen.getAllByRole('button')).toHaveLength(5);
+    // 23 — Enrichment, Phase 1 (issue #203): the Network card adds one, Test
+    // connection.
+    expect(screen.getAllByRole('button')).toHaveLength(6);
   });
 
   it('composes the Storage section under the Playback section', () => {
@@ -170,18 +178,42 @@ describe('SettingsPage', () => {
     ).toBe(true);
   });
 
-  it('shows LIBRARY, PLAYBACK, STORAGE, ABOUT in order', () => {
+  it('composes the Network section between Playback and Storage', () => {
     renderPage();
 
-    const headings = ['Library', 'Playback', 'Storage', 'About'].map((name) =>
-      screen.getByText(name)
+    // 23 — Enrichment, Phase 1 (issue #203): the fifth Settings group, a
+    // Section card titled The Movie Database (TMDB) over the key field.
+    expect(screen.getByText('Network')).toBeDefined();
+    expect(screen.getByText('The Movie Database (TMDB)')).toBeDefined();
+    expect(
+      comesBefore(screen.getByText('Playback'), screen.getByText('Network'))
+    ).toBe(true);
+    expect(
+      comesBefore(
+        screen.getByText('Preferred language'),
+        screen.getByText('Network')
+      )
+    ).toBe(true);
+    expect(
+      comesBefore(
+        screen.getByText('The Movie Database (TMDB)'),
+        screen.getByText('Storage')
+      )
+    ).toBe(true);
+  });
+
+  it('shows LIBRARY, PLAYBACK, NETWORK, STORAGE, ABOUT in order', () => {
+    renderPage();
+
+    const headings = ['Library', 'Playback', 'Network', 'Storage', 'About'].map(
+      (name) => screen.getByText(name)
     );
     for (const heading of headings) {
       expect(getComputedStyle(heading).textTransform).toBe('uppercase');
     }
-    expect(comesBefore(headings[0], headings[1])).toBe(true);
-    expect(comesBefore(headings[1], headings[2])).toBe(true);
-    expect(comesBefore(headings[2], headings[3])).toBe(true);
+    for (let i = 1; i < headings.length; i += 1) {
+      expect(comesBefore(headings[i - 1], headings[i])).toBe(true);
+    }
   });
 
   it('draws the storage report on the page once it lands', async () => {
@@ -220,7 +252,7 @@ describe('SettingsPage', () => {
     expect(screen.getByText('Offline · local-only · no account')).toBeDefined();
   });
 
-  it('composes the five sections and nothing else', async () => {
+  it('composes the six sections and nothing else', async () => {
     renderPage();
 
     // No Change… on the Storage card, and no Software update row: neither
@@ -233,17 +265,22 @@ describe('SettingsPage', () => {
     expect(screen.queryByText(/up to date/i)).toBeNull();
     expect(screen.queryByRole('button', { name: /update/i })).toBeNull();
     // Back, two "Add a movie"s, Import, Export — and the Preferred language
-    // pill once the settings land; Storage and About add none.
+    // pill once the settings land; Network adds Test connection; Storage and
+    // About add none.
     await waitFor(() =>
       expect(
         screen.getByRole('button', { name: /^Preferred language: / })
       ).toBeDefined()
     );
-    expect(screen.getAllByRole('button')).toHaveLength(6);
-    // Four Group headings, and only four.
-    const groupHeadings = ['Library', 'Playback', 'Storage', 'About'].map(
-      (name) => screen.getByText(name)
-    );
+    expect(screen.getAllByRole('button')).toHaveLength(7);
+    // Five Group headings, and only five.
+    const groupHeadings = [
+      'Library',
+      'Playback',
+      'Network',
+      'Storage',
+      'About',
+    ].map((name) => screen.getByText(name));
     const uppercased = Array.from(document.body.querySelectorAll('div')).filter(
       (element) =>
         getComputedStyle(element).textTransform === 'uppercase' &&
