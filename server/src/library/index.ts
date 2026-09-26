@@ -183,6 +183,14 @@ export interface LibraryStorage {
    */
   setSubtitleLanguage(language: string): void;
   /**
+   * The maintainer's TMDB key, `null` when none is stored — no default. Kept
+   * in the same `settings` table but not a household preference, so
+   * `settings()` never carries it.
+   */
+  tmdbKey(): string | null;
+  /** Store the TMDB key — an upsert, so the second write replaces the first. */
+  setTmdbKey(key: string): void;
+  /**
    * Insert a **Series** and its genres (ordered) in one transaction, and
    * return the assembled model. It carries no watch state: that lives on its
    * episodes.
@@ -267,6 +275,8 @@ export function createSqliteStorage(dbPath: string): LibraryStorage {
     setRating: curation.setRating,
     settings: settingsRepository.settings,
     setSubtitleLanguage: settingsRepository.setSubtitleLanguage,
+    tmdbKey: settingsRepository.tmdbKey,
+    setTmdbKey: settingsRepository.setTmdbKey,
     addSeries: seriesWrite.addSeries,
     addEpisode: seriesWrite.addEpisode,
     setSeriesFavorite: seriesCuration.setSeriesFavorite,

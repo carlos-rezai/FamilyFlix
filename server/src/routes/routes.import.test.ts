@@ -31,6 +31,8 @@ import { join } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { createApiRouter } from '.';
+import { createEnrichment } from '../enrichment/createEnrichment/createEnrichment';
+import { offlineTmdb } from '../test-support/offlineTmdb/offlineTmdb';
 import {
   createImporter,
   type Importer,
@@ -121,7 +123,8 @@ function freshApi({
       media,
       playback,
       mediaDomain,
-      importer ? importer(composed) : composed
+      importer ? importer(composed) : composed,
+      createEnrichment({ storage, client: offlineTmdb() })
     )
   );
 

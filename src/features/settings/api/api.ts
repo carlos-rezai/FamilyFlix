@@ -161,3 +161,56 @@ function isLanguageEcho(echoed: unknown): echoed is string {
 export function saveSubtitleLanguage(language: string): Promise<string> {
   return postValue(SUBTITLE_LANGUAGE_ENDPOINT, language, isLanguageEcho);
 }
+
+/** Where the maintainer's TMDB key is read, and tested and saved in one. */
+const TMDB_KEY_ENDPOINT = '/api/tmdb/key';
+
+/**
+ * The stored TMDB key — `GET /api/tmdb/key`, `null` when none is stored. A
+ * status that is not OK rejects; the one caller, `useTmdbKey`, keeps the
+ * field empty on that.
+ */
+export async function fetchTmdbKey(): Promise<string | null> {
+  const response = await fetch(TMDB_KEY_ENDPOINT);
+
+  if (!response.ok) {
+    throw new Error(`GET ${TMDB_KEY_ENDPOINT} failed: ${response.status}`);
+  }
+
+  const { key } = (await response.json()) as { key: string | null };
+  return key;
+}
+
+/** What testing a key came to: stored, refused by TMDB, or TMDB not reached. */
+export type TmdbKeyOutcome =
+  | { kind: 'saved'; key: string }
+  | { kind: 'refused' }
+  | { kind: 'unreachable' };
+
+/**
+ * The test and the save in one — `POST /api/tmdb/key { key }`. Never rejects:
+ * a `200` is the stored key's echo, a `422` TMDB's refusal, and anything else
+ * — the `503`, a failed request — is TMDB not reached.
+ */
+export async function saveTmdbKey(key: string): Promise<TmdbKeyOutcome> {
+  try {
+    const response = await fetch(TMDB_KEY_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ key }),
+    });
+
+    if (response.ok) {
+      const echo = (await response.json()) as { key?: unknown };
+      return {
+        kind: 'saved',
+        key: typeof echo.key === 'string' ? echo.key : key,
+      };
+    }
+    return response.status === 422
+      ? { kind: 'refused' }
+      : { kind: 'unreachable' };
+  } catch {
+    return { kind: 'unreachable' };
+  }
+}

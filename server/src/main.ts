@@ -1,5 +1,7 @@
 import express from 'express';
 
+import { createEnrichment } from './enrichment/createEnrichment/createEnrichment';
+import { createTmdbClient } from './enrichment/tmdbClient/tmdbClient';
 import { createImporter } from './import-export/createImporter/createImporter';
 import { createSqliteStorage } from './library';
 import { createMedia } from './media/createMedia/createMedia';
@@ -48,7 +50,9 @@ app.use(
     // The import domain over the same library and managed directory the
     // routes write through, so an imported film is a hand-added one to every
     // read in the app.
-    createImporter({ storage, media, playback })
+    createImporter({ storage, media, playback }),
+    // The one domain that goes online, over the global `fetch`.
+    createEnrichment({ storage, client: createTmdbClient(fetch) })
   )
 );
 

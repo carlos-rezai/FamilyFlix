@@ -45,6 +45,8 @@ import { Readable } from 'node:stream';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { createApiRouter } from '.';
+import { createEnrichment } from '../enrichment/createEnrichment/createEnrichment';
+import { offlineTmdb } from '../test-support/offlineTmdb/offlineTmdb';
 import { createImporter } from '../import-export/createImporter/createImporter';
 import { readSheet } from '../import-export/readSheet/readSheet';
 import { createMedia } from '../media/createMedia/createMedia';
@@ -112,7 +114,8 @@ function freshApi(): {
       media,
       playback,
       mediaDomain,
-      createImporter({ storage, media: mediaDomain, playback })
+      createImporter({ storage, media: mediaDomain, playback }),
+      createEnrichment({ storage, client: offlineTmdb() })
     )
   );
 

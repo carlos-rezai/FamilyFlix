@@ -67,6 +67,8 @@ import { Readable } from 'node:stream';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { createApiRouter } from '.';
+import { createEnrichment } from '../enrichment/createEnrichment/createEnrichment';
+import { offlineTmdb } from '../test-support/offlineTmdb/offlineTmdb';
 import { createImporter } from '../import-export/createImporter/createImporter';
 import { createMedia } from '../media/createMedia/createMedia';
 import type {
@@ -168,7 +170,8 @@ function freshApi({
       mediaPath ?? media,
       playback,
       mediaDomain,
-      createImporter({ storage, media: mediaDomain, playback })
+      createImporter({ storage, media: mediaDomain, playback }),
+      createEnrichment({ storage, client: offlineTmdb() })
     )
   );
 
@@ -774,8 +777,9 @@ describe('POST /api/playback/component — the pair goes live', () => {
     // Nothing new is injected for this route: it reaches the **Component
     // slot** through the `playback` the router was composed with. A sixth
     // argument here would be a second resolution of the component, and the
-    // report and pressing Play could then disagree.
-    expect(createApiRouter).toHaveLength(5);
+    // report and pressing Play could then disagree. (The sixth the router does
+    // take is the `enrichment/` domain, issue #203 — not the component.)
+    expect(createApiRouter).toHaveLength(6);
 
     const { baseUrl } = freshApi({ slot: uploadableSlot().slot });
 
@@ -958,8 +962,9 @@ describe('POST /api/playback/component — what the router was composed with', (
     // The route reaches the **Component slot** through the `playback` the
     // router already holds. A fifth thing injected here would be a second
     // resolution of the component, and the report and pressing Play could
-    // then disagree.
-    expect(createApiRouter).toHaveLength(5);
+    // then disagree. (The sixth the router does take is the `enrichment/`
+    // domain, issue #203 — not the component.)
+    expect(createApiRouter).toHaveLength(6);
   });
 });
 

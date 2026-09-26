@@ -23,6 +23,8 @@ import { join } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { createApiRouter } from '.';
+import { createEnrichment } from '../enrichment/createEnrichment/createEnrichment';
+import { offlineTmdb } from '../test-support/offlineTmdb/offlineTmdb';
 import { createImporter } from '../import-export/createImporter/createImporter';
 import { createMedia } from '../media/createMedia/createMedia';
 import { createPlayback } from '../playback/createPlayback/createPlayback';
@@ -66,7 +68,8 @@ function freshApi(): { storage: LibraryStorage; baseUrl: string } {
       media,
       playback,
       mediaDomain,
-      createImporter({ storage, media: mediaDomain, playback })
+      createImporter({ storage, media: mediaDomain, playback }),
+      createEnrichment({ storage, client: offlineTmdb() })
     )
   );
   const server = app.listen(0);

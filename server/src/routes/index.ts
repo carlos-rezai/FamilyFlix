@@ -1,6 +1,10 @@
 import { resolve } from 'node:path';
 import { pipeline } from 'node:stream';
 
+import type {
+  Enrichment,
+  SaveKeyOutcome,
+} from '../enrichment/createEnrichment/createEnrichment';
 import express, { type Request, type Response, type Router } from 'express';
 
 import type { LibraryStorage } from '../library';
@@ -424,6 +428,16 @@ function streamOffset(value: unknown): number | null {
   return Number.isFinite(seconds) && seconds >= 0 ? seconds : null;
 }
 
+/** What each refused TMDB key answers with. */
+const KEY_REFUSALS: Record<
+  Exclude<SaveKeyOutcome['kind'], 'saved'>,
+  { status: number; error: string }
+> = {
+  empty: { status: 400, error: 'Body must be { key: string }, not empty' },
+  refused: { status: 422, error: "TMDB didn't accept that key" },
+  unreachable: { status: 503, error: "Couldn't reach TMDB" },
+};
+
 /**
  * Mount the JSON API over a {@link LibraryStorage}. Handlers stay thin — parse
  * the request, call one repository method, serialize the result — so the
@@ -448,7 +462,10 @@ function streamOffset(value: unknown): number | null {
  * import routes hand it a sheet path and a root path and answer with the
  * snapshot it holds, and never learn there is a spreadsheet, a walker or a copy.
  *
- * All five are required, `media` included. It used to default to the domain over
+ * `enrichment` is the fifth domain, injected so no route learns there is a
+ * TMDB: the key routes hand it what was pasted and map the value it answers.
+ *
+ * All six are required, `media` included. It used to default to the domain over
  * `mediaPath` so that a test could compose the router with three arguments —
  * which made it a seam pointed at the tests rather than at the app, and left two
  * places able to decide what the router is made of. `playback`, the seam this
@@ -460,7 +477,8 @@ export function createApiRouter(
   mediaPath: string,
   playback: Playback,
   media: Media,
-  importer: Importer
+  importer: Importer,
+  enrichment: Enrichment
 ): Router {
   const router = express.Router();
 
@@ -1230,6 +1248,27 @@ export function createApiRouter(
 
     storage.setSubtitleLanguage(value);
     res.json({ value });
+  });
+
+  // The TMDB key, the `enrichment/` domain's. `GET /api/settings` is not
+  // widened: the key is the maintainer's, not a household preference, and the
+  // player never reads it.
+  router.get('/tmdb/key', (_req: Request, res: Response) => {
+    res.json({ key: enrichment.key() });
+  });
+
+  // The test and the save in one: `200 { key }` and stored only when TMDB
+  // accepts it; `400` empty, `422` refused, `503` unreachable — a refused or
+  // unreachable key leaves the stored one as it was.
+  router.post('/tmdb/key', async (req: Request, res: Response) => {
+    const { key } = (req.body ?? {}) as { key?: unknown };
+    const outcome = await enrichment.saveKey(key);
+    if (outcome.kind === 'saved') {
+      res.json({ key: outcome.key });
+      return;
+    }
+    const refused = KEY_REFUSALS[outcome.kind];
+    res.status(refused.status).json({ error: refused.error });
   });
 
   // The **Storage report** — `{ mediaPath, bytesUsed, movieCount }` — three

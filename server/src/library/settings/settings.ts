@@ -1,8 +1,10 @@
 import type { SqliteDatabase } from '../../db';
 import { DEFAULT_SUBTITLE_LANGUAGE, type Settings } from '@/types';
 
-/** The `settings` table's one key today. */
+/** The household's preferred subtitle language. */
 const SUBTITLE_LANGUAGE_KEY = 'subtitle-language';
+/** The maintainer's TMDB key — beside the preferences, never one of them. */
+const TMDB_KEY = 'tmdb-api-key';
 
 /**
  * The settings slice: the household's preferences, read as one `Settings` with
@@ -12,6 +14,8 @@ const SUBTITLE_LANGUAGE_KEY = 'subtitle-language';
 export interface SettingsRepository {
   settings(): Settings;
   setSubtitleLanguage(language: string): void;
+  tmdbKey(): string | null;
+  setTmdbKey(key: string): void;
 }
 
 export function createSettings(db: SqliteDatabase): SettingsRepository {
@@ -35,5 +39,14 @@ export function createSettings(db: SqliteDatabase): SettingsRepository {
     upsertValue.run(SUBTITLE_LANGUAGE_KEY, language);
   }
 
-  return { settings, setSubtitleLanguage };
+  function tmdbKey(): string | null {
+    const row = selectValue.get(TMDB_KEY) as { value: string } | undefined;
+    return row?.value ?? null;
+  }
+
+  function setTmdbKey(key: string): void {
+    upsertValue.run(TMDB_KEY, key);
+  }
+
+  return { settings, setSubtitleLanguage, tmdbKey, setTmdbKey };
 }
