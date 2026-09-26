@@ -394,3 +394,63 @@ describe('tmdbClient: a caller’s signal aborts the request in flight', () => {
     await expect(outcome).resolves.toEqual({ kind: 'unreachable' });
   });
 });
+
+// 23 — Enrichment, Phase 3: "setup's readiness" (issue #206).
+//
+// `reachable()` — the short reachability probe the summary asks **from the
+// server**, so a Wi-Fi with no internet behind it reads offline. It needs no
+// key and sends none: any answer from TMDB's API — a `401` included — means
+// TMDB answered; a network error, or no answer within `probeTimeoutMs`,
+// means it did not. A boolean, never a throw.
+
+describe('tmdbClient: reachable — the probe', () => {
+  it("asks TMDB's API, sending no key", async () => {
+    const fetchMock = answering(200);
+
+    await createTmdbClient(fetchMock).reachable();
+
+    const { url, headers } = onlyRequest(fetchMock);
+    expect(url.origin).toBe('https://api.themoviedb.org');
+    expect(url.searchParams.has('api_key')).toBe(false);
+    expect(headers.has('Authorization')).toBe(false);
+  });
+
+  it('answers true when TMDB answers', async () => {
+    const reachable = await createTmdbClient(answering(200)).reachable();
+
+    expect(reachable).toBe(true);
+  });
+
+  it('answers true when TMDB answers 401 — it answered', async () => {
+    const reachable = await createTmdbClient(answering(401)).reachable();
+
+    expect(reachable).toBe(true);
+  });
+
+  it('answers false when the network fails, rather than throwing', async () => {
+    const fetchMock = vi.fn<Fetch>(() =>
+      Promise.reject(new TypeError('fetch failed'))
+    );
+
+    const reachable = await createTmdbClient(fetchMock).reachable();
+
+    expect(reachable).toBe(false);
+  });
+
+  it('answers false when TMDB does not answer within the probe’s timeout', async () => {
+    const fetchMock = vi.fn<Fetch>(
+      (_input, init) =>
+        new Promise<Response>((_resolve, reject) => {
+          init?.signal?.addEventListener('abort', () =>
+            reject(new DOMException('The operation was aborted.', 'AbortError'))
+          );
+        })
+    );
+
+    const reachable = await createTmdbClient(fetchMock, {
+      probeTimeoutMs: 20,
+    }).reachable();
+
+    expect(reachable).toBe(false);
+  });
+});

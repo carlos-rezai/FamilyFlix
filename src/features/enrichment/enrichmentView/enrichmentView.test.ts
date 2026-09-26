@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { enrichmentView } from './enrichmentView';
-import type { EnrichmentRun } from '@/types';
+import { enrichmentEstimate, enrichmentView } from './enrichmentView';
+import type { EnrichmentRun, EnrichmentSummary } from '@/types';
 
 /**
  * 23 — Enrichment, Phase 3: "the whole library" (issue #205).
@@ -118,5 +118,59 @@ describe('enrichmentView — the ETA', () => {
 
   it('has nothing to say once nothing is left', () => {
     expect(enrichmentView(running(30, 30), secondsIn(60)).eta).toBeNull();
+  });
+});
+
+/**
+ * 23 — Enrichment, Phase 3: "setup's readiness" (issue #206).
+ *
+ * The estimate beside Start, from the summary and the scope chosen — the
+ * prototype's `estimateLabel`, three faces: offline first, _Waiting for a
+ * connection_; then with no key, _A key is needed before this can run_; and
+ * otherwise `About {⌈n × 0.4⌉}s for N titles`, where N is the scope's count —
+ * the titles without **Full details** for _Only what's missing_, every title
+ * for _Everything_, one for _Just this movie_.
+ */
+
+const READY: EnrichmentSummary = {
+  total: 30,
+  complete: 18,
+  lastSyncedAt: null,
+  keySet: true,
+  online: true,
+  libraryRoot: null,
+};
+
+describe('enrichmentEstimate — ready to run', () => {
+  it('estimates Everything over every title', () => {
+    expect(enrichmentEstimate(READY, 'all')).toBe('About 12s for 30 titles');
+  });
+
+  it('estimates Only what’s missing over the titles without Full details', () => {
+    expect(enrichmentEstimate(READY, 'missing')).toBe('About 5s for 12 titles');
+  });
+
+  it('estimates Just this movie as one title, in the singular', () => {
+    expect(enrichmentEstimate(READY, 'single')).toBe('About 1s for 1 title');
+  });
+});
+
+describe('enrichmentEstimate — not ready', () => {
+  it('waits for a connection when TMDB did not answer', () => {
+    expect(enrichmentEstimate({ ...READY, online: false }, 'all')).toBe(
+      'Waiting for a connection'
+    );
+  });
+
+  it('asks for a key when none is set', () => {
+    expect(enrichmentEstimate({ ...READY, keySet: false }, 'all')).toBe(
+      'A key is needed before this can run'
+    );
+  });
+
+  it('waits for a connection first when there is neither', () => {
+    expect(
+      enrichmentEstimate({ ...READY, online: false, keySet: false }, 'missing')
+    ).toBe('Waiting for a connection');
   });
 });

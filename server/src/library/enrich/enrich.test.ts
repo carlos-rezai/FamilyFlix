@@ -240,3 +240,49 @@ describe('library: moviesInScope — Everything', () => {
     expect(storage.moviesInScope('all')).toEqual([storage.getMovie(id)]);
   });
 });
+
+// 23 — Enrichment, Phase 3: "setup's readiness" (issue #206).
+//
+// `enrichmentCounts()` — the counts `GET /api/enrichment` answers the setup
+// and the Settings row with: `total`, every **Movie** and every **Series** in
+// the library, and `complete`, those of them with **Full details** — a
+// synopsis and a poster both. An empty library answers zeros.
+
+describe('library: enrichmentCounts — the summary’s counts', () => {
+  it('answers zeros for an empty library', () => {
+    const storage = freshStorage();
+
+    expect(storage.enrichmentCounts()).toEqual({ total: 0, complete: 0 });
+  });
+
+  it('counts every film, and those with Full details', () => {
+    const storage = fourFilms();
+
+    expect(storage.enrichmentCounts()).toEqual({ total: 4, complete: 1 });
+  });
+
+  it('counts every series beside the films, and those with Full details', () => {
+    const storage = fourFilms();
+    storage.addSeries({
+      title: 'Complete Show',
+      synopsis: 'Has everything.',
+      posterPath: 'complete-show/poster.jpg',
+    });
+    storage.addSeries({ title: 'Show Without A Poster', synopsis: 'Words.' });
+    storage.addSeries({
+      title: 'Show Without A Synopsis',
+      posterPath: 'show-without-a-synopsis/poster.jpg',
+    });
+
+    expect(storage.enrichmentCounts()).toEqual({ total: 7, complete: 2 });
+  });
+
+  it('counts an empty synopsis as none', () => {
+    const storage = freshStorage();
+    storage.addMovie(
+      newMovie({ title: 'Blank', synopsis: '', posterPath: 'blank/poster.jpg' })
+    );
+
+    expect(storage.enrichmentCounts()).toEqual({ total: 1, complete: 0 });
+  });
+});

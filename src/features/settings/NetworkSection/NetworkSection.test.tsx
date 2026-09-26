@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ThemeProvider } from 'styled-components';
+import { MemoryRouter } from 'react-router-dom';
 
 import { NetworkSection } from './NetworkSection';
 import { SnackbarProvider } from '@/App/SnackbarProvider/SnackbarProvider';
@@ -103,12 +104,15 @@ afterEach(() => {
 });
 
 function renderSection() {
+  // Under a router: the section's sync row pushes `/enrich` (issue #206).
   return render(
-    <ThemeProvider theme={theme}>
-      <SnackbarProvider>
-        <NetworkSection />
-      </SnackbarProvider>
-    </ThemeProvider>
+    <MemoryRouter initialEntries={['/settings']}>
+      <ThemeProvider theme={theme}>
+        <SnackbarProvider>
+          <NetworkSection />
+        </SnackbarProvider>
+      </ThemeProvider>
+    </MemoryRouter>
   );
 }
 
