@@ -474,6 +474,8 @@ describe('LibraryPage — the Series tab', () => {
         isFavorite: false,
         posterPath: null,
         backdropPath: null,
+        originalTitle: null,
+        tmdbScore: null,
         genres: [],
         watched: false,
         createdAt: '2026-09-23T00:00:00.000Z',

@@ -71,6 +71,18 @@ export type {
 export type { ExportFormat, ExportColumn, ExportSummary } from './export';
 export type { SubtitleLanguage, Settings, StorageReport } from './settings';
 export type {
+  EnrichField,
+  EnrichScope,
+  EnrichmentSummary,
+  Candidate,
+  ConflictField,
+  FieldConflict,
+  Decision,
+  EnrichmentPhase,
+  EnrichmentRun,
+  StartEnrichment,
+} from './enrichment';
+export type {
   PosterCardMovie,
   ContinueCardMovie,
   MovieDetailModel,

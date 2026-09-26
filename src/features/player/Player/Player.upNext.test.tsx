@@ -115,6 +115,8 @@ const FILM: Movie = {
   videoPath: 'the-long-summer-1998/film.mp4',
   posterPath: null,
   backdropPath: null,
+  originalTitle: null,
+  tmdbScore: null,
   genres: [],
   subtitles: [],
   createdAt: '2026-01-01T00:00:00.000Z',

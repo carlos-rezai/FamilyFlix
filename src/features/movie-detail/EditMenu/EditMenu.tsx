@@ -21,8 +21,9 @@ const MORE_SIZE = 44;
  * The movie detail page's ⋯ overflow menu, in its fixed slot opposite the Back
  * pill.
  *
- * Two rows. Edit navigates to `/add?movie=<id>`, the prototype's own route for
+ * Three rows. Edit navigates to `/add?movie=<id>`, the prototype's own route for
  * editing (it pre-fills the add form rather than owning an `/edit` screen).
+ * _Fetch from TMDB_ pushes `/enrich?movie=<id>`, the single-title **Sync**.
  * Delete is the **Danger row**, and it opens the **Delete dialog** rather than
  * deleting: this menu owns the row, so it owns the dialog's open state too, and
  * renders the dialog beside the corner slot — the portal takes it out of the
@@ -30,7 +31,7 @@ const MORE_SIZE = 44;
  *
  * Everything about opening and closing the menu belongs to `mol.Menu`. What is
  * left here is the whole of what makes this menu *this* menu: a translucent ⋯
- * button, and two rows that know which movie they are for.
+ * button, and three rows that know which movie they are for.
  */
 export function EditMenu({ movieId, title }: EditMenuProps) {
   const navigate = useNavigate();
@@ -50,6 +51,14 @@ export function EditMenu({ movieId, title }: EditMenuProps) {
           onSelect={() => navigate(movieFormPath({ movie: movieId }))}
         >
           Edit details
+        </MenuItem>
+        <MenuItem
+          glyph="⟳"
+          onSelect={() =>
+            navigate(`/enrich?${new URLSearchParams({ movie: movieId })}`)
+          }
+        >
+          Fetch from TMDB
         </MenuItem>
         <MenuItem glyph="🗑" danger onSelect={() => setDeleteOpen(true)}>
           Delete movie

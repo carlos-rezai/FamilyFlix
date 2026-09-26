@@ -24,6 +24,8 @@ export interface SeriesRow {
   is_favorite: number;
   poster_path: string | null;
   backdrop_path: string | null;
+  original_title: string | null;
+  tmdb_score: number | null;
   created_at: string;
   updated_at: string;
 }
@@ -65,6 +67,8 @@ const mapRowToSeries = (
   isFavorite: row.is_favorite !== 0,
   posterPath: row.poster_path,
   backdropPath: row.backdrop_path,
+  originalTitle: row.original_title,
+  tmdbScore: row.tmdb_score,
   genres,
   watched,
   createdAt: row.created_at,

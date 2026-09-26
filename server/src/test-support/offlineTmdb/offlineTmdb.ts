@@ -6,5 +6,11 @@ import type { TmdbClient } from '../../enrichment/tmdbClient/tmdbClient';
  * and must still hand it an `enrichment/` domain.
  */
 export function offlineTmdb(): TmdbClient {
-  return { authenticate: () => Promise.resolve('unreachable') };
+  const unreachable = { kind: 'unreachable' } as const;
+  return {
+    authenticate: () => Promise.resolve('unreachable'),
+    searchMovie: () => Promise.resolve(unreachable),
+    movie: () => Promise.resolve(unreachable),
+    image: () => Promise.resolve(unreachable),
+  };
 }

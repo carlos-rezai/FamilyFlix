@@ -12,6 +12,7 @@ import AddMoviePage from '@/pages/AddMoviePage/AddMoviePage';
 import GenrePage from '@/pages/GenrePage/GenrePage';
 import SettingsPage from '@/pages/SettingsPage/SettingsPage';
 import ImportPage from '@/pages/ImportPage/ImportPage';
+import EnrichmentPage from '@/pages/EnrichmentPage/EnrichmentPage';
 import { SnackbarProvider } from '@/App/SnackbarProvider/SnackbarProvider';
 
 /**
@@ -21,12 +22,12 @@ import { SnackbarProvider } from '@/App/SnackbarProvider/SnackbarProvider';
  * entry URL. The **Snackbar stack** sits here too, above the route table, so a
  * notice raised on one screen is still in the corner on the next.
  *
- * Eight routes, eight real screens: the browse home at `/`, the movie page at
+ * Every route a real screen: the browse home at `/`, the movie page at
  * `/movie/:id` and the genre page at `/genre/:name` (the home's two
  * destinations), the player at `/movie/:id/play` (and on an episode at `/episode/:id/play`), the movie form at `/add`
  * (with `?movie=<id>` to edit), the series page at `/series/:id`, the Settings
- * hub at `/settings` and the bulk
- * importer at `/import`. The URLs were the stable part all along — each screen
+ * hub at `/settings`, the bulk
+ * importer at `/import` and the TMDB **Sync** at `/enrich`. The URLs were the stable part all along — each screen
  * landed behind the link already pointed at it, without any link changing,
  * which is how every link in the app could be honest before the screen behind
  * it existed.
@@ -50,6 +51,7 @@ export default function App() {
           <Route path="/genre/:name" element={<GenrePage />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/import" element={<ImportPage />} />
+          <Route path="/enrich" element={<EnrichmentPage />} />
         </Routes>
       </SnackbarProvider>
     </ThemeProvider>

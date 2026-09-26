@@ -49,4 +49,8 @@ export interface Movie {
    *  by the watch mutators (`setResumePosition`, `markWatched`); never by an
    *  ordinary edit. */
   lastWatchedAt: string | null;
+  /** The title in its own language, as TMDB has it; written only by a Sync. */
+  originalTitle: string | null;
+  /** TMDB's score to one decimal — beside the household's rating, never over it. */
+  tmdbScore: number | null;
 }

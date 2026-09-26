@@ -4,6 +4,7 @@ import { pipeline } from 'node:stream';
 import type {
   Enrichment,
   SaveKeyOutcome,
+  StartEnrichmentOutcome,
 } from '../enrichment/createEnrichment/createEnrichment';
 import express, { type Request, type Response, type Router } from 'express';
 
@@ -436,6 +437,15 @@ const KEY_REFUSALS: Record<
   empty: { status: 400, error: 'Body must be { key: string }, not empty' },
   refused: { status: 422, error: "TMDB didn't accept that key" },
   unreachable: { status: 503, error: "Couldn't reach TMDB" },
+};
+
+/** A Sync's start refusals, each to its status. */
+const START_REFUSALS: Record<
+  Exclude<StartEnrichmentOutcome['kind'], 'started' | 'bad-body'>,
+  { status: number; error: string }
+> = {
+  busy: { status: 409, error: 'A sync is already running' },
+  'no-key': { status: 412, error: 'Add your TMDB key first' },
 };
 
 /**
@@ -1269,6 +1279,31 @@ export function createApiRouter(
     }
     const refused = KEY_REFUSALS[outcome.kind];
     res.status(refused.status).json({ error: refused.error });
+  });
+
+  // A **Sync**: `201` with the **Current enrichment run** it started, which
+  // goes on behind the answer; the screen polls `current` from there.
+  router.post('/enrichment', async (req: Request, res: Response) => {
+    const outcome = await enrichment.start(req.body);
+    if (outcome.kind === 'started') {
+      res.status(201).json(outcome.run);
+      return;
+    }
+    if (outcome.kind === 'bad-body') {
+      res.status(400).json({ error: outcome.error });
+      return;
+    }
+    const refused = START_REFUSALS[outcome.kind];
+    res.status(refused.status).json({ error: refused.error });
+  });
+
+  router.get('/enrichment/current', (_req: Request, res: Response) => {
+    const run = enrichment.current();
+    if (run === null) {
+      res.status(404).json({ error: 'No sync is running' });
+      return;
+    }
+    res.json(run);
   });
 
   // The **Storage report** — `{ mediaPath, bytesUsed, movieCount }` — three

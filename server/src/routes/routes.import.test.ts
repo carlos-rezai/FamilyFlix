@@ -124,7 +124,7 @@ function freshApi({
       playback,
       mediaDomain,
       importer ? importer(composed) : composed,
-      createEnrichment({ storage, client: offlineTmdb() })
+      createEnrichment({ storage, client: offlineTmdb(), media: mediaDomain })
     )
   );
 

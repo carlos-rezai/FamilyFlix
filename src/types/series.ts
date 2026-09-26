@@ -24,6 +24,10 @@ export interface Series {
   isFavorite: boolean;
   posterPath: string | null;
   backdropPath: string | null;
+  /** The title in its own language, as TMDB has it; written only by a Sync. */
+  originalTitle: string | null;
+  /** TMDB's score to one decimal — beside the household's rating, never over it. */
+  tmdbScore: number | null;
   genres: Genre[];
   /** True only when every episode is watched; derived, never stored. */
   watched: boolean;

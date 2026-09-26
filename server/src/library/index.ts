@@ -28,11 +28,14 @@ import { createWrite } from './write/write';
 import { createWatch } from './watch/watch';
 import { createCuration } from './curation/curation';
 import { createSettings } from './settings/settings';
+import { createEnrich, type MovieEnrichment } from './enrich/enrich';
 import { createSeriesReader } from './series/read/read';
 import { createSeriesBrowse } from './series/browse/browse';
 import { createSeriesWrite } from './series/write/write';
 import { createSeriesCuration } from './series/curation/curation';
 import { createSeriesWatch } from './series/watch/watch';
+
+export type { MovieEnrichment } from './enrich/enrich';
 
 /**
  * The repository seam every consumer (routes, importer, player) reads and writes
@@ -60,6 +63,11 @@ export interface LibraryStorage {
    * id; a failure inside the transaction commits nothing.
    */
   updateMovie(id: string, patch: MoviePatch): Movie;
+  /**
+   * A **Sync**'s write: the columns `fields` names and only those — never
+   * `rating`, `watched`, `resume_position_seconds` or `last_watched_at`.
+   */
+  enrichMovie(id: string, fields: MovieEnrichment): void;
   /**
    * Delete a movie, cascading to its `movie_genres` and `subtitles` rows so no
    * orphans remain. A silent, idempotent no-op for an unknown id.
@@ -247,6 +255,7 @@ export function createSqliteStorage(dbPath: string): LibraryStorage {
   const watch = createWatch(db);
   const curation = createCuration(db);
   const settingsRepository = createSettings(db);
+  const enrich = createEnrich(db);
   const seriesReader = createSeriesReader(db);
   const seriesBrowse = createSeriesBrowse(db, seriesReader);
   const seriesWrite = createSeriesWrite(db, seriesReader);
@@ -256,6 +265,7 @@ export function createSqliteStorage(dbPath: string): LibraryStorage {
   return {
     addMovie: write.addMovie,
     updateMovie: write.updateMovie,
+    enrichMovie: enrich.enrichMovie,
     deleteMovie: write.deleteMovie,
     getMovie: reader.getMovie,
     listMovies: browse.listMovies,

@@ -52,7 +52,7 @@ app.use(
     // read in the app.
     createImporter({ storage, media, playback }),
     // The one domain that goes online, over the global `fetch`.
-    createEnrichment({ storage, client: createTmdbClient(fetch) })
+    createEnrichment({ storage, client: createTmdbClient(fetch), media })
   )
 );
 

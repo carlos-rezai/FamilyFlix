@@ -199,4 +199,22 @@ export const migrations: readonly Migration[] = [
       `);
     },
   },
+  {
+    // Enrichment: what a Sync writes and where a title came from — the
+    // original title, TMDB's score and the source folder on a movie and a
+    // series, and an episode's still. Additive and nullable: nothing is
+    // seeded and nothing is backfilled.
+    version: 5,
+    up(db) {
+      db.exec(`
+        ALTER TABLE movies ADD COLUMN original_title TEXT;
+        ALTER TABLE movies ADD COLUMN tmdb_score REAL;
+        ALTER TABLE movies ADD COLUMN source_folder TEXT;
+        ALTER TABLE series ADD COLUMN original_title TEXT;
+        ALTER TABLE series ADD COLUMN tmdb_score REAL;
+        ALTER TABLE series ADD COLUMN source_folder TEXT;
+        ALTER TABLE episodes ADD COLUMN still_path TEXT;
+      `);
+    },
+  },
 ];

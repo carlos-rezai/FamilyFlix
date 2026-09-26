@@ -93,6 +93,7 @@ function freshApi(tmdb: Tmdb = 'accepts'): Api {
   const enrichment = createEnrichment({
     storage,
     client: createTmdbClient(tmdbFetch),
+    media: mediaDomain,
   });
 
   const app = express();

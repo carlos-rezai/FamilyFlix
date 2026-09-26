@@ -117,6 +117,19 @@ export interface Media {
   ): Promise<string>;
 
   /**
+   * Write `source` as exactly `name` into the folder the title's **Stored
+   * path** lives in — a **Sync**'s `poster.jpg` and `backdrop.jpg`, beside the
+   * video — answering the **Stored path** of what it wrote. A file of that
+   * name is replaced, so a second Sync leaves one poster. Rejects, writing
+   * nothing, for a stored path that names no file under the media directory.
+   */
+  storeNamed(
+    storedPath: string,
+    name: string,
+    source: Readable
+  ): Promise<string>;
+
+  /**
    * **Copy-in**: {@link storeUpload}'s **Bulk import** counterpart — the same
    * **Managed copy** into `<folder>/<safe name>`, from a file where it lies
    * under the **Library root** instead of from a stream, answering the same
@@ -301,6 +314,17 @@ export function createMedia(mediaPath: string): Media {
       // guarantee without having to remember it.
       await pipeline(source, createWriteStream(join(folder, safe)));
 
+      return storedIn(folder, safe);
+    },
+
+    storeNamed: async (storedPath, name, source) => {
+      const file = mediaFilePath(mediaPath, storedPath);
+      if (file === null) {
+        throw new Error(`No title folder for ${storedPath}`);
+      }
+      const folder = dirname(file);
+      const safe = safeFilename(name);
+      await pipeline(source, createWriteStream(join(folder, safe)));
       return storedIn(folder, safe);
     },
 

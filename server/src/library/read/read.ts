@@ -22,6 +22,8 @@ export interface MovieRow {
   created_at: string;
   updated_at: string;
   last_watched_at: string | null;
+  original_title: string | null;
+  tmdb_score: number | null;
 }
 
 export interface GenreRow {
@@ -87,6 +89,8 @@ export function mapRowToMovie(
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     lastWatchedAt: row.last_watched_at,
+    originalTitle: row.original_title,
+    tmdbScore: row.tmdb_score,
   };
 }
 

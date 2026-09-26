@@ -30,6 +30,8 @@ const MOVIE_KEYS: Array<keyof Movie> = [
   'createdAt',
   'updatedAt',
   'lastWatchedAt',
+  'originalTitle',
+  'tmdbScore',
 ];
 
 describe('makeMovie — the default record', () => {
