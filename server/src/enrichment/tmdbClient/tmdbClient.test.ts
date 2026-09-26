@@ -136,3 +136,191 @@ describe('tmdbClient: authenticate — the three answers, as values', () => {
     expect(outcome).toBe('unreachable');
   });
 });
+
+// 23 — Enrichment, Phase 2: "the tracer — Just this movie" (issue #204).
+//
+// The client learns what a Sync asks of TMDB for one movie: `searchMovie(key,
+// title, year)` → `/3/search/movie`, `movie(key, id)` → `/3/movie/{id}` with
+// `append_to_response=credits`, and `image(path)` → the image's bytes as a
+// stream. Each answers `{ kind: 'ok', value }`, or **refused** / **unreachable**
+// as values — never a throw. Every API request asks for `en-US`: the answers
+// are fixed to one language, whatever machine asks.
+
+/** A fake `fetch` answering every request with `body` under `status`. */
+function answeringWith(body: unknown, status = 200) {
+  return vi.fn<Fetch>(() => Promise.resolve(answer(status, body)));
+}
+
+const SEARCH_BODY = {
+  page: 1,
+  total_results: 1,
+  results: [
+    {
+      id: 550123,
+      title: 'The Lantern Keeper',
+      original_title: 'Le Gardien du phare',
+      release_date: '2019-06-14',
+      genre_ids: [18],
+      original_language: 'fr',
+      poster_path: '/lantern-poster.jpg',
+      vote_average: 7.4,
+    },
+  ],
+};
+
+const MOVIE_BODY = {
+  id: 550123,
+  title: 'The Lantern Keeper',
+  original_title: 'Le Gardien du phare',
+  overview: 'A keeper tends a light nobody needs any more.',
+  release_date: '2019-06-14',
+  runtime: 112,
+  genres: [{ id: 18, name: 'Drama' }],
+  vote_average: 7.456,
+  poster_path: '/lantern-poster.jpg',
+  backdrop_path: '/lantern-backdrop.jpg',
+  credits: {
+    cast: [{ name: 'Ada Brennan', order: 0 }],
+    crew: [{ name: 'Paul Verhoek', job: 'Director' }],
+  },
+};
+
+describe('tmdbClient: searchMovie', () => {
+  it('asks /3/search/movie for the title and its year, in en-US', async () => {
+    const fetchMock = answeringWith(SEARCH_BODY);
+
+    await createTmdbClient(fetchMock).searchMovie(
+      V3_KEY,
+      'The Lantern Keeper',
+      2019
+    );
+
+    const { url } = onlyRequest(fetchMock);
+    expect(url.origin).toBe('https://api.themoviedb.org');
+    expect(url.pathname).toBe('/3/search/movie');
+    expect(url.searchParams.get('query')).toBe('The Lantern Keeper');
+    expect(url.searchParams.get('year')).toBe('2019');
+    expect(url.searchParams.get('language')).toBe('en-US');
+  });
+
+  it('sends no year for a title that has none', async () => {
+    const fetchMock = answeringWith(SEARCH_BODY);
+
+    await createTmdbClient(fetchMock).searchMovie(V3_KEY, 'Northwind', null);
+
+    const { url } = onlyRequest(fetchMock);
+    expect(url.searchParams.has('year')).toBe(false);
+    expect(url.searchParams.get('language')).toBe('en-US');
+  });
+
+  it('sends the key the way its shape says', async () => {
+    const fetchMock = answeringWith(SEARCH_BODY);
+
+    await createTmdbClient(fetchMock).searchMovie(V4_TOKEN, 'Northwind', null);
+
+    const { headers } = onlyRequest(fetchMock);
+    expect(headers.get('Authorization')).toBe(`Bearer ${V4_TOKEN}`);
+  });
+
+  it('answers the results', async () => {
+    const outcome = await createTmdbClient(
+      answeringWith(SEARCH_BODY)
+    ).searchMovie(V3_KEY, 'The Lantern Keeper', 2019);
+
+    expect(outcome).toEqual({ kind: 'ok', value: SEARCH_BODY.results });
+  });
+
+  it('answers refused on a 401, and unreachable when the network fails', async () => {
+    const refused = await createTmdbClient(
+      answeringWith({ status_code: 7 }, 401)
+    ).searchMovie(V3_KEY, 'Northwind', null);
+    const unreachable = await createTmdbClient(
+      vi.fn<Fetch>(() => Promise.reject(new TypeError('fetch failed')))
+    ).searchMovie(V3_KEY, 'Northwind', null);
+
+    expect(refused).toEqual({ kind: 'refused' });
+    expect(unreachable).toEqual({ kind: 'unreachable' });
+  });
+});
+
+describe('tmdbClient: movie — the detail with its credits', () => {
+  it('asks /3/movie/{id} with its credits appended, in en-US', async () => {
+    const fetchMock = answeringWith(MOVIE_BODY);
+
+    await createTmdbClient(fetchMock).movie(V3_KEY, 550123);
+
+    const { url } = onlyRequest(fetchMock);
+    expect(url.origin).toBe('https://api.themoviedb.org');
+    expect(url.pathname).toBe('/3/movie/550123');
+    expect(url.searchParams.get('append_to_response')).toBe('credits');
+    expect(url.searchParams.get('language')).toBe('en-US');
+    expect(url.searchParams.get('api_key')).toBe(V3_KEY);
+  });
+
+  it('answers the detail', async () => {
+    const outcome = await createTmdbClient(answeringWith(MOVIE_BODY)).movie(
+      V3_KEY,
+      550123
+    );
+
+    expect(outcome).toEqual({ kind: 'ok', value: MOVIE_BODY });
+  });
+
+  it('answers refused on a 401, and unreachable when the network fails', async () => {
+    const refused = await createTmdbClient(
+      answeringWith({ status_code: 7 }, 401)
+    ).movie(V3_KEY, 550123);
+    const unreachable = await createTmdbClient(
+      vi.fn<Fetch>(() => Promise.reject(new TypeError('fetch failed')))
+    ).movie(V3_KEY, 550123);
+
+    expect(refused).toEqual({ kind: 'refused' });
+    expect(unreachable).toEqual({ kind: 'unreachable' });
+  });
+});
+
+describe('tmdbClient: image — the bytes as a stream', () => {
+  /** Everything a Node stream yields, as one buffer. */
+  async function drain(stream: AsyncIterable<unknown>): Promise<Buffer> {
+    const chunks: Buffer[] = [];
+    for await (const chunk of stream) {
+      chunks.push(Buffer.from(chunk as Uint8Array));
+    }
+    return Buffer.concat(chunks);
+  }
+
+  it('asks image.tmdb.org for the path', async () => {
+    const fetchMock = vi.fn<Fetch>(() =>
+      Promise.resolve(new Response(new Uint8Array([1, 2, 3]), { status: 200 }))
+    );
+
+    await createTmdbClient(fetchMock).image('/lantern-poster.jpg');
+
+    const { url } = onlyRequest(fetchMock);
+    expect(url.origin).toBe('https://image.tmdb.org');
+    expect(url.pathname.endsWith('/lantern-poster.jpg')).toBe(true);
+  });
+
+  it('answers the image’s bytes as a stream', async () => {
+    const bytes = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 7, 7, 7]);
+    const fetchMock = vi.fn<Fetch>(() =>
+      Promise.resolve(new Response(bytes, { status: 200 }))
+    );
+
+    const outcome = await createTmdbClient(fetchMock).image(
+      '/lantern-poster.jpg'
+    );
+
+    expect(outcome.kind).toBe('ok');
+    if (outcome.kind !== 'ok') return;
+    expect(await drain(outcome.value)).toEqual(Buffer.from(bytes));
+  });
+
+  it('answers unreachable when the network fails, rather than throwing', async () => {
+    const outcome = await createTmdbClient(
+      vi.fn<Fetch>(() => Promise.reject(new TypeError('fetch failed')))
+    ).image('/lantern-poster.jpg');
+
+    expect(outcome).toEqual({ kind: 'unreachable' });
+  });
+});

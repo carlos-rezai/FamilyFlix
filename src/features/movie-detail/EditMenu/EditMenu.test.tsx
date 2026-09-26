@@ -86,6 +86,59 @@ describe('EditMenu', () => {
   });
 });
 
+/**
+ * 23 — Enrichment, Phase 2: "the tracer — Just this movie" (issue #204).
+ *
+ * The menu's third way into a **Sync**: _⟳ Fetch from TMDB_, between _Edit
+ * details_ and the **Danger row** (`page.MoviePage.dc.html`), pushing
+ * `/enrich?movie=<id>` — the single-title run, which returns to this movie.
+ */
+describe('EditMenu — Fetch from TMDB', () => {
+  it('draws Fetch from TMDB between Edit details and the danger row', () => {
+    renderEditMenu();
+
+    openMenu();
+
+    const edit = screen.getByRole('menuitem', { name: 'Edit details' });
+    const fetchFromTmdb = screen.getByRole('menuitem', {
+      name: 'Fetch from TMDB',
+    });
+    const remove = screen.getByRole('menuitem', { name: 'Delete movie' });
+    expect(comesBefore(edit, fetchFromTmdb)).toBe(true);
+    expect(comesBefore(fetchFromTmdb, remove)).toBe(true);
+    // The glyph is drawn and kept out of the name, Edit details' precedent.
+    expect(fetchFromTmdb.textContent).toContain('⟳');
+    // Not a danger row: it does not wear the danger ink.
+    expect(getComputedStyle(fetchFromTmdb).color).not.toBe(
+      'rgb(201, 122, 106)'
+    );
+  });
+
+  it('opens the Sync for this movie alone', () => {
+    renderEditMenu('northwind-1994');
+
+    openMenu();
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Fetch from TMDB' }));
+
+    expect(screen.getByTestId('destination').textContent).toBe(
+      '/enrich?movie=northwind-1994'
+    );
+  });
+
+  it('encodes the movie’s id into the query, so it reads back whole', () => {
+    renderEditMenu('m 2/y&scope=all');
+
+    openMenu();
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Fetch from TMDB' }));
+
+    const destination = screen.getByTestId('destination').textContent ?? '';
+    const query = new URLSearchParams(destination.split('?')[1] ?? '');
+    expect(destination.startsWith('/enrich?')).toBe(true);
+    expect(query.get('movie')).toBe('m 2/y&scope=all');
+    expect(query.has('scope')).toBe(false);
+  });
+});
+
 describe('EditMenu — the Delete dialog', () => {
   const dialog = () => screen.queryByRole('dialog');
   const selectDelete = () =>

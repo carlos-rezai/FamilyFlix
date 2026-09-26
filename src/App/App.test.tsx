@@ -1738,3 +1738,20 @@ describe('App — the season page', () => {
     expect(pathname()).toBe('/series/sv1');
   });
 });
+
+// --- 23 — Enrichment, Phase 2: "the tracer — Just this movie" (issue #204) --
+
+/**
+ * `/enrich` is a real route with the real screen behind it: the ⋯ menu's
+ * _⟳ Fetch from TMDB_ pushes `/enrich?movie=<id>`, and this is where it lands.
+ */
+describe('App — the enrichment screen', () => {
+  it('renders the enrichment screen at /enrich', async () => {
+    renderApp('/enrich?movie=m1');
+
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Sync with TMDB' })
+    ).toBeDefined();
+    expect(pathname()).toBe('/enrich');
+  });
+});

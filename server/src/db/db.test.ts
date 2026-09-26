@@ -43,10 +43,18 @@ const EXPECTED_GENRES = [
   'Crime',
 ];
 
-// The version a fresh database migrates to — migration #4, the series tables
-// (issue #189). Every "at the latest version" assertion reads it, so the next
-// migration moves one number rather than seven.
-const LATEST_VERSION = 4;
+// The version a fresh database migrates to — migration #5, Enrichment's
+// columns (issue #204). Every "at the latest version" assertion reads it, so
+// the next migration moves one number rather than seven.
+const LATEST_VERSION = 5;
+
+// What migration #5 adds, by table: the three columns a Sync writes on a movie
+// and a series, and the episode's still. Additive, nullable, nothing seeded.
+const MIGRATION_5_COLUMNS = {
+  movies: ['original_title', 'tmdb_score', 'source_folder'],
+  series: ['original_title', 'tmdb_score', 'source_folder'],
+  episodes: ['still_path'],
+} as const;
 
 // The four tables migration #4 adds, children first — the order they can be
 // dropped in without a foreign key refusing.
@@ -202,6 +210,7 @@ function indexesReferencing(db: TestDb, column: string): string[] {
 function windBackToV1(path: string): void {
   const db = open(path);
   try {
+    dropMigration5Columns(db);
     dropSeriesTables(db);
     // What #3 added: a v1 database has no settings table.
     db.prepare('DROP TABLE settings').run();
@@ -226,6 +235,7 @@ function windBackToV1(path: string): void {
 function windBackToV2(path: string): void {
   const db = open(path);
   try {
+    dropMigration5Columns(db);
     dropSeriesTables(db);
     db.prepare('DROP TABLE settings').run();
     db.pragma('user_version = 2');
@@ -253,11 +263,52 @@ function dropSeriesTables(db: TestDb): void {
 function windBackToV3(path: string): void {
   const db = open(path);
   try {
+    dropMigration5Columns(db);
     dropSeriesTables(db);
     db.pragma('user_version = 3');
   } finally {
     db.close();
   }
+}
+
+/**
+ * What migration #5 added, dropped — each column only where it exists, so the
+ * wind-backs read the same on a database from before #5 was written as on one
+ * after.
+ */
+function dropMigration5Columns(db: TestDb): void {
+  for (const [table, columns] of Object.entries(MIGRATION_5_COLUMNS)) {
+    if (!tableNames(db).includes(table)) {
+      continue;
+    }
+    const present = columnNames(db, table);
+    for (const column of columns) {
+      if (present.includes(column)) {
+        db.prepare(`ALTER TABLE ${table} DROP COLUMN ${column}`).run();
+      }
+    }
+  }
+}
+
+/**
+ * Leave the database at `path` looking exactly like one written before
+ * migration #5 existed: drop its columns and wind `user_version` back to 4.
+ * Re-opening it is the upgrade every dev database from the series slice takes.
+ */
+function windBackToV4(path: string): void {
+  const db = open(path);
+  try {
+    dropMigration5Columns(db);
+    db.pragma('user_version = 4');
+  } finally {
+    db.close();
+  }
+}
+
+/** A table's columns less what migration #5 added — the v4 shape. */
+function v4Columns(db: TestDb, table: keyof typeof MIGRATION_5_COLUMNS) {
+  const added: readonly string[] = MIGRATION_5_COLUMNS[table];
+  return columnNames(db, table).filter((column) => !added.includes(column));
 }
 
 /** One table's declared columns as `table_info` reports them. */
@@ -597,7 +648,7 @@ describe('db: migration #4 — series', () => {
   it('gives series its columns, and no watch columns', () => {
     const db = track(open(':memory:'));
 
-    expect([...columnNames(db, 'series')].sort()).toEqual(
+    expect([...v4Columns(db, 'series')].sort()).toEqual(
       [
         'id',
         'tmdb_id',
@@ -620,7 +671,7 @@ describe('db: migration #4 — series', () => {
   it('gives episodes the movie’s watch trio', () => {
     const db = track(open(':memory:'));
 
-    expect([...columnNames(db, 'episodes')].sort()).toEqual(
+    expect([...v4Columns(db, 'episodes')].sort()).toEqual(
       [
         'id',
         'series_id',
@@ -704,13 +755,13 @@ describe('db: migration #4 — series', () => {
   it('leaves movies exactly as it was', () => {
     const db = track(open(':memory:'));
 
-    expect(columnNames(db, 'movies')).toEqual(MOVIE_COLUMNS);
+    expect(v4Columns(db, 'movies')).toEqual(MOVIE_COLUMNS);
   });
 
-  it('lands a fresh database at version 4', () => {
+  it('lands a fresh database at version 4 or later', () => {
     const db = track(open(':memory:'));
 
-    expect(userVersion(db)).toBe(4);
+    expect(userVersion(db)).toBeGreaterThanOrEqual(4);
   });
 
   it('upgrades a database already at version 3 in place, keeping its rows', () => {
@@ -729,12 +780,12 @@ describe('db: migration #4 — series', () => {
 
     const upgraded = track(open(path));
 
-    expect(userVersion(upgraded)).toBe(4);
+    expect(userVersion(upgraded)).toBe(LATEST_VERSION);
     expect(tableNames(upgraded)).toEqual(
       expect.arrayContaining([...SERIES_TABLES])
     );
     expect(genreNames(upgraded)).toHaveLength(12);
-    expect(columnNames(upgraded, 'movies')).toEqual(MOVIE_COLUMNS);
+    expect(v4Columns(upgraded, 'movies')).toEqual(MOVIE_COLUMNS);
     upgraded.close();
 
     const storage = trackStorage(createSqliteStorage(path));
@@ -742,6 +793,121 @@ describe('db: migration #4 — series', () => {
     expect(movie?.title).toBe('Northwind');
     expect(movie?.status).toBe('watched');
     expect(storage.settings().subtitleLanguage).toBe('Spanish');
+  });
+});
+
+// 23 — Enrichment, Phase 2: "the tracer — Just this movie" (issue #204) adds
+// migration #5: what a **Sync** writes and where a title came from —
+// `original_title`, `tmdb_score` and `source_folder` on `movies` and on
+// `series`, and `still_path` on `episodes`. Additive and nullable: nothing is
+// seeded and nothing is backfilled, so every title a library already holds
+// reads back with none of them until a Sync or an import says otherwise.
+
+describe('db: migration #5 — enrichment columns', () => {
+  it.each(Object.entries(MIGRATION_5_COLUMNS))(
+    'adds its nullable columns to %s',
+    (table, columns) => {
+      const db = track(open(':memory:'));
+
+      const info = columnInfo(db, table);
+      for (const column of columns) {
+        const declared = info.find((c) => c.name === column);
+        expect(declared, `${table}.${column}`).toBeDefined();
+        expect(declared?.notnull).toBe(0);
+      }
+    }
+  );
+
+  it('types the score as REAL and the rest as TEXT', () => {
+    const db = track(open(':memory:'));
+
+    for (const table of ['movies', 'series'] as const) {
+      const info = columnInfo(db, table);
+      const typeOf = (name: string) =>
+        info.find((c) => c.name === name)?.type.toUpperCase();
+      expect(typeOf('original_title')).toBe('TEXT');
+      expect(typeOf('tmdb_score')).toBe('REAL');
+      expect(typeOf('source_folder')).toBe('TEXT');
+    }
+    expect(
+      columnInfo(db, 'episodes')
+        .find((c) => c.name === 'still_path')
+        ?.type.toUpperCase()
+    ).toBe('TEXT');
+  });
+
+  it('lands a fresh database at version 5', () => {
+    const db = track(open(':memory:'));
+
+    expect(userVersion(db)).toBe(5);
+  });
+
+  it('seeds nothing — a fresh database still holds no movies and no series', () => {
+    const db = track(open(':memory:'));
+
+    expect(db.prepare('SELECT id FROM movies').all()).toEqual([]);
+    expect(db.prepare('SELECT id FROM series').all()).toEqual([]);
+    expect(genreNames(db)).toHaveLength(12);
+  });
+
+  it('upgrades a database already at version 4 in place, keeping its rows', () => {
+    const path = tempDbPath();
+
+    const before = trackStorage(createSqliteStorage(path));
+    const added = before.addMovie({
+      title: 'Northwind',
+      year: 2018,
+      videoPath: 'Northwind (2018)/northwind.mkv',
+      synopsis: 'Ours.',
+      genres: ['Drama'],
+    });
+    before.setRating(added.id, 7);
+    before.close();
+    windBackToV4(path);
+
+    const upgraded = track(open(path));
+
+    expect(userVersion(upgraded)).toBe(5);
+    for (const [table, columns] of Object.entries(MIGRATION_5_COLUMNS)) {
+      expect(columnNames(upgraded, table)).toEqual(
+        expect.arrayContaining([...columns])
+      );
+    }
+    expect(genreNames(upgraded)).toHaveLength(12);
+    upgraded.close();
+
+    const storage = trackStorage(createSqliteStorage(path));
+    const movie = storage.getMovie(added.id);
+    expect(movie?.title).toBe('Northwind');
+    expect(movie?.synopsis).toBe('Ours.');
+    expect(movie?.rating).toBe(7);
+  });
+
+  it('backfills nothing — a title from before reads back with none of them', () => {
+    const path = tempDbPath();
+
+    const before = trackStorage(createSqliteStorage(path));
+    const added = before.addMovie({
+      title: 'Northwind',
+      videoPath: 'Northwind (2018)/northwind.mkv',
+    });
+    before.close();
+    windBackToV4(path);
+
+    const upgraded = track(open(path));
+    expect(
+      upgraded
+        .prepare(
+          'SELECT original_title, tmdb_score, source_folder FROM movies WHERE id = ?'
+        )
+        .get(added.id)
+    ).toEqual({ original_title: null, tmdb_score: null, source_folder: null });
+    upgraded.close();
+
+    const storage = trackStorage(createSqliteStorage(path));
+    const movie = storage.getMovie(added.id);
+    expect(movie?.originalTitle).toBeNull();
+    expect(movie?.tmdbScore).toBeNull();
   });
 });
 

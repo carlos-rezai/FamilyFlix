@@ -920,3 +920,91 @@ describe('createMedia — copyIn', () => {
     );
   });
 });
+
+// 23 — Enrichment, Phase 2: "the tracer — Just this movie" (issue #204).
+//
+// `storeNamed(storedPath, name, source)` — the member a **Sync** writes its
+// images through: the stream written as exactly `name` (`poster.jpg`,
+// `backdrop.jpg`) into the folder the title's **Stored path** lives in, and
+// the **Stored path** of what it wrote answered, `storeUpload`'s precedent.
+// The folder is the title's own — found from a path it already holds, the way
+// `openFolder` finds it for an edit — so an enriched film's art sits beside
+// its video. A second Sync replaces the file of that name rather than adding
+// a `-2` beside it.
+
+describe('createMedia — storeNamed', () => {
+  /** A title already in the library: its folder and its video's Stored path. */
+  async function titleWithVideo(media: Media) {
+    const folder = media.reserveFolder('The Lantern Keeper', 2019);
+    const video = await media.storeUpload(
+      folder,
+      'lantern.mp4',
+      part('video bytes')
+    );
+    return { folder, video };
+  }
+
+  it('writes the bytes under the name it is given, in the title’s own folder', async () => {
+    const { media } = sandbox();
+    const { folder, video } = await titleWithVideo(media);
+
+    await media.storeNamed(video, 'poster.jpg', part('poster bytes'));
+
+    expect(readFileSync(join(folder, 'poster.jpg'), 'utf8')).toBe(
+      'poster bytes'
+    );
+  });
+
+  it('answers the Stored path, relative and forward-slashed', async () => {
+    const { media, root } = sandbox();
+    const { folder, video } = await titleWithVideo(media);
+
+    const stored = await media.storeNamed(
+      video,
+      'backdrop.jpg',
+      part('backdrop bytes')
+    );
+
+    expect(isAbsolute(stored)).toBe(false);
+    expect(stored).toBe('the-lantern-keeper-2019/backdrop.jpg');
+    expect(mediaFilePath(root, stored)).toBe(join(folder, 'backdrop.jpg'));
+  });
+
+  it('replaces a file of that name, so a second Sync leaves one poster', async () => {
+    const { media } = sandbox();
+    const { folder, video } = await titleWithVideo(media);
+    await media.storeNamed(video, 'poster.jpg', part('first poster'));
+
+    const stored = await media.storeNamed(
+      video,
+      'poster.jpg',
+      part('second poster')
+    );
+
+    expect(stored).toBe('the-lantern-keeper-2019/poster.jpg');
+    expect(readFileSync(join(folder, 'poster.jpg'), 'utf8')).toBe(
+      'second poster'
+    );
+    expect(existsSync(join(folder, 'poster-2.jpg'))).toBe(false);
+  });
+
+  it('refuses a Stored path that names nothing under the media directory, writing nothing', async () => {
+    const { media, outside } = sandbox();
+
+    await expect(
+      media.storeNamed(
+        'no-such-title-2019/video.mp4',
+        'poster.jpg',
+        part('poster bytes')
+      )
+    ).rejects.toThrow();
+    await expect(
+      media.storeNamed(
+        '../elsewhere/video.mp4',
+        'poster.jpg',
+        part('poster bytes')
+      )
+    ).rejects.toThrow();
+    expect(existsSync(join(outside, 'poster.jpg'))).toBe(false);
+  });
+});
