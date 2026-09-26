@@ -74,6 +74,11 @@ export interface LibraryStorage {
    */
   moviesInScope(scope: 'missing' | 'all'): Movie[];
   /**
+   * Every **Movie** and **Series**, and those with **Full details** — a
+   * synopsis and a poster both. An empty library answers zeros.
+   */
+  enrichmentCounts(): { total: number; complete: number };
+  /**
    * Delete a movie, cascading to its `movie_genres` and `subtitles` rows so no
    * orphans remain. A silent, idempotent no-op for an unknown id.
    */
@@ -276,6 +281,7 @@ export function createSqliteStorage(dbPath: string): LibraryStorage {
     updateMovie: write.updateMovie,
     enrichMovie: enrich.enrichMovie,
     moviesInScope: enrich.moviesInScope,
+    enrichmentCounts: enrich.enrichmentCounts,
     deleteMovie: write.deleteMovie,
     getMovie: reader.getMovie,
     listMovies: browse.listMovies,

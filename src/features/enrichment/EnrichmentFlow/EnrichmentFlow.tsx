@@ -1,7 +1,9 @@
-import { useCallback, useEffect, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useCallback, useContext, useEffect, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 
+import { SnackbarContext } from '@/App/useSnackbar/useSnackbar';
 import { fetchMovie } from '@/api/fetchMovie/fetchMovie';
+import { useEnrichmentSummary } from '@/hooks/useEnrichmentSummary/useEnrichmentSummary';
 import { useGoBack } from '@/hooks/useGoBack/useGoBack';
 import { ChevronLeftIcon, IconButton } from '@/primitives';
 import type { EnrichField, EnrichScope } from '@/types';
@@ -13,7 +15,7 @@ import {
   EnrichmentSetup,
 } from '../EnrichmentSetup/EnrichmentSetup';
 import { useEnrichmentRun } from '../useEnrichmentRun/useEnrichmentRun';
-import { HeaderRow, Heading, Lede } from './EnrichmentFlow.styles';
+import { HeaderRow, Heading, KeyBadge, Lede } from './EnrichmentFlow.styles';
 
 /** Every chip on — the setup's default. */
 const ALL_FIELDS: EnrichField[] = ENRICH_FIELDS.map(({ field }) => field);
@@ -32,12 +34,22 @@ const ALL_FIELDS: EnrichField[] = ENRICH_FIELDS.map(({ field }) => field);
  * review's Finish is _Back to the movie_. Back and Finish both follow the
  * **Back rule**, the movie as the **Landing** — a **History step** when the
  * movie is behind the screen, the movie pushed on a deep link.
+ *
+ * The setup reads the `EnrichmentSummary` and draws nothing of itself — no
+ * key badge, no banner, no scope card, no Start — until it lands. Start is
+ * the prototype's `startEnrich`: with no key it pushes `/settings` and raises
+ * _Add your TMDB key here first._; offline it does nothing; else it runs.
  */
 export function EnrichmentFlow() {
   const [params] = useSearchParams();
   const movieId = params.get('movie');
   const goBack = useGoBack(movieId === null ? '/settings' : moviePath(movieId));
   const { run, start, cancel } = useEnrichmentRun();
+  const { summary, retry } = useEnrichmentSummary();
+  const navigate = useNavigate();
+  // Read off the context rather than `useSnackbar`: the notice is the one
+  // thing the flow raises, and a flow drawn with no stack still runs.
+  const snackbar = useContext(SnackbarContext);
 
   const [title, setTitle] = useState<string | null>(null);
   const [fields, setFields] = useState<EnrichField[]>(ALL_FIELDS);
@@ -71,7 +83,23 @@ export function EnrichmentFlow() {
     );
   }, []);
 
+  const openSettings = useCallback(() => navigate('/settings'), [navigate]);
+
   const onStart = useCallback(() => {
+    if (summary === null) {
+      return;
+    }
+    if (!summary.keySet) {
+      openSettings();
+      snackbar?.notify({
+        variant: 'info',
+        message: 'Add your TMDB key here first.',
+      });
+      return;
+    }
+    if (!summary.online) {
+      return;
+    }
     void start({
       scope,
       ...(scope === 'single' && movieId !== null ? { movieId } : {}),
@@ -81,7 +109,7 @@ export function EnrichmentFlow() {
     }).catch(() => {
       // A refused start leaves the setup where it is, to press again.
     });
-  }, [start, scope, movieId, fields]);
+  }, [summary, openSettings, snackbar, start, scope, movieId, fields]);
 
   return (
     <>
@@ -96,6 +124,11 @@ export function EnrichmentFlow() {
           <ChevronLeftIcon size={18} />
         </IconButton>
         <Heading>Sync with TMDB</Heading>
+        {summary === null ? null : (
+          <KeyBadge $connected={summary.keySet}>
+            {summary.keySet ? 'TMDB connected' : 'No key yet'}
+          </KeyBadge>
+        )}
       </HeaderRow>
       <Lede>
         Fetch synopses, artwork, and credits for movies already in your library.
@@ -103,14 +136,19 @@ export function EnrichmentFlow() {
       </Lede>
 
       {run === null ? (
-        <EnrichmentSetup
-          scope={scope}
-          title={title}
-          fields={fields}
-          onChooseScope={setLibraryScope}
-          onToggleField={onToggleField}
-          onStart={onStart}
-        />
+        summary === null ? null : (
+          <EnrichmentSetup
+            scope={scope}
+            summary={summary}
+            title={title}
+            fields={fields}
+            onChooseScope={setLibraryScope}
+            onToggleField={onToggleField}
+            onStart={onStart}
+            onRetry={retry}
+            onOpenKeySettings={openSettings}
+          />
+        )
       ) : run.phase === 'review' ? (
         <EnrichmentReview
           run={run}

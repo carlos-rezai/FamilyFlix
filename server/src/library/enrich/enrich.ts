@@ -53,11 +53,20 @@ export interface Enrich {
    * poster), `all` every film.
    */
   moviesInScope(scope: Exclude<EnrichScope, 'single'>): Movie[];
+  /**
+   * Every **Movie** and **Series** in the library, and those of them with
+   * **Full details** — a synopsis and a poster both. Zeros when empty.
+   */
+  enrichmentCounts(): { total: number; complete: number };
 }
 
 /** No synopsis or no poster: a film without **Full details**. */
 const MISSING_WHERE =
   "WHERE m.synopsis IS NULL OR m.synopsis = '' OR m.poster_path IS NULL OR m.poster_path = ''";
+
+/** A synopsis and a poster both: a row with **Full details**. */
+const FULL_DETAILS =
+  "synopsis IS NOT NULL AND synopsis <> '' AND poster_path IS NOT NULL AND poster_path <> ''";
 
 export function createEnrich(db: SqliteDatabase, reader: MovieReader): Enrich {
   const selectGenreIdByName = db.prepare(
@@ -110,5 +119,20 @@ export function createEnrich(db: SqliteDatabase, reader: MovieReader): Enrich {
     return reader.assembleMany(rows, where, []);
   }
 
-  return { enrichMovie, moviesInScope };
+  const countTitles = db.prepare(
+    `SELECT
+       (SELECT COUNT(*) FROM movies) + (SELECT COUNT(*) FROM series) AS total,
+       (SELECT COUNT(*) FROM movies WHERE ${FULL_DETAILS})
+         + (SELECT COUNT(*) FROM series WHERE ${FULL_DETAILS}) AS complete`
+  );
+
+  function enrichmentCounts(): { total: number; complete: number } {
+    const { total, complete } = countTitles.get() as {
+      total: number;
+      complete: number;
+    };
+    return { total, complete };
+  }
+
+  return { enrichMovie, moviesInScope, enrichmentCounts };
 }

@@ -72,11 +72,19 @@ export interface TmdbClient {
    * and the call still answers a value.
    */
   image(path: string, signal?: AbortSignal): Promise<TmdbOutcome<Readable>>;
+  /**
+   * The short reachability probe, asked with no key: any answer from TMDB's
+   * API — a `401` included — is `true`; a network error or no answer within
+   * `probeTimeoutMs` is `false`. Never throws.
+   */
+  reachable(): Promise<boolean>;
 }
 
 export interface TmdbClientOptions {
   /** How long a request may go unanswered before TMDB counts as unreachable. */
   timeoutMs?: number;
+  /** How long the reachability probe waits before TMDB counts as offline. */
+  probeTimeoutMs?: number;
 }
 
 const TMDB_ORIGIN = 'https://api.themoviedb.org';
@@ -84,6 +92,7 @@ const IMAGE_BASE = 'https://image.tmdb.org/t/p/original';
 /** Every answer fixed to one language, whatever machine asks. */
 const LANGUAGE = 'en-US';
 const DEFAULT_TIMEOUT_MS = 8000;
+const DEFAULT_PROBE_TIMEOUT_MS = 3000;
 
 /**
  * A TMDB client over an injected `fetch`, so nothing that composes one in a
@@ -91,7 +100,10 @@ const DEFAULT_TIMEOUT_MS = 8000;
  */
 export function createTmdbClient(
   fetchImpl: typeof fetch,
-  { timeoutMs = DEFAULT_TIMEOUT_MS }: TmdbClientOptions = {}
+  {
+    timeoutMs = DEFAULT_TIMEOUT_MS,
+    probeTimeoutMs = DEFAULT_PROBE_TIMEOUT_MS,
+  }: TmdbClientOptions = {}
 ): TmdbClient {
   /** One GET under the key and the timeout; `null` when nothing answered. */
   async function get(
@@ -213,5 +225,21 @@ export function createTmdbClient(
     return response.ok ? 'accepted' : 'unreachable';
   }
 
-  return { authenticate, searchMovie, movie, image };
+  async function reachable(): Promise<boolean> {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), probeTimeoutMs);
+    try {
+      await fetchImpl(new URL('/3/configuration', TMDB_ORIGIN), {
+        headers: new Headers({ Accept: 'application/json' }),
+        signal: controller.signal,
+      });
+      return true;
+    } catch {
+      return false;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  return { authenticate, searchMovie, movie, image, reachable };
 }

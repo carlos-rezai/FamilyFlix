@@ -1,5 +1,9 @@
-import { Button } from '@/primitives';
+import { useNavigate } from 'react-router-dom';
 
+import { useEnrichmentSummary } from '@/hooks/useEnrichmentSummary/useEnrichmentSummary';
+import { Button, ChevronRightIcon, SyncIcon } from '@/primitives';
+
+import { syncLine } from '../syncLine/syncLine';
 import { useTmdbKey } from '../useTmdbKey/useTmdbKey';
 import { Card, GroupHeading, ItemTitle } from '../section.styles';
 import {
@@ -9,6 +13,13 @@ import {
   KeyRow,
   Lede,
   StatusPill,
+  SyncChevron,
+  SyncDesc,
+  SyncDivider,
+  SyncLabel,
+  SyncRow,
+  SyncText,
+  SyncTile,
   TitleRow,
 } from './NetworkSection.styles';
 
@@ -29,9 +40,14 @@ function testLabel(testing: boolean, connected: boolean): string {
  * The section owns `useTmdbKey`: the stored key comes back masked in the
  * field, the pill reads _Connected_ while it is there and _Not set up_ the
  * moment it is edited, and _Test connection_ tests and saves in one.
+ *
+ * Under a divider, _Sync metadata & posters_ pushes `/enrich`; its line is
+ * `syncLine` over the `EnrichmentSummary`, blank until the read lands.
  */
 export function NetworkSection() {
   const { key, connected, testing, onKey, test } = useTmdbKey();
+  const { summary } = useEnrichmentSummary();
+  const navigate = useNavigate();
 
   return (
     <>
@@ -69,6 +85,21 @@ export function NetworkSection() {
             ? 'Key saved on this machine. It is never shared or uploaded anywhere else.'
             : 'Get a free key at themoviedb.org → Settings → API.'}
         </KeyHint>
+        <SyncDivider />
+        <SyncRow type="button" onClick={() => navigate('/enrich')}>
+          <SyncTile aria-hidden="true">
+            <SyncIcon size={19} />
+          </SyncTile>
+          <SyncText>
+            <SyncLabel>Sync metadata &amp; posters</SyncLabel>
+            <SyncDesc>
+              {summary === null ? '' : syncLine(summary, new Date())}
+            </SyncDesc>
+          </SyncText>
+          <SyncChevron>
+            <ChevronRightIcon size={18} />
+          </SyncChevron>
+        </SyncRow>
       </Card>
     </>
   );

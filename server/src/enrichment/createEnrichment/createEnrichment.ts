@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import type {
   EnrichField,
   EnrichmentRun,
+  EnrichmentSummary,
   EnrichScope,
   LogKind,
   Movie,
@@ -61,6 +62,12 @@ export interface Enrichment {
    * finished. Every row already written stays. Harmless with no run held.
    */
   cancel(): void;
+  /**
+   * The setup's read: the library's titles and those with **Full details**,
+   * when a Sync last reached review, whether a key is stored, whether TMDB
+   * answered the server's own probe, and the **Library root**.
+   */
+  summary(): Promise<EnrichmentSummary>;
 }
 
 export interface EnrichmentDeps {
@@ -458,5 +465,19 @@ export function createEnrichment({
     run = null;
   }
 
-  return { key, saveKey, start, current, cancel };
+  async function summary(): Promise<EnrichmentSummary> {
+    const online = await client.reachable();
+    const { total, complete } = storage.enrichmentCounts();
+    return {
+      total,
+      complete,
+      lastSyncedAt: storage.enrichmentLastSyncedAt(),
+      keySet: storage.tmdbKey() !== null,
+      online,
+      // No Library root is remembered yet.
+      libraryRoot: null,
+    };
+  }
+
+  return { key, saveKey, start, current, cancel, summary };
 }

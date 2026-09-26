@@ -1281,6 +1281,13 @@ export function createApiRouter(
     res.status(refused.status).json({ error: refused.error });
   });
 
+  // The setup's and the Settings row's read: the **EnrichmentSummary**. An
+  // empty library answers zeros; offline means the server's own probe of
+  // TMDB went unanswered.
+  router.get('/enrichment', async (_req: Request, res: Response) => {
+    res.json(await enrichment.summary());
+  });
+
   // A **Sync**: `201` with the **Current enrichment run** it started, which
   // goes on behind the answer; the screen polls `current` from there.
   router.post('/enrichment', async (req: Request, res: Response) => {

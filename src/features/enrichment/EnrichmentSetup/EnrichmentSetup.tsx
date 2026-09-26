@@ -1,6 +1,13 @@
-import type { EnrichField, EnrichScope } from '@/types';
-import { Button, Chip } from '@/primitives';
+import type { EnrichField, EnrichmentSummary, EnrichScope } from '@/types';
+import { BangRingIcon, Button, Chip } from '@/primitives';
+import { enrichmentEstimate } from '../enrichmentView/enrichmentView';
 import {
+  Banner,
+  BannerAction,
+  BannerGlyph,
+  BannerLine,
+  BannerText,
+  BannerTitle,
   Chips,
   Estimate,
   GroupLabel,
@@ -37,23 +44,27 @@ export const ENRICH_FIELDS: ReadonlyArray<{
 const LIBRARY_SCOPES: ReadonlyArray<{
   scope: Exclude<EnrichScope, 'single'>;
   label: string;
-  description: string;
+  description: (summary: EnrichmentSummary) => string;
 }> = [
   {
     scope: 'missing',
     label: 'Only what’s missing',
-    description: 'Titles with no synopsis or artwork',
+    description: ({ total, complete }) =>
+      `${total - complete} titles have no synopsis or artwork`,
   },
   {
     scope: 'all',
     label: 'Everything',
-    description: 'Every title — re-checks ones already filled in',
+    description: ({ total }) =>
+      `${total} titles — re-checks ones already filled in`,
   },
 ];
 
 export interface EnrichmentSetupProps {
   /** The scope chosen — `single` draws _Just this movie_ alone. */
   scope: EnrichScope;
+  /** What the library and the connection are, as the server read them. */
+  summary: EnrichmentSummary;
   /** The film's title, once read — the _Just this movie_ card's line. */
   title: string | null;
   /** The chips that are on. */
@@ -61,25 +72,76 @@ export interface EnrichmentSetupProps {
   onChooseScope: (scope: EnrichScope) => void;
   onToggleField: (field: EnrichField) => void;
   onStart: () => void;
+  /** The offline banner's _Retry_. */
+  onRetry: () => void;
+  /** The key banner's _Open Network settings_. */
+  onOpenKeySettings: () => void;
 }
 
 /**
- * The **Setup step**, from `feat.EnrichmentFlow.dc.html`: the scope cards —
+ * The **Setup step**, from `feat.EnrichmentFlow.dc.html`: the offline banner
+ * and the key banner when either applies, the scope cards —
  * _Only what's missing_ and _Everything_ for the library, or _Just this
  * movie_ in their place for one film — the field chips with the rating note,
  * and Start: _Start sync_, or _Fetch details_ with its estimate for one film.
  */
 export function EnrichmentSetup({
   scope,
+  summary,
   title,
   fields,
   onChooseScope,
   onToggleField,
   onStart,
+  onRetry,
+  onOpenKeySettings,
 }: EnrichmentSetupProps) {
   const single = scope === 'single';
+  const ready = summary.keySet && summary.online;
   return (
     <Stack>
+      {summary.online ? null : (
+        <Banner $tone="danger">
+          <BannerGlyph>
+            <BangRingIcon size={20} />
+          </BannerGlyph>
+          <BannerText>
+            <BannerTitle>No internet connection</BannerTitle>
+            <BannerLine>
+              FamilyFlix works fine offline — this is the one feature that needs
+              the network. Everything already in your library stays available.
+            </BannerLine>
+          </BannerText>
+          <BannerAction>
+            <Button
+              label="Retry"
+              variant="secondary"
+              size="md"
+              onClick={onRetry}
+            />
+          </BannerAction>
+        </Banner>
+      )}
+      {summary.keySet ? null : (
+        <Banner $tone="accent">
+          <BannerText>
+            <BannerTitle>A TMDB API key is needed first</BannerTitle>
+            <BannerLine>
+              It’s free and takes a minute. Paste it under Settings → Network,
+              and it stays on this machine.
+            </BannerLine>
+          </BannerText>
+          <BannerAction>
+            <Button
+              label="Open Network settings"
+              variant="primary"
+              size="md"
+              onClick={onOpenKeySettings}
+            />
+          </BannerAction>
+        </Banner>
+      )}
+
       <div>
         <GroupLabel>What to sync</GroupLabel>
         <Scopes role="radiogroup" aria-label="What to sync">
@@ -107,7 +169,9 @@ export function EnrichmentSetup({
                     <ScopeDot aria-hidden="true" $selected={selected} />
                     <ScopeLabel>{each.label}</ScopeLabel>
                   </ScopeTitle>
-                  <ScopeDescription>{each.description}</ScopeDescription>
+                  <ScopeDescription>
+                    {each.description(summary)}
+                  </ScopeDescription>
                 </ScopeCard>
               );
             })
@@ -136,10 +200,11 @@ export function EnrichmentSetup({
       <StartRow>
         <Button
           label={single ? 'Fetch details' : 'Start sync'}
-          variant="primary"
+          variant={ready ? 'primary' : 'secondary'}
+          size="md"
           onClick={onStart}
         />
-        {single ? <Estimate>About 1s for 1 title</Estimate> : null}
+        <Estimate>{enrichmentEstimate(summary, scope)}</Estimate>
       </StartRow>
     </Stack>
   );

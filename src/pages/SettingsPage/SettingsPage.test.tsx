@@ -156,8 +156,8 @@ describe('SettingsPage', () => {
       screen.getByRole('button', { name: /export to csv/i })
     ).toBeDefined();
     // 23 — Enrichment, Phase 1 (issue #203): the Network card adds one, Test
-    // connection.
-    expect(screen.getAllByRole('button')).toHaveLength(6);
+    // connection; and Phase 3 (issue #206) one more, Sync metadata & posters.
+    expect(screen.getAllByRole('button')).toHaveLength(7);
   });
 
   it('composes the Storage section under the Playback section', () => {
@@ -265,14 +265,14 @@ describe('SettingsPage', () => {
     expect(screen.queryByText(/up to date/i)).toBeNull();
     expect(screen.queryByRole('button', { name: /update/i })).toBeNull();
     // Back, two "Add a movie"s, Import, Export — and the Preferred language
-    // pill once the settings land; Network adds Test connection; Storage and
-    // About add none.
+    // pill once the settings land; Network adds Test connection and Sync
+    // metadata & posters; Storage and About add none.
     await waitFor(() =>
       expect(
         screen.getByRole('button', { name: /^Preferred language: / })
       ).toBeDefined()
     );
-    expect(screen.getAllByRole('button')).toHaveLength(7);
+    expect(screen.getAllByRole('button')).toHaveLength(8);
     // Five Group headings, and only five.
     const groupHeadings = [
       'Library',

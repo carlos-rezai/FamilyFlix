@@ -24,6 +24,19 @@ beforeEach(() => {
     'fetch',
     vi.fn((input: RequestInfo | URL) => {
       const p = new URL(String(input), 'http://localhost').pathname;
+      // The setup draws nothing until the summary lands (issue #206).
+      if (p === '/api/enrichment') {
+        return Promise.resolve(
+          okResponse({
+            total: 1,
+            complete: 0,
+            lastSyncedAt: null,
+            keySet: true,
+            online: true,
+            libraryRoot: null,
+          })
+        );
+      }
       if (p === '/api/movies/m1') {
         return Promise.resolve(
           okResponse(makeMovie({ id: 'm1', title: 'The Lantern Keeper' }))

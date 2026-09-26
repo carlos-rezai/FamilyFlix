@@ -1,4 +1,4 @@
-import type { EnrichmentRun } from '@/types';
+import type { EnrichmentRun, EnrichmentSummary, EnrichScope } from '@/types';
 
 /** What the enrichment **Running step** prints, from a snapshot and the clock. */
 export interface EnrichmentView {
@@ -56,4 +56,28 @@ export function enrichmentView(run: EnrichmentRun, now: Date): EnrichmentView {
     elapsed: `Elapsed ${clock(elapsedSeconds)}`,
     eta: forecast === null ? null : `About ${clock(forecast)} left`,
   };
+}
+
+/** Seconds a title takes to look up, the prototype's own pace. */
+const SECONDS_PER_TITLE = 0.4;
+
+/** How many titles a scope covers, off the summary. */
+function titlesIn(summary: EnrichmentSummary, scope: EnrichScope): number {
+  if (scope === 'single') return 1;
+  return scope === 'all' ? summary.total : summary.total - summary.complete;
+}
+
+/**
+ * The estimate beside Start — the prototype's `estimateLabel`: offline first,
+ * then no key, then `About Ns for N titles` over the scope's count.
+ */
+export function enrichmentEstimate(
+  summary: EnrichmentSummary,
+  scope: EnrichScope
+): string {
+  if (!summary.online) return 'Waiting for a connection';
+  if (!summary.keySet) return 'A key is needed before this can run';
+  const n = titlesIn(summary, scope);
+  const seconds = Math.max(1, Math.round(n * SECONDS_PER_TITLE));
+  return `About ${seconds}s for ${n} title${n === 1 ? '' : 's'}`;
 }
