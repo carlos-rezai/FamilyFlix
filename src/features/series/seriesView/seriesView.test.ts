@@ -65,6 +65,7 @@ function makeEpisode(
     resumePositionSeconds: status === 'in-progress' ? 600 : 0,
     status,
     videoPath: `harbor-2019/season-0${season}/e${number}.mp4`,
+    stillPath: null,
     subtitles: [],
     lastWatchedAt: null,
   };

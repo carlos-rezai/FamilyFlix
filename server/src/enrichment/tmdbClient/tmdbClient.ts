@@ -42,6 +42,52 @@ export interface TmdbMovieDetail {
   };
 }
 
+/** One result of `/3/search/tv`, the fields a Sync reads. */
+export interface TmdbTvResult {
+  id: number;
+  name: string;
+  original_name: string;
+  first_air_date: string;
+  genre_ids: number[];
+  original_language: string;
+  poster_path: string | null;
+  vote_average: number;
+}
+
+/** `/3/tv/{id}?append_to_response=credits`, the fields a Sync reads. */
+export interface TmdbTvDetail {
+  id: number;
+  name: string;
+  original_name: string;
+  overview: string;
+  first_air_date: string;
+  last_air_date: string | null;
+  genres: { id: number; name: string }[];
+  vote_average: number;
+  poster_path: string | null;
+  backdrop_path: string | null;
+  created_by: { name: string }[];
+  credits: {
+    cast: { name: string; order: number }[];
+    crew: { name: string; job: string }[];
+  };
+}
+
+/** One episode of `/3/tv/{id}/season/{n}`, the fields a Sync reads. */
+export interface TmdbSeasonEpisode {
+  episode_number: number;
+  name: string;
+  air_date: string | null;
+  runtime: number | null;
+  still_path: string | null;
+}
+
+/** `/3/tv/{id}/season/{n}`, the fields a Sync reads. */
+export interface TmdbSeason {
+  season_number: number;
+  episodes: TmdbSeasonEpisode[];
+}
+
 /**
  * The injected seam of the `enrichment/` domain: what can be asked of TMDB.
  * Nothing else in the server is a network client.
@@ -66,6 +112,26 @@ export interface TmdbClient {
     id: number,
     signal?: AbortSignal
   ): Promise<TmdbOutcome<TmdbMovieDetail>>;
+  /** `/3/search/tv` for a title, and its first year when it has one. */
+  searchTv(
+    key: string,
+    title: string,
+    year: number | null,
+    signal?: AbortSignal
+  ): Promise<TmdbOutcome<TmdbTvResult[]>>;
+  /** `/3/tv/{id}` with its credits appended. */
+  tv(
+    key: string,
+    id: number,
+    signal?: AbortSignal
+  ): Promise<TmdbOutcome<TmdbTvDetail>>;
+  /** `/3/tv/{id}/season/{n}`: one season's episodes. */
+  season(
+    key: string,
+    id: number,
+    seasonNumber: number,
+    signal?: AbortSignal
+  ): Promise<TmdbOutcome<TmdbSeason>>;
   /**
    * An image's bytes off `image.tmdb.org`, as a stream. Each of the three
    * takes the caller's signal last: aborting it aborts the request in flight,
@@ -196,6 +262,55 @@ export function createTmdbClient(
     );
   }
 
+  async function searchTv(
+    key: string,
+    title: string,
+    year: number | null,
+    signal?: AbortSignal
+  ): Promise<TmdbOutcome<TmdbTvResult[]>> {
+    const params: Record<string, string> = { query: title, language: LANGUAGE };
+    if (year !== null) {
+      params.first_air_date_year = String(year);
+    }
+    const outcome = await json<{ results: TmdbTvResult[] }>(
+      await get('/3/search/tv', key, params, signal)
+    );
+    return outcome.kind === 'ok'
+      ? { kind: 'ok', value: outcome.value.results }
+      : outcome;
+  }
+
+  async function tv(
+    key: string,
+    id: number,
+    signal?: AbortSignal
+  ): Promise<TmdbOutcome<TmdbTvDetail>> {
+    return json<TmdbTvDetail>(
+      await get(
+        `/3/tv/${id}`,
+        key,
+        { append_to_response: 'credits', language: LANGUAGE },
+        signal
+      )
+    );
+  }
+
+  async function season(
+    key: string,
+    id: number,
+    seasonNumber: number,
+    signal?: AbortSignal
+  ): Promise<TmdbOutcome<TmdbSeason>> {
+    return json<TmdbSeason>(
+      await get(
+        `/3/tv/${id}/season/${seasonNumber}`,
+        key,
+        { language: LANGUAGE },
+        signal
+      )
+    );
+  }
+
   async function image(
     path: string,
     signal?: AbortSignal
@@ -241,5 +356,14 @@ export function createTmdbClient(
     }
   }
 
-  return { authenticate, searchMovie, movie, image, reachable };
+  return {
+    authenticate,
+    searchMovie,
+    movie,
+    searchTv,
+    tv,
+    season,
+    image,
+    reachable,
+  };
 }

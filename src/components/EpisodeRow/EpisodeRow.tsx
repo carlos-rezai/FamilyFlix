@@ -1,6 +1,6 @@
 import type { KeyboardEvent, MouseEvent } from 'react';
 
-import { PlayIcon, ProgressBar } from '@/primitives';
+import { Artwork, PlayIcon, ProgressBar } from '@/primitives';
 import type { EpisodeRowEpisode } from '@/types';
 import { formatEpisodeTag } from '@/utils';
 import {
@@ -30,7 +30,7 @@ const ACTIVATION_KEYS = ['Enter', ' '];
 
 /**
  * One episode on the season page — `mol.EpisodeRow` 1:1. The 16:9 thumbnail
- * in the series' gradient with a hover play glyph and the resume bar, the
+ * — its **Still** when a Sync stored one, over the series' gradient — with a hover play glyph and the resume bar, the
  * `S02E04` code and title over the air date and the **Resume label**, then the
  * watched box. The row is a **Card** (`cardLift`, `cardFocus`) and one tab
  * stop; the box is a **Control** and a tab stop of its own that only marks.
@@ -74,6 +74,9 @@ export function EpisodeRow({
       onKeyDown={handleOpenKey}
     >
       <Thumb $g1={episode.g1} $g2={episode.g2}>
+        {episode.stillUrl ? (
+          <Artwork url={episode.stillUrl} g1={episode.g1} g2={episode.g2} />
+        ) : null}
         <PlayHover aria-hidden="true">
           <PlayDisc>
             <PlayIcon size={20} />

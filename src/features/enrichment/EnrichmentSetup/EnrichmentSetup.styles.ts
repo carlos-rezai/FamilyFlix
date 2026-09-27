@@ -100,6 +100,16 @@ export const RatingNote = styled.div`
   color: ${({ theme }) => theme.colors.textFaint};
 `;
 
+/** What a series gets, under the rating note. */
+export const SeriesNote = styled.div`
+  margin-top: 6px;
+  font-family: ${({ theme }) => theme.fonts.sans};
+  font-size: 13px;
+  line-height: 1.5;
+  color: ${({ theme }) => theme.colors.textFaint};
+  text-wrap: pretty;
+`;
+
 export const Star = styled.span`
   color: ${({ theme }) => theme.colors.accent};
 `;

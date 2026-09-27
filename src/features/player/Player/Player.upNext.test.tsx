@@ -59,6 +59,7 @@ function makeEpisode(overrides: Partial<Episode>): Episode {
     resumePositionSeconds: 0,
     status: 'unwatched',
     videoPath: 'harbor-vine-2019/season-02/S02E04.mp4',
+    stillPath: null,
     subtitles: [],
     lastWatchedAt: null,
     ...overrides,

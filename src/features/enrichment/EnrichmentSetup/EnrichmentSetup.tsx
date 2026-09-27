@@ -12,6 +12,7 @@ import {
   Estimate,
   GroupLabel,
   RatingNote,
+  SeriesNote,
   ScopeCard,
   ScopeDescription,
   ScopeDot,
@@ -195,6 +196,10 @@ export function EnrichmentSetup({
           <Star>★</Star>Your household rating is yours — TMDB’s score is stored
           beside it, never over it.
         </RatingNote>
+        <SeriesNote>
+          Series get the same fields at show level, plus episode titles, air
+          dates, and stills for every season found on disk.
+        </SeriesNote>
       </div>
 
       <StartRow>

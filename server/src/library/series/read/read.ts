@@ -42,6 +42,7 @@ export interface EpisodeRow {
   resume_position_seconds: number;
   last_watched_at: string | null;
   video_path: string;
+  still_path: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -89,6 +90,7 @@ const mapRowToEpisode = (row: EpisodeRow, subtitles: Subtitle[]): Episode => {
     resumePositionSeconds: row.resume_position_seconds,
     status: deriveStatus(watched, row.resume_position_seconds),
     videoPath: row.video_path,
+    stillPath: row.still_path,
     subtitles,
     lastWatchedAt: row.last_watched_at,
   };

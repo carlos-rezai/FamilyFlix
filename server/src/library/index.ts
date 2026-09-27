@@ -28,14 +28,23 @@ import { createWrite } from './write/write';
 import { createWatch } from './watch/watch';
 import { createCuration } from './curation/curation';
 import { createSettings } from './settings/settings';
-import { createEnrich, type MovieEnrichment } from './enrich/enrich';
+import {
+  createEnrich,
+  type EpisodeEnrichment,
+  type MovieEnrichment,
+  type SeriesEnrichment,
+} from './enrich/enrich';
 import { createSeriesReader } from './series/read/read';
 import { createSeriesBrowse } from './series/browse/browse';
 import { createSeriesWrite } from './series/write/write';
 import { createSeriesCuration } from './series/curation/curation';
 import { createSeriesWatch } from './series/watch/watch';
 
-export type { MovieEnrichment } from './enrich/enrich';
+export type {
+  EpisodeEnrichment,
+  MovieEnrichment,
+  SeriesEnrichment,
+} from './enrich/enrich';
 
 /**
  * The repository seam every consumer (routes, importer, player) reads and writes
@@ -68,6 +77,18 @@ export interface LibraryStorage {
    * `rating`, `watched`, `resume_position_seconds` or `last_watched_at`.
    */
   enrichMovie(id: string, fields: MovieEnrichment): void;
+  /** {@link enrichMovie} over a **Series** — never its rating or favorite. */
+  enrichSeries(id: string, fields: SeriesEnrichment): void;
+  /**
+   * {@link enrichMovie} over one **Episode** — never `watched`,
+   * `resume_position_seconds` or `last_watched_at`.
+   */
+  enrichEpisode(id: string, fields: EpisodeEnrichment): void;
+  /**
+   * {@link moviesInScope} over the series: those without a synopsis or a
+   * poster, or all of them.
+   */
+  seriesInScope(scope: 'missing' | 'all'): Series[];
   /**
    * The titles a library-wide **Sync** snapshots, with their current values:
    * `missing` — every film without a synopsis or without a poster — or `all`.
@@ -269,8 +290,8 @@ export function createSqliteStorage(dbPath: string): LibraryStorage {
   const watch = createWatch(db);
   const curation = createCuration(db);
   const settingsRepository = createSettings(db);
-  const enrich = createEnrich(db, reader);
   const seriesReader = createSeriesReader(db);
+  const enrich = createEnrich(db, reader, seriesReader);
   const seriesBrowse = createSeriesBrowse(db, seriesReader);
   const seriesWrite = createSeriesWrite(db, seriesReader);
   const seriesCuration = createSeriesCuration(db);
@@ -280,7 +301,10 @@ export function createSqliteStorage(dbPath: string): LibraryStorage {
     addMovie: write.addMovie,
     updateMovie: write.updateMovie,
     enrichMovie: enrich.enrichMovie,
+    enrichSeries: enrich.enrichSeries,
+    enrichEpisode: enrich.enrichEpisode,
     moviesInScope: enrich.moviesInScope,
+    seriesInScope: enrich.seriesInScope,
     enrichmentCounts: enrich.enrichmentCounts,
     deleteMovie: write.deleteMovie,
     getMovie: reader.getMovie,

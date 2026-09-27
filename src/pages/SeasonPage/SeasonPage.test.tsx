@@ -62,6 +62,7 @@ const DETAIL: SeriesDetail = {
           resumePositionSeconds: 0,
           status: 'unwatched',
           videoPath: 'harbor-2019/season-01/e1.mp4',
+          stillPath: null,
           subtitles: [],
           lastWatchedAt: null,
         },

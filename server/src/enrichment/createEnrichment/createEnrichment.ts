@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { dirname, posix } from 'node:path';
 
 import type {
   Candidate,
@@ -9,16 +10,25 @@ import type {
   EnrichmentRun,
   EnrichmentSummary,
   EnrichScope,
+  Episode,
   FieldConflict,
   LogKind,
   Movie,
+  Series,
   StartEnrichment,
 } from '@/types';
-import type { LibraryStorage, MovieEnrichment } from '../../library';
+import type {
+  EpisodeEnrichment,
+  LibraryStorage,
+  MovieEnrichment,
+  SeriesEnrichment,
+} from '../../library';
 import type { Media } from '../../media/createMedia/createMedia';
 import {
   fetchedFields,
+  fetchedTvFields,
   type FetchedFields,
+  type FetchedTvFields,
 } from '../fetchedFields/fetchedFields';
 import {
   confident,
@@ -30,7 +40,14 @@ import type {
   TmdbClient,
   TmdbMovieDetail,
   TmdbMovieResult,
+  TmdbSeason,
+  TmdbTvDetail,
 } from '../tmdbClient/tmdbClient';
+
+/** One title a Sync snapshots: a film, or a show with its episodes. */
+type Title =
+  | { kind: 'movie'; movie: Movie }
+  | { kind: 'series'; series: Series };
 
 /** What saving a key came to, as a value the route maps to a status. */
 export type SaveKeyOutcome =
@@ -199,11 +216,31 @@ function currentFields(movie: Movie): FetchedFields {
   };
 }
 
+/** A series' values now, in the fetched shape: its creator as the director. */
+function currentSeriesFields(series: Series): FetchedFields {
+  return {
+    synopsis: series.synopsis,
+    poster: series.posterPath,
+    backdrop: series.backdropPath,
+    runtime: null,
+    year: series.year,
+    genres: series.genres.map((genre) => genre.name),
+    director: series.creator,
+    cast: series.cast,
+    originalTitle: series.originalTitle,
+    tmdbScore: series.tmdbScore,
+  };
+}
+
 /** The year off a TMDB release date, `null` for none. */
-function releaseYear(date: string): number | null {
-  const year = Number.parseInt(date.slice(0, 4), 10);
+function releaseYear(date: string | null): number | null {
+  const year = Number.parseInt((date ?? '').slice(0, 4), 10);
   return Number.isNaN(year) ? null : year;
 }
+
+/** An empty string or `null`: nothing there yet. */
+const blank = (value: string | null): boolean =>
+  value === null || value.trim() === '';
 
 /** A search result as `matchScore` reads it. */
 function titledYear(result: TmdbMovieResult): TitledYear {
@@ -528,8 +565,267 @@ export function createEnrichment({
     return { conflicts, fetched };
   }
 
+  /** TMDB's detail for a series: by its `tmdb_id`, else a Confident search. */
+  async function lookUpSeries(
+    apiKey: string,
+    series: Series,
+    signal: AbortSignal
+  ): Promise<
+    | { kind: 'found'; detail: TmdbTvDetail }
+    | { kind: 'unsettled'; reason: string }
+    | { kind: 'stop'; stop: Stop }
+  > {
+    let id = series.tmdbId;
+    if (id === null) {
+      const search = await client.searchTv(
+        apiKey,
+        series.title,
+        series.year,
+        signal
+      );
+      if (search.kind !== 'ok') {
+        return { kind: 'stop', stop: search.kind };
+      }
+      const ours: TitledYear = { title: series.title, year: series.year };
+      const theirs = search.value.map(
+        (result): TitledYear => ({
+          title: result.name,
+          year: releaseYear(result.first_air_date),
+        })
+      );
+      if (!confident(ours, theirs)) {
+        return {
+          kind: 'unsettled',
+          reason:
+            search.value.length === 0
+              ? 'no result on TMDB'
+              : 'several possible matches',
+        };
+      }
+      id = search.value[0].id;
+    }
+    const detail = await client.tv(apiKey, id, signal);
+    if (detail.kind !== 'ok') {
+      return { kind: 'stop', stop: detail.kind };
+    }
+    return { kind: 'found', detail: detail.value };
+  }
+
+  /**
+   * One image streamed into the **Series folder** — two directories above an
+   * episode's video — as `name`; `null` when there is nowhere, or it failed.
+   */
+  async function storeSeriesImage(
+    current: EnrichmentRun,
+    episodes: readonly Episode[],
+    path: string,
+    name: string,
+    signal: AbortSignal
+  ): Promise<string | null> {
+    const video = episodes[0]?.videoPath;
+    const seasonFolder = video === undefined ? null : media.openFolder(video);
+    // A stored path of fewer than three segments has no Series folder above
+    // its season folder: nothing is written above the media root.
+    if (
+      video === undefined ||
+      seasonFolder === null ||
+      video.split('/').length < 3
+    ) {
+      return null;
+    }
+    const image = await client.image(path, signal);
+    if (image.kind !== 'ok' || signal.aborted) {
+      return null;
+    }
+    try {
+      const stored = await media.storeUpload(
+        dirname(seasonFolder),
+        name,
+        image.value
+      );
+      log(current, `↓ ${name}  →  ${stored}`, 'scan');
+      return stored;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Plan and write one Confident series at show level: its columns, creator,
+   * year range, id and images. A filled field is kept as it is — a series
+   * raises no **Field conflict**, since the review's writes are a film's.
+   */
+  async function writeSeries(
+    current: EnrichmentRun,
+    series: Series,
+    episodes: readonly Episode[],
+    detail: TmdbTvDetail,
+    fields: readonly EnrichField[],
+    signal: AbortSignal
+  ): Promise<void> {
+    const fetched: FetchedTvFields = fetchedTvFields(detail);
+    const { fill } = planFields({
+      current: currentSeriesFields(series),
+      fetched,
+      fields,
+      scope: 'missing',
+    });
+
+    const enrichment: SeriesEnrichment = { tmdbId: detail.id };
+    if (fill.synopsis) enrichment.synopsis = fill.synopsis;
+    if (fill.year) enrichment.year = fill.year;
+    if (
+      fields.includes('year') &&
+      series.endYear === null &&
+      fetched.endYear !== null
+    ) {
+      enrichment.endYear = fetched.endYear;
+    }
+    if (fill.genres) enrichment.genres = fill.genres;
+    if (fill.director) enrichment.creator = fill.director;
+    if (fill.cast) enrichment.cast = fill.cast;
+    if (fill.originalTitle) enrichment.originalTitle = fill.originalTitle;
+    if (fill.tmdbScore !== undefined && fill.tmdbScore !== null) {
+      enrichment.tmdbScore = fill.tmdbScore;
+    }
+    if (fill.poster) {
+      const stored = await storeSeriesImage(
+        current,
+        episodes,
+        fill.poster,
+        'poster.jpg',
+        signal
+      );
+      if (stored !== null) enrichment.posterPath = stored;
+    }
+    if (fill.backdrop) {
+      const stored = await storeSeriesImage(
+        current,
+        episodes,
+        fill.backdrop,
+        'backdrop.jpg',
+        signal
+      );
+      if (stored !== null) enrichment.backdropPath = stored;
+    }
+
+    if (signal.aborted) return;
+    storage.enrichSeries(series.id, enrichment);
+  }
+
+  /**
+   * One season's episodes on disk against TMDB's, by episode number: title and
+   * air date when empty, always; the still under Poster; the runtime under
+   * Runtime. Never a Decision, never the watch state.
+   */
+  async function writeEpisodes(
+    current: EnrichmentRun,
+    episodes: readonly Episode[],
+    season: TmdbSeason,
+    fields: readonly EnrichField[],
+    signal: AbortSignal
+  ): Promise<void> {
+    for (const episode of episodes) {
+      const theirs = season.episodes.find(
+        (each) => each.episode_number === episode.number
+      );
+      if (theirs === undefined) continue;
+
+      const enrichment: EpisodeEnrichment = {};
+      if (blank(episode.title) && theirs.name && theirs.name.trim() !== '') {
+        enrichment.title = theirs.name;
+      }
+      if (blank(episode.airDate) && theirs.air_date) {
+        enrichment.airDate = theirs.air_date;
+      }
+      if (
+        fields.includes('runtime') &&
+        episode.runtimeMinutes === null &&
+        theirs.runtime
+      ) {
+        enrichment.runtimeMinutes = theirs.runtime;
+      }
+      if (
+        fields.includes('poster') &&
+        episode.stillPath === null &&
+        theirs.still_path
+      ) {
+        const image = await client.image(theirs.still_path, signal);
+        if (signal.aborted) return;
+        if (image.kind === 'ok') {
+          const stem = posix.basename(
+            episode.videoPath,
+            posix.extname(episode.videoPath)
+          );
+          try {
+            const name = `${stem}.still.jpg`;
+            const stored = await media.storeNamed(
+              episode.videoPath,
+              name,
+              image.value
+            );
+            enrichment.stillPath = stored;
+            log(current, `↓ ${name}  →  ${stored}`, 'scan');
+          } catch {
+            // A still that cannot be stored leaves the gradient drawn.
+          }
+        }
+      }
+
+      if (signal.aborted) return;
+      if (Object.keys(enrichment).length > 0) {
+        storage.enrichEpisode(episode.id, enrichment);
+      }
+    }
+  }
+
+  /**
+   * One series through: looked up, written at show level, then every season
+   * it has on disk — never season 0 — read and matched by episode number.
+   */
+  async function syncSeries(
+    current: EnrichmentRun,
+    apiKey: string,
+    series: Series,
+    fields: readonly EnrichField[],
+    signal: AbortSignal
+  ): Promise<
+    | { kind: 'written' }
+    | { kind: 'unsettled'; reason: string }
+    | { kind: 'stop'; stop: Stop }
+  > {
+    const found = await lookUpSeries(apiKey, series, signal);
+    if (found.kind !== 'found') return found;
+
+    const episodes = storage.listEpisodes(series.id);
+    await writeSeries(current, series, episodes, found.detail, fields, signal);
+
+    const seasons = [...new Set(episodes.map((each) => each.season))].filter(
+      (season) => season > 0
+    );
+    for (const number of seasons) {
+      if (signal.aborted) return { kind: 'written' };
+      const season = await client.season(
+        apiKey,
+        found.detail.id,
+        number,
+        signal
+      );
+      if (signal.aborted) return { kind: 'written' };
+      if (season.kind !== 'ok') return { kind: 'stop', stop: season.kind };
+      await writeEpisodes(
+        current,
+        episodes.filter((each) => each.season === number),
+        season.value,
+        fields,
+        signal
+      );
+    }
+    return { kind: 'written' };
+  }
+
   /** A title as the log names it: `Title (Year)`, or the title alone. */
-  function named(movie: Movie): string {
+  function named(movie: Movie | Series): string {
     return movie.year === null ? movie.title : `${movie.title} (${movie.year})`;
   }
 
@@ -548,12 +844,40 @@ export function createEnrichment({
   async function go(
     current: EnrichmentRun,
     apiKey: string,
-    movies: readonly Movie[],
+    titles: readonly Title[],
     fields: readonly EnrichField[],
     signal: AbortSignal
   ): Promise<void> {
     let stopped = false;
-    for (const movie of movies) {
+    for (const title of titles) {
+      if (title.kind === 'series') {
+        const { series } = title;
+        current.currentItem = series.title;
+        let outcome: Awaited<ReturnType<typeof syncSeries>> | null;
+        try {
+          outcome = await syncSeries(current, apiKey, series, fields, signal);
+        } catch {
+          outcome = null;
+        }
+        if (signal.aborted) return;
+        if (outcome === null) {
+          log(current, `⚠ ${series.title} — could not be saved`, 'warning');
+        } else if (outcome.kind === 'stop') {
+          log(current, STOP_LINES[outcome.stop], 'error');
+          stopped = true;
+          break;
+        } else if (outcome.kind === 'unsettled') {
+          // A series' review would write a film: it is left for a later Sync.
+          log(current, `⚠ ${series.title} — ${outcome.reason}`, 'warning');
+        } else {
+          current.enriched += 1;
+          log(current, `✓ Matched   ${named(series)}`, 'success');
+        }
+        current.done += 1;
+        continue;
+      }
+
+      const { movie } = title;
       current.currentItem = movie.title;
       const found = await lookUp(apiKey, movie, signal);
       // A Stop dropped the run: nothing more is written or logged.
@@ -618,14 +942,24 @@ export function createEnrichment({
     reachReview(current);
   }
 
-  /** The titles a start's options name, snapshotted; `null` for no movie. */
-  function titlesFor(options: StartEnrichment): Movie[] | null {
+  /**
+   * The titles a start's options name, snapshotted — the films, then the
+   * series; `null` for no movie.
+   */
+  function titlesFor(options: StartEnrichment): Title[] | null {
     if (options.scope !== 'single') {
-      return storage.moviesInScope(options.scope);
+      return [
+        ...storage
+          .moviesInScope(options.scope)
+          .map((movie): Title => ({ kind: 'movie', movie })),
+        ...storage
+          .seriesInScope(options.scope)
+          .map((series): Title => ({ kind: 'series', series })),
+      ];
     }
     const movie =
       options.movieId === undefined ? null : storage.getMovie(options.movieId);
-    return movie === null ? null : [movie];
+    return movie === null ? null : [{ kind: 'movie', movie }];
   }
 
   async function start(body: unknown): Promise<StartEnrichmentOutcome> {
@@ -641,8 +975,8 @@ export function createEnrichment({
       return { kind: 'no-key' };
     }
     const { options } = read;
-    const movies = titlesFor(options);
-    if (movies === null) {
+    const titles = titlesFor(options);
+    if (titles === null) {
       return { kind: 'bad-body', error: 'No such movie' };
     }
 
@@ -651,7 +985,7 @@ export function createEnrichment({
       phase: 'running',
       scope: options.scope,
       startedAt: new Date().toISOString(),
-      total: movies.length,
+      total: titles.length,
       done: 0,
       enriched: 0,
       currentItem: null,
@@ -662,7 +996,7 @@ export function createEnrichment({
     log(current, 'Contacting api.themoviedb.org …', 'info');
     log(
       current,
-      `Looking up ${movies.length} title${movies.length === 1 ? '' : 's'} by name and year.`,
+      `Looking up ${titles.length} title${titles.length === 1 ? '' : 's'} by name and year.`,
       'info'
     );
     run = current;
@@ -673,7 +1007,7 @@ export function createEnrichment({
     abort = controller;
     const snapshot = structuredClone(current);
 
-    void go(current, apiKey, movies, options.fields, controller.signal).catch(
+    void go(current, apiKey, titles, options.fields, controller.signal).catch(
       () => {
         if (!controller.signal.aborted) reachReview(current);
       }

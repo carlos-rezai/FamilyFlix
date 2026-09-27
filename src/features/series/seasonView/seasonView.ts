@@ -28,6 +28,8 @@ const MONTHS = [
   'Dec',
 ];
 
+const IMAGE_ROUTE = '/api/images/';
+
 const seasonLabelOf = (number: number) => `Season ${number}`;
 
 /**
@@ -86,6 +88,7 @@ function toEpisodeModel(
         ? `Resume · ${elapsed}`
         : `Resume · ${elapsed} of ${formatClock(totalSeconds)}`
       : null,
+    stillUrl: episode.stillPath ? `${IMAGE_ROUTE}${episode.stillPath}` : null,
     g1,
     g2,
   };

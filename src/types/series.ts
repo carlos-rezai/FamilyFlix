@@ -50,6 +50,8 @@ export interface Episode {
   /** Derived from `watched` + `resumePositionSeconds`; never stored. */
   status: WatchStatus;
   videoPath: string;
+  /** A Sync's **Still**, a stored path beside the video; `null` until one. */
+  stillPath: string | null;
   subtitles: Subtitle[];
   lastWatchedAt: string | null;
 }

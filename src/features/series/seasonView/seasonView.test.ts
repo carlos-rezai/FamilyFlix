@@ -65,6 +65,7 @@ function makeEpisode(
     resumePositionSeconds: 0,
     status: 'unwatched',
     videoPath: `harbor-2019/season-0${season}/e${number}.mp4`,
+    stillPath: null,
     subtitles: [],
     lastWatchedAt: null,
     ...overrides,

@@ -148,6 +148,8 @@ export interface EpisodeRowEpisode {
   progress: number;
   /** The **Resume label**, or `null` when there is nothing to resume. */
   resumeLabel: string | null;
+  /** A Sync's **Still**, drawn over the Gradient fallback; absent or `null` for none. */
+  stillUrl?: string | null;
   /** The series' **Gradient fallback** stops. */
   g1: string;
   g2: string;

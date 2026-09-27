@@ -31,6 +31,7 @@ function episode(
     resumePositionSeconds: state === 'in-progress' ? 600 : 0,
     status: state,
     videoPath: `harbor-2021/season-0${season}/e${number}.mp4`,
+    stillPath: null,
     subtitles: [],
     lastWatchedAt: state === 'unwatched' ? null : '2026-09-20T20:00:00.000Z',
   };

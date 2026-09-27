@@ -1,4 +1,4 @@
-import type { TmdbMovieDetail } from '../tmdbClient/tmdbClient';
+import type { TmdbMovieDetail, TmdbTvDetail } from '../tmdbClient/tmdbClient';
 import { tmdbGenres } from '../tmdbGenres/tmdbGenres';
 
 /**
@@ -19,6 +19,11 @@ export interface FetchedFields {
   tmdbScore: number | null;
 }
 
+/** A TV detail's fields, plus the last year it aired. */
+export interface FetchedTvFields extends FetchedFields {
+  endYear: number | null;
+}
+
 /** How many of the cast a Sync keeps, in billing order. */
 const CAST_SIZE = 10;
 
@@ -32,16 +37,30 @@ function yearOf(date: string | null | undefined): number | null {
   return Number.isNaN(year) ? null : year;
 }
 
+/** The top of the billing, in order. */
+function topCast(
+  members: readonly { name: string; order: number }[]
+): string[] {
+  return [...members]
+    .sort((a, b) => a.order - b.order)
+    .slice(0, CAST_SIZE)
+    .map((member) => member.name);
+}
+
+/** `vote_average` to one decimal, `null` for none. */
+function score(voteAverage: number | undefined): number | null {
+  return typeof voteAverage === 'number'
+    ? Math.round(voteAverage * 10) / 10
+    : null;
+}
+
 /**
  * Pure: a TMDB movie detail, fetched with its credits → our columns. Director
  * is the first crew credit whose job is Director; cast the top ten; the score
  * `vote_average` to one decimal; genres onto the pool.
  */
 export function fetchedFields(detail: TmdbMovieDetail): FetchedFields {
-  const cast = [...detail.credits.cast]
-    .sort((a, b) => a.order - b.order)
-    .slice(0, CAST_SIZE)
-    .map((member) => member.name);
+  const cast = topCast(detail.credits.cast);
   const director =
     detail.credits.crew.find((member) => member.job === 'Director')?.name ??
     null;
@@ -55,9 +74,29 @@ export function fetchedFields(detail: TmdbMovieDetail): FetchedFields {
     director,
     cast,
     originalTitle: text(detail.original_title),
-    tmdbScore:
-      typeof detail.vote_average === 'number'
-        ? Math.round(detail.vote_average * 10) / 10
-        : null,
+    tmdbScore: score(detail.vote_average),
+  };
+}
+
+/**
+ * Pure: a TMDB TV detail, fetched with its credits → our columns at show
+ * level. Where a film has its director a series has its creator —
+ * `created_by`'s names joined with `, `; the year range comes off the first
+ * and last air dates; a series has no runtime of its own.
+ */
+export function fetchedTvFields(detail: TmdbTvDetail): FetchedTvFields {
+  const creators = detail.created_by.map((person) => person.name).join(', ');
+  return {
+    synopsis: text(detail.overview),
+    poster: text(detail.poster_path),
+    backdrop: text(detail.backdrop_path),
+    runtime: null,
+    year: yearOf(detail.first_air_date),
+    endYear: yearOf(detail.last_air_date),
+    genres: tmdbGenres(detail.genres.map((genre) => genre.name)),
+    director: text(creators),
+    cast: topCast(detail.credits.cast),
+    originalTitle: text(detail.original_name),
+    tmdbScore: score(detail.vote_average),
   };
 }
