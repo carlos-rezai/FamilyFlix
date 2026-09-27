@@ -160,3 +160,195 @@ describe('planFields: Original title and TMDB score', () => {
     expect(fill).not.toHaveProperty('tmdbScore');
   });
 });
+
+// 23 — Enrichment, Phase 5: "conflict Decisions" (issue #208).
+//
+// Planning learns **Field conflicts**. Outside _Only what's missing_,
+// Synopsis, Year, Genres, Director and Cast conflict when TMDB's value
+// differs from a filled one after trimming and case-folding — genres and cast
+// compared as sets. Poster, Backdrop and Runtime are never diffed; TMDB's
+// score and original title never conflict. A conflicting title's empty
+// fields are still filled; only the disagreements wait.
+
+const planIn = (
+  scope: 'missing' | 'all' | 'single',
+  current: Partial<FetchedFields>,
+  fields: EnrichField[] = ALL_FIELDS
+) =>
+  planFields({
+    current: { ...EMPTY, ...current },
+    fetched: FETCHED,
+    fields,
+    scope,
+  });
+
+/** The fields a plan raised, sorted, so order is no part of the promise. */
+const conflictsIn = (plan: ReturnType<typeof planIn>) =>
+  plan.conflicts.map((each) => each.field).sort();
+
+/** Every one of the five filled, each differently from TMDB. */
+const DISAGREEING: Partial<FetchedFields> = {
+  synopsis: 'Our own words about it.',
+  year: 2018,
+  genres: ['Family'],
+  director: 'Someone Else',
+  cast: ['Our Lead', 'Our Second'],
+};
+
+const FIVE = ['cast', 'director', 'genres', 'synopsis', 'year'];
+
+describe('planFields: a filled field TMDB answers differently is a conflict', () => {
+  it.each([
+    [
+      'synopsis',
+      { synopsis: 'Our own words about it.' },
+      {
+        field: 'synopsis',
+        label: 'Synopsis',
+        mine: 'Our own words about it.',
+        tmdb: 'A keeper tends a light nobody needs any more.',
+      },
+    ],
+    [
+      'year',
+      { year: 2018 },
+      { field: 'year', label: 'Year', mine: '2018', tmdb: '2019' },
+    ],
+    [
+      'genres',
+      { genres: ['Family'] },
+      {
+        field: 'genres',
+        label: 'Genres',
+        mine: 'Family',
+        tmdb: 'Drama, Sci-Fi',
+      },
+    ],
+    [
+      'director',
+      { director: 'Someone Else' },
+      {
+        field: 'director',
+        label: 'Director',
+        mine: 'Someone Else',
+        tmdb: 'Paul Verhoek',
+      },
+    ],
+    [
+      'cast',
+      { cast: ['Our Lead', 'Our Second'] },
+      {
+        field: 'cast',
+        label: 'Cast',
+        mine: 'Our Lead, Our Second',
+        tmdb: 'Ada Brennan, Tomas Ekholm',
+      },
+    ],
+  ] as const)('raises %s, ours beside TMDB’s', (_field, current, conflict) => {
+    expect(planIn('all', current).conflicts).toEqual([conflict]);
+  });
+
+  it('raises all five in the Just this movie scope too, and writes none of them', () => {
+    const plan = planIn('single', DISAGREEING);
+
+    expect(conflictsIn(plan)).toEqual(FIVE);
+    for (const field of FIVE) {
+      expect(plan.fill).not.toHaveProperty(field);
+    }
+  });
+
+  it('raises nothing for a field whose chip is off', () => {
+    const plan = planIn(
+      'all',
+      DISAGREEING,
+      ALL_FIELDS.filter((field) => field !== 'director')
+    );
+
+    expect(conflictsIn(plan)).toEqual(
+      FIVE.filter((field) => field !== 'director')
+    );
+  });
+});
+
+describe('planFields: only the five fields ever conflict', () => {
+  it('never diffs Poster, Backdrop or Runtime', () => {
+    const plan = planIn('all', {
+      synopsis: 'Our own words about it.',
+      poster: 'the-lantern-keeper-2019/poster.jpg',
+      backdrop: 'the-lantern-keeper-2019/backdrop.jpg',
+      runtime: 109,
+    });
+
+    expect(conflictsIn(plan)).toEqual(['synopsis']);
+  });
+
+  it('never raises Original title or TMDB score, and writes both', () => {
+    const plan = planIn('all', {
+      synopsis: 'Our own words about it.',
+      originalTitle: 'Old guess',
+      tmdbScore: 6.1,
+    });
+
+    expect(conflictsIn(plan)).toEqual(['synopsis']);
+    expect(plan.fill.originalTitle).toBe('Le Gardien du phare');
+    expect(plan.fill.tmdbScore).toBe(7.5);
+  });
+});
+
+describe('planFields: case, spacing and order do not count', () => {
+  it('ignores case and surrounding spaces in the text fields', () => {
+    const plan = planIn('all', {
+      synopsis: '  a keeper TENDS a light nobody needs any more.  ',
+      director: 'paul VERHOEK ',
+      year: 2018,
+    });
+
+    expect(conflictsIn(plan)).toEqual(['year']);
+  });
+
+  it('compares genres as a set, ignoring case and order', () => {
+    const plan = planIn('all', { genres: ['sci-fi', ' DRAMA'], year: 2018 });
+
+    expect(conflictsIn(plan)).toEqual(['year']);
+  });
+
+  it('compares cast as a set, ignoring case and order', () => {
+    const plan = planIn('all', {
+      cast: ['tomas ekholm', 'Ada Brennan '],
+      year: 2018,
+    });
+
+    expect(conflictsIn(plan)).toEqual(['year']);
+  });
+
+  it('still raises genres that differ by one member', () => {
+    const plan = planIn('all', { genres: ['Drama', 'Sci-Fi', 'Family'] });
+
+    expect(conflictsIn(plan)).toEqual(['genres']);
+  });
+
+  it('still raises a cast missing one member', () => {
+    expect(conflictsIn(planIn('all', { cast: ['Ada Brennan'] }))).toEqual([
+      'cast',
+    ]);
+  });
+});
+
+describe('planFields: Only what’s missing never conflicts', () => {
+  it('raises nothing where Everything raises all five', () => {
+    expect(conflictsIn(planIn('all', DISAGREEING))).toEqual(FIVE);
+    expect(planIn('missing', DISAGREEING).conflicts).toEqual([]);
+  });
+});
+
+describe('planFields: a conflicting title’s empty fields', () => {
+  it('are filled beside the conflicts', () => {
+    const plan = planIn('all', { synopsis: 'Our own words about it.' });
+
+    expect(conflictsIn(plan)).toEqual(['synopsis']);
+    expect(plan.fill.cast).toEqual(FETCHED.cast);
+    expect(plan.fill.director).toBe(FETCHED.director);
+    expect(plan.fill.poster).toBe(FETCHED.poster);
+    expect(plan.fill.runtime).toBe(FETCHED.runtime);
+  });
+});

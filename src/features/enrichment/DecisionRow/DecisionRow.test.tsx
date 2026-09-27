@@ -74,6 +74,7 @@ function renderRow(props: Partial<DecisionRowProps> = {}) {
     onSkip: vi.fn(),
     onPick: vi.fn<(tmdbId: number) => void>(),
     onSearch: vi.fn<(query: string) => void>(),
+    onApply: vi.fn<DecisionRowProps['onApply']>(),
   };
   render(
     <ThemeProvider theme={theme}>
@@ -82,6 +83,7 @@ function renderRow(props: Partial<DecisionRowProps> = {}) {
         onSkip={props.onSkip ?? handlers.onSkip}
         onPick={props.onPick ?? handlers.onPick}
         onSearch={props.onSearch ?? handlers.onSearch}
+        onApply={props.onApply ?? handlers.onApply}
       />
     </ThemeProvider>
   );
@@ -260,5 +262,73 @@ describe('the prototype the row translates, amended', () => {
       'Nothing on TMDB matched this folder name.'
     );
     expect(prototype).toContain('Nothing on TMDB matched this title.');
+  });
+});
+
+/**
+ * 23 — Enrichment, Phase 5: "conflict Decisions" (issue #208).
+ *
+ * The third face: a `conflict` row wears the `#c9a86a` dot and draws the
+ * **Field conflicts** as the _Yours | TMDB_ diff. _Apply choices_ reports the
+ * chosen sides as `onApply(choices)`; _Keep all mine_ is **Dismiss**, so it
+ * reports `onSkip()`, as the prototype's `onKeepAll` does.
+ */
+const CONFLICT: Decision = {
+  id: 'd2',
+  kind: 'conflict',
+  title: 'The Lantern Keeper',
+  reason: 'TMDB has different values for fields you already filled in.',
+  path: 'E:\\Movies\\The.Lantern.Keeper.2019\\',
+  query: 'The Lantern Keeper',
+  fields: [
+    { field: 'year', label: 'Year', mine: '2019', tmdb: '2018' },
+    {
+      field: 'director',
+      label: 'Director',
+      mine: 'Eleanor Past',
+      tmdb: 'Eleanor Past-Whitlock',
+    },
+  ],
+};
+
+const GOLD = 'rgb(201, 168, 106)';
+
+describe('DecisionRow — the conflict face, the field diff', () => {
+  it('fills the conflict dot in its colour', () => {
+    renderRow({ decision: CONFLICT });
+
+    expect(getComputedStyle(dotOf(CONFLICT.reason)).backgroundColor).toBe(GOLD);
+  });
+
+  it('draws one Yours | TMDB row per field, and no picker or box', () => {
+    renderRow({ decision: CONFLICT });
+
+    expect(screen.getAllByRole('button', { name: /^Yours/ })).toHaveLength(2);
+    expect(screen.getAllByRole('button', { name: /^TMDB/ })).toHaveLength(2);
+    expect(screen.getByText('Eleanor Past-Whitlock')).toBeDefined();
+    expect(screen.queryAllByRole('button', { name: /% match/ })).toHaveLength(
+      0
+    );
+    expect(
+      screen.queryByPlaceholderText('Search TMDB by title and year')
+    ).toBeNull();
+  });
+
+  it('reports Apply choices with the side chosen for each field', () => {
+    const { onApply } = renderRow({ decision: CONFLICT });
+
+    fireEvent.click(screen.getAllByRole('button', { name: /^Yours/ })[1]);
+    fireEvent.click(screen.getByRole('button', { name: 'Apply choices' }));
+
+    expect(onApply).toHaveBeenCalledWith({ year: 'tmdb', director: 'mine' });
+  });
+
+  it('reports Keep all mine as Skip', () => {
+    const { onSkip, onApply } = renderRow({ decision: CONFLICT });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Keep all mine' }));
+
+    expect(onSkip).toHaveBeenCalledTimes(1);
+    expect(onApply).not.toHaveBeenCalled();
   });
 });
