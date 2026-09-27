@@ -23,6 +23,7 @@ export function makeImportRun(overrides: Partial<ImportRun> = {}): ImportRun {
     currentItem: '',
     log: [],
     problems: [],
+    enrich: false,
     ...overrides,
   };
 }
