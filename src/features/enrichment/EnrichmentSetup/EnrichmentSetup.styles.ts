@@ -177,3 +177,62 @@ export const BannerLine = styled.div`
 export const BannerAction = styled.div`
   flex: 0 0 auto;
 `;
+
+/** _Where it is saved_'s card: the Write target rows on the surface. */
+export const Targets = styled.div`
+  background: ${({ theme }) => theme.colors.surface};
+  border: 1px solid ${({ theme }) => theme.colors.borderSoft};
+  border-radius: ${({ theme }) => theme.radius.md};
+  overflow: hidden;
+`;
+
+/** One **Write target row**: the glyph tile, the two lines, the trailing control. */
+export const Target = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 18px;
+`;
+
+/** The row's 38px glyph tile. */
+export const TargetGlyph = styled.span`
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 9px;
+  background: ${({ theme }) => theme.colors.surface3};
+  color: ${({ theme }) => theme.colors.textDim};
+`;
+
+/** The title and the line, taking the width the tile and control do not. */
+export const TargetText = styled.div`
+  flex: 1;
+`;
+
+export const TargetTitle = styled.div`
+  font-family: ${({ theme }) => theme.fonts.sans};
+  font-size: 15px;
+  font-weight: 600;
+  color: ${({ theme }) => theme.colors.text};
+`;
+
+export const TargetLine = styled.div`
+  margin-top: 2px;
+  font-family: ${({ theme }) => theme.fonts.sans};
+  font-size: 13px;
+  color: ${({ theme }) => theme.colors.textFaint};
+`;
+
+/** _Required_, where a Toggle would sit on a target that can be turned off. */
+export const RequiredPill = styled.span`
+  font-family: ${({ theme }) => theme.fonts.sans};
+  font-size: 12px;
+  font-weight: 600;
+  color: ${({ theme }) => theme.colors.textFaint};
+  background: ${({ theme }) => theme.colors.surface3};
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  padding: 4px 11px;
+  border-radius: ${({ theme }) => theme.radius.pill};
+`;

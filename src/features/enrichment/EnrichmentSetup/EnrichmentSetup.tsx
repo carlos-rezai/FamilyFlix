@@ -1,5 +1,5 @@
 import type { EnrichField, EnrichmentSummary, EnrichScope } from '@/types';
-import { BangRingIcon, Button, Chip } from '@/primitives';
+import { BangRingIcon, Button, Chip, DatabaseIcon } from '@/primitives';
 import { enrichmentEstimate } from '../enrichmentView/enrichmentView';
 import {
   Banner,
@@ -22,6 +22,13 @@ import {
   Stack,
   Star,
   StartRow,
+  RequiredPill,
+  Target,
+  TargetGlyph,
+  TargetLine,
+  Targets,
+  TargetText,
+  TargetTitle,
 } from './EnrichmentSetup.styles';
 
 /** The ten chips in the prototype's order, each with its label. */
@@ -84,7 +91,7 @@ export interface EnrichmentSetupProps {
  * and the key banner when either applies, the scope cards —
  * _Only what's missing_ and _Everything_ for the library, or _Just this
  * movie_ in their place for one film — the field chips with the rating note,
- * and Start: _Start sync_, or _Fetch details_ with its estimate for one film.
+ * _Where it is saved_ with _Your library_ as Required, and Start: _Start sync_, or _Fetch details_ with its estimate for one film.
  */
 export function EnrichmentSetup({
   scope,
@@ -200,6 +207,22 @@ export function EnrichmentSetup({
           Series get the same fields at show level, plus episode titles, air
           dates, and stills for every season found on disk.
         </SeriesNote>
+      </div>
+
+      <div>
+        <GroupLabel>Where it is saved</GroupLabel>
+        <Targets>
+          <Target>
+            <TargetGlyph>
+              <DatabaseIcon size={19} />
+            </TargetGlyph>
+            <TargetText>
+              <TargetTitle>Your library</TargetTitle>
+              <TargetLine>Always. This is what the app reads from.</TargetLine>
+            </TargetText>
+            <RequiredPill>Required</RequiredPill>
+          </Target>
+        </Targets>
       </div>
 
       <StartRow>

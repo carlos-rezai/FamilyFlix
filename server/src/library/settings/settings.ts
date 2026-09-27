@@ -7,6 +7,8 @@ const SUBTITLE_LANGUAGE_KEY = 'subtitle-language';
 const TMDB_KEY = 'tmdb-api-key';
 /** When a Sync last reached review — the library's, not a preference. */
 const LAST_SYNCED_KEY = 'enrichment-last-synced-at';
+/** The Library root the last import was handed — the maintainer's own typing. */
+const LIBRARY_ROOT_KEY = 'library-root';
 
 /**
  * The settings slice: the household's preferences, read as one `Settings` with
@@ -20,6 +22,8 @@ export interface SettingsRepository {
   setTmdbKey(key: string): void;
   enrichmentLastSyncedAt(): string | null;
   setEnrichmentLastSyncedAt(at: string): void;
+  libraryRoot(): string | null;
+  setLibraryRoot(root: string): void;
 }
 
 export function createSettings(db: SqliteDatabase): SettingsRepository {
@@ -63,6 +67,17 @@ export function createSettings(db: SqliteDatabase): SettingsRepository {
     upsertValue.run(LAST_SYNCED_KEY, at);
   }
 
+  function libraryRoot(): string | null {
+    const row = selectValue.get(LIBRARY_ROOT_KEY) as
+      | { value: string }
+      | undefined;
+    return row?.value ?? null;
+  }
+
+  function setLibraryRoot(root: string): void {
+    upsertValue.run(LIBRARY_ROOT_KEY, root);
+  }
+
   return {
     settings,
     setSubtitleLanguage,
@@ -70,5 +85,7 @@ export function createSettings(db: SqliteDatabase): SettingsRepository {
     setTmdbKey,
     enrichmentLastSyncedAt,
     setEnrichmentLastSyncedAt,
+    libraryRoot,
+    setLibraryRoot,
   };
 }

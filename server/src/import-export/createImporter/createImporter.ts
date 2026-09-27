@@ -552,7 +552,8 @@ export function createImporter({
     pool: Map<string, string>,
     warnedGenres: Set<string>,
     current: ImportRun,
-    signal: AbortSignal
+    signal: AbortSignal,
+    rootPath: string
   ): Promise<Movie | null> => {
     const folder = media.reserveFolder(row.title, row.year);
     try {
@@ -594,6 +595,7 @@ export function createImporter({
         ...(subtitles.length === 0 ? {} : { subtitles }),
       };
       const added = storage.addMovie(movie);
+      storage.setSourceFolder(added.id, relative(rootPath, scan.dir));
       if (genres.length === 0) {
         // Imported — nothing about the film is missing — and then listed,
         // because a film in no genre row is a film the family will not find.
@@ -649,8 +651,15 @@ export function createImporter({
     pool: Map<string, string>,
     warnedGenres: Set<string>,
     current: ImportRun,
-    signal: AbortSignal
+    signal: AbortSignal,
+    rootPath: string
   ): Promise<void> => {
+    // Where the show came from, relative to the root: on a held series too,
+    // so a re-run backfills a library imported before it was remembered.
+    const sourceFolder = relative(rootPath, show.dir);
+    if (held !== null) {
+      storage.setSourceFolder(held.series.id, sourceFolder);
+    }
     for (const stray of show.straySubtitles) {
       log(
         current,
@@ -700,6 +709,7 @@ export function createImporter({
             ...(genres.length === 0 ? {} : { genres }),
           };
           series = storage.addSeries(input);
+          storage.setSourceFolder(series.id, sourceFolder);
         }
         storage.addEpisode(series.id, {
           season: episode.season,
@@ -812,12 +822,12 @@ export function createImporter({
       })
     );
 
-  /** Every film the library holds, by key and year — read once per run. */
-  const inLibrary = (): Set<string> =>
-    new Set(
+  /** Every film the library holds, by key and year, to its id — read once per run. */
+  const inLibrary = (): Map<string, string> =>
+    new Map(
       storage
         .listMovies({ sort: 'a-z' })
-        .map((movie: Movie) => filmKey(movie.title, movie.year))
+        .map((movie: Movie) => [filmKey(movie.title, movie.year), movie.id])
     );
 
   const execute = async (
@@ -882,6 +892,12 @@ export function createImporter({
       if (show !== undefined) {
         matchedShows.push(showMatch(match.row, show, heldSeries));
       } else if (already.has(filmKey(match.row.title, match.row.year))) {
+        // Already in library: nothing is added, but where it came from is
+        // remembered — the backfill for a library imported before this was.
+        const heldId = already.get(filmKey(match.row.title, match.row.year));
+        if (heldId !== undefined) {
+          storage.setSourceFolder(heldId, relative(rootPath, match.folder.dir));
+        }
         log(
           current,
           `– Already in library ${titleWithYear(match.row.title, match.row.year)}`,
@@ -961,7 +977,8 @@ export function createImporter({
         pool,
         warnedGenres,
         current,
-        signal
+        signal,
+        rootPath
       );
       if (signal.aborted) {
         return;
@@ -975,7 +992,7 @@ export function createImporter({
     }
 
     for (const match of matchedShows) {
-      await importShow(match, pool, warnedGenres, current, signal);
+      await importShow(match, pool, warnedGenres, current, signal, rootPath);
       if (signal.aborted) {
         return;
       }
@@ -1022,6 +1039,8 @@ export function createImporter({
       };
       run = current;
       root = rootPath;
+      // Remembered on Start: a Sync reads it to find each Source folder.
+      storage.setLibraryRoot(rootPath);
       sources.clear();
       stop = new AbortController();
 

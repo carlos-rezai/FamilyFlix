@@ -72,7 +72,8 @@ export type Decision = {
   id: string;
   title: string;
   reason: string;
-  path: string;
+  /** The Library root joined to the title's Source folder; `null` when unknown. */
+  path: string | null;
   /** What TMDB was last asked for this title — the search box's prefill. */
   query: string;
 } & (

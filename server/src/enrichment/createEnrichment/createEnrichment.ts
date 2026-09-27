@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { dirname, posix } from 'node:path';
+import { dirname, join, posix, sep } from 'node:path';
 
 import type {
   Candidate,
@@ -467,8 +467,7 @@ export function createEnrichment({
           decision: {
             id: randomUUID(),
             title: movie.title,
-            // No source folder is on record for a film yet.
-            path: '',
+            path: sourcePath(movie.id),
             ...decisionFace(
               ours,
               movie.title,
@@ -906,8 +905,7 @@ export function createEnrichment({
               id: randomUUID(),
               title: movie.title,
               reason: CONFLICT_REASON,
-              // No source folder is on record for a film yet.
-              path: '',
+              path: sourcePath(movie.id),
               query: movie.title,
               kind: 'conflict',
               fields: conflicts,
@@ -1132,6 +1130,17 @@ export function createEnrichment({
     return true;
   }
 
+  /**
+   * Where a title came from — the Library root joined to its Source folder,
+   * drawn with the trailing separator — or `null` when either is not on record.
+   */
+  function sourcePath(id: string): string | null {
+    const root = storage.libraryRoot();
+    const folder = storage.sourceFolder(id);
+    if (root === null || folder === null) return null;
+    return `${join(root, folder)}${sep}`;
+  }
+
   async function summary(): Promise<EnrichmentSummary> {
     const online = await client.reachable();
     const { total, complete } = storage.enrichmentCounts();
@@ -1141,8 +1150,7 @@ export function createEnrichment({
       lastSyncedAt: storage.enrichmentLastSyncedAt(),
       keySet: storage.tmdbKey() !== null,
       online,
-      // No Library root is remembered yet.
-      libraryRoot: null,
+      libraryRoot: storage.libraryRoot(),
     };
   }
 

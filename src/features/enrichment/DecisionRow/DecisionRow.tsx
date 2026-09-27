@@ -121,7 +121,7 @@ export function DecisionRow({
         <Text>
           <Title>{decision.title}</Title>
           <Reason>{decision.reason}</Reason>
-          {decision.path === '' ? null : <Path>{decision.path}</Path>}
+          {decision.path === null ? null : <Path>{decision.path}</Path>}
         </Text>
         <SkipSlot>
           <Button label="Skip" variant="ghost" size="md" onClick={onSkip} />

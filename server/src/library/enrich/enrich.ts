@@ -145,6 +145,13 @@ export interface Enrich {
    * **Full details** — a synopsis and a poster both. Zeros when empty.
    */
   enrichmentCounts(): { total: number; complete: number };
+  /**
+   * Record a **Movie**'s or **Series**' Source folder, relative to the Library
+   * root, and nothing else. Answers whether the library holds that id.
+   */
+  setSourceFolder(id: string, folder: string): boolean;
+  /** A Movie's or Series' recorded Source folder, `null` when none is. */
+  sourceFolder(id: string): string | null;
 }
 
 /** No synopsis or no poster: a title without **Full details**. */
@@ -269,7 +276,35 @@ export function createEnrich(
     return { total, complete };
   }
 
+  const updateMovieSource = db.prepare(
+    'UPDATE movies SET source_folder = ? WHERE id = ?'
+  );
+  const updateSeriesSource = db.prepare(
+    'UPDATE series SET source_folder = ? WHERE id = ?'
+  );
+  const selectSource = db.prepare(
+    `SELECT source_folder FROM movies WHERE id = @id
+     UNION ALL SELECT source_folder FROM series WHERE id = @id`
+  );
+
+  function setSourceFolder(id: string, folder: string): boolean {
+    return (
+      updateMovieSource.run(folder, id).changes +
+        updateSeriesSource.run(folder, id).changes >
+      0
+    );
+  }
+
+  function sourceFolder(id: string): string | null {
+    const row = selectSource.get({ id }) as
+      | { source_folder: string | null }
+      | undefined;
+    return row?.source_folder ?? null;
+  }
+
   return {
+    setSourceFolder,
+    sourceFolder,
     enrichMovie,
     enrichSeries,
     enrichEpisode,

@@ -234,6 +234,21 @@ export interface LibraryStorage {
   /** Stamp when a Sync reached review — an upsert, like the key. */
   setEnrichmentLastSyncedAt(at: string): void;
   /**
+   * The **Library root** the last import was handed, `null` before any — the
+   * one absolute path the library keeps, in the `settings` table beside the key.
+   */
+  libraryRoot(): string | null;
+  /** Remember the Library root — an upsert, like the key. */
+  setLibraryRoot(root: string): void;
+  /**
+   * Record where a **Movie** or **Series** came from: its Source folder,
+   * relative to the Library root. Touches no other column. Answers whether
+   * the library holds that id.
+   */
+  setSourceFolder(id: string, folder: string): boolean;
+  /** A Movie's or Series' Source folder as recorded, `null` when none is. */
+  sourceFolder(id: string): string | null;
+  /**
    * Insert a **Series** and its genres (ordered) in one transaction, and
    * return the assembled model. It carries no watch state: that lives on its
    * episodes.
@@ -329,6 +344,10 @@ export function createSqliteStorage(dbPath: string): LibraryStorage {
     setTmdbKey: settingsRepository.setTmdbKey,
     enrichmentLastSyncedAt: settingsRepository.enrichmentLastSyncedAt,
     setEnrichmentLastSyncedAt: settingsRepository.setEnrichmentLastSyncedAt,
+    libraryRoot: settingsRepository.libraryRoot,
+    setLibraryRoot: settingsRepository.setLibraryRoot,
+    setSourceFolder: enrich.setSourceFolder,
+    sourceFolder: enrich.sourceFolder,
     addSeries: seriesWrite.addSeries,
     addEpisode: seriesWrite.addEpisode,
     setSeriesFavorite: seriesCuration.setSeriesFavorite,
