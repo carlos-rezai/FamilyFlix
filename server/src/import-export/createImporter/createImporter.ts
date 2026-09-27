@@ -123,8 +123,13 @@ export interface Importer {
    * does not exist, cannot be read, is neither `.xlsx` nor `.csv` or has no
    * title column, and for a root that does not exist or is not a directory —
    * before any run exists; with {@link ImportBusyError} while a run exists.
+   * `enrich` is only carried on the run, for _Finish_ to read.
    */
-  start(sheetPath: string, rootPath: string): Promise<ImportRun>;
+  start(
+    sheetPath: string,
+    rootPath: string,
+    enrich?: boolean
+  ): Promise<ImportRun>;
   /** The **Current run**'s snapshot, or `null` when there is none. */
   current(): ImportRun | null;
   /**
@@ -1008,7 +1013,7 @@ export function createImporter({
   };
 
   return {
-    start: async (sheetPath, rootPath) => {
+    start: async (sheetPath, rootPath, enrich = false) => {
       if (run !== null) {
         throw new ImportBusyError();
       }
@@ -1036,6 +1041,7 @@ export function createImporter({
         currentItem: '',
         log: [],
         problems: [],
+        enrich,
       };
       run = current;
       root = rootPath;

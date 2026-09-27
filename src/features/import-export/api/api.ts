@@ -50,7 +50,8 @@ function isRefusal(
 
 /**
  * Start the **Current run** over the two paths the **Setup step** holds, and
- * resolve the snapshot the route answered its `201` with.
+ * resolve the snapshot the route answered its `201` with. `enrich` — the
+ * _Also fetch from TMDB_ box — is always sent, and only carried on the run.
  *
  * A `400` rejects with {@link ImportRefusedError} naming the field; a `409`
  * with {@link ImportBusyError}, naming none; every other failure — a `500`, a
@@ -59,12 +60,13 @@ function isRefusal(
  */
 export async function startImport(
   sheetPath: string,
-  rootPath: string
+  rootPath: string,
+  enrich = false
 ): Promise<ImportRun> {
   const response = await fetch(IMPORT_ENDPOINT, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ sheetPath, rootPath }),
+    body: JSON.stringify({ sheetPath, rootPath, enrich }),
   });
 
   if (response.status === 400) {

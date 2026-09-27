@@ -400,6 +400,7 @@ describe('ImportFlow — starting the run', () => {
     expect(JSON.parse(String(init?.body))).toEqual({
       sheetPath: SHEET,
       rootPath: ROOT,
+      enrich: false,
     });
     // The setup step is gone; the running step's bar and Cancel are here.
     expect(screen.queryByRole('textbox', { name: 'Spreadsheet' })).toBeNull();
@@ -529,6 +530,7 @@ describe('ImportFlow — Cancel import', () => {
     expect(JSON.parse(String(starts[1][1]?.body))).toEqual({
       sheetPath: SHEET,
       rootPath: ROOT,
+      enrich: false,
     });
   });
 });

@@ -162,24 +162,11 @@ export function saveSubtitleLanguage(language: string): Promise<string> {
   return postValue(SUBTITLE_LANGUAGE_ENDPOINT, language, isLanguageEcho);
 }
 
-/** Where the maintainer's TMDB key is read, and tested and saved in one. */
-const TMDB_KEY_ENDPOINT = '/api/tmdb/key';
-
 /**
- * The stored TMDB key — `GET /api/tmdb/key`, `null` when none is stored. A
- * status that is not OK rejects; the one caller, `useTmdbKey`, keeps the
- * field empty on that.
+ * Where the maintainer's TMDB key is tested and saved in one. Its read,
+ * `fetchTmdbKey`, lives in `src/api/` because the Import flow asks for it too.
  */
-export async function fetchTmdbKey(): Promise<string | null> {
-  const response = await fetch(TMDB_KEY_ENDPOINT);
-
-  if (!response.ok) {
-    throw new Error(`GET ${TMDB_KEY_ENDPOINT} failed: ${response.status}`);
-  }
-
-  const { key } = (await response.json()) as { key: string | null };
-  return key;
-}
+const TMDB_KEY_ENDPOINT = '/api/tmdb/key';
 
 /** What testing a key came to: stored, refused by TMDB, or TMDB not reached. */
 export type TmdbKeyOutcome =

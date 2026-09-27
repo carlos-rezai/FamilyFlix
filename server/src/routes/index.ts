@@ -1774,8 +1774,11 @@ export function createApiRouter(
     const body = (req.body ?? {}) as {
       sheetPath?: unknown;
       rootPath?: unknown;
+      enrich?: unknown;
     };
     const { sheetPath, rootPath } = body;
+    // Only carried on the run: the import itself goes nowhere near TMDB.
+    const enrich = body.enrich === true;
 
     if (typeof sheetPath !== 'string' || sheetPath.trim() === '') {
       res
@@ -1789,7 +1792,7 @@ export function createApiRouter(
     }
 
     try {
-      res.status(201).json(await importer.start(sheetPath, rootPath));
+      res.status(201).json(await importer.start(sheetPath, rootPath, enrich));
     } catch (error) {
       if (error instanceof ImportStartError) {
         res.status(400).json({ error: error.message, field: error.field });

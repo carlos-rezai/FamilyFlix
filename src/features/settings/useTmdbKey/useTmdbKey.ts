@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useSnackbar } from '@/App/useSnackbar/useSnackbar';
-import { fetchTmdbKey, saveTmdbKey } from '../api/api';
+import { fetchTmdbKey } from '@/api/fetchTmdbKey/fetchTmdbKey';
+import { saveTmdbKey } from '../api/api';
 
 export interface TmdbKeyState {
   /** What is in the field — the stored key once it lands, then what is typed. */

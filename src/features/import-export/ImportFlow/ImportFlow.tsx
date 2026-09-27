@@ -1,6 +1,7 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
+import { fetchTmdbKey } from '@/api/fetchTmdbKey/fetchTmdbKey';
 import { useGoBack } from '@/hooks/useGoBack/useGoBack';
 import { ChevronLeftIcon, IconButton } from '@/primitives';
 import { ImportRefusedError } from '../api/api';
@@ -38,6 +39,13 @@ import { HeaderRow, Heading, Lede } from './ImportFlow.styles';
  * _Skip_ goes through the hook,
  * which takes the row off the snapshot once the route has answered, and
  * _Resolve_ is the row's own link to the form.
+ *
+ * _Also fetch metadata and posters from TMDB_ is held here too, and sent with
+ * the start; its hint reads `GET /api/tmdb/key` once on arrival, a failed read
+ * counting as no key. _Finish_ reads the box off the run, not off this screen —
+ * so a run re-attached on arrival still knows it — and on a run carrying it
+ * **replaces** `/import` with `/enrich?scope=all`: setup with _Everything_
+ * selected, nothing started, and Back from there stepping to Settings.
  */
 export function ImportFlow() {
   const navigate = useNavigate();
@@ -53,6 +61,27 @@ export function ImportFlow() {
   const [root, setRoot] = useState('');
   const [sheetError, setSheetError] = useState<string | null>(null);
   const [rootError, setRootError] = useState<string | null>(null);
+  const [enrich, setEnrich] = useState(false);
+  const [keySet, setKeySet] = useState(false);
+
+  useEffect(() => {
+    let left = false;
+    fetchTmdbKey().then(
+      (key) => {
+        if (!left) {
+          setKeySet(key !== null);
+        }
+      },
+      () => {
+        // A read that failed is no key: the hint says to add one.
+      }
+    );
+    return () => {
+      left = true;
+    };
+  }, []);
+
+  const onToggleEnrich = useCallback(() => setEnrich((ticked) => !ticked), []);
 
   const onSheet = useCallback((value: string) => {
     setSheet(value);
@@ -68,7 +97,7 @@ export function ImportFlow() {
     setSheetError(null);
     setRootError(null);
     try {
-      await start(sheet, root);
+      await start(sheet, root, enrich);
     } catch (error) {
       // A refusal names its field and is drawn under it. A `500` names none
       // and draws nothing; a `409` never reaches here — the hook answers it
@@ -77,7 +106,7 @@ export function ImportFlow() {
         (error.field === 'sheet' ? setSheetError : setRootError)(error.message);
       }
     }
-  }, [start, sheet, root]);
+  }, [start, sheet, root, enrich]);
 
   const onCancel = useCallback(() => {
     void cancel().catch(() => {
@@ -121,12 +150,19 @@ export function ImportFlow() {
           onSheet={onSheet}
           onRoot={onRoot}
           onStart={onStart}
+          enrich={enrich}
+          keySet={keySet}
+          onToggleEnrich={onToggleEnrich}
         />
       ) : run.phase === 'review' ? (
         <ImportReview
           run={run}
           onSkip={onSkip}
-          onFinish={() => navigate('/')}
+          onFinish={() =>
+            run.enrich
+              ? navigate('/enrich?scope=all', { replace: true })
+              : navigate('/')
+          }
         />
       ) : (
         <ImportProgress run={run} onCancel={onCancel} />

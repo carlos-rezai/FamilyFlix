@@ -28,6 +28,9 @@ function renderSetup(props: Partial<ImportSetupProps> = {}) {
         onSheet={() => undefined}
         onRoot={() => undefined}
         onStart={() => undefined}
+        enrich={false}
+        keySet={false}
+        onToggleEnrich={() => undefined}
         {...props}
       />
     </ThemeProvider>

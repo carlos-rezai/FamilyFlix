@@ -77,6 +77,12 @@ export interface ImportRun {
   currentItem: string;
   log: LogLine[];
   problems: ImportProblem[];
+  /**
+   * Whether _Finish_ hands off to an **Enrichment run** — the Setup step's
+   * _Also fetch metadata and posters from TMDB_, carried on the run so a
+   * re-attached screen still knows it. The import itself asks TMDB nothing.
+   */
+  enrich: boolean;
 }
 
 /** What Resolve prefills the **Movie form** from. */

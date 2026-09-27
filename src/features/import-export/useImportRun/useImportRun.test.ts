@@ -245,6 +245,7 @@ describe('useImportRun — starting', () => {
     expect(JSON.parse(String(init?.body))).toEqual({
       sheetPath: SHEET,
       rootPath: ROOT,
+      enrich: false,
     });
     expect(result.current.run).toEqual(started);
   });

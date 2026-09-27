@@ -29,6 +29,10 @@ const ALL_FIELDS: EnrichField[] = ENRICH_FIELDS.map(({ field }) => field);
  * missing_ (the default) and _Everything_, Start reads _Start sync_, and Back
  * lands on Settings. _Stop_ and _Sync again_ both drop the run and show setup.
  *
+ * Opened with `?scope=all` — the Import flow's _Finish_ on a run carrying
+ * `enrich` — setup has _Everything_ selected instead, and still waits for
+ * _Start sync_.
+ *
  * Opened with `?movie=<id>` it is the `single` **Enrichment scope**: setup
  * names the film under _Just this movie_, Start reads _Fetch details_, and
  * review's Finish is _Back to the movie_. Back and Finish both follow the
@@ -54,7 +58,11 @@ export function EnrichmentFlow() {
 
   const [title, setTitle] = useState<string | null>(null);
   const [fields, setFields] = useState<EnrichField[]>(ALL_FIELDS);
-  const [libraryScope, setLibraryScope] = useState<EnrichScope>('missing');
+  // `?scope=all` is where the Import flow's _Finish_ lands: _Everything_
+  // selected, the prototype's `setState({ enScope: 'all' })`, nothing started.
+  const [libraryScope, setLibraryScope] = useState<EnrichScope>(() =>
+    params.get('scope') === 'all' ? 'all' : 'missing'
+  );
   // Both on to begin with, the prototype's `enWriteSheet` / `enWritePosters`.
   const [writeSheet, setWriteSheet] = useState(true);
   const [writePosters, setWritePosters] = useState(true);

@@ -106,6 +106,7 @@ describe('startImport', () => {
     expect(JSON.parse(String(request.body))).toEqual({
       sheetPath: SHEET,
       rootPath: ROOT,
+      enrich: false,
     });
   });
 
