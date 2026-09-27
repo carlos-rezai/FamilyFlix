@@ -45,6 +45,8 @@ export { InfoRingIcon } from './Icon/InfoRingIcon';
 export { BangRingIcon } from './Icon/BangRingIcon';
 export { SyncIcon } from './Icon/SyncIcon';
 export { DatabaseIcon } from './Icon/DatabaseIcon';
+export { TableIcon } from './Icon/TableIcon';
+export { LandscapeIcon } from './Icon/LandscapeIcon';
 export { CheckCircleIcon } from './Icon/CheckCircleIcon';
 export { BangTriangleIcon } from './Icon/BangTriangleIcon';
 export { CrossCircleIcon } from './Icon/CrossCircleIcon';

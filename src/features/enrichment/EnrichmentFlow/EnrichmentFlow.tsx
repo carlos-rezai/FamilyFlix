@@ -55,6 +55,9 @@ export function EnrichmentFlow() {
   const [title, setTitle] = useState<string | null>(null);
   const [fields, setFields] = useState<EnrichField[]>(ALL_FIELDS);
   const [libraryScope, setLibraryScope] = useState<EnrichScope>('missing');
+  // Both on to begin with, the prototype's `enWriteSheet` / `enWritePosters`.
+  const [writeSheet, setWriteSheet] = useState(true);
+  const [writePosters, setWritePosters] = useState(true);
   const scope: EnrichScope = movieId === null ? libraryScope : 'single';
 
   useEffect(() => {
@@ -150,12 +153,23 @@ export function EnrichmentFlow() {
       scope,
       ...(scope === 'single' && movieId !== null ? { movieId } : {}),
       fields,
-      writeSheet: false,
-      writePosters: false,
+      // With no Library root there is nowhere to write either (log 23 Q37).
+      writeSheet: summary.libraryRoot !== null && writeSheet,
+      writePosters: summary.libraryRoot !== null && writePosters,
     }).catch(() => {
       // A refused start leaves the setup where it is, to press again.
     });
-  }, [summary, openSettings, snackbar, start, scope, movieId, fields]);
+  }, [
+    summary,
+    openSettings,
+    snackbar,
+    start,
+    scope,
+    movieId,
+    fields,
+    writeSheet,
+    writePosters,
+  ]);
 
   return (
     <>
@@ -188,6 +202,10 @@ export function EnrichmentFlow() {
             summary={summary}
             title={title}
             fields={fields}
+            writeSheet={writeSheet}
+            writePosters={writePosters}
+            onToggleSheet={() => setWriteSheet((on) => !on)}
+            onTogglePosters={() => setWritePosters((on) => !on)}
             onChooseScope={setLibraryScope}
             onToggleField={onToggleField}
             onStart={onStart}

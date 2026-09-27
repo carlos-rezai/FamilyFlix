@@ -14,6 +14,19 @@ import {
   Tiles,
 } from './EnrichmentReview.styles';
 
+/**
+ * _All done_'s line off what the run says landed — the prototype's
+ * `writtenSummary`: your library always, each optional target only when written.
+ */
+function writtenSummary(written: EnrichmentRun['written']): string {
+  const targets = [
+    'your library',
+    written.sheet ? 'the sheet in your collection root' : null,
+    written.posters ? 'a poster.jpg in each movie folder' : null,
+  ].filter((target) => target !== null);
+  return `Saved to ${targets.join(', ')}.`;
+}
+
 export interface EnrichmentReviewProps {
   run: EnrichmentRun;
   /** Finish's label — _Back to the movie_ for one film, else _Done_. */
@@ -57,7 +70,7 @@ export function EnrichmentReview({
       {run.decisions.length === 0 ? (
         <AllDone>
           <AllDoneHeading>All done</AllDoneHeading>
-          <AllDoneLine>Saved to your library.</AllDoneLine>
+          <AllDoneLine>{writtenSummary(run.written)}</AllDoneLine>
         </AllDone>
       ) : (
         <Decisions>

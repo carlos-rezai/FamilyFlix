@@ -209,6 +209,7 @@ export const TargetGlyph = styled.span`
 /** The title and the line, taking the width the tile and control do not. */
 export const TargetText = styled.div`
   flex: 1;
+  min-width: 0;
 `;
 
 export const TargetTitle = styled.div`
@@ -235,4 +236,36 @@ export const RequiredPill = styled.span`
   border: 1px solid ${({ theme }) => theme.colors.border};
   padding: 4px 11px;
   border-radius: ${({ theme }) => theme.radius.pill};
+`;
+
+/** The hairline between two **Write target rows**. */
+export const TargetDivider = styled.div`
+  height: 1px;
+  background: ${({ theme }) => theme.colors.borderSoft};
+`;
+
+/** A target's path under its title, in mono, clipped to one line. */
+export const TargetPath = styled.div`
+  margin-top: 3px;
+  font-family: ${({ theme }) => theme.fonts.mono};
+  font-size: 12px;
+  color: ${({ theme }) => theme.colors.textFaint};
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+`;
+
+/** The note under the card while either target writes into the collection. */
+export const SourceNote = styled.div`
+  margin: 10px 0 0 2px;
+  font-family: ${({ theme }) => theme.fonts.sans};
+  font-size: 13px;
+  line-height: 1.5;
+  color: ${({ theme }) => theme.colors.textFaint};
+  text-wrap: pretty;
+`;
+
+export const SourceNoteMono = styled.span`
+  font-family: ${({ theme }) => theme.fonts.mono};
+  color: ${({ theme }) => theme.colors.textDim};
 `;

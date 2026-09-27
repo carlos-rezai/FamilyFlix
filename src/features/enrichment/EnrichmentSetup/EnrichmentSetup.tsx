@@ -1,5 +1,13 @@
 import type { EnrichField, EnrichmentSummary, EnrichScope } from '@/types';
-import { BangRingIcon, Button, Chip, DatabaseIcon } from '@/primitives';
+import {
+  BangRingIcon,
+  Button,
+  Chip,
+  DatabaseIcon,
+  LandscapeIcon,
+  TableIcon,
+  Toggle,
+} from '@/primitives';
 import { enrichmentEstimate } from '../enrichmentView/enrichmentView';
 import {
   Banner,
@@ -13,6 +21,8 @@ import {
   GroupLabel,
   RatingNote,
   SeriesNote,
+  SourceNote,
+  SourceNoteMono,
   ScopeCard,
   ScopeDescription,
   ScopeDot,
@@ -24,8 +34,10 @@ import {
   StartRow,
   RequiredPill,
   Target,
+  TargetDivider,
   TargetGlyph,
   TargetLine,
+  TargetPath,
   Targets,
   TargetText,
   TargetTitle,
@@ -47,6 +59,9 @@ export const ENRICH_FIELDS: ReadonlyArray<{
   { field: 'originalTitle', label: 'Original title' },
   { field: 'tmdbScore', label: 'TMDB score' },
 ];
+
+const SHEET_TITLE = 'Metadata sheet in the collection root';
+const POSTERS_TITLE = 'Posters into each movie folder';
 
 /** The two library scopes, as the prototype's `scopeDefs` names them. */
 const LIBRARY_SCOPES: ReadonlyArray<{
@@ -77,6 +92,11 @@ export interface EnrichmentSetupProps {
   title: string | null;
   /** The chips that are on. */
   fields: readonly EnrichField[];
+  /** The two optional **Write targets**' switches, drawn only with a root. */
+  writeSheet: boolean;
+  writePosters: boolean;
+  onToggleSheet: () => void;
+  onTogglePosters: () => void;
   onChooseScope: (scope: EnrichScope) => void;
   onToggleField: (field: EnrichField) => void;
   onStart: () => void;
@@ -98,6 +118,10 @@ export function EnrichmentSetup({
   summary,
   title,
   fields,
+  writeSheet,
+  writePosters,
+  onToggleSheet,
+  onTogglePosters,
   onChooseScope,
   onToggleField,
   onStart,
@@ -106,6 +130,7 @@ export function EnrichmentSetup({
 }: EnrichmentSetupProps) {
   const single = scope === 'single';
   const ready = summary.keySet && summary.online;
+  const root = summary.libraryRoot;
   return (
     <Stack>
       {summary.online ? null : (
@@ -222,7 +247,48 @@ export function EnrichmentSetup({
             </TargetText>
             <RequiredPill>Required</RequiredPill>
           </Target>
+          {root === null ? null : (
+            <>
+              <TargetDivider />
+              <Target>
+                <TargetGlyph>
+                  <TableIcon size={19} />
+                </TargetGlyph>
+                <TargetText>
+                  <TargetTitle>{SHEET_TITLE}</TargetTitle>
+                  <TargetPath>{`${root}\\familyflix-metadata.csv`}</TargetPath>
+                </TargetText>
+                <Toggle
+                  checked={writeSheet}
+                  onToggle={onToggleSheet}
+                  label={SHEET_TITLE}
+                />
+              </Target>
+              <TargetDivider />
+              <Target>
+                <TargetGlyph>
+                  <LandscapeIcon size={19} />
+                </TargetGlyph>
+                <TargetText>
+                  <TargetTitle>{POSTERS_TITLE}</TargetTitle>
+                  <TargetPath>{`${root}\\<movie folder>\\poster.jpg`}</TargetPath>
+                </TargetText>
+                <Toggle
+                  checked={writePosters}
+                  onToggle={onTogglePosters}
+                  label={POSTERS_TITLE}
+                />
+              </Target>
+            </>
+          )}
         </Targets>
+        {root !== null && (writeSheet || writePosters) ? (
+          <SourceNote>
+            FamilyFlix will write into your movie folders. Existing files are
+            never replaced — a new <SourceNoteMono>poster.jpg</SourceNoteMono>{' '}
+            is only written where there isn’t one.
+          </SourceNote>
+        ) : null}
       </div>
 
       <StartRow>
