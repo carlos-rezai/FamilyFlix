@@ -261,6 +261,22 @@ describe('seasonView — the episode rows', () => {
     ]);
   });
 
+  // Issue #209: a Sync's still, served the way a poster is.
+  it('carries the still as an image URL, and null when there is none', () => {
+    const episodes = [
+      makeEpisode(1, 1, {
+        stillPath: 'harbor-2019/season-01/e1.still.jpg',
+      } as Partial<Episode>),
+      makeEpisode(1, 2, { stillPath: null } as Partial<Episode>),
+    ];
+    const view = viewOf(detailOf([season(1, episodes)]), 1);
+
+    expect(view.episodes.map((row) => row.stillUrl)).toEqual([
+      '/api/images/harbor-2019/season-01/e1.still.jpg',
+      null,
+    ]);
+  });
+
   it('carries the watched flag', () => {
     const view = viewOf(detailOf([midSeason()]), 2);
 

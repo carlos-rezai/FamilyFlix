@@ -264,6 +264,17 @@ describe('EnrichmentFlow — setup for the whole library', () => {
     ).toBeDefined();
   });
 
+  // Issue #209: what a series gets, in the prototype's words.
+  it('says a series gets the same fields at show level, plus its episodes’', async () => {
+    renderFlow();
+
+    expect(
+      await screen.findByText(
+        'Series get the same fields at show level, plus episode titles, air dates, and stills for every season found on disk.'
+      )
+    ).toBeDefined();
+  });
+
   it('names Start Start sync', async () => {
     renderFlow();
 

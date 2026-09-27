@@ -180,6 +180,40 @@ describe('EpisodeRow — the thumbnail', () => {
   });
 });
 
+/**
+ * 23 — Enrichment, Phase 6 (issue #209): the row gains `episode.stillUrl?`.
+ * With one, the thumbnail draws the still where it drew the gradient — the
+ * **Gradient fallback** under it, `PosterCard`'s precedent; without one it is
+ * the gradient alone. The play glyph and the resume bar still sit over it.
+ */
+describe('EpisodeRow — the still', () => {
+  const STILL = '/api/images/the-hollow-coast-2018/season-02/S02E04.still.jpg';
+
+  /** Every background the thumbnail and its descendants paint. */
+  const paints = () =>
+    [thumbnail(), ...Array.from(thumbnail().querySelectorAll('*'))].map(
+      (element) => {
+        const computed = window.getComputedStyle(element);
+        return `${computed.backgroundImage} ${computed.background}`;
+      }
+    );
+
+  it('draws the still in the thumbnail when the episode has one', () => {
+    renderRow({ episode: { stillUrl: STILL } as Partial<Episode> });
+
+    expect(paints().some((bg) => bg.includes(STILL))).toBe(true);
+  });
+
+  it('keeps the resume bar over the still', () => {
+    renderRow({
+      episode: { stillUrl: STILL, progress: 40 } as Partial<Episode>,
+    });
+
+    expect(within(thumbnail()).getByRole('progressbar')).toBeDefined();
+    expect(paints().some((bg) => bg.includes(STILL))).toBe(true);
+  });
+});
+
 describe('EpisodeRow — opening it', () => {
   it('is one tab stop with the button role', () => {
     renderRow();
