@@ -1,6 +1,8 @@
 import { randomUUID } from 'node:crypto';
 
 import type {
+  Candidate,
+  Decision,
   EnrichField,
   EnrichmentRun,
   EnrichmentSummary,
@@ -9,13 +11,17 @@ import type {
   Movie,
   StartEnrichment,
 } from '@/types';
-import { titleKey } from '../../import-export/titleKey/titleKey';
 import type { LibraryStorage, MovieEnrichment } from '../../library';
 import type { Media } from '../../media/createMedia/createMedia';
 import {
   fetchedFields,
   type FetchedFields,
 } from '../fetchedFields/fetchedFields';
+import {
+  confident,
+  matchScore,
+  type TitledYear,
+} from '../matchScore/matchScore';
 import { planFields } from '../planFields/planFields';
 import type {
   TmdbClient,
@@ -27,6 +33,20 @@ import type {
 export type SaveKeyOutcome =
   | { kind: 'saved'; key: string }
   | { kind: 'empty' }
+  | { kind: 'refused' }
+  | { kind: 'unreachable' };
+
+/** What a review search came to, as a value the route maps to a status. */
+export type SearchOutcome =
+  | { kind: 'ok'; decision: Decision }
+  | { kind: 'not-found' }
+  | { kind: 'refused' }
+  | { kind: 'unreachable' };
+
+/** What a pick came to, as a value the route maps to a status. */
+export type PickOutcome =
+  | { kind: 'picked' }
+  | { kind: 'not-found' }
   | { kind: 'refused' }
   | { kind: 'unreachable' };
 
@@ -68,6 +88,18 @@ export interface Enrichment {
    * answered the server's own probe, and the **Library root**.
    */
   summary(): Promise<EnrichmentSummary>;
+  /**
+   * Search TMDB for `query` as typed and put the answer on Decision `id`:
+   * candidates in the picker, or the box kept with the line that says so.
+   */
+  search(id: string, query: string): Promise<SearchOutcome>;
+  /**
+   * Write the picked film as a Confident one would, count it into
+   * `enriched`, and take the row off the list.
+   */
+  pick(id: string, tmdbId: number): Promise<PickOutcome>;
+  /** _Skip_: take the row off and write nothing; `false` when none is held. */
+  dismiss(id: string): boolean;
 }
 
 export interface EnrichmentDeps {
@@ -161,21 +193,125 @@ function releaseYear(date: string): number | null {
   return Number.isNaN(year) ? null : year;
 }
 
-/**
- * **Confident**: exactly one candidate with an equal **Title key** and, when
- * the title has a year, an equal year. Answers its id, or `null`.
- */
-function confidentMatch(
-  movie: Movie,
+/** A search result as `matchScore` reads it. */
+function titledYear(result: TmdbMovieResult): TitledYear {
+  return { title: result.title, year: releaseYear(result.release_date) };
+}
+
+/** How many candidates an `ambiguous` Decision carries. */
+const CANDIDATE_CAP = 3;
+
+/** Where the review's candidate posters load from, straight off TMDB. */
+const CANDIDATE_POSTER_BASE = 'https://image.tmdb.org/t/p/w185';
+
+/** TMDB's movie genre ids, for the one genre a candidate's line names. */
+const TMDB_GENRE_NAMES: Readonly<Record<number, string>> = {
+  28: 'Action',
+  12: 'Adventure',
+  16: 'Animation',
+  35: 'Comedy',
+  80: 'Crime',
+  99: 'Documentary',
+  18: 'Drama',
+  10751: 'Family',
+  14: 'Fantasy',
+  36: 'History',
+  27: 'Horror',
+  10402: 'Music',
+  9648: 'Mystery',
+  10749: 'Romance',
+  878: 'Science Fiction',
+  10770: 'TV Movie',
+  53: 'Thriller',
+  10752: 'War',
+  37: 'Western',
+};
+
+/** The best three results by **Match score**, as the picker's Candidates. */
+function candidatesFor(
+  ours: TitledYear,
   results: readonly TmdbMovieResult[]
-): number | null {
-  const key = titleKey(movie.title);
-  const matches = results.filter(
-    (result) =>
-      titleKey(result.title) === key &&
-      (movie.year === null || releaseYear(result.release_date) === movie.year)
-  );
-  return matches.length === 1 ? matches[0].id : null;
+): Candidate[] {
+  return results
+    .map(
+      (result): Candidate => ({
+        tmdbId: result.id,
+        title: result.title,
+        year: releaseYear(result.release_date),
+        genre:
+          result.genre_ids
+            .map((id) => TMDB_GENRE_NAMES[id])
+            .find((name) => name !== undefined) ?? null,
+        language: result.original_language || null,
+        posterUrl:
+          result.poster_path === null
+            ? null
+            : `${CANDIDATE_POSTER_BASE}${result.poster_path}`,
+        score: matchScore(ours, titledYear(result)),
+      })
+    )
+    .sort((a, b) => b.score - a.score)
+    .slice(0, CANDIDATE_CAP);
+}
+
+const COUNT_WORDS = [
+  'No',
+  'One',
+  'Two',
+  'Three',
+  'Four',
+  'Five',
+  'Six',
+  'Seven',
+  'Eight',
+  'Nine',
+  'Ten',
+  'Eleven',
+  'Twelve',
+  'Thirteen',
+  'Fourteen',
+  'Fifteen',
+  'Sixteen',
+  'Seventeen',
+  'Eighteen',
+  'Nineteen',
+  'Twenty',
+];
+
+/** An `ambiguous` reason, the count of releases spelled out. */
+function ambiguousReason(count: number): string {
+  const spelled = COUNT_WORDS[count] ?? String(count);
+  return count === 1
+    ? `${spelled} release shares this title — pick the right one.`
+    : `${spelled} releases share this title — pick the right one.`;
+}
+
+/**
+ * What a search came to, as the Decision's face: candidates in the picker,
+ * or the box kept with `missingReason`.
+ */
+function decisionFace(
+  ours: TitledYear,
+  query: string,
+  results: readonly TmdbMovieResult[],
+  missingReason: string
+):
+  | {
+      kind: 'ambiguous';
+      reason: string;
+      query: string;
+      candidates: Candidate[];
+    }
+  | { kind: 'missing'; reason: string; query: string } {
+  if (results.length === 0) {
+    return { kind: 'missing', reason: missingReason, query };
+  }
+  return {
+    kind: 'ambiguous',
+    reason: ambiguousReason(results.length),
+    query,
+    candidates: candidatesFor(ours, results),
+  };
 }
 
 /** Why a title ended without being written, as the run's own value. */
@@ -195,6 +331,10 @@ export function createEnrichment({
   let run: EnrichmentRun | null = null;
   /** Aborts the Current run's requests in flight — _Stop_'s handle. */
   let abort: AbortController | null = null;
+  /** Each Decision of the Current run → the movie it is about. */
+  const decided = new Map<string, string>();
+  /** The fields the Current run fills — what a pick writes too. */
+  let runFields: readonly EnrichField[] = [];
 
   function key(): string | null {
     return storage.tmdbKey();
@@ -228,7 +368,7 @@ export function createEnrichment({
     signal: AbortSignal
   ): Promise<
     | { kind: 'found'; detail: TmdbMovieDetail }
-    | { kind: 'unsettled'; reason: string }
+    | { kind: 'unsettled'; reason: string; decision: Decision }
     | { kind: 'stop'; stop: Stop }
   > {
     let id = movie.tmdbId;
@@ -242,16 +382,29 @@ export function createEnrichment({
       if (search.kind !== 'ok') {
         return { kind: 'stop', stop: search.kind };
       }
-      id = confidentMatch(movie, search.value);
-      if (id === null) {
+      const ours: TitledYear = { title: movie.title, year: movie.year };
+      if (!confident(ours, search.value.map(titledYear))) {
         return {
           kind: 'unsettled',
           reason:
             search.value.length === 0
               ? 'no result on TMDB'
               : 'several possible matches',
+          decision: {
+            id: randomUUID(),
+            title: movie.title,
+            // No source folder is on record for a film yet.
+            path: '',
+            ...decisionFace(
+              ours,
+              movie.title,
+              search.value,
+              'Nothing on TMDB matched this title.'
+            ),
+          },
         };
       }
+      id = search.value[0].id;
     }
     const detail = await client.movie(apiKey, id, signal);
     if (detail.kind !== 'ok') {
@@ -369,6 +522,8 @@ export function createEnrichment({
         break;
       }
       if (found.kind === 'unsettled') {
+        current.decisions.push(found.decision);
+        decided.set(found.decision.id, movie.id);
         log(current, `⚠ ${movie.title} — ${found.reason}`, 'warning');
       } else {
         try {
@@ -442,6 +597,8 @@ export function createEnrichment({
       'info'
     );
     run = current;
+    decided.clear();
+    runFields = options.fields;
     const controller = new AbortController();
     abort = controller;
     const snapshot = structuredClone(current);
@@ -463,6 +620,83 @@ export function createEnrichment({
     abort?.abort();
     abort = null;
     run = null;
+    decided.clear();
+  }
+
+  /** The Current run's Decision `id` and its movie, or `null`. */
+  function held(
+    id: string
+  ): { current: EnrichmentRun; decision: Decision; movie: Movie } | null {
+    const current = run;
+    const movieId = decided.get(id);
+    const decision = current?.decisions.find((each) => each.id === id);
+    if (current === null || movieId === undefined || decision === undefined) {
+      return null;
+    }
+    const movie = storage.getMovie(movieId);
+    return movie === null ? null : { current, decision, movie };
+  }
+
+  /** The Decision off the list, and its movie forgotten. */
+  function settle(current: EnrichmentRun, id: string): void {
+    current.decisions = current.decisions.filter((each) => each.id !== id);
+    decided.delete(id);
+  }
+
+  async function search(id: string, query: string): Promise<SearchOutcome> {
+    const found = held(id);
+    const apiKey = storage.tmdbKey();
+    if (found === null) return { kind: 'not-found' };
+    if (apiKey === null) return { kind: 'refused' };
+    const answer = await client.searchMovie(apiKey, query, null);
+    if (answer.kind !== 'ok') return { kind: answer.kind };
+
+    const { current, decision, movie } = found;
+    const next: Decision = {
+      id: decision.id,
+      title: decision.title,
+      path: decision.path,
+      ...decisionFace(
+        { title: movie.title, year: movie.year },
+        query,
+        answer.value,
+        `Nothing on TMDB matched “${query}”.`
+      ),
+    };
+    // A Skip or a new run while TMDB answered leaves nothing to put back.
+    if (run !== current || !decided.has(id)) return { kind: 'not-found' };
+    current.decisions = current.decisions.map((each) =>
+      each.id === id ? next : each
+    );
+    return { kind: 'ok', decision: structuredClone(next) };
+  }
+
+  async function pick(id: string, tmdbId: number): Promise<PickOutcome> {
+    const found = held(id);
+    const apiKey = storage.tmdbKey();
+    if (found === null) return { kind: 'not-found' };
+    if (apiKey === null) return { kind: 'refused' };
+    const { current, movie } = found;
+    const signal = abort?.signal ?? new AbortController().signal;
+    const detail = await client.movie(apiKey, tmdbId, signal);
+    if (detail.kind !== 'ok') return { kind: detail.kind };
+    if (run !== current || !decided.has(id)) return { kind: 'not-found' };
+
+    await write(current, movie, detail.value, runFields, signal);
+    if (signal.aborted) return { kind: 'not-found' };
+    settle(current, id);
+    current.enriched += 1;
+    log(current, `✓ Matched   ${named(movie)}`, 'success');
+    return { kind: 'picked' };
+  }
+
+  function dismiss(id: string): boolean {
+    const current = run;
+    if (current === null || !current.decisions.some((each) => each.id === id)) {
+      return false;
+    }
+    settle(current, id);
+    return true;
   }
 
   async function summary(): Promise<EnrichmentSummary> {
@@ -479,5 +713,15 @@ export function createEnrichment({
     };
   }
 
-  return { key, saveKey, start, current, cancel, summary };
+  return {
+    key,
+    saveKey,
+    start,
+    current,
+    cancel,
+    summary,
+    search,
+    pick,
+    dismiss,
+  };
 }

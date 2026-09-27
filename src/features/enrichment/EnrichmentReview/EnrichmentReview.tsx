@@ -1,8 +1,10 @@
 import type { EnrichmentRun } from '@/types';
 import { Button } from '@/primitives';
+import { DecisionRow } from '../DecisionRow/DecisionRow';
 import {
   Actions,
   AllDone,
+  Decisions,
   AllDoneHeading,
   AllDoneLine,
   Stack,
@@ -18,17 +20,24 @@ export interface EnrichmentReviewProps {
   finishLabel: string;
   onFinish: () => void;
   onAgain: () => void;
+  onSkip: (id: string) => void;
+  onPick: (id: string, tmdbId: number) => void;
+  onSearch: (id: string, query: string) => void;
 }
 
 /**
  * The **Review step**: the two stat tiles, and — with nothing left to decide
- * — _All done_ over where it was saved; then Finish and _Sync again_.
+ * — _All done_ over where it was saved, else one **Decision row** per
+ * Decision; then Finish and _Sync again_.
  */
 export function EnrichmentReview({
   run,
   finishLabel,
   onFinish,
   onAgain,
+  onSkip,
+  onPick,
+  onSearch,
 }: EnrichmentReviewProps) {
   return (
     <Stack>
@@ -48,7 +57,20 @@ export function EnrichmentReview({
           <AllDoneHeading>All done</AllDoneHeading>
           <AllDoneLine>Saved to your library.</AllDoneLine>
         </AllDone>
-      ) : null}
+      ) : (
+        <Decisions>
+          {run.decisions.map((decision) => (
+            // Keyed by its face too, so a search's answer draws afresh.
+            <DecisionRow
+              key={`${decision.id}:${decision.kind}:${decision.query}`}
+              decision={decision}
+              onSkip={() => onSkip(decision.id)}
+              onPick={(tmdbId) => onPick(decision.id, tmdbId)}
+              onSearch={(query) => onSearch(decision.id, query)}
+            />
+          ))}
+        </Decisions>
+      )}
 
       <Actions>
         <Button label={finishLabel} variant="primary" onClick={onFinish} />

@@ -515,11 +515,11 @@
         cancelEnrich(){ this.setState({enStep:'setup',enDone:0,enTotal:0,enCurrent:'',enLog:[]}); }
         retryOnline(){ this.setState({online:true}); }
         seedEnrichPending(){ return [
-          {id:'e1',kind:'ambiguous',title:'Harbor Lights',path:'E:\\Movies\\Harbor.Lights.1080p\\',reason:'Three releases share this title — pick the right one.',query:'Harbor Lights',
+          {id:'e1',kind:'ambiguous',title:'Harbor Lights',path:'E:\\Movies\\Harbor.Lights.1080p\\',reason:'{n} releases share this title — pick the right one.',query:'Harbor Lights',
             candidates:[{t:'Harbor Lights',y:1963,c:'Drama · US',s:82,g1:'#2a3540',g2:'#5f93a8'},{t:'Harbor Lights',y:2019,c:'Drama · IE',s:74,g1:'#243a36',g2:'#5e7a6a'},{t:'The Harbor Light',y:2005,c:'Doc · NO',s:51,g1:'#3a2f24',g2:'#84603f'}]},
           {id:'e2',kind:'conflict',title:'The Lantern Keeper',path:'E:\\Movies\\The.Lantern.Keeper.2019\\',reason:'TMDB has different values for fields you already filled in.',
             fields:[{key:'year',label:'Year',mine:'2019',tmdb:'2018'},{key:'director',label:'Director',mine:'Eleanor Past',tmdb:'Eleanor Past-Whitlock'},{key:'synopsis',label:'Synopsis',mine:'A lighthouse keeper on a fading coast takes in a runaway girl…',tmdb:'On a storm-battered coast, a solitary lighthouse keeper shelters a runaway and finds a family in the wreckage of winter.'}]},
-          {id:'e3',kind:'missing',title:'Sundial',path:'E:\\Movies\\Sundial\\',reason:'Nothing on TMDB matched this folder name.',query:'Sundial'},
+          {id:'e3',kind:'missing',title:'Sundial',path:'E:\\Movies\\Sundial\\',reason:'Nothing on TMDB matched this title.',query:'Sundial'},
         ]; }
         pickCandidate(rowId){ this.setState(s=>({enPending:s.enPending.filter(p=>p.id!==rowId), enMatched:s.enMatched+1, enrichedCount:s.enrichedCount+1})); this.pushSnack({variant:'success',message:'Match saved.',duration:3000,dismissible:true}); }
         skipEnrichRow(id){ this.setState(s=>({enPending:s.enPending.filter(p=>p.id!==id)})); }

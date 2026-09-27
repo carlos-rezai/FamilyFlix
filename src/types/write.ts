@@ -19,7 +19,7 @@ export interface NewMovie {
   title: string;
   videoPath: string;
   tmdbId?: number;
-  year?: number;
+  year?: number | null;
   runtimeMinutes?: number;
   synopsis?: string;
   director?: string;

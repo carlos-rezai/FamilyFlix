@@ -63,6 +63,13 @@ export const AllDoneLine = styled.div`
   color: ${({ theme }) => theme.colors.textDim};
 `;
 
+/** The Decision rows, 14px apart. */
+export const Decisions = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+`;
+
 /** Finish and _Sync again_. */
 export const Actions = styled.div`
   display: flex;

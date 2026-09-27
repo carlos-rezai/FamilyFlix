@@ -3,8 +3,11 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { EnrichmentRun, StartEnrichment } from '@/types';
 import {
   cancelEnrichment,
+  dismissDecision,
   EnrichmentBusyError,
   fetchCurrentEnrichment,
+  pickCandidate,
+  searchDecision,
   startEnrichment,
 } from '../api/api';
 
@@ -24,6 +27,18 @@ export interface EnrichmentRunState {
    * server and from the screen, back to setup. Every row written stays.
    */
   cancel: () => void;
+  /**
+   * Search TMDB for Decision `id` and draw the answer in its place. Rejects
+   * when the route refuses.
+   */
+  search: (id: string, query: string) => Promise<void>;
+  /**
+   * Pick a candidate: the settled row leaves the list and counts into
+   * _movies enriched_. Rejects when the route refuses.
+   */
+  pick: (id: string, tmdbId: number) => Promise<void>;
+  /** _Skip_: the row leaves the list. Rejects when the route refuses. */
+  dismiss: (id: string) => Promise<void>;
 }
 
 /**
@@ -76,6 +91,45 @@ export function useEnrichmentRun(): EnrichmentRunState {
     });
   }, []);
 
+  const search = useCallback(async (id: string, query: string) => {
+    const answer = await searchDecision(id, query);
+    setRun((held) =>
+      held === null
+        ? held
+        : {
+            ...held,
+            decisions: held.decisions.map((each) =>
+              each.id === id ? answer : each
+            ),
+          }
+    );
+  }, []);
+
+  const pick = useCallback(async (id: string, tmdbId: number) => {
+    await pickCandidate(id, tmdbId);
+    setRun((held) =>
+      held === null
+        ? held
+        : {
+            ...held,
+            enriched: held.enriched + 1,
+            decisions: held.decisions.filter((each) => each.id !== id),
+          }
+    );
+  }, []);
+
+  const dismiss = useCallback(async (id: string) => {
+    await dismissDecision(id);
+    setRun((held) =>
+      held === null
+        ? held
+        : {
+            ...held,
+            decisions: held.decisions.filter((each) => each.id !== id),
+          }
+    );
+  }, []);
+
   const live = run !== null && run.phase === 'running';
   useEffect(() => {
     if (!live) {
@@ -101,5 +155,5 @@ export function useEnrichmentRun(): EnrichmentRunState {
     };
   }, [live]);
 
-  return { run, start, cancel };
+  return { run, start, cancel, search, pick, dismiss };
 }

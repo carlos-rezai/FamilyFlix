@@ -1,4 +1,4 @@
-import type { EnrichmentRun, StartEnrichment } from '@/types';
+import type { Decision, EnrichmentRun, StartEnrichment } from '@/types';
 
 /**
  * A start the route refused because a **Current enrichment run** is already
@@ -66,5 +66,54 @@ export async function cancelEnrichment(): Promise<void> {
 
   if (!response.ok) {
     throw new Error(`POST ${CANCEL_ENDPOINT} failed: ${response.status}`);
+  }
+}
+
+const decisionEndpoint = (id: string) =>
+  `/api/enrichment/current/decisions/${encodeURIComponent(id)}`;
+
+/**
+ * Search TMDB for `query` on Decision `id`, resolving the Decision as it now
+ * stands — candidates in the picker, or the box kept with its line.
+ */
+export async function searchDecision(
+  id: string,
+  query: string
+): Promise<Decision> {
+  const url = `${decisionEndpoint(id)}/search`;
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ query }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`POST ${url} failed: ${response.status}`);
+  }
+
+  return (await response.json()) as Decision;
+}
+
+/** Pick candidate `tmdbId` for Decision `id`; the route answers `204`. */
+export async function pickCandidate(id: string, tmdbId: number): Promise<void> {
+  const url = `${decisionEndpoint(id)}/pick`;
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ tmdbId }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`POST ${url} failed: ${response.status}`);
+  }
+}
+
+/** _Skip_: take Decision `id` off the list; the route answers `204`. */
+export async function dismissDecision(id: string): Promise<void> {
+  const url = decisionEndpoint(id);
+  const response = await fetch(url, { method: 'DELETE' });
+
+  if (!response.ok) {
+    throw new Error(`DELETE ${url} failed: ${response.status}`);
   }
 }

@@ -67,9 +67,11 @@ export type Decision = {
   title: string;
   reason: string;
   path: string;
+  /** What TMDB was last asked for this title — the search box's prefill. */
+  query: string;
 } & (
-  | { kind: 'ambiguous'; query: string; candidates: Candidate[] }
-  | { kind: 'missing'; query: string }
+  | { kind: 'ambiguous'; candidates: Candidate[] }
+  | { kind: 'missing' }
   | { kind: 'conflict'; fields: FieldConflict[] }
 );
 

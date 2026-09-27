@@ -44,11 +44,11 @@ export function EnrichmentFlow() {
   const [params] = useSearchParams();
   const movieId = params.get('movie');
   const goBack = useGoBack(movieId === null ? '/settings' : moviePath(movieId));
-  const { run, start, cancel } = useEnrichmentRun();
+  const { run, start, cancel, search, pick, dismiss } = useEnrichmentRun();
   const { summary, retry } = useEnrichmentSummary();
   const navigate = useNavigate();
-  // Read off the context rather than `useSnackbar`: the notice is the one
-  // thing the flow raises, and a flow drawn with no stack still runs.
+  // Read off the context rather than `useSnackbar`: a flow drawn with no
+  // stack still runs, its notices simply unraised.
   const snackbar = useContext(SnackbarContext);
 
   const [title, setTitle] = useState<string | null>(null);
@@ -82,6 +82,38 @@ export function EnrichmentFlow() {
         : ALL_FIELDS.filter((each) => each === field || on.includes(each))
     );
   }, []);
+
+  const onSkip = useCallback(
+    (id: string) => {
+      dismiss(id).catch(() => {
+        // A refused Skip leaves the row where it is, to press again.
+      });
+    },
+    [dismiss]
+  );
+
+  const onPick = useCallback(
+    (id: string, tmdbId: number) => {
+      pick(id, tmdbId)
+        .then(() => {
+          snackbar?.notify({ variant: 'success', message: 'Match saved.' });
+        })
+        .catch(() => {
+          // A refused pick leaves the row where it is, to pick again.
+        });
+    },
+    [pick, snackbar]
+  );
+
+  const onSearch = useCallback(
+    (id: string, query: string) => {
+      snackbar?.notify({ variant: 'info', message: 'Searching TMDB…' });
+      search(id, query).catch(() => {
+        // A refused search leaves the row as it was, to search again.
+      });
+    },
+    [search, snackbar]
+  );
 
   const openSettings = useCallback(() => navigate('/settings'), [navigate]);
 
@@ -155,6 +187,9 @@ export function EnrichmentFlow() {
           finishLabel={movieId === null ? 'Done' : 'Back to the movie'}
           onFinish={goBack}
           onAgain={cancel}
+          onSkip={onSkip}
+          onPick={onPick}
+          onSearch={onSearch}
         />
       ) : (
         <EnrichmentProgress run={run} onStop={cancel} />

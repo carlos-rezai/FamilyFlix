@@ -448,6 +448,16 @@ const START_REFUSALS: Record<
   'no-key': { status: 412, error: 'Add your TMDB key first' },
 };
 
+/** Why a review search or pick answered nothing, as a status. */
+const DECISION_REFUSALS: Record<
+  'not-found' | 'refused' | 'unreachable',
+  { status: number; error: string }
+> = {
+  'not-found': { status: 404, error: 'No such decision' },
+  refused: { status: 422, error: 'TMDB refused the key' },
+  unreachable: { status: 503, error: 'TMDB could not be reached' },
+};
+
 /**
  * Mount the JSON API over a {@link LibraryStorage}. Handlers stay thin — parse
  * the request, call one repository method, serialize the result — so the
@@ -1319,6 +1329,57 @@ export function createApiRouter(
     enrichment.cancel();
     res.status(204).end();
   });
+
+  // The review's **Decisions**. A search answers `200` with the Decision as it
+  // now stands — candidates, or the box kept with its line.
+  router.post(
+    '/enrichment/current/decisions/:id/search',
+    async (req: Request<{ id: string }>, res: Response) => {
+      const { query } = (req.body ?? {}) as { query?: unknown };
+      if (typeof query !== 'string' || query.trim().length === 0) {
+        res.status(400).json({ error: 'A search names its query' });
+        return;
+      }
+      const outcome = await enrichment.search(req.params.id, query);
+      if (outcome.kind === 'ok') {
+        res.json(outcome.decision);
+        return;
+      }
+      const refused = DECISION_REFUSALS[outcome.kind];
+      res.status(refused.status).json({ error: refused.error });
+    }
+  );
+
+  // A pick: `204`, the film written through the same path as a Confident one.
+  router.post(
+    '/enrichment/current/decisions/:id/pick',
+    async (req: Request<{ id: string }>, res: Response) => {
+      const { tmdbId } = (req.body ?? {}) as { tmdbId?: unknown };
+      if (typeof tmdbId !== 'number' || !Number.isInteger(tmdbId)) {
+        res.status(400).json({ error: 'A pick names its TMDB id' });
+        return;
+      }
+      const outcome = await enrichment.pick(req.params.id, tmdbId);
+      if (outcome.kind === 'picked') {
+        res.status(204).end();
+        return;
+      }
+      const refused = DECISION_REFUSALS[outcome.kind];
+      res.status(refused.status).json({ error: refused.error });
+    }
+  );
+
+  // _Skip_: `204`, the row off the list and nothing written; `404` for none.
+  router.delete(
+    '/enrichment/current/decisions/:id',
+    (req: Request<{ id: string }>, res: Response) => {
+      if (!enrichment.dismiss(req.params.id)) {
+        res.status(404).json({ error: 'No such decision' });
+        return;
+      }
+      res.status(204).end();
+    }
+  );
 
   // The **Storage report** — `{ mediaPath, bytesUsed, movieCount }` — three
   // reads the router already holds, composed; nothing new is injected. The
