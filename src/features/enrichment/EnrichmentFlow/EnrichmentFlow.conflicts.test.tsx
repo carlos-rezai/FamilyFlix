@@ -59,7 +59,7 @@ const CONFLICT: Decision = {
   kind: 'conflict',
   title: 'The Lantern Keeper',
   reason: REASON,
-  path: '',
+  path: null,
   query: 'The Lantern Keeper',
   fields: [
     { field: 'year', label: 'Year', mine: '2019', tmdb: '2018' },

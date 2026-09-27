@@ -58,7 +58,7 @@ const AMBIGUOUS: Decision = {
   kind: 'ambiguous',
   title: 'Harbor Lights',
   reason: 'Two releases share this title — pick the right one.',
-  path: '',
+  path: null,
   query: 'Harbor Lights',
   candidates: [
     {
@@ -87,7 +87,7 @@ const MISSING: Decision = {
   kind: 'missing',
   title: 'Sundial',
   reason: 'Nothing on TMDB matched this title.',
-  path: '',
+  path: null,
   query: 'Sundial',
 };
 

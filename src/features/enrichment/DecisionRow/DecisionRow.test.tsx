@@ -65,7 +65,7 @@ const MISSING: Decision = {
   kind: 'missing',
   title: 'Sundial',
   reason: 'Nothing on TMDB matched this title.',
-  path: '',
+  path: null,
   query: 'Sundial',
 };
 

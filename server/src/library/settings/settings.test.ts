@@ -227,3 +227,55 @@ describe('library: enrichmentLastSyncedAt — when the library last synced', () 
     expect(storage.tmdbKey()).toBe('kept-key');
   });
 });
+
+// 23 — Enrichment, Phase 7 (issue #210): the importer remembers the **Library
+// root** it was handed as `library-root`, in the same `settings` table — the
+// one absolute path the library keeps, the maintainer's own typing. Read and
+// written beside the key: `libraryRoot()` is `null` until an import has run,
+// `setLibraryRoot` an upsert, and `settings()` never carries it.
+describe('library: libraryRoot / setLibraryRoot — the remembered root', () => {
+  it('answers null on a fresh database — no root remembered yet', () => {
+    const storage = freshStorage();
+
+    expect(storage.libraryRoot()).toBeNull();
+  });
+
+  it('stores the root and reads it back as given', () => {
+    const storage = freshStorage();
+
+    storage.setLibraryRoot('E:\Movies');
+
+    expect(storage.libraryRoot()).toBe('E:\Movies');
+  });
+
+  it('replaces the root on a second write rather than failing on the key', () => {
+    const storage = freshStorage();
+    storage.setLibraryRoot('E:\Movies');
+
+    storage.setLibraryRoot('F:\Films');
+
+    expect(storage.libraryRoot()).toBe('F:\Films');
+  });
+
+  it('leaves the household settings and the key exactly as they were', () => {
+    const storage = freshStorage();
+    storage.setSubtitleLanguage('French');
+    storage.setTmdbKey('kept-key');
+
+    storage.setLibraryRoot('E:\Movies');
+
+    expect(storage.settings()).toEqual({ subtitleLanguage: 'French' });
+    expect(storage.tmdbKey()).toBe('kept-key');
+  });
+
+  it('survives closing and reopening the database', () => {
+    const path = tempDbPath();
+    const first = track(createSqliteStorage(path));
+    first.setLibraryRoot('E:\Movies');
+    first.close();
+
+    const second = track(createSqliteStorage(path));
+
+    expect(second.libraryRoot()).toBe('E:\Movies');
+  });
+});

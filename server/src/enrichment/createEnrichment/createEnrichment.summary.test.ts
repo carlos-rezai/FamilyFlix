@@ -106,6 +106,14 @@ describe('createEnrichment: summary — the key, the last sync, the root', () =>
     expect((await enrichment.summary()).keySet).toBe(true);
   });
 
+  // Issue #210: the importer remembers the root, and the summary answers it.
+  it('answers the Library root once one is remembered', async () => {
+    const { storage, enrichment } = world();
+    storage.setLibraryRoot('E:\\Movies');
+
+    expect((await enrichment.summary()).libraryRoot).toBe('E:\\Movies');
+  });
+
   it('answers when a Sync last reached review', async () => {
     const { storage, enrichment } = world();
     storage.setEnrichmentLastSyncedAt('2026-09-26T09:30:00.000Z');
