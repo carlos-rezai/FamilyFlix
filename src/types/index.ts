@@ -77,6 +77,8 @@ export type {
   Candidate,
   ConflictField,
   FieldConflict,
+  FieldChoice,
+  ConflictChoices,
   Decision,
   EnrichmentPhase,
   EnrichmentRun,

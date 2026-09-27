@@ -136,12 +136,22 @@ describe('FieldDiff — TMDB chosen by default, each switchable', () => {
   });
 });
 
+const TRANSPARENT = 'rgba(0, 0, 0, 0)';
+
 describe('FieldDiff — the prototype’s pixels', () => {
   it('frames the rows in the soft border, clipped to its radius', () => {
     renderDiff();
 
     const frame = getComputedStyle(rowOf('Year').parentElement as HTMLElement);
-    expect(frame.border).toBe(`1px solid ${BORDER_SOFT}`);
+    // jsdom drops the `border` shorthand off a stylesheet rule; read its sides
+    for (const side of [
+      frame.borderTop,
+      frame.borderRight,
+      frame.borderBottom,
+      frame.borderLeft,
+    ]) {
+      expect(side).toBe(`1px solid ${BORDER_SOFT}`);
+    }
     expect(frame.borderRadius).toBe(theme.radius.md);
     expect(frame.overflow).toBe('hidden');
     expect(frame.marginTop).toBe('14px');
@@ -175,11 +185,12 @@ describe('FieldDiff — the prototype’s pixels', () => {
     expect(chosen.boxShadow).toBe(`inset 0 0 0 1px ${ACCENT_LINE}`);
   });
 
+  // jsdom computes `transparent` as rgba(0, 0, 0, 0)
   it('draws the other side clear, with no ring', () => {
     renderDiff();
 
     const other = getComputedStyle(yours('Year'));
-    expect(other.backgroundColor).toBe('transparent');
+    expect(other.backgroundColor).toBe(TRANSPARENT);
     expect(other.boxShadow).toBe('none');
   });
 
@@ -190,7 +201,7 @@ describe('FieldDiff — the prototype’s pixels', () => {
 
     expect(getComputedStyle(yours('Year')).backgroundColor).toBe(ACCENT_SOFT);
     expect(getComputedStyle(tmdbSide('Year')).backgroundColor).toBe(
-      'transparent'
+      TRANSPARENT
     );
   });
 

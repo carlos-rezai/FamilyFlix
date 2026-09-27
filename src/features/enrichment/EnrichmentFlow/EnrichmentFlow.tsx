@@ -6,7 +6,7 @@ import { fetchMovie } from '@/api/fetchMovie/fetchMovie';
 import { useEnrichmentSummary } from '@/hooks/useEnrichmentSummary/useEnrichmentSummary';
 import { useGoBack } from '@/hooks/useGoBack/useGoBack';
 import { ChevronLeftIcon, IconButton } from '@/primitives';
-import type { EnrichField, EnrichScope } from '@/types';
+import type { ConflictChoices, EnrichField, EnrichScope } from '@/types';
 import { moviePath } from '@/utils';
 import { EnrichmentProgress } from '../EnrichmentProgress/EnrichmentProgress';
 import { EnrichmentReview } from '../EnrichmentReview/EnrichmentReview';
@@ -44,7 +44,8 @@ export function EnrichmentFlow() {
   const [params] = useSearchParams();
   const movieId = params.get('movie');
   const goBack = useGoBack(movieId === null ? '/settings' : moviePath(movieId));
-  const { run, start, cancel, search, pick, dismiss } = useEnrichmentRun();
+  const { run, start, cancel, search, pick, apply, dismiss } =
+    useEnrichmentRun();
   const { summary, retry } = useEnrichmentSummary();
   const navigate = useNavigate();
   // Read off the context rather than `useSnackbar`: a flow drawn with no
@@ -103,6 +104,19 @@ export function EnrichmentFlow() {
         });
     },
     [pick, snackbar]
+  );
+
+  const onApply = useCallback(
+    (id: string, choices: ConflictChoices) => {
+      apply(id, choices)
+        .then(() => {
+          snackbar?.notify({ variant: 'success', message: 'Details updated.' });
+        })
+        .catch(() => {
+          // A refused apply leaves the row where it is, to apply again.
+        });
+    },
+    [apply, snackbar]
   );
 
   const onSearch = useCallback(
@@ -190,6 +204,7 @@ export function EnrichmentFlow() {
           onSkip={onSkip}
           onPick={onPick}
           onSearch={onSearch}
+          onApply={onApply}
         />
       ) : (
         <EnrichmentProgress run={run} onStop={cancel} />

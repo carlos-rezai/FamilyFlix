@@ -1,4 +1,9 @@
-import type { Decision, EnrichmentRun, StartEnrichment } from '@/types';
+import type {
+  ConflictChoices,
+  Decision,
+  EnrichmentRun,
+  StartEnrichment,
+} from '@/types';
 
 /**
  * A start the route refused because a **Current enrichment run** is already
@@ -101,6 +106,26 @@ export async function pickCandidate(id: string, tmdbId: number): Promise<void> {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ tmdbId }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`POST ${url} failed: ${response.status}`);
+  }
+}
+
+/**
+ * _Apply choices_ on `conflict` Decision `id`: the side chosen for each field.
+ * The route answers `204`.
+ */
+export async function applyChoices(
+  id: string,
+  choices: ConflictChoices
+): Promise<void> {
+  const url = `${decisionEndpoint(id)}/apply`;
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ choices }),
   });
 
   if (!response.ok) {

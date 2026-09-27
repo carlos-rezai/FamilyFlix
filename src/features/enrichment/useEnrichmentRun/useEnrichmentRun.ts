@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import type { EnrichmentRun, StartEnrichment } from '@/types';
+import type { ConflictChoices, EnrichmentRun, StartEnrichment } from '@/types';
 import {
+  applyChoices,
   cancelEnrichment,
   dismissDecision,
   EnrichmentBusyError,
@@ -37,6 +38,11 @@ export interface EnrichmentRunState {
    * _movies enriched_. Rejects when the route refuses.
    */
   pick: (id: string, tmdbId: number) => Promise<void>;
+  /**
+   * _Apply choices_ on a `conflict` row: the settled row leaves the list and
+   * counts into _movies enriched_. Rejects when the route refuses.
+   */
+  apply: (id: string, choices: ConflictChoices) => Promise<void>;
   /** _Skip_: the row leaves the list. Rejects when the route refuses. */
   dismiss: (id: string) => Promise<void>;
 }
@@ -118,6 +124,19 @@ export function useEnrichmentRun(): EnrichmentRunState {
     );
   }, []);
 
+  const apply = useCallback(async (id: string, choices: ConflictChoices) => {
+    await applyChoices(id, choices);
+    setRun((held) =>
+      held === null
+        ? held
+        : {
+            ...held,
+            enriched: held.enriched + 1,
+            decisions: held.decisions.filter((each) => each.id !== id),
+          }
+    );
+  }, []);
+
   const dismiss = useCallback(async (id: string) => {
     await dismissDecision(id);
     setRun((held) =>
@@ -155,5 +174,5 @@ export function useEnrichmentRun(): EnrichmentRunState {
     };
   }, [live]);
 
-  return { run, start, cancel, search, pick, dismiss };
+  return { run, start, cancel, search, pick, apply, dismiss };
 }

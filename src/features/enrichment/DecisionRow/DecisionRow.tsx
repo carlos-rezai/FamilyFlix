@@ -1,8 +1,9 @@
 import { useState } from 'react';
 
 import { Button, SearchIcon } from '@/primitives';
-import type { Candidate, Decision } from '@/types';
+import type { Candidate, ConflictChoices, Decision } from '@/types';
 import { gradientFromId } from '@/utils';
+import { FieldDiff } from '../FieldDiff/FieldDiff';
 import {
   CandidateCard,
   CandidateMeta,
@@ -29,6 +30,8 @@ export interface DecisionRowProps {
   onSkip: () => void;
   onPick: (tmdbId: number) => void;
   onSearch: (query: string) => void;
+  /** _Apply choices_ on a `conflict` row: the side chosen for each field. */
+  onApply: (choices: ConflictChoices) => void;
 }
 
 /** Above this, a candidate's _% match_ wears the watched green. */
@@ -99,13 +102,15 @@ function TitleSearch({
  * One **Decision row** of the review, from `feat.EnrichmentFlow.dc.html`: the
  * dot by kind, the title, the reason, the path when known, and _Skip_; then
  * one face — the candidate picker for `ambiguous`, the search box for
- * `missing`. It draws a Decision and reports presses, nothing more.
+ * `missing`, the field diff for `conflict`, whose _Keep all mine_ is a Skip.
+ * It draws a Decision and reports presses, nothing more.
  */
 export function DecisionRow({
   decision,
   onSkip,
   onPick,
   onSearch,
+  onApply,
 }: DecisionRowProps) {
   const [searching, setSearching] = useState(false);
 
@@ -145,6 +150,14 @@ export function DecisionRow({
 
       {decision.kind === 'missing' ? (
         <TitleSearch initial={decision.query} onSearch={onSearch} />
+      ) : null}
+
+      {decision.kind === 'conflict' ? (
+        <FieldDiff
+          fields={decision.fields}
+          onApply={onApply}
+          onKeepAll={onSkip}
+        />
       ) : null}
     </Card>
   );

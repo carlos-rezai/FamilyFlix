@@ -17,7 +17,13 @@ export const Head = styled.div`
   gap: 14px;
 `;
 
-/** The 10px dot, coloured by kind: accent for `ambiguous`, danger for `missing`. */
+/** The prototype's gold for a `conflict` dot — a hue no token names. */
+const CONFLICT_GOLD = '#c9a86a';
+
+/**
+ * The 10px dot, coloured by kind: accent for `ambiguous`, gold for
+ * `conflict`, danger for `missing`.
+ */
 export const Dot = styled.span<{ $kind: Decision['kind'] }>`
   flex: 0 0 auto;
   width: 10px;
@@ -25,7 +31,11 @@ export const Dot = styled.span<{ $kind: Decision['kind'] }>`
   margin-top: 7px;
   border-radius: 99px;
   background: ${({ $kind, theme }) =>
-    $kind === 'ambiguous' ? theme.colors.accent : theme.colors.danger};
+    $kind === 'ambiguous'
+      ? theme.colors.accent
+      : $kind === 'conflict'
+        ? CONFLICT_GOLD
+        : theme.colors.danger};
 `;
 
 export const Text = styled.div`

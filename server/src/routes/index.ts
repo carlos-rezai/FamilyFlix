@@ -49,6 +49,7 @@ import {
   type GenrePoolPayload,
   type GenreQuery,
   type LibraryQuery,
+  type ConflictChoices,
   type Movie,
   type MovieSort,
   type NewSubtitle,
@@ -1361,6 +1362,37 @@ export function createApiRouter(
       }
       const outcome = await enrichment.pick(req.params.id, tmdbId);
       if (outcome.kind === 'picked') {
+        res.status(204).end();
+        return;
+      }
+      const refused = DECISION_REFUSALS[outcome.kind];
+      res.status(refused.status).json({ error: refused.error });
+    }
+  );
+
+  // _Apply choices_: `204`, the chosen side of each **Field conflict**
+  // written; `400` for choices that are not a map of field to `mine`/`tmdb`,
+  // `404` for a conflict that is not held.
+  router.post(
+    '/enrichment/current/decisions/:id/apply',
+    async (req: Request<{ id: string }>, res: Response) => {
+      const { choices } = (req.body ?? {}) as { choices?: unknown };
+      if (
+        typeof choices !== 'object' ||
+        choices === null ||
+        Array.isArray(choices) ||
+        !Object.values(choices).every(
+          (side) => side === 'mine' || side === 'tmdb'
+        )
+      ) {
+        res.status(400).json({ error: 'Choices map each field to a side' });
+        return;
+      }
+      const outcome = await enrichment.apply(
+        req.params.id,
+        choices as ConflictChoices
+      );
+      if (outcome.kind === 'applied') {
         res.status(204).end();
         return;
       }

@@ -61,6 +61,12 @@ export interface FieldConflict {
   tmdb: string;
 }
 
+/** Which side of a **Field conflict** _Apply choices_ keeps. */
+export type FieldChoice = 'mine' | 'tmdb';
+
+/** _Apply choices_' body: the side chosen for each conflicting field. */
+export type ConflictChoices = Partial<Record<ConflictField, FieldChoice>>;
+
 /** A title the run could not settle on its own, for the review. */
 export type Decision = {
   id: string;

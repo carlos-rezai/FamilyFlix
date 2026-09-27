@@ -2,11 +2,14 @@ import { randomUUID } from 'node:crypto';
 
 import type {
   Candidate,
+  ConflictChoices,
+  ConflictField,
   Decision,
   EnrichField,
   EnrichmentRun,
   EnrichmentSummary,
   EnrichScope,
+  FieldConflict,
   LogKind,
   Movie,
   StartEnrichment,
@@ -49,6 +52,9 @@ export type PickOutcome =
   | { kind: 'not-found' }
   | { kind: 'refused' }
   | { kind: 'unreachable' };
+
+/** What _Apply choices_ came to, as a value the route maps to a status. */
+export type ApplyOutcome = { kind: 'applied' } | { kind: 'not-found' };
 
 /** What starting a **Sync** came to, as a value the route maps to a status. */
 export type StartEnrichmentOutcome =
@@ -98,6 +104,12 @@ export interface Enrichment {
    * `enriched`, and take the row off the list.
    */
   pick(id: string, tmdbId: number): Promise<PickOutcome>;
+  /**
+   * _Apply choices_: write TMDB's side of every **Field conflict** chosen as
+   * `tmdb` on a `conflict` Decision, keep ours for the rest, count the title
+   * into `enriched`, and take the row off the list.
+   */
+  apply(id: string, choices: ConflictChoices): Promise<ApplyOutcome>;
   /** _Skip_: take the row off and write nothing; `false` when none is held. */
   dismiss(id: string): boolean;
 }
@@ -317,6 +329,29 @@ function decisionFace(
 /** Why a title ended without being written, as the run's own value. */
 type Stop = 'refused' | 'unreachable';
 
+/** A `conflict` Decision's reason. */
+const CONFLICT_REASON =
+  'TMDB has different values for fields you already filled in.';
+
+/** TMDB's side of one **Field conflict**, as the column it writes. */
+function tmdbSide(
+  field: ConflictField,
+  fetched: FetchedFields
+): MovieEnrichment {
+  switch (field) {
+    case 'synopsis':
+      return fetched.synopsis === null ? {} : { synopsis: fetched.synopsis };
+    case 'year':
+      return fetched.year === null ? {} : { year: fetched.year };
+    case 'genres':
+      return { genres: fetched.genres };
+    case 'director':
+      return fetched.director === null ? {} : { director: fetched.director };
+    case 'cast':
+      return { cast: fetched.cast };
+  }
+}
+
 const STOP_LINES: Readonly<Record<Stop, string>> = {
   refused: 'TMDB refused the key.',
   unreachable:
@@ -335,6 +370,8 @@ export function createEnrichment({
   const decided = new Map<string, string>();
   /** The fields the Current run fills — what a pick writes too. */
   let runFields: readonly EnrichField[] = [];
+  /** Each `conflict` Decision → what TMDB answered, for _Apply choices_. */
+  const disputed = new Map<string, FetchedFields>();
 
   function key(): string | null {
     return storage.tmdbKey();
@@ -434,17 +471,21 @@ export function createEnrichment({
     }
   }
 
-  /** Plan and write one Confident title: its columns, id and images. */
+  /**
+   * Plan and write one Confident title: its columns, id and images. Answers
+   * the **Field conflicts** the plan left for the review, and what TMDB said.
+   */
   async function write(
     current: EnrichmentRun,
     movie: Movie,
     detail: TmdbMovieDetail,
     fields: readonly EnrichField[],
     signal: AbortSignal
-  ): Promise<void> {
-    const { fill } = planFields({
+  ): Promise<{ conflicts: FieldConflict[]; fetched: FetchedFields }> {
+    const fetched = fetchedFields(detail);
+    const { fill, conflicts } = planFields({
       current: currentFields(movie),
-      fetched: fetchedFields(detail),
+      fetched,
       fields,
       scope: current.scope,
     });
@@ -482,8 +523,9 @@ export function createEnrichment({
     }
 
     // A Stop while the images streamed writes nothing more.
-    if (signal.aborted) return;
+    if (signal.aborted) return { conflicts, fetched };
     storage.enrichMovie(movie.id, enrichment);
+    return { conflicts, fetched };
   }
 
   /** A title as the log names it: `Title (Year)`, or the title alone. */
@@ -527,10 +569,37 @@ export function createEnrichment({
         log(current, `⚠ ${movie.title} — ${found.reason}`, 'warning');
       } else {
         try {
-          await write(current, movie, found.detail, fields, signal);
+          const { conflicts, fetched } = await write(
+            current,
+            movie,
+            found.detail,
+            fields,
+            signal
+          );
           if (signal.aborted) return;
-          current.enriched += 1;
-          log(current, `✓ Matched   ${named(movie)}`, 'success');
+          if (conflicts.length > 0) {
+            const decision: Decision = {
+              id: randomUUID(),
+              title: movie.title,
+              reason: CONFLICT_REASON,
+              // No source folder is on record for a film yet.
+              path: '',
+              query: movie.title,
+              kind: 'conflict',
+              fields: conflicts,
+            };
+            current.decisions.push(decision);
+            decided.set(decision.id, movie.id);
+            disputed.set(decision.id, fetched);
+            log(
+              current,
+              `⚠ ${movie.title} — TMDB disagrees with what you filled in`,
+              'warning'
+            );
+          } else {
+            current.enriched += 1;
+            log(current, `✓ Matched   ${named(movie)}`, 'success');
+          }
         } catch {
           if (signal.aborted) return;
           log(current, `⚠ ${movie.title} — could not be saved`, 'warning');
@@ -598,6 +667,7 @@ export function createEnrichment({
     );
     run = current;
     decided.clear();
+    disputed.clear();
     runFields = options.fields;
     const controller = new AbortController();
     abort = controller;
@@ -621,6 +691,7 @@ export function createEnrichment({
     abort = null;
     run = null;
     decided.clear();
+    disputed.clear();
   }
 
   /** The Current run's Decision `id` and its movie, or `null`. */
@@ -641,6 +712,7 @@ export function createEnrichment({
   function settle(current: EnrichmentRun, id: string): void {
     current.decisions = current.decisions.filter((each) => each.id !== id);
     decided.delete(id);
+    disputed.delete(id);
   }
 
   async function search(id: string, query: string): Promise<SearchOutcome> {
@@ -690,6 +762,33 @@ export function createEnrichment({
     return { kind: 'picked' };
   }
 
+  async function apply(
+    id: string,
+    choices: ConflictChoices
+  ): Promise<ApplyOutcome> {
+    const found = held(id);
+    const fetched = disputed.get(id);
+    if (
+      found === null ||
+      found.decision.kind !== 'conflict' ||
+      fetched === undefined
+    ) {
+      return { kind: 'not-found' };
+    }
+    const { current, decision, movie } = found;
+    let enrichment: MovieEnrichment = {};
+    for (const { field } of decision.fields) {
+      if (choices[field] === 'tmdb') {
+        enrichment = { ...enrichment, ...tmdbSide(field, fetched) };
+      }
+    }
+    storage.enrichMovie(movie.id, enrichment);
+    settle(current, id);
+    current.enriched += 1;
+    log(current, `✓ Matched   ${named(movie)}`, 'success');
+    return { kind: 'applied' };
+  }
+
   function dismiss(id: string): boolean {
     const current = run;
     if (current === null || !current.decisions.some((each) => each.id === id)) {
@@ -722,6 +821,7 @@ export function createEnrichment({
     summary,
     search,
     pick,
+    apply,
     dismiss,
   };
 }

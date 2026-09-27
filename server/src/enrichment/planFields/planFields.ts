@@ -1,4 +1,9 @@
-import type { EnrichField, EnrichScope, FieldConflict } from '@/types';
+import type {
+  ConflictField,
+  EnrichField,
+  EnrichScope,
+  FieldConflict,
+} from '@/types';
 import type { FetchedFields } from '../fetchedFields/fetchedFields';
 
 export interface PlanInput {
@@ -13,7 +18,7 @@ export interface PlanInput {
 export interface FieldPlan {
   /** What to write, by chip. */
   fill: Partial<FetchedFields>;
-  /** Filled fields that differ from TMDB — the conflict phase's; none yet. */
+  /** Filled fields that differ from TMDB, outside _Only what's missing_. */
   conflicts: FieldConflict[];
 }
 
@@ -31,20 +36,75 @@ function isEmpty(value: FetchedFields[EnrichField]): boolean {
   return false;
 }
 
+/** The five a filled value can disagree on, with the diff's label. */
+const CONFLICT_LABELS: Readonly<Record<ConflictField, string>> = {
+  synopsis: 'Synopsis',
+  year: 'Year',
+  genres: 'Genres',
+  director: 'Director',
+  cast: 'Cast',
+};
+
+const isConflictField = (field: EnrichField): field is ConflictField =>
+  field in CONFLICT_LABELS;
+
+const fold = (value: string): string => value.trim().toLowerCase();
+
+/** A field's value as the diff shows it. */
+function shown(value: FetchedFields[EnrichField]): string {
+  if (Array.isArray(value)) return value.join(', ');
+  return String(value);
+}
+
+/** Equal after trimming and case-folding; lists as sets. */
+function same(
+  a: FetchedFields[EnrichField],
+  b: FetchedFields[EnrichField]
+): boolean {
+  if (Array.isArray(a) && Array.isArray(b)) {
+    const left = new Set(a.map(fold));
+    const right = new Set(b.map(fold));
+    return (
+      left.size === right.size && [...left].every((each) => right.has(each))
+    );
+  }
+  return fold(shown(a)) === fold(shown(b));
+}
+
 /**
- * Pure: a title's current values × what TMDB answered × the chips on → what
- * to write. Every empty field whose chip is on is filled; a filled one is
- * never quietly overwritten; Original title and TMDB score are always written
- * when their chip is on. Nothing TMDB left blank is written.
+ * Pure: a title's current values × what TMDB answered × the chips on × the
+ * scope → what to write and what to ask. Every empty field whose chip is on is
+ * filled; a filled one is never quietly overwritten — outside _Only what's
+ * missing_, one of the five TMDB answers differently is a **Field conflict**;
+ * Original title and TMDB score are always written when their chip is on.
+ * Nothing TMDB left blank is written.
  */
-export function planFields({ current, fetched, fields }: PlanInput): FieldPlan {
+export function planFields({
+  current,
+  fetched,
+  fields,
+  scope,
+}: PlanInput): FieldPlan {
   const fill: Partial<Record<EnrichField, FetchedFields[EnrichField]>> = {};
+  const conflicts: FieldConflict[] = [];
   for (const field of fields) {
     const value = fetched[field];
     if (isEmpty(value)) continue;
-    if (ALWAYS.has(field) || isEmpty(current[field])) {
+    const mine = current[field];
+    if (ALWAYS.has(field) || isEmpty(mine)) {
       fill[field] = value;
+    } else if (
+      scope !== 'missing' &&
+      isConflictField(field) &&
+      !same(mine, value)
+    ) {
+      conflicts.push({
+        field,
+        label: CONFLICT_LABELS[field],
+        mine: shown(mine),
+        tmdb: shown(value),
+      });
     }
   }
-  return { fill: fill as Partial<FetchedFields>, conflicts: [] };
+  return { fill: fill as Partial<FetchedFields>, conflicts };
 }

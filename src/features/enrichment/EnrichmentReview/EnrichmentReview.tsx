@@ -1,4 +1,4 @@
-import type { EnrichmentRun } from '@/types';
+import type { ConflictChoices, EnrichmentRun } from '@/types';
 import { Button } from '@/primitives';
 import { DecisionRow } from '../DecisionRow/DecisionRow';
 import {
@@ -23,6 +23,7 @@ export interface EnrichmentReviewProps {
   onSkip: (id: string) => void;
   onPick: (id: string, tmdbId: number) => void;
   onSearch: (id: string, query: string) => void;
+  onApply: (id: string, choices: ConflictChoices) => void;
 }
 
 /**
@@ -38,6 +39,7 @@ export function EnrichmentReview({
   onSkip,
   onPick,
   onSearch,
+  onApply,
 }: EnrichmentReviewProps) {
   return (
     <Stack>
@@ -67,6 +69,7 @@ export function EnrichmentReview({
               onSkip={() => onSkip(decision.id)}
               onPick={(tmdbId) => onPick(decision.id, tmdbId)}
               onSearch={(query) => onSearch(decision.id, query)}
+              onApply={(choices) => onApply(decision.id, choices)}
             />
           ))}
         </Decisions>
