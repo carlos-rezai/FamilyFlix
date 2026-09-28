@@ -11,7 +11,6 @@ import {
   DatabaseIcon,
   LandscapeIcon,
   TableIcon,
-  Toggle,
 } from '@/primitives';
 import {
   enrichmentEstimate,
@@ -19,6 +18,7 @@ import {
 } from '../enrichmentView/enrichmentView';
 import { ScopeCard } from '../ScopeCard/ScopeCard';
 import { SetupBanner } from '../SetupBanner/SetupBanner';
+import { WriteTargetRow } from '../WriteTargetRow/WriteTargetRow';
 import {
   Chips,
   Estimate,
@@ -31,15 +31,8 @@ import {
   Stack,
   Star,
   StartRow,
-  RequiredPill,
-  Target,
   TargetDivider,
-  TargetGlyph,
-  TargetLine,
-  TargetPath,
   Targets,
-  TargetText,
-  TargetTitle,
 } from './EnrichmentSetup.styles';
 
 const SHEET_TITLE = 'Metadata sheet in the collection root';
@@ -171,48 +164,29 @@ export function EnrichmentSetup({
       <div>
         <GroupLabel>Where it is saved</GroupLabel>
         <Targets>
-          <Target>
-            <TargetGlyph>
-              <DatabaseIcon size={19} />
-            </TargetGlyph>
-            <TargetText>
-              <TargetTitle>Your library</TargetTitle>
-              <TargetLine>Always. This is what the app reads from.</TargetLine>
-            </TargetText>
-            <RequiredPill>Required</RequiredPill>
-          </Target>
+          <WriteTargetRow
+            glyph={<DatabaseIcon size={19} />}
+            title="Your library"
+            line="Always. This is what the app reads from."
+          />
           {root === null ? null : (
             <>
               <TargetDivider />
-              <Target>
-                <TargetGlyph>
-                  <TableIcon size={19} />
-                </TargetGlyph>
-                <TargetText>
-                  <TargetTitle>{SHEET_TITLE}</TargetTitle>
-                  <TargetPath>{`${root}\\familyflix-metadata.csv`}</TargetPath>
-                </TargetText>
-                <Toggle
-                  checked={writeSheet}
-                  onToggle={onToggleSheet}
-                  label={SHEET_TITLE}
-                />
-              </Target>
+              <WriteTargetRow
+                glyph={<TableIcon size={19} />}
+                title={SHEET_TITLE}
+                line={`${root}\\familyflix-metadata.csv`}
+                path
+                toggle={{ checked: writeSheet, onToggle: onToggleSheet }}
+              />
               <TargetDivider />
-              <Target>
-                <TargetGlyph>
-                  <LandscapeIcon size={19} />
-                </TargetGlyph>
-                <TargetText>
-                  <TargetTitle>{POSTERS_TITLE}</TargetTitle>
-                  <TargetPath>{`${root}\\<movie folder>\\poster.jpg`}</TargetPath>
-                </TargetText>
-                <Toggle
-                  checked={writePosters}
-                  onToggle={onTogglePosters}
-                  label={POSTERS_TITLE}
-                />
-              </Target>
+              <WriteTargetRow
+                glyph={<LandscapeIcon size={19} />}
+                title={POSTERS_TITLE}
+                line={`${root}\\<movie folder>\\poster.jpg`}
+                path
+                toggle={{ checked: writePosters, onToggle: onTogglePosters }}
+              />
             </>
           )}
         </Targets>
