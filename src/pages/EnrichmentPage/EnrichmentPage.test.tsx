@@ -3,6 +3,7 @@ import { render, screen } from '@testing-library/react';
 import { ThemeProvider } from 'styled-components';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 
+import { SnackbarProvider } from '@/App/SnackbarProvider/SnackbarProvider';
 import EnrichmentPage from './EnrichmentPage';
 import { theme } from '@/styles/theme';
 import { makeMovie } from '@/test-support/makeMovie/makeMovie';
@@ -59,10 +60,12 @@ describe('EnrichmentPage', () => {
         initialIndex={1}
       >
         <ThemeProvider theme={theme}>
-          <Routes>
-            <Route path="/movie/:id" element={<p>the movie page</p>} />
-            <Route path="/enrich" element={<EnrichmentPage />} />
-          </Routes>
+          <SnackbarProvider>
+            <Routes>
+              <Route path="/movie/:id" element={<p>the movie page</p>} />
+              <Route path="/enrich" element={<EnrichmentPage />} />
+            </Routes>
+          </SnackbarProvider>
         </ThemeProvider>
       </MemoryRouter>
     );

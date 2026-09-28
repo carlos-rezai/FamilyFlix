@@ -3,6 +3,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { ThemeProvider } from 'styled-components';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 
+import { SnackbarProvider } from '@/App/SnackbarProvider/SnackbarProvider';
 import { EnrichmentFlow } from './EnrichmentFlow';
 import type { EnrichmentRun, EnrichmentSummary } from '@/types';
 import { theme } from '@/styles/theme';
@@ -96,11 +97,13 @@ function renderFlow(
   return render(
     <MemoryRouter initialEntries={history} initialIndex={history.length - 1}>
       <ThemeProvider theme={theme}>
-        <Routes>
-          <Route path="/" element={<p>the browse home</p>} />
-          <Route path="/settings" element={<p>the settings hub</p>} />
-          <Route path="/enrich" element={<EnrichmentFlow />} />
-        </Routes>
+        <SnackbarProvider>
+          <Routes>
+            <Route path="/" element={<p>the browse home</p>} />
+            <Route path="/settings" element={<p>the settings hub</p>} />
+            <Route path="/enrich" element={<EnrichmentFlow />} />
+          </Routes>
+        </SnackbarProvider>
       </ThemeProvider>
     </MemoryRouter>
   );

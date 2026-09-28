@@ -1,7 +1,7 @@
-import { useCallback, useContext, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
-import { SnackbarContext } from '@/App/useSnackbar/useSnackbar';
+import { useSnackbar } from '@/App/useSnackbar/useSnackbar';
 import { fetchMovie } from '@/api/fetchMovie/fetchMovie';
 import { useEnrichmentSummary } from '@/hooks/useEnrichmentSummary/useEnrichmentSummary';
 import { useGoBack } from '@/hooks/useGoBack/useGoBack';
@@ -54,9 +54,7 @@ export function EnrichmentFlow() {
     useEnrichmentRun();
   const { summary, retry } = useEnrichmentSummary();
   const navigate = useNavigate();
-  // Read off the context rather than `useSnackbar`: a flow drawn with no
-  // stack still runs, its notices simply unraised.
-  const snackbar = useContext(SnackbarContext);
+  const { notify } = useSnackbar();
 
   const [title, setTitle] = useState<string | null>(null);
   const [fields, setFields] = useState<EnrichField[]>(ALL_FIELDS);
@@ -110,36 +108,36 @@ export function EnrichmentFlow() {
     (id: string, tmdbId: number) => {
       pick(id, tmdbId)
         .then(() => {
-          snackbar?.notify({ variant: 'success', message: 'Match saved.' });
+          notify({ variant: 'success', message: 'Match saved.' });
         })
         .catch(() => {
           // A refused pick leaves the row where it is, to pick again.
         });
     },
-    [pick, snackbar]
+    [pick, notify]
   );
 
   const onApply = useCallback(
     (id: string, choices: ConflictChoices) => {
       apply(id, choices)
         .then(() => {
-          snackbar?.notify({ variant: 'success', message: 'Details updated.' });
+          notify({ variant: 'success', message: 'Details updated.' });
         })
         .catch(() => {
           // A refused apply leaves the row where it is, to apply again.
         });
     },
-    [apply, snackbar]
+    [apply, notify]
   );
 
   const onSearch = useCallback(
     (id: string, query: string) => {
-      snackbar?.notify({ variant: 'info', message: 'Searching TMDB…' });
+      notify({ variant: 'info', message: 'Searching TMDB…' });
       search(id, query).catch(() => {
         // A refused search leaves the row as it was, to search again.
       });
     },
-    [search, snackbar]
+    [search, notify]
   );
 
   const openSettings = useCallback(() => navigate('/settings'), [navigate]);
@@ -150,7 +148,7 @@ export function EnrichmentFlow() {
     }
     if (!summary.keySet) {
       openSettings();
-      snackbar?.notify({
+      notify({
         variant: 'info',
         message: 'Add your TMDB key here first.',
       });
@@ -172,7 +170,7 @@ export function EnrichmentFlow() {
   }, [
     summary,
     openSettings,
-    snackbar,
+    notify,
     start,
     scope,
     movieId,
