@@ -39,7 +39,7 @@ Files are picked individually, from your machine's normal file dialog. FamilyFli
 
 ### Migrating an existing library
 
-A bulk importer reads an existing spreadsheet (title, year, genre, …), matches each row to its movie folder, and scans that folder for the video, poster and subtitle files (it isn't picky about subtitle format — `.srt`, `.vtt`, `.ass`, and `.sub` are all recognised), building the whole library in one pass. A row whose folder is a confident match is imported as the run goes, with a live progress console showing what's happening; the review step at the end lists only what the run couldn't settle on its own — a row with no folder, two folders for one row, a folder no row names, a copy that failed — each with a Resolve that opens the ordinary Add Movie form prefilled, and a Skip. Nothing is looked up online: the spreadsheet and the folder are all the importer reads, so there is no TMDB key to enter and no network to be on. Filling in what the sheet left blank — synopses, posters, runtimes — is a separate, opt-in Enrichment pass over the finished library (planned, see Build Status), which is the one and only place FamilyFlix goes online. Pointing at a folder is the bulk importer's job rather than the Add Movie form's: a file dialog hands over a file, never a folder path. It is also how a development library gets filled — the importer's own test fixtures replace the dev seed the app carried until it shipped. An exporter writes the library back out as CSV or Excel — every movie, A–Z, under the same columns the importer reads — for backups or bulk edits, and an export fed back to the importer adds nothing.
+A bulk importer reads an existing spreadsheet (title, year, genre, …), matches each row to its movie folder, and scans that folder for the video, poster and subtitle files (it isn't picky about subtitle format — `.srt`, `.vtt`, `.ass`, and `.sub` are all recognised), building the whole library in one pass. A row whose folder is a confident match is imported as the run goes, with a live progress console showing what's happening; the review step at the end lists only what the run couldn't settle on its own — a row with no folder, two folders for one row, a folder no row names, a copy that failed — each with a Resolve that opens the ordinary Add Movie form prefilled, and a Skip. Nothing is looked up online: the spreadsheet and the folder are all the importer reads, so there is no TMDB key to enter and no network to be on. Filling in what the sheet left blank — synopses, posters, runtimes — is a separate, opt-in Enrichment pass over the finished library — Settings → Network, or the import's own _Also fetch metadata and posters from TMDB_ — which is the one and only place FamilyFlix goes online. Pointing at a folder is the bulk importer's job rather than the Add Movie form's: a file dialog hands over a file, never a folder path. It is also how a development library gets filled — the importer's own test fixtures replace the dev seed the app carried until it shipped. An exporter writes the library back out as CSV or Excel — every movie, A–Z, under the same columns the importer reads — for backups or bulk edits, and an export fed back to the importer adds nothing.
 
 ### Watching
 
@@ -143,10 +143,11 @@ familyflix/
 ├── electron/           # Main process, preload, server lifecycle
 ├── server/             # Express backend
 │   └── src/
-│       ├── routes/         # HTTP layer only — parses requests, calls a domain module
-│       ├── library/        # movie CRUD, SQLite queries, watch-state + resume position, the household's settings
-│       │   └── series/            # series storage, one unit per concern: read, browse, write, watch, curation, nextEpisodeOf
-│       ├── media/          # folder scanning, copying files into managed storage (a season's folder among them), subtitle detection, removing a movie folder after a delete, space used
+│       ├── routes/         # HTTP layer only — parses requests, calls a domain module; enrichmentBody/ reads a Sync's start and Apply choices
+│       ├── library/        # movie CRUD, SQLite queries, watch-state + resume position, the household's settings and the TMDB key, stamp and Library root beside them
+│       │   ├── enrich/            # a Sync's film writes, the counts over both kinds, the Source folders, and Full details spelled once
+│       │   └── series/            # series storage, one unit per concern: read, browse, write, watch, curation, enrich, nextEpisodeOf
+│       ├── media/          # folder scanning, copying files into managed storage (a season's folder among them), a Sync's art (storeNamed, storeInSeriesFolder, readStored), subtitle detection, removing a movie folder after a delete, space used
 │       │   ├── walkLibraryRoot/       # a Library root → its Source folders
 │       │   ├── scanMovieFolder/       # one folder → its video, poster, backdrop, subtitles
 │       │   ├── detectSubtitleLanguage/ # the language tag in a subtitle's name
@@ -155,8 +156,9 @@ familyflix/
 │       │   └── fileKinds/             # what an image, a subtitle and a video may be called
 │       ├── import-export/  # the bulk importer and the exporter: readSheet, titleKey, matchRows, groupShows, createImporter (+ its film and series fixtures), writeSheet
 │       ├── playback/       # the Playback component (probe, spawn, decoders), the Component slot it lives in (componentSlot, componentBinary, verifyComponent), the path choice, streaming, subtitle parsing, derivedRuntime, capabilities(component)
-│       ├── db/             # SQLite connection + schema/migrations (3: the settings table; 4: series and episodes)
-│       └── test-support/   # Shared test doubles — never imported by shipping code (heldCopy, libraryFixture, seriesFixture, fixedSlot, componentDir, …)
+│       ├── enrichment/     # the fifth domain, the one network client: tmdbClient, tmdbAuth, tmdbGenres, matchScore, fetchedFields, currentFields, planFields, planEpisode, plannedEnrichment, decisionFace, writeBack, createEnrichment
+│       ├── db/             # SQLite connection + schema/migrations (3: the settings table; 4: series and episodes; 5: original title, TMDB score and source folder on both titles, stills on episodes)
+│       └── test-support/   # Shared test doubles — never imported by shipping code (heldCopy, libraryFixture, seriesFixture, fixedSlot, componentDir, fakeTmdb, offlineTmdb, …)
 ├── src/                # React frontend
 │   ├── App/            # Router and app-level providers
 │   │   ├── SnackbarProvider/ # the Snackbar stack: the queue, the timers, the fixed bottom-right column; an action persists, everything else dies at 5s
@@ -164,7 +166,7 @@ familyflix/
 │   ├── assets/         # Static images, fonts, icons
 │   ├── styles/         # Global CSS reset and Reduced motion, visuallyHidden; theme.ts, the createTheme(accent) factory spreading the Accent scale; interactionStates/ — controlStates(press), cardLift, cardFocus, and the structural guard in its test
 │   ├── tokens/         # Colors, spacing, typography, breakpoints, motion
-│   ├── primitives/     # Atomic UI elements (Button, Input, Text, Toggle, the Icon glyphs — the Snackbar's four and the FAB's two among them) — each with .tsx, .test.tsx, .styles.ts
+│   ├── primitives/     # Atomic UI elements (Button, Input, Text, Toggle, the Icon glyphs — the Snackbar's four, the FAB's two and enrichment's five among them) — each with .tsx, .test.tsx, .styles.ts
 │   ├── components/     # Composed UI blocks (PosterCard, Modal, ProgressBar, CreditsRow, SeasonCard, EpisodeRow) — same three-file shape
 │   │   ├── Modal/          # the scrimmed card every dialog is drawn on; owns its own dismissal and focus; `bare` for a card that is its children alone
 │   │   ├── LogConsole/     # the import's Activity log, pinned to its bottom
@@ -183,17 +185,18 @@ familyflix/
 │   │   ├── player/          # built-in video player for any Playable, subtitles (useSubtitles reads the preferred language), resume, and Up next (UpNextCard, useUpNext)
 │   │   ├── movie-form/      # Add/Edit a movie: one form, manual pickers — and Resolve, the Import context
 │   │   ├── import-export/   # the bulk importer's screen: ImportFlow and its three steps, useImportRun, importView — and the Export dialog: ExportModal, FormatCard, useExport, saveToComputer
-│   │   ├── settings/        # the Maintainer's hub: SettingsHeader; LibrarySection + ActionRow; PlaybackSection over CodecManager, CodecRow, ComponentDropZone, codecView, zoneFace; StorageSection; AboutSection; useCapabilities, useSettings, useStorageReport; and its api/
+│   │   ├── enrichment/      # the Sync with TMDB: EnrichmentFlow and its three steps, SetupBanner, ScopeCard, WriteTargetRow, DecisionRow over CandidatePicker, TitleSearch and FieldDiff, useEnrichmentRun, enrichmentView, and its api/
+│   │   ├── settings/        # the Maintainer's hub: SettingsHeader; LibrarySection + ActionRow; PlaybackSection over CodecManager, CodecRow, ComponentDropZone, codecView, zoneFace; NetworkSection + useTmdbKey + syncLine; StorageSection; AboutSection; useCapabilities, useSettings, useStorageReport; and its api/
 │   │   │   └── section.styles.ts # the Group heading, the Section card, the divider, an item's title and lede — what every group draws with
 │   │   ├── maintainer.styles.ts # the header and the captioned field the Maintainer's screens share
 │   │   └── collections/     # playlists (roadmap)
 │   ├── layouts/         # Page chrome (MainLayout mounts Back-to-top over its body, on the ref useRestoredScroll attached)
-│   ├── pages/           # Route-level views, composition only (ImportPage among them)
-│   ├── api/             # Wire calls two or more features share (saveFavorite, fetchMovie, saveWatched, dismissProblem, fetchSettings, saveSeriesFavorite, saveEpisodeWatched)
-│   ├── hooks/            # Global shared hooks (useGoBack(fallback) — the one Back rule, a history step with the screen's own landing behind it — useRestoredScroll, and useOptimisticEdit)
-│   ├── types/            # Shared TypeScript interfaces (import.ts, export.ts, settings.ts, playback.ts, series.ts — read by both build targets; appVersion.d.ts)
-│   ├── utils/            # Pure helper functions (formatBytes, formatEpisodeTag, moviePath, seriesPath, seasonPath, episodePlayPath and accentScale among them)
-│   └── test-support/     # Shared test doubles (fakeResponse, makeSeriesDetail, stubDownload, stubScrollMetrics, stubScrollTo, comesBefore, snackbarStack, LocationProbe and its navigationType reader, shippingSources, resolvedStyle and normCss, …)
+│   ├── pages/           # Route-level views, composition only (ImportPage and EnrichmentPage among them)
+│   ├── api/             # Wire calls two or more features share (saveFavorite, fetchMovie, saveWatched, dismissProblem, fetchSettings, saveSeriesFavorite, saveEpisodeWatched, fetchEnrichmentSummary, fetchTmdbKey)
+│   ├── hooks/            # Global shared hooks (useGoBack(fallback) — the one Back rule, a history step with the screen's own landing behind it — useRestoredScroll, useOptimisticEdit, and useEnrichmentSummary)
+│   ├── types/            # Shared TypeScript interfaces (import.ts, export.ts, settings.ts, playback.ts, series.ts, enrichment.ts — read by both build targets; appVersion.d.ts)
+│   ├── utils/            # Pure helper functions (formatBytes, formatElapsed, formatEpisodeTag, moviePath, enrichPath, seriesPath, seasonPath, episodePlayPath and accentScale among them)
+│   └── test-support/     # Shared test doubles (fakeResponse, makeSeriesDetail, makeEnrichmentRun, stubDownload, stubScrollMetrics, stubScrollTo, comesBefore, snackbarStack, LocationProbe and its navigationType reader, shippingSources, resolvedStyle and normCss, …)
 └── docs/
     ├── design-logs/    # Immutable feature design snapshots
     ├── PRDs/           # Product requirements and implementation plans

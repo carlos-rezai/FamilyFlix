@@ -109,11 +109,13 @@ familyflix/
 ├── server/
 │ └── src/
 │ ├── routes/ ← HTTP layer only: parse request, call a domain module, return response
+│ │ └── enrichmentBody/ ← `startEnrichmentBody` and `conflictChoicesBody`: a Sync's start and _Apply choices_ read into typed values, each `400` a sentence — `movieFormBody`'s precedent
 │ ├── library/ ← movie CRUD, SQLite queries, watch-state + resume-position logic
-│ │ ├── settings/ ← the household's Settings: `settings()` with the default applied when the row is absent, `setSubtitleLanguage()` as an upsert
-│ │ └── series/ ← series storage, one unit per concern as the movie's is, each with its own suite: `read` (the series page, the player's episode read, the episode list), `browse` (the Series tab and its genres), `write` (the two inserts), `watch` (the resume write, the episode and season marks), `curation` (the heart), and `nextEpisodeOf`, pure
+│ │ ├── settings/ ← the household's Settings: `settings()` with the default applied when the row is absent, `setSubtitleLanguage()` as an upsert; and three keys beside the preferences, never among them — `tmdb-api-key`, `enrichment-last-synced-at`, `library-root` — every one read through one `valueOf(key)`
+│ │ ├── enrich/ ← a Sync's film writes: `enrichMovie` (the columns named, only those), `moviesInScope`, `enrichmentCounts` over both kinds, `setSourceFolder` / `sourceFolder` over one id space; the **Full details** rule spelled once as `fullDetails`
+│ │ └── series/ ← series storage, one unit per concern as the movie's is, each with its own suite: `read` (the series page, the player's episode read, the episode list), `browse` (the Series tab and its genres), `write` (the two inserts), `watch` (the resume write, the episode and season marks), `curation` (the heart), `enrich` (a Sync's series and episode writes and `seriesInScope`), and `nextEpisodeOf`, pure
 │ ├── media/ ← folder scanning, file copy into managed storage, subtitle detection, the Movie folder’s removal after a Delete
-│ │ ├── createMedia/ ← the injected domain: reserve a Movie folder, `seasonFolder` (a Series folder’s `season-NN/`), storeUpload, copyIn (a stream under the cancel signal), the three removals
+│ │ ├── createMedia/ ← the injected domain: reserve a Movie folder, `seasonFolder` (a Series folder’s `season-NN/`), storeUpload, copyIn (a stream under the cancel signal), the three removals; and a Sync's three — `storeNamed` (beside a Stored path), `storeInSeriesFolder` (two directories above an episode), `readStored` (a stored file as a stream). Only `media/` touches managed storage
 │ │ ├── fileKinds/ ← what an image, a subtitle and a video may be called — the store’s security boundary, and the scanner’s line
 │ │ ├── walkLibraryRoot/ ← a Library root → its Source folders: a folder holding a video is one and is not descended
 │ │ ├── scanMovieFolder/ ← one Source folder → every video, the poster by name, the backdrop by name only, every subtitle
@@ -145,9 +147,23 @@ familyflix/
 │ │ ├── capabilities/ ← the Codec report: Chromium native set ∪ what `capabilities(component)` reads off whichever component the slot holds now — never the environment, never a binary on PATH; a decoder name begins with a letter
 │ │ ├── parseSrt/ parseVtt/ parseAss/ parseSub/ ← pure, one format each
 │ │ └── parseSubtitle/ ← dispatch on extension; the last place a format is known
-│ ├── db/ ← SQLite connection + schema/migrations (1 the schema and the genre seed, 2 `last_watched_at`, 3 the `settings` table — nothing seeded, 4 `series` and `episodes` with their two joins, `series_genres` and `episode_subtitles` — no `seasons` table), shared by every domain module above; and `seriesSeed/`, the dev library's mock series
+│ ├── enrichment/ ← the fifth domain, the one network client: a Sync fills what the sheet left blank from TMDB — born by `playback/`'s rule, injected as `createApiRouter(…, enrichment)`
+│ │ ├── tmdbClient/ ← the injected seam: search, movie, TV, season, image and the reachability probe, each a value and never a throw, each under the caller's abort signal
+│ │ ├── tmdbAuth/ ← pure: a key → a v4 bearer token or a v3 `api_key`, told apart by shape alone
+│ │ ├── tmdbGenres/ ← TMDB's vocabulary: its names onto the **Genre pool** (Science Fiction is Sci-Fi, a TV compound split), and `tmdbGenreName(id)`
+│ │ ├── matchScore/ ← pure: the **Match score** and the **Confident** rule
+│ │ ├── fetchedFields/ ← pure: a TMDB movie or show → the ten fields; `releaseYear`, the one reading of a TMDB date
+│ │ ├── currentFields/ ← pure: a Movie or Series → its values now, in the fetched shape
+│ │ ├── planFields/ planEpisode/ ← pure: what to fill and which **Field conflicts** to raise; an episode's title, air date, runtime and whether a **Still** is wanted
+│ │ ├── plannedEnrichment/ ← pure: a plan → the columns a film, a series or _Apply choices_ writes
+│ │ ├── decisionFace/ ← pure: a search → an `ambiguous` Decision's top three **Candidates** (the genre off the pool, the language upper-cased) or a `missing` one's reason
+│ │ ├── writeBack/ ← the two **Write targets**: the permission check and its dry-run lines, `familyflix-metadata.csv` at the root and `poster.jpg` per **Source folder** — the only code that writes into the Library root, and never over a file that exists
+│ │ └── createEnrichment/ ← the injected domain: the key, and the **Current enrichment run** — one in memory, its state machine as closures over the run, the abort controller and the Decisions, `createImporter`'s shape
+│ ├── db/ ← SQLite connection + schema/migrations (1 the schema and the genre seed, 2 `last_watched_at`, 3 the `settings` table — nothing seeded, 4 `series` and `episodes` with their two joins, `series_genres` and `episode_subtitles` — no `seasons` table, 5 `original_title`, `tmdb_score` and `source_folder` on both titles and `still_path` on episodes), shared by every domain module above; and `seriesSeed/`, the dev library's mock series
 │ └── test-support/ ← test doubles shared across server tests, never imported by shipping code
 │ ├── heldCopy/ ← a Media whose first copy waits until released, forwarding the cancel signal
+│ ├── fakeTmdb/ ← a scripted TMDB for the enrichment suites: each question off the suite's table, every call recorded, one held or failed on cue; the result, detail, TV and season builders, and `reviewed()`
+│ ├── offlineTmdb/ ← the one-line TMDB that answers unreachable, for suites composing the router for something else
 │ ├── fixedSlot/ ← a Component slot over one fixed component, for the thirty-odd suites that compose a Playback and never write to the slot
 │ ├── componentDir/ ← a component's two files in a sandbox, and `ffmpegIn` / `ffprobeIn` / `EXE` (re-exported from the resolver that owns it)
 │ ├── seriesFixture/ ← the importer’s series fixture copied under a sandbox → { root, sheet }
@@ -169,7 +185,7 @@ familyflix/
 │ │ └── index.ts
 │ ├── primitives/ ← dumb, reusable UI atoms (Button, Input, Text, Icon, Badge)
 │ │ ├── index.ts ← barrel: re-exports every primitive (only barrel at this rung)
-│ │ ├── Icon/ ← one file per glyph on IconBase (DownloadIcon, SheetIcon, CheckIcon, MicrochipIcon, UploadIcon, the Snackbar's four — InfoCircleIcon, CheckCircleIcon, BangTriangleIcon, CrossCircleIcon — and the FAB's two — ArrowUpIcon, PlusIcon — named for what they draw, …), `currentColor`, sized by the caller
+│ │ ├── Icon/ ← one file per glyph on IconBase (DownloadIcon, SheetIcon, CheckIcon, MicrochipIcon, UploadIcon, the Snackbar's four — InfoCircleIcon, CheckCircleIcon, BangTriangleIcon, CrossCircleIcon — the FAB's two — ArrowUpIcon, PlusIcon — and enrichment's five — BangRingIcon, SyncIcon, DatabaseIcon, TableIcon, LandscapeIcon — named for what they draw, …), `currentColor`, sized by the caller
 │ │ ├── TextField/ ← the boxed input: a glyph slot (the sheet and folder glyphs among them) and `mono` for a path
 │ │ ├── Toggle/ ← the switch: `{ checked, disabled?, onToggle, label }`, `role="switch"`, `aria-disabled` rather than `disabled` so it stays in the tab order
 │ │ └── Button/ ← primary / secondary / ghost / danger, at sm (a list row’s pair) / md / lg
@@ -233,6 +249,15 @@ familyflix/
 │ │ │ ├── preferredSubtitle/ ← pure: default language, then track order
 │ │ │ ├── volumePreference/ ← the level and mute, in localStorage
 │ │ │ └── api/ ← fetchPlayback, fetchSubtitleCues, saveResume, fetchEpisode — each addressed by a Playable
+│ │ ├── enrichment/ ← the Enrichment flow at `/enrich`: a Sync with TMDB in its three scopes, ImportFlow's sibling
+│ │ │ ├── EnrichmentFlow/ ← the organism: owns useEnrichmentRun and the summary, the Back rule, Start's three outcomes and the notices, renders one of the three steps
+│ │ │ ├── EnrichmentSetup/ EnrichmentProgress/ EnrichmentReview/ ← the three steps: the banners, scope cards, chips and _Where it is saved_; the determinate bar and the log; the two tiles over the Decision rows or _All done_
+│ │ │ ├── SetupBanner/ ScopeCard/ WriteTargetRow/ ← the setup's molecules: the offline and key banners by tone; the radio card, its dot on the left; a Write target's tile, lines and Toggle or _Required_
+│ │ │ ├── DecisionRow/ ← one Decision: the dot by kind, the title, reason and path, _Skip_, then one face
+│ │ │ ├── CandidatePicker/ TitleSearch/ FieldDiff/ ← the three faces: the Candidate cards and the dashed _Search by title_; the 44px box; _Yours \| TMDB_ per field
+│ │ │ ├── useEnrichmentRun/ ← start, poll at 500 ms while running, cancel, and the review's writes, each settling one row
+│ │ │ ├── enrichmentView/ ← pure: the running card's words, the estimate, the scope cards' lines, _All done_'s _Saved to …_
+│ │ │ └── api/ ← startEnrichment, fetchCurrentEnrichment, cancelEnrichment, and the four Decision writes (one caller each)
 │ │ ├── maintainer.styles.ts ← the furniture the Maintainer’s screens extend: the header row, heading and lede; the captioned field
 │ │ ├── movie-form/ ← Add/Edit a movie: one form, manual file pickers; and Resolve, the Import context over either job
 │ │ │ └── api/ ← createMovie, updateMovie, fetchGenrePool, fetchProblem, resolveProblem (one caller each)
@@ -247,7 +272,7 @@ familyflix/
 │ │ │ ├── useExport/ ← csv and idle on every open, the summary fetched fresh; exportLibrary fetches the file, hands it to saveToComputer, then done. A close mid-request drops the redraw, not the file
 │ │ │ ├── saveToComputer/ ← a blob → the browser’s Downloads under a filename: an object URL on an anchor carrying `download`, clicked, revoked. A DOM side effect, so a feature unit rather than a util
 │ │ │ └── api/ ← startImport, fetchCurrentImport, cancelImport, fetchExportSummary, fetchExportFile (one caller each)
-│ │ ├── settings/ ← the Maintainer’s hub: four Settings groups under one header
+│ │ ├── settings/ ← the Maintainer’s hub: five Settings groups under one header
 │ │ │ ├── section.styles.ts ← the furniture every Settings group draws with: the Group heading, the Section card (with the 32px group gap under it), the divider, an item’s title and lede
 │ │ │ ├── SettingsHeader/ ← Back, the heading, ＋ Add a movie
 │ │ │ ├── LibrarySection/ ← the Library group: Add a movie and Import from spreadsheet owning their routes, and Export to CSV owning the Export dialog it mounts — the one place a section composes another feature’s organism
@@ -258,38 +283,44 @@ familyflix/
 │ │ │ ├── ComponentDropZone/ ← the Component drop zone: a label over a clipped multiple file input, drag-over as the prototype's hover, the three faces read off zoneFace; it sorts nothing and labels nothing — the route tells the two binaries apart
 │ │ │ ├── zoneFace/ ← pure: an Upload state → `{ title, line, refused }`, importView's precedent; the invitation's line is `null` because its `ffmpeg` is a Mono span the molecule composes
 │ │ │ ├── codecView/ ← pure: the Format catalogue, `codecRows` (catalogue order, uncatalogued decoders absent), `componentRow` (the one row with a size and a source) and `codecSummary` (which counts formats, not the component)
+│ │ │ ├── NetworkSection/ ← the Network card: TMDB and its status pill, the lede, the key field in mono with _Test connection_, and the _Sync metadata & posters_ row onto `/enrich`
+│ │ │ ├── useTmdbKey/ ← the stored key read on mount — never over one typed first — **Connected** as a comparison, and _Test connection_'s four notices through `useSnackbar()`
+│ │ │ ├── syncLine/ ← pure: the sync row's line off the summary — the complete count and when a Sync last reached review
 │ │ │ ├── StorageSection/ ← the Storage card: the path in mono, the space line off formatBytes and the title count; no Change… until the Electron shell
 │ │ │ ├── AboutSection/ ← the About card: the brand row, the App version in mono, the tagline; no Software update row; the last card, so no group gap
 │ │ │ ├── useCapabilities/ ← the read on mount, plus the two writes that change it: `{ capabilities, upload, installComponent, removeComponent }`. Neither write rejects, and neither re-fetches — both routes echo the report after the write, and that echo is the redraw
 │ │ │ ├── useStorageReport/ ← one fetch on mount, `null` until it lands and `null` still if it never does — nothing drawn while so
 │ │ │ ├── useSettings/ ← the read half the same; `chooseSubtitleLanguage` flips the pill first and puts it back if the save refuses, never rejecting
-│ │ │ └── api/ ← fetchCapabilities, installComponent, removeComponent (both rejecting with ComponentRefusedError carrying the route's own words), saveSubtitleLanguage, fetchStorageReport (one caller each)
+│ │ │ └── api/ ← fetchCapabilities, installComponent, removeComponent (both rejecting with ComponentRefusedError carrying the route's own words), saveSubtitleLanguage, saveTmdbKey (never rejecting: saved, refused or unreachable), fetchStorageReport (one caller each)
 │ │ └── collections/ ← playlists/collections (roadmap, not MVP)
 │ ├── layouts/ ← page chrome
 │ │ ├── chrome.styles.ts ← the furniture MainLayout and GenreLayout both extend
 │ │ ├── MainLayout/ ← the Family's screens: logo, gear, scrolling body — and Back-to-top mounted over the body, because the body is where the scrolling happens, so the chrome is what knows how far it has gone; it lends the control the same ref `useRestoredScroll` attached, and holds no state for either
 │ │ ├── GenreLayout/ ← Back pill, heading slot, trailing controls, scrolling body
 │ │ └── MaintainerLayout/ ← the Maintainer surface: bg2 sheet + centred column, no header row
-│ ├── pages/ ← route-level views, composition only, no logic (ImportPage is MaintainerLayout around ImportFlow; SeriesPage and SeasonPage own a scroll container and Back each, MoviePage’s precedent)
+│ ├── pages/ ← route-level views, composition only, no logic (ImportPage is MaintainerLayout around ImportFlow; SeriesPage and SeasonPage own a scroll container and Back each, MoviePage’s precedent; EnrichmentPage is MaintainerLayout around EnrichmentFlow)
 │ ├── api/ ← wire calls two or more features share (one folder per call + its test, no barrel)
-│ │ ├── saveFavorite/ fetchMovie/ saveWatched/ dismissProblem/ fetchSettings/ saveSeriesFavorite/ saveEpisodeWatched/ ← the seven that earned it
+│ │ ├── saveFavorite/ fetchMovie/ saveWatched/ dismissProblem/ fetchSettings/ saveSeriesFavorite/ saveEpisodeWatched/ fetchEnrichmentSummary/ fetchTmdbKey/ ← the nine that earned it
 │ │ └── postValue/
 │ │ ├── postValue.ts
 │ │ └── postValue.test.ts
-│ ├── hooks/ ← global shared hooks only: `useGoBack(fallback)` — the one **Back rule**, a **History step** with the screen's own **Landing** behind it (the library by default) — `useRestoredScroll`, and `useOptimisticEdit`, the one bargain a detail page's edit keeps, over whatever record the page holds
-│ ├── types/ ← shared TypeScript interfaces (import.ts: ImportRun, ImportProblem, ImportProblemDetail, ImportField; export.ts: EXPORT_FORMATS, EXPORT_COLUMNS, EXPORT_FILENAME, ExportSummary; settings.ts: SUBTITLE_LANGUAGES, SubtitleLanguage, DEFAULT_SUBTITLE_LANGUAGE, Settings, StorageReport; playback.ts: CodecKind, CodecSupport, CodecCapability, ComponentSource, PlaybackComponentInfo, PlaybackCapabilities — both build targets; series.ts: Series, Episode, SeasonSummary, SeriesDetail, EpisodeRead, NextEpisodeRef, EpisodeContinueEntry, SeriesHomePayload, NewSeries, NewEpisode, Playable — both build targets; viewModels.ts carries the series’ SeriesPageModel, SeasonPageModel, SeasonCardSeason and EpisodeRowEpisode beside the movie’s; appVersion.d.ts: `__APP_VERSION__`, defined by Vite from package.json)
+│ ├── hooks/ ← global shared hooks only: `useGoBack(fallback)` — the one **Back rule**, a **History step** with the screen's own **Landing** behind it (the library by default) — `useRestoredScroll`, and `useOptimisticEdit`, the one bargain a detail page's edit keeps, over whatever record the page holds; and `useEnrichmentSummary`, the summary Settings' sync row and the Enrichment setup both draw, `null` until it lands
+│ ├── types/ ← shared TypeScript interfaces (import.ts: ImportRun, ImportProblem, ImportProblemDetail, ImportField; export.ts: EXPORT*FORMATS, EXPORT_COLUMNS, EXPORT_FILENAME, ExportSummary; settings.ts: SUBTITLE_LANGUAGES, SubtitleLanguage, DEFAULT_SUBTITLE_LANGUAGE, Settings, StorageReport; playback.ts: CodecKind, CodecSupport, CodecCapability, ComponentSource, PlaybackComponentInfo, PlaybackCapabilities — both build targets; series.ts: Series, Episode, SeasonSummary, SeriesDetail, EpisodeRead, NextEpisodeRef, EpisodeContinueEntry, SeriesHomePayload, NewSeries, NewEpisode, Playable — both build targets; enrichment.ts: ENRICH_FIELDS, ENRICH_FIELD_LABELS, ENRICH_SCOPES, EnrichField, EnrichScope, EnrichmentSummary, Candidate, Decision, FieldConflict, ConflictChoices, EnrichmentRun, StartEnrichment — both build targets; viewModels.ts carries the series’ SeriesPageModel, SeasonPageModel, SeasonCardSeason and EpisodeRowEpisode beside the movie’s; appVersion.d.ts: `__APP_VERSION__`, defined by Vite from package.json)
 │ ├── utils/ ← pure helper functions (one folder per helper + its test)
 │ │ ├── index.ts ← barrel: re-exports every helper
 │ │ ├── formatBytes/ ← 1024-based, one decimal from KB up: `18.4 GB`
 │ │ ├── accentScale/ ← the accent → its five: `accentHover`, `accentPress`, `accentSoft`, `accentLine`, `focusRing`
 │ │ ├── moviePath/ ← the film's page as a route, `/movie/<id>`, the id encoded: the cards open it, and it is the player's and the edit's **Landing**
 │ │ ├── seriesPath/ seasonPath/ episodePlayPath/ ← the three series routes, `/series/<id>`, `/series/<id>/season/<n>`, `/episode/<id>/play`, the ids encoded
+│ │ ├── enrichPath/ ← the Enrichment flow as a route, `/enrich`, `?scope=all` or `?movie=<id>`, the id encoded: Settings' sync row, Import's \_Finish* and the ⋯ menu's _⟳ Fetch from TMDB_
+│ │ ├── formatElapsed/ ← a run's clock, `m:ss` rounded and never rolling into hours — not `formatClock`, which floors and grows an hour field for playback
 │ │ ├── formatEpisodeTag/ ← the client’s one spelling of the Episode tag: `S02E04`, `S02` or `E04`, two digits a side
 │ │ └── gradientFromId/
 │ │ ├── gradientFromId.ts
 │ │ └── gradientFromId.test.ts
 │ └── test-support/ ← test doubles shared across features, never imported by shipping code
 │ ├── fakeResponse/ ← a Response by status; `fileResponse` the one whose caller reads `blob()`, its `json()` rejecting
+│ ├── makeEnrichmentRun/ ← an EnrichmentRun just started, `makeImportRun`'s rule
 │ ├── makeSeriesDetail/ ← a SeriesDetail by its seasons’ watch states, `makeMovie`’s rule; `makeSeries` and `makeEpisode` beside it
 │ ├── comesBefore/ ← document order between two elements, for a slot's contract
 │ ├── LocationProbe/ ← where the router is, in four spellings — `pathname`, `search`, `url` and `navigationType` (`POP` after a step, `PUSH` after a push) — with an optional Back of its own, and `navigationType()`, the reader of the fourth
@@ -335,7 +366,11 @@ and the Movie form's Skip this one both send the same `DELETE`; and
 the player's `useSubtitles` both read the same household preference; and
 `saveSeriesFavorite` did, because the Series tab's card and the series page
 both save the same series heart; and `saveEpisodeWatched` did, because the
-season page's box and the player's _Play now_ both mark the same episode. `saveRating`
+season page's box and the player's _Play now_ both mark the same episode; and
+`fetchEnrichmentSummary` did, because the Settings hub's _Sync metadata &
+posters_ row and the Enrichment setup both draw the same summary; and
+`fetchTmdbKey` did, because the Network group fills its field with the stored
+key and Import setup chooses the _Also fetch from TMDB_ hint by it. `saveRating`
 has one caller and stays with the feature that makes it, and so does the
 player's own `saveResume` — the player is the only thing in the app that can
 know where a film is, which is the same rule read the other way round — and so
@@ -354,7 +389,7 @@ features into a route.
 
 - `src/utils/` — pure logic and utility functions
 - `server/src/` is organized by domain (`library/`, `media/`,
-  `import-export/`, `playback/`), not by I/O-purity — each domain folder
+  `import-export/`, `playback/`, `enrichment/`), not by I/O-purity — each domain folder
   owns its full responsibility, data access and logic together. There is
   no generic `services/` or `lib/` catch-all; if new backend logic
   doesn't fit one of those, that's a sign a new domain folder is needed,
@@ -366,7 +401,12 @@ features into a route.
   `media/`; subtitle _parsing_ exists to feed the player and lives here.
   The domain is injected into the router the way `storage` already is —
   `createApiRouter(storage, mediaPath, playback)` — so the route layer
-  never learns there is an FFmpeg. That rule is about **backend logic**; test doubles are not
+  never learns there is an FFmpeg. `enrichment/` is the rule exercised a
+  second time: a network client fitted none of the four, so it is the fifth,
+  injected as `createApiRouter(…, enrichment)` so no route learns there is a
+  TMDB. It holds stored paths and hands them to `media/`, which is the only
+  code that touches managed storage; the one path it joins itself is under
+  the **Library root**, which its **Write targets** own. That rule is about **backend logic**; test doubles are not
   backend logic, which is why `server/src/test-support/` exists beside
   `db/` as the mirror of the frontend's rung — same one-line rule
   ("never imported by shipping code"), same one-folder-per-unit shape,
@@ -509,11 +549,10 @@ progress indicator, not a spinner.
 
 ## Settings Hub
 
-`/settings` is four **Settings groups** under one header — Library,
-Playback, Storage, About — each a **Section card** on the feature's shared
-`section.styles.ts` except Library, which draws rows. Every number on the
-page is a read the app can truthfully answer now, over six routes and
-nothing new injected:
+`/settings` is five **Settings groups** under one header — Library,
+Playback, Network, Storage, About — each a **Section card** on the feature's
+shared `section.styles.ts` except Library, which draws rows. Every number on
+the page is a read the app can truthfully answer now:
 
 - `GET /api/playback/capabilities` → `{ component, codecs }`, the **Codec
   report**, reached through `Playback.capabilities()` alone — a property
@@ -542,6 +581,19 @@ nothing new injected:
 - `GET /api/storage` → `{ mediaPath, bytesUsed, movieCount }`, the
   **Storage report**: the path resolved to absolute at request time, the
   walk read afresh on every visit, the count off the database.
+- The **Network group**: `GET /api/tmdb/key` → `{ key }`, `null` when none
+  is stored, and `POST /api/tmdb/key { key }` — _Test connection_, the test
+  and the save in one: `200` with the key stored only when TMDB accepts it,
+  `400` for an empty key, `422` when TMDB refuses it, `503` when TMDB was
+  not reached. Its _Sync metadata & posters_ row reads `GET /api/enrichment`,
+  the **EnrichmentSummary** the Enrichment setup draws too.
+- The **Enrichment flow** at `/enrich`: `POST /api/enrichment` → `201` with
+  the **Current enrichment run** (`400` for a body `enrichmentBody` refuses
+  or a film the library does not hold, `409` while one runs, `412` with no
+  key); `GET /api/enrichment/current` polled every 500 ms, `404` for none;
+  `POST …/current/cancel` → `204` either way; and the review's four
+  **Decision** writes under `…/current/decisions/:id` — `search`, `pick`,
+  `apply` and the `DELETE` that is _Skip_.
 
 Every read on the page is `null` until it lands and `null` still if it
 never does, and nothing is drawn while so — no skeleton, no error face.
@@ -552,13 +604,17 @@ existed. The _Add a codec pack_ zone and the ✕ were the third; the
 **Playback component upload** built their mechanism, so both are drawn
 now.
 
-The **Snackbar stack** ships first and empty: it is mounted in `App` above
-the route table, and no screen in the app raises a **Snackbar notice**
-today. Six logs refused a snackbar on their own merits — a refused rating
-save, add, delete, a backgrounded import, export done, a refused language
-save, a replaced component — and none was reopened to give the stack
-work, because the prototype still draws none on any of those paths. The
-first caller is the **Update offer snackbar** of the Software update flow.
+The **Snackbar stack** shipped first and empty, mounted in `App` above the
+route table, with the **Update offer snackbar** of the Software update flow
+expected as its first caller. Enrichment got there first. Its callers are
+the Network group's four notices — _Paste a key first._, _Connected to
+TMDB._, _TMDB didn't accept that key._, _Couldn't reach TMDB._ — and the
+flow's _Add your TMDB key here first._, _Match saved._, _Details updated._
+and _Searching TMDB…_, each through `useSnackbar()` and nothing else. Six
+logs refused a snackbar on their own merits — a refused rating save, add,
+delete, a backgrounded import, export done, a refused language save, a
+replaced component — and none was reopened, because the prototype still
+draws none on any of those paths.
 
 ## Watch Tracking
 
