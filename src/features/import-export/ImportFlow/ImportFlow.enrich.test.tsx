@@ -169,7 +169,7 @@ describe('ImportFlow — the Also fetch from TMDB card', () => {
     renderFlow();
     await setupStep();
 
-    expect((await enrichCard()).getAttribute('aria-checked')).toBe('false');
+    expect(((await enrichCard()) as HTMLInputElement).checked).toBe(false);
   });
 
   it('reads the with-key hint when GET /api/tmdb/key answers a key', async () => {
@@ -194,10 +194,10 @@ describe('ImportFlow — the Also fetch from TMDB card', () => {
     await setupStep();
 
     fireEvent.click(await enrichCard());
-    expect((await enrichCard()).getAttribute('aria-checked')).toBe('true');
+    expect(((await enrichCard()) as HTMLInputElement).checked).toBe(true);
 
     fireEvent.click(await enrichCard());
-    expect((await enrichCard()).getAttribute('aria-checked')).toBe('false');
+    expect(((await enrichCard()) as HTMLInputElement).checked).toBe(false);
   });
 });
 

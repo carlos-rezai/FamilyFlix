@@ -16,6 +16,7 @@ import {
   EnrichBox,
   EnrichCard,
   EnrichHint,
+  EnrichInput,
   EnrichLabel,
   EnrichText,
   ErrorLine,
@@ -64,8 +65,9 @@ export interface ImportSetupProps {
  * are non-empty. Between the root and the button, _What the scanner accepts_:
  * the three folder shapes, with the prototype's backslashes, and the
  * folder-first rule. Under that, the _Also fetch metadata and posters from
- * TMDB_ card: one `role="checkbox"`, the 22px box first in it, its hint
- * chosen by whether a key is stored. The box is only carried on the run —
+ * TMDB_ card: a `<label>` over the native checkbox, clipped by
+ * `visuallyHidden` so it keeps its place in the tab order, the 22px box drawn
+ * first in it, its hint chosen by whether a key is stored. The box is only carried on the run —
  * _Finish_ reads it; the import itself asks TMDB nothing.
  *
  * Controlled: the values, the two refusals and the three handlers are handed
@@ -137,15 +139,15 @@ export function ImportSetup({
         </AcceptsBody>
       </Accepts>
 
-      <EnrichCard
-        type="button"
-        role="checkbox"
-        aria-checked={enrich}
-        onClick={onToggleEnrich}
-      >
+      <EnrichCard>
         <EnrichBox aria-hidden="true" $checked={enrich}>
           {enrich ? '✓' : ''}
         </EnrichBox>
+        <EnrichInput
+          type="checkbox"
+          checked={enrich}
+          onChange={onToggleEnrich}
+        />
         <EnrichText>
           <EnrichLabel>Also fetch metadata and posters from TMDB</EnrichLabel>
           <EnrichHint>{keySet ? HINT_WITH_KEY : HINT_WITHOUT_KEY}</EnrichHint>

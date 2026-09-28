@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { ThemeProvider } from 'styled-components';
 
 import { ImportSetup, type ImportSetupProps } from './ImportSetup';
@@ -11,10 +12,10 @@ import { comesBefore } from '@/test-support/comesBefore/comesBefore';
  *
  * The **Setup step** gains the _Also fetch metadata and posters from TMDB_
  * checkbox card over _Start import_, from `feat.ImportFlow.dc.html` and the
- * prototype's `enrichBoxStyle` / `enrichHint`: a card that is itself the one
- * `role="checkbox"` (its native input visually hidden, never a second
- * checkbox in the tree), the 22px box first in it, the 15px label and the
- * 13px hint under it. The hint is chosen by whether a TMDB key is stored.
+ * prototype's `enrichBoxStyle` / `enrichHint`: a `<label>` card over the one
+ * native checkbox — clipped by `visuallyHidden`, so it keeps its place in the
+ * tab order and Space toggles it — the 22px box first in it, the 15px label
+ * and the 13px hint under it. The hint is chosen by whether a TMDB key is stored.
  *
  * Controlled, as the rest of the step is: `enrich`, `keySet` and
  * `onToggleEnrich` are handed in.
@@ -46,8 +47,15 @@ function renderSetup(props: Partial<ImportSetupProps> = {}) {
   );
 }
 
-/** The card: the one checkbox in the tree, named by its label. */
-const card = () => screen.getByRole('checkbox', { name: new RegExp(LABEL) });
+/** The one checkbox in the tree — native, named by the card that labels it. */
+const checkbox = () =>
+  screen.getByRole('checkbox', { name: new RegExp(LABEL) }) as HTMLInputElement;
+/** The card: the `<label>` around the checkbox. */
+const card = () => {
+  const label = checkbox().closest('label');
+  if (label === null) throw new Error('no card around the checkbox');
+  return label;
+};
 /** The prototype's 22px box — the first thing drawn in the card. */
 const box = () => card().firstElementChild as HTMLElement;
 
@@ -67,12 +75,12 @@ describe('ImportSetup — the Also fetch from TMDB card', () => {
 
   it('is unticked when enrich is off and ticked when it is on', () => {
     const { unmount } = renderSetup({ enrich: false });
-    expect(card().getAttribute('aria-checked')).toBe('false');
+    expect(checkbox().checked).toBe(false);
     expect(box().textContent).toBe('');
     unmount();
 
     renderSetup({ enrich: true });
-    expect(card().getAttribute('aria-checked')).toBe('true');
+    expect(checkbox().checked).toBe(true);
     expect(box().textContent).toBe('✓');
   });
 
@@ -83,6 +91,45 @@ describe('ImportSetup — the Also fetch from TMDB card', () => {
     fireEvent.click(card());
 
     expect(onToggleEnrich).toHaveBeenCalledTimes(1);
+  });
+
+  it('reports a press on the checkbox itself', () => {
+    const onToggleEnrich = vi.fn();
+    renderSetup({ onToggleEnrich });
+
+    fireEvent.click(checkbox());
+
+    expect(onToggleEnrich).toHaveBeenCalledTimes(1);
+  });
+
+  it('is reached by Tab, as a checkbox is', async () => {
+    const user = userEvent.setup();
+    renderSetup();
+    screen.getByRole('textbox', { name: 'Movies root folder' }).focus();
+
+    await user.tab();
+
+    expect(document.activeElement).toBe(checkbox());
+  });
+
+  it('toggles on Space, as a checkbox does', async () => {
+    const user = userEvent.setup();
+    const onToggleEnrich = vi.fn();
+    renderSetup({ onToggleEnrich });
+    checkbox().focus();
+
+    await user.keyboard(' ');
+
+    expect(onToggleEnrich).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps the native checkbox clipped rather than out of the tree', () => {
+    renderSetup();
+
+    const style = getComputedStyle(checkbox());
+    expect(style.display).not.toBe('none');
+    expect(style.position).toBe('absolute');
+    expect(style.width).toBe('1px');
   });
 
   it('reads the with-key hint when a key is stored', () => {

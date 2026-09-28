@@ -1,5 +1,7 @@
 import styled from 'styled-components';
 
+import { visuallyHidden } from '@/styles/visuallyHidden';
+
 /**
  * The stack of the two fields and the button, from `feat.ImportFlow.dc.html`'s
  * setup block: `18px` is the prototype's own gap and is not a spacing token.
@@ -97,12 +99,13 @@ export const Mono = styled.span`
 `;
 
 /**
- * _Also fetch metadata and posters from TMDB_: the prototype's `<label>` card,
- * drawn as one button carrying `role="checkbox"` so the whole card is the
- * target and no second checkbox reaches the tree. The surface inside the soft
- * border, 4px below the accepted shapes, its text set left.
+ * _Also fetch metadata and posters from TMDB_: the prototype's `<label>` card
+ * over its native checkbox, so the whole card is the target and the checkbox
+ * is the one control in the tree. The surface inside the soft border, 4px
+ * below the accepted shapes, its text set left.
  */
-export const EnrichCard = styled.button`
+export const EnrichCard = styled.label`
+  position: relative;
   display: flex;
   align-items: flex-start;
   gap: 12px;
@@ -116,6 +119,14 @@ export const EnrichCard = styled.button`
   text-align: left;
   font: inherit;
   color: inherit;
+`;
+
+/**
+ * The native checkbox the card labels, clipped rather than hidden, so Space
+ * and the tab order reach it as they reach any checkbox.
+ */
+export const EnrichInput = styled.input`
+  ${visuallyHidden}
 `;
 
 /**
