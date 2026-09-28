@@ -130,6 +130,26 @@ export interface Media {
   ): Promise<string>;
 
   /**
+   * Write `source` as exactly `name` into the **Series folder** an episode's
+   * **Stored path** sits under — two directories up, above its season folder —
+   * answering the **Stored path** of what it wrote: a series' `poster.jpg` and
+   * `backdrop.jpg`. Rejects, writing nothing, for a path that names no file
+   * under the media directory, or one with no Series folder above its season.
+   */
+  storeInSeriesFolder(
+    episodePath: string,
+    name: string,
+    source: Readable
+  ): Promise<string>;
+
+  /**
+   * The bytes of the file a **Stored path** names, as a stream — what a
+   * **Write target** copies out of managed storage. Rejects for a path that
+   * escapes the media directory or names no file, `mediaFilePath`'s check.
+   */
+  readStored(storedPath: string): Promise<Readable>;
+
+  /**
    * **Copy-in**: {@link storeUpload}'s **Bulk import** counterpart — the same
    * **Managed copy** into `<folder>/<safe name>`, from a file where it lies
    * under the **Library root** instead of from a stream, answering the same
@@ -326,6 +346,27 @@ export function createMedia(mediaPath: string): Media {
       const safe = safeFilename(name);
       await pipeline(source, createWriteStream(join(folder, safe)));
       return storedIn(folder, safe);
+    },
+
+    storeInSeriesFolder: async (episodePath, name, source) => {
+      const file = mediaFilePath(mediaPath, episodePath);
+      // Fewer than three segments has no Series folder above its season
+      // folder: nothing is written into the media root itself.
+      if (file === null || episodePath.split('/').length < 3) {
+        throw new Error(`No Series folder above ${episodePath}`);
+      }
+      const folder = dirname(dirname(file));
+      const safe = safeFilename(name);
+      await pipeline(source, createWriteStream(join(folder, safe)));
+      return storedIn(folder, safe);
+    },
+
+    readStored: async (storedPath) => {
+      const file = mediaFilePath(mediaPath, storedPath);
+      if (file === null) {
+        throw new Error(`No stored file at ${storedPath}`);
+      }
+      return createReadStream(file);
     },
 
     copyIn: async (folder, sourcePath, signal) => {

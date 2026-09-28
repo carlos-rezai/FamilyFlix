@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
-import { createReadStream } from 'node:fs';
-import { basename, dirname, join, posix, sep } from 'node:path';
+import { join, posix, sep } from 'node:path';
+import type { Readable } from 'node:stream';
 
 import type {
   ConflictChoices,
@@ -289,16 +289,16 @@ export function createEnrichment({
   ): Promise<void> {
     if (!runWritable.posters || runRoot === null) return;
     const folder = storage.sourceFolder(movie.id);
-    const mediaFolder = media.openFolder(stored);
-    if (mediaFolder === null) return;
-    const outcome =
-      folder === null
-        ? null
-        : await writeBack.poster(
-            runRoot,
-            folder,
-            createReadStream(join(mediaFolder, basename(stored)))
-          );
+    let outcome: Awaited<ReturnType<WriteBack['poster']>> | null = null;
+    if (folder !== null) {
+      let poster: Readable;
+      try {
+        poster = await media.readStored(stored);
+      } catch {
+        return;
+      }
+      outcome = await writeBack.poster(runRoot, folder, poster);
+    }
     if (outcome === null || outcome.kind === 'no-folder') {
       log(
         current,
@@ -421,8 +421,8 @@ export function createEnrichment({
   }
 
   /**
-   * One image streamed into the **Series folder** — two directories above an
-   * episode's video — as `name`; `null` when there is nowhere, or it failed.
+   * One image streamed into the **Series folder** above the show's episodes as
+   * `name`; `null` when it has no episode, or the image could not be stored.
    */
   async function storeSeriesImage(
     current: EnrichmentRun,
@@ -432,26 +432,13 @@ export function createEnrichment({
     signal: AbortSignal
   ): Promise<string | null> {
     const video = episodes[0]?.videoPath;
-    const seasonFolder = video === undefined ? null : media.openFolder(video);
-    // A stored path of fewer than three segments has no Series folder above
-    // its season folder: nothing is written above the media root.
-    if (
-      video === undefined ||
-      seasonFolder === null ||
-      video.split('/').length < 3
-    ) {
-      return null;
-    }
+    if (video === undefined) return null;
     const image = await client.image(path, signal);
     if (image.kind !== 'ok' || signal.aborted) {
       return null;
     }
     try {
-      const stored = await media.storeUpload(
-        dirname(seasonFolder),
-        name,
-        image.value
-      );
+      const stored = await media.storeInSeriesFolder(video, name, image.value);
       log(current, `↓ ${name}  →  ${stored}`, 'scan');
       return stored;
     } catch {

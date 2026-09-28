@@ -1008,3 +1008,122 @@ describe('createMedia — storeNamed', () => {
     expect(existsSync(join(outside, 'poster.jpg'))).toBe(false);
   });
 });
+
+// 23 — Enrichment refactor (issue #214), Group 2: `media/` reads what it
+// stored, and finds the Series folder.
+//
+// `storeInSeriesFolder(episodePath, name, source)` writes a series' art into
+// the **Series folder** two directories above an episode's video, where the
+// run once found it by path arithmetic of its own. `readStored(storedPath)` is
+// the stream a **Write target** copies a stored poster out of. Only `media/`
+// touches managed storage.
+
+describe('createMedia — storeInSeriesFolder', () => {
+  /** A show with one episode in its season folder, and that episode's path. */
+  async function showWithEpisode(media: Media) {
+    const series = media.reserveFolder('The Hollow Coast', 2018);
+    const episode = await media.storeUpload(
+      media.seasonFolder(series, 1),
+      'S01E01.mkv',
+      part('video bytes')
+    );
+    return { series, episode };
+  }
+
+  it('writes the bytes under the name it is given, in the Series folder', async () => {
+    const { media } = sandbox();
+    const { series, episode } = await showWithEpisode(media);
+
+    await media.storeInSeriesFolder(
+      episode,
+      'poster.jpg',
+      part('poster bytes')
+    );
+
+    expect(readFileSync(join(series, 'poster.jpg'), 'utf8')).toBe(
+      'poster bytes'
+    );
+  });
+
+  it('answers the Stored path, relative and forward-slashed', async () => {
+    const { media, root } = sandbox();
+    const { series, episode } = await showWithEpisode(media);
+
+    const stored = await media.storeInSeriesFolder(
+      episode,
+      'backdrop.jpg',
+      part('backdrop bytes')
+    );
+
+    expect(isAbsolute(stored)).toBe(false);
+    expect(stored).toBe('the-hollow-coast-2018/backdrop.jpg');
+    expect(mediaFilePath(root, stored)).toBe(join(series, 'backdrop.jpg'));
+  });
+
+  it('refuses an episode with no Series folder above its season, writing nothing', async () => {
+    const { media, root } = sandbox();
+    const folder = media.reserveFolder('Loose', 2018);
+    const shallow = await media.storeUpload(folder, 'S01E01.mkv', part('v'));
+
+    await expect(
+      media.storeInSeriesFolder(shallow, 'poster.jpg', part('poster bytes'))
+    ).rejects.toThrow();
+    expect(existsSync(join(root, 'poster.jpg'))).toBe(false);
+  });
+
+  it('refuses a path that names nothing under the media directory', async () => {
+    const { media, outside } = sandbox();
+
+    await expect(
+      media.storeInSeriesFolder(
+        'no-such-show/season-01/S01E01.mkv',
+        'poster.jpg',
+        part('poster bytes')
+      )
+    ).rejects.toThrow();
+    await expect(
+      media.storeInSeriesFolder(
+        '../elsewhere/season-01/S01E01.mkv',
+        'poster.jpg',
+        part('poster bytes')
+      )
+    ).rejects.toThrow();
+    expect(existsSync(join(outside, 'poster.jpg'))).toBe(false);
+  });
+});
+
+describe('createMedia — readStored', () => {
+  async function textOf(stream: Readable): Promise<string> {
+    const chunks: Buffer[] = [];
+    for await (const chunk of stream) chunks.push(Buffer.from(chunk));
+    return Buffer.concat(chunks).toString();
+  }
+
+  it('streams the bytes a Stored path names', async () => {
+    const { media } = sandbox();
+    const folder = media.reserveFolder('The Lantern Keeper', 2019);
+    const stored = await media.storeUpload(
+      folder,
+      'poster.jpg',
+      part('poster bytes')
+    );
+
+    expect(await textOf(await media.readStored(stored))).toBe('poster bytes');
+  });
+
+  it('refuses a path that names no file', async () => {
+    const { media } = sandbox();
+    media.reserveFolder('The Lantern Keeper', 2019);
+
+    await expect(
+      media.readStored('the-lantern-keeper-2019/poster.jpg')
+    ).rejects.toThrow();
+  });
+
+  it('refuses a path that escapes the media directory', async () => {
+    const { media, outside } = sandbox();
+    writeFileSync(join(outside, 'poster.jpg'), 'not ours');
+
+    await expect(media.readStored('../elsewhere/poster.jpg')).rejects.toThrow();
+  });
+});
