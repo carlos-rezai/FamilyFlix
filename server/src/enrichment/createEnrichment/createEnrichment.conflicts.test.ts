@@ -205,6 +205,18 @@ describe('createEnrichment: a conflict Decision', () => {
     );
   });
 
+  it('logs the title as differing from what you filled in', async () => {
+    const { enrichment, addLantern } = world();
+    await addLantern();
+
+    const run = await sync(enrichment);
+
+    expect(run.log).toContainEqual({
+      text: '⚠ The Lantern Keeper — differs from what you filled in',
+      kind: 'warning',
+    });
+  });
+
   it('is not made by case, spacing or the order of genres and cast', async () => {
     const { enrichment, storage, addLantern, addHarbor } = world();
     await addLantern();

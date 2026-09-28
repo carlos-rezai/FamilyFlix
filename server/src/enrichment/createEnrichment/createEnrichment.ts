@@ -694,7 +694,7 @@ export function createEnrichment({
             disputed.set(decision.id, fetched);
             log(
               current,
-              `⚠ ${movie.title} — TMDB disagrees with what you filled in`,
+              `⚠ ${movie.title} — differs from what you filled in`,
               'warning'
             );
           } else {
