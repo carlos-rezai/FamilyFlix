@@ -2,23 +2,20 @@ import { randomUUID } from 'node:crypto';
 import { createReadStream } from 'node:fs';
 import { basename, dirname, join, posix, sep } from 'node:path';
 
-import {
-  ENRICH_FIELDS,
-  ENRICH_SCOPES,
-  type Candidate,
-  type ConflictChoices,
-  type ConflictField,
-  type Decision,
-  type EnrichField,
-  type EnrichmentRun,
-  type EnrichmentSummary,
-  type EnrichScope,
-  type Episode,
-  type FieldConflict,
-  type LogKind,
-  type Movie,
-  type Series,
-  type StartEnrichment,
+import type {
+  Candidate,
+  ConflictChoices,
+  ConflictField,
+  Decision,
+  EnrichField,
+  EnrichmentRun,
+  EnrichmentSummary,
+  Episode,
+  FieldConflict,
+  LogKind,
+  Movie,
+  Series,
+  StartEnrichment,
 } from '@/types';
 import type {
   EpisodeEnrichment,
@@ -84,9 +81,9 @@ export type ApplyOutcome = { kind: 'applied' } | { kind: 'not-found' };
 /** What starting a **Sync** came to, as a value the route maps to a status. */
 export type StartEnrichmentOutcome =
   | { kind: 'started'; run: EnrichmentRun }
-  | { kind: 'bad-body'; error: string }
   | { kind: 'busy' }
-  | { kind: 'no-key' };
+  | { kind: 'no-key' }
+  | { kind: 'no-movie' };
 
 /**
  * The `enrichment/` domain, injected into the router so no route learns there
@@ -103,9 +100,10 @@ export interface Enrichment {
   saveKey(key: unknown): Promise<SaveKeyOutcome>;
   /**
    * Start a Sync over the titles in scope, snapshotted so `total` is known
-   * before the first request. Answers at once; the run goes on behind it.
+   * before the first request. Answers at once; the run goes on behind it;
+   * `no-movie` for a single-title Sync the library holds no film for.
    */
-  start(options: unknown): Promise<StartEnrichmentOutcome>;
+  start(options: StartEnrichment): Promise<StartEnrichmentOutcome>;
   /** The **Current enrichment run**'s snapshot, or `null` when none is held. */
   current(): EnrichmentRun | null;
   /**
@@ -149,50 +147,6 @@ export interface EnrichmentDeps {
 
 /** The last lines of the log a snapshot carries, the importer's cap. */
 const LOG_CAP = 80;
-
-/** A start body read into its options, or the reason it cannot be. */
-function readOptions(
-  body: unknown
-): { ok: true; options: StartEnrichment } | { ok: false; error: string } {
-  if (typeof body !== 'object' || body === null) {
-    return { ok: false, error: 'Body must be an object' };
-  }
-  const { scope, movieId, fields, writeSheet, writePosters } = body as Record<
-    string,
-    unknown
-  >;
-  if (!ENRICH_SCOPES.includes(scope as EnrichScope)) {
-    return { ok: false, error: 'Unknown scope' };
-  }
-  if (
-    scope === 'single' &&
-    (typeof movieId !== 'string' || movieId.length === 0)
-  ) {
-    return { ok: false, error: 'A single-title Sync names its movie' };
-  }
-  if (scope !== 'single' && movieId !== undefined) {
-    return { ok: false, error: 'Only a single-title Sync names a movie' };
-  }
-  if (
-    !Array.isArray(fields) ||
-    !fields.every((field) => ENRICH_FIELDS.includes(field as EnrichField))
-  ) {
-    return { ok: false, error: 'Unknown field' };
-  }
-  if (typeof writeSheet !== 'boolean' || typeof writePosters !== 'boolean') {
-    return { ok: false, error: 'writeSheet and writePosters are booleans' };
-  }
-  return {
-    ok: true,
-    options: {
-      scope: scope as EnrichScope,
-      ...(typeof movieId === 'string' ? { movieId } : {}),
-      fields: fields as EnrichField[],
-      writeSheet,
-      writePosters,
-    },
-  };
-}
 
 /** A movie's values now, in the fetched shape `planFields` compares. */
 function currentFields(movie: Movie): FetchedFields {
@@ -1022,11 +976,9 @@ export function createEnrichment({
     return movie === null ? null : [{ kind: 'movie', movie }];
   }
 
-  async function start(body: unknown): Promise<StartEnrichmentOutcome> {
-    const read = readOptions(body);
-    if (!read.ok) {
-      return { kind: 'bad-body', error: read.error };
-    }
+  async function start(
+    options: StartEnrichment
+  ): Promise<StartEnrichmentOutcome> {
     if (run !== null && run.phase === 'running') {
       return { kind: 'busy' };
     }
@@ -1034,10 +986,9 @@ export function createEnrichment({
     if (apiKey === null) {
       return { kind: 'no-key' };
     }
-    const { options } = read;
     const titles = titlesFor(options);
     if (titles === null) {
-      return { kind: 'bad-body', error: 'No such movie' };
+      return { kind: 'no-movie' };
     }
 
     const current: EnrichmentRun = {

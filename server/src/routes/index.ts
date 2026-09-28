@@ -38,6 +38,10 @@ import { onlyField } from './onlyField/onlyField';
 import { optionalYear } from './optionalYear/optionalYear';
 import { readBody, type OnFilePart } from './readBody/readBody';
 import {
+  conflictChoicesBody,
+  startEnrichmentBody,
+} from './enrichmentBody/enrichmentBody';
+import {
   DEFAULT_MOVIE_SORT,
   EXPORT_FILENAME,
   EXPORT_FORMATS,
@@ -49,7 +53,6 @@ import {
   type GenrePoolPayload,
   type GenreQuery,
   type LibraryQuery,
-  type ConflictChoices,
   type Movie,
   type MovieSort,
   type NewSubtitle,
@@ -442,11 +445,12 @@ const KEY_REFUSALS: Record<
 
 /** A Sync's start refusals, each to its status. */
 const START_REFUSALS: Record<
-  Exclude<StartEnrichmentOutcome['kind'], 'started' | 'bad-body'>,
+  Exclude<StartEnrichmentOutcome['kind'], 'started'>,
   { status: number; error: string }
 > = {
   busy: { status: 409, error: 'A sync is already running' },
   'no-key': { status: 412, error: 'Add your TMDB key first' },
+  'no-movie': { status: 400, error: 'No such movie' },
 };
 
 /** Why a review search or pick answered nothing, as a status. */
@@ -1302,13 +1306,14 @@ export function createApiRouter(
   // A **Sync**: `201` with the **Current enrichment run** it started, which
   // goes on behind the answer; the screen polls `current` from there.
   router.post('/enrichment', async (req: Request, res: Response) => {
-    const outcome = await enrichment.start(req.body);
-    if (outcome.kind === 'started') {
-      res.status(201).json(outcome.run);
+    const body = startEnrichmentBody(req.body);
+    if (!body.ok) {
+      res.status(400).json({ error: body.error });
       return;
     }
-    if (outcome.kind === 'bad-body') {
-      res.status(400).json({ error: outcome.error });
+    const outcome = await enrichment.start(body.value);
+    if (outcome.kind === 'started') {
+      res.status(201).json(outcome.run);
       return;
     }
     const refused = START_REFUSALS[outcome.kind];
@@ -1376,22 +1381,12 @@ export function createApiRouter(
   router.post(
     '/enrichment/current/decisions/:id/apply',
     async (req: Request<{ id: string }>, res: Response) => {
-      const { choices } = (req.body ?? {}) as { choices?: unknown };
-      if (
-        typeof choices !== 'object' ||
-        choices === null ||
-        Array.isArray(choices) ||
-        !Object.values(choices).every(
-          (side) => side === 'mine' || side === 'tmdb'
-        )
-      ) {
-        res.status(400).json({ error: 'Choices map each field to a side' });
+      const choices = conflictChoicesBody(req.body);
+      if (!choices.ok) {
+        res.status(400).json({ error: choices.error });
         return;
       }
-      const outcome = await enrichment.apply(
-        req.params.id,
-        choices as ConflictChoices
-      );
+      const outcome = await enrichment.apply(req.params.id, choices.value);
       if (outcome.kind === 'applied') {
         res.status(204).end();
         return;

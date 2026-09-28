@@ -322,6 +322,40 @@ function holdNextSearch(tmdbFetch: ReturnType<typeof fakeTmdb>) {
   return release;
 }
 
+describe('POST /api/enrichment — a body it refuses', () => {
+  const post = (baseUrl: string, body: unknown) =>
+    fetch(`${baseUrl}/api/enrichment`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+
+  it('answers 400 with the body’s refusal, starting nothing', async () => {
+    const { baseUrl } = await freshApi();
+
+    const response = await post(baseUrl, {
+      scope: 'some',
+      fields: ALL_FIELDS,
+      writeSheet: false,
+      writePosters: false,
+    });
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: 'Unknown scope' });
+    expect((await fetch(`${baseUrl}/api/enrichment/current`)).status).toBe(404);
+  });
+
+  it('answers 400 for a movie the library does not hold', async () => {
+    const { baseUrl } = await freshApi();
+
+    const response = await startSync(baseUrl, 'no-such-id');
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: 'No such movie' });
+    expect((await fetch(`${baseUrl}/api/enrichment/current`)).status).toBe(404);
+  });
+});
+
 describe('POST /api/enrichment — the whole library', () => {
   it('answers 201 for Only what’s missing, the film without details in it', async () => {
     const { baseUrl } = await freshApi();
