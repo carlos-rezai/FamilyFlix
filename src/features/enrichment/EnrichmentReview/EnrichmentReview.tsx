@@ -1,6 +1,7 @@
 import type { ConflictChoices, EnrichmentRun } from '@/types';
 import { Button } from '@/primitives';
 import { DecisionRow } from '../DecisionRow/DecisionRow';
+import { writtenSummary } from '../enrichmentView/enrichmentView';
 import {
   Actions,
   AllDone,
@@ -13,19 +14,6 @@ import {
   TileValue,
   Tiles,
 } from './EnrichmentReview.styles';
-
-/**
- * _All done_'s line off what the run says landed — the prototype's
- * `writtenSummary`: your library always, each optional target only when written.
- */
-function writtenSummary(written: EnrichmentRun['written']): string {
-  const targets = [
-    'your library',
-    written.sheet ? 'the sheet in your collection root' : null,
-    written.posters ? 'a poster.jpg in each movie folder' : null,
-  ].filter((target) => target !== null);
-  return `Saved to ${targets.join(', ')}.`;
-}
 
 export interface EnrichmentReviewProps {
   run: EnrichmentRun;

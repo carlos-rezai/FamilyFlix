@@ -73,3 +73,30 @@ export function enrichmentEstimate(
   const seconds = Math.max(1, Math.round(n * SECONDS_PER_TITLE));
   return `About ${seconds}s for ${n} title${n === 1 ? '' : 's'}`;
 }
+
+/**
+ * A library scope card's line — the prototype's `scopeDefs`: the titles
+ * without **Full details** for _Only what's missing_, every title for
+ * _Everything_.
+ */
+export function scopeDescription(
+  summary: EnrichmentSummary,
+  scope: Exclude<EnrichScope, 'single'>
+): string {
+  return scope === 'missing'
+    ? `${summary.total - summary.complete} titles have no synopsis or artwork`
+    : `${summary.total} titles — re-checks ones already filled in`;
+}
+
+/**
+ * _All done_'s line off what the run says landed — the prototype's
+ * `writtenSummary`: your library always, each optional target only when written.
+ */
+export function writtenSummary(written: EnrichmentRun['written']): string {
+  const targets = [
+    'your library',
+    written.sheet ? 'the sheet in your collection root' : null,
+    written.posters ? 'a poster.jpg in each movie folder' : null,
+  ].filter((target) => target !== null);
+  return `Saved to ${targets.join(', ')}.`;
+}

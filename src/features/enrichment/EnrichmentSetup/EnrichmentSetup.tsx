@@ -14,7 +14,10 @@ import {
   TableIcon,
   Toggle,
 } from '@/primitives';
-import { enrichmentEstimate } from '../enrichmentView/enrichmentView';
+import {
+  enrichmentEstimate,
+  scopeDescription,
+} from '../enrichmentView/enrichmentView';
 import {
   Banner,
   BannerAction,
@@ -56,20 +59,9 @@ const POSTERS_TITLE = 'Posters into each movie folder';
 const LIBRARY_SCOPES: ReadonlyArray<{
   scope: Exclude<EnrichScope, 'single'>;
   label: string;
-  description: (summary: EnrichmentSummary) => string;
 }> = [
-  {
-    scope: 'missing',
-    label: 'Only what’s missing',
-    description: ({ total, complete }) =>
-      `${total - complete} titles have no synopsis or artwork`,
-  },
-  {
-    scope: 'all',
-    label: 'Everything',
-    description: ({ total }) =>
-      `${total} titles — re-checks ones already filled in`,
-  },
+  { scope: 'missing', label: 'Only what’s missing' },
+  { scope: 'all', label: 'Everything' },
 ];
 
 export interface EnrichmentSetupProps {
@@ -192,7 +184,7 @@ export function EnrichmentSetup({
                     <ScopeLabel>{each.label}</ScopeLabel>
                   </ScopeTitle>
                   <ScopeDescription>
-                    {each.description(summary)}
+                    {scopeDescription(summary, each.scope)}
                   </ScopeDescription>
                 </ScopeCard>
               );

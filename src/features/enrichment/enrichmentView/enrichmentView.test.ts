@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import { enrichmentEstimate, enrichmentView } from './enrichmentView';
+import {
+  enrichmentEstimate,
+  enrichmentView,
+  scopeDescription,
+  writtenSummary,
+} from './enrichmentView';
 import type { EnrichmentRun, EnrichmentSummary } from '@/types';
 
 /**
@@ -172,5 +177,56 @@ describe('enrichmentEstimate — not ready', () => {
     expect(
       enrichmentEstimate({ ...READY, online: false, keySet: false }, 'missing')
     ).toBe('Waiting for a connection');
+  });
+});
+
+describe('scopeDescription — the library scope cards’ lines', () => {
+  it('counts the titles without Full details for Only what’s missing', () => {
+    expect(scopeDescription(READY, 'missing')).toBe(
+      '12 titles have no synopsis or artwork'
+    );
+  });
+
+  it('counts every title for Everything', () => {
+    expect(scopeDescription(READY, 'all')).toBe(
+      '30 titles — re-checks ones already filled in'
+    );
+  });
+
+  it('reads an empty library as none of either', () => {
+    const empty = { ...READY, total: 0, complete: 0 };
+
+    expect(scopeDescription(empty, 'missing')).toBe(
+      '0 titles have no synopsis or artwork'
+    );
+    expect(scopeDescription(empty, 'all')).toBe(
+      '0 titles — re-checks ones already filled in'
+    );
+  });
+});
+
+describe('writtenSummary — All done’s line', () => {
+  it('names your library alone when neither target was written', () => {
+    expect(writtenSummary({ sheet: false, posters: false })).toBe(
+      'Saved to your library.'
+    );
+  });
+
+  it('adds the sheet when it landed', () => {
+    expect(writtenSummary({ sheet: true, posters: false })).toBe(
+      'Saved to your library, the sheet in your collection root.'
+    );
+  });
+
+  it('adds the posters when they landed', () => {
+    expect(writtenSummary({ sheet: false, posters: true })).toBe(
+      'Saved to your library, a poster.jpg in each movie folder.'
+    );
+  });
+
+  it('names all three when both landed, the sheet first', () => {
+    expect(writtenSummary({ sheet: true, posters: true })).toBe(
+      'Saved to your library, the sheet in your collection root, a poster.jpg in each movie folder.'
+    );
   });
 });
