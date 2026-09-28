@@ -15,6 +15,23 @@ import {
 /** How often the **Current enrichment run** is read while it is going. */
 const POLL_INTERVAL_MS = 500;
 
+/**
+ * The snapshot with Decision `id` settled: off the list, and — for a pick or
+ * _Apply choices_, not a Skip — counted into _movies enriched_.
+ */
+function settled(
+  run: EnrichmentRun | null,
+  id: string,
+  { counted }: { counted: boolean }
+): EnrichmentRun | null {
+  if (run === null) return run;
+  return {
+    ...run,
+    enriched: counted ? run.enriched + 1 : run.enriched,
+    decisions: run.decisions.filter((each) => each.id !== id),
+  };
+}
+
 export interface EnrichmentRunState {
   /** The run as last read — `null` while none is held. */
   run: EnrichmentRun | null;
@@ -113,40 +130,17 @@ export function useEnrichmentRun(): EnrichmentRunState {
 
   const pick = useCallback(async (id: string, tmdbId: number) => {
     await pickCandidate(id, tmdbId);
-    setRun((held) =>
-      held === null
-        ? held
-        : {
-            ...held,
-            enriched: held.enriched + 1,
-            decisions: held.decisions.filter((each) => each.id !== id),
-          }
-    );
+    setRun((held) => settled(held, id, { counted: true }));
   }, []);
 
   const apply = useCallback(async (id: string, choices: ConflictChoices) => {
     await applyChoices(id, choices);
-    setRun((held) =>
-      held === null
-        ? held
-        : {
-            ...held,
-            enriched: held.enriched + 1,
-            decisions: held.decisions.filter((each) => each.id !== id),
-          }
-    );
+    setRun((held) => settled(held, id, { counted: true }));
   }, []);
 
   const dismiss = useCallback(async (id: string) => {
     await dismissDecision(id);
-    setRun((held) =>
-      held === null
-        ? held
-        : {
-            ...held,
-            decisions: held.decisions.filter((each) => each.id !== id),
-          }
-    );
+    setRun((held) => settled(held, id, { counted: false }));
   }, []);
 
   const live = run !== null && run.phase === 'running';
