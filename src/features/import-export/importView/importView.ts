@@ -1,4 +1,5 @@
 import type { ImportRun } from '@/types';
+import { formatElapsed } from '@/utils';
 
 /** What the **Running step** prints, worked out from a snapshot and the clock. */
 export interface ImportView {
@@ -20,18 +21,9 @@ export interface ImportView {
 const ETA_AFTER = 20;
 
 const MS_PER_SECOND = 1000;
-const SECONDS_PER_MINUTE = 60;
 
 /** A count as the prototype prints it: `1,234`. */
 const count = (n: number): string => n.toLocaleString('en-US');
-
-/** Seconds as `m:ss` — minutes never roll into hours, the seconds padded. */
-function clock(seconds: number): string {
-  const whole = Math.max(0, Math.round(seconds));
-  const minutes = Math.floor(whole / SECONDS_PER_MINUTE);
-  const rest = whole % SECONDS_PER_MINUTE;
-  return `${minutes}:${String(rest).padStart(2, '0')}`;
-}
 
 /**
  * The **Running step**'s pure view: a snapshot and the time now, in; what the
@@ -63,7 +55,7 @@ export function importView(run: ImportRun, now: Date): ImportView {
       : `${count(run.done)} of ${count(run.total)} imported`,
     indeterminate: scanning,
     percent: run.total === 0 ? 0 : Math.round((run.done / run.total) * 100),
-    elapsed: `Elapsed ${clock(elapsedSeconds)}`,
-    eta: forecast === null ? null : `About ${clock(forecast)} left`,
+    elapsed: `Elapsed ${formatElapsed(elapsedSeconds)}`,
+    eta: forecast === null ? null : `About ${formatElapsed(forecast)} left`,
   };
 }

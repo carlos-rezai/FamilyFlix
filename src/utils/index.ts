@@ -11,6 +11,7 @@ export {
   NOMINAL_SLIVER_PERCENT,
 } from './toProgressPercent/toProgressPercent';
 export { formatClock } from './formatClock/formatClock';
+export { formatElapsed } from './formatElapsed/formatElapsed';
 export { formatBytes } from './formatBytes/formatBytes';
 export { formatEpisodeTag } from './formatEpisodeTag/formatEpisodeTag';
 export { toScalarPercent } from './toScalarPercent/toScalarPercent';
