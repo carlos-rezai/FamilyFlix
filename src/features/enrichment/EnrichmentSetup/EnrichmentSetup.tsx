@@ -17,6 +17,7 @@ import {
   enrichmentEstimate,
   scopeDescription,
 } from '../enrichmentView/enrichmentView';
+import { ScopeCard } from '../ScopeCard/ScopeCard';
 import { SetupBanner } from '../SetupBanner/SetupBanner';
 import {
   Chips,
@@ -26,12 +27,7 @@ import {
   SeriesNote,
   SourceNote,
   SourceNoteMono,
-  ScopeCard,
-  ScopeDescription,
-  ScopeDot,
-  ScopeLabel,
   Scopes,
-  ScopeTitle,
   Stack,
   Star,
   StartRow,
@@ -131,35 +127,21 @@ export function EnrichmentSetup({
         <GroupLabel>What to sync</GroupLabel>
         <Scopes role="radiogroup" aria-label="What to sync">
           {single ? (
-            <ScopeCard type="button" role="radio" aria-checked $selected>
-              <ScopeTitle>
-                <ScopeDot aria-hidden="true" $selected />
-                <ScopeLabel>Just this movie</ScopeLabel>
-              </ScopeTitle>
-              <ScopeDescription>{title ?? ''}</ScopeDescription>
-            </ScopeCard>
+            <ScopeCard
+              label="Just this movie"
+              description={title ?? ''}
+              selected
+            />
           ) : (
-            LIBRARY_SCOPES.map((each) => {
-              const selected = each.scope === scope;
-              return (
-                <ScopeCard
-                  key={each.scope}
-                  type="button"
-                  role="radio"
-                  aria-checked={selected}
-                  $selected={selected}
-                  onClick={() => onChooseScope(each.scope)}
-                >
-                  <ScopeTitle>
-                    <ScopeDot aria-hidden="true" $selected={selected} />
-                    <ScopeLabel>{each.label}</ScopeLabel>
-                  </ScopeTitle>
-                  <ScopeDescription>
-                    {scopeDescription(summary, each.scope)}
-                  </ScopeDescription>
-                </ScopeCard>
-              );
-            })
+            LIBRARY_SCOPES.map((each) => (
+              <ScopeCard
+                key={each.scope}
+                label={each.label}
+                description={scopeDescription(summary, each.scope)}
+                selected={each.scope === scope}
+                onSelect={() => onChooseScope(each.scope)}
+              />
+            ))
           )}
         </Scopes>
       </div>
