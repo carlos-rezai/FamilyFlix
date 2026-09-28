@@ -27,6 +27,7 @@ import type { Media } from '../../media/createMedia/createMedia';
 import {
   fetchedFields,
   fetchedTvFields,
+  releaseYear,
   type FetchedFields,
   type FetchedTvFields,
 } from '../fetchedFields/fetchedFields';
@@ -43,6 +44,7 @@ import type {
   TmdbSeason,
   TmdbTvDetail,
 } from '../tmdbClient/tmdbClient';
+import { tmdbGenreName } from '../tmdbGenres/tmdbGenres';
 import {
   writeBack as realWriteBack,
   type WriteBack,
@@ -180,12 +182,6 @@ function currentSeriesFields(series: Series): FetchedFields {
   };
 }
 
-/** The year off a TMDB release date, `null` for none. */
-function releaseYear(date: string | null): number | null {
-  const year = Number.parseInt((date ?? '').slice(0, 4), 10);
-  return Number.isNaN(year) ? null : year;
-}
-
 /** An empty string or `null`: nothing there yet. */
 const blank = (value: string | null): boolean =>
   value === null || value.trim() === '';
@@ -201,29 +197,6 @@ const CANDIDATE_CAP = 3;
 /** Where the review's candidate posters load from, straight off TMDB. */
 const CANDIDATE_POSTER_BASE = 'https://image.tmdb.org/t/p/w185';
 
-/** TMDB's movie genre ids, for the one genre a candidate's line names. */
-const TMDB_GENRE_NAMES: Readonly<Record<number, string>> = {
-  28: 'Action',
-  12: 'Adventure',
-  16: 'Animation',
-  35: 'Comedy',
-  80: 'Crime',
-  99: 'Documentary',
-  18: 'Drama',
-  10751: 'Family',
-  14: 'Fantasy',
-  36: 'History',
-  27: 'Horror',
-  10402: 'Music',
-  9648: 'Mystery',
-  10749: 'Romance',
-  878: 'Science Fiction',
-  10770: 'TV Movie',
-  53: 'Thriller',
-  10752: 'War',
-  37: 'Western',
-};
-
 /** The best three results by **Match score**, as the picker's Candidates. */
 function candidatesFor(
   ours: TitledYear,
@@ -236,9 +209,8 @@ function candidatesFor(
         title: result.title,
         year: releaseYear(result.release_date),
         genre:
-          result.genre_ids
-            .map((id) => TMDB_GENRE_NAMES[id])
-            .find((name) => name !== undefined) ?? null,
+          result.genre_ids.map(tmdbGenreName).find((name) => name !== null) ??
+          null,
         language: result.original_language || null,
         posterUrl:
           result.poster_path === null

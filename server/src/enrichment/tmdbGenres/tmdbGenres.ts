@@ -14,6 +14,29 @@ const POOL = new Set([
   'Crime',
 ]);
 
+/** TMDB's movie genre ids, as a search result's `genre_ids` carries them. */
+const TMDB_GENRE_NAMES: Readonly<Record<number, string>> = {
+  28: 'Action',
+  12: 'Adventure',
+  16: 'Animation',
+  35: 'Comedy',
+  80: 'Crime',
+  99: 'Documentary',
+  18: 'Drama',
+  10751: 'Family',
+  14: 'Fantasy',
+  36: 'History',
+  27: 'Horror',
+  10402: 'Music',
+  9648: 'Mystery',
+  10749: 'Romance',
+  878: 'Science Fiction',
+  10770: 'TV Movie',
+  53: 'Thriller',
+  10752: 'War',
+  37: 'Western',
+};
+
 /** TMDB's names for a pool genre that the pool spells otherwise. */
 const RENAMED: Readonly<Record<string, string>> = {
   'Science Fiction': 'Sci-Fi',
@@ -41,4 +64,9 @@ export function tmdbGenres(names: readonly string[]): string[] {
     }
   }
   return mapped;
+}
+
+/** Pure: a TMDB movie genre id → TMDB's own name for it, `null` for an unknown id. */
+export function tmdbGenreName(id: number): string | null {
+  return TMDB_GENRE_NAMES[id] ?? null;
 }

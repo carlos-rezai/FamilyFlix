@@ -10,7 +10,7 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { tmdbGenres } from './tmdbGenres';
+import { tmdbGenreName, tmdbGenres } from './tmdbGenres';
 
 describe('tmdbGenres: TMDB names onto the Genre pool', () => {
   it.each([
@@ -53,5 +53,27 @@ describe('tmdbGenres: TMDB names onto the Genre pool', () => {
 
   it('answers nothing for nothing', () => {
     expect(tmdbGenres([])).toEqual([]);
+  });
+});
+
+describe('tmdbGenreName: a TMDB movie genre id → TMDB’s name', () => {
+  it.each([
+    [18, 'Drama'],
+    [878, 'Science Fiction'],
+    [14, 'Fantasy'],
+    [10751, 'Family'],
+  ])('names %i as %s', (id, name) => {
+    expect(tmdbGenreName(id)).toBe(name);
+  });
+
+  it('answers null for an id TMDB does not use for films', () => {
+    expect(tmdbGenreName(10759)).toBeNull();
+    expect(tmdbGenreName(0)).toBeNull();
+  });
+
+  it('names ids tmdbGenres can put on the pool, and ids it drops', () => {
+    expect(tmdbGenres([878, 14].map((id) => tmdbGenreName(id) ?? ''))).toEqual([
+      'Sci-Fi',
+    ]);
   });
 });

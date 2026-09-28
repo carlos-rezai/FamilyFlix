@@ -31,8 +31,8 @@ const CAST_SIZE = 10;
 const text = (value: string | null | undefined): string | null =>
   value === null || value === undefined || value.trim() === '' ? null : value;
 
-/** The year off an ISO date, `null` for none. */
-function yearOf(date: string | null | undefined): number | null {
+/** The year off a TMDB date — a release or an air date — `null` for none. */
+export function releaseYear(date: string | null | undefined): number | null {
   const year = Number.parseInt((date ?? '').slice(0, 4), 10);
   return Number.isNaN(year) ? null : year;
 }
@@ -69,7 +69,7 @@ export function fetchedFields(detail: TmdbMovieDetail): FetchedFields {
     poster: text(detail.poster_path),
     backdrop: text(detail.backdrop_path),
     runtime: detail.runtime ? detail.runtime : null,
-    year: yearOf(detail.release_date),
+    year: releaseYear(detail.release_date),
     genres: tmdbGenres(detail.genres.map((genre) => genre.name)),
     director,
     cast,
@@ -91,8 +91,8 @@ export function fetchedTvFields(detail: TmdbTvDetail): FetchedTvFields {
     poster: text(detail.poster_path),
     backdrop: text(detail.backdrop_path),
     runtime: null,
-    year: yearOf(detail.first_air_date),
-    endYear: yearOf(detail.last_air_date),
+    year: releaseYear(detail.first_air_date),
+    endYear: releaseYear(detail.last_air_date),
     genres: tmdbGenres(detail.genres.map((genre) => genre.name)),
     director: text(creators),
     cast: topCast(detail.credits.cast),

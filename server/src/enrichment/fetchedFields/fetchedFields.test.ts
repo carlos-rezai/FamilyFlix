@@ -12,7 +12,7 @@
 import { describe, expect, it } from 'vitest';
 
 import type { TmdbMovieDetail } from '../tmdbClient/tmdbClient';
-import { fetchedFields } from './fetchedFields';
+import { fetchedFields, releaseYear } from './fetchedFields';
 
 /** A TMDB `/3/movie/{id}?append_to_response=credits` body, overridable. */
 function detail(overrides: Partial<TmdbMovieDetail> = {}): TmdbMovieDetail {
@@ -132,5 +132,24 @@ describe('fetchedFields: a TMDB movie → our columns', () => {
     expect(blank.year).toBeNull();
     expect(blank.poster).toBeNull();
     expect(blank.backdrop).toBeNull();
+  });
+});
+
+describe('releaseYear: a TMDB date → its year', () => {
+  it('reads the year off a full date', () => {
+    expect(releaseYear('2019-06-14')).toBe(2019);
+  });
+
+  it('reads the year off a year alone', () => {
+    expect(releaseYear('1963')).toBe(1963);
+  });
+
+  it('answers null for an empty string — TMDB’s unreleased film', () => {
+    expect(releaseYear('')).toBeNull();
+  });
+
+  it('answers null for null and undefined', () => {
+    expect(releaseYear(null)).toBeNull();
+    expect(releaseYear(undefined)).toBeNull();
   });
 });
