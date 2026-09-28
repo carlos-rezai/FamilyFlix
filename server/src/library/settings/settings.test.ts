@@ -243,18 +243,18 @@ describe('library: libraryRoot / setLibraryRoot — the remembered root', () => 
   it('stores the root and reads it back as given', () => {
     const storage = freshStorage();
 
-    storage.setLibraryRoot('E:\Movies');
+    storage.setLibraryRoot(String.raw`E:\Movies`);
 
-    expect(storage.libraryRoot()).toBe('E:\Movies');
+    expect(storage.libraryRoot()).toBe(String.raw`E:\Movies`);
   });
 
   it('replaces the root on a second write rather than failing on the key', () => {
     const storage = freshStorage();
-    storage.setLibraryRoot('E:\Movies');
+    storage.setLibraryRoot(String.raw`E:\Movies`);
 
-    storage.setLibraryRoot('F:\Films');
+    storage.setLibraryRoot(String.raw`F:\Films`);
 
-    expect(storage.libraryRoot()).toBe('F:\Films');
+    expect(storage.libraryRoot()).toBe(String.raw`F:\Films`);
   });
 
   it('leaves the household settings and the key exactly as they were', () => {
@@ -262,7 +262,7 @@ describe('library: libraryRoot / setLibraryRoot — the remembered root', () => 
     storage.setSubtitleLanguage('French');
     storage.setTmdbKey('kept-key');
 
-    storage.setLibraryRoot('E:\Movies');
+    storage.setLibraryRoot(String.raw`E:\Movies`);
 
     expect(storage.settings()).toEqual({ subtitleLanguage: 'French' });
     expect(storage.tmdbKey()).toBe('kept-key');
@@ -271,11 +271,11 @@ describe('library: libraryRoot / setLibraryRoot — the remembered root', () => 
   it('survives closing and reopening the database', () => {
     const path = tempDbPath();
     const first = track(createSqliteStorage(path));
-    first.setLibraryRoot('E:\Movies');
+    first.setLibraryRoot(String.raw`E:\Movies`);
     first.close();
 
     const second = track(createSqliteStorage(path));
 
-    expect(second.libraryRoot()).toBe('E:\Movies');
+    expect(second.libraryRoot()).toBe(String.raw`E:\Movies`);
   });
 });

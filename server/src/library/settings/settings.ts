@@ -35,12 +35,18 @@ export function createSettings(db: SqliteDatabase): SettingsRepository {
       ON CONFLICT(key) DO UPDATE SET value = excluded.value
   `);
 
+  /** The value stored under `key`, or `null` when none is. */
+  function valueOf(key: string): string | null {
+    const row = selectValue.get(key) as { value: string } | undefined;
+    return row?.value ?? null;
+  }
+
   function settings(): Settings {
-    const row = selectValue.get(SUBTITLE_LANGUAGE_KEY) as
-      | { value: string }
-      | undefined;
     // Reading applies the default; it does not write it down as if chosen.
-    return { subtitleLanguage: row?.value ?? DEFAULT_SUBTITLE_LANGUAGE };
+    return {
+      subtitleLanguage:
+        valueOf(SUBTITLE_LANGUAGE_KEY) ?? DEFAULT_SUBTITLE_LANGUAGE,
+    };
   }
 
   function setSubtitleLanguage(language: string): void {
@@ -48,8 +54,7 @@ export function createSettings(db: SqliteDatabase): SettingsRepository {
   }
 
   function tmdbKey(): string | null {
-    const row = selectValue.get(TMDB_KEY) as { value: string } | undefined;
-    return row?.value ?? null;
+    return valueOf(TMDB_KEY);
   }
 
   function setTmdbKey(key: string): void {
@@ -57,10 +62,7 @@ export function createSettings(db: SqliteDatabase): SettingsRepository {
   }
 
   function enrichmentLastSyncedAt(): string | null {
-    const row = selectValue.get(LAST_SYNCED_KEY) as
-      | { value: string }
-      | undefined;
-    return row?.value ?? null;
+    return valueOf(LAST_SYNCED_KEY);
   }
 
   function setEnrichmentLastSyncedAt(at: string): void {
@@ -68,10 +70,7 @@ export function createSettings(db: SqliteDatabase): SettingsRepository {
   }
 
   function libraryRoot(): string | null {
-    const row = selectValue.get(LIBRARY_ROOT_KEY) as
-      | { value: string }
-      | undefined;
-    return row?.value ?? null;
+    return valueOf(LIBRARY_ROOT_KEY);
   }
 
   function setLibraryRoot(root: string): void {
