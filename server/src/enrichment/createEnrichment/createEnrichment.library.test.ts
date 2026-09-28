@@ -21,32 +21,30 @@
 import { Readable } from 'node:stream';
 import { describe, expect, it, vi } from 'vitest';
 
-import type { EnrichField, EnrichmentRun, EnrichScope } from '@/types';
+import {
+  ENRICH_FIELDS,
+  type EnrichField,
+  type EnrichmentRun,
+  type EnrichScope,
+} from '@/types';
 import { createMedia } from '../../media/createMedia/createMedia';
 import { freshStorage } from '../../test-support/freshStorage/freshStorage';
 import { sandboxRoot } from '../../test-support/sandboxRoot/sandboxRoot';
+import {
+  fakeTmdb,
+  reviewed,
+  TMDB_KEY as KEY,
+  tmdbMovieDetail,
+  tmdbMovieResult,
+  type FakeTmdb,
+} from '../../test-support/fakeTmdb/fakeTmdb';
 import type {
-  TmdbClient,
   TmdbMovieDetail,
   TmdbMovieResult,
-  TmdbOutcome,
 } from '../tmdbClient/tmdbClient';
 import { createEnrichment } from './createEnrichment';
 
-const KEY = '0123456789abcdef0123456789abcdef';
-
-const ALL_FIELDS: EnrichField[] = [
-  'synopsis',
-  'poster',
-  'backdrop',
-  'runtime',
-  'year',
-  'genres',
-  'director',
-  'cast',
-  'originalTitle',
-  'tmdbScore',
-];
+const ALL_FIELDS: EnrichField[] = [...ENRICH_FIELDS];
 
 const LOST_LINE =
   'Lost the connection — stopped. Anything already fetched is kept.';
@@ -61,35 +59,25 @@ interface Film {
 
 function film(id: number, title: string, year: number, overview: string): Film {
   const slug = title.toLowerCase().replace(/\s+/g, '-');
+  const poster = `/${slug}-poster.jpg`;
   return {
     title,
     year,
-    result: {
-      id,
-      title,
-      original_title: title,
-      release_date: `${year}-06-14`,
-      genre_ids: [18],
-      original_language: 'en',
-      poster_path: `/${slug}-poster.jpg`,
+    result: tmdbMovieResult(id, title, year, {
+      poster_path: poster,
       vote_average: 7.4,
-    },
-    detail: {
-      id,
-      title,
-      original_title: title,
+    }),
+    detail: tmdbMovieDetail(id, title, year, {
       overview,
-      release_date: `${year}-06-14`,
       runtime: 101,
-      genres: [{ id: 18, name: 'Drama' }],
       vote_average: 7.4,
-      poster_path: `/${slug}-poster.jpg`,
+      poster_path: poster,
       backdrop_path: `/${slug}-backdrop.jpg`,
       credits: {
         cast: [{ name: 'Ada Brennan', order: 0 }],
         crew: [{ name: 'Paul Verhoek', job: 'Director' }],
       },
-    },
+    }),
   };
 }
 
@@ -107,39 +95,12 @@ const HARBOR = film(
 );
 const FILMS = [LANTERN, HARBOR];
 
-const ok = <T>(value: T): Promise<TmdbOutcome<T>> =>
-  Promise.resolve({ kind: 'ok', value });
-
 /** A TMDB that knows both films, and answers every image with fake bytes. */
-function fakeTmdb() {
-  return {
-    authenticate: vi.fn<TmdbClient['authenticate']>(() =>
-      Promise.resolve('accepted')
-    ),
-    searchMovie: vi.fn<TmdbClient['searchMovie']>((_key, title) =>
-      ok(FILMS.filter((each) => each.title === title).map((f) => f.result))
-    ),
-    movie: vi.fn<TmdbClient['movie']>((_key, id) => {
-      const found = FILMS.find((each) => each.detail.id === id);
-      return found
-        ? ok(found.detail)
-        : Promise.resolve({ kind: 'unreachable' });
-    }),
-    image: vi.fn<TmdbClient['image']>((path: string) =>
-      ok(Readable.from([Buffer.from(`image bytes of ${path}`)]))
-    ),
-  };
-}
-
-type FakeTmdb = ReturnType<typeof fakeTmdb>;
-
-/** A promise the test settles by hand — a TMDB request held in flight. */
-function held<T>() {
-  let release: (value: T) => void = () => undefined;
-  const promise = new Promise<T>((resolve) => {
-    release = resolve;
+function knowsBoth(): FakeTmdb {
+  return fakeTmdb({
+    searches: Object.fromEntries(FILMS.map((f) => [f.title, [f.result]])),
+    movies: FILMS.map((f) => f.detail),
   });
-  return { promise, release };
 }
 
 interface FilmValues {
@@ -148,13 +109,13 @@ interface FilmValues {
 }
 
 /** A library with a key, a sandbox media root, and the domain over both. */
-function world(client: FakeTmdb = fakeTmdb()) {
+function world(client: FakeTmdb = knowsBoth()) {
   const storage = freshStorage();
   storage.setTmdbKey(KEY);
   const media = createMedia(sandboxRoot('familyflix-enrich-library-'));
   const enrichment = createEnrichment({
     storage,
-    client: client as unknown as TmdbClient,
+    client,
     media,
   });
 
@@ -190,17 +151,6 @@ function startSync(
     writeSheet: false,
     writePosters: false,
   });
-}
-
-async function reviewed(enrichment: Enrichment): Promise<EnrichmentRun> {
-  await vi.waitFor(() => {
-    expect(enrichment.current()?.phase).toBe('review');
-  });
-  const run = enrichment.current();
-  if (run === null) {
-    throw new Error('no Current enrichment run');
-  }
-  return run;
 }
 
 const lines = (run: EnrichmentRun) => run.log.map((line) => line.text);
@@ -378,9 +328,8 @@ describe('createEnrichment: the log', () => {
 
 describe('createEnrichment: one title at a time', () => {
   it('does not ask about the next film while one is in flight', async () => {
-    const client = fakeTmdb();
-    const first = held<TmdbOutcome<TmdbMovieDetail>>();
-    client.movie.mockImplementationOnce(() => first.promise);
+    const client = knowsBoth();
+    client.hold('movie');
     const { enrichment, addFilm } = world(client);
     await addFilm(LANTERN);
     await addFilm(HARBOR);
@@ -398,17 +347,8 @@ describe('createEnrichment: one title at a time', () => {
 describe('createEnrichment: cancel — Stop', () => {
   /** A run over both films, the second film's detail request held. */
   async function heldOnSecond() {
-    const client = fakeTmdb();
-    const second = held<TmdbOutcome<TmdbMovieDetail>>();
-    let calls = 0;
-    client.movie.mockImplementation((_key, id) => {
-      calls += 1;
-      if (calls === 2) return second.promise;
-      const found = FILMS.find((each) => each.detail.id === id);
-      return found
-        ? ok(found.detail)
-        : Promise.resolve({ kind: 'unreachable' });
-    });
+    const client = knowsBoth();
+    const second = client.hold('movie', 2);
     const w = world(client);
     const ids = [await w.addFilm(LANTERN), await w.addFilm(HARBOR)];
     await startSync(w.enrichment, 'all');
@@ -484,15 +424,8 @@ describe('createEnrichment: cancel — Stop', () => {
 describe('createEnrichment: the run ending early, into review', () => {
   /** The second search answers `outcome`; the first answers as TMDB would. */
   function failingSecondSearch(outcome: 'unreachable' | 'refused') {
-    const client = fakeTmdb();
-    let calls = 0;
-    client.searchMovie.mockImplementation((_key, title) => {
-      calls += 1;
-      if (calls === 2) return Promise.resolve({ kind: outcome });
-      return ok(
-        FILMS.filter((each) => each.title === title).map((f) => f.result)
-      );
-    });
+    const client = knowsBoth();
+    client.fail('searchMovie', 2, outcome);
     return client;
   }
 
@@ -539,9 +472,8 @@ describe('createEnrichment: the run ending early, into review', () => {
 
 describe('createEnrichment: a second start while one runs', () => {
   it('is refused as busy, the first run untouched', async () => {
-    const client = fakeTmdb();
-    const first = held<TmdbOutcome<TmdbMovieResult[]>>();
-    client.searchMovie.mockImplementationOnce(() => first.promise);
+    const client = knowsBoth();
+    client.hold('searchMovie');
     const { enrichment, addFilm } = world(client);
     await addFilm(LANTERN);
 
@@ -573,9 +505,8 @@ describe('createEnrichment: reaching review', () => {
   });
 
   it('stamps nothing while the run is still going', async () => {
-    const client = fakeTmdb();
-    const first = held<TmdbOutcome<TmdbMovieResult[]>>();
-    client.searchMovie.mockImplementationOnce(() => first.promise);
+    const client = knowsBoth();
+    client.hold('searchMovie');
     const { enrichment, storage, addFilm } = world(client);
     await addFilm(LANTERN);
 

@@ -19,130 +19,76 @@
 // - `dismiss(id)` — _Skip_ — takes the row off and writes nothing.
 
 import { Readable } from 'node:stream';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
-import type { Decision, EnrichField, EnrichmentRun } from '@/types';
+import {
+  ENRICH_FIELDS,
+  type Decision,
+  type EnrichField,
+  type EnrichmentRun,
+} from '@/types';
 import { createMedia } from '../../media/createMedia/createMedia';
 import { freshStorage } from '../../test-support/freshStorage/freshStorage';
 import { sandboxRoot } from '../../test-support/sandboxRoot/sandboxRoot';
+import {
+  fakeTmdb,
+  reviewed,
+  TMDB_KEY as KEY,
+  tmdbMovieDetail,
+  tmdbMovieResult,
+} from '../../test-support/fakeTmdb/fakeTmdb';
 import type {
-  TmdbClient,
   TmdbMovieDetail,
   TmdbMovieResult,
-  TmdbOutcome,
 } from '../tmdbClient/tmdbClient';
 import { createEnrichment } from './createEnrichment';
 
-const KEY = '0123456789abcdef0123456789abcdef';
-
-const ALL_FIELDS: EnrichField[] = [
-  'synopsis',
-  'poster',
-  'backdrop',
-  'runtime',
-  'year',
-  'genres',
-  'director',
-  'cast',
-  'originalTitle',
-  'tmdbScore',
-];
-
-function result(id: number, title: string, year: number): TmdbMovieResult {
-  return {
-    id,
-    title,
-    original_title: title,
-    release_date: `${year}-06-14`,
-    genre_ids: [18],
-    original_language: 'en',
-    poster_path: `/poster-${id}.jpg`,
-    vote_average: 7.1,
-  };
-}
-
-function detail(id: number, title: string, year: number): TmdbMovieDetail {
-  return {
-    id,
-    title,
-    original_title: title,
-    overview: `The ${year} ${title}.`,
-    release_date: `${year}-06-14`,
-    runtime: 98,
-    genres: [{ id: 18, name: 'Drama' }],
-    vote_average: 7.1,
-    poster_path: `/poster-${id}.jpg`,
-    backdrop_path: `/backdrop-${id}.jpg`,
-    credits: {
-      cast: [{ name: `Lead of ${id}`, order: 0 }],
-      crew: [{ name: `Director of ${id}`, job: 'Director' }],
-    },
-  };
-}
+const ALL_FIELDS: EnrichField[] = [...ENRICH_FIELDS];
 
 /** What TMDB's search answers, by the query it is sent. */
 const SEARCHES: Record<string, TmdbMovieResult[]> = {
   // Two releases share the title — one of them exact, which is not enough.
   'Harbor Lights': [
-    result(101, 'Harbor Lights', 1963),
-    result(102, 'Harbor Lights', 2019),
+    tmdbMovieResult(101, 'Harbor Lights', 1963),
+    tmdbMovieResult(102, 'Harbor Lights', 2019),
   ],
   // Five answers: 100, 85, 70, then two far below.
   'The Quiet Coast': [
-    result(301, 'The Quiet Coast', 2004),
-    result(302, 'Quiet Coast Road', 1990),
-    result(303, 'The Quiet Coast', 2005),
-    result(304, 'Quiet', 1971),
-    result(305, 'The Quiet Coast', 1980),
+    tmdbMovieResult(301, 'The Quiet Coast', 2004),
+    tmdbMovieResult(302, 'Quiet Coast Road', 1990),
+    tmdbMovieResult(303, 'The Quiet Coast', 2005),
+    tmdbMovieResult(304, 'Quiet', 1971),
+    tmdbMovieResult(305, 'The Quiet Coast', 1980),
   ],
   // One answer, its year off: not Confident.
-  Driftwood: [result(401, 'Driftwood', 1999)],
+  Driftwood: [tmdbMovieResult(401, 'Driftwood', 1999)],
   // One answer for a yearless title with an equal key: Confident.
-  Lanternlight: [result(501, 'Lanternlight', 2011)],
+  Lanternlight: [tmdbMovieResult(501, 'Lanternlight', 2011)],
   // Nothing at all.
   Sundial: [],
   // What a search from the review finds.
-  'Sundial 2004': [result(601, 'Sundial', 2004), result(602, 'Sundials', 2006)],
+  'Sundial 2004': [
+    tmdbMovieResult(601, 'Sundial', 2004),
+    tmdbMovieResult(602, 'Sundials', 2006),
+  ],
   Sundal: [],
 };
 
 const DETAILS: TmdbMovieDetail[] = [
-  detail(101, 'Harbor Lights', 1963),
-  detail(102, 'Harbor Lights', 2019),
-  detail(501, 'Lanternlight', 2011),
-  detail(601, 'Sundial', 2004),
+  tmdbMovieDetail(101, 'Harbor Lights', 1963),
+  tmdbMovieDetail(102, 'Harbor Lights', 2019),
+  tmdbMovieDetail(501, 'Lanternlight', 2011),
+  tmdbMovieDetail(601, 'Sundial', 2004),
 ];
-
-const ok = <T>(value: T): Promise<TmdbOutcome<T>> =>
-  Promise.resolve({ kind: 'ok', value });
-
-function fakeTmdb() {
-  return {
-    authenticate: vi.fn<TmdbClient['authenticate']>(() =>
-      Promise.resolve('accepted')
-    ),
-    searchMovie: vi.fn<TmdbClient['searchMovie']>((_key, title) =>
-      ok(SEARCHES[title] ?? [])
-    ),
-    movie: vi.fn<TmdbClient['movie']>((_key, id) => {
-      const found = DETAILS.find((each) => each.id === id);
-      return found ? ok(found) : Promise.resolve({ kind: 'unreachable' });
-    }),
-    image: vi.fn<TmdbClient['image']>((path: string) =>
-      ok(Readable.from([Buffer.from(`image bytes of ${path}`)]))
-    ),
-    reachable: vi.fn<TmdbClient['reachable']>(() => Promise.resolve(true)),
-  };
-}
 
 function world() {
   const storage = freshStorage();
   storage.setTmdbKey(KEY);
   const media = createMedia(sandboxRoot('familyflix-enrich-decisions-'));
-  const client = fakeTmdb();
+  const client = fakeTmdb({ searches: SEARCHES, movies: DETAILS });
   const enrichment = createEnrichment({
     storage,
-    client: client as unknown as TmdbClient,
+    client,
     media,
   });
 
@@ -168,12 +114,7 @@ async function syncEverything(enrichment: Enrichment): Promise<EnrichmentRun> {
     writeSheet: false,
     writePosters: false,
   });
-  await vi.waitFor(() => {
-    expect(enrichment.current()?.phase).toBe('review');
-  });
-  const run = enrichment.current();
-  if (run === null) throw new Error('no Current enrichment run');
-  return run;
+  return reviewed(enrichment);
 }
 
 function decisionFor(run: EnrichmentRun | null, title: string): Decision {

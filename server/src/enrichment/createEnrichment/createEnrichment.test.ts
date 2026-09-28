@@ -20,35 +20,28 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { Readable } from 'node:stream';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
-import type { EnrichField, EnrichmentRun } from '@/types';
+import { ENRICH_FIELDS, type EnrichField } from '@/types';
 import type { LibraryStorage } from '../../library';
 import { createMedia } from '../../media/createMedia/createMedia';
 import { freshStorage } from '../../test-support/freshStorage/freshStorage';
 import { sandboxRoot } from '../../test-support/sandboxRoot/sandboxRoot';
+import {
+  fakeTmdb,
+  reviewed,
+  TMDB_KEY as KEY,
+  tmdbImageBytes,
+  type FakeTmdb,
+} from '../../test-support/fakeTmdb/fakeTmdb';
 import type {
-  TmdbClient,
   TmdbMovieDetail,
   TmdbMovieResult,
 } from '../tmdbClient/tmdbClient';
 import { createEnrichment } from './createEnrichment';
 
-const KEY = '0123456789abcdef0123456789abcdef';
-
 /** The ten chips, every one on — the setup's default. */
-const ALL_FIELDS: EnrichField[] = [
-  'synopsis',
-  'poster',
-  'backdrop',
-  'runtime',
-  'year',
-  'genres',
-  'director',
-  'cast',
-  'originalTitle',
-  'tmdbScore',
-];
+const ALL_FIELDS: EnrichField[] = [...ENRICH_FIELDS];
 
 const RESULT: TmdbMovieResult = {
   id: 550123,
@@ -88,45 +81,24 @@ const DETAIL: TmdbMovieDetail = {
   },
 };
 
-/** The bytes the fake image stream yields for a TMDB image path. */
-const imageBytes = (path: string) => `image bytes of ${path}`;
-
-/** A TMDB that knows one film, and answers every image with fake bytes. */
-function fakeTmdb(results: TmdbMovieResult[] = [RESULT]) {
-  return {
-    authenticate: vi.fn<TmdbClient['authenticate']>(() =>
-      Promise.resolve('accepted')
-    ),
-    searchMovie: vi.fn<TmdbClient['searchMovie']>(() =>
-      Promise.resolve({ kind: 'ok', value: results })
-    ),
-    movie: vi.fn<TmdbClient['movie']>(() =>
-      Promise.resolve({ kind: 'ok', value: DETAIL })
-    ),
-    image: vi.fn<TmdbClient['image']>((path: string) =>
-      Promise.resolve({
-        kind: 'ok',
-        value: Readable.from([Buffer.from(imageBytes(path))]),
-      })
-    ),
-  };
-}
-
-type FakeTmdb = ReturnType<typeof fakeTmdb>;
-
 interface FilmOverrides {
   tmdbId?: number;
 }
 
 /** A library with a key, a sandbox media root, and the domain over both. */
-function world(client: FakeTmdb = fakeTmdb()) {
+function world(
+  client: FakeTmdb = fakeTmdb({
+    searches: { 'The Lantern Keeper': [RESULT] },
+    movies: [DETAIL],
+  })
+) {
   const storage = freshStorage();
   storage.setTmdbKey(KEY);
   const mediaRoot = sandboxRoot('familyflix-enrich-');
   const media = createMedia(mediaRoot);
   const enrichment = createEnrichment({
     storage,
-    client: client as unknown as TmdbClient,
+    client,
     media,
   });
 
@@ -164,18 +136,6 @@ function startSingle(
     writeSheet: false,
     writePosters: false,
   });
-}
-
-/** The Current enrichment run, once it has reached review. */
-async function reviewed(enrichment: Enrichment): Promise<EnrichmentRun> {
-  await vi.waitFor(() => {
-    expect(enrichment.current()?.phase).toBe('review');
-  });
-  const run = enrichment.current();
-  if (run === null) {
-    throw new Error('no Current enrichment run');
-  }
-  return run;
 }
 
 /** The TMDB image paths the run asked the fake for. */
@@ -269,10 +229,10 @@ describe('createEnrichment: a Confident movie is written', () => {
     expect(movie?.backdropPath).toBe('the-lantern-keeper-2019/backdrop.jpg');
     const folder = join(mediaRoot, 'the-lantern-keeper-2019');
     expect(readFileSync(join(folder, 'poster.jpg'), 'utf8')).toBe(
-      imageBytes('/lantern-poster.jpg')
+      tmdbImageBytes('/lantern-poster.jpg')
     );
     expect(readFileSync(join(folder, 'backdrop.jpg'), 'utf8')).toBe(
-      imageBytes('/lantern-backdrop.jpg')
+      tmdbImageBytes('/lantern-backdrop.jpg')
     );
   });
 

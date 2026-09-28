@@ -23,29 +23,22 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join, posix } from 'node:path';
 import { Readable } from 'node:stream';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
-import type { EnrichField, EnrichmentRun, EnrichScope } from '@/types';
+import { ENRICH_FIELDS, type EnrichField, type EnrichScope } from '@/types';
 import { createMedia } from '../../media/createMedia/createMedia';
 import { freshStorage } from '../../test-support/freshStorage/freshStorage';
 import { sandboxRoot } from '../../test-support/sandboxRoot/sandboxRoot';
-import type { TmdbClient, TmdbOutcome } from '../tmdbClient/tmdbClient';
+import {
+  fakeTmdb,
+  reviewed,
+  TMDB_KEY as KEY,
+  type FakeTmdb,
+} from '../../test-support/fakeTmdb/fakeTmdb';
+import type { TmdbSeason } from '../tmdbClient/tmdbClient';
 import { createEnrichment } from './createEnrichment';
 
-const KEY = '0123456789abcdef0123456789abcdef';
-
-const ALL_FIELDS: EnrichField[] = [
-  'synopsis',
-  'poster',
-  'backdrop',
-  'runtime',
-  'year',
-  'genres',
-  'director',
-  'cast',
-  'originalTitle',
-  'tmdbScore',
-];
+const ALL_FIELDS: EnrichField[] = [...ENRICH_FIELDS];
 
 const SHOW_ID = 71001;
 
@@ -89,7 +82,7 @@ const SHOW_DETAIL = {
 };
 
 /** TMDB's `/3/tv/{id}/season/{n}`, by season number. */
-const SEASONS: Record<number, unknown> = {
+const SEASONS: Record<number, TmdbSeason> = {
   0: {
     season_number: 0,
     episodes: [
@@ -147,36 +140,14 @@ const SEASONS: Record<number, unknown> = {
   },
 };
 
-const ok = <T>(value: T): Promise<TmdbOutcome<T>> =>
-  Promise.resolve({ kind: 'ok', value });
-
 /** A TMDB that knows the one show, and no film at all. */
-function fakeTmdb(seasons: Record<number, unknown> = SEASONS) {
-  return {
-    authenticate: vi.fn(() => Promise.resolve('accepted')),
-    reachable: vi.fn(() => Promise.resolve(true)),
-    searchMovie: vi.fn(() => ok([])),
-    movie: vi.fn(() => Promise.resolve({ kind: 'unreachable' })),
-    searchTv: vi.fn((_key: string, title: string) =>
-      ok(title === SHOW_RESULT.name ? [SHOW_RESULT] : [])
-    ),
-    tv: vi.fn((_key: string, id: number) =>
-      id === SHOW_ID
-        ? ok(SHOW_DETAIL)
-        : Promise.resolve({ kind: 'unreachable' })
-    ),
-    season: vi.fn((_key: string, id: number, n: number) =>
-      id === SHOW_ID && seasons[n] !== undefined
-        ? ok(seasons[n])
-        : Promise.resolve({ kind: 'unreachable' })
-    ),
-    image: vi.fn((path: string) =>
-      ok(Readable.from([Buffer.from(`image bytes of ${path}`)]))
-    ),
-  };
+function knowsTheShow(seasons: Record<number, TmdbSeason> = SEASONS) {
+  return fakeTmdb({
+    tvSearches: { [SHOW_RESULT.name]: [SHOW_RESULT] },
+    shows: [SHOW_DETAIL],
+    seasons: { [SHOW_ID]: seasons },
+  });
 }
-
-type FakeTmdb = ReturnType<typeof fakeTmdb>;
 
 interface OnDisk {
   season: number;
@@ -194,14 +165,14 @@ const ON_DISK: OnDisk[] = [
 ];
 
 /** A library with a key, a sandbox media root, and the domain over both. */
-function world(client: FakeTmdb = fakeTmdb()) {
+function world(client: FakeTmdb = knowsTheShow()) {
   const storage = freshStorage();
   storage.setTmdbKey(KEY);
   const root = sandboxRoot('familyflix-enrich-series-');
   const media = createMedia(root);
   const enrichment = createEnrichment({
     storage,
-    client: client as unknown as TmdbClient,
+    client,
     media,
   });
 
@@ -256,17 +227,6 @@ function startSync(
     writeSheet: false,
     writePosters: false,
   });
-}
-
-async function reviewed(enrichment: Enrichment): Promise<EnrichmentRun> {
-  await vi.waitFor(() => {
-    expect(enrichment.current()?.phase).toBe('review');
-  });
-  const run = enrichment.current();
-  if (run === null) {
-    throw new Error('no Current enrichment run');
-  }
-  return run;
 }
 
 function detailOf(storage: ReturnType<typeof freshStorage>, id: string) {
@@ -607,7 +567,7 @@ describe('createEnrichment: episodes never raise a Decision', () => {
 
   it('leaves an episode TMDB does not list as it was, raising nothing', async () => {
     const { enrichment, storage, addShow } = world(
-      fakeTmdb({ ...SEASONS, 2: { season_number: 2, episodes: [] } })
+      knowsTheShow({ ...SEASONS, 2: { season_number: 2, episodes: [] } })
     );
     const id = await addShow();
     const before = episodeOf(storage, id, 2, 1);

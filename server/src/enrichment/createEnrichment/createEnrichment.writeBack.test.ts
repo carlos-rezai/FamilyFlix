@@ -30,9 +30,9 @@ import {
   writeFileSync,
 } from 'node:fs';
 import { join, relative } from 'node:path';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 
-import type { EnrichField, EnrichmentRun } from '@/types';
+import { ENRICH_FIELDS, type EnrichField, type EnrichmentRun } from '@/types';
 import { openDatabase } from '../../db';
 import { readSheet } from '../../import-export/readSheet/readSheet';
 import { createSqliteStorage } from '../../library';
@@ -42,51 +42,22 @@ import {
   track,
 } from '../../test-support/freshStorage/freshStorage';
 import { sandboxRoot } from '../../test-support/sandboxRoot/sandboxRoot';
-import type {
-  TmdbClient,
-  TmdbMovieDetail,
-  TmdbOutcome,
-} from '../tmdbClient/tmdbClient';
+import {
+  fakeTmdb,
+  reviewed,
+  TMDB_KEY as KEY,
+  tmdbImageBytes,
+  tmdbMovieDetail,
+} from '../../test-support/fakeTmdb/fakeTmdb';
 import { createEnrichment } from './createEnrichment';
 
 // Registered after the helpers' own hooks, so it runs first: Windows will not
 // remove a sandbox holding an open database file.
 afterEach(closeTracked);
 
-const KEY = '0123456789abcdef0123456789abcdef';
 const SHEET = 'familyflix-metadata.csv';
 
-const ALL_FIELDS: EnrichField[] = [
-  'synopsis',
-  'poster',
-  'backdrop',
-  'runtime',
-  'year',
-  'genres',
-  'director',
-  'cast',
-  'originalTitle',
-  'tmdbScore',
-];
-
-function detail(id: number, title: string, year: number): TmdbMovieDetail {
-  return {
-    id,
-    title,
-    original_title: title,
-    overview: `The ${year} ${title}.`,
-    release_date: `${year}-06-14`,
-    runtime: 98,
-    genres: [{ id: 18, name: 'Drama' }],
-    vote_average: 7.1,
-    poster_path: `/poster-${id}.jpg`,
-    backdrop_path: `/backdrop-${id}.jpg`,
-    credits: {
-      cast: [{ name: `Lead of ${id}`, order: 0 }],
-      crew: [{ name: `Director of ${id}`, job: 'Director' }],
-    },
-  };
-}
+const ALL_FIELDS: EnrichField[] = [...ENRICH_FIELDS];
 
 /** Three films, each fetched by the `tmdb_id` it already carries: Confident. */
 const FILMS = [
@@ -95,39 +66,9 @@ const FILMS = [
   { tmdbId: 503, title: 'Kettle Bay', year: 1998 },
 ] as const;
 
-const DETAILS = FILMS.map((film) => detail(film.tmdbId, film.title, film.year));
-
-const ok = <T>(value: T): Promise<TmdbOutcome<T>> =>
-  Promise.resolve({ kind: 'ok', value });
-
-/** The bytes TMDB answers for an image path. */
-const imageBytes = (path: string) => `image bytes of ${path}`;
-
-/**
- * A fake TMDB. `onLookup` is told before every request that looks a title up
- * or fetches an image — the reachability probe is not one.
- */
-function fakeTmdb(onLookup: () => void) {
-  return {
-    authenticate: vi.fn<TmdbClient['authenticate']>(() =>
-      Promise.resolve('accepted')
-    ),
-    searchMovie: vi.fn<TmdbClient['searchMovie']>(() => {
-      onLookup();
-      return ok([]);
-    }),
-    movie: vi.fn<TmdbClient['movie']>((_key, id) => {
-      onLookup();
-      const found = DETAILS.find((each) => each.id === id);
-      return found ? ok(found) : Promise.resolve({ kind: 'unreachable' });
-    }),
-    image: vi.fn<TmdbClient['image']>((path: string) => {
-      onLookup();
-      return ok(Readable.from([Buffer.from(imageBytes(path))]));
-    }),
-    reachable: vi.fn<TmdbClient['reachable']>(() => Promise.resolve(true)),
-  };
-}
+const DETAILS = FILMS.map((film) =>
+  tmdbMovieDetail(film.tmdbId, film.title, film.year)
+);
 
 /** Every file under a directory, relative to it, sorted. */
 function filesUnder(dir: string): string[] {
@@ -163,16 +104,21 @@ function world() {
 
   /** The run's log as it stood when TMDB was first asked for anything. */
   let logAtFirstLookup: string[] | null = null;
-  const client = fakeTmdb(() => {
-    if (logAtFirstLookup !== null) return;
-    logAtFirstLookup = (enrichment.current()?.log ?? []).map(
-      (line) => line.text
-    );
+  const client = fakeTmdb({
+    movies: DETAILS,
+    // The reachability probe is not a lookup.
+    onCall: ({ method }) => {
+      if (method === 'reachable' || method === 'authenticate') return;
+      if (logAtFirstLookup !== null) return;
+      logAtFirstLookup = (enrichment.current()?.log ?? []).map(
+        (line) => line.text
+      );
+    },
   });
 
   const enrichment = createEnrichment({
     storage,
-    client: client as unknown as TmdbClient,
+    client,
     media,
   });
 
@@ -223,12 +169,7 @@ async function sync(
     ...targets,
   });
   expect(started).toMatchObject({ kind: 'started' });
-  await vi.waitFor(() => {
-    expect(enrichment.current()?.phase).toBe('review');
-  });
-  const run = enrichment.current();
-  if (run === null) throw new Error('no Current enrichment run');
-  return run;
+  return reviewed(enrichment);
 }
 
 const BOTH = { writeSheet: true, writePosters: true };
@@ -294,7 +235,7 @@ describe('createEnrichment: poster.jpg into each Source folder', () => {
 
     expect(
       readFileSync(join(root, 'Lanternlight (2011)', 'poster.jpg'), 'utf8')
-    ).toBe(imageBytes('/poster-502.jpg'));
+    ).toBe(tmdbImageBytes('/poster-502.jpg'));
     expect(run.written.posters).toBe(true);
   });
 

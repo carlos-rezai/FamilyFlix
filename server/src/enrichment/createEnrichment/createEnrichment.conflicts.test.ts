@@ -17,39 +17,28 @@
 // - _Keep all mine_ is **Dismiss**: nothing on the title changes, the row goes.
 
 import { Readable } from 'node:stream';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
-import type {
-  Decision,
-  EnrichField,
-  EnrichScope,
-  EnrichmentRun,
-  FieldConflict,
+import {
+  ENRICH_FIELDS,
+  type Decision,
+  type EnrichField,
+  type EnrichScope,
+  type EnrichmentRun,
+  type FieldConflict,
 } from '@/types';
 import { createMedia } from '../../media/createMedia/createMedia';
 import { freshStorage } from '../../test-support/freshStorage/freshStorage';
 import { sandboxRoot } from '../../test-support/sandboxRoot/sandboxRoot';
-import type {
-  TmdbClient,
-  TmdbMovieDetail,
-  TmdbOutcome,
-} from '../tmdbClient/tmdbClient';
+import {
+  fakeTmdb,
+  reviewed,
+  TMDB_KEY as KEY,
+} from '../../test-support/fakeTmdb/fakeTmdb';
+import type { TmdbMovieDetail } from '../tmdbClient/tmdbClient';
 import { createEnrichment } from './createEnrichment';
 
-const KEY = '0123456789abcdef0123456789abcdef';
-
-const ALL_FIELDS: EnrichField[] = [
-  'synopsis',
-  'poster',
-  'backdrop',
-  'runtime',
-  'year',
-  'genres',
-  'director',
-  'cast',
-  'originalTitle',
-  'tmdbScore',
-];
+const ALL_FIELDS: EnrichField[] = [...ENRICH_FIELDS];
 
 const OURS = 'A lighthouse keeper on a fading coast takes in a runaway girl…';
 const THEIRS =
@@ -100,34 +89,14 @@ const HARBOR: TmdbMovieDetail = {
   },
 };
 
-const ok = <T>(value: T): Promise<TmdbOutcome<T>> =>
-  Promise.resolve({ kind: 'ok', value });
-
-function fakeTmdb() {
-  return {
-    authenticate: vi.fn<TmdbClient['authenticate']>(() =>
-      Promise.resolve('accepted')
-    ),
-    searchMovie: vi.fn<TmdbClient['searchMovie']>(() => ok([])),
-    movie: vi.fn<TmdbClient['movie']>((_key, id) => {
-      const found = [LANTERN, HARBOR].find((each) => each.id === id);
-      return found ? ok(found) : Promise.resolve({ kind: 'unreachable' });
-    }),
-    image: vi.fn<TmdbClient['image']>((path: string) =>
-      ok(Readable.from([Buffer.from(`image bytes of ${path}`)]))
-    ),
-    reachable: vi.fn<TmdbClient['reachable']>(() => Promise.resolve(true)),
-  };
-}
-
 function world() {
   const storage = freshStorage();
   storage.setTmdbKey(KEY);
   const media = createMedia(sandboxRoot('familyflix-enrich-conflicts-'));
-  const client = fakeTmdb();
+  const client = fakeTmdb({ movies: [LANTERN, HARBOR] });
   const enrichment = createEnrichment({
     storage,
-    client: client as unknown as TmdbClient,
+    client,
     media,
   });
 
@@ -185,12 +154,7 @@ async function sync(
     writeSheet: false,
     writePosters: false,
   });
-  await vi.waitFor(() => {
-    expect(enrichment.current()?.phase).toBe('review');
-  });
-  const run = enrichment.current();
-  if (run === null) throw new Error('no Current enrichment run');
-  return run;
+  return reviewed(enrichment);
 }
 
 function conflictFor(

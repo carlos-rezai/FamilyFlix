@@ -13,42 +13,24 @@
 // A real in-memory SQLite library and a fake TMDB client, the
 // `createEnrichment` suites' precedent. Nothing here goes online.
 
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import { createMedia } from '../../media/createMedia/createMedia';
+import {
+  fakeTmdb,
+  TMDB_KEY as KEY,
+} from '../../test-support/fakeTmdb/fakeTmdb';
 import { freshStorage } from '../../test-support/freshStorage/freshStorage';
 import { newMovie } from '../../test-support/newMovie/newMovie';
 import { sandboxRoot } from '../../test-support/sandboxRoot/sandboxRoot';
-import type { TmdbClient } from '../tmdbClient/tmdbClient';
 import { createEnrichment } from './createEnrichment';
-
-const KEY = '0123456789abcdef0123456789abcdef';
-
-/** A TMDB client whose probe answers `reachable`, and that knows nothing. */
-function fakeTmdb(reachable = true) {
-  return {
-    authenticate: vi.fn<TmdbClient['authenticate']>(() =>
-      Promise.resolve('accepted')
-    ),
-    searchMovie: vi.fn<TmdbClient['searchMovie']>(() =>
-      Promise.resolve({ kind: 'ok', value: [] })
-    ),
-    movie: vi.fn<TmdbClient['movie']>(() =>
-      Promise.resolve({ kind: 'unreachable' })
-    ),
-    image: vi.fn<TmdbClient['image']>(() =>
-      Promise.resolve({ kind: 'unreachable' })
-    ),
-    reachable: vi.fn<TmdbClient['reachable']>(() => Promise.resolve(reachable)),
-  };
-}
 
 function world({ reachable = true } = {}) {
   const storage = freshStorage();
-  const client = fakeTmdb(reachable);
+  const client = fakeTmdb({ reachable });
   const enrichment = createEnrichment({
     storage,
-    client: client as unknown as TmdbClient,
+    client,
     media: createMedia(sandboxRoot('familyflix-enrich-summary-')),
   });
   return { storage, client, enrichment };
