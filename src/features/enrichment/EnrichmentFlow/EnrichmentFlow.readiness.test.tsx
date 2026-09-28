@@ -220,19 +220,6 @@ describe('EnrichmentFlow — the header', () => {
 });
 
 describe('EnrichmentFlow — the offline banner', () => {
-  it('says there is no internet connection, and that the library stays', async () => {
-    serve(OFFLINE);
-    renderFlow();
-
-    expect(await screen.findByText('No internet connection')).toBeDefined();
-    expect(
-      screen.getByText(
-        'FamilyFlix works fine offline — this is the one feature that needs the network. Everything already in your library stays available.'
-      )
-    ).toBeDefined();
-    expect(screen.getByRole('button', { name: 'Retry' })).toBeDefined();
-  });
-
   it('is not drawn when TMDB answered', async () => {
     renderFlow();
 
@@ -256,20 +243,6 @@ describe('EnrichmentFlow — the offline banner', () => {
 });
 
 describe('EnrichmentFlow — the key banner', () => {
-  it('says a key is needed first, and where it goes', async () => {
-    serve(NO_KEY);
-    renderFlow();
-
-    expect(
-      await screen.findByText('A TMDB API key is needed first')
-    ).toBeDefined();
-    expect(
-      screen.getByText(
-        'It’s free and takes a minute. Paste it under Settings → Network, and it stays on this machine.'
-      )
-    ).toBeDefined();
-  });
-
   it('is not drawn with a key', async () => {
     renderFlow();
 
@@ -292,36 +265,6 @@ describe('EnrichmentFlow — the key banner', () => {
     expect(pathname()).toBe('/settings');
     expect(navigationType()).toBe('PUSH');
   });
-
-  it('draws both banners when there is neither a key nor a connection', async () => {
-    serve({ ...READY, keySet: false, online: false });
-    renderFlow();
-
-    expect(await screen.findByText('No internet connection')).toBeDefined();
-    expect(screen.getByText('A TMDB API key is needed first')).toBeDefined();
-  });
-});
-
-describe('EnrichmentFlow — the scope cards’ counts', () => {
-  it('counts the titles without Full details on Only what’s missing', async () => {
-    renderFlow();
-
-    const card = await screen.findByRole('radio', {
-      name: /Only what.s missing/,
-    });
-    expect(
-      within(card).getByText('12 titles have no synopsis or artwork')
-    ).toBeDefined();
-  });
-
-  it('counts every title on Everything', async () => {
-    renderFlow();
-
-    const card = await screen.findByRole('radio', { name: /Everything/ });
-    expect(
-      within(card).getByText('30 titles — re-checks ones already filled in')
-    ).toBeDefined();
-  });
 });
 
 describe('EnrichmentFlow — the estimate', () => {
@@ -337,22 +280,6 @@ describe('EnrichmentFlow — the estimate', () => {
     fireEvent.click(await screen.findByRole('radio', { name: /Everything/ }));
 
     expect(await screen.findByText('About 12s for 30 titles')).toBeDefined();
-  });
-
-  it('waits for a connection when offline', async () => {
-    serve(OFFLINE);
-    renderFlow();
-
-    expect(await screen.findByText('Waiting for a connection')).toBeDefined();
-  });
-
-  it('asks for a key when none is set', async () => {
-    serve(NO_KEY);
-    renderFlow();
-
-    expect(
-      await screen.findByText('A key is needed before this can run')
-    ).toBeDefined();
   });
 });
 

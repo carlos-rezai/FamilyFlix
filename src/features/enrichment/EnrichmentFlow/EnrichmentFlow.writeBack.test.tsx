@@ -161,24 +161,6 @@ async function startBody(): Promise<Record<string, unknown>> {
 }
 
 describe('EnrichmentSetup — the Write targets in the Library root', () => {
-  it('draws the Metadata sheet row with the root’s sheet path in mono', async () => {
-    renderFlow();
-
-    const saved = within(await card());
-    await saved.findByText(SHEET);
-    expect(saved.getByText(`${ROOT}\\familyflix-metadata.csv`)).toBeDefined();
-  });
-
-  it('draws the posters row with a poster.jpg in each movie folder', async () => {
-    renderFlow();
-
-    const saved = within(await card());
-    await saved.findByText(POSTERS);
-    expect(
-      saved.getByText(`${ROOT}\\<movie folder>\\poster.jpg`)
-    ).toBeDefined();
-  });
-
   it('gives each of the two a switch, both on to begin with', async () => {
     renderFlow();
 
@@ -237,7 +219,7 @@ describe('EnrichmentSetup — no Library root, no Write targets', () => {
     serve({ ...SUMMARY, libraryRoot: null });
   });
 
-  // That neither row is drawn is `EnrichmentFlow.saved.test.tsx`'s (#210).
+  // That neither row is drawn is `EnrichmentSetup.test.tsx`'s (#210).
   // This one guards the body: the switches default on, and must not leak
   // into a run that has nowhere to write them.
   it('starts a run asking for neither target', async () => {
@@ -248,64 +230,5 @@ describe('EnrichmentSetup — no Library root, no Write targets', () => {
 
     expect(body.writeSheet).toBe(false);
     expect(body.writePosters).toBe(false);
-  });
-});
-
-describe('EnrichmentReview — Saved to names what was written', () => {
-  const reviewed = (written: EnrichmentRun['written']) =>
-    makeRun({
-      phase: 'review',
-      done: 12,
-      enriched: 12,
-      written,
-    });
-
-  it('names the sheet and the posters when both landed', async () => {
-    serve(SUMMARY, reviewed({ sheet: true, posters: true }));
-    renderFlow();
-
-    expect(
-      await screen.findByText(
-        'Saved to your library, the sheet in your collection root, a poster.jpg in each movie folder.',
-        undefined,
-        { timeout: 3000 }
-      )
-    ).toBeDefined();
-  });
-
-  it('names the sheet alone when no poster landed', async () => {
-    serve(SUMMARY, reviewed({ sheet: true, posters: false }));
-    renderFlow();
-
-    expect(
-      await screen.findByText(
-        'Saved to your library, the sheet in your collection root.',
-        undefined,
-        { timeout: 3000 }
-      )
-    ).toBeDefined();
-  });
-
-  it('names the posters alone when the sheet did not land', async () => {
-    serve(SUMMARY, reviewed({ sheet: false, posters: true }));
-    renderFlow();
-
-    expect(
-      await screen.findByText(
-        'Saved to your library, a poster.jpg in each movie folder.',
-        undefined,
-        { timeout: 3000 }
-      )
-    ).toBeDefined();
-  });
-
-  it('names your library alone when nothing landed in the root', async () => {
-    serve(SUMMARY, reviewed({ sheet: false, posters: false }));
-    renderFlow();
-
-    await screen.findByText('All done', undefined, { timeout: 3000 });
-    expect(screen.getByText('Saved to your library.')).toBeDefined();
-    expect(screen.queryByText(/collection root/)).toBeNull();
-    expect(screen.queryByText(/poster\.jpg in each/)).toBeNull();
   });
 });

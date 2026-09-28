@@ -96,3 +96,48 @@ describe('WriteTargetRow — the trailing control', () => {
     expect(onToggle).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('WriteTargetRow — the prototype’s pixels', () => {
+  const SURFACE_3 = 'rgb(51, 42, 32)';
+  const BORDER = 'rgb(58, 48, 36)';
+  const TEXT = 'rgb(243, 236, 224)';
+  const TEXT_DIM = 'rgb(182, 169, 148)';
+  const TEXT_FAINT = 'rgb(133, 122, 104)';
+
+  it('draws the title at 15px 600 over the line at 13px in the faint ink', () => {
+    renderRow();
+
+    const title = getComputedStyle(screen.getByText('Your library'));
+    expect(title.fontSize).toBe('15px');
+    expect(title.fontWeight).toBe('600');
+    expect(title.color).toBe(TEXT);
+    const line = getComputedStyle(
+      screen.getByText('Always. This is what the app reads from.')
+    );
+    expect(line.fontSize).toBe('13px');
+    expect(line.color).toBe(TEXT_FAINT);
+  });
+
+  it('draws the tile with 9px corners, the glyph in the dim ink', () => {
+    renderRow();
+
+    const tile = document.querySelector('svg')?.parentElement as Element;
+    const computed = getComputedStyle(tile);
+    expect(computed.borderRadius).toBe('9px');
+    expect(computed.color).toBe(TEXT_DIM);
+  });
+
+  it('draws Required as the prototype’s pill', () => {
+    renderRow();
+
+    const pill = getComputedStyle(screen.getByText('Required'));
+    expect(pill.fontSize).toBe('12px');
+    expect(pill.fontWeight).toBe('600');
+    expect(pill.color).toBe(TEXT_FAINT);
+    expect(pill.backgroundColor).toBe(SURFACE_3);
+    expect(pill.borderTopColor).toBe(BORDER);
+    expect(pill.paddingTop).toBe('4px');
+    expect(pill.paddingLeft).toBe('11px');
+    expect(pill.borderRadius).toBe('999px');
+  });
+});

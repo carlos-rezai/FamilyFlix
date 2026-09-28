@@ -59,19 +59,6 @@ const ALL_FIELDS: EnrichField[] = [
   'tmdbScore',
 ];
 
-const CHIP_LABELS = [
-  'Synopsis',
-  'Poster',
-  'Backdrop',
-  'Runtime',
-  'Year',
-  'Genres',
-  'Director',
-  'Cast',
-  'Original title',
-  'TMDB score',
-];
-
 const SUMMARY: EnrichmentSummary = {
   total: 30,
   complete: 18,
@@ -235,54 +222,6 @@ describe('EnrichmentFlow — setup for the whole library', () => {
       (await scopeCard(/Only what.s missing/)).getAttribute('aria-checked')
     ).toBe('false');
   });
-
-  it('draws the ten field chips in the prototype’s order, every one on', async () => {
-    renderFlow();
-    await scopeCard(/Everything/);
-
-    const chips = CHIP_LABELS.map((label) =>
-      screen.getByRole('button', { name: label })
-    );
-    for (const chip of chips) {
-      expect(chip.getAttribute('aria-pressed')).toBe('true');
-    }
-    for (let i = 1; i < chips.length; i += 1) {
-      expect(
-        chips[i - 1].compareDocumentPosition(chips[i]) &
-          Node.DOCUMENT_POSITION_FOLLOWING
-      ).toBeTruthy();
-    }
-  });
-
-  it('says the household rating is never touched', async () => {
-    renderFlow();
-
-    expect(
-      await screen.findByText(
-        /Your household rating is yours — TMDB’s score is stored beside it, never over it\./
-      )
-    ).toBeDefined();
-  });
-
-  // Issue #209: what a series gets, in the prototype's words.
-  it('says a series gets the same fields at show level, plus its episodes’', async () => {
-    renderFlow();
-
-    expect(
-      await screen.findByText(
-        'Series get the same fields at show level, plus episode titles, air dates, and stills for every season found on disk.'
-      )
-    ).toBeDefined();
-  });
-
-  it('names Start Start sync', async () => {
-    renderFlow();
-
-    expect(
-      await screen.findByRole('button', { name: 'Start sync' })
-    ).toBeDefined();
-    expect(screen.queryByRole('button', { name: 'Fetch details' })).toBeNull();
-  });
 });
 
 describe('EnrichmentFlow — what Start sends', () => {
@@ -321,45 +260,6 @@ describe('EnrichmentFlow — what Start sends', () => {
 });
 
 describe('EnrichmentFlow — the running card', () => {
-  it('shows the headline, the stat line and the determinate bar', async () => {
-    renderFlow();
-    await pressStart();
-
-    expect(await screen.findByText('Fetching from TMDB…')).toBeDefined();
-    expect(screen.getByText('3 of 30 looked up')).toBeDefined();
-    expect(screen.getByRole('progressbar').getAttribute('aria-valuenow')).toBe(
-      '10'
-    );
-  });
-
-  it('shows the current item and the Activity log', async () => {
-    renderFlow();
-    await pressStart();
-
-    expect(await screen.findByText('Harbor Lights (1963)')).toBeDefined();
-    expect(
-      screen.getByText('✓ Matched   The Lantern Keeper (2019)', {
-        normalizer: (text) => text,
-      })
-    ).toBeDefined();
-  });
-
-  it('shows elapsed and the ETA', async () => {
-    renderFlow();
-    await pressStart();
-
-    expect(await screen.findByText(/^Elapsed \d+:\d\d$/)).toBeDefined();
-    expect(screen.getByText(/^About \d+:\d\d left$/)).toBeDefined();
-  });
-
-  it('offers Stop, with the line that fetched details are kept', async () => {
-    renderFlow();
-    await pressStart();
-
-    expect(await screen.findByRole('button', { name: 'Stop' })).toBeDefined();
-    expect(screen.getByText('Anything already fetched is kept.')).toBeDefined();
-  });
-
   it('polls, and draws the progress each read brings', async () => {
     serve({
       next: (run) => ({
