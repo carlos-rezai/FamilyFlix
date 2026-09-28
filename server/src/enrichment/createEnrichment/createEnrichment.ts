@@ -38,6 +38,10 @@ import {
   titledYear,
 } from '../decisionFace/decisionFace';
 import { confident, type TitledYear } from '../matchScore/matchScore';
+import {
+  currentFields,
+  currentSeriesFields,
+} from '../currentFields/currentFields';
 import { planFields } from '../planFields/planFields';
 import type {
   TmdbClient,
@@ -149,38 +153,6 @@ export interface EnrichmentDeps {
 
 /** The last lines of the log a snapshot carries, the importer's cap. */
 const LOG_CAP = 80;
-
-/** A movie's values now, in the fetched shape `planFields` compares. */
-function currentFields(movie: Movie): FetchedFields {
-  return {
-    synopsis: movie.synopsis,
-    poster: movie.posterPath,
-    backdrop: movie.backdropPath,
-    runtime: movie.runtimeMinutes,
-    year: movie.year,
-    genres: movie.genres.map((genre) => genre.name),
-    director: movie.director,
-    cast: movie.cast,
-    originalTitle: movie.originalTitle,
-    tmdbScore: movie.tmdbScore,
-  };
-}
-
-/** A series' values now, in the fetched shape: its creator as the director. */
-function currentSeriesFields(series: Series): FetchedFields {
-  return {
-    synopsis: series.synopsis,
-    poster: series.posterPath,
-    backdrop: series.backdropPath,
-    runtime: null,
-    year: series.year,
-    genres: series.genres.map((genre) => genre.name),
-    director: series.creator,
-    cast: series.cast,
-    originalTitle: series.originalTitle,
-    tmdbScore: series.tmdbScore,
-  };
-}
 
 /** An empty string or `null`: nothing there yet. */
 const blank = (value: string | null): boolean =>
