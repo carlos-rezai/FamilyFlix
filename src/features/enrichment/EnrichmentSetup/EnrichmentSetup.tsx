@@ -6,7 +6,6 @@ import {
   type EnrichScope,
 } from '@/types';
 import {
-  BangRingIcon,
   Button,
   Chip,
   DatabaseIcon,
@@ -18,13 +17,8 @@ import {
   enrichmentEstimate,
   scopeDescription,
 } from '../enrichmentView/enrichmentView';
+import { SetupBanner } from '../SetupBanner/SetupBanner';
 import {
-  Banner,
-  BannerAction,
-  BannerGlyph,
-  BannerLine,
-  BannerText,
-  BannerTitle,
   Chips,
   Estimate,
   GroupLabel,
@@ -115,45 +109,22 @@ export function EnrichmentSetup({
   return (
     <Stack>
       {summary.online ? null : (
-        <Banner $tone="danger">
-          <BannerGlyph>
-            <BangRingIcon size={20} />
-          </BannerGlyph>
-          <BannerText>
-            <BannerTitle>No internet connection</BannerTitle>
-            <BannerLine>
-              FamilyFlix works fine offline — this is the one feature that needs
-              the network. Everything already in your library stays available.
-            </BannerLine>
-          </BannerText>
-          <BannerAction>
-            <Button
-              label="Retry"
-              variant="secondary"
-              size="md"
-              onClick={onRetry}
-            />
-          </BannerAction>
-        </Banner>
+        <SetupBanner
+          tone="danger"
+          title="No internet connection"
+          line="FamilyFlix works fine offline — this is the one feature that needs the network. Everything already in your library stays available."
+          actionLabel="Retry"
+          onAction={onRetry}
+        />
       )}
       {summary.keySet ? null : (
-        <Banner $tone="accent">
-          <BannerText>
-            <BannerTitle>A TMDB API key is needed first</BannerTitle>
-            <BannerLine>
-              It’s free and takes a minute. Paste it under Settings → Network,
-              and it stays on this machine.
-            </BannerLine>
-          </BannerText>
-          <BannerAction>
-            <Button
-              label="Open Network settings"
-              variant="primary"
-              size="md"
-              onClick={onOpenKeySettings}
-            />
-          </BannerAction>
-        </Banner>
+        <SetupBanner
+          tone="accent"
+          title="A TMDB API key is needed first"
+          line="It’s free and takes a minute. Paste it under Settings → Network, and it stays on this machine."
+          actionLabel="Open Network settings"
+          onAction={onOpenKeySettings}
+        />
       )}
 
       <div>
