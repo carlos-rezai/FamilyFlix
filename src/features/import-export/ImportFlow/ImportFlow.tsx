@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { fetchTmdbKey } from '@/api/fetchTmdbKey/fetchTmdbKey';
 import { useGoBack } from '@/hooks/useGoBack/useGoBack';
 import { ChevronLeftIcon, IconButton } from '@/primitives';
+import { enrichPath } from '@/utils';
 import { ImportRefusedError } from '../api/api';
 import { ImportProgress } from '../ImportProgress/ImportProgress';
 import { ImportReview } from '../ImportReview/ImportReview';
@@ -160,7 +161,7 @@ export function ImportFlow() {
           onSkip={onSkip}
           onFinish={() =>
             run.enrich
-              ? navigate('/enrich?scope=all', { replace: true })
+              ? navigate(enrichPath({ scope: 'all' }), { replace: true })
               : navigate('/')
           }
         />

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 
 import { MenuItem } from '@/components';
 import { MoreIcon } from '@/primitives';
-import { movieFormPath } from '@/utils';
+import { enrichPath, movieFormPath } from '@/utils';
 import { DeleteMovieDialog } from '../DeleteMovieDialog/DeleteMovieDialog';
 import { CornerMenu, MoreButton } from './EditMenu.styles';
 
@@ -54,9 +54,7 @@ export function EditMenu({ movieId, title }: EditMenuProps) {
         </MenuItem>
         <MenuItem
           glyph="⟳"
-          onSelect={() =>
-            navigate(`/enrich?${new URLSearchParams({ movie: movieId })}`)
-          }
+          onSelect={() => navigate(enrichPath({ movie: movieId }))}
         >
           Fetch from TMDB
         </MenuItem>

@@ -29,5 +29,6 @@ export { moviePath } from './moviePath/moviePath';
 export { seriesPath } from './seriesPath/seriesPath';
 export { seasonPath } from './seasonPath/seasonPath';
 export { episodePlayPath } from './episodePlayPath/episodePlayPath';
+export { enrichPath } from './enrichPath/enrichPath';
 export { movieFormPath } from './movieFormPath/movieFormPath';
 export { accentScale, type AccentScale } from './accentScale/accentScale';

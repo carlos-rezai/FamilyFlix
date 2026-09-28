@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom';
 
 import { useEnrichmentSummary } from '@/hooks/useEnrichmentSummary/useEnrichmentSummary';
 import { Button, ChevronRightIcon, SyncIcon } from '@/primitives';
+import { enrichPath } from '@/utils';
 
 import { syncLine } from '../syncLine/syncLine';
 import { useTmdbKey } from '../useTmdbKey/useTmdbKey';
@@ -86,7 +87,7 @@ export function NetworkSection() {
             : 'Get a free key at themoviedb.org → Settings → API.'}
         </KeyHint>
         <SyncDivider />
-        <SyncRow type="button" onClick={() => navigate('/enrich')}>
+        <SyncRow type="button" onClick={() => navigate(enrichPath())}>
           <SyncTile aria-hidden="true">
             <SyncIcon size={19} />
           </SyncTile>
