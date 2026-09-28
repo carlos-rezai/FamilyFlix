@@ -139,7 +139,7 @@ describe('createEnrichment: an ambiguous Decision', () => {
     expect(run.enriched).toBe(0);
   });
 
-  it('carries each candidate’s id, title, year, poster and % match', async () => {
+  it('carries each candidate’s id, title, year, pool genre, language, poster and % match', async () => {
     const { enrichment, addFilm } = world();
     await addFilm('Harbor Lights', 1963);
 
@@ -153,7 +153,8 @@ describe('createEnrichment: an ambiguous Decision', () => {
         tmdbId: 101,
         title: 'Harbor Lights',
         year: 1963,
-        language: 'en',
+        genre: 'Drama',
+        language: 'EN',
         posterUrl: 'https://image.tmdb.org/t/p/w185/poster-101.jpg',
         score: 100,
       }),

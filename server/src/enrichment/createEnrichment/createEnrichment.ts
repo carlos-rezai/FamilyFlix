@@ -3,7 +3,6 @@ import { createReadStream } from 'node:fs';
 import { basename, dirname, join, posix, sep } from 'node:path';
 
 import type {
-  Candidate,
   ConflictChoices,
   ConflictField,
   Decision,
@@ -32,19 +31,20 @@ import {
   type FetchedTvFields,
 } from '../fetchedFields/fetchedFields';
 import {
-  confident,
-  matchScore,
-  type TitledYear,
-} from '../matchScore/matchScore';
+  CONFLICT_REASON,
+  decisionFace,
+  NO_MATCH_REASON,
+  noMatchFor,
+  titledYear,
+} from '../decisionFace/decisionFace';
+import { confident, type TitledYear } from '../matchScore/matchScore';
 import { planFields } from '../planFields/planFields';
 import type {
   TmdbClient,
   TmdbMovieDetail,
-  TmdbMovieResult,
   TmdbSeason,
   TmdbTvDetail,
 } from '../tmdbClient/tmdbClient';
-import { tmdbGenreName } from '../tmdbGenres/tmdbGenres';
 import {
   writeBack as realWriteBack,
   type WriteBack,
@@ -186,109 +186,8 @@ function currentSeriesFields(series: Series): FetchedFields {
 const blank = (value: string | null): boolean =>
   value === null || value.trim() === '';
 
-/** A search result as `matchScore` reads it. */
-function titledYear(result: TmdbMovieResult): TitledYear {
-  return { title: result.title, year: releaseYear(result.release_date) };
-}
-
-/** How many candidates an `ambiguous` Decision carries. */
-const CANDIDATE_CAP = 3;
-
-/** Where the review's candidate posters load from, straight off TMDB. */
-const CANDIDATE_POSTER_BASE = 'https://image.tmdb.org/t/p/w185';
-
-/** The best three results by **Match score**, as the picker's Candidates. */
-function candidatesFor(
-  ours: TitledYear,
-  results: readonly TmdbMovieResult[]
-): Candidate[] {
-  return results
-    .map(
-      (result): Candidate => ({
-        tmdbId: result.id,
-        title: result.title,
-        year: releaseYear(result.release_date),
-        genre:
-          result.genre_ids.map(tmdbGenreName).find((name) => name !== null) ??
-          null,
-        language: result.original_language || null,
-        posterUrl:
-          result.poster_path === null
-            ? null
-            : `${CANDIDATE_POSTER_BASE}${result.poster_path}`,
-        score: matchScore(ours, titledYear(result)),
-      })
-    )
-    .sort((a, b) => b.score - a.score)
-    .slice(0, CANDIDATE_CAP);
-}
-
-const COUNT_WORDS = [
-  'No',
-  'One',
-  'Two',
-  'Three',
-  'Four',
-  'Five',
-  'Six',
-  'Seven',
-  'Eight',
-  'Nine',
-  'Ten',
-  'Eleven',
-  'Twelve',
-  'Thirteen',
-  'Fourteen',
-  'Fifteen',
-  'Sixteen',
-  'Seventeen',
-  'Eighteen',
-  'Nineteen',
-  'Twenty',
-];
-
-/** An `ambiguous` reason, the count of releases spelled out. */
-function ambiguousReason(count: number): string {
-  const spelled = COUNT_WORDS[count] ?? String(count);
-  return count === 1
-    ? `${spelled} release shares this title — pick the right one.`
-    : `${spelled} releases share this title — pick the right one.`;
-}
-
-/**
- * What a search came to, as the Decision's face: candidates in the picker,
- * or the box kept with `missingReason`.
- */
-function decisionFace(
-  ours: TitledYear,
-  query: string,
-  results: readonly TmdbMovieResult[],
-  missingReason: string
-):
-  | {
-      kind: 'ambiguous';
-      reason: string;
-      query: string;
-      candidates: Candidate[];
-    }
-  | { kind: 'missing'; reason: string; query: string } {
-  if (results.length === 0) {
-    return { kind: 'missing', reason: missingReason, query };
-  }
-  return {
-    kind: 'ambiguous',
-    reason: ambiguousReason(results.length),
-    query,
-    candidates: candidatesFor(ours, results),
-  };
-}
-
 /** Why a title ended without being written, as the run's own value. */
 type Stop = 'refused' | 'unreachable';
-
-/** A `conflict` Decision's reason. */
-const CONFLICT_REASON =
-  'TMDB has different values for fields you already filled in.';
 
 /** TMDB's side of one **Field conflict**, as the column it writes. */
 function tmdbSide(
@@ -395,12 +294,7 @@ export function createEnrichment({
             id: randomUUID(),
             title: movie.title,
             path: sourcePath(movie.id),
-            ...decisionFace(
-              ours,
-              movie.title,
-              search.value,
-              'Nothing on TMDB matched this title.'
-            ),
+            ...decisionFace(ours, movie.title, search.value, NO_MATCH_REASON),
           },
         };
       }
@@ -1060,7 +954,7 @@ export function createEnrichment({
         { title: movie.title, year: movie.year },
         query,
         answer.value,
-        `Nothing on TMDB matched “${query}”.`
+        noMatchFor(query)
       ),
     };
     // A Skip or a new run while TMDB answered leaves nothing to put back.
