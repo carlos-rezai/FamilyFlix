@@ -4,7 +4,6 @@ import { basename, dirname, join, posix, sep } from 'node:path';
 
 import type {
   ConflictChoices,
-  ConflictField,
   Decision,
   EnrichField,
   EnrichmentRun,
@@ -16,12 +15,7 @@ import type {
   Series,
   StartEnrichment,
 } from '@/types';
-import type {
-  EpisodeEnrichment,
-  LibraryStorage,
-  MovieEnrichment,
-  SeriesEnrichment,
-} from '../../library';
+import type { EpisodeEnrichment, LibraryStorage } from '../../library';
 import type { Media } from '../../media/createMedia/createMedia';
 import {
   fetchedFields,
@@ -43,6 +37,11 @@ import {
   currentSeriesFields,
 } from '../currentFields/currentFields';
 import { planFields } from '../planFields/planFields';
+import {
+  chosenEnrichment,
+  movieEnrichment,
+  seriesEnrichment,
+} from '../plannedEnrichment/plannedEnrichment';
 import type {
   TmdbClient,
   TmdbMovieDetail,
@@ -160,25 +159,6 @@ const blank = (value: string | null): boolean =>
 
 /** Why a title ended without being written, as the run's own value. */
 type Stop = 'refused' | 'unreachable';
-
-/** TMDB's side of one **Field conflict**, as the column it writes. */
-function tmdbSide(
-  field: ConflictField,
-  fetched: FetchedFields
-): MovieEnrichment {
-  switch (field) {
-    case 'synopsis':
-      return fetched.synopsis === null ? {} : { synopsis: fetched.synopsis };
-    case 'year':
-      return fetched.year === null ? {} : { year: fetched.year };
-    case 'genres':
-      return { genres: fetched.genres };
-    case 'director':
-      return fetched.director === null ? {} : { director: fetched.director };
-    case 'cast':
-      return { cast: fetched.cast };
-  }
-}
 
 const STOP_LINES: Readonly<Record<Stop, string>> = {
   refused: 'TMDB refused the key.',
@@ -366,17 +346,7 @@ export function createEnrichment({
       scope: current.scope,
     });
 
-    const enrichment: MovieEnrichment = { tmdbId: detail.id };
-    if (fill.synopsis) enrichment.synopsis = fill.synopsis;
-    if (fill.runtime) enrichment.runtimeMinutes = fill.runtime;
-    if (fill.year) enrichment.year = fill.year;
-    if (fill.genres) enrichment.genres = fill.genres;
-    if (fill.director) enrichment.director = fill.director;
-    if (fill.cast) enrichment.cast = fill.cast;
-    if (fill.originalTitle) enrichment.originalTitle = fill.originalTitle;
-    if (fill.tmdbScore !== undefined && fill.tmdbScore !== null) {
-      enrichment.tmdbScore = fill.tmdbScore;
-    }
+    const enrichment = movieEnrichment(detail.id, fill);
     if (fill.poster) {
       const stored = await storeImage(
         current,
@@ -513,23 +483,13 @@ export function createEnrichment({
       scope: 'missing',
     });
 
-    const enrichment: SeriesEnrichment = { tmdbId: detail.id };
-    if (fill.synopsis) enrichment.synopsis = fill.synopsis;
-    if (fill.year) enrichment.year = fill.year;
-    if (
-      fields.includes('year') &&
-      series.endYear === null &&
-      fetched.endYear !== null
-    ) {
-      enrichment.endYear = fetched.endYear;
-    }
-    if (fill.genres) enrichment.genres = fill.genres;
-    if (fill.director) enrichment.creator = fill.director;
-    if (fill.cast) enrichment.cast = fill.cast;
-    if (fill.originalTitle) enrichment.originalTitle = fill.originalTitle;
-    if (fill.tmdbScore !== undefined && fill.tmdbScore !== null) {
-      enrichment.tmdbScore = fill.tmdbScore;
-    }
+    const enrichment = seriesEnrichment(
+      detail.id,
+      fill,
+      series,
+      fetched,
+      fields
+    );
     if (fill.poster) {
       const stored = await storeSeriesImage(
         current,
@@ -970,13 +930,10 @@ export function createEnrichment({
       return { kind: 'not-found' };
     }
     const { current, decision, movie } = found;
-    let enrichment: MovieEnrichment = {};
-    for (const { field } of decision.fields) {
-      if (choices[field] === 'tmdb') {
-        enrichment = { ...enrichment, ...tmdbSide(field, fetched) };
-      }
-    }
-    storage.enrichMovie(movie.id, enrichment);
+    storage.enrichMovie(
+      movie.id,
+      chosenEnrichment(decision.fields, choices, fetched)
+    );
     settle(current, id);
     current.enriched += 1;
     log(current, `✓ Matched   ${named(movie)}`, 'success');
