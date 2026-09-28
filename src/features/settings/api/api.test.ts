@@ -7,6 +7,7 @@ import {
   installComponent,
   removeComponent,
   saveSubtitleLanguage,
+  saveTmdbKey,
 } from './api';
 import type { PlaybackCapabilities, StorageReport } from '@/types';
 import {
@@ -486,5 +487,60 @@ describe('removeComponent', () => {
 
     await expect(refusal).rejects.toThrow();
     await expect(refusal).rejects.not.toBeInstanceOf(ComponentRefusedError);
+  });
+});
+
+/**
+ * 23 — Enrichment refactor (issue #214): `saveTmdbKey`, _Test connection_'s
+ * test and save in one — `POST /api/tmdb/key { key }`. It never rejects: a
+ * `200` is the stored key's echo, a `422` TMDB's refusal, and anything else —
+ * the `503`, a failed request — TMDB not reached. The empty key's `400` is
+ * never sent: `useTmdbKey` refuses a blank field before the wire.
+ */
+describe('saveTmdbKey', () => {
+  const KEY = '0123456789abcdef0123456789abcdef';
+  const status = (code: number) =>
+    ({
+      ok: false,
+      status: code,
+      json: () => Promise.resolve({ error: 'refused' }),
+    }) as unknown as Response;
+
+  it('POSTs the key to /api/tmdb/key', async () => {
+    fetchMock.mockResolvedValue(okResponse({ key: KEY }));
+
+    await saveTmdbKey(KEY);
+
+    expect(onlyRequest()).toEqual({ url: '/api/tmdb/key', method: 'POST' });
+    expect(JSON.parse(String(fetchMock.mock.calls[0][1]?.body))).toEqual({
+      key: KEY,
+    });
+  });
+
+  it('answers saved with the route’s echo on a 200', async () => {
+    fetchMock.mockResolvedValue(okResponse({ key: KEY }));
+
+    await expect(saveTmdbKey(`  ${KEY} `)).resolves.toEqual({
+      kind: 'saved',
+      key: KEY,
+    });
+  });
+
+  it('answers refused on a 422', async () => {
+    fetchMock.mockResolvedValue(status(422));
+
+    await expect(saveTmdbKey(KEY)).resolves.toEqual({ kind: 'refused' });
+  });
+
+  it('answers unreachable on a 503', async () => {
+    fetchMock.mockResolvedValue(status(503));
+
+    await expect(saveTmdbKey(KEY)).resolves.toEqual({ kind: 'unreachable' });
+  });
+
+  it('answers unreachable when the request fails, never rejecting', async () => {
+    fetchMock.mockRejectedValue(new Error('offline'));
+
+    await expect(saveTmdbKey(KEY)).resolves.toEqual({ kind: 'unreachable' });
   });
 });
