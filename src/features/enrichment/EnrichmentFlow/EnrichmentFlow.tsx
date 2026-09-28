@@ -6,19 +6,21 @@ import { fetchMovie } from '@/api/fetchMovie/fetchMovie';
 import { useEnrichmentSummary } from '@/hooks/useEnrichmentSummary/useEnrichmentSummary';
 import { useGoBack } from '@/hooks/useGoBack/useGoBack';
 import { ChevronLeftIcon, IconButton } from '@/primitives';
-import type { ConflictChoices, EnrichField, EnrichScope } from '@/types';
+import {
+  ENRICH_FIELDS,
+  type ConflictChoices,
+  type EnrichField,
+  type EnrichScope,
+} from '@/types';
 import { moviePath } from '@/utils';
 import { EnrichmentProgress } from '../EnrichmentProgress/EnrichmentProgress';
 import { EnrichmentReview } from '../EnrichmentReview/EnrichmentReview';
-import {
-  ENRICH_FIELDS,
-  EnrichmentSetup,
-} from '../EnrichmentSetup/EnrichmentSetup';
+import { EnrichmentSetup } from '../EnrichmentSetup/EnrichmentSetup';
 import { useEnrichmentRun } from '../useEnrichmentRun/useEnrichmentRun';
 import { HeaderRow, Heading, KeyBadge, Lede } from './EnrichmentFlow.styles';
 
 /** Every chip on — the setup's default. */
-const ALL_FIELDS: EnrichField[] = ENRICH_FIELDS.map(({ field }) => field);
+const ALL_FIELDS: EnrichField[] = [...ENRICH_FIELDS];
 
 /**
  * The **Enrichment flow** organism, from `feat.EnrichmentFlow.dc.html`: the

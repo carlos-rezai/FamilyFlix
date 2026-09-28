@@ -1,8 +1,9 @@
-import type {
-  ConflictField,
-  EnrichField,
-  EnrichScope,
-  FieldConflict,
+import {
+  ENRICH_FIELD_LABELS,
+  type ConflictField,
+  type EnrichField,
+  type EnrichScope,
+  type FieldConflict,
 } from '@/types';
 import type { FetchedFields } from '../fetchedFields/fetchedFields';
 
@@ -36,17 +37,17 @@ function isEmpty(value: FetchedFields[EnrichField]): boolean {
   return false;
 }
 
-/** The five a filled value can disagree on, with the diff's label. */
-const CONFLICT_LABELS: Readonly<Record<ConflictField, string>> = {
-  synopsis: 'Synopsis',
-  year: 'Year',
-  genres: 'Genres',
-  director: 'Director',
-  cast: 'Cast',
-};
+/** The five a filled value can disagree on; the diff labels them as the chips do. */
+const CONFLICT_FIELDS: ReadonlySet<EnrichField> = new Set<ConflictField>([
+  'synopsis',
+  'year',
+  'genres',
+  'director',
+  'cast',
+]);
 
 const isConflictField = (field: EnrichField): field is ConflictField =>
-  field in CONFLICT_LABELS;
+  CONFLICT_FIELDS.has(field);
 
 const fold = (value: string): string => value.trim().toLowerCase();
 
@@ -100,7 +101,7 @@ export function planFields({
     ) {
       conflicts.push({
         field,
-        label: CONFLICT_LABELS[field],
+        label: ENRICH_FIELD_LABELS[field],
         mine: shown(mine),
         tmdb: shown(value),
       });

@@ -2,21 +2,23 @@ import { randomUUID } from 'node:crypto';
 import { createReadStream } from 'node:fs';
 import { basename, dirname, join, posix, sep } from 'node:path';
 
-import type {
-  Candidate,
-  ConflictChoices,
-  ConflictField,
-  Decision,
-  EnrichField,
-  EnrichmentRun,
-  EnrichmentSummary,
-  EnrichScope,
-  Episode,
-  FieldConflict,
-  LogKind,
-  Movie,
-  Series,
-  StartEnrichment,
+import {
+  ENRICH_FIELDS,
+  ENRICH_SCOPES,
+  type Candidate,
+  type ConflictChoices,
+  type ConflictField,
+  type Decision,
+  type EnrichField,
+  type EnrichmentRun,
+  type EnrichmentSummary,
+  type EnrichScope,
+  type Episode,
+  type FieldConflict,
+  type LogKind,
+  type Movie,
+  type Series,
+  type StartEnrichment,
 } from '@/types';
 import type {
   EpisodeEnrichment,
@@ -145,22 +147,6 @@ export interface EnrichmentDeps {
   writeBack?: WriteBack;
 }
 
-const FIELDS: readonly EnrichField[] = [
-  'synopsis',
-  'poster',
-  'backdrop',
-  'runtime',
-  'year',
-  'genres',
-  'director',
-  'cast',
-  'originalTitle',
-  'tmdbScore',
-];
-
-/** The three scopes: the library's gaps, all of it, or one film. */
-const SCOPES: readonly EnrichScope[] = ['missing', 'all', 'single'];
-
 /** The last lines of the log a snapshot carries, the importer's cap. */
 const LOG_CAP = 80;
 
@@ -175,7 +161,7 @@ function readOptions(
     string,
     unknown
   >;
-  if (!SCOPES.includes(scope as EnrichScope)) {
+  if (!ENRICH_SCOPES.includes(scope as EnrichScope)) {
     return { ok: false, error: 'Unknown scope' };
   }
   if (
@@ -189,7 +175,7 @@ function readOptions(
   }
   if (
     !Array.isArray(fields) ||
-    !fields.every((field) => FIELDS.includes(field as EnrichField))
+    !fields.every((field) => ENRICH_FIELDS.includes(field as EnrichField))
   ) {
     return { ok: false, error: 'Unknown field' };
   }

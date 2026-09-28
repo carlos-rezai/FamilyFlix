@@ -1,4 +1,10 @@
-import type { EnrichField, EnrichmentSummary, EnrichScope } from '@/types';
+import {
+  ENRICH_FIELD_LABELS,
+  ENRICH_FIELDS,
+  type EnrichField,
+  type EnrichmentSummary,
+  type EnrichScope,
+} from '@/types';
 import {
   BangRingIcon,
   Button,
@@ -42,23 +48,6 @@ import {
   TargetText,
   TargetTitle,
 } from './EnrichmentSetup.styles';
-
-/** The ten chips in the prototype's order, each with its label. */
-export const ENRICH_FIELDS: ReadonlyArray<{
-  field: EnrichField;
-  label: string;
-}> = [
-  { field: 'synopsis', label: 'Synopsis' },
-  { field: 'poster', label: 'Poster' },
-  { field: 'backdrop', label: 'Backdrop' },
-  { field: 'runtime', label: 'Runtime' },
-  { field: 'year', label: 'Year' },
-  { field: 'genres', label: 'Genres' },
-  { field: 'director', label: 'Director' },
-  { field: 'cast', label: 'Cast' },
-  { field: 'originalTitle', label: 'Original title' },
-  { field: 'tmdbScore', label: 'TMDB score' },
-];
 
 const SHEET_TITLE = 'Metadata sheet in the collection root';
 const POSTERS_TITLE = 'Posters into each movie folder';
@@ -215,10 +204,10 @@ export function EnrichmentSetup({
       <div>
         <GroupLabel>Fields to fill</GroupLabel>
         <Chips>
-          {ENRICH_FIELDS.map(({ field, label }) => (
+          {ENRICH_FIELDS.map((field) => (
             <Chip
               key={field}
-              label={label}
+              label={ENRICH_FIELD_LABELS[field]}
               selected={fields.includes(field)}
               onClick={() => onToggleField(field)}
             />

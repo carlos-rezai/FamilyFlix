@@ -6,21 +6,47 @@
  */
 import type { LogLine } from './import';
 
-/** The ten **Enrichment field** chips: what a Sync may fill. */
-export type EnrichField =
-  | 'synopsis'
-  | 'poster'
-  | 'backdrop'
-  | 'runtime'
-  | 'year'
-  | 'genres'
-  | 'director'
-  | 'cast'
-  | 'originalTitle'
-  | 'tmdbScore';
+/**
+ * The ten **Enrichment field** chips — what a Sync may fill — in the
+ * prototype's chip order. An `as const` list its union is derived from, on
+ * `EXPORT_COLUMNS`' precedent: the server validates a start against it and
+ * the setup draws its chips off it.
+ */
+export const ENRICH_FIELDS = [
+  'synopsis',
+  'poster',
+  'backdrop',
+  'runtime',
+  'year',
+  'genres',
+  'director',
+  'cast',
+  'originalTitle',
+  'tmdbScore',
+] as const;
 
-/** The **Enrichment scope**: the library's gaps, all of it, or one film. */
-export type EnrichScope = 'missing' | 'all' | 'single';
+/** One of the fields in {@link ENRICH_FIELDS}. */
+export type EnrichField = (typeof ENRICH_FIELDS)[number];
+
+/** Each field's label: the chip's, and a **Field conflict**'s row. */
+export const ENRICH_FIELD_LABELS: Readonly<Record<EnrichField, string>> = {
+  synopsis: 'Synopsis',
+  poster: 'Poster',
+  backdrop: 'Backdrop',
+  runtime: 'Runtime',
+  year: 'Year',
+  genres: 'Genres',
+  director: 'Director',
+  cast: 'Cast',
+  originalTitle: 'Original title',
+  tmdbScore: 'TMDB score',
+};
+
+/** The **Enrichment scopes**: the library's gaps, all of it, or one film. */
+export const ENRICH_SCOPES = ['missing', 'all', 'single'] as const;
+
+/** One of the scopes in {@link ENRICH_SCOPES}. */
+export type EnrichScope = (typeof ENRICH_SCOPES)[number];
 
 /** The setup's read: the library's counts, the key, the connection, the root. */
 export interface EnrichmentSummary {
