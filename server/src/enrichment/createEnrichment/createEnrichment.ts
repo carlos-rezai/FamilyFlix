@@ -15,7 +15,7 @@ import type {
   Series,
   StartEnrichment,
 } from '@/types';
-import type { EpisodeEnrichment, LibraryStorage } from '../../library';
+import type { LibraryStorage } from '../../library';
 import type { Media } from '../../media/createMedia/createMedia';
 import {
   fetchedFields,
@@ -36,6 +36,7 @@ import {
   currentFields,
   currentSeriesFields,
 } from '../currentFields/currentFields';
+import { planEpisode } from '../planEpisode/planEpisode';
 import { planFields } from '../planFields/planFields';
 import {
   chosenEnrichment,
@@ -152,10 +153,6 @@ export interface EnrichmentDeps {
 
 /** The last lines of the log a snapshot carries, the importer's cap. */
 const LOG_CAP = 80;
-
-/** An empty string or `null`: nothing there yet. */
-const blank = (value: string | null): boolean =>
-  value === null || value.trim() === '';
 
 /** Why a title ended without being written, as the run's own value. */
 type Stop = 'refused' | 'unreachable';
@@ -533,26 +530,9 @@ export function createEnrichment({
       );
       if (theirs === undefined) continue;
 
-      const enrichment: EpisodeEnrichment = {};
-      if (blank(episode.title) && theirs.name && theirs.name.trim() !== '') {
-        enrichment.title = theirs.name;
-      }
-      if (blank(episode.airDate) && theirs.air_date) {
-        enrichment.airDate = theirs.air_date;
-      }
-      if (
-        fields.includes('runtime') &&
-        episode.runtimeMinutes === null &&
-        theirs.runtime
-      ) {
-        enrichment.runtimeMinutes = theirs.runtime;
-      }
-      if (
-        fields.includes('poster') &&
-        episode.stillPath === null &&
-        theirs.still_path
-      ) {
-        const image = await client.image(theirs.still_path, signal);
+      const { enrichment, still } = planEpisode(episode, theirs, fields);
+      if (still !== null) {
+        const image = await client.image(still, signal);
         if (signal.aborted) return;
         if (image.kind === 'ok') {
           const stem = posix.basename(
