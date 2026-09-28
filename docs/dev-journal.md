@@ -11,6 +11,106 @@ Newest entry first.
 
 ---
 
+## 2026-09-28 — Enrichment (TMDB) refactor (issue #214)
+
+Twenty-eight commits against `docs/refactor-plans/23-enrichment-refactor.md`,
+the docs-and-checks slice filed as 213 folded in. **6430 tests pass across 361
+files**, from 6175 across 341. `tsc -b` is clean, and `eslint src server` is
+clean of warnings too: the eight `no-useless-escape` warnings were the whole
+of its report, and they are gone. `createEnrichment` is **955 lines, from
+1256**, and is the run's state machine and nothing else.
+
+**Enrichment (TMDB)** and the **Network group** are ticked ✅. The build order
+loses step 6, and the **Electron desktop shell** is next.
+
+### What each group changed
+
+- **Group 0, the record.** The build's own entry, below this one, written
+  before this round changed anything.
+- **Group 1, one vocabulary and one double.** `ENRICH_FIELDS`,
+  `ENRICH_FIELD_LABELS` and `ENRICH_SCOPES` in `types/enrichment.ts`, the
+  unions derived from them, `EXPORT_COLUMNS`' precedent; the server validates
+  against them, `planFields` labels its conflicts off them, and the chips draw
+  them. `test-support/fakeTmdb/` replaced the eight suites' eight TMDB copies:
+  each question off a table, every call recorded, one call held or failed on
+  cue, the builders, and `reviewed()`.
+- **Group 2, the server.** `routes/enrichmentBody/` reads the start and _Apply
+  choices_, so `bad-body` left the domain and `no-movie` joined it.
+  `tmdbGenreName` and `releaseYear` put TMDB's vocabulary with its owners.
+  Five pure units came out of `createEnrichment` — `decisionFace`,
+  `currentFields`, `plannedEnrichment`, `planEpisode`, and the reasons with
+  them. `Media` gained `readStored` and `storeInSeriesFolder`, so only
+  `media/` touches managed storage. The series half of the enrichment storage
+  moved to `library/series/enrich/`, **Full details** is spelled once as
+  `fullDetails`, and `library/settings` reads a key one way.
+- **Group 3, the shared client units.** `enrichPath` for the three surfaces
+  that spelled `/enrich` by hand; `formatElapsed`, the run clock `importView`
+  and `enrichmentView` each carried; `scopeDescription` and `writtenSummary`
+  into the view.
+- **Group 4, the feature.** `SetupBanner`, `ScopeCard`, `WriteTargetRow`,
+  `CandidatePicker` and `TitleSearch` as the log's units. Suites for the three
+  steps, the run hook, the enrichment `api`, `useTmdbKey`,
+  `useEnrichmentSummary` and `saveTmdbKey`. The run hook settles a row through
+  one `settled(run, id, { counted })`. `EnrichmentFlow` raises through
+  `useSnackbar()`, and the optional chain is gone.
+- **Group 5, the checkbox.** The TMDB box is the prototype's `<label>` over a
+  native checkbox clipped by `visuallyHidden`.
+- **Group 6, the documents.** The map, README's tree, the glossary's
+  **Decision** and **Candidate**, three flags, and this entry.
+
+### What changed on screen
+
+The three the plan named, and nothing else:
+
+- A **Candidate**'s line reads its genre off the **Genre pool** and its
+  language upper-cased: `1982 · Sci-Fi · EN`.
+- The conflict's log line reads _⚠ Title — differs from what you filled in_.
+- The Import TMDB box is a native checkbox: Space toggles it, and Tab reaches
+  it as it reaches any checkbox.
+
+### Where the round departed from the plan
+
+- **The start's `400`s were not asserted anywhere.** Commit 4 counted on the
+  route suites to prove the move; none of them sent a bad body. The new
+  `enrichmentBody` suite pins every refusal's sentence and its order, and
+  `routes.enrichment.test.ts` gained two leaves for the wiring: a bad body,
+  and a film the library does not hold.
+- **A series image is asked for before the Series folder is checked.** The
+  guard moved into `storeInSeriesFolder` with the path arithmetic, so a show
+  whose episode has no Series folder above it costs one image request before
+  the store refuses. It still writes nothing, and no importer puts an episode
+  there.
+- **`'E:\Movies'` was `'E:Movies'`.** The escape was not only a lint warning:
+  the Library-root leaves stored and read back a string with no separator.
+  `String.raw` makes them store the path they name.
+- **`makeEnrichmentRun`** joined `src/test-support/` beside `makeImportRun`,
+  for the step, hook and api suites. `EnrichmentFlow.saved.test.tsx` went
+  whole: its leaves were all the setup's pixels, and they are now
+  `EnrichmentSetup`'s and `WriteTargetRow`'s.
+- **`saveTmdbKey` has no `empty` outcome.** The plan listed `empty` on a
+  `400`. The call answers `saved`, `refused` or `unreachable`, and a `400`
+  reads as `unreachable`. It is never sent one, because `useTmdbKey` refuses a
+  blank field before the wire, so the leaves assert what the call does.
+- **Four suites rendered the flow bare, not three.** `EnrichmentPage.test`
+  needed the provider too.
+- **The checkbox has no focus ring.** The prototype draws none, and this round
+  invents none. Its leaves assert the tab order and Space.
+
+### Deliberately left out
+
+The plan's own list: a review face for an unsettled series (a behaviour and a
+prototype amendment), folding `lookUp` and `lookUpSeries`, interaction states
+on the radio and Candidate cards (a §2a amendment), sharing `ActionRow` with
+the sync row, the Source folder's separator, `createImporter`'s own size,
+everything log 23 Q3 ruled out, and per-notice durations.
+
+### Follow-ups
+
+None filed. The unsettled series and the series page's ⋯ menu are flagged in
+the glossary, where the next grill-me will find them.
+
+---
+
 ## 2026-09-27 — Enrichment (TMDB) (issues #203–#212)
 
 Twenty commits across issues #203–#212 — ten RED/GREEN pairs — against the
