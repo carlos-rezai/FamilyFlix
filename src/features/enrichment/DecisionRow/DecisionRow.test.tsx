@@ -19,7 +19,8 @@ import { theme } from '@/styles/theme';
  * - **`ambiguous`** is the `CandidatePicker` — its cards are that unit's
  *   suite's — whose dashed _Search by title_ card swaps the picker for the
  *   search box, prefilled with the title: the row's own choice of face.
- * - **`missing`** is that box: _Search TMDB by title and year_, and _Search_.
+ * - **`missing`** is that box, `TitleSearch` — whose typing and Enter are
+ *   that unit's suite's — prefilled with the query.
  *
  * The row draws a Decision and reports presses — `onPick(tmdbId)`,
  * `onSearch(query)`, `onSkip()` — and knows nothing of what follows.
@@ -204,13 +205,12 @@ describe('DecisionRow — the missing face, the search box', () => {
     );
   });
 
-  it('reports the query as typed on Search', () => {
+  it('reports the box’s search', () => {
     const { onSearch } = renderRow({ decision: MISSING });
 
-    fireEvent.change(searchBox(), { target: { value: 'Sundial 2004' } });
     fireEvent.click(screen.getByRole('button', { name: 'Search' }));
 
-    expect(onSearch).toHaveBeenCalledWith('Sundial 2004');
+    expect(onSearch).toHaveBeenCalledWith('Sundial');
   });
 });
 

@@ -4,14 +4,13 @@ import { Button } from '@/primitives';
 import type { ConflictChoices, Decision } from '@/types';
 import { CandidatePicker } from '../CandidatePicker/CandidatePicker';
 import { FieldDiff } from '../FieldDiff/FieldDiff';
+import { TitleSearch } from '../TitleSearch/TitleSearch';
 import {
   Card,
   Dot,
   Head,
   Path,
   Reason,
-  SearchInput,
-  SearchRow,
   SkipSlot,
   Text,
   Title,
@@ -24,36 +23,6 @@ export interface DecisionRowProps {
   onSearch: (query: string) => void;
   /** _Apply choices_ on a `conflict` row: the side chosen for each field. */
   onApply: (choices: ConflictChoices) => void;
-}
-
-/** The search box, prefilled, and _Search_ reporting the query as typed. */
-function TitleSearch({
-  initial,
-  onSearch,
-}: {
-  initial: string;
-  onSearch: (query: string) => void;
-}) {
-  const [query, setQuery] = useState(initial);
-  return (
-    <SearchRow>
-      <SearchInput
-        value={query}
-        placeholder="Search TMDB by title and year"
-        aria-label="Search TMDB by title and year"
-        onChange={(event) => setQuery(event.target.value)}
-        onKeyDown={(event) => {
-          if (event.key === 'Enter') onSearch(query);
-        }}
-      />
-      <Button
-        label="Search"
-        variant="secondary"
-        size="md"
-        onClick={() => onSearch(query)}
-      />
-    </SearchRow>
-  );
 }
 
 /**
