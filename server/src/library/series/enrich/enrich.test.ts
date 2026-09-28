@@ -15,7 +15,7 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { freshStorage } from '../../test-support/freshStorage/freshStorage';
+import { freshStorage } from '../../../test-support/freshStorage/freshStorage';
 
 function showWithEpisodes() {
   const storage = freshStorage();
