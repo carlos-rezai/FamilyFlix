@@ -11,6 +11,115 @@ Newest entry first.
 
 ---
 
+## 2026-09-27 — Enrichment (TMDB) (issues #203–#212)
+
+Twenty commits across issues #203–#212 — ten RED/GREEN pairs — against the
+plan on #202, built from `docs/design-logs/23-enrichment.md`. **6175 tests
+pass across 341 files**, from 5584 across 295 at the end of the series round.
+`tsc -b` is clean; `eslint src server` reports no errors and eight
+`no-useless-escape` warnings, all in `library/settings`' suite. About 150
+files and 20,000 lines — the first feature that goes online, and the first
+that raises a **Snackbar notice**. It carries build step 6, **Enrichment
+(TMDB)** and the **Network group**. The maintainer's instruction was the
+scope: translate the prototype 1:1 into the codebase, in its naming,
+conventions, patterns and architecture.
+
+**Neither is ticked** in the feature table. ✅ when the refactor closes, not
+when the build issues do.
+
+### What shipped
+
+The log's six steps became ten slices.
+
+- **#203, the TMDB key in Settings → Network.** `enrichment/`, the fifth
+  server domain, born of `playback/`'s rule — nothing that existed was a
+  network client: `tmdbClient` over an injected `fetch`, `tmdbAuth`, and the
+  domain injected as `createApiRouter(…, enrichment)`. The **TMDB key** in
+  `library/settings`; `NetworkSection` and `useTmdbKey` in Settings, with
+  _Test connection_'s four notices. `test-support/offlineTmdb/` for the
+  suites that compose the router for something else.
+- **#204, Fetch from TMDB for one Confident film.** Migration 5 — the
+  enrichment columns on `movies` and `series`, `episodes.still_path`, and
+  `tmdb_id` finally written. `matchScore`'s Confident line, `fetchedFields`,
+  `planFields`, `tmdbGenres` onto the **Genre pool**, `library/enrich`,
+  `storeNamed` on `createMedia`. `/enrich?movie=<id>` from the ⋯ menu's
+  _⟳ Fetch from TMDB_, and the organism with its three steps.
+- **#205, sync the whole library.** The **Current enrichment run**, polled at
+  500 ms and re-attachable, the running card and its estimate, and the
+  last-sync stamp.
+- **#206, setup's readiness and the sync row.** The key and offline banners,
+  Start inert until both are settled, the Settings row's `syncLine`, and the
+  shared `useEnrichmentSummary` and `fetchEnrichmentSummary`. `BangRingIcon`
+  and `SyncIcon`.
+- **#207, ambiguous and missing Decisions.** `DecisionRow`'s picker of
+  **Candidates** with their % match, and the _Search by title_ box.
+- **#208, conflict Decisions.** `FieldDiff`'s _Yours | TMDB_ rows, _Apply
+  choices_ and _Keep all mine_.
+- **#209, series and episodes.** A series and its episodes looked up by the
+  same rules; **Stills** into the season folder, series posters and
+  backdrops into the **Series folder**.
+- **#210, the Library root and Source folders.** The import remembers its
+  root and records every title's **Source folder**. `DatabaseIcon`.
+- **#211, the two Write targets.** `writeBack`: `familyflix-metadata.csv` at
+  the root and `poster.jpg` in each Source folder, neither overwriting a file
+  that exists. `LandscapeIcon` and `TableIcon`.
+- **#212, Also fetch from TMDB on Import setup.** The checkbox, its hint off
+  the shared `fetchTmdbKey`, and _Finish_ handing off to `/enrich?scope=all`.
+
+### Judgment calls the slices made on their own
+
+- **`createEnrichment` held six pure concerns Q28 did not name** — reading
+  the start body, the picker's Candidates, a title's current values, a plan
+  into columns (twice, and `tmdbSide` a third time), an episode's plan, and a
+  second TMDB genre table — and grew to 1256 lines.
+- **The series half of the storage went into the movie's `library/enrich/`**,
+  `enrich.series.test.ts` beside the film's suite, because the movie's
+  statements were open there.
+- **`storeSeriesImage` did its own path arithmetic** over managed storage —
+  `dirname` of a season folder, a `split('/')` guard, `createReadStream` of a
+  stored poster — because `storeNamed` answered only for a film's folder.
+- **`EnrichmentFlow` read `SnackbarContext` raw**, `snackbar?.notify(…)`, so
+  that three suites without a provider still ran.
+- **The five Q40 molecules were left inline**: `SetupBanner`, `ScopeCard`
+  and `WriteTargetRow` in `EnrichmentSetup`, `CandidatePicker` and
+  `TitleSearch` in `DecisionRow`.
+- **The TMDB box was built as a `button[role=checkbox]`**, where the
+  prototype and Q45 name a native checkbox under `visuallyHidden`.
+- **`useEnrichmentSummary` went on the global rung**, because Settings and
+  the flow both read it. That was right, and it stays.
+
+### Where the run departed from the log
+
+- **The Candidate's genre and language.** The line reads TMDB's first genre
+  name and its lower-case language (`1982 · Science Fiction · en`), where the
+  log's Shapes say the first `genre_ids` on the pool, upper-cased.
+- **The conflict's log line** reads _TMDB disagrees with what you filled in_,
+  where Q32 and PRD story 52 settle _differs from what you filled in_.
+- **An unsettled series** — ambiguous or not found — is one log line and no
+  **Decision**, because the review's pick and apply write a film and the
+  prototype draws no series Decision.
+
+### Deliberately not built (Q3)
+
+A place the TMDB score or the original title is drawn, a series _Fetch from
+TMDB_, a language choice, a scheduled sync, and specials.
+
+### The Snackbar stack's first callers
+
+The stack shipped empty in the snackbar round, its first caller expected to be
+the Software update's **Update offer snackbar**. Enrichment got there first:
+the Network group's four notices (_Paste a key first._, _Connected to TMDB._,
+_TMDB didn't accept that key._, _Couldn't reach TMDB._) and the flow's _Add
+your TMDB key here first._, _Match saved._, _Details updated._ and
+_Searching TMDB…_.
+
+### Follow-ups
+
+The refactor is 214. The docs-and-checks slice, 213, was folded into it and
+closed at filing.
+
+---
+
 ## 2026-09-25 — Series (TV) refactor (issue #201)
 
 Twenty-six commits against `docs/refactor-plans/22-series-refactor.md`, the
