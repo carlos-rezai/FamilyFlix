@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent, within } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { ThemeProvider } from 'styled-components';
 
 import { DecisionRow, type DecisionRowProps } from './DecisionRow';
@@ -16,11 +16,9 @@ import { theme } from '@/styles/theme';
  * `danger` ink — for `missing`), the title, the reason, its path when known,
  * and _Skip_ as a ghost `Button`; then one face.
  *
- * - **`ambiguous`** is the candidate picker: one button per **Candidate** —
- *   its poster straight from `image.tmdb.org` over the Gradient fallback, the
- *   title, year · genre · language, and _% match_ — and a dashed _Search by
- *   title_ card that swaps the picker for the search box, prefilled with the
- *   title.
+ * - **`ambiguous`** is the `CandidatePicker` — its cards are that unit's
+ *   suite's — whose dashed _Search by title_ card swaps the picker for the
+ *   search box, prefilled with the title: the row's own choice of face.
  * - **`missing`** is that box: _Search TMDB by title and year_, and _Search_.
  *
  * The row draws a Decision and reports presses — `onPick(tmdbId)`,
@@ -153,39 +151,13 @@ describe('DecisionRow — what every row shows', () => {
 });
 
 describe('DecisionRow — the ambiguous face, the candidate picker', () => {
-  it('draws one card per candidate', () => {
+  it('composes the candidate picker, one card per candidate', () => {
     renderRow();
 
     expect(candidateButtons()).toHaveLength(3);
   });
 
-  it('draws a candidate’s title, year, genre, language and % match', () => {
-    renderRow();
-
-    const card = candidateButtons()[0];
-    expect(within(card).getByText('Harbor Lights')).toBeDefined();
-    expect(card.textContent).toContain('1963');
-    expect(card.textContent).toContain('Drama');
-    expect(card.textContent).toMatch(/\ben\b/i);
-    expect(within(card).getByText('82% match')).toBeDefined();
-  });
-
-  it('loads a candidate’s poster straight from TMDB', () => {
-    renderRow();
-
-    const poster = candidateButtons()[0].querySelector('img');
-    expect(poster?.getAttribute('src')).toBe(
-      'https://image.tmdb.org/t/p/w185/poster-101.jpg'
-    );
-  });
-
-  it('draws the Gradient fallback, and no image, for a candidate with no poster', () => {
-    renderRow();
-
-    expect(candidateButtons()[1].querySelector('img')).toBeNull();
-  });
-
-  it('reports the candidate picked by its TMDB id', () => {
+  it('reports a pick from the picker by its TMDB id', () => {
     const { onPick } = renderRow();
 
     fireEvent.click(candidateButtons()[2]);

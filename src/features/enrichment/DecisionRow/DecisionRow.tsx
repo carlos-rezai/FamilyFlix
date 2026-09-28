@@ -1,23 +1,15 @@
 import { useState } from 'react';
 
-import { Button, SearchIcon } from '@/primitives';
-import type { Candidate, ConflictChoices, Decision } from '@/types';
-import { gradientFromId } from '@/utils';
+import { Button } from '@/primitives';
+import type { ConflictChoices, Decision } from '@/types';
+import { CandidatePicker } from '../CandidatePicker/CandidatePicker';
 import { FieldDiff } from '../FieldDiff/FieldDiff';
 import {
-  CandidateCard,
-  CandidateMeta,
-  CandidateTitle,
   Card,
   Dot,
   Head,
   Path,
-  Picker,
-  Poster,
-  PosterImage,
   Reason,
-  Score,
-  SearchCard,
   SearchInput,
   SearchRow,
   SkipSlot,
@@ -32,40 +24,6 @@ export interface DecisionRowProps {
   onSearch: (query: string) => void;
   /** _Apply choices_ on a `conflict` row: the side chosen for each field. */
   onApply: (choices: ConflictChoices) => void;
-}
-
-/** Above this, a candidate's _% match_ wears the watched green. */
-const STRONG_SCORE = 70;
-
-/** Year · genre · language, whichever TMDB knows. */
-function metaOf(candidate: Candidate): string {
-  return [candidate.year, candidate.genre, candidate.language]
-    .filter((part) => part !== null && part !== '')
-    .join(' · ');
-}
-
-function CandidateButton({
-  candidate,
-  onPick,
-}: {
-  candidate: Candidate;
-  onPick: (tmdbId: number) => void;
-}) {
-  const { g1, g2 } = gradientFromId(String(candidate.tmdbId));
-  return (
-    <CandidateCard type="button" onClick={() => onPick(candidate.tmdbId)}>
-      <Poster $g1={g1} $g2={g2}>
-        {candidate.posterUrl === null ? null : (
-          <PosterImage src={candidate.posterUrl} alt="" />
-        )}
-      </Poster>
-      <CandidateTitle>{candidate.title}</CandidateTitle>
-      <CandidateMeta>{metaOf(candidate)}</CandidateMeta>{' '}
-      <Score $strong={candidate.score > STRONG_SCORE}>
-        {candidate.score}% match
-      </Score>
-    </CandidateCard>
-  );
 }
 
 /** The search box, prefilled, and _Search_ reporting the query as typed. */
@@ -129,19 +87,11 @@ export function DecisionRow({
       </Head>
 
       {decision.kind === 'ambiguous' && !searching ? (
-        <Picker>
-          {decision.candidates.map((candidate) => (
-            <CandidateButton
-              key={candidate.tmdbId}
-              candidate={candidate}
-              onPick={onPick}
-            />
-          ))}
-          <SearchCard type="button" onClick={() => setSearching(true)}>
-            <SearchIcon size={20} />
-            Search by title
-          </SearchCard>
-        </Picker>
+        <CandidatePicker
+          candidates={decision.candidates}
+          onPick={onPick}
+          onSearchByTitle={() => setSearching(true)}
+        />
       ) : null}
 
       {decision.kind === 'ambiguous' && searching ? (
