@@ -14,7 +14,7 @@
 
 /**
  * The projects that must compile on every commit without exception: the
- * frontend and the backend, and not the tests.
+ * frontend, the backend and the Desktop shell (issue #216), and not the tests.
  *
  * `tsconfig.spec.json` covers the tests, which on a RED commit are deliberately
  * ahead of the code they describe.
@@ -22,6 +22,7 @@
 export const SHIPPING_PROJECTS = [
   'tsconfig.app.json',
   'tsconfig.server.json',
+  'tsconfig.electron.json',
 ] as const;
 
 /** The whole solution file, which is what every other commit typechecks. */

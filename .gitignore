@@ -94,3 +94,6 @@ familyflix.db-wal
 # Vite / Vitest timestamps
 vite.config.*.timestamp*
 vitest.config.*.timestamp*
+
+# The Electron-ABI better-sqlite3 binding `npm run electron:native` fetches
+electron/.native

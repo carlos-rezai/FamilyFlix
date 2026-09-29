@@ -17,7 +17,14 @@ const BUSY_TIMEOUT_MS = 5000;
  */
 export function openDatabase(dbPath: string): SqliteDatabase {
   const verbose = process.env.DEBUG_SQL === '1' ? console.info : undefined;
-  const db = new Database(dbPath, { verbose });
+  // Under the Desktop shell the server runs on Electron's own Node, whose ABI
+  // the package's own binding does not match: main points this at the
+  // Electron-ABI prebuild `electron:native` fetched. Unset, the package's own.
+  const nativeBinding = process.env.FAMILYFLIX_SQLITE_BINDING;
+  const db = new Database(dbPath, {
+    verbose,
+    ...(nativeBinding ? { nativeBinding } : {}),
+  });
 
   db.pragma('foreign_keys = ON');
   db.pragma('journal_mode = WAL');

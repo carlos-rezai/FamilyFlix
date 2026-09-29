@@ -33,6 +33,9 @@
     },
     {
       "path": "./tsconfig.server.json"
+    },
+    {
+      "path": "./tsconfig.electron.json"
     }
   ],
   "compileOnSave": false,
