@@ -13,7 +13,7 @@ import { createServer, type Server } from 'node:http';
 import { type AddressInfo } from 'node:net';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import type { ServerMessage } from '../../../../src/types/shell';
+import type { ServerMessage, ShellCommand } from '../../../../src/types/shell';
 import { shellHandshake, type ShellParentPort } from './shellHandshake';
 
 const open: Server[] = [];
@@ -118,5 +118,40 @@ describe('shellHandshake — under a parent port', () => {
     }).catch(() => undefined);
 
     expect(posted.some((message) => message.type === 'ready')).toBe(false);
+  });
+});
+
+// Issue #217 — the ordered shutdown. Under a parent port, main's `shutdown`
+// command runs the **Ordered shutdown** the handshake is handed — the same
+// function the standalone server's signal handlers run.
+
+/** A parent port that keeps main's side: the listener it registered. */
+function commandingParentPort() {
+  let heard: ((event: { data: ShellCommand }) => void) | undefined;
+  const port: ShellParentPort = {
+    postMessage: vi.fn(),
+    on: (_event, listener) => {
+      heard = listener;
+    },
+  };
+  const send = (command: ShellCommand) => {
+    if (!heard) throw new Error('the handshake is not listening for commands');
+    heard({ data: command });
+  };
+  return { port, send };
+}
+
+describe('shellHandshake — the shutdown command', () => {
+  it('runs the ordered shutdown when main sends shutdown, and not before', async () => {
+    const { port, send } = commandingParentPort();
+    const shutdown = vi.fn(async () => undefined);
+    const server = await listening();
+
+    await shellHandshake(port, () => server, shutdown);
+    expect(shutdown).not.toHaveBeenCalled();
+
+    send({ type: 'shutdown' });
+
+    expect(shutdown).toHaveBeenCalledTimes(1);
   });
 });

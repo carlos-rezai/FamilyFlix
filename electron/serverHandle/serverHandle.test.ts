@@ -113,3 +113,59 @@ describe('serverHandle — after ready', () => {
     await expect(started).resolves.toEqual({ port: 3001 });
   });
 });
+
+// Issue #217 — the ordered shutdown. On `before-quit` main calls
+// `shutdown(ms)`: it sends the **Shell handshake**'s `shutdown` command and
+// waits for the exit through `awaitExitOrKill`, killing the server at `ms`.
+// An exit main asked for is a quit, not a crash, so it never reaches `onExit`.
+
+async function running() {
+  const held = handle();
+  const started = held.start();
+  child.post({ type: 'ready', port: 3001 });
+  await started;
+  return held;
+}
+
+describe('serverHandle — shutdown', () => {
+  it('sends the shutdown command to the server', async () => {
+    const held = await running();
+
+    void held.shutdown(5_000);
+
+    expect(child.postMessage).toHaveBeenCalledWith({ type: 'shutdown' });
+  });
+
+  it('resolves when the server exits, without killing it', async () => {
+    const held = await running();
+
+    const stopping = held.shutdown(5_000);
+    child.exit(0);
+
+    await expect(stopping).resolves.toBeUndefined();
+    expect(child.kill).not.toHaveBeenCalled();
+  });
+
+  it('kills the server when it has not exited by the deadline', async () => {
+    vi.useFakeTimers();
+    const held = await running();
+
+    const stopping = held.shutdown(5_000);
+    await vi.advanceTimersByTimeAsync(4_999);
+    expect(child.kill).not.toHaveBeenCalled();
+
+    await vi.advanceTimersByTimeAsync(1);
+    expect(child.kill).toHaveBeenCalledTimes(1);
+    await expect(stopping).resolves.toBeUndefined();
+  });
+
+  it('does not report the exit it asked for as a crash', async () => {
+    const held = await running();
+
+    const stopping = held.shutdown(5_000);
+    child.exit(0);
+    await stopping;
+
+    expect(onExit).not.toHaveBeenCalled();
+  });
+});
