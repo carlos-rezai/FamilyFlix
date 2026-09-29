@@ -954,3 +954,28 @@ describe('library: createSqliteStorage factory shell', () => {
     expect(() => createSqliteStorage(':memory:')).not.toThrow();
   });
 });
+
+// Issue #216 — the window over the server. Under the Desktop shell the server
+// runs on Electron's own Node, whose ABI the package's own binding does not
+// match, so main points `FAMILYFLIX_SQLITE_BINDING` at the Electron-ABI
+// prebuild `electron:native` fetched and the opener hands it to
+// `better-sqlite3` as `nativeBinding`. Unset, the package's own binding is
+// used — which is every other suite in this file, on Node's ABI.
+describe('db: the SQLite binding', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it('loads the binding FAMILYFLIX_SQLITE_BINDING names when it is set', () => {
+    // A path holding no binding at all: loaded, it fails naming the path;
+    // ignored, the package's own binding opens the database as if unset.
+    const missing = join(
+      tmpdir(),
+      'familyflix-no-binding',
+      'better_sqlite3.node'
+    );
+    vi.stubEnv('FAMILYFLIX_SQLITE_BINDING', missing);
+
+    expect(() => openDatabase(':memory:')).toThrow(/familyflix-no-binding/);
+  });
+});

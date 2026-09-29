@@ -32,6 +32,8 @@
     "src/**/*.test.jsx",
     "src/**/*.spec.jsx",
     "src/**/*.d.ts",
-    ".husky/**/*.ts"
+    ".husky/**/*.ts",
+    "electron/**/*.test.ts",
+    "electron/**/*.spec.ts"
   ]
 }

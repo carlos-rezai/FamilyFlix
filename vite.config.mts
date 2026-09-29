@@ -68,6 +68,9 @@ export default defineConfig(() => ({
       // the typecheck gate does is exactly the thing that should not be the one
       // file nobody tests.
       '.husky/**/*.{test,spec}.{ts,mts}',
+      // The Desktop shell's units. Each suite declares the node environment:
+      // Electron is never launched in a test, its world is injected.
+      'electron/**/*.{test,spec}.{ts,mts}',
     ],
     reporters: ['default'],
     coverage: {

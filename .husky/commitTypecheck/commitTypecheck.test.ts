@@ -24,6 +24,7 @@
 // a message that says nothing — typechecks everything, because the failure
 // direction that costs something is a gate that quietly stopped running.
 
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -55,12 +56,14 @@ describe('projectsFor — a RED test commit', () => {
     ).toEqual(SHIPPING_PROJECTS);
   });
 
-  it('names the frontend and the backend, and not the tests', () => {
-    // Stated as the thing the whole issue turns on: `src` and `server` must
-    // always compile; the tests are deliberately ahead of the code.
+  it('names the frontend, the backend and the shell, and not the tests', () => {
+    // Stated as the thing the whole issue turns on: `src`, `server` and
+    // `electron` must always compile; the tests are deliberately ahead of the
+    // code. Issue #216 made the Desktop shell the third shipping project.
     expect(SHIPPING_PROJECTS).toEqual([
       'tsconfig.app.json',
       'tsconfig.server.json',
+      'tsconfig.electron.json',
     ]);
     expect(SHIPPING_PROJECTS).not.toContain('tsconfig.spec.json');
   });
@@ -99,6 +102,18 @@ describe('projectsFor — every other commit', () => {
 
   it('typechecks everything, which is the whole solution file', () => {
     expect(ALL_PROJECTS).toEqual(['tsconfig.json']);
+  });
+
+  it('builds the shell too, because the solution file references it', () => {
+    // Issue #216: `tsconfig.electron.json` is the fourth project in the
+    // solution file, so a full typecheck covers `electron/` as well.
+    const solution = JSON.parse(
+      readFileSync(new URL('../../tsconfig.json', import.meta.url), 'utf8')
+    ) as { references: { path: string }[] };
+
+    expect(solution.references.map((reference) => reference.path)).toContain(
+      './tsconfig.electron.json'
+    );
   });
 });
 
