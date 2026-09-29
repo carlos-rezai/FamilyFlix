@@ -480,6 +480,28 @@ Movies and series both.
 | **Write target** (new)           | A place a **Sync** saves to: _Your library_ (always), and two optional ones in the **Library root** — the **Metadata sheet** and a `poster.jpg` in each **Source folder** — each behind a write check and a dry-run log line, neither ever replacing a file. The two are not drawn when no **Library root** is remembered.                                                                                                                                                               | destination, output, export target         |
 | **Metadata sheet** (new)         | `familyflix-metadata.csv` in the **Library root**: the **Export file** in CSV, the eight **Export columns**, films only — written once, by the first **Sync** that finds it absent, so the collection carries a sheet the importer can read back.                                                                                                                                                                                                                                        | metadata file, sidecar, backup csv         |
 
+## The Electron shell (new)
+
+The desktop application around the app — its own initiative
+(`electron-shell`, design log 24), step 7 of the build order: one window over
+one server process, on one origin, with no internet required.
+
+| Term                       | Definition                                                                                                                                                                                                                                     | Aliases to avoid                       |
+| -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------- |
+| **Desktop shell** (new)    | `electron/`: the main process that starts the **Server process**, opens the window, and stops both in order. Holds no library logic; `main.ts` wires events to units.                                                                          | wrapper, host app, Electron app (bare) |
+| **Server process** (new)   | The Express server running as Electron's `utilityProcess`, the same `server/src/main.ts` `npm run dev:server` runs, and the only process that touches SQLite or the disk.                                                                      | backend child, worker, sidecar         |
+| **Shell handshake** (new)  | The three messages between the **Desktop shell** and the **Server process**: `ready {port}`, `fatal {message}`, `shutdown`. Typed in `src/types/shell.ts`; the server's half is `shell/shellHandshake/`, inert when there is no parent.        | IPC (for this), protocol, ping         |
+| **Ordered shutdown** (new) | What `shutdown` (or a signal) runs: cancel the **Current run** and the **Current enrichment run**, drop open connections (a playing film holds one), close the listener, close the database. The shell kills the process if it takes over 5 s. | graceful exit, teardown                |
+| **One origin** (new)       | The window loads the **Server process**'s own `http://127.0.0.1:<port>/`, which serves the built renderer beside `/api`. So every relative call, media source and `BrowserRouter` route works unchanged, and there is no CORS.                 | API base URL, same-host                |
+| **Shell port** (new)       | `41720`, the installed app's fixed loopback port, fixed because `localStorage` belongs to an origin and an origin includes its port. Taken, the server falls back to an ephemeral port for that launch only.                                   | app port, default port                 |
+| **Loopback guard** (new)   | The middleware answering `403` to a request whose `Host` is not a **Trusted host**, or whose `Origin` is present and foreign. It stops a web page in the family's browser from writing to the library.                                         | CORS (for this), firewall, auth        |
+| **Trusted host** (new)     | A `Host` the **Loopback guard** accepts: `127.0.0.1:<bound>`, `localhost:<bound>`, and `FAMILYFLIX_TRUSTED_HOSTS` (default `localhost:4200`, Vite's; empty when installed).                                                                    | allowed origin, whitelist              |
+| **Installed app** (new)    | The packaged FamilyFlix: data under `%APPDATA%\FamilyFlix\`, no menu bar, a **Shell log**, the **Shell port**. What the family runs.                                                                                                           | prod, release build                    |
+| **Unpackaged run** (new)   | `electron:dev` or `electron:start` from the repo: the repo's own library files, `userData` under `FamilyFlix (dev)`, the default menu and DevTools. `electron:start` is the **Installed app**'s shape without the installer.                   | dev mode (alone), local build          |
+| **Shell log** (new)        | `logs\familyflix.log` in the **Installed app**: main's and the server's output tagged `[main]` / `[server]`, rolled to `familyflix.old.log` past 5 MB at startup. An **Unpackaged run** prints the same lines to the terminal.                 | app log, debug log                     |
+| **Wordmark** (new)         | The prototype's brand: _Family_ in `--color-text`, _Flix_ in `--color-accent`, Source Serif 4 at 700, as the library header and the About card draw it.                                                                                        | logo, brand name                       |
+| **App mark** (new)         | The square icon derived from the **Wordmark**: its two initials in its two colours on `--color-bg`. `docs/handoff/brand/familyflix-mark.svg`, a prototype amendment, rendered to `icon.ico` (window, taskbar, `.exe`) and the favicon.         | app icon (loosely), logo, favicon      |
+
 ## Relationships
 
 - A **Movie** has zero-or-more **Genres** (ordered; `genres[0]` is the primary tag) and zero-or-more **Subtitles**.
@@ -595,6 +617,10 @@ Movies and series both.
 - The **Player** plays one **Playable** at a time. For an **Episode**, its **Landing** is the **Season page**, and the **Up next card** moves it on by a **Sideways move**, never a push.
 - The **Next episode** is answered once, on the server. The **Series page**'s _Resume_, the **Season page**'s _Resume_ and the **Episode continue card** are three readings of it.
 - The **Series tab** and the Movies tab share one **Library query**; the **Library tabs** clear its **Search text** on a switch and keep the rest.
+
+- The **Desktop shell** runs exactly one **Server process** and one window. The window reaches the server only over **One origin**, never through the shell. The shell's only conversation with the server is the **Shell handshake**.
+- The **Installed app** and an **Unpackaged run** never share a library, a lock or a `localStorage`: the first keeps its data in `userData`, the second in the repo.
+- The **App mark** is the **Wordmark** reduced. It never appears inside the app's own screens, where the **Wordmark** is drawn.
 
 ## Example dialogue
 
@@ -1025,6 +1051,25 @@ Hard` gets found and `Die Hard\extras` doesn't become a second film."
 > **Maintainer:** "No **Episode tag**, so it's **Unplaced**: a **Problem**
 > with Skip and no Resolve. Rename it `S02E09`, run the import again, and only
 > that episode comes in."
+
+> **Dev:** "Horizon hands the window an API URL through a preload. Same here?"
+> **Maintainer:** "No. The **Server process** serves the renderer too, so it's
+> **One origin**: every `/api` call, every poster and `BrowserRouter` work as
+> they are. There's no preload until the updater needs one."
+> **Dev:** "Then why not an ephemeral port, like Horizon?"
+> **Maintainer:** "The volume lives in `localStorage`, and so will the **Seen
+> version**. A new port is a new origin, and it would forget both every launch.
+> The **Installed app** takes the **Shell port**, and only falls back when it's
+> taken."
+> **Dev:** "A loopback server with a fixed port. Can't any website post to
+> it?"
+> **Maintainer:** "Not past the **Loopback guard**: a foreign `Host` or
+> `Origin` gets a 403. And the family close the window mid-film? The
+> **Ordered shutdown**: stop the run, drop the stream, close the database.
+> Five seconds, or the shell kills it."
+> **Dev:** "The icon, the prototype doesn't have one."
+> **Maintainer:** "It has the **Wordmark**. The **App mark** is its two F's in
+> its two colours, amended into the handoff before anything uses it."
 
 ## Flagged ambiguities
 
@@ -1736,3 +1781,23 @@ Hard` gets found and `Die Hard\extras` doesn't become a second film."
   page** with no ⋯ menu, so a series has no _Fetch from TMDB_ where a film
   has one; log 23 Q3 ruled the single-series **Sync** out for the same
   reason. Both wait on a prototype amendment to the series page.
+- **"Shell" now names two things (new):** CLAUDE.md's **Settings shell**
+  (the hub's groups on one page) and the **Desktop shell** (`electron/`).
+  Neither is **Chrome**, which is a layout's or the player's. Always qualify:
+  say **Desktop shell** for Electron, never bare "shell". Bare "shell" survives
+  only in fixed names: `electron-shell`, `src/types/shell.ts`,
+  `server/src/shell/`.
+- **"App icon" was ambiguous with the favicon and the wordmark (new):** the
+  **Wordmark** is drawn inside the app; the **App mark** is what the OS draws
+  (window, taskbar, `.exe`) and what a browser tab in dev shows. They are one
+  brand at two sizes. Never put the **App mark** on a screen the prototype
+  draws the **Wordmark** on.
+- **"The only network FamilyFlix makes" is stale in two entries (new):** the
+  **Release feed** entry predates **Enrichment**, which goes online too. And
+  the **Loopback guard** is not network access: the **Server process** is on
+  `127.0.0.1` and reachable from nowhere else. "Offline" means FamilyFlix
+  needs no internet, not that it has no socket.
+- **Dev has two meanings now (new):** `npm run dev` (a browser over Vite and
+  a standalone server) and an **Unpackaged run** (`electron:dev`, the
+  **Desktop shell** over Vite). They open the same repo library but different
+  origins, so a volume set in one is not set in the other.
