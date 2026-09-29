@@ -39,11 +39,15 @@ function messageOf(error: unknown): string {
  * startup throws. The failure is still thrown afterwards, so the process ends
  * the way it always did.
  *
+ * Once `ready` is posted, main's `shutdown` command runs `shutdown` — the
+ * **Ordered shutdown**, the same function the standalone server's signals run.
+ *
  * Without a parent port there is no shell to tell, and it is inert.
  */
 export async function shellHandshake(
   parentPort: ShellParentPort | undefined,
-  startup: () => Server | Promise<Server>
+  startup: () => Server | Promise<Server>,
+  shutdown?: () => Promise<void>
 ): Promise<Server> {
   let server: Server;
   try {
@@ -55,5 +59,10 @@ export async function shellHandshake(
 
   const { port } = server.address() as AddressInfo;
   parentPort?.postMessage({ type: 'ready', port });
+  if (parentPort && shutdown) {
+    parentPort.on('message', ({ data }) => {
+      if (data.type === 'shutdown') void shutdown();
+    });
+  }
   return server;
 }

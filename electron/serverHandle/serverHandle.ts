@@ -1,4 +1,5 @@
-import type { ServerMessage } from '../../src/types/shell';
+import type { ServerMessage, ShellCommand } from '../../src/types/shell';
+import { awaitExitOrKill } from '../awaitExitOrKill/awaitExitOrKill';
 import type { ServerLaunch } from '../serverLaunch/serverLaunch';
 
 /** How long main waits for the **Shell handshake**'s `ready`. */
@@ -8,6 +9,7 @@ export const READY_TIMEOUT_MS = 15_000;
 export interface ServerChild {
   on(event: 'message', listener: (message: ServerMessage) => void): unknown;
   on(event: 'exit', listener: (code: number) => void): unknown;
+  once(event: 'exit', listener: (code: number) => void): unknown;
   postMessage(message: unknown): void;
   kill(): boolean;
 }
@@ -23,6 +25,11 @@ export interface ServerHandleWorld {
 export interface ServerHandle {
   /** Fork the server and wait for `ready`, resolving with its bound port. */
   start(): Promise<{ port: number }>;
+  /**
+   * Send the **Shell handshake**'s `shutdown` and wait for the exit, killing
+   * the server at `ms`. The exit asked for is a quit, never `onExit`.
+   */
+  shutdown(ms: number): Promise<void>;
 }
 
 /**
@@ -35,10 +42,22 @@ export function serverHandle({
   launch,
   onExit,
 }: ServerHandleWorld): ServerHandle {
+  let child: ServerChild | undefined;
+  let stopping = false;
+  let exited = false;
+
   return {
+    shutdown(ms) {
+      if (!child || exited) return Promise.resolve();
+      stopping = true;
+      const waited = awaitExitOrKill(child, ms);
+      child.postMessage({ type: 'shutdown' } satisfies ShellCommand);
+      return waited;
+    },
     start() {
       return new Promise((resolve, reject) => {
-        const child = fork(launch);
+        const forked = fork(launch);
+        child = forked;
         let ready = false;
         let settled = false;
 
@@ -59,7 +78,7 @@ export function serverHandle({
           READY_TIMEOUT_MS
         );
 
-        child.on('message', (message: ServerMessage) => {
+        forked.on('message', (message: ServerMessage) => {
           if (settled) return;
           if (message.type === 'fatal') {
             fail(new Error(message.message));
@@ -71,7 +90,9 @@ export function serverHandle({
           resolve({ port: message.port });
         });
 
-        child.on('exit', (code: number) => {
+        forked.on('exit', (code: number) => {
+          exited = true;
+          if (stopping) return;
           if (ready) {
             onExit(code);
             return;

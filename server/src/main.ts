@@ -11,6 +11,10 @@ import { createPlayback } from './playback/createPlayback/createPlayback';
 import { createApiRouter } from './routes';
 import { listen } from './shell/listen/listen';
 import {
+  orderedShutdown,
+  shutdownOnSignals,
+} from './shell/orderedShutdown/orderedShutdown';
+import {
   parentPortOf,
   shellHandshake,
 } from './shell/shellHandshake/shellHandshake';
@@ -32,7 +36,13 @@ const COMPONENT_PATH =
  * Open the library, mount the API and listen on the loopback. Run inside the
  * **Shell handshake**, so a failure here is what the **Desktop shell** is told.
  */
-async function start(): Promise<{ server: Server; close: () => void }> {
+interface Started {
+  server: Server;
+  /** The **Ordered shutdown** over what this startup opened. */
+  shutdown: () => Promise<void>;
+}
+
+async function start(): Promise<Started> {
   const storage = createSqliteStorage(DB_PATH);
 
   /**
@@ -51,52 +61,59 @@ async function start(): Promise<{ server: Server; close: () => void }> {
   const playback = createPlayback(MEDIA_PATH, slot);
   const media = createMedia(MEDIA_PATH);
 
+  // The import domain over the same library and managed directory the routes
+  // write through, so an imported film is a hand-added one to every read in
+  // the app.
+  const importer = createImporter({ storage, media, playback });
+  // The one domain that goes online, over the global `fetch`.
+  const enrichment = createEnrichment({
+    storage,
+    client: createTmdbClient(fetch),
+    media,
+  });
+
   const app = express();
   app.use(
     '/api',
-    createApiRouter(
-      storage,
-      MEDIA_PATH,
-      playback,
-      media,
-      // The import domain over the same library and managed directory the
-      // routes write through, so an imported film is a hand-added one to every
-      // read in the app.
-      createImporter({ storage, media, playback }),
-      // The one domain that goes online, over the global `fetch`.
-      createEnrichment({ storage, client: createTmdbClient(fetch), media })
-    )
+    createApiRouter(storage, MEDIA_PATH, playback, media, importer, enrichment)
   );
 
+  let server: Server;
   try {
-    return { server: await listen(app, PORT), close: () => storage.close() };
+    server = await listen(app, PORT);
   } catch (error) {
     storage.close();
     throw error;
   }
+
+  let stopping: Promise<void> | undefined;
+  const shutdown = () => {
+    stopping ??= orderedShutdown({
+      importer,
+      enrichment,
+      server,
+      closeDatabase: () => storage.close(),
+      exit: (code) => process.exit(code),
+    });
+    return stopping;
+  };
+  return { server, shutdown };
 }
 
 /**
- * Close the listener and the database so no WAL files are left mid-write, then
- * exit. Wired only once the server is up; a startup failure is left to reject
- * unhandled, which ends the process the way a throw here always did.
+ * The **Ordered shutdown**, once the server is up: main's `shutdown` command
+ * under the **Desktop shell**, `SIGINT`/`SIGTERM` standalone — one function.
+ * A startup failure is left to reject unhandled, which ends the process the
+ * way a throw here always did.
  */
-function handleSignals(server: Server, close: () => void): void {
-  const shutdown = () => {
-    server.close(() => {
-      close();
-      process.exit(0);
-    });
-  };
+let shutdown = (): Promise<void> => Promise.resolve();
 
-  process.on('SIGINT', shutdown);
-  process.on('SIGTERM', shutdown);
-}
-
-let closeLibrary = (): void => undefined;
-
-shellHandshake(parentPortOf(process), async () => {
-  const started = await start();
-  closeLibrary = started.close;
-  return started.server;
-}).then((server) => handleSignals(server, closeLibrary));
+shellHandshake(
+  parentPortOf(process),
+  async () => {
+    const started = await start();
+    shutdown = started.shutdown;
+    return started.server;
+  },
+  () => shutdown()
+).then(() => shutdownOnSignals(process, () => shutdown()));

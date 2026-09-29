@@ -18,6 +18,9 @@ const BACKGROUND = '#14110d';
 /** How long to wait before asking Vite again while it is still starting. */
 const RENDERER_RETRY_MS = 500;
 
+/** How long the **Ordered shutdown** has before the server is killed. */
+const SHUTDOWN_MS = 5_000;
+
 const cwd = process.cwd();
 const dev = !app.isPackaged && process.env.FAMILYFLIX_SHELL_PROD !== '1';
 
@@ -102,6 +105,18 @@ if (!app.requestSingleInstanceLock()) {
       fork,
       launch: serverLaunch(app.isPackaged, !dev, app.getPath('userData'), cwd),
       onExit: () => app.quit(),
+    });
+
+    // Quit waits out the server's **Ordered shutdown**, killing it at 5 s.
+    let stopping: Promise<void> | undefined;
+    let stopped = false;
+    app.on('before-quit', (event) => {
+      if (stopped) return;
+      event.preventDefault();
+      stopping ??= server.shutdown(SHUTDOWN_MS).then(() => {
+        stopped = true;
+        app.quit();
+      });
     });
 
     try {
