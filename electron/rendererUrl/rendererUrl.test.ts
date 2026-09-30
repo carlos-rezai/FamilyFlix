@@ -11,21 +11,24 @@ import { rendererUrl } from './rendererUrl';
 
 describe('rendererUrl', () => {
   it('points the dev window at Vite on localhost:4200', () => {
-    const url = new URL(rendererUrl(true, 3001));
+    const url = new URL(rendererUrl('dev', 3001));
 
     expect(url.origin).toBe('http://localhost:4200');
     expect(url.pathname).toBe('/');
   });
 
-  it('points every other window at the server on 127.0.0.1 and its port', () => {
-    const url = new URL(rendererUrl(false, 41720));
+  it.each(['start', 'installed'] as const)(
+    'points every other window at the server on 127.0.0.1 and its port (%s)',
+    (mode) => {
+      const url = new URL(rendererUrl(mode, 41720));
 
-    expect(url.origin).toBe('http://127.0.0.1:41720');
-    expect(url.pathname).toBe('/');
-  });
+      expect(url.origin).toBe('http://127.0.0.1:41720');
+      expect(url.pathname).toBe('/');
+    }
+  );
 
   it('carries whatever port the server reported, not a fixed one', () => {
-    expect(new URL(rendererUrl(false, 53117)).origin).toBe(
+    expect(new URL(rendererUrl('installed', 53117)).origin).toBe(
       'http://127.0.0.1:53117'
     );
   });

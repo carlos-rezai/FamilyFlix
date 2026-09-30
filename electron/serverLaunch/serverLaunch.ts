@@ -1,5 +1,7 @@
 import { join } from 'node:path';
 
+import type { ShellMode } from '../shellMode/shellMode';
+
 /** What main hands `utilityProcess.fork()` to start the **Server process**. */
 export interface ServerLaunch {
   /** The module the process runs. */
@@ -28,13 +30,13 @@ export function nativeBindingPath(cwd: string): string {
 const SHELL_PORT = '41720';
 
 /**
- * Pure: how to start the **Server process** for this run.
+ * Pure: how to start the **Server process** in this **Shell mode**.
  *
- * - **Dev** (unpackaged, no `FAMILYFLIX_SHELL_PROD`): the server from source
- *   through tsx on `3001`, Vite serving the renderer.
- * - **The prod flag** (`electron:start`, unpackaged): the installed shape —
- *   the bundled server, the **Shell port**, the built renderer.
- * - **Packaged**: the installed shape, plus the database, the managed media
+ * - `'dev'` (`electron:dev`): the server from source through tsx on `3001`,
+ *   Vite serving the renderer.
+ * - `'start'` (`electron:start`): the installed shape — the bundled server,
+ *   the **Shell port**, the built renderer.
+ * - `'installed'`: the installed shape, plus the database, the managed media
  *   directory and the **Component slot** under `userData`, the **Trusted
  *   hosts** set empty, and the package's own SQLite binding.
  *
@@ -43,12 +45,11 @@ const SHELL_PORT = '41720';
  * fetched.
  */
 export function serverLaunch(
-  isPackaged: boolean,
-  prodFlag: boolean,
+  mode: ShellMode,
   userData: string,
   cwd: string
 ): ServerLaunch {
-  if (!isPackaged && !prodFlag) {
+  if (mode === 'dev') {
     return {
       entry: join(cwd, 'server', 'src', 'main.ts'),
       execArgv: ['--import', 'tsx'],
@@ -63,15 +64,16 @@ export function serverLaunch(
     PORT: SHELL_PORT,
     FAMILYFLIX_RENDERER_PATH: join(cwd, 'dist', 'familyflix'),
   };
-  const env: Record<string, string> = isPackaged
-    ? {
-        ...installed,
-        FAMILYFLIX_DB_PATH: join(userData, 'familyflix.db'),
-        FAMILYFLIX_MEDIA_PATH: join(userData, 'media'),
-        FAMILYFLIX_COMPONENT_PATH: join(userData, 'playback-component'),
-        FAMILYFLIX_TRUSTED_HOSTS: '',
-      }
-    : { ...installed, FAMILYFLIX_SQLITE_BINDING: nativeBindingPath(cwd) };
+  const env: Record<string, string> =
+    mode === 'installed'
+      ? {
+          ...installed,
+          FAMILYFLIX_DB_PATH: join(userData, 'familyflix.db'),
+          FAMILYFLIX_MEDIA_PATH: join(userData, 'media'),
+          FAMILYFLIX_COMPONENT_PATH: join(userData, 'playback-component'),
+          FAMILYFLIX_TRUSTED_HOSTS: '',
+        }
+      : { ...installed, FAMILYFLIX_SQLITE_BINDING: nativeBindingPath(cwd) };
 
   return {
     entry: join(cwd, 'electron', 'dist', 'server.js'),

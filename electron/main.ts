@@ -20,6 +20,7 @@ import { downloadPath } from './downloadPath/downloadPath';
 import { rendererUrl } from './rendererUrl/rendererUrl';
 import { serverHandle, type ServerChild } from './serverHandle/serverHandle';
 import { serverLaunch, type ServerLaunch } from './serverLaunch/serverLaunch';
+import { shellMode } from './shellMode/shellMode';
 import {
   startServer,
   stoppedUnexpectedly,
@@ -53,16 +54,16 @@ const cwd = process.cwd();
 /** The **App mark**, rendered by `electron/scripts/buildIcon.mjs`. */
 const ICON = join(cwd, 'electron', 'assets', 'icon.ico');
 
-const dev = !app.isPackaged && process.env.FAMILYFLIX_SHELL_PROD !== '1';
+const mode = shellMode(app.isPackaged, process.env);
 
-if (!app.isPackaged) {
+if (mode !== 'installed') {
   app.setPath('userData', join(app.getPath('appData'), 'FamilyFlix (dev)'));
 }
 
 app.setAppUserModelId(APP_USER_MODEL_ID);
 
 // The installed app has no menu bar; unpackaged runs keep theirs.
-if (app.isPackaged) {
+if (mode === 'installed') {
   Menu.setApplicationMenu(null);
 }
 
@@ -83,7 +84,7 @@ const logFs: LogFileSystem = {
 };
 
 const log = shellLog({
-  toFile: app.isPackaged,
+  toFile: mode === 'installed',
   dir: join(app.getPath('userData'), 'logs'),
   fs: logFs,
   terminal: (text) => process.stdout.write(text),
@@ -200,11 +201,11 @@ function openWindow(port: number): void {
     window = null;
   });
 
-  if (dev) {
+  if (mode === 'dev') {
     window.webContents.openDevTools();
   }
 
-  const url = rendererUrl(dev, port);
+  const url = rendererUrl(mode, port);
   applyWindowPolicy(window, url);
   load(window, url);
 }
@@ -223,7 +224,7 @@ if (!app.requestSingleInstanceLock()) {
   app.whenReady().then(async () => {
     const server = serverHandle({
       fork,
-      launch: serverLaunch(app.isPackaged, !dev, app.getPath('userData'), cwd),
+      launch: serverLaunch(mode, app.getPath('userData'), cwd),
       onExit: (code) => {
         log.main(`Server exited unexpectedly with code ${code}.`);
         void stoppedUnexpectedly(dialogWorld);

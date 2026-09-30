@@ -1,12 +1,11 @@
 // @vitest-environment node
 //
 // Issue #216 — the window over the server. `serverLaunch` is pure: from
-// `(isPackaged, prodFlag, userData, cwd)` it answers what main hands
+// `(mode, userData, cwd)` — the **Shell mode** since issue #226 — it answers what main hands
 // `utilityProcess.fork()` — the entry, the execArgv and the environment the
 // **Server process** starts under.
 //
-// This slice covers the dev combination only (unpackaged, no
-// `FAMILYFLIX_SHELL_PROD`): the server forked from source through tsx on
+// This slice covers the `'dev'` mode only (`electron:dev`): the server forked from source through tsx on
 // `3001`, pointed at the Electron-ABI `better-sqlite3` binding that
 // `electron:native` fetched, and — because an unpackaged run uses the repo's
 // own `./familyflix.db`, `./media` and `./playback-component` — none of the
@@ -27,9 +26,9 @@ const USER_DATA = join(
   'FamilyFlix (dev)'
 );
 
-const dev = () => serverLaunch(false, false, USER_DATA, CWD);
+const dev = () => serverLaunch('dev', USER_DATA, CWD);
 
-describe('serverLaunch — the dev combination', () => {
+describe('serverLaunch — dev (electron:dev)', () => {
   it('forks the server from its source entry', () => {
     expect(dev().entry).toBe(join(CWD, 'server', 'src', 'main.ts'));
   });
@@ -60,10 +59,9 @@ describe('serverLaunch — the dev combination', () => {
 });
 
 // Issue #220 — the installed shape. `serverLaunch` learns the other two
-// combinations. `FAMILYFLIX_SHELL_PROD` (`electron:start`) runs the installed
-// shape unpackaged: the bundled server, no tsx, the **Shell port** `41720`, the
+// modes. `'start'` (`electron:start`) runs the installed shape unpackaged: the bundled server, no tsx, the **Shell port** `41720`, the
 // built renderer — but still the repo's own library and the Electron-ABI
-// binding `electron:native` fetched. Packaged, the three path variables go
+// binding `electron:native` fetched. `'installed'`, the three path variables go
 // under `userData` (`%APPDATA%\FamilyFlix\`), the **Trusted hosts** are set
 // empty, and the package's own binding is used.
 
@@ -79,7 +77,7 @@ const PACKAGED_USER_DATA = join(
 const BUNDLED_SERVER = join(CWD, 'electron', 'dist', 'server.js');
 const BUILT_RENDERER = join(CWD, 'dist', 'familyflix');
 
-describe('serverLaunch — the dev combination, the installed shape’s variables', () => {
+describe('serverLaunch — dev, the installed shape’s variables', () => {
   it('sets no renderer path, so Vite serves the renderer', () => {
     expect(dev().env).not.toHaveProperty('FAMILYFLIX_RENDERER_PATH');
   });
@@ -89,8 +87,8 @@ describe('serverLaunch — the dev combination, the installed shape’s variable
   });
 });
 
-describe('serverLaunch — the prod flag, unpackaged (electron:start)', () => {
-  const prod = () => serverLaunch(false, true, USER_DATA, CWD);
+describe('serverLaunch — start (electron:start)', () => {
+  const prod = () => serverLaunch('start', USER_DATA, CWD);
 
   it('forks the bundled server', () => {
     expect(prod().entry).toBe(BUNDLED_SERVER);
@@ -127,11 +125,8 @@ describe('serverLaunch — the prod flag, unpackaged (electron:start)', () => {
   });
 });
 
-describe.each([
-  ['without the prod flag', false],
-  ['with the prod flag', true],
-])('serverLaunch — packaged, %s', (_label, prodFlag) => {
-  const packaged = () => serverLaunch(true, prodFlag, PACKAGED_USER_DATA, CWD);
+describe('serverLaunch — installed (the Installed app)', () => {
+  const packaged = () => serverLaunch('installed', PACKAGED_USER_DATA, CWD);
 
   it('forks the bundled server', () => {
     expect(packaged().entry).toBe(BUNDLED_SERVER);
