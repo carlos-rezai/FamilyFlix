@@ -6,8 +6,6 @@ import type { ShellMode } from '../shellMode/shellMode';
 export interface ServerLaunch {
   /** The module the process runs. */
   entry: string;
-  /** Node flags for the process. */
-  execArgv: string[];
   /** The environment the server reads, beside the inherited one. */
   env: Record<string, string>;
 }
@@ -30,12 +28,14 @@ export function nativeBindingPath(cwd: string): string {
 const SHELL_PORT = '41720';
 
 /**
- * Pure: how to start the **Server process** in this **Shell mode**.
+ * Pure: how to start the **Server process** in this **Shell mode**. Every mode
+ * forks the bundled server `buildElectron.mjs` writes — under `electron:dev`
+ * its watcher rebuilds it — so there is one fork path, and it is the one the
+ * **Installed app** runs.
  *
- * - `'dev'` (`electron:dev`): the server from source through tsx on `3001`,
- *   Vite serving the renderer.
- * - `'start'` (`electron:start`): the installed shape — the bundled server,
- *   the **Shell port**, the built renderer.
+ * - `'dev'` (`electron:dev`): `3001`, Vite serving the renderer.
+ * - `'start'` (`electron:start`): the installed shape — the **Shell port**,
+ *   the built renderer.
  * - `'installed'`: the installed shape, plus the database, the managed media
  *   directory and the **Component slot** under `userData`, the **Trusted
  *   hosts** set empty, and the package's own SQLite binding.
@@ -49,10 +49,11 @@ export function serverLaunch(
   userData: string,
   cwd: string
 ): ServerLaunch {
+  const entry = join(cwd, 'electron', 'dist', 'server.js');
+
   if (mode === 'dev') {
     return {
-      entry: join(cwd, 'server', 'src', 'main.ts'),
-      execArgv: ['--import', 'tsx'],
+      entry,
       env: {
         PORT: DEV_PORT,
         FAMILYFLIX_SQLITE_BINDING: nativeBindingPath(cwd),
@@ -75,9 +76,5 @@ export function serverLaunch(
         }
       : { ...installed, FAMILYFLIX_SQLITE_BINDING: nativeBindingPath(cwd) };
 
-  return {
-    entry: join(cwd, 'electron', 'dist', 'server.js'),
-    execArgv: [],
-    env,
-  };
+  return { entry, env };
 }

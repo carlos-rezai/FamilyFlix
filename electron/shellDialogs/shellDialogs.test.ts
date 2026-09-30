@@ -28,8 +28,7 @@ import {
 } from './shellDialogs';
 
 const LAUNCH: ServerLaunch = {
-  entry: 'server/dist/server.js',
-  execArgv: [],
+  entry: 'electron/dist/server.js',
   env: { PORT: '41720' },
 };
 

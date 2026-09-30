@@ -18,8 +18,7 @@ import { FakeServerChild } from '../test-support/fakeServerChild/fakeServerChild
 import { serverHandle } from './serverHandle';
 
 const LAUNCH: ServerLaunch = {
-  entry: 'server/src/main.ts',
-  execArgv: ['--import', 'tsx'],
+  entry: 'electron/dist/server.js',
   env: { PORT: '3001' },
 };
 

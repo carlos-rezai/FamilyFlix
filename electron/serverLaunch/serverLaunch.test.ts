@@ -1,11 +1,12 @@
 // @vitest-environment node
 //
 // Issue #216 — the window over the server. `serverLaunch` is pure: from
-// `(mode, userData, cwd)` — the **Shell mode** since issue #226 — it answers what main hands
-// `utilityProcess.fork()` — the entry, the execArgv and the environment the
+// `(mode, userData, cwd)` — the **Shell mode**, since issue #226 — it answers
+// what main hands `utilityProcess.fork()`: the entry and the environment the
 // **Server process** starts under.
 //
-// This slice covers the `'dev'` mode only (`electron:dev`): the server forked from source through tsx on
+// This slice covers the `'dev'` mode only (`electron:dev`): since issue #226
+// the bundle the watcher builds, the one fork path every mode shares, on
 // `3001`, pointed at the Electron-ABI `better-sqlite3` binding that
 // `electron:native` fetched, and — because an unpackaged run uses the repo's
 // own `./familyflix.db`, `./media` and `./playback-component` — none of the
@@ -29,12 +30,12 @@ const USER_DATA = join(
 const dev = () => serverLaunch('dev', USER_DATA, CWD);
 
 describe('serverLaunch — dev (electron:dev)', () => {
-  it('forks the server from its source entry', () => {
-    expect(dev().entry).toBe(join(CWD, 'server', 'src', 'main.ts'));
+  it('forks the bundle the watcher builds', () => {
+    expect(dev().entry).toBe(join(CWD, 'electron', 'dist', 'server.js'));
   });
 
-  it('runs the source through tsx with --import tsx', () => {
-    expect(dev().execArgv).toEqual(['--import', 'tsx']);
+  it('passes no Node flags', () => {
+    expect(dev()).not.toHaveProperty('execArgv');
   });
 
   it('listens on 3001, the port Vite proxies to', () => {
@@ -95,7 +96,7 @@ describe('serverLaunch — start (electron:start)', () => {
   });
 
   it('passes no --import tsx', () => {
-    expect(prod().execArgv).toEqual([]);
+    expect(prod()).not.toHaveProperty('execArgv');
   });
 
   it('listens on the Shell port 41720', () => {
@@ -133,7 +134,7 @@ describe('serverLaunch — installed (the Installed app)', () => {
   });
 
   it('passes no --import tsx', () => {
-    expect(packaged().execArgv).toEqual([]);
+    expect(packaged()).not.toHaveProperty('execArgv');
   });
 
   it('listens on the Shell port 41720', () => {

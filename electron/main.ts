@@ -102,22 +102,14 @@ const dialogWorld: DialogWorld = {
   exit: (code) => app.exit(code),
 };
 
-/**
- * `utilityProcess.fork()` over a launch: the server on Electron's own Node,
- * through `serverBoot.mjs`, which applies the `--import`s a utility process
- * would otherwise ignore.
- */
+/** `utilityProcess.fork()` over a launch: the server on Electron's own Node. */
 function fork(launch: ServerLaunch): ServerChild {
-  const child = utilityProcess.fork(
-    join(cwd, 'electron', 'serverBoot.mjs'),
-    [launch.entry, ...launch.execArgv],
-    {
-      cwd,
-      env: { ...process.env, ...launch.env },
-      serviceName: 'FamilyFlix server',
-      stdio: 'pipe',
-    }
-  );
+  const child = utilityProcess.fork(launch.entry, [], {
+    cwd,
+    env: { ...process.env, ...launch.env },
+    serviceName: 'FamilyFlix server',
+    stdio: 'pipe',
+  });
   child.stdout?.on('data', (chunk: Buffer) => log.server(chunk.toString()));
   child.stderr?.on('data', (chunk: Buffer) => log.server(chunk.toString()));
   return child;
