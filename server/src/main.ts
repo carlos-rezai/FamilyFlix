@@ -8,8 +8,8 @@ import { createMedia } from './media/createMedia/createMedia';
 import { createComponentSlot } from './playback/componentSlot/componentSlot';
 import { createPlayback } from './playback/createPlayback/createPlayback';
 import { createApiRouter } from './routes';
+import { loopbackGuard } from './routes/loopbackGuard/loopbackGuard';
 import { boundPort, listen } from './shell/listen/listen';
-import { loopbackGuard } from './shell/loopbackGuard/loopbackGuard';
 import { mountRenderer } from './shell/rendererRouter/rendererRouter';
 import {
   orderedShutdown,
