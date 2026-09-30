@@ -13,6 +13,8 @@ import { type AddressInfo } from 'node:net';
 import express from 'express';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import type { ServerMessage } from '../../../../src/types/shell';
+import { shellHandshake } from '../shellHandshake/shellHandshake';
 import { listen } from './listen';
 
 const open: Server[] = [];
@@ -76,6 +78,74 @@ describe('listen', () => {
     await expect(listen(appAnsweringPing(), port)).rejects.toThrow(
       /EADDRINUSE/
     );
+  });
+});
+
+// Issue #220 — the installed shape. Under the **Desktop shell** the server
+// listens on the **Shell port**, and a taken one falls back to an ephemeral
+// port, which `ready` reports. Standalone, a taken port still throws.
+
+async function takenPort(): Promise<number> {
+  const taken = createServer();
+  open.push(taken);
+  await new Promise<void>((resolve) =>
+    taken.listen(0, '127.0.0.1', () => resolve())
+  );
+  return (taken.address() as AddressInfo).port;
+}
+
+describe('listen — under the shell', () => {
+  it('binds the port it was given when that port is free', async () => {
+    const free = await takenPort();
+    await new Promise<void>((resolve) => open.pop()?.close(() => resolve()));
+
+    const server = await listen(appAnsweringPing(), free, { underShell: true });
+    open.push(server);
+
+    expect((server.address() as AddressInfo).port).toBe(free);
+  });
+
+  it('falls back to an ephemeral port on 127.0.0.1 when the port is taken', async () => {
+    const port = await takenPort();
+
+    const server = await listen(appAnsweringPing(), port, { underShell: true });
+    open.push(server);
+    const bound = server.address() as AddressInfo;
+
+    expect(bound.address).toBe('127.0.0.1');
+    expect(bound.port).not.toBe(port);
+    expect(bound.port).toBeGreaterThan(0);
+    await expect(get(bound.port, '/api/ping')).resolves.toBe(200);
+  });
+
+  it('has `ready` carry the port it actually bound after the fallback', async () => {
+    const port = await takenPort();
+    const posted: ServerMessage[] = [];
+    const parentPort = {
+      postMessage: (message: ServerMessage) => {
+        posted.push(message);
+      },
+      on: vi.fn(),
+    };
+
+    const server = await shellHandshake(parentPort, () =>
+      listen(appAnsweringPing(), port, { underShell: true })
+    );
+    open.push(server);
+
+    const bound = (server.address() as AddressInfo).port;
+    expect(bound).not.toBe(port);
+    expect(posted).toEqual([{ type: 'ready', port: bound }]);
+  });
+});
+
+describe('listen — standalone', () => {
+  it('still throws on a taken port when not under the shell', async () => {
+    const port = await takenPort();
+
+    await expect(
+      listen(appAnsweringPing(), port, { underShell: false })
+    ).rejects.toThrow(/EADDRINUSE/);
   });
 });
 
