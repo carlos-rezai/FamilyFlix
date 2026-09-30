@@ -11,6 +11,114 @@ Newest entry first.
 
 ---
 
+## 2026-09-30 — Electron desktop shell (issues #216–#224)
+
+Seventeen commits across issues #216–#224 — eight RED/GREEN pairs and one
+prototype amendment — against the plan on #215, built from
+`docs/design-logs/24-electron-shell.md`. **6608 tests pass across 378 files**,
+from 6430 across 361 at the end of the enrichment round. `tsc -b` is clean;
+`eslint src server electron .husky` reports no errors and one `no-script-url`
+warning, in `windowPolicy`'s suite. About 53 files and 5,000 lines. It carries
+build step 7, the first step that needs Electron. The maintainer's instruction
+was the scope: translate the prototype 1:1 into the codebase, in its naming,
+conventions, patterns and architecture — and the prototype draws no shell, so
+"the prototype" here is the **App mark**, the `--color-bg` the window opens on,
+the three font families and the **Wordmark**. All of them shipped as drawn.
+
+**Not ticked** in the feature table. ✅ when the refactor closes, not when the
+build issues do.
+
+### What shipped
+
+- **#216, the window over the server.** `electron/main.ts` forks the **Server
+  process** in a `utilityProcess` and opens one maximized window on `#14110d`
+  once the **Shell handshake**'s `ready` arrives. `serverHandle` (fork, the
+  15 s ready timeout, `fatal`, an exit before `ready`), `serverLaunch`,
+  `rendererUrl`; `server/src/shell/` with `shellHandshake` and `listen` (the
+  `127.0.0.1` bind, always, standalone included). The handshake's messages
+  typed once in `src/types/shell.ts`. `tsconfig.electron.json` as the third
+  shipping project, the commit gate taught to build it on a `test:` commit,
+  and `fetchNative.mjs` with `db/`'s `FAMILYFLIX_SQLITE_BINDING`, so the
+  Electron-ABI `better-sqlite3` sits in the gitignored `electron/.native/`
+  and Vitest keeps the package's own.
+- **#217, the ordered shutdown.** `orderedShutdown` and `shutdownOnSignals`,
+  one path for the `shutdown` command and the signals; `awaitExitOrKill`,
+  `serverHandle.shutdown(ms)`, and main's `before-quit` waiting it out,
+  killing the server at 5 s.
+- **#218, the App mark** — the prototype amendment, in `docs/handoff/brand/`
+  and registered under COMPONENT-SPEC §2, approved before anything used it.
+- **#219, the App mark in the app.** `buildIcon.mjs` renders `icon.ico` at
+  seven sizes, the favicon and the preview PNGs; `iconSizes.test.ts` guards
+  the `.ico`; `appIdentity`'s `APP_USER_MODEL_ID` set before the window.
+- **#220, the installed shape.** `rendererRouter` serving the built renderer
+  beside `/api` under its CSP — **One origin**; the **Shell port** `41720`
+  and its ephemeral fallback in `listen`; `serverLaunch`'s packaged and
+  prod-flag shapes; `buildElectron.mjs`'s two CJS bundles; `electron:start`.
+- **#221, offline fonts and the title.** The three families at the token
+  weights from `@fontsource`, imported once in `src/main.tsx`; no Google
+  Fonts link; `<title>FamilyFlix</title>`.
+- **#222, the Loopback guard.** Mounted first, bound to the port after
+  `listen`; the **Trusted hosts** off `FAMILYFLIX_TRUSTED_HOSTS`.
+- **#223, the window's rules.** `windowPolicy` (`isAppUrl`,
+  `openExternalAllowed`, `permissionAllowed`) and `downloadPath` — a download
+  straight to Downloads under a free name, no dialog; no menu when installed.
+- **#224, failures and logs.** The **Shell log** (`shellLog`, rolled at
+  5 MB, to the terminal when unpackaged) and `shellDialogs`: the startup
+  dialog and _stopped unexpectedly_, with `startServer` putting every startup
+  failure in front of the first.
+
+### Judgment calls the slices made on their own
+
+- **`electron/serverBoot.mjs`**, because a `utilityProcess` ignores `--import`
+  in its `execArgv`, so Q32's "from source with `--import tsx`" never reached
+  the server. The shim re-implements Node's preload by hand, and has no suite.
+- **`loopbackGuard` and `rendererRouter` went into `server/src/shell/`**,
+  where Q13 and Q15 placed them in `routes/`, because it was the new folder
+  the slice was already in.
+- **`listen` and `orderedShutdown` got units of their own**, where the log
+  left both in `server/src/main.ts`. That was right, and they stay.
+- **`withoutCsp`**, a patch of `res.setHeader` on every request, so that
+  Express's own `404` page carries no `Content-Security-Policy` either —
+  because the leaf was written as "no CSP", not "not the renderer's".
+- **`shellDialogs` and `startServer`**, a unit the log did not name. That was
+  right, and it stays.
+- **The build scripts are `electron/scripts/` in camelCase** —
+  `buildElectron.mjs`, `buildIcon.mjs`, `fetchNative.mjs` — where the log
+  named `scripts/build-electron.mjs`, `build-icon.mjs` and
+  `electron-sqlite.mjs`; and the bundles are `electron/dist/main.js` and
+  `server.js`, where it named `.cjs` files in two folders. Both are the repo's
+  own conventions, and they stay.
+- **`electron:icon`**, a fourth script the log did not list.
+
+### Deliberately not built (Q2, Q3, Q4, the Trade-offs)
+
+The installer and FFmpeg bundling (step 8); the preload and
+`window.familyflix` (step 9); _Change…_; any native picker; a tray, a custom
+title bar or an application menu; remembered bounds; macOS and Linux.
+
+### The manual smokes
+
+- **#216**: `electron:dev` by hand — a maximized window titled FamilyFlix
+  over Vite, the API on `127.0.0.1:3001` only, a second launch exits. This is
+  the run that found `--import` ignored.
+- **#220**: the bundled server over `curl` — a deep route answers
+  `index.html` under the CSP, `/api` answers with none.
+- **#222**: `tsx server/src/main.ts` over `curl` — a trusted Host, the
+  `localhost` spelling and Vite's `localhost:4200` answer `200`; a rebinding
+  Host and a `POST` with a foreign Origin answer `403`.
+- **Not run unattended**, each for want of a display session: closing during
+  playback or an import (#217), the taskbar and pin (#219), the volume
+  surviving a relaunch (#220), the network-off fonts (#221), the window's
+  three rules (#223), and killing the server and `chrome://crash` (#224). The
+  refactor runs them once, after its server group.
+
+### Follow-ups
+
+The refactor is 226. The docs-and-refactor-filing slice, 225, was folded into
+it and closed at filing.
+
+---
+
 ## 2026-09-28 — Enrichment (TMDB) refactor (issue #214)
 
 Twenty-eight commits against `docs/refactor-plans/23-enrichment-refactor.md`,
