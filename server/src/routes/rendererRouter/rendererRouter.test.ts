@@ -4,8 +4,12 @@
 // server mounts `rendererRouter`: it serves the built renderer's files under
 // the CSP and answers `index.html` for any GET outside `/api`, so a reload on
 // a deep route stays there (**One origin**). `/api` is never shadowed — an
-// unknown `/api` path is still the API's own 404, with no CSP on it — and when
-// the variable is unset nothing is mounted at all.
+// unknown `/api` path is still the API's own 404 — and when the variable is
+// unset nothing is mounted at all.
+//
+// Issue #226 — the rule is about the renderer's policy, not every CSP: it is
+// sent on the renderer and never on `/api`. Express's own not-found page keeps
+// its own `default-src 'none'`, and nothing is patched onto the response.
 
 import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
 import type { Server } from 'node:http';
@@ -136,11 +140,15 @@ describe('rendererRouter — mounted', () => {
     expect(deep.headers.get('content-security-policy')).toBe(CSP);
   });
 
-  it('never sends the CSP on /api', async () => {
-    const res = await request(serverWith(renderer)).get('/api/ping');
+  it('never sends the renderer’s policy on /api', async () => {
+    const client = request(serverWith(renderer));
 
-    expect(res.status).toBe(200);
-    expect(res.headers.get('content-security-policy')).toBeNull();
+    const known = await client.get('/api/ping');
+    const unknown = await client.get('/api/no-such-thing');
+
+    expect(known.status).toBe(200);
+    expect(known.headers.get('content-security-policy')).not.toBe(CSP);
+    expect(unknown.headers.get('content-security-policy')).not.toBe(CSP);
   });
 
   it('never shadows an /api route', async () => {
@@ -154,7 +162,7 @@ describe('rendererRouter — mounted', () => {
 
     expect(res.status).toBe(404);
     expect(res.text).not.toBe(INDEX);
-    expect(res.headers.get('content-security-policy')).toBeNull();
+    expect(res.headers.get('content-security-policy')).not.toBe(CSP);
   });
 
   it('does not shadow /api even when mounted ahead of it', async () => {
@@ -167,6 +175,7 @@ describe('rendererRouter — mounted', () => {
     const unknown = await client.get('/api/no-such-thing');
 
     expect(JSON.parse(known.text)).toEqual({ ok: true });
+    expect(known.headers.get('content-security-policy')).not.toBe(CSP);
     expect(unknown.status).toBe(404);
     expect(unknown.text).not.toBe(INDEX);
   });
@@ -183,10 +192,25 @@ describe('rendererRouter — FAMILYFLIX_RENDERER_PATH unset', () => {
     expect(deep.status).toBe(404);
   });
 
-  it('sends no CSP anywhere', async () => {
-    const res = await request(serverWith(undefined)).get('/');
+  it('mounts nothing: the app’s middleware stack is the API’s alone', () => {
+    const apiAlone = express();
+    apiAlone.use('/api', apiRouter());
 
-    expect(res.headers.get('content-security-policy')).toBeNull();
+    expect(serverWith(undefined).router.stack).toHaveLength(
+      apiAlone.router.stack.length
+    );
+  });
+
+  it('sends the renderer’s policy nowhere', async () => {
+    const client = request(serverWith(undefined));
+
+    const root = await client.get('/');
+    const deep = await client.get('/series/3/season/2');
+    const api = await client.get('/api/ping');
+
+    for (const res of [root, deep, api]) {
+      expect(res.headers.get('content-security-policy')).not.toBe(CSP);
+    }
   });
 
   it('leaves the API answering as before', async () => {
