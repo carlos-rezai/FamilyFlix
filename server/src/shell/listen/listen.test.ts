@@ -128,9 +128,10 @@ describe('listen — under the shell', () => {
       on: vi.fn(),
     };
 
-    const server = await shellHandshake(parentPort, () =>
-      listen(appAnsweringPing(), port, { underShell: true })
-    );
+    const { server } = await shellHandshake(parentPort, async () => ({
+      server: await listen(appAnsweringPing(), port, { underShell: true }),
+      shutdown: async () => undefined,
+    }));
     open.push(server);
 
     const bound = (server.address() as AddressInfo).port;

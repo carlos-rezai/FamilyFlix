@@ -8,13 +8,20 @@
 //
 // Without `process.parentPort` there is no shell to tell, so it is inert:
 // `npm run dev:server` starts, or crashes, exactly as it did before.
+//
+// Issue #226 — the startup answers a `Started`, the server and its shutdown
+// together, and the handshake answers the same one.
 
 import { createServer, type Server } from 'node:http';
 import { type AddressInfo } from 'node:net';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { ServerMessage, ShellCommand } from '../../../../src/types/shell';
-import { shellHandshake, type ShellParentPort } from './shellHandshake';
+import {
+  shellHandshake,
+  type ShellParentPort,
+  type Started,
+} from './shellHandshake';
 
 const open: Server[] = [];
 
@@ -25,6 +32,14 @@ function listening(): Promise<Server> {
   return new Promise((resolve) => {
     server.listen(0, '127.0.0.1', () => resolve(server));
   });
+}
+
+/** A startup's answer over `server`, with a shutdown that does nothing. */
+function started(
+  server: Server,
+  shutdown: () => Promise<void> = async () => undefined
+): Started {
+  return { server, shutdown };
 }
 
 function fakeParentPort() {
@@ -51,9 +66,9 @@ afterEach(async () => {
 
 describe('shellHandshake — without a parent port', () => {
   it('runs the startup and hands back its server', async () => {
-    const server = await listening();
+    const answer = started(await listening());
 
-    await expect(shellHandshake(undefined, () => server)).resolves.toBe(server);
+    await expect(shellHandshake(undefined, () => answer)).resolves.toBe(answer);
   });
 
   it('lets a startup failure through as it always did', async () => {
@@ -71,7 +86,7 @@ describe('shellHandshake — under a parent port', () => {
     const server = await listening();
     const bound = (server.address() as AddressInfo).port;
 
-    await shellHandshake(port, () => server);
+    await shellHandshake(port, () => started(server));
 
     expect(posted).toEqual([{ type: 'ready', port: bound }]);
   });
@@ -79,7 +94,9 @@ describe('shellHandshake — under a parent port', () => {
   it('waits for an asynchronous startup before posting ready', async () => {
     const { port, posted } = fakeParentPort();
 
-    const server = await shellHandshake(port, () => listening());
+    const { server } = await shellHandshake(port, async () =>
+      started(await listening())
+    );
 
     expect(posted).toEqual([
       { type: 'ready', port: (server.address() as AddressInfo).port },
@@ -147,7 +164,7 @@ describe('shellHandshake — the shutdown command', () => {
     const shutdown = vi.fn(async () => undefined);
     const server = await listening();
 
-    await shellHandshake(port, () => server, shutdown);
+    await shellHandshake(port, () => started(server, shutdown));
     expect(shutdown).not.toHaveBeenCalled();
 
     send({ type: 'shutdown' });

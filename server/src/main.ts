@@ -1,4 +1,3 @@
-import type { Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import express from 'express';
 
@@ -20,6 +19,7 @@ import {
 import {
   parentPortOf,
   shellHandshake,
+  type Started,
 } from './shell/shellHandshake/shellHandshake';
 
 /**
@@ -43,12 +43,6 @@ const parentPort = parentPortOf(process);
  * Open the library, mount the API and listen on the loopback. Run inside the
  * **Shell handshake**, so a failure here is what the **Desktop shell** is told.
  */
-interface Started {
-  server: Server;
-  /** The **Ordered shutdown** over what this startup opened. */
-  shutdown: () => Promise<void>;
-}
-
 async function start(): Promise<Started> {
   const storage = createSqliteStorage(DB_PATH);
 
@@ -92,7 +86,7 @@ async function start(): Promise<Started> {
   );
   mountRenderer(app, RENDERER_PATH);
 
-  let server: Server;
+  let server: Started['server'];
   try {
     server = await listen(app, PORT, {
       underShell: parentPort !== undefined,
@@ -119,18 +113,10 @@ async function start(): Promise<Started> {
 
 /**
  * The **Ordered shutdown**, once the server is up: main's `shutdown` command
- * under the **Desktop shell**, `SIGINT`/`SIGTERM` standalone — one function.
- * A startup failure is left to reject unhandled, which ends the process the
- * way a throw here always did.
+ * under the **Desktop shell**, `SIGINT`/`SIGTERM` standalone — one function,
+ * the one the startup built. A startup failure is left to reject unhandled,
+ * which ends the process the way a throw here always did.
  */
-let shutdown = (): Promise<void> => Promise.resolve();
-
-shellHandshake(
-  parentPort,
-  async () => {
-    const started = await start();
-    shutdown = started.shutdown;
-    return started.server;
-  },
-  () => shutdown()
-).then(() => shutdownOnSignals(process, () => shutdown()));
+shellHandshake(parentPort, start).then(({ shutdown }) =>
+  shutdownOnSignals(process, shutdown)
+);

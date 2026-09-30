@@ -28,6 +28,16 @@ export function parentPortOf(
     : (port as ShellParentPort);
 }
 
+/**
+ * What the startup builds: the listening server and the **Ordered shutdown**
+ * over what it opened — made together, and handed to the handshake together.
+ */
+export interface Started {
+  server: Server;
+  /** The **Ordered shutdown** over what this startup opened. */
+  shutdown: () => Promise<void>;
+}
+
 function messageOf(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
@@ -39,30 +49,28 @@ function messageOf(error: unknown): string {
  * startup throws. The failure is still thrown afterwards, so the process ends
  * the way it always did.
  *
- * Once `ready` is posted, main's `shutdown` command runs `shutdown` — the
- * **Ordered shutdown**, the same function the standalone server's signals run.
+ * Once `ready` is posted, main's `shutdown` command runs the `shutdown` the
+ * startup built — the **Ordered shutdown**, the same function the standalone
+ * server's signals run. It answers the same `Started`.
  *
  * Without a parent port there is no shell to tell, and it is inert.
  */
 export async function shellHandshake(
   parentPort: ShellParentPort | undefined,
-  startup: () => Server | Promise<Server>,
-  shutdown?: () => Promise<void>
-): Promise<Server> {
-  let server: Server;
+  startup: () => Started | Promise<Started>
+): Promise<Started> {
+  let started: Started;
   try {
-    server = await startup();
+    started = await startup();
   } catch (error) {
     parentPort?.postMessage({ type: 'fatal', message: messageOf(error) });
     throw error;
   }
 
-  const { port } = server.address() as AddressInfo;
+  const { port } = started.server.address() as AddressInfo;
   parentPort?.postMessage({ type: 'ready', port });
-  if (parentPort && shutdown) {
-    parentPort.on('message', ({ data }) => {
-      if (data.type === 'shutdown') void shutdown();
-    });
-  }
-  return server;
+  parentPort?.on('message', ({ data }) => {
+    if (data.type === 'shutdown') void started.shutdown();
+  });
+  return started;
 }
