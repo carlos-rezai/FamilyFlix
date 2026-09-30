@@ -17,6 +17,7 @@ import {
 
 import { APP_USER_MODEL_ID } from './appIdentity/appIdentity';
 import { downloadPath } from './downloadPath/downloadPath';
+import { quitAfterShutdown } from './quitAfterShutdown/quitAfterShutdown';
 import { rendererUrl } from './rendererUrl/rendererUrl';
 import { serverHandle, type ServerChild } from './serverHandle/serverHandle';
 import { serverLaunch, type ServerLaunch } from './serverLaunch/serverLaunch';
@@ -224,16 +225,14 @@ if (!app.requestSingleInstanceLock()) {
     });
 
     // Quit waits out the server's **Ordered shutdown**, killing it at 5 s.
-    let stopping: Promise<void> | undefined;
-    let stopped = false;
-    app.on('before-quit', (event) => {
-      if (stopped) return;
-      event.preventDefault();
-      stopping ??= server.shutdown(SHUTDOWN_MS).then(() => {
-        stopped = true;
-        app.quit();
-      });
-    });
+    app.on(
+      'before-quit',
+      quitAfterShutdown({
+        shutdown: server.shutdown,
+        ms: SHUTDOWN_MS,
+        quit: () => app.quit(),
+      })
+    );
 
     log.main('Starting the server.');
     const started = await startServer(server, {
