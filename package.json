@@ -11,7 +11,7 @@
     "dev:server": "tsx watch server/src/main.ts",
     "dev:web": "nx serve",
     "electron:dev": "node node_modules/concurrently/dist/bin/index.js --names \"web,shell\" --prefix-colors \"magenta,yellow\" --kill-others \"npm:dev:web\" \"node electron/scripts/buildElectron.mjs --watch\"",
-    "electron:start": "nx build && node electron/scripts/buildElectron.mjs --start",
+    "electron:start": "node node_modules/nx/dist/bin/nx.js build && node electron/scripts/buildElectron.mjs --start",
     "electron:native": "node electron/scripts/fetchNative.mjs",
     "electron:icon": "node electron/scripts/buildIcon.mjs",
     "start": "nx serve",

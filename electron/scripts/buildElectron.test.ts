@@ -118,5 +118,20 @@ describe('package.json', () => {
 
     expect(start).toBeDefined();
     expect(start).not.toMatch(/\bnpx\b/);
+
+    // Issue #226 — and no tool in an `electron:*` script is called by bare
+    // name: every command is `node` on a path, as `electron:dev` calls
+    // `concurrently`, so none resolves through a `.cmd` shim.
+    const electronScripts = Object.entries(manifest.scripts).filter(([name]) =>
+      name.startsWith('electron:')
+    );
+    expect(electronScripts.map(([name]) => name)).toEqual(
+      expect.arrayContaining(['electron:dev', 'electron:start'])
+    );
+    for (const [, command] of electronScripts) {
+      for (const step of command.split('&&')) {
+        expect(step.trim()).toMatch(/^node \S+/);
+      }
+    }
   });
 });

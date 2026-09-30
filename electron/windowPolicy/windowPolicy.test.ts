@@ -54,6 +54,8 @@ describe('openExternalAllowed', () => {
   it('drops http, file and javascript', () => {
     expect(openExternalAllowed('http://www.themoviedb.org/')).toBe(false);
     expect(openExternalAllowed('file:///C:/Users/')).toBe(false);
+    // The leaf is that such a URL is refused, so it has to be written here.
+    // eslint-disable-next-line no-script-url
     expect(openExternalAllowed('javascript:alert(1)')).toBe(false);
   });
 
