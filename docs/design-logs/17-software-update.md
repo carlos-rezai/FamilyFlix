@@ -184,7 +184,9 @@ has not been built yet?
     the row returns to idle with its label advanced, and the offer arrives on
     its own when the bytes land.
 
-13. **What is the global called, and who owns it?** ✅ `window.familyflix`,
+13. **What is the global called, and who owns it?** ⚠️ **The parenthetical is
+    superseded by `24-electron-shell` Q4** — the preload never carries an API
+    base URL. ✅ `window.familyflix`,
     owned and declared by the **Electron shell** initiative (it will carry the
     API base URL before it carries anything else); this initiative adds one
     member, `updates`. The contract itself is `src/types/update.ts` and both

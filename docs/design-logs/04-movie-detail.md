@@ -137,7 +137,9 @@ fields below the fold.
     Continue, and future collections. ❌ hardcode `navigate('/')`: breaks the
     exact case `detailReturn` was written for — a parent browsing "Action", opening
     a movie, and losing their scrolled place in the row.
-14. **Does the router choice depend on Electron?** No — `navigate(-1)` and
+14. **Does the router choice depend on Electron?** ⚠️ **Settled by
+    `24-electron-shell` Q10** — `BrowserRouter` stays, served over the bundled
+    Express process. No — `navigate(-1)` and
     `location.key === 'default'` behave identically under `BrowserRouter`,
     `HashRouter`, and `MemoryRouter`. Under `MemoryRouter` the fallback rarely
     fires in production (no URL to start on) but stays correct in dev and tests.
