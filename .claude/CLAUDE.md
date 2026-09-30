@@ -895,12 +895,12 @@ same layout, spacing, states, copy, and interaction.
 > Status legend: ✅ Done · 🔜 Planned · 🧭 Roadmap · 🚫 Out of scope
 > Every 🔜 item builds against its prototype in `docs/handoff/` — translate, don't redesign.
 
-**Build order — the three that are left.** The groups below say what the app
+**Build order — the two that are left.** The groups below say what the app
 _is_; this says what to build _next_, and it is a chain rather than a
-preference. Each 🔜 entry carries its step number; steps 1–6, the
+preference. Each 🔜 entry carries its step number; steps 1–7, the
 **Snackbar system**, the **Back-to-top FAB**, **Back navigation**,
-**Motion & interaction states**, **Series (TV)** and **Enrichment (TMDB)**,
-are done — step 3 was found by the prototype audit of 2026-09-21 and went ahead
+**Motion & interaction states**, **Series (TV)**, **Enrichment (TMDB)** and
+the **Electron desktop shell**, are done — step 3 was found by the prototype audit of 2026-09-21 and went ahead
 of the shell, because it was the app's own seams rather than anything
 Electron adds. Steps 4–6 arrived
 with the prototype revision of 2026-09-22 (`docs/handoff/` — three new
@@ -908,24 +908,24 @@ components, two new pages, one new organism, and a motion contract) and
 go ahead of the shell for the same reason: none of the three needs anything
 Electron adds, and each is built against a prototype that already exists.
 The shell, the packaging and the update moved down three numbers and keep
-their gates.
+their gates; the shell, step 7, is done (log 24), and `Change…` in the
+Storage group is not in the chain — it is the Roadmap's **Move the media
+folder** (log 24 Q2).
 
-7. **Electron desktop shell** _(next)_ — unblocks everything after it: the
-   window 8 packages and 9 updates. `Change…` in the Storage group does not
-   wait on it — it is the Roadmap's **Move the media folder** (log 24 Q2).
-8. **Desktop packaging** — needs 7; produces the installer that 9 publishes.
+8. **Desktop packaging** _(next)_ — needs 7, which is done; produces the
+   installer that 9 publishes.
 9. **Software update** — needs 7 and 8 (and 1, which is done). Designed in
    full already (`docs/design-logs/17-software-update.md`); its PRD waits
-   on 7.
+   on 8.
 
-A 🧭 Roadmap item is not in this chain — it is after all three, if ever.
+A 🧭 Roadmap item is not in this chain — it is after both, if ever.
 
 ### Foundation
 
 - ✅ **Nx + Vite + React workspace scaffold** — monorepo, tooling, lint/format.
 - ✅ **Claude design handoff prototype** — full interactive design system, the build spec.
 - ✅ **Library core** — movie model, SQLite schema, repository layer.
-- 🔜 **Electron desktop shell** _(step 7 — next)_ — one window over the **Server process**, **One origin** on the **Shell port**, the **Loopback guard**, the **Ordered shutdown**, the window's rules, the two failure dialogs and the **Shell log**, the **App mark**, and fonts served offline. No preload, no native picker.
+- ✅ **Electron desktop shell** — one window over the **Server process**, **One origin** on the **Shell port**, the **Loopback guard**, the **Ordered shutdown**, the window's rules, the two failure dialogs and the **Shell log**, the **App mark**, and fonts served offline. No preload, no native picker.
 
 ### Browse & discover (parent-facing)
 
@@ -973,7 +973,7 @@ A 🧭 Roadmap item is not in this chain — it is after all three, if ever.
 - ✅ **Back-to-top FAB** — the accent circle in the home screen's bottom-right corner once the body is past 420px, riding it back to the top on a press; mounted by the chrome over the body it already owns, and gone again under the line.
 - ✅ **Back navigation** — one **Back rule** on every screen: `useGoBack(fallback)`, a **History step**, or the screen's own **Landing** pushed when there is nothing behind it — the player's is its movie, Import's is Settings, the **Movie form**'s is where its job came from. Every **Leaving** is a step except the two **Fresh homes**, _Add to library_ and Import's _Finish_; Play → Back → Back reaches the library, the shelf comes back filtered and scrolled, and a Delete after a Play lands on the library.
 - ✅ **Motion & interaction states** — the prototype's **Interaction contract** (`COMPONENT-SPEC.md` §2a) over every built control and card, in two disjoint vocabularies: a **Control** (Button, Chip, IconButton and every extension, the Filter dropdown's trigger) signals with colour, a **Card** (PosterCard, ContinueCard) with elevation. `tokens/motion.ts` is the one file that spells `durFast`, `durBase`, `durSlow` and `easeOut`; the **Accent scale** is derived from the one accent by `createTheme(accent)`, never aliased; `styles/interactionStates/` holds `controlStates(press)` — the **Press** at doubled rank in 60ms, so every `IconButton` extension inherits it — and `cardLift` and `cardFocus`, with a structural guard against any other file spelling a duration, the curve or a press; one **Reduced motion** block in `GlobalStyle`. `SeasonCard` and `EpisodeRow` are born on the card fragments in step 5.
-- 🔜 **Desktop packaging** _(step 8)_ — Windows installer build via electron-builder; needs step 7.
+- 🔜 **Desktop packaging** _(step 8 — next)_ — Windows installer build via electron-builder; needs step 7, which is done.
 
 ### Roadmap
 

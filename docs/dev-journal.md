@@ -11,6 +11,104 @@ Newest entry first.
 
 ---
 
+## 2026-09-30 — Electron desktop shell refactor (issue #226)
+
+Seventeen commits against `docs/refactor-plans/24-electron-shell-refactor.md`,
+the docs-and-refactor-filing slice filed as 225 folded in. **6626 tests pass
+across 383 files**, from 6608 across 378. `tsc -b` is clean, and
+`eslint src server electron .husky` is clean of warnings too: the one
+`no-script-url` warning was the whole of its report. `electron/main.ts` is
+**238 lines, from 257** — fewer lines is not the point; what is left is
+wiring. **Nothing changes on screen.**
+
+**Electron desktop shell** is ticked ✅ in both feature lists, and **Desktop
+packaging** is next.
+
+### What each group changed
+
+- **Group 0, the record.** The build's own journal entry, below, written first
+  so it describes what shipped before this round changed it.
+- **Group 1, the shared double.** `electron/test-support/fakeServerChild/`, the
+  shell's rung of the test-support rule, excluded from `tsconfig.electron.json`
+  so the typecheck enforces it. The `awaitExitOrKill`, `serverHandle` and
+  `shellDialogs` suites moved onto it; their three local `FakeChild`s are gone.
+- **Group 2, the main process.**
+  - `shellMode(isPackaged, env)` → `'dev' | 'start' | 'installed'`, the
+    **Shell mode**, read once. `serverLaunch` and `rendererUrl` take the mode
+    in place of `isPackaged` and a flag, and `main.ts` reads
+    `FAMILYFLIX_SHELL_PROD` nowhere.
+  - **One fork path.** `serverLaunch` answers `electron/dist/server.js` in
+    every mode, `execArgv` left `ServerLaunch`, and `electron/serverBoot.mjs`
+    is deleted. `electron:dev`'s watcher already built that bundle before it
+    launched Electron.
+  - `quitAfterShutdown`, `reloadOnce` and `loadRenderer`: the quit gate, the
+    one reload, and loading until Vite answers, each a unit with a suite.
+    `loadRenderer` also checks the window before each ask, not only after a
+    refusal — a retry scheduled as the window closed would otherwise have
+    called `loadURL` on a destroyed window, which Electron throws on.
+  - **The dialogs log themselves.** `DialogWorld` gained `log`, so the
+    _stopped unexpectedly_ dialog reaches the **Shell log** as the startup one
+    already did, and a third dialog cannot be added unlogged.
+- **Group 3, the server's half.**
+  - `shellHandshake(parentPort, startup)` is handed a `Started` — which moved
+    into its module — and answers it. `server/src/main.ts` lost its reassigned
+    `let shutdown` and the optional third parameter is gone.
+  - `boundPort(server)` in `listen/`, the one reading of the port; the cast
+    lives there alone.
+  - `loopbackGuard` and `rendererRouter` moved to `routes/`, as Q13 and Q15
+    placed them. `shell/` is `shellHandshake`, `listen` and `orderedShutdown`.
+  - `withoutCsp` is gone, and with the renderer path unset nothing is mounted.
+    The rule is the renderer's policy: sent on the renderer, never on `/api`.
+- **Group 4, the drift.** `electron:start` calls `nx` by path, and the
+  `buildElectron` suite now asserts every `electron:*` command is `node` on a
+  path. The `javascript:` literal carries its `eslint-disable` and reason.
+- **Group 5, the documents.** CLAUDE.md's environment section, the folder map
+  (`electron/` and every unit, `server/src/shell/`, the two route units,
+  `shell.ts`, `db/`'s binding), the commit gate's three shipping projects,
+  _Desktop Build_, step 7's line (Q3's autofill struck) and the new Roadmap
+  item **Move the media folder** (Q2). README's run section rewritten around
+  `dev`, `electron:dev`, `electron:start`, `electron:native` and
+  `electron:icon`; the nonexistent `npm run release` and `npm version` hooks
+  are gone. The glossary's **Save to computer**, **Server process**, **One
+  origin**, **Loopback guard** and **Unpackaged run** corrected, **Shell mode**
+  added, and the ⚠️ pointers on `04-movie-detail` Q14 and `17-software-update`
+  Q13.
+
+### Leaves restated
+
+As the plan named: `serverLaunch`'s dev pair (_forks the bundle the watcher
+builds_, _passes no Node flags_) and `rendererRouter`'s pair (_never sends the
+renderer's policy on /api_, _sends the renderer's policy nowhere_). One more
+than the plan named: _leaves an unknown /api path the API's own 404_ asserted a
+null CSP in one line, which Express's own `404` no longer gives once
+`withoutCsp` is gone; that line now asserts the renderer's policy is absent,
+the same restatement. The packaged-with-the-flag run of `serverLaunch`'s
+packaged describe collapsed into `'installed'`, and "packaged ignores the flag"
+is `shellMode`'s leaf instead.
+
+### The manual smoke
+
+The bundled server — the one every mode now forks — was run under Node over a
+scratch library with the built renderer: a deep route answered `index.html`
+under the renderer's policy, `/api` answered with none, Express's own `404`
+carried its own `default-src 'none'`, and a rebinding `Host` got `403`.
+
+**The Electron window smokes were not run**, for want of a display session:
+`electron:dev` opening the library over the bundle and a film playing,
+`electron:start` reloading on `/series/3/season/2`, closing during playback
+inside 5 s with no `-wal`, and killing the server offering Restart with the
+dialog in the **Shell log**. They are the first thing to run by hand.
+
+### Deliberately left out
+
+The installed app's resource paths (step 8's), one spelling of the native
+binding's path, tests for `buildIcon.mjs` and `fetchNative.mjs`,
+`orderedShutdown`'s idempotence (the memo stays in `start()`), the guard's
+`bind(port)` shape, and `npm run dev`'s bare `concurrently` — each as the
+plan's _Out of Scope_ gives it.
+
+---
+
 ## 2026-09-30 — Electron desktop shell (issues #216–#224)
 
 Seventeen commits across issues #216–#224 — eight RED/GREEN pairs and one

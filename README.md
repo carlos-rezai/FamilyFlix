@@ -326,8 +326,8 @@ Keep the description short enough to fit on one line — long descriptions get w
 | Series (TV) — tab, series page, seasons, episodes   | ✅ Done         |
 | Enrichment — TMDB metadata & posters sync           | ✅ Done         |
 | Network group — the TMDB key and the sync row       | ✅ Done         |
-| Electron desktop shell                              | 🔜 7 — next     |
-| Desktop packaging (Windows installer)               | 🔜 8            |
+| Electron desktop shell                              | ✅ Done         |
+| Desktop packaging (Windows installer)               | 🔜 8 — next     |
 | Software update (check / install)                   | 🔜 9            |
 | Collections / playlists                             | 🧭 Roadmap      |
 | Auto-on subtitles                                   | 🧭 Roadmap      |
@@ -335,24 +335,23 @@ Keep the description short enough to fit on one line — long descriptions get w
 | Move the media folder                               | 🧭 Roadmap      |
 | User accounts / multi-profile                       | 🚫 Out of scope |
 
-Everything above the line is done. The three that are left are numbered in
-**build order**, because they are a chain rather than a preference; steps 1–6,
+Everything above the line is done. The two that are left are numbered in
+**build order**, because they are a chain rather than a preference; steps 1–7,
 the Snackbar system, the Back-to-top FAB, Back navigation, Motion &
-interaction states, Series (TV) and Enrichment (TMDB), are done — step 3 came out of auditing the build against
-the prototype (2026-09-21) and went ahead of the shell, since it was a fix to
-what is built rather than anything Electron adds. Steps 4–6 came with the
-prototype revision of 2026-09-22 and go ahead of the shell for the same reason
-— none of them needs anything Electron adds, and each has its prototype
-already; the three behind them moved down three numbers.
+interaction states, Series (TV), Enrichment (TMDB) and the Electron desktop
+shell, are done — step 3 came out of auditing the build against the prototype
+(2026-09-21) and went ahead of the shell, since it was a fix to what is built
+rather than anything Electron adds. Steps 4–6 came with the prototype revision
+of 2026-09-22 and went ahead of the shell for the same reason. _Change…_ in
+Settings → Storage is not in the chain — it is the Roadmap's **Move the media
+folder**.
 
-7. **Electron desktop shell** _(next)_ — unblocks everything after it: the
-   window 8 packages and 9 updates. _Change…_ in Settings → Storage does not
-   wait on it — it is the Roadmap's **Move the media folder**.
-8. **Desktop packaging** — needs 7, and produces the installer 9 publishes.
+8. **Desktop packaging** _(next)_ — needs 7, which is done, and produces the
+   installer 9 publishes.
 9. **Software update** — needs 7 and 8 (and 1, which is done). Already
-   designed in full; its PRD waits on the shell.
+   designed in full; its PRD waits on packaging.
 
-A 🧭 Roadmap item is not in the chain — it comes after all three, if ever.
+A 🧭 Roadmap item is not in the chain — it comes after both, if ever.
 
 ---
 
