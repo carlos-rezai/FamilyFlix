@@ -1,4 +1,3 @@
-import type { AddressInfo } from 'node:net';
 import express from 'express';
 
 import { createEnrichment } from './enrichment/createEnrichment/createEnrichment';
@@ -9,7 +8,7 @@ import { createMedia } from './media/createMedia/createMedia';
 import { createComponentSlot } from './playback/componentSlot/componentSlot';
 import { createPlayback } from './playback/createPlayback/createPlayback';
 import { createApiRouter } from './routes';
-import { listen } from './shell/listen/listen';
+import { boundPort, listen } from './shell/listen/listen';
 import { loopbackGuard } from './shell/loopbackGuard/loopbackGuard';
 import { mountRenderer } from './shell/rendererRouter/rendererRouter';
 import {
@@ -95,7 +94,7 @@ async function start(): Promise<Started> {
     storage.close();
     throw error;
   }
-  guard.bind((server.address() as AddressInfo).port);
+  guard.bind(boundPort(server));
 
   let stopping: Promise<void> | undefined;
   const shutdown = () => {

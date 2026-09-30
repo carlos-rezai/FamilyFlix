@@ -1,7 +1,7 @@
 import type { Server } from 'node:http';
-import type { AddressInfo } from 'node:net';
 
 import type { ServerMessage, ShellCommand } from '../../../../src/types/shell';
+import { boundPort } from '../listen/listen';
 
 /**
  * The part of Electron's `process.parentPort` the server uses: post a
@@ -67,8 +67,7 @@ export async function shellHandshake(
     throw error;
   }
 
-  const { port } = started.server.address() as AddressInfo;
-  parentPort?.postMessage({ type: 'ready', port });
+  parentPort?.postMessage({ type: 'ready', port: boundPort(started.server) });
   parentPort?.on('message', ({ data }) => {
     if (data.type === 'shutdown') void started.shutdown();
   });

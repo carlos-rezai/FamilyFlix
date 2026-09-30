@@ -15,7 +15,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { ServerMessage } from '../../../../src/types/shell';
 import { shellHandshake } from '../shellHandshake/shellHandshake';
-import { listen } from './listen';
+import { boundPort, listen } from './listen';
 
 const open: Server[] = [];
 
@@ -65,6 +65,16 @@ describe('listen', () => {
     await expect(
       get((server.address() as AddressInfo).port, '/api/ping')
     ).resolves.toBe(200);
+  });
+
+  it('boundPort answers the port a request reaches', async () => {
+    const server = await listen(appAnsweringPing(), 0);
+    open.push(server);
+
+    const port = boundPort(server);
+
+    expect(port).toBeGreaterThan(0);
+    await expect(get(port, '/api/ping')).resolves.toBe(200);
   });
 
   it('rejects when the port is taken', async () => {

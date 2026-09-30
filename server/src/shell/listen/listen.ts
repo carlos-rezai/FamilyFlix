@@ -1,4 +1,5 @@
 import type { Server } from 'node:http';
+import type { AddressInfo } from 'node:net';
 import type { Express } from 'express';
 
 /**
@@ -35,6 +36,15 @@ function isAddressInUse(error: unknown): boolean {
     error instanceof Error &&
     (error as NodeJS.ErrnoException).code === 'EADDRINUSE'
   );
+}
+
+/**
+ * The port a listening server actually bound — under the shell, maybe the
+ * ephemeral fallback rather than the one it was asked for. The one reading of
+ * it: the **Loopback guard** is bound to it and `ready` reports it.
+ */
+export function boundPort(server: Server): number {
+  return (server.address() as AddressInfo).port;
 }
 
 /**
