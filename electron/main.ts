@@ -18,6 +18,7 @@ import {
 import { APP_USER_MODEL_ID } from './appIdentity/appIdentity';
 import { downloadPath } from './downloadPath/downloadPath';
 import { quitAfterShutdown } from './quitAfterShutdown/quitAfterShutdown';
+import { reloadOnce } from './reloadOnce/reloadOnce';
 import { rendererUrl } from './rendererUrl/rendererUrl';
 import { serverHandle, type ServerChild } from './serverHandle/serverHandle';
 import { serverLaunch, type ServerLaunch } from './serverLaunch/serverLaunch';
@@ -183,12 +184,13 @@ function openWindow(port: number): void {
   // The window is FamilyFlix, whatever the page's own `<title>` says.
   window.on('page-title-updated', (event) => event.preventDefault());
   // A crashed renderer is reloaded once; a second crash is left as it is.
-  let reloaded = false;
+  const onRendererGone = reloadOnce({
+    reload: () => window?.webContents.reload(),
+    isGone: () => window === null || window.isDestroyed(),
+  });
   window.webContents.on('render-process-gone', (_event, details) => {
     log.main(`Renderer gone: ${details.reason}`);
-    if (reloaded || window === null || window.isDestroyed()) return;
-    reloaded = true;
-    window.webContents.reload();
+    onRendererGone();
   });
   window.on('closed', () => {
     window = null;
