@@ -11,25 +11,11 @@
 // message itself as the payload and `exit` with a code, the way Electron's
 // does. Electron is never launched.
 
-import { EventEmitter } from 'node:events';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { ServerMessage } from '../../src/types/shell';
 import type { ServerLaunch } from '../serverLaunch/serverLaunch';
-import { serverHandle, type ServerChild } from './serverHandle';
-
-class FakeChild extends EventEmitter implements ServerChild {
-  readonly postMessage = vi.fn();
-  readonly kill = vi.fn(() => true);
-
-  post(message: ServerMessage): void {
-    this.emit('message', message);
-  }
-
-  exit(code: number): void {
-    this.emit('exit', code);
-  }
-}
+import { FakeServerChild } from '../test-support/fakeServerChild/fakeServerChild';
+import { serverHandle } from './serverHandle';
 
 const LAUNCH: ServerLaunch = {
   entry: 'server/src/main.ts',
@@ -37,14 +23,14 @@ const LAUNCH: ServerLaunch = {
   env: { PORT: '3001' },
 };
 
-let child: FakeChild;
+let child: FakeServerChild;
 let onExit: ReturnType<typeof vi.fn<(code: number) => void>>;
 
 const handle = () =>
   serverHandle({ fork: () => child, launch: LAUNCH, onExit });
 
 beforeEach(() => {
-  child = new FakeChild();
+  child = new FakeServerChild();
   onExit = vi.fn<(code: number) => void>();
 });
 

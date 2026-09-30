@@ -17,6 +17,7 @@
   "include": [
     "src/test-support/**/*",
     "server/src/test-support/**/*",
+    "electron/test-support/**/*",
     "server/**/*.test.ts",
     "server/**/*.spec.ts",
     "vite.config.ts",

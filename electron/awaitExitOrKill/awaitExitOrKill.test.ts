@@ -8,24 +8,16 @@
 // The fake child stands in for a `UtilityProcess`: it emits `exit` with a
 // code, and records `kill()`. Electron is never launched.
 
-import { EventEmitter } from 'node:events';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { awaitExitOrKill, type ExitingChild } from './awaitExitOrKill';
+import { FakeServerChild } from '../test-support/fakeServerChild/fakeServerChild';
+import { awaitExitOrKill } from './awaitExitOrKill';
 
-class FakeChild extends EventEmitter implements ExitingChild {
-  readonly kill = vi.fn(() => true);
-
-  exit(code: number): void {
-    this.emit('exit', code);
-  }
-}
-
-let child: FakeChild;
+let child: FakeServerChild;
 
 beforeEach(() => {
   vi.useFakeTimers();
-  child = new FakeChild();
+  child = new FakeServerChild();
 });
 
 afterEach(() => {

@@ -7,11 +7,13 @@
   // The Desktop shell's shipping code (issue #216), and the shared Shell
   // handshake types it imports. The tests belong to `tsconfig.spec.json`, the
   // way the frontend's and the backend's do, so a RED `test:` commit can still
-  // ask whether the shell itself compiles.
+  // ask whether the shell itself compiles. `test-support/` is excluded so
+  // shipping code cannot import a double (issue #226).
   "include": ["electron/**/*.ts", "src/types/shell.ts"],
   "exclude": [
     "electron/.native/**/*",
     "electron/dist/**/*",
+    "electron/test-support/**/*",
     "electron/**/*.spec.ts",
     "electron/**/*.test.ts"
   ]

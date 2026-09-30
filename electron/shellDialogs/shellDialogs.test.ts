@@ -14,12 +14,11 @@
 // Electron's `dialog`, `shell.openPath` and `app` are injected; the server is
 // the real `serverHandle` over a fake child, the way its own suite drives it.
 
-import { EventEmitter } from 'node:events';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import type { ServerMessage } from '../../src/types/shell';
-import { serverHandle, type ServerChild } from '../serverHandle/serverHandle';
+import { serverHandle } from '../serverHandle/serverHandle';
 import type { ServerLaunch } from '../serverLaunch/serverLaunch';
+import { FakeServerChild } from '../test-support/fakeServerChild/fakeServerChild';
 import {
   startServer,
   startupFailed,
@@ -27,19 +26,6 @@ import {
   type DialogWorld,
   type MessageBox,
 } from './shellDialogs';
-
-class FakeChild extends EventEmitter implements ServerChild {
-  readonly postMessage = vi.fn();
-  readonly kill = vi.fn(() => true);
-
-  post(message: ServerMessage): void {
-    this.emit('message', message);
-  }
-
-  exit(code: number): void {
-    this.emit('exit', code);
-  }
-}
 
 const LAUNCH: ServerLaunch = {
   entry: 'server/dist/server.js',
@@ -81,7 +67,7 @@ function world(press: string) {
 }
 
 function failingStart() {
-  const child = new FakeChild();
+  const child = new FakeServerChild();
   const server = serverHandle({
     fork: () => child,
     launch: LAUNCH,
