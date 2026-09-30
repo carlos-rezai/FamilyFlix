@@ -49,6 +49,21 @@ in `src/`.
 Assemble these into one `theme` object passed to `<ThemeProvider>`. Keep the names — they
 already read as a semantic scale.
 
+### Brand assets — `brand/`
+
+| Asset        | File                                                                       | Target                                                        |
+| ------------ | -------------------------------------------------------------------------- | ------------------------------------------------------------- |
+| **Wordmark** | drawn inline (library header, About card) — no file                        | `layouts/` and `AboutSection`                                 |
+| **App mark** | `brand/familyflix-mark.svg`, previews `familyflix-mark-{256,512,1024}.png` | `electron/assets/icon.ico` and `public/favicon.ico`, rendered |
+
+The **App mark** is the Wordmark reduced: its two F's, `--color-text` (`#f3ece0`) then
+`--color-accent` (`#d97a4e`), Source Serif 4 at 700 outlined to paths, on a `--color-bg`
+(`#14110d`) square with a 22% corner radius. The SVG carries no `<text>` and no font
+reference, so it renders the same on a machine without the font. It is what the OS draws —
+window, taskbar, Alt+Tab, shortcut, browser tab — and never appears on a screen that draws
+the Wordmark. The icons are rendered from the SVG by a script; change the SVG, then re-run
+the script — never edit a rendered icon.
+
 ---
 
 ## 2a. Interaction & motion contract
