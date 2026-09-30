@@ -22,10 +22,10 @@ This project has two purposes:
 
 FamilyFlix is an offline-first desktop application for Windows. There is no cloud version, no authentication, and no network dependency. All data and media live locally on the machine.
 
-- **Shell:** Electron, wrapping the React frontend and bundling the Express server as a utility process
-- **Storage:** SQLite via `better-sqlite3` for the library; video/subtitle/poster files are copied into FamilyFlix's own managed media folder on import
+- **Shell:** Electron — one window over the bundled Express server, forked as a utility process and serving the built app beside its API on one loopback origin
+- **Storage:** SQLite via `better-sqlite3` for the library; video/subtitle/poster files are copied into FamilyFlix's own managed media folder on import. Installed, everything lives under `%APPDATA%\FamilyFlix\`
 - **No auth** — single household, single shared watch history, local-only by design
-- **Packaging:** NSIS installer via `electron-builder`, installs per-user with no UAC prompt
+- **Packaging:** NSIS installer via `electron-builder`, installs per-user with no UAC prompt — build step 8, not built yet
 
 ---
 
@@ -140,10 +140,18 @@ Every feature is a 1:1 translation of the canonical prototype in docs/handoff/ �
 ```
 familyflix/
 ├── .claude/            # Claude Code skills and CLAUDE.md
-├── electron/           # Main process, preload, server lifecycle
+├── electron/           # The Desktop shell's main process: main.ts, wiring only, over one unit per decision
+│   ├── shellMode/          # dev / start / installed, read once
+│   ├── serverLaunch/ serverHandle/ awaitExitOrKill/ # fork the bundled server, wait for ready, shut it down or kill it
+│   ├── quitAfterShutdown/ reloadOnce/ loadRenderer/ # the quit gate, one reload after a crash, loading until Vite answers
+│   ├── rendererUrl/ windowPolicy/ downloadPath/     # where the window points, what it may open, where a download lands
+│   ├── shellDialogs/ shellLog/ appIdentity/         # the two failure dialogs, the Shell log, the taskbar identity
+│   ├── assets/             # icon.ico, the App mark, and its guard
+│   ├── scripts/            # buildElectron.mjs, buildIcon.mjs, fetchNative.mjs
+│   └── test-support/       # fakeServerChild — never imported by shipping code
 ├── server/             # Express backend
 │   └── src/
-│       ├── routes/         # HTTP layer only — parses requests, calls a domain module; enrichmentBody/ reads a Sync's start and Apply choices
+│       ├── routes/         # HTTP layer only — parses requests, calls a domain module; enrichmentBody/ reads a Sync's start and Apply choices; loopbackGuard/ and rendererRouter/ stand in front of the API
 │       ├── library/        # movie CRUD, SQLite queries, watch-state + resume position, the household's settings and the TMDB key, stamp and Library root beside them
 │       │   ├── enrich/            # a Sync's film writes, the counts over both kinds, the Source folders, and Full details spelled once
 │       │   └── series/            # series storage, one unit per concern: read, browse, write, watch, curation, enrich, nextEpisodeOf
@@ -157,7 +165,8 @@ familyflix/
 │       ├── import-export/  # the bulk importer and the exporter: readSheet, titleKey, matchRows, groupShows, createImporter (+ its film and series fixtures), writeSheet
 │       ├── playback/       # the Playback component (probe, spawn, decoders), the Component slot it lives in (componentSlot, componentBinary, verifyComponent), the path choice, streaming, subtitle parsing, derivedRuntime, capabilities(component)
 │       ├── enrichment/     # the fifth domain, the one network client: tmdbClient, tmdbAuth, tmdbGenres, matchScore, fetchedFields, currentFields, planFields, planEpisode, plannedEnrichment, decisionFace, writeBack, createEnrichment
-│       ├── db/             # SQLite connection + schema/migrations (3: the settings table; 4: series and episodes; 5: original title, TMDB score and source folder on both titles, stills on episodes)
+│       ├── db/             # SQLite connection + schema/migrations (3: the settings table; 4: series and episodes; 5: original title, TMDB score and source folder on both titles, stills on episodes); the Electron-ABI binding when FAMILYFLIX_SQLITE_BINDING names one
+│       ├── shell/          # the server's half of the shell seam: shellHandshake, listen (the loopback bind and boundPort), orderedShutdown
 │       └── test-support/   # Shared test doubles — never imported by shipping code (heldCopy, libraryFixture, seriesFixture, fixedSlot, componentDir, fakeTmdb, offlineTmdb, …)
 ├── src/                # React frontend
 │   ├── App/            # Router and app-level providers
@@ -194,7 +203,7 @@ familyflix/
 │   ├── pages/           # Route-level views, composition only (ImportPage and EnrichmentPage among them)
 │   ├── api/             # Wire calls two or more features share (saveFavorite, fetchMovie, saveWatched, dismissProblem, fetchSettings, saveSeriesFavorite, saveEpisodeWatched, fetchEnrichmentSummary, fetchTmdbKey)
 │   ├── hooks/            # Global shared hooks (useGoBack(fallback) — the one Back rule, a history step with the screen's own landing behind it — useRestoredScroll, useOptimisticEdit, and useEnrichmentSummary)
-│   ├── types/            # Shared TypeScript interfaces (import.ts, export.ts, settings.ts, playback.ts, series.ts, enrichment.ts — read by both build targets; appVersion.d.ts)
+│   ├── types/            # Shared TypeScript interfaces (import.ts, export.ts, settings.ts, playback.ts, series.ts, enrichment.ts — read by both build targets; shell.ts, the Shell handshake, read by the server and the shell; appVersion.d.ts)
 │   ├── utils/            # Pure helper functions (formatBytes, formatElapsed, formatEpisodeTag, moviePath, enrichPath, seriesPath, seasonPath, episodePlayPath and accentScale among them)
 │   └── test-support/     # Shared test doubles (fakeResponse, makeSeriesDetail, makeEnrichmentRun, stubDownload, stubScrollMetrics, stubScrollTo, comesBefore, snackbarStack, LocationProbe and its navigationType reader, shippingSources, resolvedStyle and normCss, …)
 └── docs/
@@ -222,25 +231,42 @@ cd FamilyFlix
 npm install
 ```
 
-### Dev (browser + hot reload)
+### Dev in the browser (the fast loop)
 
 ```
+npm run dev
+```
+
+The server from source through `tsx watch` on `127.0.0.1:3001`, and Vite with hot reload on `localhost:4200`. Server edits restart it; this is the loop for everyday work.
+
+### Dev in the desktop window
+
+```
+npm run electron:native   # once, and again after an Electron upgrade
 npm run electron:dev
 ```
 
-### Smoke-test (compiled, production renderer)
+`electron:native` fetches the Electron-ABI `better-sqlite3` binding into the gitignored `electron/.native/`, so the shell and Vitest each keep their own. `electron:dev` opens the window over Vite with hot reload, and forks the bundled server the watcher rebuilds — a server change is picked up by restarting the script.
+
+### The installed shape, unpackaged
 
 ```
 npm run electron:start
 ```
 
-### Build installer
+Builds the renderer and both bundles, then runs exactly what the installed app runs — the built renderer served on the server's own origin, the Shell port `41720` — over the repo's own library rather than `%APPDATA%`.
+
+### The App mark
 
 ```
-npm run release
+npm run electron:icon
 ```
 
-Output: `release/FamilyFlix-Setup-x.x.x.exe`
+Run by hand when the mark in `docs/handoff/brand/` changes: it renders `electron/assets/icon.ico` and the favicon.
+
+### The installer
+
+Not built yet — it is build step 8, **Desktop packaging**.
 
 ### Commit message convention
 
@@ -261,24 +287,6 @@ refactor: [library] issue #9 extract genre-row hook
 Types: `feat`, `fix`, `chore`, `refactor`, `test`, `docs`
 
 Keep the description short enough to fit on one line — long descriptions get wrapped or mangled in commit history. If it doesn't fit, the issue is too broad; split it.
-
----
-
-### Releasing a new version
-
-```
-npm version patch   # bugfix:      1.0.0 → 1.0.1
-npm version minor   # new feature: 1.0.0 → 1.1.0
-npm version major   # breaking:    1.0.0 → 2.0.0
-```
-
-Each command runs tests, typecheck, and lint first — if any fail the version bump is aborted. On success it updates `package.json`, commits, tags, and pushes. Then:
-
-```
-npm run release
-```
-
-Builds the installer and publishes it to GitHub Releases automatically.
 
 ---
 
@@ -324,6 +332,7 @@ Builds the installer and publishes it to GitHub Releases automatically.
 | Collections / playlists                             | 🧭 Roadmap      |
 | Auto-on subtitles                                   | 🧭 Roadmap      |
 | Backgroundable import                               | 🧭 Roadmap      |
+| Move the media folder                               | 🧭 Roadmap      |
 | User accounts / multi-profile                       | 🚫 Out of scope |
 
 Everything above the line is done. The three that are left are numbered in
@@ -336,9 +345,9 @@ prototype revision of 2026-09-22 and go ahead of the shell for the same reason
 — none of them needs anything Electron adds, and each has its prototype
 already; the three behind them moved down three numbers.
 
-7. **Electron desktop shell** _(next)_ — unblocks everything after it. _Change…_ in
-   Settings → Storage and folder-path autofill in the Movie form are both
-   waiting on it, and both stay undrawn until it lands.
+7. **Electron desktop shell** _(next)_ — unblocks everything after it: the
+   window 8 packages and 9 updates. _Change…_ in Settings → Storage does not
+   wait on it — it is the Roadmap's **Move the media folder**.
 8. **Desktop packaging** — needs 7, and produces the installer 9 publishes.
 9. **Software update** — needs 7 and 8 (and 1, which is done). Already
    designed in full; its PRD waits on the shell.

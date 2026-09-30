@@ -106,10 +106,32 @@ fetching or domain knowledge, it has graduated into a feature.
 familyflix/
 ├── .claude/
 │ └── skills/
+├── electron/ ← the **Desktop shell**'s main process: `tsconfig.electron.json`'s shipping code, one unit per decision, Electron only ever run in a manual smoke
+│ ├── main.ts ← the composition root, and wiring only: adapters over Electron's `fs`, `dialog`, `shell` and `app`, the window's options, each event handed to a unit below
+│ ├── shellMode/ ← pure: `shellMode(isPackaged, env)` → `'dev'` / `'start'` / `'installed'`, the **Shell mode**, read once; the one reader of `FAMILYFLIX_SHELL_PROD`
+│ ├── serverLaunch/ ← pure: a mode → the entry and environment the **Server process** is forked with — the bundled `electron/dist/server.js` in every mode, `3001` in dev and the **Shell port** otherwise, the paths under `userData` only when installed; and `nativeBindingPath`
+│ ├── serverHandle/ ← main's hold on the server: fork, the 15 s wait for `ready`, `fatal` and an exit before `ready` as rejections, an exit after it to `onExit`, and `shutdown(ms)`
+│ ├── awaitExitOrKill/ ← wait for a child's exit, killing it at the budget and resolving anyway
+│ ├── quitAfterShutdown/ ← the quit gate: the `before-quit` listener that holds the app open until the **Ordered shutdown** is over, then quits and lets that quit through
+│ ├── reloadOnce/ ← the `render-process-gone` listener: a crashed renderer reloaded once, a second crash left as it is
+│ ├── loadRenderer/ ← `loadURL`, asked again every 500 ms while it rejects — the window can be up before Vite — until it resolves or the window is gone
+│ ├── rendererUrl/ ← pure: Vite's `localhost:4200` in dev, else `127.0.0.1:<port>` — **One origin**
+│ ├── windowPolicy/ ← pure: `isAppUrl`, `openExternalAllowed` (`https:` only), `permissionAllowed` (`fullscreen` only)
+│ ├── downloadPath/ ← pure: a download's free name in Downloads, deduplicated as Chromium does, no dialog
+│ ├── shellDialogs/ ← the two failure dialogs — _couldn't start_ (Quit / Show data folder) and _stopped unexpectedly_ (Restart / Quit) — each logging what it says before its box; `startServer` puts every startup failure in front of the first
+│ ├── shellLog/ ← the **Shell log**: `[main]` and `[server]` lines to `logs\familyflix.log` when installed, rolled at 5 MB, to the terminal otherwise
+│ ├── appIdentity/ ← `APP_USER_MODEL_ID`, set before the window so the taskbar groups it
+│ ├── assets/ ← `icon.ico`, the **App mark** at seven sizes, and `iconSizes.test.ts`, its guard
+│ ├── scripts/ ← `buildElectron.mjs` (the two CJS bundles into `dist/`; `--watch` for `electron:dev`, `--start` for `electron:start`, each launching Electron after the first build), `buildIcon.mjs` (`electron:icon`) and `fetchNative.mjs` (`electron:native`)
+│ ├── test-support/ ← the shell's rung of the rule: never imported by shipping code, excluded from `tsconfig.electron.json` so the typecheck enforces it
+│ │ └── fakeServerChild/ ← a `ServerChild` never forked: `postMessage` and `kill` recorded, `post(message)` and `exit(code)` on cue
+│ └── .native/ dist/ ← gitignored: the Electron-ABI `better_sqlite3.node` `electron:native` fetches, and the two bundles
 ├── server/
 │ └── src/
 │ ├── routes/ ← HTTP layer only: parse request, call a domain module, return response
-│ │ └── enrichmentBody/ ← `startEnrichmentBody` and `conflictChoicesBody`: a Sync's start and _Apply choices_ read into typed values, each `400` a sentence — `movieFormBody`'s precedent
+│ │ ├── enrichmentBody/ ← `startEnrichmentBody` and `conflictChoicesBody`: a Sync's start and _Apply choices_ read into typed values, each `400` a sentence — `movieFormBody`'s precedent
+│ │ ├── loopbackGuard/ ← the **Loopback guard**: mounted first, standalone included, `403` for a Host or Origin that is not a **Trusted host**; `bind(port)` once `listen` has resolved
+│ │ └── rendererRouter/ ← `mountRenderer`: the built renderer beside `/api` under `RENDERER_CSP` and `index.html` for any other GET, `/api` passed on before the policy is set; nothing mounted when `FAMILYFLIX_RENDERER_PATH` is unset
 │ ├── library/ ← movie CRUD, SQLite queries, watch-state + resume-position logic
 │ │ ├── settings/ ← the household's Settings: `settings()` with the default applied when the row is absent, `setSubtitleLanguage()` as an upsert; and three keys beside the preferences, never among them — `tmdb-api-key`, `enrichment-last-synced-at`, `library-root` — every one read through one `valueOf(key)`
 │ │ ├── enrich/ ← a Sync's film writes: `enrichMovie` (the columns named, only those), `moviesInScope`, `enrichmentCounts` over both kinds, `setSourceFolder` / `sourceFolder` over one id space; the **Full details** rule spelled once as `fullDetails`
@@ -159,7 +181,11 @@ familyflix/
 │ │ ├── decisionFace/ ← pure: a search → an `ambiguous` Decision's top three **Candidates** (the genre off the pool, the language upper-cased) or a `missing` one's reason
 │ │ ├── writeBack/ ← the two **Write targets**: the permission check and its dry-run lines, `familyflix-metadata.csv` at the root and `poster.jpg` per **Source folder** — the only code that writes into the Library root, and never over a file that exists
 │ │ └── createEnrichment/ ← the injected domain: the key, and the **Current enrichment run** — one in memory, its state machine as closures over the run, the abort controller and the Decisions, `createImporter`'s shape
-│ ├── db/ ← SQLite connection + schema/migrations (1 the schema and the genre seed, 2 `last_watched_at`, 3 the `settings` table — nothing seeded, 4 `series` and `episodes` with their two joins, `series_genres` and `episode_subtitles` — no `seasons` table, 5 `original_title`, `tmdb_score` and `source_folder` on both titles and `still_path` on episodes), shared by every domain module above; and `seriesSeed/`, the dev library's mock series
+│ ├── db/ ← SQLite connection + schema/migrations (1 the schema and the genre seed, 2 `last_watched_at`, 3 the `settings` table — nothing seeded, 4 `series` and `episodes` with their two joins, `series_genres` and `episode_subtitles` — no `seasons` table, 5 `original_title`, `tmdb_score` and `source_folder` on both titles and `still_path` on episodes), shared by every domain module above; `better-sqlite3`'s `nativeBinding` taken from `FAMILYFLIX_SQLITE_BINDING` when set, so the shell runs on the Electron-ABI binding and Vitest on the package's own; and `seriesSeed/`, the dev library's mock series
+│ ├── shell/ ← the server's half of the shell seam and its process lifecycle — infrastructure beside `db/`, not a domain
+│ │ ├── shellHandshake/ ← `shellHandshake(parentPort, startup)`: the startup answers `Started { server, shutdown }`, `ready` or `fatal` is posted, main's `shutdown` command runs the shutdown it was handed; inert with no parent port
+│ │ ├── listen/ ← the `127.0.0.1` bind, always; under the shell a taken **Shell port** falls back to an ephemeral one; `boundPort(server)`, the one reading of the port
+│ │ └── orderedShutdown/ ← the **Ordered shutdown** (cancel the runs, close the listener, close the database, exit) and `shutdownOnSignals`, one path for the command and the signals
 │ └── test-support/ ← test doubles shared across server tests, never imported by shipping code
 │ ├── heldCopy/ ← a Media whose first copy waits until released, forwarding the cancel signal
 │ ├── fakeTmdb/ ← a scripted TMDB for the enrichment suites: each question off the suite's table, every call recorded, one held or failed on cue; the result, detail, TV and season builders, and `reviewed()`
@@ -286,7 +312,7 @@ familyflix/
 │ │ │ ├── NetworkSection/ ← the Network card: TMDB and its status pill, the lede, the key field in mono with _Test connection_, and the _Sync metadata & posters_ row onto `/enrich`
 │ │ │ ├── useTmdbKey/ ← the stored key read on mount — never over one typed first — **Connected** as a comparison, and _Test connection_'s four notices through `useSnackbar()`
 │ │ │ ├── syncLine/ ← pure: the sync row's line off the summary — the complete count and when a Sync last reached review
-│ │ │ ├── StorageSection/ ← the Storage card: the path in mono, the space line off formatBytes and the title count; no Change… until the Electron shell
+│ │ │ ├── StorageSection/ ← the Storage card: the path in mono, the space line off formatBytes and the title count; no Change… — the Roadmap's **Move the media folder**
 │ │ │ ├── AboutSection/ ← the About card: the brand row, the App version in mono, the tagline; no Software update row; the last card, so no group gap
 │ │ │ ├── useCapabilities/ ← the read on mount, plus the two writes that change it: `{ capabilities, upload, installComponent, removeComponent }`. Neither write rejects, and neither re-fetches — both routes echo the report after the write, and that echo is the redraw
 │ │ │ ├── useStorageReport/ ← one fetch on mount, `null` until it lands and `null` still if it never does — nothing drawn while so
@@ -305,7 +331,7 @@ familyflix/
 │ │ ├── postValue.ts
 │ │ └── postValue.test.ts
 │ ├── hooks/ ← global shared hooks only: `useGoBack(fallback)` — the one **Back rule**, a **History step** with the screen's own **Landing** behind it (the library by default) — `useRestoredScroll`, and `useOptimisticEdit`, the one bargain a detail page's edit keeps, over whatever record the page holds; and `useEnrichmentSummary`, the summary Settings' sync row and the Enrichment setup both draw, `null` until it lands
-│ ├── types/ ← shared TypeScript interfaces (import.ts: ImportRun, ImportProblem, ImportProblemDetail, ImportField; export.ts: EXPORT*FORMATS, EXPORT_COLUMNS, EXPORT_FILENAME, ExportSummary; settings.ts: SUBTITLE_LANGUAGES, SubtitleLanguage, DEFAULT_SUBTITLE_LANGUAGE, Settings, StorageReport; playback.ts: CodecKind, CodecSupport, CodecCapability, ComponentSource, PlaybackComponentInfo, PlaybackCapabilities — both build targets; series.ts: Series, Episode, SeasonSummary, SeriesDetail, EpisodeRead, NextEpisodeRef, EpisodeContinueEntry, SeriesHomePayload, NewSeries, NewEpisode, Playable — both build targets; enrichment.ts: ENRICH_FIELDS, ENRICH_FIELD_LABELS, ENRICH_SCOPES, EnrichField, EnrichScope, EnrichmentSummary, Candidate, Decision, FieldConflict, ConflictChoices, EnrichmentRun, StartEnrichment — both build targets; viewModels.ts carries the series’ SeriesPageModel, SeasonPageModel, SeasonCardSeason and EpisodeRowEpisode beside the movie’s; appVersion.d.ts: `__APP_VERSION__`, defined by Vite from package.json)
+│ ├── types/ ← shared TypeScript interfaces (import.ts: ImportRun, ImportProblem, ImportProblemDetail, ImportField; export.ts: EXPORT*FORMATS, EXPORT_COLUMNS, EXPORT_FILENAME, ExportSummary; settings.ts: SUBTITLE_LANGUAGES, SubtitleLanguage, DEFAULT_SUBTITLE_LANGUAGE, Settings, StorageReport; playback.ts: CodecKind, CodecSupport, CodecCapability, ComponentSource, PlaybackComponentInfo, PlaybackCapabilities — both build targets; series.ts: Series, Episode, SeasonSummary, SeriesDetail, EpisodeRead, NextEpisodeRef, EpisodeContinueEntry, SeriesHomePayload, NewSeries, NewEpisode, Playable — both build targets; enrichment.ts: ENRICH_FIELDS, ENRICH_FIELD_LABELS, ENRICH_SCOPES, EnrichField, EnrichScope, EnrichmentSummary, Candidate, Decision, FieldConflict, ConflictChoices, EnrichmentRun, StartEnrichment — both build targets; viewModels.ts carries the series’ SeriesPageModel, SeasonPageModel, SeasonCardSeason and EpisodeRowEpisode beside the movie’s; shell.ts: ServerMessage, ShellCommand — the **Shell handshake**, typed once and read by `server/src/shell/` and `electron/`, in `tsconfig.electron.json` too; appVersion.d.ts: `__APP_VERSION__`, defined by Vite from package.json)
 │ ├── utils/ ← pure helper functions (one folder per helper + its test)
 │ │ ├── index.ts ← barrel: re-exports every helper
 │ │ ├── formatBytes/ ← 1024-based, one decimal from KB up: `18.4 GB`
@@ -443,18 +469,29 @@ starting any task that matches its description.
 
 FamilyFlix is an offline-first desktop app. This is the only target.
 
-- **Shell:** Electron, wrapping the React frontend and bundling the
-  Express server as a utility process
+- **Shell:** Electron — one maximized, sandboxed window over the
+  **Server process**, the bundled Express server forked in a
+  `utilityProcess` in every **Shell mode**. The two speak the **Shell
+  handshake** (`ready` / `fatal` / `shutdown`), and quitting waits out the
+  server's **Ordered shutdown**, killing it at 5 s
+- **One origin:** under `electron:start` and in the **Installed app** the
+  server serves the built renderer beside `/api` on
+  `127.0.0.1:<Shell port>` (41720, with an ephemeral fallback), so every
+  relative call site stays as it is; under `electron:dev` Vite serves the
+  renderer. The server binds the loopback always, and the **Loopback
+  guard** refuses any Host or Origin that is not a **Trusted host**
 - **Storage:** SQLite via `better-sqlite3` — single-file database,
   no network, no cloud
 - **Media storage:** on import, video/subtitle/poster files are copied
-  into FamilyFlix's own managed media directory (inside the OS
-  user-data directory). The app owns its copy; the original source
-  folder is no longer the source of truth after import
+  into FamilyFlix's own managed media directory. The app owns its copy;
+  the original source folder is no longer the source of truth after import
+- **Data:** the **Installed app** keeps the database, the media, the
+  **Component slot** and the **Shell log** under `%APPDATA%\FamilyFlix\`;
+  an **Unpackaged run** uses the repo's own library
 - **No auth** — single-user household, single shared watch history,
   local-only
-- **Packaging:** `electron-builder` for Windows installers; data and
-  media live in the OS user-data directory so backups are trivial
+- **Packaging:** `electron-builder` for Windows installers — step 8, not
+  yet built
 
 ## Movie Import — One Form, Manual Pickers
 
@@ -597,8 +634,8 @@ the page is a read the app can truthfully answer now:
 
 Every read on the page is `null` until it lands and `null` still if it
 never does, and nothing is drawn while so — no skeleton, no error face.
-The two controls whose mechanism does not exist — _Change…_ (the Electron
-shell) and _Software update_ (the Electron shell and the packaging) — are
+The two controls whose mechanism does not exist — _Change…_ (the Roadmap's
+**Move the media folder**) and _Software update_ (the packaging) — are
 not drawn, the rule that held the Export row back until its dialog
 existed. The _Add a codec pack_ zone and the ✕ were the third; the
 **Playback component upload** built their mechanism, so both are drawn
@@ -715,8 +752,8 @@ exists_:
   the _previous_ commit's.
 
 The typecheck reads the subject and narrows on one type only. A `test:`
-commit builds `tsconfig.app.json` and `tsconfig.server.json`; **every**
-other commit builds the whole solution file. That is issue #111: a test
+commit builds the **three** shipping projects, `tsconfig.app.json`,
+`tsconfig.server.json` and `tsconfig.electron.json`; **every** other commit builds the whole solution file. That is issue #111: a test
 written against a module that does not exist yet cannot typecheck — which
 is the entire point of the RED step — so RED commits used to be made with
 `--no-verify`, which meant the one gate that would catch a real type error
@@ -727,9 +764,11 @@ the player initiative before anybody noticed.
 **Do not add `--no-verify` back to a RED commit.** It is no longer needed,
 and it is the habit this gate exists to end.
 
-The three tsconfig projects mean what their names say, and #111 is what
+The four tsconfig projects mean what their names say, and #111 is what
 made that true: `app` is the frontend's shipping code, `server` the
-backend's, and `spec` **all** the tests, frontend and backend both. Before
+backend's, `electron` the shell's (issue #216, and it excludes
+`electron/test-support/`), and `spec` **all** the tests, frontend, backend
+and shell alike. Before
 that, `tsconfig.server.json` included `server/**/*.ts` tests and all, so
 there was no way to ask whether the backend's shipping code compiled
 without also asking about its tests.
@@ -819,12 +858,16 @@ write the bare number or the URL: "follow-ups filed as 39 and 40".
 
 ## Environment Variables
 
-PORT=3001
+PORT=3001 # standalone and under `electron:dev`, the port Vite proxies to. Under `electron:start` and the Installed app main sets the **Shell port** 41720; if it is taken the server falls back to an ephemeral port and `ready` reports it. Standalone, a taken port throws.
 VITE_API_BASE_URL=http://localhost:3001
-FAMILYFLIX_DB_PATH= # entrypoint reads it and passes the path to createSqliteStorage; defaults to ./familyflix.db. Electron main sets this to app.getPath('userData')/familyflix.db.
-FAMILYFLIX_MEDIA_PATH= # root directory for copied video/subtitle/poster files; defaults to ./media. Electron main sets this to app.getPath('userData')/media.
+FAMILYFLIX_DB_PATH= # entrypoint reads it and passes the path to createSqliteStorage; defaults to ./familyflix.db. Electron main sets it to app.getPath('userData')/familyflix.db when installed; unpackaged runs (`electron:dev`, `electron:start`) use the repo's own library.
+FAMILYFLIX_MEDIA_PATH= # root directory for copied video/subtitle/poster files; defaults to ./media. Electron main sets it to app.getPath('userData')/media when installed; unpackaged runs use the repo's own.
 FAMILYFLIX_FFMPEG_PATH= # absolute path to the ffmpeg binary of the Playback component; ffprobe is looked for beside it. Unset falls back to `ffmpeg`/`ffprobe` on PATH, and then to absent — a state, not an error: MP4s still direct-play and everything else answers `cannot-play`. The slot the installer fills and the maintainer's uploaded component replaces.
-FAMILYFLIX_COMPONENT_PATH= # the Component slot: the writable directory an uploaded Playback component lives in (`current/`, with `incoming/` and `previous/` swept on startup); defaults to ./playback-component. Read ahead of FAMILYFLIX_FFMPEG_PATH and ahead of PATH, so an uploaded pair is what the next Play converts with. Electron main will set it to app.getPath('userData')/playback-component.
+FAMILYFLIX_COMPONENT_PATH= # the Component slot: the writable directory an uploaded Playback component lives in (`current/`, with `incoming/` and `previous/` swept on startup); defaults to ./playback-component. Read ahead of FAMILYFLIX_FFMPEG_PATH and ahead of PATH, so an uploaded pair is what the next Play converts with. Electron main sets it to app.getPath('userData')/playback-component when installed; unpackaged runs use the repo's own.
+FAMILYFLIX_RENDERER_PATH= # the built renderer (`dist/familyflix`) the server serves beside `/api` under its CSP — **One origin**. Main sets it under `electron:start` and when installed; unset (standalone, `electron:dev`) nothing is mounted and Vite serves the renderer.
+FAMILYFLIX_TRUSTED_HOSTS= # extra **Trusted hosts** for the **Loopback guard**, comma-separated, beside `127.0.0.1:<bound>` and `localhost:<bound>`. Unset means `localhost:4200`, Vite's origin; main sets it empty when installed.
+FAMILYFLIX_SQLITE_BINDING= # path to the Electron-ABI `better_sqlite3.node` that `npm run electron:native` fetches into `electron/.native/`. Main sets it for unpackaged runs; unset uses the package's own binding, which is what Vitest and `npm run dev` run on.
+FAMILYFLIX_SHELL_PROD= # main only, set to "1" by `electron:start`: run the installed shape unpackaged. Read once, by `shellMode`.
 DEBUG_SQL= # set to "1" to enable better-sqlite3 query tracing via console.info. Off by default; never on in packaged builds.
 
 ## The prototype is the spec
@@ -867,9 +910,9 @@ Electron adds, and each is built against a prototype that already exists.
 The shell, the packaging and the update moved down three numbers and keep
 their gates.
 
-7. **Electron desktop shell** _(next)_ — unblocks everything after it. `Change…` in the
-   Storage group and folder-path autofill in the **Movie form** are both
-   waiting on this one, and both stay undrawn until it lands.
+7. **Electron desktop shell** _(next)_ — unblocks everything after it: the
+   window 8 packages and 9 updates. `Change…` in the Storage group does not
+   wait on it — it is the Roadmap's **Move the media folder** (log 24 Q2).
 8. **Desktop packaging** — needs 7; produces the installer that 9 publishes.
 9. **Software update** — needs 7 and 8 (and 1, which is done). Designed in
    full already (`docs/design-logs/17-software-update.md`); its PRD waits
@@ -882,7 +925,7 @@ A 🧭 Roadmap item is not in this chain — it is after all three, if ever.
 - ✅ **Nx + Vite + React workspace scaffold** — monorepo, tooling, lint/format.
 - ✅ **Claude design handoff prototype** — full interactive design system, the build spec.
 - ✅ **Library core** — movie model, SQLite schema, repository layer.
-- 🔜 **Electron desktop shell** _(step 7 — next)_ — main process, window, file-system access. The gate every remaining Maintainer control sits behind.
+- 🔜 **Electron desktop shell** _(step 7 — next)_ — one window over the **Server process**, **One origin** on the **Shell port**, the **Loopback guard**, the **Ordered shutdown**, the window's rules, the two failure dialogs and the **Shell log**, the **App mark**, and fonts served offline. No preload, no native picker.
 
 ### Browse & discover (parent-facing)
 
@@ -920,7 +963,7 @@ A 🧭 Roadmap item is not in this chain — it is after all three, if ever.
 - ✅ **Codec manager — view installed codecs** — the Codec report off the component the player uses: one row per catalogued format, Built-in or Installed.
 - ✅ **Codec manager — add a playback component** — the Component drop zone under the rows and the ✕ on the Component row: a pair dropped is staged, verified and sworn into the Component slot, and the next press of Play converts with it.
 - ✅ **Subtitle preferences** — the household's Preferred subtitle language, kept in the library's database and honoured by the player; the Auto-on toggle built but disabled until shipped.
-- ✅ **Storage** — the managed media folder's location and space used, agreeing with Explorer; _Change…_ is the Electron shell's.
+- ✅ **Storage** — the managed media folder's location and space used, agreeing with Explorer; _Change…_ is the Roadmap's **Move the media folder**.
 - ✅ **Network group** — a fifth Settings group between Playback and Storage, the one place FamilyFlix goes online: _The Movie Database (TMDB)_ with a status pill, the lede ("Nothing is sent about your household — just movie titles, to look up posters and synopses"), the API-key field in mono with _Test connection_ beside it, and the _Sync metadata & posters_ row that opens the Enrichment flow.
 - 🔜 **Software update** _(step 9)_ — the About card's first row: an Update offer downloaded at launch, Update now, and Check for updates. Needs steps 1, 7 and 8; designed in `17-software-update`.
 
@@ -937,6 +980,7 @@ A 🧭 Roadmap item is not in this chain — it is after all three, if ever.
 - 🧭 **Collections / playlists** — user-curated groupings.
 - 🧭 **Auto-on subtitles** — enable the built, currently-disabled toggle.
 - 🧭 **Backgroundable import** — leave the Import screen while a large scan runs, surfaced via snackbar.
+- 🧭 **Move the media folder** — _Change…_ in Settings → Storage: a move of the managed media directory, a storage model of its own (log 15 Q19, log 24 Q2). A folder dialog is the easy half; undrawn until then.
 
 ### Out of scope
 
