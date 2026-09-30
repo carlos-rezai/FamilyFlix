@@ -1,4 +1,5 @@
 import type { Server } from 'node:http';
+import type { AddressInfo } from 'node:net';
 import express from 'express';
 
 import { createEnrichment } from './enrichment/createEnrichment/createEnrichment';
@@ -10,6 +11,7 @@ import { createComponentSlot } from './playback/componentSlot/componentSlot';
 import { createPlayback } from './playback/createPlayback/createPlayback';
 import { createApiRouter } from './routes';
 import { listen } from './shell/listen/listen';
+import { loopbackGuard } from './shell/loopbackGuard/loopbackGuard';
 import { mountRenderer } from './shell/rendererRouter/rendererRouter';
 import {
   orderedShutdown,
@@ -77,7 +79,13 @@ async function start(): Promise<Started> {
     media,
   });
 
+  // The **Loopback guard**, in front of everything: only this machine, and
+  // only through FamilyFlix's own origin. It learns the bound port after
+  // `listen`, since under the shell that may be an ephemeral one.
+  const guard = loopbackGuard(process.env.FAMILYFLIX_TRUSTED_HOSTS);
+
   const app = express();
+  app.use(guard);
   app.use(
     '/api',
     createApiRouter(storage, MEDIA_PATH, playback, media, importer, enrichment)
@@ -93,6 +101,7 @@ async function start(): Promise<Started> {
     storage.close();
     throw error;
   }
+  guard.bind((server.address() as AddressInfo).port);
 
   let stopping: Promise<void> | undefined;
   const shutdown = () => {
