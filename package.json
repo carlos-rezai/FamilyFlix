@@ -25,6 +25,9 @@
     "includedScripts": []
   },
   "dependencies": {
+    "@fontsource/hanken-grotesk": "^5.3.0",
+    "@fontsource/jetbrains-mono": "^5.3.0",
+    "@fontsource/source-serif-4": "^5.3.0",
     "better-sqlite3": "^12.4.1",
     "busboy": "^1.6.0",
     "exceljs": "^4.4.0",
