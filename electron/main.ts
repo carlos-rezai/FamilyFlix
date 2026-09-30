@@ -1,6 +1,7 @@
 import { join } from 'node:path';
 import { app, BrowserWindow, dialog, utilityProcess } from 'electron';
 
+import { APP_USER_MODEL_ID } from './appIdentity/appIdentity';
 import { rendererUrl } from './rendererUrl/rendererUrl';
 import { serverHandle, type ServerChild } from './serverHandle/serverHandle';
 import { serverLaunch, type ServerLaunch } from './serverLaunch/serverLaunch';
@@ -22,11 +23,17 @@ const RENDERER_RETRY_MS = 500;
 const SHUTDOWN_MS = 5_000;
 
 const cwd = process.cwd();
+
+/** The **App mark**, rendered by `electron/scripts/buildIcon.mjs`. */
+const ICON = join(cwd, 'electron', 'assets', 'icon.ico');
+
 const dev = !app.isPackaged && process.env.FAMILYFLIX_SHELL_PROD !== '1';
 
 if (!app.isPackaged) {
   app.setPath('userData', join(app.getPath('appData'), 'FamilyFlix (dev)'));
 }
+
+app.setAppUserModelId(APP_USER_MODEL_ID);
 
 let window: BrowserWindow | null = null;
 
@@ -60,6 +67,7 @@ function load(target: BrowserWindow, url: string): void {
 function openWindow(port: number): void {
   window = new BrowserWindow({
     title: 'FamilyFlix',
+    icon: ICON,
     backgroundColor: BACKGROUND,
     show: false,
     minWidth: 1024,
