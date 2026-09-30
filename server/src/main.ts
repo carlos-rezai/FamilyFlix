@@ -9,8 +9,8 @@ import { createComponentSlot } from './playback/componentSlot/componentSlot';
 import { createPlayback } from './playback/createPlayback/createPlayback';
 import { createApiRouter } from './routes';
 import { loopbackGuard } from './routes/loopbackGuard/loopbackGuard';
+import { mountRenderer } from './routes/rendererRouter/rendererRouter';
 import { boundPort, listen } from './shell/listen/listen';
-import { mountRenderer } from './shell/rendererRouter/rendererRouter';
 import {
   orderedShutdown,
   shutdownOnSignals,
