@@ -17,6 +17,7 @@ import {
 
 import { APP_USER_MODEL_ID } from './appIdentity/appIdentity';
 import { downloadPath } from './downloadPath/downloadPath';
+import { loadRenderer } from './loadRenderer/loadRenderer';
 import { quitAfterShutdown } from './quitAfterShutdown/quitAfterShutdown';
 import { reloadOnce } from './reloadOnce/reloadOnce';
 import { rendererUrl } from './rendererUrl/rendererUrl';
@@ -44,9 +45,6 @@ import {
 
 /** The window's background, the app's own, so nothing flashes white. */
 const BACKGROUND = '#14110d';
-
-/** How long to wait before asking Vite again while it is still starting. */
-const RENDERER_RETRY_MS = 500;
 
 /** How long the **Ordered shutdown** has before the server is killed. */
 const SHUTDOWN_MS = 5_000;
@@ -115,15 +113,6 @@ function fork(launch: ServerLaunch): ServerChild {
   child.stdout?.on('data', (chunk: Buffer) => log.server(chunk.toString()));
   child.stderr?.on('data', (chunk: Buffer) => log.server(chunk.toString()));
   return child;
-}
-
-/** Load the renderer, asking again until Vite answers. */
-function load(target: BrowserWindow, url: string): void {
-  target.loadURL(url).catch(() => {
-    if (!target.isDestroyed()) {
-      setTimeout(() => load(target, url), RENDERER_RETRY_MS);
-    }
-  });
 }
 
 /**
@@ -202,7 +191,7 @@ function openWindow(port: number): void {
 
   const url = rendererUrl(mode, port);
   applyWindowPolicy(window, url);
-  load(window, url);
+  loadRenderer(window, url);
 }
 
 if (!app.requestSingleInstanceLock()) {
