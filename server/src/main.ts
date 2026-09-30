@@ -10,6 +10,7 @@ import { createComponentSlot } from './playback/componentSlot/componentSlot';
 import { createPlayback } from './playback/createPlayback/createPlayback';
 import { createApiRouter } from './routes';
 import { listen } from './shell/listen/listen';
+import { mountRenderer } from './shell/rendererRouter/rendererRouter';
 import {
   orderedShutdown,
   shutdownOnSignals,
@@ -31,6 +32,10 @@ const DB_PATH = process.env.FAMILYFLIX_DB_PATH ?? './familyflix.db';
 const MEDIA_PATH = process.env.FAMILYFLIX_MEDIA_PATH ?? './media';
 const COMPONENT_PATH =
   process.env.FAMILYFLIX_COMPONENT_PATH ?? './playback-component';
+/** The built renderer, served on the API's own origin; unset under Vite. */
+const RENDERER_PATH = process.env.FAMILYFLIX_RENDERER_PATH;
+/** Under the **Desktop shell**, the parent port main forked this process with. */
+const parentPort = parentPortOf(process);
 
 /**
  * Open the library, mount the API and listen on the loopback. Run inside the
@@ -77,10 +82,13 @@ async function start(): Promise<Started> {
     '/api',
     createApiRouter(storage, MEDIA_PATH, playback, media, importer, enrichment)
   );
+  mountRenderer(app, RENDERER_PATH);
 
   let server: Server;
   try {
-    server = await listen(app, PORT);
+    server = await listen(app, PORT, {
+      underShell: parentPort !== undefined,
+    });
   } catch (error) {
     storage.close();
     throw error;
@@ -109,7 +117,7 @@ async function start(): Promise<Started> {
 let shutdown = (): Promise<void> => Promise.resolve();
 
 shellHandshake(
-  parentPortOf(process),
+  parentPort,
   async () => {
     const started = await start();
     shutdown = started.shutdown;

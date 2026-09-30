@@ -8,11 +8,16 @@ import type { Express } from 'express';
  */
 export const LOOPBACK = '127.0.0.1';
 
-/**
- * Listen on `LOOPBACK:port`, resolving with the server once it is bound and
- * rejecting with the listen error (`EADDRINUSE` for a taken port) otherwise.
- */
-export function listen(app: Express, port: number): Promise<Server> {
+export interface ListenOptions {
+  /**
+   * Under the **Desktop shell**, a taken **Shell port** falls back to an
+   * ephemeral one, which the **Shell handshake**'s `ready` then reports.
+   * Standalone, a taken port throws.
+   */
+  underShell?: boolean;
+}
+
+function bind(app: Express, port: number): Promise<Server> {
   return new Promise((resolve, reject) => {
     const server = app.listen(port, LOOPBACK);
     const failed = (error: Error) => reject(error);
@@ -23,4 +28,29 @@ export function listen(app: Express, port: number): Promise<Server> {
       resolve(server);
     });
   });
+}
+
+function isAddressInUse(error: unknown): boolean {
+  return (
+    error instanceof Error &&
+    (error as NodeJS.ErrnoException).code === 'EADDRINUSE'
+  );
+}
+
+/**
+ * Listen on `LOOPBACK:port`, resolving with the server once it is bound and
+ * rejecting with the listen error (`EADDRINUSE` for a taken port) otherwise —
+ * except under the shell, where a taken port is retried on port `0`.
+ */
+export async function listen(
+  app: Express,
+  port: number,
+  { underShell = false }: ListenOptions = {}
+): Promise<Server> {
+  try {
+    return await bind(app, port);
+  } catch (error) {
+    if (!underShell || !isAddressInUse(error)) throw error;
+    return bind(app, 0);
+  }
 }

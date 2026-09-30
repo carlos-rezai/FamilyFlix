@@ -22,27 +22,60 @@ export function nativeBindingPath(cwd: string): string {
 }
 
 /**
+ * The **Shell port** the installed shape listens on: fixed, so the renderer's
+ * origin — and with it `localStorage`, the volume — survives a relaunch.
+ */
+const SHELL_PORT = '41720';
+
+/**
  * Pure: how to start the **Server process** for this run.
  *
- * This slice covers the dev combination only — unpackaged, no
- * `FAMILYFLIX_SHELL_PROD` — so `isPackaged`, `prodFlag` and `userData` are
- * not read yet. The server is forked from source through tsx on `3001`,
- * pointed at the Electron-ABI SQLite binding, and — because an unpackaged run
- * uses the repo's own `./familyflix.db`, `./media` and `./playback-component`
- * — none of the three path variables is set.
+ * - **Dev** (unpackaged, no `FAMILYFLIX_SHELL_PROD`): the server from source
+ *   through tsx on `3001`, Vite serving the renderer.
+ * - **The prod flag** (`electron:start`, unpackaged): the installed shape —
+ *   the bundled server, the **Shell port**, the built renderer.
+ * - **Packaged**: the installed shape, plus the database, the managed media
+ *   directory and the **Component slot** under `userData`, the **Trusted
+ *   hosts** set empty, and the package's own SQLite binding.
+ *
+ * Unpackaged runs use the repo's own `./familyflix.db`, `./media` and
+ * `./playback-component`, and the Electron-ABI binding `electron:native`
+ * fetched.
  */
 export function serverLaunch(
-  _isPackaged: boolean,
-  _prodFlag: boolean,
-  _userData: string,
+  isPackaged: boolean,
+  prodFlag: boolean,
+  userData: string,
   cwd: string
 ): ServerLaunch {
+  if (!isPackaged && !prodFlag) {
+    return {
+      entry: join(cwd, 'server', 'src', 'main.ts'),
+      execArgv: ['--import', 'tsx'],
+      env: {
+        PORT: DEV_PORT,
+        FAMILYFLIX_SQLITE_BINDING: nativeBindingPath(cwd),
+      },
+    };
+  }
+
+  const installed: Record<string, string> = {
+    PORT: SHELL_PORT,
+    FAMILYFLIX_RENDERER_PATH: join(cwd, 'dist', 'familyflix'),
+  };
+  const env: Record<string, string> = isPackaged
+    ? {
+        ...installed,
+        FAMILYFLIX_DB_PATH: join(userData, 'familyflix.db'),
+        FAMILYFLIX_MEDIA_PATH: join(userData, 'media'),
+        FAMILYFLIX_COMPONENT_PATH: join(userData, 'playback-component'),
+        FAMILYFLIX_TRUSTED_HOSTS: '',
+      }
+    : { ...installed, FAMILYFLIX_SQLITE_BINDING: nativeBindingPath(cwd) };
+
   return {
-    entry: join(cwd, 'server', 'src', 'main.ts'),
-    execArgv: ['--import', 'tsx'],
-    env: {
-      PORT: DEV_PORT,
-      FAMILYFLIX_SQLITE_BINDING: nativeBindingPath(cwd),
-    },
+    entry: join(cwd, 'electron', 'dist', 'server.js'),
+    execArgv: [],
+    env,
   };
 }
