@@ -90,9 +90,13 @@ const log = shellLog({
   terminal: (text) => process.stdout.write(text),
 });
 
-/** Electron's `dialog`, `shell.openPath` and `app`, for the failure dialogs. */
+/**
+ * Electron's `dialog`, `shell.openPath` and `app`, and the **Shell log**, for
+ * the failure dialogs.
+ */
 const dialogWorld: DialogWorld = {
   userData: app.getPath('userData'),
+  log: (text) => log.main(text),
   showMessageBox: (box) =>
     window && !window.isDestroyed()
       ? dialog.showMessageBox(window, box)
@@ -226,13 +230,7 @@ if (!app.requestSingleInstanceLock()) {
     );
 
     log.main('Starting the server.');
-    const started = await startServer(server, {
-      ...dialogWorld,
-      showMessageBox: (box) => {
-        log.main(`${box.message} ${box.detail ?? ''}`);
-        return dialogWorld.showMessageBox(box);
-      },
-    });
+    const started = await startServer(server, dialogWorld);
     if (started === null) return;
     log.main(`Server ready on port ${started.port}.`);
     openWindow(started.port);

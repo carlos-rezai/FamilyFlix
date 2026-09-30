@@ -13,6 +13,10 @@
 //
 // Electron's `dialog`, `shell.openPath` and `app` are injected; the server is
 // the real `serverHandle` over a fake child, the way its own suite drives it.
+//
+// Issue #226 — every dialog is logged by the dialogs. The **Shell log** is
+// injected too, and each dialog logs what it tells the family before its box
+// is shown.
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -36,15 +40,21 @@ const USER_DATA = 'C:\\Users\\Mum\\AppData\\Roaming\\FamilyFlix';
 
 /**
  * A world whose dialog answers by pressing the button labelled `press`, and
- * records every box it was shown and every step it took, in order.
+ * records every box it was shown and every step it took, in order. Each log
+ * line is recorded with how many boxes had been shown when it was written.
  */
 function world(press: string) {
   const boxes: MessageBox[] = [];
   const order: string[] = [];
+  const logged: { text: string; boxesShown: number }[] = [];
   const fake = {
     boxes,
     order,
+    logged,
     userData: USER_DATA,
+    log: vi.fn((text: string) => {
+      logged.push({ text, boxesShown: boxes.length });
+    }),
     showMessageBox: vi.fn(async (box: MessageBox) => {
       boxes.push(box);
       const response = box.buttons.indexOf(press);
@@ -61,7 +71,11 @@ function world(press: string) {
     exit: vi.fn((code: number) => {
       order.push(`exit ${code}`);
     }),
-  } satisfies DialogWorld & { boxes: MessageBox[]; order: string[] };
+  } satisfies DialogWorld & {
+    boxes: MessageBox[];
+    order: string[];
+    logged: { text: string; boxesShown: number }[];
+  };
   return fake;
 }
 
@@ -99,6 +113,19 @@ describe('startupFailed — the startup dialog', () => {
     expect(w.openPath).not.toHaveBeenCalled();
     expect(w.relaunch).not.toHaveBeenCalled();
     expect(w.exit).toHaveBeenCalledTimes(1);
+  });
+
+  it('logs its message and the error before the box is shown', async () => {
+    const w = world('Quit');
+
+    await startupFailed(w, new Error('SQLITE_CANTOPEN: unable to open'));
+
+    expect(w.logged).toEqual([
+      {
+        text: 'FamilyFlix couldn’t start. SQLITE_CANTOPEN: unable to open',
+        boxesShown: 0,
+      },
+    ]);
   });
 
   it('Show data folder opens userData, then leaves', async () => {
@@ -188,6 +215,16 @@ describe('stoppedUnexpectedly — an exit after ready', () => {
     expect(w.boxes).toHaveLength(1);
     expect(w.boxes[0].message).toBe('FamilyFlix stopped unexpectedly.');
     expect(w.boxes[0].buttons).toEqual(['Restart', 'Quit']);
+  });
+
+  it('logs its message before the box is shown', async () => {
+    const w = world('Quit');
+
+    await stoppedUnexpectedly(w);
+
+    expect(w.logged).toEqual([
+      { text: 'FamilyFlix stopped unexpectedly.', boxesShown: 0 },
+    ]);
   });
 
   it('Restart relaunches, then exits', async () => {

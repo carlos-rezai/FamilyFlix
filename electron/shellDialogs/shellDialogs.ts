@@ -3,7 +3,10 @@ import type { ServerHandle } from '../serverHandle/serverHandle';
 /**
  * The shell's two failure dialogs, so the family always has something to
  * press: the startup dialog, and the one an unexpected exit after `ready`
- * raises. Electron's `dialog`, `shell.openPath` and `app` are injected.
+ * raises. Electron's `dialog`, `shell.openPath` and `app` are injected, and
+ * so is the **Shell log**: each dialog logs what it tells the family before
+ * the box is shown, because that is what the maintainer reads back from the
+ * parents' machine (Q28).
  */
 
 /** The part of Electron's `MessageBoxOptions` the dialogs use. */
@@ -20,6 +23,8 @@ export interface MessageBox {
 
 export interface DialogWorld {
   userData: string;
+  /** The **Shell log**'s `main`. */
+  log(text: string): void;
   showMessageBox(box: MessageBox): Promise<{ response: number }>;
   /** `shell.openPath`. */
   openPath(path: string): Promise<string>;
@@ -42,11 +47,14 @@ export async function startupFailed(
   error: unknown
 ): Promise<void> {
   const buttons = [QUIT, SHOW_DATA_FOLDER];
+  const message = 'FamilyFlix couldn’t start.';
+  const detail = error instanceof Error ? error.message : String(error);
+  world.log(`${message} ${detail}`);
   const { response } = await world.showMessageBox({
     type: 'error',
     title: 'FamilyFlix',
-    message: 'FamilyFlix couldn’t start.',
-    detail: error instanceof Error ? error.message : String(error),
+    message,
+    detail,
     buttons,
     defaultId: 0,
     cancelId: 0,
@@ -64,10 +72,12 @@ export async function startupFailed(
  */
 export async function stoppedUnexpectedly(world: DialogWorld): Promise<void> {
   const buttons = [RESTART, QUIT];
+  const message = 'FamilyFlix stopped unexpectedly.';
+  world.log(message);
   const { response } = await world.showMessageBox({
     type: 'error',
     title: 'FamilyFlix',
-    message: 'FamilyFlix stopped unexpectedly.',
+    message,
     buttons,
     defaultId: 0,
     cancelId: 1,
