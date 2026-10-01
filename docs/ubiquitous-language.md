@@ -503,6 +503,25 @@ one server process, on one origin, with no internet required.
 | **Wordmark** (new)         | The prototype's brand: _Family_ in `--color-text`, _Flix_ in `--color-accent`, Source Serif 4 at 700, as the library header and the About card draw it.                                                                                                                                                          | logo, brand name                              |
 | **App mark** (new)         | The square icon derived from the **Wordmark**: its two initials in its two colours on `--color-bg`. `docs/handoff/brand/familyflix-mark.svg`, a prototype amendment, rendered to `icon.ico` (window, taskbar, `.exe`) and the favicon.                                                                           | app icon (loosely), logo, favicon             |
 
+## Desktop packaging (new)
+
+The Windows installer: its own initiative (`desktop-packaging`, design log 25),
+step 8 of the build order. It turns the repo into `FamilyFlix-Setup-<v>.exe`
+and publishes nothing; the release feed is Software update's.
+
+| Term                            | Definition                                                                                                                                                                                                                                                              | Aliases to avoid                           |
+| ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------ |
+| **Installer** (new)             | `FamilyFlix-Setup-<version>.exe`: the one-click, per-user NSIS setup `npm run electron:package` writes to `release/`. It installs to `%LOCALAPPDATA%\Programs\FamilyFlix\` with no UAC and creates a desktop and a Start-menu shortcut.                                 | setup (bare), MSI, package (for the file)  |
+| **Packaged layout** (new)       | What the **Installer** puts down: `FamilyFlix.exe`, `resources\app.asar` (the two bundles, `package.json` and the icon, with no `node_modules`), and beside it `resources\renderer\`, `resources\ffmpeg\` and `resources\native\`.                                      | install dir, app folder, bundle            |
+| **Shell paths** (new)           | `electron/shellPaths/`: pure, the **Shell mode** plus `appPath`, `resourcesPath` and `userData` → where the icon, the server bundle, the renderer, the SQLite binding, FFmpeg and the server's working directory are. It replaces `process.cwd()` in main.              | cwd, app root (alone), paths config        |
+| **Electron-ABI binding** (new)  | `better_sqlite3.node` built for Electron's Node, fetched by `electron:native` into `electron/.native/` and shipped as `resources\native\`. Every **Shell mode** points `FAMILYFLIX_SQLITE_BINDING` at it, and the repo's own binding is never rebuilt.                  | rebuilt module, native module (bare)       |
+| **FFmpeg pin** (new)            | `electron/packaging/ffmpegPin.json`, `{ version, url, sha256 }`: the one GPL build with `libx264` the **Installer** carries as the **Default component**. `electron:ffmpeg` refuses a download whose digest differs.                                                    | ffmpeg version, latest ffmpeg              |
+| **Package smoke** (new)         | The manual proof of an **Installer** in Windows Sandbox, a clean user with no Node and no FFmpeg: the mark on every surface, an `.mkv` played, and the library surviving an uninstall and a reinstall.                                                                  | QA, manual test (bare), install test       |
+| **Installed app** (updated)     | The packaged FamilyFlix, running from the **Packaged layout**: data under `%APPDATA%\FamilyFlix\` (which uninstall never touches), no menu bar, a **Shell log**, the **Shell port**, and the **FFmpeg pin**'s build as its **Default component**. What the family runs. | prod, release build                        |
+| **App mark** (updated)          | The square icon derived from the **Wordmark**, rendered once to `electron/assets/icon.ico`. That file is the exe's, the window's, the taskbar's, the **Installer**'s, the uninstaller's, the shortcuts' and Settings → Apps' icon, and the favicon.                     | app icon (loosely), logo, favicon          |
+| **App version** (updated)       | `__APP_VERSION__`, `package.json`'s version, `0.1.0` from packaging on. The **Installer**'s file name, the exe's file version and the About card all read that one field.                                                                                               | build number, release, semver              |
+| **Default component** (updated) | The component `ffmpegBinary(env)` resolves when nothing is uploaded: the **FFmpeg pin**'s build in `resources\ffmpeg\` in the **Installed app**, `PATH`'s in an **Unpackaged run**. It is not removable, and its pill says **Default**.                                 | bundled, built-in component, system ffmpeg |
+
 ## Relationships
 
 - A **Movie** has zero-or-more **Genres** (ordered; `genres[0]` is the primary tag) and zero-or-more **Subtitles**.
@@ -622,6 +641,10 @@ one server process, on one origin, with no internet required.
 - The **Desktop shell** runs exactly one **Server process** and one window. The window reaches the server only over **One origin**, never through the shell. The shell's only conversation with the server is the **Shell handshake**.
 - The **Installed app** and an **Unpackaged run** never share a library, a lock or a `localStorage`: the first keeps its data in `userData`, the second in the repo.
 - The **App mark** is the **Wordmark** reduced. It never appears inside the app's own screens, where the **Wordmark** is drawn.
+- One **Installer** puts down exactly one **Packaged layout**. Uninstalling removes the layout and never the **Installed app**'s data, so a reinstall opens on the same library.
+- **Shell paths** are read once per run, beside the **Shell mode**, and every path main hands the **Server process** comes from them.
+- Every **Shell mode** runs the **Electron-ABI binding**. The repo's `node_modules` binding belongs to Vitest and `npm run dev` alone.
+- The **FFmpeg pin** is the **Default component** of the **Installed app**. An **Uploaded component** in the **Component slot** still wins over it on the next Play.
 
 ## Example dialogue
 
@@ -1071,6 +1094,21 @@ Hard` gets found and `Die Hard\extras` doesn't become a second film."
 > **Dev:** "The icon, the prototype doesn't have one."
 > **Maintainer:** "It has the **Wordmark**. The **App mark** is its two F's in
 > its two colours, amended into the handoff before anything uses it."
+
+> **Dev:** "`electron-builder` rebuilds `better-sqlite3` for us. Why fetch a
+> binding by hand?"
+> **Maintainer:** "Because it rebuilds it in the repo's `node_modules`, and
+> then Vitest is red. The **Installer** carries the **Electron-ABI binding** in
+> `resources\native\`, the same file `electron:start` already runs on. Nothing
+> is ever rebuilt in place."
+> **Dev:** "And the parents have no FFmpeg."
+> **Maintainer:** "The **FFmpeg pin** puts one in `resources\ffmpeg\`. It's
+> their **Default component**, so the Codec report says _Default_, and an
+> uploaded pair still beats it."
+> **Dev:** "Someone uninstalls by mistake?"
+> **Maintainer:** "The **Packaged layout** goes. `%APPDATA%\FamilyFlix\` stays,
+> films and all, and the **Package smoke** proves it with a reinstall in
+> Sandbox."
 
 ## Flagged ambiguities
 
@@ -1802,3 +1840,16 @@ Hard` gets found and `Die Hard\extras` doesn't become a second film."
   a standalone server) and an **Unpackaged run** (`electron:dev`, the
   **Desktop shell** over Vite). They open the same repo library but different
   origins, so a volume set in one is not set in the other.
+- **"Package" means three things (new):** an npm package (a dependency), the
+  verb `electron:package`, and the **Installer** file. Call the file the
+  **Installer** and the installed tree the **Packaged layout**. "Packaged"
+  stays only in `app.isPackaged` and in the **Installed app**'s shape.
+- **"Bundled" stays an alias to avoid for the Default component (new):** the
+  installer does bundle FFmpeg, but the **Default component** entry already
+  refuses "bundled" for it, and **bundle** in this codebase means esbuild's
+  `main.js` / `server.js`. Say "the **FFmpeg pin**'s build" or "the
+  **Default component**".
+- **Log 24 Q19 is superseded on one point (new):** its _"the installed app
+  needs none of it, because packaging rebuilds for Electron"_ is no longer
+  true. Log 25 Q10 ships the **Electron-ABI binding** to every **Shell mode**
+  and turns `npmRebuild` off.
