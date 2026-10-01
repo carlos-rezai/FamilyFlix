@@ -1,0 +1,37 @@
+{
+  "appId": "io.github.carlosrezai.familyflix",
+  "productName": "FamilyFlix",
+  "copyright": "Copyright © 2026 Carlos Rezai",
+  "npmRebuild": false,
+  "asar": true,
+  "directories": {
+    "output": "release"
+  },
+  "files": [
+    "package.json",
+    "electron/dist/main.js",
+    "electron/dist/server.js",
+    "electron/assets/icon.ico"
+  ],
+  "extraResources": [
+    { "from": "dist/familyflix", "to": "renderer" },
+    { "from": "electron/.native", "to": "native" }
+  ],
+  "win": {
+    "icon": "electron/assets/icon.ico",
+    "signAndEditExecutable": true
+  },
+  "nsis": {
+    "oneClick": true,
+    "perMachine": false,
+    "runAfterFinish": true,
+    "deleteAppDataOnUninstall": false,
+    "createDesktopShortcut": true,
+    "createStartMenuShortcut": true,
+    "shortcutName": "FamilyFlix",
+    "installerIcon": "electron/assets/icon.ico",
+    "installerHeaderIcon": "electron/assets/icon.ico",
+    "uninstallerIcon": "electron/assets/icon.ico",
+    "artifactName": "FamilyFlix-Setup-${version}.${ext}"
+  }
+}

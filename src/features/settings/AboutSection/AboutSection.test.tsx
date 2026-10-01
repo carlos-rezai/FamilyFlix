@@ -20,7 +20,7 @@ import { comesBefore } from '@/test-support/comesBefore/comesBefore';
  * say _You're up to date_ with no updater to know it. The section owns no
  * hook — the version is `__APP_VERSION__`, `package.json`'s `version` baked in
  * at build by Vite's `define`, so the card and the installer can never
- * disagree, and it reads `0.0.0` until the packaging initiative sets one.
+ * disagree, and it reads `0.1.0`, the first Installer's version (issue #230).
  */
 
 function renderSection() {
@@ -99,12 +99,12 @@ describe('AboutSection — the version', () => {
     expect(__APP_VERSION__).toBe(packageVersion());
   });
 
-  it('reads 0.0.0 until the packaging initiative sets one', () => {
+  it('reads 0.1.0, the version the first Installer carries', () => {
     renderSection();
 
     // The truth about this build, not a placeholder: `package.json` says
-    // `0.0.0` today, and the card says the same.
-    expect(screen.getByText('0.0.0')).toBeDefined();
+    // `0.1.0` today, and the card says the same.
+    expect(screen.getByText('0.1.0')).toBeDefined();
   });
 
   it('sets the version in mono at 13px, faint', () => {

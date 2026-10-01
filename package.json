@@ -1,10 +1,11 @@
 {
   "name": "@familyflix/source",
   "productName": "FamilyFlix",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "private": true,
   "description": "A Netflix for the family movie folder — a local, searchable movie library and player.",
   "license": "MIT",
+  "author": "Carlos Rezai",
   "main": "electron/dist/main.js",
   "scripts": {
     "dev": "concurrently --names \"server,web\" --prefix-colors \"cyan,magenta\" --kill-others \"npm:dev:server\" \"npm:dev:web\"",
@@ -14,6 +15,7 @@
     "electron:start": "node node_modules/nx/dist/bin/nx.js build && node electron/scripts/buildElectron.mjs --start",
     "electron:native": "node electron/scripts/fetchNative.mjs",
     "electron:icon": "node electron/scripts/buildIcon.mjs",
+    "electron:package": "node electron/scripts/packageApp.mjs",
     "start": "nx serve",
     "build": "nx build",
     "test": "nx test",
@@ -49,6 +51,7 @@
     "busboy": "^1.6.0",
     "concurrently": "^10.0.4",
     "electron": "^38.8.6",
+    "electron-builder": "^26.15.3",
     "esbuild": "^0.28.1",
     "eslint": "^9.8.0",
     "eslint-config-prettier": "^10.0.0",
