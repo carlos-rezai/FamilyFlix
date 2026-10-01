@@ -1,8 +1,9 @@
 // Builds the Desktop shell's two bundles with esbuild, through its API, both
 // CJS: `main.js` (`package.json`'s `main`), `electron` external; and
 // `server.js`, the **Server process** the installed shape forks,
-// `better-sqlite3` external — its native binding cannot be bundled — and the
-// dev library's `seriesSeed` kept out. Issues #216 and #220.
+// `better-sqlite3` bundled — only its native binding stays outside, handed over as
+// `nativeBinding` in every Shell mode — and the
+// dev library's `seriesSeed` kept out. Issues #216, #220 and #229.
 //
 //   node electron/scripts/buildElectron.mjs            build once
 //   node electron/scripts/buildElectron.mjs --outdir <dir>
@@ -68,7 +69,6 @@ const contexts = await Promise.all([
     ...shared,
     entryPoints: ['server/src/main.ts'],
     outfile: join(outdir, 'server.js'),
-    external: ['better-sqlite3'],
     plugins: [noSeriesSeed],
   }),
 ]);
