@@ -31,12 +31,13 @@ const SHELL_PORT = '41720';
  *   the built renderer.
  * - `'installed'`: the installed shape, plus the database, the managed media
  *   directory and the **Component slot** under `userData`, the **Trusted
- *   hosts** set empty.
+ *   hosts** set empty, and `FAMILYFLIX_FFMPEG_PATH` at the **Default
+ *   component** `shellPaths` found under `resources\ffmpeg` — unpackaged runs
+ *   set none, so the FFmpeg on `PATH` stands in.
  *
  * Every path it hands the fork is one `shellPaths` answered: the entry, the
  * renderer and the Electron-ABI binding — `electron:native`'s unpackaged,
- * `resources
-ative`'s installed. Unpackaged runs use the repo's own
+ * `resources\native`'s installed. Unpackaged runs use the repo's own
  * `./familyflix.db`, `./media` and `./playback-component`.
  */
 export function serverLaunch(
@@ -69,6 +70,7 @@ export function serverLaunch(
           FAMILYFLIX_MEDIA_PATH: join(userData, 'media'),
           FAMILYFLIX_COMPONENT_PATH: join(userData, 'playback-component'),
           FAMILYFLIX_TRUSTED_HOSTS: '',
+          ...(paths.ffmpeg ? { FAMILYFLIX_FFMPEG_PATH: paths.ffmpeg } : {}),
         }
       : installed;
 

@@ -14,6 +14,7 @@
     "electron:dev": "node node_modules/concurrently/dist/bin/index.js --names \"web,shell\" --prefix-colors \"magenta,yellow\" --kill-others \"npm:dev:web\" \"node electron/scripts/buildElectron.mjs --watch\"",
     "electron:start": "node node_modules/nx/dist/bin/nx.js build && node electron/scripts/buildElectron.mjs --start",
     "electron:native": "node electron/scripts/fetchNative.mjs",
+    "electron:ffmpeg": "node electron/scripts/fetchFfmpeg.mjs",
     "electron:icon": "node electron/scripts/buildIcon.mjs",
     "electron:package": "node electron/scripts/packageApp.mjs",
     "start": "nx serve",

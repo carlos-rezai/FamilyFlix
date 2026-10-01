@@ -4,7 +4,8 @@
 //   node electron/scripts/packageApp.mjs --dir    release/win-unpacked/ only
 //
 // The chain: `nx build` (the renderer) → `buildElectron.mjs` (the two
-// bundles) → `fetchNative.mjs` (the Electron-ABI binding) → electron-builder's
+// bundles) → `fetchNative.mjs` (the Electron-ABI binding) → `fetchFfmpeg.mjs`
+// (the **Default component**, issue #231) → electron-builder's
 // `build()` over `electron/packaging/builderConfig.json`, NSIS x64, never
 // published. Every step is run by path with no shell (CLAUDE.md, "never use
 // npx"); no typecheck and no tests run here. The Electron runtime packaged is
@@ -38,6 +39,7 @@ function step(script, args = []) {
 step('node_modules/nx/dist/bin/nx.js', ['build']);
 step('electron/scripts/buildElectron.mjs');
 step('electron/scripts/fetchNative.mjs');
+step('electron/scripts/fetchFfmpeg.mjs');
 
 const readJson = (relative) =>
   JSON.parse(readFileSync(join(root, relative), 'utf8'));

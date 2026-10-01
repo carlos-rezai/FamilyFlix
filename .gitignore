@@ -97,3 +97,6 @@ vitest.config.*.timestamp*
 
 # The Electron-ABI better-sqlite3 binding `npm run electron:native` fetches
 electron/.native
+
+# The Default component `npm run electron:ffmpeg` extracts from the FFmpeg pin
+electron/.ffmpeg
