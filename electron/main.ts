@@ -24,6 +24,7 @@ import { rendererUrl } from './rendererUrl/rendererUrl';
 import { serverHandle, type ServerChild } from './serverHandle/serverHandle';
 import { serverLaunch, type ServerLaunch } from './serverLaunch/serverLaunch';
 import { shellMode } from './shellMode/shellMode';
+import { shellPaths } from './shellPaths/shellPaths';
 import {
   startServer,
   stoppedUnexpectedly,
@@ -49,16 +50,17 @@ const BACKGROUND = '#14110d';
 /** How long the **Ordered shutdown** has before the server is killed. */
 const SHUTDOWN_MS = 5_000;
 
-const cwd = process.cwd();
-
-/** The **App mark**, rendered by `electron/scripts/buildIcon.mjs`. */
-const ICON = join(cwd, 'electron', 'assets', 'icon.ico');
-
 const mode = shellMode(app.isPackaged, process.env);
 
 if (mode !== 'installed') {
   app.setPath('userData', join(app.getPath('appData'), 'FamilyFlix (dev)'));
 }
+
+const paths = shellPaths(mode, {
+  appPath: app.getAppPath(),
+  resourcesPath: process.resourcesPath,
+  userData: app.getPath('userData'),
+});
 
 app.setAppUserModelId(APP_USER_MODEL_ID);
 
@@ -109,7 +111,7 @@ const dialogWorld: DialogWorld = {
 /** `utilityProcess.fork()` over a launch: the server on Electron's own Node. */
 function fork(launch: ServerLaunch): ServerChild {
   const child = utilityProcess.fork(launch.entry, [], {
-    cwd,
+    cwd: paths.serverCwd,
     env: { ...process.env, ...launch.env },
     serviceName: 'FamilyFlix server',
     stdio: 'pipe',
@@ -157,7 +159,7 @@ function applyWindowPolicy(target: BrowserWindow, appUrl: string): void {
 function openWindow(port: number): void {
   window = new BrowserWindow({
     title: 'FamilyFlix',
-    icon: ICON,
+    icon: paths.icon,
     backgroundColor: BACKGROUND,
     show: false,
     minWidth: 1024,
@@ -212,7 +214,7 @@ if (!app.requestSingleInstanceLock()) {
   app.whenReady().then(async () => {
     const server = serverHandle({
       fork,
-      launch: serverLaunch(mode, app.getPath('userData'), cwd),
+      launch: serverLaunch(mode, app.getPath('userData'), paths),
       onExit: (code) => {
         log.main(`Server exited unexpectedly with code ${code}.`);
         void stoppedUnexpectedly(dialogWorld);

@@ -1,6 +1,7 @@
 import { join } from 'node:path';
 
 import type { ShellMode } from '../shellMode/shellMode';
+import type { ShellPaths } from '../shellPaths/shellPaths';
 
 /** What main hands `utilityProcess.fork()` to start the **Server process**. */
 export interface ServerLaunch {
@@ -12,14 +13,6 @@ export interface ServerLaunch {
 
 /** The port `electron:dev` forks the server on, the one Vite proxies to. */
 const DEV_PORT = '3001';
-
-/**
- * Where `electron:native` puts the Electron-ABI `better-sqlite3` binding,
- * relative to the repo: gitignored, so Vitest keeps the package's own.
- */
-export function nativeBindingPath(cwd: string): string {
-  return join(cwd, 'electron', '.native', 'better_sqlite3.node');
-}
 
 /**
  * The **Shell port** the installed shape listens on: fixed, so the renderer's
@@ -38,32 +31,35 @@ const SHELL_PORT = '41720';
  *   the built renderer.
  * - `'installed'`: the installed shape, plus the database, the managed media
  *   directory and the **Component slot** under `userData`, the **Trusted
- *   hosts** set empty, and the package's own SQLite binding.
+ *   hosts** set empty.
  *
- * Unpackaged runs use the repo's own `./familyflix.db`, `./media` and
- * `./playback-component`, and the Electron-ABI binding `electron:native`
- * fetched.
+ * Every path it hands the fork is one `shellPaths` answered: the entry, the
+ * renderer and the Electron-ABI binding — `electron:native`'s unpackaged,
+ * `resources
+ative`'s installed. Unpackaged runs use the repo's own
+ * `./familyflix.db`, `./media` and `./playback-component`.
  */
 export function serverLaunch(
   mode: ShellMode,
   userData: string,
-  cwd: string
+  paths: ShellPaths
 ): ServerLaunch {
-  const entry = join(cwd, 'electron', 'dist', 'server.js');
+  const entry = paths.serverEntry;
 
   if (mode === 'dev') {
     return {
       entry,
       env: {
         PORT: DEV_PORT,
-        FAMILYFLIX_SQLITE_BINDING: nativeBindingPath(cwd),
+        FAMILYFLIX_SQLITE_BINDING: paths.sqliteBinding,
       },
     };
   }
 
   const installed: Record<string, string> = {
     PORT: SHELL_PORT,
-    FAMILYFLIX_RENDERER_PATH: join(cwd, 'dist', 'familyflix'),
+    FAMILYFLIX_RENDERER_PATH: paths.renderer,
+    FAMILYFLIX_SQLITE_BINDING: paths.sqliteBinding,
   };
   const env: Record<string, string> =
     mode === 'installed'
@@ -74,7 +70,7 @@ export function serverLaunch(
           FAMILYFLIX_COMPONENT_PATH: join(userData, 'playback-component'),
           FAMILYFLIX_TRUSTED_HOSTS: '',
         }
-      : { ...installed, FAMILYFLIX_SQLITE_BINDING: nativeBindingPath(cwd) };
+      : installed;
 
   return { entry, env };
 }
