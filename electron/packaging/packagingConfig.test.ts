@@ -27,6 +27,7 @@ interface BuilderConfig {
   asarUnpack?: unknown;
   extraResources?: ExtraResource[];
   win?: { icon?: string; signAndEditExecutable?: boolean };
+  electronFuses?: Record<string, unknown>;
   nsis?: {
     oneClick?: boolean;
     perMachine?: boolean;
@@ -155,5 +156,38 @@ describe('the Default component in the Packaged layout', () => {
     expect(join(resourcesPath, ffmpeg?.to ?? '')).toBe(
       dirname(installed.ffmpeg ?? '')
     );
+  });
+});
+
+// Issue #232 — hardening. Four Electron fuses, set by electron-builder's own
+// `electronFuses` key in `builderConfig.json`, close the run-as-Node doors and
+// pin the app to its asar. `enableEmbeddedAsarIntegrityValidation` stays unset:
+// on Windows it needs a signed exe. The server's `utilityProcess` reads none of
+// them, so the installed app still forks its server.
+
+describe('the electron fuses', () => {
+  it('turns off running the exe as Node', () => {
+    expect(config().electronFuses?.runAsNode).toBe(false);
+  });
+
+  it('turns off NODE_OPTIONS', () => {
+    expect(config().electronFuses?.enableNodeOptionsEnvironmentVariable).toBe(
+      false
+    );
+  });
+
+  it('turns off the --inspect arguments', () => {
+    expect(config().electronFuses?.enableNodeCliInspectArguments).toBe(false);
+  });
+
+  it('loads the app from its asar only', () => {
+    expect(config().electronFuses?.onlyLoadAppFromAsar).toBe(true);
+  });
+
+  it('leaves embedded asar integrity validation unset, which needs a signed exe', () => {
+    const fuses = config().electronFuses;
+
+    expect(fuses).toBeDefined();
+    expect(fuses).not.toHaveProperty('enableEmbeddedAsarIntegrityValidation');
   });
 });
