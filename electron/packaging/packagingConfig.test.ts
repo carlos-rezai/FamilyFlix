@@ -110,3 +110,50 @@ describe('packagingConfig', () => {
     expect(config().copyright).toBe('Copyright © 2026 Carlos Rezai');
   });
 });
+
+// Issue #231 — FFmpeg on board. The **FFmpeg pin** is `{ version, url, sha256 }`
+// in `ffmpegPin.json`, beside the config: one exact build, fetched over
+// `https:` and held to a full SHA-256. `electron:ffmpeg` extracts it into
+// `electron/.ffmpeg/`, and the config ships that directory to the place
+// `shellPaths` reads the **Default component** from.
+
+interface FfmpegPin {
+  version?: unknown;
+  url?: unknown;
+  sha256?: unknown;
+}
+
+const pin = (): FfmpegPin => readJson('./ffmpegPin.json');
+
+describe('the FFmpeg pin', () => {
+  it('holds a SHA-256 of 64 hex characters', () => {
+    expect(pin().sha256).toMatch(/^[0-9a-f]{64}$/i);
+  });
+
+  it('fetches over https:', () => {
+    const { url } = pin();
+
+    expect(typeof url).toBe('string');
+    expect(new URL(String(url)).protocol).toBe('https:');
+  });
+});
+
+describe('the Default component in the Packaged layout', () => {
+  it('ships electron/.ffmpeg to the directory shellPaths reads ffmpeg.exe from', () => {
+    const resourcesPath = join('C:', 'FamilyFlix', 'resources');
+    const installed = shellPaths('installed', {
+      appPath: join(resourcesPath, 'app.asar'),
+      resourcesPath,
+      userData: join('C:', 'Users', 'family', 'AppData', 'Roaming'),
+    });
+    const ffmpeg = (config().extraResources ?? []).find(
+      ({ from }) => from === 'electron/.ffmpeg'
+    );
+
+    expect(installed.ffmpeg).not.toBeNull();
+    expect(ffmpeg).toBeDefined();
+    expect(join(resourcesPath, ffmpeg?.to ?? '')).toBe(
+      dirname(installed.ffmpeg ?? '')
+    );
+  });
+});

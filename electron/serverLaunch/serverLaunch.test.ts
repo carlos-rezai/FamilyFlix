@@ -248,3 +248,48 @@ describe('serverLaunch — every path from ShellPaths', () => {
     }
   );
 });
+
+// Issue #231 — FFmpeg on board. The **Installed app** carries the **FFmpeg
+// pin**'s build as its **Default component**, so `installed` points
+// `FAMILYFLIX_FFMPEG_PATH` at the `ffmpeg.exe` `shellPaths` found under
+// `resources\ffmpeg`. `dev` and `start` set none, so an unpackaged run keeps
+// the FFmpeg on `PATH`. The Component slot is still read ahead of it.
+describe('serverLaunch — the Default component', () => {
+  const ELSEWHERE = join('E:', 'elsewhere');
+  const carrying: ShellPaths = {
+    ...INSTALLED,
+    ffmpeg: join(ELSEWHERE, 'the-ffmpeg', 'ffmpeg.exe'),
+  };
+
+  it('installed points FAMILYFLIX_FFMPEG_PATH at the shipped ffmpeg.exe', () => {
+    expect(
+      serverLaunch('installed', PACKAGED_USER_DATA, INSTALLED).env
+        .FAMILYFLIX_FFMPEG_PATH
+    ).toBe(INSTALLED.ffmpeg);
+  });
+
+  it('installed reads that path off ShellPaths', () => {
+    expect(
+      serverLaunch('installed', PACKAGED_USER_DATA, carrying).env
+        .FAMILYFLIX_FFMPEG_PATH
+    ).toBe(carrying.ffmpeg);
+  });
+
+  it.each(['dev', 'start'] as const)(
+    '%s sets no FAMILYFLIX_FFMPEG_PATH, so PATH’s FFmpeg stands in',
+    (mode) => {
+      expect(serverLaunch(mode, USER_DATA, UNPACKAGED).env).not.toHaveProperty(
+        'FAMILYFLIX_FFMPEG_PATH'
+      );
+    }
+  );
+
+  it.each(['dev', 'start'] as const)(
+    '%s sets none even when handed an ffmpeg path',
+    (mode) => {
+      expect(serverLaunch(mode, USER_DATA, carrying).env).not.toHaveProperty(
+        'FAMILYFLIX_FFMPEG_PATH'
+      );
+    }
+  );
+});
