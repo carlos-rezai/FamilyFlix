@@ -15,6 +15,7 @@
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
+import type { ShellPaths } from '../shellPaths/shellPaths';
 import { serverLaunch } from './serverLaunch';
 
 const CWD = join('D:', 'repo');
@@ -27,7 +28,20 @@ const USER_DATA = join(
   'FamilyFlix (dev)'
 );
 
-const dev = () => serverLaunch('dev', USER_DATA, CWD);
+// Issue #228 — `serverLaunch(mode, userData, cwd)` became
+// `serverLaunch(mode, userData, paths)`: every path it hands the fork is one
+// `shellPaths` answered. These are the unpackaged ones, today's under the repo.
+const UNPACKAGED: ShellPaths = {
+  app: CWD,
+  icon: join(CWD, 'electron', 'assets', 'icon.ico'),
+  serverEntry: join(CWD, 'electron', 'dist', 'server.js'),
+  renderer: join(CWD, 'dist', 'familyflix'),
+  sqliteBinding: join(CWD, 'electron', '.native', 'better_sqlite3.node'),
+  ffmpeg: null,
+  serverCwd: CWD,
+};
+
+const dev = () => serverLaunch('dev', USER_DATA, UNPACKAGED);
 
 describe('serverLaunch — dev (electron:dev)', () => {
   it('forks the bundle the watcher builds', () => {
@@ -64,7 +78,7 @@ describe('serverLaunch — dev (electron:dev)', () => {
 // built renderer — but still the repo's own library and the Electron-ABI
 // binding `electron:native` fetched. `'installed'`, the three path variables go
 // under `userData` (`%APPDATA%\FamilyFlix\`), the **Trusted hosts** are set
-// empty, and the package's own binding is used.
+// empty, and (since issue #228) the binding is the one under `resources\native`.
 
 const PACKAGED_USER_DATA = join(
   'C:',
@@ -74,6 +88,21 @@ const PACKAGED_USER_DATA = join(
   'Roaming',
   'FamilyFlix'
 );
+
+// Issue #228 — the **Packaged layout**: the bundles inside `app.asar`, the
+// renderer and the binding beside it under `resources`. Distinct from the
+// repo's, so an entry or a renderer path not read off `ShellPaths` shows.
+const RESOURCES = join('C:', 'Programs', 'FamilyFlix', 'resources');
+const ASAR = join(RESOURCES, 'app.asar');
+const INSTALLED: ShellPaths = {
+  app: ASAR,
+  icon: join(ASAR, 'electron', 'assets', 'icon.ico'),
+  serverEntry: join(ASAR, 'electron', 'dist', 'server.js'),
+  renderer: join(RESOURCES, 'renderer'),
+  sqliteBinding: join(RESOURCES, 'native', 'better_sqlite3.node'),
+  ffmpeg: join(RESOURCES, 'ffmpeg', 'ffmpeg.exe'),
+  serverCwd: PACKAGED_USER_DATA,
+};
 
 const BUNDLED_SERVER = join(CWD, 'electron', 'dist', 'server.js');
 const BUILT_RENDERER = join(CWD, 'dist', 'familyflix');
@@ -89,7 +118,7 @@ describe('serverLaunch — dev, the installed shape’s variables', () => {
 });
 
 describe('serverLaunch — start (electron:start)', () => {
-  const prod = () => serverLaunch('start', USER_DATA, CWD);
+  const prod = () => serverLaunch('start', USER_DATA, UNPACKAGED);
 
   it('forks the bundled server', () => {
     expect(prod().entry).toBe(BUNDLED_SERVER);
@@ -127,10 +156,11 @@ describe('serverLaunch — start (electron:start)', () => {
 });
 
 describe('serverLaunch — installed (the Installed app)', () => {
-  const packaged = () => serverLaunch('installed', PACKAGED_USER_DATA, CWD);
+  const packaged = () =>
+    serverLaunch('installed', PACKAGED_USER_DATA, INSTALLED);
 
-  it('forks the bundled server', () => {
-    expect(packaged().entry).toBe(BUNDLED_SERVER);
+  it('forks the server bundle shellPaths finds inside app.asar', () => {
+    expect(packaged().entry).toBe(INSTALLED.serverEntry);
   });
 
   it('passes no --import tsx', () => {
@@ -141,8 +171,8 @@ describe('serverLaunch — installed (the Installed app)', () => {
     expect(packaged().env.PORT).toBe('41720');
   });
 
-  it('serves the built renderer', () => {
-    expect(packaged().env.FAMILYFLIX_RENDERER_PATH).toBe(BUILT_RENDERER);
+  it('serves the renderer shellPaths finds under resources', () => {
+    expect(packaged().env.FAMILYFLIX_RENDERER_PATH).toBe(INSTALLED.renderer);
   });
 
   it('puts the database under userData', () => {
@@ -167,7 +197,54 @@ describe('serverLaunch — installed (the Installed app)', () => {
     expect(packaged().env.FAMILYFLIX_TRUSTED_HOSTS).toBe('');
   });
 
-  it('leaves the SQLite binding to the package’s own', () => {
-    expect(packaged().env).not.toHaveProperty('FAMILYFLIX_SQLITE_BINDING');
+  it('points the SQLite binding at resources\\native, from ShellPaths', () => {
+    expect(packaged().env.FAMILYFLIX_SQLITE_BINDING).toBe(
+      INSTALLED.sqliteBinding
+    );
   });
+});
+
+// Issue #228 — the entry and the renderer are read off `ShellPaths` in every
+// mode, never joined from a working directory. A `ShellPaths` whose paths share
+// no root with the repo's proves it.
+describe('serverLaunch — every path from ShellPaths', () => {
+  const ELSEWHERE = join('E:', 'elsewhere');
+  const paths: ShellPaths = {
+    app: ELSEWHERE,
+    icon: join(ELSEWHERE, 'mark.ico'),
+    serverEntry: join(ELSEWHERE, 'bundles', 'the-server.js'),
+    renderer: join(ELSEWHERE, 'the-renderer'),
+    sqliteBinding: join(ELSEWHERE, 'abi', 'binding.node'),
+    ffmpeg: null,
+    serverCwd: ELSEWHERE,
+  };
+
+  it.each(['dev', 'start', 'installed'] as const)(
+    '%s forks paths.serverEntry',
+    (mode) => {
+      expect(serverLaunch(mode, PACKAGED_USER_DATA, paths).entry).toBe(
+        paths.serverEntry
+      );
+    }
+  );
+
+  it.each(['start', 'installed'] as const)(
+    '%s serves paths.renderer',
+    (mode) => {
+      expect(
+        serverLaunch(mode, PACKAGED_USER_DATA, paths).env
+          .FAMILYFLIX_RENDERER_PATH
+      ).toBe(paths.renderer);
+    }
+  );
+
+  it.each(['dev', 'start', 'installed'] as const)(
+    '%s points the SQLite binding at paths.sqliteBinding',
+    (mode) => {
+      expect(
+        serverLaunch(mode, PACKAGED_USER_DATA, paths).env
+          .FAMILYFLIX_SQLITE_BINDING
+      ).toBe(paths.sqliteBinding);
+    }
+  );
 });
