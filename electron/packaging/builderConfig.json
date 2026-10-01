@@ -18,6 +18,12 @@
     { "from": "electron/.native", "to": "native" },
     { "from": "electron/.ffmpeg", "to": "ffmpeg" }
   ],
+  "electronFuses": {
+    "runAsNode": false,
+    "enableNodeOptionsEnvironmentVariable": false,
+    "enableNodeCliInspectArguments": false,
+    "onlyLoadAppFromAsar": true
+  },
   "win": {
     "icon": "electron/assets/icon.ico",
     "signAndEditExecutable": true
