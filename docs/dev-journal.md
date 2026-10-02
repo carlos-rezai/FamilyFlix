@@ -11,6 +11,123 @@ Newest entry first.
 
 ---
 
+## 2026-10-01 — Desktop packaging (issues #228–#232)
+
+Ten commits across issues #228–#232 — five RED/GREEN pairs — against the plan
+on #227, built from `docs/design-logs/25-desktop-packaging.md`. **6693 tests
+pass across 387 files**, from 6626 across 383 at the end of the shell round.
+`tsc -b` is clean, and `eslint src server electron .husky` reports no errors
+and no warnings. 19 files, most of the line count the lockfile. It carries
+build step 8: the repo becomes one file, `FamilyFlix-Setup-0.1.0.exe`, that
+the maintainer double-clicks on the parents' PC. The prototype draws no
+installer, so "the prototype" here is the **App mark**, and every surface the
+log listed (Q18) points at the one `icon.ico`.
+
+**Not ticked** in the feature table. ✅ when the refactor closes and the
+**Package smoke** has passed, not when the build issues do.
+
+### What shipped
+
+- **#228, the installed shape's paths.** `electron/shellPaths/`, pure: the
+  **Shell mode** and Electron's three locations → the icon, the server bundle,
+  the renderer, the binding, FFmpeg and the server's working directory, read
+  once by main in place of `process.cwd()`. `serverLaunch(mode, userData,
+paths)` built on it, with `nativeBindingPath` folded in, as the plan said.
+- **#229, no `node_modules` to ship.** `better-sqlite3`'s JS bundled into
+  `electron/dist/server.js`, and `dependencies: {}` — everything moved to
+  `devDependencies`, the lockfile refreshed with `--package-lock-only` —
+  guarded by `buildElectron.test.ts`. Split out of the log's first step, as
+  the plan said, because the paths and the dependencies do not depend on each
+  other.
+- **#230, the first Installer.** `electron-builder` behind `packageApp.mjs`
+  (`electron:package`, `--dir` for the layout alone),
+  `electron/packaging/builderConfig.json` and its guard,
+  `packagingConfig.test.ts`; `version` `0.1.0` and `author` in
+  `package.json`, so About reads `0.1.0`.
+- **#231, FFmpeg on board.** The **FFmpeg pin**,
+  `electron/packaging/ffmpegPin.json`; `fetchFfmpeg.mjs` (`electron:ffmpeg`)
+  and `verifyDigest`; the gitignored `electron/.ffmpeg/` shipped as
+  `resources\ffmpeg\`; and `FAMILYFLIX_FFMPEG_PATH` set by `serverLaunch` when
+  installed, so the pin's build is the **Default component**.
+- **#232, hardening.** The four fuses in `builderConfig.json` — `runAsNode`,
+  `enableNodeOptionsEnvironmentVariable` and `enableNodeCliInspectArguments`
+  off, `onlyLoadAppFromAsar` on — with asar integrity validation left unset.
+
+### Judgment calls the slices made on their own
+
+- **`verifyDigest` at `electron/scripts/verifyDigest/`**, erasable TypeScript
+  imported by the `.mjs` under Node's type stripping. That disproves the
+  reason the `electron-shell` refactor gave for leaving the binding's path
+  spelled twice — "a `.mjs` script run by Node cannot import a `.ts` unit
+  without a loader". It can.
+- **The README's digest as `fetchFfmpeg`'s "already matches" mark**, rather
+  than hashing two binaries on every package.
+- **The zip read by hand**, so the script needs no dependency.
+- **The NSIS x64 target and `electronVersion` supplied by `packageApp.mjs`**,
+  not written in the config, because `--dir` swaps the target and the version
+  is read off `node_modules/electron`, so the runtime and the binding cannot
+  disagree (Q17). Both stay.
+- **The pin at gyan.dev's essentials 9.0.2**, from the GyanD GitHub release,
+  its SHA-256 computed over the download and checked against the digest
+  GitHub publishes for the asset.
+- **`nativeBindingPath` folded into `shellPaths`**, as the plan said.
+
+### Verified unattended
+
+- `electron:package --dir` wrote `release/win-unpacked/`: `app.asar` holds
+  only `package.json`, the two bundles and `icon.ico`; `resources\renderer\`
+  and `resources\native\better_sqlite3.node` beside it; no `node_modules`
+  anywhere.
+- `electron:package` wrote `release/FamilyFlix-Setup-0.1.0.exe`, on Electron
+  38.8.6, the installed version and the binding's.
+- The exe's version resource reads FileDescription `FamilyFlix`, FileVersion
+  `0.1.0` and CompanyName `Carlos Rezai`.
+- The real pin downloaded, verified and extracted in about five seconds to
+  exactly `ffmpeg.exe`, `ffprobe.exe`, `LICENSE.txt` and `README.txt`;
+  `ffmpeg.exe -version` reads `9.0.2-essentials_build-www.gyan.dev`; a second
+  run said it already matched.
+- The fuse wire read back from the exe matches the config.
+- Vitest green straight after a package.
+
+### Not run: the Package smoke
+
+The log's proof of an **Installer** (Q26) needs an install, and a slice runs
+unattended. Each closing comment listed its items as outstanding:
+
+- **#228, #229:** `electron:dev` and `electron:start` on `shellPaths`, the
+  bundled `better-sqlite3` and the Electron-ABI binding.
+- **#230:** no console window flashing during a package; the exe's icon in
+  Explorer; SmartScreen once, the one-click window wearing the mark, the app
+  opening maximized; the mark on the shortcuts, the taskbar, Alt+Tab, a pin
+  and _Settings → Apps_ (publisher Carlos Rezai, 0.1.0); Task Manager reading
+  FamilyFlix; the pin and the window as one button; uninstall keeping
+  `%APPDATA%\FamilyFlix\` and a reinstall showing the same library; a
+  direct-played MP4.
+- **#231:** `resources\ffmpeg\` holding exactly the four files, no
+  `ffplay.exe`; an `.mkv` remuxed and played; the Codec report saying
+  **Default**; an uploaded pair overriding it and the ✕ falling back.
+- **#232:** all of the above on the hardened exe; `ELECTRON_RUN_AS_NODE`,
+  `NODE_OPTIONS` and `--inspect` with no effect; a stray `app` folder beside
+  the asar ignored.
+
+So nothing has yet proven that the installed app opens on a machine with no
+Node. The refactor writes the smoke down as a checklist and runs it, as its
+Group 3.
+
+### Deliberately not built (Q1, Q2, Q16, Q21, the Trade-offs)
+
+The release feed, `publish`, `release.yml` and `npm version` (step 9); signing
+of any kind, and asar integrity validation; arm64, macOS and Linux; an
+assisted installer, a directory picker, installer artwork, a portable build or
+an MSI; auto-launch, a tray, and backup on install.
+
+### Follow-ups
+
+The refactor is 234. The docs-and-refactor-filing slice, 233, was folded into
+it and closed at filing.
+
+---
+
 ## 2026-09-30 — Electron desktop shell refactor (issue #226)
 
 Seventeen commits against `docs/refactor-plans/24-electron-shell-refactor.md`,
