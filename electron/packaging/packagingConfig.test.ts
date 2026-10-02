@@ -106,6 +106,35 @@ describe('packagingConfig', () => {
     expect(placed).toContain(dirname(installed.sqliteBinding));
   });
 
+  it('ships the binding from the directory the unpackaged shell reads it in', () => {
+    const resourcesPath = join('C:', 'FamilyFlix', 'resources');
+    const installed = shellPaths('installed', {
+      appPath: join(resourcesPath, 'app.asar'),
+      resourcesPath,
+      userData: join('C:', 'Users', 'family', 'AppData', 'Roaming'),
+    });
+    const repo = join('D:', 'repo');
+    const unpackaged = shellPaths('start', {
+      appPath: repo,
+      resourcesPath: join(
+        repo,
+        'node_modules',
+        'electron',
+        'dist',
+        'resources'
+      ),
+      userData: join('C:', 'Users', 'maintainer', 'AppData', 'Roaming'),
+    });
+    const binding = (config().extraResources ?? []).find(
+      ({ to }) => join(resourcesPath, to) === dirname(installed.sqliteBinding)
+    );
+
+    expect(binding).toBeDefined();
+    expect(join(repo, binding?.from ?? '')).toBe(
+      dirname(unpackaged.sqliteBinding)
+    );
+  });
+
   it('unpacks nothing from the asar', () => {
     expect(config().asarUnpack).toBeUndefined();
   });
