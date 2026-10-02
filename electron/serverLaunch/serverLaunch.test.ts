@@ -32,7 +32,6 @@ const USER_DATA = join(
 // `serverLaunch(mode, userData, paths)`: every path it hands the fork is one
 // `shellPaths` answered. These are the unpackaged ones, today's under the repo.
 const UNPACKAGED: ShellPaths = {
-  app: CWD,
   icon: join(CWD, 'electron', 'assets', 'icon.ico'),
   serverEntry: join(CWD, 'electron', 'dist', 'server.js'),
   renderer: join(CWD, 'dist', 'familyflix'),
@@ -95,7 +94,6 @@ const PACKAGED_USER_DATA = join(
 const RESOURCES = join('C:', 'Programs', 'FamilyFlix', 'resources');
 const ASAR = join(RESOURCES, 'app.asar');
 const INSTALLED: ShellPaths = {
-  app: ASAR,
   icon: join(ASAR, 'electron', 'assets', 'icon.ico'),
   serverEntry: join(ASAR, 'electron', 'dist', 'server.js'),
   renderer: join(RESOURCES, 'renderer'),
@@ -210,7 +208,6 @@ describe('serverLaunch — installed (the Installed app)', () => {
 describe('serverLaunch — every path from ShellPaths', () => {
   const ELSEWHERE = join('E:', 'elsewhere');
   const paths: ShellPaths = {
-    app: ELSEWHERE,
     icon: join(ELSEWHERE, 'mark.ico'),
     serverEntry: join(ELSEWHERE, 'bundles', 'the-server.js'),
     renderer: join(ELSEWHERE, 'the-renderer'),

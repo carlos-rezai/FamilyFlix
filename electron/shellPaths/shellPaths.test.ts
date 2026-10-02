@@ -66,10 +66,6 @@ describe.each(['dev', 'start'] as const)(
         userData: DEV_USER_DATA,
       });
 
-    it('answers the repo as the app', () => {
-      expect(paths().app).toBe(REPO);
-    });
-
     it('finds the App mark under electron/assets', () => {
       expect(paths().icon).toBe(join(REPO, 'electron', 'assets', 'icon.ico'));
     });
@@ -118,10 +114,6 @@ describe('shellPaths — installed (the Packaged layout)', () => {
       resourcesPath: RESOURCES,
       userData: USER_DATA,
     });
-
-  it('answers app.asar as the app', () => {
-    expect(paths().app).toBe(ASAR);
-  });
 
   it('finds the App mark inside app.asar', () => {
     expect(paths().icon).toBe(join(ASAR, 'electron', 'assets', 'icon.ico'));

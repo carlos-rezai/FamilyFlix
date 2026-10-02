@@ -14,8 +14,6 @@ export interface ShellLocations {
 
 /** Every path the shell and the **Server process** need. */
 export interface ShellPaths {
-  /** The app's own root. */
-  app: string;
   /** The **App mark**, rendered by `electron/scripts/buildIcon.mjs`. */
   icon: string;
   /** The server bundle `buildElectron.mjs` writes. */
@@ -43,7 +41,6 @@ export function shellPaths(
   { appPath, resourcesPath, userData }: ShellLocations
 ): ShellPaths {
   const fromApp = {
-    app: appPath,
     icon: join(appPath, 'electron', 'assets', 'icon.ico'),
     serverEntry: join(appPath, 'electron', 'dist', 'server.js'),
   };
