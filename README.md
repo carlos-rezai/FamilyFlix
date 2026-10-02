@@ -268,6 +268,8 @@ Run by hand when the mark in `docs/handoff/brand/` changes: it renders `electron
 
 Not built yet — it is build step 8, **Desktop packaging**.
 
+Every Installer is proven by the [release checklist](./docs/release-checklist.md) before it reaches anyone.
+
 ### Commit message convention
 
 ```
@@ -363,6 +365,7 @@ A 🧭 Roadmap item is not in the chain — it comes after both, if ever.
 - [Refactor Plans](./docs/refactor-plans/)
 - [Design Handoff](./docs/handoff/HANDOFF.md)
 - [Dev Journal](./docs/dev-journal.md)
+- [Release Checklist](./docs/release-checklist.md) — the Package smoke a release is ticked against
 
 ---
 
