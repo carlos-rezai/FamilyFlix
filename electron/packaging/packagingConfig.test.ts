@@ -53,6 +53,15 @@ const packageJson = (): Record<string, unknown> =>
 
 const ICON = 'electron/assets/icon.ico';
 
+/** The **Packaged layout**, as `shellPaths` reads it when installed. */
+const RESOURCES_PATH = join('C:', 'FamilyFlix', 'resources');
+const installedPaths = () =>
+  shellPaths('installed', {
+    appPath: join(RESOURCES_PATH, 'app.asar'),
+    resourcesPath: RESOURCES_PATH,
+    userData: join('C:', 'Users', 'family', 'AppData', 'Roaming'),
+  });
+
 describe('packagingConfig', () => {
   it('names the app by the App User Model ID main sets', () => {
     expect(config().appId).toBe(APP_USER_MODEL_ID);
@@ -84,19 +93,14 @@ describe('packagingConfig', () => {
   });
 
   it('puts each extra resource in the directory shellPaths reads under resourcesPath', () => {
-    const resourcesPath = join('C:', 'FamilyFlix', 'resources');
-    const installed = shellPaths('installed', {
-      appPath: join(resourcesPath, 'app.asar'),
-      resourcesPath,
-      userData: join('C:', 'Users', 'family', 'AppData', 'Roaming'),
-    });
+    const installed = installedPaths();
     const read = [
       installed.renderer,
       dirname(installed.sqliteBinding),
       ...(installed.ffmpeg ? [dirname(installed.ffmpeg)] : []),
     ];
     const extraResources = config().extraResources ?? [];
-    const placed = extraResources.map(({ to }) => join(resourcesPath, to));
+    const placed = extraResources.map(({ to }) => join(RESOURCES_PATH, to));
 
     expect(extraResources.length).toBeGreaterThan(0);
     for (const directory of placed) {
@@ -107,12 +111,7 @@ describe('packagingConfig', () => {
   });
 
   it('ships the binding from the directory the unpackaged shell reads it in', () => {
-    const resourcesPath = join('C:', 'FamilyFlix', 'resources');
-    const installed = shellPaths('installed', {
-      appPath: join(resourcesPath, 'app.asar'),
-      resourcesPath,
-      userData: join('C:', 'Users', 'family', 'AppData', 'Roaming'),
-    });
+    const installed = installedPaths();
     const repo = join('D:', 'repo');
     const unpackaged = shellPaths('start', {
       appPath: repo,
@@ -126,7 +125,7 @@ describe('packagingConfig', () => {
       userData: join('C:', 'Users', 'maintainer', 'AppData', 'Roaming'),
     });
     const binding = (config().extraResources ?? []).find(
-      ({ to }) => join(resourcesPath, to) === dirname(installed.sqliteBinding)
+      ({ to }) => join(RESOURCES_PATH, to) === dirname(installed.sqliteBinding)
     );
 
     expect(binding).toBeDefined();
@@ -198,19 +197,14 @@ describe('the FFmpeg pin', () => {
 
 describe('the Default component in the Packaged layout', () => {
   it('ships electron/.ffmpeg to the directory shellPaths reads ffmpeg.exe from', () => {
-    const resourcesPath = join('C:', 'FamilyFlix', 'resources');
-    const installed = shellPaths('installed', {
-      appPath: join(resourcesPath, 'app.asar'),
-      resourcesPath,
-      userData: join('C:', 'Users', 'family', 'AppData', 'Roaming'),
-    });
+    const installed = installedPaths();
     const ffmpeg = (config().extraResources ?? []).find(
       ({ from }) => from === 'electron/.ffmpeg'
     );
 
     expect(installed.ffmpeg).not.toBeNull();
     expect(ffmpeg).toBeDefined();
-    expect(join(resourcesPath, ffmpeg?.to ?? '')).toBe(
+    expect(join(RESOURCES_PATH, ffmpeg?.to ?? '')).toBe(
       dirname(installed.ffmpeg ?? '')
     );
   });
