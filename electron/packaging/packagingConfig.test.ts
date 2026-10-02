@@ -67,6 +67,13 @@ describe('packagingConfig', () => {
     expect(nsis?.uninstallerIcon).toBe(ICON);
   });
 
+  // Q18: rcedit is the step that writes the icon and the version resource into
+  // an unsigned exe. Turning it off "to skip signing" ships Electron's atom
+  // icon on FamilyFlix.exe.
+  it('stamps the exe with the mark and the version, signed or not', () => {
+    expect(config().win?.signAndEditExecutable).toBe(true);
+  });
+
   it('installs one-click and per-user, keeps the family’s data on uninstall, and rebuilds nothing', () => {
     const { nsis, npmRebuild } = config();
 
