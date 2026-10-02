@@ -25,6 +25,7 @@ interface BuilderConfig {
   copyright?: string;
   npmRebuild?: boolean;
   asarUnpack?: unknown;
+  files?: string[];
   extraResources?: ExtraResource[];
   win?: { icon?: string; signAndEditExecutable?: boolean };
   electronFuses?: Record<string, unknown>;
@@ -100,6 +101,25 @@ describe('packagingConfig', () => {
 
   it('unpacks nothing from the asar', () => {
     expect(config().asarUnpack).toBeUndefined();
+  });
+
+  // Q7: the asar holds what main requires and nothing else. A glob here would
+  // ship whatever it matched — the silent-shipping risk `dependencies: {}`
+  // exists to stop.
+  it('packs only package.json, the two bundles and the icon into the asar, with no glob', () => {
+    const files = config().files ?? [];
+
+    expect([...files].sort()).toEqual(
+      [
+        'package.json',
+        'electron/dist/main.js',
+        'electron/dist/server.js',
+        ICON,
+      ].sort()
+    );
+    for (const entry of files) {
+      expect(entry).not.toMatch(/[*?{}![\]]/);
+    }
   });
 
   it('is versioned 0.1.0, by Carlos Rezai, with the config outside package.json', () => {
