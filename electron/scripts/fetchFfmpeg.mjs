@@ -15,17 +15,17 @@
 // mark: when the three binaries are there and the README names this pin, the
 // run skips everything, so a second run needs no network.
 //
-// The zip is read by hand — the central directory, then each wanted entry
-// stored or deflated — so the script needs no dependency.
+// The zip is read by hand, by `zipEntries` — the central directory, then each
+// wanted entry stored or deflated — so the script needs no dependency.
 
 import { createHash } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { inflateRawSync } from 'node:zlib';
 
 import { verifyDigest } from './verifyDigest/verifyDigest.ts';
+import { entryBytes, zipEntries } from './zipEntries/zipEntries.ts';
 
 const root = fileURLToPath(new URL('../..', import.meta.url));
 
@@ -78,53 +78,6 @@ async function matchesPin(pin) {
   return current === readme(pin);
 }
 
-/** The zip's entries, off its central directory. */
-function entries(zip) {
-  let end = -1;
-  for (let at = zip.length - 22; at >= Math.max(0, zip.length - 65_557); at--) {
-    if (zip.readUInt32LE(at) === 0x06054b50) {
-      end = at;
-      break;
-    }
-  }
-  if (end < 0) throw new Error('The FFmpeg archive is not a zip.');
-
-  const count = zip.readUInt16LE(end + 10);
-  let at = zip.readUInt32LE(end + 16);
-  const found = [];
-  for (let i = 0; i < count; i++) {
-    if (zip.readUInt32LE(at) !== 0x02014b50) {
-      throw new Error('The FFmpeg archive’s central directory is damaged.');
-    }
-    const method = zip.readUInt16LE(at + 10);
-    const compressedSize = zip.readUInt32LE(at + 20);
-    const nameLength = zip.readUInt16LE(at + 28);
-    const extraLength = zip.readUInt16LE(at + 30);
-    const commentLength = zip.readUInt16LE(at + 32);
-    const localOffset = zip.readUInt32LE(at + 42);
-    const name = zip.toString('utf8', at + 46, at + 46 + nameLength);
-    found.push({ name, method, compressedSize, localOffset });
-    at += 46 + nameLength + extraLength + commentLength;
-  }
-  return found;
-}
-
-/** One entry's bytes, stored or deflated. */
-function contents(zip, { name, method, compressedSize, localOffset }) {
-  if (zip.readUInt32LE(localOffset) !== 0x04034b50) {
-    throw new Error(`The FFmpeg archive’s entry ${name} is damaged.`);
-  }
-  const start =
-    localOffset +
-    30 +
-    zip.readUInt16LE(localOffset + 26) +
-    zip.readUInt16LE(localOffset + 28);
-  const data = zip.subarray(start, start + compressedSize);
-  if (method === 0) return data;
-  if (method === 8) return inflateRawSync(data);
-  throw new Error(`The FFmpeg archive’s entry ${name} uses method ${method}.`);
-}
-
 async function download(url) {
   const response = await fetch(url);
   if (!response.ok) {
@@ -147,13 +100,13 @@ async function main() {
   const zip = await download(pin.url);
   verifyDigest(createHash('sha256').update(zip).digest('hex'), pin.sha256);
 
-  const all = entries(zip);
+  const all = zipEntries(zip);
   const extracted = WANTED.map(([inner, shipped]) => {
     const entry = all.find(
       ({ name }) => name.slice(name.indexOf('/') + 1) === inner
     );
     if (!entry) throw new Error(`The FFmpeg archive carries no ${inner}.`);
-    return [shipped, contents(zip, entry)];
+    return [shipped, entryBytes(zip, entry)];
   });
 
   await rm(outdir, { recursive: true, force: true });
