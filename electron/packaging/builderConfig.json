@@ -1,6 +1,5 @@
 {
   "appId": "io.github.carlosrezai.familyflix",
-  "productName": "FamilyFlix",
   "copyright": "Copyright © 2026 Carlos Rezai",
   "npmRebuild": false,
   "asar": true,

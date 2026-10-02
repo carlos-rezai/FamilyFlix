@@ -165,6 +165,7 @@ describe('packagingConfig', () => {
     expect(pkg.author).toBe('Carlos Rezai');
     expect(pkg).not.toHaveProperty('build');
     expect(config().copyright).toBe('Copyright © 2026 Carlos Rezai');
+    expect(config()).not.toHaveProperty('productName');
   });
 });
 
