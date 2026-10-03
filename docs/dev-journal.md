@@ -114,6 +114,39 @@ So nothing has yet proven that the installed app opens on a machine with no
 Node. The refactor writes the smoke down as a checklist and runs it, as its
 Group 3.
 
+### The smoke's result (2026-10-03) — step 1 only, 2–8 deferred
+
+Run against `docs/release-checklist.md` on the dev machine, Windows 11 Pro
+10.0.26200.9457, over the tree after the refactor's Groups 1–2.
+
+- **Step 1, Build — passed.** `npm run electron:package` ran with no console
+  window flashing. It wrote `release/FamilyFlix-Setup-0.1.0.exe` (152 MB).
+  `release/win-unpacked/resources/ffmpeg/` held exactly `ffmpeg.exe`,
+  `ffprobe.exe`, `LICENSE.txt` and `README.txt`. The exe's version resource
+  read FileDescription and ProductName `FamilyFlix`, FileVersion `0.1.0` and
+  CompanyName `Carlos Rezai`, and `Get-AuthenticodeSignature` read both the
+  exe and the Installer as `NotSigned`, as Q21 settled. The log's _signing
+  with signtool.exe_ lines are rcedit's stamping (Q18), not a signature.
+- **One finding, fixed in `b03a0e1`.** The layout carried
+  `resources\app-update.yml` naming a GitHub provider off the git remote.
+  `packageApp.mjs`'s `publish: 'never'` stops an upload, not the inference,
+  so with no `publish` in the config `electron-builder` wrote the feed step 9
+  owns (Q1). `"publish": null` in `builderConfig.json`, held by a new guard
+  leaf; a `--dir` package after it has no `app-update.yml`. Nothing reads the
+  file before step 9, so it was harmless — but it is part of the Installer,
+  and the Installer should name no feed it does not have.
+- **Steps 2–8 — not run, deferred.** Windows Sandbox is not enabled on this
+  machine (`Containers-DisposableClientVM` disabled), and enabling it needs an
+  admin prompt and a restart. The maintainer chose to finish the round's
+  documents first. An install on the dev machine itself would not stand in:
+  it has Node, a dev library and earlier installs, which is exactly what step
+  3 exists to rule out.
+
+So **Desktop packaging stays 🔜** and #234 and #227 stay open until steps 2–8
+pass. The Installer on disk from this run predates `b03a0e1`; rebuild before
+running them. Each failure becomes a `fix:` commit under 234, and the results
+are added here.
+
 ### Deliberately not built (Q1, Q2, Q16, Q21, the Trade-offs)
 
 The release feed, `publish`, `release.yml` and `npm version` (step 9); signing
