@@ -2,6 +2,7 @@
   "appId": "io.github.carlosrezai.familyflix",
   "copyright": "Copyright © 2026 Carlos Rezai",
   "npmRebuild": false,
+  "publish": null,
   "asar": true,
   "directories": {
     "output": "release"

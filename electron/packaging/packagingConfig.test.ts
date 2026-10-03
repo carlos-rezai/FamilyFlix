@@ -24,6 +24,7 @@ interface BuilderConfig {
   productName?: string;
   copyright?: string;
   npmRebuild?: boolean;
+  publish?: null;
   asarUnpack?: unknown;
   files?: string[];
   extraResources?: ExtraResource[];
@@ -155,6 +156,14 @@ describe('packagingConfig', () => {
     for (const entry of files) {
       expect(entry).not.toMatch(/[*?{}![\]]/);
     }
+  });
+
+  // With no `publish` here, electron-builder infers a GitHub provider off the
+  // git remote and writes `resources\app-update.yml` into the layout — the
+  // `publish: 'never'` packageApp passes stops the upload, not the inference.
+  // The release feed is step 9's (Q1); until then the layout names none.
+  it('names no release feed, so the layout carries no app-update.yml', () => {
+    expect(config()).toHaveProperty('publish', null);
   });
 
   it('is versioned 0.1.0, by Carlos Rezai, with the config outside package.json', () => {
