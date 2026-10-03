@@ -25,7 +25,7 @@ FamilyFlix is an offline-first desktop application for Windows. There is no clou
 - **Shell:** Electron — one window over the bundled Express server, forked as a utility process and serving the built app beside its API on one loopback origin
 - **Storage:** SQLite via `better-sqlite3` for the library; video/subtitle/poster files are copied into FamilyFlix's own managed media folder on import. Installed, everything lives under `%APPDATA%\FamilyFlix\`
 - **No auth** — single household, single shared watch history, local-only by design
-- **Packaging:** NSIS installer via `electron-builder`, installs per-user with no UAC prompt — build step 8, not built yet
+- **Packaging:** one file, `FamilyFlix-Setup-<version>.exe` — a one-click, per-user NSIS installer via `electron-builder`, no UAC prompt, unsigned, carrying the pinned FFmpeg build as the Default component; uninstalling keeps the library
 
 ---
 
@@ -141,14 +141,16 @@ Every feature is a 1:1 translation of the canonical prototype in docs/handoff/ �
 familyflix/
 ├── .claude/            # Claude Code skills and CLAUDE.md
 ├── electron/           # The Desktop shell's main process: main.ts, wiring only, over one unit per decision
-│   ├── shellMode/          # dev / start / installed, read once
-│   ├── serverLaunch/ serverHandle/ awaitExitOrKill/ # fork the bundled server, wait for ready, shut it down or kill it
+│   ├── shellMode/ shellPaths/ # dev / start / installed, read once; every path the shell and the server need, for that mode
+│   ├── serverLaunch/ serverHandle/ awaitExitOrKill/ # the entry and environment off ShellPaths, fork the bundled server, wait for ready, shut it down or kill it
 │   ├── quitAfterShutdown/ reloadOnce/ loadRenderer/ # the quit gate, one reload after a crash, loading until Vite answers
 │   ├── rendererUrl/ windowPolicy/ downloadPath/     # where the window points, what it may open, where a download lands
 │   ├── shellDialogs/ shellLog/ appIdentity/         # the two failure dialogs, the Shell log, the taskbar identity
 │   ├── assets/             # icon.ico, the App mark, and its guard
-│   ├── scripts/            # buildElectron.mjs, buildIcon.mjs, fetchNative.mjs
-│   └── test-support/       # fakeServerChild — never imported by shipping code
+│   ├── packaging/          # builderConfig.json, ffmpegPin.json, and the guard that holds them to the shell
+│   ├── scripts/            # buildElectron.mjs, buildIcon.mjs, fetchNative.mjs, fetchFfmpeg.mjs, packageApp.mjs; verifyDigest/ and zipEntries/, pure units the scripts import
+│   ├── test-support/       # fakeServerChild — never imported by shipping code
+│   └── .native/ .ffmpeg/ dist/ # gitignored: the Electron-ABI binding, the Default component, the two bundles
 ├── server/             # Express backend
 │   └── src/
 │       ├── routes/         # HTTP layer only — parses requests, calls a domain module; enrichmentBody/ reads a Sync's start and Apply choices; loopbackGuard/ and rendererRouter/ stand in front of the API
@@ -206,6 +208,7 @@ familyflix/
 │   ├── types/            # Shared TypeScript interfaces (import.ts, export.ts, settings.ts, playback.ts, series.ts, enrichment.ts — read by both build targets; shell.ts, the Shell handshake, read by the server and the shell; appVersion.d.ts)
 │   ├── utils/            # Pure helper functions (formatBytes, formatElapsed, formatEpisodeTag, moviePath, enrichPath, seriesPath, seasonPath, episodePlayPath and accentScale among them)
 │   └── test-support/     # Shared test doubles (fakeResponse, makeSeriesDetail, makeEnrichmentRun, stubDownload, stubScrollMetrics, stubScrollTo, comesBefore, snackbarStack, LocationProbe and its navigationType reader, shippingSources, resolvedStyle and normCss, …)
+├── release/            # gitignored: the Installer, and win-unpacked/ — the Packaged layout
 └── docs/
     ├── design-logs/    # Immutable feature design snapshots
     ├── PRDs/           # Product requirements and implementation plans
@@ -266,9 +269,28 @@ Run by hand when the mark in `docs/handoff/brand/` changes: it renders `electron
 
 ### The installer
 
-Not built yet — it is build step 8, **Desktop packaging**.
+```
+npm run electron:package         # release/FamilyFlix-Setup-<version>.exe
+npm run electron:package -- --dir  # release/win-unpacked/ only, no installer
+```
+
+Builds the renderer and both bundles, fetches the Electron-ABI binding and the Default component, then hands `electron/packaging/builderConfig.json` to `electron-builder`: a one-click, per-user NSIS installer for x64, unsigned, with no `node_modules` inside it.
+
+```
+npm run electron:ffmpeg
+```
+
+Downloads the build `electron/packaging/ffmpegPin.json` names, refuses it unless its SHA-256 is the pin's, and extracts `ffmpeg.exe`, `ffprobe.exe` and the licence into the gitignored `electron/.ffmpeg/`. `electron:package` runs it anyway; once fetched it needs no network.
 
 Every Installer is proven by the [release checklist](./docs/release-checklist.md) before it reaches anyone.
+
+### Installing on a new machine
+
+1. Copy `FamilyFlix-Setup-<version>.exe` over.
+2. Run it. The installer is unsigned, so SmartScreen stops it once: _More info → Run anyway_. There is no other prompt — it installs for the current user and opens FamilyFlix.
+3. Import the library: Settings → Import from spreadsheet.
+
+The library lives in `%APPDATA%\FamilyFlix\` and survives an uninstall, so a reinstall finds it as it was.
 
 ### Commit message convention
 

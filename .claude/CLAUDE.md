@@ -28,7 +28,8 @@ desktop app development, and Claude Code workflow.
   subtitle overlay are entirely bespoke, so a library's skin and native
   cue rendering are both things to defeat rather than use, and jsdom can
   drive a bare element but not video.js
-- **Playback component:** FFmpeg, bundled by the installer, behind
+- **Playback component:** FFmpeg — the **Installer** carries the **FFmpeg
+  pin**'s build as the **Default component** — behind
   `server/src/playback/`. Chromium reads MP4/WebM only, so every `.mkv`
   and `.avi` in the family folder is remuxed or transcoded on the way to
   the element. No uploaded `.dll` can change what a browser decodes —
@@ -109,7 +110,8 @@ familyflix/
 ├── electron/ ← the **Desktop shell**'s main process: `tsconfig.electron.json`'s shipping code, one unit per decision, Electron only ever run in a manual smoke
 │ ├── main.ts ← the composition root, and wiring only: adapters over Electron's `fs`, `dialog`, `shell` and `app`, the window's options, each event handed to a unit below
 │ ├── shellMode/ ← pure: `shellMode(isPackaged, env)` → `'dev'` / `'start'` / `'installed'`, the **Shell mode**, read once; the one reader of `FAMILYFLIX_SHELL_PROD`
-│ ├── serverLaunch/ ← pure: a mode → the entry and environment the **Server process** is forked with — the bundled `electron/dist/server.js` in every mode, `3001` in dev and the **Shell port** otherwise, the paths under `userData` only when installed; and `nativeBindingPath`
+│ ├── shellPaths/ ← pure: a mode and Electron's three locations (`appPath`, `resourcesPath`, `userData`) → the **Shell paths** — the icon and the server bundle off `appPath`, the renderer, the binding and the Default component's `ffmpeg.exe` off the repo unpackaged and `resourcesPath` installed (`null` unpackaged), the server's working directory; read once by main in place of `process.cwd()`
+│ ├── serverLaunch/ ← pure: `serverLaunch(mode, userData, paths)` over **Shell paths** → the entry and environment the **Server process** is forked with — `paths.serverEntry` in every mode, the binding in every mode, `3001` in dev and the **Shell port** otherwise, the renderer outside dev, the data paths under `userData` and `FAMILYFLIX_FFMPEG_PATH` only when installed
 │ ├── serverHandle/ ← main's hold on the server: fork, the 15 s wait for `ready`, `fatal` and an exit before `ready` as rejections, an exit after it to `onExit`, and `shutdown(ms)`
 │ ├── awaitExitOrKill/ ← wait for a child's exit, killing it at the budget and resolving anyway
 │ ├── quitAfterShutdown/ ← the quit gate: the `before-quit` listener that holds the app open until the **Ordered shutdown** is over, then quits and lets that quit through
@@ -122,10 +124,11 @@ familyflix/
 │ ├── shellLog/ ← the **Shell log**: `[main]` and `[server]` lines to `logs\familyflix.log` when installed, rolled at 5 MB, to the terminal otherwise
 │ ├── appIdentity/ ← `APP_USER_MODEL_ID`, set before the window so the taskbar groups it
 │ ├── assets/ ← `icon.ico`, the **App mark** at seven sizes, and `iconSizes.test.ts`, its guard
-│ ├── scripts/ ← `buildElectron.mjs` (the two CJS bundles into `dist/`; `--watch` for `electron:dev`, `--start` for `electron:start`, each launching Electron after the first build), `buildIcon.mjs` (`electron:icon`) and `fetchNative.mjs` (`electron:native`)
+│ ├── scripts/ ← `buildElectron.mjs` (the two CJS bundles into `dist/`; `--watch` for `electron:dev`, `--start` for `electron:start`, each launching Electron after the first build), `buildIcon.mjs` (`electron:icon`), `fetchNative.mjs` (`electron:native`), `fetchFfmpeg.mjs` (`electron:ffmpeg`: the **FFmpeg pin**'s archive, verified and extracted into `.ffmpeg/`) and `packageApp.mjs` (`electron:package`, `--dir` for the layout alone: the renderer, the bundles, the binding and FFmpeg, then `electron-builder`); and two pure units they import as erasable TypeScript, each in its folder with its suite — `verifyDigest/` (an archive against the pin's SHA-256) and `zipEntries/` (the central directory, and one entry's bytes stored or deflated)
+│ ├── packaging/ ← `builderConfig.json` (what `packageApp.mjs` hands `build()`: `appId`, the asar's four files, `extraResources`, the four fuses, rcedit, NSIS, no `publish`), `ffmpegPin.json` (`{ version, url, sha256 }`) and `packagingConfig.test.ts`, the guard holding both to `appIdentity` and `shellPaths`
 │ ├── test-support/ ← the shell's rung of the rule: never imported by shipping code, excluded from `tsconfig.electron.json` so the typecheck enforces it
 │ │ └── fakeServerChild/ ← a `ServerChild` never forked: `postMessage` and `kill` recorded, `post(message)` and `exit(code)` on cue
-│ └── .native/ dist/ ← gitignored: the Electron-ABI `better_sqlite3.node` `electron:native` fetches, and the two bundles
+│ └── .native/ .ffmpeg/ dist/ ← gitignored: the Electron-ABI `better_sqlite3.node` `electron:native` fetches, the **Default component** `electron:ffmpeg` extracts, and the two bundles
 ├── server/
 │ └── src/
 │ ├── routes/ ← HTTP layer only: parse request, call a domain module, return response
@@ -356,6 +359,7 @@ familyflix/
 │ ├── resolvedStyle/ ← the cascade by hand for a named state jsdom cannot enter — hover, press, a click's focus, the keyboard's — `!important`, then specificity, then order; reads a combinator whose ancestors carry no state; `normCss` beside it
 │ ├── stubScrollTo/ ← `scrollTo` on every element, for a jsdom that has it on `window` alone: who was asked for what, in order; deleted after the block
 │ └── stubDownload/ ← object URLs and an anchor’s click() for a jsdom that has neither: what the page handed the browser to save, in order
+├── release/ ← gitignored: `electron:package`'s output — the **Installer**, and `win-unpacked/`, the **Packaged layout**
 └── docs/
 ├── design-logs/
 ├── PRDs/
@@ -490,8 +494,12 @@ FamilyFlix is an offline-first desktop app. This is the only target.
   an **Unpackaged run** uses the repo's own library
 - **No auth** — single-user household, single shared watch history,
   local-only
-- **Packaging:** `electron-builder` for Windows installers — step 8, not
-  yet built
+- **Packaging:** `electron-builder` behind `npm run electron:package` →
+  `release/FamilyFlix-Setup-<v>.exe`: one-click, per-user NSIS for x64, no
+  UAC prompt, unsigned (SmartScreen's _More info → Run anyway_ once), no
+  `node_modules` in the **Packaged layout**, and `%APPDATA%\FamilyFlix\`
+  kept on uninstall. Every Installer is proven by the **Package smoke**,
+  `docs/release-checklist.md`
 
 ## Movie Import — One Form, Manual Pickers
 
@@ -862,11 +870,11 @@ PORT=3001 # standalone and under `electron:dev`, the port Vite proxies to. Under
 VITE_API_BASE_URL=http://localhost:3001
 FAMILYFLIX_DB_PATH= # entrypoint reads it and passes the path to createSqliteStorage; defaults to ./familyflix.db. Electron main sets it to app.getPath('userData')/familyflix.db when installed; unpackaged runs (`electron:dev`, `electron:start`) use the repo's own library.
 FAMILYFLIX_MEDIA_PATH= # root directory for copied video/subtitle/poster files; defaults to ./media. Electron main sets it to app.getPath('userData')/media when installed; unpackaged runs use the repo's own.
-FAMILYFLIX_FFMPEG_PATH= # absolute path to the ffmpeg binary of the Playback component; ffprobe is looked for beside it. Unset falls back to `ffmpeg`/`ffprobe` on PATH, and then to absent — a state, not an error: MP4s still direct-play and everything else answers `cannot-play`. The slot the installer fills and the maintainer's uploaded component replaces.
+FAMILYFLIX_FFMPEG_PATH= # absolute path to the ffmpeg binary of the Playback component; ffprobe is looked for beside it. Main sets it when installed, to the **Default component** under `resources\ffmpeg\`; unpackaged runs leave it unset. Unset falls back to `ffmpeg`/`ffprobe` on PATH, and then to absent — a state, not an error: MP4s still direct-play and everything else answers `cannot-play`. The maintainer's uploaded component in the Component slot is read ahead of it.
 FAMILYFLIX_COMPONENT_PATH= # the Component slot: the writable directory an uploaded Playback component lives in (`current/`, with `incoming/` and `previous/` swept on startup); defaults to ./playback-component. Read ahead of FAMILYFLIX_FFMPEG_PATH and ahead of PATH, so an uploaded pair is what the next Play converts with. Electron main sets it to app.getPath('userData')/playback-component when installed; unpackaged runs use the repo's own.
 FAMILYFLIX_RENDERER_PATH= # the built renderer (`dist/familyflix`) the server serves beside `/api` under its CSP — **One origin**. Main sets it under `electron:start` and when installed; unset (standalone, `electron:dev`) nothing is mounted and Vite serves the renderer.
 FAMILYFLIX_TRUSTED_HOSTS= # extra **Trusted hosts** for the **Loopback guard**, comma-separated, beside `127.0.0.1:<bound>` and `localhost:<bound>`. Unset means `localhost:4200`, Vite's origin; main sets it empty when installed.
-FAMILYFLIX_SQLITE_BINDING= # path to the Electron-ABI `better_sqlite3.node` that `npm run electron:native` fetches into `electron/.native/`. Main sets it for unpackaged runs; unset uses the package's own binding, which is what Vitest and `npm run dev` run on.
+FAMILYFLIX_SQLITE_BINDING= # path to the Electron-ABI `better_sqlite3.node` that `npm run electron:native` fetches into `electron/.native/`. Main sets it in every mode: to `electron/.native/` unpackaged and to `resources\native\` installed. Unset uses the package's own binding, which is what Vitest and `npm run dev` run on.
 FAMILYFLIX_SHELL_PROD= # main only, set to "1" by `electron:start`: run the installed shape unpackaged. Read once, by `shellMode`.
 DEBUG_SQL= # set to "1" to enable better-sqlite3 query tracing via console.info. Off by default; never on in packaged builds.
 
