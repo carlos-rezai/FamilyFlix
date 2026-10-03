@@ -240,7 +240,9 @@ font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'`.
     single-instance lock, a Chromium profile or `localStorage` with an installed
     copy on the same machine.
 
-19. **`better-sqlite3` under Electron's ABI?** ✅ **A second binding beside the
+19. **`better-sqlite3` under Electron's ABI?** ⚠️ **The last sentence is
+    superseded by `25-desktop-packaging` Q10** — nothing is rebuilt; the
+    Installer carries the Electron-ABI binding. ✅ **A second binding beside the
     first, never a rebuild in place.** `openDatabase` passes better-sqlite3's
     own `nativeBinding` option when `FAMILYFLIX_SQLITE_BINDING` is set.
     `scripts/electron-sqlite.mjs` (`npm run electron:native`) fetches the

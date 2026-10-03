@@ -51,10 +51,10 @@ already read as a semantic scale.
 
 ### Brand assets — `brand/`
 
-| Asset        | File                                                                       | Target                                                        |
-| ------------ | -------------------------------------------------------------------------- | ------------------------------------------------------------- |
-| **Wordmark** | drawn inline (library header, About card) — no file                        | `layouts/` and `AboutSection`                                 |
-| **App mark** | `brand/familyflix-mark.svg`, previews `familyflix-mark-{256,512,1024}.png` | `electron/assets/icon.ico` and `public/favicon.ico`, rendered |
+| Asset        | File                                                                       | Target                                                                                                                                                |
+| ------------ | -------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Wordmark** | drawn inline (library header, About card) — no file                        | `layouts/` and `AboutSection`                                                                                                                         |
+| **App mark** | `brand/familyflix-mark.svg`, previews `familyflix-mark-{256,512,1024}.png` | `electron/assets/icon.ico` and `public/favicon.ico`, rendered; through `electron/packaging/`, the packaged exe, the **Installer** and the uninstaller |
 
 The **App mark** is the Wordmark reduced: its two F's, `--color-text` (`#f3ece0`) then
 `--color-accent` (`#d97a4e`), Source Serif 4 at 700 outlined to paths, on a `--color-bg`

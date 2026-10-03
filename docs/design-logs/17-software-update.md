@@ -160,7 +160,9 @@ has not been built yet?
     `dev-unavailable`, kept, because the alternative is a button that silently
     does nothing on the one machine the app is developed on.
 
-11. **Code signing?** ✅ **Not this initiative's.** Unsigned to begin with and
+11. **Code signing?** ⚠️ **The self-signed option is settled by
+    `25-desktop-packaging` Q21** — unsigned, and no root certificate. ✅ **Not
+    this initiative's.** Unsigned to begin with and
     `verifyUpdateCodeSignature: false`, so an unsigned NSIS update is accepted;
     a self-signed certificate in Trusted Root is packaging's call, as it was
     Horizon's. ❌ An EV certificate — a yearly bill in a project whose
