@@ -11,6 +11,99 @@ Newest entry first.
 
 ---
 
+## 2026-10-03 — Desktop packaging refactor (issue #234)
+
+Thirteen commits against `docs/refactor-plans/25-desktop-packaging-refactor.md`,
+with the docs slice filed as 233 folded in — twelve of the plan's fourteen, one
+`fix:` the smoke found, and none for commit 9, dropped. **6700 tests pass
+across 388 files**, from 6693 across 387 at the end of the build. `tsc -b` is
+clean, and `eslint src server electron .husky` reports nothing.
+
+**Not ticked.** The plan's last step is the ✅, and it is held back: the
+**Package smoke** has run its step 1 and not its steps 2–8 (see the build's
+entry below, _The smoke's result_). Desktop packaging stays 🔜 in README and
+CLAUDE.md, step 8 stays in the build-order chain, and #234 and #227 stay open
+until the smoke passes in Windows Sandbox.
+
+### What each group changed
+
+- **Group 0, the record.** The build's own entry, below, written before the
+  round touched anything.
+- **Group 1, the guard.** Three characterization leaves in
+  `packagingConfig.test.ts`, each green on arrival: `files` is exactly
+  `package.json`, the two bundles and the icon, with no glob (Q7);
+  `win.signAndEditExecutable` is `true`, with the log's reason as its comment
+  (Q18); and the binding's `extraResources` `from`, joined onto a repo, is the
+  directory `shellPaths('start', …)` reads it from.
+- **Group 2, the units.** `productName` left `builderConfig.json`, so
+  `package.json`'s names the exe, the Installer and `userData` alike, and the
+  guard asserts the config carries none. `ShellPaths.app` went, with its two
+  leaves — nothing read it. The guard's two installed `shellPaths(…)` calls
+  became one `installedPaths()`. And the zip reader left `fetchFfmpeg.mjs` for
+  `electron/scripts/zipEntries/`, on `verifyDigest`'s precedent, with a suite
+  of five: stored, **deflated** — the branch every real run takes, run by a
+  test for the first time — not a zip, a damaged local header, an unknown
+  method. `fetchFfmpeg`'s own suite did not change and stayed green.
+- **Group 3, the smoke.** `docs/release-checklist.md`, linked from README;
+  step 1 run and passed; `b03a0e1`, the one fix it found — `"publish": null`,
+  so the layout carries no `app-update.yml` — and the result in the build's
+  entry.
+- **Group 4, the documents.** CLAUDE.md's stack line, packaging line, the two
+  variables and the folder map; README's packaging line, _The installer_,
+  _Installing on a new machine_ and its tree; the **App mark** row in
+  COMPONENT-SPEC; the glossary's **Package smoke** and **Packaged layout**
+  rows, and a relationship line still saying the installer "bundles" the
+  component; ⚠️ pointers on log 24 Q19 and log 17 Q11.
+
+### Leaves restated
+
+Added: the three guard leaves, the five `zipEntries` leaves, and the
+_names no release feed_ leaf; one assertion — no `productName` — on the
+existing _versioned 0.1.0_ leaf. Removed: _answers the repo as the app_ and
+its installed counterpart in `shellPaths.test.ts`. Nothing else moved.
+
+### Commit 9, dropped
+
+`electron/scripts/package.json`, `{ "type": "module" }`, would have silenced
+the `MODULE_TYPELESS_PACKAGE_JSON` warning `fetchFfmpeg.mjs` prints when it
+imports a `.ts` unit. It did: the leaf asserting no warning went red without
+it and green with it, and `tsc -b` stayed clean. But `nx show projects` then
+failed outright — _"The projects in the following directories have no name
+provided: electron/scripts"_. Nx reads every nested `package.json` as a
+project, and the plan forbade giving it a name. The plan's rule was to drop
+the commit if either check failed, so it was dropped, manifest and leaf both.
+
+**The warning is accepted.** It prints once per `electron:ffmpeg` — twice per
+`electron:package`'s log is the worst it gets, since both units load in one
+run — and changes nothing: Node reparses the unit as ESM and runs it. An
+`.nxignore` entry for `electron/scripts` would let the manifest stand; it was
+offered and not taken, because it means teaching Nx to look away from a
+directory to quiet a warning, and the next nested manifest would need the
+same.
+
+### Deliberately left out
+
+- **The glossary's _(new)_ tags stay.** The plan said to drop them "on the
+  precedent of the earlier sections". There is none: every section keeps its
+  tags, the shell refactor's glossary commit included. Dropping them from one
+  section would make it the odd one out.
+- Everything the plan's _Out of Scope_ named: the fetch scripts' own output
+  directories, a suite for `packageApp.mjs`, the NSIS target and
+  `electronVersion` in the script, `serverLaunch`'s `userData` parameter,
+  `buildElectron.test`'s better-sqlite3 marker, and everything log 25 ruled
+  out.
+
+### Still to do
+
+**The Package smoke's steps 2–8**, in Windows Sandbox, against an Installer
+rebuilt after `b03a0e1`. Sandbox is off on the dev machine
+(`Containers-DisposableClientVM`): _Turn Windows features on or off →
+Windows Sandbox_, then a restart. Then the result goes in the build's entry,
+any failure is a `fix:` under 234, and the ✅, the chain's step 8 and the
+close of 234 and 227 follow.
+
+---
+
 ## 2026-10-01 — Desktop packaging (issues #228–#232)
 
 Ten commits across issues #228–#232 — five RED/GREEN pairs — against the plan
