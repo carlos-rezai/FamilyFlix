@@ -240,6 +240,24 @@ pass. The Installer on disk from this run predates `b03a0e1`; rebuild before
 running them. Each failure becomes a `fix:` commit under 234, and the results
 are added here.
 
+### Closed without steps 2–8 (2026-10-04)
+
+The Installer was rebuilt after `b03a0e1` (no `app-update.yml` in the layout)
+and Windows Sandbox enabled. In the Sandbox it installed and its window opened
+wearing the mark, but the window drew nothing: Windows' default light grey,
+not the window's own `#14110d` background, with something under the pointer
+that reacted to a hover. That reads as Chromium not painting under the
+Sandbox's virtual GPU rather than a missing page — the window only shows on
+`ready-to-show` — but it was **not diagnosed**: neither `--disable-gpu` nor a
+Sandbox with `<vGPU>Disable</vGPU>` was tried, and the Shell log was not read.
+
+The maintainer chose to close the initiative on step 1 alone and move on to
+step 9. So **Desktop packaging is ✅ with the Installer unproven on a clean
+machine**: steps 2–8 of `docs/release-checklist.md` have never passed. The
+first install on the parents' PC, or step 9's own proof cycle, is where a
+blank window would show up first; if it does, the two checks above are the
+place to start.
+
 ### Deliberately not built (Q1, Q2, Q16, Q21, the Trade-offs)
 
 The release feed, `publish`, `release.yml` and `npm version` (step 9); signing

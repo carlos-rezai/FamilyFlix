@@ -903,9 +903,9 @@ same layout, spacing, states, copy, and interaction.
 > Status legend: ✅ Done · 🔜 Planned · 🧭 Roadmap · 🚫 Out of scope
 > Every 🔜 item builds against its prototype in `docs/handoff/` — translate, don't redesign.
 
-**Build order — the two that are left.** The groups below say what the app
+**Build order — the one that is left.** The groups below say what the app
 _is_; this says what to build _next_, and it is a chain rather than a
-preference. Each 🔜 entry carries its step number; steps 1–7, the
+preference. Each 🔜 entry carries its step number; steps 1–8, the
 **Snackbar system**, the **Back-to-top FAB**, **Back navigation**,
 **Motion & interaction states**, **Series (TV)**, **Enrichment (TMDB)** and
 the **Electron desktop shell**, are done — step 3 was found by the prototype audit of 2026-09-21 and went ahead
@@ -920,13 +920,11 @@ their gates; the shell, step 7, is done (log 24), and `Change…` in the
 Storage group is not in the chain — it is the Roadmap's **Move the media
 folder** (log 24 Q2).
 
-8. **Desktop packaging** _(next)_ — needs 7, which is done; produces the
-   installer that 9 publishes.
-9. **Software update** — needs 7 and 8 (and 1, which is done). Designed in
-   full already (`docs/design-logs/17-software-update.md`); its PRD waits
-   on 8.
+9. **Software update** _(next)_ — needs 7 and 8 (and 1), which are done.
+   Designed in full already (`docs/design-logs/17-software-update.md`); its
+   PRD is next.
 
-A 🧭 Roadmap item is not in this chain — it is after both, if ever.
+A 🧭 Roadmap item is not in this chain — it is after it, if ever.
 
 ### Foundation
 
@@ -973,7 +971,7 @@ A 🧭 Roadmap item is not in this chain — it is after both, if ever.
 - ✅ **Subtitle preferences** — the household's Preferred subtitle language, kept in the library's database and honoured by the player; the Auto-on toggle built but disabled until shipped.
 - ✅ **Storage** — the managed media folder's location and space used, agreeing with Explorer; _Change…_ is the Roadmap's **Move the media folder**.
 - ✅ **Network group** — a fifth Settings group between Playback and Storage, the one place FamilyFlix goes online: _The Movie Database (TMDB)_ with a status pill, the lede ("Nothing is sent about your household — just movie titles, to look up posters and synopses"), the API-key field in mono with _Test connection_ beside it, and the _Sync metadata & posters_ row that opens the Enrichment flow.
-- 🔜 **Software update** _(step 9)_ — the About card's first row: an Update offer downloaded at launch, Update now, and Check for updates. Needs steps 1, 7 and 8; designed in `17-software-update`.
+- 🔜 **Software update** _(step 9 — next)_ — the About card's first row: an Update offer downloaded at launch, Update now, and Check for updates. Needs steps 1, 7 and 8, which are done; designed in `17-software-update`.
 
 ### System
 
@@ -981,7 +979,7 @@ A 🧭 Roadmap item is not in this chain — it is after both, if ever.
 - ✅ **Back-to-top FAB** — the accent circle in the home screen's bottom-right corner once the body is past 420px, riding it back to the top on a press; mounted by the chrome over the body it already owns, and gone again under the line.
 - ✅ **Back navigation** — one **Back rule** on every screen: `useGoBack(fallback)`, a **History step**, or the screen's own **Landing** pushed when there is nothing behind it — the player's is its movie, Import's is Settings, the **Movie form**'s is where its job came from. Every **Leaving** is a step except the two **Fresh homes**, _Add to library_ and Import's _Finish_; Play → Back → Back reaches the library, the shelf comes back filtered and scrolled, and a Delete after a Play lands on the library.
 - ✅ **Motion & interaction states** — the prototype's **Interaction contract** (`COMPONENT-SPEC.md` §2a) over every built control and card, in two disjoint vocabularies: a **Control** (Button, Chip, IconButton and every extension, the Filter dropdown's trigger) signals with colour, a **Card** (PosterCard, ContinueCard) with elevation. `tokens/motion.ts` is the one file that spells `durFast`, `durBase`, `durSlow` and `easeOut`; the **Accent scale** is derived from the one accent by `createTheme(accent)`, never aliased; `styles/interactionStates/` holds `controlStates(press)` — the **Press** at doubled rank in 60ms, so every `IconButton` extension inherits it — and `cardLift` and `cardFocus`, with a structural guard against any other file spelling a duration, the curve or a press; one **Reduced motion** block in `GlobalStyle`. `SeasonCard` and `EpisodeRow` are born on the card fragments in step 5.
-- 🔜 **Desktop packaging** _(step 8 — next)_ — Windows installer build via electron-builder; needs step 7, which is done.
+- ✅ **Desktop packaging** — `npm run electron:package` → `release/FamilyFlix-Setup-<v>.exe`: one-click per-user NSIS, unsigned, the **Default component** carried, the four fuses, the **App mark** on every surface. The Package smoke's steps 2–8 were not passed (dev journal, 2026-10-04).
 
 ### Roadmap
 

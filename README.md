@@ -351,16 +351,16 @@ Keep the description short enough to fit on one line — long descriptions get w
 | Enrichment — TMDB metadata & posters sync           | ✅ Done         |
 | Network group — the TMDB key and the sync row       | ✅ Done         |
 | Electron desktop shell                              | ✅ Done         |
-| Desktop packaging (Windows installer)               | 🔜 8 — next     |
-| Software update (check / install)                   | 🔜 9            |
+| Desktop packaging (Windows installer)               | ✅ Done         |
+| Software update (check / install)                   | 🔜 9 — next     |
 | Collections / playlists                             | 🧭 Roadmap      |
 | Auto-on subtitles                                   | 🧭 Roadmap      |
 | Backgroundable import                               | 🧭 Roadmap      |
 | Move the media folder                               | 🧭 Roadmap      |
 | User accounts / multi-profile                       | 🚫 Out of scope |
 
-Everything above the line is done. The two that are left are numbered in
-**build order**, because they are a chain rather than a preference; steps 1–7,
+Everything above the line is done. The one that is left is numbered in
+**build order**, because it ends a chain rather than a preference; steps 1–8,
 the Snackbar system, the Back-to-top FAB, Back navigation, Motion &
 interaction states, Series (TV), Enrichment (TMDB) and the Electron desktop
 shell, are done — step 3 came out of auditing the build against the prototype
@@ -370,12 +370,10 @@ of 2026-09-22 and went ahead of the shell for the same reason. _Change…_ in
 Settings → Storage is not in the chain — it is the Roadmap's **Move the media
 folder**.
 
-8. **Desktop packaging** _(next)_ — needs 7, which is done, and produces the
-   installer 9 publishes.
-9. **Software update** — needs 7 and 8 (and 1, which is done). Already
-   designed in full; its PRD waits on packaging.
+9. **Software update** _(next)_ — needs 7 and 8 (and 1), which are done.
+   Already designed in full; its PRD is next.
 
-A 🧭 Roadmap item is not in the chain — it comes after both, if ever.
+A 🧭 Roadmap item is not in the chain — it comes after it, if ever.
 
 ---
 
