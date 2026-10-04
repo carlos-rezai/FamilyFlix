@@ -170,7 +170,8 @@ has not been built yet?
 
 ### The seam
 
-12. **What shape is the bridge?** ✅ **Push and pull.** Push alone has a bug:
+12. **What shape is the bridge?** ⚠️ **`onOffered` is superseded by Q37** — the
+    push is the whole status, `onStatus`, with `installing` in it. ✅ **Push and pull.** Push alone has a bug:
     `update-downloaded` fires once, so leaving Settings and coming back would
     redraw an offered update as idle. The main process holds the state and the
     renderer reads it on mount — the `useCapabilities` rule.
@@ -217,7 +218,9 @@ has not been built yet?
     `hasUpdateBridge()` predicate the section consults: two things to keep in
     step where one will do.
 
-17. **The faces?** ✅ One pure unit, `updateFace/` — the `zoneFace` precedent,
+17. **The faces?** ⚠️ **The disabled button and the checking face are
+    restated by Q44–Q45** — `Button size="md" disabled`, both drawn in the
+    prototype first. ✅ One pure unit, `updateFace/` — the `zoneFace` precedent,
     taking `now` as an argument the way every pure unit here takes its world:
 
     | face       | line                                               | button                            |
@@ -269,7 +272,8 @@ has not been built yet?
     5s**. The container's 4000 on one of its two confirmations is a simulation
     inconsistency and is amended to 5000 rather than copied.
 
-23. **Who pushes what?** ✅ **Split by who is mounted.**
+23. **Who pushes what?** ⚠️ **The notice also retracts its offer when the row
+    installs — Q37, Q55.** ✅ **Split by who is mounted.**
     - `SoftwareUpdateRow` — Settings only — pushes the **answers to a press**:
       _You're on the latest version._ (success), _FamilyFlix couldn't check for
       updates._ (error), _Updates are only available in the installed app._
@@ -301,7 +305,8 @@ has not been built yet?
 
 ### Release
 
-26. **How does a release happen?** ✅ `npm version patch|minor|major` →
+26. **How does a release happen?** ⚠️ **To a draft Release, smoked, then
+    published by hand — Q48, Q50–Q53.** ✅ `npm version patch|minor|major` →
     `git push --follow-tags` → `.github/workflows/release.yml` on `v*`,
     `windows-latest`, `electron-builder --publish always`, authenticated with
     the workflow's own `GITHUB_TOKEN`. ❌ Channels or prereleases — one user,
@@ -317,7 +322,8 @@ has not been built yet?
 
 ### Shape and proof
 
-29. **How is the main-process half testable?** ✅ As an injected domain:
+29. **How is the main-process half testable?** ⚠️ **The dependencies and the
+    folder are restated by Q40** — `electron/createUpdates/`, an `UpdatesWorld`. ✅ As an injected domain:
     `createUpdates({ updater, isPackaged, now, onOffered })` returning the
     bridge's members, exactly as `createPlayback(mediaPath, slot)` and
     `createImporter(...)` are — `main.ts` wires IPC to it and owns no logic,
@@ -355,6 +361,8 @@ has not been built yet?
 
 ### The contract — `src/types/update.ts`
 
+> ⚠️ **Superseded by the second session's contract** (Q36, Q37).
+
 ```ts
 /** What a pressed check can come back with. */
 export type UpdateCheck =
@@ -381,6 +389,8 @@ export interface UpdateBridge {
 ```
 
 ### The main process
+
+> ⚠️ **Superseded by the second session** (Q34, Q36, Q38, Q40).
 
 ```
 electron/
@@ -531,6 +541,9 @@ itself (packaging's); the shell (its own initiative).
 
 ## Implementation Plan
 
+> ⚠️ **Superseded by the second session's plan.** Phase 1 shipped as log 18;
+> phase 4's proof cycle cannot start from 0.1.0 (Q47).
+
 > Gated unevenly, which is what sets the order (Q32): **phase 1 needs nothing
 > that does not already exist**, phases 2 and 3 need the **Electron desktop
 > shell** initiative, and phase 4 needs the **Desktop packaging** one.
@@ -593,3 +606,549 @@ improve.
 progress; release notes; channels; rollback; a preference of any kind; an
 update check that runs more than once a launch; and the Back-to-top FAB, which
 shares a rung with the Snackbar and nothing else.
+
+---
+
+# Second session — 2026-10-04, after the shell and the packaging
+
+> Run against the code at `639c78c`, the day **Desktop packaging** was ticked
+> with its Package smoke unproven. Like the first, it ran alone, with every
+> recommendation accepted in advance and the same scope: _translate the
+> prototype 1:1 into the codebase, in its naming, conventions, patterns and
+> architecture_. The first session's answers stand except where a ⚠️ pointer
+> above sends the reader here. Questions are numbered on from Q32.
+
+## Background
+
+When the first session ran, three things this feature stands on did not exist.
+All three do now, and each one built a little differently from how log 17
+pictured it:
+
+- **The Snackbar system** shipped as its own initiative (log 18). The API is
+  `notify(notice): number` / `dismiss(id)`, and `SnackbarNotice` is
+  `{ variant, title?, message, action?: { label, onClick } }`. There is **no
+  `duration`** (log 18 Q24) and no `dismissible`. Pressing an action takes the
+  notice off before it runs (Q25). The stack does not dedupe, so the
+  StrictMode guard is the caller's job (Q28). Log 17's phase 1 is done.
+- **The Electron shell** (log 24): `electron/main.ts` is a composition root
+  over small injected units (`serverHandle`, `quitAfterShutdown`,
+  `shellDialogs`, `shellLog`, …), each a top-level folder with a `…World`
+  dependency interface. The window is sandboxed with **no preload**. Log 24 Q4
+  gave the preload and `window.familyflix` to this step. Quitting goes
+  through the **quit gate**, which holds `before-quit` until the server's
+  **Ordered shutdown** (cancel runs, close the listener, close the database)
+  is over or 5 s pass. `shellMode` is `'dev' | 'start' | 'installed'`.
+  `buildElectron.mjs` emits two CJS bundles, `main.js` and `server.js`.
+- **Desktop packaging** (log 25): `electron-builder` through
+  `packageApp.mjs`, one-click per-user NSIS, unsigned, and `package.json` at
+  **0.1.0** with `dependencies: {}` held by a guard. `builderConfig.json`
+  carries **`"publish": null`** (`b03a0e1`), because without it
+  `electron-builder` infers a GitHub feed off the remote and writes
+  `app-update.yml` into the layout. The asar holds four files. The Package
+  smoke (`docs/release-checklist.md`) passed step 1 only: in Windows Sandbox
+  the installed window painted nothing, and that was never diagnosed (dev
+  journal, 2026-10-04).
+
+What the prototype still says. `page.SettingsPage.dc.html`'s `updating` face
+still reads _Downloading and installing…_. `FamilyFlix.dc.html`'s
+`checkForUpdates()` still says `duration: 4000`. **Neither amendment was
+made** — the one log 17 kept (amendment 1) or the one log 18 Q35 inherited
+(amendment 2). The `Updating…` button is a raw `<button>`: 42px tall,
+`0 22px` padding, a 9px radius and 14px text. The two buttons beside it are
+`prim.Button size="md"`: 50px, `0 26px`, 10px and 16px.
+
+`carlos-rezai/FamilyFlix` is public. `.github/` does not exist.
+
+## Problem
+
+Fit log 17's design onto the shell and installer that actually shipped. That
+means:
+
+- Settle what log 24 and log 25 handed to this step: the preload, the global
+  and the `publish` block.
+- Find where the first session's sketches no longer fit: the bridge's push,
+  the dependencies, `quitAndInstall` against the quit gate, the first
+  Release, and the button.
+- Turn the release ritual into something a workflow can run.
+
+## Questions and Answers
+
+### Where this lives
+
+33. **A new log, or this one?** ✅ **This one, appended**, numbered on from
+    Q32, with ⚠️ pointers on each first-session answer it supersedes. That
+    follows log 25's precedent of pointers on log 17 Q11 and log 24 Q19.
+    Logs 18, 24 and 25 all point here as "log 17". ❌ A log 26: two documents
+    for one feature, and the first would still read as current.
+
+### The preload and the global
+
+34. **What is the preload?** ✅ **`electron/preload.ts`, flat beside
+    `main.ts`, and wiring only.** It calls
+    `contextBridge.exposeInMainWorld('familyflix', { updates })` over
+    `ipcRenderer`. Each member passes one channel through and holds no state.
+    Like `main.ts`, it has no suite: there is nothing in it that is not
+    Electron, and it is proven by the smoke. A sandboxed preload may
+    `require('electron')` and nothing else, so it is a **third CJS bundle**,
+    `electron/dist/preload.js`, `electron` external, emitted by
+    `buildElectron.mjs` beside the other two (its suite asserts three). The
+    asar's `files` gain it, which makes five, and the guard follows.
+    `openWindow`'s `webPreferences` gain `preload: join(__dirname,
+'preload.js')` and keep `sandbox`, `contextIsolation` and
+    `nodeIntegration: false` exactly as log 24 Q21 set them. ❌ A
+    `preload/` folder unit with a test: a test of `contextBridge` is a test
+    of a mock of it.
+
+35. **Where is `window.familyflix` typed?** ✅ **`src/types/familyflix.d.ts`**,
+    the `appVersion.d.ts` precedent: a global defined outside the renderer
+    (by Vite's `define` there, by the preload here), declared once:
+    `interface Window { familyflix?: { updates: UpdateBridge } }`. It is
+    **optional** because a browser has none, which is the state
+    `updateBridge/` answers once (Q30). It is included in
+    `tsconfig.electron.json` beside `shell.ts`. ❌ A cast at the read site:
+    every reader would repeat it, and the project forbids `any`.
+
+36. **Where do the IPC channel names live?** ✅ **In `src/types/update.ts`,
+    as `UPDATE_CHANNELS`**, beside the contract they carry. That is the
+    `shell.ts` precedent: one file that both sides of a seam import.
+    `export.ts`'s `EXPORT_FORMATS` already puts `as const` values in
+    `types/`. ❌ Log 17's `electron/updates/channels.ts`: `electron/` has no
+    category folders. It is one top-level folder per unit, and a list of four
+    strings is not a unit.
+
+### The bridge, restated
+
+37. **Is `onOffered` still the right push?** ✅ **No. It becomes `onStatus`,
+    and `installing` moves into `UpdateStatus`.** Two surfaces can install:
+    the row's **Update now** and the offer snackbar's. Log 18 Q25 named the
+    case where the snackbar must be retracted because the maintainer
+    installed from the row. An `onOffered` push cannot tell
+    `SoftwareUpdateNotice` that the row did that. With main pushing the
+    **whole status** on every change, both subscribers derive from one
+    stream:
+    - the row draws _Installing and restarting…_ whichever surface was
+      pressed;
+    - the notice `dismiss`es its offer when `installing` turns true;
+    - a launch check that answers while Settings is open advances _Last
+      checked_ there too.
+
+    `checking` stays local to `useSoftwareUpdate`, because only the row can
+    start a pressed check. ❌ A second push, `onInstalling`: two channels for
+    one state.
+
+### Install against the quit gate
+
+38. **What does `install()` do now that quitting is ordered?** ✅ **It pushes
+    `installing`, awaits the Ordered shutdown, then calls
+    `quitAndInstall(true, true)`** (silent, relaunch after).
+    `electron-updater`'s `quitAndInstall` spawns the NSIS installer
+    **before** it calls `app.quit()`. Run bare, it would start the installer
+    while the quit gate is still waiting on the **Server process**. The
+    one-click installer's app-running check would then find FamilyFlix
+    processes running and kill them, and the server is a utility process of
+    the same exe, possibly holding the database mid-write. With the shutdown
+    done first, the gate's own `shutdown` resolves at once (`serverHandle`
+    answers an exited child immediately), and the quit goes straight
+    through. **The family's path needs nothing:** `autoInstallOnAppQuit`
+    installs on Electron's `quit` event, and the gate already orders that
+    after the shutdown.
+
+39. **A run in flight when Update now is pressed?** ✅ **Cancelled by the
+    Ordered shutdown, exactly as closing the window would cancel it.** An
+    Import rolls its current folder back, and an Enrichment keeps what it
+    already fetched. No confirm: log 17's _Not built_ already lists "a
+    confirm before **Update now**", and the button is the maintainer's.
+
+### The main-process unit
+
+40. **Is `createUpdates` still log 17 Q29's shape?** ✅ **The idea, with new
+    dependencies, and flat.** It lives at `electron/createUpdates/`, a
+    top-level unit like `serverHandle/`, and its dependencies are an
+    `UpdatesWorld`, the shell's naming (`ServerHandleWorld`,
+    `QuitGateWorld`, `DialogWorld`):
+    - `enabled` replaces `isPackaged`, and main passes
+      `mode === 'installed'`, so an `electron:start` run, unpackaged in the
+      installed shape, answers `unavailable` like `electron:dev`.
+    - `shutdown()` is `serverHandle.shutdown` with `SHUTDOWN_MS` bound by
+      main (Q38).
+    - `onStatus` replaces `onOffered` (Q37).
+    - `log` is the **Shell log**'s `main` writer (Q41).
+
+    ❌ `electron/updates/createUpdates/`: the nesting log 17 drew before
+    `electron/` had a shape.
+
+41. **The updater's errors and its log?** ✅ **An `error` listener is always
+    registered, and `updater.logger` writes to the Shell log.** An `error`
+    event with no listener throws in main. That covers an unreachable feed, a
+    failed download and a 404 on a repo with no Release, and any of them
+    would take the app down for a network blip. Each logs one `[main]` line
+    and is otherwise silent (Q9). `info`, `warn` and `error` go to the log,
+    and `debug` is dropped. On the parents' machine the log is the only
+    window the maintainer has into why an update never came.
+
+42. **How does a check read _none_ from _found_?** ✅ **By the result's
+    `isUpdateAvailable`**, never by comparing version strings in our code.
+    A `null` result from an enabled updater, or a rejection, is `refused`.
+
+43. **How does `electron-updater` ship, with `dependencies: {}` guarded?**
+    ✅ **As a devDependency, bundled into `main.js` by esbuild**, the way
+    every server dependency is bundled into `server.js` (log 25 Q9). The
+    guard stays as it is. The first packaged check is the proof. ❌ A
+    runtime dependency: it would put a `node_modules` tree back in the
+    **Packaged layout** for one package.
+
+### The prototype, again
+
+44. **Is `Button`'s disabled face really the `Updating…` button?** ✅ **In
+    colour, yes. In size, no — and the prototype is amended, not copied.**
+    Log 17 Q17 called it pixel-for-pixel. The fill, border and ink match
+    `prim.Button`'s own disabled face. The raw button, though, is 42px tall
+    at 14px text, while the **Update now** and **Check for updates** it
+    replaces are `md`, 50px at 16px. Copied, the row would shrink by 8px for
+    the length of the install. The amendment makes it
+    `prim.Button variant="primary" size="md" disabled label="Updating…"`. In
+    code that is `Button size="md" disabled`, with nothing local styled.
+    ❌ A one-off 42px button in the feature: CLAUDE.md forbids it when the
+    primitive exists.
+
+45. **The `checking` face log 17 designed in session: build it, or draw it
+    first?** ✅ **Draw it first.** _If a feature needs something the
+    prototype doesn't cover, the prototype needs revisiting before building_.
+    The amendment adds a fourth `sc-if` to the row: the idle line, with its
+    label, over a disabled `Checking…` `prim.Button size="md"`. It also adds
+    `checking` to `FamilyFlix.dc.html`'s `checkForUpdates()` so the
+    simulation passes through it.
+
+46. **And the two amendments that were never made?** ✅ **All four are
+    phase 1's first commit**, before any code reads them: _Installing and
+    restarting…_ (Q18), `4000` → `5000` (Q22, log 18 Q35), the `Updating…`
+    button (Q44), and the checking face (Q45).
+
+### The first Release
+
+47. **Can 0.1.0 be offered 0.1.1, as log 17's proof cycle says?** ✅ **No —
+    0.1.0 can never update.** It was built with `"publish": null`, so it
+    carries no `app-update.yml` and its updater has no feed to ask. The
+    **first Release is `v0.2.0`**, made with `npm version minor` because this
+    is a feature. It is the first Installer that names the feed, and it is
+    installed by hand like any first install. The proof cycle becomes
+    **0.2.0 installed → 0.2.1 published → offered, installed, congratulated**.
+    0.1.0 is never published.
+
+48. **Does a tag publish straight to the family?** ✅ **No: to a draft.**
+    `publish.releaseType: 'draft'`. The workflow uploads the Installer,
+    `latest.yml` and the blockmap to a **draft** Release, and
+    `electron-updater` does not read drafts. The maintainer downloads the
+    draft's Installer and runs the **Package smoke** against it. **Publishing
+    the draft is the release.** That is how the checklist's _"A release is
+    ticked against this list, every time"_ becomes a gate a machine respects.
+    ❌ `releaseType: 'release'`: the parents' machine would fetch an Installer
+    nobody had installed.
+
+49. **The Sandbox window that painted nothing?** ✅ **A gate on the first
+    publish, not on the build — and packaging's to fix.** It is filed as a
+    `desktop-packaging` fix issue. It is diagnosed with the two checks the
+    journal names: `--disable-gpu`, and a Sandbox `.wsb` with
+    `<vGPU>Disable</vGPU>`. If it turns out to be the Sandbox's virtual GPU,
+    the `.wsb` becomes part of the checklist. Phases 1–2 do not wait on it;
+    phase 3's first publish does, because Q48 makes the smoke the release.
+
+### The release, mechanised
+
+50. **What runs on a tag?** ✅ `.github/workflows/release.yml`, on
+    `push: tags: ['v*']`, `windows-latest`, `permissions: contents: write`:
+    `npm ci` → `npm run typecheck` → `node_modules/.bin/vitest run` →
+    `node electron/scripts/packageApp.mjs --publish`, with
+    `GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}`. Log 25 Q24 kept the typecheck
+    and tests out of `packageApp` because _"that is the commit gate's job,
+    and step 9's CI"_. This is that CI. ❌ CI on every push to `main`: not
+    asked for, and the commit gate already runs locally.
+
+51. **How does `packageApp` learn to publish?** ✅ **A `--publish` flag**
+    passes `publish: 'always'`. The default stays `'never'`, so a local
+    `electron:package` uploads nothing. `builderConfig.json`'s `null`
+    becomes `{ "provider": "github", "owner": "carlos-rezai", "repo":
+"FamilyFlix", "releaseType": "draft" }`. The guard's _names no release
+    feed_ leaf becomes _names the release feed_: provider `github`, and
+    owner/repo equal to `package.json`'s new `repository`. A local package
+    now writes `app-update.yml` too, which is correct: the Installer names
+    the feed it has. `win.verifyUpdateCodeSignature: false` is written into
+    the config and guarded, because log 17 Q11 and log 25 Q21 both lean on
+    it, and a stated flag cannot drift with a default.
+
+52. **What does `npm version` write?** ✅ **`.npmrc` sets
+    `message=chore: [release] v%s`**, so the ritual is
+    `npm version minor|patch` → `git push --follow-tags`, and the
+    commit-msg typecheck runs on that commit like any other. A release is
+    not an issue, so this one commit shape drops the `issue #<n>` clause.
+    CLAUDE.md's _Commit Messages_ gains the line. ❌ Hand-typed tags: the tag
+    and the version must agree, and `npm version` makes them agree by
+    construction.
+
+53. **Where is the ritual written down?** ✅ **`docs/release-checklist.md`**,
+    as that file already promises. It gains three things:
+    - a _Publish_ section: bump, push, watch the workflow, smoke the draft's
+      Installer, publish the draft;
+    - an _Update round-trip_ section: from the previous version, the offer
+      snackbar, **Update now**, _Installing and restarting…_, the relaunch,
+      _FamilyFlix updated to …_, the About card's version; then the quit
+      path on the next version; then **Check for updates** with the network
+      off;
+    - the Sandbox `.wsb` if Q49 needs it.
+
+    ❌ A second list.
+
+### Small rulings
+
+54. **Does _Last checked 3 minutes ago_ tick?** ✅ **No.** `updateFace`
+    computes the label from `now` at render. A row left open goes stale by
+    minutes, and the next render puts it right. ❌ A one-minute interval:
+    a timer kept alive for a screen nobody reads that closely.
+
+55. **The offer once per launch, under StrictMode?** ✅ **Once per renderer
+    load, held by a ref** in `SoftwareUpdateNotice`. It pushes when
+    `current()` lands with `offered` set, or when `onStatus` first brings
+    one. A renderer crash that `reloadOnce` reloads offers again, which is
+    accepted. The ref also holds the notice's id, which Q37's retraction
+    needs.
+
+56. **The Seen version in a browser?** ✅ **Never read or written.**
+    `SoftwareUpdateNotice` does nothing when `updateBridge()` is `null`, so
+    `npm run dev` never congratulates anyone. Under the shell it runs in
+    every mode. An unpackaged run that crosses an `npm version` says so,
+    which is harmless and true.
+
+57. **Glossary drift?** ✅ Two corrections for the ubiquitous-language pass.
+    The **Release feed** is no longer "the only network FamilyFlix ever
+    makes", because **TMDB** came first (log 23). The **App version** has
+    read `0.1.0` since log 25 Q23.
+
+58. **Ticks?** ✅ Unchanged from Q31, minus the Snackbar (log 18 Q36):
+    **Software update** ✅ in README and CLAUDE.md and COMPONENT-SPEC's
+    `page.SettingsPage` row, **after the refactor**. CLAUDE.md's build-order
+    chain then has no step left, and says so.
+
+## Design (second session)
+
+### The contract — `src/types/update.ts` (supersedes the first)
+
+```ts
+/** The four IPC channels between the preload and main. */
+export const UPDATE_CHANNELS = {
+  current: 'updates:current', // invoke → UpdateStatus
+  check: 'updates:check', // invoke → UpdateCheck
+  install: 'updates:install', // send
+  status: 'updates:status', // main → renderer, every change
+} as const;
+
+export type UpdateCheck = 'none' | 'found' | 'refused' | 'unavailable';
+
+export interface UpdateStatus {
+  /** The version downloaded and ready to install; `null` when there is none. */
+  offered: string | null;
+  /** ISO stamp of the last check that got an answer; `null` until one does. */
+  lastCheckedAt: string | null;
+  /** True from the moment either surface presses Update now. */
+  installing: boolean;
+}
+
+export interface UpdateBridge {
+  current(): Promise<UpdateStatus>;
+  onStatus(listener: (status: UpdateStatus) => void): () => void;
+  check(): Promise<UpdateCheck>;
+  install(): void;
+}
+```
+
+```ts
+// src/types/familyflix.d.ts — the global the preload defines
+import type { UpdateBridge } from './update';
+declare global {
+  interface Window {
+    familyflix?: { updates: UpdateBridge };
+  }
+}
+export {};
+```
+
+### The main process
+
+```
+electron/
+├── main.ts            ← + the updater wired: createUpdates, three ipcMain handlers, the status send, start() after the window
+├── preload.ts         ← new, flat, wiring: contextBridge → window.familyflix.updates
+└── createUpdates/     ← new: createUpdates(world): Updates
+```
+
+```ts
+/** The part of electron-updater's `autoUpdater` the unit uses. */
+export interface Updater {
+  autoDownload: boolean;
+  autoInstallOnAppQuit: boolean;
+  logger: {
+    info(message: string): void;
+    warn(message: string): void;
+    error(message: string): void;
+  } | null;
+  checkForUpdates(): Promise<{
+    isUpdateAvailable: boolean;
+    updateInfo: { version: string };
+  } | null>;
+  quitAndInstall(isSilent: boolean, isForceRunAfter: boolean): void;
+  on(
+    event: 'update-downloaded',
+    listener: (info: { version: string }) => void
+  ): unknown;
+  on(event: 'error', listener: (error: Error) => void): unknown;
+}
+
+export interface UpdatesWorld {
+  updater: Updater;
+  /** `shellMode === 'installed'`. */
+  enabled: boolean;
+  now(): Date;
+  /** The Ordered shutdown, its budget bound by main. */
+  shutdown(): Promise<void>;
+  /** Every status change, for `webContents.send(UPDATE_CHANNELS.status)`. */
+  onStatus(status: UpdateStatus): void;
+  /** The Shell log's `[main]` writer. */
+  log(text: string): void;
+}
+
+export interface Updates {
+  /** The once-per-launch check: never rejects, silent when refused. */
+  start(): Promise<void>;
+  current(): UpdateStatus;
+  check(): Promise<UpdateCheck>;
+  /** installing → shutdown → quitAndInstall(true, true); a no-op with no offer. */
+  install(): Promise<void>;
+}
+```
+
+```mermaid
+sequenceDiagram
+  participant R as Row or Notice
+  participant P as preload
+  participant M as createUpdates
+  participant S as Server process
+  R->>P: install()
+  P->>M: updates:install
+  M-->>R: status installing=true (row: Installing and restarting…, notice: dismiss)
+  M->>S: Ordered shutdown
+  S-->>M: exited
+  M->>M: quitAndInstall(true, true)
+  Note over M: quit gate — shutdown already resolved, so the quit passes
+```
+
+### The renderer (as the first session, except)
+
+- `useSoftwareUpdate` → `{ status: UpdateStatus | null; checking: boolean;
+check(): Promise<UpdateCheck>; install(): void }`. `busy` is gone:
+  installing is `status.installing`.
+- `updateFace(status, checking, now)`, with four faces as Q17, plus Q44's
+  button: every disabled face is `Button size="md" disabled`.
+- `SoftwareUpdateNotice` subscribes to `onStatus`. It pushes the offer once
+  (Q55), retracts it on `installing` (Q37), and congratulates off
+  `seenVersion/` (Q56).
+- `fakeUpdateBridge` gains `emit(status)` in place of `offer(version)`.
+
+### Release
+
+```yaml
+# .github/workflows/release.yml
+on:
+  push:
+    tags: ['v*']
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: node node_modules/vitest/vitest.mjs run
+      - run: node electron/scripts/packageApp.mjs --publish
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+```
+
+`package.json` gains `"repository": "github:carlos-rezai/FamilyFlix"`.
+`.npmrc` gains `message=chore: [release] v%s`. `builderConfig.json`: the
+`publish` block (Q51) and `win.verifyUpdateCodeSignature: false`.
+
+### Prototype amendments (phase 1's first commit)
+
+1. `page.SettingsPage.dc.html` — `updating` line → _Installing and
+   restarting…_ (Q18).
+2. `page.SettingsPage.dc.html` — the raw `Updating…` button →
+   `prim.Button size="md" disabled` (Q44).
+3. `page.SettingsPage.dc.html` — a `checking` face: the idle line over a
+   disabled `Checking…` (Q45). `FamilyFlix.dc.html` — `checking` in state and
+   in `checkForUpdates()`.
+4. `FamilyFlix.dc.html` — `checkForUpdates()`'s `duration: 4000` → `5000`
+   (Q22).
+
+## Implementation Plan (supersedes the first)
+
+> Phase 1 of the first plan (the Snackbar) shipped as log 18. Phases 1–2
+> below need nothing that does not exist. Phase 3's **publish** waits on the
+> Sandbox fix (Q49), which is a `desktop-packaging` issue.
+
+1. **The bridge and the row, fully voiced.** The four prototype amendments
+   first. Then:
+   - `src/types/update.ts`, `familyflix.d.ts`;
+   - `electron/createUpdates/` (start, current, check, the four outcomes, the
+     error listener, the logger);
+   - `preload.ts`, the third bundle, the asar's fifth file and `main.ts`'s
+     wiring;
+   - `updateBridge/`, `useSoftwareUpdate/`, `updateFace/`,
+     `SoftwareUpdateRow/` and the About card's geometry (Q15–Q16), with
+     `fakeUpdateBridge/`;
+   - the three pressed-check answers through `useSnackbar()`.
+
+   Proof: the suites, then an `electron:start` run, where pressing **Check
+   for updates** answers _Updates are only available in the installed app._
+
+2. **Install and the offer.** `install()` over the Ordered shutdown (Q38),
+   `SoftwareUpdateNotice/` in `App`, the offer once (Q55) and retracted on
+   `installing` (Q37), `seenVersion/` and the congratulation. Proof: the
+   suites, both surfaces driven through `fakeUpdateBridge`.
+3. **The release feed** — HITL at its end. The `publish` block and its guard,
+   `verifyUpdateCodeSignature`, `repository`, `packageApp --publish`,
+   `release.yml`, `.npmrc`, and the checklist's two new sections. Then, once
+   the Sandbox fix is in: `npm version minor` → v0.2.0 → draft → smoke →
+   publish → installed by hand; `npm version patch` → v0.2.1 → draft →
+   smoke → publish → the round-trip on the 0.2.0 install (Q47, Q53).
+4. **Docs and refactor.** CLAUDE.md (folder map: `preload.ts`,
+   `createUpdates/`, `features/software-update/`, `.github/`; _Commit
+   Messages_' release line; the build-order chain closed), README, the
+   COMPONENT-SPEC row, the glossary, the journal; then the refactor, then
+   the tick (Q58).
+
+## Trade-offs (second session)
+
+**Easier.** One status stream means the two surfaces cannot disagree, and the
+snackbar's retraction comes for free. Putting the shutdown ahead of
+`quitAndInstall` means an update cannot interrupt a database write, and the
+family's quit path needed no new code at all. Draft Releases turn the
+checklist from a promise into a gate. `UPDATE_CHANNELS` in `types/` keeps the
+preload and main from spelling a channel twice.
+
+**Harder.** The first updatable version has to be installed by hand on the
+parents' machine, because 0.1.0 never will be updated. Every release now
+needs a person: smoke the draft, then publish it. That is the point, but it
+means a release cannot happen from a phone. CI on `windows-latest` runs the
+whole suite on a machine that has never run it, so the first tag may find
+environment assumptions the commit gate never met. Bundling `electron-updater`
+into `main.js` is unproven until the first packaged check.
+
+**Ruled out of scope (added to the first session's list).** CI on pushes to
+`main`; a ticking _Last checked_; a confirm or a run-in-flight warning before
+**Update now**; a version-string comparison of our own; publishing 0.1.0;
+diagnosing the Sandbox paint inside this initiative (packaging's, Q49).
