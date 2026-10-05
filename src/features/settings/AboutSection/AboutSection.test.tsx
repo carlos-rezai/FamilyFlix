@@ -259,3 +259,50 @@ describe('AboutSection — without the update bridge', () => {
     expect(getComputedStyle(brandRow as HTMLElement).padding).toBe('16px 20px');
   });
 });
+
+/**
+ * 17 — Software update, Phase 2 (issue #237): the two version numbers stay
+ * apart. The brand row keeps the **App version** — what is running — and the
+ * **Offered version** appears only on the _Software update_ row's line.
+ */
+describe('AboutSection — an Update offer', () => {
+  const bridge = fakeUpdateBridge();
+  const OFFERED_VERSION = '9.8.7';
+
+  /** The brand row: the tagline's parent. */
+  const brandRow = (): HTMLElement => {
+    const row = screen.getByText(TAGLINE).parentElement;
+    if (row === null) throw new Error('no brand row');
+    return row;
+  };
+
+  it('keeps the App version on the brand row, and the offered version off it', async () => {
+    bridge.setCurrent({
+      offered: OFFERED_VERSION,
+      lastCheckedAt: null,
+      installing: false,
+    });
+    renderSection();
+
+    await screen.findByRole('button', { name: 'Update now' });
+    expect(within(brandRow()).getByText(__APP_VERSION__)).toBeDefined();
+    expect(brandRow().textContent).not.toContain(OFFERED_VERSION);
+  });
+
+  it('draws the offered version on the row’s line alone', async () => {
+    bridge.setCurrent({
+      offered: OFFERED_VERSION,
+      lastCheckedAt: null,
+      installing: false,
+    });
+    renderSection();
+
+    await screen.findByRole('button', { name: 'Update now' });
+    expect(
+      screen.getAllByText(new RegExp(OFFERED_VERSION.replace(/\./g, '\.')))
+    ).toHaveLength(1);
+    expect(
+      screen.getByText(`Version ${OFFERED_VERSION} is available to install.`)
+    ).toBeDefined();
+  });
+});

@@ -205,3 +205,139 @@ describe('SoftwareUpdateRow — the answers to a press', () => {
     expect(within(snackbarStack()).queryByRole('alert')).toBeNull();
   });
 });
+
+/**
+ * 17 — Software update, Phase 2: "offered and installing on the row"
+ * (issue #237).
+ *
+ * The row draws whatever main last pushed. An **Update offer** draws the
+ * **Offered version** in the accent over **Update now**, whether it was there
+ * when the row mounted or arrived while it was on screen; a press calls
+ * `install()`. _Installing and restarting…_ over a disabled `Updating…` comes
+ * from a pushed `installing`, never from the row's own press — so an install
+ * started from the offer snackbar draws the same face.
+ */
+
+const OFFERED = {
+  offered: '0.2.0',
+  lastCheckedAt: null,
+  installing: false,
+} as const;
+const INSTALLING = { ...OFFERED, installing: true } as const;
+
+const updateNow = () => screen.findByRole('button', { name: 'Update now' });
+
+describe('SoftwareUpdateRow — offered', () => {
+  const bridge = fakeUpdateBridge();
+
+  it('draws the offered face when the offer is already there on mount', async () => {
+    bridge.setCurrent(OFFERED);
+    renderRow();
+
+    const button = await updateNow();
+    expect((button as HTMLButtonElement).disabled).toBe(false);
+    expect(
+      screen.getByText('Version 0.2.0 is available to install.')
+    ).toBeDefined();
+  });
+
+  it('draws the offered face when the offer is pushed while it is on screen', async () => {
+    renderRow();
+    await checkButton();
+
+    act(() => bridge.emit(OFFERED));
+
+    expect(await updateNow()).toBeDefined();
+    expect(
+      screen.getByText('Version 0.2.0 is available to install.')
+    ).toBeDefined();
+    expect(
+      screen.queryByRole('button', { name: 'Check for updates' })
+    ).toBeNull();
+  });
+
+  it('draws the offered version in the accent', async () => {
+    bridge.setCurrent(OFFERED);
+    renderRow();
+
+    await updateNow();
+    const line = screen.getByText('Version 0.2.0 is available to install.');
+    expect(getComputedStyle(line).color).toBe(rgb(theme.colors.accent));
+  });
+
+  it('Update now calls install()', async () => {
+    bridge.setCurrent(OFFERED);
+    renderRow();
+
+    await userEvent.click(await updateNow());
+
+    expect(bridge.installs()).toBe(1);
+    expect(bridge.checks()).toBe(0);
+  });
+});
+
+describe('SoftwareUpdateRow — installing', () => {
+  const bridge = fakeUpdateBridge();
+
+  it('draws Installing and restarting… over a disabled Updating… from a pushed installing', async () => {
+    bridge.setCurrent(OFFERED);
+    renderRow();
+    await updateNow();
+
+    act(() => bridge.emit(INSTALLING));
+
+    const button = await screen.findByRole('button', { name: 'Updating…' });
+    expect((button as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.getByText('Installing and restarting…')).toBeDefined();
+    expect(screen.queryByRole('button', { name: 'Update now' })).toBeNull();
+  });
+
+  it('draws the installing face from the push alone, not from its own press', async () => {
+    bridge.setCurrent(OFFERED);
+    renderRow();
+
+    await userEvent.click(await updateNow());
+
+    expect(bridge.installs()).toBe(1);
+    expect(screen.queryByText('Installing and restarting…')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Updating…' })).toBeNull();
+  });
+
+  it('draws the installing face for an install started elsewhere', async () => {
+    renderRow();
+    await checkButton();
+
+    act(() => bridge.emit(INSTALLING));
+
+    expect(await screen.findByText('Installing and restarting…')).toBeDefined();
+    expect(bridge.installs()).toBe(0);
+  });
+
+  it('draws the installing face when it is already installing on mount', async () => {
+    bridge.setCurrent(INSTALLING);
+    renderRow();
+
+    const button = await screen.findByRole('button', { name: 'Updating…' });
+    expect((button as HTMLButtonElement).disabled).toBe(true);
+  });
+});
+
+describe('SoftwareUpdateRow — a status pushed while mounted', () => {
+  const bridge = fakeUpdateBridge();
+
+  it('redraws when a launch check answers while Settings is open', async () => {
+    renderRow();
+    await checkButton();
+    expect(screen.queryByText(/Last checked/)).toBeNull();
+
+    act(() =>
+      bridge.emit({
+        offered: null,
+        lastCheckedAt: new Date().toISOString(),
+        installing: false,
+      })
+    );
+
+    expect(await screen.findByText(/Last checked just now/)).toBeDefined();
+  });
+});

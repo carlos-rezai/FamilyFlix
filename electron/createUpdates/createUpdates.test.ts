@@ -296,3 +296,135 @@ describe('createUpdates — the logger', () => {
     );
   });
 });
+
+// Issue #237 — offered and installing. `update-downloaded` is the only thing
+// that makes an **Update offer**: it sets `offered` to the **Offered version**
+// and pushes the whole status. `install()` is a no-op with no offer; with
+// one it pushes `installing`, awaits the **Ordered shutdown** (which cancels
+// a running Import or Enrichment and closes the database), and only once that
+// has resolved calls `quitAndInstall(true, true)` — silent, then relaunch.
+
+/** A shutdown held open until the test lets it finish. */
+function heldShutdown() {
+  let finish: () => void = () => undefined;
+  const shutdown = vi.fn(
+    () =>
+      new Promise<void>((resolve) => {
+        finish = resolve;
+      })
+  );
+  return { shutdown, finish: () => finish() };
+}
+
+/** Let every queued microtask run. */
+const settle = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
+
+describe('createUpdates — update-downloaded', () => {
+  it('sets offered to the downloaded version', () => {
+    const { fake, updates } = setup();
+
+    fake.emit('update-downloaded', { version: '0.2.0' });
+
+    expect(updates.current().offered).toBe('0.2.0');
+  });
+
+  it('pushes the whole status', () => {
+    const { fake, onStatus } = setup();
+
+    fake.emit('update-downloaded', { version: '0.2.0' });
+
+    expect(onStatus).toHaveBeenLastCalledWith({
+      offered: '0.2.0',
+      lastCheckedAt: null,
+      installing: false,
+    });
+  });
+
+  it('keeps an earlier check’s stamp in the pushed status', async () => {
+    const { fake, updates, onStatus } = setup();
+    fake.answers(() => Promise.resolve(found('0.2.0')));
+    await updates.check();
+
+    fake.emit('update-downloaded', { version: '0.2.0' });
+
+    expect(onStatus).toHaveBeenLastCalledWith({
+      offered: '0.2.0',
+      lastCheckedAt: NOW.toISOString(),
+      installing: false,
+    });
+  });
+
+  it('a found release with no download yet offers nothing', async () => {
+    const { fake, updates } = setup();
+    fake.answers(() => Promise.resolve(found('0.2.0')));
+
+    await updates.check();
+
+    expect(updates.current().offered).toBeNull();
+  });
+});
+
+describe('createUpdates — install', () => {
+  it('does nothing with no offer', async () => {
+    const shutdown = vi.fn(() => Promise.resolve());
+    const { fake, updates, onStatus } = setup({ shutdown });
+
+    updates.install();
+    await settle();
+
+    expect(shutdown).not.toHaveBeenCalled();
+    expect(fake.updater.quitAndInstall).not.toHaveBeenCalled();
+    expect(onStatus).not.toHaveBeenCalled();
+    expect(updates.current().installing).toBe(false);
+  });
+
+  it('pushes installing before the shutdown begins', () => {
+    const order: string[] = [];
+    const onStatus = vi.fn((status: UpdateStatus) => {
+      if (status.installing) order.push('installing');
+    });
+    const shutdown = vi.fn(() => {
+      order.push('shutdown');
+      return Promise.resolve();
+    });
+    const { fake, updates } = setup({ onStatus, shutdown });
+    fake.emit('update-downloaded', { version: '0.2.0' });
+
+    updates.install();
+
+    expect(order).toEqual(['installing', 'shutdown']);
+    expect(onStatus).toHaveBeenLastCalledWith({
+      offered: '0.2.0',
+      lastCheckedAt: null,
+      installing: true,
+    });
+    expect(updates.current().installing).toBe(true);
+  });
+
+  it('calls quitAndInstall only after the shutdown resolves', async () => {
+    const held = heldShutdown();
+    const { fake, updates } = setup({ shutdown: held.shutdown });
+    fake.emit('update-downloaded', { version: '0.2.0' });
+
+    updates.install();
+    await settle();
+
+    expect(held.shutdown).toHaveBeenCalledTimes(1);
+    expect(fake.updater.quitAndInstall).not.toHaveBeenCalled();
+
+    held.finish();
+    await settle();
+
+    expect(fake.updater.quitAndInstall).toHaveBeenCalledTimes(1);
+  });
+
+  it('installs silently and relaunches: quitAndInstall(true, true)', async () => {
+    const { fake, updates } = setup();
+    fake.emit('update-downloaded', { version: '0.2.0' });
+
+    updates.install();
+    await settle();
+
+    expect(fake.updater.quitAndInstall).toHaveBeenCalledWith(true, true);
+  });
+});
