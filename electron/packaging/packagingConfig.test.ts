@@ -191,10 +191,12 @@ describe('packagingConfig', () => {
     expect(config().win?.verifyUpdateCodeSignature).toBe(false);
   });
 
-  it('is versioned 0.1.0, by Carlos Rezai, with the config outside package.json', () => {
+  it('is semver-versioned, by Carlos Rezai, with the config outside package.json', () => {
     const pkg = packageJson();
 
-    expect(pkg.version).toBe('0.1.0');
+    // `npm version` moves the number every release (issue #241), so the
+    // guard holds its shape, never one release's value.
+    expect(pkg.version).toMatch(/^\d+\.\d+\.\d+$/);
     expect(pkg.author).toBe('Carlos Rezai');
     expect(pkg).not.toHaveProperty('build');
     expect(config().copyright).toBe('Copyright © 2026 Carlos Rezai');
