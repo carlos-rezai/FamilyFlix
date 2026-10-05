@@ -9,8 +9,9 @@ FFmpeg. A release is ticked against this list, top to bottom, every time.
 the smoke again from step 1. A failure that is not packaging's (one in the
 player, say) is filed as its own issue.
 
-Software update (build step 9) extends this file with the publish and the
-update round-trip, log 17's proof cycle, rather than writing a second list.
+Software update (build step 9) extends it with the publish and the update
+round-trip, log 17's proof cycle, rather than writing a second list: a release
+is the **Draft release** the workflow builds, smoked, then published.
 
 ---
 
@@ -104,3 +105,42 @@ Quit the app. Open a Command Prompt in the install directory,
 ## 9. Back on the dev machine
 
 - [ ] `node_modules/.bin/vitest run` is green.
+
+---
+
+## 10. Publish
+
+**Publishing the Draft release is the release** (log 17 Q48). Nothing reaches
+the family before it, and the smoke is run against the draft's own Installer.
+
+- [ ] On `main`, clean: `npm version minor` (or `patch`). The commit reads
+      `chore: [release] v<version>` and the tag is `v<version>`.
+- [ ] `git push --follow-tags`. The **Release** workflow runs on the tag —
+      and only on a `v*` tag, never on a push to `main`.
+- [ ] The workflow is green: typecheck, tests, package.
+- [ ] GitHub → Releases holds a **Draft** `v<version>` with
+      `FamilyFlix-Setup-<version>.exe`, its `.blockmap` and `latest.yml`.
+- [ ] Download the draft's Installer and run steps 2–8 above against it.
+- [ ] Every step passed: publish the draft. Only now is it on the
+      **Release feed**.
+
+## 11. Update round-trip
+
+Proves the feed end to end: a machine on the previous version is offered this
+one and lands on it. In Sandbox (step 2) install the **previous** published
+Installer first — the round-trip needs a version to update from.
+
+- [ ] The previous version opens and, at launch, the About card offers this
+      release with **Update now**.
+- [ ] Press **Update now**: the row reads _Installing and restarting…_, the
+      app quits, and it relaunches by itself.
+- [ ] The relaunch congratulates once, and the About card reads the new
+      version.
+- [ ] The quit path: install the previous version again, let the offer
+      arrive, then quit without pressing **Update now**. The next launch is on
+      the new version.
+- [ ] Turn the network off, press **Check for updates**: it answers that it
+      couldn't check, and nothing else changes.
+- [ ] If the Sandbox network or the download gets in the way, start it from a
+      `.wsb` file mapping the Installers' folder read-only and leaving
+      networking on, and run the round-trip again.

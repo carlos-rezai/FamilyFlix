@@ -2,26 +2,30 @@
 //
 //   node electron/scripts/packageApp.mjs          release/FamilyFlix-Setup-<version>.exe
 //   node electron/scripts/packageApp.mjs --dir    release/win-unpacked/ only
+//   node electron/scripts/packageApp.mjs --publish   the Installer, uploaded to
+//                                                    the Release feed as a draft
 //
 // The chain: `nx build` (the renderer) → `buildElectron.mjs` (the two
 // bundles) → `fetchNative.mjs` (the Electron-ABI binding) → `fetchFfmpeg.mjs`
 // (the **Default component**, issue #231) → electron-builder's
-// `build()` over `electron/packaging/builderConfig.json`, NSIS x64, never
-// published. Every step is run by path with no shell (CLAUDE.md, "never use
-// npx"); no typecheck and no tests run here. The Electron runtime packaged is
-// the installed `electron` version — the one `fetchNative.mjs` fetched the
-// binding for.
+// `build()` over `electron/packaging/builderConfig.json`, NSIS x64, published
+// only under `--publish` (issue #239) — the release workflow's flag. Every
+// step is run by path with no shell (CLAUDE.md, "never use npx"); no
+// typecheck and no tests run here. The Electron runtime packaged is the
+// installed `electron` version — the one `fetchNative.mjs` fetched the binding
+// for.
 
 import { spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import builder from 'electron-builder';
+import { packageOptions } from './packageOptions/packageOptions.ts';
 
 const { Arch, Platform, build } = builder;
 
 const root = fileURLToPath(new URL('../..', import.meta.url));
-const dir = process.argv.slice(2).includes('--dir');
+const options = packageOptions(process.argv.slice(2));
 
 /** Run one step of the chain with Node, by path, and stop the chain on failure. */
 function step(script, args = []) {
@@ -53,8 +57,8 @@ try {
   await build({
     projectDir: root,
     config,
-    publish: 'never',
-    targets: Platform.WINDOWS.createTarget(dir ? 'dir' : 'nsis', Arch.x64),
+    publish: options.publish,
+    targets: Platform.WINDOWS.createTarget(options.target, Arch.x64),
   });
 } catch (error) {
   process.stderr.write(`${error instanceof Error ? error.stack : error}\n`);

@@ -848,6 +848,17 @@ refactor: [library] issue #9 extract genre-row hook
 
 Types: `feat`, `fix`, `chore`, `refactor`, `test`, `docs`
 
+**The release commit is the one shape with no `issue #<n>`.** `npm version`
+writes it, with the message `.npmrc` gives it:
+
+```
+chore: [release] v0.2.0
+```
+
+Its tag, `v<version>`, is what `.github/workflows/release.yml` builds a
+**Draft release** from. The commit gate reads it as any `chore:` and
+typechecks the whole solution.
+
 **Keep the `<description>` short enough to fit on one line.** Long
 descriptions get wrapped or mangled in commit history (this happened
 during Horizon). If the description doesn't fit in roughly 60

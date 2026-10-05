@@ -6,6 +6,7 @@
   "description": "A Netflix for the family movie folder — a local, searchable movie library and player.",
   "license": "MIT",
   "author": "Carlos Rezai",
+  "repository": "github:carlos-rezai/FamilyFlix",
   "main": "electron/dist/main.js",
   "scripts": {
     "dev": "concurrently --names \"server,web\" --prefix-colors \"cyan,magenta\" --kill-others \"npm:dev:server\" \"npm:dev:web\"",

@@ -1,0 +1,39 @@
+# The Release: on a `v*` tag — `npm version`'s, never a push to `main` — build
+# the Installer and upload it, `latest.yml` and the blockmap as a Draft
+# release. Publishing the draft after the Package smoke is the release
+# (docs/release-checklist.md, sections 10 and 11). The token is the workflow's
+# own and goes to electron-builder's upload only; nothing is baked into the
+# Installer.
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Typecheck
+        run: node node_modules/typescript/bin/tsc -b tsconfig.json
+
+      - name: Test
+        run: node node_modules/vitest/vitest.mjs run
+
+      - name: Package and upload the Draft release
+        run: node electron/scripts/packageApp.mjs --publish
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

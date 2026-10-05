@@ -2,7 +2,12 @@
   "appId": "io.github.carlosrezai.familyflix",
   "copyright": "Copyright © 2026 Carlos Rezai",
   "npmRebuild": false,
-  "publish": null,
+  "publish": {
+    "provider": "github",
+    "owner": "carlos-rezai",
+    "repo": "FamilyFlix",
+    "releaseType": "draft"
+  },
   "asar": true,
   "directories": {
     "output": "release"
@@ -27,7 +32,8 @@
   },
   "win": {
     "icon": "electron/assets/icon.ico",
-    "signAndEditExecutable": true
+    "signAndEditExecutable": true,
+    "verifyUpdateCodeSignature": false
   },
   "nsis": {
     "oneClick": true,
