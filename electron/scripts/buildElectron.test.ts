@@ -16,7 +16,7 @@
 import { spawn } from 'node:child_process';
 import { builtinModules } from 'node:module';
 import { existsSync, readFileSync } from 'node:fs';
-import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { mkdtemp, readdir, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -28,6 +28,7 @@ const script = join(root, 'electron', 'scripts', 'buildElectron.mjs');
 interface PackageJson {
   main?: string;
   dependencies?: Record<string, string>;
+  devDependencies?: Record<string, string>;
   productName?: string;
   scripts: Record<string, string>;
 }
@@ -73,6 +74,25 @@ describe('build-electron', () => {
     expect(await readFile(main, 'utf8')).toMatch(/require\(["']electron["']\)/);
   });
 
+  it('emits the preload bundle, with electron left external', async () => {
+    // Issue #236 — the third bundle: `contextBridge` over `ipcRenderer`, the
+    // one file behind `window.familyflix`.
+    const preload = join(outdir, 'preload.js');
+
+    expect(existsSync(preload)).toBe(true);
+    expect(await readFile(preload, 'utf8')).toMatch(
+      /require\(["']electron["']\)/
+    );
+  });
+
+  it('emits three bundles: main, server and preload', async () => {
+    const bundles = (await readdir(outdir)).filter((name) =>
+      name.endsWith('.js')
+    );
+
+    expect(bundles.sort()).toEqual(['main.js', 'preload.js', 'server.js']);
+  });
+
   it('emits the server bundle, with better-sqlite3 bundled rather than external', async () => {
     // Issue #229 — the Installer ships no node_modules, so better-sqlite3's JS
     // travels inside the bundle; only its `.node` binding stays outside, and
@@ -96,7 +116,7 @@ describe('build-electron', () => {
       'electron',
     ]);
 
-    for (const bundle of ['main.js', 'server.js']) {
+    for (const bundle of ['main.js', 'server.js', 'preload.js']) {
       const code = await readFile(join(outdir, bundle), 'utf8');
       const required = [...code.matchAll(/require\(["']([^"']+)["']\)/g)].map(
         ([, name]) => name
@@ -108,8 +128,8 @@ describe('build-electron', () => {
     }
   });
 
-  it('emits both as CommonJS', async () => {
-    for (const bundle of ['main.js', 'server.js']) {
+  it('emits all three as CommonJS', async () => {
+    for (const bundle of ['main.js', 'server.js', 'preload.js']) {
       const code = await readFile(join(outdir, bundle), 'utf8');
       expect(code).not.toMatch(/^\s*export\s/m);
       expect(code).not.toMatch(/^\s*import\s.+\sfrom\s/m);
@@ -144,6 +164,13 @@ describe('package.json', () => {
     // in the Installer silently.
     expect(manifest.dependencies ?? {}).toEqual({});
     expect(manifest).toHaveProperty('dependencies');
+  });
+
+  it('carries electron-updater as a devDependency, for main.js to bundle', () => {
+    // Issue #236 — the updater travels inside main.js, so `dependencies`
+    // stays `{}`.
+    expect(manifest.devDependencies).toHaveProperty('electron-updater');
+    expect(manifest.dependencies ?? {}).not.toHaveProperty('electron-updater');
   });
 
   it('names the app FamilyFlix, so userData is %APPDATA%\\FamilyFlix', () => {

@@ -1,11 +1,13 @@
 import { describe, it, expect, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { ThemeProvider } from 'styled-components';
 
 import { AboutSection } from './AboutSection';
 import { theme } from '@/styles/theme';
+import { SnackbarProvider } from '@/App/SnackbarProvider/SnackbarProvider';
 import { comesBefore } from '@/test-support/comesBefore/comesBefore';
+import { fakeUpdateBridge } from '@/test-support/fakeUpdateBridge/fakeUpdateBridge';
 
 /**
  * 15 — Settings hub, Phase 5: "the About card" (issue #147).
@@ -26,7 +28,9 @@ import { comesBefore } from '@/test-support/comesBefore/comesBefore';
 function renderSection() {
   return render(
     <ThemeProvider theme={theme}>
-      <AboutSection />
+      <SnackbarProvider>
+        <AboutSection />
+      </SnackbarProvider>
     </ThemeProvider>
   );
 }
@@ -175,5 +179,83 @@ describe('AboutSection — what it does not draw', () => {
     } finally {
       vi.unstubAllGlobals();
     }
+  });
+});
+
+/**
+ * 17 — Software update, Phase 1: "the bridge and the row" (issue #236).
+ *
+ * Under the **Desktop shell** the card gains its first row — _Software
+ * update_ — and the full-bleed hairline under it, above the brand row. In a
+ * browser there is no bridge, so the row and its hairline are absent and the
+ * card is exactly today's: the brand row and nothing else.
+ */
+
+/** The About card: the element the `About` heading introduces. */
+const aboutCard = (): HTMLElement => {
+  const card = screen.getByText('About').nextElementSibling;
+  if (!(card instanceof HTMLElement)) {
+    throw new Error('no card follows the About heading');
+  }
+  return card;
+};
+
+/** 1px-tall rules inside the card — the hairline, reached by its geometry. */
+const hairlinesIn = (card: HTMLElement): Element[] =>
+  Array.from(card.querySelectorAll('div')).filter(
+    (node) => getComputedStyle(node).height === '1px'
+  );
+
+describe('AboutSection — with the update bridge', () => {
+  fakeUpdateBridge();
+
+  it('draws the Software update row above the brand row', async () => {
+    renderSection();
+
+    const title = await screen.findByText('Software update');
+    expect(comesBefore(title, screen.getByText('Family'))).toBe(true);
+    expect(aboutCard().contains(title)).toBe(true);
+  });
+
+  it('puts the hairline between the row and the brand row', async () => {
+    renderSection();
+
+    await screen.findByText('Software update');
+    const rules = hairlinesIn(aboutCard());
+    expect(rules).toHaveLength(1);
+    const rule = rules[0] as HTMLElement;
+    expect(
+      comesBefore(
+        within(aboutCard()).getByRole('button', { name: 'Check for updates' }),
+        rule
+      )
+    ).toBe(true);
+    expect(comesBefore(rule, screen.getByText('Family'))).toBe(true);
+  });
+
+  it('still shows the App version on the brand row', async () => {
+    renderSection();
+
+    await screen.findByText('Software update');
+    expect(screen.getByText(__APP_VERSION__)).toBeDefined();
+  });
+});
+
+describe('AboutSection — without the update bridge', () => {
+  it('is exactly today’s card: the brand row and nothing else', () => {
+    renderSection();
+
+    const card = aboutCard();
+    expect(card.textContent).toBe(`FamilyFlix${__APP_VERSION__}${TAGLINE}`);
+    expect(hairlinesIn(card)).toHaveLength(0);
+    expect(within(card).queryByRole('button')).toBeNull();
+  });
+
+  it('keeps the brand row at today’s 16px 20px inset', () => {
+    renderSection();
+
+    const brandRow = screen.getByText(TAGLINE).parentElement;
+    expect(brandRow).not.toBeNull();
+    expect(getComputedStyle(brandRow as HTMLElement).padding).toBe('16px 20px');
   });
 });

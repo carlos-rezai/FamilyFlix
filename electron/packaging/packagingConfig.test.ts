@@ -139,10 +139,11 @@ describe('packagingConfig', () => {
     expect(config().asarUnpack).toBeUndefined();
   });
 
+  // Issue #236 — the preload is the asar's fifth file.
   // Q7: the asar holds what main requires and nothing else. A glob here would
   // ship whatever it matched — the silent-shipping risk `dependencies: {}`
   // exists to stop.
-  it('packs only package.json, the two bundles and the icon into the asar, with no glob', () => {
+  it('packs only package.json, the three bundles and the icon into the asar, with no glob', () => {
     const files = config().files ?? [];
 
     expect([...files].sort()).toEqual(
@@ -150,6 +151,7 @@ describe('packagingConfig', () => {
         'package.json',
         'electron/dist/main.js',
         'electron/dist/server.js',
+        'electron/dist/preload.js',
         ICON,
       ].sort()
     );
