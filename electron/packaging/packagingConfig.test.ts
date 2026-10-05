@@ -24,11 +24,15 @@ interface BuilderConfig {
   productName?: string;
   copyright?: string;
   npmRebuild?: boolean;
-  publish?: null;
+  publish?: unknown;
   asarUnpack?: unknown;
   files?: string[];
   extraResources?: ExtraResource[];
-  win?: { icon?: string; signAndEditExecutable?: boolean };
+  win?: {
+    icon?: string;
+    signAndEditExecutable?: boolean;
+    verifyUpdateCodeSignature?: boolean;
+  };
   electronFuses?: Record<string, unknown>;
   nsis?: {
     oneClick?: boolean;
@@ -160,12 +164,31 @@ describe('packagingConfig', () => {
     }
   });
 
-  // With no `publish` here, electron-builder infers a GitHub provider off the
-  // git remote and writes `resources\app-update.yml` into the layout — the
-  // `publish: 'never'` packageApp passes stops the upload, not the inference.
-  // The release feed is step 9's (Q1); until then the layout names none.
-  it('names no release feed, so the layout carries no app-update.yml', () => {
-    expect(config()).toHaveProperty('publish', null);
+  // Issue #239 — the **Release feed**. `publish` names the GitHub Releases of
+  // the repository `package.json` names, so every Installer's layout carries
+  // the `app-update.yml` `electron-updater` reads. The workflow uploads a
+  // **Draft release**, invisible to the updater until the maintainer publishes
+  // it after the smoke — publishing the draft is the release (log 17 Q48).
+  it('names the release feed: a draft GitHub release of the repository package.json names', () => {
+    const repository = packageJson().repository;
+
+    expect(repository).toBe('github:carlos-rezai/FamilyFlix');
+    const [owner, repo] = String(repository)
+      .replace(/^github:/, '')
+      .split('/');
+
+    expect(config().publish).toEqual({
+      provider: 'github',
+      owner,
+      repo,
+      releaseType: 'draft',
+    });
+  });
+
+  // The Installer is unsigned (log 25), so an update whose signature were
+  // checked would be refused every time.
+  it('turns off the update signature check, the Installer being unsigned', () => {
+    expect(config().win?.verifyUpdateCodeSignature).toBe(false);
   });
 
   it('is versioned 0.1.0, by Carlos Rezai, with the config outside package.json', () => {

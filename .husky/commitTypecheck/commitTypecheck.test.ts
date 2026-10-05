@@ -171,3 +171,35 @@ describe('projectsFor — what must not relax the gate', () => {
     ).toEqual(ALL_PROJECTS);
   });
 });
+
+// Issue #239 — the release commit. `npm version` writes it, with the message
+// `.npmrc` gives it: `chore: [release] v<version>`, the one commit shape with
+// no `issue #<n>`. The gate reads it as what it is — a `chore:`, typechecked
+// whole — and neither narrows nor stumbles on the missing issue number.
+describe('projectsFor — the release commit', () => {
+  /** `npm version`'s message off `.npmrc`, `%s` being the new version. */
+  const releaseMessage = (version: string): string => {
+    const npmrc = readFileSync(
+      new URL('../../.npmrc', import.meta.url),
+      'utf8'
+    );
+    const line = npmrc
+      .split(/\r?\n/)
+      .map((entry) => entry.trim())
+      .find((entry) => /^message\s*=/.test(entry));
+
+    expect(line).toBeDefined();
+    const template = (line ?? '')
+      .replace(/^message\s*=\s*/, '')
+      .replace(/^"(.*)"$/, '$1');
+    return template.replace(/%s/g, version);
+  };
+
+  it("makes npm version's commit read chore: [release] v<version>", () => {
+    expect(releaseMessage('0.2.0')).toBe('chore: [release] v0.2.0');
+  });
+
+  it('typechecks everything for the release commit', () => {
+    expect(projectsFor(message(releaseMessage('0.2.0')))).toEqual(ALL_PROJECTS);
+  });
+});
