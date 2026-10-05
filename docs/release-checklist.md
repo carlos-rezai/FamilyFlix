@@ -1,9 +1,11 @@
 # Release checklist — the Package smoke
 
 The **Package smoke** is the proof of an **Installer** (design log 25 Q26):
-the Installer built on the dev machine, then installed, played, hardened-checked
-and uninstalled in Windows Sandbox, which is a clean user with no Node and no
-FFmpeg. A release is ticked against this list, top to bottom, every time.
+the Installer built, then installed, played, hardened-checked and uninstalled
+on real hardware — the maintainer's own Windows machine, with the parents' PC as
+the clean-machine check (dev journal, 2026-10-05: Windows Sandbox painted a
+blank window and was dropped undiagnosed). A release is ticked against this
+list, top to bottom, every time.
 
 **A failed step blocks the release.** Fix it, rebuild the Installer, and run
 the smoke again from step 1. A failure that is not packaging's (one in the
@@ -38,11 +40,12 @@ cp server/src/test-support/fixtureVideo/fixture-video.mp4 release/smoke.mp4
 electron/.ffmpeg/ffmpeg.exe -i release/smoke.mp4 -c copy release/smoke.mkv
 ```
 
-## 2. Into Sandbox
+## 2. Onto the target machine
 
-- [ ] Start **Windows Sandbox**.
-- [ ] Copy in the Installer, `release/smoke.mp4`, `release/smoke.mkv`, and
-      the importer's fixture: `library.xlsx` and its `root/` folder from
+- [ ] Quit any running FamilyFlix. If a previous install exists, note that
+      `%APPDATA%\FamilyFlix\` carries its library into this run.
+- [ ] Have the Installer, `release/smoke.mp4`, `release/smoke.mkv`, and the
+      importer's fixture to hand: `library.xlsx` and its `root/` folder from
       `server/src/import-export/createImporter/fixture/`.
 
 ## 3. Install
@@ -127,8 +130,8 @@ the family before it, and the smoke is run against the draft's own Installer.
 ## 11. Update round-trip
 
 Proves the feed end to end: a machine on the previous version is offered this
-one and lands on it. In Sandbox (step 2) install the **previous** published
-Installer first — the round-trip needs a version to update from.
+one and lands on it. On the target machine (step 2) install the **previous**
+published Installer first — the round-trip needs a version to update from.
 
 - [ ] The previous version opens and, at launch, the About card offers this
       release with **Update now**.
@@ -139,8 +142,5 @@ Installer first — the round-trip needs a version to update from.
 - [ ] The quit path: install the previous version again, let the offer
       arrive, then quit without pressing **Update now**. The next launch is on
       the new version.
-- [ ] Turn the network off, press **Check for updates**: it answers that it
-      couldn't check, and nothing else changes.
-- [ ] If the Sandbox network or the download gets in the way, start it from a
-      `.wsb` file mapping the Installers' folder read-only and leaving
-      networking on, and run the round-trip again.
+- [ ] Turn the network off, press **Check for updates**: it answers
+      _FamilyFlix couldn’t check for updates._, and nothing else changes.

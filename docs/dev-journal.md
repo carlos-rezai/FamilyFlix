@@ -11,6 +11,34 @@ Newest entry first.
 
 ---
 
+## 2026-10-05 — The Sandbox blank window, closed undiagnosed (issue #240)
+
+The blank window from _Closed without steps 2–8_ below was never diagnosed.
+The Shell log was not read, and neither `--disable-gpu` nor
+`<vGPU>Disable</vGPU>` was tried. The likeliest reading is still Chromium not
+painting under the Sandbox's virtual GPU, but that is a guess, not a finding.
+
+The maintainer closed #240 and **moved the Package smoke off Windows Sandbox
+onto real hardware**: the maintainer's own Windows machine for the draft's
+Installer, then the parents' PC. The family runs real GPUs, so real hardware is
+the closer proof. What is lost is the _clean user_. The dev machine has Node,
+the VC++ runtimes and maybe FFmpeg on PATH. The installed app always reads its
+own Default component, so PATH cannot mask a missing FFmpeg, but a missing
+runtime DLL could hide there. **The parents' PC is now the clean-machine
+check**: v0.2.0 is installed and an `.mkv` played there before v0.2.1 is cut,
+because from v0.2.1 on a published release reaches that PC by itself.
+
+`docs/release-checklist.md` §2 now names the target machine rather than the
+Sandbox, and §11's offline check quotes the row's own words. If a blank window
+is ever seen on real hardware, the two untried checks above are still the place
+to start.
+
+The manual check #236 left open passed the same day: under `electron:start`,
+**Check for updates** reads _Checking…_, then _Updates are only available in
+the installed app._
+
+---
+
 ## 2026-10-03 — Desktop packaging refactor (issue #234)
 
 Thirteen commits against `docs/refactor-plans/25-desktop-packaging-refactor.md`,
