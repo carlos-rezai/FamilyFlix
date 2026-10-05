@@ -22,6 +22,10 @@ export interface Updater {
   checkForUpdates(): Promise<UpdateCheckResult>;
   quitAndInstall(isSilent: boolean, isForceRunAfter: boolean): void;
   on(event: 'error', listener: (error: Error) => void): unknown;
+  on(
+    event: 'update-downloaded',
+    listener: (info: { version: string }) => void
+  ): unknown;
 }
 
 export interface UpdatesWorld {
@@ -59,7 +63,7 @@ const text = (message: unknown): string =>
  * updater's info, warn and error, dropping debug.
  */
 export function createUpdates(world: UpdatesWorld): Updates {
-  const { updater, enabled, now, onStatus, log } = world;
+  const { updater, enabled, now, shutdown, onStatus, log } = world;
   let status: UpdateStatus = {
     offered: null,
     lastCheckedAt: null,
@@ -75,6 +79,13 @@ export function createUpdates(world: UpdatesWorld): Updates {
 
   updater.on('error', (error) => {
     log(`Update error: ${text(error)}`);
+  });
+
+  // The only thing that makes an **Update offer**: a found release that has
+  // not finished downloading offers nothing.
+  updater.on('update-downloaded', (info) => {
+    status = { ...status, offered: info.version };
+    onStatus(status);
   });
 
   /** One check against the feed: its outcome, or `refused`. */
@@ -103,7 +114,16 @@ export function createUpdates(world: UpdatesWorld): Updates {
       return runCheck();
     },
     install() {
-      // Nothing can be offered until `update-downloaded` is listened for.
+      if (status.offered === null || status.installing) return;
+      status = { ...status, installing: true };
+      onStatus(status);
+      // The **Ordered shutdown** first — it cancels a running Import or
+      // Enrichment and closes the database — then a silent install and a
+      // relaunch. The quit gate's own shutdown then resolves at once.
+      void shutdown().then(
+        () => updater.quitAndInstall(true, true),
+        (error: unknown) => log(`Update install failed: ${text(error)}`)
+      );
     },
   };
 }
