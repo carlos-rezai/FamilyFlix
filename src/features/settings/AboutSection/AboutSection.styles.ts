@@ -3,20 +3,28 @@ import styled from 'styled-components';
 import { Card } from '../section.styles';
 
 /**
- * The About card is its brand row and nothing else, so the row's own inset —
- * the prototype's `16px 20px` — is the card's, and the row's flex is the
- * card's: the brand, the version, then the tagline pushed to the far end.
+ * The About card, from `page.SettingsPage.dc.html`: `overflow: hidden` and no
+ * padding of its own, because each row insets itself — the _Software update_
+ * row at `18px 20px` with its full-bleed hairline under it (issue #236), then
+ * the brand row at `16px 20px`. In a browser there is no update row, and the
+ * card is the brand row alone.
  *
  * The last card on the page carries no group gap: `Card` sets the 32px the
  * Playback and Storage cards need under them, and the prototype's About card
  * has none — the column's own bottom padding is what follows it.
  */
 export const AboutCard = styled(Card)`
+  overflow: hidden;
+  padding: 0;
+  margin-bottom: 0;
+`;
+
+/** The brand row: the brand, the version, then the tagline pushed to the far end. */
+export const BrandRow = styled.div`
   display: flex;
   align-items: center;
   gap: 12px;
   padding: 16px 20px;
-  margin-bottom: 0;
 `;
 
 /** **Family** run straight into **Flix**, on one baseline. */

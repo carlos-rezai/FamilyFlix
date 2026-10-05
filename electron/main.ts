@@ -10,12 +10,17 @@ import {
   app,
   BrowserWindow,
   dialog,
+  ipcMain,
   Menu,
   shell,
   utilityProcess,
 } from 'electron';
+import { autoUpdater } from 'electron-updater';
+
+import { UPDATE_CHANNELS } from '../src/types/update';
 
 import { APP_USER_MODEL_ID } from './appIdentity/appIdentity';
+import { createUpdates } from './createUpdates/createUpdates';
 import { downloadPath } from './downloadPath/downloadPath';
 import { loadRenderer } from './loadRenderer/loadRenderer';
 import { quitAfterShutdown } from './quitAfterShutdown/quitAfterShutdown';
@@ -156,7 +161,7 @@ function applyWindowPolicy(target: BrowserWindow, appUrl: string): void {
   });
 }
 
-function openWindow(port: number): void {
+function openWindow(port: number, preload: string): void {
   window = new BrowserWindow({
     title: 'FamilyFlix',
     icon: paths.icon,
@@ -165,6 +170,7 @@ function openWindow(port: number): void {
     minWidth: 1024,
     minHeight: 640,
     webPreferences: {
+      preload,
       contextIsolation: true,
       sandbox: true,
       webSecurity: true,
@@ -235,6 +241,26 @@ if (!app.requestSingleInstanceLock()) {
     const started = await startServer(server, dialogWorld);
     if (started === null) return;
     log.main(`Server ready on port ${started.port}.`);
-    openWindow(started.port);
+
+    // **Software update**: only the installed app checks; every other Shell
+    // mode answers `unavailable`.
+    const updates = createUpdates({
+      updater: autoUpdater,
+      enabled: mode === 'installed',
+      now: () => new Date(),
+      shutdown: () => server.shutdown(SHUTDOWN_MS),
+      onStatus: (status) => {
+        if (window && !window.isDestroyed()) {
+          window.webContents.send(UPDATE_CHANNELS.status, status);
+        }
+      },
+      log: (text) => log.main(text),
+    });
+    ipcMain.handle(UPDATE_CHANNELS.current, () => updates.current());
+    ipcMain.handle(UPDATE_CHANNELS.check, () => updates.check());
+    ipcMain.on(UPDATE_CHANNELS.install, () => updates.install());
+
+    openWindow(started.port, join(__dirname, 'preload.js'));
+    void updates.start();
   });
 }

@@ -11,6 +11,7 @@
     "package.json",
     "electron/dist/main.js",
     "electron/dist/server.js",
+    "electron/dist/preload.js",
     "electron/assets/icon.ico"
   ],
   "extraResources": [

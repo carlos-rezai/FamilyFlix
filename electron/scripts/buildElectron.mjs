@@ -1,5 +1,7 @@
-// Builds the Desktop shell's two bundles with esbuild, through its API, both
-// CJS: `main.js` (`package.json`'s `main`), `electron` external; and
+// Builds the Desktop shell's three bundles with esbuild, through its API, all
+// CJS: `main.js` (`package.json`'s `main`), `electron` external and
+// `electron-updater` bundled; `preload.js`, `window.familyflix` over
+// `contextBridge`, `electron` external (issue #236); and
 // `server.js`, the **Server process** the installed shape forks,
 // `better-sqlite3` bundled — only its native binding stays outside, handed over as
 // `nativeBinding` in every Shell mode — and the
@@ -70,6 +72,12 @@ const contexts = await Promise.all([
     entryPoints: ['server/src/main.ts'],
     outfile: join(outdir, 'server.js'),
     plugins: [noSeriesSeed],
+  }),
+  context({
+    ...shared,
+    entryPoints: ['electron/preload.ts'],
+    outfile: join(outdir, 'preload.js'),
+    external: ['electron'],
   }),
 ]);
 

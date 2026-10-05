@@ -257,7 +257,7 @@
           enStep:'setup', enScope:'missing', enFieldsOff:[], enWriteSheet:true, enWritePosters:true,
           enDone:0, enTotal:0, enCurrent:'', enLog:[], enStartTime:null, enMatched:0, enPending:[], enReturn:'settings', enSingleTitle:null,
           impEnrich:false,
-          snackbars:[], updateAvailable:true, updateVersion:'1.1.0', currentVersion:'1.0.0', updating:false, lastChecked:null,
+          snackbars:[], updateAvailable:true, updateVersion:'1.1.0', currentVersion:'1.0.0', updating:false, checking:false, lastChecked:null,
         };
         _snackSeq = 0;
         lastMove = Date.now();
@@ -364,7 +364,7 @@
         // ---- software update ----
         offerUpdate(){ if(!this.state.updateAvailable || this._updateOffered) return; this._updateOffered=true; this._updateSnackId = this.pushSnack({variant:'info', title:'Update available', message:'FamilyFlix '+this.state.updateVersion+' is ready to install.', actionLabel:'Update now', action:()=>this.runUpdate(), dismissible:true}); }
         runUpdate(){ if(this.state.updating) return; if(this._updateSnackId) this.dismissSnack(this._updateSnackId); this.setState({updating:true}); setTimeout(()=>{ const v=this.state.updateVersion; this.setState({currentVersion:v, updateAvailable:false, updating:false, lastChecked:'just now'}); this.pushSnack({variant:'success', message:'FamilyFlix updated to '+v+'.', duration:5000, dismissible:true}); }, 1700); }
-        checkForUpdates(){ this.setState({lastChecked:'just now'}); if(this.state.updateAvailable){ this.offerUpdate(); } else { this.pushSnack({variant:'success', message:'You’re on the latest version.', duration:4000, dismissible:true}); } }
+        checkForUpdates(){ if(this.state.checking) return; this.setState({checking:true}); setTimeout(()=>{ this.setState({checking:false, lastChecked:'just now'}); if(this.state.updateAvailable){ this.offerUpdate(); } else { this.pushSnack({variant:'success', message:'You’re on the latest version.', duration:5000, dismissible:true}); } }, 1200); }
         openExport(){ this.setState({gearOpen:false,exportOpen:true,exportDone:false,exportFormat:'csv'}); }
         closeExport(){ this.setState({exportOpen:false,exportDone:false}); }
         setExportFormat(f){ this.setState({exportFormat:f,exportDone:false}); }
@@ -726,7 +726,7 @@
               mediaFolder:'C:\\Users\\Family\\FamilyFlix\\Media',
               spaceUsed:'18.4 GB', titleCount:this.rawMovies.length+' titles', version:s.currentVersion,
               updateAvailable:s.updateAvailable, updateVersion:s.updateVersion, updating:s.updating,
-              updateOffered:s.updateAvailable && !s.updating, updateIdle:!s.updateAvailable && !s.updating,
+              updateOffered:s.updateAvailable && !s.updating, updateIdle:!s.updateAvailable && !s.updating && !s.checking, updateChecking:!s.updateAvailable && !s.updating && s.checking, updateIdleLine:!s.updateAvailable && !s.updating,
               lastCheckedLabel:s.lastChecked?('Last checked '+s.lastChecked):'',
               lastChecked:s.lastChecked, onUpdate:()=>this.runUpdate(), onCheckUpdates:()=>this.checkForUpdates(),
             },

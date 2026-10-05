@@ -749,11 +749,11 @@
                       margin-top: 2px;
                     "
                   >
-                    Downloading and installing…
+                    Installing and restarting…
                   </div>
                 </sc-if>
                 <sc-if
-                  value="{{ settings.updateIdle }}"
+                  value="{{ settings.updateIdleLine }}"
                   hint-placeholder-val="{{ false }}"
                 >
                   <div
@@ -788,24 +788,33 @@
                 value="{{ settings.updating }}"
                 hint-placeholder-val="{{ false }}"
               >
-                <button
-                  disabled="disabled"
-                  style="
-                    flex: 0 0 auto;
-                    height: 42px;
-                    padding: 0 22px;
-                    background: var(--color-surface-3);
-                    border: 1px solid var(--color-border);
-                    border-radius: 9px;
-                    color: var(--color-text-faint);
-                    font-family: var(--font-sans);
-                    font-size: 14px;
-                    font-weight: 600;
-                    cursor: default;
-                  "
-                >
-                  Updating…
-                </button>
+                <div style="flex: 0 0 auto">
+                  <dc-import
+                    name="prim.Button"
+                    label="Updating…"
+                    variant="primary"
+                    size="md"
+                    icon="none"
+                    disabled="{{ true }}"
+                    hint-size="120px,44px"
+                  ></dc-import>
+                </div>
+              </sc-if>
+              <sc-if
+                value="{{ settings.updateChecking }}"
+                hint-placeholder-val="{{ false }}"
+              >
+                <div style="flex: 0 0 auto">
+                  <dc-import
+                    name="prim.Button"
+                    label="Checking…"
+                    variant="secondary"
+                    size="md"
+                    icon="none"
+                    disabled="{{ true }}"
+                    hint-size="150px,44px"
+                  ></dc-import>
+                </div>
               </sc-if>
               <sc-if
                 value="{{ settings.updateIdle }}"
