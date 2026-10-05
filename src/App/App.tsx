@@ -14,13 +14,16 @@ import SettingsPage from '@/pages/SettingsPage/SettingsPage';
 import ImportPage from '@/pages/ImportPage/ImportPage';
 import EnrichmentPage from '@/pages/EnrichmentPage/EnrichmentPage';
 import { SnackbarProvider } from '@/App/SnackbarProvider/SnackbarProvider';
+import { SoftwareUpdateNotice } from '@/features/software-update/SoftwareUpdateNotice/SoftwareUpdateNotice';
 
 /**
  * The app root: the theme and global reset every screen renders under, plus the
  * route table. The router itself lives outside (`main.tsx` supplies a
  * `BrowserRouter`, tests a `MemoryRouter`), so the app can be mounted at any
  * entry URL. The **Snackbar stack** sits here too, above the route table, so a
- * notice raised on one screen is still in the corner on the next.
+ * notice raised on one screen is still in the corner on the next. The
+ * headless `SoftwareUpdateNotice` is mounted inside it, once, for the offer and
+ * the congratulation.
  *
  * Every route a real screen: the browse home at `/`, the movie page at
  * `/movie/:id` and the genre page at `/genre/:name` (the home's two
@@ -37,6 +40,7 @@ export default function App() {
     <ThemeProvider theme={theme}>
       <GlobalStyle />
       <SnackbarProvider>
+        <SoftwareUpdateNotice />
         <Routes>
           <Route path="/" element={<LibraryPage />} />
           <Route path="/movie/:id" element={<MoviePage />} />
