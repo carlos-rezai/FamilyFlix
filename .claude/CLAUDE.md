@@ -316,7 +316,7 @@ familyflix/
 │ │ │ ├── useTmdbKey/ ← the stored key read on mount — never over one typed first — **Connected** as a comparison, and _Test connection_'s four notices through `useSnackbar()`
 │ │ │ ├── syncLine/ ← pure: the sync row's line off the summary — the complete count and when a Sync last reached review
 │ │ │ ├── StorageSection/ ← the Storage card: the path in mono, the space line off formatBytes and the title count; no Change… — the Roadmap's **Move the media folder**
-│ │ │ ├── AboutSection/ ← the About card: the brand row, the App version in mono, the tagline; no Software update row; the last card, so no group gap
+│ │ │ ├── AboutSection/ ← the About card: the brand row, the App version in mono, the tagline, under the Software update row; the last card, so no group gap
 │ │ │ ├── useCapabilities/ ← the read on mount, plus the two writes that change it: `{ capabilities, upload, installComponent, removeComponent }`. Neither write rejects, and neither re-fetches — both routes echo the report after the write, and that echo is the redraw
 │ │ │ ├── useStorageReport/ ← one fetch on mount, `null` until it lands and `null` still if it never does — nothing drawn while so
 │ │ │ ├── useSettings/ ← the read half the same; `chooseSubtitleLanguage` flips the pill first and puts it back if the save refuses, never rejecting
@@ -642,12 +642,12 @@ the page is a read the app can truthfully answer now:
 
 Every read on the page is `null` until it lands and `null` still if it
 never does, and nothing is drawn while so — no skeleton, no error face.
-The two controls whose mechanism does not exist — _Change…_ (the Roadmap's
-**Move the media folder**) and _Software update_ (the packaging) — are
-not drawn, the rule that held the Export row back until its dialog
+The one control whose mechanism does not exist — _Change…_ (the Roadmap's
+**Move the media folder**) — is not drawn, the rule that held the Export row back until its dialog
 existed. The _Add a codec pack_ zone and the ✕ were the third; the
 **Playback component upload** built their mechanism, so both are drawn
-now.
+now, and _Software update_ was the fourth: step 9 built the updater, so
+the About card draws its row.
 
 The **Snackbar stack** shipped first and empty, mounted in `App` above the
 route table, with the **Update offer snackbar** of the Software update flow
@@ -914,26 +914,36 @@ same layout, spacing, states, copy, and interaction.
 > Status legend: ✅ Done · 🔜 Planned · 🧭 Roadmap · 🚫 Out of scope
 > Every 🔜 item builds against its prototype in `docs/handoff/` — translate, don't redesign.
 
-**Build order — the one that is left.** The groups below say what the app
-_is_; this says what to build _next_, and it is a chain rather than a
-preference. Each 🔜 entry carries its step number; steps 1–8, the
-**Snackbar system**, the **Back-to-top FAB**, **Back navigation**,
-**Motion & interaction states**, **Series (TV)**, **Enrichment (TMDB)** and
-the **Electron desktop shell**, are done — step 3 was found by the prototype audit of 2026-09-21 and went ahead
-of the shell, because it was the app's own seams rather than anything
-Electron adds. Steps 4–6 arrived
-with the prototype revision of 2026-09-22 (`docs/handoff/` — three new
-components, two new pages, one new organism, and a motion contract) and
-go ahead of the shell for the same reason: none of the three needs anything
-Electron adds, and each is built against a prototype that already exists.
-The shell, the packaging and the update moved down three numbers and keep
-their gates; the shell, step 7, is done (log 24), and `Change…` in the
-Storage group is not in the chain — it is the Roadmap's **Move the media
-folder** (log 24 Q2).
+**Build order — what is left.** The groups below say what the app _is_;
+this says what to build _next_. Steps 1–9 of the first chain are done,
+ending with **Software update** (v0.2.0). Steps 10–15 came out of installing
+FamilyFlix and using it: smallest and most self-contained first, the form
+before the folders that will feed it, export last because it mirrors what
+import holds. None has a prototype yet — each goes through grill-me and a
+prototype revision in `docs/handoff/` before it is built, per _The prototype
+is the spec_. `Change…` in the Storage group is not in the chain — it is the
+Roadmap's **Move the media folder** (log 24 Q2).
 
-9. **Software update** _(next)_ — needs 7 and 8 (and 1), which are done.
-   Designed in full already (`docs/design-logs/17-software-update.md`); its
-   PRD is next.
+10. **Codecs page** _(next)_ — the Codec report's rows take too much of the
+    Settings page: fold them into an accordion in the Playback card, or move
+    the Codec manager to its own Settings sub-page linked from the card.
+    Grill-me picks one.
+11. **Ultrawide margins** — an optional left/right margin on every screen,
+    a household preference beside the subtitle language, so the library does
+    not stretch edge to edge on an ultra-wide monitor.
+12. **Default poster** — a title with no poster linked draws a FamilyFlix
+    default poster rather than an empty tile, on every surface a poster
+    appears.
+13. **Add a series** — the **Movie form** learns a second kind: a show, its
+    seasons and its episodes, beside the film it adds and edits today.
+14. **Library folders** — one or more top folders that hold movies, added
+    at once. It needs a real path, so it lives where folder-path autofill
+    already does (bulk import's scanner, Electron's native dialog over the
+    preload bridge), not in the Movie form's file pickers.
+15. **Export options** — choose where the **Export file** is saved, rather
+    than Downloads alone, and what travels with it: today the eight Export
+    columns and nothing else; optionally posters, subtitles and the rest of
+    a title's files beside the sheet.
 
 A 🧭 Roadmap item is not in this chain — it is after it, if ever.
 
@@ -966,10 +976,14 @@ A 🧭 Roadmap item is not in this chain — it is after it, if ever.
 ### Maintainer tools
 
 - ✅ **Add a movie** — manual file picker (video, poster, multiple subtitles with language).
+- 🔜 **Default poster** _(step 12)_ — a FamilyFlix default poster for any title with none linked.
+- 🔜 **Add a series** _(step 13)_ — the same form adds a show, its seasons and its episodes.
+- 🔜 **Library folders** _(step 14)_ — several top folders of movies, added at once.
 - ✅ **Edit a movie** — amend metadata and files; a file the library already holds travels as its path, only a freshly picked one as bytes.
 - ✅ **Delete a movie** — the ⋯ menu’s Danger row, the Delete dialog, `DELETE /api/movies/:id`, then the Movie folder under best-effort cleanup.
 - ✅ **Bulk import** — a Sheet and a Library root become Movies during the run; the Review step lists only the Problems the run could not settle, each with Resolve (the Movie form in Import context) and Skip.
 - ✅ **Import progress console** — the Connect ✓ → Scan → Import stepper, the bar, the current item, elapsed and ETA, the Activity log, and Cancel; a server run polled every 500 ms, re-attachable.
+- 🔜 **Export options** _(step 15)_ — choose the export’s destination, and whether posters, subtitles and other files travel with the sheet.
 - ✅ **Export** — the Settings hub’s third row opens the Export dialog; `family-library.csv` or `.xlsx` lands in Downloads with every movie A–Z under the eight Export columns, and an untouched export fed back to Bulk import adds nothing.
 - ✅ **Series import** — the Library root may hold shows beside movies: `Show Name/Season 01/S01E03.mkv`, or loose episodes at the show root. Season and episode numbers come from the folder first, then the filename (`S01E03`, `1x03`); anything unparsed lands in the existing Review list. The accepted shapes are shown verbatim in Import setup.
 - ✅ **Enrichment (TMDB)** — the first and only feature that touches the network; everything else stays offline-first. One organism, `EnrichmentFlow` (`features/enrichment/`), mirroring ImportFlow's three steps so the two read as siblings: **setup** (the key and offline banners, three scope cards — _Only what's missing_ / _Everything_ / _Just this movie_ — the field chips, and the write-target list; Start is `secondary` and inert until the key is tested and the machine is online), **running** (a determinate bar, because the count is known up front; LogConsole; elapsed and ETA; _Stop_ keeps what was already fetched), and **review** (two stat tiles over the rows that need a human: `ambiguous` with a horizontal poster picker of candidates and their % match, `conflict` as a field-by-field _Yours | TMDB_ diff with per-field choice then _Apply choices_ / _Keep all mine_, `missing` with a manual search box; every row has Skip). Three ways in: Settings → Network → _Sync metadata & posters_ (the primary), the Import setup's _Also fetch metadata and posters from TMDB_ checkbox (Finish hands the review straight to a full-library run), and the movie page's ⋯ menu → _Fetch from TMDB_ (a single-title run that returns to the movie). Fields: synopsis, poster, backdrop, runtime, year, genres, director, cast, original title, TMDB score. **The household rating is untouched** — TMDB's score is a separate field beside it. Conflicts are asked per movie in the review, never silently overwritten. The run is a pass over the already-imported library keyed by title + year, not a second scanner — `walkLibraryRoot` / `scanMovieFolder` are untouched, and `tmdbId` finally gets a value. The library database is the source of truth, and optionally a `familyflix-metadata.csv` in the collection root and a `poster.jpg` in each movie folder, each toggleable and neither overwriting a file that exists — the only place the app writes back into the source folders, so it needs its own permission check and a dry-run log line. Spec §5a.
@@ -982,11 +996,13 @@ A 🧭 Roadmap item is not in this chain — it is after it, if ever.
 - ✅ **Subtitle preferences** — the household's Preferred subtitle language, kept in the library's database and honoured by the player; the Auto-on toggle built but disabled until shipped.
 - ✅ **Storage** — the managed media folder's location and space used, agreeing with Explorer; _Change…_ is the Roadmap's **Move the media folder**.
 - ✅ **Network group** — a fifth Settings group between Playback and Storage, the one place FamilyFlix goes online: _The Movie Database (TMDB)_ with a status pill, the lede ("Nothing is sent about your household — just movie titles, to look up posters and synopses"), the API-key field in mono with _Test connection_ beside it, and the _Sync metadata & posters_ row that opens the Enrichment flow.
-- 🔜 **Software update** _(step 9 — next)_ — the About card's first row: an Update offer downloaded at launch, Update now, and Check for updates. Needs steps 1, 7 and 8, which are done; designed in `17-software-update`.
+- ✅ **Software update** — the About card's first row: an Update offer downloaded at launch from GitHub Releases, Update now, and Check for updates; closing the app installs it. Designed in `17-software-update`, shipped as v0.2.0.
+- 🔜 **Codecs page** _(step 10 — next)_ — the Codec manager folded into an accordion, or moved to its own Settings sub-page.
+- 🔜 **Ultrawide margins** _(step 11)_ — an optional left/right margin for ultra-wide monitors.
 
 ### System
 
-- ✅ **Snackbar system** — info / success / warning / error notices in the bottom-right Snackbar stack; an actionable one persists, a confirmation dies at 5s. Ships with no caller: the first is the Software update flow's Update offer.
+- ✅ **Snackbar system** — info / success / warning / error notices in the bottom-right Snackbar stack; an actionable one persists, a confirmation dies at 5s. Its callers are Enrichment's notices and the Software update flow's Update offer.
 - ✅ **Back-to-top FAB** — the accent circle in the home screen's bottom-right corner once the body is past 420px, riding it back to the top on a press; mounted by the chrome over the body it already owns, and gone again under the line.
 - ✅ **Back navigation** — one **Back rule** on every screen: `useGoBack(fallback)`, a **History step**, or the screen's own **Landing** pushed when there is nothing behind it — the player's is its movie, Import's is Settings, the **Movie form**'s is where its job came from. Every **Leaving** is a step except the two **Fresh homes**, _Add to library_ and Import's _Finish_; Play → Back → Back reaches the library, the shelf comes back filtered and scrolled, and a Delete after a Play lands on the library.
 - ✅ **Motion & interaction states** — the prototype's **Interaction contract** (`COMPONENT-SPEC.md` §2a) over every built control and card, in two disjoint vocabularies: a **Control** (Button, Chip, IconButton and every extension, the Filter dropdown's trigger) signals with colour, a **Card** (PosterCard, ContinueCard) with elevation. `tokens/motion.ts` is the one file that spells `durFast`, `durBase`, `durSlow` and `easeOut`; the **Accent scale** is derived from the one accent by `createTheme(accent)`, never aliased; `styles/interactionStates/` holds `controlStates(press)` — the **Press** at doubled rank in 60ms, so every `IconButton` extension inherits it — and `cardLift` and `cardFocus`, with a structural guard against any other file spelling a duration, the curve or a press; one **Reduced motion** block in `GlobalStyle`. `SeasonCard` and `EpisodeRow` are born on the card fragments in step 5.

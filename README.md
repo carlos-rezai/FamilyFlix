@@ -352,26 +352,42 @@ Keep the description short enough to fit on one line — long descriptions get w
 | Network group — the TMDB key and the sync row       | ✅ Done         |
 | Electron desktop shell                              | ✅ Done         |
 | Desktop packaging (Windows installer)               | ✅ Done         |
-| Software update (check / install)                   | 🔜 9 — next     |
+| Software update (check / install)                   | ✅ Done         |
+| Codecs page — the codec list on its own page        | 🔜 10 — next    |
+| Ultrawide margins — side gutters for wide screens   | 🔜 11           |
+| Default poster — a fallback for titles without one  | 🔜 12           |
+| Add a series — the Add form for shows too           | 🔜 13           |
+| Library folders — several root folders at once      | 🔜 14           |
+| Export options — where to, and what travels         | 🔜 15           |
 | Collections / playlists                             | 🧭 Roadmap      |
 | Auto-on subtitles                                   | 🧭 Roadmap      |
 | Backgroundable import                               | 🧭 Roadmap      |
 | Move the media folder                               | 🧭 Roadmap      |
 | User accounts / multi-profile                       | 🚫 Out of scope |
 
-Everything above the line is done. The one that is left is numbered in
-**build order**, because it ends a chain rather than a preference; steps 1–8,
-the Snackbar system, the Back-to-top FAB, Back navigation, Motion &
-interaction states, Series (TV), Enrichment (TMDB) and the Electron desktop
-shell, are done — step 3 came out of auditing the build against the prototype
-(2026-09-21) and went ahead of the shell, since it was a fix to what is built
-rather than anything Electron adds. Steps 4–6 came with the prototype revision
-of 2026-09-22 and went ahead of the shell for the same reason. _Change…_ in
-Settings → Storage is not in the chain — it is the Roadmap's **Move the media
-folder**.
+Everything marked ✅ is done — steps 1–9 of the first build order, ending
+with Software update, which shipped as v0.2.0. The next six came out of
+installing FamilyFlix and using it for real, and are numbered in **build
+order**: smallest and most self-contained first, the form before the folders
+that will feed it, export last because it mirrors what import now holds. Each
+still goes through grill-me and a prototype revision before it is built.
+_Change…_ in Settings → Storage is not in the chain — it is the Roadmap's
+**Move the media folder**.
 
-9. **Software update** _(next)_ — needs 7 and 8 (and 1), which are done.
-   Already designed in full; its PRD is next.
+10. **Codecs page** _(next)_ — the codec rows are too long for the Settings
+    page. They fold away: an accordion in the Playback card, or a dedicated
+    Settings sub-page that the card links to — grill-me picks one.
+11. **Ultrawide margins** — an optional left/right margin on every screen, so
+    the library doesn't stretch edge to edge on an ultra-wide monitor.
+12. **Default poster** — a title with no poster linked shows a FamilyFlix
+    default poster instead of an empty tile.
+13. **Add a series** — the Add form adds a show, its seasons and its episodes,
+    not only a film.
+14. **Library folders** — point FamilyFlix at one or more top folders that
+    hold movies, and add everything in them at once.
+15. **Export options** — choose where the export is saved and what it
+    carries: the sheet today, and optionally posters, subtitles and the rest
+    of a title's files.
 
 A 🧭 Roadmap item is not in the chain — it comes after it, if ever.
 
