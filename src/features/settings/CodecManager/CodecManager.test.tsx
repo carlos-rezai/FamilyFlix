@@ -8,6 +8,7 @@ import {
   waitFor,
 } from '@testing-library/react';
 import { ThemeProvider } from 'styled-components';
+import { MemoryRouter, Route, Routes } from 'react-router-dom';
 
 import { CodecManager } from './CodecManager';
 import type {
@@ -17,6 +18,11 @@ import type {
 } from '@/types';
 import { theme } from '@/styles/theme';
 import { comesBefore } from '@/test-support/comesBefore/comesBefore';
+import {
+  LocationProbe,
+  navigationType,
+  pathname,
+} from '@/test-support/LocationProbe/LocationProbe';
 import {
   okResponse,
   serverErrorResponse,
@@ -69,6 +75,18 @@ import {
  * redraw — the _Installed_ rows the component added go, the **Codec summary**
  * recounts, and the pill reads **Default** again, or the row goes with the
  * pair on a machine that has no default either.
+ *
+ * 26 — Codecs page, Phase 1: "the page, end to end" (issue #244). The
+ * organism becomes the **Codecs page**'s screen. It draws its own maintainer
+ * header — the Back pill, the heading **Codecs** and the lede — the way
+ * `ImportFlow` and `EnrichmentFlow` do, and under it two Settings groups:
+ * **Playback component** (the **Component row**, then the drop zone) and
+ * **Formats** (the **Codec summary**, then the codec rows). The order on the
+ * screen is Component row → drop zone → summary → codec rows, so the Component
+ * row is no longer last. While the report is `null`, and after a refused read,
+ * the header draws and nothing under it does. Back is `useGoBack('/settings')`:
+ * a **History step** when there is one, the **Landing** otherwise. No
+ * accordion, no _Show all_, no header action.
  */
 
 let fetchMock: ReturnType<
@@ -142,30 +160,128 @@ function holdRead() {
   return { settle: (response: Response) => settle(response) };
 }
 
-function renderManager() {
+/** Opened from Settings by default: the history the Codecs row leaves. */
+function renderManager(
+  history: string[] = ['/', '/settings', '/settings/codecs']
+) {
   return render(
-    <ThemeProvider theme={theme}>
-      <CodecManager />
-    </ThemeProvider>
+    <MemoryRouter initialEntries={history} initialIndex={history.length - 1}>
+      <ThemeProvider theme={theme}>
+        <Routes>
+          <Route path="/" element={<p>the browse home</p>} />
+          <Route path="/settings" element={<p>the settings hub</p>} />
+          <Route path="/settings/codecs" element={<CodecManager />} />
+        </Routes>
+        <LocationProbe />
+      </ThemeProvider>
+    </MemoryRouter>
   );
 }
 
 const summary = () => screen.queryByText(/formats enabled/);
 
-describe('CodecManager — blank until it lands', () => {
-  it('renders nothing while the report has not landed', () => {
-    holdRead();
+const LEDE =
+  "These decide which video files FamilyFlix can play. Common formats work out of the box — add a pack only if a movie won't play.";
 
-    const { container } = renderManager();
+/** The header, as the screen draws it whatever the read has done. */
+function expectHeader() {
+  expect(screen.getByRole('button', { name: 'Back' })).toBeDefined();
+  expect(
+    screen.getByRole('heading', { level: 1, name: 'Codecs' })
+  ).toBeDefined();
+  expect(screen.getByText(LEDE)).toBeDefined();
+}
 
-    expect(container.textContent).toBe('');
-    expect(summary()).toBeNull();
+/** Nothing under the header: no group, no row, no zone, no summary. */
+function expectNothingUnderHeader() {
+  expect(summary()).toBeNull();
+  expect(screen.queryByText('Playback component')).toBeNull();
+  expect(screen.queryByText('Formats')).toBeNull();
+  expect(screen.queryByText('Add a codec pack')).toBeNull();
+  expect(screen.queryByText('H.264 / AVC')).toBeNull();
+  expect(screen.queryByText(/Built-in|Installed|Default|Uploaded/)).toBeNull();
+}
+
+/** The Component row, by the basename only it draws. */
+const componentRowMarker = () => screen.queryByText('ffmpeg.exe');
+
+describe('CodecManager — the header', () => {
+  it('draws Back, the heading Codecs and the lede', async () => {
+    fetchMock.mockResolvedValue(okResponse(WITH_COMPONENT));
+    renderManager();
+
+    await waitFor(() => expect(summary()).not.toBeNull());
+    expectHeader();
   });
 
-  it('renders nothing on a refused read', async () => {
+  it('draws no accordion, no Show all and no header action', async () => {
+    fetchMock.mockResolvedValue(okResponse(WITH_COMPONENT));
+    renderManager();
+
+    await waitFor(() => expect(summary()).not.toBeNull());
+
+    // A default component carries no ✕ and the zone is a label, so Back is
+    // the one button on the screen: nothing in the header beside it, and
+    // nothing that folds the rows away.
+    expect(screen.getAllByRole('button')).toEqual([
+      screen.getByRole('button', { name: 'Back' }),
+    ]);
+    expect(document.querySelector('[aria-expanded]')).toBeNull();
+    expect(screen.queryByText(/show all/i)).toBeNull();
+  });
+});
+
+describe('CodecManager — Back', () => {
+  it('steps back onto Settings when there is an entry behind the page', async () => {
+    fetchMock.mockResolvedValue(okResponse(WITH_COMPONENT));
+    renderManager();
+    await waitFor(() => expect(summary()).not.toBeNull());
+
+    fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+
+    expect(pathname()).toBe('/settings');
+    expect(navigationType()).toBe('POP');
+    expect(screen.getByText('the settings hub')).toBeDefined();
+  });
+
+  it('steps through whatever is behind it, not always to Settings', async () => {
+    fetchMock.mockResolvedValue(okResponse(WITH_COMPONENT));
+    renderManager(['/', '/settings/codecs']);
+    await waitFor(() => expect(summary()).not.toBeNull());
+
+    fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+
+    expect(pathname()).toBe('/');
+    expect(navigationType()).toBe('POP');
+  });
+
+  it('lands on /settings when there is nothing behind the page', async () => {
+    fetchMock.mockResolvedValue(okResponse(WITH_COMPONENT));
+    renderManager(['/settings/codecs']);
+    await waitFor(() => expect(summary()).not.toBeNull());
+
+    fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+
+    expect(pathname()).toBe('/settings');
+    expect(navigationType()).toBe('PUSH');
+    expect(screen.getByText('the settings hub')).toBeDefined();
+  });
+});
+
+describe('CodecManager — blank under the header until it lands', () => {
+  it('draws the header and nothing under it while the report has not landed', () => {
+    holdRead();
+
+    renderManager();
+
+    expectHeader();
+    expectNothingUnderHeader();
+  });
+
+  it('draws the header and nothing under it on a refused read', async () => {
     fetchMock.mockResolvedValue(serverErrorResponse());
 
-    const { container } = renderManager();
+    renderManager();
 
     await act(async () => {
       await Promise.resolve();
@@ -173,8 +289,8 @@ describe('CodecManager — blank until it lands', () => {
     await act(async () => {
       await Promise.resolve();
     });
-    expect(container.textContent).toBe('');
-    expect(summary()).toBeNull();
+    expectHeader();
+    expectNothingUnderHeader();
   });
 
   it('reads the report once, on mount', async () => {
@@ -272,34 +388,57 @@ describe('CodecManager — once the report lands', () => {
     expect(screen.queryByText('Installed')).toBeNull();
   });
 
-  it('draws no Component row for a machine with none', async () => {
+  it('draws the drop zone alone in the Playback component group for a machine with none', async () => {
     // Nothing to name, weigh or remove: the absence of the row is how the
-    // screen says so, the rule the codec rows already keep.
+    // screen says so, the rule the codec rows already keep. The group stays,
+    // because the zone is how a component arrives.
     fetchMock.mockResolvedValue(okResponse(WITHOUT_COMPONENT));
     renderManager();
 
     await waitFor(() => expect(summary()).not.toBeNull());
 
-    expect(screen.queryByText('Playback component')).toBeNull();
+    // The group heading is the one "Playback component" left on screen.
+    expect(screen.getAllByText('Playback component')).toHaveLength(1);
+    expect(componentRowMarker()).toBeNull();
     expect(screen.queryByText('Default')).toBeNull();
+    expect(screen.queryByText('Uploaded')).toBeNull();
+
+    const heading = screen.getByText('Playback component');
+    const zone = screen.getByText('Add a codec pack');
+    expect(comesBefore(heading, zone)).toBe(true);
+    expect(comesBefore(zone, screen.getByText('Formats'))).toBe(true);
   });
 
-  it('draws the Component row last, under every codec row', async () => {
+  it('draws the group headings Playback component, then Formats', async () => {
     fetchMock.mockResolvedValue(okResponse(WITH_COMPONENT));
     renderManager();
 
     await waitFor(() => expect(summary()).not.toBeNull());
 
-    const componentRow = screen.getByText('Playback component');
-    for (const name of [
-      'H.264 / AVC',
-      'H.265 / HEVC',
-      'VP9',
-      'AAC Audio',
-      'AC-3 / Dolby Digital',
-    ]) {
-      expect(comesBefore(screen.getByText(name), componentRow)).toBe(true);
-    }
+    // The heading comes first of the two "Playback component"s: the group
+    // over the row that shares its name.
+    const groupHeading = screen.getAllByText('Playback component')[0];
+    expect(comesBefore(groupHeading, screen.getByText('Formats'))).toBe(true);
+    expect(comesBefore(groupHeading, screen.getByText('ffmpeg.exe'))).toBe(
+      true
+    );
+  });
+
+  it('orders the screen Component row, drop zone, summary, codec rows', async () => {
+    fetchMock.mockResolvedValue(okResponse(WITH_COMPONENT));
+    renderManager();
+
+    await waitFor(() => expect(summary()).not.toBeNull());
+
+    const componentRow = screen.getByText('ffmpeg.exe');
+    const zone = screen.getByText('Add a codec pack');
+    const line = screen.getByText(/formats enabled/);
+    const firstCodec = screen.getByText('H.264 / AVC');
+
+    expect(comesBefore(componentRow, zone)).toBe(true);
+    expect(comesBefore(zone, line)).toBe(true);
+    expect(comesBefore(line, firstCodec)).toBe(true);
+    expect(comesBefore(screen.getByText('Formats'), line)).toBe(true);
   });
 
   it('draws the pair’s basenames and its size on that row', async () => {
@@ -387,8 +526,8 @@ async function dropPair(container: HTMLElement) {
   });
 }
 
-describe('CodecManager — the zone under the rows', () => {
-  it('draws the zone last, under the Component row', async () => {
+describe('CodecManager — the zone under the Component row', () => {
+  it('draws the zone under the Component row', async () => {
     fetchMock.mockResolvedValue(okResponse(WITH_COMPONENT));
     renderManager();
 
@@ -396,7 +535,7 @@ describe('CodecManager — the zone under the rows', () => {
 
     expect(
       comesBefore(
-        screen.getByText('Playback component'),
+        screen.getByText('ffmpeg.exe'),
         screen.getByText('Add a codec pack')
       )
     ).toBe(true);
@@ -634,9 +773,8 @@ describe('CodecManager — the fall-back redrawn', () => {
     fetchMock.mockResolvedValue(okResponse(NOTHING_LEFT));
     await pressRemove();
 
-    await waitFor(() =>
-      expect(screen.queryByText('Playback component')).toBeNull()
-    );
+    await waitFor(() => expect(componentRowMarker()).toBeNull());
+    expect(screen.getAllByText('Playback component')).toHaveLength(1);
     expect(
       screen.getByText('3 formats enabled · no playback component')
     ).toBeDefined();

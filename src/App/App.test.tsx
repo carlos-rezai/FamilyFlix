@@ -1154,6 +1154,34 @@ describe('App — the import flow behind the gear', () => {
   });
 });
 
+/**
+ * 26 — Codecs page, Phase 1 (issue #244): `/settings/codecs`, the first
+ * nested Settings route, a literal in the route table. `/settings` is left as
+ * it was.
+ */
+describe('App — the Codecs page', () => {
+  it('renders the Codecs screen at /settings/codecs', async () => {
+    renderApp('/settings/codecs');
+
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Codecs' })
+    ).toBeDefined();
+    expect(pathname()).toBe('/settings/codecs');
+  });
+
+  it('lands a cold-opened Codecs page’s Back on Settings', async () => {
+    renderApp('/settings/codecs');
+    await screen.findByRole('heading', { level: 1, name: 'Codecs' });
+
+    await pressBack();
+
+    expect(pathname()).toBe('/settings');
+    expect(
+      await screen.findByRole('heading', { name: 'Settings' })
+    ).toBeDefined();
+  });
+});
+
 describe('App — no import control on the family’s screens', () => {
   // The player behind `/movie/:id/play` drives a media element, and jsdom
   // has none.
