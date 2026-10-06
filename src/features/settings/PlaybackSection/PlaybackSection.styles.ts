@@ -1,15 +1,61 @@
 import styled from 'styled-components';
 
 /**
- * The card's opening: the item's title and lede, held apart from the report
- * under them by the prototype's 16px.
+ * The **Codecs row**: the whole row one bare button — the Network group's
+ * _Sync metadata & posters_ row, rule for rule, under its own names.
  */
-export const Header = styled.div`
+export const CodecsRow = styled.button`
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 16px;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 15px 4px 4px;
+  text-align: left;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+`;
+
+/** The microchip in its accent tile — the prototype's own 38px and 9px. */
+export const CodecsTile = styled.span`
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 9px;
+  background: ${({ theme }) => theme.colors.accentSoft};
+  color: ${({ theme }) => theme.colors.accent};
+`;
+
+/** The label and its line, taking the width the tile and chevron do not. */
+export const CodecsText = styled.span`
+  flex: 1;
+  min-width: 0;
+`;
+
+export const CodecsLabel = styled.span`
+  display: block;
+  font-family: ${({ theme }) => theme.fonts.sans};
+  font-size: 16px;
+  font-weight: 600;
+  color: ${({ theme }) => theme.colors.text};
+`;
+
+export const CodecsDesc = styled.span`
+  display: block;
+  margin-top: 2px;
+  font-family: ${({ theme }) => theme.fonts.sans};
+  font-size: 13px;
+  color: ${({ theme }) => theme.colors.textFaint};
+`;
+
+/** The chevron at the row's end, in the faintest ink. */
+export const CodecsChevron = styled.span`
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  color: ${({ theme }) => theme.colors.textFaint};
 `;
 
 /** The Subtitles half's own header: title and lede, 14px over the first row. */
@@ -72,29 +118,4 @@ export const RowRule = styled.div`
   height: 1px;
   margin: 6px 0;
   background: ${({ theme }) => theme.colors.borderSoft};
-`;
-
-/**
- * The **Codec report** as the card still draws it until the Codecs row takes
- * its place (26 — Codecs page, Phase 2): the summary over the rows, 14px
- * apart.
- */
-export const Report = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-`;
-
-/** The **Codec summary**, 13px in the faint ink. */
-export const Summary = styled.div`
-  font-family: ${({ theme }) => theme.fonts.sans};
-  font-size: 13px;
-  color: ${({ theme }) => theme.colors.textFaint};
-`;
-
-/** The rows, stacked 8px apart. */
-export const Rows = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
 `;

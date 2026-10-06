@@ -1,10 +1,10 @@
+import { useNavigate } from 'react-router-dom';
+
 import { FilterDropdown } from '@/components';
-import { Toggle } from '@/primitives';
+import { ChevronRightIcon, MicrochipIcon, Toggle } from '@/primitives';
 import { SUBTITLE_LANGUAGES, type FilterOption } from '@/types';
 
-import { CodecRow } from '../CodecRow/CodecRow';
-import { ComponentDropZone } from '../ComponentDropZone/ComponentDropZone';
-import { codecRows, codecSummary, componentRow } from '../codecView/codecView';
+import { codecSummary } from '../codecView/codecView';
 import { useCapabilities } from '../useCapabilities/useCapabilities';
 import { useSettings } from '../useSettings/useSettings';
 import {
@@ -15,40 +15,45 @@ import {
   ItemTitle,
 } from '../section.styles';
 import {
+  CodecsChevron,
+  CodecsDesc,
+  CodecsLabel,
+  CodecsRow,
+  CodecsText,
+  CodecsTile,
   ComingSoon,
-  Header,
-  Report,
   Row,
   RowDesc,
   RowRule,
   RowTitle,
   RowTitleLine,
-  Rows,
   SubtitlesHeader,
-  Summary,
 } from './PlaybackSection.styles';
 
 /**
  * The Settings hub's Playback **Settings group**, from
  * `page.SettingsPage.dc.html`: the `Playback` **Group heading** over a
- * **Section card** that opens with _Codecs_ and its lede, over the **Codec
- * report**.
+ * **Section card** that opens with the **Codecs row**: a copy of the Network
+ * group's _Sync metadata & posters_ row — the microchip in its tile, _Codecs_,
+ * the **Codec summary** as its line (blank until the read lands, blank still
+ * after a refusal), and a chevron. Pressed, it pushes `/settings/codecs`, the
+ * **Codecs page**, which reads the report again for itself (log 26 Q13).
  *
- * The lede is both of the prototype's sentences, and the second one points at
- * the _Add a codec pack_ zone the report draws under the rows.
- *
- * Under the report, the second half of the card: the divider; _Subtitles_ with
+ * Under the row, the second half of the card: the divider; _Subtitles_ with
  * its lede; _Turn on automatically_ beside a **Coming soon** pill over a
  * `Toggle` drawn off and disabled — it stores nothing and presses to nothing,
  * auto-on staying on the roadmap exactly as log 10 decided; a rule; and
  * _Preferred language_ with `FilterDropdown` on the right, the seven names of
  * the **Language pool** as its options and the fetched value as its value.
  *
- * The section owns `useSettings`. The pill is not drawn while the settings
+ * The section owns `useSettings`, and takes only the read of
+ * `useCapabilities` — the writes are the Codecs page's. The pill is not drawn while the settings
  * are `null` — a refused read shows no default the server never confirmed.
  */
 export function PlaybackSection() {
   const { settings, chooseSubtitleLanguage } = useSettings();
+  const { capabilities } = useCapabilities();
+  const navigate = useNavigate();
 
   const languageOptions: FilterOption[] = SUBTITLE_LANGUAGES.map((name) => ({
     label: name,
@@ -62,16 +67,20 @@ export function PlaybackSection() {
     <>
       <GroupHeading>Playback</GroupHeading>
       <Card>
-        <Header>
-          <div>
-            <ItemTitle>Codecs</ItemTitle>
-            <ItemDesc>
-              These decide which video files FamilyFlix can play. Common formats
-              work out of the box — add a pack only if a movie won’t play.
-            </ItemDesc>
-          </div>
-        </Header>
-        <CodecReport />
+        <CodecsRow type="button" onClick={() => navigate('/settings/codecs')}>
+          <CodecsTile aria-hidden="true">
+            <MicrochipIcon size={19} />
+          </CodecsTile>
+          <CodecsText>
+            <CodecsLabel>Codecs</CodecsLabel>
+            <CodecsDesc>
+              {capabilities === null ? '' : codecSummary(capabilities)}
+            </CodecsDesc>
+          </CodecsText>
+          <CodecsChevron>
+            <ChevronRightIcon size={18} />
+          </CodecsChevron>
+        </CodecsRow>
 
         <Divider />
 
@@ -115,52 +124,5 @@ export function PlaybackSection() {
         </Row>
       </Card>
     </>
-  );
-}
-
-/**
- * The **Codec report** as the card drew it before the **Codecs page** — the
- * summary over the codec rows, the **Component row** last, the zone under all
- * of it — kept here for the one slice the report shows in both places (26 —
- * Codecs page, Phase 1). Phase 2 puts the **Codecs row** in its place.
- */
-function CodecReport() {
-  const { capabilities, upload, installComponent, removeComponent } =
-    useCapabilities();
-
-  if (capabilities === null) {
-    return null;
-  }
-
-  const component = componentRow(capabilities);
-
-  return (
-    <Report>
-      <Summary>{codecSummary(capabilities)}</Summary>
-      <Rows>
-        {codecRows(capabilities).map((row) => (
-          <CodecRow key={row.key} row={row} />
-        ))}
-        {component !== null && (
-          <CodecRow
-            key={component.key}
-            row={component}
-            onRemove={
-              component.removable
-                ? () => {
-                    void removeComponent();
-                  }
-                : undefined
-            }
-          />
-        )}
-      </Rows>
-      <ComponentDropZone
-        upload={upload}
-        onFiles={(files) => {
-          void installComponent(files);
-        }}
-      />
-    </Report>
   );
 }
