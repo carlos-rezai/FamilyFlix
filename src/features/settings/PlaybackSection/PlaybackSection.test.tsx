@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { ThemeProvider } from 'styled-components';
+import { MemoryRouter } from 'react-router-dom';
 
 import { PlaybackSection } from './PlaybackSection';
 import {
@@ -21,13 +22,9 @@ import {
  *
  * The Settings hub's Playback **Settings group**, from
  * `page.SettingsPage.dc.html`: the `Playback` **Group heading** over a
- * **Section card** that opens with _Codecs_ in 16px/600 and its lede in the
- * faint 13px at 440px max-width, over the **Codec report**. The lede keeps
- * both of the prototype's sentences though the _Add a codec pack_ zone the
- * second one points at is not drawn — so the copy does not move when the
- * **Playback component upload** lands.
+ * **Section card** that opens with the **Codecs row**.
  *
- * Under the report, the second half of the card: the `Divider`; _Subtitles_
+ * Under the row, the second half of the card: the `Divider`; _Subtitles_
  * with its lede; _Turn on automatically_ beside a **Coming soon** pill over
  * a `Toggle` drawn `checked={false} disabled` — it stores nothing and presses
  * to nothing, auto-on staying 🧭 exactly as log 10 decided; a rule; and
@@ -36,8 +33,9 @@ import {
  * The section owns `useSettings`; the pill is not drawn while the settings
  * are `null` — a refused read shows no default the server never confirmed.
  *
- * The report's own behaviour is `CodecManager`'s; here it is enough that the
- * section draws it under the header. The `fetch` stub answers both routes by
+ * 26 — Codecs page, Phase 2 (issue #245): the _Codecs_ header and the report
+ * gave way to the **Codecs row**, whose suite is `PlaybackSection.codecsRow`;
+ * the report's own behaviour is `CodecManager`'s, on the **Codecs page**. The `fetch` stub answers both routes by
  * URL, and the write when the test says.
  */
 
@@ -133,23 +131,17 @@ afterEach(() => {
 
 function renderSection() {
   return render(
-    <ThemeProvider theme={theme}>
-      <PlaybackSection />
-    </ThemeProvider>
+    <MemoryRouter initialEntries={['/settings']}>
+      <ThemeProvider theme={theme}>
+        <PlaybackSection />
+      </ThemeProvider>
+    </MemoryRouter>
   );
 }
-
-const LEDE =
-  'These decide which video files FamilyFlix can play. Common formats work ' +
-  'out of the box — add a pack only if a movie won’t play.';
 
 const SUBTITLES_LEDE = 'How subtitles behave when a movie has them.';
 const AUTO_ON_DESC = 'Show subtitles by default when a movie has them.';
 const LANGUAGE_DESC = 'Which track to use whenever subtitles are shown.';
-
-/** The report, landed. */
-const reportLanded = () =>
-  waitFor(() => expect(screen.getByText(/formats enabled/)).toBeDefined());
 
 /** The _Preferred language_ pill, by the value it shows — or `null`. */
 const languagePill = (value: string) =>
@@ -181,80 +173,15 @@ function rules(container: HTMLElement): HTMLElement[] {
   });
 }
 
-describe('PlaybackSection — the heading and the Codecs header', () => {
+describe('PlaybackSection — the heading', () => {
   it('is headed Playback', () => {
     renderSection();
 
     expect(screen.getByText('Playback')).toBeDefined();
   });
-
-  it('opens the card with Codecs, in 16px at weight 600', () => {
-    renderSection();
-
-    const title = screen.getByText('Codecs');
-    const style = getComputedStyle(title);
-    expect(style.fontSize).toBe('16px');
-    expect(style.fontWeight).toBe('600');
-  });
-
-  it('keeps both sentences of the lede, in the faint 13px at 440px', () => {
-    renderSection();
-
-    const lede = screen.getByText(LEDE);
-    const style = getComputedStyle(lede);
-    expect(style.fontSize).toBe('13px');
-    expect(style.maxWidth).toBe('440px');
-    expect(style.color).toBe('rgb(133, 122, 104)');
-  });
-
-  it('draws the heading, then Codecs, then the lede, in that order', () => {
-    renderSection();
-
-    expect(
-      comesBefore(screen.getByText('Playback'), screen.getByText('Codecs'))
-    ).toBe(true);
-    expect(
-      comesBefore(screen.getByText('Codecs'), screen.getByText(LEDE))
-    ).toBe(true);
-  });
-});
-
-describe('PlaybackSection — the report under the header', () => {
-  it('draws the codec report once it lands, under the lede', async () => {
-    renderSection();
-
-    await reportLanded();
-    expect(screen.getByText('H.264 / AVC')).toBeDefined();
-    expect(screen.getByText('H.265 / HEVC')).toBeDefined();
-    expect(
-      comesBefore(screen.getByText(LEDE), screen.getByText(/formats enabled/))
-    ).toBe(true);
-  });
-
-  it('draws the Add a codec pack zone the lede points at', async () => {
-    // 16 — Playback component upload, Phase 3 (issue #154): the second
-    // sentence of the lede now points at something, and the copy never moved.
-    renderSection();
-
-    await reportLanded();
-    expect(screen.getByText('Add a codec pack')).toBeDefined();
-    expect(screen.getByText(/drop a playback component/i)).toBeDefined();
-  });
 });
 
 describe('PlaybackSection — the Subtitles header', () => {
-  it('draws a rule after the codec rows, before Subtitles', async () => {
-    const { container } = renderSection();
-
-    await reportLanded();
-    const rule = rules(container).find(
-      (candidate) =>
-        comesBefore(screen.getByText('H.265 / HEVC'), candidate) &&
-        comesBefore(candidate, screen.getByText('Subtitles'))
-    );
-    expect(rule).toBeDefined();
-  });
-
   it('titles the half Subtitles, in 16px at weight 600, with its lede', () => {
     renderSection();
 
@@ -269,19 +196,6 @@ describe('PlaybackSection — the Subtitles header', () => {
         screen.getByText(SUBTITLES_LEDE)
       )
     ).toBe(true);
-  });
-
-  it('keeps the Subtitles half under the Codecs half, in the one card', async () => {
-    renderSection();
-
-    await reportLanded();
-    expect(
-      comesBefore(
-        screen.getByText(/formats enabled/),
-        screen.getByText('Subtitles')
-      )
-    ).toBe(true);
-    expect(screen.getAllByText('Playback')).toHaveLength(1);
   });
 });
 
@@ -378,7 +292,13 @@ describe('PlaybackSection — Preferred language, the pill', () => {
   it('stays absent on a refused read — no default the server never confirmed', async () => {
     const { read } = answerWith(null);
     renderSection();
-    await reportLanded();
+    await waitFor(() =>
+      expect(
+        fetchMock.mock.calls.some(
+          ([input]) => String(input) === CAPABILITIES_ROUTE
+        )
+      ).toBe(true)
+    );
 
     read.settle(serverErrorResponse());
     await waitFor(() =>

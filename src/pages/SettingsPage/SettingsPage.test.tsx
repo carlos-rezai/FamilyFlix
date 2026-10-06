@@ -130,23 +130,29 @@ describe('SettingsPage', () => {
     expect(comesBefore(importRow(), screen.getByText('Playback'))).toBe(true);
   });
 
-  it('draws the codec report on the page once it lands', async () => {
+  it('draws the Codecs row’s summary, and no codec report, once it lands', async () => {
+    // 26 — Codecs page, Phase 2 (issue #245): the report moved to its own
+    // page; Settings keeps only its summary, as the Codecs row's line.
     renderPage();
 
     await waitFor(() =>
-      expect(screen.getByText(/formats enabled/)).toBeDefined()
+      expect(
+        screen.getByText('2 formats enabled · 1 from the playback component')
+      ).toBeDefined()
     );
-    expect(screen.getByText('H.264 / AVC')).toBeDefined();
-    expect(screen.getByText('Built-in')).toBeDefined();
-    expect(screen.getByText('Installed')).toBeDefined();
+    expect(screen.getByRole('button', { name: /^Codecs/ })).toBeDefined();
+    expect(screen.queryByText('H.264 / AVC')).toBeNull();
+    expect(screen.queryByText('Built-in')).toBeNull();
+    expect(screen.queryByText('Installed')).toBeNull();
+    expect(screen.queryByText('Add a codec pack')).toBeNull();
   });
 
   it('keeps the Library rows exactly as before, with the Playback card under them', () => {
     renderPage();
 
     // Back, two "Add a movie"s — the header's and the row's — then the two
-    // rows the Library group always had: five buttons, and the Playback card
-    // adds none of its own.
+    // rows the Library group always had: five buttons; the Playback card adds
+    // one, the Codecs row (26 — Codecs page, issue #245).
     expect(screen.getByText('Codecs')).toBeDefined();
     expect(
       screen.getAllByRole('button', { name: /add a movie/i })
@@ -157,7 +163,7 @@ describe('SettingsPage', () => {
     ).toBeDefined();
     // 23 — Enrichment, Phase 1 (issue #203): the Network card adds one, Test
     // connection; and Phase 3 (issue #206) one more, Sync metadata & posters.
-    expect(screen.getAllByRole('button')).toHaveLength(7);
+    expect(screen.getAllByRole('button')).toHaveLength(8);
   });
 
   it('composes the Storage section under the Playback section', () => {
@@ -265,14 +271,14 @@ describe('SettingsPage', () => {
     expect(screen.queryByText(/up to date/i)).toBeNull();
     expect(screen.queryByRole('button', { name: /update/i })).toBeNull();
     // Back, two "Add a movie"s, Import, Export — and the Preferred language
-    // pill once the settings land; Network adds Test connection and Sync
+    // pill once the settings land, and the Codecs row; Network adds Test connection and Sync
     // metadata & posters; Storage and About add none.
     await waitFor(() =>
       expect(
         screen.getByRole('button', { name: /^Preferred language: / })
       ).toBeDefined()
     );
-    expect(screen.getAllByRole('button')).toHaveLength(8);
+    expect(screen.getAllByRole('button')).toHaveLength(9);
     // Five Group headings, and only five.
     const groupHeadings = [
       'Library',

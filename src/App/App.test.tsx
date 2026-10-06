@@ -19,6 +19,7 @@ import type {
   ImportProblemDetail,
   ImportRun,
   Movie,
+  PlaybackCapabilities,
   Series,
   SeriesDetail,
   SeriesHomePayload,
@@ -1179,6 +1180,120 @@ describe('App — the Codecs page', () => {
     expect(
       await screen.findByRole('heading', { name: 'Settings' })
     ).toBeDefined();
+  });
+});
+
+/**
+ * 26 — Codecs page, Phase 2 (issue #245): the round trip. Settings reads the
+ * report on mount for the **Codecs row**'s line; the **Codecs page** reads it
+ * again for itself. An upload on the page, then Back, re-mounts Settings,
+ * which reads again — two reads and no cache (log 26 Q13), so the line shows
+ * the echoed report's summary.
+ */
+describe('App — the Codecs row and the Codecs page', () => {
+  const native = (codec: string, kind: 'video' | 'audio') => ({
+    codec,
+    kind,
+    support: 'native' as const,
+  });
+  const added = (codec: string, kind: 'video' | 'audio') => ({
+    codec,
+    kind,
+    support: 'via-component' as const,
+  });
+
+  const BEFORE: PlaybackCapabilities = {
+    component: {
+      source: 'default',
+      bytes: 98_765_432,
+      files: ['ffmpeg.exe', 'ffprobe.exe'],
+    },
+    codecs: [
+      native('h264', 'video'),
+      native('vp9', 'video'),
+      native('aac', 'audio'),
+      added('hevc', 'video'),
+      added('ac3', 'audio'),
+    ],
+  };
+
+  const AFTER: PlaybackCapabilities = {
+    component: {
+      source: 'uploaded',
+      bytes: 101_000_000,
+      files: ['ffmpeg.exe', 'ffprobe.exe'],
+    },
+    codecs: [...BEFORE.codecs, added('dts', 'audio'), added('av1', 'video')],
+  };
+
+  /** The server's slot: what the capabilities read answers, swapped by a POST. */
+  let live: PlaybackCapabilities;
+
+  beforeEach(() => {
+    live = BEFORE;
+    const fallThrough = fetchMock.getMockImplementation();
+    fetchMock.mockImplementation((input, init) => {
+      const url = String(input);
+      if (url === '/api/playback/capabilities') {
+        return Promise.resolve(okResponse(live));
+      }
+      if (url === '/api/playback/component' && init?.method === 'POST') {
+        live = AFTER;
+        return Promise.resolve(okResponse(live));
+      }
+      if (fallThrough === undefined) {
+        return Promise.reject(new Error(`Unexpected request: ${url}`));
+      }
+      return fallThrough(input, init);
+    });
+  });
+
+  const codecsRow = () => screen.findByRole('button', { name: /^Codecs/ });
+
+  it('shows the uploaded report’s summary in the Codecs row after Back', async () => {
+    const { container } = renderApp('/settings');
+    await waitFor(async () =>
+      expect((await codecsRow()).textContent).toContain(
+        '5 formats enabled · 2 from the playback component'
+      )
+    );
+
+    fireEvent.click(await codecsRow());
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Codecs' })
+    ).toBeDefined();
+    expect(pathname()).toBe('/settings/codecs');
+
+    await screen.findByText(
+      '5 formats enabled · 2 from the playback component'
+    );
+    const zone = container.querySelector('label');
+    if (zone === null) {
+      throw new Error('the Codecs page drew no drop zone');
+    }
+    await act(async () => {
+      fireEvent.drop(zone, {
+        dataTransfer: {
+          files: [
+            new File(['MZ'], 'ffmpeg.exe'),
+            new File(['MZ'], 'ffprobe.exe'),
+          ],
+          types: ['Files'],
+        },
+      });
+    });
+    await screen.findByText(
+      '7 formats enabled · 4 from the playback component'
+    );
+
+    await pressBack();
+
+    expect(pathname()).toBe('/settings');
+    await waitFor(async () =>
+      expect((await codecsRow()).textContent).toContain(
+        '7 formats enabled · 4 from the playback component'
+      )
+    );
   });
 });
 
