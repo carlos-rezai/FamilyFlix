@@ -2,7 +2,10 @@ import { FilterDropdown } from '@/components';
 import { Toggle } from '@/primitives';
 import { SUBTITLE_LANGUAGES, type FilterOption } from '@/types';
 
-import { CodecManager } from '../CodecManager/CodecManager';
+import { CodecRow } from '../CodecRow/CodecRow';
+import { ComponentDropZone } from '../ComponentDropZone/ComponentDropZone';
+import { codecRows, codecSummary, componentRow } from '../codecView/codecView';
+import { useCapabilities } from '../useCapabilities/useCapabilities';
 import { useSettings } from '../useSettings/useSettings';
 import {
   Card,
@@ -14,12 +17,15 @@ import {
 import {
   ComingSoon,
   Header,
+  Report,
   Row,
   RowDesc,
   RowRule,
   RowTitle,
   RowTitleLine,
+  Rows,
   SubtitlesHeader,
+  Summary,
 } from './PlaybackSection.styles';
 
 /**
@@ -29,7 +35,7 @@ import {
  * report**.
  *
  * The lede is both of the prototype's sentences, and the second one points at
- * the _Add a codec pack_ zone `CodecManager` draws under the rows.
+ * the _Add a codec pack_ zone the report draws under the rows.
  *
  * Under the report, the second half of the card: the divider; _Subtitles_ with
  * its lede; _Turn on automatically_ beside a **Coming soon** pill over a
@@ -65,7 +71,7 @@ export function PlaybackSection() {
             </ItemDesc>
           </div>
         </Header>
-        <CodecManager />
+        <CodecReport />
 
         <Divider />
 
@@ -109,5 +115,52 @@ export function PlaybackSection() {
         </Row>
       </Card>
     </>
+  );
+}
+
+/**
+ * The **Codec report** as the card drew it before the **Codecs page** — the
+ * summary over the codec rows, the **Component row** last, the zone under all
+ * of it — kept here for the one slice the report shows in both places (26 —
+ * Codecs page, Phase 1). Phase 2 puts the **Codecs row** in its place.
+ */
+function CodecReport() {
+  const { capabilities, upload, installComponent, removeComponent } =
+    useCapabilities();
+
+  if (capabilities === null) {
+    return null;
+  }
+
+  const component = componentRow(capabilities);
+
+  return (
+    <Report>
+      <Summary>{codecSummary(capabilities)}</Summary>
+      <Rows>
+        {codecRows(capabilities).map((row) => (
+          <CodecRow key={row.key} row={row} />
+        ))}
+        {component !== null && (
+          <CodecRow
+            key={component.key}
+            row={component}
+            onRemove={
+              component.removable
+                ? () => {
+                    void removeComponent();
+                  }
+                : undefined
+            }
+          />
+        )}
+      </Rows>
+      <ComponentDropZone
+        upload={upload}
+        onFiles={(files) => {
+          void installComponent(files);
+        }}
+      />
+    </Report>
   );
 }

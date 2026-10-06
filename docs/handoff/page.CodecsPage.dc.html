@@ -1,0 +1,38 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="tokens.css" />
+      </helmet>
+      <div
+        data-screen-label="Codecs"
+        style="height: 100%; overflow-y: auto; background: var(--color-bg-2)"
+      >
+        <div
+          style="
+            max-width: 780px;
+            margin: 0 auto;
+            padding: var(--space-6) var(--space-6) var(--space-8);
+          "
+        >
+          <dc-import
+            name="feat.CodecManager"
+            cdc="{{ cdc }}"
+            hint-size="100%,900px"
+          ></dc-import>
+        </div>
+      </div>
+    </x-dc>
+    <script
+      type="text/x-dc"
+      data-dc-script
+      data-props='{"$preview":{"width":900,"height":820},"cdc":{"editor":null,"tsType":"CodecManagerModel"}}'
+    ></script>
+  </body>
+</html>

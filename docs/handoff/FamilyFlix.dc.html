@@ -113,6 +113,16 @@
           ></dc-import>
         </sc-if>
 
+        <!-- ============================= CODECS ============================= -->
+        <sc-if value="{{ isCodecs }}" hint-placeholder-val="{{ false }}">
+          <dc-import
+            name="page.CodecsPage"
+            cdc="{{ codecModel }}"
+            style="position: absolute; inset: 0"
+            hint-size="100%,100%"
+          ></dc-import>
+        </sc-if>
+
         <!-- ============================= EXPORT MODAL (feat.ExportModal) ============================= -->
         <sc-if value="{{ exportOpen }}" hint-placeholder-val="{{ false }}">
           <dc-import
@@ -352,6 +362,7 @@
         goAdd(){ this.resetForm(); this.setState({screen:'add',gearOpen:false,addContext:'settings',resolveId:null}); }
         goImport(){ this.setState({screen:'import',gearOpen:false,impStep:'setup',impProgress:0}); }
         goSettings(){ this.setState({screen:'settings',gearOpen:false,openDrop:null}); }
+        goCodecs(){ this.setState({screen:'codecs',gearOpen:false,openDrop:null}); }
         uploadCodec(){ this.setState(s=>{ const id=Math.max(0,...s.codecs.map(c=>c.id))+1; const packs=[{name:'DTS Audio',exts:['.mkv','.dts'],size:'2.3 MB'},{name:'ProRes',exts:['.mov'],size:'9.4 MB'},{name:'FLAC Audio',exts:['.mkv','.flac'],size:'0.8 MB'},{name:'Theora',exts:['.ogv'],size:'1.6 MB'}]; const p=packs[s.codecs.filter(c=>c.kind==='installed').length % packs.length]; return {codecs:[...s.codecs,{id,name:p.name,exts:p.exts,kind:'installed',size:p.size}],codecJustAdded:id}; }); }
         removeCodec(id){ this.setState(s=>({codecs:s.codecs.filter(c=>c.id!==id),codecJustAdded:s.codecJustAdded===id?null:s.codecJustAdded})); }
         setSubLang(v){ this.setState({settingsSubLang:v,openDrop:null}); }
@@ -658,7 +669,7 @@
           const problems=s.impProblems.map(p=>{ const col=p.kind==='no-folder'?'#c97a6a':p.kind==='ambiguous'?accent:p.kind==='missing-file'?'#c9a86a':'#9a8a6b'; return {id:p.id,title:p.title,reason:p.reason,dotStyle:{flex:'0 0 auto',width:'10px',height:'10px',borderRadius:'99px',background:col},resolve:()=>this.resolveProblem(p),skip:()=>this.skipProblem(p.id)}; });
 
           return {
-            rootStyle, isBrowse:s.screen==='browse', isDetail:s.screen==='detail', isPlayer:s.screen==='player', isAdd:s.screen==='add', isImport:s.screen==='import', isGenre:s.screen==='genre', isSettings:s.screen==='settings', isEnrich:s.screen==='enrich', isSeries:s.screen==='series', isSeason:s.screen==='season',
+            rootStyle, isBrowse:s.screen==='browse', isDetail:s.screen==='detail', isPlayer:s.screen==='player', isAdd:s.screen==='add', isImport:s.screen==='import', isGenre:s.screen==='genre', isSettings:s.screen==='settings', isCodecs:s.screen==='codecs', isEnrich:s.screen==='enrich', isSeries:s.screen==='series', isSeason:s.screen==='season',
             snackbars: s.snackbars.map(n=>({ ...n, onDismiss:()=>this.dismissSnack(n.id) })), hasSnackbars: s.snackbars.length>0,
             goBrowse:()=>this.goBrowse(), backFromDetail:()=>this.backFromDetail(),
             genreView:s.genreView, genrePageList:this.genrePageMovies().map(m=>this.view(m)), genreNoResults:this.genrePageMovies().length===0,
@@ -694,6 +705,17 @@
               showContinue:continueList.length>0, continueList, showFavorites:favoritesList.length>0, favoritesList,
               genreRows:rows, noResults:rows.length===0,
             },
+            codecModel:{
+              landed:true, hasComponent:false, component:null, onBack:()=>this.goSettings(),
+              summaryLabel:s.codecs.length+' formats enabled · '+s.codecs.filter(c=>c.kind==='installed').length+' added by you',
+              onBrowse:()=>this.uploadCodec(),
+              codecs:s.codecs.map(c=>{ const built=c.kind==='built-in'; return {
+                id:c.id, name:c.name, exts:c.exts, size:c.size, builtIn:built, notBuiltIn:!built, justAdded:s.codecJustAdded===c.id,
+                statusLabel:built?'Built-in':'Installed',
+                statusStyle:{flex:'0 0 auto',fontFamily:'var(--font-sans)',fontSize:'12px',fontWeight:'600',padding:'4px 11px',borderRadius:'var(--radius-pill)',color:built?'var(--color-text-faint)':'var(--color-watched)',background:built?'var(--color-surface-3)':'rgba(138,154,107,.16)',border:'1px solid '+(built?'var(--color-border)':'rgba(138,154,107,.3)')},
+                onRemove:()=>this.removeCodec(c.id),
+              }; }),
+            },
             settingsModel:{
               onBack:()=>this.goBrowse(), onAddMovie:()=>this.goAdd(),
               net:{
@@ -710,16 +732,7 @@
                 {key:'import',glyph:'⇪',label:'Import from spreadsheet',desc:'Bulk-migrate a spreadsheet + movie folders in one pass.',onClick:()=>this.goImport()},
                 {key:'export',glyph:'⬇',label:'Export to CSV',desc:'Save your whole library out as a spreadsheet backup.',onClick:()=>this.openExport()},
               ],
-              codec:{
-                summaryLabel:s.codecs.length+' formats enabled · '+s.codecs.filter(c=>c.kind==='installed').length+' added by you',
-                onBrowse:()=>this.uploadCodec(),
-                codecs:s.codecs.map(c=>{ const built=c.kind==='built-in'; return {
-                  id:c.id, name:c.name, exts:c.exts, size:c.size, builtIn:built, notBuiltIn:!built, justAdded:s.codecJustAdded===c.id,
-                  statusLabel:built?'Built-in':'Installed',
-                  statusStyle:{flex:'0 0 auto',fontFamily:'var(--font-sans)',fontSize:'12px',fontWeight:'600',padding:'4px 11px',borderRadius:'var(--radius-pill)',color:built?'var(--color-text-faint)':'var(--color-watched)',background:built?'var(--color-surface-3)':'rgba(138,154,107,.16)',border:'1px solid '+(built?'var(--color-border)':'rgba(138,154,107,.3)')},
-                  onRemove:()=>this.removeCodec(c.id),
-                }; }),
-              },
+              codecRow:{ summary:s.codecs.length+' formats enabled · '+s.codecs.filter(c=>c.kind==='installed').length+' added by you', onOpen:()=>this.goCodecs() },
               subAutoOn:s.settingsSubAuto, onToggleSubAuto:()=>this.toggleSubAuto(),
               subLang:s.settingsSubLang, subLangOpen:s.openDrop==='subLang', onToggleSubLang:()=>this.setState(st=>({openDrop:st.openDrop==='subLang'?null:'subLang'})),
               subLangOptions:['English','Spanish','French','German'].map(l=>({label:l,selected:l===s.settingsSubLang,onSelect:()=>this.setSubLang(l)})),

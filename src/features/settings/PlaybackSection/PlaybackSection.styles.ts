@@ -73,3 +73,28 @@ export const RowRule = styled.div`
   margin: 6px 0;
   background: ${({ theme }) => theme.colors.borderSoft};
 `;
+
+/**
+ * The **Codec report** as the card still draws it until the Codecs row takes
+ * its place (26 — Codecs page, Phase 2): the summary over the rows, 14px
+ * apart.
+ */
+export const Report = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+`;
+
+/** The **Codec summary**, 13px in the faint ink. */
+export const Summary = styled.div`
+  font-family: ${({ theme }) => theme.fonts.sans};
+  font-size: 13px;
+  color: ${({ theme }) => theme.colors.textFaint};
+`;
+
+/** The rows, stacked 8px apart. */
+export const Rows = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+`;

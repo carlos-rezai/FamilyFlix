@@ -11,6 +11,7 @@ import PlayerPage from '@/pages/PlayerPage/PlayerPage';
 import AddMoviePage from '@/pages/AddMoviePage/AddMoviePage';
 import GenrePage from '@/pages/GenrePage/GenrePage';
 import SettingsPage from '@/pages/SettingsPage/SettingsPage';
+import CodecsPage from '@/pages/CodecsPage/CodecsPage';
 import ImportPage from '@/pages/ImportPage/ImportPage';
 import EnrichmentPage from '@/pages/EnrichmentPage/EnrichmentPage';
 import { SnackbarProvider } from '@/App/SnackbarProvider/SnackbarProvider';
@@ -54,6 +55,7 @@ export default function App() {
           <Route path="/add" element={<AddMoviePage />} />
           <Route path="/genre/:name" element={<GenrePage />} />
           <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/settings/codecs" element={<CodecsPage />} />
           <Route path="/import" element={<ImportPage />} />
           <Route path="/enrich" element={<EnrichmentPage />} />
         </Routes>
