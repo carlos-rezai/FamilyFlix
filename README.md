@@ -197,12 +197,12 @@ familyflix/
 │   │   ├── movie-form/      # Add/Edit a movie: one form, manual pickers — and Resolve, the Import context
 │   │   ├── import-export/   # the bulk importer's screen: ImportFlow and its three steps, useImportRun, importView — and the Export dialog: ExportModal, FormatCard, useExport, saveToComputer
 │   │   ├── enrichment/      # the Sync with TMDB: EnrichmentFlow and its three steps, SetupBanner, ScopeCard, WriteTargetRow, DecisionRow over CandidatePicker, TitleSearch and FieldDiff, useEnrichmentRun, enrichmentView, and its api/
-│   │   ├── settings/        # the Maintainer's hub: SettingsHeader; LibrarySection + ActionRow; PlaybackSection over CodecManager, CodecRow, ComponentDropZone, codecView, zoneFace; NetworkSection + useTmdbKey + syncLine; StorageSection; AboutSection; useCapabilities, useSettings, useStorageReport; and its api/
+│   │   ├── settings/        # the Maintainer's hub: SettingsHeader; LibrarySection + ActionRow; PlaybackSection (the Codecs row onto the Codecs page); CodecManager — the Codecs page's screen — over CodecRow, ComponentDropZone, codecView, zoneFace; NavigationRow, the row both the Codecs row and the sync row draw through; NetworkSection + useTmdbKey + syncLine; StorageSection; AboutSection; useCapabilities, useSettings, useStorageReport; and its api/
 │   │   │   └── section.styles.ts # the Group heading, the Section card, the divider, an item's title and lede — what every group draws with
 │   │   ├── maintainer.styles.ts # the header and the captioned field the Maintainer's screens share
 │   │   └── collections/     # playlists (roadmap)
 │   ├── layouts/         # Page chrome (MainLayout mounts Back-to-top over its body, on the ref useRestoredScroll attached)
-│   ├── pages/           # Route-level views, composition only (ImportPage and EnrichmentPage among them)
+│   ├── pages/           # Route-level views, composition only (ImportPage, EnrichmentPage and CodecsPage among them)
 │   ├── api/             # Wire calls two or more features share (saveFavorite, fetchMovie, saveWatched, dismissProblem, fetchSettings, saveSeriesFavorite, saveEpisodeWatched, fetchEnrichmentSummary, fetchTmdbKey)
 │   ├── hooks/            # Global shared hooks (useGoBack(fallback) — the one Back rule, a history step with the screen's own landing behind it — useRestoredScroll, useOptimisticEdit, and useEnrichmentSummary)
 │   ├── types/            # Shared TypeScript interfaces (import.ts, export.ts, settings.ts, playback.ts, series.ts, enrichment.ts — read by both build targets; shell.ts, the Shell handshake, read by the server and the shell; appVersion.d.ts)
@@ -353,8 +353,8 @@ Keep the description short enough to fit on one line — long descriptions get w
 | Electron desktop shell                              | ✅ Done         |
 | Desktop packaging (Windows installer)               | ✅ Done         |
 | Software update (check / install)                   | ✅ Done         |
-| Codecs page — the codec list on its own page        | 🔜 10 — next    |
-| Ultrawide margins — side gutters for wide screens   | 🔜 11           |
+| Codecs page — the codec list on its own page        | ✅ Done         |
+| Ultrawide margins — side gutters for wide screens   | 🔜 11 — next    |
 | Default poster — a fallback for titles without one  | 🔜 12           |
 | Add a series — the Add form for shows too           | 🔜 13           |
 | Library folders — several root folders at once      | 🔜 14           |
@@ -366,7 +366,7 @@ Keep the description short enough to fit on one line — long descriptions get w
 | User accounts / multi-profile                       | 🚫 Out of scope |
 
 Everything marked ✅ is done — steps 1–9 of the first build order, ending
-with Software update, which shipped as v0.2.0. The next six came out of
+with Software update, which shipped as v0.2.0, and step 10, the Codecs page. Steps 10–15 came out of
 installing FamilyFlix and using it for real, and are numbered in **build
 order**: smallest and most self-contained first, the form before the folders
 that will feed it, export last because it mirrors what import now holds. Each
@@ -374,10 +374,9 @@ still goes through grill-me and a prototype revision before it is built.
 _Change…_ in Settings → Storage is not in the chain — it is the Roadmap's
 **Move the media folder**.
 
-10. **Codecs page** _(next)_ — the codec rows are too long for the Settings
-    page. They fold away: an accordion in the Playback card, or a dedicated
-    Settings sub-page that the card links to — grill-me picks one.
-11. **Ultrawide margins** — an optional left/right margin on every screen, so
+10. ✅ **Codecs page** — the codec rows moved to their own Settings
+    sub-page, `/settings/codecs`, opened from the Playback card's Codecs row.
+11. **Ultrawide margins** _(next)_ — an optional left/right margin on every screen, so
     the library doesn't stretch edge to edge on an ultra-wide monitor.
 12. **Default poster** — a title with no poster linked shows a FamilyFlix
     default poster instead of an empty tile.

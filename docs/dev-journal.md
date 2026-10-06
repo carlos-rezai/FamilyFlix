@@ -11,6 +11,26 @@ Newest entry first.
 
 ---
 
+## 2026-10-06 — Codecs page (issues #244–#246)
+
+The Codec report left the Settings page for `/settings/codecs`, the hub's
+first nested route, and the shape a future Settings sub-page follows: a page
+in `pages/` that is `MaintainerLayout` at the hub's 780 column around one
+`features/settings/` organism, which draws its own maintainer header with
+Back onto Settings as its **Landing**, and a **navigation row** on the
+Settings card that pushes it — now `NavigationRow`, the Codecs row and
+_Sync metadata & posters_ written twice and extracted once (log 26 Q14), and
+kept in `features/settings/` because both callers are Settings groups. The
+report is read twice on a round trip, once by the Playback card for the Codec
+summary and once by the Codecs page for itself; that was accepted rather than
+cached (log 26 Q13), because the read is cheap and a shared cache would be a
+second source of truth for what pressing Play will do. The prototype
+amendments (`page.CodecsPage`, the reworked `feat.CodecManager`, the Settings
+page's Codecs row, COMPONENT-SPEC) rode in #244's commit rather than a
+docs-only one of their own.
+
+---
+
 ## 2026-10-05 — The Sandbox blank window, closed undiagnosed (issue #240)
 
 The blank window from _Closed without steps 2–8_ below was never diagnosed.

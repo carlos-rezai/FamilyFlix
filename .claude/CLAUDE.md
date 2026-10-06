@@ -306,8 +306,9 @@ familyflix/
 │ │ │ ├── SettingsHeader/ ← Back, the heading, ＋ Add a movie
 │ │ │ ├── LibrarySection/ ← the Library group: Add a movie and Import from spreadsheet owning their routes, and Export to CSV owning the Export dialog it mounts — the one place a section composes another feature’s organism
 │ │ │ ├── ActionRow/ ← one glyph + label + description row of the Library group
-│ │ │ ├── PlaybackSection/ ← the Playback card: Codecs over CodecManager, the divider, Subtitles — the Auto-on toggle under its Coming soon pill, and Preferred language over FilterDropdown, shown at once and put back on refusal
-│ │ │ ├── CodecManager/ ← the Codec report organism: owns useCapabilities, the Codec summary over one CodecRow per catalogued codec, then the Component row last, then the drop zone under all of it; the ✕ passed only when the report says the component is removable
+│ │ │ ├── PlaybackSection/ ← the Playback card: the Codecs row — the Codec summary as its line, pushing `/settings/codecs` — the divider, Subtitles — the Auto-on toggle under its Coming soon pill, and Preferred language over FilterDropdown, shown at once and put back on refusal
+│ │ │ ├── NavigationRow/ ← one Settings row that goes somewhere: a button whose accent tile holds a glyph, then a label, its line and a chevron, pushing its destination — the Codecs row and _Sync metadata & posters_, written twice and extracted once, kept here because both callers are Settings groups
+│ │ │ ├── CodecManager/ ← the Codecs page's screen: owns useCapabilities and its own maintainer header (Back onto Settings, **Codecs**, the lede), then the Playback component group — the Component row, then the drop zone — then the Formats group, the Codec summary over one CodecRow per catalogued codec; the ✕ passed only when the report says the component is removable
 │ │ │ ├── CodecRow/ ← one template for both kinds of row: the tile, the name, the Container chips, the size (— on a codec, a weight on the Component row), the Status pill (Built-in / Installed / Default / Uploaded), and either the RemoveButton primitive or the 32px where it would sit
 │ │ │ ├── ComponentDropZone/ ← the Component drop zone: a label over a clipped multiple file input, drag-over as the prototype's hover, the three faces read off zoneFace; it sorts nothing and labels nothing — the route tells the two binaries apart
 │ │ │ ├── zoneFace/ ← pure: an Upload state → `{ title, line, refused }`, importView's precedent; the invitation's line is `null` because its `ffmpeg` is a Mono span the molecule composes
@@ -327,7 +328,7 @@ familyflix/
 │ │ ├── MainLayout/ ← the Family's screens: logo, gear, scrolling body — and Back-to-top mounted over the body, because the body is where the scrolling happens, so the chrome is what knows how far it has gone; it lends the control the same ref `useRestoredScroll` attached, and holds no state for either
 │ │ ├── GenreLayout/ ← Back pill, heading slot, trailing controls, scrolling body
 │ │ └── MaintainerLayout/ ← the Maintainer surface: bg2 sheet + centred column, no header row
-│ ├── pages/ ← route-level views, composition only, no logic (ImportPage is MaintainerLayout around ImportFlow; SeriesPage and SeasonPage own a scroll container and Back each, MoviePage’s precedent; EnrichmentPage is MaintainerLayout around EnrichmentFlow)
+│ ├── pages/ ← route-level views, composition only, no logic (ImportPage is MaintainerLayout around ImportFlow; SeriesPage and SeasonPage own a scroll container and Back each, MoviePage’s precedent; EnrichmentPage is MaintainerLayout around EnrichmentFlow; CodecsPage is MaintainerLayout at 780 around CodecManager, the first nested Settings route)
 │ ├── api/ ← wire calls two or more features share (one folder per call + its test, no barrel)
 │ │ ├── saveFavorite/ fetchMovie/ saveWatched/ dismissProblem/ fetchSettings/ saveSeriesFavorite/ saveEpisodeWatched/ fetchEnrichmentSummary/ fetchTmdbKey/ ← the nine that earned it
 │ │ └── postValue/
@@ -602,9 +603,13 @@ the page is a read the app can truthfully answer now:
 - `GET /api/playback/capabilities` → `{ component, codecs }`, the **Codec
   report**, reached through `Playback.capabilities()` alone — a property
   of the **Component slot** `main.ts` composed, never a second resolution
-  of it, so the report and pressing Play cannot disagree. The screen keeps
-  the **Format catalogue**: a decoder the catalogue does not name is not a
-  row.
+  of it, so the report and pressing Play cannot disagree. The report lives
+  on the **Codecs page** at `/settings/codecs` — the hub's first nested
+  route, the Playback component group over the Formats group — and the
+  Playback card carries only its **Codec summary**, as the line of the
+  **Codecs row** that opens it; the page reads the report again for itself.
+  The screen keeps the **Format catalogue**: a decoder the catalogue does
+  not name is not a row.
 - `POST /api/playback/component` → `200 PlaybackCapabilities`, the report
   **after the swap**: `multipart/form-data`, every file part named
   `component` and told apart by `componentBinary` — the client sorts
@@ -916,19 +921,17 @@ same layout, spacing, states, copy, and interaction.
 
 **Build order — what is left.** The groups below say what the app _is_;
 this says what to build _next_. Steps 1–9 of the first chain are done,
-ending with **Software update** (v0.2.0). Steps 10–15 came out of installing
+ending with **Software update** (v0.2.0), and so is step 10. Steps 10–15 came out of installing
 FamilyFlix and using it: smallest and most self-contained first, the form
 before the folders that will feed it, export last because it mirrors what
-import holds. None has a prototype yet — each goes through grill-me and a
+import holds. None of 11–15 has a prototype yet — each goes through grill-me and a
 prototype revision in `docs/handoff/` before it is built, per _The prototype
 is the spec_. `Change…` in the Storage group is not in the chain — it is the
 Roadmap's **Move the media folder** (log 24 Q2).
 
-10. **Codecs page** _(next)_ — the Codec report's rows take too much of the
-    Settings page: fold them into an accordion in the Playback card, or move
-    the Codec manager to its own Settings sub-page linked from the card.
-    Grill-me picks one.
-11. **Ultrawide margins** — an optional left/right margin on every screen,
+10. ✅ **Codecs page** — the Codec manager moved to its own Settings
+    sub-page, `/settings/codecs`, linked from the Playback card's Codecs row.
+11. **Ultrawide margins** _(next)_ — an optional left/right margin on every screen,
     a household preference beside the subtitle language, so the library does
     not stretch edge to edge on an ultra-wide monitor.
 12. **Default poster** — a title with no poster linked draws a FamilyFlix
@@ -997,8 +1000,8 @@ A 🧭 Roadmap item is not in this chain — it is after it, if ever.
 - ✅ **Storage** — the managed media folder's location and space used, agreeing with Explorer; _Change…_ is the Roadmap's **Move the media folder**.
 - ✅ **Network group** — a fifth Settings group between Playback and Storage, the one place FamilyFlix goes online: _The Movie Database (TMDB)_ with a status pill, the lede ("Nothing is sent about your household — just movie titles, to look up posters and synopses"), the API-key field in mono with _Test connection_ beside it, and the _Sync metadata & posters_ row that opens the Enrichment flow.
 - ✅ **Software update** — the About card's first row: an Update offer downloaded at launch from GitHub Releases, Update now, and Check for updates; closing the app installs it. Designed in `17-software-update`, shipped as v0.2.0.
-- 🔜 **Codecs page** _(step 10 — next)_ — the Codec manager folded into an accordion, or moved to its own Settings sub-page.
-- 🔜 **Ultrawide margins** _(step 11)_ — an optional left/right margin for ultra-wide monitors.
+- ✅ **Codecs page** — the Codec manager on its own Settings sub-page, `/settings/codecs`: the Playback component group over the Formats group, reached from the Playback card's Codecs row, which carries the Codec summary.
+- 🔜 **Ultrawide margins** _(step 11 — next)_ — an optional left/right margin for ultra-wide monitors.
 
 ### System
 

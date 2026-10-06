@@ -1,10 +1,9 @@
-import { useNavigate } from 'react-router-dom';
-
 import { FilterDropdown } from '@/components';
-import { ChevronRightIcon, MicrochipIcon, Toggle } from '@/primitives';
+import { MicrochipIcon, Toggle } from '@/primitives';
 import { SUBTITLE_LANGUAGES, type FilterOption } from '@/types';
 
 import { codecSummary } from '../codecView/codecView';
+import { NavigationRow } from '../NavigationRow/NavigationRow';
 import { useCapabilities } from '../useCapabilities/useCapabilities';
 import { useSettings } from '../useSettings/useSettings';
 import {
@@ -15,12 +14,6 @@ import {
   ItemTitle,
 } from '../section.styles';
 import {
-  CodecsChevron,
-  CodecsDesc,
-  CodecsLabel,
-  CodecsRow,
-  CodecsText,
-  CodecsTile,
   ComingSoon,
   Row,
   RowDesc,
@@ -33,8 +26,7 @@ import {
 /**
  * The Settings hub's Playback **Settings group**, from
  * `page.SettingsPage.dc.html`: the `Playback` **Group heading** over a
- * **Section card** that opens with the **Codecs row**: a copy of the Network
- * group's _Sync metadata & posters_ row — the microchip in its tile, _Codecs_,
+ * **Section card** that opens with the **Codecs row**, a `NavigationRow` — the microchip in its tile, _Codecs_,
  * the **Codec summary** as its line (blank until the read lands, blank still
  * after a refusal), and a chevron. Pressed, it pushes `/settings/codecs`, the
  * **Codecs page**, which reads the report again for itself (log 26 Q13).
@@ -53,7 +45,6 @@ import {
 export function PlaybackSection() {
   const { settings, chooseSubtitleLanguage } = useSettings();
   const { capabilities } = useCapabilities();
-  const navigate = useNavigate();
 
   const languageOptions: FilterOption[] = SUBTITLE_LANGUAGES.map((name) => ({
     label: name,
@@ -67,20 +58,12 @@ export function PlaybackSection() {
     <>
       <GroupHeading>Playback</GroupHeading>
       <Card>
-        <CodecsRow type="button" onClick={() => navigate('/settings/codecs')}>
-          <CodecsTile aria-hidden="true">
-            <MicrochipIcon size={19} />
-          </CodecsTile>
-          <CodecsText>
-            <CodecsLabel>Codecs</CodecsLabel>
-            <CodecsDesc>
-              {capabilities === null ? '' : codecSummary(capabilities)}
-            </CodecsDesc>
-          </CodecsText>
-          <CodecsChevron>
-            <ChevronRightIcon size={18} />
-          </CodecsChevron>
-        </CodecsRow>
+        <NavigationRow
+          glyph={<MicrochipIcon size={19} />}
+          label="Codecs"
+          line={capabilities === null ? '' : codecSummary(capabilities)}
+          to="/settings/codecs"
+        />
 
         <Divider />
 
