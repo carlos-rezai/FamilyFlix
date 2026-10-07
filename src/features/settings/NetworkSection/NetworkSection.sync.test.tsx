@@ -137,4 +137,10 @@ describe('NetworkSection — the Sync metadata & posters row', () => {
       )
     ).toBe(true);
   });
+
+  it('sits at the prototype’s 15px 4px 4px, under the divider', async () => {
+    renderSection();
+
+    expect(getComputedStyle(await syncRow()).padding).toBe('15px 4px 4px');
+  });
 });
