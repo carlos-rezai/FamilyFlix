@@ -190,19 +190,21 @@ describe('SettingsPage', () => {
     ).toBe(true);
   });
 
-  it('composes the Network section between Playback and Storage', () => {
+  it('composes the Network section between Display and Storage', () => {
     renderPage();
 
-    // 23 — Enrichment, Phase 1 (issue #203): the fifth Settings group, a
-    // Section card titled The Movie Database (TMDB) over the key field.
+    // 23 — Enrichment, Phase 1 (issue #203): a Settings group of its own, a
+    // Section card titled The Movie Database (TMDB) over the key field. 27 —
+    // Ultrawide margins (issue #249) put the Display group above it, so its
+    // card's last row is what Network follows.
     expect(screen.getByText('Network')).toBeDefined();
     expect(screen.getByText('The Movie Database (TMDB)')).toBeDefined();
     expect(
-      comesBefore(screen.getByText('Playback'), screen.getByText('Network'))
+      comesBefore(screen.getByText('Display'), screen.getByText('Network'))
     ).toBe(true);
     expect(
       comesBefore(
-        screen.getByText('Preferred language'),
+        screen.getByText('Ultrawide margins'),
         screen.getByText('Network')
       )
     ).toBe(true);
