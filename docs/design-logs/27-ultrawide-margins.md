@@ -1,7 +1,7 @@
 # 27 — Ultrawide margins
 
 > **Initiative:** `ultrawide-margins`
-> **PRD:** to follow this log
+> **PRD:** `docs/PRDs/27-ultrawide-margins.md` (#248)
 > **Plan:** to follow the PRD
 
 This log is the `grill-me` session that settled step 11 of the build order
