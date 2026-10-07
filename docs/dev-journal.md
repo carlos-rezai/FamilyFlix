@@ -11,6 +11,101 @@ Newest entry first.
 
 ---
 
+## 2026-10-07 — Ultrawide margins (issues #249–#250)
+
+**Ultrawide margins** is a household preference beside the subtitle
+language: one Toggle in a new **Display group** on the Settings page that
+caps every screen but the player at the **Content measure**, 1920px, centred,
+the page's `bg` showing through the margins. One seam decides it, in `App/`:
+the **Content frame** is a layout route around every route but the player's
+two, so no layout, page or feature learns the preference exists and a new
+screen is framed by default (log 27 Q8–Q12). The value lives in the library's
+database, not `localStorage`, so it survives a cleared profile and travels
+with a backup. The prototype amendments — the Display group in
+`page.SettingsPage.dc.html` and COMPONENT-SPEC's Content frame note — rode in
+#249's `feat:` commit, as the plan said, rather than a docs-only one of their
+own.
+
+Four commits across issues #249–#250 — two RED/GREEN pairs — against the plan
+on #248, built from `docs/design-logs/27-ultrawide-margins.md`. **6891 tests
+pass across 402 files**, measured at `1f5dfed`.
+
+### What shipped, slice by slice
+
+- **#249, the toggle and the frame.**
+  - _The server._ The `ultrawide-margins` key in `library/settings/`, stored
+    `'1'` / `'0'`; `settings()` answers `ultrawideMargins` beside the
+    language, `DEFAULT_ULTRAWIDE_MARGINS` (`false`) when the row is absent;
+    `setUltrawideMargins()` as an upsert; and
+    `POST /api/settings/ultrawide-margins { value }` → `{ value }`, a
+    **Single-signal write** whose `400` refuses anything but a boolean — the
+    string `"true"`, `1` and `null` included.
+  - _The type._ `Settings` gained `ultrawideMargins`, and `settings.ts`
+    `DEFAULT_ULTRAWIDE_MARGINS`.
+  - _The provider and hook._ `DisplayPreferenceProvider` in `App/`, outside
+    the Snackbar stack, reads the shared `fetchSettings` once on mount
+    (**Blank until it lands**) and writes on `useSettings`' bargain: shown at
+    once, posted, the echo kept, put back on refusal, never rejecting.
+    `useDisplayPreference()` reads it, throwing outside the provider.
+  - _The frame._ `ContentFrame` in `App/`, the layout route's element:
+    `max-width` at the measure with auto side margins while the preference is
+    `true`, nothing while it is `false` or `null` — no media query, no
+    transition.
+  - _The Display group._ `DisplaySection`, between Playback and Network: the
+    _Ultrawide margins_ row and its Toggle, writing through the provider.
+  - _The furniture._ `Row`, `RowTitle` and `RowDesc` moved out of
+    `PlaybackSection.styles.ts` into `section.styles.ts`, both sections on
+    them — the plan's phase 3, done in the build because phase 1 would
+    otherwise have written them twice.
+  - _The token._ `tokens/layout.ts`, `contentMeasure: '1920px'`, mounted by
+    `createTheme` as `theme.layout`.
+- **#250, the stack at the frame's corner.** `SnackbarProvider`'s stack takes
+  `$framed` while the preference is on: its `right` follows the frame's
+  bottom-right corner on a window wider than the measure, and the window's
+  own corner on a narrower one. Nothing else moves (log 27 Q16–Q17).
+
+### Judgement calls the log did not name
+
+Each was made by a subagent reading one issue, and each is the refactor
+round's to settle (`docs/refactor-plans/27-ultrawide-margins-refactor.md`):
+
+- **The wire call inlined.** The plan named `saveUltrawideMargins` beside the
+  provider; the build has none. The provider holds the endpoint as a module
+  constant, its own `isBoolean` guard, and calls `postValue` inline, so the
+  route's wire contract is proven only as the effect a fetch mock observes.
+- **`useSettings` left holding the whole `Settings`.** Log 27 Q13 kept it to
+  the subtitle language. It holds both fields, so the Settings page holds the
+  preference twice — once in the provider, which follows every flip, and once
+  in `PlaybackSection`'s read, which never updates. Eleven fixtures across
+  `useSettings.test.ts` and `PlaybackSection.test.tsx` gained
+  `ultrawideMargins: false` to keep up.
+- **`ContentFrame` proven only through `App`.** It has no suite of its own;
+  its docblock points at `App.contentFrame.test.tsx`, which proves the
+  frame's three states through twelve routes and six fetch branches.
+- **The stack's `right` written twice.** `Stack` declares `right: s5`, then a
+  second `right: max(…)` in a conditional `css` block, working by cascade
+  order.
+- **The stack reads `DisplayPreferenceContext` directly**, not through the
+  throwing hook, so the eighteen suites that mount the stack alone read as
+  off. Kept — the refactor plan's Decision Document says why.
+- **The furniture guard's source reader joins with `node:path`.** Vite
+  rewrote the RED suite's dynamic `new URL` template into an asset glob, so
+  `DisplaySection.test.tsx` reads the two sections' sources through
+  `path.join` instead.
+
+### Deliberately not built
+
+Everything log 27 _Not built_ lists: a width picker or a custom measure,
+wheel scrolling forwarded from the margins, a `localStorage` mirror for the
+first paint, and any change to the player, fullscreen or the Modal.
+
+### Follow-ups
+
+The refactor plan, filed as 252, with the plan's phase 3, filed as 251,
+folded into it.
+
+---
+
 ## 2026-10-07 — Codecs page refactor (issue 247)
 
 Eleven commits against `docs/refactor-plans/26-codecs-page-refactor.md`, one
