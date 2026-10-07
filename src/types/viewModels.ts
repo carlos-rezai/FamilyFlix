@@ -84,12 +84,12 @@ export interface MovieDetailModel {
   /** Ready image-route URLs, or `null` → the gradient fallback. */
   posterUrl: string | null;
   backdropUrl: string | null;
-  /** True when either artwork exists; the overlays are drawn only without it. */
-  hasArtwork: boolean;
+  /** True when a poster is set; the poster frame's caption is drawn only without one. */
+  hasPoster: boolean;
   /** The placeholder gradient stops — the same ones the movie's card draws. */
   g1: string;
   g2: string;
-  /** The uppercase caption over the gradient; `null` when there is artwork. */
+  /** The uppercase caption over the gradient; `null` when there is a poster. */
   topTag: string | null;
 }
 
@@ -187,12 +187,12 @@ export interface SeriesPageModel {
   /** Ready image-route URLs, or `null` → the gradient fallback. */
   posterUrl: string | null;
   backdropUrl: string | null;
-  /** True when either artwork exists; the overlays are drawn only without it. */
-  hasArtwork: boolean;
+  /** True when a poster is set; the poster frame's caption is drawn only without one. */
+  hasPoster: boolean;
   /** The placeholder gradient stops — the same ones the series' card draws. */
   g1: string;
   g2: string;
-  /** The uppercase caption over the gradient; `null` when there is artwork. */
+  /** The uppercase caption over the gradient; `null` when there is a poster. */
   topTag: string | null;
   /** The series' heart. */
   isFavorite: boolean;

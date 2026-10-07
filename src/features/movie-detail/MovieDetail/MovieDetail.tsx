@@ -121,10 +121,10 @@ export function MovieDetail() {
       <Content>
         <PosterColumn>
           <PosterFrame>
-            <Artwork url={movie.posterUrl} g1={movie.g1} g2={movie.g2} />
-            {/* Overlays caption the gradient placeholder only — real artwork is
+            <Artwork poster url={movie.posterUrl} g1={movie.g1} g2={movie.g2} />
+            {/* Overlays caption the Default poster only — a real poster is
                 never covered by text that duplicates the heading beside it. */}
-            {movie.hasArtwork ? null : (
+            {movie.hasPoster ? null : (
               <>
                 {movie.topTag === null ? null : <TopTag>{movie.topTag}</TopTag>}
                 <PosterTitle>{movie.title}</PosterTitle>

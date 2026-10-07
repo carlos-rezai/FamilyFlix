@@ -52,15 +52,15 @@ function toProgressLabel(watched: number, total: number): string {
 
 /**
  * The uppercase caption over the gradient poster — the first genre and the
- * year range, `detailView`'s shape — and none over real artwork. The halves
+ * year range, `detailView`'s shape — and none over a real poster. The halves
  * are joined only where both survive.
  */
 function toTopTag(
   detail: SeriesDetail,
   yearLabel: string | null,
-  hasArtwork: boolean
+  hasPoster: boolean
 ): string | null {
-  if (hasArtwork) {
+  if (hasPoster) {
     return null;
   }
   const [primaryGenre] = detail.series.genres;
@@ -82,7 +82,7 @@ export function seriesView(detail: SeriesDetail): SeriesPageModel {
   const watched = episodes.filter((episode) => episode.watched).length;
   const hasCreator = series.creator !== null;
   const hasCast = series.cast.length > 0;
-  const hasArtwork = series.posterPath !== null || series.backdropPath !== null;
+  const hasPoster = series.posterPath !== null;
   const yearLabel = toYearLabel(series.year, series.endYear);
 
   return {
@@ -106,10 +106,10 @@ export function seriesView(detail: SeriesDetail): SeriesPageModel {
     backdropUrl: series.backdropPath
       ? `${IMAGE_ROUTE}${series.backdropPath}`
       : null,
-    hasArtwork,
+    hasPoster,
     g1,
     g2,
-    topTag: toTopTag(detail, yearLabel, hasArtwork),
+    topTag: toTopTag(detail, yearLabel, hasPoster),
     isFavorite: series.isFavorite,
     seasons: seasons.map((season) => ({
       number: season.number,

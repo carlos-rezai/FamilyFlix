@@ -105,8 +105,13 @@ export function SeriesDetail() {
         <Hero>
           <PosterColumn>
             <PosterFrame>
-              <Artwork url={series.posterUrl} g1={series.g1} g2={series.g2} />
-              {series.hasArtwork ? null : (
+              <Artwork
+                poster
+                url={series.posterUrl}
+                g1={series.g1}
+                g2={series.g2}
+              />
+              {series.hasPoster ? null : (
                 <>
                   {series.topTag === null ? null : (
                     <TopTag>{series.topTag}</TopTag>

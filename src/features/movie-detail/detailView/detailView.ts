@@ -51,13 +51,13 @@ function toPlayLabel(movie: Movie): string {
 
 /**
  * The small uppercase line drawn on the poster. It exists to caption the
- * gradient placeholder, so over real artwork it is not composed at all — it
+ * Default poster, so over a real poster it is not composed at all — it
  * would be text laid on top of the picture it describes. Like the meta line, its
  * separator is generated *between* the halves that survive, so a lone "· 1994"
  * is unrepresentable.
  */
-function toTopTag(movie: Movie, hasArtwork: boolean): string | null {
-  if (hasArtwork) {
+function toTopTag(movie: Movie, hasPoster: boolean): string | null {
+  if (hasPoster) {
     return null;
   }
 
@@ -94,7 +94,7 @@ function toTopTag(movie: Movie, hasArtwork: boolean): string | null {
  */
 export function detailView(movie: Movie): MovieDetailModel {
   const { g1, g2 } = gradientFromId(movie.id);
-  const hasArtwork = movie.posterPath !== null || movie.backdropPath !== null;
+  const hasPoster = movie.posterPath !== null;
   const hasDirector = movie.director !== null;
   const hasCast = movie.cast.length > 0;
 
@@ -116,9 +116,9 @@ export function detailView(movie: Movie): MovieDetailModel {
     backdropUrl: movie.backdropPath
       ? `${IMAGE_ROUTE}${movie.backdropPath}`
       : null,
-    hasArtwork,
+    hasPoster,
     g1,
     g2,
-    topTag: toTopTag(movie, hasArtwork),
+    topTag: toTopTag(movie, hasPoster),
   };
 }
