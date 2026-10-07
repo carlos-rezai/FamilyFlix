@@ -42,7 +42,10 @@ export interface ContinueCardMovie {
   g2: string;
   resumeLabel: string;
   progress: number;
-  /** The film's poster off the image route, or `null` for the **Default poster**. */
+  /**
+   * The film's poster off the image route, or `null` for the **Default
+   * poster**.
+   */
   posterUrl: string | null;
 }
 
@@ -86,7 +89,10 @@ export interface MovieDetailModel {
   /** Ready image-route URLs, or `null` → the gradient fallback. */
   posterUrl: string | null;
   backdropUrl: string | null;
-  /** True when a poster is set; the poster frame's caption is drawn only without one. */
+  /**
+   * True when a poster is set; the poster frame's caption is drawn only
+   * without one.
+   */
   hasPoster: boolean;
   /** The placeholder gradient stops — the same ones the movie's card draws. */
   g1: string;
@@ -189,7 +195,10 @@ export interface SeriesPageModel {
   /** Ready image-route URLs, or `null` → the gradient fallback. */
   posterUrl: string | null;
   backdropUrl: string | null;
-  /** True when a poster is set; the poster frame's caption is drawn only without one. */
+  /**
+   * True when a poster is set; the poster frame's caption is drawn only
+   * without one.
+   */
   hasPoster: boolean;
   /** The placeholder gradient stops — the same ones the series' card draws. */
   g1: string;

@@ -20,10 +20,11 @@ export interface ContinueCardProps {
 
 /**
  * The wide 16:10 resume tile for the Continue Watching row — the film's poster,
- * or the **Default poster**, under a dark scrim, the title and its finished resume label, a 4px
- * accent progress track pinned to the bottom edge, and a play badge top-right.
- * Read-only by design: no favorite control, one `onOpen`. Presentational — the
- * label and percent arrive ready-made on the `ContinueCardMovie`.
+ * or the **Default poster**, under a dark scrim, the title and its finished
+ * resume label, a 4px accent progress track pinned to the bottom edge, and a
+ * play badge top-right. Read-only by design: no favorite control, one
+ * `onOpen`. Presentational — the label and percent arrive ready-made on the
+ * `ContinueCardMovie`.
  *
  * The tile is a single button (see `Root`), labelled with the movie's title
  * rather than by its contents: read as content it would announce as "Comet

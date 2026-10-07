@@ -2,7 +2,10 @@ import { Wordmark } from '../Wordmark/Wordmark';
 import { PosterMark, Root } from './Artwork.styles';
 
 export interface ArtworkProps {
-  /** The image to draw, over the gradient. `null` — or nothing — is the gradient alone. */
+  /**
+   * The image to draw, over the gradient. `null` — or nothing — is the
+   * gradient alone.
+   */
   url?: string | null;
   /**
    * This frame is a poster: with no url it draws the **Default poster**, the

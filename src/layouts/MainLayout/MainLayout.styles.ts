@@ -29,7 +29,9 @@ export const Logo = styled.button`
   user-select: none;
 `;
 
-/** The header's **Wordmark**: 25px, a hair of tracking, 2px between the words. */
+/**
+ * The header's **Wordmark**: 25px, a hair of tracking, 2px between the words.
+ */
 export const LogoMark = styled(Wordmark)`
   gap: 2px;
   font-size: 25px;
