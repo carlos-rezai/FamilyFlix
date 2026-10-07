@@ -1,10 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { fireEvent, render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { ThemeProvider } from 'styled-components';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 
 import { NavigationRow, type NavigationRowProps } from './NavigationRow';
+import { ChevronRightIcon } from '@/primitives';
 import { theme } from '@/styles/theme';
 import {
   LocationProbe,
@@ -86,6 +88,47 @@ describe('NavigationRow', () => {
 
     expect(pathname()).toBe('/enrich');
     expect(navigationType()).toBe('PUSH');
+  });
+
+  it('pushes its destination on Enter after Tab', async () => {
+    const user = userEvent.setup();
+    renderRow({ to: '/enrich' });
+
+    await user.tab();
+    expect(document.activeElement).toBe(
+      screen.getByRole('button', { name: /^Codecs/ })
+    );
+    await user.keyboard('{Enter}');
+
+    expect(pathname()).toBe('/enrich');
+    expect(navigationType()).toBe('PUSH');
+  });
+
+  it('pushes its destination on Space after Tab', async () => {
+    const user = userEvent.setup();
+    renderRow({ to: '/enrich' });
+
+    await user.tab();
+    expect(document.activeElement).toBe(
+      screen.getByRole('button', { name: /^Codecs/ })
+    );
+    await user.keyboard(' ');
+
+    expect(pathname()).toBe('/enrich');
+    expect(navigationType()).toBe('PUSH');
+  });
+
+  it('carries a chevron at its end', () => {
+    renderRow();
+
+    const chevron = render(
+      <ChevronRightIcon size={18} />
+    ).container.querySelector('svg');
+    const row = screen.getByRole('button', { name: /^Codecs/ });
+
+    expect(row.lastElementChild?.querySelector('svg')?.innerHTML).toBe(
+      chevron?.innerHTML
+    );
   });
 });
 
