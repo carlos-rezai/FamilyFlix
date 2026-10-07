@@ -1,4 +1,4 @@
-import styled, { css } from 'styled-components';
+import styled from 'styled-components';
 
 /**
  * The **Snackbar stack**: fixed bottom-right at `z-index: 200`, clearing the
@@ -14,15 +14,10 @@ import styled, { css } from 'styled-components';
  */
 export const Stack = styled.div<{ $framed: boolean }>`
   position: fixed;
-  right: ${({ theme }) => theme.space.s5};
-  ${({ $framed, theme }) =>
-    $framed &&
-    css`
-      right: max(
-        ${theme.space.s5},
-        calc((100vw - ${theme.layout.contentMeasure}) / 2 + ${theme.space.s5})
-      );
-    `}
+  right: ${({ $framed, theme: { space, layout } }) =>
+    $framed
+      ? `max(${space.s5}, calc((100vw - ${layout.contentMeasure}) / 2 + ${space.s5}))`
+      : space.s5};
   bottom: ${({ theme }) => theme.space.s5};
   z-index: 200;
   display: flex;
