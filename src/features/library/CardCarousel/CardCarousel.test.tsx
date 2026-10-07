@@ -16,21 +16,7 @@ import {
 } from '@/test-support/resolvedStyle/resolvedStyle';
 import type { ContinueCardMovie, PosterCardMovie } from '@/types';
 import { makePosterCardMovie } from '@/test-support/makePosterCardMovie/makePosterCardMovie';
-
-function makeContinueMovie(
-  overrides: Partial<ContinueCardMovie> = {}
-): ContinueCardMovie {
-  return {
-    id: 'm1',
-    title: 'Comet Season',
-    g1: '#1f2a3a',
-    g2: '#3a6a8a',
-    resumeLabel: 'Resume · 1:13 of 1:55',
-    progress: 64,
-    posterUrl: null,
-    ...overrides,
-  };
-}
+import { makeContinueCardMovie } from '@/test-support/makeContinueCardMovie/makeContinueCardMovie';
 
 function posterItems(...movies: PosterCardMovie[]): PosterCarouselItem[] {
   return movies.map((movie) => ({
@@ -155,9 +141,9 @@ describe('CardCarousel — the cards it holds', () => {
     renderCarousel({
       variant: 'continue',
       items: continueItems(
-        makeContinueMovie({ id: 'a1', title: 'Northwind' }),
-        makeContinueMovie({ id: 'a2', title: 'Ironclad' }),
-        makeContinueMovie({ id: 'a3', title: 'Quiet Harbor' })
+        makeContinueCardMovie({ id: 'a1', title: 'Northwind' }),
+        makeContinueCardMovie({ id: 'a2', title: 'Ironclad' }),
+        makeContinueCardMovie({ id: 'a3', title: 'Quiet Harbor' })
       ),
     });
 
@@ -170,8 +156,11 @@ describe('CardCarousel — the cards it holds', () => {
     renderCarousel({
       variant: 'continue',
       items: continueItems(
-        makeContinueMovie({ id: 'a1', resumeLabel: 'Resume · 1:13 of 1:55' }),
-        makeContinueMovie({ id: 'a2', resumeLabel: 'Resume · 0:42' })
+        makeContinueCardMovie({
+          id: 'a1',
+          resumeLabel: 'Resume · 1:13 of 1:55',
+        }),
+        makeContinueCardMovie({ id: 'a2', resumeLabel: 'Resume · 0:42' })
       ),
     });
 
@@ -183,8 +172,8 @@ describe('CardCarousel — the cards it holds', () => {
     renderCarousel({
       variant: 'continue',
       items: continueItems(
-        makeContinueMovie({ id: 'a1', progress: 64 }),
-        makeContinueMovie({ id: 'a2', progress: 12 })
+        makeContinueCardMovie({ id: 'a1', progress: 64 }),
+        makeContinueCardMovie({ id: 'a2', progress: 12 })
       ),
     });
 
@@ -201,10 +190,13 @@ describe('CardCarousel — the cards it holds', () => {
       variant: 'continue',
       items: [
         {
-          movie: makeContinueMovie({ id: 'a1', title: 'Northwind' }),
+          movie: makeContinueCardMovie({ id: 'a1', title: 'Northwind' }),
           onOpen: () => undefined,
         },
-        { movie: makeContinueMovie({ id: 'a2', title: 'Ironclad' }), onOpen },
+        {
+          movie: makeContinueCardMovie({ id: 'a2', title: 'Ironclad' }),
+          onOpen,
+        },
       ],
     });
 
@@ -222,7 +214,7 @@ describe('CardCarousel — the same movie in either variant', () => {
     const resume = renderCarousel({
       variant: 'continue',
       items: continueItems(
-        makeContinueMovie({
+        makeContinueCardMovie({
           id: 'a1',
           title: 'Northwind',
           resumeLabel: 'Resume · 1:13 of 1:55',
@@ -253,7 +245,9 @@ describe('CardCarousel — a row is laid out for the tiles it holds', () => {
     });
     const resume = renderCarousel({
       variant: 'continue',
-      items: continueItems(makeContinueMovie({ id: 'a2', title: 'Ironclad' })),
+      items: continueItems(
+        makeContinueCardMovie({ id: 'a2', title: 'Ironclad' })
+      ),
     });
 
     // The width only means anything once the tile actually holds a card.
@@ -269,7 +263,9 @@ describe('CardCarousel — a row is laid out for the tiles it holds', () => {
     });
     const resume = renderCarousel({
       variant: 'continue',
-      items: continueItems(makeContinueMovie({ id: 'a2', title: 'Ironclad' })),
+      items: continueItems(
+        makeContinueCardMovie({ id: 'a2', title: 'Ironclad' })
+      ),
     });
 
     for (const { container } of [poster, resume]) {
@@ -414,9 +410,9 @@ describe('CardCarousel — a row of continue tiles scrolls like a poster row', (
     const rendered = renderCarousel({
       variant: 'continue',
       items: continueItems(
-        makeContinueMovie({ id: 'a1', title: 'Northwind' }),
-        makeContinueMovie({ id: 'a2', title: 'Ironclad' }),
-        makeContinueMovie({ id: 'a3', title: 'Quiet Harbor' })
+        makeContinueCardMovie({ id: 'a1', title: 'Northwind' }),
+        makeContinueCardMovie({ id: 'a2', title: 'Ironclad' }),
+        makeContinueCardMovie({ id: 'a3', title: 'Quiet Harbor' })
       ),
     });
     const scroller = scrollerIn(rendered.container);
@@ -469,7 +465,7 @@ describe('CardCarousel — a row of continue tiles scrolls like a poster row', (
  */
 describe('CardCarousel — illegal item and variant combinations do not compile', () => {
   it('will not seat a continue item in a poster row', () => {
-    const items = continueItems(makeContinueMovie({ id: 'a1' }));
+    const items = continueItems(makeContinueCardMovie({ id: 'a1' }));
 
     // @ts-expect-error — a continue tile cannot sit in a row of posters
     const props: CardCarouselProps = { items, variant: 'poster' };
@@ -483,7 +479,7 @@ describe('CardCarousel — illegal item and variant combinations do not compile'
     // naming the offending property, and the guard would stop being about the
     // heart.
     const item: ContinueCarouselItem = {
-      movie: makeContinueMovie({ id: 'a1' }),
+      movie: makeContinueCardMovie({ id: 'a1' }),
       onOpen: () => undefined,
       // @ts-expect-error — a continue tile has no heart to raise this from
       onToggleFavorite: () => undefined,

@@ -5,31 +5,17 @@ import { ThemeProvider } from 'styled-components';
 import { ContinueRow, type ContinueRowProps } from './ContinueRow';
 import { theme } from '@/styles/theme';
 import type { ContinueCardMovie } from '@/types';
-
-function makeMovie(
-  overrides: Partial<ContinueCardMovie> = {}
-): ContinueCardMovie {
-  return {
-    id: 'm1',
-    title: 'Comet Season',
-    g1: '#1f2a3a',
-    g2: '#3a6a8a',
-    resumeLabel: 'Resume · 25:00 of 1:40:00',
-    progress: 25,
-    posterUrl: null,
-    ...overrides,
-  };
-}
+import { makeContinueCardMovie } from '@/test-support/makeContinueCardMovie/makeContinueCardMovie';
 
 /** Two movies part-way through, each with its own label and progress. */
 const STARTED: ContinueCardMovie[] = [
-  makeMovie({
+  makeContinueCardMovie({
     id: 'a1',
     title: 'Northwind',
     resumeLabel: 'Resume · 25:00 of 1:40:00',
     progress: 25,
   }),
-  makeMovie({
+  makeContinueCardMovie({
     id: 'a2',
     title: 'Ironclad',
     resumeLabel: 'Resume · 42:00',

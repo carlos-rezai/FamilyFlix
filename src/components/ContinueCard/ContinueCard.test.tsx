@@ -9,16 +9,9 @@ import {
   normCss,
   resolvedStyle,
 } from '@/test-support/resolvedStyle/resolvedStyle';
+import { makeContinueCardMovie } from '@/test-support/makeContinueCardMovie/makeContinueCardMovie';
 
-const movie: ContinueCardMovie = {
-  id: 'm1',
-  title: 'Comet Season',
-  g1: '#1f2a3a',
-  g2: '#3a6a8a',
-  resumeLabel: 'Resume · 1:13 of 1:55',
-  progress: 64,
-  posterUrl: null,
-};
+const movie = makeContinueCardMovie();
 
 function renderCard(
   overrides: { onOpen?: () => void; movie?: ContinueCardMovie } = {}
