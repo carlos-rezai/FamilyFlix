@@ -1,8 +1,9 @@
-import { Artwork, PlayIcon, ProgressBar } from '@/primitives';
+import { PlayIcon, ProgressBar } from '@/primitives';
 import type { ContinueCardMovie } from '@/types';
 import {
   Root,
   Tile,
+  Art,
   Scrim,
   TextWrap,
   Title,
@@ -18,8 +19,8 @@ export interface ContinueCardProps {
 }
 
 /**
- * The wide 16:10 resume tile for the Continue Watching row — a deterministic
- * gradient under a dark scrim, the title and its finished resume label, a 4px
+ * The wide 16:10 resume tile for the Continue Watching row — the film's poster,
+ * or the **Default poster**, under a dark scrim, the title and its finished resume label, a 4px
  * accent progress track pinned to the bottom edge, and a play badge top-right.
  * Read-only by design: no favorite control, one `onOpen`. Presentational — the
  * label and percent arrive ready-made on the `ContinueCardMovie`.
@@ -33,9 +34,7 @@ export function ContinueCard({ movie, onOpen }: ContinueCardProps) {
   return (
     <Root type="button" aria-label={movie.title} onClick={onOpen}>
       <Tile>
-        {/* No url, ever: the resume tile has no image slot by design (design
-            log 03), and passing nothing is that decision written down. */}
-        <Artwork g1={movie.g1} g2={movie.g2} />
+        <Art url={movie.posterUrl} poster g1={movie.g1} g2={movie.g2} />
         <Scrim />
         <TextWrap>
           <Title>{movie.title}</Title>

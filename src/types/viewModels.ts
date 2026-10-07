@@ -42,6 +42,8 @@ export interface ContinueCardMovie {
   g2: string;
   resumeLabel: string;
   progress: number;
+  /** The film's poster off the image route, or `null` for the **Default poster**. */
+  posterUrl: string | null;
 }
 
 /**

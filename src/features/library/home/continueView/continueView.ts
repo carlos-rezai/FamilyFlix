@@ -2,6 +2,7 @@ import type { ContinueCardMovie, Movie } from '@/types';
 import {
   formatClock,
   gradientFromId,
+  imageUrl,
   toProgressPercent,
   toRuntimeSeconds,
 } from '@/utils';
@@ -11,8 +12,8 @@ import {
  * renders — the resume-tile sibling of `view()`. It builds the **Resume label**
  * here rather than in the molecule: elapsed and total together
  * ("Resume · 1:13 of 1:55") when the runtime is known, elapsed alone when it
- * isn't — no "of --" placeholder. Gradient stops always come from the id (the
- * tile has no artwork slot) and progress reuses `toProgressPercent`, including
+ * isn't — no "of --" placeholder. Gradient stops come from the id, under the
+ * poster when there is one, and progress reuses `toProgressPercent`, including
  * its nominal sliver for an in-progress movie of unknown length.
  */
 export function continueView(movie: Movie): ContinueCardMovie {
@@ -33,5 +34,6 @@ export function continueView(movie: Movie): ContinueCardMovie {
       movie.resumePositionSeconds,
       movie.runtimeMinutes
     ),
+    posterUrl: imageUrl(movie.posterPath),
   };
 }

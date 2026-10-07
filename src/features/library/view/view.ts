@@ -1,9 +1,12 @@
 import type { Movie, PosterCardMovie } from '@/types';
-import { gradientFromId, toRatingPercent, toProgressPercent } from '@/utils';
+import {
+  gradientFromId,
+  imageUrl,
+  toRatingPercent,
+  toProgressPercent,
+} from '@/utils';
 
 /** Path prefix for the Express route that streams managed poster images. */
-const IMAGE_ROUTE = '/api/images/';
-
 /**
  * Maps a canonical `Movie` record to the `PosterCardMovie` a `PosterCard`
  * renders. The pure seam between the domain model and the tile: it resolves the
@@ -21,7 +24,7 @@ export function view(movie: Movie): PosterCardMovie {
   return {
     id: movie.id,
     title: movie.title,
-    posterUrl: movie.posterPath ? `${IMAGE_ROUTE}${movie.posterPath}` : null,
+    posterUrl: imageUrl(movie.posterPath),
     g1,
     g2,
     rating: toRatingPercent(movie.rating),

@@ -1,9 +1,7 @@
 import type { PosterCardMovie, Series } from '@/types';
-import { gradientFromId, toRatingPercent } from '@/utils';
+import { gradientFromId, imageUrl, toRatingPercent } from '@/utils';
 
 /** Path prefix for the Express route that streams managed poster images. */
-const IMAGE_ROUTE = '/api/images/';
-
 /**
  * Maps a **Series** to the `PosterCardMovie` an unchanged `PosterCard` renders
  * — `view`'s precedent for a movie. Gradient art off the series id when there
@@ -15,7 +13,7 @@ export function seriesCardView(series: Series): PosterCardMovie {
   return {
     id: series.id,
     title: series.title,
-    posterUrl: series.posterPath ? `${IMAGE_ROUTE}${series.posterPath}` : null,
+    posterUrl: imageUrl(series.posterPath),
     g1,
     g2,
     rating: toRatingPercent(series.rating),

@@ -9,6 +9,7 @@ import {
   formatClock,
   formatEpisodeTag,
   gradientFromId,
+  imageUrl,
   toProgressPercent,
   toRuntimeSeconds,
 } from '@/utils';
@@ -27,8 +28,6 @@ const MONTHS = [
   'Nov',
   'Dec',
 ];
-
-const IMAGE_ROUTE = '/api/images/';
 
 const seasonLabelOf = (number: number) => `Season ${number}`;
 
@@ -88,7 +87,7 @@ function toEpisodeModel(
         ? `Resume · ${elapsed}`
         : `Resume · ${elapsed} of ${formatClock(totalSeconds)}`
       : null,
-    stillUrl: episode.stillPath ? `${IMAGE_ROUTE}${episode.stillPath}` : null,
+    stillUrl: imageUrl(episode.stillPath),
     g1,
     g2,
   };

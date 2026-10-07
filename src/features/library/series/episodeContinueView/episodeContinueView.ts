@@ -35,5 +35,7 @@ export function episodeContinueView({
       episode.resumePositionSeconds,
       episode.runtimeMinutes
     ),
+    // The series' poster arrives with the wire's `series.posterPath`, a later phase.
+    posterUrl: null,
   };
 }

@@ -1,9 +1,12 @@
 import type { Movie, MovieDetailModel } from '@/types';
-import { formatClock, gradientFromId, toRatingPercent } from '@/utils';
+import {
+  formatClock,
+  gradientFromId,
+  imageUrl,
+  toRatingPercent,
+} from '@/utils';
 
 /** Path prefix for the Express route that streams managed artwork. */
-const IMAGE_ROUTE = '/api/images/';
-
 /** What a credit reads as when it is missing but its sibling survives. */
 const MISSING_CREDIT = '—';
 
@@ -112,10 +115,8 @@ export function detailView(movie: Movie): MovieDetailModel {
     hasCredits: hasDirector || hasCast,
     director: movie.director ?? MISSING_CREDIT,
     castText: hasCast ? movie.cast.join(', ') : MISSING_CREDIT,
-    posterUrl: movie.posterPath ? `${IMAGE_ROUTE}${movie.posterPath}` : null,
-    backdropUrl: movie.backdropPath
-      ? `${IMAGE_ROUTE}${movie.backdropPath}`
-      : null,
+    posterUrl: imageUrl(movie.posterPath),
+    backdropUrl: imageUrl(movie.backdropPath),
     hasPoster,
     g1,
     g2,

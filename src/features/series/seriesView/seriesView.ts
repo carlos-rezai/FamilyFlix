@@ -1,9 +1,12 @@
 import type { Episode, SeriesDetail, SeriesPageModel } from '@/types';
-import { formatEpisodeTag, gradientFromId, toRatingPercent } from '@/utils';
+import {
+  formatEpisodeTag,
+  gradientFromId,
+  imageUrl,
+  toRatingPercent,
+} from '@/utils';
 
 /** Path prefix for the Express route that streams managed artwork. */
-const IMAGE_ROUTE = '/api/images/';
-
 /** What a credit reads as when it is missing but its sibling survives. */
 const MISSING_CREDIT = '—';
 
@@ -102,10 +105,8 @@ export function seriesView(detail: SeriesDetail): SeriesPageModel {
     hasCredits: hasCreator || hasCast,
     creator: series.creator ?? MISSING_CREDIT,
     castText: hasCast ? series.cast.join(', ') : MISSING_CREDIT,
-    posterUrl: series.posterPath ? `${IMAGE_ROUTE}${series.posterPath}` : null,
-    backdropUrl: series.backdropPath
-      ? `${IMAGE_ROUTE}${series.backdropPath}`
-      : null,
+    posterUrl: imageUrl(series.posterPath),
+    backdropUrl: imageUrl(series.backdropPath),
     hasPoster,
     g1,
     g2,

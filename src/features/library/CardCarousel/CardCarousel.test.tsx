@@ -27,6 +27,7 @@ function makeContinueMovie(
     g2: '#3a6a8a',
     resumeLabel: 'Resume · 1:13 of 1:55',
     progress: 64,
+    posterUrl: null,
     ...overrides,
   };
 }

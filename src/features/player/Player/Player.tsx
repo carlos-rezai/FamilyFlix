@@ -6,6 +6,7 @@ import type { Episode, EpisodeRead, Movie, Playable } from '@/types';
 import {
   formatEpisodeTag,
   gradientFromId,
+  imageUrl,
   moviePath,
   seasonPath,
 } from '@/utils';
@@ -45,8 +46,6 @@ interface PlayerProps {
 }
 
 /** Path prefix for the Express route that streams managed poster images. */
-const IMAGE_ROUTE = '/api/images/';
-
 /**
  * The stream a movie's bytes arrive on.
  *
@@ -324,11 +323,7 @@ export function Player({ playable }: PlayerProps) {
   return (
     <Stage ref={stageRef} $idle={!visible} onMouseMove={onMouseMove}>
       <ArtLayer aria-hidden="true">
-        <Backdrop
-          url={movie?.posterPath ? `${IMAGE_ROUTE}${movie.posterPath}` : null}
-          g1={g1}
-          g2={g2}
-        />
+        <Backdrop url={imageUrl(movie?.posterPath ?? null)} g1={g1} g2={g2} />
         <Scrim />
       </ArtLayer>
 

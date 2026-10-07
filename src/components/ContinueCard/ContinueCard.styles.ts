@@ -1,5 +1,6 @@
 import styled from 'styled-components';
 
+import { Artwork } from '@/primitives';
 import {
   cardFocus,
   cardLift,
@@ -103,4 +104,13 @@ export const PlayBadge = styled.div`
   place-items: center;
   border: 1px solid rgba(255, 255, 255, 0.25);
   color: #fff;
+`;
+
+/**
+ * The poster cropped to the key art: a 2:3 poster in a 16:10 tile keeps its
+ * upper-middle band, where a title's faces and lettering usually sit.
+ */
+export const Art = styled(Artwork)`
+  background-position: center 25%;
+  background-size: cover;
 `;
