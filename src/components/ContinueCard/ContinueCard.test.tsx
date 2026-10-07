@@ -17,6 +17,7 @@ const movie: ContinueCardMovie = {
   g2: '#3a6a8a',
   resumeLabel: 'Resume · 1:13 of 1:55',
   progress: 64,
+  posterUrl: null,
 };
 
 function renderCard(
@@ -183,5 +184,70 @@ describe('ContinueCard — hover, press and keyboard focus', () => {
     expect(focus.outline).toBe(normCss(`2px solid ${c.focusRing}`));
     expect(focus['outline-offset']).toBe('4px');
     expect(focus['border-radius']).toBe(theme.radius.md);
+  });
+});
+
+/**
+ * 28 — Default poster, Phase 3 (issue #256): the card draws the film's own
+ * poster, cropped to the key art at `center 25%` under the existing scrim, and
+ * the **Default poster** when there is none — matching its card in the rows.
+ */
+describe('ContinueCard — the poster on the tile', () => {
+  const POSTER_URL = '/api/images/solo/poster.jpg';
+
+  /** The art layer — the tile's first child, under the scrim. */
+  function art(): Element {
+    const tile = screen.getByRole('button', {
+      name: movie.title,
+    }).firstElementChild;
+    const layer = tile?.firstElementChild ?? null;
+    if (layer === null) throw new Error('the tile has no art layer');
+    return layer;
+  }
+
+  it('holds the movie’s poster in its art layer', () => {
+    renderCard({ movie: { ...movie, posterUrl: POSTER_URL } });
+
+    expect(window.getComputedStyle(art()).backgroundImage).toContain(
+      POSTER_URL
+    );
+  });
+
+  it('crops that poster to the key art, covering the tile at center 25%', () => {
+    renderCard({ movie: { ...movie, posterUrl: POSTER_URL } });
+
+    const layer = resolvedStyle(art());
+    expect(layer['background-position']).toBe(normCss('center 25%'));
+    expect(layer['background-size']).toBe('cover');
+  });
+
+  it('draws no Wordmark over a real poster', () => {
+    renderCard({ movie: { ...movie, posterUrl: POSTER_URL } });
+
+    expect(screen.queryByText('Flix')).toBeNull();
+  });
+
+  it('draws the Wordmark on a movie with no poster, hidden from the accessibility tree', () => {
+    renderCard({ movie: { ...movie, posterUrl: null } });
+
+    expect(screen.getByText('Flix')).toBeTruthy();
+    expect(screen.getByText('Flix').closest('[aria-hidden="true"]')).not.toBe(
+      null
+    );
+    expect(screen.getByRole('button', { name: 'Comet Season' })).toBeTruthy();
+  });
+
+  it('keeps the title and the resume label over a real poster', () => {
+    renderCard({ movie: { ...movie, posterUrl: POSTER_URL } });
+
+    expect(screen.getByText('Comet Season')).toBeTruthy();
+    expect(screen.getByText('Resume · 1:13 of 1:55')).toBeTruthy();
+  });
+
+  it('keeps the title and the resume label over the Default poster', () => {
+    renderCard({ movie: { ...movie, posterUrl: null } });
+
+    expect(screen.getByText('Comet Season')).toBeTruthy();
+    expect(screen.getByText('Resume · 1:13 of 1:55')).toBeTruthy();
   });
 });

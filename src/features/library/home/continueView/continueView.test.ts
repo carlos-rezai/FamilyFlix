@@ -93,4 +93,18 @@ describe('continueView — Movie → ContinueCardMovie mapper', () => {
 
     expect(first.g1).not.toBe(second.g1);
   });
+
+  it('serves the movie’s poster from the image route as its posterUrl', () => {
+    const vm = continueView(
+      makeStartedMovie({ posterPath: 'solo/poster.jpg' })
+    );
+
+    expect(vm.posterUrl).toBe('/api/images/solo/poster.jpg');
+  });
+
+  it('gives a null posterUrl to a movie with no poster', () => {
+    const vm = continueView(makeStartedMovie({ posterPath: null }));
+
+    expect(vm.posterUrl).toBeNull();
+  });
 });
