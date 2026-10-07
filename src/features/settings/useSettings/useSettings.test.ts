@@ -11,10 +11,13 @@ import {
 /**
  * 15 — Settings hub, Phase 2: "the Subtitles rows" (issue #144).
  *
- * `useSettings()` → `{ settings, chooseSubtitleLanguage }`: the household's
- * one preference, fetched once on mount. **Blank until it lands** — the Export
- * summary's rule: `settings` is `null` until the read lands and stays `null`
- * if it never does; no skeleton, no error face, no snackbar.
+ * `useSettings()` → `{ subtitleLanguage, chooseSubtitleLanguage }`: the
+ * **Preferred subtitle language**, fetched once on mount — the one field of the
+ * settings read this hook keeps; **Ultrawide margins** is
+ * `DisplayPreferenceProvider`'s (log 27 Q13, refactor 252). **Blank until it
+ * lands** — the Export summary's rule: `subtitleLanguage` is `null` until the
+ * read lands and stays `null` if it never does; no skeleton, no error face, no
+ * snackbar.
  *
  * `chooseSubtitleLanguage` is the detail page's bargain in two lines: set the
  * value on screen, post, take the echo, and put the previous value back on
@@ -89,10 +92,12 @@ function postedValues(): unknown[] {
     );
 }
 
-/** The hook, its settings already landed as `read`. */
+/** The hook, its language already landed off `read`. */
 async function renderLanded(read: Settings = ENGLISH) {
   const rendered = renderHook(() => useSettings());
-  await waitFor(() => expect(rendered.result.current.settings).toEqual(read));
+  await waitFor(() =>
+    expect(rendered.result.current.subtitleLanguage).toBe(read.subtitleLanguage)
+  );
   return rendered;
 }
 
@@ -113,10 +118,10 @@ describe('useSettings — the read', () => {
 
     const { result } = renderHook(() => useSettings());
 
-    expect(result.current.settings).toBeNull();
+    expect(result.current.subtitleLanguage).toBeNull();
   });
 
-  it('hands over the settings once they land', async () => {
+  it('hands over the subtitle language once it lands', async () => {
     const read = held();
     fetchMock.mockImplementation(() => read.pending);
     const { result } = renderHook(() => useSettings());
@@ -128,11 +133,22 @@ describe('useSettings — the read', () => {
     });
 
     await waitFor(() =>
-      expect(result.current.settings).toEqual({
-        subtitleLanguage: 'Spanish',
-        ultrawideMargins: false,
-      })
+      expect(result.current.subtitleLanguage).toBe('Spanish')
     );
+  });
+
+  it('keeps the subtitle language alone, not the rest of the settings', async () => {
+    fetchMock.mockResolvedValue(
+      okResponse({ subtitleLanguage: 'Spanish', ultrawideMargins: true })
+    );
+
+    const { result } = await renderLanded({
+      subtitleLanguage: 'Spanish',
+      ultrawideMargins: true,
+    });
+
+    expect(result.current).not.toHaveProperty('settings');
+    expect(result.current).not.toHaveProperty('ultrawideMargins');
   });
 
   it('keeps null when the route refuses', async () => {
@@ -147,7 +163,7 @@ describe('useSettings — the read', () => {
       await Promise.resolve();
     });
 
-    expect(result.current.settings).toBeNull();
+    expect(result.current.subtitleLanguage).toBeNull();
   });
 
   it('keeps null when the request itself fails', async () => {
@@ -162,7 +178,7 @@ describe('useSettings — the read', () => {
       await Promise.resolve();
     });
 
-    expect(result.current.settings).toBeNull();
+    expect(result.current.subtitleLanguage).toBeNull();
   });
 });
 
@@ -175,10 +191,7 @@ describe('useSettings — chooseSubtitleLanguage', () => {
       void result.current.chooseSubtitleLanguage('Spanish');
     });
 
-    expect(result.current.settings).toEqual({
-      subtitleLanguage: 'Spanish',
-      ultrawideMargins: false,
-    });
+    expect(result.current.subtitleLanguage).toBe('Spanish');
   });
 
   it('posts the value to the subtitle-language route', async () => {
@@ -202,10 +215,7 @@ describe('useSettings — chooseSubtitleLanguage', () => {
       await chosen;
     });
 
-    expect(result.current.settings).toEqual({
-      subtitleLanguage: 'Spanish',
-      ultrawideMargins: false,
-    });
+    expect(result.current.subtitleLanguage).toBe('Spanish');
   });
 
   it('keeps the echo rather than what was sent — the route stored it', async () => {
@@ -218,10 +228,7 @@ describe('useSettings — chooseSubtitleLanguage', () => {
       await chosen;
     });
 
-    expect(result.current.settings).toEqual({
-      subtitleLanguage: 'Spanish',
-      ultrawideMargins: false,
-    });
+    expect(result.current.subtitleLanguage).toBe('Spanish');
   });
 
   it('puts the previous value back when the route refuses', async () => {
@@ -240,10 +247,7 @@ describe('useSettings — chooseSubtitleLanguage', () => {
       await chosen;
     });
 
-    expect(result.current.settings).toEqual({
-      subtitleLanguage: 'French',
-      ultrawideMargins: false,
-    });
+    expect(result.current.subtitleLanguage).toBe('French');
   });
 
   it('puts the previous value back when the request itself fails', async () => {
@@ -256,7 +260,7 @@ describe('useSettings — chooseSubtitleLanguage', () => {
       await chosen;
     });
 
-    expect(result.current.settings).toEqual(ENGLISH);
+    expect(result.current.subtitleLanguage).toBe('English');
   });
 
   it('does not reject on a refusal — the screen has no error face to show', async () => {

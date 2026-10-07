@@ -41,16 +41,16 @@ import {
  *
  * The section owns `useSettings`, and takes only the read of
  * `useCapabilities` — the writes are the Codecs page's. The pill is not drawn
- * while the settings are `null` — a refused read shows no default the server
+ * while the language is `null` — a refused read shows no default the server
  * never confirmed.
  */
 export function PlaybackSection() {
-  const { settings, chooseSubtitleLanguage } = useSettings();
+  const { subtitleLanguage, chooseSubtitleLanguage } = useSettings();
   const { capabilities } = useCapabilities();
 
   const languageOptions: FilterOption[] = SUBTITLE_LANGUAGES.map((name) => ({
     label: name,
-    selected: name === settings?.subtitleLanguage,
+    selected: name === subtitleLanguage,
     onSelect: () => {
       void chooseSubtitleLanguage(name);
     },
@@ -97,11 +97,11 @@ export function PlaybackSection() {
             <RowTitle>Preferred language</RowTitle>
             <RowDesc>Which track to use whenever subtitles are shown.</RowDesc>
           </div>
-          {settings ? (
+          {subtitleLanguage !== null ? (
             <FilterDropdown
               label="Preferred language"
               showLabel={false}
-              value={settings.subtitleLanguage}
+              value={subtitleLanguage}
               options={languageOptions}
               menuWidth={200}
             />

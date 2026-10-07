@@ -1,15 +1,14 @@
 import { useCallback, useEffect, useState } from 'react';
 
-import type { Settings } from '@/types';
 import { fetchSettings } from '@/api/fetchSettings/fetchSettings';
 import { saveSubtitleLanguage } from '../api/api';
 
 export interface SettingsState {
   /**
-   * The household's settings: `null` until the read lands, the payload after,
-   * and `null` still if it never does.
+   * The **Preferred subtitle language**: `null` until the read lands, the
+   * stored value after, and `null` still if it never does.
    */
-  settings: Settings | null;
+  subtitleLanguage: string | null;
   /**
    * Choose the preferred subtitle language: shown at once, posted, the echo
    * kept, and the previous value put back on a refusal. Never rejects — the
@@ -19,7 +18,11 @@ export interface SettingsState {
 }
 
 /**
- * The household's one preference, fetched once on mount.
+ * The household's **Preferred subtitle language**, read once on mount off the
+ * shared `fetchSettings` — the one field of its answer this hook keeps.
+ * **Ultrawide margins** rides the same read and is
+ * `DisplayPreferenceProvider`'s to hold (log 27 Q13), so no screen holds a
+ * copy that never updates.
  *
  * **Blank until it lands** — the Export summary's rule, and the shape every
  * read on the Settings page repeats: no skeleton, no error face, no snackbar.
@@ -31,7 +34,7 @@ export interface SettingsState {
  * edits a movie.
  */
 export function useSettings(): SettingsState {
-  const [settings, setSettings] = useState<Settings | null>(null);
+  const [subtitleLanguage, setSubtitleLanguage] = useState<string | null>(null);
 
   useEffect(() => {
     let wanted = true;
@@ -39,7 +42,7 @@ export function useSettings(): SettingsState {
     fetchSettings().then(
       (landed) => {
         if (wanted) {
-          setSettings(landed);
+          setSubtitleLanguage(landed.subtitleLanguage);
         }
       },
       () => undefined
@@ -52,22 +55,17 @@ export function useSettings(): SettingsState {
 
   const chooseSubtitleLanguage = useCallback(
     async (language: string): Promise<void> => {
-      const previous = settings;
-      setSettings((current) =>
-        current ? { ...current, subtitleLanguage: language } : current
-      );
+      const previous = subtitleLanguage;
+      setSubtitleLanguage(language);
 
       try {
-        const stored = await saveSubtitleLanguage(language);
-        setSettings((current) =>
-          current ? { ...current, subtitleLanguage: stored } : current
-        );
+        setSubtitleLanguage(await saveSubtitleLanguage(language));
       } catch {
-        setSettings(previous);
+        setSubtitleLanguage(previous);
       }
     },
-    [settings]
+    [subtitleLanguage]
   );
 
-  return { settings, chooseSubtitleLanguage };
+  return { subtitleLanguage, chooseSubtitleLanguage };
 }
