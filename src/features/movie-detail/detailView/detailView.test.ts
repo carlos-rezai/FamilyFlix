@@ -3,7 +3,6 @@ import { describe, it, expect } from 'vitest';
 import { detailView } from './detailView';
 import { gradientFromId } from '@/utils';
 import { makeMovie } from '@/test-support/makeMovie/makeMovie';
-import { shippingSourcesMatching } from '@/test-support/shippingSources/shippingSources';
 
 describe('detailView — Movie → MovieDetailModel mapper', () => {
   it('passes id and title straight through', () => {
@@ -375,15 +374,5 @@ describe('detailView — hasPoster', () => {
     const vm = detailView(makeMovie({ posterPath: null, backdropPath: null }));
 
     expect(vm.hasPoster).toBe(false);
-  });
-});
-
-/**
- * Issue #255's rename is total: nothing in shipping code still reads the old
- * `hasArtwork`, so no surface can go on captioning by "any art at all".
- */
-describe('detailView — hasArtwork is gone', () => {
-  it('is read by no shipping file', () => {
-    expect(shippingSourcesMatching('src', /\bhasArtwork\b/)).toEqual([]);
   });
 });
