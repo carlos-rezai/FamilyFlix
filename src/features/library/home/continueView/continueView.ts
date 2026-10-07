@@ -24,6 +24,7 @@ export function continueView(movie: Movie): ContinueCardMovie {
   return {
     id: movie.id,
     title: movie.title,
+    posterUrl: imageUrl(movie.posterPath),
     g1,
     g2,
     resumeLabel:
@@ -34,6 +35,5 @@ export function continueView(movie: Movie): ContinueCardMovie {
       movie.resumePositionSeconds,
       movie.runtimeMinutes
     ),
-    posterUrl: imageUrl(movie.posterPath),
   };
 }

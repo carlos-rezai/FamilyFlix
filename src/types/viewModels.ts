@@ -38,15 +38,15 @@ export interface PosterCardMovie {
 export interface ContinueCardMovie {
   id: string;
   title: string;
-  g1: string;
-  g2: string;
-  resumeLabel: string;
-  progress: number;
   /**
    * The film's poster off the image route, or `null` for the **Default
    * poster**.
    */
   posterUrl: string | null;
+  g1: string;
+  g2: string;
+  resumeLabel: string;
+  progress: number;
 }
 
 /**

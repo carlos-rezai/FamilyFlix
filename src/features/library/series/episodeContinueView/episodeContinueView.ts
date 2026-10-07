@@ -28,6 +28,7 @@ export function episodeContinueView({
   return {
     id: episode.id,
     title: `${series.title} · ${formatEpisodeTag(episode)}`,
+    posterUrl: imageUrl(series.posterPath),
     g1,
     g2,
     resumeLabel:
@@ -38,6 +39,5 @@ export function episodeContinueView({
       episode.resumePositionSeconds,
       episode.runtimeMinutes
     ),
-    posterUrl: imageUrl(series.posterPath),
   };
 }
