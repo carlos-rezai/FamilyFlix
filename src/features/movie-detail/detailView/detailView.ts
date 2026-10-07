@@ -6,7 +6,6 @@ import {
   toRatingPercent,
 } from '@/utils';
 
-/** Path prefix for the Express route that streams managed artwork. */
 /** What a credit reads as when it is missing but its sibling survives. */
 const MISSING_CREDIT = '—';
 

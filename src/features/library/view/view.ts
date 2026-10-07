@@ -6,7 +6,6 @@ import {
   toProgressPercent,
 } from '@/utils';
 
-/** Path prefix for the Express route that streams managed poster images. */
 /**
  * Maps a canonical `Movie` record to the `PosterCardMovie` a `PosterCard`
  * renders. The pure seam between the domain model and the tile: it resolves the

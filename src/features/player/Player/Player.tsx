@@ -45,7 +45,6 @@ interface PlayerProps {
   playable: Playable;
 }
 
-/** Path prefix for the Express route that streams managed poster images. */
 /**
  * The stream a movie's bytes arrive on.
  *

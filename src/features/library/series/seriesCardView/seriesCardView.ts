@@ -1,7 +1,6 @@
 import type { PosterCardMovie, Series } from '@/types';
 import { gradientFromId, imageUrl, toRatingPercent } from '@/utils';
 
-/** Path prefix for the Express route that streams managed poster images. */
 /**
  * Maps a **Series** to the `PosterCardMovie` an unchanged `PosterCard` renders
  * — `view`'s precedent for a movie. Gradient art off the series id when there
