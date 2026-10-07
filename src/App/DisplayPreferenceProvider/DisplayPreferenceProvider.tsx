@@ -7,17 +7,11 @@ import {
 } from 'react';
 
 import { fetchSettings } from '@/api/fetchSettings/fetchSettings';
-import { postValue } from '@/api/postValue/postValue';
 import {
   DisplayPreferenceContext,
   type DisplayPreferenceApi,
 } from '@/App/useDisplayPreference/useDisplayPreference';
-
-/** Where **Ultrawide margins** is written. */
-const ULTRAWIDE_MARGINS_ENDPOINT = '/api/settings/ultrawide-margins';
-
-const isBoolean = (echoed: unknown): echoed is boolean =>
-  typeof echoed === 'boolean';
+import { saveUltrawideMargins } from '@/App/saveUltrawideMargins/saveUltrawideMargins';
 
 /**
  * The household's **Ultrawide margins**, held app-wide so the **Content
@@ -57,7 +51,7 @@ export function DisplayPreferenceProvider({
       setValue(on);
 
       try {
-        setValue(await postValue(ULTRAWIDE_MARGINS_ENDPOINT, on, isBoolean));
+        setValue(await saveUltrawideMargins(on));
       } catch {
         setValue(previous);
       }
