@@ -2,7 +2,6 @@ import { useEnrichmentSummary } from '@/hooks/useEnrichmentSummary/useEnrichment
 import { Button, SyncIcon } from '@/primitives';
 import { enrichPath } from '@/utils';
 
-import { NavigationRow } from '../NavigationRow/NavigationRow';
 import { syncLine } from '../syncLine/syncLine';
 import { useTmdbKey } from '../useTmdbKey/useTmdbKey';
 import { Card, GroupHeading, ItemTitle } from '../section.styles';
@@ -14,6 +13,7 @@ import {
   Lede,
   StatusPill,
   SyncDivider,
+  SyncRow,
   TitleRow,
 } from './NetworkSection.styles';
 
@@ -80,7 +80,7 @@ export function NetworkSection() {
             : 'Get a free key at themoviedb.org → Settings → API.'}
         </KeyHint>
         <SyncDivider />
-        <NavigationRow
+        <SyncRow
           glyph={<SyncIcon size={19} />}
           label="Sync metadata & posters"
           line={summary === null ? '' : syncLine(summary, new Date())}

@@ -3,7 +3,6 @@ import { MicrochipIcon, Toggle } from '@/primitives';
 import { SUBTITLE_LANGUAGES, type FilterOption } from '@/types';
 
 import { codecSummary } from '../codecView/codecView';
-import { NavigationRow } from '../NavigationRow/NavigationRow';
 import { useCapabilities } from '../useCapabilities/useCapabilities';
 import { useSettings } from '../useSettings/useSettings';
 import {
@@ -14,6 +13,7 @@ import {
   ItemTitle,
 } from '../section.styles';
 import {
+  CodecsRow,
   ComingSoon,
   Row,
   RowDesc,
@@ -60,7 +60,7 @@ export function PlaybackSection() {
     <>
       <GroupHeading>Playback</GroupHeading>
       <Card>
-        <NavigationRow
+        <CodecsRow
           glyph={<MicrochipIcon size={19} />}
           label="Codecs"
           line={capabilities === null ? '' : codecSummary(capabilities)}

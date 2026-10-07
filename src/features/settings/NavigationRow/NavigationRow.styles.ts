@@ -1,12 +1,15 @@
 import styled from 'styled-components';
 
-/** The whole row one bare button. */
+/**
+ * The whole row one bare button, at the 4px inset both prototypes share; its
+ * vertical padding is the caller's.
+ */
 export const Row = styled.button`
   display: flex;
   align-items: center;
   gap: 14px;
   width: 100%;
-  padding: 15px 4px 4px;
+  padding: 0 4px;
   text-align: left;
   background: transparent;
   border: none;

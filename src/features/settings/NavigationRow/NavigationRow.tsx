@@ -14,6 +14,8 @@ export interface NavigationRowProps {
   line: string;
   /** Where a press goes, pushed. */
   to: string;
+  /** Set by `styled(NavigationRow)`, which is how a caller places the row. */
+  className?: string;
 }
 
 /**
@@ -23,12 +25,23 @@ export interface NavigationRowProps {
  * _Sync metadata & posters_ row and the Playback group's **Codecs row**),
  * extracted once (log 26 Q14); it stays in `features/settings/` because both
  * callers are Settings groups.
+ *
+ * The row owns what both draw — the 4px inset, the tile, the text, the
+ * chevron — and not where it sits: each caller places it at its own
+ * prototype's vertical padding through `styled(NavigationRow)`, as a screen
+ * places `LoadMessage`.
  */
-export function NavigationRow({ glyph, label, line, to }: NavigationRowProps) {
+export function NavigationRow({
+  glyph,
+  label,
+  line,
+  to,
+  className,
+}: NavigationRowProps) {
   const navigate = useNavigate();
 
   return (
-    <Row type="button" onClick={() => navigate(to)}>
+    <Row type="button" className={className} onClick={() => navigate(to)}>
       <Tile aria-hidden="true">{glyph}</Tile>
       <Text>
         <Label>{label}</Label>

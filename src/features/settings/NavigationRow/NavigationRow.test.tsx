@@ -130,19 +130,32 @@ describe('NavigationRow', () => {
       chevron?.innerHTML
     );
   });
+
+  it('puts a className handed in on the button, where a caller places it', () => {
+    renderRow({ className: 'placed' });
+
+    expect(
+      screen
+        .getByRole('button', { name: /^Codecs/ })
+        .classList.contains('placed')
+    ).toBe(true);
+  });
 });
 
 describe('NavigationRow — the two rows it replaced', () => {
   const read = (path: string) => withoutComments(readFileSync(path, 'utf8'));
 
+  // Each section declares its own `…Row` — a placement, not a copy — so the
+  // guard is on the five inner parts, and on the row being an extension.
   it.each([
-    ['NetworkSection', /\bSync(Row|Tile|Text|Label|Desc|Chevron)\b/],
-    ['PlaybackSection', /\bCodecs(Row|Tile|Text|Label|Desc|Chevron)\b/],
+    ['NetworkSection', /\bSync(Tile|Text|Label|Desc|Chevron)\b/],
+    ['PlaybackSection', /\bCodecs(Tile|Text|Label|Desc|Chevron)\b/],
   ])('%s draws through it, keeping no copy of its styles', (name, copy) => {
     const section = read(`src/features/settings/${name}/${name}.tsx`);
     const styles = read(`src/features/settings/${name}/${name}.styles.ts`);
 
-    expect(section).toMatch(/<NavigationRow\b/);
+    expect(styles).toMatch(/\bstyled\(NavigationRow\)/);
+    expect(styles).not.toMatch(/\bstyled\.button\b/);
     expect(section).not.toMatch(copy);
     expect(styles).not.toMatch(copy);
   });

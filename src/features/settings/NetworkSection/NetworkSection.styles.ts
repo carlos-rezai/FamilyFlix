@@ -1,5 +1,6 @@
 import styled from 'styled-components';
 
+import { NavigationRow } from '../NavigationRow/NavigationRow';
 import { Divider, ItemDesc } from '../section.styles';
 
 /** The watched green's tint and line, the Codec row's _Installed_ pair. */
@@ -82,4 +83,12 @@ export const KeyHint = styled.div`
 /** The hairline above the sync row, at the prototype's own margins. */
 export const SyncDivider = styled(Divider)`
   margin: 20px 0 4px;
+`;
+
+/**
+ * The sync row, placed: `page.SettingsPage.dc.html` draws it at
+ * `15px 4px 4px`, under the divider at the card's end.
+ */
+export const SyncRow = styled(NavigationRow)`
+  padding: 15px 4px 4px;
 `;

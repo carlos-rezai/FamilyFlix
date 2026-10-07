@@ -1,5 +1,12 @@
 import styled from 'styled-components';
 
+import { NavigationRow } from '../NavigationRow/NavigationRow';
+
+/** The **Codecs row**, placed at the top of the Playback card. */
+export const CodecsRow = styled(NavigationRow)`
+  padding: 15px 4px 4px;
+`;
+
 /** The Subtitles half's own header: title and lede, 14px over the first row. */
 export const SubtitlesHeader = styled.div`
   margin-bottom: 14px;
