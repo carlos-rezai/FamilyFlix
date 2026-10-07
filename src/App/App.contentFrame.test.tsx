@@ -21,15 +21,15 @@ import { okResponse } from '@/test-support/fakeResponse/fakeResponse';
 import { stubMediaElement } from '@/test-support/stubMediaElement/stubMediaElement';
 
 /**
- * 27 — Ultrawide margins, Phase 1 (issue #249): the **Content frame** and the
- * route table, through `App` on a `MemoryRouter`.
+ * 27 — Ultrawide margins, Phase 1 (issue #249): the route table's shape,
+ * through `App` on a `MemoryRouter`. The frame's own rule — capped on,
+ * uncapped off or `null` — is `ContentFrame.test.tsx`'s (refactor 252).
  *
  * While **Ultrawide margins** is on, every route but the player's two renders
- * inside one frame capped at the **Content measure** — `max-width: 1920px`
- * with auto side margins. Off, or `null` before the read lands, there is no
- * cap at all. `/movie/:id/play` and `/episode/:id/play` render outside the
- * frame whatever the preference says. Flipping the Toggle on `/settings`
- * re-frames the page at once, with no navigation.
+ * inside one frame capped at the **Content measure**; `/movie/:id/play` and
+ * `/episode/:id/play` render outside it whatever the preference says. The
+ * frame follows the provider's read as it lands, and flipping the Toggle on
+ * `/settings` re-frames the page at once, with no navigation.
  *
  * The frame is found the way a user would meet it — as the box around what is
  * on screen that resolves the measure — not by name or nesting.
@@ -151,21 +151,6 @@ describe('App — the Content frame on a framed route', () => {
     const title = (await screen.findAllByText('Northwind'))[0];
 
     await waitFor(() => expect(framesAround(title)).toHaveLength(1));
-  });
-
-  it('draws no cap while the preference is off', async () => {
-    settingsRead = { subtitleLanguage: 'English', ultrawideMargins: false };
-    renderApp('/settings');
-    // The Toggle is drawn only once the read has landed, so it is the proof
-    // that "off" is the stored value and not a read still on its way.
-    const toggle = await screen.findByRole('switch', {
-      name: 'Ultrawide margins',
-    });
-    expect(toggle.getAttribute('aria-checked')).toBe('false');
-
-    expect(
-      framesAround(screen.getByRole('heading', { name: 'Settings' }))
-    ).toEqual([]);
   });
 
   it('draws no cap while the read has not landed, and the cap once it lands on', async () => {

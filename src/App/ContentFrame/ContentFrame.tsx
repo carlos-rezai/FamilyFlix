@@ -9,8 +9,8 @@ import { Frame } from './ContentFrame.styles';
  * the player's two. It reads **Ultrawide margins** off the app-level provider
  * and caps what the outlet renders at the **Content measure** only while that
  * is `true` — so no layout, page or feature learns the preference exists, and
- * a new screen is framed by default. Its behaviour is asserted through `App`
- * in `App.contentFrame.test.tsx`.
+ * a new screen is framed by default. The route table that decides which
+ * routes are framed is proven through `App` in `App.contentFrame.test.tsx`.
  */
 export function ContentFrame() {
   const { ultrawideMargins } = useDisplayPreference();
