@@ -179,7 +179,7 @@ familyflix/
 │   ├── assets/         # Static images, fonts, icons
 │   ├── styles/         # Global CSS reset and Reduced motion, visuallyHidden; theme.ts, the createTheme(accent) factory spreading the Accent scale; interactionStates/ — controlStates(press), cardLift, cardFocus, and the structural guard in its test
 │   ├── tokens/         # Colors, spacing, typography, breakpoints, motion, layout (the Content measure)
-│   ├── primitives/     # Atomic UI elements (Button, Input, Text, Toggle, the Icon glyphs — the Snackbar's four, the FAB's two and enrichment's five among them) — each with .tsx, .test.tsx, .styles.ts
+│   ├── primitives/     # Atomic UI elements (Button, Input, Text, Toggle, Artwork and the Wordmark, the Icon glyphs — the Snackbar's four, the FAB's two and enrichment's five among them) — each with .tsx, .test.tsx, .styles.ts
 │   ├── components/     # Composed UI blocks (PosterCard, Modal, ProgressBar, CreditsRow, SeasonCard, EpisodeRow) — same three-file shape
 │   │   ├── Modal/          # the scrimmed card every dialog is drawn on; owns its own dismissal and focus; `bare` for a card that is its children alone
 │   │   ├── LogConsole/     # the import's Activity log, pinned to its bottom
@@ -208,8 +208,8 @@ familyflix/
 │   ├── api/             # Wire calls two or more features share (saveFavorite, fetchMovie, saveWatched, dismissProblem, fetchSettings, saveSeriesFavorite, saveEpisodeWatched, fetchEnrichmentSummary, fetchTmdbKey)
 │   ├── hooks/            # Global shared hooks (useGoBack(fallback) — the one Back rule, a history step with the screen's own landing behind it — useRestoredScroll, useOptimisticEdit, and useEnrichmentSummary)
 │   ├── types/            # Shared TypeScript interfaces (import.ts, export.ts, settings.ts, playback.ts, series.ts, enrichment.ts — read by both build targets; shell.ts, the Shell handshake, read by the server and the shell; appVersion.d.ts)
-│   ├── utils/            # Pure helper functions (formatBytes, formatElapsed, formatEpisodeTag, moviePath, enrichPath, seriesPath, seasonPath, episodePlayPath and accentScale among them)
-│   └── test-support/     # Shared test doubles (fakeResponse, makeSeriesDetail, makeEnrichmentRun, stubDownload, stubScrollMetrics, stubScrollTo, comesBefore, snackbarStack, LocationProbe and its navigationType reader, shippingSources, resolvedStyle and normCss, …)
+│   ├── utils/            # Pure helper functions (formatBytes, formatElapsed, formatEpisodeTag, moviePath, enrichPath, seriesPath, seasonPath, episodePlayPath, imageUrl and accentScale among them)
+│   └── test-support/     # Shared test doubles (fakeResponse, makeSeriesDetail, makeContinueCardMovie, makeEnrichmentRun, stubDownload, stubScrollMetrics, stubScrollTo, comesBefore, snackbarStack, LocationProbe and its navigationType reader, shippingSources, resolvedStyle and normCss, …)
 ├── release/            # gitignored: the Installer, and win-unpacked/ — the Packaged layout
 └── docs/
     ├── design-logs/    # Immutable feature design snapshots
@@ -357,8 +357,8 @@ Keep the description short enough to fit on one line — long descriptions get w
 | Software update (check / install)                   | ✅ Done         |
 | Codecs page — the codec list on its own page        | ✅ Done         |
 | Ultrawide margins — side gutters for wide screens   | ✅ Done         |
-| Default poster — a fallback for titles without one  | 🔜 12 — next    |
-| Add a series — the Add form for shows too           | 🔜 13           |
+| Default poster — a fallback for titles without one  | ✅ Done         |
+| Add a series — the Add form for shows too           | 🔜 13 — next    |
 | Library folders — several root folders at once      | 🔜 14           |
 | Export options — where to, and what travels         | 🔜 15           |
 | Collections / playlists                             | 🧭 Roadmap      |
@@ -368,8 +368,8 @@ Keep the description short enough to fit on one line — long descriptions get w
 | User accounts / multi-profile                       | 🚫 Out of scope |
 
 Everything marked ✅ is done — steps 1–9 of the first build order, ending
-with Software update, which shipped as v0.2.0, and steps 10 and 11, the
-Codecs page and Ultrawide margins. Steps 10–15 came out of installing
+with Software update, which shipped as v0.2.0, and steps 10–12, the
+Codecs page, Ultrawide margins and the Default poster. Steps 10–15 came out of installing
 FamilyFlix and using it for real, and are numbered in **build
 order**: smallest and most self-contained first, the form before the folders
 that will feed it, export last because it mirrors what import now holds. Each
@@ -381,10 +381,10 @@ _Change…_ in Settings → Storage is not in the chain — it is the Roadmap's
     sub-page, `/settings/codecs`, opened from the Playback card's Codecs row.
 11. ✅ **Ultrawide margins** — an optional left/right margin on every screen, so
     the library doesn't stretch edge to edge on an ultra-wide monitor.
-12. **Default poster** _(next)_ — a title with no poster linked shows a FamilyFlix
+12. ✅ **Default poster** — a title with no poster linked shows a FamilyFlix
     default poster instead of an empty tile.
-13. **Add a series** — the Add form adds a show, its seasons and its episodes,
-    not only a film.
+13. **Add a series** _(next)_ — the Add form adds a show, its seasons and its
+    episodes, not only a film.
 14. **Library folders** — point FamilyFlix at one or more top folders that
     hold movies, and add everything in them at once.
 15. **Export options** — choose where the export is saved and what it

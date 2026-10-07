@@ -11,6 +11,91 @@ Newest entry first.
 
 ---
 
+## 2026-10-07 — Default poster refactor (issue 259)
+
+Ten commits against `docs/refactor-plans/28-default-poster-refactor.md`, one
+per plan commit, none dropped. **6946 tests pass across 407 files**, from
+6943 across 406 at the end of the build. `tsc -b` is clean, and
+`eslint src server electron .husky` reports no errors and the one warning the
+codecs-page round already logged (`AboutSection.test.tsx`'s escaped dot). No
+commit changed a pixel.
+
+Issue 258, the plan's Phase 5 (_the close_), was folded into this plan when
+it was filed, so the initiative has one refactor issue. The standing rule
+makes the close the refactor's last commit anyway, and its acceptance
+criteria are commit 10's.
+
+### What each group changed
+
+- **Group 0, the record.** The build's own entry, below, written before the
+  round touched anything. It records log 03 Q6's open item as closed.
+- **Group 1, the comments.**
+  - The five `IMAGE_ROUTE` docblocks the build orphaned are gone from `view`,
+    `seriesCardView`, `detailView`, `seriesView` and `Player`, so each
+    declaration under them is documented by its own block again.
+  - `ContinueCardMovie` no longer says the tile carries no artwork.
+  - `EpisodeContinueEntry` names the series' poster.
+  - `PosterCard` names the **Default poster**.
+  - `view`'s `null` resolves to the Default poster.
+  - `Artwork` names the **Poster surfaces** and everything that draws the
+    plain gradient, instead of listing three callers.
+  - The six comment lines the build wrote past 80 columns are rewrapped.
+- **Group 2, the shipping tidies.**
+  - `ContinueCardMovie.posterUrl` sits beside the title, where
+    `PosterCardMovie` has it, and both mappers' literals follow.
+  - `ContinueCard`'s `Art` states only the `center 25%` crop. The cover is
+    `Artwork`'s. The _"covering the tile at center 25%"_ leaf, which reads
+    both properties through `resolvedStyle`, was green before and after.
+- **Group 3, one builder per view model, one guard per rule.**
+  - `makeContinueCardMovie` sits in `test-support/` beside
+    `makePosterCardMovie`, with its suite, and that builder's docblock no
+    longer says the resume tile deliberately has none.
+  - `ContinueCard`, `CardCarousel` and `ContinueRow` build through it. Their
+    local literal, `makeContinueMovie` and `makeMovie` are gone, and every
+    leaf keeps its name.
+  - The `hasArtwork` name guard left `detailView.test.ts` with its
+    `shippingSourcesMatching` import. The `hasPoster` leaves keep the rule,
+    and `tsc -b` keeps the name gone.
+- **Group 4, the docs.**
+  - CLAUDE.md:
+    - the tree names `Artwork/`, `Wordmark/`, `imageUrl/` and
+      `makeContinueCardMovie/`;
+    - the types line says `EpisodeContinueEntry`'s `series` carries
+      `posterPath`;
+    - step 12 is ✅, _(next)_ is on step 13, and _None of 13–15 has a
+      prototype yet_;
+    - the Maintainer tools line _Default poster_ is ✅.
+  - README: the same ✅ and _(next)_, steps 10–12 in the build order's
+    preamble, and `Artwork`, the Wordmark, `imageUrl` and the new builder in
+    its tree.
+  - The glossary and COMPONENT-SPEC were read against the final tree and left
+    alone, as the plan expected.
+
+### Leaves added, removed and moved
+
+Added: `makeContinueCardMovie`'s four:
+
+- _builds every field the tile renders from, none missing_;
+- _builds nothing the view model does not declare_;
+- _builds a posterless film part-way through_;
+- _replaces exactly the field named_.
+
+The plan said three. The key check is two leaves, as in
+`makePosterCardMovie`'s suite.
+
+Removed: _detailView — hasArtwork is gone › is read by no shipping file_.
+
+Restated: the fixtures of `ContinueCard`, `CardCarousel` and `ContinueRow`,
+with no leaf renamed or changed.
+
+Net +3.
+
+### Follow-ups
+
+None. This entry closes 253, 258 and 259.
+
+---
+
 ## 2026-10-07 — Default poster (issues #254–#257)
 
 A title with no **Poster** now draws the **Default poster**: its own

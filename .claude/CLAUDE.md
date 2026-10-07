@@ -220,6 +220,8 @@ familyflix/
 │ ├── primitives/ ← dumb, reusable UI atoms (Button, Input, Text, Icon, Badge)
 │ │ ├── index.ts ← barrel: re-exports every primitive (only barrel at this rung)
 │ │ ├── Icon/ ← one file per glyph on IconBase (DownloadIcon, SheetIcon, CheckIcon, MicrochipIcon, UploadIcon, the Snackbar's four — InfoCircleIcon, CheckCircleIcon, BangTriangleIcon, CrossCircleIcon — the FAB's two — ArrowUpIcon, PlusIcon — and enrichment's five — BangRingIcon, SyncIcon, DatabaseIcon, TableIcon, LandscapeIcon — named for what they draw, …), `currentColor`, sized by the caller
+│ │ ├── Artwork/ ← a title's art over its **Gradient fallback**: the url a background layer over the gradient, so a file that fails to load shows it; a size container; `poster` on a **Poster surface** draws the **Default poster** — the `aria-hidden` Wordmark centred at `11cqmin` — when there is no url
+│ │ ├── Wordmark/ ← _Family_ in the text ink, _Flix_ in the accent, serif 700, sized by its parent's `font-size`: the header's logo, the About card's brand row and the Default poster, each placing it through `styled(Wordmark)`
 │ │ ├── TextField/ ← the boxed input: a glyph slot (the sheet and folder glyphs among them) and `mono` for a path
 │ │ ├── Toggle/ ← the switch: `{ checked, disabled?, onToggle, label }`, `role="switch"`, `aria-disabled` rather than `disabled` so it stays in the tab order
 │ │ └── Button/ ← primary / secondary / ghost / danger, at sm (a list row’s pair) / md / lg
@@ -341,7 +343,7 @@ familyflix/
 │ │ ├── postValue.ts
 │ │ └── postValue.test.ts
 │ ├── hooks/ ← global shared hooks only: `useGoBack(fallback)` — the one **Back rule**, a **History step** with the screen's own **Landing** behind it (the library by default) — `useRestoredScroll`, and `useOptimisticEdit`, the one bargain a detail page's edit keeps, over whatever record the page holds; and `useEnrichmentSummary`, the summary Settings' sync row and the Enrichment setup both draw, `null` until it lands
-│ ├── types/ ← shared TypeScript interfaces (import.ts: ImportRun, ImportProblem, ImportProblemDetail, ImportField; export.ts: EXPORT*FORMATS, EXPORT_COLUMNS, EXPORT_FILENAME, ExportSummary; settings.ts: SUBTITLE_LANGUAGES, SubtitleLanguage, DEFAULT_SUBTITLE_LANGUAGE, DEFAULT_ULTRAWIDE_MARGINS, Settings (`subtitleLanguage`, `ultrawideMargins`), StorageReport; playback.ts: CodecKind, CodecSupport, CodecCapability, ComponentSource, PlaybackComponentInfo, PlaybackCapabilities — both build targets; series.ts: Series, Episode, SeasonSummary, SeriesDetail, EpisodeRead, NextEpisodeRef, EpisodeContinueEntry, SeriesHomePayload, NewSeries, NewEpisode, Playable — both build targets; enrichment.ts: ENRICH_FIELDS, ENRICH_FIELD_LABELS, ENRICH_SCOPES, EnrichField, EnrichScope, EnrichmentSummary, Candidate, Decision, FieldConflict, ConflictChoices, EnrichmentRun, StartEnrichment — both build targets; viewModels.ts carries the series’ SeriesPageModel, SeasonPageModel, SeasonCardSeason and EpisodeRowEpisode beside the movie’s; shell.ts: ServerMessage, ShellCommand — the **Shell handshake**, typed once and read by `server/src/shell/` and `electron/`, in `tsconfig.electron.json` too; appVersion.d.ts: `__APP_VERSION__`, defined by Vite from package.json)
+│ ├── types/ ← shared TypeScript interfaces (import.ts: ImportRun, ImportProblem, ImportProblemDetail, ImportField; export.ts: EXPORT*FORMATS, EXPORT_COLUMNS, EXPORT_FILENAME, ExportSummary; settings.ts: SUBTITLE_LANGUAGES, SubtitleLanguage, DEFAULT_SUBTITLE_LANGUAGE, DEFAULT_ULTRAWIDE_MARGINS, Settings (`subtitleLanguage`, `ultrawideMargins`), StorageReport; playback.ts: CodecKind, CodecSupport, CodecCapability, ComponentSource, PlaybackComponentInfo, PlaybackCapabilities — both build targets; series.ts: Series, Episode, SeasonSummary, SeriesDetail, EpisodeRead, NextEpisodeRef, EpisodeContinueEntry (its `series` carrying `posterPath`, for the Continue card's art), SeriesHomePayload, NewSeries, NewEpisode, Playable — both build targets; enrichment.ts: ENRICH_FIELDS, ENRICH_FIELD_LABELS, ENRICH_SCOPES, EnrichField, EnrichScope, EnrichmentSummary, Candidate, Decision, FieldConflict, ConflictChoices, EnrichmentRun, StartEnrichment — both build targets; viewModels.ts carries the series’ SeriesPageModel, SeasonPageModel, SeasonCardSeason and EpisodeRowEpisode beside the movie’s; shell.ts: ServerMessage, ShellCommand — the **Shell handshake**, typed once and read by `server/src/shell/` and `electron/`, in `tsconfig.electron.json` too; appVersion.d.ts: `__APP_VERSION__`, defined by Vite from package.json)
 │ ├── utils/ ← pure helper functions (one folder per helper + its test)
 │ │ ├── index.ts ← barrel: re-exports every helper
 │ │ ├── formatBytes/ ← 1024-based, one decimal from KB up: `18.4 GB`
@@ -351,11 +353,13 @@ familyflix/
 │ │ ├── enrichPath/ ← the Enrichment flow as a route, `/enrich`, `?scope=all` or `?movie=<id>`, the id encoded: Settings' sync row, Import's \_Finish* and the ⋯ menu's _⟳ Fetch from TMDB_
 │ │ ├── formatElapsed/ ← a run's clock, `m:ss` rounded and never rolling into hours — not `formatClock`, which floors and grows an hour field for playback
 │ │ ├── formatEpisodeTag/ ← the client’s one spelling of the Episode tag: `S02E04`, `S02` or `E04`, two digits a side
+│ │ ├── imageUrl/ ← a **Stored path** → `/api/images/<path>`, `null` in and `null` out: the one spelling of the image route in `src/`, held there by a guard
 │ │ └── gradientFromId/
 │ │ ├── gradientFromId.ts
 │ │ └── gradientFromId.test.ts
 │ └── test-support/ ← test doubles shared across features, never imported by shipping code
 │ ├── fakeResponse/ ← a Response by status; `fileResponse` the one whose caller reads `blob()`, its `json()` rejecting
+│ ├── makeContinueCardMovie/ ← a full `ContinueCardMovie` with overrides, `makePosterCardMovie`'s rule for the resume tile
 │ ├── makeEnrichmentRun/ ← an EnrichmentRun just started, `makeImportRun`'s rule
 │ ├── makeSeriesDetail/ ← a SeriesDetail by its seasons’ watch states, `makeMovie`’s rule; `makeSeries` and `makeEpisode` beside it
 │ ├── comesBefore/ ← document order between two elements, for a slot's contract
@@ -932,10 +936,10 @@ same layout, spacing, states, copy, and interaction.
 
 **Build order — what is left.** The groups below say what the app _is_;
 this says what to build _next_. Steps 1–9 of the first chain are done,
-ending with **Software update** (v0.2.0), and so are steps 10 and 11. Steps 10–15 came out of installing
+ending with **Software update** (v0.2.0), and so are steps 10, 11 and 12. Steps 10–15 came out of installing
 FamilyFlix and using it: smallest and most self-contained first, the form
 before the folders that will feed it, export last because it mirrors what
-import holds. None of 12–15 has a prototype yet — each goes through grill-me and a
+import holds. None of 13–15 has a prototype yet — each goes through grill-me and a
 prototype revision in `docs/handoff/` before it is built, per _The prototype
 is the spec_. `Change…` in the Storage group is not in the chain — it is the
 Roadmap's **Move the media folder** (log 24 Q2).
@@ -945,11 +949,12 @@ Roadmap's **Move the media folder** (log 24 Q2).
 11. ✅ **Ultrawide margins** — an optional left/right margin on every screen,
     a household preference beside the subtitle language, so the library does
     not stretch edge to edge on an ultra-wide monitor.
-12. **Default poster** _(next)_ — a title with no poster linked draws a FamilyFlix
+12. ✅ **Default poster** — a title with no poster linked draws a FamilyFlix
     default poster rather than an empty tile, on every surface a poster
     appears.
-13. **Add a series** — the **Movie form** learns a second kind: a show, its
-    seasons and its episodes, beside the film it adds and edits today.
+13. **Add a series** _(next)_ — the **Movie form** learns a second kind: a
+    show, its seasons and its episodes, beside the film it adds and edits
+    today.
 14. **Library folders** — one or more top folders that hold movies, added
     at once. It needs a real path, so it lives where folder-path autofill
     already does (bulk import's scanner, Electron's native dialog over the
@@ -990,8 +995,8 @@ A 🧭 Roadmap item is not in this chain — it is after it, if ever.
 ### Maintainer tools
 
 - ✅ **Add a movie** — manual file picker (video, poster, multiple subtitles with language).
-- 🔜 **Default poster** _(step 12 — next)_ — a FamilyFlix default poster for any title with none linked.
-- 🔜 **Add a series** _(step 13)_ — the same form adds a show, its seasons and its episodes.
+- ✅ **Default poster** — a FamilyFlix default poster for any title with none linked: its own gradient with the **Wordmark** centred, on every **Poster surface**; and the Continue card draws the title's poster, an episode's its series'.
+- 🔜 **Add a series** _(step 13 — next)_ — the same form adds a show, its seasons and its episodes.
 - 🔜 **Library folders** _(step 14)_ — several top folders of movies, added at once.
 - ✅ **Edit a movie** — amend metadata and files; a file the library already holds travels as its path, only a freshly picked one as bytes.
 - ✅ **Delete a movie** — the ⋯ menu’s Danger row, the Delete dialog, `DELETE /api/movies/:id`, then the Movie folder under best-effort cleanup.
