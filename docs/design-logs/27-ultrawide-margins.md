@@ -2,7 +2,7 @@
 
 > **Initiative:** `ultrawide-margins`
 > **PRD:** `docs/PRDs/27-ultrawide-margins.md` (#248)
-> **Plan:** to follow the PRD
+> **Plan:** `docs/PRDs/27-ultrawide-margins-plan.md`
 
 This log is the `grill-me` session that settled step 11 of the build order
 before the PRD was written. It ran against the prototype and the code as they
