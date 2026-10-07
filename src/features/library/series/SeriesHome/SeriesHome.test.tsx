@@ -345,7 +345,11 @@ type ContinueEntry = SeriesHomePayload['continueWatching'][number];
 
 function makeEntry(
   overrides: Partial<ContinueEntry['episode']> = {},
-  series: ContinueEntry['series'] = { id: 's1', title: 'Harbor & Vine' }
+  series: ContinueEntry['series'] = {
+    id: 's1',
+    title: 'Harbor & Vine',
+    posterPath: null,
+  }
 ): ContinueEntry {
   return {
     series,

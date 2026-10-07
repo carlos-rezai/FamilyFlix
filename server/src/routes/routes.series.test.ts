@@ -767,11 +767,39 @@ describe('GET /api/series — continue watching', () => {
 
     expect(body.continueWatching).toHaveLength(1);
     const [entry] = body.continueWatching;
-    expect(entry.series).toEqual({ id: series.id, title: 'Harbor & Vine' });
+    expect(entry.series).toEqual({
+      id: series.id,
+      title: 'Harbor & Vine',
+      posterPath: null,
+    });
     expect(entry.episode.id).toBe(episodes[1].id);
     expect(entry.episode.season).toBe(1);
     expect(entry.episode.number).toBe(2);
     expect(entry.episode.resumePositionSeconds).toBe(600);
+  });
+
+  it('carries the series’ poster on the entry', async () => {
+    const { storage, baseUrl } = freshApi();
+    const series = storage.addSeries({
+      title: 'Harbor & Vine',
+      posterPath: 'harbor-vine-2019/poster.jpg',
+    });
+    const episode = storage.addEpisode(series.id, {
+      season: 1,
+      number: 1,
+      videoPath: 'harbor-vine-2019/season-01/e1.mp4',
+    });
+    resumeAt(storage, episode.id, 600, '2026-06-01T00:00:00.000Z');
+
+    const { body } = await getSeries(baseUrl);
+
+    expect(body.continueWatching.map((entry) => entry.series)).toEqual([
+      {
+        id: series.id,
+        title: 'Harbor & Vine',
+        posterPath: 'harbor-vine-2019/poster.jpg',
+      },
+    ]);
   });
 
   it('keeps the Movies tab’s Continue row films only', async () => {

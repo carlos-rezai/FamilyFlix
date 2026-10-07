@@ -328,12 +328,38 @@ describe('series browse: the Continue row', () => {
     const [entry, ...rest] = storage.getSeriesHome().continueWatching;
 
     expect(rest).toEqual([]);
-    expect(entry.series).toEqual({ id: series.id, title: 'Harbor & Vine' });
+    expect(entry.series).toEqual({
+      id: series.id,
+      title: 'Harbor & Vine',
+      posterPath: null,
+    });
     expect(entry.episode).toMatchObject({
       id: episodes[1].id,
       season: 1,
       number: 2,
       resumePositionSeconds: 600,
+    });
+  });
+
+  it('carries the series’ poster on the entry, so the card can draw its art', () => {
+    const storage = freshStorage();
+    const series = storage.addSeries({
+      title: 'Harbor & Vine',
+      posterPath: 'harbor-vine-2019/poster.jpg',
+    });
+    const episode = storage.addEpisode(series.id, {
+      season: 1,
+      number: 1,
+      videoPath: 'harbor-vine-2019/season-01/e1.mp4',
+    });
+    resumeAt(storage, episode.id, 600, '2026-06-01T00:00:00.000Z');
+
+    const [entry] = storage.getSeriesHome().continueWatching;
+
+    expect(entry.series).toEqual({
+      id: series.id,
+      title: 'Harbor & Vine',
+      posterPath: 'harbor-vine-2019/poster.jpg',
     });
   });
 

@@ -2,10 +2,14 @@ import { describe, it, expect } from 'vitest';
 
 import { episodeContinueView } from './episodeContinueView';
 import type { EpisodeContinueEntry, Episode } from '@/types';
+import { gradientFromId } from '@/utils';
 
-function makeEntry(overrides: Partial<Episode> = {}): EpisodeContinueEntry {
+function makeEntry(
+  overrides: Partial<Episode> = {},
+  series: Partial<EpisodeContinueEntry['series']> = {}
+): EpisodeContinueEntry {
   return {
-    series: { id: 's1', title: 'Harbor & Vine' },
+    series: { id: 's1', title: 'Harbor & Vine', posterPath: null, ...series },
     episode: {
       id: 'e24',
       seriesId: 's1',
@@ -52,6 +56,25 @@ describe('episodeContinueView — entry → ContinueCardMovie mapper', () => {
         makeEntry({ runtimeMinutes: null, resumePositionSeconds: 300 })
       ).resumeLabel
     ).toBe('Resume · 5:00');
+  });
+
+  it('serves the series’ poster from the image route as its posterUrl', () => {
+    const vm = episodeContinueView(
+      makeEntry({}, { posterPath: 'harbor-vine-2019/poster.jpg' })
+    );
+
+    expect(vm.posterUrl).toBe('/api/images/harbor-vine-2019/poster.jpg');
+  });
+
+  it('gives a null posterUrl to an episode whose series has no poster', () => {
+    expect(episodeContinueView(makeEntry()).posterUrl).toBeNull();
+  });
+
+  it('hashes its gradient from the series id, so it wears its show’s colours', () => {
+    const vm = episodeContinueView(makeEntry({}, { id: 'harbor-vine' }));
+    const { g1, g2 } = gradientFromId('harbor-vine');
+
+    expect([vm.g1, vm.g2]).toEqual([g1, g2]);
   });
 
   it('fills the progress by the position over the runtime', () => {
