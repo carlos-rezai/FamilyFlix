@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, act, fireEvent, within } from '@testing-library/react';
 import { ThemeProvider } from 'styled-components';
 import { MemoryRouter, Route, Routes, Link } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 
 import { SnackbarProvider } from '@/App/SnackbarProvider/SnackbarProvider';
 import {
@@ -16,6 +16,11 @@ import {
   pathname,
 } from '@/test-support/LocationProbe/LocationProbe';
 import { snackbarStack } from '@/test-support/snackbarStack/snackbarStack';
+import {
+  normCss,
+  resolvedStyle,
+} from '@/test-support/resolvedStyle/resolvedStyle';
+import { DisplayPreferenceContext } from '@/App/useDisplayPreference/useDisplayPreference';
 
 /**
  * 18 — Snackbar system, Phase 2: "the tracer bullet" (issue #161).
@@ -684,5 +689,152 @@ describe('SnackbarProvider — above the route table', () => {
     elapse(FIVE_SECONDS);
 
     expect(screen.queryByText('Saved.')).toBeNull();
+  });
+});
+
+/**
+ * 27 — Ultrawide margins, Phase 2 (issue #250): the stack at the frame's
+ * corner.
+ *
+ * The stack reads the same `useDisplayPreference()` the **Content frame**
+ * does. While **Ultrawide margins** is on, its `right` is
+ * `max(s5, (100vw − contentMeasure) / 2 + s5)` — the frame's bottom-right
+ * corner on a window wider than the **Content measure**, the window's own on
+ * a narrower one. Off or `null`, `right` stays `s5`. Nothing else about the
+ * stack moves in any state.
+ *
+ * jsdom drops a `max()` it cannot compute, so the on-state's `right` is read
+ * off the injected stylesheet by `resolvedStyle` — the cascade by hand —
+ * while everything jsdom can compute is read through `getComputedStyle`.
+ */
+describe('SnackbarProvider — Ultrawide margins', () => {
+  const S5 = theme.space.s5;
+  const MEASURE = theme.layout.contentMeasure;
+
+  /** The `max(…)` over the Content measure, in either legal spelling. */
+  const FRAME_CORNER = [
+    normCss(`max(${S5}, calc((100vw - ${MEASURE}) / 2 + ${S5}))`),
+    normCss(`max(${S5}, (100vw - ${MEASURE}) / 2 + ${S5})`),
+  ];
+
+  type Preference = boolean | null;
+
+  /** Flips the preference from outside, as the Settings toggle would. */
+  let setPreference: (value: Preference) => void = () => undefined;
+
+  function PreferenceHarness({
+    initial,
+    children,
+  }: {
+    initial: Preference;
+    children: ReactNode;
+  }) {
+    const [ultrawideMargins, setValue] = useState<Preference>(initial);
+    setPreference = setValue;
+    return (
+      <DisplayPreferenceContext.Provider
+        value={{
+          ultrawideMargins,
+          setUltrawideMargins: async () => undefined,
+        }}
+      >
+        {children}
+      </DisplayPreferenceContext.Provider>
+    );
+  }
+
+  function renderWithPreference(initial: Preference) {
+    return render(
+      <ThemeProvider theme={theme}>
+        <PreferenceHarness initial={initial}>
+          <SnackbarProvider>
+            <Consumer />
+          </SnackbarProvider>
+        </PreferenceHarness>
+      </ThemeProvider>
+    );
+  }
+
+  function flip(value: Preference) {
+    act(() => {
+      setPreference(value);
+    });
+  }
+
+  /** Every computed style of the stack's but `right`. */
+  function everythingButRight() {
+    const drawn = getComputedStyle(stack());
+    return {
+      position: drawn.position,
+      bottom: drawn.bottom,
+      zIndex: drawn.zIndex,
+      display: drawn.display,
+      flexDirection: drawn.flexDirection,
+      gap: drawn.gap,
+      alignItems: drawn.alignItems,
+      pointerEvents: drawn.pointerEvents,
+    };
+  }
+
+  const UNCHANGED = {
+    position: 'fixed',
+    bottom: '24px',
+    zIndex: '200',
+    display: 'flex',
+    flexDirection: 'column-reverse',
+    gap: '12px',
+    alignItems: 'flex-end',
+    pointerEvents: 'none',
+  };
+
+  it('keeps right at s5 with the preference off', () => {
+    renderWithPreference(false);
+
+    expect(getComputedStyle(stack()).right).toBe(S5);
+    expect(resolvedStyle(stack()).right).toBe(S5);
+  });
+
+  it('keeps right at s5 while the preference is null, before the read lands', () => {
+    renderWithPreference(null);
+
+    expect(getComputedStyle(stack()).right).toBe(S5);
+    expect(resolvedStyle(stack()).right).toBe(S5);
+  });
+
+  it('sets right to the max() over the Content measure with the preference on', () => {
+    renderWithPreference(true);
+
+    expect(FRAME_CORNER).toContain(resolvedStyle(stack()).right);
+  });
+
+  it('changes nothing else about the stack, off, null or on', () => {
+    renderWithPreference(false);
+    expect(everythingButRight()).toEqual(UNCHANGED);
+
+    flip(null);
+    expect(everythingButRight()).toEqual(UNCHANGED);
+
+    flip(true);
+    expect(everythingButRight()).toEqual(UNCHANGED);
+    expect(FRAME_CORNER).toContain(resolvedStyle(stack()).right);
+  });
+
+  it('moves the stack when the preference flips with a notice up, without remounting it', () => {
+    renderWithPreference(false);
+    raise(SAVED);
+    const card = cardSaying('Saved.');
+    const before = stack();
+
+    flip(true);
+
+    expect(FRAME_CORNER).toContain(resolvedStyle(stack()).right);
+    expect(cardSaying('Saved.')).toBe(card);
+    expect(stack()).toBe(before);
+
+    flip(false);
+
+    expect(resolvedStyle(stack()).right).toBe(S5);
+    expect(getComputedStyle(stack()).right).toBe(S5);
+    expect(cardSaying('Saved.')).toBe(card);
   });
 });
