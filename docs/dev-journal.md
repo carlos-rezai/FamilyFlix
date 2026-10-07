@@ -11,6 +11,93 @@ Newest entry first.
 
 ---
 
+## 2026-10-07 — Default poster (issues #254–#257)
+
+A title with no **Poster** now draws the **Default poster**: its own
+**Gradient fallback** with the FamilyFlix **Wordmark** centred in it, scaled
+to the tile, plus the caption the surface already drew. It is drawn in CSS and
+never stored, so `poster_path` stays `NULL`, a **Sync** still fetches one,
+and no **Write target** writes it out. It appears on the **Poster surfaces**
+alone: the Poster card, both detail poster frames and the **Continue card**.
+The same initiative put real artwork on the Continue card, which **closes log
+03 Q6's open item**, flagged then as a prototype amendment for later. The
+prototype amendments (`mol.PosterCard`, `mol.ContinueCard`, `page.MoviePage`,
+`page.SeriesPage` and COMPONENT-SPEC's Default poster note) rode in #254's
+`feat:` commit, as the plan said. They set the mark's numbers: `11cqmin`,
+`opacity: .9` and the title overlay's `0 1px 8px rgba(0,0,0,.55)` shadow.
+
+Eight commits across issues #254–#257 — four RED/GREEN pairs — against the
+plan on #253, built from `docs/design-logs/28-default-poster.md`. **6943 tests
+pass across 406 files**, measured at `0ed5279`.
+
+### What shipped, slice by slice
+
+- **#254, the Default poster on the card.**
+  - _The `Wordmark` primitive._ _Family_ in the text ink, _Flix_ in the
+    accent, serif 700, sized by its parent's `font-size`. `MainLayout`'s
+    `Logo` and `AboutSection`'s brand row draw it through `styled(Wordmark)`
+    at their own 25px and 18px, and neither looks any different.
+  - _`Artwork`._ It gained `poster`. With no url, `poster` draws the
+    `aria-hidden` Wordmark centred. `Artwork` is a size container, so the
+    mark is `11cqmin` of whatever frame it is in. A url is now a background
+    layer **over** the gradient for every caller, backdrops included, so a
+    file that fails to load shows the gradient rather than a hole.
+  - _`PosterCard`_ passes `poster`, on the Movies tab and the Series tab
+    alike.
+- **#255, the detail pages.** `hasArtwork` became `hasPoster`
+  (`posterPath !== null`) in `detailView` and `seriesView`, and both poster
+  frames pass `poster`. A title with a backdrop and no poster now gets a
+  captioned Default poster in front of its backdrop.
+- **#256, the movie's Continue card.** `imageUrl` in `utils/` replaced the
+  six local `IMAGE_ROUTE` copies, and a guard holds the route to that one
+  file. `ContinueCardMovie` gained `posterUrl`, which `continueView` fills.
+  The `ContinueCard` draws it through its own `styled(Artwork)`, cropped
+  `center 25%` under the existing scrim.
+- **#257, the episode's Continue card.** The series browse read's Continue
+  query selects `s.poster_path`, and `EpisodeContinueEntry.series` carries
+  `posterPath`. `episodeContinueView` fills `posterUrl` from it and hashes
+  its gradient from the **series** id, so the card wears its show's colours.
+
+### Judgement calls the log did not name
+
+Each was made by a subagent reading one issue, and each is the refactor
+round's to settle (`docs/refactor-plans/28-default-poster-refactor.md`):
+
+- **Five docblocks orphaned.** The `IMAGE_ROUTE` constants went, but five of
+  their docblocks stayed, each now sitting over a different declaration's.
+- **`posterUrl` appended.** It sits after `progress` in `ContinueCardMovie`,
+  where `PosterCardMovie` has it beside the title.
+- **`Art` restates `background-size: cover`**, which `Artwork`'s `Root`
+  already declares for every caller.
+- **Three local `ContinueCardMovie` literals extended.** Each suite gained
+  `posterUrl: null` rather than sharing a builder, though
+  `makePosterCardMovie`'s own rule now calls for one.
+- **A `hasArtwork` name guard.** `detailView.test.ts` walks the shipping tree
+  for the retired name, which `tsc -b` already refuses.
+- **The About card's size leaves read the mark.** jsdom doesn't cascade
+  inherited properties into `getComputedStyle`, so the 18px is read on the
+  word's parent, where it is set. Kept.
+- **The Wordmark's gap is the caller's.** It is 2px in the header and 1px in
+  the About card, as each drew it before, set through `styled(Wordmark)`.
+  Kept.
+
+### Deliberately not built
+
+Everything log 28 _Not built_ lists:
+
+- art on the Season card, the episode thumbnails or the Up next card;
+- a Wordmark on a backdrop or behind the player;
+- an `<img>` with `onError`;
+- a generated or stored Default poster;
+- the backdrop or the Still as Continue art.
+
+### Follow-ups
+
+The refactor plan, filed as 259, with the plan's Phase 5, filed as 258,
+folded into it.
+
+---
+
 ## 2026-10-07 — Ultrawide margins refactor (issue 252)
 
 Eleven commits against `docs/refactor-plans/27-ultrawide-margins-refactor.md`,
