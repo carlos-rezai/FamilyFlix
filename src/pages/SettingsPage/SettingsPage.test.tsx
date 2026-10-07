@@ -9,6 +9,7 @@ import { theme } from '@/styles/theme';
 import { comesBefore } from '@/test-support/comesBefore/comesBefore';
 import { okResponse } from '@/test-support/fakeResponse/fakeResponse';
 import { SnackbarProvider } from '@/App/SnackbarProvider/SnackbarProvider';
+import { DisplayPreferenceProvider } from '@/App/DisplayPreferenceProvider/DisplayPreferenceProvider';
 
 /** The **Codec report** the Playback card reads on mount. */
 const REPORT: PlaybackCapabilities = {
@@ -24,7 +25,10 @@ const REPORT: PlaybackCapabilities = {
 };
 
 /** The household's settings the Playback card's Subtitles half reads. */
-const SETTINGS: Settings = { subtitleLanguage: 'English' };
+const SETTINGS: Settings = {
+  subtitleLanguage: 'English',
+  ultrawideMargins: false,
+};
 
 /** The **Storage report** the Storage card reads on mount. */
 const STORAGE: StorageReport = {
@@ -68,9 +72,11 @@ function renderPage() {
   return render(
     <MemoryRouter initialEntries={['/settings']}>
       <ThemeProvider theme={theme}>
-        <SnackbarProvider>
-          <SettingsPage />
-        </SnackbarProvider>
+        <DisplayPreferenceProvider>
+          <SnackbarProvider>
+            <SettingsPage />
+          </SnackbarProvider>
+        </DisplayPreferenceProvider>
       </ThemeProvider>
     </MemoryRouter>
   );
@@ -208,12 +214,19 @@ describe('SettingsPage', () => {
     ).toBe(true);
   });
 
-  it('shows LIBRARY, PLAYBACK, NETWORK, STORAGE, ABOUT in order', () => {
+  it('shows LIBRARY, PLAYBACK, DISPLAY, NETWORK, STORAGE, ABOUT in order', () => {
+    // 27 — Ultrawide margins, Phase 1 (issue #249): the Display group joins
+    // between Playback and Network.
     renderPage();
 
-    const headings = ['Library', 'Playback', 'Network', 'Storage', 'About'].map(
-      (name) => screen.getByText(name)
-    );
+    const headings = [
+      'Library',
+      'Playback',
+      'Display',
+      'Network',
+      'Storage',
+      'About',
+    ].map((name) => screen.getByText(name));
     for (const heading of headings) {
       expect(getComputedStyle(heading).textTransform).toBe('uppercase');
     }
@@ -258,7 +271,7 @@ describe('SettingsPage', () => {
     expect(screen.getByText('Offline · local-only · no account')).toBeDefined();
   });
 
-  it('composes the six sections and nothing else', async () => {
+  it('composes the seven sections and nothing else', async () => {
     renderPage();
 
     // No Change… on the Storage card, and no Software update row: neither
@@ -279,10 +292,11 @@ describe('SettingsPage', () => {
       ).toBeDefined()
     );
     expect(screen.getAllByRole('button')).toHaveLength(9);
-    // Five Group headings, and only five.
+    // Six Group headings, and only six — Display joined in log 27.
     const groupHeadings = [
       'Library',
       'Playback',
+      'Display',
       'Network',
       'Storage',
       'About',

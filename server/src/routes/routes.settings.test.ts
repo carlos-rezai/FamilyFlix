@@ -373,6 +373,7 @@ describe('GET /api/settings', () => {
 
     expect(await readSettings(baseUrl)).toEqual({
       subtitleLanguage: DEFAULT_SUBTITLE_LANGUAGE,
+      ultrawideMargins: false,
     });
     expect(DEFAULT_SUBTITLE_LANGUAGE).toBe('English');
   });
@@ -381,7 +382,10 @@ describe('GET /api/settings', () => {
     const { storage, baseUrl } = freshApi();
     storage.setSubtitleLanguage('French');
 
-    expect(await readSettings(baseUrl)).toEqual({ subtitleLanguage: 'French' });
+    expect(await readSettings(baseUrl)).toEqual({
+      subtitleLanguage: 'French',
+      ultrawideMargins: false,
+    });
   });
 });
 
@@ -404,6 +408,7 @@ describe('POST /api/settings/subtitle-language', () => {
     expect(storage.settings().subtitleLanguage).toBe('Spanish');
     expect(await readSettings(baseUrl)).toEqual({
       subtitleLanguage: 'Spanish',
+      ultrawideMargins: false,
     });
   });
 
@@ -414,7 +419,10 @@ describe('POST /api/settings/subtitle-language', () => {
     const response = await postSubtitleLanguage(baseUrl, { value: 'German' });
 
     expect(response.status).toBe(200);
-    expect(await readSettings(baseUrl)).toEqual({ subtitleLanguage: 'German' });
+    expect(await readSettings(baseUrl)).toEqual({
+      subtitleLanguage: 'German',
+      ultrawideMargins: false,
+    });
   });
 
   it('takes the value already held as a harmless 200', async () => {
@@ -427,6 +435,7 @@ describe('POST /api/settings/subtitle-language', () => {
     expect(await response.json()).toEqual({ value: 'Spanish' });
     expect(await readSettings(baseUrl)).toEqual({
       subtitleLanguage: 'Spanish',
+      ultrawideMargins: false,
     });
   });
 
@@ -439,6 +448,7 @@ describe('POST /api/settings/subtitle-language', () => {
     expect(await response.json()).toEqual({ value: 'Japanese' });
     expect(await readSettings(baseUrl)).toEqual({
       subtitleLanguage: 'Japanese',
+      ultrawideMargins: false,
     });
   });
 
@@ -461,6 +471,120 @@ describe('POST /api/settings/subtitle-language', () => {
     expect((payload.error as string).length).toBeGreaterThan(0);
     expect(storage.settings().subtitleLanguage).toBe('French');
   });
+});
+
+// 27 — Ultrawide margins, Phase 1 (issue #249): the household's second
+// preference on the same pair. `GET /api/settings` is widened by the
+// repository alone; `POST /api/settings/ultrawide-margins { value: boolean }`
+// is a **Single-signal write** answering `200 { value }`, and anything but a
+// boolean — a missing body or value, the string "true", 1, null — is a `400`
+// with a sentence that leaves the stored value as it was.
+
+/** The write, with whatever body the test wants on the wire. */
+const postUltrawideMargins = (baseUrl: string, body: unknown) =>
+  fetch(`${baseUrl}/api/settings/ultrawide-margins`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+
+/** The write with no body on the wire at all. */
+const postUltrawideMarginsBare = (baseUrl: string) =>
+  fetch(`${baseUrl}/api/settings/ultrawide-margins`, { method: 'POST' });
+
+describe('GET /api/settings — ultrawideMargins', () => {
+  it('answers false when no row is stored', async () => {
+    const { baseUrl } = freshApi();
+
+    expect((await readSettings(baseUrl)).ultrawideMargins).toBe(false);
+  });
+
+  it('answers the stored value when the row is there', async () => {
+    const { storage, baseUrl } = freshApi();
+    storage.setUltrawideMargins(true);
+
+    expect(await readSettings(baseUrl)).toEqual({
+      subtitleLanguage: DEFAULT_SUBTITLE_LANGUAGE,
+      ultrawideMargins: true,
+    });
+  });
+});
+
+describe('POST /api/settings/ultrawide-margins', () => {
+  it.each([true, false])('echoes %s as JSON', async (value) => {
+    const { baseUrl } = freshApi();
+
+    const response = await postUltrawideMargins(baseUrl, { value });
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get('content-type')).toContain('application/json');
+    expect(await response.json()).toEqual({ value });
+  });
+
+  it('shows true on the next GET', async () => {
+    const { baseUrl } = freshApi();
+
+    await postUltrawideMargins(baseUrl, { value: true });
+
+    expect((await readSettings(baseUrl)).ultrawideMargins).toBe(true);
+  });
+
+  it('shows false on the next GET after true', async () => {
+    const { baseUrl } = freshApi();
+    await postUltrawideMargins(baseUrl, { value: true });
+
+    await postUltrawideMargins(baseUrl, { value: false });
+
+    expect((await readSettings(baseUrl)).ultrawideMargins).toBe(false);
+  });
+
+  it('leaves the subtitle language as it was', async () => {
+    const { storage, baseUrl } = freshApi();
+    storage.setSubtitleLanguage('French');
+
+    await postUltrawideMargins(baseUrl, { value: true });
+
+    expect(await readSettings(baseUrl)).toEqual({
+      subtitleLanguage: 'French',
+      ultrawideMargins: true,
+    });
+  });
+
+  it('answers 400 with an error for a missing body, storing nothing', async () => {
+    const { storage, baseUrl } = freshApi();
+    storage.setUltrawideMargins(true);
+
+    const response = await postUltrawideMarginsBare(baseUrl);
+
+    expect(response.status).toBe(400);
+    const payload = (await response.json()) as { error: unknown };
+    expect(typeof payload.error).toBe('string');
+    expect((payload.error as string).length).toBeGreaterThan(0);
+    expect(storage.settings().ultrawideMargins).toBe(true);
+  });
+
+  // Each seeded with the value a loose reading of the body would coerce it
+  // away from, so a write that slipped through cannot pass as "unchanged".
+  it.each([
+    ['a missing value', {}, true],
+    ['the string "true"', { value: 'true' }, false],
+    ['the number 1', { value: 1 }, false],
+    ['a null', { value: null }, true],
+  ])(
+    'answers 400 with an error for %s, storing nothing',
+    async (_, body, stored) => {
+      const { storage, baseUrl } = freshApi();
+      storage.setUltrawideMargins(stored);
+
+      const response = await postUltrawideMargins(baseUrl, body);
+
+      expect(response.status).toBe(400);
+      const payload = (await response.json()) as { error: unknown };
+      expect(typeof payload.error).toBe('string');
+      expect((payload.error as string).length).toBeGreaterThan(0);
+      expect(storage.settings().ultrawideMargins).toBe(stored);
+    }
+  );
 });
 
 // --- the storage report ----------------------------------------------------------

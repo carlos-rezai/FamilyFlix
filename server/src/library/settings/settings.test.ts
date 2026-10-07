@@ -21,7 +21,13 @@ import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { createSqliteStorage } from '..';
-import { DEFAULT_SUBTITLE_LANGUAGE, type Settings } from '@/types';
+import { openDatabase, type SqliteDatabase } from '../../db';
+import { createSettings } from './settings';
+import {
+  DEFAULT_SUBTITLE_LANGUAGE,
+  DEFAULT_ULTRAWIDE_MARGINS,
+  type Settings,
+} from '@/types';
 import {
   closeTracked,
   freshStorage,
@@ -51,7 +57,10 @@ describe('library: settings() — the default applied', () => {
   it('answers English on a fresh database', () => {
     const storage = freshStorage();
 
-    expect(storage.settings()).toEqual({ subtitleLanguage: 'English' });
+    expect(storage.settings()).toEqual({
+      subtitleLanguage: 'English',
+      ultrawideMargins: false,
+    });
   });
 
   it('answers the shared default, and nothing the caller has to know', () => {
@@ -59,7 +68,10 @@ describe('library: settings() — the default applied', () => {
     const settings: Settings = storage.settings();
 
     expect(settings.subtitleLanguage).toBe(DEFAULT_SUBTITLE_LANGUAGE);
-    expect(Object.keys(settings)).toEqual(['subtitleLanguage']);
+    expect(Object.keys(settings)).toEqual([
+      'subtitleLanguage',
+      'ultrawideMargins',
+    ]);
   });
 
   it('answers the same default however many times it is asked', () => {
@@ -77,7 +89,10 @@ describe('library: setSubtitleLanguage — the upsert', () => {
 
     storage.setSubtitleLanguage('Spanish');
 
-    expect(storage.settings()).toEqual({ subtitleLanguage: 'Spanish' });
+    expect(storage.settings()).toEqual({
+      subtitleLanguage: 'Spanish',
+      ultrawideMargins: false,
+    });
   });
 
   it('replaces the language already held rather than refusing the key', () => {
@@ -124,7 +139,10 @@ describe('library: setSubtitleLanguage — the upsert', () => {
 
     const second = track(createSqliteStorage(path));
 
-    expect(second.settings()).toEqual({ subtitleLanguage: 'Portuguese' });
+    expect(second.settings()).toEqual({
+      subtitleLanguage: 'Portuguese',
+      ultrawideMargins: false,
+    });
   });
 });
 
@@ -165,7 +183,10 @@ describe('library: tmdbKey / setTmdbKey — the TMDB key', () => {
 
     storage.setTmdbKey('0123456789abcdef0123456789abcdef');
 
-    expect(storage.settings()).toEqual({ subtitleLanguage: 'French' });
+    expect(storage.settings()).toEqual({
+      subtitleLanguage: 'French',
+      ultrawideMargins: false,
+    });
   });
 
   it('is untouched by a subtitle language write', () => {
@@ -223,7 +244,10 @@ describe('library: enrichmentLastSyncedAt — when the library last synced', () 
 
     storage.setEnrichmentLastSyncedAt('2026-09-26T12:00:00.000Z');
 
-    expect(storage.settings()).toEqual({ subtitleLanguage: 'French' });
+    expect(storage.settings()).toEqual({
+      subtitleLanguage: 'French',
+      ultrawideMargins: false,
+    });
     expect(storage.tmdbKey()).toBe('kept-key');
   });
 });
@@ -264,7 +288,10 @@ describe('library: libraryRoot / setLibraryRoot — the remembered root', () => 
 
     storage.setLibraryRoot(String.raw`E:\Movies`);
 
-    expect(storage.settings()).toEqual({ subtitleLanguage: 'French' });
+    expect(storage.settings()).toEqual({
+      subtitleLanguage: 'French',
+      ultrawideMargins: false,
+    });
     expect(storage.tmdbKey()).toBe('kept-key');
   });
 
@@ -277,5 +304,105 @@ describe('library: libraryRoot / setLibraryRoot — the remembered root', () => 
     const second = track(createSqliteStorage(path));
 
     expect(second.libraryRoot()).toBe(String.raw`E:\Movies`);
+  });
+});
+
+// 27 — Ultrawide margins, Phase 1 (issue #249): the household's second
+// preference, `ultrawide-margins` in the same `settings` table, stored as
+// `'1'` / `'0'`. `settings()` answers it with the default — off — applied when
+// the row is absent, and does not write that default down; `setUltrawideMargins`
+// is an upsert through the same pair the subtitle language uses. Driven through
+// `createSettings` over a raw migrated handle, so the table itself can be asked
+// whether a read wrote anything.
+describe('library: ultrawideMargins / setUltrawideMargins — the frame preference', () => {
+  /** A migrated in-memory handle and the repository over it. */
+  function repositoryOverRawDb() {
+    const db = track(openDatabase(':memory:'));
+    return { db, repository: createSettings(db) };
+  }
+
+  /** How many rows the settings table holds under `key`. */
+  function rowsUnder(db: SqliteDatabase, key: string): number {
+    return (
+      db
+        .prepare('SELECT COUNT(*) AS count FROM settings WHERE key = ?')
+        .get(key) as { count: number }
+    ).count;
+  }
+
+  it('answers false on a fresh database — the shared default', () => {
+    const storage = freshStorage();
+
+    expect(storage.settings().ultrawideMargins).toBe(false);
+    expect(DEFAULT_ULTRAWIDE_MARGINS).toBe(false);
+  });
+
+  it('does not write the default down when it is read', () => {
+    const { db, repository } = repositoryOverRawDb();
+
+    expect(repository.settings().ultrawideMargins).toBe(false);
+    expect(repository.settings().ultrawideMargins).toBe(false);
+
+    expect(rowsUnder(db, 'ultrawide-margins')).toBe(0);
+  });
+
+  it('stores true and reads it back', () => {
+    const storage = freshStorage();
+
+    storage.setUltrawideMargins(true);
+
+    expect(storage.settings().ultrawideMargins).toBe(true);
+  });
+
+  it('round-trips true then false', () => {
+    const storage = freshStorage();
+    storage.setUltrawideMargins(true);
+
+    storage.setUltrawideMargins(false);
+
+    expect(storage.settings().ultrawideMargins).toBe(false);
+  });
+
+  it('upserts a repeated write rather than failing on the key', () => {
+    const { db, repository } = repositoryOverRawDb();
+    repository.setUltrawideMargins(true);
+
+    expect(() => repository.setUltrawideMargins(true)).not.toThrow();
+    expect(repository.settings().ultrawideMargins).toBe(true);
+    expect(rowsUnder(db, 'ultrawide-margins')).toBe(1);
+  });
+
+  it('leaves the subtitle language untouched by either write', () => {
+    const storage = freshStorage();
+    storage.setSubtitleLanguage('French');
+
+    storage.setUltrawideMargins(true);
+    expect(storage.settings().subtitleLanguage).toBe('French');
+
+    storage.setUltrawideMargins(false);
+    expect(storage.settings().subtitleLanguage).toBe('French');
+  });
+
+  it('is untouched by a subtitle language write', () => {
+    const storage = freshStorage();
+    storage.setUltrawideMargins(true);
+
+    storage.setSubtitleLanguage('German');
+
+    expect(storage.settings()).toEqual({
+      subtitleLanguage: 'German',
+      ultrawideMargins: true,
+    });
+  });
+
+  it('survives closing and reopening the database — it is in the backup', () => {
+    const path = tempDbPath();
+    const first = track(createSqliteStorage(path));
+    first.setUltrawideMargins(true);
+    first.close();
+
+    const second = track(createSqliteStorage(path));
+
+    expect(second.settings().ultrawideMargins).toBe(true);
   });
 });
