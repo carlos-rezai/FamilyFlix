@@ -476,6 +476,21 @@ describe('CodecManager — once the report lands', () => {
     );
     expect(screen.getAllByText(/Built-in|Installed|Default/)).toHaveLength(6);
   });
+
+  it('keeps the group gap under the Playback component card and none under Formats', async () => {
+    fetchMock.mockResolvedValue(okResponse(WITH_COMPONENT));
+    renderManager();
+
+    await waitFor(() => expect(summary()).not.toBeNull());
+
+    // The Formats heading sits between the two Section cards; the last on the
+    // page carries no gap, as the About card on Settings carries none.
+    const formats = screen.getByText('Formats');
+    const componentCard = formats.previousElementSibling as HTMLElement;
+    const formatsCard = formats.nextElementSibling as HTMLElement;
+    expect(getComputedStyle(componentCard).marginBottom).toBe('32px');
+    expect(getComputedStyle(formatsCard).marginBottom).toBe('0px');
+  });
 });
 
 /** The report after the swap: the pair is the maintainer's, and it adds more. */

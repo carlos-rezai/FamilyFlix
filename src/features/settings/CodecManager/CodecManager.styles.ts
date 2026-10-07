@@ -13,12 +13,15 @@ export { GroupHeading } from '../section.styles';
 /**
  * One group's **Section card**, its contents stacked the prototype's 14px
  * apart: the Component row over the zone, or the summary over the rows.
+ *
+ * `Card` already sets the 32px group gap; `$last` states only the override,
+ * on `AboutCard`'s reason — the last card on the page carries no group gap.
  */
 export const GroupCard = styled(Card)<{ $last?: boolean }>`
   display: flex;
   flex-direction: column;
   gap: 14px;
-  margin-bottom: ${({ $last }) => ($last ? '0' : '32px')};
+  ${({ $last }) => ($last ? 'margin-bottom: 0;' : '')}
 `;
 
 /** The **Codec summary**, 13px in the faint ink. */
