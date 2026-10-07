@@ -11,6 +11,90 @@ Newest entry first.
 
 ---
 
+## 2026-10-07 — Ultrawide margins refactor (issue 252)
+
+Eleven commits against `docs/refactor-plans/27-ultrawide-margins-refactor.md`,
+one per plan commit, none dropped. **6901 tests pass across 404 files**, from
+6891 across 402 at the end of the build. `tsc -b` is clean, and
+`eslint src server electron .husky` reports no errors and the one warning the
+codecs-page round already logged (`AboutSection.test.tsx:295`). No commit
+changed a pixel.
+
+### What each group changed
+
+- **Group 0, the record.** The build's own entry, below, written before the
+  round touched anything.
+- **Group 1, the shipping tidies.** `SettingsPage`'s docblock rewrapped, no
+  word changed; `App`'s route paragraph rewrapped and now naming the season
+  page and the **Codecs page**, two framed routes it never listed. The
+  stack's `right` is one declaration whose value `$framed` chooses, the
+  conditional `css` block and its import gone — the five _Ultrawide margins_
+  stack leaves green before and after.
+- **Group 2, the wire call as a unit.** `saveUltrawideMargins` in `App/`
+  beside its one caller, over `postValue` with `isMarginsEcho`, after
+  `saveSubtitleLanguage`; then the provider calling it, its endpoint
+  constant, `isBoolean` and `postValue` import gone, its twelve leaves
+  unchanged.
+- **Group 3, one holder per preference.** `useSettings` holds
+  `subtitleLanguage: string | null` rather than the whole `Settings`, so the
+  Settings page no longer keeps a second copy of **Ultrawide margins** that
+  never updates (log 27 Q13). `PlaybackSection` reads the field; its suite
+  passed unchanged. `tsc -b` found no other caller.
+- **Group 4, one suite per thing it proves.** `ContentFrame.test.tsx`, the
+  frame on a `MemoryRouter` with the context handed in directly — no fetch,
+  no provider; `App.contentFrame.test.tsx` keeps the route table's shape. The
+  Settings page's Network leaf checks the order it is named for.
+- **Group 5, the docs.** The glossary's **Network group** sits between
+  Display and Storage. CLAUDE.md: six groups and the widened read and the new
+  route in _Settings Hub_; `App/`'s six units, `layout.ts`, `theme.ts`
+  mounting `layout`, `DisplaySection/`, the row furniture, `useSettings/`
+  holding the language alone, the server's `setUltrawideMargins()`, and the
+  types line; step 11 ✅ and _(next)_ on step 12. README: the same ✅ and
+  _(next)_, the hub's row counting six groups, and its tree's new units.
+  COMPONENT-SPEC was read against the final tree and left alone.
+
+### Leaves added, removed, moved and restated
+
+Added: `saveUltrawideMargins`'s six — _POSTs the new value as JSON to the
+ultrawide-margins route_, _sends false … rather than a second route_,
+_answers with the value the route says it stored_, _falls back to the
+requested value when the route echoes nothing usable_ (the string `"true"`
+among them), _throws when the save does not succeed_, _throws when the
+request itself cannot be made_; `ContentFrame`'s _caps its outlet at 1920px
+with auto side margins while the preference is on_, _draws no cap while the
+preference is null_ and _renders the child route inside it_; `useSettings`'
+_keeps the subtitle language alone, not the rest of the settings_. Moved:
+_draws no cap while the preference is off_, from the App suite to
+`ContentFrame`'s. Restated: every `useSettings` leaf against
+`subtitleLanguage`, names kept but _hands over the settings once they land_,
+now _the subtitle language once it lands_, and the `ultrawideMargins: false`
+padding gone from its expectations. Renamed: _composes the Network section
+between Display and Storage_, comparing the _Ultrawide margins_ row rather
+than _Preferred language_. Net +10.
+
+### Where the round met the plan's words and differed
+
+- **No _Setting row_ term.** The plan named `section.styles.ts`'s rows the
+  **Setting row** furniture; the glossary has no such term, so CLAUDE.md and
+  README call them the row furniture, and name `Row`, `RowTitle` and
+  `RowDesc`.
+- **The Network leaf's heading comparison moved too.** Besides the
+  _Preferred language_ row, its _Playback_ heading comparison became
+  _Display_, so both checks name the neighbour the leaf is titled for.
+
+### 251, merged
+
+The plan's Phase 3, filed as 251, was folded into this round: the standing
+rule already makes the close the refactor's last commits, so one issue closes
+the initiative rather than two touching the same files.
+
+### Surfaced
+
+Nothing new. The `no-useless-escape` warning above is still the codecs-page
+round's, outside this plan.
+
+---
+
 ## 2026-10-07 — Ultrawide margins (issues #249–#250)
 
 **Ultrawide margins** is a household preference beside the subtitle
