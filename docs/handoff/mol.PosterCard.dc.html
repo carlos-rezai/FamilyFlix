@@ -21,7 +21,14 @@
           style-hover="transform:translateY(-4px);box-shadow:0 14px 34px rgba(0,0,0,.5);border-color:var(--color-accent-line)"
           style-active="transform:translateY(-1px);transition-duration:70ms"
         >
-          <div style="{{ gradientStyle }}"></div>
+          <div style="{{ gradientStyle }}">
+            <sc-if value="{{ noPoster }}" hint-placeholder-val="{{ true }}"
+              ><span aria-hidden="true" style="{{ wordmarkStyle }}"
+                ><span style="{{ wordFamily }}">Family</span
+                ><span style="{{ wordFlix }}">Flix</span></span
+              ></sc-if
+            >
+          </div>
           <div style="{{ innerBorder }}"></div>
           <button
             onClick="{{ onFav }}"
@@ -52,7 +59,9 @@
                 ></path></svg
             ></sc-if>
           </button>
-          <div style="{{ titleOverlay }}">{{ title }}</div>
+          <sc-if value="{{ noPoster }}" hint-placeholder-val="{{ true }}"
+            ><div style="{{ titleOverlay }}">{{ title }}</div></sc-if
+          >
           <sc-if value="{{ watched }}" hint-placeholder-val="{{ false }}"
             ><div style="{{ badgeWrap }}">
               <dc-import
@@ -88,7 +97,7 @@
     <script
       type="text/x-dc"
       data-dc-script
-      data-props='{"$preview":{"width":210,"height":360},"movie":{"editor":null,"default":{"title":"Comet Season","g1":"#1f2a3a","g2":"#3a6a8a","rating":80,"watched":false,"progress":64,"favorite":false},"tsType":"PosterCardMovie"},"onOpen":{"editor":null,"tsType":"() =&gt; void"},"onToggleFav":{"editor":null,"tsType":"() =&gt; void"}}'
+      data-props='{"$preview":{"width":210,"height":360},"movie":{"editor":null,"default":{"title":"Comet Season","g1":"#1f2a3a","g2":"#3a6a8a","rating":80,"watched":false,"progress":64,"favorite":false,"posterUrl":null},"tsType":"PosterCardMovie"},"onOpen":{"editor":null,"tsType":"() =&gt; void"},"onToggleFav":{"editor":null,"tsType":"() =&gt; void"}}'
     >
       class Component extends DCLogic {
         renderVals(){
@@ -97,15 +106,25 @@
           const watched=m.watched??false;
           const progress=Math.max(0,Math.min(100,m.progress??0));
           const inProgress=!watched && progress>0;
+          // The Default poster: no posterUrl draws the gradient with the
+          // Wordmark centred on both axes, at 11% of the tile's shorter side
+          // (11cqmin — about 23px here), 90% opaque, under the title
+          // overlay's own shadow. A posterUrl is a layer over the gradient,
+          // so an image that fails to load shows the gradient.
+          const posterUrl=m.posterUrl??null;
+          const gradient=`linear-gradient(155deg, ${m.g1||'#2a241f'} 0%, ${m.g2||'#7a5a34'} 100%)`;
           return {
             onOpen:this.props.onOpen,
             onFav:(e)=>{ if(e&&e.stopPropagation)e.stopPropagation(); this.props.onToggleFav&&this.props.onToggleFav(); },
             title:m.title??'Untitled', rating:m.rating??0,
-            favorite:fav, notFavorite:!fav, watched, inProgress, progress,
+            favorite:fav, notFavorite:!fav, watched, inProgress, progress, noPoster:!posterUrl,
             rootStyle:{width:'100%',cursor:'pointer'},
             posterStyle:{position:'relative',width:'100%',aspectRatio:'2 / 3',borderRadius:'var(--poster-radius)',overflow:'hidden',border:'1px solid var(--color-border-soft)',boxShadow:'0 6px 20px rgba(0,0,0,.35)',transition:'transform var(--dur-base) var(--ease-out), box-shadow var(--dur-base) var(--ease-out), border-color var(--dur-base) var(--ease-out)'},
             posterHover:{transform:'translateY(-4px)',boxShadow:'0 14px 34px rgba(0,0,0,.5)',borderColor:'var(--color-accent-line)'},
-            gradientStyle:{position:'absolute',inset:0,background:`linear-gradient(155deg, ${m.g1||'#2a241f'} 0%, ${m.g2||'#7a5a34'} 100%)`},
+            gradientStyle:{position:'absolute',inset:0,containerType:'size',display:'grid',placeItems:'center',backgroundImage:posterUrl?`url(${posterUrl}), ${gradient}`:gradient,backgroundPosition:'center',backgroundSize:'cover',backgroundRepeat:'no-repeat'},
+            wordmarkStyle:{display:'inline-flex',alignItems:'baseline',fontSize:'11cqmin',lineHeight:1,opacity:.9,textShadow:'0 1px 8px rgba(0,0,0,.55)'},
+            wordFamily:{fontFamily:'var(--font-serif)',fontWeight:700,color:'var(--color-text)'},
+            wordFlix:{fontFamily:'var(--font-serif)',fontWeight:700,color:'var(--color-accent)'},
             innerBorder:{position:'absolute',inset:0,border:'1px solid rgba(255,255,255,.08)',borderRadius:'var(--poster-radius)',pointerEvents:'none'},
             favBtnStyle:{position:'absolute',top:'10px',left:'10px',width:'34px',height:'34px',borderRadius:'999px',border:'1px solid rgba(255,255,255,.22)',background:'rgba(18,14,10,.5)',backdropFilter:'blur(4px)',transition:'background var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out)',display:'grid',placeItems:'center',cursor:'pointer',padding:0,zIndex:3},
             favHover:{background:'rgba(18,14,10,.82)'},

@@ -1,5 +1,7 @@
 import styled from 'styled-components';
 
+import { Wordmark } from '@/primitives';
+
 import { Card } from '../section.styles';
 
 /**
@@ -27,24 +29,10 @@ export const BrandRow = styled.div`
   padding: 16px 20px;
 `;
 
-/** **Family** run straight into **Flix**, on one baseline. */
-export const Brand = styled.div`
-  display: flex;
-  align-items: baseline;
+/** The brand's **Wordmark** at 18px, 1px between the words. */
+export const Brand = styled(Wordmark)`
   gap: 1px;
-`;
-
-/** The brand's serif at 18px bold; `Family` in the text ink. */
-export const Family = styled.span`
-  font-family: ${({ theme }) => theme.fonts.serif};
   font-size: 18px;
-  font-weight: 700;
-  color: ${({ theme }) => theme.colors.text};
-`;
-
-/** The same serif; `Flix` in the accent. */
-export const Flix = styled(Family)`
-  color: ${({ theme }) => theme.colors.accent};
 `;
 
 /** The **App version**, mono at 13px in the faint ink, beside the brand. */

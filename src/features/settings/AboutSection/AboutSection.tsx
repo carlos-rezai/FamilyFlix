@@ -4,8 +4,6 @@ import {
   AboutCard,
   Brand,
   BrandRow,
-  Family,
-  Flix,
   Tagline,
   Version,
 } from './AboutSection.styles';
@@ -31,10 +29,7 @@ export function AboutSection() {
       <AboutCard>
         <SoftwareUpdateRow />
         <BrandRow>
-          <Brand>
-            <Family>Family</Family>
-            <Flix>Flix</Flix>
-          </Brand>
+          <Brand />
           <Version>{__APP_VERSION__}</Version>
           <Tagline>Offline · local-only · no account</Tagline>
         </BrandRow>

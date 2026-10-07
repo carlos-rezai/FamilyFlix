@@ -8,6 +8,7 @@ export { StatusBadge, type StatusBadgeProps } from './StatusBadge/StatusBadge';
 export { ProgressBar, type ProgressBarProps } from './ProgressBar/ProgressBar';
 export { Skeleton, type SkeletonProps } from './Skeleton/Skeleton';
 export { Artwork, type ArtworkProps } from './Artwork/Artwork';
+export { Wordmark, type WordmarkProps } from './Wordmark/Wordmark';
 export { TextField, type TextFieldProps } from './TextField/TextField';
 export { Textarea, type TextareaProps } from './Textarea/Textarea';
 export { FilePicker, type FilePickerProps } from './FilePicker/FilePicker';

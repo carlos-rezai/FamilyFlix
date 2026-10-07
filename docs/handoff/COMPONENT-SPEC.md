@@ -315,18 +315,40 @@ Target: `components/PosterCard/` · composes StarRating + StatusBadge + Progress
 favorite toggle. The library's primary tile.
 | Prop | Type | Notes |
 | --- | --- | --- |
-| `movie` | `{ title, g1, g2, rating, watched, progress, favorite }` | `g1/g2` = poster gradient stops (placeholder art; swap for real `posterUrl`) |
+| `movie` | `{ title, g1, g2, rating, watched, progress, favorite, posterUrl }` | `g1/g2` = poster gradient stops; `posterUrl` (or `null`) a layer over them — none draws the **Default poster** |
 | `onOpen` | () => void | navigate to detail |
 | `onToggleFav` | () => void | stops propagation internally |
 
 States: hover (lift −4px + deeper shadow + accent-line border, §2a), press (settles to −1px),
 focus-visible (offset outline on the card root), watched (badge), in-progress (bottom bar),
-favorite (filled heart; the heart button has its own scale hover/press).
+favorite (filled heart; the heart button has its own scale hover/press), no poster (the
+**Default poster** with the title overlay; a poster url draws neither).
+
+### Default poster
+
+A title with no poster draws the **Default poster**: its own `gradientFromId` gradient with
+the FamilyFlix **Wordmark** centred on both axes, plus whatever caption the surface already
+draws. Drawn in CSS, never stored, exported or written back.
+
+- **Where it appears:** every poster frame — the Poster card (`mol.PosterCard`), the Continue
+  card (`mol.ContinueCard`, the movie's poster or an episode's series poster), and the poster
+  frame of `page.MoviePage` and `page.SeriesPage`.
+- **Where it doesn't:** the detail backdrops, the player's art layer, the Season card,
+  `EpisodeRow`, `UpNextCard` and the Enrichment candidates — each keeps the plain gradient.
+- **The Wordmark:** `Family` in `--color-text`, `Flix` in `--color-accent`, serif 700, the
+  header's markup. On the tile it is `11cqmin` (11% of the frame's shorter side — the frame is
+  a size container), `opacity: .9`, `text-shadow: 0 1px 8px rgba(0,0,0,.55)` (the title
+  overlay's), and `aria-hidden` — the surface's own name stands alone.
+- **The layered url:** a poster or backdrop url is a background layer **over** the gradient,
+  never in place of it, so an image that fails to load shows the gradient with no script.
+  The Continue card anchors its layer at `center 25%`.
 
 ### ContinueCard — `mol.ContinueCard.dc.html`
 
 Target: `components/ContinueCard/` · wide 16:10 resume tile.
-Props: `movie { title, g1, g2, resumeLabel, progress }`, `onOpen`.
+Props: `movie { title, g1, g2, resumeLabel, progress, posterUrl }`, `onOpen`. `posterUrl`
+is drawn at `cover`, anchored `center 25%`, over the gradient; none draws the **Default
+poster** under the existing scrim.
 
 ### SearchBar — `mol.SearchBar.dc.html`
 

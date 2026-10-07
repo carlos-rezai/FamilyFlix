@@ -100,7 +100,7 @@ export function PosterCard({
       onKeyDown={handleOpenKey}
     >
       <Poster>
-        <Artwork url={movie.posterUrl} g1={movie.g1} g2={movie.g2} />
+        <Artwork url={movie.posterUrl} poster g1={movie.g1} g2={movie.g2} />
         <InnerBorder />
         <FavoriteButton
           label="Favorite"

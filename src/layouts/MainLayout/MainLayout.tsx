@@ -8,8 +8,7 @@ import {
   Root,
   Header,
   Logo,
-  LogoWord,
-  LogoAccent,
+  LogoMark,
   Spacer,
   Body,
 } from './MainLayout.styles';
@@ -59,8 +58,7 @@ export function MainLayout({
     <Root>
       <Header>
         <Logo type="button" onClick={() => navigate('/')}>
-          <LogoWord>Family</LogoWord>
-          <LogoAccent>Flix</LogoAccent>
+          <LogoMark />
         </Logo>
         {headerStart}
         <Spacer />

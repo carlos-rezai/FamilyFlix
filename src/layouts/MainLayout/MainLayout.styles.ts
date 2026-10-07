@@ -1,5 +1,7 @@
 import styled from 'styled-components';
 
+import { Wordmark } from '@/primitives';
+
 import {
   Body as ChromeBody,
   Header as ChromeHeader,
@@ -27,16 +29,11 @@ export const Logo = styled.button`
   user-select: none;
 `;
 
-export const LogoWord = styled.span`
-  font-family: ${({ theme }) => theme.fonts.serif};
-  font-weight: 700;
+/** The header's **Wordmark**: 25px, a hair of tracking, 2px between the words. */
+export const LogoMark = styled(Wordmark)`
+  gap: 2px;
   font-size: 25px;
   letter-spacing: 0.3px;
-  color: ${({ theme }) => theme.colors.text};
-`;
-
-export const LogoAccent = styled(LogoWord)`
-  color: ${({ theme }) => theme.colors.accent};
 `;
 
 export { Spacer } from '../chrome.styles';

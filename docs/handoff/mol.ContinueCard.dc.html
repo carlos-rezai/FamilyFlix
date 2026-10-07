@@ -16,7 +16,14 @@
           style-hover="transform:translateY(-4px);box-shadow:0 14px 34px rgba(0,0,0,.5);border-color:var(--color-accent-line)"
           style-active="transform:translateY(-1px);transition-duration:70ms"
         >
-          <div style="{{ gradientStyle }}"></div>
+          <div style="{{ gradientStyle }}">
+            <sc-if value="{{ noPoster }}" hint-placeholder-val="{{ true }}"
+              ><span aria-hidden="true" style="{{ wordmarkStyle }}"
+                ><span style="{{ wordFamily }}">Family</span
+                ><span style="{{ wordFlix }}">Flix</span></span
+              ></sc-if
+            >
+          </div>
           <div style="{{ scrimStyle }}"></div>
           <div style="{{ textWrap }}">
             <div style="{{ titleStyle }}">{{ title }}</div>
@@ -36,18 +43,27 @@
     <script
       type="text/x-dc"
       data-dc-script
-      data-props='{"$preview":{"width":330,"height":220},"movie":{"editor":null,"tsType":"ContinueCardMovie"},"onOpen":{"editor":null,"tsType":"() =&gt; void"}}'
+      data-props='{"$preview":{"width":330,"height":220},"movie":{"editor":null,"default":{"title":"Comet Season","g1":"#1f2a3a","g2":"#3a6a8a","resumeLabel":"Resume · 1:13 of 1:55","progress":64,"posterUrl":null},"tsType":"ContinueCardMovie"},"onOpen":{"editor":null,"tsType":"() =&gt; void"}}'
     >
       class Component extends DCLogic {
         renderVals(){
           const m=this.props.movie||{title:'Comet Season',g1:'#1f2a3a',g2:'#3a6a8a',resumeLabel:'Resume · 1:13 of 1:55',progress:64};
           const progress=Math.max(0,Math.min(100,m.progress??0));
+          // posterUrl: the movie's poster, or for an episode its series'.
+          // A layer over the gradient at cover, anchored center 25% so a 2:3
+          // poster in this 16:10 frame keeps its faces; none draws the Default
+          // poster — the centred Wordmark, mol.PosterCard's numbers.
+          const posterUrl=m.posterUrl??null;
+          const gradient=`linear-gradient(155deg, ${m.g1||'#1f2a3a'} 0%, ${m.g2||'#3a6a8a'} 100%)`;
           return {
-            onOpen:this.props.onOpen, title:m.title, resumeLabel:m.resumeLabel,
+            onOpen:this.props.onOpen, title:m.title, resumeLabel:m.resumeLabel, noPoster:!posterUrl,
             rootStyle:{width:'100%',cursor:'pointer'},
             posterHover:{transform:'translateY(-4px)',boxShadow:'0 14px 34px rgba(0,0,0,.5)',borderColor:'var(--color-accent-line)'},
             posterStyle:{position:'relative',width:'100%',aspectRatio:'16 / 10',borderRadius:'var(--poster-radius)',overflow:'hidden',border:'1px solid var(--color-border-soft)',boxShadow:'0 6px 20px rgba(0,0,0,.35)',transition:'transform var(--dur-base) var(--ease-out), box-shadow var(--dur-base) var(--ease-out), border-color var(--dur-base) var(--ease-out)'},
-            gradientStyle:{position:'absolute',inset:0,background:`linear-gradient(155deg, ${m.g1||'#1f2a3a'} 0%, ${m.g2||'#3a6a8a'} 100%)`},
+            gradientStyle:{position:'absolute',inset:0,containerType:'size',display:'grid',placeItems:'center',backgroundImage:posterUrl?`url(${posterUrl}), ${gradient}`:gradient,backgroundPosition:'center 25%',backgroundSize:'cover',backgroundRepeat:'no-repeat'},
+            wordmarkStyle:{display:'inline-flex',alignItems:'baseline',fontSize:'11cqmin',lineHeight:1,opacity:.9,textShadow:'0 1px 8px rgba(0,0,0,.55)'},
+            wordFamily:{fontFamily:'var(--font-serif)',fontWeight:700,color:'var(--color-text)'},
+            wordFlix:{fontFamily:'var(--font-serif)',fontWeight:700,color:'var(--color-accent)'},
             scrimStyle:{position:'absolute',inset:0,background:'linear-gradient(180deg,rgba(0,0,0,0) 35%,rgba(0,0,0,.78) 100%)'},
             textWrap:{position:'absolute',left:'16px',right:'16px',bottom:'14px'},
             titleStyle:{fontFamily:'var(--font-serif)',fontWeight:600,fontSize:'18px',color:'#fff',textShadow:'0 1px 6px rgba(0,0,0,.6)'},

@@ -38,6 +38,21 @@ function renderSection() {
 
 const TAGLINE = 'Offline · local-only · no account';
 
+/**
+ * The size a word is drawn at. Since issue #254 the brand row draws the
+ * **Wordmark**, which takes its size from its parent's `font-size` — so 18px
+ * is set on the mark and inherited by each word. jsdom does not cascade
+ * inherited properties into `getComputedStyle`, so the size is read where it is
+ * set: on the word's parent, the mark.
+ */
+function sizeOf(word: HTMLElement): string {
+  const mark = word.parentElement;
+  if (mark === null) {
+    throw new Error(`${word.textContent ?? ''} has no mark around it`);
+  }
+  return getComputedStyle(mark).fontSize;
+}
+
 /** `package.json`'s `version`, read off disk — what the build bakes in. */
 const packageVersion = (): string =>
   (JSON.parse(readFileSync('package.json', 'utf8')) as { version: string })
@@ -63,7 +78,7 @@ describe('AboutSection — the heading and the brand', () => {
 
     const style = getComputedStyle(screen.getByText('Family'));
     expect(style.fontFamily).toContain('Source Serif 4');
-    expect(style.fontSize).toBe('18px');
+    expect(sizeOf(screen.getByText('Family'))).toBe('18px');
     expect(style.fontWeight).toBe('700');
     expect(style.color).toBe('rgb(243, 236, 224)');
   });
@@ -73,7 +88,7 @@ describe('AboutSection — the heading and the brand', () => {
 
     const style = getComputedStyle(screen.getByText('Flix'));
     expect(style.fontFamily).toContain('Source Serif 4');
-    expect(style.fontSize).toBe('18px');
+    expect(sizeOf(screen.getByText('Flix'))).toBe('18px');
     expect(style.fontWeight).toBe('700');
     expect(style.color).toBe('rgb(217, 122, 78)');
   });
