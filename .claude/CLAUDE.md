@@ -136,7 +136,7 @@ familyflix/
 │ │ ├── loopbackGuard/ ← the **Loopback guard**: mounted first, standalone included, `403` for a Host or Origin that is not a **Trusted host**; `bind(port)` once `listen` has resolved
 │ │ └── rendererRouter/ ← `mountRenderer`: the built renderer beside `/api` under `RENDERER_CSP` and `index.html` for any other GET, `/api` passed on before the policy is set; nothing mounted when `FAMILYFLIX_RENDERER_PATH` is unset
 │ ├── library/ ← movie CRUD, SQLite queries, watch-state + resume-position logic
-│ │ ├── settings/ ← the household's Settings: `settings()` with the default applied when the row is absent, `setSubtitleLanguage()` as an upsert; and three keys beside the preferences, never among them — `tmdb-api-key`, `enrichment-last-synced-at`, `library-root` — every one read through one `valueOf(key)`
+│ │ ├── settings/ ← the household's Settings: `settings()` with the default applied when the row is absent, `setSubtitleLanguage()` and `setUltrawideMargins()` as upserts over the two preference keys, `subtitle-language` and `ultrawide-margins`; and three keys beside the preferences, never among them — `tmdb-api-key`, `enrichment-last-synced-at`, `library-root` — every one read through one `valueOf(key)`
 │ │ ├── enrich/ ← a Sync's film writes: `enrichMovie` (the columns named, only those), `moviesInScope`, `enrichmentCounts` over both kinds, `setSourceFolder` / `sourceFolder` over one id space; the **Full details** rule spelled once as `fullDetails`
 │ │ └── series/ ← series storage, one unit per concern as the movie's is, each with its own suite: `read` (the series page, the player's episode read, the episode list), `browse` (the Series tab and its genres), `write` (the two inserts), `watch` (the resume write, the episode and season marks), `curation` (the heart), `enrich` (a Sync's series and episode writes and `seriesInScope`), and `nextEpisodeOf`, pure
 │ ├── media/ ← folder scanning, file copy into managed storage, subtitle detection, the Movie folder’s removal after a Delete
@@ -198,19 +198,24 @@ familyflix/
 │ ├── seriesFixture/ ← the importer’s series fixture copied under a sandbox → { root, sheet }
 │ └── libraryFixture/ ← the importer’s fixture copied under a sandbox → { root, sheet }
 ├── src/
-│ ├── App/ ← the router and the app-level providers every page renders inside; `App.tsx` stays flat here (log 18 Q16), and the two units below are imported by path, no barrel
-│ │ ├── SnackbarProvider/ ← the Snackbar stack: the queue, the ids off a counter, one timer per plain notice, the fixed bottom-right `column-reverse` column (newest nearest the corner, `pointer-events: none` with each card's wrapper taking them back, always mounted, no portal, no cap, no dedupe), and the action that takes its own notice off first and then runs
+│ ├── App/ ← the router and the app-level providers every page renders inside; `App.tsx` stays flat here (log 18 Q16), and its six units are imported by path, no barrel
+│ │ ├── DisplayPreferenceProvider/ ← the household's **Ultrawide margins**, held app-wide outside the Snackbar stack: one `fetchSettings` on mount (**Blank until it lands**), and a setter shown at once, posted, the echo kept, put back on refusal, never rejecting
+│ │ ├── useDisplayPreference/ ← the context, `useDisplayPreference()` → `{ ultrawideMargins, setUltrawideMargins }`, throwing outside the provider, naming itself; the stack reads the context directly, so a suite without the provider reads as off
+│ │ ├── saveUltrawideMargins/ ← the one write, `POST /api/settings/ultrawide-margins` over `postValue`; one caller, so beside it rather than in `src/api/`
+│ │ ├── ContentFrame/ ← the **Content frame**: the layout route's element around every route but the player's two, capped at the **Content measure** with auto side margins while the preference is `true`, nothing while `false` or `null`
+│ │ ├── SnackbarProvider/ ← the Snackbar stack: the queue, the ids off a counter, one timer per plain notice, the fixed bottom-right `column-reverse` column (newest nearest the corner, `pointer-events: none` with each card's wrapper taking them back, always mounted, no portal, no cap, no dedupe), and the action that takes its own notice off first and then runs; `right` follows the Content frame's corner while Ultrawide margins is on
 │ │ └── useSnackbar/ ← the context, `useSnackbar()` → `{ notify, dismiss }` (throwing outside the provider, naming itself), and `SnackbarNotice` — `{ variant, title?, message, action? }`; no `duration`, no `dismissible`: an action persists, everything else dies at 5s
 │ ├── assets/ ← images, fonts, icons (static)
 │ ├── styles/ ← global CSS reset (and the one **Reduced motion** block), themes, and visuallyHidden.ts — the clip that hides an input without taking it out of the tab order
-│ │ ├── theme.ts ← the factory: `createTheme(accent = colors.accent)` spreads the **Accent scale** over `colors` and mounts `motion`; `theme = createTheme()`
+│ │ ├── theme.ts ← the factory: `createTheme(accent = colors.accent)` spreads the **Accent scale** over `colors` and mounts `motion` and `layout`; `theme = createTheme()`
 │ │ └── interactionStates/ ← the **Interaction contract** as three fragments: `controlStates(press)` — the transition, the **Press** at doubled rank in 60ms, the 3px **Focus ring** — and `cardLift` (tile) and `cardFocus` (root) for a **Card**; its test carries the structural guard: no shipping file but `tokens/motion.ts` spells a duration or the curve, none but the fragment a press
-│ ├── tokens/ ← colors, spacing, typography, breakpoints, motion
+│ ├── tokens/ ← colors, spacing, typography, breakpoints, motion, layout
 │ │ ├── colors.ts ← one accent; its five derivatives are the theme factory's
 │ │ ├── spacing.ts
 │ │ ├── typography.ts
 │ │ ├── breakpoints.ts
 │ │ ├── motion.ts ← `durFast` 120ms, `durBase` 180ms, `durSlow` 280ms, `easeOut` — the only file that spells them
+│ │ ├── layout.ts ← `contentMeasure` 1920px, the **Content measure** — widths the page is held to, not the `breakpoints` it responds at
 │ │ └── index.ts
 │ ├── primitives/ ← dumb, reusable UI atoms (Button, Input, Text, Icon, Badge)
 │ │ ├── index.ts ← barrel: re-exports every primitive (only barrel at this rung)
@@ -301,12 +306,13 @@ familyflix/
 │ │ │ ├── useExport/ ← csv and idle on every open, the summary fetched fresh; exportLibrary fetches the file, hands it to saveToComputer, then done. A close mid-request drops the redraw, not the file
 │ │ │ ├── saveToComputer/ ← a blob → the browser’s Downloads under a filename: an object URL on an anchor carrying `download`, clicked, revoked. A DOM side effect, so a feature unit rather than a util
 │ │ │ └── api/ ← startImport, fetchCurrentImport, cancelImport, fetchExportSummary, fetchExportFile (one caller each)
-│ │ ├── settings/ ← the Maintainer’s hub: five Settings groups under one header
-│ │ │ ├── section.styles.ts ← the furniture every Settings group draws with: the Group heading, the Section card (with the 32px group gap under it), the divider, an item’s title and lede
+│ │ ├── settings/ ← the Maintainer’s hub: six Settings groups under one header
+│ │ │ ├── section.styles.ts ← the furniture every Settings group draws with: the Group heading, the Section card (with the 32px group gap under it), the divider, an item’s title and lede, and the row furniture — `Row`, `RowTitle`, `RowDesc` — the Playback and Display groups both draw
 │ │ │ ├── SettingsHeader/ ← Back, the heading, ＋ Add a movie
 │ │ │ ├── LibrarySection/ ← the Library group: Add a movie and Import from spreadsheet owning their routes, and Export to CSV owning the Export dialog it mounts — the one place a section composes another feature’s organism
 │ │ │ ├── ActionRow/ ← one glyph + label + description row of the Library group
 │ │ │ ├── PlaybackSection/ ← the Playback card: the Codecs row — the Codec summary as its line, pushing `/settings/codecs` — the divider, Subtitles — the Auto-on toggle under its Coming soon pill, and Preferred language over FilterDropdown, shown at once and put back on refusal
+│ │ │ ├── DisplaySection/ ← the Display card: the _Ultrawide margins_ row and its Toggle, reading and writing through `useDisplayPreference()`
 │ │ │ ├── NavigationRow/ ← one Settings row that goes somewhere: a button whose accent tile holds a glyph, then a label, its line and a chevron, pushing its destination — the Codecs row and _Sync metadata & posters_, written twice and extracted once, kept here because both callers are Settings groups; placed by its caller through `styled(NavigationRow)`, `LoadMessage`'s precedent
 │ │ │ ├── CodecManager/ ← the Codecs page's screen: owns useCapabilities and its own maintainer header (Back onto Settings, **Codecs**, the lede), then the Playback component group — the Component row, then the drop zone — then the Formats group, the Codec summary over one CodecRow per catalogued codec; the ✕ passed only when the report says the component is removable
 │ │ │ ├── CodecRow/ ← one template for both kinds of row: the tile, the name, the Container chips, the size (— on a codec, a weight on the Component row), the Status pill (Built-in / Installed / Default / Uploaded), and either the RemoveButton primitive or the 32px where it would sit
@@ -320,7 +326,7 @@ familyflix/
 │ │ │ ├── AboutSection/ ← the About card: the brand row, the App version in mono, the tagline, under the Software update row; the last card, so no group gap
 │ │ │ ├── useCapabilities/ ← the read on mount, plus the two writes that change it: `{ capabilities, upload, installComponent, removeComponent }`. Neither write rejects, and neither re-fetches — both routes echo the report after the write, and that echo is the redraw
 │ │ │ ├── useStorageReport/ ← one fetch on mount, `null` until it lands and `null` still if it never does — nothing drawn while so
-│ │ │ ├── useSettings/ ← the read half the same; `chooseSubtitleLanguage` flips the pill first and puts it back if the save refuses, never rejecting
+│ │ │ ├── useSettings/ ← the read half the same, holding the **Preferred subtitle language** alone — Ultrawide margins is `DisplayPreferenceProvider`'s; `chooseSubtitleLanguage` flips the pill first and puts it back if the save refuses, never rejecting
 │ │ │ └── api/ ← fetchCapabilities, installComponent, removeComponent (both rejecting with ComponentRefusedError carrying the route's own words), saveSubtitleLanguage, saveTmdbKey (never rejecting: saved, refused or unreachable), fetchStorageReport (one caller each)
 │ │ └── collections/ ← playlists/collections (roadmap, not MVP)
 │ ├── layouts/ ← page chrome
@@ -335,7 +341,7 @@ familyflix/
 │ │ ├── postValue.ts
 │ │ └── postValue.test.ts
 │ ├── hooks/ ← global shared hooks only: `useGoBack(fallback)` — the one **Back rule**, a **History step** with the screen's own **Landing** behind it (the library by default) — `useRestoredScroll`, and `useOptimisticEdit`, the one bargain a detail page's edit keeps, over whatever record the page holds; and `useEnrichmentSummary`, the summary Settings' sync row and the Enrichment setup both draw, `null` until it lands
-│ ├── types/ ← shared TypeScript interfaces (import.ts: ImportRun, ImportProblem, ImportProblemDetail, ImportField; export.ts: EXPORT*FORMATS, EXPORT_COLUMNS, EXPORT_FILENAME, ExportSummary; settings.ts: SUBTITLE_LANGUAGES, SubtitleLanguage, DEFAULT_SUBTITLE_LANGUAGE, Settings, StorageReport; playback.ts: CodecKind, CodecSupport, CodecCapability, ComponentSource, PlaybackComponentInfo, PlaybackCapabilities — both build targets; series.ts: Series, Episode, SeasonSummary, SeriesDetail, EpisodeRead, NextEpisodeRef, EpisodeContinueEntry, SeriesHomePayload, NewSeries, NewEpisode, Playable — both build targets; enrichment.ts: ENRICH_FIELDS, ENRICH_FIELD_LABELS, ENRICH_SCOPES, EnrichField, EnrichScope, EnrichmentSummary, Candidate, Decision, FieldConflict, ConflictChoices, EnrichmentRun, StartEnrichment — both build targets; viewModels.ts carries the series’ SeriesPageModel, SeasonPageModel, SeasonCardSeason and EpisodeRowEpisode beside the movie’s; shell.ts: ServerMessage, ShellCommand — the **Shell handshake**, typed once and read by `server/src/shell/` and `electron/`, in `tsconfig.electron.json` too; appVersion.d.ts: `__APP_VERSION__`, defined by Vite from package.json)
+│ ├── types/ ← shared TypeScript interfaces (import.ts: ImportRun, ImportProblem, ImportProblemDetail, ImportField; export.ts: EXPORT*FORMATS, EXPORT_COLUMNS, EXPORT_FILENAME, ExportSummary; settings.ts: SUBTITLE_LANGUAGES, SubtitleLanguage, DEFAULT_SUBTITLE_LANGUAGE, DEFAULT_ULTRAWIDE_MARGINS, Settings (`subtitleLanguage`, `ultrawideMargins`), StorageReport; playback.ts: CodecKind, CodecSupport, CodecCapability, ComponentSource, PlaybackComponentInfo, PlaybackCapabilities — both build targets; series.ts: Series, Episode, SeasonSummary, SeriesDetail, EpisodeRead, NextEpisodeRef, EpisodeContinueEntry, SeriesHomePayload, NewSeries, NewEpisode, Playable — both build targets; enrichment.ts: ENRICH_FIELDS, ENRICH_FIELD_LABELS, ENRICH_SCOPES, EnrichField, EnrichScope, EnrichmentSummary, Candidate, Decision, FieldConflict, ConflictChoices, EnrichmentRun, StartEnrichment — both build targets; viewModels.ts carries the series’ SeriesPageModel, SeasonPageModel, SeasonCardSeason and EpisodeRowEpisode beside the movie’s; shell.ts: ServerMessage, ShellCommand — the **Shell handshake**, typed once and read by `server/src/shell/` and `electron/`, in `tsconfig.electron.json` too; appVersion.d.ts: `__APP_VERSION__`, defined by Vite from package.json)
 │ ├── utils/ ← pure helper functions (one folder per helper + its test)
 │ │ ├── index.ts ← barrel: re-exports every helper
 │ │ ├── formatBytes/ ← 1024-based, one decimal from KB up: `18.4 GB`
@@ -595,10 +601,10 @@ progress indicator, not a spinner.
 
 ## Settings Hub
 
-`/settings` is five **Settings groups** under one header — Library,
-Playback, Network, Storage, About — each a **Section card** on the feature's
-shared `section.styles.ts` except Library, which draws rows. Every number on
-the page is a read the app can truthfully answer now:
+`/settings` is six **Settings groups** under one header — Library,
+Playback, Display, Network, Storage, About — each a **Section card** on the
+feature's shared `section.styles.ts` except Library, which draws rows. Every
+number on the page is a read the app can truthfully answer now:
 
 - `GET /api/playback/capabilities` → `{ component, codecs }`, the **Codec
   report**, reached through `Playback.capabilities()` alone — a property
@@ -621,13 +627,18 @@ the page is a read the app can truthfully answer now:
   nothing uploaded to take back, `409` in the upload's own words, `500`
   the same. Both echo the whole report, so the screen redraws from the
   echo rather than reading again.
-- `GET /api/settings` → `{ subtitleLanguage }` with the default applied,
-  and `POST /api/settings/subtitle-language { value }` → `{ value }`, a
-  **Single-signal write** on the favorite / watched / rating precedent;
+- `GET /api/settings` → `{ subtitleLanguage, ultrawideMargins }`, both
+  defaults applied, and `POST /api/settings/subtitle-language { value }` →
+  `{ value }`, a **Single-signal write** on the favorite / watched / rating
+  precedent;
   `400` for a missing, empty or non-string value. Membership in the
   **Language pool** is not checked — a vocabulary, not a constraint. The
   player's `useSubtitles` reads the same preference through the shared
   `fetchSettings` once per open.
+- `POST /api/settings/ultrawide-margins { value }` → `{ value }`, the same
+  **Single-signal write**; `400` for anything but a boolean. **Ultrawide
+  margins** is held app-wide by `DisplayPreferenceProvider` in `App/`, not by
+  the hub, and the **Content frame** follows it at once.
 - `GET /api/storage` → `{ mediaPath, bytesUsed, movieCount }`, the
   **Storage report**: the path resolved to absolute at request time, the
   walk read afresh on every visit, the count off the database.
@@ -921,20 +932,20 @@ same layout, spacing, states, copy, and interaction.
 
 **Build order — what is left.** The groups below say what the app _is_;
 this says what to build _next_. Steps 1–9 of the first chain are done,
-ending with **Software update** (v0.2.0), and so is step 10. Steps 10–15 came out of installing
+ending with **Software update** (v0.2.0), and so are steps 10 and 11. Steps 10–15 came out of installing
 FamilyFlix and using it: smallest and most self-contained first, the form
 before the folders that will feed it, export last because it mirrors what
-import holds. None of 11–15 has a prototype yet — each goes through grill-me and a
+import holds. None of 12–15 has a prototype yet — each goes through grill-me and a
 prototype revision in `docs/handoff/` before it is built, per _The prototype
 is the spec_. `Change…` in the Storage group is not in the chain — it is the
 Roadmap's **Move the media folder** (log 24 Q2).
 
 10. ✅ **Codecs page** — the Codec manager moved to its own Settings
     sub-page, `/settings/codecs`, linked from the Playback card's Codecs row.
-11. **Ultrawide margins** _(next)_ — an optional left/right margin on every screen,
+11. ✅ **Ultrawide margins** — an optional left/right margin on every screen,
     a household preference beside the subtitle language, so the library does
     not stretch edge to edge on an ultra-wide monitor.
-12. **Default poster** — a title with no poster linked draws a FamilyFlix
+12. **Default poster** _(next)_ — a title with no poster linked draws a FamilyFlix
     default poster rather than an empty tile, on every surface a poster
     appears.
 13. **Add a series** — the **Movie form** learns a second kind: a show, its
@@ -979,7 +990,7 @@ A 🧭 Roadmap item is not in this chain — it is after it, if ever.
 ### Maintainer tools
 
 - ✅ **Add a movie** — manual file picker (video, poster, multiple subtitles with language).
-- 🔜 **Default poster** _(step 12)_ — a FamilyFlix default poster for any title with none linked.
+- 🔜 **Default poster** _(step 12 — next)_ — a FamilyFlix default poster for any title with none linked.
 - 🔜 **Add a series** _(step 13)_ — the same form adds a show, its seasons and its episodes.
 - 🔜 **Library folders** _(step 14)_ — several top folders of movies, added at once.
 - ✅ **Edit a movie** — amend metadata and files; a file the library already holds travels as its path, only a freshly picked one as bytes.
@@ -998,10 +1009,10 @@ A 🧭 Roadmap item is not in this chain — it is after it, if ever.
 - ✅ **Codec manager — add a playback component** — the Component drop zone under the rows and the ✕ on the Component row: a pair dropped is staged, verified and sworn into the Component slot, and the next press of Play converts with it.
 - ✅ **Subtitle preferences** — the household's Preferred subtitle language, kept in the library's database and honoured by the player; the Auto-on toggle built but disabled until shipped.
 - ✅ **Storage** — the managed media folder's location and space used, agreeing with Explorer; _Change…_ is the Roadmap's **Move the media folder**.
-- ✅ **Network group** — a fifth Settings group between Playback and Storage, the one place FamilyFlix goes online: _The Movie Database (TMDB)_ with a status pill, the lede ("Nothing is sent about your household — just movie titles, to look up posters and synopses"), the API-key field in mono with _Test connection_ beside it, and the _Sync metadata & posters_ row that opens the Enrichment flow.
+- ✅ **Network group** — a fifth Settings group, between Display and Storage, the one place FamilyFlix goes online: _The Movie Database (TMDB)_ with a status pill, the lede ("Nothing is sent about your household — just movie titles, to look up posters and synopses"), the API-key field in mono with _Test connection_ beside it, and the _Sync metadata & posters_ row that opens the Enrichment flow.
 - ✅ **Software update** — the About card's first row: an Update offer downloaded at launch from GitHub Releases, Update now, and Check for updates; closing the app installs it. Designed in `17-software-update`, shipped as v0.2.0.
 - ✅ **Codecs page** — the Codec manager on its own Settings sub-page, `/settings/codecs`: the Playback component group over the Formats group, reached from the Playback card's Codecs row, which carries the Codec summary.
-- 🔜 **Ultrawide margins** _(step 11 — next)_ — an optional left/right margin for ultra-wide monitors.
+- ✅ **Ultrawide margins** — an optional left/right margin for ultra-wide monitors: the Display group's Toggle caps every screen but the player at 1920px, centred.
 
 ### System
 

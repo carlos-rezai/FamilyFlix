@@ -172,11 +172,13 @@ familyflix/
 │       └── test-support/   # Shared test doubles — never imported by shipping code (heldCopy, libraryFixture, seriesFixture, fixedSlot, componentDir, fakeTmdb, offlineTmdb, …)
 ├── src/                # React frontend
 │   ├── App/            # Router and app-level providers
+│   │   ├── DisplayPreferenceProvider/ # the household's Ultrawide margins, held app-wide; useDisplayPreference reads it, saveUltrawideMargins writes it
+│   │   ├── ContentFrame/     # the Content frame: every route but the player's, capped at 1920px and centred while Ultrawide margins is on
 │   │   ├── SnackbarProvider/ # the Snackbar stack: the queue, the timers, the fixed bottom-right column; an action persists, everything else dies at 5s
 │   │   └── useSnackbar/      # `{ notify, dismiss }` off the stack, and SnackbarNotice
 │   ├── assets/         # Static images, fonts, icons
 │   ├── styles/         # Global CSS reset and Reduced motion, visuallyHidden; theme.ts, the createTheme(accent) factory spreading the Accent scale; interactionStates/ — controlStates(press), cardLift, cardFocus, and the structural guard in its test
-│   ├── tokens/         # Colors, spacing, typography, breakpoints, motion
+│   ├── tokens/         # Colors, spacing, typography, breakpoints, motion, layout (the Content measure)
 │   ├── primitives/     # Atomic UI elements (Button, Input, Text, Toggle, the Icon glyphs — the Snackbar's four, the FAB's two and enrichment's five among them) — each with .tsx, .test.tsx, .styles.ts
 │   ├── components/     # Composed UI blocks (PosterCard, Modal, ProgressBar, CreditsRow, SeasonCard, EpisodeRow) — same three-file shape
 │   │   ├── Modal/          # the scrimmed card every dialog is drawn on; owns its own dismissal and focus; `bare` for a card that is its children alone
@@ -197,8 +199,8 @@ familyflix/
 │   │   ├── movie-form/      # Add/Edit a movie: one form, manual pickers — and Resolve, the Import context
 │   │   ├── import-export/   # the bulk importer's screen: ImportFlow and its three steps, useImportRun, importView — and the Export dialog: ExportModal, FormatCard, useExport, saveToComputer
 │   │   ├── enrichment/      # the Sync with TMDB: EnrichmentFlow and its three steps, SetupBanner, ScopeCard, WriteTargetRow, DecisionRow over CandidatePicker, TitleSearch and FieldDiff, useEnrichmentRun, enrichmentView, and its api/
-│   │   ├── settings/        # the Maintainer's hub: SettingsHeader; LibrarySection + ActionRow; PlaybackSection (the Codecs row onto the Codecs page); CodecManager — the Codecs page's screen — over CodecRow, ComponentDropZone, codecView, zoneFace; NavigationRow, the row both the Codecs row and the sync row draw through; NetworkSection + useTmdbKey + syncLine; StorageSection; AboutSection; useCapabilities, useSettings, useStorageReport; and its api/
-│   │   │   └── section.styles.ts # the Group heading, the Section card, the divider, an item's title and lede — what every group draws with
+│   │   ├── settings/        # the Maintainer's hub: SettingsHeader; LibrarySection + ActionRow; PlaybackSection (the Codecs row onto the Codecs page); DisplaySection (the Ultrawide margins Toggle); CodecManager — the Codecs page's screen — over CodecRow, ComponentDropZone, codecView, zoneFace; NavigationRow, the row both the Codecs row and the sync row draw through; NetworkSection + useTmdbKey + syncLine; StorageSection; AboutSection; useCapabilities, useSettings, useStorageReport; and its api/
+│   │   │   └── section.styles.ts # the Group heading, the Section card, the divider, an item's title and lede, and the row furniture — what every group draws with
 │   │   ├── maintainer.styles.ts # the header and the captioned field the Maintainer's screens share
 │   │   └── collections/     # playlists (roadmap)
 │   ├── layouts/         # Page chrome (MainLayout mounts Back-to-top over its body, on the ref useRestoredScroll attached)
@@ -338,7 +340,7 @@ Keep the description short enough to fit on one line — long descriptions get w
 | Bulk import (Excel/CSV → library)                   | ✅ Done         |
 | Import progress console (scan/import, live log)     | ✅ Done         |
 | Export (library → CSV/Excel)                        | ✅ Done         |
-| Settings hub (Library / Playback / Storage / About) | ✅ Done         |
+| Settings hub (six groups, Library to About)         | ✅ Done         |
 | Codec manager — view installed codecs               | ✅ Done         |
 | Codec manager — add a playback component            | ✅ Done         |
 | Subtitle preferences (preferred language)           | ✅ Done         |
@@ -354,8 +356,8 @@ Keep the description short enough to fit on one line — long descriptions get w
 | Desktop packaging (Windows installer)               | ✅ Done         |
 | Software update (check / install)                   | ✅ Done         |
 | Codecs page — the codec list on its own page        | ✅ Done         |
-| Ultrawide margins — side gutters for wide screens   | 🔜 11 — next    |
-| Default poster — a fallback for titles without one  | 🔜 12           |
+| Ultrawide margins — side gutters for wide screens   | ✅ Done         |
+| Default poster — a fallback for titles without one  | 🔜 12 — next    |
 | Add a series — the Add form for shows too           | 🔜 13           |
 | Library folders — several root folders at once      | 🔜 14           |
 | Export options — where to, and what travels         | 🔜 15           |
@@ -366,8 +368,9 @@ Keep the description short enough to fit on one line — long descriptions get w
 | User accounts / multi-profile                       | 🚫 Out of scope |
 
 Everything marked ✅ is done — steps 1–9 of the first build order, ending
-with Software update, which shipped as v0.2.0, and step 10, the Codecs page. Steps 10–15 came out of
-installing FamilyFlix and using it for real, and are numbered in **build
+with Software update, which shipped as v0.2.0, and steps 10 and 11, the
+Codecs page and Ultrawide margins. Steps 10–15 came out of installing
+FamilyFlix and using it for real, and are numbered in **build
 order**: smallest and most self-contained first, the form before the folders
 that will feed it, export last because it mirrors what import now holds. Each
 still goes through grill-me and a prototype revision before it is built.
@@ -376,9 +379,9 @@ _Change…_ in Settings → Storage is not in the chain — it is the Roadmap's
 
 10. ✅ **Codecs page** — the codec rows moved to their own Settings
     sub-page, `/settings/codecs`, opened from the Playback card's Codecs row.
-11. **Ultrawide margins** _(next)_ — an optional left/right margin on every screen, so
+11. ✅ **Ultrawide margins** — an optional left/right margin on every screen, so
     the library doesn't stretch edge to edge on an ultra-wide monitor.
-12. **Default poster** — a title with no poster linked shows a FamilyFlix
+12. **Default poster** _(next)_ — a title with no poster linked shows a FamilyFlix
     default poster instead of an empty tile.
 13. **Add a series** — the Add form adds a show, its seasons and its episodes,
     not only a film.
