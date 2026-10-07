@@ -496,6 +496,53 @@ describe('MovieDetail — artwork and the gradient fallback', () => {
 });
 
 /**
+ * 28 — Default poster, Phase 2 (issue #255): the poster frame's caption
+ * follows whether there is a **poster**, not whether there is any art. A film
+ * with a backdrop and no poster gets the captioned Default poster — its tag,
+ * its title and the **Wordmark** — in front of the backdrop, which itself stays
+ * without a Wordmark. A real poster is never captioned and never branded.
+ */
+describe('MovieDetail — the Default poster in the poster frame', () => {
+  it('captions a backdrop-only film’s poster frame and draws the Wordmark there', async () => {
+    serveMovie({ posterPath: null, backdropPath: 'northwind/backdrop.jpg' });
+
+    renderDetail();
+    await findTitle('Northwind');
+
+    expect(screen.getByText('Drama · 1994')).toBeDefined();
+    // Once as the page heading, once as the poster's caption.
+    expect(screen.getAllByText('Northwind')).toHaveLength(2);
+    // One Wordmark — the poster frame's; the backdrop carries none.
+    expect(screen.getAllByText('Family')).toHaveLength(1);
+    expect(screen.getAllByText('Flix')).toHaveLength(1);
+  });
+
+  it('draws the Wordmark on a film with neither a poster nor a backdrop', async () => {
+    serveMovie({ posterPath: null, backdropPath: null });
+
+    renderDetail();
+    await findTitle('Northwind');
+
+    expect(screen.getAllByText('Flix')).toHaveLength(1);
+  });
+
+  it('draws neither the caption nor the Wordmark over a real poster', async () => {
+    serveMovie({
+      posterPath: 'northwind/poster.jpg',
+      backdropPath: 'northwind/backdrop.jpg',
+    });
+
+    renderDetail();
+    await findTitle('Northwind');
+
+    expect(screen.queryByText('Drama · 1994')).toBeNull();
+    expect(screen.getAllByText('Northwind')).toHaveLength(1);
+    expect(screen.queryByText('Family')).toBeNull();
+    expect(screen.queryByText('Flix')).toBeNull();
+  });
+});
+
+/**
  * The row's navigation half. Play is the most obvious thing on the screen and
  * the honest one: it opens the player's URL and touches nothing about the movie,
  * because only the player writes playback state.

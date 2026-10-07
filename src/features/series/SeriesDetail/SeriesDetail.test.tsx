@@ -285,6 +285,55 @@ describe('SeriesDetail — the series on screen', () => {
   });
 });
 
+/**
+ * 28 — Default poster, Phase 2 (issue #255): `MovieDetail`'s rule on the
+ * series page. The poster frame's caption follows whether there is a
+ * **poster**: a show with a backdrop and no poster gets the captioned Default
+ * poster with the **Wordmark**, the backdrop itself unbranded; a real poster is
+ * never captioned and never branded.
+ */
+describe('SeriesDetail — the Default poster in the poster frame', () => {
+  it('captions a backdrop-only show’s poster frame and draws the Wordmark there', async () => {
+    serve(unstarted({ posterPath: null, backdropPath: 'harbor/backdrop.jpg' }));
+
+    renderDetail();
+    await findTitle('Harbor & Vine');
+
+    expect(screen.getByText('Drama · 2019–2023')).toBeDefined();
+    // Once as the page heading, once as the poster's caption.
+    expect(screen.getAllByText('Harbor & Vine')).toHaveLength(2);
+    // One Wordmark — the poster frame's; the backdrop carries none.
+    expect(screen.getAllByText('Family')).toHaveLength(1);
+    expect(screen.getAllByText('Flix')).toHaveLength(1);
+  });
+
+  it('draws the Wordmark on a show with neither a poster nor a backdrop', async () => {
+    serve(unstarted({ posterPath: null, backdropPath: null }));
+
+    renderDetail();
+    await findTitle('Harbor & Vine');
+
+    expect(screen.getAllByText('Flix')).toHaveLength(1);
+  });
+
+  it('draws neither the caption nor the Wordmark over a real poster', async () => {
+    serve(
+      unstarted({
+        posterPath: 'harbor/poster.jpg',
+        backdropPath: 'harbor/backdrop.jpg',
+      })
+    );
+
+    renderDetail();
+    await findTitle('Harbor & Vine');
+
+    expect(screen.queryByText('Drama · 2019–2023')).toBeNull();
+    expect(screen.getAllByText('Harbor & Vine')).toHaveLength(1);
+    expect(screen.queryByText('Family')).toBeNull();
+    expect(screen.queryByText('Flix')).toBeNull();
+  });
+});
+
 describe('SeriesDetail — the meta line', () => {
   it('reads the year range, the counts and the stars beside the title', async () => {
     serve(unstarted());

@@ -286,3 +286,41 @@ describe('seriesView — the rating', () => {
     ).toBeNull();
   });
 });
+
+/**
+ * 28 — Default poster, Phase 2 (issue #255): `detailView`'s rule on the series
+ * page. The poster frame's caption follows whether there is a **poster**, not
+ * whether there is any art, so a show with a backdrop and no poster draws a
+ * captioned Default poster in front of the backdrop.
+ */
+describe('seriesView — hasPoster', () => {
+  it('is true when a poster is set, and composes no tag', () => {
+    const vm = seriesView(
+      makeDetail([makeSeason(1, 10)], makeEpisode(1, 1), {
+        posterPath: 'harbor-2019/poster.jpg',
+        backdropPath: 'harbor-2019/backdrop.jpg',
+      })
+    );
+
+    expect(vm.hasPoster).toBe(true);
+    expect(vm.topTag).toBeNull();
+  });
+
+  it('is false for a backdrop alone, and the top tag is filled', () => {
+    const vm = seriesView(
+      makeDetail([makeSeason(1, 10)], makeEpisode(1, 1), {
+        posterPath: null,
+        backdropPath: 'harbor-2019/backdrop.jpg',
+      })
+    );
+
+    expect(vm.hasPoster).toBe(false);
+    expect(vm.topTag).toBe('Drama · 2019–2023');
+  });
+
+  it('is false when the series carries neither path', () => {
+    const vm = seriesView(unstarted());
+
+    expect(vm.hasPoster).toBe(false);
+  });
+});

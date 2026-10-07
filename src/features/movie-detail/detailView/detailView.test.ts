@@ -3,6 +3,7 @@ import { describe, it, expect } from 'vitest';
 import { detailView } from './detailView';
 import { gradientFromId } from '@/utils';
 import { makeMovie } from '@/test-support/makeMovie/makeMovie';
+import { shippingSourcesMatching } from '@/test-support/shippingSources/shippingSources';
 
 describe('detailView — Movie → MovieDetailModel mapper', () => {
   it('passes id and title straight through', () => {
@@ -251,9 +252,9 @@ describe('detailView — artwork and the gradient fallback', () => {
     expect(vm.g2).toBe(gradientFromId('m1').g2);
     expect(vm.posterUrl).toContain('/api/images/abc/poster.jpg');
 
-    // And it is artwork: the "no artwork" caption belongs to a film with
-    // neither image, not to one that simply has no backdrop.
-    expect(vm.hasArtwork).toBe(true);
+    // And it has a poster: the caption belongs to a film with no poster, not
+    // to one that simply has no backdrop.
+    expect(vm.hasPoster).toBe(true);
   });
 
   it('always carries the deterministic gradient stops its id hashes to — the same ones its card draws', () => {
@@ -324,5 +325,65 @@ describe('detailView — the poster overlay tag', () => {
     );
 
     expect(vm.topTag).toBeNull();
+  });
+});
+
+/**
+ * 28 — Default poster, Phase 2 (issue #255): the poster frame's caption
+ * follows whether there is a **poster**, not whether there is any art. A film
+ * with a backdrop and no poster draws a captioned Default poster in front of
+ * the backdrop; real poster art is never captioned.
+ */
+describe('detailView — hasPoster', () => {
+  it('is true when a poster is set', () => {
+    const vm = detailView(
+      makeMovie({ posterPath: 'abc/poster.jpg', backdropPath: null })
+    );
+
+    expect(vm.hasPoster).toBe(true);
+  });
+
+  it('is true when both a poster and a backdrop are set, and composes no tag', () => {
+    const vm = detailView(
+      makeMovie({
+        posterPath: 'abc/poster.jpg',
+        backdropPath: 'abc/backdrop.jpg',
+        year: 1994,
+        genres: [{ id: 'g1', name: 'Drama' }],
+      })
+    );
+
+    expect(vm.hasPoster).toBe(true);
+    expect(vm.topTag).toBeNull();
+  });
+
+  it('is false for a backdrop alone, and the top tag is filled', () => {
+    const vm = detailView(
+      makeMovie({
+        posterPath: null,
+        backdropPath: 'abc/backdrop.jpg',
+        year: 1994,
+        genres: [{ id: 'g1', name: 'Drama' }],
+      })
+    );
+
+    expect(vm.hasPoster).toBe(false);
+    expect(vm.topTag).toBe('Drama · 1994');
+  });
+
+  it('is false when the record carries neither path', () => {
+    const vm = detailView(makeMovie({ posterPath: null, backdropPath: null }));
+
+    expect(vm.hasPoster).toBe(false);
+  });
+});
+
+/**
+ * Issue #255's rename is total: nothing in shipping code still reads the old
+ * `hasArtwork`, so no surface can go on captioning by "any art at all".
+ */
+describe('detailView — hasArtwork is gone', () => {
+  it('is read by no shipping file', () => {
+    expect(shippingSourcesMatching('src', /\bhasArtwork\b/)).toEqual([]);
   });
 });
