@@ -298,7 +298,7 @@ does not exist yet.
 | Term                                    | Definition                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | Aliases to avoid                             |
 | --------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------- |
 | **Settings hub** (new)                  | `page.SettingsPage` → `pages/SettingsPage`: the header, then the **Library**, **Playback**, **Storage** and **About** groups in that order, on `MaintainerLayout` at 780px. The one door to every other maintainer screen.                                                                                                                                                                                                                                                                                       | settings page, preferences, admin, config    |
-| **Settings group** (new)                | One uppercase **Group heading** and what sits under it — the **Library section**'s rows, or a **Section card** for Playback, Storage and About. `features/settings/<Name>Section/`, furniture in `features/settings/section.styles.ts`.                                                                                                                                                                                                                                                                          | panel, block, category                       |
+| **Settings group** (updated)            | One uppercase **Group heading** and what sits under it — the **Library section**'s rows, or a **Section card** for Playback, Display, Network, Storage and About (the **Display group** joined in log 27). `features/settings/<Name>Section/`, furniture in `features/settings/section.styles.ts`.                                                                                                                                                                                                               | panel, block, category                       |
 | **Section card** (new)                  | The surface card a **Settings group** draws its rows in — `Card` in `section.styles.ts`, with `Divider`, `ItemTitle` and `ItemDesc` for the rows inside it. The Library group has none: its rows are **Action rows**.                                                                                                                                                                                                                                                                                            | box, panel, tile                             |
 | **Codec report** (updated)              | `feat.CodecManager` → `features/settings/CodecManager`, on the **Codecs page** since `26-codecs-page`: the _Playback component_ group (the **Component row**, then the **Component drop zone**) over the **Formats group** (the **Codec summary** over one **Codec row** per `CodecRowModel`) — read from `GET /api/playback/capabilities` and redrawn from what the two component writes echo. Since `16-component-upload` it installs and removes the one thing it truthfully can: the **Playback component**. | codec manager, codec list, formats panel     |
 | **Codec row** (updated)                 | One row of the prototype's row template — the microchip tile, a name, mono chips, the size cell, a **Status pill**, and a ✕ or the 32px spacer — `features/settings/CodecRow` over a `CodecRowModel`, drawn 1:1 since `16-component-upload` Q10. A codec's row has `—` for a size and the spacer; the **Component row** is the same molecule with both filled.                                                                                                                                                   | codec item, format line                      |
@@ -540,6 +540,19 @@ Nothing on the server or in the types changes.
 | **Navigation row** (new) | A **Settings group**'s bare button row that pushes a destination: a glyph in the accent tile, the label, a line under it, and a chevron — `NavigationRow`, placed by its caller through `styled(NavigationRow)`, `LoadMessage`'s precedent, at its own prototype's vertical padding. Two instances: the **Codecs row** and the Network group's _Sync metadata & posters_ row. Not an **Action row**: an Action row sits on a card, its glyph a character, its press handed to it; a Navigation row is bare, its glyph a node, and it pushes its own destination. | settings link, link row                       |
 | **Formats group** (new)  | The **Codecs page**'s second **Settings group**: the **Codec summary** over the codec rows, in **Format catalogue** order. The summary heads the group it counts.                                                                                                                                                                                                                                                                                                                                                                                                | codec list (alone), supported formats         |
 
+## Ultrawide margins (new)
+
+Its own initiative (`ultrawide-margins`, design log 27), step 11 of the build
+order. It adds one household preference that caps how wide every screen except
+the player is drawn.
+
+| Term                        | Definition                                                                                                                                                                                                                                                                                     | Aliases to avoid                                   |
+| --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- |
+| **Ultrawide margins** (new) | The household's on/off preference (`settings.ultrawide-margins`, `Settings.ultrawideMargins`, default off) that puts every screen but the player inside the **Content frame**. Written by a **Single-signal write**, `POST /api/settings/ultrawide-margins { value: boolean }`.                | wide mode, letterbox, side margins, padding toggle |
+| **Content frame** (new)     | The centred region every route but the player renders in. `ContentFrame` in `App/`: `max-width` at the **Content measure** and `margin: 0 auto` while **Ultrawide margins** is on, and nothing while it is off. The whole screen goes inside it, header and backdrop included. Not **Chrome**. | frame (bare), container, wrapper, viewport         |
+| **Content measure** (new)   | The **Content frame**'s cap, 1920px, spelled once as `layout.contentMeasure` in `tokens/layout.ts`. On any narrower window the frame is inert, which is why a laptop looks the same with the preference on.                                                                                    | max width, breakpoint, page width                  |
+| **Display group** (new)     | The sixth **Settings group**, between Playback and Network: one **Section card** holding the _Ultrawide margins_ row and its `Toggle`. `features/settings/DisplaySection/`.                                                                                                                    | Appearance, Layout settings                        |
+
 ## Relationships
 
 - A **Movie** has zero-or-more **Genres** (ordered; `genres[0]` is the primary tag) and zero-or-more **Subtitles**.
@@ -618,7 +631,7 @@ Nothing on the server or in the types changes.
 - An **Export** has no run and no cancel: one request, one **Export file**, and **Export ready** only once **Save to computer** has handed the bytes over. There is no **Current run** to re-attach to.
 - The **Export summary** and the **Export file** are two reads of one library at two moments; the count on the filename row is not a promise, and the done copy repeats it rather than counting the file.
 
-- The **Settings hub** draws five **Settings groups**; the Library group is **Action rows**, the other four are one **Section card** each. A control whose mechanism does not exist — _Change…_ — is not drawn, the way the **Export** row was not drawn until its dialog existed and the _Add a codec pack_ zone was not drawn until `16-component-upload`; only a control the prototype itself marks **Coming soon** is drawn disabled.
+- The **Settings hub** draws six **Settings groups** (the **Display group** joined in log 27); the Library group is **Action rows**, the other five are one **Section card** each. A control whose mechanism does not exist — _Change…_ — is not drawn, the way the **Export** row was not drawn until its dialog existed and the _Add a codec pack_ zone was not drawn until `16-component-upload`; only a control the prototype itself marks **Coming soon** is drawn disabled.
 - The **Codec report** draws exactly the **Format catalogue** ∩ what `capabilities(component)` reports, in catalogue order; a row is **Built-in** or **Installed** and never "unsupported", because absence is how the report says so.
 - Every **Installed** row exists because of the one **Playback component**; none has a size or a remove, and all of them change together when the **Component swap** replaces it. The size and the remove are the **Component row**'s, which is one row because there is one component.
 - A **Setting** lives in SQLite beside the **Movies**, is read by the **Settings hub** and the **Player** through one `fetchSettings`, and is written by a **Single-signal write** per key. The **Preferred subtitle language** is the only key today; the **Auto-on toggle**'s is the roadmap's.
@@ -666,6 +679,9 @@ Nothing on the server or in the types changes.
 - **Shell paths** are read once per run, beside the **Shell mode**, and every path main hands the **Server process** comes from them.
 - Every **Shell mode** runs the **Electron-ABI binding**. The repo's `node_modules` binding belongs to Vitest and `npm run dev` alone.
 - The **FFmpeg pin** is the **Default component** of the **Installed app**. An **Uploaded component** in the **Component slot** still wins over it on the next Play.
+
+- **Ultrawide margins** is a **Setting** like the **Preferred subtitle language**: one row in `settings`, one **Single-signal write**, read in the one `GET /api/settings`. It is held app-wide by `DisplayPreferenceProvider` rather than by the **Settings hub**, because the **Content frame** has to follow a flip at once.
+- Exactly one **Content frame** exists, in `App/`. Every route renders inside it except the player's two, and no layout or page knows it is there. The **Snackbar stack** sits at its bottom-right corner, while a **Modal**'s scrim still covers the whole window.
 
 ## Example dialogue
 
@@ -1149,6 +1165,15 @@ Hard` gets found and `Die Hard\extras` doesn't become a second film."
 > **Maintainer:** "The component first. The **Component row** and the drop
 > zone are the only things there that change anything, so they go on top.
 > The **Formats group** follows, with the summary over the rows it counts."
+
+> **Dev:** "Margins on the ultrawide. Do we pad every screen by, say, 20%?"
+> **Maintainer:** "No, that squeezes the laptop too. **Ultrawide margins**
+> caps the screen at the **Content measure** and centres it, so on anything
+> narrower than 1920px it does nothing."
+> **Dev:** "And the player? It's a screen too."
+> **Maintainer:** "The player stays outside the **Content frame**. A 2.39:1
+> film on that monitor is the whole point of the monitor. The toggle lives in
+> the new **Display group**, not under Playback."
 
 ## Flagged ambiguities
 
@@ -1901,3 +1926,12 @@ Hard` gets found and `Die Hard\extras` doesn't become a second film."
   Settings hub, the **Codecs page** it opens, and the decoders the **Codec
   report** lists. Say **Codecs row** or **Codecs page** for the UI, and
   **Format** or **Codec row** for one decoder. "Codec overview" is not a term.
+- **"Frame" now names one thing (new):** the **Content frame**. **Chrome**
+  already lists "frame" as an alias to avoid, and that stands: Chrome is a
+  layout's furniture _inside_ the frame, and the frame is the cap _around_
+  every layout. Never say bare "frame" for either one. A video frame stays
+  "frame" only in the player's own context (a **Still**, a keyframe).
+- **"Margin" is the leftover, not a setting value (new):** **Ultrawide
+  margins** has no margin width. The margins are whatever the window has
+  left over beyond the **Content measure**. Don't call the measure "the
+  margin size", and don't describe the feature as padding.
