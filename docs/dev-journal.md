@@ -11,6 +11,89 @@ Newest entry first.
 
 ---
 
+## 2026-10-07 — Codecs page refactor (issue 247)
+
+Eleven commits against `docs/refactor-plans/26-codecs-page-refactor.md`, one
+per plan commit, none dropped. **6835 tests pass across 398 files**, from 6832
+across 398 at the end of the build. `tsc -b` is clean, and
+`eslint src server electron .husky` reports no errors and one warning that
+predates this initiative (below).
+
+### What each group changed
+
+- **Group 0, the record.** The build's own entry, below, completed before
+  the round touched anything: slice by slice, the judgement calls the log did
+  not name, what was not built, the counts, the follow-up.
+- **Group 1, two tidies.** `PlaybackSection`'s two spliced docblock
+  paragraphs and `NetworkSection`'s sync paragraph rewrapped, no word
+  changed. `GroupCard` stops re-spelling `Card`'s 32px; `$last` writes only
+  `margin-bottom: 0`, on `AboutCard`'s reason.
+- **Group 2, one suite per proof.** The keys and the chevron moved into
+  `NavigationRow.test.tsx`; the Codecs row suite keeps what `PlaybackSection`
+  hands the molecule; the Sync row suite gained its placement.
+- **Group 3, the placement.** `NavigationRow` forwards `className` onto the
+  button, `LoadMessage`'s precedent, and its own `Row` keeps only the `0 4px`
+  inset both prototypes share. `SyncRow` and `CodecsRow`, each
+  `styled(NavigationRow)` in its section's styles, place it — first both at
+  `15px 4px 4px`, a pure refactor, then the Codecs row at the prototype's
+  `4px 4px 0`.
+- **Group 4, the docs.** The glossary's **Navigation row**, the **Codecs
+  row** entry pointing at it, and the relationship line made five groups with
+  only _Change…_ undrawn; `page.CodecsPage` ✅ in COMPONENT-SPEC; CLAUDE.md's
+  `NavigationRow/` line naming the placement. README's tree line already
+  held, and was left.
+
+### Leaves restated
+
+Added: `CodecManager`'s _keeps the group gap under the Playback component
+card and none under Formats_; `NavigationRow`'s _pushes its destination on
+Enter after Tab_, _on Space after Tab_, _carries a chevron at its end_ and
+_puts a className handed in on the button_; the Sync row's _sits at the
+prototype's 15px 4px 4px_; the Codecs row's _sits at the prototype's 4px 4px
+0_. Removed from the Codecs row suite: _on Enter after Tab_ and _on Space
+after Tab_ (now the molecule's), _takes only the read from useCapabilities,
+never a write_ (the source grep — _sends nothing to the component route_
+proves the rule by behaviour), and _matches the Sync metadata & posters row
+rule for rule_. Renamed: _carries the microchip glyph in its tile_, its
+chevron half gone to the molecule. Net +3.
+
+### The one visible change
+
+The Codecs row moved up 11px and lost 4px of height: `page.SettingsPage.dc.html`
+draws it at `4px 4px 0`, first in its card, where the Sync row sits at
+`15px 4px 4px` under a divider. Log 26 Q14's "character for character" was the
+condition for one molecule, not a reason to make two paddings one.
+
+### Where the round met the plan's words and differed
+
+- **No _Action row_ term to sit beside.** The plan put **Navigation row**
+  "beside **Action row**", but the glossary has no such row — _Action rows_
+  appears only in prose (the **Section card** row and a relationship line).
+  The new term sits in _The Codecs page_ table beside the **Codecs row**. An
+  **Action row** term was not added; it is a gap, not this round's.
+- **The guard's section assertion was replaced, not kept.** _The two rows it
+  replaced_ asserted each section's `.tsx` renders `<NavigationRow`; once each
+  renders its placement it cannot. It now asserts each section's styles
+  extend `styled(NavigationRow)` and declare no `styled.button`, with the copy
+  pattern narrowed to the five inner parts.
+- **The gap leaf reads both cards off the _Formats_ heading.** _Playback
+  component_ is both the group heading and the Component row's line, so the
+  cards are the heading's previous and next siblings.
+
+### The tick
+
+Left standing where #246 put it, in README and CLAUDE.md. This round closing,
+with 243, is what makes it true.
+
+### Surfaced
+
+`eslint` reports one `no-useless-escape` warning at
+`AboutSection.test.tsx:295`, from `af7bf17` (software-update #237). The
+enrichment refactor had taken the suite to zero warnings; this one came in
+after. Not fixed here — outside the plan.
+
+---
+
 ## 2026-10-06 — Codecs page (issues #244–#246)
 
 The Codec report left the Settings page for `/settings/codecs`, the hub's
