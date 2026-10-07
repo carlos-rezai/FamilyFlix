@@ -26,10 +26,11 @@ import {
 /**
  * The Settings hub's Playback **Settings group**, from
  * `page.SettingsPage.dc.html`: the `Playback` **Group heading** over a
- * **Section card** that opens with the **Codecs row**, a `NavigationRow` — the microchip in its tile, _Codecs_,
- * the **Codec summary** as its line (blank until the read lands, blank still
- * after a refusal), and a chevron. Pressed, it pushes `/settings/codecs`, the
- * **Codecs page**, which reads the report again for itself (log 26 Q13).
+ * **Section card** that opens with the **Codecs row**, a `NavigationRow` —
+ * the microchip in its tile, _Codecs_, the **Codec summary** as its line
+ * (blank until the read lands, blank still after a refusal), and a chevron.
+ * Pressed, it pushes `/settings/codecs`, the **Codecs page**, which reads the
+ * report again for itself (log 26 Q13).
  *
  * Under the row, the second half of the card: the divider; _Subtitles_ with
  * its lede; _Turn on automatically_ beside a **Coming soon** pill over a
@@ -39,8 +40,9 @@ import {
  * the **Language pool** as its options and the fetched value as its value.
  *
  * The section owns `useSettings`, and takes only the read of
- * `useCapabilities` — the writes are the Codecs page's. The pill is not drawn while the settings
- * are `null` — a refused read shows no default the server never confirmed.
+ * `useCapabilities` — the writes are the Codecs page's. The pill is not drawn
+ * while the settings are `null` — a refused read shows no default the server
+ * never confirmed.
  */
 export function PlaybackSection() {
   const { settings, chooseSubtitleLanguage } = useSettings();

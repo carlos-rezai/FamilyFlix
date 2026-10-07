@@ -35,8 +35,9 @@ function testLabel(testing: boolean, connected: boolean): string {
  * field, the pill reads _Connected_ while it is there and _Not set up_ the
  * moment it is edited, and _Test connection_ tests and saves in one.
  *
- * Under a divider, _Sync metadata & posters_, a `NavigationRow`, pushes `/enrich`; its line is
- * `syncLine` over the `EnrichmentSummary`, blank until the read lands.
+ * Under a divider, _Sync metadata & posters_, a `NavigationRow`, pushes
+ * `/enrich`; its line is `syncLine` over the `EnrichmentSummary`, blank until
+ * the read lands.
  */
 export function NetworkSection() {
   const { key, connected, testing, onKey, test } = useTmdbKey();
