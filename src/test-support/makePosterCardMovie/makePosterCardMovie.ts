@@ -9,8 +9,8 @@ import type { PosterCardMovie } from '@/types';
  * `Movie` sent in issue 80 was accruing here one rung down. The defaults are
  * those three copies' specimen, adopted unchanged.
  *
- * `ContinueCardMovie` deliberately has no builder here: one file renders it,
- * and a shape with one caller stays at its call site.
+ * Its sibling for the resume tile is `makeContinueCardMovie`, born by the same
+ * rule once three suites built that shape.
  */
 export function makePosterCardMovie(
   overrides: Partial<PosterCardMovie> = {}
