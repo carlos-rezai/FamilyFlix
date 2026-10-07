@@ -108,9 +108,9 @@ export const PlayBadge = styled.div`
 
 /**
  * The poster cropped to the key art: a 2:3 poster in a 16:10 tile keeps its
- * upper-middle band, where a title's faces and lettering usually sit.
+ * upper-middle band, where a title's faces and lettering usually sit. Only the
+ * anchor moves — the cover is `Artwork`'s, for every caller.
  */
 export const Art = styled(Artwork)`
   background-position: center 25%;
-  background-size: cover;
 `;
