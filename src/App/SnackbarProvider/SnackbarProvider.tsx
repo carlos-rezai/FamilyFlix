@@ -1,5 +1,6 @@
 import {
   useCallback,
+  useContext,
   useEffect,
   useMemo,
   useRef,
@@ -13,6 +14,7 @@ import {
   type SnackbarApi,
   type SnackbarNotice,
 } from '@/App/useSnackbar/useSnackbar';
+import { DisplayPreferenceContext } from '@/App/useDisplayPreference/useDisplayPreference';
 import { Slot, Stack } from './SnackbarProvider.styles';
 
 /** How long a notice stays before the stack takes it off on its own. */
@@ -97,10 +99,18 @@ export function SnackbarProvider({ children }: SnackbarProviderProps) {
     [notify, dismiss]
   );
 
+  /*
+   * The context rather than the throwing `useDisplayPreference()`: the stack
+   * is drawn the same with no preference as with a `null` one, so a provider
+   * absent above it — every suite that mounts the stack alone — reads as off.
+   */
+  const framed =
+    useContext(DisplayPreferenceContext)?.ultrawideMargins === true;
+
   return (
     <SnackbarContext.Provider value={api}>
       {children}
-      <Stack>
+      <Stack $framed={framed}>
         {queue.map(({ id, notice: { variant, title, message, action } }) => (
           <Slot key={id}>
             <Snackbar
