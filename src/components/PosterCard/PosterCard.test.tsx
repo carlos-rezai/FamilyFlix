@@ -239,6 +239,47 @@ describe('PosterCard — an unrated movie is not a zero-rated one', () => {
 });
 
 /**
+ * 28 — Default poster (issue #254): a title with no poster draws its own
+ * Gradient fallback with the FamilyFlix **Wordmark** centred on it, plus the
+ * caption the card already drew. The Wordmark is decoration — hidden from the
+ * accessibility tree — so the card is still named by its title alone.
+ */
+describe('PosterCard — the Default poster', () => {
+  it('draws the Wordmark on a title with no poster', () => {
+    renderCard({ movie: { ...movie, posterUrl: null } });
+
+    expect(screen.getByText('Family')).toBeTruthy();
+    expect(screen.getByText('Flix')).toBeTruthy();
+  });
+
+  it('keeps the title caption on the Default poster, over the title below', () => {
+    renderCard({ movie: { ...movie, posterUrl: null } });
+
+    // One on the poster, one under it.
+    expect(screen.getAllByText('Comet Season')).toHaveLength(2);
+  });
+
+  it('is still named by its title alone with the Wordmark drawn', () => {
+    renderCard({ movie: { ...movie, posterUrl: null } });
+
+    expect(screen.getByText('Flix')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Comet Season' })).toBeTruthy();
+    expect(screen.getByText('Flix').closest('[aria-hidden="true"]')).not.toBe(
+      null
+    );
+  });
+
+  it('draws no Wordmark on a title with a poster', () => {
+    renderCard({
+      movie: { ...movie, posterUrl: '/api/images/comet-season/poster.jpg' },
+    });
+
+    expect(screen.queryByText('Family')).toBe(null);
+    expect(screen.queryByText('Flix')).toBe(null);
+  });
+});
+
+/**
  * 21 — Motion & interaction states, Phase 5 (issue #185): the poster on the
  * Card vocabulary — `cardLift` on the tile, `cardFocus` on the root — and the
  * heart on the Control's, as `mol.PosterCard.dc.html` draws them.
