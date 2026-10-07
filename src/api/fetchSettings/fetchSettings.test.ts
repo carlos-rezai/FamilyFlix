@@ -48,7 +48,10 @@ function onlyRequest() {
   return { url: String(input), method: init?.method };
 }
 
-const SETTINGS: Settings = { subtitleLanguage: 'Spanish' };
+const SETTINGS: Settings = {
+  subtitleLanguage: 'Spanish',
+  ultrawideMargins: false,
+};
 
 describe('fetchSettings', () => {
   it('GETs the settings route', async () => {

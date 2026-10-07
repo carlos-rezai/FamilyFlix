@@ -82,7 +82,10 @@ function held() {
  * is `null` is held instead.
  */
 function answerWith(
-  settings: Settings | null = { subtitleLanguage: 'English' }
+  settings: Settings | null = {
+    subtitleLanguage: 'English',
+    ultrawideMargins: false,
+  }
 ) {
   const read = held();
   const write = held();
@@ -314,7 +317,7 @@ describe('PlaybackSection — Preferred language, the pill', () => {
   });
 
   it('shows the fetched value once the settings land', async () => {
-    answerWith({ subtitleLanguage: 'Spanish' });
+    answerWith({ subtitleLanguage: 'Spanish', ultrawideMargins: false });
 
     renderSection();
 
@@ -323,7 +326,7 @@ describe('PlaybackSection — Preferred language, the pill', () => {
   });
 
   it('is named Preferred language, with no caption on screen', async () => {
-    answerWith({ subtitleLanguage: 'Spanish' });
+    answerWith({ subtitleLanguage: 'Spanish', ultrawideMargins: false });
 
     renderSection();
 
@@ -367,7 +370,7 @@ describe('PlaybackSection — Preferred language, the pill', () => {
   });
 
   it('marks the fetched value as the current option', async () => {
-    answerWith({ subtitleLanguage: 'French' });
+    answerWith({ subtitleLanguage: 'French', ultrawideMargins: false });
     renderSection();
     const pill = await pillLanded('French');
 

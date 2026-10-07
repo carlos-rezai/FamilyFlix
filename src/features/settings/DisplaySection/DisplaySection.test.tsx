@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -156,7 +157,13 @@ describe('DisplaySection — the Toggle', () => {
 describe('the Setting row furniture — exported once, shared', () => {
   const FURNITURE = ['Row', 'RowTitle', 'RowDesc'] as const;
   const source = (path: string) =>
-    readFileSync(fileURLToPath(new URL(`../${path}`, import.meta.url)), 'utf8');
+    readFileSync(
+      // Joined by `node:path`, not `new URL(`../${path}`, import.meta.url)`:
+      // Vite rewrites that dynamic-template shape as an asset glob, and the
+      // path comes out `undefined`.
+      join(dirname(fileURLToPath(import.meta.url)), '..', path),
+      'utf8'
+    );
 
   it('is exported from the shared section styles', () => {
     for (const name of FURNITURE) {

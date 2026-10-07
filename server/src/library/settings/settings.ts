@@ -1,8 +1,14 @@
 import type { SqliteDatabase } from '../../db';
-import { DEFAULT_SUBTITLE_LANGUAGE, type Settings } from '@/types';
+import {
+  DEFAULT_SUBTITLE_LANGUAGE,
+  DEFAULT_ULTRAWIDE_MARGINS,
+  type Settings,
+} from '@/types';
 
 /** The household's preferred subtitle language. */
 const SUBTITLE_LANGUAGE_KEY = 'subtitle-language';
+/** Whether the household keeps the Content frame on — `'1'` / `'0'`. */
+const ULTRAWIDE_MARGINS_KEY = 'ultrawide-margins';
 /** The maintainer's TMDB key — beside the preferences, never one of them. */
 const TMDB_KEY = 'tmdb-api-key';
 /** When a Sync last reached review — the library's, not a preference. */
@@ -18,6 +24,7 @@ const LIBRARY_ROOT_KEY = 'library-root';
 export interface SettingsRepository {
   settings(): Settings;
   setSubtitleLanguage(language: string): void;
+  setUltrawideMargins(on: boolean): void;
   tmdbKey(): string | null;
   setTmdbKey(key: string): void;
   enrichmentLastSyncedAt(): string | null;
@@ -46,7 +53,17 @@ export function createSettings(db: SqliteDatabase): SettingsRepository {
     return {
       subtitleLanguage:
         valueOf(SUBTITLE_LANGUAGE_KEY) ?? DEFAULT_SUBTITLE_LANGUAGE,
+      ultrawideMargins: ultrawideMargins(),
     };
+  }
+
+  function ultrawideMargins(): boolean {
+    const stored = valueOf(ULTRAWIDE_MARGINS_KEY);
+    return stored === null ? DEFAULT_ULTRAWIDE_MARGINS : stored === '1';
+  }
+
+  function setUltrawideMargins(on: boolean): void {
+    upsertValue.run(ULTRAWIDE_MARGINS_KEY, on ? '1' : '0');
   }
 
   function setSubtitleLanguage(language: string): void {
@@ -80,6 +97,7 @@ export function createSettings(db: SqliteDatabase): SettingsRepository {
   return {
     settings,
     setSubtitleLanguage,
+    setUltrawideMargins,
     tmdbKey,
     setTmdbKey,
     enrichmentLastSyncedAt,

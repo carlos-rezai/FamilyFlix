@@ -58,3 +58,32 @@ export const ItemDesc = styled.div`
   font-size: 13px;
   color: ${({ theme }) => theme.colors.textFaint};
 `;
+
+/**
+ * One **Setting row**: its title and description on the left, its control on
+ * the right. The last row of the card closes on 2px rather than 12px, so the
+ * card's own padding is not doubled under it.
+ */
+export const Row = styled.div<{ $last?: boolean }>`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: ${({ $last }) => ($last ? '12px 0 2px' : '12px 0')};
+`;
+
+/** A row's title, 15px medium in the text ink. */
+export const RowTitle = styled.div`
+  font-family: ${({ theme }) => theme.fonts.sans};
+  font-size: 15px;
+  font-weight: 500;
+  color: ${({ theme }) => theme.colors.text};
+`;
+
+/** The description under a row's title, 13px in the faint ink. */
+export const RowDesc = styled.div`
+  margin-top: 2px;
+  font-family: ${({ theme }) => theme.fonts.sans};
+  font-size: 13px;
+  color: ${({ theme }) => theme.colors.textFaint};
+`;

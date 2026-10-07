@@ -222,6 +222,11 @@ export interface LibraryStorage {
    */
   setSubtitleLanguage(language: string): void;
   /**
+   * Store **Ultrawide margins** — an upsert, so the second write replaces the
+   * first. `settings()` reads it back with the default, off, applied.
+   */
+  setUltrawideMargins(on: boolean): void;
+  /**
    * The maintainer's TMDB key, `null` when none is stored — no default. Kept
    * in the same `settings` table but not a household preference, so
    * `settings()` never carries it.
@@ -341,6 +346,7 @@ export function createSqliteStorage(dbPath: string): LibraryStorage {
     setRating: curation.setRating,
     settings: settingsRepository.settings,
     setSubtitleLanguage: settingsRepository.setSubtitleLanguage,
+    setUltrawideMargins: settingsRepository.setUltrawideMargins,
     tmdbKey: settingsRepository.tmdbKey,
     setTmdbKey: settingsRepository.setTmdbKey,
     enrichmentLastSyncedAt: settingsRepository.enrichmentLastSyncedAt,

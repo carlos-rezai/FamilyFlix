@@ -1275,6 +1275,21 @@ export function createApiRouter(
     res.json({ value });
   });
 
+  // **Ultrawide margins** — the subtitle language's sibling, the same
+  // Single-signal write. A valid body is exactly a boolean: the string
+  // "true", 1 and null are refused rather than coerced, so a loose client
+  // cannot flip the household's frame by accident.
+  router.post('/settings/ultrawide-margins', (req: Request, res: Response) => {
+    const { value } = (req.body ?? {}) as { value?: unknown };
+    if (typeof value !== 'boolean') {
+      res.status(400).json({ error: 'Body must be { value: boolean }' });
+      return;
+    }
+
+    storage.setUltrawideMargins(value);
+    res.json({ value });
+  });
+
   // The TMDB key, the `enrichment/` domain's. `GET /api/settings` is not
   // widened: the key is the maintainer's, not a household preference, and the
   // player never reads it.

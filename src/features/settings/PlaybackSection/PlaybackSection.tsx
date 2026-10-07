@@ -11,14 +11,14 @@ import {
   GroupHeading,
   ItemDesc,
   ItemTitle,
+  Row,
+  RowDesc,
+  RowTitle,
 } from '../section.styles';
 import {
   CodecsRow,
   ComingSoon,
-  Row,
-  RowDesc,
   RowRule,
-  RowTitle,
   RowTitleLine,
   SubtitlesHeader,
 } from './PlaybackSection.styles';

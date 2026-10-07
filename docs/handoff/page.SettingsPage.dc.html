@@ -415,6 +415,71 @@
             </div>
           </div>
 
+          <!-- DISPLAY -->
+          <div
+            style="
+              font-family: var(--font-sans);
+              font-size: 12px;
+              font-weight: 700;
+              letter-spacing: 0.9px;
+              text-transform: uppercase;
+              color: var(--color-text-faint);
+              margin: 0 0 12px 2px;
+            "
+          >
+            Display
+          </div>
+          <div
+            style="
+              background: var(--color-surface);
+              border: 1px solid var(--color-border-soft);
+              border-radius: var(--radius-md);
+              padding: 20px;
+              margin-bottom: 32px;
+            "
+          >
+            <div
+              style="
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 16px;
+                padding: 12px 0 2px;
+              "
+            >
+              <div>
+                <div
+                  style="
+                    font-family: var(--font-sans);
+                    font-size: 15px;
+                    font-weight: 500;
+                    color: var(--color-text);
+                  "
+                >
+                  Ultrawide margins
+                </div>
+                <div
+                  style="
+                    font-family: var(--font-sans);
+                    font-size: 13px;
+                    color: var(--color-text-faint);
+                    margin-top: 2px;
+                  "
+                >
+                  Keep everything in the middle of a very wide screen, so the
+                  rows fit without turning your head. Smaller screens look the
+                  same either way.
+                </div>
+              </div>
+              <dc-import
+                name="prim.Toggle"
+                checked="{{ settings.ultrawideMargins }}"
+                on-toggle="{{ settings.onToggleUltrawide }}"
+                hint-size="46px,26px"
+              ></dc-import>
+            </div>
+          </div>
+
           <!-- NETWORK -->
           <div
             style="

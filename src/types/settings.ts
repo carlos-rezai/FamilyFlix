@@ -35,6 +35,9 @@ export type SubtitleLanguage = (typeof SUBTITLE_LANGUAGES)[number];
  */
 export const DEFAULT_SUBTITLE_LANGUAGE: SubtitleLanguage = 'English';
 
+/** **Ultrawide margins** until the household turns it on: off. */
+export const DEFAULT_ULTRAWIDE_MARGINS = false;
+
 /**
  * What `GET /api/settings` answers: every preference the household keeps, the
  * default already applied. `subtitleLanguage` is a string rather than a
@@ -43,6 +46,8 @@ export const DEFAULT_SUBTITLE_LANGUAGE: SubtitleLanguage = 'English';
 export interface Settings {
   /** Which track the player uses whenever subtitles are shown. */
   subtitleLanguage: string;
+  /** Whether every screen but the player sits in the centred **Content frame**. */
+  ultrawideMargins: boolean;
 }
 
 /**

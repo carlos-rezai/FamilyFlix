@@ -5,6 +5,7 @@ import {
   radius,
   breakpoints,
   motion,
+  layout,
 } from '@/tokens';
 import { accentScale } from '@/utils/accentScale/accentScale';
 
@@ -23,6 +24,7 @@ export function createTheme(accent: string = colors.accent) {
     radius,
     breakpoints,
     motion,
+    layout,
   } as const;
 }
 

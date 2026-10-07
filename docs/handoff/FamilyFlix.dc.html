@@ -249,7 +249,7 @@
           impStep:'setup', impSheet:'', impRoot:'', impProgress:0, impMatched:0, impProblems:[],
           impPhase:'scan', impFound:0, impTotal:0, impDone:0, impCurrent:'', impLog:[], impStartTime:null,
           exportOpen:false, exportFormat:'csv', exportDone:false,
-          settingsSubAuto:false, settingsSubLang:'English',
+          settingsSubAuto:false, settingsSubLang:'English', settingsUltrawide:false,
           codecs:[
             {id:1,name:'H.264 / AVC',exts:['.mp4','.mov','.m4v'],kind:'built-in',size:'—'},
             {id:2,name:'AAC Audio',exts:['.mp4','.m4a'],kind:'built-in',size:'—'},
@@ -367,6 +367,7 @@
         removeCodec(id){ this.setState(s=>({codecs:s.codecs.filter(c=>c.id!==id),codecJustAdded:s.codecJustAdded===id?null:s.codecJustAdded})); }
         setSubLang(v){ this.setState({settingsSubLang:v,openDrop:null}); }
         toggleSubAuto(){ this.setState(s=>({settingsSubAuto:!s.settingsSubAuto})); }
+        toggleUltrawide(){ this.setState(s=>({settingsUltrawide:!s.settingsUltrawide})); }
 
         // ---- snackbars ----
         pushSnack(snack){ const id=++this._snackSeq; this.setState(s=>({snackbars:[...s.snackbars, {...snack, id}]})); if(snack.duration){ setTimeout(()=>this.dismissSnack(id), snack.duration); } return id; }
@@ -734,6 +735,7 @@
               ],
               codecRow:{ summary:s.codecs.length+' formats enabled · '+s.codecs.filter(c=>c.kind==='installed').length+' added by you', onOpen:()=>this.goCodecs() },
               subAutoOn:s.settingsSubAuto, onToggleSubAuto:()=>this.toggleSubAuto(),
+              ultrawideMargins:s.settingsUltrawide, onToggleUltrawide:()=>this.toggleUltrawide(),
               subLang:s.settingsSubLang, subLangOpen:s.openDrop==='subLang', onToggleSubLang:()=>this.setState(st=>({openDrop:st.openDrop==='subLang'?null:'subLang'})),
               subLangOptions:['English','Spanish','French','German'].map(l=>({label:l,selected:l===s.settingsSubLang,onSelect:()=>this.setSubLang(l)})),
               mediaFolder:'C:\\Users\\Family\\FamilyFlix\\Media',

@@ -15,6 +15,8 @@ import CodecsPage from '@/pages/CodecsPage/CodecsPage';
 import ImportPage from '@/pages/ImportPage/ImportPage';
 import EnrichmentPage from '@/pages/EnrichmentPage/EnrichmentPage';
 import { SnackbarProvider } from '@/App/SnackbarProvider/SnackbarProvider';
+import { DisplayPreferenceProvider } from '@/App/DisplayPreferenceProvider/DisplayPreferenceProvider';
+import { ContentFrame } from '@/App/ContentFrame/ContentFrame';
 import { SoftwareUpdateNotice } from '@/features/software-update/SoftwareUpdateNotice/SoftwareUpdateNotice';
 
 /**
@@ -35,31 +37,40 @@ import { SoftwareUpdateNotice } from '@/features/software-update/SoftwareUpdateN
  * landed behind the link already pointed at it, without any link changing,
  * which is how every link in the app could be honest before the screen behind
  * it existed.
+ *
+ * Every route but the player's two is a child of one layout route whose
+ * element is the **Content frame**, so **Ultrawide margins** — held by the
+ * `DisplayPreferenceProvider` outside the Snackbar stack — centres them all at
+ * once and the player alone stays edge to edge.
  */
 export default function App() {
   return (
     <ThemeProvider theme={theme}>
       <GlobalStyle />
-      <SnackbarProvider>
-        <SoftwareUpdateNotice />
-        <Routes>
-          <Route path="/" element={<LibraryPage />} />
-          <Route path="/movie/:id" element={<MoviePage />} />
-          <Route path="/movie/:id/play" element={<PlayerPage />} />
-          <Route
-            path="/episode/:id/play"
-            element={<PlayerPage kind="episode" />}
-          />
-          <Route path="/series/:id" element={<SeriesPage />} />
-          <Route path="/series/:id/season/:n" element={<SeasonPage />} />
-          <Route path="/add" element={<AddMoviePage />} />
-          <Route path="/genre/:name" element={<GenrePage />} />
-          <Route path="/settings" element={<SettingsPage />} />
-          <Route path="/settings/codecs" element={<CodecsPage />} />
-          <Route path="/import" element={<ImportPage />} />
-          <Route path="/enrich" element={<EnrichmentPage />} />
-        </Routes>
-      </SnackbarProvider>
+      <DisplayPreferenceProvider>
+        <SnackbarProvider>
+          <SoftwareUpdateNotice />
+          <Routes>
+            <Route path="/movie/:id/play" element={<PlayerPage />} />
+            <Route
+              path="/episode/:id/play"
+              element={<PlayerPage kind="episode" />}
+            />
+            <Route element={<ContentFrame />}>
+              <Route path="/" element={<LibraryPage />} />
+              <Route path="/movie/:id" element={<MoviePage />} />
+              <Route path="/series/:id" element={<SeriesPage />} />
+              <Route path="/series/:id/season/:n" element={<SeasonPage />} />
+              <Route path="/add" element={<AddMoviePage />} />
+              <Route path="/genre/:name" element={<GenrePage />} />
+              <Route path="/settings" element={<SettingsPage />} />
+              <Route path="/settings/codecs" element={<CodecsPage />} />
+              <Route path="/import" element={<ImportPage />} />
+              <Route path="/enrich" element={<EnrichmentPage />} />
+            </Route>
+          </Routes>
+        </SnackbarProvider>
+      </DisplayPreferenceProvider>
     </ThemeProvider>
   );
 }

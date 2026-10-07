@@ -46,7 +46,10 @@ afterEach(() => {
 const SETTINGS_ROUTE = '/api/settings';
 const WRITE_ROUTE = '/api/settings/subtitle-language';
 
-const ENGLISH: Settings = { subtitleLanguage: 'English' };
+const ENGLISH: Settings = {
+  subtitleLanguage: 'English',
+  ultrawideMargins: false,
+};
 
 /** A request that answers only when the test says so. */
 function held() {
@@ -119,11 +122,16 @@ describe('useSettings — the read', () => {
     const { result } = renderHook(() => useSettings());
 
     await act(async () => {
-      read.settle(okResponse({ subtitleLanguage: 'Spanish' }));
+      read.settle(
+        okResponse({ subtitleLanguage: 'Spanish', ultrawideMargins: false })
+      );
     });
 
     await waitFor(() =>
-      expect(result.current.settings).toEqual({ subtitleLanguage: 'Spanish' })
+      expect(result.current.settings).toEqual({
+        subtitleLanguage: 'Spanish',
+        ultrawideMargins: false,
+      })
     );
   });
 
@@ -167,7 +175,10 @@ describe('useSettings — chooseSubtitleLanguage', () => {
       void result.current.chooseSubtitleLanguage('Spanish');
     });
 
-    expect(result.current.settings).toEqual({ subtitleLanguage: 'Spanish' });
+    expect(result.current.settings).toEqual({
+      subtitleLanguage: 'Spanish',
+      ultrawideMargins: false,
+    });
   });
 
   it('posts the value to the subtitle-language route', async () => {
@@ -191,7 +202,10 @@ describe('useSettings — chooseSubtitleLanguage', () => {
       await chosen;
     });
 
-    expect(result.current.settings).toEqual({ subtitleLanguage: 'Spanish' });
+    expect(result.current.settings).toEqual({
+      subtitleLanguage: 'Spanish',
+      ultrawideMargins: false,
+    });
   });
 
   it('keeps the echo rather than what was sent — the route stored it', async () => {
@@ -204,12 +218,21 @@ describe('useSettings — chooseSubtitleLanguage', () => {
       await chosen;
     });
 
-    expect(result.current.settings).toEqual({ subtitleLanguage: 'Spanish' });
+    expect(result.current.settings).toEqual({
+      subtitleLanguage: 'Spanish',
+      ultrawideMargins: false,
+    });
   });
 
   it('puts the previous value back when the route refuses', async () => {
-    const write = settledReadHeldWrite({ subtitleLanguage: 'French' });
-    const { result } = await renderLanded({ subtitleLanguage: 'French' });
+    const write = settledReadHeldWrite({
+      subtitleLanguage: 'French',
+      ultrawideMargins: false,
+    });
+    const { result } = await renderLanded({
+      subtitleLanguage: 'French',
+      ultrawideMargins: false,
+    });
 
     await act(async () => {
       const chosen = result.current.chooseSubtitleLanguage('Spanish');
@@ -217,7 +240,10 @@ describe('useSettings — chooseSubtitleLanguage', () => {
       await chosen;
     });
 
-    expect(result.current.settings).toEqual({ subtitleLanguage: 'French' });
+    expect(result.current.settings).toEqual({
+      subtitleLanguage: 'French',
+      ultrawideMargins: false,
+    });
   });
 
   it('puts the previous value back when the request itself fails', async () => {

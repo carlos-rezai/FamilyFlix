@@ -554,19 +554,19 @@ so they need their own permission check and a dry-run log line.
 > pure router** — ten `<sc-if>` → `<dc-import>` mounts, with the logic class as the sole
 > state container. Each page receives one typed model object built in `renderVals()`.
 
-| Page (prototype file)    | Target                 | Composition                                                                                                                                                                                                                                        |
-| ------------------------ | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `page.LibraryPage` ✅    | `pages/LibraryPage`    | browse header (SearchBar + FilterDropdown ×3 + gear → Settings) + ContinueCard row + Favorites row + `GenreRow` ×n                                                                                                                                 |
-| `page.GenrePage` ✅      | `pages/GenrePage`      | genre header (SearchBar + Sort FilterDropdown) + `LibraryGrid`                                                                                                                                                                                     |
-| `page.MoviePage` ✅      | `pages/MoviePage`      | backdrop + poster + meta (StarRating, Chip tags, director/cast) + actions                                                                                                                                                                          |
-| `page.SettingsPage` ✅   | `pages/SettingsPage`   | grouped settings hub: **Library** (Add/Import/Export actions) · **Playback** (the **Codecs row** → `/settings/codecs`, its line the Codec summary + default-subtitle FilterDropdown) · **Network** · **Storage** (media folder, space) · **About** |
-| `page.CodecsPage` ✅     | `pages/CodecsPage`     | the maintainer sheet at 780 around `feat.CodecManager`; reached from the Codecs row, Back to Settings                                                                                                                                              |
-| `feat.PlayerControls` ✅ | `pages/PlayerPage`     | full player surface + subtitle overlay (player is one self-contained screen)                                                                                                                                                                       |
-| `feat.MovieForm` ✅      | `pages/AddMoviePage`   | the Add/Edit form (also resolves an import row)                                                                                                                                                                                                    |
-| `feat.ImportFlow` ✅     | `pages/ImportPage`     | the import setup → running → review flow                                                                                                                                                                                                           |
-| `feat.EnrichmentFlow` ✅ | `pages/EnrichmentPage` | TMDB sync setup → running → review (see §5a)                                                                                                                                                                                                       |
-| `page.SeriesPage` ✅     | `pages/SeriesPage`     | series hero + Seasons grid (see §5aa)                                                                                                                                                                                                              |
-| `page.SeasonPage` ✅     | `pages/SeasonPage`     | episode list for one season                                                                                                                                                                                                                        |
+| Page (prototype file)    | Target                 | Composition                                                                                                                                                                                                                                                                                       |
+| ------------------------ | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `page.LibraryPage` ✅    | `pages/LibraryPage`    | browse header (SearchBar + FilterDropdown ×3 + gear → Settings) + ContinueCard row + Favorites row + `GenreRow` ×n                                                                                                                                                                                |
+| `page.GenrePage` ✅      | `pages/GenrePage`      | genre header (SearchBar + Sort FilterDropdown) + `LibraryGrid`                                                                                                                                                                                                                                    |
+| `page.MoviePage` ✅      | `pages/MoviePage`      | backdrop + poster + meta (StarRating, Chip tags, director/cast) + actions                                                                                                                                                                                                                         |
+| `page.SettingsPage` ✅   | `pages/SettingsPage`   | grouped settings hub: **Library** (Add/Import/Export actions) · **Playback** (the **Codecs row** → `/settings/codecs`, its line the Codec summary + default-subtitle FilterDropdown) · **Display** (the _Ultrawide margins_ Toggle) · **Network** · **Storage** (media folder, space) · **About** |
+| `page.CodecsPage` ✅     | `pages/CodecsPage`     | the maintainer sheet at 780 around `feat.CodecManager`; reached from the Codecs row, Back to Settings                                                                                                                                                                                             |
+| `feat.PlayerControls` ✅ | `pages/PlayerPage`     | full player surface + subtitle overlay (player is one self-contained screen)                                                                                                                                                                                                                      |
+| `feat.MovieForm` ✅      | `pages/AddMoviePage`   | the Add/Edit form (also resolves an import row)                                                                                                                                                                                                                                                   |
+| `feat.ImportFlow` ✅     | `pages/ImportPage`     | the import setup → running → review flow                                                                                                                                                                                                                                                          |
+| `feat.EnrichmentFlow` ✅ | `pages/EnrichmentPage` | TMDB sync setup → running → review (see §5a)                                                                                                                                                                                                                                                      |
+| `page.SeriesPage` ✅     | `pages/SeriesPage`     | series hero + Seasons grid (see §5aa)                                                                                                                                                                                                                                                             |
+| `page.SeasonPage` ✅     | `pages/SeasonPage`     | episode list for one season                                                                                                                                                                                                                                                                       |
 
 The gear icon now opens **`page.SettingsPage`** (a full route), not a dropdown — the old
 maintenance menu's actions (Add / Import / Export) are the Library section there, so tasks
@@ -574,6 +574,25 @@ and configuration share one home and the menu scales as settings grow. The brows
 headers differ, so each page owns its header rather than sharing a `MainLayout` chrome; in
 code, factor the shared bits (logo, gear button) into `layouts/` as desired. The Export
 dialog (`feat.ExportModal`) renders as an overlay above the current route.
+
+### Content frame (Ultrawide margins)
+
+The household's **Ultrawide margins** (Settings → Display) caps every screen but the
+player at the **Content measure**, 1920px, centred — `max-width` plus auto side margins,
+no media query, since below the measure the cap is already inert. The page's `bg` shows
+through the margins, with no border or shade, and nothing transitions. Off, or before the
+setting has been read, the frame is a full-width box that changes nothing.
+
+- **What it caps:** every route — the library, genre, movie, series and season pages, the
+  Movie form, Import, Enrichment, Settings and the Codecs page. In code it is one layout
+  route in `App` (`ContentFrame` around an `<Outlet />`), so no layout or page knows it exists.
+- **Outside it:** the player, `/movie/:id/play` and `/episode/:id/play` — a film fills the
+  window whatever the setting says.
+- **Overlays:** the Modal's scrim still covers the window, and its card is centred on the
+  window, which is the frame's centre. The Back-to-top FAB rides the frame, being absolute
+  inside the chrome. The **Snackbar stack** sits at the frame's bottom-right corner on a
+  window wider than the measure — `right: max(s5, (100vw − 1920px) / 2 + s5)` — and at the
+  window's corner on a narrower one; `bottom` is unchanged.
 
 Routing: `react-router-dom` v6. The prototype's `screen` state enumerates the routes
 (`/`, `/genre/:name`, `/movie/:id`, `/movie/:id/play`, `/add`, `/import`, `/settings`,
