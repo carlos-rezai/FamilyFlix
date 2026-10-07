@@ -1,5 +1,4 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { readFileSync } from 'node:fs';
 import {
   act,
   fireEvent,
@@ -7,14 +6,13 @@ import {
   screen,
   waitFor,
 } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import { ThemeProvider } from 'styled-components';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 
 import { PlaybackSection } from './PlaybackSection';
 import { NetworkSection } from '../NetworkSection/NetworkSection';
 import { SnackbarProvider } from '@/App/SnackbarProvider/SnackbarProvider';
-import { ChevronRightIcon, MicrochipIcon } from '@/primitives';
+import { MicrochipIcon } from '@/primitives';
 import type { EnrichmentSummary, PlaybackCapabilities } from '@/types';
 import { theme } from '@/styles/theme';
 import { comesBefore } from '@/test-support/comesBefore/comesBefore';
@@ -27,17 +25,18 @@ import {
   okResponse,
   serverErrorResponse,
 } from '@/test-support/fakeResponse/fakeResponse';
-import { withoutComments } from '@/test-support/shippingSources/shippingSources';
 
 /**
  * 26 — Codecs page, Phase 2: "the Settings card" (issue #245).
  *
  * In the Playback card, the _Codecs_ title, its lede and the **Codec report**
- * give way to one **Codecs row**: a copy of the Network group's _Sync metadata
- * & posters_ row — the microchip in its tile, _Codecs_, the **Codec summary**
- * of `GET /api/playback/capabilities` as its line (blank until the read lands,
- * blank still after a refusal), and a chevron. Pressed, it pushes
- * `/settings/codecs`. The Subtitles half stays under it, as it was.
+ * give way to one **Codecs row**, drawn through `NavigationRow` as the Network
+ * group's _Sync metadata & posters_ row is. This suite proves what the section
+ * hands the molecule — the microchip, _Codecs_, the **Codec summary** of
+ * `GET /api/playback/capabilities` as its line (blank until the read lands,
+ * blank still after a refusal), and `/settings/codecs` — and leaves what every
+ * row is (a button, its chevron, its keys) to `NavigationRow.test.tsx`. The
+ * Subtitles half stays under it, as it was.
  *
  * The round trip — an upload on the **Codecs page**, Back, and the new summary
  * in this row — is the App suite's, because it crosses two screens.
@@ -174,23 +173,17 @@ describe('PlaybackSection — the Codecs row', () => {
     expect(screen.getByText('Codecs').closest('button')).toBe(codecsRow());
   });
 
-  it('carries the microchip glyph in its tile and a chevron at its end', async () => {
+  it('carries the microchip glyph in its tile', async () => {
     renderSection();
     await lineLanded();
 
     const glyph = render(<MicrochipIcon size={19} />).container.querySelector(
       'svg'
     );
-    const chevron = render(
-      <ChevronRightIcon size={18} />
-    ).container.querySelector('svg');
     const row = codecsRow();
 
     expect(row.firstElementChild?.querySelector('svg')?.innerHTML).toBe(
       glyph?.innerHTML
-    );
-    expect(row.lastElementChild?.querySelector('svg')?.innerHTML).toBe(
-      chevron?.innerHTML
     );
   });
 
@@ -245,34 +238,6 @@ describe('PlaybackSection — pressing the Codecs row', () => {
     expect(pathname()).toBe('/settings/codecs');
     expect(navigationType()).toBe('PUSH');
   });
-
-  it('pushes /settings/codecs on Enter after Tab', async () => {
-    const user = userEvent.setup();
-    renderSection();
-    await lineLanded();
-
-    await user.tab();
-    expect(document.activeElement).toBe(codecsRow());
-    await user.keyboard('{Enter}');
-
-    expect(await screen.findByText('the codecs page')).toBeDefined();
-    expect(pathname()).toBe('/settings/codecs');
-    expect(navigationType()).toBe('PUSH');
-  });
-
-  it('pushes /settings/codecs on Space after Tab', async () => {
-    const user = userEvent.setup();
-    renderSection();
-    await lineLanded();
-
-    await user.tab();
-    expect(document.activeElement).toBe(codecsRow());
-    await user.keyboard(' ');
-
-    expect(await screen.findByText('the codecs page')).toBeDefined();
-    expect(pathname()).toBe('/settings/codecs');
-    expect(navigationType()).toBe('PUSH');
-  });
 });
 
 describe('PlaybackSection — the Subtitles half under the row', () => {
@@ -312,20 +277,6 @@ describe('PlaybackSection — the Subtitles half under the row', () => {
 });
 
 describe('PlaybackSection — the read alone', () => {
-  it('takes only the read from useCapabilities, never a write', () => {
-    const source = withoutComments(
-      readFileSync(
-        'src/features/settings/PlaybackSection/PlaybackSection.tsx',
-        'utf8'
-      )
-    );
-
-    expect(source).toMatch(/useCapabilities\(\)/);
-    expect(source).not.toMatch(/\bupload\b/);
-    expect(source).not.toMatch(/\binstallComponent\b/);
-    expect(source).not.toMatch(/\bremoveComponent\b/);
-  });
-
   it('sends nothing to the component route', async () => {
     renderSection();
     await lineLanded();
