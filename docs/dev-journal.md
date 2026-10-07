@@ -29,6 +29,64 @@ amendments (`page.CodecsPage`, the reworked `feat.CodecManager`, the Settings
 page's Codecs row, COMPONENT-SPEC) rode in #244's commit rather than a
 docs-only one of their own.
 
+Six commits across issues #244–#246 — three RED/GREEN pairs — against the
+plan on #243, built from `docs/design-logs/26-codecs-page.md`. **6832 tests
+pass across 398 files**, measured at `301a7ae`.
+
+### What shipped, slice by slice
+
+- **#244, the Codecs page end to end.** `CodecsPage` at `/settings/codecs`,
+  `MaintainerLayout` at 780 around `CodecManager`, which gained its own
+  maintainer header — Back onto Settings, **Codecs**, the lede — over the
+  _Playback component_ group (the Component row, then the drop zone) and the
+  _Formats_ group (the Codec summary over the rows). The route went into
+  `App.tsx`. The Playback card kept a stopgap report until #245.
+- **#245, the Codecs row on Settings.** The Playback card opens with one
+  Codecs row whose line is the Codec summary, pushing `/settings/codecs`; the
+  stopgap report and its styles went, and `PlaybackSection` takes only the
+  read from `useCapabilities`.
+- **#246, the graduation.** The Codecs row and _Sync metadata & posters_
+  draw through one `NavigationRow` in `features/settings/`, both sections'
+  copies of the row's styles gone; and the close's docs — both trees, the
+  Settings Hub section, the tick, this entry, the glossary's Codecs row.
+
+### Judgement calls the log did not name
+
+Each was made by a subagent reading one issue, and each is the refactor
+round's to settle (`docs/refactor-plans/26-codecs-page-refactor.md`):
+
+- **The Codecs row took the Sync row's padding.** #245's body says the row
+  was copied "rule for rule… No difference from the Sync row was needed". The
+  amended `page.SettingsPage.dc.html` draws the Codecs row at `4px 4px 0`,
+  first in its card, and the Sync row at `15px 4px 4px`, under a divider — so
+  the Codecs row sits 11px low and 4px tall, and #246 baked that into the
+  molecule's default.
+- **A _rule for rule_ leaf.** `PlaybackSection.codecsRow.test.tsx` asserts
+  every computed property of both rows' six parts equal — written to force
+  the graduation, and now asserting the wrong thing for placement.
+- **The molecule's behaviour proven through one caller.** Enter, Space and
+  the chevron are leaves in the Codecs row suite, not in
+  `NavigationRow.test.tsx`; the Sync row's suite proves none of it.
+- **A source-grep leaf.** _Takes only the read from useCapabilities, never a
+  write_ greps `PlaybackSection.tsx` for the write names, beside a leaf that
+  proves the same rule by behaviour.
+- **`GroupCard` re-spells the group gap.** It extends `Card`, which already
+  sets the 32px, and writes it again for every card but the last.
+- **The ✅ ticked at #246**, in README and CLAUDE.md, rather than when the
+  refactor closes. It is left standing; this round closing with #243 is what
+  makes it true.
+
+### Deliberately not built
+
+Everything log 26 _Not built_ lists: an accordion or any collapse, a
+Video/Audio split, search or filter over the formats, a codec's own details
+page, a shared cache of the report, a header action, **Move the media
+folder**, and any server change.
+
+### Follow-ups
+
+The refactor plan, filed as 247.
+
 ---
 
 ## 2026-10-05 — The Sandbox blank window, closed undiagnosed (issue #240)
