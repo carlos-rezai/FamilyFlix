@@ -82,7 +82,7 @@ export function createSeriesBrowse(
   // Continue Watching: per series, its earliest part-watched episode — not
   // watched, a resume position — most recently watched first, at most 15.
   const continueEpisodesSql = (where: string) => `
-    SELECT e.*, s.title AS series_title
+    SELECT e.*, s.title AS series_title, s.poster_path AS series_poster_path
     FROM episodes e
     JOIN series s ON s.id = e.series_id
     WHERE e.watched = 0 AND e.resume_position_seconds > 0
@@ -126,9 +126,14 @@ export function createSeriesBrowse(
           .prepare(continueEpisodesSql(where.sql))
           .all(...where.params) as (EpisodeRow & {
           series_title: string;
+          series_poster_path: string | null;
         })[]
       ).map((row) => ({
-        series: { id: row.series_id, title: row.series_title },
+        series: {
+          id: row.series_id,
+          title: row.series_title,
+          posterPath: row.series_poster_path,
+        },
         episode: reader.assembleEpisode(row),
       }));
       return {

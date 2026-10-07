@@ -62,7 +62,7 @@ export interface Episode {
  * two halves, without the next.
  */
 export interface EpisodeContinueEntry {
-  series: { id: string; title: string };
+  series: { id: string; title: string; posterPath: string | null };
   episode: Episode;
 }
 

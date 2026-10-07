@@ -402,7 +402,7 @@ describe('SeriesHome — Continue Watching', () => {
             runtimeMinutes: null,
             resumePositionSeconds: 300,
           },
-          { id: 's2', title: 'Lighthouse Keepers' }
+          { id: 's2', title: 'Lighthouse Keepers', posterPath: null }
         ),
       ],
       series: [
@@ -428,7 +428,7 @@ describe('SeriesHome — Continue Watching', () => {
       continueWatching: [
         makeEntry(
           { id: 'l9', season: 1, number: 9 },
-          { id: 's2', title: 'Lighthouse Keepers' }
+          { id: 's2', title: 'Lighthouse Keepers', posterPath: null }
         ),
         makeEntry(),
       ],

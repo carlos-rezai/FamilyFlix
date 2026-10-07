@@ -3,6 +3,7 @@ import {
   formatClock,
   formatEpisodeTag,
   gradientFromId,
+  imageUrl,
   toProgressPercent,
   toRuntimeSeconds,
 } from '@/utils';
@@ -12,13 +13,15 @@ import {
  * `ContinueCard` renders — an **Episode continue card**, `continueView`'s
  * precedent for a movie. The title reads `Series · SnnEnn`; the **Resume
  * label** is elapsed and total together when the runtime is known, elapsed
- * alone when it isn't. The id is the episode's, which is what the card opens.
+ * alone when it isn't. The id is the episode's, which is what the card opens;
+ * the art is the series' — its poster, or its gradient under the Default
+ * poster.
  */
 export function episodeContinueView({
   series,
   episode,
 }: EpisodeContinueEntry): ContinueCardMovie {
-  const { g1, g2 } = gradientFromId(episode.id);
+  const { g1, g2 } = gradientFromId(series.id);
   const elapsed = formatClock(episode.resumePositionSeconds);
   const totalSeconds = toRuntimeSeconds(episode.runtimeMinutes);
 
@@ -35,7 +38,6 @@ export function episodeContinueView({
       episode.resumePositionSeconds,
       episode.runtimeMinutes
     ),
-    // The series' poster arrives with the wire's `series.posterPath`, a later phase.
-    posterUrl: null,
+    posterUrl: imageUrl(series.posterPath),
   };
 }
