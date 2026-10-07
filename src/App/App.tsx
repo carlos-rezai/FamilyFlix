@@ -30,13 +30,15 @@ import { SoftwareUpdateNotice } from '@/features/software-update/SoftwareUpdateN
  *
  * Every route a real screen: the browse home at `/`, the movie page at
  * `/movie/:id` and the genre page at `/genre/:name` (the home's two
- * destinations), the player at `/movie/:id/play` (and on an episode at `/episode/:id/play`), the movie form at `/add`
- * (with `?movie=<id>` to edit), the series page at `/series/:id`, the Settings
- * hub at `/settings`, the bulk
- * importer at `/import` and the TMDB **Sync** at `/enrich`. The URLs were the stable part all along — each screen
- * landed behind the link already pointed at it, without any link changing,
- * which is how every link in the app could be honest before the screen behind
- * it existed.
+ * destinations), the player at `/movie/:id/play` (and on an episode at
+ * `/episode/:id/play`), the movie form at `/add` (with `?movie=<id>` to edit),
+ * the series page at `/series/:id` and the season page at
+ * `/series/:id/season/:n`, the Settings hub at `/settings` and the **Codecs
+ * page** at `/settings/codecs`, the bulk importer at `/import` and the TMDB
+ * **Sync** at `/enrich`. The URLs were the stable part all along — each
+ * screen landed behind the link already pointed at it, without any link
+ * changing, which is how every link in the app could be honest before the
+ * screen behind it existed.
  *
  * Every route but the player's two is a child of one layout route whose
  * element is the **Content frame**, so **Ultrawide margins** — held by the
