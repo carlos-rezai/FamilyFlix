@@ -18,13 +18,17 @@ export interface ArtworkProps {
 }
 
 /**
- * A movie's artwork, or the **Gradient fallback** when there is none — the
- * poster on a card, the poster on the detail page, and the backdrop behind it.
+ * A title's artwork over its **Gradient fallback**. The **Poster surfaces** —
+ * the Poster card, the Continue card and both detail poster frames — pass
+ * `poster`, and with no url draw the **Default poster**. Everything else — the
+ * detail backdrops, the player's art layer, the Season card, the episode
+ * thumbnail, the Up next card and the Enrichment candidates — draws the plain
+ * gradient.
  *
- * One component for all three because the glossary already treats them as one
- * thing: the **Gradient fallback** is defined as covering "cards, the detail
- * Poster, and the Backdrop". Before this, each of the three drew it from its
- * own copy of the same `linear-gradient`, and the copies were free to drift.
+ * One component for all of them because the glossary treats the gradient as
+ * one thing, painted under every image. Before this, each surface drew it from
+ * its own copy of the same `linear-gradient`, and the copies were free to
+ * drift.
  *
  * Decorative: the Default poster's Wordmark is `aria-hidden`, because every
  * caller already names the thing the artwork belongs to.

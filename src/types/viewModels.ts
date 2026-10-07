@@ -29,9 +29,9 @@ export interface PosterCardMovie {
 /**
  * The view model a `ContinueCard` renders from — the wide resume tile on the
  * home screen, built by the `continueView()` mapper
- * (`features/library/home/continueView/continueView.ts`). The tile carries no
- * artwork, so `g1`/`g2` are always the deterministic gradient stops.
- * `resumeLabel` arrives as a finished string ("Resume · 1:13 of 1:55", or just
+ * (`features/library/home/continueView/continueView.ts`). `posterUrl` is the
+ * **Poster URL**, layered over the deterministic gradient stops `g1`/`g2`, or
+ * `null` for the **Default poster**. `resumeLabel` arrives as a finished string ("Resume · 1:13 of 1:55", or just
  * the elapsed half when the runtime is unknown) so the molecule stays
  * logic-free, and `progress` is a 0–100 percent.
  */

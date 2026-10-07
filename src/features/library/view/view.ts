@@ -9,7 +9,7 @@ import {
 /**
  * Maps a canonical `Movie` record to the `PosterCardMovie` a `PosterCard`
  * renders. The pure seam between the domain model and the tile: it resolves the
- * poster path to an image-route URL (or `null` → gradient fallback), always
+ * poster path to an image-route URL (or `null` → the Default poster), always
  * computes deterministic gradient stops from the id, scales the rating and
  * resume position to percents, and carries the watched / favorite flags through
  * (`isFavorite` → `favorite`).

@@ -58,8 +58,8 @@ export interface Episode {
 
 /**
  * One entry of the Series tab's Continue Watching: a series' earliest
- * part-watched episode, and the series' id and title — {@link EpisodeRead}'s
- * two halves, without the next.
+ * part-watched episode, and the series' id, title and poster — the poster for
+ * the card's art. {@link EpisodeRead}'s two halves, without the next.
  */
 export interface EpisodeContinueEntry {
   series: { id: string; title: string; posterPath: string | null };

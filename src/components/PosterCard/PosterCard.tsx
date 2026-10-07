@@ -42,8 +42,8 @@ const ACTIVATION_KEYS = ['Enter', ' '];
 const FAVORITE_SIZE = 34;
 
 /**
- * The library's primary tile — a 2:3 poster (real art or a deterministic
- * gradient placeholder with the title overlaid), a favorite toggle, a watched
+ * The library's primary tile — a 2:3 poster (real art, or the **Default
+ * poster** with the title overlaid), a favorite toggle, a watched
  * badge or in-progress bar, and the title + star rating below. Presentational:
  * it renders a `PosterCardMovie` and emits `onOpen` / `onToggleFavorite`.
  *
