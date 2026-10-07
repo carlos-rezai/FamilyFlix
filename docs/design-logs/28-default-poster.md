@@ -1,7 +1,7 @@
 # 28 — Default poster
 
 > **Initiative:** `default-poster`
-> **PRD:** `docs/PRDs/28-default-poster.md` (to be written)
+> **PRD:** `docs/PRDs/28-default-poster.md` (#253)
 > **Plan:** `docs/PRDs/28-default-poster-plan.md` (to be written)
 
 This log is the `grill-me` session that settled step 12 of the build order
