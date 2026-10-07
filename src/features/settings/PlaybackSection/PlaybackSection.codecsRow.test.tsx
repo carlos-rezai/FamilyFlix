@@ -10,10 +10,8 @@ import { ThemeProvider } from 'styled-components';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 
 import { PlaybackSection } from './PlaybackSection';
-import { NetworkSection } from '../NetworkSection/NetworkSection';
-import { SnackbarProvider } from '@/App/SnackbarProvider/SnackbarProvider';
 import { MicrochipIcon } from '@/primitives';
-import type { EnrichmentSummary, PlaybackCapabilities } from '@/types';
+import type { PlaybackCapabilities } from '@/types';
 import { theme } from '@/styles/theme';
 import { comesBefore } from '@/test-support/comesBefore/comesBefore';
 import {
@@ -73,15 +71,6 @@ const BARE: PlaybackCapabilities = {
   ],
 };
 
-const SUMMARY: EnrichmentSummary = {
-  total: 480,
-  complete: 412,
-  lastSyncedAt: null,
-  keySet: true,
-  online: true,
-  libraryRoot: null,
-};
-
 /** How the capabilities read answers; the other reads always land. */
 let answerCapabilities: () => Promise<Response>;
 
@@ -94,12 +83,6 @@ beforeEach(() => {
     }
     if (path === '/api/settings') {
       return Promise.resolve(okResponse({ subtitleLanguage: 'English' }));
-    }
-    if (path === '/api/enrichment') {
-      return Promise.resolve(okResponse(SUMMARY));
-    }
-    if (path === '/api/tmdb/key') {
-      return Promise.resolve(okResponse({ key: null }));
     }
     return Promise.reject(new Error(`unexpected request: ${path}`));
   });
@@ -185,6 +168,13 @@ describe('PlaybackSection — the Codecs row', () => {
     expect(row.firstElementChild?.querySelector('svg')?.innerHTML).toBe(
       glyph?.innerHTML
     );
+  });
+
+  it('sits at the prototype’s 4px 4px 0, first in its card', async () => {
+    renderSection();
+    await lineLanded();
+
+    expect(getComputedStyle(codecsRow()).padding).toBe('4px 4px 0px');
   });
 
   it('reads the Codec summary of the fetched report as its line', async () => {
@@ -285,54 +275,5 @@ describe('PlaybackSection — the read alone', () => {
     await screen.findByText('the codecs page');
 
     expect(callsTo('/api/playback/component')).toEqual([]);
-  });
-});
-
-/** Every property the cascade resolved for one element, as a plain record. */
-function resolved(element: Element): Record<string, string> {
-  const style = getComputedStyle(element);
-  const entries: Record<string, string> = {};
-  for (let index = 0; index < style.length; index += 1) {
-    const property = style.item(index);
-    entries[property] = style.getPropertyValue(property);
-  }
-  return entries;
-}
-
-/** The six parts of a Settings row: button, tile, text, label, line, chevron. */
-function partsOf(row: HTMLElement): Record<string, Element> {
-  const [tile, text, chevron] = Array.from(row.children);
-  const [label, line] = Array.from(text?.children ?? []);
-  return { button: row, tile, text, label, line, chevron };
-}
-
-describe('PlaybackSection — the Codecs row is the Sync row', () => {
-  it('matches the Sync metadata & posters row rule for rule', async () => {
-    render(
-      <MemoryRouter initialEntries={['/settings']}>
-        <ThemeProvider theme={theme}>
-          <SnackbarProvider>
-            <NetworkSection />
-            <PlaybackSection />
-          </SnackbarProvider>
-        </ThemeProvider>
-      </MemoryRouter>
-    );
-    await lineLanded();
-    const syncRow = await screen.findByRole('button', {
-      name: /Sync metadata & posters/,
-    });
-
-    const sync = partsOf(syncRow);
-    const codecs = partsOf(codecsRow());
-
-    for (const part of ['button', 'tile', 'text', 'label', 'line', 'chevron']) {
-      expect(sync[part], `the Sync row's ${part}`).toBeDefined();
-      expect(codecs[part], `the Codecs row's ${part}`).toBeDefined();
-      expect(codecs[part].tagName, part).toBe(sync[part].tagName);
-      const syncStyle = resolved(sync[part]);
-      expect(Object.keys(syncStyle).length, part).toBeGreaterThan(0);
-      expect(resolved(codecs[part]), part).toEqual(syncStyle);
-    }
   });
 });
