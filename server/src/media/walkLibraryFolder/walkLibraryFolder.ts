@@ -9,7 +9,7 @@ import {
 } from '../scanMovieFolder/scanMovieFolder';
 
 /**
- * Walk a **Library root** for its **Source folders**, in the order they are
+ * Walk a **Library folder** for its **Source folders**, in the order they are
  * found: a folder holding a video file is a Source folder and is not descended
  * — an `Extras/` inside a film's own folder is not a second film on the shelf
  * — and one holding none is descended, so `Drama/Amelie (2001)` is reached
@@ -28,7 +28,7 @@ import {
  * walk. The root itself is not skipped: a root that cannot be read is the
  * caller's to refuse.
  */
-export async function walkLibraryRoot(
+export async function walkLibraryFolder(
   root: string,
   onFound: (scan: MovieFolderScan) => void = () => undefined,
   onUnreadable: (dir: string) => void = () => undefined

@@ -2,7 +2,7 @@
 //
 // 13 — Bulk import, Phase 2: "the tracer bullet" (issue #125).
 //
-// The **Library root** walker, against a real tree under `sandboxRoot`. The
+// The **Library folder** walker, against a real tree under `sandboxRoot`. The
 // one rule it carries is the scan rule from the glossary: *a folder holding a
 // video file is a Source folder and is not descended; one holding none is
 // descended*. What a video file is, is the scanner's fixed extension list —
@@ -12,7 +12,7 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-import { walkLibraryRoot } from './walkLibraryRoot';
+import { walkLibraryFolder } from './walkLibraryFolder';
 import { sandboxRoot } from '../../test-support/sandboxRoot/sandboxRoot';
 
 /** A folder under the root, holding the files named. */
@@ -27,11 +27,11 @@ function folderWith(root: string, path: string, files: string[]): string {
 
 /** The scans' folders, by name, sorted — the shape every assertion reads. */
 async function foundFolders(root: string): Promise<string[]> {
-  const scans = await walkLibraryRoot(root);
+  const scans = await walkLibraryFolder(root);
   return scans.map((scan) => basename(scan.dir)).sort();
 }
 
-describe('walkLibraryRoot — the scan rule', () => {
+describe('walkLibraryFolder — the scan rule', () => {
   it('finds a folder holding a video', async () => {
     const root = sandboxRoot('familyflix-walk-');
     folderWith(root, 'Die Hard (1988)', ['die-hard.mkv', 'poster.jpg']);
@@ -64,7 +64,7 @@ describe('walkLibraryRoot — the scan rule', () => {
     const root = sandboxRoot('familyflix-walk-');
     const dir = folderWith(root, 'Die Hard (1988)', ['die-hard.mkv']);
 
-    const scans = await walkLibraryRoot(root);
+    const scans = await walkLibraryFolder(root);
 
     expect(scans).toHaveLength(1);
     expect(scans[0].dir).toBe(dir);
@@ -77,17 +77,17 @@ describe('walkLibraryRoot — the scan rule', () => {
     const root = sandboxRoot('familyflix-walk-');
     folderWith(root, 'Photos/2019', ['beach.jpg', 'notes.txt']);
 
-    expect(await walkLibraryRoot(root)).toEqual([]);
+    expect(await walkLibraryFolder(root)).toEqual([]);
   });
 
   it('answers nothing for an empty root', async () => {
     const root = sandboxRoot('familyflix-walk-');
 
-    expect(await walkLibraryRoot(root)).toEqual([]);
+    expect(await walkLibraryFolder(root)).toEqual([]);
   });
 });
 
-describe('walkLibraryRoot — what counts as a video', () => {
+describe('walkLibraryFolder — what counts as a video', () => {
   it.each(['mp4', 'mkv', 'avi', 'mov', 'webm'])(
     'recognises a .%s file',
     async (extension) => {
@@ -111,7 +111,7 @@ describe('walkLibraryRoot — what counts as a video', () => {
       const root = sandboxRoot('familyflix-walk-');
       folderWith(root, 'Film', [`film.${extension}`]);
 
-      expect(await walkLibraryRoot(root)).toEqual([]);
+      expect(await walkLibraryFolder(root)).toEqual([]);
     }
   );
 });

@@ -6,7 +6,7 @@ import type { LibraryStorage, StoredLibraryFolder } from '../../library';
 import type { Media } from '../../media/createMedia/createMedia';
 import type { MovieFolderScan } from '../../media/scanMovieFolder/scanMovieFolder';
 import { folderOverlap } from '../../library/folders/folderOverlap/folderOverlap';
-import { walkLibraryRoot } from '../../media/walkLibraryRoot/walkLibraryRoot';
+import { walkLibraryFolder } from '../../media/walkLibraryFolder/walkLibraryFolder';
 import { readableFolder } from '../../media/readableFolder/readableFolder';
 import type { Playback } from '../../playback/createPlayback/createPlayback';
 import { episodeTag, spellEpisodeTag } from '../../media/episodeTag/episodeTag';
@@ -904,7 +904,7 @@ export function createImporter({
 
     let scans: MovieFolderScan[] = [];
     try {
-      scans = await walkLibraryRoot(
+      scans = await walkLibraryFolder(
         rootPath,
         (scan) => {
           current.found += 1;
@@ -1098,7 +1098,7 @@ export function createImporter({
       }
       let scans: MovieFolderScan[] = [];
       try {
-        scans = await walkLibraryRoot(
+        scans = await walkLibraryFolder(
           folder.path,
           (scan) => {
             current.found += 1;

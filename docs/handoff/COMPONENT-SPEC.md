@@ -615,7 +615,7 @@ as siblings:
 
 **Server-side note for the implementers:** the run is a pass over the _already-imported_
 library keyed by title + year — not a second filesystem scanner. The existing
-`walkLibraryRoot`/`scanMovieFolder` path is untouched; the `tmdb_id` column finally gets
+`walkLibraryFolder`/`scanMovieFolder` path is untouched; the `tmdb_id` column finally gets
 a value. Poster/CSV writes are the only place the app writes back into the source folders,
 so they need their own permission check and a dry-run log line.
 

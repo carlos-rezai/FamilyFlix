@@ -9,7 +9,7 @@
 // numbered: the season from the folder's name, the episode and the title from
 // the **Episode tag**. Every other scan is a film and passes through exactly
 // as it came, by identity and in order — which is what keeps the movie import
-// untouched. `walkLibraryRoot` is not asked to change: the Season folder is
+// untouched. `walkLibraryFolder` is not asked to change: the Season folder is
 // the Source folder it already yields, because that is where the videos are.
 //
 // Table tests in the style of `matchRows`: a scan is built by name under a
