@@ -3,11 +3,11 @@ import { readFile } from 'node:fs/promises';
 import { basename, dirname, extname, isAbsolute, relative } from 'node:path';
 
 import type { LibraryStorage, StoredLibraryFolder } from '../../library';
-import type { Media } from '../../media/createMedia/createMedia';
-import type { MovieFolderScan } from '../../media/scanMovieFolder/scanMovieFolder';
 import { folderOverlap } from '../../library/folders/folderOverlap/folderOverlap';
-import { walkLibraryFolder } from '../../media/walkLibraryFolder/walkLibraryFolder';
+import type { Media } from '../../media/createMedia/createMedia';
 import { readableFolder } from '../../media/readableFolder/readableFolder';
+import type { MovieFolderScan } from '../../media/scanMovieFolder/scanMovieFolder';
+import { walkLibraryFolder } from '../../media/walkLibraryFolder/walkLibraryFolder';
 import type { Playback } from '../../playback/createPlayback/createPlayback';
 import { episodeTag, spellEpisodeTag } from '../../media/episodeTag/episodeTag';
 import { derivedRuntime } from '../../playback/derivedRuntime/derivedRuntime';

@@ -15,7 +15,7 @@ import { HeaderRow, Heading, Lede } from './ImportFlow.styles';
 /**
  * The header's words, by what the run reads: a sheet, or the Library folders.
  */
-const COPY = {
+const WORDING = {
   sheet: {
     heading: 'Import library',
     lede: 'Bulk-migrate your spreadsheet and movie folders in one pass.',
@@ -72,7 +72,7 @@ export function ImportFlow() {
   // run is the server's, and the next visit re-attaches to it.
   const goBack = useGoBack('/settings');
   // `run.source` chooses the header's words and nothing else.
-  const copy = COPY[run?.source ?? 'sheet'];
+  const wording = WORDING[run?.source ?? 'sheet'];
 
   const [sheet, setSheet] = useState('');
   const [root, setRoot] = useState('');
@@ -154,9 +154,9 @@ export function ImportFlow() {
         >
           <ChevronLeftIcon size={18} />
         </IconButton>
-        <Heading>{copy.heading}</Heading>
+        <Heading>{wording.heading}</Heading>
       </HeaderRow>
-      <Lede>{copy.lede}</Lede>
+      <Lede>{wording.lede}</Lede>
 
       {attaching ? null : run === null ? (
         <ImportSetup

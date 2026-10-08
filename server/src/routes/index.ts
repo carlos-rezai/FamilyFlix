@@ -9,6 +9,10 @@ import type {
 import express, { type Request, type Response, type Router } from 'express';
 
 import type { LibraryStorage } from '../library';
+import {
+  folderOverlap,
+  type FolderClash,
+} from '../library/folders/folderOverlap/folderOverlap';
 import { yearSpan } from '../library/series/yearSpan/yearSpan';
 import {
   ImportBusyError,
@@ -21,12 +25,8 @@ import {
 } from '../import-export/createImporter/createImporter';
 import { writeSheet } from '../import-export/writeSheet/writeSheet';
 import type { Media } from '../media/createMedia/createMedia';
-import { spaceUsed } from '../media/spaceUsed/spaceUsed';
 import { readableFolder } from '../media/readableFolder/readableFolder';
-import {
-  folderOverlap,
-  type FolderClash,
-} from '../library/folders/folderOverlap/folderOverlap';
+import { spaceUsed } from '../media/spaceUsed/spaceUsed';
 import { componentBinary } from '../playback/componentBinary/componentBinary';
 import type {
   InstallRefusal,
