@@ -1,7 +1,6 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-import { fetchTmdbKey } from '@/api/fetchTmdbKey/fetchTmdbKey';
 import { useGoBack } from '@/hooks/useGoBack/useGoBack';
 import { ChevronLeftIcon, IconButton } from '@/primitives';
 import { enrichPath } from '@/utils';
@@ -10,6 +9,7 @@ import { ImportProgress } from '../ImportProgress/ImportProgress';
 import { ImportReview } from '../ImportReview/ImportReview';
 import { ImportSetup } from '../ImportSetup/ImportSetup';
 import { useImportRun } from '../useImportRun/useImportRun';
+import { useKeyStored } from '../useKeyStored/useKeyStored';
 import { HeaderRow, Heading, Lede } from './ImportFlow.styles';
 
 /**
@@ -79,24 +79,7 @@ export function ImportFlow() {
   const [sheetError, setSheetError] = useState<string | null>(null);
   const [rootError, setRootError] = useState<string | null>(null);
   const [enrich, setEnrich] = useState(false);
-  const [keySet, setKeySet] = useState(false);
-
-  useEffect(() => {
-    let left = false;
-    fetchTmdbKey().then(
-      (key) => {
-        if (!left) {
-          setKeySet(key !== null);
-        }
-      },
-      () => {
-        // A read that failed is no key: the hint says to add one.
-      }
-    );
-    return () => {
-      left = true;
-    };
-  }, []);
+  const keySet = useKeyStored();
 
   const onToggleEnrich = useCallback(() => setEnrich((ticked) => !ticked), []);
 

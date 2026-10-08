@@ -6,9 +6,9 @@ const TMDB_KEY_ENDPOINT = '/api/tmdb/key';
  * status that is not OK rejects.
  *
  * It lives on this rung because two features read it: the Settings hub's
- * `useTmdbKey` fills the Network group's field with it, and the Import flow
- * chooses the _Also fetch from TMDB_ card's hint by it — treating a rejection
- * as no key.
+ * `useTmdbKey` fills the Network group's field with it, and import-export's
+ * `useKeyStored` chooses the _Also fetch from TMDB_ card's hint by it —
+ * treating a rejection as no key.
  */
 export async function fetchTmdbKey(): Promise<string | null> {
   const response = await fetch(TMDB_KEY_ENDPOINT);

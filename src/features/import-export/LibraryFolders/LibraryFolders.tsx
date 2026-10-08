@@ -1,7 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-import { fetchTmdbKey } from '@/api/fetchTmdbKey/fetchTmdbKey';
 import { useGoBack } from '@/hooks/useGoBack/useGoBack';
 import {
   Button,
@@ -15,6 +14,7 @@ import { folderBridge } from '../folderBridge/folderBridge';
 import { EnrichCheckCard } from '../EnrichCheckCard/EnrichCheckCard';
 import { FolderRow } from '../FolderRow/FolderRow';
 import { FolderShapes } from '../FolderShapes/FolderShapes';
+import { useKeyStored } from '../useKeyStored/useKeyStored';
 import { useLibraryFolders } from '../useLibraryFolders/useLibraryFolders';
 import {
   AddRow,
@@ -57,24 +57,7 @@ export function LibraryFolders() {
   const [bridge] = useState(folderBridge);
   const [scanning, setScanning] = useState(false);
   const [enrich, setEnrich] = useState(false);
-  const [keySet, setKeySet] = useState(false);
-
-  useEffect(() => {
-    let left = false;
-    fetchTmdbKey().then(
-      (key) => {
-        if (!left) {
-          setKeySet(key !== null);
-        }
-      },
-      () => {
-        // A read that failed is no key: the hint says to add one.
-      }
-    );
-    return () => {
-      left = true;
-    };
-  }, []);
+  const keySet = useKeyStored();
 
   const scan = async () => {
     setScanning(true);
