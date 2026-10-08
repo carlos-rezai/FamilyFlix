@@ -3,6 +3,7 @@ import type {
   ExportSummary,
   ImportField,
   ImportRun,
+  LibraryFolder,
 } from '@/types';
 
 /**
@@ -150,4 +151,68 @@ export async function fetchExportFile(format: ExportFormat): Promise<Blob> {
   }
 
   return response.blob();
+}
+
+const FOLDERS_ENDPOINT = '/api/library-folders';
+
+/**
+ * The **Library folders** in the order added, each with its title count and
+ * whether the disk could reach it just now. Any status but a `200` rejects.
+ */
+export async function fetchLibraryFolders(): Promise<LibraryFolder[]> {
+  const response = await fetch(FOLDERS_ENDPOINT);
+
+  if (!response.ok) {
+    throw new Error(`GET ${FOLDERS_ENDPOINT} failed: ${response.status}`);
+  }
+
+  return (await response.json()) as LibraryFolder[];
+}
+
+/** What an add came to: the folder the route added, or its one sentence. */
+export type AddFolderOutcome =
+  | { kind: 'added'; folder: LibraryFolder }
+  | { kind: 'refused'; sentence: string };
+
+/**
+ * List one folder. A `400` or `409` resolves with the route's own sentence,
+ * because the screen draws it; any other failure rejects.
+ */
+export async function addLibraryFolder(
+  path: string
+): Promise<AddFolderOutcome> {
+  const response = await fetch(FOLDERS_ENDPOINT, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ path }),
+  });
+
+  if (response.status === 400 || response.status === 409) {
+    const body: unknown = await response.json().catch(() => null);
+    const error =
+      typeof body === 'object' && body !== null
+        ? (body as { error?: unknown }).error
+        : undefined;
+    if (typeof error === 'string') {
+      return { kind: 'refused', sentence: error };
+    }
+  }
+  if (!response.ok) {
+    throw new Error(`POST ${FOLDERS_ENDPOINT} failed: ${response.status}`);
+  }
+
+  return { kind: 'added', folder: (await response.json()) as LibraryFolder };
+}
+
+/**
+ * Take one folder off the list. Its titles stay. Any status but a `2xx`
+ * rejects.
+ */
+export async function removeLibraryFolder(id: string): Promise<void> {
+  const url = `${FOLDERS_ENDPOINT}/${encodeURIComponent(id)}`;
+  const response = await fetch(url, { method: 'DELETE' });
+
+  if (!response.ok) {
+    throw new Error(`DELETE ${url} failed: ${response.status}`);
+  }
 }

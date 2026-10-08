@@ -123,6 +123,16 @@
           ></dc-import>
         </sc-if>
 
+        <!-- ============================= LIBRARY FOLDERS ============================= -->
+        <sc-if value="{{ isFolders }}" hint-placeholder-val="{{ false }}">
+          <dc-import
+            name="page.LibraryFoldersPage"
+            lf="{{ foldersModel }}"
+            style="position: absolute; inset: 0"
+            hint-size="100%,100%"
+          ></dc-import>
+        </sc-if>
+
         <!-- ============================= EXPORT MODAL (feat.ExportModal) ============================= -->
         <sc-if value="{{ exportOpen }}" hint-placeholder-val="{{ false }}">
           <dc-import
@@ -246,6 +256,7 @@
           addMode:'folder', folderPath:'', scanned:false,
           fTitle:'', fYear:'', fDirector:'', fCast:'', fDescription:'', fGenres:[], fVideo:'', fPoster:'', fSubs:[], fKind:'movie', fEpisodes:[], subLangOpen:null,
           addContext:null, resolveId:null,
+          libraryFolders:[{id:'f1',path:'E:\\Movies',titleCount:214,reachable:true},{id:'f2',path:'F:\\Kids',titleCount:38,reachable:false}], folderTyped:'', folderRefusal:null, folderBridge:true, impSource:'sheet',
           impStep:'setup', impSheet:'', impRoot:'', impProgress:0, impMatched:0, impProblems:[],
           impPhase:'scan', impFound:0, impTotal:0, impDone:0, impCurrent:'', impLog:[], impStartTime:null,
           exportOpen:false, exportFormat:'csv', exportDone:false,
@@ -363,6 +374,29 @@
         goImport(){ this.setState({screen:'import',gearOpen:false,impStep:'setup',impProgress:0}); }
         goSettings(){ this.setState({screen:'settings',gearOpen:false,openDrop:null}); }
         goCodecs(){ this.setState({screen:'codecs',gearOpen:false,openDrop:null}); }
+        goFolders(){ this.setState({screen:'folders',gearOpen:false,openDrop:null,folderTyped:'',folderRefusal:null}); }
+        // Library folders: the route's refusals, simulated — case-blind, by whole path segments.
+        folderClash(path){
+          const norm=(p)=>p.replace(/[\\/]+$/,'').toLowerCase();
+          const want=norm(path);
+          for(const f of this.state.libraryFolders){
+            const held=norm(f.path);
+            if(want===held) return 'That folder is already in your library folders.';
+            if(want.startsWith(held+'\\')) return 'That folder is inside '+f.path+', which is already a library folder.';
+            if(held.startsWith(want+'\\')) return 'That folder holds '+f.path+', which is already a library folder.';
+          }
+          return null;
+        }
+        addFolder(path){
+          const typed=(path||'').trim();
+          if(!typed) return;
+          if(!/^[A-Za-z]:\\/.test(typed)){ this.setState({folderRefusal:'Type the folder’s full path, starting with its drive.'}); return; }
+          const clash=this.folderClash(typed);
+          if(clash){ this.setState({folderRefusal:clash}); return; }
+          this.setState(s=>({libraryFolders:[...s.libraryFolders,{id:'f'+Date.now(),path:typed,titleCount:0,reachable:true}],folderTyped:'',folderRefusal:null}));
+        }
+        browseFolders(){ this.addFolder('D:\\Films'); }
+        removeFolder(id){ this.setState(s=>({libraryFolders:s.libraryFolders.filter(f=>f.id!==id)})); }
         uploadCodec(){ this.setState(s=>{ const id=Math.max(0,...s.codecs.map(c=>c.id))+1; const packs=[{name:'DTS Audio',exts:['.mkv','.dts'],size:'2.3 MB'},{name:'ProRes',exts:['.mov'],size:'9.4 MB'},{name:'FLAC Audio',exts:['.mkv','.flac'],size:'0.8 MB'},{name:'Theora',exts:['.ogv'],size:'1.6 MB'}]; const p=packs[s.codecs.filter(c=>c.kind==='installed').length % packs.length]; return {codecs:[...s.codecs,{id,name:p.name,exts:p.exts,kind:'installed',size:p.size}],codecJustAdded:id}; }); }
         removeCodec(id){ this.setState(s=>({codecs:s.codecs.filter(c=>c.id!==id),codecJustAdded:s.codecJustAdded===id?null:s.codecJustAdded})); }
         setSubLang(v){ this.setState({settingsSubLang:v,openDrop:null}); }
@@ -677,7 +711,7 @@
           const problems=s.impProblems.map(p=>{ const col=p.kind==='no-folder'?'#c97a6a':p.kind==='ambiguous'?accent:p.kind==='missing-file'?'#c9a86a':'#9a8a6b'; return {id:p.id,title:p.title,reason:p.reason,dotStyle:{flex:'0 0 auto',width:'10px',height:'10px',borderRadius:'99px',background:col},resolve:()=>this.resolveProblem(p),skip:()=>this.skipProblem(p.id)}; });
 
           return {
-            rootStyle, isBrowse:s.screen==='browse', isDetail:s.screen==='detail', isPlayer:s.screen==='player', isAdd:s.screen==='add', isImport:s.screen==='import', isGenre:s.screen==='genre', isSettings:s.screen==='settings', isCodecs:s.screen==='codecs', isEnrich:s.screen==='enrich', isSeries:s.screen==='series', isSeason:s.screen==='season',
+            rootStyle, isBrowse:s.screen==='browse', isDetail:s.screen==='detail', isPlayer:s.screen==='player', isAdd:s.screen==='add', isImport:s.screen==='import', isGenre:s.screen==='genre', isSettings:s.screen==='settings', isCodecs:s.screen==='codecs', isFolders:s.screen==='folders', isEnrich:s.screen==='enrich', isSeries:s.screen==='series', isSeason:s.screen==='season',
             snackbars: s.snackbars.map(n=>({ ...n, onDismiss:()=>this.dismissSnack(n.id) })), hasSnackbars: s.snackbars.length>0,
             goBrowse:()=>this.goBrowse(), backFromDetail:()=>this.backFromDetail(),
             genreView:s.genreView, genrePageList:this.genrePageMovies().map(m=>this.view(m)), genreNoResults:this.genrePageMovies().length===0,
@@ -713,6 +747,16 @@
               showContinue:continueList.length>0, continueList, showFavorites:favoritesList.length>0, favoritesList,
               genreRows:rows, noResults:rows.length===0,
             },
+            foldersModel:{
+              onBack:()=>this.goSettings(),
+              landed:true,
+              empty:s.libraryFolders.length===0,
+              folders:s.libraryFolders.map(f=>({key:f.id,path:f.path,titleCount:f.titleCount,reachable:f.reachable,onRemove:()=>this.removeFolder(f.id)})),
+              typed:s.folderTyped, onTyped:(e)=>this.setState({folderTyped:e.target.value}),
+              onAdd:()=>this.addFolder(s.folderTyped),
+              browse:s.folderBridge, onBrowse:()=>this.browseFolders(),
+              refusal:s.folderRefusal, refused:s.folderRefusal!==null,
+            },
             codecModel:{
               landed:true, hasComponent:false, component:null, onBack:()=>this.goSettings(),
               summaryLabel:s.codecs.length+' formats enabled · '+s.codecs.filter(c=>c.kind==='installed').length+' added by you',
@@ -737,6 +781,7 @@
               },
               libraryActions:[
                 {key:'add',glyph:'＋',label:'Add a title',desc:'A movie or a series, with its files.',onClick:()=>this.goAdd()},
+                {key:'folders',glyph:'📁',label:'Library folders',desc:'The folders your movies and series are kept in.',onClick:()=>this.goFolders()},
                 {key:'import',glyph:'⇪',label:'Import from spreadsheet',desc:'Bulk-migrate a spreadsheet + movie folders in one pass.',onClick:()=>this.goImport()},
                 {key:'export',glyph:'⬇',label:'Export to CSV',desc:'Save your whole library out as a spreadsheet backup.',onClick:()=>this.openExport()},
               ],
@@ -821,6 +866,8 @@
               stepScanActive:s.impPhase==='scan', stepScanDone:s.impPhase==='import', stepImportActive:s.impPhase==='import',
               importStepDotStyle:{display:'grid',placeItems:'center',width:'24px',height:'24px',borderRadius:'50%',fontFamily:'var(--font-sans)',fontSize:'12px',fontWeight:'700',background:s.impPhase==='import'?'var(--color-accent)':'var(--color-surface-3)',color:s.impPhase==='import'?'#14110d':'var(--color-text-faint)'},
               importStepLabelStyle:{fontFamily:'var(--font-sans)',fontSize:'14px',fontWeight:'600',color:s.impPhase==='import'?'var(--color-text)':'var(--color-text-faint)'},
+              heading: s.impSource==='folders' ? 'Scan library folders' : 'Import library',
+              lede: s.impSource==='folders' ? 'Finding new movies and series in your library folders.' : 'Bulk-migrate your spreadsheet and movie folders in one pass.',
               headline: s.impPhase==='scan' ? 'Scanning your library…' : 'Importing movies…',
               statLine: s.impPhase==='scan' ? ('Found '+s.impFound.toLocaleString()+' movies so far') : (s.impDone.toLocaleString()+' of '+s.impTotal.toLocaleString()+' imported'),
               currentItem:s.impCurrent, hasCurrent:!!s.impCurrent,
@@ -925,8 +972,9 @@
                 writeSheet:s.enWriteSheet, onToggleSheet:()=>this.toggleEnrichSheet(),
                 writePosters:s.enWritePosters, onTogglePosters:()=>this.toggleEnrichPosters(),
                 writesToSource:s.enWriteSheet||s.enWritePosters,
-                sheetPath:(s.impRoot||'E:\\Movies')+'\\familyflix-metadata.csv',
-                posterPathExample:(s.impRoot||'E:\\Movies')+'\\<movie folder>\\poster.jpg',
+                // One library folder: the two paths under it. Several: one line each, in each folder.
+                sheetPath:s.libraryFolders.length>1?'familyflix-metadata.csv in each library folder':((s.libraryFolders[0]&&s.libraryFolders[0].path)||s.impRoot||'E:\\Movies')+'\\familyflix-metadata.csv',
+                posterPathExample:s.libraryFolders.length>1?'<movie folder>\\poster.jpg in each library folder':((s.libraryFolders[0]&&s.libraryFolders[0].path)||s.impRoot||'E:\\Movies')+'\\<movie folder>\\poster.jpg',
                 startLabel:s.enSingleTitle?'Fetch details':'Start sync',
                 startVariant:ready?'primary':'secondary',
                 startDisabled:!ready,

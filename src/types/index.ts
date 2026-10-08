@@ -112,3 +112,4 @@ export type {
   GenreRowModel,
   FilterOption,
 } from './viewModels';
+export type { LibraryFolder } from './libraryFolders';

@@ -217,4 +217,25 @@ export const migrations: readonly Migration[] = [
       `);
     },
   },
+  {
+    // Library folders: the list of top folders the maintainer keeps, and on
+    // each movie and series the folder it came from — set to null when that
+    // folder is removed, so the title stays. Inserts no folder: carrying the
+    // old `library-root` setting over is #7's.
+    version: 6,
+    up(db) {
+      db.exec(`
+        CREATE TABLE library_folders (
+          id       TEXT PRIMARY KEY,
+          path     TEXT NOT NULL UNIQUE,
+          added_at TEXT NOT NULL
+        );
+
+        ALTER TABLE movies ADD COLUMN library_folder_id TEXT
+          REFERENCES library_folders(id) ON DELETE SET NULL;
+        ALTER TABLE series ADD COLUMN library_folder_id TEXT
+          REFERENCES library_folders(id) ON DELETE SET NULL;
+      `);
+    },
+  },
 ];

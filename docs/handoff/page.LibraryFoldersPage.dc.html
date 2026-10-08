@@ -1,0 +1,222 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="tokens.css" />
+      </helmet>
+      <!--
+        /settings/folders — the Library folders page. The states it is drawn in:
+        the empty card (No folders yet.), two folders with one unreachable, a
+        refusal line under the field with the typed path kept, and the add row
+        with and without Browse… (drawn only when the shell's folder bridge exists).
+      -->
+      <div
+        data-screen-label="Library folders"
+        style="height: 100%; overflow-y: auto; background: var(--color-bg-2)"
+      >
+        <div
+          style="
+            max-width: 780px;
+            margin: 0 auto;
+            padding: var(--space-6) var(--space-6) var(--space-8);
+          "
+        >
+          <div
+            style="
+              display: flex;
+              align-items: center;
+              gap: 16px;
+              margin-bottom: 8px;
+            "
+          >
+            <dc-import
+              name="prim.IconButton"
+              icon="back"
+              variant="outline"
+              size="42"
+              title="Back"
+              on-click="{{ lf.onBack }}"
+              hint-size="42px,42px"
+            ></dc-import>
+            <h1
+              style="
+                font-family: var(--font-serif);
+                font-weight: 600;
+                font-size: 30px;
+                color: var(--color-text);
+                margin: 0;
+              "
+            >
+              Library folders
+            </h1>
+          </div>
+          <p
+            style="
+              font-family: var(--font-sans);
+              font-size: 15px;
+              color: var(--color-text-faint);
+              margin: 0 0 28px 58px;
+            "
+          >
+            The folders your movies and series are kept in. FamilyFlix looks in
+            each one for new titles.
+          </p>
+
+          <!-- Blank under the header until the list lands -->
+          <sc-if value="{{ lf.landed }}" hint-placeholder-val="{{ true }}">
+            <div
+              style="
+                font-family: var(--font-sans);
+                font-size: 12px;
+                font-weight: 700;
+                letter-spacing: 0.9px;
+                text-transform: uppercase;
+                color: var(--color-text-faint);
+                margin: 0 0 12px 2px;
+              "
+            >
+              Folders
+            </div>
+            <div
+              style="
+                background: var(--color-surface);
+                border: 1px solid var(--color-border-soft);
+                border-radius: var(--radius-md);
+                padding: 20px;
+                margin-bottom: 32px;
+              "
+            >
+              <sc-if value="{{ lf.empty }}" hint-placeholder-val="{{ false }}">
+                <p
+                  style="
+                    margin: 0;
+                    font-family: var(--font-sans);
+                    font-size: 14px;
+                    color: var(--color-text-faint);
+                  "
+                >
+                  No folders yet.
+                </p>
+              </sc-if>
+              <div style="display: flex; flex-direction: column; gap: 8px">
+                <sc-for
+                  list="{{ lf.folders }}"
+                  as="f"
+                  hint-placeholder-count="2"
+                >
+                  <dc-import
+                    name="mol.FolderRow"
+                    path="{{ f.path }}"
+                    title-count="{{ f.titleCount }}"
+                    reachable="{{ f.reachable }}"
+                    on-remove="{{ f.onRemove }}"
+                    hint-size="100%,68px"
+                  ></dc-import>
+                </sc-for>
+              </div>
+
+              <div
+                style="
+                  height: 1px;
+                  margin: 22px 0;
+                  background: var(--color-border-soft);
+                "
+              ></div>
+
+              <div style="display: flex; align-items: center; gap: 10px">
+                <div
+                  style="
+                    flex: 1;
+                    min-width: 0;
+                    display: flex;
+                    align-items: center;
+                    gap: 10px;
+                    height: 46px;
+                    padding: 0 14px;
+                    background: var(--color-surface);
+                    border: 1px solid var(--color-border);
+                    border-radius: 10px;
+                  "
+                  style-focus-within="border-color:var(--color-accent-line)"
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                    <path
+                      d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"
+                      stroke="var(--color-text-faint)"
+                      stroke-width="1.6"
+                    />
+                  </svg>
+                  <input
+                    value="{{ lf.typed }}"
+                    onInput="{{ lf.onTyped }}"
+                    aria-label="Folder path"
+                    placeholder="E:\Movies"
+                    style="
+                      flex: 1;
+                      min-width: 0;
+                      background: transparent;
+                      border: none;
+                      outline: none;
+                      color: var(--color-text);
+                      font-family: var(--font-mono);
+                      font-size: 14px;
+                    "
+                  />
+                </div>
+                <sc-if
+                  value="{{ lf.browse }}"
+                  hint-placeholder-val="{{ true }}"
+                >
+                  <dc-import
+                    name="prim.Button"
+                    label="Browse…"
+                    variant="ghost"
+                    size="sm"
+                    icon="none"
+                    on-click="{{ lf.onBrowse }}"
+                    hint-size="100px,40px"
+                  ></dc-import>
+                </sc-if>
+                <dc-import
+                  name="prim.Button"
+                  label="Add"
+                  variant="secondary"
+                  size="sm"
+                  icon="none"
+                  on-click="{{ lf.onAdd }}"
+                  hint-size="72px,40px"
+                ></dc-import>
+              </div>
+              <sc-if
+                value="{{ lf.refused }}"
+                hint-placeholder-val="{{ false }}"
+              >
+                <p
+                  style="
+                    margin: 8px 0 0;
+                    font-family: var(--font-sans);
+                    font-size: 13px;
+                    color: var(--color-danger);
+                  "
+                >
+                  {{ lf.refusal }}
+                </p>
+              </sc-if>
+            </div>
+          </sc-if>
+        </div>
+      </div>
+    </x-dc>
+    <script
+      type="text/x-dc"
+      data-dc-script
+      data-props='{"$preview":{"width":900,"height":720},"lf":{"editor":null,"tsType":"LibraryFoldersModel"}}'
+    ></script>
+  </body>
+</html>

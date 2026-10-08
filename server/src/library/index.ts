@@ -28,6 +28,7 @@ import { createWrite } from './write/write';
 import { createWatch } from './watch/watch';
 import { createCuration } from './curation/curation';
 import { createSettings } from './settings/settings';
+import { createFolders, type StoredLibraryFolder } from './folders/folders';
 import { createEnrich, type MovieEnrichment } from './enrich/enrich';
 import {
   createSeriesEnrich,
@@ -41,6 +42,7 @@ import { createSeriesCuration } from './series/curation/curation';
 import { createSeriesWatch } from './series/watch/watch';
 
 export type { MovieEnrichment } from './enrich/enrich';
+export type { StoredLibraryFolder } from './folders/folders';
 export type {
   EpisodeEnrichment,
   SeriesEnrichment,
@@ -291,6 +293,20 @@ export interface LibraryStorage {
    * for an id the library does not hold as a series.
    */
   getSeriesDetail(id: string): SeriesDetail | null;
+  /**
+   * The **Library folders** in the order they were added, each with its title
+   * count — the movies and series recorded against it.
+   */
+  libraryFolders(): StoredLibraryFolder[];
+  /** List a folder, answering it. Throws on a path already listed. */
+  addLibraryFolder(path: string): StoredLibraryFolder;
+  /**
+   * Take a folder off the list in one transaction, keeping its titles and
+   * forgetting only where they came from — `library_folder_id` and
+   * `source_folder` nulled on that folder's titles alone. Answers whether the
+   * list held it.
+   */
+  removeLibraryFolder(id: string): boolean;
   /** Close the underlying database connection. */
   close(): void;
 }
@@ -311,6 +327,7 @@ export function createSqliteStorage(dbPath: string): LibraryStorage {
   const watch = createWatch(db);
   const curation = createCuration(db);
   const settingsRepository = createSettings(db);
+  const folders = createFolders(db);
   const seriesReader = createSeriesReader(db);
   const enrich = createEnrich(db, reader);
   const seriesEnrich = createSeriesEnrich(db, seriesReader);
@@ -364,6 +381,9 @@ export function createSqliteStorage(dbPath: string): LibraryStorage {
     listSeriesGenres: seriesBrowse.listSeriesGenres,
     listEpisodes: seriesReader.listEpisodes,
     getSeriesDetail: seriesReader.getSeriesDetail,
+    libraryFolders: folders.libraryFolders,
+    addLibraryFolder: folders.addLibraryFolder,
+    removeLibraryFolder: folders.removeLibraryFolder,
     close() {
       db.close();
     },

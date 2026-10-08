@@ -22,6 +22,11 @@ import {
 import { writeSheet } from '../import-export/writeSheet/writeSheet';
 import type { Media } from '../media/createMedia/createMedia';
 import { spaceUsed } from '../media/spaceUsed/spaceUsed';
+import { readableFolder } from '../media/readableFolder/readableFolder';
+import {
+  folderOverlap,
+  type FolderClash,
+} from '../library/folders/folderOverlap/folderOverlap';
 import { componentBinary } from '../playback/componentBinary/componentBinary';
 import type {
   InstallRefusal,
@@ -57,6 +62,7 @@ import {
   type GenreListPayload,
   type GenrePoolPayload,
   type GenreQuery,
+  type LibraryFolder,
   type LibraryQuery,
   type Movie,
   type MovieSort,
@@ -469,6 +475,18 @@ const DECISION_REFUSALS: Record<
   refused: { status: 422, error: 'TMDB refused the key' },
   unreachable: { status: 503, error: 'TMDB could not be reached' },
 };
+
+/** A {@link folderOverlap} clash as the one sentence the add refuses with. */
+function overlapSentence(clash: FolderClash): string {
+  switch (clash.overlap) {
+    case 'same':
+      return 'That folder is already in your library folders.';
+    case 'inside':
+      return `That folder is inside ${clash.folder}, which is already a library folder.`;
+    case 'contains':
+      return `That folder holds ${clash.folder}, which is already a library folder.`;
+  }
+}
 
 /**
  * Mount the JSON API over a {@link LibraryStorage}. Handlers stay thin — parse
@@ -1399,6 +1417,73 @@ export function createApiRouter(
 
     storage.setUltrawideMargins(value);
     res.json({ value });
+  });
+
+  // The **Library folders** list. `reachable` is the disk's answer, read
+  // afresh on every list rather than stored, so a drive unplugged since the
+  // add reads false on the next visit and true again once it is back.
+  router.get('/library-folders', async (_req: Request, res: Response) => {
+    const listed = storage.libraryFolders();
+    const folders: LibraryFolder[] = await Promise.all(
+      listed.map(async (folder) => ({
+        ...folder,
+        reachable: (await readableFolder(folder.path)) === 'readable',
+      }))
+    );
+    res.json(folders);
+  });
+
+  // Add one folder: `201` with it, `400` for no path, a relative one or one
+  // that is not a readable directory, `409` for a folder that is, is inside
+  // or holds one already listed. Every refusal is one sentence.
+  router.post('/library-folders', async (req: Request, res: Response) => {
+    const { path } = (req.body ?? {}) as { path?: unknown };
+    if (typeof path !== 'string' || path.trim() === '') {
+      res.status(400).json({ error: 'Type the folder’s path first.' });
+      return;
+    }
+    const reading = await readableFolder(path);
+    if (reading === 'relative') {
+      res.status(400).json({
+        error: 'Type the folder’s full path, starting with its drive.',
+      });
+      return;
+    }
+    if (reading !== 'readable') {
+      res.status(400).json({ error: 'No folder at that path.' });
+      return;
+    }
+    const clash = folderOverlap(
+      path,
+      storage.libraryFolders().map((folder) => folder.path)
+    );
+    if (clash !== null) {
+      res.status(409).json({ error: overlapSentence(clash) });
+      return;
+    }
+    let added;
+    try {
+      added = storage.addLibraryFolder(path);
+    } catch {
+      // Two adds racing past the check: the schema holds the path unique.
+      res
+        .status(409)
+        .json({ error: overlapSentence({ overlap: 'same', folder: path }) });
+      return;
+    }
+    const folder: LibraryFolder = { ...added, reachable: true };
+    res.status(201).json(folder);
+  });
+
+  // Remove one folder: its titles stay, forgetting only where they came from.
+  router.delete('/library-folders/:id', (req: Request, res: Response) => {
+    if (!storage.removeLibraryFolder(String(req.params.id))) {
+      res
+        .status(404)
+        .json({ error: 'That folder is not in your library folders.' });
+      return;
+    }
+    res.status(204).end();
   });
 
   // The TMDB key, the `enrichment/` domain's. `GET /api/settings` is not

@@ -230,7 +230,7 @@ describe('LibrarySection — the Export row', () => {
 
     expect(exportDialog()).toBeNull();
     expect(pathname()).toBe('/settings');
-    expect(screen.getAllByRole('button')).toHaveLength(3);
+    expect(screen.getAllByRole('button')).toHaveLength(4);
   });
 
   it('closes from the ✕', () => {

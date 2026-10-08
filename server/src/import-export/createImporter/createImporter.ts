@@ -1,11 +1,12 @@
 import { randomUUID } from 'node:crypto';
-import { readFile, stat } from 'node:fs/promises';
+import { readFile } from 'node:fs/promises';
 import { basename, dirname, extname, isAbsolute, relative } from 'node:path';
 
 import type { LibraryStorage } from '../../library';
 import type { Media } from '../../media/createMedia/createMedia';
 import type { MovieFolderScan } from '../../media/scanMovieFolder/scanMovieFolder';
 import { walkLibraryRoot } from '../../media/walkLibraryRoot/walkLibraryRoot';
+import { readableFolder } from '../../media/readableFolder/readableFolder';
 import type { Playback } from '../../playback/createPlayback/createPlayback';
 import { episodeTag, spellEpisodeTag } from '../../media/episodeTag/episodeTag';
 import { derivedRuntime } from '../../playback/derivedRuntime/derivedRuntime';
@@ -290,14 +291,12 @@ async function checkSheet(sheetPath: string): Promise<SheetRead> {
 
 /** Check the root before any run exists: it has to be there and be a folder. */
 async function checkRoot(rootPath: string): Promise<void> {
-  let isDirectory: boolean;
-  try {
-    isDirectory = (await stat(rootPath)).isDirectory();
-  } catch {
-    throw new ImportStartError('root', 'That folder could not be found.');
-  }
-  if (!isDirectory) {
+  const reading = await readableFolder(rootPath);
+  if (reading === 'not-a-folder') {
     throw new ImportStartError('root', 'That path is not a folder.');
+  }
+  if (reading !== 'readable') {
+    throw new ImportStartError('root', 'That folder could not be found.');
   }
 }
 

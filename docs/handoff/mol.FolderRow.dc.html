@@ -1,0 +1,99 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="tokens.css" />
+      </helmet>
+      <div
+        style="
+          display: flex;
+          align-items: center;
+          gap: 14px;
+          padding: 13px 14px;
+          background: var(--color-bg-2);
+          border: 1px solid var(--color-border-soft);
+          border-radius: var(--radius-md);
+        "
+      >
+        <div
+          style="
+            flex: 0 0 auto;
+            width: 40px;
+            height: 40px;
+            border-radius: 9px;
+            background: var(--color-accent-soft);
+            color: var(--color-accent);
+            display: grid;
+            place-items: center;
+          "
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+            <path
+              d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"
+              stroke="currentColor"
+              stroke-width="1.6"
+            />
+          </svg>
+        </div>
+        <div style="flex: 1; min-width: 0">
+          <div
+            style="
+              font-family: var(--font-mono);
+              font-size: 14px;
+              color: var(--color-text);
+              overflow-wrap: anywhere;
+            "
+          >
+            {{ path }}
+          </div>
+          <div style="{{ lineStyle }}">{{ line }}</div>
+        </div>
+        <button
+          onClick="{{ onRemove }}"
+          title="{{ removeLabel }}"
+          aria-label="{{ removeLabel }}"
+          style="
+            display: grid;
+            place-items: center;
+            width: 32px;
+            height: 32px;
+            flex: 0 0 auto;
+            background: transparent;
+            border: none;
+            border-radius: 7px;
+            color: var(--color-text-faint);
+            cursor: pointer;
+          "
+          style-hover="color:#c97a6a;background:rgba(201,122,106,.1)"
+        >
+          ✕
+        </button>
+      </div>
+    </x-dc>
+    <script
+      type="text/x-dc"
+      data-dc-script
+      data-props='{"$preview":{"width":640,"height":80},"path":{"editor":"text","default":"E:\\Movies","tsType":"string"},"titleCount":{"editor":"number","default":214,"tsType":"number"},"reachable":{"editor":"boolean","default":true,"tsType":"boolean"},"onRemove":{"editor":null,"tsType":"() =&gt; void"}}'
+    >
+      class Component extends DCLogic {
+        renderVals(){
+          const reachable=this.props.reachable!==false;
+          const path=this.props.path||'E:\\Movies';
+          return {
+            path,
+            line: reachable ? (this.props.titleCount||0)+' titles' : 'Can’t be reached right now',
+            lineStyle:{marginTop:'4px',fontFamily:'var(--font-sans)',fontSize:'13px',color:reachable?'var(--color-text-faint)':'var(--color-danger)'},
+            removeLabel:'Remove '+path,
+            onRemove:this.props.onRemove,
+          };
+        }
+      }
+    </script>
+  </body>
+</html>

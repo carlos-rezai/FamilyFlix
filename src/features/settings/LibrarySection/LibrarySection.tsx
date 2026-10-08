@@ -8,7 +8,7 @@ import { Rows } from './LibrarySection.styles';
 
 /**
  * The Settings hub's **Library section**, from `page.SettingsPage.dc.html`:
- * the `Library` group heading over the `＋ Add a title`, `⇪ Import from
+ * the `Library` group heading over the `＋ Add a title`, `📁 Library folders`, `⇪ Import from
  * spreadsheet` and `⬇ Export to CSV` rows — the third's label kept as drawn,
  * though the dialog it opens offers Excel too.
  *
@@ -37,6 +37,12 @@ export function LibrarySection() {
           label="Add a title"
           desc="A movie or a series, with its files."
           onClick={() => navigate('/add')}
+        />
+        <ActionRow
+          glyph="📁"
+          label="Library folders"
+          desc="The folders your movies and series are kept in."
+          onClick={() => navigate('/settings/folders')}
         />
         <ActionRow
           glyph="⇪"
