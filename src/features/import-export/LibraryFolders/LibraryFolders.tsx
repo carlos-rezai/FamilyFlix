@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 
 import { useGoBack } from '@/hooks/useGoBack/useGoBack';
 import {
@@ -9,11 +8,11 @@ import {
   IconButton,
   TextField,
 } from '@/primitives';
-import { ImportBusyError, startFolderScan } from '../api/api';
 import { folderBridge } from '../folderBridge/folderBridge';
 import { EnrichCheckCard } from '../EnrichCheckCard/EnrichCheckCard';
 import { FolderRow } from '../FolderRow/FolderRow';
 import { FolderShapes } from '../FolderShapes/FolderShapes';
+import { useFolderScan } from '../useFolderScan/useFolderScan';
 import { useKeyStored } from '../useKeyStored/useKeyStored';
 import { useLibraryFolders } from '../useLibraryFolders/useLibraryFolders';
 import {
@@ -53,25 +52,10 @@ export function LibraryFolders() {
   const { folders, add, remove, adding, refusal } = useLibraryFolders();
   const goBack = useGoBack('/settings');
   const [typed, setTyped] = useState('');
-  const navigate = useNavigate();
   const [bridge] = useState(folderBridge);
-  const [scanning, setScanning] = useState(false);
+  const { scanning, scan } = useFolderScan();
   const [enrich, setEnrich] = useState(false);
   const keySet = useKeyStored();
-
-  const scan = async () => {
-    setScanning(true);
-    try {
-      await startFolderScan(enrich);
-      navigate('/import');
-    } catch (error) {
-      if (error instanceof ImportBusyError) {
-        navigate('/import');
-        return;
-      }
-      setScanning(false);
-    }
-  };
 
   const submit = async () => {
     if (await add(typed.trim())) {
@@ -173,7 +157,7 @@ export function LibraryFolders() {
               size="lg"
               disabled={scanning || folders.length === 0}
               onClick={() => {
-                void scan();
+                void scan(enrich);
               }}
             />
           </ScanActions>
