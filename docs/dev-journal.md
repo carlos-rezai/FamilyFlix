@@ -11,6 +11,105 @@ Newest entry first.
 
 ---
 
+## 2026-10-08 — Library folders (issues #268–#272)
+
+The maintainer keeps a list of **Library folders**, each a top folder of
+movies and series, at `/settings/folders`. The Settings hub reaches it
+through the Library group's _📁 Library folders_ row. Folders are added by
+typed path or by _Browse…_ over Electron's native dialog, several at a time.
+A **Folder scan** imports every folder on the list in one run, and the Sync
+writes posters and a Metadata sheet into each folder a title came from. The
+spreadsheet import still takes one typed root, and that root now joins the
+list. The prototype amendments (`page.LibraryFoldersPage`, `mol.FolderRow`,
+`page.SettingsPage`, `feat.ImportFlow`, `feat.EnrichmentFlow`,
+`FamilyFlix.dc.html` and the COMPONENT-SPEC entries) rode in #268's `feat:`
+commit, as the plan said.
+
+Ten commits across issues #268–#272, five RED/GREEN pairs, against the plan
+in `docs/PRDs/30-library-folders-plan.md`, built from
+`docs/design-logs/30-library-folders.md`. **7419 tests pass across 438
+files**, measured at `0ca65f6`, from 7246 across 417 at the end of the Add a
+series refactor.
+
+### What shipped, slice by slice
+
+- **#268, the remembered folder list.**
+  - Migration 6: the `library_folders` table, and `library_folder_id` and
+    `source_folder` on both titles.
+  - The `library/folders/` slice, `folderOverlap`, and `readableFolder`,
+    extracted from the importer's `checkRoot`.
+  - The three list routes: `GET`, `POST` and `DELETE /api/library-folders`.
+  - `useLibraryFolders`, `FolderRow`, the `LibraryFolders` organism,
+    `LibraryFoldersPage` and the Settings row.
+- **#269, the Folder scan.** `Importer.scan`, `ImportRun.source`, `titleAt`,
+  the three-argument `setSourceFolder`, `POST /api/library-folders/scan`,
+  `FolderShapes`, and the `/import` heading worded by source.
+- **#270, the sheet root joins the list.** The spreadsheet's typed root is
+  added to the list when it is new, used when it is already there, and
+  refused when it contains a folder on the list.
+- **#271, the Sync over folders.**
+  - Migration 7: the carry-over of `settings.library-root` onto the list.
+  - `sourcePath`, the per-folder write check, and posters and Metadata
+    sheets written per folder.
+  - `EnrichmentSummary.libraryFolders` and `EnrichCheckCard`.
+  - `libraryRoot` removed from the settings slice.
+- **#272, the native picker.** `pickFolders`, its channel in `main.ts` and
+  `preload.ts`, `folderBridge`, `fakeFolderBridge`, and _Browse…_.
+
+### The plan's two departures from the log
+
+- **The spreadsheet root got its own slice**, #270. The log had folded it
+  into the Folder scan.
+- **The carry-over moved from migration 6 to migration 7.** The importer
+  wrote `library-root` and the Sync read it until #270 and #271. Deleting
+  the key in migration 6 would have left the Sync with no write targets
+  for two slices.
+
+### Judgement calls the log did not name
+
+Each was made by a subagent reading one issue. Each is the refactor round's
+to settle (`docs/refactor-plans/30-library-folders-refactor.md`), except the
+five it keeps:
+
+- **`titleAt`**, a storage read the log didn't list, for the first
+  Already-in-library rule. Kept.
+- **`readableFolder` answers a four-way `FolderReading`** rather than a
+  boolean, so the add can tell _relative_ apart from _missing_. Kept.
+- **The add's extra `400` sentence** for a relative path, _Type the folder's
+  full path, starting with its drive._ Kept.
+- **`ImportSource` exported** as a named type. Kept.
+- **`fakeUpdateBridge` spreads `window.familyflix`**, so the two fakes can
+  stand together. Kept.
+- **`createEnrichment`'s own `stat`**, a fourth reading of reach.
+- **A title's run folder matched by joined paths**, where the row carries
+  its folder's id.
+- **`Origin`**, the importer's `StoredLibraryFolder` under other names.
+- **`executeScan` written beside `execute`**, and `scan` beside `start`.
+- **The sheet root's clash read twice** in one call.
+- **`overlapSentence` in the route**, and the importer restating its
+  sentence.
+- **The add's rules in the route handler.**
+- **The stored-key effect copied** from `ImportFlow` into `LibraryFolders`,
+  and the scan's press inline in the organism.
+- **No suite for `LibraryFoldersPage`.**
+
+### Deliberately not built
+
+Everything log 30 _Not built_ lists:
+
+- playing media in place;
+- watching folders, scanning on launch, a per-folder scan;
+- loose videos at a Library folder's top level;
+- a Browse button on Import setup's fields;
+- reading a sheet found inside a Library folder.
+
+### Follow-ups
+
+The refactor plan, filed as 274, with the plan's Phase 6, filed as 273,
+merged into it.
+
+---
+
 ## 2026-10-08 — Add a series refactor (issue 266)
 
 Twenty commits against `docs/refactor-plans/29-add-series-refactor.md`, one
