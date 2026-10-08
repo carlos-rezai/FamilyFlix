@@ -31,7 +31,9 @@ import {
  */
 const FRESH_HOME = '/';
 
-/** The series kind's **Fresh home**: the Series tab the show has just joined. */
+/**
+ * The series kind's **Fresh home**: the Series tab the show has just joined.
+ */
 const SERIES_FRESH_HOME = '/?tab=series';
 
 /**
@@ -659,12 +661,13 @@ export function useMovieForm(): UseMovieFormResult {
                 .then(() => goBack())
           : editing === null
             ? createMovie(values).then(() => navigate(FRESH_HOME))
-            : // A correction is only visible on the film's page — which is the
-              // entry the form was opened from, so a *step* is what lands there.
-              // The push this used to be left a second copy of that page behind,
-              // and the next Back walked into the form the correction had just
-              // been finished in. The **Landing** is the same URL, for the
-              // deep-linked edit that has no such entry to step onto.
+            : // A correction is only visible on the film's page — which is
+              // the entry the form was opened from, so a *step* is what lands
+              // there. The push this used to be left a second copy of that
+              // page behind, and the next Back walked into the form the
+              // correction had just been finished in. The **Landing** is the
+              // same URL, for the deep-linked edit that has no such entry to
+              // step onto.
               updateMovie(editing, values).then(() => goBack());
 
     // The form is still on screen with everything typed still in it, and Save

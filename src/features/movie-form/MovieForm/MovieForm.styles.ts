@@ -36,7 +36,9 @@ export const BannerTitle = styled.span`
 /** The header is the Maintainer's furniture; nothing here is the form's own. */
 export { HeaderRow, Heading, Lede } from '../../maintainer.styles';
 
-/** The **Kind tabs**' place: after the heading, pushed to the header row's end. */
+/**
+ * The **Kind tabs**' place: after the heading, pushed to the header row's end.
+ */
 export const KindTabs = styled.div`
   margin-left: auto;
 `;

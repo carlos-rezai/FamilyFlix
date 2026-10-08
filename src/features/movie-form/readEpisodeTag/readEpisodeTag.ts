@@ -1,4 +1,7 @@
-/** What an **Episode tag** says on the client: the numbers, and the title after it. */
+/**
+ * What an **Episode tag** says on the client: the numbers, and the title after
+ * it.
+ */
 export interface ReadEpisodeTag {
   season: number;
   number: number;
@@ -28,9 +31,10 @@ function withoutExtension(filename: string): string {
 }
 
 /**
- * Read the **Episode tag** off a picked file's name: `{ season, number, title }`,
- * or `null` for a name that carries none. The title is the text after the tag,
- * dots and underscores read as spaces and quality tags dropped.
+ * Read the **Episode tag** off a picked file's name:
+ * `{ season, number, title }`, or `null` for a name that carries none. The
+ * title is the text after the tag, dots and underscores read as spaces and
+ * quality tags dropped.
  */
 export function readEpisodeTag(filename: string): ReadEpisodeTag | null {
   const name = withoutExtension(filename);

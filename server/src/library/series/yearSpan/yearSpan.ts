@@ -1,4 +1,6 @@
-/** A series' **Year range**: its first year and its last, `null` while it runs. */
+/**
+ * A series' **Year range**: its first year and its last, `null` while it runs.
+ */
 export interface YearSpan {
   year: number;
   endYear: number | null;

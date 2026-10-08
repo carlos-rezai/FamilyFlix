@@ -1,6 +1,8 @@
 import styled from 'styled-components';
 
-/** The card and its caption are the movie's, so the two kinds read as one form. */
+/**
+ * The card and its caption are the movie's, so the two kinds read as one form.
+ */
 export { Card, Caption } from '../MovieFormFiles/MovieFormFiles.styles';
 
 /**

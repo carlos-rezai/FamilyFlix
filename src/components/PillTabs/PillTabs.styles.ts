@@ -2,7 +2,10 @@ import styled from 'styled-components';
 
 import { controlStates } from '@/styles/interactionStates/interactionStates';
 
-/** The pill track the tabs sit in — `mol.PillTabs.dc.html`, extracted from `page.LibraryPage.dc.html`. */
+/**
+ * The pill track the tabs sit in — `mol.PillTabs.dc.html`, extracted from
+ * `page.LibraryPage.dc.html`.
+ */
 export const Track = styled.div`
   flex: 0 0 auto;
   display: flex;
