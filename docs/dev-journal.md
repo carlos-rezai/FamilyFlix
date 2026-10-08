@@ -11,6 +11,96 @@ Newest entry first.
 
 ---
 
+## 2026-10-08 — Add a series (issues #261–#264)
+
+The **Movie form** now adds a **Series** too. A plain add at `/add` has two
+**Form kinds**, chosen on the **Kind tabs** (the Library tabs' pill track,
+held in `?kind=series`); the edit and the Resolve stay movie-only. A series is
+its shared fields, a poster and one **Episode file row** per picked video,
+each numbered from its **Episode tag** and carrying its own subtitles, saved
+as one atomic `POST /api/series` that lands on the Series tab. The **Save
+gate** is a video for either kind, held on the wire too, and the title fills
+itself from the filename. This **closes log 22 Q2's open item**, a form for
+series, for the add: Edit, Delete and _Add episodes_ for a held series stay
+the follow-up log 29 names. The prototype amendments (`feat.MovieForm`,
+`mol.PillTabs`, `mol.EpisodeFileRow`, `page.LibraryPage`, `page.SettingsPage`
+and the COMPONENT-SPEC entries) rode in #262's `feat:` commit, as the plan
+said.
+
+Eight commits across issues #261–#264 — four RED/GREEN pairs — against the
+plan in `docs/PRDs/29-add-series-plan.md`, built from
+`docs/design-logs/29-add-series.md`. **7200 tests pass across 416 files**,
+measured at `7f06da3`.
+
+### What shipped, slice by slice
+
+- **#261, the video gate and the title prefill.** `titleFromFilename`, and
+  picking a video into an empty title fills it. `POST /api/movies` and
+  `PATCH /api/movies/:id` refuse a body with no video, in the resolve route's
+  sentence, so no row says it has no film behind it.
+- **#262, the Kind tabs and the series surface.**
+  - `PillTabs` extracted to `components/`, and `LibraryTabs` drawn on it.
+  - The Kind tabs on `?kind=series`, the series' words, and
+    `SeriesFormFiles`, the series' Files card.
+  - The Settings entrances renamed _Add a title_.
+- **#263, a series saved with its episodes.**
+  - _The client._ `readEpisodeTag` and its drift guard against the server's
+    `episodeTag`, `useEpisodeList`, `EpisodeFileRow`, `FilePicker`'s
+    multiple mode, and `createSeries`, landing on the Series tab.
+  - _The server._ `yearSpan`, extracted from `readSheet`'s `cellYears`;
+    `seriesFormBody`; `addSeries(input, episodes)` in one transaction; and
+    `POST /api/series`, rolled back whole on a refusal.
+- **#264, each row's own subtitles.** Each Episode file row's _＋ Add
+  subtitle_ and **Subtitle rows**, sent as `episodeSubtitle` parts and stored
+  in `episode_subtitles`.
+
+### Judgement calls the log did not name
+
+Each was made by a subagent reading one issue, and each is the refactor
+round's to settle (`docs/refactor-plans/29-add-series-refactor.md`), except
+the last two, which it keeps:
+
+- **`FormKind` declared in the hook**, where log 29 Q28 put it in
+  `src/types/` beside `EpisodeFormRow`.
+- **`PillTabs` over `string`**, so `MovieForm` added an `isFormKind` guard to
+  get its union back out of `onChange`.
+- **`HEADING.addSeries`**, a kind's word keyed by job and picked by a nested
+  ternary.
+- **The picked literals inline.** `useEpisodeList` spells the `picked` arm
+  three times beside `pickedFile`, and declares a second `DEFAULT_LANGUAGE`.
+- **Optional episode props on `SeriesFormFiles`**, with an `ignore` default,
+  though its one caller passes every one since #263.
+- **The Files card's constants and furniture restated**, and its styles
+  re-exported from `MovieFormFiles.styles`.
+- **The prototype's `outline: none` carried** onto `EpisodeFileRow`'s fields.
+- **`titleFromFilename`'s own tag patterns**, narrower than
+  `readEpisodeTag`'s.
+- **`seriesFormBody` without a suite** of its own.
+- **The route's casts** of paths the body reader had already proved.
+- **`FilePicker`'s multiple mode without a leaf** in its own suite.
+- **`lib: dom.iterable` in `tsconfig.spec.json`**, so suites can spread a sent
+  `FormData` to read its parts in order. Kept.
+- **`FilePicker`'s two modes as a union of prop shapes** told apart by
+  `multiple`, rather than a second primitive. Kept.
+
+### Deliberately not built
+
+Everything log 29 _Not built_ lists:
+
+- Edit, Delete, or _Add episodes_ for a series already held;
+- series in the **Import context** (`unplaced` stays Skip-only);
+- a backdrop slot, a still slot, an air-date field;
+- a bulk subtitle picker matched by stem;
+- an upload progress bar (debt shared with the movie kind);
+- a duplicate-series check.
+
+### Follow-ups
+
+The refactor plan, filed as 266, with the plan's Phase 5, filed as 265,
+folded into it.
+
+---
+
 ## 2026-10-07 — Default poster refactor (issue 259)
 
 Ten commits against `docs/refactor-plans/28-default-poster-refactor.md`, one
