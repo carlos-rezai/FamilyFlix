@@ -133,12 +133,14 @@ familyflix/
 │ └── src/
 │ ├── routes/ ← HTTP layer only: parse request, call a domain module, return response
 │ │ ├── enrichmentBody/ ← `startEnrichmentBody` and `conflictChoicesBody`: a Sync's start and _Apply choices_ read into typed values, each `400` a sentence — `movieFormBody`'s precedent
+│ │ ├── seriesFormBody/ ← the **Movie form**'s series body, `movieFormBody`'s split: `collectEpisodeUploads`, the part half — each `episodeVideo` and `episodeSubtitle` paired by order with its `episode` field and stored in its season's folder, a refused part drained and remembered — and `readSeriesFields`, the pure field half: each refusal a sentence in a load-bearing order, each episode answered with the paths its parts landed at
 │ │ ├── loopbackGuard/ ← the **Loopback guard**: mounted first, standalone included, `403` for a Host or Origin that is not a **Trusted host**; `bind(port)` once `listen` has resolved
 │ │ └── rendererRouter/ ← `mountRenderer`: the built renderer beside `/api` under `RENDERER_CSP` and `index.html` for any other GET, `/api` passed on before the policy is set; nothing mounted when `FAMILYFLIX_RENDERER_PATH` is unset
 │ ├── library/ ← movie CRUD, SQLite queries, watch-state + resume-position logic
 │ │ ├── settings/ ← the household's Settings: `settings()` with the default applied when the row is absent, `setSubtitleLanguage()` and `setUltrawideMargins()` as upserts over the two preference keys, `subtitle-language` and `ultrawide-margins`; and three keys beside the preferences, never among them — `tmdb-api-key`, `enrichment-last-synced-at`, `library-root` — every one read through one `valueOf(key)`
 │ │ ├── enrich/ ← a Sync's film writes: `enrichMovie` (the columns named, only those), `moviesInScope`, `enrichmentCounts` over both kinds, `setSourceFolder` / `sourceFolder` over one id space; the **Full details** rule spelled once as `fullDetails`
 │ │ └── series/ ← series storage, one unit per concern as the movie's is, each with its own suite: `read` (the series page, the player's episode read, the episode list), `browse` (the Series tab and its genres), `write` (the two inserts), `watch` (the resume write, the episode and season marks), `curation` (the heart), `enrich` (a Sync's series and episode writes and `seriesInScope`), and `nextEpisodeOf`, pure
+│ │ │ └── yearSpan/ ← pure: the one reading of a **Year range** — `2022`, `2019–2023`, `2021–` → `{ year, endYear }`, anything else `null` — read by the Movie form's series save and the Sheet's Year cell alike
 │ ├── media/ ← folder scanning, file copy into managed storage, subtitle detection, the Movie folder’s removal after a Delete
 │ │ ├── createMedia/ ← the injected domain: reserve a Movie folder, `seasonFolder` (a Series folder’s `season-NN/`), storeUpload, copyIn (a stream under the cancel signal), the three removals; and a Sync's three — `storeNamed` (beside a Stored path), `storeInSeriesFolder` (two directories above an episode), `readStored` (a stored file as a stream). Only `media/` touches managed storage
 │ │ ├── fileKinds/ ← what an image, a subtitle and a video may be called — the store’s security boundary, and the scanner’s line
@@ -237,6 +239,8 @@ familyflix/
 │ │ ├── BackToTop/ ← the control: given the scrolling container as a ref, it owns the Scroll threshold (`scrollTop > 420`, strictly), the passive listener, the read on attach and the press, and mounts the FAB or nothing. Two files, no styles — it draws nothing of its own
 │ │ ├── CreditsRow/ ← the lead credit and Starring: graduated from `movie-detail/` when the series page drew it too, its lead label a prop
 │ │ ├── SeasonCard/ ← `mol.SeasonCard` 1:1: the 2:3 **Card**, `S02` over the gradient, the badge when complete, the bar when part-watched
+│ │ ├── PillTabs/ ← `mol.PillTabs` 1:1: the pill track of `aria-pressed` buttons in a labelled group, generic in its value so a press hands back the caller's own union; presentational — it knows no URL. The **Library tabs** and the **Kind tabs** are its callers
+│ │ ├── EpisodeFileRow/ ← `mol.EpisodeFileRow` 1:1: one **Episode file row** — the `S` and `E` number fields (digits, two and three), the title, the ✕, the filename in mono, and a children slot for its subtitles; presentational, the browser's focus ring kept
 │ │ ├── EpisodeRow/ ← `mol.EpisodeRow` 1:1: the 16:9 thumbnail, `S02E04` and the title, the air date, the Resume label, the watched box that only marks; a **Card**, its box a **Control**
 │ │ └── PosterCard/
 │ │ ├── PosterCard.tsx
@@ -295,8 +299,16 @@ familyflix/
 │ │ │ ├── enrichmentView/ ← pure: the running card's words, the estimate, the scope cards' lines, _All done_'s _Saved to …_
 │ │ │ └── api/ ← startEnrichment, fetchCurrentEnrichment, cancelEnrichment, and the four Decision writes (one caller each)
 │ │ ├── maintainer.styles.ts ← the furniture the Maintainer’s screens extend: the header row, heading and lede; the captioned field
-│ │ ├── movie-form/ ← Add/Edit a movie: one form, manual file pickers; and Resolve, the Import context over either job
-│ │ │ └── api/ ← createMovie, updateMovie, fetchGenrePool, fetchProblem, resolveProblem (one caller each)
+│ │ ├── movie-form/ ← Add a movie or a series, Edit a movie: one form, manual file pickers, the **Form kind** on the **Kind tabs**; and Resolve, the Import context over either job
+│ │ │ ├── MovieForm/ ← the organism: the header row with the Kind tabs on a plain add, the fields both kinds share, the kind's words, and one of the two Files cards
+│ │ │ ├── MovieFormFiles/ SeriesFormFiles/ ← the two Files cards: the video, poster and subtitle list; and the poster over the **Episode file rows** and _＋ Add episode files_
+│ │ │ ├── filesCard.styles.ts filesCard.ts ← what both Files cards share, flat as `maintainer.styles.ts` is: the card, its caption and the list section; the three `accept` lists, the caption and the poster slot's names
+│ │ │ ├── useMovieForm/ ← everything the form does: the kind off `?kind=series`, the **Save gate** per kind, the title prefill, each job's save and where it lands
+│ │ │ ├── useEpisodeList/ ← the series' rows: a pick read off its tags, the edits, each row's subtitles, and `episodesComplete`, the series half of the gate
+│ │ │ ├── readEpisodeTag/ ← the client mirror of the server's `episodeTag`, `TAG_SHAPES` exported, held to it by a drift guard over one table
+│ │ │ ├── titleFromFilename/ ← pure: the **Title guess** off a picked video, ending at a year, a quality tag or a tag shape `readEpisodeTag` reads
+│ │ │ ├── formValues/ ← a record, a Problem detail or the form's values → each other; `pickedFile` and `pickedSubtitle`, the one constructor of each picked thing
+│ │ │ └── api/ ← createMovie, createSeries, updateMovie, fetchGenrePool, fetchProblem, resolveProblem (one caller each)
 │ │ ├── import-export/ ← the bulk importer’s screen, and the Export dialog
 │ │ │ ├── ImportFlow/ ← the organism: owns useImportRun, renders one of the three steps
 │ │ │ ├── ImportSetup/ ImportProgress/ ImportReview/ ← the three steps: the two path fields; the stepper, bar and log; the tiles and the Needs attention list
@@ -343,7 +355,7 @@ familyflix/
 │ │ ├── postValue.ts
 │ │ └── postValue.test.ts
 │ ├── hooks/ ← global shared hooks only: `useGoBack(fallback)` — the one **Back rule**, a **History step** with the screen's own **Landing** behind it (the library by default) — `useRestoredScroll`, and `useOptimisticEdit`, the one bargain a detail page's edit keeps, over whatever record the page holds; and `useEnrichmentSummary`, the summary Settings' sync row and the Enrichment setup both draw, `null` until it lands
-│ ├── types/ ← shared TypeScript interfaces (import.ts: ImportRun, ImportProblem, ImportProblemDetail, ImportField; export.ts: EXPORT*FORMATS, EXPORT_COLUMNS, EXPORT_FILENAME, ExportSummary; settings.ts: SUBTITLE_LANGUAGES, SubtitleLanguage, DEFAULT_SUBTITLE_LANGUAGE, DEFAULT_ULTRAWIDE_MARGINS, Settings (`subtitleLanguage`, `ultrawideMargins`), StorageReport; playback.ts: CodecKind, CodecSupport, CodecCapability, ComponentSource, PlaybackComponentInfo, PlaybackCapabilities — both build targets; series.ts: Series, Episode, SeasonSummary, SeriesDetail, EpisodeRead, NextEpisodeRef, EpisodeContinueEntry (its `series` carrying `posterPath`, for the Continue card's art), SeriesHomePayload, NewSeries, NewEpisode, Playable — both build targets; enrichment.ts: ENRICH_FIELDS, ENRICH_FIELD_LABELS, ENRICH_SCOPES, EnrichField, EnrichScope, EnrichmentSummary, Candidate, Decision, FieldConflict, ConflictChoices, EnrichmentRun, StartEnrichment — both build targets; viewModels.ts carries the series’ SeriesPageModel, SeasonPageModel, SeasonCardSeason and EpisodeRowEpisode beside the movie’s; shell.ts: ServerMessage, ShellCommand — the **Shell handshake**, typed once and read by `server/src/shell/` and `electron/`, in `tsconfig.electron.json` too; appVersion.d.ts: `__APP_VERSION__`, defined by Vite from package.json)
+│ ├── types/ ← shared TypeScript interfaces (import.ts: ImportRun, ImportProblem, ImportProblemDetail, ImportField; export.ts: EXPORT*FORMATS, EXPORT_COLUMNS, EXPORT_FILENAME, ExportSummary; settings.ts: SUBTITLE_LANGUAGES, SubtitleLanguage, DEFAULT_SUBTITLE_LANGUAGE, DEFAULT_ULTRAWIDE_MARGINS, Settings (`subtitleLanguage`, `ultrawideMargins`), StorageReport; playback.ts: CodecKind, CodecSupport, CodecCapability, ComponentSource, PlaybackComponentInfo, PlaybackCapabilities — both build targets; series.ts: Series, Episode, SeasonSummary, SeriesDetail, EpisodeRead, NextEpisodeRef, EpisodeContinueEntry (its `series` carrying `posterPath`, for the Continue card's art), SeriesHomePayload, NewSeries, NewEpisode, Playable — both build targets; enrichment.ts: ENRICH_FIELDS, ENRICH_FIELD_LABELS, ENRICH_SCOPES, EnrichField, EnrichScope, EnrichmentSummary, Candidate, Decision, FieldConflict, ConflictChoices, EnrichmentRun, StartEnrichment — both build targets; viewModels.ts carries the series’ SeriesPageModel, SeasonPageModel, SeasonCardSeason and EpisodeRowEpisode beside the movie’s; shell.ts: ServerMessage, ShellCommand — the **Shell handshake**, typed once and read by `server/src/shell/` and `electron/`, in `tsconfig.electron.json` too; form.ts: MovieFormValues, MovieFormFile, MovieFormSubtitle, EpisodeFormRow, FormKind — the Movie form's shapes; appVersion.d.ts: `__APP_VERSION__`, defined by Vite from package.json)
 │ ├── utils/ ← pure helper functions (one folder per helper + its test)
 │ │ ├── index.ts ← barrel: re-exports every helper
 │ │ ├── formatBytes/ ← 1024-based, one decimal from KB up: `18.4 GB`
@@ -519,15 +531,28 @@ movie, and with `?movie=<id>` it edits one. Same fields, same encoding,
 same save — only the heading, the button label and where a finished save
 lands differ.
 
+**A plain add has two Form kinds**, a movie or a series, chosen on the
+**Kind tabs** — the Library tabs' pill track, drawn in the header row and
+held in `?kind=series` — and only on a plain add: an edit and a Resolve are
+movie-only. The fields above the Files card are one record both kinds share;
+a switch keeps what is typed and each kind's files, and only the kind on
+screen is saved.
+
 It collects title, year, director, cast (one comma-separated line),
 description, genres (chips drawn from the **Genre pool**), a rating, and
 three kinds of file: a video, a poster, and as many subtitle files as the
-film has, each with its own language. **Title and video are the save
-gate**; everything else is optional. `runtimeMinutes` is the one column
-with no field — it is derived from the bytes after the copy, best-effort.
+film has, each with its own language. A series' year is a **Year range**,
+its credit _Created by_, and its files a poster and one **Episode file row**
+per picked video, numbered from its **Episode tag** and carrying its own
+subtitles. **The Save gate is a title and a video** — for a series, every
+episode's, with numbers set and no pair twice — and the title fills itself
+from the first video's name. It is held on the wire too: `POST` and
+`PATCH /api/movies` refuse a body with no video. Everything else is
+optional. `runtimeMinutes` is the one column with no field — it is derived
+from the bytes after the copy, best-effort.
 
 **The file fields are manual pickers, and only manual pickers.** There
-are no mode tabs and no folder-path field. The reason is not preference:
+are no picker-mode tabs and no folder-path field. The reason is not preference:
 a browser's `<input type="file">` yields a name and bytes and _never_ a
 path, so a form running in Chromium cannot be given a folder to scan.
 That is also why the app **copies** what it is given into the managed
@@ -545,7 +570,10 @@ The save is one multipart request — `POST /api/movies` to add,
 never sits in memory. On an edit, **a file the library already holds
 travels as the relative path it already has, and only a freshly picked
 file travels as bytes**, which is what makes a title-only edit carry no
-file part at all.
+file part at all. A series is one atomic `POST /api/series` — its fields,
+its poster, then each episode as an `episode` field followed by its
+`episodeVideo` and `episodeSubtitle` parts — rolled back whole on any
+refusal, and landing on the Series tab.
 
 ## Bulk Import / Export
 
@@ -936,10 +964,10 @@ same layout, spacing, states, copy, and interaction.
 
 **Build order — what is left.** The groups below say what the app _is_;
 this says what to build _next_. Steps 1–9 of the first chain are done,
-ending with **Software update** (v0.2.0), and so are steps 10, 11 and 12. Steps 10–15 came out of installing
+ending with **Software update** (v0.2.0), and so are steps 10, 11, 12 and 13. Steps 10–15 came out of installing
 FamilyFlix and using it: smallest and most self-contained first, the form
 before the folders that will feed it, export last because it mirrors what
-import holds. None of 13–15 has a prototype yet — each goes through grill-me and a
+import holds. Neither 14 nor 15 has a prototype yet — each goes through grill-me and a
 prototype revision in `docs/handoff/` before it is built, per _The prototype
 is the spec_. `Change…` in the Storage group is not in the chain — it is the
 Roadmap's **Move the media folder** (log 24 Q2).
@@ -952,10 +980,10 @@ Roadmap's **Move the media folder** (log 24 Q2).
 12. ✅ **Default poster** — a title with no poster linked draws a FamilyFlix
     default poster rather than an empty tile, on every surface a poster
     appears.
-13. **Add a series** _(next)_ — the **Movie form** learns a second kind: a
+13. ✅ **Add a series** — the **Movie form** learns a second kind: a
     show, its seasons and its episodes, beside the film it adds and edits
     today.
-14. **Library folders** — one or more top folders that hold movies, added
+14. **Library folders** _(next)_ — one or more top folders that hold movies, added
     at once. It needs a real path, so it lives where folder-path autofill
     already does (bulk import's scanner, Electron's native dialog over the
     preload bridge), not in the Movie form's file pickers.
@@ -996,8 +1024,8 @@ A 🧭 Roadmap item is not in this chain — it is after it, if ever.
 
 - ✅ **Add a movie** — manual file picker (video, poster, multiple subtitles with language).
 - ✅ **Default poster** — a FamilyFlix default poster for any title with none linked: its own gradient with the **Wordmark** centred, on every **Poster surface**; and the Continue card draws the title's poster, an episode's its series'.
-- 🔜 **Add a series** _(step 13 — next)_ — the same form adds a show, its seasons and its episodes.
-- 🔜 **Library folders** _(step 14)_ — several top folders of movies, added at once.
+- ✅ **Add a series** — the same form adds a show, its seasons and its episodes: the Kind tabs on `?kind=series`, one Episode file row per picked video with its own subtitles, and one atomic `POST /api/series`; a video is the Save gate for either kind.
+- 🔜 **Library folders** _(step 14 — next)_ — several top folders of movies, added at once.
 - ✅ **Edit a movie** — amend metadata and files; a file the library already holds travels as its path, only a freshly picked one as bytes.
 - ✅ **Delete a movie** — the ⋯ menu’s Danger row, the Delete dialog, `DELETE /api/movies/:id`, then the Movie folder under best-effort cleanup.
 - ✅ **Bulk import** — a Sheet and a Library root become Movies during the run; the Review step lists only the Problems the run could not settle, each with Resolve (the Movie form in Import context) and Skip.
