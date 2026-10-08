@@ -478,7 +478,7 @@ the line — _N titles_, or _Can't be reached right now_ in `danger` for an **Un
 folder — and last the ✕ (`RemoveButton`, labelled _Remove `<path>`_). Feature-local rather
 than a `components/` molecule: one caller, and it draws a domain record. Presentational: the
 press is handed back.
-Props: `path`, `titleCount`, `reachable`, `onRemove`.
+Props: `folder { path, titleCount, reachable }` (a `LibraryFolder`), `onRemove`.
 
 ---
 
