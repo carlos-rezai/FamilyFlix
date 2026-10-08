@@ -209,17 +209,23 @@ export interface UseMovieFormResult {
   episodes: EpisodeFormRow[];
   /** Append a pick of episode videos; the first fills an empty title. */
   addEpisodeFiles: (files: readonly File[]) => void;
+  /** The season of the row holding `key`, as typed. */
   setSeason: (key: string, season: string) => void;
+  /** The episode number of the row holding `key`, as typed. */
   setNumber: (key: string, number: string) => void;
+  /** The episode title of the row holding `key`, held exactly as typed. */
   setEpisodeTitle: (key: string, title: string) => void;
+  /** Take the row holding `key` off the series. */
   removeEpisode: (key: string) => void;
-  /** A row's own **Subtitles**: added in English, re-languaged, removed. */
+  /** Append a picked track to the row holding `rowKey`, in English. */
   addEpisodeSubtitle: (rowKey: string, file: File) => void;
+  /** Put a row's track holding `subtitleKey` into another language. */
   changeEpisodeSubtitleLanguage: (
     rowKey: string,
     subtitleKey: string,
     language: string
   ) => void;
+  /** Take the track holding `subtitleKey` off its row. */
   removeEpisodeSubtitle: (rowKey: string, subtitleKey: string) => void;
   /** Whether Save can be pressed — the gate, not a validation message. */
   canSave: boolean;
@@ -237,7 +243,7 @@ export interface UseMovieFormResult {
    * and every exit's destination are decided from.
    */
   resolving: ResolvingProblem | null;
-  /** Write the movie, and leave for the screen it is now visible on. */
+  /** Write the title, and leave for the screen it is now visible on. */
   save: () => void;
   /**
    * The back pill: the app's one Back rule, in every context this screen has.
@@ -258,13 +264,14 @@ export interface UseMovieFormResult {
  * **The gate is a disabled button, never a message.** `title` is `NOT NULL`, so
  * the only invalid state this form can reach is one where Save cannot be
  * pressed — which is a state the prototype's own `disabled` prop already draws,
- * rather than an error surface nothing designed. It lives here, in one place:
- * a title and a film are one condition rather than two conditions in two
+ * rather than an error surface nothing designed. It lives here, in one place,
+ * as one condition per **Form kind**: a title and a film for a movie, a title
+ * and a complete episode list for a series — never two conditions in two
  * places — and it is a condition rather than a latch, so either half can be
- * taken back. **The poster is not a third half**: `poster_path` is nullable, and
- * a film the maintainer has no artwork for still belongs in the library. Nor is
- * a subtitle — a film with no track at all is a normal row, and one attached to
- * nothing else is still not a row this form can write.
+ * taken back. **The poster is not a third half** of either: `poster_path` is
+ * nullable, and a title the maintainer has no artwork for still belongs in the
+ * library. Nor is a subtitle — a film with no track at all is a normal row, and
+ * one attached to nothing else is still not a row this form can write.
  *
  * **Year is text, and cannot be a non-year.** Non-digits are dropped and the
  * field stops at four characters, so there is nothing to validate and nothing to
@@ -328,6 +335,13 @@ export interface UseMovieFormResult {
  * lands there too. A problem that is gone leaves the plain edit standing,
  * which is what the URL's other half names.
  *
+ * **`?kind=series` is the URL's third parameter**, read on a plain add alone:
+ * beside `?movie=` or `?problem=` it is ignored, and the kind is `movie`. On a
+ * series, Save is one `POST /api/series` carrying every **Episode file row**,
+ * and a finished save lands on the Series tab — the kind's own **Fresh
+ * home**, the shelf the show has just joined. The rows themselves are
+ * `useEpisodeList`'s.
+ *
  * ---
  *
  * **Why this file has no `useMovieForm.test.ts`**, asked and settled in the
@@ -336,11 +350,14 @@ export interface UseMovieFormResult {
  * wrong thing to fix here.
  *
  * Everything this hook returns is a thing a maintainer *presses*, and
- * `MovieForm.test.tsx` presses all of it: 129 tests over 22 blocks covering
+ * `MovieForm.test.tsx` presses all of it: 266 tests over 62 blocks covering
  * every field and its save, the **Save gate** at each slot that could move it,
- * the rating picker, the three kinds of file, both jobs the screen does, the
- * **Stored file** passthrough, and a refused save leaving the form as it was.
- * There is no member of {@link UseMovieFormResult} those do not reach.
+ * the rating picker, the three kinds of file, every job the screen does, both
+ * **Form kinds** and the switch between them, the **Stored file** passthrough,
+ * and a refused save leaving the form as it was. There is no member of
+ * {@link UseMovieFormResult} those do not reach. The series half's list rules —
+ * the order rows land in, their numbers and the gate they make — are
+ * `useEpisodeList`'s own suite's, because that hook is a unit of its own.
  *
  * A test file here would have to drive the hook through `renderHook` and assert
  * on the record it returns — which is asserting the shape of the seam between

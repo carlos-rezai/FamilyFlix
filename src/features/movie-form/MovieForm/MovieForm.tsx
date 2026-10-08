@@ -41,10 +41,11 @@ const FIELD_BOX = { height: 48, rounded: false } as const;
 
 /**
  * What the screen calls itself, and what Save says on it, on two independent
- * axes. The **heading** is the job's alone: an add — with or without the
- * import's head start — is "Add a movie", and an amendment — a movie the
- * library already holds, whether opened from its page or from the review's
- * soft `missing-meta` row — is "Edit details". The **Save pair** is the
+ * axes. The **heading** follows the job, and on an add the kind too: an add —
+ * with or without the import's head start — is "Add a movie" or "Add a
+ * series" by the **Form kind**, and an amendment — a movie the library already
+ * holds, whether opened from its page or from the review's soft `missing-meta`
+ * row — is "Edit details". The **Save pair** is the
  * context's first: in **Import context** it says what it does to the run,
  * and outside it the job's own, plus what each says while the write is in
  * flight.
@@ -125,6 +126,12 @@ const ALSO_MATCHED_LEAD = ' — also matched: ';
  * `/edit` route: what changes between the contexts is the banner, the heading,
  * the two buttons' labels and where a finished save lands, and all but the
  * last of those are the whole of what is decided here.
+ *
+ * **A plain add has two Form kinds**, a movie or a series, chosen on the
+ * **Kind tabs** in the header row and drawn only there: beside an edit or a
+ * Resolve there is no kind to switch. The kind picks the heading on an add,
+ * the words in `WORDING` and which Files card is drawn; the fields above the
+ * card are one record both kinds share.
  *
  * It renders the form and nothing else — the sheet it sits on is
  * `MaintainerLayout`'s, composed by the page — and what may be typed, what is
