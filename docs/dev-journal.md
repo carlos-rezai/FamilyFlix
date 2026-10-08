@@ -11,6 +11,124 @@ Newest entry first.
 
 ---
 
+## 2026-10-08 — Library folders refactor (issue 274)
+
+Twenty commits against `docs/refactor-plans/30-library-folders-refactor.md`,
+one per plan commit, none dropped. **7450 tests pass across 442 files**, from
+7419 across 438 at the end of the build (`0ca65f6`). `tsc -b --force` is
+clean, and `eslint src server electron .husky` reports no errors and the one
+warning earlier rounds already logged (`AboutSection.test.tsx`'s escaped
+dot). No pixel changed, and no route, wire, schema or log line.
+
+Issue 273, the plan's Phase 6 (_the close_), was merged into this plan when
+it was filed. The standing rule makes the close the refactor's last commit
+anyway, and its acceptance criteria are commits 17 and 18.
+
+### What each group changed
+
+- **Group 0, the record.** The build's own entry, below, written before the
+  round touched anything.
+- **Group 1, the comments and names.**
+  - Shipping comments say **Library folder**, or _the spreadsheet's root_
+    where they mean the one typed path.
+  - `walkLibraryRoot` is `walkLibraryFolder`: the folder, both files, the
+    export, both importer call sites, `groupShows.test`'s mention and
+    COMPONENT-SPEC.
+  - The build's thirteen over-measure comment lines are rewrapped.
+  - The build's imports sit in their groups in `main.ts`, `createImporter`
+    and `routes/index.ts`, and `ImportFlow`'s `COPY` is `WORDING`.
+- **Group 2, the server's tidies.**
+  - `createEnrichment`'s `reachableFolders` asks `readableFolder`, and its
+    `stat` import is gone.
+  - `sourceFolder(id)` is `titleSource(id)`, both source columns in one
+    query, `null` without a folder. The Sync matches a title's run folder by
+    id, and the Metadata sheet reads each film's folder once. `setSourceFolder`
+    takes a `string` folder id, and its third parameter is `sourceFolder`.
+  - `Origin` is gone: the importer passes the `StoredLibraryFolder`, and
+    `sheetOriginOf` is `sheetFolderOf`.
+  - Both runs end in `importPlaced(current, films, shows, verb, signal)`,
+    which builds the genre pool and the warned set. `fileUnplacedOn` is
+    `fileUnplaced`, and `seriesInLibrary` takes its list with no default.
+  - Both starts claim the run through `claimRun(source, enrich, roots)`.
+  - `start` reads the list and the clash once and hands both to
+    `sheetFolderOf`.
+  - `clashSentence` sits beside `folderOverlap`. The route and the
+    importer's refusal both read it.
+  - `import-export/admitFolder/` holds the add's rules and answers
+    `added`, `refused` or `clash`. The route maps a refusal through
+    `FOLDER_REFUSALS`, and the untyped `let added;` is gone.
+- **Group 3, the client's tidies.** `useKeyStored` is the one stored-key
+  read, for `ImportFlow` and `LibraryFolders`. `useFolderScan` holds the
+  _Scan folders_ press. `LibraryFoldersPage` has its suite.
+- **Group 4, the docs.**
+  - The glossary's **Library root (retired)** names migration 7 and the
+    rename as done. Six current entries and three relationship lines say
+    **Library folder** or _the spreadsheet's root_.
+  - CLAUDE.md's tree names every new unit, `preload.ts` among them.
+  - CLAUDE.md's `db/` line lists migrations 6 and 7, and the settings
+    slice no longer lists `library-root`.
+  - The Settings Hub section has the four routes and `/settings/folders`,
+    and Bulk Import has the Folder scan.
+  - The Foundation line names the preload's two members.
+  - Step 14 and the Maintainer tools entry are ✅, and _(next)_ is on 15.
+  - The README matches.
+  - COMPONENT-SPEC was read against the tree. `FolderRow`'s props were the
+    one drift: the row takes `folder`, a `LibraryFolder`, and `onRemove`.
+
+### Where the round met the plan's words and differed
+
+- **`start` keeps its own busy check** before it reads either field, and
+  `claimRun` asks again after them. Without it, a start during a run would
+  answer the sheet's refusal instead of _busy_.
+- **`clashSentence`, not `overlapSentence`.** The plan names the moved
+  function both ways. The Decision Document's name won.
+- **`enrich.sourceFolder.test` gained `titleSource`'s leaves** rather than
+  being restated: no leaf there read `sourceFolder` before.
+- **Two leaves renamed**, because the state they named no longer exists: a
+  Source folder recorded under no Library folder. _enrich.sourcePath › is
+  null once the folder it was moved onto is removed_ and
+  _createEnrichment.sourcePath › is null when the title's Library folder was
+  removed_ keep their assertions.
+- **`ImportSetup`'s docblock** split **Library root** across two lines, so
+  the plan's list missed it. Commit 4 rewrote it with the rewrap.
+- **The build entry said migration 6 added `source_folder`.** Migration 5
+  did. This commit corrects that line.
+
+### Leaves added, removed and moved
+
+Added:
+
+- `titleSource`, five leaves in `enrich.sourceFolder.test`;
+- `clashSentence`, three leaves in `folderOverlap.test`;
+- `admitFolder.test.ts`: an add, the refusals (empty twice, relative,
+  missing, a file, nothing added) and the four clashes, the race among them;
+  eleven tests;
+- `useKeyStored.test.ts`: five leaves;
+- `useFolderScan.test.tsx`: four leaves;
+- `LibraryFoldersPage.test.tsx`: three leaves.
+
+Removed: none. Restated: the two renamed leaves above, and
+`walkLibraryFolder`'s two `describe` names. Net +31.
+
+### Surfaced
+
+- `tsc -b` without `--force` reported commit 7's two spec errors as clean,
+  where `tsc -p tsconfig.spec.json` caught them. The incremental build info
+  can hide a test file's type error after a shipping signature changes. The
+  commit gate runs the same command. Every check after that commit used
+  `--force`.
+- CLAUDE.md's tree still has no `createUpdates/` or `fakeUpdateBridge/`,
+  both from step 9.
+- CLAUDE.md's `enrichPath/` line carries Prettier's mangled emphasis
+  (`\_Finish*`), which predates this round. Bare underscores elsewhere in
+  the tree re-pair it, so new tree lines must keep identifiers in backticks.
+- _Bulk Import / Export_ still says the domain is four units. `groupShows`,
+  `writeSheet` and now `admitFolder` have joined them.
+
+None filed. This entry closes 267, 273 and 274.
+
+---
+
 ## 2026-10-08 — Library folders (issues #268–#272)
 
 The maintainer keeps a list of **Library folders**, each a top folder of
@@ -34,8 +152,8 @@ series refactor.
 ### What shipped, slice by slice
 
 - **#268, the remembered folder list.**
-  - Migration 6: the `library_folders` table, and `library_folder_id` and
-    `source_folder` on both titles.
+  - Migration 6: the `library_folders` table, and `library_folder_id` on both
+    titles, beside the `source_folder` migration 5 added.
   - The `library/folders/` slice, `folderOverlap`, and `readableFolder`,
     extracted from the importer's `checkRoot`.
   - The three list routes: `GET`, `POST` and `DELETE /api/library-folders`.
