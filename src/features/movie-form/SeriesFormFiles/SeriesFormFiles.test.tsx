@@ -14,7 +14,7 @@ import type { MovieFormFile } from '@/types';
  * File field, and the _Episodes_ label the **Episode file rows** will sit
  * beside. No video slot — a series' videos are its episodes' — no subtitle
  * list of its own, and no backdrop slot. The rows and _＋ Add episode files_
- * arrive in the next slice.
+ * are driven through `MovieForm`, so the episode callbacks here are inert.
  */
 
 const ARTWORK = new File(['image bytes'], 'harbor-poster.jpg', {
@@ -37,6 +37,15 @@ function renderFiles(poster: MovieFormFile | null = null) {
         poster={poster}
         onPickPoster={onPickPoster}
         onRemovePoster={onRemovePoster}
+        episodes={[]}
+        onAddEpisodeFiles={vi.fn()}
+        onSeasonChange={vi.fn()}
+        onNumberChange={vi.fn()}
+        onEpisodeTitleChange={vi.fn()}
+        onRemoveEpisode={vi.fn()}
+        onAddEpisodeSubtitle={vi.fn()}
+        onChangeEpisodeSubtitleLanguage={vi.fn()}
+        onRemoveEpisodeSubtitle={vi.fn()}
       />
     </ThemeProvider>
   );

@@ -31,9 +31,6 @@ const VIDEO_ACCEPT = 'video/*,.mkv,.avi';
 const SUBTITLE_ACCEPT = '.srt,.vtt,.ass,.sub';
 const SUBTITLE_ADD = 'Add subtitle';
 
-/** What a callback the caller left out does: nothing. */
-const ignore = (): void => undefined;
-
 export interface SeriesFormFilesProps {
   /** What is in the poster slot, or `null` while it is empty. */
   poster: MovieFormFile | null;
@@ -42,21 +39,21 @@ export interface SeriesFormFilesProps {
   /** Reports that the poster slot's ✕ was pressed. */
   onRemovePoster: () => void;
   /** The **Episode file rows**, in the order they are held. */
-  episodes?: readonly EpisodeFormRow[];
+  episodes: readonly EpisodeFormRow[];
   /** Reports every video picked in one dialog of _＋ Add episode files_. */
-  onAddEpisodeFiles?: (files: File[]) => void;
-  onSeasonChange?: (key: string, season: string) => void;
-  onNumberChange?: (key: string, number: string) => void;
-  onEpisodeTitleChange?: (key: string, title: string) => void;
-  onRemoveEpisode?: (key: string) => void;
+  onAddEpisodeFiles: (files: File[]) => void;
+  onSeasonChange: (key: string, season: string) => void;
+  onNumberChange: (key: string, number: string) => void;
+  onEpisodeTitleChange: (key: string, title: string) => void;
+  onRemoveEpisode: (key: string) => void;
   /** Reports a track picked on the row holding `rowKey`. */
-  onAddEpisodeSubtitle?: (rowKey: string, file: File) => void;
-  onChangeEpisodeSubtitleLanguage?: (
+  onAddEpisodeSubtitle: (rowKey: string, file: File) => void;
+  onChangeEpisodeSubtitleLanguage: (
     rowKey: string,
     subtitleKey: string,
     language: string
   ) => void;
-  onRemoveEpisodeSubtitle?: (rowKey: string, subtitleKey: string) => void;
+  onRemoveEpisodeSubtitle: (rowKey: string, subtitleKey: string) => void;
 }
 
 /**
@@ -70,15 +67,15 @@ export function SeriesFormFiles({
   poster,
   onPickPoster,
   onRemovePoster,
-  episodes = [],
-  onAddEpisodeFiles = ignore,
-  onSeasonChange = ignore,
-  onNumberChange = ignore,
-  onEpisodeTitleChange = ignore,
-  onRemoveEpisode = ignore,
-  onAddEpisodeSubtitle = ignore,
-  onChangeEpisodeSubtitleLanguage = ignore,
-  onRemoveEpisodeSubtitle = ignore,
+  episodes,
+  onAddEpisodeFiles,
+  onSeasonChange,
+  onNumberChange,
+  onEpisodeTitleChange,
+  onRemoveEpisode,
+  onAddEpisodeSubtitle,
+  onChangeEpisodeSubtitleLanguage,
+  onRemoveEpisodeSubtitle,
 }: SeriesFormFilesProps) {
   return (
     <Card>
