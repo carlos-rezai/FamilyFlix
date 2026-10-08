@@ -41,7 +41,7 @@ const SUMMARY: EnrichmentSummary = {
   lastSyncedAt: '2026-09-26T09:30:00.000Z',
   keySet: true,
   online: false,
-  libraryRoot: null,
+  libraryFolders: [],
 };
 
 describe('fetchEnrichmentSummary', () => {

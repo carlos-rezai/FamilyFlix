@@ -7,12 +7,13 @@
 // many have **Full details**, when a **Sync** last reached review, whether a
 // key is stored, whether TMDB answered the client's reachability probe —
 // asked by the server, so a Wi-Fi with no internet behind it is offline —
-// and the **Library root** (none remembered yet on a fresh library). An
+// and the reachable **Library folders** (none on a fresh library). An
 // empty library answers zeros, not an error.
 //
 // A real in-memory SQLite library and a fake TMDB client, the
 // `createEnrichment` suites' precedent. Nothing here goes online.
 
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { createMedia } from '../../media/createMedia/createMedia';
@@ -77,7 +78,7 @@ describe('createEnrichment: summary — the key, the last sync, the root', () =>
     expect(summary).toMatchObject({
       keySet: false,
       lastSyncedAt: null,
-      libraryRoot: null,
+      libraryFolders: [],
     });
   });
 
@@ -88,12 +89,28 @@ describe('createEnrichment: summary — the key, the last sync, the root', () =>
     expect((await enrichment.summary()).keySet).toBe(true);
   });
 
-  // Issue #210: the importer remembers the root, and the summary answers it.
-  it('answers the Library root once one is remembered', async () => {
+  // Issue #271: the summary answers the reachable Library folders, in the
+  // order added — the folders a Sync can write back into.
+  it('answers the reachable Library folders in the order added', async () => {
     const { storage, enrichment } = world();
-    storage.setLibraryRoot('E:\\Movies');
+    const first = sandboxRoot('familyflix-enrich-folder-a-');
+    const second = sandboxRoot('familyflix-enrich-folder-b-');
+    storage.addLibraryFolder(first);
+    storage.addLibraryFolder(second);
 
-    expect((await enrichment.summary()).libraryRoot).toBe('E:\\Movies');
+    expect((await enrichment.summary()).libraryFolders).toEqual([
+      first,
+      second,
+    ]);
+  });
+
+  it('leaves out a Library folder that cannot be reached', async () => {
+    const { storage, enrichment } = world();
+    const here = sandboxRoot('familyflix-enrich-folder-a-');
+    storage.addLibraryFolder(join(here, 'not-there'));
+    storage.addLibraryFolder(here);
+
+    expect((await enrichment.summary()).libraryFolders).toEqual([here]);
   });
 
   it('answers when a Sync last reached review', async () => {

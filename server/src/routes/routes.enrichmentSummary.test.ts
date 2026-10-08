@@ -104,7 +104,7 @@ describe('GET /api/enrichment — the summary', () => {
       lastSyncedAt: null,
       keySet: false,
       online: true,
-      libraryRoot: null,
+      libraryFolders: [],
     });
   });
 

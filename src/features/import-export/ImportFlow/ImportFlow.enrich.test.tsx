@@ -292,3 +292,51 @@ describe('ImportFlow — Finish on a run without enrich', () => {
     expect(navigationType()).toBe('PUSH');
   });
 });
+
+// 30 — Library folders, Phase 4 (issue #271): a **Folder scan** carries the
+// box from the Library folders page on the same `ImportRun.enrich`, so its
+// _Finish_ reads it exactly as a sheet run's does.
+describe('ImportFlow — Finish on a Folder scan', () => {
+  const FROM_FOLDERS = ['/', '/settings', '/settings/folders', '/import'];
+
+  it('replaces /import with /enrich?scope=all when the scan was ticked', async () => {
+    serve({
+      onArrival: true,
+      then: [
+        makeImportRun({
+          ...REVIEW,
+          phase: 'review',
+          source: 'folders',
+          enrich: true,
+        }),
+      ],
+    });
+    renderFlow(FROM_FOLDERS);
+
+    fireEvent.click(await finish());
+
+    expect(pathname()).toBe('/enrich');
+    expect(search()).toBe('?scope=all');
+    expect(navigationType()).toBe('REPLACE');
+  });
+
+  it('lands on the library when the scan was not ticked', async () => {
+    serve({
+      onArrival: true,
+      then: [
+        makeImportRun({
+          ...REVIEW,
+          phase: 'review',
+          source: 'folders',
+          enrich: false,
+        }),
+      ],
+    });
+    renderFlow(FROM_FOLDERS);
+
+    fireEvent.click(await finish());
+
+    expect(pathname()).toBe('/');
+    expect(screen.getByText('the browse home')).toBeDefined();
+  });
+});

@@ -16,8 +16,8 @@ import { EnrichmentSetup, type EnrichmentSetupProps } from './EnrichmentSetup';
  * The **Setup step** driven through its props alone, the leaves that asserted
  * only its pixels moved down from `EnrichmentFlow`'s suites: the banners by
  * summary, the scope cards by scope — _Just this movie_ in place of the two —
- * the chips, the notes, _Where it is saved_ with and without a **Library
- * root**, the source note, and Start's label, variant and estimate. What the
+ * the chips, the notes, _Where it is saved_ over no, one and several **Library
+ * folders** (issue #271), the source note, and Start's label, variant and estimate. What the
  * organism decides — which scope, what Start sends, where Back goes — stays in
  * its own suites.
  */
@@ -28,10 +28,11 @@ const READY: EnrichmentSummary = {
   lastSyncedAt: null,
   keySet: true,
   online: true,
-  libraryRoot: null,
+  libraryFolders: [],
 };
 
 const ROOT = String.raw`E:\Movies`;
+const ARCHIVE = String.raw`F:\Archive`;
 const SHEET = 'Metadata sheet in the collection root';
 const POSTERS = 'Posters into each movie folder';
 
@@ -276,7 +277,7 @@ describe('EnrichmentSetup — Where it is saved', () => {
     expect(style.borderRadius).toBe('12px');
   });
 
-  it('draws Your library alone, Required, while no root is remembered', () => {
+  it('draws Your library alone, Required, with no Library folder', () => {
     renderSetup();
 
     const saved = within(savedCard());
@@ -289,8 +290,8 @@ describe('EnrichmentSetup — Where it is saved', () => {
     expect(savedCard().querySelectorAll('svg')).toHaveLength(1);
   });
 
-  it('draws the two Write targets under a root, their paths off it', () => {
-    renderSetup({ summary: { ...READY, libraryRoot: ROOT } });
+  it('draws the two Write targets under one Library folder, their paths off it', () => {
+    renderSetup({ summary: { ...READY, libraryFolders: [ROOT] } });
 
     const saved = within(savedCard());
     expect(saved.getByText(`${ROOT}\\familyflix-metadata.csv`)).toBeDefined();
@@ -299,9 +300,28 @@ describe('EnrichmentSetup — Where it is saved', () => {
     ).toBeDefined();
   });
 
+  // Issue #271: several Library folders — the lines say where without naming
+  // any one folder.
+  it('draws the two Write targets in each of several Library folders', () => {
+    renderSetup({ summary: { ...READY, libraryFolders: [ROOT, ARCHIVE] } });
+
+    const saved = within(savedCard());
+    expect(
+      saved.getByText('familyflix-metadata.csv in each library folder')
+    ).toBeDefined();
+    expect(
+      saved.getByText(
+        String.raw`<movie folder>\poster.jpg in each library folder`
+      )
+    ).toBeDefined();
+    expect(saved.getAllByRole('switch')).toHaveLength(2);
+    expect(saved.queryByText(`${ROOT}\\familyflix-metadata.csv`)).toBeNull();
+    expect(saved.queryByText(`${ARCHIVE}\\familyflix-metadata.csv`)).toBeNull();
+  });
+
   it('draws each target’s switch as it is given', () => {
     renderSetup({
-      summary: { ...READY, libraryRoot: ROOT },
+      summary: { ...READY, libraryFolders: [ROOT] },
       writeSheet: true,
       writePosters: false,
     });
@@ -316,7 +336,7 @@ describe('EnrichmentSetup — Where it is saved', () => {
 
   it('reports each switch', () => {
     const { onToggleSheet, onTogglePosters } = renderSetup({
-      summary: { ...READY, libraryRoot: ROOT },
+      summary: { ...READY, libraryFolders: [ROOT] },
     });
 
     fireEvent.click(screen.getByRole('switch', { name: SHEET }));
@@ -328,7 +348,7 @@ describe('EnrichmentSetup — Where it is saved', () => {
 
   it('says it writes into the movie folders while either target is on', () => {
     renderSetup({
-      summary: { ...READY, libraryRoot: ROOT },
+      summary: { ...READY, libraryFolders: [ROOT] },
       writeSheet: false,
       writePosters: true,
     });
@@ -340,7 +360,7 @@ describe('EnrichmentSetup — Where it is saved', () => {
 
   it('says nothing of the folders with both targets off', () => {
     renderSetup({
-      summary: { ...READY, libraryRoot: ROOT },
+      summary: { ...READY, libraryFolders: [ROOT] },
       writeSheet: false,
       writePosters: false,
     });

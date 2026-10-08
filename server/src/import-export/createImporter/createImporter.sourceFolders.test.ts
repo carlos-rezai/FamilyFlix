@@ -7,8 +7,8 @@
 // came from, and the app used to forget it the moment the copy finished. So
 // the importer now remembers:
 //
-// - `library-root` in the `settings` table, on Start — the one absolute path
-//   the library keeps, the maintainer's own typing;
+// - the root itself, on Start — as a **Library folder** on the list since
+//   issue #271, and no longer as `library-root` in the `settings` table;
 // - `source_folder` on every **Movie** and **Series** it adds **or** finds
 //   **Already in library** — **relative to that root**, so no absolute path
 //   from the source machine lands on a row (CLAUDE.md's rule). Finding one
@@ -146,33 +146,28 @@ function libraryRows(db: SqliteDatabase): Record<string, unknown[]> {
   );
 }
 
-describe('createImporter — the Library root is remembered on Start', () => {
-  it('stores library-root as the run starts', async () => {
+// 30 — Library folders, Phase 4 (issue #271): the root is remembered once,
+// as a **Library folder** on the list, and no longer as `library-root` too.
+describe('createImporter — the Library root is a folder on the list, not a setting', () => {
+  it('lists the root as the run starts', async () => {
     const { storage, importer, root, sheet } = sandbox();
 
     await importer.start(sheet, root);
 
-    expect(storage.libraryRoot()).toBe(root);
+    expect(storage.libraryFolders().map((folder) => folder.path)).toEqual([
+      root,
+    ]);
     await untilReview(importer);
   });
 
-  it('keeps it in the settings table under library-root', async () => {
+  it('writes no library-root into the settings table', async () => {
     const { db, importer, root, sheet } = sandbox();
 
     await runOnce(importer, sheet, root);
 
     expect(
       db.prepare("SELECT value FROM settings WHERE key = 'library-root'").get()
-    ).toEqual({ value: root });
-  });
-
-  it('replaces the root a previous import remembered', async () => {
-    const { storage, importer, root, sheet } = sandbox();
-    storage.setLibraryRoot('E:\\Somewhere else');
-
-    await runOnce(importer, sheet, root);
-
-    expect(storage.libraryRoot()).toBe(root);
+    ).toBeUndefined();
   });
 });
 

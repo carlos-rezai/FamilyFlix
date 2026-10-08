@@ -52,7 +52,7 @@ const SUMMARY: EnrichmentSummary = {
   lastSyncedAt: null,
   keySet: true,
   online: true,
-  libraryRoot: ROOT,
+  libraryFolders: [ROOT],
 };
 
 function makeRun(overrides: Partial<EnrichmentRun> = {}): EnrichmentRun {
@@ -214,9 +214,9 @@ describe('EnrichmentSetup — the Write targets in the Library root', () => {
   });
 });
 
-describe('EnrichmentSetup — no Library root, no Write targets', () => {
+describe('EnrichmentSetup — no Library folder, no Write targets', () => {
   beforeEach(() => {
-    serve({ ...SUMMARY, libraryRoot: null });
+    serve({ ...SUMMARY, libraryFolders: [] });
   });
 
   // That neither row is drawn is `EnrichmentSetup.test.tsx`'s (#210).

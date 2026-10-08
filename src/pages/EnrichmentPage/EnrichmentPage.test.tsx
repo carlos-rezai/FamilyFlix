@@ -34,7 +34,7 @@ beforeEach(() => {
             lastSyncedAt: null,
             keySet: true,
             online: true,
-            libraryRoot: null,
+            libraryFolders: [],
           })
         );
       }

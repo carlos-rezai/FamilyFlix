@@ -24,8 +24,12 @@ import { makeImportRun } from '@/test-support/makeImportRun/makeImportRun';
  * The page's group **Scan**: _What the scanner accepts_ (`FolderShapes`),
  * then **Scan folders** — `primary`, `lg` — disabled while no folder is
  * listed. A press posts `POST /api/library-folders/scan { enrich: false }`
- * (the box is Phase 4's) and pushes `/import`; a `409` pushes too, so the
- * run already in flight is the one shown.
+ * and pushes `/import`; a `409` pushes too, so the run already in flight is
+ * the one shown.
+ *
+ * Phase 4 (issue #271) draws `EnrichCheckCard` between the shapes and the
+ * button, with Import setup's stored-key hint, and _Scan folders_ sends the
+ * box's value as `enrich`.
  *
  * The wire is a stubbed `fetch`: the list on GET, the scan's answer on its
  * POST.
@@ -70,9 +74,20 @@ function busyResponse(): Response {
   } as unknown as Response;
 }
 
-/** The list on GET; the scan answered `201` with a run, or `409`. */
-function serve(listed: LibraryFolder[], scan: 'created' | 'busy' = 'created') {
+/**
+ * The list on GET; the scan answered `201` with a run, or `409`; and the
+ * stored TMDB key — one by default — on `/api/tmdb/key`, which chooses the
+ * box's hint.
+ */
+function serve(
+  listed: LibraryFolder[],
+  scan: 'created' | 'busy' = 'created',
+  key: string | null = 'stored-key'
+) {
   fetchMock.mockImplementation((input, init) => {
+    if (path(input) === '/api/tmdb/key') {
+      return Promise.resolve(okResponse({ key }));
+    }
     if (isScan(input, init)) {
       return Promise.resolve(
         scan === 'created'
@@ -163,5 +178,74 @@ describe('LibraryFolders — Scan folders', () => {
 
     await waitFor(() => expect(pathname()).toBe('/import'));
     expect(scanCalls()).toHaveLength(1);
+  });
+});
+
+const ENRICH_LABEL = 'Also fetch metadata and posters from TMDB';
+const HINT_WITH_KEY =
+  'Runs straight after the import, over everything it brings in. Needs the internet.';
+const HINT_WITHOUT_KEY =
+  'Needs a TMDB key — add one under Settings → Network first.';
+
+const enrichBox = () =>
+  screen.findByRole('checkbox', { name: new RegExp(ENRICH_LABEL) });
+
+describe('LibraryFolders — Also fetch from TMDB', () => {
+  it('draws the box unticked, between What the scanner accepts and Scan folders', async () => {
+    serve([MOVIES]);
+    renderPage();
+
+    const box = (await enrichBox()) as HTMLInputElement;
+    const button = await scanButton();
+    expect(box.checked).toBe(false);
+    expect(
+      screen
+        .getByText('What the scanner accepts')
+        .compareDocumentPosition(box) & Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
+    expect(
+      box.compareDocumentPosition(button) & Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
+  });
+
+  it('reads the with-key hint when a key is stored', async () => {
+    serve([MOVIES], 'created', 'stored-key');
+    renderPage();
+
+    expect(await screen.findByText(HINT_WITH_KEY)).toBeDefined();
+    expect(screen.queryByText(HINT_WITHOUT_KEY)).toBeNull();
+  });
+
+  it('reads the without-key hint when none is', async () => {
+    serve([MOVIES], 'created', null);
+    renderPage();
+
+    expect(await screen.findByText(HINT_WITHOUT_KEY)).toBeDefined();
+    expect(screen.queryByText(HINT_WITH_KEY)).toBeNull();
+  });
+
+  it('sends enrich true once the box is ticked', async () => {
+    serve([MOVIES]);
+    renderPage();
+
+    await userEvent.click(await enrichBox());
+    await userEvent.click(await scanButton());
+
+    await waitFor(() => expect(pathname()).toBe('/import'));
+    const [, init] = scanCalls()[0] ?? [];
+    expect(JSON.parse(String(init?.body))).toEqual({ enrich: true });
+  });
+
+  it('sends enrich false again once the box is unticked', async () => {
+    serve([MOVIES]);
+    renderPage();
+
+    await userEvent.click(await enrichBox());
+    await userEvent.click(await enrichBox());
+    await userEvent.click(await scanButton());
+
+    await waitFor(() => expect(pathname()).toBe('/import'));
+    const [, init] = scanCalls()[0] ?? [];
+    expect(JSON.parse(String(init?.body))).toEqual({ enrich: false });
   });
 });

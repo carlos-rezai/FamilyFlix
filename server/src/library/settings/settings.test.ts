@@ -23,6 +23,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { createSqliteStorage } from '..';
 import { openDatabase, type SqliteDatabase } from '../../db';
 import { createSettings } from './settings';
+import { shippingSourcesMatching } from '@/test-support/shippingSources/shippingSources';
 import {
   DEFAULT_SUBTITLE_LANGUAGE,
   DEFAULT_ULTRAWIDE_MARGINS,
@@ -252,58 +253,27 @@ describe('library: enrichmentLastSyncedAt — when the library last synced', () 
   });
 });
 
-// 23 — Enrichment, Phase 7 (issue #210): the importer remembers the **Library
-// root** it was handed as `library-root`, in the same `settings` table — the
-// one absolute path the library keeps, the maintainer's own typing. Read and
-// written beside the key: `libraryRoot()` is `null` until an import has run,
-// `setLibraryRoot` an upsert, and `settings()` never carries it.
-describe('library: libraryRoot / setLibraryRoot — the remembered root', () => {
-  it('answers null on a fresh database — no root remembered yet', () => {
+// 30 — Library folders, Phase 4 (issue #271): the single remembered root is
+// gone. Migration #7 carries `library-root` over onto the **Library folders**
+// list and deletes the key, so one place remembers folders: the storage no
+// longer answers `libraryRoot` or takes `setLibraryRoot`, and no shipping code
+// reads either — the migration that carries the key over is the one place
+// left that names it.
+describe('library: no remembered root — the folder list replaced it', () => {
+  it('offers neither libraryRoot nor setLibraryRoot', () => {
     const storage = freshStorage();
 
-    expect(storage.libraryRoot()).toBeNull();
+    expect('libraryRoot' in storage).toBe(false);
+    expect('setLibraryRoot' in storage).toBe(false);
   });
 
-  it('stores the root and reads it back as given', () => {
-    const storage = freshStorage();
+  it('leaves no shipping code reading libraryRoot or the library-root key', () => {
+    const pattern = /\b(?:set)?[lL]ibraryRoot\b|['"`]library-root['"`]/;
+    const readers = ['server/src', 'src', 'electron']
+      .flatMap((root) => shippingSourcesMatching(root, pattern))
+      .filter((path) => path !== 'server/src/db/migrations.ts');
 
-    storage.setLibraryRoot(String.raw`E:\Movies`);
-
-    expect(storage.libraryRoot()).toBe(String.raw`E:\Movies`);
-  });
-
-  it('replaces the root on a second write rather than failing on the key', () => {
-    const storage = freshStorage();
-    storage.setLibraryRoot(String.raw`E:\Movies`);
-
-    storage.setLibraryRoot(String.raw`F:\Films`);
-
-    expect(storage.libraryRoot()).toBe(String.raw`F:\Films`);
-  });
-
-  it('leaves the household settings and the key exactly as they were', () => {
-    const storage = freshStorage();
-    storage.setSubtitleLanguage('French');
-    storage.setTmdbKey('kept-key');
-
-    storage.setLibraryRoot(String.raw`E:\Movies`);
-
-    expect(storage.settings()).toEqual({
-      subtitleLanguage: 'French',
-      ultrawideMargins: false,
-    });
-    expect(storage.tmdbKey()).toBe('kept-key');
-  });
-
-  it('survives closing and reopening the database', () => {
-    const path = tempDbPath();
-    const first = track(createSqliteStorage(path));
-    first.setLibraryRoot(String.raw`E:\Movies`);
-    first.close();
-
-    const second = track(createSqliteStorage(path));
-
-    expect(second.libraryRoot()).toBe(String.raw`E:\Movies`);
+    expect(readers).toEqual([]);
   });
 });
 

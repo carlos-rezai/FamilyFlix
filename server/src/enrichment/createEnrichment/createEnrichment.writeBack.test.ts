@@ -33,7 +33,6 @@ import { join, relative } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { ENRICH_FIELDS, type EnrichField, type EnrichmentRun } from '@/types';
-import { openDatabase } from '../../db';
 import { readSheet } from '../../import-export/readSheet/readSheet';
 import { createSqliteStorage } from '../../library';
 import { createMedia } from '../../media/createMedia/createMedia';
@@ -49,6 +48,10 @@ import {
   tmdbImageBytes,
   tmdbMovieDetail,
 } from '../../test-support/fakeTmdb/fakeTmdb';
+import {
+  writeBack as realWriteBack,
+  type WriteBack,
+} from '../writeBack/writeBack';
 import { createEnrichment } from './createEnrichment';
 
 // Registered after the helpers' own hooks, so it runs first: Windows will not
@@ -85,11 +88,33 @@ function filesUnder(dir: string): string[] {
   return found.sort();
 }
 
-function world() {
+/**
+ * The real Write targets, but with a permission check that refuses `readOnly`
+ * as an unwritable folder would — Windows answers every directory writable to
+ * `access`, so a sandbox cannot be made read-only for real.
+ */
+function refusing(readOnly: string): WriteBack {
+  return {
+    ...realWriteBack,
+    check: async (root, targets) =>
+      root === readOnly
+        ? {
+            writable: { sheet: false, posters: false },
+            lines: [
+              {
+                text: `Can't write to ${root} — the sheet and posters will be skipped`,
+                kind: 'warning',
+              },
+            ],
+          }
+        : realWriteBack.check(root, targets),
+  };
+}
+
+function world({ readOnly = false }: { readOnly?: boolean } = {}) {
   const dir = sandboxRoot('familyflix-enrich-writeback-');
   const dbPath = join(dir, 'familyflix.db');
   const storage = track(createSqliteStorage(dbPath));
-  const db = track(openDatabase(dbPath));
   storage.setTmdbKey(KEY);
   const media = createMedia(join(dir, 'media'));
 
@@ -101,6 +126,8 @@ function world() {
     mkdirSync(folder);
     writeFileSync(join(folder, `${film.title}.mkv`), 'source video bytes');
   }
+  /** The root on the list, as the one **Library folder**. */
+  const listed = storage.addLibraryFolder(root);
 
   /** The run's log as it stood when TMDB was first asked for anything. */
   let logAtFirstLookup: string[] | null = null;
@@ -120,6 +147,7 @@ function world() {
     storage,
     client,
     media,
+    ...(readOnly ? { writeBack: refusing(root) } : {}),
   });
 
   /** A film in the library, its video really stored, its source folder recorded. */
@@ -140,10 +168,7 @@ function world() {
       tmdbId: film.tmdbId,
     }).id;
     if (sourceFolder !== null) {
-      db.prepare('UPDATE movies SET source_folder = ? WHERE id = ?').run(
-        sourceFolder,
-        id
-      );
+      storage.setSourceFolder(id, listed.id, sourceFolder);
     }
     return id;
   }
@@ -177,8 +202,7 @@ const texts = (run: EnrichmentRun) => run.log.map((line) => line.text);
 
 describe('createEnrichment: the permission check comes first', () => {
   it('logs that it will write the sheet before any TMDB request', async () => {
-    const { storage, enrichment, root, addFilm, logAtFirstLookup } = world();
-    storage.setLibraryRoot(root);
+    const { enrichment, root, addFilm, logAtFirstLookup } = world();
     await addFilm(FILMS[0]);
 
     await sync(enrichment, BOTH);
@@ -186,22 +210,21 @@ describe('createEnrichment: the permission check comes first', () => {
     expect(logAtFirstLookup()).toContain(`Will write ${SHEET} to ${root}`);
   });
 
-  it('warns before any TMDB request that an unwritable root will be skipped', async () => {
-    const { storage, enrichment, root, addFilm, logAtFirstLookup } = world();
-    const gone = join(root, 'not-there');
-    storage.setLibraryRoot(gone);
+  it('warns before any TMDB request that an unwritable folder will be skipped', async () => {
+    const { enrichment, root, addFilm, logAtFirstLookup } = world({
+      readOnly: true,
+    });
     await addFilm(FILMS[0]);
 
     await sync(enrichment, BOTH);
 
     expect(logAtFirstLookup()).toContain(
-      `Can't write to ${gone} — the sheet and posters will be skipped`
+      `Can't write to ${root} — the sheet and posters will be skipped`
     );
   });
 
-  it('runs into the library all the same when the root cannot be written', async () => {
-    const { storage, enrichment, root, addFilm } = world();
-    storage.setLibraryRoot(join(root, 'not-there'));
+  it('runs into the library all the same when the folder cannot be written', async () => {
+    const { storage, enrichment, addFilm } = world({ readOnly: true });
     const id = await addFilm(FILMS[0]);
 
     const run = await sync(enrichment, BOTH);
@@ -210,25 +233,21 @@ describe('createEnrichment: the permission check comes first', () => {
     expect(storage.getMovie(id)?.synopsis).toBe('The 2004 Sundial.');
   });
 
-  it('skips both targets when the root cannot be written', async () => {
-    const { storage, enrichment, root, addFilm } = world();
+  it('skips both targets when the folder cannot be written', async () => {
+    const { enrichment, root, addFilm } = world({ readOnly: true });
     const before = filesUnder(root);
-    const gone = join(root, 'not-there');
-    storage.setLibraryRoot(gone);
     await addFilm(FILMS[0]);
 
     const run = await sync(enrichment, BOTH);
 
     expect(run.written).toEqual({ sheet: false, posters: false });
-    expect(existsSync(gone)).toBe(false);
     expect(filesUnder(root)).toEqual(before);
   });
 });
 
 describe('createEnrichment: poster.jpg into each Source folder', () => {
   it('adds the fetched poster as poster.jpg in the title’s Source folder', async () => {
-    const { storage, enrichment, root, addFilm } = world();
-    storage.setLibraryRoot(root);
+    const { enrichment, root, addFilm } = world();
     await addFilm(FILMS[1]);
 
     const run = await sync(enrichment, BOTH);
@@ -240,8 +259,7 @@ describe('createEnrichment: poster.jpg into each Source folder', () => {
   });
 
   it('leaves an existing poster.jpg byte-identical, with its log line', async () => {
-    const { storage, enrichment, root, addFilm } = world();
-    storage.setLibraryRoot(root);
+    const { enrichment, root, addFilm } = world();
     const ours = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 7, 7, 7]);
     const poster = join(root, 'Lanternlight (2011)', 'poster.jpg');
     writeFileSync(poster, ours);
@@ -257,8 +275,7 @@ describe('createEnrichment: poster.jpg into each Source folder', () => {
   });
 
   it('logs a title with no source folder on record and raises no Decision', async () => {
-    const { storage, enrichment, root, addFilm } = world();
-    storage.setLibraryRoot(root);
+    const { storage, enrichment, addFilm } = world();
     const id = await addFilm(FILMS[0], null);
 
     const run = await sync(enrichment, BOTH);
@@ -271,8 +288,7 @@ describe('createEnrichment: poster.jpg into each Source folder', () => {
   });
 
   it('treats a source folder that is gone as none on record, and does not make it', async () => {
-    const { storage, enrichment, root, addFilm } = world();
-    storage.setLibraryRoot(root);
+    const { enrichment, root, addFilm } = world();
     await addFilm(FILMS[0], 'Moved Away (2004)');
 
     const run = await sync(enrichment, BOTH);
@@ -285,8 +301,7 @@ describe('createEnrichment: poster.jpg into each Source folder', () => {
   });
 
   it('writes no poster.jpg with posters switched off', async () => {
-    const { storage, enrichment, root, addFilm } = world();
-    storage.setLibraryRoot(root);
+    const { enrichment, root, addFilm } = world();
     await addFilm(FILMS[1]);
 
     const run = await sync(enrichment, {
@@ -303,8 +318,7 @@ describe('createEnrichment: poster.jpg into each Source folder', () => {
 
 describe('createEnrichment: the Metadata sheet in the root', () => {
   it('adds familyflix-metadata.csv at review, the films A–Z', async () => {
-    const { storage, enrichment, root, addFilm } = world();
-    storage.setLibraryRoot(root);
+    const { enrichment, root, addFilm } = world();
     for (const film of FILMS) await addFilm(film);
 
     const run = await sync(enrichment, BOTH);
@@ -319,8 +333,7 @@ describe('createEnrichment: the Metadata sheet in the root', () => {
   });
 
   it('reads back through Bulk import carrying what the Sync fetched', async () => {
-    const { storage, enrichment, root, addFilm } = world();
-    storage.setLibraryRoot(root);
+    const { enrichment, root, addFilm } = world();
     await addFilm(FILMS[1]);
 
     await sync(enrichment, BOTH);
@@ -336,8 +349,7 @@ describe('createEnrichment: the Metadata sheet in the root', () => {
   });
 
   it('leaves an existing sheet byte-identical, with its log line', async () => {
-    const { storage, enrichment, root, addFilm } = world();
-    storage.setLibraryRoot(root);
+    const { enrichment, root, addFilm } = world();
     const ours = Buffer.from('Title,Year\nOur own list,1999\n');
     writeFileSync(join(root, SHEET), ours);
     await addFilm(FILMS[1]);
@@ -352,8 +364,7 @@ describe('createEnrichment: the Metadata sheet in the root', () => {
   });
 
   it('writes no sheet with the sheet switched off', async () => {
-    const { storage, enrichment, root, addFilm } = world();
-    storage.setLibraryRoot(root);
+    const { enrichment, root, addFilm } = world();
     await addFilm(FILMS[1]);
 
     const run = await sync(enrichment, {
@@ -368,8 +379,7 @@ describe('createEnrichment: the Metadata sheet in the root', () => {
 
 describe('createEnrichment: nothing else is ever written into the root', () => {
   it('adds the sheet and one poster.jpg per Source folder, and nothing more', async () => {
-    const { storage, enrichment, root, addFilm } = world();
-    storage.setLibraryRoot(root);
+    const { enrichment, root, addFilm } = world();
     const before = filesUnder(root);
     for (const film of FILMS) await addFilm(film);
 

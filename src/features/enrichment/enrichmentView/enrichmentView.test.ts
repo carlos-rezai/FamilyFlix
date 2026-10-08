@@ -143,7 +143,7 @@ const READY: EnrichmentSummary = {
   lastSyncedAt: null,
   keySet: true,
   online: true,
-  libraryRoot: null,
+  libraryFolders: [],
 };
 
 describe('enrichmentEstimate — ready to run', () => {

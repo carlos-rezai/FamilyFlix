@@ -3,12 +3,11 @@
 // 23 — Enrichment, Phase 7: "remember the library root and source folders"
 // (issue #210).
 //
-// A **Decision** row's mono path line is the **Library root** joined to the
-// title's `source_folder` — both remembered by the importer — so the
+// A **Decision** row's mono path line is the title's **Library folder** joined
+// to its `source_folder` — `sourcePath`, since issue #271 — so the
 // maintainer can find the folder the title came from. It is `null`, and the
 // row draws no line, whenever either half is not on record: a title added by
-// hand has no source folder, and a library no import has run over has no
-// root. Every kind of Decision carries it: `ambiguous`, `missing` and
+// hand has no source folder, and a title under no listed folder has no root. Every kind of Decision carries it: `ambiguous`, `missing` and
 // `conflict`.
 //
 // A real SQLite library on disk (so the `source_folder` column, which no
@@ -25,7 +24,6 @@ import {
   type EnrichField,
   type EnrichmentRun,
 } from '@/types';
-import { openDatabase } from '../../db';
 import { createSqliteStorage } from '../../library';
 import { createMedia } from '../../media/createMedia/createMedia';
 import {
@@ -71,7 +69,6 @@ function world() {
   const dir = sandboxRoot('familyflix-enrich-source-');
   const dbPath = join(dir, 'familyflix.db');
   const storage = track(createSqliteStorage(dbPath));
-  const db = track(openDatabase(dbPath));
   storage.setTmdbKey(KEY);
   const media = createMedia(join(dir, 'media'));
   const enrichment = createEnrichment({
@@ -95,14 +92,23 @@ function world() {
     return storage.addMovie({ title, year, videoPath, ...values }).id;
   }
 
-  /** The folder an import would have recorded for the film. */
-  function recordSourceFolder(id: string, folder: string): void {
-    db.prepare('UPDATE movies SET source_folder = ? WHERE id = ?').run(
-      folder,
-      id
-    );
-  }
+  let listedRoot: { id: string } | undefined;
 
+  /**
+   * The folder an import would have recorded for the film: its Source folder,
+   * under the **Library folder** at `ROOT` — or under none, with `listed`
+   * false, as a library from before the list could hold it.
+   */
+  function recordSourceFolder(
+    id: string,
+    folder: string,
+    { listed = true }: { listed?: boolean } = {}
+  ): void {
+    const library = listed
+      ? (listedRoot ??= storage.addLibraryFolder(ROOT))
+      : null;
+    storage.setSourceFolder(id, library?.id ?? null, folder);
+  }
   return { storage, enrichment, addFilm, recordSourceFolder };
 }
 
@@ -130,8 +136,7 @@ const bare = (path: string | null) =>
 
 describe('createEnrichment: a Decision’s path — root + source folder', () => {
   it('is drawn on an ambiguous Decision', async () => {
-    const { storage, enrichment, addFilm, recordSourceFolder } = world();
-    storage.setLibraryRoot(ROOT);
+    const { enrichment, addFilm, recordSourceFolder } = world();
     recordSourceFolder(
       await addFilm('Harbor Lights', 1963),
       'Harbor.Lights.1080p'
@@ -147,8 +152,7 @@ describe('createEnrichment: a Decision’s path — root + source folder', () =>
   });
 
   it('is drawn on a missing Decision, keeping the folders in between', async () => {
-    const { storage, enrichment, addFilm, recordSourceFolder } = world();
-    storage.setLibraryRoot(ROOT);
+    const { enrichment, addFilm, recordSourceFolder } = world();
     recordSourceFolder(
       await addFilm('Sundial', 2004),
       join('Drama', 'Sundial')
@@ -161,8 +165,7 @@ describe('createEnrichment: a Decision’s path — root + source folder', () =>
   });
 
   it('is drawn on a conflict Decision', async () => {
-    const { storage, enrichment, addFilm, recordSourceFolder } = world();
-    storage.setLibraryRoot(ROOT);
+    const { enrichment, addFilm, recordSourceFolder } = world();
     recordSourceFolder(
       await addFilm('Lanternlight', 2011, {
         tmdbId: 501,
@@ -183,8 +186,7 @@ describe('createEnrichment: a Decision’s path — root + source folder', () =>
 
 describe('createEnrichment: a Decision’s path — none when not on record', () => {
   it('is null for a title with no source folder', async () => {
-    const { storage, enrichment, addFilm } = world();
-    storage.setLibraryRoot(ROOT);
+    const { enrichment, addFilm } = world();
     await addFilm('Sundial', 2004);
 
     const decision = decisionFor(await syncEverything(enrichment), 'Sundial');
@@ -192,9 +194,11 @@ describe('createEnrichment: a Decision’s path — none when not on record', ()
     expect(decision.path).toBeNull();
   });
 
-  it('is null when no Library root is remembered', async () => {
+  it('is null when the title is under no Library folder', async () => {
     const { enrichment, addFilm, recordSourceFolder } = world();
-    recordSourceFolder(await addFilm('Sundial', 2004), 'Sundial');
+    recordSourceFolder(await addFilm('Sundial', 2004), 'Sundial', {
+      listed: false,
+    });
 
     const decision = decisionFor(await syncEverything(enrichment), 'Sundial');
 

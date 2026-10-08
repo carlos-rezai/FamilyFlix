@@ -66,7 +66,7 @@ const SUMMARY: EnrichmentSummary = {
   lastSyncedAt: null,
   keySet: true,
   online: true,
-  libraryRoot: null,
+  libraryFolders: [],
 };
 
 /** A run six seconds old, three of thirty looked up. */

@@ -49,7 +49,7 @@ const SUMMARY: EnrichmentSummary = {
   lastSyncedAt: null,
   keySet: true,
   online: true,
-  libraryRoot: null,
+  libraryFolders: [],
 };
 
 const REASON = 'TMDB has different values for fields you already filled in.';

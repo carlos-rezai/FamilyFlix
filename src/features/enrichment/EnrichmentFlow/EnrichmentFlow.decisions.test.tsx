@@ -50,7 +50,7 @@ const SUMMARY: EnrichmentSummary = {
   lastSyncedAt: null,
   keySet: true,
   online: true,
-  libraryRoot: null,
+  libraryFolders: [],
 };
 
 const AMBIGUOUS: Decision = {

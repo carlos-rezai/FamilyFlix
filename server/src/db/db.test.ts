@@ -43,10 +43,10 @@ const EXPECTED_GENRES = [
   'Crime',
 ];
 
-// The version a fresh database migrates to — migration #6, the Library
-// folders list (issue #268). Every "at the latest version" assertion reads it,
+// The version a fresh database migrates to — migration #7, the carry-over of
+// `library-root` (issue #271). Every "at the latest version" assertion reads it,
 // so the next migration moves one number rather than seven.
-const LATEST_VERSION = 6;
+const LATEST_VERSION = 7;
 
 // What migration #5 adds, by table: the three columns a Sync writes on a movie
 // and a series, and the episode's still. Additive, nullable, nothing seeded.
@@ -1009,7 +1009,7 @@ describe('db: migration #6 — library folders', () => {
   it('lands a fresh database at version 6 holding no folder', () => {
     const db = track(open(':memory:'));
 
-    expect(userVersion(db)).toBe(6);
+    expect(userVersion(db)).toBeGreaterThanOrEqual(6);
     expect(db.prepare('SELECT id FROM library_folders').all()).toEqual([]);
   });
 
@@ -1035,7 +1035,7 @@ describe('db: migration #6 — library folders', () => {
     before5.close();
 
     const upgraded = track(open(path));
-    expect(userVersion(upgraded)).toBe(6);
+    expect(userVersion(upgraded)).toBe(LATEST_VERSION);
     expect(tableNames(upgraded)).toContain('library_folders');
     expect(columnNames(upgraded, 'movies')).toContain('library_folder_id');
     expect(columnNames(upgraded, 'series')).toContain('library_folder_id');
@@ -1045,6 +1045,132 @@ describe('db: migration #6 — library folders', () => {
     expect(
       upgraded.prepare('SELECT * FROM movies WHERE id = ?').get(added.id)
     ).toEqual({ ...(rowBefore as object), library_folder_id: null });
+  });
+});
+
+// 30 — Library folders, Phase 4 (issue #271) adds migration #7: the
+// carry-over. A library an earlier import remembered a single root for —
+// `settings.library-root` — gains that root as a **Library folder**, unless it
+// is already listed (Phase 3's spreadsheet start lists its root), and every
+// movie and series with a `source_folder` is linked to it. Then the key goes:
+// one place remembers folders.
+
+const ROOT_KEY = 'library-root';
+
+/**
+ * A version-6 library at `path`, as v0.3 left it: a movie and a series an
+ * import recorded a Source folder for, a movie added by hand with none, and —
+ * when `root` is given — the remembered root under `library-root`. Answers the
+ * ids by role.
+ */
+function versionSixLibrary(
+  path: string,
+  { root, listed = false }: { root: string | null; listed?: boolean }
+) {
+  const storage = trackStorage(createSqliteStorage(path));
+  const imported = storage.addMovie({
+    title: 'Northwind',
+    year: 2018,
+    videoPath: 'Northwind (2018)/northwind.mkv',
+  }).id;
+  const byHand = storage.addMovie({
+    title: 'Sundial',
+    videoPath: 'Sundial/sundial.mkv',
+  }).id;
+  const show = storage.addSeries({ title: 'Harbor & Vine' }).id;
+  const listedId =
+    listed && root !== null ? storage.addLibraryFolder(root).id : null;
+  storage.close();
+
+  const db = open(path);
+  try {
+    db.prepare('UPDATE movies SET source_folder = ? WHERE id = ?').run(
+      'Northwind (2018)',
+      imported
+    );
+    db.prepare('UPDATE series SET source_folder = ? WHERE id = ?').run(
+      'Harbor & Vine',
+      show
+    );
+    if (root !== null) {
+      db.prepare('INSERT INTO settings (key, value) VALUES (?, ?)').run(
+        ROOT_KEY,
+        root
+      );
+    }
+    db.pragma('user_version = 6');
+  } finally {
+    db.close();
+  }
+  return { imported, byHand, show, listedId };
+}
+
+const folderOf = (db: TestDb, table: 'movies' | 'series', id: string) =>
+  (
+    db
+      .prepare(`SELECT library_folder_id FROM ${table} WHERE id = ?`)
+      .get(id) as { library_folder_id: string | null }
+  ).library_folder_id;
+
+const listedFolders = (db: TestDb) =>
+  db.prepare('SELECT id, path FROM library_folders').all() as Array<{
+    id: string;
+    path: string;
+  }>;
+
+const rootKeyRow = (db: TestDb) =>
+  db.prepare('SELECT value FROM settings WHERE key = ?').get(ROOT_KEY);
+
+describe('db: migration #7 — library-root carried over', () => {
+  it('lands a fresh database at version 7', () => {
+    const db = track(open(':memory:'));
+
+    expect(userVersion(db)).toBe(7);
+  });
+
+  it('lists the remembered root as the one folder, links exactly the titles with a source folder, and drops the key', () => {
+    const path = tempDbPath();
+    const root = join(tmpdir(), 'familyflix-carried-root');
+    const { imported, byHand, show } = versionSixLibrary(path, { root });
+
+    const upgraded = track(open(path));
+
+    expect(userVersion(upgraded)).toBe(7);
+    const folders = listedFolders(upgraded);
+    expect(folders.map((folder) => folder.path)).toEqual([root]);
+    const [folder] = folders;
+    expect(folderOf(upgraded, 'movies', imported)).toBe(folder.id);
+    expect(folderOf(upgraded, 'series', show)).toBe(folder.id);
+    expect(folderOf(upgraded, 'movies', byHand)).toBeNull();
+    expect(rootKeyRow(upgraded)).toBeUndefined();
+  });
+
+  it('does not list a root twice that is already a library folder', () => {
+    const path = tempDbPath();
+    const root = join(tmpdir(), 'familyflix-carried-root');
+    const { imported, show, listedId } = versionSixLibrary(path, {
+      root,
+      listed: true,
+    });
+
+    const upgraded = track(open(path));
+
+    expect(listedFolders(upgraded)).toEqual([{ id: listedId, path: root }]);
+    expect(folderOf(upgraded, 'movies', imported)).toBe(listedId);
+    expect(folderOf(upgraded, 'series', show)).toBe(listedId);
+    expect(rootKeyRow(upgraded)).toBeUndefined();
+  });
+
+  it('lists nothing and links nothing with no root remembered', () => {
+    const path = tempDbPath();
+    const { imported, show } = versionSixLibrary(path, { root: null });
+
+    const upgraded = track(open(path));
+
+    expect(userVersion(upgraded)).toBe(7);
+    expect(listedFolders(upgraded)).toEqual([]);
+    expect(folderOf(upgraded, 'movies', imported)).toBeNull();
+    expect(folderOf(upgraded, 'series', show)).toBeNull();
   });
 });
 

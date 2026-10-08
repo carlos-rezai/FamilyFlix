@@ -42,7 +42,7 @@ function summary(lastSyncedAt: string | null): EnrichmentSummary {
     lastSyncedAt,
     keySet: true,
     online: true,
-    libraryRoot: null,
+    libraryFolders: [],
   };
 }
 
