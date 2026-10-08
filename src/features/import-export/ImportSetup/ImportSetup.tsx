@@ -36,12 +36,13 @@ export interface ImportSetupProps {
 
 /**
  * The **Setup step**, from `feat.ImportFlow.dc.html`: two paths typed into two
- * mono fields — the spreadsheet, led by the sheet glyph, and the **Library
- * root**, led by the folder glyph — and _Start import_, disabled until both
- * are non-empty. Between the root and the button, _What the scanner accepts_:
- * the three folder shapes, with the prototype's backslashes, and the
- * folder-first rule. Under that, the `EnrichCheckCard`. The box is only carried on the run —
- * _Finish_ reads it; the import itself asks TMDB nothing.
+ * mono fields — the spreadsheet, led by the sheet glyph, and the
+ * spreadsheet's root, led by the folder glyph — and _Start import_, disabled
+ * until both are non-empty. Between the root and the button, _What the
+ * scanner accepts_: the three folder shapes, with the prototype's
+ * backslashes, and the folder-first rule. Under that, the `EnrichCheckCard`.
+ * The box is only carried on the run — _Finish_ reads it; the import itself
+ * asks TMDB nothing.
  *
  * Controlled: the values, the two refusals and the three handlers are handed
  * in, because it is the organism that holds the values and decides when a

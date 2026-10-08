@@ -21,6 +21,8 @@ export const FOLDER_CHANNELS = {
 
 /** `window.familyflix.folders`, as the preload defines it. */
 export interface FolderBridge {
-  /** Open the system folder dialog; the paths picked, in order, `[]` a cancel. */
+  /**
+   * Open the system folder dialog; the paths picked, in order, `[]` a cancel.
+   */
   pick(): Promise<string[]>;
 }

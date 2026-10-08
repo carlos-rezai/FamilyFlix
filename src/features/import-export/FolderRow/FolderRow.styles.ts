@@ -37,7 +37,9 @@ export const Path = styled.div`
   overflow-wrap: anywhere;
 `;
 
-/** The line under the path: the title count, or the unreachable word in danger. */
+/**
+ * The line under the path: the title count, or the unreachable word in danger.
+ */
 export const Line = styled.div<{ $unreachable: boolean }>`
   margin-top: 4px;
   font-family: ${({ theme }) => theme.fonts.sans};

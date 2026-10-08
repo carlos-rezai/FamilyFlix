@@ -8,7 +8,10 @@ import {
 } from '../api/api';
 
 export interface LibraryFoldersState {
-  /** The listed folders, `null` until the read lands and still if it never does. */
+  /**
+   * The listed folders, `null` until the read lands and still if it never
+   * does.
+   */
   folders: LibraryFolder[] | null;
   /**
    * Post one path, resolving whether it was added; never rejects — a refusal
@@ -19,7 +22,9 @@ export interface LibraryFoldersState {
   remove: (id: string) => Promise<void>;
   /** Whether an add is out. */
   adding: boolean;
-  /** The route's own sentence for the last refused add, `null` once one lands. */
+  /**
+   * The route's own sentence for the last refused add, `null` once one lands.
+   */
   refusal: string | null;
 }
 

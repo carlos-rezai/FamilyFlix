@@ -8,9 +8,9 @@ import { Rows } from './LibrarySection.styles';
 
 /**
  * The Settings hub's **Library section**, from `page.SettingsPage.dc.html`:
- * the `Library` group heading over the `＋ Add a title`, `📁 Library folders`, `⇪ Import from
- * spreadsheet` and `⬇ Export to CSV` rows — the third's label kept as drawn,
- * though the dialog it opens offers Excel too.
+ * the `Library` group heading over the `＋ Add a title`, `📁 Library
+ * folders`, `⇪ Import from spreadsheet` and `⬇ Export to CSV` rows — the
+ * third's label kept as drawn, though the dialog it opens offers Excel too.
  *
  * Like `SettingsHeader`, the section owns where its rows lead: the maintainer
  * surface's only doors are here, and a page is composition only. The first

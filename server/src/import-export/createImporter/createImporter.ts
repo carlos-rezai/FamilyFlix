@@ -123,9 +123,9 @@ export interface Importer {
    * Start the **Current run** over a sheet and the spreadsheet's root, and
    * answer its first snapshot. Rejects with {@link ImportStartError} for a
    * sheet that does not exist, cannot be read, is neither `.xlsx` nor `.csv`
-   * or has no title column, and for a root that does not exist or is not a directory —
-   * before any run exists; with {@link ImportBusyError} while a run exists.
-   * `enrich` is only carried on the run, for _Finish_ to read.
+   * or has no title column, and for a root that does not exist or is not a
+   * directory — before any run exists; with {@link ImportBusyError} while a
+   * run exists. `enrich` is only carried on the run, for _Finish_ to read.
    */
   start(
     sheetPath: string,

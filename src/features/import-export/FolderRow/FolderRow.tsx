@@ -5,7 +5,9 @@ import { Line, Path, Row, Text, Tile } from './FolderRow.styles';
 export interface FolderRowProps {
   /** The folder the row draws. */
   folder: LibraryFolder;
-  /** What to do when the ✕ is pressed — the row knows nothing of what follows. */
+  /**
+   * What to do when the ✕ is pressed — the row knows nothing of what follows.
+   */
   onRemove: () => void;
 }
 

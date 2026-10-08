@@ -12,7 +12,9 @@ import { ImportSetup } from '../ImportSetup/ImportSetup';
 import { useImportRun } from '../useImportRun/useImportRun';
 import { HeaderRow, Heading, Lede } from './ImportFlow.styles';
 
-/** The header's words, by what the run reads: a sheet, or the Library folders. */
+/**
+ * The header's words, by what the run reads: a sheet, or the Library folders.
+ */
 const COPY = {
   sheet: {
     heading: 'Import library',

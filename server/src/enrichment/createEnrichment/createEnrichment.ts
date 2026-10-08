@@ -152,14 +152,18 @@ export interface EnrichmentDeps {
   writeBack?: WriteBack;
 }
 
-/** A reachable Library folder of the Current run, and what it may be written. */
+/**
+ * A reachable Library folder of the Current run, and what it may be written.
+ */
 interface RunFolder {
   id: string;
   path: string;
   writable: Record<WriteTarget, boolean>;
 }
 
-/** The listed **Library folders** that can be reached now, in the order added. */
+/**
+ * The listed **Library folders** that can be reached now, in the order added.
+ */
 async function reachableFolders(
   storage: LibraryStorage
 ): Promise<Array<{ id: string; path: string }>> {

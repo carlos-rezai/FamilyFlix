@@ -48,7 +48,10 @@ export const ENRICH_SCOPES = ['missing', 'all', 'single'] as const;
 /** One of the scopes in {@link ENRICH_SCOPES}. */
 export type EnrichScope = (typeof ENRICH_SCOPES)[number];
 
-/** The setup's read: the library's counts, the key, the connection, the folders. */
+/**
+ * The setup's read: the library's counts, the key, the connection, the
+ * folders.
+ */
 export interface EnrichmentSummary {
   total: number;
   /** Titles holding both a synopsis and a poster. */

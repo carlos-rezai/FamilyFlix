@@ -13,10 +13,11 @@ import {
 
 /**
  * The **Desktop shell**'s preload: wiring only. It defines
- * `window.familyflix.updates` and `window.familyflix.folders`, each member passing one channel through to
- * main and holding no state. `sandbox`, `contextIsolation` and
- * `nodeIntegration: false` are untouched — `contextBridge` is the one way
- * across. See `docs/PRDs/17-software-update.md`, _The preload_.
+ * `window.familyflix.updates` and `window.familyflix.folders`, each member
+ * passing one channel through to main and holding no state. `sandbox`,
+ * `contextIsolation` and `nodeIntegration: false` are untouched —
+ * `contextBridge` is the one way across. See
+ * `docs/PRDs/17-software-update.md`, _The preload_.
  */
 const updates: UpdateBridge = {
   current: () =>
