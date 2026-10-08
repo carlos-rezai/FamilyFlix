@@ -1,7 +1,7 @@
 # 31 — Export options
 
 > **Initiative:** `export-options`
-> **PRD:** `docs/PRDs/31-export-options.md` (to be written)
+> **PRD:** `docs/PRDs/31-export-options.md` (#275)
 > **Plan:** `docs/PRDs/31-export-options-plan.md` (to be written)
 
 This log is the `grill-me` session that settled step 15 of the build order
