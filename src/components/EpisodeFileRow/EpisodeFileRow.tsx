@@ -30,6 +30,12 @@ export interface EpisodeFileRowProps {
   children?: ReactNode;
 }
 
+/** The most digits a season can have. */
+const SEASON_LENGTH = 2;
+
+/** The most digits an episode number can have. */
+const NUMBER_LENGTH = 3;
+
 /** A typed value held to digits, at most `length` of them. */
 const digits = (value: string, length: number): string =>
   value.replace(/\D/g, '').slice(0, length);
@@ -59,7 +65,9 @@ export function EpisodeFileRow({
             value={season}
             aria-label="Season"
             inputMode="numeric"
-            onChange={(event) => onSeasonChange(digits(event.target.value, 2))}
+            onChange={(event) =>
+              onSeasonChange(digits(event.target.value, SEASON_LENGTH))
+            }
           />
         </Tag>
         <Tag>
@@ -68,7 +76,9 @@ export function EpisodeFileRow({
             value={number}
             aria-label="Episode"
             inputMode="numeric"
-            onChange={(event) => onNumberChange(digits(event.target.value, 3))}
+            onChange={(event) =>
+              onNumberChange(digits(event.target.value, NUMBER_LENGTH))
+            }
           />
         </Tag>
         <TitleInput

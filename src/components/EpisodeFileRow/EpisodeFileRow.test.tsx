@@ -6,6 +6,7 @@ import { ThemeProvider } from 'styled-components';
 import { EpisodeFileRow, type EpisodeFileRowProps } from '@/components';
 import { theme } from '@/styles/theme';
 import { comesBefore } from '@/test-support/comesBefore/comesBefore';
+import { resolvedStyle } from '@/test-support/resolvedStyle/resolvedStyle';
 
 /**
  * 29 — Add a series, Phase 3 (issue #263): one **Episode file row**, from
@@ -154,6 +155,21 @@ describe('EpisodeFileRow — the number fields', () => {
 
     expect(onSeasonChange).toHaveBeenLastCalledWith('');
     expect(onNumberChange).toHaveBeenLastCalledWith('');
+  });
+});
+
+describe('EpisodeFileRow — focus', () => {
+  // The prototype's `outline: none` is not carried over, as on `TextField` and
+  // `Textarea`: the ring is the only thing that tells a keyboard user where
+  // they are.
+  it('a focused field keeps the browser’s focus ring', () => {
+    renderRow();
+
+    for (const field of [seasonField(), numberField(), titleField()]) {
+      expect(resolvedStyle(field, { focusVisible: true }).outline).toBe(
+        undefined
+      );
+    }
   });
 });
 

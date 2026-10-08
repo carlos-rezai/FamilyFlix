@@ -31,6 +31,15 @@ export const Tag = styled.label`
   color: ${({ theme }) => theme.colors.textFaint};
 `;
 
+/**
+ * The rule the number and title fields share.
+ *
+ * The prototype's `outline: none` is deliberately **not** carried over, as on
+ * `TextField` and `Textarea`: the focus ring is left alone here. It is the
+ * only thing that tells a keyboard user where they are, and suppressing it is
+ * not a token or a layout the prototype is the authority on. The accent border
+ * on `:focus` is the prototype's, and stays.
+ */
 const field = css`
   height: 34px;
   background: ${({ theme }) => theme.colors.surface2};
@@ -39,7 +48,6 @@ const field = css`
   color: ${({ theme }) => theme.colors.text};
   font-family: ${({ theme }) => theme.fonts.sans};
   font-size: 14px;
-  outline: none;
 
   &:focus {
     border-color: ${({ theme }) => theme.colors.accentLine};
