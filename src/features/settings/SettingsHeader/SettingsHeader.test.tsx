@@ -8,6 +8,7 @@ import { theme } from '@/styles/theme';
 import {
   LocationProbe,
   pathname,
+  search,
 } from '@/test-support/LocationProbe/LocationProbe';
 
 /**
@@ -31,7 +32,7 @@ function renderPage(history: string[] = ['/', '/settings']) {
 }
 
 const back = () => screen.getByRole('button', { name: /back/i });
-const addMovie = () => screen.getByRole('button', { name: /add a movie/i });
+const addTitle = () => screen.getByRole('button', { name: /add a title/i });
 /**
  * The header of the **Maintainer**'s hub, and the reason the movie form was a
  * tracer bullet rather than a URL typed into the address bar: the gear is the
@@ -48,7 +49,7 @@ describe('SettingsHeader', () => {
 
     expect(screen.getByRole('heading', { name: 'Settings' })).toBeDefined();
     expect(back()).toBeDefined();
-    expect(addMovie()).toBeDefined();
+    expect(addTitle()).toBeDefined();
     expect(
       screen.getByText('Manage your library, playback, and storage.')
     ).toBeDefined();
@@ -75,12 +76,13 @@ describe('SettingsHeader', () => {
     expect(pathname()).toBe('/');
   });
 
-  it('opens the movie form from ＋ Add a movie', () => {
+  it('opens the movie form from ＋ Add a title, on the movie kind', () => {
     renderPage();
 
-    fireEvent.click(addMovie());
+    fireEvent.click(addTitle());
 
     expect(pathname()).toBe('/add');
+    expect(search()).toBe('');
   });
 
   it('builds nothing below the header', () => {

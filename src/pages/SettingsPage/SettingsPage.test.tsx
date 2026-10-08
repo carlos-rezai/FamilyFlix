@@ -88,7 +88,7 @@ const importRow = () =>
 
 /**
  * `/settings` — composition only. What the header does — where Back goes,
- * what ＋ Add a movie opens — is tested where it lives, in
+ * what ＋ Add a title opens — is tested where it lives, in
  * `features/settings/SettingsHeader`; what the Library section's rows open,
  * in `features/settings/LibrarySection`; what the Playback card draws, in
  * `features/settings/PlaybackSection`.
@@ -107,8 +107,8 @@ describe('SettingsPage', () => {
 
     expect(screen.getByRole('heading', { name: 'Settings' })).toBeDefined();
     // By its exact name: the Library section under it carries a second
-    // "Add a movie", the row, whose name runs on into its line.
-    expect(screen.getByRole('button', { name: 'Add a movie' })).toBeDefined();
+    // "Add a title", the row, whose name runs on into its line.
+    expect(screen.getByRole('button', { name: 'Add a title' })).toBeDefined();
   });
 
   it('composes the Library section under the header', () => {
@@ -156,12 +156,12 @@ describe('SettingsPage', () => {
   it('keeps the Library rows exactly as before, with the Playback card under them', () => {
     renderPage();
 
-    // Back, two "Add a movie"s — the header's and the row's — then the two
+    // Back, two "Add a title"s — the header's and the row's — then the two
     // rows the Library group always had: five buttons; the Playback card adds
     // one, the Codecs row (26 — Codecs page, issue #245).
     expect(screen.getByText('Codecs')).toBeDefined();
     expect(
-      screen.getAllByRole('button', { name: /add a movie/i })
+      screen.getAllByRole('button', { name: /add a title/i })
     ).toHaveLength(2);
     expect(importRow()).toBeDefined();
     expect(
@@ -285,7 +285,7 @@ describe('SettingsPage', () => {
     expect(screen.queryByText(/software update/i)).toBeNull();
     expect(screen.queryByText(/up to date/i)).toBeNull();
     expect(screen.queryByRole('button', { name: /update/i })).toBeNull();
-    // Back, two "Add a movie"s, Import, Export — and the Preferred language
+    // Back, two "Add a title"s, Import, Export — and the Preferred language
     // pill once the settings land, and the Codecs row; Network adds Test connection and Sync
     // metadata & posters; Storage and About add none.
     await waitFor(() =>

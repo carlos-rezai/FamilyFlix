@@ -523,7 +523,7 @@ describe('App — returning the browse home to where the parent was', () => {
     // Settings screen (issue #98) has no app header for it to press.
     fireEvent.click(screen.getByRole('button', { name: 'Settings' }));
     await screen.findByRole('heading', { name: /settings/i });
-    fireEvent.click(screen.getByRole('button', { name: 'Add a movie' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add a title' }));
     fireEvent.change(await screen.findByRole('textbox', { name: /title/i }), {
       target: { value: 'Saved Film' },
     });
@@ -767,7 +767,7 @@ async function pickVideo(): Promise<void> {
 // --- 11 — Movie form, Phase 1: the tracer bullet (issue #98) ------------------
 
 /**
- * The whole demoable path in one test: press the gear, press ＋ Add a movie,
+ * The whole demoable path in one test: press the gear, press ＋ Add a title,
  * type a title, press Add to library, and the film is on the home screen.
  *
  * It is here rather than in any one unit's suite because none of them can prove
@@ -828,8 +828,8 @@ describe('App — a typed title becomes a row on the home screen', () => {
     expect(pathname()).toBe('/settings');
     await screen.findByRole('heading', { name: 'Settings' });
 
-    // And ＋ Add a movie is the only door from there to the form.
-    fireEvent.click(screen.getByRole('button', { name: 'Add a movie' }));
+    // And ＋ Add a title is the only door from there to the form.
+    fireEvent.click(screen.getByRole('button', { name: 'Add a title' }));
     expect(pathname()).toBe('/add');
 
     const title = await screen.findByRole('textbox', { name: /title/i });
@@ -981,7 +981,7 @@ describe('App — a film filed under two genres reaches both rows', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Settings' }));
     await screen.findByRole('heading', { name: 'Settings' });
-    fireEvent.click(screen.getByRole('button', { name: 'Add a movie' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add a title' }));
 
     await screen.findByRole('button', { name: 'Documentary' });
   }

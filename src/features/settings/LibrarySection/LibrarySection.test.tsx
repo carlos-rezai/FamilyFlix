@@ -9,6 +9,7 @@ import { theme } from '@/styles/theme';
 import {
   LocationProbe,
   pathname,
+  search,
 } from '@/test-support/LocationProbe/LocationProbe';
 import { comesBefore } from '@/test-support/comesBefore/comesBefore';
 import { okResponse } from '@/test-support/fakeResponse/fakeResponse';
@@ -72,7 +73,7 @@ function renderSection() {
   );
 }
 
-const addRow = () => screen.getByRole('button', { name: /add a movie/i });
+const addRow = () => screen.getByRole('button', { name: /add a title/i });
 const importRow = () =>
   screen.getByRole('button', { name: /import from spreadsheet/i });
 const exportRow = () => screen.getByRole('button', { name: /export to csv/i });
@@ -103,7 +104,7 @@ describe('LibrarySection', () => {
     expect(getComputedStyle(heading).textTransform).toBe('uppercase');
   });
 
-  it('draws exactly three rows: Add a movie, Import from spreadsheet, Export to CSV', () => {
+  it('draws exactly three rows: Add a title, Import from spreadsheet, Export to CSV', () => {
     renderSection();
 
     expect(screen.getAllByRole('button')).toHaveLength(3);
@@ -116,9 +117,7 @@ describe('LibrarySection', () => {
 
     expect(screen.getByText('＋')).toBeDefined();
     expect(
-      screen.getByText(
-        'Pick the video, poster, and subtitle files for one title.'
-      )
+      screen.getByText('A movie or a series, with its files.')
     ).toBeDefined();
     expect(screen.getByText('⇪')).toBeDefined();
     expect(
@@ -145,12 +144,13 @@ describe('LibrarySection', () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it('lands on the movie form from Add a movie', () => {
+  it('lands on the movie form from Add a title, on the movie kind', () => {
     renderSection();
 
     fireEvent.click(addRow());
 
     expect(pathname()).toBe('/add');
+    expect(search()).toBe('');
     expect(screen.getByText('the movie form')).toBeDefined();
   });
 

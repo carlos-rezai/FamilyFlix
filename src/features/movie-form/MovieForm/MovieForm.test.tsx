@@ -5,6 +5,7 @@ import {
   fireEvent,
   waitFor,
   act,
+  within,
 } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ThemeProvider } from 'styled-components';
@@ -17,6 +18,7 @@ import {
   LocationProbe,
   navigationType,
   pathname,
+  search,
 } from '@/test-support/LocationProbe/LocationProbe';
 import { makeMovie } from '@/test-support/makeMovie/makeMovie';
 import {
@@ -210,10 +212,17 @@ const castField = () =>
 const descriptionField = () =>
   screen.getByRole('textbox', { name: /description/i }) as HTMLTextAreaElement;
 
-/** Every genre chip on the form, in the order it is drawn. */
+/**
+ * Every genre chip on the form, in the order it is drawn.
+ *
+ * Amended by 29 — Add a series (issue #262): the **Kind tabs** are
+ * `aria-pressed` buttons too, in their own group, and are not chips.
+ */
 function chips(): HTMLButtonElement[] {
-  return (screen.getAllByRole('button') as HTMLButtonElement[]).filter((el) =>
-    el.hasAttribute('aria-pressed')
+  return (screen.getAllByRole('button') as HTMLButtonElement[]).filter(
+    (el) =>
+      el.hasAttribute('aria-pressed') &&
+      el.closest('[role="group"][aria-label="Kind"]') === null
   );
 }
 
@@ -4003,5 +4012,331 @@ describe('MovieForm — the landing, and leaving an edit', () => {
 
     await waitFor(() => expect(pathname()).toBe('/'));
     expect(navigationType()).toBe('PUSH');
+  });
+});
+
+// --- 29 — Add a series, Phase 2 (issue #262): the Kind tabs ---------------------
+//
+// The **Movie form** learns a second **Form kind**. _Movie_ / _Series_ **Kind
+// tabs** sit at the end of the header row on a plain add, writing
+// `?kind=series` as a `replace` and omitting it at `movie` — the library tabs'
+// rule. The series kind has its own wording and its own Files card,
+// `SeriesFormFiles`; the shared fields are one record both kinds draw, and each
+// kind's files are held side by side, so a switch either way loses nothing.
+// Nothing can be saved on Series yet. With `?movie=` or `?problem=` the form
+// has no kind to switch: no tabs, and `?kind=` is ignored.
+
+describe('MovieForm — the Kind tabs', () => {
+  /** The form at `url`, with Settings behind it, settled. */
+  async function renderAt(url: string) {
+    const view = render(
+      <MemoryRouter initialEntries={['/settings', url]} initialIndex={1}>
+        <ThemeProvider theme={theme}>
+          <MovieForm />
+          <LocationProbe />
+        </ThemeProvider>
+      </MemoryRouter>
+    );
+    await act(async () => undefined);
+    return view;
+  }
+
+  const kindGroup = () => screen.queryByRole('group', { name: 'Kind' });
+  const kindTab = (name: 'Movie' | 'Series') => {
+    const group = kindGroup();
+    if (group === null) throw new Error('No Kind tabs are drawn');
+    return within(group).getByRole('button', { name });
+  };
+  const press = (name: 'Movie' | 'Series') => {
+    act(() => {
+      kindTab(name).click();
+    });
+  };
+  const kindParam = () => new URLSearchParams(search() ?? '').get('kind');
+
+  const heading = (name: string) => screen.queryByRole('heading', { name });
+
+  /** Text read whole across its inline children, matched on the innermost element holding all of it. */
+  const textMatching = (pattern: RegExp) => {
+    const read = (element: Element | null) =>
+      element?.textContent?.replace(/\s+/g, ' ').trim() ?? '';
+    return screen.queryAllByText(
+      (_, element) =>
+        element !== null &&
+        element.tagName !== 'BODY' &&
+        pattern.test(read(element)) &&
+        Array.from(element.children).every(
+          (child) => !pattern.test(read(child))
+        )
+    );
+  };
+
+  const createdByField = () =>
+    screen.getByRole('textbox', { name: /created by/i }) as HTMLInputElement;
+
+  describe('on a plain add', () => {
+    it('draws Movie and Series, in that order, with Movie pressed', async () => {
+      await renderAt('/add');
+
+      const group = kindGroup();
+      expect(group).not.toBeNull();
+      expect(
+        within(group as HTMLElement)
+          .getAllByRole('button')
+          .map((button) => button.textContent)
+      ).toEqual(['Movie', 'Series']);
+      expect(kindTab('Movie').getAttribute('aria-pressed')).toBe('true');
+      expect(kindTab('Series').getAttribute('aria-pressed')).toBe('false');
+    });
+
+    it('draws the tabs in the header row, after the heading', async () => {
+      await renderAt('/add');
+
+      const title = heading('Add a movie');
+      const group = kindGroup();
+      expect(title).not.toBeNull();
+      expect(group).not.toBeNull();
+      expect(title?.parentElement?.contains(group)).toBe(true);
+      expect(
+        (title as HTMLElement).compareDocumentPosition(group as HTMLElement) &
+          Node.DOCUMENT_POSITION_FOLLOWING
+      ).toBeTruthy();
+    });
+
+    it('writes ?kind=series as a replace when Series is pressed', async () => {
+      await renderAt('/add');
+
+      press('Series');
+
+      expect(pathname()).toBe('/add');
+      expect(kindParam()).toBe('series');
+      expect(navigationType()).toBe('REPLACE');
+      expect(kindTab('Series').getAttribute('aria-pressed')).toBe('true');
+    });
+
+    it('takes kind back off the URL, as a replace, when Movie is pressed', async () => {
+      await renderAt('/add?kind=series');
+
+      press('Movie');
+
+      expect(pathname()).toBe('/add');
+      expect(search()).toBe('');
+      expect(navigationType()).toBe('REPLACE');
+      expect(kindTab('Movie').getAttribute('aria-pressed')).toBe('true');
+    });
+
+    it('opens on Series at ?kind=series', async () => {
+      await renderAt('/add?kind=series');
+
+      expect(kindTab('Series').getAttribute('aria-pressed')).toBe('true');
+      expect(kindTab('Movie').getAttribute('aria-pressed')).toBe('false');
+    });
+  });
+
+  describe('the series wording', () => {
+    it('heads the form Add a series', async () => {
+      await renderAt('/add?kind=series');
+
+      expect(heading('Add a series')).not.toBeNull();
+      expect(heading('Add a movie')).toBeNull();
+    });
+
+    it('carries the series lede, ending on Import library', async () => {
+      await renderAt('/add?kind=series');
+
+      expect(
+        textMatching(
+          /^Pick the poster and every episode.s video and subtitles for this series\. To add many at once, use Import library\.$/
+        )
+      ).toHaveLength(1);
+      expect(
+        screen.queryByText(/pick the video, poster, and any subtitle files/i)
+      ).toBeNull();
+    });
+
+    it('carries the series placeholders on Title, Year and Description', async () => {
+      await renderAt('/add?kind=series');
+
+      expect(titleField().placeholder).toBe('Series title');
+      expect(yearField().placeholder).toBe('2019–2023');
+      expect(descriptionField().placeholder).toBe(
+        'A short synopsis of the series'
+      );
+    });
+
+    it('asks Created by, for a creator name, where the movie asks Director', async () => {
+      await renderAt('/add?kind=series');
+
+      expect(screen.getByText(/^created by$/i)).toBeDefined();
+      expect(createdByField().placeholder).toBe('Creator name');
+      expect(screen.queryByRole('textbox', { name: /director/i })).toBeNull();
+    });
+
+    it('draws the series Files card in place of the movie’s', async () => {
+      await renderAt('/add?kind=series');
+
+      expect(screen.getByText(/^files$/i)).toBeDefined();
+      expect(posterPicker()).toBeDefined();
+      expect(screen.getByText(/^episodes$/i)).toBeDefined();
+      expect(screen.queryByLabelText(/choose video file/i)).toBeNull();
+      expect(screen.queryByLabelText(/add subtitle file/i)).toBeNull();
+    });
+
+    it('keeps the movie wording on the movie kind', async () => {
+      await renderAt('/add');
+
+      expect(heading('Add a movie')).not.toBeNull();
+      expect(titleField().placeholder).toBe('Movie title');
+      expect(yearField().placeholder).toBe('2019');
+      expect(directorField().placeholder).toBe('Director name');
+      expect(screen.queryByText(/^episodes$/i)).toBeNull();
+      expect(videoPicker()).toBeDefined();
+    });
+  });
+
+  describe('the series Year field', () => {
+    it.each(['2019–2023', '2019-2023', '2021–'])('accepts %s', async (span) => {
+      await renderAt('/add?kind=series');
+
+      fireEvent.change(yearField(), { target: { value: span } });
+
+      expect(yearField().value).toBe(span);
+    });
+
+    it('refuses letters', async () => {
+      await renderAt('/add?kind=series');
+
+      fireEvent.change(yearField(), { target: { value: 'abc' } });
+
+      expect(yearField().value).toBe('');
+    });
+
+    it('refuses a tenth character', async () => {
+      await renderAt('/add?kind=series');
+      fireEvent.change(yearField(), { target: { value: '2019–2023' } });
+
+      fireEvent.change(yearField(), { target: { value: '2019–20234' } });
+
+      expect(yearField().value).toBe('2019–2023');
+    });
+  });
+
+  describe('a switch keeps what was typed and picked', () => {
+    /** Every shared field filled, and every movie slot holding a pick. */
+    async function fillEverything() {
+      fireEvent.change(titleField(), { target: { value: 'Rear Window' } });
+      fireEvent.change(yearField(), { target: { value: '1954' } });
+      fireEvent.change(directorField(), {
+        target: { value: 'Alfred Hitchcock' },
+      });
+      fireEvent.change(castField(), {
+        target: { value: 'James Stewart, Grace Kelly' },
+      });
+      fireEvent.change(descriptionField(), {
+        target: { value: 'A photographer watches his neighbours.' },
+      });
+      fireEvent.click(chip('Thriller'));
+      fireEvent.click(segment('Rate 4 stars'));
+      await pickPoster();
+      await pickVideo();
+      await attachSubtitle();
+    }
+
+    function expectSharedFieldsKept(creditField: () => HTMLInputElement) {
+      expect(titleField().value).toBe('Rear Window');
+      expect(yearField().value).toBe('1954');
+      expect(creditField().value).toBe('Alfred Hitchcock');
+      expect(castField().value).toBe('James Stewart, Grace Kelly');
+      expect(descriptionField().value).toBe(
+        'A photographer watches his neighbours.'
+      );
+      expect(picked('Thriller')).toBe('true');
+      expect(ratingLabel()).toContain('4.0 / 5');
+      expect(pickedPoster()).not.toBeNull();
+    }
+
+    it('carries the shared fields and the poster onto Series', async () => {
+      await renderAt('/add');
+      await fillEverything();
+
+      press('Series');
+
+      expectSharedFieldsKept(createdByField);
+    });
+
+    it('finds the shared fields, the poster, the video and the subtitles still there back on Movie', async () => {
+      await renderAt('/add');
+      await fillEverything();
+
+      press('Series');
+      press('Movie');
+
+      expectSharedFieldsKept(directorField);
+      expect(pickedFilename()).not.toBeNull();
+      expect(screen.queryByText('lantern.en.srt')).not.toBeNull();
+    });
+
+    it('carries what was typed on Series back onto Movie', async () => {
+      await renderAt('/add?kind=series');
+      fireEvent.change(titleField(), { target: { value: 'Harbor Lights' } });
+      fireEvent.change(createdByField(), {
+        target: { value: 'Ana Sørensen' },
+      });
+      await pickPoster();
+
+      press('Movie');
+
+      expect(titleField().value).toBe('Harbor Lights');
+      expect(directorField().value).toBe('Ana Sørensen');
+      expect(pickedPoster()).not.toBeNull();
+    });
+  });
+
+  describe('the save gate on Series', () => {
+    it('keeps Save closed on Series, with a title and the movie’s video held', async () => {
+      await renderAt('/add');
+      fireEvent.change(titleField(), { target: { value: 'Rear Window' } });
+      await pickVideo();
+      expect(save().disabled).toBe(false);
+
+      press('Series');
+
+      expect(save().disabled).toBe(true);
+    });
+  });
+
+  describe('beside a context', () => {
+    it('draws no tabs on an edit, and ignores ?kind=series', async () => {
+      await renderAt(`/add?movie=${STORED.id}&kind=series`);
+
+      expect(kindGroup()).toBeNull();
+      expect(heading('Edit details')).not.toBeNull();
+      expect(heading('Add a series')).toBeNull();
+      expect(titleField().placeholder).toBe('Movie title');
+      expect(directorField()).toBeDefined();
+      expect(screen.queryByText(/^episodes$/i)).toBeNull();
+    });
+
+    it('draws no tabs on a Resolve, and ignores ?kind=series', async () => {
+      fetchMock.mockImplementation((input, init) => {
+        const url = String(input);
+        if (init?.method === 'POST' || init?.method === 'PATCH') {
+          return answerSave();
+        }
+        if (url.includes('/api/import/current/problems/')) {
+          return Promise.resolve(okResponse(DIE_HARD));
+        }
+        return url.includes('/api/genres/pool') ? answerPool() : answerMovie();
+      });
+
+      await renderAt(`/add?problem=${DIE_HARD.id}&kind=series`);
+
+      expect(kindGroup()).toBeNull();
+      expect(heading('Add a movie')).not.toBeNull();
+      expect(heading('Add a series')).toBeNull();
+      expect(titleField().placeholder).toBe('Movie title');
+      expect(directorField()).toBeDefined();
+      expect(screen.queryByText(/^episodes$/i)).toBeNull();
+    });
   });
 });
