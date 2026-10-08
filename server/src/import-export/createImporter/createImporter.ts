@@ -3,7 +3,10 @@ import { readFile } from 'node:fs/promises';
 import { basename, dirname, extname, isAbsolute, relative } from 'node:path';
 
 import type { LibraryStorage, StoredLibraryFolder } from '../../library';
-import { folderOverlap } from '../../library/folders/folderOverlap/folderOverlap';
+import {
+  folderOverlap,
+  type FolderClash,
+} from '../../library/folders/folderOverlap/folderOverlap';
 import type { Media } from '../../media/createMedia/createMedia';
 import { readableFolder } from '../../media/readableFolder/readableFolder';
 import type { MovieFolderScan } from '../../media/scanMovieFolder/scanMovieFolder';
@@ -1187,15 +1190,15 @@ export function createImporter({
   /**
    * Where a sheet run's titles are recorded as coming from: the listed
    * **Library folder** the root is, or the one it is inside — else the root
-   * itself, added to the list. A root containing a listed folder was refused
+   * itself, added to the list. Handed the list and the root's clash with it
+   * as `start` read them; a root containing a listed folder was refused
    * before this is asked.
    */
-  const sheetFolderOf = (rootPath: string): StoredLibraryFolder => {
-    const listed = storage.libraryFolders();
-    const clash = folderOverlap(
-      rootPath,
-      listed.map((folder) => folder.path)
-    );
+  const sheetFolderOf = (
+    rootPath: string,
+    listed: StoredLibraryFolder[],
+    clash: FolderClash | null
+  ): StoredLibraryFolder => {
     const held =
       clash === null
         ? undefined
@@ -1262,9 +1265,10 @@ export function createImporter({
 
       const sheet = await checkSheet(sheetPath);
       await checkRoot(rootPath);
+      const listed = storage.libraryFolders();
       const clash = folderOverlap(
         rootPath,
-        storage.libraryFolders().map((folder) => folder.path)
+        listed.map((folder) => folder.path)
       );
       if (clash?.overlap === 'contains') {
         throw new ImportStartError(
@@ -1273,7 +1277,7 @@ export function createImporter({
         );
       }
       const current = await claimRun('sheet', enrich, [rootPath]);
-      const sheetFolder = sheetFolderOf(rootPath);
+      const sheetFolder = sheetFolderOf(rootPath, listed, clash);
 
       // Not awaited: the run goes on in the background, and `current` answers
       // where it has got to. Nothing in `execute` throws past its own catches.
