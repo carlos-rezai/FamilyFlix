@@ -42,22 +42,18 @@ const FIELD_BOX = { height: 48, rounded: false } as const;
 
 /**
  * What the screen calls itself, and what Save says on it, on two independent
- * axes. The **heading** follows the job, and on an add the kind too: an add —
- * with or without the import's head start — is "Add a movie" or "Add a
- * series" by the **Form kind**, and an amendment — a movie the library already
- * holds, whether opened from its page or from the review's soft `missing-meta`
- * row — is "Edit details". The **Save pair** is the
- * context's first: in **Import context** it says what it does to the run,
- * and outside it the job's own, plus what each says while the write is in
- * flight.
+ * axes. The **heading** is the job's on an amendment — a movie the library
+ * already holds, whether opened from its page or from the review's soft
+ * `missing-meta` row — which is "Edit details"; on an add it is the kind's, in
+ * `WORDING`. The **Save pair** is the context's first: in **Import context** it
+ * says what it does to the run, and outside it the job's own, plus what each
+ * says while the write is in flight.
  *
  * The whole of what the maintainer sees of the difference between the jobs
  * and the contexts is here: one URL, one component, and a heading and a
  * button that say which is in front of them.
  */
 const HEADING = {
-  add: 'Add a movie',
-  addSeries: 'Add a series',
   edit: 'Edit details',
 } as const;
 
@@ -68,12 +64,14 @@ const KIND_OPTIONS: readonly { value: FormKind; label: string }[] = [
 ];
 
 /**
- * What the form says that is the kind's own — the lede's opening sentence, the
+ * What the form says that is the kind's own — the heading on an add, with or
+ * without the import's head start, the lede's opening sentence, the
  * placeholders and the credit field. Everything else is one record both kinds
  * draw, and both ledes end on _Import library_.
  */
 const WORDING = {
   movie: {
+    heading: 'Add a movie',
     lede: 'Pick the video, poster, and any subtitle files for this movie.',
     title: 'Movie title',
     year: '2019',
@@ -82,6 +80,7 @@ const WORDING = {
     description: 'A short synopsis of the movie',
   },
   series: {
+    heading: 'Add a series',
     lede: 'Pick the poster and every episode’s video and subtitles for this series.',
     title: 'Series title',
     year: '2019–2023',
@@ -180,9 +179,8 @@ export function MovieForm() {
     cancel,
   } = useMovieForm();
 
-  const heading =
-    HEADING[editing ? 'edit' : kind === 'series' ? 'addSeries' : 'add'];
   const wording = WORDING[kind];
+  const heading = editing ? HEADING.edit : wording.heading;
   const copy = SAVE[resolving !== null ? 'import' : editing ? 'edit' : 'add'];
 
   return (
