@@ -132,12 +132,12 @@ function treeOf(dir: string, prefix = ''): string[] {
     .sort();
 }
 
-/** Every row of every library table but `settings`, as it stands. */
+/** Every row of every library table but `settings` and `library_folders` — the two that hold a path as typed — as it stands. */
 function libraryRows(db: SqliteDatabase): Record<string, unknown[]> {
   const tables = (
     db
       .prepare(
-        "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' AND name <> 'settings' ORDER BY name"
+        "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' AND name NOT IN ('settings', 'library_folders') ORDER BY name"
       )
       .all() as Array<{ name: string }>
   ).map((row) => row.name);

@@ -128,7 +128,7 @@ describe('createImporter.start — a root equal to a listed folder', () => {
       library_folder_id: listed.id,
       source_folder: 'Die.Hard.1988.1080p',
     });
-    expect(movies['Amelie']).toMatchObject({
+    expect(movies['Amélie']).toMatchObject({
       library_folder_id: listed.id,
       source_folder: join('Drama', 'Amelie (2001)'),
     });
@@ -150,7 +150,7 @@ describe('createImporter.start — a root inside a listed folder', () => {
       library_folder_id: listed.id,
       source_folder: join('root', 'Die.Hard.1988.1080p'),
     });
-    expect(movies['Amelie']).toMatchObject({
+    expect(movies['Amélie']).toMatchObject({
       library_folder_id: listed.id,
       source_folder: join('root', 'Drama', 'Amelie (2001)'),
     });
@@ -172,7 +172,7 @@ describe('createImporter.start — an unlisted root', () => {
       library_folder_id: added.id,
       source_folder: 'Die.Hard.1988.1080p',
     });
-    expect(movies['Amelie']).toMatchObject({
+    expect(movies['Amélie']).toMatchObject({
       library_folder_id: added.id,
       source_folder: join('Drama', 'Amelie (2001)'),
     });

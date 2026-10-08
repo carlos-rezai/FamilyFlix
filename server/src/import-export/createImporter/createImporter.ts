@@ -5,6 +5,7 @@ import { basename, dirname, extname, isAbsolute, relative } from 'node:path';
 import type { LibraryStorage, StoredLibraryFolder } from '../../library';
 import type { Media } from '../../media/createMedia/createMedia';
 import type { MovieFolderScan } from '../../media/scanMovieFolder/scanMovieFolder';
+import { folderOverlap } from '../../library/folders/folderOverlap/folderOverlap';
 import { walkLibraryRoot } from '../../media/walkLibraryRoot/walkLibraryRoot';
 import { readableFolder } from '../../media/readableFolder/readableFolder';
 import type { Playback } from '../../playback/createPlayback/createPlayback';
@@ -374,11 +375,10 @@ const asMatchable = (show: ShowScan): MovieFolderScan => ({
 
 /**
  * Where a run's titles are recorded as coming from: the **Library folder**
- * (`null` for a sheet run's root, which is not one) and the path their
- * **Source folders** are recorded relative to.
+ * and the path their **Source folders** are recorded relative to.
  */
 interface Origin {
-  folderId: string | null;
+  folderId: string;
   base: string;
 }
 
@@ -884,6 +884,7 @@ export function createImporter({
     current: ImportRun,
     { rows, blankTitleRows }: SheetRead,
     rootPath: string,
+    sheetOrigin: Origin,
     signal: AbortSignal
   ): Promise<void> => {
     const pool = new Map(
@@ -894,7 +895,6 @@ export function createImporter({
     const already = inLibrary();
     const heldSeries = seriesInLibrary();
     const warnedGenres = new Set<string>();
-    const sheetOrigin: Origin = { folderId: null, base: rootPath };
 
     log(current, `Connecting to ${rootPath} …`, 'info');
     for (const rowNumber of blankTitleRows) {
@@ -956,7 +956,7 @@ export function createImporter({
           storage.setSourceFolder(
             heldId,
             sheetOrigin.folderId,
-            relative(rootPath, match.folder.dir)
+            relative(sheetOrigin.base, match.folder.dir)
           );
         }
         log(
@@ -1202,6 +1202,26 @@ export function createImporter({
     current.phase = 'review';
   };
 
+  /**
+   * Where a sheet run's titles are recorded as coming from: the listed
+   * **Library folder** the root is, or the one it is inside — else the root
+   * itself, added to the list. A root containing a listed folder was refused
+   * before this is asked.
+   */
+  const sheetOriginOf = (rootPath: string): Origin => {
+    const listed = storage.libraryFolders();
+    const clash = folderOverlap(
+      rootPath,
+      listed.map((folder) => folder.path)
+    );
+    const held =
+      clash === null
+        ? undefined
+        : listed.find((folder) => folder.path === clash.folder);
+    const folder = held ?? storage.addLibraryFolder(rootPath);
+    return { folderId: folder.id, base: folder.path };
+  };
+
   /** A run's first state, from its source and the flag it carries. */
   const freshRun = (
     source: ImportRun['source'],
@@ -1229,6 +1249,16 @@ export function createImporter({
 
       const sheet = await checkSheet(sheetPath);
       await checkRoot(rootPath);
+      const clash = folderOverlap(
+        rootPath,
+        storage.libraryFolders().map((folder) => folder.path)
+      );
+      if (clash?.overlap === 'contains') {
+        throw new ImportStartError(
+          'root',
+          `That folder holds ${clash.folder}, which is already a library folder. Import from ${clash.folder}, or remove it from your library folders first.`
+        );
+      }
       // A run just cancelled may still be rolling its folder back; the new
       // one waits for that rather than reserving beside it.
       await running;
@@ -1244,12 +1274,13 @@ export function createImporter({
       roots = [rootPath];
       // Remembered on Start: a Sync reads it to find each Source folder.
       storage.setLibraryRoot(rootPath);
+      const origin = sheetOriginOf(rootPath);
       sources.clear();
       stop = new AbortController();
 
       // Not awaited: the run goes on in the background, and `current` answers
       // where it has got to. Nothing in `execute` throws past its own catches.
-      running = execute(current, sheet, rootPath, stop.signal);
+      running = execute(current, sheet, rootPath, origin, stop.signal);
 
       return snapshot() as ImportRun;
     },
