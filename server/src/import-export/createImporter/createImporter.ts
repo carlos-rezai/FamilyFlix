@@ -1222,8 +1222,40 @@ export function createImporter({
     source,
   });
 
+  /**
+   * Make a new run the **Current run**, for either start: refused with
+   * {@link ImportBusyError} while one exists, and only once a run just
+   * cancelled has finished rolling its folder back. Answers the run, with its
+   * `roots`, an empty problem record and a fresh cancel.
+   */
+  const claimRun = async (
+    source: ImportRun['source'],
+    enrich: boolean,
+    runRoots: string[]
+  ): Promise<ImportRun> => {
+    if (run !== null) {
+      throw new ImportBusyError();
+    }
+    // A run just cancelled may still be rolling its folder back; the new one
+    // waits for that rather than reserving beside it.
+    await running;
+    // Checked again: two starts could have been racing through the wait, and
+    // only one of them gets to be the run.
+    if (run !== null) {
+      throw new ImportBusyError();
+    }
+
+    const current = freshRun(source, enrich);
+    run = current;
+    roots = runRoots;
+    sources.clear();
+    stop = new AbortController();
+    return current;
+  };
+
   return {
     start: async (sheetPath, rootPath, enrich = false) => {
+      // Busy before either field is read; `claimRun` asks again after them.
       if (run !== null) {
         throw new ImportBusyError();
       }
@@ -1240,22 +1272,8 @@ export function createImporter({
           `That folder holds ${clash.folder}, which is already a library folder. Import from ${clash.folder}, or remove it from your library folders first.`
         );
       }
-      // A run just cancelled may still be rolling its folder back; the new
-      // one waits for that rather than reserving beside it.
-      await running;
-
-      // Checked again: two starts could have been racing through the checks
-      // above, and only one of them gets to be the run.
-      if (run !== null) {
-        throw new ImportBusyError();
-      }
-
-      const current = freshRun('sheet', enrich);
-      run = current;
-      roots = [rootPath];
+      const current = await claimRun('sheet', enrich, [rootPath]);
       const sheetFolder = sheetFolderOf(rootPath);
-      sources.clear();
-      stop = new AbortController();
 
       // Not awaited: the run goes on in the background, and `current` answers
       // where it has got to. Nothing in `execute` throws past its own catches.
@@ -1265,20 +1283,11 @@ export function createImporter({
     },
 
     scan: async (folders, enrich = false) => {
-      if (run !== null) {
-        throw new ImportBusyError();
-      }
-      // A run just cancelled may still be rolling its folder back.
-      await running;
-      if (run !== null) {
-        throw new ImportBusyError();
-      }
-
-      const current = freshRun('folders', enrich);
-      run = current;
-      roots = folders.map((folder) => folder.path);
-      sources.clear();
-      stop = new AbortController();
+      const current = await claimRun(
+        'folders',
+        enrich,
+        folders.map((folder) => folder.path)
+      );
 
       // Not awaited, as a sheet run's is not.
       running = executeScan(current, folders, stop.signal);
