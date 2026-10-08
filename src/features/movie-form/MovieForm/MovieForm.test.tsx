@@ -1159,6 +1159,65 @@ describe('MovieForm — the save gate', () => {
 });
 
 /**
+ * The **Title prefill** — the first video picked into an empty title fills it
+ * with its **Title guess**. A prefill, never a write: a typed title is never
+ * overwritten, and a prefilled one is the maintainer's to clear like any other,
+ * which takes the title half of the **Save gate** back with it.
+ */
+describe('MovieForm — the title prefill', () => {
+  it('fills an empty title from the video picked', async () => {
+    await renderForm();
+
+    await pickVideo(videoFile('The.Long.Fare.2019.1080p.mkv'));
+
+    expect(titleField().value).toBe('The Long Fare');
+  });
+
+  it('opens Save on the prefilled title and the video, with no poster', async () => {
+    await renderForm();
+
+    await pickVideo(videoFile('The.Long.Fare.2019.1080p.mkv'));
+
+    // The phase's end to end: one pick, nothing typed, no artwork — and the
+    // film can go into the library.
+    expect(save().disabled).toBe(false);
+  });
+
+  it('never overwrites a title the maintainer typed', async () => {
+    await renderForm();
+
+    fireEvent.change(titleField(), { target: { value: 'Rear Window' } });
+    await pickVideo(videoFile('The.Long.Fare.2019.1080p.mkv'));
+
+    expect(titleField().value).toBe('Rear Window');
+    expect(save().disabled).toBe(false);
+  });
+
+  it('closes Save again when the prefilled title is cleared', async () => {
+    await renderForm();
+    await pickVideo(videoFile('The.Long.Fare.2019.1080p.mkv'));
+    // Open first — the prefill is what took the title half — so that the
+    // close below is the clear's doing, not a gate that never opened.
+    expect(save().disabled).toBe(false);
+
+    fireEvent.change(titleField(), { target: { value: '' } });
+
+    expect(titleField().value).toBe('');
+    expect(save().disabled).toBe(true);
+  });
+
+  it('saves the prefilled title as the movie’s title', async () => {
+    await renderForm();
+    await pickVideo(videoFile('The.Long.Fare.2019.1080p.mkv'));
+
+    fireEvent.click(save());
+
+    await waitFor(() => expect(savedFields()).toBeDefined());
+    expect(savedFields()?.get('title')).toBe('The Long Fare');
+  });
+});
+
+/**
  * Saving, in the **Add context** — one `POST` carrying every field and every
  * file, and where the screen goes once it has landed.
  *

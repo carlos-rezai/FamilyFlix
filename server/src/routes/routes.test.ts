@@ -5422,6 +5422,145 @@ describe('PATCH /api/movies/:id — a title-only edit', () => {
   });
 });
 
+// --- Add a series, Phase 1: the video gate, for movies (issue #261) -----------
+//
+// The form's **Save gate** — a title and a film — held on the wire, in the
+// resolve route's own sentence. The form makes both refusals unreachable from
+// the app; these are the routes refusing a client they did not write.
+
+/** Every movie the library holds, by title. */
+const libraryTitles = (storage: LibraryStorage): string[] =>
+  movieTitles(storage, 'recently-added');
+
+describe('POST /api/movies — a body with no video', () => {
+  it('answers 400 Body must carry a video', async () => {
+    const { baseUrl } = freshApi();
+
+    const refused = await postParts(baseUrl, [...KEEPER]);
+
+    expect(refused.status).toBe(400);
+    expect(await refused.json()).toEqual({
+      error: 'Body must carry a video',
+    });
+  });
+
+  it('writes no row and leaves no Movie folder behind', async () => {
+    const { storage, baseUrl, media } = freshApi();
+
+    const refused = await postParts(baseUrl, [
+      ...KEEPER,
+      ['director', 'Ana Sorensen'],
+      ['genre', 'Drama'],
+    ]);
+
+    expect(refused.status).toBe(400);
+    expect(libraryTitles(storage)).toEqual([]);
+    expect(folders(media)).toEqual([]);
+  });
+
+  it('rolls back a poster and a subtitle that landed before the refusal', async () => {
+    const { storage, baseUrl, media } = freshApi();
+
+    const refused = await postParts(baseUrl, [
+      ['poster', posterPart()],
+      ['subtitle', subtitlePart('lantern.en.srt')],
+      ['subtitleLanguage', 'English'],
+      ...KEEPER,
+    ]);
+
+    // The poster and the track are streamed into a reserved Movie folder
+    // before the route has read that no film followed them — the only way a
+    // body with no video can leave bytes behind.
+    expect(refused.status).toBe(400);
+    expect(await refused.json()).toEqual({
+      error: 'Body must carry a video',
+    });
+    expect(libraryTitles(storage)).toEqual([]);
+    expect(folders(media)).toEqual([]);
+  });
+
+  it('refuses a missing title first, in the title’s own sentence', async () => {
+    const { baseUrl } = freshApi();
+
+    const refused = await postParts(baseUrl, [['title', '   ']]);
+
+    // The video check runs after the title check, so a body wrong in both
+    // ways answers the sentence it always did.
+    expect(refused.status).toBe(400);
+    expect(await refused.json()).toEqual({
+      error: 'Body must carry a title',
+    });
+  });
+});
+
+describe('PATCH /api/movies/:id — a body with no video', () => {
+  it('answers 400 Body must carry a video for an empty videoPath', async () => {
+    const { baseUrl } = freshApi();
+    const movie = await storedMovie(baseUrl);
+
+    const refused = await patchParts(baseUrl, movie.id, [
+      ...unchangedParts(movie).filter(([name]) => name !== 'videoPath'),
+      ['videoPath', ''],
+    ]);
+
+    expect(refused.status).toBe(400);
+    expect(await refused.json()).toEqual({
+      error: 'Body must carry a video',
+    });
+  });
+
+  it('answers the same when the videoPath field is absent', async () => {
+    const { baseUrl } = freshApi();
+    const movie = await storedMovie(baseUrl);
+
+    const refused = await patchParts(
+      baseUrl,
+      movie.id,
+      unchangedParts(movie).filter(([name]) => name !== 'videoPath')
+    );
+
+    expect(refused.status).toBe(400);
+    expect(await refused.json()).toEqual({
+      error: 'Body must carry a video',
+    });
+  });
+
+  it('leaves the movie and its files unchanged', async () => {
+    const { baseUrl, media } = freshApi();
+    const movie = await storedMovie(baseUrl);
+    const before = folderContents(media, KEEPER_FOLDER);
+
+    const refused = await patchParts(baseUrl, movie.id, [
+      ...unchangedParts(movie, {
+        title: 'The Lantern Keeper (restored)',
+      }).filter(([name]) => name !== 'videoPath'),
+      ['videoPath', ''],
+    ]);
+    expect(refused.status).toBe(400);
+
+    const read = await fetch(`${baseUrl}/api/movies/${movie.id}`);
+    expect(await read.json()).toEqual(movie);
+    expect(folderContents(media, KEEPER_FOLDER)).toEqual(before);
+    expect(folders(media)).toEqual([KEEPER_FOLDER]);
+  });
+
+  it('still answers 200 for a body that carries the held videoPath', async () => {
+    const { baseUrl } = freshApi();
+    const movie = await storedMovie(baseUrl);
+
+    // No video part — the film the library already holds travels as its path,
+    // which is a video as far as the gate is concerned.
+    const amended = await patchedMovie(
+      baseUrl,
+      movie.id,
+      unchangedParts(movie, { title: 'The Lantern Keeper (restored)' })
+    );
+
+    expect(amended.title).toBe('The Lantern Keeper (restored)');
+    expect(amended.videoPath).toBe(movie.videoPath);
+  });
+});
+
 describe('PATCH /api/movies/:id — renaming a movie', () => {
   it('leaves the movie folder exactly where it was', async () => {
     const { baseUrl, media } = freshApi();
