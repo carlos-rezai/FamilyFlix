@@ -374,15 +374,6 @@ const asMatchable = (show: ShowScan): MovieFolderScan => ({
 });
 
 /**
- * Where a run's titles are recorded as coming from: the **Library folder**
- * and the path their **Source folders** are recorded relative to.
- */
-interface Origin {
-  folderId: string;
-  base: string;
-}
-
-/**
  * A matched show: the row that named it, and the show — and, when the show is
  * **Already in library**, the series it joins. `episodes` are the ones this
  * run imports: every numbered episode, less those the held series has.
@@ -576,7 +567,7 @@ export function createImporter({
     warnedGenres: Set<string>,
     current: ImportRun,
     signal: AbortSignal,
-    origin: Origin
+    libraryFolder: StoredLibraryFolder
   ): Promise<Movie | null> => {
     const folder = media.reserveFolder(row.title, row.year);
     try {
@@ -620,8 +611,8 @@ export function createImporter({
       const added = storage.addMovie(movie);
       storage.setSourceFolder(
         added.id,
-        origin.folderId,
-        relative(origin.base, scan.dir)
+        libraryFolder.id,
+        relative(libraryFolder.path, scan.dir)
       );
       // A Folder scan has no row to name a genre: nothing is missing there.
       if (genres.length === 0 && current.source === 'sheet') {
@@ -680,14 +671,14 @@ export function createImporter({
     warnedGenres: Set<string>,
     current: ImportRun,
     signal: AbortSignal,
-    origin: Origin
+    libraryFolder: StoredLibraryFolder
   ): Promise<void> => {
     // Where the show came from, relative to its Library folder: on a held
     // series too, so a re-run backfills a library imported before it was
     // remembered.
-    const sourceFolder = relative(origin.base, show.dir);
+    const sourceFolder = relative(libraryFolder.path, show.dir);
     if (held !== null) {
-      storage.setSourceFolder(held.series.id, origin.folderId, sourceFolder);
+      storage.setSourceFolder(held.series.id, libraryFolder.id, sourceFolder);
     }
     for (const stray of show.straySubtitles) {
       log(
@@ -738,7 +729,7 @@ export function createImporter({
             ...(genres.length === 0 ? {} : { genres }),
           };
           series = storage.addSeries(input);
-          storage.setSourceFolder(series.id, origin.folderId, sourceFolder);
+          storage.setSourceFolder(series.id, libraryFolder.id, sourceFolder);
         }
         storage.addEpisode(series.id, {
           season: episode.season,
@@ -885,7 +876,7 @@ export function createImporter({
     current: ImportRun,
     { rows, blankTitleRows }: SheetRead,
     rootPath: string,
-    sheetOrigin: Origin,
+    sheetFolder: StoredLibraryFolder,
     signal: AbortSignal
   ): Promise<void> => {
     const pool = new Map(
@@ -956,8 +947,8 @@ export function createImporter({
         if (heldId !== undefined) {
           storage.setSourceFolder(
             heldId,
-            sheetOrigin.folderId,
-            relative(sheetOrigin.base, match.folder.dir)
+            sheetFolder.id,
+            relative(sheetFolder.path, match.folder.dir)
           );
         }
         log(
@@ -1030,7 +1021,7 @@ export function createImporter({
         warnedGenres,
         current,
         signal,
-        sheetOrigin
+        sheetFolder
       );
       if (signal.aborted) {
         return;
@@ -1044,7 +1035,7 @@ export function createImporter({
     }
 
     for (const match of matchedShows) {
-      await importShow(match, pool, warnedGenres, current, signal, sheetOrigin);
+      await importShow(match, pool, warnedGenres, current, signal, sheetFolder);
       if (signal.aborted) {
         return;
       }
@@ -1086,8 +1077,9 @@ export function createImporter({
       log(current, `Scanning   ${folder.path}`, 'scan');
     }
 
-    const films: { match: Match; origin: Origin }[] = [];
-    const shows: { match: ShowMatch; origin: Origin }[] = [];
+    const films: { match: Match; libraryFolder: StoredLibraryFolder }[] = [];
+    const shows: { match: ShowMatch; libraryFolder: StoredLibraryFolder }[] =
+      [];
     let found = 0;
     let shelves = 0;
 
@@ -1118,7 +1110,6 @@ export function createImporter({
       found += scans.length;
       shelves += foldersUnder(folder.path, scans);
 
-      const origin: Origin = { folderId: folder.id, base: folder.path };
       const grouped = groupShows(scans);
       for (const scan of grouped.films) {
         const row = guessedRow(scan.name);
@@ -1136,7 +1127,7 @@ export function createImporter({
           );
           continue;
         }
-        films.push({ match: { row, folder: scan }, origin });
+        films.push({ match: { row, folder: scan }, libraryFolder: folder });
       }
       for (const show of grouped.shows) {
         const row = guessedRow(show.name);
@@ -1150,7 +1141,7 @@ export function createImporter({
           null;
         const match = showMatch(row, show, heldShow);
         fileUnplacedOn(current, match);
-        shows.push({ match, origin });
+        shows.push({ match, libraryFolder: folder });
       }
     }
 
@@ -1166,7 +1157,7 @@ export function createImporter({
     current.phase = 'importing';
 
     let imported = 0;
-    for (const { match, origin } of films) {
+    for (const { match, libraryFolder } of films) {
       current.currentItem = match.row.title;
       const added = await importMatch(
         match,
@@ -1174,7 +1165,7 @@ export function createImporter({
         warnedGenres,
         current,
         signal,
-        origin
+        libraryFolder
       );
       if (signal.aborted) {
         return;
@@ -1187,8 +1178,15 @@ export function createImporter({
       current.done += 1;
     }
 
-    for (const { match, origin } of shows) {
-      await importShow(match, pool, warnedGenres, current, signal, origin);
+    for (const { match, libraryFolder } of shows) {
+      await importShow(
+        match,
+        pool,
+        warnedGenres,
+        current,
+        signal,
+        libraryFolder
+      );
       if (signal.aborted) {
         return;
       }
@@ -1209,7 +1207,7 @@ export function createImporter({
    * itself, added to the list. A root containing a listed folder was refused
    * before this is asked.
    */
-  const sheetOriginOf = (rootPath: string): Origin => {
+  const sheetFolderOf = (rootPath: string): StoredLibraryFolder => {
     const listed = storage.libraryFolders();
     const clash = folderOverlap(
       rootPath,
@@ -1219,8 +1217,7 @@ export function createImporter({
       clash === null
         ? undefined
         : listed.find((folder) => folder.path === clash.folder);
-    const folder = held ?? storage.addLibraryFolder(rootPath);
-    return { folderId: folder.id, base: folder.path };
+    return held ?? storage.addLibraryFolder(rootPath);
   };
 
   /** A run's first state, from its source and the flag it carries. */
@@ -1273,13 +1270,13 @@ export function createImporter({
       const current = freshRun('sheet', enrich);
       run = current;
       roots = [rootPath];
-      const origin = sheetOriginOf(rootPath);
+      const sheetFolder = sheetFolderOf(rootPath);
       sources.clear();
       stop = new AbortController();
 
       // Not awaited: the run goes on in the background, and `current` answers
       // where it has got to. Nothing in `execute` throws past its own catches.
-      running = execute(current, sheet, rootPath, origin, stop.signal);
+      running = execute(current, sheet, rootPath, sheetFolder, stop.signal);
 
       return snapshot() as ImportRun;
     },
