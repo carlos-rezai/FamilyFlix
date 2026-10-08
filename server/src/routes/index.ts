@@ -9,11 +9,12 @@ import type {
 import express, { type Request, type Response, type Router } from 'express';
 
 import type { LibraryStorage } from '../library';
-import {
-  clashSentence,
-  folderOverlap,
-} from '../library/folders/folderOverlap/folderOverlap';
+import { clashSentence } from '../library/folders/folderOverlap/folderOverlap';
 import { yearSpan } from '../library/series/yearSpan/yearSpan';
+import {
+  admitFolder,
+  type FolderRefusal,
+} from '../import-export/admitFolder/admitFolder';
 import {
   ImportBusyError,
   ImportPathError,
@@ -474,6 +475,19 @@ const DECISION_REFUSALS: Record<
   'not-found': { status: 404, error: 'No such decision' },
   refused: { status: 422, error: 'TMDB refused the key' },
   unreachable: { status: 503, error: 'TMDB could not be reached' },
+};
+
+/** How each refused folder add is answered: a `400` and its one sentence. */
+const FOLDER_REFUSALS: Record<
+  FolderRefusal,
+  { status: number; error: string }
+> = {
+  empty: { status: 400, error: 'Type the folder’s path first.' },
+  relative: {
+    status: 400,
+    error: 'Type the folder’s full path, starting with its drive.',
+  },
+  missing: { status: 400, error: 'No folder at that path.' },
 };
 
 /**
@@ -1426,41 +1440,22 @@ export function createApiRouter(
   // or holds one already listed. Every refusal is one sentence.
   router.post('/library-folders', async (req: Request, res: Response) => {
     const { path } = (req.body ?? {}) as { path?: unknown };
-    if (typeof path !== 'string' || path.trim() === '') {
-      res.status(400).json({ error: 'Type the folder’s path first.' });
-      return;
-    }
-    const reading = await readableFolder(path);
-    if (reading === 'relative') {
-      res.status(400).json({
-        error: 'Type the folder’s full path, starting with its drive.',
-      });
-      return;
-    }
-    if (reading !== 'readable') {
-      res.status(400).json({ error: 'No folder at that path.' });
-      return;
-    }
-    const clash = folderOverlap(
-      path,
-      storage.libraryFolders().map((folder) => folder.path)
+    const admission = await admitFolder(
+      storage,
+      typeof path === 'string' ? path : ''
     );
-    if (clash !== null) {
-      res.status(409).json({ error: clashSentence(clash) });
-      return;
+    switch (admission.kind) {
+      case 'added':
+        res.status(201).json(admission.folder);
+        return;
+      case 'refused': {
+        const { status, error } = FOLDER_REFUSALS[admission.refusal];
+        res.status(status).json({ error });
+        return;
+      }
+      case 'clash':
+        res.status(409).json({ error: clashSentence(admission.clash) });
     }
-    let added;
-    try {
-      added = storage.addLibraryFolder(path);
-    } catch {
-      // Two adds racing past the check: the schema holds the path unique.
-      res
-        .status(409)
-        .json({ error: clashSentence({ overlap: 'same', folder: path }) });
-      return;
-    }
-    const folder: LibraryFolder = { ...added, reachable: true };
-    res.status(201).json(folder);
   });
 
   // Remove one folder: its titles stay, forgetting only where they came from.
