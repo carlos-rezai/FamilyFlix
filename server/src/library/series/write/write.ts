@@ -7,9 +7,12 @@ import type { SeriesReader } from '../read/read';
 export interface SeriesWrite {
   /**
    * Insert a series and its genres (ordered) in one transaction, returning the
-   * assembled model. An unknown genre throws and commits nothing.
+   * assembled model. An unknown genre throws and commits nothing. Given
+   * episodes, they and their tracks are written in the same transaction, so a
+   * duplicate episode commits nothing either; the importer's one-argument call
+   * writes the series alone.
    */
-  addSeries(input: NewSeries): Series;
+  addSeries(input: NewSeries, episodes?: readonly NewEpisode[]): Series;
   /**
    * Insert one episode under a series the library holds, unwatched at zero,
    * returning the assembled model, its subtitle tracks written with it in one
@@ -106,10 +109,19 @@ export function createSeriesWrite(
     }
   );
 
-  return {
-    addSeries: (input) => {
-      const id = randomUUID();
+  const insertSeriesWithEpisodes = db.transaction(
+    (id: string, input: NewSeries, episodes: readonly NewEpisode[]) => {
       insertSeriesGraph(id, input);
+      for (const episode of episodes) {
+        insertEpisodeGraph(randomUUID(), id, episode);
+      }
+    }
+  );
+
+  return {
+    addSeries: (input, episodes = []) => {
+      const id = randomUUID();
+      insertSeriesWithEpisodes(id, input, episodes);
       return reader.getSeries(id) as Series;
     },
 

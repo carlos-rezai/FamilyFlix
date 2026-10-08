@@ -158,6 +158,12 @@ export function MovieForm() {
     addSubtitle,
     changeSubtitleLanguage,
     removeSubtitle,
+    episodes,
+    addEpisodeFiles,
+    setSeason,
+    setNumber,
+    setEpisodeTitle,
+    removeEpisode,
     canSave,
     saving,
     editing,
@@ -318,6 +324,12 @@ export function MovieForm() {
             poster={values.poster}
             onPickPoster={pickPoster}
             onRemovePoster={removePoster}
+            episodes={episodes}
+            onAddEpisodeFiles={addEpisodeFiles}
+            onSeasonChange={setSeason}
+            onNumberChange={setNumber}
+            onEpisodeTitleChange={setEpisodeTitle}
+            onRemoveEpisode={removeEpisode}
           />
         ) : (
           <MovieFormFiles

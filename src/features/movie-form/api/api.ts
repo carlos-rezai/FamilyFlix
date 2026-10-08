@@ -1,12 +1,17 @@
 import type {
+  EpisodeFormRow,
   Genre,
   GenrePoolPayload,
   ImportProblemDetail,
   Movie,
   MovieFormValues,
+  Series,
 } from '@/types';
 
-import { movieFormData } from '../formValues/formValues';
+import { movieFormData, seriesFormData } from '../formValues/formValues';
+
+/** Where a new series is written, with its episodes. */
+const SERIES_ENDPOINT = '/api/series';
 
 /** Where a new movie is written. */
 const MOVIES_ENDPOINT = '/api/movies';
@@ -82,6 +87,28 @@ async function sendMovie(
  */
 export function createMovie(values: MovieFormValues): Promise<Movie> {
   return sendMovie('POST', MOVIES_ENDPOINT, values);
+}
+
+/**
+ * Writes one series with its episodes and answers with the record stored: the
+ * **Movie form**'s series save, `seriesFormData`'s body in the contract's
+ * order. Rejects on anything but success, so a refused save leaves the form
+ * standing with every field and row still in it.
+ */
+export async function createSeries(
+  values: MovieFormValues,
+  episodes: readonly EpisodeFormRow[]
+): Promise<Series> {
+  const response = await fetch(SERIES_ENDPOINT, {
+    method: 'POST',
+    body: seriesFormData(values, episodes),
+  });
+
+  if (!response.ok) {
+    throw new Error(`POST ${SERIES_ENDPOINT} failed: ${response.status}`);
+  }
+
+  return (await response.json()) as Series;
 }
 
 /**

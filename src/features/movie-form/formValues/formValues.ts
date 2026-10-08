@@ -1,4 +1,5 @@
 import type {
+  EpisodeFormRow,
   ImportProblemDetail,
   Movie,
   MovieFormFile,
@@ -278,6 +279,62 @@ export function movieFormData(values: MovieFormValues): FormData {
     );
     if (subtitle.file.kind === 'picked') {
       body.append('subtitle', subtitle.file.file);
+    }
+  }
+
+  return body;
+}
+
+/**
+ * The body of a series save, `POST /api/series`, in the contract's order: the
+ * series fields (the director's field travels as `creator`), the poster, then
+ * each row as its `episode` JSON field followed by its `episodeVideo` and its
+ * `episodeSubtitle` parts. The order is load-bearing: the route pairs the k-th
+ * video with the k-th `episode` field and names the Series folder off a title
+ * and year it has already read.
+ */
+export function seriesFormData(
+  values: MovieFormValues,
+  episodes: readonly EpisodeFormRow[]
+): FormData {
+  const body = new FormData();
+
+  body.append('title', values.title);
+  body.append('year', values.year);
+  body.append('creator', values.director);
+  for (const name of castNames(values.cast)) {
+    body.append('cast', name);
+  }
+  body.append('description', values.description);
+  for (const genre of values.genres) {
+    body.append('genre', genre);
+  }
+  body.append('rating', String(toRatingUnits(values.rating) ?? ''));
+
+  if (values.poster?.kind === 'picked') {
+    body.append('poster', values.poster.file);
+  }
+
+  for (const row of episodes) {
+    const subtitles = row.subtitles.filter(
+      (subtitle) => subtitle.file.kind === 'picked'
+    );
+    body.append(
+      'episode',
+      JSON.stringify({
+        season: Number(row.season),
+        number: Number(row.number),
+        title: row.title,
+        subtitleLanguages: subtitles.map((subtitle) => subtitle.language),
+      })
+    );
+    if (row.file.kind === 'picked') {
+      body.append('episodeVideo', row.file.file);
+    }
+    for (const subtitle of subtitles) {
+      if (subtitle.file.kind === 'picked') {
+        body.append('episodeSubtitle', subtitle.file.file);
+      }
     }
   }
 

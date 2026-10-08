@@ -20,3 +20,12 @@ export const EpisodesLabel = styled.span`
   font-size: 14px;
   color: ${({ theme }) => theme.colors.textDim};
 `;
+
+/** The rows and the ＋ under them, filling what the label leaves. */
+export const EpisodeRows = styled.div`
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: ${({ theme }) => theme.space.s2};
+`;

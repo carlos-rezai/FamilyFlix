@@ -121,3 +121,21 @@ export interface MovieFormSubtitle {
   file: MovieFormFile;
   language: string;
 }
+
+/**
+ * One episode row of the **Movie form**'s series kind: its video, the season
+ * and number as typed (digits, held as text the way `year` is), its title, and
+ * the form's own key. The list's order is the order the rows landed in, and an
+ * edit never re-sorts it.
+ */
+export interface EpisodeFormRow {
+  key: string;
+  file: MovieFormFile;
+  /** Digits only, at most two. */
+  season: string;
+  /** Digits only, at most three. */
+  number: string;
+  title: string;
+  /** The episode's **Subtitles**, in the order they were attached. */
+  subtitles: MovieFormSubtitle[];
+}

@@ -28,6 +28,7 @@ import type {
 } from '../playback/componentSlot/componentSlot';
 import type { Playback } from '../playback/createPlayback/createPlayback';
 import { derivedRuntime } from '../playback/derivedRuntime/derivedRuntime';
+import { yearSpan } from '../library/series/yearSpan/yearSpan';
 import { isRatingValue, MAX_RATING } from './isRatingValue/isRatingValue';
 import {
   collectUploads,
@@ -37,6 +38,10 @@ import {
 import { onlyField } from './onlyField/onlyField';
 import { optionalYear } from './optionalYear/optionalYear';
 import { readBody, type OnFilePart } from './readBody/readBody';
+import {
+  collectEpisodeUploads,
+  readSeriesFields,
+} from './seriesFormBody/seriesFormBody';
 import {
   conflictChoicesBody,
   startEnrichmentBody,
@@ -55,7 +60,9 @@ import {
   type LibraryQuery,
   type Movie,
   type MovieSort,
+  type NewEpisode,
   type NewSubtitle,
+  type Series,
   type SeriesDetail,
   type SeriesHomePayload,
   type Settings,
@@ -616,6 +623,100 @@ export function createApiRouter(
       return;
     }
     res.json(detail);
+  });
+
+  // The **Movie form**'s series save: the series fields, the poster, then each
+  // episode as an `episode` JSON field followed by its `episodeVideo` and its
+  // `episodeSubtitle` parts. The **Series folder** is reserved when the first
+  // file needs it, each video lands in its `season-NN/`, each runtime is
+  // derived after its copy, and no row is written until every byte has landed.
+  // Every refusal is one sentence and takes the whole folder with it.
+  router.post('/series', async (req: Request, res: Response) => {
+    const { onFile, uploads } = collectEpisodeUploads(media, (before) =>
+      media.reserveFolder(
+        onlyField(before, 'title')?.trim() ?? '',
+        yearSpan(onlyField(before, 'year')?.trim() ?? '')?.year ?? null
+      )
+    );
+
+    /** Take back everything this request put on disk. */
+    const rollback = (): void => {
+      if (uploads.folder !== null) {
+        media.removeFolder(uploads.folder);
+      }
+    };
+
+    let fields: Record<string, string[]>;
+    try {
+      fields = await readBody(req, onFile);
+    } catch {
+      rollback();
+      res.status(400).json({ error: 'Body must be multipart/form-data' });
+      return;
+    }
+
+    const read = readSeriesFields(
+      fields,
+      uploads,
+      new Set(storage.listGenrePool().map((genre) => genre.name))
+    );
+    if (!read.ok) {
+      rollback();
+      res.status(read.status).json({ error: read.error });
+      return;
+    }
+    const { title, year, endYear, creator, synopsis, rating, cast, genres } =
+      read;
+
+    // Nothing is refused after this point: the folder takes the title's name,
+    // as a movie's does, and every stored path follows it.
+    let stored = (path: string): string => path;
+    if (uploads.folder !== null) {
+      const renamed = media.renameFolder(uploads.folder, title, year ?? null);
+      uploads.folder = renamed.folder;
+      stored = (path) => renamed.storedPath(path);
+    }
+
+    const episodes: NewEpisode[] = read.episodes.map((episode, index) => {
+      const upload = uploads.episodes[index];
+      const videoPath = stored(upload.video as string);
+      const runtimeMinutes = derivedRuntime(playback, videoPath);
+      const subtitles: NewSubtitle[] = upload.subtitles.map((path, track) => ({
+        path: stored(path as string),
+        language: episode.subtitleLanguages[track],
+      }));
+      return {
+        season: episode.season,
+        number: episode.number,
+        videoPath,
+        ...(episode.title === undefined ? {} : { title: episode.title }),
+        ...(runtimeMinutes === null ? {} : { runtimeMinutes }),
+        ...(subtitles.length === 0 ? {} : { subtitles }),
+      };
+    });
+
+    try {
+      const series: Series = storage.addSeries(
+        {
+          title,
+          ...(uploads.poster === undefined
+            ? {}
+            : { posterPath: stored(uploads.poster) }),
+          ...(year === undefined ? {} : { year }),
+          ...(endYear === undefined ? {} : { endYear }),
+          ...(creator === undefined ? {} : { creator }),
+          ...(synopsis === undefined ? {} : { synopsis }),
+          ...(rating === undefined ? {} : { rating }),
+          ...(cast.length === 0 ? {} : { cast }),
+          ...(genres.length === 0 ? {} : { genres }),
+        },
+        episodes
+      );
+      res.status(201).json(series);
+    } catch {
+      rollback();
+      res.status(500).json({ error: 'Could not add the series' });
+    }
   });
 
   // The series' heart, a **Single-signal write** on the movie favorite's

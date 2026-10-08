@@ -5,11 +5,13 @@ import { dismissProblem } from '@/api/dismissProblem/dismissProblem';
 import { fetchMovie } from '@/api/fetchMovie/fetchMovie';
 import { useQueryParamWriter } from '@/features/search/useQueryParamWriter/useQueryParamWriter';
 import { useGoBack } from '@/hooks/useGoBack/useGoBack';
-import type { MovieFormValues } from '@/types';
+import type { EpisodeFormRow, MovieFormValues } from '@/types';
 import { moviePath } from '@/utils';
 import { titleFromFilename } from '../titleFromFilename/titleFromFilename';
+import { useEpisodeList } from '../useEpisodeList/useEpisodeList';
 import {
   createMovie,
+  createSeries,
   fetchProblem,
   ProblemGoneError,
   resolveProblem,
@@ -28,6 +30,9 @@ import {
  * leaving on this screen that is.
  */
 const FRESH_HOME = '/';
+
+/** The series kind's **Fresh home**: the Series tab the show has just joined. */
+const SERIES_FRESH_HOME = '/?tab=series';
 
 /**
  * The **Add context**'s **Landing** — the hub the ＋ that opens this screen
@@ -200,6 +205,14 @@ export interface UseMovieFormResult {
   changeSubtitleLanguage: (key: string, language: string) => void;
   /** Take the row holding `key` off the movie. */
   removeSubtitle: (key: string) => void;
+  /** The series kind's **Episode file rows**, in the order they landed. */
+  episodes: EpisodeFormRow[];
+  /** Append a pick of episode videos; the first fills an empty title. */
+  addEpisodeFiles: (files: readonly File[]) => void;
+  setSeason: (key: string, season: string) => void;
+  setNumber: (key: string, number: string) => void;
+  setEpisodeTitle: (key: string, title: string) => void;
+  removeEpisode: (key: string) => void;
   /** Whether Save can be pressed — the gate, not a validation message. */
   canSave: boolean;
   /** Whether the write is in flight. */
@@ -338,6 +351,9 @@ export function useMovieForm(): UseMovieFormResult {
   const [searchParams] = useSearchParams();
   const [values, setValues] = useState<MovieFormValues>(EMPTY);
   const [saving, setSaving] = useState(false);
+  const episodeList = useEpisodeList();
+  const { episodes, episodesComplete } = episodeList;
+  const addFiles = episodeList.addEpisodeFiles;
 
   /** The movie this screen is amending, once its record has been read back. */
   const [editing, setEditing] = useState<string | null>(null);
@@ -554,6 +570,23 @@ export function useMovieForm(): UseMovieFormResult {
     }));
   }, []);
 
+  const addEpisodeFiles = useCallback(
+    (files: readonly File[]) => {
+      // The **Title guess** off the first file picked, into an empty title
+      // only — the video slot's prefill, at the series' list.
+      const first = files[0];
+      if (first !== undefined) {
+        setValues((current) =>
+          current.title.trim() === ''
+            ? { ...current, title: titleFromFilename(first.name) }
+            : current
+        );
+      }
+      addFiles(files);
+    },
+    [addFiles]
+  );
+
   const toggleGenre = useCallback((name: string) => {
     setValues((current) => ({
       ...current,
@@ -563,13 +596,12 @@ export function useMovieForm(): UseMovieFormResult {
     }));
   }, []);
 
-  // Nothing can be saved on Series yet: the series save is the next slice's.
-  // The movie's video is still held while Series is on screen — it is simply
-  // not the series kind's gate.
+  // The **Save gate**, per kind: a title, and then a film for a movie or a
+  // complete episode list for a series. The movie's video is still held while
+  // Series is on screen — it is simply not the series kind's gate.
   const canSave =
-    kind === 'movie' &&
     values.title.trim() !== '' &&
-    values.video !== null &&
+    (kind === 'series' ? episodesComplete : values.video !== null) &&
     !saving;
 
   const save = useCallback(() => {
@@ -592,21 +624,23 @@ export function useMovieForm(): UseMovieFormResult {
     // on the review, as _Skip this one_'s does — the row is still listed,
     // which is the honest picture.
     const written =
-      resolving !== null
-        ? editing === null
-          ? resolveProblem(resolving.id, values).then(() => goBack())
-          : updateMovie(editing, values)
-              .then(() => dismissProblem(resolving.id).catch(() => undefined))
-              .then(() => goBack())
-        : editing === null
-          ? createMovie(values).then(() => navigate(FRESH_HOME))
-          : // A correction is only visible on the film's page — which is the
-            // entry the form was opened from, so a *step* is what lands there.
-            // The push this used to be left a second copy of that page behind,
-            // and the next Back walked into the form the correction had just
-            // been finished in. The **Landing** is the same URL, for the
-            // deep-linked edit that has no such entry to step onto.
-            updateMovie(editing, values).then(() => goBack());
+      kind === 'series'
+        ? createSeries(values, episodes).then(() => navigate(SERIES_FRESH_HOME))
+        : resolving !== null
+          ? editing === null
+            ? resolveProblem(resolving.id, values).then(() => goBack())
+            : updateMovie(editing, values)
+                .then(() => dismissProblem(resolving.id).catch(() => undefined))
+                .then(() => goBack())
+          : editing === null
+            ? createMovie(values).then(() => navigate(FRESH_HOME))
+            : // A correction is only visible on the film's page — which is the
+              // entry the form was opened from, so a *step* is what lands there.
+              // The push this used to be left a second copy of that page behind,
+              // and the next Back walked into the form the correction had just
+              // been finished in. The **Landing** is the same URL, for the
+              // deep-linked edit that has no such entry to step onto.
+              updateMovie(editing, values).then(() => goBack());
 
     // The form is still on screen with everything typed still in it, and Save
     // is offered again. Nothing else is said, because there is nothing yet to
@@ -621,7 +655,7 @@ export function useMovieForm(): UseMovieFormResult {
         setValues(EMPTY);
       }
     });
-  }, [canSave, values, navigate, goBack, editing, resolving]);
+  }, [canSave, kind, values, episodes, navigate, goBack, editing, resolving]);
 
   // _Skip this one_ is the review row's own Skip, from the form: dismiss, then
   // the step back onto the review. A dismiss that failed still lands there —
@@ -656,6 +690,12 @@ export function useMovieForm(): UseMovieFormResult {
     addSubtitle,
     changeSubtitleLanguage,
     removeSubtitle,
+    episodes,
+    addEpisodeFiles,
+    setSeason: episodeList.setSeason,
+    setNumber: episodeList.setNumber,
+    setEpisodeTitle: episodeList.setEpisodeTitle,
+    removeEpisode: episodeList.removeEpisode,
     canSave,
     saving,
     editing: editing !== null,

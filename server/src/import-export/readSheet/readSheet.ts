@@ -2,6 +2,8 @@ import ExcelJS from 'exceljs';
 import { extname } from 'node:path';
 import { Readable } from 'node:stream';
 
+import { yearSpan } from '../../library/series/yearSpan/yearSpan';
+
 /**
  * One row of the maintainer's spreadsheet, as the **Sheet reader** answers it:
  * every column the importer can carry onto a movie, in one shape whichever
@@ -131,24 +133,9 @@ function cellNumber(text: string): number | null {
   return Number(text);
 }
 
-/**
- * A Year cell's first and last year: `2022` is a finished run of one year,
- * `2019–2023` (or `2019-2023`) a range, `2021–` a run still going. Anything
- * else is neither year.
- */
+/** A Year cell's first and last year, or neither when it reads as no span. */
 function cellYears(text: string): Pick<SheetRow, 'year' | 'endYear'> {
-  const lone = /^(\d{4})$/.exec(text);
-  if (lone) {
-    return { year: Number(lone[1]), endYear: Number(lone[1]) };
-  }
-  const range = /^(\d{4})\s*[–-]\s*(\d{4})?$/.exec(text);
-  if (range) {
-    return {
-      year: Number(range[1]),
-      endYear: range[2] === undefined ? null : Number(range[2]),
-    };
-  }
-  return { year: null, endYear: null };
+  return yearSpan(text) ?? { year: null, endYear: null };
 }
 
 /**

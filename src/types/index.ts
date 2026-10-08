@@ -66,7 +66,12 @@ export type {
   PlaybackComponentInfo,
   PlaybackCapabilities,
 } from './playback';
-export type { MovieFormFile, MovieFormSubtitle, MovieFormValues } from './form';
+export type {
+  EpisodeFormRow,
+  MovieFormFile,
+  MovieFormSubtitle,
+  MovieFormValues,
+} from './form';
 export type {
   ImportField,
   ImportPhase,

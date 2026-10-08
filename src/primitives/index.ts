@@ -11,7 +11,11 @@ export { Artwork, type ArtworkProps } from './Artwork/Artwork';
 export { Wordmark, type WordmarkProps } from './Wordmark/Wordmark';
 export { TextField, type TextFieldProps } from './TextField/TextField';
 export { Textarea, type TextareaProps } from './Textarea/Textarea';
-export { FilePicker, type FilePickerProps } from './FilePicker/FilePicker';
+export {
+  FilePicker,
+  type FilePickerProps,
+  type MultiFilePickerProps,
+} from './FilePicker/FilePicker';
 export { Toggle, type ToggleProps } from './Toggle/Toggle';
 export {
   RemoveButton,

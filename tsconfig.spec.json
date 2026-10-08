@@ -2,6 +2,9 @@
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "outDir": "./dist/out-tsc",
+    // The tests spread a sent `FormData` to read its parts in order, which is
+    // the iterable half of the DOM's types.
+    "lib": ["es2020", "dom", "dom.iterable"],
     // `vite.config.mts` is type-checked here, and Vite ships its types behind an
     // exports map that `node` resolution can't read. Resolve like the bundler
     // that actually consumes this project.

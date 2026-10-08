@@ -14,6 +14,17 @@ export interface FilePickerProps {
 }
 
 /**
+ * The same picker over a dialog that takes many files at once — the series'
+ * _＋ Add episode files_ — reporting every file chosen, in the order given.
+ */
+export interface MultiFilePickerProps {
+  label: string;
+  accept: string;
+  multiple: true;
+  onPickFiles: (files: File[]) => void;
+}
+
+/**
  * The **File picker**: a dashed "＋ …" box that opens a file dialog and reports
  * what was chosen. The one control in the app that can, because it is the
  * `<label>` of a hidden `<input type="file">` — see the styles for why.
@@ -29,20 +40,26 @@ export interface FilePickerProps {
  * unmounts on pick, and exactly what a maintainer does in a list after
  * removing the wrong row.
  */
-export function FilePicker({ label, accept, onPick }: FilePickerProps) {
+export function FilePicker(props: FilePickerProps | MultiFilePickerProps) {
+  const { label, accept } = props;
   return (
     <Box>
       ＋ {label}
       <Input
         type="file"
         accept={accept}
+        multiple={'multiple' in props}
         onChange={(event) => {
           // A cancelled dialog fires a change with nothing in it, and a caller
           // that acted on one would empty a slot or append a track with no
           // file.
-          const file: File | undefined = event.target.files?.[0];
-          if (file) {
-            onPick(file);
+          const files = Array.from(event.target.files ?? []);
+          if ('multiple' in props) {
+            if (files.length > 0) {
+              props.onPickFiles(files);
+            }
+          } else if (files[0]) {
+            props.onPick(files[0]);
           }
           event.target.value = '';
         }}

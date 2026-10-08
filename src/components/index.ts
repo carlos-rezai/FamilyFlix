@@ -26,6 +26,10 @@ export {
   RatingPicker,
   type RatingPickerProps,
 } from './RatingPicker/RatingPicker';
+export {
+  EpisodeFileRow,
+  type EpisodeFileRowProps,
+} from './EpisodeFileRow/EpisodeFileRow';
 export { SubtitleRow, type SubtitleRowProps } from './SubtitleRow/SubtitleRow';
 export { Modal, type ModalProps } from './Modal/Modal';
 export { LogConsole, type LogConsoleProps } from './LogConsole/LogConsole';

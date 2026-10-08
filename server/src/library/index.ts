@@ -256,9 +256,10 @@ export interface LibraryStorage {
   /**
    * Insert a **Series** and its genres (ordered) in one transaction, and
    * return the assembled model. It carries no watch state: that lives on its
-   * episodes.
+   * episodes. Given episodes, they are written in the same transaction, so a
+   * refused one commits nothing.
    */
-  addSeries(input: NewSeries): Series;
+  addSeries(input: NewSeries, episodes?: readonly NewEpisode[]): Series;
   /**
    * Insert one **Episode** under a held series, unwatched at zero. A second
    * episode under one series, season and number is refused by the schema.
