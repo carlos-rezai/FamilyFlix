@@ -156,10 +156,22 @@ describe('readSeriesFields — the record a body describes', () => {
         ['genre', 'Drama'],
         ['genre', 'Comedy'],
         ['rating', '7'],
-        ['episode', episode(1, 1, 'Pilot')],
+        ['episode', episode(1, 1, 'Pilot', ['English', 'Danish'])],
         ['episode', episode(1, 2)],
       ]),
-      landed(2),
+      {
+        folder: 'harbor-and-vine',
+        episodes: [
+          {
+            video: 'harbor-and-vine/season-01/pilot.mkv',
+            subtitles: [
+              'harbor-and-vine/season-01/pilot.en.srt',
+              'harbor-and-vine/season-01/pilot.da.srt',
+            ],
+          },
+          { video: 'harbor-and-vine/season-01/second.mkv', subtitles: [] },
+        ],
+      },
       POOL
     );
 
@@ -175,9 +187,27 @@ describe('readSeriesFields — the record a body describes', () => {
       rating: 7,
       cast: ['Marit Holt', 'Peder Vinge'],
       genres: ['Drama', 'Comedy'],
+      // Each episode with the paths its parts landed at, its tracks in the
+      // order its languages name them.
       episodes: [
-        { season: 1, number: 1, title: 'Pilot', subtitleLanguages: [] },
-        { season: 1, number: 2, subtitleLanguages: [] },
+        {
+          season: 1,
+          number: 1,
+          title: 'Pilot',
+          subtitleLanguages: ['English', 'Danish'],
+          video: 'harbor-and-vine/season-01/pilot.mkv',
+          subtitles: [
+            'harbor-and-vine/season-01/pilot.en.srt',
+            'harbor-and-vine/season-01/pilot.da.srt',
+          ],
+        },
+        {
+          season: 1,
+          number: 2,
+          subtitleLanguages: [],
+          video: 'harbor-and-vine/season-01/second.mkv',
+          subtitles: [],
+        },
       ],
     });
   });
@@ -251,7 +281,15 @@ describe('readSeriesFields — the record a body describes', () => {
       rating: undefined,
       cast: [],
       genres: [],
-      episodes: [{ season: 1, number: 1, subtitleLanguages: [] }],
+      episodes: [
+        {
+          season: 1,
+          number: 1,
+          subtitleLanguages: [],
+          video: 'harbor-and-vine/season-01/episode-1.mkv',
+          subtitles: [],
+        },
+      ],
     });
   });
 });

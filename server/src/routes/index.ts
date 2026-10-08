@@ -9,6 +9,7 @@ import type {
 import express, { type Request, type Response, type Router } from 'express';
 
 import type { LibraryStorage } from '../library';
+import { yearSpan } from '../library/series/yearSpan/yearSpan';
 import {
   ImportBusyError,
   ImportPathError,
@@ -28,7 +29,6 @@ import type {
 } from '../playback/componentSlot/componentSlot';
 import type { Playback } from '../playback/createPlayback/createPlayback';
 import { derivedRuntime } from '../playback/derivedRuntime/derivedRuntime';
-import { yearSpan } from '../library/series/yearSpan/yearSpan';
 import { isRatingValue, MAX_RATING } from './isRatingValue/isRatingValue';
 import {
   collectUploads,
@@ -677,12 +677,11 @@ export function createApiRouter(
       stored = (path) => renamed.storedPath(path);
     }
 
-    const episodes: NewEpisode[] = read.episodes.map((episode, index) => {
-      const upload = uploads.episodes[index];
-      const videoPath = stored(upload.video as string);
+    const episodes: NewEpisode[] = read.episodes.map((episode) => {
+      const videoPath = stored(episode.video);
       const runtimeMinutes = derivedRuntime(playback, videoPath);
-      const subtitles: NewSubtitle[] = upload.subtitles.map((path, track) => ({
-        path: stored(path as string),
+      const subtitles: NewSubtitle[] = episode.subtitles.map((path, track) => ({
+        path: stored(path),
         language: episode.subtitleLanguages[track],
       }));
       return {

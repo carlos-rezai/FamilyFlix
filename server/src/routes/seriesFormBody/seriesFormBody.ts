@@ -190,6 +190,15 @@ export function collectEpisodeUploads(
   return { onFile, uploads };
 }
 
+/**
+ * One episode once its body has been read whole: its field, paired with the
+ * paths its parts landed at — the video, and a track per language, in order.
+ */
+export interface LandedEpisode extends EpisodeField {
+  video: string;
+  subtitles: string[];
+}
+
 /** The fields of a series body, coerced into the shapes `addSeries` takes. */
 export interface SeriesFormValues {
   title: string;
@@ -200,7 +209,7 @@ export interface SeriesFormValues {
   rating?: number;
   cast: string[];
   genres: string[];
-  episodes: EpisodeField[];
+  episodes: LandedEpisode[];
 }
 
 export type SeriesFormRead =
@@ -209,7 +218,9 @@ export type SeriesFormRead =
 
 /**
  * Read the fields of a series body, having already read its parts — the
- * refusals as sentences, the missing title first, as the movie's are.
+ * refusals as sentences, the missing title first, as the movie's are. Each
+ * episode is answered with the paths its checks proved landed, so the route
+ * reads them off the episode it is handed.
  */
 export function readSeriesFields(
   fields: Record<string, string[]>,
@@ -252,18 +263,20 @@ export function readSeriesFields(
     return refuse(uploads.refused);
   }
 
+  const landed: LandedEpisode[] = [];
   for (const [index, episode] of episodes.entries()) {
+    const tag = spellEpisodeTag(episode.season, episode.number);
     const upload = uploads.episodes[index];
     if (upload?.video === undefined) {
-      return refuse(
-        `Episode ${spellEpisodeTag(episode.season, episode.number)} has no video`
-      );
+      return refuse(`Episode ${tag} has no video`);
     }
-    if (upload.subtitles.length !== episode.subtitleLanguages.length) {
-      return refuse(
-        `Episode ${spellEpisodeTag(episode.season, episode.number)} is missing a subtitle`
-      );
+    const subtitles = upload.subtitles.filter(
+      (path): path is string => path !== undefined
+    );
+    if (subtitles.length !== episode.subtitleLanguages.length) {
+      return refuse(`Episode ${tag} is missing a subtitle`);
     }
+    landed.push({ ...episode, video: upload.video, subtitles });
   }
 
   const postedRating = onlyField(fields, 'rating');
@@ -285,12 +298,14 @@ export function readSeriesFields(
     ok: true,
     title,
     ...(span === null ? {} : { year: span.year }),
-    ...(span?.endYear == null ? {} : { endYear: span.endYear }),
+    ...(span === null || span.endYear === null
+      ? {}
+      : { endYear: span.endYear }),
     creator: optionalText(onlyField(fields, 'creator')),
     synopsis: optionalText(onlyField(fields, 'description')),
     rating,
     cast: fields.cast ?? [],
     genres,
-    episodes,
+    episodes: landed,
   };
 }
