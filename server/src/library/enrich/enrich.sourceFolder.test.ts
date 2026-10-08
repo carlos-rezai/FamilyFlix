@@ -87,3 +87,53 @@ describe('library: setSourceFolder — both columns in one call', () => {
     );
   });
 });
+
+describe('library: titleSource — both columns in one read', () => {
+  it('answers a movie’s Library folder id and Source folder', () => {
+    const { storage } = library();
+    const folder = storage.addLibraryFolder('E:\\Movies');
+    const { id } = storage.addMovie(newMovie({ title: 'Northwind' }));
+    storage.setSourceFolder(id, folder.id, 'Northwind (2019)');
+
+    expect(storage.titleSource(id)).toEqual({
+      folderId: folder.id,
+      sourceFolder: 'Northwind (2019)',
+    });
+  });
+
+  it('answers a series’ Library folder id and Show folder', () => {
+    const { storage } = library();
+    const folder = storage.addLibraryFolder('D:\\Shows');
+    const { id } = storage.addSeries({ title: 'Harbor & Vine' });
+    storage.setSourceFolder(id, folder.id, 'Harbor & Vine (2021)');
+
+    expect(storage.titleSource(id)).toEqual({
+      folderId: folder.id,
+      sourceFolder: 'Harbor & Vine (2021)',
+    });
+  });
+
+  it('is null for a title with no source recorded', () => {
+    const { storage } = library();
+    const { id } = storage.addMovie(newMovie({ title: 'Northwind' }));
+
+    expect(storage.titleSource(id)).toBeNull();
+  });
+
+  it('is null once the title’s folder is removed from the list', () => {
+    const { storage } = library();
+    const folder = storage.addLibraryFolder('E:\\Movies');
+    const { id } = storage.addMovie(newMovie({ title: 'Northwind' }));
+    storage.setSourceFolder(id, folder.id, 'Northwind (2019)');
+
+    storage.removeLibraryFolder(folder.id);
+
+    expect(storage.titleSource(id)).toBeNull();
+  });
+
+  it('is null for an id the library does not hold', () => {
+    const { storage } = library();
+
+    expect(storage.titleSource('no-such-title')).toBeNull();
+  });
+});

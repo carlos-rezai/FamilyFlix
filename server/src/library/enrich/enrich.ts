@@ -23,6 +23,12 @@ export interface MovieEnrichment {
   tmdbScore?: number;
 }
 
+/** Where a title was recorded as coming from: both of its source columns. */
+export interface TitleSource {
+  folderId: string;
+  sourceFolder: string;
+}
+
 /** One key of an enrichment shape and the column it writes. */
 export interface Column<K> {
   key: K;
@@ -88,17 +94,16 @@ export interface Enrich {
   enrichmentCounts(): { total: number; complete: number };
   /**
    * Record where a **Movie** or **Series** came from, both columns in one
-   * call: the **Library folder** it was found under (`null` for none) and its
-   * Source folder relative to that folder. Answers whether the library holds
-   * that id.
+   * call: the **Library folder** it was found under and its Source folder
+   * relative to that folder. Answers whether the library holds that id.
    */
-  setSourceFolder(
-    id: string,
-    folderId: string | null,
-    sourceFolder: string
-  ): boolean;
-  /** A Movie's or Series' recorded Source folder, `null` when none is. */
-  sourceFolder(id: string): string | null;
+  setSourceFolder(id: string, folderId: string, sourceFolder: string): boolean;
+  /**
+   * Where a Movie or Series was recorded as coming from, both columns in one
+   * query: its Library folder's id and its Source folder — `null` for a title
+   * with no folder.
+   */
+  titleSource(id: string): TitleSource | null;
   /**
    * The title's Library folder path joined to its Source folder, in one query
    * over both columns — `null` for a title with no folder.
@@ -205,8 +210,12 @@ export function createEnrich(db: SqliteDatabase, reader: MovieReader): Enrich {
      LIMIT 1`
   );
   const selectSource = db.prepare(
-    `SELECT source_folder FROM movies WHERE id = @id
-     UNION ALL SELECT source_folder FROM series WHERE id = @id`
+    `SELECT library_folder_id, source_folder FROM movies
+       WHERE id = @id AND library_folder_id IS NOT NULL
+         AND source_folder IS NOT NULL
+     UNION ALL SELECT library_folder_id, source_folder FROM series
+       WHERE id = @id AND library_folder_id IS NOT NULL
+         AND source_folder IS NOT NULL`
   );
 
   const selectPath = db.prepare(
@@ -220,12 +229,12 @@ export function createEnrich(db: SqliteDatabase, reader: MovieReader): Enrich {
 
   function setSourceFolder(
     id: string,
-    folderId: string | null,
-    folder: string
+    folderId: string,
+    sourceFolder: string
   ): boolean {
     return (
-      updateMovieSource.run(folderId, folder, id).changes +
-        updateSeriesSource.run(folderId, folder, id).changes >
+      updateMovieSource.run(folderId, sourceFolder, id).changes +
+        updateSeriesSource.run(folderId, sourceFolder, id).changes >
       0
     );
   }
@@ -244,16 +253,18 @@ export function createEnrich(db: SqliteDatabase, reader: MovieReader): Enrich {
     return row === undefined ? null : join(row.path, row.source_folder);
   }
 
-  function sourceFolder(id: string): string | null {
+  function titleSource(id: string): TitleSource | null {
     const row = selectSource.get({ id }) as
-      | { source_folder: string | null }
+      | { library_folder_id: string; source_folder: string }
       | undefined;
-    return row?.source_folder ?? null;
+    return row === undefined
+      ? null
+      : { folderId: row.library_folder_id, sourceFolder: row.source_folder };
   }
 
   return {
     setSourceFolder,
-    sourceFolder,
+    titleSource,
     sourcePath,
     titleAt,
     enrichMovie,

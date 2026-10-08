@@ -29,7 +29,11 @@ import { createWatch } from './watch/watch';
 import { createCuration } from './curation/curation';
 import { createSettings } from './settings/settings';
 import { createFolders, type StoredLibraryFolder } from './folders/folders';
-import { createEnrich, type MovieEnrichment } from './enrich/enrich';
+import {
+  createEnrich,
+  type MovieEnrichment,
+  type TitleSource,
+} from './enrich/enrich';
 import {
   createSeriesEnrich,
   type EpisodeEnrichment,
@@ -41,7 +45,7 @@ import { createSeriesWrite } from './series/write/write';
 import { createSeriesCuration } from './series/curation/curation';
 import { createSeriesWatch } from './series/watch/watch';
 
-export type { MovieEnrichment } from './enrich/enrich';
+export type { MovieEnrichment, TitleSource } from './enrich/enrich';
 export type { StoredLibraryFolder } from './folders/folders';
 export type {
   EpisodeEnrichment,
@@ -242,17 +246,16 @@ export interface LibraryStorage {
   setEnrichmentLastSyncedAt(at: string): void;
   /**
    * Record where a **Movie** or **Series** came from, both columns in one
-   * call: the **Library folder** it was found under (`null` for none) and its
-   * Source folder relative to that folder. Answers whether the library holds
-   * that id.
+   * call: the **Library folder** it was found under and its Source folder
+   * relative to that folder. Answers whether the library holds that id.
    */
-  setSourceFolder(
-    id: string,
-    folderId: string | null,
-    sourceFolder: string
-  ): boolean;
-  /** A Movie's or Series' Source folder as recorded, `null` when none is. */
-  sourceFolder(id: string): string | null;
+  setSourceFolder(id: string, folderId: string, sourceFolder: string): boolean;
+  /**
+   * Where a Movie or Series was recorded as coming from: its Library folder's
+   * id and its Source folder, read together — `null` for a title with no
+   * folder.
+   */
+  titleSource(id: string): TitleSource | null;
   /**
    * Where a Movie or Series sits on disk: its Library folder's path joined to
    * its Source folder — `null` for a title with no folder.
@@ -378,7 +381,7 @@ export function createSqliteStorage(dbPath: string): LibraryStorage {
     enrichmentLastSyncedAt: settingsRepository.enrichmentLastSyncedAt,
     setEnrichmentLastSyncedAt: settingsRepository.setEnrichmentLastSyncedAt,
     setSourceFolder: enrich.setSourceFolder,
-    sourceFolder: enrich.sourceFolder,
+    titleSource: enrich.titleSource,
     sourcePath: enrich.sourcePath,
     titleAt: enrich.titleAt,
     addSeries: seriesWrite.addSeries,

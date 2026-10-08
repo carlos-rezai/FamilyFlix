@@ -70,10 +70,15 @@ describe('library: sourcePath — the Library folder joined to the Source folder
     expect(storage.sourcePath(id)).toBeNull();
   });
 
-  it('is null for a Source folder recorded under no Library folder', () => {
+  it('is null once the folder it was moved onto is removed', () => {
     const storage = library();
+    const first = storage.addLibraryFolder('E:\\Movies');
+    const second = storage.addLibraryFolder('F:\\Archive');
     const { id } = storage.addMovie(newMovie({ title: 'Northwind' }));
-    storage.setSourceFolder(id, null, 'Northwind');
+    storage.setSourceFolder(id, first.id, 'Northwind');
+    storage.setSourceFolder(id, second.id, 'Northwind');
+
+    storage.removeLibraryFolder(second.id);
 
     expect(storage.sourcePath(id)).toBeNull();
   });

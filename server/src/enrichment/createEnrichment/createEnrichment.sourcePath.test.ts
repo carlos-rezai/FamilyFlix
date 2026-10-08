@@ -96,18 +96,11 @@ function world() {
 
   /**
    * The folder an import would have recorded for the film: its Source folder,
-   * under the **Library folder** at `ROOT` — or under none, with `listed`
-   * false, as a library from before the list could hold it.
+   * under the **Library folder** at `ROOT`.
    */
-  function recordSourceFolder(
-    id: string,
-    folder: string,
-    { listed = true }: { listed?: boolean } = {}
-  ): void {
-    const library = listed
-      ? (listedRoot ??= storage.addLibraryFolder(ROOT))
-      : null;
-    storage.setSourceFolder(id, library?.id ?? null, folder);
+  function recordSourceFolder(id: string, folder: string): void {
+    listedRoot ??= storage.addLibraryFolder(ROOT);
+    storage.setSourceFolder(id, listedRoot.id, folder);
   }
   return { storage, enrichment, addFilm, recordSourceFolder };
 }
@@ -194,11 +187,10 @@ describe('createEnrichment: a Decision’s path — none when not on record', ()
     expect(decision.path).toBeNull();
   });
 
-  it('is null when the title is under no Library folder', async () => {
-    const { enrichment, addFilm, recordSourceFolder } = world();
-    recordSourceFolder(await addFilm('Sundial', 2004), 'Sundial', {
-      listed: false,
-    });
+  it('is null when the title’s Library folder was removed', async () => {
+    const { storage, enrichment, addFilm, recordSourceFolder } = world();
+    recordSourceFolder(await addFilm('Sundial', 2004), 'Sundial');
+    storage.removeLibraryFolder(storage.libraryFolders()[0].id);
 
     const decision = decisionFor(await syncEverything(enrichment), 'Sundial');
 

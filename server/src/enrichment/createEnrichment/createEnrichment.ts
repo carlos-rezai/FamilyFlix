@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { join, posix, sep } from 'node:path';
+import { posix, sep } from 'node:path';
 import type { Readable } from 'node:stream';
 
 import type {
@@ -315,18 +315,18 @@ export function createEnrichment({
     stored: string
   ): Promise<void> {
     if (!runWantsPosters) return;
-    const folder = storage.sourceFolder(movie.id);
-    const home = folder === null ? undefined : runFolderOf(movie.id, folder);
+    const source = storage.titleSource(movie.id);
+    const home = source === null ? undefined : runFolderOf(source.folderId);
     if (home !== undefined && !home.writable.posters) return;
     let outcome: Awaited<ReturnType<WriteBack['poster']>> | null = null;
-    if (folder !== null && home !== undefined) {
+    if (source !== null && home !== undefined) {
       let poster: Readable;
       try {
         poster = await media.readStored(stored);
       } catch {
         return;
       }
-      outcome = await writeBack.poster(home.path, folder, poster);
+      outcome = await writeBack.poster(home.path, source.sourceFolder, poster);
     }
     if (outcome === null || outcome.kind === 'no-folder') {
       log(
@@ -342,14 +342,9 @@ export function createEnrichment({
     if (outcome.kind === 'written') current.written.posters = true;
   }
 
-  /**
-   * The reachable Library folder of the Current run a title sits in — the one
-   * whose path joined to the title's Source folder is its `sourcePath`.
-   */
-  function runFolderOf(id: string, folder: string): RunFolder | undefined {
-    const path = storage.sourcePath(id);
-    if (path === null) return undefined;
-    return runFolders.find((each) => join(each.path, folder) === path);
+  /** The reachable Library folder of the Current run with this id, if any. */
+  function runFolderOf(folderId: string): RunFolder | undefined {
+    return runFolders.find((each) => each.id === folderId);
   }
 
   /**
@@ -360,11 +355,11 @@ export function createEnrichment({
     const sheetFolders = runFolders.filter((each) => each.writable.sheet);
     if (sheetFolders.length === 0) return;
     const movies = storage.listMovies({ sort: 'a-z' });
+    const folderOf = new Map(
+      movies.map((movie) => [movie.id, storage.titleSource(movie.id)?.folderId])
+    );
     for (const home of sheetFolders) {
-      const own = movies.filter((movie) => {
-        const folder = storage.sourceFolder(movie.id);
-        return folder !== null && runFolderOf(movie.id, folder) === home;
-      });
+      const own = movies.filter((movie) => folderOf.get(movie.id) === home.id);
       const outcome = await writeBack.sheet(home.path, own);
       log(current, outcome.line.text, outcome.line.kind);
       if (outcome.kind === 'written') current.written.sheet = true;
