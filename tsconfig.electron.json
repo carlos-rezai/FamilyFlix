@@ -5,7 +5,8 @@
     "types": ["node", "electron"]
   },
   // The Desktop shell's shipping code (issue #216), and the shared Shell
-  // handshake and Software update types it imports (issue #236). The tests
+  // handshake, Software update and Library folders types it imports (issues
+  // #236, #272). The tests
   // belong to `tsconfig.spec.json`, the way the frontend's and the backend's
   // do, so a RED `test:` commit can still ask whether the shell itself
   // compiles. `test-support/` is excluded so
@@ -14,6 +15,7 @@
     "electron/**/*.ts",
     "src/types/shell.ts",
     "src/types/update.ts",
+    "src/types/libraryFolders.ts",
     "src/types/familyflix.d.ts"
   ],
   "exclude": [

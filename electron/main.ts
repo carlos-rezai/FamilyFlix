@@ -12,16 +12,19 @@ import {
   dialog,
   ipcMain,
   Menu,
+  type OpenDialogOptions,
   shell,
   utilityProcess,
 } from 'electron';
 import { autoUpdater } from 'electron-updater';
 
+import { FOLDER_CHANNELS } from '../src/types/libraryFolders';
 import { UPDATE_CHANNELS } from '../src/types/update';
 
 import { APP_USER_MODEL_ID } from './appIdentity/appIdentity';
 import { createUpdates } from './createUpdates/createUpdates';
 import { downloadPath } from './downloadPath/downloadPath';
+import { pickFolders } from './pickFolders/pickFolders';
 import { loadRenderer } from './loadRenderer/loadRenderer';
 import { quitAfterShutdown } from './quitAfterShutdown/quitAfterShutdown';
 import { reloadOnce } from './reloadOnce/reloadOnce';
@@ -259,6 +262,19 @@ if (!app.requestSingleInstanceLock()) {
     ipcMain.handle(UPDATE_CHANNELS.current, () => updates.current());
     ipcMain.handle(UPDATE_CHANNELS.check, () => updates.check());
     ipcMain.on(UPDATE_CHANNELS.install, () => updates.install());
+
+    // The **Library folders page**'s _Browse…_: the system folder dialog,
+    // several folders at once, a cancel answered as `[]`.
+    ipcMain.handle(FOLDER_CHANNELS.pick, async () => {
+      const options: OpenDialogOptions = {
+        title: 'Add library folders',
+        properties: ['openDirectory', 'multiSelections'],
+      };
+      const answer = window
+        ? await dialog.showOpenDialog(window, options)
+        : await dialog.showOpenDialog(options);
+      return pickFolders(answer);
+    });
 
     openWindow(started.port, join(__dirname, 'preload.js'));
     void updates.start();

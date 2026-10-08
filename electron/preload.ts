@@ -1,6 +1,10 @@
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron';
 
 import {
+  FOLDER_CHANNELS,
+  type FolderBridge,
+} from '../src/types/libraryFolders';
+import {
   UPDATE_CHANNELS,
   type UpdateBridge,
   type UpdateCheck,
@@ -9,7 +13,7 @@ import {
 
 /**
  * The **Desktop shell**'s preload: wiring only. It defines
- * `window.familyflix.updates`, each member passing one channel through to
+ * `window.familyflix.updates` and `window.familyflix.folders`, each member passing one channel through to
  * main and holding no state. `sandbox`, `contextIsolation` and
  * `nodeIntegration: false` are untouched — `contextBridge` is the one way
  * across. See `docs/PRDs/17-software-update.md`, _The preload_.
@@ -30,4 +34,9 @@ const updates: UpdateBridge = {
   install: () => ipcRenderer.send(UPDATE_CHANNELS.install),
 };
 
-contextBridge.exposeInMainWorld('familyflix', { updates });
+/** The native folder picker for the **Library folders page**'s _Browse…_. */
+const folders: FolderBridge = {
+  pick: () => ipcRenderer.invoke(FOLDER_CHANNELS.pick) as Promise<string[]>,
+};
+
+contextBridge.exposeInMainWorld('familyflix', { updates, folders });

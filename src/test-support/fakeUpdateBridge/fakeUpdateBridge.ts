@@ -53,7 +53,9 @@ export function fakeUpdateBridge() {
     listeners.clear();
     checks = 0;
     installs = 0;
-    window.familyflix = { updates };
+    window.familyflix = { ...window.familyflix, updates } as NonNullable<
+      Window['familyflix']
+    >;
   });
 
   afterEach(() => {

@@ -12,3 +12,15 @@ export interface LibraryFolder {
   /** Read afresh on every list: `false` for a folder the disk cannot reach. */
   reachable: boolean;
 }
+
+/** The one IPC channel between the preload and main for the native picker. */
+export const FOLDER_CHANNELS = {
+  /** invoke → `string[]`, the folders picked; `[]` for a cancel */
+  pick: 'familyflix:folders:pick',
+} as const;
+
+/** `window.familyflix.folders`, as the preload defines it. */
+export interface FolderBridge {
+  /** Open the system folder dialog; the paths picked, in order, `[]` a cancel. */
+  pick(): Promise<string[]>;
+}

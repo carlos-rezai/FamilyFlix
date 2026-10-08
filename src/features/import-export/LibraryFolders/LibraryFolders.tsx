@@ -11,6 +11,7 @@ import {
   TextField,
 } from '@/primitives';
 import { ImportBusyError, startFolderScan } from '../api/api';
+import { folderBridge } from '../folderBridge/folderBridge';
 import { EnrichCheckCard } from '../EnrichCheckCard/EnrichCheckCard';
 import { FolderRow } from '../FolderRow/FolderRow';
 import { FolderShapes } from '../FolderShapes/FolderShapes';
@@ -40,6 +41,11 @@ import {
  * disabled with no folder listed, which posts the **Folder scan** and pushes
  * `/import` — on a `409` too, so the run already in flight is the one shown.
  *
+ * In the desktop app _Browse…_ sits beside _Add_ and opens the system folder
+ * dialog: each picked folder is posted in order, as if it had been typed, and
+ * each is checked and refused on its own. A browser has no bridge, so no
+ * _Browse…_; a cancelled pick posts nothing.
+ *
  * **Blank until it lands**: nothing under the header is drawn while the list
  * is `null`. Back is the one **Back rule** with Settings as the **Landing**.
  */
@@ -48,6 +54,7 @@ export function LibraryFolders() {
   const goBack = useGoBack('/settings');
   const [typed, setTyped] = useState('');
   const navigate = useNavigate();
+  const [bridge] = useState(folderBridge);
   const [scanning, setScanning] = useState(false);
   const [enrich, setEnrich] = useState(false);
   const [keySet, setKeySet] = useState(false);
@@ -86,6 +93,14 @@ export function LibraryFolders() {
   const submit = async () => {
     if (await add(typed.trim())) {
       setTyped('');
+    }
+  };
+
+  const browse = async () => {
+    if (bridge === null) return;
+    const picked = await bridge.pick();
+    for (const path of picked) {
+      await add(path);
     }
   };
 
@@ -147,6 +162,17 @@ export function LibraryFolders() {
                   void submit();
                 }}
               />
+              {bridge === null ? null : (
+                <Button
+                  label="Browse…"
+                  variant="secondary"
+                  size="sm"
+                  disabled={adding}
+                  onClick={() => {
+                    void browse();
+                  }}
+                />
+              )}
             </AddRow>
             {refusal === null ? null : <Refusal>{refusal}</Refusal>}
           </Card>
