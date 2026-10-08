@@ -1098,10 +1098,13 @@ describe('MovieForm — the save gate', () => {
     expect(save().disabled).toBe(true);
   });
 
-  it('does not open on a video alone', async () => {
+  it('does not open on a video alone once its prefilled title is cleared', async () => {
     await renderForm();
 
     await pickVideo();
+    // A pick fills an empty title (the title prefill, issue #261); cleared, the
+    // video is alone and the title half is missing again.
+    fireEvent.change(titleField(), { target: { value: '' } });
 
     expect(save().disabled).toBe(true);
   });

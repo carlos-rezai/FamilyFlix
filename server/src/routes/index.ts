@@ -733,12 +733,10 @@ export function createApiRouter(
   // arrives, so a 12 GB film never sits in memory anywhere between the file
   // dialog and the **Managed media directory**.
   //
-  // `videoPath` is still `''` for a body that carries no video part, and that is
-  // not a fiction being papered over: `mediaFilePath` resolves `''` to the media
-  // root itself, fails its own containment test, and `/playback` and `/stream`
-  // give the JSON 404 they already give a missing file. The form's own **Save
-  // gate** makes it unreachable from the app; a client this route did not write
-  // can still ask for a row with no film behind it, and gets a real one.
+  // **A body with no video part is refused**, `400 Body must carry a video` —
+  // the resolve route's sentence — after the title check and before any row is
+  // written, taking back whatever poster or track had already landed. The
+  // form's own **Save gate** makes it unreachable from the app.
   //
   // **An unplayable container is accepted, not refused.** `cannot-play` is a
   // designed `PlayerNotice` state, and refusing an MKV at the door would refuse
@@ -797,6 +795,14 @@ export function createApiRouter(
       res.status(read.status).json({ error: read.error });
       return;
     }
+    // A movie is a film: the **Save gate**'s other half, held on the wire in
+    // the resolve route's own sentence, after the title so a body wrong in both
+    // ways answers as it always did.
+    if (uploads.video === undefined) {
+      rollback();
+      res.status(400).json({ error: 'Body must carry a video' });
+      return;
+    }
     const { title, year, director, synopsis, rating, cast, genres } = read;
 
     // The third list, paired by the body reader as the edit's is: the form
@@ -843,9 +849,7 @@ export function createApiRouter(
       res.status(201).json(
         storage.addMovie({
           title,
-          // A body with no video part is a row that says it has no film behind
-          // it, rather than a save this route refuses.
-          videoPath: uploads.video ?? '',
+          videoPath: uploads.video,
           // No poster part is a film with no artwork, which is a normal row:
           // `poster_path` stays null and the card draws its gradient. No
           // backdrop is written either — the form does not collect one, and the
@@ -984,6 +988,13 @@ export function createApiRouter(
       // form sends one of the two for every filled slot, so silence is the only
       // way it can say "there is nothing here now".
       const videoPath = uploads.video ?? onlyField(fields, 'videoPath') ?? '';
+      if (videoPath === '') {
+        // The **Save gate** on the wire: an edit may keep the film or replace
+        // it, never empty the slot.
+        rollback();
+        res.status(400).json({ error: 'Body must carry a video' });
+        return;
+      }
       const posterPath =
         uploads.poster ?? onlyField(fields, 'posterPath') ?? null;
 

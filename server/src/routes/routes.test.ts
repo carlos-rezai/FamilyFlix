@@ -3561,11 +3561,9 @@ describe('GET /api/movies/:id/stream — a conversion that produces nothing', ()
 // boundary, the header and the encoding under test are the real ones, and no
 // helper here knows how a multipart body is spelled.
 //
-// **Fields only.** No part handling until the media domain lands, which is why
-// `videoPath` is `''`. That is not a fiction to paper over: the last two tests
-// assert what the empty path means downstream — the same JSON 404 `/playback`
-// and `/stream` already give a missing file, which is what the player draws its
-// missing-file notice from.
+// **Fields, and the film the gate asks for.** A movie needs a video (issue
+// #261), so `postMovie` sends the fixture film beside whatever fields a test
+// names; the suites below it own what happens to the part itself.
 
 /**
  * A fields-only multipart POST to `/api/movies`, the way the form sends it.
@@ -3575,6 +3573,9 @@ describe('GET /api/movies/:id/stream — a conversion that produces nothing', ()
  * travel (issue #99). Nothing here spells a multipart body by hand: the
  * platform's own `FormData` encodes it, so the repetition under test is the
  * real one.
+ *
+ * The fixture film follows the fields, because the route refuses a body with
+ * no video (issue #261).
  */
 function postMovie(
   baseUrl: string,
@@ -3586,6 +3587,7 @@ function postMovie(
       body.append(name, entry);
     }
   }
+  body.append('video', filePart());
   return fetch(`${baseUrl}/api/movies`, { method: 'POST', body });
 }
 
@@ -3705,38 +3707,6 @@ describe('POST /api/movies', () => {
     expect(home.rows).toEqual([]);
     expect(home.continueWatching).toEqual([]);
     expect(home.favorites).toEqual([]);
-  });
-
-  it('stores no video path, and says so on /playback', async () => {
-    const { baseUrl } = freshApi();
-
-    const movie = await createdMovie(baseUrl, { title: 'Rear Window' });
-    expect(movie.videoPath).toBe('');
-
-    const response = await fetch(`${baseUrl}/api/movies/${movie.id}/playback`);
-
-    // `mediaFilePath` resolves `''` to the media root itself, fails its own
-    // `file === root` containment test and answers `null` — so this is the
-    // route's existing missing-file answer, reached with no change to it. It is
-    // what the player draws the **missing-file** notice from.
-    expect(response.status).toBe(404);
-    expect(response.headers.get('content-type')).toContain('application/json');
-    expect(await response.json()).toEqual({
-      error: `No video file for movie: ${movie.id}`,
-    });
-  });
-
-  it('says the same thing on /stream', async () => {
-    const { baseUrl } = freshApi();
-
-    const movie = await createdMovie(baseUrl, { title: 'Rear Window' });
-
-    const response = await fetch(`${baseUrl}/api/movies/${movie.id}/stream`);
-
-    expect(response.status).toBe(404);
-    expect(await response.json()).toEqual({
-      error: `No video file for movie: ${movie.id}`,
-    });
   });
 
   // --- 11 — Movie form, Phase 1: the chips reach the row (issue #99) ----------
@@ -4475,15 +4445,14 @@ describe('POST /api/movies — what a save leaves on disk', () => {
   it('creates a movie folder only when there are bytes to put in it', async () => {
     const { baseUrl, media } = freshApi();
 
-    const noVideo = await createdFromParts(baseUrl, [['title', 'Rear Window']]);
-    expect(noVideo.videoPath).toBe('');
+    const refused = await postParts(baseUrl, [['title', 'Rear Window']]);
+    expect(refused.status).toBe(400);
     expect(folders(media)).toEqual([]);
 
     await createdFromParts(baseUrl, [...KEEPER, ['video', filePart()]]);
 
-    // A movie added with no video is still a real library row that says it has
-    // no film behind it — the state Phases 1 and 2 shipped in — and it must not
-    // start leaving empty folders behind now that folders exist.
+    // A body with no video is refused (issue #261), and must not leave an
+    // empty folder behind on its way out.
     expect(folders(media)).toEqual(['the-lantern-keeper-2019']);
   });
 
@@ -6260,17 +6229,6 @@ describe('POST /api/movies — the runtime, derived', () => {
     // And the bytes are where the save promised, which is the acceptance
     // criterion the whole best-effort rule exists to protect.
     expect(existsSync(storedFile(media, movie.videoPath))).toBe(true);
-  });
-
-  it('adds a movie with no film behind it at all', async () => {
-    const { baseUrl } = freshApi();
-
-    const movie = await createdFromParts(baseUrl, KEEPER);
-
-    // There is no file to derive from, which is not a failure to derive — the
-    // row already says it has no film behind it, and a runtime is the least of
-    // what is missing.
-    expect(movie.runtimeMinutes).toBeNull();
   });
 });
 

@@ -6,6 +6,7 @@ import { fetchMovie } from '@/api/fetchMovie/fetchMovie';
 import { useGoBack } from '@/hooks/useGoBack/useGoBack';
 import type { MovieFormValues } from '@/types';
 import { moviePath } from '@/utils';
+import { titleFromFilename } from '../titleFromFilename/titleFromFilename';
 import {
   createMovie,
   fetchProblem,
@@ -418,9 +419,16 @@ export function useMovieForm(): UseMovieFormResult {
   // the whole of what there is to hold — and its own name is what the slot
   // shows, because it is the only way to tell the right film from the one
   // beside it in the folder.
+  //
+  // **The title prefill**: a video picked into an empty title fills it with
+  // its **Title guess** — a prefill, never a write, so a typed title stays.
   const pickVideo = useCallback((file: File) => {
     setValues((current) => ({
       ...current,
+      title:
+        current.title.trim() === ''
+          ? titleFromFilename(file.name)
+          : current.title,
       video: pickedFile(file),
     }));
   }, []);
