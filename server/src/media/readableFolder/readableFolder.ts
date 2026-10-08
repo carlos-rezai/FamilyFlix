@@ -15,7 +15,8 @@ export type FolderReading =
 /**
  * Is this absolute path an existing directory the app can read? Answered as a
  * value, never a throw, so each caller words the answer its own way: the
- * folder add, the importer's root check and the per-folder `reachable` read.
+ * folder add, the importer's root check, the per-folder `reachable` read, and
+ * the Sync's write check and summary.
  */
 export async function readableFolder(path: string): Promise<FolderReading> {
   if (!isAbsolute(path)) {

@@ -1,6 +1,5 @@
 import { randomUUID } from 'node:crypto';
 import { join, posix, sep } from 'node:path';
-import { stat } from 'node:fs/promises';
 import type { Readable } from 'node:stream';
 
 import type {
@@ -18,6 +17,7 @@ import type {
 } from '@/types';
 import type { LibraryStorage } from '../../library';
 import type { Media } from '../../media/createMedia/createMedia';
+import { readableFolder } from '../../media/readableFolder/readableFolder';
 import {
   fetchedFields,
   fetchedTvFields,
@@ -169,12 +169,9 @@ async function reachableFolders(
 ): Promise<Array<{ id: string; path: string }>> {
   const reached: Array<{ id: string; path: string }> = [];
   for (const folder of storage.libraryFolders()) {
-    try {
-      if ((await stat(folder.path)).isDirectory()) {
-        reached.push({ id: folder.id, path: folder.path });
-      }
-    } catch {
-      // Unreachable: a drive unplugged, a folder moved — left out.
+    // Unreachable — a drive unplugged, a folder moved — is left out.
+    if ((await readableFolder(folder.path)) === 'readable') {
+      reached.push({ id: folder.id, path: folder.path });
     }
   }
   return reached;
