@@ -145,6 +145,7 @@ familyflix/
 │   ├── serverLaunch/ serverHandle/ awaitExitOrKill/ # the entry and environment off ShellPaths, fork the bundled server, wait for ready, shut it down or kill it
 │   ├── quitAfterShutdown/ reloadOnce/ loadRenderer/ # the quit gate, one reload after a crash, loading until Vite answers
 │   ├── rendererUrl/ windowPolicy/ downloadPath/     # where the window points, what it may open, where a download lands
+│   ├── pickFolders/        # the native folder dialog's answer → the paths to add, behind the preload's folders bridge
 │   ├── shellDialogs/ shellLog/ appIdentity/         # the two failure dialogs, the Shell log, the taskbar identity
 │   ├── assets/             # icon.ico, the App mark, and its guard
 │   ├── packaging/          # builderConfig.json, ffmpegPin.json, and the guard that holds them to the shell
@@ -154,20 +155,22 @@ familyflix/
 ├── server/             # Express backend
 │   └── src/
 │       ├── routes/         # HTTP layer only — parses requests, calls a domain module; enrichmentBody/ reads a Sync's start and Apply choices, seriesFormBody/ a series save; loopbackGuard/ and rendererRouter/ stand in front of the API
-│       ├── library/        # movie CRUD, SQLite queries, watch-state + resume position, the household's settings and the TMDB key, stamp and Library root beside them
+│       ├── library/        # movie CRUD, SQLite queries, watch-state + resume position, the household's settings and the TMDB key and stamp beside them
 │       │   ├── enrich/            # a Sync's film writes, the counts over both kinds, the Source folders, and Full details spelled once
+│       │   ├── folders/           # the Library folders: the list, its title counts, the remove that keeps the titles, and folderOverlap
 │       │   └── series/            # series storage, one unit per concern: read, browse, write, watch, curation, enrich, nextEpisodeOf, and yearSpan — the one reading of a Year range
 │       ├── media/          # folder scanning, copying files into managed storage (a season's folder among them), a Sync's art (storeNamed, storeInSeriesFolder, readStored), subtitle detection, removing a movie folder after a delete, space used
-│       │   ├── walkLibraryRoot/       # a Library root → its Source folders
+│       │   ├── readableFolder/        # whether a path is a folder the app can read, never throwing
+│       │   ├── walkLibraryFolder/     # a Library folder → its Source folders
 │       │   ├── scanMovieFolder/       # one folder → its video, poster, backdrop, subtitles
 │       │   ├── detectSubtitleLanguage/ # the language tag in a subtitle's name
 │       │   ├── episodeTag/            # the Episode tag: read off a filename, and spelled back as S01E03
 │       │   ├── spaceUsed/             # the bytes under the media root, never throwing
 │       │   └── fileKinds/             # what an image, a subtitle and a video may be called
-│       ├── import-export/  # the bulk importer and the exporter: readSheet, titleKey, matchRows, groupShows, createImporter (+ its film and series fixtures), writeSheet
+│       ├── import-export/  # the bulk importer and the exporter: readSheet, titleKey, matchRows, groupShows, admitFolder, createImporter (+ its film and series fixtures), writeSheet
 │       ├── playback/       # the Playback component (probe, spawn, decoders), the Component slot it lives in (componentSlot, componentBinary, verifyComponent), the path choice, streaming, subtitle parsing, derivedRuntime, capabilities(component)
 │       ├── enrichment/     # the fifth domain, the one network client: tmdbClient, tmdbAuth, tmdbGenres, matchScore, fetchedFields, currentFields, planFields, planEpisode, plannedEnrichment, decisionFace, writeBack, createEnrichment
-│       ├── db/             # SQLite connection + schema/migrations (3: the settings table; 4: series and episodes; 5: original title, TMDB score and source folder on both titles, stills on episodes); the Electron-ABI binding when FAMILYFLIX_SQLITE_BINDING names one
+│       ├── db/             # SQLite connection + schema/migrations (3: the settings table; 4: series and episodes; 5: original title, TMDB score and source folder on both titles, stills on episodes; 6: the Library folders; 7: the old library root carried onto them); the Electron-ABI binding when FAMILYFLIX_SQLITE_BINDING names one
 │       ├── shell/          # the server's half of the shell seam: shellHandshake, listen (the loopback bind and boundPort), orderedShutdown
 │       └── test-support/   # Shared test doubles — never imported by shipping code (heldCopy, libraryFixture, seriesFixture, fixedSlot, componentDir, fakeTmdb, offlineTmdb, …)
 ├── src/                # React frontend
@@ -197,19 +200,19 @@ familyflix/
 │   │   ├── series/          # the Series page and the Season page: SeriesDetail, SeasonEpisodes, SeriesMetaLine, LoadingSeries, useSeriesRead and the two page hooks, seriesView, seasonView
 │   │   ├── player/          # built-in video player for any Playable, subtitles (useSubtitles reads the preferred language), resume, and Up next (UpNextCard, useUpNext)
 │   │   ├── movie-form/      # Add a movie or a series, Edit a movie: one form, manual pickers, the Kind tabs — MovieForm, MovieFormFiles and SeriesFormFiles over filesCard.styles.ts and filesCard.ts, useMovieForm, useEpisodeList, readEpisodeTag, titleFromFilename, and createSeries in its api/ — and Resolve, the Import context
-│   │   ├── import-export/   # the bulk importer's screen: ImportFlow and its three steps, useImportRun, importView — and the Export dialog: ExportModal, FormatCard, useExport, saveToComputer
+│   │   ├── import-export/   # the bulk importer's screen: ImportFlow and its three steps, useImportRun, importView — the Library folders page: LibraryFolders, FolderRow, useLibraryFolders, useFolderScan — and the Export dialog: ExportModal, FormatCard, useExport, saveToComputer
 │   │   ├── enrichment/      # the Sync with TMDB: EnrichmentFlow and its three steps, SetupBanner, ScopeCard, WriteTargetRow, DecisionRow over CandidatePicker, TitleSearch and FieldDiff, useEnrichmentRun, enrichmentView, and its api/
 │   │   ├── settings/        # the Maintainer's hub: SettingsHeader; LibrarySection + ActionRow; PlaybackSection (the Codecs row onto the Codecs page); DisplaySection (the Ultrawide margins Toggle); CodecManager — the Codecs page's screen — over CodecRow, ComponentDropZone, codecView, zoneFace; NavigationRow, the row both the Codecs row and the sync row draw through; NetworkSection + useTmdbKey + syncLine; StorageSection; AboutSection; useCapabilities, useSettings, useStorageReport; and its api/
 │   │   │   └── section.styles.ts # the Group heading, the Section card, the divider, an item's title and lede, and the row furniture — what every group draws with
 │   │   ├── maintainer.styles.ts # the header and the captioned field the Maintainer's screens share
 │   │   └── collections/     # playlists (roadmap)
 │   ├── layouts/         # Page chrome (MainLayout mounts Back-to-top over its body, on the ref useRestoredScroll attached)
-│   ├── pages/           # Route-level views, composition only (ImportPage, EnrichmentPage and CodecsPage among them)
+│   ├── pages/           # Route-level views, composition only (ImportPage, EnrichmentPage, CodecsPage and LibraryFoldersPage among them)
 │   ├── api/             # Wire calls two or more features share (saveFavorite, fetchMovie, saveWatched, dismissProblem, fetchSettings, saveSeriesFavorite, saveEpisodeWatched, fetchEnrichmentSummary, fetchTmdbKey)
 │   ├── hooks/            # Global shared hooks (useGoBack(fallback) — the one Back rule, a history step with the screen's own landing behind it — useRestoredScroll, useOptimisticEdit, and useEnrichmentSummary)
 │   ├── types/            # Shared TypeScript interfaces (import.ts, export.ts, settings.ts, playback.ts, series.ts, enrichment.ts — read by both build targets; form.ts, the Movie form's shapes; shell.ts, the Shell handshake, read by the server and the shell; appVersion.d.ts)
 │   ├── utils/            # Pure helper functions (formatBytes, formatElapsed, formatEpisodeTag, moviePath, enrichPath, seriesPath, seasonPath, episodePlayPath, imageUrl and accentScale among them)
-│   └── test-support/     # Shared test doubles (fakeResponse, makeSeriesDetail, makeContinueCardMovie, makeEnrichmentRun, stubDownload, stubScrollMetrics, stubScrollTo, comesBefore, snackbarStack, LocationProbe and its navigationType reader, shippingSources, resolvedStyle and normCss, …)
+│   └── test-support/     # Shared test doubles (fakeResponse, fakeFolderBridge, makeSeriesDetail, makeContinueCardMovie, makeEnrichmentRun, stubDownload, stubScrollMetrics, stubScrollTo, comesBefore, snackbarStack, LocationProbe and its navigationType reader, shippingSources, resolvedStyle and normCss, …)
 ├── release/            # gitignored: the Installer, and win-unpacked/ — the Packaged layout
 └── docs/
     ├── design-logs/    # Immutable feature design snapshots
@@ -359,8 +362,8 @@ Keep the description short enough to fit on one line — long descriptions get w
 | Ultrawide margins — side gutters for wide screens   | ✅ Done         |
 | Default poster — a fallback for titles without one  | ✅ Done         |
 | Add a series — the Add form for shows too           | ✅ Done         |
-| Library folders — several root folders at once      | 🔜 14 — next    |
-| Export options — where to, and what travels         | 🔜 15           |
+| Library folders — several root folders at once      | ✅ Done         |
+| Export options — where to, and what travels         | 🔜 15 — next    |
 | Collections / playlists                             | 🧭 Roadmap      |
 | Auto-on subtitles                                   | 🧭 Roadmap      |
 | Backgroundable import                               | 🧭 Roadmap      |
@@ -368,8 +371,8 @@ Keep the description short enough to fit on one line — long descriptions get w
 | User accounts / multi-profile                       | 🚫 Out of scope |
 
 Everything marked ✅ is done — steps 1–9 of the first build order, ending
-with Software update, which shipped as v0.2.0, and steps 10–13, the
-Codecs page, Ultrawide margins, the Default poster and Add a series. Steps 10–15 came out of installing
+with Software update, which shipped as v0.2.0, and steps 10–14, the
+Codecs page, Ultrawide margins, the Default poster, Add a series and Library folders. Steps 10–15 came out of installing
 FamilyFlix and using it for real, and are numbered in **build
 order**: smallest and most self-contained first, the form before the folders
 that will feed it, export last because it mirrors what import now holds. Each
@@ -385,9 +388,9 @@ _Change…_ in Settings → Storage is not in the chain — it is the Roadmap's
     default poster instead of an empty tile.
 13. ✅ **Add a series** — the Add form adds a show, its seasons and its
     episodes, not only a film.
-14. **Library folders** _(next)_ — point FamilyFlix at one or more top folders that
+14. ✅ **Library folders** — point FamilyFlix at one or more top folders that
     hold movies, and add everything in them at once.
-15. **Export options** — choose where the export is saved and what it
+15. **Export options** _(next)_ — choose where the export is saved and what it
     carries: the sheet today, and optionally posters, subtitles and the rest
     of a title's files.
 

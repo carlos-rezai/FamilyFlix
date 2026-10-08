@@ -109,6 +109,7 @@ familyflix/
 │ └── skills/
 ├── electron/ ← the **Desktop shell**'s main process: `tsconfig.electron.json`'s shipping code, one unit per decision, Electron only ever run in a manual smoke
 │ ├── main.ts ← the composition root, and wiring only: adapters over Electron's `fs`, `dialog`, `shell` and `app`, the window's options, each event handed to a unit below
+│ ├── preload.ts ← wiring only: `window.familyflix.updates` and `window.familyflix.folders`, each member one channel through `contextBridge` to main, no state
 │ ├── shellMode/ ← pure: `shellMode(isPackaged, env)` → `'dev'` / `'start'` / `'installed'`, the **Shell mode**, read once; the one reader of `FAMILYFLIX_SHELL_PROD`
 │ ├── shellPaths/ ← pure: a mode and Electron's three locations (`appPath`, `resourcesPath`, `userData`) → the **Shell paths** — the icon and the server bundle off `appPath`, the renderer, the binding and the Default component's `ffmpeg.exe` off the repo unpackaged and `resourcesPath` installed (`null` unpackaged), the server's working directory; read once by main in place of `process.cwd()`
 │ ├── serverLaunch/ ← pure: `serverLaunch(mode, userData, paths)` over **Shell paths** → the entry and environment the **Server process** is forked with — `paths.serverEntry` in every mode, the binding in every mode, `3001` in dev and the **Shell port** otherwise, the renderer outside dev, the data paths under `userData` and `FAMILYFLIX_FFMPEG_PATH` only when installed
@@ -120,6 +121,7 @@ familyflix/
 │ ├── rendererUrl/ ← pure: Vite's `localhost:4200` in dev, else `127.0.0.1:<port>` — **One origin**
 │ ├── windowPolicy/ ← pure: `isAppUrl`, `openExternalAllowed` (`https:` only), `permissionAllowed` (`fullscreen` only)
 │ ├── downloadPath/ ← pure: a download's free name in Downloads, deduplicated as Chromium does, no dialog
+│ ├── pickFolders/ ← pure: the folder dialog's answer → the paths to post, in the order picked, `[]` for a cancel — behind `FOLDER_CHANNELS.pick`, the Library folders page's Browse…
 │ ├── shellDialogs/ ← the two failure dialogs — _couldn't start_ (Quit / Show data folder) and _stopped unexpectedly_ (Restart / Quit) — each logging what it says before its box; `startServer` puts every startup failure in front of the first
 │ ├── shellLog/ ← the **Shell log**: `[main]` and `[server]` lines to `logs\familyflix.log` when installed, rolled at 5 MB, to the terminal otherwise
 │ ├── appIdentity/ ← `APP_USER_MODEL_ID`, set before the window so the taskbar groups it
@@ -137,14 +139,17 @@ familyflix/
 │ │ ├── loopbackGuard/ ← the **Loopback guard**: mounted first, standalone included, `403` for a Host or Origin that is not a **Trusted host**; `bind(port)` once `listen` has resolved
 │ │ └── rendererRouter/ ← `mountRenderer`: the built renderer beside `/api` under `RENDERER_CSP` and `index.html` for any other GET, `/api` passed on before the policy is set; nothing mounted when `FAMILYFLIX_RENDERER_PATH` is unset
 │ ├── library/ ← movie CRUD, SQLite queries, watch-state + resume-position logic
-│ │ ├── settings/ ← the household's Settings: `settings()` with the default applied when the row is absent, `setSubtitleLanguage()` and `setUltrawideMargins()` as upserts over the two preference keys, `subtitle-language` and `ultrawide-margins`; and three keys beside the preferences, never among them — `tmdb-api-key`, `enrichment-last-synced-at`, `library-root` — every one read through one `valueOf(key)`
-│ │ ├── enrich/ ← a Sync's film writes: `enrichMovie` (the columns named, only those), `moviesInScope`, `enrichmentCounts` over both kinds, `setSourceFolder` / `sourceFolder` over one id space; the **Full details** rule spelled once as `fullDetails`
+│ │ ├── settings/ ← the household's Settings: `settings()` with the default applied when the row is absent, `setSubtitleLanguage()` and `setUltrawideMargins()` as upserts over the two preference keys, `subtitle-language` and `ultrawide-margins`; and three keys beside the preferences, never among them — `tmdb-api-key` and `enrichment-last-synced-at` — every one read through one `valueOf(key)`
+│ │ ├── enrich/ ← a Sync's film writes: `enrichMovie` (the columns named, only those), `moviesInScope`, `enrichmentCounts` over both kinds, `setSourceFolder` (a title's Library folder and Source folder together), `titleSource` (both read back as one) and `sourcePath` (the two joined, for a review row's mono line) over one id space, and `titleAt` (the title recorded at a folder and Source folder); the **Full details** rule spelled once as `fullDetails`
+│ │ ├── folders/ ← the **Library folders**: the list in the order added with each folder's title count, an add, and a remove that keeps the titles, forgetting only where they came from
+│ │ │ └── folderOverlap/ ← pure: whether a path is, is inside or holds a listed folder — resolved, case-folded on Windows, by whole segments — and `clashSentence`, each clash's one sentence
 │ │ └── series/ ← series storage, one unit per concern as the movie's is, each with its own suite: `read` (the series page, the player's episode read, the episode list), `browse` (the Series tab and its genres), `write` (the two inserts), `watch` (the resume write, the episode and season marks), `curation` (the heart), `enrich` (a Sync's series and episode writes and `seriesInScope`), and `nextEpisodeOf`, pure
 │ │ │ └── yearSpan/ ← pure: the one reading of a **Year range** — `2022`, `2019–2023`, `2021–` → `{ year, endYear }`, anything else `null` — read by the Movie form's series save and the Sheet's Year cell alike
 │ ├── media/ ← folder scanning, file copy into managed storage, subtitle detection, the Movie folder’s removal after a Delete
 │ │ ├── createMedia/ ← the injected domain: reserve a Movie folder, `seasonFolder` (a Series folder’s `season-NN/`), storeUpload, copyIn (a stream under the cancel signal), the three removals; and a Sync's three — `storeNamed` (beside a Stored path), `storeInSeriesFolder` (two directories above an episode), `readStored` (a stored file as a stream). Only `media/` touches managed storage
 │ │ ├── fileKinds/ ← what an image, a subtitle and a video may be called — the store’s security boundary, and the scanner’s line
-│ │ ├── walkLibraryRoot/ ← a Library root → its Source folders: a folder holding a video is one and is not descended
+│ │ ├── readableFolder/ ← an absolute path → `readable` / `not-a-folder` / `missing` / `relative`, never throwing: the one reading of reach, for the folder add, the importer's root check, the list's `reachable` and the Sync
+│ │ ├── walkLibraryFolder/ ← a Library folder → its Source folders: a folder holding a video is one and is not descended
 │ │ ├── scanMovieFolder/ ← one Source folder → every video, the poster by name, the backdrop by name only, every subtitle
 │ │ ├── detectSubtitleLanguage/ ← the language tag in a subtitle’s name → its language, off the shared Language pool
 │ │ ├── episodeTag/ ← the Episode tag: `episodeTag` reads `S01E03` / `1x03` and the title after it off a filename, `spellEpisodeTag` writes one back — the server’s one spelling
@@ -156,7 +161,8 @@ familyflix/
 │ │ ├── titleKey/ ← pure: the Title key matching compares, and titleGuess for a folder no row names
 │ │ ├── matchRows/ ← pure: rows × folder scans → matches, problems by kind, unclaimed folders
 │ │ ├── groupShows/ ← pure: the walk’s Source folders → Show folders (Season folders under one, or loose tagged episodes) and the films left over
-│ │ ├── createImporter/ ← the injected domain: start, current, cancel, problem, resolve, dismiss — one run in memory, its state machine as closures
+│ │ ├── admitFolder/ ← the folder add's rules out of the route: something typed, absolute, readable, no overlap — `added`, `refused` or `clash`, the unique-path race answered as `same`, never throwing
+│ │ ├── createImporter/ ← the injected domain: start (a sheet and its root, the root joining the list), scan (the **Folder scan** over every listed folder), current, cancel, problem, resolve, dismiss — one run in memory, its state machine as closures, both starts through `claimRun` and both ending in `importPlaced`
 │ │ │ ├── fixture/ ← the two-film sheet (.xlsx and .csv) and folder tree the tests run over, and a dev library is filled from
 │ │ │ └── seriesFixture/ ← the two-show sheet and tree — one Season-folder show, one of loose episodes — kept apart so the film suites’ counts never move
 │ ├── playback/ ← the Playback component, the slot it lives in, the path choice, streaming, subtitle parsing
@@ -184,9 +190,9 @@ familyflix/
 │ │ ├── planFields/ planEpisode/ ← pure: what to fill and which **Field conflicts** to raise; an episode's title, air date, runtime and whether a **Still** is wanted
 │ │ ├── plannedEnrichment/ ← pure: a plan → the columns a film, a series or _Apply choices_ writes
 │ │ ├── decisionFace/ ← pure: a search → an `ambiguous` Decision's top three **Candidates** (the genre off the pool, the language upper-cased) or a `missing` one's reason
-│ │ ├── writeBack/ ← the two **Write targets**: the permission check and its dry-run lines, `familyflix-metadata.csv` at the root and `poster.jpg` per **Source folder** — the only code that writes into the Library root, and never over a file that exists
+│ │ ├── writeBack/ ← the two **Write targets**: the permission check and its dry-run lines, `familyflix-metadata.csv` per **Library folder** and `poster.jpg` per **Source folder** — the only code that writes into a Library folder, and never over a file that exists
 │ │ └── createEnrichment/ ← the injected domain: the key, and the **Current enrichment run** — one in memory, its state machine as closures over the run, the abort controller and the Decisions, `createImporter`'s shape
-│ ├── db/ ← SQLite connection + schema/migrations (1 the schema and the genre seed, 2 `last_watched_at`, 3 the `settings` table — nothing seeded, 4 `series` and `episodes` with their two joins, `series_genres` and `episode_subtitles` — no `seasons` table, 5 `original_title`, `tmdb_score` and `source_folder` on both titles and `still_path` on episodes), shared by every domain module above; `better-sqlite3`'s `nativeBinding` taken from `FAMILYFLIX_SQLITE_BINDING` when set, so the shell runs on the Electron-ABI binding and Vitest on the package's own; and `seriesSeed/`, the dev library's mock series
+│ ├── db/ ← SQLite connection + schema/migrations (1 the schema and the genre seed, 2 `last_watched_at`, 3 the `settings` table — nothing seeded, 4 `series` and `episodes` with their two joins, `series_genres` and `episode_subtitles` — no `seasons` table, 5 `original_title`, `tmdb_score` and `source_folder` on both titles and `still_path` on episodes, 6 `library_folders` and `library_folder_id` on both titles, 7 the carry-over of `settings.library-root` onto the list), shared by every domain module above; `better-sqlite3`'s `nativeBinding` taken from `FAMILYFLIX_SQLITE_BINDING` when set, so the shell runs on the Electron-ABI binding and Vitest on the package's own; and `seriesSeed/`, the dev library's mock series
 │ ├── shell/ ← the server's half of the shell seam and its process lifecycle — infrastructure beside `db/`, not a domain
 │ │ ├── shellHandshake/ ← `shellHandshake(parentPort, startup)`: the startup answers `Started { server, shutdown }`, `ready` or `fatal` is posted, main's `shutdown` command runs the shutdown it was handed; inert with no parent port
 │ │ ├── listen/ ← the `127.0.0.1` bind, always; under the shell a taken **Shell port** falls back to an ephemeral one; `boundPort(server)`, the one reading of the port
@@ -309,21 +315,27 @@ familyflix/
 │ │ │ ├── titleFromFilename/ ← pure: the **Title guess** off a picked video, ending at a year, a quality tag or a tag shape `readEpisodeTag` reads
 │ │ │ ├── formValues/ ← a record, a Problem detail or the form's values → each other; `pickedFile` and `pickedSubtitle`, the one constructor of each picked thing
 │ │ │ └── api/ ← createMovie, createSeries, updateMovie, fetchGenrePool, fetchProblem, resolveProblem (one caller each)
-│ │ ├── import-export/ ← the bulk importer’s screen, and the Export dialog
-│ │ │ ├── ImportFlow/ ← the organism: owns useImportRun, renders one of the three steps
+│ │ ├── import-export/ ← the bulk importer’s screen, the Library folders page, and the Export dialog
+│ │ │ ├── ImportFlow/ ← the organism: owns useImportRun, renders one of the three steps, its heading and lede worded by `run.source`
 │ │ │ ├── ImportSetup/ ImportProgress/ ImportReview/ ← the three steps: the two path fields; the stepper, bar and log; the tiles and the Needs attention list
 │ │ │ ├── PhaseStepper/ StatTile/ ProblemRow/ ← the flow’s own molecules
 │ │ │ ├── useImportRun/ ← start, poll at 500 ms while running, cancel, skip
 │ │ │ ├── importView/ ← pure: an ImportRun → headline, stat line, percent, elapsed, ETA
+│ │ │ ├── LibraryFolders/ ← the Library folders page's organism: the Folder rows, the add row with Browse… when the bridge exists, then What the scanner accepts, the `EnrichCheckCard` and **Scan folders**
+│ │ │ ├── FolderRow/ FolderShapes/ EnrichCheckCard/ ← the page's molecules: one listed folder with its title count or “Can't be reached right now” and its ✕; the three accepted folder shapes, Import setup's too; the Also fetch from TMDB box and its stored-key hint, Import setup's too
+│ │ │ ├── useLibraryFolders/ ← the list read on mount, the add (the route's own sentence kept on a refusal) and the remove
+│ │ │ ├── useKeyStored/ ← whether a TMDB key is stored, `false` until it lands and for a failed read: the `EnrichCheckCard` hint's one read
+│ │ │ ├── useFolderScan/ ← Scan folders: the Folder scan posted with the box, `/import` pushed on a `201` and a `409`, `scanning` let go otherwise
+│ │ │ ├── folderBridge/ ← the one reader of `window.familyflix?.folders`, `null` in a browser
 │ │ │ ├── ExportModal/ ← the Export dialog: owns useExport; the idle face over Modal, and Export ready over the bare one — the same card, so the pop-in runs once
 │ │ │ ├── FormatCard/ ← one Format card: a role="radio" button with a label and a line, the pair in a radiogroup
 │ │ │ ├── useExport/ ← csv and idle on every open, the summary fetched fresh; exportLibrary fetches the file, hands it to saveToComputer, then done. A close mid-request drops the redraw, not the file
 │ │ │ ├── saveToComputer/ ← a blob → the browser’s Downloads under a filename: an object URL on an anchor carrying `download`, clicked, revoked. A DOM side effect, so a feature unit rather than a util
-│ │ │ └── api/ ← startImport, fetchCurrentImport, cancelImport, fetchExportSummary, fetchExportFile (one caller each)
+│ │ │ └── api/ ← startImport, fetchCurrentImport, cancelImport, fetchExportSummary, fetchExportFile, fetchLibraryFolders, addLibraryFolder, removeLibraryFolder, startFolderScan (one caller each)
 │ │ ├── settings/ ← the Maintainer’s hub: six Settings groups under one header
 │ │ │ ├── section.styles.ts ← the furniture every Settings group draws with: the Group heading, the Section card (with the 32px group gap under it), the divider, an item’s title and lede, and the row furniture — `Row`, `RowTitle`, `RowDesc` — the Playback and Display groups both draw
 │ │ │ ├── SettingsHeader/ ← Back, the heading, ＋ Add a movie
-│ │ │ ├── LibrarySection/ ← the Library group: Add a movie and Import from spreadsheet owning their routes, and Export to CSV owning the Export dialog it mounts — the one place a section composes another feature’s organism
+│ │ │ ├── LibrarySection/ ← the Library group: Add a title, Library folders and Import from spreadsheet owning their routes, and Export to CSV owning the Export dialog it mounts — the one place a section composes another feature’s organism
 │ │ │ ├── ActionRow/ ← one glyph + label + description row of the Library group
 │ │ │ ├── PlaybackSection/ ← the Playback card: the Codecs row — the Codec summary as its line, pushing `/settings/codecs` — the divider, Subtitles — the Auto-on toggle under its Coming soon pill, and Preferred language over FilterDropdown, shown at once and put back on refusal
 │ │ │ ├── DisplaySection/ ← the Display card: the _Ultrawide margins_ row and its Toggle, reading and writing through `useDisplayPreference()`
@@ -348,14 +360,14 @@ familyflix/
 │ │ ├── MainLayout/ ← the Family's screens: logo, gear, scrolling body — and Back-to-top mounted over the body, because the body is where the scrolling happens, so the chrome is what knows how far it has gone; it lends the control the same ref `useRestoredScroll` attached, and holds no state for either
 │ │ ├── GenreLayout/ ← Back pill, heading slot, trailing controls, scrolling body
 │ │ └── MaintainerLayout/ ← the Maintainer surface: bg2 sheet + centred column, no header row
-│ ├── pages/ ← route-level views, composition only, no logic (ImportPage is MaintainerLayout around ImportFlow; SeriesPage and SeasonPage own a scroll container and Back each, MoviePage’s precedent; EnrichmentPage is MaintainerLayout around EnrichmentFlow; CodecsPage is MaintainerLayout at 780 around CodecManager, the first nested Settings route)
+│ ├── pages/ ← route-level views, composition only, no logic (ImportPage is MaintainerLayout around ImportFlow; SeriesPage and SeasonPage own a scroll container and Back each, MoviePage’s precedent; EnrichmentPage is MaintainerLayout around EnrichmentFlow; CodecsPage is MaintainerLayout at 780 around CodecManager, the first nested Settings route; LibraryFoldersPage the same around LibraryFolders, at `/settings/folders`)
 │ ├── api/ ← wire calls two or more features share (one folder per call + its test, no barrel)
 │ │ ├── saveFavorite/ fetchMovie/ saveWatched/ dismissProblem/ fetchSettings/ saveSeriesFavorite/ saveEpisodeWatched/ fetchEnrichmentSummary/ fetchTmdbKey/ ← the nine that earned it
 │ │ └── postValue/
 │ │ ├── postValue.ts
 │ │ └── postValue.test.ts
 │ ├── hooks/ ← global shared hooks only: `useGoBack(fallback)` — the one **Back rule**, a **History step** with the screen's own **Landing** behind it (the library by default) — `useRestoredScroll`, and `useOptimisticEdit`, the one bargain a detail page's edit keeps, over whatever record the page holds; and `useEnrichmentSummary`, the summary Settings' sync row and the Enrichment setup both draw, `null` until it lands
-│ ├── types/ ← shared TypeScript interfaces (import.ts: ImportRun, ImportProblem, ImportProblemDetail, ImportField; export.ts: EXPORT*FORMATS, EXPORT_COLUMNS, EXPORT_FILENAME, ExportSummary; settings.ts: SUBTITLE_LANGUAGES, SubtitleLanguage, DEFAULT_SUBTITLE_LANGUAGE, DEFAULT_ULTRAWIDE_MARGINS, Settings (`subtitleLanguage`, `ultrawideMargins`), StorageReport; playback.ts: CodecKind, CodecSupport, CodecCapability, ComponentSource, PlaybackComponentInfo, PlaybackCapabilities — both build targets; series.ts: Series, Episode, SeasonSummary, SeriesDetail, EpisodeRead, NextEpisodeRef, EpisodeContinueEntry (its `series` carrying `posterPath`, for the Continue card's art), SeriesHomePayload, NewSeries, NewEpisode, Playable — both build targets; enrichment.ts: ENRICH_FIELDS, ENRICH_FIELD_LABELS, ENRICH_SCOPES, EnrichField, EnrichScope, EnrichmentSummary, Candidate, Decision, FieldConflict, ConflictChoices, EnrichmentRun, StartEnrichment — both build targets; viewModels.ts carries the series’ SeriesPageModel, SeasonPageModel, SeasonCardSeason and EpisodeRowEpisode beside the movie’s; shell.ts: ServerMessage, ShellCommand — the **Shell handshake**, typed once and read by `server/src/shell/` and `electron/`, in `tsconfig.electron.json` too; form.ts: MovieFormValues, MovieFormFile, MovieFormSubtitle, EpisodeFormRow, FormKind — the Movie form's shapes; appVersion.d.ts: `__APP_VERSION__`, defined by Vite from package.json)
+│ ├── types/ ← shared TypeScript interfaces (import.ts: ImportRun, ImportSource, ImportProblem, ImportProblemDetail, ImportField; libraryFolders.ts: LibraryFolder, `FOLDER_CHANNELS`, FolderBridge — both build targets, and `tsconfig.electron.json` too; export.ts: EXPORT*FORMATS, EXPORT*COLUMNS, EXPORT\*FILENAME, ExportSummary; settings.ts: SUBTITLE*LANGUAGES, SubtitleLanguage, DEFAULT_SUBTITLE_LANGUAGE, DEFAULT_ULTRAWIDE_MARGINS, Settings (`subtitleLanguage`, `ultrawideMargins`), StorageReport; playback.ts: CodecKind, CodecSupport, CodecCapability, ComponentSource, PlaybackComponentInfo, PlaybackCapabilities — both build targets; series.ts: Series, Episode, SeasonSummary, SeriesDetail, EpisodeRead, NextEpisodeRef, EpisodeContinueEntry (its `series` carrying `posterPath`, for the Continue card's art), SeriesHomePayload, NewSeries, NewEpisode, Playable — both build targets; enrichment.ts: ENRICH_FIELDS, ENRICH_FIELD_LABELS, ENRICH_SCOPES, EnrichField, EnrichScope, EnrichmentSummary (its `libraryFolders` the reachable folders a Sync may write into), Candidate, Decision, FieldConflict, ConflictChoices, EnrichmentRun, StartEnrichment — both build targets; viewModels.ts carries the series’ SeriesPageModel, SeasonPageModel, SeasonCardSeason and EpisodeRowEpisode beside the movie’s; shell.ts: ServerMessage, ShellCommand — the **Shell handshake**, typed once and read by `server/src/shell/` and `electron/`, in `tsconfig.electron.json` too; form.ts: MovieFormValues, MovieFormFile, MovieFormSubtitle, EpisodeFormRow, FormKind — the Movie form's shapes; appVersion.d.ts: `__APP_VERSION__`, defined by Vite from package.json)
 │ ├── utils/ ← pure helper functions (one folder per helper + its test)
 │ │ ├── index.ts ← barrel: re-exports every helper
 │ │ ├── formatBytes/ ← 1024-based, one decimal from KB up: `18.4 GB`
@@ -373,6 +385,7 @@ familyflix/
 │ ├── fakeResponse/ ← a Response by status; `fileResponse` the one whose caller reads `blob()`, its `json()` rejecting
 │ ├── makeContinueCardMovie/ ← a full `ContinueCardMovie` with overrides, `makePosterCardMovie`'s rule for the resume tile
 │ ├── makeEnrichmentRun/ ← an EnrichmentRun just started, `makeImportRun`'s rule
+│ ├── fakeFolderBridge/ ← a controllable `window.familyflix.folders` for the length of a `describe`: each `pick()` answers what `setPick` last set and is counted — `fakeUpdateBridge`'s twin
 │ ├── makeSeriesDetail/ ← a SeriesDetail by its seasons’ watch states, `makeMovie`’s rule; `makeSeries` and `makeEpisode` beside it
 │ ├── comesBefore/ ← document order between two elements, for a slot's contract
 │ ├── LocationProbe/ ← where the router is, in four spellings — `pathname`, `search`, `url` and `navigationType` (`POP` after a step, `PUSH` after a push) — with an optional Back of its own, and `navigationType()`, the reader of the fourth
@@ -588,6 +601,11 @@ once via a bulk importer:
   also has. This is the _only_ place autofill lives: it needs a real
   folder path, which a browser file picker cannot supply and Electron's
   native dialog can
+- Beside the sheet, a **Folder scan** imports every listed **Library
+  folder** with no spreadsheet at all — each title named off its own folder,
+  a held one linked to where it was found — from the Library folders page's
+  _Scan folders_. Both runs end in the same **Import phase**, and the sheet's
+  typed root joins the list
 - Imports each confident match **during the run** — reserve a Movie
   folder, copy the files in, add the movie — and shows the run in a
   progress console; the **Review step** at the end lists only what the
@@ -671,6 +689,16 @@ number on the page is a read the app can truthfully answer now:
   **Single-signal write**; `400` for anything but a boolean. **Ultrawide
   margins** is held app-wide by `DisplayPreferenceProvider` in `App/`, not by
   the hub, and the **Content frame** follows it at once.
+- The **Library folders page** at `/settings/folders`, the hub's second
+  nested route, opened by the Library group's _📁 Library folders_ row:
+  `GET /api/library-folders` → `LibraryFolder[]` in the order added, each
+  `reachable` read afresh; `POST /api/library-folders { path }` → `201` with
+  the folder, `400` for an empty, relative or unreadable path, `409` for a
+  folder that is, is inside or holds one already listed, every refusal one
+  sentence; `DELETE /api/library-folders/:id` → `204`, its titles kept, `404`
+  for an id not listed; and `POST /api/library-folders/scan { enrich }` →
+  `201` with the **Folder scan**'s first snapshot, `400` with none listed,
+  `409` while a **Current run** exists.
 - `GET /api/storage` → `{ mediaPath, bytesUsed, movieCount }`, the
   **Storage report**: the path resolved to absolute at request time, the
   walk read afresh on every visit, the count off the database.
@@ -964,10 +992,10 @@ same layout, spacing, states, copy, and interaction.
 
 **Build order — what is left.** The groups below say what the app _is_;
 this says what to build _next_. Steps 1–9 of the first chain are done,
-ending with **Software update** (v0.2.0), and so are steps 10, 11, 12 and 13. Steps 10–15 came out of installing
+ending with **Software update** (v0.2.0), and so are steps 10, 11, 12, 13 and 14. Steps 10–15 came out of installing
 FamilyFlix and using it: smallest and most self-contained first, the form
 before the folders that will feed it, export last because it mirrors what
-import holds. Neither 14 nor 15 has a prototype yet — each goes through grill-me and a
+import holds. Step 15 has no prototype yet — it goes through grill-me and a
 prototype revision in `docs/handoff/` before it is built, per _The prototype
 is the spec_. `Change…` in the Storage group is not in the chain — it is the
 Roadmap's **Move the media folder** (log 24 Q2).
@@ -983,11 +1011,11 @@ Roadmap's **Move the media folder** (log 24 Q2).
 13. ✅ **Add a series** — the **Movie form** learns a second kind: a
     show, its seasons and its episodes, beside the film it adds and edits
     today.
-14. **Library folders** _(next)_ — one or more top folders that hold movies, added
+14. ✅ **Library folders** — one or more top folders that hold movies, added
     at once. It needs a real path, so it lives where folder-path autofill
     already does (bulk import's scanner, Electron's native dialog over the
     preload bridge), not in the Movie form's file pickers.
-15. **Export options** — choose where the **Export file** is saved, rather
+15. **Export options** _(next)_ — choose where the **Export file** is saved, rather
     than Downloads alone, and what travels with it: today the eight Export
     columns and nothing else; optionally posters, subtitles and the rest of
     a title's files beside the sheet.
@@ -999,7 +1027,7 @@ A 🧭 Roadmap item is not in this chain — it is after it, if ever.
 - ✅ **Nx + Vite + React workspace scaffold** — monorepo, tooling, lint/format.
 - ✅ **Claude design handoff prototype** — full interactive design system, the build spec.
 - ✅ **Library core** — movie model, SQLite schema, repository layer.
-- ✅ **Electron desktop shell** — one window over the **Server process**, **One origin** on the **Shell port**, the **Loopback guard**, the **Ordered shutdown**, the window's rules, the two failure dialogs and the **Shell log**, the **App mark**, and fonts served offline. No preload, no native picker.
+- ✅ **Electron desktop shell** — one window over the **Server process**, **One origin** on the **Shell port**, the **Loopback guard**, the **Ordered shutdown**, the window's rules, the two failure dialogs and the **Shell log**, the **App mark**, and fonts served offline. A preload with two members — the Software update bridge and the native folder picker — and nothing else across `contextBridge`.
 
 ### Browse & discover (parent-facing)
 
@@ -1025,12 +1053,12 @@ A 🧭 Roadmap item is not in this chain — it is after it, if ever.
 - ✅ **Add a movie** — manual file picker (video, poster, multiple subtitles with language).
 - ✅ **Default poster** — a FamilyFlix default poster for any title with none linked: its own gradient with the **Wordmark** centred, on every **Poster surface**; and the Continue card draws the title's poster, an episode's its series'.
 - ✅ **Add a series** — the same form adds a show, its seasons and its episodes: the Kind tabs on `?kind=series`, one Episode file row per picked video with its own subtitles, and one atomic `POST /api/series`; a video is the Save gate for either kind.
-- 🔜 **Library folders** _(step 14 — next)_ — several top folders of movies, added at once.
+- ✅ **Library folders** — several top folders of movies and series at `/settings/folders`, added by typed path or _Browse…_ over the native dialog, and imported all at once by a **Folder scan**; a Sync writes posters and a Metadata sheet into each.
 - ✅ **Edit a movie** — amend metadata and files; a file the library already holds travels as its path, only a freshly picked one as bytes.
 - ✅ **Delete a movie** — the ⋯ menu’s Danger row, the Delete dialog, `DELETE /api/movies/:id`, then the Movie folder under best-effort cleanup.
 - ✅ **Bulk import** — a Sheet and a Library root become Movies during the run; the Review step lists only the Problems the run could not settle, each with Resolve (the Movie form in Import context) and Skip.
 - ✅ **Import progress console** — the Connect ✓ → Scan → Import stepper, the bar, the current item, elapsed and ETA, the Activity log, and Cancel; a server run polled every 500 ms, re-attachable.
-- 🔜 **Export options** _(step 15)_ — choose the export’s destination, and whether posters, subtitles and other files travel with the sheet.
+- 🔜 **Export options** _(step 15 — next)_ — choose the export’s destination, and whether posters, subtitles and other files travel with the sheet.
 - ✅ **Export** — the Settings hub’s third row opens the Export dialog; `family-library.csv` or `.xlsx` lands in Downloads with every movie A–Z under the eight Export columns, and an untouched export fed back to Bulk import adds nothing.
 - ✅ **Series import** — the Library root may hold shows beside movies: `Show Name/Season 01/S01E03.mkv`, or loose episodes at the show root. Season and episode numbers come from the folder first, then the filename (`S01E03`, `1x03`); anything unparsed lands in the existing Review list. The accepted shapes are shown verbatim in Import setup.
 - ✅ **Enrichment (TMDB)** — the first and only feature that touches the network; everything else stays offline-first. One organism, `EnrichmentFlow` (`features/enrichment/`), mirroring ImportFlow's three steps so the two read as siblings: **setup** (the key and offline banners, three scope cards — _Only what's missing_ / _Everything_ / _Just this movie_ — the field chips, and the write-target list; Start is `secondary` and inert until the key is tested and the machine is online), **running** (a determinate bar, because the count is known up front; LogConsole; elapsed and ETA; _Stop_ keeps what was already fetched), and **review** (two stat tiles over the rows that need a human: `ambiguous` with a horizontal poster picker of candidates and their % match, `conflict` as a field-by-field _Yours | TMDB_ diff with per-field choice then _Apply choices_ / _Keep all mine_, `missing` with a manual search box; every row has Skip). Three ways in: Settings → Network → _Sync metadata & posters_ (the primary), the Import setup's _Also fetch metadata and posters from TMDB_ checkbox (Finish hands the review straight to a full-library run), and the movie page's ⋯ menu → _Fetch from TMDB_ (a single-title run that returns to the movie). Fields: synopsis, poster, backdrop, runtime, year, genres, director, cast, original title, TMDB score. **The household rating is untouched** — TMDB's score is a separate field beside it. Conflicts are asked per movie in the review, never silently overwritten. The run is a pass over the already-imported library keyed by title + year, not a second scanner — `walkLibraryRoot` / `scanMovieFolder` are untouched, and `tmdbId` finally gets a value. The library database is the source of truth, and optionally a `familyflix-metadata.csv` in the collection root and a `poster.jpg` in each movie folder, each toggleable and neither overwriting a file that exists — the only place the app writes back into the source folders, so it needs its own permission check and a dry-run log line. Spec §5a.
