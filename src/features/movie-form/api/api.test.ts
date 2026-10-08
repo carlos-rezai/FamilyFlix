@@ -2,12 +2,14 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 import {
   createMovie,
+  createSeries,
   fetchGenrePool,
   fetchProblem,
   ProblemGoneError,
   resolveProblem,
 } from './api';
 import type {
+  EpisodeFormRow,
   ImportProblemDetail,
   Movie,
   MovieFormFile,
@@ -15,6 +17,7 @@ import type {
   MovieFormValues,
 } from '@/types';
 import { makeMovie } from '@/test-support/makeMovie/makeMovie';
+import { makeSeries } from '@/test-support/makeSeriesDetail/makeSeriesDetail';
 import {
   createdResponse,
   notFoundResponse,
@@ -960,5 +963,157 @@ describe('resolveProblem', () => {
     fetchMock.mockRejectedValue(new Error('offline'));
 
     await expect(resolveProblem('p1', RESOLVED_VALUES)).rejects.toThrow();
+  });
+});
+
+// 29 — Add a series, Phase 3 (issue #263): `createSeries`.
+//
+// The series kind's save: one `multipart/form-data` POST to `/api/series`,
+// its parts in the contract's order — the series fields, the poster, then
+// each episode as its `episode` JSON field followed by its `episodeVideo`.
+// The order is the contract: the route pairs the k-th video with the k-th
+// `episode` field and reserves the Series folder off a title and year it has
+// already read, so neither may arrive after a file.
+
+const SERIES_CREATED = makeSeries({ id: 'series-1', title: 'Harbor and Vine' });
+
+function episodeRow(
+  key: string,
+  filename: string,
+  season: string,
+  number: string,
+  title: string
+): EpisodeFormRow {
+  const file = new File(['video bytes'], filename, { type: 'video/mp4' });
+  return {
+    key,
+    file: { kind: 'picked', file, filename },
+    season,
+    number,
+    title,
+    subtitles: [],
+  };
+}
+
+const PILOT = episodeRow('e1', 'S01E01.Pilot.mp4', '1', '1', 'Pilot');
+const LOW_TIDE = episodeRow('e2', 'S01E02.Low.Tide.mp4', '1', '2', 'Low Tide');
+
+const SERIES_VALUES = typed({
+  title: 'Harbor and Vine',
+  year: '2019–2023',
+  director: 'Mara Quinn',
+  cast: 'Ana Vega, Tomas Bell',
+  description: 'Two families share one vineyard.',
+  genres: ['Drama', 'Comedy'],
+  rating: null,
+  poster: {
+    kind: 'picked',
+    file: new File(['image bytes'], 'poster.jpg', { type: 'image/jpeg' }),
+    filename: 'poster.jpg',
+  },
+});
+
+describe('createSeries', () => {
+  it('POSTs multipart to the series route, naming no Content-Type', async () => {
+    fetchMock.mockResolvedValue(createdResponse(SERIES_CREATED));
+
+    await createSeries(SERIES_VALUES, [PILOT, LOW_TIDE]);
+
+    const request = onlyRequest();
+    expect(request.url).toBe('/api/series');
+    expect(request.method?.toUpperCase()).toBe('POST');
+    expect(request.body).toBeInstanceOf(FormData);
+    const named = Object.keys(request.headers ?? {}).map((key) =>
+      key.toLowerCase()
+    );
+    expect(named).not.toContain('content-type');
+  });
+
+  it('sends its parts in the contract’s order', async () => {
+    fetchMock.mockResolvedValue(createdResponse(SERIES_CREATED));
+
+    await createSeries(SERIES_VALUES, [PILOT, LOW_TIDE]);
+
+    expect([...sentFields().keys()]).toEqual([
+      'title',
+      'year',
+      'creator',
+      'cast',
+      'cast',
+      'description',
+      'genre',
+      'genre',
+      'rating',
+      'poster',
+      'episode',
+      'episodeVideo',
+      'episode',
+      'episodeVideo',
+    ]);
+  });
+
+  it('carries the series fields, the director’s field as the creator', async () => {
+    fetchMock.mockResolvedValue(createdResponse(SERIES_CREATED));
+
+    await createSeries(SERIES_VALUES, [PILOT]);
+
+    const fields = sentFields();
+    expect(fields.get('title')).toBe('Harbor and Vine');
+    expect(fields.get('year')).toBe('2019–2023');
+    expect(fields.get('creator')).toBe('Mara Quinn');
+    expect(fields.getAll('cast')).toEqual(['Ana Vega', 'Tomas Bell']);
+    expect(fields.get('description')).toBe('Two families share one vineyard.');
+    expect(fields.getAll('genre')).toEqual(['Drama', 'Comedy']);
+    expect(fields.get('rating')).toBe('');
+    expect(fields.has('director')).toBe(false);
+  });
+
+  it('sends each episode as its numbers and title, then its video', async () => {
+    fetchMock.mockResolvedValue(createdResponse(SERIES_CREATED));
+
+    await createSeries(SERIES_VALUES, [PILOT, LOW_TIDE]);
+
+    const fields = sentFields();
+    expect(
+      fields.getAll('episode').map((part) => JSON.parse(String(part)))
+    ).toEqual([
+      { season: 1, number: 1, title: 'Pilot', subtitleLanguages: [] },
+      { season: 1, number: 2, title: 'Low Tide', subtitleLanguages: [] },
+    ]);
+    expect(
+      fields.getAll('episodeVideo').map((part) => (part as File).name)
+    ).toEqual(['S01E01.Pilot.mp4', 'S01E02.Low.Tide.mp4']);
+  });
+
+  it('sends no poster part when the slot is empty', async () => {
+    fetchMock.mockResolvedValue(createdResponse(SERIES_CREATED));
+
+    await createSeries({ ...SERIES_VALUES, poster: null }, [PILOT]);
+
+    expect(sentFields().has('poster')).toBe(false);
+  });
+
+  it('resolves the Series the route answered with on a 201', async () => {
+    fetchMock.mockResolvedValue(createdResponse(SERIES_CREATED));
+
+    await expect(createSeries(SERIES_VALUES, [PILOT])).resolves.toEqual(
+      SERIES_CREATED
+    );
+  });
+
+  it('rejects on a refusal', async () => {
+    fetchMock.mockResolvedValue({
+      ok: false,
+      status: 400,
+      json: () => Promise.resolve({ error: 'Duplicate episode: S01E01' }),
+    } as unknown as Response);
+
+    await expect(createSeries(SERIES_VALUES, [PILOT])).rejects.toThrow();
+  });
+
+  it('rejects when the request could not be made at all', async () => {
+    fetchMock.mockRejectedValue(new Error('offline'));
+
+    await expect(createSeries(SERIES_VALUES, [PILOT])).rejects.toThrow();
   });
 });

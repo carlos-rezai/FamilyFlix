@@ -21,6 +21,7 @@ import {
   search,
 } from '@/test-support/LocationProbe/LocationProbe';
 import { makeMovie } from '@/test-support/makeMovie/makeMovie';
+import { makeSeries } from '@/test-support/makeSeriesDetail/makeSeriesDetail';
 import {
   createdResponse,
   noContentResponse,
@@ -4337,6 +4338,321 @@ describe('MovieForm — the Kind tabs', () => {
       expect(titleField().placeholder).toBe('Movie title');
       expect(directorField()).toBeDefined();
       expect(screen.queryByText(/^episodes$/i)).toBeNull();
+    });
+  });
+});
+
+// 29 — Add a series, Phase 3 (issue #263): a series saved with its episodes.
+//
+// The series kind's Files card gains its **Episode file rows** and _＋ Add
+// episode files_, a multiple video picker. A pick lands in episode order with
+// each row's numbers and title read off its **Episode tag**, and the first
+// batch picked into an empty title fills it with the show's **Title guess**.
+// Save opens on a title and a complete episode list; it posts through
+// `createSeries`, reads _Adding…_ while in flight, and lands with a push on
+// the Series tab, `/?tab=series` — the series kind's **Fresh home**. A refused
+// save leaves every field and every row as it was.
+
+describe('MovieForm — a series saved with its episodes', () => {
+  const SERIES_CREATED = makeSeries({
+    id: 'series-1',
+    title: 'Harbor and Vine',
+  });
+
+  const SEASON = [
+    'Harbor.and.Vine.S01E03.The.Night.Market.mkv',
+    'Harbor.and.Vine.S01E01.Pilot.mkv',
+    'Harbor.and.Vine.S01E02.Low.Tide.mkv',
+  ];
+
+  const episodeVideo = (name: string) =>
+    new File(['video bytes'], name, { type: 'video/x-matroska' });
+
+  /** The series form at `/add?kind=series`, with Settings behind it, settled. */
+  async function renderSeries() {
+    const view = render(
+      <MemoryRouter
+        initialEntries={['/settings', '/add?kind=series']}
+        initialIndex={1}
+      >
+        <ThemeProvider theme={theme}>
+          <MovieForm />
+          <LocationProbe />
+        </ThemeProvider>
+      </MemoryRouter>
+    );
+    await act(async () => undefined);
+    return view;
+  }
+
+  /** The series' own Title — not an episode's. */
+  const seriesTitle = () =>
+    screen.getByRole('textbox', { name: 'Title' }) as HTMLInputElement;
+
+  const episodePicker = () =>
+    screen.getByLabelText(/add episode files/i) as HTMLInputElement;
+
+  async function pickEpisodes(names: string[] = SEASON) {
+    await userEvent.upload(episodePicker(), names.map(episodeVideo), {
+      applyAccept: false,
+    });
+  }
+
+  const seasonFields = () =>
+    screen.queryAllByRole('textbox', { name: 'Season' }) as HTMLInputElement[];
+  const numberFields = () =>
+    screen.queryAllByRole('textbox', { name: 'Episode' }) as HTMLInputElement[];
+  const episodeTitles = () =>
+    (
+      screen.queryAllByRole('textbox', {
+        name: 'Episode title',
+      }) as HTMLInputElement[]
+    ).map((field) => field.value);
+
+  /** The rows on screen as `[season, number, title]`, in the order drawn. */
+  const drawnRows = () => {
+    const titles = episodeTitles();
+    const numbers = numberFields();
+    return seasonFields().map((season, index) => [
+      season.value,
+      numbers[index].value,
+      titles[index],
+    ]);
+  };
+
+  const pressKind = (name: 'Movie' | 'Series') => {
+    const group = screen.getByRole('group', { name: 'Kind' });
+    act(() => {
+      within(group).getByRole('button', { name }).click();
+    });
+  };
+
+  /** Every series save the form has issued. */
+  const seriesSaves = () =>
+    fetchMock.mock.calls.filter(
+      ([input, init]) =>
+        String(input).includes('/api/series') && init?.method === 'POST'
+    );
+
+  beforeEach(() => {
+    answerSave = () => Promise.resolve(createdResponse(SERIES_CREATED));
+  });
+
+  describe('the episode rows', () => {
+    it('offers a multiple video picker, Add episode files', async () => {
+      await renderSeries();
+
+      expect(episodePicker().type).toBe('file');
+      expect(episodePicker().multiple).toBe(true);
+    });
+
+    it('draws a pick in episode order, numbers and titles filled', async () => {
+      await renderSeries();
+
+      await pickEpisodes();
+
+      expect(drawnRows()).toEqual([
+        ['1', '1', 'Pilot'],
+        ['1', '2', 'Low Tide'],
+        ['1', '3', 'The Night Market'],
+      ]);
+      expect(
+        screen.getByText('Harbor.and.Vine.S01E01.Pilot.mkv')
+      ).toBeDefined();
+    });
+
+    it('takes a row off with its ✕', async () => {
+      await renderSeries();
+      await pickEpisodes();
+
+      fireEvent.click(
+        screen.getByRole('button', {
+          name: 'Remove Harbor.and.Vine.S01E02.Low.Tide.mkv',
+        })
+      );
+
+      expect(drawnRows().map((row) => row[1])).toEqual(['1', '3']);
+    });
+  });
+
+  describe('the title prefill', () => {
+    it('fills an empty title from the first batch of episode files', async () => {
+      await renderSeries();
+
+      await pickEpisodes();
+
+      expect(seriesTitle().value).toBe('Harbor and Vine');
+    });
+
+    it('leaves a typed title alone', async () => {
+      await renderSeries();
+      fireEvent.change(seriesTitle(), { target: { value: 'Harbor & Vine' } });
+
+      await pickEpisodes();
+
+      expect(seriesTitle().value).toBe('Harbor & Vine');
+    });
+  });
+
+  describe('the series save gate', () => {
+    it('stays closed with episodes and no title', async () => {
+      await renderSeries();
+      await pickEpisodes();
+      fireEvent.change(seriesTitle(), { target: { value: '' } });
+
+      expect(save().disabled).toBe(true);
+    });
+
+    it('stays closed with a title and no episodes', async () => {
+      await renderSeries();
+      fireEvent.change(seriesTitle(), {
+        target: { value: 'Harbor and Vine' },
+      });
+
+      expect(save().disabled).toBe(true);
+    });
+
+    it('opens on a title and a complete episode list', async () => {
+      await renderSeries();
+
+      await pickEpisodes();
+
+      expect(save().disabled).toBe(false);
+    });
+
+    it('closes again while two rows share a season and number', async () => {
+      await renderSeries();
+      await pickEpisodes();
+
+      fireEvent.change(numberFields()[1], { target: { value: '1' } });
+
+      expect(save().disabled).toBe(true);
+    });
+
+    it('closes again while a number is blank', async () => {
+      await renderSeries();
+      await pickEpisodes();
+
+      fireEvent.change(numberFields()[0], { target: { value: '' } });
+
+      expect(save().disabled).toBe(true);
+    });
+  });
+
+  describe('saving', () => {
+    it('sends the body in the contract’s order', async () => {
+      await renderSeries();
+      await pickPoster();
+      await pickEpisodes([SEASON[0], SEASON[1]]);
+
+      fireEvent.click(save());
+      await waitFor(() => expect(seriesSaves()).toHaveLength(1));
+
+      const body = seriesSaves()[0][1]?.body as FormData;
+      expect([...body.keys()]).toEqual([
+        'title',
+        'year',
+        'creator',
+        'description',
+        'rating',
+        'poster',
+        'episode',
+        'episodeVideo',
+        'episode',
+        'episodeVideo',
+      ]);
+      expect(body.get('title')).toBe('Harbor and Vine');
+      expect(
+        body.getAll('episode').map((part) => JSON.parse(String(part)))
+      ).toEqual([
+        { season: 1, number: 1, title: 'Pilot', subtitleLanguages: [] },
+        {
+          season: 1,
+          number: 3,
+          title: 'The Night Market',
+          subtitleLanguages: [],
+        },
+      ]);
+      expect(
+        fetchMock.mock.calls.some(([input]) =>
+          String(input).includes('/api/movies')
+        )
+      ).toBe(false);
+    });
+
+    it('reads Adding… and is disabled while the request is in flight', async () => {
+      let settle: (response: Response) => void = () => undefined;
+      answerSave = () =>
+        new Promise<Response>((resolve) => {
+          settle = resolve;
+        });
+      await renderSeries();
+      await pickEpisodes();
+
+      fireEvent.click(save());
+
+      await waitFor(() => expect(save().textContent).toContain('Adding…'));
+      expect(save().disabled).toBe(true);
+
+      settle(createdResponse(SERIES_CREATED));
+      await waitFor(() => expect(pathname()).toBe('/'));
+    });
+
+    it('lands on the Series tab with a push', async () => {
+      await renderSeries();
+      await pickEpisodes();
+
+      fireEvent.click(save());
+
+      await waitFor(() => expect(pathname()).toBe('/'));
+      expect(new URLSearchParams(search() ?? '').get('tab')).toBe('series');
+      expect(navigationType()).toBe('PUSH');
+    });
+
+    it('keeps every field and row on a refused save, and offers Save again', async () => {
+      answerSave = () => Promise.resolve(serverErrorResponse());
+      await renderSeries();
+      fireEvent.change(seriesTitle(), { target: { value: 'Harbor & Vine' } });
+      fireEvent.change(yearField(), { target: { value: '2019–2023' } });
+      fireEvent.change(castField(), { target: { value: 'Ana Vega' } });
+      await pickPoster();
+      await pickEpisodes();
+      fireEvent.change(
+        screen.getAllByRole('textbox', { name: 'Episode title' })[0],
+        { target: { value: 'The Beginning' } }
+      );
+
+      fireEvent.click(save());
+      await waitFor(() => expect(seriesSaves()).toHaveLength(1));
+      await waitFor(() => expect(save().disabled).toBe(false));
+
+      expect(pathname()).toBe('/add');
+      expect(seriesTitle().value).toBe('Harbor & Vine');
+      expect(yearField().value).toBe('2019–2023');
+      expect(castField().value).toBe('Ana Vega');
+      expect(pickedPoster()).not.toBeNull();
+      expect(drawnRows()).toEqual([
+        ['1', '1', 'The Beginning'],
+        ['1', '2', 'Low Tide'],
+        ['1', '3', 'The Night Market'],
+      ]);
+    });
+  });
+
+  describe('a switch of kind', () => {
+    it('keeps the episode rows across a switch to Movie and back', async () => {
+      await renderSeries();
+      await pickEpisodes();
+
+      pressKind('Movie');
+      expect(seasonFields()).toEqual([]);
+      pressKind('Series');
+
+      expect(drawnRows()).toEqual([
+        ['1', '1', 'Pilot'],
+        ['1', '2', 'Low Tide'],
+        ['1', '3', 'The Night Market'],
+      ]);
     });
   });
 });

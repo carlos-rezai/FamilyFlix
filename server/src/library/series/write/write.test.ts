@@ -131,3 +131,108 @@ describe('series write: addEpisode', () => {
     expect(storage.listEpisodes(lighthouse.id)).toHaveLength(1);
   });
 });
+
+// 29 — Add a series, Phase 3 (issue #263): `addSeries(input, episodes)`.
+//
+// The **Movie form**'s series save writes the show and every episode it was
+// handed at once, so a series is never in the library without the episodes
+// the maintainer picked for it. One transaction: the series, its genres, its
+// episodes and their tracks are written together, and a refused insert —
+// an unknown genre, a duplicate episode — commits nothing at all. The
+// importer keeps calling `addSeries(input)` and then `addEpisode`, so the
+// one-argument call is exactly what it was.
+
+describe('series write: addSeries with its episodes', () => {
+  it('writes the series, its genres and its episodes together', () => {
+    const storage = freshStorage();
+
+    const series = storage.addSeries(
+      { title: 'Harbor and Vine', year: 2019, genres: ['Drama', 'Comedy'] },
+      [
+        {
+          season: 1,
+          number: 1,
+          title: 'Pilot',
+          runtimeMinutes: 42,
+          videoPath: 'harbor-and-vine-2019/season-01/S01E01.mp4',
+        },
+        {
+          season: 1,
+          number: 2,
+          title: 'Low Tide',
+          videoPath: 'harbor-and-vine-2019/season-01/S01E02.mp4',
+          subtitles: [
+            {
+              path: 'harbor-and-vine-2019/season-01/S01E02.en.srt',
+              language: 'English',
+            },
+          ],
+        },
+      ]
+    );
+
+    expect(series.title).toBe('Harbor and Vine');
+    expect(series.genres.map((genre) => genre.name)).toEqual([
+      'Drama',
+      'Comedy',
+    ]);
+    const episodes = storage.listEpisodes(series.id);
+    expect(
+      episodes.map((episode) => [episode.season, episode.number, episode.title])
+    ).toEqual([
+      [1, 1, 'Pilot'],
+      [1, 2, 'Low Tide'],
+    ]);
+    expect(episodes[0]).toMatchObject({
+      seriesId: series.id,
+      runtimeMinutes: 42,
+      videoPath: 'harbor-and-vine-2019/season-01/S01E01.mp4',
+      watched: false,
+      resumePositionSeconds: 0,
+    });
+    expect(episodes[1].subtitles.map((track) => track.path)).toEqual([
+      'harbor-and-vine-2019/season-01/S01E02.en.srt',
+    ]);
+  });
+
+  it('commits nothing when a genre is unknown', () => {
+    const storage = freshStorage();
+
+    expect(() =>
+      storage.addSeries({ title: 'Harbor and Vine', genres: ['Nope'] }, [
+        { season: 1, number: 1, videoPath: 'a.mp4' },
+      ])
+    ).toThrow();
+
+    expect(storage.getSeriesHome().series).toEqual([]);
+    expect(storage.getSeriesHome().episodeCount).toBe(0);
+  });
+
+  it('commits nothing when two episodes share a season and number', () => {
+    const storage = freshStorage();
+
+    expect(() =>
+      storage.addSeries({ title: 'Harbor and Vine', genres: ['Drama'] }, [
+        { season: 1, number: 3, videoPath: 'a.mp4' },
+        { season: 1, number: 3, videoPath: 'b.mp4' },
+      ])
+    ).toThrow();
+
+    expect(storage.getSeriesHome().series).toEqual([]);
+    expect(storage.getSeriesHome().episodeCount).toBe(0);
+  });
+
+  it('writes no episodes when given only the series, as the importer calls it', () => {
+    const storage = freshStorage();
+
+    const series = storage.addSeries({
+      title: 'Harbor and Vine',
+      genres: ['Drama'],
+    });
+
+    expect(storage.getSeriesHome().series.map((s) => s.id)).toEqual([
+      series.id,
+    ]);
+    expect(storage.listEpisodes(series.id)).toEqual([]);
+  });
+});
