@@ -11,6 +11,137 @@ Newest entry first.
 
 ---
 
+## 2026-10-08 — Add a series refactor (issue 266)
+
+Twenty commits against `docs/refactor-plans/29-add-series-refactor.md`, one
+per plan commit, none dropped. **7246 tests pass across 417 files**, from
+7200 across 416 at the end of the build. `tsc -b` is clean, and
+`eslint src server electron .husky` reports no errors and the one warning
+earlier rounds already logged (`AboutSection.test.tsx`'s escaped dot).
+
+One pixel changed: an **Episode file row**'s number and title fields keep
+the browser's focus ring. The prototype draws them with `outline: none`, and
+`TextField` and `Textarea` already record the same deviation from that line —
+the ring is the only thing that tells a keyboard user where they are.
+
+Issue 265, the plan's Phase 5 (_the close_), was folded into this plan when
+it was filed, so the initiative has one refactor issue. The standing rule
+makes the close the refactor's last commit anyway, and its acceptance
+criteria are commit 19's.
+
+### What each group changed
+
+- **Group 0, the record.** The build's own entry, below, written before the
+  round touched anything. It records log 22 Q2's open item as closed for the
+  add.
+- **Group 1, the comments.**
+  - `MovieForm` names the two **Form kinds** and the **Kind tabs**, and the
+    heading's docblock says it follows the kind on an add.
+  - `useMovieForm`'s gate is one condition per kind; `?kind=` is the URL's
+    third parameter, read on a plain add alone; a series lands on its kind's
+    **Fresh home**. The _"Why no test file"_ section counts the suite as
+    measured — **266 tests over 62 blocks**, where the plan quoted 290 — and
+    says the list rules are `useEpisodeList`'s suite's.
+  - `save` writes _the title_, and each episode member of
+    `UseMovieFormResult` has a docblock.
+  - The build's eight over-measure comment lines are rewrapped.
+- **Group 2, the client's tidies.**
+  - `FormKind` sits in `types/form.ts` beside `EpisodeFormRow`, in the
+    barrel.
+  - `PillTabs<T extends string>` hands back its caller's type, so
+    `MovieForm`'s `isFormKind` guard is gone and `onChange={setKind}`.
+  - The heading on an add is `WORDING[kind].heading`; `HEADING` keeps
+    `edit` alone.
+  - `formValues` gained `pickedSubtitle(key, file)` beside `pickedFile`, with
+    `DEFAULT_LANGUAGE` and story 27's docblock moved there. `useMovieForm`
+    and `useEpisodeList` build every picked file and track through the two.
+  - `SeriesFormFiles`' nine episode props are required; `ignore` and the
+    defaults are gone. Its suite's render helper passes a `vi.fn()` for
+    each, and its header no longer says the rows arrive in the next slice.
+  - `filesCard.styles.ts` holds `Card`, `Caption` and the list section
+    (`ListSection`, `ListLabel`, `ListRows`). Both cards' styles files are
+    now re-exports of it under their own names, with nothing of their own
+    left, and `SeriesFormFiles.styles` no longer imports from
+    `MovieFormFiles.styles`.
+  - `filesCard.ts` holds the three `accept` lists with their docblocks,
+    `CARD_LABEL`, `POSTER_LABEL` and `POSTER_CHOOSE`. No existing name in
+    the codebase covered the idea, so the plan's names stand.
+  - `EpisodeFileRow` keeps the focus ring, and its lengths are
+    `SEASON_LENGTH` and `NUMBER_LENGTH`.
+  - The client's tag type is `EpisodeTag`, and `readEpisodeTag` exports
+    `TAG_SHAPES`.
+  - `titleFromFilename` ends a title at `TAG_SHAPES` instead of its own two
+    patterns, so the client spells the tag's shape once, and its docblock is
+    on the function.
+  - `AddMovieButton` is `AddTitleButton`, and `kindSwitchable` is
+    COMPONENT-SPEC's `showKindTabs`.
+- **Group 3, the server's tidies, and the primitive's leaves.**
+  - `seriesFormBody.test.ts`, on `movieFormBody.test.ts`' shape and header.
+    `collectEpisodeUploads` stays asserted through the router.
+  - `readSeriesFields` answers each episode as a `LandedEpisode`, its
+    `video` and `subtitles` paired once the checks pass, so the route's two
+    casts are gone. `span?.endYear == null` is strict, and the route's
+    `yearSpan` import sits with the other `library/` import.
+  - `cellYears` is inlined into its one caller.
+  - `FilePicker`'s multiple mode has its leaves.
+- **Group 4, the docs.**
+  - CLAUDE.md: the tree names `PillTabs/`, `EpisodeFileRow/`,
+    `seriesFormBody/`, `yearSpan/`, the movie form's units (`MovieForm/`,
+    the two Files cards, `filesCard.styles.ts`, `filesCard.ts`,
+    `useMovieForm/`, `useEpisodeList/`, `readEpisodeTag/`,
+    `titleFromFilename/`, `formValues/`, `createSeries`), and `form.ts` in
+    the types line. _Movie Import — One Form_ says the form adds a series on
+    the Kind tabs, that the Save gate is a video for either kind and held on
+    the wire, and that a series is one atomic `POST /api/series`. Step 13 and
+    the _Add a series_ line are ✅, _(next)_ is on step 14, and _Neither 14
+    nor 15 has a prototype yet_.
+  - README: the same ✅ and _(next)_, and the new units in its tree.
+  - The glossary and COMPONENT-SPEC were read against the final tree. The
+    glossary names none of the round's renamed identifiers, and
+    COMPONENT-SPEC already said `showKindTabs`, so neither changed.
+
+### Two behaviours narrowed on the way
+
+Neither is reachable through the form, and both are recorded so they are not
+a later surprise:
+
+- **A tag in brackets no longer ends a title.** `TAG_SHAPES` want a
+  separator or the start of the name before the tag, where the prefill's own
+  patterns took any word boundary. `Show (S01E03).mkv` now prefills
+  _Show (S01E03)_, and the row is untagged, so the two readers still agree.
+- **A subtitle slot taken but never filled refuses.** `readSeriesFields`
+  counts only the paths that landed, so such a body answers _Episode … is
+  missing a subtitle_ rather than passing an `undefined` path through the
+  cast. `readBody` awaits every part, so no body reaches that state today.
+
+### Leaves added, removed and moved
+
+Added:
+
+- _EpisodeFileRow — focus › a focused field keeps the browser's focus ring_,
+  red before commit 11's edit and green after;
+- _titleFromFilename › titles Harbor.and.Vine.1x3.mkv "Harbor and Vine"_,
+  red before commit 13's edit and green after;
+- `seriesFormBody.test.ts`: 29 leaves, 40 tests once its `it.each` tables
+  expand — `readEpisodeField` (17), the record (7), the refusals (11) and
+  their order (5);
+- _FilePicker — the multiple mode_: four leaves.
+
+Removed: none. Restated: `SeriesFormFiles.test.tsx`'s render helper, with no
+leaf renamed or changed; and `seriesFormBody`'s two value leaves gained the
+landed paths in commit 16, as the plan said.
+
+Net +46.
+
+### Follow-ups
+
+None filed. `TextField` and `Textarea` have no focus-ring leaf of their own;
+`EpisodeFileRow`'s is the first, read through `resolvedStyle`'s keyboard
+focus, and giving them one is a candidate for a later round rather than this
+one's work. This entry closes 260, 265 and 266.
+
+---
+
 ## 2026-10-08 — Add a series (issues #261–#264)
 
 The **Movie form** now adds a **Series** too. A plain add at `/add` has two
