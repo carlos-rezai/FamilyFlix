@@ -76,6 +76,21 @@
             >
               {{ form.heading }}
             </h1>
+            <sc-if
+              value="{{ form.showKindTabs }}"
+              hint-placeholder-val="{{ true }}"
+            >
+              <div style="margin-left: auto">
+                <dc-import
+                  name="mol.PillTabs"
+                  label="Kind"
+                  options="{{ form.kindOptions }}"
+                  value="{{ form.kind }}"
+                  on-change="{{ form.onKind }}"
+                  hint-size="196px,48px"
+                ></dc-import>
+              </div>
+            </sc-if>
           </div>
           <p
             style="
@@ -85,8 +100,7 @@
               margin: 0 0 28px 58px;
             "
           >
-            Pick the video, poster, and any subtitle files for this movie. To
-            add many at once, use
+            {{ form.lede }} To add many at once, use
             <span style="color: var(--color-text-dim); font-weight: 500"
               >Import library</span
             >.
@@ -99,7 +113,7 @@
                 <input
                   value="{{ form.title }}"
                   onInput="{{ form.onTitle }}"
-                  placeholder="Movie title"
+                  placeholder="{{ form.titlePlaceholder }}"
                   style="{{ form.inputStyle }}"
                   style-focus="border-color:var(--color-accent-line)"
                 />
@@ -109,7 +123,7 @@
                 <input
                   value="{{ form.year }}"
                   onInput="{{ form.onYear }}"
-                  placeholder="2019"
+                  placeholder="{{ form.yearPlaceholder }}"
                   style="{{ form.inputStyle }}"
                   style-focus="border-color:var(--color-accent-line)"
                 />
@@ -118,11 +132,13 @@
 
             <div style="display: flex; gap: 18px">
               <label style="flex: 1; display: block">
-                <span style="{{ form.labelStyle }}">Director</span>
+                <span style="{{ form.labelStyle }}"
+                  >{{ form.creditLabel }}</span
+                >
                 <input
                   value="{{ form.director }}"
                   onInput="{{ form.onDirector }}"
-                  placeholder="Director name"
+                  placeholder="{{ form.creditPlaceholder }}"
                   style="{{ form.inputStyle }}"
                   style-focus="border-color:var(--color-accent-line)"
                 />
@@ -150,7 +166,7 @@
                 name="prim.Textarea"
                 value="{{ form.description }}"
                 on-input="{{ form.onDescription }}"
-                placeholder="A short synopsis of the movie"
+                placeholder="{{ form.descriptionPlaceholder }}"
                 min-height="96"
                 hint-size="100%,96px"
               ></dc-import>
@@ -200,111 +216,253 @@
               </div>
             </div>
 
-            <div
-              style="
-                display: flex;
-                flex-direction: column;
-                gap: 14px;
-                padding: 20px;
-                background: var(--color-surface);
-                border: 1px solid var(--color-border-soft);
-                border-radius: var(--radius-md);
-              "
+            <sc-if value="{{ form.isMovie }}" hint-placeholder-val="{{ true }}">
+              <div
+                style="
+                  display: flex;
+                  flex-direction: column;
+                  gap: 14px;
+                  padding: 20px;
+                  background: var(--color-surface);
+                  border: 1px solid var(--color-border-soft);
+                  border-radius: var(--radius-md);
+                "
+              >
+                <div
+                  style="
+                    font-family: var(--font-sans);
+                    font-size: 12px;
+                    font-weight: 600;
+                    letter-spacing: 0.8px;
+                    text-transform: uppercase;
+                    color: var(--color-text-faint);
+                  "
+                >
+                  Files
+                </div>
+
+                <dc-import
+                  name="mol.FileField"
+                  label="Video"
+                  filename="{{ form.video }}"
+                  choose-label="Choose video file"
+                  icon="video"
+                  on-pick="{{ form.pickVideo }}"
+                  on-remove="{{ form.removeVideo }}"
+                  hint-size="100%,42px"
+                ></dc-import>
+                <dc-import
+                  name="mol.FileField"
+                  label="Poster"
+                  filename="{{ form.poster }}"
+                  choose-label="Choose poster image"
+                  icon="poster"
+                  on-pick="{{ form.pickPoster }}"
+                  on-remove="{{ form.removePoster }}"
+                  hint-size="100%,42px"
+                ></dc-import>
+
+                <div style="display: flex; gap: 12px">
+                  <div
+                    style="
+                      flex: 0 0 70px;
+                      font-family: var(--font-sans);
+                      font-size: 14px;
+                      color: var(--color-text-dim);
+                      padding-top: 10px;
+                    "
+                  >
+                    Subtitles
+                  </div>
+                  <div
+                    style="
+                      flex: 1;
+                      display: flex;
+                      flex-direction: column;
+                      gap: 8px;
+                      min-width: 0;
+                    "
+                  >
+                    <sc-for
+                      list="{{ form.subtitles }}"
+                      as="s"
+                      hint-placeholder-count="2"
+                    >
+                      <dc-import
+                        name="mol.SubtitleRow"
+                        filename="{{ s.filename }}"
+                        lang="{{ s.lang }}"
+                        lang-options="{{ form.langOptions }}"
+                        on-lang-change="{{ s.onLangChange }}"
+                        on-remove="{{ s.remove }}"
+                        hint-size="100%,48px"
+                      ></dc-import>
+                    </sc-for>
+                    <button
+                      onClick="{{ form.addSub }}"
+                      style="
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        gap: 6px;
+                        height: 42px;
+                        background: transparent;
+                        border: 1px dashed var(--color-border);
+                        border-radius: 8px;
+                        color: var(--color-text-dim);
+                        font-family: var(--font-sans);
+                        font-size: 13px;
+                        font-weight: 600;
+                        cursor: pointer;
+                      "
+                      style-hover="border-color:var(--color-accent-line);color:var(--color-text)"
+                    >
+                      ＋ Add subtitle file
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </sc-if>
+            <sc-if
+              value="{{ form.isSeries }}"
+              hint-placeholder-val="{{ false }}"
             >
               <div
                 style="
-                  font-family: var(--font-sans);
-                  font-size: 12px;
-                  font-weight: 600;
-                  letter-spacing: 0.8px;
-                  text-transform: uppercase;
-                  color: var(--color-text-faint);
+                  display: flex;
+                  flex-direction: column;
+                  gap: 14px;
+                  padding: 20px;
+                  background: var(--color-surface);
+                  border: 1px solid var(--color-border-soft);
+                  border-radius: var(--radius-md);
                 "
               >
-                Files
-              </div>
-
-              <dc-import
-                name="mol.FileField"
-                label="Video"
-                filename="{{ form.video }}"
-                choose-label="Choose video file"
-                icon="video"
-                on-pick="{{ form.pickVideo }}"
-                on-remove="{{ form.removeVideo }}"
-                hint-size="100%,42px"
-              ></dc-import>
-              <dc-import
-                name="mol.FileField"
-                label="Poster"
-                filename="{{ form.poster }}"
-                choose-label="Choose poster image"
-                icon="poster"
-                on-pick="{{ form.pickPoster }}"
-                on-remove="{{ form.removePoster }}"
-                hint-size="100%,42px"
-              ></dc-import>
-
-              <div style="display: flex; gap: 12px">
                 <div
                   style="
-                    flex: 0 0 70px;
                     font-family: var(--font-sans);
-                    font-size: 14px;
-                    color: var(--color-text-dim);
-                    padding-top: 10px;
+                    font-size: 12px;
+                    font-weight: 600;
+                    letter-spacing: 0.8px;
+                    text-transform: uppercase;
+                    color: var(--color-text-faint);
                   "
                 >
-                  Subtitles
+                  Files
                 </div>
-                <div
-                  style="
-                    flex: 1;
-                    display: flex;
-                    flex-direction: column;
-                    gap: 8px;
-                    min-width: 0;
-                  "
-                >
-                  <sc-for
-                    list="{{ form.subtitles }}"
-                    as="s"
-                    hint-placeholder-count="2"
-                  >
-                    <dc-import
-                      name="mol.SubtitleRow"
-                      filename="{{ s.filename }}"
-                      lang="{{ s.lang }}"
-                      lang-options="{{ form.langOptions }}"
-                      on-lang-change="{{ s.onLangChange }}"
-                      on-remove="{{ s.remove }}"
-                      hint-size="100%,48px"
-                    ></dc-import>
-                  </sc-for>
-                  <button
-                    onClick="{{ form.addSub }}"
+
+                <dc-import
+                  name="mol.FileField"
+                  label="Poster"
+                  filename="{{ form.poster }}"
+                  choose-label="Choose poster image"
+                  icon="poster"
+                  on-pick="{{ form.pickPoster }}"
+                  on-remove="{{ form.removePoster }}"
+                  hint-size="100%,42px"
+                ></dc-import>
+
+                <div style="display: flex; gap: 12px">
+                  <div
                     style="
-                      display: flex;
-                      align-items: center;
-                      justify-content: center;
-                      gap: 6px;
-                      height: 42px;
-                      background: transparent;
-                      border: 1px dashed var(--color-border);
-                      border-radius: 8px;
-                      color: var(--color-text-dim);
+                      flex: 0 0 70px;
                       font-family: var(--font-sans);
-                      font-size: 13px;
-                      font-weight: 600;
-                      cursor: pointer;
+                      font-size: 14px;
+                      color: var(--color-text-dim);
+                      padding-top: 10px;
                     "
-                    style-hover="border-color:var(--color-accent-line);color:var(--color-text)"
                   >
-                    ＋ Add subtitle file
-                  </button>
+                    Episodes
+                  </div>
+                  <div
+                    style="
+                      flex: 1;
+                      display: flex;
+                      flex-direction: column;
+                      gap: 8px;
+                      min-width: 0;
+                    "
+                  >
+                    <sc-for
+                      list="{{ form.episodes }}"
+                      as="ep"
+                      hint-placeholder-count="2"
+                    >
+                      <dc-import
+                        name="mol.EpisodeFileRow"
+                        filename="{{ ep.filename }}"
+                        season="{{ ep.season }}"
+                        number="{{ ep.number }}"
+                        title="{{ ep.title }}"
+                        on-season-change="{{ ep.onSeason }}"
+                        on-number-change="{{ ep.onNumber }}"
+                        on-title-change="{{ ep.onTitle }}"
+                        on-remove="{{ ep.remove }}"
+                        hint-size="100%,140px"
+                      >
+                        <sc-for
+                          list="{{ ep.subtitles }}"
+                          as="s"
+                          hint-placeholder-count="1"
+                        >
+                          <dc-import
+                            name="mol.SubtitleRow"
+                            filename="{{ s.filename }}"
+                            lang="{{ s.lang }}"
+                            lang-options="{{ form.langOptions }}"
+                            on-lang-change="{{ s.onLangChange }}"
+                            on-remove="{{ s.remove }}"
+                            hint-size="100%,48px"
+                          ></dc-import>
+                        </sc-for>
+                        <button
+                          onClick="{{ ep.addSub }}"
+                          style="
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            gap: 6px;
+                            height: 36px;
+                            background: transparent;
+                            border: 1px dashed var(--color-border);
+                            border-radius: 8px;
+                            color: var(--color-text-dim);
+                            font-family: var(--font-sans);
+                            font-size: 13px;
+                            font-weight: 600;
+                            cursor: pointer;
+                          "
+                          style-hover="border-color:var(--color-accent-line);color:var(--color-text)"
+                        >
+                          ＋ Add subtitle
+                        </button>
+                      </dc-import>
+                    </sc-for>
+                    <button
+                      onClick="{{ form.addEpisodeFiles }}"
+                      style="
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        gap: 6px;
+                        height: 42px;
+                        background: transparent;
+                        border: 1px dashed var(--color-border);
+                        border-radius: 8px;
+                        color: var(--color-text-dim);
+                        font-family: var(--font-sans);
+                        font-size: 13px;
+                        font-weight: 600;
+                        cursor: pointer;
+                      "
+                      style-hover="border-color:var(--color-accent-line);color:var(--color-text)"
+                    >
+                      ＋ Add episode files
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
+            </sc-if>
           </div>
 
           <div

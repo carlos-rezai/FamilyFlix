@@ -71,30 +71,14 @@
             >
           </div>
 
-          <div
-            style="
-              flex: 0 0 auto;
-              display: flex;
-              gap: 4px;
-              padding: 4px;
-              background: var(--color-surface);
-              border: 1px solid var(--color-border-soft);
-              border-radius: var(--radius-pill);
-            "
-          >
-            <button
-              onClick="{{ lib.onMoviesTab }}"
-              style="{{ lib.moviesTabStyle }}"
-            >
-              Movies
-            </button>
-            <button
-              onClick="{{ lib.onSeriesTab }}"
-              style="{{ lib.seriesTabStyle }}"
-            >
-              Series
-            </button>
-          </div>
+          <dc-import
+            name="mol.PillTabs"
+            label="Library"
+            options="{{ lib.tabOptions }}"
+            value="{{ lib.tab }}"
+            on-change="{{ lib.onTab }}"
+            hint-size="196px,48px"
+          ></dc-import>
 
           <dc-import
             name="mol.SearchBar"

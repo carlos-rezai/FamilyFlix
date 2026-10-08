@@ -12,10 +12,10 @@ import {
 
 /**
  * The header of the **Maintainer**'s hub, from `page.SettingsPage.dc.html`:
- * the back pill, the heading, ＋ Add a movie, and the line under them.
+ * the back pill, the heading, ＋ Add a title, and the line under them.
  *
  * It is the one door to every maintainer surface in the app — the header gear
- * is the only way to Settings, and ＋ Add a movie is the only way from here to
+ * is the only way to Settings, and ＋ Add a title is the only way from here to
  * the **Movie form**. Nothing the **Family** sees on the browse home leads to
  * either.
  *
@@ -46,7 +46,7 @@ export function SettingsHeader() {
         <Heading>Settings</Heading>
         <AddMovieButton type="button" onClick={() => navigate('/add')}>
           <AddGlyph aria-hidden="true">＋</AddGlyph>
-          Add a movie
+          Add a title
         </AddMovieButton>
       </HeaderRow>
       <Subtitle>Manage your library, playback, and storage.</Subtitle>

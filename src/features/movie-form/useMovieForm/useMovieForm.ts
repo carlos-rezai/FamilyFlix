@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import { dismissProblem } from '@/api/dismissProblem/dismissProblem';
 import { fetchMovie } from '@/api/fetchMovie/fetchMovie';
+import { useQueryParamWriter } from '@/features/search/useQueryParamWriter/useQueryParamWriter';
 import { useGoBack } from '@/hooks/useGoBack/useGoBack';
 import type { MovieFormValues } from '@/types';
 import { moviePath } from '@/utils';
@@ -93,6 +94,36 @@ function formLanding(movie: string | null, problem: string | null): string {
 const YEAR_LENGTH = 4;
 
 /**
+ * The query parameter that says which **Form kind** a plain add is on —
+ * `?kind=series`, written as a `replace` and omitted at `movie`: the library
+ * tabs' rule. Beside `?movie=` or `?problem=` it is ignored.
+ */
+const KIND_PARAM = 'kind';
+
+/** The **Form kind**: what a plain add is adding. */
+export type FormKind = 'movie' | 'series';
+
+/**
+ * The most characters a series' **Year range** can have — `2019–2023`: two
+ * years and the one dash between them.
+ */
+const YEAR_RANGE_LENGTH = 9;
+
+/**
+ * A series' year as typed: digits and one dash, en dash or hyphen, at most
+ * nine characters. Anything else is dropped, and so is a second dash.
+ */
+function yearRange(typed: string): string {
+  const kept = typed.replace(/[^\d–-]/g, '');
+  const dash = kept.search(/[–-]/);
+  const once =
+    dash === -1
+      ? kept
+      : kept.slice(0, dash + 1) + kept.slice(dash + 1).replace(/[–-]/g, '');
+  return once.slice(0, YEAR_RANGE_LENGTH);
+}
+
+/**
  * The language a picked track lands in.
  *
  * Story 27: most of the family folder is English, so the common case is meant
@@ -134,6 +165,15 @@ export interface ResolvingProblem {
 }
 
 export interface UseMovieFormResult {
+  /**
+   * The **Form kind** on screen. Always `movie` beside a context — an edit or
+   * a Resolve — where there is no kind to switch.
+   */
+  kind: FormKind;
+  /** Whether the **Kind tabs** are drawn: on a plain add, and only there. */
+  kindSwitchable: boolean;
+  /** Switch the kind, writing `?kind=` as a `replace`. */
+  setKind: (kind: FormKind) => void;
   /** What is in the fields right now. */
   values: MovieFormValues;
   setTitle: (title: string) => void;
@@ -310,6 +350,19 @@ export function useMovieForm(): UseMovieFormResult {
   const requested = searchParams.get(MOVIE_PARAM);
   const problem = searchParams.get(PROBLEM_PARAM);
 
+  // The kind is the URL's, on a plain add alone: beside a context there is
+  // nothing to switch, and `?kind=` is ignored.
+  const kindSwitchable = requested === null && problem === null;
+  const kind: FormKind =
+    kindSwitchable && searchParams.get(KIND_PARAM) === 'series'
+      ? 'series'
+      : 'movie';
+  const setParam = useQueryParamWriter();
+  const setKind = useCallback(
+    (next: FormKind) => setParam(KIND_PARAM, next, 'movie'),
+    [setParam]
+  );
+
   // The app's one **Back rule**, with this screen's own **Landing** behind it
   // for the deep-linked case. Built from the URL on the first render, before
   // either read above has answered — see {@link formLanding}.
@@ -388,12 +441,21 @@ export function useMovieForm(): UseMovieFormResult {
     setValues((current) => ({ ...current, title }));
   }, []);
 
-  const setYear = useCallback((year: string) => {
-    setValues((current) => ({
-      ...current,
-      year: year.replace(/\D/g, '').slice(0, YEAR_LENGTH),
-    }));
-  }, []);
+  // The one field whose rule follows the kind: a movie's year is four digits,
+  // a series' a **Year range**. A switch leaves what is held as it is — the
+  // record is one, and only what is typed next is read by the other rule.
+  const setYear = useCallback(
+    (year: string) => {
+      setValues((current) => ({
+        ...current,
+        year:
+          kind === 'series'
+            ? yearRange(year)
+            : year.replace(/\D/g, '').slice(0, YEAR_LENGTH),
+      }));
+    },
+    [kind]
+  );
 
   // Held exactly as typed, all three. Only `year` is filtered on its way in,
   // because only `year` is a field that cannot hold a non-value — and the cast
@@ -501,8 +563,14 @@ export function useMovieForm(): UseMovieFormResult {
     }));
   }, []);
 
+  // Nothing can be saved on Series yet: the series save is the next slice's.
+  // The movie's video is still held while Series is on screen — it is simply
+  // not the series kind's gate.
   const canSave =
-    values.title.trim() !== '' && values.video !== null && !saving;
+    kind === 'movie' &&
+    values.title.trim() !== '' &&
+    values.video !== null &&
+    !saving;
 
   const save = useCallback(() => {
     if (!canSave) {
@@ -570,6 +638,9 @@ export function useMovieForm(): UseMovieFormResult {
   }, [resolving, goBack]);
 
   return {
+    kind,
+    kindSwitchable,
+    setKind,
     values,
     setTitle,
     setYear,

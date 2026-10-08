@@ -244,7 +244,7 @@
           genreView:null, genreSearch:'', detailReturn:'browse',
           playing:true, currentTime:0, subsOn:true, muted:false, volume:0.8, controlsVisible:true,
           addMode:'folder', folderPath:'', scanned:false,
-          fTitle:'', fYear:'', fDirector:'', fCast:'', fDescription:'', fGenres:[], fVideo:'', fPoster:'', fSubs:[], subLangOpen:null,
+          fTitle:'', fYear:'', fDirector:'', fCast:'', fDescription:'', fGenres:[], fVideo:'', fPoster:'', fSubs:[], fKind:'movie', fEpisodes:[], subLangOpen:null,
           addContext:null, resolveId:null,
           impStep:'setup', impSheet:'', impRoot:'', impProgress:0, impMatched:0, impProblems:[],
           impPhase:'scan', impFound:0, impTotal:0, impDone:0, impCurrent:'', impLog:[], impStartTime:null,
@@ -429,7 +429,7 @@
         onVolClick(e){ const r=e.currentTarget.getBoundingClientRect(); const p=Math.max(0,Math.min(1,(e.clientX-r.left)/r.width)); this.setState({volume:p,muted:p===0}); }
 
         // ---- add form ----
-        resetForm(){ this.setState({addMode:'folder',folderPath:'',scanned:false,fTitle:'',fYear:'',fDirector:'',fCast:'',fDescription:'',fGenres:[],fVideo:'',fPoster:'',fSubs:[],fRating:0,fRatingHover:null}); }
+        resetForm(){ this.setState({addMode:'folder',folderPath:'',scanned:false,fTitle:'',fYear:'',fDirector:'',fCast:'',fDescription:'',fGenres:[],fVideo:'',fPoster:'',fSubs:[],fKind:'movie',fEpisodes:[],fRating:0,fRatingHover:null}); }
         setFRating(pct){ this.setState({fRating:pct}); }
         hoverFRating(pct){ this.setState({fRatingHover:pct}); }
         clearFRatingHover(){ this.setState({fRatingHover:null}); }
@@ -439,7 +439,15 @@
         onFolderPath(e){ this.setState({folderPath:e.target.value}); }
         scanFolder(){ this.setState({scanned:true,fTitle:this.state.fTitle||'The Lantern Keeper',fYear:this.state.fYear||'2019',fVideo:'the.lantern.keeper.1080p.mkv',fPoster:'folder.jpg',fSubs:[{filename:'lantern_keeper.en.srt',lang:'English'},{filename:'lantern_keeper.es.srt',lang:'Spanish'}]}); }
         onFTitle(e){ this.setState({fTitle:e.target.value}); }
-        onFYear(e){ this.setState({fYear:e.target.value}); }
+        onFYear(e){ const v=e.target.value; this.setState(s=>({fYear:s.fKind==='series'?v.replace(/[^\d–-]/g,'').slice(0,9):v.replace(/\D/g,'').slice(0,4)})); }
+        // ---- the Kind tabs (plain add only): one record, each kind's files held side by side ----
+        setFKind(k){ this.setState({fKind:k}); }
+        addEpisodeFiles(){ this.setState(s=>{ const n=s.fEpisodes.length; const picked=[1,2,3].map(i=>({filename:'Harbor.Lights.S01E0'+(n+i)+'.mkv',season:'1',number:String(n+i),title:'',subs:[]})); return {fEpisodes:[...s.fEpisodes,...picked], fTitle:s.fTitle||'Harbor Lights'}; }); }
+        removeEpisode(i){ this.setState(s=>({fEpisodes:s.fEpisodes.filter((_,j)=>j!==i)})); }
+        setEpisode(i,patch){ this.setState(s=>({fEpisodes:s.fEpisodes.map((x,j)=>j===i?{...x,...patch}:x)})); }
+        addEpisodeSub(i){ this.setState(s=>({fEpisodes:s.fEpisodes.map((x,j)=>j===i?{...x,subs:[...x.subs,{filename:x.filename.replace(/\.mkv$/,'.en.srt'),lang:'English'}]}:x)})); }
+        removeEpisodeSub(i,k){ this.setState(s=>({fEpisodes:s.fEpisodes.map((x,j)=>j===i?{...x,subs:x.subs.filter((_,m)=>m!==k)}:x)})); }
+        setEpisodeSubLang(i,k,l){ this.setState(s=>({fEpisodes:s.fEpisodes.map((x,j)=>j===i?{...x,subs:x.subs.map((y,m)=>m===k?{...y,lang:l}:y)}:x)})); }
         onFDirector(e){ this.setState({fDirector:e.target.value}); }
         onFCast(e){ this.setState({fCast:e.target.value}); }
         onFDescription(e){ this.setState({fDescription:e.target.value}); }
@@ -585,7 +593,6 @@
           const ratingFilterLabel=(this.ratingDefs.find(d=>d[0]===s.ratingFilter)||['','All ratings'])[1];
 
           // series
-          const tabStyle=on=>({height:'38px',padding:'0 20px',background:on?'var(--color-accent)':'transparent',border:'none',borderRadius:'var(--radius-pill)',color:on?'#1a1109':'var(--color-text-faint)',fontFamily:'var(--font-sans)',fontSize:'15px',fontWeight:on?'700':'500',cursor:'pointer'});
           const sq=s.search.trim().toLowerCase();
           const seriesFiltered=this.rawSeries.filter(x=>!sq||x.title.toLowerCase().includes(sq)||x.syn.toLowerCase().includes(sq)||x.genres.join(' ').toLowerCase().includes(sq));
           const seriesList=seriesFiltered.map(x=>this.seriesView(x));
@@ -694,8 +701,8 @@
             libModel:{
               onLogo:()=>this.goBrowse(), search:s.search, onSearch:(e)=>this.onSearch(e),
               isMoviesTab:s.tab==='movies', isSeriesTab:s.tab==='series',
-              onMoviesTab:()=>this.setTab('movies'), onSeriesTab:()=>this.setTab('series'),
-              moviesTabStyle:tabStyle(s.tab==='movies'), seriesTabStyle:tabStyle(s.tab==='series'),
+              tabOptions:[{value:'movies',label:'Movies'},{value:'series',label:'Series'}], tab:s.tab, onTab:(t)=>this.setTab(t),
+
               searchPlaceholder:s.tab==='series'?'Search your series':'Search your movies',
               seriesList, seriesCountLabel:seriesList.length+' series · '+totalEpisodes+' episodes', seriesNoResults:seriesList.length===0,
               episodeContinueList, showEpisodeContinue:episodeContinueList.length>0,
@@ -729,7 +736,7 @@
                 syncDesc:s.lastSync?('Last synced '+s.lastSync+' · '+s.enrichedCount+' of '+this.rawMovies.length+' titles have full details.'):(s.enrichedCount+' of '+this.rawMovies.length+' titles have full details.'),
               },
               libraryActions:[
-                {key:'add',glyph:'＋',label:'Add a movie',desc:'Pick the video, poster, and subtitle files for one title.',onClick:()=>this.goAdd()},
+                {key:'add',glyph:'＋',label:'Add a title',desc:'A movie or a series, with its files.',onClick:()=>this.goAdd()},
                 {key:'import',glyph:'⇪',label:'Import from spreadsheet',desc:'Bulk-migrate a spreadsheet + movie folders in one pass.',onClick:()=>this.goImport()},
                 {key:'export',glyph:'⬇',label:'Export to CSV',desc:'Save your whole library out as a spreadsheet backup.',onClick:()=>this.openExport()},
               ],
@@ -770,9 +777,25 @@
               subtitleLine:'— You can see the whole coast from up here.',
             },
             // add
-            formModel:{
+            formModel:(()=>{ const isSeriesForm=s.addContext==='settings' && s.fKind==='series';
+              const pairs=s.fEpisodes.map(e=>e.season+'-'+e.number);
+              const episodesComplete=s.fEpisodes.length>0 && s.fEpisodes.every(e=>Number(e.season)>=1 && Number(e.number)>=1) && new Set(pairs).size===pairs.length;
+              // The gate, per kind: a movie needs a title and a video; a series a title and complete episodes. Closed is a disabled Save, never a message.
+              const canSave=isSeriesForm ? (!!s.fTitle.trim() && episodesComplete) : (!!s.fTitle.trim() && !!s.fVideo);
+              return {
               inImportContext:s.addContext==='import', resolveLabel:s.fTitle,
-              heading:s.addContext==='edit'?'Edit details':'Add a movie',
+              heading:s.addContext==='edit'?'Edit details':isSeriesForm?'Add a series':'Add a movie',
+              // The Kind tabs: drawn on a plain add alone — never on an edit or a Resolve.
+              showKindTabs:s.addContext==='settings', kindOptions:[{value:'movie',label:'Movie'},{value:'series',label:'Series'}], kind:isSeriesForm?'series':'movie', onKind:(k)=>this.setFKind(k),
+              isSeries:isSeriesForm, isMovie:!isSeriesForm,
+              lede:isSeriesForm?'Pick the poster and every episode’s video and subtitles for this series.':'Pick the video, poster, and any subtitle files for this movie.',
+              titlePlaceholder:isSeriesForm?'Series title':'Movie title', yearPlaceholder:isSeriesForm?'2019–2023':'2019',
+              creditLabel:isSeriesForm?'Created by':'Director', creditPlaceholder:isSeriesForm?'Creator name':'Director name',
+              descriptionPlaceholder:isSeriesForm?'A short synopsis of the series':'A short synopsis of the movie',
+              episodes:s.fEpisodes.map((ep,i)=>({...ep, onSeason:(v)=>this.setEpisode(i,{season:v}), onNumber:(v)=>this.setEpisode(i,{number:v}), onTitle:(v)=>this.setEpisode(i,{title:v}), remove:()=>this.removeEpisode(i), addSub:()=>this.addEpisodeSub(i),
+                subtitles:ep.subs.map((x,k)=>({...x, remove:()=>this.removeEpisodeSub(i,k), onLangChange:(l)=>this.setEpisodeSubLang(i,k,l)}))})),
+              addEpisodeFiles:()=>this.addEpisodeFiles(),
+              canSave,
               labelStyle, inputStyle, textareaStyle,
               title:s.fTitle, year:s.fYear, onTitle:(e)=>this.onFTitle(e), onYear:(e)=>this.onFYear(e),
               director:s.fDirector, cast:s.fCast, description:s.fDescription, onDirector:(e)=>this.onFDirector(e), onCast:(e)=>this.onFCast(e), onDescription:(e)=>this.onFDescription(e),
@@ -780,10 +803,10 @@
               rating:s.fRating, onRating:(p)=>this.setFRating(p),
               video:s.fVideo, poster:s.fPoster, pickVideo:()=>this.pickVideo(), pickPoster:()=>this.pickPoster(), removeVideo:()=>this.removeVideo(), removePoster:()=>this.removePoster(),
               addSub:()=>this.addSub(), subtitles:subRows, langOptions:this.langPool,
-              onSave:()=>this.saveMovie(), onBack:()=>this.backFromAdd(),
+              onSave:()=>{ if(canSave) this.saveMovie(); }, onBack:()=>this.backFromAdd(),
               saveLabel:s.addContext==='import'?'Save & continue':s.addContext==='edit'?'Save changes':'Add to library',
               cancelLabel:s.addContext==='import'?'Skip this one':'Cancel',
-            },
+            }; })(),
             // import
             importModel:(()=>{
               const elapsed = s.impStartTime ? (Date.now()-s.impStartTime)/1000 : 0;

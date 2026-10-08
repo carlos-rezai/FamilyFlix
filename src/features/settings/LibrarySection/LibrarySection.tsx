@@ -8,7 +8,7 @@ import { Rows } from './LibrarySection.styles';
 
 /**
  * The Settings hub's **Library section**, from `page.SettingsPage.dc.html`:
- * the `Library` group heading over the `＋ Add a movie`, `⇪ Import from
+ * the `Library` group heading over the `＋ Add a title`, `⇪ Import from
  * spreadsheet` and `⬇ Export to CSV` rows — the third's label kept as drawn,
  * though the dialog it opens offers Excel too.
  *
@@ -34,8 +34,8 @@ export function LibrarySection() {
       <Rows>
         <ActionRow
           glyph="＋"
-          label="Add a movie"
-          desc="Pick the video, poster, and subtitle files for one title."
+          label="Add a title"
+          desc="A movie or a series, with its files."
           onClick={() => navigate('/add')}
         />
         <ActionRow

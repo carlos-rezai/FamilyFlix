@@ -25,7 +25,7 @@ const OPTIONS = [
 ] as const;
 
 function renderTabs(
-  value: string = 'movie',
+  value = 'movie',
   onChange: (value: string) => void = () => undefined,
   options: readonly { value: string; label: string }[] = OPTIONS
 ) {

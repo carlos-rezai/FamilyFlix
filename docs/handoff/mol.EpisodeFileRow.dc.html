@@ -1,0 +1,124 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="tokens.css" />
+      </helmet>
+      <div
+        style="
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+          padding: 7px 10px;
+          background: var(--color-bg-2);
+          border: 1px solid var(--color-border-soft);
+          border-radius: 8px;
+        "
+      >
+        <div style="display: flex; align-items: center; gap: 10px">
+          <label style="{{ tagStyle }}"
+            >S<input
+              value="{{ season }}"
+              onInput="{{ onSeasonInput }}"
+              aria-label="Season"
+              inputmode="numeric"
+              style="{{ numberStyle }}"
+              style-focus="border-color:var(--color-accent-line)"
+          /></label>
+          <label style="{{ tagStyle }}"
+            >E<input
+              value="{{ number }}"
+              onInput="{{ onNumberInput }}"
+              aria-label="Episode"
+              inputmode="numeric"
+              style="{{ numberStyle }}"
+              style-focus="border-color:var(--color-accent-line)"
+          /></label>
+          <input
+            value="{{ title }}"
+            onInput="{{ onTitleInput }}"
+            aria-label="Episode title"
+            placeholder="Untitled episode"
+            style="
+              flex: 1;
+              min-width: 0;
+              height: 34px;
+              padding: 0 10px;
+              background: var(--color-surface-2);
+              border: 1px solid var(--color-border);
+              border-radius: 7px;
+              color: var(--color-text);
+              font-family: var(--font-sans);
+              font-size: 14px;
+              outline: none;
+            "
+            style-focus="border-color:var(--color-accent-line)"
+          />
+          <button
+            onClick="{{ onRemove }}"
+            title="Remove"
+            style="
+              display: grid;
+              place-items: center;
+              width: 32px;
+              height: 32px;
+              flex: 0 0 auto;
+              background: transparent;
+              border: none;
+              border-radius: 7px;
+              color: var(--color-text-faint);
+              cursor: pointer;
+            "
+            style-hover="color:#c97a6a;background:rgba(201,122,106,.1)"
+          >
+            ✕
+          </button>
+        </div>
+        <span
+          style="
+            font-family: var(--font-mono);
+            font-size: 13px;
+            color: var(--color-text-dim);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            min-width: 0;
+          "
+          >{{ filename }}</span
+        >
+        <div style="display: flex; flex-direction: column; gap: 8px">
+          {{ children }}
+        </div>
+      </div>
+    </x-dc>
+    <script
+      type="text/x-dc"
+      data-dc-script
+      data-props='{"$preview":{"width":560,"height":140},"filename":{"editor":"text","default":"Harbor.Lights.S01E03.The.Long.Night.mkv","tsType":"string"},"season":{"editor":"text","default":"1","tsType":"string"},"number":{"editor":"text","default":"3","tsType":"string"},"title":{"editor":"text","default":"The Long Night","tsType":"string"},"onSeasonChange":{"editor":null,"tsType":"(season: string) =&gt; void"},"onNumberChange":{"editor":null,"tsType":"(number: string) =&gt; void"},"onTitleChange":{"editor":null,"tsType":"(title: string) =&gt; void"},"onRemove":{"editor":null,"tsType":"() =&gt; void"},"children":{"editor":null,"tsType":"ReactNode"}}'
+    >
+      class Component extends DCLogic {
+        renderVals(){
+          // S: digits, at most 2. E: digits, at most 3.
+          const digits=(v,n)=>String(v||'').replace(/\D/g,'').slice(0,n);
+          return {
+            filename:this.props.filename||'episode.mkv',
+            season:this.props.season||'', number:this.props.number||'', title:this.props.title||'',
+            children:this.props.children||null,
+            tagStyle:{display:'flex',alignItems:'center',gap:'4px',flex:'0 0 auto',fontFamily:'var(--font-sans)',fontSize:'13px',fontWeight:'600',color:'var(--color-text-faint)'},
+            numberStyle:{width:'44px',height:'34px',padding:'0 8px',background:'var(--color-surface-2)',border:'1px solid var(--color-border)',borderRadius:'7px',color:'var(--color-text)',fontFamily:'var(--font-sans)',fontSize:'14px',textAlign:'center',outline:'none'},
+            onSeasonInput:(e)=>{ if(this.props.onSeasonChange) this.props.onSeasonChange(digits(e.target.value,2)); },
+            onNumberInput:(e)=>{ if(this.props.onNumberChange) this.props.onNumberChange(digits(e.target.value,3)); },
+            onTitleInput:(e)=>{ if(this.props.onTitleChange) this.props.onTitleChange(e.target.value); },
+            onRemove:this.props.onRemove,
+          };
+        }
+      }
+    </script>
+  </body>
+</html>

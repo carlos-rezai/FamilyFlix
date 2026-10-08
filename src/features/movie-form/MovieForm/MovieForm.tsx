@@ -1,4 +1,4 @@
-import { RatingPicker } from '@/components';
+import { PillTabs, RatingPicker } from '@/components';
 import {
   Button,
   ChevronLeftIcon,
@@ -8,14 +8,16 @@ import {
 } from '@/primitives';
 import { GenrePicker } from '../GenrePicker/GenrePicker';
 import { MovieFormFiles } from '../MovieFormFiles/MovieFormFiles';
+import { SeriesFormFiles } from '../SeriesFormFiles/SeriesFormFiles';
 import { useGenrePool } from '../useGenrePool/useGenrePool';
-import { useMovieForm } from '../useMovieForm/useMovieForm';
+import { useMovieForm, type FormKind } from '../useMovieForm/useMovieForm';
 import {
   Banner,
   BannerLead,
   BannerTitle,
   HeaderRow,
   Heading,
+  KindTabs,
   Lede,
   Emphasis,
   Fields,
@@ -53,8 +55,43 @@ const FIELD_BOX = { height: 48, rounded: false } as const;
  */
 const HEADING = {
   add: 'Add a movie',
+  addSeries: 'Add a series',
   edit: 'Edit details',
 } as const;
+
+/** The **Kind tabs**: what a plain add can be adding, in the order drawn. */
+const KIND_OPTIONS: readonly { value: FormKind; label: string }[] = [
+  { value: 'movie', label: 'Movie' },
+  { value: 'series', label: 'Series' },
+];
+
+/**
+ * What the form says that is the kind's own — the lede's opening sentence, the
+ * placeholders and the credit field. Everything else is one record both kinds
+ * draw, and both ledes end on _Import library_.
+ */
+const WORDING = {
+  movie: {
+    lede: 'Pick the video, poster, and any subtitle files for this movie.',
+    title: 'Movie title',
+    year: '2019',
+    credit: 'Director',
+    creditPlaceholder: 'Director name',
+    description: 'A short synopsis of the movie',
+  },
+  series: {
+    lede: 'Pick the poster and every episode’s video and subtitles for this series.',
+    title: 'Series title',
+    year: '2019–2023',
+    credit: 'Created by',
+    creditPlaceholder: 'Creator name',
+    description: 'A short synopsis of the series',
+  },
+} as const;
+
+function isFormKind(value: string): value is FormKind {
+  return value === 'movie' || value === 'series';
+}
 
 const SAVE = {
   add: { save: 'Add to library', saving: 'Adding…' },
@@ -103,6 +140,9 @@ const ALSO_MATCHED_LEAD = ' — also matched: ';
 export function MovieForm() {
   const genrePool = useGenrePool();
   const {
+    kind,
+    kindSwitchable,
+    setKind,
     values,
     setTitle,
     setYear,
@@ -127,7 +167,9 @@ export function MovieForm() {
     cancel,
   } = useMovieForm();
 
-  const heading = HEADING[editing ? 'edit' : 'add'];
+  const heading =
+    HEADING[editing ? 'edit' : kind === 'series' ? 'addSeries' : 'add'];
+  const wording = WORDING[kind];
   const copy = SAVE[resolving !== null ? 'import' : editing ? 'edit' : 'add'];
 
   return (
@@ -156,11 +198,25 @@ export function MovieForm() {
           <ChevronLeftIcon size={18} />
         </IconButton>
         <Heading>{heading}</Heading>
+        {kindSwitchable && (
+          <KindTabs>
+            <PillTabs
+              label="Kind"
+              options={KIND_OPTIONS}
+              value={kind}
+              onChange={(next) => {
+                if (isFormKind(next)) {
+                  setKind(next);
+                }
+              }}
+            />
+          </KindTabs>
+        )}
       </HeaderRow>
 
       <Lede>
-        Pick the video, poster, and any subtitle files for this movie. To add
-        many at once, use <Emphasis>Import library</Emphasis>.
+        {wording.lede} To add many at once, use{' '}
+        <Emphasis>Import library</Emphasis>.
       </Lede>
 
       <Fields>
@@ -170,7 +226,7 @@ export function MovieForm() {
             <TextField
               {...FIELD_BOX}
               value={values.title}
-              placeholder="Movie title"
+              placeholder={wording.title}
               aria-label="Title"
               onChange={setTitle}
             />
@@ -180,7 +236,7 @@ export function MovieForm() {
             <TextField
               {...FIELD_BOX}
               value={values.year}
-              placeholder="2019"
+              placeholder={wording.year}
               aria-label="Year"
               onChange={setYear}
             />
@@ -189,12 +245,12 @@ export function MovieForm() {
 
         <FieldRow>
           <Field>
-            <FieldLabel>Director</FieldLabel>
+            <FieldLabel>{wording.credit}</FieldLabel>
             <TextField
               {...FIELD_BOX}
               value={values.director}
-              placeholder="Director name"
-              aria-label="Director"
+              placeholder={wording.creditPlaceholder}
+              aria-label={wording.credit}
               onChange={setDirector}
             />
           </Field>
@@ -220,7 +276,7 @@ export function MovieForm() {
           <FieldLabel>Description</FieldLabel>
           <Textarea
             value={values.description}
-            placeholder="A short synopsis of the movie"
+            placeholder={wording.description}
             aria-label="Description"
             onChange={setDescription}
           />
@@ -257,18 +313,26 @@ export function MovieForm() {
 
         {/* The prototype's own place for it: under every metadata field, on a
           card of its own. */}
-        <MovieFormFiles
-          video={values.video}
-          onPickVideo={pickVideo}
-          onRemoveVideo={removeVideo}
-          poster={values.poster}
-          onPickPoster={pickPoster}
-          onRemovePoster={removePoster}
-          subtitles={values.subtitles}
-          onAddSubtitle={addSubtitle}
-          onChangeSubtitleLanguage={changeSubtitleLanguage}
-          onRemoveSubtitle={removeSubtitle}
-        />
+        {kind === 'series' ? (
+          <SeriesFormFiles
+            poster={values.poster}
+            onPickPoster={pickPoster}
+            onRemovePoster={removePoster}
+          />
+        ) : (
+          <MovieFormFiles
+            video={values.video}
+            onPickVideo={pickVideo}
+            onRemoveVideo={removeVideo}
+            poster={values.poster}
+            onPickPoster={pickPoster}
+            onRemovePoster={removePoster}
+            subtitles={values.subtitles}
+            onAddSubtitle={addSubtitle}
+            onChangeSubtitleLanguage={changeSubtitleLanguage}
+            onRemoveSubtitle={removeSubtitle}
+          />
+        )}
       </Fields>
 
       <Actions>
