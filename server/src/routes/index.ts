@@ -1486,6 +1486,28 @@ export function createApiRouter(
     res.status(204).end();
   });
 
+  // A **Folder scan** over every listed folder: `201` with the run's first
+  // snapshot, `400` with none listed, `409` while a **Current run** exists.
+  router.post('/library-folders/scan', async (req: Request, res: Response) => {
+    const body = (req.body ?? {}) as { enrich?: unknown };
+    // Only carried on the run, as a sheet import's is.
+    const enrich = body.enrich === true;
+    const folders = storage.libraryFolders();
+    if (folders.length === 0) {
+      res.status(400).json({ error: 'Add a library folder to scan first.' });
+      return;
+    }
+    try {
+      res.status(201).json(await importer.scan(folders, enrich));
+    } catch (error) {
+      if (error instanceof ImportBusyError) {
+        res.status(409).json({ error: error.message });
+        return;
+      }
+      res.status(500).json({ error: 'Could not start the scan' });
+    }
+  });
+
   // The TMDB key, the `enrichment/` domain's. `GET /api/settings` is not
   // widened: the key is the maintainer's, not a household preference, and the
   // player never reads it.

@@ -527,6 +527,7 @@ describe('the importer is injected, not imported', () => {
   it('answers current from the injected importer’s own current', async () => {
     const snapshot: ImportRun = {
       enrich: false,
+      source: 'sheet',
       id: 'run-1',
       phase: 'scanning',
       startedAt: '2026-09-13T10:00:00.000Z',

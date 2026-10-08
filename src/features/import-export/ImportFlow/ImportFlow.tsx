@@ -12,6 +12,18 @@ import { ImportSetup } from '../ImportSetup/ImportSetup';
 import { useImportRun } from '../useImportRun/useImportRun';
 import { HeaderRow, Heading, Lede } from './ImportFlow.styles';
 
+/** The header's words, by what the run reads: a sheet, or the Library folders. */
+const COPY = {
+  sheet: {
+    heading: 'Import library',
+    lede: 'Bulk-migrate your spreadsheet and movie folders in one pass.',
+  },
+  folders: {
+    heading: 'Scan library folders',
+    lede: 'Finding new movies and series in your library folders.',
+  },
+} as const;
+
 /**
  * The **Import flow** organism, from `feat.ImportFlow.dc.html`: the header row
  * — the back pill to Settings, the heading and the lede — and one of three
@@ -57,6 +69,8 @@ export function ImportFlow() {
   // `/settings` entry a push left behind. A Back mid-run cancels nothing — the
   // run is the server's, and the next visit re-attaches to it.
   const goBack = useGoBack('/settings');
+  // `run.source` chooses the header's words and nothing else.
+  const copy = COPY[run?.source ?? 'sheet'];
 
   const [sheet, setSheet] = useState('');
   const [root, setRoot] = useState('');
@@ -138,9 +152,9 @@ export function ImportFlow() {
         >
           <ChevronLeftIcon size={18} />
         </IconButton>
-        <Heading>Import library</Heading>
+        <Heading>{copy.heading}</Heading>
       </HeaderRow>
-      <Lede>Bulk-migrate your spreadsheet and movie folders in one pass.</Lede>
+      <Lede>{copy.lede}</Lede>
 
       {attaching ? null : run === null ? (
         <ImportSetup

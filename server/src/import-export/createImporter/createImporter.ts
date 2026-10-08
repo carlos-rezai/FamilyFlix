@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { basename, dirname, extname, isAbsolute, relative } from 'node:path';
 
-import type { LibraryStorage } from '../../library';
+import type { LibraryStorage, StoredLibraryFolder } from '../../library';
 import type { Media } from '../../media/createMedia/createMedia';
 import type { MovieFolderScan } from '../../media/scanMovieFolder/scanMovieFolder';
 import { walkLibraryRoot } from '../../media/walkLibraryRoot/walkLibraryRoot';
@@ -165,6 +165,14 @@ export interface Importer {
    * problem.
    */
   resolve(id: string, form: ResolveForm): Promise<Movie>;
+  /**
+   * Start the **Current run** as a **Folder scan** over the listed **Library
+   * folders**, in the order given, and answer its first snapshot. No sheet:
+   * each film is named off its folder, each show off its Show folder. A folder
+   * that cannot be reached is skipped with a **Warning line**. Rejects with
+   * {@link ImportBusyError} while a run exists; `enrich` is only carried.
+   */
+  scan(folders: StoredLibraryFolder[], enrich?: boolean): Promise<ImportRun>;
 }
 
 /** The sheet formats the reader opens, by extension. */
@@ -365,6 +373,16 @@ const asMatchable = (show: ShowScan): MovieFolderScan => ({
 });
 
 /**
+ * Where a run's titles are recorded as coming from: the **Library folder**
+ * (`null` for a sheet run's root, which is not one) and the path their
+ * **Source folders** are recorded relative to.
+ */
+interface Origin {
+  folderId: string | null;
+  base: string;
+}
+
+/**
  * A matched show: the row that named it, and the show — and, when the show is
  * **Already in library**, the series it joins. `episodes` are the ones this
  * run imports: every numbered episode, less those the held series has.
@@ -388,12 +406,13 @@ interface HeldSeries {
 }
 
 /**
- * The row a show no row names imports under: its title guessed from the Show
- * folder's name, its year the one the name carries, and nothing else.
+ * The row a folder no row names imports under — a show the sheet left out, or
+ * every title of a **Folder scan**: its title guessed from the folder's name,
+ * its year the one the name carries, and nothing else.
  */
-const guessedRow = (show: ShowScan): SheetRow => ({
-  title: titleGuess(show.name),
-  year: yearInName(show.name),
+const guessedRow = (name: string): SheetRow => ({
+  title: titleGuess(name),
+  year: yearInName(name),
   endYear: null,
   genres: [],
   director: null,
@@ -472,8 +491,8 @@ export function createImporter({
   playback: Playback;
 }): Importer {
   let run: ImportRun | null = null;
-  /** The **Library root** of the run, and the only place a found file may be. */
-  let root: string | null = null;
+  /** The run's **Library root** or folders: the only places a found file may be. */
+  let roots: string[] = [];
   /** What the run knew when it filed each **Problem**, by the problem's id. */
   const sources = new Map<string, ProblemSource>();
   /** The cancel of the run that is going, and the run itself, to be awaited. */
@@ -557,7 +576,7 @@ export function createImporter({
     warnedGenres: Set<string>,
     current: ImportRun,
     signal: AbortSignal,
-    rootPath: string
+    origin: Origin
   ): Promise<Movie | null> => {
     const folder = media.reserveFolder(row.title, row.year);
     try {
@@ -599,8 +618,13 @@ export function createImporter({
         ...(subtitles.length === 0 ? {} : { subtitles }),
       };
       const added = storage.addMovie(movie);
-      storage.setSourceFolder(added.id, relative(rootPath, scan.dir));
-      if (genres.length === 0) {
+      storage.setSourceFolder(
+        added.id,
+        origin.folderId,
+        relative(origin.base, scan.dir)
+      );
+      // A Folder scan has no row to name a genre: nothing is missing there.
+      if (genres.length === 0 && current.source === 'sheet') {
         // Imported — nothing about the film is missing — and then listed,
         // because a film in no genre row is a film the family will not find.
         file(
@@ -656,13 +680,13 @@ export function createImporter({
     warnedGenres: Set<string>,
     current: ImportRun,
     signal: AbortSignal,
-    rootPath: string
+    origin: Origin
   ): Promise<void> => {
     // Where the show came from, relative to the root: on a held series too,
     // so a re-run backfills a library imported before it was remembered.
-    const sourceFolder = relative(rootPath, show.dir);
+    const sourceFolder = relative(origin.base, show.dir);
     if (held !== null) {
-      storage.setSourceFolder(held.series.id, sourceFolder);
+      storage.setSourceFolder(held.series.id, origin.folderId, sourceFolder);
     }
     for (const stray of show.straySubtitles) {
       log(
@@ -713,7 +737,7 @@ export function createImporter({
             ...(genres.length === 0 ? {} : { genres }),
           };
           series = storage.addSeries(input);
-          storage.setSourceFolder(series.id, sourceFolder);
+          storage.setSourceFolder(series.id, origin.folderId, sourceFolder);
         }
         storage.addEpisode(series.id, {
           season: episode.season,
@@ -747,6 +771,24 @@ export function createImporter({
 
     if (series === null) {
       media.removeFolder(folder);
+    }
+  };
+
+  /**
+   * A matched show's **Unplaced** videos: hard, and Skip alone — there is no
+   * form an episode is resolved in; the reason names the rename.
+   */
+  const fileUnplacedOn = (current: ImportRun, { row, show }: ShowMatch) => {
+    for (const video of show.unplaced) {
+      file(
+        current,
+        problemOf(
+          'unplaced',
+          `${row.title} · ${basename(video)}`,
+          unplacedReason(show, video)
+        ),
+        { row, folder: asMatchable(show), candidates: [] }
+      );
     }
   };
 
@@ -785,9 +827,8 @@ export function createImporter({
   const showMatch = (
     row: SheetRow,
     show: ShowScan,
-    heldSeries: Map<string, HeldSeries>
+    held: HeldSeries | null
   ): ShowMatch => {
-    const held = heldSeries.get(filmKey(row.title, row.year)) ?? null;
     return {
       row,
       show,
@@ -807,23 +848,28 @@ export function createImporter({
    * and folder — read once per run, before its first `await`, as `inLibrary`
    * is: a storage read after the walk would sit outside every catch.
    */
-  const seriesInLibrary = (): Map<string, HeldSeries> =>
+  const heldSeriesList = (): HeldSeries[] =>
+    storage.getSeriesHome().series.map((series) => {
+      const episodes = storage.listEpisodes(series.id);
+      return {
+        series,
+        tags: new Set(
+          episodes.map((episode) =>
+            spellEpisodeTag(episode.season, episode.number)
+          )
+        ),
+        folder: heldFolder(episodes),
+      };
+    });
+
+  const seriesInLibrary = (
+    held: HeldSeries[] = heldSeriesList()
+  ): Map<string, HeldSeries> =>
     new Map(
-      storage.getSeriesHome().series.map((series) => {
-        const episodes = storage.listEpisodes(series.id);
-        return [
-          filmKey(series.title, series.year),
-          {
-            series,
-            tags: new Set(
-              episodes.map((episode) =>
-                spellEpisodeTag(episode.season, episode.number)
-              )
-            ),
-            folder: heldFolder(episodes),
-          },
-        ];
-      })
+      held.map((entry) => [
+        filmKey(entry.series.title, entry.series.year),
+        entry,
+      ])
     );
 
   /** Every film the library holds, by key and year, to its id — read once per run. */
@@ -848,6 +894,7 @@ export function createImporter({
     const already = inLibrary();
     const heldSeries = seriesInLibrary();
     const warnedGenres = new Set<string>();
+    const sheetOrigin: Origin = { folderId: null, base: rootPath };
 
     log(current, `Connecting to ${rootPath} …`, 'info');
     for (const rowNumber of blankTitleRows) {
@@ -894,13 +941,23 @@ export function createImporter({
     for (const match of verdicts.matched) {
       const show = showOf.get(match.folder);
       if (show !== undefined) {
-        matchedShows.push(showMatch(match.row, show, heldSeries));
+        matchedShows.push(
+          showMatch(
+            match.row,
+            show,
+            heldSeries.get(filmKey(match.row.title, match.row.year)) ?? null
+          )
+        );
       } else if (already.has(filmKey(match.row.title, match.row.year))) {
         // Already in library: nothing is added, but where it came from is
         // remembered — the backfill for a library imported before this was.
         const heldId = already.get(filmKey(match.row.title, match.row.year));
         if (heldId !== undefined) {
-          storage.setSourceFolder(heldId, relative(rootPath, match.folder.dir));
+          storage.setSourceFolder(
+            heldId,
+            sheetOrigin.folderId,
+            relative(rootPath, match.folder.dir)
+          );
         }
         log(
           current,
@@ -927,21 +984,7 @@ export function createImporter({
         });
       }
     }
-    // A matched show's **Unplaced** videos: hard, and Skip alone — there is
-    // no form an episode is resolved in; the reason names the rename.
-    const fileUnplaced = ({ row, show }: ShowMatch) => {
-      for (const video of show.unplaced) {
-        file(
-          current,
-          problemOf(
-            'unplaced',
-            `${row.title} · ${basename(video)}`,
-            unplacedReason(show, video)
-          ),
-          { row, folder: asMatchable(show), candidates: [] }
-        );
-      }
-    };
+    const fileUnplaced = (match: ShowMatch) => fileUnplacedOn(current, match);
     matchedShows.forEach(fileUnplaced);
     for (const folder of verdicts.unclaimed) {
       // A show no row names imports anyway, under the title its folder
@@ -949,13 +992,17 @@ export function createImporter({
       // series.
       const show = showOf.get(folder);
       if (show !== undefined) {
-        const row = guessedRow(show);
+        const row = guessedRow(show.name);
         log(
           current,
           `⚠ ${titleWithYear(row.title, row.year)} — not in the spreadsheet, imported under its folder’s name`,
           'warning'
         );
-        const unnamed = showMatch(row, show, heldSeries);
+        const unnamed = showMatch(
+          row,
+          show,
+          heldSeries.get(filmKey(row.title, row.year)) ?? null
+        );
         fileUnplaced(unnamed);
         matchedShows.push(unnamed);
         continue;
@@ -982,7 +1029,7 @@ export function createImporter({
         warnedGenres,
         current,
         signal,
-        rootPath
+        sheetOrigin
       );
       if (signal.aborted) {
         return;
@@ -996,7 +1043,7 @@ export function createImporter({
     }
 
     for (const match of matchedShows) {
-      await importShow(match, pool, warnedGenres, current, signal, rootPath);
+      await importShow(match, pool, warnedGenres, current, signal, sheetOrigin);
       if (signal.aborted) {
         return;
       }
@@ -1010,6 +1057,169 @@ export function createImporter({
     );
     current.phase = 'review';
   };
+
+  /**
+   * A **Folder scan**: each listed folder walked in the order given, every
+   * film and show named off its own folder. **Already in library** is two
+   * rules in order — the same Library folder and Source folder, whatever the
+   * title now says; then the title key and year, which links the held title
+   * to this folder. A held show still gains the episodes it lacks.
+   */
+  const executeScan = async (
+    current: ImportRun,
+    folders: StoredLibraryFolder[],
+    signal: AbortSignal
+  ): Promise<void> => {
+    const pool = new Map(
+      storage
+        .listGenrePool()
+        .map((genre) => [genre.name.toLowerCase(), genre.name])
+    );
+    const already = inLibrary();
+    const held = heldSeriesList();
+    const heldSeries = seriesInLibrary(held);
+    const seriesById = new Map(held.map((entry) => [entry.series.id, entry]));
+    const warnedGenres = new Set<string>();
+
+    for (const folder of folders) {
+      log(current, `Scanning   ${folder.path}`, 'scan');
+    }
+
+    const films: { match: Match; origin: Origin }[] = [];
+    const shows: { match: ShowMatch; origin: Origin }[] = [];
+    let found = 0;
+    let shelves = 0;
+
+    for (const folder of folders) {
+      if ((await readableFolder(folder.path)) !== 'readable') {
+        log(current, `⚠ Can't reach ${folder.path} — skipped`, 'warning');
+        continue;
+      }
+      let scans: MovieFolderScan[] = [];
+      try {
+        scans = await walkLibraryRoot(
+          folder.path,
+          (scan) => {
+            current.found += 1;
+            current.currentItem = scan.dir;
+          },
+          (dir) => {
+            log(current, `⚠ Could not read ${dir} — skipped`, 'warning');
+          }
+        );
+      } catch {
+        // A folder that stopped being readable mid-walk: what was found is
+        // what there is, and the run still reaches review.
+      }
+      if (signal.aborted) {
+        return;
+      }
+      found += scans.length;
+      shelves += foldersUnder(folder.path, scans);
+
+      const origin: Origin = { folderId: folder.id, base: folder.path };
+      const grouped = groupShows(scans);
+      for (const scan of grouped.films) {
+        const row = guessedRow(scan.name);
+        const sourceFolder = relative(folder.path, scan.dir);
+        const key = filmKey(row.title, row.year);
+        const atFolder = storage.titleAt(folder.id, sourceFolder);
+        const heldId = atFolder ?? already.get(key) ?? null;
+        if (heldId !== null) {
+          // Held: linked to where it was found, and nothing is added.
+          storage.setSourceFolder(heldId, folder.id, sourceFolder);
+          log(
+            current,
+            `– Already in library ${titleWithYear(row.title, row.year)}`,
+            'info'
+          );
+          continue;
+        }
+        films.push({ match: { row, folder: scan }, origin });
+      }
+      for (const show of grouped.shows) {
+        const row = guessedRow(show.name);
+        const atFolder = storage.titleAt(
+          folder.id,
+          relative(folder.path, show.dir)
+        );
+        const heldShow =
+          (atFolder === null ? undefined : seriesById.get(atFolder)) ??
+          heldSeries.get(filmKey(row.title, row.year)) ??
+          null;
+        const match = showMatch(row, show, heldShow);
+        fileUnplacedOn(current, match);
+        shows.push({ match, origin });
+      }
+    }
+
+    log(
+      current,
+      `✓ Found ${count(found)} movies across ${count(shelves)} folders. Starting import…`,
+      'success'
+    );
+    current.matched = films.length + shows.length;
+    current.total =
+      films.length +
+      shows.reduce((sum, { match }) => sum + match.episodes.length, 0);
+    current.phase = 'importing';
+
+    let imported = 0;
+    for (const { match, origin } of films) {
+      current.currentItem = match.row.title;
+      const added = await importMatch(
+        match,
+        pool,
+        warnedGenres,
+        current,
+        signal,
+        origin
+      );
+      if (signal.aborted) {
+        return;
+      }
+      if (added !== null) {
+        imported += 1;
+        log(current, `✓ Imported   ${match.row.title}`, 'success');
+        warnOfMissingFiles(current, match);
+      }
+      current.done += 1;
+    }
+
+    for (const { match, origin } of shows) {
+      await importShow(match, pool, warnedGenres, current, signal, origin);
+      if (signal.aborted) {
+        return;
+      }
+    }
+
+    current.currentItem = '';
+    log(
+      current,
+      `✓ Scan complete — ${count(imported)} imported, ${count(current.problems.length)} need attention.`,
+      'success'
+    );
+    current.phase = 'review';
+  };
+
+  /** A run's first state, from its source and the flag it carries. */
+  const freshRun = (
+    source: ImportRun['source'],
+    enrich: boolean
+  ): ImportRun => ({
+    id: randomUUID(),
+    phase: 'scanning',
+    startedAt: new Date().toISOString(),
+    found: 0,
+    total: 0,
+    done: 0,
+    matched: 0,
+    currentItem: '',
+    log: [],
+    problems: [],
+    enrich,
+    source,
+  });
 
   return {
     start: async (sheetPath, rootPath, enrich = false) => {
@@ -1029,21 +1239,9 @@ export function createImporter({
         throw new ImportBusyError();
       }
 
-      const current: ImportRun = {
-        id: randomUUID(),
-        phase: 'scanning',
-        startedAt: new Date().toISOString(),
-        found: 0,
-        total: 0,
-        done: 0,
-        matched: 0,
-        currentItem: '',
-        log: [],
-        problems: [],
-        enrich,
-      };
+      const current = freshRun('sheet', enrich);
       run = current;
-      root = rootPath;
+      roots = [rootPath];
       // Remembered on Start: a Sync reads it to find each Source folder.
       storage.setLibraryRoot(rootPath);
       sources.clear();
@@ -1052,6 +1250,28 @@ export function createImporter({
       // Not awaited: the run goes on in the background, and `current` answers
       // where it has got to. Nothing in `execute` throws past its own catches.
       running = execute(current, sheet, rootPath, stop.signal);
+
+      return snapshot() as ImportRun;
+    },
+
+    scan: async (folders, enrich = false) => {
+      if (run !== null) {
+        throw new ImportBusyError();
+      }
+      // A run just cancelled may still be rolling its folder back.
+      await running;
+      if (run !== null) {
+        throw new ImportBusyError();
+      }
+
+      const current = freshRun('folders', enrich);
+      run = current;
+      roots = folders.map((folder) => folder.path);
+      sources.clear();
+      stop = new AbortController();
+
+      // Not awaited, as a sheet run's is not.
+      running = executeScan(current, folders, stop.signal);
 
       return snapshot() as ImportRun;
     },
@@ -1096,7 +1316,6 @@ export function createImporter({
       const source = sources.get(id);
       if (
         current === null ||
-        root === null ||
         source === undefined ||
         !current.problems.some((problem) => problem.id === id)
       ) {
@@ -1112,7 +1331,10 @@ export function createImporter({
         ...form.subtitles.map((track) => track.file),
       ];
       for (const slot of slots) {
-        if ('found' in slot && !isUnder(root, slot.found)) {
+        if (
+          'found' in slot &&
+          !roots.some((root) => isUnder(root, slot.found))
+        ) {
           throw new ImportPathError(slot.found);
         }
       }

@@ -41,3 +41,9 @@ export const Refusal = styled.p`
   font-size: 13px;
   color: ${({ theme }) => theme.colors.danger};
 `;
+
+/** _Scan folders_, 16px under the accepted shapes. */
+export const ScanActions = styled.div`
+  display: flex;
+  margin-top: 16px;
+`;

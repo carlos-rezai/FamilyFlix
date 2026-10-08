@@ -76,6 +76,7 @@ export type {
 export type {
   ImportField,
   ImportPhase,
+  ImportSource,
   LogKind,
   LogLine,
   ProblemKind,

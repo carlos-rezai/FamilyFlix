@@ -216,3 +216,27 @@ export async function removeLibraryFolder(id: string): Promise<void> {
     throw new Error(`DELETE ${url} failed: ${response.status}`);
   }
 }
+
+const SCAN_ENDPOINT = '/api/library-folders/scan';
+
+/**
+ * Start a **Folder scan** over every listed **Library folder**, and resolve the
+ * snapshot the route answered its `201` with. `enrich` is always sent, and
+ * only carried on the run. A `409` rejects with {@link ImportBusyError} — a
+ * run exists already — and every other failure with a plain `Error`.
+ */
+export async function startFolderScan(enrich = false): Promise<ImportRun> {
+  const response = await fetch(SCAN_ENDPOINT, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ enrich }),
+  });
+
+  if (response.status === 409) {
+    throw new ImportBusyError();
+  }
+  if (!response.ok) {
+    throw new Error(`POST ${SCAN_ENDPOINT} failed: ${response.status}`);
+  }
+  return (await response.json()) as ImportRun;
+}

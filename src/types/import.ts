@@ -12,6 +12,9 @@
  */
 export type ImportField = 'sheet' | 'root';
 
+/** A run over a spreadsheet, or a **Folder scan** over the Library folders. */
+export type ImportSource = 'sheet' | 'folders';
+
 /** Where a run is: walking the root, copying matches in, or waiting on review. */
 export type ImportPhase = 'scanning' | 'importing' | 'review';
 
@@ -83,6 +86,11 @@ export interface ImportRun {
    * re-attached screen still knows it. The import itself asks TMDB nothing.
    */
   enrich: boolean;
+  /**
+   * What the run reads: a spreadsheet and its root, or the listed **Library
+   * folders** — a **Folder scan**. The screen reads it for its heading alone.
+   */
+  source: ImportSource;
 }
 
 /** What Resolve prefills the **Movie form** from. */

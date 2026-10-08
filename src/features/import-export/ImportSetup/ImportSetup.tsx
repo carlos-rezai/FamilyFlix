@@ -1,17 +1,5 @@
+import { Button, FolderIcon, SheetIcon, TextField } from '@/primitives';
 import {
-  Button,
-  FolderIcon,
-  InfoRingIcon,
-  SheetIcon,
-  TextField,
-} from '@/primitives';
-import {
-  Accepts,
-  AcceptsBody,
-  AcceptsGlyph,
-  AcceptsHeading,
-  AcceptsRule,
-  AcceptsShapes,
   Actions,
   EnrichBox,
   EnrichCard,
@@ -23,9 +11,8 @@ import {
   Field,
   FieldLabel,
   Fields,
-  Mono,
-  Sans,
 } from './ImportSetup.styles';
+import { FolderShapes } from '../FolderShapes/FolderShapes';
 
 /**
  * The box both path fields are drawn as: the prototype's mono face in a 50px
@@ -117,27 +104,7 @@ export function ImportSetup({
         {rootError === null ? null : <ErrorLine>{rootError}</ErrorLine>}
       </Field>
 
-      <Accepts>
-        <AcceptsGlyph>
-          <InfoRingIcon size={18} />
-        </AcceptsGlyph>
-        <AcceptsBody>
-          <AcceptsHeading>What the scanner accepts</AcceptsHeading>
-          <AcceptsShapes>
-            {'Movie Title (2019)\\ movie.mkv · subs.en.srt'}
-            <br />
-            {'Show Name\\ Season 01\\ S01E03.mkv'}
-            <br />
-            {'Show Name\\ S01E03.mkv '}
-            <Sans>— loose episodes at the show root are fine</Sans>
-          </AcceptsShapes>
-          <AcceptsRule>
-            Season and episode numbers come from the folder first, then the
-            filename (<Mono>S01E03</Mono>, <Mono>1x03</Mono>). Anything it can’t
-            place lands in the review list.
-          </AcceptsRule>
-        </AcceptsBody>
-      </Accepts>
+      <FolderShapes />
 
       <EnrichCard>
         <EnrichBox aria-hidden="true" $checked={enrich}>

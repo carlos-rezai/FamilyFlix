@@ -248,13 +248,23 @@ export interface LibraryStorage {
   /** Remember the Library root — an upsert, like the key. */
   setLibraryRoot(root: string): void;
   /**
-   * Record where a **Movie** or **Series** came from: its Source folder,
-   * relative to the Library root. Touches no other column. Answers whether
-   * the library holds that id.
+   * Record where a **Movie** or **Series** came from, both columns in one
+   * call: the **Library folder** it was found under (`null` for none) and its
+   * Source folder relative to that folder. Answers whether the library holds
+   * that id.
    */
-  setSourceFolder(id: string, folder: string): boolean;
+  setSourceFolder(
+    id: string,
+    folderId: string | null,
+    sourceFolder: string
+  ): boolean;
   /** A Movie's or Series' Source folder as recorded, `null` when none is. */
   sourceFolder(id: string): string | null;
+  /**
+   * The id of the **Movie** or **Series** recorded at this Library folder and
+   * Source folder, whatever its title says now — `null` when none is.
+   */
+  titleAt(folderId: string, sourceFolder: string): string | null;
   /**
    * Insert a **Series** and its genres (ordered) in one transaction, and
    * return the assembled model. It carries no watch state: that lives on its
@@ -373,6 +383,7 @@ export function createSqliteStorage(dbPath: string): LibraryStorage {
     setLibraryRoot: settingsRepository.setLibraryRoot,
     setSourceFolder: enrich.setSourceFolder,
     sourceFolder: enrich.sourceFolder,
+    titleAt: enrich.titleAt,
     addSeries: seriesWrite.addSeries,
     addEpisode: seriesWrite.addEpisode,
     setSeriesFavorite: seriesCuration.setSeriesFavorite,

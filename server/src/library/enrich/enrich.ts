@@ -85,12 +85,23 @@ export interface Enrich {
    */
   enrichmentCounts(): { total: number; complete: number };
   /**
-   * Record a **Movie**'s or **Series**' Source folder, relative to the Library
-   * root, and nothing else. Answers whether the library holds that id.
+   * Record where a **Movie** or **Series** came from, both columns in one
+   * call: the **Library folder** it was found under (`null` for none) and its
+   * Source folder relative to that folder. Answers whether the library holds
+   * that id.
    */
-  setSourceFolder(id: string, folder: string): boolean;
+  setSourceFolder(
+    id: string,
+    folderId: string | null,
+    sourceFolder: string
+  ): boolean;
   /** A Movie's or Series' recorded Source folder, `null` when none is. */
   sourceFolder(id: string): string | null;
+  /**
+   * The **Movie** or **Series** recorded at this Library folder and Source
+   * folder, whatever its title says now — `null` when none is.
+   */
+  titleAt(folderId: string, sourceFolder: string): string | null;
 }
 
 /** The two columns a title needs for **Full details**: a synopsis and a poster. */
@@ -176,22 +187,38 @@ export function createEnrich(db: SqliteDatabase, reader: MovieReader): Enrich {
   }
 
   const updateMovieSource = db.prepare(
-    'UPDATE movies SET source_folder = ? WHERE id = ?'
+    'UPDATE movies SET library_folder_id = ?, source_folder = ? WHERE id = ?'
   );
   const updateSeriesSource = db.prepare(
-    'UPDATE series SET source_folder = ? WHERE id = ?'
+    'UPDATE series SET library_folder_id = ?, source_folder = ? WHERE id = ?'
+  );
+  const selectAt = db.prepare(
+    `SELECT id FROM movies WHERE library_folder_id = @folderId AND source_folder = @sourceFolder
+     UNION ALL SELECT id FROM series WHERE library_folder_id = @folderId AND source_folder = @sourceFolder
+     LIMIT 1`
   );
   const selectSource = db.prepare(
     `SELECT source_folder FROM movies WHERE id = @id
      UNION ALL SELECT source_folder FROM series WHERE id = @id`
   );
 
-  function setSourceFolder(id: string, folder: string): boolean {
+  function setSourceFolder(
+    id: string,
+    folderId: string | null,
+    folder: string
+  ): boolean {
     return (
-      updateMovieSource.run(folder, id).changes +
-        updateSeriesSource.run(folder, id).changes >
+      updateMovieSource.run(folderId, folder, id).changes +
+        updateSeriesSource.run(folderId, folder, id).changes >
       0
     );
+  }
+
+  function titleAt(folderId: string, sourceFolder: string): string | null {
+    const row = selectAt.get({ folderId, sourceFolder }) as
+      | { id: string }
+      | undefined;
+    return row?.id ?? null;
   }
 
   function sourceFolder(id: string): string | null {
@@ -204,6 +231,7 @@ export function createEnrich(db: SqliteDatabase, reader: MovieReader): Enrich {
   return {
     setSourceFolder,
     sourceFolder,
+    titleAt,
     enrichMovie,
     moviesInScope,
     enrichmentCounts,
