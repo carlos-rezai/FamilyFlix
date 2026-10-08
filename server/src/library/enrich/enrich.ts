@@ -1,3 +1,5 @@
+import { join } from 'node:path';
+
 import type { SqliteDatabase } from '../../db';
 import type { EnrichScope, Movie } from '@/types';
 import type { MovieReader, MovieRow } from '../read/read';
@@ -97,6 +99,11 @@ export interface Enrich {
   ): boolean;
   /** A Movie's or Series' recorded Source folder, `null` when none is. */
   sourceFolder(id: string): string | null;
+  /**
+   * The title's Library folder path joined to its Source folder, in one query
+   * over both columns — `null` for a title with no folder.
+   */
+  sourcePath(id: string): string | null;
   /**
    * The **Movie** or **Series** recorded at this Library folder and Source
    * folder, whatever its title says now — `null` when none is.
@@ -202,6 +209,15 @@ export function createEnrich(db: SqliteDatabase, reader: MovieReader): Enrich {
      UNION ALL SELECT source_folder FROM series WHERE id = @id`
   );
 
+  const selectPath = db.prepare(
+    `SELECT f.path, m.source_folder FROM movies m
+       JOIN library_folders f ON f.id = m.library_folder_id
+       WHERE m.id = @id AND m.source_folder IS NOT NULL
+     UNION ALL SELECT f.path, s.source_folder FROM series s
+       JOIN library_folders f ON f.id = s.library_folder_id
+       WHERE s.id = @id AND s.source_folder IS NOT NULL`
+  );
+
   function setSourceFolder(
     id: string,
     folderId: string | null,
@@ -221,6 +237,13 @@ export function createEnrich(db: SqliteDatabase, reader: MovieReader): Enrich {
     return row?.id ?? null;
   }
 
+  function sourcePath(id: string): string | null {
+    const row = selectPath.get({ id }) as
+      | { path: string; source_folder: string }
+      | undefined;
+    return row === undefined ? null : join(row.path, row.source_folder);
+  }
+
   function sourceFolder(id: string): string | null {
     const row = selectSource.get({ id }) as
       | { source_folder: string | null }
@@ -231,6 +254,7 @@ export function createEnrich(db: SqliteDatabase, reader: MovieReader): Enrich {
   return {
     setSourceFolder,
     sourceFolder,
+    sourcePath,
     titleAt,
     enrichMovie,
     moviesInScope,

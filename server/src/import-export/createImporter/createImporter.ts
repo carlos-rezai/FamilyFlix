@@ -1272,8 +1272,6 @@ export function createImporter({
       const current = freshRun('sheet', enrich);
       run = current;
       roots = [rootPath];
-      // Remembered on Start: a Sync reads it to find each Source folder.
-      storage.setLibraryRoot(rootPath);
       const origin = sheetOriginOf(rootPath);
       sources.clear();
       stop = new AbortController();

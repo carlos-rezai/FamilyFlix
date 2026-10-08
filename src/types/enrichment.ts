@@ -48,7 +48,7 @@ export const ENRICH_SCOPES = ['missing', 'all', 'single'] as const;
 /** One of the scopes in {@link ENRICH_SCOPES}. */
 export type EnrichScope = (typeof ENRICH_SCOPES)[number];
 
-/** The setup's read: the library's counts, the key, the connection, the root. */
+/** The setup's read: the library's counts, the key, the connection, the folders. */
 export interface EnrichmentSummary {
   total: number;
   /** Titles holding both a synopsis and a poster. */
@@ -56,7 +56,8 @@ export interface EnrichmentSummary {
   lastSyncedAt: string | null;
   keySet: boolean;
   online: boolean;
-  libraryRoot: string | null;
+  /** The reachable **Library folders**' paths, in the order added. */
+  libraryFolders: string[];
 }
 
 /** One TMDB answer an `ambiguous` **Decision** offers. */

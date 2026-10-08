@@ -241,13 +241,6 @@ export interface LibraryStorage {
   /** Stamp when a Sync reached review — an upsert, like the key. */
   setEnrichmentLastSyncedAt(at: string): void;
   /**
-   * The **Library root** the last import was handed, `null` before any — the
-   * one absolute path the library keeps, in the `settings` table beside the key.
-   */
-  libraryRoot(): string | null;
-  /** Remember the Library root — an upsert, like the key. */
-  setLibraryRoot(root: string): void;
-  /**
    * Record where a **Movie** or **Series** came from, both columns in one
    * call: the **Library folder** it was found under (`null` for none) and its
    * Source folder relative to that folder. Answers whether the library holds
@@ -260,6 +253,11 @@ export interface LibraryStorage {
   ): boolean;
   /** A Movie's or Series' Source folder as recorded, `null` when none is. */
   sourceFolder(id: string): string | null;
+  /**
+   * Where a Movie or Series sits on disk: its Library folder's path joined to
+   * its Source folder — `null` for a title with no folder.
+   */
+  sourcePath(id: string): string | null;
   /**
    * The id of the **Movie** or **Series** recorded at this Library folder and
    * Source folder, whatever its title says now — `null` when none is.
@@ -379,10 +377,9 @@ export function createSqliteStorage(dbPath: string): LibraryStorage {
     setTmdbKey: settingsRepository.setTmdbKey,
     enrichmentLastSyncedAt: settingsRepository.enrichmentLastSyncedAt,
     setEnrichmentLastSyncedAt: settingsRepository.setEnrichmentLastSyncedAt,
-    libraryRoot: settingsRepository.libraryRoot,
-    setLibraryRoot: settingsRepository.setLibraryRoot,
     setSourceFolder: enrich.setSourceFolder,
     sourceFolder: enrich.sourceFolder,
+    sourcePath: enrich.sourcePath,
     titleAt: enrich.titleAt,
     addSeries: seriesWrite.addSeries,
     addEpisode: seriesWrite.addEpisode,

@@ -1,30 +1,19 @@
 import { Button, FolderIcon, SheetIcon, TextField } from '@/primitives';
 import {
   Actions,
-  EnrichBox,
-  EnrichCard,
-  EnrichHint,
-  EnrichInput,
-  EnrichLabel,
-  EnrichText,
   ErrorLine,
   Field,
   FieldLabel,
   Fields,
 } from './ImportSetup.styles';
 import { FolderShapes } from '../FolderShapes/FolderShapes';
+import { EnrichCheckCard } from '../EnrichCheckCard/EnrichCheckCard';
 
 /**
  * The box both path fields are drawn as: the prototype's mono face in a 50px
  * box with the soft corner rather than the search bar's pill.
  */
 const PATH_FIELD = { mono: true, height: 50, rounded: false } as const;
-
-/** The card's hint, chosen by whether a TMDB key is stored (`enrichHint`). */
-const HINT_WITH_KEY =
-  'Runs straight after the import, over everything it brings in. Needs the internet.';
-const HINT_WITHOUT_KEY =
-  'Needs a TMDB key — add one under Settings → Network first.';
 
 export interface ImportSetupProps {
   /** The spreadsheet path as typed. */
@@ -51,10 +40,7 @@ export interface ImportSetupProps {
  * root**, led by the folder glyph — and _Start import_, disabled until both
  * are non-empty. Between the root and the button, _What the scanner accepts_:
  * the three folder shapes, with the prototype's backslashes, and the
- * folder-first rule. Under that, the _Also fetch metadata and posters from
- * TMDB_ card: a `<label>` over the native checkbox, clipped by
- * `visuallyHidden` so it keeps its place in the tab order, the 22px box drawn
- * first in it, its hint chosen by whether a key is stored. The box is only carried on the run —
+ * folder-first rule. Under that, the `EnrichCheckCard`. The box is only carried on the run —
  * _Finish_ reads it; the import itself asks TMDB nothing.
  *
  * Controlled: the values, the two refusals and the three handlers are handed
@@ -106,20 +92,11 @@ export function ImportSetup({
 
       <FolderShapes />
 
-      <EnrichCard>
-        <EnrichBox aria-hidden="true" $checked={enrich}>
-          {enrich ? '✓' : ''}
-        </EnrichBox>
-        <EnrichInput
-          type="checkbox"
-          checked={enrich}
-          onChange={onToggleEnrich}
-        />
-        <EnrichText>
-          <EnrichLabel>Also fetch metadata and posters from TMDB</EnrichLabel>
-          <EnrichHint>{keySet ? HINT_WITH_KEY : HINT_WITHOUT_KEY}</EnrichHint>
-        </EnrichText>
-      </EnrichCard>
+      <EnrichCheckCard
+        checked={enrich}
+        keySet={keySet}
+        onToggle={onToggleEnrich}
+      />
 
       <Actions>
         <Button label="Start import" disabled={!ready} onClick={onStart} />

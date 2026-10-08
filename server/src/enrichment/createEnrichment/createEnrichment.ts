@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { join, posix, sep } from 'node:path';
+import { stat } from 'node:fs/promises';
 import type { Readable } from 'node:stream';
 
 import type {
@@ -151,6 +152,30 @@ export interface EnrichmentDeps {
   writeBack?: WriteBack;
 }
 
+/** A reachable Library folder of the Current run, and what it may be written. */
+interface RunFolder {
+  id: string;
+  path: string;
+  writable: Record<WriteTarget, boolean>;
+}
+
+/** The listed **Library folders** that can be reached now, in the order added. */
+async function reachableFolders(
+  storage: LibraryStorage
+): Promise<Array<{ id: string; path: string }>> {
+  const reached: Array<{ id: string; path: string }> = [];
+  for (const folder of storage.libraryFolders()) {
+    try {
+      if ((await stat(folder.path)).isDirectory()) {
+        reached.push({ id: folder.id, path: folder.path });
+      }
+    } catch {
+      // Unreachable: a drive unplugged, a folder moved — left out.
+    }
+  }
+  return reached;
+}
+
 /** The last lines of the log a snapshot carries, the importer's cap. */
 const LOG_CAP = 80;
 
@@ -170,12 +195,13 @@ export function createEnrichment({
   writeBack = realWriteBack,
 }: EnrichmentDeps): Enrichment {
   let run: EnrichmentRun | null = null;
-  /** The Library root the Current run writes into, and which targets it may. */
-  let runRoot: string | null = null;
-  let runWritable: Record<WriteTarget, boolean> = {
-    sheet: false,
-    posters: false,
-  };
+  /**
+   * The reachable **Library folders** the Current run writes into, and which
+   * targets each may — filled by the write check before any TMDB request.
+   */
+  let runFolders: RunFolder[] = [];
+  /** Whether the Current run asked for posters at all. */
+  let runWantsPosters = false;
   /** Aborts the Current run's requests in flight — _Stop_'s handle. */
   let abort: AbortController | null = null;
   /** Each Decision of the Current run → the movie it is about. */
@@ -287,17 +313,19 @@ export function createEnrichment({
     movie: Movie,
     stored: string
   ): Promise<void> {
-    if (!runWritable.posters || runRoot === null) return;
+    if (!runWantsPosters) return;
     const folder = storage.sourceFolder(movie.id);
+    const home = folder === null ? undefined : runFolderOf(movie.id, folder);
+    if (home !== undefined && !home.writable.posters) return;
     let outcome: Awaited<ReturnType<WriteBack['poster']>> | null = null;
-    if (folder !== null) {
+    if (folder !== null && home !== undefined) {
       let poster: Readable;
       try {
         poster = await media.readStored(stored);
       } catch {
         return;
       }
-      outcome = await writeBack.poster(runRoot, folder, poster);
+      outcome = await writeBack.poster(home.path, folder, poster);
     }
     if (outcome === null || outcome.kind === 'no-folder') {
       log(
@@ -313,15 +341,33 @@ export function createEnrichment({
     if (outcome.kind === 'written') current.written.posters = true;
   }
 
-  /** The sheet write target, at review: the films A–Z, when the run may. */
+  /**
+   * The reachable Library folder of the Current run a title sits in — the one
+   * whose path joined to the title's Source folder is its `sourcePath`.
+   */
+  function runFolderOf(id: string, folder: string): RunFolder | undefined {
+    const path = storage.sourcePath(id);
+    if (path === null) return undefined;
+    return runFolders.find((each) => join(each.path, folder) === path);
+  }
+
+  /**
+   * The sheet write target, at review: one sheet per writable folder, holding
+   * that folder's films A–Z, when the run may.
+   */
   async function writeMetadataSheet(current: EnrichmentRun): Promise<void> {
-    if (!runWritable.sheet || runRoot === null) return;
-    const outcome = await writeBack.sheet(
-      runRoot,
-      storage.listMovies({ sort: 'a-z' })
-    );
-    log(current, outcome.line.text, outcome.line.kind);
-    if (outcome.kind === 'written') current.written.sheet = true;
+    const sheetFolders = runFolders.filter((each) => each.writable.sheet);
+    if (sheetFolders.length === 0) return;
+    const movies = storage.listMovies({ sort: 'a-z' });
+    for (const home of sheetFolders) {
+      const own = movies.filter((movie) => {
+        const folder = storage.sourceFolder(movie.id);
+        return folder !== null && runFolderOf(movie.id, folder) === home;
+      });
+      const outcome = await writeBack.sheet(home.path, own);
+      log(current, outcome.line.text, outcome.line.kind);
+      if (outcome.kind === 'written') current.written.sheet = true;
+    }
   }
 
   /**
@@ -619,11 +665,14 @@ export function createEnrichment({
     signal: AbortSignal
   ): Promise<void> {
     // The permission check and its dry-run lines, before any TMDB request.
-    if (runRoot !== null) {
-      const checked = await writeBack.check(runRoot, targets);
-      if (signal.aborted) return;
-      runWritable = checked.writable;
-      for (const line of checked.lines) log(current, line.text, line.kind);
+    // One check per reachable Library folder, one dry-run line each.
+    if (targets.length > 0) {
+      for (const folder of await reachableFolders(storage)) {
+        const checked = await writeBack.check(folder.path, targets);
+        if (signal.aborted) return;
+        runFolders.push({ ...folder, writable: checked.writable });
+        for (const line of checked.lines) log(current, line.text, line.kind);
+      }
     }
 
     let stopped = false;
@@ -781,8 +830,8 @@ export function createEnrichment({
     runFields = options.fields;
     const controller = new AbortController();
     abort = controller;
-    runRoot = storage.libraryRoot();
-    runWritable = { sheet: false, posters: false };
+    runFolders = [];
+    runWantsPosters = options.writePosters;
     const targets: WriteTarget[] = [
       ...(options.writeSheet ? (['sheet'] as const) : []),
       ...(options.writePosters ? (['posters'] as const) : []),
@@ -917,14 +966,12 @@ export function createEnrichment({
   }
 
   /**
-   * Where a title came from — the Library root joined to its Source folder,
-   * drawn with the trailing separator — or `null` when either is not on record.
+   * Where a title came from — its Library folder joined to its Source folder,
+   * drawn with the trailing separator — or `null` when it has no folder.
    */
   function sourcePath(id: string): string | null {
-    const root = storage.libraryRoot();
-    const folder = storage.sourceFolder(id);
-    if (root === null || folder === null) return null;
-    return `${join(root, folder)}${sep}`;
+    const path = storage.sourcePath(id);
+    return path === null ? null : `${path}${sep}`;
   }
 
   async function summary(): Promise<EnrichmentSummary> {
@@ -936,7 +983,9 @@ export function createEnrichment({
       lastSyncedAt: storage.enrichmentLastSyncedAt(),
       keySet: storage.tmdbKey() !== null,
       online,
-      libraryRoot: storage.libraryRoot(),
+      libraryFolders: (await reachableFolders(storage)).map(
+        (folder) => folder.path
+      ),
     };
   }
 

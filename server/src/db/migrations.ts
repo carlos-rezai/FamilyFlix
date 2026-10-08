@@ -238,4 +238,32 @@ export const migrations: readonly Migration[] = [
       `);
     },
   },
+  {
+    // The carry-over: a remembered `library-root` becomes a Library folder
+    // (unless already listed), every title with a Source folder but no folder
+    // yet is linked to it, and the key goes — one place remembers folders.
+    version: 7,
+    up(db) {
+      const row = db
+        .prepare("SELECT value FROM settings WHERE key = 'library-root'")
+        .get() as { value: string } | undefined;
+      if (row === undefined) return;
+      const listed = db
+        .prepare('SELECT id FROM library_folders WHERE path = ?')
+        .get(row.value) as { id: string } | undefined;
+      const folderId = listed?.id ?? randomUUID();
+      if (listed === undefined) {
+        db.prepare(
+          'INSERT INTO library_folders (id, path, added_at) VALUES (?, ?, ?)'
+        ).run(folderId, row.value, new Date().toISOString());
+      }
+      for (const table of ['movies', 'series']) {
+        db.prepare(
+          `UPDATE ${table} SET library_folder_id = ?
+           WHERE source_folder IS NOT NULL AND library_folder_id IS NULL`
+        ).run(folderId);
+      }
+      db.prepare("DELETE FROM settings WHERE key = 'library-root'").run();
+    },
+  },
 ];

@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
+import { fetchTmdbKey } from '@/api/fetchTmdbKey/fetchTmdbKey';
 import { useGoBack } from '@/hooks/useGoBack/useGoBack';
 import {
   Button,
@@ -10,6 +11,7 @@ import {
   TextField,
 } from '@/primitives';
 import { ImportBusyError, startFolderScan } from '../api/api';
+import { EnrichCheckCard } from '../EnrichCheckCard/EnrichCheckCard';
 import { FolderRow } from '../FolderRow/FolderRow';
 import { FolderShapes } from '../FolderShapes/FolderShapes';
 import { useLibraryFolders } from '../useLibraryFolders/useLibraryFolders';
@@ -33,7 +35,8 @@ import {
  * row** per listed folder (or _No folders yet._), a divider, and the add row,
  * a mono `TextField` with the folder glyph and _Add_. A refused add is one
  * 13px `danger` line under the field, and the typed path stays in it. Then
- * the group **Scan**: _What the scanner accepts_ and **Scan folders**,
+ * the group **Scan**: _What the scanner accepts_, the `EnrichCheckCard` with
+ * Import setup's stored-key hint, and **Scan folders** — sending the box —
  * disabled with no folder listed, which posts the **Folder scan** and pushes
  * `/import` — on a `409` too, so the run already in flight is the one shown.
  *
@@ -46,12 +49,30 @@ export function LibraryFolders() {
   const [typed, setTyped] = useState('');
   const navigate = useNavigate();
   const [scanning, setScanning] = useState(false);
+  const [enrich, setEnrich] = useState(false);
+  const [keySet, setKeySet] = useState(false);
+
+  useEffect(() => {
+    let left = false;
+    fetchTmdbKey().then(
+      (key) => {
+        if (!left) {
+          setKeySet(key !== null);
+        }
+      },
+      () => {
+        // A read that failed is no key: the hint says to add one.
+      }
+    );
+    return () => {
+      left = true;
+    };
+  }, []);
 
   const scan = async () => {
     setScanning(true);
     try {
-      // `enrich` stays false until the page draws its box.
-      await startFolderScan(false);
+      await startFolderScan(enrich);
       navigate('/import');
     } catch (error) {
       if (error instanceof ImportBusyError) {
@@ -132,6 +153,11 @@ export function LibraryFolders() {
 
           <GroupHeading>Scan</GroupHeading>
           <FolderShapes />
+          <EnrichCheckCard
+            checked={enrich}
+            keySet={keySet}
+            onToggle={() => setEnrich((ticked) => !ticked)}
+          />
           <ScanActions>
             <Button
               label="Scan folders"

@@ -94,7 +94,9 @@ export function EnrichmentSetup({
 }: EnrichmentSetupProps) {
   const single = scope === 'single';
   const ready = summary.keySet && summary.online;
-  const root = summary.libraryRoot;
+  const folders = summary.libraryFolders;
+  const root = folders.length === 1 ? folders[0] : null;
+  const anyFolder = folders.length > 0;
   return (
     <Stack>
       {summary.online ? null : (
@@ -169,13 +171,17 @@ export function EnrichmentSetup({
             title="Your library"
             line="Always. This is what the app reads from."
           />
-          {root === null ? null : (
+          {!anyFolder ? null : (
             <>
               <TargetDivider />
               <WriteTargetRow
                 glyph={<TableIcon size={19} />}
                 title={SHEET_TITLE}
-                line={`${root}\\familyflix-metadata.csv`}
+                line={
+                  root === null
+                    ? 'familyflix-metadata.csv in each library folder'
+                    : `${root}\\familyflix-metadata.csv`
+                }
                 path
                 toggle={{ checked: writeSheet, onToggle: onToggleSheet }}
               />
@@ -183,14 +189,18 @@ export function EnrichmentSetup({
               <WriteTargetRow
                 glyph={<LandscapeIcon size={19} />}
                 title={POSTERS_TITLE}
-                line={`${root}\\<movie folder>\\poster.jpg`}
+                line={
+                  root === null
+                    ? '<movie folder>\\poster.jpg in each library folder'
+                    : `${root}\\<movie folder>\\poster.jpg`
+                }
                 path
                 toggle={{ checked: writePosters, onToggle: onTogglePosters }}
               />
             </>
           )}
         </Targets>
-        {root !== null && (writeSheet || writePosters) ? (
+        {anyFolder && (writeSheet || writePosters) ? (
           <SourceNote>
             FamilyFlix will write into your movie folders. Existing files are
             never replaced — a new <SourceNoteMono>poster.jpg</SourceNoteMono>{' '}

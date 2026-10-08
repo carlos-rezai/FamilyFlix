@@ -162,8 +162,8 @@ export function EnrichmentFlow() {
       ...(scope === 'single' && movieId !== null ? { movieId } : {}),
       fields,
       // With no Library root there is nowhere to write either (log 23 Q37).
-      writeSheet: summary.libraryRoot !== null && writeSheet,
-      writePosters: summary.libraryRoot !== null && writePosters,
+      writeSheet: summary.libraryFolders.length > 0 && writeSheet,
+      writePosters: summary.libraryFolders.length > 0 && writePosters,
     }).catch(() => {
       // A refused start leaves the setup where it is, to press again.
     });
