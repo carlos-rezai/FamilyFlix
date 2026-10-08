@@ -161,7 +161,7 @@ export function EnrichmentFlow() {
       scope,
       ...(scope === 'single' && movieId !== null ? { movieId } : {}),
       fields,
-      // With no Library root there is nowhere to write either (log 23 Q37).
+      // With no Library folder there is nowhere to write either (log 23 Q37).
       writeSheet: summary.libraryFolders.length > 0 && writeSheet,
       writePosters: summary.libraryFolders.length > 0 && writePosters,
     }).catch(() => {

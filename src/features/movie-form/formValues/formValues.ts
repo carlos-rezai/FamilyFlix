@@ -214,7 +214,7 @@ export function otherCandidates(detail: ImportProblemDetail): string[] {
  * The two names travel together because the slot is one thing — `video` and
  * `videoPath` are the same slot answering in the only two ways it can. A found
  * file answers the way a stored one does: what the path *means* — a file the
- * library holds, or one under the **Library root** the resolve route may copy
+ * library holds, or one under a **Library folder** the resolve route may copy
  * from — is the route's to decide, and nothing about the encoding differs.
  */
 function appendFile(

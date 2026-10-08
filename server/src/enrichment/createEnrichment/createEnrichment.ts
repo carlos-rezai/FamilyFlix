@@ -121,7 +121,7 @@ export interface Enrichment {
   /**
    * The setup's read: the library's titles and those with **Full details**,
    * when a Sync last reached review, whether a key is stored, whether TMDB
-   * answered the server's own probe, and the **Library root**.
+   * answered the server's own probe, and the **Library folders**.
    */
   summary(): Promise<EnrichmentSummary>;
   /**

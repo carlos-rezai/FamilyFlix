@@ -152,7 +152,7 @@ export interface Media {
   /**
    * **Copy-in**: {@link storeUpload}'s **Bulk import** counterpart — the same
    * **Managed copy** into `<folder>/<safe name>`, from a file where it lies
-   * under the **Library root** instead of from a stream, answering the same
+   * under a **Library folder** instead of from a stream, answering the same
    * **Stored path**. The name is the source's own, through the same sanitiser.
    *
    * Copy, never move: the originals under the root survive a bad run, and

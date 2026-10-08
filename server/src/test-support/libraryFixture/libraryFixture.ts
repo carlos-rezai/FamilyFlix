@@ -16,7 +16,7 @@ export const LIBRARY_FIXTURE = fileURLToPath(
  * it — answering the two paths a run is started on. A copy rather than the
  * fixture itself, because a test that adds a **Source folder** or watches a
  * cancel roll a copy back must not be writing into what is checked in, and
- * because two suites running at once must not share a **Library root**.
+ * because two suites running at once must not share a **Library folder**.
  *
  * Both import suites carried this pair of `cpSync`s before it moved here. A
  * test double's neighbour rather than backend logic — nothing that ships

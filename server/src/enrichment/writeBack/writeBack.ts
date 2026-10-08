@@ -7,7 +7,7 @@ import { pipeline } from 'node:stream/promises';
 import type { LogLine, Movie } from '@/types';
 import { writeSheet } from '../../import-export/writeSheet/writeSheet';
 
-/** The **Metadata sheet**'s name in the **Library root**. */
+/** The **Metadata sheet**'s name in each **Library folder**. */
 export const SHEET_NAME = 'familyflix-metadata.csv';
 
 /** The name a poster takes in its **Source folder**. */
@@ -35,8 +35,8 @@ export interface SheetOutcome {
 }
 
 /**
- * The two **Write targets** — the only code in the app that writes into the
- * **Library root**. Every member answers a value and never throws, and none
+ * The two **Write targets** — the only code in the app that writes into a
+ * **Library folder**. Every member answers a value and never throws, and none
  * ever replaces a file: each creates exclusively, so an existing one is left
  * byte-identical.
  */

@@ -120,10 +120,10 @@ export interface ResolveForm {
  */
 export interface Importer {
   /**
-   * Start the **Current run** over a sheet and a **Library root**, and answer
-   * its first snapshot. Rejects with {@link ImportStartError} for a sheet that
-   * does not exist, cannot be read, is neither `.xlsx` nor `.csv` or has no
-   * title column, and for a root that does not exist or is not a directory —
+   * Start the **Current run** over a sheet and the spreadsheet's root, and
+   * answer its first snapshot. Rejects with {@link ImportStartError} for a
+   * sheet that does not exist, cannot be read, is neither `.xlsx` nor `.csv`
+   * or has no title column, and for a root that does not exist or is not a directory —
    * before any run exists; with {@link ImportBusyError} while a run exists.
    * `enrich` is only carried on the run, for _Finish_ to read.
    */
@@ -491,7 +491,7 @@ export function createImporter({
   playback: Playback;
 }): Importer {
   let run: ImportRun | null = null;
-  /** The run's **Library root** or folders: the only places a found file may be. */
+  /** The run's **Library folders**: the only places a found file may be. */
   let roots: string[] = [];
   /** What the run knew when it filed each **Problem**, by the problem's id. */
   const sources = new Map<string, ProblemSource>();
@@ -682,8 +682,9 @@ export function createImporter({
     signal: AbortSignal,
     origin: Origin
   ): Promise<void> => {
-    // Where the show came from, relative to the root: on a held series too,
-    // so a re-run backfills a library imported before it was remembered.
+    // Where the show came from, relative to its Library folder: on a held
+    // series too, so a re-run backfills a library imported before it was
+    // remembered.
     const sourceFolder = relative(origin.base, show.dir);
     if (held !== null) {
       storage.setSourceFolder(held.series.id, origin.folderId, sourceFolder);

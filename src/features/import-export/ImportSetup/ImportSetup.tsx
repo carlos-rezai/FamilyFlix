@@ -18,7 +18,7 @@ const PATH_FIELD = { mono: true, height: 50, rounded: false } as const;
 export interface ImportSetupProps {
   /** The spreadsheet path as typed. */
   sheet: string;
-  /** The **Library root** path as typed. */
+  /** The spreadsheet's root path as typed. */
   root: string;
   /** The reason the last start refused the sheet, or `null` for none. */
   sheetError: string | null;
