@@ -5,7 +5,7 @@ import { dismissProblem } from '@/api/dismissProblem/dismissProblem';
 import { fetchMovie } from '@/api/fetchMovie/fetchMovie';
 import { useQueryParamWriter } from '@/features/search/useQueryParamWriter/useQueryParamWriter';
 import { useGoBack } from '@/hooks/useGoBack/useGoBack';
-import type { EpisodeFormRow, MovieFormValues } from '@/types';
+import type { EpisodeFormRow, FormKind, MovieFormValues } from '@/types';
 import { moviePath } from '@/utils';
 import { titleFromFilename } from '../titleFromFilename/titleFromFilename';
 import { useEpisodeList } from '../useEpisodeList/useEpisodeList';
@@ -106,9 +106,6 @@ const YEAR_LENGTH = 4;
  * tabs' rule. Beside `?movie=` or `?problem=` it is ignored.
  */
 const KIND_PARAM = 'kind';
-
-/** The **Form kind**: what a plain add is adding. */
-export type FormKind = 'movie' | 'series';
 
 /**
  * The most characters a series' **Year range** can have — `2019–2023`: two

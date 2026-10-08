@@ -6,11 +6,12 @@ import {
   Textarea,
   TextField,
 } from '@/primitives';
+import type { FormKind } from '@/types';
 import { GenrePicker } from '../GenrePicker/GenrePicker';
 import { MovieFormFiles } from '../MovieFormFiles/MovieFormFiles';
 import { SeriesFormFiles } from '../SeriesFormFiles/SeriesFormFiles';
 import { useGenrePool } from '../useGenrePool/useGenrePool';
-import { useMovieForm, type FormKind } from '../useMovieForm/useMovieForm';
+import { useMovieForm } from '../useMovieForm/useMovieForm';
 import {
   Banner,
   BannerLead,

@@ -139,3 +139,6 @@ export interface EpisodeFormRow {
   /** The episode's **Subtitles**, in the order they were attached. */
   subtitles: MovieFormSubtitle[];
 }
+
+/** The **Form kind**: what a plain add is adding. */
+export type FormKind = 'movie' | 'series';

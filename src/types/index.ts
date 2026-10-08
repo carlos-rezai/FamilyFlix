@@ -68,6 +68,7 @@ export type {
 } from './playback';
 export type {
   EpisodeFormRow,
+  FormKind,
   MovieFormFile,
   MovieFormSubtitle,
   MovieFormValues,
