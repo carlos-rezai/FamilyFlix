@@ -3,6 +3,7 @@ import type {
   ImportProblemDetail,
   Movie,
   MovieFormFile,
+  MovieFormSubtitle,
   MovieFormValues,
 } from '@/types';
 import { toRatingPercent, toRatingUnits } from '@/utils';
@@ -73,6 +74,25 @@ function storedFile(path: string | null): MovieFormFile | null {
  */
 export function pickedFile(file: File): MovieFormFile {
   return { kind: 'picked', file, filename: file.name };
+}
+
+/**
+ * The language a picked track lands in.
+ *
+ * Story 27: most of the family folder is English, so the common case is meant
+ * to need no second press. It is a default the maintainer can take back on the
+ * row itself, never a locked value — and it is the form's decision rather than
+ * the card's, which is why it is here and the pool is there.
+ */
+const DEFAULT_LANGUAGE = 'English';
+
+/**
+ * A **Subtitle row** for a track the maintainer has just picked, under the
+ * form's own `key`, in the default language — the one constructor of a picked
+ * track, for a movie's list and an episode row's alike.
+ */
+export function pickedSubtitle(key: string, file: File): MovieFormSubtitle {
+  return { key, file: pickedFile(file), language: DEFAULT_LANGUAGE };
 }
 
 /**

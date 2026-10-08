@@ -21,6 +21,7 @@ import {
   movieFormValues,
   otherCandidates,
   pickedFile,
+  pickedSubtitle,
   problemFormValues,
 } from '../formValues/formValues';
 
@@ -126,16 +127,6 @@ function yearRange(typed: string): string {
       : kept.slice(0, dash + 1) + kept.slice(dash + 1).replace(/[–-]/g, '');
   return once.slice(0, YEAR_RANGE_LENGTH);
 }
-
-/**
- * The language a picked track lands in.
- *
- * Story 27: most of the family folder is English, so the common case is meant
- * to need no second press. It is a default the maintainer can take back on the
- * row itself, never a locked value — and it is the form's decision rather than
- * the card's, which is why it is here and the pool is there.
- */
-const DEFAULT_LANGUAGE = 'English';
 
 /** An empty form: what the **Add context** opens on. */
 const EMPTY: MovieFormValues = {
@@ -564,14 +555,7 @@ export function useMovieForm(): UseMovieFormResult {
     const key = `subtitle-${nextKey.current}`;
     setValues((current) => ({
       ...current,
-      subtitles: [
-        ...current.subtitles,
-        {
-          key,
-          file: pickedFile(file),
-          language: DEFAULT_LANGUAGE,
-        },
-      ],
+      subtitles: [...current.subtitles, pickedSubtitle(key, file)],
     }));
   }, []);
 

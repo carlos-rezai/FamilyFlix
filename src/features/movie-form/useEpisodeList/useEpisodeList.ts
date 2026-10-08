@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
 
 import type { EpisodeFormRow, MovieFormSubtitle } from '@/types';
+import { pickedFile, pickedSubtitle } from '../formValues/formValues';
 import { readEpisodeTag } from '../readEpisodeTag/readEpisodeTag';
 
 export interface EpisodeList {
@@ -29,9 +30,6 @@ export interface EpisodeList {
    */
   episodesComplete: boolean;
 }
-
-/** The language a picked track lands in — the movie subtitles' rule. */
-const DEFAULT_LANGUAGE = 'English';
 
 /** A typed number as the count it is, or `null` for one that is not ≥ 1. */
 function counted(text: string): number | null {
@@ -77,7 +75,7 @@ export function useEpisodeList(): EpisodeList {
           number: tag.number,
           row: {
             key,
-            file: { kind: 'picked', file, filename: file.name },
+            file: pickedFile(file),
             season: String(tag.season),
             number: String(tag.number),
             title: tag.title ?? '',
@@ -100,7 +98,7 @@ export function useEpisodeList(): EpisodeList {
         seasonOne.add(number);
         added.push({
           key,
-          file: { kind: 'picked', file, filename: file.name },
+          file: pickedFile(file),
           season: '1',
           number: String(number),
           title: '',
@@ -158,11 +156,7 @@ export function useEpisodeList(): EpisodeList {
       const key = `episode-subtitle-${nextKey.current}`;
       editSubtitles(rowKey, (subtitles) => [
         ...subtitles,
-        {
-          key,
-          file: { kind: 'picked', file, filename: file.name },
-          language: DEFAULT_LANGUAGE,
-        },
+        pickedSubtitle(key, file),
       ]);
     },
     [editSubtitles]
