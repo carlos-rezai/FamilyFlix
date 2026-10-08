@@ -386,6 +386,15 @@ interface ShowMatch {
 }
 
 /**
+ * A film or show a run will import, and the **Library folder** it was found
+ * under — where its **Source folder** is recorded relative to.
+ */
+interface Placed<M> {
+  match: M;
+  libraryFolder: StoredLibraryFolder;
+}
+
+/**
  * A series the library already holds, as a run needs it: the series, the
  * `(season, episode)` tags it has, and the **Series folder** they live in —
  * or `null` when none of them names one.
@@ -770,7 +779,7 @@ export function createImporter({
    * A matched show's **Unplaced** videos: hard, and Skip alone — there is no
    * form an episode is resolved in; the reason names the rename.
    */
-  const fileUnplacedOn = (current: ImportRun, { row, show }: ShowMatch) => {
+  const fileUnplaced = (current: ImportRun, { row, show }: ShowMatch) => {
     for (const video of show.unplaced) {
       file(
         current,
@@ -854,9 +863,7 @@ export function createImporter({
       };
     });
 
-  const seriesInLibrary = (
-    held: HeldSeries[] = heldSeriesList()
-  ): Map<string, HeldSeries> =>
+  const seriesInLibrary = (held: HeldSeries[]): Map<string, HeldSeries> =>
     new Map(
       held.map((entry) => [
         filmKey(entry.series.title, entry.series.year),
@@ -872,11 +879,17 @@ export function createImporter({
         .map((movie: Movie) => [filmKey(movie.title, movie.year), movie.id])
     );
 
-  const execute = async (
+  /**
+   * The **Import phase** both runs end in: each placed film, then each placed
+   * show, imported against the folder it was found under, and the completion
+   * line — `✓ Import complete` for a sheet, `✓ Scan complete` for a **Folder
+   * scan**. A cancel stops it where it is, and the run never reaches review.
+   */
+  const importPlaced = async (
     current: ImportRun,
-    { rows, blankTitleRows }: SheetRead,
-    rootPath: string,
-    sheetFolder: StoredLibraryFolder,
+    films: Placed<Match>[],
+    shows: Placed<ShowMatch>[],
+    verb: 'Import' | 'Scan',
     signal: AbortSignal
   ): Promise<void> => {
     const pool = new Map(
@@ -884,9 +897,69 @@ export function createImporter({
         .listGenrePool()
         .map((genre) => [genre.name.toLowerCase(), genre.name])
     );
-    const already = inLibrary();
-    const heldSeries = seriesInLibrary();
     const warnedGenres = new Set<string>();
+
+    current.matched = films.length + shows.length;
+    // Each episode is one item on the bar, as each film is.
+    current.total =
+      films.length +
+      shows.reduce((sum, { match }) => sum + match.episodes.length, 0);
+    current.phase = 'importing';
+
+    let imported = 0;
+    for (const { match, libraryFolder } of films) {
+      current.currentItem = match.row.title;
+      const added = await importMatch(
+        match,
+        pool,
+        warnedGenres,
+        current,
+        signal,
+        libraryFolder
+      );
+      if (signal.aborted) {
+        return;
+      }
+      if (added !== null) {
+        imported += 1;
+        log(current, `✓ Imported   ${match.row.title}`, 'success');
+        warnOfMissingFiles(current, match);
+      }
+      current.done += 1;
+    }
+
+    for (const { match, libraryFolder } of shows) {
+      await importShow(
+        match,
+        pool,
+        warnedGenres,
+        current,
+        signal,
+        libraryFolder
+      );
+      if (signal.aborted) {
+        return;
+      }
+    }
+
+    current.currentItem = '';
+    log(
+      current,
+      `✓ ${verb} complete — ${count(imported)} imported, ${count(current.problems.length)} need attention.`,
+      'success'
+    );
+    current.phase = 'review';
+  };
+
+  const execute = async (
+    current: ImportRun,
+    { rows, blankTitleRows }: SheetRead,
+    rootPath: string,
+    sheetFolder: StoredLibraryFolder,
+    signal: AbortSignal
+  ): Promise<void> => {
+    const already = inLibrary();
+    const heldSeries = seriesInLibrary(heldSeriesList());
 
     log(current, `Connecting to ${rootPath} …`, 'info');
     for (const rowNumber of blankTitleRows) {
@@ -976,8 +1049,9 @@ export function createImporter({
         });
       }
     }
-    const fileUnplaced = (match: ShowMatch) => fileUnplacedOn(current, match);
-    matchedShows.forEach(fileUnplaced);
+    for (const match of matchedShows) {
+      fileUnplaced(current, match);
+    }
     for (const folder of verdicts.unclaimed) {
       // A show no row names imports anyway, under the title its folder
       // suggests: a `no-row` Problem would open a form that cannot take a
@@ -995,7 +1069,7 @@ export function createImporter({
           show,
           heldSeries.get(filmKey(row.title, row.year)) ?? null
         );
-        fileUnplaced(unnamed);
+        fileUnplaced(current, unnamed);
         matchedShows.push(unnamed);
         continue;
       }
@@ -1005,49 +1079,13 @@ export function createImporter({
         candidates: [],
       });
     }
-    current.matched = matched.length + matchedShows.length;
-    // Each episode is one item on the bar, as each film is.
-    current.total =
-      matched.length +
-      matchedShows.reduce((sum, { episodes }) => sum + episodes.length, 0);
-    current.phase = 'importing';
-
-    let imported = 0;
-    for (const match of matched) {
-      current.currentItem = match.row.title;
-      const added = await importMatch(
-        match,
-        pool,
-        warnedGenres,
-        current,
-        signal,
-        sheetFolder
-      );
-      if (signal.aborted) {
-        return;
-      }
-      if (added !== null) {
-        imported += 1;
-        log(current, `✓ Imported   ${match.row.title}`, 'success');
-        warnOfMissingFiles(current, match);
-      }
-      current.done += 1;
-    }
-
-    for (const match of matchedShows) {
-      await importShow(match, pool, warnedGenres, current, signal, sheetFolder);
-      if (signal.aborted) {
-        return;
-      }
-    }
-
-    current.currentItem = '';
-    log(
+    await importPlaced(
       current,
-      `✓ Import complete — ${count(imported)} imported, ${count(current.problems.length)} need attention.`,
-      'success'
+      matched.map((match) => ({ match, libraryFolder: sheetFolder })),
+      matchedShows.map((match) => ({ match, libraryFolder: sheetFolder })),
+      'Import',
+      signal
     );
-    current.phase = 'review';
   };
 
   /**
@@ -1062,24 +1100,17 @@ export function createImporter({
     folders: StoredLibraryFolder[],
     signal: AbortSignal
   ): Promise<void> => {
-    const pool = new Map(
-      storage
-        .listGenrePool()
-        .map((genre) => [genre.name.toLowerCase(), genre.name])
-    );
     const already = inLibrary();
     const held = heldSeriesList();
     const heldSeries = seriesInLibrary(held);
     const seriesById = new Map(held.map((entry) => [entry.series.id, entry]));
-    const warnedGenres = new Set<string>();
 
     for (const folder of folders) {
       log(current, `Scanning   ${folder.path}`, 'scan');
     }
 
-    const films: { match: Match; libraryFolder: StoredLibraryFolder }[] = [];
-    const shows: { match: ShowMatch; libraryFolder: StoredLibraryFolder }[] =
-      [];
+    const films: Placed<Match>[] = [];
+    const shows: Placed<ShowMatch>[] = [];
     let found = 0;
     let shelves = 0;
 
@@ -1140,7 +1171,7 @@ export function createImporter({
           heldSeries.get(filmKey(row.title, row.year)) ??
           null;
         const match = showMatch(row, show, heldShow);
-        fileUnplacedOn(current, match);
+        fileUnplaced(current, match);
         shows.push({ match, libraryFolder: folder });
       }
     }
@@ -1150,55 +1181,7 @@ export function createImporter({
       `✓ Found ${count(found)} movies across ${count(shelves)} folders. Starting import…`,
       'success'
     );
-    current.matched = films.length + shows.length;
-    current.total =
-      films.length +
-      shows.reduce((sum, { match }) => sum + match.episodes.length, 0);
-    current.phase = 'importing';
-
-    let imported = 0;
-    for (const { match, libraryFolder } of films) {
-      current.currentItem = match.row.title;
-      const added = await importMatch(
-        match,
-        pool,
-        warnedGenres,
-        current,
-        signal,
-        libraryFolder
-      );
-      if (signal.aborted) {
-        return;
-      }
-      if (added !== null) {
-        imported += 1;
-        log(current, `✓ Imported   ${match.row.title}`, 'success');
-        warnOfMissingFiles(current, match);
-      }
-      current.done += 1;
-    }
-
-    for (const { match, libraryFolder } of shows) {
-      await importShow(
-        match,
-        pool,
-        warnedGenres,
-        current,
-        signal,
-        libraryFolder
-      );
-      if (signal.aborted) {
-        return;
-      }
-    }
-
-    current.currentItem = '';
-    log(
-      current,
-      `✓ Scan complete — ${count(imported)} imported, ${count(current.problems.length)} need attention.`,
-      'success'
-    );
-    current.phase = 'review';
+    await importPlaced(current, films, shows, 'Scan', signal);
   };
 
   /**
