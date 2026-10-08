@@ -7,6 +7,14 @@ import {
 } from '@/types';
 
 import {
+  CARD_LABEL,
+  POSTER_ACCEPT,
+  POSTER_CHOOSE,
+  POSTER_LABEL,
+  SUBTITLE_ACCEPT,
+  VIDEO_ACCEPT,
+} from '../filesCard';
+import {
   Caption,
   Card,
   EpisodeRows,
@@ -14,21 +22,11 @@ import {
   EpisodesLabel,
 } from './SeriesFormFiles.styles';
 
-/** What the poster slot offers a file dialog — the movie card's own answer. */
-const POSTER_ACCEPT = 'image/*';
-
-/** The caption over the card, and the names of its slots. */
-const CARD_LABEL = 'Files';
-const POSTER_LABEL = 'Poster';
-const POSTER_CHOOSE = 'Choose poster image';
+/** The episodes section's name, and what its picker says. */
 const EPISODES_LABEL = 'Episodes';
 const EPISODES_ADD = 'Add episode files';
 
-/** What the episode picker offers a file dialog — the movie's video answer. */
-const VIDEO_ACCEPT = 'video/*,.mkv,.avi';
-
-/** What a row's subtitle picker offers — the movie card's own four. */
-const SUBTITLE_ACCEPT = '.srt,.vtt,.ass,.sub';
+/** What a row's own subtitle picker says. */
 const SUBTITLE_ADD = 'Add subtitle';
 
 export interface SeriesFormFilesProps {
