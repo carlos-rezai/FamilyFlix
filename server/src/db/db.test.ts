@@ -43,10 +43,10 @@ const EXPECTED_GENRES = [
   'Crime',
 ];
 
-// The version a fresh database migrates to — migration #5, Enrichment's
-// columns (issue #204). Every "at the latest version" assertion reads it, so
-// the next migration moves one number rather than seven.
-const LATEST_VERSION = 5;
+// The version a fresh database migrates to — migration #6, the Library
+// folders list (issue #268). Every "at the latest version" assertion reads it,
+// so the next migration moves one number rather than seven.
+const LATEST_VERSION = 6;
 
 // What migration #5 adds, by table: the three columns a Sync writes on a movie
 // and a series, and the episode's still. Additive, nullable, nothing seeded.
@@ -210,6 +210,7 @@ function indexesReferencing(db: TestDb, column: string): string[] {
 function windBackToV1(path: string): void {
   const db = open(path);
   try {
+    dropMigration6(db);
     dropMigration5Columns(db);
     dropSeriesTables(db);
     // What #3 added: a v1 database has no settings table.
@@ -235,6 +236,7 @@ function windBackToV1(path: string): void {
 function windBackToV2(path: string): void {
   const db = open(path);
   try {
+    dropMigration6(db);
     dropMigration5Columns(db);
     dropSeriesTables(db);
     db.prepare('DROP TABLE settings').run();
@@ -263,6 +265,7 @@ function dropSeriesTables(db: TestDb): void {
 function windBackToV3(path: string): void {
   const db = open(path);
   try {
+    dropMigration6(db);
     dropMigration5Columns(db);
     dropSeriesTables(db);
     db.pragma('user_version = 3');
@@ -298,8 +301,41 @@ function dropMigration5Columns(db: TestDb): void {
 function windBackToV4(path: string): void {
   const db = open(path);
   try {
+    dropMigration6(db);
     dropMigration5Columns(db);
     db.pragma('user_version = 4');
+  } finally {
+    db.close();
+  }
+}
+
+/**
+ * What migration #6 added, dropped: the two `library_folder_id` columns, then
+ * the table they reference. Each only where it exists, so every wind-back
+ * reads the same before #6 is written as after.
+ */
+function dropMigration6(db: TestDb): void {
+  for (const table of ['movies', 'series']) {
+    if (
+      tableNames(db).includes(table) &&
+      columnNames(db, table).includes('library_folder_id')
+    ) {
+      db.prepare(`ALTER TABLE ${table} DROP COLUMN library_folder_id`).run();
+    }
+  }
+  db.prepare('DROP TABLE IF EXISTS library_folders').run();
+}
+
+/**
+ * Leave the database at `path` looking exactly like one written before
+ * migration #6 existed: drop what it added and wind `user_version` back to 5.
+ * Re-opening it is the upgrade every installed library from v0.2 takes.
+ */
+function windBackToV5(path: string): void {
+  const db = open(path);
+  try {
+    dropMigration6(db);
+    db.pragma('user_version = 5');
   } finally {
     db.close();
   }
@@ -836,10 +872,10 @@ describe('db: migration #5 — enrichment columns', () => {
     ).toBe('TEXT');
   });
 
-  it('lands a fresh database at version 5', () => {
+  it('lands a fresh database at the latest version', () => {
     const db = track(open(':memory:'));
 
-    expect(userVersion(db)).toBe(5);
+    expect(userVersion(db)).toBe(LATEST_VERSION);
   });
 
   it('seeds nothing — a fresh database still holds no movies and no series', () => {
@@ -867,7 +903,7 @@ describe('db: migration #5 — enrichment columns', () => {
 
     const upgraded = track(open(path));
 
-    expect(userVersion(upgraded)).toBe(5);
+    expect(userVersion(upgraded)).toBe(LATEST_VERSION);
     for (const [table, columns] of Object.entries(MIGRATION_5_COLUMNS)) {
       expect(columnNames(upgraded, table)).toEqual(
         expect.arrayContaining([...columns])
@@ -908,6 +944,104 @@ describe('db: migration #5 — enrichment columns', () => {
     const movie = storage.getMovie(added.id);
     expect(movie?.originalTitle).toBeNull();
     expect(movie?.tmdbScore).toBeNull();
+  });
+});
+
+// 30 — Library folders, Phase 1 (issue #268) adds migration #6: the list of
+// **Library folders** — `library_folders (id, path, added_at)` — and a
+// `library_folder_id` on `movies` and `series` that a folder's removal sets to
+// null. It inserts no folder: the carry-over of `library-root` is #7's.
+
+describe('db: migration #6 — library folders', () => {
+  it('creates the library_folders table with its three columns', () => {
+    const db = track(open(':memory:'));
+
+    expect(tableNames(db)).toContain('library_folders');
+    const info = columnInfo(db, 'library_folders');
+    const column = (name: string) => info.find((c) => c.name === name);
+    expect(info.map((c) => c.name)).toEqual(['id', 'path', 'added_at']);
+    expect(column('id')?.pk).toBe(1);
+    expect(column('path')?.notnull).toBe(1);
+    expect(column('added_at')?.notnull).toBe(1);
+  });
+
+  it('refuses a second folder under the same path', () => {
+    const db = track(open(':memory:'));
+    const insert = db.prepare(
+      'INSERT INTO library_folders (id, path, added_at) VALUES (?, ?, ?)'
+    );
+    insert.run('a', 'E:\\Movies', '2026-10-08T00:00:00.000Z');
+
+    expect(() =>
+      insert.run('b', 'E:\\Movies', '2026-10-08T00:00:01.000Z')
+    ).toThrow();
+  });
+
+  it.each(['movies', 'series'])(
+    'adds a nullable library_folder_id to %s, set to null when its folder goes',
+    (table) => {
+      const db = track(open(':memory:'));
+
+      const declared = columnInfo(db, table).find(
+        (c) => c.name === 'library_folder_id'
+      );
+      expect(declared?.notnull).toBe(0);
+      const keys = db.pragma(`foreign_key_list(${table})`) as Array<{
+        table: string;
+        from: string;
+        to: string;
+        on_delete: string;
+      }>;
+      expect(keys).toContainEqual(
+        expect.objectContaining({
+          table: 'library_folders',
+          from: 'library_folder_id',
+          to: 'id',
+          on_delete: 'SET NULL',
+        })
+      );
+    }
+  );
+
+  it('lands a fresh database at version 6 holding no folder', () => {
+    const db = track(open(':memory:'));
+
+    expect(userVersion(db)).toBe(6);
+    expect(db.prepare('SELECT id FROM library_folders').all()).toEqual([]);
+  });
+
+  it('upgrades a version-5 database in place: no folder, its titles unchanged', () => {
+    const path = tempDbPath();
+
+    const before = trackStorage(createSqliteStorage(path));
+    const added = before.addMovie({
+      title: 'Northwind',
+      year: 2018,
+      videoPath: 'Northwind (2018)/northwind.mkv',
+      synopsis: 'Ours.',
+      genres: ['Drama'],
+    });
+    before.setRating(added.id, 7);
+    before.close();
+    windBackToV5(path);
+
+    const before5 = track(open(path));
+    const rowBefore = before5
+      .prepare('SELECT * FROM movies WHERE id = ?')
+      .get(added.id);
+    before5.close();
+
+    const upgraded = track(open(path));
+    expect(userVersion(upgraded)).toBe(6);
+    expect(tableNames(upgraded)).toContain('library_folders');
+    expect(columnNames(upgraded, 'movies')).toContain('library_folder_id');
+    expect(columnNames(upgraded, 'series')).toContain('library_folder_id');
+    expect(upgraded.prepare('SELECT id FROM library_folders').all()).toEqual(
+      []
+    );
+    expect(
+      upgraded.prepare('SELECT * FROM movies WHERE id = ?').get(added.id)
+    ).toEqual({ ...(rowBefore as object), library_folder_id: null });
   });
 });
 

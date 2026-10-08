@@ -38,6 +38,10 @@ import { okResponse } from '@/test-support/fakeResponse/fakeResponse';
  * furniture every **Settings group** draws with, so the Playback card's
  * heading and this one are one styled component rather than two copies.
  * The three rows are exactly as before.
+ *
+ * 30 — Library folders, Phase 1 (issue #268) adds a fourth row, second:
+ * 📁 _Library folders_, with the line _The folders your movies and series are
+ * kept in._, pushing the **Library folders page** at `/settings/folders`.
  */
 let fetchMock: ReturnType<
   typeof vi.fn<
@@ -66,6 +70,10 @@ function renderSection() {
           <Route path="/settings" element={<LibrarySection />} />
           <Route path="/add" element={<p>the movie form</p>} />
           <Route path="/import" element={<p>the import flow</p>} />
+          <Route
+            path="/settings/folders"
+            element={<p>the library folders page</p>}
+          />
         </Routes>
         <LocationProbe />
       </ThemeProvider>
@@ -74,6 +82,8 @@ function renderSection() {
 }
 
 const addRow = () => screen.getByRole('button', { name: /add a title/i });
+const foldersRow = () =>
+  screen.getByRole('button', { name: /library folders/i });
 const importRow = () =>
   screen.getByRole('button', { name: /import from spreadsheet/i });
 const exportRow = () => screen.getByRole('button', { name: /export to csv/i });
@@ -104,11 +114,12 @@ describe('LibrarySection', () => {
     expect(getComputedStyle(heading).textTransform).toBe('uppercase');
   });
 
-  it('draws exactly three rows: Add a title, Import from spreadsheet, Export to CSV', () => {
+  it('draws exactly four rows: Add a title, Library folders, Import from spreadsheet, Export to CSV', () => {
     renderSection();
 
-    expect(screen.getAllByRole('button')).toHaveLength(3);
-    expect(comesBefore(addRow(), importRow())).toBe(true);
+    expect(screen.getAllByRole('button')).toHaveLength(4);
+    expect(comesBefore(addRow(), foldersRow())).toBe(true);
+    expect(comesBefore(foldersRow(), importRow())).toBe(true);
     expect(comesBefore(importRow(), exportRow())).toBe(true);
   });
 
@@ -152,6 +163,25 @@ describe('LibrarySection', () => {
     expect(pathname()).toBe('/add');
     expect(search()).toBe('');
     expect(screen.getByText('the movie form')).toBeDefined();
+  });
+
+  it('draws the Library folders row second, with its glyph and its line', () => {
+    renderSection();
+
+    expect(screen.getAllByRole('button')[1]).toBe(foldersRow());
+    expect(screen.getByText('📁')).toBeDefined();
+    expect(
+      screen.getByText('The folders your movies and series are kept in.')
+    ).toBeDefined();
+  });
+
+  it('pushes the Library folders page from Library folders', () => {
+    renderSection();
+
+    fireEvent.click(foldersRow());
+
+    expect(pathname()).toBe('/settings/folders');
+    expect(screen.getByText('the library folders page')).toBeDefined();
   });
 
   it('lands on the import flow from Import from spreadsheet', () => {
