@@ -56,6 +56,14 @@ describe('titleFromFilename — the Title guess off a picked video', () => {
     expect(titleFromFilename(filename)).toBe('Breaking Bad');
   });
 
+  it('titles Harbor.and.Vine.1x3.mkv “Harbor and Vine”', () => {
+    // A one-digit episode: the tag reader reads it as S1E3, so the prefill
+    // has to stop where that reader says the tag starts.
+    expect(titleFromFilename('Harbor.and.Vine.1x3.mkv')).toBe(
+      'Harbor and Vine'
+    );
+  });
+
   it('reads a name with no extension', () => {
     expect(titleFromFilename('Rear Window')).toBe('Rear Window');
     expect(titleFromFilename('Rear Window (1954)')).toBe('Rear Window');
