@@ -1,6 +1,10 @@
-import { EpisodeFileRow, FileField } from '@/components';
+import { EpisodeFileRow, FileField, SubtitleRow } from '@/components';
 import { FilePicker, ImageIcon } from '@/primitives';
-import type { EpisodeFormRow, MovieFormFile } from '@/types';
+import {
+  SUBTITLE_LANGUAGES,
+  type EpisodeFormRow,
+  type MovieFormFile,
+} from '@/types';
 
 import {
   Caption,
@@ -23,6 +27,10 @@ const EPISODES_ADD = 'Add episode files';
 /** What the episode picker offers a file dialog — the movie's video answer. */
 const VIDEO_ACCEPT = 'video/*,.mkv,.avi';
 
+/** What a row's subtitle picker offers — the movie card's own four. */
+const SUBTITLE_ACCEPT = '.srt,.vtt,.ass,.sub';
+const SUBTITLE_ADD = 'Add subtitle';
+
 /** What a callback the caller left out does: nothing. */
 const ignore = (): void => undefined;
 
@@ -41,6 +49,14 @@ export interface SeriesFormFilesProps {
   onNumberChange?: (key: string, number: string) => void;
   onEpisodeTitleChange?: (key: string, title: string) => void;
   onRemoveEpisode?: (key: string) => void;
+  /** Reports a track picked on the row holding `rowKey`. */
+  onAddEpisodeSubtitle?: (rowKey: string, file: File) => void;
+  onChangeEpisodeSubtitleLanguage?: (
+    rowKey: string,
+    subtitleKey: string,
+    language: string
+  ) => void;
+  onRemoveEpisodeSubtitle?: (rowKey: string, subtitleKey: string) => void;
 }
 
 /**
@@ -60,6 +76,9 @@ export function SeriesFormFiles({
   onNumberChange = ignore,
   onEpisodeTitleChange = ignore,
   onRemoveEpisode = ignore,
+  onAddEpisodeSubtitle = ignore,
+  onChangeEpisodeSubtitleLanguage = ignore,
+  onRemoveEpisodeSubtitle = ignore,
 }: SeriesFormFilesProps) {
   return (
     <Card>
@@ -91,7 +110,31 @@ export function SeriesFormFiles({
                 onEpisodeTitleChange(episode.key, title)
               }
               onRemove={() => onRemoveEpisode(episode.key)}
-            />
+            >
+              {episode.subtitles.map((subtitle) => (
+                <SubtitleRow
+                  key={subtitle.key}
+                  filename={subtitle.file.filename}
+                  language={subtitle.language}
+                  languages={SUBTITLE_LANGUAGES}
+                  onLanguageChange={(language) =>
+                    onChangeEpisodeSubtitleLanguage(
+                      episode.key,
+                      subtitle.key,
+                      language
+                    )
+                  }
+                  onRemove={() =>
+                    onRemoveEpisodeSubtitle(episode.key, subtitle.key)
+                  }
+                />
+              ))}
+              <FilePicker
+                label={SUBTITLE_ADD}
+                accept={SUBTITLE_ACCEPT}
+                onPick={(file) => onAddEpisodeSubtitle(episode.key, file)}
+              />
+            </EpisodeFileRow>
           ))}
           <FilePicker
             label={EPISODES_ADD}

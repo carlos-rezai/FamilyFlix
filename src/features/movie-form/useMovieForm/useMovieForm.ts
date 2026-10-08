@@ -213,6 +213,14 @@ export interface UseMovieFormResult {
   setNumber: (key: string, number: string) => void;
   setEpisodeTitle: (key: string, title: string) => void;
   removeEpisode: (key: string) => void;
+  /** A row's own **Subtitles**: added in English, re-languaged, removed. */
+  addEpisodeSubtitle: (rowKey: string, file: File) => void;
+  changeEpisodeSubtitleLanguage: (
+    rowKey: string,
+    subtitleKey: string,
+    language: string
+  ) => void;
+  removeEpisodeSubtitle: (rowKey: string, subtitleKey: string) => void;
   /** Whether Save can be pressed — the gate, not a validation message. */
   canSave: boolean;
   /** Whether the write is in flight. */
@@ -696,6 +704,9 @@ export function useMovieForm(): UseMovieFormResult {
     setNumber: episodeList.setNumber,
     setEpisodeTitle: episodeList.setEpisodeTitle,
     removeEpisode: episodeList.removeEpisode,
+    addEpisodeSubtitle: episodeList.addEpisodeSubtitle,
+    changeEpisodeSubtitleLanguage: episodeList.changeEpisodeSubtitleLanguage,
+    removeEpisodeSubtitle: episodeList.removeEpisodeSubtitle,
     canSave,
     saving,
     editing: editing !== null,

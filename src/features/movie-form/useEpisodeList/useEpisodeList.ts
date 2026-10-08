@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
 
-import type { EpisodeFormRow } from '@/types';
+import type { EpisodeFormRow, MovieFormSubtitle } from '@/types';
 import { readEpisodeTag } from '../readEpisodeTag/readEpisodeTag';
 
 export interface EpisodeList {
@@ -15,12 +15,23 @@ export interface EpisodeList {
   setNumber: (key: string, number: string) => void;
   setEpisodeTitle: (key: string, title: string) => void;
   removeEpisode: (key: string) => void;
+  /** Append a picked track to the row holding `rowKey`, in English. */
+  addEpisodeSubtitle: (rowKey: string, file: File) => void;
+  changeEpisodeSubtitleLanguage: (
+    rowKey: string,
+    subtitleKey: string,
+    language: string
+  ) => void;
+  removeEpisodeSubtitle: (rowKey: string, subtitleKey: string) => void;
   /**
    * The series half of the **Save gate**: at least one row, every season and
    * number at least 1, and no (season, number) pair twice.
    */
   episodesComplete: boolean;
 }
+
+/** The language a picked track lands in — the movie subtitles' rule. */
+const DEFAULT_LANGUAGE = 'English';
 
 /** A typed number as the count it is, or `null` for one that is not ≥ 1. */
 function counted(text: string): number | null {
@@ -126,6 +137,53 @@ export function useEpisodeList(): EpisodeList {
     []
   );
 
+  const editSubtitles = useCallback(
+    (
+      rowKey: string,
+      change: (subtitles: MovieFormSubtitle[]) => MovieFormSubtitle[]
+    ) =>
+      setEpisodes((current) =>
+        current.map((row) =>
+          row.key === rowKey
+            ? { ...row, subtitles: change(row.subtitles) }
+            : row
+        )
+      ),
+    []
+  );
+
+  const addEpisodeSubtitle = useCallback(
+    (rowKey: string, file: File) => {
+      nextKey.current += 1;
+      const key = `episode-subtitle-${nextKey.current}`;
+      editSubtitles(rowKey, (subtitles) => [
+        ...subtitles,
+        {
+          key,
+          file: { kind: 'picked', file, filename: file.name },
+          language: DEFAULT_LANGUAGE,
+        },
+      ]);
+    },
+    [editSubtitles]
+  );
+  const changeEpisodeSubtitleLanguage = useCallback(
+    (rowKey: string, subtitleKey: string, language: string) =>
+      editSubtitles(rowKey, (subtitles) =>
+        subtitles.map((subtitle) =>
+          subtitle.key === subtitleKey ? { ...subtitle, language } : subtitle
+        )
+      ),
+    [editSubtitles]
+  );
+  const removeEpisodeSubtitle = useCallback(
+    (rowKey: string, subtitleKey: string) =>
+      editSubtitles(rowKey, (subtitles) =>
+        subtitles.filter((subtitle) => subtitle.key !== subtitleKey)
+      ),
+    [editSubtitles]
+  );
+
   const episodesComplete = useMemo(() => {
     if (episodes.length === 0) {
       return false;
@@ -153,6 +211,9 @@ export function useEpisodeList(): EpisodeList {
     setNumber,
     setEpisodeTitle,
     removeEpisode,
+    addEpisodeSubtitle,
+    changeEpisodeSubtitleLanguage,
+    removeEpisodeSubtitle,
     episodesComplete,
   };
 }

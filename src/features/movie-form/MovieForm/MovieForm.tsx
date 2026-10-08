@@ -164,6 +164,9 @@ export function MovieForm() {
     setNumber,
     setEpisodeTitle,
     removeEpisode,
+    addEpisodeSubtitle,
+    changeEpisodeSubtitleLanguage,
+    removeEpisodeSubtitle,
     canSave,
     saving,
     editing,
@@ -330,6 +333,9 @@ export function MovieForm() {
             onNumberChange={setNumber}
             onEpisodeTitleChange={setEpisodeTitle}
             onRemoveEpisode={removeEpisode}
+            onAddEpisodeSubtitle={addEpisodeSubtitle}
+            onChangeEpisodeSubtitleLanguage={changeEpisodeSubtitleLanguage}
+            onRemoveEpisodeSubtitle={removeEpisodeSubtitle}
           />
         ) : (
           <MovieFormFiles
