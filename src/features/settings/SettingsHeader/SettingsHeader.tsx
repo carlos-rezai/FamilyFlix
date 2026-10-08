@@ -5,7 +5,7 @@ import { ChevronLeftIcon, IconButton } from '@/primitives';
 import {
   HeaderRow,
   Heading,
-  AddMovieButton,
+  AddTitleButton,
   AddGlyph,
   Subtitle,
 } from './SettingsHeader.styles';
@@ -44,10 +44,10 @@ export function SettingsHeader() {
           <ChevronLeftIcon size={18} />
         </IconButton>
         <Heading>Settings</Heading>
-        <AddMovieButton type="button" onClick={() => navigate('/add')}>
+        <AddTitleButton type="button" onClick={() => navigate('/add')}>
           <AddGlyph aria-hidden="true">＋</AddGlyph>
           Add a title
-        </AddMovieButton>
+        </AddTitleButton>
       </HeaderRow>
       <Subtitle>Manage your library, playback, and storage.</Subtitle>
     </>

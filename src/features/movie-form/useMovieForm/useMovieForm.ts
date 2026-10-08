@@ -166,7 +166,7 @@ export interface UseMovieFormResult {
    */
   kind: FormKind;
   /** Whether the **Kind tabs** are drawn: on a plain add, and only there. */
-  kindSwitchable: boolean;
+  showKindTabs: boolean;
   /** Switch the kind, writing `?kind=` as a `replace`. */
   setKind: (kind: FormKind) => void;
   /** What is in the fields right now. */
@@ -383,9 +383,9 @@ export function useMovieForm(): UseMovieFormResult {
 
   // The kind is the URL's, on a plain add alone: beside a context there is
   // nothing to switch, and `?kind=` is ignored.
-  const kindSwitchable = requested === null && problem === null;
+  const showKindTabs = requested === null && problem === null;
   const kind: FormKind =
-    kindSwitchable && searchParams.get(KIND_PARAM) === 'series'
+    showKindTabs && searchParams.get(KIND_PARAM) === 'series'
       ? 'series'
       : 'movie';
   const setParam = useQueryParamWriter();
@@ -682,7 +682,7 @@ export function useMovieForm(): UseMovieFormResult {
 
   return {
     kind,
-    kindSwitchable,
+    showKindTabs,
     setKind,
     values,
     setTitle,

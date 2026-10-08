@@ -28,7 +28,7 @@ export const Heading = styled(MaintainerHeading)`
  * four other screens share, to fit one call site's geometry, is the trade the
  * two `BackPill`s already declined.
  */
-export const AddMovieButton = styled.button`
+export const AddTitleButton = styled.button`
   display: flex;
   align-items: center;
   gap: ${({ theme }) => theme.space.s2};

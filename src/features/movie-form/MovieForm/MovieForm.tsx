@@ -144,7 +144,7 @@ export function MovieForm() {
   const genrePool = useGenrePool();
   const {
     kind,
-    kindSwitchable,
+    showKindTabs,
     setKind,
     values,
     setTitle,
@@ -209,7 +209,7 @@ export function MovieForm() {
           <ChevronLeftIcon size={18} />
         </IconButton>
         <Heading>{heading}</Heading>
-        {kindSwitchable && (
+        {showKindTabs && (
           <KindTabs>
             <PillTabs
               label="Kind"
