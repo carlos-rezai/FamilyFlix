@@ -91,10 +91,6 @@ const WORDING = {
   },
 } as const;
 
-function isFormKind(value: string): value is FormKind {
-  return value === 'movie' || value === 'series';
-}
-
 const SAVE = {
   add: { save: 'Add to library', saving: 'Adding…' },
   edit: { save: 'Save changes', saving: 'Saving…' },
@@ -221,11 +217,7 @@ export function MovieForm() {
               label="Kind"
               options={KIND_OPTIONS}
               value={kind}
-              onChange={(next) => {
-                if (isFormKind(next)) {
-                  setKind(next);
-                }
-              }}
+              onChange={setKind}
             />
           </KindTabs>
         )}

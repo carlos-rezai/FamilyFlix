@@ -1,12 +1,16 @@
 import { Tab, Track } from './PillTabs.styles';
 
-export interface PillTabsProps {
+/**
+ * Generic in the option's value, so a press hands the caller back its own
+ * union rather than a string it would have to narrow again.
+ */
+export interface PillTabsProps<T extends string> {
   /** The group's accessible name. */
   label: string;
-  options: readonly { value: string; label: string }[];
+  options: readonly { value: T; label: string }[];
   /** The option currently pressed. */
-  value: string;
-  onChange: (value: string) => void;
+  value: T;
+  onChange: (value: T) => void;
 }
 
 /**
@@ -14,7 +18,12 @@ export interface PillTabsProps {
  * labelled group on the pill track. Presentational: it knows no URL, and a
  * press only reports the option's value; the caller decides what it writes.
  */
-export function PillTabs({ label, options, value, onChange }: PillTabsProps) {
+export function PillTabs<T extends string>({
+  label,
+  options,
+  value,
+  onChange,
+}: PillTabsProps<T>) {
   return (
     <Track role="group" aria-label={label}>
       {options.map((option) => (
