@@ -433,3 +433,154 @@ describe('POST /api/series — each refusal', () => {
     expect(readdirSync(media)).toEqual([]);
   });
 });
+
+// 29 — Add a series, Phase 4 (issue #264): each episode's subtitles.
+//
+// An episode's `episodeSubtitle` parts follow its `episodeVideo` and pair with
+// its `subtitleLanguages` by order. Each lands beside its episode's video in
+// `season-NN/` with its `episode_subtitles` row, so the player's episode read
+// lists the track exactly as it does an imported one. A subtitle with no
+// episode before it, or a language count its parts do not match, is a `400`
+// that leaves no row and no Series folder.
+
+/** An `episode` field naming its tracks' languages. */
+const subtitledEpisode = (
+  season: number,
+  number: number,
+  subtitleLanguages: string[]
+): Part => [
+  'episode',
+  JSON.stringify({ season, number, title: '', subtitleLanguages }),
+];
+
+const srtPart = (filename: string): File =>
+  new File(['1\n00:00:01,000 --> 00:00:02,000\nHello\n'], filename, {
+    type: 'text/plain',
+  });
+
+describe('POST /api/series — episode subtitles', () => {
+  const SUBTITLED: Part[] = [
+    ['title', 'Harbor and Vine'],
+    ['year', '2019'],
+    subtitledEpisode(1, 1, ['English', 'Portuguese']),
+    ['episodeVideo', videoPart('S01E01.mp4')],
+    ['episodeSubtitle', srtPart('S01E01.en.srt')],
+    ['episodeSubtitle', srtPart('S01E01.pt.srt')],
+    subtitledEpisode(2, 1, []),
+    ['episodeVideo', videoPart('S02E01.mp4')],
+  ];
+
+  it('stores each track beside its episode in season-NN/, with its row', async () => {
+    const { storage, baseUrl, media } = freshApi();
+
+    const response = await postSeries(baseUrl, SUBTITLED);
+    expect(response.status).toBe(201);
+    const series = (await response.json()) as Series;
+
+    const [pilot, springTide] = storage.listEpisodes(series.id);
+    expect(pilot.subtitles.map((track) => track.language)).toEqual([
+      'English',
+      'Portuguese',
+    ]);
+    for (const track of pilot.subtitles) {
+      expect(track.path).toMatch(/^harbor-and-vine-2019\/season-01\/[^/]+$/);
+      expect(existsSync(join(media, track.path))).toBe(true);
+    }
+    expect(springTide.subtitles).toEqual([]);
+  });
+
+  it('lists the track on the episode read the player opens', async () => {
+    const { storage, baseUrl } = freshApi();
+
+    const series = (await (
+      await postSeries(baseUrl, SUBTITLED)
+    ).json()) as Series;
+    const [pilot] = storage.listEpisodes(series.id);
+
+    const response = await fetch(`${baseUrl}/api/episodes/${pilot.id}`);
+    expect(response.status).toBe(200);
+    const read = (await response.json()) as {
+      episode: { subtitles: { path: string; language: string }[] };
+    };
+    expect(read.episode.subtitles.map((track) => track.language)).toEqual([
+      'English',
+      'Portuguese',
+    ]);
+    expect(read.episode.subtitles.map((track) => track.path)).toEqual(
+      pilot.subtitles.map((track) => track.path)
+    );
+  });
+
+  const SUBTITLE_REFUSALS: [name: string, parts: Part[]][] = [
+    [
+      'a subtitle with no episode before it',
+      [
+        ['title', 'Harbor and Vine'],
+        ['year', '2019'],
+        ['episodeSubtitle', srtPart('S01E01.srt')],
+        subtitledEpisode(1, 1, ['English']),
+        ['episodeVideo', videoPart('S01E01.mp4')],
+        ['episodeSubtitle', srtPart('S01E01.again.srt')],
+      ],
+    ],
+    [
+      'more subtitles than the episode names languages for',
+      [
+        ['title', 'Harbor and Vine'],
+        ['year', '2019'],
+        subtitledEpisode(1, 1, ['English']),
+        ['episodeVideo', videoPart('S01E01.mp4')],
+        ['episodeSubtitle', srtPart('S01E01.en.srt')],
+        ['episodeSubtitle', srtPart('S01E01.pt.srt')],
+      ],
+    ],
+    [
+      'fewer subtitles than the episode names languages for',
+      [
+        ['title', 'Harbor and Vine'],
+        ['year', '2019'],
+        subtitledEpisode(1, 1, ['English', 'Portuguese']),
+        ['episodeVideo', videoPart('S01E01.mp4')],
+        ['episodeSubtitle', srtPart('S01E01.en.srt')],
+      ],
+    ],
+    [
+      'an earlier episode short of its subtitles',
+      [
+        ['title', 'Harbor and Vine'],
+        ['year', '2019'],
+        subtitledEpisode(1, 1, ['English']),
+        ['episodeVideo', videoPart('S01E01.mp4')],
+        subtitledEpisode(1, 2, []),
+        ['episodeVideo', videoPart('S01E02.mp4')],
+      ],
+    ],
+    [
+      'an episode subtitle the store will not take',
+      [
+        ['title', 'Harbor and Vine'],
+        ['year', '2019'],
+        subtitledEpisode(1, 1, ['English']),
+        ['episodeVideo', videoPart('S01E01.mp4')],
+        ['episodeSubtitle', new File(['not cues'], 'S01E01.exe')],
+      ],
+    ],
+  ];
+
+  it.each(SUBTITLE_REFUSALS)(
+    'answers 400 with one sentence, and leaves nothing, for %s',
+    async (_, parts) => {
+      const { storage, baseUrl, media } = freshApi();
+
+      const response = await postSeries(baseUrl, parts);
+
+      expect(response.status).toBe(400);
+      const body = (await response.json()) as { error: unknown };
+      expect(typeof body.error).toBe('string');
+      expect((body.error as string).length).toBeGreaterThan(0);
+      expect(storage.getSeriesHome().series).toEqual([]);
+      expect(storage.getSeriesHome().episodeCount).toBe(0);
+      expect(readdirSync(media)).toEqual([]);
+    }
+  );
+});

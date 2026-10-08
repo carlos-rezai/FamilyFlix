@@ -236,3 +236,84 @@ describe('series write: addSeries with its episodes', () => {
     expect(storage.listEpisodes(series.id)).toEqual([]);
   });
 });
+
+// 29 — Add a series, Phase 4 (issue #264): each episode's subtitle tracks.
+//
+// `addSeries(input, episodes)` writes every episode's `episode_subtitles`
+// rows in the same transaction as the series, in track order, and a refused
+// insert commits no track along with no series and no episode.
+
+describe('series write: addSeries with episode subtitles', () => {
+  it('writes each episode’s tracks, in order, with their languages', () => {
+    const storage = freshStorage();
+
+    const series = storage.addSeries(
+      { title: 'Harbor and Vine', year: 2019, genres: ['Drama'] },
+      [
+        {
+          season: 1,
+          number: 1,
+          videoPath: 'harbor-and-vine-2019/season-01/S01E01.mp4',
+          subtitles: [
+            {
+              path: 'harbor-and-vine-2019/season-01/S01E01.en.srt',
+              language: 'English',
+            },
+            {
+              path: 'harbor-and-vine-2019/season-01/S01E01.pt.srt',
+              language: 'Portuguese',
+            },
+          ],
+        },
+        {
+          season: 1,
+          number: 2,
+          videoPath: 'harbor-and-vine-2019/season-01/S01E02.mp4',
+        },
+      ]
+    );
+
+    const [pilot, lowTide] = storage.listEpisodes(series.id);
+    expect(
+      pilot.subtitles.map((track) => [track.path, track.language])
+    ).toEqual([
+      ['harbor-and-vine-2019/season-01/S01E01.en.srt', 'English'],
+      ['harbor-and-vine-2019/season-01/S01E01.pt.srt', 'Portuguese'],
+    ]);
+    expect(lowTide.subtitles).toEqual([]);
+  });
+
+  it('commits no track when a later episode is refused', () => {
+    const storage = freshStorage();
+
+    expect(() =>
+      storage.addSeries({ title: 'Harbor and Vine', genres: ['Drama'] }, [
+        {
+          season: 1,
+          number: 1,
+          videoPath: 'a.mp4',
+          subtitles: [{ path: 'a.en.srt', language: 'English' }],
+        },
+        { season: 1, number: 1, videoPath: 'b.mp4' },
+      ])
+    ).toThrow();
+
+    expect(storage.getSeriesHome().series).toEqual([]);
+    expect(storage.getSeriesHome().episodeCount).toBe(0);
+
+    // The library still takes the show cleanly afterwards: nothing of the
+    // refused write is in the way.
+    const series = storage.addSeries(
+      { title: 'Harbor and Vine', genres: ['Drama'] },
+      [
+        {
+          season: 1,
+          number: 1,
+          videoPath: 'a.mp4',
+          subtitles: [{ path: 'a.en.srt', language: 'English' }],
+        },
+      ]
+    );
+    expect(storage.listEpisodes(series.id)[0].subtitles).toHaveLength(1);
+  });
+});

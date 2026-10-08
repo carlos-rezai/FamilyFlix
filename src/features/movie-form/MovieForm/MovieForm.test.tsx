@@ -22,6 +22,7 @@ import {
 } from '@/test-support/LocationProbe/LocationProbe';
 import { makeMovie } from '@/test-support/makeMovie/makeMovie';
 import { makeSeries } from '@/test-support/makeSeriesDetail/makeSeriesDetail';
+import { comesBefore } from '@/test-support/comesBefore/comesBefore';
 import {
   createdResponse,
   noContentResponse,
@@ -4653,6 +4654,129 @@ describe('MovieForm — a series saved with its episodes', () => {
         ['1', '2', 'Low Tide'],
         ['1', '3', 'The Night Market'],
       ]);
+    });
+  });
+
+  // 29 — Add a series, Phase 4 (issue #264): each row's own subtitles.
+  //
+  // Every Episode file row carries its Subtitle rows and its own _＋ Add
+  // subtitle_ picker in its children slot, under its filename — the movie
+  // subtitle list's rule held per row: English on a pick, a language menu,
+  // a ✕ — and the save sends each row's tracks after its video.
+  describe('each row’s subtitles', () => {
+    const rowSubtitlePickers = () =>
+      screen.queryAllByLabelText(/^＋ add subtitle$/i) as HTMLInputElement[];
+
+    const episodeSubtitle = (name: string) =>
+      new File(['cue bytes'], name, { type: 'text/plain' });
+
+    async function attachTo(index: number, name: string) {
+      await userEvent.upload(
+        screen.getAllByLabelText(/^＋ add subtitle$/i)[
+          index
+        ] as HTMLInputElement,
+        episodeSubtitle(name),
+        { applyAccept: false }
+      );
+    }
+
+    it('offers one Add subtitle picker per row', async () => {
+      await renderSeries();
+      await pickEpisodes();
+
+      expect(rowSubtitlePickers()).toHaveLength(3);
+      for (const picker of rowSubtitlePickers()) {
+        expect(picker.type).toBe('file');
+      }
+    });
+
+    it('draws a picked track under its own row’s filename, in English', async () => {
+      await renderSeries();
+      await pickEpisodes();
+
+      await attachTo(1, 'S01E02.en.srt');
+
+      const language = languageOf('S01E02.en.srt');
+      expect(language.textContent).toContain('English');
+      const ownFilename = screen.getByText(
+        'Harbor.and.Vine.S01E02.Low.Tide.mkv'
+      );
+      const nextRow = screen.getByText(
+        'Harbor.and.Vine.S01E03.The.Night.Market.mkv'
+      );
+      expect(comesBefore(ownFilename, language)).toBe(true);
+      expect(comesBefore(language, nextRow)).toBe(true);
+      expect(comesBefore(language, rowSubtitlePickers()[1])).toBe(true);
+    });
+
+    it('draws a row’s tracks without touching the other rows', async () => {
+      await renderSeries();
+      await pickEpisodes();
+
+      await attachTo(0, 'S01E01.en.srt');
+      await attachTo(0, 'S01E01.pt.srt');
+
+      expect(
+        screen.queryAllByRole('button', { name: /^language for /i })
+      ).toHaveLength(2);
+      const nextRow = screen.getByText('Harbor.and.Vine.S01E02.Low.Tide.mkv');
+      expect(comesBefore(languageOf('S01E01.pt.srt'), nextRow)).toBe(true);
+    });
+
+    it('changes a track’s language through its own menu', async () => {
+      await renderSeries();
+      await pickEpisodes();
+      await attachTo(0, 'S01E01.srt');
+      await attachTo(2, 'S01E03.srt');
+
+      chooseLanguage('S01E01.srt', 'Portuguese');
+
+      expect(languageOf('S01E01.srt').textContent).toContain('Portuguese');
+      expect(languageOf('S01E03.srt').textContent).toContain('English');
+    });
+
+    it('takes a track off with its ✕, and leaves the row', async () => {
+      await renderSeries();
+      await pickEpisodes();
+      await attachTo(0, 'S01E01.srt');
+
+      fireEvent.click(
+        screen.getByRole('button', { name: 'Remove S01E01.srt' })
+      );
+
+      expect(screen.queryByText('S01E01.srt')).toBeNull();
+      expect(drawnRows()).toHaveLength(3);
+    });
+
+    it('sends each row’s tracks after its video, their languages in its JSON', async () => {
+      await renderSeries();
+      await pickEpisodes([SEASON[1], SEASON[2]]);
+      await attachTo(0, 'S01E01.en.srt');
+      await attachTo(0, 'S01E01.pt.srt');
+      chooseLanguage('S01E01.pt.srt', 'Portuguese');
+
+      fireEvent.click(save());
+      await waitFor(() => expect(seriesSaves()).toHaveLength(1));
+
+      const body = seriesSaves()[0][1]?.body as FormData;
+      const parts = [...body.entries()]
+        .filter(([name]) => name.startsWith('episode'))
+        .map(([name, value]) =>
+          name === 'episode' ? name : `${name}:${(value as File).name}`
+        );
+      expect(parts).toEqual([
+        'episode',
+        'episodeVideo:Harbor.and.Vine.S01E01.Pilot.mkv',
+        'episodeSubtitle:S01E01.en.srt',
+        'episodeSubtitle:S01E01.pt.srt',
+        'episode',
+        'episodeVideo:Harbor.and.Vine.S01E02.Low.Tide.mkv',
+      ]);
+      expect(
+        body
+          .getAll('episode')
+          .map((part) => JSON.parse(String(part)).subtitleLanguages)
+      ).toEqual([['English', 'Portuguese'], []]);
     });
   });
 });

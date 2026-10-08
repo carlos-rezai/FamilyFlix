@@ -1117,3 +1117,82 @@ describe('createSeries', () => {
     await expect(createSeries(SERIES_VALUES, [PILOT])).rejects.toThrow();
   });
 });
+
+// 29 — Add a series, Phase 4 (issue #264): each episode's subtitles.
+//
+// A row's tracks travel as `episodeSubtitle` parts straight after its
+// `episodeVideo`, and their languages ride in its `episode` JSON as
+// `subtitleLanguages`, in the same order — the route pairs them by order.
+
+describe('createSeries — each episode’s subtitles', () => {
+  function track(key: string, filename: string, language: string) {
+    const file = new File(['cue bytes'], filename, { type: 'text/plain' });
+    return {
+      key,
+      file: { kind: 'picked' as const, file, filename },
+      language,
+    };
+  }
+
+  const PILOT_SUBTITLED: EpisodeFormRow = {
+    ...PILOT,
+    subtitles: [
+      track('s1', 'S01E01.en.srt', 'English'),
+      track('s2', 'S01E01.pt.srt', 'Portuguese'),
+    ],
+  };
+  const LOW_TIDE_SUBTITLED: EpisodeFormRow = {
+    ...LOW_TIDE,
+    subtitles: [track('s3', 'S01E02.es.srt', 'Spanish')],
+  };
+
+  it('sends each row’s subtitle parts straight after its video', async () => {
+    fetchMock.mockResolvedValue(createdResponse(SERIES_CREATED));
+
+    await createSeries({ ...SERIES_VALUES, poster: null }, [
+      PILOT_SUBTITLED,
+      LOW_TIDE_SUBTITLED,
+    ]);
+
+    const parts = [...sentFields().entries()]
+      .filter(([name]) => name.startsWith('episode'))
+      .map(([name, value]) =>
+        name === 'episode' ? name : `${name}:${(value as File).name}`
+      );
+    expect(parts).toEqual([
+      'episode',
+      'episodeVideo:S01E01.Pilot.mp4',
+      'episodeSubtitle:S01E01.en.srt',
+      'episodeSubtitle:S01E01.pt.srt',
+      'episode',
+      'episodeVideo:S01E02.Low.Tide.mp4',
+      'episodeSubtitle:S01E02.es.srt',
+    ]);
+  });
+
+  it('names each row’s languages in its episode JSON, in track order', async () => {
+    fetchMock.mockResolvedValue(createdResponse(SERIES_CREATED));
+
+    await createSeries(SERIES_VALUES, [PILOT_SUBTITLED, LOW_TIDE_SUBTITLED]);
+
+    expect(
+      sentFields()
+        .getAll('episode')
+        .map((part) => JSON.parse(String(part)).subtitleLanguages)
+    ).toEqual([['English', 'Portuguese'], ['Spanish']]);
+  });
+
+  it('sends no subtitle part and no language for a row with none', async () => {
+    fetchMock.mockResolvedValue(createdResponse(SERIES_CREATED));
+
+    await createSeries(SERIES_VALUES, [PILOT_SUBTITLED, LOW_TIDE]);
+
+    const fields = sentFields();
+    expect(
+      fields.getAll('episodeSubtitle').map((part) => (part as File).name)
+    ).toEqual(['S01E01.en.srt', 'S01E01.pt.srt']);
+    expect(
+      JSON.parse(String(fields.getAll('episode')[1])).subtitleLanguages
+    ).toEqual([]);
+  });
+});

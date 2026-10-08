@@ -271,3 +271,149 @@ describe('useEpisodeList — episodesComplete', () => {
     expect(result.current.episodesComplete).toBe(true);
   });
 });
+
+/**
+ * 29 — Add a series, Phase 4 (issue #264): each row's own **Subtitles**.
+ *
+ * The movie subtitles' rule, held per row: a picked file is a track in
+ * English until the maintainer says otherwise, its language can be changed
+ * and the track removed — each by the row's key and the track's own key, so
+ * no edit ever reaches another row's tracks.
+ */
+describe('useEpisodeList — a row’s subtitles', () => {
+  const subtitle = (name: string) =>
+    new File(['cue bytes'], name, { type: 'text/plain' });
+
+  function twoRows() {
+    const hook = renderHook(() => useEpisodeList());
+    add(hook.result, [
+      'Harbor.and.Vine.S01E01.Pilot.mkv',
+      'Harbor.and.Vine.S01E02.Low.Tide.mkv',
+    ]);
+    return hook;
+  }
+
+  const keyOf = (
+    result: { current: ReturnType<typeof useEpisodeList> },
+    index: number
+  ) => result.current.episodes[index].key;
+
+  /** One row's tracks as `[filename, language]`, in the order held. */
+  const tracks = (
+    result: { current: ReturnType<typeof useEpisodeList> },
+    index: number
+  ) =>
+    result.current.episodes[index].subtitles.map((track) => [
+      track.file.filename,
+      track.language,
+    ]);
+
+  it('adds a track to a row, in English by default, as a picked file', () => {
+    const { result } = twoRows();
+    const file = subtitle('S01E01.srt');
+
+    act(() => {
+      result.current.addEpisodeSubtitle(keyOf(result, 0), file);
+    });
+
+    expect(tracks(result, 0)).toEqual([['S01E01.srt', 'English']]);
+    expect(result.current.episodes[0].subtitles[0].file).toEqual({
+      kind: 'picked',
+      file,
+      filename: 'S01E01.srt',
+    });
+  });
+
+  it('appends a second track after the first', () => {
+    const { result } = twoRows();
+    const key = keyOf(result, 0);
+
+    act(() => {
+      result.current.addEpisodeSubtitle(key, subtitle('S01E01.en.srt'));
+    });
+    act(() => {
+      result.current.addEpisodeSubtitle(key, subtitle('S01E01.pt.srt'));
+    });
+
+    expect(tracks(result, 0)).toEqual([
+      ['S01E01.en.srt', 'English'],
+      ['S01E01.pt.srt', 'English'],
+    ]);
+    const [first, second] = result.current.episodes[0].subtitles;
+    expect(first.key).not.toBe(second.key);
+  });
+
+  it('leaves the other rows’ tracks alone when one row gains a track', () => {
+    const { result } = twoRows();
+
+    act(() => {
+      result.current.addEpisodeSubtitle(keyOf(result, 0), subtitle('a.srt'));
+    });
+
+    expect(tracks(result, 1)).toEqual([]);
+  });
+
+  it('changes one track’s language, and no other', () => {
+    const { result } = twoRows();
+    act(() => {
+      result.current.addEpisodeSubtitle(keyOf(result, 0), subtitle('a.srt'));
+      result.current.addEpisodeSubtitle(keyOf(result, 0), subtitle('b.srt'));
+      result.current.addEpisodeSubtitle(keyOf(result, 1), subtitle('c.srt'));
+    });
+    const target = result.current.episodes[0].subtitles[1].key;
+
+    act(() => {
+      result.current.changeEpisodeSubtitleLanguage(
+        keyOf(result, 0),
+        target,
+        'Portuguese'
+      );
+    });
+
+    expect(tracks(result, 0)).toEqual([
+      ['a.srt', 'English'],
+      ['b.srt', 'Portuguese'],
+    ]);
+    expect(tracks(result, 1)).toEqual([['c.srt', 'English']]);
+  });
+
+  it('removes one track, and leaves the rest of every row as it was', () => {
+    const { result } = twoRows();
+    act(() => {
+      result.current.addEpisodeSubtitle(keyOf(result, 0), subtitle('a.srt'));
+      result.current.addEpisodeSubtitle(keyOf(result, 0), subtitle('b.srt'));
+      result.current.addEpisodeSubtitle(keyOf(result, 1), subtitle('c.srt'));
+    });
+    const target = result.current.episodes[0].subtitles[0].key;
+
+    act(() => {
+      result.current.removeEpisodeSubtitle(keyOf(result, 0), target);
+    });
+
+    expect(tracks(result, 0)).toEqual([['b.srt', 'English']]);
+    expect(tracks(result, 1)).toEqual([['c.srt', 'English']]);
+    expect(rows(result)).toEqual([
+      ['1', '1', 'Pilot', 'Harbor.and.Vine.S01E01.Pilot.mkv'],
+      ['1', '2', 'Low Tide', 'Harbor.and.Vine.S01E02.Low.Tide.mkv'],
+    ]);
+  });
+
+  it('keeps a row’s season, number and title through its track edits', () => {
+    const { result } = twoRows();
+    const key = keyOf(result, 1);
+    act(() => {
+      result.current.setEpisodeTitle(key, 'The Low Tide');
+    });
+
+    act(() => {
+      result.current.addEpisodeSubtitle(key, subtitle('c.srt'));
+    });
+
+    expect(rows(result)[1]).toEqual([
+      '1',
+      '2',
+      'The Low Tide',
+      'Harbor.and.Vine.S01E02.Low.Tide.mkv',
+    ]);
+  });
+});
