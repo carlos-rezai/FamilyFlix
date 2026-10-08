@@ -11,7 +11,7 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { folderOverlap } from './folderOverlap';
+import { clashSentence, folderOverlap } from './folderOverlap';
 
 const LISTED = ['E:\\Movies', 'D:\\Kids\\Cartoons'];
 
@@ -112,5 +112,25 @@ describe('folderOverlap — elsewhere, where case is a difference', () => {
       folder: '/srv/Movies',
     });
     expect(folderOverlap('/srv/Movies2', ['/srv/Movies'], 'linux')).toBeNull();
+  });
+});
+
+describe('clashSentence — one sentence per clash', () => {
+  it('words the same folder', () => {
+    expect(clashSentence({ overlap: 'same', folder: 'E:/Movies' })).toBe(
+      'That folder is already in your library folders.'
+    );
+  });
+
+  it('words a folder inside a listed one', () => {
+    expect(clashSentence({ overlap: 'inside', folder: 'E:/Movies' })).toBe(
+      'That folder is inside E:/Movies, which is already a library folder.'
+    );
+  });
+
+  it('words a folder holding a listed one', () => {
+    expect(clashSentence({ overlap: 'contains', folder: 'E:/Movies' })).toBe(
+      'That folder holds E:/Movies, which is already a library folder.'
+    );
   });
 });

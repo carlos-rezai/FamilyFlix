@@ -4,6 +4,7 @@ import { basename, dirname, extname, isAbsolute, relative } from 'node:path';
 
 import type { LibraryStorage, StoredLibraryFolder } from '../../library';
 import {
+  clashSentence,
   folderOverlap,
   type FolderClash,
 } from '../../library/folders/folderOverlap/folderOverlap';
@@ -1273,7 +1274,7 @@ export function createImporter({
       if (clash?.overlap === 'contains') {
         throw new ImportStartError(
           'root',
-          `That folder holds ${clash.folder}, which is already a library folder. Import from ${clash.folder}, or remove it from your library folders first.`
+          `${clashSentence(clash)} Import from ${clash.folder}, or remove it from your library folders first.`
         );
       }
       const current = await claimRun('sheet', enrich, [rootPath]);

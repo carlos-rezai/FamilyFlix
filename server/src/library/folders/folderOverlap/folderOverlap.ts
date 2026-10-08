@@ -45,3 +45,18 @@ export function folderOverlap(
   }
   return null;
 }
+
+/**
+ * A {@link folderOverlap} clash as the one sentence that words it — the
+ * folder add's refusal, and the start of a sheet import's.
+ */
+export function clashSentence(clash: FolderClash): string {
+  switch (clash.overlap) {
+    case 'same':
+      return 'That folder is already in your library folders.';
+    case 'inside':
+      return `That folder is inside ${clash.folder}, which is already a library folder.`;
+    case 'contains':
+      return `That folder holds ${clash.folder}, which is already a library folder.`;
+  }
+}

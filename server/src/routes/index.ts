@@ -10,8 +10,8 @@ import express, { type Request, type Response, type Router } from 'express';
 
 import type { LibraryStorage } from '../library';
 import {
+  clashSentence,
   folderOverlap,
-  type FolderClash,
 } from '../library/folders/folderOverlap/folderOverlap';
 import { yearSpan } from '../library/series/yearSpan/yearSpan';
 import {
@@ -475,18 +475,6 @@ const DECISION_REFUSALS: Record<
   refused: { status: 422, error: 'TMDB refused the key' },
   unreachable: { status: 503, error: 'TMDB could not be reached' },
 };
-
-/** A {@link folderOverlap} clash as the one sentence the add refuses with. */
-function overlapSentence(clash: FolderClash): string {
-  switch (clash.overlap) {
-    case 'same':
-      return 'That folder is already in your library folders.';
-    case 'inside':
-      return `That folder is inside ${clash.folder}, which is already a library folder.`;
-    case 'contains':
-      return `That folder holds ${clash.folder}, which is already a library folder.`;
-  }
-}
 
 /**
  * Mount the JSON API over a {@link LibraryStorage}. Handlers stay thin — parse
@@ -1458,7 +1446,7 @@ export function createApiRouter(
       storage.libraryFolders().map((folder) => folder.path)
     );
     if (clash !== null) {
-      res.status(409).json({ error: overlapSentence(clash) });
+      res.status(409).json({ error: clashSentence(clash) });
       return;
     }
     let added;
@@ -1468,7 +1456,7 @@ export function createApiRouter(
       // Two adds racing past the check: the schema holds the path unique.
       res
         .status(409)
-        .json({ error: overlapSentence({ overlap: 'same', folder: path }) });
+        .json({ error: clashSentence({ overlap: 'same', folder: path }) });
       return;
     }
     const folder: LibraryFolder = { ...added, reachable: true };
