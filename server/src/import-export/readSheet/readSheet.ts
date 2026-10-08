@@ -133,11 +133,6 @@ function cellNumber(text: string): number | null {
   return Number(text);
 }
 
-/** A Year cell's first and last year, or neither when it reads as no span. */
-function cellYears(text: string): Pick<SheetRow, 'year' | 'endYear'> {
-  return yearSpan(text) ?? { year: null, endYear: null };
-}
-
 /**
  * A rating on the column's own 0–10 scale, rounded to the whole star the
  * library's half-star units count in; off the scale is no rating.
@@ -255,7 +250,7 @@ export async function readSheet(
     }
     rows.push({
       title,
-      ...cellYears(read(row, 'year')),
+      ...(yearSpan(read(row, 'year')) ?? { year: null, endYear: null }),
       genres: cellList(read(row, 'genres'), GENRE_SEPARATORS),
       director: cellOptional(read(row, 'director')),
       cast: cellList(read(row, 'cast'), CAST_SEPARATORS),
