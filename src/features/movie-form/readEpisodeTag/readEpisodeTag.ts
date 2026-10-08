@@ -1,8 +1,9 @@
 /**
  * What an **Episode tag** says on the client: the numbers, and the title after
- * it.
+ * it. The server's `EpisodeTag` with one word changed — `number`, the form's
+ * and `NewEpisode`'s, where the server says `episode`.
  */
-export interface ReadEpisodeTag {
+export interface EpisodeTag {
   season: number;
   number: number;
   /** The words after the tag, or `null` when none are left. */
@@ -15,7 +16,7 @@ export interface ReadEpisodeTag {
  * The server's `episodeTag` reads the same shapes; the drift guard beside this
  * file holds the two together.
  */
-const TAG_SHAPES = [
+export const TAG_SHAPES = [
   /(?:^|[\s._-])s(\d{1,3})e(\d{1,4})(?:-?e\d{1,4})*(?=$|[\s._-])/i,
   /(?:^|[\s._-])(\d{1,2})x(\d{1,3})(?=$|[\s._-])/i,
 ];
@@ -36,7 +37,7 @@ function withoutExtension(filename: string): string {
  * title is the text after the tag, dots and underscores read as spaces and
  * quality tags dropped.
  */
-export function readEpisodeTag(filename: string): ReadEpisodeTag | null {
+export function readEpisodeTag(filename: string): EpisodeTag | null {
   const name = withoutExtension(filename);
 
   for (const shape of TAG_SHAPES) {
