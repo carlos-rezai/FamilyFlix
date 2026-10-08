@@ -107,6 +107,76 @@ describe('FilePicker', () => {
 });
 
 /**
+ * 29 — Add a series refactor (issue 266): the multiple mode.
+ *
+ * #263 gave the picker a second mode for the series' _＋ Add episode files_ —
+ * `multiple`, reporting through `onPickFiles` — and it was covered only through
+ * `MovieForm`. A primitive's every mode has its leaves in its own suite.
+ */
+function renderMultiPicker() {
+  const onPickFiles = vi.fn<(files: File[]) => void>();
+
+  render(
+    <ThemeProvider theme={theme}>
+      <FilePicker
+        label="Add episode files"
+        accept="video/*,.mkv,.avi"
+        multiple
+        onPickFiles={onPickFiles}
+      />
+    </ThemeProvider>
+  );
+
+  return { onPickFiles };
+}
+
+const multiPicker = () =>
+  screen.getByLabelText(/add episode files/i) as HTMLInputElement;
+
+describe('FilePicker — the multiple mode', () => {
+  it('carries multiple on the input in that mode, and not in the other', () => {
+    renderMultiPicker();
+    renderPicker();
+
+    expect(multiPicker().multiple).toBe(true);
+    expect(picker().multiple).toBe(false);
+  });
+
+  it('reports every file picked, in the order given', async () => {
+    const files = [
+      someFile('Harbor.and.Vine.S01E02.mkv', ''),
+      someFile('Harbor.and.Vine.S01E01.mkv', ''),
+      someFile('Harbor.and.Vine.S01E03.mkv', ''),
+    ];
+    const { onPickFiles } = renderMultiPicker();
+
+    await userEvent.upload(multiPicker(), files, { applyAccept: false });
+
+    expect(onPickFiles).toHaveBeenCalledTimes(1);
+    expect(onPickFiles).toHaveBeenCalledWith(files);
+  });
+
+  it('says nothing when a dialog is opened and dismissed', () => {
+    const { onPickFiles } = renderMultiPicker();
+
+    fireEvent.change(multiPicker(), { target: { files: [] } });
+
+    expect(onPickFiles).not.toHaveBeenCalled();
+  });
+
+  it('lets the same files be picked again', async () => {
+    const files = [someFile('Harbor.and.Vine.S01E01.mkv', '')];
+    const { onPickFiles } = renderMultiPicker();
+
+    await userEvent.upload(multiPicker(), files, { applyAccept: false });
+    await userEvent.upload(multiPicker(), files, { applyAccept: false });
+
+    expect(multiPicker().value).toBe('');
+    expect(onPickFiles).toHaveBeenCalledTimes(2);
+  });
+});
+
+/**
  * 16 — Playback component upload, Phase 3: "the zone" (issue #154).
  *
  * The clipping rule this atom spelled inline is now `src/styles/visuallyHidden`,
