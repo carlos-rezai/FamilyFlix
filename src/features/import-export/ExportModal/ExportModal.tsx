@@ -28,6 +28,7 @@ import {
   Formats,
   IncludeCard,
   IncludeDesc,
+  IncludeDivider,
   IncludeRow,
   IncludeText,
   IncludeTitle,
@@ -77,7 +78,8 @@ const folderNameOf = (path: string): string =>
  * **Format cards**, CSV checked on every open; _Save to_, a mono field with
  * the folder glyph and the route's refusal under it; the name row — the
  * folder glyph, the **Export name** and the titles count; _Include_, the
- * _Images_ row and its Toggle, on every open; _Columns included_
+ * _Images_ row and its Toggle, on every open, then the _Subtitles_ row,
+ * off; _Columns included_
  * over the sixteen **Export columns** as pills — a list, not controls;
  * _Export as CSV_ / _Export as Excel_ beside _Cancel_. Then **Export ready**,
  * swapped inside the same card as the one **Bare modal** so the pop-in runs
@@ -96,12 +98,14 @@ export function ExportModal({ open, onClose }: ExportModalProps) {
     summary,
     destination,
     images,
+    subtitles,
     exporting,
     refusal,
     result,
     chooseFormat,
     setDestination,
     setImages,
+    setSubtitles,
     exportLibrary,
   } = useExport(open);
   const formatLabelId = useId();
@@ -190,6 +194,20 @@ export function ExportModal({ open, onClose }: ExportModalProps) {
               checked={images}
               label="Images"
               onToggle={() => setImages(!images)}
+            />
+          </IncludeRow>
+          <IncludeDivider />
+          <IncludeRow>
+            <IncludeText>
+              <IncludeTitle>Subtitles</IncludeTitle>
+              <IncludeDesc>
+                Every subtitle file, beside its title&apos;s images.
+              </IncludeDesc>
+            </IncludeText>
+            <Toggle
+              checked={subtitles}
+              label="Subtitles"
+              onToggle={() => setSubtitles(!subtitles)}
             />
           </IncludeRow>
         </IncludeCard>

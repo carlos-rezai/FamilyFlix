@@ -18,6 +18,8 @@ export interface ExportState {
   exporting: boolean;
   /** Whether images travel beside the sheet — the _Images_ toggle, on every open. */
   images: boolean;
+  /** Whether subtitle files travel too — the _Subtitles_ toggle, off on every open. */
+  subtitles: boolean;
   /** The sentence a `400` said about the destination; `null` otherwise. */
   refusal: string | null;
   /** What a `201` answered — **Export ready**; `null` until then. */
@@ -27,6 +29,8 @@ export interface ExportState {
   setDestination: (destination: string) => void;
   /** Turn the _Images_ toggle on or off. */
   setImages: (images: boolean) => void;
+  /** Turn the _Subtitles_ toggle on or off. */
+  setSubtitles: (subtitles: boolean) => void;
   /**
    * Ask the server to write the export into _Save to_. A `201` sets `result`,
    * a `400` sets `refusal` and keeps the idle face, and any other failure
@@ -40,7 +44,7 @@ export interface ExportState {
  * summary, the destination, and whether a request is in flight, was refused or
  * has written the **Export folder**.
  *
- * `open` is the reset: each opening puts the hook back to `csv`, images on, idle, nothing
+ * `open` is the reset: each opening puts the hook back to `csv`, images on, subtitles off, idle, nothing
  * typed, refused or written, and fetches a fresh summary. The summary's
  * `defaultDestination` fills _Save to_ once it lands, but never over a path
  * typed first — `useTmdbKey`'s rule. A summary or an export that lands after
@@ -53,6 +57,7 @@ export function useExport(open: boolean): ExportState {
   const [summary, setSummary] = useState<ExportSummary | null>(null);
   const [destination, setTyped] = useState('');
   const [images, setImages] = useState(true);
+  const [subtitles, setSubtitles] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [refusal, setRefusal] = useState<string | null>(null);
   const [result, setResult] = useState<ExportResult | null>(null);
@@ -75,6 +80,7 @@ export function useExport(open: boolean): ExportState {
     setSummary(null);
     setTyped('');
     setImages(true);
+    setSubtitles(false);
     setExporting(false);
     setRefusal(null);
     setResult(null);
@@ -114,7 +120,7 @@ export function useExport(open: boolean): ExportState {
         format,
         destination,
         images,
-        subtitles: false,
+        subtitles,
       });
       if (opening.current !== current) {
         return;
@@ -132,19 +138,21 @@ export function useExport(open: boolean): ExportState {
         setExporting(false);
       }
     }
-  }, [format, destination, images]);
+  }, [format, destination, images, subtitles]);
 
   return {
     format,
     summary,
     destination,
     images,
+    subtitles,
     exporting,
     refusal,
     result,
     chooseFormat,
     setDestination,
     setImages,
+    setSubtitles,
     exportLibrary,
   };
 }

@@ -51,10 +51,13 @@ const STATUS_CELL: Record<WatchStatus, string> = {
   unwatched: 'Unwatched',
 };
 
+/** A title's tracks in track order. */
+const inTrackOrder = (subtitles: readonly Subtitle[]): Subtitle[] =>
+  [...subtitles].sort((a, b) => a.position - b.position);
+
 /** The languages of a title's tracks, in track order. */
 const languagesOf = (subtitles: readonly Subtitle[]): string =>
-  [...subtitles]
-    .sort((a, b) => a.position - b.position)
+  inTrackOrder(subtitles)
     .map((subtitle) => subtitle.language)
     .join(CELL_SEPARATOR);
 
@@ -192,6 +195,10 @@ const UNSAFE_IN_NAME = /[<>:"/\\|?*\u0000-\u001f]/g;
 /** What a title whose name leaves nothing usable is filed under instead. */
 const FALLBACK_FOLDER = 'Untitled';
 
+/** A name with anything a filename cannot hold taken out. */
+const safeName = (name: string): string =>
+  name.replace(UNSAFE_IN_NAME, '').trim() || FALLBACK_FOLDER;
+
 /**
  * A title's folder, named as a Movie folder is in the maintainer's own
  * collection — `Heat (1995)`, `Severance (2022–)` — with anything a folder
@@ -236,6 +243,11 @@ interface PlannedTitle {
   backdrop: string | null;
   /** Each episode with a still stored. */
   stills: Episode[];
+  /**
+   * Each subtitle file the title carries, as the name it is planned under
+   * inside the title's folder, its extension still to come.
+   */
+  tracks: { storedPath: string; name: string }[];
   row: (art: TitleArt) => ExportCell[];
 }
 
@@ -252,6 +264,12 @@ interface PlannedTitle {
  * `stills/` by its **Episode tag**. The Poster, Backdrop and Still cells carry
  * those same paths, and stay blank with Images off or no stored file — so the
  * drawn **Default poster** is never mistaken for a picture.
+ *
+ * With Subtitles on, each title holding a track gets that folder too: a
+ * film's track beside its art, named by its language (`English.srt`), and an
+ * episode's under `subtitles/` by its Episode tag and language
+ * (`S01E03 English.srt`), each with the stored file's own extension. A video
+ * is never planned.
  */
 export function exportRows(
   movies: readonly Movie[],
@@ -269,6 +287,10 @@ export function exportRows(
         poster: movie.posterPath,
         backdrop: movie.backdropPath,
         stills: [],
+        tracks: inTrackOrder(movie.subtitles).map((subtitle) => ({
+          storedPath: subtitle.path,
+          name: safeName(subtitle.language),
+        })),
         row: (art) =>
           EXPORT_COLUMNS.map((column) => FILM_CELLS[column](movie, art)),
       })
@@ -284,6 +306,12 @@ export function exportRows(
         poster: detail.series.posterPath,
         backdrop: detail.series.backdropPath,
         stills: episodes.filter((episode) => episode.stillPath !== null),
+        tracks: episodes.flatMap((episode) =>
+          inTrackOrder(episode.subtitles).map((subtitle) => ({
+            storedPath: subtitle.path,
+            name: `subtitles/${spellEpisodeTag(episode.season, episode.number)} ${safeName(subtitle.language)}`,
+          }))
+        ),
         row: (art) =>
           EXPORT_COLUMNS.map((column) =>
             SERIES_CELLS[column](detail, episodes, art)
@@ -297,11 +325,13 @@ export function exportRows(
   const taken = new Set<string>();
 
   const titleRows = planned.map((title) => {
-    const hasArt =
-      title.poster !== null ||
-      title.backdrop !== null ||
-      title.stills.length > 0;
-    if (!include.images || !hasArt) {
+    const images =
+      include.images &&
+      (title.poster !== null ||
+        title.backdrop !== null ||
+        title.stills.length > 0);
+    const subtitles = include.subtitles && title.tracks.length > 0;
+    if (!images && !subtitles) {
       return title.row(NO_ART);
     }
     const folder = claimFolder(title.folderBase, taken);
@@ -313,6 +343,14 @@ export function exportRows(
       files.push({ storedPath, path });
       return path;
     };
+    if (subtitles) {
+      for (const track of title.tracks) {
+        plan(track.storedPath, track.name);
+      }
+    }
+    if (!images) {
+      return title.row(NO_ART);
+    }
     const art: TitleArt = {
       poster: plan(title.poster, 'poster'),
       backdrop: plan(title.backdrop, 'backdrop'),

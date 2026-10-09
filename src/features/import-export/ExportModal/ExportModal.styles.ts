@@ -172,3 +172,9 @@ export const IncludeDesc = styled.div`
   font-size: 12.5px;
   color: ${({ theme }) => theme.colors.textFaint};
 `;
+
+/** The 1px rule between two Include rows, in the soft border. */
+export const IncludeDivider = styled.div`
+  height: 1px;
+  background: ${({ theme }) => theme.colors.borderSoft};
+`;
