@@ -121,8 +121,9 @@ the family before it, and the smoke is run against the draft's own Installer.
 - [ ] `git push --follow-tags`. The **Release** workflow runs on the tag —
       and only on a `v*` tag, never on a push to `main`.
 - [ ] The workflow is green: typecheck, tests, package.
-- [ ] GitHub → Releases holds a **Draft** `v<version>` with
-      `FamilyFlix-Setup-<version>.exe`, its `.blockmap` and `latest.yml`.
+- [ ] GitHub → Releases holds exactly **one** **Draft** `v<version>`, and it
+      has all three: `FamilyFlix-Setup-<version>.exe`, its `.blockmap` and
+      `latest.yml`. A second draft means the uploads split (issue #284).
 - [ ] Download the draft's Installer and run steps 2–8 above against it.
 - [ ] Every step passed: publish the draft. Only now is it on the
       **Release feed**.

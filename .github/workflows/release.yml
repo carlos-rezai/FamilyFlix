@@ -33,6 +33,18 @@ jobs:
       - name: Test
         run: node node_modules/vitest/vitest.mjs run
 
+      # electron-builder uploads the Installer, `latest.yml` and the blockmap
+      # concurrently, and each upload that finds no release creates its own —
+      # two drafts for one tag (issue #284). Made here first, every upload
+      # finds it; a re-run finds the one already there.
+      - name: Create the Draft release
+        shell: bash
+        run: |
+          gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 ||
+            gh release create "$GITHUB_REF_NAME" --draft --verify-tag --title "$GITHUB_REF_NAME" --notes ""
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Package and upload the Draft release
         run: node electron/scripts/packageApp.mjs --publish
         env:
