@@ -17,9 +17,15 @@ export interface ExportState {
   destination: string;
   /** True for the life of the export request, false before and after. */
   exporting: boolean;
-  /** Whether images travel beside the sheet — the _Images_ toggle, on every open. */
+  /**
+   * Whether images travel beside the sheet — the _Images_ toggle, on every
+   * open.
+   */
   images: boolean;
-  /** Whether subtitle files travel too — the _Subtitles_ toggle, off on every open. */
+  /**
+   * Whether subtitle files travel too — the _Subtitles_ toggle, off on every
+   * open.
+   */
   subtitles: boolean;
   /** The sentence a `400` said about the destination; `null` otherwise. */
   refusal: string | null;
@@ -51,13 +57,13 @@ export interface ExportState {
  * summary, the destination, and whether a request is in flight, was refused or
  * has written the **Export folder**.
  *
- * `open` is the reset: each opening puts the hook back to `csv`, images on, subtitles off, idle, nothing
- * typed, refused or written, and fetches a fresh summary. The summary's
- * `defaultDestination` fills _Save to_ once it lands, but never over a path
- * typed first — `useTmdbKey`'s rule. A summary or an export that lands after
- * the dialog has closed — or after it has been opened again — redraws
- * nothing. The export itself still happens: a close drops the **Export
- * ready** face, not the folder.
+ * `open` is the reset: each opening puts the hook back to `csv`, images on,
+ * subtitles off, idle, nothing typed, refused or written, and fetches a fresh
+ * summary. The summary's `defaultDestination` fills _Save to_ once it lands,
+ * but never over a path typed first — `useTmdbKey`'s rule. A summary or an
+ * export that lands after the dialog has closed — or after it has been opened
+ * again — redraws nothing. The export itself still happens: a close drops the
+ * **Export ready** face, not the folder.
  */
 export function useExport(open: boolean): ExportState {
   const [format, setFormat] = useState<ExportFormat>('csv');

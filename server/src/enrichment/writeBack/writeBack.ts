@@ -11,7 +11,10 @@ import { writeSheet } from '../../import-export/writeSheet/writeSheet';
 /** The **Metadata sheet**'s name in each **Library folder**. */
 export const SHEET_NAME = 'familyflix-metadata.csv';
 
-/** {@link SHEET_NAME} without its extension — what the Sheet writer names it by. */
+/**
+ * {@link SHEET_NAME} without its extension — what the Sheet writer names it
+ * by.
+ */
 const SHEET_STEM = 'familyflix-metadata';
 
 /** The name a poster takes in its **Source folder**. */

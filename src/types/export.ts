@@ -88,7 +88,9 @@ export interface ExportSummary {
    * `<home>\Downloads` with none.
    */
   defaultDestination: string;
-  /** Today's **Export name** — the folder an export made now would be called. */
+  /**
+   * Today's **Export name** — the folder an export made now would be called.
+   */
   folderName: string;
 }
 
@@ -103,7 +105,10 @@ export interface StartExport {
   subtitles: boolean;
 }
 
-/** What `POST /api/export` answers with a `201`: the folder it wrote, and its counts. */
+/**
+ * What `POST /api/export` answers with a `201`: the folder it wrote, and its
+ * counts.
+ */
 export interface ExportResult {
   /** The **Export folder** actually made — numbered if the name was taken. */
   folder: string;

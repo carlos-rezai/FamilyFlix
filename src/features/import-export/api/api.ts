@@ -122,10 +122,11 @@ export async function cancelImport(): Promise<void> {
 const EXPORT_ENDPOINT = '/api/export';
 
 /**
- * The **Export summary** — the count the **Export dialog** shows beside the
- * filename, read on open. Any status but a `200` rejects, and so does a
- * request that could not be made; the hook answers both with no count, never
- * with a blocked export.
+ * The **Export summary** — the counts the **Export dialog** shows beside the
+ * **Export name**, the default destination _Save to_ starts at, and the name
+ * itself, read on open. Any status but a `200` rejects, and so does a request
+ * that could not be made; the hook answers both with no count, never with a
+ * blocked export.
  */
 export async function fetchExportSummary(): Promise<ExportSummary> {
   const response = await fetch(EXPORT_ENDPOINT);

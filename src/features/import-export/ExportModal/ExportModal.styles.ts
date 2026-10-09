@@ -1,6 +1,9 @@
 import styled from 'styled-components';
 
-/** A section's heading — _Format_, _Columns included_: 13px semibold in the dim ink. */
+/**
+ * A section's heading — _Format_, _Save to_, _Include_, _Columns included_:
+ * 13px semibold in the dim ink.
+ */
 export const SectionLabel = styled.div`
   font-family: ${({ theme }) => theme.fonts.sans};
   font-size: 13px;
@@ -16,8 +19,8 @@ export const Formats = styled.div`
 `;
 
 /**
- * The filename row: the sheet glyph and the name at one end, the count at the
- * other, on `bg2` inside the soft border.
+ * The name row: the folder glyph and the **Export name** at one end, the
+ * count at the other, on `bg2` inside the soft border.
  */
 export const FileRow = styled.div`
   display: flex;
@@ -29,7 +32,7 @@ export const FileRow = styled.div`
   border-radius: ${({ theme }) => theme.radius.md};
 `;
 
-/** The glyph and the filename, 10px apart; the faint ink is the glyph's. */
+/** The glyph and the name, 10px apart; the faint ink is the glyph's. */
 export const FileName = styled.div`
   display: flex;
   align-items: center;
@@ -37,7 +40,7 @@ export const FileName = styled.div`
   color: ${({ theme }) => theme.colors.textFaint};
 `;
 
-/** The **Export file**'s name, in mono, in the dim ink. */
+/** The **Export name**, in mono, in the dim ink. */
 export const Filename = styled.span`
   font-family: ${({ theme }) => theme.fonts.mono};
   font-size: 13.5px;
@@ -52,7 +55,10 @@ export const Count = styled.span`
   color: ${({ theme }) => theme.colors.accent};
 `;
 
-/** The sixteen **Column pills**, wrapping, as a list drawn without its bullets. */
+/**
+ * The sixteen **Column pills**, wrapping, as a list drawn without its
+ * bullets.
+ */
 export const Columns = styled.ul`
   display: flex;
   flex-wrap: wrap;
@@ -108,7 +114,10 @@ export const DoneHeading = styled.h2`
   margin: 0;
 `;
 
-/** The line under it: 15px in the dim ink, the filename in mono inside it. */
+/**
+ * The line under it: 15px in the dim ink, the folder and where in mono
+ * inside it.
+ */
 export const DoneLine = styled.p`
   font-family: ${({ theme }) => theme.fonts.sans};
   font-size: 15px;
@@ -116,7 +125,7 @@ export const DoneLine = styled.p`
   margin: 8px 0 0;
 `;
 
-/** The filename inside the done line, in mono and the text ink. */
+/** The folder or its destination inside the done line, mono in the text ink. */
 export const DoneFilename = styled.span`
   font-family: ${({ theme }) => theme.fonts.mono};
   font-size: 14px;
@@ -128,7 +137,10 @@ export const DoneActions = styled.div`
   margin-top: 26px;
 `;
 
-/** A refused destination's one sentence, a 13px `danger` line under _Save to_. */
+/**
+ * A refused destination's one sentence, a 13px `danger` line under
+ * _Save to_.
+ */
 export const Refusal = styled.p`
   margin: 8px 0 0;
   font-family: ${({ theme }) => theme.fonts.sans};
@@ -136,7 +148,10 @@ export const Refusal = styled.p`
   color: ${({ theme }) => theme.colors.danger};
 `;
 
-/** The **Include** group's card: the surface inside the border, its rows stacked. */
+/**
+ * The **Include** group's card: the surface inside the border, its rows
+ * stacked.
+ */
 export const IncludeCard = styled.div`
   background: ${({ theme }) => theme.colors.surface};
   border: 1px solid ${({ theme }) => theme.colors.border};

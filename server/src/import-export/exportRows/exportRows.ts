@@ -20,7 +20,10 @@ export type ExportTable = ExportCell[][];
 
 /** The tables an **Export** is written from. */
 export interface ExportTables {
-  /** The Titles table: the sixteen {@link EXPORT_COLUMNS}, then every title A–Z. */
+  /**
+   * The Titles table: the sixteen {@link EXPORT_COLUMNS}, then every title
+   * A–Z.
+   */
   titles: ExportTable;
   /**
    * The Episodes table: the nine {@link EXPORT_EPISODE_COLUMNS}, then every
@@ -160,7 +163,10 @@ const SERIES_CELLS: Record<
   Backdrop: (_, __, art) => art.backdrop,
 };
 
-/** The episode cell rules, one per Episodes column; Still the planned path or blank. */
+/**
+ * The episode cell rules, one per Episodes column; Still the planned path or
+ * blank.
+ */
 const EPISODE_CELLS: Record<
   ExportEpisodeColumn,
   (episode: Episode, seriesTitle: string, still: string | null) => ExportCell
@@ -188,7 +194,10 @@ interface TitleArt {
 
 const NO_ART: TitleArt = { poster: null, backdrop: null };
 
-/** What Windows refuses in a folder name, and the control characters with it. */
+/**
+ * What Windows refuses in a folder name, and the control characters with
+ * it.
+ */
 // eslint-disable-next-line no-control-regex
 const UNSAFE_IN_NAME = /[<>:"/\\|?*\u0000-\u001f]/g;
 

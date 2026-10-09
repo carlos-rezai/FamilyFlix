@@ -62,7 +62,10 @@ const FORMAT_COPY: Record<
   },
 };
 
-/** `1 title`, `4 titles` — the count as the name row and the done line say it. */
+/**
+ * `1 title`, `4 titles` — the count as the name row and the done line say
+ * it.
+ */
 const titleLabel = (count: number): string =>
   `${count} ${count === 1 ? 'title' : 'titles'}`;
 
@@ -80,11 +83,11 @@ const folderNameOf = (path: string): string =>
  * the folder glyph and the route's refusal under it; the name row — the
  * folder glyph, the **Export name** and the titles count; _Include_, the
  * _Images_ row and its Toggle, on every open, then the _Subtitles_ row,
- * off; _Columns included_
- * over the sixteen **Export columns** as pills — a list, not controls;
- * _Export as CSV_ / _Export as Excel_ beside _Cancel_. Then **Export ready**,
- * swapped inside the same card as the one **Bare modal** so the pop-in runs
- * once: the tick, the heading, the folder written and where, and _Done_.
+ * off; _Columns included_ over the sixteen **Export columns** as pills — a
+ * list, not controls; _Export as CSV_ / _Export as Excel_ beside _Cancel_.
+ * Then **Export ready**, swapped inside the same card as the one **Bare
+ * modal** so the pop-in runs once: the tick, the heading, the folder written
+ * and where, and _Done_.
  *
  * The dialog owns `useExport`. The count is `null` until the summary lands
  * and absent on screen while so — it never blocks the export, and a done face
