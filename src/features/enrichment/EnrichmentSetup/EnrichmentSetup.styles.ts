@@ -96,10 +96,11 @@ export const SourceNote = styled.div`
 `;
 
 /**
- * The **let-go line** under Start, in the source note's style: 10px below the
- * row, as the note sits under its card, the Stack's gap taken back.
+ * The note the **let-go line** is drawn in under Start, `SourceNote`'s
+ * sibling in its style: 10px below the row, as the source note sits under
+ * its card, the Stack's gap taken back.
  */
-export const LetGoLine = styled(SourceNote)`
+export const LetGoNote = styled(SourceNote)`
   margin-top: -10px;
 `;
 

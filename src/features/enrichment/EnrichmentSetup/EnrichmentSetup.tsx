@@ -23,7 +23,7 @@ import {
   Chips,
   Estimate,
   GroupLabel,
-  LetGoLine,
+  LetGoNote,
   RatingNote,
   SeriesNote,
   SourceNote,
@@ -225,7 +225,7 @@ export function EnrichmentSetup({
         />
         <Estimate>{enrichmentEstimate(summary, scope)}</Estimate>
       </StartRow>
-      {letGo === null ? null : <LetGoLine>{letGo}</LetGoLine>}
+      {letGo === null ? null : <LetGoNote>{letGo}</LetGoNote>}
     </Stack>
   );
 }
