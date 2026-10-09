@@ -618,17 +618,19 @@ Design log 32: steps 16–23, six problems found using v0.3.0. Terms defined
 here are planned (🔜) until their step ships. **Export name** (above) becomes
 an editable field in step 19; its definition changes when that step ships.
 
-| Term                      | Definition                                                                                                                                                                                                                                                                                                                              | Aliases to avoid                           |
-| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------ |
-| **Episode link** (new)    | An **Episode**'s numbers typed by hand in front of a file the reader could not number — `S[01] E[01]  eps1.0_hellofriend.mov` on an **Episode file row** — so the numbers become the episode's identity while the file keeps its name. Nothing on disk is renamed. Made in an **Unplaced** Problem's _Resolve_ or in **Edit a series**. | rename, relabel, mapping, alias            |
-| **Source file** (new)     | An **Episode**'s video name relative to its series' **Source folder** (`episodes.source_file`, migration 8; `null` for episodes imported before it). A **Folder scan** treats a video whose Source file is already held as **Already in library**, so an **Episode link** is never raised again.                                        | original filename, source path             |
-| **Episode word** (new)    | The third **Episode tag** shape: `Episode 12`, `Ep 12`, `Ep.12`, `E12`. It gives an episode number only, and is read only where the season is already known: in a **Season folder**, or at a **Show folder**'s root as season 1. It never makes a folder a show.                                                                        | bare episode, episode-only tag             |
-| **Numbering guess** (new) | The prefill of an **Unplaced** Problem's rows in the **Movie form**: the season from the folder, the episode from the **Episode word**, else the next free number in name order. Always editable.                                                                                                                                       | auto-number, suggestion                    |
-| **Backdrop veil** (new)   | What lies between the **Backdrop** and the detail page's text, replacing the old scrim: an `accentSoft` wash under a darkening gradient. The art fills the whole viewport and stays put while the content scrolls. Drawn on the movie page and the series page alike.                                                                   | overlay, filter, scrim (the old one), tint |
-| **Factory reset** (new)   | Erasing everything FamilyFlix made: every database row (genres re-seeded), the managed media directory's contents, and an uploaded **Playback component**. **Library folders** on disk, **Export folders** and the **Shell log** stay. `POST /api/reset` from the Storage card's last row, behind the **Reset dialog**.                 | wipe, clear all, delete library, uninstall |
-| **Reset dialog** (new)    | The **Factory reset**'s warning: _Erase everything?_, what goes, what stays, _This can't be undone._, and _Cancel_ (focused) / _Erase everything_. The **Delete dialog**'s precedent.                                                                                                                                                   | confirm modal, are-you-sure                |
-| **Edit a series** (new)   | The **Movie form**'s edit job for a **Series**, `/add?series=<id>`, from the series page's ⋯ menu: the shared fields, the poster and one **Episode file row** per held episode, renumberable, removable and addable; `PATCH /api/series/:id`. A renumbered episode keeps its watch state.                                               | series settings, manage episodes           |
-| **Delete a series** (new) | The series page's ⋯ Danger row: a dialog, `DELETE /api/series/:id`, then the **Series folder** under best-effort cleanup, landing on the Series tab.                                                                                                                                                                                    | remove show                                |
+| Term                        | Definition                                                                                                                                                                                                                                                                                                                              | Aliases to avoid                           |
+| --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------ |
+| **Episode link** (new)      | An **Episode**'s numbers typed by hand in front of a file the reader could not number — `S[01] E[01]  eps1.0_hellofriend.mov` on an **Episode file row** — so the numbers become the episode's identity while the file keeps its name. Nothing on disk is renamed. Made in an **Unplaced** Problem's _Resolve_ or in **Edit a series**. | rename, relabel, mapping, alias            |
+| **Source file** (new)       | An **Episode**'s video name relative to its series' **Source folder** (`episodes.source_file`, migration 8; `null` for episodes imported before it). A **Folder scan** treats a video whose Source file is already held as **Already in library**, so an **Episode link** is never raised again.                                        | original filename, source path             |
+| **Episode word** (new)      | The third **Episode tag** shape: `Episode 12`, `Ep 12`, `Ep.12`, `E12`. It gives an episode number only, and is read only where the season is already known: in a **Season folder**, or at a **Show folder**'s root as season 1. It never makes a folder a show.                                                                        | bare episode, episode-only tag             |
+| **Numbering guess** (new)   | The prefill of an **Unplaced** Problem's rows in the **Movie form**: the season from the folder, the episode from the **Episode word**, else the next free number in name order. Always editable.                                                                                                                                       | auto-number, suggestion                    |
+| **Backdrop veil** (new)     | What lies between the **Backdrop** and the detail page's text, replacing the old scrim: an `accentSoft` wash under a darkening gradient. The art fills the whole viewport and stays put while the content scrolls. Drawn on the movie page and the series page alike.                                                                   | overlay, filter, scrim (the old one), tint |
+| **Factory reset** (new)     | Erasing everything FamilyFlix made: every database row (genres re-seeded), the managed media directory's contents, and an uploaded **Playback component**. **Library folders** on disk, **Export folders** and the **Shell log** stay. `POST /api/reset` from the Storage card's last row, behind the **Reset dialog**.                 | wipe, clear all, delete library, uninstall |
+| **Reset dialog** (new)      | The **Factory reset**'s warning: _Erase everything?_, what goes, what stays, _This can't be undone._, and _Cancel_ (focused) / _Erase everything_. The **Delete dialog**'s precedent.                                                                                                                                                   | confirm modal, are-you-sure                |
+| **Edit a series** (new)     | The **Movie form**'s edit job for a **Series**, `/add?series=<id>`, from the series page's ⋯ menu: the shared fields, the poster and one **Episode file row** per held episode, renumberable, removable and addable; `PATCH /api/series/:id`. A renumbered episode keeps its watch state.                                               | series settings, manage episodes           |
+| **Delete a series** (new)   | The series page's ⋯ Danger row: a dialog, `DELETE /api/series/:id`, then the **Series folder** under best-effort cleanup, landing on the Series tab.                                                                                                                                                                                    | remove show                                |
+| **Single-title Sync** (new) | A **Sync** in the `single` **Enrichment scope**, opened from a film's ⋯ menu (`/enrich?movie=<id>`). Its **Current enrichment run** carries that film's `movieId`, and the flow re-attaches only to a run for that same film.                                                                                                           | movie sync, one-off fetch                  |
+| **Waiting run** (new)       | A **Current enrichment run** in `review` that a **Single-title Sync**'s setup did not re-attach to: a library Sync, or another film's. Start lets it go, and the setup says so in one line while the run still has **Decisions**.                                                                                                       | stale run, pending sync, other run         |
 
 ## Relationships
 
@@ -770,6 +772,7 @@ an editable field in step 19; its definition changes when that step ships.
 - The **Default poster** never makes a title **Full details**, so _Only what's missing_ still syncs it.
 - An **Episode continue card** draws its **Series**' **Poster** and its **Series**' **Gradient fallback**, the same colours as that series' **Poster card** and **Season cards**.
 - The **Wordmark** appears inside the screens (the header, the About card, the **Default poster**); the **App mark** never does.
+- A **Single-title Sync** belongs to exactly one **Movie**. Opened for a film, the flow re-attaches only to that film's run. A **Waiting run** is let go by Start. A _running_ Sync is never let go, so Start's `409` raises _A sync is already running._
 
 ## Example dialogue
 
@@ -1303,6 +1306,15 @@ Hard` gets found and `Die Hard\extras` doesn't become a second film."
 > **Dev:** "If `F:` is unplugged?"
 > **Maintainer:** "It's **Unreachable**: still listed, skipped with a warning.
 > Removing it from the list wouldn't delete a single title either."
+
+> **Dev:** "The maintainer left a library **Sync** in review and then pressed
+> _Fetch from TMDB_ on one film. Which review do they see?"
+> **Maintainer:** "Neither. It's a **Single-title Sync**, and that run isn't
+> theirs, so they see the film's setup. The library run is a **Waiting run**,
+> and one line says Start lets it go."
+> **Dev:** "And if the library Sync is still running?"
+> **Maintainer:** "Then Start is refused and the notice says _A sync is
+> already running._ A running Sync is never let go."
 
 ## Flagged ambiguities
 
@@ -2096,3 +2108,8 @@ Hard` gets found and `Die Hard\extras` doesn't become a second film."
 - **"Link" (new):** the brief's word for adding a **Library folder**. It does
   not mean referencing in place — the app still copies (log 30 Q2). Say
   "add a Library folder", never "link media".
+- **"Re-attach" is conditional now (new):** opened without a movie, the
+  **Enrichment flow** still re-attaches to any **Current enrichment run**.
+  Opened for a film, it re-attaches only to that film's **Single-title Sync**.
+  Say "let go" for what Start does to a **Waiting run**. Never call it _Stop_
+  or a cancel: those are the user dropping their own run.
