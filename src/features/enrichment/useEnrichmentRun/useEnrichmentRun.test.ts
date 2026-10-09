@@ -4,6 +4,7 @@ import { act, renderHook } from '@testing-library/react';
 import { useEnrichmentRun } from './useEnrichmentRun';
 import type { Decision, EnrichmentRun, StartEnrichment } from '@/types';
 import { makeEnrichmentRun } from '@/test-support/makeEnrichmentRun/makeEnrichmentRun';
+import { EnrichmentBusyError } from '../api/api';
 import {
   createdResponse,
   noContentResponse,
@@ -123,9 +124,9 @@ function serve({
   });
 }
 
-/** The hook mounted, its first read settled. */
-async function mounted() {
-  const hook = renderHook(() => useEnrichmentRun());
+/** The hook mounted for `movieId` (none by default), its first read settled. */
+async function mounted(movieId: string | null = null) {
+  const hook = renderHook(() => useEnrichmentRun(movieId));
   await elapse(0);
   return hook;
 }
@@ -148,7 +149,7 @@ describe('useEnrichmentRun — re-attaching', () => {
 
   it('draws nothing from a read that lands after the screen was left', async () => {
     serve({ held: RUNNING });
-    const { result, unmount } = renderHook(() => useEnrichmentRun());
+    const { result, unmount } = renderHook(() => useEnrichmentRun(null));
     unmount();
     await elapse(0);
 
@@ -231,7 +232,7 @@ describe('useEnrichmentRun — start and cancel', () => {
           answer = resolve;
         })
     );
-    const { result } = renderHook(() => useEnrichmentRun());
+    const { result } = renderHook(() => useEnrichmentRun(null));
     serve();
 
     await act(() => result.current.start(OPTIONS));
@@ -355,4 +356,220 @@ describe('useEnrichmentRun — settling a Decision', () => {
       expect(result.current.run?.enriched).toBe(1);
     }
   );
+});
+
+/**
+ * 33 — Single-title Sync (issue #286): whose run it is. Opened for a film, the
+ * hook holds only a `single` run for that same film. Another film's run, or a
+ * library run, is not held: in review it is the **Waiting run**, running it is
+ * ignored, and a `409` over it rejects with `EnrichmentBusyError`. Opened with
+ * no film, every run is held — today's rule, kept.
+ */
+const FILM = 'movie-7';
+
+const busy = () =>
+  ({
+    ok: false,
+    status: 409,
+    json: () => Promise.resolve({ error: 'A sync is already running' }),
+  }) as unknown as Response;
+
+const SINGLE: StartEnrichment = {
+  scope: 'single',
+  movieId: FILM,
+  fields: ['synopsis'],
+  writeSheet: false,
+  writePosters: false,
+};
+
+const OWN_RUNNING = makeEnrichmentRun({
+  id: 'own',
+  scope: 'single',
+  movieId: FILM,
+  total: 1,
+});
+const OWN_REVIEW = makeEnrichmentRun({
+  id: 'own',
+  phase: 'review',
+  scope: 'single',
+  movieId: FILM,
+  total: 1,
+  done: 1,
+  decisions: [MISSING],
+});
+const OTHER_FILM_REVIEW = makeEnrichmentRun({
+  id: 'other-film',
+  phase: 'review',
+  scope: 'single',
+  movieId: 'movie-9',
+  total: 1,
+  done: 1,
+  decisions: [MISSING],
+});
+const OTHER_FILM_RUNNING = makeEnrichmentRun({
+  id: 'other-film',
+  scope: 'single',
+  movieId: 'movie-9',
+  total: 1,
+});
+const LIBRARY_REVIEW = makeEnrichmentRun({
+  id: 'library',
+  phase: 'review',
+  scope: 'all',
+  decisions: [MISSING, OTHER],
+});
+const LIBRARY_RUNNING = makeEnrichmentRun({
+  id: 'library',
+  scope: 'all',
+  total: 40,
+  done: 3,
+});
+
+describe('useEnrichmentRun — on mount, opened for a film', () => {
+  it.each([
+    ['running', OWN_RUNNING],
+    ['in review', OWN_REVIEW],
+  ] as const)('holds that film’s own run %s', async (_name, held) => {
+    serve({ held });
+    const { result } = await mounted(FILM);
+
+    expect(result.current.run).toEqual(held);
+    expect(result.current.waiting).toBeNull();
+  });
+
+  it.each([
+    ['another film’s', OTHER_FILM_REVIEW],
+    ['a library', LIBRARY_REVIEW],
+  ] as const)(
+    'makes %s run in review the Waiting run, holding none',
+    async (_name, held) => {
+      serve({ held });
+      const { result } = await mounted(FILM);
+
+      expect(result.current.run).toBeNull();
+      expect(result.current.waiting).toEqual(held);
+    }
+  );
+
+  it.each([
+    ['another film’s', OTHER_FILM_RUNNING],
+    ['a library', LIBRARY_RUNNING],
+  ] as const)(
+    'ignores %s run that is running: no run, no Waiting run, no polling',
+    async (_name, held) => {
+      serve({ held });
+      const { result } = await mounted(FILM);
+
+      await elapse(1500);
+
+      expect(result.current.run).toBeNull();
+      expect(result.current.waiting).toBeNull();
+      expect(reads()).toBe(1);
+    }
+  );
+});
+
+describe('useEnrichmentRun — on mount, opened with no film', () => {
+  it.each([
+    ['a single film’s', OTHER_FILM_REVIEW],
+    ['a library', LIBRARY_REVIEW],
+    ['a running single film’s', OTHER_FILM_RUNNING],
+  ] as const)('holds %s run, as today', async (_name, held) => {
+    serve({ held });
+    const { result } = await mounted(null);
+
+    expect(result.current.run).toEqual(held);
+    expect(result.current.waiting).toBeNull();
+  });
+});
+
+describe('useEnrichmentRun — a 409 at Start, opened for a film', () => {
+  it('holds that film’s own running run, and clears the Waiting run', async () => {
+    serve({ held: LIBRARY_REVIEW });
+    const { result } = await mounted(FILM);
+    serve({ held: OWN_RUNNING, started: busy() });
+
+    await act(() => result.current.start(SINGLE));
+
+    expect(result.current.run).toEqual(OWN_RUNNING);
+    expect(result.current.waiting).toBeNull();
+  });
+
+  it.each([
+    ['another film’s', OTHER_FILM_RUNNING],
+    ['a library', LIBRARY_RUNNING],
+  ] as const)(
+    'rejects with EnrichmentBusyError over %s run, holding none',
+    async (_name, held) => {
+      serve();
+      const { result } = await mounted(FILM);
+      serve({ held, started: busy() });
+
+      await expect(act(() => result.current.start(SINGLE))).rejects.toThrow(
+        EnrichmentBusyError
+      );
+
+      expect(result.current.run).toBeNull();
+    }
+  );
+
+  it('holds whatever run is going when opened with no film', async () => {
+    serve();
+    const { result } = await mounted(null);
+    serve({ held: OTHER_FILM_RUNNING, started: busy() });
+
+    await act(() => result.current.start(OPTIONS));
+
+    expect(result.current.run).toEqual(OTHER_FILM_RUNNING);
+  });
+});
+
+describe('useEnrichmentRun — the Waiting run let go', () => {
+  it('is cleared by a successful start, the film’s run held', async () => {
+    serve({ held: LIBRARY_REVIEW, started: createdResponse(OWN_RUNNING) });
+    const { result } = await mounted(FILM);
+
+    await act(() => result.current.start(SINGLE));
+
+    expect(result.current.run).toEqual(OWN_RUNNING);
+    expect(result.current.waiting).toBeNull();
+  });
+
+  it('is not set by a mount read that lands after a start', async () => {
+    let answer: (response: Response) => void = () => undefined;
+    fetchMock.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          answer = resolve;
+        })
+    );
+    const { result } = renderHook(() => useEnrichmentRun(FILM));
+    serve({ started: createdResponse(OWN_RUNNING) });
+
+    await act(() => result.current.start(SINGLE));
+    answer(okResponse(LIBRARY_REVIEW));
+    await elapse(0);
+
+    expect(result.current.run).toEqual(OWN_RUNNING);
+    expect(result.current.waiting).toBeNull();
+  });
+
+  it('is not set by a mount read that lands after a cancel', async () => {
+    let answer: (response: Response) => void = () => undefined;
+    fetchMock.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          answer = resolve;
+        })
+    );
+    const { result } = renderHook(() => useEnrichmentRun(FILM));
+    serve();
+
+    act(() => result.current.cancel());
+    answer(okResponse(OTHER_FILM_REVIEW));
+    await elapse(0);
+
+    expect(result.current.run).toBeNull();
+    expect(result.current.waiting).toBeNull();
+  });
 });

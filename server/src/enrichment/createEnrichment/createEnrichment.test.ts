@@ -316,3 +316,30 @@ describe('createEnrichment: the household’s own signals', () => {
     expect(signals(storage, movieId)).toEqual(before);
   });
 });
+
+// 33 — Single-title Sync (issue #286): whose run it is. A `single` start
+// records its film's `movieId` on the run, in the snapshot it answers and in
+// every read of the Current run, so a film's screen can tell its own run from
+// another's.
+describe('createEnrichment: a single run records its film', () => {
+  it('carries the film’s movieId in the snapshot a start answers', async () => {
+    const { enrichment, addFilm } = world();
+    const movieId = await addFilm();
+
+    const outcome = await startSingle(enrichment, movieId);
+
+    expect(outcome.kind === 'started' && outcome.run.movieId).toBe(movieId);
+  });
+
+  it('carries it in every read of the Current run, running and in review', async () => {
+    const { enrichment, addFilm } = world();
+    const movieId = await addFilm();
+
+    await startSingle(enrichment, movieId);
+    expect(enrichment.current()?.movieId).toBe(movieId);
+
+    const run = await reviewed(enrichment);
+    expect(run.movieId).toBe(movieId);
+    expect(enrichment.current()?.movieId).toBe(movieId);
+  });
+});

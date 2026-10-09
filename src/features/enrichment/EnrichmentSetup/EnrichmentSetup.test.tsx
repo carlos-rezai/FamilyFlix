@@ -9,6 +9,7 @@ import {
   type EnrichField,
 } from '@/types';
 import { EnrichmentSetup, type EnrichmentSetupProps } from './EnrichmentSetup';
+import { comesBefore } from '@/test-support/comesBefore/comesBefore';
 
 /**
  * 23 — Enrichment refactor (issue #214), Group 4: the three steps have suites.
@@ -55,6 +56,7 @@ function renderSetup(props: Partial<EnrichmentSetupProps> = {}) {
         fields={ENRICH_FIELDS}
         writeSheet
         writePosters
+        letGo={null}
         {...handlers}
         {...props}
       />
@@ -417,5 +419,37 @@ describe('EnrichmentSetup — Start', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Start sync' }));
 
     expect(onStart).toHaveBeenCalledTimes(1);
+  });
+});
+
+/**
+ * 33 — Single-title Sync (issue #286): the **let-go line**, under Start in the
+ * source note's style, while a **Waiting run** has Decisions — and nothing
+ * there when the flow passes `null`.
+ */
+describe('EnrichmentSetup — the let-go line', () => {
+  const LINE = 'Starting lets go of the library sync waiting for review.';
+
+  it('draws the line under Start when given one', () => {
+    renderSetup({ scope: 'single', title: 'The Lantern Keeper', letGo: LINE });
+
+    const line = screen.getByText(LINE);
+    const start = screen.getByRole('button', { name: 'Fetch details' });
+    expect(comesBefore(start, line)).toBe(true);
+    expect(start.parentElement?.contains(line)).toBe(false);
+  });
+
+  it('draws it in the source note’s faint 13px sans', () => {
+    renderSetup({ scope: 'single', title: 'The Lantern Keeper', letGo: LINE });
+
+    const style = getComputedStyle(screen.getByText(LINE));
+    expect(style.fontSize).toBe('13px');
+    expect(style.color).toBe(TEXT_FAINT);
+  });
+
+  it('draws no line when given none', () => {
+    renderSetup({ scope: 'single', title: 'The Lantern Keeper', letGo: null });
+
+    expect(screen.queryByText(/Starting lets go of/)).toBeNull();
   });
 });

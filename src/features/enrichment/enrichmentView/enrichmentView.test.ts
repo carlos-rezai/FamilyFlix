@@ -3,10 +3,12 @@ import { describe, expect, it } from 'vitest';
 import {
   enrichmentEstimate,
   enrichmentView,
+  letGoLine,
   scopeDescription,
   writtenSummary,
 } from './enrichmentView';
-import type { EnrichmentRun, EnrichmentSummary } from '@/types';
+import type { Decision, EnrichmentRun, EnrichmentSummary } from '@/types';
+import { makeEnrichmentRun } from '@/test-support/makeEnrichmentRun/makeEnrichmentRun';
 
 /**
  * 23 — Enrichment, Phase 3: "the whole library" (issue #205).
@@ -228,5 +230,60 @@ describe('writtenSummary — All done’s line', () => {
     expect(writtenSummary({ sheet: true, posters: true })).toBe(
       'Saved to your library, the sheet in your collection root, a poster.jpg in each movie folder.'
     );
+  });
+});
+
+/**
+ * 33 — Single-title Sync (issue #286): the **let-go line**. The **Waiting
+ * run** a film's setup would let go of on Start, worded by whose it is — the
+ * library's (`missing` / `all`) or another film's (`single`) — and nothing at
+ * all while there is no Waiting run or it has no Decisions left.
+ */
+describe('letGoLine', () => {
+  const DECISION: Decision = {
+    id: 'd1',
+    kind: 'missing',
+    title: 'Sundial',
+    reason: 'Nothing on TMDB matched this title.',
+    path: null,
+    query: 'Sundial',
+  };
+
+  it.each(['missing', 'all'] as const)(
+    'names the library sync for a %s run with Decisions',
+    (scope) => {
+      const waiting = makeEnrichmentRun({
+        phase: 'review',
+        scope,
+        decisions: [DECISION],
+      });
+
+      expect(letGoLine(waiting)).toBe(
+        'Starting lets go of the library sync waiting for review.'
+      );
+    }
+  );
+
+  it("names another movie's sync for a single run with Decisions", () => {
+    const waiting = makeEnrichmentRun({
+      phase: 'review',
+      scope: 'single',
+      movieId: 'movie-9',
+      decisions: [DECISION],
+    });
+
+    expect(letGoLine(waiting)).toBe(
+      "Starting lets go of another movie's sync waiting for review."
+    );
+  });
+
+  it('is null for a Waiting run with no Decisions', () => {
+    const waiting = makeEnrichmentRun({ phase: 'review', decisions: [] });
+
+    expect(letGoLine(waiting)).toBeNull();
+  });
+
+  it('is null with no Waiting run', () => {
+    expect(letGoLine(null)).toBeNull();
   });
 });

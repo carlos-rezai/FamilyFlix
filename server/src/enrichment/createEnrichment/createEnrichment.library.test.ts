@@ -515,3 +515,24 @@ describe('createEnrichment: reaching review', () => {
     expect(storage.enrichmentLastSyncedAt()).toBeNull();
   });
 });
+
+// 33 — Single-title Sync (issue #286): a library run belongs to no one film,
+// so neither its snapshot nor a read of it carries a `movieId`.
+describe('createEnrichment: a library run records no film', () => {
+  it.each(['missing', 'all'] as const)(
+    'carries no movieId on a %s run, started or read',
+    async (scope) => {
+      const { enrichment, addFilm } = world();
+      await addFilm(LANTERN);
+
+      const outcome = await startSync(enrichment, scope);
+
+      expect(outcome.kind).toBe('started');
+      if (outcome.kind !== 'started') return;
+      expect('movieId' in outcome.run).toBe(false);
+      expect(enrichment.current()).not.toHaveProperty('movieId');
+      const run = await reviewed(enrichment);
+      expect(run).not.toHaveProperty('movieId');
+    }
+  );
+});
