@@ -1,5 +1,4 @@
 import type {
-  ExportFormat,
   ExportResult,
   ExportSummary,
   ImportField,
@@ -136,24 +135,6 @@ export async function fetchExportSummary(): Promise<ExportSummary> {
   }
 
   return (await response.json()) as ExportSummary;
-}
-
-/**
- * The **Export file** in the format asked for — the one call in the app that
- * resolves bytes rather than JSON. The route answers the file under an
- * attachment disposition; a refusal — the `400` a format it does not write
- * meets, a `500` — is a status and a JSON body, so anything but a `200`
- * rejects without reading the body as a file.
- */
-export async function fetchExportFile(format: ExportFormat): Promise<Blob> {
-  const endpoint = `${EXPORT_ENDPOINT}/${format}`;
-  const response = await fetch(endpoint);
-
-  if (!response.ok) {
-    throw new Error(`GET ${endpoint} failed: ${response.status}`);
-  }
-
-  return response.blob();
 }
 
 /** What an export came to: the folder the server wrote, or its one sentence. */

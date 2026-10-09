@@ -5,15 +5,13 @@ import {
   fetchCurrentImport,
   cancelImport,
   fetchExportSummary,
-  fetchExportFile,
   startExport,
   ImportBusyError,
 } from './api';
-import type { ExportFormat, ExportResult, StartExport } from '@/types';
+import type { ExportResult, StartExport } from '@/types';
 import { makeImportRun } from '@/test-support/makeImportRun/makeImportRun';
 import {
   createdResponse,
-  fileResponse,
   noContentResponse,
   notFoundResponse,
   okResponse,
@@ -38,9 +36,10 @@ import {
  *
  * 14 — Export, Phase 1: "the tracer bullet" (issue #137) adds the two calls
  * the **Export dialog** makes — `fetchExportSummary` on open, for the count
- * the filename row shows, and `fetchExportFile` behind _Export as CSV_, the one
- * call in the app that resolves bytes rather than JSON. One caller each, so
- * they stay here too.
+ * the name row shows, and `fetchExportFile` behind _Export as CSV_. One
+ * caller each, so they stay here too. `fetchExportFile` retired with the
+ * download route in the Export options refactor (issue 283), and
+ * `startExport` took its place.
  */
 
 let fetchMock: ReturnType<
@@ -312,72 +311,6 @@ describe('fetchExportSummary', () => {
     fetchMock.mockRejectedValue(new Error('offline'));
 
     await expect(fetchExportSummary()).rejects.toThrow();
-  });
-});
-
-describe('fetchExportFile', () => {
-  const csv = () =>
-    new Blob(['\uFEFFTitle,Year\nDie Hard,1988\n'], {
-      type: 'text/csv; charset=utf-8',
-    });
-
-  it('GETs the CSV route for csv', async () => {
-    fetchMock.mockResolvedValue(fileResponse(csv()));
-
-    await fetchExportFile('csv');
-
-    const request = onlyRequest();
-    expect(request.url).toBe('/api/export/csv');
-    expect(request.method === undefined || request.method === 'GET').toBe(true);
-  });
-
-  it('GETs the Excel route for xlsx and resolves the workbook as a Blob', async () => {
-    const workbook = new Blob(['PK'], {
-      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    });
-    fetchMock.mockResolvedValue(fileResponse(workbook));
-
-    const result = await fetchExportFile('xlsx');
-
-    expect(onlyRequest().url).toBe('/api/export/xlsx');
-    expect(result).toBeInstanceOf(Blob);
-    expect(result).toBe(workbook);
-  });
-
-  it('resolves the bytes as a Blob, reading no JSON', async () => {
-    // `fileResponse` rejects on `json()`: a call that parsed the body as a
-    // document would reject here.
-    const blob = csv();
-    fetchMock.mockResolvedValue(fileResponse(blob));
-
-    const result = await fetchExportFile('csv');
-
-    expect(result).toBeInstanceOf(Blob);
-    expect(result).toBe(blob);
-  });
-
-  it('rejects when the server fell over', async () => {
-    fetchMock.mockResolvedValue(serverErrorResponse());
-
-    await expect(fetchExportFile('csv')).rejects.toThrow();
-  });
-
-  it('rejects when the route refuses the format', async () => {
-    fetchMock.mockResolvedValue({
-      ok: false,
-      status: 400,
-      json: () => Promise.resolve({ error: 'Unknown export format: pdf' }),
-    } as unknown as Response);
-
-    // The two formats are the wire's own names; the type keeps a third out of
-    // the call, so the refusal is reached the one way it still can be.
-    await expect(fetchExportFile('pdf' as ExportFormat)).rejects.toThrow();
-  });
-
-  it('rejects when the request could not be made at all', async () => {
-    fetchMock.mockRejectedValue(new Error('offline'));
-
-    await expect(fetchExportFile('csv')).rejects.toThrow();
   });
 });
 

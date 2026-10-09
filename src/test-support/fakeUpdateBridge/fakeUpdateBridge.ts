@@ -21,7 +21,7 @@ export const IDLE_STATUS: UpdateStatus = {
  * `install()` is recorded. After the block the global is deleted, so every
  * later file in the worker is a browser again.
  *
- * It follows `stubDownload` and `stubScrollTo` in shape.
+ * It follows `stubScrollTo` in shape.
  */
 export function fakeUpdateBridge() {
   let current: UpdateStatus = IDLE_STATUS;
