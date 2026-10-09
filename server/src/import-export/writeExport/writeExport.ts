@@ -1,5 +1,5 @@
-import { constants, createWriteStream } from 'node:fs';
-import { access, mkdir, rm, writeFile } from 'node:fs/promises';
+import { createWriteStream } from 'node:fs';
+import { mkdir, rm, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import type { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
@@ -7,6 +7,7 @@ import { pipeline } from 'node:stream/promises';
 import type { Movie, SeriesDetail, StartExport } from '@/types';
 import type { Media } from '../../media/createMedia/createMedia';
 import { readableFolder } from '../../media/readableFolder/readableFolder';
+import { writableFolder } from '../../media/writableFolder/writableFolder';
 import { exportName } from '../exportName/exportName';
 import {
   exportRows,
@@ -53,12 +54,7 @@ async function refusalOf(destination: string): Promise<string | null> {
   if (reading !== 'readable') {
     return REFUSALS.missing;
   }
-  try {
-    await access(destination, constants.W_OK);
-    return null;
-  } catch {
-    return REFUSALS.readOnly;
-  }
+  return (await writableFolder(destination)) ? null : REFUSALS.readOnly;
 }
 
 /**

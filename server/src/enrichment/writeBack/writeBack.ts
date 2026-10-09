@@ -1,5 +1,5 @@
-import { constants, createWriteStream } from 'node:fs';
-import { access, stat, unlink, writeFile } from 'node:fs/promises';
+import { createWriteStream } from 'node:fs';
+import { stat, unlink, writeFile } from 'node:fs/promises';
 import { isAbsolute, join, relative, resolve } from 'node:path';
 import type { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
@@ -7,6 +7,7 @@ import { pipeline } from 'node:stream/promises';
 import type { LogLine, Movie } from '@/types';
 import { exportRows } from '../../import-export/exportRows/exportRows';
 import { writeSheet } from '../../import-export/writeSheet/writeSheet';
+import { writableFolder } from '../../media/writableFolder/writableFolder';
 
 /** The **Metadata sheet**'s name in each **Library folder**. */
 export const SHEET_NAME = 'familyflix-metadata.csv';
@@ -69,14 +70,7 @@ async function check(
   if (targets.length === 0) {
     return { writable: { sheet: false, posters: false }, lines: [] };
   }
-  let writable = true;
-  try {
-    await access(root, constants.W_OK);
-    writable = (await stat(root)).isDirectory();
-  } catch {
-    writable = false;
-  }
-  if (!writable) {
+  if (!(await writableFolder(root))) {
     return {
       writable: { sheet: false, posters: false },
       lines: [
