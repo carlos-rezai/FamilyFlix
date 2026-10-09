@@ -69,6 +69,25 @@ export function notFoundResponse(error = 'Movie not found'): Response {
 }
 
 /**
+ * A 409 carrying the server's own sentence — what a route answers when the
+ * thing asked for is already going: a Sync, an import, a Folder scan.
+ *
+ * `notFoundResponse`'s precedent: the sentence is the one axis that varies,
+ * each route sending its own. The default is the enrichment route's, the
+ * newest caller, so a Sync's suite with nothing to say about the body says
+ * nothing.
+ */
+export function conflictResponse(
+  error = 'A sync is already running'
+): Response {
+  return {
+    ok: false,
+    status: 409,
+    json: () => Promise.resolve({ error }),
+  } as unknown as Response;
+}
+
+/**
  * A 204 — what a route answers when it did the thing and has nothing to say
  * about it. `DELETE /api/movies/:id` is the first, and the one place a client
  * must not reach for `json()`: there is no body, and a real `Response` would

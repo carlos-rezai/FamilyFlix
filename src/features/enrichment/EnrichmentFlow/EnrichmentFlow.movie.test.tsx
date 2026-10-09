@@ -22,6 +22,7 @@ import { makeMovie } from '@/test-support/makeMovie/makeMovie';
 import { makeEnrichmentRun } from '@/test-support/makeEnrichmentRun/makeEnrichmentRun';
 import { snackbarStack } from '@/test-support/snackbarStack/snackbarStack';
 import {
+  conflictResponse,
   createdResponse,
   noContentResponse,
   notFoundResponse,
@@ -124,13 +125,6 @@ const path = (input: RequestInfo | URL) =>
 const isStart = (input: RequestInfo | URL, init?: RequestInit) =>
   path(input) === '/api/enrichment' && method(init) === 'POST';
 
-const busyResponse = () =>
-  ({
-    ok: false,
-    status: 409,
-    json: () => Promise.resolve({ error: 'A sync is already running' }),
-  }) as unknown as Response;
-
 /**
  * A server holding `held` as the Current run (none by default). Start answers
  * `201` with `started`, the run held from then on — or `409` with `busy`
@@ -149,7 +143,7 @@ function serve({
   fetchMock.mockImplementation((input, init) => {
     const p = path(input);
     if (isStart(input, init)) {
-      if (answer === 'busy') return Promise.resolve(busyResponse());
+      if (answer === 'busy') return Promise.resolve(conflictResponse());
       if (answer === 'fails') return Promise.resolve(serverErrorResponse());
       current = started;
       return Promise.resolve(createdResponse(started));

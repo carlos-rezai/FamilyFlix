@@ -4,6 +4,7 @@ import {
   okResponse,
   serverErrorResponse,
   notFoundResponse,
+  conflictResponse,
 } from './fakeResponse';
 
 /**
@@ -57,6 +58,27 @@ describe('notFoundResponse', () => {
   it('defaults to the API’s most common sentence', async () => {
     await expect(notFoundResponse().json()).resolves.toEqual({
       error: 'Movie not found',
+    });
+  });
+});
+
+describe('conflictResponse', () => {
+  it('is a 409 a caller treats as already going rather than broken', () => {
+    const response = conflictResponse();
+
+    expect(response.ok).toBe(false);
+    expect(response.status).toBe(409);
+  });
+
+  it('carries the server’s sentence when one is given', async () => {
+    await expect(
+      conflictResponse('An import is already running').json()
+    ).resolves.toEqual({ error: 'An import is already running' });
+  });
+
+  it('defaults to the enrichment route’s sentence', async () => {
+    await expect(conflictResponse().json()).resolves.toEqual({
+      error: 'A sync is already running',
     });
   });
 });

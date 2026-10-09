@@ -13,6 +13,7 @@ import {
 import type { Decision, StartEnrichment } from '@/types';
 import { makeEnrichmentRun } from '@/test-support/makeEnrichmentRun/makeEnrichmentRun';
 import {
+  conflictResponse,
   createdResponse,
   noContentResponse,
   notFoundResponse,
@@ -56,13 +57,6 @@ const sent = () => {
     body: init?.body === undefined ? undefined : JSON.parse(String(init.body)),
   };
 };
-
-const conflictResponse = () =>
-  ({
-    ok: false,
-    status: 409,
-    json: () => Promise.resolve({ error: 'A sync is already running' }),
-  }) as unknown as Response;
 
 const OPTIONS: StartEnrichment = {
   scope: 'single',

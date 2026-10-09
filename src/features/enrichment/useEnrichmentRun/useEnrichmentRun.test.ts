@@ -6,6 +6,7 @@ import type { Decision, EnrichmentRun, StartEnrichment } from '@/types';
 import { makeEnrichmentRun } from '@/test-support/makeEnrichmentRun/makeEnrichmentRun';
 import { EnrichmentBusyError } from '../api/api';
 import {
+  conflictResponse,
   createdResponse,
   noContentResponse,
   notFoundResponse,
@@ -205,11 +206,7 @@ describe('useEnrichmentRun — start and cancel', () => {
     // Another screen started one since this one mounted.
     serve({
       held: RUNNING,
-      started: {
-        ok: false,
-        status: 409,
-        json: () => Promise.resolve({ error: 'A sync is already running' }),
-      } as unknown as Response,
+      started: conflictResponse(),
     });
 
     await act(() => result.current.start(OPTIONS));
@@ -367,13 +364,6 @@ describe('useEnrichmentRun — settling a Decision', () => {
  */
 const FILM = 'movie-7';
 
-const busy = () =>
-  ({
-    ok: false,
-    status: 409,
-    json: () => Promise.resolve({ error: 'A sync is already running' }),
-  }) as unknown as Response;
-
 const SINGLE: StartEnrichment = {
   scope: 'single',
   movieId: FILM,
@@ -487,7 +477,7 @@ describe('useEnrichmentRun — a 409 at Start, opened for a film', () => {
   it('holds that film’s own running run, and clears the Waiting run', async () => {
     serve({ held: LIBRARY_REVIEW });
     const { result } = await mounted(FILM);
-    serve({ held: OWN_RUNNING, started: busy() });
+    serve({ held: OWN_RUNNING, started: conflictResponse() });
 
     await act(() => result.current.start(SINGLE));
 
@@ -503,7 +493,7 @@ describe('useEnrichmentRun — a 409 at Start, opened for a film', () => {
     async (_name, held) => {
       serve();
       const { result } = await mounted(FILM);
-      serve({ held, started: busy() });
+      serve({ held, started: conflictResponse() });
 
       await expect(act(() => result.current.start(SINGLE))).rejects.toThrow(
         EnrichmentBusyError
@@ -516,7 +506,7 @@ describe('useEnrichmentRun — a 409 at Start, opened for a film', () => {
   it('holds whatever run is going when opened with no film', async () => {
     serve();
     const { result } = await mounted(null);
-    serve({ held: OTHER_FILM_RUNNING, started: busy() });
+    serve({ held: OTHER_FILM_RUNNING, started: conflictResponse() });
 
     await act(() => result.current.start(OPTIONS));
 
