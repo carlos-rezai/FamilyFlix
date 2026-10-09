@@ -11,6 +11,77 @@ Newest entry first.
 
 ---
 
+## 2026-10-09 — Single-title Sync refactor (issue 287)
+
+Eleven commits against `docs/refactor-plans/33-single-title-sync-refactor.md`,
+one per plan commit. **7600 tests pass across 461 files**, from 7597 across
+461 at the end of the build (`e9fc99c`); the three new leaves are
+`conflictResponse`'s. `tsc -b --force` is clean, and
+`eslint src server electron .husky` reports no errors and the one warning
+earlier rounds already logged (`AboutSection.test.tsx`'s escaped dot). No
+wire, schema, prototype or pixel changed, and the server is untouched.
+
+### What each group changed
+
+- **Group 0, the record.** The build's own entry, below, written before the
+  round touched anything.
+- **Group 1, the comments.** `useEnrichmentRun`'s docblock names the
+  re-attach rule and the **Waiting run**; the predicate's docblock stops
+  bolding _belongs here_, a phrase of the **Single-title Sync** row; and
+  `EnrichmentFlow`'s single-film paragraph is rewrapped to the measure.
+- **Group 2, the code's tidies.**
+  - `belongs` is `belongsHere`, log 33 Q1's name, still module-local.
+  - `LetGoLine` is `LetGoNote`, log 33 Q4's name, `SourceNote`'s sibling,
+    no longer one letter's case from the `letGoLine` that words it.
+  - `start` reads the started snapshot, or after a `409` the current run
+    that belongs here, into one local, then holds it and lets the Waiting
+    run go once. Its contract is unchanged, and the hook's suite passed
+    unchanged, both `409` describes included.
+- **Group 3, the tests' tidies.**
+  - `fakeResponse` gains `conflictResponse(error)`, a `409` with
+    `{ error }`, defaulting to the enrichment route's sentence, with three
+    leaves. The enrichment feature's four hand-spelled `409`s read through
+    it.
+  - `import-export`'s five do too, each passing the importer's own
+    sentence. The one built with `new Response` was checked first:
+    `startFolderScan` reads only `status` and `ok`, so it moved.
+  - `EnrichmentFlow.movie.test.tsx` is `EnrichmentFlow.whoseRun.test.tsx`,
+    its four describes in the siblings' `EnrichmentFlow — …` form.
+- **Group 4, the docs.**
+  - The glossary: **Let-go line** and **Busy notice** are new rows;
+    **Single-title Sync** names the `409` rule and **Waiting run** the
+    Let-go line.
+  - CLAUDE.md: the tree's `useEnrichmentRun/` and `enrichmentView/` lines
+    describe the slice, and step 16 and its Browse & discover entry are ✅.
+    The README matches.
+
+### Where the round met the plan's words and differed
+
+- **Commit 2 was made as `refactor:`**, after a first `docs:` was amended
+  before it left the machine. The plan types only 1 and 9–11 as `docs:`.
+- **One full run after commit 5 dropped a file**: 460 of 461 files and
+  7486 of 7597 tests, no failing leaf named, and the hook's own suite green
+  just before it. Commit 5 had already been made. Two full runs straight
+  after were green at 7597, and every later commit was made only on a run
+  that exited `0`. Read as load, not as the change; noted in case it
+  returns.
+
+### Left as it is
+
+- **A `movieId` that changes while the flow stays mounted.** The mount
+  effect re-reads on a new `movieId` but does not clear a run or Waiting run
+  held for the old one. Nothing navigates `/enrich?movie=a` to
+  `/enrich?movie=b` without leaving the route, so it is unreachable today.
+- **The flow suites' local `makeRun` builders** (`EnrichmentFlow.test`,
+  `.library`, `.writeBack`), older than this initiative.
+- **`StartEnrichment` as a union by scope**, which would let the spread's
+  second guard go: a type change across the wire shape, not a tidy.
+- **`fakeResponse`'s module docblock** still says _three_ fakes; it has said
+  so since the third.
+- Everything log 33 ruled out, as the build's entry lists it.
+
+---
+
 ## 2026-10-09 — Single-title Sync (issue #286)
 
 The ⋯ menu's _⟳ Fetch from TMDB_ no longer re-attaches to whatever
