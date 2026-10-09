@@ -26,7 +26,6 @@ import {
   type ResolveForm,
 } from '../import-export/createImporter/createImporter';
 import { exportName } from '../import-export/exportName/exportName';
-import { writeDownload } from '../import-export/writeDownload/writeDownload';
 import { writeExport } from '../import-export/writeExport/writeExport';
 import type { Media } from '../media/createMedia/createMedia';
 import { readableFolder } from '../media/readableFolder/readableFolder';
@@ -58,10 +57,7 @@ import {
 } from './enrichmentBody/enrichmentBody';
 import {
   DEFAULT_MOVIE_SORT,
-  EXPORT_FILENAME,
-  EXPORT_FORMATS,
   MOVIE_SORTS,
-  type ExportFormat,
   type EpisodeRead,
   type ExportResult,
   type ExportSummary,
@@ -334,17 +330,6 @@ function queryString(value: unknown): string | undefined {
 function isMovieSort(value: string): value is MovieSort {
   return (MOVIE_SORTS as readonly string[]).includes(value);
 }
-
-/** The format `GET /api/export/:format` was asked for, if it is one of the two. */
-function isExportFormat(value: string): value is ExportFormat {
-  return (EXPORT_FORMATS as readonly string[]).includes(value);
-}
-
-/** The content type each **Export file** is sent under. */
-const EXPORT_CONTENT_TYPE: Record<ExportFormat, string> = {
-  csv: 'text/csv; charset=utf-8',
-  xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-};
 
 /**
  * The order a request is asking for, read the one way every browse endpoint
@@ -2225,7 +2210,7 @@ export function createApiRouter(
   // — the first **Library folder**, in the order added, that can be read now,
   // else the home folder's Downloads — and today's **Export name**. Nothing is
   // injected for the export — there is no run, no state and no cancel — so
-  // the routes sit on `storage` and `media` directly.
+  // the summary and the export sit on `storage` and `media` directly.
   router.get('/export', async (_req: Request, res: Response) => {
     const series = storage.seriesInScope('all');
     let defaultDestination = join(homedir(), 'Downloads');
@@ -2286,40 +2271,6 @@ export function createApiRouter(
     };
     res.status(201).json(result);
   });
-
-  // The **Export file**: every movie A–Z through the **Sheet writer**, sent as
-  // an attachment under the format's own content type and filename. A format
-  // that is not one of the two is a `400`. A failing file route answers a
-  // status and a JSON body, never a page: the dialog reads the status, and a
-  // body the browser would open as the file is the one thing it must not be
-  // handed.
-  router.get(
-    '/export/:format',
-    async (req: Request<{ format: string }>, res: Response) => {
-      const { format } = req.params;
-      if (!isExportFormat(format)) {
-        res.status(400).json({ error: `Unknown export format: ${format}` });
-        return;
-      }
-
-      try {
-        const bytes = await writeDownload(
-          storage.listMovies({ sort: 'a-z' }),
-          format
-        );
-        res
-          .status(200)
-          .type(EXPORT_CONTENT_TYPE[format])
-          .setHeader(
-            'Content-Disposition',
-            `attachment; filename="${EXPORT_FILENAME[format]}"`
-          )
-          .send(bytes);
-      } catch {
-        res.status(500).json({ error: 'Could not write the export' });
-      }
-    }
-  );
 
   // Posters and backdrops straight off disk. Serves nothing until an import
   // populates the managed media directory; cards fall back to their gradient
