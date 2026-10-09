@@ -122,20 +122,20 @@ export function useEnrichmentRun(movieId: string | null): EnrichmentRunState {
   const start = useCallback(
     async (options: StartEnrichment) => {
       generation.current += 1;
+      let held: EnrichmentRun | null;
       try {
-        setRun(await startEnrichment(options));
-        setWaiting(null);
+        held = await startEnrichment(options);
       } catch (error) {
         if (!(error instanceof EnrichmentBusyError)) {
           throw error;
         }
-        const held = await fetchCurrentEnrichment();
+        held = await fetchCurrentEnrichment();
         if (held !== null && !belongsHere(held, movieId)) {
           throw error;
         }
-        setRun(held);
-        setWaiting(null);
       }
+      setRun(held);
+      setWaiting(null);
     },
     [movieId]
   );
