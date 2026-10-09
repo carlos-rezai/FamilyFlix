@@ -1,7 +1,7 @@
 {
   "name": "@familyflix/source",
   "productName": "FamilyFlix",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "description": "A Netflix for the family movie folder — a local, searchable movie library and player.",
   "license": "MIT",
