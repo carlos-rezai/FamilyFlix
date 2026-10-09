@@ -11,6 +11,80 @@ Newest entry first.
 
 ---
 
+## 2026-10-09 — Backdrop veil (issue #289)
+
+Both detail pages draw one **Detail backdrop**: the art a full viewport tall,
+pinned to the top of the page's scroller while the content scrolls over it,
+under the **Backdrop veil** — a darkening gradient over the theme's
+`accentSoft` — in place of the old 62% `ArtArea` and its `Scrim`.
+
+One slice, as log 34 Q9 ruled: `15607c3` RED and `6712655` GREEN, against
+the plan in `docs/PRDs/34-backdrop-veil-plan.md`, built from
+`docs/design-logs/34-backdrop-veil.md`. **7608 tests pass across 462
+files**, measured at `6712655`, from 7600 across 461 at the end of the
+Single-title Sync refactor.
+
+### What shipped
+
+- **The molecule.** `components/DetailBackdrop/` — `{ url, g1, g2 }`, an
+  `aria-hidden` root holding `ArtArea` (sticky at `top: 0`, `100vh`, the
+  negative margin that lets the content ride over it, and the comment naming
+  its coupling to the pages' scrollers) and `Veil` (`bg` at `.65`, `.85` at
+  50%, solid `bg`, over `accentSoft`, one background in two layers). Its
+  suite reads `getComputedStyle`, the wash under `createTheme('#3a7bd5')`.
+- **The barrel line**, appended last in `components/index.ts`.
+- **Both features swapped.** `MovieDetail` and `SeriesDetail` draw the
+  molecule; each feature's `ArtArea` and `Scrim` are deleted from its
+  styles.
+- **Both page `Scroller` docblocks** rewritten for a sticky art layer.
+- **Both page prototypes**, `page.MoviePage.dc.html` and
+  `page.SeriesPage.dc.html`, revised to the full-height art and the veil,
+  and the molecule's row added to `COMPONENT-SPEC.md` — no `mol.*` file, as
+  Q6 ruled on `CreditsRow`'s precedent.
+
+### Where the build met the RED suite and differed
+
+The GREEN commit fixed two things in the RED suite, and its message names
+both. Neither relaxes an assertion:
+
+- **`soft()`'s regex lost its escapes** inside a template literal, so it
+  matched nothing; the escapes were restored.
+- **`artworkImage()` looked for an `hsl()` stop** that the resolved style
+  spells as `rgb()`; it finds the gradient by its angle instead.
+
+### Judgement calls the log did not name
+
+Each is the refactor round's to settle
+(`docs/refactor-plans/34-backdrop-veil-refactor.md`):
+
+- **The import order.** Both callers append `DetailBackdrop` to an
+  otherwise alphabetical `@/components` list.
+- **One walk written three times.** The molecule's suite has a
+  `backgrounds(root)` helper; the two feature suites spell the same walk
+  inline, fifteen lines apiece.
+- **Two leaves that read a module.** Each feature suite's _keeps no art area
+  or scrim of its own_ asserts on the `.styles` module's export names rather
+  than on the rendered page.
+- **The series prototype's `backdropStyle`.** The slice rewrote both
+  prototypes' container and veil but left the series art drawn as a blurred
+  120° gradient, where the movie prototype draws the **Gradient fallback**
+  and the code has never blurred.
+
+### Deliberately not built
+
+Everything log 34 rules out:
+
+- a blur (log 32 Q2b);
+- parallax or any motion of the art;
+- a veil on the Season page, which draws no backdrop;
+- stops tuned per image brightness.
+
+### Follow-ups
+
+The refactor plan, filed as 290.
+
+---
+
 ## 2026-10-09 — Single-title Sync refactor (issue 287)
 
 Eleven commits against `docs/refactor-plans/33-single-title-sync-refactor.md`,
