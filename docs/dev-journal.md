@@ -11,6 +11,100 @@ Newest entry first.
 
 ---
 
+## 2026-10-09 — Export options (issues #276–#281)
+
+The Export dialog writes an **Export folder**, `familyflix-collection_DD-MM-YYYY`,
+at an **Export destination** the maintainer types or picks with _Browse…_.
+It holds the sheet with sixteen columns, films and series together, and an
+Episodes table beside it. With the _Include_ toggles on, each title's
+posters, backdrops, stills and subtitles travel in a folder per title. The
+server writes it straight to the folder, through `POST /api/export`. The
+prototype amendment (`feat.ExportModal.dc.html` and the COMPONENT-SPEC
+entries) rode in #276's `feat:` commit, as the plan said.
+
+Twelve commits across issues #276–#281: six RED/GREEN pairs, plus one
+`fix:`. They follow the plan in `docs/PRDs/31-export-options-plan.md`, built
+from `docs/design-logs/31-export-options.md`. **7586 tests pass across 461
+files**, measured at `2f6cbe3`, from 7450 across 442 at the end of the
+Library folders refactor.
+
+### What shipped, slice by slice
+
+- **#276, a dated folder of films.**
+  - `exportName`, `exportRows` over films, and `writeSheet(tables, format,
+name)`.
+  - `writeExport`, `exportBody` and `POST /api/export`.
+  - The summary grown to `{ movieCount, seriesCount, episodeCount,
+defaultDestination, folderName }`.
+  - The client's `startExport`, the new `useExport`, and the dialog's
+    _Save to_, name row and done copy.
+  - The Metadata sheet moved onto `exportRows`' sixteen columns.
+  - The old download moved onto a new `writeDownload` unit, so the Sheet
+    writer could change shape.
+- **#277, series and episodes.** Series rows in the Titles table, and the
+  Episodes table: a second worksheet in xlsx, `<name>-episodes.csv` in csv.
+- **#278, images beside the sheet.** The file plan, the art in a folder per
+  title, the `xlsx` hyperlinks on the path cells, and the _Images_ toggle.
+- **#279, subtitles beside the sheet.** The subtitle files and their toggle.
+  `3f010ce`, a `fix:`, makes three importer suites await their runs.
+- **#280, the native picker.** `pickOneFolder`, the `pickOne` channel and
+  preload member, `fakeFolderBridge.pickOne`, and _Browse…_.
+- **#281, the edges.** The three refusals (relative, missing, read-only),
+  the numbered name, the rollback, an unreadable file skipped, and the
+  sheet written last.
+
+### The plan's two departures from the log
+
+- **No prototype-only slice.** The revision rode Phase 1's build step, as
+  in the Library folders plan.
+- **The Metadata sheet moved into Phase 1.** Phase 1 changed
+  `EXPORT_COLUMNS` and the Sheet writer's signature, and `writeBack` calls
+  both.
+
+### Judgement calls the log did not name
+
+Each was made by a subagent reading one issue. Each is the refactor round's
+to settle (`docs/refactor-plans/31-export-options-refactor.md`), except the
+four it keeps:
+
+- **Title folders named `Heat (1995)`** by `exportRows`, not by
+  `movieFolder`, which slugs. Kept.
+- **The _Include_ rows on their own styles**, at the prototype's sizes rather
+  than the Settings `Row`'s. Kept.
+- **The suites split by phase**: `exportRows` into `.series`, `.images` and
+  `.subtitles`, `writeExport` into `.images`, `.subtitles`, `.readOnly` and
+  `.edges`. Kept.
+- **`3f010ce`**, three importer suites made to await their runs. Kept.
+- **`writeDownload`**, the old route kept alive on a copy of log 14's cell
+  rules, with no suite.
+- **`yearRange`**, a private spelling of a Year range, and **two name
+  strips** in the file plan.
+- **A second write check** in `writeExport`, and its refusals worded as
+  sentences in the domain.
+- **The summary's rule in the route**, reading episodes once per series.
+- **`SHEET_STEM`** beside `SHEET_NAME`, **untyped `PATH_COLUMNS`**, and the
+  **second dialog fallback** in `main.ts`.
+- **The path row and refusal line copied** from `LibraryFolders` into
+  `ExportModal`, the **bridge read every render** in `useExport`, and **a
+  second refusal parse** in the feature's `api.ts`.
+
+### Deliberately not built
+
+Everything log 31 Q2 rules out:
+
+- video files — 🧭 **Back up the library**;
+- a column picker;
+- remembering the last destination;
+- a _Show in folder_ button;
+- reading the new columns back on import.
+
+### Follow-ups
+
+The refactor plan, filed as 283, with the plan's Phase 7, filed as 282,
+merged into it.
+
+---
+
 ## 2026-10-08 — Library folders refactor (issue 274)
 
 Twenty commits against `docs/refactor-plans/30-library-folders-refactor.md`,
