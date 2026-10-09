@@ -6,9 +6,10 @@ import {
   cancelImport,
   fetchExportSummary,
   fetchExportFile,
+  startExport,
   ImportBusyError,
 } from './api';
-import type { ExportFormat } from '@/types';
+import type { ExportFormat, ExportResult, StartExport } from '@/types';
 import { makeImportRun } from '@/test-support/makeImportRun/makeImportRun';
 import {
   createdResponse,
@@ -377,5 +378,79 @@ describe('fetchExportFile', () => {
     fetchMock.mockRejectedValue(new Error('offline'));
 
     await expect(fetchExportFile('csv')).rejects.toThrow();
+  });
+});
+
+/**
+ * 31 — Export options, Phase 1: "the tracer" (issue #276) adds `startExport`,
+ * the feature's one-caller wire behind _Export as CSV / Excel_ now that the
+ * server writes the export: `POST /api/export` with a `StartExport`, the
+ * `201`'s **ExportResult** handed back as `written`, a `400`'s sentence as
+ * `refused` (`addLibraryFolder`'s precedent), and anything else a rejection.
+ */
+describe('startExport', () => {
+  const REQUEST: StartExport = {
+    format: 'csv',
+    destination: 'E:\\Movies',
+    images: false,
+    subtitles: false,
+  };
+  const RESULT: ExportResult = {
+    folder: 'E:\\Movies\\familyflix-collection_08-10-2026',
+    movieCount: 3,
+    seriesCount: 0,
+  };
+
+  /** A 400 carrying the route's one sentence. */
+  function badRequest(error: string): Response {
+    return {
+      ok: false,
+      status: 400,
+      json: () => Promise.resolve({ error }),
+    } as unknown as Response;
+  }
+
+  it('POSTs the request as JSON to the export route', async () => {
+    fetchMock.mockResolvedValue(createdResponse(RESULT));
+
+    await startExport(REQUEST);
+
+    const request = onlyRequest();
+    expect(request.url).toBe('/api/export');
+    expect(request.method).toBe('POST');
+    expect(request.headers).toMatchObject({
+      'Content-Type': 'application/json',
+    });
+    expect(JSON.parse(String(request.body))).toEqual(REQUEST);
+  });
+
+  it('answers written with the result on a 201', async () => {
+    fetchMock.mockResolvedValue(createdResponse(RESULT));
+
+    await expect(startExport(REQUEST)).resolves.toEqual({
+      kind: 'written',
+      result: RESULT,
+    });
+  });
+
+  it('answers refused with the route’s own sentence on a 400', async () => {
+    fetchMock.mockResolvedValue(badRequest('No folder at that path.'));
+
+    await expect(startExport(REQUEST)).resolves.toEqual({
+      kind: 'refused',
+      sentence: 'No folder at that path.',
+    });
+  });
+
+  it('rejects on a 500', async () => {
+    fetchMock.mockResolvedValue(serverErrorResponse());
+
+    await expect(startExport(REQUEST)).rejects.toThrow();
+  });
+
+  it('rejects when the request could not be made at all', async () => {
+    fetchMock.mockRejectedValue(new Error('offline'));
+
+    await expect(startExport(REQUEST)).rejects.toThrow();
   });
 });

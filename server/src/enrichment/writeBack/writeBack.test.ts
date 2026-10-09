@@ -14,11 +14,14 @@
 //   folder**, only when there is none. `sourceFolder` is relative to the root,
 //   `null` when none is on record; a folder that is gone is not made.
 // - `sheet(root, movies)` — `familyflix-metadata.csv`, the **Export file**'s
-//   CSV (`writeSheet`), only when there is none.
+//   CSV (`writeSheet`), only when there is none. Since 31 — Export options
+//   (issue #276) it is written through `exportRows` and `writeSheet` over the
+//   root's films alone: the sixteen-column header, its image cells blank.
 //
 // Each answers what it did as a value and a log line; none ever throws, and
 // none ever replaces a file. Every test writes into a sandbox.
 
+import ExcelJS from 'exceljs';
 import { Readable } from 'node:stream';
 import {
   existsSync,
@@ -32,11 +35,30 @@ import { describe, expect, it } from 'vitest';
 
 import { makeMovie } from '@/test-support/makeMovie/makeMovie';
 import { readSheet } from '../../import-export/readSheet/readSheet';
-import { writeSheet } from '../../import-export/writeSheet/writeSheet';
 import { sandboxRoot } from '../../test-support/sandboxRoot/sandboxRoot';
 import { writeBack } from './writeBack';
 
 const SHEET = 'familyflix-metadata.csv';
+
+/** The Metadata sheet on disk as text cells, header first, as wide as the header. */
+async function sheetCells(path: string): Promise<string[][]> {
+  const text = readFileSync(path, 'utf8').replace(/^\uFEFF/, '');
+  const workbook = new ExcelJS.Workbook();
+  await workbook.csv.read(Readable.from([text]), {
+    map: (value: string) => value,
+  });
+  const rows: string[][] = [];
+  const width = workbook.worksheets[0].getRow(1).cellCount;
+  workbook.worksheets[0].eachRow({ includeEmpty: true }, (row) => {
+    rows.push(
+      Array.from({ length: width }, (_, index) => {
+        const value = row.getCell(index + 1).value;
+        return value === null || value === undefined ? '' : String(value);
+      })
+    );
+  });
+  return rows;
+}
 
 /** A Library root holding one Source folder, and the root's full path. */
 function collection(): { root: string; folder: string } {
@@ -238,14 +260,48 @@ describe('writeBack.sheet — the Metadata sheet in the root, only when absent',
     });
   });
 
-  it('is the Export file’s CSV to the byte', async () => {
+  it('carries the sixteen-column header', async () => {
     const { root } = collection();
 
     await writeBack.sheet(root, films);
 
-    expect(
-      readFileSync(join(root, SHEET)).equals(await writeSheet(films, 'csv'))
-    ).toBe(true);
+    const [header] = await sheetCells(join(root, SHEET));
+    expect(header).toEqual([
+      'Type',
+      'Title',
+      'Year',
+      'Runtime',
+      'Genres',
+      'Director',
+      'Cast',
+      'Synopsis',
+      'Rating',
+      'Status',
+      'Favorite',
+      'Seasons',
+      'Episodes',
+      'Subtitles',
+      'Poster',
+      'Backdrop',
+    ]);
+  });
+
+  it('leaves the Poster and Backdrop cells blank, even for a film with art', async () => {
+    const { root } = collection();
+
+    await writeBack.sheet(root, [
+      makeMovie({
+        id: 'c',
+        title: 'Harbor Lights',
+        posterPath: 'Harbor Lights (1963)/poster.jpg',
+        backdropPath: 'Harbor Lights (1963)/backdrop.jpg',
+      }),
+    ]);
+
+    const [header, row] = await sheetCells(join(root, SHEET));
+    expect(row[header.indexOf('Poster')]).toBe('');
+    expect(row[header.indexOf('Backdrop')]).toBe('');
+    expect(row[header.indexOf('Title')]).toBe('Harbor Lights');
   });
 
   it('leaves an existing sheet byte-identical, logging it as left alone', async () => {

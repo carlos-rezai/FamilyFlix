@@ -2,33 +2,32 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { act, renderHook, waitFor } from '@testing-library/react';
 
 import { useExport } from './useExport';
-import { stubDownload } from '@/test-support/stubDownload/stubDownload';
+import type { ExportResult, ExportSummary } from '@/types';
 import {
-  fileResponse,
+  createdResponse,
   okResponse,
   serverErrorResponse,
 } from '@/test-support/fakeResponse/fakeResponse';
 
 /**
- * 14 — Export, Phase 1: "the tracer bullet" (issue #137).
+ * 31 — Export options, Phase 1: "the tracer" (issue #276).
  *
- * `useExport(open)` — what the **Export dialog** holds: the chosen **Export
- * format**, the **Export summary**'s count, whether a request is in flight and
- * whether **Export ready** has been reached. On open it resets to `csv` and
- * idle and fetches the summary; `movieCount` is `null` until it lands and
- * stays `null` if it never does — the count never blocks the export.
- * `exportLibrary` fetches the format's route, hands the blob to **Save to
- * computer** under the format's filename, and only then sets `done`.
+ * `useExport(open)` — what the **Export dialog** holds, now that the server
+ * writes the export straight to a folder: the chosen **Export format**, the
+ * grown **Export summary** (`null` until it lands), the _Save to_
+ * `destination` and its setter, whether a request is in flight, the
+ * `refusal` sentence a `400` said, and the `result` a `201` answered — which
+ * is **Export ready**.
  *
- * A rejected fetch clears `exporting` and changes nothing else — the Delete
- * dialog's rule, and the hook's shape from its first commit. Phase 1 (#137)
- * had _Export as Excel_ meet that rule on every press, because the route
- * answered `400` for `xlsx` until the writer's second arm existed; Phase 2
- * (#138) gave it the arm, and the hook never told the formats apart, so
- * nothing here changed but the story the refusal tells.
+ * Every open resets all of it. `destination` fills from the summary's
+ * `defaultDestination` once it lands, but never over a path typed first
+ * (`useTmdbKey`'s rule). `exportLibrary()` posts a `StartExport` with images
+ * and subtitles off until Phases 3 and 4. A `201` sets `result`; a `400` sets
+ * `refusal` and keeps the idle face; any other failure leaves the dialog as it
+ * was; a close mid-request drops the redraw, not the export.
  *
- * Everything is asserted as requests against a stubbed `fetch`, and as what
- * the browser was handed through `stubDownload`.
+ * Asserted as requests against a stubbed `fetch` and as what the hook hands
+ * its dialog.
  */
 
 let fetchMock: ReturnType<
@@ -49,54 +48,48 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-const isSummary = ([input]: [RequestInfo | URL, RequestInit?]) =>
-  String(input).endsWith('/api/export');
-const isFile = ([input]: [RequestInfo | URL, RequestInit?]) =>
-  /\/api\/export\/[a-z]+$/.test(String(input));
+const SUMMARY: ExportSummary = {
+  movieCount: 3,
+  seriesCount: 1,
+  episodeCount: 8,
+  defaultDestination: 'E:\\Movies',
+  folderName: 'familyflix-collection_08-10-2026',
+};
 
-/** Every read of the summary route so far. */
-const summaryReads = () => fetchMock.mock.calls.filter(isSummary).length;
+const RESULT: ExportResult = {
+  folder: 'E:\\Movies\\familyflix-collection_08-10-2026',
+  movieCount: 3,
+  seriesCount: 1,
+};
 
-/** The file routes asked for so far, by their last segment. */
-const fileRequests = () =>
+type Call = [RequestInfo | URL, RequestInit?];
+
+const isSummaryRead = ([input, init]: Call) =>
+  String(input).endsWith('/api/export') &&
+  (init?.method === undefined || init.method === 'GET');
+const isExportPost = ([input, init]: Call) =>
+  String(input).endsWith('/api/export') && init?.method === 'POST';
+
+const summaryReads = () =>
+  fetchMock.mock.calls.filter((call) => isSummaryRead(call)).length;
+
+/** Every body POSTed to the export route so far, parsed. */
+const posts = (): unknown[] =>
   fetchMock.mock.calls
-    .filter(isFile)
-    .map(([input]) => String(input).split('/').pop());
+    .filter((call) => isExportPost(call))
+    .map(([, init]) => JSON.parse(String(init?.body)) as unknown);
 
-const csv = () =>
-  new Blob(['\uFEFFTitle,Year\nDie Hard,1988\n'], {
-    type: 'text/csv; charset=utf-8',
-  });
-
-/**
- * A server with a library of `movieCount` movies. The summary answers the
- * count (or falls over); the file route answers `file` — the bytes, or a
- * refusal.
- */
-function serve({
-  movieCount = 3,
-  summary = 'ok',
-  file = () => fileResponse(csv()),
-}: {
-  movieCount?: number;
-  summary?: 'ok' | 'failing' | 'offline';
-  file?: () => Promise<Response> | Response;
-} = {}) {
-  fetchMock.mockImplementation((input) => {
-    if (isSummary([input])) {
-      if (summary === 'offline') {
-        return Promise.reject(new Error('offline'));
-      }
-      return Promise.resolve(
-        summary === 'ok' ? okResponse({ movieCount }) : serverErrorResponse()
-      );
-    }
-    return Promise.resolve(file());
-  });
+/** A 400 carrying the route's one sentence. */
+function badRequest(error: string): Response {
+  return {
+    ok: false,
+    status: 400,
+    json: () => Promise.resolve({ error }),
+  } as unknown as Response;
 }
 
-/** A file route that answers only when the test says so. */
-function holdFile() {
+/** A promise the test settles when it says so. */
+function held() {
   let settle: (response: Response) => void = () => undefined;
   let refuse: (reason: Error) => void = () => undefined;
   const pending = new Promise<Response>((resolve, reject) => {
@@ -104,10 +97,26 @@ function holdFile() {
     refuse = reject;
   });
   return {
-    file: () => pending,
+    answer: () => pending,
     settle: (response: Response) => settle(response),
     refuse: (reason: Error) => refuse(reason),
   };
+}
+
+/**
+ * A server whose summary answers `summary` (or fails, or is held), and whose
+ * export route answers `post`.
+ */
+function serve({
+  summary = () => Promise.resolve(okResponse(SUMMARY)),
+  post = () => Promise.resolve(createdResponse(RESULT)),
+}: {
+  summary?: () => Promise<Response>;
+  post?: () => Promise<Response>;
+} = {}) {
+  fetchMock.mockImplementation((input, init) =>
+    isExportPost([input, init]) ? post() : summary()
+  );
 }
 
 function renderExport(open = true) {
@@ -117,59 +126,42 @@ function renderExport(open = true) {
 }
 
 describe('useExport — opening', () => {
-  it('opens on csv, idle', () => {
-    serve();
+  it('opens on csv, idle, with nothing typed, refused or written', () => {
+    serve({ summary: () => new Promise<Response>(() => undefined) });
 
     const { result } = renderExport();
 
     expect(result.current.format).toBe('csv');
+    expect(result.current.summary).toBeNull();
+    expect(result.current.destination).toBe('');
+    expect(result.current.refusal).toBeNull();
+    expect(result.current.result).toBeNull();
     expect(result.current.exporting).toBe(false);
-    expect(result.current.done).toBe(false);
   });
 
-  it('fetches the summary once on open', async () => {
+  it('reads the summary once on open, and nothing while closed', async () => {
     serve();
 
-    renderExport();
-
-    await waitFor(() => expect(summaryReads()).toBe(1));
-    expect(fileRequests()).toEqual([]);
-  });
-
-  it('fetches nothing while closed', async () => {
-    serve();
-
-    renderExport(false);
-
+    const { rerender } = renderExport(false);
     await act(async () => {
       await Promise.resolve();
     });
     expect(fetchMock).not.toHaveBeenCalled();
+
+    rerender({ open: true });
+    await waitFor(() => expect(summaryReads()).toBe(1));
   });
 
-  it('holds a null count until the summary lands, then the count', async () => {
-    const summary = holdFile();
-    fetchMock.mockImplementation(() => summary.file());
+  it('holds the whole summary once it lands', async () => {
+    serve();
 
     const { result } = renderExport();
 
-    expect(result.current.movieCount).toBeNull();
-    await act(async () => {
-      summary.settle(okResponse({ movieCount: 3 }));
-    });
-    await waitFor(() => expect(result.current.movieCount).toBe(3));
+    await waitFor(() => expect(result.current.summary).toEqual(SUMMARY));
   });
 
-  it('answers a count of 0 for an empty library, not null', async () => {
-    serve({ movieCount: 0 });
-
-    const { result } = renderExport();
-
-    await waitFor(() => expect(result.current.movieCount).toBe(0));
-  });
-
-  it('keeps the count null when the summary fails', async () => {
-    serve({ summary: 'failing' });
+  it('keeps the summary null when it fails', async () => {
+    serve({ summary: () => Promise.resolve(serverErrorResponse()) });
 
     const { result } = renderExport();
 
@@ -177,243 +169,175 @@ describe('useExport — opening', () => {
     await act(async () => {
       await Promise.resolve();
     });
-    expect(result.current.movieCount).toBeNull();
-    expect(result.current.exporting).toBe(false);
-    expect(result.current.done).toBe(false);
-  });
-
-  it('keeps the count null when the summary cannot be requested', async () => {
-    serve({ summary: 'offline' });
-
-    const { result } = renderExport();
-
-    await waitFor(() => expect(summaryReads()).toBe(1));
-    await act(async () => {
-      await Promise.resolve();
-    });
-    expect(result.current.movieCount).toBeNull();
+    expect(result.current.summary).toBeNull();
+    expect(result.current.destination).toBe('');
   });
 });
 
-describe('useExport — choosing the format', () => {
-  it('switches to xlsx and back', () => {
+describe('useExport — the default destination', () => {
+  it('fills Save to from the summary’s default once it lands', async () => {
     serve();
+
     const { result } = renderExport();
 
-    act(() => result.current.chooseFormat('xlsx'));
-    expect(result.current.format).toBe('xlsx');
-
-    act(() => result.current.chooseFormat('csv'));
-    expect(result.current.format).toBe('csv');
+    await waitFor(() => expect(result.current.destination).toBe('E:\\Movies'));
   });
 
-  it('fetches nothing for a choice — the count is the library’s, not the format’s', async () => {
-    serve();
+  it('takes what is typed', () => {
+    serve({ summary: () => new Promise<Response>(() => undefined) });
     const { result } = renderExport();
-    await waitFor(() => expect(summaryReads()).toBe(1));
 
-    act(() => result.current.chooseFormat('xlsx'));
+    act(() => result.current.setDestination('D:\\Backups'));
 
-    expect(summaryReads()).toBe(1);
-    expect(fileRequests()).toEqual([]);
+    expect(result.current.destination).toBe('D:\\Backups');
+  });
+
+  it('never writes the default over a path typed before it landed', async () => {
+    const summary = held();
+    serve({ summary: summary.answer });
+    const { result } = renderExport();
+
+    act(() => result.current.setDestination('D:\\Backups'));
+    await act(async () => {
+      summary.settle(okResponse(SUMMARY));
+    });
+
+    await waitFor(() => expect(result.current.summary).toEqual(SUMMARY));
+    expect(result.current.destination).toBe('D:\\Backups');
   });
 });
 
 describe('useExport — exporting', () => {
-  const browser = stubDownload();
-
-  it('fetches the CSV route for csv', async () => {
+  it('posts the format and the destination, with images and subtitles off', async () => {
     serve();
     const { result } = renderExport();
-
-    await act(async () => {
-      await result.current.exportLibrary();
-    });
-
-    expect(fileRequests()).toEqual(['csv']);
-  });
-
-  it('fetches the Excel route for xlsx', async () => {
-    serve();
-    const { result } = renderExport();
+    await waitFor(() => expect(result.current.destination).toBe('E:\\Movies'));
     act(() => result.current.chooseFormat('xlsx'));
 
     await act(async () => {
       await result.current.exportLibrary();
     });
 
-    expect(fileRequests()).toEqual(['xlsx']);
+    expect(posts()).toEqual([
+      {
+        format: 'xlsx',
+        destination: 'E:\\Movies',
+        images: false,
+        subtitles: false,
+      },
+    ]);
+  });
+
+  it('posts the path typed, not the default', async () => {
+    serve();
+    const { result } = renderExport();
+    await waitFor(() => expect(result.current.destination).toBe('E:\\Movies'));
+    act(() => result.current.setDestination('D:\\Backups'));
+
+    await act(async () => {
+      await result.current.exportLibrary();
+    });
+
+    expect(posts()).toEqual([
+      expect.objectContaining({ destination: 'D:\\Backups' }),
+    ]);
   });
 
   it('is exporting for the life of the request, and not before', async () => {
-    const request = holdFile();
-    serve({ file: request.file });
+    const request = held();
+    serve({ post: request.answer });
     const { result } = renderExport();
     expect(result.current.exporting).toBe(false);
 
     act(() => {
       void result.current.exportLibrary();
     });
-
     await waitFor(() => expect(result.current.exporting).toBe(true));
-    expect(result.current.done).toBe(false);
 
     await act(async () => {
-      request.settle(fileResponse(csv()));
+      request.settle(createdResponse(RESULT));
     });
-
     await waitFor(() => expect(result.current.exporting).toBe(false));
   });
 
-  it('hands the blob to the browser under the CSV filename', async () => {
-    const blob = csv();
-    serve({ file: () => fileResponse(blob) });
-    const { result } = renderExport();
-
-    await act(async () => {
-      await result.current.exportLibrary();
-    });
-
-    expect(browser.downloads()).toHaveLength(1);
-    expect(browser.downloads()[0]).toMatchObject({
-      blob,
-      filename: 'family-library.csv',
-    });
-  });
-
-  it('hands the blob to the browser under the Excel filename for xlsx', async () => {
+  it('sets result on a 201 — Export ready', async () => {
     serve();
     const { result } = renderExport();
-    act(() => result.current.chooseFormat('xlsx'));
 
     await act(async () => {
       await result.current.exportLibrary();
     });
 
-    expect(browser.downloads()[0].filename).toBe('family-library.xlsx');
-  });
-
-  it('is done only once the browser has been handed the file', async () => {
-    const request = holdFile();
-    serve({ file: request.file });
-    const { result } = renderExport();
-
-    act(() => {
-      void result.current.exportLibrary();
-    });
-    await waitFor(() => expect(result.current.exporting).toBe(true));
-    expect(result.current.done).toBe(false);
-    expect(browser.downloads()).toHaveLength(0);
-
-    await act(async () => {
-      request.settle(fileResponse(csv()));
-    });
-
-    await waitFor(() => expect(result.current.done).toBe(true));
-    expect(browser.downloads()).toHaveLength(1);
-    expect(result.current.exporting).toBe(false);
-  });
-
-  it('keeps the format and the count through the export', async () => {
-    serve({ movieCount: 3 });
-    const { result } = renderExport();
-    await waitFor(() => expect(result.current.movieCount).toBe(3));
-    act(() => result.current.chooseFormat('xlsx'));
-
-    await act(async () => {
-      await result.current.exportLibrary();
-    });
-
-    expect(result.current.format).toBe('xlsx');
-    expect(result.current.movieCount).toBe(3);
-  });
-
-  it('exports before the summary has landed — the count never blocks it', async () => {
-    const summary = holdFile();
-    fetchMock.mockImplementation((input) =>
-      isSummary([input]) ? summary.file() : Promise.resolve(fileResponse(csv()))
-    );
-    const { result } = renderExport();
-    expect(result.current.movieCount).toBeNull();
-
-    await act(async () => {
-      await result.current.exportLibrary();
-    });
-
-    expect(result.current.done).toBe(true);
-    expect(browser.downloads()).toHaveLength(1);
+    expect(result.current.result).toEqual(RESULT);
+    expect(result.current.refusal).toBeNull();
   });
 });
 
-describe('useExport — a request the server refuses', () => {
-  const browser = stubDownload();
-
-  it('clears exporting and leaves done false on a 500', async () => {
-    const request = holdFile();
-    serve({ file: request.file });
-    const { result } = renderExport();
-
-    act(() => {
-      void result.current.exportLibrary();
+describe('useExport — a refused destination (400)', () => {
+  it('sets the refusal sentence and keeps the idle face', async () => {
+    serve({
+      post: () => Promise.resolve(badRequest('No folder at that path.')),
     });
-    await waitFor(() => expect(result.current.exporting).toBe(true));
+    const { result } = renderExport();
 
     await act(async () => {
-      request.settle(serverErrorResponse());
+      await result.current.exportLibrary();
     });
 
-    await waitFor(() => expect(result.current.exporting).toBe(false));
-    expect(result.current.done).toBe(false);
-    expect(browser.downloads()).toHaveLength(0);
+    expect(result.current.refusal).toBe('No folder at that path.');
+    expect(result.current.result).toBeNull();
+    expect(result.current.exporting).toBe(false);
   });
 
-  it('keeps the format the maintainer chose when the Excel request is refused', async () => {
-    serve({ file: () => serverErrorResponse() });
+  it('keeps the path that was refused in the field', async () => {
+    serve({
+      post: () => Promise.resolve(badRequest('No folder at that path.')),
+    });
     const { result } = renderExport();
+    act(() => result.current.setDestination('Q:\\Nowhere'));
+
+    await act(async () => {
+      await result.current.exportLibrary();
+    });
+
+    expect(result.current.destination).toBe('Q:\\Nowhere');
+  });
+});
+
+describe('useExport — any other failure', () => {
+  it('leaves the dialog as it was on a 500', async () => {
+    serve({ post: () => Promise.resolve(serverErrorResponse()) });
+    const { result } = renderExport();
+    await waitFor(() => expect(result.current.summary).toEqual(SUMMARY));
     act(() => result.current.chooseFormat('xlsx'));
 
     await act(async () => {
       await result.current.exportLibrary();
     });
 
-    expect(result.current.format).toBe('xlsx');
     expect(result.current.exporting).toBe(false);
-    expect(result.current.done).toBe(false);
-    expect(browser.downloads()).toHaveLength(0);
+    expect(result.current.result).toBeNull();
+    expect(result.current.refusal).toBeNull();
+    expect(result.current.format).toBe('xlsx');
+    expect(result.current.destination).toBe('E:\\Movies');
+    expect(result.current.summary).toEqual(SUMMARY);
   });
 
-  it('keeps the count the summary answered', async () => {
-    serve({ movieCount: 3, file: () => serverErrorResponse() });
+  it('leaves the dialog as it was when the request could not be made', async () => {
+    serve({ post: () => Promise.reject(new Error('offline')) });
     const { result } = renderExport();
-    await waitFor(() => expect(result.current.movieCount).toBe(3));
 
     await act(async () => {
       await result.current.exportLibrary();
     });
 
-    expect(result.current.movieCount).toBe(3);
+    expect(result.current.exporting).toBe(false);
+    expect(result.current.result).toBeNull();
+    expect(result.current.refusal).toBeNull();
   });
 
-  it('clears exporting when the request could not be made at all', async () => {
-    const request = holdFile();
-    serve({ file: request.file });
-    const { result } = renderExport();
-
-    act(() => {
-      void result.current.exportLibrary();
-    });
-    await waitFor(() => expect(result.current.exporting).toBe(true));
-
-    await act(async () => {
-      request.refuse(new Error('offline'));
-    });
-
-    await waitFor(() => expect(result.current.exporting).toBe(false));
-    expect(result.current.done).toBe(false);
-  });
-
-  it('does not reject the caller — the refusal is a state, not an error', async () => {
-    serve({ file: () => serverErrorResponse() });
+  it('does not reject the caller', async () => {
+    serve({ post: () => Promise.resolve(serverErrorResponse()) });
     const { result } = renderExport();
 
     await expect(
@@ -422,38 +346,12 @@ describe('useExport — a request the server refuses', () => {
       })
     ).resolves.toBeUndefined();
   });
-
-  it('can be asked again from the same idle face', async () => {
-    let attempts = 0;
-    serve({
-      file: () => {
-        attempts += 1;
-        return attempts === 1 ? serverErrorResponse() : fileResponse(csv());
-      },
-    });
-    const { result } = renderExport();
-
-    await act(async () => {
-      await result.current.exportLibrary();
-    });
-    expect(result.current.done).toBe(false);
-
-    await act(async () => {
-      await result.current.exportLibrary();
-    });
-
-    expect(result.current.done).toBe(true);
-    expect(fileRequests()).toEqual(['csv', 'csv']);
-    expect(browser.downloads()).toHaveLength(1);
-  });
 });
 
 describe('useExport — a close mid-request', () => {
-  const browser = stubDownload();
-
-  it('still lands the file, and never reaches done', async () => {
-    const request = holdFile();
-    serve({ file: request.file });
+  it('still sends the export, and drops the redraw', async () => {
+    const request = held();
+    serve({ post: request.answer });
     const { result, rerender } = renderExport();
 
     act(() => {
@@ -461,41 +359,80 @@ describe('useExport — a close mid-request', () => {
     });
     await waitFor(() => expect(result.current.exporting).toBe(true));
 
-    // Cancel while the bytes are on their way. The maintainer asked for the
-    // file, and a download the browser has been handed cannot be recalled, so
-    // it lands; what the close drops is the Export ready face.
     rerender({ open: false });
     await act(async () => {
-      request.settle(fileResponse(csv()));
+      request.settle(createdResponse(RESULT));
     });
 
-    expect(browser.downloads()).toHaveLength(1);
-    expect(browser.downloads()[0].filename).toBe('family-library.csv');
-    expect(result.current.done).toBe(false);
+    expect(posts()).toHaveLength(1);
+    expect(result.current.result).toBeNull();
+  });
+
+  it('drops a refusal that lands after the close, too', async () => {
+    const request = held();
+    serve({ post: request.answer });
+    const { result, rerender } = renderExport();
+
+    act(() => {
+      void result.current.exportLibrary();
+    });
+    await waitFor(() => expect(result.current.exporting).toBe(true));
+
+    rerender({ open: false });
+    await act(async () => {
+      request.settle(badRequest('No folder at that path.'));
+    });
+
+    expect(result.current.refusal).toBeNull();
   });
 });
 
-describe('useExport — reopening', () => {
-  stubDownload();
-
-  it('resets to csv and idle, and fetches a fresh summary', async () => {
-    serve({ movieCount: 3 });
+describe('useExport — every open resets the state', () => {
+  it('resets the format, the field, the refusal and the result, and reads afresh', async () => {
+    serve({
+      post: () => Promise.resolve(badRequest('No folder at that path.')),
+    });
     const { result, rerender } = renderExport();
-    await waitFor(() => expect(result.current.movieCount).toBe(3));
+    await waitFor(() => expect(result.current.summary).toEqual(SUMMARY));
     act(() => result.current.chooseFormat('xlsx'));
+    act(() => result.current.setDestination('Q:\\Nowhere'));
     await act(async () => {
       await result.current.exportLibrary();
     });
-    expect(result.current.done).toBe(true);
+    expect(result.current.refusal).toBe('No folder at that path.');
 
     rerender({ open: false });
-    serve({ movieCount: 4 });
+    const later = held();
+    serve({ summary: later.answer });
     rerender({ open: true });
 
     expect(result.current.format).toBe('csv');
-    expect(result.current.done).toBe(false);
+    expect(result.current.summary).toBeNull();
+    expect(result.current.destination).toBe('');
+    expect(result.current.refusal).toBeNull();
+    expect(result.current.result).toBeNull();
     expect(result.current.exporting).toBe(false);
-    await waitFor(() => expect(result.current.movieCount).toBe(4));
-    expect(summaryReads()).toBe(2);
+    await waitFor(() => expect(summaryReads()).toBe(2));
+  });
+
+  it('forgets Export ready on a reopen, and fills the default again', async () => {
+    serve();
+    const { result, rerender } = renderExport();
+    await act(async () => {
+      await result.current.exportLibrary();
+    });
+    expect(result.current.result).toEqual(RESULT);
+
+    rerender({ open: false });
+    serve({
+      summary: () =>
+        Promise.resolve(
+          okResponse({ ...SUMMARY, defaultDestination: 'F:\\Films' })
+        ),
+    });
+    rerender({ open: true });
+
+    expect(result.current.result).toBeNull();
+    await waitFor(() => expect(result.current.destination).toBe('F:\\Films'));
   });
 });

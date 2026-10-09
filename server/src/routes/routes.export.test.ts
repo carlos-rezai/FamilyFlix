@@ -177,7 +177,9 @@ describe('GET /api/export — the summary', () => {
 
     expect(response.status).toBe(200);
     expect(response.headers.get('content-type')).toContain('application/json');
-    expect((await response.json()) as ExportSummary).toEqual({ movieCount: 0 });
+    expect((await response.json()) as ExportSummary).toMatchObject({
+      movieCount: 0,
+    });
   });
 
   it('answers the number of movies in the library', async () => {
@@ -187,16 +189,22 @@ describe('GET /api/export — the summary', () => {
     const response = await getSummary(baseUrl);
 
     expect(response.status).toBe(200);
-    expect((await response.json()) as ExportSummary).toEqual({ movieCount: 4 });
+    expect((await response.json()) as ExportSummary).toMatchObject({
+      movieCount: 4,
+    });
   });
 
   it('answers the count as it stands now, not as it stood at startup', async () => {
     const { storage, baseUrl } = freshApi();
-    expect(await (await getSummary(baseUrl)).json()).toEqual({ movieCount: 0 });
+    expect(await (await getSummary(baseUrl)).json()).toMatchObject({
+      movieCount: 0,
+    });
 
     addLibrary(storage);
 
-    expect(await (await getSummary(baseUrl)).json()).toEqual({ movieCount: 4 });
+    expect(await (await getSummary(baseUrl)).json()).toMatchObject({
+      movieCount: 4,
+    });
   });
 });
 
@@ -807,7 +815,7 @@ describe.each(FORMATS)('GET /api/export/%s — a library of none', (format) => {
     const response = await getFile(baseUrl, format);
     const bytes = Buffer.from(await response.arrayBuffer());
 
-    expect(summary).toEqual({ movieCount: 0 });
+    expect(summary).toMatchObject({ movieCount: 0 });
     expect(response.status).toBe(200);
     expect(response.headers.get('content-type')).toBe(CONTENT_TYPE[format]);
     expect(response.headers.get('content-disposition')).toBe(
