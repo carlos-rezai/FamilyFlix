@@ -197,16 +197,12 @@ const safeName = (name: string): string =>
 
 /**
  * A title's folder, named as a Movie folder is in the maintainer's own
- * collection — `Heat (1995)`, `Severance (2022–)` — with anything a folder
- * name cannot hold taken out, and no trailing dot or space.
+ * collection — `Heat (1995)`, `Severance (2022–)` — through {@link safeName},
+ * and with no trailing dot or space, which Windows drops from a folder's name.
  */
 function titleFolderName(title: string, years: string | null): string {
   const name = years === null ? title : `${title} (${years})`;
-  const safe = name
-    .replace(UNSAFE_IN_NAME, '')
-    .replace(/[. ]+$/, '')
-    .trim();
-  return safe === '' ? FALLBACK_FOLDER : safe;
+  return safeName(safeName(name).replace(/[. ]+$/, ''));
 }
 
 /** A stored file's own extension, its dot included — `''` for none. */
