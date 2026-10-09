@@ -21,8 +21,8 @@ import {
  *
  * Every open resets all of it. `destination` fills from the summary's
  * `defaultDestination` once it lands, but never over a path typed first
- * (`useTmdbKey`'s rule). `exportLibrary()` posts a `StartExport` with images
- * and subtitles off until Phases 3 and 4. A `201` sets `result`; a `400` sets
+ * (`useTmdbKey`'s rule). `exportLibrary()` posts a `StartExport` with images on
+ * by default (Phase 3) and subtitles off until Phase 4. A `201` sets `result`; a `400` sets
  * `refusal` and keeps the idle face; any other failure leaves the dialog as it
  * was; a close mid-request drops the redraw, not the export.
  *
@@ -208,7 +208,7 @@ describe('useExport — the default destination', () => {
 });
 
 describe('useExport — exporting', () => {
-  it('posts the format and the destination, with images and subtitles off', async () => {
+  it('posts the format and the destination, with images on and subtitles off', async () => {
     serve();
     const { result } = renderExport();
     await waitFor(() => expect(result.current.destination).toBe('E:\\Movies'));
@@ -222,7 +222,7 @@ describe('useExport — exporting', () => {
       {
         format: 'xlsx',
         destination: 'E:\\Movies',
-        images: false,
+        images: true,
         subtitles: false,
       },
     ]);
@@ -434,5 +434,61 @@ describe('useExport — every open resets the state', () => {
 
     expect(result.current.result).toBeNull();
     await waitFor(() => expect(result.current.destination).toBe('F:\\Films'));
+  });
+});
+
+/**
+ * 31 — Export options, Phase 3: images (issue #278).
+ *
+ * `images` — the _Images_ Include toggle — is on by default, put back on by
+ * every open, and sent with the request; `setImages` flips it.
+ */
+describe('useExport — images', () => {
+  it('opens with images on', () => {
+    serve({ summary: () => new Promise<Response>(() => undefined) });
+
+    const { result } = renderExport();
+
+    expect(result.current.images).toBe(true);
+  });
+
+  it('takes images off when asked', () => {
+    serve({ summary: () => new Promise<Response>(() => undefined) });
+    const { result } = renderExport();
+
+    act(() => result.current.setImages(false));
+
+    expect(result.current.images).toBe(false);
+  });
+
+  it('sends images off once it is turned off', async () => {
+    serve();
+    const { result } = renderExport();
+    await waitFor(() => expect(result.current.destination).toBe('E:\\Movies'));
+    act(() => result.current.setImages(false));
+
+    await act(async () => {
+      await result.current.exportLibrary();
+    });
+
+    expect(posts()).toEqual([
+      {
+        format: 'csv',
+        destination: 'E:\\Movies',
+        images: false,
+        subtitles: false,
+      },
+    ]);
+  });
+
+  it('puts images back on when the dialog opens again', async () => {
+    serve();
+    const { result, rerender } = renderExport();
+    act(() => result.current.setImages(false));
+
+    rerender({ open: false });
+    rerender({ open: true });
+
+    await waitFor(() => expect(result.current.images).toBe(true));
   });
 });

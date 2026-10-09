@@ -340,7 +340,7 @@ describe('ExportModal — exporting', () => {
     expect(JSON.parse(String(init?.body))).toEqual({
       format: 'csv',
       destination: 'D:\\Backups',
-      images: false,
+      images: true,
       subtitles: false,
     });
   });
@@ -448,5 +448,70 @@ describe('ExportModal — Export ready', () => {
 
     fireEvent.click(within(dialog()).getByRole('button', { name: 'Done' }));
     expect(onClose).toHaveBeenCalledTimes(1);
+  });
+});
+
+/**
+ * 31 — Export options, Phase 3: images (issue #278).
+ *
+ * The **Include** group, after the name row and before _Columns included_:
+ * a Settings-`Row`-furniture row reading _Images_ over _Posters, backdrops
+ * and episode stills, in a folder per title._, with a Toggle — on by default,
+ * and what the request sends.
+ */
+describe('ExportModal — Include', () => {
+  const imagesToggle = () =>
+    within(dialog()).getByRole('switch', { name: 'Images' });
+
+  it('draws the Include group between the name row and the columns', async () => {
+    serve();
+
+    renderDialog();
+
+    const include = within(dialog()).getByText('Include');
+    const name = await within(dialog()).findByText(NAME);
+    expect(before(name, include)).toBe(true);
+    expect(
+      before(include, within(dialog()).getByText('Columns included'))
+    ).toBe(true);
+  });
+
+  it('draws the Images row with its line and its Toggle, on', () => {
+    serve();
+
+    renderDialog();
+
+    expect(within(dialog()).getByText('Images')).toBeDefined();
+    expect(
+      within(dialog()).getByText(
+        'Posters, backdrops and episode stills, in a folder per title.'
+      )
+    ).toBeDefined();
+    expect(imagesToggle().getAttribute('aria-checked')).toBe('true');
+  });
+
+  it('turns the Toggle off on a press', () => {
+    serve();
+    renderDialog();
+
+    fireEvent.click(imagesToggle());
+
+    expect(imagesToggle().getAttribute('aria-checked')).toBe('false');
+  });
+
+  it('sends images off once the Toggle is off', async () => {
+    serve();
+    renderDialog();
+    await waitFor(() => expect(saveTo().value).toBe('E:\\Movies'));
+    fireEvent.click(imagesToggle());
+
+    fireEvent.click(exportButton());
+
+    await waitFor(() =>
+      expect(fetchMock.mock.calls.some(([, init]) => isPost(init))).toBe(true)
+    );
+    const [, init] =
+      fetchMock.mock.calls.find(([, call]) => isPost(call)) ?? [];
+    expect(JSON.parse(String(init?.body))).toMatchObject({ images: false });
   });
 });
