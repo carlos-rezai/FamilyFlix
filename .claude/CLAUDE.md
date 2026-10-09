@@ -1009,7 +1009,8 @@ same layout, spacing, states, copy, and interaction.
 **Build order — what is left.** The groups below say what the app _is_;
 this says what to build _next_. Steps 1–9 of the first chain are done,
 ending with **Software update** (v0.2.0), and so are steps 10–15: the
-second chain is done too. Steps 10–15 came out of installing FamilyFlix and
+second chain is done too, shipped as v0.3.0. Steps 16–23, the third chain,
+are planned. Steps 10–15 came out of installing FamilyFlix and
 using it: smallest and most self-contained first, the form before the
 folders that will feed it, export last because it mirrors what import holds.
 `Change…` in the Storage group is not in the chain — it is the
@@ -1035,6 +1036,42 @@ Roadmap's **Move the media folder** (log 24 Q2).
     films, series and episodes, and optionally posters, backdrops, stills
     and subtitles beside it.
 
+Steps 16–23 are the **third chain** (design log 32), out of using v0.3.0,
+smallest and most self-contained first; each still gets its PRD and, where it
+draws something new, a prototype revision before it is built:
+
+16. 🔜 **Single-title Sync** (`fix:`) — the ⋯ menu's _⟳ Fetch from TMDB_
+    re-attaches to any **Current enrichment run**, so a library-wide Sync left
+    in review hijacks it. `EnrichmentRun` gains `movieId`; `?movie=<id>`
+    re-attaches only to a `single` run for that movie, else shows its setup.
+17. 🔜 **Backdrop veil** — the detail pages' `ArtArea` fills the viewport
+    (not 62%) and stays put, under an `accentSoft` wash and a darker gradient
+    in place of the `Scrim`. Movie page and series page alike.
+18. 🔜 **Open the media folder** — _Open folder_ on the Storage card's path
+    row: `folders.openMedia()` over `FOLDER_CHANNELS.openMedia`, **no
+    argument**; main opens **Shell paths**' new `mediaRoot`. Undrawn in a
+    browser.
+19. 🔜 **Export name** — the name row becomes a field, prefilled and never
+    overwritten once edited; `StartExport.name`, refused in a sentence when
+    empty or not a folder name, numbered when taken.
+20. 🔜 **Factory reset** — the Storage card's last row and the **Reset
+    dialog** (focus on _Cancel_): `POST /api/reset` → `204`, `409` while a run
+    runs; `db/resetDatabase` in one transaction (genres re-seeded), then
+    `createMedia.emptyRoot` best-effort, then the slot's `removeComponent`;
+    then a full reload onto `/`. Library folders on disk are never touched.
+21. 🔜 **Episode links** — the **Episode word** (`Episode 12`, `Ep 12`, `E12`,
+    only where the season is known); one `unplaced` Problem per show, its
+    _Resolve_ the Movie form's series kind in import context
+    (`/add?kind=series&problem=<id>`, Found files as paths) with one Episode
+    file row per video under the **Numbering guess**; the numbers are an
+    **Episode link**, the file is never renamed, and migration 8's
+    `episodes.source_file` remembers it across scans.
+22. 🔜 **Edit a series** — a ⋯ menu on the series page; the Movie form's
+    series edit job, `/add?series=<id>`, `PATCH /api/series/:id`: held files
+    travel as paths, episodes renumbered (watch state kept), added, removed.
+23. 🔜 **Delete a series** — the ⋯ Danger row, the dialog,
+    `DELETE /api/series/:id`, the Series folder's best-effort cleanup.
+
 A 🧭 Roadmap item is not in this chain — it is after it, if ever.
 
 ### Foundation
@@ -1057,6 +1094,9 @@ A 🧭 Roadmap item is not in this chain — it is after it, if ever.
 - ✅ **Continue Watching row** — resume in-progress titles from the home screen, ordered by when the family last watched them.
 - ✅ **Series (TV)** — a separate top-level tab, not mixed into the movie rows: a segmented Movies / Series control in the library header; the Series tab is a Continue Watching row of **episode** cards — one per series, on its earliest part-watched episode (log 22 Q29) — over an "All series" grid on the same `LibraryGrid` + `PosterCard`. The **Series page** (`page.SeriesPage`) is the movie page's hero shape — poster, year range, season and episode count, rating, genres, synopsis, creator and cast — over a Seasons grid of `SeasonCard` (a 2:3 tile: StatusBadge when the season is fully watched, ProgressBar when partly; its line reads "8 episodes" or "3 of 8 watched"). A season poster opens the **Season page** (`page.SeasonPage`): the series → season header, _Resume Enn_, Mark season watched, one `EpisodeRow` per episode — a 16:9 thumbnail with a hover play affordance and a resume bar, `S02E04` and the title, the air date, the resume label, and a watched checkbox that stops propagation (the row opens the episode, the box only marks it) — and an "Other seasons" pill row. No synopsis, runtime or filename on a row; no tabs or accordion for seasons. Resume on the series and Continue Watching both follow `nextEpisodeOf`: the part-watched episode, else the first unwatched. In SQLite this is two tables and two joins — `series`, `episodes` (carrying the same watch-state columns the movie table has), `series_genres` and `episode_subtitles` — and no `seasons` table: a season is a number (log 22 Q3). Everything is additive; the movie flow is untouched. Spec §5aa.
 
+- 🔜 **Backdrop veil** — the movie and series pages' art over the whole viewport, under an accent-tinted veil (step 17).
+- 🔜 **Single-title Sync** — the ⋯ menu's _Fetch from TMDB_ syncs that movie alone (step 16, a fix).
+
 ### Playback
 
 - ✅ **Built-in video player** — local playback, subtitle tracks, transport controls.
@@ -1070,6 +1110,10 @@ A 🧭 Roadmap item is not in this chain — it is after it, if ever.
 - ✅ **Add a series** — the same form adds a show, its seasons and its episodes: the Kind tabs on `?kind=series`, one Episode file row per picked video with its own subtitles, and one atomic `POST /api/series`; a video is the Save gate for either kind.
 - ✅ **Library folders** — several top folders of movies and series at `/settings/folders`, added by typed path or _Browse…_ over the native dialog, and imported all at once by a **Folder scan**; a Sync writes posters and a Metadata sheet into each.
 - ✅ **Edit a movie** — amend metadata and files; a file the library already holds travels as its path, only a freshly picked one as bytes.
+- 🔜 **Episode links** — number a show's file in the app without renaming it: `S[01] E[01]` in front of `eps1.0_hellofriend.mov`, remembered as its **Source file**; the reader learns the **Episode word**; one `unplaced` Problem per show with a _Resolve_ (step 21).
+- 🔜 **Edit a series** — the series page's ⋯ menu and the Movie form's series edit job, `PATCH /api/series/:id` (step 22).
+- 🔜 **Delete a series** — the ⋯ Danger row, the dialog, `DELETE /api/series/:id` (step 23).
+- 🔜 **Export name** — the Export folder's name as an editable field in the Export dialog (step 19).
 - ✅ **Delete a movie** — the ⋯ menu’s Danger row, the Delete dialog, `DELETE /api/movies/:id`, then the Movie folder under best-effort cleanup.
 - ✅ **Bulk import** — a Sheet and a Library root become Movies during the run; the Review step lists only the Problems the run could not settle, each with Resolve (the Movie form in Import context) and Skip.
 - ✅ **Import progress console** — the Connect ✓ → Scan → Import stepper, the bar, the current item, elapsed and ETA, the Activity log, and Cancel; a server run polled every 500 ms, re-attachable.
@@ -1089,6 +1133,9 @@ A 🧭 Roadmap item is not in this chain — it is after it, if ever.
 - ✅ **Software update** — the About card's first row: an Update offer downloaded at launch from GitHub Releases, Update now, and Check for updates; closing the app installs it. Designed in `17-software-update`, shipped as v0.2.0.
 - ✅ **Codecs page** — the Codec manager on its own Settings sub-page, `/settings/codecs`: the Playback component group over the Formats group, reached from the Playback card's Codecs row, which carries the Codec summary.
 - ✅ **Ultrawide margins** — an optional left/right margin for ultra-wide monitors: the Display group's Toggle caps every screen but the player at 1920px, centred.
+
+- 🔜 **Open the media folder** — _Open folder_ on the Storage card, over a no-argument `openMedia` bridge channel (step 18).
+- 🔜 **Factory reset** — erase everything FamilyFlix made behind the **Reset dialog**; Library folders on disk stay (step 20).
 
 ### System
 

@@ -322,55 +322,63 @@ Keep the description short enough to fit on one line — long descriptions get w
 
 ## Build Status
 
-| Feature                                             | Status          |
-| --------------------------------------------------- | --------------- |
-| Nx + Vite + React workspace scaffold                | ✅ Done         |
-| Claude Design handoff prototype                     | ✅ Done         |
-| Library core (movie model, SQLite, repository)      | ✅ Done         |
-| Browse grid — genre rows                            | ✅ Done         |
-| Card carousel — prev/next arrows, 15-per-row cap    | ✅ Done         |
-| Movie detail page (synopsis, director, cast)        | ✅ Done         |
-| Search + filter (title, genre, rating)              | ✅ Done         |
-| Genre page — every movie in one genre, uncapped     | ✅ Done         |
-| Sort (recent, A–Z, year, rating, unwatched)         | ✅ Done         |
-| Ratings — 5-star display + half-star picker         | ✅ Done         |
-| Favorites — mark + dedicated row                    | ✅ Done         |
-| Continue Watching row                               | ✅ Done         |
-| Built-in video player (playback, subtitles)         | ✅ Done         |
-| Watch tracking (watched / in-progress / resume)     | ✅ Done         |
-| Add Movie — manual file picker                      | ✅ Done         |
-| Edit a movie — amend metadata and files             | ✅ Done         |
-| Delete a movie — from the ⋯ menu, with confirmation | ✅ Done         |
-| Bulk import (Excel/CSV → library)                   | ✅ Done         |
-| Import progress console (scan/import, live log)     | ✅ Done         |
-| Export (library → CSV/Excel)                        | ✅ Done         |
-| Settings hub (six groups, Library to About)         | ✅ Done         |
-| Codec manager — view installed codecs               | ✅ Done         |
-| Codec manager — add a playback component            | ✅ Done         |
-| Subtitle preferences (preferred language)           | ✅ Done         |
-| Storage (media folder location, space used)         | ✅ Done         |
-| Snackbar system (info / success / warning / error)  | ✅ Done         |
-| Back-to-top FAB                                     | ✅ Done         |
-| Back navigation — one Back rule on every screen     | ✅ Done         |
-| Motion & interaction states (hover / press / focus) | ✅ Done         |
-| Series (TV) — tab, series page, seasons, episodes   | ✅ Done         |
-| Enrichment — TMDB metadata & posters sync           | ✅ Done         |
-| Network group — the TMDB key and the sync row       | ✅ Done         |
-| Electron desktop shell                              | ✅ Done         |
-| Desktop packaging (Windows installer)               | ✅ Done         |
-| Software update (check / install)                   | ✅ Done         |
-| Codecs page — the codec list on its own page        | ✅ Done         |
-| Ultrawide margins — side gutters for wide screens   | ✅ Done         |
-| Default poster — a fallback for titles without one  | ✅ Done         |
-| Add a series — the Add form for shows too           | ✅ Done         |
-| Library folders — several root folders at once      | ✅ Done         |
-| Export options — where to, and what travels         | ✅ Done         |
-| Collections / playlists                             | 🧭 Roadmap      |
-| Auto-on subtitles                                   | 🧭 Roadmap      |
-| Backgroundable import                               | 🧭 Roadmap      |
-| Back up the library                                 | 🧭 Roadmap      |
-| Move the media folder                               | 🧭 Roadmap      |
-| User accounts / multi-profile                       | 🚫 Out of scope |
+| Feature                                              | Status          |
+| ---------------------------------------------------- | --------------- |
+| Nx + Vite + React workspace scaffold                 | ✅ Done         |
+| Claude Design handoff prototype                      | ✅ Done         |
+| Library core (movie model, SQLite, repository)       | ✅ Done         |
+| Browse grid — genre rows                             | ✅ Done         |
+| Card carousel — prev/next arrows, 15-per-row cap     | ✅ Done         |
+| Movie detail page (synopsis, director, cast)         | ✅ Done         |
+| Search + filter (title, genre, rating)               | ✅ Done         |
+| Genre page — every movie in one genre, uncapped      | ✅ Done         |
+| Sort (recent, A–Z, year, rating, unwatched)          | ✅ Done         |
+| Ratings — 5-star display + half-star picker          | ✅ Done         |
+| Favorites — mark + dedicated row                     | ✅ Done         |
+| Continue Watching row                                | ✅ Done         |
+| Built-in video player (playback, subtitles)          | ✅ Done         |
+| Watch tracking (watched / in-progress / resume)      | ✅ Done         |
+| Add Movie — manual file picker                       | ✅ Done         |
+| Edit a movie — amend metadata and files              | ✅ Done         |
+| Delete a movie — from the ⋯ menu, with confirmation  | ✅ Done         |
+| Bulk import (Excel/CSV → library)                    | ✅ Done         |
+| Import progress console (scan/import, live log)      | ✅ Done         |
+| Export (library → CSV/Excel)                         | ✅ Done         |
+| Settings hub (six groups, Library to About)          | ✅ Done         |
+| Codec manager — view installed codecs                | ✅ Done         |
+| Codec manager — add a playback component             | ✅ Done         |
+| Subtitle preferences (preferred language)            | ✅ Done         |
+| Storage (media folder location, space used)          | ✅ Done         |
+| Snackbar system (info / success / warning / error)   | ✅ Done         |
+| Back-to-top FAB                                      | ✅ Done         |
+| Back navigation — one Back rule on every screen      | ✅ Done         |
+| Motion & interaction states (hover / press / focus)  | ✅ Done         |
+| Series (TV) — tab, series page, seasons, episodes    | ✅ Done         |
+| Enrichment — TMDB metadata & posters sync            | ✅ Done         |
+| Network group — the TMDB key and the sync row        | ✅ Done         |
+| Electron desktop shell                               | ✅ Done         |
+| Desktop packaging (Windows installer)                | ✅ Done         |
+| Software update (check / install)                    | ✅ Done         |
+| Codecs page — the codec list on its own page         | ✅ Done         |
+| Ultrawide margins — side gutters for wide screens    | ✅ Done         |
+| Default poster — a fallback for titles without one   | ✅ Done         |
+| Add a series — the Add form for shows too            | ✅ Done         |
+| Library folders — several root folders at once       | ✅ Done         |
+| Export options — where to, and what travels          | ✅ Done         |
+| Single-title Sync — the ⋯ menu's fetch, one movie    | 🔜 Planned      |
+| Backdrop veil — full-screen art, accent-veiled       | 🔜 Planned      |
+| Open the media folder from Settings → Storage        | 🔜 Planned      |
+| Export name — the export folder's name as a field    | 🔜 Planned      |
+| Factory reset — erase everything, behind a dialog    | 🔜 Planned      |
+| Episode links — number a file without renaming it    | 🔜 Planned      |
+| Edit a series — details and episodes                 | 🔜 Planned      |
+| Delete a series — from the ⋯ menu, with confirmation | 🔜 Planned      |
+| Collections / playlists                              | 🧭 Roadmap      |
+| Auto-on subtitles                                    | 🧭 Roadmap      |
+| Backgroundable import                                | 🧭 Roadmap      |
+| Back up the library                                  | 🧭 Roadmap      |
+| Move the media folder                                | 🧭 Roadmap      |
+| User accounts / multi-profile                        | 🚫 Out of scope |
 
 Everything marked ✅ is done — steps 1–9 of the first build order, ending
 with Software update, which shipped as v0.2.0, and steps 10–15, the
@@ -396,6 +404,29 @@ _Change…_ in Settings → Storage is not in the chain — it is the Roadmap's
 15. ✅ **Export options** — choose where the export is saved and what it
     carries: the sheet with films, series and episodes, and optionally
     posters, backdrops, stills and subtitles beside it.
+
+Steps 16–23 are the **third chain**, out of using v0.3.0 (design log 32),
+again smallest first:
+
+16. 🔜 **Single-title Sync** — _Fetch from TMDB_ on a movie's ⋯ menu syncs
+    that movie alone, rather than reopening a library-wide sync left in review.
+17. 🔜 **Backdrop veil** — the detail pages' art fills the whole screen under
+    an accent-tinted veil, so the title, buttons and text read clearly.
+18. 🔜 **Open the media folder** — an _Open folder_ button on Settings →
+    Storage.
+19. 🔜 **Export name** — the export folder's name becomes editable beside
+    _Save to_.
+20. 🔜 **Factory reset** — erase every title, watch history and setting and
+    empty the media folder, behind an _Erase everything?_ dialog; your own
+    folders are never touched.
+21. 🔜 **Episode links** — a show whose files carry no `S01E01` is imported
+    anyway: `Episode 12` is read, and for any other name you type
+    `S[01] E[01]` in front of the file (`eps1.0_hellofriend.mov`) without
+    renaming it. One review row per show, not one per file.
+22. 🔜 **Edit a series** — the Add form's edit job for a show: its details,
+    and its episodes renumbered, added or removed.
+23. 🔜 **Delete a series** — from the series page's ⋯ menu, with
+    confirmation.
 
 A 🧭 Roadmap item is not in the chain — it comes after it, if ever.
 
