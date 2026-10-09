@@ -33,8 +33,8 @@ function settled(
 }
 
 /**
- * Whether `run` **belongs here**: opened with no film every run does; opened
- * for a film, only a `single` run for that same film.
+ * Whether `run` belongs here: opened with no film every run does; opened for
+ * a film, only a `single` run for that same film.
  */
 function belongs(run: EnrichmentRun, movieId: string | null): boolean {
   return (
@@ -84,9 +84,14 @@ export interface EnrichmentRunState {
  * The run hook — `useImportRun`'s shape: the **Current enrichment run** read
  * once on mount, so a screen opened again re-attaches to a run already
  * going; then `GET /api/enrichment/current` every 500 ms while the run is
- * running, and not once more once it is in review. A read that lands after a
- * newer start, a cancel, or the screen was left does not put its snapshot
- * back.
+ * running, and not once more once it is in review.
+ *
+ * Opened with no film, every run re-attaches. Opened for a film, only that
+ * film's own `single` run does; a run in review that is not its own is held
+ * apart as the **Waiting run**, the run a Start would let go of.
+ *
+ * A read that lands after a newer start, a cancel, or the screen was left
+ * puts back neither a run nor a Waiting run.
  */
 export function useEnrichmentRun(movieId: string | null): EnrichmentRunState {
   const [run, setRun] = useState<EnrichmentRun | null>(null);

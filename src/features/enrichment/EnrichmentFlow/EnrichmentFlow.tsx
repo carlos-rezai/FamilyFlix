@@ -42,9 +42,9 @@ const ALL_FIELDS: EnrichField[] = [...ENRICH_FIELDS];
  * review's Finish is _Back to the movie_. It re-attaches only to that film's
  * own run: another's in review is the **Waiting run**, named by the let-go
  * line under Start, and a `409` over another's running Sync raises the
- * **busy notice**. Back and Finish both follow the
- * **Back rule**, the movie as the **Landing** — a **History step** when the
- * movie is behind the screen, the movie pushed on a deep link.
+ * **busy notice**. Back and Finish both follow the **Back rule**, the movie
+ * as the **Landing** — a **History step** when the movie is behind the
+ * screen, the movie pushed on a deep link.
  *
  * The setup reads the `EnrichmentSummary` and draws nothing of itself — no
  * key badge, no banner, no scope card, no Start — until it lands. Start is
