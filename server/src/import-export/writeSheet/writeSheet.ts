@@ -1,6 +1,6 @@
 import ExcelJS from 'exceljs';
 
-import type { ExportFormat } from '@/types';
+import type { ExportColumn, ExportEpisodeColumn, ExportFormat } from '@/types';
 import type { ExportTable, ExportTables } from '../exportRows/exportRows';
 
 /** The bytes Excel expects ahead of a UTF-8 CSV, so a diacritic opens as itself. */
@@ -8,13 +8,12 @@ const UTF8_BOM = Buffer.from([0xef, 0xbb, 0xbf]);
 
 /**
  * The columns whose cells are paths into the **Export folder** — a link in
- * Excel.
+ * Excel. Built from the two column lists' own names, so a renamed column fails
+ * the typecheck rather than quietly stopping linking; read by any header cell.
  */
-const PATH_COLUMNS: ReadonlySet<string> = new Set([
-  'Poster',
-  'Backdrop',
-  'Still',
-]);
+const PATH_COLUMNS: ReadonlySet<string> = new Set<
+  ExportColumn | ExportEpisodeColumn
+>(['Poster', 'Backdrop', 'Still']);
 
 /**
  * One file the writer answers: its name inside the **Export folder**, and its
