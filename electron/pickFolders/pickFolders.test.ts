@@ -10,7 +10,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
-import { pickFolders } from './pickFolders';
+import { pickFolders, pickOneFolder } from './pickFolders';
 
 describe('pickFolders', () => {
   it('gives [] for a cancelled dialog', () => {
@@ -36,6 +36,33 @@ describe('pickFolders', () => {
         filePaths: ['E:\\Movies', 'D:\\Kids', 'F:\\Films'],
       })
     ).toEqual(['E:\\Movies', 'D:\\Kids', 'F:\\Films']);
+  });
+});
+
+// Issue #280 — Export options, Phase 5. `main.ts` answers
+// `familyflix:folders:pick-one` with `dialog.showOpenDialog(window, { title:
+// 'Choose a folder', properties: ['openDirectory', 'createDirectory'] })`,
+// and `pickOneFolder` is its pure half: the dialog's answer → the one folder
+// picked, or `null` for a cancel.
+describe('pickOneFolder', () => {
+  it('gives the folder picked', () => {
+    expect(pickOneFolder({ canceled: false, filePaths: ['F:\\Backup'] })).toBe(
+      'F:\\Backup'
+    );
+  });
+
+  it('gives null for a cancelled dialog', () => {
+    expect(pickOneFolder({ canceled: true, filePaths: [] })).toBeNull();
+  });
+
+  it('gives null for a cancelled dialog even if it names a path', () => {
+    expect(
+      pickOneFolder({ canceled: true, filePaths: ['F:\\Backup'] })
+    ).toBeNull();
+  });
+
+  it('gives null for an answer that names no folder', () => {
+    expect(pickOneFolder({ canceled: false, filePaths: [] })).toBeNull();
   });
 });
 
