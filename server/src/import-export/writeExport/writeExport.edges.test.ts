@@ -5,14 +5,15 @@
 // Every way an **Export** can go wrong is handled by `writeExport`, and
 // nothing that already exists is ever touched:
 //
-// - a destination that is missing, or is a file, is refused with _No folder
-//   at that path._ and nothing is created (the relative sentence is the
-//   tracer's suite; the read-only one is `writeExport.readOnly.test.ts`);
+// - a destination that is missing, or is a file, is refused as `missing` and
+//   nothing is created (`relative` is the tracer's suite; `read-only` is
+//   `writeExport.readOnly.test.ts`); the route words each refusal;
 // - a taken **Export name** is numbered Chromium's way — `name (1)`,
 //   `name (2)` — and the folder already there is left byte-identical;
 // - a stored file that can't be read is skipped, and its cell blanked;
 // - any other failure takes the **Export folder** back out and answers
-//   `failed` with the _stopped partway_ sentence;
+//   `failed` with the error's reason, which the route words as _stopped
+//   partway_;
 // - zero titles still writes a folder holding the header-only sheets.
 //
 // Over a sandbox and a real `createMedia`; asserted as the tree and bytes on
@@ -132,10 +133,7 @@ describe('writeExport — a destination that is not a folder', () => {
       NOW
     );
 
-    expect(outcome).toEqual({
-      kind: 'refused',
-      sentence: 'No folder at that path.',
-    });
+    expect(outcome).toEqual({ kind: 'refused', refusal: 'missing' });
     expect(existsSync(missing)).toBe(false);
   });
 
@@ -151,10 +149,7 @@ describe('writeExport — a destination that is not a folder', () => {
       NOW
     );
 
-    expect(outcome).toEqual({
-      kind: 'refused',
-      sentence: 'No folder at that path.',
-    });
+    expect(outcome).toEqual({ kind: 'refused', refusal: 'missing' });
     expect(readFileSync(file, 'utf8')).toBe('the family’s notes');
     expect(readdirSync(destination)).toEqual(['notes.txt']);
   });
@@ -306,7 +301,7 @@ function breakingMedia(base: Media): Media {
 }
 
 describe('writeExport — any other failure', () => {
-  it('answers failed with the stopped-partway sentence', async () => {
+  it('answers failed with the error’s reason', async () => {
     const { media, destination } = sandbox();
 
     const outcome = await writeExport(
@@ -318,8 +313,7 @@ describe('writeExport — any other failure', () => {
 
     expect(outcome).toEqual({
       kind: 'failed',
-      sentence:
-        'The export stopped partway: the disk went away. Nothing was left behind.',
+      reason: 'the disk went away',
     });
   });
 

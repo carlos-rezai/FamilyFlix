@@ -143,7 +143,7 @@ describe('writeExport — a valid destination', () => {
 });
 
 describe('writeExport — a relative destination', () => {
-  it('is refused with the drive-letter sentence', async () => {
+  it('is refused as relative', async () => {
     const { media } = sandbox();
 
     const outcome = await writeExport(
@@ -153,10 +153,7 @@ describe('writeExport — a relative destination', () => {
       NOW
     );
 
-    expect(outcome).toEqual({
-      kind: 'refused',
-      sentence: 'Type the full path, starting with a drive letter.',
-    });
+    expect(outcome).toEqual({ kind: 'refused', refusal: 'relative' });
   });
 
   it('creates nothing, not even under the working directory', async () => {

@@ -23,18 +23,21 @@ export interface ExportContent {
   series: readonly SeriesDetail[];
 }
 
-/** What {@link writeExport} came to — a value, never a throw. */
+/**
+ * Why a destination cannot take an export: not absolute, not a folder that is
+ * there, or a folder FamilyFlix can't write to. The route words each one.
+ */
+export type ExportRefusal = 'relative' | 'missing' | 'read-only';
+
+/**
+ * What {@link writeExport} came to — a value, never a throw. A refusal is its
+ * kind and a failure its reason; the route words both, as `admitFolder`'s
+ * refusals are worded through `FOLDER_REFUSALS`.
+ */
 export type ExportOutcome =
   | { kind: 'written'; folder: string; movieCount: number; seriesCount: number }
-  | { kind: 'refused'; sentence: string }
-  | { kind: 'failed'; sentence: string };
-
-/** Each refused destination's one sentence. */
-const REFUSALS = {
-  relative: 'Type the full path, starting with a drive letter.',
-  missing: 'No folder at that path.',
-  readOnly: "FamilyFlix can't write to that folder.",
-} as const;
+  | { kind: 'refused'; refusal: ExportRefusal }
+  | { kind: 'failed'; reason: string };
 
 /** How many numbered names are tried before a taken name is given up on. */
 const MAX_NUMBERED = 999;
@@ -46,15 +49,15 @@ const errorCode = (error: unknown): unknown =>
     : undefined;
 
 /** Why a destination cannot take an export, or `null` when it can. */
-async function refusalOf(destination: string): Promise<string | null> {
+async function refusalOf(destination: string): Promise<ExportRefusal | null> {
   const reading = await readableFolder(destination);
   if (reading === 'relative') {
-    return REFUSALS.relative;
+    return 'relative';
   }
   if (reading !== 'readable') {
-    return REFUSALS.missing;
+    return 'missing';
   }
-  return (await writableFolder(destination)) ? null : REFUSALS.readOnly;
+  return (await writableFolder(destination)) ? null : 'read-only';
 }
 
 /**
@@ -133,19 +136,19 @@ async function copyPlanned(
   return skipped;
 }
 
-/** The sentence a failure is answered with. */
+/** What a failure is answered with: the error's own message. */
 const reasonOf = (error: unknown): string =>
   error instanceof Error ? error.message : String(error);
 
 /**
  * The injected writer of an **Export**, and it never throws: check the
  * destination (absolute, then readable, then writable — each failure a
- * `refused` sentence), make the dated **Export folder** inside it exclusively,
+ * `refused` kind), make the dated **Export folder** inside it exclusively,
  * copy each file the **File plan** names into it — piped out of
  * `Media.readStored`, the only way a stored file is read, one that cannot be
  * read skipped and its cell blanked — then write the sheet last. Anything
  * else that fails takes the folder back out, best-effort, and answers
- * `failed`.
+ * `failed` with the error's reason.
  */
 export async function writeExport(
   media: Media,
@@ -155,7 +158,7 @@ export async function writeExport(
 ): Promise<ExportOutcome> {
   const refusal = await refusalOf(request.destination);
   if (refusal !== null) {
-    return { kind: 'refused', sentence: refusal };
+    return { kind: 'refused', refusal };
   }
 
   const name = exportName(now);
@@ -185,9 +188,6 @@ export async function writeExport(
     if (folder !== null) {
       await rm(folder, { recursive: true, force: true }).catch(() => undefined);
     }
-    return {
-      kind: 'failed',
-      sentence: `The export stopped partway: ${reasonOf(error)}. Nothing was left behind.`,
-    };
+    return { kind: 'failed', reason: reasonOf(error) };
   }
 }

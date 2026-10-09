@@ -3,10 +3,11 @@
 // 31 — Export options, Phase 6: the edges (issue #281).
 //
 // The third refusal: a destination that is there and is a folder, but that
-// FamilyFlix can't write to — `access(W_OK)`, the **Write targets**' own
-// check — is refused with _FamilyFlix can't write to that folder._, and
-// nothing is created. It is checked after the other two: a missing path is
-// _No folder at that path._ even when it would not be writable either.
+// FamilyFlix can't write to — `writableFolder`, the **Write targets**' own
+// check — is refused as `read-only`, which the route words as _FamilyFlix
+// can't write to that folder._, and nothing is created. It is checked after
+// the other two: a missing path is `missing` even when it would not be
+// writable either.
 //
 // Windows does not honour a directory's read-only bit, so a sandbox cannot be
 // made unwritable; `access` is the one seam stood in for, answering `EACCES`
@@ -77,7 +78,7 @@ function sandbox(): {
 }
 
 describe('writeExport — a folder FamilyFlix can’t write to', () => {
-  it('is refused with its sentence', async () => {
+  it('is refused as read-only', async () => {
     const { media, destination } = sandbox();
 
     const outcome = await writeExport(
@@ -87,10 +88,7 @@ describe('writeExport — a folder FamilyFlix can’t write to', () => {
       NOW
     );
 
-    expect(outcome).toEqual({
-      kind: 'refused',
-      sentence: "FamilyFlix can't write to that folder.",
-    });
+    expect(outcome).toEqual({ kind: 'refused', refusal: 'read-only' });
   });
 
   it('creates nothing inside it', async () => {
@@ -106,7 +104,7 @@ describe('writeExport — a folder FamilyFlix can’t write to', () => {
     expect(readdirSync(destination)).toEqual([]);
   });
 
-  it('is checked after the folder is found: a missing path is No folder', async () => {
+  it('is checked after the folder is found: a missing path is missing', async () => {
     const { media, dir } = sandbox();
     const missing = join(dir, 'not-there');
     readOnly.add(missing);
@@ -118,9 +116,6 @@ describe('writeExport — a folder FamilyFlix can’t write to', () => {
       NOW
     );
 
-    expect(outcome).toEqual({
-      kind: 'refused',
-      sentence: 'No folder at that path.',
-    });
+    expect(outcome).toEqual({ kind: 'refused', refusal: 'missing' });
   });
 });

@@ -26,7 +26,10 @@ import {
   type ResolveForm,
 } from '../import-export/createImporter/createImporter';
 import { exportName } from '../import-export/exportName/exportName';
-import { writeExport } from '../import-export/writeExport/writeExport';
+import {
+  writeExport,
+  type ExportRefusal,
+} from '../import-export/writeExport/writeExport';
 import type { Media } from '../media/createMedia/createMedia';
 import { readableFolder } from '../media/readableFolder/readableFolder';
 import { spaceUsed } from '../media/spaceUsed/spaceUsed';
@@ -478,6 +481,19 @@ const FOLDER_REFUSALS: Record<
     error: 'Type the folder’s full path, starting with its drive.',
   },
   missing: { status: 400, error: 'No folder at that path.' },
+};
+
+/** How each refused export destination is answered: a `400` and its sentence. */
+const EXPORT_REFUSALS: Record<
+  ExportRefusal,
+  { status: number; error: string }
+> = {
+  relative: {
+    status: 400,
+    error: 'Type the full path, starting with a drive letter.',
+  },
+  missing: { status: 400, error: 'No folder at that path.' },
+  'read-only': { status: 400, error: "FamilyFlix can't write to that folder." },
 };
 
 /**
@@ -2237,8 +2253,9 @@ export function createApiRouter(
   // and every series' detail, read over the full series list, handed to
   // `writeExport`, which makes the dated **Export folder** inside the
   // destination. `201` with the folder it wrote, `400` with the one sentence
-  // for a malformed body or a refused destination, `500` with the writer's own
-  // for anything else.
+  // for a malformed body or a refused destination — each refusal worded
+  // through `EXPORT_REFUSALS` — and `500` with the stopped-partway sentence
+  // around the writer's reason for anything else.
   router.post('/export', async (req: Request, res: Response) => {
     const read = exportBody(req.body);
     if (!read.ok) {
@@ -2257,11 +2274,14 @@ export function createApiRouter(
       new Date()
     );
     if (outcome.kind === 'refused') {
-      res.status(400).json({ error: outcome.sentence });
+      const { status, error } = EXPORT_REFUSALS[outcome.refusal];
+      res.status(status).json({ error });
       return;
     }
     if (outcome.kind === 'failed') {
-      res.status(500).json({ error: outcome.sentence });
+      res.status(500).json({
+        error: `The export stopped partway: ${outcome.reason}. Nothing was left behind.`,
+      });
       return;
     }
     const result: ExportResult = {
