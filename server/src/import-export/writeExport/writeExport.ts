@@ -1,12 +1,13 @@
-import { constants } from 'node:fs';
+import { constants, createWriteStream } from 'node:fs';
 import { access, mkdir, rm, writeFile } from 'node:fs/promises';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
+import { pipeline } from 'node:stream/promises';
 
 import type { Movie, SeriesDetail, StartExport } from '@/types';
 import type { Media } from '../../media/createMedia/createMedia';
 import { readableFolder } from '../../media/readableFolder/readableFolder';
 import { exportName } from '../exportName/exportName';
-import { exportRows } from '../exportRows/exportRows';
+import { exportRows, type ExportFile } from '../exportRows/exportRows';
 import { writeSheet } from '../writeSheet/writeSheet';
 
 /** The library an **Export** is written from. */
@@ -74,6 +75,26 @@ async function makeFolder(destination: string, name: string): Promise<string> {
   throw new Error(`every name for ${name} is taken`);
 }
 
+/**
+ * Pipe each planned file out of managed storage into the **Export folder** —
+ * `Media.readStored`, the only reader of a stored file — never over a file
+ * that exists.
+ */
+async function copyPlanned(
+  media: Media,
+  folder: string,
+  files: readonly ExportFile[]
+): Promise<void> {
+  for (const file of files) {
+    const target = join(folder, ...file.path.split('/'));
+    await mkdir(dirname(target), { recursive: true });
+    await pipeline(
+      await media.readStored(file.storedPath),
+      createWriteStream(target, { flags: 'wx' })
+    );
+  }
+}
+
 /** The sentence a failure is answered with. */
 const reasonOf = (error: unknown): string =>
   error instanceof Error ? error.message : String(error);
@@ -82,11 +103,9 @@ const reasonOf = (error: unknown): string =>
  * The injected writer of an **Export**, and it never throws: check the
  * destination (absolute, then readable, then writable — each failure a
  * `refused` sentence), make the dated **Export folder** inside it exclusively,
- * and write the sheet into it. Anything else that fails takes the folder back
+ * and write the sheet into it, then each image the **File plan** names —
+ * piped out of `Media.readStored`, the only way a stored file is read. Anything else that fails takes the folder back
  * out, best-effort, and answers `failed`.
- *
- * `media` is the only way a stored file is read — `Media.readStored` — which
- * the files that travel beside the sheet will go through.
  */
 export async function writeExport(
   media: Media,
@@ -94,7 +113,6 @@ export async function writeExport(
   content: ExportContent,
   now: Date
 ): Promise<ExportOutcome> {
-  void media;
   const refusal = await refusalOf(request.destination);
   if (refusal !== null) {
     return { kind: 'refused', sentence: refusal };
@@ -104,10 +122,15 @@ export async function writeExport(
   let folder: string | null = null;
   try {
     folder = await makeFolder(request.destination, name);
-    const { tables } = exportRows(content.movies, content.series, request);
+    const { tables, files } = exportRows(
+      content.movies,
+      content.series,
+      request
+    );
     for (const file of await writeSheet(tables, request.format, name)) {
       await writeFile(join(folder, file.filename), file.bytes, { flag: 'wx' });
     }
+    await copyPlanned(media, folder, files);
     return {
       kind: 'written',
       folder,

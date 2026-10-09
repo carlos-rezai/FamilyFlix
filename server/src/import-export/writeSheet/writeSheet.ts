@@ -6,6 +6,13 @@ import type { ExportTable, ExportTables } from '../exportRows/exportRows';
 /** The bytes Excel expects ahead of a UTF-8 CSV, so a diacritic opens as itself. */
 const UTF8_BOM = Buffer.from([0xef, 0xbb, 0xbf]);
 
+/** The columns whose cells are paths into the **Export folder** — a link in Excel. */
+const PATH_COLUMNS: ReadonlySet<string> = new Set([
+  'Poster',
+  'Backdrop',
+  'Still',
+]);
+
 /** One file the writer answers: its name inside the **Export folder**, and its bytes. */
 export interface SheetFile {
   filename: string;
@@ -23,7 +30,8 @@ export interface SheetFile {
  * open `Amélie` as `Amélie`; the reader strips it on the way back in. As
  * xlsx, it is `<name>.xlsx`, a workbook whose worksheets are `Titles` then
  * `Episodes` — a number where a number was stored, and no styling: no bold
- * header, no widths, no frozen panes. Titles is first in both, so the Sheet
+ * header, no widths, no frozen panes — and each Poster, Backdrop and Still
+ * cell holding a path is a hyperlink whose text is that path. Titles is first in both, so the Sheet
  * reader's first-worksheet rule reads it and never an episode.
  */
 export async function writeSheet(
@@ -35,8 +43,8 @@ export async function writeSheet(
   // what is a Node `Buffer` at runtime, the same mismatch the reader notes.
   if (format === 'xlsx') {
     const workbook = new ExcelJS.Workbook();
-    addSheet(workbook, 'Titles', tables.titles);
-    addSheet(workbook, 'Episodes', tables.episodes);
+    addSheet(workbook, 'Titles', tables.titles, true);
+    addSheet(workbook, 'Episodes', tables.episodes, true);
     const bytes = (await workbook.xlsx.writeBuffer()) as unknown as Buffer;
     return [{ filename: `${name}.xlsx`, bytes }];
   }
@@ -46,15 +54,32 @@ export async function writeSheet(
   ];
 }
 
-/** Add one worksheet holding `table`, row for row. */
+/**
+ * Add one worksheet holding `table`, row for row; with `links`, each filled
+ * cell under a path column becomes a hyperlink whose text is the path.
+ */
 function addSheet(
   workbook: ExcelJS.Workbook,
   sheetName: string,
-  table: ExportTable
+  table: ExportTable,
+  links = false
 ): void {
   const sheet = workbook.addWorksheet(sheetName);
-  for (const row of table) {
-    sheet.addRow(row);
+  const [header = []] = table;
+  for (const [index, row] of table.entries()) {
+    if (!links || index === 0) {
+      sheet.addRow(row);
+      continue;
+    }
+    sheet.addRow(
+      row.map((cell, column) =>
+        typeof cell === 'string' &&
+        cell !== '' &&
+        PATH_COLUMNS.has(String(header[column]))
+          ? { text: cell, hyperlink: cell }
+          : cell
+      )
+    );
   }
 }
 

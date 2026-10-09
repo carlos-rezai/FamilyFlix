@@ -7,6 +7,7 @@ import {
   DownloadIcon,
   FolderIcon,
   TextField,
+  Toggle,
 } from '@/primitives';
 import { EXPORT_COLUMNS, EXPORT_FORMATS, type ExportFormat } from '@/types';
 import { FormatCard } from '../FormatCard/FormatCard';
@@ -25,6 +26,11 @@ import {
   Filename,
   FileRow,
   Formats,
+  IncludeCard,
+  IncludeDesc,
+  IncludeRow,
+  IncludeText,
+  IncludeTitle,
   Refusal,
   SectionLabel,
   TickCircle,
@@ -70,7 +76,8 @@ const folderNameOf = (path: string): string =>
  * the download glyph, _Export library_ and its lede; _Format_ over the two
  * **Format cards**, CSV checked on every open; _Save to_, a mono field with
  * the folder glyph and the route's refusal under it; the name row — the
- * folder glyph, the **Export name** and the titles count; _Columns included_
+ * folder glyph, the **Export name** and the titles count; _Include_, the
+ * _Images_ row and its Toggle, on every open; _Columns included_
  * over the sixteen **Export columns** as pills — a list, not controls;
  * _Export as CSV_ / _Export as Excel_ beside _Cancel_. Then **Export ready**,
  * swapped inside the same card as the one **Bare modal** so the pop-in runs
@@ -88,11 +95,13 @@ export function ExportModal({ open, onClose }: ExportModalProps) {
     format,
     summary,
     destination,
+    images,
     exporting,
     refusal,
     result,
     chooseFormat,
     setDestination,
+    setImages,
     exportLibrary,
   } = useExport(open);
   const formatLabelId = useId();
@@ -167,6 +176,25 @@ export function ExportModal({ open, onClose }: ExportModalProps) {
         </FileName>
         {count === null ? null : <Count>{count}</Count>}
       </FileRow>
+      <div>
+        <SectionLabel>Include</SectionLabel>
+        <IncludeCard>
+          <IncludeRow>
+            <IncludeText>
+              <IncludeTitle>Images</IncludeTitle>
+              <IncludeDesc>
+                Posters, backdrops and episode stills, in a folder per title.
+              </IncludeDesc>
+            </IncludeText>
+            <Toggle
+              checked={images}
+              label="Images"
+              onToggle={() => setImages(!images)}
+            />
+          </IncludeRow>
+        </IncludeCard>
+      </div>
+
       <div>
         <SectionLabel>Columns included</SectionLabel>
         <Columns>

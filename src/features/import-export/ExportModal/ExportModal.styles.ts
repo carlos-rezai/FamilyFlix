@@ -135,3 +135,40 @@ export const Refusal = styled.p`
   font-size: 13px;
   color: ${({ theme }) => theme.colors.danger};
 `;
+
+/** The **Include** group's card: the surface inside the border, its rows stacked. */
+export const IncludeCard = styled.div`
+  background: ${({ theme }) => theme.colors.surface};
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: ${({ theme }) => theme.radius.md};
+`;
+
+/** One Include row: its words at one end, its Toggle at the other. */
+export const IncludeRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+`;
+
+/** The row's words, taking what the Toggle leaves. */
+export const IncludeText = styled.div`
+  flex: 1;
+  min-width: 0;
+`;
+
+/** An Include row's title, 14.5px semibold in the text ink. */
+export const IncludeTitle = styled.div`
+  font-family: ${({ theme }) => theme.fonts.sans};
+  font-size: 14.5px;
+  font-weight: 600;
+  color: ${({ theme }) => theme.colors.text};
+`;
+
+/** The line under an Include row's title, 12.5px in the faint ink. */
+export const IncludeDesc = styled.div`
+  margin-top: 2px;
+  font-family: ${({ theme }) => theme.fonts.sans};
+  font-size: 12.5px;
+  color: ${({ theme }) => theme.colors.textFaint};
+`;
