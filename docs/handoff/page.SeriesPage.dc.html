@@ -20,12 +20,12 @@
         "
       >
         <div
+          aria-hidden="true"
           style="
-            position: absolute;
+            position: sticky;
             top: 0;
-            left: 0;
-            right: 0;
-            height: 520px;
+            height: 100vh;
+            margin-bottom: -100vh;
             overflow: hidden;
           "
         >
@@ -34,12 +34,14 @@
             style="
               position: absolute;
               inset: 0;
-              background: linear-gradient(
-                180deg,
-                rgba(20, 17, 13, 0.35) 0%,
-                rgba(20, 17, 13, 0.8) 55%,
-                var(--color-bg) 100%
-              );
+              background:
+                linear-gradient(
+                  180deg,
+                  rgba(20, 17, 13, 0.65) 0%,
+                  rgba(20, 17, 13, 0.85) 50%,
+                  var(--color-bg) 100%
+                ),
+                var(--color-accent-soft);
             "
           ></div>
         </div>

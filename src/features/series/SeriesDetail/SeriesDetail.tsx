@@ -1,6 +1,11 @@
 import { useNavigate, useParams } from 'react-router-dom';
 
-import { CreditsRow, ExpandableText, SeasonCard } from '@/components';
+import {
+  CreditsRow,
+  ExpandableText,
+  SeasonCard,
+  DetailBackdrop,
+} from '@/components';
 import {
   Artwork,
   Button,
@@ -13,8 +18,6 @@ import { LoadingSeries } from '../LoadingSeries/LoadingSeries';
 import { SeriesMetaLine } from '../SeriesMetaLine/SeriesMetaLine';
 import { useSeriesDetail } from '../useSeriesDetail/useSeriesDetail';
 import {
-  ArtArea,
-  Scrim,
   Content,
   Hero,
   PosterColumn,
@@ -96,10 +99,7 @@ export function SeriesDetail() {
 
   return (
     <>
-      <ArtArea aria-hidden="true">
-        <Artwork url={series.backdropUrl} g1={series.g1} g2={series.g2} />
-        <Scrim />
-      </ArtArea>
+      <DetailBackdrop url={series.backdropUrl} g1={series.g1} g2={series.g2} />
 
       <Content>
         <Hero>

@@ -3,28 +3,6 @@ import styled from 'styled-components';
 import { LoadMessage } from '@/components';
 import { IconButton } from '@/primitives';
 
-/** The art area behind the top of the page — 520px, `page.SeriesPage`'s. */
-export const ArtArea = styled.div`
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 520px;
-  overflow: hidden;
-`;
-
-/** Three stops, landing on the page background so the art has no bottom edge. */
-export const Scrim = styled.div`
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    180deg,
-    rgba(20, 17, 13, 0.35) 0%,
-    rgba(20, 17, 13, 0.8) 55%,
-    ${({ theme }) => theme.colors.bg} 100%
-  );
-`;
-
 export const Content = styled.div`
   position: relative;
   z-index: 10;

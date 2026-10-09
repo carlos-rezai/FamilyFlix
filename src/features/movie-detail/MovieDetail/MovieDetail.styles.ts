@@ -3,30 +3,6 @@ import styled from 'styled-components';
 import { LoadMessage } from '@/components';
 import { IconButton } from '@/primitives';
 
-/**
- * The full-bleed art area behind the top of the page. It is sized against the
- * scroll container (`MoviePage`), not the content, so a movie with a ten-line
- * synopsis and one with two lines get identically-sized backdrops.
- */
-export const ArtArea = styled.div`
-  position: absolute;
-  inset: 0;
-  height: 62%;
-  overflow: hidden;
-`;
-
-/** Three stops, landing on the page background so the art has no bottom edge. */
-export const Scrim = styled.div`
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    180deg,
-    rgba(20, 17, 13, 0.45) 0%,
-    rgba(20, 17, 13, 0.82) 55%,
-    ${({ theme }) => theme.colors.bg} 100%
-  );
-`;
-
 export const Content = styled.div`
   position: relative;
   z-index: 10;

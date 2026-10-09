@@ -480,6 +480,17 @@ than a `components/` molecule: one caller, and it draws a domain record. Present
 press is handed back.
 Props: `folder { path, titleCount, reachable }` (a `LibraryFolder`), `onRemove`.
 
+### DetailBackdrop — drawn inline in `page.MoviePage` and `page.SeriesPage`
+
+Target: `components/DetailBackdrop/` · the **Detail backdrop**, the one art layer both detail
+pages draw. No `mol.*` file of its own (`CreditsRow`'s precedent): both page prototypes draw
+it inline, identically. The root is `aria-hidden`, `position: sticky; top: 0; height: 100vh;
+margin-bottom: -100vh` — pinned to the top of the page's scroller while the content scrolls
+over it; the `100vh` is coupled to the scroller's own height. Inside, the backdrop over its
+**Gradient fallback**, then the **Backdrop veil**: a 180° gradient — `rgba(20,17,13,.65)` 0%,
+`.85` 50%, `--color-bg` 100% — over `--color-accent-soft`. No motion, no blur.
+Props: `url` (string | null), `g1`, `g2`.
+
 ---
 
 ## 5. Features (organisms) → `src/features/`

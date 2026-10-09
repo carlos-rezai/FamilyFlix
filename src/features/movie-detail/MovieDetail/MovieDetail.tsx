@@ -1,6 +1,6 @@
 import { useNavigate, useParams } from 'react-router-dom';
 
-import { CreditsRow, ExpandableText } from '@/components';
+import { CreditsRow, ExpandableText, DetailBackdrop } from '@/components';
 import {
   Artwork,
   Button,
@@ -15,8 +15,6 @@ import { LoadingDetail } from '../LoadingDetail/LoadingDetail';
 import { MetaLine } from '../MetaLine/MetaLine';
 import { useMovieDetail } from '../useMovieDetail/useMovieDetail';
 import {
-  ArtArea,
-  Scrim,
   Content,
   PosterColumn,
   PosterFrame,
@@ -111,10 +109,7 @@ export function MovieDetail() {
 
   return (
     <>
-      <ArtArea aria-hidden="true">
-        <Artwork url={movie.backdropUrl} g1={movie.g1} g2={movie.g2} />
-        <Scrim />
-      </ArtArea>
+      <DetailBackdrop url={movie.backdropUrl} g1={movie.g1} g2={movie.g2} />
 
       <EditMenu movieId={movie.id} title={movie.title} />
 

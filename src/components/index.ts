@@ -44,3 +44,7 @@ export { CreditsRow, type CreditsRowProps } from './CreditsRow/CreditsRow';
 export { SeasonCard, type SeasonCardProps } from './SeasonCard/SeasonCard';
 export { EpisodeRow, type EpisodeRowProps } from './EpisodeRow/EpisodeRow';
 export { PillTabs, type PillTabsProps } from './PillTabs/PillTabs';
+export {
+  DetailBackdrop,
+  type DetailBackdropProps,
+} from './DetailBackdrop/DetailBackdrop';

@@ -1,11 +1,11 @@
 import styled from 'styled-components';
 
 /**
- * The page's own scroll container, rather than the document's. The art area
- * inside is sized as a percentage of this box, so it resolves against the
- * viewport — under document scroll it would resolve against *content* height,
- * and a movie with a ten-line synopsis would get a taller backdrop than one
- * with two lines. It is the positioned ancestor that area is placed against.
+ * The page's own scroll container, rather than the document's, and a full
+ * viewport tall: the **Detail backdrop** inside is pinned to its top and is
+ * `100vh` tall itself, so it covers exactly this box while the movie's synopsis
+ * and cast scroll over it. The two heights are coupled — change one, change
+ * the other.
  */
 export const Scroller = styled.div`
   position: relative;

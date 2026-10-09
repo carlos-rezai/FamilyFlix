@@ -20,19 +20,28 @@
         "
       >
         <div
-          style="position: absolute; inset: 0; height: 62%; overflow: hidden"
+          aria-hidden="true"
+          style="
+            position: sticky;
+            top: 0;
+            height: 100vh;
+            margin-bottom: -100vh;
+            overflow: hidden;
+          "
         >
           <div style="{{ detail.posterStyle }}"></div>
           <div
             style="
               position: absolute;
               inset: 0;
-              background: linear-gradient(
-                180deg,
-                rgba(20, 17, 13, 0.45) 0%,
-                rgba(20, 17, 13, 0.82) 55%,
-                var(--color-bg) 100%
-              );
+              background:
+                linear-gradient(
+                  180deg,
+                  rgba(20, 17, 13, 0.65) 0%,
+                  rgba(20, 17, 13, 0.85) 50%,
+                  var(--color-bg) 100%
+                ),
+                var(--color-accent-soft);
             "
           ></div>
         </div>

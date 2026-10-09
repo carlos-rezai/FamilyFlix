@@ -47,11 +47,15 @@ function backgrounds(root: HTMLElement): string[] {
   });
 }
 
-/** The Artwork's resolved image: the one layer drawing the 155° gradient. */
+/**
+ * The Artwork's resolved image: the one layer drawing the 155° gradient. Found
+ * by its angle, not its stops — the resolved style may normalise `hsl()` into
+ * `rgb()`.
+ */
 function artworkImage(root: HTMLElement): string {
   const art = [root, ...Array.from(root.querySelectorAll('*'))]
     .map((el) => window.getComputedStyle(el).backgroundImage)
-    .find((image) => image.includes(STOPS.g1));
+    .find((image) => image.includes('linear-gradient(155deg'));
   if (art === undefined) {
     throw new Error('No Artwork drawing the Gradient fallback');
   }
@@ -60,7 +64,7 @@ function artworkImage(root: HTMLElement): string {
 
 /** An accent's 14% alpha, as `accentScale` spells `accentSoft`. */
 function soft(r: number, g: number, b: number): RegExp {
-  return new RegExp(`rgba\(${r},\s*${g},\s*${b},\s*0?\.14\)`);
+  return new RegExp(String.raw`rgba\(${r},\s*${g},\s*${b},\s*0?\.14\)`);
 }
 
 describe('DetailBackdrop — the art layer', () => {
