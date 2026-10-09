@@ -401,6 +401,50 @@ describe('ExportModal — a refused destination', () => {
   });
 });
 
+// 31 — Export options, Phase 6: the edges (issue #281). Each of the three
+// refusal sentences is drawn on the refusal line; a 500 — the write that broke
+// partway — leaves the dialog as it was, its sentence drawn nowhere.
+describe('ExportModal — the refusal line, every sentence', () => {
+  it.each([
+    'Type the full path, starting with a drive letter.',
+    'No folder at that path.',
+    "FamilyFlix can't write to that folder.",
+  ])('draws “%s” under Save to, on the idle face', async (sentence) => {
+    serve({ post: () => Promise.resolve(badRequest(sentence)) });
+    renderDialog();
+
+    fireEvent.click(exportButton());
+
+    const line = await within(dialog()).findByText(sentence);
+    expect(before(saveTo(), line)).toBe(true);
+    expect(idleDialog()).toBeDefined();
+    expect(exportButton()).toBeDefined();
+  });
+
+  it('draws no refusal line for a write that broke partway', async () => {
+    serve({
+      post: () =>
+        Promise.resolve({
+          ok: false,
+          status: 500,
+          json: () =>
+            Promise.resolve({
+              error:
+                'The export stopped partway: the disk went away. Nothing was left behind.',
+            }),
+        } as unknown as Response),
+    });
+    renderDialog();
+
+    fireEvent.click(exportButton());
+
+    await waitFor(() => expect(exportButton()).toBeDefined());
+    expect(idleDialog()).toBeDefined();
+    expect(within(dialog()).queryByText(/stopped partway/)).toBeNull();
+    expect(within(dialog()).queryByText('Export ready')).toBeNull();
+  });
+});
+
 describe('ExportModal — Export ready', () => {
   it('names the folder written and the destination, with the count', async () => {
     serve();
