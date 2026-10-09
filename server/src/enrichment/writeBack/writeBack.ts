@@ -9,14 +9,14 @@ import { exportRows } from '../../import-export/exportRows/exportRows';
 import { writeSheet } from '../../import-export/writeSheet/writeSheet';
 import { writableFolder } from '../../media/writableFolder/writableFolder';
 
-/** The **Metadata sheet**'s name in each **Library folder**. */
-export const SHEET_NAME = 'familyflix-metadata.csv';
-
 /**
- * {@link SHEET_NAME} without its extension — what the Sheet writer names it
- * by.
+ * The **Metadata sheet**'s name without its extension — what the Sheet
+ * writer names it by.
  */
-const SHEET_STEM = 'familyflix-metadata';
+export const SHEET_STEM = 'familyflix-metadata';
+
+/** The **Metadata sheet**'s name in each **Library folder**. */
+export const SHEET_NAME = `${SHEET_STEM}.csv`;
 
 /** The name a poster takes in its **Source folder**. */
 export const POSTER_NAME = 'poster.jpg';
