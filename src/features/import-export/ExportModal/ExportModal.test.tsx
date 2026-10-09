@@ -515,3 +515,66 @@ describe('ExportModal — Include', () => {
     expect(JSON.parse(String(init?.body))).toMatchObject({ images: false });
   });
 });
+
+/**
+ * 31 — Export options, Phase 4: subtitles (issue #279).
+ *
+ * The Include group's second row, after _Images_: _Subtitles_ over _Every
+ * subtitle file, beside its title's images._, with a Toggle — off by default,
+ * and what the request sends.
+ */
+describe('ExportModal — Include, Subtitles', () => {
+  const subtitlesToggle = () =>
+    within(dialog()).getByRole('switch', { name: 'Subtitles' });
+  const imagesToggle = () =>
+    within(dialog()).getByRole('switch', { name: 'Images' });
+
+  it('draws the Subtitles row second, after Images and before the columns', () => {
+    serve();
+
+    renderDialog();
+
+    expect(before(imagesToggle(), subtitlesToggle())).toBe(true);
+    expect(
+      before(subtitlesToggle(), within(dialog()).getByText('Columns included'))
+    ).toBe(true);
+  });
+
+  it('draws the Subtitles row with its line and its Toggle, off', () => {
+    serve();
+
+    renderDialog();
+
+    expect(
+      within(dialog()).getByText(
+        "Every subtitle file, beside its title's images."
+      )
+    ).toBeDefined();
+    expect(subtitlesToggle().getAttribute('aria-checked')).toBe('false');
+  });
+
+  it('turns the Toggle on on a press', () => {
+    serve();
+    renderDialog();
+
+    fireEvent.click(subtitlesToggle());
+
+    expect(subtitlesToggle().getAttribute('aria-checked')).toBe('true');
+  });
+
+  it('sends subtitles on once the Toggle is on', async () => {
+    serve();
+    renderDialog();
+    await waitFor(() => expect(saveTo().value).toBe('E:\\Movies'));
+    fireEvent.click(subtitlesToggle());
+
+    fireEvent.click(exportButton());
+
+    await waitFor(() =>
+      expect(fetchMock.mock.calls.some(([, init]) => isPost(init))).toBe(true)
+    );
+    const [, init] =
+      fetchMock.mock.calls.find(([, call]) => isPost(call)) ?? [];
+    expect(JSON.parse(String(init?.body))).toMatchObject({ subtitles: true });
+  });
+});

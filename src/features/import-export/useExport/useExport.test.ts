@@ -492,3 +492,59 @@ describe('useExport — images', () => {
     await waitFor(() => expect(result.current.images).toBe(true));
   });
 });
+
+/**
+ * 31 — Export options, Phase 4: subtitles (issue #279).
+ *
+ * `subtitles` — the _Subtitles_ Include toggle — is off by default, put back
+ * off by every open, and sent with the request; `setSubtitles` flips it.
+ */
+describe('useExport — subtitles', () => {
+  it('opens with subtitles off', () => {
+    serve({ summary: () => new Promise<Response>(() => undefined) });
+
+    const { result } = renderExport();
+
+    expect(result.current.subtitles).toBe(false);
+  });
+
+  it('turns subtitles on when asked', () => {
+    serve({ summary: () => new Promise<Response>(() => undefined) });
+    const { result } = renderExport();
+
+    act(() => result.current.setSubtitles(true));
+
+    expect(result.current.subtitles).toBe(true);
+  });
+
+  it('sends subtitles on once it is turned on', async () => {
+    serve();
+    const { result } = renderExport();
+    await waitFor(() => expect(result.current.destination).toBe('E:\\Movies'));
+    act(() => result.current.setSubtitles(true));
+
+    await act(async () => {
+      await result.current.exportLibrary();
+    });
+
+    expect(posts()).toEqual([
+      {
+        format: 'csv',
+        destination: 'E:\\Movies',
+        images: true,
+        subtitles: true,
+      },
+    ]);
+  });
+
+  it('puts subtitles back off when the dialog opens again', async () => {
+    serve();
+    const { result, rerender } = renderExport();
+    act(() => result.current.setSubtitles(true));
+
+    rerender({ open: false });
+    rerender({ open: true });
+
+    await waitFor(() => expect(result.current.subtitles).toBe(false));
+  });
+});
