@@ -121,6 +121,20 @@ export async function cancelImport(): Promise<void> {
 const EXPORT_ENDPOINT = '/api/export';
 
 /**
+ * A refusal body's one sentence — the `error` of `{ error }` — or `null` for
+ * a body that is not one, so the caller can treat it as any other failure.
+ * The export's and the folder add's refusals both read through it.
+ */
+async function refusalSentence(response: Response): Promise<string | null> {
+  const body: unknown = await response.json().catch(() => null);
+  const error =
+    typeof body === 'object' && body !== null
+      ? (body as { error?: unknown }).error
+      : undefined;
+  return typeof error === 'string' ? error : null;
+}
+
+/**
  * The **Export summary** — the counts the **Export dialog** shows beside the
  * **Export name**, the default destination _Save to_ starts at, and the name
  * itself, read on open. Any status but a `200` rejects, and so does a request
@@ -158,13 +172,9 @@ export async function startExport(
   });
 
   if (response.status === 400) {
-    const body: unknown = await response.json().catch(() => null);
-    const error =
-      typeof body === 'object' && body !== null
-        ? (body as { error?: unknown }).error
-        : undefined;
-    if (typeof error === 'string') {
-      return { kind: 'refused', sentence: error };
+    const sentence = await refusalSentence(response);
+    if (sentence !== null) {
+      return { kind: 'refused', sentence };
     }
   }
   if (!response.ok) {
@@ -209,13 +219,9 @@ export async function addLibraryFolder(
   });
 
   if (response.status === 400 || response.status === 409) {
-    const body: unknown = await response.json().catch(() => null);
-    const error =
-      typeof body === 'object' && body !== null
-        ? (body as { error?: unknown }).error
-        : undefined;
-    if (typeof error === 'string') {
-      return { kind: 'refused', sentence: error };
+    const sentence = await refusalSentence(response);
+    if (sentence !== null) {
+      return { kind: 'refused', sentence };
     }
   }
   if (!response.ok) {
