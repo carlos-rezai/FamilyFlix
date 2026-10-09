@@ -17,7 +17,13 @@
 // And the round trip, for films: an untouched export, written to disk by the
 // server and fed back to Bulk import over the same root, adds nothing; and the
 // same export with one row edited, imported onto a fresh library, imports the
-// edit.
+// edit and leaves the other row as written.
+//
+// And log 14's edges, ported from the download route before it retired: the
+// two awkward titles — _Amélie_, a diacritic; _"Whatever," she said_, a comma
+// and a double quote — read back identically in both formats; the CSV's BOM
+// ahead of them and stripped by the reader; a library of none written as the
+// header row alone; and the summary read as the library stands now.
 
 import ExcelJS from 'exceljs';
 import express from 'express';
@@ -50,7 +56,7 @@ import { fixedSlot } from '../test-support/fixedSlot/fixedSlot';
 import { libraryFixture } from '../test-support/libraryFixture/libraryFixture';
 import { newMovie } from '../test-support/newMovie/newMovie';
 import { sandboxRoot } from '../test-support/sandboxRoot/sandboxRoot';
-import { EXPORT_FORMATS } from '@/types';
+import { EXPORT_COLUMNS, EXPORT_FORMATS } from '@/types';
 import type {
   ExportFormat,
   ExportResult,
@@ -517,3 +523,222 @@ describe.each(FORMATS)(
     });
   }
 );
+
+describe.each(FORMATS)(
+  'POST /api/export (%s) — the row an edit did not touch',
+  (format) => {
+    it('leaves the row it did not edit as the export wrote it', async () => {
+      const first = freshApi();
+      const exported = await exportedFixture(first, format);
+      const edited = await withRowEdited(
+        readFileSync(exported),
+        format,
+        'Die Hard',
+        { year: 1989, genres: 'Action, Thriller, Crime' }
+      );
+
+      const second = freshApi();
+      renameSync(
+        join(second.root, 'Die.Hard.1988.1080p'),
+        join(second.root, 'Die Hard')
+      );
+      const sheetPath = join(second.scratch, `edited.${format}`);
+      writeFileSync(sheetPath, edited);
+      expect(
+        (await postImport(second.baseUrl, sheetPath, second.root)).status
+      ).toBe(201);
+      await untilReview(second.baseUrl);
+
+      const amelie = second.storage
+        .listMovies({ sort: 'a-z' })
+        .find((movie) => movie.title === 'Amélie');
+      expect(amelie).toMatchObject({
+        year: 2001,
+        director: 'Jean-Pierre Jeunet',
+        cast: ['Audrey Tautou'],
+        rating: 7,
+        watched: false,
+      });
+      expect(amelie?.genres.map((genre) => genre.name)).toEqual([
+        'Romance',
+        'Comedy',
+      ]);
+    });
+  }
+);
+
+// --- the edges -------------------------------------------------------------------
+
+/** The two awkward titles: a diacritic, then a comma and a double quote. */
+function addAwkwardLibrary(storage: LibraryStorage): void {
+  storage.addMovie(
+    newMovie({
+      title: 'Amélie',
+      videoPath: 'Amélie (2001)/amelie.mkv',
+      year: 2001,
+      director: 'Jean-Pierre Jeunet',
+      cast: ['Audrey Tautou'],
+      rating: 7,
+      genres: ['Romance', 'Comedy'],
+      watched: true,
+    })
+  );
+  storage.addMovie(
+    newMovie({
+      title: '"Whatever," she said',
+      videoPath: 'Whatever she said (2015)/whatever.mkv',
+      year: 2015,
+      director: 'Zoë "Zed" Ríos',
+      cast: ['Ana Sørensen', 'Peder "Pete" Vinge'],
+      genres: ['Drama'],
+    })
+  );
+}
+
+/** The library as it stands, exported to a folder of its own; the sheet's bytes. */
+async function exportedSheet(
+  api: ReturnType<typeof freshApi>,
+  format: ExportFormat
+): Promise<Buffer> {
+  const response = await postExport(api.baseUrl, {
+    format,
+    destination: folder(api.dir, 'Exports'),
+    images: false,
+    subtitles: false,
+  });
+  expect(response.status).toBe(201);
+  const { folder: written } = (await response.json()) as ExportResult;
+  return readFileSync(join(written, `${exportName(new Date())}.${format}`));
+}
+
+describe.each(FORMATS)(
+  'POST /api/export (%s) — the awkward title',
+  (format) => {
+    const filename = `${exportName(new Date())}.${format}`;
+
+    it('reads back every awkward cell identically, A–Z, the quote first', async () => {
+      const api = freshApi();
+      addAwkwardLibrary(api.storage);
+
+      const rows = await readSheet(await exportedSheet(api, format), filename);
+
+      expect(rows.map((row) => row.title)).toEqual([
+        '"Whatever," she said',
+        'Amélie',
+      ]);
+      expect(rows[0]).toMatchObject({
+        title: '"Whatever," she said',
+        year: 2015,
+        genres: ['Drama'],
+        director: 'Zoë "Zed" Ríos',
+        cast: ['Ana Sørensen', 'Peder "Pete" Vinge'],
+        rating: null,
+        watched: false,
+      });
+      expect(rows[1]).toMatchObject({
+        title: 'Amélie',
+        year: 2001,
+        genres: ['Romance', 'Comedy'],
+        director: 'Jean-Pierre Jeunet',
+        cast: ['Audrey Tautou'],
+        rating: 7,
+        watched: true,
+      });
+    });
+  }
+);
+
+describe('POST /api/export (csv) — the BOM through the route and the reader', () => {
+  it('writes the BOM ahead of the awkward titles, quoted as CSV quotes them', async () => {
+    const api = freshApi();
+    addAwkwardLibrary(api.storage);
+
+    const bytes = await exportedSheet(api, 'csv');
+    const text = bytes.toString('utf8');
+
+    expect(bytes.subarray(0, 3)).toEqual(Buffer.from([0xef, 0xbb, 0xbf]));
+    expect(text).toContain('Amélie');
+    expect(text).toContain('"""Whatever,"" she said"');
+  });
+
+  it('is stripped by the reader, so no title carries it', async () => {
+    const api = freshApi();
+    addAwkwardLibrary(api.storage);
+
+    const rows = await readSheet(
+      await exportedSheet(api, 'csv'),
+      `${exportName(new Date())}.csv`
+    );
+
+    expect(rows).toHaveLength(2);
+    for (const row of rows) {
+      expect(row.title).not.toContain('\uFEFF');
+    }
+  });
+
+  it('writes the BOM once, ahead of a header-only file too', async () => {
+    const api = freshApi();
+
+    const text = (await exportedSheet(api, 'csv')).toString('utf8');
+
+    expect(text.startsWith('\uFEFF')).toBe(true);
+    expect(text.indexOf('\uFEFF', 1)).toBe(-1);
+  });
+});
+
+describe.each(FORMATS)(
+  'POST /api/export (%s) — a library of none',
+  (format) => {
+    it('answers 201 with no titles, and a sheet the reader reads as no rows', async () => {
+      const api = freshApi();
+
+      const response = await postExport(api.baseUrl, {
+        format,
+        destination: folder(api.dir, 'Exports'),
+        images: false,
+        subtitles: false,
+      });
+
+      expect(response.status).toBe(201);
+      const result = (await response.json()) as ExportResult;
+      expect(result).toMatchObject({ movieCount: 0, seriesCount: 0 });
+      const name = exportName(new Date());
+      const bytes = readFileSync(join(result.folder, `${name}.${format}`));
+      expect(await readSheet(bytes, `${name}.${format}`)).toEqual([]);
+    });
+
+    it('is the header row alone — the sixteen names, nothing under them', async () => {
+      const api = freshApi();
+
+      const bytes = await exportedSheet(api, format);
+
+      const workbook = new ExcelJS.Workbook();
+      if (format === 'xlsx') {
+        await workbook.xlsx.load(bytes as unknown as ArrayBuffer);
+      } else {
+        await workbook.csv.read(
+          Readable.from([bytes.toString('utf8').replace(/^\uFEFF/, '')]),
+          { map: (value: string) => value }
+        );
+      }
+      const [sheet] = workbook.worksheets;
+      expect(sheet.rowCount).toBe(1);
+      expect(sheet.getRow(1).values).toEqual([undefined, ...EXPORT_COLUMNS]);
+    });
+  }
+);
+
+describe('GET /api/export — the summary as it stands now', () => {
+  it('answers the count as it stands now, not as it stood at startup', async () => {
+    const { storage, baseUrl } = freshApi();
+    expect(await getSummary(baseUrl)).toMatchObject({ movieCount: 0 });
+
+    addLibrary(storage);
+
+    expect(await getSummary(baseUrl)).toMatchObject({
+      movieCount: 3,
+      seriesCount: 2,
+      episodeCount: 5,
+    });
+  });
+});
