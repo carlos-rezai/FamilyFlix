@@ -1312,7 +1312,7 @@ describe('MovieDetail — the circle toggles through hover, press and focus', ()
 /**
  * 34 — Backdrop veil (issue #289): the page draws the shared **Detail
  * backdrop** — its backdrop under the **Backdrop veil** and the theme's
- * `accentSoft` — and keeps no art area or scrim of its own. The art's geometry
+ * `accentSoft` — and exactly one, the glossary's invariant. The art's geometry
  * is the molecule's suite's to prove, not this one's.
  */
 describe('MovieDetail — the Detail backdrop', () => {
@@ -1336,11 +1336,18 @@ describe('MovieDetail — the Detail backdrop', () => {
     expect(painted).toContain(theme.colors.accentSoft.replace(/\s+/g, ''));
   });
 
-  it('keeps no art area or scrim of its own', async () => {
-    const styles: Record<string, unknown> =
-      await import('./MovieDetail.styles');
+  it('draws exactly one Detail backdrop', async () => {
+    serveMovie({ backdropPath: 'northwind/backdrop.jpg' });
 
-    expect(Object.keys(styles)).not.toContain('ArtArea');
-    expect(Object.keys(styles)).not.toContain('Scrim');
+    const { container } = renderDetail();
+    await findTitle('Northwind');
+
+    const arts = Array.from(container.querySelectorAll('*')).filter((el) =>
+      window
+        .getComputedStyle(el)
+        .backgroundImage.includes('/api/images/northwind/backdrop.jpg')
+    );
+    expect(arts).toHaveLength(1);
+    expect(arts[0]?.closest('[aria-hidden="true"]')).toBeTruthy();
   });
 });
