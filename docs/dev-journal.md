@@ -11,6 +11,116 @@ Newest entry first.
 
 ---
 
+## 2026-10-09 — Export options refactor (issue 283)
+
+Twenty-four commits against `docs/refactor-plans/31-export-options-refactor.md`,
+one per plan commit. Commit 24 is empty, as the plan allowed: the prototype
+was read against the tree and nothing had drifted. **7555 tests pass across
+460 files**, from 7586 across 461 at the end of the build (`2f6cbe3`); the
+drop is the retired download path's own leaves. `tsc -b --force` is clean,
+and `eslint src server electron .husky` reports no errors and the one
+warning earlier rounds already logged (`AboutSection.test.tsx`'s escaped
+dot). No pixel changed, and no wire answer but the retired route's.
+
+Issue 282, the plan's Phase 7 (_the close_), was merged into this plan when
+it was filed. The standing rule makes the close the refactor's last commit
+anyway, so one refactor issue closes the initiative. 282's acceptance
+criteria are commits 5–7 and 21–23, and its journal entry is commits 1 and
+this one.
+
+### What each group changed
+
+- **Group 0, the record.** The build's own entry, below, written before the
+  round touched anything.
+- **Group 1, the comments and the import.** The build's over-measure comment
+  lines rewrapped, `ExportModal`'s broken sentence joined, the docblocks that
+  still described log 14 (the filename row, the sheet glyph, the summary's
+  one count) corrected, and `exportBody`'s import in its alphabetical place.
+- **Group 2, the retirement.**
+  - The GET suite's unported leaves moved onto the `POST` first.
+  - `GET /api/export/:format`, its format reader and content-type table, and
+    `writeDownload/` are gone.
+  - `fetchExportFile`, `fileResponse`, `saveToComputer/` and `stubDownload/`
+    are gone, and `fakeUpdateBridge` names `stubScrollTo` alone as its model.
+  - `EXPORT_FILENAME` is gone.
+  - `routes.exportFolder.test.ts` is `routes.export.test.ts`.
+- **Group 3, the server's tidies.**
+  - `spellYearSpan` beside `yearSpan`; `exportRows`' `yearRange` is gone.
+  - `titleFolderName` is built on `safeName`.
+  - `media/writableFolder/`, asked by `writeExport` and `writeBack.check`.
+  - `writeExport` answers `ExportRefusal` kinds and a failure's reason, and
+    the route words them through `EXPORT_REFUSALS`.
+  - `import-export/exportSummary/` holds the summary's rule, on
+    `getSeriesHome()`'s one read. Both export routes read series off it, so
+    neither borrows the Sync's `seriesInScope`.
+  - `SHEET_NAME` is built from an exported `SHEET_STEM`.
+  - `PATH_COLUMNS` is built from `ExportColumn | ExportEpisodeColumn`; a
+    misspelt column was tried and fails the typecheck.
+  - `main.ts`' one `showFolderDialog`.
+- **Group 4, the client's tidies.**
+  - `features/import-export/pathField.styles.ts`: `PathRow` and `Refusal`,
+    re-exported by both organisms' styles.
+  - `NameRow`, `NameLead`, `ExportName` and `DonePath`.
+  - `useExport` reads the bridge once; `edited` and `setField`.
+  - `refusalSentence`, the one reader of `{ error }` in the feature's `api.ts`.
+- **Group 5, the docs.**
+  - The glossary: **Save to computer** is _retired_; **Export** and **Export
+    file** say the download path _was retired_; **Export folder** names its
+    title folders `Heat (1995)`; **Export destination** names its two checks;
+    one relationship line says _name row_.
+  - CLAUDE.md: the tree names every new unit and drops every retired one, the
+    exporter paragraph and the Architectural Boundaries rule describe the
+    Export, step 15 and its Maintainer tools entry are ✅, and 🧭 **Back up
+    the library** is on the Roadmap. The README matches.
+  - COMPONENT-SPEC: ExportModal's _Composes_ column was the one drift. Its
+    props column describes the prototype's model and still matches it.
+
+### Where the round met the plan's words and differed
+
+- **The furniture is re-exported**, not imported directly: each organism's
+  styles re-export `PathRow` and `Refusal`, the way `LibraryFolders.styles`
+  already re-exports the Settings and Maintainer furniture.
+- **`getSeriesHome({ sort: 'a-z' })`**, not the default order: the series
+  reach `writeExport` in the order `seriesInScope` gave them.
+- **The `writeExport` leaves that named a sentence were renamed** with their
+  assertions: _is refused as relative_, _is refused as read-only_, _a
+  missing path is missing_, _answers failed with the error's reason_.
+- **CLAUDE.md's types line** keeps every underscored identifier in
+  backticks. Changing the export names there moved Prettier's emphasis
+  pairing, and fixing that cleared the `\_Finish*` mangle on the
+  `enrichPath/` line the last round logged.
+- **The README's server, test-support and feature tree lines** were updated
+  too, beyond the plan's ✅ and Roadmap lines.
+
+### Leaves added, removed and moved
+
+Added:
+
+- `routes.export`: the untouched row after an edit (×2), the awkward title
+  (×2), the BOM ahead of the awkward titles, stripped by the reader and once
+  ahead of a header-only file, a library of none (×4) and the summary as it
+  stands now; twelve tests;
+- `yearSpan`: `spellYearSpan`'s four shapes and the round trip (×3); seven;
+- `writableFolder.test.ts`: four;
+- `exportSummary.test.ts`: seven.
+
+Removed: the GET suite's 39 leaves; `api`'s `fetchExportFile` describe (6);
+`fakeResponse`'s `fileResponse` (3); `saveToComputer` and `stubDownload`
+(13). Restated: the four `writeExport` leaves above. Net −31.
+
+### Surfaced
+
+- CLAUDE.md's tree still has no `createUpdates/` or `fakeUpdateBridge/`,
+  and _Bulk Import / Export_ still says the domain is four units. Both were
+  logged last round and are left.
+- The shell's `will-download` handler and `downloadPath/` stay, as the plan
+  said: they are the window's rule for any download, though nothing in the
+  renderer downloads now.
+
+None filed. This entry closes 275, 282 and 283.
+
+---
+
 ## 2026-10-09 — Export options (issues #276–#281)
 
 The Export dialog writes an **Export folder**, `familyflix-collection_DD-MM-YYYY`,
