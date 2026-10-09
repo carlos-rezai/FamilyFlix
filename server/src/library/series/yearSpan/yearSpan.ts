@@ -25,3 +25,22 @@ export function yearSpan(text: string): YearSpan | null {
   }
   return null;
 }
+
+/**
+ * Spell a **Year range** from its years — the inverse of {@link yearSpan}, on
+ * `spellEpisodeTag`'s precedent: `2022` for a run of one year, `2019–2023`
+ * for a finished run, `2021–` for one still open, and `null` with no year.
+ * Whatever this spells reads back through `yearSpan` as the span it came from.
+ */
+export function spellYearSpan(
+  year: number | null,
+  endYear: number | null
+): string | null {
+  if (year === null) {
+    return null;
+  }
+  if (endYear === year) {
+    return String(year);
+  }
+  return `${year}–${endYear ?? ''}`;
+}

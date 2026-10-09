@@ -10,6 +10,7 @@ import {
   type Subtitle,
   type WatchStatus,
 } from '@/types';
+import { spellYearSpan } from '../../library/series/yearSpan/yearSpan';
 import { spellEpisodeTag } from '../../media/episodeTag/episodeTag';
 
 /** A cell's value: text or a number, or `null` for an empty cell. */
@@ -103,20 +104,6 @@ const episodesOf = (detail: SeriesDetail): Episode[] =>
     .sort((a, b) => a.season - b.season || a.number - b.number);
 
 /**
- * A series' **Year range** as the Sheet reader reads it back: `2022` for a run
- * of one year, `2019–2023` for a finished run, `2021–` for one still open.
- */
-function yearRange(year: number | null, endYear: number | null): string | null {
-  if (year === null) {
-    return null;
-  }
-  if (endYear === year) {
-    return String(year);
-  }
-  return `${year}–${endYear ?? ''}`;
-}
-
-/**
  * A series' Status off its episodes: every one watched is `Watched`; none
  * watched or started is `Unwatched`; anything else is `In progress`.
  */
@@ -146,7 +133,7 @@ const SERIES_CELLS: Record<
 > = {
   Type: () => 'Series',
   Title: ({ series }) => series.title,
-  Year: ({ series }) => yearRange(series.year, series.endYear),
+  Year: ({ series }) => spellYearSpan(series.year, series.endYear),
   Runtime: () => null,
   Genres: ({ series }) =>
     series.genres.map((genre) => genre.name).join(CELL_SEPARATOR),
@@ -310,7 +297,7 @@ export function exportRows(
         title: detail.series.title,
         folderBase: titleFolderName(
           detail.series.title,
-          yearRange(detail.series.year, detail.series.endYear)
+          spellYearSpan(detail.series.year, detail.series.endYear)
         ),
         poster: detail.series.posterPath,
         backdrop: detail.series.backdropPath,
