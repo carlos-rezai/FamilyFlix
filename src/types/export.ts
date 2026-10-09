@@ -69,12 +69,6 @@ export type ExportEpisodeColumn = (typeof EXPORT_EPISODE_COLUMNS)[number];
 /** What every **Export name** begins with, ahead of `_DD-MM-YYYY`. */
 export const EXPORT_NAME_PREFIX = 'familyflix-collection';
 
-/** The name the **Export file** lands under, per format. */
-export const EXPORT_FILENAME: Record<ExportFormat, string> = {
-  csv: 'family-library.csv',
-  xlsx: 'family-library.xlsx',
-};
-
 /**
  * What `GET /api/export` answers: how many titles an export would carry, where
  * _Save to_ starts, and today's **Export name**.
