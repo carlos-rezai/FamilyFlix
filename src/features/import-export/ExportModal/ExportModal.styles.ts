@@ -178,3 +178,15 @@ export const IncludeDivider = styled.div`
   height: 1px;
   background: ${({ theme }) => theme.colors.borderSoft};
 `;
+
+/** _Save to_'s row: the field taking the width, _Browse…_ beside it. */
+export const DestinationRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  & > :first-child {
+    flex: 1;
+    min-width: 0px;
+  }
+`;

@@ -35,9 +35,14 @@ const updates: UpdateBridge = {
   install: () => ipcRenderer.send(UPDATE_CHANNELS.install),
 };
 
-/** The native folder picker for the **Library folders page**'s _Browse…_. */
+/**
+ * The native folder pickers: the **Library folders page**'s _Browse…_, and
+ * the Export dialog's.
+ */
 const folders: FolderBridge = {
   pick: () => ipcRenderer.invoke(FOLDER_CHANNELS.pick) as Promise<string[]>,
+  pickOne: () =>
+    ipcRenderer.invoke(FOLDER_CHANNELS.pickOne) as Promise<string | null>,
 };
 
 contextBridge.exposeInMainWorld('familyflix', { updates, folders });

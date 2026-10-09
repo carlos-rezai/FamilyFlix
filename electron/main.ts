@@ -25,7 +25,7 @@ import { APP_USER_MODEL_ID } from './appIdentity/appIdentity';
 import { createUpdates } from './createUpdates/createUpdates';
 import { downloadPath } from './downloadPath/downloadPath';
 import { loadRenderer } from './loadRenderer/loadRenderer';
-import { pickFolders } from './pickFolders/pickFolders';
+import { pickFolders, pickOneFolder } from './pickFolders/pickFolders';
 import { quitAfterShutdown } from './quitAfterShutdown/quitAfterShutdown';
 import { reloadOnce } from './reloadOnce/reloadOnce';
 import { rendererUrl } from './rendererUrl/rendererUrl';
@@ -274,6 +274,19 @@ if (!app.requestSingleInstanceLock()) {
         ? await dialog.showOpenDialog(window, options)
         : await dialog.showOpenDialog(options);
       return pickFolders(answer);
+    });
+
+    // The Export dialog's _Browse…_: one destination folder, a cancel
+    // answered as `null`.
+    ipcMain.handle(FOLDER_CHANNELS.pickOne, async () => {
+      const options: OpenDialogOptions = {
+        title: 'Choose a folder',
+        properties: ['openDirectory', 'createDirectory'],
+      };
+      const answer = window
+        ? await dialog.showOpenDialog(window, options)
+        : await dialog.showOpenDialog(options);
+      return pickOneFolder(answer);
     });
 
     openWindow(started.port, join(__dirname, 'preload.js'));

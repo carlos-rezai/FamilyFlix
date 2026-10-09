@@ -17,6 +17,7 @@ import {
   ColumnPill,
   Columns,
   Count,
+  DestinationRow,
   Done,
   DoneActions,
   DoneFilename,
@@ -104,6 +105,7 @@ export function ExportModal({ open, onClose }: ExportModalProps) {
     result,
     chooseFormat,
     setDestination,
+    browse,
     setImages,
     setSubtitles,
     exportLibrary,
@@ -161,15 +163,27 @@ export function ExportModal({ open, onClose }: ExportModalProps) {
 
       <div>
         <SectionLabel>Save to</SectionLabel>
-        <TextField
-          value={destination}
-          placeholder="E:\Movies"
-          icon={<FolderIcon size={18} />}
-          rounded={false}
-          mono
-          onChange={setDestination}
-          aria-label="Save to"
-        />
+        <DestinationRow>
+          <TextField
+            value={destination}
+            placeholder="E:\Movies"
+            icon={<FolderIcon size={18} />}
+            rounded={false}
+            mono
+            onChange={setDestination}
+            aria-label="Save to"
+          />
+          {browse === null ? null : (
+            <Button
+              label="Browse…"
+              variant="secondary"
+              size="sm"
+              onClick={() => {
+                void browse();
+              }}
+            />
+          )}
+        </DestinationRow>
         {refusal === null ? null : <Refusal>{refusal}</Refusal>}
       </div>
 

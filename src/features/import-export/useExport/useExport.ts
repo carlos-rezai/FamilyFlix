@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import type { ExportFormat, ExportResult, ExportSummary } from '@/types';
 import { fetchExportSummary, startExport } from '../api/api';
+import { folderBridge } from '../folderBridge/folderBridge';
 
 export interface ExportState {
   /** The chosen **Export format** — `csv` on every open. */
@@ -27,6 +28,12 @@ export interface ExportState {
   chooseFormat: (format: ExportFormat) => void;
   /** Take what was typed into _Save to_; the default never writes over it. */
   setDestination: (destination: string) => void;
+  /**
+   * _Browse…_: the native one-folder dialog, writing the folder picked into
+   * _Save to_ and leaving it as it was on a cancel. `null` in a browser,
+   * where there is no folder bridge — and no button.
+   */
+  browse: (() => Promise<void>) | null;
   /** Turn the _Images_ toggle on or off. */
   setImages: (images: boolean) => void;
   /** Turn the _Subtitles_ toggle on or off. */
@@ -112,6 +119,15 @@ export function useExport(open: boolean): ExportState {
     setTyped(next);
   }, []);
 
+  const bridge = folderBridge();
+  const pickDestination = useCallback(async () => {
+    const picked = await bridge?.pickOne();
+    if (picked !== null && picked !== undefined) {
+      setDestination(picked);
+    }
+  }, [bridge, setDestination]);
+  const browse = bridge === null ? null : pickDestination;
+
   const exportLibrary = useCallback(async () => {
     const current = opening.current;
     setExporting(true);
@@ -151,6 +167,7 @@ export function useExport(open: boolean): ExportState {
     result,
     chooseFormat,
     setDestination,
+    browse,
     setImages,
     setSubtitles,
     exportLibrary,
