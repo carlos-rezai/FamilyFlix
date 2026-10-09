@@ -220,7 +220,7 @@ async function filmSetup(): Promise<HTMLElement> {
 
 const starts = () => fetchMock.mock.calls.filter(([i, n]) => isStart(i, n));
 
-describe('EnrichmentFlow ?movie= — over a run that is not the film’s', () => {
+describe('EnrichmentFlow — over a run that is not the film’s', () => {
   it('shows the film’s setup over a library run in review, with the library line', async () => {
     serve({ held: LIBRARY_REVIEW });
     renderFlow();
@@ -285,7 +285,7 @@ describe('EnrichmentFlow ?movie= — over a run that is not the film’s', () =>
   });
 });
 
-describe('EnrichmentFlow ?movie= — the film’s own run', () => {
+describe('EnrichmentFlow — the film’s own run', () => {
   it('re-attaches to the film’s own run while it runs', async () => {
     serve({ held: OWN_RUNNING });
     renderFlow();
@@ -313,7 +313,7 @@ describe('EnrichmentFlow ?movie= — the film’s own run', () => {
   });
 });
 
-describe('EnrichmentFlow ?movie= — Start answered 409', () => {
+describe('EnrichmentFlow — Start answered 409', () => {
   it('raises the busy notice as a warning over a running library Sync, the setup and its choices kept', async () => {
     serve({ held: LIBRARY_RUNNING, answer: 'busy' });
     renderFlow();
@@ -361,7 +361,7 @@ describe('EnrichmentFlow ?movie= — Start answered 409', () => {
   });
 });
 
-describe('EnrichmentFlow with no film — every run re-attaches, as before', () => {
+describe('EnrichmentFlow — no film, every run re-attaches', () => {
   it.each(['/enrich', '/enrich?scope=all'])(
     '%s re-attaches to a single film’s run in review',
     async (entry) => {
