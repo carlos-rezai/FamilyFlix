@@ -1,5 +1,8 @@
 import styled from 'styled-components';
 
+/** _Save to_'s row and a refused destination's line: the path furniture. */
+export { PathRow, Refusal } from '../pathField.styles';
+
 /**
  * A section's heading — _Format_, _Save to_, _Include_, _Columns included_:
  * 13px semibold in the dim ink.
@@ -138,17 +141,6 @@ export const DoneActions = styled.div`
 `;
 
 /**
- * A refused destination's one sentence, a 13px `danger` line under
- * _Save to_.
- */
-export const Refusal = styled.p`
-  margin: 8px 0 0;
-  font-family: ${({ theme }) => theme.fonts.sans};
-  font-size: 13px;
-  color: ${({ theme }) => theme.colors.danger};
-`;
-
-/**
  * The **Include** group's card: the surface inside the border, its rows
  * stacked.
  */
@@ -192,16 +184,4 @@ export const IncludeDesc = styled.div`
 export const IncludeDivider = styled.div`
   height: 1px;
   background: ${({ theme }) => theme.colors.borderSoft};
-`;
-
-/** _Save to_'s row: the field taking the width, _Browse…_ beside it. */
-export const DestinationRow = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 10px;
-
-  & > :first-child {
-    flex: 1;
-    min-width: 0px;
-  }
 `;

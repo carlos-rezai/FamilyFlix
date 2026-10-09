@@ -16,7 +16,6 @@ import { useFolderScan } from '../useFolderScan/useFolderScan';
 import { useKeyStored } from '../useKeyStored/useKeyStored';
 import { useLibraryFolders } from '../useLibraryFolders/useLibraryFolders';
 import {
-  AddRow,
   Card,
   Divider,
   Empty,
@@ -24,6 +23,7 @@ import {
   HeaderRow,
   Heading,
   Lede,
+  PathRow,
   Refusal,
   Rows,
   ScanActions,
@@ -110,7 +110,7 @@ export function LibraryFolders() {
               </Rows>
             )}
             <Divider />
-            <AddRow>
+            <PathRow>
               <TextField
                 value={typed}
                 placeholder="E:\Movies"
@@ -140,7 +140,7 @@ export function LibraryFolders() {
                   }}
                 />
               )}
-            </AddRow>
+            </PathRow>
             {refusal === null ? null : <Refusal>{refusal}</Refusal>}
           </Card>
 

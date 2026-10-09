@@ -17,7 +17,6 @@ import {
   ColumnPill,
   Columns,
   Count,
-  DestinationRow,
   Done,
   DoneActions,
   DoneFilename,
@@ -33,6 +32,7 @@ import {
   IncludeRow,
   IncludeText,
   IncludeTitle,
+  PathRow,
   Refusal,
   SectionLabel,
   TickCircle,
@@ -166,7 +166,7 @@ export function ExportModal({ open, onClose }: ExportModalProps) {
 
       <div>
         <SectionLabel>Save to</SectionLabel>
-        <DestinationRow>
+        <PathRow>
           <TextField
             value={destination}
             placeholder="E:\Movies"
@@ -186,7 +186,7 @@ export function ExportModal({ open, onClose }: ExportModalProps) {
               }}
             />
           )}
-        </DestinationRow>
+        </PathRow>
         {refusal === null ? null : <Refusal>{refusal}</Refusal>}
       </div>
 
