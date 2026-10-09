@@ -2,7 +2,7 @@ import { constants } from 'node:fs';
 import { access, mkdir, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
-import type { Movie, Series, StartExport } from '@/types';
+import type { Movie, SeriesDetail, StartExport } from '@/types';
 import type { Media } from '../../media/createMedia/createMedia';
 import { readableFolder } from '../../media/readableFolder/readableFolder';
 import { exportName } from '../exportName/exportName';
@@ -12,7 +12,8 @@ import { writeSheet } from '../writeSheet/writeSheet';
 /** The library an **Export** is written from. */
 export interface ExportContent {
   movies: readonly Movie[];
-  series: readonly Series[];
+  /** Each series' detail — its seasons and their episodes with it. */
+  series: readonly SeriesDetail[];
 }
 
 /** What {@link writeExport} came to — a value, never a throw. */

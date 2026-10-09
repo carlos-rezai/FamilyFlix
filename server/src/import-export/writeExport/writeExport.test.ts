@@ -136,7 +136,9 @@ describe('writeExport — a valid destination', () => {
       NOW
     );
 
-    expect(readdirSync(join(destination, NAME))).toEqual([`${NAME}.csv`]);
+    expect(readdirSync(join(destination, NAME)).sort()).toEqual(
+      [`${NAME}-episodes.csv`, `${NAME}.csv`].sort()
+    );
   });
 });
 

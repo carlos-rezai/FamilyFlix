@@ -46,6 +46,26 @@ export const EXPORT_COLUMNS = [
 /** One of the columns in {@link EXPORT_COLUMNS}. */
 export type ExportColumn = (typeof EXPORT_COLUMNS)[number];
 
+/**
+ * The nine columns of an **Export**'s Episodes table, in the PRD's order —
+ * one row per episode, beside the Titles table: the second worksheet in xlsx,
+ * `<name>-episodes.csv` in csv.
+ */
+export const EXPORT_EPISODE_COLUMNS = [
+  'Series',
+  'Season',
+  'Episode',
+  'Title',
+  'Air date',
+  'Runtime',
+  'Status',
+  'Subtitles',
+  'Still',
+] as const;
+
+/** One of the columns in {@link EXPORT_EPISODE_COLUMNS}. */
+export type ExportEpisodeColumn = (typeof EXPORT_EPISODE_COLUMNS)[number];
+
 /** What every **Export name** begins with, ahead of `_DD-MM-YYYY`. */
 export const EXPORT_NAME_PREFIX = 'familyflix-collection';
 
