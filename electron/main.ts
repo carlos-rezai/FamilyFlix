@@ -263,31 +263,33 @@ if (!app.requestSingleInstanceLock()) {
     ipcMain.handle(UPDATE_CHANNELS.check, () => updates.check());
     ipcMain.on(UPDATE_CHANNELS.install, () => updates.install());
 
-    // The **Library folders page**'s _Browse…_: the system folder dialog,
-    // several folders at once, a cancel answered as `[]`.
-    ipcMain.handle(FOLDER_CHANNELS.pick, async () => {
-      const options: OpenDialogOptions = {
-        title: 'Add library folders',
-        properties: ['openDirectory', 'multiSelections'],
-      };
-      const answer = window
-        ? await dialog.showOpenDialog(window, options)
-        : await dialog.showOpenDialog(options);
-      return pickFolders(answer);
-    });
+    // The system folder dialog, over the window while there is one.
+    const showFolderDialog = (options: OpenDialogOptions) =>
+      window
+        ? dialog.showOpenDialog(window, options)
+        : dialog.showOpenDialog(options);
+
+    // The **Library folders page**'s _Browse…_: several folders at once, a
+    // cancel answered as `[]`.
+    ipcMain.handle(FOLDER_CHANNELS.pick, async () =>
+      pickFolders(
+        await showFolderDialog({
+          title: 'Add library folders',
+          properties: ['openDirectory', 'multiSelections'],
+        })
+      )
+    );
 
     // The Export dialog's _Browse…_: one destination folder, a cancel
     // answered as `null`.
-    ipcMain.handle(FOLDER_CHANNELS.pickOne, async () => {
-      const options: OpenDialogOptions = {
-        title: 'Choose a folder',
-        properties: ['openDirectory', 'createDirectory'],
-      };
-      const answer = window
-        ? await dialog.showOpenDialog(window, options)
-        : await dialog.showOpenDialog(options);
-      return pickOneFolder(answer);
-    });
+    ipcMain.handle(FOLDER_CHANNELS.pickOne, async () =>
+      pickOneFolder(
+        await showFolderDialog({
+          title: 'Choose a folder',
+          properties: ['openDirectory', 'createDirectory'],
+        })
+      )
+    );
 
     openWindow(started.port, join(__dirname, 'preload.js'));
     void updates.start();
