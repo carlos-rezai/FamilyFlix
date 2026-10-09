@@ -11,6 +11,82 @@ Newest entry first.
 
 ---
 
+## 2026-10-09 — Single-title Sync (issue #286)
+
+The ⋯ menu's _⟳ Fetch from TMDB_ no longer re-attaches to whatever
+**Current enrichment run** exists. A film's flow holds only that film's own
+`single` run. A run in review that is not its own is the **Waiting run**,
+named by one line under Start. A `409` over another's running Sync raises
+the busy notice. Opened with no film, the flow re-attaches to every run, as
+before.
+
+One slice, as log 33 Q7 ruled: `d60101d` RED and `e9fc99c` GREEN, against
+the plan in `docs/PRDs/33-single-title-sync-plan.md`, built from
+`docs/design-logs/33-single-title-sync.md`. **7597 tests pass across 461
+files**, measured at `e9fc99c`, from 7555 across 460 at the end of the
+Export options refactor.
+
+### What shipped
+
+- **The type.** `EnrichmentRun.movieId?`, the film a `single` run belongs
+  to, absent on a library run.
+- **The server record.** `createEnrichment.start` spreads `movieId` onto a
+  `single` run's snapshot; `current()` carries it as it is. The route,
+  `enrichmentBody` and every status code are untouched.
+- **The hook.** `useEnrichmentRun(movieId)`: the mount read holds a run that
+  belongs here, else keeps one in review apart as `waiting`. Start's `409`
+  holds the current run when it belongs here and rejects with
+  `EnrichmentBusyError` when it does not. Both are kept apart from a late
+  read by the generation guard the hook already had.
+- **The view.** `letGoLine(waiting)`: the library's or another movie's sync
+  waiting for review, `null` with no Waiting run or no Decisions left.
+- **The setup.** `EnrichmentSetup`'s `letGo` prop, drawn under Start in the
+  source note's style.
+- **The notice.** `EnrichmentFlow.onStart` raises _A sync is already
+  running._, a `warning`, on `EnrichmentBusyError`.
+
+### Where the build met the log and differed
+
+- **The commit is a `feat:`.** Q7 ruled a `fix:`; the GREEN commit was made
+  as `feat:`. The history is left as it is.
+- **The spread carries a second guard**,
+  `&& options.movieId !== undefined`, beside Q5's scope test.
+  `StartEnrichment.movieId` is optional and the domain's own suites call it
+  without the route, so the guard keeps a `movieId: undefined` key off a
+  snapshot. On the wire `enrichmentBody` already guarantees the id. Kept.
+
+### Judgement calls the log did not name
+
+Each was made by a subagent reading one issue. Each is the refactor round's
+to settle (`docs/refactor-plans/33-single-title-sync-refactor.md`), except
+the guard above:
+
+- **`belongs`** for Q1's `belongsHere`, and **`LetGoLine`** for Q4's
+  `LetGoNote` — one letter's case away from the `letGoLine` that words it.
+- **The hold written twice** in `start`: the success path and the `409` path
+  each end in the same `setRun` and `setWaiting(null)`.
+- **Two more hand-spelled `409`s**, the hook suite's `busy` and the flow
+  suite's `busyResponse`, beside seven already in the tree.
+- **The new flow suite named `.movie`**, though the one-movie suite is
+  `EnrichmentFlow.test.tsx` and the new one is about whose run the flow
+  holds, the no-film case included.
+
+### Deliberately not built
+
+Everything log 33 rules out:
+
+- a server-side refusal to replace another scope's review — log 32 chose
+  the line;
+- a warning ahead of time about a _running_ Sync;
+- a single-title Sync for a series;
+- re-attaching a library flow only to library runs.
+
+### Follow-ups
+
+The refactor plan, filed as 287.
+
+---
+
 ## 2026-10-09 — Export options refactor (issue 283)
 
 Twenty-four commits against `docs/refactor-plans/31-export-options-refactor.md`,
