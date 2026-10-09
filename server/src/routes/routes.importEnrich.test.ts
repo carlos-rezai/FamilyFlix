@@ -136,6 +136,8 @@ describe('POST /api/import — enrich travels on the run', () => {
 
     expect(response.status).toBe(201);
     expect(((await response.json()) as ImportRun).enrich).toBe(true);
+    // Otherwise the run outlives the test and imports into a closed database.
+    await untilReview(baseUrl);
   });
 
   it('carries enrich: true on every read of the current run, through to review', async () => {
@@ -173,6 +175,8 @@ describe('POST /api/import — enrich travels on the run', () => {
     });
 
     expect(((await response.json()) as ImportRun).enrich).toBe(false);
+    // Otherwise the run outlives the test and imports into a closed database.
+    await untilReview(baseUrl);
   });
 });
 

@@ -195,6 +195,8 @@ describe('POST /api/import — starting a run', () => {
       log: expect.any(Array),
       problems: [],
     });
+    // Otherwise the run outlives the test and imports into a closed database.
+    await untilReview(baseUrl);
   });
 
   it('runs the fixture through to two movies on the library', async () => {
@@ -522,6 +524,8 @@ describe('the importer is injected, not imported', () => {
     await postImport(baseUrl, { sheetPath: sheet, rootPath: root });
 
     expect(start).toHaveBeenCalledWith(sheet, root);
+    // Otherwise the run outlives the test and imports into a closed database.
+    await untilReview(baseUrl);
   });
 
   it('answers current from the injected importer’s own current', async () => {

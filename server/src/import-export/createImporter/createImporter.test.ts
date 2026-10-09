@@ -374,6 +374,8 @@ describe('createImporter — the snapshot', () => {
     });
     // An ISO stamp, as every date in the app is.
     expect(new Date(run.startedAt).toISOString()).toBe(run.startedAt);
+    // Otherwise the run outlives the test and imports into a closed database.
+    await untilReview(importer);
   });
 
   it('holds the same run under current() while it runs and once it is in review', async () => {
@@ -557,6 +559,7 @@ describe('createImporter — refusing to start', () => {
 
     await expect(importer.start(sheet, root)).rejects.toThrow();
     expect(importer.current()?.id).toBe(first.id);
+    await untilReview(importer);
   });
 });
 
