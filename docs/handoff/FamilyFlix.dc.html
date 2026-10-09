@@ -892,7 +892,6 @@
                 countLabel:x.seasons.length+' season'+(x.seasons.length===1?'':'s')+' \u00b7 '+pr.total+' episodes',
                 ratingPct:x.rating,
                 posterStyle:{position:'absolute',inset:0,background:'linear-gradient(155deg, '+x.g1+' 0%, '+x.g2+' 100%)'},
-                backdropStyle:{position:'absolute',inset:0,background:'linear-gradient(120deg, '+x.g1+' 0%, '+x.g2+' 100%)',filter:'blur(2px)',transform:'scale(1.05)'},
                 playLabel: nx ? ((nx.progress>0?'Resume ':'Play ')+'S'+String(nx.season).padStart(2,'0')+'E'+String(nx.number).padStart(2,'0')) : 'Play',
                 onPlayNext:()=>this.playEpisode(nx), onBack:()=>this.backFromSeries(),
                 progressLabel: pr.watched===0 ? 'Not started' : pr.watched>=pr.total ? 'All '+pr.total+' episodes watched' : pr.watched+' of '+pr.total+' episodes watched',
