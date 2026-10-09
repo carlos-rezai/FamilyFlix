@@ -6,7 +6,7 @@
 // every refused destination is a `400` carrying its one sentence — a path
 // that is a file is _No folder at that path._, a folder FamilyFlix can't
 // write to is _FamilyFlix can't write to that folder._ (the relative and
-// missing sentences are `routes.exportFolder.test.ts`'s) — and a write that
+// missing sentences are `routes.export.test.ts`'s) — and a write that
 // broke partway is a `500` with the _stopped partway_ sentence, no folder
 // left behind.
 //

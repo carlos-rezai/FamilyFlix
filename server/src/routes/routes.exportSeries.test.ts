@@ -3,7 +3,7 @@
 // 31 — Export options, Phase 2: series and episodes (issue #277).
 //
 // `POST /api/export` through a real listener and a real `fetch` over a real
-// `:memory:` library, `routes.exportFolder.test.ts`'s seam. The route reads
+// `:memory:` library, `routes.export.test.ts`'s seam. The route reads
 // each series' detail over the full series list and hands it to the writer:
 //
 // - an export of a library holding _Heat_ and _Severance_ lists both in one

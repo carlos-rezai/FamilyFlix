@@ -2,9 +2,10 @@
 //
 // 31 — Export options, Phase 1: "the tracer" (issue #276).
 //
-// The export's new route pair, through a real listener and a real `fetch` over
-// a real `:memory:` library — `routes.export.test.ts`'s seam, kept apart from
-// that file because its download route retires in this initiative's refactor.
+// The export's route pair, through a real listener and a real `fetch` over a
+// real `:memory:` library — the seam `routes.test.ts`'s header names and that
+// file is too large to take. It took the name `routes.export.test.ts` when the
+// download route that file was written for retired (issue 283).
 //
 // - `GET /api/export` → the grown **Export summary**: `movieCount`,
 //   `seriesCount`, `episodeCount`, `defaultDestination` (the first **Library
