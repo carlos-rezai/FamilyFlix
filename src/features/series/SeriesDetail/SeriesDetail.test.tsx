@@ -28,6 +28,7 @@ import {
   okResponse,
   serverErrorResponse,
 } from '@/test-support/fakeResponse/fakeResponse';
+import { paintedBackgrounds } from '@/test-support/paintedBackgrounds/paintedBackgrounds';
 
 /**
  * 22 — Series (TV), Phase 2 (issue #191): the series page's organism.
@@ -667,11 +668,7 @@ describe('SeriesDetail — the Detail backdrop', () => {
     const layer = art?.closest('[aria-hidden="true"]');
     expect(layer).toBeTruthy();
 
-    const painted = Array.from(layer?.querySelectorAll('*') ?? [])
-      .map((el) => {
-        const style = window.getComputedStyle(el);
-        return `${style.background} ${style.backgroundImage} ${style.backgroundColor}`;
-      })
+    const painted = (layer ? paintedBackgrounds(layer) : [])
       .join('\n')
       .replace(/\s+/g, '');
     expect(painted).toContain(theme.colors.accentSoft.replace(/\s+/g, ''));

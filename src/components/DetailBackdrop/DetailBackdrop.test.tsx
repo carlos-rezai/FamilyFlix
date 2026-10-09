@@ -3,8 +3,9 @@ import { render } from '@testing-library/react';
 import { ThemeProvider } from 'styled-components';
 
 import { DetailBackdrop } from '@/components';
-import { createTheme, theme } from '@/styles/theme';
+import { createTheme, theme, type Theme } from '@/styles/theme';
 import { gradientFromId } from '@/utils';
+import { paintedBackgrounds } from '@/test-support/paintedBackgrounds/paintedBackgrounds';
 
 /**
  * 34 — Backdrop veil (issue #289): the **Detail backdrop**, the one art layer
@@ -23,7 +24,7 @@ const BACKDROP_URL = '/api/images/northwind/backdrop.jpg';
 
 function drawBackdrop(
   url: string | null = BACKDROP_URL,
-  withTheme: ReturnType<typeof createTheme> = theme
+  withTheme: Theme = theme
 ): HTMLElement {
   const { container } = render(
     <ThemeProvider theme={withTheme}>
@@ -35,16 +36,6 @@ function drawBackdrop(
     throw new Error('DetailBackdrop drew nothing');
   }
   return root;
-}
-
-/** Every background the root and its descendants paint, as resolved. */
-function backgrounds(root: HTMLElement): string[] {
-  return [root, ...Array.from(root.querySelectorAll('*'))].map((el) => {
-    const style = window.getComputedStyle(el);
-    return [style.background, style.backgroundImage, style.backgroundColor]
-      .filter(Boolean)
-      .join(' | ');
-  });
 }
 
 /**
@@ -98,7 +89,7 @@ describe('DetailBackdrop — the art layer', () => {
 
 describe('DetailBackdrop — the Backdrop veil', () => {
   it('washes the art in the theme’s own accentSoft, not the default accent’s', () => {
-    const painted = backgrounds(
+    const painted = paintedBackgrounds(
       drawBackdrop(BACKDROP_URL, createTheme('#3a7bd5'))
     ).join('\n');
 

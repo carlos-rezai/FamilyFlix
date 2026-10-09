@@ -30,6 +30,7 @@ import {
   search,
 } from '@/test-support/LocationProbe/LocationProbe';
 import { makeMovie } from '@/test-support/makeMovie/makeMovie';
+import { paintedBackgrounds } from '@/test-support/paintedBackgrounds/paintedBackgrounds';
 import {
   noContentResponse,
   notFoundResponse,
@@ -1329,11 +1330,7 @@ describe('MovieDetail — the Detail backdrop', () => {
     const layer = art?.closest('[aria-hidden="true"]');
     expect(layer).toBeTruthy();
 
-    const painted = Array.from(layer?.querySelectorAll('*') ?? [])
-      .map((el) => {
-        const style = window.getComputedStyle(el);
-        return `${style.background} ${style.backgroundImage} ${style.backgroundColor}`;
-      })
+    const painted = (layer ? paintedBackgrounds(layer) : [])
       .join('\n')
       .replace(/\s+/g, '');
     expect(painted).toContain(theme.colors.accentSoft.replace(/\s+/g, ''));
