@@ -1307,3 +1307,43 @@ describe('MovieDetail — the circle toggles through hover, press and focus', ()
     });
   });
 });
+
+/**
+ * 34 — Backdrop veil (issue #289): the page draws the shared **Detail
+ * backdrop** — its backdrop under the **Backdrop veil** and the theme's
+ * `accentSoft` — and keeps no art area or scrim of its own. The art's geometry
+ * is the molecule's suite's to prove, not this one's.
+ */
+describe('MovieDetail — the Detail backdrop', () => {
+  it('draws its backdrop under the Backdrop veil’s accent wash', async () => {
+    serveMovie({ backdropPath: 'northwind/backdrop.jpg' });
+
+    const { container } = renderDetail();
+    await findTitle('Northwind');
+
+    const art = Array.from(container.querySelectorAll('*')).find((el) =>
+      window
+        .getComputedStyle(el)
+        .backgroundImage.includes('/api/images/northwind/backdrop.jpg')
+    );
+    const layer = art?.closest('[aria-hidden="true"]');
+    expect(layer).toBeTruthy();
+
+    const painted = Array.from(layer?.querySelectorAll('*') ?? [])
+      .map((el) => {
+        const style = window.getComputedStyle(el);
+        return `${style.background} ${style.backgroundImage} ${style.backgroundColor}`;
+      })
+      .join('\n')
+      .replace(/\s+/g, '');
+    expect(painted).toContain(theme.colors.accentSoft.replace(/\s+/g, ''));
+  });
+
+  it('keeps no art area or scrim of its own', async () => {
+    const styles: Record<string, unknown> =
+      await import('./MovieDetail.styles');
+
+    expect(Object.keys(styles)).not.toContain('ArtArea');
+    expect(Object.keys(styles)).not.toContain('Scrim');
+  });
+});

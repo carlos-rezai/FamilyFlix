@@ -645,3 +645,43 @@ describe('SeriesDetail — the heart', () => {
     ).toBeDefined();
   });
 });
+
+/**
+ * 34 — Backdrop veil (issue #289): the series page draws the same **Detail
+ * backdrop** as the movie page — its backdrop under the **Backdrop veil** and
+ * the theme's `accentSoft` — and keeps no art area or scrim of its own. The
+ * art's geometry is the molecule's suite's to prove, not this one's.
+ */
+describe('SeriesDetail — the Detail backdrop', () => {
+  it('draws its backdrop under the Backdrop veil’s accent wash', async () => {
+    serve(unstarted({ backdropPath: 'harbor/backdrop.jpg' }));
+
+    const { container } = renderDetail();
+    await findTitle('Harbor & Vine');
+
+    const art = Array.from(container.querySelectorAll('*')).find((el) =>
+      window
+        .getComputedStyle(el)
+        .backgroundImage.includes('/api/images/harbor/backdrop.jpg')
+    );
+    const layer = art?.closest('[aria-hidden="true"]');
+    expect(layer).toBeTruthy();
+
+    const painted = Array.from(layer?.querySelectorAll('*') ?? [])
+      .map((el) => {
+        const style = window.getComputedStyle(el);
+        return `${style.background} ${style.backgroundImage} ${style.backgroundColor}`;
+      })
+      .join('\n')
+      .replace(/\s+/g, '');
+    expect(painted).toContain(theme.colors.accentSoft.replace(/\s+/g, ''));
+  });
+
+  it('keeps no art area or scrim of its own', async () => {
+    const styles: Record<string, unknown> =
+      await import('./SeriesDetail.styles');
+
+    expect(Object.keys(styles)).not.toContain('ArtArea');
+    expect(Object.keys(styles)).not.toContain('Scrim');
+  });
+});
