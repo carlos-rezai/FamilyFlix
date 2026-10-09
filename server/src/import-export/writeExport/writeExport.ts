@@ -1,13 +1,18 @@
 import { constants, createWriteStream } from 'node:fs';
 import { access, mkdir, rm, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
+import type { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 
 import type { Movie, SeriesDetail, StartExport } from '@/types';
 import type { Media } from '../../media/createMedia/createMedia';
 import { readableFolder } from '../../media/readableFolder/readableFolder';
 import { exportName } from '../exportName/exportName';
-import { exportRows, type ExportFile } from '../exportRows/exportRows';
+import {
+  exportRows,
+  type ExportFile,
+  type ExportTable,
+} from '../exportRows/exportRows';
 import { writeSheet } from '../writeSheet/writeSheet';
 
 /** The library an **Export** is written from. */
@@ -27,7 +32,7 @@ export type ExportOutcome =
 const REFUSALS = {
   relative: 'Type the full path, starting with a drive letter.',
   missing: 'No folder at that path.',
-  readOnly: 'FamilyFlix can’t write to that folder.',
+  readOnly: "FamilyFlix can't write to that folder.",
 } as const;
 
 /** How many numbered names are tried before a taken name is given up on. */
@@ -75,24 +80,61 @@ async function makeFolder(destination: string, name: string): Promise<string> {
   throw new Error(`every name for ${name} is taken`);
 }
 
+/** The codes a stored file that cannot be opened for reading fails with. */
+const UNREADABLE: ReadonlySet<string> = new Set([
+  'ENOENT',
+  'EACCES',
+  'EPERM',
+  'EISDIR',
+  'ENOTDIR',
+]);
+
+/** A table with every cell holding a skipped file's planned path blanked. */
+const blanked = (
+  table: ExportTable,
+  skipped: ReadonlySet<string>
+): ExportTable =>
+  table.map((row) =>
+    row.map((cell) =>
+      typeof cell === 'string' && skipped.has(cell) ? null : cell
+    )
+  );
+
 /**
  * Pipe each planned file out of managed storage into the **Export folder** —
  * `Media.readStored`, the only reader of a stored file — never over a file
- * that exists.
+ * that exists, and answer the planned paths of the files that could not be
+ * read: a stored file that is not there, or cannot be opened, is skipped and
+ * leaves nothing behind. A read that fails once it has begun is a failure.
  */
 async function copyPlanned(
   media: Media,
   folder: string,
   files: readonly ExportFile[]
-): Promise<void> {
+): Promise<Set<string>> {
+  const skipped = new Set<string>();
   for (const file of files) {
     const target = join(folder, ...file.path.split('/'));
+    let source: Readable;
+    try {
+      source = await media.readStored(file.storedPath);
+    } catch {
+      skipped.add(file.path);
+      continue;
+    }
     await mkdir(dirname(target), { recursive: true });
-    await pipeline(
-      await media.readStored(file.storedPath),
-      createWriteStream(target, { flags: 'wx' })
-    );
+    try {
+      await pipeline(source, createWriteStream(target, { flags: 'wx' }));
+    } catch (error) {
+      const code = errorCode(error);
+      if (typeof code !== 'string' || !UNREADABLE.has(code)) {
+        throw error;
+      }
+      await rm(target, { force: true });
+      skipped.add(file.path);
+    }
   }
+  return skipped;
 }
 
 /** The sentence a failure is answered with. */
@@ -103,9 +145,11 @@ const reasonOf = (error: unknown): string =>
  * The injected writer of an **Export**, and it never throws: check the
  * destination (absolute, then readable, then writable — each failure a
  * `refused` sentence), make the dated **Export folder** inside it exclusively,
- * and write the sheet into it, then each image the **File plan** names —
- * piped out of `Media.readStored`, the only way a stored file is read. Anything else that fails takes the folder back
- * out, best-effort, and answers `failed`.
+ * copy each file the **File plan** names into it — piped out of
+ * `Media.readStored`, the only way a stored file is read, one that cannot be
+ * read skipped and its cell blanked — then write the sheet last. Anything
+ * else that fails takes the folder back out, best-effort, and answers
+ * `failed`.
  */
 export async function writeExport(
   media: Media,
@@ -127,10 +171,14 @@ export async function writeExport(
       content.series,
       request
     );
-    for (const file of await writeSheet(tables, request.format, name)) {
+    const skipped = await copyPlanned(media, folder, files);
+    const settled = {
+      titles: blanked(tables.titles, skipped),
+      episodes: blanked(tables.episodes, skipped),
+    };
+    for (const file of await writeSheet(settled, request.format, name)) {
       await writeFile(join(folder, file.filename), file.bytes, { flag: 'wx' });
     }
-    await copyPlanned(media, folder, files);
     return {
       kind: 'written',
       folder,
