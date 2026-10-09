@@ -16,6 +16,8 @@ import { moviePath } from '@/utils';
 import { EnrichmentProgress } from '../EnrichmentProgress/EnrichmentProgress';
 import { EnrichmentReview } from '../EnrichmentReview/EnrichmentReview';
 import { EnrichmentSetup } from '../EnrichmentSetup/EnrichmentSetup';
+import { EnrichmentBusyError } from '../api/api';
+import { letGoLine } from '../enrichmentView/enrichmentView';
 import { useEnrichmentRun } from '../useEnrichmentRun/useEnrichmentRun';
 import { HeaderRow, Heading, KeyBadge, Lede } from './EnrichmentFlow.styles';
 
@@ -37,7 +39,10 @@ const ALL_FIELDS: EnrichField[] = [...ENRICH_FIELDS];
  *
  * Opened with `?movie=<id>` it is the `single` **Enrichment scope**: setup
  * names the film under _Just this movie_, Start reads _Fetch details_, and
- * review's Finish is _Back to the movie_. Back and Finish both follow the
+ * review's Finish is _Back to the movie_. It re-attaches only to that film's
+ * own run: another's in review is the **Waiting run**, named by the let-go
+ * line under Start, and a `409` over another's running Sync raises the
+ * **busy notice**. Back and Finish both follow the
  * **Back rule**, the movie as the **Landing** — a **History step** when the
  * movie is behind the screen, the movie pushed on a deep link.
  *
@@ -50,8 +55,8 @@ export function EnrichmentFlow() {
   const [params] = useSearchParams();
   const movieId = params.get('movie');
   const goBack = useGoBack(movieId === null ? '/settings' : moviePath(movieId));
-  const { run, start, cancel, search, pick, apply, dismiss } =
-    useEnrichmentRun();
+  const { run, waiting, start, cancel, search, pick, apply, dismiss } =
+    useEnrichmentRun(movieId);
   const { summary, retry } = useEnrichmentSummary();
   const navigate = useNavigate();
   const { notify } = useSnackbar();
@@ -164,8 +169,12 @@ export function EnrichmentFlow() {
       // With no Library folder there is nowhere to write either (log 23 Q37).
       writeSheet: summary.libraryFolders.length > 0 && writeSheet,
       writePosters: summary.libraryFolders.length > 0 && writePosters,
-    }).catch(() => {
-      // A refused start leaves the setup where it is, to press again.
+    }).catch((error: unknown) => {
+      // A refused start leaves the setup where it is, to press again; one
+      // refused over another's running Sync says so — the **busy notice**.
+      if (error instanceof EnrichmentBusyError) {
+        notify({ variant: 'warning', message: 'A sync is already running.' });
+      }
     });
   }, [
     summary,
@@ -217,6 +226,7 @@ export function EnrichmentFlow() {
             onChooseScope={setLibraryScope}
             onToggleField={onToggleField}
             onStart={onStart}
+            letGo={letGoLine(waiting)}
             onRetry={retry}
             onOpenKeySettings={openSettings}
           />

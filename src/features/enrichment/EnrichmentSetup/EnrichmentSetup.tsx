@@ -23,6 +23,7 @@ import {
   Chips,
   Estimate,
   GroupLabel,
+  LetGoLine,
   RatingNote,
   SeriesNote,
   SourceNote,
@@ -64,6 +65,11 @@ export interface EnrichmentSetupProps {
   onChooseScope: (scope: EnrichScope) => void;
   onToggleField: (field: EnrichField) => void;
   onStart: () => void;
+  /**
+   * The **let-go line** under Start while a **Waiting run** has Decisions —
+   * `null` draws none.
+   */
+  letGo: string | null;
   /** The offline banner's _Retry_. */
   onRetry: () => void;
   /** The key banner's _Open Network settings_. */
@@ -89,6 +95,7 @@ export function EnrichmentSetup({
   onChooseScope,
   onToggleField,
   onStart,
+  letGo,
   onRetry,
   onOpenKeySettings,
 }: EnrichmentSetupProps) {
@@ -218,6 +225,7 @@ export function EnrichmentSetup({
         />
         <Estimate>{enrichmentEstimate(summary, scope)}</Estimate>
       </StartRow>
+      {letGo === null ? null : <LetGoLine>{letGo}</LetGoLine>}
     </Stack>
   );
 }

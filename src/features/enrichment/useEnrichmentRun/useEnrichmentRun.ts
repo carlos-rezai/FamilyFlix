@@ -32,12 +32,28 @@ function settled(
   };
 }
 
+/**
+ * Whether `run` **belongs here**: opened with no film every run does; opened
+ * for a film, only a `single` run for that same film.
+ */
+function belongs(run: EnrichmentRun, movieId: string | null): boolean {
+  return (
+    movieId === null || (run.scope === 'single' && run.movieId === movieId)
+  );
+}
+
 export interface EnrichmentRunState {
   /** The run as last read — `null` while none is held. */
   run: EnrichmentRun | null;
   /**
+   * The **Waiting run**: a run in review that does not belong to the film the
+   * screen was opened for, which Start would let go of — `null` while none.
+   */
+  waiting: EnrichmentRun | null;
+  /**
    * Start a Sync and hold the snapshot it answered. A `409` is answered by
-   * holding the run already going instead. Rejects otherwise.
+   * holding the run already going instead when it belongs here, and by
+   * rejecting with `EnrichmentBusyError` when it does not. Rejects otherwise.
    */
   start: (options: StartEnrichment) => Promise<void>;
   /**
@@ -72,8 +88,9 @@ export interface EnrichmentRunState {
  * newer start, a cancel, or the screen was left does not put its snapshot
  * back.
  */
-export function useEnrichmentRun(): EnrichmentRunState {
+export function useEnrichmentRun(movieId: string | null): EnrichmentRunState {
   const [run, setRun] = useState<EnrichmentRun | null>(null);
+  const [waiting, setWaiting] = useState<EnrichmentRun | null>(null);
   /** Bumped by every start and cancel, so a read from before either is stale. */
   const generation = useRef(0);
 
@@ -82,8 +99,11 @@ export function useEnrichmentRun(): EnrichmentRunState {
     const at = generation.current;
     fetchCurrentEnrichment()
       .then((held) => {
-        if (!left && at === generation.current && held !== null) {
+        if (left || at !== generation.current || held === null) return;
+        if (belongs(held, movieId)) {
           setRun(held);
+        } else if (held.phase === 'review') {
+          setWaiting(held);
         }
       })
       .catch(() => {
@@ -92,23 +112,33 @@ export function useEnrichmentRun(): EnrichmentRunState {
     return () => {
       left = true;
     };
-  }, []);
+  }, [movieId]);
 
-  const start = useCallback(async (options: StartEnrichment) => {
-    generation.current += 1;
-    try {
-      setRun(await startEnrichment(options));
-    } catch (error) {
-      if (!(error instanceof EnrichmentBusyError)) {
-        throw error;
+  const start = useCallback(
+    async (options: StartEnrichment) => {
+      generation.current += 1;
+      try {
+        setRun(await startEnrichment(options));
+        setWaiting(null);
+      } catch (error) {
+        if (!(error instanceof EnrichmentBusyError)) {
+          throw error;
+        }
+        const held = await fetchCurrentEnrichment();
+        if (held !== null && !belongs(held, movieId)) {
+          throw error;
+        }
+        setRun(held);
+        setWaiting(null);
       }
-      setRun(await fetchCurrentEnrichment());
-    }
-  }, []);
+    },
+    [movieId]
+  );
 
   const cancel = useCallback(() => {
     generation.current += 1;
     setRun(null);
+    setWaiting(null);
     cancelEnrichment().catch(() => {
       // The screen is back at setup either way; a start will say if one runs.
     });
@@ -168,5 +198,5 @@ export function useEnrichmentRun(): EnrichmentRunState {
     };
   }, [live]);
 
-  return { run, start, cancel, search, pick, apply, dismiss };
+  return { run, waiting, start, cancel, search, pick, apply, dismiss };
 }

@@ -123,6 +123,8 @@ export interface EnrichmentRun {
   id: string;
   phase: EnrichmentPhase;
   scope: EnrichScope;
+  /** The film a `single` run belongs to; absent on a library run. */
+  movieId?: string;
   startedAt: string;
   /** Known up front: the titles in scope, snapshotted at start. */
   total: number;

@@ -805,6 +805,9 @@ export function createEnrichment({
       id: randomUUID(),
       phase: 'running',
       scope: options.scope,
+      ...(options.scope === 'single' && options.movieId !== undefined
+        ? { movieId: options.movieId }
+        : {}),
       startedAt: new Date().toISOString(),
       total: titles.length,
       done: 0,

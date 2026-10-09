@@ -100,3 +100,15 @@ export function writtenSummary(written: EnrichmentRun['written']): string {
   ].filter((target) => target !== null);
   return `Saved to ${targets.join(', ')}.`;
 }
+
+/**
+ * The **let-go line** under a film's Start: the **Waiting run** Start would
+ * let go of, worded by whose it is — the library's or another film's — and
+ * `null` with no Waiting run or none of its Decisions left.
+ */
+export function letGoLine(waiting: EnrichmentRun | null): string | null {
+  if (waiting === null || waiting.decisions.length === 0) return null;
+  return waiting.scope === 'single'
+    ? "Starting lets go of another movie's sync waiting for review."
+    : 'Starting lets go of the library sync waiting for review.';
+}

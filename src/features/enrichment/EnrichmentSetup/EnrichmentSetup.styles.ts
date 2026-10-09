@@ -95,6 +95,14 @@ export const SourceNote = styled.div`
   text-wrap: pretty;
 `;
 
+/**
+ * The **let-go line** under Start, in the source note's style: 10px below the
+ * row, as the note sits under its card, the Stack's gap taken back.
+ */
+export const LetGoLine = styled(SourceNote)`
+  margin-top: -10px;
+`;
+
 export const SourceNoteMono = styled.span`
   font-family: ${({ theme }) => theme.fonts.mono};
   color: ${({ theme }) => theme.colors.textDim};
