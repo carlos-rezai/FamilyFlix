@@ -5,6 +5,7 @@ import { useImportRun } from './useImportRun';
 import type { ImportRun } from '@/types';
 import { makeImportRun } from '@/test-support/makeImportRun/makeImportRun';
 import {
+  conflictResponse,
   createdResponse,
   noContentResponse,
   notFoundResponse,
@@ -89,15 +90,6 @@ async function elapse(ms: number): Promise<void> {
   await act(async () => {
     await vi.advanceTimersByTimeAsync(ms);
   });
-}
-
-/** A 409 — a **Current run** already exists. */
-function conflictResponse(): Response {
-  return {
-    ok: false,
-    status: 409,
-    json: () => Promise.resolve({ error: 'An import is already running' }),
-  } as unknown as Response;
 }
 
 /**
@@ -258,7 +250,7 @@ describe('useImportRun — starting', () => {
       done: 1,
       matched: 3,
     });
-    serve(conflictResponse(), [theirs]);
+    serve(conflictResponse('An import is already running'), [theirs]);
 
     const { result } = await startRun();
 
@@ -276,7 +268,10 @@ describe('useImportRun — starting', () => {
       done: 1,
       matched: 3,
     });
-    serve(conflictResponse(), [theirs, { ...theirs, done: 2 }]);
+    serve(conflictResponse('An import is already running'), [
+      theirs,
+      { ...theirs, done: 2 },
+    ]);
 
     const { result } = await startRun();
     await elapse(500);

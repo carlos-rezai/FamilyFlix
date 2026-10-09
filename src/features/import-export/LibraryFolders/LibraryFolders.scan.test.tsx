@@ -13,6 +13,7 @@ import {
   pathname,
 } from '@/test-support/LocationProbe/LocationProbe';
 import {
+  conflictResponse,
   createdResponse,
   okResponse,
 } from '@/test-support/fakeResponse/fakeResponse';
@@ -65,15 +66,6 @@ const path = (input: RequestInfo | URL) =>
 const isScan = (input: RequestInfo | URL, init?: RequestInit) =>
   path(input) === '/api/library-folders/scan' && method(init) === 'POST';
 
-/** A run already in flight: the scan route's `409`. */
-function busyResponse(): Response {
-  return {
-    ok: false,
-    status: 409,
-    json: () => Promise.resolve({ error: 'An import is already running.' }),
-  } as unknown as Response;
-}
-
 /**
  * The list on GET; the scan answered `201` with a run, or `409`; and the
  * stored TMDB key — one by default — on `/api/tmdb/key`, which chooses the
@@ -92,7 +84,7 @@ function serve(
       return Promise.resolve(
         scan === 'created'
           ? createdResponse(makeImportRun({ source: 'folders' }))
-          : busyResponse()
+          : conflictResponse('An import is already running.')
       );
     }
     return Promise.resolve(okResponse(listed));

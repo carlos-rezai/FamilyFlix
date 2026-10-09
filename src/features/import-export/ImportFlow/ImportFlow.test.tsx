@@ -22,6 +22,7 @@ import {
 import { comesBefore } from '@/test-support/comesBefore/comesBefore';
 import { makeImportRun } from '@/test-support/makeImportRun/makeImportRun';
 import {
+  conflictResponse,
   createdResponse,
   noContentResponse,
   notFoundResponse,
@@ -82,15 +83,6 @@ function refusedResponse(field: 'sheet' | 'root', error: string): Response {
     ok: false,
     status: 400,
     json: () => Promise.resolve({ error, field }),
-  } as unknown as Response;
-}
-
-/** A 409 — a **Current run** already exists. */
-function conflictResponse(): Response {
-  return {
-    ok: false,
-    status: 409,
-    json: () => Promise.resolve({ error: 'An import is already running' }),
   } as unknown as Response;
 }
 
@@ -427,7 +419,7 @@ describe('ImportFlow — starting the run', () => {
 
 describe('ImportFlow — a 409 on Start', () => {
   it('shows the run already in progress, not the setup fields', async () => {
-    serve(conflictResponse(), [
+    serve(conflictResponse('An import is already running'), [
       makeImportRun({
         id: 'run-elsewhere',
         phase: 'importing',
@@ -449,7 +441,7 @@ describe('ImportFlow — a 409 on Start', () => {
   });
 
   it('draws no reason under either field', async () => {
-    serve(conflictResponse(), [
+    serve(conflictResponse('An import is already running'), [
       makeImportRun({ phase: 'importing', total: 3, done: 1, matched: 3 }),
     ]);
     renderFlow();

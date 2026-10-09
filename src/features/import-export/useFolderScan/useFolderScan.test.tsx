@@ -10,6 +10,7 @@ import {
   pathname,
 } from '@/test-support/LocationProbe/LocationProbe';
 import {
+  conflictResponse,
   createdResponse,
   serverErrorResponse,
 } from '@/test-support/fakeResponse/fakeResponse';
@@ -60,13 +61,6 @@ function renderAtFolders() {
   );
 }
 
-function busyResponse(): Response {
-  return new Response(
-    JSON.stringify({ error: 'An import is already running.' }),
-    { status: 409, headers: { 'Content-Type': 'application/json' } }
-  );
-}
-
 describe('useFolderScan', () => {
   it('posts the scan with the box, held while it is asked', async () => {
     fetchMock.mockReturnValue(new Promise<Response>(() => undefined));
@@ -94,7 +88,9 @@ describe('useFolderScan', () => {
   });
 
   it('pushes /import on a 409, to the run already in flight', async () => {
-    fetchMock.mockResolvedValue(busyResponse());
+    fetchMock.mockResolvedValue(
+      conflictResponse('An import is already running.')
+    );
     renderAtFolders();
 
     fireEvent.click(screen.getByRole('button', { name: 'Scan folders' }));

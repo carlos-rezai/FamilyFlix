@@ -11,6 +11,7 @@ import {
 import type { ExportResult, StartExport } from '@/types';
 import { makeImportRun } from '@/test-support/makeImportRun/makeImportRun';
 import {
+  conflictResponse,
   createdResponse,
   noContentResponse,
   notFoundResponse,
@@ -81,15 +82,6 @@ function refusedResponse(field: 'sheet' | 'root', error: string): Response {
   } as unknown as Response;
 }
 
-/** A 409 — a **Current run** already exists. */
-function conflictResponse(): Response {
-  return {
-    ok: false,
-    status: 409,
-    json: () => Promise.resolve({ error: 'An import is already running' }),
-  } as unknown as Response;
-}
-
 const SHEET = 'C:\\Movies\\library.xlsx';
 const ROOT = 'C:\\Movies';
 
@@ -144,7 +136,9 @@ describe('startImport', () => {
   });
 
   it('rejects on a 409 without naming a field', async () => {
-    fetchMock.mockResolvedValue(conflictResponse());
+    fetchMock.mockResolvedValue(
+      conflictResponse('An import is already running')
+    );
 
     // A run already exists; neither field is wrong, so nothing is drawn under
     // one.
@@ -160,7 +154,9 @@ describe('startImport', () => {
   });
 
   it('rejects a 409 as ImportBusyError, so the screen can show the run already there', async () => {
-    fetchMock.mockResolvedValue(conflictResponse());
+    fetchMock.mockResolvedValue(
+      conflictResponse('An import is already running')
+    );
 
     // The one failure the hook answers by reading `current` instead of
     // reporting: a run exists, and the screen should be showing it. A `500`
