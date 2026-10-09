@@ -365,7 +365,7 @@ Keep the description short enough to fit on one line — long descriptions get w
 | Add a series — the Add form for shows too            | ✅ Done         |
 | Library folders — several root folders at once       | ✅ Done         |
 | Export options — where to, and what travels          | ✅ Done         |
-| Single-title Sync — the ⋯ menu's fetch, one movie    | 🔜 Planned      |
+| Single-title Sync — the ⋯ menu's fetch, one movie    | ✅ Done         |
 | Backdrop veil — full-screen art, accent-veiled       | 🔜 Planned      |
 | Open the media folder from Settings → Storage        | 🔜 Planned      |
 | Export name — the export folder's name as a field    | 🔜 Planned      |
@@ -408,7 +408,7 @@ _Change…_ in Settings → Storage is not in the chain — it is the Roadmap's
 Steps 16–23 are the **third chain**, out of using v0.3.0 (design log 32),
 again smallest first:
 
-16. 🔜 **Single-title Sync** — _Fetch from TMDB_ on a movie's ⋯ menu syncs
+16. ✅ **Single-title Sync** — _Fetch from TMDB_ on a movie's ⋯ menu syncs
     that movie alone, rather than reopening a library-wide sync left in review.
 17. 🔜 **Backdrop veil** — the detail pages' art fills the whole screen under
     an accent-tinted veil, so the title, buttons and text read clearly.

@@ -307,8 +307,8 @@ familyflix/
 │ │ │ ├── SetupBanner/ ScopeCard/ WriteTargetRow/ ← the setup's molecules: the offline and key banners by tone; the radio card, its dot on the left; a Write target's tile, lines and Toggle or _Required_
 │ │ │ ├── DecisionRow/ ← one Decision: the dot by kind, the title, reason and path, _Skip_, then one face
 │ │ │ ├── CandidatePicker/ TitleSearch/ FieldDiff/ ← the three faces: the Candidate cards and the dashed _Search by title_; the 44px box; _Yours \| TMDB_ per field
-│ │ │ ├── useEnrichmentRun/ ← start, poll at 500 ms while running, cancel, and the review's writes, each settling one row
-│ │ │ ├── enrichmentView/ ← pure: the running card's words, the estimate, the scope cards' lines, _All done_'s _Saved to …_
+│ │ │ ├── useEnrichmentRun/ ← start, poll at 500 ms while running, cancel, and the review's writes, each settling one row; opened for a film, only that film's run re-attaches — another's in review is the **Waiting run**, and Start's `409` over another's rejects with `EnrichmentBusyError`
+│ │ │ ├── enrichmentView/ ← pure: the running card's words, the estimate, the scope cards' lines, _All done_'s _Saved to …_, and the **Let-go line**
 │ │ │ └── api/ ← startEnrichment, fetchCurrentEnrichment, cancelEnrichment, and the four Decision writes (one caller each)
 │ │ ├── maintainer.styles.ts ← the furniture the Maintainer’s screens extend: the header row, heading and lede; the captioned field
 │ │ ├── movie-form/ ← Add a movie or a series, Edit a movie: one form, manual file pickers, the **Form kind** on the **Kind tabs**; and Resolve, the Import context over either job
@@ -1009,10 +1009,11 @@ same layout, spacing, states, copy, and interaction.
 **Build order — what is left.** The groups below say what the app _is_;
 this says what to build _next_. Steps 1–9 of the first chain are done,
 ending with **Software update** (v0.2.0), and so are steps 10–15: the
-second chain is done too, shipped as v0.3.0. Steps 16–23, the third chain,
-are planned. Steps 10–15 came out of installing FamilyFlix and
-using it: smallest and most self-contained first, the form before the
-folders that will feed it, export last because it mirrors what import holds.
+second chain is done too, shipped as v0.3.0. Steps 16–23 are the third
+chain: step 16 is done, 17–23 are planned. Steps 10–15 came out of
+installing FamilyFlix and using it: smallest and most self-contained first,
+the form before the folders that will feed it, export last because it
+mirrors what import holds.
 `Change…` in the Storage group is not in the chain — it is the
 Roadmap's **Move the media folder** (log 24 Q2).
 
@@ -1040,10 +1041,11 @@ Steps 16–23 are the **third chain** (design log 32), out of using v0.3.0,
 smallest and most self-contained first; each still gets its PRD and, where it
 draws something new, a prototype revision before it is built:
 
-16. 🔜 **Single-title Sync** (`fix:`) — the ⋯ menu's _⟳ Fetch from TMDB_
-    re-attaches to any **Current enrichment run**, so a library-wide Sync left
-    in review hijacks it. `EnrichmentRun` gains `movieId`; `?movie=<id>`
-    re-attaches only to a `single` run for that movie, else shows its setup.
+16. ✅ **Single-title Sync** — the ⋯ menu's _⟳ Fetch from TMDB_ no longer
+    re-attaches to any **Current enrichment run**: `EnrichmentRun` carries
+    `movieId`, and `?movie=<id>` re-attaches only to a `single` run for that
+    movie, else shows its setup — a **Waiting run** named by the **Let-go
+    line**, another's running Sync by the **Busy notice**.
 17. 🔜 **Backdrop veil** — the detail pages' `ArtArea` fills the viewport
     (not 62%) and stays put, under an `accentSoft` wash and a darker gradient
     in place of the `Scrim`. Movie page and series page alike.
@@ -1095,7 +1097,7 @@ A 🧭 Roadmap item is not in this chain — it is after it, if ever.
 - ✅ **Series (TV)** — a separate top-level tab, not mixed into the movie rows: a segmented Movies / Series control in the library header; the Series tab is a Continue Watching row of **episode** cards — one per series, on its earliest part-watched episode (log 22 Q29) — over an "All series" grid on the same `LibraryGrid` + `PosterCard`. The **Series page** (`page.SeriesPage`) is the movie page's hero shape — poster, year range, season and episode count, rating, genres, synopsis, creator and cast — over a Seasons grid of `SeasonCard` (a 2:3 tile: StatusBadge when the season is fully watched, ProgressBar when partly; its line reads "8 episodes" or "3 of 8 watched"). A season poster opens the **Season page** (`page.SeasonPage`): the series → season header, _Resume Enn_, Mark season watched, one `EpisodeRow` per episode — a 16:9 thumbnail with a hover play affordance and a resume bar, `S02E04` and the title, the air date, the resume label, and a watched checkbox that stops propagation (the row opens the episode, the box only marks it) — and an "Other seasons" pill row. No synopsis, runtime or filename on a row; no tabs or accordion for seasons. Resume on the series and Continue Watching both follow `nextEpisodeOf`: the part-watched episode, else the first unwatched. In SQLite this is two tables and two joins — `series`, `episodes` (carrying the same watch-state columns the movie table has), `series_genres` and `episode_subtitles` — and no `seasons` table: a season is a number (log 22 Q3). Everything is additive; the movie flow is untouched. Spec §5aa.
 
 - 🔜 **Backdrop veil** — the movie and series pages' art over the whole viewport, under an accent-tinted veil (step 17).
-- 🔜 **Single-title Sync** — the ⋯ menu's _Fetch from TMDB_ syncs that movie alone (step 16, a fix).
+- ✅ **Single-title Sync** — the ⋯ menu's _Fetch from TMDB_ syncs that movie alone, re-attaching only to its own run; a library Sync left in review is let go by Start, never hijacked.
 
 ### Playback
 
