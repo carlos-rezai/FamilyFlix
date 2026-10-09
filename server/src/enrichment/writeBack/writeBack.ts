@@ -5,10 +5,14 @@ import type { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 
 import type { LogLine, Movie } from '@/types';
+import { exportRows } from '../../import-export/exportRows/exportRows';
 import { writeSheet } from '../../import-export/writeSheet/writeSheet';
 
 /** The **Metadata sheet**'s name in each **Library folder**. */
 export const SHEET_NAME = 'familyflix-metadata.csv';
+
+/** {@link SHEET_NAME} without its extension — what the Sheet writer names it by. */
+const SHEET_STEM = 'familyflix-metadata';
 
 /** The name a poster takes in its **Source folder**. */
 export const POSTER_NAME = 'poster.jpg';
@@ -156,8 +160,14 @@ async function poster(
 async function sheet(root: string, movies: Movie[]): Promise<SheetOutcome> {
   const target = join(root, SHEET_NAME);
   try {
-    const bytes = await writeSheet(movies, 'csv');
-    await writeFile(target, bytes, { flag: 'wx' });
+    // The **Export**'s Titles table over this folder's films, its image
+    // cells blank: nothing travels beside a Metadata sheet.
+    const { tables } = exportRows(movies, [], {
+      images: false,
+      subtitles: false,
+    });
+    const [file] = await writeSheet(tables, 'csv', SHEET_STEM);
+    await writeFile(target, file.bytes, { flag: 'wx' });
     return {
       kind: 'written',
       line: { text: `↓ ${SHEET_NAME}  →  ${target}`, kind: 'scan' },

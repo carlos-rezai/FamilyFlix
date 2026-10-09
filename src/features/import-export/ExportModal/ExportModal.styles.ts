@@ -52,7 +52,7 @@ export const Count = styled.span`
   color: ${({ theme }) => theme.colors.accent};
 `;
 
-/** The eight **Column pills**, wrapping, as a list drawn without its bullets. */
+/** The sixteen **Column pills**, wrapping, as a list drawn without its bullets. */
 export const Columns = styled.ul`
   display: flex;
   flex-wrap: wrap;
@@ -126,4 +126,12 @@ export const DoneFilename = styled.span`
 /** _Done_, 26px under the line. */
 export const DoneActions = styled.div`
   margin-top: 26px;
+`;
+
+/** A refused destination's one sentence, a 13px `danger` line under _Save to_. */
+export const Refusal = styled.p`
+  margin: 8px 0 0;
+  font-family: ${({ theme }) => theme.fonts.sans};
+  font-size: 13px;
+  color: ${({ theme }) => theme.colors.danger};
 `;

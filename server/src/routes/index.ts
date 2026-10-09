@@ -1,4 +1,5 @@
-import { resolve } from 'node:path';
+import { homedir } from 'node:os';
+import { join, resolve } from 'node:path';
 import { pipeline } from 'node:stream';
 
 import type {
@@ -24,7 +25,9 @@ import {
   type ResolveFile,
   type ResolveForm,
 } from '../import-export/createImporter/createImporter';
-import { writeSheet } from '../import-export/writeSheet/writeSheet';
+import { exportName } from '../import-export/exportName/exportName';
+import { writeDownload } from '../import-export/writeDownload/writeDownload';
+import { writeExport } from '../import-export/writeExport/writeExport';
 import type { Media } from '../media/createMedia/createMedia';
 import { readableFolder } from '../media/readableFolder/readableFolder';
 import { spaceUsed } from '../media/spaceUsed/spaceUsed';
@@ -41,6 +44,7 @@ import {
   readMovieFields,
   subtitleRows,
 } from './movieFormBody/movieFormBody';
+import { exportBody } from './exportBody/exportBody';
 import { onlyField } from './onlyField/onlyField';
 import { optionalYear } from './optionalYear/optionalYear';
 import { readBody, type OnFilePart } from './readBody/readBody';
@@ -59,6 +63,7 @@ import {
   MOVIE_SORTS,
   type ExportFormat,
   type EpisodeRead,
+  type ExportResult,
   type ExportSummary,
   type GenreListPayload,
   type GenrePoolPayload,
@@ -2215,13 +2220,68 @@ export function createApiRouter(
     }
   );
 
-  // The **Export summary**: how many movies an export would carry, read on
-  // the **Export dialog**'s open for the count beside the filename. Nothing is
+  // The **Export summary**, read on the **Export dialog**'s open: how many
+  // films, series and episodes an export would carry, where _Save to_ starts
+  // — the first **Library folder**, in the order added, that can be read now,
+  // else the home folder's Downloads — and today's **Export name**. Nothing is
   // injected for the export — there is no run, no state and no cancel — so
-  // the two routes sit on `storage` directly.
-  router.get('/export', (_req: Request, res: Response) => {
-    const summary: ExportSummary = { movieCount: storage.countMovies() };
+  // the routes sit on `storage` and `media` directly.
+  router.get('/export', async (_req: Request, res: Response) => {
+    const series = storage.seriesInScope('all');
+    let defaultDestination = join(homedir(), 'Downloads');
+    for (const folder of storage.libraryFolders()) {
+      if ((await readableFolder(folder.path)) === 'readable') {
+        defaultDestination = folder.path;
+        break;
+      }
+    }
+    const summary: ExportSummary = {
+      movieCount: storage.countMovies(),
+      seriesCount: series.length,
+      episodeCount: series.reduce(
+        (count, each) => count + storage.listEpisodes(each.id).length,
+        0
+      ),
+      defaultDestination,
+      folderName: exportName(new Date()),
+    };
     res.json(summary);
+  });
+
+  // The **Export** itself: the body read by `exportBody`, then every film A–Z
+  // and every series handed to `writeExport`, which makes the dated **Export
+  // folder** inside the destination. `201` with the folder it wrote, `400`
+  // with the one sentence for a malformed body or a refused destination,
+  // `500` with the writer's own for anything else.
+  router.post('/export', async (req: Request, res: Response) => {
+    const read = exportBody(req.body);
+    if (!read.ok) {
+      res.status(400).json({ error: read.error });
+      return;
+    }
+    const outcome = await writeExport(
+      media,
+      read.value,
+      {
+        movies: storage.listMovies({ sort: 'a-z' }),
+        series: storage.seriesInScope('all'),
+      },
+      new Date()
+    );
+    if (outcome.kind === 'refused') {
+      res.status(400).json({ error: outcome.sentence });
+      return;
+    }
+    if (outcome.kind === 'failed') {
+      res.status(500).json({ error: outcome.sentence });
+      return;
+    }
+    const result: ExportResult = {
+      folder: outcome.folder,
+      movieCount: outcome.movieCount,
+      seriesCount: outcome.seriesCount,
+    };
+    res.status(201).json(result);
   });
 
   // The **Export file**: every movie A–Z through the **Sheet writer**, sent as
@@ -2240,7 +2300,7 @@ export function createApiRouter(
       }
 
       try {
-        const bytes = await writeSheet(
+        const bytes = await writeDownload(
           storage.listMovies({ sort: 'a-z' }),
           format
         );

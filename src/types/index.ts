@@ -15,7 +15,12 @@
  * declaration. Both build targets import them as values.
  */
 export { MOVIE_SORTS, DEFAULT_MOVIE_SORT } from './browse';
-export { EXPORT_FORMATS, EXPORT_COLUMNS, EXPORT_FILENAME } from './export';
+export {
+  EXPORT_FORMATS,
+  EXPORT_COLUMNS,
+  EXPORT_FILENAME,
+  EXPORT_NAME_PREFIX,
+} from './export';
 export {
   SUBTITLE_LANGUAGES,
   DEFAULT_SUBTITLE_LANGUAGE,
@@ -84,7 +89,13 @@ export type {
   ImportRun,
   ImportProblemDetail,
 } from './import';
-export type { ExportFormat, ExportColumn, ExportSummary } from './export';
+export type {
+  ExportFormat,
+  ExportColumn,
+  ExportSummary,
+  StartExport,
+  ExportResult,
+} from './export';
 export type { SubtitleLanguage, Settings, StorageReport } from './settings';
 export type {
   EnrichField,

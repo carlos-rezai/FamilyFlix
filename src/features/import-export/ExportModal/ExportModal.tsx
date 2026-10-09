@@ -1,13 +1,14 @@
 import { useId } from 'react';
 
 import { Modal } from '@/components';
-import { Button, CheckIcon, DownloadIcon, SheetIcon } from '@/primitives';
 import {
-  EXPORT_COLUMNS,
-  EXPORT_FILENAME,
-  EXPORT_FORMATS,
-  type ExportFormat,
-} from '@/types';
+  Button,
+  CheckIcon,
+  DownloadIcon,
+  FolderIcon,
+  TextField,
+} from '@/primitives';
+import { EXPORT_COLUMNS, EXPORT_FORMATS, type ExportFormat } from '@/types';
 import { FormatCard } from '../FormatCard/FormatCard';
 import { useExport } from '../useExport/useExport';
 import {
@@ -24,6 +25,7 @@ import {
   Filename,
   FileRow,
   Formats,
+  Refusal,
   SectionLabel,
   TickCircle,
 } from './ExportModal.styles';
@@ -52,37 +54,54 @@ const FORMAT_COPY: Record<
   },
 };
 
-/** `1 movie`, `3 movies` — the count as the filename row and the done line say it. */
-const movieLabel = (count: number): string =>
-  `${count} ${count === 1 ? 'movie' : 'movies'}`;
+/** `1 title`, `4 titles` — the count as the name row and the done line say it. */
+const titleLabel = (count: number): string =>
+  `${count} ${count === 1 ? 'title' : 'titles'}`;
+
+/** The last segment of a path — the **Export folder**'s own name. */
+const folderNameOf = (path: string): string =>
+  path
+    .split(/[\\/]/)
+    .filter((part) => part !== '')
+    .pop() ?? path;
 
 /**
  * The **Export dialog**, 1:1 from `feat.ExportModal.dc.html`: the Modal with
- * the download glyph, _Export library_ and its line; _Format_ over the two
- * **Format cards**, CSV checked on every open; the filename row with the
- * **Export summary**'s count; _Columns included_ over the eight **Export
- * columns** as pills — a list, not controls; _Export as CSV_ / _Export as
- * Excel_ beside _Cancel_. Then **Export ready**, swapped inside the same card
- * as the one **Bare modal** so the pop-in runs once: the tick, the heading,
- * the filename and the count in the copy, and _Done_.
+ * the download glyph, _Export library_ and its lede; _Format_ over the two
+ * **Format cards**, CSV checked on every open; _Save to_, a mono field with
+ * the folder glyph and the route's refusal under it; the name row — the
+ * folder glyph, the **Export name** and the titles count; _Columns included_
+ * over the sixteen **Export columns** as pills — a list, not controls;
+ * _Export as CSV_ / _Export as Excel_ beside _Cancel_. Then **Export ready**,
+ * swapped inside the same card as the one **Bare modal** so the pop-in runs
+ * once: the tick, the heading, the folder written and where, and _Done_.
  *
  * The dialog owns `useExport`. The count is `null` until the summary lands
- * and blank on screen while so — it never blocks the export, and a done face
- * reached without one leaves the clause out rather than a hole in: _Saved
- * `family-library.csv` to your computer._ The button reads
- * _Exporting…_ and is disabled for the life of the request; the cards and
- * _Cancel_ are left alone. A request the server refuses leaves the idle face
- * exactly as it was — the Delete dialog's rule, since the prototype designs
- * no error face.
+ * and absent on screen while so — it never blocks the export, and a done face
+ * reached without one leaves the clause out rather than a hole in. The button
+ * reads _Exporting…_ and is disabled for the life of the request. A refused
+ * destination keeps the idle face and the path typed, its sentence under the
+ * field; any other failure leaves the idle face exactly as it was.
  */
 export function ExportModal({ open, onClose }: ExportModalProps) {
-  const { format, movieCount, exporting, done, chooseFormat, exportLibrary } =
-    useExport(open);
+  const {
+    format,
+    summary,
+    destination,
+    exporting,
+    refusal,
+    result,
+    chooseFormat,
+    setDestination,
+    exportLibrary,
+  } = useExport(open);
   const formatLabelId = useId();
-  const filename = EXPORT_FILENAME[format];
-  const count = movieCount === null ? null : movieLabel(movieCount);
+  const count =
+    summary === null
+      ? null
+      : titleLabel(summary.movieCount + summary.seriesCount);
 
-  if (done) {
+  if (result !== null) {
     return (
       <Modal open={open} bare title="Export ready" onClose={onClose}>
         <Done>
@@ -91,11 +110,10 @@ export function ExportModal({ open, onClose }: ExportModalProps) {
           </TickCircle>
           <DoneHeading>Export ready</DoneHeading>
           <DoneLine>
-            Saved <DoneFilename>{filename}</DoneFilename>
+            Saved <DoneFilename>{folderNameOf(result.folder)}</DoneFilename>
             <br />
-            {count === null
-              ? 'to your computer.'
-              : `with ${count} to your computer.`}
+            to <DoneFilename>{destination}</DoneFilename>
+            {count === null ? '.' : ` with ${count}.`}
           </DoneLine>
           <DoneActions>
             <Button label="Done" variant="secondary" onClick={onClose} />
@@ -109,7 +127,7 @@ export function ExportModal({ open, onClose }: ExportModalProps) {
     <Modal
       open={open}
       title="Export library"
-      subtitle="Save your whole collection as a spreadsheet."
+      subtitle="Save your whole collection — details, artwork and all."
       icon={<DownloadIcon size={22} />}
       onClose={onClose}
     >
@@ -128,14 +146,27 @@ export function ExportModal({ open, onClose }: ExportModalProps) {
         </Formats>
       </div>
 
+      <div>
+        <SectionLabel>Save to</SectionLabel>
+        <TextField
+          value={destination}
+          placeholder="E:\Movies"
+          icon={<FolderIcon size={18} />}
+          rounded={false}
+          mono
+          onChange={setDestination}
+          aria-label="Save to"
+        />
+        {refusal === null ? null : <Refusal>{refusal}</Refusal>}
+      </div>
+
       <FileRow>
         <FileName>
-          <SheetIcon size={18} />
-          <Filename>{filename}</Filename>
+          <FolderIcon size={18} />
+          <Filename>{summary?.folderName ?? ''}</Filename>
         </FileName>
         {count === null ? null : <Count>{count}</Count>}
       </FileRow>
-
       <div>
         <SectionLabel>Columns included</SectionLabel>
         <Columns>

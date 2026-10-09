@@ -1,9 +1,11 @@
 import type {
   ExportFormat,
+  ExportResult,
   ExportSummary,
   ImportField,
   ImportRun,
   LibraryFolder,
+  StartExport,
 } from '@/types';
 
 /**
@@ -151,6 +153,43 @@ export async function fetchExportFile(format: ExportFormat): Promise<Blob> {
   }
 
   return response.blob();
+}
+
+/** What an export came to: the folder the server wrote, or its one sentence. */
+export type StartExportOutcome =
+  | { kind: 'written'; result: ExportResult }
+  | { kind: 'refused'; sentence: string };
+
+/**
+ * Write the **Export** into a folder: `POST /api/export` with a
+ * {@link StartExport}. A `201`'s **ExportResult** is `written`, a `400`'s
+ * sentence is `refused` — `addLibraryFolder`'s precedent — and any other
+ * status, or a request that could not be made, rejects.
+ */
+export async function startExport(
+  request: StartExport
+): Promise<StartExportOutcome> {
+  const response = await fetch(EXPORT_ENDPOINT, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(request),
+  });
+
+  if (response.status === 400) {
+    const body: unknown = await response.json().catch(() => null);
+    const error =
+      typeof body === 'object' && body !== null
+        ? (body as { error?: unknown }).error
+        : undefined;
+    if (typeof error === 'string') {
+      return { kind: 'refused', sentence: error };
+    }
+  }
+  if (!response.ok) {
+    throw new Error(`POST ${EXPORT_ENDPOINT} failed: ${response.status}`);
+  }
+
+  return { kind: 'written', result: (await response.json()) as ExportResult };
 }
 
 const FOLDERS_ENDPOINT = '/api/library-folders';
