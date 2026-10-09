@@ -109,7 +109,7 @@ familyflix/
 │ └── skills/
 ├── electron/ ← the **Desktop shell**'s main process: `tsconfig.electron.json`'s shipping code, one unit per decision, Electron only ever run in a manual smoke
 │ ├── main.ts ← the composition root, and wiring only: adapters over Electron's `fs`, `dialog`, `shell` and `app`, the window's options, each event handed to a unit below
-│ ├── preload.ts ← wiring only: `window.familyflix.updates` and `window.familyflix.folders`, each member one channel through `contextBridge` to main, no state
+│ ├── preload.ts ← wiring only: `window.familyflix.updates` and `window.familyflix.folders` (`pick` and `pickOne`), each member one channel through `contextBridge` to main, no state
 │ ├── shellMode/ ← pure: `shellMode(isPackaged, env)` → `'dev'` / `'start'` / `'installed'`, the **Shell mode**, read once; the one reader of `FAMILYFLIX_SHELL_PROD`
 │ ├── shellPaths/ ← pure: a mode and Electron's three locations (`appPath`, `resourcesPath`, `userData`) → the **Shell paths** — the icon and the server bundle off `appPath`, the renderer, the binding and the Default component's `ffmpeg.exe` off the repo unpackaged and `resourcesPath` installed (`null` unpackaged), the server's working directory; read once by main in place of `process.cwd()`
 │ ├── serverLaunch/ ← pure: `serverLaunch(mode, userData, paths)` over **Shell paths** → the entry and environment the **Server process** is forked with — `paths.serverEntry` in every mode, the binding in every mode, `3001` in dev and the **Shell port** otherwise, the renderer outside dev, the data paths under `userData` and `FAMILYFLIX_FFMPEG_PATH` only when installed
@@ -121,7 +121,7 @@ familyflix/
 │ ├── rendererUrl/ ← pure: Vite's `localhost:4200` in dev, else `127.0.0.1:<port>` — **One origin**
 │ ├── windowPolicy/ ← pure: `isAppUrl`, `openExternalAllowed` (`https:` only), `permissionAllowed` (`fullscreen` only)
 │ ├── downloadPath/ ← pure: a download's free name in Downloads, deduplicated as Chromium does, no dialog
-│ ├── pickFolders/ ← pure: the folder dialog's answer → the paths to post, in the order picked, `[]` for a cancel — behind `FOLDER_CHANNELS.pick`, the Library folders page's Browse…
+│ ├── pickFolders/ ← pure: the folder dialog's answer → the paths to post, in the order picked, `[]` for a cancel — behind `FOLDER_CHANNELS.pick`, the Library folders page's Browse…; and `pickOneFolder`, one folder or `null`, behind `FOLDER_CHANNELS.pickOne`, the Export dialog's Browse… — both over `main.ts`' one `showFolderDialog`
 │ ├── shellDialogs/ ← the two failure dialogs — _couldn't start_ (Quit / Show data folder) and _stopped unexpectedly_ (Restart / Quit) — each logging what it says before its box; `startServer` puts every startup failure in front of the first
 │ ├── shellLog/ ← the **Shell log**: `[main]` and `[server]` lines to `logs\familyflix.log` when installed, rolled at 5 MB, to the terminal otherwise
 │ ├── appIdentity/ ← `APP_USER_MODEL_ID`, set before the window so the taskbar groups it
@@ -135,6 +135,7 @@ familyflix/
 │ └── src/
 │ ├── routes/ ← HTTP layer only: parse request, call a domain module, return response
 │ │ ├── enrichmentBody/ ← `startEnrichmentBody` and `conflictChoicesBody`: a Sync's start and _Apply choices_ read into typed values, each `400` a sentence — `movieFormBody`'s precedent
+│ │ ├── exportBody/ ← `POST /api/export`'s body read into a `StartExport` — a format, an absolute-or-not destination, the two Include booleans — each `400` a sentence
 │ │ ├── seriesFormBody/ ← the **Movie form**'s series body, `movieFormBody`'s split: `collectEpisodeUploads`, the part half — each `episodeVideo` and `episodeSubtitle` paired by order with its `episode` field and stored in its season's folder, a refused part drained and remembered — and `readSeriesFields`, the pure field half: each refusal a sentence in a load-bearing order, each episode answered with the paths its parts landed at
 │ │ ├── loopbackGuard/ ← the **Loopback guard**: mounted first, standalone included, `403` for a Host or Origin that is not a **Trusted host**; `bind(port)` once `listen` has resolved
 │ │ └── rendererRouter/ ← `mountRenderer`: the built renderer beside `/api` under `RENDERER_CSP` and `index.html` for any other GET, `/api` passed on before the policy is set; nothing mounted when `FAMILYFLIX_RENDERER_PATH` is unset
@@ -144,11 +145,12 @@ familyflix/
 │ │ ├── folders/ ← the **Library folders**: the list in the order added with each folder's title count, an add, and a remove that keeps the titles, forgetting only where they came from
 │ │ │ └── folderOverlap/ ← pure: whether a path is, is inside or holds a listed folder — resolved, case-folded on Windows, by whole segments — and `clashSentence`, each clash's one sentence
 │ │ └── series/ ← series storage, one unit per concern as the movie's is, each with its own suite: `read` (the series page, the player's episode read, the episode list), `browse` (the Series tab and its genres), `write` (the two inserts), `watch` (the resume write, the episode and season marks), `curation` (the heart), `enrich` (a Sync's series and episode writes and `seriesInScope`), and `nextEpisodeOf`, pure
-│ │ │ └── yearSpan/ ← pure: the one reading of a **Year range** — `2022`, `2019–2023`, `2021–` → `{ year, endYear }`, anything else `null` — read by the Movie form's series save and the Sheet's Year cell alike
+│ │ │ └── yearSpan/ ← pure: the one reading of a **Year range** — `2022`, `2019–2023`, `2021–` → `{ year, endYear }`, anything else `null` — read by the Movie form's series save and the Sheet's Year cell alike; and `spellYearSpan`, its writer, the Export's Year cell and title folders
 │ ├── media/ ← folder scanning, file copy into managed storage, subtitle detection, the Movie folder’s removal after a Delete
 │ │ ├── createMedia/ ← the injected domain: reserve a Movie folder, `seasonFolder` (a Series folder’s `season-NN/`), storeUpload, copyIn (a stream under the cancel signal), the three removals; and a Sync's three — `storeNamed` (beside a Stored path), `storeInSeriesFolder` (two directories above an episode), `readStored` (a stored file as a stream). Only `media/` touches managed storage
 │ │ ├── fileKinds/ ← what an image, a subtitle and a video may be called — the store’s security boundary, and the scanner’s line
-│ │ ├── readableFolder/ ← an absolute path → `readable` / `not-a-folder` / `missing` / `relative`, never throwing: the one reading of reach, for the folder add, the importer's root check, the list's `reachable` and the Sync
+│ │ ├── readableFolder/ ← an absolute path → `readable` / `not-a-folder` / `missing` / `relative`, never throwing: the one reading of reach, for the folder add, the importer's root check, the list's `reachable`, the Sync and the Export
+│ │ ├── writableFolder/ ← a path → whether it is a directory this process can write into, never throwing: the one reading of _writable_, for the Sync's Write targets and an Export's destination
 │ │ ├── walkLibraryFolder/ ← a Library folder → its Source folders: a folder holding a video is one and is not descended
 │ │ ├── scanMovieFolder/ ← one Source folder → every video, the poster by name, the backdrop by name only, every subtitle
 │ │ ├── detectSubtitleLanguage/ ← the language tag in a subtitle’s name → its language, off the shared Language pool
@@ -157,7 +159,11 @@ familyflix/
 │ │ └── movieFolder/ safeFilename/ ← pure: the folder a title and year name; a filename the store will take
 │ ├── import-export/ ← the bulk importer and the exporter: Excel/CSV parsing and writing, row-to-folder matching, the Current run
 │ │ ├── readSheet/ ← .xlsx or .csv by extension, first worksheet, headers through a synonym table → Sheet rows; a Status column reads as watched, a BOM is stripped
-│ │ ├── writeSheet/ ← the reader’s mirror: the eight Export columns as a header row, one row per movie in the order given, .csv behind a BOM or .xlsx unstyled — pure over the list, no storage, no sorting
+│ │ ├── writeSheet/ ← the reader’s mirror: `exportRows`' two tables → the named files — `<name>.xlsx` with the Titles and Episodes worksheets, path cells as hyperlinks, or `<name>.csv` and `<name>-episodes.csv` each behind a BOM — pure over the tables, no storage, no sorting
+│ │ ├── exportName/ ← pure: `familyflix-collection_DD-MM-YYYY` off the local date, the **Export name**
+│ │ ├── exportRows/ ← pure: films and series → the two tables under the sixteen Export columns and the nine Episodes columns (every cell rule spelled once, the Metadata sheet's too), and the **File plan** — each title's folder named `Heat (1995)`, its art and, when chosen, its subtitles
+│ │ ├── exportSummary/ ← the **Export summary** out of the route: the counts off the Series tab's one read, the first readable Library folder else `<home>\Downloads`, today's name
+│ │ ├── writeExport/ ← the **Export** written: the destination checked (`relative`, `missing`, `read-only` — kinds the route words), the Export folder made exclusively and numbered when taken, the File plan copied through `Media.readStored` (an unreadable file skipped, its cell blanked), the sheet last; a break rolls the folder back and answers its reason
 │ │ ├── titleKey/ ← pure: the Title key matching compares, and titleGuess for a folder no row names
 │ │ ├── matchRows/ ← pure: rows × folder scans → matches, problems by kind, unclaimed folders
 │ │ ├── groupShows/ ← pure: the walk’s Source folders → Show folders (Season folders under one, or loose tagged episodes) and the films left over
@@ -190,7 +196,7 @@ familyflix/
 │ │ ├── planFields/ planEpisode/ ← pure: what to fill and which **Field conflicts** to raise; an episode's title, air date, runtime and whether a **Still** is wanted
 │ │ ├── plannedEnrichment/ ← pure: a plan → the columns a film, a series or _Apply choices_ writes
 │ │ ├── decisionFace/ ← pure: a search → an `ambiguous` Decision's top three **Candidates** (the genre off the pool, the language upper-cased) or a `missing` one's reason
-│ │ ├── writeBack/ ← the two **Write targets**: the permission check and its dry-run lines, `familyflix-metadata.csv` per **Library folder** and `poster.jpg` per **Source folder** — the only code that writes into a Library folder, and never over a file that exists
+│ │ ├── writeBack/ ← the two **Write targets**: the permission check and its dry-run lines, `familyflix-metadata.csv` per **Library folder** and `poster.jpg` per **Source folder** — with an Export, the only code that writes into a Library folder, each only ever adding what is not there
 │ │ └── createEnrichment/ ← the injected domain: the key, and the **Current enrichment run** — one in memory, its state machine as closures over the run, the abort controller and the Decisions, `createImporter`'s shape
 │ ├── db/ ← SQLite connection + schema/migrations (1 the schema and the genre seed, 2 `last_watched_at`, 3 the `settings` table — nothing seeded, 4 `series` and `episodes` with their two joins, `series_genres` and `episode_subtitles` — no `seasons` table, 5 `original_title`, `tmdb_score` and `source_folder` on both titles and `still_path` on episodes, 6 `library_folders` and `library_folder_id` on both titles, 7 the carry-over of `settings.library-root` onto the list), shared by every domain module above; `better-sqlite3`'s `nativeBinding` taken from `FAMILYFLIX_SQLITE_BINDING` when set, so the shell runs on the Electron-ABI binding and Vitest on the package's own; and `seriesSeed/`, the dev library's mock series
 │ ├── shell/ ← the server's half of the shell seam and its process lifecycle — infrastructure beside `db/`, not a domain
@@ -327,11 +333,11 @@ familyflix/
 │ │ │ ├── useKeyStored/ ← whether a TMDB key is stored, `false` until it lands and for a failed read: the `EnrichCheckCard` hint's one read
 │ │ │ ├── useFolderScan/ ← Scan folders: the Folder scan posted with the box, `/import` pushed on a `201` and a `409`, `scanning` let go otherwise
 │ │ │ ├── folderBridge/ ← the one reader of `window.familyflix?.folders`, `null` in a browser
-│ │ │ ├── ExportModal/ ← the Export dialog: owns useExport; the idle face over Modal, and Export ready over the bare one — the same card, so the pop-in runs once
+│ │ │ ├── ExportModal/ ← the Export dialog: owns useExport; the idle face over Modal — the Format cards, _Save to_ with Browse… when the bridge exists, the name row, the two Include toggles, the column pills — and Export ready over the bare one, the folder written and where — the same card, so the pop-in runs once
 │ │ │ ├── FormatCard/ ← one Format card: a role="radio" button with a label and a line, the pair in a radiogroup
-│ │ │ ├── useExport/ ← csv and idle on every open, the summary fetched fresh; exportLibrary fetches the file, hands it to saveToComputer, then done. A close mid-request drops the redraw, not the file
-│ │ │ ├── saveToComputer/ ← a blob → the browser’s Downloads under a filename: an object URL on an anchor carrying `download`, clicked, revoked. A DOM side effect, so a feature unit rather than a util
-│ │ │ └── api/ ← startImport, fetchCurrentImport, cancelImport, fetchExportSummary, fetchExportFile, fetchLibraryFolders, addLibraryFolder, removeLibraryFolder, startFolderScan (one caller each)
+│ │ │ ├── useExport/ ← csv, images on, subtitles off and idle on every open, the summary fetched fresh and its default destination never over an edit; the bridge read once; exportLibrary posts `startExport`, a refusal's sentence kept under the field. A close mid-request drops the redraw, not the folder
+│ │ │ ├── pathField.styles.ts ← the feature's path furniture, flat as `filesCard.styles.ts` is: `PathRow` and `Refusal`, drawn by the Library folders page's add row and the Export dialog's _Save to_
+│ │ │ └── api/ ← startImport, fetchCurrentImport, cancelImport, fetchExportSummary, startExport, fetchLibraryFolders, addLibraryFolder, removeLibraryFolder, startFolderScan (one caller each)
 │ │ ├── settings/ ← the Maintainer’s hub: six Settings groups under one header
 │ │ │ ├── section.styles.ts ← the furniture every Settings group draws with: the Group heading, the Section card (with the 32px group gap under it), the divider, an item’s title and lede, and the row furniture — `Row`, `RowTitle`, `RowDesc` — the Playback and Display groups both draw
 │ │ │ ├── SettingsHeader/ ← Back, the heading, ＋ Add a movie
@@ -367,14 +373,14 @@ familyflix/
 │ │ ├── postValue.ts
 │ │ └── postValue.test.ts
 │ ├── hooks/ ← global shared hooks only: `useGoBack(fallback)` — the one **Back rule**, a **History step** with the screen's own **Landing** behind it (the library by default) — `useRestoredScroll`, and `useOptimisticEdit`, the one bargain a detail page's edit keeps, over whatever record the page holds; and `useEnrichmentSummary`, the summary Settings' sync row and the Enrichment setup both draw, `null` until it lands
-│ ├── types/ ← shared TypeScript interfaces (import.ts: ImportRun, ImportSource, ImportProblem, ImportProblemDetail, ImportField; libraryFolders.ts: LibraryFolder, `FOLDER_CHANNELS`, FolderBridge — both build targets, and `tsconfig.electron.json` too; export.ts: EXPORT*FORMATS, EXPORT*COLUMNS, EXPORT\*FILENAME, ExportSummary; settings.ts: SUBTITLE*LANGUAGES, SubtitleLanguage, DEFAULT_SUBTITLE_LANGUAGE, DEFAULT_ULTRAWIDE_MARGINS, Settings (`subtitleLanguage`, `ultrawideMargins`), StorageReport; playback.ts: CodecKind, CodecSupport, CodecCapability, ComponentSource, PlaybackComponentInfo, PlaybackCapabilities — both build targets; series.ts: Series, Episode, SeasonSummary, SeriesDetail, EpisodeRead, NextEpisodeRef, EpisodeContinueEntry (its `series` carrying `posterPath`, for the Continue card's art), SeriesHomePayload, NewSeries, NewEpisode, Playable — both build targets; enrichment.ts: ENRICH_FIELDS, ENRICH_FIELD_LABELS, ENRICH_SCOPES, EnrichField, EnrichScope, EnrichmentSummary (its `libraryFolders` the reachable folders a Sync may write into), Candidate, Decision, FieldConflict, ConflictChoices, EnrichmentRun, StartEnrichment — both build targets; viewModels.ts carries the series’ SeriesPageModel, SeasonPageModel, SeasonCardSeason and EpisodeRowEpisode beside the movie’s; shell.ts: ServerMessage, ShellCommand — the **Shell handshake**, typed once and read by `server/src/shell/` and `electron/`, in `tsconfig.electron.json` too; form.ts: MovieFormValues, MovieFormFile, MovieFormSubtitle, EpisodeFormRow, FormKind — the Movie form's shapes; appVersion.d.ts: `__APP_VERSION__`, defined by Vite from package.json)
+│ ├── types/ ← shared TypeScript interfaces (import.ts: ImportRun, ImportSource, ImportProblem, ImportProblemDetail, ImportField; libraryFolders.ts: LibraryFolder, `FOLDER_CHANNELS` (`pick`, `pickOne`), FolderBridge — both build targets, and `tsconfig.electron.json` too; export.ts: `EXPORT_FORMATS`, `EXPORT_COLUMNS`, `EXPORT_EPISODE_COLUMNS`, `EXPORT_NAME_PREFIX`, ExportSummary, StartExport, ExportResult; settings.ts: `SUBTITLE_LANGUAGES`, SubtitleLanguage, `DEFAULT_SUBTITLE_LANGUAGE`, `DEFAULT_ULTRAWIDE_MARGINS`, Settings (`subtitleLanguage`, `ultrawideMargins`), StorageReport; playback.ts: CodecKind, CodecSupport, CodecCapability, ComponentSource, PlaybackComponentInfo, PlaybackCapabilities — both build targets; series.ts: Series, Episode, SeasonSummary, SeriesDetail, EpisodeRead, NextEpisodeRef, EpisodeContinueEntry (its `series` carrying `posterPath`, for the Continue card's art), SeriesHomePayload, NewSeries, NewEpisode, Playable — both build targets; enrichment.ts: `ENRICH_FIELDS`, `ENRICH_FIELD_LABELS`, `ENRICH_SCOPES`, EnrichField, EnrichScope, EnrichmentSummary (its `libraryFolders` the reachable folders a Sync may write into), Candidate, Decision, FieldConflict, ConflictChoices, EnrichmentRun, StartEnrichment — both build targets; viewModels.ts carries the series’ SeriesPageModel, SeasonPageModel, SeasonCardSeason and EpisodeRowEpisode beside the movie’s; shell.ts: ServerMessage, ShellCommand — the **Shell handshake**, typed once and read by `server/src/shell/` and `electron/`, in `tsconfig.electron.json` too; form.ts: MovieFormValues, MovieFormFile, MovieFormSubtitle, EpisodeFormRow, FormKind — the Movie form's shapes; appVersion.d.ts: `__APP_VERSION__`, defined by Vite from package.json)
 │ ├── utils/ ← pure helper functions (one folder per helper + its test)
 │ │ ├── index.ts ← barrel: re-exports every helper
 │ │ ├── formatBytes/ ← 1024-based, one decimal from KB up: `18.4 GB`
 │ │ ├── accentScale/ ← the accent → its five: `accentHover`, `accentPress`, `accentSoft`, `accentLine`, `focusRing`
 │ │ ├── moviePath/ ← the film's page as a route, `/movie/<id>`, the id encoded: the cards open it, and it is the player's and the edit's **Landing**
 │ │ ├── seriesPath/ seasonPath/ episodePlayPath/ ← the three series routes, `/series/<id>`, `/series/<id>/season/<n>`, `/episode/<id>/play`, the ids encoded
-│ │ ├── enrichPath/ ← the Enrichment flow as a route, `/enrich`, `?scope=all` or `?movie=<id>`, the id encoded: Settings' sync row, Import's \_Finish* and the ⋯ menu's _⟳ Fetch from TMDB_
+│ │ ├── enrichPath/ ← the Enrichment flow as a route, `/enrich`, `?scope=all` or `?movie=<id>`, the id encoded: Settings' sync row, Import's _Finish_ and the ⋯ menu's _⟳ Fetch from TMDB_
 │ │ ├── formatElapsed/ ← a run's clock, `m:ss` rounded and never rolling into hours — not `formatClock`, which floors and grows an hour field for playback
 │ │ ├── formatEpisodeTag/ ← the client’s one spelling of the Episode tag: `S02E04`, `S02` or `E04`, two digits a side
 │ │ ├── imageUrl/ ← a **Stored path** → `/api/images/<path>`, `null` in and `null` out: the one spelling of the image route in `src/`, held there by a guard
@@ -382,10 +388,10 @@ familyflix/
 │ │ ├── gradientFromId.ts
 │ │ └── gradientFromId.test.ts
 │ └── test-support/ ← test doubles shared across features, never imported by shipping code
-│ ├── fakeResponse/ ← a Response by status; `fileResponse` the one whose caller reads `blob()`, its `json()` rejecting
+│ ├── fakeResponse/ ← a Response by status
 │ ├── makeContinueCardMovie/ ← a full `ContinueCardMovie` with overrides, `makePosterCardMovie`'s rule for the resume tile
 │ ├── makeEnrichmentRun/ ← an EnrichmentRun just started, `makeImportRun`'s rule
-│ ├── fakeFolderBridge/ ← a controllable `window.familyflix.folders` for the length of a `describe`: each `pick()` answers what `setPick` last set and is counted — `fakeUpdateBridge`'s twin
+│ ├── fakeFolderBridge/ ← a controllable `window.familyflix.folders` for the length of a `describe`: each `pick()` answers what `setPick` last set and each `pickOne()` what `setPickOne` did, both counted — `fakeUpdateBridge`'s twin
 │ ├── makeSeriesDetail/ ← a SeriesDetail by its seasons’ watch states, `makeMovie`’s rule; `makeSeries` and `makeEpisode` beside it
 │ ├── comesBefore/ ← document order between two elements, for a slot's contract
 │ ├── LocationProbe/ ← where the router is, in four spellings — `pathname`, `search`, `url` and `navigationType` (`POP` after a step, `PUSH` after a push) — with an optional Back of its own, and `navigationType()`, the reader of the fourth
@@ -393,8 +399,7 @@ familyflix/
 │ ├── snackbarStack/ ← the Snackbar stack's node, reached by what the prototype draws — the one fixed, reversed column — because it carries no role and no `data-testid`; throws when there is none
 │ ├── stubScrollMetrics/ ← a writable `scrollTop` and a real overflow on every element, for a jsdom that does no layout
 │ ├── resolvedStyle/ ← the cascade by hand for a named state jsdom cannot enter — hover, press, a click's focus, the keyboard's — `!important`, then specificity, then order; reads a combinator whose ancestors carry no state; `normCss` beside it
-│ ├── stubScrollTo/ ← `scrollTo` on every element, for a jsdom that has it on `window` alone: who was asked for what, in order; deleted after the block
-│ └── stubDownload/ ← object URLs and an anchor’s click() for a jsdom that has neither: what the page handed the browser to save, in order
+│ └── stubScrollTo/ ← `scrollTo` on every element, for a jsdom that has it on `window` alone: who was asked for what, in order; deleted after the block
 ├── release/ ← gitignored: `electron:package`'s output — the **Installer**, and `win-unpacked/`, the **Packaged layout**
 └── docs/
 ├── design-logs/
@@ -472,7 +477,9 @@ features into a route.
   injected as `createApiRouter(…, enrichment)` so no route learns there is a
   TMDB. It holds stored paths and hands them to `media/`, which is the only
   code that touches managed storage; the one path it joins itself is under
-  the **Library root**, which its **Write targets** own. That rule is about **backend logic**; test doubles are not
+  a **Library folder**, which its **Write targets** write into — and with an
+  **Export**, the only writers into a Library folder, each only ever adding
+  what is not there. That rule is about **backend logic**; test doubles are not
   backend logic, which is why `server/src/test-support/` exists beside
   `db/` as the mirror of the frontend's rung — same one-line rule
   ("never imported by shipping code"), same one-folder-per-unit shape,
@@ -632,18 +639,27 @@ once via a bulk importer:
   the sources map and the abort controller, because pulling it out would
   pass all three across a seam nobody else uses
 
-The exporter writes the current library back out as one **Export file**,
-CSV or Excel, from the Settings hub's third row: every movie A–Z under
-the eight **Export columns** — Title, Year, Genres, Director, Cast,
-Rating, Status, Subtitles — for backup or for bulk-editing externally and
-re-importing. It is the reader's mirror: `writeSheet` in
-`server/src/import-export/` behind `GET /api/export/:format`, with
-`GET /api/export` answering the count the dialog shows. The round trip
-holds in both formats and both directions — an untouched export fed back
-to Bulk import adds nothing, and one with a row edited imports the edit —
-which is why the reader learned to read a `Status` column as the watched
-state when export shipped. No synopsis, runtime or path travels, and no
-column is optional: the pills in the dialog are a list, not a picker.
+The exporter writes the current library back out as one **Export folder**,
+`familyflix-collection_DD-MM-YYYY`, from the Settings hub's third row, at an
+**Export destination** typed under _Save to_ or picked with _Browse…_ — by
+default the first reachable **Library folder**, else Downloads. The server
+writes it straight to that folder, through `POST /api/export { format,
+destination, images, subtitles }`; `GET /api/export` answers the **Export
+summary** — the film, series and episode counts, the default destination and
+today's name. Inside is the **Export file**: the **Titles sheet**, every film
+and series A–Z under the sixteen **Export columns**, and the **Episodes
+sheet** beside it — the second worksheet in Excel, `…-episodes.csv` in CSV.
+The two **Include toggles** choose which files travel beside the sheet, in a
+folder per title: _Images_ (posters, backdrops and stills, on) and
+_Subtitles_ (off); a path cell is blank when its file did not travel. Video
+never travels. The reader's mirror is `writeSheet`, fed by `exportRows` and
+written by `writeExport` in `server/src/import-export/`. The round trip holds
+in both formats and both directions — an untouched export fed back to Bulk
+import adds nothing, and one with a row edited imports the edit — which is
+why the reader learned to read a `Status` column as the watched state when
+export shipped. No column is optional: the pills in the dialog are a list,
+not a picker. An Export is never written into or over anything that exists:
+it only ever adds its own new folder.
 
 Both bulk import and single Add Movie are large-file operations (video
 files are big) — neither should block the UI. Both need a visible
@@ -992,12 +1008,11 @@ same layout, spacing, states, copy, and interaction.
 
 **Build order — what is left.** The groups below say what the app _is_;
 this says what to build _next_. Steps 1–9 of the first chain are done,
-ending with **Software update** (v0.2.0), and so are steps 10, 11, 12, 13 and 14. Steps 10–15 came out of installing
-FamilyFlix and using it: smallest and most self-contained first, the form
-before the folders that will feed it, export last because it mirrors what
-import holds. Step 15 has no prototype yet — it goes through grill-me and a
-prototype revision in `docs/handoff/` before it is built, per _The prototype
-is the spec_. `Change…` in the Storage group is not in the chain — it is the
+ending with **Software update** (v0.2.0), and so are steps 10–15: the
+second chain is done too. Steps 10–15 came out of installing FamilyFlix and
+using it: smallest and most self-contained first, the form before the
+folders that will feed it, export last because it mirrors what import holds.
+`Change…` in the Storage group is not in the chain — it is the
 Roadmap's **Move the media folder** (log 24 Q2).
 
 10. ✅ **Codecs page** — the Codec manager moved to its own Settings
@@ -1015,10 +1030,10 @@ Roadmap's **Move the media folder** (log 24 Q2).
     at once. It needs a real path, so it lives where folder-path autofill
     already does (bulk import's scanner, Electron's native dialog over the
     preload bridge), not in the Movie form's file pickers.
-15. **Export options** _(next)_ — choose where the **Export file** is saved, rather
-    than Downloads alone, and what travels with it: today the eight Export
-    columns and nothing else; optionally posters, subtitles and the rest of
-    a title's files beside the sheet.
+15. ✅ **Export options** — choose where the **Export folder** is written,
+    rather than Downloads alone, and what travels with it: the sheet with
+    films, series and episodes, and optionally posters, backdrops, stills
+    and subtitles beside it.
 
 A 🧭 Roadmap item is not in this chain — it is after it, if ever.
 
@@ -1058,8 +1073,8 @@ A 🧭 Roadmap item is not in this chain — it is after it, if ever.
 - ✅ **Delete a movie** — the ⋯ menu’s Danger row, the Delete dialog, `DELETE /api/movies/:id`, then the Movie folder under best-effort cleanup.
 - ✅ **Bulk import** — a Sheet and a Library root become Movies during the run; the Review step lists only the Problems the run could not settle, each with Resolve (the Movie form in Import context) and Skip.
 - ✅ **Import progress console** — the Connect ✓ → Scan → Import stepper, the bar, the current item, elapsed and ETA, the Activity log, and Cancel; a server run polled every 500 ms, re-attachable.
-- 🔜 **Export options** _(step 15 — next)_ — choose the export’s destination, and whether posters, subtitles and other files travel with the sheet.
-- ✅ **Export** — the Settings hub’s third row opens the Export dialog; `family-library.csv` or `.xlsx` lands in Downloads with every movie A–Z under the eight Export columns, and an untouched export fed back to Bulk import adds nothing.
+- ✅ **Export options** — _Save to_ an Export destination, typed or picked with _Browse…_; a dated **Export folder** holding the sheet — films and series under sixteen columns, and an Episodes sheet — and, by the two Include toggles, each title's images and subtitles in a folder of its own.
+- ✅ **Export** — the Settings hub’s third row opens the Export dialog; the library lands as one Export file, CSV or Excel, every title A–Z, and an untouched export fed back to Bulk import adds nothing.
 - ✅ **Series import** — the Library root may hold shows beside movies: `Show Name/Season 01/S01E03.mkv`, or loose episodes at the show root. Season and episode numbers come from the folder first, then the filename (`S01E03`, `1x03`); anything unparsed lands in the existing Review list. The accepted shapes are shown verbatim in Import setup.
 - ✅ **Enrichment (TMDB)** — the first and only feature that touches the network; everything else stays offline-first. One organism, `EnrichmentFlow` (`features/enrichment/`), mirroring ImportFlow's three steps so the two read as siblings: **setup** (the key and offline banners, three scope cards — _Only what's missing_ / _Everything_ / _Just this movie_ — the field chips, and the write-target list; Start is `secondary` and inert until the key is tested and the machine is online), **running** (a determinate bar, because the count is known up front; LogConsole; elapsed and ETA; _Stop_ keeps what was already fetched), and **review** (two stat tiles over the rows that need a human: `ambiguous` with a horizontal poster picker of candidates and their % match, `conflict` as a field-by-field _Yours | TMDB_ diff with per-field choice then _Apply choices_ / _Keep all mine_, `missing` with a manual search box; every row has Skip). Three ways in: Settings → Network → _Sync metadata & posters_ (the primary), the Import setup's _Also fetch metadata and posters from TMDB_ checkbox (Finish hands the review straight to a full-library run), and the movie page's ⋯ menu → _Fetch from TMDB_ (a single-title run that returns to the movie). Fields: synopsis, poster, backdrop, runtime, year, genres, director, cast, original title, TMDB score. **The household rating is untouched** — TMDB's score is a separate field beside it. Conflicts are asked per movie in the review, never silently overwritten. The run is a pass over the already-imported library keyed by title + year, not a second scanner — `walkLibraryRoot` / `scanMovieFolder` are untouched, and `tmdbId` finally gets a value. The library database is the source of truth, and optionally a `familyflix-metadata.csv` in the collection root and a `poster.jpg` in each movie folder, each toggleable and neither overwriting a file that exists — the only place the app writes back into the source folders, so it needs its own permission check and a dry-run log line. Spec §5a.
 
@@ -1088,6 +1103,7 @@ A 🧭 Roadmap item is not in this chain — it is after it, if ever.
 - 🧭 **Collections / playlists** — user-curated groupings.
 - 🧭 **Auto-on subtitles** — enable the built, currently-disabled toggle.
 - 🧭 **Backgroundable import** — leave the Import screen while a large scan runs, surfaced via snackbar.
+- 🧭 **Back up the library** — an Export that carries the video files too: hundreds of gigabytes, so a run with progress and cancel of its own (log 31 Q2, Q23).
 - 🧭 **Move the media folder** — _Change…_ in Settings → Storage: a move of the managed media directory, a storage model of its own (log 15 Q19, log 24 Q2). A folder dialog is the easy half; undrawn until then.
 
 ### Out of scope
