@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import type { ExportFormat, ExportResult, ExportSummary } from '@/types';
 import { fetchExportSummary, startExport } from '../api/api';
@@ -68,7 +68,7 @@ export interface ExportState {
 export function useExport(open: boolean): ExportState {
   const [format, setFormat] = useState<ExportFormat>('csv');
   const [summary, setSummary] = useState<ExportSummary | null>(null);
-  const [destination, setTyped] = useState('');
+  const [destination, setField] = useState('');
   const [images, setImages] = useState(true);
   const [subtitles, setSubtitles] = useState(false);
   const [exporting, setExporting] = useState(false);
@@ -79,8 +79,10 @@ export function useExport(open: boolean): ExportState {
   // unmount — so an answer that arrives for an earlier opening can tell it is
   // no longer wanted.
   const opening = useRef(0);
-  // Whether _Save to_ has been typed into this opening.
-  const typed = useRef(false);
+  // Whether _Save to_ has been edited in this opening.
+  const edited = useRef(false);
+  // The folder bridge, read once per mount: `null` in a browser.
+  const [bridge] = useState(folderBridge);
 
   useEffect(() => {
     if (!open) {
@@ -88,10 +90,10 @@ export function useExport(open: boolean): ExportState {
     }
     const current = opening.current;
 
-    typed.current = false;
+    edited.current = false;
     setFormat('csv');
     setSummary(null);
-    setTyped('');
+    setField('');
     setImages(true);
     setSubtitles(false);
     setExporting(false);
@@ -104,8 +106,8 @@ export function useExport(open: boolean): ExportState {
           return;
         }
         setSummary(landed);
-        if (!typed.current) {
-          setTyped(landed.defaultDestination);
+        if (!edited.current) {
+          setField(landed.defaultDestination);
         }
       },
       () => undefined
@@ -121,18 +123,22 @@ export function useExport(open: boolean): ExportState {
   }, []);
 
   const setDestination = useCallback((next: string) => {
-    typed.current = true;
-    setTyped(next);
+    edited.current = true;
+    setField(next);
   }, []);
 
-  const bridge = folderBridge();
-  const pickDestination = useCallback(async () => {
-    const picked = await bridge?.pickOne();
-    if (picked !== null && picked !== undefined) {
-      setDestination(picked);
-    }
-  }, [bridge, setDestination]);
-  const browse = bridge === null ? null : pickDestination;
+  const browse = useMemo(
+    () =>
+      bridge === null
+        ? null
+        : async () => {
+            const picked = await bridge.pickOne();
+            if (picked !== null) {
+              setDestination(picked);
+            }
+          },
+    [bridge, setDestination]
+  );
 
   const exportLibrary = useCallback(async () => {
     const current = opening.current;
