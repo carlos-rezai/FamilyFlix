@@ -11,6 +11,70 @@ Newest entry first.
 
 ---
 
+## 2026-10-09 — Backdrop veil refactor (issue 290)
+
+Nine commits against `docs/refactor-plans/34-backdrop-veil-refactor.md`, one
+per plan commit. **7611 tests pass across 463 files**, from 7608 across 462
+at the end of the build (`6712655`); the three new leaves and the new file
+are `paintedBackgrounds`'. `tsc -b --force` is clean, and
+`eslint src server electron .husky` reports no errors and the one warning
+earlier rounds already logged (`AboutSection.test.tsx`'s escaped dot). No
+wire, schema, type or pixel changed, and the server is untouched.
+
+### What each group changed
+
+- **Group 0, the record.** The build's own entry, below, written before the
+  round touched anything.
+- **Group 1, the code's tidy.** `MovieDetail` and `SeriesDetail` import
+  `DetailBackdrop` in its alphabetical place. The barrel's appended line
+  stays last, as every molecule joined it.
+- **Group 2, the tests' tidies.**
+  - `test-support/paintedBackgrounds/`, with three leaves: every element
+    from a root down, each as its resolved `background`, `backgroundImage`
+    and `backgroundColor` on one line. The molecule's `backgrounds()` moved
+    into it.
+  - The molecule's suite and both page suites' accent-wash leaves read
+    through it; the molecule's theme argument is typed `Theme`.
+  - Each page suite's _keeps no art area or scrim of its own_, which read the
+    `.styles` module's export names, is _draws exactly one Detail backdrop_:
+    exactly one element paints the backdrop's url, inside an `aria-hidden`
+    layer. Checked by drawing the molecule twice on the movie page, which
+    fails it.
+- **Group 3, the prototype.** `page.SeriesPage.dc.html`'s art layer draws
+  `sr.posterStyle`, the 155° **Gradient fallback** the movie page draws, and
+  `FamilyFlix.dc.html`'s series model drops `backdropStyle` and its blur.
+  Not opened in a browser this round; the change is one binding and one
+  removed property nothing else read.
+- **Group 4, the docs.** CLAUDE.md's tree gains `DetailBackdrop/` after
+  `CreditsRow/`, and step 17 and its Browse & discover entry are ✅, with the
+  build-order sentence reading _steps 16–17 are done_. The README matches.
+
+### Where the round met the plan's words and differed
+
+- **The new page leaf asks for one painter of the url inside an
+  `aria-hidden` layer**, not that the layer is _the one_ the accent-wash
+  leaf finds: the page has other `aria-hidden` elements (glyphs), so _one
+  layer_ is read off _one painter_.
+- **Commit 7 also changed the build-order sentence** (_step 16 is done,
+  17–23 are planned_), which the plan did not list but step 17's tick makes
+  false.
+
+### Left as it is
+
+- **The `Scroller`s' `position: relative`**, which nothing is placed against
+  any more: a CSS change in a round that moves no pixel.
+- **A token for `bg` with an alpha**: `rgba(20, 17, 13, …)` is spelled in ten
+  shipping files, the veil's two stops among them.
+- **The two `Scroller` docblocks' near-twin wording**: pages do not share
+  styles.
+- **`COMPONENT-SPEC`'s molecules without a `mol.*` file**, on `CreditsRow`'s
+  precedent.
+- Everything log 34 ruled out, as the build's entry lists it.
+
+This entry's commit closes the initiative, 288, and this round, 290.
+
+---
+
 ## 2026-10-09 — Backdrop veil (issue #289)
 
 Both detail pages draw one **Detail backdrop**: the art a full viewport tall,
