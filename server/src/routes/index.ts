@@ -1,5 +1,5 @@
 import { homedir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { resolve } from 'node:path';
 import { pipeline } from 'node:stream';
 
 import type {
@@ -25,7 +25,7 @@ import {
   type ResolveFile,
   type ResolveForm,
 } from '../import-export/createImporter/createImporter';
-import { exportName } from '../import-export/exportName/exportName';
+import { exportSummary } from '../import-export/exportSummary/exportSummary';
 import {
   writeExport,
   type ExportRefusal,
@@ -63,7 +63,6 @@ import {
   MOVIE_SORTS,
   type EpisodeRead,
   type ExportResult,
-  type ExportSummary,
   type GenreListPayload,
   type GenrePoolPayload,
   type GenreQuery,
@@ -2221,36 +2220,16 @@ export function createApiRouter(
     }
   );
 
-  // The **Export summary**, read on the **Export dialog**'s open: how many
-  // films, series and episodes an export would carry, where _Save to_ starts
-  // — the first **Library folder**, in the order added, that can be read now,
-  // else the home folder's Downloads — and today's **Export name**. Nothing is
+  // The **Export summary**, read on the **Export dialog**'s open — its rule
+  // is `exportSummary`'s, handed the home folder and the clock. Nothing is
   // injected for the export — there is no run, no state and no cancel — so
   // the summary and the export sit on `storage` and `media` directly.
   router.get('/export', async (_req: Request, res: Response) => {
-    const series = storage.seriesInScope('all');
-    let defaultDestination = join(homedir(), 'Downloads');
-    for (const folder of storage.libraryFolders()) {
-      if ((await readableFolder(folder.path)) === 'readable') {
-        defaultDestination = folder.path;
-        break;
-      }
-    }
-    const summary: ExportSummary = {
-      movieCount: storage.countMovies(),
-      seriesCount: series.length,
-      episodeCount: series.reduce(
-        (count, each) => count + storage.listEpisodes(each.id).length,
-        0
-      ),
-      defaultDestination,
-      folderName: exportName(new Date()),
-    };
-    res.json(summary);
+    res.json(await exportSummary(storage, homedir(), new Date()));
   });
 
   // The **Export** itself: the body read by `exportBody`, then every film A–Z
-  // and every series' detail, read over the full series list, handed to
+  // and every series' detail, read over the Series tab's list, handed to
   // `writeExport`, which makes the dated **Export folder** inside the
   // destination. `201` with the folder it wrote, `400` with the one sentence
   // for a malformed body or a refused destination — each refusal worded
@@ -2268,8 +2247,8 @@ export function createApiRouter(
       {
         movies: storage.listMovies({ sort: 'a-z' }),
         series: storage
-          .seriesInScope('all')
-          .flatMap((each) => storage.getSeriesDetail(each.id) ?? []),
+          .getSeriesHome({ sort: 'a-z' })
+          .series.flatMap((each) => storage.getSeriesDetail(each.id) ?? []),
       },
       new Date()
     );
