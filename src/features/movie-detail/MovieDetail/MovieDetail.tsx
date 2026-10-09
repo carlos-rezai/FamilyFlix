@@ -1,6 +1,6 @@
 import { useNavigate, useParams } from 'react-router-dom';
 
-import { CreditsRow, ExpandableText, DetailBackdrop } from '@/components';
+import { CreditsRow, DetailBackdrop, ExpandableText } from '@/components';
 import {
   Artwork,
   Button,

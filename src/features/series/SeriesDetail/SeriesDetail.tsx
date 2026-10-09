@@ -2,9 +2,9 @@ import { useNavigate, useParams } from 'react-router-dom';
 
 import {
   CreditsRow,
+  DetailBackdrop,
   ExpandableText,
   SeasonCard,
-  DetailBackdrop,
 } from '@/components';
 import {
   Artwork,
