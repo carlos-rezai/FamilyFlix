@@ -250,6 +250,7 @@ familyflix/
 │ │ ├── Fab/ ← the FAB, `mol.Fab.dc.html` 1:1: one more `styled(IconButton)` face — the accent circle at 28px from the bottom-right corner, one of two glyphs by `icon`, named by a required `label`. Presentational to the last prop — no state, no listener, no effect; it does not know there is a threshold
 │ │ ├── BackToTop/ ← the control: given the scrolling container as a ref, it owns the Scroll threshold (`scrollTop > 420`, strictly), the passive listener, the read on attach and the press, and mounts the FAB or nothing. Two files, no styles — it draws nothing of its own
 │ │ ├── CreditsRow/ ← the lead credit and Starring: graduated from `movie-detail/` when the series page drew it too, its lead label a prop
+│ │ ├── DetailBackdrop/ ← the **Detail backdrop**, graduated when both detail pages drew it: the art sticky at the top of the page's scroller and a full viewport tall, under the **Backdrop veil** — a gradient over `accentSoft`; its `100vh` coupled to both pages' `Scroller`
 │ │ ├── SeasonCard/ ← `mol.SeasonCard` 1:1: the 2:3 **Card**, `S02` over the gradient, the badge when complete, the bar when part-watched
 │ │ ├── PillTabs/ ← `mol.PillTabs` 1:1: the pill track of `aria-pressed` buttons in a labelled group, generic in its value so a press hands back the caller's own union; presentational — it knows no URL. The **Library tabs** and the **Kind tabs** are its callers
 │ │ ├── EpisodeFileRow/ ← `mol.EpisodeFileRow` 1:1: one **Episode file row** — the `S` and `E` number fields (digits, two and three), the title, the ✕, the filename in mono, and a children slot for its subtitles; presentational, the browser's focus ring kept
@@ -1010,7 +1011,7 @@ same layout, spacing, states, copy, and interaction.
 this says what to build _next_. Steps 1–9 of the first chain are done,
 ending with **Software update** (v0.2.0), and so are steps 10–15: the
 second chain is done too, shipped as v0.3.0. Steps 16–23 are the third
-chain: step 16 is done, 17–23 are planned. Steps 10–15 came out of
+chain: steps 16–17 are done, 18–23 are planned. Steps 10–15 came out of
 installing FamilyFlix and using it: smallest and most self-contained first,
 the form before the folders that will feed it, export last because it
 mirrors what import holds.
@@ -1046,9 +1047,11 @@ draws something new, a prototype revision before it is built:
     `movieId`, and `?movie=<id>` re-attaches only to a `single` run for that
     movie, else shows its setup — a **Waiting run** named by the **Let-go
     line**, another's running Sync by the **Busy notice**.
-17. 🔜 **Backdrop veil** — the detail pages' `ArtArea` fills the viewport
-    (not 62%) and stays put, under an `accentSoft` wash and a darker gradient
-    in place of the `Scrim`. Movie page and series page alike.
+17. ✅ **Backdrop veil** — both detail pages draw one **Detail backdrop**
+    (`components/DetailBackdrop/`): the art a full viewport tall (not 62%) and
+    sticky at the top of the page's scroller, under the **Backdrop veil** — a
+    darker gradient over an `accentSoft` wash — in place of each feature's
+    `ArtArea` and `Scrim`.
 18. 🔜 **Open the media folder** — _Open folder_ on the Storage card's path
     row: `folders.openMedia()` over `FOLDER_CHANNELS.openMedia`, **no
     argument**; main opens **Shell paths**' new `mediaRoot`. Undrawn in a
@@ -1096,7 +1099,7 @@ A 🧭 Roadmap item is not in this chain — it is after it, if ever.
 - ✅ **Continue Watching row** — resume in-progress titles from the home screen, ordered by when the family last watched them.
 - ✅ **Series (TV)** — a separate top-level tab, not mixed into the movie rows: a segmented Movies / Series control in the library header; the Series tab is a Continue Watching row of **episode** cards — one per series, on its earliest part-watched episode (log 22 Q29) — over an "All series" grid on the same `LibraryGrid` + `PosterCard`. The **Series page** (`page.SeriesPage`) is the movie page's hero shape — poster, year range, season and episode count, rating, genres, synopsis, creator and cast — over a Seasons grid of `SeasonCard` (a 2:3 tile: StatusBadge when the season is fully watched, ProgressBar when partly; its line reads "8 episodes" or "3 of 8 watched"). A season poster opens the **Season page** (`page.SeasonPage`): the series → season header, _Resume Enn_, Mark season watched, one `EpisodeRow` per episode — a 16:9 thumbnail with a hover play affordance and a resume bar, `S02E04` and the title, the air date, the resume label, and a watched checkbox that stops propagation (the row opens the episode, the box only marks it) — and an "Other seasons" pill row. No synopsis, runtime or filename on a row; no tabs or accordion for seasons. Resume on the series and Continue Watching both follow `nextEpisodeOf`: the part-watched episode, else the first unwatched. In SQLite this is two tables and two joins — `series`, `episodes` (carrying the same watch-state columns the movie table has), `series_genres` and `episode_subtitles` — and no `seasons` table: a season is a number (log 22 Q3). Everything is additive; the movie flow is untouched. Spec §5aa.
 
-- 🔜 **Backdrop veil** — the movie and series pages' art over the whole viewport, under an accent-tinted veil (step 17).
+- ✅ **Backdrop veil** — the movie and series pages' art over the whole viewport, staying put under an accent-tinted veil while the content scrolls over it.
 - ✅ **Single-title Sync** — the ⋯ menu's _Fetch from TMDB_ syncs that movie alone, re-attaching only to its own run; a library Sync left in review is let go by Start, never hijacked.
 
 ### Playback
