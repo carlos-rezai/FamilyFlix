@@ -366,7 +366,7 @@ Keep the description short enough to fit on one line — long descriptions get w
 | Library folders — several root folders at once       | ✅ Done         |
 | Export options — where to, and what travels          | ✅ Done         |
 | Single-title Sync — the ⋯ menu's fetch, one movie    | ✅ Done         |
-| Backdrop veil — full-screen art, accent-veiled       | 🔜 Planned      |
+| Backdrop veil — full-screen art, accent-veiled       | ✅ Done         |
 | Open the media folder from Settings → Storage        | 🔜 Planned      |
 | Export name — the export folder's name as a field    | 🔜 Planned      |
 | Factory reset — erase everything, behind a dialog    | 🔜 Planned      |
@@ -410,7 +410,7 @@ again smallest first:
 
 16. ✅ **Single-title Sync** — _Fetch from TMDB_ on a movie's ⋯ menu syncs
     that movie alone, rather than reopening a library-wide sync left in review.
-17. 🔜 **Backdrop veil** — the detail pages' art fills the whole screen under
+17. ✅ **Backdrop veil** — the detail pages' art fills the whole screen under
     an accent-tinted veil, so the title, buttons and text read clearly.
 18. 🔜 **Open the media folder** — an _Open folder_ button on Settings →
     Storage.
