@@ -36,7 +36,7 @@ function settled(
  * Whether `run` belongs here: opened with no film every run does; opened for
  * a film, only a `single` run for that same film.
  */
-function belongs(run: EnrichmentRun, movieId: string | null): boolean {
+function belongsHere(run: EnrichmentRun, movieId: string | null): boolean {
   return (
     movieId === null || (run.scope === 'single' && run.movieId === movieId)
   );
@@ -105,7 +105,7 @@ export function useEnrichmentRun(movieId: string | null): EnrichmentRunState {
     fetchCurrentEnrichment()
       .then((held) => {
         if (left || at !== generation.current || held === null) return;
-        if (belongs(held, movieId)) {
+        if (belongsHere(held, movieId)) {
           setRun(held);
         } else if (held.phase === 'review') {
           setWaiting(held);
@@ -130,7 +130,7 @@ export function useEnrichmentRun(movieId: string | null): EnrichmentRunState {
           throw error;
         }
         const held = await fetchCurrentEnrichment();
-        if (held !== null && !belongs(held, movieId)) {
+        if (held !== null && !belongsHere(held, movieId)) {
           throw error;
         }
         setRun(held);
