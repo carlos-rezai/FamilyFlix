@@ -19,12 +19,10 @@ import {
   Count,
   Done,
   DoneActions,
-  DoneFilename,
   DoneHeading,
   DoneLine,
-  FileName,
-  Filename,
-  FileRow,
+  DonePath,
+  ExportName,
   Formats,
   IncludeCard,
   IncludeDesc,
@@ -32,6 +30,8 @@ import {
   IncludeRow,
   IncludeText,
   IncludeTitle,
+  NameLead,
+  NameRow,
   PathRow,
   Refusal,
   SectionLabel,
@@ -128,9 +128,9 @@ export function ExportModal({ open, onClose }: ExportModalProps) {
           </TickCircle>
           <DoneHeading>Export ready</DoneHeading>
           <DoneLine>
-            Saved <DoneFilename>{folderNameOf(result.folder)}</DoneFilename>
+            Saved <DonePath>{folderNameOf(result.folder)}</DonePath>
             <br />
-            to <DoneFilename>{destination}</DoneFilename>
+            to <DonePath>{destination}</DonePath>
             {count === null ? '.' : ` with ${count}.`}
           </DoneLine>
           <DoneActions>
@@ -190,13 +190,13 @@ export function ExportModal({ open, onClose }: ExportModalProps) {
         {refusal === null ? null : <Refusal>{refusal}</Refusal>}
       </div>
 
-      <FileRow>
-        <FileName>
+      <NameRow>
+        <NameLead>
           <FolderIcon size={18} />
-          <Filename>{summary?.folderName ?? ''}</Filename>
-        </FileName>
+          <ExportName>{summary?.folderName ?? ''}</ExportName>
+        </NameLead>
         {count === null ? null : <Count>{count}</Count>}
-      </FileRow>
+      </NameRow>
       <div>
         <SectionLabel>Include</SectionLabel>
         <IncludeCard>

@@ -25,7 +25,7 @@ export const Formats = styled.div`
  * The name row: the folder glyph and the **Export name** at one end, the
  * count at the other, on `bg2` inside the soft border.
  */
-export const FileRow = styled.div`
+export const NameRow = styled.div`
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -35,8 +35,11 @@ export const FileRow = styled.div`
   border-radius: ${({ theme }) => theme.radius.md};
 `;
 
-/** The glyph and the name, 10px apart; the faint ink is the glyph's. */
-export const FileName = styled.div`
+/**
+ * The name row's lead: the glyph and the **Export name**, 10px apart; the
+ * faint ink is the glyph's.
+ */
+export const NameLead = styled.div`
   display: flex;
   align-items: center;
   gap: 10px;
@@ -44,7 +47,7 @@ export const FileName = styled.div`
 `;
 
 /** The **Export name**, in mono, in the dim ink. */
-export const Filename = styled.span`
+export const ExportName = styled.span`
   font-family: ${({ theme }) => theme.fonts.mono};
   font-size: 13.5px;
   color: ${({ theme }) => theme.colors.textDim};
@@ -128,8 +131,11 @@ export const DoneLine = styled.p`
   margin: 8px 0 0;
 `;
 
-/** The folder or its destination inside the done line, mono in the text ink. */
-export const DoneFilename = styled.span`
+/**
+ * A path inside the done line — the folder written, then its destination —
+ * in mono and the text ink.
+ */
+export const DonePath = styled.span`
   font-family: ${({ theme }) => theme.fonts.mono};
   font-size: 14px;
   color: ${({ theme }) => theme.colors.text};
