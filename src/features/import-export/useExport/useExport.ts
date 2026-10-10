@@ -10,7 +10,7 @@ import { fetchExportSummary, startExport } from '../api/api';
 import { folderBridge } from '@/api/folderBridge/folderBridge';
 
 /** A `400`'s sentence and the field it is drawn under. */
-export interface ExportRefusal {
+export interface ExportFieldRefusal {
   field: ExportField;
   sentence: string;
 }
@@ -47,7 +47,7 @@ export interface ExportState {
    * What the last press's `400` said and which field it is about; `null`
    * otherwise. Kept until the next press.
    */
-  refusal: ExportRefusal | null;
+  refusal: ExportFieldRefusal | null;
   /** What a `201` answered — **Export ready**; `null` until then. */
   result: ExportResult | null;
   chooseFormat: (format: ExportFormat) => void;
@@ -75,27 +75,27 @@ export interface ExportState {
 
 /**
  * What the **Export dialog** holds, from the moment it opens: the format, the
- * summary, the destination, and whether a request is in flight, was refused or
- * has written the **Export folder**.
+ * summary, the destination, the name, and whether a request is in flight, was
+ * refused or has written the **Export folder**.
  *
  * `open` is the reset: each opening puts the hook back to `csv`, images on,
  * subtitles off, idle, nothing typed, refused or written, and fetches a fresh
  * summary. The summary's `defaultDestination` fills _Save to_ and its
- * `defaultName` the name once it lands, each never over what was typed into
- * it first — `useTmdbKey`'s rule. A summary or an
- * export that lands after the dialog has closed — or after it has been opened
- * again — redraws nothing. The export itself still happens: a close drops the
+ * `defaultName` the **Folder name field** once it lands, each never over what
+ * was typed into it first — `useTmdbKey`'s rule. A summary or an export that
+ * lands after the dialog has closed — or after it has been opened again —
+ * redraws nothing. The export itself still happens: a close drops the
  * **Export ready** face, not the folder.
  */
 export function useExport(open: boolean): ExportState {
   const [format, setFormat] = useState<ExportFormat>('csv');
   const [summary, setSummary] = useState<ExportSummary | null>(null);
-  const [destination, setField] = useState('');
+  const [destination, setDestinationField] = useState('');
   const [name, setNameField] = useState('');
   const [images, setImages] = useState(true);
   const [subtitles, setSubtitles] = useState(false);
   const [exporting, setExporting] = useState(false);
-  const [refusal, setRefusal] = useState<ExportRefusal | null>(null);
+  const [refusal, setRefusal] = useState<ExportFieldRefusal | null>(null);
   const [result, setResult] = useState<ExportResult | null>(null);
 
   // Which opening is current. Bumped as each opening ends — on close, and on
@@ -118,7 +118,7 @@ export function useExport(open: boolean): ExportState {
     nameEdited.current = false;
     setFormat('csv');
     setSummary(null);
-    setField('');
+    setDestinationField('');
     setNameField('');
     setImages(true);
     setSubtitles(false);
@@ -133,7 +133,7 @@ export function useExport(open: boolean): ExportState {
         }
         setSummary(landed);
         if (!destinationEdited.current) {
-          setField(landed.defaultDestination);
+          setDestinationField(landed.defaultDestination);
         }
         if (!nameEdited.current) {
           setNameField(landed.defaultName);
@@ -153,7 +153,7 @@ export function useExport(open: boolean): ExportState {
 
   const setDestination = useCallback((next: string) => {
     destinationEdited.current = true;
-    setField(next);
+    setDestinationField(next);
   }, []);
 
   const setName = useCallback((next: string) => {
