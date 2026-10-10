@@ -98,11 +98,12 @@ function freshApi(): {
   return { storage, baseUrl: `http://127.0.0.1:${port}`, dir, root, sheet };
 }
 
-const postExport = (baseUrl: string, body: unknown) =>
+/** Post an export, named today's **Export name** unless the body names one. */
+const postExport = (baseUrl: string, body: Record<string, unknown>) =>
   fetch(`${baseUrl}/api/export`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
+    body: JSON.stringify({ name: exportName(new Date()), ...body }),
   });
 
 /** A directory of its own under the sandbox. */

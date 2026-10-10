@@ -2,7 +2,7 @@
 //
 // 31 — Export options, Phase 1: "the tracer" (issue #276).
 //
-// `writeExport(media, request, content, now)` — the injected writer, and it
+// `writeExport(media, request, content)` — the injected writer, and it
 // never throws: it answers `written`, `refused` or `failed`. Its tracer shape
 // checks the destination (absolute, then `readableFolder`, then writable),
 // creates the **Export folder** exclusively under today's **Export name**,
@@ -24,7 +24,6 @@ import { readSheet } from '../readSheet/readSheet';
 import { writeExport } from './writeExport';
 
 /** 8 October 2026, midday, local — the day the PRD's walk-through stands on. */
-const NOW = new Date(2026, 9, 8, 12, 0);
 const NAME = 'familyflix-collection_08-10-2026';
 
 const FILMS: Movie[] = [
@@ -59,6 +58,7 @@ const request = (
   destination,
   images: false,
   subtitles: false,
+  name: NAME,
   ...overrides,
 });
 
@@ -66,12 +66,10 @@ describe('writeExport — a valid destination', () => {
   it('answers written, with the folder it made and the counts', async () => {
     const { media, destination } = sandbox();
 
-    const outcome = await writeExport(
-      media,
-      request(destination),
-      { movies: FILMS, series: [] },
-      NOW
-    );
+    const outcome = await writeExport(media, request(destination), {
+      movies: FILMS,
+      series: [],
+    });
 
     expect(outcome).toEqual({
       kind: 'written',
@@ -84,12 +82,10 @@ describe('writeExport — a valid destination', () => {
   it('gains the dated folder, and nothing else beside it', async () => {
     const { media, destination } = sandbox();
 
-    await writeExport(
-      media,
-      request(destination),
-      { movies: FILMS, series: [] },
-      NOW
-    );
+    await writeExport(media, request(destination), {
+      movies: FILMS,
+      series: [],
+    });
 
     expect(readdirSync(destination)).toEqual([NAME]);
   });
@@ -97,12 +93,10 @@ describe('writeExport — a valid destination', () => {
   it('holds the films’ sheet as csv, read back A–Z through Bulk import', async () => {
     const { media, destination } = sandbox();
 
-    await writeExport(
-      media,
-      request(destination),
-      { movies: FILMS, series: [] },
-      NOW
-    );
+    await writeExport(media, request(destination), {
+      movies: FILMS,
+      series: [],
+    });
 
     const sheet = join(destination, NAME, `${NAME}.csv`);
     expect(existsSync(sheet)).toBe(true);
@@ -113,12 +107,10 @@ describe('writeExport — a valid destination', () => {
   it('holds the films’ sheet as xlsx when Excel is asked for', async () => {
     const { media, destination } = sandbox();
 
-    await writeExport(
-      media,
-      request(destination, { format: 'xlsx' }),
-      { movies: FILMS, series: [] },
-      NOW
-    );
+    await writeExport(media, request(destination, { format: 'xlsx' }), {
+      movies: FILMS,
+      series: [],
+    });
 
     const sheet = join(destination, NAME, `${NAME}.xlsx`);
     expect(existsSync(sheet)).toBe(true);
@@ -129,12 +121,10 @@ describe('writeExport — a valid destination', () => {
   it('writes no title folders with images and subtitles off', async () => {
     const { media, destination } = sandbox();
 
-    await writeExport(
-      media,
-      request(destination),
-      { movies: FILMS, series: [] },
-      NOW
-    );
+    await writeExport(media, request(destination), {
+      movies: FILMS,
+      series: [],
+    });
 
     expect(readdirSync(join(destination, NAME)).sort()).toEqual(
       [`${NAME}-episodes.csv`, `${NAME}.csv`].sort()
@@ -146,12 +136,10 @@ describe('writeExport — a relative destination', () => {
   it('is refused as relative', async () => {
     const { media } = sandbox();
 
-    const outcome = await writeExport(
-      media,
-      request('exports-276-relative'),
-      { movies: FILMS, series: [] },
-      NOW
-    );
+    const outcome = await writeExport(media, request('exports-276-relative'), {
+      movies: FILMS,
+      series: [],
+    });
 
     expect(outcome).toEqual({ kind: 'refused', refusal: 'relative' });
   });
@@ -159,12 +147,10 @@ describe('writeExport — a relative destination', () => {
   it('creates nothing, not even under the working directory', async () => {
     const { media, destination } = sandbox();
 
-    await writeExport(
-      media,
-      request('exports-276-relative'),
-      { movies: FILMS, series: [] },
-      NOW
-    );
+    await writeExport(media, request('exports-276-relative'), {
+      movies: FILMS,
+      series: [],
+    });
 
     expect(existsSync(resolve('exports-276-relative'))).toBe(false);
     expect(readdirSync(destination)).toEqual([]);
@@ -174,7 +160,7 @@ describe('writeExport — a relative destination', () => {
     const { media } = sandbox();
 
     await expect(
-      writeExport(media, request(''), { movies: FILMS, series: [] }, NOW)
+      writeExport(media, request(''), { movies: FILMS, series: [] })
     ).resolves.toMatchObject({ kind: 'refused' });
   });
 });

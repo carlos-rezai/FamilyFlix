@@ -84,7 +84,7 @@ function badRequest(error: string): Response {
   return {
     ok: false,
     status: 400,
-    json: () => Promise.resolve({ error }),
+    json: () => Promise.resolve({ error, field: 'destination' }),
   } as unknown as Response;
 }
 
@@ -224,6 +224,7 @@ describe('useExport — exporting', () => {
         destination: 'E:\\Movies',
         images: true,
         subtitles: false,
+        name: 'familyflix-collection_08-10-2026',
       },
     ]);
   });
@@ -284,7 +285,10 @@ describe('useExport — a refused destination (400)', () => {
       await result.current.exportLibrary();
     });
 
-    expect(result.current.refusal).toBe('No folder at that path.');
+    expect(result.current.refusal).toEqual({
+      field: 'destination',
+      sentence: 'No folder at that path.',
+    });
     expect(result.current.result).toBeNull();
     expect(result.current.exporting).toBe(false);
   });
@@ -399,7 +403,10 @@ describe('useExport — every open resets the state', () => {
     await act(async () => {
       await result.current.exportLibrary();
     });
-    expect(result.current.refusal).toBe('No folder at that path.');
+    expect(result.current.refusal).toEqual({
+      field: 'destination',
+      sentence: 'No folder at that path.',
+    });
 
     rerender({ open: false });
     const later = held();
@@ -477,6 +484,7 @@ describe('useExport — images', () => {
         destination: 'E:\\Movies',
         images: false,
         subtitles: false,
+        name: 'familyflix-collection_08-10-2026',
       },
     ]);
   });
@@ -533,6 +541,7 @@ describe('useExport — subtitles', () => {
         destination: 'E:\\Movies',
         images: true,
         subtitles: true,
+        name: 'familyflix-collection_08-10-2026',
       },
     ]);
   });

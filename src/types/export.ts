@@ -88,6 +88,12 @@ export interface ExportSummary {
   defaultName: string;
 }
 
+/**
+ * The field an Export refusal names — the dialog draws its sentence under it.
+ * `ImportField`'s precedent.
+ */
+export type ExportField = 'destination' | 'name';
+
 /** What `POST /api/export` is sent: the format, where to, and what travels. */
 export interface StartExport {
   format: ExportFormat;
@@ -97,6 +103,11 @@ export interface StartExport {
   images: boolean;
   /** Whether subtitle files travel beside the sheet. */
   subtitles: boolean;
+  /**
+   * The **Export name** as typed — the folder and its sheet are called this,
+   * numbered when taken. Never trimmed.
+   */
+  name: string;
 }
 
 /**

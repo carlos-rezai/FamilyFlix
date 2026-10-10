@@ -28,7 +28,6 @@ import { sandboxRoot } from '../../test-support/sandboxRoot/sandboxRoot';
 import { writeExport } from './writeExport';
 
 /** 8 October 2026, midday, local. */
-const NOW = new Date(2026, 9, 8, 12, 0);
 const NAME = 'familyflix-collection_08-10-2026';
 
 /** Each stored file and the bytes it holds. */
@@ -91,18 +90,17 @@ const request = (destination: string, images: boolean): StartExport => ({
   destination,
   images,
   subtitles: false,
+  name: NAME,
 });
 
 describe('writeExport — Images on', () => {
   it('puts a film’s poster and backdrop in its title folder', async () => {
     const { media, destination } = sandbox();
 
-    await writeExport(
-      media,
-      request(destination, true),
-      { movies: [HEAT], series: [SEVERANCE] },
-      NOW
-    );
+    await writeExport(media, request(destination, true), {
+      movies: [HEAT],
+      series: [SEVERANCE],
+    });
 
     const folder = join(destination, NAME, 'Heat (1995)');
     expect(readdirSync(folder).sort()).toEqual(['backdrop.png', 'poster.jpg']);
@@ -117,12 +115,10 @@ describe('writeExport — Images on', () => {
   it('puts a series’ poster and its stills under stills\\', async () => {
     const { media, destination } = sandbox();
 
-    await writeExport(
-      media,
-      request(destination, true),
-      { movies: [HEAT], series: [SEVERANCE] },
-      NOW
-    );
+    await writeExport(media, request(destination, true), {
+      movies: [HEAT],
+      series: [SEVERANCE],
+    });
 
     const folder = join(destination, NAME, 'Severance (2022–)');
     expect(readFileSync(join(folder, 'poster.jpg'), 'utf8')).toBe(
@@ -137,12 +133,10 @@ describe('writeExport — Images on', () => {
   it('holds the sheet beside the title folders', async () => {
     const { media, destination } = sandbox();
 
-    await writeExport(
-      media,
-      request(destination, true),
-      { movies: [HEAT], series: [SEVERANCE] },
-      NOW
-    );
+    await writeExport(media, request(destination, true), {
+      movies: [HEAT],
+      series: [SEVERANCE],
+    });
 
     expect(readdirSync(join(destination, NAME)).sort()).toEqual(
       [
@@ -157,12 +151,10 @@ describe('writeExport — Images on', () => {
   it('writes the Poster cell’s path into the sheet', async () => {
     const { media, destination } = sandbox();
 
-    await writeExport(
-      media,
-      request(destination, true),
-      { movies: [HEAT], series: [] },
-      NOW
-    );
+    await writeExport(media, request(destination, true), {
+      movies: [HEAT],
+      series: [],
+    });
 
     const sheet = readFileSync(join(destination, NAME, `${NAME}.csv`), 'utf8');
     expect(sheet).toContain('Heat (1995)/poster.jpg');
@@ -173,12 +165,10 @@ describe('writeExport — Images off', () => {
   it('writes no title folders, though the art is stored', async () => {
     const { media, destination } = sandbox();
 
-    await writeExport(
-      media,
-      request(destination, false),
-      { movies: [HEAT], series: [SEVERANCE] },
-      NOW
-    );
+    await writeExport(media, request(destination, false), {
+      movies: [HEAT],
+      series: [SEVERANCE],
+    });
 
     expect(readdirSync(join(destination, NAME)).sort()).toEqual(
       [`${NAME}-episodes.csv`, `${NAME}.csv`].sort()

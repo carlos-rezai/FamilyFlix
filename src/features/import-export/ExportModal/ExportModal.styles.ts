@@ -22,35 +22,18 @@ export const Formats = styled.div`
 `;
 
 /**
- * The name row: the folder glyph and the **Export name** at one end, the
- * count at the other, on `bg2` inside the soft border.
+ * The _Folder name_ label row: the heading at one end, the count at the
+ * other, 8px over the field — the heading's own margin is the row's.
  */
-export const NameRow = styled.div`
+export const LabelRow = styled.div`
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 16px;
-  background: ${({ theme }) => theme.colors.bg2};
-  border: 1px solid ${({ theme }) => theme.colors.borderSoft};
-  border-radius: ${({ theme }) => theme.radius.md};
-`;
+  margin-bottom: 8px;
 
-/**
- * The name row's lead: the glyph and the **Export name**, 10px apart; the
- * faint ink is the glyph's.
- */
-export const NameLead = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  color: ${({ theme }) => theme.colors.textFaint};
-`;
-
-/** The **Export name**, in mono, in the dim ink. */
-export const ExportName = styled.span`
-  font-family: ${({ theme }) => theme.fonts.mono};
-  font-size: 13.5px;
-  color: ${({ theme }) => theme.colors.textDim};
+  & > ${SectionLabel} {
+    margin-bottom: 0;
+  }
 `;
 
 /** The **Export summary**'s count, semibold in the accent. */

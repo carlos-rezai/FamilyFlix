@@ -9,7 +9,12 @@ import {
   TextField,
   Toggle,
 } from '@/primitives';
-import { EXPORT_COLUMNS, EXPORT_FORMATS, type ExportFormat } from '@/types';
+import {
+  EXPORT_COLUMNS,
+  EXPORT_FORMATS,
+  EXPORT_NAME_PREFIX,
+  type ExportFormat,
+} from '@/types';
 import { FormatCard } from '../FormatCard/FormatCard';
 import { useExport } from '../useExport/useExport';
 import {
@@ -22,7 +27,6 @@ import {
   DoneHeading,
   DoneLine,
   DonePath,
-  ExportName,
   Formats,
   IncludeCard,
   IncludeDesc,
@@ -30,8 +34,7 @@ import {
   IncludeRow,
   IncludeText,
   IncludeTitle,
-  NameLead,
-  NameRow,
+  LabelRow,
   PathRow,
   Refusal,
   SectionLabel,
@@ -63,8 +66,8 @@ const FORMAT_COPY: Record<
 };
 
 /**
- * `1 title`, `4 titles` — the count as the name row and the done line say
- * it.
+ * `1 title`, `4 titles` — the count as the _Folder name_ label row and the
+ * done line say it.
  */
 const titleLabel = (count: number): string =>
   `${count} ${count === 1 ? 'title' : 'titles'}`;
@@ -80,8 +83,9 @@ const folderNameOf = (path: string): string =>
  * The **Export dialog**, 1:1 from `feat.ExportModal.dc.html`: the Modal with
  * the download glyph, _Export library_ and its lede; _Format_ over the two
  * **Format cards**, CSV checked on every open; _Save to_, a mono field with
- * the folder glyph and the route's refusal under it; the name row — the
- * folder glyph, the **Export name** and the titles count; _Include_, the
+ * the folder glyph and a destination refusal under it; _Folder name_ — the
+ * heading with the titles count at its right end, then a mono field with the
+ * folder glyph holding the **Export name**, and a name refusal under it; _Include_, the
  * _Images_ row and its Toggle, on every open, then the _Subtitles_ row,
  * off; _Columns included_ over the sixteen **Export columns** as pills — a
  * list, not controls; _Export as CSV_ / _Export as Excel_ beside _Cancel_.
@@ -92,15 +96,16 @@ const folderNameOf = (path: string): string =>
  * The dialog owns `useExport`. The count is `null` until the summary lands
  * and absent on screen while so — it never blocks the export, and a done face
  * reached without one leaves the clause out rather than a hole in. The button
- * reads _Exporting…_ and is disabled for the life of the request. A refused
- * destination keeps the idle face and the path typed, its sentence under the
- * field; any other failure leaves the idle face exactly as it was.
+ * reads _Exporting…_ and is disabled for the life of the request. A refusal
+ * keeps the idle face and what was typed, its sentence under the field it
+ * names; any other failure leaves the idle face exactly as it was.
  */
 export function ExportModal({ open, onClose }: ExportModalProps) {
   const {
     format,
     summary,
     destination,
+    name,
     images,
     subtitles,
     exporting,
@@ -108,6 +113,7 @@ export function ExportModal({ open, onClose }: ExportModalProps) {
     result,
     chooseFormat,
     setDestination,
+    setName,
     browse,
     setImages,
     setSubtitles,
@@ -187,16 +193,30 @@ export function ExportModal({ open, onClose }: ExportModalProps) {
             />
           )}
         </PathRow>
-        {refusal === null ? null : <Refusal>{refusal}</Refusal>}
+        {refusal?.field === 'destination' ? (
+          <Refusal>{refusal.sentence}</Refusal>
+        ) : null}
       </div>
 
-      <NameRow>
-        <NameLead>
-          <FolderIcon size={18} />
-          <ExportName>{summary?.defaultName ?? ''}</ExportName>
-        </NameLead>
-        {count === null ? null : <Count>{count}</Count>}
-      </NameRow>
+      <div>
+        <LabelRow>
+          <SectionLabel>Folder name</SectionLabel>
+          {count === null ? null : <Count>{count}</Count>}
+        </LabelRow>
+        <TextField
+          value={name}
+          placeholder={EXPORT_NAME_PREFIX}
+          icon={<FolderIcon size={18} />}
+          rounded={false}
+          mono
+          onChange={setName}
+          aria-label="Folder name"
+        />
+        {refusal?.field === 'name' ? (
+          <Refusal>{refusal.sentence}</Refusal>
+        ) : null}
+      </div>
+
       <div>
         <SectionLabel>Include</SectionLabel>
         <IncludeCard>

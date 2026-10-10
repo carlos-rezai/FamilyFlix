@@ -132,11 +132,12 @@ async function getSummary(baseUrl: string): Promise<ExportSummary> {
   return (await response.json()) as ExportSummary;
 }
 
-const postExport = (baseUrl: string, body: unknown) =>
+/** Post an export, named today's **Export name** unless the body names one. */
+const postExport = (baseUrl: string, body: Record<string, unknown>) =>
   fetch(`${baseUrl}/api/export`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
+    body: JSON.stringify({ name: exportName(new Date()), ...body }),
   });
 
 const addFolder = (baseUrl: string, path: string) =>
@@ -329,6 +330,7 @@ describe('POST /api/export — refused', () => {
     expect(response.status).toBe(400);
     expect(await response.json()).toEqual({
       error: 'Type the full path, starting with a drive letter.',
+      field: 'destination',
     });
     expect(existsSync(join(process.cwd(), 'Exports'))).toBe(false);
   });
@@ -345,7 +347,10 @@ describe('POST /api/export — refused', () => {
     });
 
     expect(response.status).toBe(400);
-    expect(await response.json()).toEqual({ error: 'No folder at that path.' });
+    expect(await response.json()).toEqual({
+      error: 'No folder at that path.',
+      field: 'destination',
+    });
     expect(existsSync(missing)).toBe(false);
   });
 

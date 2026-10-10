@@ -140,10 +140,11 @@ const postExport = (baseUrl: string, destination: string) =>
       destination,
       images: true,
       subtitles: false,
+      name: 'familyflix-collection_08-10-2026',
     }),
   });
 
-describe('POST /api/export — every refusal a 400 with its sentence', () => {
+describe('POST /api/export — every refusal a 400 with its sentence and field', () => {
   it('answers No folder for a destination that is a file', async () => {
     const { baseUrl, destination } = freshApi();
     const file = join(destination, 'notes.txt');
@@ -152,7 +153,10 @@ describe('POST /api/export — every refusal a 400 with its sentence', () => {
     const response = await postExport(baseUrl, file);
 
     expect(response.status).toBe(400);
-    expect(await response.json()).toEqual({ error: 'No folder at that path.' });
+    expect(await response.json()).toEqual({
+      error: 'No folder at that path.',
+      field: 'destination',
+    });
     expect(readdirSync(destination)).toEqual(['notes.txt']);
   });
 
@@ -165,6 +169,7 @@ describe('POST /api/export — every refusal a 400 with its sentence', () => {
     expect(response.status).toBe(400);
     expect(await response.json()).toEqual({
       error: "FamilyFlix can't write to that folder.",
+      field: 'destination',
     });
     expect(readdirSync(destination)).toEqual([]);
   });

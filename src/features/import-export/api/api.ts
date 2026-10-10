@@ -1,4 +1,5 @@
 import type {
+  ExportField,
   ExportResult,
   ExportSummary,
   ImportField,
@@ -151,16 +152,33 @@ export async function fetchExportSummary(): Promise<ExportSummary> {
   return (await response.json()) as ExportSummary;
 }
 
-/** What an export came to: the folder the server wrote, or its one sentence. */
+/**
+ * What an export came to: the folder the server wrote, or its one sentence
+ * and the field it is about.
+ */
 export type StartExportOutcome =
   | { kind: 'written'; result: ExportResult }
-  | { kind: 'refused'; sentence: string };
+  | { kind: 'refused'; field: ExportField; sentence: string };
+
+/** What a refusing `POST /api/export` answers with, when it names a field. */
+function isExportRefusal(
+  body: unknown
+): body is { error: string; field: ExportField } {
+  if (typeof body !== 'object' || body === null) {
+    return false;
+  }
+  const { error, field } = body as { error?: unknown; field?: unknown };
+  return (
+    typeof error === 'string' && (field === 'destination' || field === 'name')
+  );
+}
 
 /**
  * Write the **Export** into a folder: `POST /api/export` with a
- * {@link StartExport}. A `201`'s **ExportResult** is `written`, a `400`'s
- * sentence is `refused` — `addLibraryFolder`'s precedent — and any other
- * status, or a request that could not be made, rejects.
+ * {@link StartExport}. A `201`'s **ExportResult** is `written`, a `400` that
+ * names a field is `refused` with its field and sentence — `startImport`'s
+ * precedent — and any other status, a `400` naming no field among them, or a
+ * request that could not be made, rejects.
  */
 export async function startExport(
   request: StartExport
@@ -172,9 +190,9 @@ export async function startExport(
   });
 
   if (response.status === 400) {
-    const sentence = await refusalSentence(response);
-    if (sentence !== null) {
-      return { kind: 'refused', sentence };
+    const body: unknown = await response.json().catch(() => null);
+    if (isExportRefusal(body)) {
+      return { kind: 'refused', field: body.field, sentence: body.error };
     }
   }
   if (!response.ok) {

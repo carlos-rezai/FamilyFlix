@@ -62,6 +62,7 @@ import {
   DEFAULT_MOVIE_SORT,
   MOVIE_SORTS,
   type EpisodeRead,
+  type ExportField,
   type ExportResult,
   type GenreListPayload,
   type GenrePoolPayload,
@@ -485,14 +486,31 @@ const FOLDER_REFUSALS: Record<
 /** How each refused export destination is answered: a `400` and its sentence. */
 const EXPORT_REFUSALS: Record<
   ExportRefusal,
-  { status: number; error: string }
+  { field: ExportField; error: string }
 > = {
   relative: {
-    status: 400,
+    field: 'destination',
     error: 'Type the full path, starting with a drive letter.',
   },
-  missing: { status: 400, error: 'No folder at that path.' },
-  'read-only': { status: 400, error: "FamilyFlix can't write to that folder." },
+  missing: { field: 'destination', error: 'No folder at that path.' },
+  'read-only': {
+    field: 'destination',
+    error: "FamilyFlix can't write to that folder.",
+  },
+  unnamed: { field: 'name', error: 'Give the export folder a name.' },
+  'too-long': { field: 'name', error: 'Keep the name under 200 characters.' },
+  'bad-character': {
+    field: 'name',
+    error: 'A folder name can\'t use < > : " / \\ | ? or *.',
+  },
+  'bad-ending': {
+    field: 'name',
+    error: "A folder name can't end in a space or a dot.",
+  },
+  reserved: {
+    field: 'name',
+    error: 'Windows keeps that name for itself. Choose another.',
+  },
 };
 
 /**
@@ -2230,10 +2248,10 @@ export function createApiRouter(
 
   // The **Export** itself: the body read by `exportBody`, then every film A–Z
   // and every series' detail, read over the Series tab's list, handed to
-  // `writeExport`, which makes the dated **Export folder** inside the
-  // destination. `201` with the folder it wrote, `400` with the one sentence
-  // for a malformed body or a refused destination — each refusal worded
-  // through `EXPORT_REFUSALS` — and `500` with the stopped-partway sentence
+  // `writeExport`, which makes the **Export folder** under the requested name
+  // inside the destination. `201` with the folder it wrote, `400 { error }`
+  // for a malformed body, `400 { error, field }` for a refused destination or
+  // name — each worded through `EXPORT_REFUSALS` — and `500` with the stopped-partway sentence
   // around the writer's reason for anything else.
   router.post('/export', async (req: Request, res: Response) => {
     const read = exportBody(req.body);
@@ -2241,20 +2259,15 @@ export function createApiRouter(
       res.status(400).json({ error: read.error });
       return;
     }
-    const outcome = await writeExport(
-      media,
-      read.value,
-      {
-        movies: storage.listMovies({ sort: 'a-z' }),
-        series: storage
-          .getSeriesHome({ sort: 'a-z' })
-          .series.flatMap((each) => storage.getSeriesDetail(each.id) ?? []),
-      },
-      new Date()
-    );
+    const outcome = await writeExport(media, read.value, {
+      movies: storage.listMovies({ sort: 'a-z' }),
+      series: storage
+        .getSeriesHome({ sort: 'a-z' })
+        .series.flatMap((each) => storage.getSeriesDetail(each.id) ?? []),
+    });
     if (outcome.kind === 'refused') {
-      const { status, error } = EXPORT_REFUSALS[outcome.refusal];
-      res.status(status).json({ error });
+      const { field, error } = EXPORT_REFUSALS[outcome.refusal];
+      res.status(400).json({ error, field });
       return;
     }
     if (outcome.kind === 'failed') {

@@ -29,8 +29,9 @@ import {
  * 2. **Format**, the two Format cards, unchanged;
  * 3. **Save to**: a mono `TextField` with the folder glyph, and under it the
  *    13px `danger` refusal line when the route refused the path;
- * 4. the name row: the folder glyph, the **Export name** in mono, and
- *    `N titles` / `1 title` in accent — dropped while the summary is `null`;
+ * 4. **Folder name** (log 36): the heading with `N titles` / `1 title` in
+ *    accent — dropped while the summary is `null` — over a mono `TextField`
+ *    with the folder glyph holding the **Export name**;
  * 5. **Columns included**: the sixteen pills;
  * 6. _Export as CSV / Excel_, _Exporting…_ and disabled in flight, and
  *    _Cancel_.
@@ -109,7 +110,7 @@ function badRequest(error: string): Response {
   return {
     ok: false,
     status: 400,
-    json: () => Promise.resolve({ error }),
+    json: () => Promise.resolve({ error, field: 'destination' }),
   } as unknown as Response;
 }
 
@@ -164,6 +165,10 @@ const csvCard = () => within(dialog()).getByRole('radio', { name: /CSV/ });
 const saveTo = () =>
   within(dialog()).getByRole('textbox', {
     name: 'Save to',
+  }) as HTMLInputElement;
+const folderName = () =>
+  within(dialog()).getByRole('textbox', {
+    name: 'Folder name',
   }) as HTMLInputElement;
 const exportButton = (format: 'CSV' | 'Excel' = 'CSV') =>
   within(dialog()).getByRole('button', { name: `Export as ${format}` });
@@ -228,7 +233,7 @@ describe('ExportModal — the idle face, top to bottom', () => {
     await waitFor(() => expect(saveTo().value).toBe('E:\\Movies'));
   });
 
-  it('draws the folder glyph in the field and on the name row', () => {
+  it('draws the folder glyph in both path fields', () => {
     serve();
 
     renderDialog();
@@ -237,13 +242,13 @@ describe('ExportModal — the idle face, top to bottom', () => {
     expect(glyphs.length).toBeGreaterThanOrEqual(2);
   });
 
-  it('names the export folder on the name row, after Save to', async () => {
+  it('names the export folder in the Folder name field, after Save to', async () => {
     serve();
 
     renderDialog();
 
-    const name = await within(dialog()).findByText(NAME);
-    expect(before(saveTo(), name)).toBe(true);
+    await waitFor(() => expect(folderName().value).toBe(NAME));
+    expect(before(saveTo(), folderName())).toBe(true);
   });
 
   it('counts the films and the series together as titles', async () => {
@@ -342,6 +347,7 @@ describe('ExportModal — exporting', () => {
       destination: 'D:\\Backups',
       images: true,
       subtitles: false,
+      name: NAME,
     });
   });
 
@@ -498,7 +504,7 @@ describe('ExportModal — Export ready', () => {
 /**
  * 31 — Export options, Phase 3: images (issue #278).
  *
- * The **Include** group, after the name row and before _Columns included_:
+ * The **Include** group, after the Folder name field and before _Columns included_:
  * a Settings-`Row`-furniture row reading _Images_ over _Posters, backdrops
  * and episode stills, in a folder per title._, with a Toggle — on by default,
  * and what the request sends.
@@ -507,14 +513,14 @@ describe('ExportModal — Include', () => {
   const imagesToggle = () =>
     within(dialog()).getByRole('switch', { name: 'Images' });
 
-  it('draws the Include group between the name row and the columns', async () => {
+  it('draws the Include group between the Folder name field and the columns', async () => {
     serve();
 
     renderDialog();
 
     const include = within(dialog()).getByText('Include');
-    const name = await within(dialog()).findByText(NAME);
-    expect(before(name, include)).toBe(true);
+    await waitFor(() => expect(folderName().value).toBe(NAME));
+    expect(before(folderName(), include)).toBe(true);
     expect(
       before(include, within(dialog()).getByText('Columns included'))
     ).toBe(true);

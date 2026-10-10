@@ -30,7 +30,6 @@ import { sandboxRoot } from '../../test-support/sandboxRoot/sandboxRoot';
 import { writeExport } from './writeExport';
 
 /** 8 October 2026, midday, local. */
-const NOW = new Date(2026, 9, 8, 12, 0);
 const NAME = 'familyflix-collection_08-10-2026';
 
 /** Each stored file and the bytes it holds — the videos among them. */
@@ -115,7 +114,13 @@ const request = (
   destination: string,
   images: boolean,
   subtitles: boolean
-): StartExport => ({ format: 'csv', destination, images, subtitles });
+): StartExport => ({
+  format: 'csv',
+  destination,
+  images,
+  subtitles,
+  name: NAME,
+});
 
 /** Every file under `root`, relative and forward-slashed, sorted. */
 function tree(root: string): string[] {
@@ -132,12 +137,10 @@ function tree(root: string): string[] {
 /** Export the whole library with the given toggles; the Export folder's tree. */
 async function exported(images: boolean, subtitles: boolean) {
   const { media, destination } = sandbox();
-  await writeExport(
-    media,
-    request(destination, images, subtitles),
-    { movies: [HEAT], series: [SEVERANCE] },
-    NOW
-  );
+  await writeExport(media, request(destination, images, subtitles), {
+    movies: [HEAT],
+    series: [SEVERANCE],
+  });
   const folder = join(destination, NAME);
   return { folder, files: tree(folder) };
 }

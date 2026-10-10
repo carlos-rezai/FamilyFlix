@@ -8,7 +8,10 @@ import type { Movie, SeriesDetail, StartExport } from '@/types';
 import type { Media } from '../../media/createMedia/createMedia';
 import { readableFolder } from '../../media/readableFolder/readableFolder';
 import { writableFolder } from '../../media/writableFolder/writableFolder';
-import { exportName } from '../exportName/exportName';
+import {
+  exportNameRefusal,
+  type ExportNameRefusal,
+} from '../exportName/exportName';
 import {
   exportRows,
   type ExportFile,
@@ -24,10 +27,15 @@ export interface ExportContent {
 }
 
 /**
- * Why a destination cannot take an export: not absolute, not a folder that is
- * there, or a folder FamilyFlix can't write to. The route words each one.
+ * Why an export cannot be made: a destination not absolute, not a folder that
+ * is there, or a folder FamilyFlix can't write to — or a name Windows would
+ * refuse. The route words each one.
  */
-export type ExportRefusal = 'relative' | 'missing' | 'read-only';
+export type ExportRefusal =
+  | 'relative'
+  | 'missing'
+  | 'read-only'
+  | ExportNameRefusal;
 
 /**
  * What {@link writeExport} came to — a value, never a throw. A refusal is its
@@ -143,7 +151,8 @@ const reasonOf = (error: unknown): string =>
 /**
  * The injected writer of an **Export**, and it never throws: check the
  * destination (absolute, then readable, then writable — each failure a
- * `refused` kind), make the dated **Export folder** inside it exclusively,
+ * `refused` kind) and then the name (`exportNameRefusal`, as typed), make the
+ * **Export folder** under the requested name inside it exclusively,
  * copy each file the **File plan** names into it — piped out of
  * `Media.readStored`, the only way a stored file is read, one that cannot be
  * read skipped and its cell blanked — then write the sheet last. Anything
@@ -153,15 +162,15 @@ const reasonOf = (error: unknown): string =>
 export async function writeExport(
   media: Media,
   request: StartExport,
-  content: ExportContent,
-  now: Date
+  content: ExportContent
 ): Promise<ExportOutcome> {
-  const refusal = await refusalOf(request.destination);
+  const refusal =
+    (await refusalOf(request.destination)) ?? exportNameRefusal(request.name);
   if (refusal !== null) {
     return { kind: 'refused', refusal };
   }
 
-  const name = exportName(now);
+  const { name } = request;
   let folder: string | null = null;
   try {
     folder = await makeFolder(request.destination, name);

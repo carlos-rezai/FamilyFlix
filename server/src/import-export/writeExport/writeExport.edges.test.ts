@@ -39,7 +39,6 @@ import { sandboxRoot } from '../../test-support/sandboxRoot/sandboxRoot';
 import { writeExport } from './writeExport';
 
 /** 8 October 2026, midday, local. */
-const NOW = new Date(2026, 9, 8, 12, 0);
 const NAME = 'familyflix-collection_08-10-2026';
 
 /** Each stored file and the bytes it holds — Heat's poster is not among them. */
@@ -94,6 +93,7 @@ const request = (
   destination,
   images: true,
   subtitles: false,
+  name: NAME,
   ...overrides,
 });
 
@@ -126,12 +126,10 @@ describe('writeExport — a destination that is not a folder', () => {
     const { media, dir } = sandbox();
     const missing = join(dir, 'not-there');
 
-    const outcome = await writeExport(
-      media,
-      request(missing),
-      { movies: [ZEPHYR], series: [] },
-      NOW
-    );
+    const outcome = await writeExport(media, request(missing), {
+      movies: [ZEPHYR],
+      series: [],
+    });
 
     expect(outcome).toEqual({ kind: 'refused', refusal: 'missing' });
     expect(existsSync(missing)).toBe(false);
@@ -142,12 +140,10 @@ describe('writeExport — a destination that is not a folder', () => {
     const file = join(destination, 'notes.txt');
     writeFileSync(file, 'the family’s notes');
 
-    const outcome = await writeExport(
-      media,
-      request(file),
-      { movies: [ZEPHYR], series: [] },
-      NOW
-    );
+    const outcome = await writeExport(media, request(file), {
+      movies: [ZEPHYR],
+      series: [],
+    });
 
     expect(outcome).toEqual({ kind: 'refused', refusal: 'missing' });
     expect(readFileSync(file, 'utf8')).toBe('the family’s notes');
@@ -173,12 +169,10 @@ describe('writeExport — a taken Export name', () => {
     const { media, destination } = sandbox();
     firstExport(destination);
 
-    const outcome = await writeExport(
-      media,
-      request(destination),
-      { movies: [ZEPHYR], series: [] },
-      NOW
-    );
+    const outcome = await writeExport(media, request(destination), {
+      movies: [ZEPHYR],
+      series: [],
+    });
 
     expect(outcome).toMatchObject({
       kind: 'written',
@@ -193,12 +187,10 @@ describe('writeExport — a taken Export name', () => {
     const { media, destination } = sandbox();
     const before = firstExport(destination);
 
-    await writeExport(
-      media,
-      request(destination),
-      { movies: [ZEPHYR], series: [] },
-      NOW
-    );
+    await writeExport(media, request(destination), {
+      movies: [ZEPHYR],
+      series: [],
+    });
 
     expect(tree(join(destination, NAME))).toEqual(before);
   });
@@ -208,12 +200,10 @@ describe('writeExport — a taken Export name', () => {
     firstExport(destination);
     mkdirSync(join(destination, `${NAME} (1)`));
 
-    const outcome = await writeExport(
-      media,
-      request(destination),
-      { movies: [ZEPHYR], series: [] },
-      NOW
-    );
+    const outcome = await writeExport(media, request(destination), {
+      movies: [ZEPHYR],
+      series: [],
+    });
 
     expect(outcome).toMatchObject({
       kind: 'written',
@@ -227,12 +217,10 @@ describe('writeExport — a stored file that can’t be read', () => {
   it('still answers written', async () => {
     const { media, destination } = sandbox();
 
-    const outcome = await writeExport(
-      media,
-      request(destination),
-      { movies: [HEAT, ZEPHYR], series: [] },
-      NOW
-    );
+    const outcome = await writeExport(media, request(destination), {
+      movies: [HEAT, ZEPHYR],
+      series: [],
+    });
 
     expect(outcome).toEqual({
       kind: 'written',
@@ -245,12 +233,10 @@ describe('writeExport — a stored file that can’t be read', () => {
   it('skips the missing file and copies the rest', async () => {
     const { media, destination } = sandbox();
 
-    await writeExport(
-      media,
-      request(destination),
-      { movies: [HEAT, ZEPHYR], series: [] },
-      NOW
-    );
+    await writeExport(media, request(destination), {
+      movies: [HEAT, ZEPHYR],
+      series: [],
+    });
 
     const heat = join(destination, NAME, 'Heat (1995)');
     expect(readdirSync(heat)).toEqual(['backdrop.png']);
@@ -268,12 +254,10 @@ describe('writeExport — a stored file that can’t be read', () => {
   it('blanks the missing file’s cell and keeps the others', async () => {
     const { media, destination } = sandbox();
 
-    await writeExport(
-      media,
-      request(destination),
-      { movies: [HEAT, ZEPHYR], series: [] },
-      NOW
-    );
+    await writeExport(media, request(destination), {
+      movies: [HEAT, ZEPHYR],
+      series: [],
+    });
 
     const sheet = readFileSync(join(destination, NAME, `${NAME}.csv`), 'utf8');
     expect(sheet).not.toContain('Heat (1995)/poster.jpg');
@@ -307,8 +291,7 @@ describe('writeExport — any other failure', () => {
     const outcome = await writeExport(
       breakingMedia(media),
       request(destination),
-      { movies: [ZEPHYR], series: [] },
-      NOW
+      { movies: [ZEPHYR], series: [] }
     );
 
     expect(outcome).toEqual({
@@ -320,12 +303,10 @@ describe('writeExport — any other failure', () => {
   it('leaves no Export folder behind', async () => {
     const { media, destination } = sandbox();
 
-    await writeExport(
-      breakingMedia(media),
-      request(destination),
-      { movies: [ZEPHYR], series: [] },
-      NOW
-    );
+    await writeExport(breakingMedia(media), request(destination), {
+      movies: [ZEPHYR],
+      series: [],
+    });
 
     expect(readdirSync(destination)).toEqual([]);
   });
@@ -335,12 +316,10 @@ describe('writeExport — any other failure', () => {
     mkdirSync(join(destination, NAME));
     writeFileSync(join(destination, NAME, 'kept.txt'), 'kept');
 
-    await writeExport(
-      breakingMedia(media),
-      request(destination),
-      { movies: [ZEPHYR], series: [] },
-      NOW
-    );
+    await writeExport(breakingMedia(media), request(destination), {
+      movies: [ZEPHYR],
+      series: [],
+    });
 
     expect(readdirSync(destination)).toEqual([NAME]);
     expect(tree(join(destination, NAME))).toEqual({
@@ -353,12 +332,10 @@ describe('writeExport — zero titles', () => {
   it('answers written with zero counts', async () => {
     const { media, destination } = sandbox();
 
-    const outcome = await writeExport(
-      media,
-      request(destination),
-      { movies: [], series: [] },
-      NOW
-    );
+    const outcome = await writeExport(media, request(destination), {
+      movies: [],
+      series: [],
+    });
 
     expect(outcome).toEqual({
       kind: 'written',
@@ -371,12 +348,7 @@ describe('writeExport — zero titles', () => {
   it('writes both csv sheets holding their header row alone', async () => {
     const { media, destination } = sandbox();
 
-    await writeExport(
-      media,
-      request(destination),
-      { movies: [], series: [] },
-      NOW
-    );
+    await writeExport(media, request(destination), { movies: [], series: [] });
 
     const folder = join(destination, NAME);
     expect(readdirSync(folder).sort()).toEqual(
@@ -393,12 +365,10 @@ describe('writeExport — zero titles', () => {
   it('writes the workbook’s two worksheets holding their header row alone', async () => {
     const { media, destination } = sandbox();
 
-    await writeExport(
-      media,
-      request(destination, { format: 'xlsx' }),
-      { movies: [], series: [] },
-      NOW
-    );
+    await writeExport(media, request(destination, { format: 'xlsx' }), {
+      movies: [],
+      series: [],
+    });
 
     const folder = join(destination, NAME);
     expect(readdirSync(folder)).toEqual([`${NAME}.xlsx`]);

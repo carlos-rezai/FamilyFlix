@@ -53,13 +53,14 @@ vi.mock('node:fs/promises', async (importOriginal) => {
   };
 });
 
-const NOW = new Date(2026, 9, 8, 12, 0);
+const NAME = 'familyflix-collection_08-10-2026';
 
 const request = (destination: string): StartExport => ({
   format: 'csv',
   destination,
   images: false,
   subtitles: false,
+  name: NAME,
 });
 
 /** A media root and a destination this process may read but not write. */
@@ -81,12 +82,10 @@ describe('writeExport — a folder FamilyFlix can’t write to', () => {
   it('is refused as read-only', async () => {
     const { media, destination } = sandbox();
 
-    const outcome = await writeExport(
-      media,
-      request(destination),
-      { movies: [makeMovie({ title: 'Zephyr', year: 2020 })], series: [] },
-      NOW
-    );
+    const outcome = await writeExport(media, request(destination), {
+      movies: [makeMovie({ title: 'Zephyr', year: 2020 })],
+      series: [],
+    });
 
     expect(outcome).toEqual({ kind: 'refused', refusal: 'read-only' });
   });
@@ -94,12 +93,10 @@ describe('writeExport — a folder FamilyFlix can’t write to', () => {
   it('creates nothing inside it', async () => {
     const { media, destination } = sandbox();
 
-    await writeExport(
-      media,
-      request(destination),
-      { movies: [makeMovie({ title: 'Zephyr', year: 2020 })], series: [] },
-      NOW
-    );
+    await writeExport(media, request(destination), {
+      movies: [makeMovie({ title: 'Zephyr', year: 2020 })],
+      series: [],
+    });
 
     expect(readdirSync(destination)).toEqual([]);
   });
@@ -109,12 +106,10 @@ describe('writeExport — a folder FamilyFlix can’t write to', () => {
     const missing = join(dir, 'not-there');
     readOnly.add(missing);
 
-    const outcome = await writeExport(
-      media,
-      request(missing),
-      { movies: [], series: [] },
-      NOW
-    );
+    const outcome = await writeExport(media, request(missing), {
+      movies: [],
+      series: [],
+    });
 
     expect(outcome).toEqual({ kind: 'refused', refusal: 'missing' });
   });

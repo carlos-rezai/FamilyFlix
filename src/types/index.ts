@@ -94,6 +94,7 @@ export type {
   ExportColumn,
   ExportEpisodeColumn,
   ExportSummary,
+  ExportField,
   StartExport,
   ExportResult,
 } from './export';
