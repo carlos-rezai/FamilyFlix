@@ -32,10 +32,12 @@ interface WorldOptions {
   opened?: string;
   /** A `mkdir` that throws this. */
   mkdirThrows?: Error;
+  /** A `shell.openPath` that rejects with this. */
+  openRejects?: Error;
 }
 
 /** A recorded world: every call, in order, and every log line. */
-function world({ opened = '', mkdirThrows }: WorldOptions = {}) {
+function world({ opened = '', mkdirThrows, openRejects }: WorldOptions = {}) {
   const calls: string[] = [];
   const lines: string[] = [];
   const made: string[] = [];
@@ -52,7 +54,9 @@ function world({ opened = '', mkdirThrows }: WorldOptions = {}) {
     openPath(path: string) {
       calls.push('openPath');
       openedPaths.push(path);
-      return Promise.resolve(opened);
+      return openRejects
+        ? Promise.reject(openRejects)
+        : Promise.resolve(opened);
     },
     log(text: string) {
       lines.push(text);
@@ -118,6 +122,17 @@ describe('openMediaFolder — openPath refuses', () => {
     await expect(
       openMediaFolder(ROOT, world({ opened: ERROR }).value)
     ).resolves.toBeUndefined();
+  });
+
+  it('logs a rejecting openPath as one line naming the error and the root, and resolves', async () => {
+    const w = world({ openRejects: new Error('spawn explorer ENOENT') });
+
+    await expect(openMediaFolder(ROOT, w.value)).resolves.toBeUndefined();
+
+    expect(w.lines).toHaveLength(1);
+    expect(w.lines[0]).toMatch(/^Couldn’t open the media folder: /);
+    expect(w.lines[0]).toContain('spawn explorer ENOENT');
+    expect(w.lines[0]).toContain(ROOT);
   });
 });
 
