@@ -15,6 +15,11 @@ interface ButtonFace {
   icon?: 'none' | 'play';
   /** Stretch to fill the container instead of hugging the label. */
   fullWidth?: boolean;
+  /**
+   * Set by `styled(Button)`, which is how each call site adds its own chrome
+   * — its placement in a row, say — without a prop for it here.
+   */
+  className?: string;
 }
 
 /**
@@ -57,9 +62,11 @@ export function Button({
   size = 'md',
   icon = 'none',
   fullWidth = false,
+  className,
   ...form
 }: ButtonProps) {
   const face = {
+    className,
     $variant: variant,
     $size: size,
     $fullWidth: fullWidth,

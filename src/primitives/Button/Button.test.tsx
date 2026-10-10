@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { cleanup, render, screen, fireEvent } from '@testing-library/react';
 import type { ReactElement } from 'react';
-import { ThemeProvider } from 'styled-components';
+import styled, { ThemeProvider } from 'styled-components';
 import { MemoryRouter } from 'react-router-dom';
 
 // Imported through the category barrel, the way every consumer will import it
@@ -155,6 +155,39 @@ describe('Button — as a router link', () => {
 
     expect(container.querySelector('svg')).not.toBeNull();
     expect(screen.getByRole('link', { name: 'Play' })).toBeTruthy();
+  });
+});
+
+describe('Button — a caller’s chrome', () => {
+  // A caller places the button with `styled(Button)` — the Storage card holds
+  // _Open folder_'s width that way — which works only if the generated class
+  // reaches the element, in both forms.
+  const Placed = styled(Button)`
+    margin-top: 7px;
+  `;
+
+  it('wears a className, which is how each call site adds its own chrome', () => {
+    render(
+      <ThemeProvider theme={theme}>
+        <Placed label="Open folder" variant="secondary" size="sm" />
+      </ThemeProvider>
+    );
+
+    const button = screen.getByRole('button', { name: 'Open folder' });
+    expect(getComputedStyle(button).marginTop).toBe('7px');
+  });
+
+  it('wears a className as a router link too', () => {
+    render(
+      <ThemeProvider theme={theme}>
+        <MemoryRouter>
+          <Placed label="Back to library" to="/" />
+        </MemoryRouter>
+      </ThemeProvider>
+    );
+
+    const link = screen.getByRole('link', { name: 'Back to library' });
+    expect(getComputedStyle(link).marginTop).toBe('7px');
   });
 });
 
