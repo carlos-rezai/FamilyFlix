@@ -26,6 +26,12 @@ export interface ShellPaths {
   ffmpeg: string | null;
   /** The working directory the server is forked in. */
   serverCwd: string;
+  /**
+   * The **Managed media directory**: where the server's `./media` resolves
+   * under `serverCwd` — the one spelling the server's `FAMILYFLIX_MEDIA_PATH`
+   * and Open folder both read.
+   */
+  mediaRoot: string;
 }
 
 /**
@@ -52,6 +58,7 @@ export function shellPaths(
       sqliteBinding: join(resourcesPath, 'native', 'better_sqlite3.node'),
       ffmpeg: join(resourcesPath, 'ffmpeg', 'ffmpeg.exe'),
       serverCwd: userData,
+      mediaRoot: join(userData, 'media'),
     };
   }
 
@@ -61,5 +68,6 @@ export function shellPaths(
     sqliteBinding: join(appPath, 'electron', '.native', 'better_sqlite3.node'),
     ffmpeg: null,
     serverCwd: appPath,
+    mediaRoot: join(appPath, 'media'),
   };
 }

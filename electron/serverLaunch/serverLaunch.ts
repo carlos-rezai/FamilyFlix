@@ -29,8 +29,9 @@ const SHELL_PORT = '41720';
  * - `'dev'` (`electron:dev`): `3001`, Vite serving the renderer.
  * - `'start'` (`electron:start`): the installed shape — the **Shell port**,
  *   the built renderer.
- * - `'installed'`: the installed shape, plus the database, the managed media
- *   directory and the **Component slot** under `userData`, the **Trusted
+ * - `'installed'`: the installed shape, plus the database and the
+ *   **Component slot** under `userData`, the managed media directory at
+ *   `paths.mediaRoot`, the **Trusted
  *   hosts** set empty, and `FAMILYFLIX_FFMPEG_PATH` at the **Default
  *   component** `shellPaths` found under `resources\ffmpeg` — unpackaged runs
  *   set none, so the FFmpeg on `PATH` stands in.
@@ -67,7 +68,7 @@ export function serverLaunch(
       ? {
           ...installed,
           FAMILYFLIX_DB_PATH: join(userData, 'familyflix.db'),
-          FAMILYFLIX_MEDIA_PATH: join(userData, 'media'),
+          FAMILYFLIX_MEDIA_PATH: paths.mediaRoot,
           FAMILYFLIX_COMPONENT_PATH: join(userData, 'playback-component'),
           FAMILYFLIX_TRUSTED_HOSTS: '',
           ...(paths.ffmpeg ? { FAMILYFLIX_FFMPEG_PATH: paths.ffmpeg } : {}),

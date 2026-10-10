@@ -1,3 +1,7 @@
+import { useState } from 'react';
+
+import { folderBridge } from '@/api/folderBridge/folderBridge';
+import { Button } from '@/primitives';
 import { formatBytes } from '@/utils';
 
 import { useStorageReport } from '../useStorageReport/useStorageReport';
@@ -25,8 +29,12 @@ const titles = (count: number) =>
  * under it the space line — **Space used** in bold, _of movies_, a faint `·`,
  * and `N titles`.
  *
- * No _Change…_: a control whose mechanism does not exist is not drawn, so the
- * title and path stand alone on their line.
+ * _Open folder_ ends the folder line in the desktop app: a `secondary`, `sm`
+ * button that asks the **Folder bridge**'s `openMedia()` — no argument, the
+ * renderer never names a path — and shows nothing after: no busy state, no
+ * snackbar, no error face, since main logs any failure to the **Shell log**.
+ * It is a control, not a read, so it is drawn before the report lands. A
+ * browser has no bridge, and the title and path stand alone on their line.
  *
  * The section owns `useStorageReport`. **Blank until it lands**: the path and
  * the space line are drawn from the report and not before — the title alone
@@ -34,6 +42,7 @@ const titles = (count: number) =>
  */
 export function StorageSection() {
   const { report } = useStorageReport();
+  const [bridge] = useState(folderBridge);
 
   return (
     <>
@@ -44,6 +53,14 @@ export function StorageSection() {
             <ItemTitle>Managed media folder</ItemTitle>
             {report ? <Path>{report.mediaPath}</Path> : null}
           </FolderText>
+          {bridge ? (
+            <Button
+              label="Open folder"
+              variant="secondary"
+              size="sm"
+              onClick={() => void bridge.openMedia()}
+            />
+          ) : null}
         </Folder>
         {report ? (
           <SpaceLine>

@@ -53,6 +53,8 @@ electron/.ffmpeg/ffmpeg.exe -i release/smoke.mp4 -c copy release/smoke.mkv
 - [ ] Run the Installer. SmartScreen appears once: _More info → Run anyway_.
 - [ ] The one-click progress window wears the mark, and asks nothing.
 - [ ] The app opens maximized on _Your library is empty_.
+- [ ] Settings → Storage → _Open folder_ on this fresh install, before any
+      import: Explorer opens `%APPDATA%\FamilyFlix\media`, made empty.
 
 ## 4. Every surface wears the mark
 
@@ -73,6 +75,8 @@ electron/.ffmpeg/ffmpeg.exe -i release/smoke.mp4 -c copy release/smoke.mkv
       plays.
 - [ ] Settings → Playback → Codecs: the Component row's pill reads
       **Default**.
+- [ ] Settings → Storage → _Open folder_: Explorer opens
+      `%APPDATA%\FamilyFlix\media`, holding the imported films' folders.
 - [ ] Settings → About reads the version.
 
 ## 6. The slot over the default

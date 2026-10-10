@@ -13,12 +13,20 @@ export interface LibraryFolder {
   reachable: boolean;
 }
 
-/** The IPC channels between the preload and main for the native pickers. */
+/**
+ * The IPC channels between the preload and main for the native pickers and
+ * Open folder.
+ */
 export const FOLDER_CHANNELS = {
   /** invoke → `string[]`, the folders picked; `[]` for a cancel */
   pick: 'familyflix:folders:pick',
   /** invoke → `string | null`, the one folder picked; `null` for a cancel */
   pickOne: 'familyflix:folders:pick-one',
+  /**
+   * invoke, no argument → nothing: main opens the **Managed media directory**
+   * in Explorer. The renderer never names a path.
+   */
+  openMedia: 'familyflix:folders:open-media',
 } as const;
 
 /** `window.familyflix.folders`, as the preload defines it. */
@@ -29,4 +37,9 @@ export interface FolderBridge {
   pick(): Promise<string[]>;
   /** Open the system folder dialog for one folder; `null` a cancel. */
   pickOne(): Promise<string | null>;
+  /**
+   * Open the **Managed media directory** in Explorer, made first if absent;
+   * a failure is logged by main, never answered.
+   */
+  openMedia(): Promise<void>;
 }

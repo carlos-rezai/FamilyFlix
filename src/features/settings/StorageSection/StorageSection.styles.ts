@@ -13,14 +13,20 @@ export const StorageCard = styled(Card)`
 `;
 
 /**
- * The folder line: the title over the path. `min-width: 0` is what lets the
- * path shrink to the card and take an ellipsis rather than widen it.
+ * The folder line: the title over the path, then _Open folder_.
+ * `min-width: 0` is what lets the path shrink to the card and take an
+ * ellipsis rather than widen it; the button holds its width,
+ * `flex: 0 0 auto`, as the prototype's _Change…_ did.
  */
 export const Folder = styled.div`
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
+
+  & > button {
+    flex: 0 0 auto;
+  }
 `;
 
 export const FolderText = styled.div`

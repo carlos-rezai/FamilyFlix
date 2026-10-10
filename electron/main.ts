@@ -25,6 +25,7 @@ import { APP_USER_MODEL_ID } from './appIdentity/appIdentity';
 import { createUpdates } from './createUpdates/createUpdates';
 import { downloadPath } from './downloadPath/downloadPath';
 import { loadRenderer } from './loadRenderer/loadRenderer';
+import { openMediaFolder } from './openMediaFolder/openMediaFolder';
 import { pickFolders, pickOneFolder } from './pickFolders/pickFolders';
 import { quitAfterShutdown } from './quitAfterShutdown/quitAfterShutdown';
 import { reloadOnce } from './reloadOnce/reloadOnce';
@@ -289,6 +290,18 @@ if (!app.requestSingleInstanceLock()) {
           properties: ['openDirectory', 'createDirectory'],
         })
       )
+    );
+
+    // The Storage card's _Open folder_: no argument, the **Managed media
+    // directory** made if absent and shown in Explorer; a failure logged.
+    ipcMain.handle(FOLDER_CHANNELS.openMedia, () =>
+      openMediaFolder(paths.mediaRoot, {
+        mkdir: (path) => {
+          mkdirSync(path, { recursive: true });
+        },
+        openPath: (path) => shell.openPath(path),
+        log: (text) => log.main(text),
+      })
     );
 
     openWindow(started.port, join(__dirname, 'preload.js'));
