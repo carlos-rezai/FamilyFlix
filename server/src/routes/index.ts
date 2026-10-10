@@ -483,31 +483,51 @@ const FOLDER_REFUSALS: Record<
   missing: { status: 400, error: 'No folder at that path.' },
 };
 
-/** How each refused export destination is answered: a `400` and its sentence. */
+/**
+ * How each refused export destination or name is answered: a status, the
+ * field the dialog draws it under, and its one sentence.
+ */
 const EXPORT_REFUSALS: Record<
   ExportRefusal,
-  { field: ExportField; error: string }
+  { status: number; field: ExportField; error: string }
 > = {
   relative: {
+    status: 400,
     field: 'destination',
     error: 'Type the full path, starting with a drive letter.',
   },
-  missing: { field: 'destination', error: 'No folder at that path.' },
+  missing: {
+    status: 400,
+    field: 'destination',
+    error: 'No folder at that path.',
+  },
   'read-only': {
+    status: 400,
     field: 'destination',
     error: "FamilyFlix can't write to that folder.",
   },
-  unnamed: { field: 'name', error: 'Give the export folder a name.' },
-  'too-long': { field: 'name', error: 'Keep the name under 200 characters.' },
+  unnamed: {
+    status: 400,
+    field: 'name',
+    error: 'Give the export folder a name.',
+  },
+  'too-long': {
+    status: 400,
+    field: 'name',
+    error: 'Keep the name under 200 characters.',
+  },
   'bad-character': {
+    status: 400,
     field: 'name',
     error: 'A folder name can\'t use < > : " / \\ | ? or *.',
   },
   'bad-ending': {
+    status: 400,
     field: 'name',
     error: "A folder name can't end in a space or a dot.",
   },
   reserved: {
+    status: 400,
     field: 'name',
     error: 'Windows keeps that name for itself. Choose another.',
   },
@@ -2251,8 +2271,8 @@ export function createApiRouter(
   // `writeExport`, which makes the **Export folder** under the requested name
   // inside the destination. `201` with the folder it wrote, `400 { error }`
   // for a malformed body, `400 { error, field }` for a refused destination or
-  // name — each worded through `EXPORT_REFUSALS` — and `500` with the stopped-partway sentence
-  // around the writer's reason for anything else.
+  // name — each worded through `EXPORT_REFUSALS` — and `500` with the
+  // stopped-partway sentence around the writer's reason for anything else.
   router.post('/export', async (req: Request, res: Response) => {
     const read = exportBody(req.body);
     if (!read.ok) {
@@ -2266,8 +2286,8 @@ export function createApiRouter(
         .series.flatMap((each) => storage.getSeriesDetail(each.id) ?? []),
     });
     if (outcome.kind === 'refused') {
-      const { field, error } = EXPORT_REFUSALS[outcome.refusal];
-      res.status(400).json({ error, field });
+      const { status, field, error } = EXPORT_REFUSALS[outcome.refusal];
+      res.status(status).json({ error, field });
       return;
     }
     if (outcome.kind === 'failed') {
