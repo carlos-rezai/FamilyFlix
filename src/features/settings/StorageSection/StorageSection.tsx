@@ -1,7 +1,6 @@
 import { useState } from 'react';
 
 import { folderBridge } from '@/api/folderBridge/folderBridge';
-import { Button } from '@/primitives';
 import { formatBytes } from '@/utils';
 
 import { useStorageReport } from '../useStorageReport/useStorageReport';
@@ -11,6 +10,7 @@ import {
   Dot,
   Folder,
   FolderText,
+  OpenFolder,
   Path,
   SpaceLine,
   StorageCard,
@@ -54,7 +54,7 @@ export function StorageSection() {
             {report ? <Path>{report.mediaPath}</Path> : null}
           </FolderText>
           {bridge ? (
-            <Button
+            <OpenFolder
               label="Open folder"
               variant="secondary"
               size="sm"

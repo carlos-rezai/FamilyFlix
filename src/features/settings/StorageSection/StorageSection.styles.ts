@@ -1,5 +1,7 @@
 import styled from 'styled-components';
 
+import { Button } from '@/primitives';
+
 import { Card } from '../section.styles';
 
 /**
@@ -12,25 +14,28 @@ export const StorageCard = styled(Card)`
   gap: 18px;
 `;
 
-/**
- * The folder line: the title over the path, then _Open folder_.
- * `min-width: 0` is what lets the path shrink to the card and take an
- * ellipsis rather than widen it; the button holds its width,
- * `flex: 0 0 auto`, as the prototype's _Change…_ did.
- */
+/** The folder line: the title over the path, then _Open folder_. */
 export const Folder = styled.div`
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-
-  & > button {
-    flex: 0 0 auto;
-  }
 `;
 
+/**
+ * `min-width: 0` is what lets the path shrink to the card and take an
+ * ellipsis rather than widen it.
+ */
 export const FolderText = styled.div`
   min-width: 0;
+`;
+
+/**
+ * _Open folder_ holds its width, `flex: 0 0 auto`, while a long path takes
+ * the ellipsis, as the prototype's _Change…_ did.
+ */
+export const OpenFolder = styled(Button)`
+  flex: 0 0 auto;
 `;
 
 /**
