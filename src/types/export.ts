@@ -99,15 +99,15 @@ export interface StartExport {
   format: ExportFormat;
   /** The absolute folder the **Export folder** is made inside. */
   destination: string;
-  /** Whether posters and backdrops travel beside the sheet. */
-  images: boolean;
-  /** Whether subtitle files travel beside the sheet. */
-  subtitles: boolean;
   /**
    * The **Export name** as typed — the folder and its sheet are called this,
    * numbered when taken. Never trimmed.
    */
   name: string;
+  /** Whether posters and backdrops travel beside the sheet. */
+  images: boolean;
+  /** Whether subtitle files travel beside the sheet. */
+  subtitles: boolean;
 }
 
 /**

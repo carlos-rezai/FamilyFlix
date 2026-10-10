@@ -16,9 +16,9 @@ import { exportBody } from './exportBody';
 const BODY: StartExport = {
   format: 'csv',
   destination: 'E:\\Movies',
+  name: 'familyflix-collection_08-10-2026',
   images: false,
   subtitles: false,
-  name: 'familyflix-collection_08-10-2026',
 };
 
 describe('exportBody — what it reads', () => {
@@ -134,6 +134,16 @@ describe('exportBody — the name', () => {
     if (!read.ok) {
       expect(typeof read.error).toBe('string');
       expect(read.error.length).toBeGreaterThan(0);
+    }
+  });
+
+  it('reads the name before the Include booleans, top to bottom as the dialog draws them', () => {
+    const nameAlone = exportBody({ ...BODY, name: 42 });
+    const both = exportBody({ ...BODY, name: 42, images: 'true' });
+
+    expect(nameAlone.ok || both.ok).toBe(false);
+    if (!nameAlone.ok && !both.ok) {
+      expect(both.error).toBe(nameAlone.error);
     }
   });
 });
