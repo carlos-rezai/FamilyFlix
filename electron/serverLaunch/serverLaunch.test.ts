@@ -38,6 +38,7 @@ const UNPACKAGED: ShellPaths = {
   sqliteBinding: join(CWD, 'electron', '.native', 'better_sqlite3.node'),
   ffmpeg: null,
   serverCwd: CWD,
+  mediaRoot: join(CWD, 'media'),
 };
 
 const dev = () => serverLaunch('dev', USER_DATA, UNPACKAGED);
@@ -100,6 +101,7 @@ const INSTALLED: ShellPaths = {
   sqliteBinding: join(RESOURCES, 'native', 'better_sqlite3.node'),
   ffmpeg: join(RESOURCES, 'ffmpeg', 'ffmpeg.exe'),
   serverCwd: PACKAGED_USER_DATA,
+  mediaRoot: join(PACKAGED_USER_DATA, 'media'),
 };
 
 const BUNDLED_SERVER = join(CWD, 'electron', 'dist', 'server.js');
@@ -214,6 +216,7 @@ describe('serverLaunch — every path from ShellPaths', () => {
     sqliteBinding: join(ELSEWHERE, 'abi', 'binding.node'),
     ffmpeg: null,
     serverCwd: ELSEWHERE,
+    mediaRoot: join(ELSEWHERE, 'the-media'),
   };
 
   it.each(['dev', 'start', 'installed'] as const)(
@@ -286,6 +289,42 @@ describe('serverLaunch — the Default component', () => {
     (mode) => {
       expect(serverLaunch(mode, USER_DATA, carrying).env).not.toHaveProperty(
         'FAMILYFLIX_FFMPEG_PATH'
+      );
+    }
+  );
+});
+
+// Issue #292 — `mediaRoot` is the one spelling of the **Managed media
+// directory**: installed, the fork's `FAMILYFLIX_MEDIA_PATH` is read off
+// `ShellPaths` rather than joined from `userData`, so the server and Open
+// folder cannot disagree. Unpackaged it is still not set, so a developer's own
+// variable is honoured.
+describe('serverLaunch — the managed media directory from ShellPaths', () => {
+  const ELSEWHERE = join('E:', 'elsewhere');
+  const distinct: ShellPaths = {
+    ...INSTALLED,
+    mediaRoot: join(ELSEWHERE, 'not-under-user-data', 'media'),
+  };
+
+  it('installed sets FAMILYFLIX_MEDIA_PATH to paths.mediaRoot', () => {
+    expect(
+      serverLaunch('installed', PACKAGED_USER_DATA, INSTALLED).env
+        .FAMILYFLIX_MEDIA_PATH
+    ).toBe(INSTALLED.mediaRoot);
+  });
+
+  it('installed reads it off ShellPaths, never rebuilding it from userData', () => {
+    expect(
+      serverLaunch('installed', PACKAGED_USER_DATA, distinct).env
+        .FAMILYFLIX_MEDIA_PATH
+    ).toBe(distinct.mediaRoot);
+  });
+
+  it.each(['dev', 'start'] as const)(
+    '%s sets no FAMILYFLIX_MEDIA_PATH even when handed a mediaRoot',
+    (mode) => {
+      expect(serverLaunch(mode, USER_DATA, distinct).env).not.toHaveProperty(
+        'FAMILYFLIX_MEDIA_PATH'
       );
     }
   );

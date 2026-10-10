@@ -1,8 +1,15 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { act, render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { ThemeProvider } from 'styled-components';
 
 import { StorageSection } from './StorageSection';
+import { Button } from '@/primitives';
+import { fakeFolderBridge } from '@/test-support/fakeFolderBridge/fakeFolderBridge';
+import {
+  normCss,
+  resolvedStyle,
+} from '@/test-support/resolvedStyle/resolvedStyle';
 import type { StorageReport } from '@/types';
 import { theme } from '@/styles/theme';
 import { comesBefore } from '@/test-support/comesBefore/comesBefore';
@@ -326,5 +333,197 @@ describe('StorageSection — before the report lands', () => {
 
     await reportLanded();
     expect(spaceLineText()).toBe('18.4 GB of movies · 12 titles');
+  });
+});
+
+/**
+ * 35 — Open the media folder (issue #292).
+ *
+ * The revised `page.SettingsPage.dc.html` draws _Open folder_ where it drew
+ * _Change…_: a `secondary`, `sm` `Button` with no glyph, after the title and
+ * path on the folder line, `flex: 0 0 auto` so a long path takes the ellipsis
+ * and the button keeps its width. It is drawn only when the desktop shell's
+ * **Folder bridge** exists, and — **Blank until it lands** governs reads, not
+ * controls — whether or not the **Storage report** has landed. A press is the
+ * bridge's `openMedia()`, no argument: no busy state, no snackbar, no error
+ * face; main logs any failure to the **Shell log**.
+ */
+
+const OPEN_FOLDER = 'Open folder';
+const openFolder = () => screen.queryByRole('button', { name: OPEN_FOLDER });
+
+describe('StorageSection — Open folder in a browser', () => {
+  it('draws no Open folder', async () => {
+    renderSection();
+
+    await reportLanded();
+    expect(openFolder()).toBeNull();
+    expect(screen.queryByText(OPEN_FOLDER)).toBeNull();
+  });
+});
+
+describe('StorageSection — Open folder in the desktop app', () => {
+  const bridge = fakeFolderBridge();
+
+  it('draws Open folder before the report lands', () => {
+    answerWith(null);
+
+    renderSection();
+
+    expect(openFolder()).not.toBeNull();
+  });
+
+  it('keeps Open folder on a refused read', async () => {
+    const { read } = answerWith(null);
+    renderSection();
+
+    read.settle(serverErrorResponse());
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(openFolder()).not.toBeNull();
+  });
+
+  it('draws Open folder after the title and the path', async () => {
+    renderSection();
+
+    await reportLanded();
+    const button = openFolder() as HTMLElement;
+    expect(comesBefore(screen.getByText(TITLE), button)).toBe(true);
+    expect(comesBefore(screen.getByText(REPORT.mediaPath), button)).toBe(true);
+  });
+
+  it('draws it before the space line', async () => {
+    renderSection();
+
+    await reportLanded();
+    expect(
+      comesBefore(openFolder() as HTMLElement, spaceLine() as HTMLElement)
+    ).toBe(true);
+  });
+
+  it('asks the bridge to open the media folder once per press', async () => {
+    const user = userEvent.setup();
+    renderSection();
+    await reportLanded();
+
+    await user.click(openFolder() as HTMLElement);
+
+    expect(bridge.openMedias()).toBe(1);
+  });
+
+  it('hands openMedia no argument — the renderer never names a path', async () => {
+    const user = userEvent.setup();
+    const spy = vi.spyOn(bridge.folders, 'openMedia');
+    renderSection();
+    await reportLanded();
+
+    await user.click(openFolder() as HTMLElement);
+
+    expect(spy).toHaveBeenCalledTimes(1);
+    expect(spy.mock.calls[0]).toEqual([]);
+    spy.mockRestore();
+  });
+
+  it('can be pressed again right away', async () => {
+    const user = userEvent.setup();
+    renderSection();
+    await reportLanded();
+
+    await user.click(openFolder() as HTMLElement);
+    await user.click(openFolder() as HTMLElement);
+
+    expect(bridge.openMedias()).toBe(2);
+  });
+
+  it('shows nothing after a press — no busy state, no snackbar, no error face', async () => {
+    const user = userEvent.setup();
+    renderSection();
+    await reportLanded();
+
+    await user.click(openFolder() as HTMLElement);
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    const button = openFolder() as HTMLButtonElement;
+    expect(button).not.toBeNull();
+    expect(button.disabled).toBe(false);
+    expect(button.getAttribute('aria-busy')).toBeNull();
+    expect(button.textContent).toBe(OPEN_FOLDER);
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.queryByRole('status')).toBeNull();
+    expect(
+      screen.queryByText(/could not|couldn’t|failed|try again|opening/i)
+    ).toBeNull();
+  });
+
+  it('is the Button primitive, secondary and sm', async () => {
+    const reference = render(
+      <ThemeProvider theme={theme}>
+        <Button variant="secondary" size="sm" label="Reference" />
+      </ThemeProvider>
+    );
+    const expected = getComputedStyle(
+      reference.getByRole('button', { name: 'Reference' })
+    );
+    const face = [
+      'height',
+      'padding-left',
+      'padding-right',
+      'font-family',
+      'font-size',
+      'font-weight',
+      'border-radius',
+      'background-color',
+      'color',
+      'border-top-width',
+      'border-top-style',
+      'border-top-color',
+    ];
+    const want = Object.fromEntries(
+      face.map((name) => [name, expected.getPropertyValue(name)])
+    );
+    reference.unmount();
+
+    renderSection();
+    await reportLanded();
+
+    const actual = getComputedStyle(openFolder() as HTMLElement);
+    expect(
+      Object.fromEntries(
+        face.map((name) => [name, actual.getPropertyValue(name)])
+      )
+    ).toEqual(want);
+  });
+
+  it('draws no glyph', async () => {
+    renderSection();
+
+    await reportLanded();
+    expect((openFolder() as HTMLElement).querySelector('svg')).toBeNull();
+  });
+
+  it('keeps its width — flex: 0 0 auto — while a long path takes the ellipsis', async () => {
+    answerWith({
+      ...REPORT,
+      mediaPath: `D:\\${'a-very-long-folder-name\\'.repeat(20)}media`,
+    });
+    renderSection();
+    await waitFor(() => expect(screen.getByText(/a-very-long/)).toBeDefined());
+
+    // jsdom drops the `flex` shorthand, so the cascade is read by hand.
+    expect(normCss(resolvedStyle(openFolder() as HTMLElement).flex ?? '')).toBe(
+      '0 0 auto'
+    );
+
+    const path = screen.getByText(/a-very-long/);
+    expect(getComputedStyle(path).textOverflow).toBe('ellipsis');
+    expect(getComputedStyle(path.parentElement as HTMLElement).minWidth).toBe(
+      '0'
+    );
   });
 });

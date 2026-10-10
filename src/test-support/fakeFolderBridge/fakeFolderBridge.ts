@@ -9,15 +9,16 @@ import type { FolderBridge } from '@/types/libraryFolders';
  * Call this inside the `describe` that needs it, and for the length of that
  * block the global is installed: each `pick()` answers what `setPick` last
  * set (`[]` by default — a cancelled dialog), each `pickOne()` what
- * `setPickOne` last set (`null` by default — a cancelled dialog), and both
- * are counted. After the block the global is deleted, so every later file in
- * the worker is a browser again. `fakeUpdateBridge`'s twin.
+ * `setPickOne` last set (`null` by default — a cancelled dialog), each
+ * `openMedia()` resolves at once, and all three are counted. After the block
+ * the global is deleted, so every later file in the worker is a browser again. `fakeUpdateBridge`'s twin.
  */
 export function fakeFolderBridge() {
   let answer: string[] = [];
   let oneAnswer: string | null = null;
   let picks = 0;
   let pickOnes = 0;
+  let openMedias = 0;
 
   const folders: FolderBridge = {
     pick() {
@@ -28,6 +29,10 @@ export function fakeFolderBridge() {
       pickOnes += 1;
       return Promise.resolve(oneAnswer);
     },
+    openMedia() {
+      openMedias += 1;
+      return Promise.resolve();
+    },
   };
 
   beforeEach(() => {
@@ -35,6 +40,7 @@ export function fakeFolderBridge() {
     oneAnswer = null;
     picks = 0;
     pickOnes = 0;
+    openMedias = 0;
     window.familyflix = { ...window.familyflix, folders } as NonNullable<
       Window['familyflix']
     >;
@@ -59,5 +65,7 @@ export function fakeFolderBridge() {
     picks: (): number => picks,
     /** How many times the one-folder dialog was opened. */
     pickOnes: (): number => pickOnes,
+    /** How many times the managed media directory was asked to open. */
+    openMedias: (): number => openMedias,
   };
 }

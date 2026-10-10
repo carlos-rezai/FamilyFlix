@@ -94,6 +94,12 @@ describe.each(['dev', 'start'] as const)(
       expect(paths().serverCwd).toBe(REPO);
     });
 
+    // Issue #292 — the **Managed media directory** Open folder opens: where
+    // the server's default `./media` resolves under `serverCwd`.
+    it('finds the managed media directory at <appPath>\\media', () => {
+      expect(paths().mediaRoot).toBe(join(REPO, 'media'));
+    });
+
     it('reads nothing under resourcesPath or userData', () => {
       const values = Object.values(paths()).filter(
         (value): value is string => typeof value === 'string'
@@ -141,6 +147,12 @@ describe('shellPaths — installed (the Packaged layout)', () => {
 
   it('forks the server in userData, never inside the asar', () => {
     expect(paths().serverCwd).toBe(USER_DATA);
+  });
+
+  // Issue #292 — `%APPDATA%\FamilyFlix\media`, the one spelling the server's
+  // `FAMILYFLIX_MEDIA_PATH` and Open folder both read.
+  it('finds the managed media directory at userData\\media', () => {
+    expect(paths().mediaRoot).toBe(join(USER_DATA, 'media'));
   });
 });
 
