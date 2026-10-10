@@ -15,6 +15,10 @@ export interface MediaFolderWorld {
 const failed = (root: string, error: string) =>
   `Couldn’t open the media folder: ${error} (${root})`;
 
+/** Whatever was thrown or rejected, as words. */
+const reason = (error: unknown) =>
+  error instanceof Error ? error.message : String(error);
+
 /**
  * Make the **Managed media directory** if it is absent, then show it in
  * Explorer. Every failure is one Shell log line naming the root; nothing
@@ -26,21 +30,11 @@ export async function openMediaFolder(
 ): Promise<void> {
   try {
     world.mkdir(root);
-  } catch (error) {
-    world.log(
-      failed(root, error instanceof Error ? error.message : String(error))
-    );
-    return;
-  }
-
-  try {
     const error = await world.openPath(root);
     if (error !== '') {
       world.log(failed(root, error));
     }
   } catch (error) {
-    world.log(
-      failed(root, error instanceof Error ? error.message : String(error))
-    );
+    world.log(failed(root, reason(error)));
   }
 }
