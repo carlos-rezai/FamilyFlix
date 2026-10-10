@@ -1,11 +1,11 @@
 import styled from 'styled-components';
 
-/** _Save to_'s row and a refused destination's line: the path furniture. */
+/** _Save to_'s row and a refused field's line: the path furniture. */
 export { PathRow, Refusal } from '../pathField.styles';
 
 /**
- * A section's heading — _Format_, _Save to_, _Include_, _Columns included_:
- * 13px semibold in the dim ink.
+ * A section's heading — _Format_, _Save to_, _Folder name_, _Include_,
+ * _Columns included_: 13px semibold in the dim ink.
  */
 export const SectionLabel = styled.div`
   font-family: ${({ theme }) => theme.fonts.sans};

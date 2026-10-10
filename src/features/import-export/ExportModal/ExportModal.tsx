@@ -85,13 +85,13 @@ const folderNameOf = (path: string): string =>
  * **Format cards**, CSV checked on every open; _Save to_, a mono field with
  * the folder glyph and a destination refusal under it; _Folder name_ — the
  * heading with the titles count at its right end, then a mono field with the
- * folder glyph holding the **Export name**, and a name refusal under it; _Include_, the
- * _Images_ row and its Toggle, on every open, then the _Subtitles_ row,
- * off; _Columns included_ over the sixteen **Export columns** as pills — a
- * list, not controls; _Export as CSV_ / _Export as Excel_ beside _Cancel_.
- * Then **Export ready**, swapped inside the same card as the one **Bare
- * modal** so the pop-in runs once: the tick, the heading, the folder written
- * and where, and _Done_.
+ * folder glyph holding the **Export name**, and a name refusal under it;
+ * _Include_, the _Images_ row and its Toggle, on every open, then the
+ * _Subtitles_ row, off; _Columns included_ over the sixteen **Export
+ * columns** as pills — a list, not controls; _Export as CSV_ / _Export as
+ * Excel_ beside _Cancel_. Then **Export ready**, swapped inside the same card
+ * as the one **Bare modal** so the pop-in runs once: the tick, the heading,
+ * the folder written and where, and _Done_.
  *
  * The dialog owns `useExport`. The count is `null` until the summary lands
  * and absent on screen while so — it never blocks the export, and a done face
