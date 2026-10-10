@@ -11,7 +11,8 @@ import type { FolderBridge } from '@/types/libraryFolders';
  * set (`[]` by default — a cancelled dialog), each `pickOne()` what
  * `setPickOne` last set (`null` by default — a cancelled dialog), each
  * `openMedia()` resolves at once, and all three are counted. After the block
- * the global is deleted, so every later file in the worker is a browser again. `fakeUpdateBridge`'s twin.
+ * the global is deleted, so every later file in the worker is a browser
+ * again. `fakeUpdateBridge`'s twin.
  */
 export function fakeFolderBridge() {
   let answer: string[] = [];
