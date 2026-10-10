@@ -89,10 +89,14 @@ export interface ExportSummary {
 }
 
 /**
- * The field an Export refusal names — the dialog draws its sentence under it.
- * `ImportField`'s precedent.
+ * The fields an Export refusal can name — the dialog draws its sentence under
+ * the one it names. `IMPORT_FIELDS`' precedent: an `as const` list its union
+ * is derived from.
  */
-export type ExportField = 'destination' | 'name';
+export const EXPORT_FIELDS = ['destination', 'name'] as const;
+
+/** One of the fields in {@link EXPORT_FIELDS}. */
+export type ExportField = (typeof EXPORT_FIELDS)[number];
 
 /** What `POST /api/export` is sent: the format, where to, and what travels. */
 export interface StartExport {

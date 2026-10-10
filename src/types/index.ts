@@ -8,11 +8,12 @@
  * `docs/design-logs/01-library-core.md`.
  *
  * Almost everything here is a type. The exceptions are the vocabularies — the
- * sorts, the export's formats, columns and filenames, the subtitle
- * languages with their default, and the enrichment's fields and scopes —
- * each an `as const` list that its own union is derived from, so that the names a sort or a
- * format can have and the names it can be checked against are one
- * declaration. Both build targets import them as values.
+ * sorts, the export's formats, columns and filenames, the fields an import's
+ * and an export's refusal can name, the subtitle languages with their
+ * default, and the enrichment's fields and scopes — each an `as const` list
+ * that its own union is derived from, so that the names a sort or a format
+ * can have and the names it can be checked against are one declaration. Both
+ * build targets import them as values.
  */
 export { MOVIE_SORTS, DEFAULT_MOVIE_SORT } from './browse';
 export {
@@ -20,7 +21,9 @@ export {
   EXPORT_COLUMNS,
   EXPORT_EPISODE_COLUMNS,
   EXPORT_NAME_PREFIX,
+  EXPORT_FIELDS,
 } from './export';
+export { IMPORT_FIELDS } from './import';
 export {
   SUBTITLE_LANGUAGES,
   DEFAULT_SUBTITLE_LANGUAGE,
