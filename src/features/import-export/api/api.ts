@@ -1,11 +1,13 @@
-import type {
-  ExportField,
-  ExportResult,
-  ExportSummary,
-  ImportField,
-  ImportRun,
-  LibraryFolder,
-  StartExport,
+import {
+  EXPORT_FIELDS,
+  IMPORT_FIELDS,
+  type ExportField,
+  type ExportResult,
+  type ExportSummary,
+  type ImportField,
+  type ImportRun,
+  type LibraryFolder,
+  type StartExport,
 } from '@/types';
 
 /**
@@ -40,15 +42,21 @@ const IMPORT_ENDPOINT = '/api/import';
 const CURRENT_ENDPOINT = '/api/import/current';
 const CANCEL_ENDPOINT = '/api/import/current/cancel';
 
-/** What a refusing `POST /api/import` answers with, when it names a field. */
-function isRefusal(
-  body: unknown
-): body is { error: string; field: ImportField } {
+/**
+ * Whether a refusing start's body is `{ error, field }` with a field from
+ * `fields` — `400 { error, field }`, the shape `POST /api/import` and
+ * `POST /api/export` both answer. A body naming no field, or one the screen
+ * does not have, is not a refusal the caller can draw.
+ */
+function isFieldRefusal<F extends string>(
+  body: unknown,
+  fields: readonly F[]
+): body is { error: string; field: F } {
   if (typeof body !== 'object' || body === null) {
     return false;
   }
   const { error, field } = body as { error?: unknown; field?: unknown };
-  return typeof error === 'string' && (field === 'sheet' || field === 'root');
+  return typeof error === 'string' && fields.includes(field as F);
 }
 
 /**
@@ -74,7 +82,7 @@ export async function startImport(
 
   if (response.status === 400) {
     const body: unknown = await response.json().catch(() => null);
-    if (isRefusal(body)) {
+    if (isFieldRefusal(body, IMPORT_FIELDS)) {
       throw new ImportRefusedError(body.field, body.error);
     }
   }
@@ -122,20 +130,6 @@ export async function cancelImport(): Promise<void> {
 const EXPORT_ENDPOINT = '/api/export';
 
 /**
- * A refusal body's one sentence — the `error` of `{ error }` — or `null` for
- * a body that is not one, so the caller can treat it as any other failure.
- * The export's and the folder add's refusals both read through it.
- */
-async function refusalSentence(response: Response): Promise<string | null> {
-  const body: unknown = await response.json().catch(() => null);
-  const error =
-    typeof body === 'object' && body !== null
-      ? (body as { error?: unknown }).error
-      : undefined;
-  return typeof error === 'string' ? error : null;
-}
-
-/**
  * The **Export summary** — the counts the **Export dialog** shows beside the
  * **Export name**, the default destination _Save to_ starts at, and the name
  * itself, read on open. Any status but a `200` rejects, and so does a request
@@ -160,19 +154,6 @@ export type StartExportOutcome =
   | { kind: 'written'; result: ExportResult }
   | { kind: 'refused'; field: ExportField; sentence: string };
 
-/** What a refusing `POST /api/export` answers with, when it names a field. */
-function isExportRefusal(
-  body: unknown
-): body is { error: string; field: ExportField } {
-  if (typeof body !== 'object' || body === null) {
-    return false;
-  }
-  const { error, field } = body as { error?: unknown; field?: unknown };
-  return (
-    typeof error === 'string' && (field === 'destination' || field === 'name')
-  );
-}
-
 /**
  * Write the **Export** into a folder: `POST /api/export` with a
  * {@link StartExport}. A `201`'s **ExportResult** is `written`, a `400` that
@@ -191,7 +172,7 @@ export async function startExport(
 
   if (response.status === 400) {
     const body: unknown = await response.json().catch(() => null);
-    if (isExportRefusal(body)) {
+    if (isFieldRefusal(body, EXPORT_FIELDS)) {
       return { kind: 'refused', field: body.field, sentence: body.error };
     }
   }
@@ -222,6 +203,20 @@ export async function fetchLibraryFolders(): Promise<LibraryFolder[]> {
 export type AddFolderOutcome =
   | { kind: 'added'; folder: LibraryFolder }
   | { kind: 'refused'; sentence: string };
+
+/**
+ * A refusal body's one sentence — the `error` of `{ error }` — or `null` for
+ * a body that is not one, so the caller can treat it as any other failure.
+ * The folder add's refusals read through it.
+ */
+async function refusalSentence(response: Response): Promise<string | null> {
+  const body: unknown = await response.json().catch(() => null);
+  const error =
+    typeof body === 'object' && body !== null
+      ? (body as { error?: unknown }).error
+      : undefined;
+  return typeof error === 'string' ? error : null;
+}
 
 /**
  * List one folder. A `400` or `409` resolves with the route's own sentence,
