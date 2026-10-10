@@ -368,7 +368,7 @@ Keep the description short enough to fit on one line — long descriptions get w
 | Single-title Sync — the ⋯ menu's fetch, one movie    | ✅ Done         |
 | Backdrop veil — full-screen art, accent-veiled       | ✅ Done         |
 | Open the media folder from Settings → Storage        | ✅ Done         |
-| Export name — the export folder's name as a field    | 🔜 Planned      |
+| Export name — the export folder's name as a field    | ✅ Done         |
 | Factory reset — erase everything, behind a dialog    | 🔜 Planned      |
 | Episode links — number a file without renaming it    | 🔜 Planned      |
 | Edit a series — details and episodes                 | 🔜 Planned      |
@@ -414,7 +414,7 @@ again smallest first:
     an accent-tinted veil, so the title, buttons and text read clearly.
 18. ✅ **Open the media folder** — an _Open folder_ button on Settings →
     Storage.
-19. 🔜 **Export name** — the export folder's name becomes editable beside
+19. ✅ **Export name** — the export folder's name becomes editable beside
     _Save to_.
 20. 🔜 **Factory reset** — erase every title, watch history and setting and
     empty the media folder, behind an _Erase everything?_ dialog; your own
