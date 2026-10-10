@@ -152,8 +152,8 @@ const reasonOf = (error: unknown): string =>
  * The injected writer of an **Export**, and it never throws: check the
  * destination (absolute, then readable, then writable — each failure a
  * `refused` kind) and then the name (`exportNameRefusal`, as typed), make the
- * **Export folder** under the requested name inside it exclusively,
- * copy each file the **File plan** names into it — piped out of
+ * **Export folder** under the requested name inside it exclusively, copy
+ * each file the **File plan** names into it — piped out of
  * `Media.readStored`, the only way a stored file is read, one that cannot be
  * read skipped and its cell blanked — then write the sheet last. Anything
  * else that fails takes the folder back out, best-effort, and answers
