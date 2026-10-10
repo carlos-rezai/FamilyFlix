@@ -136,7 +136,7 @@ familyflix/
 │ └── src/
 │ ├── routes/ ← HTTP layer only: parse request, call a domain module, return response
 │ │ ├── enrichmentBody/ ← `startEnrichmentBody` and `conflictChoicesBody`: a Sync's start and _Apply choices_ read into typed values, each `400` a sentence — `movieFormBody`'s precedent
-│ │ ├── exportBody/ ← `POST /api/export`'s body read into a `StartExport` — a format, an absolute-or-not destination, the two Include booleans — each `400` a sentence
+│ │ ├── exportBody/ ← `POST /api/export`'s body read into a `StartExport` — a format, an absolute-or-not destination, a name read only as a string, the two Include booleans, in the dialog's order — each `400` a sentence
 │ │ ├── seriesFormBody/ ← the **Movie form**'s series body, `movieFormBody`'s split: `collectEpisodeUploads`, the part half — each `episodeVideo` and `episodeSubtitle` paired by order with its `episode` field and stored in its season's folder, a refused part drained and remembered — and `readSeriesFields`, the pure field half: each refusal a sentence in a load-bearing order, each episode answered with the paths its parts landed at
 │ │ ├── loopbackGuard/ ← the **Loopback guard**: mounted first, standalone included, `403` for a Host or Origin that is not a **Trusted host**; `bind(port)` once `listen` has resolved
 │ │ └── rendererRouter/ ← `mountRenderer`: the built renderer beside `/api` under `RENDERER_CSP` and `index.html` for any other GET, `/api` passed on before the policy is set; nothing mounted when `FAMILYFLIX_RENDERER_PATH` is unset
@@ -161,10 +161,10 @@ familyflix/
 │ ├── import-export/ ← the bulk importer and the exporter: Excel/CSV parsing and writing, row-to-folder matching, the Current run
 │ │ ├── readSheet/ ← .xlsx or .csv by extension, first worksheet, headers through a synonym table → Sheet rows; a Status column reads as watched, a BOM is stripped
 │ │ ├── writeSheet/ ← the reader’s mirror: `exportRows`' two tables → the named files — `<name>.xlsx` with the Titles and Episodes worksheets, path cells as hyperlinks, or `<name>.csv` and `<name>-episodes.csv` each behind a BOM — pure over the tables, no storage, no sorting
-│ │ ├── exportName/ ← pure: `familyflix-collection_DD-MM-YYYY` off the local date, the **Export name**
+│ │ ├── exportName/ ← pure: `exportName(now)`, `familyflix-collection_DD-MM-YYYY` off the local date, the **Export name**'s default; `exportNameRefusal(name)`, the reader beside it — a **Name refusal** or `null`, Windows' rules on every platform, nothing trimmed; and `FORBIDDEN_IN_NAME`, the one spelling of what Windows refuses in a folder name
 │ │ ├── exportRows/ ← pure: films and series → the two tables under the sixteen Export columns and the nine Episodes columns (every cell rule spelled once, the Metadata sheet's too), and the **File plan** — each title's folder named `Heat (1995)`, its art and, when chosen, its subtitles
 │ │ ├── exportSummary/ ← the **Export summary** out of the route: the counts off the Series tab's one read, the first readable Library folder else `<home>\Downloads`, today's name
-│ │ ├── writeExport/ ← the **Export** written: the destination checked (`relative`, `missing`, `read-only` — kinds the route words), the Export folder made exclusively and numbered when taken, the File plan copied through `Media.readStored` (an unreadable file skipped, its cell blanked), the sheet last; a break rolls the folder back and answers its reason
+│ │ ├── writeExport/ ← the **Export** written: the destination checked (`relative`, `missing`, `read-only`), then the name (`exportNameRefusal`) — kinds the route words, each naming its field — the Export folder made exclusively under the name asked for and numbered when taken, the sheet named after it, the File plan copied through `Media.readStored` (an unreadable file skipped, its cell blanked), the sheet last; a break rolls the folder back and answers its reason
 │ │ ├── titleKey/ ← pure: the Title key matching compares, and titleGuess for a folder no row names
 │ │ ├── matchRows/ ← pure: rows × folder scans → matches, problems by kind, unclaimed folders
 │ │ ├── groupShows/ ← pure: the walk’s Source folders → Show folders (Season folders under one, or loose tagged episodes) and the films left over
@@ -334,9 +334,9 @@ familyflix/
 │ │ │ ├── useLibraryFolders/ ← the list read on mount, the add (the route's own sentence kept on a refusal) and the remove
 │ │ │ ├── useKeyStored/ ← whether a TMDB key is stored, `false` until it lands and for a failed read: the `EnrichCheckCard` hint's one read
 │ │ │ ├── useFolderScan/ ← Scan folders: the Folder scan posted with the box, `/import` pushed on a `201` and a `409`, `scanning` let go otherwise
-│ │ │ ├── ExportModal/ ← the Export dialog: owns useExport; the idle face over Modal — the Format cards, _Save to_ with Browse… when the bridge exists, the name row, the two Include toggles, the column pills — and Export ready over the bare one, the folder written and where — the same card, so the pop-in runs once
+│ │ │ ├── ExportModal/ ← the Export dialog: owns useExport; the idle face over Modal — the Format cards, _Save to_ with Browse… when the bridge exists, the **Folder name field** with the title count at its heading's right, the two Include toggles, the column pills — and Export ready over the bare one, the folder written and where — the same card, so the pop-in runs once
 │ │ │ ├── FormatCard/ ← one Format card: a role="radio" button with a label and a line, the pair in a radiogroup
-│ │ │ ├── useExport/ ← csv, images on, subtitles off and idle on every open, the summary fetched fresh and its default destination never over an edit; the bridge read once; exportLibrary posts `startExport`, a refusal's sentence kept under the field. A close mid-request drops the redraw, not the folder
+│ │ │ ├── useExport/ ← csv, images on, subtitles off and idle on every open, the summary fetched fresh and its default destination and default name each never over an edit; the bridge read once; exportLibrary posts `startExport`, a refusal's sentence kept under the field it names. A close mid-request drops the redraw, not the folder
 │ │ │ ├── pathField.styles.ts ← the feature's path furniture, flat as `filesCard.styles.ts` is: `PathRow` and `Refusal`, drawn by the Library folders page's add row and the Export dialog's _Save to_
 │ │ │ └── api/ ← startImport, fetchCurrentImport, cancelImport, fetchExportSummary, startExport, fetchLibraryFolders, addLibraryFolder, removeLibraryFolder, startFolderScan (one caller each)
 │ │ ├── settings/ ← the Maintainer’s hub: six Settings groups under one header
@@ -644,15 +644,18 @@ once via a bulk importer:
   pass all three across a seam nobody else uses
 
 The exporter writes the current library back out as one **Export folder**,
-`familyflix-collection_DD-MM-YYYY`, from the Settings hub's third row, at an
-**Export destination** typed under _Save to_ or picked with _Browse…_ — by
-default the first reachable **Library folder**, else Downloads. The server
-writes it straight to that folder, through `POST /api/export { format,
-destination, images, subtitles }`; `GET /api/export` answers the **Export
-summary** — the film, series and episode counts, the default destination and
-today's name. Inside is the **Export file**: the **Titles sheet**, every film
-and series A–Z under the sixteen **Export columns**, and the **Episodes
-sheet** beside it — the second worksheet in Excel, `…-episodes.csv` in CSV.
+named in the **Folder name field** — `familyflix-collection_DD-MM-YYYY` until
+edited, a **Name refusal** for a name no folder can have, numbered when
+taken — from the Settings hub's third row, at an **Export destination** typed
+under _Save to_ or picked with _Browse…_ — by default the first reachable
+**Library folder**, else Downloads. The server writes it straight to that
+folder, through `POST /api/export { format, destination, name, images,
+subtitles }`, a refusal answered `400 { error, field }`; `GET /api/export`
+answers the **Export summary** — the film, series and episode counts, the
+default destination and the default name, today's. Inside is the **Export
+file**: the **Titles sheet**, every film and series A–Z under the sixteen
+**Export columns**, and the **Episodes sheet** beside it — the second
+worksheet in Excel, `…-episodes.csv` in CSV.
 The two **Include toggles** choose which files travel beside the sheet, in a
 folder per title: _Images_ (posters, backdrops and stills, on) and
 _Subtitles_ (off); a path cell is blank when its file did not travel. Video
@@ -1014,7 +1017,7 @@ same layout, spacing, states, copy, and interaction.
 this says what to build _next_. Steps 1–9 of the first chain are done,
 ending with **Software update** (v0.2.0), and so are steps 10–15: the
 second chain is done too, shipped as v0.3.0. Steps 16–23 are the third
-chain: steps 16–18 are done, 19–23 are planned. Steps 10–15 came out of
+chain: steps 16–19 are done, 20–23 are planned. Steps 10–15 came out of
 installing FamilyFlix and using it: smallest and most self-contained first,
 the form before the folders that will feed it, export last because it
 mirrors what import holds.
@@ -1059,7 +1062,7 @@ draws something new, a prototype revision before it is built:
     row: `folders.openMedia()` over `FOLDER_CHANNELS.openMedia`, **no
     argument**; main opens **Shell paths**' new `mediaRoot`. Undrawn in a
     browser.
-19. 🔜 **Export name** — the name row becomes a field, prefilled and never
+19. ✅ **Export name** — the name row becomes a field, prefilled and never
     overwritten once edited; `StartExport.name`, refused in a sentence when
     empty or not a folder name, numbered when taken.
 20. 🔜 **Factory reset** — the Storage card's last row and the **Reset
@@ -1121,7 +1124,7 @@ A 🧭 Roadmap item is not in this chain — it is after it, if ever.
 - 🔜 **Episode links** — number a show's file in the app without renaming it: `S[01] E[01]` in front of `eps1.0_hellofriend.mov`, remembered as its **Source file**; the reader learns the **Episode word**; one `unplaced` Problem per show with a _Resolve_ (step 21).
 - 🔜 **Edit a series** — the series page's ⋯ menu and the Movie form's series edit job, `PATCH /api/series/:id` (step 22).
 - 🔜 **Delete a series** — the ⋯ Danger row, the dialog, `DELETE /api/series/:id` (step 23).
-- 🔜 **Export name** — the Export folder's name as an editable field in the Export dialog (step 19).
+- ✅ **Export name** — the Export folder's name as the **Folder name field** in the Export dialog: prefilled with today's dated name and never overwritten once edited, refused in one sentence under the field when no folder can be called that, never stripped, numbered when taken.
 - ✅ **Delete a movie** — the ⋯ menu’s Danger row, the Delete dialog, `DELETE /api/movies/:id`, then the Movie folder under best-effort cleanup.
 - ✅ **Bulk import** — a Sheet and a Library root become Movies during the run; the Review step lists only the Problems the run could not settle, each with Resolve (the Movie form in Import context) and Skip.
 - ✅ **Import progress console** — the Connect ✓ → Scan → Import stepper, the bar, the current item, elapsed and ETA, the Activity log, and Cancel; a server run polled every 500 ms, re-attachable.
