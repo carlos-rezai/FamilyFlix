@@ -109,10 +109,10 @@ familyflix/
 │ └── skills/
 ├── electron/ ← the **Desktop shell**'s main process: `tsconfig.electron.json`'s shipping code, one unit per decision, Electron only ever run in a manual smoke
 │ ├── main.ts ← the composition root, and wiring only: adapters over Electron's `fs`, `dialog`, `shell` and `app`, the window's options, each event handed to a unit below
-│ ├── preload.ts ← wiring only: `window.familyflix.updates` and `window.familyflix.folders` (`pick` and `pickOne`), each member one channel through `contextBridge` to main, no state
+│ ├── preload.ts ← wiring only: `window.familyflix.updates` and `window.familyflix.folders` (`pick`, `pickOne` and `openMedia`), each member one channel through `contextBridge` to main, no state
 │ ├── shellMode/ ← pure: `shellMode(isPackaged, env)` → `'dev'` / `'start'` / `'installed'`, the **Shell mode**, read once; the one reader of `FAMILYFLIX_SHELL_PROD`
-│ ├── shellPaths/ ← pure: a mode and Electron's three locations (`appPath`, `resourcesPath`, `userData`) → the **Shell paths** — the icon and the server bundle off `appPath`, the renderer, the binding and the Default component's `ffmpeg.exe` off the repo unpackaged and `resourcesPath` installed (`null` unpackaged), the server's working directory; read once by main in place of `process.cwd()`
-│ ├── serverLaunch/ ← pure: `serverLaunch(mode, userData, paths)` over **Shell paths** → the entry and environment the **Server process** is forked with — `paths.serverEntry` in every mode, the binding in every mode, `3001` in dev and the **Shell port** otherwise, the renderer outside dev, the data paths under `userData` and `FAMILYFLIX_FFMPEG_PATH` only when installed
+│ ├── shellPaths/ ← pure: a mode and Electron's three locations (`appPath`, `resourcesPath`, `userData`) → the **Shell paths** — the icon and the server bundle off `appPath`, the renderer, the binding and the Default component's `ffmpeg.exe` off the repo unpackaged and `resourcesPath` installed (`null` unpackaged), the server's working directory, and the three data paths — `mediaRoot`, `database` and `componentSlot` — under `userData` installed and the repo unpackaged; read once by main in place of `process.cwd()`
+│ ├── serverLaunch/ ← pure: `serverLaunch(mode, paths)` over **Shell paths** → the entry and environment the **Server process** is forked with — `paths.serverEntry` in every mode, the binding in every mode, `3001` in dev and the **Shell port** otherwise, the renderer outside dev, the three data paths and `FAMILYFLIX_FFMPEG_PATH` only when installed — read off Shell paths, never joined
 │ ├── serverHandle/ ← main's hold on the server: fork, the 15 s wait for `ready`, `fatal` and an exit before `ready` as rejections, an exit after it to `onExit`, and `shutdown(ms)`
 │ ├── awaitExitOrKill/ ← wait for a child's exit, killing it at the budget and resolving anyway
 │ ├── quitAfterShutdown/ ← the quit gate: the `before-quit` listener that holds the app open until the **Ordered shutdown** is over, then quits and lets that quit through
@@ -122,6 +122,7 @@ familyflix/
 │ ├── windowPolicy/ ← pure: `isAppUrl`, `openExternalAllowed` (`https:` only), `permissionAllowed` (`fullscreen` only)
 │ ├── downloadPath/ ← pure: a download's free name in Downloads, deduplicated as Chromium does, no dialog
 │ ├── pickFolders/ ← pure: the folder dialog's answer → the paths to post, in the order picked, `[]` for a cancel — behind `FOLDER_CHANNELS.pick`, the Library folders page's Browse…; and `pickOneFolder`, one folder or `null`, behind `FOLDER_CHANNELS.pickOne`, the Export dialog's Browse… — both over `main.ts`' one `showFolderDialog`
+│ ├── openMediaFolder/ ← the Storage card's _Open folder_ answered in main, behind `FOLDER_CHANNELS.openMedia`: the **Managed media directory** made, then opened in Explorer, a failure one **Shell log** line naming the root, never rejecting — over an injected world, the `shellDialogs` shape
 │ ├── shellDialogs/ ← the two failure dialogs — _couldn't start_ (Quit / Show data folder) and _stopped unexpectedly_ (Restart / Quit) — each logging what it says before its box; `startServer` puts every startup failure in front of the first
 │ ├── shellLog/ ← the **Shell log**: `[main]` and `[server]` lines to `logs\familyflix.log` when installed, rolled at 5 MB, to the terminal otherwise
 │ ├── appIdentity/ ← `APP_USER_MODEL_ID`, set before the window so the taskbar groups it
@@ -374,7 +375,7 @@ familyflix/
 │ │ ├── postValue.ts
 │ │ └── postValue.test.ts
 │ ├── hooks/ ← global shared hooks only: `useGoBack(fallback)` — the one **Back rule**, a **History step** with the screen's own **Landing** behind it (the library by default) — `useRestoredScroll`, and `useOptimisticEdit`, the one bargain a detail page's edit keeps, over whatever record the page holds; and `useEnrichmentSummary`, the summary Settings' sync row and the Enrichment setup both draw, `null` until it lands
-│ ├── types/ ← shared TypeScript interfaces (import.ts: ImportRun, ImportSource, ImportProblem, ImportProblemDetail, ImportField; libraryFolders.ts: LibraryFolder, `FOLDER_CHANNELS` (`pick`, `pickOne`), FolderBridge — both build targets, and `tsconfig.electron.json` too; export.ts: `EXPORT_FORMATS`, `EXPORT_COLUMNS`, `EXPORT_EPISODE_COLUMNS`, `EXPORT_NAME_PREFIX`, ExportSummary, StartExport, ExportResult; settings.ts: `SUBTITLE_LANGUAGES`, SubtitleLanguage, `DEFAULT_SUBTITLE_LANGUAGE`, `DEFAULT_ULTRAWIDE_MARGINS`, Settings (`subtitleLanguage`, `ultrawideMargins`), StorageReport; playback.ts: CodecKind, CodecSupport, CodecCapability, ComponentSource, PlaybackComponentInfo, PlaybackCapabilities — both build targets; series.ts: Series, Episode, SeasonSummary, SeriesDetail, EpisodeRead, NextEpisodeRef, EpisodeContinueEntry (its `series` carrying `posterPath`, for the Continue card's art), SeriesHomePayload, NewSeries, NewEpisode, Playable — both build targets; enrichment.ts: `ENRICH_FIELDS`, `ENRICH_FIELD_LABELS`, `ENRICH_SCOPES`, EnrichField, EnrichScope, EnrichmentSummary (its `libraryFolders` the reachable folders a Sync may write into), Candidate, Decision, FieldConflict, ConflictChoices, EnrichmentRun, StartEnrichment — both build targets; viewModels.ts carries the series’ SeriesPageModel, SeasonPageModel, SeasonCardSeason and EpisodeRowEpisode beside the movie’s; shell.ts: ServerMessage, ShellCommand — the **Shell handshake**, typed once and read by `server/src/shell/` and `electron/`, in `tsconfig.electron.json` too; form.ts: MovieFormValues, MovieFormFile, MovieFormSubtitle, EpisodeFormRow, FormKind — the Movie form's shapes; appVersion.d.ts: `__APP_VERSION__`, defined by Vite from package.json)
+│ ├── types/ ← shared TypeScript interfaces (import.ts: ImportRun, ImportSource, ImportProblem, ImportProblemDetail, ImportField; libraryFolders.ts: LibraryFolder, `FOLDER_CHANNELS` (`pick`, `pickOne`, `openMedia`), FolderBridge — both build targets, and `tsconfig.electron.json` too; export.ts: `EXPORT_FORMATS`, `EXPORT_COLUMNS`, `EXPORT_EPISODE_COLUMNS`, `EXPORT_NAME_PREFIX`, ExportSummary, StartExport, ExportResult; settings.ts: `SUBTITLE_LANGUAGES`, SubtitleLanguage, `DEFAULT_SUBTITLE_LANGUAGE`, `DEFAULT_ULTRAWIDE_MARGINS`, Settings (`subtitleLanguage`, `ultrawideMargins`), StorageReport; playback.ts: CodecKind, CodecSupport, CodecCapability, ComponentSource, PlaybackComponentInfo, PlaybackCapabilities — both build targets; series.ts: Series, Episode, SeasonSummary, SeriesDetail, EpisodeRead, NextEpisodeRef, EpisodeContinueEntry (its `series` carrying `posterPath`, for the Continue card's art), SeriesHomePayload, NewSeries, NewEpisode, Playable — both build targets; enrichment.ts: `ENRICH_FIELDS`, `ENRICH_FIELD_LABELS`, `ENRICH_SCOPES`, EnrichField, EnrichScope, EnrichmentSummary (its `libraryFolders` the reachable folders a Sync may write into), Candidate, Decision, FieldConflict, ConflictChoices, EnrichmentRun, StartEnrichment — both build targets; viewModels.ts carries the series’ SeriesPageModel, SeasonPageModel, SeasonCardSeason and EpisodeRowEpisode beside the movie’s; shell.ts: ServerMessage, ShellCommand — the **Shell handshake**, typed once and read by `server/src/shell/` and `electron/`, in `tsconfig.electron.json` too; form.ts: MovieFormValues, MovieFormFile, MovieFormSubtitle, EpisodeFormRow, FormKind — the Movie form's shapes; appVersion.d.ts: `__APP_VERSION__`, defined by Vite from package.json)
 │ ├── utils/ ← pure helper functions (one folder per helper + its test)
 │ │ ├── index.ts ← barrel: re-exports every helper
 │ │ ├── formatBytes/ ← 1024-based, one decimal from KB up: `18.4 GB`
@@ -1013,7 +1014,7 @@ same layout, spacing, states, copy, and interaction.
 this says what to build _next_. Steps 1–9 of the first chain are done,
 ending with **Software update** (v0.2.0), and so are steps 10–15: the
 second chain is done too, shipped as v0.3.0. Steps 16–23 are the third
-chain: steps 16–17 are done, 18–23 are planned. Steps 10–15 came out of
+chain: steps 16–18 are done, 19–23 are planned. Steps 10–15 came out of
 installing FamilyFlix and using it: smallest and most self-contained first,
 the form before the folders that will feed it, export last because it
 mirrors what import holds.
@@ -1054,7 +1055,7 @@ draws something new, a prototype revision before it is built:
     sticky at the top of the page's scroller, under the **Backdrop veil** — a
     darker gradient over an `accentSoft` wash — in place of each feature's
     `ArtArea` and `Scrim`.
-18. 🔜 **Open the media folder** — _Open folder_ on the Storage card's path
+18. ✅ **Open the media folder** — _Open folder_ on the Storage card's path
     row: `folders.openMedia()` over `FOLDER_CHANNELS.openMedia`, **no
     argument**; main opens **Shell paths**' new `mediaRoot`. Undrawn in a
     browser.
@@ -1086,7 +1087,7 @@ A 🧭 Roadmap item is not in this chain — it is after it, if ever.
 - ✅ **Nx + Vite + React workspace scaffold** — monorepo, tooling, lint/format.
 - ✅ **Claude design handoff prototype** — full interactive design system, the build spec.
 - ✅ **Library core** — movie model, SQLite schema, repository layer.
-- ✅ **Electron desktop shell** — one window over the **Server process**, **One origin** on the **Shell port**, the **Loopback guard**, the **Ordered shutdown**, the window's rules, the two failure dialogs and the **Shell log**, the **App mark**, and fonts served offline. A preload with two members — the Software update bridge and the native folder picker — and nothing else across `contextBridge`.
+- ✅ **Electron desktop shell** — one window over the **Server process**, **One origin** on the **Shell port**, the **Loopback guard**, the **Ordered shutdown**, the window's rules, the two failure dialogs and the **Shell log**, the **App mark**, and fonts served offline. A preload with two members — the Software update bridge and the **Folder bridge** (the native folder picker and _Open folder_) — and nothing else across `contextBridge`.
 
 ### Browse & discover (parent-facing)
 
@@ -1141,7 +1142,7 @@ A 🧭 Roadmap item is not in this chain — it is after it, if ever.
 - ✅ **Codecs page** — the Codec manager on its own Settings sub-page, `/settings/codecs`: the Playback component group over the Formats group, reached from the Playback card's Codecs row, which carries the Codec summary.
 - ✅ **Ultrawide margins** — an optional left/right margin for ultra-wide monitors: the Display group's Toggle caps every screen but the player at 1920px, centred.
 
-- 🔜 **Open the media folder** — _Open folder_ on the Storage card, over a no-argument `openMedia` bridge channel (step 18).
+- ✅ **Open the media folder** — _Open folder_ on the Storage card, over a no-argument `openMedia` bridge channel: main makes the managed media directory if it is missing and opens it in Explorer.
 - 🔜 **Factory reset** — erase everything FamilyFlix made behind the **Reset dialog**; Library folders on disk stay (step 20).
 
 ### System
