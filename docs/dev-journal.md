@@ -11,6 +11,92 @@ Newest entry first.
 
 ---
 
+## 2026-10-10 — Open the media folder (issue #292)
+
+The Storage card's path row draws _Open folder_ in the desktop app: a press
+asks main, over a no-argument channel, to make the managed media directory
+if it is missing and open it in Explorer, logging a failure to the **Shell
+log** and never rejecting. Undrawn in a browser.
+
+Three commits, as log 35 Q9 ruled: `e55f33c` refactor, `549283e` RED and
+`ad6d593` GREEN, against the plan in `docs/PRDs/35-open-media-folder-plan.md`,
+built from `docs/design-logs/35-open-media-folder.md`. **7642 tests pass
+across 464 files**, measured at `ad6d593`, from 7611 across 463 at the end of
+the Backdrop veil refactor; the new file is `openMediaFolder`'s suite.
+
+### What shipped
+
+- **The bridge's move.** `folderBridge` moved from
+  `features/import-export/` into `src/api/`, the third feature to read it
+  being the Storage card — a `refactor:` commit of its own, before the RED.
+- **`mediaRoot` on Shell paths**, in both branches: `userData\media`
+  installed, `<appPath>\media` unpackaged, where the server's own default
+  resolves under `serverCwd`.
+- **`serverLaunch` reads it** when installed, for `FAMILYFLIX_MEDIA_PATH`;
+  `dev` and `start` set no media path, as before.
+- **`electron/openMediaFolder/`** and its suite: `openMediaFolder(root,
+world)` over an injected world that makes, opens and logs.
+- **The channel and the member.** `FOLDER_CHANNELS.openMedia`, and
+  `FolderBridge`'s third member, `openMedia()`, taking no argument.
+- **The preload line and main's handler**, `ipcMain.handle` over
+  `paths.mediaRoot`.
+- **`fakeFolderBridge` counts `openMedias()`.**
+- **The button.** _Open folder_ on the Storage card's path row, the
+  `secondary` `Button` at `sm`, drawn when the bridge exists; no busy state,
+  no notice.
+- **The prototype.** `page.SettingsPage.dc.html`'s _Change…_ relabelled
+  _Open folder_ first, as Q8 ruled.
+- **Two Package smoke checks** in `docs/release-checklist.md`: the button
+  opens `%APPDATA%\FamilyFlix\media`, made on a fresh install.
+
+### Where the build met the log and differed
+
+- **The button is placed by `& > button`** inside `Folder`, not as Q5's
+  `styled(Button)` named `OpenFolder`: `Button` forwards no `className`,
+  where `IconButton` and `NavigationRow` both do. It is the only element
+  selector on a primitive in `src/`.
+
+### Judgement calls the log did not name
+
+Each is the refactor round's to settle
+(`docs/refactor-plans/35-open-media-folder-refactor.md`):
+
+- **The invariant is not yet true.** Log 35 Q1 says every path main hands
+  the Server process comes from Shell paths again. `serverLaunch` still
+  joins `FAMILYFLIX_DB_PATH` and `FAMILYFLIX_COMPONENT_PATH` off `userData`
+  itself, which is why it still takes `userData`. Its docblock also splits
+  **Trusted hosts** across two lines.
+- **Two failure paths, two spellings.** `openMediaFolder` has two `try`
+  blocks, each reading the thrown value its own way, and the rejecting
+  `openPath` branch has no leaf.
+- **Main builds the world inline**, inside the handler, rebuilt on every
+  press, where `logFs` and `dialogWorld` are named, typed constants.
+- **The button's placement**, above.
+- **Tests and docs left stale**: `StorageSection.test`'s _draws no
+  Change… button — the title and path alone on their line_;
+  `serverLaunch.test`'s media leaves in a describe beside issue 228's
+  _every path from ShellPaths_; `fakeFolderBridge`'s unreflowed docblock;
+  the glossary's 🔜 marks and "graduating"; CLAUDE.md's tree, preload,
+  `shellPaths/` and Foundation lines, and step 18 in CLAUDE.md and the
+  README.
+
+### Deliberately not built
+
+Everything log 35 rules out:
+
+- opening any other folder — a Library folder, an Export folder;
+- revealing a single file (`showItemInFolder`);
+- _Change…_, the Roadmap's **Move the media folder**;
+- a notice for a failed open;
+- unpackaged, the button following a developer's own
+  `FAMILYFLIX_MEDIA_PATH`.
+
+### Follow-ups
+
+The refactor plan, filed as 293.
+
+---
+
 ## 2026-10-09 — Backdrop veil refactor (issue 290)
 
 Nine commits against `docs/refactor-plans/34-backdrop-veil-refactor.md`, one
