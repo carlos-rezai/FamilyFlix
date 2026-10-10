@@ -11,6 +11,82 @@ Newest entry first.
 
 ---
 
+## 2026-10-10 — Export name refactor (issue 296)
+
+Fifteen commits against `docs/refactor-plans/36-export-name-refactor.md`, one
+per plan commit. **7771 tests pass across 468 files**, up from 7770 across 468
+at the end of the build (`13c4d0b`). The new leaf is `exportBody`'s. `tsc -b
+--force` is clean. `eslint src server electron .husky` reports no errors and
+the one warning earlier rounds already logged (`AboutSection.test.tsx`'s
+escaped dot). No pixel, sentence, status, schema or prototype changed.
+
+### What each group changed
+
+- **Group 0, the record.** The build's own entry, below, written before the
+  round touched anything.
+- **Group 1, the server.**
+  - `EXPORT_REFUSALS` is `{ status, field, error }` again, the shape of every
+    other refusal table, and the route reads the status off it.
+  - `exportBody` reads the name right after the destination, in the dialog's
+    top-to-bottom order, and `StartExport` declares it there.
+  - `writeExport`'s docblock was reflowed.
+  - `FORBIDDEN_IN_NAME` in `exportName` is the one spelling of what Windows
+    refuses in a folder name. `exportRows` builds its global title-folder
+    replacer from it.
+- **Group 2, the client.**
+  - `EXPORT_FIELDS` and `IMPORT_FIELDS` are `as const` lists, with the
+    unions derived from them.
+  - `isFieldRefusal(body, fields)` replaces `isRefusal` and
+    `isExportRefusal`. `refusalSentence` moved beside its one remaining
+    caller, the folder add.
+  - The hook's `ExportFieldRefusal` and `setDestinationField` were renamed.
+  - The hook's and the dialog's docblocks were updated.
+- **Group 3, the tests.**
+  - `'a\b'` is labelled a backspace, and `writeExport.name.test` checks a
+    real backslash.
+  - "Dated" was retired from leaves that now ask for a name. The route POST
+    suites name their requests with one `NAME`, so only the summary's leaf
+    reads the clock.
+  - `ExportModal.name.test`'s helpers are `nameField()` and `nameLabel()`.
+- **Group 4, the docs.** The glossary, CLAUDE.md (closing 294), the README,
+  and this entry.
+
+### The one wire behaviour that moved
+
+A `POST /api/export` body wrong in both its `name` and its _Include_
+booleans used to earn the booleans' sentence. It now earns the name's. Our
+client never sends such a body. `exportBody.test` pins the new order.
+
+### Where the round met the plan's words and differed
+
+- **The glossary keeps its _(new)_ tags.** The plan said to drop them from
+  **Folder name field** and **Name refusal** "as the earlier rounds did". The
+  earlier rounds did not: the third chain's section still marks **Detail
+  backdrop** and **Open folder** _(new)_. The tags stay, for consistency.
+- **An intermittent failure.** One full-suite run late in the round reported
+  1 failed of 7771. Its output was not captured, so the leaf is unknown. The
+  two runs straight after, and every run before, were green. Nothing in the
+  round touches a timer, the network or the clock, apart from removing the
+  route suites' clock reads.
+
+### Left as it is
+
+- **`exportRows`' title-folder namer** strips the forbidden characters but
+  does not refuse or rename `CON`, `NUL` and the rest, and has no length cap.
+  Changing that changes the export's inner folders, so it is a question of
+  its own. This is a follow-up, not filed.
+- **`media/safeFilename`** has a third look-alike of the character class. It
+  guards a file inside a Movie folder, in another domain (log 36 Q4), and is
+  left apart on purpose.
+- **The prototype's `rowLabel` and `counted`.** These are old names, not
+  wrong ones, and the prototype is the spec.
+
+### Follow-ups
+
+The `exportRows` reserved-name question above, unfiled.
+
+---
+
 ## 2026-10-10 — Export name (issue #295)
 
 The Export dialog's name row is now the **Folder name field**: a mono
