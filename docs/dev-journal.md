@@ -11,6 +11,100 @@ Newest entry first.
 
 ---
 
+## 2026-10-10 — Open the media folder refactor (issue 293)
+
+Sixteen commits against
+`docs/refactor-plans/35-open-media-folder-refactor.md`, one per plan commit.
+**7657 tests pass across 464 files**, from 7642 across 464 at the end of the
+build (`ad6d593`): one new leaf is `openMediaFolder`'s, six `shellPaths`'
+(the unpackaged pair runs under `dev` and `start`), six `serverLaunch`'s
+(the data-path tables) and two `Button`'s. `tsc -b --force` is clean, and
+`eslint src server electron .husky` reports no errors and the one warning
+earlier rounds already logged (`AboutSection.test.tsx`'s escaped dot). No
+wire, schema, channel, environment variable value or pixel changed.
+
+### What each group changed
+
+- **Group 0, the record.** The build's own entry, below, written before the
+  round touched anything.
+- **Group 1, the shell.**
+  - `openMediaFolder` is one `try` around make-then-open, the thrown value
+    read once by a local `reason`. A leaf for a rejecting `openPath` was
+    committed first and passed on both sides of the reshape.
+  - `main.ts` names `mediaFolderWorld: MediaFolderWorld` beside
+    `dialogWorld`; the handler is
+    `openMediaFolder(paths.mediaRoot, mediaFolderWorld)`.
+  - **Shell paths are whole.** `ShellPaths` answers `database` and
+    `componentSlot` beside `mediaRoot`, in both branches. `serverLaunch`
+    reads all three when installed and sets none unpackaged, and is
+    `serverLaunch(mode, paths)`: the `userData` parameter is gone. Its
+    docblock is rewritten and **Trusted hosts** is whole on one line.
+  - `serverLaunch.test`'s media describe is folded into issue 228's _every
+    path from ShellPaths_, whose installed and unpackaged leaves are each
+    an `it.each` over the three variables. The installed-environment leaves,
+    which assert the `userData` strings, passed unchanged.
+- **Group 2, the frontend.** `Button` forwards `className`, in both forms,
+  and _Open folder_ is `OpenFolder = styled(Button)` with `flex: 0 0 auto`,
+  as log 35 Q5 ruled. `Folder`'s `& > button` rule is gone; there is no
+  element selector on a primitive in `src/`.
+- **Group 3, the tests' tidies.** The Storage card's _Change…_ leaf is
+  _draws no Change… — Move the media folder is not built_, asserting only
+  that; `fakeFolderBridge`'s docblock is reflowed.
+- **Group 4, the docs.** The glossary's **Shell paths** and **Folder
+  bridge** rows lose their 🔜 marks and name what landed. CLAUDE.md's tree
+  gains `openMediaFolder/`, the preload and `types/` lines name `openMedia`,
+  the `shellPaths/` and `serverLaunch/` lines describe the whole Shell paths,
+  the Foundation entry names the **Folder bridge**, and step 18 and its
+  Settings hub entry are ✅. The README matches.
+
+### The invariant made true
+
+Log 35 Q1 said every path main hands the **Server process** comes from Shell
+paths again; at `ad6d593` that was not yet so — the database and the slot
+were still joined off `userData` inside `serverLaunch`. After commit 8 it
+holds as the glossary words it, and every installed path the server receives
+is the same string as before.
+
+### Where the round met the plan's words and differed
+
+- **Commits 2, 6, 11 and 12 were made as `test:`**, the commit gate's type
+  for a test-only change; the plan does not type them.
+- **Commit 7 also dropped `serverLaunch.ts`' `join` import**, unread once
+  the two joins went; ESLint warned on it.
+- **Commit 9's leaves read a caller's `margin-top` off the computed style**
+  rather than counting class names as `IconButton.test`'s leaf does, so each
+  fails against a `Button` that drops `className` — checked by running them
+  against the old `Button`.
+- **Commit 10 moved `min-width: 0`'s sentence onto `FolderText`'s
+  docblock**, the element it describes, as `Folder`'s lost the button's.
+- **Commit 11 also mended the suite's header**, which still said _the title
+  and path alone on their line_.
+- **Commit 14 also fixed the `types/` line's `FOLDER_CHANNELS` list**, which
+  the plan did not name and which still read `pick`, `pickOne`.
+- **One full run after commit 8 reported a single failing leaf** that two
+  reruns did not reproduce; the run's output was not kept, so which leaf is
+  not known. Every other full run in the round was green.
+- **The manual `electron:dev` check** the plan asks for after commit 8 —
+  the app starts on the repo's library, _Open folder_ opens the repo's
+  `media`, Codecs still reads the slot — was not run in this round; it is
+  the maintainer's.
+
+### Left as it is
+
+- **One shared reading of a thrown value.** `instanceof Error ? … :
+String(…)` is spelled in `createUpdates`, `shellDialogs`,
+  `openMediaFolder` and the server's `shellHandshake`, across two tsconfig
+  projects. A unit of its own, if ever.
+- **`FOLDER_CHANNELS` and `FolderBridge` in `libraryFolders.ts`.**
+- **The logs directory and the failure dialog's `userData`**: main reads
+  them itself, and neither is handed to the Server process.
+- Everything log 35 ruled out, as the build's entry lists it.
+
+This entry's commit closes this round, 293. CLAUDE.md's commit closes the
+initiative, 291, on push.
+
+---
+
 ## 2026-10-10 — Open the media folder (issue #292)
 
 The Storage card's path row draws _Open folder_ in the desktop app: a press
