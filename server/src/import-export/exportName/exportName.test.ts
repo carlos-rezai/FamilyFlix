@@ -91,8 +91,8 @@ describe('exportNameRefusal — too-long', () => {
 describe('exportNameRefusal — bad-character', () => {
   it.each([
     ['a forward slash', 'a/b'],
-    ['a backslash', 'a\b'],
-    ['a literal backslash', String.raw`a\b`],
+    ['a backspace', 'a\b'],
+    ['a backslash', String.raw`a\b`],
     ['a tab', 'a\tb'],
     ['a less-than', 'a<b'],
     ['a greater-than', 'a>b'],

@@ -153,7 +153,7 @@ describe('writeExport — a refused name', () => {
   it.each([
     ['an empty name', ''],
     ['a name with a slash', 'a/b'],
-    ['a name with a backslash', 'a\b'],
+    ['a name with a backslash', String.raw`a\b`],
     ['two dots', '..'],
     ['a reserved name', 'con.txt'],
   ])('makes nothing at the destination for %s', async (_, name) => {
