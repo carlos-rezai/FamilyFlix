@@ -211,6 +211,12 @@ describe('serverLaunch — installed (the Installed app)', () => {
 // Issue #228 — the entry and the renderer are read off `ShellPaths` in every
 // mode, never joined from a working directory. A `ShellPaths` whose paths share
 // no root with the repo's proves it.
+//
+// Issue #292 — `mediaRoot` is the one spelling of the **Managed media
+// directory**: installed, the fork's `FAMILYFLIX_MEDIA_PATH` is read off
+// `ShellPaths` rather than joined from `userData`, so the server and Open
+// folder cannot disagree. Unpackaged it is still not set, so a developer's own
+// variable is honoured.
 describe('serverLaunch — every path from ShellPaths', () => {
   const ELSEWHERE = join('E:', 'elsewhere');
   const paths: ShellPaths = {
@@ -251,6 +257,29 @@ describe('serverLaunch — every path from ShellPaths', () => {
         serverLaunch(mode, PACKAGED_USER_DATA, paths).env
           .FAMILYFLIX_SQLITE_BINDING
       ).toBe(paths.sqliteBinding);
+    }
+  );
+
+  it('installed sets FAMILYFLIX_MEDIA_PATH to paths.mediaRoot', () => {
+    expect(
+      serverLaunch('installed', PACKAGED_USER_DATA, INSTALLED).env
+        .FAMILYFLIX_MEDIA_PATH
+    ).toBe(INSTALLED.mediaRoot);
+  });
+
+  it('installed reads it off ShellPaths, never rebuilding it from userData', () => {
+    expect(
+      serverLaunch('installed', PACKAGED_USER_DATA, paths).env
+        .FAMILYFLIX_MEDIA_PATH
+    ).toBe(paths.mediaRoot);
+  });
+
+  it.each(['dev', 'start'] as const)(
+    '%s sets no FAMILYFLIX_MEDIA_PATH even when handed a mediaRoot',
+    (mode) => {
+      expect(serverLaunch(mode, USER_DATA, paths).env).not.toHaveProperty(
+        'FAMILYFLIX_MEDIA_PATH'
+      );
     }
   );
 });
@@ -295,42 +324,6 @@ describe('serverLaunch — the Default component', () => {
     (mode) => {
       expect(serverLaunch(mode, USER_DATA, carrying).env).not.toHaveProperty(
         'FAMILYFLIX_FFMPEG_PATH'
-      );
-    }
-  );
-});
-
-// Issue #292 — `mediaRoot` is the one spelling of the **Managed media
-// directory**: installed, the fork's `FAMILYFLIX_MEDIA_PATH` is read off
-// `ShellPaths` rather than joined from `userData`, so the server and Open
-// folder cannot disagree. Unpackaged it is still not set, so a developer's own
-// variable is honoured.
-describe('serverLaunch — the managed media directory from ShellPaths', () => {
-  const ELSEWHERE = join('E:', 'elsewhere');
-  const distinct: ShellPaths = {
-    ...INSTALLED,
-    mediaRoot: join(ELSEWHERE, 'not-under-user-data', 'media'),
-  };
-
-  it('installed sets FAMILYFLIX_MEDIA_PATH to paths.mediaRoot', () => {
-    expect(
-      serverLaunch('installed', PACKAGED_USER_DATA, INSTALLED).env
-        .FAMILYFLIX_MEDIA_PATH
-    ).toBe(INSTALLED.mediaRoot);
-  });
-
-  it('installed reads it off ShellPaths, never rebuilding it from userData', () => {
-    expect(
-      serverLaunch('installed', PACKAGED_USER_DATA, distinct).env
-        .FAMILYFLIX_MEDIA_PATH
-    ).toBe(distinct.mediaRoot);
-  });
-
-  it.each(['dev', 'start'] as const)(
-    '%s sets no FAMILYFLIX_MEDIA_PATH even when handed a mediaRoot',
-    (mode) => {
-      expect(serverLaunch(mode, USER_DATA, distinct).env).not.toHaveProperty(
-        'FAMILYFLIX_MEDIA_PATH'
       );
     }
   );
