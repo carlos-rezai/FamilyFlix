@@ -18,6 +18,7 @@ const BODY: StartExport = {
   destination: 'E:\\Movies',
   images: false,
   subtitles: false,
+  name: 'familyflix-collection_08-10-2026',
 };
 
 describe('exportBody — what it reads', () => {
@@ -31,13 +32,14 @@ describe('exportBody — what it reads', () => {
     expect(exportBody(body)).toEqual({ ok: true, value: body });
   });
 
-  it('carries nothing the body said beyond the four fields', () => {
+  it('carries nothing the body said beyond the five fields', () => {
     const read = exportBody({ ...BODY, extra: 1 });
 
     expect(read.ok && Object.keys(read.value).sort()).toEqual([
       'destination',
       'format',
       'images',
+      'name',
       'subtitles',
     ]);
   });
@@ -82,6 +84,56 @@ describe('exportBody — each malformed body is a 400 sentence', () => {
     expect(format.ok || destination.ok).toBe(false);
     if (!format.ok && !destination.ok) {
       expect(format.error).not.toBe(destination.error);
+    }
+  });
+});
+
+// 36 — Export name (issue #295).
+//
+// The body carries the typed **Export name** as `name`, read only as a string:
+// what a folder may be called is the domain's rule (`exportNameRefusal`), not
+// the body reader's, so a name Windows would refuse still reads, and nothing
+// is trimmed on the way through.
+
+describe('exportBody — the name', () => {
+  it('carries the name as typed', () => {
+    const read = exportBody({ ...BODY, name: 'Heat (1995) – kopia' });
+
+    expect(read).toEqual({
+      ok: true,
+      value: { ...BODY, name: 'Heat (1995) – kopia' },
+    });
+  });
+
+  it('trims nothing off the name', () => {
+    const read = exportBody({ ...BODY, name: '  family  ' });
+
+    expect(read.ok && read.value.name).toBe('  family  ');
+  });
+
+  it.each([
+    ['an empty name', ''],
+    ['a name with a slash', 'a/b'],
+    ['a reserved name', 'con'],
+  ])('leaves %s for the writer to refuse', (_, name) => {
+    expect(exportBody({ ...BODY, name })).toEqual({
+      ok: true,
+      value: { ...BODY, name },
+    });
+  });
+
+  it.each([
+    ['no name', undefined],
+    ['a numeric name', 42],
+    ['a null name', null],
+    ['an array name', ['family']],
+  ])('refuses %s with one sentence', (_, name) => {
+    const read = exportBody({ ...BODY, name });
+
+    expect(read.ok).toBe(false);
+    if (!read.ok) {
+      expect(typeof read.error).toBe('string');
+      expect(read.error.length).toBeGreaterThan(0);
     }
   });
 });

@@ -323,6 +323,7 @@ describe('startExport', () => {
     destination: 'E:\\Movies',
     images: false,
     subtitles: false,
+    name: 'Family films',
   };
   const RESULT: ExportResult = {
     folder: 'E:\\Movies\\familyflix-collection_08-10-2026',
@@ -330,12 +331,13 @@ describe('startExport', () => {
     seriesCount: 0,
   };
 
-  /** A 400 carrying the route's one sentence. */
-  function badRequest(error: string): Response {
+  /** A 400 carrying the route's one sentence, and the field it names if any. */
+  function badRequest(error: string, field?: string): Response {
     return {
       ok: false,
       status: 400,
-      json: () => Promise.resolve({ error }),
+      json: () =>
+        Promise.resolve(field === undefined ? { error } : { error, field }),
     } as unknown as Response;
   }
 
@@ -362,13 +364,45 @@ describe('startExport', () => {
     });
   });
 
-  it('answers refused with the route’s own sentence on a 400', async () => {
-    fetchMock.mockResolvedValue(badRequest('No folder at that path.'));
+  // 36 — Export name (issue #295): a refusal names its field, `destination`
+  // or `name`, so the dialog draws the sentence under the one it is about —
+  // `startImport`'s precedent. A 400 that names no field is a malformed body,
+  // nothing the maintainer typed, and rejects like any other failure.
+
+  it('answers refused with the destination field and its sentence on a 400', async () => {
+    fetchMock.mockResolvedValue(
+      badRequest('No folder at that path.', 'destination')
+    );
 
     await expect(startExport(REQUEST)).resolves.toEqual({
       kind: 'refused',
+      field: 'destination',
       sentence: 'No folder at that path.',
     });
+  });
+
+  it('answers refused with the name field and its sentence on a 400', async () => {
+    fetchMock.mockResolvedValue(
+      badRequest('Give the export folder a name.', 'name')
+    );
+
+    await expect(startExport(REQUEST)).resolves.toEqual({
+      kind: 'refused',
+      field: 'name',
+      sentence: 'Give the export folder a name.',
+    });
+  });
+
+  it('rejects on a 400 that names no field', async () => {
+    fetchMock.mockResolvedValue(badRequest('Unknown export format'));
+
+    await expect(startExport(REQUEST)).rejects.toThrow();
+  });
+
+  it('rejects on a 400 that names a field the dialog does not have', async () => {
+    fetchMock.mockResolvedValue(badRequest('No such thing.', 'sheet'));
+
+    await expect(startExport(REQUEST)).rejects.toThrow();
   });
 
   it('rejects on a 500', async () => {
