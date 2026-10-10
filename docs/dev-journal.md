@@ -11,6 +11,97 @@ Newest entry first.
 
 ---
 
+## 2026-10-10 — Export name (issue #295)
+
+The Export dialog's name row is now the **Folder name field**: a mono
+`TextField` under _Save to_, with the title count at its heading's right end.
+It is prefilled with today's `familyflix-collection_DD-MM-YYYY` and never
+overwritten once edited. The server names the **Export folder** and the sheet
+after the name asked for, numbers it if taken, and refuses a name a folder
+can't have with one sentence under the field. Nothing is ever stripped.
+
+Three commits, as log 36 Q10 ruled: `04636ab` refactor, `bf0b4b6` RED and
+`13c4d0b` GREEN. They follow the plan in `docs/PRDs/36-export-name-plan.md`,
+built from `docs/design-logs/36-export-name.md`. **7770 tests pass across 468
+files**, measured at `13c4d0b`, up from 7657 across 464 at the end of the Open
+the media folder refactor. The four new files are the `.name` suites of
+`writeExport`, the route, `useExport` and `ExportModal`.
+
+### What shipped
+
+- **The rename.** `ExportSummary.folderName` became `defaultName`, in a
+  `refactor:` commit of its own before the RED.
+- **The prototype.** `feat.ExportModal.dc.html` draws the _Folder name_
+  section, with _Save to_'s refusal on `destinationRefused` and the name's on
+  `nameRefused`. `COMPONENT-SPEC.md`'s entry follows.
+- **`exportNameRefusal(name)`**, beside `exportName(now)`. It answers
+  `unnamed`, `too-long`, `bad-character`, `bad-ending` or `reserved`, in that
+  order, or `null`. Windows' rules apply on every platform, and nothing is
+  trimmed.
+- **The body** carries `name`, read only as a string.
+- **The writer** checks the destination, then the name, and makes the
+  folder and the sheet under `request.name`. It lost its `now` parameter, so
+  `exportName(now)` has one caller left, `exportSummary`.
+- **The route.** Every `EXPORT_REFUSALS` entry names its `field`, and a
+  refusal is answered `400 { error, field }`, the same shape as
+  `/api/import`.
+- **The client.** `startExport` reads `{ kind: 'refused', field, sentence }`
+  off a `400` that names a known field. `useExport` gains `name`, `setName`,
+  a `nameEdited` ref beside `destinationEdited`, and a fielded refusal.
+  `ExportModal` draws the section and each refusal under its own field.
+  `NameRow`, `NameLead` and `ExportName` were retired.
+
+### Where the build met the log and differed
+
+- **`EXPORT_REFUSALS` lost `status`.** Log 36's Design typed it
+  `{ status, field, error }`. The build replaced `status` with `field`, and
+  the route writes a literal `400`. Every other refusal table in the router
+  carries its status.
+
+### Judgement calls the log did not name
+
+Each is the refactor round's to settle
+(`docs/refactor-plans/36-export-name-refactor.md`):
+
+- **The body reads the name last.** It comes after the two _Include_
+  booleans, not after the destination as the dialog and the writer order it.
+  `StartExport` declares it last too.
+- **Two spellings of one rule.** `exportName`'s `BAD_CHARACTER` and
+  `exportRows`' `UNSAFE_IN_NAME` are the same character class. The client's
+  `isRefusal` and `isExportRefusal` are the same guard, each spelling its
+  field union a second time.
+- **Names the second field made wrong.** The hook exports an
+  `ExportRefusal` interface, the same name as the server's kind union. Its
+  destination setter is still `setField`. Several docblocks took the edit
+  without being reflowed, or still describe a dialog with one field.
+- **A backslash that is a backspace.** `'a\b'` is labelled _a backslash_ in
+  `exportName.test` and `writeExport.name.test`. The latter checks no real
+  backslash at all.
+- **Tests and docs left stale.** There are "dated" leaf names where the name
+  is now asked for, and the route POST suites name their requests off the
+  clock. `ExportModal.name.test`'s helper is called `folderName()`. The
+  glossary's **Export summary**, **Export dialog**, **Export ready** and
+  **Export name** rows are out of date, and step 19 is 🔜 in CLAUDE.md and
+  the README.
+
+### Deliberately not built
+
+Everything log 36 rules out:
+
+- remembering a name between opens;
+- a name template or date tokens;
+- renaming an Export folder after it is written;
+- checking the name as it is typed, or anywhere in the client;
+- clearing a refusal on the next edit;
+- a sheet name that differs from the folder's;
+- any other platform's naming rules.
+
+### Follow-ups
+
+The refactor plan, filed as 296.
+
+---
+
 ## 2026-10-10 — Open the media folder refactor (issue 293)
 
 Sixteen commits against
