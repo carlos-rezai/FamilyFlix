@@ -1,7 +1,7 @@
 # 36 — Export name
 
 > **Initiative:** `export-name`
-> **PRD:** `docs/PRDs/36-export-name.md` (to be written)
+> **PRD:** `docs/PRDs/36-export-name.md` (#294)
 > **Plan:** `docs/PRDs/36-export-name-plan.md` (to be written)
 
 This log is the `grill-me` session that settled step 19 of the build order,
