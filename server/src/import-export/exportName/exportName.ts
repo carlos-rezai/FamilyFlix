@@ -31,8 +31,13 @@ export type ExportNameRefusal =
 /** The longest name an **Export folder** may be given. */
 const MAX_NAME = 200;
 
+/**
+ * What Windows refuses in a folder name — `< > : " / \ | ? *` and the control
+ * characters. The one spelling: the name check refuses a name holding one,
+ * and `exportRows` strips them from a title's folder through a global copy.
+ */
 // eslint-disable-next-line no-control-regex
-const BAD_CHARACTER = /[<>:"/\\|?*\u0000-\u001f]/;
+export const FORBIDDEN_IN_NAME = /[<>:"/\\|?*\u0000-\u001f]/;
 
 const RESERVED = /^(con|prn|aux|nul|com[1-9]|lpt[1-9])(\.|$)/i;
 
@@ -50,7 +55,7 @@ export function exportNameRefusal(name: string): ExportNameRefusal | null {
   if (name.length > MAX_NAME) {
     return 'too-long';
   }
-  if (BAD_CHARACTER.test(name)) {
+  if (FORBIDDEN_IN_NAME.test(name)) {
     return 'bad-character';
   }
   if (name.endsWith(' ') || name.endsWith('.')) {

@@ -12,6 +12,7 @@ import {
 } from '@/types';
 import { spellYearSpan } from '../../library/series/yearSpan/yearSpan';
 import { spellEpisodeTag } from '../../media/episodeTag/episodeTag';
+import { FORBIDDEN_IN_NAME } from '../exportName/exportName';
 
 /** A cell's value: text or a number, or `null` for an empty cell. */
 export type ExportCell = string | number | null;
@@ -182,11 +183,11 @@ interface TitleArt {
 const NO_ART: TitleArt = { poster: null, backdrop: null };
 
 /**
- * What Windows refuses in a folder name, and the control characters with
- * it.
+ * What Windows refuses in a folder name, every occurrence — a global copy of
+ * `exportName`'s {@link FORBIDDEN_IN_NAME}, the one spelling, made here so no
+ * `lastIndex` is shared with the check that refuses a typed name.
  */
-// eslint-disable-next-line no-control-regex
-const UNSAFE_IN_NAME = /[<>:"/\\|?*\u0000-\u001f]/g;
+const UNSAFE_IN_NAME = new RegExp(FORBIDDEN_IN_NAME.source, 'g');
 
 /** What a title whose name leaves nothing usable is filed under instead. */
 const FALLBACK_FOLDER = 'Untitled';
