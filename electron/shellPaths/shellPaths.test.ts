@@ -100,6 +100,17 @@ describe.each(['dev', 'start'] as const)(
       expect(paths().mediaRoot).toBe(join(REPO, 'media'));
     });
 
+    // Issue #293 — the database and the **Component slot** join it: where the
+    // server's `./familyflix.db` and `./playback-component` resolve under
+    // `serverCwd`.
+    it('finds the database at <appPath>\\familyflix.db', () => {
+      expect(paths().database).toBe(join(REPO, 'familyflix.db'));
+    });
+
+    it('finds the Component slot at <appPath>\\playback-component', () => {
+      expect(paths().componentSlot).toBe(join(REPO, 'playback-component'));
+    });
+
     it('reads nothing under resourcesPath or userData', () => {
       const values = Object.values(paths()).filter(
         (value): value is string => typeof value === 'string'
@@ -153,6 +164,17 @@ describe('shellPaths — installed (the Packaged layout)', () => {
   // `FAMILYFLIX_MEDIA_PATH` and Open folder both read.
   it('finds the managed media directory at userData\\media', () => {
     expect(paths().mediaRoot).toBe(join(USER_DATA, 'media'));
+  });
+
+  // Issue #293 — `%APPDATA%\FamilyFlix\familyflix.db` and
+  // `%APPDATA%\FamilyFlix\playback-component`, the one spelling each of the
+  // server's `FAMILYFLIX_DB_PATH` and `FAMILYFLIX_COMPONENT_PATH`.
+  it('finds the database at userData\\familyflix.db', () => {
+    expect(paths().database).toBe(join(USER_DATA, 'familyflix.db'));
+  });
+
+  it('finds the Component slot at userData\\playback-component', () => {
+    expect(paths().componentSlot).toBe(join(USER_DATA, 'playback-component'));
   });
 });
 

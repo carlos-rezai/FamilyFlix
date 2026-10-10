@@ -32,6 +32,18 @@ export interface ShellPaths {
    * and Open folder both read.
    */
   mediaRoot: string;
+  /**
+   * The library's database: where the server's `./familyflix.db` resolves
+   * under `serverCwd` — the one spelling the server's `FAMILYFLIX_DB_PATH`
+   * reads.
+   */
+  database: string;
+  /**
+   * The **Component slot**: where the server's `./playback-component`
+   * resolves under `serverCwd` — the one spelling the server's
+   * `FAMILYFLIX_COMPONENT_PATH` reads.
+   */
+  componentSlot: string;
 }
 
 /**
@@ -59,6 +71,8 @@ export function shellPaths(
       ffmpeg: join(resourcesPath, 'ffmpeg', 'ffmpeg.exe'),
       serverCwd: userData,
       mediaRoot: join(userData, 'media'),
+      database: join(userData, 'familyflix.db'),
+      componentSlot: join(userData, 'playback-component'),
     };
   }
 
@@ -69,5 +83,7 @@ export function shellPaths(
     ffmpeg: null,
     serverCwd: appPath,
     mediaRoot: join(appPath, 'media'),
+    database: join(appPath, 'familyflix.db'),
+    componentSlot: join(appPath, 'playback-component'),
   };
 }

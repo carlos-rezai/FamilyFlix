@@ -39,6 +39,8 @@ const UNPACKAGED: ShellPaths = {
   ffmpeg: null,
   serverCwd: CWD,
   mediaRoot: join(CWD, 'media'),
+  database: join(CWD, 'familyflix.db'),
+  componentSlot: join(CWD, 'playback-component'),
 };
 
 const dev = () => serverLaunch('dev', USER_DATA, UNPACKAGED);
@@ -102,6 +104,8 @@ const INSTALLED: ShellPaths = {
   ffmpeg: join(RESOURCES, 'ffmpeg', 'ffmpeg.exe'),
   serverCwd: PACKAGED_USER_DATA,
   mediaRoot: join(PACKAGED_USER_DATA, 'media'),
+  database: join(PACKAGED_USER_DATA, 'familyflix.db'),
+  componentSlot: join(PACKAGED_USER_DATA, 'playback-component'),
 };
 
 const BUNDLED_SERVER = join(CWD, 'electron', 'dist', 'server.js');
@@ -217,6 +221,8 @@ describe('serverLaunch — every path from ShellPaths', () => {
     ffmpeg: null,
     serverCwd: ELSEWHERE,
     mediaRoot: join(ELSEWHERE, 'the-media'),
+    database: join(ELSEWHERE, 'the-library.db'),
+    componentSlot: join(ELSEWHERE, 'the-slot'),
   };
 
   it.each(['dev', 'start', 'installed'] as const)(
