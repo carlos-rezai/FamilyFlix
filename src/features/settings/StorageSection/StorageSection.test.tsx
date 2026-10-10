@@ -28,8 +28,8 @@ import {
  * folder's absolute path under it in mono at 13px, faint, on one line with an
  * ellipsis when long; under it the space line — **Space used** in bold, _of
  * movies_, a faint `·`, and `N titles` / `1 title` for one. No _Change…_: a
- * control whose mechanism does not exist is not drawn, the title and path
- * alone on their line.
+ * control whose mechanism does not exist is not drawn, and **Move the media
+ * folder** is not built.
  *
  * The section owns `useStorageReport`. **Blank until it lands**: the path and
  * the space line are empty while the report is `null` and left so if it
@@ -153,11 +153,10 @@ describe('StorageSection — the heading and the title', () => {
     ).toBe(true);
   });
 
-  it('draws no Change… button — the title and path alone on their line', async () => {
+  it('draws no Change… — Move the media folder is not built', async () => {
     renderSection();
 
     await reportLanded();
-    expect(screen.queryByRole('button')).toBeNull();
     expect(screen.queryByText(/change/i)).toBeNull();
   });
 });
