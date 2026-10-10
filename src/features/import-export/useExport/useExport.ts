@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import type { ExportFormat, ExportResult, ExportSummary } from '@/types';
 import { fetchExportSummary, startExport } from '../api/api';
-import { folderBridge } from '../folderBridge/folderBridge';
+import { folderBridge } from '@/api/folderBridge/folderBridge';
 
 export interface ExportState {
   /** The chosen **Export format** — `csv` on every open. */

@@ -333,7 +333,6 @@ familyflix/
 │ │ │ ├── useLibraryFolders/ ← the list read on mount, the add (the route's own sentence kept on a refusal) and the remove
 │ │ │ ├── useKeyStored/ ← whether a TMDB key is stored, `false` until it lands and for a failed read: the `EnrichCheckCard` hint's one read
 │ │ │ ├── useFolderScan/ ← Scan folders: the Folder scan posted with the box, `/import` pushed on a `201` and a `409`, `scanning` let go otherwise
-│ │ │ ├── folderBridge/ ← the one reader of `window.familyflix?.folders`, `null` in a browser
 │ │ │ ├── ExportModal/ ← the Export dialog: owns useExport; the idle face over Modal — the Format cards, _Save to_ with Browse… when the bridge exists, the name row, the two Include toggles, the column pills — and Export ready over the bare one, the folder written and where — the same card, so the pop-in runs once
 │ │ │ ├── FormatCard/ ← one Format card: a role="radio" button with a label and a line, the pair in a radiogroup
 │ │ │ ├── useExport/ ← csv, images on, subtitles off and idle on every open, the summary fetched fresh and its default destination never over an edit; the bridge read once; exportLibrary posts `startExport`, a refusal's sentence kept under the field. A close mid-request drops the redraw, not the folder
@@ -370,6 +369,7 @@ familyflix/
 │ ├── pages/ ← route-level views, composition only, no logic (ImportPage is MaintainerLayout around ImportFlow; SeriesPage and SeasonPage own a scroll container and Back each, MoviePage’s precedent; EnrichmentPage is MaintainerLayout around EnrichmentFlow; CodecsPage is MaintainerLayout at 780 around CodecManager, the first nested Settings route; LibraryFoldersPage the same around LibraryFolders, at `/settings/folders`)
 │ ├── api/ ← wire calls two or more features share (one folder per call + its test, no barrel)
 │ │ ├── saveFavorite/ fetchMovie/ saveWatched/ dismissProblem/ fetchSettings/ saveSeriesFavorite/ saveEpisodeWatched/ fetchEnrichmentSummary/ fetchTmdbKey/ ← the nine that earned it
+│ │ ├── folderBridge/ ← the one reader of `window.familyflix?.folders`, `null` in a browser: the preload is the shell's wire, and the Library folders page, the Export dialog and the Storage card all read it
 │ │ └── postValue/
 │ │ ├── postValue.ts
 │ │ └── postValue.test.ts
@@ -442,7 +442,9 @@ season page's box and the player's _Play now_ both mark the same episode; and
 `fetchEnrichmentSummary` did, because the Settings hub's _Sync metadata &
 posters_ row and the Enrichment setup both draw the same summary; and
 `fetchTmdbKey` did, because the Network group fills its field with the stored
-key and Import setup chooses the _Also fetch from TMDB_ hint by it. `saveRating`
+key and Import setup chooses the _Also fetch from TMDB_ hint by it; and
+`folderBridge` did, because the Library folders page, the Export dialog and the
+Settings hub's Storage card all read the shell's folder bridge. `saveRating`
 has one caller and stays with the feature that makes it, and so does the
 player's own `saveResume` — the player is the only thing in the app that can
 know where a film is, which is the same rule read the other way round — and so

@@ -8,7 +8,7 @@ import {
   IconButton,
   TextField,
 } from '@/primitives';
-import { folderBridge } from '../folderBridge/folderBridge';
+import { folderBridge } from '@/api/folderBridge/folderBridge';
 import { EnrichCheckCard } from '../EnrichCheckCard/EnrichCheckCard';
 import { FolderRow } from '../FolderRow/FolderRow';
 import { FolderShapes } from '../FolderShapes/FolderShapes';
