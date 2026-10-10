@@ -72,7 +72,7 @@ const summaryOf = (overrides: Partial<ExportSummary> = {}): ExportSummary => ({
   seriesCount: 1,
   episodeCount: 8,
   defaultDestination: 'E:\\Movies',
-  folderName: NAME,
+  defaultName: NAME,
   ...overrides,
 });
 

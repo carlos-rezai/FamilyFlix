@@ -10,7 +10,7 @@
 // - `GET /api/export` → the grown **Export summary**: `movieCount`,
 //   `seriesCount`, `episodeCount`, `defaultDestination` (the first **Library
 //   folder** in the order added that `readableFolder` calls readable, else
-//   `<home>\Downloads`) and `folderName` (today's **Export name**).
+//   `<home>\Downloads`) and `defaultName` (today's **Export name**).
 // - `POST /api/export { format, destination, images, subtitles }` → `201
 //   ExportResult { folder, movieCount, seriesCount }`, or `400 { error }` for a
 //   malformed body or a refused destination.
@@ -220,8 +220,8 @@ describe('GET /api/export — the grown summary', () => {
 
     const summary = await getSummary(baseUrl);
 
-    expect(summary.folderName).toBe(exportName(new Date()));
-    expect(summary.folderName).toMatch(
+    expect(summary.defaultName).toBe(exportName(new Date()));
+    expect(summary.defaultName).toMatch(
       /^familyflix-collection_\d{2}-\d{2}-\d{4}$/
     );
   });

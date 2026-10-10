@@ -193,7 +193,7 @@ export function ExportModal({ open, onClose }: ExportModalProps) {
       <NameRow>
         <NameLead>
           <FolderIcon size={18} />
-          <ExportName>{summary?.folderName ?? ''}</ExportName>
+          <ExportName>{summary?.defaultName ?? ''}</ExportName>
         </NameLead>
         {count === null ? null : <Count>{count}</Count>}
       </NameRow>

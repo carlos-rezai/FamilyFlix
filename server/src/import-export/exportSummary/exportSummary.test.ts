@@ -136,7 +136,7 @@ describe('exportSummary — the name', () => {
   it('is the Export name an export made now would take', async () => {
     const summary = await exportSummary(freshStorage(), sandbox().home, NOW);
 
-    expect(summary.folderName).toBe(exportName(NOW));
-    expect(summary.folderName).toBe('familyflix-collection_09-10-2026');
+    expect(summary.defaultName).toBe(exportName(NOW));
+    expect(summary.defaultName).toBe('familyflix-collection_09-10-2026');
   });
 });

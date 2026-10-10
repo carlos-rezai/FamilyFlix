@@ -26,7 +26,7 @@ export async function exportSummary(
     seriesCount: series.length,
     episodeCount,
     defaultDestination: await defaultDestination(storage, home),
-    folderName: exportName(now),
+    defaultName: exportName(now),
   };
 }
 

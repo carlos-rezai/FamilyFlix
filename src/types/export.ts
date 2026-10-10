@@ -85,7 +85,7 @@ export interface ExportSummary {
   /**
    * Today's **Export name** — the folder an export made now would be called.
    */
-  folderName: string;
+  defaultName: string;
 }
 
 /** What `POST /api/export` is sent: the format, where to, and what travels. */

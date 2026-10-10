@@ -40,7 +40,7 @@ const SUMMARY: ExportSummary = {
   seriesCount: 1,
   episodeCount: 8,
   defaultDestination: 'E:\\Movies',
-  folderName: 'familyflix-collection_08-10-2026',
+  defaultName: 'familyflix-collection_08-10-2026',
 };
 
 function renderExport() {
