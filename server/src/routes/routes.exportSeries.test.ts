@@ -27,7 +27,6 @@ import { createApiRouter } from '.';
 import { createEnrichment } from '../enrichment/createEnrichment/createEnrichment';
 import { offlineTmdb } from '../test-support/offlineTmdb/offlineTmdb';
 import { createImporter } from '../import-export/createImporter/createImporter';
-import { exportName } from '../import-export/exportName/exportName';
 import { readSheet } from '../import-export/readSheet/readSheet';
 import { createMedia } from '../media/createMedia/createMedia';
 import { createPlayback } from '../playback/createPlayback/createPlayback';
@@ -44,6 +43,9 @@ import {
 import type { ExportFormat, ExportResult, ImportRun } from '@/types';
 
 const FORMATS = [...EXPORT_FORMATS];
+
+/** The **Export name** every export in this suite asks for — the POST reads no clock. */
+const NAME = 'familyflix-collection_08-10-2026';
 
 /** A UTF-8 BOM at the start of decoded text. */
 const LEADING_BOM = new RegExp(`^${String.fromCharCode(0xfeff)}`);
@@ -98,12 +100,12 @@ function freshApi(): {
   return { storage, baseUrl: `http://127.0.0.1:${port}`, dir, root, sheet };
 }
 
-/** Post an export, named today's **Export name** unless the body names one. */
+/** Post an export, named {@link NAME} unless the body names one. */
 const postExport = (baseUrl: string, body: Record<string, unknown>) =>
   fetch(`${baseUrl}/api/export`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name: exportName(new Date()), ...body }),
+    body: JSON.stringify({ name: NAME, ...body }),
   });
 
 /** A directory of its own under the sandbox. */
@@ -151,7 +153,7 @@ async function exported(
   expect(response.status).toBe(201);
   return {
     result: (await response.json()) as ExportResult,
-    name: exportName(new Date()),
+    name: NAME,
   };
 }
 

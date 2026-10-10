@@ -67,6 +67,9 @@ import type {
 
 const FORMATS = [...EXPORT_FORMATS];
 
+/** The **Export name** every export in this suite asks for — the POST reads no clock. */
+const NAME = 'familyflix-collection_08-10-2026';
+
 const storages: LibraryStorage[] = [];
 const servers: Server[] = [];
 
@@ -132,12 +135,12 @@ async function getSummary(baseUrl: string): Promise<ExportSummary> {
   return (await response.json()) as ExportSummary;
 }
 
-/** Post an export, named today's **Export name** unless the body names one. */
+/** Post an export, named {@link NAME} unless the body names one. */
 const postExport = (baseUrl: string, body: Record<string, unknown>) =>
   fetch(`${baseUrl}/api/export`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name: exportName(new Date()), ...body }),
+    body: JSON.stringify({ name: NAME, ...body }),
   });
 
 const addFolder = (baseUrl: string, path: string) =>
@@ -286,13 +289,13 @@ describe('POST /api/export — written', () => {
     expect(response.status).toBe(201);
     const result = (await response.json()) as ExportResult;
     expect(result).toEqual({
-      folder: join(destination, exportName(new Date())),
+      folder: join(destination, NAME),
       movieCount: 3,
       seriesCount: 2,
     });
   });
 
-  it('leaves the dated folder on disk, holding the films’ sheet', async () => {
+  it('leaves the Export folder on disk, holding the films’ sheet', async () => {
     const { storage, baseUrl, dir } = freshApi();
     addLibrary(storage);
     const destination = folder(dir, 'Exports');
@@ -306,10 +309,9 @@ describe('POST /api/export — written', () => {
       })
     ).json()) as ExportResult;
 
-    const name = exportName(new Date());
-    expect(readdirSync(destination)).toEqual([name]);
-    const sheet = join(result.folder, `${name}.xlsx`);
-    const rows = await readSheet(readFileSync(sheet), `${name}.xlsx`);
+    expect(readdirSync(destination)).toEqual([NAME]);
+    const sheet = join(result.folder, `${NAME}.xlsx`);
+    const rows = await readSheet(readFileSync(sheet), `${NAME}.xlsx`);
     expect(rows.map((row) => row.title)).toEqual(
       expect.arrayContaining(['Backwater', 'Meridian', 'Zephyr'])
     );
@@ -415,8 +417,7 @@ async function exportedFixture(
   });
   expect(response.status).toBe(201);
   const { folder: written } = (await response.json()) as ExportResult;
-  const name = exportName(new Date());
-  return join(written, `${name}.${format}`);
+  return join(written, `${NAME}.${format}`);
 }
 
 async function withRowEdited(
@@ -614,13 +615,13 @@ async function exportedSheet(
   });
   expect(response.status).toBe(201);
   const { folder: written } = (await response.json()) as ExportResult;
-  return readFileSync(join(written, `${exportName(new Date())}.${format}`));
+  return readFileSync(join(written, `${NAME}.${format}`));
 }
 
 describe.each(FORMATS)(
   'POST /api/export (%s) — the awkward title',
   (format) => {
-    const filename = `${exportName(new Date())}.${format}`;
+    const filename = `${NAME}.${format}`;
 
     it('reads back every awkward cell identically, A–Z, the quote first', async () => {
       const api = freshApi();
@@ -673,7 +674,7 @@ describe('POST /api/export (csv) — the BOM through the route and the reader', 
 
     const rows = await readSheet(
       await exportedSheet(api, 'csv'),
-      `${exportName(new Date())}.csv`
+      `${NAME}.csv`
     );
 
     expect(rows).toHaveLength(2);
@@ -708,9 +709,8 @@ describe.each(FORMATS)(
       expect(response.status).toBe(201);
       const result = (await response.json()) as ExportResult;
       expect(result).toMatchObject({ movieCount: 0, seriesCount: 0 });
-      const name = exportName(new Date());
-      const bytes = readFileSync(join(result.folder, `${name}.${format}`));
-      expect(await readSheet(bytes, `${name}.${format}`)).toEqual([]);
+      const bytes = readFileSync(join(result.folder, `${NAME}.${format}`));
+      expect(await readSheet(bytes, `${NAME}.${format}`)).toEqual([]);
     });
 
     it('is the header row alone — the sixteen names, nothing under them', async () => {

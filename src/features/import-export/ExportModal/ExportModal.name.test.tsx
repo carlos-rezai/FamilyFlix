@@ -113,11 +113,11 @@ const saveTo = () =>
   within(dialog()).getByRole('textbox', {
     name: 'Save to',
   }) as HTMLInputElement;
-const folderName = () =>
+const nameField = () =>
   within(dialog()).getByRole('textbox', {
     name: 'Folder name',
   }) as HTMLInputElement;
-const folderNameLabel = () => within(dialog()).getByText('Folder name');
+const nameLabel = () => within(dialog()).getByText('Folder name');
 const imagesToggle = () =>
   within(dialog()).getByRole('switch', { name: 'Images' });
 const exportButton = () =>
@@ -139,9 +139,9 @@ describe('ExportModal — the Folder name field', () => {
 
     renderDialog();
 
-    expect(comesBefore(saveTo(), folderNameLabel())).toBe(true);
-    expect(comesBefore(folderNameLabel(), folderName())).toBe(true);
-    expect(comesBefore(folderName(), imagesToggle())).toBe(true);
+    expect(comesBefore(saveTo(), nameLabel())).toBe(true);
+    expect(comesBefore(nameLabel(), nameField())).toBe(true);
+    expect(comesBefore(nameField(), imagesToggle())).toBe(true);
   });
 
   it('prefills the field with today’s dated name once the summary lands', async () => {
@@ -149,7 +149,7 @@ describe('ExportModal — the Folder name field', () => {
 
     renderDialog();
 
-    await waitFor(() => expect(folderName().value).toBe(NAME));
+    await waitFor(() => expect(nameField().value).toBe(NAME));
   });
 
   it('shows the prefix as the placeholder while the field is empty', () => {
@@ -157,8 +157,8 @@ describe('ExportModal — the Folder name field', () => {
 
     renderDialog();
 
-    expect(folderName().value).toBe('');
-    expect(folderName().placeholder).toBe(EXPORT_NAME_PREFIX);
+    expect(nameField().value).toBe('');
+    expect(nameField().placeholder).toBe(EXPORT_NAME_PREFIX);
   });
 
   it('draws the name only in the field, not as a line of its own', async () => {
@@ -166,7 +166,7 @@ describe('ExportModal — the Folder name field', () => {
 
     renderDialog();
 
-    await waitFor(() => expect(folderName().value).toBe(NAME));
+    await waitFor(() => expect(nameField().value).toBe(NAME));
     expect(within(dialog()).queryByText(NAME)).toBeNull();
   });
 
@@ -181,11 +181,11 @@ describe('ExportModal — the Folder name field', () => {
     );
     renderDialog();
 
-    fireEvent.change(folderName(), { target: { value: 'Family films' } });
+    fireEvent.change(nameField(), { target: { value: 'Family films' } });
     land(okResponse(SUMMARY));
 
     await waitFor(() => expect(countLabel()).not.toBeNull());
-    expect(folderName().value).toBe('Family films');
+    expect(nameField().value).toBe('Family films');
   });
 });
 
@@ -196,8 +196,8 @@ describe('ExportModal — the count in the label row', () => {
     renderDialog();
 
     const count = await within(dialog()).findByText('4 titles');
-    expect(comesBefore(folderNameLabel(), count)).toBe(true);
-    expect(comesBefore(count, folderName())).toBe(true);
+    expect(comesBefore(nameLabel(), count)).toBe(true);
+    expect(comesBefore(count, nameField())).toBe(true);
   });
 
   it('draws no count before the summary lands, and the heading still', () => {
@@ -205,7 +205,7 @@ describe('ExportModal — the count in the label row', () => {
 
     renderDialog();
 
-    expect(folderNameLabel()).toBeDefined();
+    expect(nameLabel()).toBeDefined();
     expect(countLabel()).toBeNull();
   });
 });
@@ -214,8 +214,8 @@ describe('ExportModal — typing reaches the posted body', () => {
   it('posts the name typed into the field', async () => {
     serve();
     renderDialog();
-    await waitFor(() => expect(folderName().value).toBe(NAME));
-    fireEvent.change(folderName(), { target: { value: 'Family films' } });
+    await waitFor(() => expect(nameField().value).toBe(NAME));
+    fireEvent.change(nameField(), { target: { value: 'Family films' } });
 
     fireEvent.click(exportButton());
 
@@ -225,7 +225,7 @@ describe('ExportModal — typing reaches the posted body', () => {
   it('posts the default name when nothing was typed', async () => {
     serve();
     renderDialog();
-    await waitFor(() => expect(folderName().value).toBe(NAME));
+    await waitFor(() => expect(nameField().value).toBe(NAME));
 
     fireEvent.click(exportButton());
 
@@ -246,7 +246,7 @@ describe('ExportModal — each refusal under its own field', () => {
     const line = await within(dialog()).findByText(
       'Give the export folder a name.'
     );
-    expect(comesBefore(folderName(), line)).toBe(true);
+    expect(comesBefore(nameField(), line)).toBe(true);
     expect(comesBefore(line, imagesToggle())).toBe(true);
     expect(
       within(dialog()).getAllByText('Give the export folder a name.')
@@ -264,7 +264,7 @@ describe('ExportModal — each refusal under its own field', () => {
 
     const line = await within(dialog()).findByText('No folder at that path.');
     expect(comesBefore(saveTo(), line)).toBe(true);
-    expect(comesBefore(line, folderNameLabel())).toBe(true);
+    expect(comesBefore(line, nameLabel())).toBe(true);
     expect(
       within(dialog()).getAllByText('No folder at that path.')
     ).toHaveLength(1);
@@ -278,15 +278,15 @@ describe('ExportModal — each refusal under its own field', () => {
         ),
     });
     renderDialog();
-    await waitFor(() => expect(folderName().value).toBe(NAME));
-    fireEvent.change(folderName(), { target: { value: 'Family.' } });
+    await waitFor(() => expect(nameField().value).toBe(NAME));
+    fireEvent.change(nameField(), { target: { value: 'Family.' } });
 
     fireEvent.click(exportButton());
 
     await within(dialog()).findByText(
       "A folder name can't end in a space or a dot."
     );
-    expect(folderName().value).toBe('Family.');
+    expect(nameField().value).toBe('Family.');
     expect(exportButton()).toBeDefined();
   });
 });

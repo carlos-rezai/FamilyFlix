@@ -79,7 +79,7 @@ describe('writeExport — a valid destination', () => {
     });
   });
 
-  it('gains the dated folder, and nothing else beside it', async () => {
+  it('gains the named folder, and nothing else beside it', async () => {
     const { media, destination } = sandbox();
 
     await writeExport(media, request(destination), {
