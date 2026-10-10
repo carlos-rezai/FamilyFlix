@@ -267,21 +267,32 @@ describe('serverLaunch — every path from ShellPaths', () => {
     ).toBe(INSTALLED.mediaRoot);
   });
 
-  it('installed reads it off ShellPaths, never rebuilding it from userData', () => {
-    expect(
-      serverLaunch('installed', PACKAGED_USER_DATA, paths).env
-        .FAMILYFLIX_MEDIA_PATH
-    ).toBe(paths.mediaRoot);
-  });
+  // Issue #293 — the database and the **Component slot** follow it: each data
+  // path is read off `ShellPaths` when installed, and none is set unpackaged.
+  const DATA_PATHS = [
+    ['FAMILYFLIX_DB_PATH', 'database'],
+    ['FAMILYFLIX_MEDIA_PATH', 'mediaRoot'],
+    ['FAMILYFLIX_COMPONENT_PATH', 'componentSlot'],
+  ] as const;
 
-  it.each(['dev', 'start'] as const)(
-    '%s sets no FAMILYFLIX_MEDIA_PATH even when handed a mediaRoot',
-    (mode) => {
-      expect(serverLaunch(mode, USER_DATA, paths).env).not.toHaveProperty(
-        'FAMILYFLIX_MEDIA_PATH'
-      );
+  it.each(DATA_PATHS)(
+    'installed reads %s off paths.%s, never rebuilding it from userData',
+    (variable, field) => {
+      expect(
+        serverLaunch('installed', PACKAGED_USER_DATA, paths).env[variable]
+      ).toBe(paths[field]);
     }
   );
+
+  it.each(
+    (['dev', 'start'] as const).flatMap((mode) =>
+      DATA_PATHS.map(([variable, field]) => [mode, variable, field] as const)
+    )
+  )('%s sets no %s even when handed paths.%s', (mode, variable) => {
+    expect(serverLaunch(mode, USER_DATA, paths).env).not.toHaveProperty(
+      variable
+    );
+  });
 });
 
 // Issue #231 — FFmpeg on board. The **Installed app** carries the **FFmpeg

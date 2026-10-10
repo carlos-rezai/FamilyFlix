@@ -1,5 +1,3 @@
-import { join } from 'node:path';
-
 import type { ShellMode } from '../shellMode/shellMode';
 import type { ShellPaths } from '../shellPaths/shellPaths';
 
@@ -67,9 +65,9 @@ export function serverLaunch(
     mode === 'installed'
       ? {
           ...installed,
-          FAMILYFLIX_DB_PATH: join(userData, 'familyflix.db'),
+          FAMILYFLIX_DB_PATH: paths.database,
           FAMILYFLIX_MEDIA_PATH: paths.mediaRoot,
-          FAMILYFLIX_COMPONENT_PATH: join(userData, 'playback-component'),
+          FAMILYFLIX_COMPONENT_PATH: paths.componentSlot,
           FAMILYFLIX_TRUSTED_HOSTS: '',
           ...(paths.ffmpeg ? { FAMILYFLIX_FFMPEG_PATH: paths.ffmpeg } : {}),
         }
