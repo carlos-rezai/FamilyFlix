@@ -19,17 +19,9 @@ import type { ShellPaths } from '../shellPaths/shellPaths';
 import { serverLaunch } from './serverLaunch';
 
 const CWD = join('D:', 'repo');
-const USER_DATA = join(
-  'C:',
-  'Users',
-  'someone',
-  'AppData',
-  'Roaming',
-  'FamilyFlix (dev)'
-);
-
 // Issue #228 — `serverLaunch(mode, userData, cwd)` became
-// `serverLaunch(mode, userData, paths)`: every path it hands the fork is one
+// `serverLaunch(mode, userData, paths)`, and since issue #293
+// `serverLaunch(mode, paths)`: every path it hands the fork is one
 // `shellPaths` answered. These are the unpackaged ones, today's under the repo.
 const UNPACKAGED: ShellPaths = {
   icon: join(CWD, 'electron', 'assets', 'icon.ico'),
@@ -43,7 +35,7 @@ const UNPACKAGED: ShellPaths = {
   componentSlot: join(CWD, 'playback-component'),
 };
 
-const dev = () => serverLaunch('dev', USER_DATA, UNPACKAGED);
+const dev = () => serverLaunch('dev', UNPACKAGED);
 
 describe('serverLaunch — dev (electron:dev)', () => {
   it('forks the bundle the watcher builds', () => {
@@ -122,7 +114,7 @@ describe('serverLaunch — dev, the installed shape’s variables', () => {
 });
 
 describe('serverLaunch — start (electron:start)', () => {
-  const prod = () => serverLaunch('start', USER_DATA, UNPACKAGED);
+  const prod = () => serverLaunch('start', UNPACKAGED);
 
   it('forks the bundled server', () => {
     expect(prod().entry).toBe(BUNDLED_SERVER);
@@ -160,8 +152,7 @@ describe('serverLaunch — start (electron:start)', () => {
 });
 
 describe('serverLaunch — installed (the Installed app)', () => {
-  const packaged = () =>
-    serverLaunch('installed', PACKAGED_USER_DATA, INSTALLED);
+  const packaged = () => serverLaunch('installed', INSTALLED);
 
   it('forks the server bundle shellPaths finds inside app.asar', () => {
     expect(packaged().entry).toBe(INSTALLED.serverEntry);
@@ -234,37 +225,32 @@ describe('serverLaunch — every path from ShellPaths', () => {
   it.each(['dev', 'start', 'installed'] as const)(
     '%s forks paths.serverEntry',
     (mode) => {
-      expect(serverLaunch(mode, PACKAGED_USER_DATA, paths).entry).toBe(
-        paths.serverEntry
-      );
+      expect(serverLaunch(mode, paths).entry).toBe(paths.serverEntry);
     }
   );
 
   it.each(['start', 'installed'] as const)(
     '%s serves paths.renderer',
     (mode) => {
-      expect(
-        serverLaunch(mode, PACKAGED_USER_DATA, paths).env
-          .FAMILYFLIX_RENDERER_PATH
-      ).toBe(paths.renderer);
+      expect(serverLaunch(mode, paths).env.FAMILYFLIX_RENDERER_PATH).toBe(
+        paths.renderer
+      );
     }
   );
 
   it.each(['dev', 'start', 'installed'] as const)(
     '%s points the SQLite binding at paths.sqliteBinding',
     (mode) => {
-      expect(
-        serverLaunch(mode, PACKAGED_USER_DATA, paths).env
-          .FAMILYFLIX_SQLITE_BINDING
-      ).toBe(paths.sqliteBinding);
+      expect(serverLaunch(mode, paths).env.FAMILYFLIX_SQLITE_BINDING).toBe(
+        paths.sqliteBinding
+      );
     }
   );
 
   it('installed sets FAMILYFLIX_MEDIA_PATH to paths.mediaRoot', () => {
-    expect(
-      serverLaunch('installed', PACKAGED_USER_DATA, INSTALLED).env
-        .FAMILYFLIX_MEDIA_PATH
-    ).toBe(INSTALLED.mediaRoot);
+    expect(serverLaunch('installed', INSTALLED).env.FAMILYFLIX_MEDIA_PATH).toBe(
+      INSTALLED.mediaRoot
+    );
   });
 
   // Issue #293 — the database and the **Component slot** follow it: each data
@@ -278,9 +264,7 @@ describe('serverLaunch — every path from ShellPaths', () => {
   it.each(DATA_PATHS)(
     'installed reads %s off paths.%s, never rebuilding it from userData',
     (variable, field) => {
-      expect(
-        serverLaunch('installed', PACKAGED_USER_DATA, paths).env[variable]
-      ).toBe(paths[field]);
+      expect(serverLaunch('installed', paths).env[variable]).toBe(paths[field]);
     }
   );
 
@@ -289,9 +273,7 @@ describe('serverLaunch — every path from ShellPaths', () => {
       DATA_PATHS.map(([variable, field]) => [mode, variable, field] as const)
     )
   )('%s sets no %s even when handed paths.%s', (mode, variable) => {
-    expect(serverLaunch(mode, USER_DATA, paths).env).not.toHaveProperty(
-      variable
-    );
+    expect(serverLaunch(mode, paths).env).not.toHaveProperty(variable);
   });
 });
 
@@ -309,22 +291,20 @@ describe('serverLaunch — the Default component', () => {
 
   it('installed points FAMILYFLIX_FFMPEG_PATH at the shipped ffmpeg.exe', () => {
     expect(
-      serverLaunch('installed', PACKAGED_USER_DATA, INSTALLED).env
-        .FAMILYFLIX_FFMPEG_PATH
+      serverLaunch('installed', INSTALLED).env.FAMILYFLIX_FFMPEG_PATH
     ).toBe(INSTALLED.ffmpeg);
   });
 
   it('installed reads that path off ShellPaths', () => {
-    expect(
-      serverLaunch('installed', PACKAGED_USER_DATA, carrying).env
-        .FAMILYFLIX_FFMPEG_PATH
-    ).toBe(carrying.ffmpeg);
+    expect(serverLaunch('installed', carrying).env.FAMILYFLIX_FFMPEG_PATH).toBe(
+      carrying.ffmpeg
+    );
   });
 
   it.each(['dev', 'start'] as const)(
     '%s sets no FAMILYFLIX_FFMPEG_PATH, so PATH’s FFmpeg stands in',
     (mode) => {
-      expect(serverLaunch(mode, USER_DATA, UNPACKAGED).env).not.toHaveProperty(
+      expect(serverLaunch(mode, UNPACKAGED).env).not.toHaveProperty(
         'FAMILYFLIX_FFMPEG_PATH'
       );
     }
@@ -333,7 +313,7 @@ describe('serverLaunch — the Default component', () => {
   it.each(['dev', 'start'] as const)(
     '%s sets none even when handed an ffmpeg path',
     (mode) => {
-      expect(serverLaunch(mode, USER_DATA, carrying).env).not.toHaveProperty(
+      expect(serverLaunch(mode, carrying).env).not.toHaveProperty(
         'FAMILYFLIX_FFMPEG_PATH'
       );
     }

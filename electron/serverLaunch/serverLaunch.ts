@@ -27,23 +27,19 @@ const SHELL_PORT = '41720';
  * - `'dev'` (`electron:dev`): `3001`, Vite serving the renderer.
  * - `'start'` (`electron:start`): the installed shape — the **Shell port**,
  *   the built renderer.
- * - `'installed'`: the installed shape, plus the database and the
- *   **Component slot** under `userData`, the managed media directory at
- *   `paths.mediaRoot`, the **Trusted
- *   hosts** set empty, and `FAMILYFLIX_FFMPEG_PATH` at the **Default
- *   component** `shellPaths` found under `resources\ffmpeg` — unpackaged runs
- *   set none, so the FFmpeg on `PATH` stands in.
+ * - `'installed'`: the installed shape, plus the database, the managed media
+ *   directory and the **Component slot** under `userData`, the
+ *   **Trusted hosts** set empty, and `FAMILYFLIX_FFMPEG_PATH` at the
+ *   **Default component** under `resources\ffmpeg` — unpackaged runs set
+ *   none, so the FFmpeg on `PATH` stands in.
  *
  * Every path it hands the fork is one `shellPaths` answered: the entry, the
- * renderer and the Electron-ABI binding — `electron:native`'s unpackaged,
- * `resources\native`'s installed. Unpackaged runs use the repo's own
- * `./familyflix.db`, `./media` and `./playback-component`.
+ * renderer, the Electron-ABI binding — `electron:native`'s unpackaged,
+ * `resources\native`'s installed — and, installed, the database, the media
+ * and the slot. Unpackaged runs set none of those three, so the repo's own
+ * `./familyflix.db`, `./media` and `./playback-component` are used.
  */
-export function serverLaunch(
-  mode: ShellMode,
-  userData: string,
-  paths: ShellPaths
-): ServerLaunch {
+export function serverLaunch(mode: ShellMode, paths: ShellPaths): ServerLaunch {
   const entry = paths.serverEntry;
 
   if (mode === 'dev') {

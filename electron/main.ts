@@ -237,7 +237,7 @@ if (!app.requestSingleInstanceLock()) {
   app.whenReady().then(async () => {
     const server = serverHandle({
       fork,
-      launch: serverLaunch(mode, app.getPath('userData'), paths),
+      launch: serverLaunch(mode, paths),
       onExit: (code) => {
         log.main(`Server exited unexpectedly with code ${code}.`);
         void stoppedUnexpectedly(dialogWorld);
