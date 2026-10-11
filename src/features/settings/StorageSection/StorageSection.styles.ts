@@ -31,10 +31,11 @@ export const FolderText = styled.div`
 `;
 
 /**
- * _Open folder_ holds its width, `flex: 0 0 auto`, while a long path takes
- * the ellipsis, as the prototype's _Change…_ did.
+ * A button that holds its width, `flex: 0 0 auto`, beside text that may
+ * shrink: _Open folder_ while a long path takes the ellipsis, as the
+ * prototype's _Change…_ did, and _Reset…_ beside the Factory reset row's line.
  */
-export const OpenFolder = styled(Button)`
+export const HeldButton = styled(Button)`
   flex: 0 0 auto;
 `;
 
@@ -80,9 +81,4 @@ export const Dot = styled.span`
  */
 export const ResetDivider = styled(Divider)`
   margin: 4px 0;
-`;
-
-/** _Reset…_ holds its width beside the row's line, as _Open folder_ does. */
-export const ResetButton = styled(Button)`
-  flex: 0 0 auto;
 `;

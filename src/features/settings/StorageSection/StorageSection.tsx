@@ -17,9 +17,8 @@ import {
   Dot,
   Folder,
   FolderText,
-  OpenFolder,
+  HeldButton,
   Path,
-  ResetButton,
   ResetDivider,
   SpaceLine,
   StorageCard,
@@ -69,7 +68,7 @@ export function StorageSection() {
             {report ? <Path>{report.mediaPath}</Path> : null}
           </FolderText>
           {bridge ? (
-            <OpenFolder
+            <HeldButton
               label="Open folder"
               variant="secondary"
               size="sm"
@@ -92,7 +91,7 @@ export function StorageSection() {
               folder. Your own folders are not touched.
             </RowDesc>
           </div>
-          <ResetButton
+          <HeldButton
             label="Reset…"
             variant="danger"
             size="sm"
