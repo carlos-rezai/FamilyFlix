@@ -355,12 +355,14 @@ familyflix/
 │ │ │ ├── NetworkSection/ ← the Network card: TMDB and its status pill, the lede, the key field in mono with _Test connection_, and the _Sync metadata & posters_ row onto `/enrich`
 │ │ │ ├── useTmdbKey/ ← the stored key read on mount — never over one typed first — **Connected** as a comparison, and _Test connection_'s four notices through `useSnackbar()`
 │ │ │ ├── syncLine/ ← pure: the sync row's line off the summary — the complete count and when a Sync last reached review
-│ │ │ ├── StorageSection/ ← the Storage card: the path in mono, the space line off formatBytes and the title count; no Change… — the Roadmap's **Move the media folder**
+│ │ │ ├── StorageSection/ ← the Storage card: the path in mono with _Open folder_ when the bridge exists, the space line off formatBytes and the title count, then a divider and the Factory reset row, its `danger` _Reset…_ opening the **Reset dialog** — a control, drawn before the report lands and in a browser too; the card owns the dialog's open state. No Change… — the Roadmap's **Move the media folder**
+│ │ │ ├── ResetDialog/ ← the **Reset dialog** on Modal: _Erase everything?_ over _This can’t be undone._ and the warning triangle, the **What goes** and **What stays** lists, the refusal in danger ink above the buttons, _Erase everything_ (_Erasing…_ in flight) before _Cancel_; focus on the card, no type-to-confirm
+│ │ │ ├── useFactoryReset/ ← `{ resetting, refusal, reset }`: a reset reloads onto `/` with `location.assign`, the third **Fresh home**; a refusal held until the next press is answered; any other failure swallowed, the state as it was — never rejecting
 │ │ │ ├── AboutSection/ ← the About card: the brand row, the App version in mono, the tagline, under the Software update row; the last card, so no group gap
 │ │ │ ├── useCapabilities/ ← the read on mount, plus the two writes that change it: `{ capabilities, upload, installComponent, removeComponent }`. Neither write rejects, and neither re-fetches — both routes echo the report after the write, and that echo is the redraw
 │ │ │ ├── useStorageReport/ ← one fetch on mount, `null` until it lands and `null` still if it never does — nothing drawn while so
 │ │ │ ├── useSettings/ ← the read half the same, holding the **Preferred subtitle language** alone — Ultrawide margins is `DisplayPreferenceProvider`'s; `chooseSubtitleLanguage` flips the pill first and puts it back if the save refuses, never rejecting
-│ │ │ └── api/ ← fetchCapabilities, installComponent, removeComponent (both rejecting with ComponentRefusedError carrying the route's own words), saveSubtitleLanguage, saveTmdbKey (never rejecting: saved, refused or unreachable), fetchStorageReport (one caller each)
+│ │ │ └── api/ ← fetchCapabilities, installComponent, removeComponent (both rejecting with ComponentRefusedError carrying the route's own words), saveSubtitleLanguage, saveTmdbKey (never rejecting: saved, refused or unreachable), fetchStorageReport, factoryReset (`reset` on a `204`, `refused` with the route’s sentence on a `409`, rejecting otherwise) (one caller each)
 │ │ └── collections/ ← playlists/collections (roadmap, not MVP)
 │ ├── layouts/ ← page chrome
 │ │ ├── chrome.styles.ts ← the furniture MainLayout and GenreLayout both extend
@@ -401,7 +403,8 @@ familyflix/
 │ ├── snackbarStack/ ← the Snackbar stack's node, reached by what the prototype draws — the one fixed, reversed column — because it carries no role and no `data-testid`; throws when there is none
 │ ├── stubScrollMetrics/ ← a writable `scrollTop` and a real overflow on every element, for a jsdom that does no layout
 │ ├── resolvedStyle/ ← the cascade by hand for a named state jsdom cannot enter — hover, press, a click's focus, the keyboard's — `!important`, then specificity, then order; reads a combinator whose ancestors carry no state; `normCss` beside it
-│ └── stubScrollTo/ ← `scrollTo` on every element, for a jsdom that has it on `window` alone: who was asked for what, in order; deleted after the block
+│ ├── stubScrollTo/ ← `scrollTo` on every element, for a jsdom that has it on `window` alone: who was asked for what, in order; deleted after the block
+│ └── stubLocation/ ← `window.location` with its `assign` recorded rather than run, for a jsdom whose `assign` cannot be spied: every URL asked for, in order, the rest read through to the real one; restored after the block
 ├── release/ ← gitignored: `electron:package`'s output — the **Installer**, and `win-unpacked/`, the **Packaged layout**
 └── docs/
 ├── design-logs/
@@ -725,6 +728,12 @@ number on the page is a read the app can truthfully answer now:
 - `GET /api/storage` → `{ mediaPath, bytesUsed, movieCount }`, the
   **Storage report**: the path resolved to absolute at request time, the
   walk read afresh on every visit, the count off the database.
+- The Storage card's **Factory reset** row: _Reset…_ opens the **Reset
+  dialog**, and _Erase everything_ posts `POST /api/reset` → `204`, then a
+  full reload onto `/` — the third **Fresh home**; `409` with one sentence
+  while an import or a Sync runs, held in the dialog; `500` when the database
+  would not take the erase. The route reaches `db/resetDatabase` only through
+  `storage.reset()`. The device's `localStorage` is left as it is.
 - The **Network group**: `GET /api/tmdb/key` → `{ key }`, `null` when none
   is stored, and `POST /api/tmdb/key { key }` — _Test connection_, the test
   and the save in one: `200` with the key stored only when TMDB accepts it,
@@ -1153,7 +1162,7 @@ A 🧭 Roadmap item is not in this chain — it is after it, if ever.
 
 - ✅ **Snackbar system** — info / success / warning / error notices in the bottom-right Snackbar stack; an actionable one persists, a confirmation dies at 5s. Its callers are Enrichment's notices and the Software update flow's Update offer.
 - ✅ **Back-to-top FAB** — the accent circle in the home screen's bottom-right corner once the body is past 420px, riding it back to the top on a press; mounted by the chrome over the body it already owns, and gone again under the line.
-- ✅ **Back navigation** — one **Back rule** on every screen: `useGoBack(fallback)`, a **History step**, or the screen's own **Landing** pushed when there is nothing behind it — the player's is its movie, Import's is Settings, the **Movie form**'s is where its job came from. Every **Leaving** is a step except the two **Fresh homes**, _Add to library_ and Import's _Finish_; Play → Back → Back reaches the library, the shelf comes back filtered and scrolled, and a Delete after a Play lands on the library.
+- ✅ **Back navigation** — one **Back rule** on every screen: `useGoBack(fallback)`, a **History step**, or the screen's own **Landing** pushed when there is nothing behind it — the player's is its movie, Import's is Settings, the **Movie form**'s is where its job came from. Every **Leaving** is a step except the three **Fresh homes**, _Add to library_, Import's _Finish_ and a **Factory reset**'s reload; Play → Back → Back reaches the library, the shelf comes back filtered and scrolled, and a Delete after a Play lands on the library.
 - ✅ **Motion & interaction states** — the prototype's **Interaction contract** (`COMPONENT-SPEC.md` §2a) over every built control and card, in two disjoint vocabularies: a **Control** (Button, Chip, IconButton and every extension, the Filter dropdown's trigger) signals with colour, a **Card** (PosterCard, ContinueCard) with elevation. `tokens/motion.ts` is the one file that spells `durFast`, `durBase`, `durSlow` and `easeOut`; the **Accent scale** is derived from the one accent by `createTheme(accent)`, never aliased; `styles/interactionStates/` holds `controlStates(press)` — the **Press** at doubled rank in 60ms, so every `IconButton` extension inherits it — and `cardLift` and `cardFocus`, with a structural guard against any other file spelling a duration, the curve or a press; one **Reduced motion** block in `GlobalStyle`. `SeasonCard` and `EpisodeRow` are born on the card fragments in step 5.
 - ✅ **Desktop packaging** — `npm run electron:package` → `release/FamilyFlix-Setup-<v>.exe`: one-click per-user NSIS, unsigned, the **Default component** carried, the four fuses, the **App mark** on every surface. The Package smoke's steps 2–8 were not passed (dev journal, 2026-10-04).
 
