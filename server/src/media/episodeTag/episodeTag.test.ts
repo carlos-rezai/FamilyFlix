@@ -161,3 +161,77 @@ describe('spellEpisodeTag — the tag written back', () => {
     expect(respelled(written)).toBe(tag);
   });
 });
+
+// 38 — Title editing, Phase 6: "the Episode word" (issue #309).
+//
+// A third shape, the **Episode word** — `Episode 12`, `Ep 12`, `Ep.12`,
+// `E12` — gives an episode number only, so it is read only where the season
+// is already known: the caller passes that season, from a **Season folder**'s
+// name or as 1 at a **Show folder**'s root. With no season given, the word is
+// not a tag at all.
+
+describe('episodeTag — the Episode word, where the season is known', () => {
+  it.each([
+    ['Episode 12.mkv'],
+    ['Ep 12.mkv'],
+    ['Ep.12.mkv'],
+    ['E12.mkv'],
+    ['episode 12.mkv'],
+    ['EP 12.mkv'],
+    ['Harbor.and.Vine.Episode.12.mkv'],
+    ['Harbor and Vine - Ep 12.mkv'],
+  ])('numbers %s under the season it is given', (filename) => {
+    expect(episodeTag(filename, 2)).toMatchObject({ season: 2, episode: 12 });
+  });
+
+  it('reads the word at a Show folder’s root as season 1', () => {
+    expect(episodeTag('Ep 12.mkv', 1)).toEqual({
+      season: 1,
+      episode: 12,
+      title: null,
+    });
+  });
+
+  it('reads the title after the word, as after any tag', () => {
+    expect(episodeTag('Episode 12 - The Storm.1080p.mkv', 1)).toEqual({
+      season: 1,
+      episode: 12,
+      title: 'The Storm',
+    });
+  });
+
+  it('reads a padded number whole', () => {
+    expect(episodeTag('Episode 003.mkv', 1)).toMatchObject({
+      season: 1,
+      episode: 3,
+    });
+  });
+
+  it('still reads a full tag’s own numbers when a season is given', () => {
+    expect(episodeTag('Harbor.and.Vine.S01E03.mkv', 1)).toMatchObject({
+      season: 1,
+      episode: 3,
+    });
+  });
+});
+
+describe('episodeTag — the Episode word, where the season is not known', () => {
+  it.each([['Episode 12.mkv'], ['Ep 12.mkv'], ['Ep.12.mkv'], ['E12.mkv']])(
+    'answers null for %s with no season given',
+    (filename) => {
+      expect(episodeTag(filename)).toBeNull();
+    }
+  );
+});
+
+describe('episodeTag — a name that is not the Episode word', () => {
+  it.each([
+    ['Die.Hard.1988.1080p.mp4'],
+    ['Amelie (2001).mkv'],
+    ['Epic.mkv'],
+    ['Eden.mkv'],
+    ['Season 01.mp4'],
+  ])('answers null for %s even with a season given', (filename) => {
+    expect(episodeTag(filename, 1)).toBeNull();
+  });
+});

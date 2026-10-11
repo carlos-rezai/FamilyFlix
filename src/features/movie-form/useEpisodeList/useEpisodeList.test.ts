@@ -417,3 +417,36 @@ describe('useEpisodeList — a row’s subtitles', () => {
     ]);
   });
 });
+
+/**
+ * 38 — Title editing, Phase 6 (issue #309): a pick is a **Show folder**'s
+ * root, so an **Episode word** in a picked name reads as season 1 — the
+ * number the importer would give the same file.
+ */
+describe('useEpisodeList — the Episode word', () => {
+  it('numbers a picked Ep 12.mkv as season 1, episode 12', () => {
+    const { result } = renderHook(() => useEpisodeList());
+
+    add(result, ['Ep 12.mkv']);
+
+    expect(rows(result)).toEqual([['1', '12', '', 'Ep 12.mkv']]);
+  });
+
+  it('orders Episode-word files among tagged ones by their numbers', () => {
+    const { result } = renderHook(() => useEpisodeList());
+
+    add(result, [
+      'Episode 03.mkv',
+      'Harbor.and.Vine.S01E01.Pilot.mkv',
+      'E02.mkv',
+    ]);
+
+    expect(
+      rows(result).map(([season, number, , file]) => [season, number, file])
+    ).toEqual([
+      ['1', '1', 'Harbor.and.Vine.S01E01.Pilot.mkv'],
+      ['1', '2', 'E02.mkv'],
+      ['1', '3', 'Episode 03.mkv'],
+    ]);
+  });
+});

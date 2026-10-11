@@ -128,3 +128,46 @@ describe('readEpisodeTag — a name with no tag', () => {
     expect(readEpisodeTag(filename)).toBeNull();
   });
 });
+
+/**
+ * 38 — Title editing, Phase 6 (issue #309): the **Episode word** read on the
+ * client, `episodeTag`'s new cases mirrored — `Episode 12`, `Ep 12`, `Ep.12`,
+ * `E12`, an episode number only, read under the season the caller knows and
+ * not at all without one.
+ */
+describe('readEpisodeTag — the Episode word, where the season is known', () => {
+  it.each([['Episode 12.mkv'], ['Ep 12.mkv'], ['Ep.12.mkv'], ['E12.mkv']])(
+    'numbers %s under the season it is given',
+    (filename) => {
+      expect(readEpisodeTag(filename, 2)).toMatchObject({
+        season: 2,
+        number: 12,
+      });
+    }
+  );
+
+  it('numbers a picked Ep 12.mkv as season 1, episode 12', () => {
+    expect(readEpisodeTag('Ep 12.mkv', 1)).toEqual({
+      season: 1,
+      number: 12,
+      title: null,
+    });
+  });
+
+  it('reads the title after the word', () => {
+    expect(readEpisodeTag('Episode 12 - The Storm.1080p.mkv', 1)).toEqual({
+      season: 1,
+      number: 12,
+      title: 'The Storm',
+    });
+  });
+});
+
+describe('readEpisodeTag — the Episode word, where the season is not known', () => {
+  it.each([['Episode 12.mkv'], ['Ep 12.mkv'], ['Ep.12.mkv'], ['E12.mkv']])(
+    'answers null for %s with no season given',
+    (filename) => {
+      expect(readEpisodeTag(filename)).toBeNull();
+    }
+  );
+});

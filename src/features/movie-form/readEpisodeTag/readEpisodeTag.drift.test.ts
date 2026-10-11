@@ -41,6 +41,34 @@ const SHARED_FILENAMES: readonly string[] = [
   'Season 01.mp4',
 ];
 
+/**
+ * 38 — Title editing, Phase 6 (issue #309): the **Episode word**'s cases. The
+ * word is read only under a season the caller already knows, so each case is
+ * a filename and the season passed with it — `undefined` where none is known,
+ * which both readers must answer alike too.
+ */
+const SHARED_EPISODE_WORDS: readonly (readonly [string, number | undefined])[] =
+  [
+    ['Episode 12.mkv', 1],
+    ['Ep 12.mkv', 1],
+    ['Ep.12.mkv', 1],
+    ['E12.mkv', 1],
+    ['episode 12.mkv', 2],
+    ['EP 12.mkv', 3],
+    ['Episode 003.mkv', 1],
+    ['Harbor.and.Vine.Episode.12.mkv', 1],
+    ['Harbor and Vine - Ep 12.mkv', 1],
+    ['Episode 12 - The Storm.1080p.mkv', 1],
+    ['Harbor.and.Vine.S01E03.mkv', 2],
+    ['Epic.mkv', 1],
+    ['Eden.mkv', 1],
+    ['Season 01.mp4', 1],
+    ['Episode 12.mkv', undefined],
+    ['Ep 12.mkv', undefined],
+    ['Ep.12.mkv', undefined],
+    ['E12.mkv', undefined],
+  ];
+
 describe('the Episode tag — client and server agree', () => {
   it.each(SHARED_FILENAMES.map((name) => [name]))('%s', (filename) => {
     const server = episodeTag(filename);
@@ -51,5 +79,34 @@ describe('the Episode tag — client and server agree', () => {
         ? null
         : { season: server.season, number: server.episode, title: server.title }
     );
+  });
+
+  it.each(SHARED_EPISODE_WORDS.map(([name, season]) => [name, season]))(
+    '%s under season %s',
+    (filename, season) => {
+      const server = episodeTag(filename, season);
+      const client = readEpisodeTag(filename, season);
+
+      expect(client).toEqual(
+        server === null
+          ? null
+          : {
+              season: server.season,
+              number: server.episode,
+              title: server.title,
+            }
+      );
+    }
+  );
+
+  it('numbers the word where the season is known, so agreement is not two nulls', () => {
+    expect(episodeTag('Ep 12.mkv', 1)).toMatchObject({
+      season: 1,
+      episode: 12,
+    });
+    expect(readEpisodeTag('Ep 12.mkv', 1)).toMatchObject({
+      season: 1,
+      number: 12,
+    });
   });
 });

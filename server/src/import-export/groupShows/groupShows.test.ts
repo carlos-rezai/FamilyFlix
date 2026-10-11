@@ -503,3 +503,80 @@ describe('groupShows — films pass through the loose rule unchanged', () => {
     }
   );
 });
+
+// 38 — Title editing, Phase 6: "the Episode word" (issue #309).
+//
+// The **Episode word** — `Episode 12`, `Ep 12`, `Ep.12`, `E12` — numbers a
+// video where the season is already known: inside a **Season folder**, under
+// the folder's season, and at a **Show folder**'s root as season 1. It never
+// makes a folder a show on its own strength.
+
+describe('groupShows — the Episode word', () => {
+  it.each([['Episode 12.mkv'], ['Ep 12.mkv'], ['Ep.12.mkv'], ['E12.mkv']])(
+    'numbers %s inside a Season folder, under the folder’s season',
+    (filename) => {
+      const season = scan(['Harbor & Vine (2021)', 'Season 02'], [filename]);
+
+      const [show] = groupShows([season]).shows;
+
+      expect(show.episodes).toMatchObject([
+        { season: 2, episode: 12, video: season.videos[0] },
+      ]);
+      expect(show.unplaced).toEqual([]);
+    }
+  );
+
+  it.each([['Episode 12.mkv'], ['Ep 12.mkv'], ['Ep.12.mkv'], ['E12.mkv']])(
+    'numbers %s at a Show folder’s root as season 1',
+    (filename) => {
+      const loose = scan(
+        ['Lighthouse Keepers (2019)'],
+        ['Lighthouse.Keepers.S01E01.First.Light.mp4', filename]
+      );
+
+      const [show] = groupShows([loose]).shows;
+
+      expect(show.episodes).toMatchObject([
+        { season: 1, episode: 1, video: loose.videos[0] },
+        { season: 1, episode: 12, video: loose.videos[1] },
+      ]);
+      expect(show.unplaced).toEqual([]);
+    }
+  );
+
+  it('reads the title after the word', () => {
+    const season = scan(
+      ['Harbor & Vine (2021)', 'Season 01'],
+      ['Episode 03 - The Night Market.mkv']
+    );
+
+    const [show] = groupShows([season]).shows;
+
+    expect(show.episodes[0]).toMatchObject({
+      season: 1,
+      episode: 3,
+      title: 'The Night Market',
+    });
+  });
+
+  it('keeps a film called E12 a film', () => {
+    const film = scan(['E12 (2014)'], ['E12.mkv']);
+
+    const { shows, films } = groupShows([film]);
+
+    expect(shows).toEqual([]);
+    expect(films).toEqual([film]);
+  });
+
+  it('never groups a folder of Episode-word files alone as a show', () => {
+    const folder = scan(
+      ['Lighthouse Keepers'],
+      ['Episode 01.mkv', 'Episode 02.mkv']
+    );
+
+    const { shows, films } = groupShows([folder]);
+
+    expect(shows).toEqual([]);
+    expect(films).toEqual([folder]);
+  });
+});
