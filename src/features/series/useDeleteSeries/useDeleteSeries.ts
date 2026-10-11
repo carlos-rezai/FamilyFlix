@@ -1,10 +1,11 @@
 import { useCallback, useState } from 'react';
 
 import { useGoBack } from '@/hooks/useGoBack/useGoBack';
+import { seriesTabPath } from '@/utils';
 import { deleteSeries as sendDelete } from '../api/api';
 
 /** Where a delete lands with nothing behind the page: the Series tab. */
-const LANDING = '/?tab=series';
+const LANDING = seriesTabPath();
 
 export interface DeleteSeries {
   /** True for the life of the request, false before and after. */

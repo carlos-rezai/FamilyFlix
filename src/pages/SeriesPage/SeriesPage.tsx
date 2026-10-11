@@ -2,10 +2,11 @@ import { SeriesDetail } from '@/features/series/SeriesDetail/SeriesDetail';
 import { useGoBack } from '@/hooks/useGoBack/useGoBack';
 import { useRestoredScroll } from '@/hooks/useRestoredScroll/useRestoredScroll';
 import { ChevronLeftIcon } from '@/primitives';
+import { seriesTabPath } from '@/utils';
 import { Scroller, BackCircle } from './SeriesPage.styles';
 
 /** Where Back goes with nothing behind the page: the Series tab. */
-const LANDING = '/?tab=series';
+const LANDING = seriesTabPath();
 
 /** The circle's edge and its chevron, from `page.SeriesPage.dc.html`. */
 const BACK_SIZE = 44;

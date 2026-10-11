@@ -7,7 +7,7 @@ import { fetchSeriesDetail } from '@/api/fetchSeriesDetail/fetchSeriesDetail';
 import { useQueryParamWriter } from '@/features/search/useQueryParamWriter/useQueryParamWriter';
 import { useGoBack } from '@/hooks/useGoBack/useGoBack';
 import type { EpisodeFormRow, FormKind, MovieFormValues } from '@/types';
-import { moviePath, seriesPath } from '@/utils';
+import { moviePath, seriesPath, seriesTabPath } from '@/utils';
 import { titleFromFilename } from '../titleFromFilename/titleFromFilename';
 import { useEpisodeList } from '../useEpisodeList/useEpisodeList';
 import {
@@ -42,7 +42,7 @@ const FRESH_HOME = '/';
 /**
  * The series kind's **Fresh home**: the Series tab the show has just joined.
  */
-const SERIES_FRESH_HOME = '/?tab=series';
+const SERIES_FRESH_HOME = seriesTabPath();
 
 /**
  * The **Add context**'s **Landing** — the hub the ＋ that opens this screen
