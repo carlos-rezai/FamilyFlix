@@ -48,3 +48,18 @@ export function saveSeasonWatched(
 ): Promise<boolean> {
   return postValue(seasonWatchedEndpoint(id, season), watched, isWatchedEcho);
 }
+
+/**
+ * Deletes one series from the library — `deleteMovie`'s promise over the
+ * series' own route: **gone is gone**, so a `204` and a `404` both resolve, and
+ * anything else rejects. One caller, the Delete dialog, so it stays here.
+ * Nothing reads the body: a `204` has none.
+ */
+export async function deleteSeries(id: string): Promise<void> {
+  const endpoint = seriesEndpoint(id);
+  const response = await fetch(endpoint, { method: 'DELETE' });
+
+  if (!response.ok && response.status !== 404) {
+    throw new Error(`DELETE ${endpoint} failed: ${response.status}`);
+  }
+}

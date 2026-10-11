@@ -42,7 +42,7 @@ import {
 } from './series/enrich/enrich';
 import { createSeriesReader } from './series/read/read';
 import { createSeriesBrowse } from './series/browse/browse';
-import { createSeriesWrite } from './series/write/write';
+import { createSeriesWrite, type SeriesDeletion } from './series/write/write';
 import { createSeriesCuration } from './series/curation/curation';
 import { createSeriesWatch } from './series/watch/watch';
 
@@ -280,6 +280,12 @@ export interface LibraryStorage {
    */
   addEpisode(seriesId: string, input: NewEpisode): Episode;
   /**
+   * Delete a **Series**; the cascade takes its episodes, genres and subtitle
+   * tracks. Answers whether a row went, and an episode's **Stored path** that
+   * names the Series folder to clean up (`null` when there is none).
+   */
+  deleteSeries(id: string): SeriesDeletion;
+  /**
    * The series' Favorites toggle — `setFavorite` over the series table.
    * Answers whether the library holds that series; a movie's id is not one.
    */
@@ -393,6 +399,7 @@ export function createSqliteStorage(dbPath: string): LibraryStorage {
     titleAt: enrich.titleAt,
     addSeries: seriesWrite.addSeries,
     addEpisode: seriesWrite.addEpisode,
+    deleteSeries: seriesWrite.deleteSeries,
     setSeriesFavorite: seriesCuration.setSeriesFavorite,
     getEpisodeRead: seriesReader.getEpisodeRead,
     getSeriesHome: seriesBrowse.getSeriesHome,

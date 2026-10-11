@@ -15,6 +15,7 @@ import {
 } from '@/primitives';
 import { episodePlayPath, seasonPath } from '@/utils';
 import { LoadingSeries } from '../LoadingSeries/LoadingSeries';
+import { SeriesEditMenu } from '../SeriesEditMenu/SeriesEditMenu';
 import { SeriesMetaLine } from '../SeriesMetaLine/SeriesMetaLine';
 import { useSeriesDetail } from '../useSeriesDetail/useSeriesDetail';
 import {
@@ -96,10 +97,19 @@ export function SeriesDetail() {
 
   const { series } = detail;
   const playId = series.playEpisodeId;
+  const episodeCount = series.seasons.reduce(
+    (total, season) => total + season.episodeCount,
+    0
+  );
 
   return (
     <>
       <DetailBackdrop url={series.backdropUrl} g1={series.g1} g2={series.g2} />
+      <SeriesEditMenu
+        seriesId={series.id}
+        title={series.title}
+        episodeCount={episodeCount}
+      />
 
       <Content>
         <Hero>

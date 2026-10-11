@@ -206,6 +206,17 @@ export interface Media {
   removeMovieFolder(storedPath: string): void;
 
   /**
+   * Remove the whole **Series folder** an episode's **Stored path** names —
+   * the folder one directory above its season folder, `storeInSeriesFolder`'s
+   * reading — every season, poster and subtitle in it, whether or not the
+   * named episode is still there. A series **Delete**'s cleanup, run after the
+   * row has gone, so **best-effort** as {@link removeMovieFolder} is: a path
+   * with no Series folder above its season, one that escapes the root, or a
+   * folder already gone is nothing to do, and a failure is swallowed.
+   */
+  removeSeriesFolder(storedPath: string): void;
+
+  /**
    * Empty the **Managed media directory** and keep it — **Factory reset**'s
    * removal. Each entry directly inside the root is removed on its own,
    * **best-effort**: one that will not go — a video the stream route still has
@@ -446,6 +457,26 @@ export function createMedia(mediaPath: string): Media {
       } catch {
         // A folder that will not go — a video the stream route still has open.
         // The row is already gone, and a stranded folder beats a ghost row.
+      }
+    },
+
+    removeSeriesFolder: (storedPath) => {
+      // `series/season-NN/file`: the Series folder is every segment but the
+      // last two. Fewer than three segments has none — two up is the root.
+      const segments = storedPath.split('/');
+      if (isAbsolute(storedPath) || segments.length < 3) {
+        return;
+      }
+      const folder = containedFolder(segments.slice(0, -2).join('/'));
+      if (folder === null) {
+        return;
+      }
+
+      try {
+        rmSync(folder, { recursive: true, force: true });
+      } catch {
+        // A folder that will not go — an episode the stream route still has
+        // open. The row is already gone; a stranded folder beats a ghost row.
       }
     },
 

@@ -20,6 +20,18 @@ export interface SeriesWrite {
    * and number is refused by the schema.
    */
   addEpisode(seriesId: string, input: NewEpisode): Episode;
+  /**
+   * Delete a series; the cascade takes its episodes, `series_genres` and
+   * `episode_subtitles`. Answers whether a row went, and one episode's
+   * **Stored path** — what names the Series folder to clean up — or `null`.
+   */
+  deleteSeries(id: string): SeriesDeletion;
+}
+
+/** What a series delete answers: whether a row went, and the path to clean up. */
+export interface SeriesDeletion {
+  deleted: boolean;
+  storedPath: string | null;
 }
 
 /** The series' writes — the movie's `addMovie` over the series tables. */
@@ -109,6 +121,22 @@ export function createSeriesWrite(
     }
   );
 
+  const selectAnyEpisodePath = db.prepare(
+    'SELECT video_path FROM episodes WHERE series_id = ? LIMIT 1'
+  );
+  const deleteSeriesRow = db.prepare('DELETE FROM series WHERE id = ?');
+
+  const deleteSeriesGraph = db.transaction((id: string): SeriesDeletion => {
+    const episode = selectAnyEpisodePath.get(id) as
+      | { video_path: string }
+      | undefined;
+    const { changes } = deleteSeriesRow.run(id);
+    if (changes === 0) {
+      return { deleted: false, storedPath: null };
+    }
+    return { deleted: true, storedPath: episode?.video_path ?? null };
+  });
+
   const insertSeriesWithEpisodes = db.transaction(
     (id: string, input: NewSeries, episodes: readonly NewEpisode[]) => {
       insertSeriesGraph(id, input);
@@ -130,5 +158,7 @@ export function createSeriesWrite(
       insertEpisodeGraph(id, seriesId, input);
       return reader.getEpisode(id) as Episode;
     },
+
+    deleteSeries: (id) => deleteSeriesGraph(id),
   };
 }

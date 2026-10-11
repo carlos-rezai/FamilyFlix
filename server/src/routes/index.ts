@@ -710,6 +710,26 @@ export function createApiRouter(
     res.json(detail);
   });
 
+  // The series' **Delete dialog** confirm — the movie delete's shape. `204`
+  // with nothing in it, `404` for a series not held. **Row first, then bytes,
+  // best-effort**: the cascade takes the episodes, genres and subtitles, then
+  // `removeSeriesFolder` takes the Series folder and swallows its own failure.
+  // No `409` guard, the movie delete's precedent.
+  router.delete(
+    '/series/:id',
+    (req: Request<{ id: string }>, res: Response) => {
+      const { deleted, storedPath } = storage.deleteSeries(req.params.id);
+      if (!deleted) {
+        res.status(404).json({ error: `Unknown series: ${req.params.id}` });
+        return;
+      }
+      if (storedPath !== null) {
+        media.removeSeriesFolder(storedPath);
+      }
+      res.status(204).end();
+    }
+  );
+
   // The **Movie form**'s series save: the series fields, the poster, then each
   // episode as an `episode` JSON field followed by its `episodeVideo` and its
   // `episodeSubtitle` parts. The **Series folder** is reserved when the first
