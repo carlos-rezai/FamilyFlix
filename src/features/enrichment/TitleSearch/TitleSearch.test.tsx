@@ -81,4 +81,17 @@ describe('TitleSearch', () => {
 
     expect(onSearch).toHaveBeenCalledWith('Harbor Lights');
   });
+
+  // 38 — Title editing (issue #306): the Title fix, said before the pick. A
+  // pick from a missing or ambiguous row makes TMDB's title the title's own,
+  // and the caption under the box names it.
+  it('says under the box that a pick becomes the title', () => {
+    renderSearch();
+
+    expect(
+      screen.getByText(
+        'Try another title — the one you pick becomes its title.'
+      )
+    ).toBeDefined();
+  });
 });

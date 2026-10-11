@@ -11,7 +11,10 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { tmdbMovieResult } from '../../test-support/fakeTmdb/fakeTmdb';
+import {
+  tmdbMovieResult,
+  tmdbTvResult,
+} from '../../test-support/fakeTmdb/fakeTmdb';
 import {
   ambiguousReason,
   candidatesFor,
@@ -21,6 +24,7 @@ import {
   NO_MATCH_REASON,
   noMatchFor,
   titledYear,
+  tvDecisionFace,
 } from './decisionFace';
 
 const OURS = { title: 'The Quiet Coast', year: 2004 };
@@ -214,6 +218,89 @@ describe('the reasons and the scoring shape', () => {
     expect(titledYear(tmdbMovieResult(1, 'Sundial', 2004))).toEqual({
       title: 'Sundial',
       year: 2004,
+    });
+  });
+});
+
+// 38 — Title editing (issue #306): a series gets Decisions too. A TV search
+// result names itself `name` and dates itself `first_air_date`, so the face
+// has a TV variant reading those — the Candidate it draws is shaped exactly
+// as a film's, its year the first air year, its genre the pool's.
+describe('tvDecisionFace: a series’ search as the Decision’s face', () => {
+  const SHOW = { title: 'The Hollow Coast', year: 2018 };
+
+  it('is ambiguous for several shows, their count its reason', () => {
+    const face = tvDecisionFace(
+      SHOW,
+      'The Hollow Coast',
+      [
+        tmdbTvResult(71001, 'The Hollow Coast', 2018),
+        tmdbTvResult(71002, 'The Hollow Coast', 2023),
+      ],
+      NO_MATCH_REASON
+    );
+
+    expect(face).toMatchObject({
+      kind: 'ambiguous',
+      reason: 'Two releases share this title — pick the right one.',
+      query: 'The Hollow Coast',
+    });
+    expect(face.kind === 'ambiguous' && face.candidates).toHaveLength(2);
+  });
+
+  it('reads each candidate’s name and first air year, best first', () => {
+    const face = tvDecisionFace(
+      SHOW,
+      'The Hollow Coast',
+      [
+        tmdbTvResult(71002, 'Hollow', 1999),
+        tmdbTvResult(71001, 'The Hollow Coast', 2018),
+      ],
+      NO_MATCH_REASON
+    );
+
+    expect(face.kind === 'ambiguous' && face.candidates[0]).toEqual({
+      tmdbId: 71001,
+      title: 'The Hollow Coast',
+      year: 2018,
+      genre: 'Drama',
+      language: 'EN',
+      posterUrl: 'https://image.tmdb.org/t/p/w185/poster-71001.jpg',
+      score: 100,
+    });
+  });
+
+  it('answers no year for a show with no first air date', () => {
+    const face = tvDecisionFace(
+      SHOW,
+      'The Hollow Coast',
+      [tmdbTvResult(71001, 'The Hollow Coast', 2018, { first_air_date: '' })],
+      NO_MATCH_REASON
+    );
+
+    expect(face.kind === 'ambiguous' && face.candidates[0]?.year).toBeNull();
+  });
+
+  it('names a TV genre as the pool spells it', () => {
+    const face = tvDecisionFace(
+      SHOW,
+      'The Hollow Coast',
+      [tmdbTvResult(71001, 'The Hollow Coast', 2018, { genre_ids: [10765] })],
+      NO_MATCH_REASON
+    );
+
+    expect(face.kind === 'ambiguous' && face.candidates[0]?.genre).toBe(
+      'Sci-Fi'
+    );
+  });
+
+  it('is missing for no results, with the reason it is handed', () => {
+    expect(
+      tvDecisionFace(SHOW, 'The Hollow Coast', [], NO_MATCH_REASON)
+    ).toEqual({
+      kind: 'missing',
+      reason: 'Nothing on TMDB matched this title.',
+      query: 'The Hollow Coast',
     });
   });
 });

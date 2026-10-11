@@ -218,6 +218,26 @@ export function tmdbMovieResult(
   };
 }
 
+/** One `/3/search/tv` result: first aired in September, Drama, English, a poster. */
+export function tmdbTvResult(
+  id: number,
+  name: string,
+  firstYear: number,
+  overrides: Partial<TmdbTvResult> = {}
+): TmdbTvResult {
+  return {
+    id,
+    name,
+    original_name: name,
+    first_air_date: `${firstYear}-09-02`,
+    genre_ids: [18],
+    original_language: 'en',
+    poster_path: `/poster-${id}.jpg`,
+    vote_average: 7.1,
+    ...overrides,
+  };
+}
+
 /** One `/3/movie/{id}` with credits: a lead, a director, both images. */
 export function tmdbMovieDetail(
   id: number,
