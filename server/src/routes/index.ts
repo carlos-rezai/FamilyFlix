@@ -971,7 +971,7 @@ export function createApiRouter(
               title: episode.title ?? null,
               videoPath: episode.video,
               ...(runtimeMinutes === undefined ? {} : { runtimeMinutes }),
-              subtitles: episode.tracks,
+              subtitles: [...episode.heldTracks, ...episode.pickedTracks],
             };
           }),
         });
@@ -2444,25 +2444,25 @@ export function createApiRouter(
           cast: read.cast,
           genres: read.genres,
           poster,
-          episodes: read.episodes.map((episode) => {
+          episodes: read.episodes.map((episode) => ({
+            season: episode.season,
+            number: episode.number,
+            ...(episode.title === undefined ? {} : { title: episode.title }),
+            video: episode.freshVideo
+              ? { stored: episode.video }
+              : { found: episode.video },
             // The held tracks an edit would send are Found files here.
-            const found = episode.storedSubtitles?.length ?? 0;
-            return {
-              season: episode.season,
-              number: episode.number,
-              ...(episode.title === undefined ? {} : { title: episode.title }),
-              video: episode.freshVideo
-                ? { stored: episode.video }
-                : { found: episode.video },
-              subtitles: episode.tracks.map((track, index) => ({
-                file:
-                  index < found
-                    ? { found: track.path }
-                    : { stored: track.path },
+            subtitles: [
+              ...episode.heldTracks.map((track) => ({
+                file: { found: track.path },
                 language: track.language,
               })),
-            };
-          }),
+              ...episode.pickedTracks.map((track) => ({
+                file: { stored: track.path },
+                language: track.language,
+              })),
+            ],
+          })),
         })
       );
     } catch (error) {

@@ -252,13 +252,15 @@ export interface LandedEpisode extends EpisodeField {
 
 /**
  * One episode of an edit, read whole: its video — the part that landed, else
- * the held path — whether that video is fresh bytes, and its tracks, the held
- * ones first and then each picked one with its language.
+ * the held path — whether that video is fresh bytes, and its tracks kept
+ * apart: the held ones its `storedSubtitles` named, and each picked one that
+ * landed, with its language.
  */
 export interface EditedEpisode extends EpisodeField {
   video: string;
   freshVideo: boolean;
-  tracks: NewSubtitle[];
+  heldTracks: NewSubtitle[];
+  pickedTracks: NewSubtitle[];
 }
 
 /** The series' own fields, coerced into the shapes the storage takes. */
@@ -311,10 +313,12 @@ export function readSeriesFields(
 }
 
 /**
- * {@link readSeriesFields} for the **Series edit job**: an episode's video is
- * the part that landed or, without one, the held `videoPath` it names; its
- * tracks are its held ones and then those picked. Whether each `id` is the
- * series' own is the route's to ask — it holds the library.
+ * {@link readSeriesFields} for the **Series edit job**, and for the **Series
+ * Resolve**, whose body is the same: an episode's video is the part that
+ * landed or, without one, the `videoPath` it names — a held **Stored path**
+ * on an edit, a **Found file** on a Resolve; its held tracks and its picked
+ * ones are answered apart. Whether each `id` is the series' own is the
+ * route's to ask — it holds the library.
  */
 export function readSeriesEditFields(
   fields: Record<string, string[]>,
@@ -334,13 +338,11 @@ export function readSeriesEditFields(
       ...episode,
       video,
       freshVideo: upload?.video !== undefined,
-      tracks: [
-        ...(episode.storedSubtitles ?? []),
-        ...picked.map((path, track) => ({
-          path,
-          language: episode.subtitleLanguages[track],
-        })),
-      ],
+      heldTracks: episode.storedSubtitles ?? [],
+      pickedTracks: picked.map((path, track) => ({
+        path,
+        language: episode.subtitleLanguages[track],
+      })),
     };
   });
 }
