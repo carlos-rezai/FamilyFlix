@@ -11,6 +11,50 @@ Newest entry first.
 
 ---
 
+## 2026-10-11 — Factory reset — the surface's refactor (issue 301)
+
+Nine commits against `docs/refactor-plans/37-factory-reset-surface-refactor.md`,
+one per plan commit — the initiative's closing round. **7844 tests pass across
+473 files**, the same as at the end of the build (`ccabe64`): no leaf added,
+none changed. `tsc -b --force` is clean. `eslint src server electron .husky`
+reports no errors and the one warning earlier rounds already logged. No
+behaviour, pixel, copy, wire or prototype changed.
+
+### What each group changed
+
+- **Group 0, the record.** The build's own entry, below.
+- **Group 1, the code.**
+  - The settings `api`'s `namesAReason` and `FactoryResetOutcome` docblocks
+    are wrapped to the file's measure.
+  - `OpenFolder` and `ResetButton` are one `HeldButton`, named for its one
+    rule — a button that holds its width beside text that may shrink.
+  - `useFactoryReset`'s `resetting` says what it is: true from a press until
+    an answer that is not a reset, and left true while the page goes.
+- **Group 2, the docs.**
+  - The glossary's **Leaving** counts three **Fresh homes**. The dialogue
+    quoted from the Back navigation session keeps its "two": it records what
+    was said then.
+  - CLAUDE.md's tree names `ResetDialog/`, `useFactoryReset/`,
+    `factoryReset` and `stubLocation/`; the Settings Hub section has the
+    Factory reset bullet; Back navigation counts three Fresh homes.
+  - Step 20 and the Settings hub entry are ✅ in CLAUDE.md, and both rows in
+    the README. The build-order line reads 16–20 done, 21–23 planned.
+
+### Left as it is
+
+- **The `held()` request double**, written in several settings suites before
+  this initiative. A shared double is its own question.
+- **A danger tone for `Modal`'s icon tile.** The reviewed prototype draws the
+  accent tile; a red one would be a prototype change first.
+
+### The initiative
+
+**Factory reset is done**: the wire (298) and its refactor (300), the surface
+(299) and this round (301). Issue 297 is closed with it. Next in the third
+chain is step 21, **Episode links**.
+
+---
+
 ## 2026-10-11 — Factory reset — the row and the dialog (issue #299)
 
 The surface of **Factory reset**, over the wire from issue 298: the prototype
