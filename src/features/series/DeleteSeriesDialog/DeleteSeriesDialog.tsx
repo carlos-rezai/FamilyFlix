@@ -30,6 +30,7 @@ export function DeleteSeriesDialog({
   onClose,
 }: DeleteSeriesDialogProps) {
   const { deleting, deleteSeries } = useDeleteSeries(seriesId);
+  const episodes = `${episodeCount} episode${episodeCount === 1 ? '' : 's'}`;
 
   return (
     <Modal
@@ -40,7 +41,7 @@ export function DeleteSeriesDialog({
       onClose={onClose}
     >
       <Copy>
-        {`The series and its ${episodeCount} episodes leave your library, ` +
+        {`The series and its ${episodes} leave your library, ` +
           'and the videos, posters and subtitles FamilyFlix copied are ' +
           'deleted. Its watch history goes with it. The original files are ' +
           'not touched.'}

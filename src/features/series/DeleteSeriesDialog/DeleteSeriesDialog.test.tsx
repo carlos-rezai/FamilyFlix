@@ -27,7 +27,7 @@ import {
  * flight, and four ways out that send nothing.
  */
 const bodyFor = (count: number) =>
-  `The series and its ${count} episodes leave your library, and the videos, ` +
+  `The series and its ${count} episode${count === 1 ? '' : 's'} leave your library, and the videos, ` +
   'posters and subtitles FamilyFlix copied are deleted. Its watch history ' +
   'goes with it. The original files are not touched.';
 
@@ -142,6 +142,15 @@ describe('DeleteSeriesDialog — the copy', () => {
     renderDialog({ episodeCount: 7 });
 
     expect(within(dialog()).getByText(bodyFor(7))).toBeTruthy();
+  });
+
+  it('counts a lone episode in the singular', () => {
+    renderDialog({ episodeCount: 1 });
+
+    expect(
+      within(dialog()).getByText(/its 1 episode leave your library/)
+    ).toBeTruthy();
+    expect(within(dialog()).getByText(bodyFor(1))).toBeTruthy();
   });
 
   it('renders nothing when closed', () => {
