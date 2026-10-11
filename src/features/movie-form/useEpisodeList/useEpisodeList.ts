@@ -14,9 +14,14 @@ export interface EpisodeList {
   addEpisodeFiles: (files: readonly File[]) => void;
   /**
    * Put a held series' rows in place of the list — the **Series edit job**'s
-   * opening, each row under its episode's id with **Stored file** slots.
+   * opening, each row under its episode's id with **Stored file** slots — or
+   * the **Series Resolve**'s found rows, with the `season x number` pairs a
+   * joined series holds already, which the gate then refuses.
    */
-  holdEpisodes: (rows: readonly EpisodeFormRow[]) => void;
+  holdEpisodes: (
+    rows: readonly EpisodeFormRow[],
+    taken?: readonly string[]
+  ) => void;
   setSeason: (key: string, season: string) => void;
   setNumber: (key: string, number: string) => void;
   setEpisodeTitle: (key: string, title: string) => void;
@@ -31,7 +36,8 @@ export interface EpisodeList {
   removeEpisodeSubtitle: (rowKey: string, subtitleKey: string) => void;
   /**
    * The series half of the **Save gate**: at least one row, every season and
-   * number at least 1, and no (season, number) pair twice.
+   * number at least 1, no (season, number) pair twice, and none a joined
+   * series holds.
    */
   episodesComplete: boolean;
 }
@@ -57,6 +63,7 @@ function nextFreeInSeasonOne(taken: Set<number>): number {
 /** The **Movie form**'s episode list: keyed rows, read off a pick's tags. */
 export function useEpisodeList(): EpisodeList {
   const [episodes, setEpisodes] = useState<EpisodeFormRow[]>([]);
+  const [taken, setTaken] = useState<ReadonlySet<string>>(() => new Set());
   const nextKey = useRef(0);
 
   const addEpisodeFiles = useCallback((files: readonly File[]) => {
@@ -115,9 +122,13 @@ export function useEpisodeList(): EpisodeList {
     });
   }, []);
 
-  const holdEpisodes = useCallback((rows: readonly EpisodeFormRow[]) => {
-    setEpisodes([...rows]);
-  }, []);
+  const holdEpisodes = useCallback(
+    (rows: readonly EpisodeFormRow[], held: readonly string[] = []) => {
+      setEpisodes([...rows]);
+      setTaken(new Set(held));
+    },
+    []
+  );
 
   const edit = useCallback(
     (key: string, change: Partial<EpisodeFormRow>) =>
@@ -200,13 +211,13 @@ export function useEpisodeList(): EpisodeList {
         return false;
       }
       const pair = `${season}x${number}`;
-      if (seen.has(pair)) {
+      if (seen.has(pair) || taken.has(pair)) {
         return false;
       }
       seen.add(pair);
     }
     return true;
-  }, [episodes]);
+  }, [episodes, taken]);
 
   return {
     episodes,

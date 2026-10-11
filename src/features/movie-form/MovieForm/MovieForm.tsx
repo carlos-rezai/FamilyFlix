@@ -156,6 +156,8 @@ export function MovieForm() {
     setRating,
     pickVideo,
     removeVideo,
+    foundVideos,
+    chooseVideo,
     pickPoster,
     removePoster,
     addSubtitle,
@@ -340,6 +342,8 @@ export function MovieForm() {
             video={values.video}
             onPickVideo={pickVideo}
             onRemoveVideo={removeVideo}
+            foundVideos={foundVideos}
+            onChooseVideo={chooseVideo}
             poster={values.poster}
             onPickPoster={pickPoster}
             onRemovePoster={removePoster}

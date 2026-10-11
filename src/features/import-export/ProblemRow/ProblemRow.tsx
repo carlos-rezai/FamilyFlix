@@ -14,17 +14,21 @@ export interface ProblemRowProps {
  * Where _Resolve_ lands: the **Movie form** in import context, by the
  * problem's id. A `missing-meta` problem is already in the library, so its
  * Resolve names the movie too — the Edit job under the banner, rather than
- * adding the film twice.
+ * adding the film twice. An `unplaced` show opens the **Series Resolve**, the
+ * form's series kind, naming the held series beside it when there is one.
  */
-const resolveRoute = ({ id, movieId }: ImportProblem): string =>
-  movieFormPath({ movie: movieId, problem: id });
-
-/**
- * Whether a kind can be resolved in a form. An `unplaced` episode cannot: no
- * form takes an episode, and its reason already names the fix — rename the
- * file and import again — so its row draws _Skip_ alone.
- */
-const resolvable = ({ kind }: ImportProblem): boolean => kind !== 'unplaced';
+const resolveRoute = ({
+  id,
+  kind,
+  movieId,
+  seriesId,
+}: ImportProblem): string =>
+  kind === 'unplaced'
+    ? movieFormPath({ problem: id, series: seriesId }).replace(
+        '/add?',
+        '/add?kind=series&'
+      )
+    : movieFormPath({ movie: movieId, problem: id });
 
 /**
  * One row of the **Review step**'s **Needs attention** list, from
@@ -46,14 +50,12 @@ export function ProblemRow({ problem, onSkip }: ProblemRowProps) {
         <Title>{problem.title}</Title>
         <Reason>{problem.reason}</Reason>
       </Text>
-      {resolvable(problem) && (
-        <Button
-          label="Resolve"
-          variant="secondary"
-          size="sm"
-          to={resolveRoute(problem)}
-        />
-      )}
+      <Button
+        label="Resolve"
+        variant="secondary"
+        size="sm"
+        to={resolveRoute(problem)}
+      />
       <Button label="Skip" variant="secondary" size="sm" onClick={onSkip} />
     </Row>
   );

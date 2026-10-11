@@ -43,7 +43,7 @@ export const MATCH_REASON = {
   nearName: "One folder looks like a match, but the name isn't exact.",
   noFolder: 'No folder found matching this spreadsheet row.',
   noVideo: 'Folder matched, but no video file was found.',
-  manyVideos: 'Folder matched, but it holds more than one video file.',
+  manyVideos: 'Two videos — pick the film.',
 } as const;
 
 /** Whether a row and a folder agree on the year, when both carry one. */

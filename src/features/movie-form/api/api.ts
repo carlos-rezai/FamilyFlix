@@ -246,3 +246,30 @@ export async function resolveProblem(
 
   return (await response.json()) as Movie;
 }
+
+/**
+ * The **Series Resolve**'s _Save & continue_: the series body, each found
+ * video as its `episode` field's `videoPath`, posted to the problem's own
+ * resolve route — which creates the series or joins the held one. A `404`
+ * rejects with {@link ProblemGoneError}, as the film's resolve does.
+ */
+export async function resolveSeriesProblem(
+  id: string,
+  values: MovieFormValues,
+  episodes: readonly EpisodeFormRow[]
+): Promise<Series> {
+  const endpoint = `${problemEndpoint(id)}/resolve`;
+  const response = await fetch(endpoint, {
+    method: 'POST',
+    body: seriesFormData(values, episodes),
+  });
+
+  if (response.status === 404) {
+    throw new ProblemGoneError(id);
+  }
+  if (!response.ok) {
+    throw new Error(`POST ${endpoint} failed: ${response.status}`);
+  }
+
+  return (await response.json()) as Series;
+}

@@ -20,7 +20,7 @@ import { readableFolder } from '../../media/readableFolder/readableFolder';
 import type { MovieFolderScan } from '../../media/scanMovieFolder/scanMovieFolder';
 import { walkLibraryFolder } from '../../media/walkLibraryFolder/walkLibraryFolder';
 import type { Playback } from '../../playback/createPlayback/createPlayback';
-import { episodeTag, spellEpisodeTag } from '../../media/episodeTag/episodeTag';
+import { spellEpisodeTag } from '../../media/episodeTag/episodeTag';
 import { derivedRuntime } from '../../playback/derivedRuntime/derivedRuntime';
 import {
   groupShows,
@@ -124,6 +124,44 @@ export interface ResolveForm {
 }
 
 /**
+ * A **Series Resolve** the importer will not write — a number the held series
+ * already has. Refused before anything is copied; the route answers it as
+ * `400`, its message naming the number.
+ */
+export class ResolveRefusedError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'ResolveRefusedError';
+  }
+}
+
+/** One **Episode file row** of the **Series Resolve**, as _Save & continue_ sends it. */
+export interface ResolveEpisode {
+  season: number;
+  number: number;
+  title?: string;
+  video: ResolveFile;
+  subtitles: { file: ResolveFile; language: string }[];
+}
+
+/**
+ * The series kind of the **Movie form** as the **Series Resolve** sends it:
+ * the fields as the maintainer left them, the poster, and each episode.
+ */
+export interface ResolveSeriesForm {
+  title: string;
+  year?: number;
+  endYear?: number;
+  creator?: string;
+  synopsis?: string;
+  rating?: number;
+  cast: string[];
+  genres: string[];
+  poster: ResolveFile | null;
+  episodes: ResolveEpisode[];
+}
+
+/**
  * What the API layer can ask the import domain for. Injected into the router
  * as the fifth argument the way `playback` and `media` are, so the route layer
  * never learns there is a spreadsheet. `start`, `current`, `cancel`,
@@ -177,6 +215,15 @@ export interface Importer {
    * problem.
    */
   resolve(id: string, form: ResolveForm): Promise<Movie>;
+  /**
+   * The **Series Resolve**'s _Save & continue_ on an `unplaced` Problem:
+   * create the series, or join the one the Problem names, copying every
+   * found video in from under the root and recording each as its **Source
+   * file**, then dismiss the problem. Rejects with {@link ImportPathError},
+   * {@link ResolveRefusedError} for a number the held series has, and
+   * {@link ProblemNotFoundError}, each before anything is copied.
+   */
+  resolveSeries(id: string, form: ResolveSeriesForm): Promise<Series>;
   /**
    * Start the **Current run** as a **Folder scan** over the listed **Library
    * folders**, in the order given, and answer its first snapshot. No sheet:
@@ -243,14 +290,19 @@ const rowDetail = (row: SheetRow): ImportProblemDetail['row'] => ({
   ...(row.rating === null ? {} : { rating: row.rating }),
 });
 
+/** Paths in name order, as the **Problem detail** lists them. */
+const inNameOrder = (paths: string[]): string[] =>
+  [...paths].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+
 /**
  * The **Found files** of one **Source folder**, as the form's slots take them.
- * The video only when the folder holds exactly one: two is the `no-video`
- * verdict, and the detail guesses no more than the run did — the maintainer
- * picks.
+ * Every video in `videos`, in name order; `video` only when the folder holds
+ * exactly one: two is the `no-video` verdict, and the detail guesses no more
+ * than the run did — the maintainer picks, on the **Found-file choice**.
  */
 const filesOf = (scan: MovieFolderScan): ImportProblemDetail['files'] => ({
   ...(scan.videos.length === 1 ? { video: scan.videos[0] } : {}),
+  videos: inNameOrder(scan.videos),
   ...(scan.poster === null ? {} : { poster: scan.poster }),
   ...(scan.backdrop === null ? {} : { backdrop: scan.backdrop }),
   subtitles: scan.subtitles.map(({ path, language }) => ({ path, language })),
@@ -352,25 +404,9 @@ const sourceFileOf = (show: ShowScan, video: string): string =>
 const episodeLabel = (title: string, { season, episode }: ShowEpisode) =>
   `${title} · ${spellEpisodeTag(season, episode)}`;
 
-/**
- * The reason an **Unplaced** video is filed with, naming the fix: the number
- * to rename it to — the next free one in the season its tag names, or in the
- * show's first season when it carries none — and to import again.
- */
-function unplacedReason(show: ShowScan, video: string): string {
-  const tag = episodeTag(basename(video));
-  const season = tag?.season ?? show.episodes[0]?.season ?? 1;
-  const last = Math.max(
-    0,
-    ...show.episodes
-      .filter((episode) => episode.season === season)
-      .map((episode) => episode.episode)
-  );
-  const fix = `rename it ${spellEpisodeTag(season, last + 1)} and import again.`;
-  return tag === null
-    ? `No episode number — ${fix}`
-    : `${spellEpisodeTag(tag.season, tag.episode)} is already another file — ${fix}`;
-}
+/** The reason a show's **Unplaced** videos are filed with: their count. */
+const unplacedReason = (n: number): string =>
+  n === 1 ? '1 episode needs a number' : `${count(n)} episodes need numbers`;
 
 /**
  * A **Show folder** as the matcher weighs it: a scan under the show's own
@@ -401,6 +437,11 @@ interface ShowMatch {
   show: ShowScan;
   held: HeldSeries | null;
   episodes: ShowEpisode[];
+  /**
+   * The show's one `unplaced` **Problem**, once filed: the run names the
+   * series on it when it creates one, so _Resolve_ joins it.
+   */
+  unplaced: ImportProblem | null;
 }
 
 /**
@@ -695,13 +736,14 @@ export function createImporter({
    * metadata is left as it is. One with nothing new says so and adds nothing.
    */
   const importShow = async (
-    { row, show, held, episodes }: ShowMatch,
+    match: ShowMatch,
     pool: Map<string, string>,
     warnedGenres: Set<string>,
     current: ImportRun,
     signal: AbortSignal,
     libraryFolder: StoredLibraryFolder
   ): Promise<void> => {
+    const { row, show, held, episodes } = match;
     // Where the show came from, relative to its Library folder: on a held
     // series too, so a re-run backfills a library imported before it was
     // remembered.
@@ -759,6 +801,9 @@ export function createImporter({
           };
           series = storage.addSeries(input);
           storage.setSourceFolder(series.id, libraryFolder.id, sourceFolder);
+          if (match.unplaced !== null) {
+            match.unplaced.seriesId = series.id;
+          }
         }
         storage.addEpisode(series.id, {
           season: episode.season,
@@ -797,24 +842,31 @@ export function createImporter({
   };
 
   /**
-   * A matched show's **Unplaced** videos: hard, and Skip alone — there is no
-   * form an episode is resolved in; the reason names the rename.
+   * A matched show's **Unplaced** videos: one hard Problem for the show,
+   * titled with it, its reason the count, its detail listing every video —
+   * resolved in the **Series Resolve**. A held series is named on it now; one
+   * the run creates, once it has.
    */
-  const fileUnplaced = (current: ImportRun, { row, show, held }: ShowMatch) => {
-    for (const video of show.unplaced) {
-      if (held?.sourceFiles.has(sourceFileOf(show, video))) {
-        continue;
-      }
-      file(
-        current,
-        problemOf(
-          'unplaced',
-          `${row.title} · ${basename(video)}`,
-          unplacedReason(show, video)
-        ),
-        { row, folder: asMatchable(show), candidates: [] }
-      );
+  const fileUnplaced = (current: ImportRun, match: ShowMatch) => {
+    const { row, show, held } = match;
+    const videos = inNameOrder(
+      show.unplaced.filter(
+        (video) => !held?.sourceFiles.has(sourceFileOf(show, video))
+      )
+    );
+    if (videos.length === 0) {
+      return;
     }
+    const problem: ImportProblem = {
+      ...problemOf('unplaced', row.title, unplacedReason(videos.length)),
+      ...(held === null ? {} : { seriesId: held.series.id }),
+    };
+    file(current, problem, {
+      row,
+      folder: { ...asMatchable(show), videos },
+      candidates: [],
+    });
+    match.unplaced = problem;
   };
 
   /**
@@ -868,6 +920,7 @@ export function createImporter({
                 !held.sourceFiles.has(sourceFileOf(show, episode.video)) &&
                 !held.tags.has(spellEpisodeTag(episode.season, episode.episode))
             ),
+      unplaced: null,
     };
   };
 
@@ -1445,6 +1498,152 @@ export function createImporter({
         // route's own bytes included, since a resolve is a new movie and
         // nothing older lives in that folder — and the problem stays listed.
         media.removeFolder(folder);
+        throw error;
+      }
+    },
+
+    resolveSeries: async (id, form) => {
+      const current = run;
+      const source = sources.get(id);
+      const listed = current?.problems.find((problem) => problem.id === id);
+      if (current === null || source === undefined || listed === undefined) {
+        throw new ProblemNotFoundError(id);
+      }
+
+      // Joining: the held series, and every number it has refused up front.
+      const heldSeries =
+        listed.seriesId === undefined
+          ? null
+          : (storage
+              .getSeriesHome()
+              .series.find((series) => series.id === listed.seriesId) ?? null);
+      const heldEpisodes =
+        heldSeries === null ? [] : storage.listEpisodes(heldSeries.id);
+      const heldTags = new Set(
+        heldEpisodes.map((episode) =>
+          spellEpisodeTag(episode.season, episode.number)
+        )
+      );
+
+      // A join adds episodes and nothing else: the held series keeps its
+      // poster, so the form's — the held one, sent back — is not read.
+      const poster = heldSeries === null ? form.poster : null;
+
+      // Every found path is checked before the first is copied, as the
+      // film's are.
+      const slots: ResolveFile[] = [
+        ...(poster === null ? [] : [poster]),
+        ...form.episodes.flatMap((episode) => [
+          episode.video,
+          ...episode.subtitles.map((track) => track.file),
+        ]),
+      ];
+      for (const slot of slots) {
+        if (
+          'found' in slot &&
+          !roots.some((root) => isUnder(root, slot.found))
+        ) {
+          throw new ImportPathError(slot.found);
+        }
+      }
+      for (const { season, number } of form.episodes) {
+        const tag = spellEpisodeTag(season, number);
+        if (heldTags.has(tag)) {
+          throw new ResolveRefusedError(
+            `Episode ${tag} is already in the series`
+          );
+        }
+      }
+
+      const stored = slots.find(
+        (slot): slot is { stored: string } => 'stored' in slot
+      );
+      const ownFolder = heldSeries === null ? null : heldFolder(heldEpisodes);
+      const folder =
+        ownFolder ??
+        (stored === undefined ? null : media.openFolder(stored.stored)) ??
+        media.reserveFolder(form.title, form.year ?? null);
+      const copied: string[] = [];
+
+      /** A stored file as it is; a found one copied into its season. */
+      const place = async (slot: ResolveFile, season: number) => {
+        if ('stored' in slot) {
+          return slot.stored;
+        }
+        const path = await media.copyIn(
+          media.seasonFolder(folder, season),
+          slot.found
+        );
+        copied.push(path);
+        return path;
+      };
+      const showDir = source.folder?.dir ?? null;
+      const sourceFile = (slot: ResolveFile): string | undefined =>
+        'found' in slot && showDir !== null
+          ? relative(showDir, slot.found).split(sep).join('/')
+          : undefined;
+
+      try {
+        const episodes = [];
+        for (const episode of form.episodes) {
+          const videoPath = await place(episode.video, episode.season);
+          const subtitles: NewSubtitle[] = [];
+          for (const track of episode.subtitles) {
+            subtitles.push({
+              path: await place(track.file, episode.season),
+              language: track.language,
+            });
+          }
+          const runtime = derivedRuntime(playback, videoPath);
+          const found = sourceFile(episode.video);
+          episodes.push({
+            season: episode.season,
+            number: episode.number,
+            videoPath,
+            ...(episode.title === undefined ? {} : { title: episode.title }),
+            ...(runtime === null ? {} : { runtimeMinutes: runtime }),
+            ...(subtitles.length === 0 ? {} : { subtitles }),
+            ...(found === undefined ? {} : { sourceFile: found }),
+          });
+        }
+
+        let series: Series;
+        if (heldSeries !== null) {
+          for (const episode of episodes) {
+            storage.addEpisode(heldSeries.id, episode);
+          }
+          series = heldSeries;
+        } else {
+          const posterPath =
+            poster === null
+              ? undefined
+              : 'stored' in poster
+                ? poster.stored
+                : await media.copyIn(folder, poster.found);
+          const input: NewSeries = {
+            title: form.title,
+            ...(form.year === undefined ? {} : { year: form.year }),
+            ...(form.endYear === undefined ? {} : { endYear: form.endYear }),
+            ...(form.creator === undefined ? {} : { creator: form.creator }),
+            ...(form.synopsis === undefined ? {} : { synopsis: form.synopsis }),
+            ...(form.rating === undefined ? {} : { rating: form.rating }),
+            ...(form.cast.length === 0 ? {} : { cast: form.cast }),
+            ...(form.genres.length === 0 ? {} : { genres: form.genres }),
+            ...(posterPath === undefined ? {} : { posterPath }),
+          };
+          series = storage.addSeries(input, episodes);
+        }
+        takeOff(id);
+        return series;
+      } catch (error) {
+        // A held series' folder keeps what it held: only this save's copies go.
+        if (ownFolder === null) {
+          media.removeFolder(folder);
+        } else {
+          for (const path of copied) {
+            media.removeFile(path);
+          }
+        }
         throw error;
       }
     },

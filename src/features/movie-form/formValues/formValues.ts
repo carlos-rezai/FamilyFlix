@@ -10,6 +10,7 @@ import type {
 import { toRatingPercent, toRatingUnits } from '@/utils';
 
 import { castNames, castText } from '../castNames/castNames';
+import { readEpisodeTag } from '../readEpisodeTag/readEpisodeTag';
 
 /**
  * How a **Stored path** is separated, everywhere it is stored: the media domain
@@ -215,7 +216,7 @@ export function heldEpisodeRows({ seasons }: SeriesDetail): EpisodeFormRow[] {
  * it at, and the name after its last separator — which is all the slot shows
  * of it, exactly as it shows a stored file.
  */
-function foundFile(path: string): MovieFormFile {
+export function foundFile(path: string): MovieFormFile {
   return { kind: 'found', path, filename: foundFilenameOf(path) };
 }
 
@@ -245,7 +246,14 @@ export function problemFormValues(
     cast: castText(row.cast ?? []),
     genres: [...row.genres],
     rating: toRatingPercent(row.rating ?? null),
-    video: files.video === undefined ? null : foundFile(files.video),
+    // One video is the slot's; two or more are the **Found-file choice**, the
+    // first preselected.
+    video:
+      files.video !== undefined
+        ? foundFile(files.video)
+        : (files.videos?.length ?? 0) > 1
+          ? foundFile((files.videos ?? [])[0])
+          : null,
     poster: files.poster === undefined ? null : foundFile(files.poster),
     // In the folder's order, which is the order the run would have stored
     // them in — and each in the language the scan read off its name.
@@ -396,8 +404,9 @@ export function seriesFormData(
 
   if (values.poster?.kind === 'picked') {
     body.append('poster', values.poster.file);
-  } else if (values.poster?.kind === 'stored') {
-    // A held poster travels as the path it has, never as bytes.
+  } else if (values.poster !== null) {
+    // A held poster travels as the path it has, never as bytes; so does a
+    // found one.
     body.append('posterPath', values.poster.path);
   }
 
@@ -419,10 +428,13 @@ export function seriesFormData(
                 : []
             ),
           };
+    // A **Found file** — the **Series Resolve**'s — travels as its path.
+    const found = row.file.kind === 'found' ? { videoPath: row.file.path } : {};
     body.append(
       'episode',
       JSON.stringify({
         ...held,
+        ...found,
         season: Number(row.season),
         number: Number(row.number),
         title: row.title,
@@ -440,4 +452,70 @@ export function seriesFormData(
   }
 
   return body;
+}
+
+/** A path's segments, whichever separator the machine spells it with. */
+const segmentsOf = (path: string): string[] =>
+  path.split(/[\\/]/).filter((segment) => segment !== '');
+
+/**
+ * The season a found video's folder names: season 1 at the **Show folder**'s
+ * root, else the number a **Season folder**'s name carries.
+ */
+function folderSeason(video: string, showFolder: string | undefined): number {
+  const parent = segmentsOf(video).slice(0, -1);
+  const show = showFolder === undefined ? parent : segmentsOf(showFolder);
+  if (parent.length <= show.length) {
+    return 1;
+  }
+  const digits = /\d+/.exec(parent[parent.length - 1]);
+  const season = digits === null ? 1 : Number(digits[0]);
+  return season >= 1 ? season : 1;
+}
+
+/**
+ * The **Series Resolve**'s rows: one **Episode file row** per Unplaced video
+ * of the **Problem detail**, as a found path, numbered by the **Numbering
+ * guess** — the season from the folder, the episode from the **Episode word**,
+ * else the next free number in name order. A held series' numbers are taken
+ * already, and answered beside the rows for the gate to refuse.
+ */
+export function seriesResolveRows(
+  detail: ImportProblemDetail,
+  held: SeriesDetail | null
+): { rows: EpisodeFormRow[]; taken: string[] } {
+  const taken = (held?.seasons ?? []).flatMap((season) =>
+    season.episodes.map((episode) => `${episode.season}x${episode.number}`)
+  );
+  const used = new Set(taken);
+  const guesses = (detail.files.videos ?? []).map((path) => {
+    const season = folderSeason(path, detail.folder);
+    const tag = readEpisodeTag(foundFilenameOf(path), season);
+    const claim =
+      tag !== null && !used.has(`${tag.season}x${tag.number}`) ? tag : null;
+    if (claim !== null) {
+      used.add(`${claim.season}x${claim.number}`);
+    }
+    return { path, season: claim?.season ?? season, claim };
+  });
+  const rows = guesses.map(({ path, season, claim }, index) => {
+    let number = claim?.number ?? null;
+    if (number === null) {
+      number = 1;
+      while (used.has(`${season}x${number}`)) {
+        number += 1;
+      }
+      used.add(`${season}x${number}`);
+    }
+    return {
+      key: `${FOUND_KEY}episode-${index}`,
+      // Named by its path: the folder is what tells two `Episode 1`s apart.
+      file: { kind: 'found' as const, path, filename: path },
+      season: String(season),
+      number: String(number),
+      title: claim?.title ?? '',
+      subtitles: [],
+    };
+  });
+  return { rows, taken };
 }

@@ -21,6 +21,7 @@ import {
   ImportPathError,
   ImportStartError,
   ProblemNotFoundError,
+  ResolveRefusedError,
   type Importer,
   type ResolveFile,
   type ResolveForm,
@@ -2377,14 +2378,120 @@ export function createApiRouter(
   // importer has copied, added and dismissed; `404` for a problem that is not
   // there, before the body is read where that is knowable and after it where
   // the problem went during the upload.
+  // The **Series Resolve**: an `unplaced` Problem's body is the series form,
+  // read by `seriesFormBody` as the edit reads it — an episode's video is the
+  // `episodeVideo` part that follows its field, else its `videoPath`, which
+  // here is a **Found file** under the root. The importer creates the series
+  // or joins the held one; the refusals are the film resolve's, plus a number
+  // the held series has.
+  const resolveSeries = async (
+    req: Request<{ id: string }>,
+    res: Response,
+    id: string
+  ): Promise<void> => {
+    const { onFile, uploads } = collectEpisodeUploads(media, (before) =>
+      media.reserveFolder(
+        onlyField(before, 'title')?.trim() ?? '',
+        yearSpan(onlyField(before, 'year')?.trim() ?? '')?.year ?? null
+      )
+    );
+    const rollback = (): void => {
+      if (uploads.folder !== null) {
+        media.removeFolder(uploads.folder);
+      }
+    };
+
+    let fields: Record<string, string[]>;
+    try {
+      fields = await readBody(req, onFile);
+    } catch {
+      rollback();
+      res.status(400).json({ error: 'Body must be multipart/form-data' });
+      return;
+    }
+
+    const read = readSeriesEditFields(
+      fields,
+      uploads,
+      new Set(storage.listGenrePool().map((genre) => genre.name))
+    );
+    if (!read.ok) {
+      rollback();
+      res.status(read.status).json({ error: read.error });
+      return;
+    }
+
+    const posterPath = onlyField(fields, 'posterPath');
+    const poster: ResolveFile | null =
+      uploads.poster !== undefined
+        ? { stored: uploads.poster }
+        : posterPath === undefined || posterPath === ''
+          ? null
+          : { found: posterPath };
+
+    try {
+      res.status(201).json(
+        await importer.resolveSeries(id, {
+          title: read.title,
+          ...(read.year === undefined ? {} : { year: read.year }),
+          ...(read.endYear === undefined ? {} : { endYear: read.endYear }),
+          ...(read.creator === undefined ? {} : { creator: read.creator }),
+          ...(read.synopsis === undefined ? {} : { synopsis: read.synopsis }),
+          ...(read.rating === undefined ? {} : { rating: read.rating }),
+          cast: read.cast,
+          genres: read.genres,
+          poster,
+          episodes: read.episodes.map((episode) => {
+            // The held tracks an edit would send are Found files here.
+            const found = episode.storedSubtitles?.length ?? 0;
+            return {
+              season: episode.season,
+              number: episode.number,
+              ...(episode.title === undefined ? {} : { title: episode.title }),
+              video: episode.freshVideo
+                ? { stored: episode.video }
+                : { found: episode.video },
+              subtitles: episode.tracks.map((track, index) => ({
+                file:
+                  index < found
+                    ? { found: track.path }
+                    : { stored: track.path },
+                language: track.language,
+              })),
+            };
+          }),
+        })
+      );
+    } catch (error) {
+      rollback();
+      if (
+        error instanceof ImportPathError ||
+        error instanceof ResolveRefusedError
+      ) {
+        res.status(400).json({ error: error.message });
+        return;
+      }
+      if (error instanceof ProblemNotFoundError) {
+        res.status(404).json({ error: error.message });
+        return;
+      }
+      res.status(500).json({ error: 'Could not resolve the problem' });
+    }
+  };
+
   router.post(
     '/import/current/problems/:id/resolve',
     async (req: Request<{ id: string }>, res: Response) => {
       const { id } = req.params;
-      if (importer.problem(id) === null) {
+      const problem = importer.problem(id);
+      if (problem === null) {
         // The body is still arriving and nothing here is going to read it.
         req.resume();
         res.status(404).json({ error: `No such problem: ${id}` });
+        return;
+      }
+      if (problem.kind === 'unplaced') {
+        await resolveSeries(req, res, id);
         return;
       }
 

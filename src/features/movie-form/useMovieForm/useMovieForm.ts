@@ -16,6 +16,7 @@ import {
   fetchProblem,
   ProblemGoneError,
   resolveProblem,
+  resolveSeriesProblem,
   updateMovie,
   updateSeries,
 } from '../api/api';
@@ -25,8 +26,10 @@ import {
   pickedFile,
   pickedSubtitle,
   heldEpisodeRows,
+  foundFile,
   problemFormValues,
   seriesFormValues,
+  seriesResolveRows,
 } from '../formValues/formValues';
 
 /**
@@ -204,6 +207,13 @@ export interface UseMovieFormResult {
   pickVideo: (file: File) => void;
   /** Empty the video slot again. */
   removeVideo: () => void;
+  /**
+   * A film Resolve's found videos when its folder holds two or more — the
+   * **Found-file choice** — else none.
+   */
+  foundVideos: string[];
+  /** Put the found video at `path` into the video slot. */
+  chooseVideo: (path: string) => void;
   /** Put artwork the maintainer chose off their own disk into the poster slot. */
   pickPoster: (file: File) => void;
   /** Empty the poster slot again. */
@@ -400,6 +410,9 @@ export function useMovieForm(): UseMovieFormResult {
     (ResolvingProblem & { id: string }) | null
   >(null);
 
+  /** The film Resolve's found videos, for the **Found-file choice**. */
+  const [foundVideos, setFoundVideos] = useState<string[]>([]);
+
   const requested = searchParams.get(MOVIE_PARAM);
   const problem = searchParams.get(PROBLEM_PARAM);
   // The **Series edit job** stands alone: beside `?problem=` or `?movie=` it
@@ -414,8 +427,20 @@ export function useMovieForm(): UseMovieFormResult {
   // kind, with no tabs to switch it.
   const showKindTabs =
     requested === null && problem === null && seriesRequested === null;
+  // The **Series Resolve**: `?problem=` with `?kind=series`, an `unplaced`
+  // show's _Resolve_ — and `?series=` beside them, the held series it joins.
+  // The kind is the series' once the problem read back is `unplaced`: beside
+  // any other problem `?kind=` is ignored, as it is beside every context.
+  const askingSeries =
+    problem !== null &&
+    requested === null &&
+    searchParams.get(KIND_PARAM) === 'series';
+  const joining = askingSeries ? searchParams.get(SERIES_PARAM) : null;
+  const [unplaced, setUnplaced] = useState(false);
+  const resolvingSeries = askingSeries && unplaced;
   const kind: FormKind =
     seriesRequested !== null ||
+    resolvingSeries ||
     (showKindTabs && searchParams.get(KIND_PARAM) === 'series')
       ? 'series'
       : 'movie';
@@ -500,18 +525,34 @@ export function useMovieForm(): UseMovieFormResult {
   useEffect(() => {
     if (problem === null) {
       setResolving(null);
+      setUnplaced(false);
       return;
     }
 
     let current = true;
 
-    fetchProblem(problem)
-      .then((detail) => {
+    Promise.all([
+      fetchProblem(problem),
+      joining === null ? null : fetchSeriesDetail(joining),
+    ])
+      .then(([detail, held]) => {
         if (!current || detail === null) {
           return;
         }
-        if (requested === null) {
+        const series = askingSeries && detail.kind === 'unplaced';
+        setUnplaced(series);
+        if (series) {
+          // The fields from the held series when the show joins one, else
+          // from the sheet row; one row per found video under the guess.
+          setValues(
+            held === null ? problemFormValues(detail) : seriesFormValues(held)
+          );
+          const { rows, taken } = seriesResolveRows(detail, held);
+          holdEpisodes(rows, taken);
+        } else if (requested === null) {
           setValues(problemFormValues(detail));
+          const videos = detail.files.videos ?? [];
+          setFoundVideos(videos.length > 1 ? videos : []);
         }
         setResolving({
           id: detail.id,
@@ -524,7 +565,7 @@ export function useMovieForm(): UseMovieFormResult {
     return () => {
       current = false;
     };
-  }, [problem, requested]);
+  }, [problem, requested, askingSeries, joining, holdEpisodes]);
 
   const setTitle = useCallback((title: string) => {
     setValues((current) => ({ ...current, title }));
@@ -586,6 +627,13 @@ export function useMovieForm(): UseMovieFormResult {
 
   const removeVideo = useCallback(() => {
     setValues((current) => ({ ...current, video: null }));
+  }, []);
+
+  const chooseVideo = useCallback((path: string) => {
+    setValues((current) => ({
+      ...current,
+      video: foundFile(path),
+    }));
   }, []);
 
   // The same two lines for the second slot, because a slot is a slot — what
@@ -691,13 +739,17 @@ export function useMovieForm(): UseMovieFormResult {
     // which is the honest picture.
     const written =
       kind === 'series'
-        ? editingSeries !== null
-          ? // The series page is the entry the edit was opened from, so a
-            // step lands there; the deep link reaches it through the Landing.
-            updateSeries(editingSeries, values, episodes).then(() => goBack())
-          : createSeries(values, episodes).then(() =>
-              navigate(SERIES_FRESH_HOME)
+        ? resolving !== null
+          ? resolveSeriesProblem(resolving.id, values, episodes).then(() =>
+              goBack()
             )
+          : editingSeries !== null
+            ? // The series page is the entry the edit was opened from, so a
+              // step lands there; the deep link reaches it through the Landing.
+              updateSeries(editingSeries, values, episodes).then(() => goBack())
+            : createSeries(values, episodes).then(() =>
+                navigate(SERIES_FRESH_HOME)
+              )
         : resolving !== null
           ? editing === null
             ? resolveProblem(resolving.id, values).then(() => goBack())
@@ -768,6 +820,8 @@ export function useMovieForm(): UseMovieFormResult {
     setRating,
     pickVideo,
     removeVideo,
+    foundVideos,
+    chooseVideo,
     pickPoster,
     removePoster,
     addSubtitle,

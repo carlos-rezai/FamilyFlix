@@ -1884,6 +1884,7 @@ describe('createImporter — problem: the detail Resolve prefills from', () => {
       expect(detail?.candidates).toEqual([]);
       expect(detail?.files).toEqual({
         video: join(folder, 'Harbor.Lights.2019.mp4'),
+        videos: [join(folder, 'Harbor.Lights.2019.mp4')],
         poster: join(folder, 'poster.jpg'),
         subtitles: [
           {

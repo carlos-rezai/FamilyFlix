@@ -60,6 +60,11 @@ export interface ImportProblem {
   reason: string;
   /** Set for the soft kind: the movie already in the library. */
   movieId?: string;
+  /**
+   * Set on an `unplaced` Problem whose show the library holds: the series a
+   * _Resolve_ joins.
+   */
+  seriesId?: string;
 }
 
 /**
@@ -116,6 +121,11 @@ export interface ImportProblemDetail extends ImportProblem {
   /** The **Found files** under the folder, as absolute paths under the root. */
   files: {
     video?: string;
+    /**
+     * Every video, in name order: a film's **Found-file choice**, a show's
+     * Unplaced videos. Absent when there is no folder.
+     */
+    videos?: string[];
     poster?: string;
     backdrop?: string;
     subtitles: { path: string; language: string }[];
