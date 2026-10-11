@@ -64,7 +64,7 @@ const COMPONENT_ENDPOINT = '/api/playback/component';
  */
 const REFUSAL_STATUSES = [400, 404, 409, 422];
 
-/** What a refusing **Component route** answers with, when it says why. */
+/** What a refusing route answers with, when it says why — the **Component route**'s and the reset's. */
 function namesAReason(body: unknown): body is { error: string } {
   if (typeof body !== 'object' || body === null) {
     return false;
@@ -200,4 +200,34 @@ export async function saveTmdbKey(key: string): Promise<TmdbKeyOutcome> {
   } catch {
     return { kind: 'unreachable' };
   }
+}
+
+/** Where **Factory reset** erases everything FamilyFlix made. */
+const RESET_ENDPOINT = '/api/reset';
+
+/** What pressing _Erase everything_ came to: erased, or refused in a sentence. */
+export type FactoryResetOutcome =
+  | { kind: 'reset' }
+  | { kind: 'refused'; sentence: string };
+
+/**
+ * **Factory reset** — `POST /api/reset`, no body. A `204` is `reset`, its
+ * empty body never read. A `409` naming its reason is `refused` with the
+ * route's own sentence — a running import or Sync. Anything else rejects, the
+ * `500` of an erase the database would not take included, and its one caller,
+ * `useFactoryReset`, leaves the dialog as it was.
+ */
+export async function factoryReset(): Promise<FactoryResetOutcome> {
+  const response = await fetch(RESET_ENDPOINT, { method: 'POST' });
+
+  if (response.status === 204) {
+    return { kind: 'reset' };
+  }
+  if (response.status === 409) {
+    const body: unknown = await response.json().catch(() => null);
+    if (namesAReason(body)) {
+      return { kind: 'refused', sentence: body.error };
+    }
+  }
+  throw new Error(`POST ${RESET_ENDPOINT} failed: ${response.status}`);
 }

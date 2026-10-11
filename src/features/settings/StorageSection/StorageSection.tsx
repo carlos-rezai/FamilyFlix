@@ -3,8 +3,15 @@ import { useState } from 'react';
 import { folderBridge } from '@/api/folderBridge/folderBridge';
 import { formatBytes } from '@/utils';
 
+import { ResetDialog } from '../ResetDialog/ResetDialog';
 import { useStorageReport } from '../useStorageReport/useStorageReport';
-import { GroupHeading, ItemTitle } from '../section.styles';
+import {
+  GroupHeading,
+  ItemTitle,
+  Row,
+  RowDesc,
+  RowTitle,
+} from '../section.styles';
 import {
   Bytes,
   Dot,
@@ -12,6 +19,8 @@ import {
   FolderText,
   OpenFolder,
   Path,
+  ResetButton,
+  ResetDivider,
   SpaceLine,
   StorageCard,
 } from './StorageSection.styles';
@@ -36,6 +45,11 @@ const titles = (count: number) =>
  * It is a control, not a read, so it is drawn before the report lands. A
  * browser has no bridge, and the title and path stand alone on their line.
  *
+ * After the space line, a divider and the Factory reset row: _Factory reset_
+ * over its line, and a `danger` _Reset…_ that opens the **Reset dialog**. It
+ * is a control, not a read, so it is drawn before the report lands and in a
+ * browser too; the section owns the dialog's open state.
+ *
  * The section owns `useStorageReport`. **Blank until it lands**: the path and
  * the space line are drawn from the report and not before — the title alone
  * while it is `null`, and left so if it never lands.
@@ -43,6 +57,7 @@ const titles = (count: number) =>
 export function StorageSection() {
   const { report } = useStorageReport();
   const [bridge] = useState(folderBridge);
+  const [resetOpen, setResetOpen] = useState(false);
 
   return (
     <>
@@ -68,7 +83,24 @@ export function StorageSection() {
             <Dot>·</Dot> {titles(report.movieCount)}
           </SpaceLine>
         ) : null}
+        <ResetDivider />
+        <Row $last>
+          <div>
+            <RowTitle>Factory reset</RowTitle>
+            <RowDesc>
+              Erase every title, watch history and setting, and empty the media
+              folder. Your own folders are not touched.
+            </RowDesc>
+          </div>
+          <ResetButton
+            label="Reset…"
+            variant="danger"
+            size="sm"
+            onClick={() => setResetOpen(true)}
+          />
+        </Row>
       </StorageCard>
+      <ResetDialog open={resetOpen} onClose={() => setResetOpen(false)} />
     </>
   );
 }

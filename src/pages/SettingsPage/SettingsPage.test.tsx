@@ -170,8 +170,9 @@ describe('SettingsPage', () => {
     // 23 — Enrichment, Phase 1 (issue #203): the Network card adds one, Test
     // connection; and Phase 3 (issue #206) one more, Sync metadata & posters.
     // 30 — Library folders (issue #268): the Library group adds one, Library
-    // folders.
-    expect(screen.getAllByRole('button')).toHaveLength(9);
+    // folders. 37 — Factory reset (issue #299): the Storage card adds one,
+    // Reset….
+    expect(screen.getAllByRole('button')).toHaveLength(10);
   });
 
   it('composes the Storage section under the Playback section', () => {
@@ -289,14 +290,14 @@ describe('SettingsPage', () => {
     expect(screen.queryByRole('button', { name: /update/i })).toBeNull();
     // Back, two "Add a title"s, Import, Export — and the Preferred language
     // pill once the settings land, and the Codecs row; Network adds Test connection and Sync
-    // metadata & posters; Storage and About add none; Library folders (issue
-    // #268) adds one.
+    // metadata & posters; About adds none; Library folders (issue #268) adds
+    // one; and Storage adds Reset… (issue #299).
     await waitFor(() =>
       expect(
         screen.getByRole('button', { name: /^Preferred language: / })
       ).toBeDefined()
     );
-    expect(screen.getAllByRole('button')).toHaveLength(10);
+    expect(screen.getAllByRole('button')).toHaveLength(11);
     // Six Group headings, and only six — Display joined in log 27.
     const groupHeadings = [
       'Library',

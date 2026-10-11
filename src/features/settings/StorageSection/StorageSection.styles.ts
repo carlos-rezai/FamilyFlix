@@ -2,7 +2,7 @@ import styled from 'styled-components';
 
 import { Button } from '@/primitives';
 
-import { Card } from '../section.styles';
+import { Card, Divider } from '../section.styles';
 
 /**
  * The Storage card stacks its two lines — the folder, then the space line —
@@ -71,4 +71,18 @@ export const Bytes = styled.span`
 /** The faint dot between the bytes and the titles. */
 export const Dot = styled.span`
   color: ${({ theme }) => theme.colors.textFaint};
+`;
+
+/**
+ * The divider over the Factory reset row: the shared `Divider` at 4px, so
+ * with the card's 18px gap either side it sits 22px off each line, as every
+ * other divider does.
+ */
+export const ResetDivider = styled(Divider)`
+  margin: 4px 0;
+`;
+
+/** _Reset…_ holds its width beside the row's line, as _Open folder_ does. */
+export const ResetButton = styled(Button)`
+  flex: 0 0 auto;
 `;
