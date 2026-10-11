@@ -100,8 +100,12 @@ const FELL_BACK: PlaybackComponentInfo = {
 /**
  * A **Component slot** holding an upload, the remove falling back to the
  * **Default component** — or refusing with `outcome`, the pair staying live.
+ * `routes.settings.test`'s ✕ double under its name, with a count of the
+ * removes; each suite keeps its own over its own fake component.
  */
-function uploadedSlot(outcome: RemoveOutcome = { ok: true }) {
+function removableSlot({
+  outcome = { ok: true },
+}: { outcome?: RemoveOutcome } = {}) {
   let info: PlaybackComponentInfo | null = UPLOADED;
   const component = fakeComponent();
   let removes = 0;
@@ -147,7 +151,7 @@ async function filledApi({
   const { root, sheet } = libraryFixture(dir);
 
   const mediaDomain = seam(createMedia(media));
-  const { slot, removes } = uploadedSlot(removal);
+  const { slot, removes } = removableSlot({ outcome: removal });
   const playback = createPlayback(media, slot);
   const importer = createImporter({ storage, media: mediaDomain, playback });
   const tmdb = fakeTmdb();
