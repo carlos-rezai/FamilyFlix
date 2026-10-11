@@ -130,6 +130,28 @@ export async function createSeries(
  * refused edit is the one that most needs the form left standing, because the
  * correction in it is the only copy there is.
  */
+/**
+ * The **Series edit job**'s save, `PATCH /api/series/:id`: the add's body, a
+ * held row naming its episode and a held file travelling as its path.
+ */
+export async function updateSeries(
+  id: string,
+  values: MovieFormValues,
+  episodes: readonly EpisodeFormRow[]
+): Promise<Series> {
+  const endpoint = `${SERIES_ENDPOINT}/${encodeURIComponent(id)}`;
+  const response = await fetch(endpoint, {
+    method: 'PATCH',
+    body: seriesFormData(values, episodes),
+  });
+
+  if (!response.ok) {
+    throw new Error(`PATCH ${endpoint} failed: ${response.status}`);
+  }
+
+  return (await response.json()) as Series;
+}
+
 export function updateMovie(
   id: string,
   values: MovieFormValues

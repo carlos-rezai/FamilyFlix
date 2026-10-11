@@ -3,10 +3,11 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import { dismissProblem } from '@/api/dismissProblem/dismissProblem';
 import { fetchMovie } from '@/api/fetchMovie/fetchMovie';
+import { fetchSeriesDetail } from '@/api/fetchSeriesDetail/fetchSeriesDetail';
 import { useQueryParamWriter } from '@/features/search/useQueryParamWriter/useQueryParamWriter';
 import { useGoBack } from '@/hooks/useGoBack/useGoBack';
 import type { EpisodeFormRow, FormKind, MovieFormValues } from '@/types';
-import { moviePath } from '@/utils';
+import { moviePath, seriesPath } from '@/utils';
 import { titleFromFilename } from '../titleFromFilename/titleFromFilename';
 import { useEpisodeList } from '../useEpisodeList/useEpisodeList';
 import {
@@ -16,13 +17,16 @@ import {
   ProblemGoneError,
   resolveProblem,
   updateMovie,
+  updateSeries,
 } from '../api/api';
 import {
   movieFormValues,
   otherCandidates,
   pickedFile,
   pickedSubtitle,
+  heldEpisodeRows,
   problemFormValues,
+  seriesFormValues,
 } from '../formValues/formValues';
 
 /**
@@ -72,6 +76,13 @@ const MOVIE_PARAM = 'movie';
 const PROBLEM_PARAM = 'problem';
 
 /**
+ * The query parameter that says which series this screen is amending — the
+ * **Series edit job**, `/add?series=<id>`, the series ⋯ menu's _Edit
+ * details_. The fifth job; `?problem=` and `?movie=` win over it.
+ */
+const SERIES_PARAM = 'series';
+
+/**
  * The **Landing** of the one screen in the app with three ways in: the
  * **Review step** when `?problem=` is present, the movie's page when `?movie=`
  * is, Settings otherwise.
@@ -87,13 +98,21 @@ const PROBLEM_PARAM = 'problem';
  * **Import context** over the **Edit job** — and the review is where that
  * maintainer was.
  */
-function formLanding(movie: string | null, problem: string | null): string {
+function formLanding(
+  movie: string | null,
+  problem: string | null,
+  series: string | null
+): string {
   if (problem !== null) {
     return REVIEW_LANDING;
   }
   if (movie !== null) {
     // The page a correction is visible on — the **Edit context**'s **Landing**.
     return moviePath(movie);
+  }
+  if (series !== null) {
+    // The series page, the **Series edit job**'s **Landing**.
+    return seriesPath(series);
   }
   return ADD_LANDING;
 }
@@ -367,11 +386,14 @@ export function useMovieForm(): UseMovieFormResult {
   const [values, setValues] = useState<MovieFormValues>(EMPTY);
   const [saving, setSaving] = useState(false);
   const episodeList = useEpisodeList();
-  const { episodes, episodesComplete } = episodeList;
+  const { episodes, episodesComplete, holdEpisodes } = episodeList;
   const addFiles = episodeList.addEpisodeFiles;
 
   /** The movie this screen is amending, once its record has been read back. */
   const [editing, setEditing] = useState<string | null>(null);
+
+  /** The series this screen is amending, once its detail has been read. */
+  const [editingSeries, setEditingSeries] = useState<string | null>(null);
 
   /** The problem this screen is resolving, once its detail has been read. */
   const [resolving, setResolving] = useState<
@@ -380,12 +402,21 @@ export function useMovieForm(): UseMovieFormResult {
 
   const requested = searchParams.get(MOVIE_PARAM);
   const problem = searchParams.get(PROBLEM_PARAM);
+  // The **Series edit job** stands alone: beside `?problem=` or `?movie=` it
+  // is ignored, as `?kind=` is.
+  const seriesRequested =
+    requested === null && problem === null
+      ? searchParams.get(SERIES_PARAM)
+      : null;
 
   // The kind is the URL's, on a plain add alone: beside a context there is
-  // nothing to switch, and `?kind=` is ignored.
-  const showKindTabs = requested === null && problem === null;
+  // nothing to switch, and `?kind=` is ignored. A series edit is the series
+  // kind, with no tabs to switch it.
+  const showKindTabs =
+    requested === null && problem === null && seriesRequested === null;
   const kind: FormKind =
-    showKindTabs && searchParams.get(KIND_PARAM) === 'series'
+    seriesRequested !== null ||
+    (showKindTabs && searchParams.get(KIND_PARAM) === 'series')
       ? 'series'
       : 'movie';
   const setParam = useQueryParamWriter();
@@ -397,7 +428,7 @@ export function useMovieForm(): UseMovieFormResult {
   // The app's one **Back rule**, with this screen's own **Landing** behind it
   // for the deep-linked case. Built from the URL on the first render, before
   // either read above has answered — see {@link formLanding}.
-  const goBack = useGoBack(formLanding(requested, problem));
+  const goBack = useGoBack(formLanding(requested, problem, seriesRequested));
 
   // Read once per id, the way `useGenrePool` reads once per mount: the record
   // is what fills the fields, and asking again would overwrite whatever the
@@ -429,6 +460,33 @@ export function useMovieForm(): UseMovieFormResult {
       current = false;
     };
   }, [requested]);
+
+  // The **Series edit job**, read the same way: the series fills the shared
+  // fields and the poster, and its episodes the rows, once. A series that is
+  // gone leaves the series add standing.
+  useEffect(() => {
+    if (seriesRequested === null) {
+      setEditingSeries(null);
+      return;
+    }
+
+    let current = true;
+
+    fetchSeriesDetail(seriesRequested)
+      .then((detail) => {
+        if (!current || detail === null) {
+          return;
+        }
+        setValues(seriesFormValues(detail));
+        holdEpisodes(heldEpisodeRows(detail));
+        setEditingSeries(detail.series.id);
+      })
+      .catch(() => undefined);
+
+    return () => {
+      current = false;
+    };
+  }, [seriesRequested, holdEpisodes]);
 
   // The **Import context**, read the same way: the detail is what fills the
   // fields and the slots, once. A problem that is gone — `null`, the `404` —
@@ -633,7 +691,13 @@ export function useMovieForm(): UseMovieFormResult {
     // which is the honest picture.
     const written =
       kind === 'series'
-        ? createSeries(values, episodes).then(() => navigate(SERIES_FRESH_HOME))
+        ? editingSeries !== null
+          ? // The series page is the entry the edit was opened from, so a
+            // step lands there; the deep link reaches it through the Landing.
+            updateSeries(editingSeries, values, episodes).then(() => goBack())
+          : createSeries(values, episodes).then(() =>
+              navigate(SERIES_FRESH_HOME)
+            )
         : resolving !== null
           ? editing === null
             ? resolveProblem(resolving.id, values).then(() => goBack())
@@ -664,7 +728,17 @@ export function useMovieForm(): UseMovieFormResult {
         setValues(EMPTY);
       }
     });
-  }, [canSave, kind, values, episodes, navigate, goBack, editing, resolving]);
+  }, [
+    canSave,
+    kind,
+    values,
+    episodes,
+    navigate,
+    goBack,
+    editing,
+    editingSeries,
+    resolving,
+  ]);
 
   // _Skip this one_ is the review row's own Skip, from the form: dismiss, then
   // the step back onto the review. A dismiss that failed still lands there —
@@ -710,7 +784,7 @@ export function useMovieForm(): UseMovieFormResult {
     removeEpisodeSubtitle: episodeList.removeEpisodeSubtitle,
     canSave,
     saving,
-    editing: editing !== null,
+    editing: editing !== null || editingSeries !== null,
     resolving:
       resolving === null
         ? null

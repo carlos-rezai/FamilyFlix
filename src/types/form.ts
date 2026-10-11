@@ -130,6 +130,8 @@ export interface MovieFormSubtitle {
  */
 export interface EpisodeFormRow {
   key: string;
+  /** The held episode's id, on the **Series edit job**'s rows; none for a pick. */
+  id?: string;
   file: MovieFormFile;
   /** Digits only, at most two. */
   season: string;

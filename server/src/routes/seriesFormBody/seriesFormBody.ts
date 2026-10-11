@@ -14,22 +14,30 @@ import {
 } from '../optionalRating/optionalRating';
 import { optionalText } from '../optionalText/optionalText';
 import type { OnFilePart } from '../readBody/readBody';
+import type { NewSubtitle } from '@/types';
 
 /**
  * One `episode` field of a series body, read: its numbers, its title, and the
- * languages its `episodeSubtitle` parts are paired with by order.
+ * languages its `episodeSubtitle` parts are paired with by order. An edit's
+ * field may also carry the held episode's `id`, its held video as
+ * `videoPath` (when no `episodeVideo` part follows) and its held tracks as
+ * `storedSubtitles`.
  */
 export interface EpisodeField {
+  id?: string;
   season: number;
   number: number;
   title?: string;
   subtitleLanguages: string[];
+  videoPath?: string;
+  storedSubtitles?: NewSubtitle[];
 }
 
 /**
  * One episode's bytes, as they landed: the k-th entry belongs to the k-th
- * `episode` field. Each slot is taken when its part arrives and filled when
- * its bytes land, so two writes in flight cannot swap places.
+ * `episode` field, and is absent for a field no part followed. Each slot is
+ * taken when its part arrives and filled when its bytes land, so two writes
+ * in flight cannot swap places.
  */
 export interface EpisodeUpload {
   video?: string;
@@ -41,7 +49,7 @@ export interface EpisodeUploads {
   /** The **Series folder** this request wrote into, or `null`. */
   folder: string | null;
   poster?: string;
-  episodes: EpisodeUpload[];
+  episodes: (EpisodeUpload | undefined)[];
   /**
    * The first part this route would not take — a file `fileKinds` refuses, a
    * stray part, or a part out of the contract's order — as its sentence. The
@@ -61,10 +69,15 @@ export function readEpisodeField(text: string): EpisodeField | null {
   if (typeof value !== 'object' || value === null) {
     return null;
   }
-  const { season, number, title, subtitleLanguages } = value as Record<
-    string,
-    unknown
-  >;
+  const {
+    id,
+    season,
+    number,
+    title,
+    subtitleLanguages,
+    videoPath,
+    storedSubtitles,
+  } = value as Record<string, unknown>;
   const counting = (n: unknown): n is number =>
     typeof n === 'number' && Number.isInteger(n) && n >= 1;
   if (!counting(season) || !counting(number)) {
@@ -80,28 +93,64 @@ export function readEpisodeField(text: string): EpisodeField | null {
   ) {
     return null;
   }
+  if (id !== undefined && (typeof id !== 'string' || id === '')) {
+    return null;
+  }
+  if (
+    videoPath !== undefined &&
+    (typeof videoPath !== 'string' || videoPath === '')
+  ) {
+    return null;
+  }
+  const held = storedSubtitles ?? [];
+  if (!Array.isArray(held) || !held.every(isStoredTrack)) {
+    return null;
+  }
   return {
+    ...(id === undefined ? {} : { id }),
     season,
     number,
     ...(typeof title === 'string' && title.trim() !== ''
       ? { title: title.trim() }
       : {}),
     subtitleLanguages: languages as string[],
+    ...(videoPath === undefined ? {} : { videoPath }),
+    ...(storedSubtitles === undefined
+      ? {}
+      : {
+          storedSubtitles: held.map(({ path, language }) => ({
+            path,
+            language,
+          })),
+        }),
   };
 }
 
+/** A held track as an edit sends it: `{ path, language }`, both strings. */
+function isStoredTrack(track: unknown): track is NewSubtitle {
+  if (typeof track !== 'object' || track === null) {
+    return false;
+  }
+  const { path, language } = track as Record<string, unknown>;
+  return (
+    typeof path === 'string' && path !== '' && typeof language === 'string'
+  );
+}
+
 /**
- * The file half of a series body. The k-th `episodeVideo` belongs to the k-th
- * `episode` field, so a video arriving when the count of episode fields is not
- * one past the videos already seen is out of order; each `episodeSubtitle`
- * pairs with the latest episode's `subtitleLanguages`, and one beyond them is
- * stray. A refused part is drained and remembered, never thrown over.
+ * The file half of a series body. Each `episodeVideo` and `episodeSubtitle`
+ * belongs to the latest `episode` field before it, so a video before any
+ * episode, or a second video after one, is out of order; each subtitle pairs
+ * with that episode's `subtitleLanguages`, and one beyond them is stray. A
+ * refused part is drained and remembered, never thrown over.
  */
 export function collectEpisodeUploads(
   media: Media,
   resolveFolder: ResolveFolder
 ): { onFile: OnFilePart; uploads: EpisodeUploads } {
   const uploads: EpisodeUploads = { folder: null, episodes: [] };
+  /** The episode fields a video part has already arrived for. */
+  const videoArrived = new Set<number>();
 
   const onFile: OnFilePart = async (name, filename, part, before) => {
     const refuse = (sentence: string): void => {
@@ -127,17 +176,18 @@ export function collectEpisodeUploads(
         refuse(`Not a video file: ${JSON.stringify(filename)}`);
         return;
       }
-      if (episodeFields.length !== uploads.episodes.length + 1) {
+      const index = episodeFields.length - 1;
+      if (index < 0 || videoArrived.has(index)) {
         refuse('Each episode must be followed by its video');
         return;
       }
-      const field = readEpisodeField(episodeFields[episodeFields.length - 1]);
+      const field = readEpisodeField(episodeFields[index]);
       if (field === null) {
         refuse('Invalid episode field');
         return;
       }
-      const upload: EpisodeUpload = { subtitles: [] };
-      uploads.episodes.push(upload);
+      videoArrived.add(index);
+      const upload = (uploads.episodes[index] ??= { subtitles: [] });
       target = {
         season: field.season,
         slot: (path) => {
@@ -149,11 +199,12 @@ export function collectEpisodeUploads(
         refuse(`Not a subtitle file: ${JSON.stringify(filename)}`);
         return;
       }
-      const upload = uploads.episodes.at(-1);
-      const field =
-        upload === undefined || episodeFields.length !== uploads.episodes.length
-          ? null
-          : readEpisodeField(episodeFields[episodeFields.length - 1]);
+      const latest = episodeFields.length - 1;
+      const field = latest < 0 ? null : readEpisodeField(episodeFields[latest]);
+      const upload =
+        field === null
+          ? undefined
+          : (uploads.episodes[latest] ??= { subtitles: [] });
       if (
         upload === undefined ||
         field === null ||
@@ -199,8 +250,19 @@ export interface LandedEpisode extends EpisodeField {
   subtitles: string[];
 }
 
-/** The fields of a series body, coerced into the shapes `addSeries` takes. */
-export interface SeriesFormValues {
+/**
+ * One episode of an edit, read whole: its video — the part that landed, else
+ * the held path — whether that video is fresh bytes, and its tracks, the held
+ * ones first and then each picked one with its language.
+ */
+export interface EditedEpisode extends EpisodeField {
+  video: string;
+  freshVideo: boolean;
+  tracks: NewSubtitle[];
+}
+
+/** The series' own fields, coerced into the shapes the storage takes. */
+export interface SeriesFields {
   title: string;
   year?: number;
   endYear?: number;
@@ -209,11 +271,20 @@ export interface SeriesFormValues {
   rating?: number;
   cast: string[];
   genres: string[];
+}
+
+/** The fields of a series body, coerced into the shapes `addSeries` takes. */
+export interface SeriesFormValues extends SeriesFields {
   episodes: LandedEpisode[];
 }
 
 export type SeriesFormRead =
   | ({ ok: true } & SeriesFormValues)
+  | ({ ok: false } & Refusal);
+
+/** The fields of a series edit's body, its episodes held or new. */
+export type SeriesEditRead =
+  | ({ ok: true } & SeriesFields & { episodes: EditedEpisode[] })
   | ({ ok: false } & Refusal);
 
 /**
@@ -227,7 +298,75 @@ export function readSeriesFields(
   uploads: EpisodeUploads,
   pool: ReadonlySet<string>
 ): SeriesFormRead {
-  const refuse = (error: string): SeriesFormRead => ({
+  return readSeriesBody(fields, uploads, pool, (episode, upload, tag) => {
+    if (upload?.video === undefined) {
+      return `Episode ${tag} has no video`;
+    }
+    const subtitles = landedTracks(upload);
+    if (subtitles.length !== episode.subtitleLanguages.length) {
+      return `Episode ${tag} is missing a subtitle`;
+    }
+    return { ...episode, video: upload.video, subtitles };
+  });
+}
+
+/**
+ * {@link readSeriesFields} for the **Series edit job**: an episode's video is
+ * the part that landed or, without one, the held `videoPath` it names; its
+ * tracks are its held ones and then those picked. Whether each `id` is the
+ * series' own is the route's to ask — it holds the library.
+ */
+export function readSeriesEditFields(
+  fields: Record<string, string[]>,
+  uploads: EpisodeUploads,
+  pool: ReadonlySet<string>
+): SeriesEditRead {
+  return readSeriesBody(fields, uploads, pool, (episode, upload, tag) => {
+    const video = upload?.video ?? episode.videoPath;
+    if (video === undefined) {
+      return `Episode ${tag} has no video`;
+    }
+    const picked = upload === undefined ? [] : landedTracks(upload);
+    if (picked.length !== episode.subtitleLanguages.length) {
+      return `Episode ${tag} is missing a subtitle`;
+    }
+    return {
+      ...episode,
+      video,
+      freshVideo: upload?.video !== undefined,
+      tracks: [
+        ...(episode.storedSubtitles ?? []),
+        ...picked.map((path, track) => ({
+          path,
+          language: episode.subtitleLanguages[track],
+        })),
+      ],
+    };
+  });
+}
+
+/** The tracks of an upload whose bytes have landed, in order. */
+const landedTracks = (upload: EpisodeUpload): string[] =>
+  upload.subtitles.filter((path): path is string => path !== undefined);
+
+/**
+ * The one reading behind both: the title, the episode fields, a pair or an id
+ * twice, a refused part, each episode as `land` reads it (a string is its
+ * refusal), the rating, the genres — in that load-bearing order.
+ */
+function readSeriesBody<Episode>(
+  fields: Record<string, string[]>,
+  uploads: EpisodeUploads,
+  pool: ReadonlySet<string>,
+  land: (
+    episode: EpisodeField,
+    upload: EpisodeUpload | undefined,
+    tag: string
+  ) => Episode | string
+):
+  | ({ ok: true } & SeriesFields & { episodes: Episode[] })
+  | ({ ok: false } & Refusal) {
+  const refuse = (error: string): { ok: false } & Refusal => ({
     ok: false,
     status: 400,
     error,
@@ -259,24 +398,27 @@ export function readSeriesFields(
     seen.add(tag);
   }
 
+  const ids = new Set<string>();
+  for (const { id } of episodes) {
+    if (id === undefined) continue;
+    if (ids.has(id)) {
+      return refuse(`Episode sent twice: ${id}`);
+    }
+    ids.add(id);
+  }
+
   if (uploads.refused !== undefined) {
     return refuse(uploads.refused);
   }
 
-  const landed: LandedEpisode[] = [];
+  const landed: Episode[] = [];
   for (const [index, episode] of episodes.entries()) {
     const tag = spellEpisodeTag(episode.season, episode.number);
-    const upload = uploads.episodes[index];
-    if (upload?.video === undefined) {
-      return refuse(`Episode ${tag} has no video`);
+    const read = land(episode, uploads.episodes[index], tag);
+    if (typeof read === 'string') {
+      return refuse(read);
     }
-    const subtitles = upload.subtitles.filter(
-      (path): path is string => path !== undefined
-    );
-    if (subtitles.length !== episode.subtitleLanguages.length) {
-      return refuse(`Episode ${tag} is missing a subtitle`);
-    }
-    landed.push({ ...episode, video: upload.video, subtitles });
+    landed.push(read);
   }
 
   const postedRating = onlyField(fields, 'rating');

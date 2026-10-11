@@ -12,6 +12,11 @@ export interface EpisodeList {
    * its untagged ones, each the next free number in season 1.
    */
   addEpisodeFiles: (files: readonly File[]) => void;
+  /**
+   * Put a held series' rows in place of the list — the **Series edit job**'s
+   * opening, each row under its episode's id with **Stored file** slots.
+   */
+  holdEpisodes: (rows: readonly EpisodeFormRow[]) => void;
   setSeason: (key: string, season: string) => void;
   setNumber: (key: string, number: string) => void;
   setEpisodeTitle: (key: string, title: string) => void;
@@ -109,6 +114,10 @@ export function useEpisodeList(): EpisodeList {
     });
   }, []);
 
+  const holdEpisodes = useCallback((rows: readonly EpisodeFormRow[]) => {
+    setEpisodes([...rows]);
+  }, []);
+
   const edit = useCallback(
     (key: string, change: Partial<EpisodeFormRow>) =>
       setEpisodes((current) =>
@@ -201,6 +210,7 @@ export function useEpisodeList(): EpisodeList {
   return {
     episodes,
     addEpisodeFiles,
+    holdEpisodes,
     setSeason,
     setNumber,
     setEpisodeTitle,

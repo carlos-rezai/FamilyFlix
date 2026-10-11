@@ -5,6 +5,7 @@ import type {
   MovieFormFile,
   MovieFormSubtitle,
   MovieFormValues,
+  SeriesDetail,
 } from '@/types';
 import { toRatingPercent, toRatingUnits } from '@/utils';
 
@@ -145,6 +146,66 @@ export function movieFormValues(movie: Movie): MovieFormValues {
         language: track.language,
       })),
   };
+}
+
+/**
+ * A held **Series**, read into the fields the **Series edit job** opens on —
+ * {@link movieFormValues} over the series: the **Year range** spelled as the
+ * field takes it, the creator in the credit's field, the poster as the
+ * **Stored file** it is. A series holds no video of its own, and its tracks are
+ * its episodes', so both stay empty here.
+ */
+export function seriesFormValues({ series }: SeriesDetail): MovieFormValues {
+  return {
+    title: series.title,
+    year:
+      series.year === null
+        ? ''
+        : series.endYear === null
+          ? String(series.year)
+          : `${series.year}–${series.endYear}`,
+    director: series.creator ?? '',
+    description: series.synopsis ?? '',
+    cast: castText(series.cast),
+    genres: series.genres.map((genre) => genre.name),
+    rating: toRatingPercent(series.rating),
+    video: null,
+    poster: storedFile(series.posterPath),
+    subtitles: [],
+  };
+}
+
+/**
+ * A held series' episodes as **Episode file rows**, in season then episode
+ * order: each under its episode's id, its video and tracks as **Stored files**.
+ */
+export function heldEpisodeRows({ seasons }: SeriesDetail): EpisodeFormRow[] {
+  return seasons
+    .flatMap((season) => season.episodes)
+    .sort((a, b) => a.season - b.season || a.number - b.number)
+    .map((episode) => ({
+      key: `${STORED_KEY}${episode.id}`,
+      id: episode.id,
+      file: {
+        kind: 'stored' as const,
+        path: episode.videoPath,
+        filename: filenameOf(episode.videoPath),
+      },
+      season: String(episode.season),
+      number: String(episode.number),
+      title: episode.title ?? '',
+      subtitles: [...episode.subtitles]
+        .sort((a, b) => a.position - b.position)
+        .map((track) => ({
+          key: `${STORED_KEY}${track.id}`,
+          file: {
+            kind: 'stored' as const,
+            path: track.path,
+            filename: filenameOf(track.path),
+          },
+          language: track.language,
+        })),
+    }));
 }
 
 /**
@@ -333,15 +394,33 @@ export function seriesFormData(
 
   if (values.poster?.kind === 'picked') {
     body.append('poster', values.poster.file);
+  } else if (values.poster?.kind === 'stored') {
+    // A held poster travels as the path it has, never as bytes.
+    body.append('posterPath', values.poster.path);
   }
 
   for (const row of episodes) {
     const subtitles = row.subtitles.filter(
       (subtitle) => subtitle.file.kind === 'picked'
     );
+    // A held row — the **Series edit job**'s — names its episode, and its
+    // held files travel as the **Stored paths** they have.
+    const held =
+      row.id === undefined
+        ? {}
+        : {
+            id: row.id,
+            ...(row.file.kind === 'stored' ? { videoPath: row.file.path } : {}),
+            storedSubtitles: row.subtitles.flatMap((subtitle) =>
+              subtitle.file.kind === 'stored'
+                ? [{ path: subtitle.file.path, language: subtitle.language }]
+                : []
+            ),
+          };
     body.append(
       'episode',
       JSON.stringify({
+        ...held,
         season: Number(row.season),
         number: Number(row.number),
         title: row.title,

@@ -4,12 +4,15 @@ export interface MovieFormQuery {
   movie?: string;
   /** Import context: the **Problem** being resolved. */
   problem?: string;
+  /** The **Series edit job**: the series being amended. */
+  series?: string;
 }
 
 /**
  * The **Movie form**, as a route — `/add`, `/add?movie=<id>`,
- * `/add?problem=<id>`, or both, the movie first. Two features name it: the
- * ⋯ menu's _Edit details_ and the **Review step**'s _Resolve_.
+ * `/add?problem=<id>`, or both, the movie first; or `/add?series=<id>`, the
+ * **Series edit job**. Three features name it: the two ⋯ menus' _Edit
+ * details_ and the **Review step**'s _Resolve_.
  *
  * The ids travel through `URLSearchParams`, as the library and genre queries
  * already do, so an id reads back whole whatever it holds — a raw `&` would
@@ -17,10 +20,15 @@ export interface MovieFormQuery {
  *
  * Pure, so the same ids always yield the same route.
  */
-export function movieFormPath({ movie, problem }: MovieFormQuery): string {
+export function movieFormPath({
+  movie,
+  problem,
+  series,
+}: MovieFormQuery): string {
   const params = new URLSearchParams();
   if (movie !== undefined) params.set('movie', movie);
   if (problem !== undefined) params.set('problem', problem);
+  if (series !== undefined) params.set('series', series);
   const query = params.toString();
   return query === '' ? '/add' : `/add?${query}`;
 }

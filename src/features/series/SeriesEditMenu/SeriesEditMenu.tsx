@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 
 import { MenuItem } from '@/components';
 import { MoreIcon } from '@/primitives';
-import { enrichPath } from '@/utils';
+import { enrichPath, movieFormPath } from '@/utils';
 import { DeleteSeriesDialog } from '../DeleteSeriesDialog/DeleteSeriesDialog';
 import { CornerMenu, MoreButton } from './SeriesEditMenu.styles';
 
@@ -21,7 +21,8 @@ const MORE_SIZE = 44;
 
 /**
  * The series page's ⋯ menu, `EditMenu`'s twin in the hero's corner. It holds
- * _⟳ Fetch from TMDB_, pushing `/enrich?series=<id>` — the single-title
+ * _✎ Edit details_, pushing `/add?series=<id>` — the **Series edit job** —
+ * then _⟳ Fetch from TMDB_, pushing `/enrich?series=<id>` — the single-title
  * **Sync** — then the **Danger row**, _🗑 Delete series_, which opens the
  * Delete dialog:
  * this menu owns the row, so it owns the dialog's open state. Opening, closing
@@ -44,6 +45,12 @@ export function SeriesEditMenu({
           </MoreButton>
         )}
       >
+        <MenuItem
+          glyph="✎"
+          onSelect={() => navigate(movieFormPath({ series: seriesId }))}
+        >
+          Edit details
+        </MenuItem>
         <MenuItem
           glyph="⟳"
           onSelect={() => navigate(enrichPath({ series: seriesId }))}

@@ -1,5 +1,5 @@
 import { homedir } from 'node:os';
-import { resolve } from 'node:path';
+import { dirname, resolve } from 'node:path';
 import { pipeline } from 'node:stream';
 
 import type {
@@ -9,7 +9,7 @@ import type {
 } from '../enrichment/createEnrichment/createEnrichment';
 import express, { type Request, type Response, type Router } from 'express';
 
-import type { LibraryStorage } from '../library';
+import type { LibraryStorage, SeriesUpdate } from '../library';
 import { clashSentence } from '../library/folders/folderOverlap/folderOverlap';
 import { yearSpan } from '../library/series/yearSpan/yearSpan';
 import {
@@ -52,6 +52,7 @@ import { optionalYear } from './optionalYear/optionalYear';
 import { readBody, type OnFilePart } from './readBody/readBody';
 import {
   collectEpisodeUploads,
+  readSeriesEditFields,
   readSeriesFields,
 } from './seriesFormBody/seriesFormBody';
 import {
@@ -823,6 +824,154 @@ export function createApiRouter(
     }
   });
 
+  // The **Series edit job**'s save: the add's body, each `episode` field
+  // carrying an optional `id` — a held episode, its files as the **Stored
+  // paths** they have or a picked replacement — and none for a new one; a held
+  // id the body leaves out is removed. Fresh bytes land in the series' own
+  // **Series folder**, so a retitle moves nothing. Every refusal takes back
+  // the files this request wrote and nothing beside them; the files no row
+  // points at once the edit has committed go after it, best-effort.
+  router.patch(
+    '/series/:id',
+    async (req: Request<{ id: string }>, res: Response) => {
+      const existing = storage.getSeriesDetail(req.params.id)?.series ?? null;
+      if (existing === null) {
+        req.resume();
+        res.status(404).json({ error: `Unknown series: ${req.params.id}` });
+        return;
+      }
+      const held = storage.listEpisodes(existing.id);
+
+      // The folder is the series', never the title's: the one above a held
+      // episode's season folder, else the poster's, else one reserved.
+      let reserved: string | null = null;
+      const seriesFolder = (before: Record<string, string[]>): string => {
+        for (const episode of held) {
+          const season = media.openFolder(episode.videoPath);
+          if (season !== null && episode.videoPath.split('/').length >= 3) {
+            return dirname(season);
+          }
+        }
+        const poster =
+          existing.posterPath === null
+            ? null
+            : media.openFolder(existing.posterPath);
+        if (poster !== null) {
+          return poster;
+        }
+        reserved = media.reserveFolder(
+          onlyField(before, 'title')?.trim() ?? existing.title,
+          yearSpan(onlyField(before, 'year')?.trim() ?? '')?.year ??
+            existing.year
+        );
+        return reserved;
+      };
+      const { onFile, uploads } = collectEpisodeUploads(media, seriesFolder);
+
+      /** Take back the bytes this request wrote — and nothing beside them. */
+      const rollback = (): void => {
+        if (reserved !== null) {
+          media.removeFolder(reserved);
+          return;
+        }
+        const written = [
+          uploads.poster,
+          ...uploads.episodes.flatMap((upload) =>
+            upload === undefined ? [] : [upload.video, ...upload.subtitles]
+          ),
+        ];
+        for (const path of written) {
+          if (path !== undefined) {
+            media.removeFile(path);
+          }
+        }
+      };
+
+      let fields: Record<string, string[]>;
+      try {
+        fields = await readBody(req, onFile);
+      } catch {
+        rollback();
+        res.status(400).json({ error: 'Body must be multipart/form-data' });
+        return;
+      }
+
+      const read = readSeriesEditFields(
+        fields,
+        uploads,
+        new Set(storage.listGenrePool().map((genre) => genre.name))
+      );
+      if (!read.ok) {
+        rollback();
+        res.status(read.status).json({ error: read.error });
+        return;
+      }
+      const heldIds = new Set(held.map((episode) => episode.id));
+      const stranger = read.episodes.find(
+        (episode) => episode.id !== undefined && !heldIds.has(episode.id)
+      );
+      if (stranger !== undefined) {
+        rollback();
+        res.status(400).json({
+          error: `Not an episode of this series: ${stranger.id ?? ''}`,
+        });
+        return;
+      }
+
+      const { title, year, endYear, creator, synopsis, rating, cast, genres } =
+        read;
+      let outcome: SeriesUpdate | null;
+      try {
+        outcome = storage.updateSeries(existing.id, {
+          title,
+          year: year ?? null,
+          endYear: endYear ?? null,
+          creator: creator ?? null,
+          synopsis: synopsis ?? null,
+          rating: rating ?? null,
+          cast,
+          genres,
+          posterPath: uploads.poster ?? onlyField(fields, 'posterPath') ?? null,
+          // The **Match unlink**: a new title or year is another show to
+          // TMDB, so the match goes — and the fields it filled stay.
+          ...(title !== existing.title || (year ?? null) !== existing.year
+            ? { tmdbId: null }
+            : {}),
+          episodes: read.episodes.map((episode) => {
+            const runtimeMinutes = episode.freshVideo
+              ? derivedRuntime(playback, episode.video)
+              : undefined;
+            return {
+              ...(episode.id === undefined ? {} : { id: episode.id }),
+              season: episode.season,
+              number: episode.number,
+              title: episode.title ?? null,
+              videoPath: episode.video,
+              ...(runtimeMinutes === undefined ? {} : { runtimeMinutes }),
+              subtitles: episode.tracks,
+            };
+          }),
+        });
+      } catch {
+        rollback();
+        res.status(500).json({ error: 'Could not save the series' });
+        return;
+      }
+      if (outcome === null) {
+        rollback();
+        res.status(404).json({ error: `Unknown series: ${req.params.id}` });
+        return;
+      }
+
+      res.json(outcome.series);
+
+      // Only a commit authorises the unlink: what no row points at any more.
+      for (const path of outcome.removedPaths) {
+        media.removeFile(path);
+      }
+    }
+  );
+
   // The series' heart, a **Single-signal write** on the movie favorite's
   // precedent: exactly a boolean or 400, a series the library does not hold a
   // JSON 404 — a movie's id among them — and the echo of what was stored.
@@ -1223,6 +1372,11 @@ export function createApiRouter(
         saved = storage.updateMovie(existing.id, {
           title,
           year: year ?? null,
+          // The **Match unlink**: a new title or year is a different film to
+          // TMDB, so the match goes — and the fields it filled stay.
+          ...(title !== existing.title || (year ?? null) !== existing.year
+            ? { tmdbId: null }
+            : {}),
           // The one column on this record derived rather than typed, and so
           // the one that has to be worked out again when — and only when — the
           // film itself was replaced. A row that kept the old film's length

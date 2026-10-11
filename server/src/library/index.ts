@@ -42,12 +42,22 @@ import {
 } from './series/enrich/enrich';
 import { createSeriesReader } from './series/read/read';
 import { createSeriesBrowse } from './series/browse/browse';
-import { createSeriesWrite, type SeriesDeletion } from './series/write/write';
+import {
+  createSeriesWrite,
+  type SeriesDeletion,
+  type SeriesEdit,
+  type SeriesUpdate,
+} from './series/write/write';
 import { createSeriesCuration } from './series/curation/curation';
 import { createSeriesWatch } from './series/watch/watch';
 
 export type { MovieEnrichment, TitleSource } from './enrich/enrich';
 export type { StoredLibraryFolder } from './folders/folders';
+export type {
+  EpisodeEdit,
+  SeriesEdit,
+  SeriesUpdate,
+} from './series/write/write';
 export type {
   EpisodeEnrichment,
   SeriesEnrichment,
@@ -286,6 +296,13 @@ export interface LibraryStorage {
    */
   deleteSeries(id: string): SeriesDeletion;
   /**
+   * The **Series edit job**'s save in one transaction — the fields, the
+   * **Two-pass renumber**, the inserts and the removals — answering the series
+   * and the **Stored paths** left unreferenced, or `null` for a series not
+   * held. An unknown or repeated id, or a pair of numbers twice, throws.
+   */
+  updateSeries(id: string, edit: SeriesEdit): SeriesUpdate | null;
+  /**
    * The series' Favorites toggle — `setFavorite` over the series table.
    * Answers whether the library holds that series; a movie's id is not one.
    */
@@ -400,6 +417,7 @@ export function createSqliteStorage(dbPath: string): LibraryStorage {
     addSeries: seriesWrite.addSeries,
     addEpisode: seriesWrite.addEpisode,
     deleteSeries: seriesWrite.deleteSeries,
+    updateSeries: seriesWrite.updateSeries,
     setSeriesFavorite: seriesCuration.setSeriesFavorite,
     getEpisodeRead: seriesReader.getEpisodeRead,
     getSeriesHome: seriesBrowse.getSeriesHome,
