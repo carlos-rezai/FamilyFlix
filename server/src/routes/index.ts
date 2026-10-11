@@ -247,6 +247,24 @@ function movieOr404(
 }
 
 /**
+ * {@link movieOr404} for a **Series**: the series, or `null` having already
+ * sent the JSON 404 carrying `Unknown series: <id>`. A movie's id is not a
+ * series. Local to this file on {@link movieOr404}'s recorded argument.
+ */
+function seriesOr404(
+  storage: LibraryStorage,
+  id: string,
+  res: Response
+): Series | null {
+  const series = storage.getSeries(id);
+  if (!series) {
+    res.status(404).json({ error: `Unknown series: ${id}` });
+    return null;
+  }
+  return series;
+}
+
+/**
  * {@link movieOr404} for an **Episode**: the player's read of it, or `null`
  * having already sent the JSON 404 carrying `Unknown episode: <id>`. A movie's
  * id is not an episode. The sentence is written here once, so every episode
@@ -835,10 +853,10 @@ export function createApiRouter(
   router.patch(
     '/series/:id',
     async (req: Request<{ id: string }>, res: Response) => {
-      const existing = storage.getSeries(req.params.id);
-      if (existing === null) {
+      const existing = seriesOr404(storage, req.params.id, res);
+      if (!existing) {
+        // The body is still arriving, as on the movie's PATCH: drained.
         req.resume();
-        res.status(404).json({ error: `Unknown series: ${req.params.id}` });
         return;
       }
       const held = storage.listEpisodes(existing.id);
