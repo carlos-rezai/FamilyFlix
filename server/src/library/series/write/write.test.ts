@@ -385,20 +385,6 @@ describe('series write: deleteSeries', () => {
     expect(storage.getSeriesDetail(series.id)).toBeNull();
   });
 
-  it('answers that a row went, and an episode’s stored path to clean up', () => {
-    const storage = freshStorage();
-    const series = addHarbor(storage);
-
-    const outcome = storage.deleteSeries(series.id);
-
-    expect(outcome.deleted).toBe(true);
-    // Any episode's path names the Series folder two directories up.
-    expect([
-      'harbor-2019/season-01/S01E01.mp4',
-      'harbor-2019/season-01/S01E02.mp4',
-    ]).toContain(outcome.storedPath);
-  });
-
   it('leaves another series and its episodes alone', () => {
     const storage = freshStorage();
     const gone = addHarbor(storage, 'Harbor');
@@ -411,13 +397,15 @@ describe('series write: deleteSeries', () => {
     expect(storage.getSeriesHome().series.map((s) => s.id)).toEqual([kept.id]);
   });
 
-  it('answers not-found for a series the library does not hold, changing nothing', () => {
+  it('is a silent no-op for an unknown id (idempotent)', () => {
     const storage = freshStorage();
     const kept = addHarbor(storage);
 
-    expect(
+    expect(() =>
       storage.deleteSeries('00000000-0000-4000-8000-000000000000')
-    ).toEqual({ deleted: false, storedPath: null });
+    ).not.toThrow();
+
+    // The real series is untouched.
     expect(storage.listEpisodes(kept.id)).toHaveLength(2);
   });
 });

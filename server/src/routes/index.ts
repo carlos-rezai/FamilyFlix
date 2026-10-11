@@ -731,20 +731,24 @@ export function createApiRouter(
   });
 
   // The series' **Delete dialog** confirm — the movie delete's shape. `204`
-  // with nothing in it, `404` for a series not held. **Row first, then bytes,
+  // with nothing in it; the lookup and the JSON 404 are `seriesOr404`'s. Any
+  // episode's **Stored path** names the Series folder, read before the row
+  // goes, as the movie's `videoPath` is. **Row first, then bytes,
   // best-effort**: the cascade takes the episodes, genres and subtitles, then
   // `removeSeriesFolder` takes the Series folder and swallows its own failure.
   // No `409` guard, the movie delete's precedent.
   router.delete(
     '/series/:id',
     (req: Request<{ id: string }>, res: Response) => {
-      const { deleted, storedPath } = storage.deleteSeries(req.params.id);
-      if (!deleted) {
-        res.status(404).json({ error: `Unknown series: ${req.params.id}` });
+      const series = seriesOr404(storage, req.params.id, res);
+      if (!series) {
         return;
       }
-      if (storedPath !== null) {
-        media.removeSeriesFolder(storedPath);
+
+      const [episode] = storage.listEpisodes(series.id);
+      storage.deleteSeries(series.id);
+      if (episode !== undefined) {
+        media.removeSeriesFolder(episode.videoPath);
       }
       res.status(204).end();
     }

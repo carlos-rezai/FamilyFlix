@@ -44,7 +44,6 @@ import { createSeriesReader } from './series/read/read';
 import { createSeriesBrowse } from './series/browse/browse';
 import {
   createSeriesWrite,
-  type SeriesDeletion,
   type SeriesEdit,
   type SeriesUpdate,
 } from './series/write/write';
@@ -296,10 +295,10 @@ export interface LibraryStorage {
   addEpisode(seriesId: string, input: NewEpisode): Episode;
   /**
    * Delete a **Series**; the cascade takes its episodes, genres and subtitle
-   * tracks. Answers whether a row went, and an episode's **Stored path** that
-   * names the Series folder to clean up (`null` when there is none).
+   * tracks. A silent, idempotent no-op for an unknown id, {@link deleteMovie}'s
+   * shape.
    */
-  deleteSeries(id: string): SeriesDeletion;
+  deleteSeries(id: string): void;
   /**
    * The **Series edit job**'s save in one transaction — the fields, the
    * **Two-pass renumber**, the inserts and the removals — answering the series
