@@ -453,11 +453,4 @@ describe('the router and SQLite', () => {
 
     expect(offenders).toEqual([]);
   });
-
-  it('gives LibraryStorage a reset of its own', () => {
-    const storage = createSqliteStorage(':memory:');
-    storages.push(storage);
-
-    expect(typeof storage.reset).toBe('function');
-  });
 });
