@@ -11,6 +11,98 @@ Newest entry first.
 
 ---
 
+## 2026-10-11 — Title editing — the seven slices (issues #303–#310)
+
+**Title editing** as log 38 Q20 ordered it: the prototype revision by hand,
+then seven slices under `issue-loop`, one RED and one GREEN each. **8137 tests
+pass across 486 files**, measured at `4d8e0d9`, up from 7844 across 473 at the
+end of the Factory reset surface's refactor. `tsc -b --force`, ESLint and
+Prettier are clean.
+
+### What shipped
+
+- **#303, the prototype revisions** (`36547df`), drawn by hand and closed to
+  keep the loop moving. The maintainer's review of it is still owed.
+- **#304, delete a series** — RED `5b0d195`, GREEN `2e48ce0`: `deleteSeries`
+  in the series write unit, `Media.removeSeriesFolder`,
+  `DELETE /api/series/:id` (`204`/`404`), and `SeriesEditMenu`,
+  `DeleteSeriesDialog` and `useDeleteSeries` on the series page.
+- **#305, fetch a series from TMDB** — RED `8fe2496`, GREEN `0e029c4`: a
+  single-title Sync for a series — `seriesId` on `StartEnrichment` and
+  `EnrichmentRun`, `enrichPath({ series })`, the hook's re-attach rule, _Just
+  this series_ and _Back to the series_, and the series ⋯ menu's _⟳ Fetch from
+  TMDB_.
+- **#306, series in the review, and the Title fix** — RED `479d9d8`, GREEN
+  `472a159`: series Decisions (`ambiguous` and `missing`, over `searchTv`),
+  series Field conflicts with _Apply choices_, the Title fix on a pick for
+  both kinds, and the `TitleSearch` caption.
+- **#307, edit a series, and the Match unlink** — RED `18a1e0e`, GREEN
+  `3e7b75c`: `PATCH /api/series/:id` with the Two-pass renumber, the Match
+  unlink on both PATCH routes, the Series edit job at `/add?series=<id>`, and
+  the ⋯ menu's _Edit details_.
+- **#308, the Source file** — RED `613251f`, GREEN `6d89e97`: migration 8
+  (`episodes.source_file`), `Episode.sourceFile` on the wire, both imports
+  recording it relative to the Show folder, a re-scan skipping a held Source
+  file before its tag, a Series edit keeping it for a kept video.
+- **#309, the Episode word** — RED `48ea06e`, GREEN `e6cd3a1`: `episodeTag`
+  and `readEpisodeTag` read `Episode 12`, `Ep 12` and `E12` under a known
+  season; `groupShows` reads it but never groups on it.
+- **#310, the Series Resolve and the Found-file choice** — RED `349715b`,
+  GREEN `4d8e0d9`: one `unplaced` Problem per show, its _Resolve_ the Movie
+  form's series kind in import context under the Numbering guess, and the
+  film's choice between found videos.
+
+### The loop, measured
+
+| Issue | RED  | GREEN |
+| ----- | ---- | ----- |
+| #304  | 177k | 138k  |
+| #305  | 170k | 132k  |
+| #306  | 162k | 179k  |
+| #307  | 198k | 202k  |
+| #308  | 175k | 131k  |
+| #309  | 114k | 101k  |
+| #310  | 227k | 227k  |
+
+Every step was over the loop's 100k budget, most by 30–125%. `prd-to-issues`
+cut these slices too thick. The two heaviest, #307 and #310, each carried a
+route and a Movie form job together, and would have been two slices each.
+
+### Calls the build made that the PRD didn't
+
+- **`ImportProblem.seriesId`.** The PRD says the row gains no field. A
+  _Resolve_ on a show already held has to add `&series=<id>`, and nothing
+  else reaches `ProblemRow`, so the row carries it, as it carries `movieId`.
+- **`files.videos` left optional** on `ImportProblemDetail`, so the older
+  fixtures compiled without an edit. The PRD types it `string[]`.
+- **A series' Field conflict held whole.** A film writes its gaps during the
+  run and asks only about the conflicts; a series with a conflict writes
+  nothing until its row settles, and _Skip_ or _Keep all mine_ leave its
+  gaps empty. A test forced it.
+- **A join keeps the held poster.** A Series Resolve onto a show already in
+  the library ignores the poster the form sends.
+- **The series kind waits for the problem.** A Series Resolve opens on the
+  film kind and switches once the problem read back is `unplaced`.
+- **The picker label.** The Found-file choice's picker reads _Choose video
+  file_, the slot's own label; the prototype revision reads _Choose another
+  video file_.
+- **`fetchSeriesDetail` promoted to `src/api/`**: the series pages and the
+  Movie form's Series edit job both read it.
+
+### Gaps no test covers
+
+- **A series with no episodes** strands its folder on delete: the Series
+  folder is found through an episode's Stored path. No path in the app makes
+  one.
+- **A replacement named like the stored file** overwrites it, and a refused
+  edit then removes it. The movie edit already behaves this way.
+
+### Follow-ups
+
+The refactor plan, filed as 311.
+
+---
+
 ## 2026-10-11 — Factory reset — the surface's refactor (issue 301)
 
 Nine commits against `docs/refactor-plans/37-factory-reset-surface-refactor.md`,
