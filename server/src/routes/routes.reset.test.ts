@@ -55,6 +55,7 @@ import type {
 const IMPORT_RUNNING =
   'An import is running. Stop it before erasing everything.';
 const SYNC_RUNNING = 'A sync is running. Stop it before erasing everything.';
+const ERASE_FAILED = 'Could not erase the library';
 
 // --- per-test resource tracking ------------------------------------------------
 
@@ -383,6 +384,21 @@ describe('POST /api/reset — a running Sync', () => {
       held.release();
       await syncReviewed(api.baseUrl);
     }
+  });
+});
+
+describe('POST /api/reset — a database that refuses', () => {
+  it('answers 500 with the sentence, the media root and the component untouched', async () => {
+    const api = await filledApi();
+    vi.spyOn(api.storage, 'reset').mockImplementation(() => {
+      throw new Error('SQLITE_BUSY');
+    });
+
+    const response = await postReset(api.baseUrl);
+
+    expect(response.status).toBe(500);
+    expect(await response.json()).toEqual({ error: ERASE_FAILED });
+    await expectNothingErased(api);
   });
 });
 

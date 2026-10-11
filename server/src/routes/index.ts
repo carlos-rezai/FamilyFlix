@@ -551,7 +551,7 @@ const RESET_REFUSALS: Record<
   },
   failed: {
     status: 500,
-    error: 'Could not erase the library. Nothing was changed.',
+    error: 'Could not erase the library',
   },
 };
 
