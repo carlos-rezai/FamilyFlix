@@ -31,6 +31,13 @@ describe('startEnrichmentBody: what it reads', () => {
     expect(startEnrichmentBody(body)).toEqual({ ok: true, value: body });
   });
 
+  // 38 — Title editing (issue #305): a single-title Sync may name a series.
+  it('reads a single-title Sync with its series', () => {
+    const body = { ...LIBRARY, scope: 'single', seriesId: 's1' };
+
+    expect(startEnrichmentBody(body)).toEqual({ ok: true, value: body });
+  });
+
   it('reads Only what’s missing with no chip on', () => {
     expect(
       startEnrichmentBody({ ...LIBRARY, scope: 'missing', fields: [] })
@@ -62,17 +69,32 @@ describe('startEnrichmentBody: each refusal keeps its sentence', () => {
     [
       'a single Sync with no movie',
       { ...LIBRARY, scope: 'single' },
-      'A single-title Sync names its movie',
+      'A single-title Sync names its movie or series',
     ],
     [
       'a single Sync with an empty movie id',
       { ...LIBRARY, scope: 'single', movieId: '' },
-      'A single-title Sync names its movie',
+      'A single-title Sync names its movie or series',
     ],
     [
       'a library Sync naming a movie',
       { ...LIBRARY, movieId: 'm1' },
       'Only a single-title Sync names a movie',
+    ],
+    [
+      'a single Sync with an empty series id',
+      { ...LIBRARY, scope: 'single', seriesId: '' },
+      'A single-title Sync names its movie or series',
+    ],
+    [
+      'a single Sync naming both a movie and a series',
+      { ...LIBRARY, scope: 'single', movieId: 'm1', seriesId: 's1' },
+      'A single-title Sync names one title',
+    ],
+    [
+      'a library Sync naming a series',
+      { ...LIBRARY, seriesId: 's1' },
+      'Only a single-title Sync names a series',
     ],
     [
       'fields that are not a list',
@@ -101,7 +123,10 @@ describe('startEnrichmentBody: each refusal keeps its sentence', () => {
   it('answers the first refusal for a body wrong in two ways', () => {
     expect(
       startEnrichmentBody({ scope: 'single', fields: ['trailer'] })
-    ).toEqual({ ok: false, error: 'A single-title Sync names its movie' });
+    ).toEqual({
+      ok: false,
+      error: 'A single-title Sync names its movie or series',
+    });
   });
 });
 

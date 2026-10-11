@@ -607,3 +607,80 @@ describe('createEnrichment: an episode’s watch state is the household’s', ()
     expect(resumed.title).toBe('Undertow');
   });
 });
+
+// 38 — Title editing (issue #305): a single-title Sync for a series. A
+// `single` start may name a `seriesId` in place of a `movieId`: the run is
+// over that one series, alone, and carries its `seriesId` so the series'
+// screen can tell its own run from another's. A series the library does not
+// hold is `no-title` — the film's `no-movie` reading, generalised.
+describe('createEnrichment: a single-title Sync for a series', () => {
+  function startSeries(enrichment: Enrichment, seriesId: string) {
+    return enrichment.start({
+      scope: 'single',
+      seriesId,
+      fields: ALL_FIELDS,
+      writeSheet: false,
+      writePosters: false,
+    });
+  }
+
+  it('starts a run over the one series, its total one, a film beside it left alone', async () => {
+    const { storage, enrichment, client, addShow } = world();
+    const seriesId = await addShow();
+    storage.addMovie({
+      title: 'Some Film Beside It',
+      year: 2001,
+      videoPath: 'some-film-beside-it-2001/film.mp4',
+    });
+
+    const outcome = await startSeries(enrichment, seriesId);
+
+    expect(outcome.kind).toBe('started');
+    if (outcome.kind !== 'started') return;
+    expect(outcome.run.scope).toBe('single');
+    expect(outcome.run.total).toBe(1);
+    const run = await reviewed(enrichment);
+    expect(run.done).toBe(1);
+    expect(run.enriched).toBe(1);
+    expect(client.searchMovie).not.toHaveBeenCalled();
+    expect(detailOf(storage, seriesId).series.synopsis).toBe(
+      SHOW_DETAIL.overview
+    );
+  });
+
+  it('carries the seriesId, and no movieId, in the snapshot and every read', async () => {
+    const { enrichment, addShow } = world();
+    const seriesId = await addShow();
+
+    const outcome = await startSeries(enrichment, seriesId);
+
+    expect(outcome.kind === 'started' && outcome.run.seriesId).toBe(seriesId);
+    expect(enrichment.current()?.seriesId).toBe(seriesId);
+    const run = await reviewed(enrichment);
+    expect(run.seriesId).toBe(seriesId);
+    expect(run.movieId).toBeUndefined();
+  });
+
+  it('answers no-title for a series the library does not hold, starting nothing', async () => {
+    const { enrichment } = world();
+
+    const outcome = await startSeries(enrichment, 'no-such-series');
+
+    expect(outcome.kind).toBe('no-title');
+    expect(enrichment.current()).toBeNull();
+  });
+
+  it('answers no-title for a film the library does not hold, too', async () => {
+    const { enrichment } = world();
+
+    const outcome = await enrichment.start({
+      scope: 'single',
+      movieId: 'no-such-movie',
+      fields: ALL_FIELDS,
+      writeSheet: false,
+      writePosters: false,
+    });
+
+    expect(outcome.kind).toBe('no-title');
+  });
+});

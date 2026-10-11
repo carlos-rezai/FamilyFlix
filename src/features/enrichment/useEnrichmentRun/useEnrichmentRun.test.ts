@@ -563,3 +563,165 @@ describe('useEnrichmentRun — the Waiting run let go', () => {
     expect(result.current.waiting).toBeNull();
   });
 });
+
+/**
+ * 38 — Title editing (issue #305): a series' own Sync. Opened for a series —
+ * `useEnrichmentRun(null, seriesId)` — the hook holds only a `single` run
+ * whose `seriesId` matches. A film's run, another series' run or a library
+ * run is not held: in review it is the **Waiting run**, running it is ignored,
+ * and a `409` over it rejects with `EnrichmentBusyError` — the film's rules,
+ * read for a series.
+ */
+const SHOW = 'series-3';
+
+const SINGLE_SERIES: StartEnrichment = {
+  scope: 'single',
+  seriesId: SHOW,
+  fields: ['synopsis'],
+  writeSheet: false,
+  writePosters: false,
+};
+
+const SHOW_RUNNING = makeEnrichmentRun({
+  id: 'show',
+  scope: 'single',
+  seriesId: SHOW,
+  total: 1,
+});
+const SHOW_REVIEW = makeEnrichmentRun({
+  id: 'show',
+  phase: 'review',
+  scope: 'single',
+  seriesId: SHOW,
+  total: 1,
+  done: 1,
+  decisions: [MISSING],
+});
+const OTHER_SHOW_REVIEW = makeEnrichmentRun({
+  id: 'other-show',
+  phase: 'review',
+  scope: 'single',
+  seriesId: 'series-9',
+  total: 1,
+  done: 1,
+  decisions: [MISSING],
+});
+const OTHER_SHOW_RUNNING = makeEnrichmentRun({
+  id: 'other-show',
+  scope: 'single',
+  seriesId: 'series-9',
+  total: 1,
+});
+/** A film's run whose `movieId` happens to spell the series' id. */
+const FILM_NAMED_LIKE_THE_SHOW = makeEnrichmentRun({
+  id: 'film',
+  phase: 'review',
+  scope: 'single',
+  movieId: SHOW,
+  total: 1,
+  done: 1,
+  decisions: [MISSING],
+});
+
+/** The hook mounted for the series, its first read settled. */
+async function mountedForSeries(seriesId: string = SHOW) {
+  const hook = renderHook(() => useEnrichmentRun(null, seriesId));
+  await elapse(0);
+  return hook;
+}
+
+describe('useEnrichmentRun — on mount, opened for a series', () => {
+  it.each([
+    ['running', SHOW_RUNNING],
+    ['in review', SHOW_REVIEW],
+  ] as const)('holds that series’ own run %s', async (_name, held) => {
+    serve({ held });
+    const { result } = await mountedForSeries();
+
+    expect(result.current.run).toEqual(held);
+    expect(result.current.waiting).toBeNull();
+  });
+
+  it.each([
+    ['another series’', OTHER_SHOW_REVIEW],
+    ['a film’s', OTHER_FILM_REVIEW],
+    ['a film’s, its id the same string,', FILM_NAMED_LIKE_THE_SHOW],
+    ['a library', LIBRARY_REVIEW],
+  ] as const)(
+    'makes %s run in review the Waiting run, holding none',
+    async (_name, held) => {
+      serve({ held });
+      const { result } = await mountedForSeries();
+
+      expect(result.current.run).toBeNull();
+      expect(result.current.waiting).toEqual(held);
+    }
+  );
+
+  it.each([
+    ['another series’', OTHER_SHOW_RUNNING],
+    ['a film’s', OTHER_FILM_RUNNING],
+    ['a library', LIBRARY_RUNNING],
+  ] as const)(
+    'ignores %s run that is running: no run, no Waiting run, no polling',
+    async (_name, held) => {
+      serve({ held });
+      const { result } = await mountedForSeries();
+
+      await elapse(1500);
+
+      expect(result.current.run).toBeNull();
+      expect(result.current.waiting).toBeNull();
+      expect(reads()).toBe(1);
+    }
+  );
+
+  it('a film’s screen does not hold a series’ run', async () => {
+    serve({ held: SHOW_REVIEW });
+    const { result } = await mounted(FILM);
+
+    expect(result.current.run).toBeNull();
+    expect(result.current.waiting).toEqual(SHOW_REVIEW);
+  });
+});
+
+describe('useEnrichmentRun — Start, opened for a series', () => {
+  it('lets the Waiting run go, the series’ run held', async () => {
+    serve({ held: LIBRARY_REVIEW, started: createdResponse(SHOW_RUNNING) });
+    const { result } = await mountedForSeries();
+
+    await act(() => result.current.start(SINGLE_SERIES));
+
+    expect(result.current.run).toEqual(SHOW_RUNNING);
+    expect(result.current.waiting).toBeNull();
+  });
+
+  it('holds the series’ own running run on a 409', async () => {
+    serve();
+    const { result } = await mountedForSeries();
+    serve({ held: SHOW_RUNNING, started: conflictResponse() });
+
+    await act(() => result.current.start(SINGLE_SERIES));
+
+    expect(result.current.run).toEqual(SHOW_RUNNING);
+  });
+
+  it.each([
+    ['another series’', OTHER_SHOW_RUNNING],
+    ['a film’s', OTHER_FILM_RUNNING],
+    ['a library', LIBRARY_RUNNING],
+  ] as const)(
+    'rejects with EnrichmentBusyError over %s running run, holding none',
+    async (_name, held) => {
+      serve();
+      const { result } = await mountedForSeries();
+      serve({ held, started: conflictResponse() });
+
+      await expect(
+        act(() => result.current.start(SINGLE_SERIES))
+      ).rejects.toThrow(EnrichmentBusyError);
+
+      expect(result.current.run).toBeNull();
+    }
+  );
+});

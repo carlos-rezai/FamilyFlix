@@ -5,6 +5,12 @@ import { MemoryRouter } from 'react-router-dom';
 
 import { SeriesEditMenu } from './SeriesEditMenu';
 import { theme } from '@/styles/theme';
+import { comesBefore } from '@/test-support/comesBefore/comesBefore';
+import {
+  LocationProbe,
+  pathname,
+  search,
+} from '@/test-support/LocationProbe/LocationProbe';
 
 /**
  * 38 — Title editing, Slice 1: "delete a series" (issue #304).
@@ -42,6 +48,7 @@ function renderMenu(seriesId = 'harbor', title = 'Harbor & Vine', count = 22) {
           title={title}
           episodeCount={count}
         />
+        <LocationProbe />
       </MemoryRouter>
     </ThemeProvider>
   );
@@ -61,15 +68,17 @@ describe('SeriesEditMenu — the menu', () => {
     expect(screen.queryByRole('menuitem')).toBeNull();
   });
 
-  it('holds the Danger row alone, Delete series in the danger ink', () => {
+  it('holds Fetch from TMDB, then the Danger row, Delete series in the danger ink', () => {
     renderMenu();
 
     openMenu();
 
     const items = screen.getAllByRole('menuitem');
     expect(
-      items.map((item) => item.textContent?.replace('🗑', '').trim())
-    ).toEqual(['Delete series']);
+      items.map((item) =>
+        item.textContent?.replace('🗑', '').replace('⟳', '').trim()
+      )
+    ).toEqual(['Fetch from TMDB', 'Delete series']);
     const remove = screen.getByRole('menuitem', { name: 'Delete series' });
     expect(remove.textContent).toContain('🗑');
     expect(getComputedStyle(remove).color).toBe('rgb(201, 122, 106)');
@@ -161,5 +170,56 @@ describe('SeriesEditMenu — the Delete dialog', () => {
     expect(
       screen.getByRole('dialog', { name: 'Delete “Harbor & Vine”?' })
     ).toBeTruthy();
+  });
+});
+
+/**
+ * 38 — Title editing, Slice 2: "fetch a series from TMDB" (issue #305).
+ *
+ * The menu's second item, _⟳ Fetch from TMDB_, above the **Danger row** as on
+ * the movie page, pushing `/enrich?series=<id>` — a single-title **Sync** over
+ * this series alone, which returns to it.
+ */
+describe('SeriesEditMenu — Fetch from TMDB', () => {
+  const selectFetch = () =>
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Fetch from TMDB' }));
+
+  it('draws Fetch from TMDB before the Danger row, out of the danger ink', () => {
+    renderMenu();
+
+    openMenu();
+
+    const fetchFromTmdb = screen.getByRole('menuitem', {
+      name: 'Fetch from TMDB',
+    });
+    const remove = screen.getByRole('menuitem', { name: 'Delete series' });
+    expect(comesBefore(fetchFromTmdb, remove)).toBe(true);
+    expect(fetchFromTmdb.textContent).toContain('⟳');
+    expect(getComputedStyle(fetchFromTmdb).color).not.toBe(
+      'rgb(201, 122, 106)'
+    );
+  });
+
+  it('opens the Sync for this series alone', () => {
+    renderMenu('harbor');
+
+    openMenu();
+    selectFetch();
+
+    expect(pathname()).toBe('/enrich');
+    expect(search()).toBe('?series=harbor');
+    expect(dialog()).toBeNull();
+  });
+
+  it('encodes the series’ id into the query, so it reads back whole', () => {
+    renderMenu('s 2/y&scope=all');
+
+    openMenu();
+    selectFetch();
+
+    const query = new URLSearchParams(search() ?? '');
+    expect(pathname()).toBe('/enrich');
+    expect(query.get('series')).toBe('s 2/y&scope=all');
+    expect(query.has('scope')).toBe(false);
   });
 });

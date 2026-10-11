@@ -351,7 +351,7 @@ describe('POST /api/enrichment — a body it refuses', () => {
     const response = await startSync(baseUrl, 'no-such-id');
 
     expect(response.status).toBe(400);
-    expect(await response.json()).toEqual({ error: 'No such movie' });
+    expect(await response.json()).toEqual({ error: 'No such title' });
     expect((await fetch(`${baseUrl}/api/enrichment/current`)).status).toBe(404);
   });
 });
@@ -442,5 +442,59 @@ describe('POST /api/enrichment/current/cancel', () => {
     const again = await startLibrarySync(baseUrl, 'all');
 
     expect(again.status).toBe(201);
+  });
+});
+
+// 38 — Title editing (issue #305): a single-title Sync for a series.
+// `POST /api/enrichment` takes `seriesId` beside `movieId`: a held series
+// answers `201` with a run carrying its `seriesId`; a series the library does
+// not hold is `400`, and a body naming both ids is `400` too — each starting
+// nothing.
+describe('POST /api/enrichment — a single-title Sync for a series', () => {
+  const post = (baseUrl: string, body: Record<string, unknown>) =>
+    fetch(`${baseUrl}/api/enrichment`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        scope: 'single',
+        fields: ALL_FIELDS,
+        writeSheet: false,
+        writePosters: false,
+        ...body,
+      }),
+    });
+
+  it('answers 201 with a run over the one series, carrying its seriesId', async () => {
+    const { baseUrl, storage } = await freshApi();
+    const seriesId = storage.addSeries({ title: 'The Hollow Coast' }).id;
+
+    const response = await post(baseUrl, { seriesId });
+
+    expect(response.status).toBe(201);
+    const run = (await response.json()) as EnrichmentRun;
+    expect(run.scope).toBe('single');
+    expect(run.total).toBe(1);
+    expect(run.seriesId).toBe(seriesId);
+    expect(run.movieId).toBeUndefined();
+  });
+
+  it('answers 400 for a series the library does not hold, starting nothing', async () => {
+    const { baseUrl } = await freshApi();
+
+    const response = await post(baseUrl, { seriesId: 'no-such-series' });
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: 'No such title' });
+    expect((await fetch(`${baseUrl}/api/enrichment/current`)).status).toBe(404);
+  });
+
+  it('answers 400 for a body naming both a movie and a series, starting nothing', async () => {
+    const { baseUrl, movieId, storage } = await freshApi();
+    const seriesId = storage.addSeries({ title: 'The Hollow Coast' }).id;
+
+    const response = await post(baseUrl, { movieId, seriesId });
+
+    expect(response.status).toBe(400);
+    expect((await fetch(`${baseUrl}/api/enrichment/current`)).status).toBe(404);
   });
 });

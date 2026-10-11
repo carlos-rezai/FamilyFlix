@@ -22,4 +22,18 @@ describe('enrichPath', () => {
     expect(path).toBe('/enrich?movie=a%26b+%23c');
     expect(new URLSearchParams(path.split('?')[1]).get('movie')).toBe('a&b #c');
   });
+
+  // 38 — Title editing (issue #305): _Just this series_.
+  it('names the one series of a single-title Sync', () => {
+    expect(enrichPath({ series: 's1' })).toBe('/enrich?series=s1');
+  });
+
+  it('encodes a series id so it reads back whole', () => {
+    const path = enrichPath({ series: 'a&b #c' });
+
+    expect(path).toBe('/enrich?series=a%26b+%23c');
+    expect(new URLSearchParams(path.split('?')[1]).get('series')).toBe(
+      'a&b #c'
+    );
+  });
 });

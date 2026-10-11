@@ -287,3 +287,44 @@ describe('letGoLine', () => {
     expect(letGoLine(null)).toBeNull();
   });
 });
+
+/**
+ * 38 — Title editing (issue #305): the Let-go line worded for another title's
+ * sync — a film's reads _movie's_, a series' reads _series'_.
+ */
+describe('letGoLine — another title’s sync', () => {
+  const DECISION: Decision = {
+    id: 'd1',
+    kind: 'missing',
+    title: 'Sundial',
+    reason: 'Nothing on TMDB matched this title.',
+    path: null,
+    query: 'Sundial',
+  };
+
+  it('names another series’ sync for a single series run with Decisions', () => {
+    const waiting = makeEnrichmentRun({
+      phase: 'review',
+      scope: 'single',
+      seriesId: 's9',
+      decisions: [DECISION],
+    });
+
+    expect(letGoLine(waiting)).toBe(
+      "Starting lets go of another series' sync waiting for review."
+    );
+  });
+
+  it('still names another movie’s sync for a single film run', () => {
+    const waiting = makeEnrichmentRun({
+      phase: 'review',
+      scope: 'single',
+      movieId: 'm9',
+      decisions: [DECISION],
+    });
+
+    expect(letGoLine(waiting)).toBe(
+      "Starting lets go of another movie's sync waiting for review."
+    );
+  });
+});
