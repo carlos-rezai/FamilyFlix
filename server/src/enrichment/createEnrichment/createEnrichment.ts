@@ -200,7 +200,6 @@ type ShowWritten =
       kind: 'written';
       conflicts: FieldConflict[];
       fetched: FetchedTvFields;
-      detail: TmdbTvDetail;
     }
   | { kind: 'stop'; stop: Stop };
 
@@ -232,8 +231,6 @@ export function createEnrichment({
   let runFields: readonly EnrichField[] = [];
   /** Each `conflict` Decision → what TMDB answered, for _Apply choices_. */
   const disputed = new Map<string, FetchedFields>();
-  /** Each series' `conflict` Decision → TMDB's show, its write held for review. */
-  const heldShows = new Map<string, TmdbTvDetail>();
 
   function key(): string | null {
     return storage.tmdbKey();
@@ -519,11 +516,10 @@ export function createEnrichment({
   /**
    * Plan and write one Confident series at show level: its columns, creator,
    * year range, id and images. Answers the **Field conflicts** the plan left
-   * for the review under the run's own scope, and what TMDB said.
+   * for the review under the run's own scope, and what TMDB said — `write`'s
+   * shape, so a series with a conflict has its gaps written as a film's are.
    *
-   * `settled` is what the review adds: `null` in the run, where a show with a
-   * conflict is held whole for its row — written by _Apply choices_, nothing
-   * by _Skip_ — and the review's own columns once a pick or an apply settles it.
+   * `settled` is what a pick adds: the **Title fix**, written with the rest.
    */
   async function writeSeries(
     current: EnrichmentRun,
@@ -541,7 +537,6 @@ export function createEnrichment({
       fields,
       scope: current.scope,
     });
-    if (settled === null && conflicts.length > 0) return { conflicts, fetched };
 
     const enrichment: SeriesEnrichment = {
       ...seriesEnrichment(detail.id, fill, series, fetched, fields),
@@ -649,7 +644,6 @@ export function createEnrichment({
       kind: 'written',
       conflicts,
       fetched,
-      detail,
     };
 
     const seasons = [...new Set(episodes.map((each) => each.season))].filter(
@@ -784,14 +778,13 @@ export function createEnrichment({
           decided.set(outcome.decision.id, { kind: 'series', id: series.id });
           log(current, `⚠ ${series.title} — ${outcome.reason}`, 'warning');
         } else if (outcome.conflicts.length > 0) {
-          const decisionId = raiseConflict(
+          raiseConflict(
             current,
             { kind: 'series', id: series.id },
             series,
             outcome.conflicts,
             outcome.fetched
           );
-          heldShows.set(decisionId, outcome.detail);
         } else {
           current.enriched += 1;
           log(current, `✓ Matched   ${named(series)}`, 'success');
@@ -923,7 +916,6 @@ export function createEnrichment({
     run = current;
     decided.clear();
     disputed.clear();
-    heldShows.clear();
     runFields = options.fields;
     const controller = new AbortController();
     abort = controller;
@@ -959,7 +951,6 @@ export function createEnrichment({
     run = null;
     decided.clear();
     disputed.clear();
-    heldShows.clear();
   }
 
   /** The Current run's Decision `id` and the title it is about, or `null`. */
@@ -996,7 +987,6 @@ export function createEnrichment({
     current.decisions = current.decisions.filter((each) => each.id !== id);
     decided.delete(id);
     disputed.delete(id);
-    heldShows.delete(id);
   }
 
   async function search(id: string, query: string): Promise<SearchOutcome> {
@@ -1107,21 +1097,12 @@ export function createEnrichment({
       return { kind: 'not-found' };
     }
     const { current, decision, title } = found;
-    const show = heldShows.get(id);
-    if (title.kind === 'series' && show !== undefined) {
-      // The show's write waited for this row: TMDB's gaps and the choices.
-      const signal = abort?.signal ?? new AbortController().signal;
-      await writeSeries(
-        current,
-        title.series,
-        storage.listEpisodes(title.series.id),
-        show,
-        runFields,
-        signal,
+    if (title.kind === 'series') {
+      storage.enrichSeries(
+        title.series.id,
         chosenSeriesEnrichment(decision.fields, choices, fetched)
       );
-      if (run !== current || !decided.has(id)) return { kind: 'not-found' };
-    } else if (title.kind === 'movie') {
+    } else {
       storage.enrichMovie(
         title.movie.id,
         chosenEnrichment(decision.fields, choices, fetched)

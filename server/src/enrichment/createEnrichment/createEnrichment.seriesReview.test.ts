@@ -325,6 +325,25 @@ describe('createEnrichment: series Field conflicts', () => {
     expect(seriesOf(storage, seriesId).synopsis).toBe(OURS);
   });
 
+  it('leave the empty fields written during the run, as a film’s do', async () => {
+    const { enrichment, storage, addShow } = world();
+    const seriesId = await addShow('The Hollow Coast', {
+      year: 2018,
+      tmdbId: 71001,
+      synopsis: OURS,
+    });
+
+    const run = await sync(enrichment, 'all');
+
+    decisionFor(run, 'The Hollow Coast');
+    const series = seriesOf(storage, seriesId);
+    expect(series.creator).toBe('Creator of 71001');
+    expect(series.cast).toEqual(['Lead of 71001']);
+    expect(series.posterPath).toMatch(/poster\.jpg$/);
+    expect(series.backdropPath).toMatch(/backdrop\.jpg$/);
+    expect(series.synopsis).toBe(OURS);
+  });
+
   it('are never raised by an Only what’s missing Sync', async () => {
     const { enrichment, storage, addShow } = world();
     const seriesId = await addShow('The Hollow Coast', {
@@ -373,14 +392,29 @@ describe('createEnrichment: series Field conflicts', () => {
 });
 
 describe('createEnrichment: Skip on every series row', () => {
+  it('takes the conflict row off, the gaps TMDB filled kept and ours as it was', async () => {
+    const { enrichment, storage, addShow } = world();
+    const seriesId = await addShow('The Hollow Coast', {
+      year: 2018,
+      tmdbId: 71001,
+      synopsis: OURS,
+    });
+    const decision = decisionFor(await sync(enrichment), 'The Hollow Coast');
+    expect(decision.kind).toBe('conflict');
+    const before = seriesOf(storage, seriesId);
+
+    expect(enrichment.dismiss(decision.id)).toBe(true);
+
+    expect(seriesOf(storage, seriesId)).toEqual(before);
+    expect(before.synopsis).toBe(OURS);
+    expect(before.creator).toBe('Creator of 71001');
+    expect(enrichment.current()?.decisions).toEqual([]);
+    expect(enrichment.current()?.enriched).toBe(0);
+  });
+
   it.each([
     ['ambiguous', 'Harbor Watch', { year: 1994 }],
     ['missing', 'Tidewater', {}],
-    [
-      'conflict',
-      'The Hollow Coast',
-      { year: 2018, tmdbId: 71001, synopsis: OURS },
-    ],
   ] as const)(
     'takes the %s row off and writes nothing',
     async (kind, title, values) => {
