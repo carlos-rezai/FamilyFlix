@@ -32,6 +32,7 @@ function episode(
     status: state,
     videoPath: `harbor-2021/season-0${season}/e${number}.mp4`,
     stillPath: null,
+    sourceFile: null,
     subtitles: [],
     lastWatchedAt: state === 'unwatched' ? null : '2026-09-20T20:00:00.000Z',
   };

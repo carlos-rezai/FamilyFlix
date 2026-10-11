@@ -266,4 +266,13 @@ export const migrations: readonly Migration[] = [
       db.prepare("DELETE FROM settings WHERE key = 'library-root'").run();
     },
   },
+  {
+    // An episode's Source file: the video's path relative to its series'
+    // Source folder, with forward slashes. Additive and nullable: nothing is
+    // backfilled.
+    version: 8,
+    up(db) {
+      db.exec('ALTER TABLE episodes ADD COLUMN source_file TEXT;');
+    },
+  },
 ];

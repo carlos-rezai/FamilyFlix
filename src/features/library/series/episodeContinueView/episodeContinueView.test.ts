@@ -23,6 +23,7 @@ function makeEntry(
       status: 'in-progress',
       videoPath: 'harbor-vine-2019/season-02/e04.mp4',
       stillPath: null,
+      sourceFile: null,
       subtitles: [],
       lastWatchedAt: '2026-09-20T00:00:00.000Z',
       ...overrides,

@@ -1,6 +1,13 @@
 import { randomUUID } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
-import { basename, dirname, extname, isAbsolute, relative } from 'node:path';
+import {
+  basename,
+  dirname,
+  extname,
+  isAbsolute,
+  relative,
+  sep,
+} from 'node:path';
 
 import type { LibraryStorage, StoredLibraryFolder } from '../../library';
 import {
@@ -334,6 +341,13 @@ const filmKey = (title: string, year: number | null): string =>
 const titleWithYear = (title: string, year: number | null): string =>
   year === null ? title : `${title} (${year})`;
 
+/**
+ * A video's **Source file**: its path relative to its show's **Source
+ * folder**, with forward slashes whatever the platform spells.
+ */
+const sourceFileOf = (show: ShowScan, video: string): string =>
+  relative(show.dir, video).split(sep).join('/');
+
 /** An episode as the console names it: `Harbor & Vine · S01E03`. */
 const episodeLabel = (title: string, { season, episode }: ShowEpisode) =>
   `${title} · ${spellEpisodeTag(season, episode)}`;
@@ -400,12 +414,14 @@ interface Placed<M> {
 
 /**
  * A series the library already holds, as a run needs it: the series, the
- * `(season, episode)` tags it has, and the **Series folder** they live in —
- * or `null` when none of them names one.
+ * `(season, episode)` tags it has, the **Source files** its episodes came
+ * from, and the **Series folder** they live in — or `null` when none of them
+ * names one.
  */
 interface HeldSeries {
   series: Series;
   tags: Set<string>;
+  sourceFiles: Set<string>;
   folder: string | null;
 }
 
@@ -748,6 +764,7 @@ export function createImporter({
           season: episode.season,
           number: episode.episode,
           videoPath,
+          sourceFile: sourceFileOf(show, episode.video),
           ...(episode.title === null ? {} : { title: episode.title }),
           ...(runtime === null ? {} : { runtimeMinutes: runtime }),
           ...(subtitles.length === 0 ? {} : { subtitles }),
@@ -783,8 +800,11 @@ export function createImporter({
    * A matched show's **Unplaced** videos: hard, and Skip alone — there is no
    * form an episode is resolved in; the reason names the rename.
    */
-  const fileUnplaced = (current: ImportRun, { row, show }: ShowMatch) => {
+  const fileUnplaced = (current: ImportRun, { row, show, held }: ShowMatch) => {
     for (const video of show.unplaced) {
+      if (held?.sourceFiles.has(sourceFileOf(show, video))) {
+        continue;
+      }
       file(
         current,
         problemOf(
@@ -827,7 +847,9 @@ export function createImporter({
 
   /**
    * A show as this run imports it: joined to the held series of its key and
-   * year, if there is one, with only the episodes that series lacks.
+   * year, if there is one, with only the episodes that series lacks — a video
+   * whose **Source file** the series holds first, whatever its tag says, then
+   * one whose `(season, episode)` it holds.
    */
   const showMatch = (
     row: SheetRow,
@@ -843,6 +865,7 @@ export function createImporter({
           ? show.episodes
           : show.episodes.filter(
               (episode) =>
+                !held.sourceFiles.has(sourceFileOf(show, episode.video)) &&
                 !held.tags.has(spellEpisodeTag(episode.season, episode.episode))
             ),
     };
@@ -861,6 +884,11 @@ export function createImporter({
         tags: new Set(
           episodes.map((episode) =>
             spellEpisodeTag(episode.season, episode.number)
+          )
+        ),
+        sourceFiles: new Set(
+          episodes.flatMap((episode) =>
+            episode.sourceFile === null ? [] : [episode.sourceFile]
           )
         ),
         folder: heldFolder(episodes),

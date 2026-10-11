@@ -43,6 +43,7 @@ export interface EpisodeRow {
   last_watched_at: string | null;
   video_path: string;
   still_path: string | null;
+  source_file: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -91,6 +92,7 @@ const mapRowToEpisode = (row: EpisodeRow, subtitles: Subtitle[]): Episode => {
     status: deriveStatus(watched, row.resume_position_seconds),
     videoPath: row.video_path,
     stillPath: row.still_path,
+    sourceFile: row.source_file,
     subtitles,
     lastWatchedAt: row.last_watched_at,
   };

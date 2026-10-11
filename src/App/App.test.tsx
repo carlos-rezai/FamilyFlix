@@ -1839,6 +1839,7 @@ describe('App — the season page', () => {
         status: 'unwatched' as const,
         videoPath: `harbor-2019/season-0${number}/e1.mp4`,
         stillPath: null,
+        sourceFile: null,
         subtitles: [],
         lastWatchedAt: null,
       };

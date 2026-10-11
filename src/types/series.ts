@@ -52,6 +52,11 @@ export interface Episode {
   videoPath: string;
   /** A Sync's **Still**, a stored path beside the video; `null` until one. */
   stillPath: string | null;
+  /**
+   * The **Source file**: the video's path relative to its series' Source
+   * folder, with forward slashes, as a scan found it; `null` for none.
+   */
+  sourceFile: string | null;
   subtitles: Subtitle[];
   lastWatchedAt: string | null;
 }
@@ -119,6 +124,8 @@ export interface NewEpisode {
   runtimeMinutes?: number;
   /** Its subtitle tracks, in order, already stored under the Series folder. */
   subtitles?: NewSubtitle[];
+  /** Its **Source file**, relative to the series' Source folder; none by default. */
+  sourceFile?: string;
 }
 
 /** The episode after one, in its own series — what _Up next_ names. */

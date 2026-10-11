@@ -177,7 +177,9 @@ export function seriesFormValues({ series }: SeriesDetail): MovieFormValues {
 
 /**
  * A held series' episodes as **Episode file rows**, in season then episode
- * order: each under its episode's id, its video and tracks as **Stored files**.
+ * order: each under its episode's id, its video and tracks as **Stored files**
+ * — the video named by its **Source file** when the library knows it, else by
+ * its stored name.
  */
 export function heldEpisodeRows({ seasons }: SeriesDetail): EpisodeFormRow[] {
   return seasons
@@ -189,7 +191,7 @@ export function heldEpisodeRows({ seasons }: SeriesDetail): EpisodeFormRow[] {
       file: {
         kind: 'stored' as const,
         path: episode.videoPath,
-        filename: filenameOf(episode.videoPath),
+        filename: episode.sourceFile ?? filenameOf(episode.videoPath),
       },
       season: String(episode.season),
       number: String(episode.number),

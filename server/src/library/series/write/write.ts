@@ -36,7 +36,8 @@ export interface SeriesWrite {
    * The **Series edit job**'s save, in one transaction: the fields, then the
    * **Two-pass renumber** of the held episodes, then the inserts and the
    * removals. A held episode keeps its id, so its watch state, resume position
-   * and still survive. Answers the series and the **Stored paths** no row
+   * and still survive, and so does its **Source file** while its video stays;
+   * a replaced video clears it. Answers the series and the **Stored paths** no row
    * points at any more, to clean up after the commit — or `null` for a series
    * the library does not hold. An id the series does not hold, an id twice or
    * a pair of numbers twice throws and commits nothing.
@@ -107,10 +108,10 @@ export function createSeriesWrite(
   const insertEpisode = db.prepare(`
     INSERT INTO episodes (
       id, series_id, season_number, episode_number, title, air_date,
-      runtime_minutes, video_path, created_at, updated_at
+      runtime_minutes, video_path, source_file, created_at, updated_at
     ) VALUES (
       @id, @series_id, @season_number, @episode_number, @title, @air_date,
-      @runtime_minutes, @video_path, @created_at, @updated_at
+      @runtime_minutes, @video_path, @source_file, @created_at, @updated_at
     )
   `);
   const insertEpisodeSubtitle = db.prepare(`
@@ -156,6 +157,7 @@ export function createSeriesWrite(
         air_date: input.airDate ?? null,
         runtime_minutes: input.runtimeMinutes ?? null,
         video_path: input.videoPath,
+        source_file: input.sourceFile ?? null,
         created_at: now,
         updated_at: now,
       });
@@ -216,7 +218,9 @@ export function createSeriesWrite(
   const updateEpisodeRow = db.prepare(`
     UPDATE episodes SET
       season_number = @season_number, episode_number = @episode_number,
-      title = @title, video_path = @video_path, updated_at = @updated_at
+      title = @title,
+      source_file = CASE WHEN video_path = @video_path THEN source_file END,
+      video_path = @video_path, updated_at = @updated_at
     WHERE id = @id
   `);
   const setEpisodeRuntime = db.prepare(
