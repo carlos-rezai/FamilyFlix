@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 import {
   ComponentRefusedError,
+  factoryReset,
   fetchCapabilities,
   fetchStorageReport,
   installComponent,
@@ -11,6 +12,8 @@ import {
 } from './api';
 import type { PlaybackCapabilities, StorageReport } from '@/types';
 import {
+  conflictResponse,
+  noContentResponse,
   okResponse,
   serverErrorResponse,
 } from '@/test-support/fakeResponse/fakeResponse';
@@ -542,5 +545,65 @@ describe('saveTmdbKey', () => {
     fetchMock.mockRejectedValue(new Error('offline'));
 
     await expect(saveTmdbKey(KEY)).resolves.toEqual({ kind: 'unreachable' });
+  });
+});
+
+/**
+ * 37 — Factory reset, the surface (issue #299).
+ *
+ * `factoryReset()` — `POST /api/reset`, no body. A `204` is `reset`; a `409`
+ * carrying an `error` is `refused` with that sentence, the route's own words
+ * for a running import or Sync. Anything else rejects — the `500` of an erase
+ * the database would not take included — and the hook leaves the dialog as it
+ * was.
+ */
+describe('factoryReset', () => {
+  const IMPORT_RUNNING =
+    'An import is running. Stop it before erasing everything.';
+
+  it('posts to /api/reset with no body', async () => {
+    fetchMock.mockResolvedValue(noContentResponse());
+
+    await factoryReset();
+
+    expect(onlyRequest()).toEqual({ url: '/api/reset', method: 'POST' });
+    expect(fetchMock.mock.calls[0][1]?.body).toBeUndefined();
+  });
+
+  it('answers reset on a 204, never reading a body', async () => {
+    fetchMock.mockResolvedValue(noContentResponse());
+
+    await expect(factoryReset()).resolves.toEqual({ kind: 'reset' });
+  });
+
+  it('answers refused with the route’s own sentence on a 409', async () => {
+    fetchMock.mockResolvedValue(conflictResponse(IMPORT_RUNNING));
+
+    await expect(factoryReset()).resolves.toEqual({
+      kind: 'refused',
+      sentence: IMPORT_RUNNING,
+    });
+  });
+
+  it('rejects a 409 that names no reason', async () => {
+    fetchMock.mockResolvedValue({
+      ok: false,
+      status: 409,
+      json: () => Promise.resolve({}),
+    } as unknown as Response);
+
+    await expect(factoryReset()).rejects.toThrow();
+  });
+
+  it('rejects on a 500', async () => {
+    fetchMock.mockResolvedValue(serverErrorResponse());
+
+    await expect(factoryReset()).rejects.toThrow();
+  });
+
+  it('rejects when the request fails', async () => {
+    fetchMock.mockRejectedValue(new Error('offline'));
+
+    await expect(factoryReset()).rejects.toThrow('offline');
   });
 });

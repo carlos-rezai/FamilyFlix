@@ -526,3 +526,96 @@ describe('StorageSection — Open folder in the desktop app', () => {
     );
   });
 });
+
+/**
+ * 37 — Factory reset, the surface (issue #299).
+ *
+ * After the space line, a divider and the Factory reset row: _Factory reset_
+ * over its line, and a `danger` `sm` _Reset…_ that opens the **Reset dialog**.
+ * The row is a control, not a read: drawn before the report lands, on a
+ * refused read, and in a browser with no folder bridge. The section owns the
+ * dialog's open state.
+ */
+describe('StorageSection — the Factory reset row', () => {
+  const ROW_LINE =
+    'Erase every title, watch history and setting, and empty the media folder. Your own folders are not touched.';
+  const resetButton = () => screen.getByRole('button', { name: 'Reset…' });
+
+  it('reads Factory reset over its line', () => {
+    renderSection();
+
+    expect(screen.getByText('Factory reset')).toBeDefined();
+    expect(screen.getByText(ROW_LINE)).toBeDefined();
+    expect(
+      comesBefore(screen.getByText('Factory reset'), screen.getByText(ROW_LINE))
+    ).toBe(true);
+  });
+
+  it('comes after the space line', async () => {
+    renderSection();
+
+    await reportLanded();
+    expect(
+      comesBefore(spaceLine() as HTMLElement, screen.getByText('Factory reset'))
+    ).toBe(true);
+  });
+
+  it('draws Reset… in danger ink, after the row’s line', () => {
+    renderSection();
+
+    expect(getComputedStyle(resetButton()).color).toBe('rgb(201, 122, 106)');
+    expect(comesBefore(screen.getByText(ROW_LINE), resetButton())).toBe(true);
+  });
+
+  it('is drawn before the report lands, without the folder bridge', () => {
+    answerWith(null);
+
+    renderSection();
+
+    expect(resetButton()).toBeDefined();
+  });
+
+  it('stays on a refused read', async () => {
+    const { read } = answerWith(null);
+    renderSection();
+
+    read.settle(serverErrorResponse());
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(resetButton()).toBeDefined();
+  });
+
+  it('draws no dialog until Reset… is pressed', () => {
+    renderSection();
+
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('opens the Reset dialog on a press, sending nothing', async () => {
+    const user = userEvent.setup();
+    renderSection();
+    await reportLanded();
+    fetchMock.mockClear();
+
+    await user.click(resetButton());
+
+    expect(
+      screen.getByRole('dialog', { name: 'Erase everything?' })
+    ).toBeDefined();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('closes the dialog on Cancel, the row still there', async () => {
+    const user = userEvent.setup();
+    renderSection();
+    await user.click(resetButton());
+
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(resetButton()).toBeDefined();
+  });
+});
