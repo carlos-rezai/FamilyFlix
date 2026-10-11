@@ -64,7 +64,10 @@ const COMPONENT_ENDPOINT = '/api/playback/component';
  */
 const REFUSAL_STATUSES = [400, 404, 409, 422];
 
-/** What a refusing route answers with, when it says why — the **Component route**'s and the reset's. */
+/**
+ * What a refusing route answers with, when it says why — the **Component
+ * route**'s and the reset's.
+ */
 function namesAReason(body: unknown): body is { error: string } {
   if (typeof body !== 'object' || body === null) {
     return false;
@@ -205,7 +208,10 @@ export async function saveTmdbKey(key: string): Promise<TmdbKeyOutcome> {
 /** Where **Factory reset** erases everything FamilyFlix made. */
 const RESET_ENDPOINT = '/api/reset';
 
-/** What pressing _Erase everything_ came to: erased, or refused in a sentence. */
+/**
+ * What pressing _Erase everything_ came to: erased, or refused in a
+ * sentence.
+ */
 export type FactoryResetOutcome =
   | { kind: 'reset' }
   | { kind: 'refused'; sentence: string };
