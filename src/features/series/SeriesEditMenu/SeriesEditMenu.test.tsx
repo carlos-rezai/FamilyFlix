@@ -68,7 +68,7 @@ describe('SeriesEditMenu — the menu', () => {
     expect(screen.queryByRole('menuitem')).toBeNull();
   });
 
-  it('holds Fetch from TMDB, then the Danger row, Delete series in the danger ink', () => {
+  it('holds Edit details, Fetch from TMDB, then the Danger row, Delete series in the danger ink', () => {
     renderMenu();
 
     openMenu();
@@ -76,9 +76,13 @@ describe('SeriesEditMenu — the menu', () => {
     const items = screen.getAllByRole('menuitem');
     expect(
       items.map((item) =>
-        item.textContent?.replace('🗑', '').replace('⟳', '').trim()
+        item.textContent
+          ?.replace('🗑', '')
+          .replace('⟳', '')
+          .replace('✎', '')
+          .trim()
       )
-    ).toEqual(['Fetch from TMDB', 'Delete series']);
+    ).toEqual(['Edit details', 'Fetch from TMDB', 'Delete series']);
     const remove = screen.getByRole('menuitem', { name: 'Delete series' });
     expect(remove.textContent).toContain('🗑');
     expect(getComputedStyle(remove).color).toBe('rgb(201, 122, 106)');
@@ -221,5 +225,50 @@ describe('SeriesEditMenu — Fetch from TMDB', () => {
     expect(pathname()).toBe('/enrich');
     expect(query.get('series')).toBe('s 2/y&scope=all');
     expect(query.has('scope')).toBe(false);
+  });
+});
+
+/**
+ * 38 — Title editing, Slice 4: "edit a series" (issue #307).
+ *
+ * The menu's first item, _✎ Edit details_, pushing `/add?series=<id>` — the
+ * **Series edit job**, the Movie form's fifth job.
+ */
+describe('SeriesEditMenu — Edit details', () => {
+  const selectEdit = () =>
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Edit details' }));
+
+  it('draws Edit details first, with its ✎, out of the danger ink', () => {
+    renderMenu();
+
+    openMenu();
+
+    const edit = screen.getByRole('menuitem', { name: 'Edit details' });
+    expect(screen.getAllByRole('menuitem')[0]).toBe(edit);
+    expect(edit.textContent).toContain('✎');
+    expect(getComputedStyle(edit).color).not.toBe('rgb(201, 122, 106)');
+  });
+
+  it('opens the Series edit job for this series', () => {
+    renderMenu('harbor');
+
+    openMenu();
+    selectEdit();
+
+    expect(pathname()).toBe('/add');
+    expect(search()).toBe('?series=harbor');
+    expect(dialog()).toBeNull();
+  });
+
+  it('encodes the series’ id into the query, so it reads back whole', () => {
+    renderMenu('s 2/y&movie=m1');
+
+    openMenu();
+    selectEdit();
+
+    const query = new URLSearchParams(search() ?? '');
+    expect(pathname()).toBe('/add');
+    expect(query.get('series')).toBe('s 2/y&movie=m1');
+    expect(query.has('movie')).toBe(false);
   });
 });

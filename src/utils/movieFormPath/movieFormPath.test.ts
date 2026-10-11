@@ -37,3 +37,22 @@ describe('movieFormPath', () => {
     expect([...queryOf(path).keys()]).toEqual(['movie', 'problem']);
   });
 });
+
+/**
+ * 38 — Title editing, Slice 4 (issue #307): the **Series edit job**,
+ * `/add?series=<id>`, the series ⋯ menu's _Edit details_.
+ */
+describe('movieFormPath — the Series edit job', () => {
+  it('names the series edit job by the series’ id', () => {
+    expect(movieFormPath({ series: 'harbor' })).toBe('/add?series=harbor');
+  });
+
+  it('carries a series id with reserved characters back out as it went in', () => {
+    const path = movieFormPath({ series: 's 2/y&movie=m1#x' });
+
+    expect(path.startsWith('/add?')).toBe(true);
+    expect(path).not.toContain('#');
+    expect(queryOf(path).get('series')).toBe('s 2/y&movie=m1#x');
+    expect([...queryOf(path).keys()]).toEqual(['series']);
+  });
+});

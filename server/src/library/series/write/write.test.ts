@@ -421,3 +421,246 @@ describe('series write: deleteSeries', () => {
     expect(storage.listEpisodes(kept.id)).toHaveLength(2);
   });
 });
+
+// --- 38 — Title editing, Slice 4: "edit a series" (issue #307) --------------
+
+/**
+ * The edit the form sends for `series` with nothing changed: its fields as
+ * they stand, and every held episode under its own id, its files as the
+ * stored paths they already have. A test overrides only what it is about.
+ */
+function unchangedEdit(
+  storage: ReturnType<typeof freshStorage>,
+  seriesId: string
+) {
+  const detail = storage.getSeriesDetail(seriesId);
+  if (detail === null) throw new Error(`No series ${seriesId}`);
+  const { series } = detail;
+  return {
+    title: series.title,
+    year: series.year,
+    endYear: series.endYear,
+    synopsis: series.synopsis,
+    creator: series.creator,
+    cast: series.cast,
+    rating: series.rating,
+    genres: series.genres.map((genre) => genre.name),
+    posterPath: series.posterPath,
+    episodes: storage.listEpisodes(seriesId).map((episode) => ({
+      id: episode.id,
+      season: episode.season,
+      number: episode.number,
+      title: episode.title,
+      videoPath: episode.videoPath,
+      subtitles: episode.subtitles.map(({ path, language }) => ({
+        path,
+        language,
+      })),
+    })),
+  };
+}
+
+/** The held episodes as `[id, season, number]`, in the series' order. */
+const numbering = (storage: ReturnType<typeof freshStorage>, id: string) =>
+  storage
+    .listEpisodes(id)
+    .map((episode) => [episode.id, episode.season, episode.number]);
+
+describe('series write: updateSeries', () => {
+  it('writes the fields and answers the series as it now stands', () => {
+    const storage = freshStorage();
+    const series = addHarbor(storage);
+
+    const outcome = storage.updateSeries(series.id, {
+      ...unchangedEdit(storage, series.id),
+      title: 'Harbor & Vine',
+      creator: 'Mara Quinn',
+      genres: ['Comedy'],
+    });
+
+    expect(outcome?.series).toMatchObject({
+      id: series.id,
+      title: 'Harbor & Vine',
+      creator: 'Mara Quinn',
+    });
+    expect(
+      storage.getSeriesDetail(series.id)?.series.genres.map((g) => g.name)
+    ).toEqual(['Comedy']);
+  });
+
+  it('swaps two episodes’ numbers in one save — the Two-pass renumber', () => {
+    const storage = freshStorage();
+    const series = addHarbor(storage);
+    const [pilot, lowTide] = storage.listEpisodes(series.id);
+    const edit = unchangedEdit(storage, series.id);
+
+    storage.updateSeries(series.id, {
+      ...edit,
+      episodes: [
+        { ...edit.episodes[0], number: 2 },
+        { ...edit.episodes[1], number: 1 },
+      ],
+    });
+
+    expect(numbering(storage, series.id)).toEqual([
+      [lowTide.id, 1, 1],
+      [pilot.id, 1, 2],
+    ]);
+  });
+
+  it('keeps a renumbered, retitled or re-videoed episode’s id, watch state, resume position and still', () => {
+    const storage = freshStorage();
+    const series = addHarbor(storage);
+    const [pilot, lowTide] = storage.listEpisodes(series.id);
+    storage.setEpisodeWatched(pilot.id, true);
+    storage.setEpisodeResumePosition(lowTide.id, 600);
+    storage.enrichEpisode(lowTide.id, {
+      stillPath: 'harbor-2019/season-01/S01E02-still.jpg',
+    });
+    const edit = unchangedEdit(storage, series.id);
+
+    storage.updateSeries(series.id, {
+      ...edit,
+      episodes: [
+        { ...edit.episodes[0], season: 2, number: 5, title: 'The Pilot' },
+        {
+          ...edit.episodes[1],
+          videoPath: 'harbor-2019/season-01/S01E02-recut.mp4',
+        },
+      ],
+    });
+
+    const after = storage.listEpisodes(series.id);
+    const keptPilot = after.find((episode) => episode.id === pilot.id);
+    const keptLowTide = after.find((episode) => episode.id === lowTide.id);
+    expect(keptPilot).toMatchObject({
+      season: 2,
+      number: 5,
+      title: 'The Pilot',
+      watched: true,
+    });
+    expect(keptLowTide).toMatchObject({
+      season: 1,
+      number: 2,
+      videoPath: 'harbor-2019/season-01/S01E02-recut.mp4',
+      resumePositionSeconds: 600,
+      stillPath: 'harbor-2019/season-01/S01E02-still.jpg',
+    });
+  });
+
+  it('adds an episode the edit carries with no id, unwatched at zero', () => {
+    const storage = freshStorage();
+    const series = addHarbor(storage);
+    const edit = unchangedEdit(storage, series.id);
+
+    storage.updateSeries(series.id, {
+      ...edit,
+      episodes: [
+        ...edit.episodes,
+        {
+          season: 1,
+          number: 3,
+          title: 'The Night Market',
+          videoPath: 'harbor-2019/season-01/S01E03.mp4',
+          subtitles: [],
+        },
+      ],
+    });
+
+    const added = storage.listEpisodes(series.id)[2];
+    expect(added).toMatchObject({
+      season: 1,
+      number: 3,
+      title: 'The Night Market',
+      watched: false,
+      resumePositionSeconds: 0,
+    });
+  });
+
+  it('removes a held episode the edit leaves out, its tracks with it, and answers its files to clean up', () => {
+    const storage = freshStorage();
+    const series = addHarbor(storage);
+    const [pilot] = storage.listEpisodes(series.id);
+    const edit = unchangedEdit(storage, series.id);
+
+    const outcome = storage.updateSeries(series.id, {
+      ...edit,
+      episodes: [edit.episodes[0]],
+    });
+
+    expect(storage.listEpisodes(series.id).map((e) => e.id)).toEqual([
+      pilot.id,
+    ]);
+    expect(outcome?.removedPaths).toEqual(
+      expect.arrayContaining([
+        'harbor-2019/season-01/S01E02.mp4',
+        'harbor-2019/season-01/S01E02.en.srt',
+      ])
+    );
+    expect(outcome?.removedPaths).not.toContain(
+      'harbor-2019/season-01/S01E01.mp4'
+    );
+  });
+
+  it('answers null for a series the library does not hold, changing nothing', () => {
+    const storage = freshStorage();
+    const kept = addHarbor(storage);
+
+    expect(
+      storage.updateSeries('00000000-0000-4000-8000-000000000000', {
+        ...unchangedEdit(storage, kept.id),
+        title: 'Elsewhere',
+        episodes: [],
+      })
+    ).toBeNull();
+    expect(storage.getSeriesDetail(kept.id)?.series.title).toBe('Harbor');
+    expect(storage.listEpisodes(kept.id)).toHaveLength(2);
+  });
+
+  it('refuses an episode id the series does not hold, and a refusal partway changes nothing', () => {
+    const storage = freshStorage();
+    const series = addHarbor(storage, 'Harbor');
+    const other = addHarbor(storage, 'Vine');
+    const before = numbering(storage, series.id);
+    const edit = unchangedEdit(storage, series.id);
+    const stranger = unchangedEdit(storage, other.id).episodes[0];
+
+    // The method is there, so a throw below is the refusal and not its absence.
+    expect(storage.updateSeries).toBeTypeOf('function');
+    expect(() =>
+      storage.updateSeries(series.id, {
+        ...edit,
+        title: 'Harbor & Vine',
+        // A swap first, so the placeholders would have been written…
+        episodes: [
+          { ...edit.episodes[0], number: 2 },
+          { ...edit.episodes[1], number: 1 },
+          // …then an episode of another show, refused.
+          { ...stranger, number: 9 },
+        ],
+      })
+    ).toThrow();
+
+    expect(storage.getSeriesDetail(series.id)?.series.title).toBe('Harbor');
+    expect(numbering(storage, series.id)).toEqual(before);
+    expect(storage.listEpisodes(other.id)).toHaveLength(2);
+  });
+
+  it('refuses a pair of numbers twice, changing nothing', () => {
+    const storage = freshStorage();
+    const series = addHarbor(storage);
+    const before = numbering(storage, series.id);
+    const edit = unchangedEdit(storage, series.id);
+
+    // The method is there, so a throw below is the refusal and not its absence.
+    expect(storage.updateSeries).toBeTypeOf('function');
+    expect(() =>
+      storage.updateSeries(series.id, {
+        ...edit,
+        episodes: [edit.episodes[0], { ...edit.episodes[1], number: 1 }],
+      })
+    ).toThrow();
+
+    expect(numbering(storage, series.id)).toEqual(before);
+  });
+});
