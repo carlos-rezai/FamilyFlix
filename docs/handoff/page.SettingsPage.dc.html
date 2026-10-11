@@ -757,6 +757,69 @@
               >of movies<span style="color: var(--color-text-faint)">·</span>{{
               settings.titleCount }}
             </div>
+
+            <div
+              style="
+                height: 1px;
+                background: var(--color-border-soft);
+                margin: 4px 0;
+              "
+            ></div>
+
+            <!-- Factory reset: a control, not a read — drawn before the report
+                 lands, and in a browser too. Reset… opens the Reset dialog. -->
+            <div
+              style="
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 16px;
+                padding: 12px 0 2px;
+              "
+            >
+              <div style="min-width: 0">
+                <div
+                  style="
+                    font-family: var(--font-sans);
+                    font-size: 15px;
+                    font-weight: 500;
+                    color: var(--color-text);
+                  "
+                >
+                  Factory reset
+                </div>
+                <div
+                  style="
+                    font-family: var(--font-sans);
+                    font-size: 13px;
+                    color: var(--color-text-faint);
+                    margin-top: 2px;
+                  "
+                >
+                  Erase every title, watch history and setting, and empty the
+                  media folder. Your own folders are not touched.
+                </div>
+              </div>
+              <button
+                onClick="{{ settings.reset.onOpen }}"
+                style="
+                  flex: 0 0 auto;
+                  height: 40px;
+                  padding: 0 18px;
+                  background: transparent;
+                  border: 1px solid var(--color-border);
+                  border-radius: 8px;
+                  color: var(--color-danger);
+                  font-family: var(--font-sans);
+                  font-size: 14px;
+                  font-weight: 600;
+                  cursor: pointer;
+                "
+                style-hover="background:rgba(201,122,106,.12);border-color:var(--color-danger)"
+              >
+                Reset…
+              </button>
+            </div>
           </div>
 
           <!-- ABOUT -->
@@ -990,6 +1053,234 @@
           </div>
         </div>
       </div>
+
+      <!-- ============================= RESET DIALOG (ResetDialog) =============================
+           On Modal: the scrim, the card, the icon tile, the heading and the ✕.
+           Focus lands on the card, not a button, so Enter alone erases nothing.
+           No type-to-confirm. -->
+      <sc-if
+        value="{{ settings.reset.open }}"
+        hint-placeholder-val="{{ false }}"
+      >
+        <div
+          onClick="{{ settings.reset.onClose }}"
+          style="
+            position: absolute;
+            inset: 0;
+            z-index: 90;
+            display: grid;
+            place-items: center;
+            background: var(--color-scrim);
+            backdrop-filter: blur(4px);
+            animation: ffFade 0.18s ease;
+            padding: 24px;
+          "
+        >
+          <div
+            onClick="{{ settings.reset.stopProp }}"
+            data-screen-label="Reset"
+            tabindex="-1"
+            style="
+              width: 520px;
+              max-width: 100%;
+              background: var(--color-surface-2);
+              border: 1px solid var(--color-border);
+              border-radius: var(--radius-lg);
+              box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
+              overflow: hidden;
+              animation: ffPop 0.2s ease;
+            "
+          >
+            <div style="padding: 28px 28px 0">
+              <div style="display: flex; align-items: flex-start; gap: 14px">
+                <div
+                  style="
+                    flex: 0 0 auto;
+                    width: 44px;
+                    height: 44px;
+                    border-radius: 12px;
+                    background: var(--color-accent-soft);
+                    border: 1px solid var(--color-accent-line);
+                    display: grid;
+                    place-items: center;
+                    color: var(--color-accent);
+                  "
+                >
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                    <path
+                      d="M12 3.5l9 16H3l9-16z"
+                      stroke="currentColor"
+                      stroke-width="1.8"
+                      stroke-linejoin="round"
+                    />
+                    <path
+                      d="M12 10v4"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                    />
+                    <circle cx="12" cy="17" r="1.1" fill="currentColor" />
+                  </svg>
+                </div>
+                <div style="flex: 1">
+                  <h2
+                    style="
+                      font-family: var(--font-serif);
+                      font-weight: 600;
+                      font-size: 24px;
+                      color: var(--color-text);
+                      margin: 0;
+                    "
+                  >
+                    Erase everything?
+                  </h2>
+                  <p
+                    style="
+                      font-family: var(--font-sans);
+                      font-size: 14px;
+                      color: var(--color-text-faint);
+                      margin: 4px 0 0;
+                    "
+                  >
+                    This can’t be undone.
+                  </p>
+                </div>
+                <button
+                  onClick="{{ settings.reset.onClose }}"
+                  style="
+                    flex: 0 0 auto;
+                    display: grid;
+                    place-items: center;
+                    width: 34px;
+                    height: 34px;
+                    background: transparent;
+                    border: none;
+                    border-radius: 8px;
+                    color: var(--color-text-faint);
+                    cursor: pointer;
+                    font-size: 16px;
+                  "
+                  style-hover="background:var(--color-surface-3);color:var(--color-text-dim)"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+
+            <div
+              style="
+                padding: 22px 28px 28px;
+                display: flex;
+                flex-direction: column;
+                gap: 20px;
+              "
+            >
+              <div>
+                <div
+                  style="
+                    font-family: var(--font-sans);
+                    font-size: 13px;
+                    font-weight: 600;
+                    color: var(--color-text-dim);
+                    margin-bottom: 6px;
+                  "
+                >
+                  What goes
+                </div>
+                <ul
+                  style="
+                    margin: 0;
+                    padding-left: 20px;
+                    font-family: var(--font-sans);
+                    font-size: 14px;
+                    line-height: 1.6;
+                    color: var(--color-text-dim);
+                  "
+                >
+                  <li>
+                    Every title, with its watch history, ratings and hearts
+                  </li>
+                  <li>The library folders list</li>
+                  <li>Every setting, the TMDB key included</li>
+                  <li>Everything in the media folder</li>
+                  <li>An uploaded playback component</li>
+                </ul>
+              </div>
+              <div>
+                <div
+                  style="
+                    font-family: var(--font-sans);
+                    font-size: 13px;
+                    font-weight: 600;
+                    color: var(--color-text-dim);
+                    margin-bottom: 6px;
+                  "
+                >
+                  What stays
+                </div>
+                <ul
+                  style="
+                    margin: 0;
+                    padding-left: 20px;
+                    font-family: var(--font-sans);
+                    font-size: 14px;
+                    line-height: 1.6;
+                    color: var(--color-text-dim);
+                  "
+                >
+                  <li>Your library folders and every file in them</li>
+                  <li>Your exports</li>
+                  <li>FamilyFlix itself</li>
+                </ul>
+              </div>
+
+              <sc-if
+                value="{{ settings.reset.refused }}"
+                hint-placeholder-val="{{ false }}"
+              >
+                <div
+                  style="
+                    font-family: var(--font-sans);
+                    font-size: 13px;
+                    color: var(--color-danger);
+                  "
+                >
+                  {{ settings.reset.refusal }}
+                </div>
+              </sc-if>
+
+              <div
+                style="
+                  display: flex;
+                  align-items: center;
+                  gap: 12px;
+                  margin-top: 4px;
+                "
+              >
+                <dc-import
+                  name="prim.Button"
+                  label="{{ settings.reset.eraseLabel }}"
+                  variant="danger"
+                  size="md"
+                  icon="none"
+                  disabled="{{ settings.reset.resetting }}"
+                  on-click="{{ settings.reset.onErase }}"
+                  hint-size="170px,50px"
+                ></dc-import>
+                <dc-import
+                  name="prim.Button"
+                  label="Cancel"
+                  variant="secondary"
+                  size="md"
+                  icon="none"
+                  on-click="{{ settings.reset.onClose }}"
+                  hint-size="110px,50px"
+                ></dc-import>
+              </div>
+            </div>
+          </div>
+        </div>
+      </sc-if>
     </x-dc>
     <script
       type="text/x-dc"

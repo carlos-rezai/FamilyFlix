@@ -259,7 +259,7 @@
           libraryFolders:[{id:'f1',path:'E:\\Movies',titleCount:214,reachable:true},{id:'f2',path:'F:\\Kids',titleCount:38,reachable:false}], folderTyped:'', folderRefusal:null, folderBridge:true, impSource:'sheet',
           impStep:'setup', impSheet:'', impRoot:'', impProgress:0, impMatched:0, impProblems:[],
           impPhase:'scan', impFound:0, impTotal:0, impDone:0, impCurrent:'', impLog:[], impStartTime:null,
-          exportOpen:false, exportFormat:'csv', exportDone:false,
+          exportOpen:false, exportFormat:'csv', exportDone:false, resetOpen:false, resetting:false, resetRefusal:null,
           settingsSubAuto:false, settingsSubLang:'English', settingsUltrawide:false,
           codecs:[
             {id:1,name:'H.264 / AVC',exts:['.mp4','.mov','.m4v'],kind:'built-in',size:'—'},
@@ -416,6 +416,10 @@
         setExportFormat(f){ this.setState({exportFormat:f,exportDone:false}); }
         runExport(){ this.setState({exportDone:true}); }
         stopProp(e){ if(e&&e.stopPropagation)e.stopPropagation(); }
+        openReset(){ this.setState({resetOpen:true,resetting:false,resetRefusal:null}); }
+        closeReset(){ this.setState({resetOpen:false}); }
+        // Simulated: the real wire is POST /api/reset — 204, then a full reload onto /; a 409 keeps the dialog and its one sentence.
+        runReset(){ this.setState({resetting:true}); setTimeout(()=>{ this.setState({resetting:false,resetOpen:false}); this.goBrowse(); },900); }
         chooseCsv(){ this.setExportFormat('csv'); }
         chooseXlsx(){ this.setExportFormat('xlsx'); }
         openGenre(name){ this.setState({screen:'genre',genreView:name,genreSearch:'',gearOpen:false,openDrop:null}); }
@@ -791,6 +795,9 @@
               subLang:s.settingsSubLang, subLangOpen:s.openDrop==='subLang', onToggleSubLang:()=>this.setState(st=>({openDrop:st.openDrop==='subLang'?null:'subLang'})),
               subLangOptions:['English','Spanish','French','German'].map(l=>({label:l,selected:l===s.settingsSubLang,onSelect:()=>this.setSubLang(l)})),
               mediaFolder:'C:\\Users\\Family\\FamilyFlix\\Media',
+              reset:{ open:s.resetOpen, onOpen:()=>this.openReset(), onClose:()=>this.closeReset(), stopProp:(e)=>this.stopProp(e),
+                resetting:s.resetting, eraseLabel:s.resetting?'Erasing…':'Erase everything', onErase:()=>this.runReset(),
+                refused:!!s.resetRefusal, refusal:s.resetRefusal||'' },
               spaceUsed:'18.4 GB', titleCount:this.rawMovies.length+' titles', version:s.currentVersion,
               updateAvailable:s.updateAvailable, updateVersion:s.updateVersion, updating:s.updating,
               updateOffered:s.updateAvailable && !s.updating, updateIdle:!s.updateAvailable && !s.updating && !s.checking, updateChecking:!s.updateAvailable && !s.updating && s.checking, updateIdleLine:!s.updateAvailable && !s.updating,
