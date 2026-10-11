@@ -11,6 +11,59 @@ Newest entry first.
 
 ---
 
+## 2026-10-11 — Factory reset — the wire's refactor (issue 300)
+
+Nine commits against `docs/refactor-plans/37-factory-reset-refactor.md`, one
+per plan commit. **7798 tests pass across 470 files**, the same as at the end
+of the build (`bb076d7`): one leaf added (_a database that refuses_) and one
+retired (the `typeof` check). `tsc -b --force` is clean. `eslint src server
+electron .husky` reports no errors and the one warning earlier rounds already
+logged. No pixel, schema, status or prototype changed.
+
+### What each group changed
+
+- **Group 0, the record.** The build's own entry, below, written before the
+  round touched anything.
+- **Group 1, the server.**
+  - `RESET_REFUSALS` is `{ status, error }` per kind, `DECISION_REFUSALS`'
+    shape, and sits above `createApiRouter`'s docblock with the other tables.
+    The route reads every status off it.
+  - Both runs are refused by one spelling of log 37's rule: a phase other
+    than `review`.
+  - The `500` reads `Could not erase the library`, and a leaf spies
+    `storage.reset` to throw: the answer is that sentence, and the media root,
+    the rows and the uploaded component are all where they were — the
+    database goes first, and nothing after it runs.
+  - `POST /reset` sits after `GET /storage`, the Storage card's other route.
+    `DELETE /movies/:id`'s comment is over its handler again.
+- **Group 2, the tests.** The `typeof storage.reset` leaf is gone, and the
+  slot double is `removableSlot({ outcome })`, `routes.settings.test`'s name.
+- **Group 3, the docs.** CLAUDE.md's `db/` and `createMedia/` lines and
+  step 20 (the pool kept, focus on the card, `storage.reset()`), and this
+  entry.
+
+### The one wire sentence that moved
+
+The `500`'s: `Could not erase the library. Nothing was changed.` became
+`Could not erase the library`. No client read it yet.
+
+### Left as it is
+
+- **A rejecting `importer.cancel()` after the erase** would answer Express 5's
+  default `500`. It is the route's last `await`, over a run only in review
+  with no copy to roll back, and no case reaches it.
+- **`enrichment.cancel()` before the transaction** stays, as log 37 Q4 fixed
+  the order; the sentence was made true instead.
+- **`removableSlot`** has two writers, each over its own fake component. A
+  third graduates it to `test-support/`.
+
+### Still to build
+
+Issue 299, the surface, then the initiative's closing round, which ticks
+step 20.
+
+---
+
 ## 2026-10-11 — Factory reset — the reset wire (issue #298)
 
 The first slice of **Factory reset**, the wire alone, as log 37 Q9 ruled: one
