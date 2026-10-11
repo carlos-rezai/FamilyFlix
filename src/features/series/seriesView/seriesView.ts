@@ -3,6 +3,7 @@ import {
   formatEpisodeTag,
   gradientFromId,
   imageUrl,
+  spellYearSpan,
   toRatingPercent,
 } from '@/utils';
 
@@ -12,23 +13,6 @@ const MISSING_CREDIT = '—';
 /** `1 season` / `2 seasons`. */
 const plural = (count: number, word: string) =>
   `${count} ${count === 1 ? word : `${word}s`}`;
-
-/**
- * The **Year range**: `2022` for a run inside one year, `2019–2023` for a
- * finished one, `2021–` for one still open, and no segment without a year.
- */
-function toYearLabel(
-  year: number | null,
-  endYear: number | null
-): string | null {
-  if (year === null) {
-    return null;
-  }
-  if (endYear === null) {
-    return `${year}–`;
-  }
-  return endYear === year ? String(year) : `${year}–${endYear}`;
-}
 
 /**
  * The one button, naming the **Next episode** the server answered: a Resume
@@ -85,7 +69,7 @@ export function seriesView(detail: SeriesDetail): SeriesPageModel {
   const hasCreator = series.creator !== null;
   const hasCast = series.cast.length > 0;
   const hasPoster = series.posterPath !== null;
-  const yearLabel = toYearLabel(series.year, series.endYear);
+  const yearLabel = spellYearSpan(series.year, series.endYear);
 
   return {
     id: series.id,

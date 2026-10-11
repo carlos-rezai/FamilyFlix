@@ -7,7 +7,7 @@ import type {
   MovieFormValues,
   SeriesDetail,
 } from '@/types';
-import { toRatingPercent, toRatingUnits } from '@/utils';
+import { spellYearSpan, toRatingPercent, toRatingUnits } from '@/utils';
 
 import { castNames, castText } from '../castNames/castNames';
 import { readEpisodeTag } from '../readEpisodeTag/readEpisodeTag';
@@ -159,12 +159,7 @@ export function movieFormValues(movie: Movie): MovieFormValues {
 export function seriesFormValues({ series }: SeriesDetail): MovieFormValues {
   return {
     title: series.title,
-    year:
-      series.year === null
-        ? ''
-        : series.endYear === null
-          ? String(series.year)
-          : `${series.year}–${series.endYear}`,
+    year: spellYearSpan(series.year, series.endYear) ?? '',
     director: series.creator ?? '',
     description: series.synopsis ?? '',
     cast: castText(series.cast),

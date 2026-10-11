@@ -240,6 +240,19 @@ describe('MovieForm — the Series edit job, opened', () => {
     ).toBe('true');
   });
 
+  it('opens a run inside one year as the year alone', async () => {
+    answerSeries = () =>
+      Promise.resolve(
+        okResponse({
+          ...DETAIL,
+          series: { ...SERIES, year: 2022, endYear: 2022 },
+        })
+      );
+    await renderAt();
+
+    expect(yearField().value).toBe('2022');
+  });
+
   it('holds the series’ poster in its slot, as the file it already has', async () => {
     await renderAt();
 
@@ -295,6 +308,24 @@ describe('MovieForm — the Series edit job, saved', () => {
     expect(episodes[1].storedSubtitles).toEqual([
       { path: `${FOLDER}/season-01/S01E02.en.srt`, language: 'English' },
     ]);
+  });
+
+  it('sends a run still open back open, its year untouched', async () => {
+    answerSeries = () =>
+      Promise.resolve(
+        okResponse({
+          ...DETAIL,
+          series: { ...SERIES, year: 2021, endYear: null },
+        })
+      );
+    await renderAt();
+    fireEvent.change(seriesTitle(), { target: { value: 'Harbor and Vine' } });
+
+    fireEvent.click(saveChanges());
+    const body = await sentBody();
+
+    // A lone `2021` would read on the server as a run that ended in 2021.
+    expect(body.get('year')).toBe('2021–');
   });
 
   it('keeps Save closed, and sends nothing, while two rows share a pair of numbers', async () => {

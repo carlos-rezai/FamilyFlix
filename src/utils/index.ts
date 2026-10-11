@@ -14,6 +14,7 @@ export { formatClock } from './formatClock/formatClock';
 export { formatElapsed } from './formatElapsed/formatElapsed';
 export { formatBytes } from './formatBytes/formatBytes';
 export { formatEpisodeTag } from './formatEpisodeTag/formatEpisodeTag';
+export { spellYearSpan } from './spellYearSpan/spellYearSpan';
 export { toScalarPercent } from './toScalarPercent/toScalarPercent';
 export { toRuntimeSeconds } from './toRuntimeSeconds/toRuntimeSeconds';
 export { isMovieSort } from './isMovieSort/isMovieSort';
