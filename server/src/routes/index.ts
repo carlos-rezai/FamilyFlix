@@ -835,7 +835,7 @@ export function createApiRouter(
   router.patch(
     '/series/:id',
     async (req: Request<{ id: string }>, res: Response) => {
-      const existing = storage.getSeriesDetail(req.params.id)?.series ?? null;
+      const existing = storage.getSeries(req.params.id);
       if (existing === null) {
         req.resume();
         res.status(404).json({ error: `Unknown series: ${req.params.id}` });

@@ -1514,9 +1514,7 @@ export function createImporter({
       const heldSeries =
         listed.seriesId === undefined
           ? null
-          : (storage
-              .getSeriesHome()
-              .series.find((series) => series.id === listed.seriesId) ?? null);
+          : storage.getSeries(listed.seriesId);
       const heldEpisodes =
         heldSeries === null ? [] : storage.listEpisodes(heldSeries.id);
       const heldTags = new Set(

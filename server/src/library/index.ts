@@ -124,6 +124,11 @@ export interface LibraryStorage {
   /** Assemble and return the full movie model, or `null` for an unknown id. */
   getMovie(id: string): Movie | null;
   /**
+   * {@link getMovie} over a **Series**: the assembled series, or `null` for an
+   * id the library does not hold as one, a movie's among them.
+   */
+  getSeries(id: string): Series | null;
+  /**
    * Browse the library through one parameterized query: a required sort plus any
    * combination of genre / minRating / search / favoritesOnly / inProgressOnly
    * filters. Returns fully-assembled movies, or `[]` when nothing matches.
@@ -388,6 +393,7 @@ export function createSqliteStorage(dbPath: string): LibraryStorage {
     enrichmentCounts: enrich.enrichmentCounts,
     deleteMovie: write.deleteMovie,
     getMovie: reader.getMovie,
+    getSeries: seriesReader.getSeries,
     listMovies: browse.listMovies,
     searchMovies: browse.searchMovies,
     listGenres: browse.listGenres,

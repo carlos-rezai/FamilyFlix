@@ -872,10 +872,8 @@ export function createEnrichment({
       ];
     }
     if (options.seriesId !== undefined) {
-      const detail = storage.getSeriesDetail(options.seriesId);
-      return detail === null
-        ? null
-        : [{ kind: 'series', series: detail.series }];
+      const series = storage.getSeries(options.seriesId);
+      return series === null ? null : [{ kind: 'series', series }];
     }
     const movie =
       options.movieId === undefined ? null : storage.getMovie(options.movieId);
@@ -981,8 +979,8 @@ export function createEnrichment({
   /** The title a reference names, read afresh; `null` once it is gone. */
   function titleOf(reference: TitleReference): Title | null {
     if (reference.kind === 'series') {
-      const detail = storage.getSeriesDetail(reference.id);
-      return detail === null ? null : { kind: 'series', series: detail.series };
+      const series = storage.getSeries(reference.id);
+      return series === null ? null : { kind: 'series', series };
     }
     const movie = storage.getMovie(reference.id);
     return movie === null ? null : { kind: 'movie', movie };
