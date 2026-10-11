@@ -125,6 +125,8 @@ export interface EnrichmentRun {
   scope: EnrichScope;
   /** The film a `single` run belongs to; absent on a library run. */
   movieId?: string;
+  /** The series a `single` run belongs to; absent on a library run. */
+  seriesId?: string;
   startedAt: string;
   /** Known up front: the titles in scope, snapshotted at start. */
   total: number;
@@ -140,6 +142,8 @@ export interface EnrichmentRun {
 export interface StartEnrichment {
   scope: EnrichScope;
   movieId?: string;
+  /** A `single` Sync names exactly one of `movieId` and `seriesId`. */
+  seriesId?: string;
   fields: EnrichField[];
   writeSheet: boolean;
   writePosters: boolean;

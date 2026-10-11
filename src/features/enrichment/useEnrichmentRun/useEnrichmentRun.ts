@@ -33,13 +33,22 @@ function settled(
 }
 
 /**
- * Whether `run` belongs here: opened with no film every run does; opened for
- * a film, only a `single` run for that same film.
+ * Whether `run` belongs here: opened with no title every run does; opened for
+ * a film, only a `single` run for that same film; opened for a series, only a
+ * `single` run for that same series.
  */
-function belongsHere(run: EnrichmentRun, movieId: string | null): boolean {
-  return (
-    movieId === null || (run.scope === 'single' && run.movieId === movieId)
-  );
+function belongsHere(
+  run: EnrichmentRun,
+  movieId: string | null,
+  seriesId: string | null
+): boolean {
+  if (movieId !== null) {
+    return run.scope === 'single' && run.movieId === movieId;
+  }
+  if (seriesId !== null) {
+    return run.scope === 'single' && run.seriesId === seriesId;
+  }
+  return true;
 }
 
 export interface EnrichmentRunState {
@@ -86,14 +95,17 @@ export interface EnrichmentRunState {
  * going; then `GET /api/enrichment/current` every 500 ms while the run is
  * running, and not once more once it is in review.
  *
- * Opened with no film, every run re-attaches. Opened for a film, only that
- * film's own `single` run does; a run in review that is not its own is held
- * apart as the **Waiting run**, the run a Start would let go of.
+ * Opened with no title, every run re-attaches. Opened for a film or a series,
+ * only that title's own `single` run does; a run in review that is not its
+ * own is held apart as the **Waiting run**, the run a Start would let go of.
  *
  * A read that lands after a newer start, a cancel, or the screen was left
  * puts back neither a run nor a Waiting run.
  */
-export function useEnrichmentRun(movieId: string | null): EnrichmentRunState {
+export function useEnrichmentRun(
+  movieId: string | null,
+  seriesId: string | null = null
+): EnrichmentRunState {
   const [run, setRun] = useState<EnrichmentRun | null>(null);
   const [waiting, setWaiting] = useState<EnrichmentRun | null>(null);
   /** Bumped by every start and cancel, so a read from before either is stale. */
@@ -105,7 +117,7 @@ export function useEnrichmentRun(movieId: string | null): EnrichmentRunState {
     fetchCurrentEnrichment()
       .then((held) => {
         if (left || at !== generation.current || held === null) return;
-        if (belongsHere(held, movieId)) {
+        if (belongsHere(held, movieId, seriesId)) {
           setRun(held);
         } else if (held.phase === 'review') {
           setWaiting(held);
@@ -117,7 +129,7 @@ export function useEnrichmentRun(movieId: string | null): EnrichmentRunState {
     return () => {
       left = true;
     };
-  }, [movieId]);
+  }, [movieId, seriesId]);
 
   const start = useCallback(
     async (options: StartEnrichment) => {
@@ -130,14 +142,14 @@ export function useEnrichmentRun(movieId: string | null): EnrichmentRunState {
           throw error;
         }
         held = await fetchCurrentEnrichment();
-        if (held !== null && !belongsHere(held, movieId)) {
+        if (held !== null && !belongsHere(held, movieId, seriesId)) {
           throw error;
         }
       }
       setRun(held);
       setWaiting(null);
     },
-    [movieId]
+    [movieId, seriesId]
   );
 
   const cancel = useCallback(() => {

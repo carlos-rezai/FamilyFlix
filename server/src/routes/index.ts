@@ -457,7 +457,7 @@ const START_REFUSALS: Record<
 > = {
   busy: { status: 409, error: 'A sync is already running' },
   'no-key': { status: 412, error: 'Add your TMDB key first' },
-  'no-movie': { status: 400, error: 'No such movie' },
+  'no-title': { status: 400, error: 'No such title' },
 };
 
 /** Why a review search or pick answered nothing, as a status. */

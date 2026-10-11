@@ -12,7 +12,8 @@ export type BodyRead<T> = { ok: true; value: T } | { ok: false; error: string };
 
 /**
  * `POST /api/enrichment`'s body → the **Sync**'s options: a known scope, a
- * movie id for `single` and only for `single`, known fields, and the two
+ * movie or series id — exactly one — for `single` and only for `single`,
+ * known fields, and the two
  * **Write target** booleans. The refusals are checked in that order, so a body
  * wrong in two ways earns the first sentence. Whether the library holds the
  * movie is the domain's to say.
@@ -21,21 +22,27 @@ export function startEnrichmentBody(body: unknown): BodyRead<StartEnrichment> {
   if (typeof body !== 'object' || body === null) {
     return { ok: false, error: 'Body must be an object' };
   }
-  const { scope, movieId, fields, writeSheet, writePosters } = body as Record<
-    string,
-    unknown
-  >;
+  const { scope, movieId, seriesId, fields, writeSheet, writePosters } =
+    body as Record<string, unknown>;
   if (!ENRICH_SCOPES.includes(scope as EnrichScope)) {
     return { ok: false, error: 'Unknown scope' };
   }
-  if (
-    scope === 'single' &&
-    (typeof movieId !== 'string' || movieId.length === 0)
-  ) {
-    return { ok: false, error: 'A single-title Sync names its movie' };
+  const names = (id: unknown): id is string =>
+    typeof id === 'string' && id.length > 0;
+  if (scope === 'single' && movieId !== undefined && seriesId !== undefined) {
+    return { ok: false, error: 'A single-title Sync names one title' };
+  }
+  if (scope === 'single' && !names(movieId) && !names(seriesId)) {
+    return {
+      ok: false,
+      error: 'A single-title Sync names its movie or series',
+    };
   }
   if (scope !== 'single' && movieId !== undefined) {
     return { ok: false, error: 'Only a single-title Sync names a movie' };
+  }
+  if (scope !== 'single' && seriesId !== undefined) {
+    return { ok: false, error: 'Only a single-title Sync names a series' };
   }
   if (
     !Array.isArray(fields) ||
@@ -51,6 +58,7 @@ export function startEnrichmentBody(body: unknown): BodyRead<StartEnrichment> {
     value: {
       scope: scope as EnrichScope,
       ...(typeof movieId === 'string' ? { movieId } : {}),
+      ...(typeof seriesId === 'string' ? { seriesId } : {}),
       fields: fields as EnrichField[],
       writeSheet,
       writePosters,

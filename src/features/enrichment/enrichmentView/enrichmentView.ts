@@ -102,13 +102,17 @@ export function writtenSummary(written: EnrichmentRun['written']): string {
 }
 
 /**
- * The **let-go line** under a film's Start: the **Waiting run** Start would
- * let go of, worded by whose it is — the library's or another film's — and
+ * The **let-go line** under a single title's Start: the **Waiting run** Start
+ * would let go of, worded by whose it is — the library's, another film's or
+ * another series' — and
  * `null` with no Waiting run or none of its Decisions left.
  */
 export function letGoLine(waiting: EnrichmentRun | null): string | null {
   if (waiting === null || waiting.decisions.length === 0) return null;
-  return waiting.scope === 'single'
-    ? "Starting lets go of another movie's sync waiting for review."
-    : 'Starting lets go of the library sync waiting for review.';
+  if (waiting.scope !== 'single') {
+    return 'Starting lets go of the library sync waiting for review.';
+  }
+  return waiting.seriesId !== undefined
+    ? "Starting lets go of another series' sync waiting for review."
+    : "Starting lets go of another movie's sync waiting for review.";
 }

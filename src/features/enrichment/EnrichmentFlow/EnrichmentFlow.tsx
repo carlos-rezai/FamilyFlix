@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import { useSnackbar } from '@/App/useSnackbar/useSnackbar';
 import { fetchMovie } from '@/api/fetchMovie/fetchMovie';
+import { fetchSeriesDetail } from '@/api/fetchSeriesDetail/fetchSeriesDetail';
 import { useEnrichmentSummary } from '@/hooks/useEnrichmentSummary/useEnrichmentSummary';
 import { useGoBack } from '@/hooks/useGoBack/useGoBack';
 import { ChevronLeftIcon, IconButton } from '@/primitives';
@@ -12,7 +13,7 @@ import {
   type EnrichField,
   type EnrichScope,
 } from '@/types';
-import { moviePath } from '@/utils';
+import { moviePath, seriesPath } from '@/utils';
 import { EnrichmentProgress } from '../EnrichmentProgress/EnrichmentProgress';
 import { EnrichmentReview } from '../EnrichmentReview/EnrichmentReview';
 import { EnrichmentSetup } from '../EnrichmentSetup/EnrichmentSetup';
@@ -46,6 +47,11 @@ const ALL_FIELDS: EnrichField[] = [...ENRICH_FIELDS];
  * as the **Landing** — a **History step** when the movie is behind the
  * screen, the movie pushed on a deep link.
  *
+ * Opened with `?series=<id>` it is the same `single` Sync over one series:
+ * _Just this series_ names the show, Start posts its `seriesId`, review's
+ * Finish is _Back to the series_, and the series page is the **Landing** —
+ * the film's rules, read for a series.
+ *
  * The setup reads the `EnrichmentSummary` and draws nothing of itself — no
  * key badge, no banner, no scope card, no Start — until it lands. Start is
  * the prototype's `startEnrich`: with no key it pushes `/settings` and raises
@@ -54,9 +60,16 @@ const ALL_FIELDS: EnrichField[] = [...ENRICH_FIELDS];
 export function EnrichmentFlow() {
   const [params] = useSearchParams();
   const movieId = params.get('movie');
-  const goBack = useGoBack(movieId === null ? '/settings' : moviePath(movieId));
+  const seriesId = movieId === null ? params.get('series') : null;
+  const goBack = useGoBack(
+    movieId !== null
+      ? moviePath(movieId)
+      : seriesId !== null
+        ? seriesPath(seriesId)
+        : '/settings'
+  );
   const { run, waiting, start, cancel, search, pick, apply, dismiss } =
-    useEnrichmentRun(movieId);
+    useEnrichmentRun(movieId, seriesId);
   const { summary, retry } = useEnrichmentSummary();
   const navigate = useNavigate();
   const { notify } = useSnackbar();
@@ -71,26 +84,35 @@ export function EnrichmentFlow() {
   // Both on to begin with, the prototype's `enWriteSheet` / `enWritePosters`.
   const [writeSheet, setWriteSheet] = useState(true);
   const [writePosters, setWritePosters] = useState(true);
-  const scope: EnrichScope = movieId === null ? libraryScope : 'single';
+  const single = movieId !== null || seriesId !== null;
+  const scope: EnrichScope = single ? 'single' : libraryScope;
 
   useEffect(() => {
-    if (movieId === null) {
+    const named =
+      movieId !== null
+        ? fetchMovie(movieId).then((movie) => movie?.title ?? null)
+        : seriesId !== null
+          ? fetchSeriesDetail(seriesId).then(
+              (detail) => detail?.series.title ?? null
+            )
+          : null;
+    if (named === null) {
       return undefined;
     }
     let left = false;
-    fetchMovie(movieId)
-      .then((movie) => {
+    named
+      .then((name) => {
         if (!left) {
-          setTitle(movie?.title ?? null);
+          setTitle(name);
         }
       })
       .catch(() => {
-        // No title to name: the card still offers the one movie.
+        // No title to name: the card still offers the one title.
       });
     return () => {
       left = true;
     };
-  }, [movieId]);
+  }, [movieId, seriesId]);
 
   const onToggleField = useCallback((field: EnrichField) => {
     setFields((on) =>
@@ -165,6 +187,7 @@ export function EnrichmentFlow() {
     void start({
       scope,
       ...(scope === 'single' && movieId !== null ? { movieId } : {}),
+      ...(scope === 'single' && seriesId !== null ? { seriesId } : {}),
       fields,
       // With no Library folder there is nowhere to write either (log 23 Q37).
       writeSheet: summary.libraryFolders.length > 0 && writeSheet,
@@ -183,6 +206,7 @@ export function EnrichmentFlow() {
     start,
     scope,
     movieId,
+    seriesId,
     fields,
     writeSheet,
     writePosters,
@@ -218,6 +242,7 @@ export function EnrichmentFlow() {
             scope={scope}
             summary={summary}
             title={title}
+            titleKind={seriesId !== null ? 'series' : 'movie'}
             fields={fields}
             writeSheet={writeSheet}
             writePosters={writePosters}
@@ -234,7 +259,13 @@ export function EnrichmentFlow() {
       ) : run.phase === 'review' ? (
         <EnrichmentReview
           run={run}
-          finishLabel={movieId === null ? 'Done' : 'Back to the movie'}
+          finishLabel={
+            movieId !== null
+              ? 'Back to the movie'
+              : seriesId !== null
+                ? 'Back to the series'
+                : 'Done'
+          }
           onFinish={goBack}
           onAgain={cancel}
           onSkip={onSkip}

@@ -4,22 +4,26 @@ export interface EnrichQuery {
   scope?: 'all';
   /** _Just this movie_: the single-title **Sync** from the ⋯ menu. */
   movie?: string;
+  /** _Just this series_: the single-title **Sync** from the series' ⋯ menu. */
+  series?: string;
 }
 
 /**
- * The **Enrichment flow**, as a route — `/enrich`, `/enrich?scope=all` or
- * `/enrich?movie=<id>`. Three features name it: Settings' _Sync metadata &
- * posters_, Import's _Finish_ and the movie page's _⟳ Fetch from TMDB_.
+ * The **Enrichment flow**, as a route — `/enrich`, `/enrich?scope=all`,
+ * `/enrich?movie=<id>` or `/enrich?series=<id>`. Four features name it:
+ * Settings' _Sync metadata & posters_, Import's _Finish_, and the movie and
+ * series pages' _⟳ Fetch from TMDB_.
  *
  * The id travels through `URLSearchParams`, `movieFormPath`'s precedent, so it
  * reads back whole whatever it holds.
  *
  * Pure, so the same query always yields the same route.
  */
-export function enrichPath({ scope, movie }: EnrichQuery = {}): string {
+export function enrichPath({ scope, movie, series }: EnrichQuery = {}): string {
   const params = new URLSearchParams();
   if (scope !== undefined) params.set('scope', scope);
   if (movie !== undefined) params.set('movie', movie);
+  if (series !== undefined) params.set('series', series);
   const query = params.toString();
   return query === '' ? '/enrich' : `/enrich?${query}`;
 }

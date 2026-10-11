@@ -53,8 +53,13 @@ export interface EnrichmentSetupProps {
   scope: EnrichScope;
   /** What the library and the connection are, as the server read them. */
   summary: EnrichmentSummary;
-  /** The film's title, once read — the _Just this movie_ card's line. */
+  /** The title's name, once read — the _Just this …_ card's line. */
   title: string | null;
+  /**
+   * What the one title of a `single` Sync is — _Just this movie_ or _Just
+   * this series_. A film by default.
+   */
+  titleKind?: 'movie' | 'series';
   /** The chips that are on. */
   fields: readonly EnrichField[];
   /** The two optional **Write targets**' switches, drawn only with a root. */
@@ -80,13 +85,14 @@ export interface EnrichmentSetupProps {
  * The **Setup step**, from `feat.EnrichmentFlow.dc.html`: the offline banner
  * and the key banner when either applies, the scope cards —
  * _Only what's missing_ and _Everything_ for the library, or _Just this
- * movie_ in their place for one film — the field chips with the rating note,
+ * movie_ (or _Just this series_) in their place for one title — the field chips with the rating note,
  * _Where it is saved_ with _Your library_ as Required, and Start: _Start sync_, or _Fetch details_ with its estimate for one film.
  */
 export function EnrichmentSetup({
   scope,
   summary,
   title,
+  titleKind = 'movie',
   fields,
   writeSheet,
   writePosters,
@@ -130,7 +136,7 @@ export function EnrichmentSetup({
         <Scopes role="radiogroup" aria-label="What to sync">
           {single ? (
             <ScopeCard
-              label="Just this movie"
+              label={`Just this ${titleKind}`}
               description={title ?? ''}
               selected
             />

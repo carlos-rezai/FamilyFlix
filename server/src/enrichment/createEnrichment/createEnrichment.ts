@@ -90,7 +90,7 @@ export type StartEnrichmentOutcome =
   | { kind: 'started'; run: EnrichmentRun }
   | { kind: 'busy' }
   | { kind: 'no-key' }
-  | { kind: 'no-movie' };
+  | { kind: 'no-title' };
 
 /**
  * The `enrichment/` domain, injected into the router so no route learns there
@@ -108,7 +108,8 @@ export interface Enrichment {
   /**
    * Start a Sync over the titles in scope, snapshotted so `total` is known
    * before the first request. Answers at once; the run goes on behind it;
-   * `no-movie` for a single-title Sync the library holds no film for.
+   * `no-title` for a single-title Sync the library holds no such film or
+   * series for.
    */
   start(options: StartEnrichment): Promise<StartEnrichmentOutcome>;
   /** The **Current enrichment run**'s snapshot, or `null` when none is held. */
@@ -768,7 +769,7 @@ export function createEnrichment({
 
   /**
    * The titles a start's options name, snapshotted — the films, then the
-   * series; `null` for no movie.
+   * series; `null` for a single title the library does not hold.
    */
   function titlesFor(options: StartEnrichment): Title[] | null {
     if (options.scope !== 'single') {
@@ -780,6 +781,12 @@ export function createEnrichment({
           .seriesInScope(options.scope)
           .map((series): Title => ({ kind: 'series', series })),
       ];
+    }
+    if (options.seriesId !== undefined) {
+      const detail = storage.getSeriesDetail(options.seriesId);
+      return detail === null
+        ? null
+        : [{ kind: 'series', series: detail.series }];
     }
     const movie =
       options.movieId === undefined ? null : storage.getMovie(options.movieId);
@@ -798,7 +805,7 @@ export function createEnrichment({
     }
     const titles = titlesFor(options);
     if (titles === null) {
-      return { kind: 'no-movie' };
+      return { kind: 'no-title' };
     }
 
     const current: EnrichmentRun = {
@@ -807,6 +814,9 @@ export function createEnrichment({
       scope: options.scope,
       ...(options.scope === 'single' && options.movieId !== undefined
         ? { movieId: options.movieId }
+        : {}),
+      ...(options.scope === 'single' && options.seriesId !== undefined
+        ? { seriesId: options.seriesId }
         : {}),
       startedAt: new Date().toISOString(),
       total: titles.length,

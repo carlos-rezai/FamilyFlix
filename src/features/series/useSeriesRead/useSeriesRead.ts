@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 
 import type { EditRecord } from '@/hooks/useOptimisticEdit/useOptimisticEdit';
 import type { SeriesDetail } from '@/types';
-import { fetchSeriesDetail } from '../api/api';
+import { fetchSeriesDetail } from '@/api/fetchSeriesDetail/fetchSeriesDetail';
 
 /**
  * The series read as the pages hold it: the `SeriesDetail`, addressed by its
