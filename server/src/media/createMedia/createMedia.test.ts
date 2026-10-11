@@ -27,6 +27,8 @@ import {
   mkdirSync,
   openSync,
   readFileSync,
+  readdirSync,
+  symlinkSync,
   unlinkSync,
   writeFileSync,
 } from 'node:fs';
@@ -1125,5 +1127,71 @@ describe('createMedia — readStored', () => {
     writeFileSync(join(outside, 'poster.jpg'), 'not ours');
 
     await expect(media.readStored('../elsewhere/poster.jpg')).rejects.toThrow();
+  });
+});
+
+// --- 37 — Factory reset, Phase 1: "the reset wire" (issue #298) -------------
+//
+// `emptyRoot`, the fourth removal: every entry directly inside the managed
+// media directory removed on its own, best-effort, and the directory itself
+// kept — what Factory reset leaves behind is an empty media folder, not none.
+
+describe('createMedia — emptyRoot', () => {
+  it('removes the root’s files and folders and keeps the root', async () => {
+    const { media, root } = sandbox();
+    const folder = media.reserveFolder('The Lantern Keeper', 2019);
+    await media.storeUpload(folder, 'lantern.mp4', part('video bytes'));
+    await media.storeUpload(folder, 'poster.jpg', part('poster bytes'));
+    mkdirSync(join(root, '__seed__', 'series'), { recursive: true });
+    writeFileSync(join(root, '__seed__', 'series', 'clip.mp4'), 'seed bytes');
+    writeFileSync(join(root, 'stray.txt'), 'loose file');
+
+    media.emptyRoot();
+
+    expect(existsSync(root)).toBe(true);
+    expect(readdirSync(root)).toEqual([]);
+  });
+
+  it('is nothing to do for a root that does not exist', () => {
+    const dir = sandboxRoot('familyflix-media-');
+    const root = join(dir, 'never-made');
+    const media = createMedia(root);
+
+    expect(() => media.emptyRoot()).not.toThrow();
+  });
+
+  it('removes a link inside the root as a link, its target outside surviving', () => {
+    const { media, root, outside } = sandbox();
+    writeFileSync(join(outside, 'family-photos.jpg'), 'not ours');
+    // A junction on Windows, where it needs no privilege; a directory link
+    // elsewhere. Either way the removal must not follow it.
+    symlinkSync(outside, join(root, 'linked'), 'junction');
+
+    media.emptyRoot();
+
+    expect(readdirSync(root)).toEqual([]);
+    expect(existsSync(outside)).toBe(true);
+    expect(readFileSync(join(outside, 'family-photos.jpg'), 'utf8')).toBe(
+      'not ours'
+    );
+  });
+
+  it('goes on past an entry it cannot remove, and never throws', async () => {
+    const { media, root } = sandbox();
+    const held = media.reserveFolder('The Lantern Keeper', 2019);
+    await media.storeUpload(held, 'lantern.mp4', part('video bytes'));
+    const other = media.reserveFolder('Rear Window', 1954);
+    await media.storeUpload(other, 'rear.mp4', part('rear bytes'));
+    writeFileSync(join(root, 'stray.txt'), 'loose file');
+
+    const release = holdOpen(join(held, 'lantern.mp4'));
+    try {
+      expect(() => media.emptyRoot()).not.toThrow();
+      expect(existsSync(other)).toBe(false);
+      expect(existsSync(join(root, 'stray.txt'))).toBe(false);
+      expect(existsSync(root)).toBe(true);
+    } finally {
+      release();
+    }
   });
 });
