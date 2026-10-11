@@ -1276,44 +1276,6 @@ export function createApiRouter(
   // whole one. **Row first, then bytes, best-effort**: `removeMovieFolder`
   // swallows its own failure, so a video the stream route still has open
   // leaves a stranded folder and this `204`, never a ghost row and a `500`.
-  // **Factory reset**: everything FamilyFlix made, erased — composed here over
-  // the five domains it touches, `DELETE /movies/:id`'s precedent, rather than
-  // a unit of its own. The order is the point. The two `409`s come first, so a
-  // running import or Sync erases nothing; then the Sync in review is let go,
-  // the library's rows go in one transaction, the media root is emptied and
-  // kept, and the uploaded component is taken back with its outcome ignored —
-  // a component in use is no reason to refuse a reset already done. The import
-  // in review is let go last. The **Library folders** on disk are never
-  // touched: nothing here knows where they are any more.
-  router.post('/reset', async (_req: Request, res: Response) => {
-    const run = importer.current();
-    if (run !== null && run.phase !== 'review') {
-      const { status, error } = RESET_REFUSALS.import;
-      res.status(status).json({ error });
-      return;
-    }
-    const sync = enrichment.current();
-    if (sync !== null && sync.phase !== 'review') {
-      const { status, error } = RESET_REFUSALS.sync;
-      res.status(status).json({ error });
-      return;
-    }
-
-    enrichment.cancel();
-    try {
-      storage.reset();
-    } catch {
-      const { status, error } = RESET_REFUSALS.failed;
-      res.status(status).json({ error });
-      return;
-    }
-    media.emptyRoot();
-    playback.removeComponent();
-    await importer.cancel();
-
-    res.status(204).end();
-  });
-
   router.delete('/movies/:id', (req: Request<{ id: string }>, res) => {
     const movie = movieOr404(storage, req.params.id, res);
     if (!movie) {
@@ -1744,6 +1706,44 @@ export function createApiRouter(
       movieCount: storage.countMovies(),
     };
     res.json(report);
+  });
+
+  // **Factory reset**: everything FamilyFlix made, erased — composed here over
+  // the five domains it touches, `DELETE /movies/:id`'s precedent, rather than
+  // a unit of its own. The order is the point. The two `409`s come first, so a
+  // running import or Sync erases nothing; then the Sync in review is let go,
+  // the library's rows go in one transaction, the media root is emptied and
+  // kept, and the uploaded component is taken back with its outcome ignored —
+  // a component in use is no reason to refuse a reset already done. The import
+  // in review is let go last. The **Library folders** on disk are never
+  // touched: nothing here knows where they are any more.
+  router.post('/reset', async (_req: Request, res: Response) => {
+    const run = importer.current();
+    if (run !== null && run.phase !== 'review') {
+      const { status, error } = RESET_REFUSALS.import;
+      res.status(status).json({ error });
+      return;
+    }
+    const sync = enrichment.current();
+    if (sync !== null && sync.phase !== 'review') {
+      const { status, error } = RESET_REFUSALS.sync;
+      res.status(status).json({ error });
+      return;
+    }
+
+    enrichment.cancel();
+    try {
+      storage.reset();
+    } catch {
+      const { status, error } = RESET_REFUSALS.failed;
+      res.status(status).json({ error });
+      return;
+    }
+    media.emptyRoot();
+    playback.removeComponent();
+    await importer.cancel();
+
+    res.status(204).end();
   });
 
   // What the player is told before a byte arrives: which path the film takes,
