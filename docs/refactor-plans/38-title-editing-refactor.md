@@ -8,10 +8,10 @@
 > Design log: `docs/design-logs/38-title-editing.md`. Plan:
 > `docs/PRDs/38-title-editing-plan.md`.
 > This is the initiative's closing round: it ticks step 21 and closes 302.
-> Filed as issue ISSUE*NUMBER.
+> Filed as issue 311.
 > Planned alone, on the maintainer's standing instruction: \_keep the codebase
 > consistent with our naming and code conventions, patterns and
-> architecture.*
+> architecture.\*
 
 ## Problem Statement
 
