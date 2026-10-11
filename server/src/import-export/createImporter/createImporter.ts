@@ -395,10 +395,11 @@ const titleWithYear = (title: string, year: number | null): string =>
 
 /**
  * A video's **Source file**: its path relative to its show's **Source
- * folder**, with forward slashes whatever the platform spells.
+ * folder** `dir`, with forward slashes whatever the platform spells — the one
+ * spelling the scan and the **Series Resolve** both record.
  */
-const sourceFileOf = (show: ShowScan, video: string): string =>
-  relative(show.dir, video).split(sep).join('/');
+const sourceFileOf = (dir: string, video: string): string =>
+  relative(dir, video).split(sep).join('/');
 
 /** An episode as the console names it: `Harbor & Vine · S01E03`. */
 const episodeLabel = (title: string, { season, episode }: ShowEpisode) =>
@@ -809,7 +810,7 @@ export function createImporter({
           season: episode.season,
           number: episode.episode,
           videoPath,
-          sourceFile: sourceFileOf(show, episode.video),
+          sourceFile: sourceFileOf(show.dir, episode.video),
           ...(episode.title === null ? {} : { title: episode.title }),
           ...(runtime === null ? {} : { runtimeMinutes: runtime }),
           ...(subtitles.length === 0 ? {} : { subtitles }),
@@ -851,7 +852,7 @@ export function createImporter({
     const { row, show, held } = match;
     const videos = inNameOrder(
       show.unplaced.filter(
-        (video) => !held?.sourceFiles.has(sourceFileOf(show, video))
+        (video) => !held?.sourceFiles.has(sourceFileOf(show.dir, video))
       )
     );
     if (videos.length === 0) {
@@ -917,7 +918,7 @@ export function createImporter({
           ? show.episodes
           : show.episodes.filter(
               (episode) =>
-                !held.sourceFiles.has(sourceFileOf(show, episode.video)) &&
+                !held.sourceFiles.has(sourceFileOf(show.dir, episode.video)) &&
                 !held.tags.has(spellEpisodeTag(episode.season, episode.episode))
             ),
       unplaced: null,
@@ -1578,7 +1579,7 @@ export function createImporter({
       const showDir = source.folder?.dir ?? null;
       const sourceFile = (slot: ResolveFile): string | undefined =>
         'found' in slot && showDir !== null
-          ? relative(showDir, slot.found).split(sep).join('/')
+          ? sourceFileOf(showDir, slot.found)
           : undefined;
 
       try {
