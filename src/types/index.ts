@@ -115,6 +115,7 @@ export type {
   EnrichmentPhase,
   EnrichmentRun,
   StartEnrichment,
+  TitleReference,
 } from './enrichment';
 export type {
   PosterCardMovie,

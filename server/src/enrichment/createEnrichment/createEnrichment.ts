@@ -14,6 +14,7 @@ import type {
   Movie,
   Series,
   StartEnrichment,
+  TitleReference,
 } from '@/types';
 import type { LibraryStorage } from '../../library';
 import type { Media } from '../../media/createMedia/createMedia';
@@ -64,12 +65,6 @@ import {
 type Title =
   | { kind: 'movie'; movie: Movie }
   | { kind: 'series'; series: Series };
-
-/** What a **Decision** is about, the Title reference: its kind and its id. */
-interface TitleReference {
-  kind: 'movie' | 'series';
-  id: string;
-}
 
 /** What saving a key came to, as a value the route maps to a status. */
 export type SaveKeyOutcome =

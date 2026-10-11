@@ -138,6 +138,17 @@ export interface EnrichmentRun {
   written: { sheet: boolean; posters: boolean };
 }
 
+/**
+ * The **Title reference**: which title a thing is about, its kind and its id.
+ * The server keys each **Decision** with one, and the Enrichment flow reads its
+ * single title as one. Never on the wire: `Decision` carries no kind of title,
+ * and `StartEnrichment` names a `movieId` or a `seriesId`.
+ */
+export interface TitleReference {
+  kind: 'movie' | 'series';
+  id: string;
+}
+
 /** What `POST /api/enrichment` is sent. */
 export interface StartEnrichment {
   scope: EnrichScope;
