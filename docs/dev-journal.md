@@ -11,6 +11,59 @@ Newest entry first.
 
 ---
 
+## 2026-10-11 — Factory reset — the row and the dialog (issue #299)
+
+The surface of **Factory reset**, over the wire from issue 298: the prototype
+revision, reviewed by the maintainer before any code (`1b807f0`), then one RED
+(`22b54ca`) and one GREEN (`ccabe64`). **7844 tests pass across 473 files**,
+measured at `ccabe64`, up from 7798 across 470 at the end of the wire's
+refactor. The three new files are the suites of `stubLocation`,
+`useFactoryReset` and `ResetDialog`; the settings `api` and `StorageSection`
+suites gained leaves.
+
+### What shipped
+
+- **The prototype.** `page.SettingsPage.dc.html`'s Storage card draws a
+  divider after the space line, then the Factory reset row and its `danger`
+  _Reset…_; the **Reset dialog** sits in an `sc-if`. `COMPONENT-SPEC.md` has a
+  ResetDialog entry, and the SettingsPage row names the reset row.
+- **`factoryReset()`**, in the settings feature's `api`: a `204` is `reset`,
+  its empty body never read; a `409` naming its reason is `refused` with the
+  route's sentence; anything else rejects.
+- **`useFactoryReset()`** → `{ resetting, refusal, reset }`. A reset reloads
+  onto `/` with `location.assign`, the third **Fresh home**. A refusal is held
+  until the next press is answered. Any other failure is swallowed and leaves
+  the state as it was, so `reset` never rejects.
+- **`ResetDialog`** on `Modal`: the title, subtitle and warning glyph, the
+  **What goes** and **What stays** lists, the refusal in danger ink, _Erase
+  everything_ before _Cancel_. Focus lands on the card, `Modal`'s own rule.
+- **The Storage card's row**, drawn before the report lands and without the
+  folder bridge. `StorageSection` owns the dialog's open state.
+- **`src/test-support/stubLocation/`.** jsdom's `location.assign` is an own,
+  non-writable, non-configurable property, so `vi.spyOn` cannot redefine it.
+  `window.location` itself is configurable: the stub swaps in a Proxy over an
+  empty target that records `assign` and reads everything else through to
+  the real one. A Proxy over the real `location` is refused by the Proxy
+  invariants on its frozen members.
+
+### Calls the build made
+
+- **The apostrophe.** _This can’t be undone._ is curly, as the Delete dialog's
+  and the prototype's are. The PRD types it straight.
+- **Two page-level counts.** `SettingsPage.test` counts every button on the
+  page exactly; both counts went up by one for _Reset…_.
+- **`namesAReason` shared.** The reset reads its refusal through the helper the
+  **Component route** already used. Its docblock was widened to say so.
+
+### Left for the refactor round
+
+Two over-long docblocks in the settings `api`, `OpenFolder` and `ResetButton`
+as one style written twice, `resetting`'s loose docblock, the two "two Fresh
+homes" left in the glossary and CLAUDE.md, CLAUDE.md's tree and Settings Hub
+section, and the ticks. The plan is filed as 301.
+
+---
+
 ## 2026-10-11 — Factory reset — the wire's refactor (issue 300)
 
 Nine commits against `docs/refactor-plans/37-factory-reset-refactor.md`, one
