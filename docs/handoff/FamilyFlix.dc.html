@@ -260,6 +260,7 @@
           impStep:'setup', impSheet:'', impRoot:'', impProgress:0, impMatched:0, impProblems:[],
           impPhase:'scan', impFound:0, impTotal:0, impDone:0, impCurrent:'', impLog:[], impStartTime:null,
           exportOpen:false, exportFormat:'csv', exportDone:false, resetOpen:false, resetting:false, resetRefusal:null,
+          seriesMenuOpen:false, seriesDeleteOpen:false, seriesDeleting:false, enSingleKind:'movie', fFound:[], fFoundPick:0,
           settingsSubAuto:false, settingsSubLang:'English', settingsUltrawide:false,
           codecs:[
             {id:1,name:'H.264 / AVC',exts:['.mp4','.mov','.m4v'],kind:'built-in',size:'—'},
@@ -453,6 +454,23 @@
         toggleFavorite(){ const m=this.cur(); if(m) this.toggleFavById(m.id); }
         toggleEditMenu(){ this.setState(s=>({editMenuOpen:!s.editMenuOpen})); }
         editMovie(){ const m=this.cur(); if(!m)return; const cr=this.credits[m.id]||{dir:'',cast:[]}; this.setState({fTitle:m.title,fYear:String(m.year),fDirector:cr.dir,fCast:cr.cast.join(', '),fDescription:m.syn,fGenres:[...m.genres],fVideo:m.title.toLowerCase().replace(/[^a-z0-9]+/g,'-')+'.mp4',fPoster:'poster.jpg',fSubs:[{filename:'subtitles.en.srt',lang:'English'}],fRating:this.ratingOf(m),fRatingHover:null,addMode:'manual',scanned:true,screen:'add',editMenuOpen:false,addContext:'edit',resolveId:null}); }
+        // ---- the series ⋯ menu (SeriesEditMenu) and its Delete dialog ----
+        toggleSeriesMenu(){ this.setState(s=>({seriesMenuOpen:!s.seriesMenuOpen})); }
+        openSeriesDelete(){ this.setState({seriesMenuOpen:false,seriesDeleteOpen:true,seriesDeleting:false}); }
+        closeSeriesDelete(){ this.setState({seriesDeleteOpen:false}); }
+        // Simulated: the real wire is DELETE /api/series/:id — 204, then back one step, the Series tab when nothing is behind.
+        runSeriesDelete(){ const id=this.state.seriesId; this.setState({seriesDeleting:true});
+          setTimeout(()=>{ this.rawSeries=this.rawSeries.filter(x=>x.id!==id); this.setState({seriesDeleting:false,seriesDeleteOpen:false,screen:'browse',tab:'series',seriesId:null}); },900); }
+        // The Series edit job: the shared fields prefilled, no Kind tabs, the poster as held, one held row per episode.
+        // A held row's mono line is its Source file when the library knows one, else its stored video's name.
+        editSeries(){ const x=this.seriesById(this.state.seriesId); if(!x) return;
+          const stem=x.title.replace(/[^A-Za-z0-9]+/g,'.');
+          const eps=this.allEpisodes(x.id).map((e,i)=>({id:e.key,held:true,
+            filename: i%3===2 ? stem+'.S'+String(e.season).padStart(2,'0')+'E'+String(e.number).padStart(2,'0')+'.mkv' : 'Season '+e.season+'/'+stem+'.'+e.season+'x'+String(e.number).padStart(2,'0')+'.mkv',
+            season:String(e.season),number:String(e.number),title:e.title,subs:i%2===0?[{filename:'English.srt',lang:'English'}]:[]}));
+          this.setState({fTitle:x.title,fYear:x.ye?(x.ys===x.ye?String(x.ys):x.ys+'\u2013'+x.ye):(x.ys+'\u2013'),fDirector:x.creator,fCast:x.cast.join(', '),fDescription:x.syn,fGenres:[...x.genres],
+            fPoster:'poster.jpg',fVideo:'',fSubs:[],fKind:'series',fEpisodes:eps,fRating:x.rating,fRatingHover:null,screen:'add',seriesMenuOpen:false,addContext:'seriesEdit',resolveId:null}); }
+        enrichSeries(){ const x=this.seriesById(this.state.seriesId); if(!x) return; this.setState({screen:'enrich',enReturn:'series',enStep:'setup',enSingleTitle:x.title,enSingleKind:'series',enScope:'single',seriesMenuOpen:false}); }
         playMovie(){ const m=this.cur(); if(!m)return; const resume=this.eff(m)==='progress'? m.runtime*60*m.prog/100 : 0; this.lastMove=Date.now(); this.setState({screen:'player',playingEp:null,currentTime:resume,playing:true,controlsVisible:true,subsOn:true}); }
 
         // ---- player ----
@@ -467,7 +485,7 @@
         onVolClick(e){ const r=e.currentTarget.getBoundingClientRect(); const p=Math.max(0,Math.min(1,(e.clientX-r.left)/r.width)); this.setState({volume:p,muted:p===0}); }
 
         // ---- add form ----
-        resetForm(){ this.setState({addMode:'folder',folderPath:'',scanned:false,fTitle:'',fYear:'',fDirector:'',fCast:'',fDescription:'',fGenres:[],fVideo:'',fPoster:'',fSubs:[],fKind:'movie',fEpisodes:[],fRating:0,fRatingHover:null}); }
+        resetForm(){ this.setState({addMode:'folder',folderPath:'',scanned:false,fTitle:'',fYear:'',fDirector:'',fCast:'',fDescription:'',fGenres:[],fVideo:'',fPoster:'',fSubs:[],fKind:'movie',fEpisodes:[],fFound:[],fFoundPick:0,fRating:0,fRatingHover:null}); }
         setFRating(pct){ this.setState({fRating:pct}); }
         hoverFRating(pct){ this.setState({fRatingHover:pct}); }
         clearFRatingHover(){ this.setState({fRatingHover:null}); }
@@ -489,7 +507,9 @@
         onFDirector(e){ this.setState({fDirector:e.target.value}); }
         onFCast(e){ this.setState({fCast:e.target.value}); }
         onFDescription(e){ this.setState({fDescription:e.target.value}); }
-        pickVideo(){ this.setState({fVideo:'selected-video.mp4'}); }
+        // Beside a Found-file choice the picked file joins the group as its last option, chosen.
+        pickVideo(){ const f='selected-video.mp4'; this.setState(s=>{ if(s.fFound.length<2) return {fVideo:f}; const found=s.fFound.includes(f)?s.fFound:[...s.fFound,f]; return {fFound:found,fFoundPick:found.indexOf(f),fVideo:f}; }); }
+        chooseFound(i){ this.setState(s=>({fFoundPick:i,fVideo:s.fFound[i]})); }
         pickPoster(){ this.setState({fPoster:'selected-poster.jpg'}); }
         removeVideo(){ this.setState({fVideo:''}); }
         removePoster(){ this.setState({fPoster:''}); }
@@ -498,8 +518,8 @@
         setSubLang(i,v){ this.setState(s=>({fSubs:s.fSubs.map((x,j)=>j===i?{...x,lang:v}:x)})); }
         chooseLang(i,l){ this.setState(st=>({subLangOpen:null, fSubs:st.fSubs.map((x,j)=>j===i?{...x,lang:l}:x)})); }
         toggleChip(g){ this.setState(s=>({fGenres:s.fGenres.includes(g)?s.fGenres.filter(x=>x!==g):[...s.fGenres,g]})); }
-        backFromAdd(){ if(this.state.addContext==='import') this.setState({screen:'import',impStep:'review',addContext:null,resolveId:null}); else if(this.state.addContext==='edit') this.setState({screen:'detail',addContext:null}); else if(this.state.addContext==='settings') this.setState({screen:'settings',addContext:null,gearOpen:false,openDrop:null}); else this.goBrowse(); }
-        saveMovie(){ if(this.state.addContext==='import'){ const id=this.state.resolveId; this.setState(s=>({screen:'import',impStep:'review',impProblems:s.impProblems.filter(p=>p.id!==id),impMatched:s.impMatched+1,addContext:null,resolveId:null})); } else if(this.state.addContext==='edit'){ this.setState({screen:'detail',addContext:null}); } else { this.goBrowse(); } }
+        backFromAdd(){ if(this.state.addContext==='seriesImport') this.setState({screen:'import',impStep:'review',addContext:null,resolveId:null}); else if(this.state.addContext==='seriesEdit') this.setState({screen:'series',addContext:null}); else if(this.state.addContext==='import') this.setState({screen:'import',impStep:'review',addContext:null,resolveId:null}); else if(this.state.addContext==='edit') this.setState({screen:'detail',addContext:null}); else if(this.state.addContext==='settings') this.setState({screen:'settings',addContext:null,gearOpen:false,openDrop:null}); else this.goBrowse(); }
+        saveMovie(){ if(this.state.addContext==='seriesEdit'){ this.setState({screen:'series',addContext:null}); return; } if(this.state.addContext==='import'||this.state.addContext==='seriesImport'){ const id=this.state.resolveId; this.setState(s=>({screen:'import',impStep:'review',impProblems:s.impProblems.filter(p=>p.id!==id),impMatched:s.impMatched+1,addContext:null,resolveId:null})); } else if(this.state.addContext==='edit'){ this.setState({screen:'detail',addContext:null}); } else { this.goBrowse(); } }
 
         // ---- series ----
         seriesById(id){ return this.rawSeries.find(x=>x.id===id)||null; }
@@ -554,7 +574,7 @@
         enrichFieldDefs = ['Synopsis','Poster','Backdrop','Runtime','Year','Genres','Director','Cast','Original title','TMDB score'];
         goEnrich(from){ this.setState(s=>({screen:'enrich', enReturn:from||'settings', enStep:'setup', enSingleTitle:null, gearOpen:false, openDrop:null})); }
         enrichOne(){ const m=this.cur(); if(!m) return; this.setState({screen:'enrich',enReturn:'detail',enStep:'setup',enSingleTitle:m.title,enScope:'single',editMenuOpen:false}); }
-        backFromEnrich(){ const r=this.state.enReturn; this.setState({screen:r==='detail'?'detail':r==='import'?'import':'settings', enStep:'setup'}); }
+        backFromEnrich(){ const r=this.state.enReturn; this.setState({screen:r==='detail'?'detail':r==='series'?'series':r==='import'?'import':'settings', enStep:'setup', enSingleKind:'movie'}); }
         onTmdbKey(e){ const v=e.target.value; this.setState({tmdbKey:v, tmdbConnected:false}); }
         testTmdbKey(){ if(!this.state.tmdbKey.trim()){ this.pushSnack({variant:'warning',message:'Paste a key first.',duration:3500,dismissible:true}); return; }
           this.setState({tmdbTesting:true});
@@ -599,8 +619,20 @@
           {id:'p2',title:'Harbor Lights',reason:'Two folders look like plausible matches \u2014 pick one.',kind:'ambiguous'},
           {id:'p3',title:'Ironwood',reason:'Folder matched, but no subtitle file was found.',kind:'missing-file'},
           {id:'p4',title:'Sundial',reason:'Spreadsheet row is missing a genre.',kind:'missing-meta'},
+          // One unplaced Problem per show: titled with the show, its reason the count, the files on the Problem detail.
+          {id:'p5',title:'The Night Ferry',reason:'8 episodes need numbers',kind:'unplaced',
+            videos:['departure','fog_horn','the_purser','deck_c','lifeboat_drill','starboard','the_crossing','landfall'].map((n,i)=>'E:\\Series\\The Night Ferry\\Season 1\\eps1.'+i+'_'+n+'.mov')},
+          // A film folder holding two videos: its Resolve draws the Found-file choice.
+          {id:'p6',title:'Paper Moons',reason:'Two videos \u2014 pick the film.',kind:'no-video',
+            videos:['E:\\Movies\\Paper Moons (2014)\\paper.moons.2014.1080p.mkv','E:\\Movies\\Paper Moons (2014)\\paper.moons.2014.extras.mkv']},
         ]; }
-        resolveProblem(p){ this.setState({screen:'add',addContext:'import',resolveId:p.id,addMode:'folder',scanned:true,folderPath:'C:\\\\Movies\\\\'+p.title,fTitle:p.title,fYear:p.kind==='missing-meta'?'2018':'2020',fGenres:[],fVideo:p.kind==='missing-file'?'matched-video.mkv':'matched-video.mkv',fPoster:'matched-poster.jpg',fSubs:p.kind==='missing-file'?[]:[{filename:'matched.en.srt',lang:'English'}]}); }
+        // The Series Resolve: one row per found video, as its path, numbered by the Numbering guess — the season off
+        // the folder, the episode off the Episode word, else the next free number in name order. Every number editable.
+        resolveShow(p){ this.setState({screen:'add',addContext:'seriesImport',resolveId:p.id,fKind:'series',fTitle:p.title,fYear:'',fDirector:'',fCast:'',fDescription:'',fGenres:[],fPoster:'',fVideo:'',fSubs:[],fRating:0,
+          fEpisodes:p.videos.map((v,i)=>({filename:v,season:'1',number:String(i+1),title:'',subs:[]}))}); }
+        resolveProblem(p){ if(p.kind==='unplaced'){ this.resolveShow(p); return; }
+          if(p.videos&&p.videos.length>1){ const names=p.videos.map(v=>v.split('\\').pop()); this.setState({screen:'add',addContext:'import',resolveId:p.id,fKind:'movie',fTitle:p.title,fYear:'2014',fGenres:[],fPoster:'',fSubs:[],fFound:names,fFoundPick:0,fVideo:names[0]}); return; }
+          this.setState({fFound:[],fFoundPick:0}); this.setState({screen:'add',addContext:'import',resolveId:p.id,addMode:'folder',scanned:true,folderPath:'C:\\\\Movies\\\\'+p.title,fTitle:p.title,fYear:p.kind==='missing-meta'?'2018':'2020',fGenres:[],fVideo:p.kind==='missing-file'?'matched-video.mkv':'matched-video.mkv',fPoster:'matched-poster.jpg',fSubs:p.kind==='missing-file'?[]:[{filename:'matched.en.srt',lang:'English'}]}); }
         skipProblem(id){ this.setState(s=>({impProblems:s.impProblems.filter(p=>p.id!==id)})); }
 
         _rgb(hex){ let h=String(hex||'').trim().replace('#',''); if(h.length===3) h=h.split('').map(c=>c+c).join('');
@@ -829,14 +861,20 @@
               subtitleLine:'— You can see the whole coast from up here.',
             },
             // add
-            formModel:(()=>{ const isSeriesForm=s.addContext==='settings' && s.fKind==='series';
+            formModel:(()=>{ const isSeriesForm=(s.addContext==='settings' && s.fKind==='series') || s.addContext==='seriesEdit' || s.addContext==='seriesImport';
+              const hasFoundChoice=!isSeriesForm && s.addContext==='import' && s.fFound.length>1;
               const pairs=s.fEpisodes.map(e=>e.season+'-'+e.number);
               const episodesComplete=s.fEpisodes.length>0 && s.fEpisodes.every(e=>Number(e.season)>=1 && Number(e.number)>=1) && new Set(pairs).size===pairs.length;
               // The gate, per kind: a movie needs a title and a video; a series a title and complete episodes. Closed is a disabled Save, never a message.
               const canSave=isSeriesForm ? (!!s.fTitle.trim() && episodesComplete) : (!!s.fTitle.trim() && !!s.fVideo);
               return {
-              inImportContext:s.addContext==='import', resolveLabel:s.fTitle,
-              heading:s.addContext==='edit'?'Edit details':isSeriesForm?'Add a series':'Add a movie',
+              inImportContext:s.addContext==='import'||s.addContext==='seriesImport', resolveLabel:s.fTitle,
+              heading:(s.addContext==='edit'||s.addContext==='seriesEdit')?'Edit details':isSeriesForm?'Add a series':'Add a movie',
+              // The Found-file choice: two or more videos in a film Resolve's folder, the first preselected.
+              hasFoundChoice, noFoundChoice:!hasFoundChoice,
+              foundVideos:s.fFound.map((name,i)=>{ const on=i===s.fFoundPick; return {name, selected:on, choose:()=>this.chooseFound(i),
+                rowStyle:{display:'flex',alignItems:'center',gap:'12px',height:'42px',padding:'0 14px',textAlign:'left',background:on?'var(--color-accent-soft)':'var(--color-bg-2)',border:'1px solid '+(on?'var(--color-accent-line)':'var(--color-border)'),borderRadius:'8px',cursor:'pointer'},
+                dotStyle:{display:'block',flex:'0 0 auto',width:'16px',height:'16px',borderRadius:'99px',border:'2px solid '+(on?accent:'var(--color-text-faint)'),background:on?accent:'transparent',boxShadow:on?'inset 0 0 0 3px var(--color-surface)':'none'}}; }),
               // The Kind tabs: drawn on a plain add alone — never on an edit or a Resolve.
               showKindTabs:s.addContext==='settings', kindOptions:[{value:'movie',label:'Movie'},{value:'series',label:'Series'}], kind:isSeriesForm?'series':'movie', onKind:(k)=>this.setFKind(k),
               isSeries:isSeriesForm, isMovie:!isSeriesForm,
@@ -856,8 +894,8 @@
               video:s.fVideo, poster:s.fPoster, pickVideo:()=>this.pickVideo(), pickPoster:()=>this.pickPoster(), removeVideo:()=>this.removeVideo(), removePoster:()=>this.removePoster(),
               addSub:()=>this.addSub(), subtitles:subRows, langOptions:this.langPool,
               onSave:()=>{ if(canSave) this.saveMovie(); }, onBack:()=>this.backFromAdd(),
-              saveLabel:s.addContext==='import'?'Save & continue':s.addContext==='edit'?'Save changes':'Add to library',
-              cancelLabel:s.addContext==='import'?'Skip this one':'Cancel',
+              saveLabel:(s.addContext==='import'||s.addContext==='seriesImport')?'Save & continue':(s.addContext==='edit'||s.addContext==='seriesEdit')?'Save changes':'Add to library',
+              cancelLabel:(s.addContext==='import'||s.addContext==='seriesImport')?'Skip this one':'Cancel',
             }; })(),
             // import
             importModel:(()=>{
@@ -901,6 +939,12 @@
                 posterStyle:{position:'absolute',inset:0,background:'linear-gradient(155deg, '+x.g1+' 0%, '+x.g2+' 100%)'},
                 playLabel: nx ? ((nx.progress>0?'Resume ':'Play ')+'S'+String(nx.season).padStart(2,'0')+'E'+String(nx.number).padStart(2,'0')) : 'Play',
                 onPlayNext:()=>this.playEpisode(nx), onBack:()=>this.backFromSeries(),
+                editMenuOpen:s.seriesMenuOpen, onToggleEditMenu:()=>this.toggleSeriesMenu(),
+                onEdit:()=>this.editSeries(), onFetchTmdb:()=>this.enrichSeries(), onDelete:()=>this.openSeriesDelete(),
+                del:{ open:s.seriesDeleteOpen, deleting:s.seriesDeleting, deleteLabel:s.seriesDeleting?'Deleting\u2026':'Delete series',
+                  heading:'Delete \u201c'+x.title+'\u201d?',
+                  body:'The series and its '+pr.total+' episode'+(pr.total===1?'':'s')+' leave your library, and the videos, posters and subtitles FamilyFlix copied are deleted. Its watch history goes with it. The original files are not touched.',
+                  onConfirm:()=>{ if(!s.seriesDeleting) this.runSeriesDelete(); }, onClose:()=>this.closeSeriesDelete(), stopProp:(e)=>this.stopProp(e) },
                 progressLabel: pr.watched===0 ? 'Not started' : pr.watched>=pr.total ? 'All '+pr.total+' episodes watched' : pr.watched+' of '+pr.total+' episodes watched',
                 isFavorite:isFav, favTip:isFav?'In Favorites \u2014 click to remove':'Add to Favorites',
                 onToggleFavorite:()=>this.toggleSeriesFav(x.id),
@@ -937,7 +981,7 @@
               const etaSec = (s.enDone>2) ? elapsed*(s.enTotal-s.enDone)/s.enDone : 0;
               const missing = 12;
               const scopeDefs = s.enSingleTitle
-                ? [['single','Just this movie',s.enSingleTitle]]
+                ? [['single',s.enSingleKind==='series'?'Just this series':'Just this movie',s.enSingleTitle]]
                 : [['missing','Only what\u2019s missing',missing+' titles have no synopsis or artwork'],['all','Everything',this.rawMovies.length+' titles \u2014 re-checks ones already filled in']];
               const scopeCard=sel=>({flex:'1 1 260px',textAlign:'left',padding:'16px 18px',background:sel?'var(--color-accent-soft)':'var(--color-surface)',border:'1px solid '+(sel?'var(--color-accent-line)':'var(--color-border-soft)'),borderRadius:'var(--radius-md)',cursor:'pointer'});
               const scopeDot=sel=>({display:'block',width:'18px',height:'18px',flex:'0 0 auto',borderRadius:'99px',border:'2px solid '+(sel?accent:'var(--color-text-faint)'),background:sel?accent:'transparent',boxShadow:sel?'inset 0 0 0 3px var(--color-surface-2)':'none'});
@@ -992,7 +1036,7 @@
                 log:s.enLog, matched:s.enMatched, pendingCount:s.enPending.length, pending,
                 hasPending:s.enPending.length>0, allResolved:s.enPending.length===0,
                 writtenSummary:'Saved to '+targets.join(', ')+'.',
-                finishLabel:s.enReturn==='detail'?'Back to the movie':'Done',
+                finishLabel:s.enReturn==='detail'?'Back to the movie':s.enReturn==='series'?'Back to the series':'Done',
                 onFinish:()=>this.backFromEnrich(), onAgain:()=>this.setState({enStep:'setup'}),
               };
             })(),

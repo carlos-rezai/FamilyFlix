@@ -186,7 +186,8 @@
                 </div>
               </sc-if>
 
-              <!-- scope -->
+              <!-- scope — a single-title run draws one card alone: Just this movie from a
+                   film's ⋯ menu, Just this series from a series', its line the title. -->
               <div>
                 <div
                   style="
@@ -1054,6 +1055,20 @@
                             on-click="{{ r.onSearch }}"
                             hint-size="110px,50px"
                           ></dc-import>
+                        </div>
+                        <!-- The Title fix, said before the pick: a pick from a missing or
+                             ambiguous row makes TMDB's title the title's own. The same caption
+                             sits under the box an ambiguous row opens with Search by title. -->
+                        <div
+                          style="
+                            font-family: var(--font-sans);
+                            font-size: 13px;
+                            color: var(--color-text-faint);
+                            margin-top: 8px;
+                          "
+                        >
+                          Try another title — the one you pick becomes its
+                          title.
                         </div>
                       </sc-if>
 

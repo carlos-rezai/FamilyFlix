@@ -241,16 +241,105 @@
                   Files
                 </div>
 
-                <dc-import
-                  name="mol.FileField"
-                  label="Video"
-                  filename="{{ form.video }}"
-                  choose-label="Choose video file"
-                  icon="video"
-                  on-pick="{{ form.pickVideo }}"
-                  on-remove="{{ form.removeVideo }}"
-                  hint-size="100%,42px"
-                ></dc-import>
+                <sc-if
+                  value="{{ form.noFoundChoice }}"
+                  hint-placeholder-val="{{ true }}"
+                >
+                  <dc-import
+                    name="mol.FileField"
+                    label="Video"
+                    filename="{{ form.video }}"
+                    choose-label="Choose video file"
+                    icon="video"
+                    on-pick="{{ form.pickVideo }}"
+                    on-remove="{{ form.removeVideo }}"
+                    hint-size="100%,42px"
+                  ></dc-import>
+                </sc-if>
+
+                <!-- The Found-file choice: a Resolve whose folder holds two or more videos.
+                     The folder's videos by name, a radio group, the first preselected; the
+                     picker kept under them for a file from somewhere else, which joins the
+                     group as its last option, chosen. One video or none: the FileField above. -->
+                <sc-if
+                  value="{{ form.hasFoundChoice }}"
+                  hint-placeholder-val="{{ false }}"
+                >
+                  <div style="display: flex; gap: 12px">
+                    <div
+                      style="
+                        flex: 0 0 70px;
+                        font-family: var(--font-sans);
+                        font-size: 14px;
+                        color: var(--color-text-dim);
+                        padding-top: 10px;
+                      "
+                    >
+                      Video
+                    </div>
+                    <div
+                      role="radiogroup"
+                      aria-label="Video"
+                      style="
+                        flex: 1;
+                        display: flex;
+                        flex-direction: column;
+                        gap: 8px;
+                        min-width: 0;
+                      "
+                    >
+                      <sc-for
+                        list="{{ form.foundVideos }}"
+                        as="fv"
+                        hint-placeholder-count="2"
+                      >
+                        <button
+                          role="radio"
+                          aria-checked="{{ fv.selected }}"
+                          onClick="{{ fv.choose }}"
+                          style="{{ fv.rowStyle }}"
+                          style-hover="border-color:var(--color-accent-line)"
+                        >
+                          <span style="{{ fv.dotStyle }}"></span>
+                          <span
+                            style="
+                              flex: 1;
+                              min-width: 0;
+                              overflow: hidden;
+                              text-overflow: ellipsis;
+                              white-space: nowrap;
+                              font-family: var(--font-mono);
+                              font-size: 13px;
+                              color: var(--color-text);
+                            "
+                            >{{ fv.name }}</span
+                          >
+                        </button>
+                      </sc-for>
+                      <button
+                        onClick="{{ form.pickVideo }}"
+                        style="
+                          display: flex;
+                          align-items: center;
+                          justify-content: center;
+                          gap: 6px;
+                          height: 42px;
+                          background: transparent;
+                          border: 1px dashed var(--color-border);
+                          border-radius: 8px;
+                          color: var(--color-text-dim);
+                          font-family: var(--font-sans);
+                          font-size: 13px;
+                          font-weight: 600;
+                          cursor: pointer;
+                        "
+                        style-hover="border-color:var(--color-accent-line);color:var(--color-text)"
+                      >
+                        Choose another video file
+                      </button>
+                    </div>
+                  </div>
+                </sc-if>
                 <dc-import
                   name="mol.FileField"
                   label="Poster"
@@ -383,6 +472,11 @@
                       min-width: 0;
                     "
                   >
+                    <!-- One row per episode, in every series job. The mono line is the file:
+                         on an add, the picked file's name; on the Series edit job, a held
+                         episode's Source file (else its stored video's name), its ✕ removing
+                         it on save; on the Series Resolve, the found file's path, its numbers
+                         prefilled by the Numbering guess. -->
                     <sc-for
                       list="{{ form.episodes }}"
                       as="ep"
