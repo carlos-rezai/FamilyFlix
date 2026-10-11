@@ -1,5 +1,10 @@
 /** The **Movie form**'s jobs, as the query that names them. */
 export interface MovieFormQuery {
+  /**
+   * The **Form kind** asked for: `series` beside `problem` is the **Series
+   * Resolve**. Omitted at `movie`, as the form writes it.
+   */
+  kind?: 'series';
   /** The Edit job: the movie being amended. */
   movie?: string;
   /** Import context: the **Problem** being resolved. */
@@ -10,8 +15,10 @@ export interface MovieFormQuery {
 
 /**
  * The **Movie form**, as a route — `/add`, `/add?movie=<id>`,
- * `/add?problem=<id>`, or both, the movie first; or `/add?series=<id>`, the
- * **Series edit job**. Three features name it: the two ⋯ menus' _Edit
+ * `/add?problem=<id>`, or both, the movie first; `/add?series=<id>`, the
+ * **Series edit job**; or `/add?kind=series&problem=<id>`, the **Series
+ * Resolve**, the kind first, where `series` beside `problem` is the join onto
+ * a show already held. Three features name it: the two ⋯ menus' _Edit
  * details_ and the **Review step**'s _Resolve_.
  *
  * The ids travel through `URLSearchParams`, as the library and genre queries
@@ -21,11 +28,13 @@ export interface MovieFormQuery {
  * Pure, so the same ids always yield the same route.
  */
 export function movieFormPath({
+  kind,
   movie,
   problem,
   series,
 }: MovieFormQuery): string {
   const params = new URLSearchParams();
+  if (kind !== undefined) params.set('kind', kind);
   if (movie !== undefined) params.set('movie', movie);
   if (problem !== undefined) params.set('problem', problem);
   if (series !== undefined) params.set('series', series);

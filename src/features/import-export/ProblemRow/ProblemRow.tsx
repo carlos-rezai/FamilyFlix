@@ -24,10 +24,7 @@ const resolveRoute = ({
   seriesId,
 }: ImportProblem): string =>
   kind === 'unplaced'
-    ? movieFormPath({ problem: id, series: seriesId }).replace(
-        '/add?',
-        '/add?kind=series&'
-      )
+    ? movieFormPath({ kind: 'series', problem: id, series: seriesId })
     : movieFormPath({ movie: movieId, problem: id });
 
 /**

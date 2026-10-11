@@ -56,3 +56,22 @@ describe('movieFormPath — the Series edit job', () => {
     expect([...queryOf(path).keys()]).toEqual(['series']);
   });
 });
+
+/**
+ * 38 — Title editing, the refactor (issue 311): the **Series Resolve**,
+ * `/add?kind=series&problem=<id>`, the kind first, with the held series beside
+ * it when the show joins one.
+ */
+describe('movieFormPath — the Series Resolve', () => {
+  it('names the series kind first, then the problem', () => {
+    expect(movieFormPath({ kind: 'series', problem: 'p1' })).toBe(
+      '/add?kind=series&problem=p1'
+    );
+  });
+
+  it('names the held series after the problem, for a join', () => {
+    expect(
+      movieFormPath({ kind: 'series', problem: 'p1', series: 'harbor' })
+    ).toBe('/add?kind=series&problem=p1&series=harbor');
+  });
+});
