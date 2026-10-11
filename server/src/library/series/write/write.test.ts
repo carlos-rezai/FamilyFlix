@@ -4,9 +4,17 @@
 // real `:memory:` database: the two inserts the importer writes a show
 // through, read back through the series reads.
 
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
+import { join } from 'node:path';
 
-import { freshStorage } from '../../../test-support/freshStorage/freshStorage';
+import { createSqliteStorage } from '../..';
+import { openDatabase, type SqliteDatabase } from '../../../db';
+import {
+  closeTracked,
+  freshStorage,
+  track,
+} from '../../../test-support/freshStorage/freshStorage';
+import { sandboxRoot } from '../../../test-support/sandboxRoot/sandboxRoot';
 
 describe('series write: addSeries', () => {
   it('answers the assembled series, its genres in the order given', () => {
@@ -315,5 +323,101 @@ describe('series write: addSeries with episode subtitles', () => {
       ]
     );
     expect(storage.listEpisodes(series.id)[0].subtitles).toHaveLength(1);
+  });
+});
+
+// --- 38 — Title editing, Slice 1: "delete a series" (issue #304) ------------
+
+/** Rows in one table, read through a second connection's committed view. */
+function countRows(db: SqliteDatabase, table: string): number {
+  const row = db.prepare(`SELECT COUNT(*) AS n FROM ${table}`).get() as {
+    n: number;
+  };
+  return row.n;
+}
+
+/** Two episodes, the second with an English track, under Drama and Comedy. */
+function addHarbor(storage: ReturnType<typeof freshStorage>, title = 'Harbor') {
+  const slug = title.toLowerCase();
+  return storage.addSeries({ title, year: 2019, genres: ['Drama', 'Comedy'] }, [
+    {
+      season: 1,
+      number: 1,
+      title: 'Pilot',
+      videoPath: `${slug}-2019/season-01/S01E01.mp4`,
+    },
+    {
+      season: 1,
+      number: 2,
+      title: 'Low Tide',
+      videoPath: `${slug}-2019/season-01/S01E02.mp4`,
+      subtitles: [
+        { path: `${slug}-2019/season-01/S01E02.en.srt`, language: 'English' },
+      ],
+    },
+  ]);
+}
+
+describe('series write: deleteSeries', () => {
+  // Registered after the harness's own teardowns, so it runs first: the
+  // on-disk database is closed before its sandbox is removed.
+  afterEach(closeTracked);
+
+  it('removes the series, its episodes, its genres and its subtitles', () => {
+    const path = join(sandboxRoot('familyflix-series-delete-'), 'lib.db');
+    const storage = track(createSqliteStorage(path));
+    const series = addHarbor(storage);
+
+    const before = track(openDatabase(path));
+    expect(countRows(before, 'episodes')).toBe(2);
+    expect(countRows(before, 'series_genres')).toBe(2);
+    expect(countRows(before, 'episode_subtitles')).toBe(1);
+
+    storage.deleteSeries(series.id);
+
+    const probe = track(openDatabase(path));
+    expect(countRows(probe, 'series')).toBe(0);
+    expect(countRows(probe, 'episodes')).toBe(0);
+    expect(countRows(probe, 'series_genres')).toBe(0);
+    expect(countRows(probe, 'episode_subtitles')).toBe(0);
+    // The Genre pool is not the series' to take.
+    expect(countRows(probe, 'genres')).toBe(12);
+    expect(storage.getSeriesDetail(series.id)).toBeNull();
+  });
+
+  it('answers that a row went, and an episode’s stored path to clean up', () => {
+    const storage = freshStorage();
+    const series = addHarbor(storage);
+
+    const outcome = storage.deleteSeries(series.id);
+
+    expect(outcome.deleted).toBe(true);
+    // Any episode's path names the Series folder two directories up.
+    expect([
+      'harbor-2019/season-01/S01E01.mp4',
+      'harbor-2019/season-01/S01E02.mp4',
+    ]).toContain(outcome.storedPath);
+  });
+
+  it('leaves another series and its episodes alone', () => {
+    const storage = freshStorage();
+    const gone = addHarbor(storage, 'Harbor');
+    const kept = addHarbor(storage, 'Vine');
+
+    storage.deleteSeries(gone.id);
+
+    expect(storage.getSeriesDetail(kept.id)?.series.title).toBe('Vine');
+    expect(storage.listEpisodes(kept.id)).toHaveLength(2);
+    expect(storage.getSeriesHome().series.map((s) => s.id)).toEqual([kept.id]);
+  });
+
+  it('answers not-found for a series the library does not hold, changing nothing', () => {
+    const storage = freshStorage();
+    const kept = addHarbor(storage);
+
+    expect(
+      storage.deleteSeries('00000000-0000-4000-8000-000000000000')
+    ).toEqual({ deleted: false, storedPath: null });
+    expect(storage.listEpisodes(kept.id)).toHaveLength(2);
   });
 });

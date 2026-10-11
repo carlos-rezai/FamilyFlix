@@ -689,3 +689,46 @@ describe('SeriesDetail — the Detail backdrop', () => {
     expect(arts[0]?.closest('[aria-hidden="true"]')).toBeTruthy();
   });
 });
+
+/**
+ * 38 — Title editing, Slice 1: "delete a series" (issue #304).
+ *
+ * The **Series edit menu** in the hero's corner, where the movie page's ⋯ sits:
+ * its Danger row opens the Delete dialog naming this show and every episode it
+ * holds, across all its seasons.
+ */
+describe('SeriesDetail — the ⋯ menu', () => {
+  it('draws the ⋯ menu once the series has loaded', async () => {
+    serve(unstarted());
+
+    renderDetail();
+    await findTitle('Harbor & Vine');
+
+    expect(screen.getByRole('button', { name: 'More options' })).toBeTruthy();
+  });
+
+  it('draws no ⋯ menu while the series loads, or for one that is gone', async () => {
+    fetchMock.mockResolvedValue(notFoundResponse());
+
+    renderDetail('gone');
+    await screen.findByRole('link', { name: /back to library/i });
+
+    expect(screen.queryByRole('button', { name: 'More options' })).toBeNull();
+  });
+
+  it('opens the Delete dialog for this show, counting the episodes of every season', async () => {
+    // Seasons of 10 and 12: the dialog counts the show's 22.
+    serve(unstarted());
+    renderDetail();
+    await findTitle('Harbor & Vine');
+
+    fireEvent.click(screen.getByRole('button', { name: 'More options' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Delete series' }));
+
+    const open = screen.getByRole('dialog', {
+      name: 'Delete “Harbor & Vine”?',
+    });
+    expect(within(open).getByText(/its 22 episodes/)).toBeTruthy();
+    expect(writes()).toEqual([]);
+  });
+});

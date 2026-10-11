@@ -1195,3 +1195,118 @@ describe('createMedia — emptyRoot', () => {
     }
   });
 });
+
+// --- 38 — Title editing, Slice 1: "delete a series" (issue #304) ------------
+
+/**
+ * `removeSeriesFolder`: `removeMovieFolder`'s twin for a **Series folder**. It
+ * is handed an episode's **Stored path** and takes the folder one directory
+ * above that episode's season folder — `storeInSeriesFolder`'s reading — whole,
+ * best-effort, never throwing.
+ */
+describe('createMedia — removeSeriesFolder', () => {
+  /** A show with two seasons and a poster, and one episode's stored path. */
+  async function storedShow(media: Media, title = 'The Hollow Coast') {
+    const series = media.reserveFolder(title, 2018);
+    const episode = await media.storeUpload(
+      media.seasonFolder(series, 1),
+      'S01E01.mkv',
+      part('video bytes')
+    );
+    await media.storeUpload(
+      media.seasonFolder(series, 1),
+      'S01E01.en.srt',
+      part('1\n')
+    );
+    await media.storeUpload(
+      media.seasonFolder(series, 2),
+      'S02E01.mkv',
+      part('more video')
+    );
+    await media.storeInSeriesFolder(episode, 'poster.jpg', part('poster'));
+    return { series, episode };
+  }
+
+  it('removes the Series folder an episode’s stored path names, every season in it', async () => {
+    const { media, root } = sandbox();
+    const { series, episode } = await storedShow(media);
+
+    media.removeSeriesFolder(episode);
+
+    expect(existsSync(series)).toBe(false);
+    expect(mediaFilePath(root, episode)).toBeNull();
+    expect(existsSync(root)).toBe(true);
+  });
+
+  it('removes the Series folder when the named episode is already gone', async () => {
+    const { media } = sandbox();
+    const { series, episode } = await storedShow(media);
+    unlinkSync(join(series, 'season-01', 'S01E01.mkv'));
+
+    media.removeSeriesFolder(episode);
+
+    expect(existsSync(series)).toBe(false);
+  });
+
+  it('leaves another title’s folder alone and the managed media directory standing', async () => {
+    const { media, root } = sandbox();
+    const { episode } = await storedShow(media, 'The Hollow Coast');
+    const other = await storedShow(media, 'Harbor and Vine');
+    const film = media.reserveFolder('Rear Window', 1954);
+    const kept = await media.storeUpload(film, 'rear.mp4', part('rear'));
+
+    media.removeSeriesFolder(episode);
+
+    expect(existsSync(other.series)).toBe(true);
+    expect(mediaFilePath(root, other.episode)).not.toBeNull();
+    expect(mediaFilePath(root, kept)).not.toBeNull();
+    expect(existsSync(root)).toBe(true);
+  });
+
+  it('never removes the root for a path with no Series folder above its season', async () => {
+    const { media, root } = sandbox();
+    const film = media.reserveFolder('Rear Window', 1954);
+    const kept = await media.storeUpload(film, 'rear.mp4', part('rear'));
+
+    // A film's path: two directories up is the root itself, which is never a
+    // Series folder.
+    expect(() => media.removeSeriesFolder(kept)).not.toThrow();
+
+    expect(existsSync(root)).toBe(true);
+    expect(mediaFilePath(root, kept)).not.toBeNull();
+  });
+
+  it('says nothing about a Series folder that is already gone', () => {
+    const { media } = sandbox();
+
+    expect(() =>
+      media.removeSeriesFolder('never-reserved-2018/season-01/S01E01.mkv')
+    ).not.toThrow();
+  });
+
+  it('refuses a path that escapes the root — no files touched', () => {
+    const { media, outside } = sandbox();
+    const show = join(outside, 'Their Show');
+    mkdirSync(join(show, 'Season 01'), { recursive: true });
+    const theirs = join(show, 'Season 01', 'S01E01.mkv');
+    writeFileSync(theirs, 'not ours');
+
+    media.removeSeriesFolder('../elsewhere/Their Show/Season 01/S01E01.mkv');
+    media.removeSeriesFolder(resolve(theirs));
+
+    expect(existsSync(theirs)).toBe(true);
+    expect(existsSync(outside)).toBe(true);
+  });
+
+  it('swallows a removal failure rather than throwing', async () => {
+    const { media, root } = sandbox();
+    const { episode } = await storedShow(media);
+
+    const release = holdOpen(join(root, ...episode.split('/')));
+    try {
+      expect(() => media.removeSeriesFolder(episode)).not.toThrow();
+    } finally {
+      release();
+    }
+  });
+});

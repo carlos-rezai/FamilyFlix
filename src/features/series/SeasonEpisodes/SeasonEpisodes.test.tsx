@@ -690,3 +690,19 @@ describe('SeasonEpisodes — not found', () => {
     expect(await screen.findByText(/isn’t here/)).toBeDefined();
   });
 });
+
+/**
+ * 38 — Title editing, Slice 1: "delete a series" (issue #304). The ⋯ menu sits
+ * on the title, not on one of its parts: the season page draws none.
+ */
+describe('SeasonEpisodes — no ⋯ menu', () => {
+  it('draws no More options menu on the season page', async () => {
+    serve(harbor());
+
+    renderSeason();
+    await findSeasonHeading('Season 2');
+
+    expect(screen.queryByRole('button', { name: 'More options' })).toBeNull();
+    expect(screen.queryByRole('menuitem')).toBeNull();
+  });
+});
