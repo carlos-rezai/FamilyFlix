@@ -1293,7 +1293,7 @@ export function createApiRouter(
       return;
     }
     const sync = enrichment.current();
-    if (sync !== null && sync.phase === 'running') {
+    if (sync !== null && sync.phase !== 'review') {
       const { status, error } = RESET_REFUSALS.sync;
       res.status(status).json({ error });
       return;
