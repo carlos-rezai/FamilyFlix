@@ -15,7 +15,7 @@ import type {
   Series,
   StartEnrichment,
 } from '@/types';
-import type { LibraryStorage, SeriesEnrichment } from '../../library';
+import type { LibraryStorage } from '../../library';
 import type { Media } from '../../media/createMedia/createMedia';
 import { readableFolder } from '../../media/readableFolder/readableFolder';
 import {
@@ -518,8 +518,6 @@ export function createEnrichment({
    * year range, id and images. Answers the **Field conflicts** the plan left
    * for the review under the run's own scope, and what TMDB said — `write`'s
    * shape, so a series with a conflict has its gaps written as a film's are.
-   *
-   * `settled` is what a pick adds: the **Title fix**, written with the rest.
    */
   async function writeSeries(
     current: EnrichmentRun,
@@ -527,8 +525,7 @@ export function createEnrichment({
     episodes: readonly Episode[],
     detail: TmdbTvDetail,
     fields: readonly EnrichField[],
-    signal: AbortSignal,
-    settled: SeriesEnrichment | null
+    signal: AbortSignal
   ): Promise<{ conflicts: FieldConflict[]; fetched: FetchedTvFields }> {
     const fetched: FetchedTvFields = fetchedTvFields(detail);
     const { fill, conflicts } = planFields({
@@ -538,10 +535,13 @@ export function createEnrichment({
       scope: current.scope,
     });
 
-    const enrichment: SeriesEnrichment = {
-      ...seriesEnrichment(detail.id, fill, series, fetched, fields),
-      ...settled,
-    };
+    const enrichment = seriesEnrichment(
+      detail.id,
+      fill,
+      series,
+      fetched,
+      fields
+    );
     if (fill.poster) {
       const stored = await storeSeriesImage(
         current,
@@ -627,8 +627,7 @@ export function createEnrichment({
     series: Series,
     detail: TmdbTvDetail,
     fields: readonly EnrichField[],
-    signal: AbortSignal,
-    settled: SeriesEnrichment | null
+    signal: AbortSignal
   ): Promise<ShowWritten> {
     const episodes = storage.listEpisodes(series.id);
     const { conflicts, fetched } = await writeSeries(
@@ -637,8 +636,7 @@ export function createEnrichment({
       episodes,
       detail,
       fields,
-      signal,
-      settled
+      signal
     );
     const written: ShowWritten = {
       kind: 'written',
@@ -677,15 +675,7 @@ export function createEnrichment({
   > {
     const found = await lookUpSeries(apiKey, series, signal);
     if (found.kind !== 'found') return found;
-    return writeShow(
-      current,
-      apiKey,
-      series,
-      found.detail,
-      fields,
-      signal,
-      null
-    );
+    return writeShow(current, apiKey, series, found.detail, fields, signal);
   }
 
   /**
@@ -1041,12 +1031,16 @@ export function createEnrichment({
         series,
         detail.value,
         runFields,
-        signal,
-        fixesTitle
-          ? titleFix(series, detail.value.name, detail.value.first_air_date)
-          : {}
+        signal
       );
       if (signal.aborted) return { kind: 'not-found' };
+      // Written beside the show's columns, whatever its seasons came to.
+      if (fixesTitle) {
+        storage.enrichSeries(
+          series.id,
+          titleFix(series, detail.value.name, detail.value.first_air_date)
+        );
+      }
       if (written.kind === 'stop') return { kind: written.stop };
     } else {
       const { movie } = title;
