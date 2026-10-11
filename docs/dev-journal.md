@@ -11,6 +11,70 @@ Newest entry first.
 
 ---
 
+## 2026-10-11 — Factory reset — the reset wire (issue #298)
+
+The first slice of **Factory reset**, the wire alone, as log 37 Q9 ruled: one
+RED (`b8b6573`) and one GREEN (`bb076d7`), against the plan in
+`docs/PRDs/37-factory-reset-plan.md`. **7798 tests pass across 470 files**,
+measured at `bb076d7`, up from 7771 across 468 at the end of the Export name
+refactor. The two new files are `resetDatabase.test` and `routes.reset.test`;
+`createMedia.test` gained four leaves.
+
+### What shipped
+
+- **`db/resetDatabase`**, with `ERASED_TABLES` (child-first, so no foreign key
+  points at a row already gone) and `KEPT_TABLES` (the **Genre pool**, its ids
+  untouched, nothing re-seeded). Every row of every erased table goes in one
+  transaction, all or none. `user_version` is left where it is, and there is
+  no `VACUUM`.
+- **The table guard**, in its suite: it reads `sqlite_master` after every
+  migration and refuses a table in neither list.
+- **`LibraryStorage.reset()`**, the seam that keeps `db/` out of the router,
+  `close()`'s kind.
+- **`Media.emptyRoot()`**, the fourth removal: each entry inside the root
+  removed on its own, best-effort, a link unlinked and never followed, the
+  root kept, never throwing.
+- **`POST /api/reset`**, composed in the router over the five domains it
+  touches, in Q4's order: a running import refused `409`, a running Sync
+  refused `409`, a Sync in review let go, the rows erased, the root emptied,
+  the uploaded component taken back with its outcome ignored, the import in
+  review let go, `204`.
+
+### The deviation the build made
+
+A third answer, `500 { error: 'Could not erase the library. Nothing was
+changed.' }`, for a `storage.reset()` that throws. Log 37 Q4 has no such step.
+Catching it is right — Express 5 would answer an uncaught throw with its HTML
+error page, not JSON — but no leaf reaches it, and its second sentence is not
+true when a Sync in review has already been let go.
+
+### Left for the refactor round
+
+- `RESET_REFUSALS` is a flat map of sentences, not the `{ status, error }`
+  table every other refusal table is, and it sits between `createApiRouter`'s
+  docblock and the function.
+- `POST /reset` sits between `DELETE /movies/:id`'s comment and its handler,
+  not beside `GET /storage`.
+- The two runs' checks spell one rule two ways round (`!== 'review'`,
+  `=== 'running'`).
+- The `500` above: untested, and its sentence claims too much.
+- `routes.reset.test` checks `typeof storage.reset` (a type, not a
+  behaviour), and writes `routes.settings.test`'s `removableSlot` under a
+  second name.
+- CLAUDE.md's step 20 says "genres re-seeded" and "focus on _Cancel_"; its
+  tree has no `resetDatabase/` and counts three removals.
+
+### Still to build
+
+Issue 299, the Factory reset row and the **Reset dialog**. It is HITL: the
+prototype is revised and reviewed first.
+
+### Follow-ups
+
+The refactor plan, filed as 300.
+
+---
+
 ## 2026-10-10 — Export name refactor (issue 296)
 
 Fifteen commits against `docs/refactor-plans/36-export-name-refactor.md`, one
