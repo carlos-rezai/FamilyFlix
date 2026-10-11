@@ -3,6 +3,7 @@ import {
   createWriteStream,
   existsSync,
   mkdirSync,
+  readdirSync,
   realpathSync,
   renameSync,
   rmSync,
@@ -203,6 +204,16 @@ export interface Media {
    * media directory, or names a folder already gone, is nothing to do.
    */
   removeMovieFolder(storedPath: string): void;
+
+  /**
+   * Empty the **Managed media directory** and keep it — **Factory reset**'s
+   * removal. Each entry directly inside the root is removed on its own,
+   * **best-effort**: one that will not go — a video the stream route still has
+   * open — is left, and the rest go anyway. A link is removed as a link, its
+   * target never followed. A root that does not exist is nothing to do. Never
+   * throws: it runs after the library's rows have gone.
+   */
+  emptyRoot(): void;
 }
 
 /**
@@ -435,6 +446,26 @@ export function createMedia(mediaPath: string): Media {
       } catch {
         // A folder that will not go — a video the stream route still has open.
         // The row is already gone, and a stranded folder beats a ghost row.
+      }
+    },
+
+    emptyRoot: () => {
+      let entries: string[];
+      try {
+        entries = readdirSync(mediaPath);
+      } catch {
+        // No root, or none readable: nothing to empty.
+        return;
+      }
+
+      for (const entry of entries) {
+        try {
+          // `rmSync` reads the entry with `lstat`, so a link or junction is
+          // unlinked rather than followed into what it points at.
+          rmSync(join(mediaPath, entry), { recursive: true, force: true });
+        } catch {
+          // An entry that will not go is left; the others still go.
+        }
       }
     },
   };

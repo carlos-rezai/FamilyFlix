@@ -1,4 +1,5 @@
 import { openDatabase } from '../db';
+import { resetDatabase } from '../db/resetDatabase/resetDatabase';
 import type {
   Genre,
   GenreCount,
@@ -318,6 +319,12 @@ export interface LibraryStorage {
    * list held it.
    */
   removeLibraryFolder(id: string): boolean;
+  /**
+   * **Factory reset**'s erase: every row of every table but the **Genre
+   * pool**, in one transaction — all or nothing. The same kind of seam
+   * {@link close} is, so the router never reaches `db/` itself.
+   */
+  reset(): void;
   /** Close the underlying database connection. */
   close(): void;
 }
@@ -395,6 +402,9 @@ export function createSqliteStorage(dbPath: string): LibraryStorage {
     libraryFolders: folders.libraryFolders,
     addLibraryFolder: folders.addLibraryFolder,
     removeLibraryFolder: folders.removeLibraryFolder,
+    reset() {
+      resetDatabase(db);
+    },
     close() {
       db.close();
     },
