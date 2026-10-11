@@ -2381,25 +2381,6 @@ export function createApiRouter(
     }
   );
 
-  // _Save & continue_: the **Movie form**'s own multipart encoding, read by
-  // the same reader the two movie routes use — and **the only route in the
-  // app that accepts a path**. A **Found file** arrives as the path field the
-  // edit route already reads for a **Stored file** (`videoPath`, `posterPath`,
-  // `subtitlePath`), a picked one as bytes in the part beside it; the two are
-  // told apart exactly as the edit tells them apart, so nothing about the
-  // encoding is this route's own. What is this route's own is where a path
-  // may point: the importer copies from under the **Current run**'s root and
-  // nowhere else, and a path outside it is a `400` with nothing copied — not
-  // the film named inside the root beside it either. `POST /api/movies` keeps
-  // accepting bytes only, whatever a path field says: a path-accepting field
-  // on the route anyone on the network can reach was ruled out in the PRD.
-  //
-  // **Every refusal takes the bytes this request wrote with it**, on the
-  // add's rule rather than the edit's: a resolve is a new movie, so the folder
-  // holds nothing older than this request. `201` with the movie once the
-  // importer has copied, added and dismissed; `404` for a problem that is not
-  // there, before the body is read where that is knowable and after it where
-  // the problem went during the upload.
   // The **Series Resolve**: an `unplaced` Problem's body is the series form,
   // read by `seriesFormBody` as the edit reads it — an episode's video is the
   // `episodeVideo` part that follows its field, else its `videoPath`, which
@@ -2501,6 +2482,25 @@ export function createApiRouter(
     }
   };
 
+  // _Save & continue_: the **Movie form**'s own multipart encoding, read by
+  // the same reader the two movie routes use — and **the only route in the
+  // app that accepts a path**. A **Found file** arrives as the path field the
+  // edit route already reads for a **Stored file** (`videoPath`, `posterPath`,
+  // `subtitlePath`), a picked one as bytes in the part beside it; the two are
+  // told apart exactly as the edit tells them apart, so nothing about the
+  // encoding is this route's own. What is this route's own is where a path
+  // may point: the importer copies from under the **Current run**'s root and
+  // nowhere else, and a path outside it is a `400` with nothing copied — not
+  // the film named inside the root beside it either. `POST /api/movies` keeps
+  // accepting bytes only, whatever a path field says: a path-accepting field
+  // on the route anyone on the network can reach was ruled out in the PRD.
+  //
+  // **Every refusal takes the bytes this request wrote with it**, on the
+  // add's rule rather than the edit's: a resolve is a new movie, so the folder
+  // holds nothing older than this request. `201` with the movie once the
+  // importer has copied, added and dismissed; `404` for a problem that is not
+  // there, before the body is read where that is knowable and after it where
+  // the problem went during the upload.
   router.post(
     '/import/current/problems/:id/resolve',
     async (req: Request<{ id: string }>, res: Response) => {
