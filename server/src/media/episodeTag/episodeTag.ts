@@ -20,6 +20,14 @@ const TAG_SHAPES = [
 ];
 
 /**
+ * The **Episode word** — `Episode 12`, `Ep 12`, `Ep.12`, `E12` — either case,
+ * standing as a word of its own. It gives an episode number only, so it is
+ * read only under a season the caller already knows.
+ */
+const EPISODE_WORD =
+  /(?:^|[\s._-])(?:episode|ep|e)[\s.]?(\d{1,4})(?=$|[\s._-])/i;
+
+/**
  * The words a release name carries that are not the episode's: resolutions,
  * codecs, sources and the like. Dropped from the title wherever they sit.
  */
@@ -31,26 +39,42 @@ const QUALITY_TAG =
  * `null` for a name that carries none. The title is the text after the tag,
  * with dots and underscores read as spaces and quality tags dropped; nothing
  * left is a `null` title. The extension never reaches it.
+ *
+ * Given the `season` the caller already knows — a Season folder's, or 1 at a
+ * Show folder's root — the **Episode word** is read too, under that season. A
+ * full tag still answers its own numbers.
  */
-export function episodeTag(filename: string): EpisodeTag | null {
+export function episodeTag(
+  filename: string,
+  season?: number
+): EpisodeTag | null {
   const name = filename.slice(0, filename.length - extname(filename).length);
+
+  const titleAfter = (found: RegExpExecArray): string | null => {
+    const words = name
+      .slice(found.index + found[0].length)
+      .split(/[\s._]+/)
+      .filter((word) => word !== '' && word !== '-' && !QUALITY_TAG.test(word));
+    return words.length === 0 ? null : words.join(' ');
+  };
 
   for (const shape of TAG_SHAPES) {
     const found = shape.exec(name);
-    if (found === null) {
-      continue;
+    if (found !== null) {
+      return {
+        season: Number(found[1]),
+        episode: Number(found[2]),
+        title: titleAfter(found),
+      };
     }
-    const rest = name.slice(found.index + found[0].length);
-    const words = rest
-      .split(/[\s._]+/)
-      .filter((word) => word !== '' && word !== '-' && !QUALITY_TAG.test(word));
-    return {
-      season: Number(found[1]),
-      episode: Number(found[2]),
-      title: words.length === 0 ? null : words.join(' '),
-    };
   }
-  return null;
+  if (season === undefined) {
+    return null;
+  }
+  const word = EPISODE_WORD.exec(name);
+  return word === null
+    ? null
+    : { season, episode: Number(word[1]), title: titleAfter(word) };
 }
 
 /**

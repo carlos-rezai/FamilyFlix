@@ -70,7 +70,8 @@ export function useEpisodeList(): EpisodeList {
         [];
       const untagged: { key: string; file: File }[] = [];
       for (const { key, file } of keyed) {
-        const tag = readEpisodeTag(file.name);
+        // A pick is a Show folder's root, so the Episode word reads as season 1.
+        const tag = readEpisodeTag(file.name, 1);
         if (tag === null) {
           untagged.push({ key, file });
           continue;

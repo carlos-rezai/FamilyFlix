@@ -124,7 +124,9 @@ export function groupShows(scans: MovieFolderScan[]): GroupedScans {
 
     const placed = new Map<string, ShowEpisode>();
     for (const video of scan.videos) {
-      const tag = episodeTag(basename(video));
+      // The season is known here — the folder's, or 1 at a Show folder's
+      // root — so the Episode word is read too; it never made the show.
+      const tag = episodeTag(basename(video), folderSeason ?? 1);
       const season = folderSeason ?? tag?.season ?? null;
       const number = `${season}:${tag?.episode}`;
       if (tag === null || season === null || numbers.has(number)) {
