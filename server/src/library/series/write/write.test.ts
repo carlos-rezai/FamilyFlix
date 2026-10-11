@@ -664,3 +664,41 @@ describe('series write: updateSeries', () => {
     expect(numbering(storage, series.id)).toEqual(before);
   });
 });
+
+// --- 38 — Title editing, Slice 5: "Source file" (issue #308) ----------------
+
+describe('series write: an episode’s Source file', () => {
+  it('reads back the Source file an insert was given', () => {
+    const storage = freshStorage();
+    const series = storage.addSeries({ title: 'Harbor' }, [
+      {
+        season: 1,
+        number: 1,
+        videoPath: 'harbor/season-01/S01E01.mp4',
+        sourceFile: 'Season 01/Harbor.S01E01.Pilot.mp4',
+      },
+    ]);
+    storage.addEpisode(series.id, {
+      season: 1,
+      number: 2,
+      videoPath: 'harbor/season-01/S01E02.mp4',
+      sourceFile: 'Season 01/Harbor.S01E02.mp4',
+    });
+
+    expect(
+      storage.listEpisodes(series.id).map((episode) => episode.sourceFile)
+    ).toEqual([
+      'Season 01/Harbor.S01E01.Pilot.mp4',
+      'Season 01/Harbor.S01E02.mp4',
+    ]);
+  });
+
+  it('reads an episode inserted with none as null', () => {
+    const storage = freshStorage();
+    const series = addHarbor(storage);
+
+    expect(
+      storage.listEpisodes(series.id).map((episode) => episode.sourceFile)
+    ).toEqual([null, null]);
+  });
+});

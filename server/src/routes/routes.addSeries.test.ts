@@ -584,3 +584,27 @@ describe('POST /api/series — episode subtitles', () => {
     }
   );
 });
+
+// 38 — Title editing, Slice 5 (issue #308): the form's add knows no original
+// file — a picked video arrives as bytes and a name, never a path — so it
+// records no **Source file**.
+
+describe('POST /api/series — the Source file', () => {
+  it('stores no Source file for any episode', async () => {
+    const { storage, baseUrl } = freshApi();
+
+    const response = await postSeries(baseUrl, [
+      ...FIELDS,
+      episode(1, 1, 'Pilot'),
+      ['episodeVideo', videoPart('Harbor.and.Vine.S01E01.Pilot.mp4')],
+      episode(1, 2, 'Low Tide'),
+      ['episodeVideo', videoPart('Harbor.and.Vine.S01E02.Low.Tide.mp4')],
+    ]);
+    const series = (await response.json()) as Series;
+
+    expect(response.status).toBe(201);
+    expect(
+      storage.listEpisodes(series.id).map((row) => row.sourceFile)
+    ).toEqual([null, null]);
+  });
+});

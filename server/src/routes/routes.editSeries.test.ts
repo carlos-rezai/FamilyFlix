@@ -17,10 +17,10 @@
 // Every refusal leaves nothing written and no stored file behind.
 
 import express from 'express';
-import { existsSync, mkdirSync, readdirSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, writeFileSync } from 'node:fs';
 import type { Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { createApiRouter } from '.';
@@ -591,5 +591,95 @@ describe('PATCH /api/movies/:id — the Match unlink', () => {
       tmdbId: 603,
       director: 'Ana Sørensen',
     });
+  });
+});
+
+// 38 — Title editing, Slice 5 (issue #308): an edit and the **Source file**. A
+// held file left in place keeps the Source file it was imported from, however
+// the episode is renumbered or retitled; a freshly picked video came from no
+// scanned folder, so its episode's Source file is gone.
+
+describe('PATCH /api/series/:id — the Source file', () => {
+  /**
+   * _Harbor and Vine_ as an import leaves it: two episodes with their Source
+   * files, their videos real files under the media root.
+   */
+  function importedHarbor(storage: LibraryStorage, media: string): Series {
+    const videos = [
+      'harbor-and-vine-2019/season-01/Harbor.S01E01.mp4',
+      'harbor-and-vine-2019/season-01/Harbor.S01E02.mp4',
+    ];
+    for (const video of videos) {
+      mkdirSync(dirname(join(media, video)), { recursive: true });
+      writeFileSync(join(media, video), mp4Of(2520));
+    }
+    return storage.addSeries({ title: 'Harbor and Vine', year: 2019 }, [
+      {
+        season: 1,
+        number: 1,
+        title: 'Pilot',
+        videoPath: videos[0],
+        sourceFile: 'Season 01/eps1.0_hellofriend.mov',
+      },
+      {
+        season: 1,
+        number: 2,
+        title: 'Low Tide',
+        videoPath: videos[1],
+        sourceFile: 'Season 01/eps1.1_ones-and-zer0es.mpeg',
+      },
+    ]);
+  }
+
+  it('keeps a kept file’s Source file through a renumber and a retitle', async () => {
+    const { storage, baseUrl, media } = freshApi();
+    const series = importedHarbor(storage, media);
+    const [pilot, lowTide] = storage.listEpisodes(series.id);
+
+    const response = await patchSeries(baseUrl, series.id, [
+      ...heldFields(storage, series.id),
+      heldEpisode(pilot, { number: 3, title: 'The Pilot' }),
+      heldEpisode(lowTide),
+    ]);
+
+    expect(response.status).toBe(200);
+    const after = storage.listEpisodes(series.id);
+    expect(after.find((e) => e.id === pilot.id)?.sourceFile).toBe(
+      'Season 01/eps1.0_hellofriend.mov'
+    );
+    expect(after.find((e) => e.id === lowTide.id)?.sourceFile).toBe(
+      'Season 01/eps1.1_ones-and-zer0es.mpeg'
+    );
+  });
+
+  it('stores null for a freshly picked video, and for a new episode', async () => {
+    const { storage, baseUrl, media } = freshApi();
+    const series = importedHarbor(storage, media);
+    const [pilot, lowTide] = storage.listEpisodes(series.id);
+
+    const response = await patchSeries(baseUrl, series.id, [
+      ...heldFields(storage, series.id),
+      heldEpisode(pilot),
+      heldEpisode(lowTide, { videoPath: undefined }),
+      ['episodeVideo', videoPart('S01E02.recut.mp4')],
+      [
+        'episode',
+        JSON.stringify({
+          season: 1,
+          number: 3,
+          title: 'Spring Tide',
+          subtitleLanguages: [],
+        }),
+      ],
+      ['episodeVideo', videoPart('S01E03.mp4')],
+    ]);
+
+    expect(response.status).toBe(200);
+    const after = storage.listEpisodes(series.id);
+    expect(after.map((e) => [e.number, e.sourceFile])).toEqual([
+      [1, 'Season 01/eps1.0_hellofriend.mov'],
+      [2, null],
+      [3, null],
+    ]);
   });
 });

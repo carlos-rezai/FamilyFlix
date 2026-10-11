@@ -430,3 +430,37 @@ describe('createImporter — the run’s source', () => {
     expect(started.enrich).toBe(true);
   });
 });
+
+// 38 — Title editing, Slice 5 (issue #308): a **Folder scan** records each
+// episode's **Source file** as a sheet import does — the video's path
+// relative to its show's **Source folder**, with forward slashes.
+
+describe('createImporter.scan — the Source file', () => {
+  it('records each episode’s Source file relative to its Show folder, with forward slashes', async () => {
+    const box = sandbox();
+    const folders = listBoth(box);
+
+    await scanOnce(box.importer, [folders.films, folders.shows]);
+
+    const sourceFiles = Object.fromEntries(
+      box.storage
+        .getSeriesHome()
+        .series.map((show) => [
+          show.title,
+          box.storage
+            .listEpisodes(show.id)
+            .map((episode) => episode.sourceFile),
+        ])
+    );
+    expect(sourceFiles).toEqual({
+      'Harbor & Vine': [
+        'Season 01/Harbor.and.Vine.S01E01.Pilot.mp4',
+        'Season 01/Harbor.and.Vine.S01E02.The.Night.Market.mp4',
+      ],
+      Tidewater: [
+        'Tidewater.S01E01.Low.Water.mp4',
+        'Tidewater.S01E02.The.Crossing.mp4',
+      ],
+    });
+  });
+});

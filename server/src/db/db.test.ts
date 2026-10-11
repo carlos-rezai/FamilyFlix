@@ -43,10 +43,10 @@ const EXPECTED_GENRES = [
   'Crime',
 ];
 
-// The version a fresh database migrates to — migration #7, the carry-over of
-// `library-root` (issue #271). Every "at the latest version" assertion reads it,
-// so the next migration moves one number rather than seven.
-const LATEST_VERSION = 7;
+// The version a fresh database migrates to — migration #8, an episode's
+// **Source file** (issue #308). Every "at the latest version" assertion reads
+// it, so the next migration moves one number rather than eight.
+const LATEST_VERSION = 8;
 
 // What migration #5 adds, by table: the three columns a Sync writes on a movie
 // and a series, and the episode's still. Additive, nullable, nothing seeded.
@@ -196,6 +196,19 @@ function indexesReferencing(db: TestDb, column: string): string[] {
 }
 
 /**
+ * What migration #8 added, dropped: `episodes.source_file`, only where it
+ * exists, so every wind-back reads the same before #8 is written as after.
+ */
+function dropMigration8(db: TestDb): void {
+  if (
+    tableNames(db).includes('episodes') &&
+    columnNames(db, 'episodes').includes('source_file')
+  ) {
+    db.prepare('ALTER TABLE episodes DROP COLUMN source_file').run();
+  }
+}
+
+/**
  * Leave the database at `path` looking exactly like one written before
  * migration #2 existed: open it (which migrates it to the latest), then undo
  * what #2 added and wind `user_version` back to 1.
@@ -210,6 +223,7 @@ function indexesReferencing(db: TestDb, column: string): string[] {
 function windBackToV1(path: string): void {
   const db = open(path);
   try {
+    dropMigration8(db);
     dropMigration6(db);
     dropMigration5Columns(db);
     dropSeriesTables(db);
@@ -236,6 +250,7 @@ function windBackToV1(path: string): void {
 function windBackToV2(path: string): void {
   const db = open(path);
   try {
+    dropMigration8(db);
     dropMigration6(db);
     dropMigration5Columns(db);
     dropSeriesTables(db);
@@ -265,6 +280,7 @@ function dropSeriesTables(db: TestDb): void {
 function windBackToV3(path: string): void {
   const db = open(path);
   try {
+    dropMigration8(db);
     dropMigration6(db);
     dropMigration5Columns(db);
     dropSeriesTables(db);
@@ -301,6 +317,7 @@ function dropMigration5Columns(db: TestDb): void {
 function windBackToV4(path: string): void {
   const db = open(path);
   try {
+    dropMigration8(db);
     dropMigration6(db);
     dropMigration5Columns(db);
     db.pragma('user_version = 4');
@@ -334,6 +351,7 @@ function dropMigration6(db: TestDb): void {
 function windBackToV5(path: string): void {
   const db = open(path);
   try {
+    dropMigration8(db);
     dropMigration6(db);
     db.pragma('user_version = 5');
   } finally {
@@ -341,11 +359,12 @@ function windBackToV5(path: string): void {
   }
 }
 
-/** A table's columns less what migrations #5 and #6 added — the v4 shape. */
+/** A table's columns less what migrations #5, #6 and #8 added — the v4 shape. */
 function v4Columns(db: TestDb, table: keyof typeof MIGRATION_5_COLUMNS) {
   const added: readonly string[] = [
     ...MIGRATION_5_COLUMNS[table],
     'library_folder_id',
+    'source_file',
   ];
   return columnNames(db, table).filter((column) => !added.includes(column));
 }
@@ -1084,6 +1103,7 @@ function versionSixLibrary(
 
   const db = open(path);
   try {
+    dropMigration8(db);
     db.prepare('UPDATE movies SET source_folder = ? WHERE id = ?').run(
       'Northwind (2018)',
       imported
@@ -1122,10 +1142,10 @@ const rootKeyRow = (db: TestDb) =>
   db.prepare('SELECT value FROM settings WHERE key = ?').get(ROOT_KEY);
 
 describe('db: migration #7 — library-root carried over', () => {
-  it('lands a fresh database at version 7', () => {
+  it('lands a fresh database at the latest version', () => {
     const db = track(open(':memory:'));
 
-    expect(userVersion(db)).toBe(7);
+    expect(userVersion(db)).toBe(LATEST_VERSION);
   });
 
   it('lists the remembered root as the one folder, links exactly the titles with a source folder, and drops the key', () => {
@@ -1135,7 +1155,7 @@ describe('db: migration #7 — library-root carried over', () => {
 
     const upgraded = track(open(path));
 
-    expect(userVersion(upgraded)).toBe(7);
+    expect(userVersion(upgraded)).toBe(LATEST_VERSION);
     const folders = listedFolders(upgraded);
     expect(folders.map((folder) => folder.path)).toEqual([root]);
     const [folder] = folders;
@@ -1167,10 +1187,65 @@ describe('db: migration #7 — library-root carried over', () => {
 
     const upgraded = track(open(path));
 
-    expect(userVersion(upgraded)).toBe(7);
+    expect(userVersion(upgraded)).toBe(LATEST_VERSION);
     expect(listedFolders(upgraded)).toEqual([]);
     expect(folderOf(upgraded, 'movies', imported)).toBeNull();
     expect(folderOf(upgraded, 'series', show)).toBeNull();
+  });
+});
+
+// 38 — Title editing, Slice 5 (issue #308) adds migration #8: an episode's
+// **Source file** — `episodes.source_file`, the video's path relative to its
+// series' **Source folder**, with forward slashes. Additive and nullable:
+// nothing is backfilled, so every episode a library already holds reads back
+// with none until a scan or a Resolve records one.
+
+describe('db: migration #8 — an episode’s Source file', () => {
+  it('adds a nullable TEXT source_file to episodes', () => {
+    const db = track(open(':memory:'));
+
+    const declared = columnInfo(db, 'episodes').find(
+      (c) => c.name === 'source_file'
+    );
+    expect(declared).toBeDefined();
+    expect(declared?.type.toUpperCase()).toBe('TEXT');
+    expect(declared?.notnull).toBe(0);
+  });
+
+  it('lands a fresh database at version 8', () => {
+    const db = track(open(':memory:'));
+
+    expect(userVersion(db)).toBe(8);
+  });
+
+  it('upgrades a version-7 library in place, its episodes kept with no Source file', () => {
+    const path = tempDbPath();
+    const before = trackStorage(createSqliteStorage(path));
+    const series = before.addSeries({ title: 'Harbor & Vine' }, [
+      {
+        season: 1,
+        number: 1,
+        title: 'Pilot',
+        videoPath: 'harbor-vine/season-01/S01E01.mp4',
+      },
+    ]);
+    before.close();
+    const db = open(path);
+    try {
+      dropMigration8(db);
+      db.pragma('user_version = 7');
+    } finally {
+      db.close();
+    }
+
+    const upgraded = track(open(path));
+
+    expect(userVersion(upgraded)).toBe(8);
+    expect(
+      upgraded
+        .prepare('SELECT title, source_file FROM episodes WHERE series_id = ?')
+        .all(series.id)
+    ).toEqual([{ title: 'Pilot', source_file: null }]);
   });
 });
 

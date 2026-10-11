@@ -389,3 +389,35 @@ describe('MovieForm — the Series edit job, saved', () => {
     expect(patches()).toHaveLength(0);
   });
 });
+
+/**
+ * 38 — Title editing, Slice 5 (issue #308): a held row's mono line names the
+ * episode's **Source file** — the original file a scan found it as — when the
+ * library knows it, else the stored video's name.
+ */
+describe('MovieForm — the Series edit job, the Source file', () => {
+  it('names a row by its Source file when set, else by its stored video', async () => {
+    const imported: Episode = {
+      ...PILOT,
+      sourceFile: 'Season 01/eps1.0_hellofriend.mov',
+    };
+    answerSeries = () =>
+      Promise.resolve(
+        okResponse({
+          ...DETAIL,
+          seasons: [
+            { number: 2, episodes: [SPRING_TIDE], next: SPRING_TIDE },
+            { number: 1, episodes: [LOW_TIDE, imported], next: imported },
+          ],
+          next: imported,
+        })
+      );
+
+    await renderAt();
+
+    expect(screen.getByText('Season 01/eps1.0_hellofriend.mov')).toBeTruthy();
+    expect(screen.queryByText('S01E01.mkv')).toBeNull();
+    expect(screen.getByText('S01E02.mkv')).toBeTruthy();
+    expect(screen.getByText('S02E01.mkv')).toBeTruthy();
+  });
+});

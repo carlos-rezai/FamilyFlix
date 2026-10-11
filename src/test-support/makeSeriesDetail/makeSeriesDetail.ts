@@ -49,6 +49,7 @@ export function makeEpisode(
     videoPath: `harbor-vine-2019/season-0${season}/e${number}.mp4`,
     subtitles: [],
     stillPath: null,
+    sourceFile: null,
     lastWatchedAt: null,
   };
 }

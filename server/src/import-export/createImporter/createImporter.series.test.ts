@@ -1127,3 +1127,73 @@ describe('createImporter — a show row’s Status', () => {
     }
   });
 });
+
+// 38 — Title editing, Slice 5 (issue #308): an episode's **Source file** — the
+// video's path relative to its series' **Source folder**, with forward
+// slashes — written by a sheet import, and read by a later scan: a video
+// whose Source file the held series has is **Already in library**, checked
+// before its **Episode tag**, so an episode renumbered in the app is not
+// imported a second time under the number its name still gives.
+
+describe('createImporter — the Source file', () => {
+  it('records each episode’s Source file relative to the Show folder, with forward slashes', async () => {
+    const { storage, importer, root, sheet } = sandbox();
+
+    await importer.start(sheet, root);
+    await untilReview(importer);
+
+    expect(
+      episodesOf(storage, theSeries(storage)).map(
+        (episode) => episode.sourceFile
+      )
+    ).toEqual([
+      'Season 01/Lighthouse.Keepers.S01E01.First.Light.1080p.mp4',
+      'Season 01/Lighthouse.Keepers.S01E02.The.Storm.1080p.x264.mp4',
+      'Season 2/Lighthouse Keepers 2x01 Spring Tide.mp4',
+    ]);
+  });
+
+  it('skips a held Source file on a re-scan, though its name gives other numbers', async () => {
+    const { storage, importer, media, root, sheet } = rerunSandbox(SEASON_ONE);
+    await runOnce(importer, sheet, root);
+    const series = theSeries(storage);
+    const [pilot, storm] = episodesOf(storage, series);
+    // The Pilot renumbered in the app, to S01E03: its file still says S01E01.
+    const detail = storage.getSeriesDetail(series.id);
+    if (detail === null) throw new Error('the series went');
+    storage.updateSeries(series.id, {
+      title: detail.series.title,
+      year: detail.series.year,
+      endYear: detail.series.endYear,
+      synopsis: detail.series.synopsis,
+      creator: detail.series.creator,
+      cast: detail.series.cast,
+      rating: detail.series.rating,
+      genres: detail.series.genres.map((genre) => genre.name),
+      posterPath: detail.series.posterPath,
+      episodes: [pilot, storm].map((episode) => ({
+        id: episode.id,
+        season: episode.season,
+        number: episode.id === pilot.id ? 3 : episode.number,
+        title: episode.title,
+        videoPath: episode.videoPath,
+      })),
+    });
+    const tree = treeOf(media);
+
+    const run = await runOnce(importer, sheet, root);
+
+    expect(
+      episodesOf(storage, series).map((episode) => [
+        episode.id,
+        episode.season,
+        episode.number,
+      ])
+    ).toEqual([
+      [storm.id, 1, 2],
+      [pilot.id, 1, 3],
+    ]);
+    expect(treeOf(media)).toEqual(tree);
+    expect(run).toMatchObject({ total: 0, done: 0, problems: [] });
+  });
+});

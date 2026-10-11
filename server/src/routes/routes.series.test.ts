@@ -1058,3 +1058,38 @@ describe('the Movies tab beside the Series tab’s filters', () => {
     ).toEqual(['Harbor Lights']);
   });
 });
+
+// 38 — Title editing, Slice 5 (issue #308): an episode's **Source file** is
+// read through to the wire on the series page's read.
+
+describe('GET /api/series/:id — the Source file', () => {
+  it('carries each episode’s Source file, and null for one with none', async () => {
+    const { storage, baseUrl } = freshApi();
+    const series = storage.addSeries({ title: 'Harbor & Vine' }, [
+      {
+        season: 1,
+        number: 1,
+        videoPath: 'harbor-vine/season-01/S01E01.mp4',
+        sourceFile: 'Season 01/eps1.0_hellofriend.mov',
+      },
+      {
+        season: 1,
+        number: 2,
+        videoPath: 'harbor-vine/season-01/S01E02.mp4',
+      },
+    ]);
+
+    const response = await fetch(`${baseUrl}/api/series/${series.id}`);
+    const body = (await response.json()) as SeriesDetail;
+
+    expect(response.status).toBe(200);
+    expect(
+      body.seasons
+        .flatMap((season) => season.episodes)
+        .map((episode) => [episode.number, episode.sourceFile])
+    ).toEqual([
+      [1, 'Season 01/eps1.0_hellofriend.mov'],
+      [2, null],
+    ]);
+  });
+});
