@@ -534,6 +534,28 @@ const EXPORT_REFUSALS: Record<
 };
 
 /**
+ * How `POST /api/reset` refuses: a running import or Sync `409`, an erase the
+ * database would not take `500` — each a status and its one sentence.
+ */
+const RESET_REFUSALS: Record<
+  'import' | 'sync' | 'failed',
+  { status: number; error: string }
+> = {
+  import: {
+    status: 409,
+    error: 'An import is running. Stop it before erasing everything.',
+  },
+  sync: {
+    status: 409,
+    error: 'A sync is running. Stop it before erasing everything.',
+  },
+  failed: {
+    status: 500,
+    error: 'Could not erase the library. Nothing was changed.',
+  },
+};
+
+/**
  * Mount the JSON API over a {@link LibraryStorage}. Handlers stay thin — parse
  * the request, call one repository method, serialize the result — so the
  * aggregation and query logic stay tested at the repository seam.
@@ -567,13 +589,6 @@ const EXPORT_REFUSALS: Record<
  * one was modelled on, never had one. The composition root is now the only
  * answer to what this app is composed of.
  */
-/** `POST /api/reset`'s refusals, each one sentence. */
-const RESET_REFUSALS = {
-  import: 'An import is running. Stop it before erasing everything.',
-  sync: 'A sync is running. Stop it before erasing everything.',
-  failed: 'Could not erase the library. Nothing was changed.',
-} as const;
-
 export function createApiRouter(
   storage: LibraryStorage,
   mediaPath: string,
@@ -1273,12 +1288,14 @@ export function createApiRouter(
   router.post('/reset', async (_req: Request, res: Response) => {
     const run = importer.current();
     if (run !== null && run.phase !== 'review') {
-      res.status(409).json({ error: RESET_REFUSALS.import });
+      const { status, error } = RESET_REFUSALS.import;
+      res.status(status).json({ error });
       return;
     }
     const sync = enrichment.current();
     if (sync !== null && sync.phase === 'running') {
-      res.status(409).json({ error: RESET_REFUSALS.sync });
+      const { status, error } = RESET_REFUSALS.sync;
+      res.status(status).json({ error });
       return;
     }
 
@@ -1286,7 +1303,8 @@ export function createApiRouter(
     try {
       storage.reset();
     } catch {
-      res.status(500).json({ error: RESET_REFUSALS.failed });
+      const { status, error } = RESET_REFUSALS.failed;
+      res.status(status).json({ error });
       return;
     }
     media.emptyRoot();
