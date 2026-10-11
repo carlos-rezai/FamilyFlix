@@ -1026,7 +1026,7 @@ same layout, spacing, states, copy, and interaction.
 this says what to build _next_. Steps 1–9 of the first chain are done,
 ending with **Software update** (v0.2.0), and so are steps 10–15: the
 second chain is done too, shipped as v0.3.0. Steps 16–23 are the third
-chain: steps 16–19 are done, 20–23 are planned. Steps 10–15 came out of
+chain: steps 16–20 are done, 21–23 are planned. Steps 10–15 came out of
 installing FamilyFlix and using it: smallest and most self-contained first,
 the form before the folders that will feed it, export last because it
 mirrors what import holds.
@@ -1074,7 +1074,7 @@ draws something new, a prototype revision before it is built:
 19. ✅ **Export name** — the name row becomes a field, prefilled and never
     overwritten once edited; `StartExport.name`, refused in a sentence when
     empty or not a folder name, numbered when taken.
-20. 🔜 **Factory reset** — the Storage card's last row and the **Reset
+20. ✅ **Factory reset** — the Storage card's last row and the **Reset
     dialog** (focus on the card): `POST /api/reset` → `204`, `409` while a run
     runs; `storage.reset()` — `db/resetDatabase` in one transaction, the
     **Genre pool** kept, not re-seeded — then
@@ -1156,7 +1156,7 @@ A 🧭 Roadmap item is not in this chain — it is after it, if ever.
 - ✅ **Ultrawide margins** — an optional left/right margin for ultra-wide monitors: the Display group's Toggle caps every screen but the player at 1920px, centred.
 
 - ✅ **Open the media folder** — _Open folder_ on the Storage card, over a no-argument `openMedia` bridge channel: main makes the managed media directory if it is missing and opens it in Explorer.
-- 🔜 **Factory reset** — erase everything FamilyFlix made behind the **Reset dialog**; Library folders on disk stay (step 20).
+- ✅ **Factory reset** — the Storage card's last row: _Reset…_ opens the **Reset dialog**, what goes and what stays, and _Erase everything_ erases every title, watch history and setting, empties the managed media directory and takes back an uploaded component, then reloads onto an empty library. Refused in one sentence while an import or a Sync runs; Library folders on disk stay.
 
 ### System
 
