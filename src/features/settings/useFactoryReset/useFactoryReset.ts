@@ -3,7 +3,10 @@ import { useCallback, useState } from 'react';
 import { factoryReset } from '../api/api';
 
 export interface FactoryReset {
-  /** True for the life of the request, false before and after a refusal. */
+  /**
+   * True from a press until an answer that is not a reset; a reset leaves it
+   * true while the page goes.
+   */
   resetting: boolean;
   /** The route's own sentence for the last refused press, or `null`. */
   refusal: string | null;
