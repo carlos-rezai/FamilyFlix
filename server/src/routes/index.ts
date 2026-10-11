@@ -1,5 +1,5 @@
 import { homedir } from 'node:os';
-import { dirname, resolve } from 'node:path';
+import { resolve } from 'node:path';
 import { pipeline } from 'node:stream';
 
 import type {
@@ -870,9 +870,9 @@ export function createApiRouter(
       let reserved: string | null = null;
       const seriesFolder = (before: Record<string, string[]>): string => {
         for (const episode of held) {
-          const season = media.openFolder(episode.videoPath);
-          if (season !== null && episode.videoPath.split('/').length >= 3) {
-            return dirname(season);
+          const folder = media.openSeriesFolder(episode.videoPath);
+          if (folder !== null) {
+            return folder;
           }
         }
         const poster =

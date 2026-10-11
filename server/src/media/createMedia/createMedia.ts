@@ -85,6 +85,16 @@ export interface Media {
   openFolder(storedPath: string): string | null;
 
   /**
+   * {@link openFolder} for a series: the **Series folder** an episode's
+   * **Stored path** sits under — two directories up, above its season folder
+   * — when the episode's file is there, else `null`. What a **Series edit
+   * job** writes fresh bytes into, so a retitle moves nothing. `null` too for
+   * a path with no Series folder above its season, or one that escapes the
+   * media directory.
+   */
+  openSeriesFolder(episodePath: string): string | null;
+
+  /**
    * The `season-NN/` directory under a reserved **Series folder**, created if
    * it is not there yet, and its path — where one season's episodes are copied
    * in. Two digits, so the seasons list in order; asking again for a season
@@ -298,6 +308,22 @@ export function createMedia(mediaPath: string): Media {
     return isDirectory ? target : null;
   };
 
+  /**
+   * The **Series folder** above an episode's **Stored path** —
+   * `series/season-NN/file`, every segment but the last two — as the
+   * filesystem spells it: `null` for fewer than three segments (two up is the
+   * root), an absolute path, or a folder that is not there or escapes the
+   * root. The one reading `storeInSeriesFolder`, `openSeriesFolder` and
+   * `removeSeriesFolder` share.
+   */
+  const seriesFolderOf = (storedPath: string): string | null => {
+    const segments = storedPath.split('/');
+    if (isAbsolute(storedPath) || segments.length < 3) {
+      return null;
+    }
+    return containedFolder(segments.slice(0, -2).join('/'));
+  };
+
   return {
     reserveFolder: (title, year) => {
       // The dev default is `./media`, which does not exist until the first film
@@ -316,6 +342,11 @@ export function createMedia(mediaPath: string): Media {
       const file = mediaFilePath(mediaPath, storedPath);
       return file === null ? null : dirname(file);
     },
+
+    openSeriesFolder: (episodePath) =>
+      mediaFilePath(mediaPath, episodePath) === null
+        ? null
+        : seriesFolderOf(episodePath),
 
     seasonFolder: (seriesFolder, season) => {
       const folder = join(
@@ -371,13 +402,15 @@ export function createMedia(mediaPath: string): Media {
     },
 
     storeInSeriesFolder: async (episodePath, name, source) => {
-      const file = mediaFilePath(mediaPath, episodePath);
-      // Fewer than three segments has no Series folder above its season
-      // folder: nothing is written into the media root itself.
-      if (file === null || episodePath.split('/').length < 3) {
+      // A path with no Series folder above its season folder writes nothing,
+      // and nothing is written into the media root itself.
+      const folder =
+        mediaFilePath(mediaPath, episodePath) === null
+          ? null
+          : seriesFolderOf(episodePath);
+      if (folder === null) {
         throw new Error(`No Series folder above ${episodePath}`);
       }
-      const folder = dirname(dirname(file));
       const safe = safeFilename(name);
       await pipeline(source, createWriteStream(join(folder, safe)));
       return storedIn(folder, safe);
@@ -461,13 +494,9 @@ export function createMedia(mediaPath: string): Media {
     },
 
     removeSeriesFolder: (storedPath) => {
-      // `series/season-NN/file`: the Series folder is every segment but the
-      // last two. Fewer than three segments has none — two up is the root.
-      const segments = storedPath.split('/');
-      if (isAbsolute(storedPath) || segments.length < 3) {
-        return;
-      }
-      const folder = containedFolder(segments.slice(0, -2).join('/'));
+      // Named rather than found through the file, as the movie's is: a
+      // hand-deleted episode still names its Series folder.
+      const folder = seriesFolderOf(storedPath);
       if (folder === null) {
         return;
       }

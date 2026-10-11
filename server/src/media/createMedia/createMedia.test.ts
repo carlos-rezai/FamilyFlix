@@ -1094,6 +1094,54 @@ describe('createMedia — storeInSeriesFolder', () => {
   });
 });
 
+describe('createMedia — openSeriesFolder', () => {
+  it('answers the Series folder above a held episode’s season folder', async () => {
+    const { media } = sandbox();
+    const series = media.reserveFolder('The Hollow Coast', 2018);
+    const episode = await media.storeUpload(
+      media.seasonFolder(series, 1),
+      'S01E01.mkv',
+      part('video bytes')
+    );
+
+    // What a **Series edit job** writes fresh bytes into: the series' own
+    // folder, two up from the episode, so a retitle moves nothing.
+    expect(media.openSeriesFolder(episode)).toBe(series);
+  });
+
+  it('answers nothing for an episode with no file behind it', () => {
+    const { media } = sandbox();
+    const series = media.reserveFolder('The Hollow Coast', 2018);
+    media.seasonFolder(series, 1);
+
+    expect(
+      media.openSeriesFolder('the-hollow-coast-2018/season-01/S01E01.mkv')
+    ).toBeNull();
+  });
+
+  it('answers nothing for a path with no Series folder above its season', async () => {
+    const { media } = sandbox();
+    const folder = media.reserveFolder('Loose', 2018);
+    const shallow = await media.storeUpload(folder, 'S01E01.mkv', part('v'));
+
+    // Two segments: two up is the media root, which is no series' folder.
+    expect(media.openSeriesFolder(shallow)).toBeNull();
+  });
+
+  it('answers nothing for a path that escapes the managed media directory', () => {
+    const { media, outside } = sandbox();
+    mkdirSync(join(outside, 'season-01'));
+    writeFileSync(join(outside, 'season-01', 'S01E01.mkv'), 'not ours');
+
+    expect(
+      media.openSeriesFolder('../elsewhere/season-01/S01E01.mkv')
+    ).toBeNull();
+    expect(
+      media.openSeriesFolder(join(outside, 'season-01', 'S01E01.mkv'))
+    ).toBeNull();
+  });
+});
+
 describe('createMedia — readStored', () => {
   async function textOf(stream: Readable): Promise<string> {
     const chunks: Buffer[] = [];
