@@ -639,41 +639,56 @@ describe('createImporter — episode subtitles', () => {
   });
 });
 
+/**
+ * 38 — Title editing, Slice 7 (issue #310): a show's **Unplaced** videos are
+ * one `unplaced` **Problem** per show, not one per file. The row gains no list:
+ * its title is the show's, its reason the count. The list is on the **Problem
+ * detail**, as `files.videos` — every unplaced video as an absolute path, in
+ * name order — which the **Series Resolve** draws one row per. A show the run
+ * holds carries its `seriesId`, so _Resolve_ joins it.
+ */
 describe('createImporter — unplaced episodes', () => {
-  const WITH_STRAYS = {
-    [SHOW]: [
-      ...LOOSE[SHOW],
-      'Lighthouse Keepers - Behind the Scenes.mp4',
-      'Lighthouse.Keepers.S01E02.Storm.Copy.mp4',
-    ],
-  };
+  /** Two strays beside the loose episodes: no number, and a second S01E02. */
+  const STRAYS = ['Behind the Scenes.mp4', 'Storm.Copy.S01E02.mp4'];
+  const WITH_STRAYS = { [SHOW]: [...LOOSE[SHOW], ...STRAYS] };
 
-  it('files an unnumbered video and a second claim on a number as unplaced Problems', async () => {
+  it('files one unplaced Problem for the show, titled with the show, its reason the count', async () => {
     const { importer, root, sheet } = looseSandbox(WITH_STRAYS);
 
     await importer.start(sheet, root);
     const run = await untilReview(importer);
 
-    const unplaced = unplacedOf(run);
-    expect(unplaced).toHaveLength(2);
-    expect(run.problems).toHaveLength(2);
-    expect(unplaced.map((problem) => problem.title).join(' | ')).toContain(
-      'Behind the Scenes'
-    );
+    expect(run.problems).toHaveLength(1);
+    expect(unplacedOf(run)).toEqual([
+      expect.objectContaining({
+        kind: 'unplaced',
+        title: 'Lighthouse Keepers',
+        reason: '2 episodes need numbers',
+      }),
+    ]);
   });
 
-  it('names the fix in the reason: rename it and import again', async () => {
+  it('lists every unplaced video on the Problem detail, as absolute paths in name order', async () => {
     const { importer, root, sheet } = looseSandbox(WITH_STRAYS);
 
     await importer.start(sheet, root);
-    const run = await untilReview(importer);
+    const [problem] = unplacedOf(await untilReview(importer));
+    const detail = importer.problem(problem.id);
 
-    expect(unplacedOf(run)).not.toEqual([]);
-    for (const problem of unplacedOf(run)) {
-      expect(problem.reason).toMatch(
-        /rename it .*S\d\dE\d\d.* and import again/i
-      );
-    }
+    expect(detail?.files.videos).toEqual(
+      STRAYS.map((video) => join(root, SHOW, video))
+    );
+    expect(detail?.folder).toBe(join(root, SHOW));
+    expect(detail?.row.title).toBe('Lighthouse Keepers');
+  });
+
+  it('names the series the run holds for the show, so Resolve joins it', async () => {
+    const { storage, importer, root, sheet } = looseSandbox(WITH_STRAYS);
+
+    await importer.start(sheet, root);
+    const [problem] = unplacedOf(await untilReview(importer));
+
+    expect(problem.seriesId).toBe(theSeries(storage).id);
   });
 
   it('imports every placed episode of the show all the same, one file per number', async () => {
@@ -694,7 +709,7 @@ describe('createImporter — unplaced episodes', () => {
     ]);
   });
 
-  it('files an unnumbered video in a Season folder as unplaced', async () => {
+  it('files an unnumbered video in a Season folder under the show', async () => {
     const { importer, root, sheet } = looseSandbox({
       [join(SHOW, 'Season 01')]: [
         'Lighthouse.Keepers.S01E01.First.Light.mp4',
@@ -706,34 +721,42 @@ describe('createImporter — unplaced episodes', () => {
     const run = await untilReview(importer);
 
     expect(run.problems.map((problem) => problem.kind)).toEqual(['unplaced']);
-    expect(run.problems[0].title).toContain('Bonus Feature');
+    expect(run.problems[0].title).toBe('Lighthouse Keepers');
+    expect(importer.problem(run.problems[0].id)?.files.videos).toEqual([
+      join(root, SHOW, 'Season 01', 'Bonus Feature.mp4'),
+    ]);
   });
 
-  it('lets Skip dismiss an unplaced Problem', async () => {
+  it('lets Skip dismiss the show’s unplaced Problem', async () => {
     const { importer, root, sheet } = looseSandbox(WITH_STRAYS);
 
     await importer.start(sheet, root);
-    const run = await untilReview(importer);
-    const [first] = unplacedOf(run);
+    const [first] = unplacedOf(await untilReview(importer));
 
     expect(importer.dismiss(first.id)).toBe(true);
-    expect(
-      importer.current()?.problems.map((problem) => problem.id)
-    ).not.toContain(first.id);
+    expect(importer.current()?.problems).toEqual([]);
   });
 
-  it('creates no series for a show whose every video is unplaced, and files only those Problems', async () => {
+  it('creates no series for a show whose every video is unplaced, files one Problem naming none, and lists both videos', async () => {
     const { storage, importer, media, root, sheet } = looseSandbox({
-      [join(SHOW, 'Season 01')]: ['Episode One.mp4', 'Episode Two.mp4'],
+      [join(SHOW, 'Season 01')]: ['Bonus One.mp4', 'Bonus Two.mp4'],
     });
 
     await importer.start(sheet, root);
     const run = await untilReview(importer);
 
     expect(allSeries(storage)).toEqual([]);
-    expect(run.problems.map((problem) => problem.kind)).toEqual([
-      'unplaced',
-      'unplaced',
+    expect(run.problems).toEqual([
+      expect.objectContaining({
+        kind: 'unplaced',
+        title: 'Lighthouse Keepers',
+        reason: '2 episodes need numbers',
+      }),
+    ]);
+    expect(run.problems[0].seriesId).toBeUndefined();
+    expect(importer.problem(run.problems[0].id)?.files.videos).toEqual([
+      join(root, SHOW, 'Season 01', 'Bonus One.mp4'),
+      join(root, SHOW, 'Season 01', 'Bonus Two.mp4'),
     ]);
     // Nothing reserved for it either — the film's is the one folder.
     expect(readdirSync(media)).toEqual(['die-hard-1988']);

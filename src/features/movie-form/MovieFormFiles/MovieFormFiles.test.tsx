@@ -438,3 +438,120 @@ describe('MovieFormFiles — the subtitle rows', () => {
     );
   });
 });
+
+/**
+ * 38 — Title editing, Slice 7 (issue #310): the **Found-file choice**. A film
+ * Resolve whose folder holds two or more videos hands the card every one of
+ * them as `foundVideos` — absolute paths, in name order — and the video slot
+ * draws them as a radio group named _Video_: each video by its file name, the
+ * one in the slot checked, and the picker kept beside them for a file from
+ * somewhere else. With one video or none, the slot is the `FileField` it has
+ * always been.
+ */
+describe('MovieFormFiles — the Found-file choice', () => {
+  const FOLDER = 'E:\\Movies\\Paper Moons (2014)';
+  const FOUND = [
+    `${FOLDER}\\paper.moons.2014.1080p.mkv`,
+    `${FOLDER}\\paper.moons.2014.extras.mkv`,
+  ];
+  const foundFile = (path: string): MovieFormFile => ({
+    kind: 'found',
+    path,
+    filename: path.split('\\').pop() ?? path,
+  });
+
+  function renderChoice(
+    foundVideos: string[],
+    video: MovieFormFile | null = foundVideos.length > 0
+      ? foundFile(foundVideos[0])
+      : null
+  ) {
+    const onChooseVideo = vi.fn<(path: string) => void>();
+    const onPickVideo = vi.fn<(file: File) => void>();
+    render(
+      <ThemeProvider theme={theme}>
+        <MovieFormFiles
+          video={video}
+          foundVideos={foundVideos}
+          onChooseVideo={onChooseVideo}
+          poster={null}
+          subtitles={[]}
+          onPickVideo={onPickVideo}
+          onRemoveVideo={() => undefined}
+          onPickPoster={() => undefined}
+          onRemovePoster={() => undefined}
+          onAddSubtitle={() => undefined}
+          onChangeSubtitleLanguage={() => undefined}
+          onRemoveSubtitle={() => undefined}
+        />
+      </ThemeProvider>
+    );
+    return { onChooseVideo, onPickVideo };
+  }
+
+  const choice = () => screen.queryByRole('radiogroup', { name: 'Video' });
+  const option = (name: string) =>
+    screen.getByRole('radio', { name }) as HTMLElement;
+
+  it('draws the folder’s videos as a radio group named Video, each by its file name', () => {
+    renderChoice(FOUND);
+
+    expect(choice()).not.toBeNull();
+    expect(
+      screen.getAllByRole('radio').map((radio) => radio.textContent?.trim())
+    ).toEqual(['paper.moons.2014.1080p.mkv', 'paper.moons.2014.extras.mkv']);
+  });
+
+  it('checks the video in the slot — the first, as the form preselects it', () => {
+    renderChoice(FOUND);
+
+    expect(
+      option('paper.moons.2014.1080p.mkv').getAttribute('aria-checked')
+    ).toBe('true');
+    expect(
+      option('paper.moons.2014.extras.mkv').getAttribute('aria-checked')
+    ).toBe('false');
+  });
+
+  it('checks whichever found video the slot holds', () => {
+    renderChoice(FOUND, foundFile(FOUND[1]));
+
+    expect(
+      option('paper.moons.2014.extras.mkv').getAttribute('aria-checked')
+    ).toBe('true');
+    expect(
+      option('paper.moons.2014.1080p.mkv').getAttribute('aria-checked')
+    ).toBe('false');
+  });
+
+  it('reports the path of the video chosen', () => {
+    const { onChooseVideo } = renderChoice(FOUND);
+
+    fireEvent.click(option('paper.moons.2014.extras.mkv'));
+
+    expect(onChooseVideo).toHaveBeenCalledWith(FOUND[1]);
+  });
+
+  it('keeps the picker beside the choice, for a film from somewhere else', async () => {
+    const { onPickVideo } = renderChoice(FOUND);
+
+    await userEvent.upload(picker(), LANTERN, { applyAccept: false });
+
+    expect(onPickVideo).toHaveBeenCalledWith(LANTERN);
+  });
+
+  it('draws no choice for one found video — the slot as it has always been', () => {
+    renderChoice([FOUND[0]]);
+
+    expect(choice()).toBeNull();
+    expect(screen.queryAllByRole('radio')).toEqual([]);
+    expect(screen.getByText('paper.moons.2014.1080p.mkv')).toBeDefined();
+  });
+
+  it('draws no choice for none', () => {
+    renderChoice([]);
+
+    expect(choice()).toBeNull();
+    expect(picker().type).toBe('file');
+  });
+});

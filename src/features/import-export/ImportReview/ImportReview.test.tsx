@@ -279,14 +279,16 @@ describe('ImportReview — all done', () => {
 /**
  * 22 — Series (TV), Phase 7 (issue #197): the **Review step** draws the new
  * hard `unplaced` **Problem** among the rest — counted in the second tile,
- * its row carrying _Skip_ and no _Resolve_, the rows around it unchanged.
+ * the rows around it unchanged. Amended by 38 — Title editing, Slice 7
+ * (issue #310): one per show, titled with the show, and its row carries
+ * _Resolve_ beside _Skip_ like every other.
  */
-describe('ImportReview — an unplaced episode', () => {
+describe('ImportReview — an unplaced show', () => {
   const UNPLACED: ImportProblem = {
     id: 'p4',
     kind: 'unplaced',
-    title: 'Lighthouse Keepers · Behind the Scenes.mp4',
-    reason: 'No episode number — rename it S01E03 and import again.',
+    title: 'Lighthouse Keepers',
+    reason: '2 episodes need numbers',
   };
 
   it('lists it with its title and reason, and counts it', () => {
@@ -297,13 +299,15 @@ describe('ImportReview — an unplaced episode', () => {
     expect(tileNumber(ATTENTION)).toBe('4');
   });
 
-  it('gives its row Skip and no Resolve, and leaves the others theirs', () => {
+  it('gives its row Resolve onto the Series Resolve, and Skip, and leaves the others theirs', () => {
     renderReview({ run: inReview([...PROBLEMS, UNPLACED]) });
 
     const row = within(rowOf(UNPLACED.title));
-    expect(row.queryByRole('link', { name: 'Resolve' })).toBeNull();
+    expect(
+      row.getByRole('link', { name: 'Resolve' }).getAttribute('href')
+    ).toBe('/add?kind=series&problem=p4');
     expect(row.getByRole('button', { name: 'Skip' })).toBeDefined();
-    expect(screen.getAllByRole('link', { name: 'Resolve' })).toHaveLength(3);
+    expect(screen.getAllByRole('link', { name: 'Resolve' })).toHaveLength(4);
   });
 
   it('reports its Skip with its id', () => {

@@ -162,7 +162,8 @@ const REASON = {
   nearName: "One folder looks like a match, but the name isn't exact.",
   noFolder: 'No folder found matching this spreadsheet row.',
   noVideo: 'Folder matched, but no video file was found.',
-  manyVideos: 'Folder matched, but it holds more than one video file.',
+  // 38 — Title editing, Slice 7 (issue #310): the reason names the fix.
+  manyVideos: 'Two videos — pick the film.',
 } as const;
 
 describe('matchRows — the ambiguous verdict', () => {

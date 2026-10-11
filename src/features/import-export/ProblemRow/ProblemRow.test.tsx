@@ -206,34 +206,63 @@ describe('ProblemRow — the awkward titles', () => {
 });
 
 /**
- * 22 — Series (TV), Phase 7 (issue #197): the `unplaced` **Problem** is hard,
- * and there is nothing to resolve it _in_ — no form takes an episode — so its
- * row draws _Skip_ alone. Its reason already names the fix: rename the file
- * and import again.
+ * 38 — Title editing, Slice 7 (issue #310): the `unplaced` **Problem** is one
+ * per show — titled with the show, its reason the count — and its _Resolve_
+ * opens the **Series Resolve**: the Movie form's series kind in import
+ * context, `/add?kind=series&problem=<id>`, with `&series=<id>` beside it when
+ * the show is one the library holds already, so the save joins it. The
+ * `resolvable` exclusion that drew _Skip_ alone is gone.
  */
-describe('ProblemRow — an unplaced episode', () => {
+describe('ProblemRow — an unplaced show', () => {
   const unplaced = problem({
+    id: 'p5',
     kind: 'unplaced',
-    title: 'Lighthouse Keepers · Behind the Scenes.mp4',
-    reason: 'No episode number — rename it S01E03 and import again.',
+    title: 'The Night Ferry',
+    reason: '8 episodes need numbers',
   });
 
-  it('shows its title and its reason', () => {
+  it('shows the show’s title and the count as its reason', () => {
+    renderRow({ problem: unplaced });
+
+    expect(screen.getByText('The Night Ferry')).toBeDefined();
+    expect(screen.getByText('8 episodes need numbers')).toBeDefined();
+  });
+
+  it('offers Resolve before Skip', () => {
     renderRow({ problem: unplaced });
 
     expect(
-      screen.getByText('Lighthouse Keepers · Behind the Scenes.mp4')
-    ).toBeDefined();
-    expect(
-      screen.getByText('No episode number — rename it S01E03 and import again.')
-    ).toBeDefined();
+      resolveLink().compareDocumentPosition(skipButton()) &
+        Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
   });
 
-  it('offers no Resolve', () => {
+  it('links Resolve to the series kind of the form, by the problem’s id', () => {
     renderRow({ problem: unplaced });
 
-    expect(screen.queryByRole('link', { name: 'Resolve' })).toBeNull();
-    expect(screen.queryByRole('button', { name: 'Resolve' })).toBeNull();
+    expect(resolveLink().getAttribute('href')).toBe(
+      '/add?kind=series&problem=p5'
+    );
+  });
+
+  it('names the held series beside the problem when the show is already in the library', () => {
+    renderRow({ problem: { ...unplaced, seriesId: 'night-ferry' } });
+
+    const query = resolveQuery();
+    expect(query.get('kind')).toBe('series');
+    expect(query.get('problem')).toBe('p5');
+    expect(query.get('series')).toBe('night-ferry');
+    expect(query.has('movie')).toBe(false);
+  });
+
+  it('encodes both ids into the link, so each reads back whole', () => {
+    renderRow({
+      problem: { ...unplaced, id: 'p 1/x&', seriesId: 's 2/y#' },
+    });
+
+    const query = resolveQuery();
+    expect(query.get('problem')).toBe('p 1/x&');
+    expect(query.get('series')).toBe('s 2/y#');
   });
 
   it('offers Skip, and raises onSkip when it is pressed', () => {

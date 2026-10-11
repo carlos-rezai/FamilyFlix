@@ -1159,7 +1159,8 @@ const REASON = {
   noFolder: 'No folder found matching this spreadsheet row.',
   twoFolders: 'Two folders look like plausible matches — pick one.',
   nearName: "One folder looks like a match, but the name isn't exact.",
-  manyVideos: 'Folder matched, but it holds more than one video file.',
+  // 38 — Title editing, Slice 7 (issue #310): the reason names the fix.
+  manyVideos: 'Two videos — pick the film.',
   noRow: "Folder isn't in the spreadsheet.",
   missingMeta:
     "Imported, but the row has no genre — it won't appear in any genre row.",
@@ -1746,9 +1747,36 @@ describe('createImporter — problem: the detail Resolve prefills from', () => {
     // tracks are not in doubt.
     expect(detail?.folder).toBe(dieHard);
     expect(detail?.files.video).toBeUndefined();
+    // 38 — Title editing, Slice 7 (issue #310): but it lists both, in name
+    // order, for the form's **Found-file choice**.
+    expect(detail?.files.videos).toEqual([
+      join(dieHard, 'Die.Hard.1988.1080p.mkv'),
+      join(dieHard, 'Die.Hard.1988.1080p.mp4'),
+    ]);
     expect(detail?.files.poster).toBe(join(dieHard, 'poster.jpg'));
     expect(detail?.files.subtitles).toHaveLength(2);
     expect(detail?.row.title).toBe('Die Hard');
+  });
+
+  it('lists a one-video folder’s video in files.videos too, and sets it as the video', async () => {
+    // 38 — Title editing, Slice 7 (issue #310): `files.videos` serves a film
+    // as it serves a show — every video, so one is a list of one.
+    const { importer, root, sheet } = sandbox({
+      media: failCopyOf(
+        'Die.Hard.1988.1080p.mp4',
+        'EBUSY: resource busy or locked'
+      ),
+    });
+    const dieHard = join(root, 'Die.Hard.1988.1080p');
+    await importer.start(sheet, root);
+    const [problem] = ofKind(await untilReview(importer), 'failed');
+
+    const detail = importer.problem(problem.id);
+
+    expect(detail?.files.video).toBe(join(dieHard, 'Die.Hard.1988.1080p.mp4'));
+    expect(detail?.files.videos).toEqual([
+      join(dieHard, 'Die.Hard.1988.1080p.mp4'),
+    ]);
   });
 
   it('names every candidate folder of an ambiguous problem', async () => {
