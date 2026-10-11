@@ -22,3 +22,11 @@ export const SearchInput = styled.input`
   border-radius: 9px;
   outline: none;
 `;
+
+/** The **Title fix**, said before the pick: the 13px faint caption. */
+export const Caption = styled.div`
+  margin-top: 8px;
+  font-family: ${({ theme }) => theme.fonts.sans};
+  font-size: 13px;
+  color: ${({ theme }) => theme.colors.textFaint};
+`;

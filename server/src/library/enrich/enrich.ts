@@ -10,6 +10,8 @@ import type { MovieReader, MovieRow } from '../read/read';
  * household's own signals, and not a key this shape has.
  */
 export interface MovieEnrichment {
+  /** Written only by a pick from the review — the **Title fix**. */
+  title?: string;
   tmdbId?: number;
   synopsis?: string;
   posterPath?: string;
@@ -41,6 +43,7 @@ export const asJson = (value: unknown): string => JSON.stringify(value);
 /** Each scalar key and the `movies` column it writes. */
 const COLUMNS: ReadonlyArray<Column<Exclude<keyof MovieEnrichment, 'genres'>>> =
   [
+    { key: 'title', column: 'title' },
     { key: 'tmdbId', column: 'tmdb_id' },
     { key: 'synopsis', column: 'synopsis' },
     { key: 'posterPath', column: 'poster_path' },

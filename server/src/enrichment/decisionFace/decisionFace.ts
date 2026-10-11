@@ -1,8 +1,12 @@
 import type { Candidate } from '@/types';
 import { releaseYear } from '../fetchedFields/fetchedFields';
 import { matchScore, type TitledYear } from '../matchScore/matchScore';
-import type { TmdbMovieResult } from '../tmdbClient/tmdbClient';
-import { tmdbGenreName, tmdbGenres } from '../tmdbGenres/tmdbGenres';
+import type { TmdbMovieResult, TmdbTvResult } from '../tmdbClient/tmdbClient';
+import {
+  tmdbGenreName,
+  tmdbGenres,
+  tmdbTvGenreName,
+} from '../tmdbGenres/tmdbGenres';
 
 /** How many candidates an `ambiguous` **Decision** carries. */
 export const CANDIDATE_CAP = 3;
@@ -26,10 +30,16 @@ export function titledYear(result: TmdbMovieResult): TitledYear {
   return { title: result.title, year: releaseYear(result.release_date) };
 }
 
+/** A TMDB genre id → TMDB's name for it: the movie list's, or the TV list's. */
+type GenreName = (id: number) => string | null;
+
 /** The first of a result's genres the **Genre pool** holds, or `null`. */
-function poolGenre(ids: readonly number[]): string | null {
+function poolGenre(
+  ids: readonly number[],
+  genreName: GenreName
+): string | null {
   for (const id of ids) {
-    const name = tmdbGenreName(id);
+    const name = genreName(id);
     const [genre] = name === null ? [] : tmdbGenres([name]);
     if (genre !== undefined) return genre;
   }
@@ -43,7 +53,8 @@ function poolGenre(ids: readonly number[]): string | null {
  */
 export function candidatesFor(
   ours: TitledYear,
-  results: readonly TmdbMovieResult[]
+  results: readonly TmdbMovieResult[],
+  genreName: GenreName = tmdbGenreName
 ): Candidate[] {
   return results
     .map(
@@ -51,7 +62,7 @@ export function candidatesFor(
         tmdbId: result.id,
         title: result.title,
         year: releaseYear(result.release_date),
-        genre: poolGenre(result.genre_ids),
+        genre: poolGenre(result.genre_ids, genreName),
         language: result.original_language
           ? result.original_language.toUpperCase()
           : null,
@@ -116,7 +127,8 @@ export function decisionFace(
   ours: TitledYear,
   query: string,
   results: readonly TmdbMovieResult[],
-  missingReason: string
+  missingReason: string,
+  genreName: GenreName = tmdbGenreName
 ): DecisionFace {
   if (results.length === 0) {
     return { kind: 'missing', reason: missingReason, query };
@@ -125,6 +137,45 @@ export function decisionFace(
     kind: 'ambiguous',
     reason: ambiguousReason(results.length),
     query,
-    candidates: candidatesFor(ours, results),
+    candidates: candidatesFor(ours, results, genreName),
   };
+}
+
+/** A TV search result in a film's shape: its `name` the title, first aired the release. */
+function asMovieResult(result: TmdbTvResult): TmdbMovieResult {
+  return {
+    id: result.id,
+    title: result.name,
+    original_title: result.original_name,
+    release_date: result.first_air_date,
+    genre_ids: result.genre_ids,
+    original_language: result.original_language,
+    poster_path: result.poster_path,
+    vote_average: result.vote_average,
+  };
+}
+
+/** A TV search result as `matchScore` reads it: `name`, the first air year. */
+export function tvTitledYear(result: TmdbTvResult): TitledYear {
+  return titledYear(asMovieResult(result));
+}
+
+/**
+ * Pure: `decisionFace` for a series' search — each show's `name` and
+ * `first_air_date` read as a film's title and release, so its **Candidates**
+ * are shaped exactly as a film's.
+ */
+export function tvDecisionFace(
+  ours: TitledYear,
+  query: string,
+  results: readonly TmdbTvResult[],
+  missingReason: string
+): DecisionFace {
+  return decisionFace(
+    ours,
+    query,
+    results.map(asMovieResult),
+    missingReason,
+    tmdbTvGenreName
+  );
 }

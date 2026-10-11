@@ -15,7 +15,7 @@ import type {
   Series,
   StartEnrichment,
 } from '@/types';
-import type { LibraryStorage } from '../../library';
+import type { LibraryStorage, SeriesEnrichment } from '../../library';
 import type { Media } from '../../media/createMedia/createMedia';
 import { readableFolder } from '../../media/readableFolder/readableFolder';
 import {
@@ -28,9 +28,12 @@ import {
 import {
   CONFLICT_REASON,
   decisionFace,
+  type DecisionFace,
   NO_MATCH_REASON,
   noMatchFor,
   titledYear,
+  tvDecisionFace,
+  tvTitledYear,
 } from '../decisionFace/decisionFace';
 import { confident, type TitledYear } from '../matchScore/matchScore';
 import {
@@ -41,6 +44,7 @@ import { planEpisode } from '../planEpisode/planEpisode';
 import { planFields } from '../planFields/planFields';
 import {
   chosenEnrichment,
+  chosenSeriesEnrichment,
   movieEnrichment,
   seriesEnrichment,
 } from '../plannedEnrichment/plannedEnrichment';
@@ -60,6 +64,12 @@ import {
 type Title =
   | { kind: 'movie'; movie: Movie }
   | { kind: 'series'; series: Series };
+
+/** What a **Decision** is about, the Title reference: its kind and its id. */
+interface TitleReference {
+  kind: 'movie' | 'series';
+  id: string;
+}
 
 /** What saving a key came to, as a value the route maps to a status. */
 export type SaveKeyOutcome =
@@ -184,6 +194,16 @@ const LOG_CAP = 80;
 /** Why a title ended without being written, as the run's own value. */
 type Stop = 'refused' | 'unreachable';
 
+/** What writing a matched show through came to. */
+type ShowWritten =
+  | {
+      kind: 'written';
+      conflicts: FieldConflict[];
+      fetched: FetchedTvFields;
+      detail: TmdbTvDetail;
+    }
+  | { kind: 'stop'; stop: Stop };
+
 const STOP_LINES: Readonly<Record<Stop, string>> = {
   refused: 'TMDB refused the key.',
   unreachable:
@@ -206,12 +226,14 @@ export function createEnrichment({
   let runWantsPosters = false;
   /** Aborts the Current run's requests in flight — _Stop_'s handle. */
   let abort: AbortController | null = null;
-  /** Each Decision of the Current run → the movie it is about. */
-  const decided = new Map<string, string>();
+  /** Each Decision of the Current run → the title it is about. */
+  const decided = new Map<string, TitleReference>();
   /** The fields the Current run fills — what a pick writes too. */
   let runFields: readonly EnrichField[] = [];
   /** Each `conflict` Decision → what TMDB answered, for _Apply choices_. */
   const disputed = new Map<string, FetchedFields>();
+  /** Each series' `conflict` Decision → TMDB's show, its write held for review. */
+  const heldShows = new Map<string, TmdbTvDetail>();
 
   function key(): string | null {
     return storage.tmdbKey();
@@ -424,7 +446,7 @@ export function createEnrichment({
     signal: AbortSignal
   ): Promise<
     | { kind: 'found'; detail: TmdbTvDetail }
-    | { kind: 'unsettled'; reason: string }
+    | { kind: 'unsettled'; reason: string; decision: Decision }
     | { kind: 'stop'; stop: Stop }
   > {
     let id = series.tmdbId;
@@ -439,19 +461,24 @@ export function createEnrichment({
         return { kind: 'stop', stop: search.kind };
       }
       const ours: TitledYear = { title: series.title, year: series.year };
-      const theirs = search.value.map(
-        (result): TitledYear => ({
-          title: result.name,
-          year: releaseYear(result.first_air_date),
-        })
-      );
-      if (!confident(ours, theirs)) {
+      if (!confident(ours, search.value.map(tvTitledYear))) {
         return {
           kind: 'unsettled',
           reason:
             search.value.length === 0
               ? 'no result on TMDB'
               : 'several possible matches',
+          decision: {
+            id: randomUUID(),
+            title: series.title,
+            path: sourcePath(series.id),
+            ...tvDecisionFace(
+              ours,
+              series.title,
+              search.value,
+              NO_MATCH_REASON
+            ),
+          },
         };
       }
       id = search.value[0].id;
@@ -491,8 +518,12 @@ export function createEnrichment({
 
   /**
    * Plan and write one Confident series at show level: its columns, creator,
-   * year range, id and images. A filled field is kept as it is — a series
-   * raises no **Field conflict**, since the review's writes are a film's.
+   * year range, id and images. Answers the **Field conflicts** the plan left
+   * for the review under the run's own scope, and what TMDB said.
+   *
+   * `settled` is what the review adds: `null` in the run, where a show with a
+   * conflict is held whole for its row — written by _Apply choices_, nothing
+   * by _Skip_ — and the review's own columns once a pick or an apply settles it.
    */
   async function writeSeries(
     current: EnrichmentRun,
@@ -500,23 +531,22 @@ export function createEnrichment({
     episodes: readonly Episode[],
     detail: TmdbTvDetail,
     fields: readonly EnrichField[],
-    signal: AbortSignal
-  ): Promise<void> {
+    signal: AbortSignal,
+    settled: SeriesEnrichment | null
+  ): Promise<{ conflicts: FieldConflict[]; fetched: FetchedTvFields }> {
     const fetched: FetchedTvFields = fetchedTvFields(detail);
-    const { fill } = planFields({
+    const { fill, conflicts } = planFields({
       current: currentSeriesFields(series),
       fetched,
       fields,
-      scope: 'missing',
+      scope: current.scope,
     });
+    if (settled === null && conflicts.length > 0) return { conflicts, fetched };
 
-    const enrichment = seriesEnrichment(
-      detail.id,
-      fill,
-      series,
-      fetched,
-      fields
-    );
+    const enrichment: SeriesEnrichment = {
+      ...seriesEnrichment(detail.id, fill, series, fetched, fields),
+      ...settled,
+    };
     if (fill.poster) {
       const stored = await storeSeriesImage(
         current,
@@ -538,8 +568,9 @@ export function createEnrichment({
       if (stored !== null) enrichment.backdropPath = stored;
     }
 
-    if (signal.aborted) return;
+    if (signal.aborted) return { conflicts, fetched };
     storage.enrichSeries(series.id, enrichment);
+    return { conflicts, fetched };
   }
 
   /**
@@ -592,38 +623,42 @@ export function createEnrichment({
   }
 
   /**
-   * One series through: looked up, written at show level, then every season
-   * it has on disk — never season 0 — read and matched by episode number.
+   * One matched show written: at show level, then every season it has on
+   * disk — never season 0 — read and matched by episode number.
    */
-  async function syncSeries(
+  async function writeShow(
     current: EnrichmentRun,
     apiKey: string,
     series: Series,
+    detail: TmdbTvDetail,
     fields: readonly EnrichField[],
-    signal: AbortSignal
-  ): Promise<
-    | { kind: 'written' }
-    | { kind: 'unsettled'; reason: string }
-    | { kind: 'stop'; stop: Stop }
-  > {
-    const found = await lookUpSeries(apiKey, series, signal);
-    if (found.kind !== 'found') return found;
-
+    signal: AbortSignal,
+    settled: SeriesEnrichment | null
+  ): Promise<ShowWritten> {
     const episodes = storage.listEpisodes(series.id);
-    await writeSeries(current, series, episodes, found.detail, fields, signal);
+    const { conflicts, fetched } = await writeSeries(
+      current,
+      series,
+      episodes,
+      detail,
+      fields,
+      signal,
+      settled
+    );
+    const written: ShowWritten = {
+      kind: 'written',
+      conflicts,
+      fetched,
+      detail,
+    };
 
     const seasons = [...new Set(episodes.map((each) => each.season))].filter(
       (season) => season > 0
     );
     for (const number of seasons) {
-      if (signal.aborted) return { kind: 'written' };
-      const season = await client.season(
-        apiKey,
-        found.detail.id,
-        number,
-        signal
-      );
-      if (signal.aborted) return { kind: 'written' };
+      if (signal.aborted) return written;
+      const season = await client.season(apiKey, detail.id, number, signal);
+      if (signal.aborted) return written;
       if (season.kind !== 'ok') return { kind: 'stop', stop: season.kind };
       await writeEpisodes(
         current,
@@ -633,7 +668,61 @@ export function createEnrichment({
         signal
       );
     }
-    return { kind: 'written' };
+    return written;
+  }
+
+  /** One series through: looked up, then written as `writeShow` writes it. */
+  async function syncSeries(
+    current: EnrichmentRun,
+    apiKey: string,
+    series: Series,
+    fields: readonly EnrichField[],
+    signal: AbortSignal
+  ): Promise<
+    ShowWritten | { kind: 'unsettled'; reason: string; decision: Decision }
+  > {
+    const found = await lookUpSeries(apiKey, series, signal);
+    if (found.kind !== 'found') return found;
+    return writeShow(
+      current,
+      apiKey,
+      series,
+      found.detail,
+      fields,
+      signal,
+      null
+    );
+  }
+
+  /**
+   * A `conflict` Decision on the list for a title the plan disagreed with,
+   * what TMDB answered held for _Apply choices_.
+   */
+  function raiseConflict(
+    current: EnrichmentRun,
+    reference: TitleReference,
+    title: Movie | Series,
+    conflicts: FieldConflict[],
+    fetched: FetchedFields
+  ): string {
+    const decision: Decision = {
+      id: randomUUID(),
+      title: title.title,
+      reason: CONFLICT_REASON,
+      path: sourcePath(title.id),
+      query: title.title,
+      kind: 'conflict',
+      fields: conflicts,
+    };
+    current.decisions.push(decision);
+    decided.set(decision.id, reference);
+    disputed.set(decision.id, fetched);
+    log(
+      current,
+      `⚠ ${title.title} — differs from what you filled in`,
+      'warning'
+    );
+    return decision.id;
   }
 
   /** A title as the log names it: `Title (Year)`, or the title alone. */
@@ -691,8 +780,18 @@ export function createEnrichment({
           stopped = true;
           break;
         } else if (outcome.kind === 'unsettled') {
-          // A series' review would write a film: it is left for a later Sync.
+          current.decisions.push(outcome.decision);
+          decided.set(outcome.decision.id, { kind: 'series', id: series.id });
           log(current, `⚠ ${series.title} — ${outcome.reason}`, 'warning');
+        } else if (outcome.conflicts.length > 0) {
+          const decisionId = raiseConflict(
+            current,
+            { kind: 'series', id: series.id },
+            series,
+            outcome.conflicts,
+            outcome.fetched
+          );
+          heldShows.set(decisionId, outcome.detail);
         } else {
           current.enriched += 1;
           log(current, `✓ Matched   ${named(series)}`, 'success');
@@ -713,7 +812,7 @@ export function createEnrichment({
       }
       if (found.kind === 'unsettled') {
         current.decisions.push(found.decision);
-        decided.set(found.decision.id, movie.id);
+        decided.set(found.decision.id, { kind: 'movie', id: movie.id });
         log(current, `⚠ ${movie.title} — ${found.reason}`, 'warning');
       } else {
         try {
@@ -726,22 +825,12 @@ export function createEnrichment({
           );
           if (signal.aborted) return;
           if (conflicts.length > 0) {
-            const decision: Decision = {
-              id: randomUUID(),
-              title: movie.title,
-              reason: CONFLICT_REASON,
-              path: sourcePath(movie.id),
-              query: movie.title,
-              kind: 'conflict',
-              fields: conflicts,
-            };
-            current.decisions.push(decision);
-            decided.set(decision.id, movie.id);
-            disputed.set(decision.id, fetched);
-            log(
+            raiseConflict(
               current,
-              `⚠ ${movie.title} — differs from what you filled in`,
-              'warning'
+              { kind: 'movie', id: movie.id },
+              movie,
+              conflicts,
+              fetched
             );
           } else {
             current.enriched += 1;
@@ -836,6 +925,7 @@ export function createEnrichment({
     run = current;
     decided.clear();
     disputed.clear();
+    heldShows.clear();
     runFields = options.fields;
     const controller = new AbortController();
     abort = controller;
@@ -871,20 +961,36 @@ export function createEnrichment({
     run = null;
     decided.clear();
     disputed.clear();
+    heldShows.clear();
   }
 
-  /** The Current run's Decision `id` and its movie, or `null`. */
+  /** The Current run's Decision `id` and the title it is about, or `null`. */
   function held(
     id: string
-  ): { current: EnrichmentRun; decision: Decision; movie: Movie } | null {
+  ): { current: EnrichmentRun; decision: Decision; title: Title } | null {
     const current = run;
-    const movieId = decided.get(id);
+    const reference = decided.get(id);
     const decision = current?.decisions.find((each) => each.id === id);
-    if (current === null || movieId === undefined || decision === undefined) {
+    if (current === null || reference === undefined || decision === undefined) {
       return null;
     }
-    const movie = storage.getMovie(movieId);
-    return movie === null ? null : { current, decision, movie };
+    const title = titleOf(reference);
+    return title === null ? null : { current, decision, title };
+  }
+
+  /** The title a reference names, read afresh; `null` once it is gone. */
+  function titleOf(reference: TitleReference): Title | null {
+    if (reference.kind === 'series') {
+      const detail = storage.getSeriesDetail(reference.id);
+      return detail === null ? null : { kind: 'series', series: detail.series };
+    }
+    const movie = storage.getMovie(reference.id);
+    return movie === null ? null : { kind: 'movie', movie };
+  }
+
+  /** The record a title holds, a film or a show. */
+  function recordOf(title: Title): Movie | Series {
+    return title.kind === 'movie' ? title.movie : title.series;
   }
 
   /** The Decision off the list, and its movie forgotten. */
@@ -892,6 +998,7 @@ export function createEnrichment({
     current.decisions = current.decisions.filter((each) => each.id !== id);
     decided.delete(id);
     disputed.delete(id);
+    heldShows.delete(id);
   }
 
   async function search(id: string, query: string): Promise<SearchOutcome> {
@@ -899,20 +1006,24 @@ export function createEnrichment({
     const apiKey = storage.tmdbKey();
     if (found === null) return { kind: 'not-found' };
     if (apiKey === null) return { kind: 'refused' };
-    const answer = await client.searchMovie(apiKey, query, null);
-    if (answer.kind !== 'ok') return { kind: answer.kind };
-
-    const { current, decision, movie } = found;
+    const { current, decision, title } = found;
+    const record = recordOf(title);
+    const ours: TitledYear = { title: record.title, year: record.year };
+    let face: DecisionFace;
+    if (title.kind === 'series') {
+      const answer = await client.searchTv(apiKey, query, null);
+      if (answer.kind !== 'ok') return { kind: answer.kind };
+      face = tvDecisionFace(ours, query, answer.value, noMatchFor(query));
+    } else {
+      const answer = await client.searchMovie(apiKey, query, null);
+      if (answer.kind !== 'ok') return { kind: answer.kind };
+      face = decisionFace(ours, query, answer.value, noMatchFor(query));
+    }
     const next: Decision = {
       id: decision.id,
       title: decision.title,
       path: decision.path,
-      ...decisionFace(
-        { title: movie.title, year: movie.year },
-        query,
-        answer.value,
-        noMatchFor(query)
-      ),
+      ...face,
     };
     // A Skip or a new run while TMDB answered leaves nothing to put back.
     if (run !== current || !decided.has(id)) return { kind: 'not-found' };
@@ -927,18 +1038,61 @@ export function createEnrichment({
     const apiKey = storage.tmdbKey();
     if (found === null) return { kind: 'not-found' };
     if (apiKey === null) return { kind: 'refused' };
-    const { current, movie } = found;
+    const { current, decision, title } = found;
+    // The Title fix: a pick from a missing or ambiguous row names the title.
+    const fixesTitle = decision.kind !== 'conflict';
     const signal = abort?.signal ?? new AbortController().signal;
-    const detail = await client.movie(apiKey, tmdbId, signal);
-    if (detail.kind !== 'ok') return { kind: detail.kind };
-    if (run !== current || !decided.has(id)) return { kind: 'not-found' };
-
-    await write(current, movie, detail.value, runFields, signal);
-    if (signal.aborted) return { kind: 'not-found' };
+    if (title.kind === 'series') {
+      const { series } = title;
+      const detail = await client.tv(apiKey, tmdbId, signal);
+      if (detail.kind !== 'ok') return { kind: detail.kind };
+      if (run !== current || !decided.has(id)) return { kind: 'not-found' };
+      const written = await writeShow(
+        current,
+        apiKey,
+        series,
+        detail.value,
+        runFields,
+        signal,
+        fixesTitle
+          ? titleFix(series, detail.value.name, detail.value.first_air_date)
+          : {}
+      );
+      if (signal.aborted) return { kind: 'not-found' };
+      if (written.kind === 'stop') return { kind: written.stop };
+    } else {
+      const { movie } = title;
+      const detail = await client.movie(apiKey, tmdbId, signal);
+      if (detail.kind !== 'ok') return { kind: detail.kind };
+      if (run !== current || !decided.has(id)) return { kind: 'not-found' };
+      await write(current, movie, detail.value, runFields, signal);
+      if (signal.aborted) return { kind: 'not-found' };
+      if (fixesTitle) {
+        storage.enrichMovie(
+          movie.id,
+          titleFix(movie, detail.value.title, detail.value.release_date)
+        );
+      }
+    }
     settle(current, id);
     current.enriched += 1;
-    log(current, `✓ Matched   ${named(movie)}`, 'success');
+    log(current, `✓ Matched   ${named(recordOf(title))}`, 'success');
     return { kind: 'picked' };
+  }
+
+  /**
+   * The **Title fix**: TMDB's title as the title, and its year only when ours
+   * is blank — a year we hold is kept.
+   */
+  function titleFix(
+    ours: Movie | Series,
+    theirTitle: string,
+    theirDate: string
+  ): { title: string; year?: number } {
+    const year = releaseYear(theirDate);
+    return ours.year === null && year !== null
+      ? { title: theirTitle, year }
+      : { title: theirTitle };
   }
 
   async function apply(
@@ -954,14 +1108,30 @@ export function createEnrichment({
     ) {
       return { kind: 'not-found' };
     }
-    const { current, decision, movie } = found;
-    storage.enrichMovie(
-      movie.id,
-      chosenEnrichment(decision.fields, choices, fetched)
-    );
+    const { current, decision, title } = found;
+    const show = heldShows.get(id);
+    if (title.kind === 'series' && show !== undefined) {
+      // The show's write waited for this row: TMDB's gaps and the choices.
+      const signal = abort?.signal ?? new AbortController().signal;
+      await writeSeries(
+        current,
+        title.series,
+        storage.listEpisodes(title.series.id),
+        show,
+        runFields,
+        signal,
+        chosenSeriesEnrichment(decision.fields, choices, fetched)
+      );
+      if (run !== current || !decided.has(id)) return { kind: 'not-found' };
+    } else if (title.kind === 'movie') {
+      storage.enrichMovie(
+        title.movie.id,
+        chosenEnrichment(decision.fields, choices, fetched)
+      );
+    }
     settle(current, id);
     current.enriched += 1;
-    log(current, `✓ Matched   ${named(movie)}`, 'success');
+    log(current, `✓ Matched   ${named(recordOf(title))}`, 'success');
     return { kind: 'applied' };
   }
 

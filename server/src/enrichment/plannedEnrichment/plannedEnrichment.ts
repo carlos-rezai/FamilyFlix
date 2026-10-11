@@ -104,3 +104,22 @@ export function chosenEnrichment(
   }
   return enrichment;
 }
+
+/**
+ * Pure: _Apply choices_ on a series → its columns: `chosenEnrichment`, the
+ * creator standing where a film's director does.
+ */
+export function chosenSeriesEnrichment(
+  conflicts: readonly FieldConflict[],
+  choices: ConflictChoices,
+  fetched: FetchedFields
+): SeriesEnrichment {
+  const chosen = chosenEnrichment(conflicts, choices, fetched);
+  const enrichment: SeriesEnrichment = {};
+  if (chosen.synopsis !== undefined) enrichment.synopsis = chosen.synopsis;
+  if (chosen.year !== undefined) enrichment.year = chosen.year;
+  if (chosen.genres !== undefined) enrichment.genres = chosen.genres;
+  if (chosen.director !== undefined) enrichment.creator = chosen.director;
+  if (chosen.cast !== undefined) enrichment.cast = chosen.cast;
+  return enrichment;
+}

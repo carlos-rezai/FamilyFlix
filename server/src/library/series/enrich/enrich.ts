@@ -15,6 +15,8 @@ import type { SeriesReader, SeriesRow } from '../read/read';
  * and no favorite — the household's own.
  */
 export interface SeriesEnrichment {
+  /** Written only by a pick from the review — the **Title fix**. */
+  title?: string;
   tmdbId?: number;
   synopsis?: string;
   posterPath?: string;
@@ -43,6 +45,7 @@ export interface EpisodeEnrichment {
 const SERIES_COLUMNS: ReadonlyArray<
   Column<Exclude<keyof SeriesEnrichment, 'genres'>>
 > = [
+  { key: 'title', column: 'title' },
   { key: 'tmdbId', column: 'tmdb_id' },
   { key: 'synopsis', column: 'synopsis' },
   { key: 'posterPath', column: 'poster_path' },
