@@ -1037,8 +1037,8 @@ same layout, spacing, states, copy, and interaction.
 **Build order — what is left.** The groups below say what the app _is_;
 this says what to build _next_. Steps 1–9 of the first chain are done,
 ending with **Software update** (v0.2.0), and so are steps 10–15: the
-second chain is done too, shipped as v0.3.0. Steps 16–21 are the third
-chain: steps 16–20 are done, 21 is planned. Steps 10–15 came out of
+second chain is done too, shipped as v0.3.0, and so are steps 16–21:
+the third chain is done. Steps 10–15 came out of
 installing FamilyFlix and using it: smallest and most self-contained first,
 the form before the folders that will feed it, export last because it
 mirrors what import holds.
@@ -1093,7 +1093,7 @@ draws something new, a prototype revision before it is built:
     **Genre pool** kept, not re-seeded — then
     `createMedia.emptyRoot` best-effort, then the slot's `removeComponent`;
     then a full reload onto `/`. Library folders on disk are never touched.
-21. 🔜 **Title editing** — a show's files numbered in the app, and a series
+21. ✅ **Title editing** — a show's files numbered in the app, and a series
     edited and deleted as a film is. The **Episode word** (`Episode 12`,
     `Ep 12`, `E12`, only where the season is known); one `unplaced` Problem
     per show, its _Resolve_ the **Series Resolve**
@@ -1145,7 +1145,7 @@ A 🧭 Roadmap item is not in this chain — it is after it, if ever.
 - ✅ **Add a series** — the same form adds a show, its seasons and its episodes: the Kind tabs on `?kind=series`, one Episode file row per picked video with its own subtitles, and one atomic `POST /api/series`; a video is the Save gate for either kind.
 - ✅ **Library folders** — several top folders of movies and series at `/settings/folders`, added by typed path or _Browse…_ over the native dialog, and imported all at once by a **Folder scan**; a Sync writes posters and a Metadata sheet into each.
 - ✅ **Edit a movie** — amend metadata and files; a file the library already holds travels as its path, only a freshly picked one as bytes.
-- 🔜 **Title editing** — number a show's file in the app without renaming it: `S[01] E[01]` in front of `eps1.0_hellofriend.mov`, remembered as its **Source file**; the reader learns the **Episode word**; one `unplaced` Problem per show with a _Resolve_; the series page's ⋯ menu, its _Edit details_ the Movie form's series edit job (`PATCH /api/series/:id`) and its Danger row the delete (`DELETE /api/series/:id`); and the **Found-file choice** for a film folder of two or more videos (step 21).
+- ✅ **Title editing** — number a show's file in the app without renaming it: `S[01] E[01]` in front of `eps1.0_hellofriend.mov`, remembered as its **Source file**; the reader learns the **Episode word**; one `unplaced` Problem per show with a _Resolve_; the series page's ⋯ menu, its _Edit details_ the Movie form's series edit job (`PATCH /api/series/:id`) and its Danger row the delete (`DELETE /api/series/:id`); and the **Found-file choice** for a film folder of two or more videos (step 21).
 - ✅ **Export name** — the Export folder's name as the **Folder name field** in the Export dialog: prefilled with today's dated name and never overwritten once edited, refused in one sentence under the field when no folder can be called that, never stripped, numbered when taken.
 - ✅ **Delete a movie** — the ⋯ menu’s Danger row, the Delete dialog, `DELETE /api/movies/:id`, then the Movie folder under best-effort cleanup.
 - ✅ **Bulk import** — a Sheet and a Library root become Movies during the run; the Review step lists only the Problems the run could not settle, each with Resolve (the Movie form in Import context) and Skip.

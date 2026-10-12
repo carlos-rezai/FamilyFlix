@@ -11,6 +11,96 @@ Newest entry first.
 
 ---
 
+## 2026-10-12 — Title editing — the refactor (issue 311)
+
+Thirty commits against `docs/refactor-plans/38-title-editing-refactor.md`, one
+per plan commit — the initiative's closing round. **8223 tests pass across
+494 files**, up from 8137 across 486 at the end of the build (`4d8e0d9`):
+the new leaves and suites below, and no leaf lost but the ones the plan moved.
+`tsc -b --force` is clean. `eslint src server electron` reports no errors and
+one warning, in `AboutSection.test.tsx`, which this round did not touch.
+
+### What each group changed
+
+- **Group 0, the record.** The build's own entry, below (`0c428d5`).
+- **Group 1, the server** (`6e31f14`–`137934a`).
+  - `getSeries` on `LibraryStorage`, beside `getMovie`; the enrichment's
+    `titlesFor` and `titleOf`, the PATCH route and `resolveSeries` read one
+    series rather than a `SeriesDetail` or the shelf.
+  - `seriesOr404` beside `movieOr404`, and the series delete in the movie
+    delete's shape: `deleteSeries(id)` answers nothing, and the route reads
+    the stored path it cleans up from.
+  - One reading of the **Series folder**, inside `createMedia`, exposed as
+    `openSeriesFolder`; the PATCH route no longer does path arithmetic.
+  - The Series Resolve's handler sits above its route's comment again;
+    `EditedEpisode` answers `heldTracks` and `pickedTracks` apart; a
+    **Source file** is spelled once, by `sourceFileOf`.
+  - **The one deliberate behaviour change:** a series' **Field conflict**
+    writes what a film's does — its gaps during the run, its conflicts asked
+    in review, _Skip_ keeping the household's values. `heldShows` and the
+    `settled` parameter are gone. The **Title fix** is written in its own call
+    for both kinds, and `TitleReference` is a shared type.
+- **Group 2, the two bugs** (`ef0d22d`, `3acb145`).
+  - A client `spellYearSpan`, held to the server's `yearSpan` by a round-trip
+    guard: a running series' untouched _Save changes_ no longer closes it,
+    and a one-year run opens as `2022`, not `2022–2022`.
+  - _its 1 episode_, in the singular.
+- **Group 3, the client** (`1ea586d`–`595edaf`).
+  - `seriesTabPath()`, and `movieFormPath` with a `kind`: no route literal,
+    no string surgery in `ProblemRow`.
+  - `episodeCount` on `SeriesPageModel`; the movie form's `api` in
+    declaration order.
+  - `CornerMenu` graduates to `components/`, presentational; `EditMenu` and
+    `SeriesEditMenu` compose it and lose their copied styles files. The ⋯
+    button's interaction-states leaf moved with it, and `EditMenu`'s presses
+    the real trigger.
+  - `FoundFileChoice` in its own folder, handed `MovieFormFile` slots — it
+    parses no path — with `$selected`, `ScopeCard`'s name. The video slot's
+    name and label moved to `filesCard.ts`, which both now draw. Its leaves
+    moved into its suite, plus one for a picked film as the last row.
+  - The Enrichment flow reads its single title once, as a `TitleReference`;
+    `useEnrichmentRun(title)`; `singleScopeLabel` and `finishLabel` in
+    `enrichmentView`.
+  - `files.videos` is required, empty with no folder.
+  - `readSeasonFolder`, the server's `seasonOf` mirrored and held to it by the
+    drift guard: a `Disc 2` folder now guesses season 1, as the server reads
+    it, where the client used to guess 2.
+- **Group 4, the form's five jobs** (`f78a4cc`–`194066b`).
+  - `formJob` reads the URL into `add`, `edit`, `resolve` or `seriesEdit`,
+    and `formLanding(job)` answers each job's Landing; the parameter
+    constants moved with them.
+  - `loadFormRecord(job)` makes each job's reads and answers what the form
+    opens on, never rejecting; the hook's three effects are one.
+  - `save` is a `switch` over the job as its reads left it — a record that
+    turned out gone still saves as the add.
+  - The hook's docblock names all five jobs, and its no-test note names the
+    two units that took the testable halves.
+- **Group 5, the docs** (`4e5077c`, `bc32023`, this commit).
+  - The prototype's picker reads _Choose video file_; `COMPONENT-SPEC.md`
+    gives `FoundFileChoice`'s folder and props and a `CornerMenu` entry.
+  - The glossary's **Unplaced** and **Title reference** describe what
+    shipped. CLAUDE.md's tree, `api/` paragraph, `createMedia/`, `db/` and
+    `types/` lines do too, and its build order folds steps 21–23 into one,
+    **Title editing**, as log 38 Q1 ruled.
+  - Step 21 and its Maintainer tools entry are ✅ in CLAUDE.md, and the
+    README's three rows are one ✅ row: the third chain is done.
+
+### Left as it is
+
+Everything in the plan's Out of Scope, unchanged: a `RadioDot` primitive (the
+Found-file choice, `ScopeCard` and `FormatCard` each draw one, now with one
+prop name), the dialogs' own `Copy` and `Actions`, a series with no episodes,
+a replacement named like its stored file, `createEnrichment`'s kind branches,
+the router's size, and the `issue-loop` budget.
+
+### The initiative
+
+**Title editing is done**: the prototype revision (303), the seven slices
+(304–310) and this round (311). Issue 302 is closed with it. The third chain
+is done; what is left is the Roadmap.
+
+---
+
 ## 2026-10-11 — Title editing — the seven slices (issues #303–#310)
 
 **Title editing** as log 38 Q20 ordered it: the prototype revision by hand,
