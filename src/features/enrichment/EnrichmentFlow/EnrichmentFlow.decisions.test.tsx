@@ -57,7 +57,7 @@ const AMBIGUOUS: Decision = {
   id: 'd1',
   kind: 'ambiguous',
   title: 'Harbor Lights',
-  reason: 'Two releases share this title — pick the right one.',
+  reason: 'Two releases share this title. Pick the right one.',
   path: null,
   query: 'Harbor Lights',
   candidates: [
@@ -228,7 +228,7 @@ describe('EnrichmentFlow — the review’s Decisions', () => {
 
     expect(
       await screen.findByText(
-        'Two releases share this title — pick the right one.'
+        'Two releases share this title. Pick the right one.'
       )
     ).toBeDefined();
     expect(
@@ -264,7 +264,7 @@ describe('EnrichmentFlow — picking a candidate', () => {
   it('sends the pick with the candidate’s TMDB id', async () => {
     renderFlow();
     await screen.findByText(
-      'Two releases share this title — pick the right one.'
+      'Two releases share this title. Pick the right one.'
     );
 
     fireEvent.click(screen.getByRole('button', { name: /70% match/ }));
@@ -279,7 +279,7 @@ describe('EnrichmentFlow — picking a candidate', () => {
   it('raises Match saved.', async () => {
     renderFlow();
     await screen.findByText(
-      'Two releases share this title — pick the right one.'
+      'Two releases share this title. Pick the right one.'
     );
 
     fireEvent.click(screen.getByRole('button', { name: /100% match/ }));
@@ -292,16 +292,14 @@ describe('EnrichmentFlow — picking a candidate', () => {
   it('takes the settled row off and counts it into movies enriched', async () => {
     renderFlow();
     await screen.findByText(
-      'Two releases share this title — pick the right one.'
+      'Two releases share this title. Pick the right one.'
     );
 
     fireEvent.click(screen.getByRole('button', { name: /100% match/ }));
 
     await waitFor(() => {
       expect(
-        screen.queryByText(
-          'Two releases share this title — pick the right one.'
-        )
+        screen.queryByText('Two releases share this title. Pick the right one.')
       ).toBeNull();
       expect(tile('movies enriched')).toBe('5');
       expect(tile('need your decision')).toBe('1');

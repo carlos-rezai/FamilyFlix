@@ -133,7 +133,7 @@ describe('createEnrichment: an ambiguous Decision', () => {
     const decision = decisionFor(run, 'Harbor Lights');
     expect(decision.kind).toBe('ambiguous');
     expect(decision.reason).toBe(
-      'Two releases share this title — pick the right one.'
+      'Two releases share this title. Pick the right one.'
     );
     expect(storage.getMovie(id)?.tmdbId).toBeNull();
     expect(run.enriched).toBe(0);

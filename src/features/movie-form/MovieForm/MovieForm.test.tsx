@@ -649,7 +649,7 @@ describe('MovieForm — the rating picker', () => {
   it('captions the picker the way the prototype does', async () => {
     await renderForm();
 
-    expect(screen.getByText(/click a star \(or half\)/i)).toBeDefined();
+    expect(screen.getByText(/click a star or half a star/i)).toBeDefined();
   });
 
   it('opens on Unrated rather than on nought stars', async () => {

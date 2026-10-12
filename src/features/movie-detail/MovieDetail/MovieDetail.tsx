@@ -47,12 +47,12 @@ const CIRCLE_SIZE = 58;
  * circle goes rather than only that a button is there.
  */
 const WATCHED_TIP = {
-  on: 'Watched — click to unmark',
+  on: 'Watched, click to unmark',
   off: 'Mark as watched',
 } as const;
 
 const FAVORITE_TIP = {
-  on: 'In Favorites — click to remove',
+  on: 'In Favorites, click to remove',
   off: 'Add to Favorites',
 } as const;
 

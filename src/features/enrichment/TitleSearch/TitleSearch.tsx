@@ -12,7 +12,7 @@ export interface TitleSearchProps {
 
 const PLACEHOLDER = 'Search TMDB by title and year';
 
-const CAPTION = 'Try another title — the one you pick becomes its title.';
+const CAPTION = 'Try another title. The one you pick becomes its title.';
 
 /**
  * The review's search box, from `feat.EnrichmentFlow.dc.html`: the 44px input,

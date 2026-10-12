@@ -278,7 +278,7 @@ describe('useEnrichmentRun — settling a Decision', () => {
       ...MISSING,
       kind: 'ambiguous',
       query: 'Sundial 2004',
-      reason: 'Two releases share this title — pick the right one.',
+      reason: 'Two releases share this title. Pick the right one.',
       candidates: [],
     };
     serve({ held: REVIEW, write: () => okResponse(answered) });

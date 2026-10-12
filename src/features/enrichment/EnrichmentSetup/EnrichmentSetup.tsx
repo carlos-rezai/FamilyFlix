@@ -119,7 +119,7 @@ export function EnrichmentSetup({
         <SetupBanner
           tone="danger"
           title="No internet connection"
-          line="FamilyFlix works fine offline — this is the one feature that needs the network. Everything already in your library stays available."
+          line="FamilyFlix works fine offline. This is the one feature that needs the network. Everything already in your library stays available."
           actionLabel="Retry"
           onAction={onRetry}
         />
@@ -170,7 +170,7 @@ export function EnrichmentSetup({
           ))}
         </Chips>
         <RatingNote>
-          <Star>★</Star>Your household rating is yours — TMDB’s score is stored
+          <Star>★</Star>Your household rating is yours. TMDB’s score is stored
           beside it, never over it.
         </RatingNote>
         <SeriesNote>
@@ -219,8 +219,8 @@ export function EnrichmentSetup({
         {anyFolder && (writeSheet || writePosters) ? (
           <SourceNote>
             FamilyFlix will write into your movie folders. Existing files are
-            never replaced — a new <SourceNoteMono>poster.jpg</SourceNoteMono>{' '}
-            is only written where there isn’t one.
+            never replaced: a new <SourceNoteMono>poster.jpg</SourceNoteMono> is
+            only written where there isn’t one.
           </SourceNote>
         ) : null}
       </div>

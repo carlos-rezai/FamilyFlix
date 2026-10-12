@@ -616,9 +616,9 @@ describe('MovieDetail — the action row', () => {
  */
 describe('MovieDetail — the two toggles', () => {
   const MARK_WATCHED = /mark as watched/i;
-  const UNMARK_WATCHED = /watched — click to unmark/i;
+  const UNMARK_WATCHED = /watched, click to unmark/i;
   const ADD_FAVORITE = /add to favorites/i;
-  const REMOVE_FAVORITE = /in favorites — click to remove/i;
+  const REMOVE_FAVORITE = /in favorites, click to remove/i;
 
   /** The "✓ Watched" pill beside the meta line, or nothing. */
   function watchedBadge() {

@@ -90,7 +90,7 @@ export function scopeDescription(
 ): string {
   return scope === 'missing'
     ? `${summary.total - summary.complete} titles have no synopsis or artwork`
-    : `${summary.total} titles — re-checks ones already filled in`;
+    : `${summary.total} titles, re-checking ones already filled in`;
 }
 
 /**

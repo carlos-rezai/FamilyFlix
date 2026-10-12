@@ -105,8 +105,8 @@ const COUNT_WORDS = [
 export function ambiguousReason(count: number): string {
   const spelled = COUNT_WORDS[count] ?? String(count);
   return count === 1
-    ? `${spelled} release shares this title — pick the right one.`
-    : `${spelled} releases share this title — pick the right one.`;
+    ? `${spelled} release shares this title. Pick the right one.`
+    : `${spelled} releases share this title. Pick the right one.`;
 }
 
 /** What a Decision shows for a search: its kind, reason, query and picker. */

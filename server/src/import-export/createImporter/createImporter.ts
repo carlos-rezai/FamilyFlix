@@ -247,7 +247,7 @@ const LOG_CAP = 80;
 const REASON = {
   noRow: "Folder isn't in the spreadsheet.",
   missingMeta:
-    "Imported, but the row has no genre — it won't appear in any genre row.",
+    "Imported, but the row has no genre, so it won't appear in any genre row.",
 } as const;
 
 /** A **Problem** as the snapshot lists it, under an id of its own. */
@@ -621,7 +621,7 @@ export function createImporter({
       }
       if (!warned.has(name.toLowerCase())) {
         warned.add(name.toLowerCase());
-        log(current, `⚠ Unknown genre "${name}" — dropped`, 'warning');
+        log(current, `⚠ Unknown genre "${name}", dropped`, 'warning');
       }
       return [];
     });
@@ -755,7 +755,7 @@ export function createImporter({
     for (const stray of show.straySubtitles) {
       log(
         current,
-        `⚠ ${row.title} — ${basename(stray)} matches no episode — skipped`,
+        `⚠ ${row.title}: ${basename(stray)} matches no episode, skipped`,
         'warning'
       );
     }
@@ -763,7 +763,7 @@ export function createImporter({
       if (held !== null) {
         log(
           current,
-          `– Already in library ${titleWithYear(row.title, row.year)}`,
+          `· Already in library ${titleWithYear(row.title, row.year)}`,
           'info'
         );
       }
@@ -877,10 +877,10 @@ export function createImporter({
    */
   const warnOfMissingFiles = (current: ImportRun, { row, folder }: Match) => {
     if (folder.subtitles.length === 0) {
-      log(current, `⚠ ${row.title} — no subtitle track found`, 'warning');
+      log(current, `⚠ ${row.title}: no subtitle track found`, 'warning');
     }
     if (folder.poster === null) {
-      log(current, `⚠ ${row.title} — no poster found`, 'warning');
+      log(current, `⚠ ${row.title}: no poster found`, 'warning');
     }
   };
 
@@ -1031,7 +1031,7 @@ export function createImporter({
     current.currentItem = '';
     log(
       current,
-      `✓ ${verb} complete — ${count(imported)} imported, ${count(current.problems.length)} need attention.`,
+      `✓ ${verb} complete: ${count(imported)} imported, ${count(current.problems.length)} need attention.`,
       'success'
     );
     current.phase = 'review';
@@ -1049,7 +1049,7 @@ export function createImporter({
 
     log(current, `Connecting to ${rootPath} …`, 'info');
     for (const rowNumber of blankTitleRows) {
-      log(current, `⚠ Row ${rowNumber} has no title — skipped`, 'warning');
+      log(current, `⚠ Row ${rowNumber} has no title, skipped`, 'warning');
     }
 
     let scans: MovieFolderScan[] = [];
@@ -1062,7 +1062,7 @@ export function createImporter({
           log(current, `Scanning   ${scan.dir}`, 'scan');
         },
         (dir) => {
-          log(current, `⚠ Could not read ${dir} — skipped`, 'warning');
+          log(current, `⚠ Could not read ${dir}, skipped`, 'warning');
         }
       );
     } catch {
@@ -1112,7 +1112,7 @@ export function createImporter({
         }
         log(
           current,
-          `– Already in library ${titleWithYear(match.row.title, match.row.year)}`,
+          `· Already in library ${titleWithYear(match.row.title, match.row.year)}`,
           'info'
         );
       } else {
@@ -1147,7 +1147,7 @@ export function createImporter({
         const row = guessedRow(show.name);
         log(
           current,
-          `⚠ ${titleWithYear(row.title, row.year)} — not in the spreadsheet, imported under its folder’s name`,
+          `⚠ ${titleWithYear(row.title, row.year)}: not in the spreadsheet, imported under its folder’s name`,
           'warning'
         );
         const unnamed = showMatch(
@@ -1202,7 +1202,7 @@ export function createImporter({
 
     for (const folder of folders) {
       if ((await readableFolder(folder.path)) !== 'readable') {
-        log(current, `⚠ Can't reach ${folder.path} — skipped`, 'warning');
+        log(current, `⚠ Can't reach ${folder.path}, skipped`, 'warning');
         continue;
       }
       let scans: MovieFolderScan[] = [];
@@ -1214,7 +1214,7 @@ export function createImporter({
             current.currentItem = scan.dir;
           },
           (dir) => {
-            log(current, `⚠ Could not read ${dir} — skipped`, 'warning');
+            log(current, `⚠ Could not read ${dir}, skipped`, 'warning');
           }
         );
       } catch {
@@ -1239,7 +1239,7 @@ export function createImporter({
           storage.setSourceFolder(heldId, folder.id, sourceFolder);
           log(
             current,
-            `– Already in library ${titleWithYear(row.title, row.year)}`,
+            `· Already in library ${titleWithYear(row.title, row.year)}`,
             'info'
           );
           continue;

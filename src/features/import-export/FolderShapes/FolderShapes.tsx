@@ -31,7 +31,7 @@ export function FolderShapes() {
           {'Show Name\\ Season 01\\ S01E03.mkv'}
           <br />
           {'Show Name\\ S01E03.mkv '}
-          <Sans>— loose episodes at the show root are fine</Sans>
+          <Sans>(loose episodes at the show root are fine)</Sans>
         </AcceptsShapes>
         <AcceptsRule>
           Season and episode numbers come from the folder first, then the

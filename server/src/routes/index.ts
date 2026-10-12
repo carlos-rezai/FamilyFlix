@@ -140,7 +140,7 @@ interface PlayableRoutes {
  * instead of pasted three times, which was the point rather than the volume.
  */
 /** A drop missing one of its two halves — the route's own check, and the slot's. */
-const MISSING_HALF = 'ffmpeg and ffprobe go together — add both.';
+const MISSING_HALF = 'ffmpeg and ffprobe go together. Add both.';
 
 /** A part that is neither half, or a second of one that already arrived. */
 const STRAY_PART = 'Only ffmpeg and ffprobe can be added.';
@@ -2241,7 +2241,7 @@ export function createApiRouter(
       if (typeof value !== 'number' || !Number.isFinite(value) || value < 0) {
         res
           .status(400)
-          .json({ error: 'Body must be { value: number } — seconds, from 0' });
+          .json({ error: 'Body must be { value: number }: seconds, from 0' });
         return;
       }
       const { id } = req.params;

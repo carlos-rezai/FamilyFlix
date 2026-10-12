@@ -63,7 +63,7 @@ export function CodecManager() {
       </HeaderRow>
       <Lede>
         These decide which video files FamilyFlix can play. Common formats work
-        out of the box — add a pack only if a movie won&apos;t play.
+        out of the box. Add a pack only if a movie won&apos;t play.
       </Lede>
 
       {capabilities === null ? null : (

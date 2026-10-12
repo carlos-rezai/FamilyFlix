@@ -109,7 +109,7 @@ const RESOLVING_LEAD = 'Resolving import';
  * What the banner says after the title of an `ambiguous` problem, before the
  * other folders the run was weighing — the prototype's fixed phrasing.
  */
-const ALSO_MATCHED_LEAD = ' — also matched: ';
+const ALSO_MATCHED_LEAD = ', also matched: ';
 
 /**
  * The **Movie form** — `feat.MovieForm.dc.html`, and the only screen in the app
@@ -266,7 +266,7 @@ export function MovieForm() {
           </Field>
           <Field>
             <FieldLabel>
-              Cast <FieldHint>— separate with commas</FieldHint>
+              Cast <FieldHint>(separate with commas)</FieldHint>
             </FieldLabel>
             {/* The line is held exactly as it is typed, comma by comma. It is
               resolved into names once, on the way out — a field that tidied
@@ -294,7 +294,7 @@ export function MovieForm() {
 
         <ChipField>
           <FieldLabel>
-            Genre <FieldHint>— pick one or more</FieldHint>
+            Genre <FieldHint>(pick one or more)</FieldHint>
           </FieldLabel>
           {/* An empty pool draws an empty row: a broken endpoint is a caption
             with nothing under it, and a form that still saves. */}
@@ -309,7 +309,7 @@ export function MovieForm() {
 
         <ChipField>
           <FieldLabel>
-            Your rating <FieldHint>— click a star (or half)</FieldHint>
+            Your rating <FieldHint>(click a star or half a star)</FieldHint>
           </FieldLabel>
           {/* The percent goes straight in and straight back out: the strip
             speaks the scale the form holds, so there is nothing to convert

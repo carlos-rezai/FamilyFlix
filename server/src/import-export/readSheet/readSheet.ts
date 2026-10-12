@@ -228,7 +228,7 @@ export async function readSheet(
   const titleColumn = columns.get('title');
   if (titleColumn === undefined) {
     throw new Error(
-      'The spreadsheet has no title column — a Title, Name, Movie or Film header.'
+      'The spreadsheet has no title column (a Title, Name, Movie or Film header).'
     );
   }
 

@@ -151,7 +151,7 @@ export function ExportModal({ open, onClose }: ExportModalProps) {
     <Modal
       open={open}
       title="Export library"
-      subtitle="Save your whole collection — details, artwork and all."
+      subtitle="Save your whole collection: details, artwork and all."
       icon={<DownloadIcon size={22} />}
       onClose={onClose}
     >

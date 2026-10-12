@@ -956,7 +956,7 @@ describe('createImporter — the Activity log', () => {
     expect(indexOfLine(run, /^✓ Imported\s/)).toBeGreaterThan(
       indexOfLine(run, /^✓ Found /)
     );
-    expect(indexOfLine(run, /^✓ Import complete /)).toBe(run.log.length - 1);
+    expect(indexOfLine(run, /^✓ Import complete: /)).toBe(run.log.length - 1);
   });
 });
 

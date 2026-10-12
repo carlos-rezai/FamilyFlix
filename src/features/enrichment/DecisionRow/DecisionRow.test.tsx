@@ -41,7 +41,7 @@ const AMBIGUOUS: Decision = {
   id: 'd1',
   kind: 'ambiguous',
   title: 'Harbor Lights',
-  reason: 'Three releases share this title — pick the right one.',
+  reason: 'Three releases share this title. Pick the right one.',
   path: 'E:\\Movies\\Harbor.Lights.1080p\\',
   query: 'Harbor Lights',
   candidates: [
@@ -107,7 +107,7 @@ describe('DecisionRow — what every row shows', () => {
     renderRow();
 
     const reason = screen.getByText(
-      'Three releases share this title — pick the right one.'
+      'Three releases share this title. Pick the right one.'
     );
     expect(reason.previousElementSibling?.textContent).toBe('Harbor Lights');
     expect(reason.nextElementSibling?.textContent).toBe(AMBIGUOUS.path);
@@ -125,7 +125,7 @@ describe('DecisionRow — what every row shows', () => {
     renderRow();
 
     const dot = getComputedStyle(
-      dotOf('Three releases share this title — pick the right one.')
+      dotOf('Three releases share this title. Pick the right one.')
     );
     expect(dot.width).toBe('10px');
     expect(dot.height).toBe('10px');
@@ -222,10 +222,10 @@ describe('the prototype the row translates, amended', () => {
 
   it('spells the ambiguous count out rather than fixing it at three', () => {
     expect(prototype).not.toContain(
-      'Three releases share this title — pick the right one.'
+      'Three releases share this title. Pick the right one.'
     );
     expect(prototype).toContain(
-      'releases share this title — pick the right one.'
+      'releases share this title. Pick the right one.'
     );
   });
 

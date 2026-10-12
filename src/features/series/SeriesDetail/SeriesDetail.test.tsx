@@ -539,7 +539,7 @@ describe('SeriesDetail — the Seasons grid', () => {
  */
 describe('SeriesDetail — the heart', () => {
   const ADD_FAVORITE = /add to favorites/i;
-  const REMOVE_FAVORITE = /in favorites — click to remove/i;
+  const REMOVE_FAVORITE = /in favorites, click to remove/i;
 
   /** Answer the read with `detail`; answer every write with its echo, or refuse it. */
   function serveWithSaves(detail: SeriesDetailPayload, refuse = false) {

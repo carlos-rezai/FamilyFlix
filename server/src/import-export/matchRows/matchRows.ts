@@ -39,11 +39,11 @@ export interface MatchResult {
 
 /** The five reason strings the matcher fixes, verbatim from the prototype. */
 export const MATCH_REASON = {
-  twoFolders: 'Two folders look like plausible matches — pick one.',
+  twoFolders: 'Two folders look like plausible matches. Pick one.',
   nearName: "One folder looks like a match, but the name isn't exact.",
   noFolder: 'No folder found matching this spreadsheet row.',
   noVideo: 'Folder matched, but no video file was found.',
-  manyVideos: 'Two videos — pick the film.',
+  manyVideos: 'Two videos. Pick the film.',
 } as const;
 
 /** Whether a row and a folder agree on the year, when both carry one. */

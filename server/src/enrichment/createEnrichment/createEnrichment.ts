@@ -201,7 +201,7 @@ type ShowWritten =
 const STOP_LINES: Readonly<Record<Stop, string>> = {
   refused: 'TMDB refused the key.',
   unreachable:
-    'Lost the connection — stopped. Anything already fetched is kept.',
+    'Lost the connection, so the sync stopped. Anything already fetched is kept.',
 };
 
 export function createEnrichment({
@@ -346,7 +346,7 @@ export function createEnrichment({
     if (outcome === null || outcome.kind === 'no-folder') {
       log(
         current,
-        `– ${movie.title} — no source folder on record, poster skipped`,
+        `· ${movie.title}: no source folder on record, poster skipped`,
         'info'
       );
       return;
@@ -698,7 +698,7 @@ export function createEnrichment({
     disputed.set(decision.id, fetched);
     log(
       current,
-      `⚠ ${title.title} — differs from what you filled in`,
+      `⚠ ${title.title}: differs from what you filled in`,
       'warning'
     );
     return decision.id;
@@ -753,7 +753,7 @@ export function createEnrichment({
         }
         if (signal.aborted) return;
         if (outcome === null) {
-          log(current, `⚠ ${series.title} — could not be saved`, 'warning');
+          log(current, `⚠ ${series.title}: could not be saved`, 'warning');
         } else if (outcome.kind === 'stop') {
           log(current, STOP_LINES[outcome.stop], 'error');
           stopped = true;
@@ -761,7 +761,7 @@ export function createEnrichment({
         } else if (outcome.kind === 'unsettled') {
           current.decisions.push(outcome.decision);
           decided.set(outcome.decision.id, { kind: 'series', id: series.id });
-          log(current, `⚠ ${series.title} — ${outcome.reason}`, 'warning');
+          log(current, `⚠ ${series.title}: ${outcome.reason}`, 'warning');
         } else if (outcome.conflicts.length > 0) {
           raiseConflict(
             current,
@@ -791,7 +791,7 @@ export function createEnrichment({
       if (found.kind === 'unsettled') {
         current.decisions.push(found.decision);
         decided.set(found.decision.id, { kind: 'movie', id: movie.id });
-        log(current, `⚠ ${movie.title} — ${found.reason}`, 'warning');
+        log(current, `⚠ ${movie.title}: ${found.reason}`, 'warning');
       } else {
         try {
           const { conflicts, fetched } = await write(
@@ -816,7 +816,7 @@ export function createEnrichment({
           }
         } catch {
           if (signal.aborted) return;
-          log(current, `⚠ ${movie.title} — could not be saved`, 'warning');
+          log(current, `⚠ ${movie.title}: could not be saved`, 'warning');
         }
       }
       current.done += 1;
@@ -827,7 +827,7 @@ export function createEnrichment({
     if (!stopped) {
       log(
         current,
-        `✓ Sync complete — ${current.enriched} enriched, ${current.decisions.length} need a decision.`,
+        `✓ Sync complete: ${current.enriched} enriched, ${current.decisions.length} need a decision.`,
         'success'
       );
     }

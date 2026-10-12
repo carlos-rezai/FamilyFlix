@@ -75,7 +75,7 @@ async function check(
       writable: { sheet: false, posters: false },
       lines: [
         {
-          text: `Can't write to ${root} — the sheet and posters will be skipped`,
+          text: `Can't write to ${root}, so the sheet and posters will be skipped`,
           kind: 'warning',
         },
       ],
@@ -138,7 +138,7 @@ async function poster(
       return {
         kind: 'exists',
         line: {
-          text: `– ${join(sourceFolder ?? '', POSTER_NAME)} exists, left alone`,
+          text: `· ${join(sourceFolder ?? '', POSTER_NAME)} exists, left alone`,
           kind: 'info',
         },
       };
@@ -173,7 +173,7 @@ async function sheet(root: string, movies: Movie[]): Promise<SheetOutcome> {
     if (errorCode(error) === 'EEXIST') {
       return {
         kind: 'exists',
-        line: { text: `– ${SHEET_NAME} exists, left alone`, kind: 'info' },
+        line: { text: `· ${SHEET_NAME} exists, left alone`, kind: 'info' },
       };
     }
     return {

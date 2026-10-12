@@ -140,16 +140,16 @@ describe('ambiguousReason: the count spelled out', () => {
 
   it('spells out a count to twenty', () => {
     expect(ambiguousReason(2)).toBe(
-      'Two releases share this title — pick the right one.'
+      'Two releases share this title. Pick the right one.'
     );
     expect(ambiguousReason(20)).toBe(
-      'Twenty releases share this title — pick the right one.'
+      'Twenty releases share this title. Pick the right one.'
     );
   });
 
   it('writes a numeral past twenty', () => {
     expect(ambiguousReason(21)).toBe(
-      '21 releases share this title — pick the right one.'
+      '21 releases share this title. Pick the right one.'
     );
   });
 });
@@ -168,7 +168,7 @@ describe('decisionFace', () => {
 
     expect(face).toMatchObject({
       kind: 'ambiguous',
-      reason: 'Two releases share this title — pick the right one.',
+      reason: 'Two releases share this title. Pick the right one.',
       query: 'The Quiet Coast',
     });
     expect(face.kind === 'ambiguous' && face.candidates).toHaveLength(2);
@@ -242,7 +242,7 @@ describe('tvDecisionFace: a series’ search as the Decision’s face', () => {
 
     expect(face).toMatchObject({
       kind: 'ambiguous',
-      reason: 'Two releases share this title — pick the right one.',
+      reason: 'Two releases share this title. Pick the right one.',
       query: 'The Hollow Coast',
     });
     expect(face.kind === 'ambiguous' && face.candidates).toHaveLength(2);

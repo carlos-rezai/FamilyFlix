@@ -63,7 +63,7 @@ export function EpisodeRow({
     if (ACTIVATION_KEYS.includes(event.key)) event.stopPropagation();
   };
 
-  const tip = episode.watched ? 'Watched — click to unmark' : 'Mark as watched';
+  const tip = episode.watched ? 'Watched, click to unmark' : 'Mark as watched';
 
   return (
     <Root

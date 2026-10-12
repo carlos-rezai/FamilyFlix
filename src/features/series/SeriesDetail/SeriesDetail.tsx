@@ -49,7 +49,7 @@ const HEART_SIZE = 24;
 
 /** The heart's tip and name, the movie page's words. */
 const FAVORITE_TIP = {
-  on: 'In Favorites — click to remove',
+  on: 'In Favorites, click to remove',
   off: 'Add to Favorites',
 };
 

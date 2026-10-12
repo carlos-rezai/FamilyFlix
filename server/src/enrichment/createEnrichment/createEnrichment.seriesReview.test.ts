@@ -166,7 +166,7 @@ describe('createEnrichment: a series’ ambiguous Decision', () => {
     const decision = decisionFor(run, 'Harbor Watch');
     expect(decision).toMatchObject({
       kind: 'ambiguous',
-      reason: 'Four releases share this title — pick the right one.',
+      reason: 'Four releases share this title. Pick the right one.',
       query: 'Harbor Watch',
     });
     expect(run.enriched).toBe(0);

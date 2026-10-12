@@ -56,7 +56,7 @@ export function NetworkSection() {
           </TitleRow>
           <Lede>
             The only part of FamilyFlix that goes online. Nothing is sent about
-            your household — just movie titles, to look up posters and synopses.
+            your household, just movie titles to look up posters and synopses.
           </Lede>
         </Head>
         <KeyRow>

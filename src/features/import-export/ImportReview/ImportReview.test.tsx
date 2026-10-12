@@ -16,7 +16,7 @@ import { makeImportRun } from '@/test-support/makeImportRun/makeImportRun';
  * `matched confidently and imported` and `need your attention` — over the
  * **Needs attention** list, one row per **Problem** with its dot, title,
  * reason, _Resolve_ and _Skip_; the `✓ All done` card once the list is
- * empty; and _Finish — go to library_ either way. The step draws the run it
+ * empty; and Finish either way, under the label the flow hands it. The step draws the run it
  * is handed and reports a press — _Skip_ names the problem's id — and never
  * removes a row itself: the **Run hook** does, and the next `run` shows it.
  */
