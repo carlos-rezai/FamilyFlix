@@ -227,4 +227,18 @@ describe('FilePicker — the hidden input', () => {
     expect(hidden.position).toBe('absolute');
     expect(hidden.width).toBe('1px');
   });
+
+  it('keeps the input inside the scroller it is drawn in (#317)', () => {
+    renderPicker();
+    const box = picker().closest('label');
+    if (box === null) {
+      throw new Error('the input has no label around it');
+    }
+
+    // An absolute input is placed against its nearest positioned ancestor.
+    // With none, it lands against the document at its place down the form and
+    // stretches the document past the viewport: a second scrollbar beside the
+    // screen's own. The box is that ancestor.
+    expect(getComputedStyle(box).position).toBe('relative');
+  });
 });

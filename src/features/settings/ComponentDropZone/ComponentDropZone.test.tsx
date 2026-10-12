@@ -136,6 +136,14 @@ describe('ComponentDropZone — the idle face', () => {
     expect(document.activeElement).toBe(input);
   });
 
+  it('keeps the input inside the scroller it is drawn in (#317)', () => {
+    const { zone } = renderZone();
+
+    // The FilePicker's rule: the clipped input is absolute, so the zone is
+    // the positioned ancestor that holds it, or the document stretches.
+    expect(getComputedStyle(zone).position).toBe('relative');
+  });
+
   it('opens the dialog when the zone itself is pressed', async () => {
     const { zone, input } = renderZone();
     const opened = vi.fn();

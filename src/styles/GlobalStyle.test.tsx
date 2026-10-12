@@ -105,6 +105,44 @@ describe('GlobalStyle — Reduced motion', () => {
   });
 });
 
+/**
+ * Every declaration the stylesheet gives one selector, merged in order across
+ * every rule whose selector list names it, at-rules aside.
+ */
+function declarationsFor(css: string, selector: string): Map<string, string> {
+  const merged = new Map<string, string>();
+  const flat = css.replace(/@[^{]*\{(?:[^{}]*\{[^{}]*\})*[^{}]*\}/g, '');
+  for (const rule of flat.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+    if (!rule[1].split(',').includes(selector)) continue;
+    for (const declaration of rule[2].split(';')) {
+      const colon = declaration.indexOf(':');
+      if (colon > 0) {
+        merged.set(declaration.slice(0, colon), declaration.slice(colon + 1));
+      }
+    }
+  }
+  return merged;
+}
+
+/**
+ * One scrollbar (issue #317). Every route owns its own `100vh` scroller, so
+ * the document must never scroll: an element that escapes a screen's scroller
+ * would otherwise stretch the document and draw a second scrollbar beside the
+ * screen's own. The stylesheet locks it — the root, the body and the mount
+ * fill the viewport, exactly, and none of them scrolls.
+ */
+describe('GlobalStyle — the document never scrolls', () => {
+  it.each(['html', 'body', '#root'])(
+    '%s fills the viewport and clips',
+    (selector) => {
+      const declarations = declarationsFor(renderedCss(), selector);
+
+      expect(declarations.get('height')).toBe('100%');
+      expect(declarations.get('overflow')).toBe('hidden');
+    }
+  );
+});
+
 describe('GlobalStyle — with motion allowed', () => {
   it('still defines ffSpin, and the buffering spinner still turns on it', () => {
     const css = renderedCss();
