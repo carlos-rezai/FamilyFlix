@@ -123,9 +123,9 @@ export interface ImportProblemDetail extends ImportProblem {
     video?: string;
     /**
      * Every video, in name order: a film's **Found-file choice**, a show's
-     * Unplaced videos. Absent when there is no folder.
+     * Unplaced videos. Empty when there is no folder.
      */
-    videos?: string[];
+    videos: string[];
     poster?: string;
     backdrop?: string;
     subtitles: { path: string; language: string }[];

@@ -2289,6 +2289,7 @@ const DIE_HARD: ImportProblemDetail = {
   candidates: [],
   files: {
     video: `${DIE_HARD_FOLDER}\\Die.Hard.1988.1080p.mp4`,
+    videos: [`${DIE_HARD_FOLDER}\\Die.Hard.1988.1080p.mp4`],
     poster: `${DIE_HARD_FOLDER}\\poster.jpg`,
     backdrop: `${DIE_HARD_FOLDER}\\fanart.jpg`,
     subtitles: [
@@ -2935,6 +2936,7 @@ describe('MovieForm — the Import context', () => {
     candidates: [HARBOR_FIRST, HARBOR_SECOND],
     files: {
       video: `${HARBOR_FIRST}\\Harbor Lights.mp4`,
+      videos: [`${HARBOR_FIRST}\\Harbor Lights.mp4`],
       poster: `${HARBOR_FIRST}\\poster.jpg`,
       subtitles: [
         { path: `${HARBOR_FIRST}\\Harbor Lights.en.srt`, language: 'English' },
@@ -2957,7 +2959,7 @@ describe('MovieForm — the Import context', () => {
       rating: 7,
     },
     candidates: [],
-    files: { subtitles: [] },
+    files: { videos: [], subtitles: [] },
   };
 
   const HARBOR_NO_ROW: ImportProblemDetail = {
@@ -2970,6 +2972,7 @@ describe('MovieForm — the Import context', () => {
     candidates: [],
     files: {
       video: `${HARBOR_SECOND}\\Harbor.Lights.2019.mp4`,
+      videos: [`${HARBOR_SECOND}\\Harbor.Lights.2019.mp4`],
       poster: `${HARBOR_SECOND}\\poster.jpg`,
       subtitles: [
         {
@@ -3421,6 +3424,7 @@ describe('MovieForm — the Import context', () => {
       candidates: [],
       files: {
         video: `${LANTERN_FOLDER}\\The.Lantern.Keeper.2019.mkv`,
+        videos: [`${LANTERN_FOLDER}\\The.Lantern.Keeper.2019.mkv`],
         poster: `${LANTERN_FOLDER}\\folder.jpg`,
         subtitles: [
           {

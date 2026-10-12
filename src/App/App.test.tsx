@@ -1575,6 +1575,7 @@ describe('App — coming back out of a Resolve', () => {
     candidates: [],
     files: {
       video: 'C:\\Movies\\Die Hard (1988)\\Die.Hard.1988.mp4',
+      videos: ['C:\\Movies\\Die Hard (1988)\\Die.Hard.1988.mp4'],
       subtitles: [],
     },
   };

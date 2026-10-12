@@ -1413,7 +1413,8 @@ export function createImporter({
             : rowDetail(source.row),
         ...(folder === null ? {} : { folder: folder.dir }),
         candidates: source.candidates.map((scan) => scan.dir),
-        files: folder === null ? { subtitles: [] } : filesOf(folder),
+        files:
+          folder === null ? { videos: [], subtitles: [] } : filesOf(folder),
       };
     },
 

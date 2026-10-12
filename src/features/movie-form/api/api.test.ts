@@ -739,6 +739,7 @@ const DETAIL: ImportProblemDetail = {
   candidates: [],
   files: {
     video: 'C:\\Movies\\Die.Hard.1988.1080p\\Die.Hard.1988.1080p.mp4',
+    videos: ['C:\\Movies\\Die.Hard.1988.1080p\\Die.Hard.1988.1080p.mp4'],
     poster: 'C:\\Movies\\Die.Hard.1988.1080p\\poster.jpg',
     subtitles: [
       {

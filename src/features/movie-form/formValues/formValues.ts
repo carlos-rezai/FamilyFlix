@@ -246,8 +246,8 @@ export function problemFormValues(
     video:
       files.video !== undefined
         ? foundFile(files.video)
-        : (files.videos?.length ?? 0) > 1
-          ? foundFile((files.videos ?? [])[0])
+        : files.videos.length > 1
+          ? foundFile(files.videos[0])
           : null,
     poster: files.poster === undefined ? null : foundFile(files.poster),
     // In the folder's order, which is the order the run would have stored
@@ -483,7 +483,7 @@ export function seriesResolveRows(
     season.episodes.map((episode) => `${episode.season}x${episode.number}`)
   );
   const used = new Set(taken);
-  const guesses = (detail.files.videos ?? []).map((path) => {
+  const guesses = detail.files.videos.map((path) => {
     const season = folderSeason(path, detail.folder);
     const tag = readEpisodeTag(foundFilenameOf(path), season);
     const claim =

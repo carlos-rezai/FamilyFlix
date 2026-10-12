@@ -873,7 +873,7 @@ describe('GET /api/import/current/problems/:id', () => {
       reason: 'No folder found matching this spreadsheet row.',
       row: { title: 'The Lantern Keeper', year: 2019, genres: ['Drama'] },
       candidates: [],
-      files: { subtitles: [] },
+      files: { videos: [], subtitles: [] },
     };
     const problem = vi.fn<Importer['problem']>().mockReturnValue(detail);
     const { baseUrl } = freshApi({

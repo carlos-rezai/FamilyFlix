@@ -1811,7 +1811,7 @@ describe('createImporter — problem: the detail Resolve prefills from', () => {
     });
     expect(detail?.folder).toBeUndefined();
     expect(detail?.candidates).toEqual([]);
-    expect(detail?.files).toEqual({ subtitles: [] });
+    expect(detail?.files).toEqual({ videos: [], subtitles: [] });
   });
 
   it('answers null for an id that never was', async () => {

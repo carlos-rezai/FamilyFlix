@@ -556,7 +556,7 @@ export function useMovieForm(): UseMovieFormResult {
           holdEpisodes(rows, taken);
         } else if (requested === null) {
           setValues(problemFormValues(detail));
-          const videos = detail.files.videos ?? [];
+          const videos = detail.files.videos;
           setFoundVideos(videos.length > 1 ? videos.map(foundFile) : []);
         }
         setResolving({
