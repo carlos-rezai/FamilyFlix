@@ -466,7 +466,7 @@ function folderSeason(video: string, showFolder: string | undefined): number {
     return 1;
   }
   const season = readSeasonFolder(parent[parent.length - 1]);
-  return season !== null && season >= 1 ? season : 1;
+  return season ?? 1;
 }
 
 /**

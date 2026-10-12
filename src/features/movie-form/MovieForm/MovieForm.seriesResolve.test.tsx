@@ -367,7 +367,7 @@ describe('MovieForm — the Series Resolve, a show not yet held', () => {
   });
 
   it('guesses season 0 under a Season 0 folder, as the server reads it', async () => {
-    const special = `${SHOW}\Season 0\christmas_special.mov`;
+    const special = `${SHOW}\\Season 0\\christmas_special.mov`;
     answerProblem = () =>
       Promise.resolve(
         okResponse({

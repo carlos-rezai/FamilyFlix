@@ -38,6 +38,7 @@ function renderFiles(poster: MovieFormFile | null = null) {
         onPickPoster={onPickPoster}
         onRemovePoster={onRemovePoster}
         episodes={[]}
+        refusals={{}}
         onAddEpisodeFiles={vi.fn()}
         onSeasonChange={vi.fn()}
         onNumberChange={vi.fn()}

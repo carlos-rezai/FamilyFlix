@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useId, type ReactNode } from 'react';
 
 import { RemoveButton } from '@/primitives';
 
@@ -8,6 +8,7 @@ import {
   Controls,
   Filename,
   NumberInput,
+  Refusal,
   Tag,
   TitleInput,
 } from './EpisodeFileRow.styles';
@@ -21,6 +22,12 @@ export interface EpisodeFileRowProps {
   number: string;
   /** The episode's title; empty reads _Untitled episode_. */
   title: string;
+  /** Whether the **Save gate** refuses the season field. */
+  seasonRefused?: boolean;
+  /** Whether the **Save gate** refuses the episode number field. */
+  numberRefused?: boolean;
+  /** Why the gate refuses the row, drawn under the controls; none while `null`. */
+  refusal?: string | null;
   onSeasonChange: (season: string) => void;
   onNumberChange: (number: string) => void;
   onTitleChange: (title: string) => void;
@@ -50,12 +57,19 @@ export function EpisodeFileRow({
   season,
   number,
   title,
+  seasonRefused = false,
+  numberRefused = false,
+  refusal = null,
   onSeasonChange,
   onNumberChange,
   onTitleChange,
   onRemove,
   children,
 }: EpisodeFileRowProps) {
+  const refusalId = useId();
+  const describedBy = (refused: boolean) =>
+    refused && refusal !== null ? refusalId : undefined;
+
   return (
     <Card>
       <Controls>
@@ -64,6 +78,9 @@ export function EpisodeFileRow({
           <NumberInput
             value={season}
             aria-label="Season"
+            aria-invalid={seasonRefused}
+            aria-describedby={describedBy(seasonRefused)}
+            $refused={seasonRefused}
             inputMode="numeric"
             onChange={(event) =>
               onSeasonChange(digits(event.target.value, SEASON_LENGTH))
@@ -75,6 +92,9 @@ export function EpisodeFileRow({
           <NumberInput
             value={number}
             aria-label="Episode"
+            aria-invalid={numberRefused}
+            aria-describedby={describedBy(numberRefused)}
+            $refused={numberRefused}
             inputMode="numeric"
             onChange={(event) =>
               onNumberChange(digits(event.target.value, NUMBER_LENGTH))
@@ -89,6 +109,7 @@ export function EpisodeFileRow({
         />
         <RemoveButton removes={filename} onClick={onRemove} />
       </Controls>
+      {refusal !== null && <Refusal id={refusalId}>{refusal}</Refusal>}
       <Filename>{filename}</Filename>
       <Children>{children}</Children>
     </Card>

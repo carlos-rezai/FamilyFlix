@@ -291,13 +291,13 @@ const REFUSALS: [name: string, parts: Part[], sentence: string | null][] = [
     null,
   ],
   [
-    'an episode field with season 0',
-    [...FIELDS, episode(0, 1), ['episodeVideo', videoPart('S00E01.mp4')]],
+    'an episode field with a season below 0',
+    [...FIELDS, episode(-1, 1), ['episodeVideo', videoPart('S00E01.mp4')]],
     null,
   ],
   [
-    'an episode field with number 0',
-    [...FIELDS, episode(1, 0), ['episodeVideo', videoPart('S01E00.mp4')]],
+    'an episode field with a number below 0',
+    [...FIELDS, episode(1, -1), ['episodeVideo', videoPart('S01E00.mp4')]],
     null,
   ],
   [

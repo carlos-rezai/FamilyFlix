@@ -14,6 +14,7 @@ import {
   SUBTITLE_ACCEPT,
   VIDEO_ACCEPT,
 } from '../filesCard';
+import type { EpisodeRefusal } from '../useEpisodeList/useEpisodeList';
 import {
   Caption,
   Card,
@@ -38,6 +39,8 @@ export interface SeriesFormFilesProps {
   onRemovePoster: () => void;
   /** The **Episode file rows**, in the order they are held. */
   episodes: readonly EpisodeFormRow[];
+  /** Each row the **Save gate** refuses, by its key, with why. */
+  refusals: Readonly<Record<string, EpisodeRefusal>>;
   /** Reports every video picked in one dialog of _＋ Add episode files_. */
   onAddEpisodeFiles: (files: File[]) => void;
   onSeasonChange: (key: string, season: string) => void;
@@ -66,6 +69,7 @@ export function SeriesFormFiles({
   onPickPoster,
   onRemovePoster,
   episodes,
+  refusals,
   onAddEpisodeFiles,
   onSeasonChange,
   onNumberChange,
@@ -99,6 +103,9 @@ export function SeriesFormFiles({
               season={episode.season}
               number={episode.number}
               title={episode.title}
+              seasonRefused={refusals[episode.key]?.season ?? false}
+              numberRefused={refusals[episode.key]?.number ?? false}
+              refusal={refusals[episode.key]?.message ?? null}
               onSeasonChange={(season) => onSeasonChange(episode.key, season)}
               onNumberChange={(number) => onNumberChange(episode.key, number)}
               onTitleChange={(title) =>

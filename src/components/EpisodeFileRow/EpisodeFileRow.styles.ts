@@ -54,12 +54,24 @@ const field = css`
   }
 `;
 
-/** A season or episode number: 44px, centred. */
-export const NumberInput = styled.input`
+/**
+ * A season or episode number: 44px, centred. A refused one keeps its `danger`
+ * border under focus too — the reason is still there while it is typed into.
+ */
+export const NumberInput = styled.input<{ $refused: boolean }>`
   ${field}
   width: 44px;
   padding: 0 8px;
   text-align: center;
+
+  ${({ $refused, theme }) =>
+    $refused &&
+    css`
+      &,
+      &:focus {
+        border-color: ${theme.colors.danger};
+      }
+    `}
 `;
 
 /** The episode's title, taking what the line has left. */
@@ -68,6 +80,14 @@ export const TitleInput = styled.input`
   flex: 1;
   min-width: 0;
   padding: 0 10px;
+`;
+
+/** Why the **Save gate** refuses the row: one 13px line in `danger`. */
+export const Refusal = styled.p`
+  margin: 0;
+  font-family: ${({ theme }) => theme.fonts.sans};
+  font-size: 13px;
+  color: ${({ theme }) => theme.colors.danger};
 `;
 
 /** The filename on its own line, in mono, under the controls. */

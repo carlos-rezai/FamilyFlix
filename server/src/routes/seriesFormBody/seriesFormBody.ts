@@ -78,8 +78,9 @@ export function readEpisodeField(text: string): EpisodeField | null {
     videoPath,
     storedSubtitles,
   } = value as Record<string, unknown>;
+  // 0 is a number: a pilot, a season of specials.
   const counting = (n: unknown): n is number =>
-    typeof n === 'number' && Number.isInteger(n) && n >= 1;
+    typeof n === 'number' && Number.isInteger(n) && n >= 0;
   if (!counting(season) || !counting(number)) {
     return null;
   }

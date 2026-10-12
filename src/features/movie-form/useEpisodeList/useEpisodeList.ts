@@ -1,8 +1,28 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
 
 import type { EpisodeFormRow, MovieFormSubtitle } from '@/types';
+import { formatEpisodeTag } from '@/utils';
 import { pickedFile, pickedSubtitle } from '../formValues/formValues';
 import { readEpisodeTag } from '../readEpisodeTag/readEpisodeTag';
+
+/**
+ * Why the **Save gate** refuses one row: which number field is at fault, and
+ * the sentence the row draws under its controls.
+ */
+export interface EpisodeRefusal {
+  season: boolean;
+  number: boolean;
+  message: string;
+}
+
+/** A blank season or number. */
+const BLANK = 'Give this episode a season and an episode number.';
+
+/** A pair two rows share, spelled as the tag. */
+const shared = (tag: string) => `Another file is also ${tag}.`;
+
+/** A pair the joined series holds already. */
+const held = (tag: string) => `The series already has ${tag}.`;
 
 export interface EpisodeList {
   /** The rows, in the order they landed — never re-sorted on an edit. */
@@ -35,20 +55,23 @@ export interface EpisodeList {
   ) => void;
   removeEpisodeSubtitle: (rowKey: string, subtitleKey: string) => void;
   /**
-   * The series half of the **Save gate**: at least one row, every season and
-   * number at least 1, no (season, number) pair twice, and none a joined
-   * series holds.
+   * Each row the gate refuses, by its key, with why; a row it takes is absent.
+   */
+  refusals: Readonly<Record<string, EpisodeRefusal>>;
+  /**
+   * The series half of the **Save gate**: at least one row, and none refused —
+   * every season and number filled in (0 counts), no (season, number) pair
+   * twice, and none a joined series holds.
    */
   episodesComplete: boolean;
 }
 
-/** A typed number as the count it is, or `null` for one that is not ≥ 1. */
+/**
+ * A typed number as the number it is, or `null` for a blank. 0 is a number: a
+ * pilot, a season of specials.
+ */
 function counted(text: string): number | null {
-  if (!/^\d+$/.test(text)) {
-    return null;
-  }
-  const value = Number(text);
-  return value >= 1 ? value : null;
+  return /^\d+$/.test(text) ? Number(text) : null;
 }
 
 /** The smallest number at least 1 that season 1 does not hold yet. */
@@ -199,25 +222,42 @@ export function useEpisodeList(): EpisodeList {
     [editSubtitles]
   );
 
-  const episodesComplete = useMemo(() => {
-    if (episodes.length === 0) {
-      return false;
-    }
-    const seen = new Set<string>();
+  const refusals = useMemo(() => {
+    const refused: Record<string, EpisodeRefusal> = {};
+    const byPair = new Map<string, string[]>();
     for (const row of episodes) {
       const season = counted(row.season);
       const number = counted(row.number);
       if (season === null || number === null) {
-        return false;
+        refused[row.key] = {
+          season: season === null,
+          number: number === null,
+          message: BLANK,
+        };
+        continue;
       }
       const pair = `${season}x${number}`;
-      if (seen.has(pair) || taken.has(pair)) {
-        return false;
+      const tag = formatEpisodeTag({ season, number });
+      if (taken.has(pair)) {
+        refused[row.key] = { season: true, number: true, message: held(tag) };
       }
-      seen.add(pair);
+      byPair.set(pair, [...(byPair.get(pair) ?? []), row.key]);
     }
-    return true;
+    for (const [pair, keys] of byPair) {
+      if (keys.length < 2) {
+        continue;
+      }
+      const [season, number] = pair.split('x').map(Number);
+      const message = shared(formatEpisodeTag({ season, number }));
+      for (const key of keys) {
+        refused[key] = { season: true, number: true, message };
+      }
+    }
+    return refused;
   }, [episodes, taken]);
+
+  const episodesComplete =
+    episodes.length > 0 && Object.keys(refusals).length === 0;
 
   return {
     episodes,
@@ -230,6 +270,7 @@ export function useEpisodeList(): EpisodeList {
     addEpisodeSubtitle,
     changeEpisodeSubtitleLanguage,
     removeEpisodeSubtitle,
+    refusals,
     episodesComplete,
   };
 }

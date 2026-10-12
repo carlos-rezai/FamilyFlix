@@ -17,7 +17,10 @@ import {
   type ResolvingProblem,
 } from '../loadFormRecord/loadFormRecord';
 import { titleFromFilename } from '../titleFromFilename/titleFromFilename';
-import { useEpisodeList } from '../useEpisodeList/useEpisodeList';
+import {
+  useEpisodeList,
+  type EpisodeRefusal,
+} from '../useEpisodeList/useEpisodeList';
 import {
   createMovie,
   createSeries,
@@ -130,6 +133,8 @@ export interface UseMovieFormResult {
   removeSubtitle: (key: string) => void;
   /** The series kind's **Episode file rows**, in the order they landed. */
   episodes: EpisodeFormRow[];
+  /** Each row the series' **Save gate** refuses, by its key, with why. */
+  episodeRefusals: Readonly<Record<string, EpisodeRefusal>>;
   /** Append a pick of episode videos; the first fills an empty title. */
   addEpisodeFiles: (files: readonly File[]) => void;
   /** The season of the row holding `key`, as typed. */
@@ -691,6 +696,7 @@ export function useMovieForm(): UseMovieFormResult {
     changeSubtitleLanguage,
     removeSubtitle,
     episodes,
+    episodeRefusals: episodeList.refusals,
     addEpisodeFiles,
     setSeason: episodeList.setSeason,
     setNumber: episodeList.setNumber,
