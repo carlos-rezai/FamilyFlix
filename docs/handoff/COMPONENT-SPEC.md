@@ -466,9 +466,13 @@ Target: `components/EpisodeFileRow/` · one episode file on the series Files car
 FileField's filled-row furniture: an `S` number field (digits, at most 2), an `E` number
 field (digits, at most 3), the episode title field (placeholder _Untitled episode_) and the
 ✕; under them the filename in mono, then a children slot for the row's SubtitleRows and its
-_＋ Add subtitle_ picker. Presentational, like SubtitleRow.
-Props: `filename`, `season`, `number`, `title`, `onSeasonChange(season)`,
-`onNumberChange(number)`, `onTitleChange(title)`, `onRemove`, `children`.
+_＋ Add subtitle_ picker. A row the **Save gate** refuses says why: the refused number
+field's border in `danger` (`aria-invalid`), and one 13px `danger` line under the controls —
+_Give this episode a season and an episode number._, _Another file is also S01E03._ or _The
+series already has S01E03._ Presentational, like SubtitleRow: the caller decides the refusal.
+Props: `filename`, `season`, `number`, `title`, `seasonRefused`, `numberRefused`, `refusal`
+(string | null), `onSeasonChange(season)`, `onNumberChange(number)`, `onTitleChange(title)`,
+`onRemove`, `children`.
 
 ### FolderRow — `mol.FolderRow.dc.html`
 
