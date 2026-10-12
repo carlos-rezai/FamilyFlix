@@ -128,7 +128,13 @@ built (no series form, no series delete).
    the Series tab and the heart on the series page — a **Single-signal
    write**, `POST /api/series/:id/favorite { value }`. Series never join the
    Movies tab's **Favorites row**; the Series tab draws none (the prototype
-   builds no such row).
+   builds no such row). ⚠️ **Amended 2026-10-12:** a heart nothing read was
+   reported as a bug after v0.3.0, so the Series tab draws its own
+   **Favorites row** — the same `FavoritesRow`, between Continue Watching and
+   _All series_, the hearted series of what the grid shows in its order,
+   capped at 15. `page.LibraryPage.dc.html` and `FamilyFlix.dc.html`
+   (`seriesFavoritesList`) amended first. Series still never join the Movies
+   tab's shelf.
 
 10. **Episode title and air date — from where?** ✅ **The title from the
     filename**, the text after the **Episode tag** with dots and underscores
@@ -272,7 +278,8 @@ built (no series form, no series delete).
     series_, the count line `3 series · 42 episodes` (both counted over what
     the grid shows; `episode` pluralised, `series` invariant), and
     `LibraryGrid` of `PosterCard`s opening `/series/:id`. No Favorites row,
-    no genre rows. Its no-results states mirror the movie home's: _Nothing
+    no genre rows. ⚠️ **Amended 2026-10-12 (Q9):** a Favorites row between
+    the two; still no genre rows. Its no-results states mirror the movie home's: _Nothing
     here_ with the prototype's _No series match “q”._ for a search, and
     _No series match these filters. Try a different genre or rating._ for a
     filter. A library with no series draws the heading and

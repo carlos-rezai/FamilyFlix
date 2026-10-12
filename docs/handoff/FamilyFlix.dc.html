@@ -666,6 +666,7 @@
           const sq=s.search.trim().toLowerCase();
           const seriesFiltered=this.rawSeries.filter(x=>!sq||x.title.toLowerCase().includes(sq)||x.syn.toLowerCase().includes(sq)||x.genres.join(' ').toLowerCase().includes(sq));
           const seriesList=seriesFiltered.map(x=>this.seriesView(x));
+          const seriesFavoritesList=seriesFiltered.filter(x=>s.seriesFavs.includes(x.id)).slice(0,15).map(x=>this.seriesView(x));
           const totalEpisodes=this.rawSeries.reduce((a,x)=>a+x.seasons.reduce((p,q)=>p+q,0),0);
           const episodeContinueList=[];
           this.rawSeries.forEach(x=>{ this.allEpisodes(x.id).forEach(e=>{ if(e.progress>0&&e.progress<100) episodeContinueList.push({
@@ -776,6 +777,7 @@
               searchPlaceholder:s.tab==='series'?'Search your series':'Search your movies',
               seriesList, seriesCountLabel:seriesList.length+' series · '+totalEpisodes+' episodes', seriesNoResults:seriesList.length===0,
               episodeContinueList, showEpisodeContinue:episodeContinueList.length>0,
+              seriesFavoritesList, showSeriesFavorites:seriesFavoritesList.length>0,
               genreLabel:s.genre, genreOptions, genreOpen:s.openDrop==='genre', onToggleGenre:()=>this.toggleGenre(),
               ratingLabel:ratingFilterLabel, ratingOptions, ratingOpen:s.openDrop==='rating', onToggleRating:()=>this.toggleRating(),
               sortLabel, sortOptions, sortOpen:s.openDrop==='sort', onToggleSort:()=>this.toggleSort(),
