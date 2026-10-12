@@ -14,8 +14,9 @@ import { useEpisodeList } from './useEpisodeList';
  * where the maintainer saw them land.
  *
  * `episodesComplete` is the series half of the **Save gate**: at least one
- * row, every season and number at least 1, and no (season, number) pair
- * twice.
+ * row, every season and number filled in, and no (season, number) pair
+ * twice. Since issue #312, 0 is a number — a pilot, a special — and each row
+ * the gate refuses carries why, in `refusals`.
  */
 
 const video = (name: string) =>
@@ -225,22 +226,31 @@ describe('useEpisodeList — episodesComplete', () => {
     expect(result.current.episodesComplete).toBe(false);
   });
 
-  it('is false for season 0', () => {
+  it('is true for season 0, the specials', () => {
     const { result } = renderHook(() => useEpisodeList());
     add(result, ['Harbor.and.Vine.S01E01.mkv']);
 
     act(() => result.current.setSeason(result.current.episodes[0].key, '0'));
 
-    expect(result.current.episodesComplete).toBe(false);
+    expect(result.current.episodesComplete).toBe(true);
   });
 
-  it('is false for episode 0', () => {
+  it('is true for episode 0, a pilot', () => {
     const { result } = renderHook(() => useEpisodeList());
     add(result, ['Harbor.and.Vine.S01E01.mkv']);
 
     act(() => result.current.setNumber(result.current.episodes[0].key, '0'));
 
-    expect(result.current.episodesComplete).toBe(false);
+    expect(result.current.episodesComplete).toBe(true);
+  });
+
+  it('lands a file tagged S01E00 as episode 0, the gate open', () => {
+    const { result } = renderHook(() => useEpisodeList());
+
+    add(result, ['Harbor.and.Vine.S01E00.Unaired.Pilot.mkv']);
+
+    expect(rows(result)[0].slice(0, 2)).toEqual(['1', '0']);
+    expect(result.current.episodesComplete).toBe(true);
   });
 
   it('is false while two rows share a season and number', () => {
@@ -268,6 +278,129 @@ describe('useEpisodeList — episodesComplete', () => {
 
     act(() => result.current.removeEpisode(result.current.episodes[1].key));
 
+    expect(result.current.episodesComplete).toBe(true);
+  });
+});
+
+/**
+ * Issue #312: a row the **Save gate** refuses says why. `refusals` holds one
+ * entry per refused row, by its key — which number field is at fault and the
+ * sentence the row draws under its controls — and nothing for a row the gate
+ * takes. The gate is closed exactly while some row is refused.
+ */
+describe('useEpisodeList — refusals', () => {
+  const keyOf = (
+    result: { current: ReturnType<typeof useEpisodeList> },
+    index: number
+  ) => result.current.episodes[index].key;
+
+  it('refuses nothing while every row is numbered once', () => {
+    const { result } = renderHook(() => useEpisodeList());
+    add(result, ['Harbor.and.Vine.S01E01.mkv', 'Harbor.and.Vine.S01E02.mkv']);
+
+    expect(result.current.refusals).toEqual({});
+  });
+
+  it('refuses a blank number, on the number field alone', () => {
+    const { result } = renderHook(() => useEpisodeList());
+    add(result, ['Harbor.and.Vine.S01E01.mkv']);
+
+    act(() => result.current.setNumber(keyOf(result, 0), ''));
+
+    expect(result.current.refusals[keyOf(result, 0)]).toEqual({
+      season: false,
+      number: true,
+      message: 'Give this episode a season and an episode number.',
+    });
+  });
+
+  it('refuses a blank season, on the season field alone', () => {
+    const { result } = renderHook(() => useEpisodeList());
+    add(result, ['Harbor.and.Vine.S01E01.mkv']);
+
+    act(() => result.current.setSeason(keyOf(result, 0), ''));
+
+    expect(result.current.refusals[keyOf(result, 0)]).toEqual({
+      season: true,
+      number: false,
+      message: 'Give this episode a season and an episode number.',
+    });
+  });
+
+  it('refuses both rows of a shared pair, naming the pair', () => {
+    const { result } = renderHook(() => useEpisodeList());
+    add(result, [
+      'Harbor.and.Vine.S01E01.mkv',
+      'Harbor.and.Vine.S01E02.mkv',
+      'Harbor.and.Vine.S01E03.mkv',
+    ]);
+
+    act(() => result.current.setNumber(keyOf(result, 2), '1'));
+
+    const refused = {
+      season: true,
+      number: true,
+      message: 'Another file is also S01E01.',
+    };
+    expect(result.current.refusals).toEqual({
+      [keyOf(result, 0)]: refused,
+      [keyOf(result, 2)]: refused,
+    });
+  });
+
+  it('refuses a pair the joined series holds already', () => {
+    const { result } = renderHook(() => useEpisodeList());
+    act(() =>
+      result.current.holdEpisodes(
+        [
+          {
+            key: 'found-episode-0',
+            file: {
+              kind: 'found',
+              path: 'E:\bonus.mkv',
+              filename: 'bonus.mkv',
+            },
+            season: '1',
+            number: '3',
+            title: '',
+            subtitles: [],
+          },
+        ],
+        ['1x1', '1x2']
+      )
+    );
+    expect(result.current.refusals).toEqual({});
+
+    act(() => result.current.setNumber('found-episode-0', '2'));
+
+    expect(result.current.refusals).toEqual({
+      'found-episode-0': {
+        season: true,
+        number: true,
+        message: 'The series already has S01E02.',
+      },
+    });
+    expect(result.current.episodesComplete).toBe(false);
+  });
+
+  it('lets the refusal go once the row is renumbered', () => {
+    const { result } = renderHook(() => useEpisodeList());
+    add(result, ['Harbor.and.Vine.S01E01.mkv', 'Harbor.and.Vine.S01E02.mkv']);
+    act(() => result.current.setNumber(keyOf(result, 1), '1'));
+
+    act(() => result.current.setNumber(keyOf(result, 1), '0'));
+
+    expect(result.current.refusals).toEqual({});
+    expect(result.current.episodesComplete).toBe(true);
+  });
+
+  it('never refuses over an episode title', () => {
+    const { result } = renderHook(() => useEpisodeList());
+    add(result, ['Harbor.and.Vine.S01E01.mkv']);
+
+    act(() => result.current.setEpisodeTitle(keyOf(result, 0), ''));
+
+    expect(result.current.refusals).toEqual({});
     expect(result.current.episodesComplete).toBe(true);
   });
 });

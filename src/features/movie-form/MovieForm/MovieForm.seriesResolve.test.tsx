@@ -341,6 +341,47 @@ describe('MovieForm — the Series Resolve, a show not yet held', () => {
     expect(resolves()).toHaveLength(0);
   });
 
+  // Issue #312: a row the gate refuses says why, and 0 is a number.
+  it('says why Save is closed, under the row that closes it, and on its field', async () => {
+    await renderResolve(AT);
+
+    fireEvent.change(numberFields()[1], { target: { value: '1' } });
+
+    expect(screen.getAllByText('Another file is also S02E01.')).toHaveLength(2);
+    expect(numberFields()[1].getAttribute('aria-invalid')).toBe('true');
+    expect(numberFields()[2].getAttribute('aria-invalid')).toBe('false');
+  });
+
+  it('keeps Save open on an episode 0, and sends it', async () => {
+    await renderResolve(AT);
+
+    fireEvent.change(numberFields()[3], { target: { value: '0' } });
+
+    expect(saveAndContinue().disabled).toBe(false);
+    expect(
+      screen.queryByText(/another file|already has|give this episode/i)
+    ).toBeNull();
+    fireEvent.click(saveAndContinue());
+    const episodes = episodeFields(await sentBody());
+    expect(episodes[3]).toMatchObject({ season: 1, number: 0 });
+  });
+
+  it('guesses season 0 under a Season 0 folder, as the server reads it', async () => {
+    const special = `${SHOW}\Season 0\christmas_special.mov`;
+    answerProblem = () =>
+      Promise.resolve(
+        okResponse({
+          ...NIGHT_FERRY,
+          reason: '1 episode needs a number',
+          files: { subtitles: [], videos: [special] },
+        })
+      );
+
+    await renderResolve(AT);
+
+    expect(drawnNumbers()).toEqual([['0', '1']]);
+  });
+
   it('posts to the problem’s resolve route, each video as its found path, no bytes', async () => {
     await renderResolve(AT);
 

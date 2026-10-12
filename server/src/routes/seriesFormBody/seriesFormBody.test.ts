@@ -106,12 +106,19 @@ describe('readEpisodeField — one episode field', () => {
     ).toMatchObject({ subtitleLanguages: [] });
   });
 
+  // Issue #312: 0 is a number — a pilot, a special.
+  it('reads season 0 and episode 0', () => {
+    expect(
+      readEpisodeField(JSON.stringify({ season: 0, number: 0 }))
+    ).toMatchObject({ season: 0, number: 0 });
+  });
+
   it.each([
     ['text that is not JSON', 'season one'],
     ['JSON that is not an object', '3'],
     ['JSON null', 'null'],
-    ['a season below 1', JSON.stringify({ season: 0, number: 1 })],
-    ['a number below 1', JSON.stringify({ season: 1, number: 0 })],
+    ['a season below 0', JSON.stringify({ season: -1, number: 1 })],
+    ['a number below 0', JSON.stringify({ season: 1, number: -1 })],
     [
       'a season that is not an integer',
       JSON.stringify({ season: 1.5, number: 1 }),

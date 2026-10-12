@@ -199,3 +199,60 @@ describe('EpisodeFileRow — the children slot', () => {
     expect(comesBefore(screen.getByText(FILENAME), child)).toBe(true);
   });
 });
+
+/**
+ * Issue #312: a row the **Save gate** refuses says why — the refused number
+ * field's border in `danger`, marked `aria-invalid`, and one line in `danger`
+ * under the controls that describes it. The row decides none of it.
+ */
+describe('EpisodeFileRow — a refusal', () => {
+  const REFUSAL = 'Another file is also S01E03.';
+
+  it('draws no line and marks no field while nothing is refused', () => {
+    renderRow();
+
+    expect(seasonField().getAttribute('aria-invalid')).toBe('false');
+    expect(numberField().getAttribute('aria-invalid')).toBe('false');
+    expect(screen.queryByText(REFUSAL)).toBeNull();
+  });
+
+  it('draws the refusal under the controls, before the filename', () => {
+    renderRow({ refusal: REFUSAL, numberRefused: true });
+
+    const line = screen.getByText(REFUSAL);
+    expect(comesBefore(titleField(), line)).toBe(true);
+    expect(comesBefore(line, screen.getByText(FILENAME))).toBe(true);
+    expect(resolvedStyle(line).color).toBe(theme.colors.danger);
+  });
+
+  it('marks only the field it is told is refused', () => {
+    renderRow({ refusal: REFUSAL, numberRefused: true });
+
+    expect(numberField().getAttribute('aria-invalid')).toBe('true');
+    expect(seasonField().getAttribute('aria-invalid')).toBe('false');
+  });
+
+  it('draws a refused field’s border in danger, focused or not', () => {
+    renderRow({ refusal: REFUSAL, seasonRefused: true });
+
+    expect(resolvedStyle(seasonField())['border-color']).toBe(
+      theme.colors.danger
+    );
+    expect(resolvedStyle(seasonField(), { focus: true })['border-color']).toBe(
+      theme.colors.danger
+    );
+    expect(resolvedStyle(numberField())['border-color']).not.toBe(
+      theme.colors.danger
+    );
+  });
+
+  it('has a refused field described by the line', () => {
+    renderRow({ refusal: REFUSAL, seasonRefused: true, numberRefused: true });
+
+    for (const field of [seasonField(), numberField()]) {
+      const id = field.getAttribute('aria-describedby');
+      expect(id).toBeTruthy();
+      expect(document.getElementById(id ?? '')?.textContent).toBe(REFUSAL);
+    }
+  });
+});
