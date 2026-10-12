@@ -130,6 +130,13 @@ export async function createSeries(
  * refused edit is the one that most needs the form left standing, because the
  * correction in it is the only copy there is.
  */
+export function updateMovie(
+  id: string,
+  values: MovieFormValues
+): Promise<Movie> {
+  return sendMovie('PATCH', movieEndpoint(id), values);
+}
+
 /**
  * The **Series edit job**'s save, `PATCH /api/series/:id`: the add's body, a
  * held row naming its episode and a held file travelling as its path.
@@ -150,13 +157,6 @@ export async function updateSeries(
   }
 
   return (await response.json()) as Series;
-}
-
-export function updateMovie(
-  id: string,
-  values: MovieFormValues
-): Promise<Movie> {
-  return sendMovie('PATCH', movieEndpoint(id), values);
 }
 
 /**
