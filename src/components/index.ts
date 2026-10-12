@@ -17,6 +17,7 @@ export {
   type MenuItemProps,
   type MenuTriggerProps,
 } from './Menu/Menu';
+export { CornerMenu, type CornerMenuProps } from './CornerMenu/CornerMenu';
 export {
   FilterDropdown,
   type FilterDropdownProps,

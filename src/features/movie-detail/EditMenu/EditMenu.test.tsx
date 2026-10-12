@@ -5,7 +5,6 @@ import { MemoryRouter, useLocation } from 'react-router-dom';
 
 import { EditMenu } from './EditMenu';
 import { theme } from '@/styles/theme';
-import { MoreButton } from './EditMenu.styles';
 import {
   normCss,
   resolvedStyle,
@@ -264,13 +263,7 @@ describe('EditMenu — the Delete dialog', () => {
  */
 describe('EditMenu — the ⋯ button through hover, press and focus', () => {
   it('shows a press and the ring, and does not scale on hover', () => {
-    render(
-      <ThemeProvider theme={theme}>
-        <MoreButton label="More options">
-          <span />
-        </MoreButton>
-      </ThemeProvider>
-    );
+    renderEditMenu();
     const button = screen.getByRole('button', { name: 'More options' });
 
     expect(resolvedStyle(button, { hover: true }).transform ?? 'none').toBe(

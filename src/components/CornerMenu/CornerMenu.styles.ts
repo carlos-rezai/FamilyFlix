@@ -1,6 +1,6 @@
 import styled from 'styled-components';
 
-import { Menu } from '@/components';
+import { Menu } from '../Menu/Menu';
 import { IconButton } from '@/primitives';
 
 /**
@@ -9,7 +9,7 @@ import { IconButton } from '@/primitives';
  * the panel still hangs off this box, and a press inside it is still never
  * "outside".
  */
-export const CornerMenu = styled(Menu)`
+export const Corner = styled(Menu)`
   position: fixed;
   top: 24px;
   right: 24px;

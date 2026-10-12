@@ -1,11 +1,9 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-import { MenuItem } from '@/components';
-import { MoreIcon } from '@/primitives';
+import { CornerMenu, MenuItem } from '@/components';
 import { enrichPath, movieFormPath } from '@/utils';
 import { DeleteMovieDialog } from '../DeleteMovieDialog/DeleteMovieDialog';
-import { CornerMenu, MoreButton } from './EditMenu.styles';
 
 export interface EditMenuProps {
   /** The movie the menu's actions apply to. */
@@ -13,9 +11,6 @@ export interface EditMenuProps {
   /** Its title — what the Delete dialog names. */
   title: string;
 }
-
-/** The ⋯ trigger's square, matching the Back pill's height across the screen. */
-const MORE_SIZE = 44;
 
 /**
  * The movie detail page's ⋯ overflow menu, in its fixed slot opposite the Back
@@ -29,9 +24,10 @@ const MORE_SIZE = 44;
  * renders the dialog beside the corner slot — the portal takes it out of the
  * fixed corner and over the whole viewport.
  *
- * Everything about opening and closing the menu belongs to `mol.Menu`. What is
- * left here is the whole of what makes this menu *this* menu: a translucent ⋯
- * button, and three rows that know which movie they are for.
+ * Everything about opening and closing the menu belongs to `mol.Menu`, and the
+ * corner and its translucent ⋯ to `CornerMenu`. What is left here is the whole
+ * of what makes this menu *this* menu: three rows that know which movie they
+ * are for.
  */
 export function EditMenu({ movieId, title }: EditMenuProps) {
   const navigate = useNavigate();
@@ -39,13 +35,7 @@ export function EditMenu({ movieId, title }: EditMenuProps) {
 
   return (
     <>
-      <CornerMenu
-        trigger={(props) => (
-          <MoreButton {...props} label="More options" size={MORE_SIZE}>
-            <MoreIcon size={20} />
-          </MoreButton>
-        )}
-      >
+      <CornerMenu>
         <MenuItem
           glyph="✎"
           onSelect={() => navigate(movieFormPath({ movie: movieId }))}
