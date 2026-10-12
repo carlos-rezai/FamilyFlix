@@ -13,6 +13,8 @@ import { visuallyHidden } from '@/styles/visuallyHidden';
  * input's label, and the input itself is hidden behind it.
  */
 export const Box = styled.label`
+  /* The hidden input's positioned ancestor, so it stays in the scroller. */
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;

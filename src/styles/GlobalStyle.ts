@@ -13,6 +13,18 @@ export const GlobalStyle = createGlobalStyle`
     box-sizing: border-box;
   }
 
+  /*
+   * The document never scrolls: every route owns its own 100vh scroller, so
+   * anything that escaped one would otherwise stretch the document and draw a
+   * second scrollbar beside the screen's own (#317).
+   */
+  html,
+  body,
+  #root {
+    height: 100%;
+    overflow: hidden;
+  }
+
   body {
     margin: 0;
     background: ${({ theme }) => theme.colors.bg};

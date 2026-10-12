@@ -17,6 +17,8 @@ import { visuallyHidden } from '@/styles/visuallyHidden';
  * and no hover to invite a second drop that would report nothing.
  */
 export const Zone = styled.label<{ $over: boolean; $busy: boolean }>`
+  /* The hidden input's positioned ancestor, so it stays in the scroller. */
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;

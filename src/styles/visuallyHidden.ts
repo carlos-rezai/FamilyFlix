@@ -13,6 +13,10 @@ import { css } from 'styled-components';
  * It lives here rather than in either of them because both need the same
  * bargain, and two copies of a rule this load-bearing are two chances for one
  * of them to drift into `display: none` on a tidy-up.
+ *
+ * The wrapper must be positioned. The input is absolute, so with no positioned
+ * ancestor it is placed against the document at its place down the page, and
+ * stretches the document past the screen's own scroller (#317).
  */
 export const visuallyHidden = css`
   position: absolute;
