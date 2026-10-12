@@ -108,7 +108,7 @@ function refusing(readOnly: string): WriteBack {
             writable: { sheet: false, posters: false },
             lines: [
               {
-                text: `Can't write to ${root} — the sheet and posters will be skipped`,
+                text: `Can't write to ${root}, so the sheet and posters will be skipped`,
                 kind: 'warning',
               },
             ],
@@ -275,7 +275,7 @@ describe('createEnrichment over Library folders: a read-only folder', () => {
     const run = await syncBoth(enrichment);
 
     expect(texts(run)).toContain(
-      `Can't write to ${paths.archive} — the sheet and posters will be skipped`
+      `Can't write to ${paths.archive}, so the sheet and posters will be skipped`
     );
     expect(texts(run)).toContain(`Will write ${SHEET} to ${paths.movies}`);
   });
@@ -307,7 +307,7 @@ describe('createEnrichment over Library folders: a folder that is gone', () => {
     const run = await syncBoth(enrichment);
 
     expect(texts(run)).toContain(
-      '– Fogline — no source folder on record, poster skipped'
+      '· Fogline: no source folder on record, poster skipped'
     );
     expect(existsSync(paths.gone)).toBe(false);
     const fogline = storage

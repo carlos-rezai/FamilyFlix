@@ -2930,7 +2930,7 @@ describe('MovieForm — the Import context', () => {
     id: 'p2',
     kind: 'ambiguous',
     title: 'Harbor Lights',
-    reason: 'Two folders look like plausible matches — pick one.',
+    reason: 'Two folders look like plausible matches. Pick one.',
     row: { title: 'Harbor Lights', year: 2019, genres: ['Drama'] },
     folder: HARBOR_FIRST,
     candidates: [HARBOR_FIRST, HARBOR_SECOND],
@@ -3018,7 +3018,7 @@ describe('MovieForm — the Import context', () => {
       // Story 82: the maintainer sees at once that the run was weighing
       // another folder, and which — by its name, not its whole path.
       expect(bannerText()).toBe(
-        'Resolving import · Harbor Lights — also matched: Harbor.Lights.2019'
+        'Resolving import · Harbor Lights, also matched: Harbor.Lights.2019'
       );
     });
 
@@ -3033,7 +3033,7 @@ describe('MovieForm — the Import context', () => {
       await renderResolve(HARBOR_AMBIGUOUS.id);
 
       expect(bannerText()).toBe(
-        'Resolving import · Harbor Lights — also matched: Harbor.Lights.2019, Harbor Lights 1080p'
+        'Resolving import · Harbor Lights, also matched: Harbor.Lights.2019, Harbor Lights 1080p'
       );
     });
 
@@ -3048,7 +3048,7 @@ describe('MovieForm — the Import context', () => {
       await renderResolve(HARBOR_AMBIGUOUS.id);
 
       expect(bannerText()).toBe(
-        'Resolving import · Harbor Lights — also matched: Harbor.Lights.2019'
+        'Resolving import · Harbor Lights, also matched: Harbor.Lights.2019'
       );
     });
 
@@ -3140,7 +3140,7 @@ describe('MovieForm — the Import context', () => {
       await renderResolve(HARBOR_AMBIGUOUS.id);
 
       expect(bannerText()).toBe(
-        `Resolving import · ${title} — also matched: Ça c'est Noël (2019)`
+        `Resolving import · ${title}, also matched: Ça c'est Noël (2019)`
       );
     });
   });
@@ -3413,7 +3413,7 @@ describe('MovieForm — the Import context', () => {
       kind: 'missing-meta',
       title: 'The Lantern Keeper',
       reason:
-        "Imported, but the row has no genre — it won't appear in any genre row.",
+        "Imported, but the row has no genre, so it won't appear in any genre row.",
       movieId: UNFILED.id,
       row: {
         title: 'The Lantern Keeper',

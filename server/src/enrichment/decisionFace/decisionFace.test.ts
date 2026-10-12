@@ -134,7 +134,7 @@ describe('candidatesFor: the language is upper-cased', () => {
 describe('ambiguousReason: the count spelled out', () => {
   it('names one release in the singular', () => {
     expect(ambiguousReason(1)).toBe(
-      'One release shares this title — pick the right one.'
+      'One release shares this title. Pick the right one.'
     );
   });
 
@@ -184,7 +184,7 @@ describe('decisionFace', () => {
 
     expect(face).toMatchObject({
       kind: 'ambiguous',
-      reason: 'One release shares this title — pick the right one.',
+      reason: 'One release shares this title. Pick the right one.',
     });
   });
 

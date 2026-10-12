@@ -47,7 +47,7 @@ import { createEnrichment } from './createEnrichment';
 const ALL_FIELDS: EnrichField[] = [...ENRICH_FIELDS];
 
 const LOST_LINE =
-  'Lost the connection — stopped. Anything already fetched is kept.';
+  'Lost the connection, so the sync stopped. Anything already fetched is kept.';
 const REFUSED_LINE = 'TMDB refused the key.';
 
 interface Film {
@@ -321,7 +321,7 @@ describe('createEnrichment: the log', () => {
     const run = await reviewed(enrichment);
 
     expect(lines(run).at(-1)).toBe(
-      '✓ Sync complete — 2 enriched, 0 need a decision.'
+      '✓ Sync complete: 2 enriched, 0 need a decision.'
     );
   });
 });

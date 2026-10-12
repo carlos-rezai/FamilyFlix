@@ -92,7 +92,7 @@ describe('EnrichmentSetup — the banners', () => {
     expect(screen.getByText('No internet connection')).toBeDefined();
     expect(
       screen.getByText(
-        'FamilyFlix works fine offline — this is the one feature that needs the network. Everything already in your library stays available.'
+        'FamilyFlix works fine offline. This is the one feature that needs the network. Everything already in your library stays available.'
       )
     ).toBeDefined();
   });
@@ -168,7 +168,7 @@ describe('EnrichmentSetup — the scope cards', () => {
     ).toBeDefined();
     expect(
       within(scopeCard(/Everything/)).getByText(
-        '30 titles — re-checks ones already filled in'
+        '30 titles, re-checking ones already filled in'
       )
     ).toBeDefined();
   });
@@ -247,7 +247,7 @@ describe('EnrichmentSetup — the field chips', () => {
 
     expect(
       screen.getByText(
-        /Your household rating is yours — TMDB’s score is stored beside it, never over it\./
+        /Your household rating is yours. TMDB’s score is stored beside it, never over it\./
       )
     ).toBeDefined();
     expect(

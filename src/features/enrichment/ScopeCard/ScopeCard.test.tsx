@@ -23,7 +23,7 @@ function renderCard(props: Partial<ScopeCardProps> = {}) {
       <div role="radiogroup" aria-label="What to sync">
         <ScopeCard
           label="Everything"
-          description="30 titles — re-checks ones already filled in"
+          description="30 titles, re-checking ones already filled in"
           selected={false}
           {...props}
         />
@@ -48,7 +48,7 @@ describe('ScopeCard — what it is', () => {
     expect(radio().tagName).toBe('BUTTON');
     expect(radio().getAttribute('type')).toBe('button');
     expect(
-      screen.getByText('30 titles — re-checks ones already filled in')
+      screen.getByText('30 titles, re-checking ones already filled in')
     ).toBeDefined();
   });
 
@@ -129,7 +129,7 @@ describe('ScopeCard — the dot, the label, the line', () => {
     expect(style(screen.getByText('Everything'), 'font-size')).toBe('15px');
     expect(
       style(
-        screen.getByText('30 titles — re-checks ones already filled in'),
+        screen.getByText('30 titles, re-checking ones already filled in'),
         'margin'
       )
     ).toBe('6px 0 0 28px');

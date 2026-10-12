@@ -193,7 +193,7 @@ describe('ExportModal — the idle face, top to bottom', () => {
     ).toBeDefined();
     expect(
       within(card).getByText(
-        'Save your whole collection — details, artwork and all.'
+        'Save your whole collection: details, artwork and all.'
       )
     ).toBeDefined();
   });

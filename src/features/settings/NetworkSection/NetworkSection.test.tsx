@@ -155,7 +155,7 @@ describe('NetworkSection — what it draws', () => {
 
     expect(
       screen.getByText(
-        /Nothing is sent about your household — just movie titles, to look up posters and synopses/
+        /Nothing is sent about your household, just movie titles to look up posters and synopses/
       )
     ).toBeDefined();
   });

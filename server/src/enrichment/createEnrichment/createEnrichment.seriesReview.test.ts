@@ -200,7 +200,7 @@ describe('createEnrichment: a series’ ambiguous Decision', () => {
     const run = await sync(enrichment);
 
     expect(run.log.map((each) => each.text)).toContain(
-      '✓ Sync complete — 0 enriched, 1 need a decision.'
+      '✓ Sync complete: 0 enriched, 1 need a decision.'
     );
   });
 });

@@ -102,7 +102,7 @@ function refusing(readOnly: string): WriteBack {
             writable: { sheet: false, posters: false },
             lines: [
               {
-                text: `Can't write to ${root} — the sheet and posters will be skipped`,
+                text: `Can't write to ${root}, so the sheet and posters will be skipped`,
                 kind: 'warning',
               },
             ],
@@ -219,7 +219,7 @@ describe('createEnrichment: the permission check comes first', () => {
     await sync(enrichment, BOTH);
 
     expect(logAtFirstLookup()).toContain(
-      `Can't write to ${root} — the sheet and posters will be skipped`
+      `Can't write to ${root}, so the sheet and posters will be skipped`
     );
   });
 
@@ -281,7 +281,7 @@ describe('createEnrichment: poster.jpg into each Source folder', () => {
     const run = await sync(enrichment, BOTH);
 
     expect(texts(run)).toContain(
-      '– Sundial — no source folder on record, poster skipped'
+      '· Sundial: no source folder on record, poster skipped'
     );
     expect(run.decisions).toEqual([]);
     expect(storage.getMovie(id)?.synopsis).toBe('The 2004 Sundial.');
@@ -294,7 +294,7 @@ describe('createEnrichment: poster.jpg into each Source folder', () => {
     const run = await sync(enrichment, BOTH);
 
     expect(texts(run)).toContain(
-      '– Sundial — no source folder on record, poster skipped'
+      '· Sundial: no source folder on record, poster skipped'
     );
     expect(run.decisions).toEqual([]);
     expect(existsSync(join(root, 'Moved Away (2004)'))).toBe(false);

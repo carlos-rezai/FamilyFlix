@@ -937,7 +937,7 @@ describe('createImporter — the Activity log', () => {
 
     // The fixture gives the run nothing to flag: P is zero.
     expect(run.log[run.log.length - 1]).toEqual({
-      text: '✓ Import complete — 2 imported, 0 need attention.',
+      text: '✓ Import complete: 2 imported, 0 need attention.',
       kind: 'success',
     });
   });
@@ -978,13 +978,13 @@ describe('createImporter — the lines for what is skipped', () => {
 
     expect(texts(run)).toEqual(
       expect.arrayContaining([
-        '– Already in library Die Hard (1988)',
-        '– Already in library Amélie (2001)',
+        '· Already in library Die Hard (1988)',
+        '· Already in library Amélie (2001)',
       ])
     );
     expect(linesMatching(run, /^✓ Imported\s/)).toHaveLength(0);
     expect(run.log[run.log.length - 1]).toEqual({
-      text: '✓ Import complete — 0 imported, 0 need attention.',
+      text: '✓ Import complete: 0 imported, 0 need attention.',
       kind: 'success',
     });
   });
@@ -1087,7 +1087,7 @@ describe('createImporter — a match with no subtitle, and one with no poster', 
     expect(lantern).toBeDefined();
     expect(lantern.subtitles).toEqual([]);
     expect(run.log).toContainEqual({
-      text: '⚠ The Lantern Keeper — no subtitle track found',
+      text: '⚠ The Lantern Keeper: no subtitle track found',
       kind: 'warning',
     });
     // The films that have one are not warned about.
@@ -1120,7 +1120,7 @@ describe('createImporter — a match with no subtitle, and one with no poster', 
 
     expect(run).toMatchObject({ matched: 3, total: 3, done: 3 });
     expect(run.log[run.log.length - 1]).toEqual({
-      text: '✓ Import complete — 3 imported, 0 need attention.',
+      text: '✓ Import complete: 3 imported, 0 need attention.',
       kind: 'success',
     });
   });
@@ -1145,7 +1145,7 @@ describe('createImporter — the log is capped at 80 lines', () => {
     expect(run.log).toHaveLength(80);
     // A hundred folders the sheet does not name: a hundred `no-row` problems.
     expect(run.log[run.log.length - 1]).toEqual({
-      text: '✓ Import complete — 2 imported, 100 need attention.',
+      text: '✓ Import complete: 2 imported, 100 need attention.',
       kind: 'success',
     });
     // The oldest lines are the ones that went.
@@ -1157,13 +1157,13 @@ describe('createImporter — the log is capped at 80 lines', () => {
 /** The reason strings the review slice fixes, verbatim from the prototype. */
 const REASON = {
   noFolder: 'No folder found matching this spreadsheet row.',
-  twoFolders: 'Two folders look like plausible matches — pick one.',
+  twoFolders: 'Two folders look like plausible matches. Pick one.',
   nearName: "One folder looks like a match, but the name isn't exact.",
   // 38 — Title editing, Slice 7 (issue #310): the reason names the fix.
-  manyVideos: 'Two videos — pick the film.',
+  manyVideos: 'Two videos. Pick the film.',
   noRow: "Folder isn't in the spreadsheet.",
   missingMeta:
-    "Imported, but the row has no genre — it won't appear in any genre row.",
+    "Imported, but the row has no genre, so it won't appear in any genre row.",
 } as const;
 
 /** A sheet beside the root, with whatever rows the test names under the header. */
@@ -1436,7 +1436,7 @@ describe('createImporter — a copy that fails partway', () => {
 
     expect(run.phase).toBe('review');
     expect(run.log[run.log.length - 1]).toEqual({
-      text: '✓ Import complete — 1 imported, 1 need attention.',
+      text: '✓ Import complete: 1 imported, 1 need attention.',
       kind: 'success',
     });
   });
@@ -1507,7 +1507,7 @@ describe('createImporter — the complete line counts the problems', () => {
 
     expect(run.problems).toHaveLength(2);
     expect(run.log[run.log.length - 1]).toEqual({
-      text: '✓ Import complete — 2 imported, 2 need attention.',
+      text: '✓ Import complete: 2 imported, 2 need attention.',
       kind: 'success',
     });
   });
@@ -1520,7 +1520,7 @@ describe('createImporter — the complete line counts the problems', () => {
     const run = await untilReview(importer);
 
     expect(run.log[run.log.length - 1]).toEqual({
-      text: '✓ Import complete — 2 imported, 1 need attention.',
+      text: '✓ Import complete: 2 imported, 1 need attention.',
       kind: 'success',
     });
   });
@@ -2413,7 +2413,7 @@ describe('createImporter — a subtitle with an unknown language tag', () => {
       linesMatching(run, /^[^S].*Lantern Keeper/).map((line) => line.text)
     ).toEqual([
       '✓ Imported   The Lantern Keeper',
-      '⚠ The Lantern Keeper — no poster found',
+      '⚠ The Lantern Keeper: no poster found',
     ]);
   });
 
@@ -2503,7 +2503,7 @@ describe('createImporter — the importer restarting mid-run', () => {
     const run = await untilReview(restarted);
 
     expect(run.problems).toEqual([]);
-    expect(texts(run)).toContain('– Already in library Die Hard (1988)');
+    expect(texts(run)).toContain('· Already in library Die Hard (1988)');
     expect(
       linesMatching(run, /^✓ Imported\s/).map((line) => line.text)
     ).toEqual(['✓ Imported   Amélie']);

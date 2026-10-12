@@ -50,7 +50,7 @@ const SHAPES = [
   'Show Name\\ Season 01\\ S01E03.mkv',
   'Show Name\\ S01E03.mkv',
 ];
-const LOOSE_NOTE = '— loose episodes at the show root are fine';
+const LOOSE_NOTE = '(loose episodes at the show root are fine)';
 const RULE =
   'Season and episode numbers come from the folder first, then the filename (S01E03, 1x03). Anything it can’t place lands in the review list.';
 

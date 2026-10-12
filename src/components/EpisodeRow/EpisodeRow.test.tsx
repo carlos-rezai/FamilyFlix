@@ -77,7 +77,7 @@ function row(): HTMLElement {
 /** The watched box, by the tip it carries in either state. */
 function box(): HTMLElement {
   return screen.getByRole('button', {
-    name: /^(Mark as watched|Watched — click to unmark)$/,
+    name: /^(Mark as watched|Watched, click to unmark)$/,
   });
 }
 
@@ -273,7 +273,7 @@ describe('EpisodeRow — the watched box', () => {
     renderRow({ episode: { watched: true } });
 
     const control = screen.getByRole('button', {
-      name: 'Watched — click to unmark',
+      name: 'Watched, click to unmark',
     });
     expect(control.getAttribute('aria-pressed')).toBe('true');
     expect(control.textContent).toContain('✓');

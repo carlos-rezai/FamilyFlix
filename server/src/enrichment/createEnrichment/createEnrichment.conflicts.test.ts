@@ -201,7 +201,7 @@ describe('createEnrichment: a conflict Decision', () => {
 
     expect(run.enriched).toBe(0);
     expect(run.log.map((line) => line.text)).toContain(
-      '✓ Sync complete — 0 enriched, 1 need a decision.'
+      '✓ Sync complete: 0 enriched, 1 need a decision.'
     );
   });
 
@@ -212,7 +212,7 @@ describe('createEnrichment: a conflict Decision', () => {
     const run = await sync(enrichment);
 
     expect(run.log).toContainEqual({
-      text: '⚠ The Lantern Keeper — differs from what you filled in',
+      text: '⚠ The Lantern Keeper: differs from what you filled in',
       kind: 'warning',
     });
   });

@@ -121,7 +121,7 @@ describe('writeBack.check — the permission check and its dry-run lines', () =>
 
     expect(check.lines).toEqual([
       {
-        text: `Can't write to ${root} — the sheet and posters will be skipped`,
+        text: `Can't write to ${root}, so the sheet and posters will be skipped`,
         kind: 'warning',
       },
     ]);

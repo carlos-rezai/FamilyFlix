@@ -158,12 +158,12 @@ describe('matchRows — the confident verdict', () => {
 
 /** The five reason strings the matcher fixes, verbatim from the prototype. */
 const REASON = {
-  twoFolders: 'Two folders look like plausible matches — pick one.',
+  twoFolders: 'Two folders look like plausible matches. Pick one.',
   nearName: "One folder looks like a match, but the name isn't exact.",
   noFolder: 'No folder found matching this spreadsheet row.',
   noVideo: 'Folder matched, but no video file was found.',
   // 38 — Title editing, Slice 7 (issue #310): the reason names the fix.
-  manyVideos: 'Two videos — pick the film.',
+  manyVideos: 'Two videos. Pick the film.',
 } as const;
 
 describe('matchRows — the ambiguous verdict', () => {

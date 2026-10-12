@@ -89,9 +89,7 @@ describe('TitleSearch', () => {
     renderSearch();
 
     expect(
-      screen.getByText(
-        'Try another title — the one you pick becomes its title.'
-      )
+      screen.getByText('Try another title. The one you pick becomes its title.')
     ).toBeDefined();
   });
 });

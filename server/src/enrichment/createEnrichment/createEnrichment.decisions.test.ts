@@ -234,7 +234,7 @@ describe('createEnrichment: a missing Decision', () => {
     const run = await syncEverything(enrichment);
 
     expect(run.log.map((line) => line.text)).toContain(
-      '✓ Sync complete — 1 enriched, 2 need a decision.'
+      '✓ Sync complete: 1 enriched, 2 need a decision.'
     );
   });
 });

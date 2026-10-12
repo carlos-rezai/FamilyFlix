@@ -216,7 +216,7 @@ function episodeRow(code: string): HTMLElement {
 /** The watched box inside one row. */
 function boxOf(code: string): HTMLElement {
   return within(episodeRow(code)).getByRole('button', {
-    name: /^(Mark as watched|Watched — click to unmark)$/,
+    name: /^(Mark as watched|Watched, click to unmark)$/,
   });
 }
 
@@ -224,7 +224,7 @@ function boxOf(code: string): HTMLElement {
 function pressedStates(): (string | null)[] {
   return screen
     .getAllByRole('button', {
-      name: /^(Mark as watched|Watched — click to unmark)$/,
+      name: /^(Mark as watched|Watched, click to unmark)$/,
     })
     .map((control) => control.getAttribute('aria-pressed'));
 }

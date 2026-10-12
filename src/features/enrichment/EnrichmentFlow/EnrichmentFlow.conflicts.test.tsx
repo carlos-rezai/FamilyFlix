@@ -84,7 +84,7 @@ function reviewRun(): EnrichmentRun {
     currentItem: null,
     log: [
       {
-        text: '✓ Sync complete — 4 enriched, 1 need a decision.',
+        text: '✓ Sync complete: 4 enriched, 1 need a decision.',
         kind: 'success',
       },
     ],

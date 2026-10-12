@@ -177,7 +177,7 @@ const ENRICH_LABEL = 'Also fetch metadata and posters from TMDB';
 const HINT_WITH_KEY =
   'Runs straight after the import, over everything it brings in. Needs the internet.';
 const HINT_WITHOUT_KEY =
-  'Needs a TMDB key — add one under Settings → Network first.';
+  'Needs a TMDB key. Add one under Settings → Network first.';
 
 const enrichBox = () =>
   screen.findByRole('checkbox', { name: new RegExp(ENRICH_LABEL) });

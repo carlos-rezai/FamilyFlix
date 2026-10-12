@@ -102,7 +102,7 @@ describe('LogConsole — colours each kind', () => {
     renderConsole({
       lines: [
         line('✓ Imported Die Hard', 'success'),
-        line('⚠ Amélie — no subtitle track found', 'warning'),
+        line('⚠ Amélie: no subtitle track found', 'warning'),
         line('✗ The copy failed', 'error'),
       ],
     });
@@ -111,7 +111,7 @@ describe('LogConsole — colours each kind', () => {
       getComputedStyle(screen.getByText('✓ Imported Die Hard')).color
     ).toBe(INK.success);
     expect(
-      getComputedStyle(screen.getByText('⚠ Amélie — no subtitle track found'))
+      getComputedStyle(screen.getByText('⚠ Amélie: no subtitle track found'))
         .color
     ).toBe(INK.warning);
     expect(getComputedStyle(screen.getByText('✗ The copy failed')).color).toBe(

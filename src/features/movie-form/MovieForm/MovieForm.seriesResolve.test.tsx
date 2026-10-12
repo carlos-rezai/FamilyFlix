@@ -149,7 +149,7 @@ const PAPER_MOONS: ImportProblemDetail = {
   id: 'p7',
   kind: 'no-video',
   title: 'Paper Moons',
-  reason: 'Two videos — pick the film.',
+  reason: 'Two videos. Pick the film.',
   row: { title: 'Paper Moons', year: 2014, genres: [] },
   folder: PAPER_MOONS_FOLDER,
   candidates: [],

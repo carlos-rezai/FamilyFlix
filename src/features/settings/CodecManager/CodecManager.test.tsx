@@ -181,7 +181,7 @@ function renderManager(
 const summary = () => screen.queryByText(/formats enabled/);
 
 const LEDE =
-  "These decide which video files FamilyFlix can play. Common formats work out of the box — add a pack only if a movie won't play.";
+  "These decide which video files FamilyFlix can play. Common formats work out of the box. Add a pack only if a movie won't play.";
 
 /** The header, as the screen draws it whatever the read has done. */
 function expectHeader() {

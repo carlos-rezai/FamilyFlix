@@ -922,7 +922,7 @@ describe('POST /api/playback/component — what is refused at the door', () => {
 
     expect(response.status).toBe(400);
     expect(await errorOf(response)).toBe(
-      'ffmpeg and ffprobe go together — add both.'
+      'ffmpeg and ffprobe go together. Add both.'
     );
     expect(fake.open()).toBe(0);
   });

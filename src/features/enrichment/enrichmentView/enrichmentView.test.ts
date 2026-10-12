@@ -193,7 +193,7 @@ describe('scopeDescription — the library scope cards’ lines', () => {
 
   it('counts every title for Everything', () => {
     expect(scopeDescription(READY, 'all')).toBe(
-      '30 titles — re-checks ones already filled in'
+      '30 titles, re-checking ones already filled in'
     );
   });
 
@@ -204,7 +204,7 @@ describe('scopeDescription — the library scope cards’ lines', () => {
       '0 titles have no synopsis or artwork'
     );
     expect(scopeDescription(empty, 'all')).toBe(
-      '0 titles — re-checks ones already filled in'
+      '0 titles, re-checking ones already filled in'
     );
   });
 });

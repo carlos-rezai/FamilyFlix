@@ -375,7 +375,7 @@ describe('createImporter.scan — an unreachable folder', () => {
     const run = await scanOnce(box.importer, [gone, films]);
 
     expect(run.log).toContainEqual({
-      text: `⚠ Can't reach ${box.gone} — skipped`,
+      text: `⚠ Can't reach ${box.gone}, skipped`,
       kind: 'warning',
     });
     expect(
@@ -390,7 +390,7 @@ describe('createImporter.scan — an unreachable folder', () => {
     const run = await scanOnce(box.importer, [gone]);
 
     expect(run.phase).toBe('review');
-    expect(texts(run)).toContain(`⚠ Can't reach ${box.gone} — skipped`);
+    expect(texts(run)).toContain(`⚠ Can't reach ${box.gone}, skipped`);
     expect(counts(box.storage)).toEqual({ movies: 0, series: 0, episodes: 0 });
   });
 });

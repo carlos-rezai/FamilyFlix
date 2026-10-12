@@ -39,7 +39,7 @@ const PROBLEMS: ImportProblem[] = [
     kind: 'missing-meta',
     title: 'Amélie',
     reason:
-      "Imported, but the row has no genre — it won't appear in any genre row.",
+      "Imported, but the row has no genre, so it won't appear in any genre row.",
     movieId: 'm9',
   },
 ];

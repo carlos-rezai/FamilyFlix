@@ -103,7 +103,7 @@ function reviewRun(overrides: Partial<EnrichmentRun> = {}): EnrichmentRun {
     currentItem: null,
     log: [
       {
-        text: '✓ Sync complete — 4 enriched, 2 need a decision.',
+        text: '✓ Sync complete: 4 enriched, 2 need a decision.',
         kind: 'success',
       },
     ],
@@ -332,7 +332,7 @@ describe('EnrichmentFlow — searching', () => {
       searchAnswer: (query) => ({
         ...AMBIGUOUS,
         title: 'Sundial',
-        reason: 'One release shares this title — pick the right one.',
+        reason: 'One release shares this title. Pick the right one.',
         query,
         candidates: [
           {
