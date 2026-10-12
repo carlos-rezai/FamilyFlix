@@ -297,6 +297,22 @@ describe('MovieForm — the Series Resolve, a show not yet held', () => {
     ]);
   });
 
+  it('guesses season 1 under a folder that is not a Season folder, as the server reads it', async () => {
+    const disc = `${SHOW}\\Disc 2\\the_boarding.mov`;
+    answerProblem = () =>
+      Promise.resolve(
+        okResponse({
+          ...NIGHT_FERRY,
+          reason: '1 episode needs a number',
+          files: { subtitles: [], videos: [disc] },
+        })
+      );
+
+    await renderResolve(AT);
+
+    expect(drawnNumbers()).toEqual([['1', '1']]);
+  });
+
   it('opens Save & continue on the guess alone', async () => {
     await renderResolve(AT);
 

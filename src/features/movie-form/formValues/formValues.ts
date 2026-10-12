@@ -11,6 +11,7 @@ import { spellYearSpan, toRatingPercent, toRatingUnits } from '@/utils';
 
 import { castNames, castText } from '../castNames/castNames';
 import { readEpisodeTag } from '../readEpisodeTag/readEpisodeTag';
+import { readSeasonFolder } from '../readSeasonFolder/readSeasonFolder';
 
 /**
  * How a **Stored path** is separated, everywhere it is stored: the media domain
@@ -454,8 +455,9 @@ const segmentsOf = (path: string): string[] =>
   path.split(/[\\/]/).filter((segment) => segment !== '');
 
 /**
- * The season a found video's folder names: season 1 at the **Show folder**'s
- * root, else the number a **Season folder**'s name carries.
+ * The season a found video's folder names: the number a **Season folder**'s
+ * name carries, read by the server's rule, else season 1 — at the **Show
+ * folder**'s root, or under a folder that is not a Season folder.
  */
 function folderSeason(video: string, showFolder: string | undefined): number {
   const parent = segmentsOf(video).slice(0, -1);
@@ -463,9 +465,8 @@ function folderSeason(video: string, showFolder: string | undefined): number {
   if (parent.length <= show.length) {
     return 1;
   }
-  const digits = /\d+/.exec(parent[parent.length - 1]);
-  const season = digits === null ? 1 : Number(digits[0]);
-  return season >= 1 ? season : 1;
+  const season = readSeasonFolder(parent[parent.length - 1]);
+  return season !== null && season >= 1 ? season : 1;
 }
 
 /**
