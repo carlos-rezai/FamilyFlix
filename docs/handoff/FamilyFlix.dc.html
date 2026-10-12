@@ -299,14 +299,14 @@
               const item=this.fakeTitle(done+3);
               let kind='success', text='✓ Matched   '+item;
               const r=Math.random();
-              if(r<0.08){ kind='warning'; text='⚠ '+item+' — several possible matches'; }
-              else if(r<0.12){ kind='warning'; text='⚠ '+item+' — no result on TMDB'; }
+              if(r<0.08){ kind='warning'; text='⚠ '+item+': several possible matches'; }
+              else if(r<0.12){ kind='warning'; text='⚠ '+item+': no result on TMDB'; }
               else if(r<0.2){ kind='scan'; text='↓ poster.jpg  →  '+this.fakePath(s.impRoot, done+3); }
               const log=this.appendLog(s.enLog, {text, kind});
               if(done>=s.enTotal){
                 const pend=this.seedEnrichPending();
                 this.setState({enDone:s.enTotal, enStep:'review', enMatched:s.enTotal-pend.length, enPending:pend, enrichedCount:s.enrichedCount+(s.enTotal-pend.length), lastSync:'just now',
-                  enLog:this.appendLog(log, {text:'✓ Sync complete — '+(s.enTotal-pend.length)+' enriched, '+pend.length+' need a decision.', kind:'success'})});
+                  enLog:this.appendLog(log, {text:'✓ Sync complete: '+(s.enTotal-pend.length)+' enriched, '+pend.length+' need a decision.', kind:'success'})});
               } else {
                 this.setState({enDone:done, enCurrent:item, enLog:log});
               }
@@ -327,13 +327,13 @@
                 const item=this.fakeTitle(done);
                 let kind='success', text='✓ Imported   '+item;
                 const r=Math.random();
-                if(r<0.07){ kind='warning'; text='⚠ '+item+' — no subtitle track found'; }
-                else if(r<0.10){ kind='warning'; text='⚠ '+item+' — multiple folder matches'; }
+                if(r<0.07){ kind='warning'; text='⚠ '+item+': no subtitle track found'; }
+                else if(r<0.10){ kind='warning'; text='⚠ '+item+': multiple folder matches'; }
                 const log=this.appendLog(s.impLog, {text, kind});
                 if(done>=s.impTotal){
                   const probs=this.seedProblems();
                   this.setState({impDone:s.impTotal, impStep:'review', impMatched:s.impTotal-probs.length, impProblems:probs,
-                    impLog:this.appendLog(log, {text:'✓ Import complete — '+(s.impTotal-probs.length).toLocaleString()+' imported, '+probs.length+' need attention.', kind:'success'})});
+                    impLog:this.appendLog(log, {text:'✓ Import complete: '+(s.impTotal-probs.length).toLocaleString()+' imported, '+probs.length+' need attention.', kind:'success'})});
                 } else {
                   this.setState({impDone:done, impCurrent:item, impLog:log});
                 }
@@ -593,7 +593,7 @@
         cancelEnrich(){ this.setState({enStep:'setup',enDone:0,enTotal:0,enCurrent:'',enLog:[]}); }
         retryOnline(){ this.setState({online:true}); }
         seedEnrichPending(){ return [
-          {id:'e1',kind:'ambiguous',title:'Harbor Lights',path:'E:\\Movies\\Harbor.Lights.1080p\\',reason:'{n} releases share this title — pick the right one.',query:'Harbor Lights',
+          {id:'e1',kind:'ambiguous',title:'Harbor Lights',path:'E:\\Movies\\Harbor.Lights.1080p\\',reason:'{n} releases share this title. Pick the right one.',query:'Harbor Lights',
             candidates:[{t:'Harbor Lights',y:1963,c:'Drama · US',s:82,g1:'#2a3540',g2:'#5f93a8'},{t:'Harbor Lights',y:2019,c:'Drama · IE',s:74,g1:'#243a36',g2:'#5e7a6a'},{t:'The Harbor Light',y:2005,c:'Doc · NO',s:51,g1:'#3a2f24',g2:'#84603f'}]},
           {id:'e2',kind:'conflict',title:'The Lantern Keeper',path:'E:\\Movies\\The.Lantern.Keeper.2019\\',reason:'TMDB has different values for fields you already filled in.',
             fields:[{key:'year',label:'Year',mine:'2019',tmdb:'2018'},{key:'director',label:'Director',mine:'Eleanor Past',tmdb:'Eleanor Past-Whitlock'},{key:'synopsis',label:'Synopsis',mine:'A lighthouse keeper on a fading coast takes in a runaway girl…',tmdb:'On a storm-battered coast, a solitary lighthouse keeper shelters a runaway and finds a family in the wreckage of winter.'}]},
@@ -689,8 +689,8 @@
             checkBoxStyle:{display:'grid',placeItems:'center',width:'22px',height:'22px',borderRadius:'6px',border:'2px solid '+(e==='watched'?accent:'var(--color-text-faint)'),background:e==='watched'?accent:'transparent',color:'#1a1109',fontSize:'14px',fontWeight:'700'},
             isFavorite:isFav, notFavorite:!isFav, favLabel:isFav?'In Favorites':'Add to Favorites',
             favBtnStyle:{display:'flex',alignItems:'center',gap:'10px',height:'58px',padding:'0 22px',background:isFav?'var(--color-accent-soft)':'transparent',border:'1px solid '+(isFav?'var(--color-accent-line)':'var(--color-border)'),borderRadius:'999px',color:'var(--color-text)',fontFamily:'var(--font-sans)',fontSize:'16px',fontWeight:'500',cursor:'pointer'},
-            watchedTip:e==='watched'?'Watched — click to unmark':'Mark as watched',
-            favTip:isFav?'In Favorites — click to remove':'Add to Favorites',
+            watchedTip:e==='watched'?'Watched, click to unmark':'Mark as watched',
+            favTip:isFav?'In Favorites, click to remove':'Add to Favorites',
             watchedIconStyle:{display:'grid',placeItems:'center',width:'58px',height:'58px',flex:'0 0 auto',background:e==='watched'?'var(--color-accent-soft)':'transparent',border:'1px solid '+(e==='watched'?'var(--color-accent-line)':'var(--color-border)'),borderRadius:'50%',color:e==='watched'?accent:'var(--color-text-dim)',cursor:'pointer'},
             favIconStyle:{display:'grid',placeItems:'center',width:'58px',height:'58px',flex:'0 0 auto',background:isFav?'var(--color-accent-soft)':'transparent',border:'1px solid '+(isFav?'var(--color-accent-line)':'var(--color-border)'),borderRadius:'50%',color:isFav?accent:'var(--color-text-dim)',cursor:'pointer'},
           }; }
@@ -923,7 +923,7 @@
               enrich:s.impEnrich, onToggleEnrich:()=>this.toggleImpEnrich(),
               enrichCheck:s.impEnrich?'✓':'',
               enrichBoxStyle:{flex:'0 0 auto',display:'grid',placeItems:'center',width:'22px',height:'22px',marginTop:'1px',borderRadius:'6px',border:'2px solid '+(s.impEnrich?accent:'var(--color-text-faint)'),background:s.impEnrich?accent:'transparent',color:'#1a1109',fontSize:'14px',fontWeight:'700'},
-              enrichHint:s.tmdbConnected?'Runs straight after the import, over everything it brings in. Needs the internet.':'Needs a TMDB key — add one under Settings → Network first.',
+              enrichHint:s.tmdbConnected?'Runs straight after the import, over everything it brings in. Needs the internet.':'Needs a TMDB key. Add one under Settings → Network first.',
               hasProblems:s.impProblems.length>0, allResolved:s.impProblems.length===0,
               };
             })(),
