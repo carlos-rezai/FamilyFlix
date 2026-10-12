@@ -4,34 +4,15 @@ import { Header as ChromeHeader } from '../chrome.styles';
 
 export { Root, Body } from '../chrome.styles';
 
-/** Tighter than the home's, so the pill and the genre name read as one group. */
+/**
+ * Tighter than the home's, and opening past the pinned **Back button** — the
+ * strip's own inset, Back's square and the 18px gap — so Back and the genre
+ * name read as one group on the strip's line.
+ */
 export const Header = styled(ChromeHeader)`
   gap: 18px;
-`;
-
-/**
- * Solid rather than `MoviePage`'s translucent pill: this chrome sits on a header
- * strip, not over artwork.
- */
-export const BackPill = styled.button`
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  height: 44px;
-  padding: 0 18px 0 14px;
-  flex: 0 0 auto;
-  background: ${({ theme }) => theme.colors.surface};
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  border-radius: ${({ theme }) => theme.radius.pill};
-  color: ${({ theme }) => theme.colors.text};
-  font-family: ${({ theme }) => theme.fonts.sans};
-  font-size: 15px;
-  font-weight: 500;
-  cursor: pointer;
-
-  &:hover {
-    background: ${({ theme }) => theme.colors.surface2};
-  }
+  padding-left: ${({ theme }) =>
+    `calc(${theme.space.s6} + ${theme.layout.backSize} + 18px)`};
 `;
 
 /**

@@ -2,15 +2,8 @@ import type { ReactNode } from 'react';
 
 import { useGoBack } from '@/hooks/useGoBack/useGoBack';
 import { useRestoredScroll } from '@/hooks/useRestoredScroll/useRestoredScroll';
-import { ChevronLeftIcon } from '@/primitives';
-import {
-  Root,
-  Header,
-  BackPill,
-  HeadingSlot,
-  Spacer,
-  Body,
-} from './GenreLayout.styles';
+import { BackButton } from '@/components';
+import { Root, Header, HeadingSlot, Spacer, Body } from './GenreLayout.styles';
 
 export interface GenreLayoutProps {
   /** The scrollable page body rendered under the header. */
@@ -22,7 +15,7 @@ export interface GenreLayoutProps {
 }
 
 /**
- * The chrome from `page.GenrePage.dc.html`: a Back pill, a heading, trailing
+ * The chrome from `page.GenrePage.dc.html`: the **Back button**, a heading, trailing
  * controls, and a scrolling body under them.
  *
  * A second layout rather than a `MainLayout` variant. The app-wide navigation —
@@ -46,11 +39,8 @@ export function GenreLayout({
 
   return (
     <Root>
+      <BackButton onClick={goBack} />
       <Header>
-        <BackPill type="button" onClick={goBack}>
-          <ChevronLeftIcon size={18} />
-          Back
-        </BackPill>
         {heading ? <HeadingSlot>{heading}</HeadingSlot> : null}
         <Spacer />
         {headerEnd}

@@ -1,18 +1,5 @@
 import styled from 'styled-components';
 
-import { Heading as MaintainerHeading } from '../../maintainer.styles';
-
-/**
- * The header is the Maintainer's furniture (`features/maintainer.styles.ts`);
- * the flow adds the key badge at the row's end, so its heading takes the room
- * between the back pill and the badge.
- */
-export { HeaderRow, Lede } from '../../maintainer.styles';
-
-export const Heading = styled(MaintainerHeading)`
-  flex: 1;
-`;
-
 /**
  * The key badge — _TMDB connected_ in the watched green, _No key yet_ in the
  * faintest ink on the third surface — the prototype's `keyBadgeStyle`.

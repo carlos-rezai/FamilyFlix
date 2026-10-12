@@ -80,11 +80,10 @@ describe('CodecsPage', () => {
     expect(screen.getByText('Add a codec pack')).toBeDefined();
   });
 
-  it('draws the column at the Settings hub’s 780 measure', () => {
+  it('draws the column at the one Page measure', () => {
     renderPage();
 
-    expect(measuresAroundHeading()).toContain('780px');
-    expect(measuresAroundHeading()).not.toContain('760px');
+    expect(measuresAroundHeading()).toContain('880px');
   });
 
   it('returns to Settings from Back', () => {

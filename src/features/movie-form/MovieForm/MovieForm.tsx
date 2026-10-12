@@ -1,11 +1,5 @@
-import { PillTabs, RatingPicker } from '@/components';
-import {
-  Button,
-  ChevronLeftIcon,
-  IconButton,
-  Textarea,
-  TextField,
-} from '@/primitives';
+import { PageHeader, PillTabs, RatingPicker } from '@/components';
+import { Button, Textarea, TextField } from '@/primitives';
 import type { FormKind } from '@/types';
 import { GenrePicker } from '../GenrePicker/GenrePicker';
 import { MovieFormFiles } from '../MovieFormFiles/MovieFormFiles';
@@ -16,10 +10,6 @@ import {
   Banner,
   BannerLead,
   BannerTitle,
-  HeaderRow,
-  Heading,
-  KindTabs,
-  Lede,
   Emphasis,
   Fields,
   FieldRow,
@@ -201,33 +191,26 @@ export function MovieForm() {
         </Banner>
       )}
 
-      <HeaderRow>
-        <IconButton
-          label="Back"
-          title="Back"
-          size={42}
-          variant="outline"
-          onClick={back}
-        >
-          <ChevronLeftIcon size={18} />
-        </IconButton>
-        <Heading>{heading}</Heading>
-        {showKindTabs && (
-          <KindTabs>
+      <PageHeader
+        onBack={back}
+        heading={heading}
+        end={
+          showKindTabs ? (
             <PillTabs
               label="Kind"
               options={KIND_OPTIONS}
               value={kind}
               onChange={setKind}
             />
-          </KindTabs>
-        )}
-      </HeaderRow>
-
-      <Lede>
-        {wording.lede} To add many at once, use{' '}
-        <Emphasis>Import library</Emphasis>.
-      </Lede>
+          ) : undefined
+        }
+        lede={
+          <>
+            {wording.lede} To add many at once, use{' '}
+            <Emphasis>Import library</Emphasis>.
+          </>
+        }
+      />
 
       <Fields>
         <FieldRow>

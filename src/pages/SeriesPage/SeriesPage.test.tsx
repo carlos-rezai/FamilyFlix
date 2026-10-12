@@ -123,15 +123,15 @@ describe('SeriesPage — the Back circle', () => {
     expect(back().querySelector('svg')?.getAttribute('width')).toBe('20');
   });
 
-  it('is the prototype’s 44px glass circle, fixed at 24/24', async () => {
+  it('is the Back button: the 44px glass circle, fixed at 16/32', async () => {
     renderAt(['/series/harbor']);
     await waitFor(() => expect(back()).toBeTruthy());
 
     const rest = resolvedStyle(back());
     expect(rest).toMatchObject({
       position: 'fixed',
-      top: '24px',
-      left: '24px',
+      top: '16px',
+      left: '32px',
       width: '44px',
       height: '44px',
       background: normCss('rgba(20, 17, 13, 0.6)'),

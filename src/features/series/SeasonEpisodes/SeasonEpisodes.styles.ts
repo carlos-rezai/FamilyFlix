@@ -4,49 +4,18 @@ import { LoadMessage } from '@/components';
 import { Skeleton } from '@/primitives';
 import { controlStates } from '@/styles/interactionStates/interactionStates';
 
-/** The centred 980px column of `page.SeasonPage`. */
-export const Column = styled.div`
-  max-width: 980px;
-  margin: 0 auto;
-  padding: ${({ theme }) =>
-    `${theme.space.s6} ${theme.space.s6} ${theme.space.s8}`};
-`;
+/**
+ * The season's content: the layout's column already holds it at the **Page
+ * measure**, so this is only the box the loading state is announced on.
+ */
+export const Column = styled.div``;
 
-export const HeaderRow = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  margin-bottom: 8px;
-`;
-
-export const HeaderText = styled.div`
-  flex: 1;
-  min-width: 0;
-`;
-
-export const Eyebrow = styled.div`
-  font-family: ${({ theme }) => theme.fonts.sans};
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 0.4px;
-  text-transform: uppercase;
-  color: ${({ theme }) => theme.colors.textFaint};
-`;
-
-export const Heading = styled.h1`
-  font-family: ${({ theme }) => theme.fonts.serif};
-  font-weight: 600;
-  font-size: 30px;
-  color: ${({ theme }) => theme.colors.text};
-  margin: 2px 0 0;
-`;
-
-/** The count line, indented under the heading past the Back button. */
+/** The count line under the heading. */
 export const CountRow = styled.div`
   display: flex;
   align-items: center;
   gap: 12px;
-  margin: 0 0 22px 58px;
+  margin: 0 0 22px;
   flex-wrap: wrap;
 `;
 

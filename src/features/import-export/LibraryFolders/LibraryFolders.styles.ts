@@ -1,10 +1,9 @@
 import styled from 'styled-components';
 
 /**
- * The header is the Maintainer's furniture and the group the Settings
- * furniture, as the Codecs page draws them; what follows is this page's own.
+ * The group is the Settings furniture, as the Codecs page draws it; what
+ * follows is this page's own.
  */
-export { HeaderRow, Heading, Lede } from '../../maintainer.styles';
 export { Card, Divider, GroupHeading } from '../../settings/section.styles';
 
 /** The add row and a refused add's line are the feature's path furniture. */

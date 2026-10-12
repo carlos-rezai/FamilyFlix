@@ -1,12 +1,12 @@
 import { MovieDetail } from '@/features/movie-detail/MovieDetail/MovieDetail';
 import { useGoBack } from '@/hooks/useGoBack/useGoBack';
 import { useRestoredScroll } from '@/hooks/useRestoredScroll/useRestoredScroll';
-import { ChevronLeftIcon } from '@/primitives';
-import { Scroller, BackPill } from './MoviePage.styles';
+import { BackButton } from '@/components';
+import { Scroller } from './MoviePage.styles';
 
 /**
  * `/movie/:id` — one movie in full. Composition only: this screen's own chrome
- * (the scroll container and the Back pill) and the `MovieDetail` organism, which
+ * (the scroll container and the **Back button**) and the `MovieDetail` organism, which
  * loads the movie from the URL.
  *
  * `MainLayout` is deliberately not used here. Its solid header would sit exactly
@@ -27,10 +27,7 @@ export default function MoviePage() {
 
   return (
     <Scroller ref={scroller}>
-      <BackPill type="button" onClick={goBack}>
-        <ChevronLeftIcon size={18} />
-        Back
-      </BackPill>
+      <BackButton onClick={goBack} />
       <MovieDetail />
     </Scroller>
   );

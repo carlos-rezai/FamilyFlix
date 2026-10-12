@@ -66,6 +66,16 @@ describe('ContentFrame', () => {
     expect(getComputedStyle(frame()).maxWidth).toBe('');
   });
 
+  it('holds what a screen pins, so Back sits in its corner, on or off', () => {
+    renderFramed(true);
+    expect(getComputedStyle(frame()).contain).toBe('layout');
+  });
+
+  it('holds what a screen pins while the cap is off too', () => {
+    renderFramed(false);
+    expect(getComputedStyle(frame()).contain).toBe('layout');
+  });
+
   it('renders the child route inside it', () => {
     const { container } = renderFramed(true);
 

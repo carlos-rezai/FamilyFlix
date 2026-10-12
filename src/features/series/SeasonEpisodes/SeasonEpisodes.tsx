@@ -1,16 +1,12 @@
 import { useNavigate, useParams } from 'react-router-dom';
 
-import { EpisodeRow } from '@/components';
-import { Button, ChevronLeftIcon, IconButton } from '@/primitives';
+import { BackButton, EpisodeRow, PageHeader } from '@/components';
+import { Button } from '@/primitives';
 import { useGoBack } from '@/hooks/useGoBack/useGoBack';
 import { episodePlayPath, range, seasonPath, seriesPath } from '@/utils';
 import { useSeasonEpisodes } from '../useSeasonEpisodes/useSeasonEpisodes';
 import {
   Column,
-  HeaderRow,
-  HeaderText,
-  Eyebrow,
-  Heading,
   CountRow,
   CountText,
   Spacer,
@@ -23,6 +19,9 @@ import {
   SkeletonRow,
   Message,
 } from './SeasonEpisodes.styles';
+
+/** Back's name here: it goes to the series, the page's **Landing**. */
+const BACK_LABEL = 'Back to series';
 
 /** Placeholder rows held while the series loads. */
 const SKELETON_ROWS = 4;
@@ -40,10 +39,24 @@ const SKELETON_ROWS = 4;
  * row open the player on their episode, as a push.
  */
 export function SeasonEpisodes() {
+  const { id = '' } = useParams<{ id: string }>();
+  const goBack = useGoBack(seriesPath(id));
+
+  // Back is drawn once, above whichever state the season is in, so the button
+  // a parent reaches for is the same element while it loads and after.
+  return (
+    <>
+      <BackButton onClick={goBack} label={BACK_LABEL} />
+      <SeasonBody />
+    </>
+  );
+}
+
+/** The season in whichever state its read is in: loading, missing, or there. */
+function SeasonBody() {
   const navigate = useNavigate();
   const { id = '', n = '' } = useParams<{ id: string; n: string }>();
   const number = Number(n);
-  const goBack = useGoBack(seriesPath(id));
   const view = useSeasonEpisodes(id, number);
 
   if (view.status === 'loading') {
@@ -93,32 +106,23 @@ export function SeasonEpisodes() {
 
   return (
     <Column>
-      <HeaderRow>
-        <IconButton
-          label="Back to series"
-          title="Back to series"
-          size={42}
-          variant="outline"
-          onClick={goBack}
-        >
-          <ChevronLeftIcon size={18} />
-        </IconButton>
-        <HeaderText>
-          <Eyebrow>{season.seriesTitle}</Eyebrow>
-          <Heading>{season.seasonLabel}</Heading>
-        </HeaderText>
-        <Button
-          label={season.playLabel}
-          variant="primary"
-          size="md"
-          icon="play"
-          onClick={
-            playId === null
-              ? undefined
-              : () => navigate(episodePlayPath(playId))
-          }
-        />
-      </HeaderRow>
+      <PageHeader
+        eyebrow={season.seriesTitle}
+        heading={season.seasonLabel}
+        end={
+          <Button
+            label={season.playLabel}
+            variant="primary"
+            size="md"
+            icon="play"
+            onClick={
+              playId === null
+                ? undefined
+                : () => navigate(episodePlayPath(playId))
+            }
+          />
+        }
+      />
 
       <CountRow>
         <CountText>{season.countLabel}</CountText>

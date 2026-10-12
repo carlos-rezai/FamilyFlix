@@ -2,12 +2,7 @@ import styled from 'styled-components';
 
 import { Card } from '../section.styles';
 
-/**
- * The header is the Maintainer's furniture (`features/maintainer.styles.ts`),
- * drawn as `ImportFlow` and `EnrichmentFlow` draw theirs; the groups under it
- * are Settings' own (`section.styles.ts`).
- */
-export { HeaderRow, Heading, Lede } from '../../maintainer.styles';
+/** The groups under the `PageHeader` are Settings' own (`section.styles.ts`). */
 export { GroupHeading } from '../section.styles';
 
 /**

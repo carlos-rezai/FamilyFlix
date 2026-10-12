@@ -3,12 +3,11 @@ import { MaintainerLayout } from '@/layouts/MaintainerLayout/MaintainerLayout';
 
 /**
  * `/enrich` — composition only: the **Enrichment flow** in the **Maintainer
- * surface**, at the 880 measure `feat.EnrichmentFlow.dc.html` draws its
- * column at.
+ * surface**, at the one **Page measure**.
  */
 export default function EnrichmentPage() {
   return (
-    <MaintainerLayout width={880}>
+    <MaintainerLayout>
       <EnrichmentFlow />
     </MaintainerLayout>
   );

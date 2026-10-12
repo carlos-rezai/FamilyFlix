@@ -1,32 +1,36 @@
 import styled from 'styled-components';
 
 /**
- * The **Maintainer surface**: the sheet every maintainer screen is drawn on.
- * `feat.MovieForm.dc.html`, `page.SettingsPage.dc.html` and
- * `feat.ImportFlow.dc.html` each open with the same two blocks — a full-height
- * scroll container on the deeper background, and a centred column padded
- * `s6 s6 s8` and capped at a measure — and this is where they are written
- * once, on `chrome.styles.ts`'s reasoning: a layout each screen composes rather
- * than a base class one screen inherits from.
+ * The **Maintainer surface**: the sheet every column screen is drawn on — a
+ * full-height scroll container on the deeper background, and one centred
+ * column at the **Page measure**, padded `s4 s6 s8` so a screen's heading opens
+ * on the **Back button**'s line.
  *
  * `MainLayout` is deliberately not above any of them. The logo and the gear
  * are app-wide navigation for the **Family**'s screens; these are reached from
- * Settings, whose own header carries the gear, and a gear on Settings is a
- * control that does nothing. The back pill is the only way out — the same call
- * `MoviePage` and `GenreLayout` each made for their own reasons.
+ * a screen behind them, and the Back button is the only way out.
  */
 
-/** The sheet: the viewport, once, on the deeper background, and it scrolls. */
+/**
+ * The sheet: the viewport, once, on the deeper background, and it scrolls. Its
+ * side padding is the room the pinned Back button needs beside the column's
+ * own, so a narrow window never slides the heading under it. The scrollbar's
+ * gutter is held whether or not the screen is tall enough to scroll, so a long
+ * screen like Settings centres its column on the same line as a short one.
+ */
 export const Sheet = styled.div`
   height: 100vh;
   overflow-y: auto;
+  scrollbar-gutter: stable both-edges;
+  padding: 0
+    ${({ theme }) => `calc(${theme.layout.backSize} + ${theme.space.s4})`};
   background: ${({ theme }) => theme.colors.bg2};
 `;
 
-/** The centred column everything sits in, at the measure the screen asks for. */
-export const Column = styled.div<{ $width: number }>`
-  max-width: ${({ $width }) => `${$width}px`};
+/** The centred column everything sits in, at the one Page measure. */
+export const Column = styled.div`
+  max-width: ${({ theme }) => theme.layout.pageMeasure};
   margin: 0 auto;
   padding: ${({ theme }) =>
-    `${theme.space.s6} ${theme.space.s6} ${theme.space.s8}`};
+    `${theme.space.s4} ${theme.space.s6} ${theme.space.s8}`};
 `;

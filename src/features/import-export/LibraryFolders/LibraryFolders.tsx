@@ -1,13 +1,8 @@
 import { useState } from 'react';
 
 import { useGoBack } from '@/hooks/useGoBack/useGoBack';
-import {
-  Button,
-  ChevronLeftIcon,
-  FolderIcon,
-  IconButton,
-  TextField,
-} from '@/primitives';
+import { Button, FolderIcon, TextField } from '@/primitives';
+import { PageHeader } from '@/components';
 import { folderBridge } from '@/api/folderBridge/folderBridge';
 import { EnrichCheckCard } from '../EnrichCheckCard/EnrichCheckCard';
 import { FolderRow } from '../FolderRow/FolderRow';
@@ -20,9 +15,6 @@ import {
   Divider,
   Empty,
   GroupHeading,
-  HeaderRow,
-  Heading,
-  Lede,
   PathRow,
   Refusal,
   Rows,
@@ -73,22 +65,11 @@ export function LibraryFolders() {
 
   return (
     <>
-      <HeaderRow>
-        <IconButton
-          label="Back"
-          title="Back"
-          size={42}
-          variant="outline"
-          onClick={goBack}
-        >
-          <ChevronLeftIcon size={18} />
-        </IconButton>
-        <Heading>Library folders</Heading>
-      </HeaderRow>
-      <Lede>
-        The folders your movies and series are kept in. FamilyFlix looks in each
-        one for new titles.
-      </Lede>
+      <PageHeader
+        onBack={goBack}
+        heading="Library folders"
+        lede="The folders your movies and series are kept in. FamilyFlix looks in each one for new titles."
+      />
 
       {folders === null ? null : (
         <>

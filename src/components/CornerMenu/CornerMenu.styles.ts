@@ -4,15 +4,16 @@ import { Menu } from '../Menu/Menu';
 import { IconButton } from '@/primitives';
 
 /**
- * The menu's fixed slot, mirroring the Back pill across the top of the screen.
+ * The menu's fixed slot, mirroring the **Back button** across the top of the
+ * screen — the same inset, so the two sit on one line.
  * Replacing `Menu`'s own `position: relative` is the whole of what this adds —
  * the panel still hangs off this box, and a press inside it is still never
  * "outside".
  */
 export const Corner = styled(Menu)`
   position: fixed;
-  top: 24px;
-  right: 24px;
+  top: ${({ theme }) => theme.space.s4};
+  right: ${({ theme }) => theme.space.s6};
   z-index: 30;
 `;
 

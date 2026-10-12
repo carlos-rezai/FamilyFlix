@@ -1,14 +1,8 @@
 import { useNavigate } from 'react-router-dom';
 
 import { useGoBack } from '@/hooks/useGoBack/useGoBack';
-import { ChevronLeftIcon, IconButton } from '@/primitives';
-import {
-  HeaderRow,
-  Heading,
-  AddTitleButton,
-  AddGlyph,
-  Subtitle,
-} from './SettingsHeader.styles';
+import { PageHeader } from '@/components';
+import { AddTitleButton, AddGlyph } from './SettingsHeader.styles';
 
 /**
  * The header of the **Maintainer**'s hub, from `page.SettingsPage.dc.html`:
@@ -32,24 +26,16 @@ export function SettingsHeader() {
   const navigate = useNavigate();
 
   return (
-    <>
-      <HeaderRow>
-        <IconButton
-          label="Back"
-          title="Back"
-          size={42}
-          variant="outline"
-          onClick={goBack}
-        >
-          <ChevronLeftIcon size={18} />
-        </IconButton>
-        <Heading>Settings</Heading>
+    <PageHeader
+      onBack={goBack}
+      heading="Settings"
+      end={
         <AddTitleButton type="button" onClick={() => navigate('/add')}>
           <AddGlyph aria-hidden="true">＋</AddGlyph>
           Add a title
         </AddTitleButton>
-      </HeaderRow>
-      <Subtitle>Manage your library, playback, and storage.</Subtitle>
-    </>
+      }
+      lede="Manage your library, playback, and storage."
+    />
   );
 }

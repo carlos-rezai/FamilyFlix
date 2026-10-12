@@ -1,24 +1,5 @@
 import styled from 'styled-components';
 
-import {
-  HeaderRow as MaintainerHeaderRow,
-  Heading as MaintainerHeading,
-} from '../../maintainer.styles';
-
-/**
- * The back pill, the heading and the ＋ button on one line — the Maintainer's
- * header row, set the prototype's own 6px above the subtitle rather than the
- * furniture's 8.
- */
-export const HeaderRow = styled(MaintainerHeaderRow)`
-  margin-bottom: 6px;
-`;
-
-/** Serif and large, and it takes the width the two controls do not. */
-export const Heading = styled(MaintainerHeading)`
-  flex: 1;
-`;
-
 /**
  * The accent action, and the only route in the app to the **Movie form**.
  *
@@ -55,15 +36,4 @@ export const AddTitleButton = styled.button`
 /** The ＋, at its own size. Decorative: the label is the accessible name. */
 export const AddGlyph = styled.span`
   font-size: 17px;
-`;
-
-/**
- * The line under the heading, indented past the back pill so it hangs off the
- * heading rather than off the column edge.
- */
-export const Subtitle = styled.p`
-  margin: 0 0 30px 58px;
-  font-family: ${({ theme }) => theme.fonts.sans};
-  font-size: 15px;
-  color: ${({ theme }) => theme.colors.textFaint};
 `;

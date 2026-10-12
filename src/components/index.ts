@@ -49,3 +49,5 @@ export {
   DetailBackdrop,
   type DetailBackdropProps,
 } from './DetailBackdrop/DetailBackdrop';
+export { BackButton, type BackButtonProps } from './BackButton/BackButton';
+export { PageHeader, type PageHeaderProps } from './PageHeader/PageHeader';

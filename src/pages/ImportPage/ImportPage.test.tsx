@@ -63,8 +63,7 @@ function measuresAroundHeading(): string[] {
 
 /**
  * `/import` — composition only: the **Import flow** in the **Maintainer
- * surface**, at the 760 measure `feat.ImportFlow.dc.html` draws its column
- * at. What the flow does once mounted is tested where it lives.
+ * surface**, at the one **Page measure** every column screen shares. What the flow does once mounted is tested where it lives.
  */
 describe('ImportPage', () => {
   it('mounts the import flow', async () => {
@@ -82,14 +81,10 @@ describe('ImportPage', () => {
     expect(screen.getByRole('button', { name: 'Start import' })).toBeDefined();
   });
 
-  it('draws the column at the flow’s 760 measure', () => {
+  it('draws the column at the one Page measure', () => {
     renderPage();
 
-    // 760, not Settings' 780: the two prototypes draw their columns a
-    // measure apart, and until they are amended to one sheet each screen
-    // states its own.
-    expect(measuresAroundHeading()).toContain('760px');
-    expect(measuresAroundHeading()).not.toContain('780px');
+    expect(measuresAroundHeading()).toContain('880px');
   });
 
   it('returns to Settings from Back', () => {

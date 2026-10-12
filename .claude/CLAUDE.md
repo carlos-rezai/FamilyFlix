@@ -230,7 +230,7 @@ familyflix/
 │ │ ├── typography.ts
 │ │ ├── breakpoints.ts
 │ │ ├── motion.ts ← `durFast` 120ms, `durBase` 180ms, `durSlow` 280ms, `easeOut` — the only file that spells them
-│ │ ├── layout.ts ← `contentMeasure` 1920px, the **Content measure** — widths the page is held to, not the `breakpoints` it responds at
+│ │ ├── layout.ts ← `contentMeasure` 1920px, the **Content measure**; `pageMeasure` 880px, the **Page measure**; `backSize` 44px, the Back button's square — widths the page is held to, not the `breakpoints` it responds at
 │ │ └── index.ts
 │ ├── primitives/ ← dumb, reusable UI atoms (Button, Input, Text, Icon, Badge)
 │ │ ├── index.ts ← barrel: re-exports every primitive (only barrel at this rung)
@@ -251,7 +251,9 @@ familyflix/
 │ │ ├── Fab/ ← the FAB, `mol.Fab.dc.html` 1:1: one more `styled(IconButton)` face — the accent circle at 28px from the bottom-right corner, one of two glyphs by `icon`, named by a required `label`. Presentational to the last prop — no state, no listener, no effect; it does not know there is a threshold
 │ │ ├── BackToTop/ ← the control: given the scrolling container as a ref, it owns the Scroll threshold (`scrollTop > 420`, strictly), the passive listener, the read on attach and the press, and mounts the FAB or nothing. Two files, no styles — it draws nothing of its own
 │ │ ├── CreditsRow/ ← the lead credit and Starring: graduated from `movie-detail/` when the series page drew it too, its lead label a prop
-│ │ ├── CornerMenu/ ← the ⋯ menu's furniture, graduated when both detail pages drew it: `Menu` in the fixed top-right slot, the translucent 44px ⋯ named _More options_, `MoreIcon` at 20; its `MenuItem`s the caller's children. Presentational — it knows no route and no dialog
+│ │ ├── BackButton/ ← the **Back button**: one 44px glass circle pinned at `s4`/`s6` in the **Content frame**'s top-left corner, on every screen but the player — one face, one place; the caller's `useGoBack` its press
+│ │ ├── PageHeader/ ← every column screen's header: the Back button, an optional eyebrow, the serif heading on Back's line, the screen's own controls at the row's end, the lede under it
+│ │ ├── CornerMenu/ ← the ⋯ menu's furniture, graduated when both detail pages drew it: `Menu` in the fixed top-right slot on the Back button's inset, the translucent 44px ⋯ named _More options_, `MoreIcon` at 20; its `MenuItem`s the caller's children. Presentational — it knows no route and no dialog
 │ │ ├── DetailBackdrop/ ← the **Detail backdrop**, graduated when both detail pages drew it: the art sticky at the top of the page's scroller and a full viewport tall, under the **Backdrop veil** — a gradient over `accentSoft`; its `100vh` coupled to both pages' `Scroller`
 │ │ ├── SeasonCard/ ← `mol.SeasonCard` 1:1: the 2:3 **Card**, `S02` over the gradient, the badge when complete, the bar when part-watched
 │ │ ├── PillTabs/ ← `mol.PillTabs` 1:1: the pill track of `aria-pressed` buttons in a labelled group, generic in its value so a press hands back the caller's own union; presentational — it knows no URL. The **Library tabs** and the **Kind tabs** are its callers
@@ -374,9 +376,9 @@ familyflix/
 │ ├── layouts/ ← page chrome
 │ │ ├── chrome.styles.ts ← the furniture MainLayout and GenreLayout both extend
 │ │ ├── MainLayout/ ← the Family's screens: logo, gear, scrolling body — and Back-to-top mounted over the body, because the body is where the scrolling happens, so the chrome is what knows how far it has gone; it lends the control the same ref `useRestoredScroll` attached, and holds no state for either
-│ │ ├── GenreLayout/ ← Back pill, heading slot, trailing controls, scrolling body
-│ │ └── MaintainerLayout/ ← the Maintainer surface: bg2 sheet + centred column, no header row
-│ ├── pages/ ← route-level views, composition only, no logic (ImportPage is MaintainerLayout around ImportFlow; SeriesPage and SeasonPage own a scroll container and Back each, MoviePage’s precedent; EnrichmentPage is MaintainerLayout around EnrichmentFlow; CodecsPage is MaintainerLayout at 780 around CodecManager, the first nested Settings route; LibraryFoldersPage the same around LibraryFolders, at `/settings/folders`)
+│ │ ├── GenreLayout/ ← the **Back button**, heading slot, trailing controls, scrolling body; the strip opens past Back's corner
+│ │ └── MaintainerLayout/ ← the Maintainer surface: bg2 sheet + one centred column at the **Page measure** (880), the Back button's room beside it, the scrollbar gutter held, its scroll restored; every column screen's, the Season page's too
+│ ├── pages/ ← route-level views, composition only, no logic (ImportPage is MaintainerLayout around ImportFlow; SeriesPage owns a scroll container and the Back button, MoviePage’s precedent, and SeasonPage is MaintainerLayout around SeasonEpisodes; EnrichmentPage is MaintainerLayout around EnrichmentFlow; CodecsPage is MaintainerLayout around CodecManager, the first nested Settings route; LibraryFoldersPage the same around LibraryFolders, at `/settings/folders`)
 │ ├── api/ ← wire calls two or more features share (one folder per call + its test, no barrel)
 │ │ ├── saveFavorite/ fetchMovie/ saveWatched/ dismissProblem/ fetchSettings/ saveSeriesFavorite/ saveEpisodeWatched/ fetchEnrichmentSummary/ fetchTmdbKey/ fetchSeriesDetail/ ← the ten that earned it
 │ │ ├── folderBridge/ ← the one reader of `window.familyflix?.folders`, `null` in a browser: the preload is the shell's wire, and the Library folders page, the Export dialog and the Storage card all read it

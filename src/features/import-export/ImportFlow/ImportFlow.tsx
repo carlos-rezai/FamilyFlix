@@ -2,7 +2,7 @@ import { useCallback, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { useGoBack } from '@/hooks/useGoBack/useGoBack';
-import { ChevronLeftIcon, IconButton } from '@/primitives';
+import { PageHeader } from '@/components';
 import { enrichPath } from '@/utils';
 import { ImportRefusedError } from '../api/api';
 import { ImportProgress } from '../ImportProgress/ImportProgress';
@@ -10,7 +10,6 @@ import { ImportReview } from '../ImportReview/ImportReview';
 import { ImportSetup } from '../ImportSetup/ImportSetup';
 import { useImportRun } from '../useImportRun/useImportRun';
 import { useKeyStored } from '../useKeyStored/useKeyStored';
-import { HeaderRow, Heading, Lede } from './ImportFlow.styles';
 
 /**
  * The header's words, by what the run reads: a sheet, or the Library folders.
@@ -133,19 +132,11 @@ export function ImportFlow() {
 
   return (
     <>
-      <HeaderRow>
-        <IconButton
-          label="Back"
-          title="Back"
-          size={42}
-          variant="outline"
-          onClick={goBack}
-        >
-          <ChevronLeftIcon size={18} />
-        </IconButton>
-        <Heading>{wording.heading}</Heading>
-      </HeaderRow>
-      <Lede>{wording.lede}</Lede>
+      <PageHeader
+        onBack={goBack}
+        heading={wording.heading}
+        lede={wording.lede}
+      />
 
       {attaching ? null : run === null ? (
         <ImportSetup

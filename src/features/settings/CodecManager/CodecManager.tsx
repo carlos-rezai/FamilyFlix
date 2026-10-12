@@ -1,18 +1,10 @@
 import { useGoBack } from '@/hooks/useGoBack/useGoBack';
-import { ChevronLeftIcon, IconButton } from '@/primitives';
+import { PageHeader } from '@/components';
 import { CodecRow } from '../CodecRow/CodecRow';
 import { ComponentDropZone } from '../ComponentDropZone/ComponentDropZone';
 import { codecRows, codecSummary, componentRow } from '../codecView/codecView';
 import { useCapabilities } from '../useCapabilities/useCapabilities';
-import {
-  GroupCard,
-  GroupHeading,
-  HeaderRow,
-  Heading,
-  Lede,
-  Rows,
-  Summary,
-} from './CodecManager.styles';
+import { GroupCard, GroupHeading, Rows, Summary } from './CodecManager.styles';
 
 /**
  * The **Codecs page**'s screen, `feat.CodecManager.dc.html` → `CodecManager`:
@@ -49,22 +41,11 @@ export function CodecManager() {
 
   return (
     <>
-      <HeaderRow>
-        <IconButton
-          label="Back"
-          title="Back"
-          size={42}
-          variant="outline"
-          onClick={goBack}
-        >
-          <ChevronLeftIcon size={18} />
-        </IconButton>
-        <Heading>Codecs</Heading>
-      </HeaderRow>
-      <Lede>
-        These decide which video files FamilyFlix can play. Common formats work
-        out of the box. Add a pack only if a movie won&apos;t play.
-      </Lede>
+      <PageHeader
+        onBack={goBack}
+        heading="Codecs"
+        lede="These decide which video files FamilyFlix can play. Common formats work out of the box. Add a pack only if a movie won't play."
+      />
 
       {capabilities === null ? null : (
         <>

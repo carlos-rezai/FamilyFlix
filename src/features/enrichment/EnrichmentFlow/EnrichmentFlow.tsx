@@ -6,7 +6,7 @@ import { fetchMovie } from '@/api/fetchMovie/fetchMovie';
 import { fetchSeriesDetail } from '@/api/fetchSeriesDetail/fetchSeriesDetail';
 import { useEnrichmentSummary } from '@/hooks/useEnrichmentSummary/useEnrichmentSummary';
 import { useGoBack } from '@/hooks/useGoBack/useGoBack';
-import { ChevronLeftIcon, IconButton } from '@/primitives';
+import { PageHeader } from '@/components';
 import {
   ENRICH_FIELDS,
   type ConflictChoices,
@@ -21,7 +21,7 @@ import { EnrichmentSetup } from '../EnrichmentSetup/EnrichmentSetup';
 import { EnrichmentBusyError } from '../api/api';
 import { finishLabel, letGoLine } from '../enrichmentView/enrichmentView';
 import { useEnrichmentRun } from '../useEnrichmentRun/useEnrichmentRun';
-import { HeaderRow, Heading, KeyBadge, Lede } from './EnrichmentFlow.styles';
+import { KeyBadge } from './EnrichmentFlow.styles';
 
 /** Every chip on — the setup's default. */
 const ALL_FIELDS: EnrichField[] = [...ENRICH_FIELDS];
@@ -228,27 +228,18 @@ export function EnrichmentFlow() {
 
   return (
     <>
-      <HeaderRow>
-        <IconButton
-          label="Back"
-          title="Back"
-          size={42}
-          variant="outline"
-          onClick={goBack}
-        >
-          <ChevronLeftIcon size={18} />
-        </IconButton>
-        <Heading>Sync with TMDB</Heading>
-        {summary === null ? null : (
-          <KeyBadge $connected={summary.keySet}>
-            {summary.keySet ? 'TMDB connected' : 'No key yet'}
-          </KeyBadge>
-        )}
-      </HeaderRow>
-      <Lede>
-        Fetch synopses, artwork, and credits for movies already in your library.
-        Your own ratings and watched marks are never touched.
-      </Lede>
+      <PageHeader
+        onBack={goBack}
+        heading="Sync with TMDB"
+        end={
+          summary === null ? null : (
+            <KeyBadge $connected={summary.keySet}>
+              {summary.keySet ? 'TMDB connected' : 'No key yet'}
+            </KeyBadge>
+          )
+        }
+        lede="Fetch synopses, artwork, and credits for movies already in your library. Your own ratings and watched marks are never touched."
+      />
 
       {run === null ? (
         summary === null ? null : (

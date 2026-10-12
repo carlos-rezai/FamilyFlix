@@ -1,21 +1,18 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { ThemeProvider } from 'styled-components';
+import { MemoryRouter } from 'react-router-dom';
 
-import {
-  MaintainerLayout,
-  type MaintainerLayoutProps,
-} from './MaintainerLayout';
+import { MaintainerLayout } from './MaintainerLayout';
 import { theme } from '@/styles/theme';
 
-function renderLayout(
-  children: React.ReactNode,
-  props: Omit<Partial<MaintainerLayoutProps>, 'children'> = {}
-) {
+function renderLayout(children: React.ReactNode) {
   return render(
-    <ThemeProvider theme={theme}>
-      <MaintainerLayout {...props}>{children}</MaintainerLayout>
-    </ThemeProvider>
+    <MemoryRouter>
+      <ThemeProvider theme={theme}>
+        <MaintainerLayout>{children}</MaintainerLayout>
+      </ThemeProvider>
+    </MemoryRouter>
   );
 }
 
@@ -24,10 +21,9 @@ const column = () =>
   screen.getByText('the form goes here').parentElement as HTMLElement;
 
 /**
- * The **Maintainer surface** — the sheet the **Movie form**, Settings and bulk
- * import share. Structure only: it renders what it is given and takes the
- * width it is asked for, and that is the whole of it. The header row is each
- * screen's own until the prototype is amended to one sheet.
+ * The **Maintainer surface** — the sheet every column screen shares. Structure
+ * only: it renders what it is given, at the one **Page measure**, and that is
+ * the whole of it. The header is each screen's `PageHeader`.
  */
 describe('MaintainerLayout', () => {
   it('renders the screen it is handed', () => {
@@ -36,18 +32,34 @@ describe('MaintainerLayout', () => {
     expect(screen.getByText('the form goes here')).toBeDefined();
   });
 
-  it('draws the column at the form’s measure unless told otherwise', () => {
+  it('draws the column at the one Page measure, whatever the screen', () => {
     renderLayout(<p>the form goes here</p>);
 
-    // 760 is what two of the three maintainer prototypes draw; on
-    // `FilterDropdown`'s precedent, a geometry value the caller chooses is
-    // the one kind of style worth reading back.
-    expect(getComputedStyle(column()).maxWidth).toBe('760px');
+    // One width for every column screen, so moving between them never moves
+    // the content sideways — the reason the per-screen `width` prop is gone.
+    expect(getComputedStyle(column()).maxWidth).toBe('880px');
   });
 
-  it('draws the column at the measure it is asked for', () => {
-    renderLayout(<p>the form goes here</p>, { width: 780 });
+  it('opens the column on the Back button’s line', () => {
+    renderLayout(<p>the form goes here</p>);
 
-    expect(getComputedStyle(column()).maxWidth).toBe('780px');
+    expect(getComputedStyle(column()).paddingTop).toBe('16px');
+  });
+
+  it('leaves the pinned Back button room beside the column', () => {
+    renderLayout(<p>the form goes here</p>);
+
+    const sheet = getComputedStyle(column().parentElement as HTMLElement);
+    expect(sheet.paddingLeft).toBe('calc(60px)');
+    expect(sheet.paddingRight).toBe('calc(60px)');
+  });
+
+  it('holds the scrollbar’s gutter, so a long screen centres as a short one', () => {
+    renderLayout(<p>the form goes here</p>);
+
+    const sheet = getComputedStyle(column().parentElement as HTMLElement);
+    expect(sheet.getPropertyValue('scrollbar-gutter')).toBe(
+      'stable both-edges'
+    );
   });
 });

@@ -116,15 +116,17 @@ describe('GenreLayout', () => {
   it('offers Back and nothing else, because this chrome has no logo and no gear', () => {
     // A second layout rather than a `MainLayout` variant: the app-wide
     // navigation deliberately does not follow a screen whose heading is
-    // content its own body loaded.
+    // content its own body loaded. Back is the pinned **Back button**, in its
+    // corner beside the strip rather than in it.
     renderLayout(<p>the genre grid goes here</p>, {
       heading: <p>Action, 214 titles</p>,
       headerEnd: <p>the search box and the sort pill</p>,
     });
 
-    const controls = within(screen.getByRole('banner')).getAllByRole('button');
-    expect(controls).toHaveLength(1);
-    expect(controls[0]).toBe(back());
+    expect(screen.getAllByRole('button')).toEqual([back()]);
+    expect(within(screen.getByRole('banner')).queryAllByRole('button')).toEqual(
+      []
+    );
   });
 });
 

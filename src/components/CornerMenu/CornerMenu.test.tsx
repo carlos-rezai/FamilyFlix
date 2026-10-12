@@ -48,14 +48,14 @@ describe('CornerMenu', () => {
     expect(item()).toBeNull();
   });
 
-  it('sits in the fixed top-right slot', () => {
+  it('sits in the fixed top-right slot, on the Back button’s inset', () => {
     renderCornerMenu();
 
     const slot = trigger().parentElement as HTMLElement;
     const style = window.getComputedStyle(slot);
     expect(style.position).toBe('fixed');
-    expect(style.top).toBe('24px');
-    expect(style.right).toBe('24px');
+    expect(style.top).toBe('16px');
+    expect(style.right).toBe('32px');
   });
 });
 

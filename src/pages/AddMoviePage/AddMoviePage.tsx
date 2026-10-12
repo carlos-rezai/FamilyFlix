@@ -4,7 +4,7 @@ import { MaintainerLayout } from '@/layouts/MaintainerLayout/MaintainerLayout';
 /**
  * `/add` — the Add / Edit form. Composition only: the **Maintainer surface**
  * around the **Movie form**, the way `GenrePage` is `GenreLayout` around the
- * genre grid. The header row inside the sheet is the form's own, because its
+ * genre grid. The `PageHeader` inside the sheet is the form's own, because its
  * heading is the form's state.
  *
  * `?movie=<id>` is how the prototype edits: there is no `/edit` route in

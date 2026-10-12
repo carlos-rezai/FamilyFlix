@@ -4102,7 +4102,9 @@ describe('MovieForm — the Kind tabs', () => {
       const group = kindGroup();
       expect(title).not.toBeNull();
       expect(group).not.toBeNull();
-      expect(title?.parentElement?.contains(group)).toBe(true);
+      // The heading's row: the heading sits in its titles box, the tabs at
+      // the row's end.
+      expect(title?.parentElement?.parentElement?.contains(group)).toBe(true);
       expect(
         (title as HTMLElement).compareDocumentPosition(group as HTMLElement) &
           Node.DOCUMENT_POSITION_FOLLOWING
