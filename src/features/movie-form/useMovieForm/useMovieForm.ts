@@ -537,48 +537,73 @@ export function useMovieForm(): UseMovieFormResult {
     }
 
     setSaving(true);
-    // _Save & continue_ is the resolve route's, and the route dismisses the
-    // problem on its own `201` — nothing here does. The review is where the
-    // save lands, one row shorter, and it lands there by *stepping*: the
-    // review is the entry the form was opened from, and the row it fixed is
-    // gone from the list anyway, because the list is the **Current run**'s
-    // state rather than the entry's.
-    //
-    // Over the **Edit job** it is the edit's own `PATCH`
-    // instead — the film is in the library already, and a resolve would put
-    // it there twice — and then the dismiss, in that order: a row leaves the
-    // list only once the amendment is in. A dismiss that failed still lands
-    // on the review, as _Skip this one_'s does — the row is still listed,
-    // which is the honest picture.
-    const written =
-      kind === 'series'
-        ? resolving !== null
-          ? resolveSeriesProblem(resolving.id, values, episodes).then(() =>
-              goBack()
-            )
+
+    // The job as its reads left it: a record that turned out to be gone — a
+    // movie, a series or a problem — leaves the add standing, and the add is
+    // what saves.
+    const standing =
+      resolving !== null
+        ? ({ kind: 'resolve', problem: resolving.id } as const)
+        : editing !== null
+          ? ({ kind: 'edit', movie: editing } as const)
           : editingSeries !== null
-            ? // The series page is the entry the edit was opened from, so a
-              // step lands there; the deep link reaches it through the Landing.
-              updateSeries(editingSeries, values, episodes).then(() => goBack())
-            : createSeries(values, episodes).then(() =>
+            ? ({ kind: 'seriesEdit', series: editingSeries } as const)
+            : ({ kind: 'add' } as const);
+
+    const write = (): Promise<unknown> => {
+      switch (standing.kind) {
+        case 'resolve': {
+          const problemId = standing.problem;
+          if (kind === 'series') {
+            // The **Series Resolve**: the problem's own resolve route, every
+            // row as its found path, then the step back onto the review.
+            return resolveSeriesProblem(problemId, values, episodes).then(() =>
+              goBack()
+            );
+          }
+          if (editing === null) {
+            // _Save & continue_ is the resolve route's, and the route
+            // dismisses the problem on its own `201` — nothing here does. The
+            // review is where the save lands, one row shorter, and it lands
+            // there by *stepping*: the review is the entry the form was
+            // opened from, and the row it fixed is gone from the list anyway,
+            // because the list is the **Current run**'s state rather than the
+            // entry's.
+            return resolveProblem(problemId, values).then(() => goBack());
+          }
+          // Over the **Edit job** it is the edit's own `PATCH` instead — the
+          // film is in the library already, and a resolve would put it there
+          // twice — and then the dismiss, in that order: a row leaves the list
+          // only once the amendment is in. A dismiss that failed still lands on
+          // the review, as _Skip this one_'s does — the row is still listed,
+          // which is the honest picture.
+          return updateMovie(editing, values)
+            .then(() => dismissProblem(problemId).catch(() => undefined))
+            .then(() => goBack());
+        }
+        case 'seriesEdit':
+          // The series page is the entry the edit was opened from, so a step
+          // lands there; the deep link reaches it through the Landing.
+          return updateSeries(standing.series, values, episodes).then(() =>
+            goBack()
+          );
+        case 'edit':
+          // A correction is only visible on the film's page — which is the
+          // entry the form was opened from, so a *step* is what lands there.
+          // The push this used to be left a second copy of that page behind,
+          // and the next Back walked into the form the correction had just
+          // been finished in. The **Landing** is the same URL, for the
+          // deep-linked edit that has no such entry to step onto.
+          return updateMovie(standing.movie, values).then(() => goBack());
+        case 'add':
+          // Each kind's **Fresh home**, pushed: the shelf the title joined.
+          return kind === 'series'
+            ? createSeries(values, episodes).then(() =>
                 navigate(SERIES_FRESH_HOME)
               )
-        : resolving !== null
-          ? editing === null
-            ? resolveProblem(resolving.id, values).then(() => goBack())
-            : updateMovie(editing, values)
-                .then(() => dismissProblem(resolving.id).catch(() => undefined))
-                .then(() => goBack())
-          : editing === null
-            ? createMovie(values).then(() => navigate(FRESH_HOME))
-            : // A correction is only visible on the film's page — which is
-              // the entry the form was opened from, so a *step* is what lands
-              // there. The push this used to be left a second copy of that
-              // page behind, and the next Back walked into the form the
-              // correction had just been finished in. The **Landing** is the
-              // same URL, for the deep-linked edit that has no such entry to
-              // step onto.
-              updateMovie(editing, values).then(() => goBack());
+            : createMovie(values).then(() => navigate(FRESH_HOME));
+      }
+    };
 
     // The form is still on screen with everything typed still in it, and Save
     // is offered again. Nothing else is said, because there is nothing yet to
@@ -586,7 +611,7 @@ export function useMovieForm(): UseMovieFormResult {
     // nothing left to resolve, so the form falls back to the plain add — and
     // empty, because a found file is a path under the run's root, which the
     // plain add can never send.
-    written.catch((error: unknown) => {
+    write().catch((error: unknown) => {
       setSaving(false);
       if (error instanceof ProblemGoneError) {
         setResolving(null);
