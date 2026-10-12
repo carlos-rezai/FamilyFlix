@@ -316,6 +316,64 @@ describe('createEnrichment: poster.jpg into each Source folder', () => {
   });
 });
 
+// "A collection film's poster is named after its video" (issue #316): two
+// films of one **Collection folder**, each with its **Source file** on record,
+// each get `<video stem>-poster.jpg` beside its own video — and the folder no
+// `poster.jpg`, which would be one film's art standing for the collection.
+describe('createEnrichment: a Collection folder’s films', () => {
+  /** Two of the films in one folder, each its video recorded as its Source file. */
+  async function collectionOfTwo(w: ReturnType<typeof world>) {
+    const folder = join(w.root, 'Collection');
+    mkdirSync(folder);
+    const videos = ['Sundial.2004.mkv', 'Lanternlight.2011.mkv'];
+    for (const video of videos) {
+      writeFileSync(join(folder, video), 'source video bytes');
+    }
+    const [listed] = w.storage.libraryFolders();
+    for (const [index, film] of [FILMS[0], FILMS[1]].entries()) {
+      const id = await w.addFilm(film, null);
+      w.storage.setSourceFolder(id, listed.id, 'Collection', videos[index]);
+    }
+    return folder;
+  }
+
+  it('adds each film’s poster beside its own video, named after it', async () => {
+    const w = world();
+    const folder = await collectionOfTwo(w);
+
+    const run = await sync(w.enrichment, BOTH);
+
+    expect(readFileSync(join(folder, 'Sundial.2004-poster.jpg'), 'utf8')).toBe(
+      tmdbImageBytes('/poster-501.jpg')
+    );
+    expect(
+      readFileSync(join(folder, 'Lanternlight.2011-poster.jpg'), 'utf8')
+    ).toBe(tmdbImageBytes('/poster-502.jpg'));
+    expect(run.written.posters).toBe(true);
+  });
+
+  it('writes no poster.jpg into the shared folder', async () => {
+    const w = world();
+    const folder = await collectionOfTwo(w);
+
+    await sync(w.enrichment, BOTH);
+
+    expect(existsSync(join(folder, 'poster.jpg'))).toBe(false);
+  });
+
+  it('still writes poster.jpg for a film in a folder of its own', async () => {
+    const w = world();
+    await collectionOfTwo(w);
+    await w.addFilm(FILMS[2]);
+
+    await sync(w.enrichment, BOTH);
+
+    expect(existsSync(join(w.root, 'Kettle Bay (1998)', 'poster.jpg'))).toBe(
+      true
+    );
+  });
+});
+
 describe('createEnrichment: the Metadata sheet in the root', () => {
   it('adds familyflix-metadata.csv at review, the films A–Z', async () => {
     const { enrichment, root, addFilm } = world();

@@ -41,6 +41,7 @@ function scan(
     videos: videos.map((video) => join(dir, video)),
     poster: null,
     backdrop: null,
+    images: [],
     subtitles: subtitles.map((file) => ({
       path: join(dir, file),
       language: detectSubtitleLanguage(file),

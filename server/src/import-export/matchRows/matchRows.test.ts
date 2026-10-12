@@ -52,6 +52,7 @@ function folder(name: string, videos: string[] = [`${name}.mkv`]) {
     videos: videos.map((video) => `${dir}/${video}`),
     poster: null,
     backdrop: null,
+    images: [],
     subtitles: [],
   };
 }

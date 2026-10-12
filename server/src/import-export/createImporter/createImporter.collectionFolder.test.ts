@@ -227,3 +227,73 @@ describe('createImporter.start — a Collection folder', () => {
     );
   });
 });
+
+// "A collection film's poster is named after its video" (issue #316): a
+// Collection folder's film records its **Source file** — the video's path
+// relative to its Source folder — and a held one is matched by it before its
+// title key and year. A film in a folder of its own records none.
+
+/** Each film's title and Source file, as the database holds them. */
+const sourceFiles = (db: SqliteDatabase) =>
+  Object.fromEntries(
+    (
+      db.prepare('SELECT title, source_file FROM movies').all() as {
+        title: string;
+        source_file: string | null;
+      }[]
+    ).map((row) => [row.title, row.source_file])
+  );
+
+describe('createImporter — a collection film’s Source file', () => {
+  it('is recorded by a Folder scan, and none for a film in its own folder', async () => {
+    const box = sandbox();
+    folderOf(box, 'Star Wars', STAR_WARS);
+    folderOf(box, 'Heat (1995)', ['Heat.1995.mp4']);
+
+    await scanOnce(box);
+
+    expect(sourceFiles(box.db)).toEqual({
+      'Star Wars A New Hope': 'Star.Wars.A.New.Hope.1977.mp4',
+      'The Empire Strikes Back': 'The.Empire.Strikes.Back.1980.mp4',
+      'Return of the Jedi': 'Return.of.the.Jedi.1983.mp4',
+      Heat: null,
+    });
+  });
+
+  it('is recorded by a sheet import', async () => {
+    const box = sandbox();
+    folderOf(box, 'Star Wars', STAR_WARS);
+
+    await importSheet(
+      box,
+      [
+        'Title,Year',
+        'Star Wars A New Hope,1977',
+        'The Empire Strikes Back,1980',
+        'Return of the Jedi,1983',
+      ].join('\n')
+    );
+
+    expect(sourceFiles(box.db)).toEqual({
+      'Star Wars A New Hope': 'Star.Wars.A.New.Hope.1977.mp4',
+      'The Empire Strikes Back': 'The.Empire.Strikes.Back.1980.mp4',
+      'Return of the Jedi': 'Return.of.the.Jedi.1983.mp4',
+    });
+  });
+
+  it('keeps a film renamed in the app held on the next scan', async () => {
+    const box = sandbox();
+    folderOf(box, 'Star Wars', STAR_WARS);
+    await scanOnce(box);
+    box.db
+      .prepare(
+        "UPDATE movies SET title = 'A New Hope', year = 1977 WHERE title = 'Star Wars A New Hope'"
+      )
+      .run();
+
+    const run = await scanOnce(box);
+
+    expect(titles(box.storage)).toHaveLength(3);
+    expect(run).toMatchObject({ total: 0, done: 0 });
+  });
+});

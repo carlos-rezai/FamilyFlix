@@ -24,11 +24,15 @@ import type { MovieFolderScan } from '../../media/scanMovieFolder/scanMovieFolde
 
 const ROOT = join('/', 'library');
 
-/** A scan of the folder `name` under the root, with the folder's own art. */
+/**
+ * A scan of the folder `name` under the root, with the folder's own art —
+ * `poster.jpg` and `fanart.jpg` — among its images, beside any `extraImages`.
+ */
 function scan(
   name: string,
   videos: string[],
-  subtitles: string[] = []
+  subtitles: string[] = [],
+  extraImages: string[] = []
 ): MovieFolderScan {
   const dir = join(ROOT, name);
   return {
@@ -37,6 +41,9 @@ function scan(
     videos: videos.map((video) => join(dir, video)),
     poster: join(dir, 'poster.jpg'),
     backdrop: join(dir, 'fanart.jpg'),
+    images: ['fanart.jpg', 'poster.jpg', ...extraImages].map((image) =>
+      join(dir, image)
+    ),
     subtitles: subtitles.map((file) => ({
       path: join(dir, file),
       language: detectSubtitleLanguage(file),
@@ -88,6 +95,50 @@ describe('splitCollections — a Collection folder', () => {
     expect(
       films.map((film) => ({ poster: film.poster, backdrop: film.backdrop }))
     ).toEqual(STAR_WARS.map(() => ({ poster: null, backdrop: null })));
+  });
+
+  // Issue #316: a film's own art beside its video, Plex's and Jellyfin's
+  // `<video stem>-poster.*`, is read back as its poster.
+  it('gives each film the image named <its stem>-poster as its poster', () => {
+    const folder = scan(
+      'Alien Films',
+      ['Alien.1979.mkv', 'Aliens.1986.mkv'],
+      [],
+      ['Alien.1979-poster.jpg', 'Aliens.1986-poster.png']
+    );
+
+    const films = splitCollections([folder]);
+
+    expect(films.map((film) => film.poster)).toEqual([
+      join(folder.dir, 'Alien.1979-poster.jpg'),
+      join(folder.dir, 'Aliens.1986-poster.png'),
+    ]);
+  });
+
+  it('reads <stem>-poster regardless of case', () => {
+    const folder = scan(
+      'Alien Films',
+      ['Alien.1979.mkv', 'Aliens.1986.mkv'],
+      [],
+      ['ALIEN.1979-Poster.JPG']
+    );
+
+    const films = splitCollections([folder]);
+
+    expect(films[0].poster).toBe(join(folder.dir, 'ALIEN.1979-Poster.JPG'));
+  });
+
+  it('gives a film with no <stem>-poster image no poster, never the folder’s', () => {
+    const folder = scan(
+      'Alien Films',
+      ['Alien.1979.mkv', 'Aliens.1986.mkv'],
+      [],
+      ['Alien.1979-poster.jpg']
+    );
+
+    const films = splitCollections([folder]);
+
+    expect(films[1].poster).toBeNull();
   });
 
   it('gives each film the subtitles whose names begin with its stem', () => {

@@ -222,6 +222,58 @@ describe('writeBack.poster — poster.jpg into a Source folder, only when absent
   });
 });
 
+// "A collection film's poster is named after its video" (issue #316): a film
+// of a **Collection folder** carries its **Source file**, and its poster is
+// added beside that video as `<video stem>-poster.jpg`, never as the folder's
+// `poster.jpg`, which is the collection's.
+describe('writeBack.poster — a collection film’s poster, named after its video', () => {
+  const VIDEO = 'Lanternlight.2011.mkv';
+  const NAMED = 'Lanternlight.2011-poster.jpg';
+
+  it('adds <video stem>-poster.jpg beside the video', async () => {
+    const { root, folder } = collection();
+
+    const outcome = await writeBack.poster(root, folder, image(), VIDEO);
+
+    expect(outcome.kind).toBe('written');
+    expect(readFileSync(join(root, folder, NAMED), 'utf8')).toBe(
+      'poster bytes from TMDB'
+    );
+  });
+
+  it('writes no poster.jpg for it', async () => {
+    const { root, folder } = collection();
+
+    await writeBack.poster(root, folder, image(), VIDEO);
+
+    expect(existsSync(join(root, folder, 'poster.jpg'))).toBe(false);
+  });
+
+  it('leaves an existing <video stem>-poster.jpg byte-identical, logged as left alone', async () => {
+    const { root, folder } = collection();
+    const ours = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 4, 5, 6]);
+    writeFileSync(join(root, folder, NAMED), ours);
+
+    const outcome = await writeBack.poster(root, folder, image(), VIDEO);
+
+    expect(outcome.kind).toBe('exists');
+    expect(outcome.line?.text).toContain(`${NAMED} exists, left alone`);
+    expect(readFileSync(join(root, folder, NAMED)).equals(ours)).toBe(true);
+  });
+
+  it('adds it even when the folder already holds the collection’s poster.jpg', async () => {
+    const { root, folder } = collection();
+    writeFileSync(join(root, folder, 'poster.jpg'), 'the collection’s art');
+
+    const outcome = await writeBack.poster(root, folder, image(), VIDEO);
+
+    expect(outcome.kind).toBe('written');
+    expect(readFileSync(join(root, folder, 'poster.jpg'), 'utf8')).toBe(
+      'the collection’s art'
+    );
+  });
+});
+
 describe('writeBack.sheet — the Metadata sheet in the root, only when absent', () => {
   const films = [
     makeMovie({

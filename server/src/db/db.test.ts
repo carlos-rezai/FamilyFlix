@@ -43,10 +43,10 @@ const EXPECTED_GENRES = [
   'Crime',
 ];
 
-// The version a fresh database migrates to — migration #8, an episode's
-// **Source file** (issue #308). Every "at the latest version" assertion reads
-// it, so the next migration moves one number rather than eight.
-const LATEST_VERSION = 8;
+// The version a fresh database migrates to — migration #9, a collection film's
+// **Source file** (issue #316). Every "at the latest version" assertion reads
+// it, so the next migration moves one number rather than nine.
+const LATEST_VERSION = 9;
 
 // What migration #5 adds, by table: the three columns a Sync writes on a movie
 // and a series, and the episode's still. Additive, nullable, nothing seeded.
@@ -200,11 +200,23 @@ function indexesReferencing(db: TestDb, column: string): string[] {
  * exists, so every wind-back reads the same before #8 is written as after.
  */
 function dropMigration8(db: TestDb): void {
+  // Every wind-back to before #8 is also one to before #9.
+  dropMigration9(db);
   if (
     tableNames(db).includes('episodes') &&
     columnNames(db, 'episodes').includes('source_file')
   ) {
     db.prepare('ALTER TABLE episodes DROP COLUMN source_file').run();
+  }
+}
+
+/**
+ * What migration #9 added, dropped: `movies.source_file`, only where it
+ * exists, so every wind-back reads the same before #9 is written as after.
+ */
+function dropMigration9(db: TestDb): void {
+  if (columnNames(db, 'movies').includes('source_file')) {
+    db.prepare('ALTER TABLE movies DROP COLUMN source_file').run();
   }
 }
 
@@ -1212,10 +1224,10 @@ describe('db: migration #8 — an episode’s Source file', () => {
     expect(declared?.notnull).toBe(0);
   });
 
-  it('lands a fresh database at version 8', () => {
+  it('lands a fresh database at version 8 or later', () => {
     const db = track(open(':memory:'));
 
-    expect(userVersion(db)).toBe(8);
+    expect(userVersion(db)).toBeGreaterThanOrEqual(8);
   });
 
   it('upgrades a version-7 library in place, its episodes kept with no Source file', () => {
@@ -1240,12 +1252,64 @@ describe('db: migration #8 — an episode’s Source file', () => {
 
     const upgraded = track(open(path));
 
-    expect(userVersion(upgraded)).toBe(8);
+    expect(userVersion(upgraded)).toBe(LATEST_VERSION);
     expect(
       upgraded
         .prepare('SELECT title, source_file FROM episodes WHERE series_id = ?')
         .all(series.id)
     ).toEqual([{ title: 'Pilot', source_file: null }]);
+  });
+});
+
+// "A collection film's poster is named after its video" (issue #316) adds
+// migration #9: a **Collection folder** film's **Source file** —
+// `movies.source_file`, the video's path relative to its **Source folder**.
+// Additive and nullable: a film in a folder of its own never has one, and
+// nothing is backfilled.
+
+describe('db: migration #9 — a collection film’s Source file', () => {
+  it('adds a nullable TEXT source_file to movies', () => {
+    const db = track(open(':memory:'));
+
+    const declared = columnInfo(db, 'movies').find(
+      (c) => c.name === 'source_file'
+    );
+    expect(declared).toBeDefined();
+    expect(declared?.type.toUpperCase()).toBe('TEXT');
+    expect(declared?.notnull).toBe(0);
+  });
+
+  it('lands a fresh database at version 9', () => {
+    const db = track(open(':memory:'));
+
+    expect(userVersion(db)).toBe(9);
+  });
+
+  it('upgrades a version-8 library in place, its films kept with no Source file', () => {
+    const path = tempDbPath();
+    const before = trackStorage(createSqliteStorage(path));
+    const movie = before.addMovie({
+      title: 'Heat',
+      year: 1995,
+      videoPath: 'heat-1995/video.mp4',
+    });
+    before.close();
+    const db = open(path);
+    try {
+      dropMigration9(db);
+      db.pragma('user_version = 8');
+    } finally {
+      db.close();
+    }
+
+    const upgraded = track(open(path));
+
+    expect(userVersion(upgraded)).toBe(9);
+    expect(
+      upgraded
+        .prepare('SELECT title, source_file FROM movies WHERE id = ?')
+        .all(movie.id)
+    ).toEqual([{ title: 'Heat', source_file: null }]);
   });
 });
 

@@ -96,6 +96,35 @@ describe('scanMovieFolder — the poster', () => {
   });
 });
 
+// Issue #316: every image the folder holds, so a **Collection folder**'s films
+// can each be given the one named after its video.
+describe('scanMovieFolder — the images', () => {
+  it('lists every image in the folder, in name order', async () => {
+    const dir = folderWith([
+      'poster.jpg',
+      'Heat.1995-poster.png',
+      'fanart.jpg',
+      'heat.mkv',
+      'notes.txt',
+    ]);
+
+    const scan = await scanMovieFolder(dir);
+
+    expect(scan.images.map((image) => basename(image))).toEqual([
+      'fanart.jpg',
+      'Heat.1995-poster.png',
+      'poster.jpg',
+    ]);
+    expect(scan.images[0]).toBe(join(dir, 'fanart.jpg'));
+  });
+
+  it('lists no images for a folder with none', async () => {
+    const dir = folderWith(['heat.mkv']);
+
+    expect((await scanMovieFolder(dir)).images).toEqual([]);
+  });
+});
+
 describe('scanMovieFolder — the backdrop', () => {
   it.each(['fanart.jpg', 'backdrop.png'])('finds %s by name', async (named) => {
     const dir = folderWith(['die-hard.mkv', 'poster.jpg', named]);
