@@ -369,6 +369,19 @@ describe('EnrichmentFlow — review and Sync again', () => {
     ).toBeDefined();
   });
 
+  // Issue #313: opened from Settings, Done is still the Back rule's step.
+  it('steps back onto Settings from Done', async () => {
+    inReview();
+    renderFlow();
+    await pressStart();
+
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Done' }, { timeout: 3000 })
+    );
+
+    expect(pathname()).toBe('/settings');
+  });
+
   it('drops the finished run and shows setup on Sync again', async () => {
     inReview();
     renderFlow();

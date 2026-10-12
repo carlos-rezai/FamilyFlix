@@ -160,8 +160,13 @@ async function startBody(): Promise<Record<string, unknown>> {
 }
 
 const REVIEW = { found: 2, total: 2, done: 2, matched: 2 };
+/** Finish under either of its names: the run's `enrich` chooses. */
 const finish = () =>
-  screen.findByRole('button', { name: 'Finish — go to library' }, POLLING);
+  screen.findByRole(
+    'button',
+    { name: /^(Continue to TMDB sync|Finish and go to library)$/ },
+    POLLING
+  );
 
 describe('ImportFlow — the Also fetch from TMDB card', () => {
   it('offers the card on setup, unticked', async () => {
@@ -219,6 +224,17 @@ describe('ImportFlow — the box travels on the run', () => {
 });
 
 describe('ImportFlow — Finish on a run carrying enrich', () => {
+  // Issue #313: it says where it goes, which is not the library.
+  it('reads Continue to TMDB sync', async () => {
+    serve({
+      onArrival: true,
+      then: [makeImportRun({ ...REVIEW, phase: 'review', enrich: true })],
+    });
+    renderFlow();
+
+    expect((await finish()).textContent).toBe('Continue to TMDB sync');
+  });
+
   it('replaces /import with /enrich?scope=all', async () => {
     serve({
       started: makeImportRun({ enrich: true }),
@@ -275,6 +291,16 @@ describe('ImportFlow — Finish on a run carrying enrich', () => {
 });
 
 describe('ImportFlow — Finish on a run without enrich', () => {
+  it('reads Finish and go to library', async () => {
+    serve({
+      onArrival: true,
+      then: [makeImportRun({ ...REVIEW, phase: 'review', enrich: false })],
+    });
+    renderFlow();
+
+    expect((await finish()).textContent).toBe('Finish and go to library');
+  });
+
   it('goes home even when the box was ticked on setup but the run says otherwise', async () => {
     // The run is the truth: what the server carries is what Finish reads.
     serve({

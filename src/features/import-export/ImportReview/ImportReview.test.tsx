@@ -54,6 +54,9 @@ const inReview = (problems: ImportProblem[] = PROBLEMS, matched = 7) =>
     problems,
   });
 
+/** Finish's label on a run with no Sync to hand on to. */
+const FINISH = 'Finish and go to library';
+
 function renderReview(props: Partial<ImportReviewProps> = {}) {
   const view = (
     <MemoryRouter>
@@ -61,6 +64,7 @@ function renderReview(props: Partial<ImportReviewProps> = {}) {
         <ImportReview
           run={props.run ?? inReview()}
           onSkip={props.onSkip ?? (() => undefined)}
+          finishLabel={props.finishLabel ?? FINISH}
           onFinish={props.onFinish ?? (() => undefined)}
         />
       </ThemeProvider>
@@ -77,6 +81,7 @@ function renderReview(props: Partial<ImportReviewProps> = {}) {
             <ImportReview
               run={run}
               onSkip={props.onSkip ?? (() => undefined)}
+              finishLabel={props.finishLabel ?? FINISH}
               onFinish={props.onFinish ?? (() => undefined)}
             />
           </ThemeProvider>
@@ -85,8 +90,7 @@ function renderReview(props: Partial<ImportReviewProps> = {}) {
   };
 }
 
-const finishButton = () =>
-  screen.getByRole('button', { name: 'Finish — go to library' });
+const finishButton = () => screen.getByRole('button', { name: FINISH });
 
 /** A tile is its label's parent; the number is the one other thing in it. */
 const tileNumber = (label: RegExp): string =>
@@ -239,6 +243,15 @@ describe('ImportReview — all done', () => {
     rerenderWith(inReview([]));
 
     expect((finishButton() as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  // Issue #313: Finish says where it goes; the flow chooses the words.
+  it('names Finish as it is told', () => {
+    renderReview({ finishLabel: 'Continue to TMDB sync' });
+
+    expect(
+      screen.getByRole('button', { name: 'Continue to TMDB sync' })
+    ).toBeDefined();
   });
 
   it('finishes when Finish is pressed', () => {

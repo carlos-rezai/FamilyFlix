@@ -654,7 +654,7 @@ describe('ImportFlow — reaching review', () => {
       await screen.findByText('✓ All done', undefined, POLLING)
     ).toBeDefined();
     expect(
-      screen.getByRole('button', { name: 'Finish — go to library' })
+      screen.getByRole('button', { name: 'Finish and go to library' })
     ).toBeDefined();
     expect(screen.queryByText('Importing movies…')).toBeNull();
     expect(screen.queryByRole('button', { name: 'Cancel import' })).toBeNull();
@@ -676,7 +676,7 @@ describe('ImportFlow — reaching review', () => {
     await screen.findByText('✓ All done', undefined, POLLING);
 
     fireEvent.click(
-      screen.getByRole('button', { name: 'Finish — go to library' })
+      screen.getByRole('button', { name: 'Finish and go to library' })
     );
 
     // A navigation to `/`, not a history step: the films are on the shelf and
@@ -847,7 +847,7 @@ describe('ImportFlow — the review of problems', () => {
     expect(screen.queryByText('Needs attention')).toBeNull();
     expect(tileNumber(ATTENTION)).toBe('0');
     expect(
-      screen.getByRole('button', { name: 'Finish — go to library' })
+      screen.getByRole('button', { name: 'Finish and go to library' })
     ).toBeDefined();
   });
 
@@ -866,7 +866,7 @@ describe('ImportFlow — the review of problems', () => {
     await arriveInReview();
 
     fireEvent.click(
-      screen.getByRole('button', { name: 'Finish — go to library' })
+      screen.getByRole('button', { name: 'Finish and go to library' })
     );
 
     expect(pathname()).toBe('/');
@@ -1091,7 +1091,7 @@ describe('ImportFlow — leaving is a history step', () => {
     await screen.findByText('✓ All done', undefined, POLLING);
 
     fireEvent.click(
-      screen.getByRole('button', { name: 'Finish — go to library' })
+      screen.getByRole('button', { name: 'Finish and go to library' })
     );
 
     expect(pathname()).toBe('/');

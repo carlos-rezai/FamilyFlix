@@ -22,6 +22,9 @@ import {
  * and nothing started: the maintainer still presses _Start sync_. Back from
  * there steps to Settings, because the replace left Import out of the
  * history.
+ *
+ * Issue #313: the review's _Done_ there pushes `/`, the library — where the
+ * import's own Finish would have landed had it not handed on to the Sync.
  */
 
 const SUMMARY: EnrichmentSummary = {
@@ -53,6 +56,9 @@ type FetchFn = (
 ) => Promise<Response>;
 let fetchMock: ReturnType<typeof vi.fn<FetchFn>>;
 
+/** The run the server holds on arrival, if any. */
+let arriving: EnrichmentRun | null;
+
 const method = (init?: RequestInit) => (init?.method ?? 'GET').toUpperCase();
 const path = (input: RequestInfo | URL) =>
   new URL(String(input), 'http://localhost').pathname;
@@ -60,8 +66,9 @@ const isStart = (input: RequestInfo | URL, init?: RequestInit) =>
   path(input) === '/api/enrichment' && method(init) === 'POST';
 
 beforeEach(() => {
+  arriving = null;
   fetchMock = vi.fn<FetchFn>();
-  let held: EnrichmentRun | null = null;
+  let held: EnrichmentRun | null = arriving;
   fetchMock.mockImplementation((input, init) => {
     const p = path(input);
     if (isStart(input, init)) {
@@ -145,5 +152,24 @@ describe('EnrichmentFlow — arriving with ?scope=all', () => {
     expect(
       (JSON.parse(String(init?.body)) as Record<string, unknown>).scope
     ).toBe('all');
+  });
+});
+
+describe('EnrichmentFlow — Done, reached from an import', () => {
+  it('lands on the library', async () => {
+    arriving = {
+      ...RUN,
+      phase: 'review',
+      done: RUN.total,
+      enriched: RUN.total,
+      currentItem: null,
+    };
+    renderFlow();
+
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Done' }, { timeout: 3000 })
+    );
+
+    expect(await screen.findByText('the browse home')).toBeDefined();
   });
 });
