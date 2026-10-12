@@ -87,8 +87,8 @@ const EMPTY: MovieFormValues = {
 
 export interface UseMovieFormResult {
   /**
-   * The **Form kind** on screen. Always `movie` beside a context — an edit or
-   * a Resolve — where there is no kind to switch.
+   * The **Form kind** on screen: `movie` for the Edit job and a film Resolve,
+   * `series` for the two series jobs — and on an add, whichever the tabs say.
    */
   kind: FormKind;
   /** Whether the **Kind tabs** are drawn: on a plain add, and only there. */
@@ -155,9 +155,9 @@ export interface UseMovieFormResult {
   /** Whether the write is in flight. */
   saving: boolean;
   /**
-   * Whether this screen is amending a movie rather than creating one — which
-   * is what the heading and the Save button are named from, and where a
-   * finished save lands.
+   * Whether this screen is amending a title — a movie or a series — rather
+   * than creating one: what the heading and the Save button are named from,
+   * and where a finished save lands.
    */
   editing: boolean;
   /**
@@ -233,13 +233,18 @@ export interface UseMovieFormResult {
  * both — the form stays put with everything still typed in it, which is the only
  * honest answer available until the snackbar system ships.
  *
- * **`?movie=<id>` is the whole of the difference between the two jobs.** With
- * one, the record it names is read back into the fields and Save amends it; with
- * none, the fields open empty and Save creates a row. An id that names no movie
+ * **The screen has five jobs, and the URL alone says which** — `formJob`
+ * reads it once, and `loadFormRecord` makes each job's reads: the add, the
+ * **Edit job**, the film **Resolve**, the **Series edit job** and the **Series
+ * Resolve**. What follows is each job in turn.
+ *
+ * **`?movie=<id>` is the whole of the difference between the add and the Edit
+ * job.** With one, the record it names is read back into the fields and Save
+ * amends it; with none, the fields open empty and Save creates a row. An id that names no movie
  * is not a record to amend, so the screen falls back to adding — which is also
  * the only state in which its Save could do anything at all.
  *
- * **`?problem=<id>` is the third job — the Import context.** The
+ * **`?problem=<id>` is the film Resolve — the Import context.** The
  * **Problem detail** it names is read into the fields and the **File slots**
  * as **Found files**; Save is _Save & continue_ and posts to the problem's own
  * resolve route, the secondary button is _Skip this one_ and dismisses, and
@@ -258,12 +263,26 @@ export interface UseMovieFormResult {
  * lands there too. A problem that is gone leaves the plain edit standing,
  * which is what the URL's other half names.
  *
- * **`?kind=series` is the URL's third parameter**, read on a plain add alone:
- * beside `?movie=` or `?problem=` it is ignored, and the kind is `movie`. On a
- * series, Save is one `POST /api/series` carrying every **Episode file row**,
- * and a finished save lands on the Series tab — the kind's own **Fresh
- * home**, the shelf the show has just joined. The rows themselves are
- * `useEpisodeList`'s.
+ * **`?kind=series` is the add's Form kind**, read on a plain add: beside
+ * `?movie=` it is ignored, and the kind is `movie`. On a series, Save is one
+ * `POST /api/series` carrying every **Episode file row**, and a finished save
+ * lands on the Series tab — the kind's own **Fresh home**, the shelf the show
+ * has just joined. The rows themselves are `useEpisodeList`'s.
+ *
+ * **`?series=<id>` is the Series edit job**, the series ⋯ menu's _Edit
+ * details_: the series fills the shared fields and the poster, its episodes
+ * the rows as **Stored files**, and Save is `PATCH /api/series/:id`, stepping
+ * back onto the series page. The kind is `series`, with no tabs to switch it.
+ * A series that is gone leaves the series add standing.
+ *
+ * **`?kind=series&problem=<id>` is the Series Resolve**, an `unplaced` show's
+ * _Resolve_: once the problem read back is `unplaced`, the kind is `series`,
+ * the fields come from the sheet row, and each found video is an Episode file
+ * row under the **Numbering guess**. With `&series=<id>` beside them the show
+ * joins that held series — its fields fill the form, and the pairs it holds
+ * are taken. _Save & continue_ posts to the problem's resolve route, and every
+ * exit lands on the review, as the film Resolve's does. Beside any other kind
+ * of problem the ask is ignored.
  *
  * ---
  *
@@ -277,10 +296,16 @@ export interface UseMovieFormResult {
  * every field and its save, the **Save gate** at each slot that could move it,
  * the rating picker, the three kinds of file, every job the screen does, both
  * **Form kinds** and the switch between them, the **Stored file** passthrough,
- * and a refused save leaving the form as it was. There is no member of
- * {@link UseMovieFormResult} those do not reach. The series half's list rules —
- * the order rows land in, their numbers and the gate they make — are
+ * and a refused save leaving the form as it was — and `MovieForm.seriesEdit`
+ * and `MovieForm.seriesResolve` press the two series jobs. There is no member
+ * of {@link UseMovieFormResult} those do not reach. The series half's list
+ * rules — the order rows land in, their numbers and the gate they make — are
  * `useEpisodeList`'s own suite's, because that hook is a unit of its own.
+ *
+ * The testable halves of the five jobs have left for units of their own:
+ * `formJob`, which reads the URL into a job and its Landing, and
+ * `loadFormRecord`, which makes the job's reads and answers what the form
+ * opens on. Each has its suite. What stays here is the state and the writes.
  *
  * A test file here would have to drive the hook through `renderHook` and assert
  * on the record it returns — which is asserting the shape of the seam between
