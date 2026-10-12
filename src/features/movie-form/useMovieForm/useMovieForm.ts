@@ -6,7 +6,12 @@ import { fetchMovie } from '@/api/fetchMovie/fetchMovie';
 import { fetchSeriesDetail } from '@/api/fetchSeriesDetail/fetchSeriesDetail';
 import { useQueryParamWriter } from '@/features/search/useQueryParamWriter/useQueryParamWriter';
 import { useGoBack } from '@/hooks/useGoBack/useGoBack';
-import type { EpisodeFormRow, FormKind, MovieFormValues } from '@/types';
+import type {
+  EpisodeFormRow,
+  FormKind,
+  MovieFormFile,
+  MovieFormValues,
+} from '@/types';
 import { moviePath, seriesPath, seriesTabPath } from '@/utils';
 import { titleFromFilename } from '../titleFromFilename/titleFromFilename';
 import { useEpisodeList } from '../useEpisodeList/useEpisodeList';
@@ -208,12 +213,12 @@ export interface UseMovieFormResult {
   /** Empty the video slot again. */
   removeVideo: () => void;
   /**
-   * A film Resolve's found videos when its folder holds two or more — the
-   * **Found-file choice** — else none.
+   * A film Resolve's found videos, one slot each, when its folder holds two or
+   * more — the **Found-file choice** — else none.
    */
-  foundVideos: string[];
-  /** Put the found video at `path` into the video slot. */
-  chooseVideo: (path: string) => void;
+  foundVideos: MovieFormFile[];
+  /** Put the found video chosen into the video slot. */
+  chooseVideo: (video: MovieFormFile) => void;
   /** Put artwork the maintainer chose off their own disk into the poster slot. */
   pickPoster: (file: File) => void;
   /** Empty the poster slot again. */
@@ -411,7 +416,7 @@ export function useMovieForm(): UseMovieFormResult {
   >(null);
 
   /** The film Resolve's found videos, for the **Found-file choice**. */
-  const [foundVideos, setFoundVideos] = useState<string[]>([]);
+  const [foundVideos, setFoundVideos] = useState<MovieFormFile[]>([]);
 
   const requested = searchParams.get(MOVIE_PARAM);
   const problem = searchParams.get(PROBLEM_PARAM);
@@ -552,7 +557,7 @@ export function useMovieForm(): UseMovieFormResult {
         } else if (requested === null) {
           setValues(problemFormValues(detail));
           const videos = detail.files.videos ?? [];
-          setFoundVideos(videos.length > 1 ? videos : []);
+          setFoundVideos(videos.length > 1 ? videos.map(foundFile) : []);
         }
         setResolving({
           id: detail.id,
@@ -629,11 +634,8 @@ export function useMovieForm(): UseMovieFormResult {
     setValues((current) => ({ ...current, video: null }));
   }, []);
 
-  const chooseVideo = useCallback((path: string) => {
-    setValues((current) => ({
-      ...current,
-      video: foundFile(path),
-    }));
+  const chooseVideo = useCallback((video: MovieFormFile) => {
+    setValues((current) => ({ ...current, video }));
   }, []);
 
   // The same two lines for the second slot, because a slot is a slot — what

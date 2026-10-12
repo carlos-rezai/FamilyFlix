@@ -1,7 +1,8 @@
 /**
  * What both Files cards of the **Movie form** say the same way: what each
- * kind of file dialog offers, the card's caption and the poster slot's names.
- * Labels only one card draws stay with that card.
+ * kind of file dialog offers, the card's caption and the poster slot's names —
+ * and the video slot's, which the movie's card and its **Found-file choice**
+ * both draw. Labels only one card draws stay with that card.
  */
 
 /**
@@ -47,3 +48,7 @@ export const CARD_LABEL = 'Files';
 /** The poster slot's name, and what its picker says. */
 export const POSTER_LABEL = 'Poster';
 export const POSTER_CHOOSE = 'Choose poster image';
+
+/** The movie's video slot's name, and what its picker says. */
+export const VIDEO_LABEL = 'Video';
+export const VIDEO_CHOOSE = 'Choose video file';

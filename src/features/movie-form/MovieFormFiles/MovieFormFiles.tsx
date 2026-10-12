@@ -13,24 +13,19 @@ import {
   POSTER_LABEL,
   SUBTITLE_ACCEPT,
   VIDEO_ACCEPT,
+  VIDEO_CHOOSE,
+  VIDEO_LABEL,
 } from '../filesCard';
+import { FoundFileChoice } from '../FoundFileChoice/FoundFileChoice';
 import {
   Caption,
   Card,
-  Choice,
-  ChoiceLabel,
-  Option,
-  OptionDot,
-  OptionName,
-  Options,
   Subtitles,
   SubtitlesLabel,
   Tracks,
 } from './MovieFormFiles.styles';
 
-/** The names of the slots only the movie's card draws. */
-const VIDEO_LABEL = 'Video';
-const VIDEO_CHOOSE = 'Choose video file';
+/** The names of the list only the movie's card draws. */
 const SUBTITLES_LABEL = 'Subtitles';
 const SUBTITLE_ADD = 'Add subtitle file';
 
@@ -42,12 +37,12 @@ export interface MovieFormFilesProps {
   /** Reports that the slot's ✕ was pressed. */
   onRemoveVideo: () => void;
   /**
-   * A film Resolve's **Found files**' videos, absolute paths in name order:
-   * two or more draw the **Found-file choice** in place of the video slot.
+   * A film Resolve's **Found files**' videos, one slot each in name order: two
+   * or more draw the **Found-file choice** in place of the video slot.
    */
-  foundVideos?: string[];
-  /** Reports the found video chosen, by its path. */
-  onChooseVideo?: (path: string) => void;
+  foundVideos?: MovieFormFile[];
+  /** Reports the found video chosen. */
+  onChooseVideo?: (video: MovieFormFile) => void;
   /** What is in the poster slot, or `null` while it is empty. */
   poster: MovieFormFile | null;
   /** Reports the artwork that was picked — the `File` itself. */
@@ -108,7 +103,7 @@ export function MovieFormFiles({
         <FoundFileChoice
           videos={foundVideos}
           video={video}
-          onChoose={(path) => onChooseVideo?.(path)}
+          onChoose={(found) => onChooseVideo?.(found)}
           onPick={onPickVideo}
         />
       ) : (
@@ -160,58 +155,5 @@ export function MovieFormFiles({
         </Tracks>
       </Subtitles>
     </Card>
-  );
-}
-
-/** A path's last segment, whichever separator the machine spells it with. */
-const nameOf = (path: string): string => path.split(/[\\/]/).pop() ?? path;
-
-/**
- * The **Found-file choice**: the folder's videos by name as a radio group,
- * the one in the slot checked, and the picker kept under them for a film from
- * somewhere else — whose pick joins the group as its last row, chosen.
- */
-function FoundFileChoice({
-  videos,
-  video,
-  onChoose,
-  onPick,
-}: {
-  videos: string[];
-  video: MovieFormFile | null;
-  onChoose: (path: string) => void;
-  onPick: (file: File) => void;
-}) {
-  const chosen = video?.kind === 'found' ? video.path : null;
-  return (
-    <Choice>
-      <ChoiceLabel>{VIDEO_LABEL}</ChoiceLabel>
-      <Options role="radiogroup" aria-label={VIDEO_LABEL}>
-        {videos.map((path) => (
-          <Option
-            key={path}
-            type="button"
-            role="radio"
-            aria-checked={path === chosen}
-            $on={path === chosen}
-            onClick={() => onChoose(path)}
-          >
-            <OptionDot $on={path === chosen} />
-            <OptionName>{nameOf(path)}</OptionName>
-          </Option>
-        ))}
-        {video !== null && video.kind !== 'found' && (
-          <Option type="button" role="radio" aria-checked $on>
-            <OptionDot $on />
-            <OptionName>{video.filename}</OptionName>
-          </Option>
-        )}
-        <FilePicker
-          label={VIDEO_CHOOSE}
-          accept={VIDEO_ACCEPT}
-          onPick={onPick}
-        />
-      </Options>
-    </Choice>
   );
 }
