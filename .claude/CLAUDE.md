@@ -255,7 +255,7 @@ familyflix/
 │ │ ├── DetailBackdrop/ ← the **Detail backdrop**, graduated when both detail pages drew it: the art sticky at the top of the page's scroller and a full viewport tall, under the **Backdrop veil** — a gradient over `accentSoft`; its `100vh` coupled to both pages' `Scroller`
 │ │ ├── SeasonCard/ ← `mol.SeasonCard` 1:1: the 2:3 **Card**, `S02` over the gradient, the badge when complete, the bar when part-watched
 │ │ ├── PillTabs/ ← `mol.PillTabs` 1:1: the pill track of `aria-pressed` buttons in a labelled group, generic in its value so a press hands back the caller's own union; presentational — it knows no URL. The **Library tabs** and the **Kind tabs** are its callers
-│ │ ├── EpisodeFileRow/ ← `mol.EpisodeFileRow` 1:1: one **Episode file row** — the `S` and `E` number fields (digits, two and three), the title, the ✕, the filename in mono, and a children slot for its subtitles; presentational, the browser's focus ring kept
+│ │ ├── EpisodeFileRow/ ← `mol.EpisodeFileRow` 1:1: one **Episode file row** — the `S` and `E` number fields (digits, two and three), the title, the ✕, the filename in mono, and a children slot for its subtitles; a refusal drawn when given — the refused field's border and one `danger` line under the controls; presentational, the browser's focus ring kept
 │ │ ├── EpisodeRow/ ← `mol.EpisodeRow` 1:1: the 16:9 thumbnail, `S02E04` and the title, the air date, the Resume label, the watched box that only marks; a **Card**, its box a **Control**
 │ │ └── PosterCard/
 │ │ ├── PosterCard.tsx
@@ -324,7 +324,7 @@ familyflix/
 │ │ │ ├── formJob/ ← pure: the URL → one of the five jobs (`add`, `edit`, `resolve`, `seriesEdit`), `?problem=` over `?movie=` over `?series=`; and `formLanding(job)`, each job's **Landing**
 │ │ │ ├── loadFormRecord/ ← a job's reads in one place — `fetchMovie`, `fetchSeriesDetail`, `fetchProblem` with the held series beside it — → what the form opens on, or `null` for a record that is gone; never rejecting
 │ │ │ ├── useMovieForm/ ← the state and the writes: the kind, the **Save gate** per kind, the title prefill, each job's save — a switch over the job — and where it lands
-│ │ │ ├── useEpisodeList/ ← the series' rows: a pick read off its tags, the edits, each row's subtitles, and `episodesComplete`, the series half of the gate
+│ │ │ ├── useEpisodeList/ ← the series' rows: a pick read off its tags, the edits, each row's subtitles, `refusals` — each refused row by its key, its field and its sentence (0 is a number: a pilot, a special) — and `episodesComplete`, the series half of the gate, closed exactly while a row is refused
 │ │ │ ├── readEpisodeTag/ ← the client mirror of the server's `episodeTag`, `TAG_SHAPES` exported, held to it by a drift guard over one table — and `readSeasonFolder` to `groupShows`' `seasonOf` by the same guard
 │ │ │ ├── readSeasonFolder/ ← the client mirror of the server's **Season folder** rule — `Season 01`, `Season 1`, `S01`, else `null` — which seeds the **Numbering guess**
 │ │ │ ├── titleFromFilename/ ← pure: the **Title guess** off a picked video, ending at a year, a quality tag or a tag shape `readEpisodeTag` reads
