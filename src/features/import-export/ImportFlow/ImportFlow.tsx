@@ -62,6 +62,12 @@ const WORDING = {
  * **replaces** `/import` with `/enrich?scope=all`: setup with _Everything_
  * selected, nothing started, and Back from there stepping to Settings.
  */
+/** Finish on a run carrying `enrich`: it hands on to the Sync, not home. */
+const FINISH_TO_SYNC = 'Continue to TMDB sync';
+
+/** Finish on any other run: the **Fresh home**. */
+const FINISH_TO_LIBRARY = 'Finish and go to library';
+
 export function ImportFlow() {
   const navigate = useNavigate();
   const { run, attaching, start, cancel, skip } = useImportRun();
@@ -158,6 +164,7 @@ export function ImportFlow() {
         <ImportReview
           run={run}
           onSkip={onSkip}
+          finishLabel={run.enrich ? FINISH_TO_SYNC : FINISH_TO_LIBRARY}
           onFinish={() =>
             run.enrich
               ? navigate(enrichPath({ scope: 'all' }), { replace: true })

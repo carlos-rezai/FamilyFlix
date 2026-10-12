@@ -37,7 +37,8 @@ const ALL_FIELDS: EnrichField[] = [...ENRICH_FIELDS];
  *
  * Opened with `?scope=all` — the Import flow's _Finish_ on a run carrying
  * `enrich` — setup has _Everything_ selected instead, and still waits for
- * _Start sync_.
+ * _Start sync_; and review's _Done_ pushes `/`, the **Fresh home** the
+ * import's own Finish would have been. Back still steps to Settings.
  *
  * Opened with `?movie=<id>` it is the `single` **Enrichment scope**: setup
  * names the film under _Just this movie_, Start reads _Fetch details_, and
@@ -97,6 +98,8 @@ export function EnrichmentFlow() {
   const [writeSheet, setWriteSheet] = useState(true);
   const [writePosters, setWritePosters] = useState(true);
   const scope: EnrichScope = single === null ? libraryScope : 'single';
+  // `?scope=all` is set by the Import flow's Finish alone.
+  const fromImport = single === null && params.get('scope') === 'all';
 
   useEffect(() => {
     if (single === null) {
@@ -271,7 +274,7 @@ export function EnrichmentFlow() {
         <EnrichmentReview
           run={run}
           finishLabel={finishLabel(single)}
-          onFinish={goBack}
+          onFinish={fromImport ? () => navigate('/') : goBack}
           onAgain={cancel}
           onSkip={onSkip}
           onPick={onPick}

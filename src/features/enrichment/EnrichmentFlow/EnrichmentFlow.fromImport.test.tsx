@@ -68,7 +68,7 @@ const isStart = (input: RequestInfo | URL, init?: RequestInit) =>
 beforeEach(() => {
   arriving = null;
   fetchMock = vi.fn<FetchFn>();
-  let held: EnrichmentRun | null = arriving;
+  let held: EnrichmentRun | null = null;
   fetchMock.mockImplementation((input, init) => {
     const p = path(input);
     if (isStart(input, init)) {
@@ -77,9 +77,9 @@ beforeEach(() => {
     }
     if (p === '/api/enrichment/current' && method(init) === 'GET') {
       return Promise.resolve(
-        held === null
+        (held ?? arriving) === null
           ? notFoundResponse('No sync is running')
-          : okResponse(held)
+          : okResponse(held ?? arriving)
       );
     }
     if (p === '/api/enrichment' && method(init) === 'GET') {

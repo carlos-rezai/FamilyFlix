@@ -17,6 +17,8 @@ export interface ImportReviewProps {
   run: ImportRun;
   /** _Skip_ was pressed on the **Problem** with this id. */
   onSkip: (id: string) => void;
+  /** Finish's words: where it goes, which the flow knows and this step does not. */
+  finishLabel: string;
   onFinish: () => void;
 }
 
@@ -24,14 +26,20 @@ export interface ImportReviewProps {
  * The **Review step**, from `feat.ImportFlow.dc.html`: two stat tiles —
  * `matched confidently and imported` and `need your attention` — over the
  * **Needs attention** list, one row per **Problem**; the `✓ All done` card
- * once the list is empty; and _Finish — go to library_ either way, because
- * the films that matched are already in the library.
+ * once the list is empty; and Finish either way, because the films that
+ * matched are already in the library — under the words the flow hands it,
+ * which say where it goes.
  *
  * The step draws the run it is handed and reports a press — _Skip_ names the
  * problem's id — and never removes a row itself: the **Run hook** does, and
  * the next `run` shows it.
  */
-export function ImportReview({ run, onSkip, onFinish }: ImportReviewProps) {
+export function ImportReview({
+  run,
+  onSkip,
+  finishLabel,
+  onFinish,
+}: ImportReviewProps) {
   return (
     <>
       <Tiles>
@@ -80,7 +88,7 @@ export function ImportReview({ run, onSkip, onFinish }: ImportReviewProps) {
       )}
 
       <Actions>
-        <Button label="Finish — go to library" onClick={onFinish} />
+        <Button label={finishLabel} onClick={onFinish} />
       </Actions>
     </>
   );
