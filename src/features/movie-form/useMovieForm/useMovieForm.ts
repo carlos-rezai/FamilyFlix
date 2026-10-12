@@ -1,9 +1,7 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import { dismissProblem } from '@/api/dismissProblem/dismissProblem';
-import { fetchMovie } from '@/api/fetchMovie/fetchMovie';
-import { fetchSeriesDetail } from '@/api/fetchSeriesDetail/fetchSeriesDetail';
 import { useQueryParamWriter } from '@/features/search/useQueryParamWriter/useQueryParamWriter';
 import { useGoBack } from '@/hooks/useGoBack/useGoBack';
 import type {
@@ -14,29 +12,22 @@ import type {
 } from '@/types';
 import { seriesTabPath } from '@/utils';
 import { formJob, formLanding, KIND_PARAM } from '../formJob/formJob';
+import {
+  loadFormRecord,
+  type ResolvingProblem,
+} from '../loadFormRecord/loadFormRecord';
 import { titleFromFilename } from '../titleFromFilename/titleFromFilename';
 import { useEpisodeList } from '../useEpisodeList/useEpisodeList';
 import {
   createMovie,
   createSeries,
-  fetchProblem,
   ProblemGoneError,
   resolveProblem,
   resolveSeriesProblem,
   updateMovie,
   updateSeries,
 } from '../api/api';
-import {
-  movieFormValues,
-  otherCandidates,
-  pickedFile,
-  pickedSubtitle,
-  heldEpisodeRows,
-  foundFile,
-  problemFormValues,
-  seriesFormValues,
-  seriesResolveRows,
-} from '../formValues/formValues';
+import { pickedFile, pickedSubtitle } from '../formValues/formValues';
 
 /**
  * The **Fresh home** a finished add lands on — the shelf the film has just
@@ -93,16 +84,6 @@ const EMPTY: MovieFormValues = {
   // in the family's own language needs none.
   subtitles: [],
 };
-
-/**
- * The **Problem** this screen is resolving, as the accent banner names it:
- * its title, and — for an `ambiguous` alone — the folders the run was
- * weighing besides the one the slots were filled from, each by its name.
- */
-export interface ResolvingProblem {
-  title: string;
-  alsoMatched: string[];
-}
 
 export interface UseMovieFormResult {
   /**
@@ -337,11 +318,8 @@ export function useMovieForm(): UseMovieFormResult {
   const [foundVideos, setFoundVideos] = useState<MovieFormFile[]>([]);
 
   // The URL, read once: which of the five jobs this screen is doing.
-  const job = formJob(searchParams);
-  const requested =
-    job.kind === 'edit' || job.kind === 'resolve' ? job.movie : null;
-  const problem = job.kind === 'resolve' ? job.problem : null;
-  const seriesRequested = job.kind === 'seriesEdit' ? job.series : null;
+  const search = searchParams.toString();
+  const job = useMemo(() => formJob(new URLSearchParams(search)), [search]);
 
   // The kind is the URL's, on a plain add alone: beside a context there is
   // nothing to switch. A series edit is the series kind, with no tabs to
@@ -351,7 +329,6 @@ export function useMovieForm(): UseMovieFormResult {
   // series it joins. The kind is the series' once the problem read back is
   // `unplaced`: beside any other problem the ask is ignored.
   const askingSeries = job.kind === 'resolve' && job.asksSeries;
-  const joining = job.kind === 'resolve' ? job.joining : null;
   const [unplaced, setUnplaced] = useState(false);
   const resolvingSeries = askingSeries && unplaced;
   const kind: FormKind =
@@ -371,117 +348,40 @@ export function useMovieForm(): UseMovieFormResult {
   // either read above has answered — see {@link formLanding}.
   const goBack = useGoBack(formLanding(job));
 
-  // Read once per id, the way `useGenrePool` reads once per mount: the record
-  // is what fills the fields, and asking again would overwrite whatever the
-  // maintainer had typed since.
+  // Read once per job, the way `useGenrePool` reads once per mount: the
+  // record is what fills the fields, and asking again would overwrite
+  // whatever the maintainer had typed since. A record that is gone or could
+  // not be read leaves the add standing; a read that lands after the job
+  // changed puts nothing back.
   useEffect(() => {
-    if (requested === null) {
-      setEditing(null);
-      return;
-    }
+    setEditing(null);
+    setEditingSeries(null);
+    setResolving(null);
+    setUnplaced(false);
 
     let current = true;
 
-    fetchMovie(requested)
-      .then((movie) => {
-        // `null` is a 404 — a stale link rather than a failure — and the screen
-        // only knows there is nothing to edit because it looked.
-        if (!current || movie === null) {
-          return;
-        }
-        setValues(movieFormValues(movie));
-        setEditing(movie.id);
-      })
-      // A record that could not be read is a form that adds, on `useGenrePool`'s
-      // precedent: the prototype designs no error state on this screen, and a
-      // half-filled form would be worse than an empty one.
-      .catch(() => undefined);
+    void loadFormRecord(job).then((record) => {
+      if (!current || record === null) {
+        return;
+      }
+      if (record.values !== null) {
+        setValues(record.values);
+      }
+      if (record.episodes !== null) {
+        holdEpisodes(record.episodes.rows, record.episodes.taken);
+      }
+      setFoundVideos(record.foundVideos);
+      setEditing(record.editing);
+      setEditingSeries(record.editingSeries);
+      setResolving(record.resolving);
+      setUnplaced(record.unplaced);
+    });
 
     return () => {
       current = false;
     };
-  }, [requested]);
-
-  // The **Series edit job**, read the same way: the series fills the shared
-  // fields and the poster, and its episodes the rows, once. A series that is
-  // gone leaves the series add standing.
-  useEffect(() => {
-    if (seriesRequested === null) {
-      setEditingSeries(null);
-      return;
-    }
-
-    let current = true;
-
-    fetchSeriesDetail(seriesRequested)
-      .then((detail) => {
-        if (!current || detail === null) {
-          return;
-        }
-        setValues(seriesFormValues(detail));
-        holdEpisodes(heldEpisodeRows(detail));
-        setEditingSeries(detail.series.id);
-      })
-      .catch(() => undefined);
-
-    return () => {
-      current = false;
-    };
-  }, [seriesRequested, holdEpisodes]);
-
-  // The **Import context**, read the same way: the detail is what fills the
-  // fields and the slots, once. A problem that is gone — `null`, the `404` —
-  // is a stale link, and the screen falls back to adding; so does a detail
-  // that could not be read, on the record's own precedent.
-  //
-  // Beside `?movie=` the detail fills nothing: the film is in the
-  // library already, and what the record holds — the stored copies, by their
-  // own names — is what the fields show, never the folder the run scanned.
-  // The detail is still what the banner and the labels are decided from.
-  useEffect(() => {
-    if (problem === null) {
-      setResolving(null);
-      setUnplaced(false);
-      return;
-    }
-
-    let current = true;
-
-    Promise.all([
-      fetchProblem(problem),
-      joining === null ? null : fetchSeriesDetail(joining),
-    ])
-      .then(([detail, held]) => {
-        if (!current || detail === null) {
-          return;
-        }
-        const series = askingSeries && detail.kind === 'unplaced';
-        setUnplaced(series);
-        if (series) {
-          // The fields from the held series when the show joins one, else
-          // from the sheet row; one row per found video under the guess.
-          setValues(
-            held === null ? problemFormValues(detail) : seriesFormValues(held)
-          );
-          const { rows, taken } = seriesResolveRows(detail, held);
-          holdEpisodes(rows, taken);
-        } else if (requested === null) {
-          setValues(problemFormValues(detail));
-          const videos = detail.files.videos;
-          setFoundVideos(videos.length > 1 ? videos.map(foundFile) : []);
-        }
-        setResolving({
-          id: detail.id,
-          title: detail.title,
-          alsoMatched: otherCandidates(detail),
-        });
-      })
-      .catch(() => undefined);
-
-    return () => {
-      current = false;
-    };
-  }, [problem, requested, askingSeries, joining, holdEpisodes]);
+  }, [job, holdEpisodes]);
 
   const setTitle = useCallback((title: string) => {
     setValues((current) => ({ ...current, title }));
