@@ -29,6 +29,11 @@ export interface MovieEnrichment {
 export interface TitleSource {
   folderId: string;
   sourceFolder: string;
+  /**
+   * A **Collection folder** film's **Source file**, its video's path relative
+   * to the Source folder — present only for such a film.
+   */
+  sourceFile?: string;
 }
 
 /** One key of an enrichment shape and the column it writes. */
@@ -98,9 +103,16 @@ export interface Enrich {
   /**
    * Record where a **Movie** or **Series** came from, both columns in one
    * call: the **Library folder** it was found under and its Source folder
-   * relative to that folder. Answers whether the library holds that id.
+   * relative to that folder — and for a **Collection folder** film its
+   * **Source file**, `null` for any other. Answers whether the library holds
+   * that id.
    */
-  setSourceFolder(id: string, folderId: string, sourceFolder: string): boolean;
+  setSourceFolder(
+    id: string,
+    folderId: string,
+    sourceFolder: string,
+    sourceFile?: string | null
+  ): boolean;
   /**
    * Where a Movie or Series was recorded as coming from, both columns in one
    * query: its Library folder's id and its Source folder — `null` for a title
@@ -114,9 +126,14 @@ export interface Enrich {
   sourcePath(id: string): string | null;
   /**
    * The **Movie** or **Series** recorded at this Library folder and Source
-   * folder, whatever its title says now — `null` when none is.
+   * folder, whatever its title says now — `null` when none is. Given a
+   * **Source file**, only the Collection folder film recorded with it.
    */
-  titleAt(folderId: string, sourceFolder: string): string | null;
+  titleAt(
+    folderId: string,
+    sourceFolder: string,
+    sourceFile?: string | null
+  ): string | null;
 }
 
 /** The two columns a title needs for **Full details**: a synopsis and a poster. */
@@ -202,7 +219,7 @@ export function createEnrich(db: SqliteDatabase, reader: MovieReader): Enrich {
   }
 
   const updateMovieSource = db.prepare(
-    'UPDATE movies SET library_folder_id = ?, source_folder = ? WHERE id = ?'
+    'UPDATE movies SET library_folder_id = ?, source_folder = ?, source_file = ? WHERE id = ?'
   );
   const updateSeriesSource = db.prepare(
     'UPDATE series SET library_folder_id = ?, source_folder = ? WHERE id = ?'
@@ -212,11 +229,16 @@ export function createEnrich(db: SqliteDatabase, reader: MovieReader): Enrich {
      UNION ALL SELECT id FROM series WHERE library_folder_id = @folderId AND source_folder = @sourceFolder
      LIMIT 1`
   );
+  const selectFileAt = db.prepare(
+    `SELECT id FROM movies WHERE library_folder_id = @folderId
+       AND source_folder = @sourceFolder AND source_file = @sourceFile
+     LIMIT 1`
+  );
   const selectSource = db.prepare(
-    `SELECT library_folder_id, source_folder FROM movies
+    `SELECT library_folder_id, source_folder, source_file FROM movies
        WHERE id = @id AND library_folder_id IS NOT NULL
          AND source_folder IS NOT NULL
-     UNION ALL SELECT library_folder_id, source_folder FROM series
+     UNION ALL SELECT library_folder_id, source_folder, NULL FROM series
        WHERE id = @id AND library_folder_id IS NOT NULL
          AND source_folder IS NOT NULL`
   );
@@ -233,19 +255,26 @@ export function createEnrich(db: SqliteDatabase, reader: MovieReader): Enrich {
   function setSourceFolder(
     id: string,
     folderId: string,
-    sourceFolder: string
+    sourceFolder: string,
+    sourceFile: string | null = null
   ): boolean {
     return (
-      updateMovieSource.run(folderId, sourceFolder, id).changes +
+      updateMovieSource.run(folderId, sourceFolder, sourceFile, id).changes +
         updateSeriesSource.run(folderId, sourceFolder, id).changes >
       0
     );
   }
 
-  function titleAt(folderId: string, sourceFolder: string): string | null {
-    const row = selectAt.get({ folderId, sourceFolder }) as
-      | { id: string }
-      | undefined;
+  function titleAt(
+    folderId: string,
+    sourceFolder: string,
+    sourceFile: string | null = null
+  ): string | null {
+    const row = (
+      sourceFile === null
+        ? selectAt.get({ folderId, sourceFolder })
+        : selectFileAt.get({ folderId, sourceFolder, sourceFile })
+    ) as { id: string } | undefined;
     return row?.id ?? null;
   }
 
@@ -258,11 +287,18 @@ export function createEnrich(db: SqliteDatabase, reader: MovieReader): Enrich {
 
   function titleSource(id: string): TitleSource | null {
     const row = selectSource.get({ id }) as
-      | { library_folder_id: string; source_folder: string }
+      | {
+          library_folder_id: string;
+          source_folder: string;
+          source_file: string | null;
+        }
       | undefined;
-    return row === undefined
-      ? null
-      : { folderId: row.library_folder_id, sourceFolder: row.source_folder };
+    if (row === undefined) return null;
+    return {
+      folderId: row.library_folder_id,
+      sourceFolder: row.source_folder,
+      ...(row.source_file === null ? {} : { sourceFile: row.source_file }),
+    };
   }
 
   return {

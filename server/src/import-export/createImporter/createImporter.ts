@@ -402,6 +402,13 @@ const titleWithYear = (title: string, year: number | null): string =>
 const sourceFileOf = (dir: string, video: string): string =>
   relative(dir, video).split(sep).join('/');
 
+/**
+ * A **Collection folder** film's **Source file**, its one video relative to
+ * the shared folder; `null` for a film in a folder of its own.
+ */
+const collectionFileOf = (scan: MovieFolderScan): string | null =>
+  scan.collection === true ? sourceFileOf(scan.dir, scan.videos[0]) : null;
+
 /** An episode as the console names it: `Harbor & Vine · S01E03`. */
 const episodeLabel = (title: string, { season, episode }: ShowEpisode) =>
   `${title} · ${spellEpisodeTag(season, episode)}`;
@@ -426,6 +433,7 @@ const asMatchable = (show: ShowScan): MovieFolderScan => ({
   ].slice(0, 1),
   poster: null,
   backdrop: null,
+  images: [],
   subtitles: [],
 });
 
@@ -684,7 +692,8 @@ export function createImporter({
       storage.setSourceFolder(
         added.id,
         libraryFolder.id,
-        relative(libraryFolder.path, scan.dir)
+        relative(libraryFolder.path, scan.dir),
+        collectionFileOf(scan)
       );
       // A Folder scan has no row to name a genre: nothing is missing there.
       if (genres.length === 0 && current.source === 'sheet') {
@@ -1109,7 +1118,8 @@ export function createImporter({
           storage.setSourceFolder(
             heldId,
             sheetFolder.id,
-            relative(sheetFolder.path, match.folder.dir)
+            relative(sheetFolder.path, match.folder.dir),
+            collectionFileOf(match.folder)
           );
         }
         log(
@@ -1235,15 +1245,14 @@ export function createImporter({
         const sourceFolder = relative(folder.path, scan.dir);
         const key = filmKey(row.title, row.year);
         // A Collection folder's films share it, so the folder alone names
-        // none of them: each is held by its title key and year only.
-        const atFolder =
-          scan.collection === true
-            ? null
-            : storage.titleAt(folder.id, sourceFolder);
+        // none of them: each is held by its Source file, then by its title
+        // key and year.
+        const sourceFile = collectionFileOf(scan);
+        const atFolder = storage.titleAt(folder.id, sourceFolder, sourceFile);
         const heldId = atFolder ?? already.get(key) ?? null;
         if (heldId !== null) {
           // Held: linked to where it was found, and nothing is added.
-          storage.setSourceFolder(heldId, folder.id, sourceFolder);
+          storage.setSourceFolder(heldId, folder.id, sourceFolder, sourceFile);
           log(
             current,
             `· Already in library ${titleWithYear(row.title, row.year)}`,

@@ -262,9 +262,16 @@ export interface LibraryStorage {
   /**
    * Record where a **Movie** or **Series** came from, both columns in one
    * call: the **Library folder** it was found under and its Source folder
-   * relative to that folder. Answers whether the library holds that id.
+   * relative to that folder — and for a **Collection folder** film its
+   * **Source file**, `null` for any other. Answers whether the library holds
+   * that id.
    */
-  setSourceFolder(id: string, folderId: string, sourceFolder: string): boolean;
+  setSourceFolder(
+    id: string,
+    folderId: string,
+    sourceFolder: string,
+    sourceFile?: string | null
+  ): boolean;
   /**
    * Where a Movie or Series was recorded as coming from: its Library folder's
    * id and its Source folder, read together — `null` for a title with no
@@ -278,9 +285,14 @@ export interface LibraryStorage {
   sourcePath(id: string): string | null;
   /**
    * The id of the **Movie** or **Series** recorded at this Library folder and
-   * Source folder, whatever its title says now — `null` when none is.
+   * Source folder, whatever its title says now — `null` when none is. Given
+   * a **Source file**, only the Collection folder film recorded with it.
    */
-  titleAt(folderId: string, sourceFolder: string): string | null;
+  titleAt(
+    folderId: string,
+    sourceFolder: string,
+    sourceFile?: string | null
+  ): string | null;
   /**
    * Insert a **Series** and its genres (ordered) in one transaction, and
    * return the assembled model. It carries no watch state: that lives on its

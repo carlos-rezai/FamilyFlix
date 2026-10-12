@@ -34,6 +34,11 @@ export interface MovieFolderScan {
   videos: string[];
   poster: string | null;
   backdrop: string | null;
+  /**
+   * Every image in the folder, in name order, so a **Collection folder**'s
+   * films can each be given the one named after its video.
+   */
+  images: string[];
   subtitles: SubtitleFound[];
   /**
    * Set on one film of a **Collection folder**: `dir` is shared with the
@@ -81,6 +86,7 @@ export async function scanMovieFolder(dir: string): Promise<MovieFolderScan> {
     videos: files.filter(isVideoFilename).map((file) => join(dir, file)),
     poster: at(poster),
     backdrop: at(backdrop),
+    images: images.map((file) => join(dir, file)),
     subtitles: files.filter(isSubtitleFilename).map((file) => ({
       path: join(dir, file),
       language: detectSubtitleLanguage(file),

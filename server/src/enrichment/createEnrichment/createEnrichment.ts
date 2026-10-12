@@ -321,7 +321,9 @@ export function createEnrichment({
 
   /**
    * The poster write target: the poster just stored, added to the title's
-   * **Source folder** as `poster.jpg` when the run may write posters. A title
+   * **Source folder** as `poster.jpg` — a Collection folder film's as
+   * `<video stem>-poster.jpg` beside its video — when the run may write
+   * posters. A title
    * with no source folder on record, or one whose folder is gone, is one line.
    */
   async function writePoster(
@@ -341,7 +343,12 @@ export function createEnrichment({
       } catch {
         return;
       }
-      outcome = await writeBack.poster(home.path, source.sourceFolder, poster);
+      outcome = await writeBack.poster(
+        home.path,
+        source.sourceFolder,
+        poster,
+        source.sourceFile ?? null
+      );
     }
     if (outcome === null || outcome.kind === 'no-folder') {
       log(

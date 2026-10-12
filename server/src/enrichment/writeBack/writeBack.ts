@@ -1,6 +1,14 @@
 import { createWriteStream } from 'node:fs';
 import { stat, unlink, writeFile } from 'node:fs/promises';
-import { isAbsolute, join, relative, resolve } from 'node:path';
+import {
+  basename,
+  dirname,
+  extname,
+  isAbsolute,
+  join,
+  relative,
+  resolve,
+} from 'node:path';
 import type { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 
@@ -20,6 +28,20 @@ export const SHEET_NAME = `${SHEET_STEM}.csv`;
 
 /** The name a poster takes in its **Source folder**. */
 export const POSTER_NAME = 'poster.jpg';
+
+/**
+ * A **Collection folder** film's poster, named after its **Source file** —
+ * `<video stem>-poster.jpg` beside the video — so the folder's `poster.jpg`
+ * stays the collection's. Plex's and Jellyfin's naming. With no Source file,
+ * the folder's own {@link POSTER_NAME}.
+ */
+const posterName = (sourceFile: string | null): string =>
+  sourceFile === null
+    ? POSTER_NAME
+    : join(
+        dirname(sourceFile),
+        `${basename(sourceFile, extname(sourceFile))}-poster.jpg`
+      );
 
 /** The two optional **Write targets**. */
 export type WriteTarget = 'sheet' | 'posters';
@@ -53,7 +75,8 @@ export interface WriteBack {
   poster(
     root: string,
     sourceFolder: string | null,
-    stream: Readable
+    stream: Readable,
+    sourceFile?: string | null
   ): Promise<PosterOutcome>;
   sheet(root: string, movies: Movie[]): Promise<SheetOutcome>;
 }
@@ -116,7 +139,8 @@ async function sourceDirectory(
 async function poster(
   root: string,
   sourceFolder: string | null,
-  stream: Readable
+  stream: Readable,
+  sourceFile: string | null = null
 ): Promise<PosterOutcome> {
   const folder =
     sourceFolder === null ? null : await sourceDirectory(root, sourceFolder);
@@ -124,13 +148,14 @@ async function poster(
     stream.destroy();
     return { kind: 'no-folder', line: null };
   }
-  const target = join(folder, POSTER_NAME);
+  const name = posterName(sourceFile);
+  const target = join(folder, name);
   try {
     // `wx` creates or fails: a poster already there is never opened for writing.
     await pipeline(stream, createWriteStream(target, { flags: 'wx' }));
     return {
       kind: 'written',
-      line: { text: `↓ ${POSTER_NAME}  →  ${target}`, kind: 'scan' },
+      line: { text: `↓ ${basename(name)}  →  ${target}`, kind: 'scan' },
     };
   } catch (error) {
     stream.destroy();
@@ -138,7 +163,7 @@ async function poster(
       return {
         kind: 'exists',
         line: {
-          text: `· ${join(sourceFolder ?? '', POSTER_NAME)} exists, left alone`,
+          text: `· ${join(sourceFolder ?? '', name)} exists, left alone`,
           kind: 'info',
         },
       };
@@ -147,7 +172,7 @@ async function poster(
     return {
       kind: 'failed',
       line: {
-        text: `⚠ ${POSTER_NAME} could not be written to ${folder}`,
+        text: `⚠ ${basename(name)} could not be written to ${folder}`,
         kind: 'warning',
       },
     };

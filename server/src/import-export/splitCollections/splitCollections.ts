@@ -30,24 +30,40 @@ const titleOfVideo = (video: string): string =>
 const isCollection = (scan: MovieFolderScan): boolean =>
   new Set(scan.videos.map(titleOfVideo).filter((key) => key !== '')).size >= 2;
 
+/**
+ * A film's own poster beside its video, Plex's and Jellyfin's naming: the
+ * image whose stem is `<video stem>-poster`, case folded; `null` for none.
+ */
+const posterOf = (scan: MovieFolderScan, video: string): string | null => {
+  const named = `${stemOf(video)}-poster`.toLowerCase();
+  return (
+    scan.images.find((image) => stemOf(image).toLowerCase() === named) ?? null
+  );
+};
+
 /** One video of a Collection folder as a film scan of its own. */
-const filmOf = (scan: MovieFolderScan, video: string): MovieFolderScan => ({
-  dir: scan.dir,
-  name: stemOf(video),
-  videos: [video],
-  poster: null,
-  backdrop: null,
-  subtitles: scan.subtitles.filter(
-    (track) => videoOf(track.path, scan.videos) === video
-  ),
-  collection: true,
-});
+const filmOf = (scan: MovieFolderScan, video: string): MovieFolderScan => {
+  const poster = posterOf(scan, video);
+  return {
+    dir: scan.dir,
+    name: stemOf(video),
+    videos: [video],
+    poster,
+    backdrop: null,
+    images: poster === null ? [] : [poster],
+    subtitles: scan.subtitles.filter(
+      (track) => videoOf(track.path, scan.videos) === video
+    ),
+    collection: true,
+  };
+};
 
 /**
  * Split each **Collection folder** among the films `groupShows` passed
  * through into one film scan per video — named off the video's stem, holding
- * the subtitles whose names begin with it, with no poster or backdrop, since
- * the folder's art is the collection's — and marked `collection`. Every other
+ * the subtitles whose names begin with it, its poster the image named
+ * `<its stem>-poster` and never the folder's art, which is the collection's,
+ * no backdrop — and marked `collection`. Every other
  * scan passes through by identity; order is kept.
  */
 export function splitCollections(films: MovieFolderScan[]): MovieFolderScan[] {

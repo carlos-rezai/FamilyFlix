@@ -275,4 +275,13 @@ export const migrations: readonly Migration[] = [
       db.exec('ALTER TABLE episodes ADD COLUMN source_file TEXT;');
     },
   },
+  {
+    // A Collection folder film's Source file: the video's path relative to
+    // its Source folder. Additive and nullable: a film in a folder of its own
+    // never has one, and nothing is backfilled.
+    version: 9,
+    up(db) {
+      db.exec('ALTER TABLE movies ADD COLUMN source_file TEXT;');
+    },
+  },
 ];
