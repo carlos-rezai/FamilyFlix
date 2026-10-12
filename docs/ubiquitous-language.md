@@ -439,13 +439,13 @@ and player learning what an **Episode** is. Everything additive — the
 | ------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------- |
 | **Series** (new)                | A TV show in the library — one row in `series`, one **Poster card** on the **Series tab**, one **Series page**. Carries a title, a **Year range**, a creator, cast, synopsis, genres, a household **Rating** and a **Favorite**, and no watch state of its own.                                                                                                                                                                                                              | show (in code), TV show, programme, title     |
 | **Episode** (new)               | One file of a **Series**, one row in `episodes`, numbered by **Season** and episode — the unit that is played, resumed and marked **Watched**, with exactly the movie's watch trio (`watched`, resume position, `last_watched_at`).                                                                                                                                                                                                                                          | ep, chapter, part                             |
-| **Season** (new)                | The **Episodes** of a **Series** that share a `season_number` — a number, not a row: there is no `seasons` table, and nothing about a season is stored.                                                                                                                                                                                                                                                                                                                      | series (for a season), volume, part           |
+| **Season** (updated)            | The **Episodes** of a **Series** that share a `season_number` — a number, not a row: there is no `seasons` table, and the one thing stored about a season is its **Season poster**, keyed by that number (log 39 Q1).                                                                                                                                                                                                                                                        | series (for a season), volume, part           |
 | **Year range** (new)            | A **Series**' `year` and `end_year`, drawn in the prototype's three shapes: `2022` (they are equal), `2019–2023`, and `2021–` (`end_year` null, still running). Read from the **Sheet**'s _Year_ cell; a lone year is a finished run.                                                                                                                                                                                                                                        | airing years, run, dates                      |
 | **Series tab** (new)            | The browse home at `?tab=series`, chosen by the **Library tabs**: an **Episode continue card** row over _All series_, a count line and a **Library grid** of **Poster cards**. The header's search, genre, rating and sort all apply to it.                                                                                                                                                                                                                                  | TV page, shows page, series section           |
 | **Library tabs** (updated)      | The Movies / Series **Pill tabs** first in the browse header — two **Controls** with `aria-pressed`, writing `tab` as a `replace`. Switching clears the search and keeps the filters. The **Kind tabs** are their twin on the **Movie form**.                                                                                                                                                                                                                                | tab bar, toggle, switcher, segmented tabs     |
 | **Series page** (new)           | `/series/:id` — the movie page's hero shape for a **Series**: poster, **Year range**, season and episode count, read-only stars, genres, _Resume S02E04_, the heart, the progress line, synopsis, _Created by_ / _Starring_, over the **Season cards**. No ⋯ menu, no rating picker, no watched toggle. Its Back is `page.SeriesPage`'s 44px glass circle, icon-only — not the movie page's text pill.                                                                       | series detail, show page                      |
 | **Season page** (new)           | `/series/:id/season/:n` — one **Season**'s **Episode rows** under the series title, _Resume E04_, the count line, _Mark season watched_, and the _Other seasons_ pills. Its **Landing** is the **Series page**.                                                                                                                                                                                                                                                              | episode list, season detail                   |
-| **Season card** (new)           | `components/SeasonCard/` — the 2:3 **Card** on the **Series page**: `S02` over the series' gradient, a watched badge when the **Season** is complete, a bar when part-watched, and "8 episodes" or "3 of 8 watched" under _Season 2_.                                                                                                                                                                                                                                        | season tile, season poster                    |
+| **Season card** (updated)       | `components/SeasonCard/` — the 2:3 **Card** on the **Series page**: `S02` over its **Season poster**, else the series' gradient, a watched badge when the **Season** is complete, a bar when part-watched, and "8 episodes" or "3 of 8 watched" under _Season 2_.                                                                                                                                                                                                            | season tile, season art                       |
 | **Episode row** (new)           | `components/EpisodeRow/` — one **Episode** on the **Season page**: 16:9 gradient thumbnail with a hover play glyph and resume bar, `S02E04` and the title, the air date, the **Resume label**, and a watched box that only marks. A **Card**; its box a **Control**.                                                                                                                                                                                                         | episode card, episode item, list row          |
 | **Next episode** (new)          | `nextEpisodeOf` — the first part-watched **Episode**, else the first unwatched, else the first; answered once, on the server, for a **Series** and for each **Season**. What _Resume_ / _Play_ on both pages plays; its first arm alone is what the **Episode continue card** shows.                                                                                                                                                                                         | up next (for this), resume target, current ep |
 | **Episode continue card** (new) | A **Continue card** on the **Series tab** — one per **Series** with a part-watched **Episode**, reading `Harbor & Vine · S02E04` over the **Resume label**, ordered by last watched; it opens the player, not a page.                                                                                                                                                                                                                                                        | series continue card, resume card             |
@@ -659,6 +659,17 @@ Design log 38: step 21, which folds log 32's steps 21–23 into one initiative,
 | **Series Resolve** (new)    | The **Movie form**'s series kind in import context, `/add?kind=series&problem=<id>`, plus `?series=<id>` when the show is already held. It draws one **Episode file row** per **Unplaced** video, prefilled by the **Numbering guess**. It saves through the one resolve route with the series body, and records each **Source file**.                                                                                                                  | episode resolve, link episodes                                                                                                                                             |
 | **Found-file choice** (new) | The film form's video **File slot** in import context when the **Problem detail**'s `files.videos` holds more than one video. The folder's videos are offered as options, with the first preselected and the picker kept beside them. A `no-video` Problem for two videos reads _Two videos. Pick the film._                                                                                                                                            | video picker, file chooser                                                                                                                                                 |
 
+## Season posters (new)
+
+Design log 39: the build order's 🔜 **Season posters**, initiative
+`season-posters`. It reopens log 22's ruling that "offline has no source".
+Planned (🔜) until it ships.
+
+| Term                    | Definition                                                                                                                                                                                                                                                  | Aliases to avoid                           |
+| ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------ |
+| **Season poster** (new) | A **Season**'s own portrait art from TMDB, stored as `S02-poster.jpg` in the **Series folder** and recorded as one `season_posters` row (`series_id`, `season_number`, `poster_path`), drawn on the **Season card** over the **Gradient fallback**.         | season art, season cover, season thumbnail |
+| **Season plan** (new)   | What `planSeason` answers for one **Season** in a **Sync**: the TMDB image path of the **Season poster** wanted, or `null`. It follows the **Still** rule: wanted only under the Poster chip, only when none is held, never replaced, never a **Decision**. | season fill, season enrichment             |
+
 ## Relationships
 
 - A **Library folder** has zero-or-more titles (**Movies** and **Series**) recorded against it; a title has at most one Library folder, and none once its folder is removed or when it was added by hand.
@@ -804,6 +815,10 @@ Design log 38: step 21, which folds log 32's steps 21–23 into one initiative,
 - The **Movie detail page** and the **Series page** each draw exactly one **Detail backdrop**; it holds one **Backdrop** (or its **Gradient fallback**) and one **Backdrop veil**. A **Poster surface** never draws one.
 - A **Factory reset** erases the database before the **Managed media directory**, never after: a file that will not go is a **Stranded folder** that **Space used** shows, while a row whose files are gone would be broken. Every table is either erased or kept by name, and a table that is neither fails the guard (log 37 Q1).
 - An **Export** asks for one **Export name** and makes one **Export folder**; the two differ only when the name was taken and the folder is numbered. Every refusal of `POST /api/export` names one field, the **Export destination** or the name, and the dialog draws it under that field alone (log 36).
+
+- A **Series** has at most one **Season poster** per **Season** number, and season 0 never has one. A row outlives a renumber or a removal of that season's episodes: it belongs to season N of the show, not to the files numbered N (log 39 Q10).
+- A **Season poster** is filled by a **Sync** only, through **Enrichment**: never by the **Movie form**, never by **Bulk import**. It is not a **Write target**, it does not count toward **Full details**, and it travels in an **Export** under _Images_ as `seasons/S02.<ext>`, with no column.
+- The **Season card** is not a **Poster surface**: with no **Season poster** it draws the series' **Gradient fallback**, never the **Default poster** and never the **Series**' **Poster**.
 
 ## Example dialogue
 
@@ -1392,6 +1407,18 @@ Hard` gets found and `Die Hard\extras` doesn't become a second film."
 > the file as **Already in library**. If I renumber it later in the
 > **Series edit job**, that's a **Two-pass renumber**, and the episode keeps
 > its watch state."
+
+> **Dev:** "A **Sync** matched _Harbor and Vine_. Does it fetch a **Season
+> poster** for every **Season**?"
+> **Domain expert:** "For every season on disk except season 0, and only
+> under the Poster chip. The **Season plan** asks for one only when none is
+> held, exactly like a **Still**. It never replaces one, even under
+> _Everything_."
+> **Dev:** "And if I renumber season 2's episodes into season 3 in the
+> **Series edit job**?"
+> **Domain expert:** "The `S02-poster.jpg` stays in the **Series folder** and
+> its row stays. It is season 2's poster, whichever files are numbered 2. The
+> **Season card** for season 3 draws its own, or the gradient."
 
 ## Flagged ambiguities
 
@@ -2223,3 +2250,10 @@ Hard` gets found and `Die Hard\extras` doesn't become a second film."
 - **"Unlink" means the Match unlink only (new):** clearing `tmdb_id`. An
   **Episode link** is never "unlinked"; taking an episode out is a removal in
   the **Series edit job**.
+- **"Season poster" was an alias to avoid for the Season card (updated):**
+  it is now a term of its own. The **Season poster** is the art, and the
+  **Season card** is the tile that draws it. Never say "season poster" for
+  the card.
+- **"Poster" without a qualifier means a Title's Poster (new):** a
+  **Season poster** is always named in full. In the Export, _Images_ carries
+  both kinds, and only its folder (`seasons/`) tells them apart.
