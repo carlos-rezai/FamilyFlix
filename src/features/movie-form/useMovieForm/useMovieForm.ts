@@ -12,7 +12,8 @@ import type {
   MovieFormFile,
   MovieFormValues,
 } from '@/types';
-import { moviePath, seriesPath, seriesTabPath } from '@/utils';
+import { seriesTabPath } from '@/utils';
+import { formJob, formLanding, KIND_PARAM } from '../formJob/formJob';
 import { titleFromFilename } from '../titleFromFilename/titleFromFilename';
 import { useEpisodeList } from '../useEpisodeList/useEpisodeList';
 import {
@@ -49,91 +50,8 @@ const FRESH_HOME = '/';
  */
 const SERIES_FRESH_HOME = seriesTabPath();
 
-/**
- * The **Add context**'s **Landing** — the hub the ＋ that opens this screen
- * lives on, rather than the library, which is where a *finished* add goes and
- * is a different journey's end.
- */
-const ADD_LANDING = '/settings';
-
-/**
- * The **Import context**'s **Landing**: the **Review step**, where the rest of
- * the list still is.
- *
- * Every leaving from this context — _Save & continue_, _Skip this one_ and
- * Back alike — is a **History step** onto the review the form was opened from,
- * because _Resolve_ is a link from that review and nothing else opens this
- * URL. Only the deep link, which has no such entry behind it, arrives here.
- */
-const REVIEW_LANDING = '/import';
-
-/**
- * The query parameter that says which movie this screen is amending.
- *
- * There is no `/edit` route: COMPONENT-SPEC §6's `editMovie()` reuses this
- * screen, and the detail page's **Edit details** menu item has linked here
- * since #26. One URL, two jobs.
- */
-const MOVIE_PARAM = 'movie';
-
-/**
- * The query parameter that says which **Problem** this screen is resolving —
- * the **Review step**'s _Resolve_ lands on `/add?problem=<id>`. The third job
- * of the same URL.
- */
-const PROBLEM_PARAM = 'problem';
-
-/**
- * The query parameter that says which series this screen is amending — the
- * **Series edit job**, `/add?series=<id>`, the series ⋯ menu's _Edit
- * details_. The fifth job; `?problem=` and `?movie=` win over it.
- */
-const SERIES_PARAM = 'series';
-
-/**
- * The **Landing** of the one screen in the app with three ways in: the
- * **Review step** when `?problem=` is present, the movie's page when `?movie=`
- * is, Settings otherwise.
- *
- * **It is the URL's two query parameters and nothing else.** Reading it off
- * `editing` or `resolving` would be reading it off a fetch: both are `null`
- * until a record lands, so a Back pressed on a deep-linked edit before the read
- * answered would fall back to Settings and strand the maintainer on a screen
- * they were never coming from. The URL is complete on the first render, which
- * is when the landing has to be right.
- *
- * `?problem=` wins over `?movie=` because the pair is one kind — the
- * **Import context** over the **Edit job** — and the review is where that
- * maintainer was.
- */
-function formLanding(
-  movie: string | null,
-  problem: string | null,
-  series: string | null
-): string {
-  if (problem !== null) {
-    return REVIEW_LANDING;
-  }
-  if (movie !== null) {
-    // The page a correction is visible on — the **Edit context**'s **Landing**.
-    return moviePath(movie);
-  }
-  if (series !== null) {
-    // The series page, the **Series edit job**'s **Landing**.
-    return seriesPath(series);
-  }
-  return ADD_LANDING;
-}
-
 /** The most digits a year can have. */
 const YEAR_LENGTH = 4;
-
-/**
- * The query parameter that says which **Form kind** a plain add is on —
- * `?kind=series`, written as a `replace` and omitted at `movie`: the library
- * tabs' rule. Beside `?movie=` or `?problem=` it is ignored.
- */
-const KIND_PARAM = 'kind';
 
 /**
  * The most characters a series' **Year range** can have — `2019–2023`: two
@@ -418,35 +336,28 @@ export function useMovieForm(): UseMovieFormResult {
   /** The film Resolve's found videos, for the **Found-file choice**. */
   const [foundVideos, setFoundVideos] = useState<MovieFormFile[]>([]);
 
-  const requested = searchParams.get(MOVIE_PARAM);
-  const problem = searchParams.get(PROBLEM_PARAM);
-  // The **Series edit job** stands alone: beside `?problem=` or `?movie=` it
-  // is ignored, as `?kind=` is.
-  const seriesRequested =
-    requested === null && problem === null
-      ? searchParams.get(SERIES_PARAM)
-      : null;
+  // The URL, read once: which of the five jobs this screen is doing.
+  const job = formJob(searchParams);
+  const requested =
+    job.kind === 'edit' || job.kind === 'resolve' ? job.movie : null;
+  const problem = job.kind === 'resolve' ? job.problem : null;
+  const seriesRequested = job.kind === 'seriesEdit' ? job.series : null;
 
   // The kind is the URL's, on a plain add alone: beside a context there is
-  // nothing to switch, and `?kind=` is ignored. A series edit is the series
-  // kind, with no tabs to switch it.
-  const showKindTabs =
-    requested === null && problem === null && seriesRequested === null;
-  // The **Series Resolve**: `?problem=` with `?kind=series`, an `unplaced`
-  // show's _Resolve_ — and `?series=` beside them, the held series it joins.
-  // The kind is the series' once the problem read back is `unplaced`: beside
-  // any other problem `?kind=` is ignored, as it is beside every context.
-  const askingSeries =
-    problem !== null &&
-    requested === null &&
-    searchParams.get(KIND_PARAM) === 'series';
-  const joining = askingSeries ? searchParams.get(SERIES_PARAM) : null;
+  // nothing to switch. A series edit is the series kind, with no tabs to
+  // switch it.
+  const showKindTabs = job.kind === 'add';
+  // The **Series Resolve**: an `unplaced` show's _Resolve_, and the held
+  // series it joins. The kind is the series' once the problem read back is
+  // `unplaced`: beside any other problem the ask is ignored.
+  const askingSeries = job.kind === 'resolve' && job.asksSeries;
+  const joining = job.kind === 'resolve' ? job.joining : null;
   const [unplaced, setUnplaced] = useState(false);
   const resolvingSeries = askingSeries && unplaced;
   const kind: FormKind =
-    seriesRequested !== null ||
+    job.kind === 'seriesEdit' ||
     resolvingSeries ||
-    (showKindTabs && searchParams.get(KIND_PARAM) === 'series')
+    (job.kind === 'add' && job.formKind === 'series')
       ? 'series'
       : 'movie';
   const setParam = useQueryParamWriter();
@@ -458,7 +369,7 @@ export function useMovieForm(): UseMovieFormResult {
   // The app's one **Back rule**, with this screen's own **Landing** behind it
   // for the deep-linked case. Built from the URL on the first render, before
   // either read above has answered — see {@link formLanding}.
-  const goBack = useGoBack(formLanding(requested, problem, seriesRequested));
+  const goBack = useGoBack(formLanding(job));
 
   // Read once per id, the way `useGenrePool` reads once per mount: the record
   // is what fills the fields, and asking again would overwrite whatever the
