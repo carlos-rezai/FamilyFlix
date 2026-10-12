@@ -148,7 +148,7 @@ familyflix/
 │ │ └── series/ ← series storage, one unit per concern as the movie's is, each with its own suite: `read` (the series page, the player's episode read, the episode list), `browse` (the Series tab and its genres), `write` (the two inserts), `watch` (the resume write, the episode and season marks), `curation` (the heart), `enrich` (a Sync's series and episode writes and `seriesInScope`), and `nextEpisodeOf`, pure
 │ │ │ └── yearSpan/ ← pure: the one reading of a **Year range** — `2022`, `2019–2023`, `2021–` → `{ year, endYear }`, anything else `null` — read by the Movie form's series save and the Sheet's Year cell alike; and `spellYearSpan`, its writer, the Export's Year cell and title folders
 │ ├── media/ ← folder scanning, file copy into managed storage, subtitle detection, the Movie folder’s removal after a Delete
-│ │ ├── createMedia/ ← the injected domain: reserve a Movie folder, `seasonFolder` (a Series folder’s `season-NN/`), storeUpload, copyIn (a stream under the cancel signal), the four removals — the last `emptyRoot`, **Factory reset**'s, the root emptied best-effort and kept; and a Sync's three — `storeNamed` (beside a Stored path), `storeInSeriesFolder` (two directories above an episode), `readStored` (a stored file as a stream). Only `media/` touches managed storage
+│ │ ├── createMedia/ ← the injected domain: reserve a Movie folder, `seasonFolder` (a Series folder’s `season-NN/`), storeUpload, copyIn (a stream under the cancel signal), `openSeriesFolder` (`openFolder`'s twin: the **Series folder** above a held episode's **Stored path**, read once inside the domain), the five removals — `removeSeriesFolder` a series delete's, and the last `emptyRoot`, **Factory reset**'s, the root emptied best-effort and kept; and a Sync's three — `storeNamed` (beside a Stored path), `storeInSeriesFolder` (two directories above an episode), `readStored` (a stored file as a stream). Only `media/` touches managed storage
 │ │ ├── fileKinds/ ← what an image, a subtitle and a video may be called — the store’s security boundary, and the scanner’s line
 │ │ ├── readableFolder/ ← an absolute path → `readable` / `not-a-folder` / `missing` / `relative`, never throwing: the one reading of reach, for the folder add, the importer's root check, the list's `reachable`, the Sync and the Export
 │ │ ├── writableFolder/ ← a path → whether it is a directory this process can write into, never throwing: the one reading of _writable_, for the Sync's Write targets and an Export's destination
@@ -199,7 +199,7 @@ familyflix/
 │ │ ├── decisionFace/ ← pure: a search → an `ambiguous` Decision's top three **Candidates** (the genre off the pool, the language upper-cased) or a `missing` one's reason
 │ │ ├── writeBack/ ← the two **Write targets**: the permission check and its dry-run lines, `familyflix-metadata.csv` per **Library folder** and `poster.jpg` per **Source folder** — with an Export, the only code that writes into a Library folder, each only ever adding what is not there
 │ │ └── createEnrichment/ ← the injected domain: the key, and the **Current enrichment run** — one in memory, its state machine as closures over the run, the abort controller and the Decisions, `createImporter`'s shape
-│ ├── db/ ← SQLite connection + schema/migrations (1 the schema and the genre seed, 2 `last_watched_at`, 3 the `settings` table — nothing seeded, 4 `series` and `episodes` with their two joins, `series_genres` and `episode_subtitles` — no `seasons` table, 5 `original_title`, `tmdb_score` and `source_folder` on both titles and `still_path` on episodes, 6 `library_folders` and `library_folder_id` on both titles, 7 the carry-over of `settings.library-root` onto the list), shared by every domain module above; `better-sqlite3`'s `nativeBinding` taken from `FAMILYFLIX_SQLITE_BINDING` when set, so the shell runs on the Electron-ABI binding and Vitest on the package's own; `seriesSeed/`, the dev library's mock series; and `resetDatabase/`, **Factory reset**'s erase — `ERASED_TABLES` and `KEPT_TABLES` (the Genre pool), one transaction, a guard in its suite refusing a table in neither list
+│ ├── db/ ← SQLite connection + schema/migrations (1 the schema and the genre seed, 2 `last_watched_at`, 3 the `settings` table — nothing seeded, 4 `series` and `episodes` with their two joins, `series_genres` and `episode_subtitles` — no `seasons` table, 5 `original_title`, `tmdb_score` and `source_folder` on both titles and `still_path` on episodes, 6 `library_folders` and `library_folder_id` on both titles, 7 the carry-over of `settings.library-root` onto the list, 8 `episodes.source_file`, the **Source file** an **Episode link** remembers across scans), shared by every domain module above; `better-sqlite3`'s `nativeBinding` taken from `FAMILYFLIX_SQLITE_BINDING` when set, so the shell runs on the Electron-ABI binding and Vitest on the package's own; `seriesSeed/`, the dev library's mock series; and `resetDatabase/`, **Factory reset**'s erase — `ERASED_TABLES` and `KEPT_TABLES` (the Genre pool), one transaction, a guard in its suite refusing a table in neither list
 │ ├── shell/ ← the server's half of the shell seam and its process lifecycle — infrastructure beside `db/`, not a domain
 │ │ ├── shellHandshake/ ← `shellHandshake(parentPort, startup)`: the startup answers `Started { server, shutdown }`, `ready` or `fatal` is posted, main's `shutdown` command runs the shutdown it was handed; inert with no parent port
 │ │ ├── listen/ ← the `127.0.0.1` bind, always; under the shell a taken **Shell port** falls back to an ephemeral one; `boundPort(server)`, the one reading of the port
@@ -251,6 +251,7 @@ familyflix/
 │ │ ├── Fab/ ← the FAB, `mol.Fab.dc.html` 1:1: one more `styled(IconButton)` face — the accent circle at 28px from the bottom-right corner, one of two glyphs by `icon`, named by a required `label`. Presentational to the last prop — no state, no listener, no effect; it does not know there is a threshold
 │ │ ├── BackToTop/ ← the control: given the scrolling container as a ref, it owns the Scroll threshold (`scrollTop > 420`, strictly), the passive listener, the read on attach and the press, and mounts the FAB or nothing. Two files, no styles — it draws nothing of its own
 │ │ ├── CreditsRow/ ← the lead credit and Starring: graduated from `movie-detail/` when the series page drew it too, its lead label a prop
+│ │ ├── CornerMenu/ ← the ⋯ menu's furniture, graduated when both detail pages drew it: `Menu` in the fixed top-right slot, the translucent 44px ⋯ named _More options_, `MoreIcon` at 20; its `MenuItem`s the caller's children. Presentational — it knows no route and no dialog
 │ │ ├── DetailBackdrop/ ← the **Detail backdrop**, graduated when both detail pages drew it: the art sticky at the top of the page's scroller and a full viewport tall, under the **Backdrop veil** — a gradient over `accentSoft`; its `100vh` coupled to both pages' `Scroller`
 │ │ ├── SeasonCard/ ← `mol.SeasonCard` 1:1: the 2:3 **Card**, `S02` over the gradient, the badge when complete, the bar when part-watched
 │ │ ├── PillTabs/ ← `mol.PillTabs` 1:1: the pill track of `aria-pressed` buttons in a labelled group, generic in its value so a press hands back the caller's own union; presentational — it knows no URL. The **Library tabs** and the **Kind tabs** are its callers
@@ -281,7 +282,9 @@ familyflix/
 │ │ │ ├── useSeriesRead/ ← the one load both pages read: the Load state, the stale-response guard, retry, and `editSeries`
 │ │ │ ├── useSeriesDetail/ useSeasonEpisodes/ ← each page’s read mapped per render, and its writes on `useOptimisticEdit`
 │ │ │ ├── seriesView/ seasonView/ ← pure: a SeriesDetail → SeriesPageModel, and → SeasonPageModel for one season
-│ │ │ └── api/ ← fetchSeriesDetail, saveSeasonWatched (one caller each)
+│ │ │ ├── SeriesEditMenu/ ← the series page's ⋯ on `CornerMenu`: _Edit details_ (`/add?series=<id>`), _Fetch from TMDB_, and the Danger row that opens the Delete dialog
+│ │ │ ├── DeleteSeriesDialog/ useDeleteSeries/ ← the movie's Delete dialog worded for a series, _its N episodes_ in the singular at one; `{ deleting, deleteSeries }`, onto the Series tab once the series is gone
+│ │ │ └── api/ ← saveSeasonWatched, deleteSeries (one caller each)
 │ │ ├── player/ ← built-in video player, subtitle handling, resume position — for any **Playable**, a movie or an episode
 │ │ │ ├── Player/ ← the organism: owns the hooks, renders the rest
 │ │ │ ├── PlayerControls/ ← the top and bottom chrome bars
@@ -313,16 +316,20 @@ familyflix/
 │ │ │ ├── enrichmentView/ ← pure: the running card's words, the estimate, the scope cards' lines, _All done_'s _Saved to …_, and the **Let-go line**
 │ │ │ └── api/ ← startEnrichment, fetchCurrentEnrichment, cancelEnrichment, and the four Decision writes (one caller each)
 │ │ ├── maintainer.styles.ts ← the furniture the Maintainer’s screens extend: the header row, heading and lede; the captioned field
-│ │ ├── movie-form/ ← Add a movie or a series, Edit a movie: one form, manual file pickers, the **Form kind** on the **Kind tabs**; and Resolve, the Import context over either job
+│ │ ├── movie-form/ ← Add a movie or a series, Edit a movie or a series: one form with five jobs, manual file pickers, the **Form kind** on the **Kind tabs**; and Resolve, the Import context over a film, an edit or an `unplaced` show
 │ │ │ ├── MovieForm/ ← the organism: the header row with the Kind tabs on a plain add, the fields both kinds share, the kind's words, and one of the two Files cards
 │ │ │ ├── MovieFormFiles/ SeriesFormFiles/ ← the two Files cards: the video, poster and subtitle list; and the poster over the **Episode file rows** and _＋ Add episode files_
 │ │ │ ├── filesCard.styles.ts filesCard.ts ← what both Files cards share, flat as `maintainer.styles.ts` is: the card, its caption and the list section; the three `accept` lists, the caption and the poster slot's names
-│ │ │ ├── useMovieForm/ ← everything the form does: the kind off `?kind=series`, the **Save gate** per kind, the title prefill, each job's save and where it lands
+│ │ │ ├── FoundFileChoice/ ← the **Found-file choice**: a film Resolve's videos as a radio group in the video slot's place, handed one Found file slot each, the picker kept under them
+│ │ │ ├── formJob/ ← pure: the URL → one of the five jobs (`add`, `edit`, `resolve`, `seriesEdit`), `?problem=` over `?movie=` over `?series=`; and `formLanding(job)`, each job's **Landing**
+│ │ │ ├── loadFormRecord/ ← a job's reads in one place — `fetchMovie`, `fetchSeriesDetail`, `fetchProblem` with the held series beside it — → what the form opens on, or `null` for a record that is gone; never rejecting
+│ │ │ ├── useMovieForm/ ← the state and the writes: the kind, the **Save gate** per kind, the title prefill, each job's save — a switch over the job — and where it lands
 │ │ │ ├── useEpisodeList/ ← the series' rows: a pick read off its tags, the edits, each row's subtitles, and `episodesComplete`, the series half of the gate
-│ │ │ ├── readEpisodeTag/ ← the client mirror of the server's `episodeTag`, `TAG_SHAPES` exported, held to it by a drift guard over one table
+│ │ │ ├── readEpisodeTag/ ← the client mirror of the server's `episodeTag`, `TAG_SHAPES` exported, held to it by a drift guard over one table — and `readSeasonFolder` to `groupShows`' `seasonOf` by the same guard
+│ │ │ ├── readSeasonFolder/ ← the client mirror of the server's **Season folder** rule — `Season 01`, `Season 1`, `S01`, else `null` — which seeds the **Numbering guess**
 │ │ │ ├── titleFromFilename/ ← pure: the **Title guess** off a picked video, ending at a year, a quality tag or a tag shape `readEpisodeTag` reads
 │ │ │ ├── formValues/ ← a record, a Problem detail or the form's values → each other; `pickedFile` and `pickedSubtitle`, the one constructor of each picked thing
-│ │ │ └── api/ ← createMovie, createSeries, updateMovie, fetchGenrePool, fetchProblem, resolveProblem (one caller each)
+│ │ │ └── api/ ← createMovie, createSeries, updateMovie, updateSeries, fetchGenrePool, fetchProblem, resolveProblem, resolveSeriesProblem (one caller each)
 │ │ ├── import-export/ ← the bulk importer’s screen, the Library folders page, and the Export dialog
 │ │ │ ├── ImportFlow/ ← the organism: owns useImportRun, renders one of the three steps, its heading and lede worded by `run.source`
 │ │ │ ├── ImportSetup/ ImportProgress/ ImportReview/ ← the three steps: the two path fields; the stepper, bar and log; the tiles and the Needs attention list
@@ -371,18 +378,20 @@ familyflix/
 │ │ └── MaintainerLayout/ ← the Maintainer surface: bg2 sheet + centred column, no header row
 │ ├── pages/ ← route-level views, composition only, no logic (ImportPage is MaintainerLayout around ImportFlow; SeriesPage and SeasonPage own a scroll container and Back each, MoviePage’s precedent; EnrichmentPage is MaintainerLayout around EnrichmentFlow; CodecsPage is MaintainerLayout at 780 around CodecManager, the first nested Settings route; LibraryFoldersPage the same around LibraryFolders, at `/settings/folders`)
 │ ├── api/ ← wire calls two or more features share (one folder per call + its test, no barrel)
-│ │ ├── saveFavorite/ fetchMovie/ saveWatched/ dismissProblem/ fetchSettings/ saveSeriesFavorite/ saveEpisodeWatched/ fetchEnrichmentSummary/ fetchTmdbKey/ ← the nine that earned it
+│ │ ├── saveFavorite/ fetchMovie/ saveWatched/ dismissProblem/ fetchSettings/ saveSeriesFavorite/ saveEpisodeWatched/ fetchEnrichmentSummary/ fetchTmdbKey/ fetchSeriesDetail/ ← the ten that earned it
 │ │ ├── folderBridge/ ← the one reader of `window.familyflix?.folders`, `null` in a browser: the preload is the shell's wire, and the Library folders page, the Export dialog and the Storage card all read it
 │ │ └── postValue/
 │ │ ├── postValue.ts
 │ │ └── postValue.test.ts
 │ ├── hooks/ ← global shared hooks only: `useGoBack(fallback)` — the one **Back rule**, a **History step** with the screen's own **Landing** behind it (the library by default) — `useRestoredScroll`, and `useOptimisticEdit`, the one bargain a detail page's edit keeps, over whatever record the page holds; and `useEnrichmentSummary`, the summary Settings' sync row and the Enrichment setup both draw, `null` until it lands
-│ ├── types/ ← shared TypeScript interfaces (import.ts: ImportRun, ImportSource, ImportProblem, ImportProblemDetail, ImportField; libraryFolders.ts: LibraryFolder, `FOLDER_CHANNELS` (`pick`, `pickOne`, `openMedia`), FolderBridge — both build targets, and `tsconfig.electron.json` too; export.ts: `EXPORT_FORMATS`, `EXPORT_COLUMNS`, `EXPORT_EPISODE_COLUMNS`, `EXPORT_NAME_PREFIX`, ExportSummary, StartExport, ExportResult; settings.ts: `SUBTITLE_LANGUAGES`, SubtitleLanguage, `DEFAULT_SUBTITLE_LANGUAGE`, `DEFAULT_ULTRAWIDE_MARGINS`, Settings (`subtitleLanguage`, `ultrawideMargins`), StorageReport; playback.ts: CodecKind, CodecSupport, CodecCapability, ComponentSource, PlaybackComponentInfo, PlaybackCapabilities — both build targets; series.ts: Series, Episode, SeasonSummary, SeriesDetail, EpisodeRead, NextEpisodeRef, EpisodeContinueEntry (its `series` carrying `posterPath`, for the Continue card's art), SeriesHomePayload, NewSeries, NewEpisode, Playable — both build targets; enrichment.ts: `ENRICH_FIELDS`, `ENRICH_FIELD_LABELS`, `ENRICH_SCOPES`, EnrichField, EnrichScope, EnrichmentSummary (its `libraryFolders` the reachable folders a Sync may write into), Candidate, Decision, FieldConflict, ConflictChoices, EnrichmentRun, StartEnrichment — both build targets; viewModels.ts carries the series’ SeriesPageModel, SeasonPageModel, SeasonCardSeason and EpisodeRowEpisode beside the movie’s; shell.ts: ServerMessage, ShellCommand — the **Shell handshake**, typed once and read by `server/src/shell/` and `electron/`, in `tsconfig.electron.json` too; form.ts: MovieFormValues, MovieFormFile, MovieFormSubtitle, EpisodeFormRow, FormKind — the Movie form's shapes; appVersion.d.ts: `__APP_VERSION__`, defined by Vite from package.json)
+│ ├── types/ ← shared TypeScript interfaces (import.ts: ImportRun, ImportSource, ImportProblem (its `seriesId` when an `unplaced` show is already held), ImportProblemDetail (its `files.videos` always present, empty with no folder), ImportField; libraryFolders.ts: LibraryFolder, `FOLDER_CHANNELS` (`pick`, `pickOne`, `openMedia`), FolderBridge — both build targets, and `tsconfig.electron.json` too; export.ts: `EXPORT_FORMATS`, `EXPORT_COLUMNS`, `EXPORT_EPISODE_COLUMNS`, `EXPORT_NAME_PREFIX`, ExportSummary, StartExport, ExportResult; settings.ts: `SUBTITLE_LANGUAGES`, SubtitleLanguage, `DEFAULT_SUBTITLE_LANGUAGE`, `DEFAULT_ULTRAWIDE_MARGINS`, Settings (`subtitleLanguage`, `ultrawideMargins`), StorageReport; playback.ts: CodecKind, CodecSupport, CodecCapability, ComponentSource, PlaybackComponentInfo, PlaybackCapabilities — both build targets; series.ts: Series, Episode, SeasonSummary, SeriesDetail, EpisodeRead, NextEpisodeRef, EpisodeContinueEntry (its `series` carrying `posterPath`, for the Continue card's art), SeriesHomePayload, NewSeries, NewEpisode, Playable — both build targets; enrichment.ts: `ENRICH_FIELDS`, `ENRICH_FIELD_LABELS`, `ENRICH_SCOPES`, EnrichField, EnrichScope, EnrichmentSummary (its `libraryFolders` the reachable folders a Sync may write into), Candidate, Decision, FieldConflict, ConflictChoices, EnrichmentRun, StartEnrichment — both build targets; viewModels.ts carries the series’ SeriesPageModel, SeasonPageModel, SeasonCardSeason and EpisodeRowEpisode beside the movie’s; shell.ts: ServerMessage, ShellCommand — the **Shell handshake**, typed once and read by `server/src/shell/` and `electron/`, in `tsconfig.electron.json` too; form.ts: MovieFormValues, MovieFormFile, MovieFormSubtitle, EpisodeFormRow, FormKind — the Movie form's shapes; appVersion.d.ts: `__APP_VERSION__`, defined by Vite from package.json)
 │ ├── utils/ ← pure helper functions (one folder per helper + its test)
 │ │ ├── index.ts ← barrel: re-exports every helper
 │ │ ├── formatBytes/ ← 1024-based, one decimal from KB up: `18.4 GB`
 │ │ ├── accentScale/ ← the accent → its five: `accentHover`, `accentPress`, `accentSoft`, `accentLine`, `focusRing`
 │ │ ├── moviePath/ ← the film's page as a route, `/movie/<id>`, the id encoded: the cards open it, and it is the player's and the edit's **Landing**
+│ │ ├── seriesTabPath/ ← the Series tab as a route, `/?tab=series`: the series page's and a series delete's **Landing**, and a series add's **Fresh home**
+│ │ ├── spellYearSpan/ ← a **Year range** spelled — `2022`, `2019–2023`, `2021–`, `null` with no year — the server's `spellYearSpan` mirrored, held to `yearSpan` by a round-trip guard: the series page and the series edit both read it
 │ │ ├── seriesPath/ seasonPath/ episodePlayPath/ ← the three series routes, `/series/<id>`, `/series/<id>/season/<n>`, `/episode/<id>/play`, the ids encoded
 │ │ ├── enrichPath/ ← the Enrichment flow as a route, `/enrich`, `?scope=all` or `?movie=<id>`, the id encoded: Settings' sync row, Import's _Finish_ and the ⋯ menu's _⟳ Fetch from TMDB_
 │ │ ├── formatElapsed/ ← a run's clock, `m:ss` rounded and never rolling into hours — not `formatClock`, which floors and grows an hour field for playback
@@ -448,7 +457,10 @@ posters_ row and the Enrichment setup both draw the same summary; and
 `fetchTmdbKey` did, because the Network group fills its field with the stored
 key and Import setup chooses the _Also fetch from TMDB_ hint by it; and
 `folderBridge` did, because the Library folders page, the Export dialog and the
-Settings hub's Storage card all read the shell's folder bridge. `saveRating`
+Settings hub's Storage card all read the shell's folder bridge; and
+`fetchSeriesDetail` did, because the series pages load the record they render,
+the Enrichment flow names the show under _Just this series_, and the Movie
+form reads the series it edits or a Series Resolve joins. `saveRating`
 has one caller and stays with the feature that makes it, and so does the
 player's own `saveResume` — the player is the only thing in the app that can
 know where a film is, which is the same rule read the other way round — and so
@@ -1025,8 +1037,8 @@ same layout, spacing, states, copy, and interaction.
 **Build order — what is left.** The groups below say what the app _is_;
 this says what to build _next_. Steps 1–9 of the first chain are done,
 ending with **Software update** (v0.2.0), and so are steps 10–15: the
-second chain is done too, shipped as v0.3.0. Steps 16–23 are the third
-chain: steps 16–20 are done, 21–23 are planned. Steps 10–15 came out of
+second chain is done too, shipped as v0.3.0. Steps 16–21 are the third
+chain: steps 16–20 are done, 21 is planned. Steps 10–15 came out of
 installing FamilyFlix and using it: smallest and most self-contained first,
 the form before the folders that will feed it, export last because it
 mirrors what import holds.
@@ -1053,7 +1065,8 @@ Roadmap's **Move the media folder** (log 24 Q2).
     films, series and episodes, and optionally posters, backdrops, stills
     and subtitles beside it.
 
-Steps 16–23 are the **third chain** (design log 32), out of using v0.3.0,
+Steps 16–21 are the **third chain** (design log 32, its last three steps
+folded into one by log 38 Q1), out of using v0.3.0,
 smallest and most self-contained first; each still gets its PRD and, where it
 draws something new, a prototype revision before it is built:
 
@@ -1080,18 +1093,19 @@ draws something new, a prototype revision before it is built:
     **Genre pool** kept, not re-seeded — then
     `createMedia.emptyRoot` best-effort, then the slot's `removeComponent`;
     then a full reload onto `/`. Library folders on disk are never touched.
-21. 🔜 **Episode links** — the **Episode word** (`Episode 12`, `Ep 12`, `E12`,
-    only where the season is known); one `unplaced` Problem per show, its
-    _Resolve_ the Movie form's series kind in import context
+21. 🔜 **Title editing** — a show's files numbered in the app, and a series
+    edited and deleted as a film is. The **Episode word** (`Episode 12`,
+    `Ep 12`, `E12`, only where the season is known); one `unplaced` Problem
+    per show, its _Resolve_ the **Series Resolve**
     (`/add?kind=series&problem=<id>`, Found files as paths) with one Episode
     file row per video under the **Numbering guess**; the numbers are an
     **Episode link**, the file is never renamed, and migration 8's
-    `episodes.source_file` remembers it across scans.
-22. 🔜 **Edit a series** — a ⋯ menu on the series page; the Movie form's
-    series edit job, `/add?series=<id>`, `PATCH /api/series/:id`: held files
-    travel as paths, episodes renumbered (watch state kept), added, removed.
-23. 🔜 **Delete a series** — the ⋯ Danger row, the dialog,
-    `DELETE /api/series/:id`, the Series folder's best-effort cleanup.
+    `episodes.source_file` remembers it across scans. A ⋯ menu on the series
+    page: the **Series edit job**, `/add?series=<id>`,
+    `PATCH /api/series/:id` — held files travel as paths, episodes renumbered
+    (watch state kept), added, removed — and the Danger row, the dialog,
+    `DELETE /api/series/:id`, the Series folder's best-effort cleanup. A film
+    Resolve over two or more videos draws the **Found-file choice**.
 
 A 🧭 Roadmap item is not in this chain — it is after it, if ever.
 
@@ -1131,9 +1145,7 @@ A 🧭 Roadmap item is not in this chain — it is after it, if ever.
 - ✅ **Add a series** — the same form adds a show, its seasons and its episodes: the Kind tabs on `?kind=series`, one Episode file row per picked video with its own subtitles, and one atomic `POST /api/series`; a video is the Save gate for either kind.
 - ✅ **Library folders** — several top folders of movies and series at `/settings/folders`, added by typed path or _Browse…_ over the native dialog, and imported all at once by a **Folder scan**; a Sync writes posters and a Metadata sheet into each.
 - ✅ **Edit a movie** — amend metadata and files; a file the library already holds travels as its path, only a freshly picked one as bytes.
-- 🔜 **Episode links** — number a show's file in the app without renaming it: `S[01] E[01]` in front of `eps1.0_hellofriend.mov`, remembered as its **Source file**; the reader learns the **Episode word**; one `unplaced` Problem per show with a _Resolve_ (step 21).
-- 🔜 **Edit a series** — the series page's ⋯ menu and the Movie form's series edit job, `PATCH /api/series/:id` (step 22).
-- 🔜 **Delete a series** — the ⋯ Danger row, the dialog, `DELETE /api/series/:id` (step 23).
+- 🔜 **Title editing** — number a show's file in the app without renaming it: `S[01] E[01]` in front of `eps1.0_hellofriend.mov`, remembered as its **Source file**; the reader learns the **Episode word**; one `unplaced` Problem per show with a _Resolve_; the series page's ⋯ menu, its _Edit details_ the Movie form's series edit job (`PATCH /api/series/:id`) and its Danger row the delete (`DELETE /api/series/:id`); and the **Found-file choice** for a film folder of two or more videos (step 21).
 - ✅ **Export name** — the Export folder's name as the **Folder name field** in the Export dialog: prefilled with today's dated name and never overwritten once edited, refused in one sentence under the field when no folder can be called that, never stripped, numbered when taken.
 - ✅ **Delete a movie** — the ⋯ menu’s Danger row, the Delete dialog, `DELETE /api/movies/:id`, then the Movie folder under best-effort cleanup.
 - ✅ **Bulk import** — a Sheet and a Library root become Movies during the run; the Review step lists only the Problems the run could not settle, each with Resolve (the Movie form in Import context) and Skip.
