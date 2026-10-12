@@ -1,7 +1,7 @@
 # 39 — Season posters
 
 > **Initiative:** `season-posters`
-> **PRD:** `docs/PRDs/39-season-posters.md` (to be written)
+> **PRD:** `docs/PRDs/39-season-posters.md`
 > **Plan:** `docs/PRDs/39-season-posters-plan.md` (to be written)
 
 This log is the `grill-me` session for the first item after the third chain:
