@@ -259,9 +259,13 @@ describe('SeriesHome — the heart', () => {
       }));
   }
 
-  /** The heart on one series' poster. */
+  /**
+   * The heart on one series' poster in _All series_ — the last of its cards,
+   * since a hearted series is drawn on the Favorites shelf above the grid too.
+   */
   async function heartOn(title: string) {
-    const poster = await screen.findByRole('button', { name: title });
+    const posters = await screen.findAllByRole('button', { name: title });
+    const poster = posters[posters.length - 1];
     return within(poster).getByRole('button', { name: 'Favorite' });
   }
 
@@ -579,5 +583,126 @@ describe('SeriesHome — the query', () => {
 
     expect(await screen.findByText('0 series · 0 episodes')).toBeDefined();
     expect(screen.queryByText(/nothing here/i)).toBeNull();
+  });
+});
+
+/**
+ * The Series tab's Favorites shelf — log 22 Q9 and Q28 amended: the Movies
+ * tab's shelf, the same `FavoritesRow`, between Continue Watching and _All
+ * series_, drawing the hearted series of what the grid shows, capped at 15.
+ * Un-hearting a card on it takes it off at once and a refused save puts it
+ * back.
+ */
+describe('SeriesHome — Favorites', () => {
+  const favoritesRegion = () =>
+    screen.findByRole('region', { name: 'Favorites' });
+
+  it('draws a Favorites shelf of the hearted series, between Continue Watching and All series', async () => {
+    serve({
+      continueWatching: [makeEntry()],
+      series: [
+        makeSeries({ id: 's1', title: 'Harbor & Vine', isFavorite: true }),
+        makeSeries({ id: 's2', title: 'Lighthouse Keepers' }),
+      ],
+      episodeCount: 8,
+    });
+
+    renderHome();
+
+    const shelf = await favoritesRegion();
+    expect(
+      within(shelf).getByRole('button', { name: 'Harbor & Vine' })
+    ).toBeDefined();
+    expect(
+      within(shelf).queryByRole('button', { name: 'Lighthouse Keepers' })
+    ).toBeNull();
+    expect(comesBefore(await continueRegion(), shelf)).toBe(true);
+    expect(comesBefore(shelf, await heading())).toBe(true);
+  });
+
+  it('draws no shelf when no series is hearted', async () => {
+    serve({
+      continueWatching: [],
+      series: [makeSeries()],
+      episodeCount: 8,
+    });
+
+    renderHome();
+
+    await heading();
+    expect(screen.queryByRole('region', { name: 'Favorites' })).toBeNull();
+  });
+
+  it('caps the shelf at 15, in the order the grid shows', async () => {
+    const series = Array.from({ length: 17 }, (_, i) =>
+      makeSeries({ id: `s${i}`, title: `Show ${i}`, isFavorite: true })
+    );
+    serve({ continueWatching: [], series, episodeCount: 17 });
+
+    renderHome();
+
+    const shelf = await favoritesRegion();
+    const titles = within(shelf)
+      .getAllByRole('button', { name: /^Show \d+$/ })
+      .map((card) => card.getAttribute('aria-label') ?? card.textContent);
+    expect(titles).toHaveLength(15);
+    expect(within(shelf).getByRole('button', { name: 'Show 0' })).toBeDefined();
+    expect(within(shelf).queryByRole('button', { name: 'Show 15' })).toBeNull();
+  });
+
+  it('puts a series on the shelf the moment its heart is pressed in the grid', async () => {
+    fetchMock.mockImplementation((input, init?: RequestInit) => {
+      if ((init?.method ?? 'GET').toUpperCase() !== 'GET') {
+        return Promise.resolve(okResponse({ value: true }));
+      }
+      return Promise.resolve(
+        okResponse({
+          continueWatching: [],
+          series: [makeSeries({ id: 's1', title: 'Harbor & Vine' })],
+          episodeCount: 8,
+        })
+      );
+    });
+
+    renderHome();
+    await heading();
+    fireEvent.click(
+      within(
+        await screen.findByRole('button', { name: 'Harbor & Vine' })
+      ).getByRole('button', { name: 'Favorite' })
+    );
+
+    const shelf = await favoritesRegion();
+    expect(
+      within(shelf).getByRole('button', { name: 'Harbor & Vine' })
+    ).toBeDefined();
+  });
+
+  it('takes a series off the shelf when its heart there is pressed, and back when the save is refused', async () => {
+    fetchMock.mockImplementation((input, init?: RequestInit) => {
+      if ((init?.method ?? 'GET').toUpperCase() !== 'GET') {
+        return Promise.resolve(serverErrorResponse());
+      }
+      return Promise.resolve(
+        okResponse({
+          continueWatching: [],
+          series: [
+            makeSeries({ id: 's1', title: 'Harbor & Vine', isFavorite: true }),
+          ],
+          episodeCount: 8,
+        })
+      );
+    });
+
+    renderHome();
+    const shelf = await favoritesRegion();
+    fireEvent.click(
+      within(
+        within(shelf).getByRole('button', { name: 'Harbor & Vine' })
+      ).getByRole('button', { name: 'Favorite' })
+    );
+
+    expect(screen.queryByRole('region', { name: 'Favorites' })).toBeNull();
+    expect(await favoritesRegion()).toBeDefined();
   });
 });
