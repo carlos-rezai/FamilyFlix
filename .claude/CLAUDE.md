@@ -1107,6 +1107,22 @@ draws something new, a prototype revision before it is built:
     `DELETE /api/series/:id`, the Series folder's best-effort cleanup. A film
     Resolve over two or more videos draws the **Found-file choice**.
 
+Next, after the open issues out of using v0.3.0 are closed — not yet
+numbered into a chain, and not yet through grill-me:
+
+- 🔜 **Season posters** — the **Season card** draws its **Season**'s own
+  TMDB poster. A Sync already asks `/3/tv/{id}/season/{n}` for every season
+  on disk (`writeShow`) and drops its `poster_path`, because `TmdbSeason`
+  reads only `season_number` and `episodes`. Log 22 ruled season posters out
+  ("offline has no source"); Enrichment is that source, so this reopens it.
+  Open for the grill-me: where a poster lives with no `seasons` table
+  (migration 10 — a `season_posters` table or a real `seasons` one), the
+  file beside the stills in the **Series folder**, `SeasonSummary.posterPath`,
+  `mol.SeasonCard`'s art prop (a prototype amendment — the numeral over the
+  art or not; the gradient or the series poster when there is none), the
+  Season page header, and whether season posters travel in an **Export** and
+  as a **Write target**.
+
 A 🧭 Roadmap item is not in this chain — it is after it, if ever.
 
 ### Foundation
@@ -1131,6 +1147,7 @@ A 🧭 Roadmap item is not in this chain — it is after it, if ever.
 
 - ✅ **Backdrop veil** — the movie and series pages' art over the whole viewport, staying put under an accent-tinted veil while the content scrolls over it.
 - ✅ **Single-title Sync** — the ⋯ menu's _Fetch from TMDB_ syncs that movie alone, re-attaching only to its own run; a library Sync left in review is let go by Start, never hijacked.
+- 🔜 **Season posters** — each season card on the series page draws that season's own TMDB poster, fetched by the Sync that already reads every season; log 22's ruling reopened (see the build order).
 
 ### Playback
 
