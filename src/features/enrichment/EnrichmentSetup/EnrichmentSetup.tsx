@@ -4,6 +4,7 @@ import {
   type EnrichField,
   type EnrichmentSummary,
   type EnrichScope,
+  type TitleReference,
 } from '@/types';
 import {
   Button,
@@ -15,6 +16,7 @@ import {
 import {
   enrichmentEstimate,
   scopeDescription,
+  singleScopeLabel,
 } from '../enrichmentView/enrichmentView';
 import { ScopeCard } from '../ScopeCard/ScopeCard';
 import { SetupBanner } from '../SetupBanner/SetupBanner';
@@ -59,7 +61,7 @@ export interface EnrichmentSetupProps {
    * What the one title of a `single` Sync is — _Just this movie_ or _Just
    * this series_. A film by default.
    */
-  titleKind?: 'movie' | 'series';
+  titleKind?: TitleReference['kind'];
   /** The chips that are on. */
   fields: readonly EnrichField[];
   /** The two optional **Write targets**' switches, drawn only with a root. */
@@ -83,10 +85,11 @@ export interface EnrichmentSetupProps {
 
 /**
  * The **Setup step**, from `feat.EnrichmentFlow.dc.html`: the offline banner
- * and the key banner when either applies, the scope cards —
- * _Only what's missing_ and _Everything_ for the library, or _Just this
- * movie_ (or _Just this series_) in their place for one title — the field chips with the rating note,
- * _Where it is saved_ with _Your library_ as Required, and Start: _Start sync_, or _Fetch details_ with its estimate for one film.
+ * and the key banner when either applies, the scope cards — _Only what's
+ * missing_ and _Everything_ for the library, or _Just this movie_ (or _Just
+ * this series_) in their place for one title — the field chips with the
+ * rating note, _Where it is saved_ with _Your library_ as Required, and Start:
+ * _Start sync_, or _Fetch details_ with its estimate for one film.
  */
 export function EnrichmentSetup({
   scope,
@@ -136,7 +139,7 @@ export function EnrichmentSetup({
         <Scopes role="radiogroup" aria-label="What to sync">
           {single ? (
             <ScopeCard
-              label={`Just this ${titleKind}`}
+              label={singleScopeLabel(titleKind)}
               description={title ?? ''}
               selected
             />

@@ -3,7 +3,9 @@ import { describe, expect, it } from 'vitest';
 import {
   enrichmentEstimate,
   enrichmentView,
+  finishLabel,
   letGoLine,
+  singleScopeLabel,
   scopeDescription,
   writtenSummary,
 } from './enrichmentView';
@@ -326,5 +328,31 @@ describe('letGoLine — another title’s sync', () => {
     expect(letGoLine(waiting)).toBe(
       "Starting lets go of another movie's sync waiting for review."
     );
+  });
+});
+
+describe('singleScopeLabel — the one title’s scope card', () => {
+  it('names a film', () => {
+    expect(singleScopeLabel('movie')).toBe('Just this movie');
+  });
+
+  it('names a series', () => {
+    expect(singleScopeLabel('series')).toBe('Just this series');
+  });
+});
+
+describe('finishLabel — review’s Finish', () => {
+  it('goes back to the movie the flow was opened for', () => {
+    expect(finishLabel({ kind: 'movie', id: 'm1' })).toBe('Back to the movie');
+  });
+
+  it('goes back to the series the flow was opened for', () => {
+    expect(finishLabel({ kind: 'series', id: 's1' })).toBe(
+      'Back to the series'
+    );
+  });
+
+  it('is Done for a library Sync', () => {
+    expect(finishLabel(null)).toBe('Done');
   });
 });

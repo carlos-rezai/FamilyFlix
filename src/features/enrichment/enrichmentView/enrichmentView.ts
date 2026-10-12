@@ -1,4 +1,9 @@
-import type { EnrichmentRun, EnrichmentSummary, EnrichScope } from '@/types';
+import type {
+  EnrichmentRun,
+  EnrichmentSummary,
+  EnrichScope,
+  TitleReference,
+} from '@/types';
 import { formatElapsed } from '@/utils';
 
 /** What the enrichment **Running step** prints, from a snapshot and the clock. */
@@ -115,4 +120,17 @@ export function letGoLine(waiting: EnrichmentRun | null): string | null {
   return waiting.seriesId !== undefined
     ? "Starting lets go of another series' sync waiting for review."
     : "Starting lets go of another movie's sync waiting for review.";
+}
+
+/** The `single` scope card's label: _Just this movie_ or _Just this series_. */
+export function singleScopeLabel(kind: TitleReference['kind']): string {
+  return `Just this ${kind}`;
+}
+
+/**
+ * Review's Finish: _Back to the movie_ or _Back to the series_ for the one
+ * title the flow was opened for, else _Done_.
+ */
+export function finishLabel(title: TitleReference | null): string {
+  return title === null ? 'Done' : `Back to the ${title.kind}`;
 }

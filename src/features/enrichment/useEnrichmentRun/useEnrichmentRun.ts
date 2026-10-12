@@ -1,6 +1,11 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import type { ConflictChoices, EnrichmentRun, StartEnrichment } from '@/types';
+import type {
+  ConflictChoices,
+  EnrichmentRun,
+  StartEnrichment,
+  TitleReference,
+} from '@/types';
 import {
   applyChoices,
   cancelEnrichment,
@@ -39,16 +44,13 @@ function settled(
  */
 function belongsHere(
   run: EnrichmentRun,
-  movieId: string | null,
-  seriesId: string | null
+  title: TitleReference | null
 ): boolean {
-  if (movieId !== null) {
-    return run.scope === 'single' && run.movieId === movieId;
+  if (title === null) {
+    return true;
   }
-  if (seriesId !== null) {
-    return run.scope === 'single' && run.seriesId === seriesId;
-  }
-  return true;
+  const held = title.kind === 'movie' ? run.movieId : run.seriesId;
+  return run.scope === 'single' && held === title.id;
 }
 
 export interface EnrichmentRunState {
@@ -103,9 +105,16 @@ export interface EnrichmentRunState {
  * puts back neither a run nor a Waiting run.
  */
 export function useEnrichmentRun(
-  movieId: string | null,
-  seriesId: string | null = null
+  title: TitleReference | null
 ): EnrichmentRunState {
+  // Held by its two parts, so a caller handing a fresh object on every render
+  // is not a fresh title.
+  const kind = title?.kind ?? null;
+  const id = title?.id ?? null;
+  const here = useMemo<TitleReference | null>(
+    () => (kind === null || id === null ? null : { kind, id }),
+    [kind, id]
+  );
   const [run, setRun] = useState<EnrichmentRun | null>(null);
   const [waiting, setWaiting] = useState<EnrichmentRun | null>(null);
   /** Bumped by every start and cancel, so a read from before either is stale. */
@@ -117,7 +126,7 @@ export function useEnrichmentRun(
     fetchCurrentEnrichment()
       .then((held) => {
         if (left || at !== generation.current || held === null) return;
-        if (belongsHere(held, movieId, seriesId)) {
+        if (belongsHere(held, here)) {
           setRun(held);
         } else if (held.phase === 'review') {
           setWaiting(held);
@@ -129,7 +138,7 @@ export function useEnrichmentRun(
     return () => {
       left = true;
     };
-  }, [movieId, seriesId]);
+  }, [here]);
 
   const start = useCallback(
     async (options: StartEnrichment) => {
@@ -142,14 +151,14 @@ export function useEnrichmentRun(
           throw error;
         }
         held = await fetchCurrentEnrichment();
-        if (held !== null && !belongsHere(held, movieId, seriesId)) {
+        if (held !== null && !belongsHere(held, here)) {
           throw error;
         }
       }
       setRun(held);
       setWaiting(null);
     },
-    [movieId, seriesId]
+    [here]
   );
 
   const cancel = useCallback(() => {

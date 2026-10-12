@@ -127,7 +127,9 @@ function serve({
 
 /** The hook mounted for `movieId` (none by default), its first read settled. */
 async function mounted(movieId: string | null = null) {
-  const hook = renderHook(() => useEnrichmentRun(movieId));
+  const hook = renderHook(() =>
+    useEnrichmentRun(movieId === null ? null : { kind: 'movie', id: movieId })
+  );
   await elapse(0);
   return hook;
 }
@@ -533,7 +535,9 @@ describe('useEnrichmentRun — the Waiting run let go', () => {
           answer = resolve;
         })
     );
-    const { result } = renderHook(() => useEnrichmentRun(FILM));
+    const { result } = renderHook(() =>
+      useEnrichmentRun({ kind: 'movie', id: FILM })
+    );
     serve({ started: createdResponse(OWN_RUNNING) });
 
     await act(() => result.current.start(SINGLE));
@@ -552,7 +556,9 @@ describe('useEnrichmentRun — the Waiting run let go', () => {
           answer = resolve;
         })
     );
-    const { result } = renderHook(() => useEnrichmentRun(FILM));
+    const { result } = renderHook(() =>
+      useEnrichmentRun({ kind: 'movie', id: FILM })
+    );
     serve();
 
     act(() => result.current.cancel());
@@ -566,7 +572,7 @@ describe('useEnrichmentRun — the Waiting run let go', () => {
 
 /**
  * 38 — Title editing (issue #305): a series' own Sync. Opened for a series —
- * `useEnrichmentRun(null, seriesId)` — the hook holds only a `single` run
+ * `useEnrichmentRun({ kind: 'series', id })` — the hook holds only a `single` run
  * whose `seriesId` matches. A film's run, another series' run or a library
  * run is not held: in review it is the **Waiting run**, running it is ignored,
  * and a `409` over it rejects with `EnrichmentBusyError` — the film's rules,
@@ -625,7 +631,9 @@ const FILM_NAMED_LIKE_THE_SHOW = makeEnrichmentRun({
 
 /** The hook mounted for the series, its first read settled. */
 async function mountedForSeries(seriesId: string = SHOW) {
-  const hook = renderHook(() => useEnrichmentRun(null, seriesId));
+  const hook = renderHook(() =>
+    useEnrichmentRun({ kind: 'series', id: seriesId })
+  );
   await elapse(0);
   return hook;
 }

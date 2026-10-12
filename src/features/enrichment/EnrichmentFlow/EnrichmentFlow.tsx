@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import { useSnackbar } from '@/App/useSnackbar/useSnackbar';
@@ -12,13 +12,14 @@ import {
   type ConflictChoices,
   type EnrichField,
   type EnrichScope,
+  type TitleReference,
 } from '@/types';
 import { moviePath, seriesPath } from '@/utils';
 import { EnrichmentProgress } from '../EnrichmentProgress/EnrichmentProgress';
 import { EnrichmentReview } from '../EnrichmentReview/EnrichmentReview';
 import { EnrichmentSetup } from '../EnrichmentSetup/EnrichmentSetup';
 import { EnrichmentBusyError } from '../api/api';
-import { letGoLine } from '../enrichmentView/enrichmentView';
+import { finishLabel, letGoLine } from '../enrichmentView/enrichmentView';
 import { useEnrichmentRun } from '../useEnrichmentRun/useEnrichmentRun';
 import { HeaderRow, Heading, KeyBadge, Lede } from './EnrichmentFlow.styles';
 
@@ -60,16 +61,27 @@ const ALL_FIELDS: EnrichField[] = [...ENRICH_FIELDS];
 export function EnrichmentFlow() {
   const [params] = useSearchParams();
   const movieId = params.get('movie');
-  const seriesId = movieId === null ? params.get('series') : null;
+  const seriesId = params.get('series');
+  // The one title a `single` Sync is over, read once: `?movie=` before
+  // `?series=`, and `null` for a library Sync.
+  const single = useMemo<TitleReference | null>(
+    () =>
+      movieId !== null
+        ? { kind: 'movie', id: movieId }
+        : seriesId !== null
+          ? { kind: 'series', id: seriesId }
+          : null,
+    [movieId, seriesId]
+  );
   const goBack = useGoBack(
-    movieId !== null
-      ? moviePath(movieId)
-      : seriesId !== null
-        ? seriesPath(seriesId)
-        : '/settings'
+    single === null
+      ? '/settings'
+      : single.kind === 'movie'
+        ? moviePath(single.id)
+        : seriesPath(single.id)
   );
   const { run, waiting, start, cancel, search, pick, apply, dismiss } =
-    useEnrichmentRun(movieId, seriesId);
+    useEnrichmentRun(single);
   const { summary, retry } = useEnrichmentSummary();
   const navigate = useNavigate();
   const { notify } = useSnackbar();
@@ -84,21 +96,18 @@ export function EnrichmentFlow() {
   // Both on to begin with, the prototype's `enWriteSheet` / `enWritePosters`.
   const [writeSheet, setWriteSheet] = useState(true);
   const [writePosters, setWritePosters] = useState(true);
-  const single = movieId !== null || seriesId !== null;
-  const scope: EnrichScope = single ? 'single' : libraryScope;
+  const scope: EnrichScope = single === null ? libraryScope : 'single';
 
   useEffect(() => {
-    const named =
-      movieId !== null
-        ? fetchMovie(movieId).then((movie) => movie?.title ?? null)
-        : seriesId !== null
-          ? fetchSeriesDetail(seriesId).then(
-              (detail) => detail?.series.title ?? null
-            )
-          : null;
-    if (named === null) {
+    if (single === null) {
       return undefined;
     }
+    const named =
+      single.kind === 'movie'
+        ? fetchMovie(single.id).then((movie) => movie?.title ?? null)
+        : fetchSeriesDetail(single.id).then(
+            (detail) => detail?.series.title ?? null
+          );
     let left = false;
     named
       .then((name) => {
@@ -112,7 +121,7 @@ export function EnrichmentFlow() {
     return () => {
       left = true;
     };
-  }, [movieId, seriesId]);
+  }, [single]);
 
   const onToggleField = useCallback((field: EnrichField) => {
     setFields((on) =>
@@ -186,8 +195,11 @@ export function EnrichmentFlow() {
     }
     void start({
       scope,
-      ...(scope === 'single' && movieId !== null ? { movieId } : {}),
-      ...(scope === 'single' && seriesId !== null ? { seriesId } : {}),
+      ...(single === null
+        ? {}
+        : single.kind === 'movie'
+          ? { movieId: single.id }
+          : { seriesId: single.id }),
       fields,
       // With no Library folder there is nowhere to write either (log 23 Q37).
       writeSheet: summary.libraryFolders.length > 0 && writeSheet,
@@ -205,8 +217,7 @@ export function EnrichmentFlow() {
     notify,
     start,
     scope,
-    movieId,
-    seriesId,
+    single,
     fields,
     writeSheet,
     writePosters,
@@ -242,7 +253,7 @@ export function EnrichmentFlow() {
             scope={scope}
             summary={summary}
             title={title}
-            titleKind={seriesId !== null ? 'series' : 'movie'}
+            titleKind={single?.kind}
             fields={fields}
             writeSheet={writeSheet}
             writePosters={writePosters}
@@ -259,13 +270,7 @@ export function EnrichmentFlow() {
       ) : run.phase === 'review' ? (
         <EnrichmentReview
           run={run}
-          finishLabel={
-            movieId !== null
-              ? 'Back to the movie'
-              : seriesId !== null
-                ? 'Back to the series'
-                : 'Done'
-          }
+          finishLabel={finishLabel(single)}
           onFinish={goBack}
           onAgain={cancel}
           onSkip={onSkip}
