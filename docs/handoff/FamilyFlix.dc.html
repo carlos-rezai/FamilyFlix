@@ -906,7 +906,8 @@
               return {
               labelStyle, setup:s.impStep==='setup', running:s.impStep==='running', review:s.impStep==='review',
               sheet:s.impSheet, root:s.impRoot, onSheet:(e)=>this.onImpSheet(e), onRoot:(e)=>this.onImpRoot(e), onStart:()=>this.startImport(),
-              onBack:()=>this.goSettings(), onFinish:()=>{ if(s.impEnrich){ this.setState({enScope:'all'}); this.goEnrich('browse'); } else { this.goBrowse(); } }, onCancel:()=>this.cancelImport(),
+              onBack:()=>this.goSettings(), finishLabel: s.impEnrich ? 'Continue to TMDB sync' : 'Finish and go to library',
+              onFinish:()=>{ if(s.impEnrich){ this.setState({enScope:'all'}); this.goEnrich('browse'); } else { this.goBrowse(); } }, onCancel:()=>this.cancelImport(),
               scanning:s.impPhase==='scan', importing:s.impPhase==='import', indeterminate:s.impPhase==='scan', percent:pct,
               stepScanActive:s.impPhase==='scan', stepScanDone:s.impPhase==='import', stepImportActive:s.impPhase==='import',
               importStepDotStyle:{display:'grid',placeItems:'center',width:'24px',height:'24px',borderRadius:'50%',fontFamily:'var(--font-sans)',fontSize:'12px',fontWeight:'700',background:s.impPhase==='import'?'var(--color-accent)':'var(--color-surface-3)',color:s.impPhase==='import'?'#14110d':'var(--color-text-faint)'},
@@ -1037,7 +1038,7 @@
                 hasPending:s.enPending.length>0, allResolved:s.enPending.length===0,
                 writtenSummary:'Saved to '+targets.join(', ')+'.',
                 finishLabel:s.enReturn==='detail'?'Back to the movie':s.enReturn==='series'?'Back to the series':'Done',
-                onFinish:()=>this.backFromEnrich(), onAgain:()=>this.setState({enStep:'setup'}),
+                onFinish:()=>{ if(s.enReturn==='browse'){ this.setState({enStep:'setup'}); this.goBrowse(); } else { this.backFromEnrich(); } }, onAgain:()=>this.setState({enStep:'setup'}),
               };
             })(),
             // export
