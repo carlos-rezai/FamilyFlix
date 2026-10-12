@@ -27,7 +27,8 @@ import {
   type ShowEpisode,
   type ShowScan,
 } from '../groupShows/groupShows';
-import { matchRows, type Match } from '../matchRows/matchRows';
+import { MATCH_REASON, matchRows, type Match } from '../matchRows/matchRows';
+import { splitCollections } from '../splitCollections/splitCollections';
 import { readSheet, type SheetRow } from '../readSheet/readSheet';
 import { titleGuess, titleKey, yearInName } from '../titleKey/titleKey';
 import type {
@@ -1081,7 +1082,8 @@ export function createImporter({
     // Season folders gather under their Show folder; every other scan is a
     // film, exactly as it came. A show is matched by the film's own rule, over
     // a scan standing for it — and told apart again once matched.
-    const { shows, films } = groupShows(scans);
+    const { shows, films: grouped } = groupShows(scans);
+    const films = splitCollections(grouped);
     const showOf = new Map<MovieFolderScan, ShowScan>(
       shows.map((show) => [asMatchable(show), show])
     );
@@ -1228,11 +1230,16 @@ export function createImporter({
       shelves += foldersUnder(folder.path, scans);
 
       const grouped = groupShows(scans);
-      for (const scan of grouped.films) {
+      for (const scan of splitCollections(grouped.films)) {
         const row = guessedRow(scan.name);
         const sourceFolder = relative(folder.path, scan.dir);
         const key = filmKey(row.title, row.year);
-        const atFolder = storage.titleAt(folder.id, sourceFolder);
+        // A Collection folder's films share it, so the folder alone names
+        // none of them: each is held by its title key and year only.
+        const atFolder =
+          scan.collection === true
+            ? null
+            : storage.titleAt(folder.id, sourceFolder);
         const heldId = atFolder ?? already.get(key) ?? null;
         if (heldId !== null) {
           // Held: linked to where it was found, and nothing is added.
@@ -1241,6 +1248,16 @@ export function createImporter({
             current,
             `· Already in library ${titleWithYear(row.title, row.year)}`,
             'info'
+          );
+          continue;
+        }
+        if (scan.videos.length > 1) {
+          // One film beside its extras: the maintainer picks, on the
+          // Found-file choice, as a sheet run's matcher already asks.
+          file(
+            current,
+            problemOf('no-video', row.title, MATCH_REASON.manyVideos),
+            { row: null, folder: scan, candidates: [] }
           );
           continue;
         }

@@ -35,6 +35,12 @@ export interface MovieFolderScan {
   poster: string | null;
   backdrop: string | null;
   subtitles: SubtitleFound[];
+  /**
+   * Set on one film of a **Collection folder**: `dir` is shared with the
+   * collection's other films, so the folder alone does not say which title
+   * it is. Never set by the scan itself; `splitCollections` sets it.
+   */
+  collection?: true;
 }
 
 /** The name before the extension, lowercased — what `poster.JPG` is called. */

@@ -67,7 +67,7 @@ const stemOf = (path: string): string => {
  * the longest such stem, so `Pilot.Extended.srt` goes to `Pilot.Extended`
  * rather than to `Pilot` — or `null` for a subtitle beginning with none.
  */
-const videoOf = (subtitle: string, videos: string[]): string | null => {
+export const videoOf = (subtitle: string, videos: string[]): string | null => {
   const name = basename(subtitle).toLowerCase();
   let best: string | null = null;
   for (const video of videos) {
