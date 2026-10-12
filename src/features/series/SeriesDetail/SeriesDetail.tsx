@@ -97,10 +97,6 @@ export function SeriesDetail() {
 
   const { series } = detail;
   const playId = series.playEpisodeId;
-  const episodeCount = series.seasons.reduce(
-    (total, season) => total + season.episodeCount,
-    0
-  );
 
   return (
     <>
@@ -108,7 +104,7 @@ export function SeriesDetail() {
       <SeriesEditMenu
         seriesId={series.id}
         title={series.title}
-        episodeCount={episodeCount}
+        episodeCount={series.episodeCount}
       />
 
       <Content>

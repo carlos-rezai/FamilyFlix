@@ -150,6 +150,10 @@ describe('seriesView — the count line', () => {
 
     expect(view.countLabel).toBe('1 season · 8 episodes');
   });
+
+  it('answers the episodes it counts as a number', () => {
+    expect(seriesView(unstarted()).episodeCount).toBe(22);
+  });
 });
 
 describe('seriesView — the progress line', () => {

@@ -79,6 +79,7 @@ export function seriesView(detail: SeriesDetail): SeriesPageModel {
       episodes.length,
       'episode'
     )}`,
+    episodeCount: episodes.length,
     ratingPercent: toRatingPercent(series.rating),
     genres: series.genres.map((genre) => genre.name),
     playLabel: toPlayLabel(next),
