@@ -633,7 +633,9 @@ export function createEnrichment({
     fields: readonly EnrichField[],
     signal: AbortSignal
   ): Promise<ShowWritten> {
-    const episodes = storage.listEpisodes(series.id);
+    // A series gone mid-run reads as no seasons, as its episodes would.
+    const seasons = storage.getSeriesDetail(series.id)?.seasons ?? [];
+    const episodes = seasons.flatMap((season) => season.episodes);
     const { conflicts, fetched } = await writeSeries(
       current,
       series,
@@ -648,33 +650,38 @@ export function createEnrichment({
       fetched,
     };
 
-    const seasons = [...new Set(episodes.map((each) => each.season))].filter(
-      (season) => season > 0
-    );
-    for (const number of seasons) {
+    for (const season of seasons.filter((each) => each.number > 0)) {
       if (signal.aborted) return written;
-      const season = await client.season(apiKey, detail.id, number, signal);
-      if (signal.aborted) return written;
-      if (season.kind !== 'ok') return { kind: 'stop', stop: season.kind };
-      const onDisk = episodes.filter((each) => each.season === number);
-      const { poster } = planSeason(
-        storage.seasonPosterOf(series.id, number),
-        season.value,
-        fields
+      const theirs = await client.season(
+        apiKey,
+        detail.id,
+        season.number,
+        signal
       );
+      if (signal.aborted) return written;
+      if (theirs.kind !== 'ok') return { kind: 'stop', stop: theirs.kind };
+      const { poster } = planSeason(season.posterPath, theirs.value, fields);
       if (poster !== null) {
-        const name = `${spellEpisodeTag(number)}-poster.jpg`;
+        const name = `${spellEpisodeTag(season.number)}-poster.jpg`;
         const stored = await storeSeriesImage(
           current,
-          onDisk,
+          season.episodes,
           poster,
           name,
           signal
         );
         if (signal.aborted) return written;
-        if (stored !== null) storage.setSeasonPoster(series.id, number, stored);
+        if (stored !== null) {
+          storage.setSeasonPoster(series.id, season.number, stored);
+        }
       }
-      await writeEpisodes(current, onDisk, season.value, fields, signal);
+      await writeEpisodes(
+        current,
+        season.episodes,
+        theirs.value,
+        fields,
+        signal
+      );
     }
     return written;
   }
