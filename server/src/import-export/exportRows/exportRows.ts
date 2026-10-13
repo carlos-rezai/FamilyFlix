@@ -236,6 +236,8 @@ interface PlannedTitle {
   backdrop: string | null;
   /** Each episode with a still stored. */
   stills: Episode[];
+  /** Each season with a **Season poster** stored, its number and its path. */
+  seasonPosters: { number: number; storedPath: string }[];
   /**
    * Each subtitle file the title carries, as the name it is planned under
    * inside the title's folder, its extension still to come.
@@ -254,7 +256,8 @@ interface PlannedTitle {
  * With Images on, each title holding art gets a folder named as a Movie
  * folder is, numbered `(1)`, `(2)`, … on a clash, in title order: `poster`
  * and `backdrop` with the stored file's own extension, and each still under
- * `stills/` by its **Episode tag**. The Poster, Backdrop and Still cells carry
+ * `stills/` by its **Episode tag**, and each **Season poster** under
+ * `seasons/` as `S02`. The Poster, Backdrop and Still cells carry
  * those same paths, and stay blank with Images off or no stored file — so the
  * drawn **Default poster** is never mistaken for a picture.
  *
@@ -280,6 +283,7 @@ export function exportRows(
         poster: movie.posterPath,
         backdrop: movie.backdropPath,
         stills: [],
+        seasonPosters: [],
         tracks: inTrackOrder(movie.subtitles).map((subtitle) => ({
           storedPath: subtitle.path,
           name: safeName(subtitle.language),
@@ -299,6 +303,11 @@ export function exportRows(
         poster: detail.series.posterPath,
         backdrop: detail.series.backdropPath,
         stills: episodes.filter((episode) => episode.stillPath !== null),
+        seasonPosters: detail.seasons.flatMap((season) =>
+          season.posterPath === null
+            ? []
+            : [{ number: season.number, storedPath: season.posterPath }]
+        ),
         tracks: episodes.flatMap((episode) =>
           inTrackOrder(episode.subtitles).map((subtitle) => ({
             storedPath: subtitle.path,
@@ -322,7 +331,8 @@ export function exportRows(
       include.images &&
       (title.poster !== null ||
         title.backdrop !== null ||
-        title.stills.length > 0);
+        title.stills.length > 0 ||
+        title.seasonPosters.length > 0);
     const subtitles = include.subtitles && title.tracks.length > 0;
     if (!images && !subtitles) {
       return title.row(NO_ART);
@@ -356,6 +366,12 @@ export function exportRows(
       if (path !== null) {
         stillPaths.set(episode, path);
       }
+    }
+    for (const season of title.seasonPosters) {
+      plan(
+        season.storedPath,
+        `seasons/S${String(season.number).padStart(2, '0')}`
+      );
     }
     return title.row(art);
   });
