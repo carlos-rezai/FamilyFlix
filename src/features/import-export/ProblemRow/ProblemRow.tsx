@@ -66,12 +66,12 @@ const sheetChoices = (
  * the title and the reason under it, and _Resolve_ and _Skip_ as `Button`
  * `secondary` `sm` — then, under the head, the face its kind draws.
  *
- * _Resolve_ is a navigation — `/add?problem=<id>`, or `/add?movie=<movieId>&problem=<id>`
- * for the soft kind — so it is a link, which
- * the maintainer can middle-click; _Skip_ is an action, so it is a button.
- * An `ambiguous` row draws the **Folder picker**, _Resolve_ kept beside it,
- * and a `no-row` row _Import as_ its guess, _Resolve_ kept the same.
- * A `differs` row has no _Resolve_: it is settled on the row, by the
+ * _Resolve_ is a navigation — `/add?problem=<id>`, or
+ * `/add?movie=<movieId>&problem=<id>` for the soft kind — so it is a link,
+ * which the maintainer can middle-click; _Skip_ is an action, so it is a
+ * button. An `ambiguous` row draws the **Folder picker**, _Resolve_ kept
+ * beside it, and a `no-row` row _Import as_ its guess, _Resolve_ kept the
+ * same. A `differs` row has no _Resolve_: it is settled on the row, by the
  * _Yours | Spreadsheet_ diff, whose _Keep all mine_ is the row's _Skip_.
  * Neither knows what happens next: the row draws a problem and reports a
  * press.

@@ -9,9 +9,9 @@
  * The two things the **Setup step** draws a refusal under — the sheet field
  * and the **Library folders** group: a start the route refuses before any run
  * exists answers `400 { error, field }`, and the screen draws the reason under
- * that one. An `as const` list its union
- * is derived from, on `EXPORT_FORMATS`' precedent, so a refusal's field can be
- * checked against the declaration that names it.
+ * that one. An `as const` list its union is derived from, on
+ * `EXPORT_FORMATS`' precedent, so a refusal's field can be checked against
+ * the declaration that names it.
  */
 export const IMPORT_FIELDS = ['sheet', 'folders'] as const;
 
@@ -57,7 +57,10 @@ export type SheetChoices = Partial<Record<SheetField, 'mine' | 'sheet'>>;
 /** A run over a spreadsheet, or a **Folder scan** over the Library folders. */
 export type ImportSource = 'sheet' | 'folders';
 
-/** Where a run is: walking the Library folders, copying matches in, or waiting on review. */
+/**
+ * Where a run is: walking the Library folders, copying matches in, or waiting
+ * on review.
+ */
 export type ImportPhase = 'scanning' | 'importing' | 'review';
 
 /** How a line of the **Activity log** is drawn. */
@@ -161,8 +164,9 @@ export interface ImportRun {
    */
   enrich: boolean;
   /**
-   * What the run reads: a spreadsheet and its root, or the listed **Library
-   * folders** — a **Folder scan**. The screen reads it for its heading alone.
+   * What the run reads: a spreadsheet over the listed **Library folders**, or
+   * the folders alone — a **Folder scan**. The screen reads it for its heading
+   * alone.
    */
   source: ImportSource;
 }
@@ -185,7 +189,10 @@ export interface ImportProblemDetail extends Omit<ImportProblem, 'candidates'> {
   folder?: string;
   /** The key-equal folders of an `ambiguous` problem; the first prefills. */
   candidates: string[];
-  /** The **Found files** under the folder, as absolute paths under the root. */
+  /**
+   * The **Found files** under the folder, as absolute paths under its
+   * **Library folder**.
+   */
   files: {
     video?: string;
     /**

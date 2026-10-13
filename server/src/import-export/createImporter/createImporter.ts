@@ -53,8 +53,8 @@ import { SHEET_FIELDS } from '@/types';
 /**
  * A start refused before any run exists, naming what it refuses on — the
  * sheet field, or the **Library folders** group when none is listed — and the
- * screen draws the reason under that one. The route
- * answers it as `400 { error, field }`.
+ * screen draws the reason under that one. The route answers it as
+ * `400 { error, field }`.
  */
 export class ImportStartError extends Error {
   constructor(
@@ -82,8 +82,7 @@ export class ImportBusyError extends Error {
  * read — or a folder itself, or a path climbing out of one through `..`.
  * Refused before anything is copied: the resolve route is the one surface in
  * the app that accepts a path, and the listed folders are the whole of what
- * it may be pointed at. The route
- * answers it as `400`.
+ * it may be pointed at. The route answers it as `400`.
  */
 export class ImportPathError extends Error {
   constructor(readonly path: string) {
@@ -117,8 +116,9 @@ export class CandidateRefusedError extends Error {
 
 /**
  * One of the form's **File slots** as _Save & continue_ sends it back: a
- * **Found file** — the absolute path the scan found it at, under a Library folder —
- * or a file the route has already stored from bytes, as its **Stored path**.
+ * **Found file** — the absolute path the scan found it at, under a Library
+ * folder — or a file the route has already stored from bytes, as its
+ * **Stored path**.
  */
 export type ResolveFile = { found: string } | { stored: string };
 
@@ -183,8 +183,9 @@ export interface ResolveSeriesForm {
 /**
  * What the API layer can ask the import domain for. Injected into the router
  * as the fifth argument the way `playback` and `media` are, so the route layer
- * never learns there is a spreadsheet. `start`, `current`, `cancel`,
- * `problem`, `resolve` and `dismiss`.
+ * never learns there is a spreadsheet. `start`, `scan`, `current`, `cancel`,
+ * `dismiss`, `apply`, `pick`, `importGuessed`, `problem`, `resolve` and
+ * `resolveSeries`.
  */
 export interface Importer {
   /**
@@ -192,8 +193,9 @@ export interface Importer {
    * folder**, and answer its first snapshot. Rejects with
    * {@link ImportStartError} for a sheet that does not exist, cannot be read,
    * is neither `.xlsx` nor `.csv` or has no title column, and on `folders`
-   * when none is listed — before any run exists; with {@link ImportBusyError} while a
-   * run exists. `enrich` is only carried on the run, for _Finish_ to read.
+   * when none is listed — before any run exists; with {@link ImportBusyError}
+   * while a run exists. `enrich` is only carried on the run, for _Finish_ to
+   * read.
    */
   start(sheetPath: string, enrich?: boolean): Promise<ImportRun>;
   /** The **Current run**'s snapshot, or `null` when there is none. */
@@ -240,15 +242,15 @@ export interface Importer {
   /**
    * The **Problem detail** _Resolve_ prefills the form from: the problem, the
    * **Sheet row**, the **Source folder** it is about, the candidate folders
-   * and the folder's **Found files** as absolute paths. `null`
-   * for an id that is not there, and when there is no run.
+   * and the folder's **Found files** as absolute paths. `null` for an id that
+   * is not there, and when there is no run.
    */
   problem(id: string): ImportProblemDetail | null;
   /**
    * _Save & continue_: copy every **Found file** the form names in from under
-   * the run's Library folders, take a file the route already stored as it is, add the movie by
-   * the form's own sequence and dismiss the problem. Rejects with
-   * {@link ImportPathError} for a found path outside them — before
+   * the run's Library folders, take a file the route already stored as it is,
+   * add the movie by the form's own sequence and dismiss the problem. Rejects
+   * with {@link ImportPathError} for a found path outside them — before
    * anything is copied — and with {@link ProblemNotFoundError} for a problem
    * that is not there; a copy that fails leaves no folder behind and keeps the
    * problem.
@@ -257,10 +259,11 @@ export interface Importer {
   /**
    * The **Series Resolve**'s _Save & continue_ on an `unplaced` Problem:
    * create the series, or join the one the Problem names, copying every
-   * found video in from under the Library folders and recording each as its **Source
-   * file**, then dismiss the problem. Rejects with {@link ImportPathError},
-   * {@link ResolveRefusedError} for a number the held series has, and
-   * {@link ProblemNotFoundError}, each before anything is copied.
+   * found video in from under the Library folders and recording each as its
+   * **Source file**, then dismiss the problem. Rejects with
+   * {@link ImportPathError}, {@link ResolveRefusedError} for a number the
+   * held series has, and {@link ProblemNotFoundError}, each before anything
+   * is copied.
    */
   resolveSeries(id: string, form: ResolveSeriesForm): Promise<Series>;
   /**
@@ -592,9 +595,12 @@ function foldersUnder(listed: string, scans: MovieFolderScan[]): number {
  * the numbers review will show.
  *
  * The library's titles are read once when the run starts — a thousand-row
- * sheet is a thousand lookups otherwise — and a row already there, by key and
- * year, is neither a **Match** nor a **Problem**: the **Already in library**
- * skip, which is what makes cancel-then-restart harmless.
+ * sheet is a thousand lookups otherwise. A title already there is **Already
+ * in library**: by the **Source folder** on record first, then by key and
+ * year. It is never a **Match** — nothing is added for it, which is what
+ * makes cancel-then-restart harmless — but it takes its row's **Sheet
+ * fills** during the run and files its **Sheet differences** as one `differs`
+ * **Problem**.
  *
  * Each match is imported by the **Movie form**'s own sequence: reserve the
  * **Movie folder**, copy in the video, the poster, the backdrop and each
@@ -1545,9 +1551,8 @@ export function createImporter({
       matched.push({ match, libraryFolder });
     }
     // Every match-time problem is on the snapshot before the first byte is
-    // copied: the rows the matcher could not settle — a row already in the
-    // library is neither a match nor a problem — and then the folders no row
-    // claimed.
+    // copied: the rows the matcher could not settle, and then the folders no
+    // row claimed.
     for (const { kind, reason, row, candidates } of verdicts.problems) {
       // A row for a title held with no folder found is reached by its key and
       // year, and filled.

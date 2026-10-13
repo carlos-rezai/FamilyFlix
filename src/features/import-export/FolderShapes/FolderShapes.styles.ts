@@ -1,8 +1,8 @@
 import styled from 'styled-components';
 
 /**
- * _What the scanner accepts_: the soft-bordered bg2 panel between the root
- * field and the button, its glyph in a fixed column beside the text.
+ * _What the scanner accepts_: the soft-bordered bg2 panel under the Library
+ * folders, above the button, its glyph in a fixed column beside the text.
  */
 export const Accepts = styled.div`
   display: flex;

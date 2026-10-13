@@ -19,7 +19,10 @@ export interface ImportReviewProps {
   onSkip: (id: string) => void;
   /** _Apply choices_ was pressed on the `differs` **Problem** with this id. */
   onApply: (id: string, choices: SheetChoices) => void;
-  /** A **Candidate folder** was pressed on the `ambiguous` **Problem** with this id. */
+  /**
+   * A **Candidate folder** was pressed on the `ambiguous` **Problem** with
+   * this id.
+   */
   onPick: (id: string, folder: string) => void;
   /** _Import as_ was pressed on the `no-row` **Problem** with this id. */
   onImportAs: (id: string) => void;
@@ -37,8 +40,8 @@ export interface ImportReviewProps {
  * which say where it goes.
  *
  * The step draws the run it is handed and reports a press — _Skip_ and
- * _Apply choices_ name the problem's id — and never removes a row itself: the **Run hook** does, and
- * the next `run` shows it.
+ * _Apply choices_ name the problem's id — and never removes a row itself: the
+ * **Run hook** does, and the next `run` shows it.
  */
 export function ImportReview({
   run,

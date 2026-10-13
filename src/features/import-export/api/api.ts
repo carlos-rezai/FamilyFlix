@@ -63,12 +63,13 @@ function isFieldRefusal<F extends string>(
 
 /**
  * Start the **Current run** over the sheet the **Setup step** holds and every
- * listed **Library folder**, and resolve the snapshot the route answered its `201` with. `enrich` — the
- * _Also fetch from TMDB_ box — is always sent, and only carried on the run.
+ * listed **Library folder**, and resolve the snapshot the route answered its
+ * `201` with. `enrich` — the _Also fetch from TMDB_ box — is always sent, and
+ * only carried on the run.
  *
  * A `400` rejects with {@link ImportRefusedError} naming the field — the
- * sheet, or `folders` when none is listed; a `409`
- * with {@link ImportBusyError}, naming none; every other failure — a `500`, a
+ * sheet, or `folders` when none is listed; a `409` with
+ * {@link ImportBusyError}, naming none; every other failure — a `500`, a
  * request that could not be made — rejects with a plain `Error`. Only the
  * first is ever drawn under a field, because only the first says which.
  */

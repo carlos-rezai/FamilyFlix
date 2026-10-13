@@ -597,9 +597,10 @@ const RESET_REFUSALS: Record<
  * movie's files by asking for somewhere to put them and handing over a part, and
  * never by touching the filesystem itself.
  *
- * `importer` is the import domain, injected for the same reason again: the two
- * import routes hand it a sheet path and a root path and answer with the
- * snapshot it holds, and never learn there is a spreadsheet, a walker or a copy.
+ * `importer` is the import domain, injected for the same reason again: the
+ * import routes hand it a sheet path or a press on a review row and answer
+ * with what it holds, and never learn there is a spreadsheet, a walker or a
+ * copy.
  *
  * `enrichment` is the fifth domain, injected so no route learns there is a
  * TMDB: the key routes hand it what was pasted and map the value it answers.
@@ -2434,11 +2435,11 @@ export function createApiRouter(
 
   // The **Problem detail** _Resolve_ opens the form on: the problem, the
   // **Sheet row**, the matched **Source folder**, the candidates and the
-  // folder's **Found files** as absolute paths under the root. A `404` with a
-  // reason for an id that is not there — dismissed, never was, or no run —
-  // so the screen can tell it from a route that does not exist and fall back
-  // to the plain Add context. The importer decides; this route only turns
-  // its `null` into the status.
+  // folder's **Found files** as absolute paths under its **Library folder**. A
+  // `404` with a reason for an id that is not there — dismissed, never was, or
+  // no run — so the screen can tell it from a route that does not exist and
+  // fall back to the plain Add context. The importer decides; this route only
+  // turns its `null` into the status.
   router.get(
     '/import/current/problems/:id',
     (req: Request<{ id: string }>, res: Response) => {
@@ -2454,9 +2455,9 @@ export function createApiRouter(
   // The **Series Resolve**: an `unplaced` Problem's body is the series form,
   // read by `seriesFormBody` as the edit reads it — an episode's video is the
   // `episodeVideo` part that follows its field, else its `videoPath`, which
-  // here is a **Found file** under the root. The importer creates the series
-  // or joins the held one; the refusals are the film resolve's, plus a number
-  // the held series has.
+  // here is a **Found file** under a Library folder. The importer creates the
+  // series or joins the held one; the refusals are the film resolve's, plus a
+  // number the held series has.
   const resolveSeries = async (
     req: Request<{ id: string }>,
     res: Response,
@@ -2559,11 +2560,12 @@ export function createApiRouter(
   // `subtitlePath`), a picked one as bytes in the part beside it; the two are
   // told apart exactly as the edit tells them apart, so nothing about the
   // encoding is this route's own. What is this route's own is where a path
-  // may point: the importer copies from under the **Current run**'s root and
-  // nowhere else, and a path outside it is a `400` with nothing copied — not
-  // the film named inside the root beside it either. `POST /api/movies` keeps
-  // accepting bytes only, whatever a path field says: a path-accepting field
-  // on the route anyone on the network can reach was ruled out in the PRD.
+  // may point: the importer copies from under the **Current run**'s Library
+  // folders and nowhere else, and a path outside them is a `400` with nothing
+  // copied — not the film named inside one beside it either.
+  // `POST /api/movies` keeps accepting bytes only, whatever a path field says:
+  // a path-accepting field on the route anyone on the network can reach was
+  // ruled out in the PRD.
   //
   // **Every refusal takes the bytes this request wrote with it**, on the
   // add's rule rather than the edit's: a resolve is a new movie, so the folder
@@ -2623,8 +2625,9 @@ export function createApiRouter(
       const { title, year, director, synopsis, rating, cast, genres } = read;
 
       // A slot answers in one of two ways, as it does on the edit: bytes this
-      // request stored, or a path — which here is a **Found file** under the
-      // root rather than a file the library holds. Silence is an empty slot.
+      // request stored, or a path — which here is a **Found file** under a
+      // Library folder rather than a file the library holds. Silence is an
+      // empty slot.
       const slot = (
         stored: string | undefined,
         path: string | undefined
@@ -2647,8 +2650,8 @@ export function createApiRouter(
       const poster = slot(uploads.poster, onlyField(fields, 'posterPath'));
 
       // The tracks, paired by the body reader exactly as the edit's are — and
-      // read the other way: a path here is a **Found file** under the root,
-      // not a file the library holds.
+      // read the other way: a path here is a **Found file** under a Library
+      // folder, not a file the library holds.
       const subtitles: ResolveForm['subtitles'] = subtitleRows(
         fields,
         uploads,
