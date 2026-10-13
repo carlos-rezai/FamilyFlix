@@ -291,3 +291,50 @@ describe('library: setSeasonPoster — the Season poster', () => {
     expect(seasonPosterRead(storage, other.id, 1)).toBeNull();
   });
 });
+
+// 39 — Season posters, Slice 3 (issue #323): `seasonPosterOf(seriesId,
+// season)` answers the Season poster a Sync plans with as `held` — the Stored
+// path, or `null` for none.
+describe('library: seasonPosterOf — the Season poster held', () => {
+  it('answers the held Stored path', () => {
+    const { storage, seriesId } = showWithEpisodes();
+    storage.setSeasonPoster(
+      seriesId,
+      1,
+      'the-hollow-coast-2018/S01-poster.jpg'
+    );
+
+    expect(storage.seasonPosterOf(seriesId, 1)).toBe(
+      'the-hollow-coast-2018/S01-poster.jpg'
+    );
+  });
+
+  it('answers null for a season with none held', () => {
+    const { storage, seriesId } = showWithEpisodes();
+
+    expect(storage.seasonPosterOf(seriesId, 1)).toBeNull();
+  });
+
+  it('answers null for another season of the same series', () => {
+    const { storage, seriesId } = showWithEpisodes();
+    storage.setSeasonPoster(
+      seriesId,
+      1,
+      'the-hollow-coast-2018/S01-poster.jpg'
+    );
+
+    expect(storage.seasonPosterOf(seriesId, 2)).toBeNull();
+  });
+
+  it('answers null for the same season of another series', () => {
+    const { storage, seriesId } = showWithEpisodes();
+    const other = storage.addSeries({ title: 'Harbor & Vine' });
+    storage.setSeasonPoster(
+      seriesId,
+      1,
+      'the-hollow-coast-2018/S01-poster.jpg'
+    );
+
+    expect(storage.seasonPosterOf(other.id, 1)).toBeNull();
+  });
+});

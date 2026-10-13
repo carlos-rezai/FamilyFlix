@@ -229,6 +229,21 @@ describe('the builders', () => {
       tmdbTvDetail(1, 'X', 2000, { last_air_date: '2004-01-01' }).last_air_date
     ).toBe('2004-01-01');
   });
+
+  // 39 — Season posters, Slice 3 (issue #323): `TmdbSeason` reads
+  // `poster_path`, `null` by default so the suites that build a season
+  // without one do not move.
+  it('build a season with no poster by default, and take one as an override', () => {
+    expect(SEASON.poster_path).toBeNull();
+    expect(
+      tmdbSeason(2, [], { poster_path: '/s02-poster.jpg' }).poster_path
+    ).toBe('/s02-poster.jpg');
+    expect(tmdbSeason(2, [], { poster_path: '/s02-poster.jpg' })).toEqual({
+      season_number: 2,
+      episodes: [],
+      poster_path: '/s02-poster.jpg',
+    });
+  });
 });
 
 describe('reviewed', () => {

@@ -85,6 +85,7 @@ const SHOW_DETAIL = {
 const SEASONS: Record<number, TmdbSeason> = {
   0: {
     season_number: 0,
+    poster_path: null,
     episodes: [
       {
         episode_number: 1,
@@ -97,6 +98,7 @@ const SEASONS: Record<number, TmdbSeason> = {
   },
   1: {
     season_number: 1,
+    poster_path: null,
     episodes: [
       {
         episode_number: 1,
@@ -116,6 +118,7 @@ const SEASONS: Record<number, TmdbSeason> = {
   },
   2: {
     season_number: 2,
+    poster_path: null,
     episodes: [
       {
         episode_number: 1,
@@ -128,6 +131,7 @@ const SEASONS: Record<number, TmdbSeason> = {
   },
   3: {
     season_number: 3,
+    poster_path: null,
     episodes: [
       {
         episode_number: 1,
@@ -567,7 +571,10 @@ describe('createEnrichment: episodes never raise a Decision', () => {
 
   it('leaves an episode TMDB does not list as it was, raising nothing', async () => {
     const { enrichment, storage, addShow } = world(
-      knowsTheShow({ ...SEASONS, 2: { season_number: 2, episodes: [] } })
+      knowsTheShow({
+        ...SEASONS,
+        2: { season_number: 2, poster_path: null, episodes: [] },
+      })
     );
     const id = await addShow();
     const before = episodeOf(storage, id, 2, 1);
