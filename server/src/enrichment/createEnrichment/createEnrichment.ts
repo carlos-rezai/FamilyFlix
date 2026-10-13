@@ -623,7 +623,8 @@ export function createEnrichment({
 
   /**
    * One matched show written: at show level, then every season it has on
-   * disk — never season 0 — read and matched by episode number.
+   * disk — never season 0 — given its **Season poster**, then its episodes
+   * read and matched by episode number.
    */
   async function writeShow(
     current: EnrichmentRun,
