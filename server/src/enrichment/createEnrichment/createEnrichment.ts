@@ -18,6 +18,7 @@ import type {
 } from '@/types';
 import type { LibraryStorage } from '../../library';
 import type { Media } from '../../media/createMedia/createMedia';
+import { spellEpisodeTag } from '../../media/episodeTag/episodeTag';
 import { readableFolder } from '../../media/readableFolder/readableFolder';
 import {
   fetchedFields,
@@ -662,7 +663,7 @@ export function createEnrichment({
         fields
       );
       if (poster !== null) {
-        const name = `S${String(number).padStart(2, '0')}-poster.jpg`;
+        const name = `${spellEpisodeTag(number)}-poster.jpg`;
         const stored = await storeSeriesImage(
           current,
           onDisk,
