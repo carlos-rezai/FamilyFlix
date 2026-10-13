@@ -40,6 +40,7 @@ function renderRow(props: Partial<ProblemRowProps> = {}) {
           onSkip={props.onSkip ?? (() => undefined)}
           onApply={props.onApply ?? (() => undefined)}
           onPick={props.onPick ?? (() => undefined)}
+          onImportAs={props.onImportAs ?? (() => undefined)}
         />
       </ThemeProvider>
     </MemoryRouter>
@@ -526,4 +527,139 @@ describe('ProblemRow — an ambiguous row', () => {
 
     expect(drawn).toEqual(['ambiguous']);
   });
+});
+
+/**
+ * 40 — Import review, Phase 4: "Import as on a no-row row" (issue #335).
+ *
+ * A `no-row` row draws _Import as “Ironwood (2018)”_ — `secondary`, `sm` — in
+ * the face slot under its head, the Problem's `guess` spelled in it, with
+ * _Resolve_ kept beside _Skip_ for a name the maintainer would rather choose.
+ * A press reports `onImportAs()`; the row knows nothing of what follows. No
+ * other kind draws it, and every kind's _Skip_ still reports `onSkip`.
+ */
+describe('ProblemRow — a no-row row', () => {
+  const noRow = problem({
+    id: 'p5',
+    kind: 'no-row',
+    title: 'Ironwood.2018.1080p',
+    reason: "Folder isn't in the spreadsheet.",
+    guess: { title: 'Ironwood', year: 2018 },
+  });
+
+  const importAs = () =>
+    screen.getByRole('button', { name: 'Import as “Ironwood (2018)”' });
+
+  it('draws Import as with the guess spelled, title and year', () => {
+    renderRow({ problem: noRow });
+
+    expect(importAs()).toBeDefined();
+  });
+
+  it('spells a guess with no year as its title alone', () => {
+    renderRow({
+      problem: { ...noRow, guess: { title: 'The Quiet Hours' } },
+    });
+
+    expect(
+      screen.getByRole('button', { name: 'Import as “The Quiet Hours”' })
+    ).toBeDefined();
+  });
+
+  it('keeps Resolve and Skip beside it, Resolve onto the form by the id', () => {
+    renderRow({ problem: noRow });
+
+    expect(resolveLink()).toBeDefined();
+    expect(skipButton()).toBeDefined();
+    expect(resolveLink().getAttribute('href')).toBe('/add?problem=p5');
+  });
+
+  it('draws it under the head', () => {
+    renderRow({ problem: noRow });
+
+    expect(
+      skipButton().compareDocumentPosition(importAs()) &
+        Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
+  });
+
+  it('draws it as a secondary sm Button', () => {
+    renderRow({ problem: noRow });
+
+    const style = getComputedStyle(importAs());
+    expect(style.height).toBe('40px');
+    expect(style.fontSize).toBe('14px');
+    expect(style.borderTopWidth).toBe('1px');
+    expect(style.borderTopColor).toBe('rgb(58, 48, 36)');
+    expect(style.backgroundColor).toMatch(/^(transparent|rgba\(0, 0, 0, 0\))$/);
+  });
+
+  it('reports the press, and skips nothing', () => {
+    const onImportAs = vi.fn<ProblemRowProps['onImportAs']>();
+    const onSkip = vi.fn();
+    renderRow({ problem: noRow, onImportAs, onSkip });
+
+    fireEvent.click(importAs());
+
+    expect(onImportAs).toHaveBeenCalledTimes(1);
+    expect(onSkip).not.toHaveBeenCalled();
+  });
+
+  const OTHERS: ProblemKind[] = [
+    'no-folder',
+    'ambiguous',
+    'no-video',
+    'failed',
+    'missing-meta',
+    'unplaced',
+    'differs',
+  ];
+
+  it('draws Import as on a no-row row alone', () => {
+    const drawn = (['no-row', ...OTHERS] as ProblemKind[]).filter((kind) => {
+      const { unmount } = renderRow({
+        problem: problem({ kind, movieId: 'm1', guess: noRow.guess }),
+      });
+      const shown =
+        screen.queryByRole('button', { name: /^Import as/ }) !== null;
+      unmount();
+      return shown;
+    });
+
+    expect(drawn).toEqual(['no-row']);
+  });
+
+  it.each([
+    'no-folder',
+    'no-video',
+    'failed',
+    'missing-meta',
+    'unplaced',
+  ] as ProblemKind[])(
+    'keeps a %s row’s Resolve, and draws no Import as',
+    (kind) => {
+      renderRow({ problem: problem({ kind, movieId: 'm1' }) });
+
+      expect(resolveLink()).toBeDefined();
+      expect(screen.queryByRole('button', { name: /^Import as/ })).toBeNull();
+    }
+  );
+
+  it.each(['no-row', ...OTHERS] as ProblemKind[])(
+    'reports Skip on a %s row as before, and imports nothing',
+    (kind) => {
+      const onSkip = vi.fn();
+      const onImportAs = vi.fn<ProblemRowProps['onImportAs']>();
+      renderRow({
+        problem: problem({ kind, movieId: 'm1', guess: noRow.guess }),
+        onSkip,
+        onImportAs,
+      });
+
+      fireEvent.click(skipButton());
+
+      expect(onSkip).toHaveBeenCalledTimes(1);
+      expect(onImportAs).not.toHaveBeenCalled();
+    }
+  );
 });

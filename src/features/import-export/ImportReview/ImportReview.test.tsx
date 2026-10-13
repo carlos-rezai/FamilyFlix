@@ -66,6 +66,7 @@ function renderReview(props: Partial<ImportReviewProps> = {}) {
           onSkip={props.onSkip ?? (() => undefined)}
           onApply={props.onApply ?? (() => undefined)}
           onPick={props.onPick ?? (() => undefined)}
+          onImportAs={props.onImportAs ?? (() => undefined)}
           finishLabel={props.finishLabel ?? FINISH}
           onFinish={props.onFinish ?? (() => undefined)}
         />
@@ -85,6 +86,7 @@ function renderReview(props: Partial<ImportReviewProps> = {}) {
               onSkip={props.onSkip ?? (() => undefined)}
               onApply={props.onApply ?? (() => undefined)}
               onPick={props.onPick ?? (() => undefined)}
+              onImportAs={props.onImportAs ?? (() => undefined)}
               finishLabel={props.finishLabel ?? FINISH}
               onFinish={props.onFinish ?? (() => undefined)}
             />
@@ -438,5 +440,40 @@ describe('ImportReview — an ambiguous row', () => {
     expect(onPick).toHaveBeenCalledWith('p7', 'D:/Films/Die.Hard.1988.1080p');
     // The step removes nothing itself: the Run hook does.
     expect(screen.getByText('Die Hard')).toBeDefined();
+  });
+});
+
+/**
+ * 40 — Import review, Phase 4: "Import as on a no-row row" (issue #335).
+ *
+ * A `no-row` row draws _Import as_ with its guess spelled, and a press is
+ * reported with the row's id, as _Skip_ is; the step removes nothing itself.
+ */
+describe('ImportReview — a no-row row', () => {
+  const NO_ROW: ImportProblem = {
+    id: 'p8',
+    kind: 'no-row',
+    title: 'Ironwood.2018.1080p',
+    reason: "Folder isn't in the spreadsheet.",
+    guess: { title: 'Ironwood', year: 2018 },
+  };
+
+  it('reports a press with that row’s id', () => {
+    const onImportAs = vi.fn<ImportReviewProps['onImportAs']>();
+    const onSkip = vi.fn<ImportReviewProps['onSkip']>();
+    renderReview({
+      run: inReview([NO_ROW, ...PROBLEMS], 0),
+      onImportAs,
+      onSkip,
+    });
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Import as “Ironwood (2018)”' })
+    );
+
+    expect(onImportAs).toHaveBeenCalledWith('p8');
+    expect(onSkip).not.toHaveBeenCalled();
+    // The step removes nothing itself: the Run hook does.
+    expect(screen.getByText('Ironwood.2018.1080p')).toBeDefined();
   });
 });

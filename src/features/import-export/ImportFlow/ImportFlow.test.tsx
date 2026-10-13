@@ -116,6 +116,10 @@ const isPick = (input: RequestInfo | URL, init?: RequestInit) =>
   /\/api\/import\/current\/problems\/[^/]+\/pick$/.test(String(input)) &&
   init?.method?.toUpperCase() === 'POST';
 
+const isImportAs = (input: RequestInfo | URL, init?: RequestInit) =>
+  /\/api\/import\/current\/problems\/[^/]+\/import$/.test(String(input)) &&
+  init?.method?.toUpperCase() === 'POST';
+
 /** The reads of the current route so far. */
 const reads = () => fetchMock.mock.calls.filter(([i, n]) => isCurrent(i, n));
 
@@ -136,6 +140,7 @@ function serve(
     hold,
     dismiss = () => noContentResponse(),
     pick = () => noContentResponse(),
+    importAs = () => noContentResponse(),
     folders = [LISTED],
   }: {
     onArrival?: boolean;
@@ -146,6 +151,8 @@ function serve(
     dismiss?: () => Response;
     /** What a Folder picker press answers — `204` unless a test says. */
     pick?: () => Response;
+    /** What an Import as press answers — `204` unless a test says. */
+    importAs?: () => Response;
   } = {}
 ) {
   let read = 0;
@@ -166,6 +173,9 @@ function serve(
     }
     if (isPick(input, init)) {
       return pick();
+    }
+    if (isImportAs(input, init)) {
+      return importAs();
     }
     if (isStart(input, init)) {
       if (started.status === 201 || started.status === 409) {
@@ -809,7 +819,11 @@ const dismissals = () =>
 /** Arrive on a run already in review, and wait for its list. */
 async function arriveInReview(
   problems: ImportProblem[] = PROBLEMS,
-  options: { dismiss?: () => Response; pick?: () => Response } = {}
+  options: {
+    dismiss?: () => Response;
+    pick?: () => Response;
+    importAs?: () => Response;
+  } = {}
 ) {
   serve(createdResponse(reviewOf(problems)), [reviewOf(problems)], {
     onArrival: true,
@@ -1304,6 +1318,63 @@ describe('ImportFlow — the Folder picker on an ambiguous row', () => {
     pressCard('Die.Hard.1988.1080p');
 
     await waitFor(() => expect(screen.queryByText('Die Hard')).toBeNull());
+    expect(tileNumber(ATTENTION)).toBe('2');
+  });
+});
+
+/**
+ * 40 — Import review, Phase 4: "Import as on a no-row row" (issue #335).
+ *
+ * A `no-row` row in the review: _Import as “Ironwood (2018)”_ posts to the
+ * Problem's import route. On a `204` the row goes; on a `404` — a row already
+ * gone — it goes all the same. The run is not polled for any of it, and
+ * nothing is dismissed.
+ */
+describe('ImportFlow — Import as on a no-row row', () => {
+  const NO_ROW: ImportProblem = {
+    id: 'p8',
+    kind: 'no-row',
+    title: 'Ironwood.2018.1080p',
+    reason: "Folder isn't in the spreadsheet.",
+    guess: { title: 'Ironwood', year: 2018 },
+  };
+
+  const imports = () =>
+    fetchMock.mock.calls.filter(([input, init]) => isImportAs(input, init));
+
+  const pressImportAs = () =>
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Import as “Ironwood (2018)”' })
+    );
+
+  it('posts to the import route, drops the row and counts the tile down', async () => {
+    await arriveInReview([NO_ROW, ...PROBLEMS]);
+    expect(tileNumber(ATTENTION)).toBe('3');
+    const before = reads().length;
+
+    pressImportAs();
+
+    await waitFor(() =>
+      expect(screen.queryByText('Ironwood.2018.1080p')).toBeNull()
+    );
+    expect(imports().map(([input]) => String(input))).toEqual([
+      '/api/import/current/problems/p8/import',
+    ]);
+    expect(tileNumber(ATTENTION)).toBe('2');
+    expect(dismissals()).toEqual([]);
+    expect(reads()).toHaveLength(before);
+  });
+
+  it('drops the row on a 404 — a row already gone', async () => {
+    await arriveInReview([NO_ROW, ...PROBLEMS], {
+      importAs: () => notFoundResponse('No such problem: p8'),
+    });
+
+    pressImportAs();
+
+    await waitFor(() =>
+      expect(screen.queryByText('Ironwood.2018.1080p')).toBeNull()
+    );
     expect(tileNumber(ATTENTION)).toBe('2');
   });
 });
