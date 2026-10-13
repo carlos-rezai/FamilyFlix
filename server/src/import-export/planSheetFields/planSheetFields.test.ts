@@ -284,6 +284,19 @@ describe('planSheetFields: the rating', () => {
     expect(plan.proposed).toEqual({ rating: 9 });
   });
 
+  it.each([
+    [7, '3½ ★'],
+    [8, '4 ★'],
+    [1, '½ ★'],
+    [0, 'No stars'],
+  ])('spells a rating of %i as %s', (units, spelled) => {
+    const plan = film({ rating: 6 }, { rating: units });
+
+    expect(plan.differences).toEqual([
+      { field: 'rating', label: 'Rating', mine: '3 ★', sheet: spelled },
+    ]);
+  });
+
   it('raises 0 against a held rating as a difference', () => {
     const plan = film({ rating: 4 }, { rating: 0 });
 

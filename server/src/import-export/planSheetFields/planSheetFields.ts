@@ -41,13 +41,17 @@ const LABELS: Readonly<Record<SheetField, string>> = {
 };
 
 /**
- * A rating in half-star units spelled for reading, as stars: `5` → `★★½`,
- * `8` → `★★★★`, and `0` in words, since no stars draws nothing.
+ * A rating in half-star units spelled for reading, as the amended prototype
+ * spells it — the stars' number, then a star: `7` → `3½ ★`, `8` → `4 ★`,
+ * `1` → `½ ★`, and `0` in words, since no stars is not a number of them.
  */
-const stars = (units: number): string =>
-  units <= 0
-    ? 'No stars'
-    : `${'★'.repeat(Math.floor(units / 2))}${units % 2 === 1 ? '½' : ''}`;
+const stars = (units: number): string => {
+  if (units <= 0) {
+    return 'No stars';
+  }
+  const whole = Math.floor(units / 2);
+  return `${whole > 0 ? whole : ''}${units % 2 === 1 ? '½' : ''} ★`;
+};
 
 /** Text as it is compared: trimmed and case-blind. */
 const norm = (text: string): string => text.trim().toLowerCase();
