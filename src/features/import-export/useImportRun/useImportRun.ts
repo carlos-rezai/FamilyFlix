@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { dismissProblem } from '@/api/dismissProblem/dismissProblem';
-import type { ImportRun, SheetChoices } from '@/types';
+import type { ImportProblem, ImportRun, SheetChoices } from '@/types';
 import {
   applySheetChoices,
   cancelImport,
@@ -59,8 +59,9 @@ export interface ImportRunState {
    */
   pick: (id: string, folder: string) => Promise<void>;
   /**
-   * _Import as_ on a `no-row` **Problem**: post it, and take the row off on
-   * a `204` or a `404`. Rejects otherwise; the row stays.
+   * _Import as_ on a `no-row` **Problem**: post it, and settle the row as
+   * `pick` does — off on a `204` or a `404`, redrawn in place from a `200`.
+   * Rejects otherwise; the row stays.
    */
   importAsGuessed: (id: string) => Promise<void>;
 }
@@ -159,9 +160,13 @@ export function useImportRun(): ImportRunState {
     [takeOff]
   );
 
-  const pick = useCallback(
-    async (id: string, folder: string) => {
-      const redrawn = await pickCandidateFolder(id, folder);
+  /**
+   * A review press's answer on the snapshot — {@link takeOff}'s twin: the row
+   * redrawn in its own place as the route answered it, or taken off for
+   * `null`.
+   */
+  const settle = useCallback(
+    (id: string, redrawn: ImportProblem | null) => {
       if (redrawn === null) {
         takeOff(id);
         return;
@@ -180,12 +185,18 @@ export function useImportRun(): ImportRunState {
     [takeOff]
   );
 
+  const pick = useCallback(
+    async (id: string, folder: string) => {
+      settle(id, await pickCandidateFolder(id, folder));
+    },
+    [settle]
+  );
+
   const importAsGuessed = useCallback(
     async (id: string) => {
-      await importGuessed(id);
-      takeOff(id);
+      settle(id, await importGuessed(id));
     },
-    [takeOff]
+    [settle]
   );
 
   const live = isLive(run);

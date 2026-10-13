@@ -17,8 +17,10 @@ import {
  * `importAsGuessed(id)`, _Import as “Ironwood (2018)”_ on a `no-row` row, on
  * `pick`'s prior art: `POST /api/import/current/problems/:id/import` goes,
  * with no body; the row is taken off the snapshot on a `204` — and on a `404`
- * too, because both mean the Problem is not there. Any other answer keeps the
- * row and rejects. The run is in review, so it is not polled for any of it.
+ * too, because both mean the Problem is not there — and redrawn in its place
+ * from a `200`'s Problem, `pick`'s answer (issue #336). Any other answer keeps
+ * the row and rejects. The run is in review, so it is not polled for any of
+ * it.
  */
 
 type FetchArgs = [RequestInfo | URL, RequestInit?];
@@ -153,6 +155,26 @@ describe('useImportRun — importAsGuessed', () => {
     expect(result.current.run?.problems.map((problem) => problem.id)).toEqual([
       'p1',
       'p3',
+    ]);
+  });
+
+  it('redraws the row in its own place from a 200’s Problem', async () => {
+    const redrawn = {
+      id: 'p2',
+      kind: 'no-video',
+      title: 'Ironwood',
+      reason: 'Two videos. Pick the film.',
+    } as const;
+    const { result } = await mountInReview(() => okResponse(redrawn));
+
+    await act(async () => {
+      await result.current.importAsGuessed('p2');
+    });
+
+    expect(result.current.run?.problems).toEqual([
+      inReview().problems[0],
+      redrawn,
+      inReview().problems[2],
     ]);
   });
 

@@ -5,6 +5,7 @@ import {
   fetchCurrentImport,
   cancelImport,
   fetchExportSummary,
+  importGuessed,
   startExport,
   ImportBusyError,
 } from './api';
@@ -261,6 +262,46 @@ describe('cancelImport', () => {
     fetchMock.mockRejectedValue(new Error('offline'));
 
     await expect(cancelImport()).rejects.toThrow();
+  });
+});
+
+describe('importGuessed', () => {
+  const REDRAWN = {
+    id: 'p 2/x',
+    kind: 'no-video',
+    title: 'Ironwood',
+    reason: 'Two videos. Pick the film.',
+  } as const;
+
+  it('POSTs to the Problem’s import route, the id encoded, with no body', async () => {
+    fetchMock.mockResolvedValue(noContentResponse());
+
+    await importGuessed('p 2/x');
+
+    const request = onlyRequest();
+    expect(request.url).toBe('/api/import/current/problems/p%202%2Fx/import');
+    expect(request.method?.toUpperCase()).toBe('POST');
+    expect(request.body).toBeUndefined();
+  });
+
+  it('answers the row redrawn on a 200', async () => {
+    fetchMock.mockResolvedValue(okResponse(REDRAWN));
+
+    await expect(importGuessed('p 2/x')).resolves.toEqual(REDRAWN);
+  });
+
+  it('answers null on the 204 and on the 404 — gone is gone', async () => {
+    fetchMock.mockResolvedValueOnce(noContentResponse());
+    fetchMock.mockResolvedValueOnce(notFoundResponse('No such problem'));
+
+    await expect(importGuessed('p2')).resolves.toBeNull();
+    await expect(importGuessed('p2')).resolves.toBeNull();
+  });
+
+  it('rejects when the server fell over', async () => {
+    fetchMock.mockResolvedValue(serverErrorResponse());
+
+    await expect(importGuessed('p2')).rejects.toThrow();
   });
 });
 

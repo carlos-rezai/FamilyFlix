@@ -44,6 +44,10 @@ const IMPORT_ENDPOINT = '/api/import';
 const CURRENT_ENDPOINT = '/api/import/current';
 const CANCEL_ENDPOINT = '/api/import/current/cancel';
 
+/** One **Problem**'s route on the **Current run**, the id encoded. */
+const problemEndpoint = (id: string): string =>
+  `${CURRENT_ENDPOINT}/problems/${encodeURIComponent(id)}`;
+
 /**
  * Whether a refusing start's body is `{ error, field }` with a field from
  * `fields` — `400 { error, field }`, the shape `POST /api/import` and
@@ -140,7 +144,7 @@ export async function applySheetChoices(
   id: string,
   choices: SheetChoices
 ): Promise<void> {
-  const endpoint = `${CURRENT_ENDPOINT}/problems/${encodeURIComponent(id)}/apply`;
+  const endpoint = `${problemEndpoint(id)}/apply`;
   const response = await fetch(endpoint, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -155,15 +159,15 @@ export async function applySheetChoices(
 /**
  * A press on an `ambiguous` **Problem**'s **Folder picker**: `POST` the
  * **Candidate folder** to the Problem's pick route. A `200` answers the row
- * redrawn — that folder's `no-video` Problem; the `204` and the `404` both
- * answer `null`, the Problem not there any more. Anything else rejects, and
- * so does a request that could not be made.
+ * redrawn — that folder's `no-video` or `failed` Problem; the `204` and the
+ * `404` both answer `null`, the Problem not there any more. Anything else
+ * rejects, and so does a request that could not be made.
  */
 export async function pickCandidateFolder(
   id: string,
   folder: string
 ): Promise<ImportProblem | null> {
-  const endpoint = `${CURRENT_ENDPOINT}/problems/${encodeURIComponent(id)}/pick`;
+  const endpoint = `${problemEndpoint(id)}/pick`;
   const response = await fetch(endpoint, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -181,17 +185,22 @@ export async function pickCandidateFolder(
 
 /**
  * _Import as_ on a `no-row` **Problem**: `POST` to the Problem's import
- * route, no body. The `204` and the `404` both resolve — the Problem is not
- * there any more either way. Anything else rejects, and so does a request
- * that could not be made.
+ * route, no body. A `200` answers the row redrawn — the folder's `no-video`
+ * or `failed` Problem; the `204` and the `404` both answer `null`, the
+ * Problem not there any more — {@link pickCandidateFolder}'s answers.
+ * Anything else rejects, and so does a request that could not be made.
  */
-export async function importGuessed(id: string): Promise<void> {
-  const endpoint = `${CURRENT_ENDPOINT}/problems/${encodeURIComponent(id)}/import`;
+export async function importGuessed(id: string): Promise<ImportProblem | null> {
+  const endpoint = `${problemEndpoint(id)}/import`;
   const response = await fetch(endpoint, { method: 'POST' });
 
+  if (response.status === 200) {
+    return (await response.json()) as ImportProblem;
+  }
   if (response.status !== 204 && response.status !== 404) {
     throw new Error(`POST ${endpoint} failed: ${response.status}`);
   }
+  return null;
 }
 
 const EXPORT_ENDPOINT = '/api/export';
