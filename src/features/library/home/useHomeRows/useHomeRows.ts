@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
 import type {
@@ -15,10 +15,7 @@ import { toGenreRow } from '../toGenreRow/toGenreRow';
 import { view } from '../../view/view';
 import { useBrowseLoad } from '../../useBrowseLoad/useBrowseLoad';
 import { useOptimisticSave } from '../../useOptimisticSave/useOptimisticSave';
-import {
-  withFavorite,
-  withFavoriteInList,
-} from '../../withFavorite/withFavorite';
+import { withFavorite, withShelved } from '../../withFavorite/withFavorite';
 
 /** The home payload as the three sections render it, mapped once as it lands. */
 interface HomeSections {
@@ -152,13 +149,52 @@ export function useHomeRows(): UseHomeRowsResult {
           : {
               ...current,
               rows: withFavorite(current.rows, id, favorite),
-              favorites: withFavoriteInList(current.favorites, id, favorite),
+              favorites: withShelved(
+                current.favorites,
+                current.rows,
+                id,
+                favorite
+              ),
             }
       ),
     [setData]
   );
 
-  const toggleFavorite = useOptimisticSave(applyFavorite, saveFavorite);
+  // Saves still waiting on the route, and whether one of those that landed was
+  // a confirmed heart.
+  const pendingSaves = useRef(0);
+  const reloadWanted = useRef(false);
+
+  /**
+   * The save, and the reload a confirmed heart earns. A heart puts its card at
+   * the front of the shelf, which is not where the server's sort or its cap of
+   * 15 would put it — so once the route has it, the home is read again and the
+   * shelf settles where it belongs, behind the skeleton latch so nothing on
+   * screen moves but the shelf. The reload waits for every save still in
+   * flight: one answered before the server had a heart would take that heart
+   * back. An un-heart needs no reload — the card only leaves.
+   */
+  const saveAndSettle = useCallback(
+    async (id: string, favorite: boolean) => {
+      pendingSaves.current += 1;
+      try {
+        const saved = await saveFavorite(id, favorite);
+        if (favorite && saved) {
+          reloadWanted.current = true;
+        }
+        return saved;
+      } finally {
+        pendingSaves.current -= 1;
+        if (pendingSaves.current === 0 && reloadWanted.current) {
+          reloadWanted.current = false;
+          retry();
+        }
+      }
+    },
+    [retry]
+  );
+
+  const toggleFavorite = useOptimisticSave(applyFavorite, saveAndSettle);
 
   return {
     status,

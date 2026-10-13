@@ -722,12 +722,26 @@ describe('useHomeRows — the favorite flag', () => {
   });
 
   it('keeps the new value once the save succeeds', async () => {
-    serve(HOME_PAYLOAD);
+    // A confirmed heart reads the home again (#326), so the server here
+    // remembers the save, as the real one does.
+    const saved: HomePayload = {
+      ...HOME_PAYLOAD,
+      rows: HOME_PAYLOAD.rows.map((row) => ({
+        ...row,
+        movies: row.movies.map((movie) =>
+          movie.id === 'a1' ? { ...movie, isFavorite: true } : movie
+        ),
+      })),
+    };
+    serveInTurn([HOME_PAYLOAD, saved], () =>
+      Promise.resolve(okResponse({ value: true }))
+    );
     const { result } = await loadRows();
 
     act(() => result.current.toggleFavorite('a1', true));
 
     await waitFor(() => expect(favoriteRequests()).toHaveLength(1));
+    await waitFor(() => expect(homeRequests()).toHaveLength(2));
     expect(favoriteIn(result.current.rows, 'Action', 'a1')).toBe(true);
   });
 
