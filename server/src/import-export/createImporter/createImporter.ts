@@ -861,59 +861,37 @@ export function createImporter({
   };
 
   /**
-   * A held film's **Sheet fills** written during the run — through
-   * `updateMovie`, its Watched mark through `markWatched` — never a field
-   * raised as a difference, never its title. Answers whether it took any.
+   * A held title's **Sheet fills** written during the run, through
+   * {@link writeSheetFill} — never a field raised as a difference, which is
+   * filed instead, and never its title. Only its `✓ Updated` line is written
+   * here: what took nothing is **Already in library** once the caller knows
+   * nothing else was added either. Answers whether it took any.
    */
-  const fillFilm = (
+  const fillHeld = (
     current: ImportRun,
-    id: string,
+    held: HeldTitle,
     row: SheetRow,
     genres: GenreReader
   ): boolean => {
-    const movie = storage.getMovie(id);
-    if (movie === null) {
+    const movie = held.kind === 'movie' ? storage.getMovie(held.id) : null;
+    const series = held.kind === 'series' ? storage.getSeries(held.id) : null;
+    const values =
+      movie !== null
+        ? heldValues(movie)
+        : series !== null
+          ? heldSeriesValues(series)
+          : null;
+    if (values === null) {
       return false;
     }
     const pooled = pooledRow(row, genres, current);
     const { fill, differences, proposed } = planSheetFields(
-      heldValues(movie),
+      values,
       pooled,
-      'movie'
+      held.kind
     );
-    fileDiffers(current, pooled, { kind: 'movie', id, proposed }, differences);
-    writeSheetFill({ kind: 'movie', id }, fill);
-    const updated = logUpdated(current, row, fill);
-    if (!updated) {
-      logAlreadyHeld(current, row);
-    }
-    return updated;
-  };
-
-  /**
-   * {@link fillFilm} over a held series: through `enrichSeries`, its
-   * _Created by_ as the row's director, its rating through `setSeriesRating`.
-   * Only its `✓ Updated` line is written here: a show that took nothing is
-   * **Already in library** once `importShow` knows it gains no episode either.
-   */
-  const fillSeries = (
-    current: ImportRun,
-    id: string,
-    row: SheetRow,
-    genres: GenreReader
-  ): boolean => {
-    const series = storage.getSeries(id);
-    if (series === null) {
-      return false;
-    }
-    const pooled = pooledRow(row, genres, current);
-    const { fill, differences, proposed } = planSheetFields(
-      heldSeriesValues(series),
-      pooled,
-      'series'
-    );
-    fileDiffers(current, pooled, { kind: 'series', id, proposed }, differences);
-    writeSheetFill({ kind: 'series', id }, fill);
+    fileDiffers(current, pooled, { ...held, proposed }, differences);
+    writeSheetFill(held, fill);
     return logUpdated(current, row, fill);
   };
 
@@ -1520,9 +1498,9 @@ export function createImporter({
           heldShow(held, seriesByKey, libraryFolder, show, match.row)
         );
         if (joined.held !== null) {
-          joined.updated = fillSeries(
+          joined.updated = fillHeld(
             current,
-            joined.held.series.id,
+            { kind: 'series', id: joined.held.series.id },
             match.row,
             genres
           );
@@ -1541,7 +1519,11 @@ export function createImporter({
         // remembered — the backfill for a library imported before this was —
         // and its empty fields take the row's **Sheet fills**.
         linkHeld(heldId, libraryFolder, match.folder);
-        fillFilm(current, heldId, match.row, genres);
+        if (
+          !fillHeld(current, { kind: 'movie', id: heldId }, match.row, genres)
+        ) {
+          logAlreadyHeld(current, match.row);
+        }
         continue;
       }
       matched.push({ match, libraryFolder });
@@ -1555,11 +1537,15 @@ export function createImporter({
       const key = filmKey(row.title, row.year);
       const heldId = filmsByKey.get(key);
       const heldSeries = seriesByKey.get(key);
-      if (heldId !== undefined) {
-        fillFilm(current, heldId, row, genres);
-      } else if (heldSeries !== undefined) {
-        // No Show folder, so no `importShow` to say it took nothing.
-        if (!fillSeries(current, heldSeries.series.id, row, genres)) {
+      const heldTitle: HeldTitle | null =
+        heldId !== undefined
+          ? { kind: 'movie', id: heldId }
+          : heldSeries !== undefined
+            ? { kind: 'series', id: heldSeries.series.id }
+            : null;
+      if (heldTitle !== null) {
+        // No folder found, so nothing else is added to say it took nothing.
+        if (!fillHeld(current, heldTitle, row, genres)) {
           logAlreadyHeld(current, row);
         }
       } else {
