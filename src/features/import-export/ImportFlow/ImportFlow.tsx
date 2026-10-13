@@ -120,6 +120,23 @@ export function ImportFlow() {
     });
   }, [cancel]);
 
+  // _Finish_ ends the run as well as the screen: a run left in review would
+  // stay the **Current run**, and the next visit to `/import` — from either
+  // entry — would re-attach to it (#327). A run in review has nothing left to
+  // roll back, so the cancel only lets it go. Not awaited: the navigation is
+  // not held on it, and a let-go that fails leaves the run where it was.
+  const onFinish = useCallback(
+    (enrichNext: boolean) => {
+      onCancel();
+      if (enrichNext) {
+        navigate(enrichPath({ scope: 'all' }), { replace: true });
+      } else {
+        navigate('/');
+      }
+    },
+    [onCancel, navigate]
+  );
+
   const onSkip = useCallback(
     (id: string) => {
       void skip(id).catch(() => {
@@ -156,11 +173,7 @@ export function ImportFlow() {
           run={run}
           onSkip={onSkip}
           finishLabel={run.enrich ? FINISH_TO_SYNC : FINISH_TO_LIBRARY}
-          onFinish={() =>
-            run.enrich
-              ? navigate(enrichPath({ scope: 'all' }), { replace: true })
-              : navigate('/')
-          }
+          onFinish={() => onFinish(run.enrich)}
         />
       ) : (
         <ImportProgress run={run} onCancel={onCancel} />

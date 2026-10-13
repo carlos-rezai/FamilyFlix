@@ -728,10 +728,13 @@ describe('ImportFlow — reaching review', () => {
     startRun();
     await screen.findByText('✓ All done', undefined, POLLING);
     const served = fetchMock.getMockImplementation();
+    if (served === undefined) {
+      throw new Error('serve() left no implementation to wrap');
+    }
     fetchMock.mockImplementation((input, init) =>
       isCancel(input, init)
         ? Promise.reject(new TypeError('Failed to fetch'))
-        : served!(input, init)
+        : served(input, init)
     );
 
     fireEvent.click(
