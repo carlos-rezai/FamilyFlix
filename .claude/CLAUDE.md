@@ -136,6 +136,7 @@ familyflix/
 │ └── src/
 │ ├── routes/ ← HTTP layer only: parse request, call a domain module, return response
 │ │ ├── enrichmentBody/ ← `startEnrichmentBody` and `conflictChoicesBody`: a Sync's start and _Apply choices_ read into typed values, each `400` a sentence — `movieFormBody`'s precedent
+│ │ ├── importBody/ ← `sheetChoicesBody` and `pickFolderBody`: _Apply choices_' body on a `differs` row and a **Folder picker** press's read into typed values, each `400` a sentence — `enrichmentBody`'s precedent
 │ │ ├── exportBody/ ← `POST /api/export`'s body read into a `StartExport` — a format, an absolute-or-not destination, a name read only as a string, the two Include booleans, in the dialog's order — each `400` a sentence
 │ │ ├── seriesFormBody/ ← the **Movie form**'s series body, `movieFormBody`'s split: `collectEpisodeUploads`, the part half — each `episodeVideo` and `episodeSubtitle` paired by order with its `episode` field and stored in its season's folder, a refused part drained and remembered — and `readSeriesFields`, the pure field half: each refusal a sentence in a load-bearing order, each episode answered with the paths its parts landed at
 │ │ ├── loopbackGuard/ ← the **Loopback guard**: mounted first, standalone included, `403` for a Host or Origin that is not a **Trusted host**; `bind(port)` once `listen` has resolved
@@ -145,7 +146,7 @@ familyflix/
 │ │ ├── enrich/ ← a Sync's film writes: `enrichMovie` (the columns named, only those), `moviesInScope`, `enrichmentCounts` over both kinds, `setSourceFolder` (a title's Library folder and Source folder together), `titleSource` (both read back as one) and `sourcePath` (the two joined, for a review row's mono line) over one id space, and `titleAt` (the title recorded at a folder and Source folder); the **Full details** rule spelled once as `fullDetails`
 │ │ ├── folders/ ← the **Library folders**: the list in the order added with each folder's title count, an add, and a remove that keeps the titles, forgetting only where they came from
 │ │ │ └── folderOverlap/ ← pure: whether a path is, is inside or holds a listed folder — resolved, case-folded on Windows, by whole segments — and `clashSentence`, each clash's one sentence
-│ │ └── series/ ← series storage, one unit per concern as the movie's is, each with its own suite: `read` (the series page — each season's **Season poster** with it — the player's episode read, the episode list), `browse` (the Series tab and its genres), `write` (the two inserts), `watch` (the resume write, the episode and season marks), `curation` (the heart), `enrich` (a Sync's series and episode writes, `setSeasonPoster` and `seriesInScope`), and `nextEpisodeOf`, pure
+│ │ └── series/ ← series storage, one unit per concern as the movie's is, each with its own suite: `read` (the series page — each season's **Season poster** with it — the player's episode read, the episode list), `browse` (the Series tab and its genres), `write` (the two inserts), `watch` (the resume write, the episode and season marks), `curation` (the heart, and `setSeriesRating`, a held series' rating off a Sheet row), `enrich` (a Sync's series and episode writes, `setSeasonPoster` and `seriesInScope`), and `nextEpisodeOf`, pure
 │ │ │ └── yearSpan/ ← pure: the one reading of a **Year range** — `2022`, `2019–2023`, `2021–` → `{ year, endYear }`, anything else `null` — read by the Movie form's series save and the Sheet's Year cell alike; and `spellYearSpan`, its writer, the Export's Year cell and title folders
 │ ├── media/ ← folder scanning, file copy into managed storage, subtitle detection, the Movie folder’s removal after a Delete
 │ │ ├── createMedia/ ← the injected domain: reserve a Movie folder, `seasonFolder` (a Series folder’s `season-NN/`), storeUpload, copyIn (a stream under the cancel signal), `openSeriesFolder` (`openFolder`'s twin: the **Series folder** above a held episode's **Stored path**, read once inside the domain), the five removals — `removeSeriesFolder` a series delete's, and the last `emptyRoot`, **Factory reset**'s, the root emptied best-effort and kept; and a Sync's three — `storeNamed` (beside a Stored path), `storeInSeriesFolder` (two directories above an episode), `readStored` (a stored file as a stream). Only `media/` touches managed storage
@@ -166,10 +167,13 @@ familyflix/
 │ │ ├── exportSummary/ ← the **Export summary** out of the route: the counts off the Series tab's one read, the first readable Library folder else `<home>\Downloads`, today's name
 │ │ ├── writeExport/ ← the **Export** written: the destination checked (`relative`, `missing`, `read-only`), then the name (`exportNameRefusal`) — kinds the route words, each naming its field — the Export folder made exclusively under the name asked for and numbered when taken, the sheet named after it, the File plan copied through `Media.readStored` (an unreadable file skipped, its cell blanked), the sheet last; a break rolls the folder back and answers its reason
 │ │ ├── titleKey/ ← pure: the Title key matching compares, and titleGuess for a folder no row names
+│ │ ├── heldValues/ ← pure: a held Movie or Series → its values in the sheet's shape, a series' creator as `director` — `currentFields`' twin on the import's side
+│ │ ├── planSheetFields/ ← pure: a held title's values × its **Sheet row** → its **Sheet fills**, its **Sheet differences** spelled for display (a rating as `3½ ★`) and `proposed`, the sheet's side of each, normalised as a fill is — `planFields`' twin
+│ │ ├── plannedSheetFill/ ← pure: a Sheet fill → `movieSheetPatch` (the `updateMovie` patch) and `seriesSheetPatch` (the `enrichSeries` columns, `director` as `creator`), and `chosenSheetFill`, what _Apply choices_ writes — `plannedEnrichment`'s twin
 │ │ ├── matchRows/ ← pure: rows × folder scans → matches, problems by kind, unclaimed folders
 │ │ ├── groupShows/ ← pure: the walk’s Source folders → Show folders (Season folders under one, or loose tagged episodes) and the films left over
 │ │ ├── admitFolder/ ← the folder add's rules out of the route: something typed, absolute, readable, no overlap — `added`, `refused` or `clash`, the unique-path race answered as `same`, never throwing
-│ │ ├── createImporter/ ← the injected domain: start (a sheet and its root, the root joining the list), scan (the **Folder scan** over every listed folder), current, cancel, problem, resolve, dismiss — one run in memory, its state machine as closures, both starts through `claimRun` and both ending in `importPlaced`
+│ │ ├── createImporter/ ← the injected domain: start (a sheet over every listed **Library folder**, a held title taking its **Sheet fills** and filing its **Sheet differences**), scan (the **Folder scan** over every listed folder), current, cancel, dismiss, apply (_Apply choices_, through the one writer of a sheet's values, `writeSheetFill`), pick and importGuessed (the **Folder picker** and _Import as_, both through `importFromReview`, each answering a **Review outcome**), problem, resolve, resolveSeries — one run in memory, its state machine as closures, both starts through `claimRun` and both ending in `importPlaced`
 │ │ │ ├── fixture/ ← the two-film sheet (.xlsx and .csv) and folder tree the tests run over, and a dev library is filled from
 │ │ │ └── seriesFixture/ ← the two-show sheet and tree — one Season-folder show, one of loose episodes — kept apart so the film suites’ counts never move
 │ ├── playback/ ← the Playback component, the slot it lives in, the path choice, streaming, subtitle parsing
@@ -258,6 +262,7 @@ familyflix/
 │ │ ├── SeasonCard/ ← `mol.SeasonCard` 1:1: the 2:3 **Card**, `S02` over its **Season poster**, else the gradient, the badge when complete, the bar when part-watched
 │ │ ├── PillTabs/ ← `mol.PillTabs` 1:1: the pill track of `aria-pressed` buttons in a labelled group, generic in its value so a press hands back the caller's own union; presentational — it knows no URL. The **Library tabs** and the **Kind tabs** are its callers
 │ │ ├── EpisodeFileRow/ ← `mol.EpisodeFileRow` 1:1: one **Episode file row** — the `S` and `E` number fields (digits, two and three), the title, the ✕, the filename in mono, and a children slot for its subtitles; a refusal drawn when given — the refused field's border and one `danger` line under the controls; presentational, the browser's focus ring kept
+│ │ ├── FieldDiff/ ← `mol.FieldDiff` 1:1: one _Yours \| {theirs}_ row per differing field, the theirs side until a press chooses otherwise, then _Apply choices_ and _Keep all mine_; generic in its key, so each caller — the Sync's `DecisionRow`, the import's `ProblemRow` — maps its own wire type on and off it. Graduated from `enrichment/` when Import review drew it too
 │ │ ├── EpisodeRow/ ← `mol.EpisodeRow` 1:1: the 16:9 thumbnail, `S02E04` and the title, the air date, the Resume label, the watched box that only marks; a **Card**, its box a **Control**
 │ │ └── PosterCard/
 │ │ ├── PosterCard.tsx
@@ -313,7 +318,7 @@ familyflix/
 │ │ │ ├── EnrichmentSetup/ EnrichmentProgress/ EnrichmentReview/ ← the three steps: the banners, scope cards, chips and _Where it is saved_; the determinate bar and the log; the two tiles over the Decision rows or _All done_
 │ │ │ ├── SetupBanner/ ScopeCard/ WriteTargetRow/ ← the setup's molecules: the offline and key banners by tone; the radio card, its dot on the left; a Write target's tile, lines and Toggle or _Required_
 │ │ │ ├── DecisionRow/ ← one Decision: the dot by kind, the title, reason and path, _Skip_, then one face
-│ │ │ ├── CandidatePicker/ TitleSearch/ FieldDiff/ ← the three faces: the Candidate cards and the dashed _Search by title_; the 44px box; _Yours \| TMDB_ per field
+│ │ │ ├── CandidatePicker/ TitleSearch/ ← two of the three faces: the Candidate cards and the dashed _Search by title_; the 44px box — the third, _Yours \| TMDB_ per field, is `components/FieldDiff/`
 │ │ │ ├── useEnrichmentRun/ ← start, poll at 500 ms while running, cancel, and the review's writes, each settling one row; opened for a film, only that film's run re-attaches — another's in review is the **Waiting run**, and Start's `409` over another's rejects with `EnrichmentBusyError`
 │ │ │ ├── enrichmentView/ ← pure: the running card's words, the estimate, the scope cards' lines, _All done_'s _Saved to …_, and the **Let-go line**
 │ │ │ └── api/ ← startEnrichment, fetchCurrentEnrichment, cancelEnrichment, and the four Decision writes (one caller each)
@@ -334,12 +339,14 @@ familyflix/
 │ │ │ └── api/ ← createMovie, createSeries, updateMovie, updateSeries, fetchGenrePool, fetchProblem, resolveProblem, resolveSeriesProblem (one caller each)
 │ │ ├── import-export/ ← the bulk importer’s screen, the Library folders page, and the Export dialog
 │ │ │ ├── ImportFlow/ ← the organism: owns useImportRun, renders one of the three steps, its heading and lede worded by `run.source`
-│ │ │ ├── ImportSetup/ ImportProgress/ ImportReview/ ← the three steps: the two path fields; the stepper, bar and log; the tiles and the Needs attention list
-│ │ │ ├── PhaseStepper/ StatTile/ ProblemRow/ ← the flow’s own molecules
-│ │ │ ├── useImportRun/ ← start, poll at 500 ms while running, cancel, skip
+│ │ │ ├── ImportSetup/ ImportProgress/ ImportReview/ ← the three steps: the sheet field over the listed Library folders; the stepper, bar and log; the tiles and the Needs attention list
+│ │ │ ├── PhaseStepper/ StatTile/ ProblemRow/ ← the flow’s own molecules; ProblemRow's face slot under its head draws its kind's one-press settle — the Folder picker on `ambiguous`, _Import as_ on `no-row`, the _Yours \| Spreadsheet_ `FieldDiff` on `differs`
+│ │ │ ├── FolderPicker/ ← an `ambiguous` row's face, `CandidatePicker`'s shape with its own pixels: one card per **Candidate folder** — the glyph, its name, its path in mono, its video count — in a labelled group, reporting a press
+│ │ │ ├── useImportRun/ ← start, poll at 500 ms while running, cancel, skip, and the review's presses — apply, pick and importAsGuessed, a `200`'s redrawn row settled in place
 │ │ │ ├── importView/ ← pure: an ImportRun → headline, stat line, percent, elapsed, ETA
 │ │ │ ├── LibraryFolders/ ← the Library folders page's organism: the Folder rows, the add row with Browse… when the bridge exists, then What the scanner accepts, the `EnrichCheckCard` and **Scan folders**
-│ │ │ ├── FolderRow/ FolderShapes/ EnrichCheckCard/ ← the page's molecules: one listed folder with its title count or “Can't be reached right now” and its ✕; the three accepted folder shapes, Import setup's too; the Also fetch from TMDB box and its stored-key hint, Import setup's too
+│ │ │ ├── folderLine/ ← pure: a listed folder's line, _N titles_ or _Can’t be reached right now_ — the Folder row's and Import setup's
+│ │ │ ├── FolderRow/ FolderShapes/ EnrichCheckCard/ ← the page's molecules: one listed folder with its `folderLine` and its ✕; the three accepted folder shapes, Import setup's too; the Also fetch from TMDB box and its stored-key hint, Import setup's too
 │ │ │ ├── useLibraryFolders/ ← the list read on mount, the add (the route's own sentence kept on a refusal) and the remove
 │ │ │ ├── useKeyStored/ ← whether a TMDB key is stored, `false` until it lands and for a failed read: the `EnrichCheckCard` hint's one read
 │ │ │ ├── useFolderScan/ ← Scan folders: the Folder scan posted with the box, `/import` pushed on a `201` and a `409`, `scanning` let go otherwise
@@ -347,7 +354,7 @@ familyflix/
 │ │ │ ├── FormatCard/ ← one Format card: a role="radio" button with a label and a line, the pair in a radiogroup
 │ │ │ ├── useExport/ ← csv, images on, subtitles off and idle on every open, the summary fetched fresh and its default destination and default name each never over an edit; the bridge read once; exportLibrary posts `startExport`, a refusal's sentence kept under the field it names. A close mid-request drops the redraw, not the folder
 │ │ │ ├── pathField.styles.ts ← the feature's path furniture, flat as `filesCard.styles.ts` is: `PathRow` and `Refusal`, drawn by the Library folders page's add row and the Export dialog's _Save to_
-│ │ │ └── api/ ← startImport, fetchCurrentImport, cancelImport, fetchExportSummary, startExport, fetchLibraryFolders, addLibraryFolder, removeLibraryFolder, startFolderScan (one caller each)
+│ │ │ └── api/ ← startImport, fetchCurrentImport, cancelImport, applySheetChoices, pickCandidateFolder, importGuessed, fetchExportSummary, startExport, fetchLibraryFolders, addLibraryFolder, removeLibraryFolder, startFolderScan (one caller each)
 │ │ ├── settings/ ← the Maintainer’s hub: six Settings groups under one header
 │ │ │ ├── section.styles.ts ← the furniture every Settings group draws with: the Group heading, the Section card (with the 32px group gap under it), the divider, an item’s title and lede, and the row furniture — `Row`, `RowTitle`, `RowDesc` — the Playback and Display groups both draw
 │ │ │ ├── SettingsHeader/ ← Back, the heading, ＋ Add a movie
@@ -621,27 +628,37 @@ refusal, and landing on the Series tab.
 The existing library (Excel sheet + per-movie folders) gets migrated
 once via a bulk importer:
 
-- Reads the existing spreadsheet (name, year, genre, …)
-- Matches each row to a folder (by movie name) and runs **folder-path
-  autofill** over it — scanning that folder for a video, a poster and any
-  subtitle files by extension (`.srt`, `.vtt`, `.ass`, `.sub` are all
-  recognised), and filling the three kinds of slot the Add Movie form
-  also has. This is the _only_ place autofill lives: it needs a real
-  folder path, which a browser file picker cannot supply and Electron's
-  native dialog can
+- Reads the existing spreadsheet (name, year, genre, …) over every listed
+  **Library folder** — the typed root is gone (design log 40)
+- Matches each row to a folder (by movie name), in whichever listed folder
+  it lies, and runs **folder-path autofill** over it — scanning that
+  folder for a video, a poster and any subtitle files by extension
+  (`.srt`, `.vtt`, `.ass`, `.sub` are all recognised), and filling the
+  three kinds of slot the Add Movie form also has. This is the _only_
+  place autofill lives: it needs a real folder path, which a browser file
+  picker cannot supply and Electron's native dialog can
 - Beside the sheet, a **Folder scan** imports every listed **Library
   folder** with no spreadsheet at all — each title named off its own folder,
   a held one linked to where it was found — from the Library folders page's
-  _Scan folders_. Both runs end in the same **Import phase**, and the sheet's
-  typed root joins the list
+  _Scan folders_. Both starts share one walk and end in the same **Import
+  phase**
+- A row for a title the library already holds — by its Source folder, else
+  title key and year, with or without a folder — is **Already in library**,
+  never a second copy: its empty fields take the row's **Sheet fills**
+  during the run, and fields filled on both sides that differ are **Sheet
+  differences** on one soft `differs` **Problem**, settled on the row by a
+  _Yours | Spreadsheet_ diff — _Apply choices_ or _Keep all mine_. Rating
+  is in play; Watched only ever marks; the title never
 - Imports each confident match **during the run** — reserve a Movie
   folder, copy the files in, add the movie — and shows the run in a
   progress console; the **Review step** at the end lists only what the
   run could not settle on its own, as **Problems** by kind (`no-folder`,
-  `ambiguous`, `no-video`, `no-row`, `failed`, and the one soft kind,
-  `missing-meta`), each with Resolve and Skip. Reviewing a thousand
-  confident matches is a list nobody reads; Edit and Delete already
-  exist for corrections — design log `13-bulk-import` Q16
+  `ambiguous`, `no-video`, `no-row`, `failed`, `unplaced`, and the two soft
+  kinds, `missing-meta` and `differs`), each with Resolve and Skip — and
+  `ambiguous` with a **Folder picker**, `no-row` with _Import as_ its
+  guess, each one press that imports or redraws the row. Reviewing a
+  thousand confident matches is a list nobody reads; Edit and Delete
+  already exist for corrections — design log `13-bulk-import` Q16
 - Consults nothing outside the spreadsheet and the folder: **no TMDB**,
   no network, `tmdbId` stays null. What a lookup would add is an
   **Enrichment** pass over an already-imported library — its own
@@ -1040,7 +1057,8 @@ same layout, spacing, states, copy, and interaction.
 this says what to build _next_. Steps 1–9 of the first chain are done,
 ending with **Software update** (v0.2.0), and so are steps 10–15: the
 second chain is done too, shipped as v0.3.0, and so are steps 16–21:
-the third chain is done, and so is step 22, **Season posters**. Steps 10–15 came out of
+the third chain is done, and so are step 22, **Season posters**, and step
+23, **Import review**. Steps 10–15 came out of
 installing FamilyFlix and using it: smallest and most self-contained first,
 the form before the folders that will feed it, export last because it
 mirrors what import holds.
@@ -1124,23 +1142,24 @@ v0.3.0 (design log 39):
     `seasons/` with _Images_ on, and no column. No Season page art, no
     **Write target**, no series-poster fallback.
 
-Step 23 is next, out of using the latest release (design log 40, issue
-#328), grilled and still to be built:
+Step 23 came after it, out of using the latest release (design log 40,
+issue #328):
 
-23. 🔜 **Import review** — _Import from spreadsheet_ reads every listed
+23. ✅ **Import review** — _Import from spreadsheet_ reads every listed
     **Library folder** and a **Sheet** (CSV or Excel); the typed root and its
-    log 30 Q19 rules go, and both starts share one walk. New matches still
+    log 30 Q19 rules went, and both starts share one walk. New matches still
     import during the run (log 13 Q16). A **Sheet row** for a title the
     library holds — by its Source folder, else title key and year, with or
     without a folder — is no longer skipped: its empty fields are **Sheet
     fills**, written during the run, and fields filled on both sides that
-    differ are **Sheet differences** on a new soft `differs` **Problem**,
+    differ are **Sheet differences** on a soft `differs` **Problem**,
     settled on the row by a _Yours | Spreadsheet_ diff — `FieldDiff`
-    graduated to `components/` — with _Apply choices_ or _Keep all mine_.
-    Rating is in play; watched only ever marks; title never. `ambiguous`
-    gains a **Folder picker** and `no-row` an _Import as_, both one press;
-    the rest keep Resolve and Skip. Before it, #327: _Finish_ lets the
-    **Current run** go.
+    graduated to `components/` — with _Apply choices_ or _Keep all mine_,
+    both through the one writer of a sheet's values. Rating is in play;
+    watched only ever marks; title never. `ambiguous` gains a **Folder
+    picker** and `no-row` an _Import as_, both one press answering a
+    **Review outcome**; the rest keep Resolve and Skip. Before it, #327:
+    _Finish_ lets the **Current run** go.
 
 A 🧭 Roadmap item is not in this chain — it is after it, if ever.
 
@@ -1183,13 +1202,13 @@ A 🧭 Roadmap item is not in this chain — it is after it, if ever.
 - ✅ **Edit a movie** — amend metadata and files; a file the library already holds travels as its path, only a freshly picked one as bytes.
 - ✅ **Title editing** — number a show's file in the app without renaming it: `S[01] E[01]` in front of `eps1.0_hellofriend.mov`, remembered as its **Source file**; the reader learns the **Episode word**; one `unplaced` Problem per show with a _Resolve_; the series page's ⋯ menu, its _Edit details_ the Movie form's series edit job (`PATCH /api/series/:id`) and its Danger row the delete (`DELETE /api/series/:id`); and the **Found-file choice** for a film folder of two or more videos (step 21).
 - ✅ **Export name** — the Export folder's name as the **Folder name field** in the Export dialog: prefilled with today's dated name and never overwritten once edited, refused in one sentence under the field when no folder can be called that, never stripped, numbered when taken.
-- 🔜 **Import review** — one import over the Library folders and a spreadsheet (CSV or Excel), its scan ending in a review of the adjustments to make, settled row by row as a TMDB Sync's review is (step 23, grilled in design log 40).
+- ✅ **Import review** — one import over the Library folders and a spreadsheet (CSV or Excel), its scan ending in a review of the adjustments to make, settled row by row as a TMDB Sync's review is: a held title's Sheet fills written during the run, its Sheet differences settled on a _Yours | Spreadsheet_ diff, the Folder picker on `ambiguous` and _Import as_ on `no-row` (step 23, design log 40).
 - ✅ **Delete a movie** — the ⋯ menu’s Danger row, the Delete dialog, `DELETE /api/movies/:id`, then the Movie folder under best-effort cleanup.
-- ✅ **Bulk import** — a Sheet and a Library root become Movies during the run; the Review step lists only the Problems the run could not settle, each with Resolve (the Movie form in Import context) and Skip.
+- ✅ **Bulk import** — a Sheet over the listed Library folders becomes Movies and Series during the run; the Review step lists only the Problems the run could not settle, each with Resolve (the Movie form in Import context) and Skip.
 - ✅ **Import progress console** — the Connect ✓ → Scan → Import stepper, the bar, the current item, elapsed and ETA, the Activity log, and Cancel; a server run polled every 500 ms, re-attachable.
 - ✅ **Export options** — _Save to_ an Export destination, typed or picked with _Browse…_; a dated **Export folder** holding the sheet — films and series under sixteen columns, and an Episodes sheet — and, by the two Include toggles, each title's images and subtitles in a folder of its own.
 - ✅ **Export** — the Settings hub’s third row opens the Export dialog; the library lands as one Export file, CSV or Excel, every title A–Z, and an untouched export fed back to Bulk import adds nothing.
-- ✅ **Series import** — the Library root may hold shows beside movies: `Show Name/Season 01/S01E03.mkv`, or loose episodes at the show root. Season and episode numbers come from the folder first, then the filename (`S01E03`, `1x03`); anything unparsed lands in the existing Review list. The accepted shapes are shown verbatim in Import setup.
+- ✅ **Series import** — a Library folder may hold shows beside movies: `Show Name/Season 01/S01E03.mkv`, or loose episodes at the show root. Season and episode numbers come from the folder first, then the filename (`S01E03`, `1x03`); anything unparsed lands in the existing Review list. The accepted shapes are shown verbatim in Import setup.
 - ✅ **Enrichment (TMDB)** — the first and only feature that touches the network; everything else stays offline-first. One organism, `EnrichmentFlow` (`features/enrichment/`), mirroring ImportFlow's three steps so the two read as siblings: **setup** (the key and offline banners, three scope cards — _Only what's missing_ / _Everything_ / _Just this movie_ — the field chips, and the write-target list; Start is `secondary` and inert until the key is tested and the machine is online), **running** (a determinate bar, because the count is known up front; LogConsole; elapsed and ETA; _Stop_ keeps what was already fetched), and **review** (two stat tiles over the rows that need a human: `ambiguous` with a horizontal poster picker of candidates and their % match, `conflict` as a field-by-field _Yours | TMDB_ diff with per-field choice then _Apply choices_ / _Keep all mine_, `missing` with a manual search box; every row has Skip). Three ways in: Settings → Network → _Sync metadata & posters_ (the primary), the Import setup's _Also fetch metadata and posters from TMDB_ checkbox (Finish hands the review straight to a full-library run), and the movie page's ⋯ menu → _Fetch from TMDB_ (a single-title run that returns to the movie). Fields: synopsis, poster, backdrop, runtime, year, genres, director, cast, original title, TMDB score. **The household rating is untouched** — TMDB's score is a separate field beside it. Conflicts are asked per movie in the review, never silently overwritten. The run is a pass over the already-imported library keyed by title + year, not a second scanner — `walkLibraryRoot` / `scanMovieFolder` are untouched, and `tmdbId` finally gets a value. The library database is the source of truth, and optionally a `familyflix-metadata.csv` in the collection root and a `poster.jpg` in each movie folder, each toggleable and neither overwriting a file that exists — the only place the app writes back into the source folders, so it needs its own permission check and a dry-run log line. Spec §5a.
 
 ### Settings hub

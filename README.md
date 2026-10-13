@@ -39,7 +39,7 @@ Files are picked individually, from your machine's normal file dialog. FamilyFli
 
 ### Migrating an existing library
 
-A bulk importer reads an existing spreadsheet (title, year, genre, …), matches each row to its movie folder, and scans that folder for the video, poster and subtitle files (it isn't picky about subtitle format — `.srt`, `.vtt`, `.ass`, and `.sub` are all recognised), building the whole library in one pass. A row whose folder is a confident match is imported as the run goes, with a live progress console showing what's happening; the review step at the end lists only what the run couldn't settle on its own — a row with no folder, two folders for one row, a folder no row names, a copy that failed — each with a Resolve that opens the ordinary Add Movie form prefilled, and a Skip. Nothing is looked up online: the spreadsheet and the folder are all the importer reads, so there is no TMDB key to enter and no network to be on. Filling in what the sheet left blank — synopses, posters, runtimes — is a separate, opt-in Enrichment pass over the finished library — Settings → Network, or the import's own _Also fetch metadata and posters from TMDB_ — which is the one and only place FamilyFlix goes online. Pointing at a folder is the bulk importer's job rather than the Add Movie form's: a file dialog hands over a file, never a folder path. It is also how a development library gets filled — the importer's own test fixtures replace the dev seed the app carried until it shipped. An exporter writes the library back out as CSV or Excel — every movie, A–Z, under the same columns the importer reads — for backups or bulk edits, and an export fed back to the importer adds nothing.
+A bulk importer reads an existing spreadsheet (title, year, genre, …) over every library folder you've listed, matches each row to its movie folder, and scans that folder for the video, poster and subtitle files (it isn't picky about subtitle format — `.srt`, `.vtt`, `.ass`, and `.sub` are all recognised), building the whole library in one pass. A row whose folder is a confident match is imported as the run goes, with a live progress console showing what's happening; the review step at the end lists only what the run couldn't settle on its own — a row with no folder, two folders for one row, a folder no row names, a copy that failed — each with a Resolve that opens the ordinary Add Movie form prefilled, and a Skip; two folders for one row are settled by pressing the right one, and a folder no row names by one _Import as_ press. A row for a title already in the library fills in whatever that title has empty, and anything it says differently waits in the review as _Yours | Spreadsheet_, field by field — nothing you filled in is overwritten without a press. Nothing is looked up online: the spreadsheet and the folder are all the importer reads, so there is no TMDB key to enter and no network to be on. Filling in what the sheet left blank — synopses, posters, runtimes — is a separate, opt-in Enrichment pass over the finished library — Settings → Network, or the import's own _Also fetch metadata and posters from TMDB_ — which is the one and only place FamilyFlix goes online. Pointing at a folder is the bulk importer's job rather than the Add Movie form's: a file dialog hands over a file, never a folder path. It is also how a development library gets filled — the importer's own test fixtures replace the dev seed the app carried until it shipped. An exporter writes the library back out as CSV or Excel — every movie, A–Z, under the same columns the importer reads — for backups or bulk edits, and an export fed back to the importer adds nothing.
 
 ### Watching
 
@@ -168,7 +168,7 @@ familyflix/
 │       │   ├── spaceUsed/             # the bytes under the media root, never throwing
 │       │   ├── writableFolder/        # whether a folder can be written into, never throwing
 │       │   └── fileKinds/             # what an image, a subtitle and a video may be called
-│       ├── import-export/  # the bulk importer and the exporter: readSheet, titleKey, matchRows, groupShows, admitFolder, createImporter (+ its film and series fixtures), writeSheet, exportName, exportRows, exportSummary, writeExport
+│       ├── import-export/  # the bulk importer and the exporter: readSheet, titleKey, matchRows, groupShows, admitFolder, heldValues, planSheetFields, plannedSheetFill, createImporter (+ its film and series fixtures), writeSheet, exportName, exportRows, exportSummary, writeExport
 │       ├── playback/       # the Playback component (probe, spawn, decoders), the Component slot it lives in (componentSlot, componentBinary, verifyComponent), the path choice, streaming, subtitle parsing, derivedRuntime, capabilities(component)
 │       ├── enrichment/     # the fifth domain, the one network client: tmdbClient, tmdbAuth, tmdbGenres, matchScore, fetchedFields, currentFields, planFields, planEpisode, plannedEnrichment, decisionFace, writeBack, createEnrichment
 │       ├── db/             # SQLite connection + schema/migrations (3: the settings table; 4: series and episodes; 5: original title, TMDB score and source folder on both titles, stills on episodes; 6: the Library folders; 7: the old library root carried onto them; 8 and 9: the Source file an episode and a film remember across scans; 10: season posters); the Electron-ABI binding when FAMILYFLIX_SQLITE_BINDING names one
@@ -372,7 +372,7 @@ Keep the description short enough to fit on one line — long descriptions get w
 | Factory reset — erase everything, behind a dialog   | ✅ Done         |
 | Title editing — number, edit and delete a series    | ✅ Done         |
 | Season posters — TMDB art on each season card       | ✅ Done         |
-| Import review — folders + sheet, adjustments listed | 🔜 Planned      |
+| Import review — folders + sheet, adjustments listed | ✅ Done         |
 | Collections / playlists                             | 🧭 Roadmap      |
 | Auto-on subtitles                                   | 🧭 Roadmap      |
 | Backgroundable import                               | 🧭 Roadmap      |
@@ -436,10 +436,9 @@ Step 22 came after the third chain, out of the open issues from v0.3.0's use
     never replacing one already there, and an export with images on carries
     them too.
 
-Step 23 is the next one, out of using the latest release (design log 40),
-designed and still to be built:
+Step 23 came after it, out of using the latest release (design log 40):
 
-23. 🔜 **Import review** — _Import from spreadsheet_ reads all your library
+23. ✅ **Import review** — _Import from spreadsheet_ reads all your library
     folders and a spreadsheet (CSV or Excel) together. New films still import
     as the run goes. For a title already in the library, the sheet fills in
     whatever is empty, and anything it says differently waits in the review
