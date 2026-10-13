@@ -18,6 +18,36 @@ export const IMPORT_FIELDS = ['sheet', 'folders'] as const;
 /** One of the fields in {@link IMPORT_FIELDS}. */
 export type ImportField = (typeof IMPORT_FIELDS)[number];
 
+/**
+ * The fields a **Sheet row** may fill on a title the library already holds,
+ * or raise as a **Sheet difference** — an `as const` list on `ENRICH_FIELDS`'
+ * precedent, in the order a log line and a review row name them. Title is
+ * never in play; Watched only ever marks, so it is not a field here.
+ */
+export const SHEET_FIELDS = [
+  'synopsis',
+  'year',
+  'genres',
+  'director',
+  'cast',
+  'rating',
+] as const;
+
+/** One of the fields in {@link SHEET_FIELDS}. */
+export type SheetField = (typeof SHEET_FIELDS)[number];
+
+/**
+ * A **Sheet difference**: a field filled on both sides that differs —
+ * `FieldConflict`'s shape with `sheet` in `tmdb`'s place, both sides spelled
+ * for display. `director` is labelled _Created by_ on a series.
+ */
+export interface SheetDifference {
+  field: SheetField;
+  label: string;
+  mine: string;
+  sheet: string;
+}
+
 /** A run over a spreadsheet, or a **Folder scan** over the Library folders. */
 export type ImportSource = 'sheet' | 'folders';
 

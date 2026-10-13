@@ -24,6 +24,11 @@ import {
 } from '../groupShows/groupShows';
 import { MATCH_REASON, matchRows, type Match } from '../matchRows/matchRows';
 import { splitCollections } from '../splitCollections/splitCollections';
+import {
+  planSheetFields,
+  type HeldValues,
+  type SheetFill,
+} from '../planSheetFields/planSheetFields';
 import { readSheet, type SheetRow } from '../readSheet/readSheet';
 import { titleGuess, titleKey, yearInName } from '../titleKey/titleKey';
 import type {
@@ -40,6 +45,7 @@ import type {
   ProblemKind,
   Series,
 } from '@/types';
+import { SHEET_FIELDS } from '@/types';
 
 /**
  * A start refused before any run exists, naming what it refuses on — the
@@ -434,7 +440,24 @@ interface ShowMatch {
    * series on it when it creates one, so _Resolve_ joins it.
    */
   unplaced: ImportProblem | null;
+  /** Whether the held series took **Sheet fills** this run. */
+  updated: boolean;
 }
+
+/**
+ * The **Genre pool** by lower-cased name, and the unknown names already
+ * warned of — one per run, shared by the fills and the imports.
+ */
+interface GenreReader {
+  pool: Map<string, string>;
+  warned: Set<string>;
+}
+
+/** The fields a fill names on its `✓ Updated` line, in the sheet's order. */
+const filledNames = (fill: SheetFill): string[] => [
+  ...SHEET_FIELDS.filter((field) => fill[field] !== undefined),
+  ...(fill.watched === true ? ['watched'] : []),
+];
 
 /**
  * A film or show a run will import, and the **Library folder** it was found
@@ -625,6 +648,149 @@ export function createImporter({
       return [];
     });
 
+  /** The **Genre pool** read for one run, nothing warned of yet. */
+  const genreReader = (): GenreReader => ({
+    pool: new Map(
+      storage
+        .listGenrePool()
+        .map((genre) => [genre.name.toLowerCase(), genre.name])
+    ),
+    warned: new Set<string>(),
+  });
+
+  /**
+   * The row as a held title is planned against: its genres read onto the
+   * **Genre pool**, an unknown one dropped and warned of once.
+   */
+  const pooledRow = (
+    row: SheetRow,
+    genres: GenreReader,
+    current: ImportRun
+  ): SheetRow => ({
+    ...row,
+    genres: knownGenres(row.genres, genres.pool, genres.warned, current),
+  });
+
+  /** The line a held title ends on: what it took, or that it took nothing. */
+  const logHeld = (
+    current: ImportRun,
+    row: SheetRow,
+    fill: SheetFill
+  ): boolean => {
+    const names = filledNames(fill);
+    if (names.length === 0) {
+      log(
+        current,
+        `· Already in library ${titleWithYear(row.title, row.year)}`,
+        'info'
+      );
+      return false;
+    }
+    log(
+      current,
+      `✓ Updated    ${titleWithYear(row.title, row.year)} — ${names.join(', ')}`,
+      'success'
+    );
+    return true;
+  };
+
+  /**
+   * A held film's **Sheet fills** written during the run — through
+   * `updateMovie`, its Watched mark through `markWatched` — never a field
+   * raised as a difference, never its title. Answers whether it took any.
+   */
+  const fillFilm = (
+    current: ImportRun,
+    id: string,
+    row: SheetRow,
+    genres: GenreReader
+  ): boolean => {
+    const movie = storage.getMovie(id);
+    if (movie === null) {
+      return false;
+    }
+    const held: HeldValues = {
+      title: movie.title,
+      year: movie.year,
+      endYear: movie.year,
+      genres: movie.genres.map((genre) => genre.name),
+      director: movie.director,
+      cast: movie.cast,
+      synopsis: movie.synopsis,
+      rating: movie.rating,
+      status: movie.status,
+    };
+    const { fill } = planSheetFields(
+      held,
+      pooledRow(row, genres, current),
+      'movie'
+    );
+    const { synopsis, year, genres: named, director, cast, rating } = fill;
+    const patch = {
+      ...(synopsis === undefined ? {} : { synopsis }),
+      ...(year === undefined ? {} : { year }),
+      ...(named === undefined ? {} : { genres: named }),
+      ...(director === undefined ? {} : { director }),
+      ...(cast === undefined ? {} : { cast }),
+      ...(rating === undefined ? {} : { rating }),
+    };
+    if (Object.keys(patch).length > 0) {
+      storage.updateMovie(id, patch);
+    }
+    if (fill.watched === true) {
+      storage.markWatched(id);
+    }
+    return logHeld(current, row, fill);
+  };
+
+  /**
+   * {@link fillFilm} over a held series: through `enrichSeries`, its
+   * _Created by_ as the row's director, its rating through `setSeriesRating`.
+   */
+  const fillSeries = (
+    current: ImportRun,
+    id: string,
+    row: SheetRow,
+    genres: GenreReader
+  ): boolean => {
+    const series = storage.getSeries(id);
+    if (series === null) {
+      return false;
+    }
+    const held: HeldValues = {
+      title: series.title,
+      year: series.year,
+      endYear: series.endYear,
+      genres: series.genres.map((genre) => genre.name),
+      director: series.creator,
+      cast: series.cast,
+      synopsis: series.synopsis,
+      rating: series.rating,
+      status: 'unwatched',
+    };
+    const { fill } = planSheetFields(
+      held,
+      pooledRow(row, genres, current),
+      'series'
+    );
+    const { synopsis, year, endYear, genres: named, director, cast } = fill;
+    const enrichment = {
+      ...(synopsis === undefined ? {} : { synopsis }),
+      ...(year === undefined ? {} : { year }),
+      ...(endYear === undefined ? {} : { endYear }),
+      ...(named === undefined ? {} : { genres: named }),
+      ...(director === undefined ? {} : { creator: director }),
+      ...(cast === undefined ? {} : { cast }),
+    };
+    if (Object.keys(enrichment).length > 0) {
+      storage.enrichSeries(id, enrichment);
+    }
+    if (fill.rating !== undefined) {
+      storage.setSeriesRating(id, fill.rating);
+    }
+    return logHeld(current, row, fill);
+  };
+
   /**
    * Import one match by the form's own sequence. Answers the movie added, or
    * `null` when the import threw — a locked or vanishing file, a cancel — with
@@ -760,7 +926,7 @@ export function createImporter({
       );
     }
     if (episodes.length === 0) {
-      if (held !== null) {
+      if (held !== null && !match.updated) {
         log(
           current,
           `· Already in library ${titleWithYear(row.title, row.year)}`,
@@ -922,6 +1088,7 @@ export function createImporter({
                 !held.tags.has(spellEpisodeTag(episode.season, episode.episode))
             ),
       unplaced: null,
+      updated: false,
     };
   };
 
@@ -976,15 +1143,9 @@ export function createImporter({
     films: Placed<Match>[],
     shows: Placed<ShowMatch>[],
     verb: 'Import' | 'Scan',
-    signal: AbortSignal
+    signal: AbortSignal,
+    { pool, warned: warnedGenres }: GenreReader = genreReader()
   ): Promise<void> => {
-    const pool = new Map(
-      storage
-        .listGenrePool()
-        .map((genre) => [genre.name.toLowerCase(), genre.name])
-    );
-    const warnedGenres = new Set<string>();
-
     current.matched = films.length + shows.length;
     // Each episode is one item on the bar, as each film is.
     current.total =
@@ -1137,6 +1298,20 @@ export function createImporter({
     );
   };
 
+  /** A held film linked to where it was found. */
+  const linkHeld = (
+    heldId: string,
+    folder: StoredLibraryFolder,
+    scan: MovieFolderScan
+  ): void => {
+    storage.setSourceFolder(
+      heldId,
+      folder.id,
+      relative(folder.path, scan.dir),
+      collectionFileOf(scan)
+    );
+  };
+
   /** A held film linked to where it was found, and its skip line. */
   const skipHeld = (
     current: ImportRun,
@@ -1145,12 +1320,7 @@ export function createImporter({
     scan: MovieFolderScan,
     row: SheetRow
   ): void => {
-    storage.setSourceFolder(
-      heldId,
-      folder.id,
-      relative(folder.path, scan.dir),
-      collectionFileOf(scan)
-    );
+    linkHeld(heldId, folder, scan);
     log(
       current,
       `· Already in library ${titleWithYear(row.title, row.year)}`,
@@ -1170,6 +1340,8 @@ export function createImporter({
   ): Promise<void> => {
     const already = inLibrary();
     const held = heldSeriesList();
+    const heldSeriesByKey = seriesInLibrary(held);
+    const genres = genreReader();
 
     const walked = await walkListed(current, folders, signal);
     if (walked === null) {
@@ -1206,21 +1378,29 @@ export function createImporter({
       }
       const show = showOf.get(match.folder);
       if (show !== undefined) {
-        matchedShows.push({
-          match: showMatch(
+        const joined = showMatch(
+          match.row,
+          show,
+          heldShowOf(held, libraryFolder, show, match.row)
+        );
+        if (joined.held !== null) {
+          joined.updated = fillSeries(
+            current,
+            joined.held.series.id,
             match.row,
-            show,
-            heldShowOf(held, libraryFolder, show, match.row)
-          ),
-          libraryFolder,
-        });
+            genres
+          );
+        }
+        matchedShows.push({ match: joined, libraryFolder });
         continue;
       }
       const heldId = heldFilm(already, libraryFolder, match.folder, match.row);
       if (heldId !== null) {
         // Already in library: nothing is added, but where it came from is
-        // remembered — the backfill for a library imported before this was.
-        skipHeld(current, heldId, libraryFolder, match.folder, match.row);
+        // remembered — the backfill for a library imported before this was —
+        // and its empty fields take the row's **Sheet fills**.
+        linkHeld(heldId, libraryFolder, match.folder);
+        fillFilm(current, heldId, match.row, genres);
         continue;
       }
       matched.push({ match, libraryFolder });
@@ -1230,7 +1410,16 @@ export function createImporter({
     // library is neither a match nor a problem — and then the folders no row
     // claimed.
     for (const { kind, reason, row, candidates } of verdicts.problems) {
-      if (!already.has(filmKey(row.title, row.year))) {
+      // A row for a title held with no folder found is reached by its key and
+      // year, and filled.
+      const key = filmKey(row.title, row.year);
+      const heldId = already.get(key);
+      const heldShow = heldSeriesByKey.get(key);
+      if (heldId !== undefined) {
+        fillFilm(current, heldId, row, genres);
+      } else if (heldShow !== undefined) {
+        fillSeries(current, heldShow.series.id, row, genres);
+      } else {
         // The first folder weighed is the one the detail is about — the one
         // an `ambiguous` prefills from, the one a `no-video` matched — and
         // only an `ambiguous` has others to name.
@@ -1272,7 +1461,14 @@ export function createImporter({
         candidates: [],
       });
     }
-    await importPlaced(current, matched, matchedShows, 'Import', signal);
+    await importPlaced(
+      current,
+      matched,
+      matchedShows,
+      'Import',
+      signal,
+      genres
+    );
   };
 
   /**

@@ -329,6 +329,11 @@ export interface LibraryStorage {
    */
   setSeriesFavorite(id: string, value: boolean): boolean;
   /**
+   * The series' household rating — `setRating` over the series table, `null`
+   * clearing it. Answers whether the library holds that series.
+   */
+  setSeriesRating(id: string, units: number | null): boolean;
+  /**
    * One **Episode** as the player opens it: the episode, its series' id and
    * title, and the next episode the series holds — or `null` for an id the
    * library does not hold as an episode, a movie's among them.
@@ -442,6 +447,7 @@ export function createSqliteStorage(dbPath: string): LibraryStorage {
     deleteSeries: seriesWrite.deleteSeries,
     updateSeries: seriesWrite.updateSeries,
     setSeriesFavorite: seriesCuration.setSeriesFavorite,
+    setSeriesRating: seriesCuration.setSeriesRating,
     getEpisodeRead: seriesReader.getEpisodeRead,
     getSeriesHome: seriesBrowse.getSeriesHome,
     listSeriesGenres: seriesBrowse.listSeriesGenres,

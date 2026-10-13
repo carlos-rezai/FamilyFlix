@@ -348,6 +348,10 @@ describe('createImporter.start — Already in library', () => {
       library_folder_id: folders.films.id,
       source_folder: 'Die.Hard.1988.1080p',
     });
-    expect(texts(run)).toContain('· Already in library Die Hard (1988)');
+    // Held bare, it takes the row's Sheet fills (issue #332) rather than
+    // the Already in library line.
+    expect(
+      texts(run).some((text) => text.startsWith('✓ Updated    Die Hard (1988)'))
+    ).toBe(true);
   });
 });
