@@ -68,7 +68,12 @@ export function makeSeriesDetail(
     const episodes = statuses.map((status, n) =>
       makeEpisode(index + 1, n + 1, status)
     );
-    return { number: index + 1, episodes, next: nextOf(episodes) };
+    return {
+      number: index + 1,
+      episodes,
+      next: nextOf(episodes),
+      posterPath: null,
+    };
   });
   return {
     series: makeSeries(series),

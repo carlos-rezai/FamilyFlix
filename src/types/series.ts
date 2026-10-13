@@ -89,6 +89,8 @@ export interface SeasonSummary {
   episodes: Episode[];
   /** The season's **Next episode**, derived on the server. */
   next: Episode | null;
+  /** The season's **Season poster**, a Stored path; `null` for none. */
+  posterPath: string | null;
 }
 
 /** The series page in one read: the series, its seasons, its next episode. */

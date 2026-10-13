@@ -136,7 +136,9 @@ const HELD: SeriesDetail = {
     creator: 'Mara Quinn',
     genres: [{ id: 'g3', name: 'Drama' }],
   }),
-  seasons: [{ number: 1, episodes: [PILOT, LOW_TIDE], next: PILOT }],
+  seasons: [
+    { number: 1, episodes: [PILOT, LOW_TIDE], next: PILOT, posterPath: null },
+  ],
   next: PILOT,
 };
 

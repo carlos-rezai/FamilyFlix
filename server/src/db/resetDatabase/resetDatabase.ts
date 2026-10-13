@@ -2,14 +2,15 @@ import type { SqliteDatabase } from '..';
 
 /**
  * Every table **Factory reset** erases, child-first so no foreign key is left
- * pointing at a row already gone: the joins and subtitles before the titles
- * they hang off, the episodes before their series, and the titles before the
+ * pointing at a row already gone: the joins, subtitles and Season posters before the
+ * titles they hang off, the episodes before their series, and the titles before the
  * **Library folders** they were found in.
  */
 export const ERASED_TABLES = [
   'movie_genres',
   'subtitles',
   'series_genres',
+  'season_posters',
   'episode_subtitles',
   'episodes',
   'movies',

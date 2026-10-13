@@ -19,7 +19,8 @@ export interface SeasonCardProps {
 
 /**
  * One season on the series page — `mol.SeasonCard` 1:1. A 2:3 tile in the
- * series' gradient with the `S02` numeral, the StatusBadge when every episode
+ * series' gradient — the **Season poster** painted over it when there is one —
+ * with the `S02` numeral, the StatusBadge when every episode
  * is watched and a ProgressBar when some are; under it _Season N_ over
  * "8 episodes" or "3 of 8 watched". A **Card**: `cardLift` on the tile,
  * `cardFocus` on the root. Presentational — it knows no route.
@@ -36,7 +37,7 @@ export function SeasonCard({ season, onOpen }: SeasonCardProps) {
   return (
     <Root type="button" onClick={onOpen}>
       <Tile>
-        <Artwork g1={season.g1} g2={season.g2} />
+        <Artwork url={season.posterUrl} g1={season.g1} g2={season.g2} />
         <Numeral>{formatEpisodeTag({ season: number })}</Numeral>
         {complete ? (
           <BadgeWrap>

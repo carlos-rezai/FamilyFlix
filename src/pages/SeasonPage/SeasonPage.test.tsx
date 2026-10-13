@@ -69,6 +69,7 @@ const DETAIL: SeriesDetail = {
         },
       ],
       next: null,
+      posterPath: null,
     },
   ],
   next: null,

@@ -162,7 +162,7 @@ function makeSeason(
     }
     return makeEpisode(number, index + 1, status);
   });
-  return { number, episodes, next: episodes[0] ?? null };
+  return { number, episodes, next: episodes[0] ?? null, posterPath: null };
 }
 
 /** Nobody has started it: two seasons of 10 and 12, next S01E01. */

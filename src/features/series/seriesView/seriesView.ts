@@ -102,6 +102,7 @@ export function seriesView(detail: SeriesDetail): SeriesPageModel {
       watchedCount: season.episodes.filter((episode) => episode.watched).length,
       g1,
       g2,
+      posterUrl: imageUrl(season.posterPath),
     })),
   };
 }

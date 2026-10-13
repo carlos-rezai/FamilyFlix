@@ -141,6 +141,8 @@ export interface SeasonCardSeason {
   /** The series' **Gradient fallback** stops. */
   g1: string;
   g2: string;
+  /** The **Season poster**'s url, painted over the gradient; none draws it alone. */
+  posterUrl?: string | null;
 }
 
 /** What an Episode row draws: `mol.EpisodeRow`'s `episode` prop. */

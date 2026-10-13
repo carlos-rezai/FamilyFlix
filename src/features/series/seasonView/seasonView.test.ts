@@ -93,7 +93,7 @@ function season(
   episodes: Episode[],
   next: Episode | null = episodes[0] ?? null
 ): SeasonSummary {
-  return { number, episodes, next };
+  return { number, episodes, next, posterPath: null };
 }
 
 /** Season 2 of eight: E01–E03 watched, E04 part-way, the rest unstarted. */

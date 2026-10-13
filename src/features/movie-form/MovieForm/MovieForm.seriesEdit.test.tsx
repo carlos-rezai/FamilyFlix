@@ -95,8 +95,8 @@ const SERIES = makeSeries({
 const DETAIL: SeriesDetail = {
   series: SERIES,
   seasons: [
-    { number: 2, episodes: [SPRING_TIDE], next: SPRING_TIDE },
-    { number: 1, episodes: [LOW_TIDE, PILOT], next: PILOT },
+    { number: 2, episodes: [SPRING_TIDE], next: SPRING_TIDE, posterPath: null },
+    { number: 1, episodes: [LOW_TIDE, PILOT], next: PILOT, posterPath: null },
   ],
   next: PILOT,
 };
@@ -437,7 +437,12 @@ describe('MovieForm — the Series edit job, the Source file', () => {
         okResponse({
           ...DETAIL,
           seasons: [
-            { number: 2, episodes: [SPRING_TIDE], next: SPRING_TIDE },
+            {
+              number: 2,
+              episodes: [SPRING_TIDE],
+              next: SPRING_TIDE,
+              posterPath: null,
+            },
             { number: 1, episodes: [LOW_TIDE, imported], next: imported },
           ],
           next: imported,

@@ -1844,7 +1844,7 @@ describe('App — the season page', () => {
         subtitles: [],
         lastWatchedAt: null,
       };
-      return { number, episodes: [episode], next: episode };
+      return { number, episodes: [episode], next: episode, posterPath: null };
     }),
     next: null,
   };

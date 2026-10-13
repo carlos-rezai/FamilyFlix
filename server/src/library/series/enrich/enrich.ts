@@ -76,6 +76,11 @@ export interface SeriesEnrich {
    * `missing` is every series without **Full details**, `all` every series.
    */
   seriesInScope(scope: Exclude<EnrichScope, 'single'>): Series[];
+  /**
+   * Store one season's **Season poster**, a Stored path: an upsert over
+   * `(seriesId, season)`. Refuses a series the library does not hold.
+   */
+  setSeasonPoster(seriesId: string, season: number, posterPath: string): void;
 }
 
 /**
@@ -131,5 +136,20 @@ export function createSeriesEnrich(
     return seriesReader.assembleMany(rows);
   }
 
-  return { enrichSeries, enrichEpisode, seriesInScope };
+  const upsertSeasonPoster = db.prepare(
+    `INSERT INTO season_posters (series_id, season_number, poster_path)
+     VALUES (?, ?, ?)
+     ON CONFLICT (series_id, season_number)
+     DO UPDATE SET poster_path = excluded.poster_path`
+  );
+
+  function setSeasonPoster(
+    seriesId: string,
+    season: number,
+    posterPath: string
+  ): void {
+    upsertSeasonPoster.run(seriesId, season, posterPath);
+  }
+
+  return { enrichSeries, enrichEpisode, seriesInScope, setSeasonPoster };
 }

@@ -131,7 +131,7 @@ function uniform(
   const episodes = Array.from({ length: count }, (_, index) =>
     makeEpisode(number, index + 1, status)
   );
-  return { number, episodes, next: episodes[0] ?? null };
+  return { number, episodes, next: episodes[0] ?? null, posterPath: null };
 }
 
 /** Season 2 of eight: E01–E03 watched, E04 part-way (11:00 of 44:00), the rest unstarted. */
@@ -148,7 +148,7 @@ function midSeason(): SeasonSummary {
     }
     return makeEpisode(2, number);
   });
-  return { number: 2, episodes, next: episodes[3] };
+  return { number: 2, episodes, next: episodes[3], posterPath: null };
 }
 
 /** Three seasons, the family in the middle of the second. */

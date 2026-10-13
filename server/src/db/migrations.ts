@@ -284,4 +284,20 @@ export const migrations: readonly Migration[] = [
       db.exec('ALTER TABLE movies ADD COLUMN source_file TEXT;');
     },
   },
+  {
+    // The Season poster: one row per season that has a poster, keyed on the
+    // series and the season's number — a season stays a number, no `seasons`
+    // table. Cascades away with its series; nothing is backfilled.
+    version: 10,
+    up(db) {
+      db.exec(`
+        CREATE TABLE season_posters (
+          series_id     TEXT NOT NULL REFERENCES series(id) ON DELETE CASCADE,
+          season_number INTEGER NOT NULL,
+          poster_path   TEXT NOT NULL,
+          PRIMARY KEY (series_id, season_number)
+        );
+      `);
+    },
+  },
 ];
