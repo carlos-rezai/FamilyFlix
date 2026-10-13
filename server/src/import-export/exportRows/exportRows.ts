@@ -368,10 +368,7 @@ export function exportRows(
       }
     }
     for (const season of title.seasonPosters) {
-      plan(
-        season.storedPath,
-        `seasons/S${String(season.number).padStart(2, '0')}`
-      );
+      plan(season.storedPath, `seasons/${spellEpisodeTag(season.number)}`);
     }
     return title.row(art);
   });
