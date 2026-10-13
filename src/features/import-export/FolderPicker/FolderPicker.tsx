@@ -15,7 +15,7 @@ export interface FolderPickerProps {
   /** A card pressed, by its folder's path. */
   onPick: (folder: string) => void;
   /** The group's accessible name: `Folders for <title>`. */
-  label?: string;
+  label: string;
 }
 
 /** _1 video_ in the singular, _N videos_ otherwise. */

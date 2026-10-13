@@ -37,6 +37,7 @@ function renderPicker(props: Partial<FolderPickerProps> = {}) {
       <FolderPicker
         candidates={props.candidates ?? CANDIDATES}
         onPick={props.onPick ?? onPick}
+        label={props.label ?? 'Folders for Die Hard'}
       />
     </ThemeProvider>
   );
@@ -50,6 +51,14 @@ describe('FolderPicker — the cards', () => {
     renderPicker();
 
     expect(cards()).toHaveLength(2);
+  });
+
+  it('names the group by its label', () => {
+    renderPicker({ label: 'Folders for Die Hard' });
+
+    expect(
+      screen.getByRole('group', { name: 'Folders for Die Hard' })
+    ).toBeDefined();
   });
 
   it('draws a folder’s name, its path and its video count', () => {
