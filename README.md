@@ -436,16 +436,17 @@ Step 22 came after the third chain, out of the open issues from v0.3.0's use
     never replacing one already there, and an export with images on carries
     them too.
 
-Step 23 is the next one, out of using the latest release; it has not been
-through grill-me yet, so what follows is the intent, not the design:
+Step 23 is the next one, out of using the latest release (design log 40),
+designed and still to be built:
 
-23. 🔜 **Import review** — _Import from spreadsheet_ becomes one import over
-    your library folders **and** a spreadsheet (CSV or Excel): the folders
-    and the sheet are scanned together, and the scan ends in a review of the
-    adjustments that need making — where the sheet and the folders disagree,
-    or a row and a folder don't line up — each settled row by row, the way a
-    TMDB Sync's review is, rather than the list of problems the importer
-    shows today.
+23. 🔜 **Import review** — _Import from spreadsheet_ reads all your library
+    folders and a spreadsheet (CSV or Excel) together. New films still import
+    as the run goes. For a title already in the library, the sheet fills in
+    whatever is empty, and anything it says differently waits in the review
+    as _Yours | Spreadsheet_, field by field, the way a TMDB Sync asks —
+    nothing you filled in is overwritten without a press. A row two folders
+    could match is settled by picking the folder, and a folder the sheet
+    doesn't name by one _Import as_ press.
 
 A 🧭 Roadmap item is not in the chain — it comes after it, if ever.
 

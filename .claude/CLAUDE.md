@@ -1124,27 +1124,23 @@ v0.3.0 (design log 39):
     `seasons/` with _Images_ on, and no column. No Season page art, no
     **Write target**, no series-poster fallback.
 
-Step 23 is next, out of using the latest release. It has **not** been
-grilled: what follows is the maintainer's intent, not a design — no design
-log, PRD or prototype revision exists for it yet, and nothing here is a
-decision to build to:
+Step 23 is next, out of using the latest release (design log 40, issue
+#328), grilled and still to be built:
 
-23. 🔜 **Import review** — the Library group's _Import from spreadsheet_
-    becomes one import over the **Library folders** and a **Sheet** (CSV or
-    Excel) together — today the sheet run takes one typed root and the
-    **Folder scan** reads no sheet — and the scan ends in a review of the
-    adjustments to make, settled row by row the way the **Enrichment flow**'s
-    review settles its **Decisions**, in place of today's **Review step** of
-    **Problems** with Resolve and Skip. Open for the grill-me: what counts as
-    an adjustment (sheet vs folder title, year, a row with no folder, a
-    folder with no row, metadata the sheet holds and the library differs
-    on); whether the import waits on the review or imports the confident
-    matches during the run as it does now (log 13 Q16); whether the sheet
-    and folder-scan runs merge into one run or stay two; what
-    a second run over an imported library proposes; and how it sits beside
-    the Library folders page's _Scan folders_. Before it, #327: _Finish_ now
-    lets the **Current run** go, so _Import from spreadsheet_ no longer
-    re-attaches to a finished Folder scan.
+23. 🔜 **Import review** — _Import from spreadsheet_ reads every listed
+    **Library folder** and a **Sheet** (CSV or Excel); the typed root and its
+    log 30 Q19 rules go, and both starts share one walk. New matches still
+    import during the run (log 13 Q16). A **Sheet row** for a title the
+    library holds — by its Source folder, else title key and year, with or
+    without a folder — is no longer skipped: its empty fields are **Sheet
+    fills**, written during the run, and fields filled on both sides that
+    differ are **Sheet differences** on a new soft `differs` **Problem**,
+    settled on the row by a _Yours | Spreadsheet_ diff — `FieldDiff`
+    graduated to `components/` — with _Apply choices_ or _Keep all mine_.
+    Rating is in play; watched only ever marks; title never. `ambiguous`
+    gains a **Folder picker** and `no-row` an _Import as_, both one press;
+    the rest keep Resolve and Skip. Before it, #327: _Finish_ lets the
+    **Current run** go.
 
 A 🧭 Roadmap item is not in this chain — it is after it, if ever.
 
