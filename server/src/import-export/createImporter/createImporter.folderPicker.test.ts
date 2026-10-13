@@ -5,12 +5,12 @@
 // An `ambiguous` **Problem** carries its **Candidate folders** on the
 // snapshot — `{ path, name, videos }`, one per folder the match weighed — so
 // the review can draw a **Folder picker** without opening the form.
-// `pick(id, folder)` imports the row from one of its own candidates and
-// answers `null`; a candidate holding several videos turns the row into that
-// folder's `no-video` Problem, answered and on the snapshot in its place,
-// whose detail lists the folder's videos for the **Found-file choice**; an id
-// not there answers `false`; and a folder that is not a candidate is refused
-// with `CandidateRefusedError`, nothing imported.
+// `pick(id, folder)` answers a **Review outcome**: it imports the row from one
+// of its own candidates — `imported`; a candidate holding several videos
+// turns the row into that folder's `no-video` Problem — `redrawn`, on the
+// snapshot in its place, whose detail lists the folder's videos for the
+// **Found-file choice**; an id not there is `not-found`; and a folder that is
+// not a candidate is `refused` in a sentence, nothing imported (issue #336).
 //
 // The runs are real, `createImporter.test.ts`' sandbox: the fixture copied
 // under a sandboxed **Library folder**, a second Die Hard folder beside it so
@@ -20,11 +20,7 @@ import { mkdirSync, readdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-import {
-  CandidateRefusedError,
-  createImporter,
-  type Importer,
-} from './createImporter';
+import { createImporter, type Importer } from './createImporter';
 import { createMedia } from '../../media/createMedia/createMedia';
 import { createPlayback } from '../../playback/createPlayback/createPlayback';
 import { fixedSlot } from '../../test-support/fixedSlot/fixedSlot';
@@ -164,13 +160,13 @@ describe('createImporter — an ambiguous Problem’s Candidate folders', () => 
 });
 
 describe('createImporter.pick — a one-video candidate', () => {
-  it('imports the title from that folder and answers null', async () => {
+  it('imports the title from that folder, answering imported', async () => {
     const { importer, storage, problem, fixtureFolder } = await twoAnswers();
     expect(dieHard(storage)).toBeUndefined();
 
     const picked = await importer.pick(problem.id, fixtureFolder);
 
-    expect(picked).toBeNull();
+    expect(picked).toEqual({ kind: 'imported' });
     const movie = dieHard(storage);
     expect(movie).toMatchObject({ title: 'Die Hard', year: 1988 });
     expect(movie?.videoPath).toMatch(/\.mp4$/);
@@ -219,9 +215,12 @@ describe('createImporter.pick — a candidate of several videos', () => {
     const picked = await importer.pick(problem.id, second);
 
     expect(picked).toMatchObject({
-      kind: 'no-video',
-      title: 'Die Hard',
-      reason: 'Two videos. Pick the film.',
+      kind: 'redrawn',
+      problem: {
+        kind: 'no-video',
+        title: 'Die Hard',
+        reason: 'Two videos. Pick the film.',
+      },
     });
     expect(dieHard(storage)).toBeUndefined();
   });
@@ -234,7 +233,7 @@ describe('createImporter.pick — a candidate of several videos', () => {
 
     const after = importer.current()?.problems ?? [];
     expect(after).toHaveLength(run.problems.length);
-    expect(after[at]).toEqual(picked);
+    expect(picked).toEqual({ kind: 'redrawn', problem: after[at] });
     expect(after.some((each) => each.kind === 'ambiguous')).toBe(false);
   });
 
@@ -242,10 +241,10 @@ describe('createImporter.pick — a candidate of several videos', () => {
     const { importer, problem, second } = await twoAnswers(SEVERAL);
 
     const picked = await importer.pick(problem.id, second);
-    if (picked === null || picked === false) {
-      throw new Error(`expected a redrawn Problem, got ${String(picked)}`);
+    if (picked.kind !== 'redrawn') {
+      throw new Error(`expected a redrawn Problem, got ${picked.kind}`);
     }
-    const detail = importer.problem(picked.id);
+    const detail = importer.problem(picked.problem.id);
 
     expect(detail?.folder).toBe(second);
     expect([...(detail?.files.videos ?? [])].sort()).toEqual(
@@ -261,9 +260,10 @@ describe('createImporter.pick — what it refuses', () => {
     const elsewhere = folderUnder(root, 'Heat (1995)', ['Heat.mp4']);
     const before = readdirSync(media);
 
-    await expect(importer.pick(problem.id, elsewhere)).rejects.toBeInstanceOf(
-      CandidateRefusedError
-    );
+    expect(await importer.pick(problem.id, elsewhere)).toEqual({
+      kind: 'refused',
+      error: 'That folder is not one of the candidates.',
+    });
 
     expect(dieHard(storage)).toBeUndefined();
     expect(readdirSync(media)).toEqual(before);
@@ -275,29 +275,35 @@ describe('createImporter.pick — what it refuses', () => {
   it('refuses a path climbing out of a candidate', async () => {
     const { importer, storage, problem, fixtureFolder } = await twoAnswers();
 
-    await expect(
-      importer.pick(problem.id, join(fixtureFolder, '..', 'Drama'))
-    ).rejects.toBeInstanceOf(CandidateRefusedError);
+    expect(
+      await importer.pick(problem.id, join(fixtureFolder, '..', 'Drama'))
+    ).toMatchObject({ kind: 'refused' });
     expect(dieHard(storage)).toBeUndefined();
   });
 
-  it('answers false for an id that is not there, and imports nothing', async () => {
+  it('answers not-found for an id that is not there, and imports nothing', async () => {
     const { importer, storage, fixtureFolder } = await twoAnswers();
 
-    expect(await importer.pick('no-such-problem', fixtureFolder)).toBe(false);
+    expect(await importer.pick('no-such-problem', fixtureFolder)).toEqual({
+      kind: 'not-found',
+    });
     expect(dieHard(storage)).toBeUndefined();
   });
 
-  it('answers false a second time, once the Problem is gone', async () => {
+  it('answers not-found a second time, once the Problem is gone', async () => {
     const { importer, problem, fixtureFolder } = await twoAnswers();
     await importer.pick(problem.id, fixtureFolder);
 
-    expect(await importer.pick(problem.id, fixtureFolder)).toBe(false);
+    expect(await importer.pick(problem.id, fixtureFolder)).toEqual({
+      kind: 'not-found',
+    });
   });
 
-  it('answers false when there is no run', async () => {
+  it('answers not-found when there is no run', async () => {
     const { importer, fixtureFolder } = sandbox();
 
-    expect(await importer.pick('p1', fixtureFolder)).toBe(false);
+    expect(await importer.pick('p1', fixtureFolder)).toEqual({
+      kind: 'not-found',
+    });
   });
 });

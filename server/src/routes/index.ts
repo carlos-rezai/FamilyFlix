@@ -17,7 +17,6 @@ import {
   type FolderRefusal,
 } from '../import-export/admitFolder/admitFolder';
 import {
-  CandidateRefusedError,
   ImportBusyError,
   ImportPathError,
   ImportStartError,
@@ -26,6 +25,7 @@ import {
   type Importer,
   type ResolveFile,
   type ResolveForm,
+  type ReviewOutcome,
 } from '../import-export/createImporter/createImporter';
 import { exportSummary } from '../import-export/exportSummary/exportSummary';
 import {
@@ -490,6 +490,16 @@ const DECISION_REFUSALS: Record<
   'not-found': { status: 404, error: 'No such decision' },
   refused: { status: 422, error: 'TMDB refused the key' },
   unreachable: { status: 503, error: 'TMDB could not be reached' },
+};
+
+/**
+ * How a press on a review row is refused, by its outcome: a row that is not
+ * there `404` — its sentence names the id — and a press the importer will not
+ * take `400`, in the importer's own sentence.
+ */
+const PROBLEM_REFUSALS: Record<'not-found' | 'refused', number> = {
+  'not-found': 404,
+  refused: 400,
 };
 
 /** How each refused folder add is answered: a `400` and its one sentence. */
@@ -2381,11 +2391,38 @@ export function createApiRouter(
     }
   );
 
+  /**
+   * A review press's {@link ReviewOutcome} answered: `204` once imported,
+   * `200` with the row redrawn, and a refusal through `PROBLEM_REFUSALS`.
+   */
+  const answerReview = (
+    res: Response,
+    id: string,
+    outcome: ReviewOutcome
+  ): void => {
+    switch (outcome.kind) {
+      case 'imported':
+        res.status(204).end();
+        return;
+      case 'redrawn':
+        res.json(outcome.problem);
+        return;
+      case 'not-found':
+        res
+          .status(PROBLEM_REFUSALS['not-found'])
+          .json({ error: `No such problem: ${id}` });
+        return;
+      case 'refused':
+        res.status(PROBLEM_REFUSALS.refused).json({ error: outcome.error });
+        return;
+    }
+  };
+
   // A press on an `ambiguous` row's **Folder picker**: the body read by
   // `importBody`, then the importer imports the row from that **Candidate
-  // folder** — `204` — or redraws it as the folder's `no-video` Problem —
-  // `200` with it. Its refusal is the `400`, in its words; its `false` the
-  // `404`, the Skip's own.
+  // folder** — `204` — or redraws it as the folder's `no-video` or `failed`
+  // Problem — `200` with it. Its refusal is the `400`, in its words; a row
+  // not there the `404`, the Skip's own.
   router.post(
     '/import/current/problems/:id/pick',
     async (req: Request<{ id: string }>, res: Response) => {
@@ -2395,21 +2432,12 @@ export function createApiRouter(
         return;
       }
       try {
-        const picked = await importer.pick(req.params.id, read.value);
-        if (picked === false) {
-          res.status(404).json({ error: `No such problem: ${req.params.id}` });
-          return;
-        }
-        if (picked === null) {
-          res.status(204).end();
-          return;
-        }
-        res.json(picked);
-      } catch (error) {
-        if (error instanceof CandidateRefusedError) {
-          res.status(400).json({ error: error.message });
-          return;
-        }
+        answerReview(
+          res,
+          req.params.id,
+          await importer.pick(req.params.id, read.value)
+        );
+      } catch {
         res.status(500).json({ error: 'Could not import from that folder' });
       }
     }

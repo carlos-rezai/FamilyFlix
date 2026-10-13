@@ -23,7 +23,6 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createApiRouter } from '.';
 import { createEnrichment } from '../enrichment/createEnrichment/createEnrichment';
 import {
-  CandidateRefusedError,
   createImporter,
   type Importer,
 } from '../import-export/createImporter/createImporter';
@@ -199,7 +198,9 @@ describe('POST /api/import/current/problems/:id/pick — 204', () => {
   });
 
   it('picks through the injected importer’s own pick, by the id in the path', async () => {
-    const pick = vi.fn<Importer['pick']>().mockResolvedValue(null);
+    const pick = vi
+      .fn<Importer['pick']>()
+      .mockResolvedValue({ kind: 'imported' });
     const { baseUrl } = freshApi({
       importer: (composed) => ({ ...composed, pick }),
     });
@@ -270,7 +271,9 @@ describe('POST /api/import/current/problems/:id/pick — 200, the row redrawn', 
       title: 'Die Hard',
       reason: 'Two videos. Pick the film.',
     };
-    const pick = vi.fn<Importer['pick']>().mockResolvedValue(redrawn);
+    const pick = vi
+      .fn<Importer['pick']>()
+      .mockResolvedValue({ kind: 'redrawn', problem: redrawn });
     const { baseUrl } = freshApi({
       importer: (composed) => ({ ...composed, pick }),
     });
@@ -290,7 +293,9 @@ describe('POST /api/import/current/problems/:id/pick — 400', () => {
   ])(
     'answers 400 for %s, in importBody’s own sentence',
     async (_name, body) => {
-      const pick = vi.fn<Importer['pick']>().mockResolvedValue(null);
+      const pick = vi
+        .fn<Importer['pick']>()
+        .mockResolvedValue({ kind: 'imported' });
       const { baseUrl } = freshApi({
         importer: (composed) => ({ ...composed, pick }),
       });
@@ -325,11 +330,10 @@ describe('POST /api/import/current/problems/:id/pick — 400', () => {
   });
 
   it('turns the injected importer’s refusal into the 400, in its own words', async () => {
-    const pick = vi
-      .fn<Importer['pick']>()
-      .mockRejectedValue(
-        new CandidateRefusedError('That folder is not one of the candidates.')
-      );
+    const pick = vi.fn<Importer['pick']>().mockResolvedValue({
+      kind: 'refused',
+      error: 'That folder is not one of the candidates.',
+    });
     const { baseUrl } = freshApi({
       importer: (composed) => ({ ...composed, pick }),
     });
@@ -380,7 +384,9 @@ describe('POST /api/import/current/problems/:id/pick — 404', () => {
   });
 
   it('turns the injected importer’s false into the 404', async () => {
-    const pick = vi.fn<Importer['pick']>().mockResolvedValue(false);
+    const pick = vi
+      .fn<Importer['pick']>()
+      .mockResolvedValue({ kind: 'not-found' });
     const { baseUrl } = freshApi({
       importer: (composed) => ({ ...composed, pick }),
     });

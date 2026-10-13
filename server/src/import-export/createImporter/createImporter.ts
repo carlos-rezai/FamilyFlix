@@ -108,18 +108,6 @@ export class ProblemNotFoundError extends Error {
 }
 
 /**
- * A **Folder picker** press the importer will not take — a folder that is not
- * one of the `ambiguous` **Problem**'s own **Candidate folders**. Refused
- * before anything is copied; the route answers it as `400`, in its words.
- */
-export class CandidateRefusedError extends Error {
-  constructor(message = 'That folder is not one of the candidates.') {
-    super(message);
-    this.name = 'CandidateRefusedError';
-  }
-}
-
-/**
  * One of the form's **File slots** as _Save & continue_ sends it back: a
  * **Found file** — the absolute path the scan found it at, under a Library
  * folder — or a file the route has already stored from bytes, as its
@@ -186,6 +174,23 @@ export interface ResolveSeriesForm {
 }
 
 /**
+ * What a press on a **Review step** row that imports a folder answers — an
+ * outcome value, never a throw, as enrichment's `pick` answers:
+ *
+ * - `imported`: the title is in the library and the row is off;
+ * - `redrawn`: the row became another **Problem** in its place — the folder's
+ *   `no-video`, or the `failed` its copy filed — answered for the screen;
+ * - `not-found`: no such row, or no run;
+ * - `refused`: a press the importer will not take, in its own sentence,
+ *   before anything is copied.
+ */
+export type ReviewOutcome =
+  | { kind: 'imported' }
+  | { kind: 'redrawn'; problem: ImportProblem }
+  | { kind: 'not-found' }
+  | { kind: 'refused'; error: string };
+
+/**
  * What the API layer can ask the import domain for. Injected into the router
  * as the fifth argument the way `playback` and `media` are, so the route layer
  * never learns there is a spreadsheet. `start`, `scan`, `current`, `cancel`,
@@ -230,13 +235,13 @@ export interface Importer {
   /**
    * A press on an `ambiguous` **Problem**'s **Folder picker**: import the row
    * from one of its own **Candidate folders** and take the Problem off —
-   * `null`. A candidate holding no single video turns the row into that
-   * folder's `no-video` Problem in its place, answered. `false` for an id
-   * that is not there, and when there is no run. Rejects with
-   * {@link CandidateRefusedError} for a folder that is not a candidate,
+   * `imported`. A candidate holding no single video turns the row into that
+   * folder's `no-video` Problem in its place, and a copy that fails into its
+   * `failed` one — `redrawn`. `not-found` for an id that is not there, and
+   * when there is no run; `refused` for a folder that is not a candidate,
    * before anything is copied.
    */
-  pick(id: string, folder: string): Promise<ImportProblem | null | false>;
+  pick(id: string, folder: string): Promise<ReviewOutcome>;
   /**
    * _Import as_ on a `no-row` **Problem**: import its folder under the row a
    * **Folder scan** would give it — `guessedRow` — and take the Problem off,
@@ -1793,27 +1798,34 @@ export function createImporter({
         at === -1 ||
         source === undefined
       ) {
-        return false;
+        return { kind: 'not-found' };
       }
       const candidate = source.candidates.find((each) => each.dir === folder);
       const row = source.row;
       if (candidate === undefined || row === null) {
-        throw new CandidateRefusedError();
+        return {
+          kind: 'refused',
+          error: 'That folder is not one of the candidates.',
+        };
       }
       const scan = wholeOf(candidate);
       const libraryFolder = listedFolderOf(scan.dir);
       if (libraryFolder === null) {
-        throw new CandidateRefusedError(
-          'That folder is no longer under a Library folder.'
-        );
+        return {
+          kind: 'refused',
+          error: 'That folder is no longer under a Library folder.',
+        };
       }
 
       /** The row redrawn in the ambiguous one's place, as `problem` reads it. */
-      const redraw = (problem: ImportProblem, kept: ProblemSource) => {
+      const redraw = (
+        problem: ImportProblem,
+        kept: ProblemSource
+      ): ReviewOutcome => {
         current.problems.splice(at, 1, problem);
         sources.delete(id);
         sources.set(problem.id, kept);
-        return problem;
+        return { kind: 'redrawn', problem };
       };
 
       if (scan.videos.length !== 1) {
@@ -1851,7 +1863,7 @@ export function createImporter({
         return redraw(failed, kept);
       }
       takeOff(id);
-      return null;
+      return { kind: 'imported' };
     },
 
     importGuessed: async (id) => {
