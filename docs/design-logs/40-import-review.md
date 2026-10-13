@@ -2,7 +2,7 @@
 
 > **Initiative:** `import-review`
 > **Issue:** [#328](https://github.com/carlos-rezai/FamilyFlix/issues/328)
-> **PRD:** `docs/PRDs/40-import-review.md` (to be written)
+> **PRD:** `docs/PRDs/40-import-review.md` (issue 329)
 > **Plan:** `docs/PRDs/40-import-review-plan.md` (to be written)
 
 This log is the `grill-me` session for step 23 of the build order, **Import
