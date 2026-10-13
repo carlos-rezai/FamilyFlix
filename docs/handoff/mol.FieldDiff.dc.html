@@ -1,0 +1,164 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="tokens.css" />
+      </helmet>
+      <!-- The field-by-field diff: one Yours | <theirsLabel> line per field, the theirs side
+           chosen until a press says otherwise, then Apply choices and Keep all mine. The Sync's
+           conflict row draws it as Yours | TMDB, the import's differs row as Yours | Spreadsheet.
+           It holds the choices and reports them; it writes nothing. -->
+      <div>
+        <div
+          style="
+            margin-top: 14px;
+            border: 1px solid var(--color-border-soft);
+            border-radius: var(--radius-md);
+            overflow: hidden;
+          "
+        >
+          <sc-for list="{{ rows }}" as="fl" hint-placeholder-count="3">
+            <div
+              style="
+                display: flex;
+                align-items: stretch;
+                gap: 0;
+                border-bottom: 1px solid var(--color-border-soft);
+              "
+            >
+              <div
+                style="
+                  flex: 0 0 118px;
+                  padding: 13px 14px;
+                  font-family: var(--font-sans);
+                  font-size: 13px;
+                  font-weight: 600;
+                  color: var(--color-text-faint);
+                  background: var(--color-bg-2);
+                "
+              >
+                {{ fl.label }}
+              </div>
+              <button
+                onClick="{{ fl.onKeepMine }}"
+                aria-pressed="{{ fl.minePressed }}"
+                style="{{ fl.mineStyle }}"
+              >
+                <span
+                  style="
+                    display: block;
+                    font-family: var(--font-sans);
+                    font-size: 11px;
+                    font-weight: 700;
+                    letter-spacing: 0.5px;
+                    text-transform: uppercase;
+                    color: var(--color-text-faint);
+                    margin-bottom: 4px;
+                  "
+                  >Yours</span
+                >
+                <span
+                  style="
+                    display: block;
+                    font-family: var(--font-sans);
+                    font-size: 13px;
+                    color: var(--color-text);
+                    line-height: 1.45;
+                  "
+                  >{{ fl.mine }}</span
+                >
+              </button>
+              <button
+                onClick="{{ fl.onUseTheirs }}"
+                aria-pressed="{{ fl.theirsPressed }}"
+                style="{{ fl.theirsStyle }}"
+              >
+                <span
+                  style="
+                    display: block;
+                    font-family: var(--font-sans);
+                    font-size: 11px;
+                    font-weight: 700;
+                    letter-spacing: 0.5px;
+                    text-transform: uppercase;
+                    color: var(--color-text-faint);
+                    margin-bottom: 4px;
+                  "
+                  >{{ theirsLabel }}</span
+                >
+                <span
+                  style="
+                    display: block;
+                    font-family: var(--font-sans);
+                    font-size: 13px;
+                    color: var(--color-text);
+                    line-height: 1.45;
+                  "
+                  >{{ fl.theirs }}</span
+                >
+              </button>
+            </div>
+          </sc-for>
+        </div>
+        <div style="display: flex; gap: 10px; margin-top: 14px">
+          <dc-import
+            name="prim.Button"
+            label="Apply choices"
+            variant="primary"
+            size="md"
+            icon="none"
+            on-click="{{ onApply }}"
+            hint-size="150px,50px"
+          ></dc-import>
+          <dc-import
+            name="prim.Button"
+            label="Keep all mine"
+            variant="secondary"
+            size="md"
+            icon="none"
+            on-click="{{ onKeepAll }}"
+            hint-size="150px,50px"
+          ></dc-import>
+        </div>
+      </div>
+    </x-dc>
+    <script
+      type="text/x-dc"
+      data-dc-script
+      data-props='{"$preview":{"width":640,"height":300},"rows":{"editor":null,"tsType":"{ key: K; label: string; mine: string; theirs: string }[]"},"theirsLabel":{"editor":"text","default":"Spreadsheet","tsType":"string"},"onApply":{"editor":null,"tsType":"(choices: Record&lt;K, &apos;mine&apos; | &apos;theirs&apos;&gt;) =&gt; void"},"onKeepAll":{"editor":null,"tsType":"() =&gt; void"}}'
+    >
+      class Component extends DCLogic {
+        state={chosen:{}};
+        renderVals(){
+          const rows=this.props.rows||[
+            {key:'director',label:'Director',mine:'Eleanor Past',theirs:'Eleanor Past-Whitlock'},
+            {key:'genres',label:'Genres',mine:'Drama',theirs:'Drama, Family'},
+            {key:'rating',label:'Rating',mine:'3½ ★',theirs:'4 ★'},
+          ];
+          // Every row on the theirs side until a press chooses otherwise.
+          const choiceOf=(k)=>this.state.chosen[k]||'theirs';
+          const choose=(k,side)=>this.setState(s=>({chosen:{...s.chosen,[k]:side}}));
+          const sideStyle=(on)=>({flex:1,textAlign:'left',padding:'12px 14px',background:on?'var(--color-accent-soft)':'transparent',border:'none',borderLeft:'1px solid var(--color-border-soft)',boxShadow:on?'inset 0 0 0 1px var(--color-accent-line)':'none',cursor:'pointer'});
+          return {
+            theirsLabel:this.props.theirsLabel||'Spreadsheet',
+            rows:rows.map(r=>({
+              label:r.label, mine:r.mine, theirs:r.theirs,
+              onKeepMine:()=>choose(r.key,'mine'), onUseTheirs:()=>choose(r.key,'theirs'),
+              minePressed:String(choiceOf(r.key)==='mine'), theirsPressed:String(choiceOf(r.key)==='theirs'),
+              mineStyle:sideStyle(choiceOf(r.key)==='mine'), theirsStyle:sideStyle(choiceOf(r.key)==='theirs'),
+            })),
+            // Every row is reported, chosen or not: the default is a choice too.
+            onApply:()=>{ if(this.props.onApply){ const choices={}; for(const r of rows) choices[r.key]=choiceOf(r.key); this.props.onApply(choices); } },
+            onKeepAll:this.props.onKeepAll,
+          };
+        }
+      }
+    </script>
+  </body>
+</html>

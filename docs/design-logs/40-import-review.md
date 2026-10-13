@@ -196,7 +196,7 @@ units)` in `library/series/curation/`, beside the series heart — the one
     stay **Problems** and the Sync's stay **Decisions** (log 23 Q25): two
     reviews, two nouns, as today. Its reason: _The spreadsheet has different
     values for fields you already filled in._ — the Sync's sentence with the
-    sheet in TMDB's place. Its dot is `accent`, the Sync's `conflict` dot.
+    sheet in TMDB's place. Its dot is the Sync's `conflict` gold, `#c9a86a` (corrected at #330: not `accent`, which is `ambiguous`'s).
     ❌ **`conflict`**: the glossary lists it as an alias to avoid for both
     **Problem** and **Already in library**, and it is the Sync's Decision
     kind. ❌ **"Adjustment"** as a type: it is the brief's word for the whole

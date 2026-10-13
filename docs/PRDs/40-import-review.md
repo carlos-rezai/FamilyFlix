@@ -76,7 +76,7 @@ Every other kind keeps _Resolve_ and _Skip_, as today.
 
 34. As the maintainer, I want a held title whose sheet row differs to appear in the review as one `differs` row, so that I settle each title once.
 35. As the maintainer, I want its reason to read _The spreadsheet has different values for fields you already filled in._, so that I know what the row is.
-36. As the maintainer, I want its dot in accent, like the Sync's conflict, so that the two reviews read alike.
+36. As the maintainer, I want its dot in the Sync's conflict gold, so that the two reviews read alike.
 37. As the maintainer, I want one _Yours | Spreadsheet_ line per differing field, both sides spelled for reading (lists joined with commas, a rating as stars, a year range spelled), so that I can compare at a glance.
 38. As the maintainer, I want the sheet's side chosen by default, so that bringing in a sheet I just edited is one press.
 39. As the maintainer, I want to choose per field, so that I can take the sheet's director and keep my own synopsis.

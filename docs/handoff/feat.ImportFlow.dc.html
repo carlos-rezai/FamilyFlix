@@ -110,43 +110,151 @@
                   />
                 </div>
               </label>
-              <label style="display: block">
-                <span style="{{ imp.labelStyle }}">Movies root folder</span>
-                <div
-                  style="
-                    display: flex;
-                    align-items: center;
-                    gap: 10px;
-                    height: 50px;
-                    padding: 0 14px;
-                    background: var(--color-surface);
-                    border: 1px solid var(--color-border);
-                    border-radius: 10px;
-                  "
-                >
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                    <path
-                      d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"
-                      stroke="var(--color-text-faint)"
-                      stroke-width="1.6"
-                    />
-                  </svg>
-                  <input
-                    value="{{ imp.root }}"
-                    onInput="{{ imp.onRoot }}"
-                    placeholder="C:\Movies"
+              <!-- The group Library folders, in place of the Movies root folder field: the run reads
+                   every listed folder. Each row its path in mono and its title count, or Can't be
+                   reached right now in danger; no ✕ — setup is not where the list is edited, so
+                   not FolderRow. Blank until the list lands. -->
+              <sc-if
+                value="{{ imp.foldersLanded }}"
+                hint-placeholder-val="{{ true }}"
+              >
+                <div>
+                  <div
                     style="
-                      flex: 1;
-                      background: transparent;
-                      border: none;
-                      outline: none;
-                      color: var(--color-text);
-                      font-family: var(--font-mono);
-                      font-size: 14px;
+                      display: flex;
+                      align-items: center;
+                      justify-content: space-between;
+                      gap: 12px;
                     "
-                  />
+                  >
+                    <span style="{{ imp.labelStyle }}">Library folders</span>
+                    <sc-if
+                      value="{{ imp.hasFolders }}"
+                      hint-placeholder-val="{{ true }}"
+                    >
+                      <button
+                        onClick="{{ imp.onManageFolders }}"
+                        style="
+                          height: 34px;
+                          padding: 0 12px;
+                          margin-bottom: 8px;
+                          background: transparent;
+                          border: none;
+                          border-radius: 8px;
+                          color: var(--color-text-dim);
+                          font-family: var(--font-sans);
+                          font-size: 14px;
+                          font-weight: 600;
+                          cursor: pointer;
+                        "
+                        style-hover="color:var(--color-text);background:var(--color-surface-2)"
+                      >
+                        Manage folders
+                      </button>
+                    </sc-if>
+                  </div>
+                  <sc-if
+                    value="{{ imp.hasFolders }}"
+                    hint-placeholder-val="{{ true }}"
+                  >
+                    <div
+                      style="
+                        display: flex;
+                        flex-direction: column;
+                        background: var(--color-surface);
+                        border: 1px solid var(--color-border);
+                        border-radius: 10px;
+                        overflow: hidden;
+                      "
+                    >
+                      <sc-for
+                        list="{{ imp.folders }}"
+                        as="fo"
+                        hint-placeholder-count="2"
+                      >
+                        <div style="{{ fo.rowStyle }}">
+                          <svg
+                            width="20"
+                            height="20"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            style="flex: 0 0 auto"
+                          >
+                            <path
+                              d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"
+                              stroke="var(--color-text-faint)"
+                              stroke-width="1.6"
+                            />
+                          </svg>
+                          <span
+                            style="
+                              flex: 1;
+                              min-width: 0;
+                              font-family: var(--font-mono);
+                              font-size: 14px;
+                              color: var(--color-text);
+                              overflow-wrap: anywhere;
+                            "
+                            >{{ fo.path }}</span
+                          >
+                          <span style="{{ fo.lineStyle }}">{{ fo.line }}</span>
+                        </div>
+                      </sc-for>
+                    </div>
+                  </sc-if>
+                  <sc-if
+                    value="{{ imp.noFolders }}"
+                    hint-placeholder-val="{{ false }}"
+                  >
+                    <div
+                      style="
+                        display: flex;
+                        align-items: center;
+                        justify-content: space-between;
+                        gap: 14px;
+                        padding: 14px 16px;
+                        background: var(--color-surface);
+                        border: 1px dashed var(--color-border);
+                        border-radius: 10px;
+                      "
+                    >
+                      <span
+                        style="
+                          font-family: var(--font-sans);
+                          font-size: 15px;
+                          color: var(--color-text-dim);
+                        "
+                        >No library folders yet.</span
+                      >
+                      <dc-import
+                        name="prim.Button"
+                        label="Add library folders"
+                        variant="secondary"
+                        size="md"
+                        icon="none"
+                        on-click="{{ imp.onManageFolders }}"
+                        hint-size="190px,50px"
+                      ></dc-import>
+                    </div>
+                  </sc-if>
+                  <!-- The route's refusal on `folders` — a stale screen's start — one 13px danger line. -->
+                  <sc-if
+                    value="{{ imp.foldersRefused }}"
+                    hint-placeholder-val="{{ false }}"
+                  >
+                    <div
+                      style="
+                        font-family: var(--font-sans);
+                        font-size: 13px;
+                        color: var(--color-danger);
+                        margin-top: 8px;
+                      "
+                    >
+                      {{ imp.foldersRefusal }}
+                    </div>
+                  </sc-if>
                 </div>
-              </label>
+              </sc-if>
               <div
                 style="
                   display: flex;
@@ -262,11 +370,13 @@
                   >
                 </span>
               </label>
-              <div style="margin-top: 8px">
+              <!-- With no folder listed Start import is disabled: drawn secondary and inert, as the
+                   Sync's Start is before its key is tested (the built Button takes `disabled`). -->
+              <div style="{{ imp.startWrapStyle }}">
                 <dc-import
                   name="prim.Button"
                   label="Start import"
-                  variant="primary"
+                  variant="{{ imp.startVariant }}"
                   size="md"
                   icon="none"
                   on-click="{{ imp.onStart }}"
@@ -578,74 +688,234 @@
                   as="p"
                   hint-placeholder-count="4"
                 >
+                  <!-- One Problem: the head (dot, title, reason, Resolve on every kind but differs,
+                       Skip), then the face slot under it, the Sync's Decision row layout. A face
+                       is drawn for differs, ambiguous and no-row; every other kind has none. -->
                   <div
                     style="
-                      display: flex;
-                      align-items: center;
-                      gap: 14px;
                       padding: 16px;
                       background: var(--color-surface);
                       border: 1px solid var(--color-border-soft);
                       border-radius: var(--radius-md);
                     "
                   >
-                    <div style="{{ p.dotStyle }}"></div>
-                    <div style="flex: 1; min-width: 0">
-                      <div
-                        style="
-                          font-family: var(--font-sans);
-                          font-size: 16px;
-                          font-weight: 600;
-                          color: var(--color-text);
-                        "
-                      >
-                        {{ p.title }}
+                    <div style="display: flex; align-items: center; gap: 14px">
+                      <div style="{{ p.dotStyle }}"></div>
+                      <div style="flex: 1; min-width: 0">
+                        <div
+                          style="
+                            font-family: var(--font-sans);
+                            font-size: 16px;
+                            font-weight: 600;
+                            color: var(--color-text);
+                          "
+                        >
+                          {{ p.title }}
+                        </div>
+                        <div
+                          style="
+                            font-family: var(--font-sans);
+                            font-size: 13px;
+                            color: var(--color-text-faint);
+                            margin-top: 2px;
+                          "
+                        >
+                          {{ p.reason }}
+                        </div>
                       </div>
-                      <div
+                      <!-- No Resolve on differs: the form edits a record, not a comparison. -->
+                      <sc-if
+                        value="{{ p.hasResolve }}"
+                        hint-placeholder-val="{{ true }}"
+                      >
+                        <button
+                          onClick="{{ p.resolve }}"
+                          style="
+                            height: 40px;
+                            padding: 0 18px;
+                            background: var(--color-surface-3);
+                            border: 1px solid var(--color-border);
+                            border-radius: 8px;
+                            color: var(--color-text);
+                            font-family: var(--font-sans);
+                            font-size: 14px;
+                            font-weight: 600;
+                            cursor: pointer;
+                          "
+                          style-hover="background:var(--color-border)"
+                        >
+                          Resolve
+                        </button>
+                      </sc-if>
+                      <button
+                        onClick="{{ p.skip }}"
                         style="
-                          font-family: var(--font-sans);
-                          font-size: 13px;
+                          height: 40px;
+                          padding: 0 14px;
+                          background: transparent;
+                          border: none;
                           color: var(--color-text-faint);
-                          margin-top: 2px;
+                          font-family: var(--font-sans);
+                          font-size: 14px;
+                          cursor: pointer;
+                        "
+                        style-hover="color:var(--color-text-dim)"
+                      >
+                        Skip
+                      </button>
+                    </div>
+
+                    <!-- differs: the shared mol.FieldDiff as Yours | Spreadsheet, the sheet chosen.
+                         Keep all mine is the row's Dismiss. -->
+                    <sc-if
+                      value="{{ p.isDiffers }}"
+                      hint-placeholder-val="{{ false }}"
+                    >
+                      <div style="padding-left: 24px">
+                        <dc-import
+                          name="mol.FieldDiff"
+                          rows="{{ p.diffRows }}"
+                          theirs-label="Spreadsheet"
+                          on-apply="{{ p.onApply }}"
+                          on-keep-all="{{ p.onKeepAll }}"
+                          hint-size="100%,260px"
+                        ></dc-import>
+                      </div>
+                    </sc-if>
+
+                    <!-- ambiguous: the Folder picker, one card per Candidate folder: its name,
+                         its path in mono and its video count; no poster, no % match. A press
+                         imports the row from that folder. -->
+                    <sc-if
+                      value="{{ p.isAmbiguous }}"
+                      hint-placeholder-val="{{ false }}"
+                    >
+                      <div
+                        role="group"
+                        aria-label="{{ p.pickerLabel }}"
+                        style="
+                          display: flex;
+                          gap: 12px;
+                          overflow-x: auto;
+                          padding: 16px 2px 4px 24px;
                         "
                       >
-                        {{ p.reason }}
+                        <sc-for
+                          list="{{ p.candidates }}"
+                          as="c"
+                          hint-placeholder-count="2"
+                        >
+                          <button
+                            onClick="{{ c.onPick }}"
+                            style="
+                              flex: 0 0 auto;
+                              width: 220px;
+                              display: flex;
+                              gap: 10px;
+                              align-items: flex-start;
+                              text-align: left;
+                              padding: 12px;
+                              background: var(--color-surface-2);
+                              border: 1px solid var(--color-border-soft);
+                              border-radius: var(--radius-md);
+                              cursor: pointer;
+                            "
+                            style-hover="border-color:var(--color-accent-line);background:var(--color-surface-3)"
+                          >
+                            <span
+                              style="
+                                flex: 0 0 auto;
+                                width: 32px;
+                                height: 32px;
+                                border-radius: 8px;
+                                background: var(--color-accent-soft);
+                                color: var(--color-accent);
+                                display: grid;
+                                place-items: center;
+                              "
+                              ><svg
+                                width="16"
+                                height="16"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                              >
+                                <path
+                                  d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"
+                                  stroke="currentColor"
+                                  stroke-width="1.6"
+                                /></svg
+                            ></span>
+                            <span style="flex: 1; min-width: 0">
+                              <span
+                                style="
+                                  display: block;
+                                  font-family: var(--font-sans);
+                                  font-size: 13px;
+                                  font-weight: 600;
+                                  color: var(--color-text);
+                                  line-height: 1.3;
+                                "
+                                >{{ c.name }}</span
+                              >
+                              <span
+                                style="
+                                  display: block;
+                                  font-family: var(--font-mono);
+                                  font-size: 12px;
+                                  color: var(--color-text-faint);
+                                  margin-top: 3px;
+                                  overflow-wrap: anywhere;
+                                "
+                                >{{ c.path }}</span
+                              >
+                              <span
+                                style="
+                                  display: inline-block;
+                                  margin-top: 8px;
+                                  font-family: var(--font-sans);
+                                  font-size: 11px;
+                                  font-weight: 700;
+                                  letter-spacing: 0.3px;
+                                  padding: 3px 8px;
+                                  border-radius: var(--radius-pill);
+                                  color: var(--color-text-faint);
+                                  background: var(--color-surface-3);
+                                "
+                                >{{ c.videosLabel }}</span
+                              >
+                            </span>
+                          </button>
+                        </sc-for>
                       </div>
-                    </div>
-                    <button
-                      onClick="{{ p.resolve }}"
-                      style="
-                        height: 40px;
-                        padding: 0 18px;
-                        background: var(--color-surface-3);
-                        border: 1px solid var(--color-border);
-                        border-radius: 8px;
-                        color: var(--color-text);
-                        font-family: var(--font-sans);
-                        font-size: 14px;
-                        font-weight: 600;
-                        cursor: pointer;
-                      "
-                      style-hover="background:var(--color-border)"
+                    </sc-if>
+
+                    <!-- no-row: Import as "<guess>", the folder imported under the name a Folder
+                         scan would give it. Button secondary, sm. -->
+                    <sc-if
+                      value="{{ p.isNoRow }}"
+                      hint-placeholder-val="{{ false }}"
                     >
-                      Resolve
-                    </button>
-                    <button
-                      onClick="{{ p.skip }}"
-                      style="
-                        height: 40px;
-                        padding: 0 14px;
-                        background: transparent;
-                        border: none;
-                        color: var(--color-text-faint);
-                        font-family: var(--font-sans);
-                        font-size: 14px;
-                        cursor: pointer;
-                      "
-                      style-hover="color:var(--color-text-dim)"
-                    >
-                      Skip
-                    </button>
+                      <div style="padding: 14px 0 0 24px">
+                        <button
+                          onClick="{{ p.onImportAs }}"
+                          style="
+                            height: 34px;
+                            padding: 0 14px;
+                            background: var(--color-surface-3);
+                            border: 1px solid var(--color-border);
+                            border-radius: 8px;
+                            color: var(--color-text);
+                            font-family: var(--font-sans);
+                            font-size: 14px;
+                            font-weight: 600;
+                            cursor: pointer;
+                          "
+                          style-hover="background:var(--color-border)"
+                        >
+                          {{ p.importAsLabel }}
+                        </button>
+                      </div>
+                    </sc-if>
                   </div>
                 </sc-for>
               </div>

@@ -261,7 +261,7 @@
           fTitle:'', fYear:'', fDirector:'', fCast:'', fDescription:'', fGenres:[], fVideo:'', fPoster:'', fSubs:[], fKind:'movie', fEpisodes:[], subLangOpen:null,
           addContext:null, resolveId:null,
           libraryFolders:[{id:'f1',path:'E:\\Movies',titleCount:214,reachable:true},{id:'f2',path:'F:\\Kids',titleCount:38,reachable:false}], folderTyped:'', folderRefusal:null, folderBridge:true, impSource:'sheet',
-          impStep:'setup', impSheet:'', impRoot:'', impProgress:0, impMatched:0, impProblems:[],
+          impStep:'setup', impSheet:'', impFoldersRefusal:null, impProgress:0, impMatched:0, impProblems:[],
           impPhase:'scan', impFound:0, impTotal:0, impDone:0, impCurrent:'', impLog:[], impStartTime:null,
           exportOpen:false, exportFormat:'csv', exportDone:false, resetOpen:false, resetting:false, resetRefusal:null,
           seriesMenuOpen:false, seriesDeleteOpen:false, seriesDeleting:false, enSingleKind:'movie', fFound:[], fFoundPick:0,
@@ -305,7 +305,7 @@
               const r=Math.random();
               if(r<0.08){ kind='warning'; text='⚠ '+item+': several possible matches'; }
               else if(r<0.12){ kind='warning'; text='⚠ '+item+': no result on TMDB'; }
-              else if(r<0.2){ kind='scan'; text='↓ poster.jpg  →  '+this.fakePath(s.impRoot, done+3); }
+              else if(r<0.2){ kind='scan'; text='↓ poster.jpg  →  '+this.fakePath(this.firstReachable(), done+3); }
               const log=this.appendLog(s.enLog, {text, kind});
               if(done>=s.enTotal){
                 const pend=this.seedEnrichPending();
@@ -318,7 +318,7 @@
               if(s.impPhase==='scan'){
                 const target=1240;
                 const found=Math.min(target, s.impFound + (40+Math.floor(Math.random()*95)));
-                const path=this.fakePath(s.impRoot, found);
+                const path=this.fakePath(this.firstReachable(), found);
                 const log=this.appendLog(s.impLog, {text:'Scanning   '+path, kind:'scan'});
                 if(found>=target){
                   this.setState({impFound:target, impTotal:target, impPhase:'import', impCurrent:'',
@@ -333,6 +333,9 @@
                 const r=Math.random();
                 if(r<0.07){ kind='warning'; text='⚠ '+item+': no subtitle track found'; }
                 else if(r<0.10){ kind='warning'; text='⚠ '+item+': multiple folder matches'; }
+                // A held title's Sheet fills, written during the run and named in the log.
+                else if(r<0.18){ text='✓ Updated    '+item+' — genres, director'; }
+                else if(r<0.24){ kind='info'; text='· Already in library   '+item; }
                 const log=this.appendLog(s.impLog, {text, kind});
                 if(done>=s.impTotal){
                   const probs=this.seedProblems();
@@ -605,14 +608,19 @@
         ]; }
         pickCandidate(rowId){ this.setState(s=>({enPending:s.enPending.filter(p=>p.id!==rowId), enMatched:s.enMatched+1, enrichedCount:s.enrichedCount+1})); this.pushSnack({variant:'success',message:'Match saved.',duration:3000,dismissible:true}); }
         skipEnrichRow(id){ this.setState(s=>({enPending:s.enPending.filter(p=>p.id!==id)})); }
-        setFieldChoice(rowId,key,which){ this.setState(s=>({enPending:s.enPending.map(p=>p.id===rowId?{...p,choices:{...(p.choices||{}),[key]:which}}:p)})); }
         applyConflict(rowId){ this.setState(s=>({enPending:s.enPending.filter(p=>p.id!==rowId), enMatched:s.enMatched+1, enrichedCount:s.enrichedCount+1})); this.pushSnack({variant:'success',message:'Details updated.',duration:3000,dismissible:true}); }
         searchEnrich(rowId){ this.pushSnack({variant:'info',message:'Searching TMDB…',duration:2500,dismissible:true}); }
 
         // ---- import ----
         onImpSheet(e){ this.setState({impSheet:e.target.value}); }
-        onImpRoot(e){ this.setState({impRoot:e.target.value}); }
-        startImport(){ this.setState({impStep:'running',impPhase:'scan',impFound:0,impTotal:0,impDone:0,impCurrent:'',impLog:[{text:'Connecting to '+(this.state.impRoot||'E:\\Movies')+' …',kind:'info'}],impStartTime:Date.now()}); }
+        // The sheet run reads every listed Library folder: a Scanning line per reachable folder, an
+        // unreachable one skipped with the scan's warning line. With none listed Start is inert; the
+        // route's refusal (a stale screen) is drawn under the group.
+        startImport(){ const folders=this.state.libraryFolders;
+          if(folders.length===0){ this.setState({impFoldersRefusal:'Add a library folder first.'}); return; }
+          const lines=folders.map(f=>f.reachable?{text:'Scanning   '+f.path,kind:'scan'}:{text:'\u26a0 Can\u2019t reach '+f.path+', skipped',kind:'warning'});
+          this.setState({impStep:'running',impPhase:'scan',impFound:0,impTotal:0,impDone:0,impCurrent:'',impFoldersRefusal:null,impLog:[{text:'Reading '+(this.state.impSheet||'library.xlsx')+' …',kind:'info'},...lines],impStartTime:Date.now()}); }
+        firstReachable(){ const f=this.state.libraryFolders.find(x=>x.reachable); return f?f.path:'E:\\Movies'; }
         cancelImport(){ this.setState({impStep:'setup',impPhase:'scan',impFound:0,impTotal:0,impDone:0,impCurrent:'',impLog:[]}); }
         _logPool = ['The Lantern Keeper','Salt and Cedar','Northwind','Paper Moons','The Glasshouse','Orbit of Small Things','Marigold Avenue','The Quiet Tide','Hollow Creek','Comet Season','Grandfather\u2019s Clock','The Paper Aviator','Dust and Diamonds','Tin Can Symphony','The Far Meridian','Almond Blossom','Riverkeep','Nightjar','The Cartographer','Saturday\u2019s Children','Velvet Hour','Harbor Lights','Ironwood','Sundial','Blue Hour','The Tin Forest','Winter Apples','Lighthouse Road','Cedar and Ash','The Long Field'];
         fakeTitle(n){ const p=this._logPool; return p[n % p.length]+' ('+(1994+(n*7)%31)+')'; }
@@ -620,8 +628,15 @@
         appendLog(log, entry){ const next=[...log, entry]; return next.length>80 ? next.slice(next.length-80) : next; }
         seedProblems(){ return [
           {id:'p1',title:'The Velvet Hour',reason:'No folder found matching this spreadsheet row.',kind:'no-folder'},
-          {id:'p2',title:'Harbor Lights',reason:'Two folders look like plausible matches \u2014 pick one.',kind:'ambiguous'},
-          {id:'p3',title:'Ironwood',reason:'Folder matched, but no subtitle file was found.',kind:'missing-file'},
+          // ambiguous: the Folder picker's Candidate folders. The second holds two videos, so picking it
+          // redraws the row as that folder's no-video Problem.
+          {id:'p2',title:'Harbor Lights',reason:'Two folders look like plausible matches. Pick one.',kind:'ambiguous',
+            candidates:[{name:'Harbor Lights (1963)',path:'E:\\Movies\\Harbor Lights (1963)',videos:1},{name:'Harbor.Lights.1080p',path:'F:\\Kids\\Harbor.Lights.1080p',videos:2}]},
+          // no-row: a folder the sheet forgot, imported as a Folder scan would name it.
+          {id:'p3',title:'Ironwood (2018)',reason:'Folder isn\u2019t in the spreadsheet.',kind:'no-row',guess:'Ironwood (2018)'},
+          // differs: a held title whose Sheet row spells three filled fields differently. Both sides spelled for reading.
+          {id:'p7',title:'The Lantern Keeper',reason:'The spreadsheet has different values for fields you already filled in.',kind:'differs',
+            differences:[{field:'director',label:'Director',mine:'Eleanor Past',sheet:'Eleanor Past-Whitlock'},{field:'genres',label:'Genres',mine:'Drama',sheet:'Drama, Family'},{field:'rating',label:'Rating',mine:'3\u00bd \u2605',sheet:'4 \u2605'}]},
           {id:'p4',title:'Sundial',reason:'Spreadsheet row is missing a genre.',kind:'missing-meta'},
           // One unplaced Problem per show: titled with the show, its reason the count, the files on the Problem detail.
           {id:'p5',title:'The Night Ferry',reason:'8 episodes need numbers',kind:'unplaced',
@@ -638,6 +653,15 @@
           if(p.videos&&p.videos.length>1){ const names=p.videos.map(v=>v.split('\\').pop()); this.setState({screen:'add',addContext:'import',resolveId:p.id,fKind:'movie',fTitle:p.title,fYear:'2014',fGenres:[],fPoster:'',fSubs:[],fFound:names,fFoundPick:0,fVideo:names[0]}); return; }
           this.setState({fFound:[],fFoundPick:0}); this.setState({screen:'add',addContext:'import',resolveId:p.id,addMode:'folder',scanned:true,folderPath:'C:\\\\Movies\\\\'+p.title,fTitle:p.title,fYear:p.kind==='missing-meta'?'2018':'2020',fGenres:[],fVideo:p.kind==='missing-file'?'matched-video.mkv':'matched-video.mkv',fPoster:'matched-poster.jpg',fSubs:p.kind==='missing-file'?[]:[{filename:'matched.en.srt',lang:'English'}]}); }
         skipProblem(id){ this.setState(s=>({impProblems:s.impProblems.filter(p=>p.id!==id)})); }
+        // differs: Apply choices writes the sheet's side of each field chosen so; Keep all mine is skipProblem.
+        applySheetChoices(id){ this.skipProblem(id); }
+        // ambiguous: a pick imports the row from that folder. A folder without exactly one video
+        // becomes its no-video Problem, redrawn in place, whose Resolve is the Found-file choice.
+        pickCandidateFolder(id,c){ if(c.videos===1){ this.setState(s=>({impProblems:s.impProblems.filter(p=>p.id!==id),impMatched:s.impMatched+1})); return; }
+          this.setState(s=>({impProblems:s.impProblems.map(p=>p.id!==id?p:{id:p.id,title:p.title,kind:'no-video',reason:'Two videos — pick the film.',
+            videos:[c.path+'\\harbor.lights.1080p.mkv',c.path+'\\harbor.lights.1080p.sample.mkv']})})); }
+        // no-row: imported under its guessed name, exactly as a Folder scan would.
+        importGuessed(id){ this.setState(s=>({impProblems:s.impProblems.filter(p=>p.id!==id),impMatched:s.impMatched+1})); }
 
         _rgb(hex){ let h=String(hex||'').trim().replace('#',''); if(h.length===3) h=h.split('').map(c=>c+c).join('');
           const n=parseInt(h,16); return Number.isFinite(n)&&h.length===6 ? [(n>>16)&255,(n>>8)&255,n&255] : [217,122,78]; }
@@ -749,7 +773,18 @@
           }));
 
           // import
-          const problems=s.impProblems.map(p=>{ const col=p.kind==='no-folder'?'#c97a6a':p.kind==='ambiguous'?accent:p.kind==='missing-file'?'#c9a86a':'#9a8a6b'; return {id:p.id,title:p.title,reason:p.reason,dotStyle:{flex:'0 0 auto',width:'10px',height:'10px',borderRadius:'99px',background:col},resolve:()=>this.resolveProblem(p),skip:()=>this.skipProblem(p.id)}; });
+          // The dot by kind: danger for the hard misses, accent for ambiguous, the Sync's conflict gold
+          // for differs (the two reviews read alike), faint for the soft no-row and missing-meta.
+          const problems=s.impProblems.map(p=>{ const col=(p.kind==='no-folder'||p.kind==='no-video'||p.kind==='unplaced'||p.kind==='failed')?'#c97a6a':p.kind==='ambiguous'?accent:p.kind==='differs'?'#c9a86a':'#9a8a6b';
+            return {id:p.id,title:p.title,reason:p.reason,dotStyle:{flex:'0 0 auto',width:'10px',height:'10px',borderRadius:'99px',background:col},
+              hasResolve:p.kind!=='differs', resolve:()=>this.resolveProblem(p), skip:()=>this.skipProblem(p.id),
+              isDiffers:p.kind==='differs', isAmbiguous:p.kind==='ambiguous'&&!!p.candidates, isNoRow:p.kind==='no-row'&&!!p.guess,
+              diffRows:(p.differences||[]).map(d=>({key:d.field,label:d.label,mine:d.mine,theirs:d.sheet})),
+              onApply:()=>this.applySheetChoices(p.id), onKeepAll:()=>this.skipProblem(p.id),
+              pickerLabel:'Folders for '+p.title,
+              candidates:(p.candidates||[]).map(c=>({name:c.name,path:c.path,videosLabel:c.videos===1?'1 video':c.videos+' videos',onPick:()=>this.pickCandidateFolder(p.id,c)})),
+              importAsLabel:'Import as “'+(p.guess||p.title)+'”', onImportAs:()=>this.importGuessed(p.id),
+            }; });
 
           return {
             rootStyle, isBrowse:s.screen==='browse', isDetail:s.screen==='detail', isPlayer:s.screen==='player', isAdd:s.screen==='add', isImport:s.screen==='import', isGenre:s.screen==='genre', isSettings:s.screen==='settings', isCodecs:s.screen==='codecs', isFolders:s.screen==='folders', isEnrich:s.screen==='enrich', isSeries:s.screen==='series', isSeason:s.screen==='season',
@@ -911,7 +946,17 @@
               const etaSec = (s.impPhase==='import' && s.impDone>20) ? elapsed*(s.impTotal-s.impDone)/s.impDone : 0;
               return {
               labelStyle, setup:s.impStep==='setup', running:s.impStep==='running', review:s.impStep==='review',
-              sheet:s.impSheet, root:s.impRoot, onSheet:(e)=>this.onImpSheet(e), onRoot:(e)=>this.onImpRoot(e), onStart:()=>this.startImport(),
+              sheet:s.impSheet, onSheet:(e)=>this.onImpSheet(e), onStart:()=>this.startImport(),
+              // The group Library folders: the list as the folders page holds it, no ✕; Manage folders and
+              // Add library folders both push /settings/folders. Start is inert with none listed.
+              foldersLanded:true, hasFolders:s.libraryFolders.length>0, noFolders:s.libraryFolders.length===0,
+              folders:s.libraryFolders.map((f,i)=>({path:f.path, line:f.reachable?f.titleCount+' titles':'Can’t be reached right now',
+                rowStyle:{display:'flex',alignItems:'center',gap:'12px',padding:'13px 14px',borderTop:i===0?'none':'1px solid var(--color-border-soft)'},
+                lineStyle:{flex:'0 0 auto',fontFamily:'var(--font-sans)',fontSize:'13px',color:f.reachable?'var(--color-text-faint)':'var(--color-danger)'}})),
+              onManageFolders:()=>this.goFolders(),
+              foldersRefused:!!s.impFoldersRefusal, foldersRefusal:s.impFoldersRefusal||'',
+              startVariant:s.libraryFolders.length>0?'primary':'secondary',
+              startWrapStyle:{marginTop:'8px',opacity:s.libraryFolders.length>0?1:0.55,pointerEvents:s.libraryFolders.length>0?'auto':'none'},
               onBack:()=>this.goSettings(), finishLabel: s.impEnrich ? 'Continue to TMDB sync' : 'Finish and go to library',
               onFinish:()=>{ if(s.impEnrich){ this.setState({enScope:'all'}); this.goEnrich('browse'); } else { this.goBrowse(); } }, onCancel:()=>this.cancelImport(),
               scanning:s.impPhase==='scan', importing:s.impPhase==='import', indeterminate:s.impPhase==='scan', percent:pct,
@@ -995,8 +1040,6 @@
               const ready = s.tmdbConnected && s.online;
               const pending = s.enPending.map(p=>{
                 const col = p.kind==='ambiguous'?accent:p.kind==='conflict'?'#c9a86a':'#c97a6a';
-                const choiceOf=(k)=>((p.choices||{})[k]||'tmdb');
-                const sideStyle=(on)=>({flex:1,textAlign:'left',padding:'12px 14px',background:on?'var(--color-accent-soft)':'transparent',border:'none',borderLeft:'1px solid var(--color-border-soft)',boxShadow:on?'inset 0 0 0 1px var(--color-accent-line)':'none',cursor:'pointer'});
                 return {
                   id:p.id, title:p.title, reason:p.reason, path:p.path, query:p.query||'',
                   isAmbiguous:p.kind==='ambiguous', isConflict:p.kind==='conflict', isMissing:p.kind==='missing',
@@ -1009,11 +1052,8 @@
                     posterStyle:{display:'block',width:'100%',height:'160px',borderRadius:'8px',background:'linear-gradient(155deg, '+c.g1+' 0%, '+c.g2+' 100%)'},
                     scoreStyle:{display:'inline-block',marginTop:'8px',fontFamily:'var(--font-sans)',fontSize:'11px',fontWeight:'700',letterSpacing:'.3px',padding:'3px 8px',borderRadius:'var(--radius-pill)',color:c.s>70?'var(--color-watched)':'var(--color-text-faint)',background:c.s>70?'rgba(138,154,107,.16)':'var(--color-surface-3)'},
                   })),
-                  fields:(p.fields||[]).map(f=>({
-                    label:f.label, mine:f.mine, tmdb:f.tmdb,
-                    onKeepMine:()=>this.setFieldChoice(p.id,f.key,'mine'), onUseTmdb:()=>this.setFieldChoice(p.id,f.key,'tmdb'),
-                    mineStyle:sideStyle(choiceOf(f.key)==='mine'), tmdbStyle:sideStyle(choiceOf(f.key)==='tmdb'),
-                  })),
+                  // mol.FieldDiff's rows: TMDB is the theirs side; the molecule holds the choices.
+                  diffRows:(p.fields||[]).map(f=>({key:f.key, label:f.label, mine:f.mine, theirs:f.tmdb})),
                 };
               });
               const targets = ['your library', s.enWriteSheet?'the sheet in your collection root':null, s.enWritePosters?'a poster.jpg in each movie folder':null].filter(Boolean);
@@ -1030,8 +1070,8 @@
                 writePosters:s.enWritePosters, onTogglePosters:()=>this.toggleEnrichPosters(),
                 writesToSource:s.enWriteSheet||s.enWritePosters,
                 // One library folder: the two paths under it. Several: one line each, in each folder.
-                sheetPath:s.libraryFolders.length>1?'familyflix-metadata.csv in each library folder':((s.libraryFolders[0]&&s.libraryFolders[0].path)||s.impRoot||'E:\\Movies')+'\\familyflix-metadata.csv',
-                posterPathExample:s.libraryFolders.length>1?'<movie folder>\\poster.jpg in each library folder':((s.libraryFolders[0]&&s.libraryFolders[0].path)||s.impRoot||'E:\\Movies')+'\\<movie folder>\\poster.jpg',
+                sheetPath:s.libraryFolders.length>1?'familyflix-metadata.csv in each library folder':((s.libraryFolders[0]&&s.libraryFolders[0].path)||'E:\\Movies')+'\\familyflix-metadata.csv',
+                posterPathExample:s.libraryFolders.length>1?'<movie folder>\\poster.jpg in each library folder':((s.libraryFolders[0]&&s.libraryFolders[0].path)||'E:\\Movies')+'\\<movie folder>\\poster.jpg',
                 startLabel:s.enSingleTitle?'Fetch details':'Start sync',
                 startVariant:ready?'primary':'secondary',
                 startDisabled:!ready,

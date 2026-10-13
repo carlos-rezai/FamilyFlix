@@ -1071,125 +1071,19 @@
                         </div>
                       </sc-if>
 
-                      <!-- conflict: field-by-field -->
+                      <!-- conflict: field-by-field, the shared mol.FieldDiff as Yours | TMDB -->
                       <sc-if
                         value="{{ r.isConflict }}"
                         hint-placeholder-val="{{ false }}"
                       >
-                        <div
-                          style="
-                            margin-top: 14px;
-                            border: 1px solid var(--color-border-soft);
-                            border-radius: var(--radius-md);
-                            overflow: hidden;
-                          "
-                        >
-                          <sc-for
-                            list="{{ r.fields }}"
-                            as="fl"
-                            hint-placeholder-count="2"
-                          >
-                            <div
-                              style="
-                                display: flex;
-                                align-items: stretch;
-                                gap: 0;
-                                border-bottom: 1px solid
-                                  var(--color-border-soft);
-                              "
-                            >
-                              <div
-                                style="
-                                  flex: 0 0 118px;
-                                  padding: 13px 14px;
-                                  font-family: var(--font-sans);
-                                  font-size: 13px;
-                                  font-weight: 600;
-                                  color: var(--color-text-faint);
-                                  background: var(--color-bg-2);
-                                "
-                              >
-                                {{ fl.label }}
-                              </div>
-                              <button
-                                onClick="{{ fl.onKeepMine }}"
-                                style="{{ fl.mineStyle }}"
-                              >
-                                <span
-                                  style="
-                                    display: block;
-                                    font-family: var(--font-sans);
-                                    font-size: 11px;
-                                    font-weight: 700;
-                                    letter-spacing: 0.5px;
-                                    text-transform: uppercase;
-                                    color: var(--color-text-faint);
-                                    margin-bottom: 4px;
-                                  "
-                                  >Yours</span
-                                >
-                                <span
-                                  style="
-                                    display: block;
-                                    font-family: var(--font-sans);
-                                    font-size: 13px;
-                                    color: var(--color-text);
-                                    line-height: 1.45;
-                                  "
-                                  >{{ fl.mine }}</span
-                                >
-                              </button>
-                              <button
-                                onClick="{{ fl.onUseTmdb }}"
-                                style="{{ fl.tmdbStyle }}"
-                              >
-                                <span
-                                  style="
-                                    display: block;
-                                    font-family: var(--font-sans);
-                                    font-size: 11px;
-                                    font-weight: 700;
-                                    letter-spacing: 0.5px;
-                                    text-transform: uppercase;
-                                    color: var(--color-text-faint);
-                                    margin-bottom: 4px;
-                                  "
-                                  >TMDB</span
-                                >
-                                <span
-                                  style="
-                                    display: block;
-                                    font-family: var(--font-sans);
-                                    font-size: 13px;
-                                    color: var(--color-text);
-                                    line-height: 1.45;
-                                  "
-                                  >{{ fl.tmdb }}</span
-                                >
-                              </button>
-                            </div>
-                          </sc-for>
-                        </div>
-                        <div style="display: flex; gap: 10px; margin-top: 14px">
-                          <dc-import
-                            name="prim.Button"
-                            label="Apply choices"
-                            variant="primary"
-                            size="md"
-                            icon="none"
-                            on-click="{{ r.onApply }}"
-                            hint-size="150px,50px"
-                          ></dc-import>
-                          <dc-import
-                            name="prim.Button"
-                            label="Keep all mine"
-                            variant="secondary"
-                            size="md"
-                            icon="none"
-                            on-click="{{ r.onKeepAll }}"
-                            hint-size="150px,50px"
-                          ></dc-import>
-                        </div>
+                        <dc-import
+                          name="mol.FieldDiff"
+                          rows="{{ r.diffRows }}"
+                          theirs-label="TMDB"
+                          on-apply="{{ r.onApply }}"
+                          on-keep-all="{{ r.onKeepAll }}"
+                          hint-size="100%,260px"
+                        ></dc-import>
                       </sc-if>
                     </div>
                   </sc-for>
