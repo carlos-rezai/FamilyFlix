@@ -5,8 +5,8 @@
 // `createEnrichment` keeping the season poster TMDB already sends on the
 // `/3/tv/{id}/season/{n}` request a Sync makes for every season on disk. The
 // Still's rule, reused whole through `planSeason`: fetched only under the
-// Poster chip, only when the season has none (`seasonPosterOf`), never
-// replaced, never a review row, and a failure leaves the gradient. Stored with
+// Poster chip, only when the season has none (its `posterPath` on the series
+// page's read), never replaced, never a review row, and a failure leaves the gradient. Stored with
 // `storeInSeriesFolder` as `S02-poster.jpg`, recorded with `setSeasonPoster`,
 // logged `↓ S02-poster.jpg  →  <stored>` as a `scan` line.
 //
@@ -190,7 +190,6 @@ describe('createEnrichment: a Sync stores each season’s poster', () => {
     ] as const) {
       const name = `S0${season}-poster.jpg`;
       const stored = `${folder}/${name}`;
-      expect(storage.seasonPosterOf(id, season)).toBe(stored);
       expect(seasonPosterRead(storage, id, season)).toBe(stored);
       expect(readFileSync(join(root, stored), 'utf8')).toBe(
         tmdbImageBytes(path)
@@ -224,8 +223,8 @@ describe('createEnrichment: a Sync stores each season’s poster', () => {
 
     expect(seasonsAsked(client)).toEqual([1, 2]);
     expect(seasonPostersAsked(client)).not.toContain('/s00-poster.jpg');
-    expect(storage.seasonPosterOf(id, 0)).toBeNull();
-    expect(storage.seasonPosterOf(id, 2)).not.toBeNull();
+    expect(seasonPosterRead(storage, id, 0)).toBeNull();
+    expect(seasonPosterRead(storage, id, 2)).not.toBeNull();
   });
 });
 
@@ -235,7 +234,7 @@ describe('createEnrichment: a season poster is never replaced', () => {
     const { id, folder } = await addShow();
     await startSync(enrichment);
     await reviewed(enrichment);
-    expect(storage.seasonPosterOf(id, 2)).toBe(`${folder}/S02-poster.jpg`);
+    expect(seasonPosterRead(storage, id, 2)).toBe(`${folder}/S02-poster.jpg`);
     enrichment.cancel();
     client.image.mockClear();
 
@@ -244,7 +243,7 @@ describe('createEnrichment: a season poster is never replaced', () => {
 
     expect(seasonPostersAsked(client)).toEqual([]);
     expect(run.decisions).toEqual([]);
-    expect(storage.seasonPosterOf(id, 2)).toBe(`${folder}/S02-poster.jpg`);
+    expect(seasonPosterRead(storage, id, 2)).toBe(`${folder}/S02-poster.jpg`);
   });
 
   it('keeps a season poster already held, fetching only the season without one', async () => {
@@ -255,7 +254,7 @@ describe('createEnrichment: a season poster is never replaced', () => {
     await startSync(enrichment, 'all');
     await reviewed(enrichment);
 
-    expect(storage.seasonPosterOf(id, 1)).toBe('ours/S01-poster.png');
+    expect(seasonPosterRead(storage, id, 1)).toBe('ours/S01-poster.png');
     expect(seasonPostersAsked(client)).toEqual(['/s02-poster.jpg']);
   });
 });
@@ -269,8 +268,8 @@ describe('createEnrichment: the Poster chip', () => {
     const run = await reviewed(enrichment);
 
     expect(seasonPostersAsked(client)).toEqual([]);
-    expect(storage.seasonPosterOf(id, 1)).toBeNull();
-    expect(storage.seasonPosterOf(id, 2)).toBeNull();
+    expect(seasonPosterRead(storage, id, 1)).toBeNull();
+    expect(seasonPosterRead(storage, id, 2)).toBeNull();
     // The Sync did reach the seasons.
     expect(seasonsAsked(client)).toEqual([1, 2]);
     expect(run.enriched).toBe(1);
@@ -293,9 +292,8 @@ describe('createEnrichment: a season poster that fails leaves the gradient', () 
     await startSync(enrichment);
     const run = await reviewed(enrichment);
 
-    expect(storage.seasonPosterOf(id, 1)).toBeNull();
     expect(seasonPosterRead(storage, id, 1)).toBeNull();
-    expect(storage.seasonPosterOf(id, 2)).not.toBeNull();
+    expect(seasonPosterRead(storage, id, 2)).not.toBeNull();
     expect(run.decisions).toEqual([]);
     expect(run.enriched).toBe(1);
   });
@@ -315,8 +313,8 @@ describe('createEnrichment: a season poster that fails leaves the gradient', () 
     await startSync(enrichment);
     const run = await reviewed(enrichment);
 
-    expect(storage.seasonPosterOf(id, 1)).toBeNull();
-    expect(storage.seasonPosterOf(id, 2)).not.toBeNull();
+    expect(seasonPosterRead(storage, id, 1)).toBeNull();
+    expect(seasonPosterRead(storage, id, 2)).not.toBeNull();
     expect(run.decisions).toEqual([]);
     expect(run.enriched).toBe(1);
   });
@@ -337,7 +335,7 @@ describe('createEnrichment: every way into a show stores its season posters', ()
     expect(outcome.kind).toBe('started');
     await reviewed(enrichment);
 
-    expect(storage.seasonPosterOf(id, 2)).toBe(`${folder}/S02-poster.jpg`);
+    expect(seasonPosterRead(storage, id, 2)).toBe(`${folder}/S02-poster.jpg`);
   });
 
   it('a series pick stores a season poster', async () => {
@@ -363,13 +361,13 @@ describe('createEnrichment: every way into a show stores its season posters', ()
       (each) => each.title === 'Harbor Watch'
     );
     if (decision === undefined) throw new Error('no Decision');
-    expect(storage.seasonPosterOf(id, 2)).toBeNull();
+    expect(seasonPosterRead(storage, id, 2)).toBeNull();
 
     expect(await enrichment.pick(decision.id, 81002)).toEqual({
       kind: 'picked',
     });
 
-    expect(storage.seasonPosterOf(id, 2)).toBe(`${folder}/S02-poster.jpg`);
+    expect(seasonPosterRead(storage, id, 2)).toBe(`${folder}/S02-poster.jpg`);
   });
 });
 
@@ -382,14 +380,14 @@ describe('createEnrichment: Stop', () => {
 
     await startSync(enrichment);
     await second.reached;
-    expect(storage.seasonPosterOf(id, 1)).toBe(`${folder}/S01-poster.jpg`);
+    expect(seasonPosterRead(storage, id, 1)).toBe(`${folder}/S01-poster.jpg`);
 
     enrichment.cancel();
     second.release({ kind: 'ok', value: SEASONS[2] as TmdbSeason });
     await new Promise((resolve) => setTimeout(resolve, 50));
 
-    expect(storage.seasonPosterOf(id, 1)).toBe(`${folder}/S01-poster.jpg`);
-    expect(storage.seasonPosterOf(id, 2)).toBeNull();
+    expect(seasonPosterRead(storage, id, 1)).toBe(`${folder}/S01-poster.jpg`);
+    expect(seasonPosterRead(storage, id, 2)).toBeNull();
     expect(seasonPostersAsked(client)).not.toContain('/s02-poster.jpg');
   });
 });
@@ -427,7 +425,7 @@ describe('createEnrichment: what a season poster leaves alone', () => {
     await startSync(enrichment, 'all', ALL_FIELDS, true);
     await reviewed(enrichment);
 
-    expect(storage.seasonPosterOf(id, 2)).toBe(`${folder}/S02-poster.jpg`);
+    expect(seasonPosterRead(storage, id, 2)).toBe(`${folder}/S02-poster.jpg`);
     expect(filesUnder(libraryFolder)).toEqual([]);
   });
 
@@ -444,7 +442,7 @@ describe('createEnrichment: what a season poster leaves alone', () => {
     await startSync(enrichment);
     await reviewed(enrichment);
 
-    expect(storage.seasonPosterOf(id, 2)).not.toBeNull();
+    expect(seasonPosterRead(storage, id, 2)).not.toBeNull();
     // A season poster is not the series' poster: still not Full details.
     expect(storage.getSeriesDetail(id)?.series.posterPath).toBeNull();
     expect(storage.seriesInScope('missing').map((each) => each.id)).toContain(
