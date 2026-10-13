@@ -171,7 +171,7 @@ familyflix/
 │       ├── import-export/  # the bulk importer and the exporter: readSheet, titleKey, matchRows, groupShows, admitFolder, createImporter (+ its film and series fixtures), writeSheet, exportName, exportRows, exportSummary, writeExport
 │       ├── playback/       # the Playback component (probe, spawn, decoders), the Component slot it lives in (componentSlot, componentBinary, verifyComponent), the path choice, streaming, subtitle parsing, derivedRuntime, capabilities(component)
 │       ├── enrichment/     # the fifth domain, the one network client: tmdbClient, tmdbAuth, tmdbGenres, matchScore, fetchedFields, currentFields, planFields, planEpisode, plannedEnrichment, decisionFace, writeBack, createEnrichment
-│       ├── db/             # SQLite connection + schema/migrations (3: the settings table; 4: series and episodes; 5: original title, TMDB score and source folder on both titles, stills on episodes; 6: the Library folders; 7: the old library root carried onto them); the Electron-ABI binding when FAMILYFLIX_SQLITE_BINDING names one
+│       ├── db/             # SQLite connection + schema/migrations (3: the settings table; 4: series and episodes; 5: original title, TMDB score and source folder on both titles, stills on episodes; 6: the Library folders; 7: the old library root carried onto them; 8 and 9: the Source file an episode and a film remember across scans; 10: season posters); the Electron-ABI binding when FAMILYFLIX_SQLITE_BINDING names one
 │       ├── shell/          # the server's half of the shell seam: shellHandshake, listen (the loopback bind and boundPort), orderedShutdown
 │       └── test-support/   # Shared test doubles — never imported by shipping code (heldCopy, libraryFixture, seriesFixture, fixedSlot, componentDir, fakeTmdb, offlineTmdb, …)
 ├── src/                # React frontend
@@ -371,7 +371,7 @@ Keep the description short enough to fit on one line — long descriptions get w
 | Export name — the export folder's name as a field   | ✅ Done         |
 | Factory reset — erase everything, behind a dialog   | ✅ Done         |
 | Title editing — number, edit and delete a series    | ✅ Done         |
-| Season posters — TMDB art on each season card       | 🔜 Planned      |
+| Season posters — TMDB art on each season card       | ✅ Done         |
 | Collections / playlists                             | 🧭 Roadmap      |
 | Auto-on subtitles                                   | 🧭 Roadmap      |
 | Backgroundable import                               | 🧭 Roadmap      |
@@ -426,14 +426,14 @@ its last three steps folded into one by log 38), again smallest first:
     and its episodes renumbered, added or removed — and deleted from the
     series page's ⋯ menu, with confirmation, as a movie is.
 
-🔜 Next, once the open issues from v0.3.0's use are closed:
+Step 22 came after the third chain, out of the open issues from v0.3.0's use
+(design log 39):
 
-- 🔜 **Season posters** — a synced series shows each season's own TMDB
-  poster on its season card, not just the series' gradient. A Sync already
-  asks TMDB for every season and throws the poster away; design log 22 ruled
-  season posters out when the app was offline-only, and Enrichment now
-  gives them a source. Still to go through grill-me and a prototype revision
-  of the season card before it is built.
+22. ✅ **Season posters** — a synced series shows each season's own TMDB
+    poster on its season card, not just the series' gradient. A Sync already
+    asked TMDB for every season and threw the poster away; now it keeps it,
+    never replacing one already there, and an export with images on carries
+    them too.
 
 A 🧭 Roadmap item is not in the chain — it comes after it, if ever.
 

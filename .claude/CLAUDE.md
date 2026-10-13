@@ -145,7 +145,7 @@ familyflix/
 │ │ ├── enrich/ ← a Sync's film writes: `enrichMovie` (the columns named, only those), `moviesInScope`, `enrichmentCounts` over both kinds, `setSourceFolder` (a title's Library folder and Source folder together), `titleSource` (both read back as one) and `sourcePath` (the two joined, for a review row's mono line) over one id space, and `titleAt` (the title recorded at a folder and Source folder); the **Full details** rule spelled once as `fullDetails`
 │ │ ├── folders/ ← the **Library folders**: the list in the order added with each folder's title count, an add, and a remove that keeps the titles, forgetting only where they came from
 │ │ │ └── folderOverlap/ ← pure: whether a path is, is inside or holds a listed folder — resolved, case-folded on Windows, by whole segments — and `clashSentence`, each clash's one sentence
-│ │ └── series/ ← series storage, one unit per concern as the movie's is, each with its own suite: `read` (the series page, the player's episode read, the episode list), `browse` (the Series tab and its genres), `write` (the two inserts), `watch` (the resume write, the episode and season marks), `curation` (the heart), `enrich` (a Sync's series and episode writes and `seriesInScope`), and `nextEpisodeOf`, pure
+│ │ └── series/ ← series storage, one unit per concern as the movie's is, each with its own suite: `read` (the series page — each season's **Season poster** with it — the player's episode read, the episode list), `browse` (the Series tab and its genres), `write` (the two inserts), `watch` (the resume write, the episode and season marks), `curation` (the heart), `enrich` (a Sync's series and episode writes, `setSeasonPoster` and `seriesInScope`), and `nextEpisodeOf`, pure
 │ │ │ └── yearSpan/ ← pure: the one reading of a **Year range** — `2022`, `2019–2023`, `2021–` → `{ year, endYear }`, anything else `null` — read by the Movie form's series save and the Sheet's Year cell alike; and `spellYearSpan`, its writer, the Export's Year cell and title folders
 │ ├── media/ ← folder scanning, file copy into managed storage, subtitle detection, the Movie folder’s removal after a Delete
 │ │ ├── createMedia/ ← the injected domain: reserve a Movie folder, `seasonFolder` (a Series folder’s `season-NN/`), storeUpload, copyIn (a stream under the cancel signal), `openSeriesFolder` (`openFolder`'s twin: the **Series folder** above a held episode's **Stored path**, read once inside the domain), the five removals — `removeSeriesFolder` a series delete's, and the last `emptyRoot`, **Factory reset**'s, the root emptied best-effort and kept; and a Sync's three — `storeNamed` (beside a Stored path), `storeInSeriesFolder` (two directories above an episode), `readStored` (a stored file as a stream). Only `media/` touches managed storage
@@ -162,7 +162,7 @@ familyflix/
 │ │ ├── readSheet/ ← .xlsx or .csv by extension, first worksheet, headers through a synonym table → Sheet rows; a Status column reads as watched, a BOM is stripped
 │ │ ├── writeSheet/ ← the reader’s mirror: `exportRows`' two tables → the named files — `<name>.xlsx` with the Titles and Episodes worksheets, path cells as hyperlinks, or `<name>.csv` and `<name>-episodes.csv` each behind a BOM — pure over the tables, no storage, no sorting
 │ │ ├── exportName/ ← pure: `exportName(now)`, `familyflix-collection_DD-MM-YYYY` off the local date, the **Export name**'s default; `exportNameRefusal(name)`, the reader beside it — a **Name refusal** or `null`, Windows' rules on every platform, nothing trimmed; and `FORBIDDEN_IN_NAME`, the one spelling of what Windows refuses in a folder name
-│ │ ├── exportRows/ ← pure: films and series → the two tables under the sixteen Export columns and the nine Episodes columns (every cell rule spelled once, the Metadata sheet's too), and the **File plan** — each title's folder named `Heat (1995)`, its art and, when chosen, its subtitles
+│ │ ├── exportRows/ ← pure: films and series → the two tables under the sixteen Export columns and the nine Episodes columns (every cell rule spelled once, the Metadata sheet's too), and the **File plan** — each title's folder named `Heat (1995)`, its art, each **Season poster** under `seasons/` as `S02` and, when chosen, its subtitles
 │ │ ├── exportSummary/ ← the **Export summary** out of the route: the counts off the Series tab's one read, the first readable Library folder else `<home>\Downloads`, today's name
 │ │ ├── writeExport/ ← the **Export** written: the destination checked (`relative`, `missing`, `read-only`), then the name (`exportNameRefusal`) — kinds the route words, each naming its field — the Export folder made exclusively under the name asked for and numbered when taken, the sheet named after it, the File plan copied through `Media.readStored` (an unreadable file skipped, its cell blanked), the sheet last; a break rolls the folder back and answers its reason
 │ │ ├── titleKey/ ← pure: the Title key matching compares, and titleGuess for a folder no row names
@@ -194,12 +194,12 @@ familyflix/
 │ │ ├── matchScore/ ← pure: the **Match score** and the **Confident** rule
 │ │ ├── fetchedFields/ ← pure: a TMDB movie or show → the ten fields; `releaseYear`, the one reading of a TMDB date
 │ │ ├── currentFields/ ← pure: a Movie or Series → its values now, in the fetched shape
-│ │ ├── planFields/ planEpisode/ ← pure: what to fill and which **Field conflicts** to raise; an episode's title, air date, runtime and whether a **Still** is wanted
+│ │ ├── planFields/ planEpisode/ planSeason/ ← pure: what to fill and which **Field conflicts** to raise; an episode's title, air date, runtime and whether a **Still** is wanted; whether a Season's **Season poster** is wanted
 │ │ ├── plannedEnrichment/ ← pure: a plan → the columns a film, a series or _Apply choices_ writes
 │ │ ├── decisionFace/ ← pure: a search → an `ambiguous` Decision's top three **Candidates** (the genre off the pool, the language upper-cased) or a `missing` one's reason
 │ │ ├── writeBack/ ← the two **Write targets**: the permission check and its dry-run lines, `familyflix-metadata.csv` per **Library folder** and `poster.jpg` per **Source folder** — a **Collection folder** film's `<video stem>-poster.jpg` beside its video — with an Export, the only code that writes into a Library folder, each only ever adding what is not there
 │ │ └── createEnrichment/ ← the injected domain: the key, and the **Current enrichment run** — one in memory, its state machine as closures over the run, the abort controller and the Decisions, `createImporter`'s shape
-│ ├── db/ ← SQLite connection + schema/migrations (1 the schema and the genre seed, 2 `last_watched_at`, 3 the `settings` table — nothing seeded, 4 `series` and `episodes` with their two joins, `series_genres` and `episode_subtitles` — no `seasons` table, 5 `original_title`, `tmdb_score` and `source_folder` on both titles and `still_path` on episodes, 6 `library_folders` and `library_folder_id` on both titles, 7 the carry-over of `settings.library-root` onto the list, 8 `episodes.source_file`, the **Source file** an **Episode link** remembers across scans, 9 `movies.source_file`, a **Collection folder** film's Source file), shared by every domain module above; `better-sqlite3`'s `nativeBinding` taken from `FAMILYFLIX_SQLITE_BINDING` when set, so the shell runs on the Electron-ABI binding and Vitest on the package's own; `seriesSeed/`, the dev library's mock series; and `resetDatabase/`, **Factory reset**'s erase — `ERASED_TABLES` and `KEPT_TABLES` (the Genre pool), one transaction, a guard in its suite refusing a table in neither list
+│ ├── db/ ← SQLite connection + schema/migrations (1 the schema and the genre seed, 2 `last_watched_at`, 3 the `settings` table — nothing seeded, 4 `series` and `episodes` with their two joins, `series_genres` and `episode_subtitles` — no `seasons` table, 5 `original_title`, `tmdb_score` and `source_folder` on both titles and `still_path` on episodes, 6 `library_folders` and `library_folder_id` on both titles, 7 the carry-over of `settings.library-root` onto the list, 8 `episodes.source_file`, the **Source file** an **Episode link** remembers across scans, 9 `movies.source_file`, a **Collection folder** film's Source file, 10 `season_posters`, a Season's poster by `(series_id, season_number)`), shared by every domain module above; `better-sqlite3`'s `nativeBinding` taken from `FAMILYFLIX_SQLITE_BINDING` when set, so the shell runs on the Electron-ABI binding and Vitest on the package's own; `seriesSeed/`, the dev library's mock series; and `resetDatabase/`, **Factory reset**'s erase — `ERASED_TABLES` and `KEPT_TABLES` (the Genre pool), one transaction, a guard in its suite refusing a table in neither list
 │ ├── shell/ ← the server's half of the shell seam and its process lifecycle — infrastructure beside `db/`, not a domain
 │ │ ├── shellHandshake/ ← `shellHandshake(parentPort, startup)`: the startup answers `Started { server, shutdown }`, `ready` or `fatal` is posted, main's `shutdown` command runs the shutdown it was handed; inert with no parent port
 │ │ ├── listen/ ← the `127.0.0.1` bind, always; under the shell a taken **Shell port** falls back to an ephemeral one; `boundPort(server)`, the one reading of the port
@@ -255,7 +255,7 @@ familyflix/
 │ │ ├── PageHeader/ ← every column screen's header: the Back button, an optional eyebrow, the serif heading on Back's line, the screen's own controls at the row's end, the lede under it
 │ │ ├── CornerMenu/ ← the ⋯ menu's furniture, graduated when both detail pages drew it: `Menu` in the fixed top-right slot on the Back button's inset, the translucent 44px ⋯ named _More options_, `MoreIcon` at 20; its `MenuItem`s the caller's children. Presentational — it knows no route and no dialog
 │ │ ├── DetailBackdrop/ ← the **Detail backdrop**, graduated when both detail pages drew it: the art sticky at the top of the page's scroller and a full viewport tall, under the **Backdrop veil** — a gradient over `accentSoft`; its `100vh` coupled to both pages' `Scroller`
-│ │ ├── SeasonCard/ ← `mol.SeasonCard` 1:1: the 2:3 **Card**, `S02` over the gradient, the badge when complete, the bar when part-watched
+│ │ ├── SeasonCard/ ← `mol.SeasonCard` 1:1: the 2:3 **Card**, `S02` over its **Season poster**, else the gradient, the badge when complete, the bar when part-watched
 │ │ ├── PillTabs/ ← `mol.PillTabs` 1:1: the pill track of `aria-pressed` buttons in a labelled group, generic in its value so a press hands back the caller's own union; presentational — it knows no URL. The **Library tabs** and the **Kind tabs** are its callers
 │ │ ├── EpisodeFileRow/ ← `mol.EpisodeFileRow` 1:1: one **Episode file row** — the `S` and `E` number fields (digits, two and three), the title, the ✕, the filename in mono, and a children slot for its subtitles; a refusal drawn when given — the refused field's border and one `danger` line under the controls; presentational, the browser's focus ring kept
 │ │ ├── EpisodeRow/ ← `mol.EpisodeRow` 1:1: the 16:9 thumbnail, `S02E04` and the title, the air date, the Resume label, the watched box that only marks; a **Card**, its box a **Control**
@@ -1040,7 +1040,7 @@ same layout, spacing, states, copy, and interaction.
 this says what to build _next_. Steps 1–9 of the first chain are done,
 ending with **Software update** (v0.2.0), and so are steps 10–15: the
 second chain is done too, shipped as v0.3.0, and so are steps 16–21:
-the third chain is done. Steps 10–15 came out of
+the third chain is done, and so is step 22, **Season posters**. Steps 10–15 came out of
 installing FamilyFlix and using it: smallest and most self-contained first,
 the form before the folders that will feed it, export last because it
 mirrors what import holds.
@@ -1109,21 +1109,20 @@ draws something new, a prototype revision before it is built:
     `DELETE /api/series/:id`, the Series folder's best-effort cleanup. A film
     Resolve over two or more videos draws the **Found-file choice**.
 
-Next, after the open issues out of using v0.3.0 are closed — not yet
-numbered into a chain, and not yet through grill-me:
+Step 22 came after the third chain, out of the open issues from using
+v0.3.0 (design log 39):
 
-- 🔜 **Season posters** — the **Season card** draws its **Season**'s own
-  TMDB poster. A Sync already asks `/3/tv/{id}/season/{n}` for every season
-  on disk (`writeShow`) and drops its `poster_path`, because `TmdbSeason`
-  reads only `season_number` and `episodes`. Log 22 ruled season posters out
-  ("offline has no source"); Enrichment is that source, so this reopens it.
-  Open for the grill-me: where a poster lives with no `seasons` table
-  (migration 10 — a `season_posters` table or a real `seasons` one), the
-  file beside the stills in the **Series folder**, `SeasonSummary.posterPath`,
-  `mol.SeasonCard`'s art prop (a prototype amendment — the numeral over the
-  art or not; the gradient or the series poster when there is none), the
-  Season page header, and whether season posters travel in an **Export** and
-  as a **Write target**.
+22. ✅ **Season posters** — the **Season card** draws its **Season**'s own
+    TMDB poster, the `S02` numeral kept over it, the gradient when there is
+    none. Log 22 ruled season posters out ("offline has no source");
+    Enrichment is that source. A Sync keeps the `poster_path` of the
+    `/3/tv/{id}/season/{n}` it already asks for every season on disk but 0:
+    `planSeason`, the Still's rule — only under Poster, only when none is
+    held, never replaced, never a **Decision** — stores `S02-poster.jpg` in
+    the **Series folder** and records it in migration 10's `season_posters`,
+    read as `SeasonSummary.posterPath`. An **Export** carries it under
+    `seasons/` with _Images_ on, and no column. No Season page art, no
+    **Write target**, no series-poster fallback.
 
 A 🧭 Roadmap item is not in this chain — it is after it, if ever.
 
@@ -1149,7 +1148,7 @@ A 🧭 Roadmap item is not in this chain — it is after it, if ever.
 
 - ✅ **Backdrop veil** — the movie and series pages' art over the whole viewport, staying put under an accent-tinted veil while the content scrolls over it.
 - ✅ **Single-title Sync** — the ⋯ menu's _Fetch from TMDB_ syncs that movie alone, re-attaching only to its own run; a library Sync left in review is let go by Start, never hijacked.
-- 🔜 **Season posters** — each season card on the series page draws that season's own TMDB poster, fetched by the Sync that already reads every season; log 22's ruling reopened (see the build order).
+- ✅ **Season posters** — each season card on the series page draws that season's own TMDB poster, fetched by the Sync that already reads every season, the gradient when there is none; an Export carries them under `seasons/`.
 
 ### Playback
 
