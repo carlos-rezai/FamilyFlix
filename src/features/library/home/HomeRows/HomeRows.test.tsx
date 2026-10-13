@@ -1216,3 +1216,120 @@ describe('HomeRows — the shelf that empties under the guard', () => {
     expect(screen.queryByText(/your library is empty/i)).toBeNull();
   });
 });
+
+// --- Touch-up: a heart from a genre row reaches the shelf ---------------------
+
+/**
+ * A server that remembers hearts: every save it accepts changes what the next
+ * `GET /api/home` answers, the shelf in `rows`' own order. `Northwind` and
+ * `Comet Season` start un-hearted, so the shelf starts absent — the screen the
+ * family was looking at when the heart did nothing to it.
+ */
+function serveRemembering(
+  onFavorite: (id: string, value: boolean) => Promise<Response> = (
+    _id,
+    value
+  ) => Promise.resolve(okResponse({ value }))
+) {
+  const hearted = new Set<string>();
+  const rows: HomeRow[] = [
+    {
+      genre: 'Action',
+      count: 1,
+      movies: [makeMovie({ id: 'a1', title: 'Northwind' })],
+    },
+    {
+      genre: 'Comedy',
+      count: 1,
+      movies: [makeMovie({ id: 'c1', title: 'Comet Season' })],
+    },
+  ];
+
+  fetchMock.mockImplementation((input, init) => {
+    const url = String(input);
+    if (url.includes('/api/home')) {
+      const now = rows.map((row) => ({
+        ...row,
+        movies: row.movies.map((movie) => ({
+          ...movie,
+          isFavorite: hearted.has(movie.id),
+        })),
+      }));
+      const favorites = now
+        .flatMap((row) => row.movies)
+        .filter((movie) => movie.isFavorite);
+      return Promise.resolve(okResponse(homePayload(now, [], favorites)));
+    }
+    const favorite = /\/api\/movies\/(.+)\/favorite/.exec(url);
+    if (favorite) {
+      const id = decodeURIComponent(favorite[1]);
+      const { value } = JSON.parse(String(init?.body)) as { value: boolean };
+      return onFavorite(id, value).then((response) => {
+        if (response.ok) {
+          if (value) {
+            hearted.add(id);
+          } else {
+            hearted.delete(id);
+          }
+        }
+        return response;
+      });
+    }
+    return Promise.reject(new Error(`Unexpected request: ${url}`));
+  });
+}
+
+describe('HomeRows — a heart from a genre row reaches the shelf', () => {
+  it('draws the Favorites row the moment a movie is hearted in its genre row', async () => {
+    serveRemembering(() => new Promise<Response>(() => undefined));
+    renderRows();
+    await findGenreHeading('Action');
+    expect(screen.queryByRole('region', { name: 'Favorites' })).toBeNull();
+
+    fireEvent.click(heartIn('Action'));
+
+    expect(shelf().getByRole('button', { name: 'Northwind' })).toBeDefined();
+  });
+
+  it('keeps it on the shelf once the save is confirmed and the home is read again', async () => {
+    serveRemembering();
+    renderRows();
+    await findGenreHeading('Action');
+
+    fireEvent.click(heartIn('Action'));
+
+    await waitFor(() => expect(homeRequests()).toHaveLength(2));
+    await waitFor(() =>
+      expect(shelf().getByRole('button', { name: 'Northwind' })).toBeDefined()
+    );
+    expect(isFilled('Action')).toBe('true');
+  });
+
+  it('puts a second heart at the front of the shelf, ahead of the first', async () => {
+    serveRemembering(() => new Promise<Response>(() => undefined));
+    renderRows();
+    await findGenreHeading('Action');
+
+    fireEvent.click(heartIn('Action'));
+    fireEvent.click(heartIn('Comedy'));
+
+    const titles = shelf()
+      .getAllByRole('button', { name: /^(Northwind|Comet Season)$/ })
+      .map((card) => card.getAttribute('aria-label') ?? card.textContent);
+    expect(titles).toEqual(['Comet Season', 'Northwind']);
+  });
+
+  it('takes the shelf away again when the save is refused', async () => {
+    serveRemembering(() => Promise.reject(new Error('network down')));
+    renderRows();
+    await findGenreHeading('Action');
+
+    fireEvent.click(heartIn('Action'));
+    expect(shelf().getByRole('button', { name: 'Northwind' })).toBeDefined();
+
+    await waitFor(() =>
+      expect(screen.queryByRole('region', { name: 'Favorites' })).toBeNull()
+    );
+    expect(isFilled('Action')).toBe('false');
+  });
+});

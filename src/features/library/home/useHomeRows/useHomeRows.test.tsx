@@ -1271,3 +1271,232 @@ describe('useHomeRows — the minimum rating', () => {
     expect(asked.get('rating')).toBe('8');
   });
 });
+
+// --- Touch-up: a heart from a genre row reaches the shelf ---------------------
+
+/**
+ * A home where the shelf holds one favorite, `Lantern Road`, and the rows hold
+ * two films nobody has hearted yet — `Northwind` with a card in both Action and
+ * Thriller, `Comet Season` in Comedy. Hearting either from its row is the case
+ * the snapshot shelf used to miss: it was not in `favorites`, so there was no
+ * card there for the flag to flip.
+ */
+const ROW_HEART_PAYLOAD: HomePayload = {
+  continueWatching: [],
+  favorites: [
+    makeMovie({
+      id: 'f2',
+      title: 'Lantern Road',
+      isFavorite: true,
+      genres: [],
+    }),
+  ],
+  rows: [
+    {
+      genre: 'Action',
+      count: 1,
+      movies: [makeMovie({ id: 'a1', title: 'Northwind', isFavorite: false })],
+    },
+    {
+      genre: 'Comedy',
+      count: 1,
+      movies: [
+        makeMovie({ id: 'c1', title: 'Comet Season', isFavorite: false }),
+      ],
+    },
+    {
+      genre: 'Thriller',
+      count: 1,
+      movies: [makeMovie({ id: 'a1', title: 'Northwind', isFavorite: false })],
+    },
+  ],
+};
+
+/**
+ * The same home as the server answers it once `Northwind` is saved: on the
+ * shelf, and — in the server's sort — *behind* `Lantern Road`, not in front of
+ * it, so the reload is visible as the shelf changing order.
+ */
+const ROW_HEART_SAVED_PAYLOAD: HomePayload = {
+  continueWatching: [],
+  favorites: [
+    ROW_HEART_PAYLOAD.favorites[0],
+    makeMovie({ id: 'a1', title: 'Northwind', isFavorite: true }),
+  ],
+  rows: ROW_HEART_PAYLOAD.rows.map((row) => ({
+    ...row,
+    movies: row.movies.map((movie) =>
+      movie.id === 'a1' ? { ...movie, isFavorite: true } : movie
+    ),
+  })),
+};
+
+/**
+ * Serve the home from `payloads` in turn — the nth request gets the nth, and
+ * every request after the last gets the last — and every favorite save from
+ * `onFavorite`, handed the movie's id.
+ */
+function serveInTurn(
+  payloads: HomePayload[],
+  onFavorite: (id: string) => Promise<Response>
+) {
+  let served = 0;
+  fetchMock.mockImplementation((input) => {
+    const url = String(input);
+    if (url.includes('/api/home')) {
+      const payload = payloads[Math.min(served, payloads.length - 1)];
+      served += 1;
+      return Promise.resolve(okResponse(payload));
+    }
+    const favorite = /\/api\/movies\/(.+)\/favorite/.exec(url);
+    if (favorite) {
+      return onFavorite(decodeURIComponent(favorite[1]));
+    }
+    return Promise.reject(new Error(`Unexpected request: ${url}`));
+  });
+}
+
+/** The ids the shelf draws, in its order — the favorites that read as such. */
+function shelved(favorites: PosterCardMovie[]): string[] {
+  return favorites.filter((movie) => movie.favorite).map((movie) => movie.id);
+}
+
+describe('useHomeRows — a heart from a genre row reaches the shelf', () => {
+  it('puts the movie on the shelf at once, at the front, before the save has come back', async () => {
+    serve(ROW_HEART_PAYLOAD, () => new Promise<Response>(() => undefined));
+    const { result } = await loadRows();
+
+    act(() => result.current.toggleFavorite('a1', true));
+
+    expect(shelved(result.current.favorites)).toEqual(['a1', 'f2']);
+  });
+
+  it('shelves the card the rows draw for it, title and art alike', async () => {
+    serve(ROW_HEART_PAYLOAD, () => new Promise<Response>(() => undefined));
+    const { result } = await loadRows();
+    const rowCard = result.current.rows[0].movies[0];
+
+    act(() => result.current.toggleFavorite('a1', true));
+
+    expect(result.current.favorites[0]).toEqual({
+      ...rowCard,
+      favorite: true,
+    });
+  });
+
+  it('shelves one card for a movie with a card in two genre rows', async () => {
+    serve(ROW_HEART_PAYLOAD, () => new Promise<Response>(() => undefined));
+    const { result } = await loadRows();
+
+    act(() => result.current.toggleFavorite('a1', true));
+
+    expect(
+      result.current.favorites.filter((movie) => movie.id === 'a1')
+    ).toHaveLength(1);
+    expect(favoriteIn(result.current.rows, 'Action', 'a1')).toBe(true);
+    expect(favoriteIn(result.current.rows, 'Thriller', 'a1')).toBe(true);
+  });
+
+  it('takes it back off the shelf when the save fails', async () => {
+    serve(ROW_HEART_PAYLOAD, () => Promise.reject(new Error('network down')));
+    const { result } = await loadRows();
+
+    act(() => result.current.toggleFavorite('a1', true));
+    expect(shelved(result.current.favorites)).toEqual(['a1', 'f2']);
+
+    await waitFor(() =>
+      expect(shelved(result.current.favorites)).toEqual(['f2'])
+    );
+    expect(favoriteIn(result.current.rows, 'Action', 'a1')).toBe(false);
+  });
+
+  it('takes it back off the shelf when the server rejects the save', async () => {
+    serve(ROW_HEART_PAYLOAD, () => Promise.resolve(serverErrorResponse()));
+    const { result } = await loadRows();
+
+    act(() => result.current.toggleFavorite('a1', true));
+    expect(shelved(result.current.favorites)).toEqual(['a1', 'f2']);
+
+    await waitFor(() =>
+      expect(shelved(result.current.favorites)).toEqual(['f2'])
+    );
+  });
+
+  it('takes it back off the shelf when the route echoes that it stored no favorite', async () => {
+    serve(ROW_HEART_PAYLOAD, () =>
+      Promise.resolve(okResponse({ value: false }))
+    );
+    const { result } = await loadRows();
+
+    act(() => result.current.toggleFavorite('a1', true));
+    expect(shelved(result.current.favorites)).toEqual(['a1', 'f2']);
+
+    await waitFor(() =>
+      expect(shelved(result.current.favorites)).toEqual(['f2'])
+    );
+  });
+
+  it('asks for the home again once the save is confirmed, and takes the shelf in the server’s order', async () => {
+    serveInTurn([ROW_HEART_PAYLOAD, ROW_HEART_SAVED_PAYLOAD], () =>
+      Promise.resolve(okResponse({ value: true }))
+    );
+    const { result } = await loadRows();
+    expect(homeRequests()).toHaveLength(1);
+
+    act(() => result.current.toggleFavorite('a1', true));
+
+    await waitFor(() => expect(homeRequests()).toHaveLength(2));
+    await waitFor(() =>
+      expect(shelved(result.current.favorites)).toEqual(['f2', 'a1'])
+    );
+    expect(result.current.status).toBe('ready');
+  });
+
+  it('asks the reload for the same query the screen was loaded with', async () => {
+    serveInTurn([ROW_HEART_PAYLOAD, ROW_HEART_SAVED_PAYLOAD], () =>
+      Promise.resolve(okResponse({ value: true }))
+    );
+    const { result } = await loadRows('/?q=north&genre=Action&sort=a-z');
+
+    act(() => result.current.toggleFavorite('a1', true));
+
+    await waitFor(() => expect(homeRequests()).toHaveLength(2));
+    expect(homeQuery(1).toString()).toBe(homeQuery(0).toString());
+  });
+
+  it('asks for no reload when the save is refused', async () => {
+    serve(ROW_HEART_PAYLOAD, () => Promise.reject(new Error('network down')));
+    const { result } = await loadRows();
+
+    act(() => result.current.toggleFavorite('a1', true));
+
+    await waitFor(() =>
+      expect(shelved(result.current.favorites)).toEqual(['f2'])
+    );
+    expect(homeRequests()).toHaveLength(1);
+  });
+
+  it('does not let a reload take back a heart whose save is still in flight', async () => {
+    // Northwind's save lands at once and earns a reload; Comet Season's never
+    // settles. A reload the server answered before it had Comet Season must not
+    // empty a heart the family has just filled.
+    serveInTurn([ROW_HEART_PAYLOAD, ROW_HEART_SAVED_PAYLOAD], (id) =>
+      id === 'a1'
+        ? Promise.resolve(okResponse({ value: true }))
+        : new Promise<Response>(() => undefined)
+    );
+    const { result } = await loadRows();
+
+    act(() => result.current.toggleFavorite('c1', true));
+    act(() => result.current.toggleFavorite('a1', true));
+
+    await waitFor(() => expect(favoriteRequests()).toHaveLength(2));
+    // Give any reload every chance to land before reading the screen.
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    });
+
+    expect(favoriteIn(result.current.rows, 'Comedy', 'c1')).toBe(true);
+    expect(shelved(result.current.favorites)).toContain('c1');
+  });
+});
