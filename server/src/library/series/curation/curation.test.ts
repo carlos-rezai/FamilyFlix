@@ -59,3 +59,40 @@ describe('series curation: setSeriesFavorite', () => {
     expect(storage.getMovie(movie.id)?.isFavorite).toBe(false);
   });
 });
+
+describe('series curation: setSeriesRating', () => {
+  it('sets the household rating, and answers that it held the series', () => {
+    const storage = freshStorage();
+    const series = storage.addSeries({ title: 'Harbor & Vine' });
+    expect(series.rating).toBeNull();
+
+    expect(storage.setSeriesRating(series.id, 7)).toBe(true);
+
+    expect(storage.getSeriesDetail(series.id)?.series.rating).toBe(7);
+  });
+
+  it('clears the rating back to none', () => {
+    const storage = freshStorage();
+    const series = storage.addSeries({ title: 'Harbor & Vine', rating: 8 });
+
+    expect(storage.setSeriesRating(series.id, null)).toBe(true);
+
+    expect(storage.getSeriesDetail(series.id)?.series.rating).toBeNull();
+  });
+
+  it('touches only the series asked for', () => {
+    const storage = freshStorage();
+    const harbor = storage.addSeries({ title: 'Harbor & Vine' });
+    const lighthouse = storage.addSeries({ title: 'Lighthouse Keepers' });
+
+    storage.setSeriesRating(harbor.id, 9);
+
+    expect(storage.getSeriesDetail(lighthouse.id)?.series.rating).toBeNull();
+  });
+
+  it('answers false for a series that does not exist', () => {
+    const storage = freshStorage();
+
+    expect(storage.setSeriesRating('no-such-series', 5)).toBe(false);
+  });
+});
