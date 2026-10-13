@@ -38,6 +38,7 @@ function renderRow(props: Partial<ProblemRowProps> = {}) {
         <ProblemRow
           problem={props.problem ?? problem()}
           onSkip={props.onSkip ?? (() => undefined)}
+          onApply={props.onApply ?? (() => undefined)}
         />
       </ThemeProvider>
     </MemoryRouter>
@@ -57,6 +58,8 @@ const skipButton = () => screen.getByRole('button', { name: 'Skip' });
 const DANGER = 'rgb(201, 122, 106)';
 const ACCENT = 'rgb(217, 122, 78)';
 const TEXT_FAINT = 'rgb(133, 122, 104)';
+/** The Sync's conflict gold, `#c9a86a` — the `differs` dot in the prototype. */
+const GOLD = 'rgb(201, 168, 106)';
 
 /** The token each kind's dot is filled with, as jsdom reports the hex. */
 const DOT: Record<ProblemKind, string> = {
@@ -67,6 +70,7 @@ const DOT: Record<ProblemKind, string> = {
   ambiguous: ACCENT,
   'no-row': TEXT_FAINT,
   'missing-meta': TEXT_FAINT,
+  differs: GOLD,
 };
 
 describe('ProblemRow — what it shows', () => {
@@ -273,4 +277,149 @@ describe('ProblemRow — an unplaced show', () => {
 
     expect(onSkip).toHaveBeenCalledTimes(1);
   });
+});
+
+/**
+ * 40 — Import review, Phase 3: "Sheet differences" (issue #333).
+ *
+ * The row gains `DecisionRow`'s face slot under its head. A `differs` Problem
+ * draws the graduated `FieldDiff` as _Yours | Spreadsheet_, every field on the
+ * sheet until a press says otherwise, and no _Resolve_; _Apply choices_
+ * reports `onApply(choices)` with `'theirs'` mapped to `'sheet'`, and _Keep
+ * all mine_ is the row's _Skip_. Every other kind draws no face.
+ */
+describe('ProblemRow — a differs row', () => {
+  const differs = problem({
+    id: 'p9',
+    kind: 'differs',
+    title: 'Die Hard',
+    reason:
+      'The spreadsheet has different values for fields you already filled in.',
+    movieId: 'm1',
+    differences: [
+      {
+        field: 'director',
+        label: 'Director',
+        mine: 'Renny Harlin',
+        sheet: 'John McTiernan',
+      },
+      { field: 'rating', label: 'Rating', mine: '★★½', sheet: '★★★★' },
+    ],
+  });
+
+  const sheetSides = () =>
+    screen.getAllByRole('button', { name: /^Spreadsheet/ });
+  const yoursSides = () => screen.getAllByRole('button', { name: /^Yours/ });
+
+  it('shows the title and the reason', () => {
+    renderRow({ problem: differs });
+
+    expect(screen.getByText('Die Hard')).toBeDefined();
+    expect(
+      screen.getByText(
+        'The spreadsheet has different values for fields you already filled in.'
+      )
+    ).toBeDefined();
+  });
+
+  it('offers no Resolve, and keeps Skip', () => {
+    renderRow({ problem: differs });
+
+    expect(screen.queryByRole('link', { name: 'Resolve' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Resolve' })).toBeNull();
+    expect(skipButton()).toBeDefined();
+  });
+
+  it('draws one Yours | Spreadsheet row per difference, both sides spelled', () => {
+    renderRow({ problem: differs });
+
+    expect(yoursSides()).toHaveLength(2);
+    expect(sheetSides()).toHaveLength(2);
+    expect(screen.getByText('Director')).toBeDefined();
+    expect(screen.getByText('Renny Harlin')).toBeDefined();
+    expect(screen.getByText('John McTiernan')).toBeDefined();
+    expect(screen.getByText('Rating')).toBeDefined();
+    expect(screen.getByText('★★½')).toBeDefined();
+    expect(screen.getByText('★★★★')).toBeDefined();
+    expect(screen.queryAllByRole('button', { name: /^TMDB/ })).toHaveLength(0);
+  });
+
+  it('draws the diff under the head', () => {
+    renderRow({ problem: differs });
+
+    expect(
+      screen.getByText('Die Hard').compareDocumentPosition(yoursSides()[0]) &
+        Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
+  });
+
+  it('chooses the spreadsheet on every field by default', () => {
+    renderRow({ problem: differs });
+
+    for (const side of sheetSides()) {
+      expect(side.getAttribute('aria-pressed')).toBe('true');
+    }
+    for (const side of yoursSides()) {
+      expect(side.getAttribute('aria-pressed')).toBe('false');
+    }
+  });
+
+  it('reports Apply choices keyed by field, the sheet’s side as sheet', () => {
+    const onApply = vi.fn<ProblemRowProps['onApply']>();
+    renderRow({ problem: differs, onApply });
+
+    fireEvent.click(yoursSides()[1]);
+    fireEvent.click(screen.getByRole('button', { name: 'Apply choices' }));
+
+    expect(onApply).toHaveBeenCalledTimes(1);
+    expect(onApply).toHaveBeenCalledWith({ director: 'sheet', rating: 'mine' });
+  });
+
+  it('reports Keep all mine as Skip, and applies nothing', () => {
+    const onSkip = vi.fn();
+    const onApply = vi.fn<ProblemRowProps['onApply']>();
+    renderRow({ problem: differs, onSkip, onApply });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Keep all mine' }));
+
+    expect(onSkip).toHaveBeenCalledTimes(1);
+    expect(onApply).not.toHaveBeenCalled();
+  });
+
+  it('reports Skip as Skip', () => {
+    const onSkip = vi.fn();
+    renderRow({ problem: differs, onSkip });
+
+    fireEvent.click(skipButton());
+
+    expect(onSkip).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('ProblemRow — the other kinds draw no face', () => {
+  it.each([
+    'no-folder',
+    'ambiguous',
+    'no-video',
+    'no-row',
+    'failed',
+    'missing-meta',
+    'unplaced',
+  ] as ProblemKind[])(
+    'draws no diff on a %s row, and keeps Resolve',
+    (kind) => {
+      renderRow({ problem: problem({ kind, movieId: 'm1' }) });
+
+      expect(
+        screen.queryByRole('button', { name: 'Apply choices' })
+      ).toBeNull();
+      expect(
+        screen.queryByRole('button', { name: 'Keep all mine' })
+      ).toBeNull();
+      expect(screen.queryAllByRole('button', { name: /^Yours/ })).toHaveLength(
+        0
+      );
+      expect(resolveLink()).toBeDefined();
+    }
+  );
 });

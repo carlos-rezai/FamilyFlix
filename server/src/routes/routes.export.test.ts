@@ -589,6 +589,80 @@ describe.each(FORMATS)(
   }
 );
 
+// --- the round trip's missing half (40 — Import review, issue #333) --------------
+//
+// The same export with one row edited, imported onto the library it came
+// from rather than a fresh one: the edited field is filled on both sides and
+// differs, so the held film ends the run as one `differs` **Problem** and its
+// genres stay as they were; _Apply choices_ — the sheet's side chosen — then
+// writes the edit. A film's year is never a difference, so the year is left
+// as the export wrote it.
+
+describe.each(FORMATS)(
+  'POST /api/export (%s) — an edited row imported onto its own library',
+  (format) => {
+    async function editedOntoItsOwn() {
+      const api = freshApi();
+      const exported = await exportedFixture(api, format);
+      const edited = await withRowEdited(
+        readFileSync(exported),
+        format,
+        'Die Hard',
+        { year: 1988, genres: 'Action, Thriller, Crime' }
+      );
+      const sheetPath = join(api.scratch, `edited.${format}`);
+      writeFileSync(sheetPath, edited);
+      const dieHard = api.storage
+        .listMovies({ sort: 'a-z' })
+        .find((movie) => movie.title === 'Die Hard');
+      expect(dieHard).toBeDefined();
+
+      expect((await postImport(api.baseUrl, sheetPath, api.root)).status).toBe(
+        201
+      );
+      const run = await untilReview(api.baseUrl);
+      return { api, run, id: dieHard?.id ?? '' };
+    }
+
+    const genresOf = (api: ReturnType<typeof freshApi>, id: string) =>
+      api.storage.getMovie(id)?.genres.map((genre) => genre.name);
+
+    it('lands as one differs Problem on the edited field, nothing imported', async () => {
+      const { api, run, id } = await editedOntoItsOwn();
+
+      expect(run).toMatchObject({ phase: 'review', matched: 0, done: 0 });
+      expect(run.problems).toHaveLength(1);
+      const [problem] = run.problems;
+      expect(problem).toMatchObject({ kind: 'differs', movieId: id });
+      expect(
+        problem.differences?.map((difference) => difference.field)
+      ).toEqual(['genres']);
+      expect(genresOf(api, id)).toEqual(['Action', 'Thriller']);
+      expect(api.storage.countMovies()).toBe(2);
+    });
+
+    it('writes the edit once Apply choices takes the sheet’s side', async () => {
+      const { api, run, id } = await editedOntoItsOwn();
+
+      const response = await fetch(
+        `${api.baseUrl}/api/import/current/problems/${encodeURIComponent(run.problems[0].id)}/apply`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ choices: { genres: 'sheet' } }),
+        }
+      );
+
+      expect(response.status).toBe(204);
+      expect(genresOf(api, id)).toEqual(['Action', 'Thriller', 'Crime']);
+      const after = (await (
+        await fetch(`${api.baseUrl}/api/import/current`)
+      ).json()) as ImportRun;
+      expect(after.problems).toEqual([]);
+    });
+  }
+);
+
 // --- the edges -------------------------------------------------------------------
 
 /** The two awkward titles: a diacritic, then a comma and a double quote. */

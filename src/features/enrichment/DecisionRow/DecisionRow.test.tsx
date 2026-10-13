@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
@@ -302,5 +302,58 @@ describe('DecisionRow — the conflict face, the field diff', () => {
 
     expect(onSkip).toHaveBeenCalledTimes(1);
     expect(onApply).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * 40 — Import review, Phase 3: "Sheet differences" (issue #333).
+ *
+ * `FieldDiff` graduates to `components/` on its second caller and becomes
+ * generic: rows of `{ key, label, mine, theirs }`, a `theirsLabel`, and
+ * choices keyed by `'mine' | 'theirs'`. The Sync's face is unchanged pixel for
+ * pixel: the row labels the theirs side _TMDB_, draws it chosen by default,
+ * and maps `'theirs'` back to `'tmdb'` before it reports.
+ */
+describe('DecisionRow — the conflict face over the graduated FieldDiff', () => {
+  it('composes the shared molecule, and the feature keeps no copy of it', () => {
+    const source = readFileSync(
+      join(
+        process.cwd(),
+        'src',
+        'features',
+        'enrichment',
+        'DecisionRow',
+        'DecisionRow.tsx'
+      ),
+      'utf8'
+    );
+
+    expect(source).toMatch(
+      /import\s*\{[^}]*\bFieldDiff\b[^}]*\}\s*from\s*'@\/components'/
+    );
+    expect(
+      existsSync(
+        join(process.cwd(), 'src', 'features', 'enrichment', 'FieldDiff')
+      )
+    ).toBe(false);
+  });
+
+  it('draws every field on TMDB until a press says otherwise', () => {
+    renderRow({ decision: CONFLICT });
+
+    for (const side of screen.getAllByRole('button', { name: /^TMDB/ })) {
+      expect(side.getAttribute('aria-pressed')).toBe('true');
+    }
+    for (const side of screen.getAllByRole('button', { name: /^Yours/ })) {
+      expect(side.getAttribute('aria-pressed')).toBe('false');
+    }
+  });
+
+  it('reports a field left alone as tmdb, never as theirs', () => {
+    const { onApply } = renderRow({ decision: CONFLICT });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Apply choices' }));
+
+    expect(onApply).toHaveBeenCalledWith({ year: 'tmdb', director: 'tmdb' });
   });
 });

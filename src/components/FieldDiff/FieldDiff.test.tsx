@@ -2,48 +2,55 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import { ThemeProvider } from 'styled-components';
 
-import { FieldDiff, type FieldDiffProps } from './FieldDiff';
-import type { FieldConflict } from '@/types';
+import { FieldDiff, type FieldDiffProps, type FieldDiffRow } from './FieldDiff';
+import { FieldDiff as FromBarrel } from '@/components';
 import { theme } from '@/styles/theme';
 
 /**
- * 23 — Enrichment, Phase 5: "conflict Decisions" (issue #208).
+ * 23 — Enrichment, Phase 5: "conflict Decisions" (issue #208), graduated by
+ * 40 — Import review, Phase 3: "Sheet differences" (issue #333).
  *
- * The `conflict` face of a **Decision row**, from `feat.EnrichmentFlow.dc.html`:
- * a soft-bordered frame holding one row per **Field conflict** — the label in
- * a 118px cell on `bg2`, then _Yours_ and _TMDB_ as two buttons side by side,
- * the chosen one on `accentSoft` with an inset `accentLine` ring — and under
- * it _Apply choices_ and _Keep all mine_.
+ * `mol.FieldDiff.dc.html`: the field-by-field diff, graduated from
+ * `features/enrichment/` on its second caller — the Sync's `conflict` face and
+ * the import's `differs` face. A soft-bordered frame holding one row per
+ * `{ key, label, mine, theirs }` — the label in a 118px cell on `bg2`, then
+ * _Yours_ and the caller's `theirsLabel` (_TMDB_ or _Spreadsheet_) as two
+ * buttons side by side, the chosen one on `accentSoft` with an inset
+ * `accentLine` ring — and under it _Apply choices_ and _Keep all mine_.
  *
- * Every field starts on TMDB (`choiceOf` defaults to `'tmdb'`, log 23 Q42);
- * a press on a side chooses it. _Apply choices_ reports the side of every
- * field; _Keep all mine_ reports itself and nothing else.
+ * Generic and presentational: every row starts on the theirs side; a press on
+ * a side chooses it. _Apply choices_ reports every row's side keyed by its
+ * `key`, `'mine' | 'theirs'`; _Keep all mine_ reports itself and nothing else.
+ * Each caller maps its own wire type on and off it.
  */
 
 const OURS = 'A lighthouse keeper on a fading coast takes in a runaway girl…';
 const THEIRS =
   'On a storm-battered coast, a solitary lighthouse keeper shelters a runaway and finds a family in the wreckage of winter.';
 
-const FIELDS: FieldConflict[] = [
-  { field: 'year', label: 'Year', mine: '2019', tmdb: '2018' },
+type Key = 'year' | 'director' | 'synopsis';
+
+const FIELDS: FieldDiffRow<Key>[] = [
+  { key: 'year', label: 'Year', mine: '2019', theirs: '2018' },
   {
-    field: 'director',
+    key: 'director',
     label: 'Director',
     mine: 'Eleanor Past',
-    tmdb: 'Eleanor Past-Whitlock',
+    theirs: 'Eleanor Past-Whitlock',
   },
-  { field: 'synopsis', label: 'Synopsis', mine: OURS, tmdb: THEIRS },
+  { key: 'synopsis', label: 'Synopsis', mine: OURS, theirs: THEIRS },
 ];
 
-function renderDiff(props: Partial<FieldDiffProps> = {}) {
+function renderDiff(props: Partial<FieldDiffProps<Key>> = {}) {
   const handlers = {
-    onApply: vi.fn<FieldDiffProps['onApply']>(),
+    onApply: vi.fn<FieldDiffProps<Key>['onApply']>(),
     onKeepAll: vi.fn(),
   };
   render(
     <ThemeProvider theme={theme}>
-      <FieldDiff
-        fields={props.fields ?? FIELDS}
+      <FieldDiff<Key>
+        rows={props.rows ?? FIELDS}
+        theirsLabel={props.theirsLabel ?? 'TMDB'}
         onApply={props.onApply ?? handlers.onApply}
         onKeepAll={props.onKeepAll ?? handlers.onKeepAll}
       />
@@ -67,6 +74,12 @@ const ACCENT_LINE = 'rgba(217, 122, 78, 0.32)';
 const BORDER_SOFT = 'rgb(44, 36, 27)';
 const BG_2 = 'rgb(27, 22, 17)';
 const TEXT_FAINT = 'rgb(133, 122, 104)';
+
+describe('FieldDiff — a shared molecule', () => {
+  it('is re-exported by the components barrel', () => {
+    expect(FromBarrel).toBe(FieldDiff);
+  });
+});
 
 describe('FieldDiff — one row per differing field', () => {
   it('draws a row per field, headed by its label', () => {
@@ -104,8 +117,8 @@ describe('FieldDiff — one row per differing field', () => {
   });
 });
 
-describe('FieldDiff — TMDB chosen by default, each switchable', () => {
-  it('starts every field on TMDB', () => {
+describe('FieldDiff — the theirs side chosen by default, each switchable', () => {
+  it('starts every field on the theirs side', () => {
     renderDiff();
 
     for (const { label } of FIELDS) {
@@ -235,15 +248,15 @@ describe('FieldDiff — the prototype’s pixels', () => {
 });
 
 describe('FieldDiff — Apply choices', () => {
-  it('reports TMDB for every field left alone', () => {
+  it('reports theirs for every field left alone, keyed by each row’s key', () => {
     const { onApply } = renderDiff();
 
     fireEvent.click(screen.getByRole('button', { name: 'Apply choices' }));
 
     expect(onApply).toHaveBeenCalledWith({
-      year: 'tmdb',
-      director: 'tmdb',
-      synopsis: 'tmdb',
+      year: 'theirs',
+      director: 'theirs',
+      synopsis: 'theirs',
     });
   });
 
@@ -256,7 +269,7 @@ describe('FieldDiff — Apply choices', () => {
 
     expect(onApply).toHaveBeenCalledWith({
       year: 'mine',
-      director: 'tmdb',
+      director: 'theirs',
       synopsis: 'mine',
     });
   });
@@ -281,5 +294,69 @@ describe('FieldDiff — Keep all mine', () => {
 
     expect(onKeepAll).toHaveBeenCalledTimes(1);
     expect(onApply).not.toHaveBeenCalled();
+  });
+});
+
+describe('FieldDiff — theirsLabel', () => {
+  const sheetSide = (label: string) =>
+    within(rowOf(label)).getByRole('button', { name: /^Spreadsheet/ });
+
+  it('captions the theirs side with the caller’s label', () => {
+    renderDiff({ theirsLabel: 'Spreadsheet' });
+
+    expect(
+      screen.getAllByRole('button', { name: /^Spreadsheet/ })
+    ).toHaveLength(3);
+    expect(screen.queryAllByRole('button', { name: /^TMDB/ })).toHaveLength(0);
+    expect(
+      within(sheetSide('Director')).getByText('Spreadsheet')
+    ).toBeDefined();
+    expect(
+      within(sheetSide('Director')).getByText('Eleanor Past-Whitlock')
+    ).toBeDefined();
+  });
+
+  it('keeps Yours on the left and the labelled side on the right', () => {
+    renderDiff({ theirsLabel: 'Spreadsheet' });
+
+    const cells = Array.from(rowOf('Year').children);
+    expect(cells.map((cell) => cell.textContent)).toEqual([
+      'Year',
+      expect.stringMatching(/^Yours\s*2019$/),
+      expect.stringMatching(/^Spreadsheet\s*2018$/),
+    ]);
+  });
+
+  it('chooses the labelled side by default, whatever it is called', () => {
+    renderDiff({ theirsLabel: 'Spreadsheet' });
+
+    for (const { label } of FIELDS) {
+      expect(sheetSide(label).getAttribute('aria-pressed')).toBe('true');
+      expect(yours(label).getAttribute('aria-pressed')).toBe('false');
+    }
+  });
+
+  it('reports a labelled side as theirs, never as its caption', () => {
+    const { onApply } = renderDiff({ theirsLabel: 'Spreadsheet' });
+
+    fireEvent.click(yours('Synopsis'));
+    fireEvent.click(screen.getByRole('button', { name: 'Apply choices' }));
+
+    expect(onApply).toHaveBeenCalledWith({
+      year: 'theirs',
+      director: 'theirs',
+      synopsis: 'mine',
+    });
+  });
+
+  it('reports only the rows it was given', () => {
+    const { onApply } = renderDiff({
+      theirsLabel: 'Spreadsheet',
+      rows: [FIELDS[1]],
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Apply choices' }));
+
+    expect(onApply).toHaveBeenCalledWith({ director: 'theirs' });
   });
 });

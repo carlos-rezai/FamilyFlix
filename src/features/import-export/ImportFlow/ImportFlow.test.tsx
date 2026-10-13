@@ -108,6 +108,10 @@ const isDismiss = (input: RequestInfo | URL, init?: RequestInit) =>
   /\/api\/import\/current\/problems\/[^/]+$/.test(String(input)) &&
   init?.method?.toUpperCase() === 'DELETE';
 
+const isApply = (input: RequestInfo | URL, init?: RequestInit) =>
+  /\/api\/import\/current\/problems\/[^/]+\/apply$/.test(String(input)) &&
+  init?.method?.toUpperCase() === 'POST';
+
 /** The reads of the current route so far. */
 const reads = () => fetchMock.mock.calls.filter(([i, n]) => isCurrent(i, n));
 
@@ -149,6 +153,9 @@ function serve(
     }
     if (isDismiss(input, init)) {
       return dismiss();
+    }
+    if (isApply(input, init)) {
+      return noContentResponse();
     }
     if (isStart(input, init)) {
       if (started.status === 201 || started.status === 409) {
@@ -1153,5 +1160,51 @@ describe('ImportFlow — leaving is a history step', () => {
 
     expect(pathname()).toBe('/');
     expect(navigationType()).toBe('PUSH');
+  });
+});
+
+/**
+ * 40 — Import review, Phase 3: "Sheet differences" (issue #333).
+ *
+ * A `differs` row in the review: _Apply choices_ posts the choices to the
+ * Problem's apply route, and the row goes once the route answers; the run is
+ * not polled for it.
+ */
+describe('ImportFlow — Apply choices on a differs row', () => {
+  const DIFFERS: ImportProblem = {
+    id: 'p9',
+    kind: 'differs',
+    title: 'Die Hard',
+    reason:
+      'The spreadsheet has different values for fields you already filled in.',
+    movieId: 'm1',
+    differences: [
+      {
+        field: 'director',
+        label: 'Director',
+        mine: 'Renny Harlin',
+        sheet: 'John McTiernan',
+      },
+    ],
+  };
+
+  it('posts the choices, drops the row and counts the tile down', async () => {
+    await arriveInReview([DIFFERS, ...PROBLEMS]);
+    expect(tileNumber(ATTENTION)).toBe('3');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Apply choices' }));
+
+    await waitFor(() => expect(screen.queryByText('Die Hard')).toBeNull());
+    const sent = fetchMock.mock.calls.filter(([input, init]) =>
+      isApply(input, init)
+    );
+    expect(sent.map(([input]) => String(input))).toEqual([
+      '/api/import/current/problems/p9/apply',
+    ]);
+    expect(JSON.parse(String(sent[0][1]?.body))).toEqual({
+      choices: { director: 'sheet' },
+    });
+    expect(tileNumber(ATTENTION)).toBe('2');
+    expect(dismissals()).toEqual([]);
   });
 });

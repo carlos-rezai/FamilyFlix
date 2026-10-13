@@ -64,6 +64,7 @@ function renderReview(props: Partial<ImportReviewProps> = {}) {
         <ImportReview
           run={props.run ?? inReview()}
           onSkip={props.onSkip ?? (() => undefined)}
+          onApply={props.onApply ?? (() => undefined)}
           finishLabel={props.finishLabel ?? FINISH}
           onFinish={props.onFinish ?? (() => undefined)}
         />
@@ -81,6 +82,8 @@ function renderReview(props: Partial<ImportReviewProps> = {}) {
             <ImportReview
               run={run}
               onSkip={props.onSkip ?? (() => undefined)}
+              onApply={props.onApply ?? (() => undefined)}
+              onApply={props.onApply ?? (() => undefined)}
               finishLabel={props.finishLabel ?? FINISH}
               onFinish={props.onFinish ?? (() => undefined)}
             />
@@ -332,5 +335,68 @@ describe('ImportReview — an unplaced show', () => {
     );
 
     expect(onSkip).toHaveBeenCalledWith('p4');
+  });
+});
+
+/**
+ * 40 — Import review, Phase 3: "Sheet differences" (issue #333).
+ *
+ * A `differs` row is one of the Needs attention list: _need your attention_
+ * counts it, and _matched confidently and imported_ is the run's `matched`,
+ * which counts only new imports — a held title is never one. Its row draws the
+ * _Yours | Spreadsheet_ diff, and _Apply choices_ is reported with the row's
+ * id, as _Skip_ is; the step removes nothing itself.
+ */
+describe('ImportReview — a differs row', () => {
+  const DIFFERS: ImportProblem = {
+    id: 'p9',
+    kind: 'differs',
+    title: 'Die Hard',
+    reason:
+      'The spreadsheet has different values for fields you already filled in.',
+    movieId: 'm1',
+    differences: [
+      {
+        field: 'director',
+        label: 'Director',
+        mine: 'Renny Harlin',
+        sheet: 'John McTiernan',
+      },
+    ],
+  };
+
+  it('counts it among those needing attention, and none as imported', () => {
+    renderReview({ run: inReview([DIFFERS, ...PROBLEMS], 0) });
+
+    expect(tileNumber(ATTENTION)).toBe('4');
+    expect(tileNumber(MATCHED)).toBe('0');
+  });
+
+  it('draws its diff under the Needs attention heading', () => {
+    renderReview({ run: inReview([DIFFERS], 0) });
+
+    expect(screen.getByText('Needs attention')).toBeDefined();
+    expect(screen.getByRole('button', { name: /^Spreadsheet/ })).toBeDefined();
+    expect(screen.getByText('John McTiernan')).toBeDefined();
+  });
+
+  it('reports Apply choices with that row’s id and the sheet’s side', () => {
+    const onApply = vi.fn<ImportReviewProps['onApply']>();
+    renderReview({ run: inReview([DIFFERS, ...PROBLEMS], 0), onApply });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Apply choices' }));
+
+    expect(onApply).toHaveBeenCalledWith('p9', { director: 'sheet' });
+    // The step removes nothing itself: the Run hook does.
+    expect(screen.getByText('Die Hard')).toBeDefined();
+  });
+
+  it('reports Keep all mine as that row’s Skip', () => {
+    const onSkip = vi.fn();
+    renderReview({ run: inReview([DIFFERS, ...PROBLEMS], 0), onSkip });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Keep all mine' }));
+
+    expect(onSkip).toHaveBeenCalledWith('p9');
   });
 });
