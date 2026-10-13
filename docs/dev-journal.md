@@ -11,6 +11,101 @@ Newest entry first.
 
 ---
 
+## 2026-10-13 — Import review — the refactor (issue 336)
+
+Twenty-seven commits against `docs/refactor-plans/40-import-review-refactor.md`
+— its twenty-six, one per plan commit, and one fixing two lint errors an
+earlier commit of this round introduced — the initiative's closing round.
+**8707 tests pass across 517 files**, against 8673 across 514 at the end of
+the build (`8d5bc8f`): three new pure suites (`heldValues`,
+`plannedSheetFill`, `folderLine`) and the cases the plan named. `tsc -b
+--force` is clean. `eslint src server electron` reports no errors and 83
+warnings, none this round's: 82 unused `root` destructures in the importer's
+suites, left when #331 moved them off `start(sheet, root)`, and the one
+escape the last round recorded.
+
+### What shipped
+
+Log 40's five slices: the prototype amendment (330, `62ac823`), then one RED
+and one GREEN each — the sheet over the folders (331), Sheet fills on a held
+title (332), Sheet differences (333), the Folder picker (334) and _Import as_
+on a `no-row` row (335).
+
+### What each group changed
+
+- **Group 1, the words** (`e9e8ce7`, `0495ac3`). Comments say Library
+  folders; the `Importer` docblock lists its eleven members. A `fix:` —
+  `ImportPathError` reads _"That file is not under a library folder."_, and
+  the resolve route suite now pins it (none did).
+- **Group 2, one spelling each inside the importer** (`1f4dfe3`–`5068ae8`).
+  `GenreReader` travels whole; `problemOf` takes the owner;
+  `logAlreadyHeld`; the held lookups are `heldFilmsByKey` /
+  `heldSeriesByKey`, built once per run; `candidateFolders`;
+  `listedFolderOf`. A `fix:` (`3873d1f`) — a held show re-run with nothing
+  to do logged _Already in library_ twice; the sheet-folders suite pins one
+  line per title, written failing first. `heldShow` keeps the series list
+  beside the map, so two held series under one key are still told apart by
+  the folder on record.
+- **Group 3, the Sync's twins** (`998a1d9`–`e2d146e`). `heldValues/` and
+  `plannedSheetFill/` born; `planSheetFields` answers `proposed`; one writer,
+  `writeSheetFill`, for the run's fills and _Apply choices_ alike —
+  `writeSheetSide` retires, so a cast lands trimmed whichever press wrote it;
+  `fillFilm` and `fillSeries` are `fillHeld`. Through a real sheet the old
+  writer already agreed, because `readSheet` trims and drops blank members;
+  the new difference case holds the guarantee where it now lives.
+- **Group 4, one answer per press** (`1b294e8`–`c02490b`). `ReviewOutcome`;
+  `CandidateRefusedError` retires for `PROBLEM_REFUSALS` and `answerReview`
+  in the routes; `noSuchProblem(id)` spells the problem `404` once;
+  `importFromReview` serves both presses, so `POST …/import` answers `200`
+  with a redrawn `no-video` or `failed` row as `…/pick` does; `missing-meta`
+  is a `named` argument, not a read of `current.source`; the client's
+  `settle` redraws either press's `200` in place. `importFromReview` takes
+  the row off before its copy, as `importGuessed` did, so a second press of
+  either finds nothing — `pick` used to leave the row up during the copy.
+- **Group 5, the PRD's shapes** (`a5496be`–`f12fac6`). `guess` is a string
+  and `TitleGuess` retires; `ImportProblemDetail` extends `ImportProblem`
+  whole and a non-`ambiguous` detail carries no `candidates`;
+  `otherCandidates` reads names; a rating difference reads `3½ ★`.
+- **Group 6, the client's small things** (`c6524f0`, `1b15b8b`).
+  `FolderPicker`'s `label` is required — `ProblemRow`'s docblock was
+  already back on the component since `guessSpelled` went in group 5;
+  `folderLine`; `ImportSetup.styles`' row is `ListedFolder`.
+- **Group 7, the docs** (`c7d19db`, this commit). CLAUDE.md, the README and
+  the glossary know the initiative shipped; **Review outcome** is named. The
+  plan's _"Settings hub's `/api/import` mention"_ had nothing to change:
+  CLAUDE.md's Settings hub never named that route.
+- **The lint fix** (`b8ff4b8`). Group 4's two redraw helpers defaulted a
+  hook to an empty arrow, which `no-empty-function` refuses; the hook is
+  optional now.
+
+### Deliberately not changed
+
+Everything in the plan's Further Notes and Out of Scope: `ImportSetup` keeps
+its own listed rows rather than `FolderRow`; `ImportFlow`'s three press
+callbacks stay three; `sheetChoices` and `tmdbChoices` stay apart; `apply`
+stays a boolean; `start`, `scan`, `resolve` and `resolveSeries` keep their
+exceptions; `scan(folders, enrich)` keeps its argument; a held title is
+looked up after `matchRows`; a review press reads the Library folders live
+while `resolve` checks the run's own list; no shared `'movie' | 'series'`
+type; the run's state machine stays closures inside `createImporter`.
+
+### For `prd-to-issues`
+
+The initiative's steps ran 131k–255k tokens against a 100k budget, the
+thickest #331, which moved every import suite off `start(sheet, root)` — and
+left the 82 unused `root` destructures above. A slice that changes a
+signature every suite calls is two slices: the signature, then the suites.
+
+### The initiative
+
+**Import review is done**: the prototype revision (330), the five slices
+(331–335) and this round (336). Issues 329 and 328 are closed with it. One
+follow-up, filed as 337: _Apply choices_ cannot clear a held series' end
+year — `2021–` over `2019–2023` writes `2021–2023` — because `enrichSeries`
+cannot null `end_year`. The 82 lint warnings are recorded here, not filed.
+
+---
+
 ## 2026-10-13 — Season posters — the refactor (issue 325)
 
 Eleven commits against `docs/refactor-plans/39-season-posters-refactor.md`,
