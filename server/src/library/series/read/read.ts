@@ -48,6 +48,11 @@ export interface EpisodeRow {
   updated_at: string;
 }
 
+interface SeasonPosterRow {
+  season_number: number;
+  poster_path: string;
+}
+
 interface GenreRowWithSeries extends GenreRow {
   series_id: string;
 }
@@ -188,8 +193,8 @@ export function createSeriesReader(db: SqliteDatabase): SeriesReader {
         );
   };
 
-  // Each **Season poster** a series holds, by number — read only for the
-  // seasons that have episodes, so a row for an empty season is never read.
+  // Each **Season poster** a series holds, by number. A row for a season with
+  // no episodes is read but never looked up: only a season on disk asks.
   const selectSeasonPosters = db.prepare(
     'SELECT season_number, poster_path FROM season_posters WHERE series_id = ?'
   );
@@ -206,16 +211,14 @@ export function createSeriesReader(db: SqliteDatabase): SeriesReader {
         return null;
       }
       const episodes = listEpisodes(id);
+      const posterOf = new Map(
+        (selectSeasonPosters.all(id) as SeasonPosterRow[]).map((row) => [
+          row.season_number,
+          row.poster_path,
+        ])
+      );
       // Already in season, then episode order: a season is each run of one
       // `season` number, and its next episode is asked of that run alone.
-      const posterOf = new Map(
-        (
-          selectSeasonPosters.all(id) as Array<{
-            season_number: number;
-            poster_path: string;
-          }>
-        ).map((row) => [row.season_number, row.poster_path])
-      );
       const seasons: SeasonSummary[] = [];
       for (const episode of episodes) {
         const last = seasons[seasons.length - 1];
