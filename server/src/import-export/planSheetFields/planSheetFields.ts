@@ -19,9 +19,16 @@ export interface SheetFill {
   watched?: true;
 }
 
+/**
+ * What a **Sheet row** does to a held title: its **Sheet fills**, its **Sheet
+ * differences** spelled for display, and `proposed` — the sheet's side of each
+ * difference in the fill's shape, normalised as a fill is, which is what
+ * _Apply choices_ writes for a field chosen `sheet`.
+ */
 export interface SheetPlan {
   fill: SheetFill;
   differences: SheetDifference[];
+  proposed: SheetFill;
 }
 
 const LABELS: Readonly<Record<SheetField, string>> = {
@@ -68,7 +75,8 @@ const sameSet = (a: string[], b: string[]): boolean => {
  * trimmed and case-blind, cast and genres as sets, the rating as a number,
  * a series' year as its spelled **Year range**. A film's year never differs,
  * the title is never in play, and Watched only marks an unwatched film. The
- * row's genres arrive already read onto the **Genre pool**.
+ * row's genres arrive already read onto the **Genre pool**. Each difference's
+ * sheet side is also `proposed`, normalised exactly as a fill would be.
  */
 export function planSheetFields(
   current: HeldValues,
@@ -77,6 +85,7 @@ export function planSheetFields(
 ): SheetPlan {
   const fill: SheetFill = {};
   const differences: SheetDifference[] = [];
+  const proposed: SheetFill = {};
   const differ = (field: SheetField, mine: string, sheet: string): void => {
     differences.push({
       field,
@@ -103,6 +112,7 @@ export function planSheetFields(
       fill[field] = sheet;
     } else if (norm(held) !== norm(sheet)) {
       differ(field, held, sheet);
+      proposed[field] = sheet;
     }
   };
 
@@ -120,6 +130,7 @@ export function planSheetFields(
       fill[field] = sheet;
     } else if (!sameSet(held, sheet)) {
       differ(field, held.join(', '), sheet.join(', '));
+      proposed[field] = sheet;
     }
   };
 
@@ -136,6 +147,10 @@ export function planSheetFields(
       const sheet = spellYearSpan(row.year, row.endYear) ?? '';
       if (mine !== sheet) {
         differ('year', mine, sheet);
+        proposed.year = row.year;
+        if (row.endYear !== null) {
+          proposed.endYear = row.endYear;
+        }
       }
     }
   }
@@ -149,6 +164,7 @@ export function planSheetFields(
       fill.rating = row.rating;
     } else if (current.rating !== row.rating) {
       differ('rating', stars(current.rating), stars(row.rating));
+      proposed.rating = row.rating;
     }
   }
 
@@ -156,5 +172,5 @@ export function planSheetFields(
     fill.watched = true;
   }
 
-  return { fill, differences };
+  return { fill, differences, proposed };
 }

@@ -4,9 +4,10 @@
 //
 // `planSheetFields(current, row, kind)` — pure, `planFields`' sibling on the
 // import's side: a held title's values in the sheet's shape × its **Sheet
-// row** × the kind → `{ fill, differences }`. An empty field the row fills is
-// a **Sheet fill**; a field filled on both sides that differs is a **Sheet
-// difference**, never a fill. Text is compared trimmed and case-blind, cast
+// row** × the kind → `{ fill, differences, proposed }`. An empty field the
+// row fills is a **Sheet fill**; a field filled on both sides that differs is
+// a **Sheet difference**, never a fill, and its sheet side is `proposed`,
+// normalised as a fill is (issue #336). Text is compared trimmed and case-blind, cast
 // and genres as sets, the rating as a number, a series' year as its spelled
 // **Year range**; a film's year never differs, the title is never in play,
 // and Watched only ever marks an unwatched film. The row's genres arrive
@@ -53,6 +54,9 @@ const show = (current: Partial<HeldValues>, row: Partial<SheetRow>) =>
     { ...BLANK_ROW, title: 'Tidewater', ...row },
     'series'
   );
+
+/** A plan that neither fills nor raises anything. */
+const NOTHING = { fill: {}, differences: [], proposed: {} };
 
 const fieldsOf = (plan: ReturnType<typeof planSheetFields>) =>
   plan.differences.map((difference) => difference.field);
@@ -103,14 +107,14 @@ describe('planSheetFields: empty versus filled, per field', () => {
   it.each(PER_FIELD)(
     'leaves a filled %s alone when the row leaves it blank',
     (_field, _row, held) => {
-      expect(film(held, {})).toEqual({ fill: {}, differences: [] });
+      expect(film(held, {})).toEqual(NOTHING);
     }
   );
 
   it.each(PER_FIELD)(
     'neither fills nor raises %s when both sides agree',
     (_field, row, held) => {
-      expect(film(held, row)).toEqual({ fill: {}, differences: [] });
+      expect(film(held, row)).toEqual(NOTHING);
     }
   );
 
@@ -121,6 +125,7 @@ describe('planSheetFields: empty versus filled, per field', () => {
 
       expect(plan.fill).toEqual({});
       expect(fieldsOf(plan)).toEqual([field]);
+      expect(plan.proposed).toEqual(row);
     }
   );
 
@@ -131,7 +136,7 @@ describe('planSheetFields: empty versus filled, per field', () => {
   });
 
   it('fills nothing from a row that leaves everything blank', () => {
-    expect(film({}, {})).toEqual({ fill: {}, differences: [] });
+    expect(film({}, {})).toEqual(NOTHING);
   });
 
   it('fills several empty fields at once and raises several differences at once', () => {
@@ -150,6 +155,7 @@ describe('planSheetFields: empty versus filled, per field', () => {
       genres: ['Action'],
     });
     expect(fieldsOf(plan)).toEqual(['director', 'rating']);
+    expect(plan.proposed).toEqual({ director: 'John McTiernan', rating: 8 });
   });
 
   it('spells both sides of a text difference for display', () => {
@@ -166,6 +172,22 @@ describe('planSheetFields: empty versus filled, per field', () => {
         sheet: 'John McTiernan',
       },
     ]);
+    expect(plan.proposed).toEqual({ director: 'John McTiernan' });
+  });
+
+  it('proposes the sheet’s side normalised as a fill is: text trimmed, blank members dropped', () => {
+    const plan = film(
+      { director: 'Renny Harlin', cast: ['Bonnie Bedelia'] },
+      {
+        director: '  John McTiernan ',
+        cast: [' Bruce Willis', '', 'Alan Rickman '],
+      }
+    );
+
+    expect(plan.proposed).toEqual({
+      director: 'John McTiernan',
+      cast: ['Bruce Willis', 'Alan Rickman'],
+    });
   });
 });
 
@@ -186,15 +208,14 @@ describe('planSheetFields: case and whitespace', () => {
   ] as [string, Partial<SheetRow>, Partial<HeldValues>][])(
     'reads %s the same trimmed and case-blind',
     (_field, row, held) => {
-      expect(film(held, row)).toEqual({ fill: {}, differences: [] });
+      expect(film(held, row)).toEqual(NOTHING);
     }
   );
 
   it('treats a blank text cell as empty: nothing to fill, nothing to raise', () => {
-    expect(film({ director: 'John McTiernan' }, { director: '   ' })).toEqual({
-      fill: {},
-      differences: [],
-    });
+    expect(film({ director: 'John McTiernan' }, { director: '   ' })).toEqual(
+      NOTHING
+    );
   });
 
   it('fills a held field that is only whitespace', () => {
@@ -211,7 +232,7 @@ describe('planSheetFields: cast and genres as sets', () => {
         { cast: ['Alan Rickman', 'Bruce Willis'] },
         { cast: ['Bruce Willis', 'Alan Rickman'] }
       )
-    ).toEqual({ fill: {}, differences: [] });
+    ).toEqual(NOTHING);
   });
 
   it('reads genres the same in any order', () => {
@@ -220,7 +241,7 @@ describe('planSheetFields: cast and genres as sets', () => {
         { genres: ['Thriller', 'Action'] },
         { genres: ['Action', 'Thriller'] }
       )
-    ).toEqual({ fill: {}, differences: [] });
+    ).toEqual(NOTHING);
   });
 
   it('raises a set with one more member as a difference', () => {
@@ -230,6 +251,7 @@ describe('planSheetFields: cast and genres as sets', () => {
     );
 
     expect(fieldsOf(plan)).toEqual(['cast']);
+    expect(plan.proposed).toEqual({ cast: ['Bruce Willis', 'Alan Rickman'] });
   });
 });
 
@@ -241,10 +263,7 @@ describe('planSheetFields: the Genre pool already applied', () => {
   });
 
   it('reads a row whose genres were all unknown, so dropped, as blank', () => {
-    expect(film({ genres: ['Drama'] }, { genres: [] })).toEqual({
-      fill: {},
-      differences: [],
-    });
+    expect(film({ genres: ['Drama'] }, { genres: [] })).toEqual(NOTHING);
   });
 });
 
@@ -262,19 +281,22 @@ describe('planSheetFields: the rating', () => {
 
     expect(plan.fill).toEqual({});
     expect(fieldsOf(plan)).toEqual(['rating']);
+    expect(plan.proposed).toEqual({ rating: 9 });
   });
 
   it('raises 0 against a held rating as a difference', () => {
-    expect(fieldsOf(film({ rating: 4 }, { rating: 0 }))).toEqual(['rating']);
+    const plan = film({ rating: 4 }, { rating: 0 });
+
+    expect(fieldsOf(plan)).toEqual(['rating']);
+    expect(plan.proposed).toEqual({ rating: 0 });
   });
 });
 
 describe('planSheetFields: a film’s year', () => {
   it('is never a difference', () => {
-    expect(film({ year: 1990 }, { year: 1988, endYear: 1988 })).toEqual({
-      fill: {},
-      differences: [],
-    });
+    expect(film({ year: 1990 }, { year: 1988, endYear: 1988 })).toEqual(
+      NOTHING
+    );
   });
 });
 
@@ -289,7 +311,7 @@ describe('planSheetFields: a series’ Year range', () => {
   it('agrees with the same range', () => {
     expect(
       show({ year: 2019, endYear: 2023 }, { year: 2019, endYear: 2023 })
-    ).toEqual({ fill: {}, differences: [] });
+    ).toEqual(NOTHING);
   });
 
   it('raises a different end year as a difference, spelled as a range', () => {
@@ -302,6 +324,7 @@ describe('planSheetFields: a series’ Year range', () => {
     expect(plan.differences).toEqual([
       { field: 'year', label: 'Year', mine: '2019–2023', sheet: '2019–2024' },
     ]);
+    expect(plan.proposed).toEqual({ year: 2019, endYear: 2024 });
   });
 
   it('raises an open run against a closed one', () => {
@@ -313,6 +336,16 @@ describe('planSheetFields: a series’ Year range', () => {
     expect(plan.differences).toEqual([
       { field: 'year', label: 'Year', mine: '2021–', sheet: '2021' },
     ]);
+    expect(plan.proposed).toEqual({ year: 2021, endYear: 2021 });
+  });
+
+  it('proposes an open run as its start year alone', () => {
+    const plan = show(
+      { year: 2019, endYear: 2023 },
+      { year: 2021, endYear: null }
+    );
+
+    expect(plan.proposed).toEqual({ year: 2021 });
   });
 });
 
@@ -334,6 +367,7 @@ describe('planSheetFields: Created by', () => {
         sheet: 'Ines Duarte',
       },
     ]);
+    expect(plan.proposed).toEqual({ director: 'Ines Duarte' });
   });
 });
 
@@ -345,31 +379,19 @@ describe('planSheetFields: Watched only marks', () => {
   });
 
   it('leaves a watched film as it is', () => {
-    expect(film({ status: 'watched' }, { watched: true })).toEqual({
-      fill: {},
-      differences: [],
-    });
+    expect(film({ status: 'watched' }, { watched: true })).toEqual(NOTHING);
   });
 
   it('leaves a film in progress as it is', () => {
-    expect(film({ status: 'in-progress' }, { watched: true })).toEqual({
-      fill: {},
-      differences: [],
-    });
+    expect(film({ status: 'in-progress' }, { watched: true })).toEqual(NOTHING);
   });
 
   it('never unmarks a watched film', () => {
-    expect(film({ status: 'watched' }, { watched: false })).toEqual({
-      fill: {},
-      differences: [],
-    });
+    expect(film({ status: 'watched' }, { watched: false })).toEqual(NOTHING);
   });
 
   it('never marks a series', () => {
-    expect(show({ status: 'unwatched' }, { watched: true })).toEqual({
-      fill: {},
-      differences: [],
-    });
+    expect(show({ status: 'unwatched' }, { watched: true })).toEqual(NOTHING);
   });
 });
 
@@ -381,7 +403,7 @@ describe('planSheetFields: the title is never in play', () => {
         { ...BLANK_ROW, title: 'Die Hard: Christmas Edition' },
         'movie'
       )
-    ).toEqual({ fill: {}, differences: [] });
+    ).toEqual(NOTHING);
   });
 
   it('never names the title among a series’ fills', () => {
