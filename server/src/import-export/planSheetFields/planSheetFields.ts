@@ -1,23 +1,7 @@
-import type { SheetDifference, SheetField, WatchStatus } from '@/types';
+import type { SheetDifference, SheetField } from '@/types';
 import { spellYearSpan } from '../../library/series/yearSpan/yearSpan';
+import type { HeldValues } from '../heldValues/heldValues';
 import type { SheetRow } from '../readSheet/readSheet';
-
-/**
- * A held title's values in the sheet's shape: a film's or a series' fields
- * the sheet can name, its genres by name, a series' creator as `director`.
- * `status` is a film's watch state; a series reads as `unwatched`.
- */
-export interface HeldValues {
-  title: string;
-  year: number | null;
-  endYear: number | null;
-  genres: string[];
-  director: string | null;
-  cast: string[];
-  synopsis: string | null;
-  rating: number | null;
-  status: WatchStatus;
-}
 
 /**
  * The **Sheet fills**: each empty held field the row fills, in the row's

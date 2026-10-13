@@ -15,7 +15,8 @@
 import { describe, expect, it } from 'vitest';
 
 import type { SheetRow } from '../readSheet/readSheet';
-import { planSheetFields, type HeldValues } from './planSheetFields';
+import type { HeldValues } from '../heldValues/heldValues';
+import { planSheetFields } from './planSheetFields';
 
 /** A held title with nothing filled in. */
 const BARE: HeldValues = {

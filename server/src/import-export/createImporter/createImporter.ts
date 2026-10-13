@@ -24,9 +24,9 @@ import {
 } from '../groupShows/groupShows';
 import { MATCH_REASON, matchRows, type Match } from '../matchRows/matchRows';
 import { splitCollections } from '../splitCollections/splitCollections';
+import { heldSeriesValues, heldValues } from '../heldValues/heldValues';
 import {
   planSheetFields,
-  type HeldValues,
   type SheetFill,
 } from '../planSheetFields/planSheetFields';
 import { readSheet, type SheetRow } from '../readSheet/readSheet';
@@ -884,19 +884,12 @@ export function createImporter({
     if (movie === null) {
       return false;
     }
-    const held: HeldValues = {
-      title: movie.title,
-      year: movie.year,
-      endYear: movie.year,
-      genres: movie.genres.map((genre) => genre.name),
-      director: movie.director,
-      cast: movie.cast,
-      synopsis: movie.synopsis,
-      rating: movie.rating,
-      status: movie.status,
-    };
     const pooled = pooledRow(row, genres, current);
-    const { fill, differences } = planSheetFields(held, pooled, 'movie');
+    const { fill, differences } = planSheetFields(
+      heldValues(movie),
+      pooled,
+      'movie'
+    );
     fileDiffers(current, { kind: 'movie', id, row: pooled }, differences);
     const { synopsis, year, genres: named, director, cast, rating } = fill;
     const patch = {
@@ -936,19 +929,12 @@ export function createImporter({
     if (series === null) {
       return false;
     }
-    const held: HeldValues = {
-      title: series.title,
-      year: series.year,
-      endYear: series.endYear,
-      genres: series.genres.map((genre) => genre.name),
-      director: series.creator,
-      cast: series.cast,
-      synopsis: series.synopsis,
-      rating: series.rating,
-      status: 'unwatched',
-    };
     const pooled = pooledRow(row, genres, current);
-    const { fill, differences } = planSheetFields(held, pooled, 'series');
+    const { fill, differences } = planSheetFields(
+      heldSeriesValues(series),
+      pooled,
+      'series'
+    );
     fileDiffers(current, { kind: 'series', id, row: pooled }, differences);
     const { synopsis, year, endYear, genres: named, director, cast } = fill;
     const enrichment = {
