@@ -11,6 +11,68 @@ Newest entry first.
 
 ---
 
+## 2026-10-13 — Season posters — the refactor (issue 325)
+
+Eleven commits against `docs/refactor-plans/39-season-posters-refactor.md`,
+one per plan commit — the initiative's closing round. **8366 tests pass across
+502 files**, against 8367 at the end of the build (`fbee668`): three leaves
+gained (`spellEpisodeTag`'s season alone) and four retired with
+`seasonPosterOf`, whose every assertion was already one on the series page's
+read. `tsc -b --force` is clean. `eslint src server electron` reports no
+errors and the one warning the last round left, which this round did not
+touch.
+
+### What shipped
+
+Log 39's four slices: the prototype amendment (321, `a1b486d`), then one RED
+and one GREEN each — migration 10's `season_posters` and the card's art (322),
+a Sync fetching each season's poster under the Still's rule (323), and an
+Export carrying them under `seasons/` (324).
+
+### What each group changed
+
+- **Group 1, the season tag spelled once** (`362585e`–`a144ae2`).
+  `spellEpisodeTag(season)`, the episode optional, answers `S02`; `writeShow`'s
+  `S02-poster.jpg` and `exportRows`' `seasons/S02` both spell it through it.
+  The server's Episode tag has one spelling again.
+- **Group 2, the Still's shape for every season twin** (`5fb7d2c`–`c67d16e`).
+  - `writeShow` reads `getSeriesDetail` once, where it read `listEpisodes`,
+    and walks `detail.seasons` above 0 — no `Set`, no per-season `filter`. A
+    series gone mid-run reads as no seasons, as it did.
+  - `planSeason(season: SeasonSummary, …)` reads `season.posterPath` itself,
+    as `planEpisode` reads `episode.stillPath`.
+  - `seasonPosterOf` retires from `SeriesEnrich` and `LibraryStorage`: the
+    series page's read is the one reading of a Season poster.
+  - `PlannedTitle.seasonPosters` is `SeasonSummary[]`, `stills`' twin.
+  - This amends log 39 Q3's and Q4's sketched interfaces; the log stays as
+    written, and the plan records why.
+- **Group 3, the small things** (`10b205f`, `986b42d`). `SeasonPosterRow`
+  names the read's row; the _"Already in season, then episode order"_ comment
+  sits on its loop again, and `selectSeasonPosters`' says what is true.
+  `writeShow`'s docblock names the Season poster; `SeasonCard`'s and
+  `ERASED_TABLES`' are reflowed, their wording unchanged.
+- **Group 4, the docs** (`c6061cb`, this commit). CLAUDE.md's tree knows
+  migration 10, `planSeason/`, the read's and `enrich`'s Season poster, the
+  File plan's `seasons/` and the card's art; the README's `db/` line gains
+  migrations 8, 9 and 10. **Season posters** is ✅ — step 22 in both build
+  orders, after the third chain.
+
+### Left as it is
+
+Everything in the plan's Out of Scope and Further Notes, unchanged:
+`storeSeriesImage`'s name and its log line for a Season poster,
+`SeasonCardSeason.posterUrl` optional, `createMedia`'s `season-NN` folder,
+`seriesSeed`'s lowercase tags, `exportName`'s `twoDigits`, and `Artwork`'s
+docblock. Season page art, a Season poster as a **Write target**, an Export
+column and a series-poster fallback stay out, as log 39 ruled.
+
+### The initiative
+
+**Season posters is done**: the prototype revision (321), the three slices
+(322–324) and this round (325). Issue 320 is closed with it. No follow-ups.
+
+---
+
 ## 2026-10-12 — Title editing — the refactor (issue 311)
 
 Thirty commits against `docs/refactor-plans/38-title-editing-refactor.md`, one
