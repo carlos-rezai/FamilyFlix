@@ -695,8 +695,8 @@ describe('DELETE /api/import/current/problems/:id', () => {
 // reader the movie routes use, a **Found file** arriving as the path field
 // the edit route already reads for a **Stored file** and a picked one as
 // bytes. It is the only route in the app that accepts a path — and it copies
-// from under the **Current run**'s root and nowhere else: a path outside it
-// is a `400` with nothing copied. `201` with the movie, and the problem gone
+// from under the **Current run**'s Library folders and nowhere else: a path
+// outside them is a `400` with nothing copied. `201` with the movie, and the problem gone
 // from `current`.
 
 const getProblem = (baseUrl: string, id: string) =>
@@ -974,7 +974,7 @@ describe('POST /api/import/current/problems/:id/resolve', () => {
     );
   });
 
-  it('answers 400 for a found path outside the root, with nothing copied', async () => {
+  it('answers 400 for a found path outside every library folder, with nothing copied', async () => {
     const { baseUrl, storage, media, problem, scratch } =
       await failedDieHardApi();
     const outside = join(scratch, 'elsewhere.mp4');
@@ -986,7 +986,9 @@ describe('POST /api/import/current/problems/:id/resolve', () => {
     ]);
 
     expect(response.status).toBe(400);
-    expect(await response.json()).toMatchObject({ error: expect.any(String) });
+    expect(await response.json()).toEqual({
+      error: 'That file is not under a library folder.',
+    });
     expect(readdirSync(media).sort()).toEqual(['amelie-2001']);
     const movies = storage.listMovies({ sort: 'a-z' });
     expect(movies.map((movie) => movie.title)).toEqual(['Amélie']);
@@ -995,7 +997,7 @@ describe('POST /api/import/current/problems/:id/resolve', () => {
     expect(after.problems.map((p) => p.id)).toEqual([problem.id]);
   });
 
-  it('refuses a poster or a subtitle outside the root as firmly as the video', async () => {
+  it('refuses a poster or a subtitle outside every library folder as firmly as the video', async () => {
     const { baseUrl, media, problem, dieHard, scratch } =
       await failedDieHardApi();
     writeFileSync(join(scratch, 'elsewhere.srt'), '');

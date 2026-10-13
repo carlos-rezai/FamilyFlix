@@ -86,7 +86,7 @@ export class ImportBusyError extends Error {
  */
 export class ImportPathError extends Error {
   constructor(readonly path: string) {
-    super('That file is not under the import folder.');
+    super('That file is not under a library folder.');
     this.name = 'ImportPathError';
   }
 }
