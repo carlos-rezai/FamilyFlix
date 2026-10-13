@@ -703,8 +703,7 @@ export function createImporter({
    */
   const knownGenres = (
     names: string[],
-    pool: Map<string, string>,
-    warned: Set<string>,
+    { pool, warned }: GenreReader,
     current: ImportRun
   ): string[] =>
     names.flatMap((name) => {
@@ -739,7 +738,7 @@ export function createImporter({
     current: ImportRun
   ): SheetRow => ({
     ...row,
-    genres: knownGenres(row.genres, genres.pool, genres.warned, current),
+    genres: knownGenres(row.genres, genres, current),
   });
 
   /**
@@ -938,8 +937,7 @@ export function createImporter({
    */
   const importMatch = async (
     { row, folder: scan }: Match,
-    pool: Map<string, string>,
-    warnedGenres: Set<string>,
+    genreNames: GenreReader,
     current: ImportRun,
     signal: AbortSignal,
     libraryFolder: StoredLibraryFolder
@@ -966,7 +964,7 @@ export function createImporter({
       // goes, the row is never written, and nothing half-done is left.
       signal.throwIfAborted();
       const runtime = derivedRuntime(playback, videoPath);
-      const genres = knownGenres(row.genres, pool, warnedGenres, current);
+      const genres = knownGenres(row.genres, genreNames, current);
 
       const movie: NewMovie = {
         title: row.title,
@@ -1043,8 +1041,7 @@ export function createImporter({
    */
   const importShow = async (
     match: ShowMatch,
-    pool: Map<string, string>,
-    warnedGenres: Set<string>,
+    genreNames: GenreReader,
     current: ImportRun,
     signal: AbortSignal,
     libraryFolder: StoredLibraryFolder
@@ -1094,7 +1091,7 @@ export function createImporter({
         const runtime = derivedRuntime(playback, videoPath);
 
         if (series === null) {
-          const genres = knownGenres(row.genres, pool, warnedGenres, current);
+          const genres = knownGenres(row.genres, genreNames, current);
           const input: NewSeries = {
             title: row.title,
             ...(row.year === null ? {} : { year: row.year }),
@@ -1283,7 +1280,7 @@ export function createImporter({
     shows: Placed<ShowMatch>[],
     verb: 'Import' | 'Scan',
     signal: AbortSignal,
-    { pool, warned: warnedGenres }: GenreReader = genreReader()
+    genres: GenreReader = genreReader()
   ): Promise<void> => {
     // Only new imports count: a held show taking episodes is not one.
     current.matched =
@@ -1299,8 +1296,7 @@ export function createImporter({
       current.currentItem = match.row.title;
       const added = await importMatch(
         match,
-        pool,
-        warnedGenres,
+        genres,
         current,
         signal,
         libraryFolder
@@ -1317,14 +1313,7 @@ export function createImporter({
     }
 
     for (const { match, libraryFolder } of shows) {
-      await importShow(
-        match,
-        pool,
-        warnedGenres,
-        current,
-        signal,
-        libraryFolder
-      );
+      await importShow(match, genres, current, signal, libraryFolder);
       if (signal.aborted) {
         return;
       }
@@ -1865,12 +1854,10 @@ export function createImporter({
         );
       }
 
-      const genres = genreReader();
       const before = current.problems.length;
       const added = await importMatch(
         { row, folder: scan },
-        genres.pool,
-        genres.warned,
+        genreReader(),
         current,
         stop.signal,
         libraryFolder
@@ -1912,12 +1899,10 @@ export function createImporter({
       }
       // Taken off before the copy, so a second press finds nothing to import.
       takeOff(id);
-      const genres = genreReader();
       const before = current.problems.length;
       const added = await importMatch(
         { row: guessedRow(folder.name), folder },
-        genres.pool,
-        genres.warned,
+        genreReader(),
         current,
         stop.signal,
         libraryFolder
