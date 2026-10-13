@@ -134,15 +134,19 @@ export function useHomeRows(): UseHomeRowsResult {
     [settled]
   );
 
-  // The settled query string is what says which load this is: an unchanged
-  // query is an unchanged string, and nothing else about a render can move it.
-  // Every save still waiting on the route: the value it asked for, and a token
-  // telling a movie's newest save from one it overtook.
+  // Each movie's newest save still waiting on the route: the value it asked
+  // for, and a token telling it from a save it overtook.
   const pending = useRef(
     new Map<string, { favorite: boolean; token: object }>()
   );
+  // Every save on the wire, an overtaken one included — the count the reload
+  // waits on, where `pending` holds only each movie's newest value.
+  const inFlight = useRef(0);
   const reloadWanted = useRef(false);
 
+  // The settled query string is what says which load this is: an unchanged
+  // query is an unchanged string, and nothing else about a render can move it.
+  //
   // A load answers with what the server held when it read, which can be from
   // before a save still in flight — so each of those is laid back over it, and
   // a heart pressed while a reload was out survives the reload landing.
@@ -198,6 +202,7 @@ export function useHomeRows(): UseHomeRowsResult {
     async (id: string, favorite: boolean) => {
       const token = {};
       pending.current.set(id, { favorite, token });
+      inFlight.current += 1;
       const newest = () => pending.current.get(id)?.token === token;
       try {
         const saved = await saveFavorite(id, favorite);
@@ -212,7 +217,8 @@ export function useHomeRows(): UseHomeRowsResult {
         if (newest()) {
           pending.current.delete(id);
         }
-        if (pending.current.size === 0 && reloadWanted.current) {
+        inFlight.current -= 1;
+        if (inFlight.current === 0 && reloadWanted.current) {
           reloadWanted.current = false;
           retry();
         }
