@@ -85,6 +85,8 @@ export interface TmdbSeasonEpisode {
 /** `/3/tv/{id}/season/{n}`, the fields a Sync reads. */
 export interface TmdbSeason {
   season_number: number;
+  /** The **Season poster**'s image path, or `null` when TMDB has none. */
+  poster_path: string | null;
   episodes: TmdbSeasonEpisode[];
 }
 

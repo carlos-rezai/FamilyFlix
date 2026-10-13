@@ -294,9 +294,15 @@ export function tmdbTvDetail(
 /** One `/3/tv/{id}/season/{n}`: the episodes given, in the order given. */
 export function tmdbSeason(
   seasonNumber: number,
-  episodes: TmdbSeason['episodes']
+  episodes: TmdbSeason['episodes'],
+  overrides: Partial<TmdbSeason> = {}
 ): TmdbSeason {
-  return { season_number: seasonNumber, episodes };
+  return {
+    season_number: seasonNumber,
+    episodes,
+    poster_path: null,
+    ...overrides,
+  };
 }
 
 /** The Current enrichment run, once it has reached review. */

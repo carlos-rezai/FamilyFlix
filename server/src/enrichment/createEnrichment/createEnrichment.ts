@@ -43,6 +43,7 @@ import {
 } from '../currentFields/currentFields';
 import { planEpisode } from '../planEpisode/planEpisode';
 import { planFields } from '../planFields/planFields';
+import { planSeason } from '../planSeason/planSeason';
 import {
   chosenEnrichment,
   chosenSeriesEnrichment,
@@ -654,13 +655,25 @@ export function createEnrichment({
       const season = await client.season(apiKey, detail.id, number, signal);
       if (signal.aborted) return written;
       if (season.kind !== 'ok') return { kind: 'stop', stop: season.kind };
-      await writeEpisodes(
-        current,
-        episodes.filter((each) => each.season === number),
+      const onDisk = episodes.filter((each) => each.season === number);
+      const { poster } = planSeason(
+        storage.seasonPosterOf(series.id, number),
         season.value,
-        fields,
-        signal
+        fields
       );
+      if (poster !== null) {
+        const name = `S${String(number).padStart(2, '0')}-poster.jpg`;
+        const stored = await storeSeriesImage(
+          current,
+          onDisk,
+          poster,
+          name,
+          signal
+        );
+        if (signal.aborted) return written;
+        if (stored !== null) storage.setSeasonPoster(series.id, number, stored);
+      }
+      await writeEpisodes(current, onDisk, season.value, fields, signal);
     }
     return written;
   }

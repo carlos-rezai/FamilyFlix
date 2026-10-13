@@ -105,6 +105,8 @@ export interface LibraryStorage {
    * `(seriesId, season)`, refusing a series the library does not hold.
    */
   setSeasonPoster(seriesId: string, season: number, posterPath: string): void;
+  /** The **Season poster** a Sync plans with: its Stored path, or `null`. */
+  seasonPosterOf(seriesId: string, season: number): string | null;
   /**
    * {@link moviesInScope} over the series: those without a synopsis or a
    * poster, or all of them.
@@ -405,6 +407,7 @@ export function createSqliteStorage(dbPath: string): LibraryStorage {
     enrichSeries: seriesEnrich.enrichSeries,
     enrichEpisode: seriesEnrich.enrichEpisode,
     setSeasonPoster: seriesEnrich.setSeasonPoster,
+    seasonPosterOf: seriesEnrich.seasonPosterOf,
     moviesInScope: enrich.moviesInScope,
     seriesInScope: seriesEnrich.seriesInScope,
     enrichmentCounts: enrich.enrichmentCounts,

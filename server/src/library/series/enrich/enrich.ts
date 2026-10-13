@@ -81,6 +81,8 @@ export interface SeriesEnrich {
    * `(seriesId, season)`. Refuses a series the library does not hold.
    */
   setSeasonPoster(seriesId: string, season: number, posterPath: string): void;
+  /** The **Season poster** held for one season: its Stored path, or `null`. */
+  seasonPosterOf(seriesId: string, season: number): string | null;
 }
 
 /**
@@ -151,5 +153,22 @@ export function createSeriesEnrich(
     upsertSeasonPoster.run(seriesId, season, posterPath);
   }
 
-  return { enrichSeries, enrichEpisode, seriesInScope, setSeasonPoster };
+  const selectSeasonPoster = db.prepare(
+    'SELECT poster_path FROM season_posters WHERE series_id = ? AND season_number = ?'
+  );
+
+  function seasonPosterOf(seriesId: string, season: number): string | null {
+    const row = selectSeasonPoster.get(seriesId, season) as
+      | { poster_path: string | null }
+      | undefined;
+    return row?.poster_path ?? null;
+  }
+
+  return {
+    enrichSeries,
+    enrichEpisode,
+    seriesInScope,
+    setSeasonPoster,
+    seasonPosterOf,
+  };
 }
