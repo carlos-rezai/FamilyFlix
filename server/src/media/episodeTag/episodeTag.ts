@@ -82,8 +82,14 @@ export function episodeTag(
  * least — the inverse of {@link episodeTag}: whatever shape a tag was read
  * from, this is the one it is written back in, in the console, in a Problem's
  * reason and in the set of tags a held show already carries.
+ *
+ * With no `episode`, the season alone — `S02` — the tag's season form, the
+ * client's `formatEpisodeTag` precedent: a Sync's Season poster file,
+ * `S02-poster.jpg`, and an Export's `seasons/S02`.
  */
-export function spellEpisodeTag(season: number, episode: number): string {
+export function spellEpisodeTag(season: number, episode?: number): string {
   const twoDigits = (n: number): string => String(n).padStart(2, '0');
-  return `S${twoDigits(season)}E${twoDigits(episode)}`;
+  return episode === undefined
+    ? `S${twoDigits(season)}`
+    : `S${twoDigits(season)}E${twoDigits(episode)}`;
 }

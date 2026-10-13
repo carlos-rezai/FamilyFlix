@@ -145,6 +145,14 @@ describe('spellEpisodeTag — the tag written back', () => {
     expect(spellEpisodeTag(1, 120)).toBe('S01E120');
   });
 
+  it.each([
+    [2, 'S02'],
+    [12, 'S12'],
+    [0, 'S00'],
+  ])('spells season %i alone, with no episode, as %s', (season, tag) => {
+    expect(spellEpisodeTag(season)).toBe(tag);
+  });
+
   it.each([['S01E03'], ['S02E10'], ['S12E24'], ['S01E120']])(
     'spells %s back unchanged from what the parser reads',
     (tag) => {
