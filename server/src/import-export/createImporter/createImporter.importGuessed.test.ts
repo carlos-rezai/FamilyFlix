@@ -101,10 +101,10 @@ const unnamedMovies = (storage: LibraryStorage): Movie[] =>
 async function inReview(
   name?: string,
   seam?: (real: Media) => Media,
-  before: (box: Sandbox) => void = () => {}
+  before?: (box: Sandbox) => void
 ) {
   const box = sandbox(name, seam);
-  before(box);
+  before?.(box);
   await box.importer.start(box.sheet);
   const run = await untilReview(box.importer);
   return { ...box, run, problem: noRowOf(run) };

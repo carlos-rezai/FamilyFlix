@@ -121,10 +121,10 @@ async function untilReview(baseUrl: string): Promise<ImportRun> {
 /** The sheet run over the fixture and the unnamed folder, left in review. */
 async function inReviewNoRow(
   options: Parameters<typeof freshApi>[0] = {},
-  before: (api: ReturnType<typeof freshApi>) => void = () => {}
+  before?: (api: ReturnType<typeof freshApi>) => void
 ) {
   const api = freshApi(options);
-  before(api);
+  before?.(api);
   await postImport(api.baseUrl, api.sheet);
   const run = await untilReview(api.baseUrl);
   const problem = run.problems.find(
