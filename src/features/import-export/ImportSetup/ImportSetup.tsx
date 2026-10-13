@@ -1,31 +1,45 @@
+import { useNavigate } from 'react-router-dom';
+
 import { Button, FolderIcon, SheetIcon, TextField } from '@/primitives';
 import {
   Actions,
+  EmptyFolders,
+  EmptyLine,
   ErrorLine,
   Field,
   FieldLabel,
   Fields,
+  FolderLine,
+  FolderList,
+  FolderPath,
+  FolderRow,
+  GroupHead,
+  ManageButton,
 } from './ImportSetup.styles';
 import { FolderShapes } from '../FolderShapes/FolderShapes';
 import { EnrichCheckCard } from '../EnrichCheckCard/EnrichCheckCard';
+import { useLibraryFolders } from '../useLibraryFolders/useLibraryFolders';
 
 /**
- * The box both path fields are drawn as: the prototype's mono face in a 50px
- * box with the soft corner rather than the search bar's pill.
+ * The box the spreadsheet field is drawn as: the prototype's mono face in a
+ * 50px box with the soft corner rather than the search bar's pill.
  */
 const PATH_FIELD = { mono: true, height: 50, rounded: false } as const;
+
+/** Where _Manage folders_ and _Add library folders_ go: the list's own page. */
+const FOLDERS_PAGE = '/settings/folders';
 
 export interface ImportSetupProps {
   /** The spreadsheet path as typed. */
   sheet: string;
-  /** The spreadsheet's root path as typed. */
-  root: string;
   /** The reason the last start refused the sheet, or `null` for none. */
   sheetError: string | null;
-  /** The reason the last start refused the root, or `null` for none. */
-  rootError: string | null;
+  /**
+   * The reason the last start refused on `folders` — none listed by the time
+   * it was pressed — or `null` for none.
+   */
+  foldersError: string | null;
   onSheet: (value: string) => void;
-  onRoot: (value: string) => void;
   onStart: () => void;
   /** Whether _Also fetch metadata and posters from TMDB_ is ticked. */
   enrich: boolean;
@@ -35,33 +49,37 @@ export interface ImportSetupProps {
 }
 
 /**
- * The **Setup step**, from `feat.ImportFlow.dc.html`: two paths typed into two
- * mono fields — the spreadsheet, led by the sheet glyph, and the
- * spreadsheet's root, led by the folder glyph — and _Start import_, disabled
- * until both are non-empty. Between the root and the button, _What the
- * scanner accepts_: the three folder shapes, with the prototype's
- * backslashes, and the folder-first rule. Under that, the `EnrichCheckCard`.
- * The box is only carried on the run — _Finish_ reads it; the import itself
- * asks TMDB nothing.
+ * The **Setup step**, from `feat.ImportFlow.dc.html`: the spreadsheet's path
+ * typed into one mono field, led by the sheet glyph; then the group **Library
+ * folders**, because the run reads every listed folder — each row its path in
+ * mono and its title count, or _Can’t be reached right now_ in `danger`, with
+ * _Manage folders_ at the label's right; with none listed, _No library folders
+ * yet._ and _Add library folders_. Both push `/settings/folders`. No row has a
+ * ✕ — setup is not where the list is edited, so not `FolderRow` — and nothing
+ * of the group is drawn until the list lands. Under it, _What the scanner
+ * accepts_ and the `EnrichCheckCard`; then _Start import_, disabled until the
+ * sheet is filled and a folder is listed.
  *
- * Controlled: the values, the two refusals and the three handlers are handed
- * in, because it is the organism that holds the values and decides when a
- * refusal clears. A refusal is drawn under the field the `400` named, as the
- * 13px danger line.
+ * The sheet is controlled: its value, the two refusals and the handlers are
+ * handed in, because it is the organism that holds the value and decides when
+ * a refusal clears. A refusal is the 13px danger line — the sheet's under its
+ * field, the `folders` one under the group.
  */
 export function ImportSetup({
   sheet,
-  root,
   sheetError,
-  rootError,
+  foldersError,
   onSheet,
-  onRoot,
   onStart,
   enrich,
   keySet,
   onToggleEnrich,
 }: ImportSetupProps) {
-  const ready = sheet.trim() !== '' && root.trim() !== '';
+  const navigate = useNavigate();
+  const { folders } = useLibraryFolders();
+  const listed = folders !== null && folders.length > 0;
+  const ready = sheet.trim() !== '' && listed;
+  const manage = () => navigate(FOLDERS_PAGE);
 
   return (
     <Fields>
@@ -78,18 +96,46 @@ export function ImportSetup({
         {sheetError === null ? null : <ErrorLine>{sheetError}</ErrorLine>}
       </Field>
 
-      <Field>
-        <FieldLabel>Movies root folder</FieldLabel>
-        <TextField
-          {...PATH_FIELD}
-          value={root}
-          placeholder="C:\Movies"
-          icon={<FolderIcon size={20} />}
-          aria-label="Movies root folder"
-          onChange={onRoot}
-        />
-        {rootError === null ? null : <ErrorLine>{rootError}</ErrorLine>}
-      </Field>
+      {folders === null ? null : (
+        <div>
+          <GroupHead>
+            <FieldLabel>Library folders</FieldLabel>
+            {listed ? (
+              <ManageButton
+                label="Manage folders"
+                variant="ghost"
+                size="sm"
+                onClick={manage}
+              />
+            ) : null}
+          </GroupHead>
+          {listed ? (
+            <FolderList>
+              {folders.map((folder) => (
+                <FolderRow key={folder.id}>
+                  <FolderIcon size={20} />
+                  <FolderPath>{folder.path}</FolderPath>
+                  <FolderLine $unreachable={!folder.reachable}>
+                    {folder.reachable
+                      ? `${folder.titleCount} titles`
+                      : 'Can’t be reached right now'}
+                  </FolderLine>
+                </FolderRow>
+              ))}
+            </FolderList>
+          ) : (
+            <EmptyFolders>
+              <EmptyLine>No library folders yet.</EmptyLine>
+              <Button
+                label="Add library folders"
+                variant="secondary"
+                onClick={manage}
+              />
+            </EmptyFolders>
+          )}
+          {foldersError === null ? null : <ErrorLine>{foldersError}</ErrorLine>}
+        </div>
+      )}
 
       <FolderShapes />
 

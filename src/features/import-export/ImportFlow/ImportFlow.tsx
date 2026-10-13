@@ -38,12 +38,12 @@ const WORDING = {
  * exists, and a guess would show them. A `409` on Start is the same rule —
  * the hook attaches to the run already there, and the screen shows it.
  *
- * The two paths and the two refusals are held here, because it is this
- * organism that decides when a refusal clears: on the next edit of the field
- * it names, and not on an edit of the other one, because nothing about that
- * field has changed. Both values are kept through a refusal, and through a
- * cancel — the maintainer pressed _Cancel import_ to fix something, not to
- * start over.
+ * The sheet's path and the two refusals are held here, because it is this
+ * organism that decides when a refusal clears: the sheet's on the next edit of
+ * the sheet, both on the next start. The sheet is kept through a refusal, and
+ * through a cancel — the maintainer pressed _Cancel import_ to fix something,
+ * not to start over. The `folders` refusal — a stale screen's start, with
+ * every folder since removed — is drawn under the Library folders group.
  *
  * Back is the app's one **Back rule** — a **History step**, with Settings as
  * the **Landing** for an Import nothing opened, because the hub is the one
@@ -80,9 +80,8 @@ export function ImportFlow() {
   const wording = WORDING[run?.source ?? 'sheet'];
 
   const [sheet, setSheet] = useState('');
-  const [root, setRoot] = useState('');
   const [sheetError, setSheetError] = useState<string | null>(null);
-  const [rootError, setRootError] = useState<string | null>(null);
+  const [foldersError, setFoldersError] = useState<string | null>(null);
   const [enrich, setEnrich] = useState(false);
   const keySet = useKeyStored();
 
@@ -93,25 +92,22 @@ export function ImportFlow() {
     setSheetError(null);
   }, []);
 
-  const onRoot = useCallback((value: string) => {
-    setRoot(value);
-    setRootError(null);
-  }, []);
-
   const onStart = useCallback(async () => {
     setSheetError(null);
-    setRootError(null);
+    setFoldersError(null);
     try {
-      await start(sheet, root, enrich);
+      await start(sheet, enrich);
     } catch (error) {
       // A refusal names its field and is drawn under it. A `500` names none
       // and draws nothing; a `409` never reaches here — the hook answers it
       // with the run already going.
       if (error instanceof ImportRefusedError) {
-        (error.field === 'sheet' ? setSheetError : setRootError)(error.message);
+        (error.field === 'sheet' ? setSheetError : setFoldersError)(
+          error.message
+        );
       }
     }
-  }, [start, sheet, root, enrich]);
+  }, [start, sheet, enrich]);
 
   const onCancel = useCallback(() => {
     void cancel().catch(() => {
@@ -158,11 +154,9 @@ export function ImportFlow() {
       {attaching ? null : run === null ? (
         <ImportSetup
           sheet={sheet}
-          root={root}
           sheetError={sheetError}
-          rootError={rootError}
+          foldersError={foldersError}
           onSheet={onSheet}
-          onRoot={onRoot}
           onStart={onStart}
           enrich={enrich}
           keySet={keySet}

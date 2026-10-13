@@ -2274,20 +2274,20 @@ export function createApiRouter(
     );
   }
 
-  // **Bulk import**'s start: the two paths the **Setup step** holds, as JSON,
-  // and the **Current run**'s first snapshot back. A refusal names the field
-  // it refuses on — `400 { error, field: 'sheet' | 'root' }` — because the
-  // screen has two fields and draws the reason under one of them; a run that
-  // already exists is a `409`. Both are decided by the importer; this route
-  // only tells the two kinds of refusal apart and answers a body that names
-  // no path at all before the domain is asked.
+  // **Bulk import**'s start: the sheet the **Setup step** names, as JSON, and
+  // the **Current run**'s first snapshot back — the run reads every listed
+  // **Library folder**. A refusal names what it refuses on —
+  // `400 { error, field: 'sheet' | 'folders' }` — because the screen draws the
+  // reason under the sheet field or the folders group; a run that already
+  // exists is a `409`. Both are decided by the importer; this route only tells
+  // the two kinds of refusal apart and answers a body that names no sheet
+  // before the domain is asked.
   router.post('/import', async (req: Request, res: Response) => {
     const body = (req.body ?? {}) as {
       sheetPath?: unknown;
-      rootPath?: unknown;
       enrich?: unknown;
     };
-    const { sheetPath, rootPath } = body;
+    const { sheetPath } = body;
     // Only carried on the run: the import itself goes nowhere near TMDB.
     const enrich = body.enrich === true;
 
@@ -2297,13 +2297,9 @@ export function createApiRouter(
         .json({ error: 'No spreadsheet was given.', field: 'sheet' });
       return;
     }
-    if (typeof rootPath !== 'string' || rootPath.trim() === '') {
-      res.status(400).json({ error: 'No folder was given.', field: 'root' });
-      return;
-    }
 
     try {
-      res.status(201).json(await importer.start(sheetPath, rootPath, enrich));
+      res.status(201).json(await importer.start(sheetPath, enrich));
     } catch (error) {
       if (error instanceof ImportStartError) {
         res.status(400).json({ error: error.message, field: error.field });

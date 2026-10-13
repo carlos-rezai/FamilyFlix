@@ -6,13 +6,14 @@
  */
 
 /**
- * The two fields the **Setup step** has, and the one a refusal names: a start
- * the route refuses before any run exists answers `400 { error, field }`, and
- * the screen draws the reason under that field. An `as const` list its union
+ * The two things the **Setup step** draws a refusal under — the sheet field
+ * and the **Library folders** group: a start the route refuses before any run
+ * exists answers `400 { error, field }`, and the screen draws the reason under
+ * that one. An `as const` list its union
  * is derived from, on `EXPORT_FORMATS`' precedent, so a refusal's field can be
  * checked against the declaration that names it.
  */
-export const IMPORT_FIELDS = ['sheet', 'root'] as const;
+export const IMPORT_FIELDS = ['sheet', 'folders'] as const;
 
 /** One of the fields in {@link IMPORT_FIELDS}. */
 export type ImportField = (typeof IMPORT_FIELDS)[number];
@@ -20,7 +21,7 @@ export type ImportField = (typeof IMPORT_FIELDS)[number];
 /** A run over a spreadsheet, or a **Folder scan** over the Library folders. */
 export type ImportSource = 'sheet' | 'folders';
 
-/** Where a run is: walking the root, copying matches in, or waiting on review. */
+/** Where a run is: walking the Library folders, copying matches in, or waiting on review. */
 export type ImportPhase = 'scanning' | 'importing' | 'review';
 
 /** How a line of the **Activity log** is drawn. */

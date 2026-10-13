@@ -10,11 +10,6 @@ import {
 } from 'node:path';
 
 import type { LibraryStorage, StoredLibraryFolder } from '../../library';
-import {
-  clashSentence,
-  folderOverlap,
-  type FolderClash,
-} from '../../library/folders/folderOverlap/folderOverlap';
 import type { Media } from '../../media/createMedia/createMedia';
 import { readableFolder } from '../../media/readableFolder/readableFolder';
 import type { MovieFolderScan } from '../../media/scanMovieFolder/scanMovieFolder';
@@ -47,8 +42,9 @@ import type {
 } from '@/types';
 
 /**
- * A start refused before any run exists, naming the field it refuses on — the
- * screen has two fields and draws the reason under one of them. The route
+ * A start refused before any run exists, naming what it refuses on — the
+ * sheet field, or the **Library folders** group when none is listed — and the
+ * screen draws the reason under that one. The route
  * answers it as `400 { error, field }`.
  */
 export class ImportStartError extends Error {
@@ -73,10 +69,11 @@ export class ImportBusyError extends Error {
 }
 
 /**
- * A **Found file** named outside the **Current run**'s root — or the root
- * itself, or a path climbing out of it through `..`. Refused before anything
- * is copied: the resolve route is the one surface in the app that accepts a
- * path, and the root is the whole of what it may be pointed at. The route
+ * A **Found file** named outside every **Library folder** the **Current run**
+ * read — or a folder itself, or a path climbing out of one through `..`.
+ * Refused before anything is copied: the resolve route is the one surface in
+ * the app that accepts a path, and the listed folders are the whole of what
+ * it may be pointed at. The route
  * answers it as `400`.
  */
 export class ImportPathError extends Error {
@@ -99,7 +96,7 @@ export class ProblemNotFoundError extends Error {
 
 /**
  * One of the form's **File slots** as _Save & continue_ sends it back: a
- * **Found file** — the absolute path the scan found it at, under the root —
+ * **Found file** — the absolute path the scan found it at, under a Library folder —
  * or a file the route has already stored from bytes, as its **Stored path**.
  */
 export type ResolveFile = { found: string } | { stored: string };
@@ -170,18 +167,14 @@ export interface ResolveSeriesForm {
  */
 export interface Importer {
   /**
-   * Start the **Current run** over a sheet and the spreadsheet's root, and
-   * answer its first snapshot. Rejects with {@link ImportStartError} for a
-   * sheet that does not exist, cannot be read, is neither `.xlsx` nor `.csv`
-   * or has no title column, and for a root that does not exist or is not a
-   * directory — before any run exists; with {@link ImportBusyError} while a
+   * Start the **Current run** over a sheet and every listed **Library
+   * folder**, and answer its first snapshot. Rejects with
+   * {@link ImportStartError} for a sheet that does not exist, cannot be read,
+   * is neither `.xlsx` nor `.csv` or has no title column, and on `folders`
+   * when none is listed — before any run exists; with {@link ImportBusyError} while a
    * run exists. `enrich` is only carried on the run, for _Finish_ to read.
    */
-  start(
-    sheetPath: string,
-    rootPath: string,
-    enrich?: boolean
-  ): Promise<ImportRun>;
+  start(sheetPath: string, enrich?: boolean): Promise<ImportRun>;
   /** The **Current run**'s snapshot, or `null` when there is none. */
   current(): ImportRun | null;
   /**
@@ -202,15 +195,15 @@ export interface Importer {
   /**
    * The **Problem detail** _Resolve_ prefills the form from: the problem, the
    * **Sheet row**, the **Source folder** it is about, the candidate folders
-   * and the folder's **Found files** as absolute paths under the root. `null`
+   * and the folder's **Found files** as absolute paths. `null`
    * for an id that is not there, and when there is no run.
    */
   problem(id: string): ImportProblemDetail | null;
   /**
    * _Save & continue_: copy every **Found file** the form names in from under
-   * the root, take a file the route already stored as it is, add the movie by
+   * the run's Library folders, take a file the route already stored as it is, add the movie by
    * the form's own sequence and dismiss the problem. Rejects with
-   * {@link ImportPathError} for a found path outside the root — before
+   * {@link ImportPathError} for a found path outside them — before
    * anything is copied — and with {@link ProblemNotFoundError} for a problem
    * that is not there; a copy that fails leaves no folder behind and keeps the
    * problem.
@@ -219,7 +212,7 @@ export interface Importer {
   /**
    * The **Series Resolve**'s _Save & continue_ on an `unplaced` Problem:
    * create the series, or join the one the Problem names, copying every
-   * found video in from under the root and recording each as its **Source
+   * found video in from under the Library folders and recording each as its **Source
    * file**, then dismiss the problem. Rejects with {@link ImportPathError},
    * {@link ResolveRefusedError} for a number the held series has, and
    * {@link ProblemNotFoundError}, each before anything is copied.
@@ -362,17 +355,6 @@ async function checkSheet(sheetPath: string): Promise<SheetRead> {
   }
 }
 
-/** Check the root before any run exists: it has to be there and be a folder. */
-async function checkRoot(rootPath: string): Promise<void> {
-  const reading = await readableFolder(rootPath);
-  if (reading === 'not-a-folder') {
-    throw new ImportStartError('root', 'That path is not a folder.');
-  }
-  if (reading !== 'readable') {
-    throw new ImportStartError('root', 'That folder could not be found.');
-  }
-}
-
 /**
  * What joins the two halves of a {@link filmKey}: NUL, because a title key
  * holds letters, digits and single spaces and a year holds digits, so nothing
@@ -463,6 +445,13 @@ interface Placed<M> {
   libraryFolder: StoredLibraryFolder;
 }
 
+/** One listed **Library folder** as the walk found it: its films and its shows. */
+interface WalkedFolder {
+  folder: StoredLibraryFolder;
+  films: MovieFolderScan[];
+  shows: ShowScan[];
+}
+
 /**
  * A series the library already holds, as a run needs it: the series, the
  * `(season, episode)` tags it has, the **Source files** its episodes came
@@ -494,23 +483,24 @@ const guessedRow = (name: string): SheetRow => ({
 });
 
 /**
- * Whether `path` lies strictly under `root` — not the root itself, not a path
- * climbing out of it through `..`, and not one on another drive, which
+ * Whether `path` lies strictly under `folder` — not the folder itself, not a
+ * path climbing out of it through `..`, and not one on another drive, which
  * `relative` answers with an absolute path rather than a climb.
  */
-const isUnder = (root: string, path: string): boolean => {
-  const under = relative(root, path);
+const isUnder = (folder: string, path: string): boolean => {
+  const under = relative(folder, path);
   return under !== '' && !under.startsWith('..') && !isAbsolute(under);
 };
 
 /**
  * How many folders the scan went through: every **Source folder** and every
- * shelf between it and the root — `Drama/` counts, the root does not.
+ * shelf between it and its Library folder — `Drama/` counts, the Library
+ * folder does not.
  */
-function foldersUnder(root: string, scans: MovieFolderScan[]): number {
+function foldersUnder(listed: string, scans: MovieFolderScan[]): number {
   const folders = new Set<string>();
   for (const scan of scans) {
-    for (let dir = scan.dir; isUnder(root, dir); dir = dirname(dir)) {
+    for (let dir = scan.dir; isUnder(listed, dir); dir = dirname(dir)) {
       folders.add(dir);
     }
   }
@@ -537,7 +527,7 @@ function foldersUnder(root: string, scans: MovieFolderScan[]): number {
  * subtitle, derive the runtime, `addMovie` with `tmdbId` null. A match whose
  * import throws has its folder taken back and is filed as `failed`; one whose
  * row leaves it in no genre imports and is filed as the soft `missing-meta`.
- * The originals under the root are never written to.
+ * The originals under the Library folders are never written to.
  *
  * **Problems are data.** The rows the matcher could not settle and the
  * folders no row claimed are on the snapshot before the first copy starts,
@@ -546,7 +536,7 @@ function foldersUnder(root: string, scans: MovieFolderScan[]): number {
  * What the run knew when it filed each one — the row, the folders — is kept
  * beside the snapshot for `problem`, the **Problem detail** _Resolve_ opens
  * the form on; `resolve` is that form's _Save & continue_, copying **Found
- * files** in from under the root and nowhere else.
+ * files** in from under the Library folders and nowhere else.
  *
  * `cancel` aborts the copy in flight through the signal every copy is handed,
  * which makes the match it was in a match that failed: the folder goes the
@@ -563,7 +553,7 @@ export function createImporter({
 }): Importer {
   let run: ImportRun | null = null;
   /** The run's **Library folders**: the only places a found file may be. */
-  let roots: string[] = [];
+  let listedPaths: string[] = [];
   /** What the run knew when it filed each **Problem**, by the problem's id. */
   const sources = new Map<string, ProblemSource>();
   /** The cancel of the run that is going, and the run itself, to be awaited. */
@@ -1047,171 +1037,26 @@ export function createImporter({
     current.phase = 'review';
   };
 
-  const execute = async (
-    current: ImportRun,
-    { rows, blankTitleRows }: SheetRead,
-    rootPath: string,
-    sheetFolder: StoredLibraryFolder,
-    signal: AbortSignal
-  ): Promise<void> => {
-    const already = inLibrary();
-    const heldSeries = seriesInLibrary(heldSeriesList());
-
-    log(current, `Connecting to ${rootPath} …`, 'info');
-    for (const rowNumber of blankTitleRows) {
-      log(current, `⚠ Row ${rowNumber} has no title, skipped`, 'warning');
-    }
-
-    let scans: MovieFolderScan[] = [];
-    try {
-      scans = await walkLibraryFolder(
-        rootPath,
-        (scan) => {
-          current.found += 1;
-          current.currentItem = scan.dir;
-          log(current, `Scanning   ${scan.dir}`, 'scan');
-        },
-        (dir) => {
-          log(current, `⚠ Could not read ${dir}, skipped`, 'warning');
-        }
-      );
-    } catch {
-      // A root that stopped being readable mid-walk: what was found is what
-      // there is, and the run still reaches review rather than hanging.
-    }
-    if (signal.aborted) {
-      return;
-    }
-    log(
-      current,
-      `✓ Found ${count(scans.length)} movies across ${count(foldersUnder(rootPath, scans))} folders. Starting import…`,
-      'success'
-    );
-
-    // Season folders gather under their Show folder; every other scan is a
-    // film, exactly as it came. A show is matched by the film's own rule, over
-    // a scan standing for it — and told apart again once matched.
-    const { shows, films: grouped } = groupShows(scans);
-    const films = splitCollections(grouped);
-    const showOf = new Map<MovieFolderScan, ShowScan>(
-      shows.map((show) => [asMatchable(show), show])
-    );
-
-    const verdicts = matchRows(rows, [...films, ...showOf.keys()]);
-    const matched: Match[] = [];
-    const matchedShows: ShowMatch[] = [];
-    for (const match of verdicts.matched) {
-      const show = showOf.get(match.folder);
-      if (show !== undefined) {
-        matchedShows.push(
-          showMatch(
-            match.row,
-            show,
-            heldSeries.get(filmKey(match.row.title, match.row.year)) ?? null
-          )
-        );
-      } else if (already.has(filmKey(match.row.title, match.row.year))) {
-        // Already in library: nothing is added, but where it came from is
-        // remembered — the backfill for a library imported before this was.
-        const heldId = already.get(filmKey(match.row.title, match.row.year));
-        if (heldId !== undefined) {
-          storage.setSourceFolder(
-            heldId,
-            sheetFolder.id,
-            relative(sheetFolder.path, match.folder.dir),
-            collectionFileOf(match.folder)
-          );
-        }
-        log(
-          current,
-          `· Already in library ${titleWithYear(match.row.title, match.row.year)}`,
-          'info'
-        );
-      } else {
-        matched.push(match);
-      }
-    }
-    // Every match-time problem is on the snapshot before the first byte is
-    // copied: the rows the matcher could not settle — a row already in the
-    // library is neither a match nor a problem — and then the folders no row
-    // claimed.
-    for (const { kind, reason, row, candidates } of verdicts.problems) {
-      if (!already.has(filmKey(row.title, row.year))) {
-        // The first folder weighed is the one the detail is about — the one
-        // an `ambiguous` prefills from, the one a `no-video` matched — and
-        // only an `ambiguous` has others to name.
-        file(current, problemOf(kind, row.title, reason), {
-          row,
-          folder: candidates[0] ?? null,
-          candidates: kind === 'ambiguous' ? candidates : [],
-        });
-      }
-    }
-    for (const match of matchedShows) {
-      fileUnplaced(current, match);
-    }
-    for (const folder of verdicts.unclaimed) {
-      // A show no row names imports anyway, under the title its folder
-      // suggests: a `no-row` Problem would open a form that cannot take a
-      // series.
-      const show = showOf.get(folder);
-      if (show !== undefined) {
-        const row = guessedRow(show.name);
-        log(
-          current,
-          `⚠ ${titleWithYear(row.title, row.year)}: not in the spreadsheet, imported under its folder’s name`,
-          'warning'
-        );
-        const unnamed = showMatch(
-          row,
-          show,
-          heldSeries.get(filmKey(row.title, row.year)) ?? null
-        );
-        fileUnplaced(current, unnamed);
-        matchedShows.push(unnamed);
-        continue;
-      }
-      file(current, problemOf('no-row', folder.name, REASON.noRow), {
-        row: null,
-        folder,
-        candidates: [],
-      });
-    }
-    await importPlaced(
-      current,
-      matched.map((match) => ({ match, libraryFolder: sheetFolder })),
-      matchedShows.map((match) => ({ match, libraryFolder: sheetFolder })),
-      'Import',
-      signal
-    );
-  };
-
   /**
-   * A **Folder scan**: each listed folder walked in the order given, every
-   * film and show named off its own folder. **Already in library** is two
-   * rules in order — the same Library folder and Source folder, whatever the
-   * title now says; then the title key and year, which links the held title
-   * to this folder. A held show still gains the episodes it lacks.
+   * The walk both starts take: one `Scanning   <path>` line per listed
+   * **Library folder**, in the order given, then each folder walked — one that
+   * cannot be reached skipped with a **Warning line**, the run going on over
+   * the others — and the found line. Each folder answers its films, Collection
+   * folders split, and its shows, so every title is placed against the folder
+   * it was found under. `null` once the run was cancelled mid-walk.
    */
-  const executeScan = async (
+  const walkListed = async (
     current: ImportRun,
     folders: StoredLibraryFolder[],
     signal: AbortSignal
-  ): Promise<void> => {
-    const already = inLibrary();
-    const held = heldSeriesList();
-    const heldSeries = seriesInLibrary(held);
-    const seriesById = new Map(held.map((entry) => [entry.series.id, entry]));
-
+  ): Promise<WalkedFolder[] | null> => {
     for (const folder of folders) {
       log(current, `Scanning   ${folder.path}`, 'scan');
     }
 
-    const films: Placed<Match>[] = [];
-    const shows: Placed<ShowMatch>[] = [];
+    const walked: WalkedFolder[] = [];
     let found = 0;
     let shelves = 0;
-
     for (const folder of folders) {
       if ((await readableFolder(folder.path)) !== 'readable') {
         log(current, `⚠ Can't reach ${folder.path}, skipped`, 'warning');
@@ -1234,30 +1079,230 @@ export function createImporter({
         // what there is, and the run still reaches review.
       }
       if (signal.aborted) {
-        return;
+        return null;
       }
       found += scans.length;
       shelves += foldersUnder(folder.path, scans);
-
       const grouped = groupShows(scans);
-      for (const scan of splitCollections(grouped.films)) {
+      walked.push({
+        folder,
+        films: splitCollections(grouped.films),
+        shows: grouped.shows,
+      });
+    }
+
+    log(
+      current,
+      `✓ Found ${count(found)} movies across ${count(shelves)} folders. Starting import…`,
+      'success'
+    );
+    return walked;
+  };
+
+  /**
+   * The film the library already holds for a **Source folder**, by the two
+   * **Already in library** rules in order: the folder on record first,
+   * whatever its title now says — a **Collection folder** film by its Source
+   * file — then the title key and year the row or the folder gives.
+   */
+  const heldFilm = (
+    already: Map<string, string>,
+    folder: StoredLibraryFolder,
+    scan: MovieFolderScan,
+    row: SheetRow
+  ): string | null =>
+    storage.titleAt(
+      folder.id,
+      relative(folder.path, scan.dir),
+      collectionFileOf(scan)
+    ) ??
+    already.get(filmKey(row.title, row.year)) ??
+    null;
+
+  /** The same two rules for a **Show folder**, over the held series. */
+  const heldShowOf = (
+    held: HeldSeries[],
+    folder: StoredLibraryFolder,
+    show: ShowScan,
+    row: SheetRow
+  ): HeldSeries | null => {
+    const atFolder = storage.titleAt(
+      folder.id,
+      relative(folder.path, show.dir)
+    );
+    return (
+      held.find((entry) => entry.series.id === atFolder) ??
+      seriesInLibrary(held).get(filmKey(row.title, row.year)) ??
+      null
+    );
+  };
+
+  /** A held film linked to where it was found, and its skip line. */
+  const skipHeld = (
+    current: ImportRun,
+    heldId: string,
+    folder: StoredLibraryFolder,
+    scan: MovieFolderScan,
+    row: SheetRow
+  ): void => {
+    storage.setSourceFolder(
+      heldId,
+      folder.id,
+      relative(folder.path, scan.dir),
+      collectionFileOf(scan)
+    );
+    log(
+      current,
+      `· Already in library ${titleWithYear(row.title, row.year)}`,
+      'info'
+    );
+  };
+
+  /**
+   * A sheet run: every listed folder walked, each **Sheet row** naming its
+   * folder through `matchRows`, in whichever listed folder it lies.
+   */
+  const execute = async (
+    current: ImportRun,
+    { rows, blankTitleRows }: SheetRead,
+    folders: StoredLibraryFolder[],
+    signal: AbortSignal
+  ): Promise<void> => {
+    const already = inLibrary();
+    const held = heldSeriesList();
+
+    const walked = await walkListed(current, folders, signal);
+    if (walked === null) {
+      return;
+    }
+    for (const rowNumber of blankTitleRows) {
+      log(current, `⚠ Row ${rowNumber} has no title, skipped`, 'warning');
+    }
+
+    // A show is matched by the film's own rule, over a scan standing for it —
+    // and told apart again once matched. Every scan remembers its folder.
+    const folderOf = new Map<MovieFolderScan, StoredLibraryFolder>();
+    const showOf = new Map<MovieFolderScan, ShowScan>();
+    const films: MovieFolderScan[] = [];
+    for (const { folder, films: found, shows } of walked) {
+      for (const scan of found) {
+        folderOf.set(scan, folder);
+        films.push(scan);
+      }
+      for (const show of shows) {
+        const matchable = asMatchable(show);
+        folderOf.set(matchable, folder);
+        showOf.set(matchable, show);
+      }
+    }
+
+    const verdicts = matchRows(rows, [...films, ...showOf.keys()]);
+    const matched: Placed<Match>[] = [];
+    const matchedShows: Placed<ShowMatch>[] = [];
+    for (const match of verdicts.matched) {
+      const libraryFolder = folderOf.get(match.folder);
+      if (libraryFolder === undefined) {
+        continue;
+      }
+      const show = showOf.get(match.folder);
+      if (show !== undefined) {
+        matchedShows.push({
+          match: showMatch(
+            match.row,
+            show,
+            heldShowOf(held, libraryFolder, show, match.row)
+          ),
+          libraryFolder,
+        });
+        continue;
+      }
+      const heldId = heldFilm(already, libraryFolder, match.folder, match.row);
+      if (heldId !== null) {
+        // Already in library: nothing is added, but where it came from is
+        // remembered — the backfill for a library imported before this was.
+        skipHeld(current, heldId, libraryFolder, match.folder, match.row);
+        continue;
+      }
+      matched.push({ match, libraryFolder });
+    }
+    // Every match-time problem is on the snapshot before the first byte is
+    // copied: the rows the matcher could not settle — a row already in the
+    // library is neither a match nor a problem — and then the folders no row
+    // claimed.
+    for (const { kind, reason, row, candidates } of verdicts.problems) {
+      if (!already.has(filmKey(row.title, row.year))) {
+        // The first folder weighed is the one the detail is about — the one
+        // an `ambiguous` prefills from, the one a `no-video` matched — and
+        // only an `ambiguous` has others to name.
+        file(current, problemOf(kind, row.title, reason), {
+          row,
+          folder: candidates[0] ?? null,
+          candidates: kind === 'ambiguous' ? candidates : [],
+        });
+      }
+    }
+    for (const { match } of matchedShows) {
+      fileUnplaced(current, match);
+    }
+    for (const folder of verdicts.unclaimed) {
+      // A show no row names imports anyway, under the title its folder
+      // suggests: a `no-row` Problem would open a form that cannot take a
+      // series.
+      const show = showOf.get(folder);
+      const libraryFolder = folderOf.get(folder);
+      if (show !== undefined && libraryFolder !== undefined) {
+        const row = guessedRow(show.name);
+        log(
+          current,
+          `⚠ ${titleWithYear(row.title, row.year)}: not in the spreadsheet, imported under its folder’s name`,
+          'warning'
+        );
+        const unnamed = showMatch(
+          row,
+          show,
+          heldShowOf(held, libraryFolder, show, row)
+        );
+        fileUnplaced(current, unnamed);
+        matchedShows.push({ match: unnamed, libraryFolder });
+        continue;
+      }
+      file(current, problemOf('no-row', folder.name, REASON.noRow), {
+        row: null,
+        folder,
+        candidates: [],
+      });
+    }
+    await importPlaced(current, matched, matchedShows, 'Import', signal);
+  };
+
+  /**
+   * A **Folder scan**: each listed folder walked in the order given, every
+   * film and show named off its own folder. **Already in library** is the
+   * sheet run's two rules in order. A held show still gains the episodes it
+   * lacks.
+   */
+  const executeScan = async (
+    current: ImportRun,
+    folders: StoredLibraryFolder[],
+    signal: AbortSignal
+  ): Promise<void> => {
+    const already = inLibrary();
+    const held = heldSeriesList();
+
+    const walked = await walkListed(current, folders, signal);
+    if (walked === null) {
+      return;
+    }
+
+    const films: Placed<Match>[] = [];
+    const shows: Placed<ShowMatch>[] = [];
+    for (const { folder, films: found, shows: grouped } of walked) {
+      for (const scan of found) {
         const row = guessedRow(scan.name);
-        const sourceFolder = relative(folder.path, scan.dir);
-        const key = filmKey(row.title, row.year);
-        // A Collection folder's films share it, so the folder alone names
-        // none of them: each is held by its Source file, then by its title
-        // key and year.
-        const sourceFile = collectionFileOf(scan);
-        const atFolder = storage.titleAt(folder.id, sourceFolder, sourceFile);
-        const heldId = atFolder ?? already.get(key) ?? null;
+        const heldId = heldFilm(already, folder, scan, row);
         if (heldId !== null) {
           // Held: linked to where it was found, and nothing is added.
-          storage.setSourceFolder(heldId, folder.id, sourceFolder, sourceFile);
-          log(
-            current,
-            `· Already in library ${titleWithYear(row.title, row.year)}`,
-            'info'
-          );
+          skipHeld(current, heldId, folder, scan, row);
           continue;
         }
         if (scan.videos.length > 1) {
@@ -1272,47 +1317,15 @@ export function createImporter({
         }
         films.push({ match: { row, folder: scan }, libraryFolder: folder });
       }
-      for (const show of grouped.shows) {
+      for (const show of grouped) {
         const row = guessedRow(show.name);
-        const atFolder = storage.titleAt(
-          folder.id,
-          relative(folder.path, show.dir)
-        );
-        const heldShow =
-          (atFolder === null ? undefined : seriesById.get(atFolder)) ??
-          heldSeries.get(filmKey(row.title, row.year)) ??
-          null;
-        const match = showMatch(row, show, heldShow);
+        const match = showMatch(row, show, heldShowOf(held, folder, show, row));
         fileUnplaced(current, match);
         shows.push({ match, libraryFolder: folder });
       }
     }
 
-    log(
-      current,
-      `✓ Found ${count(found)} movies across ${count(shelves)} folders. Starting import…`,
-      'success'
-    );
     await importPlaced(current, films, shows, 'Scan', signal);
-  };
-
-  /**
-   * Where a sheet run's titles are recorded as coming from: the listed
-   * **Library folder** the root is, or the one it is inside — else the root
-   * itself, added to the list. Handed the list and the root's clash with it
-   * as `start` read them; a root containing a listed folder was refused
-   * before this is asked.
-   */
-  const sheetFolderOf = (
-    rootPath: string,
-    listed: StoredLibraryFolder[],
-    clash: FolderClash | null
-  ): StoredLibraryFolder => {
-    const held =
-      clash === null
-        ? undefined
-        : listed.find((folder) => folder.path === clash.folder);
-    return held ?? storage.addLibraryFolder(rootPath);
   };
 
   /** A run's first state, from its source and the flag it carries. */
@@ -1338,12 +1351,12 @@ export function createImporter({
    * Make a new run the **Current run**, for either start: refused with
    * {@link ImportBusyError} while one exists, and only once a run just
    * cancelled has finished rolling its folder back. Answers the run, with its
-   * `roots`, an empty problem record and a fresh cancel.
+   * Library folders' paths, an empty problem record and a fresh cancel.
    */
   const claimRun = async (
     source: ImportRun['source'],
     enrich: boolean,
-    runRoots: string[]
+    runFolders: string[]
   ): Promise<ImportRun> => {
     if (run !== null) {
       throw new ImportBusyError();
@@ -1359,38 +1372,33 @@ export function createImporter({
 
     const current = freshRun(source, enrich);
     run = current;
-    roots = runRoots;
+    listedPaths = runFolders;
     sources.clear();
     stop = new AbortController();
     return current;
   };
 
   return {
-    start: async (sheetPath, rootPath, enrich = false) => {
-      // Busy before either field is read; `claimRun` asks again after them.
+    start: async (sheetPath, enrich = false) => {
+      // Busy before the sheet is read; `claimRun` asks again after it.
       if (run !== null) {
         throw new ImportBusyError();
       }
 
       const sheet = await checkSheet(sheetPath);
-      await checkRoot(rootPath);
-      const listed = storage.libraryFolders();
-      const clash = folderOverlap(
-        rootPath,
-        listed.map((folder) => folder.path)
-      );
-      if (clash?.overlap === 'contains') {
-        throw new ImportStartError(
-          'root',
-          `${clashSentence(clash)} Import from ${clash.folder}, or remove it from your library folders first.`
-        );
+      const folders = storage.libraryFolders();
+      if (folders.length === 0) {
+        throw new ImportStartError('folders', 'Add a library folder first.');
       }
-      const current = await claimRun('sheet', enrich, [rootPath]);
-      const sheetFolder = sheetFolderOf(rootPath, listed, clash);
+      const current = await claimRun(
+        'sheet',
+        enrich,
+        folders.map((folder) => folder.path)
+      );
 
       // Not awaited: the run goes on in the background, and `current` answers
       // where it has got to. Nothing in `execute` throws past its own catches.
-      running = execute(current, sheet, rootPath, sheetFolder, stop.signal);
+      running = execute(current, sheet, folders, stop.signal);
 
       return snapshot() as ImportRun;
     },
@@ -1456,7 +1464,7 @@ export function createImporter({
       }
 
       // Every found path is checked before the first is copied: a refusal
-      // copies nothing at all, not even the files named inside the root
+      // copies nothing at all, not even the files named inside a Library folder
       // beside the one named outside it.
       const slots: ResolveFile[] = [
         form.video,
@@ -1466,7 +1474,7 @@ export function createImporter({
       for (const slot of slots) {
         if (
           'found' in slot &&
-          !roots.some((root) => isUnder(root, slot.found))
+          !listedPaths.some((listed) => isUnder(listed, slot.found))
         ) {
           throw new ImportPathError(slot.found);
         }
@@ -1567,7 +1575,7 @@ export function createImporter({
       for (const slot of slots) {
         if (
           'found' in slot &&
-          !roots.some((root) => isUnder(root, slot.found))
+          !listedPaths.some((listed) => isUnder(listed, slot.found))
         ) {
           throw new ImportPathError(slot.found);
         }

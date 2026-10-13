@@ -33,11 +33,7 @@ export interface ImportRunState {
    * `ImportRefusedError` names the field — so the caller can draw the reason
    * where it belongs. `enrich` travels on the run as `ImportRun.enrich`.
    */
-  start: (
-    sheetPath: string,
-    rootPath: string,
-    enrich?: boolean
-  ) => Promise<void>;
+  start: (sheetPath: string, enrich?: boolean) => Promise<void>;
   /** _Cancel import_: discard the run, and let it go from the screen. */
   cancel: () => Promise<void>;
   /**
@@ -97,20 +93,17 @@ export function useImportRun(): ImportRunState {
     };
   }, []);
 
-  const start = useCallback(
-    async (sheetPath: string, rootPath: string, enrich = false) => {
-      generation.current += 1;
-      try {
-        setRun(await startImport(sheetPath, rootPath, enrich));
-      } catch (error) {
-        if (!(error instanceof ImportBusyError)) {
-          throw error;
-        }
-        setRun(await fetchCurrentImport());
+  const start = useCallback(async (sheetPath: string, enrich = false) => {
+    generation.current += 1;
+    try {
+      setRun(await startImport(sheetPath, enrich));
+    } catch (error) {
+      if (!(error instanceof ImportBusyError)) {
+        throw error;
       }
-    },
-    []
-  );
+      setRun(await fetchCurrentImport());
+    }
+  }, []);
 
   const cancel = useCallback(async () => {
     generation.current += 1;
