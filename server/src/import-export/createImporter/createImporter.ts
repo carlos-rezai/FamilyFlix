@@ -32,6 +32,7 @@ import {
 import { readSheet, type SheetRow } from '../readSheet/readSheet';
 import { titleGuess, titleKey, yearInName } from '../titleKey/titleKey';
 import type {
+  CandidateFolder,
   Episode,
   ImportField,
   ImportProblem,
@@ -354,6 +355,27 @@ const filesOf = (scan: MovieFolderScan): ImportProblemDetail['files'] => ({
   ...(scan.backdrop === null ? {} : { backdrop: scan.backdrop }),
   subtitles: scan.subtitles.map(({ path, language }) => ({ path, language })),
 });
+
+/**
+ * An `ambiguous` **Problem**'s **Candidate folders**, as the **Folder picker**
+ * draws them: each weighed scan's whole folder — the folder as the walk found
+ * it, before a **Collection folder** was split — once per path, in the order
+ * weighed.
+ */
+const candidateFolders = (
+  scans: MovieFolderScan[],
+  wholeOf: (scan: MovieFolderScan) => MovieFolderScan
+): CandidateFolder[] => [
+  ...new Map(
+    scans.map((scan) => {
+      const whole = wholeOf(scan);
+      return [
+        whole.dir,
+        { path: whole.dir, name: whole.name, videos: whole.videos.length },
+      ] as const;
+    })
+  ).values(),
+];
 
 /** A count as the prototype prints it: `1,234`. */
 const count = (n: number): string => n.toLocaleString('en-US');
@@ -1590,24 +1612,7 @@ export function createImporter({
         file(
           current,
           kind === 'ambiguous'
-            ? {
-                ...problem,
-                candidates: [
-                  ...new Map(
-                    candidates.map((scan) => {
-                      const whole = wholeOf(scan);
-                      return [
-                        whole.dir,
-                        {
-                          path: whole.dir,
-                          name: whole.name,
-                          videos: whole.videos.length,
-                        },
-                      ] as const;
-                    })
-                  ).values(),
-                ],
-              }
+            ? { ...problem, candidates: candidateFolders(candidates, wholeOf) }
             : problem,
           {
             row,
