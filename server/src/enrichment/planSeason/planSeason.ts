@@ -1,4 +1,4 @@
-import type { EnrichField } from '@/types';
+import type { EnrichField, SeasonSummary } from '@/types';
 import type { TmdbSeason } from '../tmdbClient/tmdbClient';
 
 /** What one season is to be given: the **Season poster** to fetch. */
@@ -8,17 +8,19 @@ export interface SeasonPlan {
 }
 
 /**
- * Pure: the **Season poster** held × TMDB's season of the same number × the
- * chips → the poster a **Sync** fetches. The Still's rule: only under Poster,
- * only when none is held, never replaced, never a **Decision**.
+ * Pure: a **Season** on disk × TMDB's season of the same number × the chips →
+ * the **Season poster** a **Sync** fetches. The Still's rule: only under
+ * Poster, only when none is held, never replaced, never a **Decision**.
  */
 export function planSeason(
-  held: string | null,
+  season: SeasonSummary,
   theirs: TmdbSeason,
   fields: readonly EnrichField[]
 ): SeasonPlan {
   const poster =
-    fields.includes('poster') && held === null && theirs.poster_path
+    fields.includes('poster') &&
+    season.posterPath === null &&
+    theirs.poster_path
       ? theirs.poster_path
       : null;
   return { poster };

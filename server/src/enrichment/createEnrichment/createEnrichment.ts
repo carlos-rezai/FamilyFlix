@@ -660,7 +660,7 @@ export function createEnrichment({
       );
       if (signal.aborted) return written;
       if (theirs.kind !== 'ok') return { kind: 'stop', stop: theirs.kind };
-      const { poster } = planSeason(season.posterPath, theirs.value, fields);
+      const { poster } = planSeason(season, theirs.value, fields);
       if (poster !== null) {
         const name = `${spellEpisodeTag(season.number)}-poster.jpg`;
         const stored = await storeSeriesImage(
