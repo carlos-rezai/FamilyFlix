@@ -2451,17 +2451,19 @@ export function createApiRouter(
   );
 
   // _Import as_ on a `no-row` row: the importer imports the folder under the
-  // title and year a **Folder scan** would give it — `204` — and its `false`,
-  // a row already gone among them, is the `404`, the Skip's own.
+  // title and year a **Folder scan** would give it — `204` — or redraws the
+  // row as the folder's `no-video` or `failed` Problem — `200` with it, the
+  // pick's own answers. A row not there, one already gone among them, is the
+  // `404`, the Skip's own.
   router.post(
     '/import/current/problems/:id/import',
     async (req: Request<{ id: string }>, res: Response) => {
       try {
-        if (!(await importer.importGuessed(req.params.id))) {
-          res.status(404).json({ error: noSuchProblem(req.params.id) });
-          return;
-        }
-        res.status(204).end();
+        answerReview(
+          res,
+          req.params.id,
+          await importer.importGuessed(req.params.id)
+        );
       } catch {
         res.status(500).json({ error: 'Could not import that folder' });
       }

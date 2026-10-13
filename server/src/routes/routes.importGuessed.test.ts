@@ -5,8 +5,9 @@
 // `POST /api/import/current/problems/:id/import` — _Import as “Ironwood
 // (2018)”_ on a `no-row` row: `204` once the importer has imported the folder
 // under its `guess`, the title and year a **Folder scan** would give it, and
-// taken the Problem off; `404` for an id not there — a row already gone among
-// them. `routes.importPick.test.ts`' shape: a real listener, a real `fetch`, a
+// taken the Problem off; `200` with the row redrawn as the folder's
+// `no-video` or `failed` Problem, the pick's own answer (issue #336); `404`
+// for an id not there — a row already gone among them. `routes.importPick.test.ts`' shape: a real listener, a real `fetch`, a
 // real `:memory:` library, the fixture tree listed as a **Library folder**
 // with a folder no sheet row names beside it; and the importer injected, so
 // the route is proved to reach the domain through its argument and nowhere
@@ -25,7 +26,7 @@ import {
   createImporter,
   type Importer,
 } from '../import-export/createImporter/createImporter';
-import { createMedia } from '../media/createMedia/createMedia';
+import { createMedia, type Media } from '../media/createMedia/createMedia';
 import { createPlayback } from '../playback/createPlayback/createPlayback';
 import { createSqliteStorage, type LibraryStorage } from '../library';
 import { fixedSlot } from '../test-support/fixedSlot/fixedSlot';
@@ -48,8 +49,10 @@ afterEach(async () => {
 
 function freshApi({
   importer,
+  seam = (real) => real,
 }: {
   importer?: (composed: Importer) => Importer;
+  seam?: (real: Media) => Media;
 } = {}) {
   const storage = createSqliteStorage(':memory:');
   storages.push(storage);
@@ -62,7 +65,7 @@ function freshApi({
   writeFileSync(join(unnamed, 'Ironwood.mp4'), '');
   storage.addLibraryFolder(root);
 
-  const mediaDomain = createMedia(media);
+  const mediaDomain = seam(createMedia(media));
   const playback = createPlayback(media, fixedSlot(null));
   const composed = createImporter({ storage, media: mediaDomain, playback });
 
@@ -81,7 +84,7 @@ function freshApi({
   const server = app.listen(0);
   servers.push(server);
   const { port } = server.address() as AddressInfo;
-  return { storage, baseUrl: `http://127.0.0.1:${port}`, sheet };
+  return { storage, baseUrl: `http://127.0.0.1:${port}`, sheet, unnamed };
 }
 
 const postImport = (baseUrl: string, sheetPath: string) =>
@@ -116,8 +119,12 @@ async function untilReview(baseUrl: string): Promise<ImportRun> {
 }
 
 /** The sheet run over the fixture and the unnamed folder, left in review. */
-async function inReviewNoRow() {
-  const api = freshApi();
+async function inReviewNoRow(
+  options: Parameters<typeof freshApi>[0] = {},
+  before: (api: ReturnType<typeof freshApi>) => void = () => {}
+) {
+  const api = freshApi(options);
+  before(api);
   await postImport(api.baseUrl, api.sheet);
   const run = await untilReview(api.baseUrl);
   const problem = run.problems.find(
@@ -166,7 +173,7 @@ describe('POST /api/import/current/problems/:id/import — 204', () => {
   it('imports through the injected importer’s own importGuessed, by the id in the path', async () => {
     const importGuessed = vi
       .fn<Importer['importGuessed']>()
-      .mockResolvedValue(true);
+      .mockResolvedValue({ kind: 'imported' });
     const { baseUrl } = freshApi({
       importer: (composed) => ({ ...composed, importGuessed }),
     });
@@ -175,6 +182,53 @@ describe('POST /api/import/current/problems/:id/import — 204', () => {
 
     expect(response.status).toBe(204);
     expect(importGuessed).toHaveBeenCalledWith('p 1/x');
+  });
+});
+
+describe('POST /api/import/current/problems/:id/import — 200, the row redrawn', () => {
+  it('answers 200 with a folder of two videos redrawn as its no-video Problem', async () => {
+    const { baseUrl, storage, problem } = await inReviewNoRow(
+      {},
+      ({ unnamed }) => writeFileSync(join(unnamed, 'Ironwood.Extras.mp4'), '')
+    );
+
+    const response = await postImportAs(baseUrl, problem.id);
+
+    expect(response.status).toBe(200);
+    const redrawn = (await response.json()) as ImportProblem;
+    expect(redrawn).toMatchObject({
+      kind: 'no-video',
+      reason: 'Two videos. Pick the film.',
+    });
+    const after = (await (await getCurrent(baseUrl)).json()) as ImportRun;
+    expect(after.problems).toContainEqual(redrawn);
+    expect(ironwood(storage)).toBeUndefined();
+  });
+
+  it('answers 200 with a copy that fails redrawn as its failed Problem', async () => {
+    const { baseUrl, storage, problem } = await inReviewNoRow({
+      seam: (real) => ({
+        ...real,
+        copyIn: async (...args) => {
+          if (args[1].endsWith('Ironwood.mp4')) {
+            throw new Error('EBUSY: resource busy or locked');
+          }
+          return real.copyIn(...args);
+        },
+      }),
+    });
+
+    const response = await postImportAs(baseUrl, problem.id);
+
+    expect(response.status).toBe(200);
+    const redrawn = (await response.json()) as ImportProblem;
+    expect(redrawn).toMatchObject({
+      kind: 'failed',
+      reason: "Couldn't copy the video file: EBUSY: resource busy or locked.",
+    });
+    const after = (await (await getCurrent(baseUrl)).json()) as ImportRun;
+    expect(after.problems).toContainEqual(redrawn);
+    expect(ironwood(storage)).toBeUndefined();
   });
 });
 
@@ -213,10 +267,10 @@ describe('POST /api/import/current/problems/:id/import — 404', () => {
     expect(await response.json()).toMatchObject({ error: expect.any(String) });
   });
 
-  it('turns the injected importer’s false into the 404', async () => {
+  it('turns the injected importer’s not-found into the 404', async () => {
     const importGuessed = vi
       .fn<Importer['importGuessed']>()
-      .mockResolvedValue(false);
+      .mockResolvedValue({ kind: 'not-found' });
     const { baseUrl } = freshApi({
       importer: (composed) => ({ ...composed, importGuessed }),
     });

@@ -6,8 +6,10 @@
 // year a **Folder scan** would give the folder, through `guessedRow` — so the
 // review can offer _Import as “Ironwood (2018)”_ without opening the form.
 // `importGuessed(id)` imports the folder under that guess, exactly as a
-// Folder scan would, takes the Problem off and answers `true`; an id not
-// there answers `false`, nothing imported.
+// Folder scan would, takes the Problem off and answers `imported`; a folder
+// of several videos, or a copy that fails, is `redrawn` in the row's place,
+// as the Folder picker's are (issue #336); an id not there is `not-found`,
+// nothing imported.
 //
 // The runs are real, `createImporter.folderPicker.test.ts`' sandbox: the
 // fixture copied under a sandboxed **Library folder**, a folder no sheet row
@@ -18,7 +20,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { createImporter, type Importer } from './createImporter';
-import { createMedia } from '../../media/createMedia/createMedia';
+import { createMedia, type Media } from '../../media/createMedia/createMedia';
 import { createPlayback } from '../../playback/createPlayback/createPlayback';
 import { fixedSlot } from '../../test-support/fixedSlot/fixedSlot';
 import { freshStorage } from '../../test-support/freshStorage/freshStorage';
@@ -40,7 +42,10 @@ interface Sandbox {
   unnamed: string;
 }
 
-function sandbox(name = IRONWOOD): Sandbox {
+function sandbox(
+  name = IRONWOOD,
+  seam: (real: Media) => Media = (real) => real
+): Sandbox {
   const dir = sandboxRoot('familyflix-import-guessed-');
   const media = join(dir, 'media');
   mkdirSync(media);
@@ -51,7 +56,7 @@ function sandbox(name = IRONWOOD): Sandbox {
   const storage = freshStorage();
   const importer = createImporter({
     storage,
-    media: createMedia(media),
+    media: seam(createMedia(media)),
     playback: createPlayback(media, fixedSlot(null)),
   });
   storage.addLibraryFolder(root);
@@ -93,8 +98,13 @@ const unnamedMovies = (storage: LibraryStorage): Movie[] =>
     .filter((movie) => !FIXTURE_TITLES.has(movie.title));
 
 /** The sheet run over the fixture and the unnamed folder, left in review. */
-async function inReview(name?: string) {
-  const box = sandbox(name);
+async function inReview(
+  name?: string,
+  seam?: (real: Media) => Media,
+  before: (box: Sandbox) => void = () => {}
+) {
+  const box = sandbox(name, seam);
+  before(box);
   await box.importer.start(box.sheet);
   const run = await untilReview(box.importer);
   return { ...box, run, problem: noRowOf(run) };
@@ -159,13 +169,13 @@ describe('createImporter — a no-row Problem’s guess', () => {
 });
 
 describe('createImporter.importGuessed — the folder imported', () => {
-  it('imports the folder under its guess and answers true', async () => {
+  it('imports the folder under its guess and answers imported', async () => {
     const { importer, storage, problem } = await inReview();
     expect(unnamedMovies(storage)).toEqual([]);
 
     const imported = await importer.importGuessed(problem.id);
 
-    expect(imported).toBe(true);
+    expect(imported).toEqual({ kind: 'imported' });
     const movies = unnamedMovies(storage);
     expect(movies).toHaveLength(1);
     expect(movies[0]).toMatchObject({ title: 'Ironwood', year: 2018 });
@@ -209,25 +219,88 @@ describe('createImporter.importGuessed — the folder imported', () => {
   });
 });
 
-describe('createImporter.importGuessed — a row not there', () => {
-  it('answers false for an id that is not there, and imports nothing', async () => {
-    const { importer, storage } = await inReview();
+describe('createImporter.importGuessed — the row redrawn', () => {
+  it('redraws a folder of two videos as its no-video Problem, in the row’s place', async () => {
+    const { importer, storage, problem, run } = await inReview(
+      IRONWOOD,
+      undefined,
+      ({ unnamed }) => writeFileSync(join(unnamed, 'Ironwood.Extras.mp4'), '')
+    );
+    const at = run.problems.findIndex((each) => each.id === problem.id);
 
-    expect(await importer.importGuessed('no-such-problem')).toBe(false);
+    const outcome = await importer.importGuessed(problem.id);
+
+    expect(outcome).toMatchObject({
+      kind: 'redrawn',
+      problem: {
+        kind: 'no-video',
+        title: 'Ironwood',
+        reason: 'Two videos. Pick the film.',
+      },
+    });
+    const after = importer.current()?.problems ?? [];
+    expect(after).toHaveLength(run.problems.length);
+    expect(outcome).toEqual({ kind: 'redrawn', problem: after[at] });
     expect(unnamedMovies(storage)).toEqual([]);
   });
 
-  it('answers false a second time, once the Problem is gone', async () => {
+  it('redraws a copy that fails as its failed Problem, in the row’s place', async () => {
+    const { importer, storage, media, problem, run } = await inReview(
+      IRONWOOD,
+      (real) => ({
+        ...real,
+        copyIn: async (...args) => {
+          if (args[1].endsWith(`${IRONWOOD}.mp4`)) {
+            throw new Error('EBUSY: resource busy or locked');
+          }
+          return real.copyIn(...args);
+        },
+      })
+    );
+    const at = run.problems.findIndex((each) => each.id === problem.id);
+    const before = readdirSync(media);
+
+    const outcome = await importer.importGuessed(problem.id);
+
+    expect(outcome).toMatchObject({
+      kind: 'redrawn',
+      problem: {
+        kind: 'failed',
+        title: 'Ironwood',
+        reason: "Couldn't copy the video file: EBUSY: resource busy or locked.",
+      },
+    });
+    const after = importer.current()?.problems ?? [];
+    expect(after).toHaveLength(run.problems.length);
+    expect(outcome).toEqual({ kind: 'redrawn', problem: after[at] });
+    expect(unnamedMovies(storage)).toEqual([]);
+    expect(readdirSync(media)).toEqual(before);
+  });
+});
+
+describe('createImporter.importGuessed — a row not there', () => {
+  it('answers not-found for an id that is not there, and imports nothing', async () => {
+    const { importer, storage } = await inReview();
+
+    expect(await importer.importGuessed('no-such-problem')).toEqual({
+      kind: 'not-found',
+    });
+    expect(unnamedMovies(storage)).toEqual([]);
+  });
+
+  it('answers not-found a second time, once the Problem is gone', async () => {
     const { importer, storage, problem } = await inReview();
     await importer.importGuessed(problem.id);
 
-    expect(await importer.importGuessed(problem.id)).toBe(false);
+    expect(await importer.importGuessed(problem.id)).toEqual({
+      kind: 'not-found',
+    });
     expect(unnamedMovies(storage)).toHaveLength(1);
   });
 
-  it('answers false when there is no run', async () => {
+  it('answers not-found when there is no run', async () => {
     const { importer } = sandbox();
 
-    expect(await importer.importGuessed('p1')).toBe(false);
+    expect(await importer.importGuessed('p1')).toEqual({ kind: 'not-found' });
   });
 });

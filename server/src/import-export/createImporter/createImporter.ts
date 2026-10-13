@@ -245,10 +245,11 @@ export interface Importer {
   /**
    * _Import as_ on a `no-row` **Problem**: import its folder under the row a
    * **Folder scan** would give it — `guessedRow` — and take the Problem off,
-   * answering `true`. `false` for an id that is not there, for a Problem
-   * that is not a `no-row`, and when there is no run.
+   * `imported`; a folder holding no single video, or a copy that fails, is
+   * `redrawn` as {@link pick}'s are. `not-found` for an id that is not there,
+   * for a Problem that is not a `no-row`, and when there is no run.
    */
-  importGuessed(id: string): Promise<boolean>;
+  importGuessed(id: string): Promise<ReviewOutcome>;
   /**
    * The **Problem detail** _Resolve_ prefills the form from: the problem, the
    * **Sheet row**, the **Source folder** it is about, the candidate folders
@@ -385,6 +386,12 @@ const candidateFolders = (
     })
   ).values(),
 ];
+
+/** The sentences a review press is refused in, before anything is copied. */
+const REFUSAL = {
+  notCandidate: 'That folder is not one of the candidates.',
+  unlisted: 'That folder is no longer under a Library folder.',
+} as const;
 
 /** A count as the prototype prints it: `1,234`. */
 const count = (n: number): string => n.toLocaleString('en-US');
@@ -1245,6 +1252,71 @@ export function createImporter({
     );
 
   /**
+   * Import one folder from the **Review step** under one row — the **Folder
+   * picker**'s and _Import as_'s one way in. The row comes off before the
+   * copy, so a second press finds nothing to import. A folder without exactly
+   * one video is `redrawn` as its `no-video` Problem in the row's place, and
+   * a copy that fails as the `failed` Problem it filed, in the same place;
+   * otherwise `imported`.
+   */
+  const importFromReview = async (
+    current: ImportRun,
+    id: string,
+    row: SheetRow,
+    scan: MovieFolderScan,
+    libraryFolder: StoredLibraryFolder
+  ): Promise<ReviewOutcome> => {
+    const at = current.problems.findIndex((problem) => problem.id === id);
+    takeOff(id);
+
+    /** The row redrawn in its own place, as `problem` reads it. */
+    const redraw = (
+      problem: ImportProblem,
+      kept: ProblemSource
+    ): ReviewOutcome => {
+      current.problems.splice(at, 0, problem);
+      sources.set(problem.id, kept);
+      return { kind: 'redrawn', problem };
+    };
+
+    if (scan.videos.length !== 1) {
+      return redraw(
+        {
+          id,
+          kind: 'no-video',
+          title: row.title,
+          reason:
+            scan.videos.length === 0
+              ? MATCH_REASON.noVideo
+              : MATCH_REASON.manyVideos,
+        },
+        { row, folder: scan, candidates: [] }
+      );
+    }
+
+    const before = current.problems.length;
+    const added = await importMatch(
+      { row, folder: scan },
+      genreReader(),
+      current,
+      stop.signal,
+      libraryFolder
+    );
+    if (added === null && current.problems.length > before) {
+      // The copy failed: the row becomes the `failed` Problem it filed.
+      const [failed] = current.problems.splice(before, 1);
+      const kept = sources.get(failed.id) ?? {
+        row,
+        folder: scan,
+        candidates: [],
+      };
+      sources.delete(failed.id);
+      return redraw(failed, kept);
+    }
+    return { kind: 'imported' };
+  };
+
+  /**
    * The **Import phase** both runs end in: each placed film, then each placed
    * show, imported against the folder it was found under, and the completion
    * line — `✓ Import complete` for a sheet, `✓ Scan complete` for a **Folder
@@ -1790,117 +1862,60 @@ export function createImporter({
 
     pick: async (id, folder) => {
       const current = run;
-      const at = current?.problems.findIndex((problem) => problem.id === id);
       const source = sources.get(id);
       if (
         current === null ||
-        at === undefined ||
-        at === -1 ||
-        source === undefined
+        source === undefined ||
+        !current.problems.some((problem) => problem.id === id)
       ) {
         return { kind: 'not-found' };
       }
       const candidate = source.candidates.find((each) => each.dir === folder);
       const row = source.row;
       if (candidate === undefined || row === null) {
-        return {
-          kind: 'refused',
-          error: 'That folder is not one of the candidates.',
-        };
+        return { kind: 'refused', error: REFUSAL.notCandidate };
       }
       const scan = wholeOf(candidate);
       const libraryFolder = listedFolderOf(scan.dir);
       if (libraryFolder === null) {
-        return {
-          kind: 'refused',
-          error: 'That folder is no longer under a Library folder.',
-        };
+        return { kind: 'refused', error: REFUSAL.unlisted };
       }
-
-      /** The row redrawn in the ambiguous one's place, as `problem` reads it. */
-      const redraw = (
-        problem: ImportProblem,
-        kept: ProblemSource
-      ): ReviewOutcome => {
-        current.problems.splice(at, 1, problem);
-        sources.delete(id);
-        sources.set(problem.id, kept);
-        return { kind: 'redrawn', problem };
-      };
-
-      if (scan.videos.length !== 1) {
-        return redraw(
-          {
-            id,
-            kind: 'no-video',
-            title: row.title,
-            reason:
-              scan.videos.length === 0
-                ? MATCH_REASON.noVideo
-                : MATCH_REASON.manyVideos,
-          },
-          { row, folder: scan, candidates: [] }
-        );
-      }
-
-      const before = current.problems.length;
-      const added = await importMatch(
-        { row, folder: scan },
-        genreReader(),
-        current,
-        stop.signal,
-        libraryFolder
-      );
-      if (added === null && current.problems.length > before) {
-        // The copy failed: the row becomes the `failed` Problem it filed.
-        const [failed] = current.problems.splice(before, 1);
-        const kept = sources.get(failed.id) ?? {
-          row,
-          folder: scan,
-          candidates: [],
-        };
-        sources.delete(failed.id);
-        return redraw(failed, kept);
-      }
-      takeOff(id);
-      return { kind: 'imported' };
+      return importFromReview(current, id, row, scan, libraryFolder);
     },
 
     importGuessed: async (id) => {
       const current = run;
       const listed = current?.problems.find((problem) => problem.id === id);
-      const folder = sources.get(id)?.folder;
+      const folder = sources.get(id)?.folder ?? null;
       if (
         current === null ||
         listed === undefined ||
         listed.kind !== 'no-row' ||
-        folder === undefined ||
-        folder === null ||
-        folder.videos.length !== 1
+        folder === null
       ) {
-        return false;
+        return { kind: 'not-found' };
       }
       const libraryFolder = listedFolderOf(folder.dir);
       if (libraryFolder === null) {
-        return false;
+        return { kind: 'refused', error: REFUSAL.unlisted };
       }
-      // Taken off before the copy, so a second press finds nothing to import.
-      takeOff(id);
-      const before = current.problems.length;
-      const added = await importMatch(
-        { row: guessedRow(folder.name), folder },
-        genreReader(),
+      const known = new Set(current.problems.map((problem) => problem.id));
+      const outcome = await importFromReview(
         current,
-        stop.signal,
+        id,
+        guessedRow(folder.name),
+        folder,
         libraryFolder
       );
-      if (added !== null) {
+      if (outcome.kind === 'imported') {
         // As a Folder scan would: no row named a genre, so nothing is missing.
-        for (const filed of current.problems.splice(before)) {
-          sources.delete(filed.id);
+        for (const filed of current.problems.filter(
+          (problem) => !known.has(problem.id)
+        )) {
+          takeOff(filed.id);
         }
       }
-      return true;
+      return outcome;
     },
 
     problem: (id) => {
