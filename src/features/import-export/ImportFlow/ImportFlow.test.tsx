@@ -684,6 +684,68 @@ describe('ImportFlow — reaching review', () => {
     expect(pathname()).toBe('/');
     expect(screen.getByText('the browse home')).toBeDefined();
   });
+
+  // #327: a run in review stayed the **Current run** after Finish, so the next
+  // visit to `/import` — from either entry — re-attached to a finished review.
+  it('lets the run go on Finish, so the next visit opens on setup', async () => {
+    serve(createdResponse(makeImportRun({ phase: 'scanning' })), [
+      makeImportRun({
+        phase: 'review',
+        found: 2,
+        total: 2,
+        done: 2,
+        matched: 2,
+      }),
+    ]);
+    renderFlow();
+    await setupStep();
+    startRun();
+    await screen.findByText('✓ All done', undefined, POLLING);
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Finish and go to library' })
+    );
+
+    await waitFor(() =>
+      expect(
+        fetchMock.mock.calls.filter(([i, n]) => isCancel(i, n))
+      ).toHaveLength(1)
+    );
+  });
+
+  it('still lands on the browse home when the let-go fails', async () => {
+    serve(createdResponse(makeImportRun({ phase: 'scanning' })), [
+      makeImportRun({
+        phase: 'review',
+        found: 2,
+        total: 2,
+        done: 2,
+        matched: 2,
+      }),
+    ]);
+    renderFlow();
+    await setupStep();
+    startRun();
+    await screen.findByText('✓ All done', undefined, POLLING);
+    const served = fetchMock.getMockImplementation();
+    fetchMock.mockImplementation((input, init) =>
+      isCancel(input, init)
+        ? Promise.reject(new TypeError('Failed to fetch'))
+        : served!(input, init)
+    );
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Finish and go to library' })
+    );
+
+    expect(pathname()).toBe('/');
+    await waitFor(() =>
+      expect(
+        fetchMock.mock.calls.filter(([i, n]) => isCancel(i, n))
+      ).toHaveLength(1)
+    );
+    expect(screen.getByText('the browse home')).toBeDefined();
+  });
 });
 
 /** The problems a review arrives with, in these tests. */

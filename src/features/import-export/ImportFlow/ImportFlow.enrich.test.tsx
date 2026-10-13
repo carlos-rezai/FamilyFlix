@@ -259,6 +259,30 @@ describe('ImportFlow — Finish on a run carrying enrich', () => {
     ).toBe(false);
   });
 
+  // #327: the import is over once its review hands on to the Sync, so it is
+  // let go rather than left as the **Current run** for the next `/import`.
+  it('lets the import go on the way to the Sync', async () => {
+    serve({
+      started: makeImportRun({ enrich: true }),
+      then: [makeImportRun({ ...REVIEW, phase: 'review', enrich: true })],
+    });
+    renderFlow();
+    await setupStep();
+    fireEvent.click(await enrichCard());
+    startRun();
+
+    fireEvent.click(await finish());
+
+    await waitFor(() =>
+      expect(
+        fetchMock.mock.calls.filter(
+          ([i, n]) =>
+            path(i) === '/api/import/current/cancel' && method(n) === 'POST'
+        )
+      ).toHaveLength(1)
+    );
+  });
+
   it('knows it from a run re-attached on arrival, ticked by nobody on this visit', async () => {
     serve({
       onArrival: true,
