@@ -7,6 +7,7 @@ import type {
   SeriesDetail,
   WatchStatus,
 } from '@/types';
+import { imageUrl } from '@/utils';
 import { seriesView } from './seriesView';
 
 /**
@@ -91,7 +92,7 @@ function makeSeason(
     }
     return makeEpisode(number, index + 1, status);
   });
-  return { number, episodes, next: episodes[0] ?? null };
+  return { number, episodes, next: episodes[0] ?? null, posterPath: null };
 }
 
 function makeDetail(
@@ -327,5 +328,39 @@ describe('seriesView — hasPoster', () => {
     const vm = seriesView(unstarted());
 
     expect(vm.hasPoster).toBe(false);
+  });
+});
+
+// 39 — Season posters, Slice 2 (issue #322): each Season card's `posterUrl` is
+// the season's **Season poster** through `imageUrl`, the one spelling of the
+// image route in `src/` — `seasonView`'s `stillUrl` precedent — and `null`
+// for a season with none.
+
+describe('seriesView — the Season poster', () => {
+  it('answers each season’s posterUrl as imageUrl of its Stored path', () => {
+    const detail = makeDetail(
+      [
+        { ...makeSeason(1, 10), posterPath: 'harbor-2019/S01-poster.jpg' },
+        makeSeason(2, 12),
+      ],
+      makeEpisode(1, 1)
+    );
+
+    const [first] = seriesView(detail).seasons;
+
+    expect(first.posterUrl).toBe(imageUrl('harbor-2019/S01-poster.jpg'));
+    expect(first.posterUrl).not.toBeNull();
+  });
+
+  it('answers a null posterUrl for a season with no poster', () => {
+    const detail = makeDetail(
+      [
+        { ...makeSeason(1, 10), posterPath: 'harbor-2019/S01-poster.jpg' },
+        makeSeason(2, 12),
+      ],
+      makeEpisode(1, 1)
+    );
+
+    expect(seriesView(detail).seasons[1].posterUrl).toBeNull();
   });
 });

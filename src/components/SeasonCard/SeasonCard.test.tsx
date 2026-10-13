@@ -170,6 +170,77 @@ describe('SeasonCard — the badge and the bar', () => {
   });
 });
 
+/**
+ * 39 — Season posters, Slice 2 (issue #322): the season gains
+ * `posterUrl?: string | null`, the **Season poster**. With one, the tile
+ * paints it over the series' gradient — a url that fails to load shows the
+ * gradient through — and the numeral, the badge, the bar and the caption are
+ * all still drawn. It stays a non-**Poster surface**: with none, the gradient
+ * alone and never the Wordmark.
+ */
+describe('SeasonCard — the Season poster', () => {
+  const POSTER = '/api/images/harbor-vine-2019/S02-poster.jpg';
+
+  /** Whether the tile paints the poster anywhere under it. */
+  const paintsPoster = () =>
+    backgroundsUnder(tile()).some((bg) => bg.includes(POSTER));
+
+  it('paints the poster on the tile’s art layer, over the gradient', () => {
+    renderCard({ season: { posterUrl: POSTER } });
+
+    const layered = backgroundsUnder(tile()).find((bg) => bg.includes(POSTER));
+    expect(layered).toBeDefined();
+    expect(layered).toContain('linear-gradient');
+    expect(layered?.indexOf(POSTER)).toBeLessThan(
+      layered?.indexOf('linear-gradient') ?? -1
+    );
+  });
+
+  it('still draws the numeral and the caption over a poster', () => {
+    renderCard({
+      season: { posterUrl: POSTER, episodeCount: 8, watchedCount: 0 },
+    });
+
+    expect(within(tile() as HTMLElement).getByText('S02')).toBeDefined();
+    expect(screen.getByText('Season 2')).toBeDefined();
+    expect(screen.getByText('8 episodes')).toBeDefined();
+    expect(paintsPoster()).toBe(true);
+  });
+
+  it('still draws the bar over a poster for a season part-way through', () => {
+    renderCard({
+      season: { posterUrl: POSTER, episodeCount: 8, watchedCount: 3 },
+    });
+
+    expect(
+      within(tile() as HTMLElement).getByRole('progressbar')
+    ).toBeDefined();
+    expect(screen.getByText('3 of 8 watched')).toBeDefined();
+    expect(paintsPoster()).toBe(true);
+  });
+
+  it('still draws the badge over a poster for a finished season', () => {
+    renderCard({
+      season: { posterUrl: POSTER, episodeCount: 8, watchedCount: 8 },
+    });
+
+    expect(
+      within(tile() as HTMLElement).getByRole('img', { name: 'Watched' })
+    ).toBeDefined();
+    expect(paintsPoster()).toBe(true);
+  });
+
+  it('paints the gradient alone, and never the Wordmark, with no poster', () => {
+    renderCard({ season: { posterUrl: null } });
+
+    const paints = backgroundsUnder(tile());
+    expect(paints.some((bg) => bg.includes('linear-gradient'))).toBe(true);
+    expect(paints.some((bg) => bg.includes('url('))).toBe(false);
+    expect(screen.queryByText('Flix')).toBeNull();
+    expect(screen.queryByText('Family')).toBeNull();
+  });
+});
+
 describe('SeasonCard — opening it', () => {
   it('is a real button, so Enter and Space open the season', () => {
     renderCard();

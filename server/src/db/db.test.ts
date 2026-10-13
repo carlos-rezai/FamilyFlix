@@ -43,10 +43,10 @@ const EXPECTED_GENRES = [
   'Crime',
 ];
 
-// The version a fresh database migrates to — migration #9, a collection film's
-// **Source file** (issue #316). Every "at the latest version" assertion reads
-// it, so the next migration moves one number rather than nine.
-const LATEST_VERSION = 9;
+// The version a fresh database migrates to — migration #10, the **Season
+// poster** (issue #322). Every "at the latest version" assertion reads it, so
+// the next migration moves one number rather than ten.
+const LATEST_VERSION = 10;
 
 // What migration #5 adds, by table: the three columns a Sync writes on a movie
 // and a series, and the episode's still. Additive, nullable, nothing seeded.
@@ -215,9 +215,19 @@ function dropMigration8(db: TestDb): void {
  * exists, so every wind-back reads the same before #9 is written as after.
  */
 function dropMigration9(db: TestDb): void {
+  // Every wind-back to before #9 is also one to before #10.
+  dropMigration10(db);
   if (columnNames(db, 'movies').includes('source_file')) {
     db.prepare('ALTER TABLE movies DROP COLUMN source_file').run();
   }
+}
+
+/**
+ * What migration #10 added, dropped: the `season_posters` table, only where it
+ * exists, so every wind-back reads the same before #10 is written as after.
+ */
+function dropMigration10(db: TestDb): void {
+  db.prepare('DROP TABLE IF EXISTS season_posters').run();
 }
 
 /**
@@ -1279,10 +1289,10 @@ describe('db: migration #9 — a collection film’s Source file', () => {
     expect(declared?.notnull).toBe(0);
   });
 
-  it('lands a fresh database at version 9', () => {
+  it('lands a fresh database at version 9 or later', () => {
     const db = track(open(':memory:'));
 
-    expect(userVersion(db)).toBe(9);
+    expect(userVersion(db)).toBeGreaterThanOrEqual(9);
   });
 
   it('upgrades a version-8 library in place, its films kept with no Source file', () => {
@@ -1304,12 +1314,107 @@ describe('db: migration #9 — a collection film’s Source file', () => {
 
     const upgraded = track(open(path));
 
-    expect(userVersion(upgraded)).toBe(9);
+    expect(userVersion(upgraded)).toBe(LATEST_VERSION);
     expect(
       upgraded
         .prepare('SELECT title, source_file FROM movies WHERE id = ?')
         .all(movie.id)
     ).toEqual([{ title: 'Heat', source_file: null }]);
+  });
+});
+
+// 39 — Season posters, Slice 2 (issue #322) adds migration #10: the **Season
+// poster** — `season_posters`, one row per season that has a poster, keyed on
+// `(series_id, season_number)`, cascading away with its series. No `seasons`
+// table: a season stays a number. Nothing is backfilled.
+
+describe('db: migration #10 — season posters', () => {
+  it('adds season_posters keyed on (series_id, season_number), every column not null', () => {
+    const db = track(open(':memory:'));
+
+    const columns = columnInfo(db, 'season_posters');
+    expect(columns.map((c) => c.name).sort()).toEqual([
+      'poster_path',
+      'season_number',
+      'series_id',
+    ]);
+    for (const column of columns) {
+      expect(column.notnull).toBe(1);
+    }
+    const key = db.pragma('table_info(season_posters)') as Array<{
+      name: string;
+      pk: number;
+    }>;
+    expect(
+      key
+        .filter((c) => c.pk > 0)
+        .sort((a, b) => a.pk - b.pk)
+        .map((c) => c.name)
+    ).toEqual(['series_id', 'season_number']);
+  });
+
+  it('references series, cascading on delete', () => {
+    const db = track(open(':memory:'));
+
+    const keys = db.pragma('foreign_key_list(season_posters)') as Array<{
+      table: string;
+      from: string;
+      to: string;
+      on_delete: string;
+    }>;
+    expect(keys).toEqual([
+      expect.objectContaining({
+        table: 'series',
+        from: 'series_id',
+        on_delete: 'CASCADE',
+      }),
+    ]);
+  });
+
+  it('lands a fresh database at version 10, with no season poster', () => {
+    const db = track(open(':memory:'));
+
+    expect(userVersion(db)).toBe(10);
+    expect(db.prepare('SELECT * FROM season_posters').all()).toEqual([]);
+  });
+
+  it('upgrades a version-9 library in place, every row kept and none added', () => {
+    const path = tempDbPath();
+    const before = trackStorage(createSqliteStorage(path));
+    const movie = before.addMovie({
+      title: 'Heat',
+      year: 1995,
+      videoPath: 'heat-1995/video.mp4',
+    });
+    const series = before.addSeries({ title: 'Harbor & Vine' }, [
+      {
+        season: 1,
+        number: 1,
+        title: 'Pilot',
+        videoPath: 'harbor-vine/season-01/S01E01.mp4',
+      },
+    ]);
+    before.close();
+    const db = open(path);
+    try {
+      dropMigration10(db);
+      db.pragma('user_version = 9');
+    } finally {
+      db.close();
+    }
+
+    const upgraded = track(open(path));
+
+    expect(userVersion(upgraded)).toBe(10);
+    expect(
+      upgraded.prepare('SELECT title FROM movies WHERE id = ?').all(movie.id)
+    ).toEqual([{ title: 'Heat' }]);
+    expect(
+      upgraded
+        .prepare('SELECT title FROM episodes WHERE series_id = ?')
+        .all(series.id)
+    ).toEqual([{ title: 'Pilot' }]);
+    expect(upgraded.prepare('SELECT * FROM season_posters').all()).toEqual([]);
   });
 });
 

@@ -211,6 +211,141 @@ describe('series read: getSeriesDetail', () => {
   });
 });
 
+// --- 39 — Season posters, Slice 2 (issue #322) ------------------------------
+//
+// The series page's read joins `season_posters`, driven by the seasons that
+// have episodes: each `SeasonSummary` carries `posterPath`, `null` with no
+// row. A row for a season with no episodes is never read (log 39 Q10), and a
+// Series edit never touches the rows, so a poster stays on its number.
+
+/** Each season the read answers, as `[number, posterPath]`. */
+function posters(storage: LibraryStorage, id: string) {
+  return (storage.getSeriesDetail(id)?.seasons ?? []).map((season) => [
+    season.number,
+    season.posterPath,
+  ]);
+}
+
+/** The edit the form sends with nothing changed; a test overrides episodes. */
+function unchangedEdit(storage: LibraryStorage, seriesId: string) {
+  const detail = storage.getSeriesDetail(seriesId);
+  if (detail === null) throw new Error(`No series ${seriesId}`);
+  const { series } = detail;
+  return {
+    title: series.title,
+    year: series.year,
+    endYear: series.endYear,
+    synopsis: series.synopsis,
+    creator: series.creator,
+    cast: series.cast,
+    rating: series.rating,
+    genres: series.genres.map((genre) => genre.name),
+    posterPath: series.posterPath,
+    episodes: storage.listEpisodes(seriesId).map((episode) => ({
+      id: episode.id,
+      season: episode.season,
+      number: episode.number,
+      title: episode.title,
+      videoPath: episode.videoPath,
+      subtitles: episode.subtitles.map(({ path, language }) => ({
+        path,
+        language,
+      })),
+    })),
+  };
+}
+
+describe('series read: getSeriesDetail — the Season poster', () => {
+  it('answers a null posterPath for every season with no poster stored', () => {
+    const storage = freshStorage();
+    const id = seedHarbor(storage);
+
+    expect(posters(storage, id)).toEqual([
+      [1, null],
+      [2, null],
+    ]);
+  });
+
+  it('answers the Stored path for a season with one, and null beside it', () => {
+    const storage = freshStorage();
+    const id = seedHarbor(storage);
+
+    storage.setSeasonPoster(id, 2, 'harbor-vine-2019/S02-poster.jpg');
+
+    expect(posters(storage, id)).toEqual([
+      [1, null],
+      [2, 'harbor-vine-2019/S02-poster.jpg'],
+    ]);
+  });
+
+  it('adds no season for a poster stored on a season with no episodes', () => {
+    const storage = freshStorage();
+    const id = seedHarbor(storage);
+
+    storage.setSeasonPoster(id, 3, 'harbor-vine-2019/S03-poster.jpg');
+
+    expect(posters(storage, id)).toEqual([
+      [1, null],
+      [2, null],
+    ]);
+  });
+
+  it('keeps each poster on its number when an edit renumbers an episode into another season', () => {
+    const storage = freshStorage();
+    const id = seedHarbor(storage);
+    storage.setSeasonPoster(id, 1, 'harbor-vine-2019/S01-poster.jpg');
+    storage.setSeasonPoster(id, 3, 'harbor-vine-2019/S03-poster.jpg');
+    const edit = unchangedEdit(storage, id);
+
+    storage.updateSeries(id, {
+      ...edit,
+      episodes: edit.episodes.map((episode) =>
+        episode.season === 1 && episode.number === 2
+          ? { ...episode, season: 3, number: 1 }
+          : episode
+      ),
+    });
+
+    expect(posters(storage, id)).toEqual([
+      [1, 'harbor-vine-2019/S01-poster.jpg'],
+      [2, null],
+      [3, 'harbor-vine-2019/S03-poster.jpg'],
+    ]);
+  });
+
+  it('keeps a season’s poster through an edit that removes every episode of it', () => {
+    const storage = freshStorage();
+    const id = seedHarbor(storage);
+    storage.setSeasonPoster(id, 1, 'harbor-vine-2019/S01-poster.jpg');
+    const edit = unchangedEdit(storage, id);
+
+    storage.updateSeries(id, {
+      ...edit,
+      episodes: edit.episodes.filter((episode) => episode.season !== 1),
+    });
+    expect(posters(storage, id)).toEqual([[2, null]]);
+
+    const after = unchangedEdit(storage, id);
+    storage.updateSeries(id, {
+      ...after,
+      episodes: [
+        ...after.episodes,
+        {
+          season: 1,
+          number: 1,
+          title: null,
+          videoPath: 'harbor-vine-2019/season-01/e1-again.mp4',
+          subtitles: [],
+        },
+      ],
+    });
+    expect(posters(storage, id)).toEqual([
+      [1, 'harbor-vine-2019/S01-poster.jpg'],
+      [2, null],
+    ]);
+  });
+});
+
 describe('series read: getEpisodeRead', () => {
   it('answers an episode with no title as a null title', () => {
     const storage = freshStorage();

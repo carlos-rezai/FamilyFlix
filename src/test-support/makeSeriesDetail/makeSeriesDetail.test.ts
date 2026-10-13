@@ -39,4 +39,13 @@ describe('makeEpisode', () => {
       status: 'in-progress',
     });
   });
+
+  it('builds every season with no Season poster by default (issue #322)', () => {
+    const detail = makeSeriesDetail([['watched'], ['unwatched']]);
+
+    expect(detail.seasons.map((season) => season.posterPath)).toEqual([
+      null,
+      null,
+    ]);
+  });
 });

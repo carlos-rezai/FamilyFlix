@@ -385,6 +385,22 @@ describe('series write: deleteSeries', () => {
     expect(storage.getSeriesDetail(series.id)).toBeNull();
   });
 
+  it('takes the series’ Season posters with it (issue #322)', () => {
+    const path = join(sandboxRoot('familyflix-series-delete-'), 'lib.db');
+    const storage = track(createSqliteStorage(path));
+    const series = addHarbor(storage);
+    const kept = addHarbor(storage, 'Vine');
+    storage.setSeasonPoster(series.id, 1, 'harbor-2019/S01-poster.jpg');
+    storage.setSeasonPoster(kept.id, 1, 'vine-2019/S01-poster.jpg');
+
+    storage.deleteSeries(series.id);
+
+    const probe = track(openDatabase(path));
+    expect(probe.prepare('SELECT series_id FROM season_posters').all()).toEqual(
+      [{ series_id: kept.id }]
+    );
+  });
+
   it('leaves another series and its episodes alone', () => {
     const storage = freshStorage();
     const gone = addHarbor(storage, 'Harbor');

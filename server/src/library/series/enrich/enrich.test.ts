@@ -206,3 +206,88 @@ describe('library: enrichEpisode — the household’s own signals', () => {
     expect(after.lastWatchedAt).toBe(before.lastWatchedAt);
   });
 });
+
+// 39 — Season posters, Slice 2 (issue #322): `setSeasonPoster(seriesId,
+// season, posterPath)` upserts the one `season_posters` row for that season,
+// read back as the `SeasonSummary`'s `posterPath` on the series page's read.
+
+/** The Season poster the series page's read answers for one season. */
+function seasonPosterRead(
+  storage: ReturnType<typeof freshStorage>,
+  seriesId: string,
+  season: number
+) {
+  const found = detailOf(storage, seriesId).seasons.find(
+    (each) => each.number === season
+  );
+  if (found === undefined) throw new Error(`no season ${season}`);
+  return found.posterPath;
+}
+
+describe('library: setSeasonPoster — the Season poster', () => {
+  it('stores a season’s poster, read back as its Stored path', () => {
+    const { storage, seriesId } = showWithEpisodes();
+
+    storage.setSeasonPoster(
+      seriesId,
+      1,
+      'the-hollow-coast-2018/S01-poster.jpg'
+    );
+
+    expect(seasonPosterRead(storage, seriesId, 1)).toBe(
+      'the-hollow-coast-2018/S01-poster.jpg'
+    );
+  });
+
+  it('replaces the poster held for the same season rather than adding a second', () => {
+    const { storage, seriesId } = showWithEpisodes();
+    storage.setSeasonPoster(
+      seriesId,
+      1,
+      'the-hollow-coast-2018/S01-poster.jpg'
+    );
+
+    storage.setSeasonPoster(
+      seriesId,
+      1,
+      'the-hollow-coast-2018/S01-poster.png'
+    );
+
+    expect(seasonPosterRead(storage, seriesId, 1)).toBe(
+      'the-hollow-coast-2018/S01-poster.png'
+    );
+    expect(detailOf(storage, seriesId).seasons).toHaveLength(1);
+  });
+
+  it('refuses a series the library does not hold', () => {
+    const { storage } = showWithEpisodes();
+    // A missing member would throw too; the refusal is the store's.
+    expect(storage.setSeasonPoster).toBeTypeOf('function');
+
+    expect(() =>
+      storage.setSeasonPoster(
+        '00000000-0000-4000-8000-000000000000',
+        1,
+        'nowhere/S01-poster.jpg'
+      )
+    ).toThrow();
+  });
+
+  it('touches no other series', () => {
+    const { storage, seriesId } = showWithEpisodes();
+    const other = storage.addSeries({ title: 'Harbor & Vine' });
+    storage.addEpisode(other.id, {
+      season: 1,
+      number: 1,
+      videoPath: 'harbor-vine/season-01/S01E01.mkv',
+    });
+
+    storage.setSeasonPoster(
+      seriesId,
+      1,
+      'the-hollow-coast-2018/S01-poster.jpg'
+    );
+
+    expect(seasonPosterRead(storage, other.id, 1)).toBeNull();
+  });
+});

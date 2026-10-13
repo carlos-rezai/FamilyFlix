@@ -8,6 +8,9 @@
 // table to one of them, so a table a future migration adds is never erased (or
 // kept) without someone deciding it should be. Real SQLite throughout, the
 // `seriesSeed` and migration suites' precedent.
+//
+// 39 — Season posters (issue #322): migration #10's `season_posters` joins the
+// erased list, a child of `series`, and `fill` writes a row of it.
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
@@ -81,6 +84,9 @@ function fill(db: SqliteDatabase, n = 1): void {
       'INSERT INTO series_genres (series_id, genre_id, position) VALUES (?, ?, 0)'
     ).run(`series-${i}`, genre);
     db.prepare(
+      'INSERT INTO season_posters (series_id, season_number, poster_path) VALUES (?, 1, ?)'
+    ).run(`series-${i}`, `show-${i}/S01-poster.jpg`);
+    db.prepare(
       `INSERT INTO episodes (id, series_id, season_number, episode_number, video_path, created_at, updated_at)
        VALUES (?, ?, 1, 1, ?, ?, ?)`
     ).run(`episode-${i}`, `series-${i}`, `show-${i}/s01e01.mkv`, NOW, NOW);
@@ -110,6 +116,7 @@ describe('resetDatabase', () => {
       'movie_genres',
       'subtitles',
       'series_genres',
+      'season_posters',
       'episode_subtitles',
       'episodes',
       'movies',
