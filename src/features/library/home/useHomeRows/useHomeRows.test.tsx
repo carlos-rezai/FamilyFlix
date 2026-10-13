@@ -1558,6 +1558,48 @@ describe('useHomeRows — a heart from a genre row reaches the shelf', () => {
     expect(shelved(result.current.favorites)).toContain('c1');
   });
 
+  it('waits for a save the same movie’s next press overtook before it reloads', async () => {
+    // Comet Season is hearted and un-hearted in quick succession: the heart's
+    // save is held at the server, the un-heart's answers at once. Northwind's
+    // heart is then confirmed. The held save is still in flight, so the home is
+    // not read again until it settles.
+    let releaseCometHeart: () => void = () => undefined;
+    fetchMock.mockImplementation((input, init) => {
+      const url = String(input);
+      if (url.includes('/api/home')) {
+        return Promise.resolve(okResponse(ROW_HEART_PAYLOAD));
+      }
+      if (url.includes('/api/movies/c1/favorite')) {
+        const { value } = JSON.parse(String(init?.body)) as { value: boolean };
+        return value
+          ? new Promise<Response>((resolve) => {
+              releaseCometHeart = () => resolve(okResponse({ value: false }));
+            })
+          : Promise.resolve(okResponse({ value: false }));
+      }
+      if (url.includes('/favorite')) {
+        return Promise.resolve(okResponse({ value: true }));
+      }
+      return Promise.reject(new Error(`Unexpected request: ${url}`));
+    });
+    const { result } = await loadRows();
+
+    act(() => result.current.toggleFavorite('c1', true));
+    act(() => result.current.toggleFavorite('c1', false));
+    act(() => result.current.toggleFavorite('a1', true));
+
+    await waitFor(() => expect(favoriteRequests()).toHaveLength(3));
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    });
+    expect(homeRequests()).toHaveLength(1);
+
+    await act(async () => {
+      releaseCometHeart();
+    });
+    await waitFor(() => expect(homeRequests()).toHaveLength(2));
+  });
+
   it('settles a heart pressed while a reload was out once its own save is confirmed', async () => {
     // As above, but Comet Season's save is confirmed after the stale reload
     // has landed: it keeps its heart through the confirmation.
