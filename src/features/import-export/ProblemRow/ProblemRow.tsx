@@ -1,11 +1,6 @@
 import { FieldDiff, type FieldDiffSide } from '@/components';
 import { Button } from '@/primitives';
-import type {
-  ImportProblem,
-  SheetChoices,
-  SheetField,
-  TitleGuess,
-} from '@/types';
+import type { ImportProblem, SheetChoices, SheetField } from '@/types';
 import { movieFormPath } from '@/utils';
 import { FolderPicker } from '../FolderPicker/FolderPicker';
 import {
@@ -76,10 +71,6 @@ const sheetChoices = (
  * Neither knows what happens next: the row draws a problem and reports a
  * press.
  */
-/** A **Title guess** spelled: `Ironwood (2018)`, or the title alone. */
-const guessSpelled = ({ title, year }: TitleGuess): string =>
-  year === undefined ? title : `${title} (${year})`;
-
 export function ProblemRow({
   problem,
   onSkip,
@@ -131,7 +122,7 @@ export function ProblemRow({
       {problem.kind === 'no-row' && problem.guess !== undefined ? (
         <ImportAsSlot>
           <Button
-            label={`Import as “${guessSpelled(problem.guess)}”`}
+            label={`Import as “${problem.guess}”`}
             variant="secondary"
             size="sm"
             onClick={onImportAs}

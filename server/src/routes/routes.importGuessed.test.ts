@@ -145,7 +145,7 @@ describe('GET /api/import/current — a no-row Problem’s guess', () => {
   it('carries the title and year a Folder scan would give the folder', async () => {
     const { problem } = await inReviewNoRow();
 
-    expect(problem.guess).toEqual({ title: 'Ironwood', year: 2018 });
+    expect(problem.guess).toBe('Ironwood (2018)');
   });
 });
 

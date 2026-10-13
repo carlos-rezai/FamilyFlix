@@ -90,7 +90,6 @@ export type {
   ProblemKind,
   ImportProblem,
   CandidateFolder,
-  TitleGuess,
   ImportRun,
   ImportProblemDetail,
   SheetField,

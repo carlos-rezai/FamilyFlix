@@ -77,7 +77,7 @@ const inReview = (): ImportRun =>
         kind: 'no-row',
         title: 'Ironwood (2018)',
         reason: "Folder isn't in the spreadsheet.",
-        guess: { title: 'Ironwood', year: 2018 },
+        guess: 'Ironwood (2018)',
       },
       {
         id: 'p3',

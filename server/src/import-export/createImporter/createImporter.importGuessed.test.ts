@@ -126,7 +126,7 @@ describe('createImporter — a no-row Problem’s guess', () => {
   it('guesses the title and year off the folder’s name', async () => {
     const { problem } = await inReview();
 
-    expect(problem.guess).toEqual({ title: 'Ironwood', year: 2018 });
+    expect(problem.guess).toBe('Ironwood (2018)');
   });
 
   it.each([IRONWOOD, 'Ironwood (2018)', 'The Quiet Hours'])(
@@ -135,8 +135,11 @@ describe('createImporter — a no-row Problem’s guess', () => {
       const { problem } = await inReview(name);
       const scanned = await scannedAs(name);
 
-      expect(problem.guess?.title).toBe(scanned.title);
-      expect(problem.guess?.year ?? null).toBe(scanned.year ?? null);
+      expect(problem.guess).toBe(
+        scanned.year === null
+          ? scanned.title
+          : `${scanned.title} (${scanned.year})`
+      );
     }
   );
 

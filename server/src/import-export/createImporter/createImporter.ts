@@ -1680,10 +1680,7 @@ export function createImporter({
         current,
         {
           ...problemOf('no-row', folder.name, REASON.noRow),
-          guess: {
-            title: guess.title,
-            ...(guess.year === null ? {} : { year: guess.year }),
-          },
+          guess: titleWithYear(guess.title, guess.year),
         },
         { row: null, folder, candidates: [] }
       );

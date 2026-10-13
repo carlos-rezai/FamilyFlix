@@ -1336,7 +1336,7 @@ describe('ImportFlow — Import as on a no-row row', () => {
     kind: 'no-row',
     title: 'Ironwood.2018.1080p',
     reason: "Folder isn't in the spreadsheet.",
-    guess: { title: 'Ironwood', year: 2018 },
+    guess: 'Ironwood (2018)',
   };
 
   const imports = () =>
