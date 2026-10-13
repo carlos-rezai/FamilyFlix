@@ -47,6 +47,23 @@ async function loadSections(query: LibraryQuery): Promise<HomeSections> {
   };
 }
 
+/**
+ * The sections with one movie's favorite value set everywhere they carry it —
+ * every genre row it has a card in, and the shelf, which gains the card at its
+ * front when the heart is new to it.
+ */
+function withHeart(
+  sections: HomeSections,
+  id: string,
+  favorite: boolean
+): HomeSections {
+  return {
+    ...sections,
+    rows: withFavorite(sections.rows, id, favorite),
+    favorites: withShelved(sections.favorites, sections.rows, id, favorite),
+  };
+}
+
 /** Where the load is: never both loading and errored, never rows without `ready`. */
 export type HomeRowsStatus = 'loading' | 'ready' | 'error';
 
@@ -119,8 +136,24 @@ export function useHomeRows(): UseHomeRowsResult {
 
   // The settled query string is what says which load this is: an unchanged
   // query is an unchanged string, and nothing else about a render can move it.
+  // Every save still waiting on the route: the value it asked for, and a token
+  // telling a movie's newest save from one it overtook.
+  const pending = useRef(
+    new Map<string, { favorite: boolean; token: object }>()
+  );
+  const reloadWanted = useRef(false);
+
+  // A load answers with what the server held when it read, which can be from
+  // before a save still in flight — so each of those is laid back over it, and
+  // a heart pressed while a reload was out survives the reload landing.
   const { status, data, setData, retry } = useBrowseLoad(
-    () => loadSections(query),
+    () =>
+      loadSections(query).then((sections) =>
+        [...pending.current].reduce(
+          (held, [id, { favorite }]) => withHeart(held, id, favorite),
+          sections
+        )
+      ),
     settled
   );
 
@@ -144,26 +177,10 @@ export function useHomeRows(): UseHomeRowsResult {
   const applyFavorite = useCallback(
     (id: string, favorite: boolean) =>
       setData((current) =>
-        current === null
-          ? current
-          : {
-              ...current,
-              rows: withFavorite(current.rows, id, favorite),
-              favorites: withShelved(
-                current.favorites,
-                current.rows,
-                id,
-                favorite
-              ),
-            }
+        current === null ? current : withHeart(current, id, favorite)
       ),
     [setData]
   );
-
-  // Saves still waiting on the route, and whether one of those that landed was
-  // a confirmed heart.
-  const pendingSaves = useRef(0);
-  const reloadWanted = useRef(false);
 
   /**
    * The save, and the reload a confirmed heart earns. A heart puts its card at
@@ -171,27 +188,37 @@ export function useHomeRows(): UseHomeRowsResult {
    * 15 would put it — so once the route has it, the home is read again and the
    * shelf settles where it belongs, behind the skeleton latch so nothing on
    * screen moves but the shelf. The reload waits for every save still in
-   * flight: one answered before the server had a heart would take that heart
-   * back. An un-heart needs no reload — the card only leaves.
+   * flight, and a reload already out is answered with them laid back over it
+   * (above). An un-heart needs no reload — the card only leaves.
+   *
+   * A confirmed save writes its value back into what is held, because a reload
+   * that landed while it was in flight may have answered without it.
    */
   const saveAndSettle = useCallback(
     async (id: string, favorite: boolean) => {
-      pendingSaves.current += 1;
+      const token = {};
+      pending.current.set(id, { favorite, token });
+      const newest = () => pending.current.get(id)?.token === token;
       try {
         const saved = await saveFavorite(id, favorite);
+        if (saved === favorite && newest()) {
+          applyFavorite(id, saved);
+        }
         if (favorite && saved) {
           reloadWanted.current = true;
         }
         return saved;
       } finally {
-        pendingSaves.current -= 1;
-        if (pendingSaves.current === 0 && reloadWanted.current) {
+        if (newest()) {
+          pending.current.delete(id);
+        }
+        if (pending.current.size === 0 && reloadWanted.current) {
           reloadWanted.current = false;
           retry();
         }
       }
     },
-    [retry]
+    [applyFavorite, retry]
   );
 
   const toggleFavorite = useOptimisticSave(applyFavorite, saveAndSettle);
