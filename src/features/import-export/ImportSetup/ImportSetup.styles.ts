@@ -71,8 +71,11 @@ export const FolderList = styled.div`
   overflow: hidden;
 `;
 
-/** One listed folder: the glyph, the path and its line — no ✕. */
-export const FolderRow = styled.div`
+/**
+ * One listed folder: the glyph, the path and its line — no ✕, so not the
+ * **Folder row** molecule.
+ */
+export const ListedFolder = styled.div`
   display: flex;
   align-items: center;
   gap: ${({ theme }) => theme.space.s3};

@@ -1,5 +1,6 @@
 import { FolderIcon, RemoveButton } from '@/primitives';
 import type { LibraryFolder } from '@/types';
+import { folderLine } from '../folderLine/folderLine';
 import { Line, Path, Row, Text, Tile } from './FolderRow.styles';
 
 export interface FolderRowProps {
@@ -25,11 +26,7 @@ export function FolderRow({ folder, onRemove }: FolderRowProps) {
       </Tile>
       <Text>
         <Path>{folder.path}</Path>
-        <Line $unreachable={!folder.reachable}>
-          {folder.reachable
-            ? `${folder.titleCount} titles`
-            : 'Can’t be reached right now'}
-        </Line>
+        <Line $unreachable={!folder.reachable}>{folderLine(folder)}</Line>
       </Text>
       <RemoveButton removes={folder.path} onClick={onRemove} />
     </Row>

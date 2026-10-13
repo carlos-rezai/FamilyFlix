@@ -12,11 +12,12 @@ import {
   FolderLine,
   FolderList,
   FolderPath,
-  FolderRow,
+  ListedFolder,
   GroupHead,
   ManageButton,
 } from './ImportSetup.styles';
 import { FolderShapes } from '../FolderShapes/FolderShapes';
+import { folderLine } from '../folderLine/folderLine';
 import { EnrichCheckCard } from '../EnrichCheckCard/EnrichCheckCard';
 import { useLibraryFolders } from '../useLibraryFolders/useLibraryFolders';
 
@@ -112,15 +113,13 @@ export function ImportSetup({
           {listed ? (
             <FolderList>
               {folders.map((folder) => (
-                <FolderRow key={folder.id}>
+                <ListedFolder key={folder.id}>
                   <FolderIcon size={20} />
                   <FolderPath>{folder.path}</FolderPath>
                   <FolderLine $unreachable={!folder.reachable}>
-                    {folder.reachable
-                      ? `${folder.titleCount} titles`
-                      : 'Can’t be reached right now'}
+                    {folderLine(folder)}
                   </FolderLine>
-                </FolderRow>
+                </ListedFolder>
               ))}
             </FolderList>
           ) : (
