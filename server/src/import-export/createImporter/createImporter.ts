@@ -294,18 +294,21 @@ const REASON = {
     'The spreadsheet has different values for fields you already filled in.',
 } as const;
 
-/** A **Problem** as the snapshot lists it, under an id of its own. */
+/**
+ * A **Problem** as the snapshot lists it, under an id of its own — and, for
+ * one about a title the library holds, its owner: the movie or the series.
+ */
 const problemOf = (
   kind: ProblemKind,
   title: string,
   reason: string,
-  movieId?: string
+  owner?: { movieId: string } | { seriesId: string }
 ): ImportProblem => ({
   id: randomUUID(),
   kind,
   title,
   reason,
-  ...(movieId === undefined ? {} : { movieId }),
+  ...owner,
 });
 
 /**
@@ -755,11 +758,12 @@ export function createImporter({
       return;
     }
     const problem: ImportProblem = {
-      id: randomUUID(),
-      kind: 'differs',
-      title: titleWithYear(held.row.title, held.row.year),
-      reason: REASON.differs,
-      ...(held.kind === 'movie' ? { movieId: held.id } : { seriesId: held.id }),
+      ...problemOf(
+        'differs',
+        titleWithYear(held.row.title, held.row.year),
+        REASON.differs,
+        held.kind === 'movie' ? { movieId: held.id } : { seriesId: held.id }
+      ),
       differences,
     };
     file(current, problem, { row: held.row, folder: null, candidates: [] });
@@ -994,7 +998,9 @@ export function createImporter({
         // because a film in no genre row is a film the family will not find.
         file(
           current,
-          problemOf('missing-meta', row.title, REASON.missingMeta, added.id),
+          problemOf('missing-meta', row.title, REASON.missingMeta, {
+            movieId: added.id,
+          }),
           { row, folder: scan, candidates: [] }
         );
       }
@@ -1160,10 +1166,12 @@ export function createImporter({
     if (videos.length === 0) {
       return;
     }
-    const problem: ImportProblem = {
-      ...problemOf('unplaced', row.title, unplacedReason(videos.length)),
-      ...(held === null ? {} : { seriesId: held.series.id }),
-    };
+    const problem = problemOf(
+      'unplaced',
+      row.title,
+      unplacedReason(videos.length),
+      held === null ? undefined : { seriesId: held.series.id }
+    );
     file(current, problem, {
       row,
       folder: { ...asMatchable(show), videos },
