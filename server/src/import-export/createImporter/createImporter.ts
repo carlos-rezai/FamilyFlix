@@ -826,15 +826,17 @@ export function createImporter({
     );
   };
 
-  /** The line a held title ends on: what it took, or that it took nothing. */
-  const logHeld = (
+  /**
+   * A held title's `✓ Updated` line, naming what it took — nothing written
+   * when it took nothing. Answers whether it took any.
+   */
+  const logUpdated = (
     current: ImportRun,
     row: SheetRow,
     fill: SheetFill
   ): boolean => {
     const names = filledNames(fill);
     if (names.length === 0) {
-      logAlreadyHeld(current, row);
       return false;
     }
     log(
@@ -889,12 +891,18 @@ export function createImporter({
     if (fill.watched === true) {
       storage.markWatched(id);
     }
-    return logHeld(current, row, fill);
+    const updated = logUpdated(current, row, fill);
+    if (!updated) {
+      logAlreadyHeld(current, row);
+    }
+    return updated;
   };
 
   /**
    * {@link fillFilm} over a held series: through `enrichSeries`, its
    * _Created by_ as the row's director, its rating through `setSeriesRating`.
+   * Only its `✓ Updated` line is written here: a show that took nothing is
+   * **Already in library** once `importShow` knows it gains no episode either.
    */
   const fillSeries = (
     current: ImportRun,
@@ -935,7 +943,7 @@ export function createImporter({
     if (fill.rating !== undefined) {
       storage.setSeriesRating(id, fill.rating);
     }
-    return logHeld(current, row, fill);
+    return logUpdated(current, row, fill);
   };
 
   /**
@@ -1556,7 +1564,10 @@ export function createImporter({
       if (heldId !== undefined) {
         fillFilm(current, heldId, row, genres);
       } else if (heldShow !== undefined) {
-        fillSeries(current, heldShow.series.id, row, genres);
+        // No Show folder, so no `importShow` to say it took nothing.
+        if (!fillSeries(current, heldShow.series.id, row, genres)) {
+          logAlreadyHeld(current, row);
+        }
       } else {
         // The first folder weighed is the one the detail is about — the one
         // an `ambiguous` prefills from, the one a `no-video` matched — and

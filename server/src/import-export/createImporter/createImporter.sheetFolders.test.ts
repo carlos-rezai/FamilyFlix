@@ -354,4 +354,30 @@ describe('createImporter.start — Already in library', () => {
       texts(run).some((text) => text.startsWith('✓ Updated    Die Hard (1988)'))
     ).toBe(true);
   });
+
+  it('logs one Already in library line per title on a re-run with nothing to fill or add', async () => {
+    const box = sandbox();
+    listBoth(box);
+    await runOnce(box.importer, box.sheet);
+
+    const run = await runOnce(box.importer, box.sheet);
+
+    const held = texts(run).filter((text) =>
+      text.startsWith('· Already in library ')
+    );
+    expect(held.sort()).toEqual(
+      [
+        ...box.storage
+          .listMovies({ sort: 'a-z' })
+          .map(
+            (movie) => `· Already in library ${movie.title} (${movie.year})`
+          ),
+        ...box.storage
+          .getSeriesHome()
+          .series.map(
+            (show) => `· Already in library ${show.title} (${show.year})`
+          ),
+      ].sort()
+    );
+  });
 });
