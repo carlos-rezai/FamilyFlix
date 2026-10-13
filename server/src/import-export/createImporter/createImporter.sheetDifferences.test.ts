@@ -305,6 +305,27 @@ describe('createImporter.apply — Apply choices', () => {
     await box.importer.cancel();
   });
 
+  it('writes a chosen cast as a fill would: each name trimmed, a blank one dropped', async () => {
+    const box = await filmDiffers();
+    box.storage.updateMovie(box.id, { cast: ['Bonnie Bedelia'] });
+    writeFileSync(
+      box.sheet,
+      readFileSync(box.sheet, 'utf8').replace(
+        '"Bruce Willis, Alan Rickman"',
+        '" Bruce Willis , , Alan Rickman "'
+      )
+    );
+    const [problem] = differsOf(await runToReview(box.importer, box.sheet));
+
+    await box.importer.apply(problem.id, { cast: 'sheet' });
+
+    expect(box.storage.getMovie(box.id)?.cast).toEqual([
+      'Bruce Willis',
+      'Alan Rickman',
+    ]);
+    await box.importer.cancel();
+  });
+
   it('takes the Problem off the run', async () => {
     const box = await filmDiffers();
     const [problem] = differsOf(await runToReview(box.importer, box.sheet));
