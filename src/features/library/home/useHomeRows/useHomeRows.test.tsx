@@ -1513,4 +1513,99 @@ describe('useHomeRows — a heart from a genre row reaches the shelf', () => {
     expect(favoriteIn(result.current.rows, 'Comedy', 'c1')).toBe(true);
     expect(shelved(result.current.favorites)).toContain('c1');
   });
+
+  it('does not let a reload already in flight take back a heart pressed while it was out', async () => {
+    // Northwind's confirmed heart sends the reload; it is held at the server.
+    // Comet Season is hearted while it is out, and its save never settles. The
+    // reload then answers from before Comet Season was saved — and must not
+    // empty a heart the family has just filled.
+    let releaseReload: (payload: HomePayload) => void = () => undefined;
+    let homeServed = 0;
+    fetchMock.mockImplementation((input) => {
+      const url = String(input);
+      if (url.includes('/api/home')) {
+        homeServed += 1;
+        if (homeServed === 1) {
+          return Promise.resolve(okResponse(ROW_HEART_PAYLOAD));
+        }
+        return new Promise<Response>((resolve) => {
+          releaseReload = (payload) => resolve(okResponse(payload));
+        });
+      }
+      if (url.includes('/api/movies/a1/favorite')) {
+        return Promise.resolve(okResponse({ value: true }));
+      }
+      if (url.includes('/favorite')) {
+        return new Promise<Response>(() => undefined);
+      }
+      return Promise.reject(new Error(`Unexpected request: ${url}`));
+    });
+    const { result } = await loadRows();
+
+    act(() => result.current.toggleFavorite('a1', true));
+    await waitFor(() => expect(homeRequests()).toHaveLength(2));
+
+    act(() => result.current.toggleFavorite('c1', true));
+    await act(async () => {
+      releaseReload(ROW_HEART_SAVED_PAYLOAD);
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    });
+
+    // The reload landed: Northwind sits where the server sorts it…
+    expect(favoriteOnShelf(result.current.favorites, 'a1')).toBe(true);
+    // …and Comet Season, still saving, kept its heart and its place.
+    expect(favoriteIn(result.current.rows, 'Comedy', 'c1')).toBe(true);
+    expect(shelved(result.current.favorites)).toContain('c1');
+  });
+
+  it('settles a heart pressed while a reload was out once its own save is confirmed', async () => {
+    // As above, but Comet Season's save is confirmed after the stale reload
+    // has landed: it keeps its heart through the confirmation.
+    let releaseReload: (payload: HomePayload) => void = () => undefined;
+    let confirmComet: () => void = () => undefined;
+    let homeServed = 0;
+    fetchMock.mockImplementation((input) => {
+      const url = String(input);
+      if (url.includes('/api/home')) {
+        homeServed += 1;
+        if (homeServed === 1) {
+          return Promise.resolve(okResponse(ROW_HEART_PAYLOAD));
+        }
+        if (homeServed === 2) {
+          return new Promise<Response>((resolve) => {
+            releaseReload = (payload) => resolve(okResponse(payload));
+          });
+        }
+        // Every later read answers with nothing new: the heart must hold on
+        // its own confirmation, not on a read that happens to agree.
+        return new Promise<Response>(() => undefined);
+      }
+      if (url.includes('/api/movies/a1/favorite')) {
+        return Promise.resolve(okResponse({ value: true }));
+      }
+      if (url.includes('/favorite')) {
+        return new Promise<Response>((resolve) => {
+          confirmComet = () => resolve(okResponse({ value: true }));
+        });
+      }
+      return Promise.reject(new Error(`Unexpected request: ${url}`));
+    });
+    const { result } = await loadRows();
+
+    act(() => result.current.toggleFavorite('a1', true));
+    await waitFor(() => expect(homeRequests()).toHaveLength(2));
+
+    act(() => result.current.toggleFavorite('c1', true));
+    await act(async () => {
+      releaseReload(ROW_HEART_SAVED_PAYLOAD);
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    });
+    await act(async () => {
+      confirmComet();
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    });
+
+    expect(favoriteIn(result.current.rows, 'Comedy', 'c1')).toBe(true);
+    expect(shelved(result.current.favorites)).toContain('c1');
+  });
 });
