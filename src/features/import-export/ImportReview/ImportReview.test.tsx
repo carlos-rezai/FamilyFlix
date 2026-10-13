@@ -65,6 +65,7 @@ function renderReview(props: Partial<ImportReviewProps> = {}) {
           run={props.run ?? inReview()}
           onSkip={props.onSkip ?? (() => undefined)}
           onApply={props.onApply ?? (() => undefined)}
+          onPick={props.onPick ?? (() => undefined)}
           finishLabel={props.finishLabel ?? FINISH}
           onFinish={props.onFinish ?? (() => undefined)}
         />
@@ -83,6 +84,7 @@ function renderReview(props: Partial<ImportReviewProps> = {}) {
               run={run}
               onSkip={props.onSkip ?? (() => undefined)}
               onApply={props.onApply ?? (() => undefined)}
+              onPick={props.onPick ?? (() => undefined)}
               finishLabel={props.finishLabel ?? FINISH}
               onFinish={props.onFinish ?? (() => undefined)}
             />
@@ -397,5 +399,44 @@ describe('ImportReview — a differs row', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Keep all mine' }));
 
     expect(onSkip).toHaveBeenCalledWith('p9');
+  });
+});
+
+/**
+ * 40 — Import review, Phase 4: "the Folder picker" (issue #334).
+ *
+ * An `ambiguous` row draws its **Folder picker**, and a press is reported
+ * with the row's id and the folder, as _Skip_ is; the step removes nothing
+ * itself.
+ */
+describe('ImportReview — an ambiguous row', () => {
+  const AMBIGUOUS: ImportProblem = {
+    id: 'p7',
+    kind: 'ambiguous',
+    title: 'Die Hard',
+    reason: 'Two folders look like plausible matches. Pick one.',
+    candidates: [
+      {
+        path: 'D:/Films/Die.Hard.1988.1080p',
+        name: 'Die.Hard.1988.1080p',
+        videos: 1,
+      },
+      { path: 'D:/Films/Die Hard (1988)', name: 'Die Hard (1988)', videos: 2 },
+    ],
+  };
+
+  it('reports a press with that row’s id and the folder', () => {
+    const onPick = vi.fn<ImportReviewProps['onPick']>();
+    renderReview({ run: inReview([AMBIGUOUS, ...PROBLEMS], 0), onPick });
+
+    const card = screen.getByText('Die.Hard.1988.1080p').closest('button');
+    if (card === null) {
+      throw new Error('no card for Die.Hard.1988.1080p');
+    }
+    fireEvent.click(card);
+
+    expect(onPick).toHaveBeenCalledWith('p7', 'D:/Films/Die.Hard.1988.1080p');
+    // The step removes nothing itself: the Run hook does.
+    expect(screen.getByText('Die Hard')).toBeDefined();
   });
 });

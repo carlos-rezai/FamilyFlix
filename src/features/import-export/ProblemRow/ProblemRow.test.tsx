@@ -39,6 +39,7 @@ function renderRow(props: Partial<ProblemRowProps> = {}) {
           problem={props.problem ?? problem()}
           onSkip={props.onSkip ?? (() => undefined)}
           onApply={props.onApply ?? (() => undefined)}
+          onPick={props.onPick ?? (() => undefined)}
         />
       </ThemeProvider>
     </MemoryRouter>
@@ -422,4 +423,107 @@ describe('ProblemRow — the other kinds draw no face', () => {
       expect(resolveLink()).toBeDefined();
     }
   );
+});
+
+/**
+ * 40 — Import review, Phase 4: "the Folder picker" (issue #334).
+ *
+ * An `ambiguous` row draws the **Folder picker** in the face slot under its
+ * head, one card per **Candidate folder**, with _Resolve_ kept beside _Skip_
+ * for a pick that wants editing first. A press reports `onPick(folder)`; the
+ * row knows nothing of what follows. No other kind draws it.
+ */
+describe('ProblemRow — an ambiguous row', () => {
+  const ambiguous = problem({
+    id: 'p4',
+    kind: 'ambiguous',
+    title: 'Die Hard',
+    reason: 'Two folders look like plausible matches. Pick one.',
+    candidates: [
+      {
+        path: 'D:/Films/Die.Hard.1988.1080p',
+        name: 'Die.Hard.1988.1080p',
+        videos: 1,
+      },
+      { path: 'D:/Films/Die Hard (1988)', name: 'Die Hard (1988)', videos: 2 },
+    ],
+  });
+
+  /** A Candidate folder's card: the button its name is drawn in. */
+  const folderCard = (name: string): HTMLElement => {
+    const card = screen.getByText(name).closest('button');
+    if (card === null) {
+      throw new Error(`no card for ${name}`);
+    }
+    return card;
+  };
+
+  it('draws one card per Candidate folder, with its path and video count', () => {
+    renderRow({ problem: ambiguous });
+
+    expect(screen.getByText('Die.Hard.1988.1080p')).toBeDefined();
+    expect(screen.getByText('D:/Films/Die.Hard.1988.1080p')).toBeDefined();
+    expect(screen.getByText('1 video')).toBeDefined();
+    expect(screen.getByText('Die Hard (1988)')).toBeDefined();
+    expect(screen.getByText('D:/Films/Die Hard (1988)')).toBeDefined();
+    expect(screen.getByText('2 videos')).toBeDefined();
+  });
+
+  it('keeps Resolve and Skip beside the picker, and draws no diff', () => {
+    renderRow({ problem: ambiguous });
+
+    expect(folderCard('Die Hard (1988)')).toBeDefined();
+    expect(resolveLink()).toBeDefined();
+    expect(skipButton()).toBeDefined();
+    expect(resolveQuery().get('problem')).toBe('p4');
+    expect(screen.queryByRole('button', { name: 'Apply choices' })).toBeNull();
+  });
+
+  it('draws the picker under the head', () => {
+    renderRow({ problem: ambiguous });
+
+    expect(
+      skipButton().compareDocumentPosition(folderCard('Die Hard (1988)')) &
+        Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
+  });
+
+  it('reports the folder pressed, and skips nothing', () => {
+    const onPick = vi.fn<ProblemRowProps['onPick']>();
+    const onSkip = vi.fn();
+    renderRow({ problem: ambiguous, onPick, onSkip });
+
+    fireEvent.click(folderCard('Die Hard (1988)'));
+
+    expect(onPick).toHaveBeenCalledTimes(1);
+    expect(onPick).toHaveBeenCalledWith('D:/Films/Die Hard (1988)');
+    expect(onSkip).not.toHaveBeenCalled();
+  });
+
+  it('draws the picker on an ambiguous row alone', () => {
+    const KINDS: ProblemKind[] = [
+      'no-folder',
+      'ambiguous',
+      'no-video',
+      'no-row',
+      'failed',
+      'missing-meta',
+      'unplaced',
+      'differs',
+    ];
+    const drawn = KINDS.filter((kind) => {
+      const { unmount } = renderRow({
+        problem: problem({
+          kind,
+          movieId: 'm1',
+          candidates: ambiguous.candidates,
+        }),
+      });
+      const shown = screen.queryByText('2 videos') !== null;
+      unmount();
+      return shown;
+    });
+
+    expect(drawn).toEqual(['ambiguous']);
+  });
 });

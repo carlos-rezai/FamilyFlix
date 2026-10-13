@@ -12,7 +12,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { SHEET_FIELDS } from '@/types';
-import { sheetChoicesBody } from './importBody';
+import { pickFolderBody, sheetChoicesBody } from './importBody';
 
 describe('sheetChoicesBody: what it reads', () => {
   it('reads a map of field to side', () => {
@@ -102,5 +102,45 @@ describe('sheetChoicesBody: what it refuses, each in a sentence', () => {
       read.ok ? null : read.error
     );
     expect(new Set(errors).size).toBe(3);
+  });
+});
+
+// 40 — Import review, Phase 4: "the Folder picker" (issue #334).
+//
+// `POST /api/import/current/problems/:id/pick { folder }` reads its body the
+// same way: `folder` is the **Candidate folder** pressed, a non-empty string.
+// Whether it is one of the Problem's candidates is the domain's to say.
+
+describe('pickFolderBody: what it reads', () => {
+  it('reads the folder pressed', () => {
+    expect(pickFolderBody({ folder: '/films/Die Hard (1988)' })).toEqual({
+      ok: true,
+      value: '/films/Die Hard (1988)',
+    });
+  });
+
+  it('carries nothing the body said beyond the folder', () => {
+    expect(pickFolderBody({ folder: '/films/Heat', extra: 1 })).toEqual({
+      ok: true,
+      value: '/films/Heat',
+    });
+  });
+});
+
+describe('pickFolderBody: what it refuses, each in a sentence', () => {
+  it.each([
+    ['no body', undefined],
+    ['a body that is not an object', 'folder=/films/Heat'],
+    ['no folder', {}],
+    ['a null folder', { folder: null }],
+    ['an empty folder', { folder: '' }],
+    ['a folder of spaces', { folder: '   ' }],
+    ['a folder that is a number', { folder: 7 }],
+    ['a list of folders', { folder: ['/films/Heat'] }],
+  ])('refuses %s', (_name, body) => {
+    const read = pickFolderBody(body);
+
+    expect(read.ok).toBe(false);
+    expect(!read.ok && read.error).toMatch(SENTENCE);
   });
 });

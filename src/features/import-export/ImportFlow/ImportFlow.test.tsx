@@ -112,6 +112,10 @@ const isApply = (input: RequestInfo | URL, init?: RequestInit) =>
   /\/api\/import\/current\/problems\/[^/]+\/apply$/.test(String(input)) &&
   init?.method?.toUpperCase() === 'POST';
 
+const isPick = (input: RequestInfo | URL, init?: RequestInit) =>
+  /\/api\/import\/current\/problems\/[^/]+\/pick$/.test(String(input)) &&
+  init?.method?.toUpperCase() === 'POST';
+
 /** The reads of the current route so far. */
 const reads = () => fetchMock.mock.calls.filter(([i, n]) => isCurrent(i, n));
 
@@ -131,6 +135,7 @@ function serve(
     onArrival = false,
     hold,
     dismiss = () => noContentResponse(),
+    pick = () => noContentResponse(),
     folders = [LISTED],
   }: {
     onArrival?: boolean;
@@ -139,6 +144,8 @@ function serve(
     folders?: LibraryFolder[];
     /** What a `DELETE` of a problem answers — `204` unless a test says. */
     dismiss?: () => Response;
+    /** What a Folder picker press answers — `204` unless a test says. */
+    pick?: () => Response;
   } = {}
 ) {
   let read = 0;
@@ -156,6 +163,9 @@ function serve(
     }
     if (isApply(input, init)) {
       return noContentResponse();
+    }
+    if (isPick(input, init)) {
+      return pick();
     }
     if (isStart(input, init)) {
       if (started.status === 201 || started.status === 409) {
@@ -799,7 +809,7 @@ const dismissals = () =>
 /** Arrive on a run already in review, and wait for its list. */
 async function arriveInReview(
   problems: ImportProblem[] = PROBLEMS,
-  options: { dismiss?: () => Response } = {}
+  options: { dismiss?: () => Response; pick?: () => Response } = {}
 ) {
   serve(createdResponse(reviewOf(problems)), [reviewOf(problems)], {
     onArrival: true,
@@ -1206,5 +1216,94 @@ describe('ImportFlow — Apply choices on a differs row', () => {
     });
     expect(tileNumber(ATTENTION)).toBe('2');
     expect(dismissals()).toEqual([]);
+  });
+});
+
+/**
+ * 40 — Import review, Phase 4: "the Folder picker" (issue #334).
+ *
+ * An `ambiguous` row in the review: a press on a **Candidate folder** posts
+ * the folder to the Problem's pick route. On a `204` the row goes; on a `200`
+ * it is redrawn in place as that folder's `no-video` Problem, whose _Resolve_
+ * opens the form; on a `404` it goes all the same. The run is not polled for
+ * any of it.
+ */
+describe('ImportFlow — the Folder picker on an ambiguous row', () => {
+  const AMBIGUOUS: ImportProblem = {
+    id: 'p7',
+    kind: 'ambiguous',
+    title: 'Die Hard',
+    reason: 'Two folders look like plausible matches. Pick one.',
+    candidates: [
+      {
+        path: 'D:/Films/Die.Hard.1988.1080p',
+        name: 'Die.Hard.1988.1080p',
+        videos: 1,
+      },
+      { path: 'D:/Films/Die Hard (1988)', name: 'Die Hard (1988)', videos: 2 },
+    ],
+  };
+
+  const pressCard = (name: string) => {
+    const card = screen.getByText(name).closest('button');
+    if (card === null) {
+      throw new Error(`no card for ${name}`);
+    }
+    fireEvent.click(card);
+  };
+
+  const picks = () =>
+    fetchMock.mock.calls.filter(([input, init]) => isPick(input, init));
+
+  it('posts the folder, drops the row and counts the tile down', async () => {
+    await arriveInReview([AMBIGUOUS, ...PROBLEMS]);
+    expect(tileNumber(ATTENTION)).toBe('3');
+    const before = reads().length;
+
+    pressCard('Die.Hard.1988.1080p');
+
+    await waitFor(() => expect(screen.queryByText('Die Hard')).toBeNull());
+    expect(picks().map(([input]) => String(input))).toEqual([
+      '/api/import/current/problems/p7/pick',
+    ]);
+    expect(JSON.parse(String(picks()[0][1]?.body))).toEqual({
+      folder: 'D:/Films/Die.Hard.1988.1080p',
+    });
+    expect(tileNumber(ATTENTION)).toBe('2');
+    expect(dismissals()).toEqual([]);
+    expect(reads()).toHaveLength(before);
+  });
+
+  it('redraws the row as the folder’s no-video Problem on a 200, its Resolve kept', async () => {
+    const redrawn: ImportProblem = {
+      id: 'p7',
+      kind: 'no-video',
+      title: 'Die Hard',
+      reason: 'Two videos. Pick the film.',
+    };
+    await arriveInReview([AMBIGUOUS, ...PROBLEMS], {
+      pick: () => okResponse(redrawn),
+    });
+
+    pressCard('Die Hard (1988)');
+
+    expect(await screen.findByText('Two videos. Pick the film.')).toBeDefined();
+    expect(screen.queryByText('Die.Hard.1988.1080p')).toBeNull();
+    expect(tileNumber(ATTENTION)).toBe('3');
+    const resolve = within(rowOf('Die Hard')).getByRole('link', {
+      name: 'Resolve',
+    });
+    expect(resolve.getAttribute('href')).toContain('problem=p7');
+  });
+
+  it('drops the row on a 404 — a row already gone', async () => {
+    await arriveInReview([AMBIGUOUS, ...PROBLEMS], {
+      pick: () => notFoundResponse('No such problem: p7'),
+    });
+
+    pressCard('Die.Hard.1988.1080p');
+
+    await waitFor(() => expect(screen.queryByText('Die Hard')).toBeNull());
+    expect(tileNumber(ATTENTION)).toBe('2');
   });
 });
