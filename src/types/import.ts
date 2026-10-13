@@ -90,6 +90,17 @@ export type ProblemKind =
   | 'missing-meta'
   | 'differs';
 
+/**
+ * A **Candidate folder**: one folder an `ambiguous` match weighed, as the
+ * **Folder picker** draws it — its absolute path, its own name and how many
+ * videos it holds.
+ */
+export interface CandidateFolder {
+  path: string;
+  name: string;
+  videos: number;
+}
+
 /** A row or folder the run could not settle on its own, for the **Review step**. */
 export interface ImportProblem {
   id: string;
@@ -105,6 +116,8 @@ export interface ImportProblem {
   seriesId?: string;
   /** Set on a `differs` Problem: its **Sheet differences**, in field order. */
   differences?: SheetDifference[];
+  /** Set on an `ambiguous` Problem: every **Candidate folder** it weighed. */
+  candidates?: CandidateFolder[];
 }
 
 /**
@@ -143,8 +156,11 @@ export interface ImportRun {
   source: ImportSource;
 }
 
-/** What Resolve prefills the **Movie form** from. */
-export interface ImportProblemDetail extends ImportProblem {
+/**
+ * What Resolve prefills the **Movie form** from. Its `candidates` are the
+ * folders' paths, for the form — not the snapshot's **Candidate folders**.
+ */
+export interface ImportProblemDetail extends Omit<ImportProblem, 'candidates'> {
   row: {
     title: string;
     year?: number;

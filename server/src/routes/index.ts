@@ -17,6 +17,7 @@ import {
   type FolderRefusal,
 } from '../import-export/admitFolder/admitFolder';
 import {
+  CandidateRefusedError,
   ImportBusyError,
   ImportPathError,
   ImportStartError,
@@ -60,7 +61,7 @@ import {
   conflictChoicesBody,
   startEnrichmentBody,
 } from './enrichmentBody/enrichmentBody';
-import { sheetChoicesBody } from './importBody/importBody';
+import { pickFolderBody, sheetChoicesBody } from './importBody/importBody';
 import {
   DEFAULT_MOVIE_SORT,
   MOVIE_SORTS,
@@ -2376,6 +2377,40 @@ export function createApiRouter(
         return;
       }
       res.status(204).end();
+    }
+  );
+
+  // A press on an `ambiguous` row's **Folder picker**: the body read by
+  // `importBody`, then the importer imports the row from that **Candidate
+  // folder** — `204` — or redraws it as the folder's `no-video` Problem —
+  // `200` with it. Its refusal is the `400`, in its words; its `false` the
+  // `404`, the Skip's own.
+  router.post(
+    '/import/current/problems/:id/pick',
+    async (req: Request<{ id: string }>, res: Response) => {
+      const read = pickFolderBody(req.body);
+      if (!read.ok) {
+        res.status(400).json({ error: read.error });
+        return;
+      }
+      try {
+        const picked = await importer.pick(req.params.id, read.value);
+        if (picked === false) {
+          res.status(404).json({ error: `No such problem: ${req.params.id}` });
+          return;
+        }
+        if (picked === null) {
+          res.status(204).end();
+          return;
+        }
+        res.json(picked);
+      } catch (error) {
+        if (error instanceof CandidateRefusedError) {
+          res.status(400).json({ error: error.message });
+          return;
+        }
+        res.status(500).json({ error: 'Could not import from that folder' });
+      }
     }
   );
 

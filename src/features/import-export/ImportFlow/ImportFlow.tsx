@@ -70,7 +70,7 @@ const FINISH_TO_LIBRARY = 'Finish and go to library';
 
 export function ImportFlow() {
   const navigate = useNavigate();
-  const { run, attaching, start, cancel, skip, apply } = useImportRun();
+  const { run, attaching, start, cancel, skip, apply, pick } = useImportRun();
 
   // Leaving is a step, not a push at Settings: the hub's own Back then steps
   // onto the screen the gear was pressed from, rather than onto the duplicate
@@ -154,6 +154,16 @@ export function ImportFlow() {
     [apply]
   );
 
+  const onPick = useCallback(
+    (id: string, folder: string) => {
+      void pick(id, folder).catch(() => {
+        // A pick that did not land leaves the row where it is, its folders
+        // still there to press again.
+      });
+    },
+    [pick]
+  );
+
   return (
     <>
       <PageHeader
@@ -178,6 +188,7 @@ export function ImportFlow() {
           run={run}
           onSkip={onSkip}
           onApply={onApply}
+          onPick={onPick}
           finishLabel={run.enrich ? FINISH_TO_SYNC : FINISH_TO_LIBRARY}
           onFinish={() => onFinish(run.enrich)}
         />

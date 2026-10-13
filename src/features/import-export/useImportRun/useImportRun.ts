@@ -7,6 +7,7 @@ import {
   cancelImport,
   fetchCurrentImport,
   ImportBusyError,
+  pickCandidateFolder,
   startImport,
 } from '../api/api';
 
@@ -50,6 +51,12 @@ export interface ImportRunState {
    * `skip` does. Rejects when the apply could not be made; the row stays.
    */
   apply: (id: string, choices: SheetChoices) => Promise<void>;
+  /**
+   * A press on an `ambiguous` **Problem**'s **Folder picker**: post the
+   * folder, and take the row off on a `204` or a `404`, or redraw it in
+   * place from a `200`'s Problem. Rejects otherwise; the row stays.
+   */
+  pick: (id: string, folder: string) => Promise<void>;
 }
 
 /**
@@ -146,6 +153,27 @@ export function useImportRun(): ImportRunState {
     [takeOff]
   );
 
+  const pick = useCallback(
+    async (id: string, folder: string) => {
+      const redrawn = await pickCandidateFolder(id, folder);
+      if (redrawn === null) {
+        takeOff(id);
+        return;
+      }
+      setRun((current) =>
+        current === null
+          ? current
+          : {
+              ...current,
+              problems: current.problems.map((problem) =>
+                problem.id === id ? redrawn : problem
+              ),
+            }
+      );
+    },
+    [takeOff]
+  );
+
   const live = isLive(run);
   useEffect(() => {
     if (!live) {
@@ -175,5 +203,5 @@ export function useImportRun(): ImportRunState {
     };
   }, [live]);
 
-  return { run, attaching, start, cancel, skip, apply };
+  return { run, attaching, start, cancel, skip, apply, pick };
 }

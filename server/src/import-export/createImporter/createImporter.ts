@@ -104,6 +104,18 @@ export class ProblemNotFoundError extends Error {
 }
 
 /**
+ * A **Folder picker** press the importer will not take — a folder that is not
+ * one of the `ambiguous` **Problem**'s own **Candidate folders**. Refused
+ * before anything is copied; the route answers it as `400`, in its words.
+ */
+export class CandidateRefusedError extends Error {
+  constructor(message = 'That folder is not one of the candidates.') {
+    super(message);
+    this.name = 'CandidateRefusedError';
+  }
+}
+
+/**
  * One of the form's **File slots** as _Save & continue_ sends it back: a
  * **Found file** — the absolute path the scan found it at, under a Library folder —
  * or a file the route has already stored from bytes, as its **Stored path**.
@@ -208,6 +220,16 @@ export interface Importer {
    * there is no run, writing nothing.
    */
   apply(id: string, choices: SheetChoices): boolean;
+  /**
+   * A press on an `ambiguous` **Problem**'s **Folder picker**: import the row
+   * from one of its own **Candidate folders** and take the Problem off —
+   * `null`. A candidate holding no single video turns the row into that
+   * folder's `no-video` Problem in its place, answered. `false` for an id
+   * that is not there, and when there is no run. Rejects with
+   * {@link CandidateRefusedError} for a folder that is not a candidate,
+   * before anything is copied.
+   */
+  pick(id: string, folder: string): Promise<ImportProblem | null | false>;
   /**
    * The **Problem detail** _Resolve_ prefills the form from: the problem, the
    * **Sheet row**, the **Source folder** it is about, the candidate folders
@@ -606,6 +628,14 @@ export function createImporter({
    * genres already read onto the pool — what _Apply choices_ writes from.
    */
   const differing = new Map<string, Differing>();
+  /**
+   * Each film **Source folder** the walk found, by its path, before a
+   * **Collection folder** was split: what a **Candidate folder** is, whole.
+   */
+  const wholeFolders = new Map<string, MovieFolderScan>();
+  /** A scan's folder as the walk found it — the scan itself, unless split. */
+  const wholeOf = (scan: MovieFolderScan): MovieFolderScan =>
+    wholeFolders.get(scan.dir) ?? scan;
   /** The cancel of the run that is going, and the run itself, to be awaited. */
   let stop: AbortController = new AbortController();
   let running: Promise<void> = Promise.resolve();
@@ -1312,6 +1342,7 @@ export function createImporter({
     for (const folder of folders) {
       log(current, `Scanning   ${folder.path}`, 'scan');
     }
+    wholeFolders.clear();
 
     const walked: WalkedFolder[] = [];
     let found = 0;
@@ -1343,6 +1374,9 @@ export function createImporter({
       found += scans.length;
       shelves += foldersUnder(folder.path, scans);
       const grouped = groupShows(scans);
+      for (const film of grouped.films) {
+        wholeFolders.set(film.dir, film);
+      }
       walked.push({
         folder,
         films: splitCollections(grouped.films),
@@ -1521,11 +1555,35 @@ export function createImporter({
         // The first folder weighed is the one the detail is about — the one
         // an `ambiguous` prefills from, the one a `no-video` matched — and
         // only an `ambiguous` has others to name.
-        file(current, problemOf(kind, row.title, reason), {
-          row,
-          folder: candidates[0] ?? null,
-          candidates: kind === 'ambiguous' ? candidates : [],
-        });
+        const problem = problemOf(kind, row.title, reason);
+        file(
+          current,
+          kind === 'ambiguous'
+            ? {
+                ...problem,
+                candidates: [
+                  ...new Map(
+                    candidates.map((scan) => {
+                      const whole = wholeOf(scan);
+                      return [
+                        whole.dir,
+                        {
+                          path: whole.dir,
+                          name: whole.name,
+                          videos: whole.videos.length,
+                        },
+                      ] as const;
+                    })
+                  ).values(),
+                ],
+              }
+            : problem,
+          {
+            row,
+            folder: candidates[0] ?? null,
+            candidates: kind === 'ambiguous' ? candidates : [],
+          }
+        );
       }
     }
     for (const { match } of matchedShows) {
@@ -1736,6 +1794,81 @@ export function createImporter({
       );
       writeSheetSide(held, chosen);
       return takeOff(id);
+    },
+
+    pick: async (id, folder) => {
+      const current = run;
+      const at = current?.problems.findIndex((problem) => problem.id === id);
+      const source = sources.get(id);
+      if (
+        current === null ||
+        at === undefined ||
+        at === -1 ||
+        source === undefined
+      ) {
+        return false;
+      }
+      const candidate = source.candidates.find((each) => each.dir === folder);
+      const row = source.row;
+      if (candidate === undefined || row === null) {
+        throw new CandidateRefusedError();
+      }
+      const scan = wholeOf(candidate);
+      const libraryFolder = storage
+        .libraryFolders()
+        .find((listed) => isUnder(listed.path, scan.dir));
+      if (libraryFolder === undefined) {
+        throw new CandidateRefusedError(
+          'That folder is no longer under a Library folder.'
+        );
+      }
+
+      /** The row redrawn in the ambiguous one's place, as `problem` reads it. */
+      const redraw = (problem: ImportProblem, kept: ProblemSource) => {
+        current.problems.splice(at, 1, problem);
+        sources.delete(id);
+        sources.set(problem.id, kept);
+        return problem;
+      };
+
+      if (scan.videos.length !== 1) {
+        return redraw(
+          {
+            id,
+            kind: 'no-video',
+            title: row.title,
+            reason:
+              scan.videos.length === 0
+                ? MATCH_REASON.noVideo
+                : MATCH_REASON.manyVideos,
+          },
+          { row, folder: scan, candidates: [] }
+        );
+      }
+
+      const genres = genreReader();
+      const before = current.problems.length;
+      const added = await importMatch(
+        { row, folder: scan },
+        genres.pool,
+        genres.warned,
+        current,
+        stop.signal,
+        libraryFolder
+      );
+      if (added === null && current.problems.length > before) {
+        // The copy failed: the row becomes the `failed` Problem it filed.
+        const [failed] = current.problems.splice(before, 1);
+        const kept = sources.get(failed.id) ?? {
+          row,
+          folder: scan,
+          candidates: [],
+        };
+        sources.delete(failed.id);
+        return redraw(failed, kept);
+      }
+      takeOff(id);
+      return null;
     },
 
     problem: (id) => {

@@ -1248,6 +1248,8 @@ describe('createImporter — the matcher’s verdicts become problems', () => {
         kind: 'ambiguous',
         title: 'Die Hard',
         reason: REASON.twoFolders,
+        // Since #334: the Candidate folders the Folder picker draws.
+        candidates: expect.any(Array),
       },
     ]);
     expect(Object.keys(byTitle(storage))).toEqual(['Amélie']);
@@ -1268,6 +1270,8 @@ describe('createImporter — the matcher’s verdicts become problems', () => {
         kind: 'ambiguous',
         title: 'Alien',
         reason: REASON.nearName,
+        // Since #334: the Candidate folders the Folder picker draws.
+        candidates: expect.any(Array),
       },
     ]);
     expect(byTitle(storage)['Alien']).toBeUndefined();

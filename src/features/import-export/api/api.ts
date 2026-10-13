@@ -5,6 +5,7 @@ import {
   type ExportResult,
   type ExportSummary,
   type ImportField,
+  type ImportProblem,
   type ImportRun,
   type LibraryFolder,
   type SheetChoices,
@@ -148,6 +149,33 @@ export async function applySheetChoices(
   if (!response.ok && response.status !== 404) {
     throw new Error(`POST ${endpoint} failed: ${response.status}`);
   }
+}
+
+/**
+ * A press on an `ambiguous` **Problem**'s **Folder picker**: `POST` the
+ * **Candidate folder** to the Problem's pick route. A `200` answers the row
+ * redrawn — that folder's `no-video` Problem; the `204` and the `404` both
+ * answer `null`, the Problem not there any more. Anything else rejects, and
+ * so does a request that could not be made.
+ */
+export async function pickCandidateFolder(
+  id: string,
+  folder: string
+): Promise<ImportProblem | null> {
+  const endpoint = `${CURRENT_ENDPOINT}/problems/${encodeURIComponent(id)}/pick`;
+  const response = await fetch(endpoint, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ folder }),
+  });
+
+  if (response.status === 200) {
+    return (await response.json()) as ImportProblem;
+  }
+  if (response.status !== 204 && response.status !== 404) {
+    throw new Error(`POST ${endpoint} failed: ${response.status}`);
+  }
+  return null;
 }
 
 const EXPORT_ENDPOINT = '/api/export';

@@ -39,3 +39,18 @@ export function sheetChoicesBody(body: unknown): BodyRead<SheetChoices> {
   }
   return { ok: true, value };
 }
+
+/**
+ * A **Folder picker** press's body → the **Candidate folder** pressed:
+ * `folder` a non-empty string, refused in a sentence otherwise. Whether it is
+ * one of the Problem's candidates is the domain's to say.
+ */
+export function pickFolderBody(body: unknown): BodyRead<string> {
+  const { folder } = (
+    typeof body === 'object' && body !== null ? body : {}
+  ) as { folder?: unknown };
+  if (typeof folder !== 'string' || folder.trim() === '') {
+    return { ok: false, error: 'Folder must be the path of a candidate.' };
+  }
+  return { ok: true, value: folder };
+}

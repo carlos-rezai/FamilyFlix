@@ -2,6 +2,7 @@ import { FieldDiff, type FieldDiffSide } from '@/components';
 import { Button } from '@/primitives';
 import type { ImportProblem, SheetChoices, SheetField } from '@/types';
 import { movieFormPath } from '@/utils';
+import { FolderPicker } from '../FolderPicker/FolderPicker';
 import {
   Card,
   DOT_TONE,
@@ -19,6 +20,8 @@ export interface ProblemRowProps {
   onSkip: () => void;
   /** _Apply choices_ on a `differs` row: the side kept for each field. */
   onApply: (choices: SheetChoices) => void;
+  /** A **Candidate folder** pressed on an `ambiguous` row, by its path. */
+  onPick: (folder: string) => void;
 }
 
 /**
@@ -58,12 +61,18 @@ const sheetChoices = (
  * _Resolve_ is a navigation — `/add?problem=<id>`, or `/add?movie=<movieId>&problem=<id>`
  * for the soft kind — so it is a link, which
  * the maintainer can middle-click; _Skip_ is an action, so it is a button.
+ * An `ambiguous` row draws the **Folder picker**, _Resolve_ kept beside it.
  * A `differs` row has no _Resolve_: it is settled on the row, by the
  * _Yours | Spreadsheet_ diff, whose _Keep all mine_ is the row's _Skip_.
  * Neither knows what happens next: the row draws a problem and reports a
  * press.
  */
-export function ProblemRow({ problem, onSkip, onApply }: ProblemRowProps) {
+export function ProblemRow({
+  problem,
+  onSkip,
+  onApply,
+  onPick,
+}: ProblemRowProps) {
   const differs = problem.kind === 'differs';
   return (
     <Card>
@@ -96,6 +105,13 @@ export function ProblemRow({ problem, onSkip, onApply }: ProblemRowProps) {
           theirsLabel="Spreadsheet"
           onApply={(choices) => onApply(sheetChoices(choices))}
           onKeepAll={onSkip}
+        />
+      ) : null}
+      {problem.kind === 'ambiguous' ? (
+        <FolderPicker
+          candidates={problem.candidates ?? []}
+          label={`Folders for ${problem.title}`}
+          onPick={onPick}
         />
       ) : null}
     </Card>

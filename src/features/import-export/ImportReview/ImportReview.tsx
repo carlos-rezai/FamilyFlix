@@ -19,6 +19,8 @@ export interface ImportReviewProps {
   onSkip: (id: string) => void;
   /** _Apply choices_ was pressed on the `differs` **Problem** with this id. */
   onApply: (id: string, choices: SheetChoices) => void;
+  /** A **Candidate folder** was pressed on the `ambiguous` **Problem** with this id. */
+  onPick: (id: string, folder: string) => void;
   /** Finish's words: where it goes, which the flow knows and this step does not. */
   finishLabel: string;
   onFinish: () => void;
@@ -40,6 +42,7 @@ export function ImportReview({
   run,
   onSkip,
   onApply,
+  onPick,
   finishLabel,
   onFinish,
 }: ImportReviewProps) {
@@ -80,6 +83,7 @@ export function ImportReview({
                 problem={problem}
                 onSkip={() => onSkip(problem.id)}
                 onApply={(choices) => onApply(problem.id, choices)}
+                onPick={(folder) => onPick(problem.id, folder)}
               />
             ))}
           </List>

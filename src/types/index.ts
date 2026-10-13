@@ -89,6 +89,7 @@ export type {
   LogLine,
   ProblemKind,
   ImportProblem,
+  CandidateFolder,
   ImportRun,
   ImportProblemDetail,
   SheetField,
