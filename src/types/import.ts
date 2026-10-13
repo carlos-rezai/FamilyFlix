@@ -101,6 +101,12 @@ export interface CandidateFolder {
   videos: number;
 }
 
+/** The title and year a folder's own name suggests, `year` absent when none. */
+export interface TitleGuess {
+  title: string;
+  year?: number;
+}
+
 /** A row or folder the run could not settle on its own, for the **Review step**. */
 export interface ImportProblem {
   id: string;
@@ -118,6 +124,11 @@ export interface ImportProblem {
   differences?: SheetDifference[];
   /** Set on an `ambiguous` Problem: every **Candidate folder** it weighed. */
   candidates?: CandidateFolder[];
+  /**
+   * Set on a `no-row` Problem: the title and year a **Folder scan** would give
+   * its folder — what _Import as_ imports it under.
+   */
+  guess?: TitleGuess;
 }
 
 /**

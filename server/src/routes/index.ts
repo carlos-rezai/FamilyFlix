@@ -2414,6 +2414,24 @@ export function createApiRouter(
     }
   );
 
+  // _Import as_ on a `no-row` row: the importer imports the folder under the
+  // title and year a **Folder scan** would give it — `204` — and its `false`,
+  // a row already gone among them, is the `404`, the Skip's own.
+  router.post(
+    '/import/current/problems/:id/import',
+    async (req: Request<{ id: string }>, res: Response) => {
+      try {
+        if (!(await importer.importGuessed(req.params.id))) {
+          res.status(404).json({ error: `No such problem: ${req.params.id}` });
+          return;
+        }
+        res.status(204).end();
+      } catch {
+        res.status(500).json({ error: 'Could not import that folder' });
+      }
+    }
+  );
+
   // The **Problem detail** _Resolve_ opens the form on: the problem, the
   // **Sheet row**, the matched **Source folder**, the candidates and the
   // folder's **Found files** as absolute paths under the root. A `404` with a

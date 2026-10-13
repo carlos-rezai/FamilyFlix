@@ -1,6 +1,11 @@
 import { FieldDiff, type FieldDiffSide } from '@/components';
 import { Button } from '@/primitives';
-import type { ImportProblem, SheetChoices, SheetField } from '@/types';
+import type {
+  ImportProblem,
+  SheetChoices,
+  SheetField,
+  TitleGuess,
+} from '@/types';
 import { movieFormPath } from '@/utils';
 import { FolderPicker } from '../FolderPicker/FolderPicker';
 import {
@@ -8,6 +13,7 @@ import {
   DOT_TONE,
   Dot,
   Head,
+  ImportAsSlot,
   Reason,
   Text,
   Title,
@@ -22,6 +28,8 @@ export interface ProblemRowProps {
   onApply: (choices: SheetChoices) => void;
   /** A **Candidate folder** pressed on an `ambiguous` row, by its path. */
   onPick: (folder: string) => void;
+  /** _Import as_ on a `no-row` row: the folder imported under its guess. */
+  onImportAs: () => void;
 }
 
 /**
@@ -61,17 +69,23 @@ const sheetChoices = (
  * _Resolve_ is a navigation — `/add?problem=<id>`, or `/add?movie=<movieId>&problem=<id>`
  * for the soft kind — so it is a link, which
  * the maintainer can middle-click; _Skip_ is an action, so it is a button.
- * An `ambiguous` row draws the **Folder picker**, _Resolve_ kept beside it.
+ * An `ambiguous` row draws the **Folder picker**, _Resolve_ kept beside it,
+ * and a `no-row` row _Import as_ its guess, _Resolve_ kept the same.
  * A `differs` row has no _Resolve_: it is settled on the row, by the
  * _Yours | Spreadsheet_ diff, whose _Keep all mine_ is the row's _Skip_.
  * Neither knows what happens next: the row draws a problem and reports a
  * press.
  */
+/** A **Title guess** spelled: `Ironwood (2018)`, or the title alone. */
+const guessSpelled = ({ title, year }: TitleGuess): string =>
+  year === undefined ? title : `${title} (${year})`;
+
 export function ProblemRow({
   problem,
   onSkip,
   onApply,
   onPick,
+  onImportAs,
 }: ProblemRowProps) {
   const differs = problem.kind === 'differs';
   return (
@@ -113,6 +127,16 @@ export function ProblemRow({
           label={`Folders for ${problem.title}`}
           onPick={onPick}
         />
+      ) : null}
+      {problem.kind === 'no-row' && problem.guess !== undefined ? (
+        <ImportAsSlot>
+          <Button
+            label={`Import as “${guessSpelled(problem.guess)}”`}
+            variant="secondary"
+            size="sm"
+            onClick={onImportAs}
+          />
+        </ImportAsSlot>
       ) : null}
     </Card>
   );

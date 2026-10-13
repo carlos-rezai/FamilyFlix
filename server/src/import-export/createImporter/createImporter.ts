@@ -231,6 +231,13 @@ export interface Importer {
    */
   pick(id: string, folder: string): Promise<ImportProblem | null | false>;
   /**
+   * _Import as_ on a `no-row` **Problem**: import its folder under the row a
+   * **Folder scan** would give it — `guessedRow` — and take the Problem off,
+   * answering `true`. `false` for an id that is not there, for a Problem
+   * that is not a `no-row`, and when there is no run.
+   */
+  importGuessed(id: string): Promise<boolean>;
+  /**
    * The **Problem detail** _Resolve_ prefills the form from: the problem, the
    * **Sheet row**, the **Source folder** it is about, the candidate folders
    * and the folder's **Found files** as absolute paths. `null`
@@ -1611,11 +1618,18 @@ export function createImporter({
         matchedShows.push({ match: unnamed, libraryFolder });
         continue;
       }
-      file(current, problemOf('no-row', folder.name, REASON.noRow), {
-        row: null,
-        folder,
-        candidates: [],
-      });
+      const guess = guessedRow(folder.name);
+      file(
+        current,
+        {
+          ...problemOf('no-row', folder.name, REASON.noRow),
+          guess: {
+            title: guess.title,
+            ...(guess.year === null ? {} : { year: guess.year }),
+          },
+        },
+        { row: null, folder, candidates: [] }
+      );
     }
     await importPlaced(
       current,
@@ -1869,6 +1883,47 @@ export function createImporter({
       }
       takeOff(id);
       return null;
+    },
+
+    importGuessed: async (id) => {
+      const current = run;
+      const listed = current?.problems.find((problem) => problem.id === id);
+      const folder = sources.get(id)?.folder;
+      if (
+        current === null ||
+        listed === undefined ||
+        listed.kind !== 'no-row' ||
+        folder === undefined ||
+        folder === null ||
+        folder.videos.length !== 1
+      ) {
+        return false;
+      }
+      const libraryFolder = storage
+        .libraryFolders()
+        .find((listedFolder) => isUnder(listedFolder.path, folder.dir));
+      if (libraryFolder === undefined) {
+        return false;
+      }
+      // Taken off before the copy, so a second press finds nothing to import.
+      takeOff(id);
+      const genres = genreReader();
+      const before = current.problems.length;
+      const added = await importMatch(
+        { row: guessedRow(folder.name), folder },
+        genres.pool,
+        genres.warned,
+        current,
+        stop.signal,
+        libraryFolder
+      );
+      if (added !== null) {
+        // As a Folder scan would: no row named a genre, so nothing is missing.
+        for (const filed of current.problems.splice(before)) {
+          sources.delete(filed.id);
+        }
+      }
+      return true;
     },
 
     problem: (id) => {

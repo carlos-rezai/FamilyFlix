@@ -79,3 +79,8 @@ export const Reason = styled.div`
   font-size: 13px;
   color: ${({ theme }) => theme.colors.textFaint};
 `;
+
+/** A `no-row` row's face: _Import as_, under the head past the dot. */
+export const ImportAsSlot = styled.div`
+  padding: 14px 0 0 24px;
+`;

@@ -7,6 +7,7 @@ import {
   cancelImport,
   fetchCurrentImport,
   ImportBusyError,
+  importGuessed,
   pickCandidateFolder,
   startImport,
 } from '../api/api';
@@ -57,6 +58,11 @@ export interface ImportRunState {
    * place from a `200`'s Problem. Rejects otherwise; the row stays.
    */
   pick: (id: string, folder: string) => Promise<void>;
+  /**
+   * _Import as_ on a `no-row` **Problem**: post it, and take the row off on
+   * a `204` or a `404`. Rejects otherwise; the row stays.
+   */
+  importAsGuessed: (id: string) => Promise<void>;
 }
 
 /**
@@ -174,6 +180,14 @@ export function useImportRun(): ImportRunState {
     [takeOff]
   );
 
+  const importAsGuessed = useCallback(
+    async (id: string) => {
+      await importGuessed(id);
+      takeOff(id);
+    },
+    [takeOff]
+  );
+
   const live = isLive(run);
   useEffect(() => {
     if (!live) {
@@ -203,5 +217,14 @@ export function useImportRun(): ImportRunState {
     };
   }, [live]);
 
-  return { run, attaching, start, cancel, skip, apply, pick };
+  return {
+    run,
+    attaching,
+    start,
+    cancel,
+    skip,
+    apply,
+    pick,
+    importAsGuessed,
+  };
 }

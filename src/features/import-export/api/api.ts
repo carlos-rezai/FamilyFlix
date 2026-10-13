@@ -178,6 +178,21 @@ export async function pickCandidateFolder(
   return null;
 }
 
+/**
+ * _Import as_ on a `no-row` **Problem**: `POST` to the Problem's import
+ * route, no body. The `204` and the `404` both resolve — the Problem is not
+ * there any more either way. Anything else rejects, and so does a request
+ * that could not be made.
+ */
+export async function importGuessed(id: string): Promise<void> {
+  const endpoint = `${CURRENT_ENDPOINT}/problems/${encodeURIComponent(id)}/import`;
+  const response = await fetch(endpoint, { method: 'POST' });
+
+  if (response.status !== 204 && response.status !== 404) {
+    throw new Error(`POST ${endpoint} failed: ${response.status}`);
+  }
+}
+
 const EXPORT_ENDPOINT = '/api/export';
 
 /**
