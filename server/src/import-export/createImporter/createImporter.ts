@@ -817,6 +817,15 @@ export function createImporter({
     }
   };
 
+  /** The **Already in library** line: a held title the run added nothing to. */
+  const logAlreadyHeld = (current: ImportRun, row: SheetRow): void => {
+    log(
+      current,
+      `· Already in library ${titleWithYear(row.title, row.year)}`,
+      'info'
+    );
+  };
+
   /** The line a held title ends on: what it took, or that it took nothing. */
   const logHeld = (
     current: ImportRun,
@@ -825,11 +834,7 @@ export function createImporter({
   ): boolean => {
     const names = filledNames(fill);
     if (names.length === 0) {
-      log(
-        current,
-        `· Already in library ${titleWithYear(row.title, row.year)}`,
-        'info'
-      );
+      logAlreadyHeld(current, row);
       return false;
     }
     log(
@@ -1069,11 +1074,7 @@ export function createImporter({
     }
     if (episodes.length === 0) {
       if (held !== null && !match.updated) {
-        log(
-          current,
-          `· Already in library ${titleWithYear(row.title, row.year)}`,
-          'info'
-        );
+        logAlreadyHeld(current, row);
       }
       return;
     }
@@ -1463,11 +1464,7 @@ export function createImporter({
     row: SheetRow
   ): void => {
     linkHeld(heldId, folder, scan);
-    log(
-      current,
-      `· Already in library ${titleWithYear(row.title, row.year)}`,
-      'info'
-    );
+    logAlreadyHeld(current, row);
   };
 
   /**
