@@ -5,13 +5,14 @@ import type { SheetRow } from '../readSheet/readSheet';
 
 /**
  * The **Sheet fills**: each empty held field the row fills, in the row's
- * values. A series' `year` brings its `endYear` with it; `watched` is only
- * ever a mark on an unwatched film.
+ * values. A series' `year` brings its `endYear` with it — `null` an open run,
+ * which a proposal carries so _Apply choices_ clears a held end year; `watched`
+ * is only ever a mark on an unwatched film.
  */
 export interface SheetFill {
   synopsis?: string;
   year?: number;
-  endYear?: number;
+  endYear?: number | null;
   genres?: string[];
   director?: string;
   cast?: string[];
@@ -152,9 +153,7 @@ export function planSheetFields(
       if (mine !== sheet) {
         differ('year', mine, sheet);
         proposed.year = row.year;
-        if (row.endYear !== null) {
-          proposed.endYear = row.endYear;
-        }
+        proposed.endYear = row.endYear;
       }
     }
   }

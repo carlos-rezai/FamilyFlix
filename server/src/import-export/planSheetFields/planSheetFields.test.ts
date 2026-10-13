@@ -352,13 +352,13 @@ describe('planSheetFields: a series’ Year range', () => {
     expect(plan.proposed).toEqual({ year: 2021, endYear: 2021 });
   });
 
-  it('proposes an open run as its start year alone', () => {
+  it('proposes an open run with its end year cleared', () => {
     const plan = show(
       { year: 2019, endYear: 2023 },
       { year: 2021, endYear: null }
     );
 
-    expect(plan.proposed).toEqual({ year: 2021 });
+    expect(plan.proposed).toEqual({ year: 2021, endYear: null });
   });
 });
 

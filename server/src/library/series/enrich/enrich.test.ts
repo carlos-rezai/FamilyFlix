@@ -96,6 +96,18 @@ describe('library: enrichSeries — the columns it names', () => {
     ]);
   });
 
+  it('clears the end year when it is named null — an open run', () => {
+    const { storage, seriesId } = showWithEpisodes();
+    storage.enrichSeries(seriesId, { year: 2019, endYear: 2023 });
+
+    storage.enrichSeries(seriesId, { year: 2021, endYear: null });
+
+    expect(detailOf(storage, seriesId).series).toMatchObject({
+      year: 2021,
+      endYear: null,
+    });
+  });
+
   it('leaves every column it does not name exactly as it was', () => {
     const { storage, seriesId } = showWithEpisodes();
     const before = detailOf(storage, seriesId).series;

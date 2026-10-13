@@ -305,6 +305,28 @@ describe('createImporter.apply — Apply choices', () => {
     await box.importer.cancel();
   });
 
+  it('writes an open run chosen sheet as an open run, its end year cleared', async () => {
+    const box = await seriesDiffers();
+    box.db
+      .prepare('UPDATE series SET year = 2019, end_year = 2023 WHERE id = ?')
+      .run(box.id);
+    const text = readFileSync(box.sheet, 'utf8');
+    expect(text).toContain('Harbor & Vine,2021,');
+    writeFileSync(
+      box.sheet,
+      text.replace('Harbor & Vine,2021,', 'Harbor & Vine,2021-,')
+    );
+    const [problem] = differsOf(await runToReview(box.importer, box.sheet));
+
+    await box.importer.apply(problem.id, { year: 'sheet' });
+
+    expect(box.storage.getSeriesDetail(box.id)?.series).toMatchObject({
+      year: 2021,
+      endYear: null,
+    });
+    await box.importer.cancel();
+  });
+
   it('writes a chosen cast as a fill would: each name trimmed, a blank one dropped', async () => {
     const box = await filmDiffers();
     box.storage.updateMovie(box.id, { cast: ['Bonnie Bedelia'] });

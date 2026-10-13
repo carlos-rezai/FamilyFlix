@@ -91,6 +91,16 @@ describe('chosenSheetFill: Apply choices', () => {
     ).toEqual(PROPOSED);
   });
 
+  it('carries an open run’s cleared end year with its year', () => {
+    expect(
+      chosenSheetFill({ year: 2021, endYear: null }, { year: 'sheet' })
+    ).toEqual({ year: 2021, endYear: null });
+    expect(seriesSheetPatch({ year: 2021, endYear: null })).toEqual({
+      year: 2021,
+      endYear: null,
+    });
+  });
+
   it('writes nothing for a field chosen mine', () => {
     expect(
       chosenSheetFill(PROPOSED, { synopsis: 'mine', director: 'sheet' })

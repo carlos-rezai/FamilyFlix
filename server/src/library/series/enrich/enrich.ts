@@ -22,7 +22,8 @@ export interface SeriesEnrichment {
   posterPath?: string;
   backdropPath?: string;
   year?: number;
-  endYear?: number;
+  /** `null` clears it: an open run, _Apply choices_' sheet side. */
+  endYear?: number | null;
   genres?: readonly string[];
   creator?: string;
   cast?: readonly string[];
