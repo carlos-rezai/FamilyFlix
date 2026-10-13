@@ -1480,6 +1480,15 @@ export function createImporter({
     );
   };
 
+  /**
+   * The listed **Library folder** a review press imports a folder under, read
+   * live — the list as it is now, not as the run read it — or `null` when the
+   * folder lies under none.
+   */
+  const listedFolderOf = (dir: string): StoredLibraryFolder | null =>
+    storage.libraryFolders().find((listed) => isUnder(listed.path, dir)) ??
+    null;
+
   /** A held film linked to where it was found. */
   const linkHeld = (
     heldId: string,
@@ -1862,10 +1871,8 @@ export function createImporter({
         throw new CandidateRefusedError();
       }
       const scan = wholeOf(candidate);
-      const libraryFolder = storage
-        .libraryFolders()
-        .find((listed) => isUnder(listed.path, scan.dir));
-      if (libraryFolder === undefined) {
+      const libraryFolder = listedFolderOf(scan.dir);
+      if (libraryFolder === null) {
         throw new CandidateRefusedError(
           'That folder is no longer under a Library folder.'
         );
@@ -1931,10 +1938,8 @@ export function createImporter({
       ) {
         return false;
       }
-      const libraryFolder = storage
-        .libraryFolders()
-        .find((listedFolder) => isUnder(listedFolder.path, folder.dir));
-      if (libraryFolder === undefined) {
+      const libraryFolder = listedFolderOf(folder.dir);
+      if (libraryFolder === null) {
         return false;
       }
       // Taken off before the copy, so a second press finds nothing to import.
