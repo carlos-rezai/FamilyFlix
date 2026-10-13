@@ -1124,6 +1124,28 @@ v0.3.0 (design log 39):
     `seasons/` with _Images_ on, and no column. No Season page art, no
     **Write target**, no series-poster fallback.
 
+Step 23 is next, out of using the latest release. It has **not** been
+grilled: what follows is the maintainer's intent, not a design — no design
+log, PRD or prototype revision exists for it yet, and nothing here is a
+decision to build to:
+
+23. 🔜 **Import review** — the Library group's _Import from spreadsheet_
+    becomes one import over the **Library folders** and a **Sheet** (CSV or
+    Excel) together — today the sheet run takes one typed root and the
+    **Folder scan** reads no sheet — and the scan ends in a review of the
+    adjustments to make, settled row by row the way the **Enrichment flow**'s
+    review settles its **Decisions**, in place of today's **Review step** of
+    **Problems** with Resolve and Skip. Open for the grill-me: what counts as
+    an adjustment (sheet vs folder title, year, a row with no folder, a
+    folder with no row, metadata the sheet holds and the library differs
+    on); whether the import waits on the review or imports the confident
+    matches during the run as it does now (log 13 Q16); whether the sheet
+    and folder-scan runs merge into one run or stay two; what
+    a second run over an imported library proposes; and how it sits beside
+    the Library folders page's _Scan folders_. Before it, #327: _Finish_ now
+    lets the **Current run** go, so _Import from spreadsheet_ no longer
+    re-attaches to a finished Folder scan.
+
 A 🧭 Roadmap item is not in this chain — it is after it, if ever.
 
 ### Foundation
@@ -1165,6 +1187,7 @@ A 🧭 Roadmap item is not in this chain — it is after it, if ever.
 - ✅ **Edit a movie** — amend metadata and files; a file the library already holds travels as its path, only a freshly picked one as bytes.
 - ✅ **Title editing** — number a show's file in the app without renaming it: `S[01] E[01]` in front of `eps1.0_hellofriend.mov`, remembered as its **Source file**; the reader learns the **Episode word**; one `unplaced` Problem per show with a _Resolve_; the series page's ⋯ menu, its _Edit details_ the Movie form's series edit job (`PATCH /api/series/:id`) and its Danger row the delete (`DELETE /api/series/:id`); and the **Found-file choice** for a film folder of two or more videos (step 21).
 - ✅ **Export name** — the Export folder's name as the **Folder name field** in the Export dialog: prefilled with today's dated name and never overwritten once edited, refused in one sentence under the field when no folder can be called that, never stripped, numbered when taken.
+- 🔜 **Import review** — one import over the Library folders and a spreadsheet (CSV or Excel), its scan ending in a review of the adjustments to make, settled row by row as a TMDB Sync's review is (step 23, not yet grilled).
 - ✅ **Delete a movie** — the ⋯ menu’s Danger row, the Delete dialog, `DELETE /api/movies/:id`, then the Movie folder under best-effort cleanup.
 - ✅ **Bulk import** — a Sheet and a Library root become Movies during the run; the Review step lists only the Problems the run could not settle, each with Resolve (the Movie form in Import context) and Skip.
 - ✅ **Import progress console** — the Connect ✓ → Scan → Import stepper, the bar, the current item, elapsed and ETA, the Activity log, and Cancel; a server run polled every 500 ms, re-attachable.

@@ -372,6 +372,7 @@ Keep the description short enough to fit on one line — long descriptions get w
 | Factory reset — erase everything, behind a dialog   | ✅ Done         |
 | Title editing — number, edit and delete a series    | ✅ Done         |
 | Season posters — TMDB art on each season card       | ✅ Done         |
+| Import review — folders + sheet, adjustments listed | 🔜 Planned      |
 | Collections / playlists                             | 🧭 Roadmap      |
 | Auto-on subtitles                                   | 🧭 Roadmap      |
 | Backgroundable import                               | 🧭 Roadmap      |
@@ -434,6 +435,17 @@ Step 22 came after the third chain, out of the open issues from v0.3.0's use
     asked TMDB for every season and threw the poster away; now it keeps it,
     never replacing one already there, and an export with images on carries
     them too.
+
+Step 23 is the next one, out of using the latest release; it has not been
+through grill-me yet, so what follows is the intent, not the design:
+
+23. 🔜 **Import review** — _Import from spreadsheet_ becomes one import over
+    your library folders **and** a spreadsheet (CSV or Excel): the folders
+    and the sheet are scanned together, and the scan ends in a review of the
+    adjustments that need making — where the sheet and the folders disagree,
+    or a row and a folder don't line up — each settled row by row, the way a
+    TMDB Sync's review is, rather than the list of problems the importer
+    shows today.
 
 A 🧭 Roadmap item is not in the chain — it comes after it, if ever.
 
