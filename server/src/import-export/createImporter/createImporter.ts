@@ -1931,7 +1931,6 @@ export function createImporter({
             ? { title: titleGuess(listed.title), genres: [] }
             : rowDetail(source.row),
         ...(folder === null ? {} : { folder: folder.dir }),
-        candidates: source.candidates.map((scan) => scan.dir),
         files:
           folder === null ? { videos: [], subtitles: [] } : filesOf(folder),
       };

@@ -1700,7 +1700,7 @@ describe('createImporter — problem: the detail Resolve prefills from', () => {
         ],
       },
     });
-    expect(detail?.candidates).toEqual([]);
+    expect(detail?.candidates).toBeUndefined();
   });
 
   it('leaves the video slot of a no-video problem empty, and fills the rest from the folder', async () => {
@@ -1760,9 +1760,10 @@ describe('createImporter — problem: the detail Resolve prefills from', () => {
 
     const detail = importer.problem(problem.id);
 
-    expect([...(detail?.candidates ?? [])].sort()).toEqual(
+    expect(detail?.candidates?.map((folder) => folder.path).sort()).toEqual(
       [join(root, 'Die.Hard.1988.1080p'), second].sort()
     );
+    expect(detail?.candidates).toEqual(problem.candidates);
     expect(detail?.row).toMatchObject({ title: 'Die Hard', year: 1988 });
   });
 
@@ -1783,7 +1784,7 @@ describe('createImporter — problem: the detail Resolve prefills from', () => {
       genres: ['Drama'],
     });
     expect(detail?.folder).toBeUndefined();
-    expect(detail?.candidates).toEqual([]);
+    expect(detail?.candidates).toBeUndefined();
     expect(detail?.files).toEqual({ videos: [], subtitles: [] });
   });
 
@@ -1854,7 +1855,7 @@ describe('createImporter — problem: the detail Resolve prefills from', () => {
 
       expect(detail?.row.title).toBe('Harbor Lights');
       expect(detail?.folder).toBe(folder);
-      expect(detail?.candidates).toEqual([]);
+      expect(detail?.candidates).toBeUndefined();
       expect(detail?.files).toEqual({
         video: join(folder, 'Harbor.Lights.2019.mp4'),
         videos: [join(folder, 'Harbor.Lights.2019.mp4')],

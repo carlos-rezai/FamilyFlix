@@ -167,10 +167,11 @@ export interface ImportRun {
 }
 
 /**
- * What Resolve prefills the **Movie form** from. Its `candidates` are the
- * folders' paths, for the form — not the snapshot's **Candidate folders**.
+ * What Resolve prefills the **Movie form** from: the Problem as the snapshot
+ * lists it — an `ambiguous` one's **Candidate folders** among it — and what
+ * the run knew when it filed it.
  */
-export interface ImportProblemDetail extends Omit<ImportProblem, 'candidates'> {
+export interface ImportProblemDetail extends ImportProblem {
   row: {
     title: string;
     year?: number;
@@ -182,8 +183,6 @@ export interface ImportProblemDetail extends Omit<ImportProblem, 'candidates'> {
   };
   /** The **Source folder** the problem is about, when there is one. */
   folder?: string;
-  /** The key-equal folders of an `ambiguous` problem; the first prefills. */
-  candidates: string[];
   /**
    * The **Found files** under the folder, as absolute paths under its
    * **Library folder**.

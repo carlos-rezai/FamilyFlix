@@ -775,13 +775,14 @@ const managedFiles = (media: string): string[] =>
     .sort();
 
 describe('GET /api/import/current/problems/:id', () => {
-  it('answers 200 with the detail: row, folder, candidates and files', async () => {
+  it('answers 200 with the detail: row, folder and files, and no candidates', async () => {
     const { baseUrl, problem, dieHard } = await failedDieHardApi();
 
     const response = await getProblem(baseUrl, problem.id);
 
     expect(response.status).toBe(200);
     const detail = (await response.json()) as ImportProblemDetail;
+    expect(detail.candidates).toBeUndefined();
     expect(detail).toMatchObject({
       id: problem.id,
       kind: 'failed',
@@ -795,7 +796,6 @@ describe('GET /api/import/current/problems/:id', () => {
         rating: 8,
       },
       folder: dieHard,
-      candidates: [],
       files: {
         video: join(dieHard, 'Die.Hard.1988.1080p.mp4'),
         poster: join(dieHard, 'poster.jpg'),
@@ -880,12 +880,12 @@ describe('GET /api/import/current/problems/:id', () => {
       // and the folder's one video into its slot.
       expect(response.status).toBe(200);
       const detail = (await response.json()) as ImportProblemDetail;
+      expect(detail.candidates).toBeUndefined();
       expect(detail).toMatchObject({
         kind: 'no-row',
         title: 'Harbor.Lights.2019',
         row: { title: 'Harbor Lights', genres: [] },
         folder: join(root, 'Harbor.Lights.2019'),
-        candidates: [],
         files: {
           video: join(root, 'Harbor.Lights.2019', 'Ironwood.mp4'),
           subtitles: [],

@@ -2926,6 +2926,13 @@ describe('MovieForm — the Import context', () => {
   const HARBOR_SECOND = 'C:\\Movies\\Harbor.Lights.2019';
   const HARBOR_THIRD = 'C:\\Movies\\Harbor Lights 1080p';
 
+  /** A **Candidate folder** at a path, named as its last segment. */
+  const candidateAt = (path: string, name = path.split(/[\\/]/).pop()) => ({
+    path,
+    name: name ?? path,
+    videos: 1,
+  });
+
   const HARBOR_AMBIGUOUS: ImportProblemDetail = {
     id: 'p2',
     kind: 'ambiguous',
@@ -2933,7 +2940,7 @@ describe('MovieForm — the Import context', () => {
     reason: 'Two folders look like plausible matches. Pick one.',
     row: { title: 'Harbor Lights', year: 2019, genres: ['Drama'] },
     folder: HARBOR_FIRST,
-    candidates: [HARBOR_FIRST, HARBOR_SECOND],
+    candidates: [candidateAt(HARBOR_FIRST), candidateAt(HARBOR_SECOND)],
     files: {
       video: `${HARBOR_FIRST}\\Harbor Lights.mp4`,
       videos: [`${HARBOR_FIRST}\\Harbor Lights.mp4`],
@@ -3027,7 +3034,11 @@ describe('MovieForm — the Import context', () => {
         Promise.resolve(
           okResponse({
             ...HARBOR_AMBIGUOUS,
-            candidates: [HARBOR_FIRST, HARBOR_SECOND, HARBOR_THIRD],
+            candidates: [
+              candidateAt(HARBOR_FIRST),
+              candidateAt(HARBOR_SECOND),
+              candidateAt(HARBOR_THIRD),
+            ],
           })
         );
       await renderResolve(HARBOR_AMBIGUOUS.id);
@@ -3037,12 +3048,15 @@ describe('MovieForm — the Import context', () => {
       );
     });
 
-    it('names a candidate by its folder name whichever way its path is spelt', async () => {
+    it('names a candidate by its own name, not its path', async () => {
       answerProblem = () =>
         Promise.resolve(
           okResponse({
             ...HARBOR_AMBIGUOUS,
-            candidates: [HARBOR_FIRST, '/movies/Harbor.Lights.2019'],
+            candidates: [
+              candidateAt(HARBOR_FIRST),
+              candidateAt('/movies/elsewhere', 'Harbor.Lights.2019'),
+            ],
           })
         );
       await renderResolve(HARBOR_AMBIGUOUS.id);
@@ -3133,7 +3147,10 @@ describe('MovieForm — the Import context', () => {
             ...HARBOR_AMBIGUOUS,
             title,
             row: { ...HARBOR_AMBIGUOUS.row, title },
-            candidates: [HARBOR_FIRST, "C:\\Movies\\Ça c'est Noël (2019)"],
+            candidates: [
+              candidateAt(HARBOR_FIRST),
+              candidateAt("C:\\Movies\\Ça c'est Noël (2019)"),
+            ],
           })
         );
 

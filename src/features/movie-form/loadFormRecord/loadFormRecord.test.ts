@@ -38,7 +38,6 @@ const NO_VIDEO: ImportProblemDetail = {
   reason: 'Two videos',
   row: { title: 'Paper Moons', year: 2014, genres: [] },
   folder: FOLDER,
-  candidates: [FOLDER],
   files: { videos: [FIRST, SECOND], subtitles: [] },
 };
 
