@@ -2,15 +2,22 @@ import styled from 'styled-components';
 
 import type { ProblemKind } from '@/types';
 
-/** The three inks a dot can take: what the kind's colour is named after. */
-export type DotTone = 'danger' | 'accent' | 'textFaint';
+/**
+ * The inks a dot can take: what the kind's colour is named after, and `gold`,
+ * the Sync's `conflict` hue that no token names.
+ */
+export type DotTone = 'danger' | 'accent' | 'textFaint' | 'gold';
+
+/** The prototype's gold for a `differs` dot — the Sync's `conflict` gold. */
+const GOLD = '#c9a86a';
 
 /**
  * The dot's colour by kind: `danger` for the film that is not there and cannot
  * be got without a hand — `no-folder`, `no-video`, `failed`, and the episode
  * that is `unplaced`; `accent` for
  * `ambiguous`, a choice to make; `text-faint` for `no-row` and the soft
- * `missing-meta`, which the library can live with.
+ * `missing-meta`, which the library can live with; and the Sync's gold for
+ * `differs`, a comparison to settle on the row.
  */
 export const DOT_TONE: Record<ProblemKind, DotTone> = {
   'no-folder': 'danger',
@@ -20,17 +27,22 @@ export const DOT_TONE: Record<ProblemKind, DotTone> = {
   ambiguous: 'accent',
   'no-row': 'textFaint',
   'missing-meta': 'textFaint',
+  differs: 'gold',
 };
 
-/** The row: dot, text block and the two controls in a line, on the surface. */
-export const Row = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 14px;
+/** The row on the surface: its head, then a face when its kind has one. */
+export const Card = styled.div`
   padding: 16px;
   background: ${({ theme }) => theme.colors.surface};
   border: 1px solid ${({ theme }) => theme.colors.borderSoft};
   border-radius: ${({ theme }) => theme.radius.md};
+`;
+
+/** The head: dot, text block and the controls in a line. */
+export const Head = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 14px;
 `;
 
 /** The 10px circle before the text, filled in the kind's colour. */
@@ -39,7 +51,8 @@ export const Dot = styled.div<{ $tone: DotTone }>`
   width: 10px;
   height: 10px;
   border-radius: 99px;
-  background: ${({ $tone, theme }) => theme.colors[$tone]};
+  background: ${({ $tone, theme }) =>
+    $tone === 'gold' ? GOLD : theme.colors[$tone]};
 `;
 
 /**

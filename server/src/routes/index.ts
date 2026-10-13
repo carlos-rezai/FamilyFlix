@@ -60,6 +60,7 @@ import {
   conflictChoicesBody,
   startEnrichmentBody,
 } from './enrichmentBody/enrichmentBody';
+import { sheetChoicesBody } from './importBody/importBody';
 import {
   DEFAULT_MOVIE_SORT,
   MOVIE_SORTS,
@@ -2351,6 +2352,26 @@ export function createApiRouter(
     '/import/current/problems/:id',
     (req: Request<{ id: string }>, res: Response) => {
       if (!importer.dismiss(req.params.id)) {
+        res.status(404).json({ error: `No such problem: ${req.params.id}` });
+        return;
+      }
+      res.status(204).end();
+    }
+  );
+
+  // _Apply choices_ on a `differs` row: the body read by `importBody` — a
+  // refusal is its sentence and the importer is never asked — then the
+  // importer writes the sheet's side of each field chosen so and takes the
+  // Problem off. Its `false` is the `404`, the Skip's own.
+  router.post(
+    '/import/current/problems/:id/apply',
+    (req: Request<{ id: string }>, res: Response) => {
+      const read = sheetChoicesBody(req.body);
+      if (!read.ok) {
+        res.status(400).json({ error: read.error });
+        return;
+      }
+      if (!importer.apply(req.params.id, read.value)) {
         res.status(404).json({ error: `No such problem: ${req.params.id}` });
         return;
       }

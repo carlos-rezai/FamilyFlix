@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { dismissProblem } from '@/api/dismissProblem/dismissProblem';
-import type { ImportRun } from '@/types';
+import type { ImportRun, SheetChoices } from '@/types';
 import {
+  applySheetChoices,
   cancelImport,
   fetchCurrentImport,
   ImportBusyError,
@@ -43,6 +44,12 @@ export interface ImportRunState {
    * dismiss could not be made, and the row stays for another press.
    */
   skip: (id: string) => Promise<void>;
+  /**
+   * _Apply choices_ on a `differs` **Problem**: post the choices, and take its
+   * row off once the route has answered — on a `404` as on the `204`, as
+   * `skip` does. Rejects when the apply could not be made; the row stays.
+   */
+  apply: (id: string, choices: SheetChoices) => Promise<void>;
 }
 
 /**
@@ -111,8 +118,8 @@ export function useImportRun(): ImportRunState {
     setRun(null);
   }, []);
 
-  const skip = useCallback(async (id: string) => {
-    await dismissProblem(id);
+  /** One **Problem** taken off the snapshot, the rest of it as it was. */
+  const takeOff = useCallback((id: string) => {
     setRun((current) =>
       current === null
         ? current
@@ -122,6 +129,22 @@ export function useImportRun(): ImportRunState {
           }
     );
   }, []);
+
+  const skip = useCallback(
+    async (id: string) => {
+      await dismissProblem(id);
+      takeOff(id);
+    },
+    [takeOff]
+  );
+
+  const apply = useCallback(
+    async (id: string, choices: SheetChoices) => {
+      await applySheetChoices(id, choices);
+      takeOff(id);
+    },
+    [takeOff]
+  );
 
   const live = isLive(run);
   useEffect(() => {
@@ -152,5 +175,5 @@ export function useImportRun(): ImportRunState {
     };
   }, [live]);
 
-  return { run, attaching, start, cancel, skip };
+  return { run, attaching, start, cancel, skip, apply };
 }

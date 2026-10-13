@@ -93,6 +93,7 @@ export type {
   ImportProblemDetail,
   SheetField,
   SheetDifference,
+  SheetChoices,
 } from './import';
 export type {
   ExportFormat,

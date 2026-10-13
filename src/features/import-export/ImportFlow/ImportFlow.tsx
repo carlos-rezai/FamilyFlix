@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useGoBack } from '@/hooks/useGoBack/useGoBack';
 import { PageHeader } from '@/components';
 import { enrichPath } from '@/utils';
+import type { SheetChoices } from '@/types';
 import { ImportRefusedError } from '../api/api';
 import { ImportProgress } from '../ImportProgress/ImportProgress';
 import { ImportReview } from '../ImportReview/ImportReview';
@@ -69,7 +70,7 @@ const FINISH_TO_LIBRARY = 'Finish and go to library';
 
 export function ImportFlow() {
   const navigate = useNavigate();
-  const { run, attaching, start, cancel, skip } = useImportRun();
+  const { run, attaching, start, cancel, skip, apply } = useImportRun();
 
   // Leaving is a step, not a push at Settings: the hub's own Back then steps
   // onto the screen the gear was pressed from, rather than onto the duplicate
@@ -143,6 +144,16 @@ export function ImportFlow() {
     [skip]
   );
 
+  const onApply = useCallback(
+    (id: string, choices: SheetChoices) => {
+      void apply(id, choices).catch(() => {
+        // An apply that did not land leaves the row where it is, its choices
+        // still there to apply again.
+      });
+    },
+    [apply]
+  );
+
   return (
     <>
       <PageHeader
@@ -166,6 +177,7 @@ export function ImportFlow() {
         <ImportReview
           run={run}
           onSkip={onSkip}
+          onApply={onApply}
           finishLabel={run.enrich ? FINISH_TO_SYNC : FINISH_TO_LIBRARY}
           onFinish={() => onFinish(run.enrich)}
         />

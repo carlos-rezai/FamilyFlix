@@ -1,9 +1,9 @@
 import { useState } from 'react';
 
+import { FieldDiff, type FieldDiffSide } from '@/components';
 import { Button } from '@/primitives';
-import type { ConflictChoices, Decision } from '@/types';
+import type { ConflictChoices, ConflictField, Decision } from '@/types';
 import { CandidatePicker } from '../CandidatePicker/CandidatePicker';
-import { FieldDiff } from '../FieldDiff/FieldDiff';
 import { TitleSearch } from '../TitleSearch/TitleSearch';
 import {
   Card,
@@ -15,6 +15,17 @@ import {
   Text,
   Title,
 } from './DecisionRow.styles';
+
+/** The diff's `'theirs'` read back as the Sync's own `'tmdb'`. */
+const tmdbChoices = (
+  choices: Partial<Record<ConflictField, FieldDiffSide>>
+): ConflictChoices =>
+  Object.fromEntries(
+    Object.entries(choices).map(([field, side]) => [
+      field,
+      side === 'theirs' ? 'tmdb' : 'mine',
+    ])
+  );
 
 export interface DecisionRowProps {
   decision: Decision;
@@ -72,9 +83,15 @@ export function DecisionRow({
       ) : null}
 
       {decision.kind === 'conflict' ? (
-        <FieldDiff
-          fields={decision.fields}
-          onApply={onApply}
+        <FieldDiff<ConflictField>
+          rows={decision.fields.map(({ field, label, mine, tmdb }) => ({
+            key: field,
+            label,
+            mine,
+            theirs: tmdb,
+          }))}
+          theirsLabel="TMDB"
+          onApply={(choices) => onApply(tmdbChoices(choices))}
           onKeepAll={onSkip}
         />
       ) : null}

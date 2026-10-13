@@ -7,6 +7,7 @@ import {
   type ImportField,
   type ImportRun,
   type LibraryFolder,
+  type SheetChoices,
   type StartExport,
 } from '@/types';
 
@@ -124,6 +125,28 @@ export async function cancelImport(): Promise<void> {
 
   if (!response.ok) {
     throw new Error(`POST ${CANCEL_ENDPOINT} failed: ${response.status}`);
+  }
+}
+
+/**
+ * _Apply choices_ on a `differs` **Problem**: `POST` its choices to the
+ * Problem's apply route. The `204` and the `404` both resolve — either way the
+ * Problem is not there any more, and the row goes; anything else rejects, and
+ * so does a request that could not be made.
+ */
+export async function applySheetChoices(
+  id: string,
+  choices: SheetChoices
+): Promise<void> {
+  const endpoint = `${CURRENT_ENDPOINT}/problems/${encodeURIComponent(id)}/apply`;
+  const response = await fetch(endpoint, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ choices }),
+  });
+
+  if (!response.ok && response.status !== 404) {
+    throw new Error(`POST ${endpoint} failed: ${response.status}`);
   }
 }
 

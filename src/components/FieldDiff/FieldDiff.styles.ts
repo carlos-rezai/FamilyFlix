@@ -8,7 +8,7 @@ export const Frame = styled.div`
   overflow: hidden;
 `;
 
-/** One **Field conflict**: the label, then _Yours_ and _TMDB_. */
+/** One differing field: the label, then _Yours_ and the other side. */
 export const Row = styled.div`
   display: flex;
   align-items: stretch;
@@ -41,7 +41,7 @@ export const Side = styled.button<{ $chosen: boolean }>`
     $chosen ? `inset 0 0 0 1px ${theme.colors.accentLine}` : 'none'};
 `;
 
-/** _Yours_ or _TMDB_, small, bold and upper-cased over the value. */
+/** _Yours_ or the other side's caption, small, bold and upper-cased over the value. */
 export const Caption = styled.span`
   display: block;
   margin-bottom: 4px;

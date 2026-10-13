@@ -51,3 +51,9 @@ export {
 } from './DetailBackdrop/DetailBackdrop';
 export { BackButton, type BackButtonProps } from './BackButton/BackButton';
 export { PageHeader, type PageHeaderProps } from './PageHeader/PageHeader';
+export {
+  FieldDiff,
+  type FieldDiffProps,
+  type FieldDiffRow,
+  type FieldDiffSide,
+} from './FieldDiff/FieldDiff';

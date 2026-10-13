@@ -49,6 +49,15 @@ const LABELS: Readonly<Record<SheetField, string>> = {
   rating: 'Rating',
 };
 
+/**
+ * A rating in half-star units spelled for reading, as stars: `5` → `★★½`,
+ * `8` → `★★★★`, and `0` in words, since no stars draws nothing.
+ */
+const stars = (units: number): string =>
+  units <= 0
+    ? 'No stars'
+    : `${'★'.repeat(Math.floor(units / 2))}${units % 2 === 1 ? '½' : ''}`;
+
 /** Text as it is compared: trimmed and case-blind. */
 const norm = (text: string): string => text.trim().toLowerCase();
 
@@ -155,7 +164,7 @@ export function planSheetFields(
     if (current.rating === null) {
       fill.rating = row.rating;
     } else if (current.rating !== row.rating) {
-      differ('rating', String(current.rating), String(row.rating));
+      differ('rating', stars(current.rating), stars(row.rating));
     }
   }
 

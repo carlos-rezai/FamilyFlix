@@ -44,6 +44,9 @@ import type {
   NewSubtitle,
   ProblemKind,
   Series,
+  SheetChoices,
+  SheetDifference,
+  SheetField,
 } from '@/types';
 import { SHEET_FIELDS } from '@/types';
 
@@ -199,6 +202,13 @@ export interface Importer {
    */
   dismiss(id: string): boolean;
   /**
+   * _Apply choices_ on a `differs` **Problem**: write the sheet's side of each
+   * of its fields chosen `sheet`, keep the rest, and take the Problem off —
+   * `true` for having gone. `false` for an id that is not there, and when
+   * there is no run, writing nothing.
+   */
+  apply(id: string, choices: SheetChoices): boolean;
+  /**
    * The **Problem detail** _Resolve_ prefills the form from: the problem, the
    * **Sheet row**, the **Source folder** it is about, the candidate folders
    * and the folder's **Found files** as absolute paths. `null`
@@ -248,6 +258,8 @@ const REASON = {
   noRow: "Folder isn't in the spreadsheet.",
   missingMeta:
     "Imported, but the row has no genre, so it won't appear in any genre row.",
+  differs:
+    'The spreadsheet has different values for fields you already filled in.',
 } as const;
 
 /** A **Problem** as the snapshot lists it, under an id of its own. */
@@ -453,6 +465,16 @@ interface GenreReader {
   warned: Set<string>;
 }
 
+/**
+ * A `differs` **Problem**'s held title — a film or a series, by id — and the
+ * **Sheet row** it differs from, its genres already read onto the pool.
+ */
+interface Differing {
+  kind: 'movie' | 'series';
+  id: string;
+  row: SheetRow;
+}
+
 /** The fields a fill names on its `✓ Updated` line, in the sheet's order. */
 const filledNames = (fill: SheetFill): string[] => [
   ...SHEET_FIELDS.filter((field) => fill[field] !== undefined),
@@ -579,6 +601,11 @@ export function createImporter({
   let listedPaths: string[] = [];
   /** What the run knew when it filed each **Problem**, by the problem's id. */
   const sources = new Map<string, ProblemSource>();
+  /**
+   * Each `differs` **Problem**'s held title and the row it differs from, its
+   * genres already read onto the pool — what _Apply choices_ writes from.
+   */
+  const differing = new Map<string, Differing>();
   /** The cancel of the run that is going, and the run itself, to be awaited. */
   let stop: AbortController = new AbortController();
   let running: Promise<void> = Promise.resolve();
@@ -613,6 +640,7 @@ export function createImporter({
     }
     run.problems.splice(at, 1);
     sources.delete(id);
+    differing.delete(id);
     return true;
   };
 
@@ -671,6 +699,78 @@ export function createImporter({
     genres: knownGenres(row.genres, genres.pool, genres.warned, current),
   });
 
+  /**
+   * A held title's **Sheet differences** filed as one `differs` **Problem**,
+   * carrying its movie or series — nothing filed when there are none. The
+   * run never writes them; _Apply choices_ does.
+   */
+  const fileDiffers = (
+    current: ImportRun,
+    held: Differing,
+    differences: SheetDifference[]
+  ): void => {
+    if (differences.length === 0) {
+      return;
+    }
+    const problem: ImportProblem = {
+      id: randomUUID(),
+      kind: 'differs',
+      title: titleWithYear(held.row.title, held.row.year),
+      reason: REASON.differs,
+      ...(held.kind === 'movie' ? { movieId: held.id } : { seriesId: held.id }),
+      differences,
+    };
+    file(current, problem, { row: held.row, folder: null, candidates: [] });
+    differing.set(problem.id, held);
+  };
+
+  /**
+   * The sheet's side of each chosen field written onto a held title — a
+   * film through `updateMovie`, a series through `enrichSeries` with its
+   * _Created by_ as the row's director and its rating through
+   * `setSeriesRating`.
+   */
+  const writeSheetSide = (
+    { kind, id, row }: Differing,
+    chosen: ReadonlySet<SheetField>
+  ): void => {
+    const synopsis = chosen.has('synopsis') ? row.synopsis?.trim() : undefined;
+    const director = chosen.has('director') ? row.director?.trim() : undefined;
+    const common = {
+      ...(synopsis === undefined ? {} : { synopsis }),
+      ...(chosen.has('genres') ? { genres: row.genres } : {}),
+      ...(chosen.has('cast') ? { cast: row.cast } : {}),
+    };
+    const rating = chosen.has('rating') ? row.rating : null;
+    if (kind === 'movie') {
+      const patch = {
+        ...common,
+        ...(director === undefined ? {} : { director }),
+        ...(rating === null ? {} : { rating }),
+      };
+      if (Object.keys(patch).length > 0) {
+        storage.updateMovie(id, patch);
+      }
+      return;
+    }
+    const enrichment = {
+      ...common,
+      ...(director === undefined ? {} : { creator: director }),
+      ...(chosen.has('year') && row.year !== null
+        ? {
+            year: row.year,
+            ...(row.endYear === null ? {} : { endYear: row.endYear }),
+          }
+        : {}),
+    };
+    if (Object.keys(enrichment).length > 0) {
+      storage.enrichSeries(id, enrichment);
+    }
+    if (rating !== null) {
+      storage.setSeriesRating(id, rating);
+    }
+  };
+
   /** The line a held title ends on: what it took, or that it took nothing. */
   const logHeld = (
     current: ImportRun,
@@ -720,11 +820,9 @@ export function createImporter({
       rating: movie.rating,
       status: movie.status,
     };
-    const { fill } = planSheetFields(
-      held,
-      pooledRow(row, genres, current),
-      'movie'
-    );
+    const pooled = pooledRow(row, genres, current);
+    const { fill, differences } = planSheetFields(held, pooled, 'movie');
+    fileDiffers(current, { kind: 'movie', id, row: pooled }, differences);
     const { synopsis, year, genres: named, director, cast, rating } = fill;
     const patch = {
       ...(synopsis === undefined ? {} : { synopsis }),
@@ -768,11 +866,9 @@ export function createImporter({
       rating: series.rating,
       status: 'unwatched',
     };
-    const { fill } = planSheetFields(
-      held,
-      pooledRow(row, genres, current),
-      'series'
-    );
+    const pooled = pooledRow(row, genres, current);
+    const { fill, differences } = planSheetFields(held, pooled, 'series');
+    fileDiffers(current, { kind: 'series', id, row: pooled }, differences);
     const { synopsis, year, endYear, genres: named, director, cast } = fill;
     const enrichment = {
       ...(synopsis === undefined ? {} : { synopsis }),
@@ -1146,7 +1242,9 @@ export function createImporter({
     signal: AbortSignal,
     { pool, warned: warnedGenres }: GenreReader = genreReader()
   ): Promise<void> => {
-    current.matched = films.length + shows.length;
+    // Only new imports count: a held show taking episodes is not one.
+    current.matched =
+      films.length + shows.filter(({ match }) => match.held === null).length;
     // Each episode is one item on the bar, as each film is.
     current.total =
       films.length +
@@ -1570,6 +1668,7 @@ export function createImporter({
     run = current;
     listedPaths = runFolders;
     sources.clear();
+    differing.clear();
     stop = new AbortController();
     return current;
   };
@@ -1623,6 +1722,21 @@ export function createImporter({
     },
 
     dismiss: takeOff,
+
+    apply: (id, choices) => {
+      const listed = run?.problems.find((problem) => problem.id === id);
+      const held = differing.get(id);
+      if (listed === undefined || held === undefined) {
+        return false;
+      }
+      const chosen = new Set(
+        (listed.differences ?? [])
+          .map((difference) => difference.field)
+          .filter((field) => choices[field] === 'sheet')
+      );
+      writeSheetSide(held, chosen);
+      return takeOff(id);
+    },
 
     problem: (id) => {
       const listed = run?.problems.find((problem) => problem.id === id);

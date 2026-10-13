@@ -48,6 +48,12 @@ export interface SheetDifference {
   sheet: string;
 }
 
+/**
+ * _Apply choices_' body on a `differs` Problem: each field to the side kept —
+ * `sheet` writes the spreadsheet's value, `mine` keeps the library's.
+ */
+export type SheetChoices = Partial<Record<SheetField, 'mine' | 'sheet'>>;
+
 /** A run over a spreadsheet, or a **Folder scan** over the Library folders. */
 export type ImportSource = 'sheet' | 'folders';
 
@@ -70,9 +76,9 @@ export interface LogLine {
 }
 
 /**
- * The six kinds of **Problem**: five hard — the film is not in the library —
- * and `missing-meta`, the one soft kind, imported already and carrying its
- * `movieId`.
+ * The kinds of **Problem**: the hard ones — the title is not in the library —
+ * and the two soft kinds, `missing-meta` and `differs`, each about a title the
+ * library holds and carrying its `movieId` or `seriesId`.
  */
 export type ProblemKind =
   | 'no-folder'
@@ -81,7 +87,8 @@ export type ProblemKind =
   | 'no-row'
   | 'failed'
   | 'unplaced'
-  | 'missing-meta';
+  | 'missing-meta'
+  | 'differs';
 
 /** A row or folder the run could not settle on its own, for the **Review step**. */
 export interface ImportProblem {
@@ -96,6 +103,8 @@ export interface ImportProblem {
    * _Resolve_ joins.
    */
   seriesId?: string;
+  /** Set on a `differs` Problem: its **Sheet differences**, in field order. */
+  differences?: SheetDifference[];
 }
 
 /**

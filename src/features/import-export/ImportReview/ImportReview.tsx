@@ -1,5 +1,5 @@
 import { Button } from '@/primitives';
-import type { ImportRun } from '@/types';
+import type { ImportRun, SheetChoices } from '@/types';
 import { ProblemRow } from '../ProblemRow/ProblemRow';
 import { StatTile } from '../StatTile/StatTile';
 import {
@@ -17,6 +17,8 @@ export interface ImportReviewProps {
   run: ImportRun;
   /** _Skip_ was pressed on the **Problem** with this id. */
   onSkip: (id: string) => void;
+  /** _Apply choices_ was pressed on the `differs` **Problem** with this id. */
+  onApply: (id: string, choices: SheetChoices) => void;
   /** Finish's words: where it goes, which the flow knows and this step does not. */
   finishLabel: string;
   onFinish: () => void;
@@ -30,13 +32,14 @@ export interface ImportReviewProps {
  * matched are already in the library — under the words the flow hands it,
  * which say where it goes.
  *
- * The step draws the run it is handed and reports a press — _Skip_ names the
- * problem's id — and never removes a row itself: the **Run hook** does, and
+ * The step draws the run it is handed and reports a press — _Skip_ and
+ * _Apply choices_ name the problem's id — and never removes a row itself: the **Run hook** does, and
  * the next `run` shows it.
  */
 export function ImportReview({
   run,
   onSkip,
+  onApply,
   finishLabel,
   onFinish,
 }: ImportReviewProps) {
@@ -76,6 +79,7 @@ export function ImportReview({
                 key={problem.id}
                 problem={problem}
                 onSkip={() => onSkip(problem.id)}
+                onApply={(choices) => onApply(problem.id, choices)}
               />
             ))}
           </List>

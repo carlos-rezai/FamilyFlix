@@ -83,7 +83,6 @@ function renderReview(props: Partial<ImportReviewProps> = {}) {
               run={run}
               onSkip={props.onSkip ?? (() => undefined)}
               onApply={props.onApply ?? (() => undefined)}
-              onApply={props.onApply ?? (() => undefined)}
               finishLabel={props.finishLabel ?? FINISH}
               onFinish={props.onFinish ?? (() => undefined)}
             />
