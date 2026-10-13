@@ -205,8 +205,12 @@
           {id:19,title:'The Cartographer',year:2021,genres:['Documentary'],runtime:88,st:'unwatched',prog:0,g1:'#2f2a20',g2:'#7a6a3a',syn:'A portrait of the last man hand-drawing maps of places that no longer match their own coastlines.',added:19},
           {id:20,title:'Saturday\u2019s Children',year:2017,genres:['Drama','Comedy'],runtime:99,st:'unwatched',prog:0,g1:'#332a2a',g2:'#7a5a4a',syn:'Five siblings reunite in their childhood home for one chaotic, tender weekend of unfinished arguments.',added:20},
         ];
+        // A season's own poster for the sample — the one Season card drawn with art
+        // (Harbor & Vine, Season 1), beside its two gradient-only seasons. Inline, so
+        // the prototype stays offline; in the app it is a Stored path a Sync fetched.
+        seasonArtSample = 'data:image/svg+xml,' + encodeURIComponent("<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 300'><defs><linearGradient id='k' x1='0' y1='0' x2='0' y2='1'><stop offset='0' stop-color='#f2c48a'/><stop offset='.55' stop-color='#d98a5a'/><stop offset='1' stop-color='#7a4a3a'/></linearGradient><linearGradient id='w' x1='0' y1='0' x2='0' y2='1'><stop offset='0' stop-color='#2f5a5e'/><stop offset='1' stop-color='#14262a'/></linearGradient></defs><rect width='200' height='300' fill='url(#k)'/><circle cx='138' cy='150' r='26' fill='#fbe3b8' opacity='.85'/><path d='M0 128 L40 112 L72 124 L110 104 L150 122 L200 110 L200 176 L0 176 Z' fill='#5a3a34' opacity='.7'/><rect y='172' width='200' height='128' fill='url(#w)'/><path d='M58 214 L118 214 L110 228 L66 228 Z' fill='#120d0b'/><path d='M86 214 L86 168 L108 210 Z' fill='#1a1412'/><path d='M0 244 Q50 238 100 244 T200 244' stroke='#f2c48a' stroke-opacity='.25' fill='none'/></svg>");
         rawSeries = [
-          {id:'s1',title:'Harbor & Vine',ys:2019,ye:2023,genres:['Drama','Family'],g1:'#243a36',g2:'#5e7a6a',rating:80,creator:'Ingrid Sø',cast:['Anders Lund','Mira Holt','Jonas Vea'],runtime:48,
+          {id:'s1',title:'Harbor & Vine',ys:2019,ye:2023,genres:['Drama','Family'],g1:'#243a36',g2:'#5e7a6a',rating:80,seasonPosters:{1:this.seasonArtSample},creator:'Ingrid Sø',cast:['Anders Lund','Mira Holt','Jonas Vea'],runtime:48,
             syn:'Three generations of a fishing family keep a harbour town alive across four turning seasons. As the boats get older and the young leave for the city, the Vine sisters take over a business none of them wanted — and find that the town has been holding its breath for them. Quiet, warm, and unhurried, it is a series about inheritance in every sense: the debts, the grudges, the recipes, and the light on the water at five in the morning.',
             seasons:[8,8,6],titles:['The Long Way In','Salt Air','Low Water','What the Nets Bring','Sunday Boats','The Quiet Berth','Weatherglass','Homecoming','Spring Tide','Rope and Rust','The Auction','Old Charts','Neap','Two Hulls','Gull Season','The Last Run','Off Season','Deep Winter','Cold Store','Ice Out','The Mooring','Vine & Vine']},
           {id:'s2',title:'The Tin Forest',ys:2021,ye:null,genres:['Adventure','Family','Animation'],g1:'#3a2f24',g2:'#84603f',rating:90,creator:'Felix Aubin',cast:['Noa Kell','Wren Tasso','Milo Frye'],runtime:26,
@@ -953,7 +957,7 @@
                 onToggleFavorite:()=>this.toggleSeriesFav(x.id),
                 favIconStyle:{display:'grid',placeItems:'center',width:'58px',height:'58px',flex:'0 0 auto',background:isFav?'var(--color-accent-soft)':'transparent',border:'1px solid '+(isFav?'var(--color-accent-line)':'var(--color-border)'),borderRadius:'50%',color:isFav?accent:'var(--color-text-dim)',cursor:'pointer'},
                 seasons:x.seasons.map((count,i)=>{ const n=i+1; const eps=this.episodesOf(x.id,n);
-                  return {card:{number:n,episodeCount:count,watchedCount:eps.filter(e=>e.watched).length,g1:x.g1,g2:x.g2},open:()=>this.openSeason(n)}; }),
+                  return {card:{number:n,episodeCount:count,watchedCount:eps.filter(e=>e.watched).length,g1:x.g1,g2:x.g2,posterUrl:(x.seasonPosters&&x.seasonPosters[n])||null},open:()=>this.openSeason(n)}; }),
               };
             })(),
             seasonModel:(()=>{

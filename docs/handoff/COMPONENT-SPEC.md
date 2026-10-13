@@ -335,6 +335,8 @@ draws. Drawn in CSS, never stored, exported or written back.
   frame of `page.MoviePage` and `page.SeriesPage`.
 - **Where it doesn't:** the detail backdrops, the player's art layer, the Season card,
   `EpisodeRow`, `UpNextCard` and the Enrichment candidates — each keeps the plain gradient.
+  The Season card layers its own **Season poster** over that gradient when it has one, and
+  with none draws the gradient alone.
 - **The Wordmark:** `Family` in `--color-text`, `Flix` in `--color-accent`, serif 700, the
   header's markup. On the tile it is `11cqmin` (11% of the frame's shorter side — the frame is
   a size container), `opacity: .9`, `text-shadow: 0 1px 8px rgba(0,0,0,.55)` (the title
@@ -422,8 +424,15 @@ install). In code, a `ResizeObserver`/`useEffect` keeps it pinned to the bottom.
 
 Target: `components/SeasonCard/` · 2:3 season tile for the series page. Composes StatusBadge
 (season fully watched) + ProgressBar (partially watched).
-Props: `season { number, label?, episodeCount, watchedCount, g1, g2 }`, `onOpen`.
+Props: `season { number, label?, episodeCount, watchedCount, g1, g2, posterUrl? }`, `onOpen`.
 Sub-label switches between "8 episodes" and "3 of 8 watched".
+`posterUrl` (`string | null`, absent as `null`) is the **Season poster** — the season's own
+art a Sync fetched from TMDB. It is a layer over the `g1`/`g2` gradient (`center`, `cover`),
+never in place of it, so an image that fails to load shows the gradient. The `S02` numeral and
+its text shadow, the badge, the bar, the caption and the watched line draw over either,
+unchanged. With no `posterUrl` the tile is the gradient alone: the card is not a Poster
+surface, so never the series poster and never the Wordmark. `page.SeriesPage`'s sample shows
+both — _Harbor & Vine_'s Season 1 with art, its Seasons 2 and 3 without.
 
 ### EpisodeRow — `mol.EpisodeRow.dc.html`
 

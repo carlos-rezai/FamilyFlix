@@ -65,7 +65,7 @@
     <script
       type="text/x-dc"
       data-dc-script
-      data-props='{"$preview":{"width":220,"height":400},"season":{"editor":null,"tsType":"{ number: number; label?: string; episodeCount: number; watchedCount: number; g1: string; g2: string }"},"onOpen":{"editor":null,"tsType":"() =&gt; void"}}'
+      data-props='{"$preview":{"width":220,"height":400},"season":{"editor":null,"tsType":"{ number: number; label?: string; episodeCount: number; watchedCount: number; g1: string; g2: string; posterUrl?: string | null }"},"onOpen":{"editor":null,"tsType":"() =&gt; void"}}'
     >
       class Component extends DCLogic {
         renderVals(){
@@ -74,6 +74,13 @@
           const total = s.episodeCount ?? 0;
           const watched = s.watchedCount ?? 0;
           const pct = total ? Math.round(watched/total*100) : 0;
+          // The season's own poster: a posterUrl is a layer over the gradient,
+          // never in place of it, so an image that fails to load shows the
+          // gradient. No posterUrl draws the gradient alone — the Season card
+          // is not a Poster surface, so never the series poster, never the
+          // Wordmark. The numeral and its shadow sit over either, unchanged.
+          const posterUrl = s.posterUrl ?? null;
+          const gradient = 'linear-gradient(155deg, '+(s.g1||'#2a2620')+' 0%, '+(s.g2||'#5e4c38')+' 100%)';
           return {
             onOpen: this.props.onOpen,
             numLabel: 'S' + String(n).padStart(2,'0'),
@@ -83,7 +90,7 @@
             inProgress: watched>0 && watched<total,
             percent: pct,
             rootStyle:{display:'block',width:'100%',textAlign:'left',background:'transparent',border:'none',padding:0,cursor:'pointer'},
-            posterStyle:{position:'relative',display:'block',width:'100%',aspectRatio:'2 / 3',borderRadius:'var(--poster-radius, 12px)',overflow:'hidden',background:'linear-gradient(155deg, '+(s.g1||'#2a2620')+' 0%, '+(s.g2||'#5e4c38')+' 100%)',border:'1px solid var(--color-border-soft)',boxShadow:'0 6px 20px rgba(0,0,0,.35)',transition:'transform var(--dur-base) var(--ease-out), box-shadow var(--dur-base) var(--ease-out), border-color var(--dur-base) var(--ease-out)'},
+            posterStyle:{position:'relative',display:'block',width:'100%',aspectRatio:'2 / 3',borderRadius:'var(--poster-radius, 12px)',overflow:'hidden',backgroundImage:posterUrl?'url('+posterUrl+'), '+gradient:gradient,backgroundPosition:'center',backgroundSize:'cover',backgroundRepeat:'no-repeat',border:'1px solid var(--color-border-soft)',boxShadow:'0 6px 20px rgba(0,0,0,.35)',transition:'transform var(--dur-base) var(--ease-out), box-shadow var(--dur-base) var(--ease-out), border-color var(--dur-base) var(--ease-out)'},
             posterHover:{transform:'translateY(-4px)',boxShadow:'0 14px 34px rgba(0,0,0,.5)',borderColor:'var(--color-accent-line)'},
             numStyle:{position:'absolute',left:'14px',bottom:'12px',fontFamily:'var(--font-serif)',fontSize:'30px',fontWeight:'700',color:'rgba(255,255,255,.92)',textShadow:'0 2px 12px rgba(0,0,0,.6)'},
           };
