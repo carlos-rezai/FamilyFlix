@@ -156,14 +156,15 @@ async function untilReview(baseUrl: string): Promise<ImportRun> {
   }
 }
 
-/** The run imported over `api`'s sheet and root, and its one `unplaced` Problem. */
+/** The run imported over `api`'s sheet, its tree listed, and its one `unplaced` Problem. */
 async function unplacedProblem(
   api: ReturnType<typeof freshApi>
 ): Promise<ImportProblem> {
+  api.storage.addLibraryFolder(api.root);
   await fetch(`${api.baseUrl}/api/import`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ sheetPath: api.sheet, rootPath: api.root }),
+    body: JSON.stringify({ sheetPath: api.sheet }),
   });
   const run = await untilReview(api.baseUrl);
   const unplaced = run.problems.filter(({ kind }) => kind === 'unplaced');

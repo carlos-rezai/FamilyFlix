@@ -9,15 +9,25 @@ import {
   LocationProbe,
   pathname,
 } from '@/test-support/LocationProbe/LocationProbe';
-import { notFoundResponse } from '@/test-support/fakeResponse/fakeResponse';
+import {
+  notFoundResponse,
+  okResponse,
+} from '@/test-support/fakeResponse/fakeResponse';
 
 beforeEach(() => {
   // The flow asks for the current run on arrival and offers nothing until it
   // is answered; a page test never reaches the network, so the stub answers
   // it with the one state that lands on the setup step: no run.
+  // The setup step reads the Library folders too: an empty list.
   vi.stubGlobal(
     'fetch',
-    vi.fn(() => Promise.resolve(notFoundResponse('No import is running')))
+    vi.fn((input: RequestInfo | URL) =>
+      Promise.resolve(
+        String(input).endsWith('/api/library-folders')
+          ? okResponse([])
+          : notFoundResponse('No import is running')
+      )
+    )
   );
 });
 
@@ -75,9 +85,7 @@ describe('ImportPage', () => {
     expect(
       await screen.findByRole('textbox', { name: 'Spreadsheet' })
     ).toBeDefined();
-    expect(
-      screen.getByRole('textbox', { name: 'Movies root folder' })
-    ).toBeDefined();
+    expect(await screen.findByText('Library folders')).toBeDefined();
     expect(screen.getByRole('button', { name: 'Start import' })).toBeDefined();
   });
 

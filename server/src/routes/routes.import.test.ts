@@ -80,8 +80,11 @@ function freshApi({
   seam = (real) => real,
   importer,
   resume,
+  listed = true,
 }: {
   seam?: (real: Media) => Media;
+  /** Whether the fixture tree is listed as a **Library folder** — a fresh library only. */
+  listed?: boolean;
   importer?: (composed: Importer) => Importer;
   resume?: {
     storage: LibraryStorage;
@@ -110,6 +113,9 @@ function freshApi({
     mkdirSync(media);
   }
   const { root, sheet } = resume ?? libraryFixture(dir);
+  if (resume === undefined && listed) {
+    storage.addLibraryFolder(root);
+  }
 
   const mediaDomain = seam(createMedia(media));
   const playback = createPlayback(media, fixedSlot(null));
@@ -178,7 +184,6 @@ describe('POST /api/import — starting a run', () => {
 
     const response = await postImport(baseUrl, {
       sheetPath: sheet,
-      rootPath: root,
     });
 
     expect(response.status).toBe(201);
@@ -202,7 +207,7 @@ describe('POST /api/import — starting a run', () => {
   it('runs the fixture through to two movies on the library', async () => {
     const { baseUrl, storage, root, sheet } = freshApi();
 
-    await postImport(baseUrl, { sheetPath: sheet, rootPath: root });
+    await postImport(baseUrl, { sheetPath: sheet });
     const run = await untilReview(baseUrl);
 
     expect(run).toMatchObject({
@@ -223,7 +228,7 @@ describe('POST /api/import — starting a run', () => {
   it('serves an imported film’s poster and detail off the same wire as a hand-added one', async () => {
     const { baseUrl, storage, root, sheet } = freshApi();
 
-    await postImport(baseUrl, { sheetPath: sheet, rootPath: root });
+    await postImport(baseUrl, { sheetPath: sheet });
     await untilReview(baseUrl);
 
     const dieHard = storage
@@ -243,13 +248,11 @@ describe('POST /api/import — starting a run', () => {
     try {
       const first = await postImport(baseUrl, {
         sheetPath: sheet,
-        rootPath: root,
       });
       expect(first.status).toBe(201);
 
       const second = await postImport(baseUrl, {
         sheetPath: sheet,
-        rootPath: root,
       });
 
       expect(second.status).toBe(409);
@@ -269,7 +272,6 @@ describe('POST /api/import — refusing the sheet', () => {
 
     const response = await postImport(baseUrl, {
       sheetPath: join(scratch, 'missing.xlsx'),
-      rootPath: root,
     });
 
     expect(response.status).toBe(400);
@@ -286,7 +288,6 @@ describe('POST /api/import — refusing the sheet', () => {
 
     const response = await postImport(baseUrl, {
       sheetPath: sheet,
-      rootPath: root,
     });
 
     expect(response.status).toBe(400);
@@ -300,7 +301,6 @@ describe('POST /api/import — refusing the sheet', () => {
 
     const response = await postImport(baseUrl, {
       sheetPath: sheet,
-      rootPath: root,
     });
 
     expect(response.status).toBe(400);
@@ -314,7 +314,6 @@ describe('POST /api/import — refusing the sheet', () => {
 
     const response = await postImport(baseUrl, {
       sheetPath: sheet,
-      rootPath: root,
     });
 
     expect(response.status).toBe(400);
@@ -324,7 +323,7 @@ describe('POST /api/import — refusing the sheet', () => {
   it('answers 400 on the sheet field when the body names no sheet at all', async () => {
     const { baseUrl, root } = freshApi();
 
-    const response = await postImport(baseUrl, { rootPath: root });
+    const response = await postImport(baseUrl, {});
 
     expect(response.status).toBe(400);
     expect(await response.json()).toMatchObject({ field: 'sheet' });
@@ -335,59 +334,40 @@ describe('POST /api/import — refusing the sheet', () => {
 
     await postImport(baseUrl, {
       sheetPath: join(scratch, 'missing.xlsx'),
-      rootPath: root,
     });
 
     expect((await getCurrent(baseUrl)).status).toBe(404);
   });
 });
 
-describe('POST /api/import — refusing the root', () => {
-  it('answers 400 on the root field for a root that does not exist', async () => {
-    const { baseUrl, sheet, scratch } = freshApi();
-
-    const response = await postImport(baseUrl, {
-      sheetPath: sheet,
-      rootPath: join(scratch, 'nowhere'),
-    });
-
-    expect(response.status).toBe(400);
-    expect(await response.json()).toEqual({
-      error: expect.any(String),
-      field: 'root',
-    });
-  });
-
-  it('answers 400 on the root field for a root that is not a directory', async () => {
-    const { baseUrl, sheet } = freshApi();
-
-    const response = await postImport(baseUrl, {
-      sheetPath: sheet,
-      rootPath: sheet,
-    });
-
-    expect(response.status).toBe(400);
-    expect(await response.json()).toMatchObject({ field: 'root' });
-  });
-
-  it('answers 400 on the root field when the body names no root at all', async () => {
-    const { baseUrl, sheet } = freshApi();
+describe('POST /api/import — no library folder listed', () => {
+  it('answers 400 on the folders field, in one sentence', async () => {
+    const { baseUrl, sheet } = freshApi({ listed: false });
 
     const response = await postImport(baseUrl, { sheetPath: sheet });
 
     expect(response.status).toBe(400);
-    expect(await response.json()).toMatchObject({ field: 'root' });
+    expect(await response.json()).toEqual({
+      error: 'Add a library folder first.',
+      field: 'folders',
+    });
   });
 
-  it('creates no run on a refusal', async () => {
-    const { baseUrl, sheet, scratch } = freshApi();
+  it('creates no run on the refusal', async () => {
+    const { baseUrl, sheet } = freshApi({ listed: false });
 
-    await postImport(baseUrl, {
-      sheetPath: sheet,
-      rootPath: join(scratch, 'nowhere'),
-    });
+    await postImport(baseUrl, { sheetPath: sheet });
 
     expect((await getCurrent(baseUrl)).status).toBe(404);
+  });
+
+  it('starts over the listed folders with a body naming only the sheet', async () => {
+    const { baseUrl, sheet } = freshApi();
+
+    const response = await postImport(baseUrl, { sheetPath: sheet });
+
+    expect(response.status).toBe(201);
+    await untilReview(baseUrl);
   });
 });
 
@@ -406,7 +386,7 @@ describe('GET /api/import/current', () => {
     const { baseUrl, root, sheet } = freshApi({ seam });
     try {
       const started = (await (
-        await postImport(baseUrl, { sheetPath: sheet, rootPath: root })
+        await postImport(baseUrl, { sheetPath: sheet })
       ).json()) as ImportRun;
 
       const response = await getCurrent(baseUrl);
@@ -427,7 +407,7 @@ describe('GET /api/import/current', () => {
   it('answers 200 with the finished snapshot once the run is in review', async () => {
     const { baseUrl, root, sheet } = freshApi();
     const started = (await (
-      await postImport(baseUrl, { sheetPath: sheet, rootPath: root })
+      await postImport(baseUrl, { sheetPath: sheet })
     ).json()) as ImportRun;
 
     const run = await untilReview(baseUrl);
@@ -455,7 +435,7 @@ describe('POST /api/import/current/cancel', () => {
   it('answers 204 for a run that is going, and current answers 404 after it', async () => {
     const { seam, release } = heldCopy();
     const { baseUrl, root, sheet } = freshApi({ seam });
-    await postImport(baseUrl, { sheetPath: sheet, rootPath: root });
+    await postImport(baseUrl, { sheetPath: sheet });
     expect((await getCurrent(baseUrl)).status).toBe(200);
 
     const cancelled = postCancel(baseUrl);
@@ -468,7 +448,7 @@ describe('POST /api/import/current/cancel', () => {
 
   it('answers 204 for a run in review, and current answers 404 after it', async () => {
     const { baseUrl, root, sheet } = freshApi();
-    await postImport(baseUrl, { sheetPath: sheet, rootPath: root });
+    await postImport(baseUrl, { sheetPath: sheet });
     await untilReview(baseUrl);
 
     const response = await postCancel(baseUrl);
@@ -480,14 +460,13 @@ describe('POST /api/import/current/cancel', () => {
   it('lets a new run start once the old one is cancelled', async () => {
     const { baseUrl, root, sheet } = freshApi();
     const first = (await (
-      await postImport(baseUrl, { sheetPath: sheet, rootPath: root })
+      await postImport(baseUrl, { sheetPath: sheet })
     ).json()) as ImportRun;
     await untilReview(baseUrl);
     await postCancel(baseUrl);
 
     const response = await postImport(baseUrl, {
       sheetPath: sheet,
-      rootPath: root,
     });
 
     expect(response.status).toBe(201);
@@ -511,19 +490,19 @@ describe('the importer is injected, not imported', () => {
 
   it('starts the run through the injected importer’s own start', async () => {
     const start = vi.fn<Importer['start']>();
-    const { baseUrl, root, sheet } = freshApi({
+    const { baseUrl, sheet } = freshApi({
       importer: (composed) => ({
         ...composed,
-        start: (sheetPath, rootPath) => {
-          start(sheetPath, rootPath);
-          return composed.start(sheetPath, rootPath);
+        start: (sheetPath, enrich) => {
+          start(sheetPath, enrich);
+          return composed.start(sheetPath, enrich);
         },
       }),
     });
 
-    await postImport(baseUrl, { sheetPath: sheet, rootPath: root });
+    await postImport(baseUrl, { sheetPath: sheet });
 
-    expect(start).toHaveBeenCalledWith(sheet, root);
+    expect(start).toHaveBeenCalledWith(sheet, false);
     // Otherwise the run outlives the test and imports into a closed database.
     await untilReview(baseUrl);
   });
@@ -616,7 +595,7 @@ describe('DELETE /api/import/current/problems/:id', () => {
   it('answers 204 and the problem is gone from current', async () => {
     const { baseUrl, root, sheet } = freshApi();
     unlistedFolder(root);
-    await postImport(baseUrl, { sheetPath: sheet, rootPath: root });
+    await postImport(baseUrl, { sheetPath: sheet });
     const run = await untilReview(baseUrl);
     expect(run.problems).toHaveLength(1);
 
@@ -630,7 +609,7 @@ describe('DELETE /api/import/current/problems/:id', () => {
   it('answers 404 for the same id a second time', async () => {
     const { baseUrl, root, sheet } = freshApi();
     unlistedFolder(root);
-    await postImport(baseUrl, { sheetPath: sheet, rootPath: root });
+    await postImport(baseUrl, { sheetPath: sheet });
     const run = await untilReview(baseUrl);
     await deleteProblem(baseUrl, run.problems[0].id);
 
@@ -643,7 +622,7 @@ describe('DELETE /api/import/current/problems/:id', () => {
   it('answers 404 for an id that never was, and leaves the problems alone', async () => {
     const { baseUrl, root, sheet } = freshApi();
     unlistedFolder(root);
-    await postImport(baseUrl, { sheetPath: sheet, rootPath: root });
+    await postImport(baseUrl, { sheetPath: sheet });
     await untilReview(baseUrl);
 
     const response = await deleteProblem(baseUrl, 'no-such-problem');
@@ -667,7 +646,7 @@ describe('DELETE /api/import/current/problems/:id', () => {
   it('imports nothing for the dismissed problem', async () => {
     const { baseUrl, storage, media, root, sheet } = freshApi();
     unlistedFolder(root);
-    await postImport(baseUrl, { sheetPath: sheet, rootPath: root });
+    await postImport(baseUrl, { sheetPath: sheet });
     const run = await untilReview(baseUrl);
 
     await deleteProblem(baseUrl, run.problems[0].id);
@@ -891,7 +870,7 @@ describe('GET /api/import/current/problems/:id', () => {
     it('answers the title guessed from the folder name beside the folder’s files', async () => {
       const { baseUrl, root, sheet } = freshApi();
       unlistedFolder(root, 'Harbor.Lights.2019');
-      await postImport(baseUrl, { sheetPath: sheet, rootPath: root });
+      await postImport(baseUrl, { sheetPath: sheet });
       const run = await untilReview(baseUrl);
       const [problem] = run.problems.filter(({ kind }) => kind === 'no-row');
 
@@ -1172,7 +1151,6 @@ describe('a fresh API over the library of an interrupted run', () => {
 
     const response = await postImport(baseUrl, {
       sheetPath: sheet,
-      rootPath: root,
     });
     expect(response.status).toBe(201);
     await untilReview(baseUrl);

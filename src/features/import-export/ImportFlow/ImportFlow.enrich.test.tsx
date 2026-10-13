@@ -36,7 +36,6 @@ import {
  */
 
 const SHEET = 'C:\\Movies\\library.xlsx';
-const ROOT = 'C:\\Movies';
 const LABEL = /Also fetch metadata and posters from TMDB/;
 const HINT_WITH_KEY =
   'Runs straight after the import, over everything it brings in. Needs the internet.';
@@ -89,6 +88,18 @@ function serve({
     if (p === '/api/tmdb/key' && method(init) === 'GET') {
       return Promise.resolve(okResponse({ key }));
     }
+    if (p === '/api/library-folders' && method(init) === 'GET') {
+      return Promise.resolve(
+        okResponse([
+          {
+            id: 'f-movies',
+            path: 'E:\\Movies',
+            titleCount: 12,
+            reachable: true,
+          },
+        ])
+      );
+    }
     if (isStart(input, init)) {
       running = true;
       return Promise.resolve(createdResponse(started));
@@ -136,17 +147,18 @@ function renderFlow(history: string[] = ['/', '/settings', '/import']) {
 
 const POLLING = { timeout: 3000 };
 
-const setupStep = () => screen.findByRole('textbox', { name: 'Spreadsheet' });
+/** The setup step, its Library folders group landed so Start can be pressed. */
+async function setupStep(): Promise<HTMLElement> {
+  const field = await screen.findByRole('textbox', { name: 'Spreadsheet' });
+  await screen.findByText('Library folders');
+  return field;
+}
 const enrichCard = () => screen.findByRole('checkbox', { name: LABEL });
 
 function startRun() {
   fireEvent.change(screen.getByRole('textbox', { name: 'Spreadsheet' }), {
     target: { value: SHEET },
   });
-  fireEvent.change(
-    screen.getByRole('textbox', { name: 'Movies root folder' }),
-    { target: { value: ROOT } }
-  );
   fireEvent.click(screen.getByRole('button', { name: 'Start import' }));
 }
 
@@ -217,7 +229,6 @@ describe('ImportFlow — the box travels on the run', () => {
 
     expect(await startBody()).toEqual({
       sheetPath: SHEET,
-      rootPath: ROOT,
       enrich: true,
     });
   });

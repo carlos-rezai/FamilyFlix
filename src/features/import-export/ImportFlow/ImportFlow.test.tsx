@@ -10,7 +10,7 @@ import { ThemeProvider } from 'styled-components';
 import { MemoryRouter, Route, Routes, useNavigate } from 'react-router-dom';
 
 import { ImportFlow } from './ImportFlow';
-import type { ImportProblem, ImportRun } from '@/types';
+import type { ImportProblem, ImportRun, LibraryFolder } from '@/types';
 import { theme } from '@/styles/theme';
 import { useGoBack } from '@/hooks/useGoBack/useGoBack';
 import {
@@ -57,7 +57,13 @@ import {
  */
 
 const SHEET = 'C:\\Movies\\library.xlsx';
-const ROOT = 'C:\\Movies';
+/** The one folder the list route answers with, unless a test says. */
+const LISTED: LibraryFolder = {
+  id: 'f-movies',
+  path: 'E:\\Movies',
+  titleCount: 12,
+  reachable: true,
+};
 
 let fetchMock: ReturnType<
   typeof vi.fn<
@@ -78,7 +84,7 @@ afterEach(() => {
 });
 
 /** A 400 naming the field it refuses — the shape `POST /api/import` promises. */
-function refusedResponse(field: 'sheet' | 'root', error: string): Response {
+function refusedResponse(field: 'sheet' | 'folders', error: string): Response {
   return {
     ok: false,
     status: 400,
@@ -95,6 +101,9 @@ const isStart = (input: RequestInfo | URL, init?: RequestInit) =>
 const isCancel = (input: RequestInfo | URL, init?: RequestInit) =>
   String(input).endsWith('/api/import/current/cancel') &&
   init?.method?.toUpperCase() === 'POST';
+const isFolders = (input: RequestInfo | URL, init?: RequestInit) =>
+  String(input).endsWith('/api/library-folders') &&
+  (init?.method ?? 'GET').toUpperCase() === 'GET';
 const isDismiss = (input: RequestInfo | URL, init?: RequestInit) =>
   /\/api\/import\/current\/problems\/[^/]+$/.test(String(input)) &&
   init?.method?.toUpperCase() === 'DELETE';
@@ -118,9 +127,12 @@ function serve(
     onArrival = false,
     hold,
     dismiss = () => noContentResponse(),
+    folders = [LISTED],
   }: {
     onArrival?: boolean;
     hold?: Promise<void>;
+    /** What `GET /api/library-folders` answers — one listed folder unless a test says. */
+    folders?: LibraryFolder[];
     /** What a `DELETE` of a problem answers — `204` unless a test says. */
     dismiss?: () => Response;
   } = {}
@@ -128,6 +140,9 @@ function serve(
   let read = 0;
   let running = onArrival;
   fetchMock.mockImplementation(async (input, init) => {
+    if (isFolders(input, init)) {
+      return okResponse(folders);
+    }
     if (isCancel(input, init)) {
       running = false;
       return noContentResponse();
@@ -200,15 +215,12 @@ function renderFlow(history: string[] = ['/', '/settings', '/import']) {
 
 const sheetField = () =>
   screen.getByRole('textbox', { name: 'Spreadsheet' }) as HTMLInputElement;
-const rootField = () =>
-  screen.getByRole('textbox', {
-    name: 'Movies root folder',
-  }) as HTMLInputElement;
 const startButton = () => screen.getByRole('button', { name: 'Start import' });
-/** Type both paths and press Start import. */
-function startRun(sheet = SHEET, root = ROOT) {
+/** The Library folders group, drawn once the list has landed. */
+const foldersGroup = () => screen.getByText('Library folders');
+/** Type the sheet's path and press Start import, over the listed folders. */
+function startRun(sheet = SHEET) {
   fireEvent.change(sheetField(), { target: { value: sheet } });
-  fireEvent.change(rootField(), { target: { value: root } });
   fireEvent.click(startButton());
 }
 
@@ -219,8 +231,15 @@ const POLLING = { timeout: 3000 };
 const runningStep = (headline = 'Importing movies…') =>
   screen.findByText(headline, undefined, POLLING);
 
-/** The setup step is on screen — the arrival read has answered its 404. */
-const setupStep = () => screen.findByRole('textbox', { name: 'Spreadsheet' });
+/**
+ * The setup step is on screen — the arrival read has answered its 404 — and
+ * the Library folders group has landed, so _Start import_ can be pressed.
+ */
+async function setupStep(): Promise<HTMLElement> {
+  const field = await screen.findByRole('textbox', { name: 'Spreadsheet' });
+  await screen.findByText('Library folders');
+  return field;
+}
 
 describe('ImportFlow — the header', () => {
   it('renders the heading and the lede the prototype draws', () => {
@@ -248,12 +267,12 @@ describe('ImportFlow — the header', () => {
 });
 
 describe('ImportFlow — opens on the setup step when there is no run', () => {
-  it('shows the two fields and Start import, and nothing of the other steps', async () => {
+  it('shows the spreadsheet field, the Library folders group and Start import, and nothing of the other steps', async () => {
     serve(createdResponse(makeImportRun()));
     renderFlow();
 
     expect(await setupStep()).toBeDefined();
-    expect(rootField()).toBeDefined();
+    expect(foldersGroup()).toBeDefined();
     expect(startButton()).toBeDefined();
     expect(screen.queryByText('Scanning your library…')).toBeNull();
     expect(screen.queryByRole('progressbar')).toBeNull();
@@ -376,7 +395,7 @@ describe('ImportFlow — a run already in progress', () => {
 });
 
 describe('ImportFlow — starting the run', () => {
-  it('posts the two paths and shows the running step', async () => {
+  it('posts the sheet’s path and shows the running step', async () => {
     serve(createdResponse(makeImportRun({ phase: 'scanning', found: 0 })), [
       makeImportRun({ phase: 'scanning', found: 1 }),
     ]);
@@ -391,7 +410,6 @@ describe('ImportFlow — starting the run', () => {
     expect(String(input)).toBe('/api/import');
     expect(JSON.parse(String(init?.body))).toEqual({
       sheetPath: SHEET,
-      rootPath: ROOT,
       enrich: false,
     });
     // The setup step is gone; the running step's bar and Cancel are here.
@@ -461,7 +479,7 @@ describe('ImportFlow — a 409 on Start', () => {
  * Cancel to fix something, not to start over.
  */
 describe('ImportFlow — Cancel import', () => {
-  it('sends the cancel and returns to setup with both fields as typed', async () => {
+  it('sends the cancel and returns to setup with the sheet as typed', async () => {
     serve(createdResponse(makeImportRun({ phase: 'scanning' })), [
       makeImportRun({ phase: 'importing', total: 2, done: 1, matched: 2 }),
     ]);
@@ -477,7 +495,6 @@ describe('ImportFlow — Cancel import', () => {
       fetchMock.mock.calls.filter(([i, n]) => isCancel(i, n))
     ).toHaveLength(1);
     expect(sheetField().value).toBe(SHEET);
-    expect(rootField().value).toBe(ROOT);
     expect(startButton()).toBeDefined();
     expect(screen.queryByText('Importing movies…')).toBeNull();
     expect(screen.queryByRole('progressbar')).toBeNull();
@@ -521,17 +538,16 @@ describe('ImportFlow — Cancel import', () => {
     expect(starts).toHaveLength(2);
     expect(JSON.parse(String(starts[1][1]?.body))).toEqual({
       sheetPath: SHEET,
-      rootPath: ROOT,
       enrich: false,
     });
   });
 });
 
 /**
- * The refusal is drawn where it belongs — under the field the 400 names —
- * and the screen stays on the setup step with both values as typed. The line
- * clears when that field is edited; a corrected root leaves a refused sheet's
- * line standing, because nothing about the sheet has changed.
+ * The refusal is drawn where it belongs — the sheet's under its field, the
+ * `folders` refusal under the Library folders group — and the screen stays on
+ * the setup step with the sheet as typed. The sheet's line clears when the
+ * sheet is edited.
  */
 describe('ImportFlow — a refused start', () => {
   it('draws the sheet’s reason under the spreadsheet field and stays on setup', async () => {
@@ -545,25 +561,29 @@ describe('ImportFlow — a refused start', () => {
       'That spreadsheet could not be found.'
     );
     expect(comesBefore(sheetField(), line)).toBe(true);
-    expect(comesBefore(line, rootField())).toBe(true);
+    expect(comesBefore(line, foldersGroup())).toBe(true);
     expect(getComputedStyle(line).fontSize).toBe('13px');
     expect(getComputedStyle(line).color).toBe('rgb(201, 122, 106)');
     expect(screen.queryByText('Scanning your library…')).toBeNull();
   });
 
-  it('draws the root’s reason under the root field', async () => {
-    serve(refusedResponse('root', 'That folder could not be found.'));
+  it('draws the folders’ reason under the Library folders group, and stays on setup', async () => {
+    serve(refusedResponse('folders', 'Add a library folder first.'));
     renderFlow();
     await setupStep();
 
     startRun();
 
-    const line = await screen.findByText('That folder could not be found.');
-    expect(comesBefore(rootField(), line)).toBe(true);
+    const line = await screen.findByText('Add a library folder first.');
+    expect(comesBefore(foldersGroup(), line)).toBe(true);
     expect(comesBefore(line, startButton())).toBe(true);
+    expect(getComputedStyle(line).fontSize).toBe('13px');
+    expect(getComputedStyle(line).color).toBe('rgb(201, 122, 106)');
+    expect(screen.queryByText('Scanning your library…')).toBeNull();
+    expect(sheetField().value).toBe(SHEET);
   });
 
-  it('keeps both values as typed', async () => {
+  it('keeps the sheet as typed', async () => {
     serve(refusedResponse('sheet', 'That spreadsheet could not be found.'));
     renderFlow();
     await setupStep();
@@ -572,7 +592,6 @@ describe('ImportFlow — a refused start', () => {
 
     await screen.findByText('That spreadsheet could not be found.');
     expect(sheetField().value).toBe(SHEET);
-    expect(rootField().value).toBe(ROOT);
   });
 
   it('clears the line when the refused field is edited', async () => {
@@ -590,33 +609,6 @@ describe('ImportFlow — a refused start', () => {
       screen.queryByText('That spreadsheet could not be found.')
     ).toBeNull();
     expect(sheetField().value).toBe('C:\\Movies\\library.csv');
-    expect(rootField().value).toBe(ROOT);
-  });
-
-  it('leaves the line standing when the other field is edited', async () => {
-    serve(refusedResponse('sheet', 'That spreadsheet could not be found.'));
-    renderFlow();
-    await setupStep();
-    startRun();
-    await screen.findByText('That spreadsheet could not be found.');
-
-    fireEvent.change(rootField(), { target: { value: 'D:\\Films' } });
-
-    expect(
-      screen.getByText('That spreadsheet could not be found.')
-    ).toBeDefined();
-  });
-
-  it('clears the root’s line when the root is edited', async () => {
-    serve(refusedResponse('root', 'That folder could not be found.'));
-    renderFlow();
-    await setupStep();
-    startRun();
-    await screen.findByText('That folder could not be found.');
-
-    fireEvent.change(rootField(), { target: { value: 'D:\\Films' } });
-
-    expect(screen.queryByText('That folder could not be found.')).toBeNull();
   });
 
   it('polls nothing after a refusal — no run exists', async () => {
@@ -938,7 +930,7 @@ describe('ImportFlow — the review of problems', () => {
     expect(screen.getByText('the browse home')).toBeDefined();
   });
 
-  it('reaches review with zeros and the card for a run over an empty root', async () => {
+  it('reaches review with zeros and the card for a run over an empty library folder', async () => {
     serve(createdResponse(makeImportRun({ phase: 'scanning' })), [
       reviewOf([], 0),
     ]);

@@ -74,7 +74,7 @@ function onlyRequest() {
 }
 
 /** A 400 naming the field it refuses — the shape `POST /api/import` promises. */
-function refusedResponse(field: 'sheet' | 'root', error: string): Response {
+function refusedResponse(field: 'sheet' | 'folders', error: string): Response {
   return {
     ok: false,
     status: 400,
@@ -83,13 +83,12 @@ function refusedResponse(field: 'sheet' | 'root', error: string): Response {
 }
 
 const SHEET = 'C:\\Movies\\library.xlsx';
-const ROOT = 'C:\\Movies';
 
 describe('startImport', () => {
-  it('POSTs the two paths as JSON to the import route', async () => {
+  it('POSTs the sheet’s path as JSON to the import route, and no root', async () => {
     fetchMock.mockResolvedValue(createdResponse(makeImportRun()));
 
-    await startImport(SHEET, ROOT);
+    await startImport(SHEET);
 
     const request = onlyRequest();
     expect(request.url).toBe('/api/import');
@@ -97,7 +96,6 @@ describe('startImport', () => {
     expect(request.headers?.['Content-Type']).toBe('application/json');
     expect(JSON.parse(String(request.body))).toEqual({
       sheetPath: SHEET,
-      rootPath: ROOT,
       enrich: false,
     });
   });
@@ -106,7 +104,7 @@ describe('startImport', () => {
     const started = makeImportRun({ id: 'run-7', phase: 'scanning' });
     fetchMock.mockResolvedValue(createdResponse(started));
 
-    const run = await startImport(SHEET, ROOT);
+    const run = await startImport(SHEET);
 
     expect(run).toEqual(started);
   });
@@ -118,20 +116,20 @@ describe('startImport', () => {
 
     // The screen has two fields and draws the reason under one of them. A bare
     // rejection would leave it guessing which.
-    await expect(startImport(SHEET, ROOT)).rejects.toMatchObject({
+    await expect(startImport(SHEET)).rejects.toMatchObject({
       field: 'sheet',
       message: 'That spreadsheet could not be found.',
     });
   });
 
-  it('surfaces the root field the same way', async () => {
+  it('surfaces the folders field the same way', async () => {
     fetchMock.mockResolvedValue(
-      refusedResponse('root', 'That folder could not be found.')
+      refusedResponse('folders', 'Add a library folder first.')
     );
 
-    await expect(startImport(SHEET, ROOT)).rejects.toMatchObject({
-      field: 'root',
-      message: 'That folder could not be found.',
+    await expect(startImport(SHEET)).rejects.toMatchObject({
+      field: 'folders',
+      message: 'Add a library folder first.',
     });
   });
 
@@ -142,13 +140,13 @@ describe('startImport', () => {
 
     // A run already exists; neither field is wrong, so nothing is drawn under
     // one.
-    const failure = await startImport(SHEET, ROOT).then(
+    const failure = await startImport(SHEET).then(
       () => null,
       (error: unknown) => error
     );
 
     expect(failure).toBeInstanceOf(Error);
-    expect(['sheet', 'root']).not.toContain(
+    expect(['sheet', 'folders']).not.toContain(
       (failure as { field?: unknown }).field
     );
   });
@@ -161,15 +159,13 @@ describe('startImport', () => {
     // The one failure the hook answers by reading `current` instead of
     // reporting: a run exists, and the screen should be showing it. A `500`
     // must not be told apart from a broken request, so it stays a plain Error.
-    await expect(startImport(SHEET, ROOT)).rejects.toBeInstanceOf(
-      ImportBusyError
-    );
+    await expect(startImport(SHEET)).rejects.toBeInstanceOf(ImportBusyError);
   });
 
   it('does not reject a 500 as ImportBusyError', async () => {
     fetchMock.mockResolvedValue(serverErrorResponse());
 
-    const failure = await startImport(SHEET, ROOT).then(
+    const failure = await startImport(SHEET).then(
       () => null,
       (error: unknown) => error
     );
@@ -181,13 +177,13 @@ describe('startImport', () => {
   it('rejects when the server fell over', async () => {
     fetchMock.mockResolvedValue(serverErrorResponse());
 
-    await expect(startImport(SHEET, ROOT)).rejects.toThrow();
+    await expect(startImport(SHEET)).rejects.toThrow();
   });
 
   it('rejects when the request could not be made at all', async () => {
     fetchMock.mockRejectedValue(new Error('offline'));
 
-    await expect(startImport(SHEET, ROOT)).rejects.toThrow();
+    await expect(startImport(SHEET)).rejects.toThrow();
   });
 });
 

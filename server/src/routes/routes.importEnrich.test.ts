@@ -70,6 +70,7 @@ function freshApi() {
   const media = join(dir, 'media');
   mkdirSync(media);
   const { root, sheet } = libraryFixture(dir);
+  storage.addLibraryFolder(root);
 
   const mediaDomain = createMedia(media);
   const playback = createPlayback(media, fixedSlot(null));
@@ -126,11 +127,10 @@ async function untilReview(baseUrl: string): Promise<ImportRun> {
 
 describe('POST /api/import — enrich travels on the run', () => {
   it('answers the 201 snapshot with enrich: true when it was asked for', async () => {
-    const { baseUrl, root, sheet } = freshApi();
+    const { baseUrl, sheet } = freshApi();
 
     const response = await postImport(baseUrl, {
       sheetPath: sheet,
-      rootPath: root,
       enrich: true,
     });
 
@@ -141,10 +141,9 @@ describe('POST /api/import — enrich travels on the run', () => {
   });
 
   it('carries enrich: true on every read of the current run, through to review', async () => {
-    const { baseUrl, root, sheet } = freshApi();
+    const { baseUrl, sheet } = freshApi();
     await postImport(baseUrl, {
       sheetPath: sheet,
-      rootPath: root,
       enrich: true,
     });
 
@@ -154,11 +153,10 @@ describe('POST /api/import — enrich travels on the run', () => {
   });
 
   it('answers enrich: false when it was not asked for', async () => {
-    const { baseUrl, root, sheet } = freshApi();
+    const { baseUrl, sheet } = freshApi();
 
     const response = await postImport(baseUrl, {
       sheetPath: sheet,
-      rootPath: root,
     });
 
     expect(((await response.json()) as ImportRun).enrich).toBe(false);
@@ -166,11 +164,10 @@ describe('POST /api/import — enrich travels on the run', () => {
   });
 
   it('answers enrich: false when it was sent false', async () => {
-    const { baseUrl, root, sheet } = freshApi();
+    const { baseUrl, sheet } = freshApi();
 
     const response = await postImport(baseUrl, {
       sheetPath: sheet,
-      rootPath: root,
       enrich: false,
     });
 
@@ -182,11 +179,10 @@ describe('POST /api/import — enrich travels on the run', () => {
 
 describe('POST /api/import — the import itself goes nowhere near TMDB', () => {
   it('asks the TMDB client nothing and starts no enrichment, run through to review', async () => {
-    const { baseUrl, root, sheet, tmdb } = freshApi();
+    const { baseUrl, sheet, tmdb } = freshApi();
 
     await postImport(baseUrl, {
       sheetPath: sheet,
-      rootPath: root,
       enrich: true,
     });
     const run = await untilReview(baseUrl);

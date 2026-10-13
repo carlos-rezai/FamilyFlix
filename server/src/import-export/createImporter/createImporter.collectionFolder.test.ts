@@ -104,7 +104,12 @@ async function scanOnce(box: Sandbox): Promise<ImportRun> {
 /** One whole sheet run over the sandbox's Library folder, then let go. */
 async function importSheet(box: Sandbox, csv: string): Promise<ImportRun> {
   writeFileSync(box.sheet, csv);
-  await box.importer.start(box.sheet, box.root);
+  if (
+    !box.storage.libraryFolders().some((folder) => folder.path === box.root)
+  ) {
+    box.storage.addLibraryFolder(box.root);
+  }
+  await box.importer.start(box.sheet);
   const run = await untilReview(box.importer);
   await box.importer.cancel();
   return run;

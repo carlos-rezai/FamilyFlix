@@ -130,6 +130,7 @@ function sandbox({
     media: mediaSeam(createMedia(media)),
     playback: createPlayback(media, fixedSlot(null)),
   });
+  storage.addLibraryFolder(root);
   return { storage, importer, media, root, sheet };
 }
 
@@ -184,7 +185,7 @@ describe('createImporter — the fixture becomes two movies', () => {
   it('adds both films to the library', async () => {
     const { storage, importer, root, sheet } = sandbox();
 
-    await importer.start(sheet, root);
+    await importer.start(sheet);
     await untilReview(importer);
 
     expect(Object.keys(byTitle(storage)).sort()).toEqual([
@@ -196,7 +197,7 @@ describe('createImporter — the fixture becomes two movies', () => {
   it('carries every column of the sheet onto the row', async () => {
     const { storage, importer, root, sheet } = sandbox();
 
-    await importer.start(sheet, root);
+    await importer.start(sheet);
     await untilReview(importer);
 
     const dieHard = byTitle(storage)['Die Hard'];
@@ -231,7 +232,7 @@ describe('createImporter — the fixture becomes two movies', () => {
   it('copies the video, the poster, the backdrop and each subtitle into the movie folder', async () => {
     const { storage, importer, media, root, sheet } = sandbox();
 
-    await importer.start(sheet, root);
+    await importer.start(sheet);
     await untilReview(importer);
 
     const dieHard = byTitle(storage)['Die Hard'];
@@ -264,7 +265,7 @@ describe('createImporter — the fixture becomes two movies', () => {
   it('reaches a film in a descended folder and takes its named poster and backdrop', async () => {
     const { storage, importer, root, sheet } = sandbox();
 
-    await importer.start(sheet, root);
+    await importer.start(sheet);
     await untilReview(importer);
 
     const amelie = byTitle(storage)['Amélie'];
@@ -279,7 +280,7 @@ describe('createImporter — the fixture becomes two movies', () => {
   it('derives the runtime from the copied video', async () => {
     const { storage, importer, root, sheet } = sandbox();
 
-    await importer.start(sheet, root);
+    await importer.start(sheet);
     await untilReview(importer);
 
     // The fixture's headers say 132 and 122 minutes; nothing on the sheet
@@ -291,7 +292,7 @@ describe('createImporter — the fixture becomes two movies', () => {
   it('leaves tmdbId null — nothing is looked up anywhere', async () => {
     const { storage, importer, root, sheet } = sandbox();
 
-    await importer.start(sheet, root);
+    await importer.start(sheet);
     await untilReview(importer);
 
     for (const movie of Object.values(byTitle(storage))) {
@@ -303,7 +304,7 @@ describe('createImporter — the fixture becomes two movies', () => {
     const { importer, root, sheet } = sandbox();
     const before = treeOf(root);
 
-    await importer.start(sheet, root);
+    await importer.start(sheet);
     await untilReview(importer);
 
     expect(treeOf(root)).toEqual(before);
@@ -314,7 +315,7 @@ describe('createImporter — the fixture becomes two movies', () => {
     const csv = join(root, '..', 'library.csv');
     cpSync(join(LIBRARY_FIXTURE, 'library.csv'), csv);
 
-    await importer.start(csv, root);
+    await importer.start(csv);
     await untilReview(importer);
 
     expect(Object.keys(byTitle(storage)).sort()).toEqual([
@@ -334,7 +335,7 @@ describe('createImporter — a genre the pool does not know', () => {
       'utf8'
     );
 
-    await importer.start(sheet, root);
+    await importer.start(sheet);
     await untilReview(importer);
 
     const dieHard = byTitle(storage)['Die Hard'];
@@ -347,7 +348,7 @@ describe('createImporter — a genre the pool does not know', () => {
     const sheet = join(root, '..', 'odd-genre.csv');
     writeFileSync(sheet, 'Title,Year,Genre\nDie Hard,1988,Kung-fu\n', 'utf8');
 
-    await importer.start(sheet, root);
+    await importer.start(sheet);
     await untilReview(importer);
 
     expect(byTitle(storage)['Die Hard'].genres).toEqual([]);
@@ -358,7 +359,7 @@ describe('createImporter — the snapshot', () => {
   it('answers the run from start, with its problems empty', async () => {
     const { importer, root, sheet } = sandbox();
 
-    const run = await importer.start(sheet, root);
+    const run = await importer.start(sheet);
 
     expect(run).toMatchObject({
       id: expect.any(String),
@@ -381,7 +382,7 @@ describe('createImporter — the snapshot', () => {
   it('holds the same run under current() while it runs and once it is in review', async () => {
     const { importer, root, sheet } = sandbox();
 
-    const started = await importer.start(sheet, root);
+    const started = await importer.start(sheet);
     const during = importer.current();
     const finished = await untilReview(importer);
 
@@ -393,7 +394,7 @@ describe('createImporter — the snapshot', () => {
   it('counts the run out: two found, two matched, two of two done', async () => {
     const { importer, root, sheet } = sandbox();
 
-    await importer.start(sheet, root);
+    await importer.start(sheet);
     const run = await untilReview(importer);
 
     expect(run).toMatchObject({
@@ -414,7 +415,7 @@ describe('createImporter — the snapshot', () => {
     aHundredFolders(root);
     const seen = new Set<string>();
 
-    await importer.start(sheet, root);
+    await importer.start(sheet);
     for (;;) {
       const run = importer.current();
       if (run === null || run.phase !== 'scanning') {
@@ -440,7 +441,7 @@ describe('createImporter — the snapshot', () => {
     // bar while importing is the film's title, not the folder it comes from.
     const hold = heldCopy('Amelie.mp4');
     const { importer, root, sheet } = sandbox({ media: hold.seam });
-    await importer.start(sheet, root);
+    await importer.start(sheet);
     await hold.reached;
 
     expect(importer.current()?.currentItem).toBe('Amélie');
@@ -469,7 +470,7 @@ describe('createImporter — the snapshot', () => {
     });
     importer = box.importer;
 
-    await importer.start(box.sheet, box.root);
+    await importer.start(box.sheet);
     await untilReview(importer);
 
     // By the first byte copied, every folder under the root has been found and
@@ -485,7 +486,7 @@ describe('createImporter — refusing to start', () => {
     const { importer, root } = sandbox();
 
     await expect(
-      importer.start(join(root, '..', 'missing.xlsx'), root)
+      importer.start(join(root, '..', 'missing.xlsx'))
     ).rejects.toMatchObject({
       field: 'sheet',
     });
@@ -498,7 +499,7 @@ describe('createImporter — refusing to start', () => {
     const sheet = join(root, '..', 'folder.xlsx');
     mkdirSync(sheet);
 
-    await expect(importer.start(sheet, root)).rejects.toMatchObject({
+    await expect(importer.start(sheet)).rejects.toMatchObject({
       field: 'sheet',
     });
   });
@@ -508,7 +509,7 @@ describe('createImporter — refusing to start', () => {
     const sheet = join(root, '..', 'library.txt');
     writeFileSync(sheet, 'Title,Year\nDie Hard,1988\n');
 
-    await expect(importer.start(sheet, root)).rejects.toMatchObject({
+    await expect(importer.start(sheet)).rejects.toMatchObject({
       field: 'sheet',
     });
   });
@@ -518,27 +519,8 @@ describe('createImporter — refusing to start', () => {
     const sheet = join(root, '..', 'no-title.csv');
     writeFileSync(sheet, 'Year,Genre\n1988,Action\n');
 
-    await expect(importer.start(sheet, root)).rejects.toMatchObject({
+    await expect(importer.start(sheet)).rejects.toMatchObject({
       field: 'sheet',
-    });
-  });
-
-  it('refuses a root that does not exist, on the root field', async () => {
-    const { importer, root, sheet } = sandbox();
-
-    await expect(
-      importer.start(sheet, join(root, 'nowhere'))
-    ).rejects.toMatchObject({
-      field: 'root',
-    });
-    expect(importer.current()).toBeNull();
-  });
-
-  it('refuses a root that is not a directory, on the root field', async () => {
-    const { importer, sheet } = sandbox();
-
-    await expect(importer.start(sheet, sheet)).rejects.toMatchObject({
-      field: 'root',
     });
   });
 
@@ -546,7 +528,7 @@ describe('createImporter — refusing to start', () => {
     const { importer, root } = sandbox();
 
     await expect(
-      importer.start(join(root, '..', 'missing.xlsx'), root)
+      importer.start(join(root, '..', 'missing.xlsx'))
     ).rejects.toMatchObject({
       message: expect.stringMatching(/\S/),
     });
@@ -555,9 +537,9 @@ describe('createImporter — refusing to start', () => {
   it('refuses a second start while a run exists, and keeps the first', async () => {
     const { importer, root, sheet } = sandbox();
 
-    const first = await importer.start(sheet, root);
+    const first = await importer.start(sheet);
 
-    await expect(importer.start(sheet, root)).rejects.toThrow();
+    await expect(importer.start(sheet)).rejects.toThrow();
     expect(importer.current()?.id).toBe(first.id);
     await untilReview(importer);
   });
@@ -579,7 +561,7 @@ describe('createImporter — cancel', () => {
   it('discards the run: current answers null afterwards', async () => {
     const hold = heldCopy('Amelie.mp4');
     const { importer, root, sheet } = sandbox({ media: hold.seam });
-    await importer.start(sheet, root);
+    await importer.start(sheet);
     await hold.reached;
 
     const cancelled = importer.cancel();
@@ -592,7 +574,7 @@ describe('createImporter — cancel', () => {
   it('keeps every movie added before the cancel', async () => {
     const hold = heldCopy('Amelie.mp4');
     const { storage, importer, root, sheet } = sandbox({ media: hold.seam });
-    await importer.start(sheet, root);
+    await importer.start(sheet);
     await hold.reached;
 
     const cancelled = importer.cancel();
@@ -610,7 +592,7 @@ describe('createImporter — cancel', () => {
     const { storage, importer, media, root, sheet } = sandbox({
       media: hold.seam,
     });
-    await importer.start(sheet, root);
+    await importer.start(sheet);
     await hold.reached;
     // The folder is reserved before the first byte is copied into it.
     expect(folders(media)).toEqual(['amelie-2001', 'die-hard-1988']);
@@ -630,7 +612,7 @@ describe('createImporter — cancel', () => {
     const { storage, importer, media, root, sheet } = sandbox({
       media: hold.seam,
     });
-    await importer.start(sheet, root);
+    await importer.start(sheet);
     await hold.reached;
 
     const cancelled = importer.cancel();
@@ -648,7 +630,7 @@ describe('createImporter — cancel', () => {
     const hold = heldCopy('Amelie.mp4');
     const { importer, root, sheet } = sandbox({ media: hold.seam });
     const before = treeOf(root);
-    await importer.start(sheet, root);
+    await importer.start(sheet);
     await hold.reached;
 
     const cancelled = importer.cancel();
@@ -660,13 +642,13 @@ describe('createImporter — cancel', () => {
 
   it('discards a run that is already in review, so a new one can start', async () => {
     const { importer, root, sheet } = sandbox();
-    const first = await importer.start(sheet, root);
+    const first = await importer.start(sheet);
     await untilReview(importer);
 
     await importer.cancel();
 
     expect(importer.current()).toBeNull();
-    const second = await importer.start(sheet, root);
+    const second = await importer.start(sheet);
     expect(second.id).not.toBe(first.id);
     await untilReview(importer);
   });
@@ -681,11 +663,11 @@ describe('createImporter — cancel', () => {
 describe('createImporter — a row already in the library', () => {
   it('adds nothing on a second run of the same sheet', async () => {
     const { storage, importer, root, sheet } = sandbox();
-    await importer.start(sheet, root);
+    await importer.start(sheet);
     await untilReview(importer);
     await importer.cancel();
 
-    await importer.start(sheet, root);
+    await importer.start(sheet);
     const run = await untilReview(importer);
 
     expect(Object.keys(byTitle(storage)).sort()).toEqual([
@@ -705,12 +687,12 @@ describe('createImporter — a row already in the library', () => {
 
   it('leaves the managed directory as the first run left it', async () => {
     const { importer, media, root, sheet } = sandbox();
-    await importer.start(sheet, root);
+    await importer.start(sheet);
     await untilReview(importer);
     const after = treeOf(media);
     await importer.cancel();
 
-    await importer.start(sheet, root);
+    await importer.start(sheet);
     await untilReview(importer);
 
     expect(treeOf(media)).toEqual(after);
@@ -732,7 +714,7 @@ describe('createImporter — a row already in the library', () => {
       videoPath: 'elsewhere/amelie-1995.mp4',
     });
 
-    await importer.start(sheet, root);
+    await importer.start(sheet);
     const run = await untilReview(importer);
 
     const films = storage
@@ -774,7 +756,7 @@ describe('createImporter — a row already in the library', () => {
       'utf8'
     );
 
-    await importer.start(sheet, root);
+    await importer.start(sheet);
     await untilReview(importer);
 
     expect(reads.count).toBe(1);
@@ -871,37 +853,22 @@ const lastIndexOfLine = (run: ImportRun, pattern: RegExp): number =>
  * `scan` per folder, `success` for the found, imported and complete lines.
  */
 describe('createImporter — the Activity log', () => {
-  it('opens with the connecting line, naming the root', async () => {
+  it('opens with one scanning line per listed folder, naming the folder', async () => {
     const { importer, root, sheet } = sandbox();
 
-    await importer.start(sheet, root);
+    await importer.start(sheet);
     const run = await untilReview(importer);
 
-    expect(run.log[0]).toEqual({
-      text: `Connecting to ${root} …`,
-      kind: 'info',
-    });
-  });
-
-  it('carries one scanning line per folder found, naming the folder', async () => {
-    const { importer, root, sheet } = sandbox();
-
-    await importer.start(sheet, root);
-    const run = await untilReview(importer);
-
-    const scanning = linesMatching(run, /^Scanning\s/);
-    expect(scanning).toHaveLength(2);
-    expect(scanning.map((line) => line.kind)).toEqual(['scan', 'scan']);
-    expect(scanning.map((line) => line.text)).toEqual([
-      expect.stringMatching(/^Scanning\s+.*Die\.Hard\.1988\.1080p$/),
-      expect.stringMatching(/^Scanning\s+.*Amelie \(2001\)$/),
+    expect(run.log[0]).toEqual({ text: `Scanning   ${root}`, kind: 'scan' });
+    expect(linesMatching(run, /^Scanning\s/)).toEqual([
+      { text: `Scanning   ${root}`, kind: 'scan' },
     ]);
   });
 
   it('says what the scan found and that the import starts', async () => {
     const { importer, root, sheet } = sandbox();
 
-    await importer.start(sheet, root);
+    await importer.start(sheet);
     const run = await untilReview(importer);
 
     const found = linesMatching(run, /^✓ Found /);
@@ -917,7 +884,7 @@ describe('createImporter — the Activity log', () => {
   it('carries one imported line per match, naming the title', async () => {
     const { importer, root, sheet } = sandbox();
 
-    await importer.start(sheet, root);
+    await importer.start(sheet);
     const run = await untilReview(importer);
 
     const imported = linesMatching(run, /^✓ Imported\s/);
@@ -932,7 +899,7 @@ describe('createImporter — the Activity log', () => {
   it('ends with the complete line, counting the imported and the flagged', async () => {
     const { importer, root, sheet } = sandbox();
 
-    await importer.start(sheet, root);
+    await importer.start(sheet);
     const run = await untilReview(importer);
 
     // The fixture gives the run nothing to flag: P is zero.
@@ -942,14 +909,13 @@ describe('createImporter — the Activity log', () => {
     });
   });
 
-  it('tells the story in order: connect, scan, found, import, complete', async () => {
-    const { importer, root, sheet } = sandbox();
+  it('tells the story in order: scan, found, import, complete', async () => {
+    const { importer, sheet } = sandbox();
 
-    await importer.start(sheet, root);
+    await importer.start(sheet);
     const run = await untilReview(importer);
 
-    expect(indexOfLine(run, /^Connecting to /)).toBe(0);
-    expect(indexOfLine(run, /^Scanning\s/)).toBeGreaterThan(0);
+    expect(indexOfLine(run, /^Scanning\s/)).toBe(0);
     expect(indexOfLine(run, /^✓ Found /)).toBeGreaterThan(
       lastIndexOfLine(run, /^Scanning\s/)
     );
@@ -969,11 +935,11 @@ describe('createImporter — the Activity log', () => {
 describe('createImporter — the lines for what is skipped', () => {
   it('logs an already-in-library row as skipped, by title and year', async () => {
     const { importer, root, sheet } = sandbox();
-    await importer.start(sheet, root);
+    await importer.start(sheet);
     await untilReview(importer);
     await importer.cancel();
 
-    await importer.start(sheet, root);
+    await importer.start(sheet);
     const run = await untilReview(importer);
 
     expect(texts(run)).toEqual(
@@ -998,7 +964,7 @@ describe('createImporter — the lines for what is skipped', () => {
       'utf8'
     );
 
-    await importer.start(sheet, root);
+    await importer.start(sheet);
     const run = await untilReview(importer);
 
     const blank = run.log.filter(
@@ -1021,7 +987,7 @@ describe('createImporter — the lines for what is skipped', () => {
       'utf8'
     );
 
-    await importer.start(sheet, root);
+    await importer.start(sheet);
     const run = await untilReview(importer);
 
     const kungFu = linesMatching(run, /Kung-fu/);
@@ -1054,7 +1020,7 @@ describe('createImporter — a folder the scanner cannot read', () => {
     mkdirSync(shelf);
     lockFolder(shelf);
 
-    await importer.start(sheet, root);
+    await importer.start(sheet);
     const run = await untilReview(importer);
 
     expect(run.phase).toBe('review');
@@ -1080,7 +1046,7 @@ describe('createImporter — a match with no subtitle, and one with no poster', 
     const { storage, importer, root } = sandbox();
     const { sheet } = lanternKeeper(root, { poster: true, subtitle: false });
 
-    await importer.start(sheet, root);
+    await importer.start(sheet);
     const run = await untilReview(importer);
 
     const lantern = byTitle(storage)['The Lantern Keeper'];
@@ -1098,7 +1064,7 @@ describe('createImporter — a match with no subtitle, and one with no poster', 
     const { storage, importer, root } = sandbox();
     const { sheet } = lanternKeeper(root, { poster: false, subtitle: true });
 
-    await importer.start(sheet, root);
+    await importer.start(sheet);
     const run = await untilReview(importer);
 
     const lantern = byTitle(storage)['The Lantern Keeper'];
@@ -1115,7 +1081,7 @@ describe('createImporter — a match with no subtitle, and one with no poster', 
     const { importer, root } = sandbox();
     const { sheet } = lanternKeeper(root, { poster: false, subtitle: false });
 
-    await importer.start(sheet, root);
+    await importer.start(sheet);
     const run = await untilReview(importer);
 
     expect(run).toMatchObject({ matched: 3, total: 3, done: 3 });
@@ -1133,24 +1099,26 @@ describe('createImporter — a match with no subtitle, and one with no poster', 
  */
 describe('createImporter — the log is capped at 80 lines', () => {
   it('never exceeds 80 lines and keeps the newest', async () => {
-    const { importer, root, sheet } = sandbox();
-    // A hundred scanning lines, and nothing to import for them — and a
-    // problem each, which is the list's business, not the log's.
-    aHundredFolders(root);
+    const { storage, importer, root, sheet } = sandbox();
+    // A hundred more listed folders, none of them there: a scanning line and
+    // a warning each, and nothing to import for them.
+    for (let n = 1; n <= 100; n += 1) {
+      storage.addLibraryFolder(join(root, '..', `gone-${n}`));
+    }
 
-    await importer.start(sheet, root);
+    await importer.start(sheet);
     const run = await untilReview(importer);
 
-    expect(run.found).toBe(102);
     expect(run.log).toHaveLength(80);
-    // A hundred folders the sheet does not name: a hundred `no-row` problems.
     expect(run.log[run.log.length - 1]).toEqual({
-      text: '✓ Import complete: 2 imported, 100 need attention.',
+      text: '✓ Import complete: 2 imported, 0 need attention.',
       kind: 'success',
     });
     // The oldest lines are the ones that went.
-    expect(linesMatching(run, /^Connecting to /)).toHaveLength(0);
-    expect(linesMatching(run, /^Scanning\s+.*Film 001$/)).toHaveLength(0);
+    expect(linesMatching(run, /^Scanning\s/)).not.toContainEqual({
+      text: `Scanning   ${root}`,
+      kind: 'scan',
+    });
   });
 });
 
@@ -1227,7 +1195,7 @@ describe('createImporter — the matcher’s verdicts become problems', () => {
     const { storage, importer, media, root, sheet } = sandbox();
     folderUnder(root, 'Ironwood (2018)', ['Ironwood.mp4']);
 
-    await importer.start(sheet, root);
+    await importer.start(sheet);
     const run = await untilReview(importer);
 
     expect(run.problems).toEqual([
@@ -1252,7 +1220,7 @@ describe('createImporter — the matcher’s verdicts become problems', () => {
       `${FIXTURE_ROWS}The Lantern Keeper,2019,Drama\n`
     );
 
-    await importer.start(sheet, root);
+    await importer.start(sheet);
     const run = await untilReview(importer);
 
     expect(run.problems).toEqual([
@@ -1271,7 +1239,7 @@ describe('createImporter — the matcher’s verdicts become problems', () => {
     const { storage, importer, media, root, sheet } = sandbox();
     folderUnder(root, 'Die Hard (1988)', ['Die Hard.mp4']);
 
-    await importer.start(sheet, root);
+    await importer.start(sheet);
     const run = await untilReview(importer);
 
     expect(run.problems).toEqual([
@@ -1291,7 +1259,7 @@ describe('createImporter — the matcher’s verdicts become problems', () => {
     folderUnder(root, 'Aliens (1986)', ['Aliens.mp4']);
     const sheet = sheetOf(root, `${FIXTURE_ROWS}Alien,1979,Horror\n`);
 
-    await importer.start(sheet, root);
+    await importer.start(sheet);
     const run = await untilReview(importer);
 
     expect(run.problems).toEqual([
@@ -1314,7 +1282,7 @@ describe('createImporter — the matcher’s verdicts become problems', () => {
       `${FIXTURE_ROWS}The Lantern Keeper,2019,Drama\nAlien,1979,Horror\n`
     );
 
-    await importer.start(sheet, root);
+    await importer.start(sheet);
     const run = await untilReview(importer);
 
     expect(run.problems).toHaveLength(3);
@@ -1334,7 +1302,7 @@ describe('createImporter — the matcher’s verdicts become problems', () => {
       `${FIXTURE_ROWS}The Lantern Keeper,2019,Drama\n`
     );
 
-    await importer.start(sheet, root);
+    await importer.start(sheet);
     await hold.reached;
     const during = importer.current();
     hold.release();
@@ -1364,7 +1332,7 @@ describe('createImporter — a matched folder holding two videos', () => {
       join(dieHard, 'Die.Hard.1988.1080p.mkv')
     );
 
-    await importer.start(sheet, root);
+    await importer.start(sheet);
     const run = await untilReview(importer);
 
     expect(run.problems).toEqual([
@@ -1394,7 +1362,7 @@ describe('createImporter — a copy that fails partway', () => {
       ),
     });
 
-    await importer.start(sheet, root);
+    await importer.start(sheet);
     const run = await untilReview(importer);
 
     expect(run.problems).toEqual([
@@ -1414,7 +1382,7 @@ describe('createImporter — a copy that fails partway', () => {
       media: failCopyOf('poster.jpg', 'ENOENT: no such file or directory'),
     });
 
-    await importer.start(sheet, root);
+    await importer.start(sheet);
     const run = await untilReview(importer);
 
     expect(ofKind(run, 'failed')).toHaveLength(1);
@@ -1431,7 +1399,7 @@ describe('createImporter — a copy that fails partway', () => {
       ),
     });
 
-    await importer.start(sheet, root);
+    await importer.start(sheet);
     const run = await untilReview(importer);
 
     expect(run.phase).toBe('review');
@@ -1452,7 +1420,7 @@ describe('createImporter — a genre-less row', () => {
     const { storage, importer, root } = sandbox();
     const sheet = sheetOf(root, 'Die Hard,1988,Action\nAmélie,2001,\n');
 
-    await importer.start(sheet, root);
+    await importer.start(sheet);
     const run = await untilReview(importer);
 
     // Imported as any match is — counted, logged, done — and then listed.
@@ -1476,7 +1444,7 @@ describe('createImporter — a genre-less row', () => {
     const { storage, importer, root } = sandbox();
     const sheet = sheetOf(root, 'Die Hard,1988\nAmélie,2001\n', 'Title,Year');
 
-    await importer.start(sheet, root);
+    await importer.start(sheet);
     const run = await untilReview(importer);
 
     expect(Object.keys(byTitle(storage)).sort()).toEqual([
@@ -1502,7 +1470,7 @@ describe('createImporter — the complete line counts the problems', () => {
       `${FIXTURE_ROWS}The Lantern Keeper,2019,Drama\n`
     );
 
-    await importer.start(sheet, root);
+    await importer.start(sheet);
     const run = await untilReview(importer);
 
     expect(run.problems).toHaveLength(2);
@@ -1516,7 +1484,7 @@ describe('createImporter — the complete line counts the problems', () => {
     const { importer, root } = sandbox();
     const sheet = sheetOf(root, 'Die Hard,1988,Action\nAmélie,2001,\n');
 
-    await importer.start(sheet, root);
+    await importer.start(sheet);
     const run = await untilReview(importer);
 
     expect(run.log[run.log.length - 1]).toEqual({
@@ -1539,7 +1507,7 @@ describe('createImporter — dismiss', () => {
       root,
       `${FIXTURE_ROWS}The Lantern Keeper,2019,Drama\n`
     );
-    await importer.start(sheet, root);
+    await importer.start(sheet);
     const run = await untilReview(importer);
     const [problem] = run.problems;
 
@@ -1557,7 +1525,7 @@ describe('createImporter — dismiss', () => {
       root,
       `${FIXTURE_ROWS}The Lantern Keeper,2019,Drama\n`
     );
-    await importer.start(sheet, root);
+    await importer.start(sheet);
     const run = await untilReview(importer);
     const noRow = ofKind(run, 'no-row')[0];
     const noFolder = ofKind(run, 'no-folder')[0];
@@ -1573,7 +1541,7 @@ describe('createImporter — dismiss', () => {
       root,
       `${FIXTURE_ROWS}The Lantern Keeper,2019,Drama\n`
     );
-    await importer.start(sheet, root);
+    await importer.start(sheet);
     const [problem] = (await untilReview(importer)).problems;
     importer.dismiss(problem.id);
 
@@ -1583,7 +1551,7 @@ describe('createImporter — dismiss', () => {
 
   it('answers false for an id that never was', async () => {
     const { importer, root, sheet } = sandbox();
-    await importer.start(sheet, root);
+    await importer.start(sheet);
     await untilReview(importer);
 
     expect(importer.dismiss('no-such-problem')).toBe(false);
@@ -1601,7 +1569,7 @@ describe('createImporter — dismiss', () => {
       root,
       `${FIXTURE_ROWS}The Lantern Keeper,2019,Drama\n`
     );
-    await importer.start(sheet, root);
+    await importer.start(sheet);
     const before = await untilReview(importer);
 
     importer.dismiss(before.problems[0].id);
@@ -1657,7 +1625,7 @@ async function failedDieHard(): Promise<
       'EBUSY: resource busy or locked'
     ),
   });
-  await box.importer.start(box.sheet, box.root);
+  await box.importer.start(box.sheet);
   const run = await untilReview(box.importer);
   const [problem] = ofKind(run, 'failed');
   return { ...box, problem, dieHard: join(box.root, 'Die.Hard.1988.1080p') };
@@ -1737,7 +1705,7 @@ describe('createImporter — problem: the detail Resolve prefills from', () => {
       join(dieHard, 'Die.Hard.1988.1080p.mp4'),
       join(dieHard, 'Die.Hard.1988.1080p.mkv')
     );
-    await importer.start(sheet, root);
+    await importer.start(sheet);
     const [problem] = ofKind(await untilReview(importer), 'no-video');
 
     const detail = importer.problem(problem.id);
@@ -1768,7 +1736,7 @@ describe('createImporter — problem: the detail Resolve prefills from', () => {
       ),
     });
     const dieHard = join(root, 'Die.Hard.1988.1080p');
-    await importer.start(sheet, root);
+    await importer.start(sheet);
     const [problem] = ofKind(await untilReview(importer), 'failed');
 
     const detail = importer.problem(problem.id);
@@ -1782,7 +1750,7 @@ describe('createImporter — problem: the detail Resolve prefills from', () => {
   it('names every candidate folder of an ambiguous problem', async () => {
     const { importer, root, sheet } = sandbox();
     const second = folderUnder(root, 'Die Hard (1988)', ['Die Hard.mp4']);
-    await importer.start(sheet, root);
+    await importer.start(sheet);
     const [problem] = ofKind(await untilReview(importer), 'ambiguous');
 
     const detail = importer.problem(problem.id);
@@ -1799,7 +1767,7 @@ describe('createImporter — problem: the detail Resolve prefills from', () => {
       root,
       `${FIXTURE_ROWS}The Lantern Keeper,2019,Drama\n`
     );
-    await importer.start(sheet, root);
+    await importer.start(sheet);
     const [problem] = ofKind(await untilReview(importer), 'no-folder');
 
     const detail = importer.problem(problem.id);
@@ -1816,7 +1784,7 @@ describe('createImporter — problem: the detail Resolve prefills from', () => {
 
   it('answers null for an id that never was', async () => {
     const { importer, root, sheet } = sandbox();
-    await importer.start(sheet, root);
+    await importer.start(sheet);
     await untilReview(importer);
 
     expect(importer.problem('no-such-problem')).toBeNull();
@@ -1845,7 +1813,7 @@ describe('createImporter — problem: the detail Resolve prefills from', () => {
     it('guesses the title from the folder name, with the tail forms dropped', async () => {
       const { importer, root, sheet } = sandbox();
       folderUnder(root, 'Harbor.Lights.2019', ['Harbor.Lights.2019.mp4']);
-      await importer.start(sheet, root);
+      await importer.start(sheet);
       const [problem] = ofKind(await untilReview(importer), 'no-row');
 
       const detail = importer.problem(problem.id);
@@ -1858,7 +1826,7 @@ describe('createImporter — problem: the detail Resolve prefills from', () => {
     it('keeps the review row naming the folder as it is on disk', async () => {
       const { importer, root, sheet } = sandbox();
       folderUnder(root, 'Harbor.Lights.2019', ['Harbor.Lights.2019.mp4']);
-      await importer.start(sheet, root);
+      await importer.start(sheet);
       const [problem] = ofKind(await untilReview(importer), 'no-row');
 
       const detail = importer.problem(problem.id);
@@ -1874,7 +1842,7 @@ describe('createImporter — problem: the detail Resolve prefills from', () => {
       ]);
       writeFileSync(join(folder, 'poster.jpg'), '');
       writeFileSync(join(folder, 'Harbor.Lights.2019.en.srt'), '');
-      await importer.start(sheet, root);
+      await importer.start(sheet);
       const [problem] = ofKind(await untilReview(importer), 'no-row');
 
       const detail = importer.problem(problem.id);
@@ -1898,7 +1866,7 @@ describe('createImporter — problem: the detail Resolve prefills from', () => {
     it('guesses from a name that carries no tail by leaving it as it is', async () => {
       const { importer, root, sheet } = sandbox();
       folderUnder(root, 'Ironwood', ['Ironwood.mp4']);
-      await importer.start(sheet, root);
+      await importer.start(sheet);
       const [problem] = ofKind(await untilReview(importer), 'no-row');
 
       expect(importer.problem(problem.id)?.row.title).toBe('Ironwood');
@@ -2105,7 +2073,7 @@ describe('createImporter — the awkward titles match and import', () => {
     filmUnder(root, "Zoë's Lantern Keeper (2020)", 'Zoe.mp4');
     const sheet = sheetOf(root, `${FIXTURE_ROWS}${cell(QUOTED)},2020,Drama\n`);
 
-    await importer.start(sheet, root);
+    await importer.start(sheet);
     const run = await untilReview(importer);
 
     expect(run.problems).toEqual([]);
@@ -2126,7 +2094,7 @@ describe('createImporter — the awkward titles match and import', () => {
       `${FIXTURE_ROWS}${cell(ACCENTED)},2019,Comedy\n`
     );
 
-    await importer.start(sheet, root);
+    await importer.start(sheet);
     const run = await untilReview(importer);
 
     expect(run.problems).toEqual([]);
@@ -2146,7 +2114,7 @@ describe('createImporter — the awkward titles match and import', () => {
       `${FIXTURE_ROWS}${cell(LONG_TITLE)},2021,Drama\n`
     );
 
-    await importer.start(sheet, root);
+    await importer.start(sheet);
     const run = await untilReview(importer);
 
     expect(run.problems).toEqual([]);
@@ -2181,7 +2149,7 @@ describe('createImporter — the awkward titles sit in a problem whole', () => {
         `${cell(LONG_TITLE)},2021,Drama\n`
     );
 
-    await importer.start(sheet, root);
+    await importer.start(sheet);
     const run = await untilReview(importer);
 
     expect(
@@ -2201,7 +2169,7 @@ describe('createImporter — the awkward titles sit in a problem whole', () => {
         `${cell(LONG_TITLE)},2021,Drama\n`
     );
 
-    await importer.start(sheet, root);
+    await importer.start(sheet);
     const run = await untilReview(importer);
 
     const [quoted, long] = run.problems;
@@ -2257,7 +2225,7 @@ describe('createImporter — two matches with the same title and year', () => {
       `${FIXTURE_ROWS}蜘蛛巣城,1957,Drama\nどん底,1957,Drama\n`
     );
 
-    await importer.start(sheet, root);
+    await importer.start(sheet);
     const run = await untilReview(importer);
 
     expect(run.problems).toEqual([]);
@@ -2291,7 +2259,7 @@ describe('createImporter — two matches with the same title and year', () => {
       root,
       `${FIXTURE_ROWS}Heat,1995,Action\nHeat,1995,Action\n`
     );
-    await importer.start(sheet, root);
+    await importer.start(sheet);
     const run = await untilReview(importer);
     expect(ofKind(run, 'ambiguous')).toHaveLength(2);
     const [one, two] = ofKind(run, 'ambiguous');
@@ -2337,7 +2305,7 @@ describe('createImporter — a source folder named with unsafe characters', () =
       `${FIXTURE_ROWS}The Lantern Keeper,2019,Drama\n`
     );
 
-    await importer.start(sheet, root);
+    await importer.start(sheet);
     const run = await untilReview(importer);
 
     expect(run.problems).toEqual([]);
@@ -2353,24 +2321,6 @@ describe('createImporter — a source folder named with unsafe characters', () =
       expect(name).toMatch(/^[a-z0-9-]+\/[^/]+$/);
     }
     expect(texts(run)).toContain('✓ Imported   The Lantern Keeper');
-  });
-
-  it('names the folder as it is on disk in the scanning line, unsafe characters and all', async () => {
-    const { importer, root } = sandbox();
-    const folder = filmUnder(root, UNSAFE, 'The.Lantern.Keeper.mp4');
-    const sheet = sheetOf(
-      root,
-      `${FIXTURE_ROWS}The Lantern Keeper,2019,Drama\n`
-    );
-
-    await importer.start(sheet, root);
-    const run = await untilReview(importer);
-
-    // The log is the maintainer's map back to the source: a name the log
-    // sanitised would be a folder they could not find.
-    expect(linesMatching(run, /^Scanning/).map((line) => line.text)).toContain(
-      `Scanning   ${folder}`
-    );
   });
 });
 
@@ -2392,7 +2342,7 @@ describe('createImporter — a subtitle with an unknown language tag', () => {
       `${FIXTURE_ROWS}The Lantern Keeper,2019,Drama\n`
     );
 
-    await importer.start(sheet, root);
+    await importer.start(sheet);
     const run = await untilReview(importer);
 
     expect(run.problems).toEqual([]);
@@ -2428,7 +2378,7 @@ describe('createImporter — a subtitle with an unknown language tag', () => {
       `${FIXTURE_ROWS}The Lantern Keeper,2019,Drama\n`
     );
 
-    await importer.start(sheet, root);
+    await importer.start(sheet);
     await untilReview(importer);
 
     const movie = byTitle(storage)['The Lantern Keeper'];
@@ -2463,7 +2413,7 @@ describe('createImporter — the importer restarting mid-run', () => {
     const { storage, importer, media, root, sheet } = sandbox({
       media: hold.seam,
     });
-    await importer.start(sheet, root);
+    await importer.start(sheet);
     await hold.reached;
     expect(importer.current()?.phase).toBe('importing');
 
@@ -2499,7 +2449,7 @@ describe('createImporter — the importer restarting mid-run', () => {
     const { storage, media, root, sheet, restarted } = await interrupted();
     const before = byTitle(storage)['Die Hard'];
 
-    await restarted.start(sheet, root);
+    await restarted.start(sheet);
     const run = await untilReview(restarted);
 
     expect(run.problems).toEqual([]);

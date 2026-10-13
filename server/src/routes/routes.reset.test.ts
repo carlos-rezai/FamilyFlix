@@ -214,11 +214,11 @@ const readComponent = async (baseUrl: string) =>
     ).json()) as PlaybackCapabilities
   ).component;
 
-const startImport = (baseUrl: string, sheet: string, root: string) =>
+const startImport = (baseUrl: string, sheet: string) =>
   fetch(`${baseUrl}/api/import`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ sheetPath: sheet, rootPath: root }),
+    body: JSON.stringify({ sheetPath: sheet }),
   });
 
 const startSync = (baseUrl: string, movieId: string) =>
@@ -350,9 +350,7 @@ describe('POST /api/reset — a running import', () => {
     const { seam, reached, release } = heldCopy();
     const api = await filledApi({ seam });
     try {
-      expect((await startImport(api.baseUrl, api.sheet, api.root)).status).toBe(
-        201
-      );
+      expect((await startImport(api.baseUrl, api.sheet)).status).toBe(201);
       await reached;
       const run = (await (
         await fetch(`${api.baseUrl}/api/import/current`)
@@ -408,8 +406,8 @@ describe('POST /api/reset — a database that refuses', () => {
 
 describe('POST /api/reset — runs in review', () => {
   it('lets an import in review go and erases everything', async () => {
-    const { baseUrl, sheet, root, storage } = await filledApi();
-    expect((await startImport(baseUrl, sheet, root)).status).toBe(201);
+    const { baseUrl, sheet, storage } = await filledApi();
+    expect((await startImport(baseUrl, sheet)).status).toBe(201);
     await importReviewed(baseUrl);
 
     const response = await postReset(baseUrl);

@@ -7,8 +7,8 @@
 // came from, and the app used to forget it the moment the copy finished. So
 // the importer now remembers:
 //
-// - the root itself, on Start — as a **Library folder** on the list since
-//   issue #271, and no longer as `library-root` in the `settings` table;
+// - nothing of the folder itself: since issue #331 a sheet run reads the
+//   listed **Library folders**, and the sandbox lists its tree as one;
 // - `source_folder` on every **Movie** and **Series** it adds **or** finds
 //   **Already in library** — **relative to that root**, so no absolute path
 //   from the source machine lands on a row (CLAUDE.md's rule). Finding one
@@ -73,6 +73,7 @@ function sandbox(fixture: 'films' | 'series' = 'films'): {
     media: createMedia(media),
     playback: createPlayback(media, fixedSlot(null)),
   });
+  storage.addLibraryFolder(root);
   return { storage, db, importer, media, root, sheet };
 }
 
@@ -92,12 +93,8 @@ async function untilReview(importer: Importer): Promise<ImportRun> {
 }
 
 /** One whole run, then the run let go, so another may start. */
-async function runOnce(
-  importer: Importer,
-  sheet: string,
-  root: string
-): Promise<ImportRun> {
-  await importer.start(sheet, root);
+async function runOnce(importer: Importer, sheet: string): Promise<ImportRun> {
+  await importer.start(sheet);
   const run = await untilReview(importer);
   await importer.cancel();
   return run;
@@ -146,24 +143,14 @@ function libraryRows(db: SqliteDatabase): Record<string, unknown[]> {
   );
 }
 
-// 30 — Library folders, Phase 4 (issue #271): the root is remembered once,
-// as a **Library folder** on the list, and no longer as `library-root` too.
-describe('createImporter — the Library root is a folder on the list, not a setting', () => {
-  it('lists the root as the run starts', async () => {
-    const { storage, importer, root, sheet } = sandbox();
-
-    await importer.start(sheet, root);
-
-    expect(storage.libraryFolders().map((folder) => folder.path)).toEqual([
-      root,
-    ]);
-    await untilReview(importer);
-  });
-
+// 30 — Library folders, Phase 4 (issue #271): no `library-root` is written
+// into the settings table. Since issue #331 a sheet run reads the listed
+// folders and lists nothing itself.
+describe('createImporter — the Library folder is not a setting', () => {
   it('writes no library-root into the settings table', async () => {
     const { db, importer, root, sheet } = sandbox();
 
-    await runOnce(importer, sheet, root);
+    await runOnce(importer, sheet);
 
     expect(
       db.prepare("SELECT value FROM settings WHERE key = 'library-root'").get()
@@ -175,7 +162,7 @@ describe('createImporter — an added title carries its Source folder', () => {
   it('records each added film’s folder relative to the root', async () => {
     const { db, importer, root, sheet } = sandbox();
 
-    await runOnce(importer, sheet, root);
+    await runOnce(importer, sheet);
 
     const folders = sourceFolders(db, 'movies');
     expect(resolvedUnder(root, folders['Die Hard'])).toBe(
@@ -190,7 +177,7 @@ describe('createImporter — an added title carries its Source folder', () => {
   it('records each added series’ Show folder relative to the root', async () => {
     const { db, importer, root, sheet } = sandbox('series');
 
-    await runOnce(importer, sheet, root);
+    await runOnce(importer, sheet);
 
     const folders = sourceFolders(db, 'series');
     expect(resolvedUnder(root, folders['Harbor & Vine'])).toBe(
@@ -206,7 +193,7 @@ describe('createImporter — an added title carries its Source folder', () => {
     async (fixture) => {
       const { db, importer, root, sheet } = sandbox(fixture);
 
-      await runOnce(importer, sheet, root);
+      await runOnce(importer, sheet);
 
       const values = Object.values(libraryRows(db))
         .flat()
@@ -230,7 +217,7 @@ describe('createImporter — an Already-in-library title carries its Source fold
       videoPath: 'die-hard-1988/video.mp4',
     });
 
-    await runOnce(importer, sheet, root);
+    await runOnce(importer, sheet);
 
     const row = db
       .prepare('SELECT source_folder FROM movies WHERE id = ?')
@@ -247,7 +234,7 @@ describe('createImporter — an Already-in-library title carries its Source fold
     const { storage, db, importer, root, sheet } = sandbox('series');
     const held = storage.addSeries({ title: 'Tidewater', year: 2018 });
 
-    await runOnce(importer, sheet, root);
+    await runOnce(importer, sheet);
 
     const row = db
       .prepare('SELECT source_folder FROM series WHERE id = ?')
@@ -263,7 +250,7 @@ describe('createImporter — a re-run backfills a library imported before', () =
     'restores every source_folder and adds nothing else (%s)',
     async (fixture) => {
       const { db, importer, media, root, sheet } = sandbox(fixture);
-      await runOnce(importer, sheet, root);
+      await runOnce(importer, sheet);
       const table = fixture === 'films' ? 'movies' : 'series';
       const recorded = sourceFolders(db, table);
       // The library as an import from before this shipped left it.
@@ -271,7 +258,7 @@ describe('createImporter — a re-run backfills a library imported before', () =
       const before = libraryRows(db);
       const tree = treeOf(media);
 
-      const run = await runOnce(importer, sheet, root);
+      const run = await runOnce(importer, sheet);
 
       expect(sourceFolders(db, table)).toEqual(recorded);
       expect(Object.values(recorded).every((folder) => folder !== null)).toBe(

@@ -1,11 +1,34 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ThemeProvider } from 'styled-components';
+import { MemoryRouter } from 'react-router-dom';
 
 import { ImportSetup, type ImportSetupProps } from './ImportSetup';
+import type { LibraryFolder } from '@/types';
 import { theme } from '@/styles/theme';
 import { comesBefore } from '@/test-support/comesBefore/comesBefore';
+import { okResponse } from '@/test-support/fakeResponse/fakeResponse';
+
+/** One listed folder, as `GET /api/library-folders` answers it. */
+const MOVIES: LibraryFolder = {
+  id: 'f-movies',
+  path: 'E:\\Movies',
+  titleCount: 12,
+  reachable: true,
+};
+
+// The step reads the list itself: the one request it makes.
+beforeEach(() => {
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async () => okResponse([MOVIES]))
+  );
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
 
 /**
  * 23 — Enrichment, Phase 9: "from the import" (issue #212).
@@ -29,21 +52,21 @@ const HINT_WITHOUT_KEY =
 
 function renderSetup(props: Partial<ImportSetupProps> = {}) {
   return render(
-    <ThemeProvider theme={theme}>
-      <ImportSetup
-        sheet=""
-        root=""
-        sheetError={null}
-        rootError={null}
-        onSheet={() => undefined}
-        onRoot={() => undefined}
-        onStart={() => undefined}
-        enrich={false}
-        keySet={true}
-        onToggleEnrich={() => undefined}
-        {...props}
-      />
-    </ThemeProvider>
+    <MemoryRouter>
+      <ThemeProvider theme={theme}>
+        <ImportSetup
+          sheet=""
+          sheetError={null}
+          foldersError={null}
+          onSheet={() => undefined}
+          onStart={() => undefined}
+          enrich={false}
+          keySet={true}
+          onToggleEnrich={() => undefined}
+          {...props}
+        />
+      </ThemeProvider>
+    </MemoryRouter>
   );
 }
 
@@ -105,7 +128,7 @@ describe('ImportSetup — the Also fetch from TMDB card', () => {
   it('is reached by Tab, as a checkbox is', async () => {
     const user = userEvent.setup();
     renderSetup();
-    screen.getByRole('textbox', { name: 'Movies root folder' }).focus();
+    (await screen.findByRole('button', { name: 'Manage folders' })).focus();
 
     await user.tab();
 

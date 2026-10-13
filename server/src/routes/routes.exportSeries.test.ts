@@ -251,12 +251,27 @@ describe('POST /api/export — series and episodes', () => {
 
 // --- the round trip through Bulk import ------------------------------------------
 
-const postImport = (baseUrl: string, sheetPath: string, rootPath: string) =>
-  fetch(`${baseUrl}/api/import`, {
+/**
+ * A sheet run over `folder`: the folder listed as a **Library folder** first
+ * (a `409` for one already listed is as good), then the sheet started over
+ * the list.
+ */
+async function postImport(
+  baseUrl: string,
+  sheetPath: string,
+  folder: string
+): Promise<Response> {
+  await fetch(`${baseUrl}/api/library-folders`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ sheetPath, rootPath }),
+    body: JSON.stringify({ path: folder }),
   });
+  return fetch(`${baseUrl}/api/import`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ sheetPath }),
+  });
+}
 
 const postCancel = (baseUrl: string) =>
   fetch(`${baseUrl}/api/import/current/cancel`, { method: 'POST' });

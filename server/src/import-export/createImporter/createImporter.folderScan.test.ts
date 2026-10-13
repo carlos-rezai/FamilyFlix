@@ -410,8 +410,9 @@ describe('createImporter — the run’s source', () => {
 
   it('is sheet for a sheet import', async () => {
     const box = sandbox();
+    box.storage.addLibraryFolder(box.films);
 
-    const started = await box.importer.start(box.sheet, box.films);
+    const started = await box.importer.start(box.sheet);
     const run = await untilReview(box.importer);
     await box.importer.cancel();
 

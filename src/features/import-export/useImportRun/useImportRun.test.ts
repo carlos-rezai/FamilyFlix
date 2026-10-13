@@ -39,7 +39,6 @@ import {
  */
 
 const SHEET = 'C:\\Movies\\library.xlsx';
-const ROOT = 'C:\\Movies';
 
 let fetchMock: ReturnType<
   typeof vi.fn<
@@ -147,7 +146,7 @@ async function mount() {
 async function startRun() {
   const rendered = await mount();
   await act(async () => {
-    await rendered.result.current.start(SHEET, ROOT);
+    await rendered.result.current.start(SHEET);
   });
   return rendered;
 }
@@ -225,7 +224,7 @@ describe('useImportRun — on mount', () => {
 });
 
 describe('useImportRun — starting', () => {
-  it('posts the two paths and holds the snapshot the start answered', async () => {
+  it('posts the sheet’s path and holds the snapshot the start answered', async () => {
     const started = makeImportRun({ id: 'run-3', phase: 'scanning' });
     serve(createdResponse(started));
 
@@ -236,7 +235,6 @@ describe('useImportRun — starting', () => {
     expect(init?.method?.toUpperCase()).toBe('POST');
     expect(JSON.parse(String(init?.body))).toEqual({
       sheetPath: SHEET,
-      rootPath: ROOT,
       enrich: false,
     });
     expect(result.current.run).toEqual(started);
@@ -408,7 +406,7 @@ describe('useImportRun — cancel', () => {
     });
 
     await act(async () => {
-      await result.current.start(SHEET, ROOT);
+      await result.current.start(SHEET);
     });
 
     expect(fetchMock.mock.calls.filter(isStart)).toHaveLength(2);

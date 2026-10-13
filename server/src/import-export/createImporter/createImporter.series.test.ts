@@ -120,6 +120,7 @@ function sandbox({
     media: mediaSeam(createMedia(media)),
     playback: createPlayback(media, fixedSlot(null)),
   });
+  storage.addLibraryFolder(root);
   return { storage, importer, media, root, sheet };
 }
 
@@ -178,7 +179,7 @@ describe('createImporter — a Season-folder show becomes one series', () => {
   it('writes the show as one series', async () => {
     const { storage, importer, root, sheet } = sandbox();
 
-    await importer.start(sheet, root);
+    await importer.start(sheet);
     await untilReview(importer);
 
     expect(allSeries(storage).map((series) => series.title)).toEqual([
@@ -189,7 +190,7 @@ describe('createImporter — a Season-folder show becomes one series', () => {
   it('takes the row’s metadata, with its Director as the creator', async () => {
     const { storage, importer, root, sheet } = sandbox();
 
-    await importer.start(sheet, root);
+    await importer.start(sheet);
     await untilReview(importer);
 
     const series = theSeries(storage);
@@ -211,7 +212,7 @@ describe('createImporter — a Season-folder show becomes one series', () => {
   it('numbers its episodes: the season off the folder, the episode and title off the tag', async () => {
     const { storage, importer, root, sheet } = sandbox();
 
-    await importer.start(sheet, root);
+    await importer.start(sheet);
     await untilReview(importer);
 
     expect(
@@ -230,7 +231,7 @@ describe('createImporter — a Season-folder show becomes one series', () => {
   it('does not apply the row’s Status — every episode starts unwatched', async () => {
     const { storage, importer, root, sheet } = sandbox();
 
-    await importer.start(sheet, root);
+    await importer.start(sheet);
     await untilReview(importer);
 
     for (const episode of episodesOf(storage, theSeries(storage))) {
@@ -245,7 +246,7 @@ describe('createImporter — a Season-folder show becomes one series', () => {
   it('copies each episode into its own Series folder, under season-NN/', async () => {
     const { storage, importer, media, root, sheet } = sandbox();
 
-    await importer.start(sheet, root);
+    await importer.start(sheet);
     await untilReview(importer);
 
     const episodes = episodesOf(storage, theSeries(storage));
@@ -271,7 +272,7 @@ describe('createImporter — a Season-folder show becomes one series', () => {
   it('derives each episode’s runtime from the copied video', async () => {
     const { storage, importer, root, sheet } = sandbox();
 
-    await importer.start(sheet, root);
+    await importer.start(sheet);
     await untilReview(importer);
 
     expect(
@@ -284,7 +285,7 @@ describe('createImporter — a Season-folder show becomes one series', () => {
   it('imports the film beside it exactly as before, and the show is not a movie', async () => {
     const { storage, importer, root, sheet } = sandbox();
 
-    await importer.start(sheet, root);
+    await importer.start(sheet);
     await untilReview(importer);
 
     const movies = storage.listMovies({ sort: 'a-z' });
@@ -303,7 +304,7 @@ describe('createImporter — each episode is one item on the bar', () => {
   it('counts the film and every episode: four of four done', async () => {
     const { importer, root, sheet } = sandbox();
 
-    await importer.start(sheet, root);
+    await importer.start(sheet);
     const run = await untilReview(importer);
 
     expect(run).toMatchObject({ total: 4, done: 4, problems: [] });
@@ -312,7 +313,7 @@ describe('createImporter — each episode is one item on the bar', () => {
   it('names the episode being copied as Series · SnnEnn under currentItem', async () => {
     const hold = heldCopy(EPISODES['Season 01'][1]);
     const { importer, root, sheet } = sandbox({ media: hold.seam });
-    await importer.start(sheet, root);
+    await importer.start(sheet);
     await reachedOrFinished(hold.reached, importer);
 
     expect(importer.current()?.currentItem).toBe('Lighthouse Keepers · S01E02');
@@ -324,7 +325,7 @@ describe('createImporter — each episode is one item on the bar', () => {
   it('has advanced the bar past the earlier episodes by the time the last one copies', async () => {
     const hold = heldCopy(EPISODES['Season 2'][0]);
     const { importer, root, sheet } = sandbox({ media: hold.seam });
-    await importer.start(sheet, root);
+    await importer.start(sheet);
     await reachedOrFinished(hold.reached, importer);
 
     const run = importer.current();
@@ -339,7 +340,7 @@ describe('createImporter — each episode is one item on the bar', () => {
   it('logs one success line per episode, reading Series · SnnEnn', async () => {
     const { importer, root, sheet } = sandbox();
 
-    await importer.start(sheet, root);
+    await importer.start(sheet);
     const run = await untilReview(importer);
 
     const episodes = linesMatching(run, /^✓ Imported\s+Lighthouse Keepers/);
@@ -358,7 +359,7 @@ describe('createImporter — each episode is one item on the bar', () => {
   it('keeps the film’s own success line as it was', async () => {
     const { importer, root, sheet } = sandbox();
 
-    await importer.start(sheet, root);
+    await importer.start(sheet);
     const run = await untilReview(importer);
 
     expect(linesMatching(run, /^✓ Imported\s+Die Hard$/)).toHaveLength(1);
@@ -375,13 +376,14 @@ describe('createImporter — the checked-in series fixture', () => {
     mkdirSync(media);
     const { root, sheet } = seriesFixture(dir, spelling);
     const storage = freshStorage();
+    storage.addLibraryFolder(root);
     const importer = createImporter({
       storage,
       media: createMedia(media),
       playback: createPlayback(media, fixedSlot(null)),
     });
 
-    await importer.start(sheet, root);
+    await importer.start(sheet);
     await untilReview(importer);
     return { storage, root };
   }
@@ -496,6 +498,7 @@ function looseSandbox(layout: Record<string, string[]>): {
     media: createMedia(media),
     playback: createPlayback(media, fixedSlot(null)),
   });
+  storage.addLibraryFolder(root);
   return { storage, importer, media, root, sheet };
 }
 
@@ -516,7 +519,7 @@ describe('createImporter — a folder of loose episodes becomes one series', () 
   it('writes the loose folder as one series from its row', async () => {
     const { storage, importer, root, sheet } = looseSandbox(LOOSE);
 
-    await importer.start(sheet, root);
+    await importer.start(sheet);
     const run = await untilReview(importer);
 
     expect(theSeries(storage)).toMatchObject({
@@ -530,7 +533,7 @@ describe('createImporter — a folder of loose episodes becomes one series', () 
   it('numbers loose episodes off their tags, a multi-episode file taking its first number', async () => {
     const { storage, importer, root, sheet } = looseSandbox(LOOSE);
 
-    await importer.start(sheet, root);
+    await importer.start(sheet);
     await untilReview(importer);
 
     expect(
@@ -567,7 +570,7 @@ describe('createImporter — a folder of loose episodes becomes one series', () 
       [join(SHOW, 'Season 03')]: ['Lighthouse.Keepers.S01E05.Misfiled.mp4'],
     });
 
-    await importer.start(sheet, root);
+    await importer.start(sheet);
     await untilReview(importer);
 
     expect(
@@ -581,7 +584,7 @@ describe('createImporter — a folder of loose episodes becomes one series', () 
   it('keeps the film beside it a movie', async () => {
     const { storage, importer, root, sheet } = looseSandbox(LOOSE);
 
-    await importer.start(sheet, root);
+    await importer.start(sheet);
     await untilReview(importer);
 
     expect(
@@ -594,7 +597,7 @@ describe('createImporter — episode subtitles', () => {
   it('attaches each subtitle to the episode whose stem it begins with, in its detected language', async () => {
     const { storage, importer, media, root, sheet } = looseSandbox(LOOSE);
 
-    await importer.start(sheet, root);
+    await importer.start(sheet);
     await untilReview(importer);
 
     const [first, second] = episodesOf(storage, theSeries(storage));
@@ -625,7 +628,7 @@ describe('createImporter — episode subtitles', () => {
       [SHOW]: [...LOOSE[SHOW], 'Directors.Commentary.en.srt'],
     });
 
-    await importer.start(sheet, root);
+    await importer.start(sheet);
     const run = await untilReview(importer);
 
     const lines = linesMatching(run, /Directors\.Commentary\.en\.srt/);
@@ -655,7 +658,7 @@ describe('createImporter — unplaced episodes', () => {
   it('files one unplaced Problem for the show, titled with the show, its reason the count', async () => {
     const { importer, root, sheet } = looseSandbox(WITH_STRAYS);
 
-    await importer.start(sheet, root);
+    await importer.start(sheet);
     const run = await untilReview(importer);
 
     expect(run.problems).toHaveLength(1);
@@ -671,7 +674,7 @@ describe('createImporter — unplaced episodes', () => {
   it('lists every unplaced video on the Problem detail, as absolute paths in name order', async () => {
     const { importer, root, sheet } = looseSandbox(WITH_STRAYS);
 
-    await importer.start(sheet, root);
+    await importer.start(sheet);
     const [problem] = unplacedOf(await untilReview(importer));
     const detail = importer.problem(problem.id);
 
@@ -685,7 +688,7 @@ describe('createImporter — unplaced episodes', () => {
   it('names the series the run holds for the show, so Resolve joins it', async () => {
     const { storage, importer, root, sheet } = looseSandbox(WITH_STRAYS);
 
-    await importer.start(sheet, root);
+    await importer.start(sheet);
     const [problem] = unplacedOf(await untilReview(importer));
 
     expect(problem.seriesId).toBe(theSeries(storage).id);
@@ -694,7 +697,7 @@ describe('createImporter — unplaced episodes', () => {
   it('imports every placed episode of the show all the same, one file per number', async () => {
     const { storage, importer, root, sheet } = looseSandbox(WITH_STRAYS);
 
-    await importer.start(sheet, root);
+    await importer.start(sheet);
     await untilReview(importer);
 
     expect(
@@ -717,7 +720,7 @@ describe('createImporter — unplaced episodes', () => {
       ],
     });
 
-    await importer.start(sheet, root);
+    await importer.start(sheet);
     const run = await untilReview(importer);
 
     expect(run.problems.map((problem) => problem.kind)).toEqual(['unplaced']);
@@ -730,7 +733,7 @@ describe('createImporter — unplaced episodes', () => {
   it('lets Skip dismiss the show’s unplaced Problem', async () => {
     const { importer, root, sheet } = looseSandbox(WITH_STRAYS);
 
-    await importer.start(sheet, root);
+    await importer.start(sheet);
     const [first] = unplacedOf(await untilReview(importer));
 
     expect(importer.dismiss(first.id)).toBe(true);
@@ -742,7 +745,7 @@ describe('createImporter — unplaced episodes', () => {
       [join(SHOW, 'Season 01')]: ['Bonus One.mp4', 'Bonus Two.mp4'],
     });
 
-    await importer.start(sheet, root);
+    await importer.start(sheet);
     const run = await untilReview(importer);
 
     expect(allSeries(storage)).toEqual([]);
@@ -772,7 +775,7 @@ describe('createImporter — two Show folders with one Title key', () => {
       ],
     });
 
-    await importer.start(sheet, root);
+    await importer.start(sheet);
     const run = await untilReview(importer);
 
     expect(allSeries(storage)).toEqual([]);
@@ -866,6 +869,7 @@ function rerunSandbox(
   rewrite(rows);
 
   const storage = freshStorage();
+  storage.addLibraryFolder(root);
   const importer = createImporter({
     storage,
     media: createMedia(media),
@@ -894,12 +898,8 @@ function treeOf(dir: string, prefix = ''): string[] {
 }
 
 /** Run the importer to review, then close the run so another can start. */
-async function runOnce(
-  importer: Importer,
-  sheet: string,
-  root: string
-): Promise<ImportRun> {
-  await importer.start(sheet, root);
+async function runOnce(importer: Importer, sheet: string): Promise<ImportRun> {
+  await importer.start(sheet);
   const run = await untilReview(importer);
   await importer.cancel();
   return run;
@@ -921,11 +921,11 @@ const numbersOf = (episodes: Episode[]) =>
 describe('createImporter — a show already in the library', () => {
   it('adds only the episodes it does not hold: a new season joins the held series', async () => {
     const { storage, importer, root, sheet, grow } = rerunSandbox(SEASON_ONE);
-    await runOnce(importer, sheet, root);
+    await runOnce(importer, sheet);
     const held = theSeries(storage);
 
     grow(SEASON_TWO);
-    await runOnce(importer, sheet, root);
+    await runOnce(importer, sheet);
 
     const series = theSeries(storage);
     expect(series.id).toBe(held.id);
@@ -938,11 +938,11 @@ describe('createImporter — a show already in the library', () => {
 
   it('copies the new season into the Series folder it already has, and nothing else', async () => {
     const { importer, media, root, sheet, grow } = rerunSandbox(SEASON_ONE);
-    await runOnce(importer, sheet, root);
+    await runOnce(importer, sheet);
     const before = treeOf(media);
 
     grow(SEASON_TWO);
-    await runOnce(importer, sheet, root);
+    await runOnce(importer, sheet);
 
     expect(treeOf(media)).toEqual(
       [
@@ -954,10 +954,10 @@ describe('createImporter — a show already in the library', () => {
 
   it('counts only the new episode on the bar', async () => {
     const { importer, root, sheet, grow } = rerunSandbox(SEASON_ONE);
-    await runOnce(importer, sheet, root);
+    await runOnce(importer, sheet);
 
     grow(SEASON_TWO);
-    const run = await runOnce(importer, sheet, root);
+    const run = await runOnce(importer, sheet);
 
     expect(run).toMatchObject({ total: 1, done: 1, problems: [] });
     expect(
@@ -970,7 +970,7 @@ describe('createImporter — a show already in the library', () => {
   it('leaves the held metadata as it was, whatever the row now says', async () => {
     const { storage, importer, root, sheet, grow, rewrite } =
       rerunSandbox(SEASON_ONE);
-    await runOnce(importer, sheet, root);
+    await runOnce(importer, sheet);
     const held = theSeries(storage);
 
     grow(SEASON_TWO);
@@ -978,7 +978,7 @@ describe('createImporter — a show already in the library', () => {
       DIE_HARD,
       showRow({ description: 'A rewritten synopsis.', rating: '3' }),
     ]);
-    await runOnce(importer, sheet, root);
+    await runOnce(importer, sheet);
 
     expect(theSeries(storage)).toMatchObject({
       title: held.title,
@@ -992,12 +992,12 @@ describe('createImporter — a show already in the library', () => {
 
   it('keeps the held episodes’ watch state', async () => {
     const { storage, importer, root, sheet, grow } = rerunSandbox(SEASON_ONE);
-    await runOnce(importer, sheet, root);
+    await runOnce(importer, sheet);
     const [first] = episodesOf(storage, theSeries(storage));
     storage.setEpisodeWatched(first.id, true);
 
     grow(SEASON_TWO);
-    await runOnce(importer, sheet, root);
+    await runOnce(importer, sheet);
 
     const [again] = episodesOf(storage, theSeries(storage));
     expect(again).toMatchObject({ id: first.id, watched: true });
@@ -1007,7 +1007,7 @@ describe('createImporter — a show already in the library', () => {
     const { storage, importer, root, sheet } = rerunSandbox(SEASON_ONE);
     storage.addSeries({ title: 'Lighthouse Keepers', year: 1999 });
 
-    await runOnce(importer, sheet, root);
+    await runOnce(importer, sheet);
 
     expect(
       allSeries(storage)
@@ -1024,18 +1024,19 @@ describe('createImporter — a show already in the library', () => {
       mkdirSync(media);
       const { root, sheet } = seriesFixture(dir, spelling);
       const storage = freshStorage();
+      storage.addLibraryFolder(root);
       const importer = createImporter({
         storage,
         media: createMedia(media),
         playback: createPlayback(media, fixedSlot(null)),
       });
 
-      await runOnce(importer, sheet, root);
+      await runOnce(importer, sheet);
       const series = allSeries(storage);
       const episodes = series.map((held) => episodesOf(storage, held));
       const tree = treeOf(media);
 
-      const run = await runOnce(importer, sheet, root);
+      const run = await runOnce(importer, sheet);
 
       expect(allSeries(storage).map((held) => held.id)).toEqual(
         series.map((held) => held.id)
@@ -1059,7 +1060,7 @@ describe('createImporter — a show’s Year cell', () => {
       showRow({ year: cell }),
     ]);
 
-    await runOnce(importer, sheet, root);
+    await runOnce(importer, sheet);
 
     expect(theSeries(storage)).toMatchObject({ year, endYear });
   });
@@ -1070,7 +1071,7 @@ describe('createImporter — a show’s Year cell', () => {
       showRow(),
     ]);
 
-    await runOnce(importer, sheet, root);
+    await runOnce(importer, sheet);
 
     expect(storage.listMovies({ sort: 'a-z' })).toMatchObject([
       { title: 'Die Hard', year: 1988 },
@@ -1082,7 +1083,7 @@ describe('createImporter — a show no row names', () => {
   it('imports it under the title its folder suggests', async () => {
     const { storage, importer, root, sheet } = rerunSandbox(LOOSE, [DIE_HARD]);
 
-    await runOnce(importer, sheet, root);
+    await runOnce(importer, sheet);
 
     const series = theSeries(storage);
     expect(series.title).toBe('Lighthouse Keepers');
@@ -1096,7 +1097,7 @@ describe('createImporter — a show no row names', () => {
   it('says so in a Warning line, and files no Problem for it', async () => {
     const { importer, root, sheet } = rerunSandbox(SEASON_ONE, [DIE_HARD]);
 
-    const run = await runOnce(importer, sheet, root);
+    const run = await runOnce(importer, sheet);
 
     expect(run.problems).toEqual([]);
     expect(
@@ -1111,7 +1112,7 @@ describe('createImporter — a show no row names', () => {
       DIE_HARD,
     ]);
 
-    await runOnce(importer, sheet, root);
+    await runOnce(importer, sheet);
 
     expect(
       storage.listMovies({ sort: 'a-z' }).map((movie) => movie.title)
@@ -1128,7 +1129,7 @@ describe('createImporter — a show row’s Status', () => {
         showRow({ watched }),
       ]);
 
-      await runOnce(importer, sheet, root);
+      await runOnce(importer, sheet);
 
       for (const episode of episodesOf(storage, theSeries(storage))) {
         expect(episode).toMatchObject({ watched: false, status: 'unwatched' });
@@ -1139,11 +1140,11 @@ describe('createImporter — a show row’s Status', () => {
   it('marks none of the episodes a later run adds either', async () => {
     const { storage, importer, root, sheet, grow, rewrite } =
       rerunSandbox(SEASON_ONE);
-    await runOnce(importer, sheet, root);
+    await runOnce(importer, sheet);
 
     grow(SEASON_TWO);
     rewrite([DIE_HARD, showRow({ watched: 'yes' })]);
-    await runOnce(importer, sheet, root);
+    await runOnce(importer, sheet);
 
     for (const episode of episodesOf(storage, theSeries(storage))) {
       expect(episode).toMatchObject({ watched: false, status: 'unwatched' });
@@ -1162,7 +1163,7 @@ describe('createImporter — the Source file', () => {
   it('records each episode’s Source file relative to the Show folder, with forward slashes', async () => {
     const { storage, importer, root, sheet } = sandbox();
 
-    await importer.start(sheet, root);
+    await importer.start(sheet);
     await untilReview(importer);
 
     expect(
@@ -1178,7 +1179,7 @@ describe('createImporter — the Source file', () => {
 
   it('skips a held Source file on a re-scan, though its name gives other numbers', async () => {
     const { storage, importer, media, root, sheet } = rerunSandbox(SEASON_ONE);
-    await runOnce(importer, sheet, root);
+    await runOnce(importer, sheet);
     const series = theSeries(storage);
     const [pilot, storm] = episodesOf(storage, series);
     // The Pilot renumbered in the app, to S01E03: its file still says S01E01.
@@ -1204,7 +1205,7 @@ describe('createImporter — the Source file', () => {
     });
     const tree = treeOf(media);
 
-    const run = await runOnce(importer, sheet, root);
+    const run = await runOnce(importer, sheet);
 
     expect(
       episodesOf(storage, series).map((episode) => [
