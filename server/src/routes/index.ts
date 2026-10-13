@@ -493,6 +493,13 @@ const DECISION_REFUSALS: Record<
 };
 
 /**
+ * The sentence every review-row route answers its `404` with — Skip, _Apply
+ * choices_, the Folder picker, _Import as_, the **Problem detail** and both
+ * resolves: the id it was asked for.
+ */
+const noSuchProblem = (id: string): string => `No such problem: ${id}`;
+
+/**
  * How a press on a review row is refused, by its outcome: a row that is not
  * there `404` — its sentence names the id — and a press the importer will not
  * take `400`, in the importer's own sentence.
@@ -2364,7 +2371,7 @@ export function createApiRouter(
     '/import/current/problems/:id',
     (req: Request<{ id: string }>, res: Response) => {
       if (!importer.dismiss(req.params.id)) {
-        res.status(404).json({ error: `No such problem: ${req.params.id}` });
+        res.status(404).json({ error: noSuchProblem(req.params.id) });
         return;
       }
       res.status(204).end();
@@ -2384,7 +2391,7 @@ export function createApiRouter(
         return;
       }
       if (!importer.apply(req.params.id, read.value)) {
-        res.status(404).json({ error: `No such problem: ${req.params.id}` });
+        res.status(404).json({ error: noSuchProblem(req.params.id) });
         return;
       }
       res.status(204).end();
@@ -2410,7 +2417,7 @@ export function createApiRouter(
       case 'not-found':
         res
           .status(PROBLEM_REFUSALS['not-found'])
-          .json({ error: `No such problem: ${id}` });
+          .json({ error: noSuchProblem(id) });
         return;
       case 'refused':
         res.status(PROBLEM_REFUSALS.refused).json({ error: outcome.error });
@@ -2451,7 +2458,7 @@ export function createApiRouter(
     async (req: Request<{ id: string }>, res: Response) => {
       try {
         if (!(await importer.importGuessed(req.params.id))) {
-          res.status(404).json({ error: `No such problem: ${req.params.id}` });
+          res.status(404).json({ error: noSuchProblem(req.params.id) });
           return;
         }
         res.status(204).end();
@@ -2473,7 +2480,7 @@ export function createApiRouter(
     (req: Request<{ id: string }>, res: Response) => {
       const detail = importer.problem(req.params.id);
       if (detail === null) {
-        res.status(404).json({ error: `No such problem: ${req.params.id}` });
+        res.status(404).json({ error: noSuchProblem(req.params.id) });
         return;
       }
       res.json(detail);
@@ -2574,7 +2581,7 @@ export function createApiRouter(
         return;
       }
       if (error instanceof ProblemNotFoundError) {
-        res.status(404).json({ error: error.message });
+        res.status(404).json({ error: noSuchProblem(id) });
         return;
       }
       res.status(500).json({ error: 'Could not resolve the problem' });
@@ -2609,7 +2616,7 @@ export function createApiRouter(
       if (problem === null) {
         // The body is still arriving and nothing here is going to read it.
         req.resume();
-        res.status(404).json({ error: `No such problem: ${id}` });
+        res.status(404).json({ error: noSuchProblem(id) });
         return;
       }
       if (problem.kind === 'unplaced') {
@@ -2714,7 +2721,7 @@ export function createApiRouter(
           return;
         }
         if (error instanceof ProblemNotFoundError) {
-          res.status(404).json({ error: error.message });
+          res.status(404).json({ error: noSuchProblem(id) });
           return;
         }
         res.status(500).json({ error: 'Could not resolve the problem' });
