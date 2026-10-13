@@ -912,9 +912,12 @@ export function createImporter({
    * `null` when the import threw — a locked or vanishing file, a cancel — with
    * the folder taken back and, unless the run was cancelled, `failed` filed
    * with the OS's reason. The run goes on to the next match either way.
+   * `named` is whether a **Sheet row** named the match: only a row can name a
+   * genre, so only its match can be missing one.
    */
   const importMatch = async (
     { row, folder: scan }: Match,
+    named: boolean,
     genreNames: GenreReader,
     current: ImportRun,
     signal: AbortSignal,
@@ -966,8 +969,8 @@ export function createImporter({
         relative(libraryFolder.path, scan.dir),
         collectionFileOf(scan)
       );
-      // A Folder scan has no row to name a genre: nothing is missing there.
-      if (genres.length === 0 && current.source === 'sheet') {
+      // A row no sheet named has no genre to be missing.
+      if (genres.length === 0 && named) {
         // Imported — nothing about the film is missing — and then listed,
         // because a film in no genre row is a film the family will not find.
         file(
@@ -1257,12 +1260,13 @@ export function createImporter({
    * copy, so a second press finds nothing to import. A folder without exactly
    * one video is `redrawn` as its `no-video` Problem in the row's place, and
    * a copy that fails as the `failed` Problem it filed, in the same place;
-   * otherwise `imported`.
+   * otherwise `imported`. `named` is whether a **Sheet row** is the row.
    */
   const importFromReview = async (
     current: ImportRun,
     id: string,
     row: SheetRow,
+    named: boolean,
     scan: MovieFolderScan,
     libraryFolder: StoredLibraryFolder
   ): Promise<ReviewOutcome> => {
@@ -1297,6 +1301,7 @@ export function createImporter({
     const before = current.problems.length;
     const added = await importMatch(
       { row, folder: scan },
+      named,
       genreReader(),
       current,
       stop.signal,
@@ -1320,7 +1325,8 @@ export function createImporter({
    * The **Import phase** both runs end in: each placed film, then each placed
    * show, imported against the folder it was found under, and the completion
    * line — `✓ Import complete` for a sheet, `✓ Scan complete` for a **Folder
-   * scan**. A cancel stops it where it is, and the run never reaches review.
+   * scan**. A sheet's films are named by its rows; a scan's by their folders.
+   * A cancel stops it where it is, and the run never reaches review.
    */
   const importPlaced = async (
     current: ImportRun,
@@ -1344,6 +1350,7 @@ export function createImporter({
       current.currentItem = match.row.title;
       const added = await importMatch(
         match,
+        verb === 'Import',
         genres,
         current,
         signal,
@@ -1880,7 +1887,7 @@ export function createImporter({
       if (libraryFolder === null) {
         return { kind: 'refused', error: REFUSAL.unlisted };
       }
-      return importFromReview(current, id, row, scan, libraryFolder);
+      return importFromReview(current, id, row, true, scan, libraryFolder);
     },
 
     importGuessed: async (id) => {
@@ -1899,23 +1906,14 @@ export function createImporter({
       if (libraryFolder === null) {
         return { kind: 'refused', error: REFUSAL.unlisted };
       }
-      const known = new Set(current.problems.map((problem) => problem.id));
-      const outcome = await importFromReview(
+      return importFromReview(
         current,
         id,
         guessedRow(folder.name),
+        false,
         folder,
         libraryFolder
       );
-      if (outcome.kind === 'imported') {
-        // As a Folder scan would: no row named a genre, so nothing is missing.
-        for (const filed of current.problems.filter(
-          (problem) => !known.has(problem.id)
-        )) {
-          takeOff(filed.id);
-        }
-      }
-      return outcome;
     },
 
     problem: (id) => {
