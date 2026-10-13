@@ -1247,8 +1247,9 @@ export function createImporter({
 
   /**
    * Every series the library holds, by key and year, with its episodes' tags
-   * and folder — read once per run, before its first `await`, as `inLibrary`
-   * is: a storage read after the walk would sit outside every catch.
+   * and folder — read once per run, before its first `await`, as
+   * `heldFilmsByKey` is: a storage read after the walk would sit outside every
+   * catch.
    */
   const heldSeriesList = (): HeldSeries[] =>
     storage.getSeriesHome().series.map((series) => {
@@ -1269,7 +1270,8 @@ export function createImporter({
       };
     });
 
-  const seriesInLibrary = (held: HeldSeries[]): Map<string, HeldSeries> =>
+  /** The held series by key and year — built once per run, from its list. */
+  const heldSeriesByKey = (held: HeldSeries[]): Map<string, HeldSeries> =>
     new Map(
       held.map((entry) => [
         filmKey(entry.series.title, entry.series.year),
@@ -1277,8 +1279,11 @@ export function createImporter({
       ])
     );
 
-  /** Every film the library holds, by key and year, to its id — read once per run. */
-  const inLibrary = (): Map<string, string> =>
+  /**
+   * Every film the library holds, by key and year, to its id — read once per
+   * run.
+   */
+  const heldFilmsByKey = (): Map<string, string> =>
     new Map(
       storage
         .listMovies({ sort: 'a-z' })
@@ -1418,7 +1423,7 @@ export function createImporter({
    * file — then the title key and year the row or the folder gives.
    */
   const heldFilm = (
-    already: Map<string, string>,
+    filmsByKey: Map<string, string>,
     folder: StoredLibraryFolder,
     scan: MovieFolderScan,
     row: SheetRow
@@ -1428,12 +1433,16 @@ export function createImporter({
       relative(folder.path, scan.dir),
       collectionFileOf(scan)
     ) ??
-    already.get(filmKey(row.title, row.year)) ??
+    filmsByKey.get(filmKey(row.title, row.year)) ??
     null;
 
-  /** The same two rules for a **Show folder**, over the held series. */
-  const heldShowOf = (
+  /**
+   * The same two rules for a **Show folder**, over the held series: the folder
+   * on record found in their list, the key and year in their map.
+   */
+  const heldShow = (
     held: HeldSeries[],
+    seriesByKey: Map<string, HeldSeries>,
     folder: StoredLibraryFolder,
     show: ShowScan,
     row: SheetRow
@@ -1444,7 +1453,7 @@ export function createImporter({
     );
     return (
       held.find((entry) => entry.series.id === atFolder) ??
-      seriesInLibrary(held).get(filmKey(row.title, row.year)) ??
+      seriesByKey.get(filmKey(row.title, row.year)) ??
       null
     );
   };
@@ -1485,9 +1494,9 @@ export function createImporter({
     folders: StoredLibraryFolder[],
     signal: AbortSignal
   ): Promise<void> => {
-    const already = inLibrary();
+    const filmsByKey = heldFilmsByKey();
     const held = heldSeriesList();
-    const heldSeriesByKey = seriesInLibrary(held);
+    const seriesByKey = heldSeriesByKey(held);
     const genres = genreReader();
 
     const walked = await walkListed(current, folders, signal);
@@ -1528,7 +1537,7 @@ export function createImporter({
         const joined = showMatch(
           match.row,
           show,
-          heldShowOf(held, libraryFolder, show, match.row)
+          heldShow(held, seriesByKey, libraryFolder, show, match.row)
         );
         if (joined.held !== null) {
           joined.updated = fillSeries(
@@ -1541,7 +1550,12 @@ export function createImporter({
         matchedShows.push({ match: joined, libraryFolder });
         continue;
       }
-      const heldId = heldFilm(already, libraryFolder, match.folder, match.row);
+      const heldId = heldFilm(
+        filmsByKey,
+        libraryFolder,
+        match.folder,
+        match.row
+      );
       if (heldId !== null) {
         // Already in library: nothing is added, but where it came from is
         // remembered — the backfill for a library imported before this was —
@@ -1559,13 +1573,13 @@ export function createImporter({
       // A row for a title held with no folder found is reached by its key and
       // year, and filled.
       const key = filmKey(row.title, row.year);
-      const heldId = already.get(key);
-      const heldShow = heldSeriesByKey.get(key);
+      const heldId = filmsByKey.get(key);
+      const heldSeries = seriesByKey.get(key);
       if (heldId !== undefined) {
         fillFilm(current, heldId, row, genres);
-      } else if (heldShow !== undefined) {
+      } else if (heldSeries !== undefined) {
         // No Show folder, so no `importShow` to say it took nothing.
-        if (!fillSeries(current, heldShow.series.id, row, genres)) {
+        if (!fillSeries(current, heldSeries.series.id, row, genres)) {
           logAlreadyHeld(current, row);
         }
       } else {
@@ -1622,7 +1636,7 @@ export function createImporter({
         const unnamed = showMatch(
           row,
           show,
-          heldShowOf(held, libraryFolder, show, row)
+          heldShow(held, seriesByKey, libraryFolder, show, row)
         );
         fileUnplaced(current, unnamed);
         matchedShows.push({ match: unnamed, libraryFolder });
@@ -1662,8 +1676,9 @@ export function createImporter({
     folders: StoredLibraryFolder[],
     signal: AbortSignal
   ): Promise<void> => {
-    const already = inLibrary();
+    const filmsByKey = heldFilmsByKey();
     const held = heldSeriesList();
+    const seriesByKey = heldSeriesByKey(held);
 
     const walked = await walkListed(current, folders, signal);
     if (walked === null) {
@@ -1675,7 +1690,7 @@ export function createImporter({
     for (const { folder, films: found, shows: grouped } of walked) {
       for (const scan of found) {
         const row = guessedRow(scan.name);
-        const heldId = heldFilm(already, folder, scan, row);
+        const heldId = heldFilm(filmsByKey, folder, scan, row);
         if (heldId !== null) {
           // Held: linked to where it was found, and nothing is added.
           skipHeld(current, heldId, folder, scan, row);
@@ -1695,7 +1710,11 @@ export function createImporter({
       }
       for (const show of grouped) {
         const row = guessedRow(show.name);
-        const match = showMatch(row, show, heldShowOf(held, folder, show, row));
+        const match = showMatch(
+          row,
+          show,
+          heldShow(held, seriesByKey, folder, show, row)
+        );
         fileUnplaced(current, match);
         shows.push({ match, libraryFolder: folder });
       }
