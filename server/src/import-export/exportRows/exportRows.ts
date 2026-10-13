@@ -5,6 +5,7 @@ import {
   type ExportColumn,
   type ExportEpisodeColumn,
   type Movie,
+  type SeasonSummary,
   type SeriesDetail,
   type StartExport,
   type Subtitle,
@@ -236,8 +237,8 @@ interface PlannedTitle {
   backdrop: string | null;
   /** Each episode with a still stored. */
   stills: Episode[];
-  /** Each season with a **Season poster** stored, its number and its path. */
-  seasonPosters: { number: number; storedPath: string }[];
+  /** Each season with a **Season poster** stored. */
+  seasonPosters: SeasonSummary[];
   /**
    * Each subtitle file the title carries, as the name it is planned under
    * inside the title's folder, its extension still to come.
@@ -303,10 +304,8 @@ export function exportRows(
         poster: detail.series.posterPath,
         backdrop: detail.series.backdropPath,
         stills: episodes.filter((episode) => episode.stillPath !== null),
-        seasonPosters: detail.seasons.flatMap((season) =>
-          season.posterPath === null
-            ? []
-            : [{ number: season.number, storedPath: season.posterPath }]
+        seasonPosters: detail.seasons.filter(
+          (season) => season.posterPath !== null
         ),
         tracks: episodes.flatMap((episode) =>
           inTrackOrder(episode.subtitles).map((subtitle) => ({
@@ -368,7 +367,7 @@ export function exportRows(
       }
     }
     for (const season of title.seasonPosters) {
-      plan(season.storedPath, `seasons/${spellEpisodeTag(season.number)}`);
+      plan(season.posterPath, `seasons/${spellEpisodeTag(season.number)}`);
     }
     return title.row(art);
   });
