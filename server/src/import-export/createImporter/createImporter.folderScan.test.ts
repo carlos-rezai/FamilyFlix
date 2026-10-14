@@ -337,6 +337,35 @@ describe('createImporter.scan — a rescan', () => {
   });
 });
 
+describe('createImporter.scan — a scan over a run in review', () => {
+  it('lets the run go and scans a folder added since', async () => {
+    const box = sandbox();
+    const films = box.storage.addLibraryFolder(box.films);
+    const first = await box.importer.scan([films]);
+    await untilReview(box.importer);
+    const shows = box.storage.addLibraryFolder(box.shows);
+
+    const second = await box.importer.scan([films, shows]);
+
+    expect(second.id).not.toBe(first.id);
+    await untilReview(box.importer);
+    expect(counts(box.storage).series).toBeGreaterThan(0);
+  });
+
+  it('lets a sheet run in review go too', async () => {
+    const box = sandbox();
+    const films = box.storage.addLibraryFolder(box.films);
+    await box.importer.start(box.sheet);
+    await untilReview(box.importer);
+
+    const scanned = await box.importer.scan([films]);
+
+    expect(scanned.source).toBe('folders');
+    expect(box.importer.current()?.id).toBe(scanned.id);
+    await untilReview(box.importer);
+  });
+});
+
 describe('createImporter.scan — a title already held by title key and year', () => {
   it('links the held film to its folder and Source folder, and adds it once', async () => {
     const box = sandbox();

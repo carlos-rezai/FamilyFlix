@@ -204,8 +204,8 @@ export interface Importer {
    * {@link ImportStartError} for a sheet that does not exist, cannot be read,
    * is neither `.xlsx` nor `.csv` or has no title column, and on `folders`
    * when none is listed — before any run exists; with {@link ImportBusyError}
-   * while a run exists. `enrich` is only carried on the run, for _Finish_ to
-   * read.
+   * while a run is scanning or importing — a run in review is let go. `enrich`
+   * is only carried on the run, for _Finish_ to read.
    */
   start(sheetPath: string, enrich?: boolean): Promise<ImportRun>;
   /** The **Current run**'s snapshot, or `null` when there is none. */
@@ -282,7 +282,8 @@ export interface Importer {
    * folders**, in the order given, and answer its first snapshot. No sheet:
    * each film is named off its folder, each show off its Show folder. A folder
    * that cannot be reached is skipped with a **Warning line**. Rejects with
-   * {@link ImportBusyError} while a run exists; `enrich` is only carried.
+   * {@link ImportBusyError} while a run is scanning or importing — a run in
+   * review is let go — and `enrich` is only carried.
    */
   scan(folders: StoredLibraryFolder[], enrich?: boolean): Promise<ImportRun>;
 }
@@ -1773,17 +1774,26 @@ export function createImporter({
   });
 
   /**
+   * Whether a start must be refused: a run is still scanning or importing. A
+   * run in review is not — it has nothing left to copy or roll back, and only
+   * _Finish_ lets it go from the screen, so a run left there by Back would
+   * otherwise refuse every start onto its stale review until the app restarts.
+   */
+  const busy = (): boolean => run !== null && run.phase !== 'review';
+
+  /**
    * Make a new run the **Current run**, for either start: refused with
-   * {@link ImportBusyError} while one exists, and only once a run just
-   * cancelled has finished rolling its folder back. Answers the run, with its
-   * Library folders' paths, an empty problem record and a fresh cancel.
+   * {@link ImportBusyError} while one is {@link busy}, a run in review let go
+   * as _Finish_ would have, and only once a run just cancelled has finished
+   * rolling its folder back. Answers the run, with its Library folders' paths,
+   * an empty problem record and a fresh cancel.
    */
   const claimRun = async (
     source: ImportRun['source'],
     enrich: boolean,
     runFolders: string[]
   ): Promise<ImportRun> => {
-    if (run !== null) {
+    if (busy()) {
       throw new ImportBusyError();
     }
     // A run just cancelled may still be rolling its folder back; the new one
@@ -1791,7 +1801,7 @@ export function createImporter({
     await running;
     // Checked again: two starts could have been racing through the wait, and
     // only one of them gets to be the run.
-    if (run !== null) {
+    if (busy()) {
       throw new ImportBusyError();
     }
 
@@ -1807,7 +1817,7 @@ export function createImporter({
   return {
     start: async (sheetPath, enrich = false) => {
       // Busy before the sheet is read; `claimRun` asks again after it.
-      if (run !== null) {
+      if (busy()) {
         throw new ImportBusyError();
       }
 

@@ -755,7 +755,8 @@ number on the page is a read the app can truthfully answer now:
   sentence; `DELETE /api/library-folders/:id` → `204`, its titles kept, `404`
   for an id not listed; and `POST /api/library-folders/scan { enrich }` →
   `201` with the **Folder scan**'s first snapshot, `400` with none listed,
-  `409` while a **Current run** exists.
+  `409` while a **Current run** is scanning or importing — a run in review
+  is let go, as _Finish_ would have.
 - `GET /api/storage` → `{ mediaPath, bytesUsed, movieCount }`, the
   **Storage report**: the path resolved to absolute at request time, the
   walk read afresh on every visit, the count off the database.

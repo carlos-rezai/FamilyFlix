@@ -8,7 +8,8 @@
 // - `201 ImportRun` — the run's first snapshot, `source: 'folders'`, the
 //   `enrich` flag carried as a sheet import's is;
 // - `400` with no folders listed;
-// - `409` while a **Current run** exists.
+// - `409` while a **Current run** is scanning or importing; a run in review
+//   is let go, as _Finish_ would have.
 //
 // A real listener, a real `fetch`, real directories on disk, over a real
 // `:memory:` library, composed the way `main.ts` is.
@@ -24,9 +25,11 @@ import { createApiRouter } from '.';
 import { createEnrichment } from '../enrichment/createEnrichment/createEnrichment';
 import { createImporter } from '../import-export/createImporter/createImporter';
 import { createSqliteStorage, type LibraryStorage } from '../library';
-import { createMedia } from '../media/createMedia/createMedia';
+import { createMedia, type Media } from '../media/createMedia/createMedia';
 import { createPlayback } from '../playback/createPlayback/createPlayback';
 import { fixedSlot } from '../test-support/fixedSlot/fixedSlot';
+import { heldCopy } from '../test-support/heldCopy/heldCopy';
+import { libraryFixture } from '../test-support/libraryFixture/libraryFixture';
 import { offlineTmdb } from '../test-support/offlineTmdb/offlineTmdb';
 import { sandboxRoot } from '../test-support/sandboxRoot/sandboxRoot';
 import type { ImportRun } from '@/types';
@@ -49,7 +52,9 @@ interface Api {
   disk: string;
 }
 
-function freshApi(): Api {
+function freshApi({
+  media: mediaSeam = (real) => real,
+}: { media?: (real: Media) => Media } = {}): Api {
   const storage = createSqliteStorage(':memory:');
   storages.push(storage);
 
@@ -69,7 +74,7 @@ function freshApi(): Api {
       media,
       playback,
       mediaDomain,
-      createImporter({ storage, media: mediaDomain, playback }),
+      createImporter({ storage, media: mediaSeam(mediaDomain), playback }),
       createEnrichment({ storage, client: offlineTmdb(), media: mediaDomain })
     )
   );
@@ -84,6 +89,11 @@ function freshApi(): Api {
 async function listFolder(api: Api, name: string): Promise<string> {
   const path = join(api.disk, name);
   mkdirSync(path, { recursive: true });
+  return listPath(api, path);
+}
+
+/** A directory already on disk, listed. */
+async function listPath(api: Api, path: string): Promise<string> {
   const response = await fetch(`${api.baseUrl}/api/library-folders`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -157,16 +167,33 @@ describe('POST /api/library-folders/scan', () => {
     expect((await fetch(`${api.baseUrl}/api/import/current`)).status).toBe(404);
   });
 
-  it('answers 409 while a run exists', async () => {
-    const api = freshApi();
-    await listFolder(api, 'Movies');
+  it('answers 409 while a run is still importing', async () => {
+    const hold = heldCopy('Amelie.mp4');
+    const api = freshApi({ media: hold.seam });
+    const { root } = libraryFixture(api.disk);
+    await listPath(api, root);
     const first = await scan(api);
     expect(first.status).toBe(201);
+    await hold.reached;
 
     const second = await scan(api);
 
     expect(second.status).toBe(409);
     expect(await second.json()).toMatchObject({ error: expect.any(String) });
+    hold.release();
+    await untilReview(api);
+  });
+
+  it('answers 201 over a run in review, letting it go', async () => {
+    const api = freshApi();
+    await listFolder(api, 'Movies');
+    const first = (await (await scan(api)).json()) as ImportRun;
+    await untilReview(api);
+
+    const second = await scan(api);
+
+    expect(second.status).toBe(201);
+    expect(((await second.json()) as ImportRun).id).not.toBe(first.id);
     await untilReview(api);
   });
 });

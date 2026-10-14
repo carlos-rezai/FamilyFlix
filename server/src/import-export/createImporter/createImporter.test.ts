@@ -74,7 +74,9 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import {
   createImporter,
+  ImportBusyError,
   ImportPathError,
+  ImportStartError,
   ProblemNotFoundError,
   type Importer,
   type ResolveForm,
@@ -534,14 +536,50 @@ describe('createImporter — refusing to start', () => {
     });
   });
 
-  it('refuses a second start while a run exists, and keeps the first', async () => {
-    const { importer, root, sheet } = sandbox();
+  it('refuses a second start while a run is still importing, and keeps the first', async () => {
+    const hold = heldCopy('Amelie.mp4');
+    const { importer, sheet } = sandbox({ media: hold.seam });
 
     const first = await importer.start(sheet);
+    await hold.reached;
 
-    await expect(importer.start(sheet)).rejects.toThrow();
+    await expect(importer.start(sheet)).rejects.toBeInstanceOf(ImportBusyError);
     expect(importer.current()?.id).toBe(first.id);
+    hold.release();
     await untilReview(importer);
+  });
+});
+
+/**
+ * A run in review has nothing left to copy or roll back, and only _Finish_
+ * lets it go from the screen — so a run left in review by Back, or by leaving
+ * for the Sync from Settings, would otherwise stay the **Current run** until
+ * the app restarts, and every later start would be refused onto its stale
+ * review. The next start lets it go, as _Finish_ would have.
+ */
+describe('createImporter — a start over a run in review', () => {
+  it('lets the run in review go and starts the new one', async () => {
+    const { importer, sheet } = sandbox();
+    const first = await importer.start(sheet);
+    await untilReview(importer);
+
+    const second = await importer.start(sheet);
+
+    expect(second.id).not.toBe(first.id);
+    expect(importer.current()?.id).toBe(second.id);
+    await untilReview(importer);
+  });
+
+  it('keeps the run in review when the new start is refused', async () => {
+    const { importer, root, sheet } = sandbox();
+    const first = await importer.start(sheet);
+    await untilReview(importer);
+
+    await expect(
+      importer.start(join(root, '..', 'missing.xlsx'))
+    ).rejects.toBeInstanceOf(ImportStartError);
+
+    expect(importer.current()?.id).toBe(first.id);
   });
 });
 

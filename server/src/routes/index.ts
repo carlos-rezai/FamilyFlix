@@ -1752,7 +1752,8 @@ export function createApiRouter(
   });
 
   // A **Folder scan** over every listed folder: `201` with the run's first
-  // snapshot, `400` with none listed, `409` while a **Current run** exists.
+  // snapshot, `400` with none listed, `409` while a **Current run** is
+  // scanning or importing — one in review is let go, as _Finish_ would have.
   router.post('/library-folders/scan', async (req: Request, res: Response) => {
     const body = (req.body ?? {}) as { enrich?: unknown };
     // Only carried on the run, as a sheet import's is.
