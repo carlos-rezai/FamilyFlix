@@ -3,11 +3,17 @@ import { useEffect, useState } from 'react';
 import { fetchMovie } from '@/api/fetchMovie/fetchMovie';
 import type { EpisodeRead, Movie, PlaybackRead, Playable } from '@/types';
 
-import {
-  fetchEpisode,
-  fetchPlayback,
-  FolderUnreachableError,
-} from '../api/api';
+import { fetchEpisode, fetchPlayback } from '../api/api';
+import type { PlayerNoticeKind } from '../PlayerNotice/PlayerNotice';
+
+/**
+ * Why there is nothing to play, in **PlayerNotice**'s own words: no file
+ * behind the row, or a **Library folder** out of reach.
+ */
+export type Unavailable = Extract<
+  PlayerNoticeKind,
+  'missing-file' | 'unreachable'
+>;
 
 /** What the **Player** knows about the film before a byte of it arrives. */
 export interface OpeningReads {
@@ -20,22 +26,22 @@ export interface OpeningReads {
   episode?: EpisodeRead;
   /** The **Playback read** — the path the film takes and how long it runs. */
   playback: PlaybackRead | null;
-  /** Whether there is no file behind the row, which is its own notice. */
-  fileMissing: boolean;
   /**
-   * Whether the film's **Library folder** can't be reached — the read's `503`,
-   * its own notice, and never a missing file.
+   * Why there is nothing to play, or `null`: `missing-file`, the read's `404`
+   * — no file behind the row — or `unreachable`, its `503` — the film's
+   * **Library folder** out of reach, never a missing file. Each is its own
+   * notice.
    */
-  folderUnreachable: boolean;
+  unavailable: Unavailable | null;
   /**
    * Whether both reads have **settled** — however they settled.
    *
    * Not "the reads have values": a read that went wrong leaves `playback` null
    * for good, which is the very null it holds before the read lands, so a
    * screen gated on a value would wait for the rest of the evening. This is the
-   * third thing the two flags above cannot carry between them — both are
-   * `false` before the read answers and `false` for a film that plays, so
-   * neither can tell "not yet" from "fine".
+   * third thing `unavailable` cannot carry — it is `null` before the read
+   * answers and `null` for a film that plays, so it cannot tell "not yet"
+   * from "fine".
    */
   opened: boolean;
 }
@@ -49,8 +55,8 @@ export interface OpeningReads {
  * wait rather than the sum.
  *
  * **A film with no file is not an error.** The playback read answers 404 for
- * one, and `fetchPlayback` resolves that as `null` precisely so it can be told
- * apart from a request that went wrong — which is what makes the missing-file
+ * one, and `fetchPlayback` resolves that as `missing` precisely so it can be
+ * told apart from a request that went wrong — which is what makes the missing-file
  * notice reachable. A read that failed outright is the other thing: there is no
  * notice for it, and the screen keeps its backdrop rather than falling over.
  * It is nonetheless {@link OpeningReads.opened} — settled is settled, and the
@@ -60,8 +66,7 @@ export function useOpeningReads({ kind, id }: Playable): OpeningReads {
   const [movie, setMovie] = useState<Movie | null>(null);
   const [episode, setEpisode] = useState<EpisodeRead | undefined>(undefined);
   const [playback, setPlayback] = useState<PlaybackRead | null>(null);
-  const [fileMissing, setFileMissing] = useState(false);
-  const [folderUnreachable, setFolderUnreachable] = useState(false);
+  const [unavailable, setUnavailable] = useState<Unavailable | null>(null);
   const [opened, setOpened] = useState(false);
 
   useEffect(() => {
@@ -78,14 +83,9 @@ export function useOpeningReads({ kind, id }: Playable): OpeningReads {
           }))
         : fetchMovie(id).then((read) => ({ movie: read, episode: undefined }));
 
-    // A folder out of reach is an answer too, like the 404, so it settles the
-    // pair rather than failing it: the record is still reported beside it.
-    const read = fetchPlayback({ kind, id }).catch((error: unknown) => {
-      if (error instanceof FolderUnreachableError) {
-        return 'unreachable' as const;
-      }
-      throw error;
-    });
+    // A file missing and a folder out of reach are answers, so they settle
+    // the pair rather than failing it: the record is still reported beside.
+    const read = fetchPlayback({ kind, id });
 
     void Promise.all([record, read])
       .then(([records, answer]) => {
@@ -94,12 +94,14 @@ export function useOpeningReads({ kind, id }: Playable): OpeningReads {
         }
         setMovie(records.movie);
         setEpisode(records.episode);
-        setPlayback(answer === 'unreachable' ? null : answer);
-        // The playback read answers 404 for a film with no file behind it, and
-        // `fetchPlayback` resolves that as `null` precisely so it can be told
-        // apart from a request that went wrong.
-        setFileMissing(answer === null);
-        setFolderUnreachable(answer === 'unreachable');
+        setPlayback(answer.kind === 'read' ? answer.read : null);
+        setUnavailable(
+          answer.kind === 'missing'
+            ? 'missing-file'
+            : answer.kind === 'unreachable'
+              ? 'unreachable'
+              : null
+        );
       })
       // A read that failed outright is not a film with no file, and the notice
       // for it arrives with the transcoding paths. Until then the screen keeps
@@ -119,5 +121,5 @@ export function useOpeningReads({ kind, id }: Playable): OpeningReads {
     };
   }, [kind, id]);
 
-  return { movie, episode, playback, fileMissing, folderUnreachable, opened };
+  return { movie, episode, playback, unavailable, opened };
 }

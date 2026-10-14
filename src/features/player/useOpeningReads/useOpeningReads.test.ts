@@ -65,8 +65,7 @@ describe('useOpeningReads — both reads, as one moment', () => {
     expect(result.current).toEqual({
       movie: null,
       playback: null,
-      fileMissing: false,
-      folderUnreachable: false,
+      unavailable: null,
       opened: false,
     });
 
@@ -88,7 +87,7 @@ describe('useOpeningReads — both reads, as one moment', () => {
       expect(result.current.movie).toEqual(MOVIE);
     });
     expect(result.current.playback).toEqual(DIRECT);
-    expect(result.current.fileMissing).toBe(false);
+    expect(result.current.unavailable).toBeNull();
   });
 
   it('asks for the film it was given, once each', async () => {
@@ -119,7 +118,7 @@ describe('useOpeningReads — a film with no file behind it', () => {
     );
 
     await waitFor(() => {
-      expect(result.current.fileMissing).toBe(true);
+      expect(result.current.unavailable).toBe('missing-file');
     });
   });
 
@@ -159,9 +158,8 @@ describe('useOpeningReads — a film whose folder can’t be reached', () => {
     );
 
     await waitFor(() => {
-      expect(result.current.folderUnreachable).toBe(true);
+      expect(result.current.unavailable).toBe('unreachable');
     });
-    expect(result.current.fileMissing).toBe(false);
     expect(result.current.playback).toBeNull();
   });
 
@@ -176,7 +174,7 @@ describe('useOpeningReads — a film whose folder can’t be reached', () => {
       expect(result.current.opened).toBe(true);
     });
     expect(result.current.movie).toEqual(MOVIE);
-    expect(result.current.folderUnreachable).toBe(true);
+    expect(result.current.unavailable).toBe('unreachable');
   });
 
   it('keeps a 404 a missing file, with the folder not reported away', async () => {
@@ -187,9 +185,8 @@ describe('useOpeningReads — a film whose folder can’t be reached', () => {
     );
 
     await waitFor(() => {
-      expect(result.current.fileMissing).toBe(true);
+      expect(result.current.unavailable).toBe('missing-file');
     });
-    expect(result.current.folderUnreachable).toBe(false);
   });
 });
 
@@ -206,7 +203,7 @@ describe('useOpeningReads — a read that went wrong', () => {
     await waitFor(() => {
       expect(fetchMock).toHaveBeenCalledTimes(2);
     });
-    expect(result.current.fileMissing).toBe(false);
+    expect(result.current.unavailable).toBeNull();
     expect(result.current.playback).toBeNull();
   });
 
@@ -293,7 +290,7 @@ describe('useOpeningReads — whether the screen is still waiting', () => {
     await waitFor(() => {
       expect(result.current.opened).toBe(true);
     });
-    expect(result.current.fileMissing).toBe(true);
+    expect(result.current.unavailable).toBe('missing-file');
   });
 
   it('is open when a read went wrong, because settled is settled', async () => {
@@ -311,7 +308,7 @@ describe('useOpeningReads — whether the screen is still waiting', () => {
       expect(result.current.opened).toBe(true);
     });
     expect(result.current.playback).toBeNull();
-    expect(result.current.fileMissing).toBe(false);
+    expect(result.current.unavailable).toBeNull();
   });
 });
 

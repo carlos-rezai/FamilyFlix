@@ -33,15 +33,16 @@ function isResumeEcho(echoed: unknown): echoed is number {
 }
 
 /**
- * The Playback read's `503`: the film's **Library folder** is out of reach —
- * most likely a drive that isn't plugged in — rather than its file gone.
+ * What the **Playback read** answered — the server's `VideoFile` read back:
+ * the read itself; `missing`, the `404` of a row with no file behind it; or
+ * `unreachable`, the `503` of a **Linked video** whose **Library folder** is
+ * out of reach — most likely a drive that isn't plugged in — rather than its
+ * file gone.
  */
-export class FolderUnreachableError extends Error {
-  constructor(endpoint: string) {
-    super(`GET ${endpoint}: the film's Library folder can't be reached`);
-    this.name = 'FolderUnreachableError';
-  }
-}
+export type PlaybackAnswer =
+  | { kind: 'read'; read: PlaybackRead }
+  | { kind: 'missing' }
+  | { kind: 'unreachable' };
 
 /**
  * The **Playback read** for one film: which **Playback path** its bytes take,
@@ -50,37 +51,34 @@ export class FolderUnreachableError extends Error {
  * `runtimeMinutes`, and never the element's `duration`, which is a lie on a
  * live transcode.
  *
- * Resolves `null` when the route answers 404. A film with no file behind it has
- * no duration to report, and the screen draws that rather than reporting a
- * failure; resolving keeps it apart from "the request went wrong" exactly as
- * `fetchMovie`'s `null` keeps `not-found` apart from `error`. A 500 is not a
- * film with no file, so it rejects — collapsing the two would tell the family
- * their film is missing every time the server hiccups.
- *
- * A 503 is a **Linked video** whose **Library folder** can't be reached — an
- * answer, not a hiccup, and a different one from the 404 — so it rejects with
- * {@link FolderUnreachableError}, which the caller tells apart by type.
+ * Answers a {@link PlaybackAnswer}: `missing` for the 404 and `unreachable`
+ * for the 503 are answers, not failures — a film with no file behind it has
+ * no duration to report, and a folder that is away may come back — and the
+ * screen draws each rather than reporting a failure, exactly as `fetchMovie`'s
+ * `null` keeps `not-found` apart from `error`. Any other status is not an
+ * answer, so it rejects — collapsing a 500 into `missing` would tell the
+ * family their film is missing every time the server hiccups.
  *
  * It stays with the player rather than moving up to `src/api/`: this is the one
  * feature that asks, which is the same rule read the other way round.
  */
 export async function fetchPlayback(
   playable: Playable
-): Promise<PlaybackRead | null> {
+): Promise<PlaybackAnswer> {
   const endpoint = playbackEndpoint(playable);
   const response = await fetch(endpoint);
 
   if (response.status === 404) {
-    return null;
+    return { kind: 'missing' };
   }
   if (response.status === 503) {
-    throw new FolderUnreachableError(endpoint);
+    return { kind: 'unreachable' };
   }
   if (!response.ok) {
     throw new Error(`GET ${endpoint} failed: ${response.status}`);
   }
 
-  return (await response.json()) as PlaybackRead;
+  return { kind: 'read', read: (await response.json()) as PlaybackRead };
 }
 
 /**

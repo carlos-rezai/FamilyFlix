@@ -317,8 +317,8 @@ describe('Player — the picture', () => {
 
   it('points nothing at the stream until the read has landed', async () => {
     // Issue #95. The element may not be given a film the screen does not yet
-    // know it can play: `fileMissing` and `cannotPlay` are both derived from
-    // the **Playback read**, and both are `false` until it answers, so a guard
+    // know it can play: `unavailable` and `cannotPlay` are both derived from
+    // the **Playback read**, and both say nothing until it answers, so a guard
     // written on those two alone does not hold on the frame it is about.
     //
     // The other half of that rule is asserted here too, because "never mount
@@ -503,7 +503,7 @@ describe('Player — a film whose file is missing', () => {
   });
 
   it('points nothing at the stream on the frame before the read lands', () => {
-    // Issue #95. `fileMissing` is false until the read answers 404, so on the
+    // Issue #95. `unavailable` is null until the read answers 404, so on the
     // first frame the element was mounted and pointed at a stream that answers
     // 404 as well — one wasted request and a console error behind a notice
     // already saying what happened.

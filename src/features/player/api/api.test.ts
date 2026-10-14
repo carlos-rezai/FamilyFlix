@@ -18,7 +18,7 @@ import {
  *
  * The 404 is the interesting case: a film with no file behind it has no
  * duration to report, and the screen has a message for exactly that. Resolving
- * `null` rather than rejecting is what keeps the missing-file notice apart from
+ * `missing` rather than rejecting is what keeps the missing-file notice apart from
  * "the request went wrong", the same way `fetchMovie`'s `null` keeps
  * `not-found` apart from `error`.
  */
@@ -59,7 +59,7 @@ describe('fetchPlayback', () => {
     const read = await fetchPlayback(MOVIE);
 
     expect(onlyRequestUrl()).toBe('/api/movies/m1/playback');
-    expect(read).toEqual(DIRECT_PLAY);
+    expect(read).toEqual({ kind: 'read', read: DIRECT_PLAY });
   });
 
   it('encodes an id that would otherwise change the URL’s shape', async () => {
@@ -76,8 +76,25 @@ describe('fetchPlayback', () => {
     );
 
     // A film whose file is missing is a state the player draws, not a failure
-    // it reports. `null` is what the missing-file notice is reached through.
-    await expect(fetchPlayback(MOVIE)).resolves.toBeNull();
+    // it reports. `missing` is what the missing-file notice is reached through.
+    await expect(fetchPlayback(MOVIE)).resolves.toEqual({ kind: 'missing' });
+  });
+
+  it('answers unreachable when the film’s Library folder is out of reach', async () => {
+    fetchMock.mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          error: "The video's Library folder is out of reach: m1",
+        }),
+        { status: 503, headers: { 'Content-Type': 'application/json' } }
+      )
+    );
+
+    // The 503 is an answer too, and a different one from the 404: the folder
+    // is away, not the file gone.
+    await expect(fetchPlayback(MOVIE)).resolves.toEqual({
+      kind: 'unreachable',
+    });
   });
 
   it('fails on any other unsuccessful response, rather than reading as absent', async () => {

@@ -17,7 +17,10 @@ import { SubtitleOverlay } from '../SubtitleOverlay/SubtitleOverlay';
 import { UpNextCard } from '../UpNextCard/UpNextCard';
 import { useControlsVisibility } from '../useControlsVisibility/useControlsVisibility';
 import { useFullscreen } from '../useFullscreen/useFullscreen';
-import { useOpeningReads } from '../useOpeningReads/useOpeningReads';
+import {
+  useOpeningReads,
+  type Unavailable,
+} from '../useOpeningReads/useOpeningReads';
 import { usePlayback } from '../usePlayback/usePlayback';
 import { usePlayerKeys } from '../usePlayerKeys/usePlayerKeys';
 import { useSubtitles } from '../useSubtitles/useSubtitles';
@@ -110,18 +113,14 @@ function openAt(movie: Movie | Episode | null): number {
  * notice at all.
  */
 function noticeFor(
-  folderUnreachable: boolean,
-  fileMissing: boolean,
+  unavailable: Unavailable | null,
   cannotPlay: boolean,
   failed: boolean,
   buffering: boolean,
   playing: boolean
 ): PlayerNoticeKind | null {
-  if (folderUnreachable) {
-    return 'unreachable';
-  }
-  if (fileMissing) {
-    return 'missing-file';
+  if (unavailable !== null) {
+    return unavailable;
   }
   if (cannotPlay) {
     return 'cannot-play';
@@ -175,8 +174,9 @@ export function Player({ playable }: PlayerProps) {
   const stageRef = useRef<HTMLDivElement>(null);
 
   // The two reads the screen opens with.
-  const { movie, episode, playback, fileMissing, folderUnreachable, opened } =
-    useOpeningReads(useMemo(() => ({ kind, id }), [kind, id]));
+  const { movie, episode, playback, unavailable, opened } = useOpeningReads(
+    useMemo(() => ({ kind, id }), [kind, id])
+  );
   // What is playing, whichever kind it is: the watch state and the tracks are
   // the same trio on a movie and an episode.
   const record = movie ?? episode?.episode ?? null;
@@ -263,14 +263,7 @@ export function Player({ playable }: PlayerProps) {
   // there — with the path it chose, and `cannot-play` is one of them.
   const cannotPlay = playback?.path === 'cannot-play';
 
-  const notice = noticeFor(
-    folderUnreachable,
-    fileMissing,
-    cannotPlay,
-    failed,
-    buffering,
-    playing
-  );
+  const notice = noticeFor(unavailable, cannotPlay, failed, buffering, playing);
 
   // Two different things hold the chrome on screen, and only one of them is
   // about playback: a paused film is someone deciding, and a notice's only way
@@ -349,7 +342,7 @@ export function Player({ playable }: PlayerProps) {
             decode. `opened` is settled rather than answered: a read that went
             wrong has no notice and no film, and the screen must stop waiting
             on it all the same. */}
-        {!opened || folderUnreachable || fileMissing || cannotPlay ? null : (
+        {!opened || unavailable !== null || cannotPlay ? null : (
           <Picture ref={setPicture} src={src} />
         )}
         {notice === null ? null : (
