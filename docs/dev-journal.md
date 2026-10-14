@@ -11,6 +11,108 @@ Newest entry first.
 
 ---
 
+## 2026-10-14 — Link or copy — the refactor (issue 348)
+
+Twenty-four commits against `docs/refactor-plans/41-link-or-copy-refactor.md`
+— its twenty-three, one per plan commit, and one fixing a lint warning an
+earlier commit of this round introduced — the initiative's closing round.
+**8943 tests pass across 536 files**, against 8921 across 535 at the end of
+the build (`663d5ee`): one new suite (`parentFolder`) and the cases the plan
+named, plus those for what it did not foresee (below). `tsc -b --force` is clean. `eslint src
+server electron` reports no errors and 85 warnings, none in a file this round
+touched.
+
+### What shipped
+
+Log 41's six slices: the prototype amendment (340, `81ec1f0`), then one RED
+and one GREEN each — 341 to 347. A video an import finds is linked where it
+lies in its Library folder by default, or copied under _Copy_; art and
+subtitles are always copied; a linked title plays from its folder, says so
+when the drive is away, and is never deleted by the app.
+
+### What each group changed
+
+- **Group 1, the Resolve that forgot its folder** (`22f4ed0`–`1de04e6`). A
+  `fix:` — a film Resolve and a Series Resolve adding a show in a Link run
+  recorded no **Media folder**, so a Sync stored no art and a Delete
+  stranded the folder; both now pass `mediaFolder`, written failing first in
+  `linkReview`. The form's two adds and the series seed name theirs too, and
+  `parentOf` became `library/parentFolder/`. The plan's commit 4 turned up a
+  second slip: both Resolves found their folder with `posix.dirname` of the
+  first stored file, so a Series Resolve whose first picked file was an
+  episode took its `season-NN/` for the show's folder. `Media.storedFolder`
+  — the title's folder a Stored path lies under, by its first segment — is
+  the reading now, and `linkReview` pins the case, written failing first.
+- **Group 2, one place a video is placed** (`f2e765f`–`22bd85e`).
+  `spellLinkedVideo` beside `linkedVideoPath`; `StoredVideo` in `src/types`,
+  extended by `Movie` and `Episode`; `NewMovie` and `NewEpisode` take
+  `videoFolderId?: string | null`, so a `StoredVideo` spreads whole;
+  `placeVideo` is the run's one link-or-copy decision, and the Resolves'
+  `linkedVideo` spells through the writer.
+- **Group 3, the folder in use** (`c5352cd`). `removeLibraryFolder` answers
+  `removed` / `not-found` / `in-use` with the count, in one transaction;
+  `linkedTitleCount` retires; `inUseSentence` words the `409`. The folders
+  suite gained a repository-level in-use case — only the route suite had one.
+- **Group 4, the playback seam** (`6974beb`–`379002c`). One reading of
+  reach under `readableFolder` and its sync twin, the suite reading both
+  over one table; `videoFileOrRefusal` with `unreachableVideo` beside
+  `noVideoFile` — `unreachableVideo(res, id)`, not the plan's `(res, kind,
+id)`: the sentence names no kind, and a dead parameter is worse than a
+  shape that differs from its neighbour; `importStartBody` for both starts.
+  The reset route's `try` around `removeComponent()` went, but the plan's
+  _"no suite asserts the catch"_ was wrong: `routes.linkedVideo`'s reset case
+  composed `fixedSlot`, whose `remove` throws by design. That suite's slot
+  now answers `nothing-uploaded`, as a real slot with nothing uploaded does;
+  `fixedSlot`'s contract is untouched.
+- **Group 5, media and the Sync** (`13658cf`, `9be7fae`). `storeNamed(folder,
+name, source, season?)`, so `seasonFolderOf` and its split on `sep` retire;
+  `writeShow` — the pass over one show, which both `syncSeries` and a
+  review's pick reach — reads the Media folder once. The plan named
+  `syncSeries`; `writeShow` is where both callers meet.
+- **Group 6, the client** (`6163352`–`d55a586`). `fetchPlayback` answers a
+  `PlaybackAnswer` and `FolderUnreachableError` retires; `useOpeningReads`
+  hands the Player one `unavailable` reason in `PlayerNotice`'s words; the
+  sheet start's mode is required; `ImportFlow` holds it beside the box; the
+  prototype's Library folders caption took `labelStyle` (a `docs:` commit)
+  before `ImportModeChoice` took `FieldLabel`, re-exported through its
+  styles file as `ImportSetup` does; `ChoiceCard`'s `Description` is `Line`.
+- **Group 7, the docs** (`39e2685`, this commit). CLAUDE.md, the README and
+  the glossary know the initiative shipped; Code Rules carries Q9's paths
+  sentence; step 24 is ✅. CLAUDE.md's Settings hub never named the sheet's
+  start; the folders bullet now names both bodies.
+- **The lint fix** (`c53575f`). Group 3's new case wrote `'E:\Movies'`.
+
+### Deliberately not changed
+
+Everything in the plan's Out of Scope and Further Notes: `mode` stays
+optional on the domain (`start` and `scan` default to Copy, which the 180-odd
+importer suites written before log 41 assume — the route always reads one);
+the write's media-folder fallback stays, as `parentFolder`, for rows written
+without one; `() => null` stays in the Playback suites; the Folder row's
+refusal stays the page's; `useLibraryFolders` keeps `refusal` and
+`removeRefusal`; `Playback.videoFile` still reads reach on every call.
+`Media.storedFolder` reads the first segment, which is right for every folder
+`reserveFolder` makes and wrong for the seed's `__seed__/series/<slug>` — no
+Resolve ever runs over a seeded show.
+
+### Follow-ups this refactor surfaced
+
+- **A shared `'movie' | 'series'` kind.** `mediaFolderOf(kind, id)` is its
+  fourth local spelling; the plan leaves it for the next initiative that
+  touches both kinds. Not filed.
+- **The commit gate is the hook, not a pipe.** This round's commit 13 first
+  landed red: the session's own gate script piped its result through `grep`,
+  so the commit followed a failing run. It was amended before anything else
+  touched it. Run the suite as its own step before a commit, never as the
+  left side of a pipe.
+
+### The initiative
+
+**Link or copy is done**: the prototype revision (340), the six slices
+(341–347) and this round (348). Issue 339 is closed with it.
+
+---
+
 ## 2026-10-13 — Import review — the refactor (issue 336)
 
 Twenty-seven commits against `docs/refactor-plans/40-import-review-refactor.md`
