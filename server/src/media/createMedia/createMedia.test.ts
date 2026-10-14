@@ -932,6 +932,41 @@ describe('createMedia — openFolder over the Media folder', () => {
   });
 });
 
+describe('createMedia — storedFolder, the title’s folder a Stored path lies under', () => {
+  it('answers the folder a file directly inside it names', async () => {
+    const { media, root } = sandbox();
+    const reserved = media.reserveFolder('The Lantern Keeper', 2019);
+    const stored = await media.storeUpload(
+      reserved,
+      'poster.jpg',
+      part('poster bytes')
+    );
+
+    expect(media.storedFolder(stored)).toBe(
+      join(root, 'the-lantern-keeper-2019')
+    );
+  });
+
+  it('answers the Series folder, not the season, for an episode', async () => {
+    const { media, root } = sandbox();
+    const reserved = media.reserveFolder('Tidewater', 2018);
+    const stored = await media.storeUpload(
+      media.seasonFolder(reserved, 1),
+      'e01.mp4',
+      part('video bytes')
+    );
+
+    expect(media.storedFolder(stored)).toBe(join(root, 'tidewater-2018'));
+  });
+
+  it('answers nothing for a path whose folder is not there', () => {
+    const { media } = sandbox();
+
+    expect(media.storedFolder('gone-1999/poster.jpg')).toBeNull();
+    expect(media.storedFolder('')).toBeNull();
+  });
+});
+
 describe('createMedia — storeNamed over the Media folder', () => {
   it('writes the bytes under the name it is given, in the recorded folder', async () => {
     const { media, root } = sandbox();

@@ -5,7 +5,6 @@ import {
   dirname,
   extname,
   isAbsolute,
-  posix,
   relative,
   sep,
 } from 'node:path';
@@ -2031,9 +2030,7 @@ export function createImporter({
         (slot): slot is { stored: string } => 'stored' in slot
       );
       const folder =
-        (stored === undefined
-          ? null
-          : media.openFolder(posix.dirname(stored.stored))) ??
+        (stored === undefined ? null : media.storedFolder(stored.stored)) ??
         media.reserveFolder(form.title, form.year);
 
       /** A stored file as it is; a found one copied in beside it. */
@@ -2146,9 +2143,7 @@ export function createImporter({
       const ownFolder = heldSeries === null ? null : heldFolder(heldSeries.id);
       const folder =
         ownFolder ??
-        (stored === undefined
-          ? null
-          : media.openFolder(posix.dirname(stored.stored))) ??
+        (stored === undefined ? null : media.storedFolder(stored.stored)) ??
         media.reserveFolder(form.title, form.year ?? null);
       const copied: string[] = [];
 

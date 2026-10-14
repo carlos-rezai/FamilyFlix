@@ -71,6 +71,14 @@ export interface Media {
   openFolder(folder: string): string | null;
 
   /**
+   * The title's folder a **Stored path** lies under — its first segment, a
+   * `season-NN/` between them or not — opened as {@link openFolder} opens a
+   * recorded one, or `null`. What a **Resolve** reuses when the route's bytes
+   * already went somewhere: the folder they went into becomes the title's.
+   */
+  storedFolder(storedPath: string): string | null;
+
+  /**
    * The `season-NN/` directory under a reserved **Series folder**, created if
    * it is not there yet, and its path — where one season's episodes are copied
    * in. Two digits, so the seasons list in order; asking again for a season
@@ -274,6 +282,11 @@ export function createMedia(mediaPath: string): Media {
     },
 
     openFolder: (folder) => recordedFolder(folder),
+
+    storedFolder: (storedPath) => {
+      const [first] = storedPath.split('/');
+      return first === '' ? null : recordedFolder(first);
+    },
 
     seasonFolder: (seriesFolder, season) => {
       const folder = join(

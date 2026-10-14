@@ -510,3 +510,28 @@ describe('createImporter — a Resolve in a Link run records its Media folder', 
     expect(box.storage.mediaFolderOf('series', series.id)).toBe(folder);
   });
 });
+
+describe('createImporter — a Resolve over picked bytes finds the title’s folder', () => {
+  it('a Series Resolve whose first picked file is an episode keeps the Series folder, not its season', async () => {
+    const box = await unplacedNewShow();
+    const reserved = box.mediaDomain.reserveFolder('Lighthouse Keepers', null);
+    const stored = await pickedVideo(
+      box,
+      box.mediaDomain.seasonFolder(reserved, 1),
+      `${NEW_SHOW}/Bonus One.mp4`
+    );
+
+    const series = await box.importer.resolveSeries(box.problem.id, {
+      ...box.form,
+      episodes: [{ ...box.form.episodes[0], video: { stored } }],
+    });
+
+    const [episode] = box.storage.listEpisodes(series.id);
+    expect(episode.videoPath).toBe(stored);
+    expect(box.storage.mediaFolderOf('series', series.id)).toBe(
+      stored.split('/')[0]
+    );
+    // The subtitle went into the same season, not a season under it.
+    expect(episode.subtitles[0].path.split('/')).toHaveLength(3);
+  });
+});
