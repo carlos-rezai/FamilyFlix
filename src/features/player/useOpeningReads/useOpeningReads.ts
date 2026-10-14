@@ -3,7 +3,11 @@ import { useEffect, useState } from 'react';
 import { fetchMovie } from '@/api/fetchMovie/fetchMovie';
 import type { EpisodeRead, Movie, PlaybackRead, Playable } from '@/types';
 
-import { fetchEpisode, fetchPlayback } from '../api/api';
+import {
+  fetchEpisode,
+  fetchPlayback,
+  FolderUnreachableError,
+} from '../api/api';
 
 /** What the **Player** knows about the film before a byte of it arrives. */
 export interface OpeningReads {
@@ -18,6 +22,11 @@ export interface OpeningReads {
   playback: PlaybackRead | null;
   /** Whether there is no file behind the row, which is its own notice. */
   fileMissing: boolean;
+  /**
+   * Whether the film's **Library folder** can't be reached — the read's `503`,
+   * its own notice, and never a missing file.
+   */
+  folderUnreachable: boolean;
   /**
    * Whether both reads have **settled** — however they settled.
    *
@@ -52,6 +61,7 @@ export function useOpeningReads({ kind, id }: Playable): OpeningReads {
   const [episode, setEpisode] = useState<EpisodeRead | undefined>(undefined);
   const [playback, setPlayback] = useState<PlaybackRead | null>(null);
   const [fileMissing, setFileMissing] = useState(false);
+  const [folderUnreachable, setFolderUnreachable] = useState(false);
   const [opened, setOpened] = useState(false);
 
   useEffect(() => {
@@ -68,18 +78,28 @@ export function useOpeningReads({ kind, id }: Playable): OpeningReads {
           }))
         : fetchMovie(id).then((read) => ({ movie: read, episode: undefined }));
 
-    void Promise.all([record, fetchPlayback({ kind, id })])
-      .then(([records, read]) => {
+    // A folder out of reach is an answer too, like the 404, so it settles the
+    // pair rather than failing it: the record is still reported beside it.
+    const read = fetchPlayback({ kind, id }).catch((error: unknown) => {
+      if (error instanceof FolderUnreachableError) {
+        return 'unreachable' as const;
+      }
+      throw error;
+    });
+
+    void Promise.all([record, read])
+      .then(([records, answer]) => {
         if (cancelled) {
           return;
         }
         setMovie(records.movie);
         setEpisode(records.episode);
-        setPlayback(read);
+        setPlayback(answer === 'unreachable' ? null : answer);
         // The playback read answers 404 for a film with no file behind it, and
         // `fetchPlayback` resolves that as `null` precisely so it can be told
         // apart from a request that went wrong.
-        setFileMissing(read === null);
+        setFileMissing(answer === null);
+        setFolderUnreachable(answer === 'unreachable');
       })
       // A read that failed outright is not a film with no file, and the notice
       // for it arrives with the transcoding paths. Until then the screen keeps
@@ -99,5 +119,5 @@ export function useOpeningReads({ kind, id }: Playable): OpeningReads {
     };
   }, [kind, id]);
 
-  return { movie, episode, playback, fileMissing, opened };
+  return { movie, episode, playback, fileMissing, folderUnreachable, opened };
 }

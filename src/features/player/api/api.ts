@@ -33,6 +33,17 @@ function isResumeEcho(echoed: unknown): echoed is number {
 }
 
 /**
+ * The Playback read's `503`: the film's **Library folder** is out of reach —
+ * most likely a drive that isn't plugged in — rather than its file gone.
+ */
+export class FolderUnreachableError extends Error {
+  constructor(endpoint: string) {
+    super(`GET ${endpoint}: the film's Library folder can't be reached`);
+    this.name = 'FolderUnreachableError';
+  }
+}
+
+/**
  * The **Playback read** for one film: which **Playback path** its bytes take,
  * and how long it runs. Fetched once when the player opens, and the one place
  * the scrubber's duration comes from — never the record's rounded
@@ -46,6 +57,10 @@ function isResumeEcho(echoed: unknown): echoed is number {
  * film with no file, so it rejects — collapsing the two would tell the family
  * their film is missing every time the server hiccups.
  *
+ * A 503 is a **Linked video** whose **Library folder** can't be reached — an
+ * answer, not a hiccup, and a different one from the 404 — so it rejects with
+ * {@link FolderUnreachableError}, which the caller tells apart by type.
+ *
  * It stays with the player rather than moving up to `src/api/`: this is the one
  * feature that asks, which is the same rule read the other way round.
  */
@@ -57,6 +72,9 @@ export async function fetchPlayback(
 
   if (response.status === 404) {
     return null;
+  }
+  if (response.status === 503) {
+    throw new FolderUnreachableError(endpoint);
   }
   if (!response.ok) {
     throw new Error(`GET ${endpoint} failed: ${response.status}`);

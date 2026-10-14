@@ -1,3 +1,4 @@
+import { statSync } from 'node:fs';
 import { stat } from 'node:fs/promises';
 import { isAbsolute } from 'node:path';
 
@@ -24,6 +25,22 @@ export async function readableFolder(path: string): Promise<FolderReading> {
   }
   try {
     return (await stat(path)).isDirectory() ? 'readable' : 'not-a-folder';
+  } catch {
+    return 'missing';
+  }
+}
+
+/**
+ * {@link readableFolder}'s twin for a caller that cannot wait — Playback's
+ * `videoFile`, which reads a Linked video's reach on every call so a folder
+ * that comes back plays again with nothing cached. Same answers, same rules.
+ */
+export function readableFolderSync(path: string): FolderReading {
+  if (!isAbsolute(path)) {
+    return 'relative';
+  }
+  try {
+    return statSync(path).isDirectory() ? 'readable' : 'not-a-folder';
   } catch {
     return 'missing';
   }

@@ -110,12 +110,16 @@ function openAt(movie: Movie | Episode | null): number {
  * notice at all.
  */
 function noticeFor(
+  folderUnreachable: boolean,
   fileMissing: boolean,
   cannotPlay: boolean,
   failed: boolean,
   buffering: boolean,
   playing: boolean
 ): PlayerNoticeKind | null {
+  if (folderUnreachable) {
+    return 'unreachable';
+  }
   if (fileMissing) {
     return 'missing-file';
   }
@@ -171,9 +175,8 @@ export function Player({ playable }: PlayerProps) {
   const stageRef = useRef<HTMLDivElement>(null);
 
   // The two reads the screen opens with.
-  const { movie, episode, playback, fileMissing, opened } = useOpeningReads(
-    useMemo(() => ({ kind, id }), [kind, id])
-  );
+  const { movie, episode, playback, fileMissing, folderUnreachable, opened } =
+    useOpeningReads(useMemo(() => ({ kind, id }), [kind, id]));
   // What is playing, whichever kind it is: the watch state and the tracks are
   // the same trio on a movie and an episode.
   const record = movie ?? episode?.episode ?? null;
@@ -260,7 +263,14 @@ export function Player({ playable }: PlayerProps) {
   // there — with the path it chose, and `cannot-play` is one of them.
   const cannotPlay = playback?.path === 'cannot-play';
 
-  const notice = noticeFor(fileMissing, cannotPlay, failed, buffering, playing);
+  const notice = noticeFor(
+    folderUnreachable,
+    fileMissing,
+    cannotPlay,
+    failed,
+    buffering,
+    playing
+  );
 
   // Two different things hold the chrome on screen, and only one of them is
   // about playback: a paused film is someone deciding, and a notice's only way
@@ -339,7 +349,7 @@ export function Player({ playable }: PlayerProps) {
             decode. `opened` is settled rather than answered: a read that went
             wrong has no notice and no film, and the screen must stop waiting
             on it all the same. */}
-        {!opened || fileMissing || cannotPlay ? null : (
+        {!opened || folderUnreachable || fileMissing || cannotPlay ? null : (
           <Picture ref={setPicture} src={src} />
         )}
         {notice === null ? null : (

@@ -16,7 +16,8 @@ export type PlayerNoticeKind =
   | 'buffering'
   | 'missing-file'
   | 'cannot-play'
-  | 'could-not-start';
+  | 'could-not-start'
+  | 'unreachable';
 
 export interface PlayerNoticeProps {
   kind: PlayerNoticeKind;
@@ -36,6 +37,10 @@ const COULD_NOT_START_TITLE = 'This film could not be started';
 const COULD_NOT_START_BODY =
   'FamilyFlix started getting this film ready and it stopped. Adding a ' +
   'playback component in Settings may fix it.';
+const UNREACHABLE_TITLE = 'Can’t reach this film’s folder';
+const UNREACHABLE_BODY =
+  'It plays from one of your library folders, which can’t be reached right ' +
+  'now — most likely a drive that isn’t plugged in.';
 
 /**
  * What each unavailable state says, which is the only thing that differs
@@ -45,7 +50,7 @@ const COULD_NOT_START_BODY =
  * sentences beside each other.
  */
 const UNAVAILABLE: Record<
-  'missing-file' | 'cannot-play' | 'could-not-start',
+  'missing-file' | 'cannot-play' | 'could-not-start' | 'unreachable',
   { title: string; body: string }
 > = {
   'missing-file': { title: MISSING_TITLE, body: MISSING_BODY },
@@ -54,6 +59,7 @@ const UNAVAILABLE: Record<
     title: COULD_NOT_START_TITLE,
     body: COULD_NOT_START_BODY,
   },
+  unreachable: { title: UNREACHABLE_TITLE, body: UNREACHABLE_BODY },
 };
 
 /**

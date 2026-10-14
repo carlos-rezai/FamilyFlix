@@ -17,6 +17,7 @@ import type {
   PlaybackProcess,
 } from '../ffmpegComponent/ffmpegComponent';
 import { mediaDuration } from '../mediaDuration/mediaDuration';
+import { readableFolderSync } from '../../media/readableFolder/readableFolder';
 import { linkedVideoPath } from '../linkedVideoPath/linkedVideoPath';
 import { mediaFilePath } from '../mediaFilePath/mediaFilePath';
 import { parseSubtitle } from '../parseSubtitle/parseSubtitle';
@@ -35,8 +36,8 @@ export interface StoredVideo {
 /**
  * The file behind a {@link StoredVideo}, or why there is none: `missing` for a
  * path that escaped its root, a file not there or a folder the library does not
- * list; `unreachable` for a Library folder that is listed but out of reach —
- * named here for the route's `503`, and not yet answered by {@link Playback.videoFile}.
+ * list; `unreachable` for a Library folder that is listed but does not read as
+ * `readable` — the route's `503`, read afresh on every call.
  */
 export type VideoFile =
   | { kind: 'file'; file: string }
@@ -284,6 +285,9 @@ export function createPlayback(
         file = mediaFilePath(mediaPath, videoPath);
       } else {
         const folder = libraryFolderPath(videoFolderId);
+        if (folder !== null && readableFolderSync(folder) !== 'readable') {
+          return { kind: 'unreachable' };
+        }
         file = folder === null ? null : linkedVideoPath(folder, videoPath);
       }
       return file === null ? { kind: 'missing' } : { kind: 'file', file };
