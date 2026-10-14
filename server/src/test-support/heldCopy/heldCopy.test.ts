@@ -103,11 +103,11 @@ describe('heldCopy', () => {
   });
 
   it('leaves everything else on the Media as it was', () => {
-    const removeMovieFolder = vi.fn();
+    const removeTitleFolder = vi.fn();
     const { seam } = heldCopy();
 
-    const seamed = seam({ removeMovieFolder } as unknown as Media);
+    const seamed = seam({ removeTitleFolder } as unknown as Media);
 
-    expect(seamed.removeMovieFolder).toBe(removeMovieFolder);
+    expect(seamed.removeTitleFolder).toBe(removeTitleFolder);
   });
 });

@@ -43,10 +43,10 @@ const EXPECTED_GENRES = [
   'Crime',
 ];
 
-// The version a fresh database migrates to — migration #10, the **Season
-// poster** (issue #322). Every "at the latest version" assertion reads it, so
+// The version a fresh database migrates to — migration #11, the **Media
+// folder** (issue #341). Every "at the latest version" assertion reads it, so
 // the next migration moves one number rather than ten.
-const LATEST_VERSION = 10;
+const LATEST_VERSION = 11;
 
 // What migration #5 adds, by table: the three columns a Sync writes on a movie
 // and a series, and the episode's still. Additive, nullable, nothing seeded.
@@ -227,7 +227,25 @@ function dropMigration9(db: TestDb): void {
  * exists, so every wind-back reads the same before #10 is written as after.
  */
 function dropMigration10(db: TestDb): void {
+  // Every wind-back to before #10 is also one to before #11.
+  dropMigration11(db);
   db.prepare('DROP TABLE IF EXISTS season_posters').run();
+}
+
+/**
+ * What migration #11 added, dropped: `media_folder` on movies and series, only
+ * where it exists, so every wind-back reads the same before #11 is written as
+ * after.
+ */
+function dropMigration11(db: TestDb): void {
+  for (const table of ['movies', 'series']) {
+    if (
+      tableNames(db).includes(table) &&
+      columnNames(db, table).includes('media_folder')
+    ) {
+      db.prepare(`ALTER TABLE ${table} DROP COLUMN media_folder`).run();
+    }
+  }
 }
 
 /**
@@ -387,6 +405,7 @@ function v4Columns(db: TestDb, table: keyof typeof MIGRATION_5_COLUMNS) {
     ...MIGRATION_5_COLUMNS[table],
     'library_folder_id',
     'source_file',
+    'media_folder',
   ];
   return columnNames(db, table).filter((column) => !added.includes(column));
 }
@@ -1374,7 +1393,7 @@ describe('db: migration #10 — season posters', () => {
   it('lands a fresh database at version 10, with no season poster', () => {
     const db = track(open(':memory:'));
 
-    expect(userVersion(db)).toBe(10);
+    expect(userVersion(db)).toBeGreaterThanOrEqual(10);
     expect(db.prepare('SELECT * FROM season_posters').all()).toEqual([]);
   });
 
@@ -1405,7 +1424,7 @@ describe('db: migration #10 — season posters', () => {
 
     const upgraded = track(open(path));
 
-    expect(userVersion(upgraded)).toBe(10);
+    expect(userVersion(upgraded)).toBe(LATEST_VERSION);
     expect(
       upgraded.prepare('SELECT title FROM movies WHERE id = ?').all(movie.id)
     ).toEqual([{ title: 'Heat' }]);
@@ -1415,6 +1434,164 @@ describe('db: migration #10 — season posters', () => {
         .all(series.id)
     ).toEqual([{ title: 'Pilot' }]);
     expect(upgraded.prepare('SELECT * FROM season_posters').all()).toEqual([]);
+  });
+});
+
+// 41 — Link or copy, Slice 2 (issue #341) adds migration #11: the **Media
+// folder** — `media_folder` on `movies` and `series`, the title's **Movie
+// folder** or **Series folder** relative to the **Managed media directory**.
+// It is backfilled: a film's from its video's directory, a series' from any
+// episode's path two directories up, the `__seed__/series/` prefix included.
+// A series with no episodes has no video to read it off, so it is read off its
+// poster, which sits in the Series folder — and with neither, it is `NULL`
+// rather than a guess.
+
+describe('db: migration #11 — the Media folder', () => {
+  it('adds a nullable TEXT media_folder to movies and to series', () => {
+    const db = track(open(':memory:'));
+
+    for (const table of ['movies', 'series']) {
+      const declared = columnInfo(db, table).find(
+        (c) => c.name === 'media_folder'
+      );
+      expect(declared).toBeDefined();
+      expect(declared?.type.toUpperCase()).toBe('TEXT');
+      expect(declared?.notnull).toBe(0);
+    }
+  });
+
+  it('lands a fresh database at version 11', () => {
+    const db = track(open(':memory:'));
+
+    expect(userVersion(db)).toBe(LATEST_VERSION);
+  });
+
+  /** A library written at the latest version, then wound back to before #11. */
+  function windBackToV10(path: string): void {
+    const db = open(path);
+    try {
+      dropMigration11(db);
+      db.pragma('user_version = 10');
+    } finally {
+      db.close();
+    }
+  }
+
+  const mediaFolders = (db: TestDb, table: 'movies' | 'series') =>
+    db.prepare(`SELECT title, media_folder FROM ${table} ORDER BY title`).all();
+
+  it('backfills a film’s Media folder from its video’s directory', () => {
+    const path = tempDbPath();
+    const before = trackStorage(createSqliteStorage(path));
+    before.addMovie({
+      title: 'Heat',
+      year: 1995,
+      videoPath: 'heat-1995/video.mp4',
+      posterPath: 'heat-1995/poster.jpg',
+    });
+    before.close();
+    windBackToV10(path);
+
+    const upgraded = track(open(path));
+
+    expect(userVersion(upgraded)).toBe(LATEST_VERSION);
+    expect(mediaFolders(upgraded, 'movies')).toEqual([
+      { title: 'Heat', media_folder: 'heat-1995' },
+    ]);
+  });
+
+  it('backfills a series’ Media folder from an episode’s path two directories up', () => {
+    const path = tempDbPath();
+    const before = trackStorage(createSqliteStorage(path));
+    before.addSeries({ title: 'Harbor & Vine' }, [
+      {
+        season: 1,
+        number: 1,
+        title: 'Pilot',
+        videoPath: 'harbor-vine-2019/season-01/S01E01.mp4',
+      },
+      {
+        season: 2,
+        number: 1,
+        title: 'Spring Tide',
+        videoPath: 'harbor-vine-2019/season-02/S02E01.mp4',
+      },
+    ]);
+    before.close();
+    windBackToV10(path);
+
+    const upgraded = track(open(path));
+
+    expect(mediaFolders(upgraded, 'series')).toEqual([
+      { title: 'Harbor & Vine', media_folder: 'harbor-vine-2019' },
+    ]);
+  });
+
+  it('backfills a seeded series with its __seed__/series/ prefix', () => {
+    const path = tempDbPath();
+    const before = trackStorage(createSqliteStorage(path));
+    before.addSeries({ title: 'The Hollow Coast' }, [
+      {
+        season: 1,
+        number: 1,
+        videoPath: '__seed__/series/the-hollow-coast/season-01/S01E01.mp4',
+      },
+    ]);
+    before.close();
+    windBackToV10(path);
+
+    const upgraded = track(open(path));
+
+    expect(mediaFolders(upgraded, 'series')).toEqual([
+      {
+        title: 'The Hollow Coast',
+        media_folder: '__seed__/series/the-hollow-coast',
+      },
+    ]);
+  });
+
+  it('records a series with no episodes off its poster, and one with neither as NULL', () => {
+    const path = tempDbPath();
+    const before = trackStorage(createSqliteStorage(path));
+    before.addSeries({
+      title: 'Aftermath',
+      posterPath: 'aftermath-2021/poster.jpg',
+    });
+    before.addSeries({ title: 'Bare' });
+    before.close();
+    windBackToV10(path);
+
+    const upgraded = track(open(path));
+
+    expect(mediaFolders(upgraded, 'series')).toEqual([
+      { title: 'Aftermath', media_folder: 'aftermath-2021' },
+      { title: 'Bare', media_folder: null },
+    ]);
+  });
+
+  it('reads the backfilled folder back through storage.mediaFolderOf', () => {
+    const path = tempDbPath();
+    const before = trackStorage(createSqliteStorage(path));
+    const movie = before.addMovie({
+      title: 'Heat',
+      videoPath: 'heat-1995/video.mp4',
+    });
+    const series = before.addSeries({ title: 'Harbor & Vine' }, [
+      {
+        season: 1,
+        number: 1,
+        videoPath: 'harbor-vine-2019/season-01/S01E01.mp4',
+      },
+    ]);
+    before.close();
+    windBackToV10(path);
+
+    const upgraded = trackStorage(createSqliteStorage(path));
+
+    expect(upgraded.mediaFolderOf('movie', movie.id)).toBe('heat-1995');
+    expect(upgraded.mediaFolderOf('series', series.id)).toBe(
+      'harbor-vine-2019'
+    );
   });
 });
 

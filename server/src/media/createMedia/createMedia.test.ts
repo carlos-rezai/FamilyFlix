@@ -29,7 +29,6 @@ import {
   readFileSync,
   readdirSync,
   symlinkSync,
-  unlinkSync,
   writeFileSync,
 } from 'node:fs';
 import { isAbsolute, join, resolve } from 'node:path';
@@ -477,76 +476,6 @@ describe('createMedia — renameFolder', () => {
   });
 });
 
-describe('createMedia — openFolder', () => {
-  it('answers the folder a stored path already lives in', async () => {
-    const { media, root } = sandbox();
-    const reserved = media.reserveFolder('The Lantern Keeper', 2019);
-    const stored = await media.storeUpload(
-      reserved,
-      'lantern.mp4',
-      part('video bytes')
-    );
-
-    // What an *edit* uses instead of `reserveFolder`: the movie already has
-    // somewhere its files live, and a second folder because a title was
-    // corrected would mean moving gigabytes to fix a spelling.
-    expect(media.openFolder(stored)).toBe(
-      join(root, 'the-lantern-keeper-2019')
-    );
-  });
-
-  it('is the folder a newly picked file lands in beside the old ones', async () => {
-    const { media, root } = sandbox();
-    const reserved = media.reserveFolder('The Lantern Keeper', 2019);
-    const film = await media.storeUpload(
-      reserved,
-      'lantern.mp4',
-      part('video bytes')
-    );
-
-    const folder = media.openFolder(film) as string;
-    const poster = await media.storeUpload(
-      folder,
-      'poster.jpg',
-      part('poster bytes')
-    );
-
-    // The round trip that matters: the path this answers is one `storeUpload`
-    // takes, and what comes back out of it resolves like every other stored
-    // path in the library.
-    expect(poster).toBe('the-lantern-keeper-2019/poster.jpg');
-    expect(readFileSync(join(root, poster), 'utf8')).toBe('poster bytes');
-  });
-
-  it('answers nothing for a path with no file behind it', () => {
-    const { media } = sandbox();
-
-    // A row pointing at bytes that are gone has no folder to reuse, and the
-    // caller reserves one rather than writing into a guess.
-    expect(media.openFolder('the-lantern-keeper-2019/lantern.mp4')).toBeNull();
-  });
-
-  it('answers nothing for the empty path a filmless row carries', () => {
-    const { media } = sandbox();
-
-    // `video_path` is `NOT NULL`, so a row written with no film behind it
-    // carries `''` — which resolves to the media root itself and is not a
-    // movie folder.
-    expect(media.openFolder('')).toBeNull();
-  });
-
-  it('answers nothing for a path that escapes the managed media directory', () => {
-    const { media, outside } = sandbox();
-    writeFileSync(join(outside, 'elsewhere.mp4'), 'not ours');
-
-    // `mediaFilePath`'s own rule, asked one directory up: the containment test
-    // is not spelled a second time here, because a second spelling is where
-    // the two drift apart.
-    expect(media.openFolder('../elsewhere/elsewhere.mp4')).toBeNull();
-    expect(media.openFolder(join(outside, 'elsewhere.mp4'))).toBeNull();
-  });
-});
-
 describe('createMedia — removeFolder', () => {
   it('removes the folder and everything one request wrote into it', async () => {
     const { media } = sandbox();
@@ -698,113 +627,6 @@ function holdOpen(file: string): () => void {
   return () => closeSync(fd);
 }
 
-describe('createMedia — removeMovieFolder', () => {
-  it('removes the folder a stored path names and everything in it', async () => {
-    const { media, root } = sandbox();
-    const folder = media.reserveFolder('The Lantern Keeper', 2019);
-    const video = await media.storeUpload(
-      folder,
-      'lantern.mp4',
-      part('video bytes')
-    );
-    await media.storeUpload(folder, 'poster.jpg', part('poster bytes'));
-    await media.storeUpload(folder, 'lantern.en.srt', part('1\n'));
-
-    media.removeMovieFolder(video);
-
-    // The feature's point: the gigabytes come back. The folder is the first
-    // segment of the stored path, and it goes whole — video, poster,
-    // subtitles, and anything else that found its way in.
-    expect(existsSync(folder)).toBe(false);
-    expect(mediaFilePath(root, video)).toBeNull();
-  });
-
-  it('removes the folder when the named file is already gone but its siblings are not', async () => {
-    const { media } = sandbox();
-    const folder = media.reserveFolder('The Lantern Keeper', 2019);
-    const video = await media.storeUpload(
-      folder,
-      'lantern.mp4',
-      part('video bytes')
-    );
-    await media.storeUpload(folder, 'poster.jpg', part('poster bytes'));
-    unlinkSync(join(folder, 'lantern.mp4'));
-
-    media.removeMovieFolder(video);
-
-    // Why neither existing removal fits: `openFolder` answers nothing for a
-    // missing file, which here would leave the poster and subtitles on disk
-    // forever after a hand-deleted video. The folder is named by the path,
-    // not found through the file.
-    expect(existsSync(folder)).toBe(false);
-  });
-
-  it('leaves another movie’s folder alone and the managed media directory standing', async () => {
-    const { media, root } = sandbox();
-    const keeper = media.reserveFolder('The Lantern Keeper', 2019);
-    const video = await media.storeUpload(
-      keeper,
-      'lantern.mp4',
-      part('video bytes')
-    );
-    const other = media.reserveFolder('Rear Window', 1954);
-    const kept = await media.storeUpload(other, 'rear.mp4', part('rear bytes'));
-
-    media.removeMovieFolder(video);
-
-    expect(mediaFilePath(root, kept)).not.toBeNull();
-    expect(existsSync(other)).toBe(true);
-    expect(existsSync(root)).toBe(true);
-  });
-
-  it('says nothing about a folder that is already gone', () => {
-    const { media } = sandbox();
-
-    // Deleted by hand, or by a Delete that ran before this one — either way
-    // the row is what the route is answering for, and there is nothing here
-    // to fail over.
-    expect(() =>
-      media.removeMovieFolder('never-reserved-2019/lantern.mp4')
-    ).not.toThrow();
-  });
-
-  it('refuses a path that escapes the root — no files touched', () => {
-    const { media, outside } = sandbox();
-    const theirs = join(outside, 'family-photos.jpg');
-    writeFileSync(theirs, 'not ours');
-
-    media.removeMovieFolder('../elsewhere/family-photos.jpg');
-    media.removeMovieFolder(resolve(theirs));
-
-    // `mediaFilePath`'s rule, on the one removal that takes a whole directory:
-    // the **Library root** is never ours to remove from, and a stored path
-    // that names it is a path that names nothing here.
-    expect(existsSync(theirs)).toBe(true);
-    expect(existsSync(outside)).toBe(true);
-  });
-
-  it('swallows a removal failure rather than throwing', async () => {
-    const { media } = sandbox();
-    const folder = media.reserveFolder('The Lantern Keeper', 2019);
-    const video = await media.storeUpload(
-      folder,
-      'lantern.mp4',
-      part('video bytes')
-    );
-    await media.storeUpload(folder, 'poster.jpg', part('poster bytes'));
-
-    const release = holdOpen(join(folder, 'lantern.mp4'));
-    try {
-      // **Best-effort cleanup**: the row has already committed by the time
-      // this runs, and a locked video — the stream route still on it — leaves
-      // the Delete successful with a **Stranded folder**, not failed.
-      expect(() => media.removeMovieFolder(video)).not.toThrow();
-    } finally {
-      release();
-    }
-  });
-});
-
 // --- 13 — Bulk import, Phase 2: "the tracer bullet" (issue #125) ------------
 
 /**
@@ -922,226 +744,6 @@ describe('createMedia — copyIn', () => {
     );
   });
 });
-
-// 23 — Enrichment, Phase 2: "the tracer — Just this movie" (issue #204).
-//
-// `storeNamed(storedPath, name, source)` — the member a **Sync** writes its
-// images through: the stream written as exactly `name` (`poster.jpg`,
-// `backdrop.jpg`) into the folder the title's **Stored path** lives in, and
-// the **Stored path** of what it wrote answered, `storeUpload`'s precedent.
-// The folder is the title's own — found from a path it already holds, the way
-// `openFolder` finds it for an edit — so an enriched film's art sits beside
-// its video. A second Sync replaces the file of that name rather than adding
-// a `-2` beside it.
-
-describe('createMedia — storeNamed', () => {
-  /** A title already in the library: its folder and its video's Stored path. */
-  async function titleWithVideo(media: Media) {
-    const folder = media.reserveFolder('The Lantern Keeper', 2019);
-    const video = await media.storeUpload(
-      folder,
-      'lantern.mp4',
-      part('video bytes')
-    );
-    return { folder, video };
-  }
-
-  it('writes the bytes under the name it is given, in the title’s own folder', async () => {
-    const { media } = sandbox();
-    const { folder, video } = await titleWithVideo(media);
-
-    await media.storeNamed(video, 'poster.jpg', part('poster bytes'));
-
-    expect(readFileSync(join(folder, 'poster.jpg'), 'utf8')).toBe(
-      'poster bytes'
-    );
-  });
-
-  it('answers the Stored path, relative and forward-slashed', async () => {
-    const { media, root } = sandbox();
-    const { folder, video } = await titleWithVideo(media);
-
-    const stored = await media.storeNamed(
-      video,
-      'backdrop.jpg',
-      part('backdrop bytes')
-    );
-
-    expect(isAbsolute(stored)).toBe(false);
-    expect(stored).toBe('the-lantern-keeper-2019/backdrop.jpg');
-    expect(mediaFilePath(root, stored)).toBe(join(folder, 'backdrop.jpg'));
-  });
-
-  it('replaces a file of that name, so a second Sync leaves one poster', async () => {
-    const { media } = sandbox();
-    const { folder, video } = await titleWithVideo(media);
-    await media.storeNamed(video, 'poster.jpg', part('first poster'));
-
-    const stored = await media.storeNamed(
-      video,
-      'poster.jpg',
-      part('second poster')
-    );
-
-    expect(stored).toBe('the-lantern-keeper-2019/poster.jpg');
-    expect(readFileSync(join(folder, 'poster.jpg'), 'utf8')).toBe(
-      'second poster'
-    );
-    expect(existsSync(join(folder, 'poster-2.jpg'))).toBe(false);
-  });
-
-  it('refuses a Stored path that names nothing under the media directory, writing nothing', async () => {
-    const { media, outside } = sandbox();
-
-    await expect(
-      media.storeNamed(
-        'no-such-title-2019/video.mp4',
-        'poster.jpg',
-        part('poster bytes')
-      )
-    ).rejects.toThrow();
-    await expect(
-      media.storeNamed(
-        '../elsewhere/video.mp4',
-        'poster.jpg',
-        part('poster bytes')
-      )
-    ).rejects.toThrow();
-    expect(existsSync(join(outside, 'poster.jpg'))).toBe(false);
-  });
-});
-
-// 23 — Enrichment refactor (issue #214), Group 2: `media/` reads what it
-// stored, and finds the Series folder.
-//
-// `storeInSeriesFolder(episodePath, name, source)` writes a series' art into
-// the **Series folder** two directories above an episode's video, where the
-// run once found it by path arithmetic of its own. `readStored(storedPath)` is
-// the stream a **Write target** copies a stored poster out of. Only `media/`
-// touches managed storage.
-
-describe('createMedia — storeInSeriesFolder', () => {
-  /** A show with one episode in its season folder, and that episode's path. */
-  async function showWithEpisode(media: Media) {
-    const series = media.reserveFolder('The Hollow Coast', 2018);
-    const episode = await media.storeUpload(
-      media.seasonFolder(series, 1),
-      'S01E01.mkv',
-      part('video bytes')
-    );
-    return { series, episode };
-  }
-
-  it('writes the bytes under the name it is given, in the Series folder', async () => {
-    const { media } = sandbox();
-    const { series, episode } = await showWithEpisode(media);
-
-    await media.storeInSeriesFolder(
-      episode,
-      'poster.jpg',
-      part('poster bytes')
-    );
-
-    expect(readFileSync(join(series, 'poster.jpg'), 'utf8')).toBe(
-      'poster bytes'
-    );
-  });
-
-  it('answers the Stored path, relative and forward-slashed', async () => {
-    const { media, root } = sandbox();
-    const { series, episode } = await showWithEpisode(media);
-
-    const stored = await media.storeInSeriesFolder(
-      episode,
-      'backdrop.jpg',
-      part('backdrop bytes')
-    );
-
-    expect(isAbsolute(stored)).toBe(false);
-    expect(stored).toBe('the-hollow-coast-2018/backdrop.jpg');
-    expect(mediaFilePath(root, stored)).toBe(join(series, 'backdrop.jpg'));
-  });
-
-  it('refuses an episode with no Series folder above its season, writing nothing', async () => {
-    const { media, root } = sandbox();
-    const folder = media.reserveFolder('Loose', 2018);
-    const shallow = await media.storeUpload(folder, 'S01E01.mkv', part('v'));
-
-    await expect(
-      media.storeInSeriesFolder(shallow, 'poster.jpg', part('poster bytes'))
-    ).rejects.toThrow();
-    expect(existsSync(join(root, 'poster.jpg'))).toBe(false);
-  });
-
-  it('refuses a path that names nothing under the media directory', async () => {
-    const { media, outside } = sandbox();
-
-    await expect(
-      media.storeInSeriesFolder(
-        'no-such-show/season-01/S01E01.mkv',
-        'poster.jpg',
-        part('poster bytes')
-      )
-    ).rejects.toThrow();
-    await expect(
-      media.storeInSeriesFolder(
-        '../elsewhere/season-01/S01E01.mkv',
-        'poster.jpg',
-        part('poster bytes')
-      )
-    ).rejects.toThrow();
-    expect(existsSync(join(outside, 'poster.jpg'))).toBe(false);
-  });
-});
-
-describe('createMedia — openSeriesFolder', () => {
-  it('answers the Series folder above a held episode’s season folder', async () => {
-    const { media } = sandbox();
-    const series = media.reserveFolder('The Hollow Coast', 2018);
-    const episode = await media.storeUpload(
-      media.seasonFolder(series, 1),
-      'S01E01.mkv',
-      part('video bytes')
-    );
-
-    // What a **Series edit job** writes fresh bytes into: the series' own
-    // folder, two up from the episode, so a retitle moves nothing.
-    expect(media.openSeriesFolder(episode)).toBe(series);
-  });
-
-  it('answers nothing for an episode with no file behind it', () => {
-    const { media } = sandbox();
-    const series = media.reserveFolder('The Hollow Coast', 2018);
-    media.seasonFolder(series, 1);
-
-    expect(
-      media.openSeriesFolder('the-hollow-coast-2018/season-01/S01E01.mkv')
-    ).toBeNull();
-  });
-
-  it('answers nothing for a path with no Series folder above its season', async () => {
-    const { media } = sandbox();
-    const folder = media.reserveFolder('Loose', 2018);
-    const shallow = await media.storeUpload(folder, 'S01E01.mkv', part('v'));
-
-    // Two segments: two up is the media root, which is no series' folder.
-    expect(media.openSeriesFolder(shallow)).toBeNull();
-  });
-
-  it('answers nothing for a path that escapes the managed media directory', () => {
-    const { media, outside } = sandbox();
-    mkdirSync(join(outside, 'season-01'));
-    writeFileSync(join(outside, 'season-01', 'S01E01.mkv'), 'not ours');
-
-    expect(
-      media.openSeriesFolder('../elsewhere/season-01/S01E01.mkv')
-    ).toBeNull();
-    expect(
-      media.openSeriesFolder(join(outside, 'season-01', 'S01E01.mkv'))
-    ).toBeNull();
-  });
-});
-
 describe('createMedia — readStored', () => {
   async function textOf(stream: Readable): Promise<string> {
     const chunks: Buffer[] = [];
@@ -1244,115 +846,327 @@ describe('createMedia — emptyRoot', () => {
   });
 });
 
-// --- 38 — Title editing, Slice 1: "delete a series" (issue #304) ------------
+// --- 41 — Link or copy, Slice 2: "the recorded folder" (issue #341) --------
+//
+// Every title's managed folder is recorded as its **Media folder** —
+// `media_folder`, relative to the **Managed media directory** — and the
+// members that once found it off a video's **Stored path** take that folder
+// instead, one reading for every title:
+//
+// - `openFolder(folder)`, `openSeriesFolder` folded in;
+// - `storeNamed(folder, name, source)`, a Season poster's too, with
+//   `storeInSeriesFolder` folded in;
+// - `removeTitleFolder(folder)`, in place of `removeMovieFolder` and
+//   `removeSeriesFolder`.
+//
+// Each still checks containment on the resolved path: a folder outside the
+// media root, the root itself, or one that is not there is refused.
 
-/**
- * `removeSeriesFolder`: `removeMovieFolder`'s twin for a **Series folder**. It
- * is handed an episode's **Stored path** and takes the folder one directory
- * above that episode's season folder — `storeInSeriesFolder`'s reading — whole,
- * best-effort, never throwing.
- */
-describe('createMedia — removeSeriesFolder', () => {
-  /** A show with two seasons and a poster, and one episode's stored path. */
-  async function storedShow(media: Media, title = 'The Hollow Coast') {
-    const series = media.reserveFolder(title, 2018);
-    const episode = await media.storeUpload(
-      media.seasonFolder(series, 1),
+/** The Media folder a reserved folder is recorded as: relative, forward-slashed. */
+const recorded = (root: string, folder: string) =>
+  folder
+    .slice(root.length + 1)
+    .split(/[\\/]/)
+    .join('/');
+
+/** The last segment of an absolute folder. */
+const basenameOf = (folder: string) => folder.split(/[\\/]/).pop() as string;
+
+describe('createMedia — openFolder over the Media folder', () => {
+  it('answers the recorded folder, ready to be written into', () => {
+    const { media, root } = sandbox();
+    const reserved = media.reserveFolder('The Lantern Keeper', 2019);
+
+    // A folder with no video in it is a title's folder all the same — a
+    // linked title's holds everything but its video.
+    expect(media.openFolder(recorded(root, reserved))).toBe(
+      join(root, 'the-lantern-keeper-2019')
+    );
+  });
+
+  it('answers a seeded Series folder under its prefix the same way', () => {
+    const { media, root } = sandbox();
+    mkdirSync(join(root, '__seed__', 'series', 'harbor-vine'), {
+      recursive: true,
+    });
+
+    expect(media.openFolder('__seed__/series/harbor-vine')).toBe(
+      join(root, '__seed__', 'series', 'harbor-vine')
+    );
+  });
+
+  it('is the folder a newly picked file lands in beside the old ones', async () => {
+    const { media, root } = sandbox();
+    const reserved = media.reserveFolder('The Lantern Keeper', 2019);
+    await media.storeUpload(reserved, 'lantern.mp4', part('video bytes'));
+
+    const folder = media.openFolder(recorded(root, reserved)) as string;
+    const poster = await media.storeUpload(
+      folder,
+      'poster.jpg',
+      part('poster bytes')
+    );
+
+    expect(poster).toBe('the-lantern-keeper-2019/poster.jpg');
+    expect(readFileSync(join(root, poster), 'utf8')).toBe('poster bytes');
+  });
+
+  it('answers nothing for a folder that is not there', () => {
+    const { media } = sandbox();
+
+    expect(media.openFolder('the-lantern-keeper-2019')).toBeNull();
+  });
+
+  it('answers nothing for the media root itself', () => {
+    const { media } = sandbox();
+
+    expect(media.openFolder('')).toBeNull();
+    expect(media.openFolder('.')).toBeNull();
+  });
+
+  it('answers nothing for a folder outside the media root', () => {
+    const { media, outside } = sandbox();
+
+    expect(media.openFolder('../elsewhere')).toBeNull();
+    expect(media.openFolder(outside)).toBeNull();
+  });
+});
+
+describe('createMedia — storeNamed over the Media folder', () => {
+  it('writes the bytes under the name it is given, in the recorded folder', async () => {
+    const { media, root } = sandbox();
+    const reserved = media.reserveFolder('The Lantern Keeper', 2019);
+
+    await media.storeNamed(
+      recorded(root, reserved),
+      'poster.jpg',
+      part('poster bytes')
+    );
+
+    expect(readFileSync(join(reserved, 'poster.jpg'), 'utf8')).toBe(
+      'poster bytes'
+    );
+  });
+
+  it('answers the Stored path, relative and forward-slashed, resolving to the file', async () => {
+    const { media, root } = sandbox();
+    const reserved = media.reserveFolder('The Lantern Keeper', 2019);
+
+    const stored = await media.storeNamed(
+      recorded(root, reserved),
+      'backdrop.jpg',
+      part('backdrop bytes')
+    );
+
+    expect(stored).toBe('the-lantern-keeper-2019/backdrop.jpg');
+    expect(mediaFilePath(root, stored)).toBe(
+      join(root, 'the-lantern-keeper-2019', 'backdrop.jpg')
+    );
+  });
+
+  it('takes a Season poster into a Series folder, where storeInSeriesFolder once wrote it', async () => {
+    const { media, root } = sandbox();
+    const series = media.reserveFolder('The Hollow Coast', 2018);
+    media.seasonFolder(series, 2);
+
+    const stored = await media.storeNamed(
+      recorded(root, series),
+      'S02-poster.jpg',
+      part('season poster')
+    );
+
+    expect(stored).toBe('the-hollow-coast-2018/S02-poster.jpg');
+    expect(readFileSync(join(series, 'S02-poster.jpg'), 'utf8')).toBe(
+      'season poster'
+    );
+  });
+
+  it('writes a Still into a season folder of the recorded Series folder', async () => {
+    const { media, root } = sandbox();
+    const series = media.reserveFolder('The Hollow Coast', 2018);
+    const season = media.seasonFolder(series, 1);
+
+    const stored = await media.storeNamed(
+      recorded(root, season),
+      'S01E01-still.jpg',
+      part('still')
+    );
+
+    expect(stored).toBe('the-hollow-coast-2018/season-01/S01E01-still.jpg');
+  });
+
+  it('replaces a file of that name, so a second Sync leaves one poster', async () => {
+    const { media, root } = sandbox();
+    const reserved = media.reserveFolder('The Lantern Keeper', 2019);
+    const folder = recorded(root, reserved);
+
+    await media.storeNamed(folder, 'poster.jpg', part('first'));
+    await media.storeNamed(folder, 'poster.jpg', part('second'));
+
+    expect(readdirSync(reserved)).toEqual(['poster.jpg']);
+    expect(readFileSync(join(reserved, 'poster.jpg'), 'utf8')).toBe('second');
+  });
+
+  it('refuses a folder that is not there, writing nothing', async () => {
+    const { media, root } = sandbox();
+
+    await expect(
+      media.storeNamed('the-lantern-keeper-2019', 'poster.jpg', part('x'))
+    ).rejects.toThrow();
+    expect(readdirSync(root)).toEqual([]);
+  });
+
+  it('refuses the media root itself, writing nothing', async () => {
+    const { media, root } = sandbox();
+
+    await expect(
+      media.storeNamed('', 'poster.jpg', part('x'))
+    ).rejects.toThrow();
+    expect(readdirSync(root)).toEqual([]);
+  });
+
+  it('refuses a folder outside the media root, writing nothing', async () => {
+    const { media, outside } = sandbox();
+
+    await expect(
+      media.storeNamed('../elsewhere', 'poster.jpg', part('x'))
+    ).rejects.toThrow();
+    await expect(
+      media.storeNamed(outside, 'poster.jpg', part('x'))
+    ).rejects.toThrow();
+    expect(readdirSync(outside)).toEqual([]);
+  });
+});
+
+describe('createMedia — removeTitleFolder', () => {
+  /** A film's folder: a video, a poster, a subtitle. */
+  async function storedFilm(media: Media, root: string, title: string) {
+    const folder = media.reserveFolder(title, 2019);
+    await media.storeUpload(folder, 'film.mp4', part('video bytes'));
+    await media.storeUpload(folder, 'poster.jpg', part('poster'));
+    await media.storeUpload(folder, 'film.en.srt', part('1\n'));
+    return { folder, recordedFolder: recorded(root, folder) };
+  }
+
+  /** A show's folder: two seasons and a poster. */
+  async function storedShow(media: Media, root: string) {
+    const folder = media.reserveFolder('The Hollow Coast', 2018);
+    await media.storeUpload(
+      media.seasonFolder(folder, 1),
       'S01E01.mkv',
       part('video bytes')
     );
     await media.storeUpload(
-      media.seasonFolder(series, 1),
-      'S01E01.en.srt',
-      part('1\n')
-    );
-    await media.storeUpload(
-      media.seasonFolder(series, 2),
+      media.seasonFolder(folder, 2),
       'S02E01.mkv',
       part('more video')
     );
-    await media.storeInSeriesFolder(episode, 'poster.jpg', part('poster'));
-    return { series, episode };
+    await media.storeUpload(folder, 'poster.jpg', part('poster'));
+    return { folder, recordedFolder: recorded(root, folder) };
   }
 
-  it('removes the Series folder an episode’s stored path names, every season in it', async () => {
+  it('removes a film’s recorded folder and everything in it', async () => {
     const { media, root } = sandbox();
-    const { series, episode } = await storedShow(media);
+    const { folder, recordedFolder } = await storedFilm(
+      media,
+      root,
+      'The Lantern Keeper'
+    );
 
-    media.removeSeriesFolder(episode);
+    media.removeTitleFolder(recordedFolder);
 
-    expect(existsSync(series)).toBe(false);
-    expect(mediaFilePath(root, episode)).toBeNull();
+    expect(existsSync(folder)).toBe(false);
     expect(existsSync(root)).toBe(true);
   });
 
-  it('removes the Series folder when the named episode is already gone', async () => {
-    const { media } = sandbox();
-    const { series, episode } = await storedShow(media);
-    unlinkSync(join(series, 'season-01', 'S01E01.mkv'));
-
-    media.removeSeriesFolder(episode);
-
-    expect(existsSync(series)).toBe(false);
-  });
-
-  it('leaves another title’s folder alone and the managed media directory standing', async () => {
+  it('removes a series’ recorded folder, every season in it', async () => {
     const { media, root } = sandbox();
-    const { episode } = await storedShow(media, 'The Hollow Coast');
-    const other = await storedShow(media, 'Harbor and Vine');
-    const film = media.reserveFolder('Rear Window', 1954);
-    const kept = await media.storeUpload(film, 'rear.mp4', part('rear'));
+    const { folder, recordedFolder } = await storedShow(media, root);
 
-    media.removeSeriesFolder(episode);
+    media.removeTitleFolder(recordedFolder);
 
-    expect(existsSync(other.series)).toBe(true);
-    expect(mediaFilePath(root, other.episode)).not.toBeNull();
-    expect(mediaFilePath(root, kept)).not.toBeNull();
+    expect(existsSync(folder)).toBe(false);
     expect(existsSync(root)).toBe(true);
   });
 
-  it('never removes the root for a path with no Series folder above its season', async () => {
+  it('removes a recorded folder with no video in it', async () => {
     const { media, root } = sandbox();
-    const film = media.reserveFolder('Rear Window', 1954);
-    const kept = await media.storeUpload(film, 'rear.mp4', part('rear'));
+    const folder = media.reserveFolder('The Lantern Keeper', 2019);
+    await media.storeUpload(folder, 'poster.jpg', part('poster'));
 
-    // A film's path: two directories up is the root itself, which is never a
-    // Series folder.
-    expect(() => media.removeSeriesFolder(kept)).not.toThrow();
+    media.removeTitleFolder(recorded(root, folder));
 
-    expect(existsSync(root)).toBe(true);
-    expect(mediaFilePath(root, kept)).not.toBeNull();
+    expect(existsSync(folder)).toBe(false);
   });
 
-  it('says nothing about a Series folder that is already gone', () => {
+  it('removes a seeded show’s folder and leaves the prefix’s other shows', () => {
+    const { media, root } = sandbox();
+    const seeded = join(root, '__seed__', 'series');
+    mkdirSync(join(seeded, 'harbor-vine', 'season-01'), { recursive: true });
+    mkdirSync(join(seeded, 'the-hollow-coast'), { recursive: true });
+    writeFileSync(join(seeded, 'harbor-vine', 'season-01', 'S01E01.mp4'), 'x');
+
+    media.removeTitleFolder('__seed__/series/harbor-vine');
+
+    expect(readdirSync(seeded)).toEqual(['the-hollow-coast']);
+  });
+
+  it('leaves another title’s folder alone', async () => {
+    const { media, root } = sandbox();
+    const { recordedFolder } = await storedFilm(
+      media,
+      root,
+      'The Lantern Keeper'
+    );
+    const neighbour = await storedFilm(media, root, 'Rear Window');
+
+    media.removeTitleFolder(recordedFolder);
+
+    expect(readdirSync(root)).toEqual([basenameOf(neighbour.folder)]);
+    expect(readdirSync(neighbour.folder).sort()).toEqual(
+      ['film.en.srt', 'film.mp4', 'poster.jpg'].sort()
+    );
+  });
+
+  it('says nothing about a folder that is already gone', () => {
     const { media } = sandbox();
 
     expect(() =>
-      media.removeSeriesFolder('never-reserved-2018/season-01/S01E01.mkv')
+      media.removeTitleFolder('the-lantern-keeper-2019')
     ).not.toThrow();
   });
 
-  it('refuses a path that escapes the root — no files touched', () => {
+  it('never removes the media root', async () => {
+    const { media, root } = sandbox();
+    await storedFilm(media, root, 'The Lantern Keeper');
+
+    media.removeTitleFolder('');
+    media.removeTitleFolder('.');
+
+    expect(readdirSync(root)).toEqual(['the-lantern-keeper-2019']);
+  });
+
+  it('refuses a folder outside the media root — no files touched', () => {
     const { media, outside } = sandbox();
-    const show = join(outside, 'Their Show');
-    mkdirSync(join(show, 'Season 01'), { recursive: true });
-    const theirs = join(show, 'Season 01', 'S01E01.mkv');
-    writeFileSync(theirs, 'not ours');
+    writeFileSync(join(outside, 'keep.mp4'), 'not ours');
 
-    media.removeSeriesFolder('../elsewhere/Their Show/Season 01/S01E01.mkv');
-    media.removeSeriesFolder(resolve(theirs));
+    media.removeTitleFolder('../elsewhere');
+    media.removeTitleFolder(outside);
 
-    expect(existsSync(theirs)).toBe(true);
-    expect(existsSync(outside)).toBe(true);
+    expect(readdirSync(outside)).toEqual(['keep.mp4']);
   });
 
   it('swallows a removal failure rather than throwing', async () => {
     const { media, root } = sandbox();
-    const { episode } = await storedShow(media);
+    const { folder, recordedFolder } = await storedFilm(
+      media,
+      root,
+      'The Lantern Keeper'
+    );
 
-    const release = holdOpen(join(root, ...episode.split('/')));
+    const release = holdOpen(join(folder, 'film.mp4'));
     try {
-      expect(() => media.removeSeriesFolder(episode)).not.toThrow();
+      expect(() => media.removeTitleFolder(recordedFolder)).not.toThrow();
     } finally {
       release();
     }

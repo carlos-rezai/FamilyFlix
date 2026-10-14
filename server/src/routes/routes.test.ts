@@ -6493,8 +6493,8 @@ describe('DELETE /api/movies/:id', () => {
       const removed: string[] = [];
       const recording = (mediaPath: string): Media => ({
         ...createMedia(mediaPath),
-        removeMovieFolder: (storedPath) => {
-          removed.push(storedPath);
+        removeTitleFolder: (folder) => {
+          removed.push(folder);
         },
       });
       const { baseUrl, media } = freshApi(null, recording);
@@ -6507,9 +6507,7 @@ describe('DELETE /api/movies/:id', () => {
       // `Media` method it calls. A seam that removes nothing leaves the folder
       // standing; if the route had its own `rmSync`, it would not.
       expect(response.status).toBe(204);
-      expect(removed.map((stored) => stored.split('/')[0])).toEqual([
-        KEEPER_FOLDER,
-      ]);
+      expect(removed).toEqual([KEEPER_FOLDER]);
       expect(existsSync(join(media, KEEPER_FOLDER))).toBe(true);
     });
   });

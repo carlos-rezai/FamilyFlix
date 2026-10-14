@@ -7,7 +7,7 @@
 // Still's rule, reused whole through `planSeason`: fetched only under the
 // Poster chip, only when the season has none (its `posterPath` on the series
 // page's read), never replaced, never a review row, and a failure leaves the gradient. Stored with
-// `storeInSeriesFolder` as `S02-poster.jpg`, recorded with `setSeasonPoster`,
+// `storeNamed` in the Series folder as `S02-poster.jpg`, recorded with `setSeasonPoster`,
 // logged `↓ S02-poster.jpg  →  <stored>` as a `scan` line.
 //
 // Composed over a real in-memory SQLite library, a real `Media` over a sandbox
@@ -302,10 +302,10 @@ describe('createEnrichment: a season poster that fails leaves the gradient', () 
     const { enrichment, storage, addShow } = world({
       wrapMedia: (media) => ({
         ...media,
-        storeInSeriesFolder: (video, name, source) =>
+        storeNamed: (folder, name, source) =>
           name === 'S01-poster.jpg'
             ? Promise.reject(new Error('disk full'))
-            : media.storeInSeriesFolder(video, name, source),
+            : media.storeNamed(folder, name, source),
       }),
     });
     const { id } = await addShow();

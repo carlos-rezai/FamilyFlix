@@ -18,7 +18,7 @@ import {
 } from 'node:fs';
 import type { Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
 import { Readable } from 'node:stream';
 import { afterEach, describe, expect, it } from 'vitest';
 
@@ -103,14 +103,20 @@ async function storedSeries(
   const e1 = await media.storeUpload(s1, 'S01E01.mp4', part('one'));
   const sub = await media.storeUpload(s1, 'S01E01.en.srt', part('1\n'));
   const e2 = await media.storeUpload(s2, 'S02E01.mp4', part('two'));
-  const posterPath = await media.storeInSeriesFolder(
-    e1,
+  const posterPath = await media.storeNamed(
+    basename(folder),
     'poster.jpg',
     part('poster')
   );
 
   const series = storage.addSeries(
-    { title, year: 2019, genres: ['Drama'], posterPath },
+    {
+      title,
+      year: 2019,
+      genres: ['Drama'],
+      posterPath,
+      mediaFolder: basename(folder),
+    },
     [
       {
         season: 1,
