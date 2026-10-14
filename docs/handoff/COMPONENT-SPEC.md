@@ -512,9 +512,10 @@ Props: `label`, `line`, `checked`, `onSelect`.
 ### ImportModeChoice — drawn inline in `feat.ImportFlow` and `page.LibraryFoldersPage`
 
 Target: `features/import-export/ImportModeChoice/` · the **Import mode**, `EnrichCheckCard`'s
-precedent: one molecule both import starts draw. The caption _Files_ — `feat.ImportFlow`'s
-`labelStyle`, 13px 600 dim with its 0.2px tracking, the Maintainer's `FieldLabel` — 8px over
-two ChoiceCards in a `radiogroup` labelled by it:
+precedent: one molecule both import starts draw. The caption _Files_ — the **Group heading**,
+`groupHeadingStyle`, 12px 700 uppercase faint at 0.9px, the Settings `GroupHeading` — 12px over
+two ChoiceCards in a `radiogroup` labelled by it. A section is labelled by the Group heading;
+`labelStyle` (`FieldLabel`) is only the caption over one input (issue #349):
 
 - **Link** — _Play videos where they are. Nothing is copied._
 - **Copy** — _Keep FamilyFlix’s own copy, playable with the drive unplugged._

@@ -19,6 +19,12 @@ export const Fields = styled.div`
 export { Field, FieldLabel } from '../../maintainer.styles';
 
 /**
+ * The Library folders group's label: the **Group heading**, the Settings
+ * furniture — a section's label, where `FieldLabel` captions one input.
+ */
+export { GroupHeading } from '../../settings/section.styles';
+
+/**
  * The refusal line: the one invented line in the initiative (design log
  * `13-bulk-import` Q7) — 13px in the danger colour under the field the `400`
  * names — under the sheet's field, or under the Library folders group.
@@ -45,13 +51,13 @@ export const GroupHead = styled.div`
 
 /**
  * _Manage folders_: the ghost button at the prototype's 34px, on the label's
- * line and its 8px above the list, the text ink and surface-2 under hover.
+ * line and the Group heading's 12px above the list, the text ink and surface-2 under hover.
  */
 export const ManageButton = styled(Button)`
   && {
     height: 34px;
     padding: 0 12px;
-    margin-bottom: ${({ theme }) => theme.space.s2};
+    margin-bottom: ${({ theme }) => theme.space.s3};
     border-radius: ${({ theme }) => theme.radius.sm};
   }
 

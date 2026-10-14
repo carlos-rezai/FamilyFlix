@@ -776,6 +776,8 @@
 
           // add form
           const labelStyle={display:'block',fontFamily:'var(--font-sans)',fontSize:'13px',fontWeight:'600',color:'var(--color-text-dim)',marginBottom:'8px',letterSpacing:'.2px'};
+          // The Group heading: a section's label (Settings' groups, Folders, Scan, Files, Library folders); labelStyle stays the caption over one input.
+          const groupHeadingStyle={display:'block',fontFamily:'var(--font-sans)',fontSize:'12px',fontWeight:'700',letterSpacing:'.9px',textTransform:'uppercase',color:'var(--color-text-faint)',margin:'0 0 12px 2px'};
           const inputStyle={width:'100%',height:'48px',padding:'0 14px',background:'var(--color-surface)',border:'1px solid var(--color-border)',borderRadius:'10px',color:'var(--color-text)',fontFamily:'var(--font-sans)',fontSize:'16px',outline:'none'};
           const textareaStyle={...inputStyle,height:'auto',minHeight:'96px',padding:'12px 14px',lineHeight:'1.5',resize:'vertical'};
           const tab=active=>({padding:'9px 18px',background:active?'var(--color-surface-3)':'transparent',border:'none',borderRadius:'7px',color:active?'var(--color-text)':'var(--color-text-faint)',fontFamily:'var(--font-sans)',fontSize:'15px',fontWeight:active?'600':'500',cursor:'pointer'});
@@ -987,7 +989,7 @@
               const pct = s.impTotal ? Math.round(s.impDone/s.impTotal*100) : 0;
               const etaSec = (s.impPhase==='import' && s.impDone>20) ? elapsed*(s.impTotal-s.impDone)/s.impDone : 0;
               return {
-              labelStyle, setup:s.impStep==='setup', running:s.impStep==='running', review:s.impStep==='review',
+              labelStyle, groupHeadingStyle, setup:s.impStep==='setup', running:s.impStep==='running', review:s.impStep==='review',
               sheet:s.impSheet, onSheet:(e)=>this.onImpSheet(e), onStart:()=>this.startImport(),
               // The Import mode, above the TMDB box: Link chosen, posted as `mode`.
               modes:modeChoices(),

@@ -21,6 +21,7 @@ import {
   Refusal,
   Rows,
   ScanActions,
+  ScanStack,
 } from './LibraryFolders.styles';
 
 /**
@@ -137,23 +138,25 @@ export function LibraryFolders() {
           </Card>
 
           <GroupHeading>Scan</GroupHeading>
-          <FolderShapes />
-          <ImportModeChoice mode={mode} onChange={setMode} />
-          <EnrichCheckCard
-            checked={enrich}
-            keySet={keySet}
-            onToggle={() => setEnrich((ticked) => !ticked)}
-          />
-          <ScanActions>
-            <Button
-              label="Scan folders"
-              size="lg"
-              disabled={scanning || folders.length === 0}
-              onClick={() => {
-                void scan(enrich, mode);
-              }}
+          <ScanStack>
+            <FolderShapes />
+            <ImportModeChoice mode={mode} onChange={setMode} />
+            <EnrichCheckCard
+              checked={enrich}
+              keySet={keySet}
+              onToggle={() => setEnrich((ticked) => !ticked)}
             />
-          </ScanActions>
+            <ScanActions>
+              <Button
+                label="Scan folders"
+                size="lg"
+                disabled={scanning || folders.length === 0}
+                onClick={() => {
+                  void scan(enrich, mode);
+                }}
+              />
+            </ScanActions>
+          </ScanStack>
         </>
       )}
     </>

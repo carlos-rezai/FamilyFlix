@@ -15,6 +15,7 @@ import {
   FolderPath,
   ListedFolder,
   GroupHead,
+  GroupHeading,
   ManageButton,
 } from './ImportSetup.styles';
 import { FolderShapes } from '../FolderShapes/FolderShapes';
@@ -110,7 +111,7 @@ export function ImportSetup({
       {folders === null ? null : (
         <div>
           <GroupHead>
-            <FieldLabel>Library folders</FieldLabel>
+            <GroupHeading>Library folders</GroupHeading>
             {listed ? (
               <ManageButton
                 label="Manage folders"

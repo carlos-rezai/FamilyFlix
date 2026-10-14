@@ -113,7 +113,8 @@
               <!-- The group Library folders, in place of the Movies root folder field: the run reads
                    every listed folder. Each row its path in mono and its title count, or Can't be
                    reached right now in danger; no ✕ — setup is not where the list is edited, so
-                   not FolderRow. Blank until the list lands. -->
+                   not FolderRow. Blank until the list lands. Labelled by the Group heading, a
+                   section's label; labelStyle is only the caption over an input. -->
               <sc-if
                 value="{{ imp.foldersLanded }}"
                 hint-placeholder-val="{{ true }}"
@@ -127,7 +128,9 @@
                       gap: 12px;
                     "
                   >
-                    <span style="{{ imp.labelStyle }}">Library folders</span>
+                    <span style="{{ imp.groupHeadingStyle }}"
+                      >Library folders</span
+                    >
                     <sc-if
                       value="{{ imp.hasFolders }}"
                       hint-placeholder-val="{{ true }}"
@@ -137,7 +140,7 @@
                         style="
                           height: 34px;
                           padding: 0 12px;
-                          margin-bottom: 8px;
+                          margin-bottom: 12px;
                           background: transparent;
                           border: none;
                           border-radius: 8px;
@@ -325,9 +328,10 @@
               </div>
               <!-- The Import mode, ImportModeChoice: the caption Files over two ChoiceCards in a
                    radiogroup — FormatCard's pixels, renamed for its second caller. Link chosen on
-                   every visit, never remembered; posted as `mode` with Start import. -->
+                   every visit, never remembered; posted as `mode` with Start import. The caption
+                   is the Group heading: Files labels a section, not one input. -->
               <div>
-                <span style="{{ imp.labelStyle }}" id="imp-mode-caption"
+                <span style="{{ imp.groupHeadingStyle }}" id="imp-mode-caption"
                   >Files</span
                 >
                 <div
