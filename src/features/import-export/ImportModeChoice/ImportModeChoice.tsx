@@ -2,7 +2,7 @@ import { useId } from 'react';
 
 import { IMPORT_MODES, type ImportMode } from '@/types';
 import { ChoiceCard } from '../ChoiceCard/ChoiceCard';
-import { Caption, Cards } from './ImportModeChoice.styles';
+import { Cards, FieldLabel } from './ImportModeChoice.styles';
 
 /** Each mode's card: its name and the line under it. */
 const MODE_COPY: Record<ImportMode, { label: string; line: string }> = {
@@ -25,7 +25,8 @@ export interface ImportModeChoiceProps {
 /**
  * The **Import mode**, from `feat.ImportFlow.dc.html` and
  * `page.LibraryFoldersPage.dc.html`, `EnrichCheckCard`'s precedent: the
- * caption _Files_ over two `ChoiceCard`s in a `radiogroup` labelled by it,
+ * caption _Files_ — the Maintainer's `FieldLabel`, `labelStyle` — over two
+ * `ChoiceCard`s in a `radiogroup` labelled by it,
  * Link then Copy. Presentational: a press hands back the mode pressed.
  */
 export function ImportModeChoice({ mode, onChange }: ImportModeChoiceProps) {
@@ -33,7 +34,7 @@ export function ImportModeChoice({ mode, onChange }: ImportModeChoiceProps) {
 
   return (
     <div>
-      <Caption id={captionId}>Files</Caption>
+      <FieldLabel id={captionId}>Files</FieldLabel>
       <Cards role="radiogroup" aria-labelledby={captionId}>
         {IMPORT_MODES.map((key) => (
           <ChoiceCard
