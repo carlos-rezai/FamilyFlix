@@ -17,6 +17,7 @@ import { walkLibraryFolder } from '../../media/walkLibraryFolder/walkLibraryFold
 import type { Playback } from '../../playback/createPlayback/createPlayback';
 import { spellEpisodeTag } from '../../media/episodeTag/episodeTag';
 import { derivedRuntime } from '../../playback/derivedRuntime/derivedRuntime';
+import { spellLinkedVideo } from '../../playback/linkedVideoPath/linkedVideoPath';
 import {
   groupShows,
   type ShowEpisode,
@@ -52,6 +53,7 @@ import type {
   Series,
   SheetChoices,
   SheetDifference,
+  StoredVideo,
 } from '@/types';
 import { SHEET_FIELDS } from '@/types';
 
@@ -920,6 +922,29 @@ export function createImporter({
   };
 
   /**
+   * The importer's one decision between link and copy: under the **Import
+   * mode** `link`, the **Linked video** where it lies, relative to its
+   * **Library folder**; under `copy`, the file copied `into` managed storage.
+   * Everything a run imports beside the video is copied either way.
+   */
+  const placeVideo = async (
+    current: ImportRun,
+    libraryFolder: StoredLibraryFolder,
+    file: string,
+    into: string,
+    signal: AbortSignal
+  ): Promise<StoredVideo> =>
+    current.mode === 'link'
+      ? {
+          videoPath: spellLinkedVideo(libraryFolder.path, file),
+          videoFolderId: libraryFolder.id,
+        }
+      : {
+          videoPath: await media.copyIn(into, file, signal),
+          videoFolderId: null,
+        };
+
+  /**
    * Import one match by the form's own sequence. Answers the movie added, or
    * `null` when the import threw — a locked or vanishing file, a cancel — with
    * the folder taken back and, unless the run was cancelled, `failed` filed
@@ -937,13 +962,13 @@ export function createImporter({
   ): Promise<Movie | null> => {
     const folder = media.reserveFolder(row.title, row.year);
     try {
-      // Link records the video where it lies, relative to its Library folder;
-      // Copy copies it in. Everything after is the same either way.
-      const linked = current.mode === 'link';
-      const videoPath = linked
-        ? relative(libraryFolder.path, scan.videos[0]).split(sep).join('/')
-        : await media.copyIn(folder, scan.videos[0], signal);
-      const videoFolderId = linked ? libraryFolder.id : null;
+      const video = await placeVideo(
+        current,
+        libraryFolder,
+        scan.videos[0],
+        folder,
+        signal
+      );
       const posterPath =
         scan.poster === null
           ? undefined
@@ -962,13 +987,12 @@ export function createImporter({
       // A cancel that landed between the last copy and the row: the folder
       // goes, the row is never written, and nothing half-done is left.
       signal.throwIfAborted();
-      const runtime = derivedRuntime(playback, { videoPath, videoFolderId });
+      const runtime = derivedRuntime(playback, video);
       const genres = knownGenres(row.genres, genreNames, current);
 
       const movie: NewMovie = {
         title: row.title,
-        videoPath,
-        videoFolderId,
+        ...video,
         watched: row.watched,
         ...(row.year === null ? {} : { year: row.year }),
         ...(runtime === null ? {} : { runtimeMinutes: runtime }),
@@ -1078,13 +1102,13 @@ export function createImporter({
       current.currentItem = label;
       try {
         const into = media.seasonFolder(folder, episode.season);
-        // Link records the video where it lies, relative to its Library
-        // folder; Copy copies it in. The subtitles are copied either way.
-        const linked = current.mode === 'link';
-        const videoPath = linked
-          ? relative(libraryFolder.path, episode.video).split(sep).join('/')
-          : await media.copyIn(into, episode.video, signal);
-        const videoFolderId = linked ? libraryFolder.id : null;
+        const video = await placeVideo(
+          current,
+          libraryFolder,
+          episode.video,
+          into,
+          signal
+        );
         const subtitles: NewSubtitle[] = [];
         for (const track of episode.subtitles) {
           subtitles.push({
@@ -1093,7 +1117,7 @@ export function createImporter({
           });
         }
         signal.throwIfAborted();
-        const runtime = derivedRuntime(playback, { videoPath, videoFolderId });
+        const runtime = derivedRuntime(playback, video);
 
         if (series === null) {
           const genres = knownGenres(row.genres, genreNames, current);
@@ -1117,8 +1141,7 @@ export function createImporter({
         storage.addEpisode(series.id, {
           season: episode.season,
           number: episode.episode,
-          videoPath,
-          videoFolderId,
+          ...video,
           sourceFile: sourceFileOf(show.dir, episode.video),
           ...(episode.title === null ? {} : { title: episode.title }),
           ...(runtime === null ? {} : { runtimeMinutes: runtime }),
@@ -1531,7 +1554,7 @@ export function createImporter({
   const linkedVideo = (
     current: ImportRun,
     slot: ResolveFile
-  ): { videoPath: string; videoFolderId: string } | null => {
+  ): StoredVideo | null => {
     if (current.mode !== 'link' || !('found' in slot)) {
       return null;
     }
@@ -1539,7 +1562,7 @@ export function createImporter({
     return listed === null
       ? null
       : {
-          videoPath: relative(listed.path, slot.found).split(sep).join('/'),
+          videoPath: spellLinkedVideo(listed.path, slot.found),
           videoFolderId: listed.id,
         };
   };
@@ -2042,9 +2065,10 @@ export function createImporter({
       try {
         // A Found video in a Link run is linked where it lies; a picked one,
         // already stored, and everything else are placed as before.
-        const link = linkedVideo(current, form.video);
-        const videoPath = link?.videoPath ?? (await place(form.video));
-        const videoFolderId = link?.videoFolderId ?? null;
+        const video: StoredVideo = linkedVideo(current, form.video) ?? {
+          videoPath: await place(form.video),
+          videoFolderId: null,
+        };
         const posterPath =
           form.poster === null ? undefined : await place(form.poster);
         const subtitles: NewSubtitle[] = [];
@@ -2054,15 +2078,14 @@ export function createImporter({
             language: track.language,
           });
         }
-        const runtime = derivedRuntime(playback, { videoPath, videoFolderId });
+        const runtime = derivedRuntime(playback, video);
 
         // The form's fields, not the sheet's: the row only prefilled them.
         // What the sheet alone knows — whether the family has seen it — is
         // carried, because the form has no field to contradict it with.
         const added = storage.addMovie({
           title: form.title,
-          videoPath,
-          videoFolderId,
+          ...video,
           mediaFolder: basename(folder),
           ...(source.row === null ? {} : { watched: source.row.watched }),
           ...(form.year === null ? {} : { year: form.year }),
@@ -2168,10 +2191,10 @@ export function createImporter({
       try {
         const episodes = [];
         for (const episode of form.episodes) {
-          const link = linkedVideo(current, episode.video);
-          const videoPath =
-            link?.videoPath ?? (await place(episode.video, episode.season));
-          const videoFolderId = link?.videoFolderId ?? null;
+          const video: StoredVideo = linkedVideo(current, episode.video) ?? {
+            videoPath: await place(episode.video, episode.season),
+            videoFolderId: null,
+          };
           const subtitles: NewSubtitle[] = [];
           for (const track of episode.subtitles) {
             subtitles.push({
@@ -2179,16 +2202,12 @@ export function createImporter({
               language: track.language,
             });
           }
-          const runtime = derivedRuntime(playback, {
-            videoPath,
-            videoFolderId,
-          });
+          const runtime = derivedRuntime(playback, video);
           const found = sourceFile(episode.video);
           episodes.push({
             season: episode.season,
             number: episode.number,
-            videoPath,
-            videoFolderId,
+            ...video,
             ...(episode.title === undefined ? {} : { title: episode.title }),
             ...(runtime === null ? {} : { runtimeMinutes: runtime }),
             ...(subtitles.length === 0 ? {} : { subtitles }),
