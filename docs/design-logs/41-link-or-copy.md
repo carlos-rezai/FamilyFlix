@@ -1,8 +1,8 @@
 # 41 — Link or copy
 
 > **Initiative:** `link-or-copy`
-> **Issue:** to be filed (step 24)
-> **PRD:** `docs/PRDs/41-link-or-copy.md` (to be written)
+> **Issue:** #339 (step 24)
+> **PRD:** `docs/PRDs/41-link-or-copy.md`
 > **Plan:** `docs/PRDs/41-link-or-copy-plan.md` (to be written)
 
 This log is the `grill-me` session for step 24 of the build order, **Link or
