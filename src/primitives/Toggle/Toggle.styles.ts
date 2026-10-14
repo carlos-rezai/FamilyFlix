@@ -1,10 +1,18 @@
 import styled from 'styled-components';
 
-/** The prototype's geometry: a 46×26 track on a 3px pad, the knob what is left. */
+/**
+ * The prototype's geometry: a 46×26 track on a 3px pad, the knob what is left.
+ * The pad is measured from the track's outer edge, but an absolute child is
+ * placed from inside the 1px border — so the knob's offsets are the pad less
+ * the border, on every side, which is what centres it.
+ */
 const TRACK_WIDTH = 46;
 const TRACK_HEIGHT = 26;
+const BORDER = 1;
 const PAD = 3;
 const KNOB = TRACK_HEIGHT - PAD * 2;
+const INSET = PAD - BORDER;
+const KNOB_ON = TRACK_WIDTH - BORDER * 2 - KNOB - INSET;
 
 interface TrackProps {
   $checked: boolean;
@@ -24,7 +32,7 @@ export const Track = styled.button<TrackProps>`
   width: ${TRACK_WIDTH}px;
   height: ${TRACK_HEIGHT}px;
   padding: 0;
-  border: 1px solid
+  border: ${BORDER}px solid
     ${({ theme, $checked }) =>
       $checked ? theme.colors.accent : theme.colors.border};
   border-radius: ${({ theme }) => theme.radius.pill};
@@ -43,8 +51,8 @@ export const Track = styled.button<TrackProps>`
  */
 export const Knob = styled.span<{ $checked: boolean }>`
   position: absolute;
-  top: ${PAD}px;
-  left: ${({ $checked }) => ($checked ? TRACK_WIDTH - KNOB - PAD - 1 : PAD)}px;
+  top: ${INSET}px;
+  left: ${({ $checked }) => ($checked ? KNOB_ON : INSET)}px;
   width: ${KNOB}px;
   height: ${KNOB}px;
   border-radius: 50%;
