@@ -29,6 +29,7 @@ export function makeMovie(overrides: Partial<Movie> = {}): Movie {
     resumePositionSeconds: 0,
     status: 'unwatched',
     videoPath: 'Comet Season/comet.mp4',
+    videoFolderId: null,
     posterPath: null,
     backdropPath: null,
     genres: [],

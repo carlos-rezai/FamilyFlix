@@ -57,7 +57,7 @@ function sandbox(
   const importer = createImporter({
     storage,
     media: seam(createMedia(media)),
-    playback: createPlayback(media, fixedSlot(null)),
+    playback: createPlayback(media, fixedSlot(null), () => null),
   });
   storage.addLibraryFolder(root);
   return { storage, importer, media, root, sheet, unnamed };

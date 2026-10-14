@@ -85,7 +85,7 @@ function freshApi(): { baseUrl: string; dir: string; destination: string } {
   );
 
   const media = createMedia(mediaPath);
-  const playback = createPlayback(mediaPath, fixedSlot(null));
+  const playback = createPlayback(mediaPath, fixedSlot(null), () => null);
   const app = express();
   app.use(
     '/api',

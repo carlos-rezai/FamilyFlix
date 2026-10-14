@@ -417,13 +417,14 @@ function windBackToV5(path: string): void {
   }
 }
 
-/** A table's columns less what migrations #5, #6 and #8 added — the v4 shape. */
+/** A table's columns less what migrations #5 onwards added — the v4 shape. */
 function v4Columns(db: TestDb, table: keyof typeof MIGRATION_5_COLUMNS) {
   const added: readonly string[] = [
     ...MIGRATION_5_COLUMNS[table],
     'library_folder_id',
     'source_file',
     'media_folder',
+    'video_folder_id',
   ];
   return columnNames(db, table).filter((column) => !added.includes(column));
 }

@@ -47,6 +47,7 @@ export function makeEpisode(
     resumePositionSeconds: status === 'in-progress' ? 600 : 0,
     status,
     videoPath: `harbor-vine-2019/season-0${season}/e${number}.mp4`,
+    videoFolderId: null,
     subtitles: [],
     stillPath: null,
     sourceFile: null,

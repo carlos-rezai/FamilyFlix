@@ -40,7 +40,10 @@ import type {
   InstallRefusal,
   RemoveRefusal,
 } from '../playback/componentSlot/componentSlot';
-import type { Playback } from '../playback/createPlayback/createPlayback';
+import type {
+  Playback,
+  StoredVideo,
+} from '../playback/createPlayback/createPlayback';
 import { derivedRuntime } from '../playback/derivedRuntime/derivedRuntime';
 import { exportBody } from './exportBody/exportBody';
 import { isRatingValue, MAX_RATING } from './isRatingValue/isRatingValue';
@@ -89,13 +92,12 @@ import {
 type PlayableKind = 'movie' | 'episode';
 
 /**
- * What a playback route needs of a row, and all it needs: its **Stored path**
+ * What a playback route needs of a row, and all it needs: its **StoredVideo**
  * and its **Subtitle** rows. A movie and an episode are both one, which is how
  * the episode routes share the movie routes' handlers — and how `playback/`
  * never learns there are episodes.
  */
-interface PlayableRow {
-  videoPath: string;
+interface PlayableRow extends StoredVideo {
   subtitles: Subtitle[];
 }
 
@@ -314,17 +316,23 @@ function noVideoFile(res: Response, kind: PlayableKind, id: string): void {
  */
 function videoFileOr404(
   playback: Playback,
-  storedPath: string,
+  video: StoredVideo,
   kind: PlayableKind,
   id: string,
   res: Response
 ): string | null {
-  const file = playback.videoFile(storedPath);
-  if (file === null) {
+  const found = playback.videoFile(video);
+  if (found.kind === 'unreachable') {
+    res
+      .status(503)
+      .json({ error: `The video's Library folder is out of reach: ${id}` });
+    return null;
+  }
+  if (found.kind === 'missing') {
     noVideoFile(res, kind, id);
     return null;
   }
-  return file;
+  return found.file;
 }
 
 /**
@@ -828,7 +836,10 @@ export function createApiRouter(
 
     const episodes: NewEpisode[] = read.episodes.map((episode) => {
       const videoPath = stored(episode.video);
-      const runtimeMinutes = derivedRuntime(playback, videoPath);
+      const runtimeMinutes = derivedRuntime(playback, {
+        videoPath,
+        videoFolderId: null,
+      });
       const subtitles: NewSubtitle[] = episode.subtitles.map((path, track) => ({
         path: stored(path),
         language: episode.subtitleLanguages[track],
@@ -974,7 +985,10 @@ export function createApiRouter(
             : {}),
           episodes: read.episodes.map((episode) => {
             const runtimeMinutes = episode.freshVideo
-              ? derivedRuntime(playback, episode.video)
+              ? derivedRuntime(playback, {
+                  videoPath: episode.video,
+                  videoFolderId: null,
+                })
               : undefined;
             return {
               ...(episode.id === undefined ? {} : { id: episode.id }),
@@ -1251,7 +1265,10 @@ export function createApiRouter(
     const runtimeMinutes =
       uploads.video === undefined
         ? null
-        : derivedRuntime(playback, uploads.video);
+        : derivedRuntime(playback, {
+            videoPath: uploads.video,
+            videoFolderId: null,
+          });
 
     try {
       res.status(201).json(
@@ -1441,7 +1458,15 @@ export function createApiRouter(
           // typo. An omitted key is what leaves that column alone.
           ...(uploads.video === undefined
             ? {}
-            : { runtimeMinutes: derivedRuntime(playback, videoPath) }),
+            : {
+                // A fresh video is a Stored path, so a linked one replaced
+                // stops being linked.
+                videoFolderId: null,
+                runtimeMinutes: derivedRuntime(playback, {
+                  videoPath,
+                  videoFolderId: null,
+                }),
+              }),
           director: director ?? null,
           synopsis: synopsis ?? null,
           rating: rating ?? null,
@@ -1477,7 +1502,11 @@ export function createApiRouter(
       // and there is nothing left to take away — unlinking the old path anyway
       // would delete the file the row now points at.
       for (const [replacement, superseded] of [
-        [uploads.video, existing.videoPath],
+        // A Linked video is never the app's to remove: only a Stored path is.
+        [
+          uploads.video,
+          existing.videoFolderId === null ? existing.videoPath : null,
+        ],
         [uploads.poster, existing.posterPath],
       ] as const) {
         if (
@@ -1973,7 +2002,13 @@ export function createApiRouter(
       return;
     }
     media.emptyRoot();
-    playback.removeComponent();
+    // Best-effort, as the root's emptying is: the library is already erased,
+    // so a slot that throws rather than answers cannot make this a `500`.
+    try {
+      playback.removeComponent();
+    } catch {
+      // The erase stands; an uploaded component left behind is the lesser harm.
+    }
     await importer.cancel();
 
     res.status(204).end();
@@ -2046,13 +2081,7 @@ export function createApiRouter(
           return;
         }
 
-        const file = videoFileOr404(
-          playback,
-          playable.videoPath,
-          kind,
-          id,
-          res
-        );
+        const file = videoFileOr404(playback, playable, kind, id, res);
         if (file === null) {
           return;
         }
@@ -2125,7 +2154,7 @@ export function createApiRouter(
         return;
       }
 
-      const file = videoFileOr404(playback, playable.videoPath, kind, id, res);
+      const file = videoFileOr404(playback, playable, kind, id, res);
       if (file === null) {
         return;
       }

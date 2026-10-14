@@ -1,4 +1,4 @@
-import type { Playback } from '../createPlayback/createPlayback';
+import type { Playback, StoredVideo } from '../createPlayback/createPlayback';
 
 /** The units the `runtime_minutes` column stores, and the film's own. */
 const SECONDS_PER_MINUTE = 60;
@@ -28,21 +28,21 @@ const SECONDS_PER_MINUTE = 60;
  */
 export function derivedRuntime(
   playback: Playback,
-  storedPath: string
+  video: StoredVideo
 ): number | null {
   // A row with no film behind it has nothing to derive from, which is not a
   // failure to derive — a runtime is the least of what is missing.
-  if (storedPath === '') {
+  if (video.videoPath === '') {
     return null;
   }
 
   try {
-    const file = playback.videoFile(storedPath);
-    if (file === null) {
+    const found = playback.videoFile(video);
+    if (found.kind !== 'file') {
       return null;
     }
 
-    const seconds = playback.duration(file);
+    const seconds = playback.duration(found.file);
     if (seconds === null) {
       return null;
     }

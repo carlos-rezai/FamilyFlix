@@ -17,9 +17,34 @@ import type {
   PlaybackProcess,
 } from '../ffmpegComponent/ffmpegComponent';
 import { mediaDuration } from '../mediaDuration/mediaDuration';
+import { linkedVideoPath } from '../linkedVideoPath/linkedVideoPath';
 import { mediaFilePath } from '../mediaFilePath/mediaFilePath';
 import { parseSubtitle } from '../parseSubtitle/parseSubtitle';
 import type { MediaProbe } from '../probe/probe';
+
+/**
+ * A row's video as the library holds it: `videoPath` a **Stored path** when
+ * `videoFolderId` is `null`, else relative to that **Library folder** — a
+ * **Linked video**.
+ */
+export interface StoredVideo {
+  videoPath: string;
+  videoFolderId: string | null;
+}
+
+/**
+ * The file behind a {@link StoredVideo}, or why there is none: `missing` for a
+ * path that escaped its root, a file not there or a folder the library does not
+ * list; `unreachable` for a Library folder that is listed but out of reach —
+ * named here for the route's `503`, and not yet answered by {@link Playback.videoFile}.
+ */
+export type VideoFile =
+  | { kind: 'file'; file: string }
+  | { kind: 'missing' }
+  | { kind: 'unreachable' };
+
+/** The path of a listed **Library folder** by its id, or `null` for none. */
+export type LibraryFolderPath = (id: string) => string | null;
 
 /**
  * What to do with a film's bytes: send the file as it is, read them off a
@@ -51,11 +76,12 @@ export type StreamPlan =
  */
 export interface Playback {
   /**
-   * The absolute file behind a movie's stored path, or `null` when there is
-   * nothing to send — the path escaped the managed media directory, or no file
-   * is there.
+   * The absolute file behind a row's {@link StoredVideo} — under the managed
+   * media directory for a Stored path, under its Library folder for a Linked
+   * video — or why there is nothing to send. A value, never a throw, and no
+   * caller learns there are two roots.
    */
-  videoFile(storedPath: string): string | null;
+  videoFile(video: StoredVideo): VideoFile;
 
   /**
    * What the player is told before a byte arrives: which path the film takes,
@@ -205,6 +231,9 @@ function availabilityOf(
  * `FAMILYFLIX_COMPONENT_PATH`; the tests compose it from a temporary directory
  * and `fixedSlot` over a fake that never spawns anything.
  *
+ * `libraryFolderPath` reads a **Library folder**'s path by its id, which is
+ * where a Linked video is resolved; `main.ts` composes it over `storage`.
+ *
  * **The slot rather than a component**, and read inside every method rather
  * than closed over here: that is the whole of what makes a component installed
  * from Settings while the app runs honoured by the next press of Play, with
@@ -216,7 +245,8 @@ function availabilityOf(
  */
 export function createPlayback(
   mediaPath: string,
-  slot: ComponentSlot
+  slot: ComponentSlot,
+  libraryFolderPath: LibraryFolderPath
 ): Playback {
   /**
    * Probe the file and decide, which is the one thing both `read` and `stream`
@@ -248,7 +278,16 @@ export function createPlayback(
     probe?.durationSeconds ?? mediaDuration(file) ?? 0;
 
   return {
-    videoFile: (storedPath) => mediaFilePath(mediaPath, storedPath),
+    videoFile: ({ videoPath, videoFolderId }) => {
+      let file: string | null;
+      if (videoFolderId === null) {
+        file = mediaFilePath(mediaPath, videoPath);
+      } else {
+        const folder = libraryFolderPath(videoFolderId);
+        file = folder === null ? null : linkedVideoPath(folder, videoPath);
+      }
+      return file === null ? { kind: 'missing' } : { kind: 'file', file };
+    },
     read: (file) => {
       const { probe, decision } = decide(file);
       const durationSeconds = lengthOf(file, probe);

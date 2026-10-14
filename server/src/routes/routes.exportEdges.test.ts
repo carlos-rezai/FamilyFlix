@@ -112,7 +112,7 @@ function freshApi(options: { breakReads?: boolean } = {}): {
 
   const real = createMedia(mediaPath);
   const media = options.breakReads === true ? breaking(real) : real;
-  const playback = createPlayback(mediaPath, fixedSlot(null));
+  const playback = createPlayback(mediaPath, fixedSlot(null), () => null);
   const app = express();
   app.use(
     '/api',

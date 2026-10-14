@@ -160,7 +160,8 @@ function freshApi({
   const mediaDomain = createMedia(media);
   const playback = createPlayback(
     media,
-    slot ?? fixedSlot(component, componentInfo)
+    slot ?? fixedSlot(component, componentInfo),
+    () => null
   );
   const app = express();
   app.use(

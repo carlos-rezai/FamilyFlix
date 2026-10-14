@@ -58,7 +58,7 @@ function freshApi({
   storage.addLibraryFolder(root);
 
   const mediaDomain = createMedia(media);
-  const playback = createPlayback(media, fixedSlot(null));
+  const playback = createPlayback(media, fixedSlot(null), () => null);
   const composed = createImporter({ storage, media: mediaDomain, playback });
 
   const app = express();

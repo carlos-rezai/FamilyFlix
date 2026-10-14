@@ -23,6 +23,7 @@ const MOVIE_KEYS: Array<keyof Movie> = [
   'resumePositionSeconds',
   'status',
   'videoPath',
+  'videoFolderId',
   'posterPath',
   'backdropPath',
   'genres',

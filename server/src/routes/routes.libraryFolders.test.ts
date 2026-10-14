@@ -59,7 +59,7 @@ function freshApi(): Api {
   const disk = join(sandbox, 'disk');
   mkdirSync(disk);
   const mediaDomain = createMedia(media);
-  const playback = createPlayback(media, fixedSlot(null));
+  const playback = createPlayback(media, fixedSlot(null), () => null);
 
   const app = express();
   app.use(

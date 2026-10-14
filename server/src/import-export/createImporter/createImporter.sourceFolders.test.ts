@@ -71,7 +71,7 @@ function sandbox(fixture: 'films' | 'series' = 'films'): {
   const importer = createImporter({
     storage,
     media: createMedia(media),
-    playback: createPlayback(media, fixedSlot(null)),
+    playback: createPlayback(media, fixedSlot(null), () => null),
   });
   storage.addLibraryFolder(root);
   return { storage, db, importer, media, root, sheet };

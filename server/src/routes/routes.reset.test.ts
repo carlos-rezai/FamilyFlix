@@ -152,7 +152,7 @@ async function filledApi({
 
   const mediaDomain = seam(createMedia(media));
   const { slot, removes } = removableSlot({ outcome: removal });
-  const playback = createPlayback(media, slot);
+  const playback = createPlayback(media, slot, () => null);
   const importer = createImporter({ storage, media: mediaDomain, playback });
   const tmdb = fakeTmdb();
   const enrichment = createEnrichment({

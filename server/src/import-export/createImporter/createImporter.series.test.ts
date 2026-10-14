@@ -118,7 +118,7 @@ function sandbox({
   const importer = createImporter({
     storage,
     media: mediaSeam(createMedia(media)),
-    playback: createPlayback(media, fixedSlot(null)),
+    playback: createPlayback(media, fixedSlot(null), () => null),
   });
   storage.addLibraryFolder(root);
   return { storage, importer, media, root, sheet };
@@ -380,7 +380,7 @@ describe('createImporter — the checked-in series fixture', () => {
     const importer = createImporter({
       storage,
       media: createMedia(media),
-      playback: createPlayback(media, fixedSlot(null)),
+      playback: createPlayback(media, fixedSlot(null), () => null),
     });
 
     await importer.start(sheet);
@@ -496,7 +496,7 @@ function looseSandbox(layout: Record<string, string[]>): {
   const importer = createImporter({
     storage,
     media: createMedia(media),
-    playback: createPlayback(media, fixedSlot(null)),
+    playback: createPlayback(media, fixedSlot(null), () => null),
   });
   storage.addLibraryFolder(root);
   return { storage, importer, media, root, sheet };
@@ -873,7 +873,7 @@ function rerunSandbox(
   const importer = createImporter({
     storage,
     media: createMedia(media),
-    playback: createPlayback(media, fixedSlot(null)),
+    playback: createPlayback(media, fixedSlot(null), () => null),
   });
   return {
     storage,
@@ -1028,7 +1028,7 @@ describe('createImporter — a show already in the library', () => {
       const importer = createImporter({
         storage,
         media: createMedia(media),
-        playback: createPlayback(media, fixedSlot(null)),
+        playback: createPlayback(media, fixedSlot(null), () => null),
       });
 
       await runOnce(importer, sheet);

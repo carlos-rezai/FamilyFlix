@@ -58,7 +58,14 @@ async function start(): Promise<Started> {
    */
   const slot = createComponentSlot(COMPONENT_PATH, process.env);
 
-  const playback = createPlayback(MEDIA_PATH, slot);
+  // A **Linked video** is read under its **Library folder**, named by id off
+  // the library's own list.
+  const playback = createPlayback(
+    MEDIA_PATH,
+    slot,
+    (id) =>
+      storage.libraryFolders().find((folder) => folder.id === id)?.path ?? null
+  );
   const media = createMedia(MEDIA_PATH);
 
   // The import domain over the same library and managed directory the routes

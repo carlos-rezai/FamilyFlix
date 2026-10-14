@@ -945,7 +945,10 @@ export function createImporter({
       // A cancel that landed between the last copy and the row: the folder
       // goes, the row is never written, and nothing half-done is left.
       signal.throwIfAborted();
-      const runtime = derivedRuntime(playback, videoPath);
+      const runtime = derivedRuntime(playback, {
+        videoPath,
+        videoFolderId: null,
+      });
       const genres = knownGenres(row.genres, genreNames, current);
 
       const movie: NewMovie = {
@@ -1069,7 +1072,10 @@ export function createImporter({
           });
         }
         signal.throwIfAborted();
-        const runtime = derivedRuntime(playback, videoPath);
+        const runtime = derivedRuntime(playback, {
+          videoPath,
+          videoFolderId: null,
+        });
 
         if (series === null) {
           const genres = knownGenres(row.genres, genreNames, current);
@@ -2001,7 +2007,10 @@ export function createImporter({
             language: track.language,
           });
         }
-        const runtime = derivedRuntime(playback, videoPath);
+        const runtime = derivedRuntime(playback, {
+          videoPath,
+          videoFolderId: null,
+        });
 
         // The form's fields, not the sheet's: the row only prefilled them.
         // What the sheet alone knows — whether the family has seen it — is
@@ -2123,7 +2132,10 @@ export function createImporter({
               language: track.language,
             });
           }
-          const runtime = derivedRuntime(playback, videoPath);
+          const runtime = derivedRuntime(playback, {
+            videoPath,
+            videoFolderId: null,
+          });
           const found = sourceFile(episode.video);
           episodes.push({
             season: episode.season,

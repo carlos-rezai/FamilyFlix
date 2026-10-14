@@ -62,7 +62,7 @@ async function freshApi(tmdbFetch: Fetch = answeringTmdb()) {
 
   const media = sandboxRoot('familyflix-enrich-summary-api-');
   const mediaDomain = createMedia(media);
-  const playback = createPlayback(media, fixedSlot(null));
+  const playback = createPlayback(media, fixedSlot(null), () => null);
   const enrichment = createEnrichment({
     storage,
     client: createTmdbClient(tmdbFetch),

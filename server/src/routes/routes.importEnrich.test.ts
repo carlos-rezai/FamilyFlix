@@ -73,7 +73,7 @@ function freshApi() {
   storage.addLibraryFolder(root);
 
   const mediaDomain = createMedia(media);
-  const playback = createPlayback(media, fixedSlot(null));
+  const playback = createPlayback(media, fixedSlot(null), () => null);
   const importer = createImporter({ storage, media: mediaDomain, playback });
   const tmdb = countingTmdb();
 

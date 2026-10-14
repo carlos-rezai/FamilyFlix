@@ -32,6 +32,7 @@ const PATCH_SCALARS: ReadonlyArray<{
   { key: 'watched', column: 'watched', toDb: (v) => (v ? 1 : 0) },
   { key: 'resumePositionSeconds', column: 'resume_position_seconds' },
   { key: 'videoPath', column: 'video_path' },
+  { key: 'videoFolderId', column: 'video_folder_id' },
   { key: 'posterPath', column: 'poster_path' },
   { key: 'backdropPath', column: 'backdrop_path' },
 ];
@@ -61,12 +62,12 @@ export function createWrite(db: SqliteDatabase, reader: MovieReader): Write {
       id, tmdb_id, title, year, runtime_minutes, synopsis, director, cast,
       rating, is_favorite, watched, resume_position_seconds, video_path,
       poster_path, backdrop_path, created_at, updated_at, last_watched_at,
-      media_folder
+      media_folder, video_folder_id
     ) VALUES (
       @id, @tmdb_id, @title, @year, @runtime_minutes, @synopsis, @director, @cast,
       @rating, @is_favorite, @watched, @resume_position_seconds, @video_path,
       @poster_path, @backdrop_path, @created_at, @updated_at, @last_watched_at,
-      @media_folder
+      @media_folder, @video_folder_id
     )
   `);
   const selectGenreIdByName = db.prepare(
@@ -112,7 +113,14 @@ export function createWrite(db: SqliteDatabase, reader: MovieReader): Write {
       // otherwise — an added movie has not been watched by us. Never `now`:
       // adding a movie is not watching it.
       last_watched_at: input.lastWatchedAt ?? null,
-      media_folder: input.mediaFolder ?? parentOf(input.videoPath, 1),
+      // A linked video sits in a Library folder, so its directory is no
+      // Media folder.
+      media_folder:
+        input.mediaFolder ??
+        (input.videoFolderId === undefined
+          ? parentOf(input.videoPath, 1)
+          : null),
+      video_folder_id: input.videoFolderId ?? null,
     });
 
     input.genres?.forEach((name, position) => {

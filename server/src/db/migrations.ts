@@ -350,4 +350,17 @@ export const migrations: readonly Migration[] = [
       }
     },
   },
+  {
+    // The Linked video: `video_folder_id` on movies and episodes, the Library
+    // folder a video is linked into, with no `ON DELETE` — the database
+    // refuses to forget a folder a video plays from. `NULL` means `video_path`
+    // is a Stored path, which every existing row is; nothing is backfilled.
+    version: 12,
+    up(db) {
+      db.exec(`
+        ALTER TABLE movies ADD COLUMN video_folder_id TEXT REFERENCES library_folders(id);
+        ALTER TABLE episodes ADD COLUMN video_folder_id TEXT REFERENCES library_folders(id);
+      `);
+    },
+  },
 ];

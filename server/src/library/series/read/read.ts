@@ -42,6 +42,7 @@ export interface EpisodeRow {
   resume_position_seconds: number;
   last_watched_at: string | null;
   video_path: string;
+  video_folder_id: string | null;
   still_path: string | null;
   source_file: string | null;
   created_at: string;
@@ -96,6 +97,7 @@ const mapRowToEpisode = (row: EpisodeRow, subtitles: Subtitle[]): Episode => {
     resumePositionSeconds: row.resume_position_seconds,
     status: deriveStatus(watched, row.resume_position_seconds),
     videoPath: row.video_path,
+    videoFolderId: row.video_folder_id,
     stillPath: row.still_path,
     sourceFile: row.source_file,
     subtitles,

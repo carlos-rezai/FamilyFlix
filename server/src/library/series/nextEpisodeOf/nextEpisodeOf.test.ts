@@ -31,6 +31,7 @@ function episode(
     resumePositionSeconds: state === 'in-progress' ? 600 : 0,
     status: state,
     videoPath: `harbor-2021/season-0${season}/e${number}.mp4`,
+    videoFolderId: null,
     stillPath: null,
     sourceFile: null,
     subtitles: [],

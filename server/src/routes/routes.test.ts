@@ -136,7 +136,7 @@ function freshApi(
   mkdirSync(media);
   mkdirSync(outside);
 
-  const playback = createPlayback(media, fixedSlot(component));
+  const playback = createPlayback(media, fixedSlot(component), () => null);
   const mediaDomain = seam(media);
   const app = express();
   app.use(
@@ -3026,7 +3026,7 @@ function relisten(
   media: string,
   component: PlaybackComponent | null
 ): string {
-  const playback = createPlayback(media, fixedSlot(component));
+  const playback = createPlayback(media, fixedSlot(component), () => null);
   const mediaDomain = createMedia(media);
   const app = express();
   app.use(

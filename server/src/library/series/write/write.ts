@@ -105,10 +105,12 @@ export function createSeriesWrite(
   const insertEpisode = db.prepare(`
     INSERT INTO episodes (
       id, series_id, season_number, episode_number, title, air_date,
-      runtime_minutes, video_path, source_file, created_at, updated_at
+      runtime_minutes, video_path, source_file, video_folder_id, created_at,
+      updated_at
     ) VALUES (
       @id, @series_id, @season_number, @episode_number, @title, @air_date,
-      @runtime_minutes, @video_path, @source_file, @created_at, @updated_at
+      @runtime_minutes, @video_path, @source_file, @video_folder_id, @created_at,
+      @updated_at
     )
   `);
   const fillSeriesFolder = db.prepare(
@@ -166,11 +168,15 @@ export function createSeriesWrite(
         runtime_minutes: input.runtimeMinutes ?? null,
         video_path: input.videoPath,
         source_file: input.sourceFile ?? null,
+        video_folder_id: input.videoFolderId ?? null,
         created_at: now,
         updated_at: now,
       });
       // A series added bare takes its Media folder off its first episode.
-      fillSeriesFolder.run(parentOf(input.videoPath, 2), seriesId);
+      // A linked video sits in a Library folder, so its path names none.
+      if (input.videoFolderId === undefined) {
+        fillSeriesFolder.run(parentOf(input.videoPath, 2), seriesId);
+      }
       input.subtitles?.forEach((track, position) => {
         insertEpisodeSubtitle.run({
           id: randomUUID(),
@@ -187,7 +193,12 @@ export function createSeriesWrite(
 
   const insertSeriesWithEpisodes = db.transaction(
     (id: string, input: NewSeries, episodes: readonly NewEpisode[]) => {
-      insertSeriesGraph(id, input, episodes[0]?.videoPath);
+      const first = episodes[0];
+      insertSeriesGraph(
+        id,
+        input,
+        first?.videoFolderId === undefined ? first?.videoPath : undefined
+      );
       for (const episode of episodes) {
         insertEpisodeGraph(randomUUID(), id, episode);
       }
@@ -216,6 +227,7 @@ export function createSeriesWrite(
       season_number = @season_number, episode_number = @episode_number,
       title = @title,
       source_file = CASE WHEN video_path = @video_path THEN source_file END,
+      video_folder_id = CASE WHEN video_path = @video_path THEN video_folder_id END,
       video_path = @video_path, updated_at = @updated_at
     WHERE id = @id
   `);
@@ -230,7 +242,8 @@ export function createSeriesWrite(
   const pathsOf = (series: Series, episodes: readonly Episode[]): string[] => [
     ...(series.posterPath === null ? [] : [series.posterPath]),
     ...episodes.flatMap((episode) => [
-      episode.videoPath,
+      // A Linked video is not a Stored path, and never the app's to remove.
+      ...(episode.videoFolderId === null ? [episode.videoPath] : []),
       ...episode.subtitles.map((track) => track.path),
     ]),
   ];

@@ -39,6 +39,11 @@ export interface Movie {
   /** Derived from `watched` + `resumePositionSeconds`; never stored. */
   status: WatchStatus;
   videoPath: string;
+  /**
+   * The **Library folder** a **Linked video** plays from, its `videoPath`
+   * relative to that folder; `null` when `videoPath` is a **Stored path**.
+   */
+  videoFolderId: string | null;
   posterPath: string | null;
   backdropPath: string | null;
   genres: Genre[];

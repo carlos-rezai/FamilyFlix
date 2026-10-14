@@ -40,6 +40,9 @@ export interface NewMovie {
    *  side only, never on the wire. Omitted, it is read off the video's
    *  directory. */
   mediaFolder?: string;
+  /** The **Library folder** its video is linked into, `videoPath` relative to
+   *  it; omitted, the video is a Stored path. */
+  videoFolderId?: string;
 }
 
 /**
@@ -70,6 +73,8 @@ export interface MoviePatch {
   watched?: boolean;
   resumePositionSeconds?: number;
   videoPath?: string;
+  /** `null` makes `videoPath` a Stored path again — a linked video replaced. */
+  videoFolderId?: string | null;
   posterPath?: string | null;
   backdropPath?: string | null;
   genres?: string[];

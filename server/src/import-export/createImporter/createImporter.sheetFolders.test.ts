@@ -101,7 +101,7 @@ function sandbox(): Sandbox {
   const importer = createImporter({
     storage,
     media: createMedia(media),
-    playback: createPlayback(media, fixedSlot(null)),
+    playback: createPlayback(media, fixedSlot(null), () => null),
   });
   return {
     storage,

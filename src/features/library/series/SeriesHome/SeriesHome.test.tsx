@@ -369,6 +369,7 @@ function makeEntry(
       resumePositionSeconds: 720,
       status: 'in-progress',
       videoPath: 'harbor-vine-2019/season-02/e04.mp4',
+      videoFolderId: null,
       stillPath: null,
       sourceFile: null,
       subtitles: [],

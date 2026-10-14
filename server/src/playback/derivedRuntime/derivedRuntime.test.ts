@@ -17,10 +17,13 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { derivedRuntime } from './derivedRuntime';
-import type { Playback } from '../createPlayback/createPlayback';
+import type { Playback, StoredVideo } from '../createPlayback/createPlayback';
 
-/** The stored path a freshly copied film is written under. */
-const STORED = 'The Lantern Keeper (2019)/lantern.mp4';
+/** The **StoredVideo** a freshly copied film is written under. */
+const STORED: StoredVideo = {
+  videoPath: 'The Lantern Keeper (2019)/lantern.mp4',
+  videoFolderId: null,
+};
 
 /** The absolute file that path resolves to, once the containment check passes. */
 const FILE = '/media/The Lantern Keeper (2019)/lantern.mp4';
@@ -35,9 +38,13 @@ const FILE = '/media/The Lantern Keeper (2019)/lantern.mp4';
  * `read` or `stream` fails loudly rather than quietly agreeing.
  */
 function playbackThat(
-  videoFile: (storedPath: string) => string | null,
+  resolve: (video: StoredVideo) => string | null,
   duration: (file: string) => number | null
 ): Playback {
+  const videoFile = (video: StoredVideo) => {
+    const file = resolve(video);
+    return file === null ? { kind: 'missing' } : { kind: 'file', file };
+  };
   const unreachable = (): never => {
     throw new Error('derivedRuntime asked Playback something it does not need');
   };
@@ -109,7 +116,7 @@ describe('derivedRuntime — when nothing can', () => {
     expect(
       derivedRuntime(
         playbackThat(videoFile, () => 111 * 60),
-        ''
+        { videoPath: '', videoFolderId: null }
       )
     ).toBeNull();
     expect(videoFile).not.toHaveBeenCalled();

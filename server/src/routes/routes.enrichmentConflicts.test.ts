@@ -109,7 +109,7 @@ async function freshApi() {
 
   const media = sandboxRoot('familyflix-enrich-conflicts-api-');
   const mediaDomain = createMedia(media);
-  const playback = createPlayback(media, fixedSlot(null));
+  const playback = createPlayback(media, fixedSlot(null), () => null);
   const enrichment = createEnrichment({
     storage,
     client: createTmdbClient(fakeTmdb()),

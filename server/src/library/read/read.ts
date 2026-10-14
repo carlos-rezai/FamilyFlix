@@ -17,6 +17,7 @@ export interface MovieRow {
   watched: number;
   resume_position_seconds: number;
   video_path: string;
+  video_folder_id: string | null;
   poster_path: string | null;
   backdrop_path: string | null;
   created_at: string;
@@ -82,6 +83,7 @@ export function mapRowToMovie(
     resumePositionSeconds: row.resume_position_seconds,
     status: deriveStatus(watched, row.resume_position_seconds),
     videoPath: row.video_path,
+    videoFolderId: row.video_folder_id,
     posterPath: row.poster_path,
     backdropPath: row.backdrop_path,
     genres,

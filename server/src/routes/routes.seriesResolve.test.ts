@@ -108,7 +108,7 @@ function freshApi(episodes: string[]): {
   writeFileSync(sheet, SHEET);
 
   const mediaDomain = createMedia(media);
-  const playback = createPlayback(media, fixedSlot(null));
+  const playback = createPlayback(media, fixedSlot(null), () => null);
   const app = express();
   app.use(
     '/api',

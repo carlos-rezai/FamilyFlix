@@ -78,7 +78,7 @@ function sandbox(): Sandbox {
   const importer = createImporter({
     storage,
     media: createMedia(media),
-    playback: createPlayback(media, fixedSlot(null)),
+    playback: createPlayback(media, fixedSlot(null), () => null),
   });
   storage.addLibraryFolder(films);
   storage.addLibraryFolder(shows);

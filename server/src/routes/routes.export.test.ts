@@ -101,7 +101,7 @@ function freshApi(): {
   const { root, sheet } = libraryFixture(dir, 'library.csv');
 
   const mediaDomain = createMedia(media);
-  const playback = createPlayback(media, fixedSlot(null));
+  const playback = createPlayback(media, fixedSlot(null), () => null);
   const app = express();
   app.use(
     '/api',

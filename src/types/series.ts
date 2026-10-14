@@ -50,6 +50,11 @@ export interface Episode {
   /** Derived from `watched` + `resumePositionSeconds`; never stored. */
   status: WatchStatus;
   videoPath: string;
+  /**
+   * The **Library folder** a **Linked video** plays from, its `videoPath`
+   * relative to that folder; `null` when `videoPath` is a **Stored path**.
+   */
+  videoFolderId: string | null;
   /** A Sync's **Still**, a stored path beside the video; `null` until one. */
   stillPath: string | null;
   /**
@@ -132,6 +137,8 @@ export interface NewEpisode {
   subtitles?: NewSubtitle[];
   /** Its **Source file**, relative to the series' Source folder; none by default. */
   sourceFile?: string;
+  /** The **Library folder** its video is linked into; omitted, it is copied. */
+  videoFolderId?: string;
 }
 
 /** The episode after one, in its own series — what _Up next_ names. */

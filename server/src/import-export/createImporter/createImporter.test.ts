@@ -130,7 +130,7 @@ function sandbox({
   const importer = createImporter({
     storage: storageSeam(storage),
     media: mediaSeam(createMedia(media)),
-    playback: createPlayback(media, fixedSlot(null)),
+    playback: createPlayback(media, fixedSlot(null), () => null),
   });
   storage.addLibraryFolder(root);
   return { storage, importer, media, root, sheet };
@@ -2464,7 +2464,7 @@ describe('createImporter — the importer restarting mid-run', () => {
     const restarted = createImporter({
       storage,
       media: createMedia(media),
-      playback: createPlayback(media, fixedSlot(null)),
+      playback: createPlayback(media, fixedSlot(null), () => null),
     });
     return { storage, media, root, sheet, restarted };
   }
