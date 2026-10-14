@@ -18,6 +18,7 @@ export interface FoldersRepository {
   libraryFolders(): StoredLibraryFolder[];
   addLibraryFolder(path: string): StoredLibraryFolder;
   removeLibraryFolder(id: string): boolean;
+  linkedTitleCount(id: string): number;
 }
 
 export function createFolders(db: SqliteDatabase): FoldersRepository {
@@ -40,6 +41,13 @@ export function createFolders(db: SqliteDatabase): FoldersRepository {
     'UPDATE series SET library_folder_id = NULL, source_folder = NULL WHERE library_folder_id = ?'
   );
   const deleteFolder = db.prepare('DELETE FROM library_folders WHERE id = ?');
+  // A series is one title however many of its episodes play from the folder.
+  const selectLinked = db.prepare(`
+    SELECT
+      (SELECT COUNT(*) FROM movies WHERE video_folder_id = @id)
+      + (SELECT COUNT(DISTINCT series_id) FROM episodes WHERE video_folder_id = @id)
+        AS count
+  `);
 
   function libraryFolders(): StoredLibraryFolder[] {
     return selectFolders.all() as StoredLibraryFolder[];
@@ -58,5 +66,14 @@ export function createFolders(db: SqliteDatabase): FoldersRepository {
     return deleteFolder.run(id).changes > 0;
   });
 
-  return { libraryFolders, addLibraryFolder, removeLibraryFolder };
+  function linkedTitleCount(id: string): number {
+    return (selectLinked.get({ id }) as { count: number }).count;
+  }
+
+  return {
+    libraryFolders,
+    addLibraryFolder,
+    removeLibraryFolder,
+    linkedTitleCount,
+  };
 }

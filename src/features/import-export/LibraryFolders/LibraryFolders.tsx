@@ -28,7 +28,9 @@ import {
  * **Library folders** and the lede — over the group **Folders**: one **Folder
  * row** per listed folder (or _No folders yet._), a divider, and the add row,
  * a mono `TextField` with the folder glyph and _Add_. A refused add is one
- * 13px `danger` line under the field, and the typed path stays in it. Then
+ * 13px `danger` line under the field, and the typed path stays in it; a
+ * refused remove — linked videos play from the folder — is the same line
+ * under that folder's row, and the row stays. Then
  * the group **Scan**: _What the scanner accepts_, the **Import mode** (Link on
  * every mount), the `EnrichCheckCard` with Import setup's stored-key hint, and
  * **Scan folders** — sending the box and the mode —
@@ -44,7 +46,8 @@ import {
  * is `null`. Back is the one **Back rule** with Settings as the **Landing**.
  */
 export function LibraryFolders() {
-  const { folders, add, remove, adding, refusal } = useLibraryFolders();
+  const { folders, add, remove, adding, refusal, removeRefusal } =
+    useLibraryFolders();
   const goBack = useGoBack('/settings');
   const [typed, setTyped] = useState('');
   const [bridge] = useState(folderBridge);
@@ -84,13 +87,17 @@ export function LibraryFolders() {
             ) : (
               <Rows>
                 {folders.map((folder) => (
-                  <FolderRow
-                    key={folder.id}
-                    folder={folder}
-                    onRemove={() => {
-                      void remove(folder.id);
-                    }}
-                  />
+                  <div key={folder.id}>
+                    <FolderRow
+                      folder={folder}
+                      onRemove={() => {
+                        void remove(folder.id);
+                      }}
+                    />
+                    {removeRefusal?.id === folder.id ? (
+                      <Refusal>{removeRefusal.sentence}</Refusal>
+                    ) : null}
+                  </div>
                 ))}
               </Rows>
             )}

@@ -26,6 +26,11 @@ export interface LibraryFoldersState {
    * The route's own sentence for the last refused add, `null` once one lands.
    */
   refusal: string | null;
+  /**
+   * The route's own sentence for the last refused remove, by the folder it
+   * was about; `null` until one is refused and once a remove lands.
+   */
+  removeRefusal: { id: string; sentence: string } | null;
 }
 
 /**
@@ -38,6 +43,10 @@ export function useLibraryFolders(): LibraryFoldersState {
   const [folders, setFolders] = useState<LibraryFolder[] | null>(null);
   const [adding, setAdding] = useState(false);
   const [refusal, setRefusal] = useState<string | null>(null);
+  const [removeRefusal, setRemoveRefusal] = useState<{
+    id: string;
+    sentence: string;
+  } | null>(null);
 
   useEffect(() => {
     let live = true;
@@ -74,7 +83,12 @@ export function useLibraryFolders(): LibraryFoldersState {
 
   const remove = useCallback(async (id: string) => {
     try {
-      await removeLibraryFolder(id);
+      const outcome = await removeLibraryFolder(id);
+      if (outcome.kind === 'refused') {
+        setRemoveRefusal({ id, sentence: outcome.sentence });
+        return;
+      }
+      setRemoveRefusal(null);
       setFolders(
         (listed) => listed?.filter((folder) => folder.id !== id) ?? null
       );
@@ -83,5 +97,5 @@ export function useLibraryFolders(): LibraryFoldersState {
     }
   }, []);
 
-  return { folders, add, remove, adding, refusal };
+  return { folders, add, remove, adding, refusal, removeRefusal };
 }

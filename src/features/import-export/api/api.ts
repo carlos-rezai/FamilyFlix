@@ -322,17 +322,33 @@ export async function addLibraryFolder(
   return { kind: 'added', folder: (await response.json()) as LibraryFolder };
 }
 
+/** What a remove came to: the folder taken off, or the route's sentence. */
+export type RemoveFolderOutcome =
+  | { kind: 'removed' }
+  | { kind: 'refused'; sentence: string };
+
 /**
- * Take one folder off the list. Its titles stay. Any status but a `2xx`
- * rejects.
+ * Take one folder off the list. Its titles stay. A `409` — linked videos play
+ * from the folder — resolves with the route's own sentence, because the
+ * screen draws it; any other failure rejects.
  */
-export async function removeLibraryFolder(id: string): Promise<void> {
+export async function removeLibraryFolder(
+  id: string
+): Promise<RemoveFolderOutcome> {
   const url = `${FOLDERS_ENDPOINT}/${encodeURIComponent(id)}`;
   const response = await fetch(url, { method: 'DELETE' });
 
+  if (response.status === 409) {
+    const sentence = await refusalSentence(response);
+    if (sentence !== null) {
+      return { kind: 'refused', sentence };
+    }
+  }
   if (!response.ok) {
     throw new Error(`DELETE ${url} failed: ${response.status}`);
   }
+
+  return { kind: 'removed' };
 }
 
 const SCAN_ENDPOINT = '/api/library-folders/scan';

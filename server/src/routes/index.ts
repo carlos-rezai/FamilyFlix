@@ -1789,8 +1789,20 @@ export function createApiRouter(
   });
 
   // Remove one folder: its titles stay, forgetting only where they came from.
+  // A folder a Linked video plays from is refused in one sentence.
   router.delete('/library-folders/:id', (req: Request, res: Response) => {
-    if (!storage.removeLibraryFolder(String(req.params.id))) {
+    const id = String(req.params.id);
+    const linked = storage.linkedTitleCount(id);
+    if (linked > 0) {
+      res.status(409).json({
+        error:
+          linked === 1
+            ? '1 title plays from this folder. Delete it before removing it.'
+            : `${linked} titles play from this folder. Delete them before removing it.`,
+      });
+      return;
+    }
+    if (!storage.removeLibraryFolder(id)) {
       res
         .status(404)
         .json({ error: 'That folder is not in your library folders.' });

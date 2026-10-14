@@ -381,6 +381,12 @@ export interface LibraryStorage {
    */
   removeLibraryFolder(id: string): boolean;
   /**
+   * How many titles a **Linked video** plays from in this folder — films,
+   * plus series with a linked episode there, each series once. A folder in
+   * use is not removed.
+   */
+  linkedTitleCount(id: string): number;
+  /**
    * **Factory reset**'s erase: every row of every table but the **Genre
    * pool**, in one transaction — all or nothing. The same kind of seam
    * {@link close} is, so the router never reaches `db/` itself.
@@ -470,6 +476,7 @@ export function createSqliteStorage(dbPath: string): LibraryStorage {
     libraryFolders: folders.libraryFolders,
     addLibraryFolder: folders.addLibraryFolder,
     removeLibraryFolder: folders.removeLibraryFolder,
+    linkedTitleCount: folders.linkedTitleCount,
     reset() {
       resetDatabase(db);
     },
