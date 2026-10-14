@@ -425,7 +425,10 @@ export function seedSeries(
 
   let episodes = 0;
   for (const { slug, favorite, seasons, ...input } of SEED_SERIES) {
-    const series = write.addSeries(input);
+    const series = write.addSeries({
+      ...input,
+      mediaFolder: `${SEED_SERIES_PREFIX}${slug}`,
+    });
     if (favorite) {
       curation.setSeriesFavorite(series.id, true);
     }

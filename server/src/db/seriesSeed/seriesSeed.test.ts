@@ -57,6 +57,23 @@ describe('seedSeries', () => {
     }
   });
 
+  it('records each show’s Media folder, the one under the prefix its videos lie in', () => {
+    seedSeries(db, mediaPath);
+
+    const reader = createSeriesReader(db);
+    const folderOf = db.prepare('SELECT media_folder FROM series WHERE id = ?');
+    for (const { id } of home().series) {
+      const { media_folder: folder } = folderOf.get(id) as {
+        media_folder: string | null;
+      };
+      expect(folder?.startsWith(SEED_SERIES_PREFIX)).toBe(true);
+      expect(existsSync(join(mediaPath, folder ?? ''))).toBe(true);
+      for (const episode of reader.listEpisodes(id)) {
+        expect(episode.videoPath.startsWith(`${folder}/`)).toBe(true);
+      }
+    }
+  });
+
   it('fills Continue Watching in the order of its own stamps', () => {
     seedSeries(db, mediaPath);
 

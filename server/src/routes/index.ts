@@ -1,5 +1,5 @@
 import { homedir } from 'node:os';
-import { resolve } from 'node:path';
+import { basename, resolve } from 'node:path';
 import { pipeline } from 'node:stream';
 
 import type {
@@ -872,6 +872,9 @@ export function createApiRouter(
           ...(rating === undefined ? {} : { rating }),
           ...(cast.length === 0 ? {} : { cast }),
           ...(genres.length === 0 ? {} : { genres }),
+          ...(uploads.folder === null
+            ? {}
+            : { mediaFolder: basename(uploads.folder) }),
         },
         episodes
       );
@@ -1299,6 +1302,11 @@ export function createApiRouter(
           // `language` and `position` have both existed since V1, and this is
           // simply the first code in the app that writes them from a request.
           ...(subtitles.length === 0 ? {} : { subtitles }),
+          // The folder this request reserved and named is the movie's Media
+          // folder: named by whoever reserved it, never read back off a file.
+          ...(uploads.folder === null
+            ? {}
+            : { mediaFolder: basename(uploads.folder) }),
         })
       );
     } catch {
