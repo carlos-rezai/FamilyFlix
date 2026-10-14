@@ -8,6 +8,7 @@ import type {
   NewSubtitle,
   Series,
 } from '@/types';
+import { parentOf } from '../../write/write';
 import type { SeriesReader } from '../read/read';
 
 export interface SeriesWrite {
@@ -87,10 +88,12 @@ export function createSeriesWrite(
   const insertSeries = db.prepare(`
     INSERT INTO series (
       id, tmdb_id, title, year, end_year, synopsis, creator, cast, rating,
-      is_favorite, poster_path, backdrop_path, created_at, updated_at
+      is_favorite, poster_path, backdrop_path, created_at, updated_at,
+      media_folder
     ) VALUES (
       @id, @tmdb_id, @title, @year, @end_year, @synopsis, @creator, @cast, @rating,
-      0, @poster_path, @backdrop_path, @created_at, @updated_at
+      0, @poster_path, @backdrop_path, @created_at, @updated_at,
+      @media_folder
     )
   `);
   const selectGenreIdByName = db.prepare(
@@ -108,36 +111,47 @@ export function createSeriesWrite(
       @runtime_minutes, @video_path, @source_file, @created_at, @updated_at
     )
   `);
+  const fillSeriesFolder = db.prepare(
+    'UPDATE series SET media_folder = ? WHERE id = ? AND media_folder IS NULL'
+  );
   const insertEpisodeSubtitle = db.prepare(`
     INSERT INTO episode_subtitles (id, episode_id, path, language, position)
     VALUES (@id, @episode_id, @path, @language, @position)
   `);
 
-  const insertSeriesGraph = db.transaction((id: string, input: NewSeries) => {
-    const now = new Date().toISOString();
-    insertSeries.run({
-      id,
-      tmdb_id: input.tmdbId ?? null,
-      title: input.title,
-      year: input.year ?? null,
-      end_year: input.endYear ?? null,
-      synopsis: input.synopsis ?? null,
-      creator: input.creator ?? null,
-      cast: input.cast ? JSON.stringify(input.cast) : null,
-      rating: input.rating ?? null,
-      poster_path: input.posterPath ?? null,
-      backdrop_path: input.backdropPath ?? null,
-      created_at: now,
-      updated_at: now,
-    });
-    input.genres?.forEach((name, position) => {
-      const genre = selectGenreIdByName.get(name) as { id: string } | undefined;
-      if (!genre) {
-        throw new Error(`Unknown genre: ${name}`);
-      }
-      insertSeriesGenre.run(id, genre.id, position);
-    });
-  });
+  const insertSeriesGraph = db.transaction(
+    (id: string, input: NewSeries, firstVideo?: string) => {
+      const now = new Date().toISOString();
+      insertSeries.run({
+        id,
+        tmdb_id: input.tmdbId ?? null,
+        title: input.title,
+        year: input.year ?? null,
+        end_year: input.endYear ?? null,
+        synopsis: input.synopsis ?? null,
+        creator: input.creator ?? null,
+        cast: input.cast ? JSON.stringify(input.cast) : null,
+        rating: input.rating ?? null,
+        poster_path: input.posterPath ?? null,
+        backdrop_path: input.backdropPath ?? null,
+        created_at: now,
+        updated_at: now,
+        media_folder:
+          input.mediaFolder ??
+          parentOf(firstVideo, 2) ??
+          parentOf(input.posterPath, 1),
+      });
+      input.genres?.forEach((name, position) => {
+        const genre = selectGenreIdByName.get(name) as
+          | { id: string }
+          | undefined;
+        if (!genre) {
+          throw new Error(`Unknown genre: ${name}`);
+        }
+        insertSeriesGenre.run(id, genre.id, position);
+      });
+    }
+  );
 
   const insertEpisodeGraph = db.transaction(
     (id: string, seriesId: string, input: NewEpisode) => {
@@ -155,6 +169,8 @@ export function createSeriesWrite(
         created_at: now,
         updated_at: now,
       });
+      // A series added bare takes its Media folder off its first episode.
+      fillSeriesFolder.run(parentOf(input.videoPath, 2), seriesId);
       input.subtitles?.forEach((track, position) => {
         insertEpisodeSubtitle.run({
           id: randomUUID(),
@@ -171,7 +187,7 @@ export function createSeriesWrite(
 
   const insertSeriesWithEpisodes = db.transaction(
     (id: string, input: NewSeries, episodes: readonly NewEpisode[]) => {
-      insertSeriesGraph(id, input);
+      insertSeriesGraph(id, input, episodes[0]?.videoPath);
       for (const episode of episodes) {
         insertEpisodeGraph(randomUUID(), id, episode);
       }

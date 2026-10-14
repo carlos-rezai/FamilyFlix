@@ -300,20 +300,25 @@ export function createEnrichment({
     return { kind: 'found', detail: detail.value };
   }
 
-  /** One image streamed into the movie's folder as `name`; `null` if not. */
+  /**
+   * One image streamed into a title's recorded **Media folder** (or a folder
+   * under it) as `name`; `null` when none is recorded, or the image could not
+   * be stored.
+   */
   async function storeImage(
     current: EnrichmentRun,
-    movie: Movie,
+    folder: string | null,
     path: string,
     name: string,
     signal: AbortSignal
   ): Promise<string | null> {
+    if (folder === null) return null;
     const image = await client.image(path, signal);
     if (image.kind !== 'ok' || signal.aborted) {
       return null;
     }
     try {
-      const stored = await media.storeNamed(movie.videoPath, name, image.value);
+      const stored = await media.storeNamed(folder, name, image.value);
       log(current, `↓ ${name}  →  ${stored}`, 'scan');
       return stored;
     } catch {
@@ -413,7 +418,7 @@ export function createEnrichment({
     if (fill.poster) {
       const stored = await storeImage(
         current,
-        movie,
+        storage.mediaFolderOf('movie', movie.id),
         fill.poster,
         'poster.jpg',
         signal
@@ -426,7 +431,7 @@ export function createEnrichment({
     if (fill.backdrop) {
       const stored = await storeImage(
         current,
-        movie,
+        storage.mediaFolderOf('movie', movie.id),
         fill.backdrop,
         'backdrop.jpg',
         signal
@@ -492,32 +497,6 @@ export function createEnrichment({
   }
 
   /**
-   * One image streamed into the **Series folder** above the show's episodes as
-   * `name`; `null` when it has no episode, or the image could not be stored.
-   */
-  async function storeSeriesImage(
-    current: EnrichmentRun,
-    episodes: readonly Episode[],
-    path: string,
-    name: string,
-    signal: AbortSignal
-  ): Promise<string | null> {
-    const video = episodes[0]?.videoPath;
-    if (video === undefined) return null;
-    const image = await client.image(path, signal);
-    if (image.kind !== 'ok' || signal.aborted) {
-      return null;
-    }
-    try {
-      const stored = await media.storeInSeriesFolder(video, name, image.value);
-      log(current, `↓ ${name}  →  ${stored}`, 'scan');
-      return stored;
-    } catch {
-      return null;
-    }
-  }
-
-  /**
    * Plan and write one Confident series at show level: its columns, creator,
    * year range, id and images. Answers the **Field conflicts** the plan left
    * for the review under the run's own scope, and what TMDB said — `write`'s
@@ -547,9 +526,9 @@ export function createEnrichment({
       fields
     );
     if (fill.poster) {
-      const stored = await storeSeriesImage(
+      const stored = await storeImage(
         current,
-        episodes,
+        storage.mediaFolderOf('series', series.id),
         fill.poster,
         'poster.jpg',
         signal
@@ -557,9 +536,9 @@ export function createEnrichment({
       if (stored !== null) enrichment.posterPath = stored;
     }
     if (fill.backdrop) {
-      const stored = await storeSeriesImage(
+      const stored = await storeImage(
         current,
-        episodes,
+        storage.mediaFolderOf('series', series.id),
         fill.backdrop,
         'backdrop.jpg',
         signal
@@ -577,8 +556,28 @@ export function createEnrichment({
    * air date when empty, always; the still under Poster; the runtime under
    * Runtime. Never a Decision, never the watch state.
    */
+  /**
+   * A season's folder under a recorded **Series folder**, made if it is not
+   * there — where a Still goes — as a recorded folder `storeNamed` takes.
+   * Throws for a series with no folder recorded, or one that is not there.
+   */
+  function seasonFolderOf(
+    seriesFolder: string | null,
+    seasonNumber: number
+  ): string {
+    const opened =
+      seriesFolder === null ? null : media.openFolder(seriesFolder);
+    if (seriesFolder === null || opened === null) {
+      throw new Error('No Series folder recorded');
+    }
+    const season = media.seasonFolder(opened, seasonNumber);
+    return `${seriesFolder}/${season.split(sep).pop() ?? ''}`;
+  }
+
   async function writeEpisodes(
     current: EnrichmentRun,
+    seriesFolder: string | null,
+    seasonNumber: number,
     episodes: readonly Episode[],
     season: TmdbSeason,
     fields: readonly EnrichField[],
@@ -602,7 +601,7 @@ export function createEnrichment({
           try {
             const name = `${stem}.still.jpg`;
             const stored = await media.storeNamed(
-              episode.videoPath,
+              seasonFolderOf(seriesFolder, seasonNumber),
               name,
               image.value
             );
@@ -664,9 +663,9 @@ export function createEnrichment({
       const { poster } = planSeason(season, theirs.value, fields);
       if (poster !== null) {
         const name = `${spellEpisodeTag(season.number)}-poster.jpg`;
-        const stored = await storeSeriesImage(
+        const stored = await storeImage(
           current,
-          season.episodes,
+          storage.mediaFolderOf('series', series.id),
           poster,
           name,
           signal
@@ -678,6 +677,8 @@ export function createEnrichment({
       }
       await writeEpisodes(
         current,
+        storage.mediaFolderOf('series', series.id),
+        season.number,
         season.episodes,
         theirs.value,
         fields,

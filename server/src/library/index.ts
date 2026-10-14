@@ -290,6 +290,12 @@ export interface LibraryStorage {
    */
   titleSource(id: string): TitleSource | null;
   /**
+   * A title's recorded **Media folder**, relative to the Managed media
+   * directory — the one way `Media` finds its folder; `null` for an id that
+   * kind does not hold. Never on the wire.
+   */
+  mediaFolderOf(kind: 'movie' | 'series', id: string): string | null;
+  /**
    * Where a Movie or Series sits on disk: its Library folder's path joined to
    * its Source folder — `null` for a title with no folder.
    */
@@ -447,6 +453,7 @@ export function createSqliteStorage(dbPath: string): LibraryStorage {
     setEnrichmentLastSyncedAt: settingsRepository.setEnrichmentLastSyncedAt,
     setSourceFolder: enrich.setSourceFolder,
     titleSource: enrich.titleSource,
+    mediaFolderOf: enrich.mediaFolderOf,
     sourcePath: enrich.sourcePath,
     titleAt: enrich.titleAt,
     addSeries: seriesWrite.addSeries,

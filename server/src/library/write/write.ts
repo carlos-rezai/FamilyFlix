@@ -45,16 +45,28 @@ export interface Write {
   deleteMovie(id: string): void;
 }
 
+/** A Stored path `levels` directories up, or `null` with nothing above it. */
+export function parentOf(
+  path: string | undefined,
+  levels: number
+): string | null {
+  if (path === undefined) return null;
+  const segments = path.split('/');
+  return segments.length > levels ? segments.slice(0, -levels).join('/') : null;
+}
+
 export function createWrite(db: SqliteDatabase, reader: MovieReader): Write {
   const insertMovie = db.prepare(`
     INSERT INTO movies (
       id, tmdb_id, title, year, runtime_minutes, synopsis, director, cast,
       rating, is_favorite, watched, resume_position_seconds, video_path,
-      poster_path, backdrop_path, created_at, updated_at, last_watched_at
+      poster_path, backdrop_path, created_at, updated_at, last_watched_at,
+      media_folder
     ) VALUES (
       @id, @tmdb_id, @title, @year, @runtime_minutes, @synopsis, @director, @cast,
       @rating, @is_favorite, @watched, @resume_position_seconds, @video_path,
-      @poster_path, @backdrop_path, @created_at, @updated_at, @last_watched_at
+      @poster_path, @backdrop_path, @created_at, @updated_at, @last_watched_at,
+      @media_folder
     )
   `);
   const selectGenreIdByName = db.prepare(
@@ -100,6 +112,7 @@ export function createWrite(db: SqliteDatabase, reader: MovieReader): Write {
       // otherwise — an added movie has not been watched by us. Never `now`:
       // adding a movie is not watching it.
       last_watched_at: input.lastWatchedAt ?? null,
+      media_folder: input.mediaFolder ?? parentOf(input.videoPath, 1),
     });
 
     input.genres?.forEach((name, position) => {

@@ -5,6 +5,7 @@ import {
   dirname,
   extname,
   isAbsolute,
+  posix,
   relative,
   sep,
 } from 'node:path';
@@ -38,7 +39,6 @@ import { readSheet, type SheetRow } from '../readSheet/readSheet';
 import { titleGuess, titleKey, yearInName } from '../titleKey/titleKey';
 import type {
   CandidateFolder,
-  Episode,
   ImportField,
   ImportProblem,
   ImportProblemDetail,
@@ -962,6 +962,7 @@ export function createImporter({
         ...(posterPath === undefined ? {} : { posterPath }),
         ...(backdropPath === undefined ? {} : { backdropPath }),
         ...(subtitles.length === 0 ? {} : { subtitles }),
+        mediaFolder: basename(folder),
       };
       const added = storage.addMovie(movie);
       storage.setSourceFolder(
@@ -1081,6 +1082,7 @@ export function createImporter({
             ...(row.rating === null ? {} : { rating: row.rating }),
             ...(row.cast.length === 0 ? {} : { cast: row.cast }),
             ...(genres.length === 0 ? {} : { genres }),
+            mediaFolder: basename(folder),
           };
           series = storage.addSeries(input);
           storage.setSourceFolder(series.id, libraryFolder.id, sourceFolder);
@@ -1169,17 +1171,12 @@ export function createImporter({
   };
 
   /**
-   * The **Series folder** a held series' episodes live in — one up from an
-   * episode's season folder — or `null` when none of them names one.
+   * The **Series folder** a held series' files live in — its recorded **Media
+   * folder**, opened — or `null` when none is recorded or it is not there.
    */
-  const heldFolder = (episodes: Episode[]): string | null => {
-    for (const episode of episodes) {
-      const season = media.openFolder(episode.videoPath);
-      if (season !== null) {
-        return dirname(season);
-      }
-    }
-    return null;
+  const heldFolder = (seriesId: string): string | null => {
+    const recorded = storage.mediaFolderOf('series', seriesId);
+    return recorded === null ? null : media.openFolder(recorded);
   };
 
   /**
@@ -1231,7 +1228,7 @@ export function createImporter({
             episode.sourceFile === null ? [] : [episode.sourceFile]
           )
         ),
-        folder: heldFolder(episodes),
+        folder: heldFolder(series.id),
       };
     });
 
@@ -1982,7 +1979,9 @@ export function createImporter({
         (slot): slot is { stored: string } => 'stored' in slot
       );
       const folder =
-        (stored === undefined ? null : media.openFolder(stored.stored)) ??
+        (stored === undefined
+          ? null
+          : media.openFolder(posix.dirname(stored.stored))) ??
         media.reserveFolder(form.title, form.year);
 
       /** A stored file as it is; a found one copied in beside it. */
@@ -2086,10 +2085,12 @@ export function createImporter({
       const stored = slots.find(
         (slot): slot is { stored: string } => 'stored' in slot
       );
-      const ownFolder = heldSeries === null ? null : heldFolder(heldEpisodes);
+      const ownFolder = heldSeries === null ? null : heldFolder(heldSeries.id);
       const folder =
         ownFolder ??
-        (stored === undefined ? null : media.openFolder(stored.stored)) ??
+        (stored === undefined
+          ? null
+          : media.openFolder(posix.dirname(stored.stored))) ??
         media.reserveFolder(form.title, form.year ?? null);
       const copied: string[] = [];
 

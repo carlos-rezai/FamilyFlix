@@ -10,15 +10,7 @@ import {
   statSync,
   unlinkSync,
 } from 'node:fs';
-import {
-  basename,
-  dirname,
-  isAbsolute,
-  join,
-  relative,
-  resolve,
-  sep,
-} from 'node:path';
+import { basename, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { pipeline } from 'node:stream/promises';
 import type { Readable } from 'node:stream';
 
@@ -67,32 +59,16 @@ export interface Media {
   reserveFolder(title: string, year: number | null): string;
 
   /**
-   * The **Movie folder** a **Stored path** already lives in, ready to be
-   * written into — or `null` for a path that names nothing under the managed
-   * media directory.
+   * A title's recorded **Media folder**, as an absolute directory ready to be
+   * written into — or `null` for a folder that is not there, is the media root
+   * itself, or lies outside it.
    *
-   * What an *edit* uses instead of {@link reserveFolder}: a movie already has
+   * What an *edit* uses instead of {@link reserveFolder}: a title already has
    * somewhere its files live, and giving it a second folder because its title
-   * was corrected would mean moving gigabytes to fix a spelling. The folder is
-   * the movie's, not the title's, so the managed directory's names are allowed
-   * to drift from the library's.
-   *
-   * It answers `null` for exactly what {@link mediaFilePath} answers `null` for
-   * — a path that escaped the root, a file that is not there, a media directory
-   * that does not exist — because it is that same check, asked one directory
-   * up. A caller with nothing here has no folder to reuse and must reserve one.
+   * was corrected would mean moving gigabytes to fix a spelling. A caller with
+   * nothing here has no folder to reuse and must reserve one.
    */
-  openFolder(storedPath: string): string | null;
-
-  /**
-   * {@link openFolder} for a series: the **Series folder** an episode's
-   * **Stored path** sits under — two directories up, above its season folder
-   * — when the episode's file is there, else `null`. What a **Series edit
-   * job** writes fresh bytes into, so a retitle moves nothing. `null` too for
-   * a path with no Series folder above its season, or one that escapes the
-   * media directory.
-   */
-  openSeriesFolder(episodePath: string): string | null;
+  openFolder(folder: string): string | null;
 
   /**
    * The `season-NN/` directory under a reserved **Series folder**, created if
@@ -128,30 +104,14 @@ export interface Media {
   ): Promise<string>;
 
   /**
-   * Write `source` as exactly `name` into the folder the title's **Stored
-   * path** lives in — a **Sync**'s `poster.jpg` and `backdrop.jpg`, beside the
-   * video — answering the **Stored path** of what it wrote. A file of that
-   * name is replaced, so a second Sync leaves one poster. Rejects, writing
-   * nothing, for a stored path that names no file under the media directory.
+   * Write `source` as exactly `name` into a recorded **Media folder** — or a
+   * folder under it, a season's — answering the **Stored path** of what it
+   * wrote: a **Sync**'s `poster.jpg` and `backdrop.jpg`, a Season poster, a
+   * Still. A file of that name is replaced, so a second Sync leaves one
+   * poster. Rejects, writing nothing, for a folder that is not there, is the
+   * media root, or lies outside it.
    */
-  storeNamed(
-    storedPath: string,
-    name: string,
-    source: Readable
-  ): Promise<string>;
-
-  /**
-   * Write `source` as exactly `name` into the **Series folder** an episode's
-   * **Stored path** sits under — two directories up, above its season folder —
-   * answering the **Stored path** of what it wrote: a series' `poster.jpg` and
-   * `backdrop.jpg`. Rejects, writing nothing, for a path that names no file
-   * under the media directory, or one with no Series folder above its season.
-   */
-  storeInSeriesFolder(
-    episodePath: string,
-    name: string,
-    source: Readable
-  ): Promise<string>;
+  storeNamed(folder: string, name: string, source: Readable): Promise<string>;
 
   /**
    * The bytes of the file a **Stored path** names, as a stream — what a
@@ -201,30 +161,14 @@ export interface Media {
   removeFile(storedPath: string): void;
 
   /**
-   * Remove the whole **Movie folder** a **Stored path** lives in — video,
-   * poster, subtitles, and anything else that found its way in — whether or
-   * not the named file is still there.
-   *
-   * The folder is the first segment of the path, named rather than found
-   * through the file: {@link openFolder} answers nothing for a missing file,
-   * which would leave a hand-deleted video's siblings on disk forever. What a
-   * **Delete** runs *after* the row has gone, so like {@link removeFile} it is
-   * **best-effort** and swallows its own failure — a locked video leaves a
-   * **Stranded folder**, not a failed delete. A path that escapes the managed
-   * media directory, or names a folder already gone, is nothing to do.
+   * Remove a title's whole recorded **Media folder** — a film's Movie folder
+   * or a series' Series folder, everything in it. What a **Delete** runs
+   * *after* the row has gone, so it is **best-effort** and swallows its own
+   * failure — a locked video leaves a **Stranded folder**, not a failed
+   * delete. A folder outside the media root, the root itself, or one already
+   * gone is nothing to do.
    */
-  removeMovieFolder(storedPath: string): void;
-
-  /**
-   * Remove the whole **Series folder** an episode's **Stored path** names —
-   * the folder one directory above its season folder, `storeInSeriesFolder`'s
-   * reading — every season, poster and subtitle in it, whether or not the
-   * named episode is still there. A series **Delete**'s cleanup, run after the
-   * row has gone, so **best-effort** as {@link removeMovieFolder} is: a path
-   * with no Series folder above its season, one that escapes the root, or a
-   * folder already gone is nothing to do, and a failure is swallowed.
-   */
-  removeSeriesFolder(storedPath: string): void;
+  removeTitleFolder(folder: string): void;
 
   /**
    * Empty the **Managed media directory** and keep it — **Factory reset**'s
@@ -309,20 +253,14 @@ export function createMedia(mediaPath: string): Media {
   };
 
   /**
-   * The **Series folder** above an episode's **Stored path** —
-   * `series/season-NN/file`, every segment but the last two — as the
-   * filesystem spells it: `null` for fewer than three segments (two up is the
-   * root), an absolute path, or a folder that is not there or escapes the
-   * root. The one reading `storeInSeriesFolder`, `openSeriesFolder` and
-   * `removeSeriesFolder` share.
+   * A recorded **Media folder** — relative to the root, as the library stores
+   * it — as the filesystem spells it, or `null`: an absolute path is refused
+   * before anything is resolved, as `mediaFilePath` refuses one, and the rest
+   * is {@link containedFolder}'s rule. The one reading `openFolder`,
+   * `storeNamed` and `removeTitleFolder` share.
    */
-  const seriesFolderOf = (storedPath: string): string | null => {
-    const segments = storedPath.split('/');
-    if (isAbsolute(storedPath) || segments.length < 3) {
-      return null;
-    }
-    return containedFolder(segments.slice(0, -2).join('/'));
-  };
+  const recordedFolder = (folder: string): string | null =>
+    isAbsolute(folder) ? null : containedFolder(folder);
 
   return {
     reserveFolder: (title, year) => {
@@ -335,18 +273,7 @@ export function createMedia(mediaPath: string): Media {
       return folder;
     },
 
-    openFolder: (storedPath) => {
-      // The containment rule is `mediaFilePath`'s own rather than a second
-      // spelling of it: a stored path that escapes the media root names no
-      // folder here either, whatever it says.
-      const file = mediaFilePath(mediaPath, storedPath);
-      return file === null ? null : dirname(file);
-    },
-
-    openSeriesFolder: (episodePath) =>
-      mediaFilePath(mediaPath, episodePath) === null
-        ? null
-        : seriesFolderOf(episodePath),
+    openFolder: (folder) => recordedFolder(folder),
 
     seasonFolder: (seriesFolder, season) => {
       const folder = join(
@@ -390,26 +317,10 @@ export function createMedia(mediaPath: string): Media {
       return storedIn(folder, safe);
     },
 
-    storeNamed: async (storedPath, name, source) => {
-      const file = mediaFilePath(mediaPath, storedPath);
-      if (file === null) {
-        throw new Error(`No title folder for ${storedPath}`);
-      }
-      const folder = dirname(file);
-      const safe = safeFilename(name);
-      await pipeline(source, createWriteStream(join(folder, safe)));
-      return storedIn(folder, safe);
-    },
-
-    storeInSeriesFolder: async (episodePath, name, source) => {
-      // A path with no Series folder above its season folder writes nothing,
-      // and nothing is written into the media root itself.
-      const folder =
-        mediaFilePath(mediaPath, episodePath) === null
-          ? null
-          : seriesFolderOf(episodePath);
+    storeNamed: async (recorded, name, source) => {
+      const folder = recordedFolder(recorded);
       if (folder === null) {
-        throw new Error(`No Series folder above ${episodePath}`);
+        throw new Error(`No title folder at ${recorded}`);
       }
       const safe = safeFilename(name);
       await pipeline(source, createWriteStream(join(folder, safe)));
@@ -472,15 +383,8 @@ export function createMedia(mediaPath: string): Media {
       }
     },
 
-    removeMovieFolder: (storedPath) => {
-      // The folder is the first segment of every stored path under it. An
-      // absolute path is refused before anything is resolved, as
-      // `mediaFilePath` refuses it; a relative one that escapes the root, or
-      // names the root itself, is refused on the resolved path.
-      if (isAbsolute(storedPath)) {
-        return;
-      }
-      const folder = containedFolder(storedPath.split('/')[0]);
+    removeTitleFolder: (recorded) => {
+      const folder = recordedFolder(recorded);
       if (folder === null) {
         return;
       }
@@ -490,22 +394,6 @@ export function createMedia(mediaPath: string): Media {
       } catch {
         // A folder that will not go — a video the stream route still has open.
         // The row is already gone, and a stranded folder beats a ghost row.
-      }
-    },
-
-    removeSeriesFolder: (storedPath) => {
-      // Named rather than found through the file, as the movie's is: a
-      // hand-deleted episode still names its Series folder.
-      const folder = seriesFolderOf(storedPath);
-      if (folder === null) {
-        return;
-      }
-
-      try {
-        rmSync(folder, { recursive: true, force: true });
-      } catch {
-        // A folder that will not go — an episode the stream route still has
-        // open. The row is already gone; a stranded folder beats a ghost row.
       }
     },
 

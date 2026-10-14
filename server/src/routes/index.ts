@@ -751,11 +751,11 @@ export function createApiRouter(
   });
 
   // The series' **Delete dialog** confirm — the movie delete's shape. `204`
-  // with nothing in it; the lookup and the JSON 404 are `seriesOr404`'s. Any
-  // episode's **Stored path** names the Series folder, read before the row
-  // goes, as the movie's `videoPath` is. **Row first, then bytes,
-  // best-effort**: the cascade takes the episodes, genres and subtitles, then
-  // `removeSeriesFolder` takes the Series folder and swallows its own failure.
+  // with nothing in it; the lookup and the JSON 404 are `seriesOr404`'s. The
+  // recorded **Media folder** is read before the row goes, as the movie's is.
+  // **Row first, then bytes, best-effort**: the cascade takes the episodes,
+  // genres and subtitles, then `removeTitleFolder` takes the Series folder
+  // and swallows its own failure.
   // No `409` guard, the movie delete's precedent.
   router.delete(
     '/series/:id',
@@ -765,10 +765,10 @@ export function createApiRouter(
         return;
       }
 
-      const [episode] = storage.listEpisodes(series.id);
+      const folder = storage.mediaFolderOf('series', series.id);
       storage.deleteSeries(series.id);
-      if (episode !== undefined) {
-        media.removeSeriesFolder(episode.videoPath);
+      if (folder !== null) {
+        media.removeTitleFolder(folder);
       }
       res.status(204).end();
     }
@@ -885,22 +885,14 @@ export function createApiRouter(
       }
       const held = storage.listEpisodes(existing.id);
 
-      // The folder is the series', never the title's: the one above a held
-      // episode's season folder, else the poster's, else one reserved.
+      // The folder is the series', never the title's: its recorded **Media
+      // folder**, else one reserved.
       let reserved: string | null = null;
+      const recorded = storage.mediaFolderOf('series', existing.id);
       const seriesFolder = (before: Record<string, string[]>): string => {
-        for (const episode of held) {
-          const folder = media.openSeriesFolder(episode.videoPath);
-          if (folder !== null) {
-            return folder;
-          }
-        }
-        const poster =
-          existing.posterPath === null
-            ? null
-            : media.openFolder(existing.posterPath);
-        if (poster !== null) {
-          return poster;
+        const folder = recorded === null ? null : media.openFolder(recorded);
+        if (folder !== null) {
+          return folder;
         }
         reserved = media.reserveFolder(
           onlyField(before, 'title')?.trim() ?? existing.title,
@@ -1344,13 +1336,14 @@ export function createApiRouter(
       }
 
       // **The folder is the movie's, never the title's.** An edit writes into
-      // the folder the movie's current `videoPath` already lives in, so
-      // renaming a film moves nothing — and only a row with no film behind it
-      // has none to reuse and gets one reserved, exactly as the POST would.
+      // the movie's recorded **Media folder**, so renaming a film moves
+      // nothing — and only a row with no folder behind it has none to reuse
+      // and gets one reserved, exactly as the POST would.
+      const recorded = storage.mediaFolderOf('movie', existing.id);
       const { onFile, uploads } = collectUploads(
         media,
         (before) =>
-          media.openFolder(existing.videoPath) ??
+          (recorded === null ? null : media.openFolder(recorded)) ??
           media.reserveFolder(
             onlyField(before, 'title')?.trim() ?? existing.title,
             optionalYear(onlyField(before, 'year')) ?? existing.year
@@ -1509,7 +1502,7 @@ export function createApiRouter(
   // the same id answers exactly what a stepped-forward detail page reads. The
   // row goes first and the cascade takes its genre tags and subtitles with it;
   // then the **Movie folder**, through the one `Media` method that removes a
-  // whole one. **Row first, then bytes, best-effort**: `removeMovieFolder`
+  // whole one. **Row first, then bytes, best-effort**: `removeTitleFolder`
   // swallows its own failure, so a video the stream route still has open
   // leaves a stranded folder and this `204`, never a ghost row and a `500`.
   router.delete('/movies/:id', (req: Request<{ id: string }>, res) => {
@@ -1518,8 +1511,11 @@ export function createApiRouter(
       return;
     }
 
+    const folder = storage.mediaFolderOf('movie', movie.id);
     storage.deleteMovie(movie.id);
-    media.removeMovieFolder(movie.videoPath);
+    if (folder !== null) {
+      media.removeTitleFolder(folder);
+    }
     res.status(204).end();
   });
 

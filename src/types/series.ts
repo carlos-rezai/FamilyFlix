@@ -114,6 +114,10 @@ export interface NewSeries {
   posterPath?: string;
   backdropPath?: string;
   genres?: string[];
+  /** Its **Media folder** (the Series folder), relative to the Managed media
+   *  directory — server side only, never on the wire. Omitted, it is read
+   *  off the first episode's path two directories up, else its poster's. */
+  mediaFolder?: string;
 }
 
 /** An episode as the library is given it, under a series it already holds. */

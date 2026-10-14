@@ -300,4 +300,54 @@ export const migrations: readonly Migration[] = [
       `);
     },
   },
+  {
+    // The Media folder: each title's managed folder, relative to the Managed
+    // media directory — the one way `Media` finds it. Backfilled: a film's off
+    // its video's directory, a series' off any episode's path two directories
+    // up (a seeded show keeps its seed prefix), else off its
+    // poster's directory, else `NULL` rather than a guess.
+    version: 11,
+    up(db) {
+      db.exec(`
+        ALTER TABLE movies ADD COLUMN media_folder TEXT;
+        ALTER TABLE series ADD COLUMN media_folder TEXT;
+      `);
+      const parent = (path: string, levels: number): string | null => {
+        const segments = path.split('/');
+        return segments.length > levels
+          ? segments.slice(0, -levels).join('/')
+          : null;
+      };
+      const movies = db
+        .prepare('SELECT id, video_path FROM movies')
+        .all() as Array<{ id: string; video_path: string }>;
+      const setMovie = db.prepare(
+        'UPDATE movies SET media_folder = ? WHERE id = ?'
+      );
+      for (const movie of movies) {
+        setMovie.run(parent(movie.video_path, 1), movie.id);
+      }
+      const series = db
+        .prepare(
+          `SELECT s.id, s.poster_path,
+             (SELECT e.video_path FROM episodes e WHERE e.series_id = s.id
+              ORDER BY e.season_number, e.episode_number LIMIT 1) AS video_path
+           FROM series s`
+        )
+        .all() as Array<{
+        id: string;
+        poster_path: string | null;
+        video_path: string | null;
+      }>;
+      const setSeries = db.prepare(
+        'UPDATE series SET media_folder = ? WHERE id = ?'
+      );
+      for (const show of series) {
+        const folder =
+          (show.video_path === null ? null : parent(show.video_path, 2)) ??
+          (show.poster_path === null ? null : parent(show.poster_path, 1));
+        setSeries.run(folder, show.id);
+      }
+    },
+  },
 ];

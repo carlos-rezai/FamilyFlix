@@ -120,6 +120,12 @@ export interface Enrich {
    */
   titleSource(id: string): TitleSource | null;
   /**
+   * A title's recorded **Media folder**, relative to the Managed media
+   * directory — `null` for an id that kind does not hold, or none recorded.
+   * Server side only: the assembled records never carry it.
+   */
+  mediaFolderOf(kind: 'movie' | 'series', id: string): string | null;
+  /**
    * The title's Library folder path joined to its Source folder, in one query
    * over both columns — `null` for a title with no folder.
    */
@@ -285,6 +291,18 @@ export function createEnrich(db: SqliteDatabase, reader: MovieReader): Enrich {
     return row === undefined ? null : join(row.path, row.source_folder);
   }
 
+  const selectMediaFolder = {
+    movie: db.prepare('SELECT media_folder FROM movies WHERE id = ?'),
+    series: db.prepare('SELECT media_folder FROM series WHERE id = ?'),
+  };
+
+  function mediaFolderOf(kind: 'movie' | 'series', id: string): string | null {
+    const row = selectMediaFolder[kind].get(id) as
+      | { media_folder: string | null }
+      | undefined;
+    return row?.media_folder ?? null;
+  }
+
   function titleSource(id: string): TitleSource | null {
     const row = selectSource.get({ id }) as
       | {
@@ -304,6 +322,7 @@ export function createEnrich(db: SqliteDatabase, reader: MovieReader): Enrich {
   return {
     setSourceFolder,
     titleSource,
+    mediaFolderOf,
     sourcePath,
     titleAt,
     enrichMovie,

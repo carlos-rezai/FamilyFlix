@@ -36,6 +36,10 @@ export interface NewMovie {
   backdropPath?: string;
   genres?: string[];
   subtitles?: NewSubtitle[];
+  /** Its **Media folder**, relative to the Managed media directory — server
+   *  side only, never on the wire. Omitted, it is read off the video's
+   *  directory. */
+  mediaFolder?: string;
 }
 
 /**
