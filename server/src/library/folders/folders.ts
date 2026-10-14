@@ -13,12 +13,22 @@ export interface StoredLibraryFolder {
   titleCount: number;
 }
 
+/**
+ * What a remove answers: `removed`; `not-found` for an id the list does not
+ * hold; `in-use` for a folder a **Linked video** plays from, with how many
+ * titles do — films, plus series with a linked episode there, each series
+ * once — and nothing removed.
+ */
+export type FolderRemoval =
+  | { kind: 'removed' }
+  | { kind: 'not-found' }
+  | { kind: 'in-use'; titles: number };
+
 /** The folders slice: the list, an add and a remove that keeps the titles. */
 export interface FoldersRepository {
   libraryFolders(): StoredLibraryFolder[];
   addLibraryFolder(path: string): StoredLibraryFolder;
-  removeLibraryFolder(id: string): boolean;
-  linkedTitleCount(id: string): number;
+  removeLibraryFolder(id: string): FolderRemoval;
 }
 
 export function createFolders(db: SqliteDatabase): FoldersRepository {
@@ -60,20 +70,23 @@ export function createFolders(db: SqliteDatabase): FoldersRepository {
     return { id, path, titleCount: 0 };
   }
 
-  const removeLibraryFolder = db.transaction((id: string): boolean => {
+  // The count and the delete in one transaction, so nothing can link a video
+  // into the folder between the two.
+  const removeLibraryFolder = db.transaction((id: string): FolderRemoval => {
+    const { count } = selectLinked.get({ id }) as { count: number };
+    if (count > 0) {
+      return { kind: 'in-use', titles: count };
+    }
     forgetMovies.run(id);
     forgetSeries.run(id);
-    return deleteFolder.run(id).changes > 0;
+    return deleteFolder.run(id).changes > 0
+      ? { kind: 'removed' }
+      : { kind: 'not-found' };
   });
-
-  function linkedTitleCount(id: string): number {
-    return (selectLinked.get({ id }) as { count: number }).count;
-  }
 
   return {
     libraryFolders,
     addLibraryFolder,
     removeLibraryFolder,
-    linkedTitleCount,
   };
 }

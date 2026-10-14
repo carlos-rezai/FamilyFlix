@@ -304,6 +304,17 @@ function noVideoFile(res: Response, kind: PlayableKind, id: string): void {
 }
 
 /**
+ * The `409` for a **Library folder** a **Linked video** plays from — one
+ * sentence, its count in the singular at one. The remove answers the count;
+ * this is the one place it is worded.
+ */
+function inUseSentence(titles: number): string {
+  return titles === 1
+    ? '1 title plays from this folder. Delete it before removing it.'
+    : `${titles} titles play from this folder. Delete them before removing it.`;
+}
+
+/**
  * What every read of a movie's *bytes* does after {@link movieOr404}: resolve
  * the stored path to a file under the managed media directory, and 404 if there
  * is nothing there.
@@ -1797,24 +1808,19 @@ export function createApiRouter(
   // Remove one folder: its titles stay, forgetting only where they came from.
   // A folder a Linked video plays from is refused in one sentence.
   router.delete('/library-folders/:id', (req: Request, res: Response) => {
-    const id = String(req.params.id);
-    const linked = storage.linkedTitleCount(id);
-    if (linked > 0) {
-      res.status(409).json({
-        error:
-          linked === 1
-            ? '1 title plays from this folder. Delete it before removing it.'
-            : `${linked} titles play from this folder. Delete them before removing it.`,
-      });
-      return;
+    const removal = storage.removeLibraryFolder(String(req.params.id));
+    switch (removal.kind) {
+      case 'removed':
+        res.status(204).end();
+        return;
+      case 'not-found':
+        res
+          .status(404)
+          .json({ error: 'That folder is not in your library folders.' });
+        return;
+      case 'in-use':
+        res.status(409).json({ error: inUseSentence(removal.titles) });
     }
-    if (!storage.removeLibraryFolder(id)) {
-      res
-        .status(404)
-        .json({ error: 'That folder is not in your library folders.' });
-      return;
-    }
-    res.status(204).end();
   });
 
   // A **Folder scan** over every listed folder: `201` with the run's first

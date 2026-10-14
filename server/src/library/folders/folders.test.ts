@@ -104,17 +104,49 @@ describe('library: removeLibraryFolder — the titles stay', () => {
     const movies = storage.addLibraryFolder('E:\\Movies');
     const kids = storage.addLibraryFolder('D:\\Kids');
 
-    expect(storage.removeLibraryFolder(movies.id)).toBe(true);
+    expect(storage.removeLibraryFolder(movies.id)).toEqual({ kind: 'removed' });
 
     expect(storage.libraryFolders().map((folder) => folder.id)).toEqual([
       kids.id,
     ]);
   });
 
-  it('answers false for an id it does not hold', () => {
+  it('answers not-found for an id it does not hold', () => {
     const { storage } = library();
 
-    expect(storage.removeLibraryFolder('no-such-folder')).toBe(false);
+    expect(storage.removeLibraryFolder('no-such-folder')).toEqual({
+      kind: 'not-found',
+    });
+  });
+
+  it('answers in-use, removing nothing, for a folder a Linked video plays from — a series once', () => {
+    const { storage } = library();
+    const movies = storage.addLibraryFolder('E:\Movies');
+    storage.addMovie(
+      newMovie({ videoPath: 'Heat (1995)/Heat.mkv', videoFolderId: movies.id })
+    );
+    storage.addSeries({ title: 'Tidewater' }, [
+      {
+        season: 1,
+        number: 1,
+        videoPath: 'T/e01.mp4',
+        videoFolderId: movies.id,
+      },
+      {
+        season: 1,
+        number: 2,
+        videoPath: 'T/e02.mp4',
+        videoFolderId: movies.id,
+      },
+    ]);
+
+    expect(storage.removeLibraryFolder(movies.id)).toEqual({
+      kind: 'in-use',
+      titles: 2,
+    });
+    expect(storage.libraryFolders().map((folder) => folder.id)).toEqual([
+      movies.id,
+    ]);
   });
 
   it('nulls both columns on that folder’s titles only, and keeps every title', () => {

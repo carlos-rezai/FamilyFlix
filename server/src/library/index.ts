@@ -29,7 +29,11 @@ import { createWrite } from './write/write';
 import { createWatch } from './watch/watch';
 import { createCuration } from './curation/curation';
 import { createSettings } from './settings/settings';
-import { createFolders, type StoredLibraryFolder } from './folders/folders';
+import {
+  createFolders,
+  type FolderRemoval,
+  type StoredLibraryFolder,
+} from './folders/folders';
 import {
   createEnrich,
   type MovieEnrichment,
@@ -51,7 +55,7 @@ import { createSeriesCuration } from './series/curation/curation';
 import { createSeriesWatch } from './series/watch/watch';
 
 export type { MovieEnrichment, TitleSource } from './enrich/enrich';
-export type { StoredLibraryFolder } from './folders/folders';
+export type { FolderRemoval, StoredLibraryFolder } from './folders/folders';
 export type {
   EpisodeEdit,
   SeriesEdit,
@@ -376,16 +380,11 @@ export interface LibraryStorage {
   /**
    * Take a folder off the list in one transaction, keeping its titles and
    * forgetting only where they came from — `library_folder_id` and
-   * `source_folder` nulled on that folder's titles alone. Answers whether the
-   * list held it.
+   * `source_folder` nulled on that folder's titles alone. A folder a **Linked
+   * video** plays from is not removed: `in-use`, with how many titles do,
+   * counted in the same transaction.
    */
-  removeLibraryFolder(id: string): boolean;
-  /**
-   * How many titles a **Linked video** plays from in this folder — films,
-   * plus series with a linked episode there, each series once. A folder in
-   * use is not removed.
-   */
-  linkedTitleCount(id: string): number;
+  removeLibraryFolder(id: string): FolderRemoval;
   /**
    * **Factory reset**'s erase: every row of every table but the **Genre
    * pool**, in one transaction — all or nothing. The same kind of seam
@@ -476,7 +475,6 @@ export function createSqliteStorage(dbPath: string): LibraryStorage {
     libraryFolders: folders.libraryFolders,
     addLibraryFolder: folders.addLibraryFolder,
     removeLibraryFolder: folders.removeLibraryFolder,
-    linkedTitleCount: folders.linkedTitleCount,
     reset() {
       resetDatabase(db);
     },
