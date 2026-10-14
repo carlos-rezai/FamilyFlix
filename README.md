@@ -23,7 +23,7 @@ This project has two purposes:
 FamilyFlix is an offline-first desktop application for Windows. There is no cloud version, no authentication, and no network dependency. All data and media live locally on the machine.
 
 - **Shell:** Electron — one window over the bundled Express server, forked as a utility process and serving the built app beside its API on one loopback origin
-- **Storage:** SQLite via `better-sqlite3` for the library; video/subtitle/poster files are copied into FamilyFlix's own managed media folder on import. Installed, everything lives under `%APPDATA%\FamilyFlix\`
+- **Storage:** SQLite via `better-sqlite3` for the library; an import links each video where it lies in its Library folder (or copies it, if you choose Copy), and copies posters and subtitles into FamilyFlix's own managed media folder. Installed, everything lives under `%APPDATA%\FamilyFlix\`
 - **No auth** — single household, single shared watch history, local-only by design
 - **Packaging:** one file, `FamilyFlix-Setup-<version>.exe` — a one-click, per-user NSIS installer via `electron-builder`, no UAC prompt, unsigned, carrying the pinned FFmpeg build as the Default component; uninstalling keeps the library
 
@@ -159,7 +159,7 @@ familyflix/
 │       │   ├── enrich/            # a Sync's film writes, the counts over both kinds, the Source folders, and Full details spelled once
 │       │   ├── folders/           # the Library folders: the list, its title counts, the remove that keeps the titles, and folderOverlap
 │       │   └── series/            # series storage, one unit per concern: read, browse, write, watch, curation, enrich, nextEpisodeOf, and yearSpan — the one reading of a Year range
-│       ├── media/          # folder scanning, copying files into managed storage (a season's folder among them), a Sync's art (storeNamed, storeInSeriesFolder, readStored), subtitle detection, removing a movie folder after a delete, space used
+│       ├── media/          # folder scanning, copying files into managed storage (a season's folder among them), a Sync's art (storeNamed, into a title's Media folder or a season under it; readStored), subtitle detection, removing a title's Media folder after a delete, space used
 │       │   ├── readableFolder/        # whether a path is a folder the app can read, never throwing
 │       │   ├── walkLibraryFolder/     # a Library folder → its Source folders
 │       │   ├── scanMovieFolder/       # one folder → its video, poster, backdrop, subtitles
@@ -201,7 +201,7 @@ familyflix/
 │   │   ├── series/          # the Series page and the Season page: SeriesDetail, SeasonEpisodes, SeriesMetaLine, LoadingSeries, useSeriesRead and the two page hooks, seriesView, seasonView
 │   │   ├── player/          # built-in video player for any Playable, subtitles (useSubtitles reads the preferred language), resume, and Up next (UpNextCard, useUpNext)
 │   │   ├── movie-form/      # Add a movie or a series, Edit a movie: one form, manual pickers, the Kind tabs — MovieForm, MovieFormFiles and SeriesFormFiles over filesCard.styles.ts and filesCard.ts, useMovieForm, useEpisodeList, readEpisodeTag, titleFromFilename, and createSeries in its api/ — and Resolve, the Import context
-│   │   ├── import-export/   # the bulk importer's screen: ImportFlow and its three steps, useImportRun, importView — the Library folders page: LibraryFolders, FolderRow, useLibraryFolders, useFolderScan — and the Export dialog: ExportModal, FormatCard, useExport, startExport in its api/; pathField.styles.ts, the path row both draw
+│   │   ├── import-export/   # the bulk importer's screen: ImportFlow and its three steps, useImportRun, importView — the Library folders page: LibraryFolders, FolderRow, useLibraryFolders, useFolderScan — the Import mode both starts draw, ImportModeChoice — and the Export dialog: ExportModal, ChoiceCard, useExport, startExport in its api/; pathField.styles.ts, the path row both draw
 │   │   ├── enrichment/      # the Sync with TMDB: EnrichmentFlow and its three steps, SetupBanner, ScopeCard, WriteTargetRow, DecisionRow over CandidatePicker, TitleSearch and FieldDiff, useEnrichmentRun, enrichmentView, and its api/
 │   │   ├── settings/        # the Maintainer's hub: SettingsHeader; LibrarySection + ActionRow; PlaybackSection (the Codecs row onto the Codecs page); DisplaySection (the Ultrawide margins Toggle); CodecManager — the Codecs page's screen — over CodecRow, ComponentDropZone, codecView, zoneFace; NavigationRow, the row both the Codecs row and the sync row draw through; NetworkSection + useTmdbKey + syncLine; StorageSection; AboutSection; useCapabilities, useSettings, useStorageReport; and its api/
 │   │   │   └── section.styles.ts # the Group heading, the Section card, the divider, an item's title and lede, and the row furniture — what every group draws with
@@ -373,7 +373,7 @@ Keep the description short enough to fit on one line — long descriptions get w
 | Title editing — number, edit and delete a series    | ✅ Done         |
 | Season posters — TMDB art on each season card       | ✅ Done         |
 | Import review — folders + sheet, adjustments listed | ✅ Done         |
-| Link or copy — import without a second copy         | 🔜 Planned      |
+| Link or copy — import without a second copy         | ✅ Done         |
 | Review at scale + Season art — grouped review       | 🔜 Planned      |
 | Collections / playlists                             | 🧭 Roadmap      |
 | Auto-on subtitles                                   | 🧭 Roadmap      |
@@ -452,9 +452,9 @@ Step 23 came after it, out of using the latest release (design log 40):
 Steps 24–25 came out of importing five real series (3–8 seasons, 8–20
 episodes each): the import was slow and doubled the disk space, and the review
 listed more than 1,400 rows. Each goes through grill-me and a prototype
-revision before it is built; step 24 has been grilled (design log 41):
+revision before it is built; step 24 is done (design log 41):
 
-24. 🔜 **Link or copy** — Import from spreadsheet and Scan folders offer
+24. ✅ **Link or copy** — Import from spreadsheet and Scan folders offer
     **Link** or **Copy**, **Link by default** (design log 41). A linked title's
     video plays from where it lies in your Library folder, so nothing is
     duplicated and the import is fast; its poster, subtitles and TMDB art are
