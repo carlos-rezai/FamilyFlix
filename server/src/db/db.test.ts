@@ -43,10 +43,10 @@ const EXPECTED_GENRES = [
   'Crime',
 ];
 
-// The version a fresh database migrates to — migration #11, the **Media
-// folder** (issue #341). Every "at the latest version" assertion reads it, so
-// the next migration moves one number rather than ten.
-const LATEST_VERSION = 11;
+// The version a fresh database migrates to — migration #12, the **Linked
+// video**'s `video_folder_id` (issue #342). Every "at the latest version"
+// assertion reads it, so the next migration moves one number rather than ten.
+const LATEST_VERSION = 12;
 
 // What migration #5 adds, by table: the three columns a Sync writes on a movie
 // and a series, and the episode's still. Additive, nullable, nothing seeded.
@@ -238,12 +238,30 @@ function dropMigration10(db: TestDb): void {
  * after.
  */
 function dropMigration11(db: TestDb): void {
+  // Every wind-back to before #11 is also one to before #12.
+  dropMigration12(db);
   for (const table of ['movies', 'series']) {
     if (
       tableNames(db).includes(table) &&
       columnNames(db, table).includes('media_folder')
     ) {
       db.prepare(`ALTER TABLE ${table} DROP COLUMN media_folder`).run();
+    }
+  }
+}
+
+/**
+ * What migration #12 added, dropped: `video_folder_id` on movies and episodes,
+ * only where it exists, so every wind-back reads the same before #12 is
+ * written as after.
+ */
+function dropMigration12(db: TestDb): void {
+  for (const table of ['movies', 'episodes']) {
+    if (
+      tableNames(db).includes(table) &&
+      columnNames(db, table).includes('video_folder_id')
+    ) {
+      db.prepare(`ALTER TABLE ${table} DROP COLUMN video_folder_id`).run();
     }
   }
 }
@@ -1460,10 +1478,10 @@ describe('db: migration #11 — the Media folder', () => {
     }
   });
 
-  it('lands a fresh database at version 11', () => {
+  it('lands a fresh database at version 11 or later', () => {
     const db = track(open(':memory:'));
 
-    expect(userVersion(db)).toBe(LATEST_VERSION);
+    expect(userVersion(db)).toBeGreaterThanOrEqual(11);
   });
 
   /** A library written at the latest version, then wound back to before #11. */
@@ -1592,6 +1610,127 @@ describe('db: migration #11 — the Media folder', () => {
     expect(upgraded.mediaFolderOf('series', series.id)).toBe(
       'harbor-vine-2019'
     );
+  });
+});
+
+// 41 — Link or copy, Phase 2 (issue #342) adds migration #12: the **Linked
+// video** — `video_folder_id` on `movies` and `episodes`, a reference to
+// `library_folders(id)` with **no `ON DELETE`**. `NULL` means `video_path` is a
+// **Stored path**, and every row that exists is one; set, `video_path` is
+// relative to that **Library folder**. With no `ON DELETE`, the database
+// itself refuses to forget a folder a video plays from.
+
+describe('db: migration #12 — the Linked video', () => {
+  it('adds a nullable TEXT video_folder_id to movies and to episodes', () => {
+    const db = track(open(':memory:'));
+
+    for (const table of ['movies', 'episodes']) {
+      const declared = columnInfo(db, table).find(
+        (c) => c.name === 'video_folder_id'
+      );
+      expect(declared).toBeDefined();
+      expect(declared?.type.toUpperCase()).toBe('TEXT');
+      expect(declared?.notnull).toBe(0);
+    }
+  });
+
+  it('lands a fresh database at version 12', () => {
+    const db = track(open(':memory:'));
+
+    expect(userVersion(db)).toBe(LATEST_VERSION);
+  });
+
+  /** A library written at the latest version, then wound back to before #12. */
+  function windBackToV11(path: string): void {
+    const db = open(path);
+    try {
+      dropMigration12(db);
+      db.pragma('user_version = 11');
+    } finally {
+      db.close();
+    }
+  }
+
+  it('leaves video_folder_id NULL on every existing film and episode', () => {
+    const path = tempDbPath();
+    const before = trackStorage(createSqliteStorage(path));
+    before.addMovie({ title: 'Heat', videoPath: 'heat-1995/video.mp4' });
+    before.addSeries({ title: 'Harbor & Vine' }, [
+      {
+        season: 1,
+        number: 1,
+        videoPath: 'harbor-vine-2019/season-01/S01E01.mp4',
+      },
+      {
+        season: 1,
+        number: 2,
+        videoPath: 'harbor-vine-2019/season-01/S01E02.mp4',
+      },
+    ]);
+    before.close();
+    windBackToV11(path);
+
+    const upgraded = track(open(path));
+
+    expect(userVersion(upgraded)).toBe(LATEST_VERSION);
+    expect(
+      upgraded.prepare('SELECT video_folder_id FROM movies').all()
+    ).toEqual([{ video_folder_id: null }]);
+    expect(
+      upgraded.prepare('SELECT video_folder_id FROM episodes').all()
+    ).toEqual([{ video_folder_id: null }, { video_folder_id: null }]);
+  });
+
+  it('reads a film’s and an episode’s videoFolderId back, null when managed', () => {
+    const storage = trackStorage(createSqliteStorage(':memory:'));
+    const folder = storage.addLibraryFolder('D:\Movies');
+    const linked = storage.addMovie({
+      title: 'Heat',
+      videoPath: 'Heat (1995)/Heat.1995.mkv',
+      videoFolderId: folder.id,
+    });
+    const managed = storage.addMovie({
+      title: 'Ronin',
+      videoPath: 'ronin-1998/video.mp4',
+    });
+    const series = storage.addSeries({ title: 'Harbor & Vine' }, [
+      {
+        season: 1,
+        number: 1,
+        videoPath: 'Harbor & Vine/Season 01/S01E01.mkv',
+        videoFolderId: folder.id,
+      },
+    ]);
+
+    expect(storage.getMovie(linked.id)?.videoFolderId).toBe(folder.id);
+    expect(storage.getMovie(managed.id)?.videoFolderId).toBeNull();
+    expect(storage.listEpisodes(series.id)[0]?.videoFolderId).toBe(folder.id);
+  });
+
+  it('refuses deleting a Library folder a film or an episode plays from', () => {
+    const db = track(open(':memory:'));
+    const addFolder = db.prepare(
+      'INSERT INTO library_folders (id, path, added_at) VALUES (?, ?, ?)'
+    );
+    addFolder.run('folder-1', 'D:\Movies', NOW);
+    addFolder.run('folder-2', 'D:\Shows', NOW);
+    db.prepare(
+      `INSERT INTO movies
+         (id, title, video_path, video_folder_id, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?)`
+    ).run('m1', 'Heat', 'Heat (1995)/Heat.1995.mkv', 'folder-1', NOW, NOW);
+    insertSeries(db, 's1');
+    insertEpisode(db, 'e1', 's1', 1, 1);
+    db.prepare('UPDATE episodes SET video_folder_id = ? WHERE id = ?').run(
+      'folder-2',
+      'e1'
+    );
+
+    const remove = (id: string) =>
+      db.prepare('DELETE FROM library_folders WHERE id = ?').run(id);
+
+    expect(() => remove('folder-1')).toThrow(/FOREIGN KEY/);
+    expect(() => remove('folder-2')).toThrow(/FOREIGN KEY/);
   });
 });
 
