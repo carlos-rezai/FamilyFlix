@@ -36,7 +36,7 @@ export interface Series {
 }
 
 /** One episode of a series, numbered within its season. */
-export interface Episode {
+export interface Episode extends StoredVideo {
   id: string;
   seriesId: string;
   season: number;
@@ -49,12 +49,6 @@ export interface Episode {
   resumePositionSeconds: number;
   /** Derived from `watched` + `resumePositionSeconds`; never stored. */
   status: WatchStatus;
-  videoPath: string;
-  /**
-   * The **Library folder** a **Linked video** plays from, its `videoPath`
-   * relative to that folder; `null` when `videoPath` is a **Stored path**.
-   */
-  videoFolderId: string | null;
   /** A Sync's **Still**, a stored path beside the video; `null` until one. */
   stillPath: string | null;
   /**
@@ -164,4 +158,18 @@ export interface EpisodeRead {
 export interface Playable {
   kind: 'movie' | 'episode';
   id: string;
+}
+
+/**
+ * A row's video as the library holds it — a {@link Playable} is addressed by
+ * both: `videoPath` a **Stored path** when `videoFolderId` is `null`, else
+ * relative to that **Library folder** — a **Linked video**.
+ */
+export interface StoredVideo {
+  videoPath: string;
+  /**
+   * The **Library folder** a **Linked video** plays from, its `videoPath`
+   * relative to that folder; `null` when `videoPath` is a **Stored path**.
+   */
+  videoFolderId: string | null;
 }

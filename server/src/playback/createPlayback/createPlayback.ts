@@ -1,6 +1,11 @@
 import { readFileSync } from 'node:fs';
 
-import type { Cue, PlaybackCapabilities, PlaybackRead } from '@/types';
+import type {
+  Cue,
+  PlaybackCapabilities,
+  PlaybackRead,
+  StoredVideo,
+} from '@/types';
 
 import { capabilities } from '../capabilities/capabilities';
 import {
@@ -22,16 +27,6 @@ import { linkedVideoPath } from '../linkedVideoPath/linkedVideoPath';
 import { mediaFilePath } from '../mediaFilePath/mediaFilePath';
 import { parseSubtitle } from '../parseSubtitle/parseSubtitle';
 import type { MediaProbe } from '../probe/probe';
-
-/**
- * A row's video as the library holds it: `videoPath` a **Stored path** when
- * `videoFolderId` is `null`, else relative to that **Library folder** — a
- * **Linked video**.
- */
-export interface StoredVideo {
-  videoPath: string;
-  videoFolderId: string | null;
-}
 
 /**
  * The file behind a {@link StoredVideo}, or why there is none: `missing` for a

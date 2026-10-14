@@ -17,7 +17,8 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { derivedRuntime } from './derivedRuntime';
-import type { Playback, StoredVideo } from '../createPlayback/createPlayback';
+import type { StoredVideo } from '@/types';
+import type { Playback } from '../createPlayback/createPlayback';
 
 /** The **StoredVideo** a freshly copied film is written under. */
 const STORED: StoredVideo = {

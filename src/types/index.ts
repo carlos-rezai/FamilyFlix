@@ -48,6 +48,7 @@ export type {
   NextEpisodeRef,
   EpisodeRead,
   Playable,
+  StoredVideo,
 } from './series';
 export type {
   MovieSort,

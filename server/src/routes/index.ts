@@ -40,10 +40,7 @@ import type {
   InstallRefusal,
   RemoveRefusal,
 } from '../playback/componentSlot/componentSlot';
-import type {
-  Playback,
-  StoredVideo,
-} from '../playback/createPlayback/createPlayback';
+import type { Playback } from '../playback/createPlayback/createPlayback';
 import { derivedRuntime } from '../playback/derivedRuntime/derivedRuntime';
 import { exportBody } from './exportBody/exportBody';
 import { isRatingValue, MAX_RATING } from './isRatingValue/isRatingValue';
@@ -89,6 +86,7 @@ import {
   type SeriesHomePayload,
   type Settings,
   type StorageReport,
+  type StoredVideo,
   type Subtitle,
 } from '@/types';
 

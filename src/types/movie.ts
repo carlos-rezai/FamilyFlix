@@ -5,6 +5,8 @@
  * it is narrowed for display.
  */
 
+import type { StoredVideo } from './series';
+
 /** Three-way watch state, derived from `watched` + `resumePositionSeconds`. */
 export type WatchStatus = 'unwatched' | 'in-progress' | 'watched';
 
@@ -23,7 +25,7 @@ export interface Subtitle {
 }
 
 /** The fully-assembled movie model returned by repository reads. */
-export interface Movie {
+export interface Movie extends StoredVideo {
   id: string;
   tmdbId: number | null;
   title: string;
@@ -38,12 +40,6 @@ export interface Movie {
   resumePositionSeconds: number;
   /** Derived from `watched` + `resumePositionSeconds`; never stored. */
   status: WatchStatus;
-  videoPath: string;
-  /**
-   * The **Library folder** a **Linked video** plays from, its `videoPath`
-   * relative to that folder; `null` when `videoPath` is a **Stored path**.
-   */
-  videoFolderId: string | null;
   posterPath: string | null;
   backdropPath: string | null;
   genres: Genre[];

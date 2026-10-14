@@ -1,4 +1,5 @@
-import type { Playback, StoredVideo } from '../createPlayback/createPlayback';
+import type { StoredVideo } from '@/types';
+import type { Playback } from '../createPlayback/createPlayback';
 
 /** The units the `runtime_minutes` column stores, and the film's own. */
 const SECONDS_PER_MINUTE = 60;
