@@ -13,8 +13,10 @@
       <!--
         /settings/folders — the Library folders page. The states it is drawn in:
         the empty card (No folders yet.), two folders with one unreachable, a
-        refusal line under the field with the typed path kept, and the add row
-        with and without Browse… (drawn only when the shell's folder bridge exists).
+        refusal line under the field with the typed path kept, the add row
+        with and without Browse… (drawn only when the shell's folder bridge exists),
+        a Folder row's removal refused under it (linked titles play from it), and
+        the Scan group with Link chosen.
       -->
       <div
         data-screen-label="Library folders"
@@ -110,14 +112,34 @@
                   as="f"
                   hint-placeholder-count="2"
                 >
-                  <dc-import
-                    name="mol.FolderRow"
-                    path="{{ f.path }}"
-                    title-count="{{ f.titleCount }}"
-                    reachable="{{ f.reachable }}"
-                    on-remove="{{ f.onRemove }}"
-                    hint-size="100%,68px"
-                  ></dc-import>
+                  <div>
+                    <dc-import
+                      name="mol.FolderRow"
+                      path="{{ f.path }}"
+                      title-count="{{ f.titleCount }}"
+                      reachable="{{ f.reachable }}"
+                      on-remove="{{ f.onRemove }}"
+                      hint-size="100%,68px"
+                    ></dc-import>
+                    <!-- The route's 409 for a folder linked titles play from, under the row it is
+                         about: "12 titles play from this folder. Delete them before removing it."
+                         ("1 title plays …" for one). The row stays; its titles stay. -->
+                    <sc-if
+                      value="{{ f.removeRefused }}"
+                      hint-placeholder-val="{{ false }}"
+                    >
+                      <p
+                        style="
+                          margin: 8px 0 0;
+                          font-family: var(--font-sans);
+                          font-size: 13px;
+                          color: var(--color-danger);
+                        "
+                      >
+                        {{ f.removeRefusal }}
+                      </p>
+                    </sc-if>
+                  </div>
                 </sc-for>
               </div>
 
@@ -208,6 +230,215 @@
                   {{ lf.refusal }}
                 </p>
               </sc-if>
+            </div>
+
+            <!-- The group Scan: the Folder scan over every listed folder, no sheet. The shapes,
+                 the Import mode, the TMDB box — Import setup's three, in setup's order — then
+                 Scan folders, disabled with no folder listed. -->
+            <div
+              style="
+                font-family: var(--font-sans);
+                font-size: 12px;
+                font-weight: 700;
+                letter-spacing: 0.9px;
+                text-transform: uppercase;
+                color: var(--color-text-faint);
+                margin: 0 0 12px 2px;
+              "
+            >
+              Scan
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 16px">
+              <div
+                style="
+                  display: flex;
+                  gap: 14px;
+                  padding: 14px 16px;
+                  background: var(--color-bg-2);
+                  border: 1px solid var(--color-border-soft);
+                  border-radius: 10px;
+                "
+              >
+                <span
+                  style="
+                    flex: 0 0 auto;
+                    color: var(--color-text-faint);
+                    margin-top: 1px;
+                  "
+                  ><svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                    <path
+                      d="M12 3a9 9 0 100 18 9 9 0 000-18zM12 11v6M12 7.5v.5"
+                      stroke="currentColor"
+                      stroke-width="1.7"
+                      stroke-linecap="round"
+                    /></svg
+                ></span>
+                <span style="flex: 1; min-width: 0">
+                  <span
+                    style="
+                      display: block;
+                      font-family: var(--font-sans);
+                      font-size: 13px;
+                      font-weight: 600;
+                      color: var(--color-text-dim);
+                      margin-bottom: 6px;
+                    "
+                    >What the scanner accepts</span
+                  >
+                  <span
+                    style="
+                      display: block;
+                      font-family: var(--font-mono);
+                      font-size: 12px;
+                      color: var(--color-text-faint);
+                      line-height: 1.8;
+                    "
+                    >Movie Title (2019)\ movie.mkv · subs.en.srt<br />Show Name\
+                    Season 01\ S01E03.mkv<br />Show Name\ S01E03.mkv
+                    <span style="font-family: var(--font-sans)"
+                      >(loose episodes at the show root are fine)</span
+                    ></span
+                  >
+                  <span
+                    style="
+                      display: block;
+                      font-family: var(--font-sans);
+                      font-size: 13px;
+                      color: var(--color-text-faint);
+                      margin-top: 8px;
+                      line-height: 1.5;
+                      text-wrap: pretty;
+                    "
+                    >Season and episode numbers come from the folder first, then
+                    the filename (<span style="font-family: var(--font-mono)"
+                      >S01E03</span
+                    >, <span style="font-family: var(--font-mono)">1x03</span>).
+                    Anything it can’t place lands in the review list.</span
+                  >
+                </span>
+              </div>
+              <!-- The Import mode, ImportModeChoice: the caption Files over two ChoiceCards in a
+                   radiogroup — FormatCard's pixels, renamed for its second caller. Link chosen on
+                   every visit, never remembered; posted as `mode` with Scan folders. -->
+              <div>
+                <span
+                  id="lf-mode-caption"
+                  style="
+                    display: block;
+                    font-family: var(--font-sans);
+                    font-size: 13px;
+                    font-weight: 600;
+                    color: var(--color-text-dim);
+                    margin-bottom: 8px;
+                  "
+                  >Files</span
+                >
+                <div
+                  role="radiogroup"
+                  aria-labelledby="lf-mode-caption"
+                  style="display: flex; gap: 10px"
+                >
+                  <sc-for
+                    list="{{ lf.modes }}"
+                    as="m"
+                    hint-placeholder-count="2"
+                  >
+                    <button
+                      role="radio"
+                      aria-checked="{{ m.checked }}"
+                      onClick="{{ m.onSelect }}"
+                      style="{{ m.cardStyle }}"
+                    >
+                      <div
+                        style="
+                          display: flex;
+                          align-items: center;
+                          justify-content: space-between;
+                        "
+                      >
+                        <span
+                          style="
+                            font-family: var(--font-sans);
+                            font-size: 16px;
+                            font-weight: 600;
+                            color: var(--color-text);
+                          "
+                          >{{ m.label }}</span
+                        ><span style="{{ m.dotStyle }}"></span>
+                      </div>
+                      <div
+                        style="
+                          font-family: var(--font-sans);
+                          font-size: 12.5px;
+                          color: var(--color-text-faint);
+                          margin-top: 4px;
+                          text-align: left;
+                        "
+                      >
+                        {{ m.line }}
+                      </div>
+                    </button>
+                  </sc-for>
+                </div>
+              </div>
+              <label
+                style="
+                  display: flex;
+                  align-items: flex-start;
+                  gap: 12px;
+                  padding: 14px 16px;
+                  background: var(--color-surface);
+                  border: 1px solid var(--color-border-soft);
+                  border-radius: 10px;
+                  cursor: pointer;
+                  margin-top: 4px;
+                "
+              >
+                <span style="{{ lf.enrichBoxStyle }}"
+                  >{{ lf.enrichCheck }}</span
+                >
+                <input
+                  type="checkbox"
+                  checked="{{ lf.enrich }}"
+                  onChange="{{ lf.onToggleEnrich }}"
+                  style="position: absolute; opacity: 0; width: 0; height: 0"
+                />
+                <span style="flex: 1; min-width: 0">
+                  <span
+                    style="
+                      display: block;
+                      font-family: var(--font-sans);
+                      font-size: 15px;
+                      font-weight: 600;
+                      color: var(--color-text);
+                    "
+                    >Also fetch metadata and posters from TMDB</span
+                  >
+                  <span
+                    style="
+                      display: block;
+                      font-family: var(--font-sans);
+                      font-size: 13px;
+                      color: var(--color-text-faint);
+                      margin-top: 2px;
+                      line-height: 1.45;
+                      text-wrap: pretty;
+                    "
+                    >{{ lf.enrichHint }}</span
+                  >
+                </span>
+              </label>
+              <div style="display: flex">
+                <dc-import
+                  name="prim.Button"
+                  label="Scan folders"
+                  variant="{{ lf.scanVariant }}"
+                  size="lg"
+                  icon="none"
+                  on-click="{{ lf.onScan }}"
+                  hint-size="170px,54px"
+                ></dc-import>
+              </div>
             </div>
           </sc-if>
         </div>

@@ -57,6 +57,136 @@
               </svg>
             </div>
           </sc-if>
+
+          <sc-if
+            value="{{ p.showBuffering }}"
+            hint-placeholder-val="{{ false }}"
+          >
+            <div
+              style="
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 20px;
+              "
+            >
+              <div
+                style="
+                  width: 96px;
+                  height: 96px;
+                  border-radius: 99px;
+                  background: rgba(20, 17, 13, 0.55);
+                  backdrop-filter: blur(8px);
+                  border: 1px solid rgba(255, 255, 255, 0.2);
+                  display: grid;
+                  place-items: center;
+                  animation: ffPop 0.2s ease;
+                "
+              >
+                <svg
+                  width="40"
+                  height="40"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  style="animation: ffSpin 0.9s linear infinite"
+                >
+                  <circle
+                    cx="12"
+                    cy="12"
+                    r="9"
+                    stroke="rgba(255,255,255,.22)"
+                    stroke-width="2.5"
+                  />
+                  <path
+                    d="M21 12a9 9 0 00-9-9"
+                    stroke="#fff"
+                    stroke-width="2.5"
+                    stroke-linecap="round"
+                  />
+                </svg>
+              </div>
+              <div
+                style="
+                  font-family: var(--font-sans);
+                  font-size: 15px;
+                  font-weight: 500;
+                  color: rgba(255, 255, 255, 0.72);
+                "
+              >
+                {{ p.noticeTitle }}
+              </div>
+            </div>
+          </sc-if>
+
+          <sc-if
+            value="{{ p.showUnavailable }}"
+            hint-placeholder-val="{{ false }}"
+          >
+            <div
+              style="
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 20px;
+                padding: 0 40px;
+                text-align: center;
+              "
+            >
+              <div
+                style="
+                  width: 96px;
+                  height: 96px;
+                  border-radius: 99px;
+                  background: rgba(20, 17, 13, 0.55);
+                  backdrop-filter: blur(8px);
+                  border: 1px solid rgba(255, 255, 255, 0.2);
+                  display: grid;
+                  place-items: center;
+                  animation: ffPop 0.2s ease;
+                "
+              >
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none">
+                  <circle
+                    cx="12"
+                    cy="12"
+                    r="9"
+                    stroke="#fff"
+                    stroke-width="2"
+                  />
+                  <path
+                    d="M5.64 5.64l12.72 12.72"
+                    stroke="#fff"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                  />
+                </svg>
+              </div>
+              <div>
+                <div
+                  style="
+                    font-family: var(--font-serif);
+                    font-size: 21px;
+                    font-weight: 600;
+                    color: #fff;
+                  "
+                >
+                  {{ p.noticeTitle }}
+                </div>
+                <div
+                  style="
+                    font-family: var(--font-sans);
+                    font-size: 14.5px;
+                    color: rgba(255, 255, 255, 0.62);
+                    max-width: 440px;
+                    margin-top: 10px;
+                    line-height: 1.55;
+                  "
+                >
+                  {{ p.noticeBody }}
+                </div>
+              </div>
+            </div>
+          </sc-if>
         </div>
 
         <sc-if value="{{ p.showSubtitle }}" hint-placeholder-val="{{ false }}">
