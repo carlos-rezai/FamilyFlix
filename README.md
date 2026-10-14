@@ -373,6 +373,8 @@ Keep the description short enough to fit on one line — long descriptions get w
 | Title editing — number, edit and delete a series    | ✅ Done         |
 | Season posters — TMDB art on each season card       | ✅ Done         |
 | Import review — folders + sheet, adjustments listed | ✅ Done         |
+| Link or copy — import without a second copy         | 🔜 Planned      |
+| Review at scale + Season art — grouped review       | 🔜 Planned      |
 | Collections / playlists                             | 🧭 Roadmap      |
 | Auto-on subtitles                                   | 🧭 Roadmap      |
 | Backgroundable import                               | 🧭 Roadmap      |
@@ -446,6 +448,33 @@ Step 23 came after it, out of using the latest release (design log 40):
     nothing you filled in is overwritten without a press. A row two folders
     could match is settled by picking the folder, and a folder the sheet
     doesn't name by one _Import as_ press.
+
+Steps 24–25 came out of importing five real series (3–8 seasons, 8–20
+episodes each): the import was slow and doubled the disk space, and the review
+listed more than 1,400 rows. Neither is designed yet — each goes through
+grill-me and a prototype revision before it is built:
+
+24. 🔜 **Link or copy** — every import (Bulk import, a Folder scan, the Add
+    form) offers **Link** or **Copy**, **Link by default**. A linked title
+    plays from where it lies in your Library folder, so nothing is duplicated
+    and the import is fast; Copy keeps today's behaviour, a copy in
+    FamilyFlix's own media folder. The choice is kept per title, so a library
+    already copied keeps working beside new linked titles. Deleting a linked
+    title, a Factory reset or removing a Library folder never touches your
+    files. A linked title whose drive is unplugged says _Can't be reached
+    right now_ rather than failing. TMDB posters and stills still go in the
+    media folder, so a Sync never writes more into your folders than it does
+    today. Only files inside a Library folder can be linked; anything else is
+    copied.
+25. 🔜 **Review at scale + Season art** — a review never runs to a thousand
+    rows: first, the run stops filing rows nobody needs to see; then the list
+    is grouped by title (one row per show with a count, opened on demand),
+    filtered by kind, the soft kinds folded away, with bulk actions per group
+    and per kind (_Skip all_, _Import all as guessed_, _Keep all mine_). A
+    single-series Sync shows a **Seasons** section — each season's current
+    poster beside TMDB's choices — so S1, S2 and S4 can be given art when
+    TMDB's default only covers S3, without wading through every episode. A
+    season poster can also be picked from a file in the series edit.
 
 A 🧭 Roadmap item is not in the chain — it comes after it, if ever.
 

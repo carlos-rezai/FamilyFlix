@@ -1164,6 +1164,57 @@ issue #328):
     **Review outcome**; the rest keep Resolve and Skip. Before it, #327:
     _Finish_ lets the **Current run** go.
 
+Steps 24–25 came out of importing five real series (3–8 seasons, 8–20
+episodes each): the copy was slow and doubled the disk, and the review ran to
+1,400+ rows. Both are 🔜 — not yet grilled, no design log, no PRD, no
+prototype revision; the points below are the input to grill-me, not
+decisions:
+
+24. 🔜 **Link or copy** — every import (Bulk import, a **Folder scan**, the
+    **Movie form**) offers **Link** or **Copy**, **Link the default**. Copying
+    made sense while the source folders were going away; with **Library
+    folders** listed and rescanned it is the slow, doubled path. What Link
+    needs already exists: `library_folder_id`, `source_folder` and
+    `source_file` on both titles. To settle in grill-me:
+    - **Two rules here change**: _All file paths are stored as relative
+      paths under the managed media directory_ and _Only `media/` touches
+      managed storage_ (Desktop Build's _Media storage_ too). `mediaFilePath`,
+      the under-media-root check, must also accept _under a listed Library
+      folder_ — a security boundary, so it needs care.
+    - **Link only inside a Library folder**: a linked path is always _folder
+      id + relative path_, never an absolute path off the machine.
+    - **The mode is per title** (a storage column on movies and episodes), not
+      one global switch: libraries copied before this keep working, mixed.
+    - **Delete, Factory reset and a folder's removal never touch a linked
+      file**: a linked title's delete is the record alone; the **Reset
+      dialog**'s _What goes_ must say so.
+    - **Unreachable**: a linked title on an unplugged drive cannot play — the
+      player needs a face for it, `folderLine`'s _Can’t be reached right now_.
+    - **TMDB art stays in managed storage** even for a linked title — small,
+      and a Sync keeps writing into a Library folder only what its **Write
+      targets** already add.
+    - **The Movie form** has no path in a browser; under the shell
+      `webUtils.getPathForFile` over the preload gives one, linkable only
+      inside a listed Library folder. Anything else — and every browser save
+      — copies.
+    - Later, not this step: _Convert to linked and free space_ for titles
+      already copied.
+25. 🔜 **Review at scale + Season art** — log 13 Q16 holds the review to
+    what needs a human, and 1,400+ rows breaks it. Enrichment raises at most
+    one **Decision** per title and `unplaced` is one **Problem** per show, so
+    something is filing per episode or per folder — find the kind first and
+    stop filing it at the source. Then the list: **grouped by title** (one
+    row per show with a count, expanded on demand), **filter chips by
+    kind** with the soft kinds (`missing-meta`, `differs`) folded by default,
+    and **bulk actions** per group and per kind (_Skip all_, _Import all as
+    guessed_, _Keep all mine_). **Season art**: `planSeason` keeps only
+    TMDB's one default poster and only when none is held, so a season TMDB
+    has none for stays bare. A single-series Sync's review gains a
+    **Seasons** section — one card per season, its current poster beside
+    `/tv/{id}/season/{n}/images`' choices, one pick per season, episodes kept
+    out of it; the **Series edit job** takes a season poster from a file, the
+    offline route; and log 39's _no series-poster fallback_ is reopened.
+
 A 🧭 Roadmap item is not in this chain — it is after it, if ever.
 
 ### Foundation
@@ -1206,6 +1257,8 @@ A 🧭 Roadmap item is not in this chain — it is after it, if ever.
 - ✅ **Title editing** — number a show's file in the app without renaming it: `S[01] E[01]` in front of `eps1.0_hellofriend.mov`, remembered as its **Source file**; the reader learns the **Episode word**; one `unplaced` Problem per show with a _Resolve_; the series page's ⋯ menu, its _Edit details_ the Movie form's series edit job (`PATCH /api/series/:id`) and its Danger row the delete (`DELETE /api/series/:id`); and the **Found-file choice** for a film folder of two or more videos (step 21).
 - ✅ **Export name** — the Export folder's name as the **Folder name field** in the Export dialog: prefilled with today's dated name and never overwritten once edited, refused in one sentence under the field when no folder can be called that, never stripped, numbered when taken.
 - ✅ **Import review** — one import over the Library folders and a spreadsheet (CSV or Excel), its scan ending in a review of the adjustments to make, settled row by row as a TMDB Sync's review is: a held title's Sheet fills written during the run, its Sheet differences settled on a _Yours | Spreadsheet_ diff, the Folder picker on `ambiguous` and _Import as_ on `no-row` (step 23, design log 40).
+- 🔜 **Link or copy** — every import offers Link (the default) or Copy: a linked title plays from its Library folder, with no second copy and no copy time; the mode kept per title, a linked file never deleted by the app, TMDB art still in managed storage (step 24).
+- 🔜 **Review at scale + Season art** — the review grouped by title, filtered by kind, with bulk actions, and fewer rows filed at the source; a single-series Sync's Seasons section picks each season's poster from TMDB's choices, and the series edit takes one from a file (step 25).
 - ✅ **Delete a movie** — the ⋯ menu’s Danger row, the Delete dialog, `DELETE /api/movies/:id`, then the Movie folder under best-effort cleanup.
 - ✅ **Bulk import** — a Sheet over the listed Library folders becomes Movies and Series during the run; the Review step lists only the Problems the run could not settle, each with Resolve (the Movie form in Import context) and Skip.
 - ✅ **Import progress console** — the Connect ✓ → Scan → Import stepper, the bar, the current item, elapsed and ETA, the Activity log, and Cancel; a server run polled every 500 ms, re-attachable.
