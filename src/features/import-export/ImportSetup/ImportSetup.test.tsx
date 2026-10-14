@@ -13,12 +13,12 @@ import { ImportSetup, type ImportSetupProps } from './ImportSetup';
 import type { LibraryFolder } from '@/types';
 import { theme } from '@/styles/theme';
 import { comesBefore } from '@/test-support/comesBefore/comesBefore';
-import { okResponse } from '@/test-support/fakeResponse/fakeResponse';
 import {
-  LocationProbe,
-  navigationType,
-  pathname,
-} from '@/test-support/LocationProbe/LocationProbe';
+  createdResponse,
+  okResponse,
+} from '@/test-support/fakeResponse/fakeResponse';
+import { fakeFolderBridge } from '@/test-support/fakeFolderBridge/fakeFolderBridge';
+import { LocationProbe } from '@/test-support/LocationProbe/LocationProbe';
 
 /**
  * 13 — Bulk import, Phase 2: "the tracer bullet" (issue #125), and
@@ -29,10 +29,10 @@ import {
  * the old root field, and _Start import_. The run reads every listed folder,
  * so the group draws the list as `GET /api/library-folders` answers it — each
  * row its path in mono and its title count, or _Can’t be reached right now_
- * in `danger` — with _Manage folders_ at the label's right; with none listed,
- * _No library folders yet._ and _Add library folders_. Both push
- * `/settings/folders`. Nothing of the group is drawn until the list lands,
- * and no row carries a ✕: setup is not where the list is edited.
+ * in `danger` — edited in place on the `FolderListEditor`, the Library
+ * folders page's own list: each row's ✕, the typed add, and _Browse…_ in the
+ * desktop app, several folders at once. Nothing of the group is drawn until
+ * the list lands.
  *
  * The sheet field is controlled — its value, its refusal and its handler are
  * handed in, with the `folders` refusal the route words for a stale screen —
@@ -73,6 +73,31 @@ function answerFolders(folders: LibraryFolder[]): void {
       return okResponse(folders);
     }
     throw new Error(`Unexpected request: ${String(input)}`);
+  });
+}
+
+/**
+ * A `fetch` over a list the way the routes keep it: GET answers it, a POST
+ * adds the path with no titles, a DELETE drops the id.
+ */
+function libraryWire(initial: LibraryFolder[]): void {
+  let listed = [...initial];
+  let next = 0;
+  fetchMock.mockImplementation(async (input, init) => {
+    const method = (init?.method ?? 'GET').toUpperCase();
+    if (method === 'POST') {
+      const { path } = JSON.parse(String(init?.body)) as { path: string };
+      next += 1;
+      const folder = { id: `f-${next}`, path, titleCount: 0, reachable: true };
+      listed = [...listed, folder];
+      return createdResponse(folder);
+    }
+    if (method === 'DELETE') {
+      const id = String(input).split('/').pop();
+      listed = listed.filter((folder) => folder.id !== id);
+      return { ok: true, status: 204 } as Response;
+    }
+    return okResponse(listed);
   });
 }
 
@@ -187,7 +212,10 @@ describe('ImportSetup — the spreadsheet field', () => {
     await groupLabel();
 
     expect(screen.queryByText('Movies root folder')).toBeNull();
-    expect(screen.getAllByRole('textbox')).toEqual([sheetField()]);
+    expect(screen.getAllByRole('textbox')).toEqual([
+      sheetField(),
+      screen.getByRole('textbox', { name: 'Folder path' }),
+    ]);
   });
 });
 
@@ -226,63 +254,122 @@ describe('ImportSetup — the Library folders group, listed', () => {
     expect(within(rowOf('F:\\Archive')).queryByText('4 titles')).toBeNull();
   });
 
-  it('draws no ✕ on any row: setup is not where the list is edited', async () => {
+  it('draws a ✕ on each row, and no Manage folders', async () => {
     answerFolders([MOVIES, ARCHIVE]);
     renderSetup();
     await groupLabel();
 
-    for (const path of ['E:\\Movies', 'F:\\Archive']) {
-      expect(within(rowOf(path)).queryByRole('button')).toBeNull();
-    }
-    expect(screen.queryByRole('button', { name: /remove/i })).toBeNull();
-  });
-
-  it('draws Manage folders, and no Add library folders', async () => {
-    renderSetup();
-    await groupLabel();
-
     expect(
-      screen.getByRole('button', { name: 'Manage folders' })
+      screen.getByRole('button', { name: 'Remove E:\\Movies' })
     ).toBeDefined();
     expect(
-      screen.queryByRole('button', { name: 'Add library folders' })
-    ).toBeNull();
-    expect(screen.queryByText('No library folders yet.')).toBeNull();
-  });
-
-  it('pushes /settings/folders from Manage folders', async () => {
-    renderSetup();
-    await groupLabel();
-
-    fireEvent.click(screen.getByRole('button', { name: 'Manage folders' }));
-
-    expect(pathname()).toBe('/settings/folders');
-    expect(navigationType()).toBe('PUSH');
-  });
-});
-
-describe('ImportSetup — the Library folders group, none listed', () => {
-  it('draws No library folders yet. and Add library folders, and no Manage folders', async () => {
-    answerFolders([]);
-    renderSetup();
-
-    expect(await screen.findByText('No library folders yet.')).toBeDefined();
-    expect(
-      screen.getByRole('button', { name: 'Add library folders' })
+      screen.getByRole('button', { name: 'Remove F:\\Archive' })
     ).toBeDefined();
     expect(screen.queryByRole('button', { name: 'Manage folders' })).toBeNull();
   });
+});
 
-  it('pushes /settings/folders from Add library folders', async () => {
-    answerFolders([]);
+describe('ImportSetup — the Library folders group, edited in place', () => {
+  it('takes a folder off with its ✕', async () => {
+    libraryWire([MOVIES, ARCHIVE]);
     renderSetup();
+    await groupLabel();
 
-    fireEvent.click(
-      await screen.findByRole('button', { name: 'Add library folders' })
+    fireEvent.click(screen.getByRole('button', { name: 'Remove F:\\Archive' }));
+
+    await waitFor(() => expect(screen.queryByText('F:\\Archive')).toBeNull());
+    expect(screen.getByText('E:\\Movies')).toBeDefined();
+  });
+
+  it('adds a typed folder to the list', async () => {
+    libraryWire([MOVIES]);
+    renderSetup();
+    await groupLabel();
+
+    fireEvent.change(screen.getByRole('textbox', { name: 'Folder path' }), {
+      target: { value: 'G:\\Series' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Add' }));
+
+    expect(await screen.findByText('G:\\Series')).toBeDefined();
+  });
+
+  it('draws No folders yet. with none listed, and enables Start import once one is added', async () => {
+    libraryWire([]);
+    renderSetup({ sheet: SHEET });
+
+    expect(await screen.findByText('No folders yet.')).toBeDefined();
+    expect(startButton().disabled).toBe(true);
+
+    fireEvent.change(screen.getByRole('textbox', { name: 'Folder path' }), {
+      target: { value: 'E:\\Movies' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Add' }));
+
+    await waitFor(() => expect(startButton().disabled).toBe(false));
+  });
+
+  it('draws no Browse… in a browser', async () => {
+    renderSetup();
+    await groupLabel();
+
+    expect(screen.queryByRole('button', { name: 'Browse…' })).toBeNull();
+  });
+});
+
+describe('ImportSetup — Browse… in the desktop app', () => {
+  const bridge = fakeFolderBridge();
+
+  /** The two Browse… buttons, in document order: the sheet's, the folders'. */
+  const browseButtons = () =>
+    screen.getAllByRole('button', { name: 'Browse…' });
+
+  it('draws a Browse… beside the spreadsheet field, before the folders’ own', async () => {
+    renderSetup();
+    await groupLabel();
+
+    const [sheetBrowse, foldersBrowse] = browseButtons();
+    expect(comesBefore(sheetField(), sheetBrowse)).toBe(true);
+    expect(comesBefore(sheetBrowse, await groupLabel())).toBe(true);
+    expect(comesBefore(await groupLabel(), foldersBrowse)).toBe(true);
+  });
+
+  it('hands the spreadsheet picked to the field’s handler', async () => {
+    const onSheet = vi.fn();
+    bridge.setPickSheet('D:\\Lists\\library.xlsx');
+    renderSetup({ onSheet });
+    await groupLabel();
+
+    fireEvent.click(browseButtons()[0]);
+
+    await waitFor(() =>
+      expect(onSheet).toHaveBeenCalledWith('D:\\Lists\\library.xlsx')
     );
+    expect(bridge.pickSheets()).toBe(1);
+  });
 
-    expect(pathname()).toBe('/settings/folders');
-    expect(navigationType()).toBe('PUSH');
+  it('leaves the field as it was for a cancelled pick', async () => {
+    const onSheet = vi.fn();
+    renderSetup({ sheet: SHEET, onSheet });
+    await groupLabel();
+
+    fireEvent.click(browseButtons()[0]);
+
+    await waitFor(() => expect(bridge.pickSheets()).toBe(1));
+    expect(onSheet).not.toHaveBeenCalled();
+  });
+
+  it('adds every folder picked, in the order picked', async () => {
+    libraryWire([MOVIES]);
+    bridge.setPick(['G:\\Series', 'H:\\Films']);
+    renderSetup();
+    await groupLabel();
+
+    fireEvent.click(browseButtons()[1]);
+
+    const films = await screen.findByText('H:\\Films');
+    expect(comesBefore(screen.getByText('G:\\Series'), films)).toBe(true);
+    expect(comesBefore(screen.getByText('E:\\Movies'), films)).toBe(true);
   });
 });
 
@@ -293,8 +380,7 @@ describe('ImportSetup — the Library folders group, loading', () => {
 
     expect(screen.queryByText('Library folders')).toBeNull();
     expect(screen.queryByText('E:\\Movies')).toBeNull();
-    expect(screen.queryByText('No library folders yet.')).toBeNull();
-    expect(screen.queryByRole('button', { name: 'Manage folders' })).toBeNull();
+    expect(screen.queryByText('No folders yet.')).toBeNull();
 
     release();
     expect(await groupLabel()).toBeDefined();
@@ -318,7 +404,7 @@ describe('ImportSetup — Start import', () => {
   it('is disabled with no folder listed, whatever the spreadsheet says', async () => {
     answerFolders([]);
     renderSetup({ sheet: SHEET });
-    await screen.findByText('No library folders yet.');
+    await screen.findByText('No folders yet.');
 
     expect(startButton().disabled).toBe(true);
   });

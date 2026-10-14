@@ -36,13 +36,16 @@ const updates: UpdateBridge = {
 };
 
 /**
- * The native folder pickers: the **Library folders page**'s _Browse…_, and
- * the Export dialog's; and the Storage card's _Open folder_.
+ * The native pickers: the **Library folders page**'s _Browse…_, the Export
+ * dialog's and Import setup's spreadsheet; and the Storage card's _Open
+ * folder_.
  */
 const folders: FolderBridge = {
   pick: () => ipcRenderer.invoke(FOLDER_CHANNELS.pick) as Promise<string[]>,
   pickOne: () =>
     ipcRenderer.invoke(FOLDER_CHANNELS.pickOne) as Promise<string | null>,
+  pickSheet: () =>
+    ipcRenderer.invoke(FOLDER_CHANNELS.pickSheet) as Promise<string | null>,
   openMedia: () =>
     ipcRenderer.invoke(FOLDER_CHANNELS.openMedia) as Promise<void>,
 };

@@ -2,74 +2,39 @@ import { useState } from 'react';
 
 import type { ImportMode } from '@/types';
 import { useGoBack } from '@/hooks/useGoBack/useGoBack';
-import { Button, FolderIcon, TextField } from '@/primitives';
+import { Button } from '@/primitives';
 import { PageHeader } from '@/components';
-import { folderBridge } from '@/api/folderBridge/folderBridge';
 import { EnrichCheckCard } from '../EnrichCheckCard/EnrichCheckCard';
-import { FolderRow } from '../FolderRow/FolderRow';
+import { FolderListEditor } from '../FolderListEditor/FolderListEditor';
 import { FolderShapes } from '../FolderShapes/FolderShapes';
 import { ImportModeChoice } from '../ImportModeChoice/ImportModeChoice';
 import { useFolderScan } from '../useFolderScan/useFolderScan';
 import { useKeyStored } from '../useKeyStored/useKeyStored';
 import { useLibraryFolders } from '../useLibraryFolders/useLibraryFolders';
-import {
-  Card,
-  Divider,
-  Empty,
-  GroupHeading,
-  PathRow,
-  Refusal,
-  Rows,
-  ScanActions,
-  ScanStack,
-} from './LibraryFolders.styles';
+import { GroupHeading, ScanActions, ScanStack } from './LibraryFolders.styles';
 
 /**
  * The **Library folders page**'s organism: the maintainer header — Back,
- * **Library folders** and the lede — over the group **Folders**: one **Folder
- * row** per listed folder (or _No folders yet._), a divider, and the add row,
- * a mono `TextField` with the folder glyph and _Add_. A refused add is one
- * 13px `danger` line under the field, and the typed path stays in it; a
- * refused remove — linked videos play from the folder — is the same line
- * under that folder's row, and the row stays. Then
+ * **Library folders** and the lede — over the group **Folders**, the
+ * `FolderListEditor`: the Folder rows with their ✕, the add row, and
+ * _Browse…_ in the desktop app. Then
  * the group **Scan**: _What the scanner accepts_, the **Import mode** (Link on
  * every mount), the `EnrichCheckCard` with Import setup's stored-key hint, and
  * **Scan folders** — sending the box and the mode —
  * disabled with no folder listed, which posts the **Folder scan** and pushes
  * `/import` — on a `409` too, so the run already in flight is the one shown.
  *
- * In the desktop app _Browse…_ sits beside _Add_ and opens the system folder
- * dialog: each picked folder is posted in order, as if it had been typed, and
- * each is checked and refused on its own. A browser has no bridge, so no
- * _Browse…_; a cancelled pick posts nothing.
- *
  * **Blank until it lands**: nothing under the header is drawn while the list
  * is `null`. Back is the one **Back rule** with Settings as the **Landing**.
  */
 export function LibraryFolders() {
-  const { folders, add, remove, adding, refusal, removeRefusal } =
-    useLibraryFolders();
+  const library = useLibraryFolders();
+  const { folders } = library;
   const goBack = useGoBack('/settings');
-  const [typed, setTyped] = useState('');
-  const [bridge] = useState(folderBridge);
   const { scanning, scan } = useFolderScan();
   const [enrich, setEnrich] = useState(false);
   const [mode, setMode] = useState<ImportMode>('link');
   const keySet = useKeyStored();
-
-  const submit = async () => {
-    if (await add(typed.trim())) {
-      setTyped('');
-    }
-  };
-
-  const browse = async () => {
-    if (bridge === null) return;
-    const picked = await bridge.pick();
-    for (const path of picked) {
-      await add(path);
-    }
-  };
 
   return (
     <>
@@ -82,60 +47,7 @@ export function LibraryFolders() {
       {folders === null ? null : (
         <>
           <GroupHeading>Folders</GroupHeading>
-          <Card>
-            {folders.length === 0 ? (
-              <Empty>No folders yet.</Empty>
-            ) : (
-              <Rows>
-                {folders.map((folder) => (
-                  <div key={folder.id}>
-                    <FolderRow
-                      folder={folder}
-                      onRemove={() => {
-                        void remove(folder.id);
-                      }}
-                    />
-                    {removeRefusal?.id === folder.id ? (
-                      <Refusal>{removeRefusal.sentence}</Refusal>
-                    ) : null}
-                  </div>
-                ))}
-              </Rows>
-            )}
-            <Divider />
-            <PathRow>
-              <TextField
-                value={typed}
-                placeholder="E:\Movies"
-                icon={<FolderIcon size={18} />}
-                rounded={false}
-                mono
-                onChange={setTyped}
-                aria-label="Folder path"
-              />
-              <Button
-                label="Add"
-                variant="secondary"
-                size="sm"
-                disabled={adding || typed.trim() === ''}
-                onClick={() => {
-                  void submit();
-                }}
-              />
-              {bridge === null ? null : (
-                <Button
-                  label="Browse…"
-                  variant="secondary"
-                  size="sm"
-                  disabled={adding}
-                  onClick={() => {
-                    void browse();
-                  }}
-                />
-              )}
-            </PathRow>
-            {refusal === null ? null : <Refusal>{refusal}</Refusal>}
-          </Card>
+          <FolderListEditor {...library} folders={folders} />
 
           <GroupHeading>Scan</GroupHeading>
           <ScanStack>

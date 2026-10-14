@@ -23,6 +23,11 @@ export const FOLDER_CHANNELS = {
   /** invoke → `string | null`, the one folder picked; `null` for a cancel */
   pickOne: 'familyflix:folders:pick-one',
   /**
+   * invoke → `string | null`, the one spreadsheet (`.xlsx` or `.csv`) picked;
+   * `null` for a cancel
+   */
+  pickSheet: 'familyflix:folders:pick-sheet',
+  /**
    * invoke, no argument → nothing: main opens the **Managed media directory**
    * in Explorer. The renderer never names a path.
    */
@@ -37,6 +42,11 @@ export interface FolderBridge {
   pick(): Promise<string[]>;
   /** Open the system folder dialog for one folder; `null` a cancel. */
   pickOne(): Promise<string | null>;
+  /**
+   * Open the system file dialog for one spreadsheet, `.xlsx` or `.csv`;
+   * `null` a cancel — Import setup's _Browse…_.
+   */
+  pickSheet(): Promise<string | null>;
   /**
    * Open the **Managed media directory** in Explorer, made first if absent;
    * a failure is logged by main, never answered.

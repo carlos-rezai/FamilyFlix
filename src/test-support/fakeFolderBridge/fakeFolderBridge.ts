@@ -9,7 +9,8 @@ import type { FolderBridge } from '@/types/libraryFolders';
  * Call this inside the `describe` that needs it, and for the length of that
  * block the global is installed: each `pick()` answers what `setPick` last
  * set (`[]` by default — a cancelled dialog), each `pickOne()` what
- * `setPickOne` last set (`null` by default — a cancelled dialog), each
+ * `setPickOne` last set and each `pickSheet()` what `setPickSheet` did
+ * (`null` by default — a cancelled dialog), each
  * `openMedia()` resolves at once, and all three are counted. After the block
  * the global is deleted, so every later file in the worker is a browser
  * again. `fakeUpdateBridge`'s twin.
@@ -17,8 +18,10 @@ import type { FolderBridge } from '@/types/libraryFolders';
 export function fakeFolderBridge() {
   let answer: string[] = [];
   let oneAnswer: string | null = null;
+  let sheetAnswer: string | null = null;
   let picks = 0;
   let pickOnes = 0;
+  let pickSheets = 0;
   let openMedias = 0;
 
   const folders: FolderBridge = {
@@ -30,6 +33,10 @@ export function fakeFolderBridge() {
       pickOnes += 1;
       return Promise.resolve(oneAnswer);
     },
+    pickSheet() {
+      pickSheets += 1;
+      return Promise.resolve(sheetAnswer);
+    },
     openMedia() {
       openMedias += 1;
       return Promise.resolve();
@@ -39,8 +46,10 @@ export function fakeFolderBridge() {
   beforeEach(() => {
     answer = [];
     oneAnswer = null;
+    sheetAnswer = null;
     picks = 0;
     pickOnes = 0;
+    pickSheets = 0;
     openMedias = 0;
     window.familyflix = { ...window.familyflix, folders } as NonNullable<
       Window['familyflix']
@@ -62,10 +71,16 @@ export function fakeFolderBridge() {
     setPickOne(path: string | null): void {
       oneAnswer = path;
     },
+    /** What the next `pickSheet()` answers: the file picked, `null` a cancel. */
+    setPickSheet(path: string | null): void {
+      sheetAnswer = path;
+    },
     /** How many times the many-folder dialog was opened. */
     picks: (): number => picks,
     /** How many times the one-folder dialog was opened. */
     pickOnes: (): number => pickOnes,
+    /** How many times the spreadsheet dialog was opened. */
+    pickSheets: (): number => pickSheets,
     /** How many times the managed media directory was asked to open. */
     openMedias: (): number => openMedias,
   };

@@ -305,6 +305,18 @@ if (!app.requestSingleInstanceLock()) {
       )
     );
 
+    // Import setup's spreadsheet _Browse…_: one `.xlsx` or `.csv`, a cancel
+    // answered as `null` — the one-folder reading, since it is one path too.
+    ipcMain.handle(FOLDER_CHANNELS.pickSheet, async () =>
+      pickOneFolder(
+        await showFolderDialog({
+          title: 'Choose a spreadsheet',
+          properties: ['openFile'],
+          filters: [{ name: 'Spreadsheets', extensions: ['xlsx', 'csv'] }],
+        })
+      )
+    );
+
     // The Storage card's _Open folder_: no argument, the **Managed media
     // directory** made if absent and shown in Explorer; a failure logged.
     ipcMain.handle(FOLDER_CHANNELS.openMedia, () =>
