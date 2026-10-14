@@ -854,7 +854,7 @@ describe('createMedia — emptyRoot', () => {
 // instead, one reading for every title:
 //
 // - `openFolder(folder)`, `openSeriesFolder` folded in;
-// - `storeNamed(folder, name, source)`, a Season poster's too, with
+// - `storeNamed(folder, name, source, season?)`, a Season poster's too, with
 //   `storeInSeriesFolder` folded in;
 // - `removeTitleFolder(folder)`, in place of `removeMovieFolder` and
 //   `removeSeriesFolder`.
@@ -1028,6 +1028,39 @@ describe('createMedia — storeNamed over the Media folder', () => {
     );
 
     expect(stored).toBe('the-hollow-coast-2018/season-01/S01E01-still.jpg');
+  });
+
+  it('writes into a season’s folder of the recorded Series folder when given a season, making it', async () => {
+    const { media, root } = sandbox();
+    const series = media.reserveFolder('The Hollow Coast', 2018);
+
+    const stored = await media.storeNamed(
+      recorded(root, series),
+      'S03E02.still.jpg',
+      part('still'),
+      3
+    );
+
+    expect(stored).toBe('the-hollow-coast-2018/season-03/S03E02.still.jpg');
+    expect(
+      readFileSync(join(series, 'season-03', 'S03E02.still.jpg'), 'utf8')
+    ).toBe('still');
+  });
+
+  it('writes beside what a season’s folder already holds', async () => {
+    const { media, root } = sandbox();
+    const series = media.reserveFolder('The Hollow Coast', 2018);
+    const season = media.seasonFolder(series, 1);
+    await media.storeUpload(season, 'e01.mp4', part('video'));
+
+    await media.storeNamed(
+      recorded(root, series),
+      'e01.still.jpg',
+      part('s'),
+      1
+    );
+
+    expect(readdirSync(season).sort()).toEqual(['e01.mp4', 'e01.still.jpg']);
   });
 
   it('replaces a file of that name, so a second Sync leaves one poster', async () => {

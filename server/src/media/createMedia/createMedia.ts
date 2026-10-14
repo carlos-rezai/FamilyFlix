@@ -112,14 +112,20 @@ export interface Media {
   ): Promise<string>;
 
   /**
-   * Write `source` as exactly `name` into a recorded **Media folder** — or a
-   * folder under it, a season's — answering the **Stored path** of what it
-   * wrote: a **Sync**'s `poster.jpg` and `backdrop.jpg`, a Season poster, a
-   * Still. A file of that name is replaced, so a second Sync leaves one
-   * poster. Rejects, writing nothing, for a folder that is not there, is the
-   * media root, or lies outside it.
+   * Write `source` as exactly `name` into a recorded **Media folder** — or,
+   * given a `season`, into that season's `season-NN/` under it, made if it is
+   * not there, the name {@link seasonFolder} spells — answering the **Stored
+   * path** of what it wrote: a **Sync**'s `poster.jpg` and `backdrop.jpg`, a
+   * Season poster, a Still. A file of that name is replaced, so a second Sync
+   * leaves one poster. Rejects, writing nothing, for a folder that is not
+   * there, is the media root, or lies outside it.
    */
-  storeNamed(folder: string, name: string, source: Readable): Promise<string>;
+  storeNamed(
+    folder: string,
+    name: string,
+    source: Readable,
+    season?: number
+  ): Promise<string>;
 
   /**
    * The bytes of the file a **Stored path** names, as a stream — what a
@@ -270,6 +276,16 @@ export function createMedia(mediaPath: string): Media {
   const recordedFolder = (folder: string): string | null =>
     isAbsolute(folder) ? null : containedFolder(folder);
 
+  /** A season's `season-NN/` under a Series folder, made if it is not there. */
+  const seasonDir = (seriesFolder: string, season: number): string => {
+    const folder = join(
+      seriesFolder,
+      `season-${String(season).padStart(2, '0')}`
+    );
+    mkdirSync(folder, { recursive: true });
+    return folder;
+  };
+
   return {
     reserveFolder: (title, year) => {
       // The dev default is `./media`, which does not exist until the first film
@@ -288,14 +304,7 @@ export function createMedia(mediaPath: string): Media {
       return first === '' ? null : recordedFolder(first);
     },
 
-    seasonFolder: (seriesFolder, season) => {
-      const folder = join(
-        seriesFolder,
-        `season-${String(season).padStart(2, '0')}`
-      );
-      mkdirSync(folder, { recursive: true });
-      return folder;
-    },
+    seasonFolder: (seriesFolder, season) => seasonDir(seriesFolder, season),
 
     renameFolder: (folder, title, year) => {
       const wanted = movieFolder(title, year);
@@ -330,11 +339,12 @@ export function createMedia(mediaPath: string): Media {
       return storedIn(folder, safe);
     },
 
-    storeNamed: async (recorded, name, source) => {
-      const folder = recordedFolder(recorded);
-      if (folder === null) {
+    storeNamed: async (recorded, name, source, season) => {
+      const title = recordedFolder(recorded);
+      if (title === null) {
         throw new Error(`No title folder at ${recorded}`);
       }
+      const folder = season === undefined ? title : seasonDir(title, season);
       const safe = safeFilename(name);
       await pipeline(source, createWriteStream(join(folder, safe)));
       return storedIn(folder, safe);

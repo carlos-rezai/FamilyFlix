@@ -556,24 +556,6 @@ export function createEnrichment({
    * air date when empty, always; the still under Poster; the runtime under
    * Runtime. Never a Decision, never the watch state.
    */
-  /**
-   * A season's folder under a recorded **Series folder**, made if it is not
-   * there — where a Still goes — as a recorded folder `storeNamed` takes.
-   * Throws for a series with no folder recorded, or one that is not there.
-   */
-  function seasonFolderOf(
-    seriesFolder: string | null,
-    seasonNumber: number
-  ): string {
-    const opened =
-      seriesFolder === null ? null : media.openFolder(seriesFolder);
-    if (seriesFolder === null || opened === null) {
-      throw new Error('No Series folder recorded');
-    }
-    const season = media.seasonFolder(opened, seasonNumber);
-    return `${seriesFolder}/${season.split(sep).pop() ?? ''}`;
-  }
-
   async function writeEpisodes(
     current: EnrichmentRun,
     seriesFolder: string | null,
@@ -593,7 +575,7 @@ export function createEnrichment({
       if (still !== null) {
         const image = await client.image(still, signal);
         if (signal.aborted) return;
-        if (image.kind === 'ok') {
+        if (image.kind === 'ok' && seriesFolder !== null) {
           const stem = posix.basename(
             episode.videoPath,
             posix.extname(episode.videoPath)
@@ -601,9 +583,10 @@ export function createEnrichment({
           try {
             const name = `${stem}.still.jpg`;
             const stored = await media.storeNamed(
-              seasonFolderOf(seriesFolder, seasonNumber),
+              seriesFolder,
               name,
-              image.value
+              image.value,
+              seasonNumber
             );
             enrichment.stillPath = stored;
             log(current, `↓ ${name}  →  ${stored}`, 'scan');
