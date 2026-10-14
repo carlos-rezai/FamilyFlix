@@ -43,8 +43,8 @@ export interface ImportRunState {
    */
   start: (
     sheetPath: string,
-    enrich?: boolean,
-    mode?: ImportMode
+    enrich: boolean,
+    mode: ImportMode
   ) => Promise<void>;
   /** _Cancel import_: discard the run, and let it go from the screen. */
   cancel: () => Promise<void>;
@@ -124,7 +124,7 @@ export function useImportRun(): ImportRunState {
   }, []);
 
   const start = useCallback(
-    async (sheetPath: string, enrich = false, mode: ImportMode = 'copy') => {
+    async (sheetPath: string, enrich: boolean, mode: ImportMode) => {
       generation.current += 1;
       try {
         setRun(await startImport(sheetPath, enrich, mode));

@@ -69,8 +69,9 @@ function isFieldRefusal<F extends string>(
 /**
  * Start the **Current run** over the sheet the **Setup step** holds and every
  * listed **Library folder**, and resolve the snapshot the route answered its
- * `201` with. `enrich` — the _Also fetch from TMDB_ box — is always sent, and
- * only carried on the run.
+ * `201` with. `enrich` — the _Also fetch from TMDB_ box — and the **Import
+ * mode** are always sent, as `startFolderScan` sends them; `enrich` is only
+ * carried on the run.
  *
  * A `400` rejects with {@link ImportRefusedError} naming the field — the
  * sheet, or `folders` when none is listed; a `409` with
@@ -80,8 +81,8 @@ function isFieldRefusal<F extends string>(
  */
 export async function startImport(
   sheetPath: string,
-  enrich = false,
-  mode: ImportMode = 'copy'
+  enrich: boolean,
+  mode: ImportMode
 ): Promise<ImportRun> {
   const response = await fetch(IMPORT_ENDPOINT, {
     method: 'POST',

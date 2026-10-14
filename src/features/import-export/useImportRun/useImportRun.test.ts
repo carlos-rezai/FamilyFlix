@@ -146,7 +146,7 @@ async function mount() {
 async function startRun() {
   const rendered = await mount();
   await act(async () => {
-    await rendered.result.current.start(SHEET);
+    await rendered.result.current.start(SHEET, false, 'link');
   });
   return rendered;
 }
@@ -429,7 +429,7 @@ describe('useImportRun — cancel', () => {
     });
 
     await act(async () => {
-      await result.current.start(SHEET);
+      await result.current.start(SHEET, false, 'link');
     });
 
     expect(fetchMock.mock.calls.filter(isStart)).toHaveLength(2);
