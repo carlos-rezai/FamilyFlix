@@ -704,6 +704,29 @@ name and made the playback read's three answers values on both sides.
 | **VideoFile** (new)    | What `Playback.videoFile` answers: `file`, `missing` (the `404` it always was) or `unreachable` — a **Linked video** whose **Library folder** can't be read, answered `503` and drawn as the player's `unreachable` notice, _Can’t reach this film’s folder_.                                         | offline, disconnected                 |
 | **Media folder** (new) | `media_folder` (migration 11) on `movies` and `series`: the path of a title's **Movie folder** or **Series folder** relative to the **Managed media directory**, backfilled, read by `storage.mediaFolderOf` — the one way `Media` finds a title's folder. Named by whoever reserved it on every add. | title folder, managed folder          |
 
+## Review at scale (new)
+
+Design log 42: step 25, initiative `review-at-scale`. A Sync finds what TMDB
+holds and keeps trying until a gap is filled; a long review reads by title and
+by kind and settles in bulk; every Season can be given art. Planned (🔜).
+
+| Term                           | Definition                                                                                                                                                                                                                                                                                              | Aliases to avoid                             |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------- |
+| **Search ladder** (new)        | The ordered TMDB searches for one title, at most four, asked until one answers a result: the title with its year, the title without it, its **Search query**, and the part before a `:` or `-` subtitle. `enrichment/searchLadder/`, pure; the run's look-up and the review's search box both climb it. | retry, fallback search, fuzzy search         |
+| **Search rung** (new)          | One step of the **Search ladder**: a query and a year or `null` (`SearchRung`).                                                                                                                                                                                                                         | attempt, try, variant                        |
+| **Search query** (new)         | A title as TMDB is asked it: `titleGuess`'s tail strip, **Release noise** dropped, curly quotes and dashes folded, `&` read as `and`, other punctuation a space. `searchQuery`, beside `titleKey`. Not the **Title key**, which is for comparing.                                                       | cleaned title, normalised title              |
+| **Release noise** (new)        | The whole-word tags a folder name carries that no title does — `BluRay`, `x264`, `WEB-DL`, `REMUX`, … — `RELEASE_NOISE` beside `titleKey`; it and everything after its first word are dropped by `searchQuery` and `titleGuess`.                                                                        | junk, tags, scene tags                       |
+| **Unmatched** (new)            | A **Movie** or **Series** with no `tmdb_id`: never written by a **Sync**. Always in the `missing` **Enrichment scope**, whatever details it holds.                                                                                                                                                      | unsynced, not found, failed                  |
+| **Sync gap** (new)             | What puts a title in the `missing` **Enrichment scope**: not **Full details**, or **Unmatched**, or — a series — an **Episode** without a title, an air date or a **Still**, or a **Season** on disk without a **Season poster**. `syncGap`, SQL spelled once in `library/enrich/`.                     | missing data, incomplete                     |
+| **Accordion** (new)            | `components/Accordion/` (`mol.Accordion`): a header button — chevron, label, count, optional actions — over a body unmounted while closed; controlled by `expanded` and `onToggle`, a **Control**, domain-free.                                                                                         | disclosure, collapsible, expander, `details` |
+| **Review group** (new)         | The **Problems** of one **Review step** that share a title, drawn as one **Accordion** — closed by default, hard kinds' groups first — or, for one Problem, as its bare row. `reviewGroups`, pure, in `importView/`. The Sync's review has none.                                                        | section, bucket, title group                 |
+| **Kind filter** (new)          | The `PillTabs` over a review — _All N_, then each kind present with its count — drawn only with two kinds or more; screen state, never in the URL.                                                                                                                                                      | tabs, category filter                        |
+| **Bulk action** (new)          | One press that settles every row a **Review group** or a **Kind filter** covers: _Skip all_ (**Dismiss**), _Import all as guessed_ (`no-row`) and _Keep all mine_ (`differs`), each answered with the whole run to redraw from.                                                                         | batch, mass action, select all               |
+| **Season choice** (new)        | One **Season** in a single-series **Sync**'s Seasons section: its held **Season poster** beside up to ten TMDB posters — the season's own, then the series' marked _Series poster_ — a press storing that image and replacing the held one (`SeasonChoice`).                                            | season picker, season candidate              |
+| **Enrichment scope** (updated) | As before; log 42: `missing` is every title with a **Sync gap**, not only those without **Full details**.                                                                                                                                                                                               | sync mode, target, filter                    |
+| **Season poster** (updated)    | As before; log 42: replaced by a **Season choice** press, and set or removed from a file in the **Series edit job** and the series add — the run itself still never replaces one.                                                                                                                       | season art, season cover, season thumbnail   |
+| **`failed`** (updated)         | The hard **Problem** for an import that broke: one per film, and since log 42 one per **Show folder**, its reason the count and the first error, its detail the episodes.                                                                                                                               | error row, copy failure                      |
+
 ## Relationships
 
 - A **Library folder** has zero-or-more titles (**Movies** and **Series**) recorded against it; a title has at most one Library folder, and none once its folder is removed or when it was added by hand.
@@ -861,6 +884,10 @@ name and made the playback read's three answers values on both sides.
 - A **Movie** and each **Episode** has exactly one video, **Linked** or managed; a **Series** may hold both kinds. A **Linked video** plays from exactly one **Library folder**, and a Library folder that one plays from cannot be removed (log 41 Q16).
 - Every **Movie** and **Series** has one **Media folder**, linked or not; a linked title's holds everything but its video.
 - **Already in library** never changes a title's **Import mode**: a re-run in the other mode leaves its video where it is.
+
+- A **Search ladder** has one to four **Search rungs**; a title's search stops at the first that answers a result, and **Confident** is read over that rung alone.
+- A **Review step** has zero-or-more **Review groups**; each holds one-or-more **Problems** sharing a title, and at most one **Problem** per kind per **Source folder**, **Sheet row** or **Show folder**.
+- A single-series **Sync** has one **Season choice** per **Season** on disk.
 
 ## Example dialogue
 
@@ -1472,6 +1499,19 @@ Hard` gets found and `Die Hard\extras` doesn't become a second film."
 > **Domain expert:** "`ambiguous`, as before, but its **Folder picker** shows
 > each **Candidate folder**. One press imports it. That isn't a **Decision**:
 > Decisions are the **Sync**'s, Problems are the import's."
+
+> **Dev:** "A Sync said _F'ck That's Delicious_ had no result on TMDB. Last
+> month too. Why does it keep missing?"
+> **Domain expert:** "It asked once, literally. Now it climbs the **Search
+> ladder**: the title with its year, without it, then its **Search query**,
+> then the part before a subtitle. It stays **Unmatched** until one rung
+> answers, and an Unmatched title has a **Sync gap**, so _Only what's
+> missing_ tries it again every time."
+> **Dev:** "And the review with a thousand rows?"
+> **Domain expert:** "A thousand **Problems**, a few dozen **Review groups**.
+> Pick `no-row` in the **Kind filter** and one **Bulk action**, _Import all as
+> guessed_, settles them. Season 3 with no art is a **Season choice** in that
+> show's own Sync."
 
 ## Flagged ambiguities
 
@@ -2331,3 +2371,15 @@ Hard` gets found and `Die Hard\extras` doesn't become a second film."
   `library_folder_id` and **Source folder** are its origin, forgotten when
   its folder is removed; `video_folder_id` is where a **Linked video** plays
   from, and keeps its folder listed. Never read one for the other.
+- **"Accordion" is the molecule, never the Codecs row (new):** "codec
+  accordion" stays an alias to avoid for the **Codecs row**. The
+  **Accordion** is `components/Accordion/`; a **Review group** is what the
+  Import review draws with it.
+- **"Missing" has three readings (new):** the `missing` **Enrichment scope**
+  (titles with a **Sync gap**), the `missing` **Decision** (no rung of the
+  **Search ladder** answered) and "missing" in prose. A title in the scope
+  is not necessarily a `missing` Decision; say **Sync gap** for the first and
+  **Unmatched** for a title no Sync has written.
+- **"Search query" is not the Title key (new):** both fold a title, for
+  different readers — the key for comparing ours with theirs, the query for
+  asking TMDB. Never send a Title key to TMDB, never compare Search queries.
