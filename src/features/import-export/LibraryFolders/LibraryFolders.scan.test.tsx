@@ -158,7 +158,7 @@ describe('LibraryFolders — Scan folders', () => {
     expect(navigationType()).toBe('PUSH');
     expect(scanCalls()).toHaveLength(1);
     const [, init] = scanCalls()[0] ?? [];
-    expect(JSON.parse(String(init?.body))).toEqual({ enrich: false });
+    expect(JSON.parse(String(init?.body))).toMatchObject({ enrich: false });
     expect(screen.getByText('the import screen')).toBeDefined();
   });
 
@@ -225,7 +225,7 @@ describe('LibraryFolders — Also fetch from TMDB', () => {
 
     await waitFor(() => expect(pathname()).toBe('/import'));
     const [, init] = scanCalls()[0] ?? [];
-    expect(JSON.parse(String(init?.body))).toEqual({ enrich: true });
+    expect(JSON.parse(String(init?.body))).toMatchObject({ enrich: true });
   });
 
   it('sends enrich false again once the box is unticked', async () => {
@@ -238,6 +238,87 @@ describe('LibraryFolders — Also fetch from TMDB', () => {
 
     await waitFor(() => expect(pathname()).toBe('/import'));
     const [, init] = scanCalls()[0] ?? [];
-    expect(JSON.parse(String(init?.body))).toEqual({ enrich: false });
+    expect(JSON.parse(String(init?.body))).toMatchObject({ enrich: false });
+  });
+});
+
+/**
+ * 41 — Link or copy, Slice 3: "a linked film plays" (issue #343).
+ *
+ * The group **Scan** draws the **Import mode** (`ImportModeChoice`) above
+ * **Scan folders**: the _Files_ caption over two radios, **Link** chosen on
+ * every mount and never remembered, and the press posts the chosen `mode`
+ * beside `enrich`.
+ */
+const modeGroup = () => screen.findByRole('radiogroup', { name: 'Files' });
+const modeRadio = (name: 'Link' | 'Copy') =>
+  screen.findByRole('radio', { name: new RegExp(`^${name}`) });
+
+describe('LibraryFolders — the Import mode', () => {
+  it('draws the choice between What the scanner accepts and Scan folders', async () => {
+    serve([MOVIES]);
+    renderPage();
+
+    const group = await modeGroup();
+    const button = await scanButton();
+    expect(
+      screen
+        .getByText('What the scanner accepts')
+        .compareDocumentPosition(group) & Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
+    expect(
+      group.compareDocumentPosition(button) & Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
+  });
+
+  it('chooses Link on mount', async () => {
+    serve([MOVIES]);
+    renderPage();
+
+    expect((await modeRadio('Link')).getAttribute('aria-checked')).toBe('true');
+    expect((await modeRadio('Copy')).getAttribute('aria-checked')).toBe(
+      'false'
+    );
+  });
+
+  it('posts mode link when nothing is pressed', async () => {
+    serve([MOVIES]);
+    renderPage();
+
+    await userEvent.click(await scanButton());
+
+    await waitFor(() => expect(pathname()).toBe('/import'));
+    const [, init] = scanCalls()[0] ?? [];
+    expect(JSON.parse(String(init?.body))).toEqual({
+      enrich: false,
+      mode: 'link',
+    });
+  });
+
+  it('posts mode copy once Copy is pressed', async () => {
+    serve([MOVIES]);
+    renderPage();
+
+    await userEvent.click(await modeRadio('Copy'));
+    await userEvent.click(await scanButton());
+
+    await waitFor(() => expect(pathname()).toBe('/import'));
+    const [, init] = scanCalls()[0] ?? [];
+    expect(JSON.parse(String(init?.body))).toEqual({
+      enrich: false,
+      mode: 'copy',
+    });
+  });
+
+  it('chooses Link again on the next mount — the choice is never remembered', async () => {
+    serve([MOVIES]);
+    const first = renderPage();
+    await userEvent.click(await modeRadio('Copy'));
+    expect((await modeRadio('Copy')).getAttribute('aria-checked')).toBe('true');
+    first.unmount();
+
+    renderPage();
+
+    expect((await modeRadio('Link')).getAttribute('aria-checked')).toBe('true');
   });
 });

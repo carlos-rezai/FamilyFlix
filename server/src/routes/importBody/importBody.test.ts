@@ -11,8 +11,8 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { SHEET_FIELDS } from '@/types';
-import { pickFolderBody, sheetChoicesBody } from './importBody';
+import { IMPORT_MODES, SHEET_FIELDS } from '@/types';
+import { folderScanBody, pickFolderBody, sheetChoicesBody } from './importBody';
 
 describe('sheetChoicesBody: what it reads', () => {
   it('reads a map of field to side', () => {
@@ -139,6 +139,57 @@ describe('pickFolderBody: what it refuses, each in a sentence', () => {
     ['a list of folders', { folder: ['/films/Heat'] }],
   ])('refuses %s', (_name, body) => {
     const read = pickFolderBody(body);
+
+    expect(read.ok).toBe(false);
+    expect(!read.ok && read.error).toMatch(SENTENCE);
+  });
+});
+
+// 41 — Link or copy, Slice 3: "a linked film plays" (issue #343).
+//
+// `POST /api/library-folders/scan { enrich, mode }` reads its body here, the
+// scan's read moved beside the others: `enrich` true only when it is `true`,
+// as before, and `mode` one of **IMPORT_MODES** — a missing or unknown mode
+// refused in a sentence.
+describe('folderScanBody: the Import mode', () => {
+  it('names the two modes, Link first', () => {
+    expect(IMPORT_MODES).toEqual(['link', 'copy']);
+  });
+
+  it.each(['link', 'copy'] as const)('reads mode %s', (mode) => {
+    expect(folderScanBody({ enrich: false, mode })).toEqual({
+      ok: true,
+      value: { enrich: false, mode },
+    });
+  });
+
+  it('reads enrich true', () => {
+    expect(folderScanBody({ enrich: true, mode: 'link' })).toEqual({
+      ok: true,
+      value: { enrich: true, mode: 'link' },
+    });
+  });
+
+  it.each([
+    ['missing', { mode: 'copy' }],
+    ['a string', { enrich: 'true', mode: 'copy' }],
+    ['a number', { enrich: 1, mode: 'copy' }],
+  ])('reads enrich false when it is %s', (_name, body) => {
+    expect(folderScanBody(body)).toEqual({
+      ok: true,
+      value: { enrich: false, mode: 'copy' },
+    });
+  });
+
+  it.each([
+    ['no body', undefined],
+    ['no mode', { enrich: false }],
+    ['a null mode', { enrich: false, mode: null }],
+    ['an unknown mode', { enrich: false, mode: 'move' }],
+    ['a mode in capitals', { enrich: false, mode: 'Link' }],
+    ['a mode that is not a string', { enrich: false, mode: 1 }],
+  ])('refuses %s in a sentence', (_name, body) => {
+    const read = folderScanBody(body);
 
     expect(read.ok).toBe(false);
     expect(!read.ok && read.error).toMatch(SENTENCE);

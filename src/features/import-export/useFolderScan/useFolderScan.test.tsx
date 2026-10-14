@@ -35,14 +35,14 @@ afterEach(() => {
   fetchMock.mockReset();
 });
 
-/** A screen whose one control is the hook's press, with the box ticked. */
+/** A screen whose one control is the hook's press, the box ticked, Copy chosen (#343). */
 function Screen() {
   const { scanning, scan } = useFolderScan();
 
   return (
     <>
       <span data-testid="scanning">{String(scanning)}</span>
-      <button type="button" onClick={() => void scan(true)}>
+      <button type="button" onClick={() => void scan(true, 'copy')}>
         Scan folders
       </button>
     </>
@@ -62,7 +62,7 @@ function renderAtFolders() {
 }
 
 describe('useFolderScan', () => {
-  it('posts the scan with the box, held while it is asked', async () => {
+  it('posts the scan with the box and the mode, held while it is asked', async () => {
     fetchMock.mockReturnValue(new Promise<Response>(() => undefined));
     renderAtFolders();
 
@@ -72,7 +72,10 @@ describe('useFolderScan', () => {
     const [input, init] = fetchMock.mock.calls[0];
     expect(input).toBe('/api/library-folders/scan');
     expect(init?.method).toBe('POST');
-    expect(JSON.parse(String(init?.body))).toEqual({ enrich: true });
+    expect(JSON.parse(String(init?.body))).toEqual({
+      enrich: true,
+      mode: 'copy',
+    });
   });
 
   it('pushes /import once the scan has started', async () => {

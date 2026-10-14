@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import { ThemeProvider } from 'styled-components';
 
-import { FormatCard, type FormatCardProps } from './FormatCard';
+import { ChoiceCard, type ChoiceCardProps } from './ChoiceCard';
 import { theme } from '@/styles/theme';
 
 /**
@@ -15,15 +15,19 @@ import { theme } from '@/styles/theme';
  * that the dialog draws around them. The card knows nothing of the export: it
  * draws a label, a line and whether it is the chosen one, and says when it is
  * pressed.
+ *
+ * 41 — Link or copy, Slice 3 (issue #343): renamed from `FormatCard` on its
+ * second caller, the **Import mode**, its pixels and this suite unchanged; its
+ * props read `label`, `line`, `checked`, `onSelect` (COMPONENT-SPEC).
  */
-function renderCard(props: Partial<FormatCardProps> = {}) {
+function renderCard(props: Partial<ChoiceCardProps> = {}) {
   return render(
     <ThemeProvider theme={theme}>
       <div role="radiogroup" aria-label="Format">
-        <FormatCard
+        <ChoiceCard
           label="CSV"
-          description="Plain comma-separated. Opens anywhere."
-          selected={false}
+          line="Plain comma-separated. Opens anywhere."
+          checked={false}
           onSelect={() => undefined}
           {...props}
         />
@@ -36,8 +40,8 @@ const radio = () => screen.getByRole('radio', { name: /CSV/ });
 
 const ACCENT_SOFT_FILL = 'rgba(217, 122, 78, 0.14)';
 
-describe('FormatCard', () => {
-  it('renders the label and the description', () => {
+describe('ChoiceCard', () => {
+  it('renders the label and the line', () => {
     renderCard();
 
     expect(screen.getByText('CSV')).toBeDefined();
@@ -61,13 +65,13 @@ describe('FormatCard', () => {
   });
 
   it('is unchecked when not selected', () => {
-    renderCard({ selected: false });
+    renderCard({ checked: false });
 
     expect(radio().getAttribute('aria-checked')).toBe('false');
   });
 
   it('is checked when selected', () => {
-    renderCard({ selected: true });
+    renderCard({ checked: true });
 
     expect(radio().getAttribute('aria-checked')).toBe('true');
   });
@@ -83,7 +87,7 @@ describe('FormatCard', () => {
 
   it('calls onSelect on press even when already selected — the choice is idempotent', () => {
     const onSelect = vi.fn();
-    renderCard({ selected: true, onSelect });
+    renderCard({ checked: true, onSelect });
 
     fireEvent.click(radio());
 
@@ -91,13 +95,13 @@ describe('FormatCard', () => {
   });
 
   it('sits on the accent-soft fill when selected', () => {
-    renderCard({ selected: true });
+    renderCard({ checked: true });
 
     expect(getComputedStyle(radio()).backgroundColor).toBe(ACCENT_SOFT_FILL);
   });
 
   it('does not sit on the accent-soft fill when not selected', () => {
-    renderCard({ selected: false });
+    renderCard({ checked: false });
 
     expect(getComputedStyle(radio()).backgroundColor).not.toBe(
       ACCENT_SOFT_FILL
@@ -107,7 +111,7 @@ describe('FormatCard', () => {
   it('draws whichever label and line it is given', () => {
     renderCard({
       label: 'Excel',
-      description: '.xlsx workbook with a header row.',
+      line: '.xlsx workbook with a header row.',
     });
 
     expect(screen.getByRole('radio', { name: /Excel/ })).toBeDefined();

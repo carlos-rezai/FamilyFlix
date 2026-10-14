@@ -103,7 +103,7 @@ async function listPath(api: Api, path: string): Promise<string> {
   return path;
 }
 
-const scan = (api: Api, body: unknown = { enrich: false }) =>
+const scan = (api: Api, body: unknown = { enrich: false, mode: 'link' }) =>
   fetch(`${api.baseUrl}/api/library-folders/scan`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -148,7 +148,7 @@ describe('POST /api/library-folders/scan', () => {
     const api = freshApi();
     await listFolder(api, 'Movies');
 
-    const response = await scan(api, { enrich: true });
+    const response = await scan(api, { enrich: true, mode: 'link' });
 
     expect(response.status).toBe(201);
     expect(await response.json()).toMatchObject({ enrich: true });
@@ -196,4 +196,47 @@ describe('POST /api/library-folders/scan', () => {
     expect(((await second.json()) as ImportRun).id).not.toBe(first.id);
     await untilReview(api);
   });
+});
+
+// 41 — Link or copy, Slice 3: "a linked film plays" (issue #343).
+//
+// The scan's body is `{ enrich, mode }`, read by `importBody`: `mode` is one
+// of `link` and `copy`, carried on the run as `ImportRun.mode`, and a missing
+// or unknown one is a `400` with a sentence — no run is started.
+describe('POST /api/library-folders/scan — the Import mode', () => {
+  it.each(['link', 'copy'] as const)(
+    'carries mode %s on the run',
+    async (mode) => {
+      const api = freshApi();
+      await listFolder(api, 'Movies');
+
+      const response = await scan(api, { enrich: false, mode });
+
+      const run: unknown = await response.json();
+      await untilReview(api);
+      expect(response.status).toBe(201);
+      expect(run).toMatchObject({ mode });
+    }
+  );
+
+  it.each([
+    ['a missing mode', { enrich: false }],
+    ['an unknown mode', { enrich: false, mode: 'move' }],
+  ])(
+    'answers 400 with a sentence for %s, starting nothing',
+    async (_name, body) => {
+      const api = freshApi();
+      await listFolder(api, 'Movies');
+
+      const response = await scan(api, body);
+
+      expect(response.status).toBe(400);
+      expect(await response.json()).toMatchObject({
+        error: expect.stringMatching(/^[A-Z][^\n]*\.$/),
+      });
+      expect((await fetch(`${api.baseUrl}/api/import/current`)).status).toBe(
+        404
+      );
+    }
+  );
 });
