@@ -294,7 +294,7 @@ function episodeOr404(
  *
  * Its own function because three call sites send it and one of them —
  * `sendFile`'s failure callback on the direct path — cannot go through
- * {@link videoFileOr404}: by then the file *did* resolve and the read failed
+ * {@link videoFileOrRefusal}: by then the file *did* resolve and the read failed
  * afterwards. The status and the sentence are the same either way, and the
  * client tells "gone" from "went wrong" by reading that body, so the two ways
  * of having nothing to send must not drift into two different sentences.
@@ -315,19 +315,30 @@ function inUseSentence(titles: number): string {
 }
 
 /**
- * What every read of a movie's *bytes* does after {@link movieOr404}: resolve
- * the stored path to a file under the managed media directory, and 404 if there
- * is nothing there.
+ * The one answer for a row whose **Linked video**'s **Library folder** is
+ * listed but out of reach — unplugged, offline — beside {@link noVideoFile}:
+ * a `503`, so the player can tell a folder that may come back from a file
+ * that is gone.
+ */
+function unreachableVideo(res: Response, id: string): void {
+  res
+    .status(503)
+    .json({ error: `The video's Library folder is out of reach: ${id}` });
+}
+
+/**
+ * What every read of a row's *bytes* does after {@link movieOr404}: resolve
+ * its **StoredVideo** to a file through `Playback.videoFile`, or refuse.
  *
- * The second half of the six-line preamble `/playback` and `/stream` open with
- * identically. `null` from `videoFile` is both "no such file" and "a stored
- * path that escaped the media root" — deliberately one answer, because what is
- * or is not on this disk is not something the API reports back.
+ * Three answers: the file; `missing` — no such file, a path that escaped its
+ * root, or a folder the library does not list, deliberately one answer, the
+ * `404` of {@link noVideoFile}; and `unreachable` — a listed folder that does
+ * not read, the `503` of {@link unreachableVideo}.
  *
- * Answers the file, or `null` having already sent the 404, which is
+ * Answers the file, or `null` having already sent the refusal, which is
  * {@link movieOr404}'s shape for the same reason.
  */
-function videoFileOr404(
+function videoFileOrRefusal(
   playback: Playback,
   video: StoredVideo,
   kind: PlayableKind,
@@ -336,9 +347,7 @@ function videoFileOr404(
 ): string | null {
   const found = playback.videoFile(video);
   if (found.kind === 'unreachable') {
-    res
-      .status(503)
-      .json({ error: `The video's Library folder is out of reach: ${id}` });
+    unreachableVideo(res, id);
     return null;
   }
   if (found.kind === 'missing') {
@@ -2113,7 +2122,7 @@ export function createApiRouter(
           return;
         }
 
-        const file = videoFileOr404(playback, playable, kind, id, res);
+        const file = videoFileOrRefusal(playback, playable, kind, id, res);
         if (file === null) {
           return;
         }
@@ -2186,7 +2195,7 @@ export function createApiRouter(
         return;
       }
 
-      const file = videoFileOr404(playback, playable, kind, id, res);
+      const file = videoFileOrRefusal(playback, playable, kind, id, res);
       if (file === null) {
         return;
       }
