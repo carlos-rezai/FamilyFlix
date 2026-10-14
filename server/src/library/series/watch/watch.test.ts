@@ -2,7 +2,8 @@
 //
 // Series watch — the movie's watch rules over episodes, through
 // `LibraryStorage` over a real `:memory:` database: the resume write, the
-// watched toggle on one episode, and the same toggle over a season. Read back
+// watched toggle on one episode, and the same toggle over a season and a
+// whole series. Read back
 // through `listEpisodes`.
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -185,6 +186,80 @@ describe('series watch: setSeasonWatched', () => {
     expect(storage.setSeasonWatched(seriesId, 3, true)).toBe(false);
     expect(storage.setSeasonWatched('no-such-series', 1, true)).toBe(false);
     expect(storage.setSeasonWatched(movie.id, 1, true)).toBe(false);
+  });
+});
+
+describe('series watch: setSeriesWatched', () => {
+  it('marks every episode of every season', () => {
+    const storage = freshStorage();
+    const { seriesId } = seedHarbor(storage);
+
+    expect(storage.setSeriesWatched(seriesId, true)).toBe(true);
+
+    expect(statuses(storage, seriesId)).toEqual([
+      'watched',
+      'watched',
+      'watched',
+      'watched',
+    ]);
+  });
+
+  it('watched zeroes every resume position and stamps it', () => {
+    const storage = freshStorage();
+    const { seriesId, episodes } = seedHarbor(storage);
+    storage.setEpisodeResumePosition(episodes[2].id, 600);
+
+    at('2026-06-03T00:00:00.000Z', () => {
+      storage.setSeriesWatched(seriesId, true);
+    });
+
+    for (const episode of storage.listEpisodes(seriesId)) {
+      expect(episode).toMatchObject({
+        resumePositionSeconds: 0,
+        lastWatchedAt: '2026-06-03T00:00:00.000Z',
+      });
+    }
+  });
+
+  it('unwatched clears watched and keeps each resume position', () => {
+    const storage = freshStorage();
+    const { seriesId, episodes } = seedHarbor(storage);
+    storage.setSeriesWatched(seriesId, true);
+    storage.setEpisodeResumePosition(episodes[3].id, 120);
+
+    storage.setSeriesWatched(seriesId, false);
+
+    const listed = storage.listEpisodes(seriesId);
+    expect(listed.every((episode) => !episode.watched)).toBe(true);
+    expect(listed[3]).toMatchObject({ resumePositionSeconds: 120 });
+  });
+
+  it('touches no other series', () => {
+    const storage = freshStorage();
+    const { seriesId } = seedHarbor(storage);
+    const other = seedHarbor(storage);
+
+    storage.setSeriesWatched(seriesId, true);
+
+    expect(statuses(storage, other.seriesId)).toEqual([
+      'unwatched',
+      'unwatched',
+      'unwatched',
+      'unwatched',
+    ]);
+  });
+
+  it('refuses a series with no episodes, an unknown series, and a movie’s id', () => {
+    const storage = freshStorage();
+    const empty = storage.addSeries({ title: 'Nothing Yet' });
+    const movie = storage.addMovie({
+      title: 'Die Hard',
+      videoPath: 'die-hard/dh.mp4',
+    });
+
+    expect(storage.setSeriesWatched(empty.id, true)).toBe(false);
+    expect(storage.setSeriesWatched('no-such-series', true)).toBe(false);
+    expect(storage.setSeriesWatched(movie.id, true)).toBe(false);
   });
 });
 

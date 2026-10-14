@@ -255,6 +255,7 @@ familyflix/
 │ │ ├── Fab/ ← the FAB, `mol.Fab.dc.html` 1:1: one more `styled(IconButton)` face — the accent circle at 28px from the bottom-right corner, one of two glyphs by `icon`, named by a required `label`. Presentational to the last prop — no state, no listener, no effect; it does not know there is a threshold
 │ │ ├── BackToTop/ ← the control: given the scrolling container as a ref, it owns the Scroll threshold (`scrollTop > 420`, strictly), the passive listener, the read on attach and the press, and mounts the FAB or nothing. Two files, no styles — it draws nothing of its own
 │ │ ├── CreditsRow/ ← the lead credit and Starring: graduated from `movie-detail/` when the series page drew it too, its lead label a prop
+│ │ ├── CircleToggle/ ← the round toggle beside a detail page's Play — the watched tick and the heart, on the movie page and the series page alike: `on`, one `label` as name and tip, the accent fill; graduated when the series page drew the tick too
 │ │ ├── BackButton/ ← the **Back button**: one 44px glass circle pinned at `s4`/`s6` in the **Content frame**'s top-left corner, on every screen but the player — one face, one place; the caller's `useGoBack` its press
 │ │ ├── PageHeader/ ← every column screen's header: the Back button, an optional eyebrow, the serif heading on Back's line, the screen's own controls at the row's end, the lede under it
 │ │ ├── CornerMenu/ ← the ⋯ menu's furniture, graduated when both detail pages drew it: `Menu` in the fixed top-right slot on the Back button's inset, the translucent 44px ⋯ named _More options_, `MoreIcon` at 20; its `MenuItem`s the caller's children. Presentational — it knows no route and no dialog
@@ -289,9 +290,10 @@ familyflix/
 │ │ │ ├── useSeriesRead/ ← the one load both pages read: the Load state, the stale-response guard, retry, and `editSeries`
 │ │ │ ├── useSeriesDetail/ useSeasonEpisodes/ ← each page’s read mapped per render, and its writes on `useOptimisticEdit`
 │ │ │ ├── seriesView/ seasonView/ ← pure: a SeriesDetail → SeriesPageModel, and → SeasonPageModel for one season
+│ │ │ ├── markEpisodes/ ← pure: an episode marked by the movie's watched rule, and the held read patched with every **Next episode** derived again — `nextEpisodeOf` mirrored — for both pages' marks
 │ │ │ ├── SeriesEditMenu/ ← the series page's ⋯ on `CornerMenu`: _Edit details_ (`/add?series=<id>`), _Fetch from TMDB_, and the Danger row that opens the Delete dialog
 │ │ │ ├── DeleteSeriesDialog/ useDeleteSeries/ ← the movie's Delete dialog worded for a series, _its N episodes_ in the singular at one; `{ deleting, deleteSeries }`, onto the Series tab once the series is gone
-│ │ │ └── api/ ← saveSeasonWatched, deleteSeries (one caller each)
+│ │ │ └── api/ ← saveSeasonWatched, saveSeriesWatched, deleteSeries (one caller each)
 │ │ ├── player/ ← built-in video player, subtitle handling, resume position — for any **Playable**, a movie or an episode
 │ │ │ ├── Player/ ← the organism: owns the hooks, renders the rest
 │ │ │ ├── PlayerControls/ ← the top and bottom chrome bars
@@ -357,7 +359,7 @@ familyflix/
 │ │ │ └── api/ ← startImport, fetchCurrentImport, cancelImport, applySheetChoices, pickCandidateFolder, importGuessed, fetchExportSummary, startExport, fetchLibraryFolders, addLibraryFolder, removeLibraryFolder, startFolderScan (one caller each)
 │ │ ├── settings/ ← the Maintainer’s hub: six Settings groups under one header
 │ │ │ ├── section.styles.ts ← the furniture every Settings group draws with: the Group heading, the Section card (with the 32px group gap under it), the divider, an item’s title and lede, and the row furniture — `Row`, `RowTitle`, `RowDesc` — the Playback and Display groups both draw
-│ │ │ ├── SettingsHeader/ ← Back, the heading, ＋ Add a movie
+│ │ │ ├── SettingsHeader/ ← Back, the heading, the lede — the Library group's ＋ Add a title row is the one door to the form
 │ │ │ ├── LibrarySection/ ← the Library group: Add a title, Library folders and Import from spreadsheet owning their routes, and Export to CSV owning the Export dialog it mounts — the one place a section composes another feature’s organism
 │ │ │ ├── ActionRow/ ← one glyph + label + description row of the Library group
 │ │ │ ├── PlaybackSection/ ← the Playback card: the Codecs row — the Codec summary as its line, pushing `/settings/codecs` — the divider, Subtitles — the Auto-on toggle under its Coming soon pill, and Preferred language over FilterDropdown, shown at once and put back on refusal

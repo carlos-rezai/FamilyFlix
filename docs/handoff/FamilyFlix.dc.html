@@ -570,6 +570,8 @@
         toggleEpWatched(ep){ this.setState(st=>{ const cur=st.epState[ep.key]||{}; const now=!cur.watched; return {epState:{...st.epState,[ep.key]:{watched:now,progress:now?0:cur.progress||0}}}; }); }
         toggleSeasonAll(){ const eps=this.episodesOf(this.state.seriesId,this.state.seasonN); const allW=eps.every(e=>e.watched);
           this.setState(st=>{ const next={...st.epState}; eps.forEach(e=>{ next[e.key]={watched:!allW,progress:0}; }); return {epState:next}; }); }
+        toggleSeriesAll(id){ const x=this.seriesById(id); if(!x) return; const eps=x.seasons.flatMap((_,i)=>this.episodesOf(id,i+1)); const allW=eps.length>0&&eps.every(e=>e.watched);
+          this.setState(st=>{ const next={...st.epState}; eps.forEach(e=>{ next[e.key]={watched:!allW,progress:0}; }); return {epState:next}; }); }
         playEpisode(ep){ if(!ep) return; const resume=ep.progress>0&&ep.progress<100 ? ep.runtime*60*ep.progress/100 : 0;
           this.lastMove=Date.now(); this.setState({screen:'player',playingEp:ep,currentTime:resume,playing:true,controlsVisible:true,subsOn:true,autoNextCancelled:false}); }
         playNextEpisode(){ const nx=this.episodeAfter(this.state.playingEp);
@@ -998,6 +1000,9 @@
                   body:'The series and its '+pr.total+' episode'+(pr.total===1?'':'s')+' leave your library, and the videos, posters and subtitles FamilyFlix copied are deleted. Its watch history goes with it. The original files are not touched.',
                   onConfirm:()=>{ if(!s.seriesDeleting) this.runSeriesDelete(); }, onClose:()=>this.closeSeriesDelete(), stopProp:(e)=>this.stopProp(e) },
                 progressLabel: pr.watched===0 ? 'Not started' : pr.watched>=pr.total ? 'All '+pr.total+' episodes watched' : pr.watched+' of '+pr.total+' episodes watched',
+                isWatched:(pr.total>0&&pr.watched>=pr.total), watchedTip:(pr.total>0&&pr.watched>=pr.total)?'Watched, click to unmark':'Mark as watched',
+                onToggleWatched:()=>this.toggleSeriesAll(x.id),
+                watchedIconStyle:{display:'grid',placeItems:'center',width:'58px',height:'58px',flex:'0 0 auto',background:(pr.total>0&&pr.watched>=pr.total)?'var(--color-accent-soft)':'transparent',border:'1px solid '+((pr.total>0&&pr.watched>=pr.total)?'var(--color-accent-line)':'var(--color-border)'),borderRadius:'50%',color:(pr.total>0&&pr.watched>=pr.total)?accent:'var(--color-text-dim)',cursor:'pointer'},
                 isFavorite:isFav, favTip:isFav?'In Favorites \u2014 click to remove':'Add to Favorites',
                 onToggleFavorite:()=>this.toggleSeriesFav(x.id),
                 favIconStyle:{display:'grid',placeItems:'center',width:'58px',height:'58px',flex:'0 0 auto',background:isFav?'var(--color-accent-soft)':'transparent',border:'1px solid '+(isFav?'var(--color-accent-line)':'var(--color-border)'),borderRadius:'50%',color:isFav?accent:'var(--color-text-dim)',cursor:'pointer'},

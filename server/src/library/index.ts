@@ -223,6 +223,12 @@ export interface LibraryStorage {
    */
   setSeasonWatched(seriesId: string, season: number, value: boolean): boolean;
   /**
+   * {@link setEpisodeWatched} over every episode of the series. Answers
+   * whether the series holds an episode — `false` for an unknown series, a
+   * movie's id among them, or a series with none.
+   */
+  setSeriesWatched(seriesId: string, value: boolean): boolean;
+  /**
    * Toggle the favorite flag, surfaced through the partial `is_favorite` index
    * that powers the Favorites row.
    */
@@ -429,6 +435,7 @@ export function createSqliteStorage(dbPath: string): LibraryStorage {
     setEpisodeResumePosition: seriesWatch.setEpisodeResumePosition,
     setEpisodeWatched: seriesWatch.setEpisodeWatched,
     setSeasonWatched: seriesWatch.setSeasonWatched,
+    setSeriesWatched: seriesWatch.setSeriesWatched,
     setFavorite: curation.setFavorite,
     setRating: curation.setRating,
     settings: settingsRepository.settings,

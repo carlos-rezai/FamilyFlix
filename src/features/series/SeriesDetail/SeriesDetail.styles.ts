@@ -1,7 +1,6 @@
 import styled from 'styled-components';
 
 import { LoadMessage } from '@/components';
-import { IconButton } from '@/primitives';
 
 export const Content = styled.div`
   position: relative;
@@ -85,29 +84,6 @@ export const ActionRow = styled.div`
   gap: 14px;
   margin-top: 28px;
   flex-wrap: wrap;
-`;
-
-/**
- * The series' heart beside the button — the movie page's circle: filled in
- * the accent when the series is a favorite, a bare outline when not. Hovering
- * brightens the outline, never the fill, and draws no scale; the press, the
- * square and `aria-pressed` are `IconButton`'s.
- */
-export const CircleToggle = styled(IconButton)<{ $on: boolean }>`
-  background: ${({ theme, $on }) =>
-    $on ? theme.colors.accentSoft : 'transparent'};
-  border: 1px solid
-    ${({ theme, $on }) => ($on ? theme.colors.accentLine : theme.colors.border)};
-  color: ${({ theme, $on }) =>
-    $on ? theme.colors.accent : theme.colors.textDim};
-
-  &:hover:not(:disabled) {
-    background: ${({ theme, $on }) =>
-      $on ? theme.colors.accentSoft : 'transparent'};
-    border-color: ${({ theme }) => theme.colors.accentLine};
-    color: ${({ theme }) => theme.colors.accent};
-    transform: none;
-  }
 `;
 
 export const Progress = styled.span`

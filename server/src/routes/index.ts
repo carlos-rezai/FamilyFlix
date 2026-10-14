@@ -1034,6 +1034,25 @@ export function createApiRouter(
     }
   );
 
+  // A series' watched mark, the movie's watched toggle over every episode the
+  // series holds — the series page's circle: exactly a boolean or 400, a series
+  // with no episode to mark a JSON 404 — a movie's id among them — and the echo.
+  router.post(
+    '/series/:id/watched',
+    (req: Request<{ id: string }>, res: Response) => {
+      const { value } = req.body as { value?: unknown };
+      if (typeof value !== 'boolean') {
+        res.status(400).json({ error: 'Body must be { value: boolean }' });
+        return;
+      }
+      if (!storage.setSeriesWatched(req.params.id, value)) {
+        res.status(404).json({ error: `Unknown series: ${req.params.id}` });
+        return;
+      }
+      res.json({ value });
+    }
+  );
+
   // A season's watched mark, the movie's watched toggle over every episode of
   // one season: exactly a boolean or 400, a series or season the library does
   // not hold a JSON 404 — a movie's id among them — and the echo.

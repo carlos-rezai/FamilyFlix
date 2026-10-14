@@ -609,6 +609,95 @@ describe('POST /api/series/:id/seasons/:n/watched', () => {
   });
 });
 
+// The series page's circle: the season's mark over every season at once.
+describe('POST /api/series/:id/watched', () => {
+  const seriesUrl = (baseUrl: string, id: string) =>
+    `${baseUrl}/api/series/${id}/watched`;
+
+  it('answers 200 with the value it stored, and marks every episode of every season', async () => {
+    const { storage, baseUrl } = freshApi();
+    const id = seedTwoSeasons(storage);
+
+    const { status, body } = await postJson(seriesUrl(baseUrl, id), {
+      value: true,
+    });
+
+    expect(status).toBe(200);
+    expect(body).toEqual({ value: true });
+    for (const [season, number] of [
+      [1, 1],
+      [1, 2],
+      [1, 3],
+      [2, 1],
+      [2, 2],
+    ]) {
+      const episode = await readEpisode(baseUrl, id, season, number);
+      expect(episode.status).toBe('watched');
+    }
+  });
+
+  it('forgets a resume position on watched, and keeps it on unwatched', async () => {
+    const { storage, baseUrl } = freshApi();
+    const id = seedTwoSeasons(storage);
+    storage.setEpisodeResumePosition(episodeId(storage, id, 2, 1), 600);
+
+    await postJson(seriesUrl(baseUrl, id), { value: false });
+    expect((await readEpisode(baseUrl, id, 2, 1)).status).toBe('in-progress');
+
+    await postJson(seriesUrl(baseUrl, id), { value: true });
+    const episode = await readEpisode(baseUrl, id, 2, 1);
+    expect(episode.resumePositionSeconds).toBe(0);
+    expect(episode.status).toBe('watched');
+  });
+
+  it('clears watched on every episode when it marks the series unwatched', async () => {
+    const { storage, baseUrl } = freshApi();
+    const id = seedTwoSeasons(storage);
+    await postJson(seriesUrl(baseUrl, id), { value: true });
+
+    const { status, body } = await postJson(seriesUrl(baseUrl, id), {
+      value: false,
+    });
+
+    expect(status).toBe(200);
+    expect(body).toEqual({ value: false });
+    expect((await readEpisode(baseUrl, id, 1, 1)).watched).toBe(false);
+    expect((await readEpisode(baseUrl, id, 2, 2)).watched).toBe(false);
+  });
+
+  it.each([
+    ['a string', { value: 'true' }],
+    ['a number', { value: 1 }],
+    ['a missing value', {}],
+  ])('answers 400 for %s, and marks nothing', async (_label, body) => {
+    const { storage, baseUrl } = freshApi();
+    const id = seedTwoSeasons(storage);
+
+    const response = await postJson(seriesUrl(baseUrl, id), body);
+
+    expect(response.status).toBe(400);
+    expect(typeof response.body.error).toBe('string');
+    expect((await readEpisode(baseUrl, id, 1, 1)).watched).toBe(false);
+  });
+
+  it('answers 404 with a JSON error for a series the library does not hold, or a movie’s id', async () => {
+    const { storage, baseUrl } = freshApi();
+    const movie = storage.addMovie({
+      title: 'Die Hard',
+      videoPath: 'die-hard/dh.mp4',
+    });
+
+    for (const id of ['no-such-series', movie.id]) {
+      const { status, body } = await postJson(seriesUrl(baseUrl, id), {
+        value: true,
+      });
+      expect(status).toBe(404);
+      expect(typeof body.error).toBe('string');
+    }
+    expect(storage.getMovie(movie.id)?.watched).toBe(false);
+  });
+});
+
 describe('POST /api/episodes/:id/watched', () => {
   const watchedUrl = (baseUrl: string, id: string) =>
     `${baseUrl}/api/episodes/${id}/watched`;

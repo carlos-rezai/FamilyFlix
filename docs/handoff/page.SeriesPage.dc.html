@@ -375,6 +375,23 @@
                   hint-size="230px,58px"
                 ></dc-import>
                 <button
+                  onClick="{{ sr.onToggleWatched }}"
+                  title="{{ sr.watchedTip }}"
+                  aria-label="{{ sr.watchedTip }}"
+                  style="{{ sr.watchedIconStyle }}"
+                  style-hover="border-color:var(--color-accent-line);color:var(--color-accent)"
+                >
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                    <path
+                      d="M5 12.5l4.5 4.5L19 7.5"
+                      stroke="currentColor"
+                      stroke-width="2.4"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    />
+                  </svg>
+                </button>
+                <button
                   onClick="{{ sr.onToggleFavorite }}"
                   title="{{ sr.favTip }}"
                   aria-label="{{ sr.favTip }}"

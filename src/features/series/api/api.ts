@@ -7,6 +7,9 @@ const seriesEndpoint = (id: string) => `/api/series/${encodeURIComponent(id)}`;
 const seasonWatchedEndpoint = (id: string, season: number) =>
   `${seriesEndpoint(id)}/seasons/${season}/watched`;
 
+/** Where the whole series' watched mark is saved. */
+const seriesWatchedEndpoint = (id: string) => `${seriesEndpoint(id)}/watched`;
+
 /** What the season route accepts as an echo of what it stored. */
 function isWatchedEcho(echoed: unknown): echoed is boolean {
   return typeof echoed === 'boolean';
@@ -24,6 +27,19 @@ export function saveSeasonWatched(
   watched: boolean
 ): Promise<boolean> {
   return postValue(seasonWatchedEndpoint(id, season), watched, isWatchedEcho);
+}
+
+/**
+ * Marks every episode of the series watched or unwatched — the series page's
+ * circle, `saveSeasonWatched` a level up — and answers with the value stored.
+ * Rejects if the save did not succeed, the page's cue to put the circle back.
+ * One caller, so it stays with the feature.
+ */
+export function saveSeriesWatched(
+  id: string,
+  watched: boolean
+): Promise<boolean> {
+  return postValue(seriesWatchedEndpoint(id), watched, isWatchedEcho);
 }
 
 /**

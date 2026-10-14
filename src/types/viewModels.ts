@@ -188,6 +188,8 @@ export interface SeriesPageModel {
   playEpisodeId: string | null;
   /** `Not started` / `5 of 22 episodes watched` / `All 22 episodes watched`. */
   progressLabel: string;
+  /** Every episode watched — the circle's filled face; `false` with none. */
+  isWatched: boolean;
   /** The synopsis, or `null` when there is none to clamp. */
   synopsis: string | null;
   /** False only when **both** the creator and the cast are missing. */

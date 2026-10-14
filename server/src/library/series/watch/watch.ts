@@ -3,7 +3,7 @@ import type { SqliteDatabase } from '../../../db';
 /**
  * The series' watch-tracking slice: the movie's `watch/` rules over the
  * `episodes` table — the hot resume-position write, the watched toggle on one
- * episode, and the same toggle over a whole season. A series carries no watch
+ * episode, and the same toggle over a whole season or a whole series. A series carries no watch
  * state of its own; it is derived from its episodes on every read.
  */
 export interface SeriesWatch {
@@ -21,6 +21,13 @@ export interface SeriesWatch {
    * among them, or a season with no episodes.
    */
   setSeasonWatched(seriesId: string, season: number, value: boolean): boolean;
+  /**
+   * {@link setEpisodeWatched} over every episode of the series — the series
+   * page's circle, the movie page's. Answers whether the series holds an
+   * episode — `false` for an unknown series, a movie's id among them, or a
+   * series with none.
+   */
+  setSeriesWatched(seriesId: string, value: boolean): boolean;
 }
 
 export function createSeriesWatch(db: SqliteDatabase): SeriesWatch {
@@ -38,6 +45,12 @@ export function createSeriesWatch(db: SqliteDatabase): SeriesWatch {
   );
   const updateMarkSeasonUnwatched = db.prepare(
     'UPDATE episodes SET watched = 0 WHERE series_id = ? AND season_number = ?'
+  );
+  const updateMarkSeriesWatched = db.prepare(
+    'UPDATE episodes SET watched = 1, resume_position_seconds = 0, last_watched_at = ? WHERE series_id = ?'
+  );
+  const updateMarkSeriesUnwatched = db.prepare(
+    'UPDATE episodes SET watched = 0 WHERE series_id = ?'
   );
 
   /** The stamp every writer here shares — an ISO string, as the movie's
@@ -65,6 +78,13 @@ export function createSeriesWatch(db: SqliteDatabase): SeriesWatch {
       (value
         ? updateMarkSeasonWatched.run(watchedNow(), seriesId, season)
         : updateMarkSeasonUnwatched.run(seriesId, season)
+      ).changes > 0,
+
+    // The season's rule a level up: no row touched is no episode to mark.
+    setSeriesWatched: (seriesId, value) =>
+      (value
+        ? updateMarkSeriesWatched.run(watchedNow(), seriesId)
+        : updateMarkSeriesUnwatched.run(seriesId)
       ).changes > 0,
   };
 }

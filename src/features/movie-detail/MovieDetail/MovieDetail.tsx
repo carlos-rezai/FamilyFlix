@@ -1,6 +1,11 @@
 import { useNavigate, useParams } from 'react-router-dom';
 
-import { CreditsRow, DetailBackdrop, ExpandableText } from '@/components';
+import {
+  CircleToggle,
+  CreditsRow,
+  DetailBackdrop,
+  ExpandableText,
+} from '@/components';
 import {
   Artwork,
   Button,
@@ -24,7 +29,6 @@ import {
   Title,
   Genres,
   ActionRow,
-  CircleToggle,
   SynopsisWrap,
   DetailMessage,
 } from './MovieDetail.styles';
@@ -37,9 +41,6 @@ const SYNOPSIS_MAX_WIDTH = 560;
 /** The two circles' icons, at the sizes the prototype draws them. */
 const CHECK_SIZE = 24;
 const HEART_SIZE = 23;
-
-/** The two circles' square, matching the `lg` Play button they sit beside. */
-const CIRCLE_SIZE = 58;
 
 /**
  * The toggles' tips, straight from the prototype. The label *is* the state and
@@ -160,22 +161,16 @@ export function MovieDetail() {
                 that waits for a round trip reads as a click that didn't land.
                 The hook puts them back if the save is refused. */}
             <CircleToggle
+              on={movie.isWatched}
               label={movie.isWatched ? WATCHED_TIP.on : WATCHED_TIP.off}
-              title={movie.isWatched ? WATCHED_TIP.on : WATCHED_TIP.off}
-              size={CIRCLE_SIZE}
-              pressed={movie.isWatched}
-              $on={movie.isWatched}
               onClick={detail.toggleWatched}
             >
               <CheckIcon size={CHECK_SIZE} />
             </CircleToggle>
 
             <CircleToggle
+              on={movie.isFavorite}
               label={movie.isFavorite ? FAVORITE_TIP.on : FAVORITE_TIP.off}
-              title={movie.isFavorite ? FAVORITE_TIP.on : FAVORITE_TIP.off}
-              size={CIRCLE_SIZE}
-              pressed={movie.isFavorite}
-              $on={movie.isFavorite}
               onClick={detail.toggleFavorite}
             >
               {movie.isFavorite ? (

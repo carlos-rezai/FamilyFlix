@@ -87,8 +87,8 @@ const importRow = () =>
   screen.getByRole('button', { name: /import from spreadsheet/i });
 
 /**
- * `/settings` — composition only. What the header does — where Back goes,
- * what ＋ Add a title opens — is tested where it lives, in
+ * `/settings` — composition only. What the header does — where Back goes —
+ * is tested where it lives, in
  * `features/settings/SettingsHeader`; what the Library section's rows open,
  * in `features/settings/LibrarySection`; what the Playback card draws, in
  * `features/settings/PlaybackSection`.
@@ -106,9 +106,11 @@ describe('SettingsPage', () => {
     renderPage();
 
     expect(screen.getByRole('heading', { name: 'Settings' })).toBeDefined();
-    // By its exact name: the Library section under it carries a second
-    // "Add a title", the row, whose name runs on into its line.
-    expect(screen.getByRole('button', { name: 'Add a title' })).toBeDefined();
+    // The header carries no ＋ Add a title: the Library group's first row is
+    // the one door to the form.
+    expect(
+      screen.getAllByRole('button', { name: /add a title/i })
+    ).toHaveLength(1);
   });
 
   it('composes the Library section under the header', () => {
@@ -156,13 +158,14 @@ describe('SettingsPage', () => {
   it('keeps the Library rows exactly as before, with the Playback card under them', () => {
     renderPage();
 
-    // Back, two "Add a title"s — the header's and the row's — then the two
+    // Back, the "Add a title" row (the header's own went, being the row twice
+    // over), then the two
     // rows the Library group always had: five buttons; the Playback card adds
     // one, the Codecs row (26 — Codecs page, issue #245).
     expect(screen.getByText('Codecs')).toBeDefined();
     expect(
       screen.getAllByRole('button', { name: /add a title/i })
-    ).toHaveLength(2);
+    ).toHaveLength(1);
     expect(importRow()).toBeDefined();
     expect(
       screen.getByRole('button', { name: /export to csv/i })
@@ -172,7 +175,7 @@ describe('SettingsPage', () => {
     // 30 — Library folders (issue #268): the Library group adds one, Library
     // folders. 37 — Factory reset (issue #299): the Storage card adds one,
     // Reset….
-    expect(screen.getAllByRole('button')).toHaveLength(10);
+    expect(screen.getAllByRole('button')).toHaveLength(9);
   });
 
   it('composes the Storage section under the Playback section', () => {
@@ -288,7 +291,7 @@ describe('SettingsPage', () => {
     expect(screen.queryByText(/software update/i)).toBeNull();
     expect(screen.queryByText(/up to date/i)).toBeNull();
     expect(screen.queryByRole('button', { name: /update/i })).toBeNull();
-    // Back, two "Add a title"s, Import, Export — and the Preferred language
+    // Back, the "Add a title" row, Import, Export — and the Preferred language
     // pill once the settings land, and the Codecs row; Network adds Test connection and Sync
     // metadata & posters; About adds none; Library folders (issue #268) adds
     // one; and Storage adds Reset… (issue #299).
@@ -297,7 +300,7 @@ describe('SettingsPage', () => {
         screen.getByRole('button', { name: /^Preferred language: / })
       ).toBeDefined()
     );
-    expect(screen.getAllByRole('button')).toHaveLength(11);
+    expect(screen.getAllByRole('button')).toHaveLength(10);
     // Six Group headings, and only six — Display joined in log 27.
     const groupHeadings = [
       'Library',

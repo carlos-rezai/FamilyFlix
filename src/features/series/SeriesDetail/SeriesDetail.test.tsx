@@ -29,6 +29,7 @@ import {
   serverErrorResponse,
 } from '@/test-support/fakeResponse/fakeResponse';
 import { paintedBackgrounds } from '@/test-support/paintedBackgrounds/paintedBackgrounds';
+import { comesBefore } from '@/test-support/comesBefore/comesBefore';
 
 /**
  * 22 — Series (TV), Phase 2 (issue #191): the series page's organism.
@@ -531,6 +532,105 @@ describe('SeriesDetail — the Seasons grid', () => {
   });
 });
 
+/** Answer the read with `detail`; answer every write with its echo, or refuse it. */
+function serveWithSaves(detail: SeriesDetailPayload, refuse = false) {
+  fetchMock.mockImplementation((input, init) => {
+    const url = String(input);
+    const method = (init?.method ?? 'GET').toUpperCase();
+    if (method !== 'GET') {
+      if (refuse) {
+        return Promise.resolve(serverErrorResponse());
+      }
+      const body = JSON.parse(String(init?.body)) as { value: unknown };
+      return Promise.resolve(okResponse({ value: body.value }));
+    }
+    if (url.includes('/api/series/')) {
+      return Promise.resolve(okResponse(detail));
+    }
+    return Promise.reject(new Error(`Unexpected request: ${url}`));
+  });
+}
+
+/** Every write issued, as url and parsed body. */
+function savedWrites() {
+  return writes().map(([input, init]) => ({
+    url: String(input),
+    body: JSON.parse(String(init?.body)) as unknown,
+  }));
+}
+
+/**
+ * The watched circle beside Play — the movie page's tick, over every episode
+ * the series holds: `POST /api/series/:id/watched { value }`. It fills before
+ * the save is confirmed and is put back if the save is refused, the heart's
+ * bargain.
+ */
+describe('SeriesDetail — the watched circle', () => {
+  const MARK = 'Mark as watched';
+  const UNMARK = 'Watched, click to unmark';
+
+  it('draws the circle, then the heart, beside the button', async () => {
+    serveWithSaves(unstarted());
+
+    renderDetail();
+    await findTitle('Harbor & Vine');
+
+    const tick = screen.getByRole('button', { name: MARK });
+    expect(tick.getAttribute('aria-pressed')).toBe('false');
+    expect(
+      comesBefore(
+        tick,
+        screen.getByRole('button', { name: /add to favorites/i })
+      )
+    ).toBe(true);
+  });
+
+  it('arrives filled for a finished show', async () => {
+    serveWithSaves({
+      series: makeSeries({ watched: true }),
+      seasons: [makeSeason(1, 10, 10), makeSeason(2, 12, 12)],
+      next: makeEpisode(1, 1, 'watched'),
+    });
+
+    renderDetail();
+    await findTitle('Harbor & Vine');
+
+    expect(
+      screen.getByRole('button', { name: UNMARK }).getAttribute('aria-pressed')
+    ).toBe('true');
+  });
+
+  it('marks the whole series the moment it is pressed, and saves it', async () => {
+    serveWithSaves(unstarted());
+
+    renderDetail('harbor');
+    await findTitle('Harbor & Vine');
+    fireEvent.click(screen.getByRole('button', { name: MARK }));
+
+    expect(screen.getByRole('button', { name: UNMARK })).toBeDefined();
+    expect(screen.getByText('All 22 episodes watched')).toBeDefined();
+    await waitFor(() => expect(savedWrites()).toHaveLength(1));
+    expect(savedWrites()[0]).toEqual({
+      url: '/api/series/harbor/watched',
+      body: { value: true },
+    });
+  });
+
+  it('puts the circle back when the save is refused', async () => {
+    serveWithSaves(unstarted(), true);
+
+    renderDetail();
+    await findTitle('Harbor & Vine');
+    fireEvent.click(screen.getByRole('button', { name: MARK }));
+
+    await waitFor(() => expect(savedWrites()).toHaveLength(1));
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: MARK })).toBeDefined()
+    );
+    expect(screen.getByText('Not started')).toBeDefined();
+  });
+});
+
 /**
  * 22 — Series (TV), Phase 2 (issue #192): the series heart beside the button —
  * the movie page's circle, named by the prototype's own tips. It fills before
@@ -540,33 +640,6 @@ describe('SeriesDetail — the Seasons grid', () => {
 describe('SeriesDetail — the heart', () => {
   const ADD_FAVORITE = /add to favorites/i;
   const REMOVE_FAVORITE = /in favorites, click to remove/i;
-
-  /** Answer the read with `detail`; answer every write with its echo, or refuse it. */
-  function serveWithSaves(detail: SeriesDetailPayload, refuse = false) {
-    fetchMock.mockImplementation((input, init) => {
-      const url = String(input);
-      const method = (init?.method ?? 'GET').toUpperCase();
-      if (method !== 'GET') {
-        if (refuse) {
-          return Promise.resolve(serverErrorResponse());
-        }
-        const body = JSON.parse(String(init?.body)) as { value: unknown };
-        return Promise.resolve(okResponse({ value: body.value }));
-      }
-      if (url.includes('/api/series/')) {
-        return Promise.resolve(okResponse(detail));
-      }
-      return Promise.reject(new Error(`Unexpected request: ${url}`));
-    });
-  }
-
-  /** Every write issued, as url and parsed body. */
-  function savedWrites() {
-    return writes().map(([input, init]) => ({
-      url: String(input),
-      body: JSON.parse(String(init?.body)) as unknown,
-    }));
-  }
 
   it('offers to add a series nobody has favorited', async () => {
     serveWithSaves(unstarted({ isFavorite: false }));

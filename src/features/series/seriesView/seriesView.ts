@@ -85,6 +85,7 @@ export function seriesView(detail: SeriesDetail): SeriesPageModel {
     playLabel: toPlayLabel(next),
     playEpisodeId: next?.id ?? null,
     progressLabel: toProgressLabel(watched, episodes.length),
+    isWatched: episodes.length > 0 && watched === episodes.length,
     synopsis: series.synopsis,
     hasCredits: hasCreator || hasCast,
     creator: series.creator ?? MISSING_CREDIT,

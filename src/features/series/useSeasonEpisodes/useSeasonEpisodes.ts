@@ -4,8 +4,9 @@ import type { Episode, SeasonPageModel } from '@/types';
 import { saveEpisodeWatched } from '@/api/saveEpisodeWatched/saveEpisodeWatched';
 import { useOptimisticEdit } from '@/hooks/useOptimisticEdit/useOptimisticEdit';
 import { saveSeasonWatched } from '../api/api';
+import { marked, patchEpisodes } from '../markEpisodes/markEpisodes';
 import { seasonView } from '../seasonView/seasonView';
-import { useSeriesRead, type HeldSeries } from '../useSeriesRead/useSeriesRead';
+import { useSeriesRead } from '../useSeriesRead/useSeriesRead';
 
 type SeasonState =
   | { status: 'loading'; season: null }
@@ -21,40 +22,6 @@ export type UseSeasonEpisodesResult = SeasonState & {
   /** Mark the whole season: shown at once, put back if the save is refused. */
   toggleSeason: () => void;
 };
-
-/**
- * One episode as the page shows it after a mark — the movie's rule: watched
- * forgets the resume position, unwatched keeps it.
- */
-function marked(episode: Episode, watched: boolean): Episode {
-  if (watched) {
-    return {
-      ...episode,
-      watched: true,
-      resumePositionSeconds: 0,
-      status: 'watched',
-    };
-  }
-  return {
-    ...episode,
-    watched: false,
-    status: episode.resumePositionSeconds > 0 ? 'in-progress' : 'unwatched',
-  };
-}
-
-/** The held read with each episode `patch` answers for replaced. */
-function patchEpisodes(
-  detail: HeldSeries,
-  patch: (episode: Episode) => Episode
-): HeldSeries {
-  return {
-    ...detail,
-    seasons: detail.seasons.map((season) => ({
-      ...season,
-      episodes: season.episodes.map(patch),
-    })),
-  };
-}
 
 /**
  * The series named by the URL through `useSeriesRead` — the series page's own

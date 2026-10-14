@@ -198,6 +198,32 @@ describe('seriesView — the progress line', () => {
   });
 });
 
+describe('seriesView — the watched circle', () => {
+  it('is on only once every episode of every season is watched', () => {
+    expect(seriesView(unstarted()).isWatched).toBe(false);
+    expect(
+      seriesView(
+        makeDetail(
+          [makeSeason(1, 10, 10), makeSeason(2, 12, 11)],
+          makeEpisode(2, 12)
+        )
+      ).isWatched
+    ).toBe(false);
+    expect(
+      seriesView(
+        makeDetail(
+          [makeSeason(1, 10, 10), makeSeason(2, 12, 12)],
+          makeEpisode(1, 1, 'watched')
+        )
+      ).isWatched
+    ).toBe(true);
+  });
+
+  it('is off for a series with no episodes', () => {
+    expect(seriesView(makeDetail([], null)).isWatched).toBe(false);
+  });
+});
+
 describe('seriesView — the button', () => {
   it('reads Play S01E01 for a show nobody has started', () => {
     expect(seriesView(unstarted()).playLabel).toBe('Play S01E01');

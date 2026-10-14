@@ -8,7 +8,6 @@ import { theme } from '@/styles/theme';
 import {
   LocationProbe,
   pathname,
-  search,
 } from '@/test-support/LocationProbe/LocationProbe';
 
 /**
@@ -23,7 +22,6 @@ function renderPage(history: string[] = ['/', '/settings']) {
         <Routes>
           <Route path="/" element={<p>the browse home</p>} />
           <Route path="/settings" element={<SettingsHeader />} />
-          <Route path="/add" element={<p>the movie form</p>} />
         </Routes>
         <LocationProbe />
       </ThemeProvider>
@@ -32,14 +30,12 @@ function renderPage(history: string[] = ['/', '/settings']) {
 }
 
 const back = () => screen.getByRole('button', { name: /back/i });
-const addTitle = () => screen.getByRole('button', { name: /add a title/i });
 /**
- * The header of the **Maintainer**'s hub, and the reason the movie form was a
- * tracer bullet rather than a URL typed into the address bar: the gear is the
- * only route to any maintainer surface, and ＋ Add a movie is the only route
- * from here to the **Movie form**.
+ * The header of the **Maintainer**'s hub: the gear is the only route to any
+ * maintainer surface, and the Library group's ＋ Add a title row — not this
+ * header — is the route from here to the **Movie form**.
  *
- * Four elements and nothing else. The grouped Library / Playback / Storage /
+ * Three elements and nothing else. The grouped Library / Playback / Storage /
  * About sections are a different initiative, and the last test here is what
  * keeps them from arriving early and unasked.
  */
@@ -49,7 +45,6 @@ describe('SettingsHeader', () => {
 
     expect(screen.getByRole('heading', { name: 'Settings' })).toBeDefined();
     expect(back()).toBeDefined();
-    expect(addTitle()).toBeDefined();
     expect(
       screen.getByText('Manage your library, playback, and storage.')
     ).toBeDefined();
@@ -76,20 +71,18 @@ describe('SettingsHeader', () => {
     expect(pathname()).toBe('/');
   });
 
-  it('opens the movie form from ＋ Add a title, on the movie kind', () => {
+  it('draws no ＋ Add a title — the Library group’s first row is that door', () => {
     renderPage();
 
-    fireEvent.click(addTitle());
-
-    expect(pathname()).toBe('/add');
-    expect(search()).toBe('');
+    expect(screen.queryByRole('button', { name: /add a title/i })).toBeNull();
+    expect(screen.getAllByRole('button')).toHaveLength(1);
   });
 
   it('builds nothing below the header', () => {
     renderPage();
 
     // The settings-shell initiative owns these. Asserting their absence is what
-    // keeps this slice honest about being four static elements.
+    // keeps this slice honest about being three static elements.
     for (const section of ['Library', 'Playback', 'Storage', 'About']) {
       expect(screen.queryByText(section)).toBeNull();
     }

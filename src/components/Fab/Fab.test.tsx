@@ -229,7 +229,7 @@ describe('Fab — the face, 1:1', () => {
     renderFab();
 
     const drawn = getComputedStyle(fab());
-    expect(drawn.boxShadow).toBe('0 8px 28px rgba(217, 122, 78, 0.42)');
+    expect(drawn.boxShadow).toBe('0 4px 14px rgba(217, 122, 78, 0.2)');
     expect(drawn.borderStyle).toBe('none');
   });
 

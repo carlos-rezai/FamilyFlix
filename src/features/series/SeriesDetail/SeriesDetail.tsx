@@ -1,6 +1,7 @@
 import { useNavigate, useParams } from 'react-router-dom';
 
 import {
+  CircleToggle,
   CreditsRow,
   DetailBackdrop,
   ExpandableText,
@@ -9,6 +10,7 @@ import {
 import {
   Artwork,
   Button,
+  CheckIcon,
   Chip,
   HeartIcon,
   HeartOutlineIcon,
@@ -29,7 +31,6 @@ import {
   Title,
   Genres,
   ActionRow,
-  CircleToggle,
   Progress,
   SynopsisWrap,
   DetailMessage,
@@ -43,11 +44,16 @@ const SYNOPSIS_LINES = 4;
 const SYNOPSIS_FONT_SIZE = 17;
 const SYNOPSIS_MAX_WIDTH = 640;
 
-/** The heart's circle and glyph, from `page.SeriesPage.dc.html`. */
-const CIRCLE_SIZE = 58;
+/** The two circles' glyphs, from `page.SeriesPage.dc.html`. */
+const CHECK_SIZE = 24;
 const HEART_SIZE = 24;
 
-/** The heart's tip and name, the movie page's words. */
+/** The circles' tips and names, the movie page's words. */
+const WATCHED_TIP = {
+  on: 'Watched, click to unmark',
+  off: 'Mark as watched',
+};
+
 const FAVORITE_TIP = {
   on: 'In Favorites, click to remove',
   off: 'Add to Favorites',
@@ -61,9 +67,10 @@ const FAVORITE_TIP = {
  * draws was decided by `seriesView`.
  *
  * Under the hero, the Seasons grid: one Season card per season, each opening
- * its season page. Beside the button, the series' heart — shown at once, put
- * back if the save is refused. The button opens the player on the episode it
- * names, as a push.
+ * its season page. Beside the button, the movie page's two circles — the
+ * watched tick over every episode, then the series' heart — each shown at
+ * once, put back if the save is refused. The button opens the player on the
+ * episode it names, as a push.
  */
 export function SeriesDetail() {
   const navigate = useNavigate();
@@ -156,11 +163,15 @@ export function SeriesDetail() {
                 }
               />
               <CircleToggle
+                on={series.isWatched}
+                label={series.isWatched ? WATCHED_TIP.on : WATCHED_TIP.off}
+                onClick={detail.toggleWatched}
+              >
+                <CheckIcon size={CHECK_SIZE} />
+              </CircleToggle>
+              <CircleToggle
+                on={series.isFavorite}
                 label={series.isFavorite ? FAVORITE_TIP.on : FAVORITE_TIP.off}
-                title={series.isFavorite ? FAVORITE_TIP.on : FAVORITE_TIP.off}
-                size={CIRCLE_SIZE}
-                pressed={series.isFavorite}
-                $on={series.isFavorite}
                 onClick={detail.toggleFavorite}
               >
                 {series.isFavorite ? (
