@@ -1,6 +1,8 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { Button, FolderIcon, SheetIcon, TextField } from '@/primitives';
+import type { ImportMode } from '@/types';
 import {
   Actions,
   EmptyFolders,
@@ -19,6 +21,7 @@ import {
 import { FolderShapes } from '../FolderShapes/FolderShapes';
 import { folderLine } from '../folderLine/folderLine';
 import { EnrichCheckCard } from '../EnrichCheckCard/EnrichCheckCard';
+import { ImportModeChoice } from '../ImportModeChoice/ImportModeChoice';
 import { useLibraryFolders } from '../useLibraryFolders/useLibraryFolders';
 
 /**
@@ -41,7 +44,8 @@ export interface ImportSetupProps {
    */
   foldersError: string | null;
   onSheet: (value: string) => void;
-  onStart: () => void;
+  /** _Start import_, handed the **Import mode** chosen. */
+  onStart: (mode: ImportMode) => void;
   /** Whether _Also fetch metadata and posters from TMDB_ is ticked. */
   enrich: boolean;
   /** Whether a TMDB key is stored — it chooses the card's hint. */
@@ -58,8 +62,10 @@ export interface ImportSetupProps {
  * yet._ and _Add library folders_. Both push `/settings/folders`. No row has a
  * ✕ — setup is not where the list is edited, so not `FolderRow` — and nothing
  * of the group is drawn until the list lands. Under it, _What the scanner
- * accepts_ and the `EnrichCheckCard`; then _Start import_, disabled until the
- * sheet is filled and a folder is listed.
+ * accepts_, the **Import mode** (`ImportModeChoice`, Link on every mount and
+ * held here, the Library folders page's precedent) and the `EnrichCheckCard`;
+ * then _Start import_, disabled until the sheet is filled and a folder is
+ * listed, handing the chosen mode on.
  *
  * The sheet is controlled: its value, the two refusals and the handlers are
  * handed in, because it is the organism that holds the value and decides when
@@ -77,6 +83,7 @@ export function ImportSetup({
   onToggleEnrich,
 }: ImportSetupProps) {
   const navigate = useNavigate();
+  const [mode, setMode] = useState<ImportMode>('link');
   const { folders } = useLibraryFolders();
   const listed = folders !== null && folders.length > 0;
   const ready = sheet.trim() !== '' && listed;
@@ -138,6 +145,8 @@ export function ImportSetup({
 
       <FolderShapes />
 
+      <ImportModeChoice mode={mode} onChange={setMode} />
+
       <EnrichCheckCard
         checked={enrich}
         keySet={keySet}
@@ -145,7 +154,11 @@ export function ImportSetup({
       />
 
       <Actions>
-        <Button label="Start import" disabled={!ready} onClick={onStart} />
+        <Button
+          label="Start import"
+          disabled={!ready}
+          onClick={() => onStart(mode)}
+        />
       </Actions>
     </Fields>
   );

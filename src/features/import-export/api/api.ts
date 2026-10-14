@@ -80,12 +80,13 @@ function isFieldRefusal<F extends string>(
  */
 export async function startImport(
   sheetPath: string,
-  enrich = false
+  enrich = false,
+  mode: ImportMode = 'copy'
 ): Promise<ImportRun> {
   const response = await fetch(IMPORT_ENDPOINT, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ sheetPath, enrich }),
+    body: JSON.stringify({ sheetPath, enrich, mode }),
   });
 
   if (response.status === 400) {

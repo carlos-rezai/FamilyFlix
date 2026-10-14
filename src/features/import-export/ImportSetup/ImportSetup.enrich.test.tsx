@@ -128,7 +128,9 @@ describe('ImportSetup — the Also fetch from TMDB card', () => {
   it('is reached by Tab, as a checkbox is', async () => {
     const user = userEvent.setup();
     renderSetup();
-    (await screen.findByRole('button', { name: 'Manage folders' })).focus();
+    // The Import mode sits above the card (#344): its last radio is the stop
+    // before it.
+    (await screen.findByRole('radio', { name: /^Copy/ })).focus();
 
     await user.tab();
 

@@ -206,9 +206,14 @@ export interface Importer {
    * is neither `.xlsx` nor `.csv` or has no title column, and on `folders`
    * when none is listed — before any run exists; with {@link ImportBusyError}
    * while a run is scanning or importing — a run in review is let go. `enrich`
-   * is only carried on the run, for _Finish_ to read.
+   * is only carried on the run, for _Finish_ to read; `mode`, the **Import
+   * mode**, is carried as `ImportRun.mode` to every import the run makes.
    */
-  start(sheetPath: string, enrich?: boolean): Promise<ImportRun>;
+  start(
+    sheetPath: string,
+    enrich?: boolean,
+    mode?: ImportMode
+  ): Promise<ImportRun>;
   /** The **Current run**'s snapshot, or `null` when there is none. */
   current(): ImportRun | null;
   /**
@@ -1074,7 +1079,13 @@ export function createImporter({
       current.currentItem = label;
       try {
         const into = media.seasonFolder(folder, episode.season);
-        const videoPath = await media.copyIn(into, episode.video, signal);
+        // Link records the video where it lies, relative to its Library
+        // folder; Copy copies it in. The subtitles are copied either way.
+        const linked = current.mode === 'link';
+        const videoPath = linked
+          ? relative(libraryFolder.path, episode.video).split(sep).join('/')
+          : await media.copyIn(into, episode.video, signal);
+        const videoFolderId = linked ? libraryFolder.id : null;
         const subtitles: NewSubtitle[] = [];
         for (const track of episode.subtitles) {
           subtitles.push({
@@ -1083,10 +1094,7 @@ export function createImporter({
           });
         }
         signal.throwIfAborted();
-        const runtime = derivedRuntime(playback, {
-          videoPath,
-          videoFolderId: null,
-        });
+        const runtime = derivedRuntime(playback, { videoPath, videoFolderId });
 
         if (series === null) {
           const genres = knownGenres(row.genres, genreNames, current);
@@ -1111,6 +1119,7 @@ export function createImporter({
           season: episode.season,
           number: episode.episode,
           videoPath,
+          ...(videoFolderId === null ? {} : { videoFolderId }),
           sourceFile: sourceFileOf(show.dir, episode.video),
           ...(episode.title === null ? {} : { title: episode.title }),
           ...(runtime === null ? {} : { runtimeMinutes: runtime }),
@@ -1832,7 +1841,7 @@ export function createImporter({
   };
 
   return {
-    start: async (sheetPath, enrich = false) => {
+    start: async (sheetPath, enrich = false, mode = 'copy') => {
       // Busy before the sheet is read; `claimRun` asks again after it.
       if (busy()) {
         throw new ImportBusyError();
@@ -1846,7 +1855,7 @@ export function createImporter({
       const current = await claimRun(
         'sheet',
         enrich,
-        'copy',
+        mode,
         folders.map((folder) => folder.path)
       );
 

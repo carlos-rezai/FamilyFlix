@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useGoBack } from '@/hooks/useGoBack/useGoBack';
 import { PageHeader } from '@/components';
 import { enrichPath } from '@/utils';
-import type { SheetChoices } from '@/types';
+import type { ImportMode, SheetChoices } from '@/types';
 import { ImportRefusedError } from '../api/api';
 import { ImportProgress } from '../ImportProgress/ImportProgress';
 import { ImportReview } from '../ImportReview/ImportReview';
@@ -94,22 +94,25 @@ export function ImportFlow() {
     setSheetError(null);
   }, []);
 
-  const onStart = useCallback(async () => {
-    setSheetError(null);
-    setFoldersError(null);
-    try {
-      await start(sheet, enrich);
-    } catch (error) {
-      // A refusal names its field and is drawn under it. A `500` names none
-      // and draws nothing; a `409` never reaches here — the hook answers it
-      // with the run already going.
-      if (error instanceof ImportRefusedError) {
-        (error.field === 'sheet' ? setSheetError : setFoldersError)(
-          error.message
-        );
+  const onStart = useCallback(
+    async (mode: ImportMode) => {
+      setSheetError(null);
+      setFoldersError(null);
+      try {
+        await start(sheet, enrich, mode);
+      } catch (error) {
+        // A refusal names its field and is drawn under it. A `500` names none
+        // and draws nothing; a `409` never reaches here — the hook answers it
+        // with the run already going.
+        if (error instanceof ImportRefusedError) {
+          (error.field === 'sheet' ? setSheetError : setFoldersError)(
+            error.message
+          );
+        }
       }
-    }
-  }, [start, sheet, enrich]);
+    },
+    [start, sheet, enrich]
+  );
 
   const onCancel = useCallback(() => {
     void cancel().catch(() => {

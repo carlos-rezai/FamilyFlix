@@ -2370,9 +2370,17 @@ export function createApiRouter(
         .json({ error: 'No spreadsheet was given.', field: 'sheet' });
       return;
     }
+    // The **Import mode**, read as the Folder scan's is.
+    const read = folderScanBody(body);
+    if (!read.ok) {
+      res.status(400).json({ error: read.error });
+      return;
+    }
 
     try {
-      res.status(201).json(await importer.start(sheetPath, enrich));
+      res
+        .status(201)
+        .json(await importer.start(sheetPath, enrich, read.value.mode));
     } catch (error) {
       if (error instanceof ImportStartError) {
         res.status(400).json({ error: error.message, field: error.field });
