@@ -242,7 +242,8 @@ export function createMedia(mediaPath: string): Media {
    * or `null` for one that is not there, is the root itself, or escapes it.
    * `mediaFilePath`'s rule, stated once for both removals of a folder:
    * `removeFolder` hands it the absolute path `reserveFolder` made, and
-   * `removeMovieFolder` the first segment of a **Stored path**.
+   * `removeTitleFolder` — through {@link recordedFolder} — a recorded **Media
+   * folder**.
    */
   const containedFolder = (candidate: string): string | null => {
     const root = realRoot();

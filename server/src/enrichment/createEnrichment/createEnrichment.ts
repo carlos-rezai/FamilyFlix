@@ -501,10 +501,12 @@ export function createEnrichment({
    * year range, id and images. Answers the **Field conflicts** the plan left
    * for the review under the run's own scope, and what TMDB said — `write`'s
    * shape, so a series with a conflict has its gaps written as a film's are.
+   * Its images go into `seriesFolder`, the show's recorded **Media folder**.
    */
   async function writeSeries(
     current: EnrichmentRun,
     series: Series,
+    seriesFolder: string | null,
     episodes: readonly Episode[],
     detail: TmdbTvDetail,
     fields: readonly EnrichField[],
@@ -528,7 +530,7 @@ export function createEnrichment({
     if (fill.poster) {
       const stored = await storeImage(
         current,
-        storage.mediaFolderOf('series', series.id),
+        seriesFolder,
         fill.poster,
         'poster.jpg',
         signal
@@ -538,7 +540,7 @@ export function createEnrichment({
     if (fill.backdrop) {
       const stored = await storeImage(
         current,
-        storage.mediaFolderOf('series', series.id),
+        seriesFolder,
         fill.backdrop,
         'backdrop.jpg',
         signal
@@ -619,9 +621,13 @@ export function createEnrichment({
     // A series gone mid-run reads as no seasons, as its episodes would.
     const seasons = storage.getSeriesDetail(series.id)?.seasons ?? [];
     const episodes = seasons.flatMap((season) => season.episodes);
+    // The show's **Media folder**, read once for the whole pass: its images,
+    // its Season posters and its Stills all go under it.
+    const seriesFolder = storage.mediaFolderOf('series', series.id);
     const { conflicts, fetched } = await writeSeries(
       current,
       series,
+      seriesFolder,
       episodes,
       detail,
       fields,
@@ -648,7 +654,7 @@ export function createEnrichment({
         const name = `${spellEpisodeTag(season.number)}-poster.jpg`;
         const stored = await storeImage(
           current,
-          storage.mediaFolderOf('series', series.id),
+          seriesFolder,
           poster,
           name,
           signal
@@ -660,7 +666,7 @@ export function createEnrichment({
       }
       await writeEpisodes(
         current,
-        storage.mediaFolderOf('series', series.id),
+        seriesFolder,
         season.number,
         season.episodes,
         theirs.value,
