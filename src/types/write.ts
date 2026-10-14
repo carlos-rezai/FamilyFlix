@@ -41,8 +41,9 @@ export interface NewMovie {
    *  directory. */
   mediaFolder?: string;
   /** The **Library folder** its video is linked into, `videoPath` relative to
-   *  it; omitted, the video is a Stored path. */
-  videoFolderId?: string;
+   *  it; omitted or `null`, the video is a Stored path — so a `StoredVideo`
+   *  spreads in whole. */
+  videoFolderId?: string | null;
 }
 
 /**

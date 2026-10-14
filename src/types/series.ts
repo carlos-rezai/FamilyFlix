@@ -131,8 +131,9 @@ export interface NewEpisode {
   subtitles?: NewSubtitle[];
   /** Its **Source file**, relative to the series' Source folder; none by default. */
   sourceFile?: string;
-  /** The **Library folder** its video is linked into; omitted, it is copied. */
-  videoFolderId?: string;
+  /** The **Library folder** its video is linked into; omitted or `null`, it is
+   *  copied — so a {@link StoredVideo} spreads in whole. */
+  videoFolderId?: string | null;
 }
 
 /** The episode after one, in its own series — what _Up next_ names. */

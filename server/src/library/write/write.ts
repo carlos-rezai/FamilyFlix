@@ -108,7 +108,7 @@ export function createWrite(db: SqliteDatabase, reader: MovieReader): Write {
       // Media folder.
       media_folder:
         input.mediaFolder ??
-        (input.videoFolderId === undefined
+        ((input.videoFolderId ?? null) === null
           ? parentFolder(input.videoPath, 1)
           : null),
       video_folder_id: input.videoFolderId ?? null,

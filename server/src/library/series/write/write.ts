@@ -174,7 +174,7 @@ export function createSeriesWrite(
       });
       // A series added bare takes its Media folder off its first episode.
       // A linked video sits in a Library folder, so its path names none.
-      if (input.videoFolderId === undefined) {
+      if ((input.videoFolderId ?? null) === null) {
         fillSeriesFolder.run(parentFolder(input.videoPath, 2), seriesId);
       }
       input.subtitles?.forEach((track, position) => {
@@ -197,7 +197,7 @@ export function createSeriesWrite(
       insertSeriesGraph(
         id,
         input,
-        first?.videoFolderId === undefined ? first?.videoPath : undefined
+        (first?.videoFolderId ?? null) === null ? first?.videoPath : undefined
       );
       for (const episode of episodes) {
         insertEpisodeGraph(randomUUID(), id, episode);
