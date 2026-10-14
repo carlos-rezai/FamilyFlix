@@ -227,7 +227,7 @@ describe('ImportFlow — the box travels on the run', () => {
     fireEvent.click(await enrichCard());
     startRun();
 
-    expect(await startBody()).toEqual({
+    expect(await startBody()).toMatchObject({
       sheetPath: SHEET,
       enrich: true,
     });

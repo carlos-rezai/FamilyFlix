@@ -269,7 +269,7 @@ async function postImport(
   return fetch(`${baseUrl}/api/import`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ sheetPath }),
+    body: JSON.stringify({ sheetPath, mode: 'copy' }),
   });
 }
 

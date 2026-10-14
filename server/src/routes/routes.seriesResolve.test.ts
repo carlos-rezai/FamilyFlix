@@ -164,7 +164,7 @@ async function unplacedProblem(
   await fetch(`${api.baseUrl}/api/import`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ sheetPath: api.sheet }),
+    body: JSON.stringify({ sheetPath: api.sheet, mode: 'copy' }),
   });
   const run = await untilReview(api.baseUrl);
   const unplaced = run.problems.filter(({ kind }) => kind === 'unplaced');

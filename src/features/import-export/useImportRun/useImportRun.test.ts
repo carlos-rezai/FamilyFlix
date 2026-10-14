@@ -233,12 +233,35 @@ describe('useImportRun — starting', () => {
     const [input, init] = fetchMock.mock.calls.find(isStart) ?? [];
     expect(String(input)).toBe('/api/import');
     expect(init?.method?.toUpperCase()).toBe('POST');
-    expect(JSON.parse(String(init?.body))).toEqual({
+    expect(JSON.parse(String(init?.body))).toMatchObject({
       sheetPath: SHEET,
       enrich: false,
     });
     expect(result.current.run).toEqual(started);
   });
+
+  // 41 — Link or copy, Slice 4 (issue #344): the start posts the mode it is
+  // handed, and the run it holds carries it.
+  it.each(['link', 'copy'] as const)(
+    'posts mode %s and holds the run that carries it',
+    async (mode) => {
+      const started = makeImportRun({ id: 'run-4', mode });
+      serve(createdResponse(started));
+      const { result } = await mount();
+
+      await act(async () => {
+        await result.current.start(SHEET, false, mode);
+      });
+
+      const [, init] = fetchMock.mock.calls.find(isStart) ?? [];
+      expect(JSON.parse(String(init?.body))).toEqual({
+        sheetPath: SHEET,
+        enrich: false,
+        mode,
+      });
+      expect(result.current.run).toMatchObject({ mode });
+    }
+  );
 
   it('on a 409, reads the run already there and holds it instead', async () => {
     const theirs = makeImportRun({

@@ -218,7 +218,7 @@ const startImport = (baseUrl: string, sheet: string) =>
   fetch(`${baseUrl}/api/import`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ sheetPath: sheet }),
+    body: JSON.stringify({ sheetPath: sheet, mode: 'copy' }),
   });
 
 const startSync = (baseUrl: string, movieId: string) =>

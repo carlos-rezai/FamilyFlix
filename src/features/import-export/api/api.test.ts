@@ -95,11 +95,28 @@ describe('startImport', () => {
     expect(request.url).toBe('/api/import');
     expect(request.method?.toUpperCase()).toBe('POST');
     expect(request.headers?.['Content-Type']).toBe('application/json');
-    expect(JSON.parse(String(request.body))).toEqual({
+    expect(JSON.parse(String(request.body))).toMatchObject({
       sheetPath: SHEET,
       enrich: false,
     });
   });
+
+  // 41 — Link or copy, Slice 4 (issue #344): the sheet start posts the
+  // **Import mode** beside `enrich`, as `startFolderScan` does.
+  it.each(['link', 'copy'] as const)(
+    'POSTs mode %s beside the sheet and the box',
+    async (mode) => {
+      fetchMock.mockResolvedValue(createdResponse(makeImportRun()));
+
+      await startImport(SHEET, true, mode);
+
+      expect(JSON.parse(String(onlyRequest().body))).toEqual({
+        sheetPath: SHEET,
+        enrich: true,
+        mode,
+      });
+    }
+  );
 
   it('resolves the snapshot the route answered its 201 with', async () => {
     const started = makeImportRun({ id: 'run-7', phase: 'scanning' });

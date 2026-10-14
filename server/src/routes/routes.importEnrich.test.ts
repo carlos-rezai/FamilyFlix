@@ -96,11 +96,12 @@ function freshApi() {
   return { baseUrl: `http://127.0.0.1:${port}`, root, sheet, tmdb };
 }
 
-function postImport(baseUrl: string, body: unknown): Promise<Response> {
+/** A start's body, posted in Copy unless it names a mode of its own (#344). */
+function postImport(baseUrl: string, body: object): Promise<Response> {
   return fetch(`${baseUrl}/api/import`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
+    body: JSON.stringify({ mode: 'copy', ...body }),
   });
 }
 

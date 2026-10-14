@@ -91,7 +91,7 @@ const postImport = (baseUrl: string, sheetPath: string) =>
   fetch(`${baseUrl}/api/import`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ sheetPath }),
+    body: JSON.stringify({ sheetPath, mode: 'copy' }),
   });
 
 const getCurrent = (baseUrl: string) => fetch(`${baseUrl}/api/import/current`);

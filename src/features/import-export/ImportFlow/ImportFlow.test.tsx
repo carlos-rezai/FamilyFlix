@@ -435,7 +435,7 @@ describe('ImportFlow — starting the run', () => {
     const [input, init] =
       fetchMock.mock.calls.find(([i, n]) => isStart(i, n)) ?? [];
     expect(String(input)).toBe('/api/import');
-    expect(JSON.parse(String(init?.body))).toEqual({
+    expect(JSON.parse(String(init?.body))).toMatchObject({
       sheetPath: SHEET,
       enrich: false,
     });
@@ -563,7 +563,7 @@ describe('ImportFlow — Cancel import', () => {
     expect(await screen.findByText('Scanning your library…')).toBeDefined();
     const starts = fetchMock.mock.calls.filter(([i, n]) => isStart(i, n));
     expect(starts).toHaveLength(2);
-    expect(JSON.parse(String(starts[1][1]?.body))).toEqual({
+    expect(JSON.parse(String(starts[1][1]?.body))).toMatchObject({
       sheetPath: SHEET,
       enrich: false,
     });

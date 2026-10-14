@@ -148,11 +148,12 @@ function freshApi({
   };
 }
 
-function postImport(baseUrl: string, body: unknown): Promise<Response> {
+/** A start's body, posted in Copy unless it names a mode of its own (#344). */
+function postImport(baseUrl: string, body: object): Promise<Response> {
   return fetch(`${baseUrl}/api/import`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
+    body: JSON.stringify({ mode: 'copy', ...body }),
   });
 }
 
@@ -340,6 +341,51 @@ describe('POST /api/import — refusing the sheet', () => {
   });
 });
 
+// 41 — Link or copy, Slice 4: "shows and the sheet link" (issue #344).
+//
+// The sheet start's body is `{ sheetPath, enrich, mode }`, `mode` read by
+// `importBody` as the scan's is: one of `link` and `copy`, carried on the run
+// as `ImportRun.mode`, and a missing or unknown one a `400` with a sentence —
+// no run is started.
+describe('POST /api/import — the Import mode', () => {
+  it.each(['link', 'copy'] as const)(
+    'carries mode %s on the run',
+    async (mode) => {
+      const { baseUrl, sheet } = freshApi();
+
+      const response = await postImport(baseUrl, { sheetPath: sheet, mode });
+
+      const run: unknown = await response.json();
+      await untilReview(baseUrl);
+      expect(response.status).toBe(201);
+      expect(run).toMatchObject({ mode });
+    }
+  );
+
+  it.each([
+    ['a missing mode', { mode: undefined }],
+    ['a null mode', { mode: null }],
+    ['an unknown mode', { mode: 'move' }],
+    ['a mode in capitals', { mode: 'Link' }],
+  ])(
+    'answers 400 with a sentence for %s, starting nothing',
+    async (_name, override) => {
+      const { baseUrl, sheet } = freshApi();
+
+      const response = await postImport(baseUrl, {
+        sheetPath: sheet,
+        ...override,
+      });
+
+      expect(response.status).toBe(400);
+      expect(await response.json()).toMatchObject({
+        error: expect.stringMatching(/^[A-Z][^\n]*\.$/),
+      });
+      expect((await fetch(`${baseUrl}/api/import/current`)).status).toBe(404);
+    }
+  );
+});
+
 describe('POST /api/import — no library folder listed', () => {
   it('answers 400 on the folders field, in one sentence', async () => {
     const { baseUrl, sheet } = freshApi({ listed: false });
@@ -493,16 +539,16 @@ describe('the importer is injected, not imported', () => {
     const { baseUrl, sheet } = freshApi({
       importer: (composed) => ({
         ...composed,
-        start: (sheetPath, enrich) => {
-          start(sheetPath, enrich);
-          return composed.start(sheetPath, enrich);
+        start: (sheetPath, enrich, mode) => {
+          start(sheetPath, enrich, mode);
+          return composed.start(sheetPath, enrich, mode);
         },
       }),
     });
 
-    await postImport(baseUrl, { sheetPath: sheet });
+    await postImport(baseUrl, { sheetPath: sheet, mode: 'link' });
 
-    expect(start).toHaveBeenCalledWith(sheet, false);
+    expect(start).toHaveBeenCalledWith(sheet, false, 'link');
     // Otherwise the run outlives the test and imports into a closed database.
     await untilReview(baseUrl);
   });
