@@ -512,7 +512,8 @@ Props: `label`, `line`, `checked`, `onSelect`.
 ### ImportModeChoice — drawn inline in `feat.ImportFlow` and `page.LibraryFoldersPage`
 
 Target: `features/import-export/ImportModeChoice/` · the **Import mode**, `EnrichCheckCard`'s
-precedent: one molecule both import starts draw. The 13px 600 dim caption _Files_, 8px over
+precedent: one molecule both import starts draw. The caption _Files_ — `feat.ImportFlow`'s
+`labelStyle`, 13px 600 dim with its 0.2px tracking, the Maintainer's `FieldLabel` — 8px over
 two ChoiceCards in a `radiogroup` labelled by it:
 
 - **Link** — _Play videos where they are. Nothing is copied._
