@@ -432,3 +432,81 @@ describe('createImporter.resolveSeries — a Series Resolve’s Found files foll
     }
   );
 });
+
+// --- The Media folder a Resolve records ---------------------------------------
+//
+// A Linked video sits in no managed folder, so the folder a Resolve reserved
+// for its art and subtitles is the only one the title has — and it must be the
+// one recorded, or a Sync stores nothing and a Delete strands the folder.
+
+const NEW_SHOW = 'Lighthouse Keepers (2020)/Season 01';
+
+/** A new show of one unnumbered video and its subtitle: `unplaced`, no series. */
+async function unplacedNewShow() {
+  const box = sandbox('shows');
+  placeVideo(
+    box,
+    'Tidewater (2018)/Tidewater.S01E01.Low.Water.mp4',
+    `${NEW_SHOW}/Bonus One.mp4`
+  );
+  placeVideo(
+    box,
+    'Tidewater (2018)/Tidewater.S01E01.Low.Water.mp4',
+    `${NEW_SHOW}/Bonus One.en.srt`
+  );
+  const run = await box.importer.start(box.sheet, false, 'link');
+  expect(run.mode).toBe('link');
+  const problem = (await untilReview(box.importer)).problems.find(
+    (each) => each.kind === 'unplaced' && each.seriesId === undefined
+  );
+  if (problem === undefined) {
+    throw new Error('no unplaced Problem for the new show');
+  }
+  const form = {
+    title: 'Lighthouse Keepers',
+    cast: [],
+    genres: [],
+    poster: null,
+    episodes: [
+      {
+        season: 1,
+        number: 1,
+        title: 'Bonus One',
+        video: { found: join(box.folder.path, NEW_SHOW, 'Bonus One.mp4') },
+        subtitles: [
+          {
+            file: {
+              found: join(box.folder.path, NEW_SHOW, 'Bonus One.en.srt'),
+            },
+            language: 'English',
+          },
+        ],
+      },
+    ],
+  };
+  return { ...box, problem, form };
+}
+
+describe('createImporter — a Resolve in a Link run records its Media folder', () => {
+  it('a film Resolve records the folder its poster was copied into', async () => {
+    const box = await twoVideoDieHard('link');
+
+    const movie = await box.importer.resolve(box.problem.id, box.form);
+
+    const folder = (movie.posterPath ?? '').split('/')[0];
+    expect(folder).not.toBe('');
+    expect(box.storage.mediaFolderOf('movie', movie.id)).toBe(folder);
+  });
+
+  it('a Series Resolve adding a show with no poster records the Series folder its subtitles went into', async () => {
+    const box = await unplacedNewShow();
+
+    const series = await box.importer.resolveSeries(box.problem.id, box.form);
+
+    const [episode] = box.storage.listEpisodes(series.id);
+    expect(episode.videoFolderId).toBe(box.folder.id);
+    const folder = episode.subtitles[0].path.split('/')[0];
+    expect(existsSync(join(box.media, folder))).toBe(true);
+    expect(box.storage.mediaFolderOf('series', series.id)).toBe(folder);
+  });
+});

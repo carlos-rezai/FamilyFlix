@@ -2066,6 +2066,7 @@ export function createImporter({
           title: form.title,
           videoPath,
           ...(videoFolderId === null ? {} : { videoFolderId }),
+          mediaFolder: basename(folder),
           ...(source.row === null ? {} : { watched: source.row.watched }),
           ...(form.year === null ? {} : { year: form.year }),
           ...(runtime === null ? {} : { runtimeMinutes: runtime }),
@@ -2223,6 +2224,7 @@ export function createImporter({
             ...(form.cast.length === 0 ? {} : { cast: form.cast }),
             ...(form.genres.length === 0 ? {} : { genres: form.genres }),
             ...(posterPath === undefined ? {} : { posterPath }),
+            mediaFolder: basename(folder),
           };
           series = storage.addSeries(input, episodes);
         }
