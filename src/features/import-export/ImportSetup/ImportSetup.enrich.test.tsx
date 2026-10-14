@@ -60,6 +60,8 @@ function renderSetup(props: Partial<ImportSetupProps> = {}) {
           foldersError={null}
           onSheet={() => undefined}
           onStart={() => undefined}
+          mode="link"
+          onMode={() => undefined}
           enrich={false}
           keySet={true}
           onToggleEnrich={() => undefined}

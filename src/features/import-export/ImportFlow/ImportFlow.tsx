@@ -85,6 +85,8 @@ export function ImportFlow() {
   const [sheetError, setSheetError] = useState<string | null>(null);
   const [foldersError, setFoldersError] = useState<string | null>(null);
   const [enrich, setEnrich] = useState(false);
+  // The **Import mode**, Link on every mount and never remembered (log 41 Q10).
+  const [mode, setMode] = useState<ImportMode>('link');
   const keySet = useKeyStored();
 
   const onToggleEnrich = useCallback(() => setEnrich((ticked) => !ticked), []);
@@ -94,25 +96,22 @@ export function ImportFlow() {
     setSheetError(null);
   }, []);
 
-  const onStart = useCallback(
-    async (mode: ImportMode) => {
-      setSheetError(null);
-      setFoldersError(null);
-      try {
-        await start(sheet, enrich, mode);
-      } catch (error) {
-        // A refusal names its field and is drawn under it. A `500` names none
-        // and draws nothing; a `409` never reaches here — the hook answers it
-        // with the run already going.
-        if (error instanceof ImportRefusedError) {
-          (error.field === 'sheet' ? setSheetError : setFoldersError)(
-            error.message
-          );
-        }
+  const onStart = useCallback(async () => {
+    setSheetError(null);
+    setFoldersError(null);
+    try {
+      await start(sheet, enrich, mode);
+    } catch (error) {
+      // A refusal names its field and is drawn under it. A `500` names none
+      // and draws nothing; a `409` never reaches here — the hook answers it
+      // with the run already going.
+      if (error instanceof ImportRefusedError) {
+        (error.field === 'sheet' ? setSheetError : setFoldersError)(
+          error.message
+        );
       }
-    },
-    [start, sheet, enrich]
-  );
+    }
+  }, [start, sheet, enrich, mode]);
 
   const onCancel = useCallback(() => {
     void cancel().catch(() => {
@@ -193,6 +192,8 @@ export function ImportFlow() {
           foldersError={foldersError}
           onSheet={onSheet}
           onStart={onStart}
+          mode={mode}
+          onMode={setMode}
           enrich={enrich}
           keySet={keySet}
           onToggleEnrich={onToggleEnrich}

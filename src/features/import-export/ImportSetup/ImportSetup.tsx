@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { Button, FolderIcon, SheetIcon, TextField } from '@/primitives';
@@ -44,8 +43,11 @@ export interface ImportSetupProps {
    */
   foldersError: string | null;
   onSheet: (value: string) => void;
-  /** _Start import_, handed the **Import mode** chosen. */
-  onStart: (mode: ImportMode) => void;
+  /** _Start import_. */
+  onStart: () => void;
+  /** The **Import mode** chosen. */
+  mode: ImportMode;
+  onMode: (mode: ImportMode) => void;
   /** Whether _Also fetch metadata and posters from TMDB_ is ticked. */
   enrich: boolean;
   /** Whether a TMDB key is stored — it chooses the card's hint. */
@@ -62,14 +64,14 @@ export interface ImportSetupProps {
  * yet._ and _Add library folders_. Both push `/settings/folders`. No row has a
  * ✕ — setup is not where the list is edited, so not `FolderRow` — and nothing
  * of the group is drawn until the list lands. Under it, _What the scanner
- * accepts_, the **Import mode** (`ImportModeChoice`, Link on every mount and
- * held here, the Library folders page's precedent) and the `EnrichCheckCard`;
- * then _Start import_, disabled until the sheet is filled and a folder is
- * listed, handing the chosen mode on.
+ * accepts_, the **Import mode** (`ImportModeChoice`) and the
+ * `EnrichCheckCard`; then _Start import_, disabled until the sheet is filled
+ * and a folder is listed.
  *
- * The sheet is controlled: its value, the two refusals and the handlers are
- * handed in, because it is the organism that holds the value and decides when
- * a refusal clears. A refusal is the 13px danger line — the sheet's under its
+ * The sheet, the mode and the box are controlled: their values, the two
+ * refusals and the handlers are handed in, because it is the organism that
+ * holds the start's fields — the mode Link on every mount, the Library folders
+ * page's precedent — and decides when a refusal clears. A refusal is the 13px danger line — the sheet's under its
  * field, the `folders` one under the group.
  */
 export function ImportSetup({
@@ -78,12 +80,13 @@ export function ImportSetup({
   foldersError,
   onSheet,
   onStart,
+  mode,
+  onMode,
   enrich,
   keySet,
   onToggleEnrich,
 }: ImportSetupProps) {
   const navigate = useNavigate();
-  const [mode, setMode] = useState<ImportMode>('link');
   const { folders } = useLibraryFolders();
   const listed = folders !== null && folders.length > 0;
   const ready = sheet.trim() !== '' && listed;
@@ -145,7 +148,7 @@ export function ImportSetup({
 
       <FolderShapes />
 
-      <ImportModeChoice mode={mode} onChange={setMode} />
+      <ImportModeChoice mode={mode} onChange={onMode} />
 
       <EnrichCheckCard
         checked={enrich}
@@ -154,11 +157,7 @@ export function ImportSetup({
       />
 
       <Actions>
-        <Button
-          label="Start import"
-          disabled={!ready}
-          onClick={() => onStart(mode)}
-        />
+        <Button label="Start import" disabled={!ready} onClick={onStart} />
       </Actions>
     </Fields>
   );
