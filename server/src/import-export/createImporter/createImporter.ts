@@ -1524,6 +1524,27 @@ export function createImporter({
     storage.libraryFolders().find((listed) => isUnder(listed.path, dir)) ??
     null;
 
+  /**
+   * A Resolve's Found video in a Link run → the **Linked video** it records,
+   * relative to its listed **Library folder** with forward slashes; `null` in
+   * a Copy run, for a picked file, or for a path under no listed folder.
+   */
+  const linkedVideo = (
+    current: ImportRun,
+    slot: ResolveFile
+  ): { videoPath: string; videoFolderId: string } | null => {
+    if (current.mode !== 'link' || !('found' in slot)) {
+      return null;
+    }
+    const listed = listedFolderOf(slot.found);
+    return listed === null
+      ? null
+      : {
+          videoPath: relative(listed.path, slot.found).split(sep).join('/'),
+          videoFolderId: listed.id,
+        };
+  };
+
   /** A held film linked to where it was found. */
   const linkHeld = (
     heldId: string,
@@ -2022,7 +2043,11 @@ export function createImporter({
           : media.copyIn(folder, slot.found);
 
       try {
-        const videoPath = await place(form.video);
+        // A Found video in a Link run is linked where it lies; a picked one,
+        // already stored, and everything else are placed as before.
+        const link = linkedVideo(current, form.video);
+        const videoPath = link?.videoPath ?? (await place(form.video));
+        const videoFolderId = link?.videoFolderId ?? null;
         const posterPath =
           form.poster === null ? undefined : await place(form.poster);
         const subtitles: NewSubtitle[] = [];
@@ -2032,10 +2057,7 @@ export function createImporter({
             language: track.language,
           });
         }
-        const runtime = derivedRuntime(playback, {
-          videoPath,
-          videoFolderId: null,
-        });
+        const runtime = derivedRuntime(playback, { videoPath, videoFolderId });
 
         // The form's fields, not the sheet's: the row only prefilled them.
         // What the sheet alone knows — whether the family has seen it — is
@@ -2043,6 +2065,7 @@ export function createImporter({
         const added = storage.addMovie({
           title: form.title,
           videoPath,
+          ...(videoFolderId === null ? {} : { videoFolderId }),
           ...(source.row === null ? {} : { watched: source.row.watched }),
           ...(form.year === null ? {} : { year: form.year }),
           ...(runtime === null ? {} : { runtimeMinutes: runtime }),
@@ -2149,7 +2172,10 @@ export function createImporter({
       try {
         const episodes = [];
         for (const episode of form.episodes) {
-          const videoPath = await place(episode.video, episode.season);
+          const link = linkedVideo(current, episode.video);
+          const videoPath =
+            link?.videoPath ?? (await place(episode.video, episode.season));
+          const videoFolderId = link?.videoFolderId ?? null;
           const subtitles: NewSubtitle[] = [];
           for (const track of episode.subtitles) {
             subtitles.push({
@@ -2159,13 +2185,14 @@ export function createImporter({
           }
           const runtime = derivedRuntime(playback, {
             videoPath,
-            videoFolderId: null,
+            videoFolderId,
           });
           const found = sourceFile(episode.video);
           episodes.push({
             season: episode.season,
             number: episode.number,
             videoPath,
+            ...(videoFolderId === null ? {} : { videoFolderId }),
             ...(episode.title === undefined ? {} : { title: episode.title }),
             ...(runtime === null ? {} : { runtimeMinutes: runtime }),
             ...(subtitles.length === 0 ? {} : { subtitles }),
