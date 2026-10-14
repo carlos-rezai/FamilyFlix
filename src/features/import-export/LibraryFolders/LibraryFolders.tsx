@@ -1,5 +1,6 @@
 import { useState } from 'react';
 
+import type { ImportMode } from '@/types';
 import { useGoBack } from '@/hooks/useGoBack/useGoBack';
 import { Button, FolderIcon, TextField } from '@/primitives';
 import { PageHeader } from '@/components';
@@ -7,6 +8,7 @@ import { folderBridge } from '@/api/folderBridge/folderBridge';
 import { EnrichCheckCard } from '../EnrichCheckCard/EnrichCheckCard';
 import { FolderRow } from '../FolderRow/FolderRow';
 import { FolderShapes } from '../FolderShapes/FolderShapes';
+import { ImportModeChoice } from '../ImportModeChoice/ImportModeChoice';
 import { useFolderScan } from '../useFolderScan/useFolderScan';
 import { useKeyStored } from '../useKeyStored/useKeyStored';
 import { useLibraryFolders } from '../useLibraryFolders/useLibraryFolders';
@@ -27,8 +29,9 @@ import {
  * row** per listed folder (or _No folders yet._), a divider, and the add row,
  * a mono `TextField` with the folder glyph and _Add_. A refused add is one
  * 13px `danger` line under the field, and the typed path stays in it. Then
- * the group **Scan**: _What the scanner accepts_, the `EnrichCheckCard` with
- * Import setup's stored-key hint, and **Scan folders** — sending the box —
+ * the group **Scan**: _What the scanner accepts_, the **Import mode** (Link on
+ * every mount), the `EnrichCheckCard` with Import setup's stored-key hint, and
+ * **Scan folders** — sending the box and the mode —
  * disabled with no folder listed, which posts the **Folder scan** and pushes
  * `/import` — on a `409` too, so the run already in flight is the one shown.
  *
@@ -47,6 +50,7 @@ export function LibraryFolders() {
   const [bridge] = useState(folderBridge);
   const { scanning, scan } = useFolderScan();
   const [enrich, setEnrich] = useState(false);
+  const [mode, setMode] = useState<ImportMode>('link');
   const keySet = useKeyStored();
 
   const submit = async () => {
@@ -127,6 +131,7 @@ export function LibraryFolders() {
 
           <GroupHeading>Scan</GroupHeading>
           <FolderShapes />
+          <ImportModeChoice mode={mode} onChange={setMode} />
           <EnrichCheckCard
             checked={enrich}
             keySet={keySet}
@@ -138,7 +143,7 @@ export function LibraryFolders() {
               size="lg"
               disabled={scanning || folders.length === 0}
               onClick={() => {
-                void scan(enrich);
+                void scan(enrich, mode);
               }}
             />
           </ScanActions>

@@ -1586,6 +1586,7 @@ describe('App — coming back out of a Resolve', () => {
   const reviewRun = (problems: ImportProblem[]): ImportRun => ({
     enrich: false,
     source: 'sheet',
+    mode: 'copy',
     id: 'run-1',
     phase: 'review',
     startedAt: '2026-09-22T10:00:00.000Z',

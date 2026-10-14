@@ -21,6 +21,7 @@ const RUN_KEYS: Array<keyof ImportRun> = [
   'problems',
   'enrich',
   'source',
+  'mode',
 ];
 
 describe('makeImportRun — the default snapshot', () => {

@@ -15,7 +15,7 @@ import {
   EXPORT_NAME_PREFIX,
   type ExportFormat,
 } from '@/types';
-import { FormatCard } from '../FormatCard/FormatCard';
+import { ChoiceCard } from '../ChoiceCard/ChoiceCard';
 import { useExport } from '../useExport/useExport';
 import {
   Actions,
@@ -159,11 +159,11 @@ export function ExportModal({ open, onClose }: ExportModalProps) {
         <SectionLabel id={formatLabelId}>Format</SectionLabel>
         <Formats role="radiogroup" aria-labelledby={formatLabelId}>
           {EXPORT_FORMATS.map((key) => (
-            <FormatCard
+            <ChoiceCard
               key={key}
               label={FORMAT_COPY[key].label}
-              description={FORMAT_COPY[key].description}
-              selected={format === key}
+              line={FORMAT_COPY[key].description}
+              checked={format === key}
               onSelect={() => chooseFormat(key)}
             />
           ))}

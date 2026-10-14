@@ -64,7 +64,11 @@ import {
   conflictChoicesBody,
   startEnrichmentBody,
 } from './enrichmentBody/enrichmentBody';
-import { pickFolderBody, sheetChoicesBody } from './importBody/importBody';
+import {
+  folderScanBody,
+  pickFolderBody,
+  sheetChoicesBody,
+} from './importBody/importBody';
 import {
   DEFAULT_MOVIE_SORT,
   MOVIE_SORTS,
@@ -1799,16 +1803,20 @@ export function createApiRouter(
   // snapshot, `400` with none listed, `409` while a **Current run** is
   // scanning or importing — one in review is let go, as _Finish_ would have.
   router.post('/library-folders/scan', async (req: Request, res: Response) => {
-    const body = (req.body ?? {}) as { enrich?: unknown };
-    // Only carried on the run, as a sheet import's is.
-    const enrich = body.enrich === true;
+    const read = folderScanBody(req.body);
+    if (!read.ok) {
+      res.status(400).json({ error: read.error });
+      return;
+    }
+    // `enrich` is only carried on the run, as a sheet import's is.
+    const { enrich, mode } = read.value;
     const folders = storage.libraryFolders();
     if (folders.length === 0) {
       res.status(400).json({ error: 'Add a library folder to scan first.' });
       return;
     }
     try {
-      res.status(201).json(await importer.scan(folders, enrich));
+      res.status(201).json(await importer.scan(folders, enrich, mode));
     } catch (error) {
       if (error instanceof ImportBusyError) {
         res.status(409).json({ error: error.message });

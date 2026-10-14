@@ -1,13 +1,15 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
+import type { ImportMode } from '@/types';
 import { ImportBusyError, startFolderScan } from '../api/api';
 
 export interface FolderScan {
   /** A scan was asked for and has not answered — _Scan folders_ is held. */
   scanning: boolean;
-  /** Post the **Folder scan**, carrying the box, and go where it leads. */
-  scan: (enrich: boolean) => Promise<void>;
+  /** Post the **Folder scan**, carrying the box and the **Import mode**, and
+   *  go where it leads. */
+  scan: (enrich: boolean, mode: ImportMode) => Promise<void>;
 }
 
 /**
@@ -20,10 +22,10 @@ export function useFolderScan(): FolderScan {
   const navigate = useNavigate();
   const [scanning, setScanning] = useState(false);
 
-  const scan = async (enrich: boolean) => {
+  const scan = async (enrich: boolean, mode: ImportMode) => {
     setScanning(true);
     try {
-      await startFolderScan(enrich);
+      await startFolderScan(enrich, mode);
       navigate('/import');
     } catch (error) {
       if (error instanceof ImportBusyError) {

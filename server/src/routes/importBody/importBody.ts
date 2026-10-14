@@ -1,4 +1,10 @@
-import { SHEET_FIELDS, type SheetChoices, type SheetField } from '@/types';
+import {
+  IMPORT_MODES,
+  SHEET_FIELDS,
+  type ImportMode,
+  type SheetChoices,
+  type SheetField,
+} from '@/types';
 import type { BodyRead } from '../enrichmentBody/enrichmentBody';
 
 /**
@@ -53,4 +59,24 @@ export function pickFolderBody(body: unknown): BodyRead<string> {
     return { ok: false, error: 'Folder must be the path of a candidate.' };
   }
   return { ok: true, value: folder };
+}
+
+/**
+ * A **Folder scan**'s body → `{ enrich, mode }`: `enrich` true only when it is
+ * `true`, and `mode` one of **IMPORT_MODES**, a missing or unknown one refused
+ * in a sentence.
+ */
+export function folderScanBody(
+  body: unknown
+): BodyRead<{ enrich: boolean; mode: ImportMode }> {
+  const { enrich, mode } = (
+    typeof body === 'object' && body !== null ? body : {}
+  ) as { enrich?: unknown; mode?: unknown };
+  if (!IMPORT_MODES.includes(mode as ImportMode)) {
+    return { ok: false, error: 'Mode must be link or copy.' };
+  }
+  return {
+    ok: true,
+    value: { enrich: enrich === true, mode: mode as ImportMode },
+  };
 }

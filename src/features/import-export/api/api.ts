@@ -5,6 +5,7 @@ import {
   type ExportResult,
   type ExportSummary,
   type ImportField,
+  type ImportMode,
   type ImportProblem,
   type ImportRun,
   type LibraryFolder,
@@ -338,14 +339,17 @@ const SCAN_ENDPOINT = '/api/library-folders/scan';
 /**
  * Start a **Folder scan** over every listed **Library folder**, and resolve the
  * snapshot the route answered its `201` with. `enrich` is always sent, and
- * only carried on the run. A `409` rejects with {@link ImportBusyError} — a
+ * only carried on the run; `mode` is the run's **Import mode**. A `409` rejects with {@link ImportBusyError} — a
  * run exists already — and every other failure with a plain `Error`.
  */
-export async function startFolderScan(enrich = false): Promise<ImportRun> {
+export async function startFolderScan(
+  enrich: boolean,
+  mode: ImportMode
+): Promise<ImportRun> {
   const response = await fetch(SCAN_ENDPOINT, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ enrich }),
+    body: JSON.stringify({ enrich, mode }),
   });
 
   if (response.status === 409) {

@@ -58,6 +58,14 @@ export type SheetChoices = Partial<Record<SheetField, 'mine' | 'sheet'>>;
 export type ImportSource = 'sheet' | 'folders';
 
 /**
+ * The **Import mode**: **Link** plays a found video where it lies, **Copy**
+ * keeps FamilyFlix's own copy. Link first, the default.
+ */
+export const IMPORT_MODES = ['link', 'copy'] as const;
+
+export type ImportMode = (typeof IMPORT_MODES)[number];
+
+/**
  * Where a run is: walking the Library folders, copying matches in, or waiting
  * on review.
  */
@@ -164,6 +172,11 @@ export interface ImportRun {
    * alone.
    */
   source: ImportSource;
+  /**
+   * The run's **Import mode**, `enrich`'s precedent: every found video the run
+   * imports follows it.
+   */
+  mode: ImportMode;
 }
 
 /**

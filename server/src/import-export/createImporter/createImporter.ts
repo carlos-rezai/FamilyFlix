@@ -40,6 +40,7 @@ import { titleGuess, titleKey, yearInName } from '../titleKey/titleKey';
 import type {
   CandidateFolder,
   ImportField,
+  ImportMode,
   ImportProblem,
   ImportProblemDetail,
   ImportRun,
@@ -283,9 +284,15 @@ export interface Importer {
    * each film is named off its folder, each show off its Show folder. A folder
    * that cannot be reached is skipped with a **Warning line**. Rejects with
    * {@link ImportBusyError} while a run is scanning or importing — a run in
-   * review is let go — and `enrich` is only carried.
+   * review is let go — and `enrich` is only carried. Under the **Import
+   * mode** `link` a found film's video is recorded where it lies, a **Linked
+   * video**, rather than copied in; `copy` when none is given.
    */
-  scan(folders: StoredLibraryFolder[], enrich?: boolean): Promise<ImportRun>;
+  scan(
+    folders: StoredLibraryFolder[],
+    enrich?: boolean,
+    mode?: ImportMode
+  ): Promise<ImportRun>;
 }
 
 /** The sheet formats the reader opens, by extension. */
@@ -926,7 +933,13 @@ export function createImporter({
   ): Promise<Movie | null> => {
     const folder = media.reserveFolder(row.title, row.year);
     try {
-      const videoPath = await media.copyIn(folder, scan.videos[0], signal);
+      // Link records the video where it lies, relative to its Library folder;
+      // Copy copies it in. Everything after is the same either way.
+      const linked = current.mode === 'link';
+      const videoPath = linked
+        ? relative(libraryFolder.path, scan.videos[0]).split(sep).join('/')
+        : await media.copyIn(folder, scan.videos[0], signal);
+      const videoFolderId = linked ? libraryFolder.id : null;
       const posterPath =
         scan.poster === null
           ? undefined
@@ -945,15 +958,13 @@ export function createImporter({
       // A cancel that landed between the last copy and the row: the folder
       // goes, the row is never written, and nothing half-done is left.
       signal.throwIfAborted();
-      const runtime = derivedRuntime(playback, {
-        videoPath,
-        videoFolderId: null,
-      });
+      const runtime = derivedRuntime(playback, { videoPath, videoFolderId });
       const genres = knownGenres(row.genres, genreNames, current);
 
       const movie: NewMovie = {
         title: row.title,
         videoPath,
+        ...(videoFolderId === null ? {} : { videoFolderId }),
         watched: row.watched,
         ...(row.year === null ? {} : { year: row.year }),
         ...(runtime === null ? {} : { runtimeMinutes: runtime }),
@@ -1760,7 +1771,8 @@ export function createImporter({
   /** A run's first state, from its source and the flag it carries. */
   const freshRun = (
     source: ImportRun['source'],
-    enrich: boolean
+    enrich: boolean,
+    mode: ImportMode
   ): ImportRun => ({
     id: randomUUID(),
     phase: 'scanning',
@@ -1774,6 +1786,7 @@ export function createImporter({
     problems: [],
     enrich,
     source,
+    mode,
   });
 
   /**
@@ -1794,6 +1807,7 @@ export function createImporter({
   const claimRun = async (
     source: ImportRun['source'],
     enrich: boolean,
+    mode: ImportMode,
     runFolders: string[]
   ): Promise<ImportRun> => {
     if (busy()) {
@@ -1808,7 +1822,7 @@ export function createImporter({
       throw new ImportBusyError();
     }
 
-    const current = freshRun(source, enrich);
+    const current = freshRun(source, enrich, mode);
     run = current;
     listedPaths = runFolders;
     sources.clear();
@@ -1832,6 +1846,7 @@ export function createImporter({
       const current = await claimRun(
         'sheet',
         enrich,
+        'copy',
         folders.map((folder) => folder.path)
       );
 
@@ -1842,10 +1857,11 @@ export function createImporter({
       return snapshot() as ImportRun;
     },
 
-    scan: async (folders, enrich = false) => {
+    scan: async (folders, enrich = false, mode = 'copy') => {
       const current = await claimRun(
         'folders',
         enrich,
+        mode,
         folders.map((folder) => folder.path)
       );
 

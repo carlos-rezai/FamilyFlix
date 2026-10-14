@@ -172,7 +172,8 @@ describe('POST /api/library-folders/scan', () => {
     const api = freshApi({ media: hold.seam });
     const { root } = libraryFixture(api.disk);
     await listPath(api, root);
-    const first = await scan(api);
+    // Copy, so the run holds on the video's copy-in (#343).
+    const first = await scan(api, { enrich: false, mode: 'copy' });
     expect(first.status).toBe(201);
     await hold.reached;
 

@@ -12,7 +12,7 @@ export interface ScopeCardProps {
  * One **Enrichment scope** card, `scopeCard` and `scopeDot` 1:1 from
  * `feat.EnrichmentFlow.dc.html`: the dot on the left, the 15px label, the line
  * indented under it. A `role="radio"` button the setup draws inside its
- * radiogroup. Not `FormatCard` — its dot is on the right and its label 16px
+ * radiogroup. Not `ChoiceCard` — its dot is on the right and its label 16px
  * (log 23 Q40).
  */
 export function ScopeCard({

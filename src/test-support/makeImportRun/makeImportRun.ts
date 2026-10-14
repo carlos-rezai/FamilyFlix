@@ -25,6 +25,7 @@ export function makeImportRun(overrides: Partial<ImportRun> = {}): ImportRun {
     problems: [],
     enrich: false,
     source: 'sheet',
+    mode: 'copy',
     ...overrides,
   };
 }

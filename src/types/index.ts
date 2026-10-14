@@ -23,7 +23,7 @@ export {
   EXPORT_NAME_PREFIX,
   EXPORT_FIELDS,
 } from './export';
-export { IMPORT_FIELDS, SHEET_FIELDS } from './import';
+export { IMPORT_FIELDS, IMPORT_MODES, SHEET_FIELDS } from './import';
 export {
   SUBTITLE_LANGUAGES,
   DEFAULT_SUBTITLE_LANGUAGE,
@@ -91,6 +91,7 @@ export type {
   ImportProblem,
   CandidateFolder,
   ImportRun,
+  ImportMode,
   ImportProblemDetail,
   SheetField,
   SheetDifference,
