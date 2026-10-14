@@ -51,16 +51,16 @@ export interface ExportModalProps {
 /** What each **Format card** says, and what the export button reads once it is chosen. */
 const FORMAT_COPY: Record<
   ExportFormat,
-  { label: string; description: string; button: string }
+  { label: string; line: string; button: string }
 > = {
   csv: {
     label: 'CSV',
-    description: 'Plain comma-separated. Opens anywhere.',
+    line: 'Plain comma-separated. Opens anywhere.',
     button: 'Export as CSV',
   },
   xlsx: {
     label: 'Excel',
-    description: '.xlsx workbook with a header row.',
+    line: '.xlsx workbook with a header row.',
     button: 'Export as Excel',
   },
 };
@@ -162,7 +162,7 @@ export function ExportModal({ open, onClose }: ExportModalProps) {
             <ChoiceCard
               key={key}
               label={FORMAT_COPY[key].label}
-              line={FORMAT_COPY[key].description}
+              line={FORMAT_COPY[key].line}
               checked={format === key}
               onSelect={() => chooseFormat(key)}
             />

@@ -1,4 +1,4 @@
-import { Card, Description, Dot, Label, TitleRow } from './ChoiceCard.styles';
+import { Card, Dot, Label, Line, TitleRow } from './ChoiceCard.styles';
 
 export interface ChoiceCardProps {
   /** The choice's name — `CSV`, `Excel`, `Link`, `Copy`. */
@@ -40,7 +40,7 @@ export function ChoiceCard({
         <Label>{label}</Label>
         <Dot aria-hidden="true" $selected={checked} />
       </TitleRow>
-      <Description>{line}</Description>
+      <Line>{line}</Line>
     </Card>
   );
 }

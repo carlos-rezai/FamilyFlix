@@ -53,7 +53,7 @@ export const Dot = styled.span<{ $selected: boolean }>`
 `;
 
 /** The line under the name: 12.5px sans in the faint ink. */
-export const Description = styled.div`
+export const Line = styled.div`
   font-family: ${({ theme }) => theme.fonts.sans};
   font-size: 12.5px;
   color: ${({ theme }) => theme.colors.textFaint};
