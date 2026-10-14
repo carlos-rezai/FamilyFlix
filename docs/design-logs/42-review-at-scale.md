@@ -1,8 +1,8 @@
 # 42 — Review at scale + Season art
 
 > **Initiative:** `review-at-scale`
-> **Issue:** to be filed by `write-a-prd` (step 25)
-> **PRD:** `docs/PRDs/42-review-at-scale.md` (to be written)
+> **Issue:** #352 (the PRD, step 25)
+> **PRD:** `docs/PRDs/42-review-at-scale.md`
 > **Plan:** `docs/PRDs/42-review-at-scale-plan.md` (to be written)
 
 This log is the `grill-me` session for step 25 of the build order, **Review at
