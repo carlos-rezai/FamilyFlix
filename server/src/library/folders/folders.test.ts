@@ -121,7 +121,7 @@ describe('library: removeLibraryFolder — the titles stay', () => {
 
   it('answers in-use, removing nothing, for a folder a Linked video plays from — a series once', () => {
     const { storage } = library();
-    const movies = storage.addLibraryFolder('E:\Movies');
+    const movies = storage.addLibraryFolder('E:\\Movies');
     storage.addMovie(
       newMovie({ videoPath: 'Heat (1995)/Heat.mkv', videoFolderId: movies.id })
     );
