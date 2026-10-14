@@ -11,7 +11,7 @@
 // everything `null` meant before. `fixedSlot` stands in for the slot, as in
 // every other suite that composes a Playback and never writes to it.
 
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
@@ -130,5 +130,58 @@ describe('createPlayback.videoFile — nothing to send', () => {
         videoFolderId: FOLDER_ID,
       })
     ).toEqual({ kind: 'missing' });
+  });
+});
+
+// 41 — Link or copy, Phase 6: "an unreachable folder" (issue #346).
+//
+// A **Linked video** whose **Library folder** is listed — the reader knows its
+// id — but does not read as `readable` is `unreachable`, not `missing`: the
+// film is very likely still there, on a drive that is not plugged in. A
+// folder that is reachable and simply lacks the file stays `missing`. Reach is
+// read afresh on every call, so a folder that comes back plays again with
+// nothing to clear.
+describe('createPlayback.videoFile — a Library folder out of reach', () => {
+  it('answers unreachable for a linked video whose folder is missing', () => {
+    const { media, folder, write } = sandbox();
+    write(folder, 'Heat (1995)/Heat.1995.mkv');
+    rmSync(folder, { recursive: true, force: true });
+
+    expect(
+      playbackOver(media, folder).videoFile({
+        videoPath: 'Heat (1995)/Heat.1995.mkv',
+        videoFolderId: FOLDER_ID,
+      })
+    ).toEqual({ kind: 'unreachable' });
+  });
+
+  it('answers unreachable for a linked video whose folder path is not a folder', () => {
+    const { media, folder } = sandbox();
+    rmSync(folder, { recursive: true, force: true });
+    writeFileSync(folder, 'not a folder');
+
+    expect(
+      playbackOver(media, folder).videoFile({
+        videoPath: 'Heat (1995)/Heat.1995.mkv',
+        videoFolderId: FOLDER_ID,
+      })
+    ).toEqual({ kind: 'unreachable' });
+  });
+
+  it('answers file again once the folder is back, with nothing cached', () => {
+    const { media, folder, write } = sandbox();
+    const file = write(folder, 'Heat (1995)/Heat.1995.mkv');
+    const away = `${folder}-unplugged`;
+    const playback = playbackOver(media, folder);
+    const video = {
+      videoPath: 'Heat (1995)/Heat.1995.mkv',
+      videoFolderId: FOLDER_ID,
+    };
+
+    renameSync(folder, away);
+    expect(playback.videoFile(video)).toEqual({ kind: 'unreachable' });
+
+    renameSync(away, folder);
+    expect(playback.videoFile(video)).toEqual({ kind: 'file', file });
   });
 });

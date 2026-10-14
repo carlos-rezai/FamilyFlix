@@ -66,6 +66,7 @@ describe('useOpeningReads — both reads, as one moment', () => {
       movie: null,
       playback: null,
       fileMissing: false,
+      folderUnreachable: false,
       opened: false,
     });
 
@@ -134,6 +135,61 @@ describe('useOpeningReads — a film with no file behind it', () => {
     await waitFor(() => {
       expect(result.current.movie).toEqual(MOVIE);
     });
+  });
+});
+
+/**
+ * 41 — Link or copy, Phase 6 (issue #346). A **Linked video** whose **Library
+ * folder** can't be reached answers `503` on the playback read — an answer, like
+ * the 404, and a different one: the folder is away, not the file gone.
+ */
+function unreachableResponse(): Response {
+  return new Response(
+    JSON.stringify({ error: "The video's Library folder is out of reach: m1" }),
+    { status: 503, headers: { 'Content-Type': 'application/json' } }
+  );
+}
+
+describe('useOpeningReads — a film whose folder can’t be reached', () => {
+  it('reports the folder out of reach, not the file missing', async () => {
+    serve(okResponse(MOVIE), unreachableResponse());
+
+    const { result } = renderHook(() =>
+      useOpeningReads({ kind: 'movie', id: 'm1' })
+    );
+
+    await waitFor(() => {
+      expect(result.current.folderUnreachable).toBe(true);
+    });
+    expect(result.current.fileMissing).toBe(false);
+    expect(result.current.playback).toBeNull();
+  });
+
+  it('still reports the record, and is settled', async () => {
+    serve(okResponse(MOVIE), unreachableResponse());
+
+    const { result } = renderHook(() =>
+      useOpeningReads({ kind: 'movie', id: 'm1' })
+    );
+
+    await waitFor(() => {
+      expect(result.current.opened).toBe(true);
+    });
+    expect(result.current.movie).toEqual(MOVIE);
+    expect(result.current.folderUnreachable).toBe(true);
+  });
+
+  it('keeps a 404 a missing file, with the folder not reported away', async () => {
+    serve(okResponse(MOVIE), notFoundResponse('No video file for movie: m1'));
+
+    const { result } = renderHook(() =>
+      useOpeningReads({ kind: 'movie', id: 'm1' })
+    );
+
+    await waitFor(() => {
+      expect(result.current.fileMissing).toBe(true);
+    });
+    expect(result.current.folderUnreachable).toBe(false);
   });
 });
 

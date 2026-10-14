@@ -48,6 +48,17 @@ const COULD_NOT_START_BODY =
   'FamilyFlix started getting this film ready and it stopped. Adding a ' +
   'playback component in Settings may fix it.';
 
+/**
+ * The fifth message (issue #346) — a **Linked video** whose **Library folder**
+ * can't be reached. Not a missing file: the film is very likely on a drive that
+ * isn't plugged in, and the remedy is to plug it in, not to look for the file.
+ * Prototype copy verbatim, `noticeCopy`'s `unreachable`.
+ */
+const UNREACHABLE_TITLE = 'Can’t reach this film’s folder';
+const UNREACHABLE_BODY =
+  'It plays from one of your library folders, which can’t be reached right ' +
+  'now — most likely a drive that isn’t plugged in.';
+
 /** The prototype's circle, to the pixel. */
 const CIRCLE_SIZE = '96px';
 
@@ -58,6 +69,7 @@ function renderNotice(
     | 'missing-file'
     | 'cannot-play'
     | 'could-not-start'
+    | 'unreachable'
 ) {
   return render(
     <ThemeProvider theme={theme}>
@@ -142,6 +154,31 @@ describe('PlayerNotice', () => {
       undecodable.container.textContent
     );
     expect(stopped.container.textContent).not.toContain(CANNOT_TITLE);
+  });
+
+  it('says what has happened when the film’s folder can’t be reached', () => {
+    renderNotice('unreachable');
+
+    expect(screen.getByText(UNREACHABLE_TITLE)).toBeDefined();
+    expect(screen.getByText(UNREACHABLE_BODY)).toBeDefined();
+  });
+
+  it('keeps a folder out of reach apart from a file that is missing', () => {
+    // Two remedies again: plug the drive in, or find the file. The one sentence
+    // must not send the family hunting for a film that is on the unplugged
+    // drive.
+    const away = renderNotice('unreachable');
+    const absent = renderNotice('missing-file');
+
+    expect(away.container.textContent).not.toBe(absent.container.textContent);
+    expect(away.container.textContent).not.toContain(MISSING_TITLE);
+  });
+
+  it('draws the folder out of reach inside the same circle, with no way out of its own', () => {
+    const { container } = renderNotice('unreachable');
+
+    expect(circle(container)).toBeDefined();
+    expect(container.querySelector('button')).toBeNull();
   });
 
   it('draws every state inside the same circle', () => {
