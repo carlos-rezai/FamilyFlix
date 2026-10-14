@@ -233,3 +233,39 @@ describe('useLibraryFolders — remove', () => {
     expect(result.current.folders).toEqual([KIDS]);
   });
 });
+
+/**
+ * 41 — Link or copy, Phase 7: "a folder in use can't be removed" (issue #347).
+ *
+ * The remove keeps the route's `409` sentence, as the add does: `removeRefusal`
+ * is `{ id, sentence }` — the folder it was about and the route's own words —
+ * `null` until a remove is refused, and the row stays listed.
+ */
+describe('useLibraryFolders — a refused remove', () => {
+  const IN_USE =
+    '12 titles play from this folder. Delete them before removing it.';
+
+  it('holds no removal refusal before any remove', async () => {
+    routeFetch([MOVIES]);
+    const { result } = renderHook(() => useLibraryFolders());
+    await waitFor(() => expect(result.current.folders).toEqual([MOVIES]));
+
+    expect(result.current.removeRefusal).toBeNull();
+  });
+
+  it('holds the route’s sentence by the folder’s id, and keeps the row', async () => {
+    routeFetch([MOVIES, KIDS], { delete: refusedResponse(409, IN_USE) });
+    const { result } = renderHook(() => useLibraryFolders());
+    await waitFor(() => expect(result.current.folders).toEqual([MOVIES, KIDS]));
+
+    await act(async () => {
+      await result.current.remove(MOVIES.id);
+    });
+
+    expect(result.current.removeRefusal).toEqual({
+      id: MOVIES.id,
+      sentence: IN_USE,
+    });
+    expect(result.current.folders).toEqual([MOVIES, KIDS]);
+  });
+});

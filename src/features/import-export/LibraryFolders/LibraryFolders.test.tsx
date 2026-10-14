@@ -7,6 +7,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { LibraryFolders } from './LibraryFolders';
 import type { LibraryFolder } from '@/types';
 import { theme } from '@/styles/theme';
+import { comesBefore } from '@/test-support/comesBefore/comesBefore';
 import {
   LocationProbe,
   navigationType,
@@ -306,5 +307,60 @@ describe('LibraryFolders — Back', () => {
     expect(pathname()).toBe('/settings');
     expect(navigationType()).toBe('PUSH');
     expect(screen.getByText('the settings hub')).toBeDefined();
+  });
+});
+
+/**
+ * 41 — Link or copy, Phase 7: "a folder in use can't be removed" (issue #347).
+ *
+ * A removal the route refuses with `409` — linked videos play from the folder
+ * — is drawn as the route's sentence, one 13px `danger` **Refusal** under the
+ * **Folder row** it is about, and the folder stays listed.
+ */
+describe('LibraryFolders — a refused remove', () => {
+  const IN_USE =
+    '12 titles play from this folder. Delete them before removing it.';
+
+  /** The list on GET; a DELETE of Movies refused as in use. */
+  function inUseWire(listed: LibraryFolder[]) {
+    fetchMock.mockImplementation((_input, init) => {
+      if ((init?.method ?? 'GET') === 'DELETE') {
+        return Promise.resolve(refusedResponse(409, IN_USE));
+      }
+      return Promise.resolve(okResponse(listed));
+    });
+  }
+
+  it('draws the sentence in 13px danger, and the folder stays listed', async () => {
+    inUseWire([MOVIES, KIDS]);
+    renderPage();
+    await loaded();
+
+    await userEvent.click(
+      screen.getByRole('button', { name: `Remove ${MOVIES.path}` })
+    );
+
+    const line = await screen.findByText(IN_USE);
+    const drawn = getComputedStyle(line);
+    expect(drawn.color).toBe(DANGER);
+    expect(drawn.fontSize).toBe('13px');
+    expect(screen.getByText(MOVIES.path)).toBeDefined();
+    expect(
+      screen.getByRole('button', { name: `Remove ${MOVIES.path}` })
+    ).toBeDefined();
+  });
+
+  it('draws it under the row it was about, before the next row', async () => {
+    inUseWire([MOVIES, KIDS]);
+    renderPage();
+    await loaded();
+
+    await userEvent.click(
+      screen.getByRole('button', { name: `Remove ${MOVIES.path}` })
+    );
+
+    const line = await screen.findByText(IN_USE);
+    expect(comesBefore(screen.getByText(MOVIES.path), line)).toBe(true);
+    expect(comesBefore(line, screen.getByText(KIDS.path))).toBe(true);
   });
 });
