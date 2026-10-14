@@ -62,11 +62,12 @@ export function pickFolderBody(body: unknown): BodyRead<string> {
 }
 
 /**
- * A **Folder scan**'s body → `{ enrich, mode }`: `enrich` true only when it is
+ * Either start's body → `{ enrich, mode }` — the sheet import's and the
+ * **Folder scan**'s read the same two fields: `enrich` true only when it is
  * `true`, and `mode` one of **IMPORT_MODES**, a missing or unknown one refused
- * in a sentence.
+ * in a sentence. The sheet's own path is read beside it, by its route.
  */
-export function folderScanBody(
+export function importStartBody(
   body: unknown
 ): BodyRead<{ enrich: boolean; mode: ImportMode }> {
   const { enrich, mode } = (

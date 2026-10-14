@@ -62,7 +62,7 @@ import {
   startEnrichmentBody,
 } from './enrichmentBody/enrichmentBody';
 import {
-  folderScanBody,
+  importStartBody,
   pickFolderBody,
   sheetChoicesBody,
 } from './importBody/importBody';
@@ -1836,7 +1836,7 @@ export function createApiRouter(
   // snapshot, `400` with none listed, `409` while a **Current run** is
   // scanning or importing — one in review is let go, as _Finish_ would have.
   router.post('/library-folders/scan', async (req: Request, res: Response) => {
-    const read = folderScanBody(req.body);
+    const read = importStartBody(req.body);
     if (!read.ok) {
       res.status(400).json({ error: read.error });
       return;
@@ -2389,13 +2389,8 @@ export function createApiRouter(
   // the two kinds of refusal apart and answers a body that names no sheet
   // before the domain is asked.
   router.post('/import', async (req: Request, res: Response) => {
-    const body = (req.body ?? {}) as {
-      sheetPath?: unknown;
-      enrich?: unknown;
-    };
+    const body = (req.body ?? {}) as { sheetPath?: unknown };
     const { sheetPath } = body;
-    // Only carried on the run: the import itself goes nowhere near TMDB.
-    const enrich = body.enrich === true;
 
     if (typeof sheetPath !== 'string' || sheetPath.trim() === '') {
       res
@@ -2403,17 +2398,17 @@ export function createApiRouter(
         .json({ error: 'No spreadsheet was given.', field: 'sheet' });
       return;
     }
-    // The **Import mode**, read as the Folder scan's is.
-    const read = folderScanBody(body);
+    // `enrich` and the **Import mode**, read as the Folder scan's are.
+    // `enrich` is only carried on the run: the import goes nowhere near TMDB.
+    const read = importStartBody(body);
     if (!read.ok) {
       res.status(400).json({ error: read.error });
       return;
     }
+    const { enrich, mode } = read.value;
 
     try {
-      res
-        .status(201)
-        .json(await importer.start(sheetPath, enrich, read.value.mode));
+      res.status(201).json(await importer.start(sheetPath, enrich, mode));
     } catch (error) {
       if (error instanceof ImportStartError) {
         res.status(400).json({ error: error.message, field: error.field });
