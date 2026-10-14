@@ -1,4 +1,4 @@
-import { isAbsolute } from 'node:path';
+import { isAbsolute, relative, sep } from 'node:path';
 
 import { isVideoFilename } from '../../media/fileKinds/fileKinds';
 import { mediaFilePath } from '../mediaFilePath/mediaFilePath';
@@ -27,4 +27,16 @@ export function linkedVideoPath(
     return null;
   }
   return mediaFilePath(folderPath, videoPath);
+}
+
+/**
+ * {@link linkedVideoPath}'s writer: the `video_path` a **Linked video**'s row
+ * keeps — the file's path relative to its **Library folder**, forward slashes
+ * on every platform, as every stored path is spelled.
+ *
+ * @param folderPath the Library folder the video lies in
+ * @param file the video, absolute, somewhere under that folder
+ */
+export function spellLinkedVideo(folderPath: string, file: string): string {
+  return relative(folderPath, file).split(sep).join('/');
 }

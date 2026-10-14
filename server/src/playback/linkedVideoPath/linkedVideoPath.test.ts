@@ -15,7 +15,7 @@ import { join } from 'node:path';
 
 import { sandboxRoot } from '../../test-support/sandboxRoot/sandboxRoot';
 
-import { linkedVideoPath } from './linkedVideoPath';
+import { linkedVideoPath, spellLinkedVideo } from './linkedVideoPath';
 
 /** A Library folder with a sibling directory beside it, in a resolved sandbox. */
 function sandbox(): { folder: string; outside: string } {
@@ -86,5 +86,33 @@ describe('linkedVideoPath — nothing behind the path', () => {
     const { folder } = sandbox();
 
     expect(linkedVideoPath(folder, 'Heat (1995)/Heat.1995.mkv')).toBeNull();
+  });
+});
+
+describe('spellLinkedVideo — the row a linked video keeps', () => {
+  it('spells a file one folder deep relative to the Library folder', () => {
+    const { folder } = sandbox();
+
+    expect(
+      spellLinkedVideo(folder, join(folder, 'Heat (1995)', 'Heat.mkv'))
+    ).toBe('Heat (1995)/Heat.mkv');
+  });
+
+  it('spells a file two folders deep with forward slashes', () => {
+    const { folder } = sandbox();
+
+    expect(
+      spellLinkedVideo(
+        folder,
+        join(folder, 'Tidewater', 'Season 01', 'e01.mp4')
+      )
+    ).toBe('Tidewater/Season 01/e01.mp4');
+  });
+
+  it('round-trips through linkedVideoPath to the same file', () => {
+    const { folder } = sandbox();
+    const file = writeFile(join(folder, 'Tidewater', 'Season 01', 'e01.mp4'));
+
+    expect(linkedVideoPath(folder, spellLinkedVideo(folder, file))).toBe(file);
   });
 });
