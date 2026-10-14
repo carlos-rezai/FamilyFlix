@@ -8,7 +8,7 @@ import type {
   NewSubtitle,
   Series,
 } from '@/types';
-import { parentOf } from '../../write/write';
+import { parentFolder } from '../../parentFolder/parentFolder';
 import type { SeriesReader } from '../read/read';
 
 export interface SeriesWrite {
@@ -140,8 +140,8 @@ export function createSeriesWrite(
         updated_at: now,
         media_folder:
           input.mediaFolder ??
-          parentOf(firstVideo, 2) ??
-          parentOf(input.posterPath, 1),
+          parentFolder(firstVideo, 2) ??
+          parentFolder(input.posterPath, 1),
       });
       input.genres?.forEach((name, position) => {
         const genre = selectGenreIdByName.get(name) as
@@ -175,7 +175,7 @@ export function createSeriesWrite(
       // A series added bare takes its Media folder off its first episode.
       // A linked video sits in a Library folder, so its path names none.
       if (input.videoFolderId === undefined) {
-        fillSeriesFolder.run(parentOf(input.videoPath, 2), seriesId);
+        fillSeriesFolder.run(parentFolder(input.videoPath, 2), seriesId);
       }
       input.subtitles?.forEach((track, position) => {
         insertEpisodeSubtitle.run({

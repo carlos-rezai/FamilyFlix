@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 
 import type { SqliteDatabase } from '../../db';
 import type { Movie, MoviePatch, NewMovie } from '@/types';
+import { parentFolder } from '../parentFolder/parentFolder';
 import type { MovieReader } from '../read/read';
 
 /**
@@ -44,16 +45,6 @@ export interface Write {
   addMovie(input: NewMovie): Movie;
   updateMovie(id: string, patch: MoviePatch): Movie;
   deleteMovie(id: string): void;
-}
-
-/** A Stored path `levels` directories up, or `null` with nothing above it. */
-export function parentOf(
-  path: string | undefined,
-  levels: number
-): string | null {
-  if (path === undefined) return null;
-  const segments = path.split('/');
-  return segments.length > levels ? segments.slice(0, -levels).join('/') : null;
 }
 
 export function createWrite(db: SqliteDatabase, reader: MovieReader): Write {
@@ -118,7 +109,7 @@ export function createWrite(db: SqliteDatabase, reader: MovieReader): Write {
       media_folder:
         input.mediaFolder ??
         (input.videoFolderId === undefined
-          ? parentOf(input.videoPath, 1)
+          ? parentFolder(input.videoPath, 1)
           : null),
       video_folder_id: input.videoFolderId ?? null,
     });
