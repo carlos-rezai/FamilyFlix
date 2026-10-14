@@ -12,15 +12,19 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { sandboxRoot } from '../../test-support/sandboxRoot/sandboxRoot';
-import { readableFolder } from './readableFolder';
+import { readableFolder, readableFolderSync } from './readableFolder';
 
-describe('readableFolder', () => {
+// The sync twin reads the same table: the two may differ only in waiting.
+describe.each([
+  ['readableFolder', readableFolder],
+  ['readableFolderSync', async (path: string) => readableFolderSync(path)],
+])('%s', (_name, read) => {
   it('answers readable for an existing directory', async () => {
     const root = sandboxRoot('familyflix-readable-');
     const folder = join(root, 'Movies');
     mkdirSync(folder);
 
-    await expect(readableFolder(folder)).resolves.toBe('readable');
+    await expect(read(folder)).resolves.toBe('readable');
   });
 
   it('answers not-a-folder for a file', async () => {
@@ -28,18 +32,18 @@ describe('readableFolder', () => {
     const file = join(root, 'northwind.mkv');
     writeFileSync(file, 'not a film');
 
-    await expect(readableFolder(file)).resolves.toBe('not-a-folder');
+    await expect(read(file)).resolves.toBe('not-a-folder');
   });
 
   it('answers missing for a path nothing is at', async () => {
     const root = sandboxRoot('familyflix-readable-');
 
-    await expect(readableFolder(join(root, 'Gone'))).resolves.toBe('missing');
+    await expect(read(join(root, 'Gone'))).resolves.toBe('missing');
   });
 
   it('answers relative for a relative path, without looking', async () => {
     // `.` is a directory wherever the suite runs — so only the shape refuses it.
-    await expect(readableFolder('.')).resolves.toBe('relative');
-    await expect(readableFolder('Movies\\Kids')).resolves.toBe('relative');
+    await expect(read('.')).resolves.toBe('relative');
+    await expect(read('Movies\\Kids')).resolves.toBe('relative');
   });
 });
