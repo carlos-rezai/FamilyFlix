@@ -1166,39 +1166,27 @@ issue #328):
 
 Steps 24–25 came out of importing five real series (3–8 seasons, 8–20
 episodes each): the copy was slow and doubled the disk, and the review ran to
-1,400+ rows. Both are 🔜 — not yet grilled, no design log, no PRD, no
-prototype revision; the points below are the input to grill-me, not
-decisions:
+1,400+ rows. Both are 🔜. Step 24 is grilled (design log 41), not yet
+PRD'd; step 25's points are still the input to grill-me, not decisions:
 
-24. 🔜 **Link or copy** — every import (Bulk import, a **Folder scan**, the
-    **Movie form**) offers **Link** or **Copy**, **Link the default**. Copying
-    made sense while the source folders were going away; with **Library
-    folders** listed and rescanned it is the slow, doubled path. What Link
-    needs already exists: `library_folder_id`, `source_folder` and
-    `source_file` on both titles. To settle in grill-me:
-    - **Two rules here change**: _All file paths are stored as relative
-      paths under the managed media directory_ and _Only `media/` touches
-      managed storage_ (Desktop Build's _Media storage_ too). `mediaFilePath`,
-      the under-media-root check, must also accept _under a listed Library
-      folder_ — a security boundary, so it needs care.
-    - **Link only inside a Library folder**: a linked path is always _folder
-      id + relative path_, never an absolute path off the machine.
-    - **The mode is per title** (a storage column on movies and episodes), not
-      one global switch: libraries copied before this keep working, mixed.
-    - **Delete, Factory reset and a folder's removal never touch a linked
-      file**: a linked title's delete is the record alone; the **Reset
-      dialog**'s _What goes_ must say so.
-    - **Unreachable**: a linked title on an unplugged drive cannot play — the
-      player needs a face for it, `folderLine`'s _Can’t be reached right now_.
-    - **TMDB art stays in managed storage** even for a linked title — small,
-      and a Sync keeps writing into a Library folder only what its **Write
-      targets** already add.
-    - **The Movie form** has no path in a browser; under the shell
-      `webUtils.getPathForFile` over the preload gives one, linkable only
-      inside a listed Library folder. Anything else — and every browser save
-      — copies.
-    - Later, not this step: _Convert to linked and free space_ for titles
-      already copied.
+24. 🔜 **Link or copy** — design log 41. Import setup and the Library
+    folders page draw the **Import mode** (`ImportModeChoice`: **Link** /
+    **Copy**, Link on every visit), posted as `mode` on both starts and
+    carried as `ImportRun.mode` to every import the run makes, the review's
+    presses included. **Link links the video alone**: art and subtitles are
+    still copied, and everything a Sync writes stays managed. A **Linked
+    video** is `video_folder_id` (migration 12, on `movies` and `episodes`)
+    beside a `video_path` relative to that **Library folder**, opened by
+    `playback/linkedVideoPath/` — video kinds only, then `mediaFilePath`'s
+    containment — through `Playback.videoFile(StoredVideo) → VideoFile`
+    (`file` / `missing` / `unreachable`, the last a `503` and the player's
+    `unreachable` notice). Every title's managed folder is recorded as
+    `media_folder` (migration 11, backfilled), the one way `Media` finds it.
+    Delete and Factory reset never touch a linked video; removing a Library
+    folder one plays from is a `409` sentence. The **Movie form** still
+    copies — a file in a Library folder is added by **Scan folders**; an edit
+    keeps a held linked video linked. Not this step: _Convert to linked_ and
+    a **Relocate**.
 25. 🔜 **Review at scale + Season art** — log 13 Q16 holds the review to
     what needs a human, and 1,400+ rows breaks it. Enrichment raises at most
     one **Decision** per title and `unplaced` is one **Problem** per show, so

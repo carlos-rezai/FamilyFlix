@@ -451,21 +451,20 @@ Step 23 came after it, out of using the latest release (design log 40):
 
 Steps 24–25 came out of importing five real series (3–8 seasons, 8–20
 episodes each): the import was slow and doubled the disk space, and the review
-listed more than 1,400 rows. Neither is designed yet — each goes through
-grill-me and a prototype revision before it is built:
+listed more than 1,400 rows. Each goes through grill-me and a prototype
+revision before it is built; step 24 has been grilled (design log 41):
 
-24. 🔜 **Link or copy** — every import (Bulk import, a Folder scan, the Add
-    form) offers **Link** or **Copy**, **Link by default**. A linked title
-    plays from where it lies in your Library folder, so nothing is duplicated
-    and the import is fast; Copy keeps today's behaviour, a copy in
-    FamilyFlix's own media folder. The choice is kept per title, so a library
-    already copied keeps working beside new linked titles. Deleting a linked
-    title, a Factory reset or removing a Library folder never touches your
-    files. A linked title whose drive is unplugged says _Can't be reached
-    right now_ rather than failing. TMDB posters and stills still go in the
-    media folder, so a Sync never writes more into your folders than it does
-    today. Only files inside a Library folder can be linked; anything else is
-    copied.
+24. 🔜 **Link or copy** — Import from spreadsheet and Scan folders offer
+    **Link** or **Copy**, **Link by default** (design log 41). A linked title's
+    video plays from where it lies in your Library folder, so nothing is
+    duplicated and the import is fast; its poster, subtitles and TMDB art are
+    still kept in FamilyFlix's own media folder, and Copy keeps today's
+    behaviour. The choice is kept per video, so a library already copied keeps
+    working beside new linked titles. Deleting a linked title or a Factory
+    reset never touches your files, and a Library folder can't be removed
+    while titles play from it. A linked title whose drive is unplugged says
+    so in the player rather than failing. The Add form still copies: a file
+    in a Library folder is added by Scan folders, which links it.
 25. 🔜 **Review at scale + Season art** — a review never runs to a thousand
     rows: first, the run stops filing rows nobody needs to see; then the list
     is grouped by title (one row per show with a count, opened on demand),
