@@ -114,9 +114,14 @@ function freshApi(component: PlaybackComponent | null = null): {
   const folderId = storage.addLibraryFolder(library).id;
 
   const mediaDomain = createMedia(media);
+  // A Factory reset takes back the uploaded component; this slot never had
+  // one, so it answers as a real slot with nothing uploaded does.
   const playback = createPlayback(
     media,
-    fixedSlot(component),
+    {
+      ...fixedSlot(component),
+      remove: () => ({ ok: false, reason: 'nothing-uploaded' }),
+    },
     (id) => storage.libraryFolders().find((f) => f.id === id)?.path ?? null
   );
 

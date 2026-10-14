@@ -2043,13 +2043,9 @@ export function createApiRouter(
       return;
     }
     media.emptyRoot();
-    // Best-effort, as the root's emptying is: the library is already erased,
-    // so a slot that throws rather than answers cannot make this a `500`.
-    try {
-      playback.removeComponent();
-    } catch {
-      // The erase stands; an uploaded component left behind is the lesser harm.
-    }
+    // The slot answers an outcome and never throws; a refusal — nothing
+    // uploaded, or a component in use — leaves the erase standing.
+    playback.removeComponent();
     await importer.cancel();
 
     res.status(204).end();
