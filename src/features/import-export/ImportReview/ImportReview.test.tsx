@@ -74,6 +74,9 @@ function renderReview(props: Partial<ImportReviewProps> = {}) {
           onPick={props.onPick ?? (() => undefined)}
           onImportAs={props.onImportAs ?? (() => undefined)}
           onSkipMany={props.onSkipMany ?? (() => undefined)}
+          onImportManyAsGuessed={
+            props.onImportManyAsGuessed ?? (() => undefined)
+          }
           finishLabel={props.finishLabel ?? FINISH}
           onFinish={props.onFinish ?? (() => undefined)}
         />
@@ -95,6 +98,9 @@ function renderReview(props: Partial<ImportReviewProps> = {}) {
               onPick={props.onPick ?? (() => undefined)}
               onImportAs={props.onImportAs ?? (() => undefined)}
               onSkipMany={props.onSkipMany ?? (() => undefined)}
+              onImportManyAsGuessed={
+                props.onImportManyAsGuessed ?? (() => undefined)
+              }
               finishLabel={props.finishLabel ?? FINISH}
               onFinish={props.onFinish ?? (() => undefined)}
             />
@@ -815,6 +821,7 @@ describe('ImportReview — the Kind filter', () => {
             onPick={() => undefined}
             onImportAs={() => undefined}
             onSkipMany={() => undefined}
+            onImportManyAsGuessed={() => undefined}
             finishLabel={FINISH}
             onFinish={() => undefined}
           />
@@ -1058,5 +1065,112 @@ describe('ImportReview — bulk actions', () => {
       expect(onApply).not.toHaveBeenCalled();
       expect(screen.queryByRole('dialog')).toBeNull();
     });
+  });
+});
+
+/**
+ * 41 — Review at scale, Phase 6: "Import all as guessed" (issue #361).
+ *
+ * From `feat.ImportFlow.dc.html` as amended: with `no-row` chosen on the
+ * **Kind filter**, _Import all as guessed_ is drawn among the Bulk actions at
+ * the filter row's end, before _Skip all_, and for no other kind. A press is
+ * reported at once, no confirm, with every `no-row` id in the run's order —
+ * the rows the filter shows; the step settles nothing itself, the **Run
+ * hook** does, and the next `run` — the route's echo — shows it.
+ */
+describe('ImportReview — Import all as guessed', () => {
+  const problem = (
+    id: string,
+    kind: ImportProblem['kind'],
+    title = `Title ${id}`
+  ): ImportProblem => ({ id, kind, title, reason: `Reason ${id}.` });
+
+  /** Two `no-row` titles, one inside a group, beside two `no-folder` rows. */
+  const GUESSED: ImportProblem[] = [
+    problem('f1', 'no-folder', 'The Night Ferry'),
+    problem('l1', 'no-row', 'Ironwood (2018)'),
+    problem('f2', 'no-row', 'The Night Ferry'),
+    problem('f3', 'no-folder', 'The Lantern Keeper'),
+  ];
+
+  const filter = () =>
+    screen.getByRole('group', { name: 'Problem kinds' }) as HTMLElement;
+  const pill = (name: string) => within(filter()).getByRole('button', { name });
+  const besideFilter = () =>
+    filter().parentElement?.parentElement as HTMLElement;
+  const importAll = () =>
+    within(besideFilter()).queryByRole('button', {
+      name: 'Import all as guessed',
+    });
+
+  it('draws no Import all as guessed while All is chosen', () => {
+    renderReview({ run: inReview(GUESSED) });
+
+    expect(importAll()).toBeNull();
+  });
+
+  it('draws Import all as guessed with no-row chosen, before Skip all', () => {
+    renderReview({ run: inReview(GUESSED) });
+
+    fireEvent.click(pill('Not in sheet 2'));
+
+    const button = importAll();
+    expect(button).not.toBeNull();
+    const skipAll = within(besideFilter()).getByRole('button', {
+      name: 'Skip all',
+    });
+    expect(comesBefore(button as HTMLElement, skipAll)).toBe(true);
+  });
+
+  it('draws it for no other kind', () => {
+    renderReview({ run: inReview(GUESSED) });
+
+    fireEvent.click(pill('No folder 2'));
+
+    expect(importAll()).toBeNull();
+    expect(
+      within(besideFilter()).getByRole('button', { name: 'Skip all' })
+    ).toBeDefined();
+  });
+
+  it('reports every no-row id the filter shows, in the run’s order, at once — no confirm', () => {
+    const onImportManyAsGuessed =
+      vi.fn<ImportReviewProps['onImportManyAsGuessed']>();
+    const onImportAs = vi.fn();
+    const onSkipMany = vi.fn();
+    renderReview({
+      run: inReview(GUESSED),
+      onImportManyAsGuessed,
+      onImportAs,
+      onSkipMany,
+    });
+
+    fireEvent.click(pill('Not in sheet 2'));
+    fireEvent.click(importAll() as HTMLElement);
+
+    expect(onImportManyAsGuessed).toHaveBeenCalledTimes(1);
+    expect(onImportManyAsGuessed).toHaveBeenCalledWith(['l1', 'f2']);
+    expect(onImportAs).not.toHaveBeenCalled();
+    expect(onSkipMany).not.toHaveBeenCalled();
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('settles nothing itself; the next run redraws the list from the answer', () => {
+    const { rerenderWith } = renderReview({ run: inReview(GUESSED) });
+    fireEvent.click(pill('Not in sheet 2'));
+    fireEvent.click(importAll() as HTMLElement);
+    expect(screen.getByText('Reason l1.')).toBeDefined();
+
+    rerenderWith(
+      inReview([
+        GUESSED[0],
+        problem('n1', 'no-video', 'The Night Ferry'),
+        GUESSED[3],
+      ])
+    );
+
+    expect(screen.queryByText('Reason l1.')).toBeNull();
+    expect(importAll()).toBeNull();
+    expect(pill('All 3').getAttribute('aria-pressed')).toBe('true');
   });
 });
