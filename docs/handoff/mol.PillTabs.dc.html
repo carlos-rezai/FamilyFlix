@@ -43,7 +43,7 @@
         renderVals(){
           const options=this.props.options||[{value:'movies',label:'Movies'},{value:'series',label:'Series'}];
           const value=this.props.value||options[0].value;
-          const tabStyle=on=>({height:'38px',padding:'0 20px',background:on?'var(--color-accent)':'transparent',border:'none',borderRadius:'var(--radius-pill)',color:on?'#1a1109':'var(--color-text-faint)',fontFamily:'var(--font-sans)',fontSize:'15px',fontWeight:on?'700':'500',cursor:'pointer'});
+          const tabStyle=on=>({height:'38px',padding:'0 20px',background:on?'var(--color-accent)':'transparent',border:'none',borderRadius:'var(--radius-pill)',color:on?'#1a1109':'var(--color-text-faint)',fontFamily:'var(--font-sans)',fontSize:'15px',fontWeight:on?'700':'500',whiteSpace:'nowrap',cursor:'pointer'});
           return {
             label:this.props.label||'Tabs',
             tabs:options.map(o=>({label:o.label, pressed:String(o.value===value), style:tabStyle(o.value===value),

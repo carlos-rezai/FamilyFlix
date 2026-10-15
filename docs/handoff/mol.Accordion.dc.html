@@ -1,0 +1,169 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="tokens.css" />
+      </helmet>
+      <!-- The Accordion: a header over a body, the body unmounted while closed. The header row
+           is the toggle — a button holding the chevron, the label, the caller's marks and the
+           count pill — then the caller's actions beside it, outside the button so a button never
+           nests in a button. A Control (§2a): the toggle's fill shifts on hover, darkens and
+           settles on press, and rings on keyboard focus; no shadow, no lift. Domain-free. -->
+      <div
+        style="
+          background: var(--color-surface);
+          border: 1px solid var(--color-border-soft);
+          border-radius: var(--radius-md);
+          overflow: hidden;
+        "
+      >
+        <div
+          style="
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding-right: 8px;
+          "
+        >
+          <button
+            onClick="{{ onToggle }}"
+            aria-expanded="{{ expandedAttr }}"
+            aria-controls="{{ bodyId }}"
+            style="
+              flex: 1;
+              min-width: 0;
+              display: flex;
+              align-items: center;
+              gap: 12px;
+              padding: 16px;
+              background: transparent;
+              border: none;
+              border-radius: var(--radius-md);
+              text-align: left;
+              cursor: pointer;
+              transition:
+                background var(--dur-fast) var(--ease-out),
+                transform var(--dur-fast) var(--ease-out),
+                box-shadow var(--dur-fast) var(--ease-out);
+            "
+            style-hover="background:var(--color-surface-2)"
+            style-active="background:var(--color-surface-3);transform:scale(.98);transition-duration:60ms"
+            style-focus-visible="outline:none;box-shadow:0 0 0 3px var(--color-focus-ring)"
+          >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              aria-hidden="true"
+              style="{{ chevronStyle }}"
+            >
+              <path
+                d="M9 6l6 6-6 6"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
+            <span
+              style="
+                min-width: 0;
+                font-family: var(--font-sans);
+                font-size: 16px;
+                font-weight: 600;
+                color: var(--color-text);
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+              "
+              >{{ label }}</span
+            >
+            <sc-if value="{{ hasMarks }}" hint-placeholder-val="{{ false }}">
+              <span
+                style="
+                  flex: 0 0 auto;
+                  display: inline-flex;
+                  align-items: center;
+                  gap: 6px;
+                "
+                >{{ marks }}</span
+              >
+            </sc-if>
+            <span
+              style="
+                flex: 0 0 auto;
+                font-family: var(--font-sans);
+                font-size: 11px;
+                font-weight: 700;
+                letter-spacing: 0.3px;
+                padding: 3px 8px;
+                border-radius: var(--radius-pill);
+                color: var(--color-text-faint);
+                background: var(--color-surface-3);
+              "
+              >{{ count }}</span
+            >
+          </button>
+          <sc-if value="{{ hasActions }}" hint-placeholder-val="{{ true }}">
+            <div
+              style="
+                flex: 0 0 auto;
+                display: flex;
+                align-items: center;
+                gap: 4px;
+              "
+            >
+              {{ actions }}
+            </div>
+          </sc-if>
+        </div>
+        <sc-if value="{{ expanded }}" hint-placeholder-val="{{ false }}">
+          <div
+            id="{{ bodyId }}"
+            role="region"
+            aria-label="{{ label }}"
+            style="
+              display: flex;
+              flex-direction: column;
+              gap: 10px;
+              padding: 0 16px 16px 44px;
+            "
+          >
+            {{ children }}
+          </div>
+        </sc-if>
+      </div>
+    </x-dc>
+    <script
+      type="text/x-dc"
+      data-dc-script
+      data-props='{"$preview":{"width":640,"height":220},"label":{"editor":"text","default":"The Night Ferry","tsType":"string"},"count":{"editor":"number","default":3,"tsType":"number"},"expanded":{"editor":"boolean","default":true,"tsType":"boolean"},"onToggle":{"editor":null,"tsType":"() =&gt; void"},"marks":{"editor":null,"tsType":"ReactNode"},"actions":{"editor":null,"tsType":"ReactNode"},"children":{"editor":null,"tsType":"ReactNode"}}'
+    >
+      class Component extends DCLogic {
+        renderVals(){
+          const expanded=!!this.props.expanded;
+          // One id per instance ties the header to the body it controls.
+          if(!this._id) this._id='accordion-'+Math.random().toString(36).slice(2,8);
+          return {
+            label:this.props.label??'Group',
+            count:this.props.count??0,
+            expanded, expandedAttr:String(expanded), bodyId:this._id,
+            // The chevron points right while closed and down while open, turned at --dur-base.
+            chevronStyle:{flex:'0 0 auto',color:'var(--color-text-faint)',transform:expanded?'rotate(90deg)':'none',transition:'transform var(--dur-base) var(--ease-out)'},
+            marks:this.props.marks||null, hasMarks:!!this.props.marks,
+            actions:this.props.actions||null, hasActions:!!this.props.actions,
+            children:this.props.children||null,
+            onToggle:()=>{ if(this.props.onToggle) this.props.onToggle(); },
+          };
+        }
+      }
+    </script>
+  </body>
+</html>

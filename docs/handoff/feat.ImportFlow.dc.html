@@ -741,75 +741,98 @@
               >
                 Needs attention
               </div>
-              <div style="display: flex; flex-direction: column; gap: 10px">
-                <sc-for
-                  list="{{ imp.problems }}"
-                  as="p"
-                  hint-placeholder-count="4"
+              <!-- The Kind filter: PillTabs reading All N, then each kind present with its count in
+                   the glossary's order — drawn only with two kinds or more, screen state, never in the
+                   URL. A chosen kind draws its Bulk actions at the row's end: Skip all for every kind;
+                   Import all as guessed before it for no-row; for differs, Keep all mine in its place —
+                   the row's own word for the same Dismiss. No confirm. -->
+              <sc-if
+                value="{{ imp.hasKindFilter }}"
+                hint-placeholder-val="{{ true }}"
+              >
+                <div
+                  style="
+                    display: flex;
+                    align-items: center;
+                    gap: 12px;
+                    flex-wrap: wrap;
+                    margin-bottom: 14px;
+                  "
                 >
-                  <!-- One Problem: the head (dot, title, reason, Resolve on every kind but differs,
-                       Skip), then the face slot under it, the Sync's Decision row layout. A face
-                       is drawn for differs, ambiguous and no-row; every other kind has none. -->
+                  <!-- The track scrolls sideways rather than wrapping when every kind is held. -->
+                  <div style="min-width: 0; max-width: 100%; overflow-x: auto">
+                    <dc-import
+                      name="mol.PillTabs"
+                      label="Problem kinds"
+                      options="{{ imp.kindOptions }}"
+                      value="{{ imp.kind }}"
+                      on-change="{{ imp.onKind }}"
+                      hint-size="520px,48px"
+                    ></dc-import>
+                  </div>
                   <div
                     style="
-                      padding: 16px;
-                      background: var(--color-surface);
-                      border: 1px solid var(--color-border-soft);
-                      border-radius: var(--radius-md);
+                      flex: 1;
+                      display: flex;
+                      justify-content: flex-end;
+                      align-items: center;
+                      gap: 4px;
                     "
                   >
-                    <div style="display: flex; align-items: center; gap: 14px">
-                      <div style="{{ p.dotStyle }}"></div>
-                      <div style="flex: 1; min-width: 0">
-                        <div
-                          style="
-                            font-family: var(--font-sans);
-                            font-size: 16px;
-                            font-weight: 600;
-                            color: var(--color-text);
-                          "
-                        >
-                          {{ p.title }}
-                        </div>
-                        <div
-                          style="
-                            font-family: var(--font-sans);
-                            font-size: 13px;
-                            color: var(--color-text-faint);
-                            margin-top: 2px;
-                          "
-                        >
-                          {{ p.reason }}
-                        </div>
-                      </div>
-                      <!-- No Resolve on differs: the form edits a record, not a comparison. -->
-                      <sc-if
-                        value="{{ p.hasResolve }}"
-                        hint-placeholder-val="{{ true }}"
-                      >
-                        <button
-                          onClick="{{ p.resolve }}"
-                          style="
-                            height: 40px;
-                            padding: 0 18px;
-                            background: var(--color-surface-3);
-                            border: 1px solid var(--color-border);
-                            border-radius: 8px;
-                            color: var(--color-text);
-                            font-family: var(--font-sans);
-                            font-size: 14px;
-                            font-weight: 600;
-                            cursor: pointer;
-                          "
-                          style-hover="background:var(--color-border)"
-                        >
-                          Resolve
-                        </button>
-                      </sc-if>
+                    <sc-if
+                      value="{{ imp.hasImportAllGuessed }}"
+                      hint-placeholder-val="{{ false }}"
+                    >
                       <button
-                        onClick="{{ p.skip }}"
+                        onClick="{{ imp.onImportAllGuessed }}"
                         style="
-                          height: 40px;
+                          height: 34px;
+                          padding: 0 14px;
+                          background: var(--color-surface-3);
+                          border: 1px solid var(--color-border);
+                          border-radius: 8px;
+                          color: var(--color-text);
+                          font-family: var(--font-sans);
+                          font-size: 14px;
+                          font-weight: 600;
+                          cursor: pointer;
+                        "
+                        style-hover="background:var(--color-border)"
+                      >
+                        Import all as guessed
+                      </button>
+                    </sc-if>
+                    <sc-if
+                      value="{{ imp.hasKeepAllMine }}"
+                      hint-placeholder-val="{{ false }}"
+                    >
+                      <button
+                        onClick="{{ imp.onKeepAllMine }}"
+                        style="
+                          height: 34px;
+                          padding: 0 14px;
+                          background: var(--color-surface-3);
+                          border: 1px solid var(--color-border);
+                          border-radius: 8px;
+                          color: var(--color-text);
+                          font-family: var(--font-sans);
+                          font-size: 14px;
+                          font-weight: 600;
+                          cursor: pointer;
+                        "
+                        style-hover="background:var(--color-border)"
+                      >
+                        Keep all mine
+                      </button>
+                    </sc-if>
+                    <sc-if
+                      value="{{ imp.hasSkipKind }}"
+                      hint-placeholder-val="{{ false }}"
+                    >
+                      <button
+                        onClick="{{ imp.onSkipKind }}"
+                        style="
+                          height: 34px;
                           padding: 0 14px;
                           background: transparent;
                           border: none;
@@ -820,162 +843,61 @@
                         "
                         style-hover="color:var(--color-text-dim)"
                       >
-                        Skip
+                        Skip all
                       </button>
-                    </div>
-
-                    <!-- differs: the shared mol.FieldDiff as Yours | Spreadsheet, the sheet chosen.
-                         Keep all mine is the row's Dismiss. -->
-                    <sc-if
-                      value="{{ p.isDiffers }}"
-                      hint-placeholder-val="{{ false }}"
-                    >
-                      <div style="padding-left: 24px">
-                        <dc-import
-                          name="mol.FieldDiff"
-                          rows="{{ p.diffRows }}"
-                          theirs-label="Spreadsheet"
-                          on-apply="{{ p.onApply }}"
-                          on-keep-all="{{ p.onKeepAll }}"
-                          hint-size="100%,260px"
-                        ></dc-import>
-                      </div>
-                    </sc-if>
-
-                    <!-- ambiguous: the Folder picker, one card per Candidate folder: its name,
-                         its path in mono and its video count; no poster, no % match. A press
-                         imports the row from that folder. -->
-                    <sc-if
-                      value="{{ p.isAmbiguous }}"
-                      hint-placeholder-val="{{ false }}"
-                    >
-                      <div
-                        role="group"
-                        aria-label="{{ p.pickerLabel }}"
-                        style="
-                          display: flex;
-                          gap: 12px;
-                          overflow-x: auto;
-                          padding: 16px 2px 4px 24px;
-                        "
-                      >
-                        <sc-for
-                          list="{{ p.candidates }}"
-                          as="c"
-                          hint-placeholder-count="2"
-                        >
-                          <button
-                            onClick="{{ c.onPick }}"
-                            style="
-                              flex: 0 0 auto;
-                              width: 220px;
-                              display: flex;
-                              gap: 10px;
-                              align-items: flex-start;
-                              text-align: left;
-                              padding: 12px;
-                              background: var(--color-surface-2);
-                              border: 1px solid var(--color-border-soft);
-                              border-radius: var(--radius-md);
-                              cursor: pointer;
-                            "
-                            style-hover="border-color:var(--color-accent-line);background:var(--color-surface-3)"
-                          >
-                            <span
-                              style="
-                                flex: 0 0 auto;
-                                width: 32px;
-                                height: 32px;
-                                border-radius: 8px;
-                                background: var(--color-accent-soft);
-                                color: var(--color-accent);
-                                display: grid;
-                                place-items: center;
-                              "
-                              ><svg
-                                width="16"
-                                height="16"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                              >
-                                <path
-                                  d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"
-                                  stroke="currentColor"
-                                  stroke-width="1.6"
-                                /></svg
-                            ></span>
-                            <span style="flex: 1; min-width: 0">
-                              <span
-                                style="
-                                  display: block;
-                                  font-family: var(--font-sans);
-                                  font-size: 13px;
-                                  font-weight: 600;
-                                  color: var(--color-text);
-                                  line-height: 1.3;
-                                "
-                                >{{ c.name }}</span
-                              >
-                              <span
-                                style="
-                                  display: block;
-                                  font-family: var(--font-mono);
-                                  font-size: 12px;
-                                  color: var(--color-text-faint);
-                                  margin-top: 3px;
-                                  overflow-wrap: anywhere;
-                                "
-                                >{{ c.path }}</span
-                              >
-                              <span
-                                style="
-                                  display: inline-block;
-                                  margin-top: 8px;
-                                  font-family: var(--font-sans);
-                                  font-size: 11px;
-                                  font-weight: 700;
-                                  letter-spacing: 0.3px;
-                                  padding: 3px 8px;
-                                  border-radius: var(--radius-pill);
-                                  color: var(--color-text-faint);
-                                  background: var(--color-surface-3);
-                                "
-                                >{{ c.videosLabel }}</span
-                              >
-                            </span>
-                          </button>
-                        </sc-for>
-                      </div>
-                    </sc-if>
-
-                    <!-- no-row: Import as "<guess>", the folder imported under the name a Folder
-                         scan would give it. Button secondary, sm. -->
-                    <sc-if
-                      value="{{ p.isNoRow }}"
-                      hint-placeholder-val="{{ false }}"
-                    >
-                      <div style="padding: 14px 0 0 24px">
-                        <button
-                          onClick="{{ p.onImportAs }}"
-                          style="
-                            height: 34px;
-                            padding: 0 14px;
-                            background: var(--color-surface-3);
-                            border: 1px solid var(--color-border);
-                            border-radius: 8px;
-                            color: var(--color-text);
-                            font-family: var(--font-sans);
-                            font-size: 14px;
-                            font-weight: 600;
-                            cursor: pointer;
-                          "
-                          style-hover="background:var(--color-border)"
-                        >
-                          {{ p.importAsLabel }}
-                        </button>
-                      </div>
                     </sc-if>
                   </div>
+                </div>
+              </sc-if>
+
+              <!-- Review groups: the Problems that share a title. A group of one is its bare
+                   Problem row, exactly as before; two or more are one mol.Accordion — the title,
+                   each kind's dot, the count, Skip all among its actions — closed until opened.
+                   Groups holding a hard kind come first, in the run's order; groups of soft kinds
+                   only (missing-meta, differs) after them. A group whose last row settles goes. -->
+              <div style="display: flex; flex-direction: column; gap: 10px">
+                <sc-for
+                  list="{{ imp.groups }}"
+                  as="g"
+                  hint-placeholder-count="4"
+                >
+                  <sc-if
+                    value="{{ g.single }}"
+                    hint-placeholder-val="{{ true }}"
+                  >
+                    <dc-import
+                      name="mol.ProblemRow"
+                      problem="{{ g.problem }}"
+                      hint-size="100%,76px"
+                    ></dc-import>
+                  </sc-if>
+                  <sc-if
+                    value="{{ g.grouped }}"
+                    hint-placeholder-val="{{ false }}"
+                  >
+                    <dc-import
+                      name="mol.Accordion"
+                      label="{{ g.title }}"
+                      count="{{ g.count }}"
+                      expanded="{{ g.expanded }}"
+                      on-toggle="{{ g.onToggle }}"
+                      marks="{{ g.marks }}"
+                      actions="{{ g.actions }}"
+                      hint-size="100%,58px"
+                    >
+                      <sc-for
+                        list="{{ g.problems }}"
+                        as="gp"
+                        hint-placeholder-count="2"
+                      >
+                        <dc-import
+                          name="mol.ProblemRow"
+                          problem="{{ gp }}"
+                          hint-size="100%,76px"
+                        ></dc-import>
+                      </sc-for>
+                    </dc-import>
+                  </sc-if>
                 </sc-for>
               </div>
             </sc-if>

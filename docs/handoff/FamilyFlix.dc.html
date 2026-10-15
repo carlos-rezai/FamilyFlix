@@ -279,10 +279,10 @@
           genreView:null, genreSearch:'', detailReturn:'browse',
           playing:true, currentTime:0, subsOn:true, muted:false, volume:0.8, controlsVisible:true, playNotice:null,
           addMode:'folder', folderPath:'', scanned:false,
-          fTitle:'', fYear:'', fDirector:'', fCast:'', fDescription:'', fGenres:[], fVideo:'', fPoster:'', fSubs:[], fKind:'movie', fEpisodes:[], subLangOpen:null,
+          fTitle:'', fYear:'', fDirector:'', fCast:'', fDescription:'', fGenres:[], fVideo:'', fPoster:'', fSubs:[], fKind:'movie', fEpisodes:[], fSeasonPosters:{}, subLangOpen:null,
           addContext:null, resolveId:null,
           libraryFolders:[{id:'f1',path:'E:\\Movies',titleCount:214,reachable:true,linkedCount:12},{id:'f2',path:'F:\\Kids',titleCount:38,reachable:false,linkedCount:0}], folderTyped:'', folderRefusal:null, folderRemoveRefusal:null, folderBridge:true, impSource:'sheet', impMode:'link',
-          impStep:'setup', impSheet:'', impFoldersRefusal:null, impProgress:0, impMatched:0, impProblems:[],
+          impStep:'setup', impSheet:'', impFoldersRefusal:null, impProgress:0, impMatched:0, impProblems:[], impKind:'all', impOpen:{},
           impPhase:'scan', impFound:0, impTotal:0, impDone:0, impCurrent:'', impLog:[], impStartTime:null,
           exportOpen:false, exportFormat:'csv', exportDone:false, resetOpen:false, resetting:false, resetRefusal:null,
           seriesMenuOpen:false, seriesDeleteOpen:false, seriesDeleting:false, enSingleKind:'movie', fFound:[], fFoundPick:0,
@@ -302,7 +302,7 @@
             's2-1-1':{watched:true},'s2-1-2':{watched:true},'s3-1-1':{watched:false,progress:22}},
           tmdbKey:'', tmdbConnected:false, tmdbTesting:false, online:true, lastSync:null, enrichedCount:8,
           enStep:'setup', enScope:'missing', enFieldsOff:[], enWriteSheet:true, enWritePosters:true,
-          enDone:0, enTotal:0, enCurrent:'', enLog:[], enStartTime:null, enMatched:0, enPending:[], enReturn:'settings', enSingleTitle:null,
+          enDone:0, enTotal:0, enCurrent:'', enLog:[], enStartTime:null, enMatched:0, enPending:[], enReturn:'settings', enSingleTitle:null, enKind:'all', enSeriesId:null, enSeasonPicks:{},
           impEnrich:false,
           snackbars:[], updateAvailable:true, updateVersion:'1.1.0', currentVersion:'1.0.0', updating:false, checking:false, lastChecked:null,
         };
@@ -506,8 +506,8 @@
             filename: i%3===2 ? stem+'.S'+String(e.season).padStart(2,'0')+'E'+String(e.number).padStart(2,'0')+'.mkv' : 'Season '+e.season+'/'+stem+'.'+e.season+'x'+String(e.number).padStart(2,'0')+'.mkv',
             season:String(e.season),number:String(e.number),title:e.title,subs:i%2===0?[{filename:'English.srt',lang:'English'}]:[]}));
           this.setState({fTitle:x.title,fYear:x.ye?(x.ys===x.ye?String(x.ys):x.ys+'\u2013'+x.ye):(x.ys+'\u2013'),fDirector:x.creator,fCast:x.cast.join(', '),fDescription:x.syn,fGenres:[...x.genres],
-            fPoster:'poster.jpg',fVideo:'',fSubs:[],fKind:'series',fEpisodes:eps,fRating:x.rating,fRatingHover:null,screen:'add',seriesMenuOpen:false,addContext:'seriesEdit',resolveId:null}); }
-        enrichSeries(){ const x=this.seriesById(this.state.seriesId); if(!x) return; this.setState({screen:'enrich',enReturn:'series',enStep:'setup',enSingleTitle:x.title,enSingleKind:'series',enScope:'single',seriesMenuOpen:false}); }
+            fPoster:'poster.jpg',fVideo:'',fSubs:[],fKind:'series',fEpisodes:eps,fSeasonPosters:Object.fromEntries(Object.keys(x.seasonPosters||{}).map(n=>[n,'S'+String(n).padStart(2,'0')+'-poster.jpg'])),fRating:x.rating,fRatingHover:null,screen:'add',seriesMenuOpen:false,addContext:'seriesEdit',resolveId:null}); }
+        enrichSeries(){ const x=this.seriesById(this.state.seriesId); if(!x) return; this.setState({screen:'enrich',enReturn:'series',enStep:'setup',enSingleTitle:x.title,enSingleKind:'series',enSeriesId:x.id,enSeasonPicks:{},enScope:'single',seriesMenuOpen:false}); }
         playMovie(){ const m=this.cur(); if(!m)return; const resume=this.eff(m)==='progress'? m.runtime*60*m.prog/100 : 0; this.lastMove=Date.now(); const broken=this.playability[m.id]||null; clearTimeout(this._bufferTimer); const opensBuffering = !broken || broken==='could-not-start'; this.setState({screen:'player',playingEp:null,currentTime:resume,playing:false,controlsVisible:true,subsOn:true,playNotice:opensBuffering?'buffering':broken}); if(opensBuffering) this._bufferTimer=setTimeout(()=>this.setState(broken?{playNotice:broken}:{playNotice:null,playing:true}), 1100); }
 
         // ---- player ----
@@ -522,7 +522,7 @@
         onVolClick(e){ const r=e.currentTarget.getBoundingClientRect(); const p=Math.max(0,Math.min(1,(e.clientX-r.left)/r.width)); this.setState({volume:p,muted:p===0}); }
 
         // ---- add form ----
-        resetForm(){ this.setState({addMode:'folder',folderPath:'',scanned:false,fTitle:'',fYear:'',fDirector:'',fCast:'',fDescription:'',fGenres:[],fVideo:'',fPoster:'',fSubs:[],fKind:'movie',fEpisodes:[],fFound:[],fFoundPick:0,fRating:0,fRatingHover:null}); }
+        resetForm(){ this.setState({addMode:'folder',folderPath:'',scanned:false,fTitle:'',fYear:'',fDirector:'',fCast:'',fDescription:'',fGenres:[],fVideo:'',fPoster:'',fSubs:[],fKind:'movie',fEpisodes:[],fSeasonPosters:{},fFound:[],fFoundPick:0,fRating:0,fRatingHover:null}); }
         setFRating(pct){ this.setState({fRating:pct}); }
         hoverFRating(pct){ this.setState({fRatingHover:pct}); }
         clearFRatingHover(){ this.setState({fRatingHover:null}); }
@@ -536,6 +536,9 @@
         // ---- the Kind tabs (plain add only): one record, each kind's files held side by side ----
         setFKind(k){ this.setState({fKind:k}); }
         addEpisodeFiles(){ this.setState(s=>{ const n=s.fEpisodes.length; const picked=[1,2,3].map(i=>({filename:'Harbor.Lights.S01E0'+(n+i)+'.mkv',season:'1',number:String(n+i),title:'',subs:[]})); return {fEpisodes:[...s.fEpisodes,...picked], fTitle:s.fTitle||'Harbor Lights'}; }); }
+        // A season's poster from a file: picked as bytes, or taken away with ✕.
+        pickSeasonPoster(n){ this.setState(s=>({fSeasonPosters:{...s.fSeasonPosters,[n]:'season-'+n+'.jpg'}})); }
+        removeSeasonPoster(n){ this.setState(s=>{ const next={...s.fSeasonPosters}; delete next[n]; return {fSeasonPosters:next}; }); }
         removeEpisode(i){ this.setState(s=>({fEpisodes:s.fEpisodes.filter((_,j)=>j!==i)})); }
         setEpisode(i,patch){ this.setState(s=>({fEpisodes:s.fEpisodes.map((x,j)=>j===i?{...x,...patch}:x)})); }
         addEpisodeSub(i){ this.setState(s=>({fEpisodes:s.fEpisodes.map((x,j)=>j===i?{...x,subs:[...x.subs,{filename:x.filename.replace(/\.mkv$/,'.en.srt'),lang:'English'}]}:x)})); }
@@ -612,7 +615,7 @@
         // ---- tmdb enrichment ----
         enrichFieldDefs = ['Synopsis','Poster','Backdrop','Runtime','Year','Genres','Director','Cast','Original title','TMDB score'];
         goEnrich(from){ this.setState(s=>({screen:'enrich', enReturn:from||'settings', enStep:'setup', enSingleTitle:null, gearOpen:false, openDrop:null})); }
-        enrichOne(){ const m=this.cur(); if(!m) return; this.setState({screen:'enrich',enReturn:'detail',enStep:'setup',enSingleTitle:m.title,enScope:'single',editMenuOpen:false}); }
+        enrichOne(){ const m=this.cur(); if(!m) return; this.setState({screen:'enrich',enReturn:'detail',enStep:'setup',enSingleTitle:m.title,enSingleKind:'movie',enSeriesId:null,enScope:'single',editMenuOpen:false}); }
         backFromEnrich(){ const r=this.state.enReturn; this.setState({screen:r==='detail'?'detail':r==='series'?'series':r==='import'?'import':'settings', enStep:'setup', enSingleKind:'movie'}); }
         onTmdbKey(e){ const v=e.target.value; this.setState({tmdbKey:v, tmdbConnected:false}); }
         testTmdbKey(){ if(!this.state.tmdbKey.trim()){ this.pushSnack({variant:'warning',message:'Paste a key first.',duration:3500,dismissible:true}); return; }
@@ -640,6 +643,11 @@
         ]; }
         pickCandidate(rowId){ this.setState(s=>({enPending:s.enPending.filter(p=>p.id!==rowId), enMatched:s.enMatched+1, enrichedCount:s.enrichedCount+1})); this.pushSnack({variant:'success',message:'Match saved.',duration:3000,dismissible:true}); }
         skipEnrichRow(id){ this.setState(s=>({enPending:s.enPending.filter(p=>p.id!==id)})); }
+        // Skip all beside a chosen kind: every Decision it shows let go at once, no confirm.
+        skipEnrichRows(ids){ this.setState(s=>({enPending:s.enPending.filter(p=>!ids.includes(p.id))})); }
+        setEnKind(k){ this.setState({enKind:k}); }
+        // A Season choice press: that image becomes the season's poster, replacing the held one.
+        chooseSeasonPoster(n,i){ this.setState(s=>({enSeasonPicks:{...s.enSeasonPicks,[n]:i}})); }
         applyConflict(rowId){ this.setState(s=>({enPending:s.enPending.filter(p=>p.id!==rowId), enMatched:s.enMatched+1, enrichedCount:s.enrichedCount+1})); this.pushSnack({variant:'success',message:'Details updated.',duration:3000,dismissible:true}); }
         searchEnrich(rowId){ this.pushSnack({variant:'info',message:'Searching TMDB…',duration:2500,dismissible:true}); }
 
@@ -676,12 +684,21 @@
           // A film folder holding two videos: its Resolve draws the Found-file choice.
           {id:'p6',title:'Paper Moons',reason:'Two videos \u2014 pick the film.',kind:'no-video',
             videos:['E:\\Movies\\Paper Moons (2014)\\paper.moons.2014.1080p.mkv','E:\\Movies\\Paper Moons (2014)\\paper.moons.2014.extras.mkv']},
+          // A second Problem for The Night Ferry: the two are one Review group, a hard kind's, so it comes first.
+          {id:'p8',title:'The Night Ferry',reason:'Spreadsheet row is missing a genre.',kind:'missing-meta'},
+          // failed, folded per show: one row titled with the show, the count and the first error; its detail the episodes.
+          {id:'p9',title:'Lighthouse Keepers',reason:'3 episodes couldn\u2019t be copied: no space left on device.',kind:'failed',show:true,
+            videos:['the_lamp','low_tide','the_relief'].map((n,i)=>'E:\\Series\\Lighthouse Keepers\\Season 2\\S02E0'+(i+4)+'.'+n+'.mkv')},
+          // A soft-only group: Sundial's missing genre beside its differing year, drawn after every hard group.
+          {id:'p10',title:'Sundial',reason:'The spreadsheet has different values for fields you already filled in.',kind:'differs',
+            differences:[{field:'year',label:'Year',mine:'2004',sheet:'2005'}]},
+          {id:'p11',title:'Copper Leaves (2021)',reason:'Folder isn\u2019t in the spreadsheet.',kind:'no-row',guess:'Copper Leaves (2021)'},
         ]; }
         // The Series Resolve: one row per found video, as its path, numbered by the Numbering guess — the season off
         // the folder, the episode off the Episode word, else the next free number in name order. Every number editable.
         resolveShow(p){ this.setState({screen:'add',addContext:'seriesImport',resolveId:p.id,fKind:'series',fTitle:p.title,fYear:'',fDirector:'',fCast:'',fDescription:'',fGenres:[],fPoster:'',fVideo:'',fSubs:[],fRating:0,
           fEpisodes:p.videos.map((v,i)=>({filename:v,season:'1',number:String(i+1),title:'',subs:[]}))}); }
-        resolveProblem(p){ if(p.kind==='unplaced'){ this.resolveShow(p); return; }
+        resolveProblem(p){ if(p.kind==='unplaced'||(p.kind==='failed'&&p.show)){ this.resolveShow(p); return; }
           if(p.videos&&p.videos.length>1){ const names=p.videos.map(v=>v.split('\\').pop()); this.setState({screen:'add',addContext:'import',resolveId:p.id,fKind:'movie',fTitle:p.title,fYear:'2014',fGenres:[],fPoster:'',fSubs:[],fFound:names,fFoundPick:0,fVideo:names[0]}); return; }
           this.setState({fFound:[],fFoundPick:0}); this.setState({screen:'add',addContext:'import',resolveId:p.id,addMode:'folder',scanned:true,folderPath:'C:\\\\Movies\\\\'+p.title,fTitle:p.title,fYear:p.kind==='missing-meta'?'2018':'2020',fGenres:[],fVideo:p.kind==='missing-file'?'matched-video.mkv':'matched-video.mkv',fPoster:'matched-poster.jpg',fSubs:p.kind==='missing-file'?[]:[{filename:'matched.en.srt',lang:'English'}]}); }
         skipProblem(id){ this.setState(s=>({impProblems:s.impProblems.filter(p=>p.id!==id)})); }
@@ -694,6 +711,12 @@
             videos:[c.path+'\\harbor.lights.1080p.mkv',c.path+'\\harbor.lights.1080p.sample.mkv']})})); }
         // no-row: imported under its guessed name, exactly as a Folder scan would.
         importGuessed(id){ this.setState(s=>({impProblems:s.impProblems.filter(p=>p.id!==id),impMatched:s.impMatched+1})); }
+        // Bulk actions: one press over every id a Review group or the Kind filter covers, no confirm. An id
+        // settled meanwhile is passed over. The real screen redraws from the run the route echoes.
+        skipProblems(ids){ this.setState(s=>({impProblems:s.impProblems.filter(p=>!ids.includes(p.id))})); }
+        importAllGuessed(ids){ this.setState(s=>({impProblems:s.impProblems.filter(p=>!ids.includes(p.id)),impMatched:s.impMatched+ids.length})); }
+        setImpKind(k){ this.setState({impKind:k}); }
+        toggleImpGroup(title){ this.setState(s=>({impOpen:{...s.impOpen,[title]:!s.impOpen[title]}})); }
 
         _rgb(hex){ let h=String(hex||'').trim().replace('#',''); if(h.length===3) h=h.split('').map(c=>c+c).join('');
           const n=parseInt(h,16); return Number.isFinite(n)&&h.length===6 ? [(n>>16)&255,(n>>8)&255,n&255] : [217,122,78]; }
@@ -820,6 +843,32 @@
               pickerLabel:'Folders for '+p.title,
               candidates:(p.candidates||[]).map(c=>({name:c.name,path:c.path,videosLabel:c.videos===1?'1 video':c.videos+' videos',onPick:()=>this.pickCandidateFolder(p.id,c)})),
               importAsLabel:'Import as “'+(p.guess||p.title)+'”', onImportAs:()=>this.importGuessed(p.id),
+            }; });
+          // The Kind filter, in the glossary's order; a kind no row holds draws no pill, and a chosen kind
+          // that empties falls back to All.
+          const kindOrder=['no-folder','ambiguous','no-video','no-row','failed','unplaced','missing-meta','differs'];
+          const kindLabel={'no-folder':'No folder','ambiguous':'Ambiguous','no-video':'No video','no-row':'Not in sheet','failed':'Failed','unplaced':'Unplaced','missing-meta':'Missing details','differs':'Differs'};
+          const kindsHeld=kindOrder.filter(k=>s.impProblems.some(p=>p.kind===k));
+          const impKind=kindsHeld.includes(s.impKind)?s.impKind:'all';
+          const shown=s.impProblems.filter(p=>impKind==='all'||p.kind===impKind);
+          const shownIds=shown.map(p=>p.id);
+          const kindOptions=[{value:'all',label:'All '+s.impProblems.length},...kindsHeld.map(k=>({value:k,label:kindLabel[k]+' '+s.impProblems.filter(p=>p.kind===k).length}))];
+          // Review groups (reviewGroups): by title in the run's order, hard kinds' groups first, soft-only after.
+          const soft=k=>k==='missing-meta'||k==='differs';
+          const byTitle=[]; shown.forEach(p=>{ let g=byTitle.find(x=>x.title===p.title); if(!g){ g={title:p.title,items:[]}; byTitle.push(g); } g.items.push(p); });
+          const ordered=[...byTitle.filter(g=>g.items.some(p=>!soft(p.kind))),...byTitle.filter(g=>g.items.every(p=>soft(p.kind)))];
+          const rowOf=p=>problems.find(r=>r.id===p.id);
+          const dotOf=p=>React.createElement('span',{key:p.kind,'aria-hidden':'true',style:{width:'8px',height:'8px',borderRadius:'99px',background:rowOf(p).dotStyle.background}});
+          const groups=ordered.map(g=>{
+            const ids=g.items.map(p=>p.id);
+            const kinds=kindOrder.filter(k=>g.items.some(p=>p.kind===k));
+            return {title:g.title, count:g.items.length, single:g.items.length===1, grouped:g.items.length>1,
+              problem:rowOf(g.items[0]), problems:g.items.map(rowOf),
+              expanded:!!s.impOpen[g.title], onToggle:()=>this.toggleImpGroup(g.title),
+              marks:kinds.map(k=>dotOf(g.items.find(p=>p.kind===k))),
+              // Skip all on the header: the row's Skip, worded for the group.
+              actions:React.createElement('button',{onClick:()=>this.skipProblems(ids),'aria-label':'Skip all for '+g.title,
+                style:{height:'40px',padding:'0 14px',background:'transparent',border:'none',color:'var(--color-text-faint)',fontFamily:'var(--font-sans)',fontSize:'14px',cursor:'pointer'}},'Skip all'),
             }; });
 
           return {
@@ -978,6 +1027,10 @@
               rating:s.fRating, onRating:(p)=>this.setFRating(p),
               video:s.fVideo, poster:s.fPoster, pickVideo:()=>this.pickVideo(), pickPoster:()=>this.pickPoster(), removeVideo:()=>this.removeVideo(), removePoster:()=>this.removePoster(),
               addSub:()=>this.addSub(), subtitles:subRows, langOptions:this.langPool,
+              seasonPosters:[...new Set(s.fEpisodes.map(e=>parseInt(e.season,10)).filter(n=>Number.isInteger(n)&&n>0))].sort((a,b)=>a-b).map(n=>({
+                label:'S'+String(n).padStart(2,'0'), filename:s.fSeasonPosters[n]||'', chooseLabel:'Choose poster for season '+n,
+                pick:()=>this.pickSeasonPoster(n), remove:()=>this.removeSeasonPoster(n)})),
+              hasSeasonPosters:s.fEpisodes.some(e=>parseInt(e.season,10)>0),
               onSave:()=>{ if(canSave) this.saveMovie(); }, onBack:()=>this.backFromAdd(),
               saveLabel:(s.addContext==='import'||s.addContext==='seriesImport')?'Save & continue':(s.addContext==='edit'||s.addContext==='seriesEdit')?'Save changes':'Add to library',
               cancelLabel:(s.addContext==='import'||s.addContext==='seriesImport')?'Skip this one':'Cancel',
@@ -1022,6 +1075,10 @@
               enrichBoxStyle:{flex:'0 0 auto',display:'grid',placeItems:'center',width:'22px',height:'22px',marginTop:'1px',borderRadius:'6px',border:'2px solid '+(s.impEnrich?accent:'var(--color-text-faint)'),background:s.impEnrich?accent:'transparent',color:'#1a1109',fontSize:'14px',fontWeight:'700'},
               enrichHint:s.tmdbConnected?'Runs straight after the import, over everything it brings in. Needs the internet.':'Needs a TMDB key. Add one under Settings → Network first.',
               hasProblems:s.impProblems.length>0, allResolved:s.impProblems.length===0,
+              groups, hasKindFilter:kindsHeld.length>1, kindOptions, kind:impKind, onKind:(k)=>this.setImpKind(k),
+              hasSkipKind:impKind!=='all'&&impKind!=='differs', onSkipKind:()=>this.skipProblems(shownIds),
+              hasImportAllGuessed:impKind==='no-row', onImportAllGuessed:()=>this.importAllGuessed(shownIds),
+              hasKeepAllMine:impKind==='differs', onKeepAllMine:()=>this.skipProblems(shownIds),
               };
             })(),
             // series
@@ -1105,6 +1162,36 @@
                   diffRows:(p.fields||[]).map(f=>({key:f.key, label:f.label, mine:f.mine, theirs:f.tmdb})),
                 };
               });
+              // The Kind filter: ambiguous, missing, conflict, the glossary's order; All when the chosen kind empties.
+              const enKindOrder=['ambiguous','missing','conflict'];
+              const enKindLabel={ambiguous:'Ambiguous',missing:'Missing',conflict:'Conflict'};
+              const enKindsHeld=enKindOrder.filter(k=>s.enPending.some(p=>p.kind===k));
+              const enKind=enKindsHeld.includes(s.enKind)?s.enKind:'all';
+              const shownPending=pending.filter((r,i)=>enKind==='all'||s.enPending[i].kind===enKind);
+              const kindOptions=[{value:'all',label:'All '+s.enPending.length},...enKindsHeld.map(k=>({value:k,label:enKindLabel[k]+' '+s.enPending.filter(p=>p.kind===k).length}))];
+              // Season choices: a single-series run only. Each season's own posters first, then the series' —
+              // at most ten — the held poster (or the gradient) beside them.
+              const sx=s.enSingleKind==='series'?this.seriesById(s.enSeriesId):null;
+              const tints=[['#2a3540','#5f93a8'],['#3a2f24','#84603f'],['#243a36','#5e7a6a'],['#3b2a35','#8a5a74'],['#2f3324','#7d8a4f']];
+              const grad=(a,b)=>'linear-gradient(155deg, '+a+' 0%, '+b+' 100%)';
+              const seasonChoices=sx?sx.seasons.map((_,j)=>{
+                const n=j+1;
+                const own=[4,2,0][j%3];
+                const choices=[...Array.from({length:own},(_,k)=>({source:'season',bg:grad(...tints[(j+k)%tints.length])})),
+                  {source:'series',bg:grad(sx.g1,sx.g2)},{source:'series',bg:grad(sx.g2,sx.g1)}].slice(0,10);
+                const picked=s.enSeasonPicks[n];
+                const heldUrl=sx.seasonPosters&&sx.seasonPosters[n];
+                const heldBg=picked!=null?choices[picked].bg:heldUrl?('url("'+heldUrl+'") center/cover, '+grad(sx.g1,sx.g2)):grad(sx.g1,sx.g2);
+                const label='S'+String(n).padStart(2,'0');
+                return {label, pickerLabel:'Posters for '+label,
+                  heldCaption:(picked!=null||heldUrl)?'Current poster':'No poster yet',
+                  heldStyle:{position:'relative',width:'112px',aspectRatio:'2 / 3',borderRadius:'8px',overflow:'hidden',background:heldBg},
+                  choices:choices.map((c,i)=>({isSeries:c.source==='series', pressed:String(picked===i),
+                    name:(c.source==='series'?'Series poster ':'Poster ')+(i+1)+' for '+label,
+                    onPick:()=>this.chooseSeasonPoster(n,i),
+                    cardStyle:{flex:'0 0 auto',width:'132px',textAlign:'left',padding:'10px',background:'var(--color-surface-2)',border:'1px solid '+(picked===i?'var(--color-accent-line)':'var(--color-border-soft)'),borderRadius:'var(--radius-md)',cursor:'pointer'},
+                    posterStyle:{display:'block',width:'100%',height:'160px',borderRadius:'8px',background:c.bg}})),
+                }; }):[];
               const targets = ['your library', s.enWriteSheet?'the sheet in your collection root':null, s.enWritePosters?'a poster.jpg in each movie folder':null].filter(Boolean);
               return {
                 setup:s.enStep==='setup', running:s.enStep==='running', review:s.enStep==='review',
@@ -1131,6 +1218,9 @@
                 etaLabel: etaSec>0 ? ('About '+fmt(etaSec)+' left') : '',
                 log:s.enLog, matched:s.enMatched, pendingCount:s.enPending.length, pending,
                 hasPending:s.enPending.length>0, allResolved:s.enPending.length===0,
+                shownPending, hasKindFilter:enKindsHeld.length>1, kindOptions, kind:enKind, onKind:(k)=>this.setEnKind(k),
+                hasSkipKind:enKind!=='all', onSkipKind:()=>this.skipEnrichRows(s.enPending.filter(p=>p.kind===enKind).map(p=>p.id)),
+                groupHeadingStyle, seasons:seasonChoices, hasSeasons:seasonChoices.length>0,
                 writtenSummary:'Saved to '+targets.join(', ')+'.',
                 finishLabel:s.enReturn==='detail'?'Back to the movie':s.enReturn==='series'?'Back to the series':'Done',
                 onFinish:()=>{ if(s.enReturn==='browse'){ this.setState({enStep:'setup'}); this.goBrowse(); } else { this.backFromEnrich(); } }, onAgain:()=>this.setState({enStep:'setup'}),

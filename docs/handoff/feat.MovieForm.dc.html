@@ -451,6 +451,49 @@
                   hint-size="100%,42px"
                 ></dc-import>
 
+                <!-- Season posters: one slot per Season the episode rows hold, in season order, under
+                     the series poster — mol.FileField, labelled S01, S02… A held poster travels as its
+                     path, a picked one as bytes, and ✕ takes one away on save. An empty slot is the
+                     dashed choose button. Drawn once the rows hold a season. -->
+                <sc-if
+                  value="{{ form.hasSeasonPosters }}"
+                  hint-placeholder-val="{{ true }}"
+                >
+                  <div
+                    role="group"
+                    aria-labelledby="season-posters-label"
+                    style="display: flex; flex-direction: column; gap: 8px"
+                  >
+                    <div
+                      id="season-posters-label"
+                      style="
+                        padding-left: 82px;
+                        font-family: var(--font-sans);
+                        font-size: 13px;
+                        color: var(--color-text-faint);
+                      "
+                    >
+                      Season posters
+                    </div>
+                    <sc-for
+                      list="{{ form.seasonPosters }}"
+                      as="sp"
+                      hint-placeholder-count="3"
+                    >
+                      <dc-import
+                        name="mol.FileField"
+                        label="{{ sp.label }}"
+                        filename="{{ sp.filename }}"
+                        choose-label="{{ sp.chooseLabel }}"
+                        icon="poster"
+                        on-pick="{{ sp.pick }}"
+                        on-remove="{{ sp.remove }}"
+                        hint-size="100%,42px"
+                      ></dc-import>
+                    </sc-for>
+                  </div>
+                </sc-if>
+
                 <div style="display: flex; gap: 12px">
                   <div
                     style="

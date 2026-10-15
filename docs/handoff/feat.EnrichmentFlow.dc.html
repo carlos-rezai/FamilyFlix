@@ -810,6 +810,125 @@
                 </div>
               </div>
 
+              <!-- The Seasons section: a single-series Sync only, above the Decision rows and on
+                   All done too. One Season choice per Season on disk — S02 over its held Season
+                   poster, else the gradient — then up to ten TMDB posters beside it, the season's own
+                   and then the series' marked Series poster: CandidatePicker's face with no score. A
+                   press stores that image as the season's poster, replacing the held one. -->
+              <sc-if
+                value="{{ en.hasSeasons }}"
+                hint-placeholder-val="{{ false }}"
+              >
+                <div role="group" aria-labelledby="en-seasons-heading">
+                  <div
+                    id="en-seasons-heading"
+                    style="{{ en.groupHeadingStyle }}"
+                  >
+                    Seasons
+                  </div>
+                  <div style="display: flex; flex-direction: column; gap: 12px">
+                    <sc-for
+                      list="{{ en.seasons }}"
+                      as="sn"
+                      hint-placeholder-count="2"
+                    >
+                      <div
+                        style="
+                          background: var(--color-surface);
+                          border: 1px solid var(--color-border-soft);
+                          border-radius: var(--radius-md);
+                          padding: 18px;
+                        "
+                      >
+                        <div
+                          role="group"
+                          aria-label="{{ sn.pickerLabel }}"
+                          style="
+                            display: flex;
+                            gap: 12px;
+                            align-items: flex-start;
+                            overflow-x: auto;
+                            padding: 2px 2px 4px;
+                          "
+                        >
+                          <div style="flex: 0 0 auto; width: 112px">
+                            <div style="{{ sn.heldStyle }}">
+                              <span
+                                style="
+                                  position: absolute;
+                                  left: 10px;
+                                  bottom: 8px;
+                                  font-family: var(--font-serif);
+                                  font-size: 24px;
+                                  font-weight: 700;
+                                  color: #fff;
+                                  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.55);
+                                "
+                                >{{ sn.label }}</span
+                              >
+                            </div>
+                            <span
+                              style="
+                                display: block;
+                                font-family: var(--font-sans);
+                                font-size: 12px;
+                                color: var(--color-text-faint);
+                                margin-top: 8px;
+                              "
+                              >{{ sn.heldCaption }}</span
+                            >
+                          </div>
+                          <div
+                            aria-hidden="true"
+                            style="
+                              flex: 0 0 1px;
+                              align-self: stretch;
+                              background: var(--color-border-soft);
+                            "
+                          ></div>
+                          <sc-for
+                            list="{{ sn.choices }}"
+                            as="ch"
+                            hint-placeholder-count="4"
+                          >
+                            <button
+                              onClick="{{ ch.onPick }}"
+                              aria-label="{{ ch.name }}"
+                              aria-pressed="{{ ch.pressed }}"
+                              style="{{ ch.cardStyle }}"
+                              style-hover="border-color:var(--color-accent-line);background:var(--color-surface-3)"
+                              style-focus-visible="outline:none;box-shadow:0 0 0 3px var(--color-focus-ring)"
+                            >
+                              <span style="{{ ch.posterStyle }}"></span>
+                              <sc-if
+                                value="{{ ch.isSeries }}"
+                                hint-placeholder-val="{{ false }}"
+                              >
+                                <span
+                                  style="
+                                    display: inline-block;
+                                    margin-top: 8px;
+                                    font-family: var(--font-sans);
+                                    font-size: 11px;
+                                    font-weight: 700;
+                                    letter-spacing: 0.3px;
+                                    padding: 3px 8px;
+                                    border-radius: var(--radius-pill);
+                                    color: var(--color-text-faint);
+                                    background: var(--color-surface-3);
+                                  "
+                                  >Series poster</span
+                                >
+                              </sc-if>
+                            </button>
+                          </sc-for>
+                        </div>
+                      </div>
+                    </sc-for>
+                  </div>
+                </div>
+              </sc-if>
+
               <sc-if
                 value="{{ en.allResolved }}"
                 hint-placeholder-val="{{ false }}"
@@ -851,9 +970,58 @@
                 value="{{ en.hasPending }}"
                 hint-placeholder-val="{{ true }}"
               >
+                <!-- The Kind filter, as the Import review's: All N, then ambiguous, missing and
+                     conflict with their counts, drawn only with two kinds or more; Skip all beside a
+                     chosen kind. Filtered, never grouped: a Sync raises one Decision per title. -->
+                <sc-if
+                  value="{{ en.hasKindFilter }}"
+                  hint-placeholder-val="{{ true }}"
+                >
+                  <div
+                    style="
+                      display: flex;
+                      align-items: center;
+                      gap: 12px;
+                      flex-wrap: wrap;
+                      margin-bottom: 14px;
+                    "
+                  >
+                    <!-- The track scrolls sideways rather than wrapping when every kind is held. -->
+                    <div
+                      style="min-width: 0; max-width: 100%; overflow-x: auto"
+                    >
+                      <dc-import
+                        name="mol.PillTabs"
+                        label="Decision kinds"
+                        options="{{ en.kindOptions }}"
+                        value="{{ en.kind }}"
+                        on-change="{{ en.onKind }}"
+                        hint-size="380px,48px"
+                      ></dc-import>
+                    </div>
+                    <div
+                      style="flex: 1; display: flex; justify-content: flex-end"
+                    >
+                      <sc-if
+                        value="{{ en.hasSkipKind }}"
+                        hint-placeholder-val="{{ false }}"
+                      >
+                        <dc-import
+                          name="prim.Button"
+                          label="Skip all"
+                          variant="ghost"
+                          size="md"
+                          icon="none"
+                          on-click="{{ en.onSkipKind }}"
+                          hint-size="106px,50px"
+                        ></dc-import>
+                      </sc-if>
+                    </div>
+                  </div>
+                </sc-if>
                 <div style="display: flex; flex-direction: column; gap: 14px">
                   <sc-for
-                    list="{{ en.pending }}"
+                    list="{{ en.shownPending }}"
                     as="r"
                     hint-placeholder-count="3"
                   >
