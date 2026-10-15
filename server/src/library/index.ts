@@ -50,6 +50,7 @@ import { createSeriesBrowse } from './series/browse/browse';
 import {
   createSeriesWrite,
   type SeriesEdit,
+  type SeasonPosterEdit,
   type SeriesUpdate,
 } from './series/write/write';
 import { createSeriesCuration } from './series/curation/curation';
@@ -60,6 +61,7 @@ export type { FolderRemoval, StoredLibraryFolder } from './folders/folders';
 export type {
   EpisodeEdit,
   SeriesEdit,
+  SeasonPosterEdit,
   SeriesUpdate,
 } from './series/write/write';
 export type {
@@ -321,7 +323,11 @@ export interface LibraryStorage {
    * episodes. Given episodes, they are written in the same transaction, so a
    * refused one commits nothing.
    */
-  addSeries(input: NewSeries, episodes?: readonly NewEpisode[]): Series;
+  addSeries(
+    input: NewSeries,
+    episodes?: readonly NewEpisode[],
+    seasonPosters?: readonly SeasonPosterEdit[]
+  ): Series;
   /**
    * Insert one **Episode** under a held series, unwatched at zero. A second
    * episode under one series, season and number is refused by the schema.

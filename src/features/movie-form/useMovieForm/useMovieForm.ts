@@ -9,6 +9,7 @@ import type {
   FormKind,
   MovieFormFile,
   MovieFormValues,
+  SeasonPosterSlot,
 } from '@/types';
 import { seriesTabPath } from '@/utils';
 import { formJob, formLanding, KIND_PARAM } from '../formJob/formJob';
@@ -125,6 +126,15 @@ export interface UseMovieFormResult {
   pickPoster: (file: File) => void;
   /** Empty the poster slot again. */
   removePoster: () => void;
+  /**
+   * The series kind's _Season posters_: one slot per **Season** the episode
+   * rows hold, in season order — none outside a series add or edit.
+   */
+  seasonPosters: SeasonPosterSlot[];
+  /** Put artwork chosen off the disk into a season's poster slot. */
+  pickSeasonPoster: (season: number, file: File) => void;
+  /** Empty a season's poster slot; a held poster goes on save. */
+  removeSeasonPoster: (season: number) => void;
   /** Append a row for a track the maintainer chose off their own disk. */
   addSubtitle: (file: File) => void;
   /** Put the row holding `key` into another language. */
@@ -347,6 +357,15 @@ export function useMovieForm(): UseMovieFormResult {
   /** The film Resolve's found videos, for the **Found-file choice**. */
   const [foundVideos, setFoundVideos] = useState<MovieFormFile[]>([]);
 
+  /** What each season's poster slot holds, by season; absent is empty. */
+  const [seasonPosterFiles, setSeasonPosterFiles] = useState<
+    Readonly<Record<number, MovieFormFile | null>>
+  >({});
+  /** The seasons the series edit opened holding a Season poster. */
+  const [heldSeasons, setHeldSeasons] = useState<ReadonlySet<number>>(
+    () => new Set()
+  );
+
   // The URL, read once: which of the five jobs this screen is doing.
   const search = searchParams.toString();
   const job = useMemo(() => formJob(new URLSearchParams(search)), [search]);
@@ -402,6 +421,8 @@ export function useMovieForm(): UseMovieFormResult {
         holdEpisodes(record.episodes.rows, record.episodes.taken);
       }
       setFoundVideos(record.foundVideos);
+      setSeasonPosterFiles(record.seasonPosters);
+      setHeldSeasons(new Set(Object.keys(record.seasonPosters).map(Number)));
       setEditing(record.editing);
       setEditingSeries(record.editingSeries);
       setResolving(record.resolving);
@@ -492,6 +513,37 @@ export function useMovieForm(): UseMovieFormResult {
   const removePoster = useCallback(() => {
     setValues((current) => ({ ...current, poster: null }));
   }, []);
+
+  const pickSeasonPoster = useCallback((season: number, file: File) => {
+    setSeasonPosterFiles((current) => ({
+      ...current,
+      [season]: pickedFile(file),
+    }));
+  }, []);
+
+  const removeSeasonPoster = useCallback((season: number) => {
+    setSeasonPosterFiles((current) => ({ ...current, [season]: null }));
+  }, []);
+
+  // One slot per season the rows hold, in season order, appearing and going
+  // with the rows. A Series Resolve's save has no Season poster to send, so it
+  // draws none.
+  const seasonPosters = useMemo<SeasonPosterSlot[]>(() => {
+    if (resolving !== null) {
+      return [];
+    }
+    const seasons = new Set(
+      episodes
+        .filter((row) => /^\d+$/.test(row.season))
+        .map((row) => Number(row.season))
+    );
+    return [...seasons]
+      .sort((a, b) => a - b)
+      .map((season) => ({
+        season,
+        poster: seasonPosterFiles[season] ?? null,
+      }));
+  }, [episodes, resolving, seasonPosterFiles]);
 
   // The rows are held by a key of the form's own, handed out here and never
   // reused. Two files can share a name, a name can be picked again after the
@@ -614,9 +666,13 @@ export function useMovieForm(): UseMovieFormResult {
         case 'seriesEdit':
           // The series page is the entry the edit was opened from, so a step
           // lands there; the deep link reaches it through the Landing.
-          return updateSeries(standing.series, values, episodes).then(() =>
-            goBack()
-          );
+          return updateSeries(
+            standing.series,
+            values,
+            episodes,
+            seasonPosters,
+            heldSeasons
+          ).then(() => goBack());
         case 'edit':
           // A correction is only visible on the film's page — which is the
           // entry the form was opened from, so a *step* is what lands there.
@@ -628,7 +684,7 @@ export function useMovieForm(): UseMovieFormResult {
         case 'add':
           // Each kind's **Fresh home**, pushed: the shelf the title joined.
           return kind === 'series'
-            ? createSeries(values, episodes).then(() =>
+            ? createSeries(values, episodes, seasonPosters).then(() =>
                 navigate(SERIES_FRESH_HOME)
               )
             : createMovie(values).then(() => navigate(FRESH_HOME));
@@ -653,6 +709,8 @@ export function useMovieForm(): UseMovieFormResult {
     kind,
     values,
     episodes,
+    seasonPosters,
+    heldSeasons,
     navigate,
     goBack,
     editing,
@@ -692,6 +750,9 @@ export function useMovieForm(): UseMovieFormResult {
     chooseVideo,
     pickPoster,
     removePoster,
+    seasonPosters,
+    pickSeasonPoster,
+    removeSeasonPoster,
     addSubtitle,
     changeSubtitleLanguage,
     removeSubtitle,

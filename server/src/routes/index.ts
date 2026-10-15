@@ -10,7 +10,11 @@ import type {
 } from '../enrichment/createEnrichment/createEnrichment';
 import express, { type Request, type Response, type Router } from 'express';
 
-import type { LibraryStorage, SeriesUpdate } from '../library';
+import type {
+  LibraryStorage,
+  SeasonPosterEdit,
+  SeriesUpdate,
+} from '../library';
 import { clashSentence } from '../library/folders/folderOverlap/folderOverlap';
 import { yearSpan } from '../library/series/yearSpan/yearSpan';
 import {
@@ -55,8 +59,10 @@ import { optionalYear } from './optionalYear/optionalYear';
 import { readBody, type OnFilePart } from './readBody/readBody';
 import {
   collectEpisodeUploads,
+  readSeasonPosters,
   readSeriesEditFields,
   readSeriesFields,
+  seasonPosterName,
 } from './seriesFormBody/seriesFormBody';
 import {
   conflictChoicesBody,
@@ -863,6 +869,14 @@ export function createApiRouter(
       res.status(read.status).json({ error: read.error });
       return;
     }
+    // A new series holds no Season poster yet: only a picked one means
+    // anything here.
+    const seasonPosters = readSeasonPosters(fields, uploads);
+    if (!seasonPosters.ok) {
+      rollback();
+      res.status(seasonPosters.status).json({ error: seasonPosters.error });
+      return;
+    }
     const { title, year, endYear, creator, synopsis, rating, cast, genres } =
       read;
 
@@ -913,7 +927,12 @@ export function createApiRouter(
             ? {}
             : { mediaFolder: basename(uploads.folder) }),
         },
-        episodes
+        episodes,
+        seasonPosters.changes.flatMap((change) =>
+          change.kind === 'picked'
+            ? [{ season: change.season, posterPath: stored(change.file) }]
+            : []
+        )
       );
       res.status(201).json(series);
     } catch {
@@ -956,7 +975,30 @@ export function createApiRouter(
         );
         return reserved;
       };
-      const { onFile, uploads } = collectEpisodeUploads(media, seriesFolder);
+      // A picked Season poster never lands on a held one's name, so a
+      // rollback can never take the held file with it.
+      const heldNames = new Set(
+        (storage.getSeriesDetail(existing.id)?.seasons ?? []).flatMap(
+          (season) =>
+            season.posterPath === null ? [] : [basename(season.posterPath)]
+        )
+      );
+      const freshSeasonPosterName = (
+        season: number,
+        extension: string
+      ): string => {
+        const name = seasonPosterName(season, extension);
+        let candidate = name;
+        for (let n = 2; heldNames.has(candidate); n += 1) {
+          candidate = name.replace(/(\.[^.]*)?$/, `-${n}$1`);
+        }
+        return candidate;
+      };
+      const { onFile, uploads } = collectEpisodeUploads(
+        media,
+        seriesFolder,
+        freshSeasonPosterName
+      );
 
       /** Take back the bytes this request wrote — and nothing beside them. */
       const rollback = (): void => {
@@ -966,6 +1008,7 @@ export function createApiRouter(
         }
         const written = [
           uploads.poster,
+          ...(uploads.seasonPosters ?? []),
           ...uploads.episodes.flatMap((upload) =>
             upload === undefined ? [] : [upload.video, ...upload.subtitles]
           ),
@@ -994,6 +1037,12 @@ export function createApiRouter(
       if (!read.ok) {
         rollback();
         res.status(read.status).json({ error: read.error });
+        return;
+      }
+      const seasonPosters = readSeasonPosters(fields, uploads);
+      if (!seasonPosters.ok) {
+        rollback();
+        res.status(seasonPosters.status).json({ error: seasonPosters.error });
         return;
       }
       const heldIds = new Set(held.map((episode) => episode.id));
@@ -1044,6 +1093,15 @@ export function createApiRouter(
               subtitles: [...episode.heldTracks, ...episode.pickedTracks],
             };
           }),
+          // A held poster sent back as its path changes nothing.
+          seasonPosters: seasonPosters.changes.flatMap(
+            (change): SeasonPosterEdit[] =>
+              change.kind === 'picked'
+                ? [{ season: change.season, posterPath: change.file }]
+                : change.kind === 'remove'
+                  ? [{ season: change.season, posterPath: null }]
+                  : []
+          ),
         });
       } catch {
         rollback();

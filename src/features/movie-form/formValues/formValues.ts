@@ -6,6 +6,7 @@ import type {
   MovieFormSubtitle,
   MovieFormValues,
   SeriesDetail,
+  SeasonPosterSlot,
 } from '@/types';
 import { spellYearSpan, toRatingPercent, toRatingUnits } from '@/utils';
 
@@ -170,6 +171,23 @@ export function seriesFormValues({ series }: SeriesDetail): MovieFormValues {
     poster: storedFile(series.posterPath),
     subtitles: [],
   };
+}
+
+/**
+ * A held series' **Season posters** as the slots they fill, by season — a
+ * season with none is absent.
+ */
+export function heldSeasonPosters({
+  seasons,
+}: SeriesDetail): Record<number, MovieFormFile> {
+  const posters: Record<number, MovieFormFile> = {};
+  for (const season of seasons) {
+    const poster = storedFile(season.posterPath ?? null);
+    if (poster !== null) {
+      posters[season.number] = poster;
+    }
+  }
+  return posters;
 }
 
 /**
@@ -379,10 +397,17 @@ export function movieFormData(values: MovieFormValues): FormData {
  * `episodeSubtitle` parts. The order is load-bearing: the route pairs the k-th
  * video with the k-th `episode` field and names the Series folder off a title
  * and year it has already read.
+ *
+ * Then each **Season poster** slot as a `seasonPoster` field: a held poster as
+ * its `path`, a picked one followed by its `seasonPosterFile` part, and a held
+ * one taken away — a season in `held` whose slot is empty — as neither. An
+ * empty slot that never held one sends nothing.
  */
 export function seriesFormData(
   values: MovieFormValues,
-  episodes: readonly EpisodeFormRow[]
+  episodes: readonly EpisodeFormRow[],
+  seasonPosters: readonly SeasonPosterSlot[] = [],
+  held: ReadonlySet<number> = new Set()
 ): FormData {
   const body = new FormData();
 
@@ -444,6 +469,20 @@ export function seriesFormData(
       if (subtitle.file.kind === 'picked') {
         body.append('episodeSubtitle', subtitle.file.file);
       }
+    }
+  }
+
+  for (const { season, poster } of seasonPosters) {
+    if (poster?.kind === 'picked') {
+      body.append('seasonPoster', JSON.stringify({ season }));
+      body.append('seasonPosterFile', poster.file);
+    } else if (poster !== null) {
+      body.append(
+        'seasonPoster',
+        JSON.stringify({ season, path: poster.path })
+      );
+    } else if (held.has(season)) {
+      body.append('seasonPoster', JSON.stringify({ season }));
     }
   }
 

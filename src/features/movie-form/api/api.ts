@@ -5,6 +5,7 @@ import type {
   ImportProblemDetail,
   Movie,
   MovieFormValues,
+  SeasonPosterSlot,
   Series,
 } from '@/types';
 
@@ -97,11 +98,12 @@ export function createMovie(values: MovieFormValues): Promise<Movie> {
  */
 export async function createSeries(
   values: MovieFormValues,
-  episodes: readonly EpisodeFormRow[]
+  episodes: readonly EpisodeFormRow[],
+  seasonPosters: readonly SeasonPosterSlot[] = []
 ): Promise<Series> {
   const response = await fetch(SERIES_ENDPOINT, {
     method: 'POST',
-    body: seriesFormData(values, episodes),
+    body: seriesFormData(values, episodes, seasonPosters),
   });
 
   if (!response.ok) {
@@ -139,17 +141,21 @@ export function updateMovie(
 
 /**
  * The **Series edit job**'s save, `PATCH /api/series/:id`: the add's body, a
- * held row naming its episode and a held file travelling as its path.
+ * held row naming its episode and a held file travelling as its path — a
+ * held **Season poster** too, and one taken away (a season in `held` whose
+ * slot is empty) as a bare `seasonPoster`.
  */
 export async function updateSeries(
   id: string,
   values: MovieFormValues,
-  episodes: readonly EpisodeFormRow[]
+  episodes: readonly EpisodeFormRow[],
+  seasonPosters: readonly SeasonPosterSlot[] = [],
+  held: ReadonlySet<number> = new Set()
 ): Promise<Series> {
   const endpoint = `${SERIES_ENDPOINT}/${encodeURIComponent(id)}`;
   const response = await fetch(endpoint, {
     method: 'PATCH',
-    body: seriesFormData(values, episodes),
+    body: seriesFormData(values, episodes, seasonPosters, held),
   });
 
   if (!response.ok) {

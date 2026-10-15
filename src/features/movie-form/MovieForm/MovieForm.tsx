@@ -150,6 +150,9 @@ export function MovieForm() {
     chooseVideo,
     pickPoster,
     removePoster,
+    seasonPosters,
+    pickSeasonPoster,
+    removeSeasonPoster,
     addSubtitle,
     changeSubtitleLanguage,
     removeSubtitle,
@@ -311,6 +314,9 @@ export function MovieForm() {
             poster={values.poster}
             onPickPoster={pickPoster}
             onRemovePoster={removePoster}
+            seasonPosters={seasonPosters}
+            onPickSeasonPoster={pickSeasonPoster}
+            onRemoveSeasonPoster={removeSeasonPoster}
             episodes={episodes}
             refusals={episodeRefusals}
             onAddEpisodeFiles={addEpisodeFiles}

@@ -1,3 +1,5 @@
+import { extname } from 'node:path';
+
 import type { Media } from '../../media/createMedia/createMedia';
 import { spellEpisodeTag } from '../../media/episodeTag/episodeTag';
 import {
@@ -50,6 +52,11 @@ export interface EpisodeUploads {
   folder: string | null;
   poster?: string;
   episodes: (EpisodeUpload | undefined)[];
+  /**
+   * Each picked **Season poster** as it landed: the k-th entry belongs to the
+   * k-th `seasonPoster` field, and is absent for a field no part followed.
+   */
+  seasonPosters?: (string | undefined)[];
   /**
    * The first part this route would not take — a file `fileKinds` refuses, a
    * stray part, or a part out of the contract's order — as its sentence. The
@@ -127,6 +134,86 @@ export function readEpisodeField(text: string): EpisodeField | null {
   };
 }
 
+/**
+ * One `seasonPoster` field of a series body: the season, and — for a held
+ * poster sent back untouched — its `path`. A field with neither a path nor a
+ * following `seasonPosterFile` part takes that season's poster away.
+ */
+export interface SeasonPosterField {
+  season: number;
+  path?: string;
+}
+
+/** A `seasonPoster` field's JSON, or `null` for one that is not the contract's. */
+export function readSeasonPosterField(text: string): SeasonPosterField | null {
+  let value: unknown;
+  try {
+    value = JSON.parse(text);
+  } catch {
+    return null;
+  }
+  if (typeof value !== 'object' || value === null) {
+    return null;
+  }
+  const { season, path } = value as Record<string, unknown>;
+  if (typeof season !== 'number' || !Number.isInteger(season) || season < 0) {
+    return null;
+  }
+  if (path !== undefined && (typeof path !== 'string' || path === '')) {
+    return null;
+  }
+  return path === undefined ? { season } : { season, path };
+}
+
+/** What a series body asks of one season's poster, read whole. */
+export type SeasonPosterChange =
+  | { season: number; kind: 'keep' }
+  | { season: number; kind: 'picked'; file: string }
+  | { season: number; kind: 'remove' };
+
+/**
+ * The `seasonPoster` fields of a body, paired with the files that landed for
+ * them — a refusal for a field that is not the contract's or a season twice.
+ */
+export function readSeasonPosters(
+  fields: Record<string, string[]>,
+  uploads: EpisodeUploads
+): { ok: true; changes: SeasonPosterChange[] } | ({ ok: false } & Refusal) {
+  const changes: SeasonPosterChange[] = [];
+  const seen = new Set<number>();
+  for (const [index, text] of (fields.seasonPoster ?? []).entries()) {
+    const field = readSeasonPosterField(text);
+    if (field === null) {
+      return {
+        ok: false,
+        status: 400,
+        error: `Invalid season poster field: ${JSON.stringify(text)}`,
+      };
+    }
+    if (seen.has(field.season)) {
+      return {
+        ok: false,
+        status: 400,
+        error: `Season poster sent twice: season ${field.season}`,
+      };
+    }
+    seen.add(field.season);
+    const file = uploads.seasonPosters?.[index];
+    changes.push(
+      file !== undefined
+        ? { season: field.season, kind: 'picked', file }
+        : field.path !== undefined
+          ? { season: field.season, kind: 'keep' }
+          : { season: field.season, kind: 'remove' }
+    );
+  }
+  return { ok: true, changes };
+}
+
+/** The name a picked Season poster is stored under: `S02-poster.jpg`. */
+export const seasonPosterName = (season: number, extension: string): string =>
+  `${spellEpisodeTag(season)}-poster${extension}`;
+
 /** A held track as an edit sends it: `{ path, language }`, both strings. */
 function isStoredTrack(track: unknown): track is NewSubtitle {
   if (typeof track !== 'object' || track === null) {
@@ -147,11 +234,21 @@ function isStoredTrack(track: unknown): track is NewSubtitle {
  */
 export function collectEpisodeUploads(
   media: Media,
-  resolveFolder: ResolveFolder
+  resolveFolder: ResolveFolder,
+  nameSeasonPoster: (
+    season: number,
+    extension: string
+  ) => string = seasonPosterName
 ): { onFile: OnFilePart; uploads: EpisodeUploads } {
-  const uploads: EpisodeUploads = { folder: null, episodes: [] };
+  const uploads: EpisodeUploads = {
+    folder: null,
+    episodes: [],
+    seasonPosters: [],
+  };
   /** The episode fields a video part has already arrived for. */
   const videoArrived = new Set<number>();
+  /** The `seasonPoster` fields a file part has already arrived for. */
+  const seasonPosterArrived = new Set<number>();
 
   const onFile: OnFilePart = async (name, filename, part, before) => {
     const refuse = (sentence: string): void => {
@@ -167,6 +264,32 @@ export function collectEpisodeUploads(
     const episodeFields = before.episode ?? [];
 
     let target: { season: number; slot: (path: string) => void } | null = null;
+    if (name === 'seasonPosterFile') {
+      if (!isImageFilename(filename)) {
+        refuse(`Not a season poster image: ${JSON.stringify(filename)}`);
+        return;
+      }
+      const posterFields = before.seasonPoster ?? [];
+      const index = posterFields.length - 1;
+      if (index < 0 || seasonPosterArrived.has(index)) {
+        refuse('Each season poster must follow its seasonPoster field');
+        return;
+      }
+      const field = readSeasonPosterField(posterFields[index]);
+      if (field === null || field.path !== undefined) {
+        refuse('Invalid season poster field');
+        return;
+      }
+      seasonPosterArrived.add(index);
+      uploads.folder ??= resolveFolder(before);
+      const landed = (uploads.seasonPosters ??= []);
+      landed[index] = await media.storeUpload(
+        uploads.folder,
+        nameSeasonPoster(field.season, extname(filename).toLowerCase()),
+        part
+      );
+      return;
+    }
     if (name === 'poster') {
       if (!isImageFilename(filename)) {
         refuse(`Not a poster image: ${JSON.stringify(filename)}`);

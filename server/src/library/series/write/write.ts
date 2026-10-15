@@ -17,9 +17,14 @@ export interface SeriesWrite {
    * assembled model. An unknown genre throws and commits nothing. Given
    * episodes, they and their tracks are written in the same transaction, so a
    * duplicate episode commits nothing either; the importer's one-argument call
-   * writes the series alone.
+   * writes the series alone. Given **Season posters**, each is recorded in
+   * the same transaction.
    */
-  addSeries(input: NewSeries, episodes?: readonly NewEpisode[]): Series;
+  addSeries(
+    input: NewSeries,
+    episodes?: readonly NewEpisode[],
+    seasonPosters?: readonly SeasonPosterEdit[]
+  ): Series;
   /**
    * Insert one episode under a series the library holds, unwatched at zero,
    * returning the assembled model, its subtitle tracks written with it in one
@@ -58,6 +63,15 @@ export interface EpisodeEdit {
   subtitles?: NewSubtitle[];
 }
 
+/**
+ * One **Season poster** a series save sets: the path it now has, or `null` to
+ * take that season's poster away.
+ */
+export interface SeasonPosterEdit {
+  season: number;
+  posterPath: string | null;
+}
+
 /** The whole record a series edit describes — every held episode it keeps. */
 export interface SeriesEdit {
   title: string;
@@ -72,6 +86,8 @@ export interface SeriesEdit {
   /** `null` is the **Match unlink**; an omitted key keeps the match. */
   tmdbId?: null;
   episodes: EpisodeEdit[];
+  /** The seasons whose poster changes; a season left out keeps its own. */
+  seasonPosters?: SeasonPosterEdit[];
 }
 
 /** What a series edit answers: the series now, and the files to clean up. */
@@ -191,8 +207,46 @@ export function createSeriesWrite(
 
   const deleteSeriesRow = db.prepare('DELETE FROM series WHERE id = ?');
 
+  const upsertSeasonPoster = db.prepare(
+    `INSERT INTO season_posters (series_id, season_number, poster_path)
+     VALUES (?, ?, ?)
+     ON CONFLICT (series_id, season_number)
+     DO UPDATE SET poster_path = excluded.poster_path`
+  );
+  const deleteSeasonPoster = db.prepare(
+    'DELETE FROM season_posters WHERE series_id = ? AND season_number = ?'
+  );
+  const selectSeasonPosterPaths = db.prepare(
+    'SELECT poster_path FROM season_posters WHERE series_id = ?'
+  );
+
+  /** Set or take away each Season poster a save names. */
+  const writeSeasonPosters = (
+    seriesId: string,
+    seasonPosters: readonly SeasonPosterEdit[]
+  ): void => {
+    for (const { season, posterPath } of seasonPosters) {
+      if (posterPath === null) {
+        deleteSeasonPoster.run(seriesId, season);
+      } else {
+        upsertSeasonPoster.run(seriesId, season, posterPath);
+      }
+    }
+  };
+
+  /** Every Season poster's Stored path a series holds. */
+  const seasonPosterPaths = (seriesId: string): string[] =>
+    (selectSeasonPosterPaths.all(seriesId) as { poster_path: string }[]).map(
+      (row) => row.poster_path
+    );
+
   const insertSeriesWithEpisodes = db.transaction(
-    (id: string, input: NewSeries, episodes: readonly NewEpisode[]) => {
+    (
+      id: string,
+      input: NewSeries,
+      episodes: readonly NewEpisode[],
+      seasonPosters: readonly SeasonPosterEdit[]
+    ) => {
       const first = episodes[0];
       insertSeriesGraph(
         id,
@@ -202,6 +256,7 @@ export function createSeriesWrite(
       for (const episode of episodes) {
         insertEpisodeGraph(randomUUID(), id, episode);
       }
+      writeSeasonPosters(id, seasonPosters);
     }
   );
 
@@ -282,7 +337,7 @@ export function createSeriesWrite(
       }
       const held = reader.listEpisodes(id);
       const heldById = new Map(held.map((episode) => [episode.id, episode]));
-      const beforePaths = pathsOf(before, held);
+      const beforePaths = [...pathsOf(before, held), ...seasonPosterPaths(id)];
       const keptIds = checkEpisodes(heldById, edit.episodes);
 
       const now = new Date().toISOString();
@@ -375,8 +430,13 @@ export function createSeriesWrite(
         }
       }
 
+      writeSeasonPosters(id, edit.seasonPosters ?? []);
+
       const series = reader.getSeries(id) as Series;
-      const afterPaths = new Set(pathsOf(series, reader.listEpisodes(id)));
+      const afterPaths = new Set([
+        ...pathsOf(series, reader.listEpisodes(id)),
+        ...seasonPosterPaths(id),
+      ]);
       return {
         series,
         removedPaths: [...new Set(beforePaths)].filter(
@@ -389,9 +449,9 @@ export function createSeriesWrite(
   return {
     updateSeries: (id, edit) => updateSeriesGraph(id, edit),
 
-    addSeries: (input, episodes = []) => {
+    addSeries: (input, episodes = [], seasonPosters = []) => {
       const id = randomUUID();
-      insertSeriesWithEpisodes(id, input, episodes);
+      insertSeriesWithEpisodes(id, input, episodes, seasonPosters);
       return reader.getSeries(id) as Series;
     },
 

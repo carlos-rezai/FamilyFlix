@@ -142,5 +142,15 @@ export interface EpisodeFormRow {
   subtitles: MovieFormSubtitle[];
 }
 
+/**
+ * One slot of the series kind's _Season posters_ list: a **Season** the
+ * episode rows hold, and what is in its poster slot — a held **Season
+ * poster**, a picked file, or `null` while it is empty.
+ */
+export interface SeasonPosterSlot {
+  season: number;
+  poster: MovieFormFile | null;
+}
+
 /** The **Form kind**: what a plain add is adding. */
 export type FormKind = 'movie' | 'series';

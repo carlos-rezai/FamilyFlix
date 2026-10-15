@@ -11,6 +11,7 @@ import type { FormJob } from '../formJob/formJob';
 import {
   foundFile,
   heldEpisodeRows,
+  heldSeasonPosters,
   movieFormValues,
   otherCandidates,
   problemFormValues,
@@ -51,6 +52,8 @@ export interface FormRecord {
   resolving: (ResolvingProblem & { id: string }) | null;
   /** Whether the problem is an `unplaced` show the Series Resolve was asked for. */
   unplaced: boolean;
+  /** The series edit's held **Season posters**, by season. */
+  seasonPosters: Record<number, MovieFormFile>;
 }
 
 /** Nothing read: the form as an add opens it. */
@@ -62,6 +65,7 @@ const NOTHING: FormRecord = {
   editingSeries: null,
   resolving: null,
   unplaced: false,
+  seasonPosters: {},
 };
 
 /**
@@ -98,6 +102,7 @@ async function seriesEditRecord(series: string): Promise<FormRecord | null> {
         values: seriesFormValues(detail),
         episodes: { rows: heldEpisodeRows(detail), taken: [] },
         editingSeries: detail.series.id,
+        seasonPosters: heldSeasonPosters(detail),
       };
 }
 

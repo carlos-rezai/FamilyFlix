@@ -4,7 +4,9 @@ import {
   SUBTITLE_LANGUAGES,
   type EpisodeFormRow,
   type MovieFormFile,
+  type SeasonPosterSlot,
 } from '@/types';
+import { formatEpisodeTag } from '@/utils';
 
 import {
   CARD_LABEL,
@@ -21,11 +23,19 @@ import {
   EpisodeRows,
   Episodes,
   EpisodesLabel,
+  SeasonPosters,
+  SeasonPostersLabel,
 } from './SeriesFormFiles.styles';
 
 /** The episodes section's name, and what its picker says. */
 const EPISODES_LABEL = 'Episodes';
 const EPISODES_ADD = 'Add episode files';
+
+/** The _Season posters_ list's caption, and what an empty slot says. */
+const SEASON_POSTERS_LABEL = 'Season posters';
+const SEASON_POSTERS_LABEL_ID = 'season-posters-label';
+const seasonPosterChoose = (season: number): string =>
+  `Choose poster for season ${season}`;
 
 /** What a row's own subtitle picker says. */
 const SUBTITLE_ADD = 'Add subtitle';
@@ -37,6 +47,15 @@ export interface SeriesFormFilesProps {
   onPickPoster: (file: File) => void;
   /** Reports that the poster slot's ✕ was pressed. */
   onRemovePoster: () => void;
+  /**
+   * One slot per **Season** the episode rows hold, in the order drawn — none
+   * draws no list.
+   */
+  seasonPosters?: readonly SeasonPosterSlot[];
+  /** Reports the artwork picked into a season's slot. */
+  onPickSeasonPoster?: (season: number, file: File) => void;
+  /** Reports that a season's ✕ was pressed. */
+  onRemoveSeasonPoster?: (season: number) => void;
   /** The **Episode file rows**, in the order they are held. */
   episodes: readonly EpisodeFormRow[];
   /** Each row the **Save gate** refuses, by its key, with why. */
@@ -60,7 +79,9 @@ export interface SeriesFormFilesProps {
 /**
  * The Files card of the **Movie form** on the series kind —
  * `MovieFormFiles`' shape for a **Series**: the _Files_ caption, the Poster
- * slot, and the _Episodes_ label the **Episode file rows** sit beside. No
+ * slot, the _Season posters_ list under it — one slot per **Season** the rows
+ * hold, labelled `S01`, `S02`… — and the _Episodes_ label the **Episode file
+ * rows** sit beside. No
  * video slot — a series' videos are its episodes' — no subtitle list of its
  * own, and no backdrop slot.
  */
@@ -68,6 +89,9 @@ export function SeriesFormFiles({
   poster,
   onPickPoster,
   onRemovePoster,
+  seasonPosters = [],
+  onPickSeasonPoster,
+  onRemoveSeasonPoster,
   episodes,
   refusals,
   onAddEpisodeFiles,
@@ -91,6 +115,25 @@ export function SeriesFormFiles({
         onPick={onPickPoster}
         onRemove={onRemovePoster}
       />
+      {seasonPosters.length > 0 && (
+        <SeasonPosters role="group" aria-labelledby={SEASON_POSTERS_LABEL_ID}>
+          <SeasonPostersLabel id={SEASON_POSTERS_LABEL_ID}>
+            {SEASON_POSTERS_LABEL}
+          </SeasonPostersLabel>
+          {seasonPosters.map(({ season, poster: held }) => (
+            <FileField
+              key={season}
+              label={formatEpisodeTag({ season })}
+              chooseLabel={seasonPosterChoose(season)}
+              filename={held?.filename}
+              accept={POSTER_ACCEPT}
+              icon={<ImageIcon size={16} />}
+              onPick={(file) => onPickSeasonPoster?.(season, file)}
+              onRemove={() => onRemoveSeasonPoster?.(season)}
+            />
+          ))}
+        </SeasonPosters>
+      )}
       <Episodes>
         <EpisodesLabel>{EPISODES_LABEL}</EpisodesLabel>
         <EpisodeRows>
