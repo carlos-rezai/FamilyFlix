@@ -11,7 +11,11 @@
 import { describe, expect, it } from 'vitest';
 
 import { ENRICH_FIELDS, type StartEnrichment } from '@/types';
-import { conflictChoicesBody, startEnrichmentBody } from './enrichmentBody';
+import {
+  conflictChoicesBody,
+  decisionIdsBody,
+  startEnrichmentBody,
+} from './enrichmentBody';
 
 const LIBRARY: StartEnrichment = {
   scope: 'all',
@@ -158,5 +162,30 @@ describe('conflictChoicesBody', () => {
       ok: false,
       error: 'Choices map each field to a side',
     });
+  });
+});
+
+// 41 — Review at scale, Phase 6 (issue #362): _Skip all_'s body, the ids of
+// the Decisions to let go — read here, each refusal a sentence.
+describe('decisionIdsBody', () => {
+  it('reads a list of Decision ids, in order', () => {
+    expect(decisionIdsBody({ ids: ['d2', 'd1'] })).toEqual({
+      ok: true,
+      value: ['d2', 'd1'],
+    });
+  });
+
+  it.each([
+    ['no body', undefined],
+    ['no ids', {}],
+    ['an empty list', { ids: [] }],
+    ['a string, not a list', { ids: 'd1' }],
+    ['a list holding a number', { ids: ['d1', 2] }],
+  ])('refuses %s in a sentence', (_, body) => {
+    const read = decisionIdsBody(body);
+
+    expect(read.ok).toBe(false);
+    if (read.ok) return;
+    expect(read.error).toMatch(/^[A-Z].*\.$/);
   });
 });

@@ -7,6 +7,7 @@ import { theme } from '@/styles/theme';
 import { makeEnrichmentRun } from '@/test-support/makeEnrichmentRun/makeEnrichmentRun';
 import { LocationProbe, url } from '@/test-support/LocationProbe/LocationProbe';
 import { resolvedStyle } from '@/test-support/resolvedStyle/resolvedStyle';
+import { Button } from '@/primitives';
 import type { Decision, EnrichmentRun } from '@/types';
 import {
   EnrichmentReview,
@@ -45,6 +46,7 @@ function renderReview(props: Partial<EnrichmentReviewProps> = {}) {
     onFinish: vi.fn(),
     onAgain: vi.fn(),
     onSkip: vi.fn<(id: string) => void>(),
+    onSkipMany: vi.fn<EnrichmentReviewProps['onSkipMany']>(),
     onPick: vi.fn<(id: string, tmdbId: number) => void>(),
     onSearch: vi.fn<(id: string, query: string) => void>(),
     onApply: vi.fn<EnrichmentReviewProps['onApply']>(),
@@ -247,6 +249,7 @@ describe('EnrichmentReview — the Kind filter', () => {
             onFinish={() => undefined}
             onAgain={() => undefined}
             onSkip={() => undefined}
+            onSkipMany={() => undefined}
             onPick={() => undefined}
             onSearch={() => undefined}
             onApply={() => undefined}
@@ -370,5 +373,143 @@ describe('EnrichmentReview — the Kind filter', () => {
 
     const wrapper = (filter() as HTMLElement).parentElement as HTMLElement;
     expect(resolvedStyle(wrapper)['overflow-x']).toBe('auto');
+  });
+});
+
+/**
+ * 41 — Review at scale, Phase 6: "Skip all in the Sync review" (issue #362).
+ *
+ * From `feat.EnrichmentFlow.dc.html` as amended: _Skip all_ (`ghost`) at the
+ * end of the **Kind filter**'s row while a kind is chosen, for every kind —
+ * the Sync has no _Keep all mine_. A press is reported at once, no confirm,
+ * with the ids of the Decisions shown, in the run's order; the step takes
+ * nothing off itself — the run hook does, and the next `run` shows it.
+ */
+describe('EnrichmentReview — Skip all beside a chosen kind', () => {
+  const decision = (id: string, kind: Decision['kind']): Decision => {
+    const base = {
+      id,
+      title: `Title ${id}`,
+      reason: `Reason ${id}.`,
+      path: null,
+      query: `Title ${id}`,
+    };
+    if (kind === 'ambiguous') return { ...base, kind, candidates: [] };
+    if (kind === 'conflict')
+      return {
+        ...base,
+        kind,
+        fields: [{ field: 'year', label: 'Year', mine: '2019', tmdb: '2018' }],
+      };
+    return { ...base, kind };
+  };
+
+  const MIXED: Decision[] = [
+    decision('1', 'conflict'),
+    decision('2', 'missing'),
+    decision('3', 'ambiguous'),
+    decision('4', 'conflict'),
+    decision('5', 'missing'),
+  ];
+
+  const inReview = (decisions: Decision[]) =>
+    makeEnrichmentRun({ phase: 'review', enriched: 4, decisions });
+
+  const filter = () =>
+    screen.getByRole('group', { name: 'Decision kinds' }) as HTMLElement;
+  const pill = (name: string) => within(filter()).getByRole('button', { name });
+  /** The Kind filter's row: the track's wrapper's parent, where Skip all sits. */
+  const besideFilter = () =>
+    filter().parentElement?.parentElement as HTMLElement;
+  const skipAll = () =>
+    within(besideFilter()).queryByRole('button', { name: 'Skip all' });
+
+  function renderWith(
+    run: EnrichmentRun,
+    handlers: Partial<EnrichmentReviewProps> = {}
+  ) {
+    const view = (r: EnrichmentRun) => (
+      <ThemeProvider theme={theme}>
+        <EnrichmentReview
+          run={r}
+          finishLabel="Done"
+          onFinish={() => undefined}
+          onAgain={() => undefined}
+          onSkip={() => undefined}
+          onSkipMany={() => undefined}
+          onPick={() => undefined}
+          onSearch={() => undefined}
+          onApply={() => undefined}
+          {...handlers}
+        />
+      </ThemeProvider>
+    );
+    const rendered = render(view(run));
+    return { rerenderWith: (r: EnrichmentRun) => rendered.rerender(view(r)) };
+  }
+
+  it('draws no Skip all while All is chosen', () => {
+    renderWith(inReview(MIXED));
+
+    expect(skipAll()).toBeNull();
+  });
+
+  it.each(['Ambiguous 1', 'Missing 2', 'Conflict 2'])(
+    'draws Skip all beside the filter once %s is chosen',
+    (name) => {
+      renderWith(inReview(MIXED));
+
+      fireEvent.click(pill(name));
+
+      expect(skipAll()).not.toBeNull();
+      expect(
+        within(besideFilter()).queryByRole('button', { name: 'Keep all mine' })
+      ).toBeNull();
+    }
+  );
+
+  it('draws Skip all as the ghost Button at md', () => {
+    renderWith(inReview(MIXED));
+    fireEvent.click(pill('Missing 2'));
+    const drawn = skipAll() as HTMLElement;
+
+    const { getByRole } = render(
+      <ThemeProvider theme={theme}>
+        <Button label="Skip all" variant="ghost" size="md" onClick={() => {}} />
+      </ThemeProvider>,
+      { container: document.body.appendChild(document.createElement('div')) }
+    );
+
+    expect(drawn.className).toBe(
+      getByRole('button', { name: 'Skip all' }).className
+    );
+  });
+
+  it('reports every Decision of the chosen kind, in the run’s order, at once — no confirm', () => {
+    const onSkipMany = vi.fn<EnrichmentReviewProps['onSkipMany']>();
+    const onSkip = vi.fn();
+    renderWith(inReview(MIXED), { onSkipMany, onSkip });
+
+    fireEvent.click(pill('Conflict 2'));
+    fireEvent.click(skipAll() as HTMLElement);
+
+    expect(onSkipMany).toHaveBeenCalledTimes(1);
+    expect(onSkipMany).toHaveBeenCalledWith(['1', '4']);
+    expect(onSkip).not.toHaveBeenCalled();
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('takes nothing off itself; the kind’s pill goes once the run drops its Decisions, and the filter falls back to All', () => {
+    const { rerenderWith } = renderWith(inReview(MIXED));
+    fireEvent.click(pill('Missing 2'));
+    fireEvent.click(skipAll() as HTMLElement);
+    expect(screen.getByText('Reason 2.')).toBeDefined();
+
+    rerenderWith(inReview(MIXED.filter((d) => d.kind !== 'missing')));
+
+    expect(screen.queryByText('Reason 2.')).toBeNull();
+    expect(screen.queryByText('Reason 5.')).toBeNull();
+    expect(pill('All 3').getAttribute('aria-pressed')).toBe('true');
+    expect(skipAll()).toBeNull();
   });
 });
