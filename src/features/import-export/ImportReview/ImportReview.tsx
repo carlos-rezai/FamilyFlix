@@ -48,6 +48,11 @@ export interface ImportReviewProps {
    * it dismisses, in the run's order.
    */
   onSkipMany: (ids: string[]) => void;
+  /**
+   * _Import all as guessed_ was pressed beside a chosen `no-row`, with every
+   * `no-row` id in the run's order.
+   */
+  onImportManyAsGuessed: (ids: string[]) => void;
   /** Finish's words: where it goes, which the flow knows and this step does not. */
   finishLabel: string;
   onFinish: () => void;
@@ -71,7 +76,8 @@ export interface ImportReviewProps {
  * in the URL, and falls back to _All_ once its kind empties.
  *
  * A chosen kind draws its Bulk actions at the filter row's end — _Skip all_,
- * or _Keep all mine_ in its place for `differs` — and each group carries
+ * _Import all as guessed_ before it for `no-row`, or _Keep all mine_ in its
+ * place for `differs` — and each group carries
  * _Skip all_ among its Accordion actions; every one reports its ids at once,
  * no confirm.
  *
@@ -86,6 +92,7 @@ export function ImportReview({
   onPick,
   onImportAs,
   onSkipMany,
+  onImportManyAsGuessed,
   finishLabel,
   onFinish,
 }: ImportReviewProps) {
@@ -163,12 +170,22 @@ export function ImportReview({
                     Keep all mine
                   </BulkButton>
                 ) : filter.value !== 'all' ? (
-                  <SkipAllButton
-                    type="button"
-                    onClick={() => onSkipMany(kindIds)}
-                  >
-                    Skip all
-                  </SkipAllButton>
+                  <>
+                    {filter.value === 'no-row' && (
+                      <BulkButton
+                        type="button"
+                        onClick={() => onImportManyAsGuessed(kindIds)}
+                      >
+                        Import all as guessed
+                      </BulkButton>
+                    )}
+                    <SkipAllButton
+                      type="button"
+                      onClick={() => onSkipMany(kindIds)}
+                    >
+                      Skip all
+                    </SkipAllButton>
+                  </>
                 ) : null}
               </BulkActions>
             </FilterRow>

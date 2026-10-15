@@ -1351,16 +1351,15 @@ export function createImporter({
     };
 
     if (scan.videos.length !== 1) {
+      // Its new problem, under an id of its own, as a failed copy's is.
       return redraw(
-        {
-          id,
-          kind: 'no-video',
-          title: row.title,
-          reason:
-            scan.videos.length === 0
-              ? MATCH_REASON.noVideo
-              : MATCH_REASON.manyVideos,
-        },
+        problemOf(
+          'no-video',
+          row.title,
+          scan.videos.length === 0
+            ? MATCH_REASON.noVideo
+            : MATCH_REASON.manyVideos
+        ),
         { row, folder: scan, candidates: [] }
       );
     }

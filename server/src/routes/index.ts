@@ -2581,6 +2581,35 @@ export function createApiRouter(
     }
   );
 
+  // _Import all as guessed_ beside a chosen `no-row`: the ids read as the bulk
+  // dismiss reads them, then each asked of the importer's `importGuessed` in
+  // order under the run's **Import mode** — a row that redraws stays as its
+  // new problem, an id not held is passed over — and the whole snapshot
+  // answered, so the screen redraws from the echo. `404` with no run.
+  router.post(
+    '/import/current/problems/import-guessed',
+    async (req: Request, res: Response) => {
+      const read = dismissIdsBody(req.body);
+      if (!read.ok) {
+        res.status(400).json({ error: read.error });
+        return;
+      }
+      if (importer.current() === null) {
+        res.status(404).json({ error: 'No import is running' });
+        return;
+      }
+      try {
+        for (const id of read.value) {
+          await importer.importGuessed(id);
+        }
+      } catch {
+        res.status(500).json({ error: 'Could not import those folders' });
+        return;
+      }
+      res.json(importer.current());
+    }
+  );
+
   // The **Problem detail** _Resolve_ opens the form on: the problem, the
   // **Sheet row**, the matched **Source folder**, the candidates and the
   // folder's **Found files** as absolute paths under its **Library folder**. A

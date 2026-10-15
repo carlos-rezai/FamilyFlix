@@ -14,6 +14,7 @@ import {
   fetchCurrentImport,
   ImportBusyError,
   importGuessed,
+  importManyGuessed,
   pickCandidateFolder,
   startImport,
 } from '../api/api';
@@ -62,6 +63,13 @@ export interface ImportRunState {
    * could not be made; the run stays as it was.
    */
   skipMany: (ids: string[]) => Promise<void>;
+  /**
+   * _Import all as guessed_: import every `no-row` id at once under the run's
+   * **Import mode**, and hold the route's echo — the whole snapshot, a row
+   * that could not settle redrawn in it — as the run. Rejects when the post
+   * could not be made; the run stays as it was.
+   */
+  importManyAsGuessed: (ids: string[]) => Promise<void>;
   /**
    * _Apply choices_ on a `differs` **Problem**: post the choices, and take its
    * row off once the route has answered — on a `404` as on the `204`, as
@@ -175,6 +183,10 @@ export function useImportRun(): ImportRunState {
     setRun(await dismissProblems(ids));
   }, []);
 
+  const importManyAsGuessed = useCallback(async (ids: string[]) => {
+    setRun(await importManyGuessed(ids));
+  }, []);
+
   const apply = useCallback(
     async (id: string, choices: SheetChoices) => {
       await applySheetChoices(id, choices);
@@ -258,6 +270,7 @@ export function useImportRun(): ImportRunState {
     cancel,
     skip,
     skipMany,
+    importManyAsGuessed,
     apply,
     pick,
     importAsGuessed,

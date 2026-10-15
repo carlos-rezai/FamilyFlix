@@ -77,6 +77,7 @@ export function ImportFlow() {
     cancel,
     skip,
     skipMany,
+    importManyAsGuessed,
     apply,
     pick,
     importAsGuessed,
@@ -166,6 +167,16 @@ export function ImportFlow() {
     [skipMany]
   );
 
+  const onImportManyAsGuessed = useCallback(
+    (ids: string[]) => {
+      void importManyAsGuessed(ids).catch(() => {
+        // A bulk import that did not land leaves every row where it is, and
+        // the button is still there to press again.
+      });
+    },
+    [importManyAsGuessed]
+  );
+
   const onApply = useCallback(
     (id: string, choices: SheetChoices) => {
       void apply(id, choices).catch(() => {
@@ -225,6 +236,7 @@ export function ImportFlow() {
           onPick={onPick}
           onImportAs={onImportAs}
           onSkipMany={onSkipMany}
+          onImportManyAsGuessed={onImportManyAsGuessed}
           finishLabel={run.enrich ? FINISH_TO_SYNC : FINISH_TO_LIBRARY}
           onFinish={() => onFinish(run.enrich)}
         />
