@@ -1,4 +1,4 @@
-import { searchQuery } from '../../import-export/titleKey/titleKey';
+import { DASHES, searchQuery } from '../../import-export/titleKey/titleKey';
 
 /** One rung of the **Search ladder**: what a TMDB search is sent. */
 export interface SearchRung {
@@ -7,7 +7,7 @@ export interface SearchRung {
 }
 
 /** The first `:` or dash a subtitle follows, curly dashes included. */
-const SUBTITLE_MARK = /[:‐-―-]/;
+const SUBTITLE_MARK = new RegExp(`:|${DASHES}`);
 
 /**
  * The part of a title before its subtitle, as a **Search query** — or `null`
