@@ -9,7 +9,7 @@ import type { ProblemKind } from '@/types';
 export type DotTone = 'danger' | 'accent' | 'textFaint' | 'gold';
 
 /** The prototype's gold for a `differs` dot — the Sync's `conflict` gold. */
-export const GOLD = '#c9a86a';
+const GOLD = '#c9a86a';
 
 /**
  * The dot's colour by kind: `danger` for the film that is not there and cannot

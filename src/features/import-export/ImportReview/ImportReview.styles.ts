@@ -1,6 +1,6 @@
 import styled from 'styled-components';
 import { controlStates } from '@/styles/interactionStates/interactionStates';
-import { GOLD, type DotTone } from '../ProblemRow/ProblemRow.styles';
+import { Dot } from '../ProblemRow/ProblemRow.styles';
 
 /** The two tiles side by side, set the prototype's 28px over the list. */
 export const Tiles = styled.div`
@@ -56,14 +56,13 @@ export const Actions = styled.div`
   margin-top: 28px;
 `;
 
-/** A Review group's mark: its kind's 8px dot, in the Problem row's ink. */
-export const KindMark = styled.span<{ $tone: DotTone }>`
-  display: inline-block;
+/**
+ * A Review group's mark: the Problem row's dot at 8px, in its ink — a span,
+ * because it is drawn inside the Accordion's toggle button.
+ */
+export const KindMark = styled(Dot).attrs({ as: 'span' })`
   width: 8px;
   height: 8px;
-  border-radius: 99px;
-  background: ${({ $tone, theme }) =>
-    $tone === 'gold' ? GOLD : theme.colors[$tone]};
 `;
 
 /**
