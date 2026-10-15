@@ -178,3 +178,42 @@ describe('loadFormRecord — nothing to open on', () => {
     expect(record?.resolving).toBeNull();
   });
 });
+
+/**
+ * 42 — Review at scale, Slice 4 (issue #357): a show's one `failed` row, its
+ * detail listing the episodes whose copies threw. With the series held, its
+ * _Resolve_ is the **Series Resolve**: one row per failed episode, joining the
+ * held series.
+ */
+describe('loadFormRecord — a show’s failed row', () => {
+  const FAILED_SHOW: ImportProblemDetail = {
+    id: 'p6',
+    kind: 'failed',
+    title: 'The Night Ferry',
+    reason: "3 episodes couldn't be copied: no space left on device.",
+    seriesId: 's1',
+    row: { title: 'The Night Ferry', year: 2019, genres: [] },
+    folder: 'E:\Series\The Night Ferry',
+    files: {
+      videos: [
+        'E:\Series\The Night Ferry\Season 01\The.Night.Ferry.S01E03.mkv',
+        'E:\Series\The Night Ferry\Season 01\The.Night.Ferry.S01E04.mkv',
+        'E:\Series\The Night Ferry\Season 01\The.Night.Ferry.S01E05.mkv',
+      ],
+      subtitles: [],
+    },
+  };
+
+  it('opens the Series Resolve on one row per failed episode, joining the held series', async () => {
+    routes['/api/import/current/problems/p6'] = () => okResponse(FAILED_SHOW);
+    routes['/api/series/s1'] = () => okResponse(HELD);
+
+    const record = await load('?kind=series&problem=p6&series=s1');
+
+    expect(record?.episodes?.rows).toHaveLength(3);
+    expect(record?.episodes?.taken).toEqual(['1x1', '1x2']);
+    expect(record?.values?.title).toBe('The Night Ferry');
+    expect(record?.foundVideos).toEqual([]);
+    expect(record?.resolving).toMatchObject({ id: 'p6' });
+  });
+});

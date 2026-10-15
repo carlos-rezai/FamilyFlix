@@ -663,3 +663,35 @@ describe('ProblemRow — a no-row row', () => {
     }
   );
 });
+
+/**
+ * 42 — Review at scale, Slice 4 (issue #357): a show's failed episode copies
+ * are one `failed` row titled with the show, its reason the count and the
+ * first error. Its _Resolve_ opens the **Series Resolve** when the series is
+ * held — the row carries its `seriesId` — and the existing form when it is
+ * not; _Skip_ dismisses it.
+ */
+describe('ProblemRow — a show’s failed row', () => {
+  const failedShow: ImportProblem = {
+    id: 'p6',
+    kind: 'failed',
+    title: 'The Night Ferry',
+    reason: "3 episodes couldn't be copied: no space left on device.",
+  };
+
+  it('links Resolve to the Series Resolve, joining the held series', () => {
+    renderRow({ problem: { ...failedShow, seriesId: 'night-ferry' } });
+
+    const query = resolveQuery();
+    expect(query.get('kind')).toBe('series');
+    expect(query.get('problem')).toBe('p6');
+    expect(query.get('series')).toBe('night-ferry');
+    expect(query.has('movie')).toBe(false);
+  });
+
+  it('links Resolve to the existing form when no series is held', () => {
+    renderRow({ problem: failedShow });
+
+    expect(resolveLink().getAttribute('href')).toBe('/add?problem=p6');
+  });
+});
