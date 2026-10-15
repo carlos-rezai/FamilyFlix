@@ -154,14 +154,9 @@ export function searchQuery(title: string): string {
  * name share one key.
  */
 export function titleGuess(name: string): string {
-  let guess = dropReleaseNoise(name.replace(SPACE_SEPARATORS, ' '));
-
-  for (let stripped = guess.replace(TAIL, ''); stripped !== guess; ) {
-    guess = stripped;
-    stripped = guess.replace(TAIL, '');
-  }
-
-  return guess.replace(/\s+/g, ' ').trim();
+  return stripTails(dropReleaseNoise(name.replace(SPACE_SEPARATORS, ' ')))
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 /**
