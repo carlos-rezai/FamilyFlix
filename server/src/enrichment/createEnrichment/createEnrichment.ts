@@ -60,9 +60,9 @@ import type {
   TmdbMovieDetail,
   TmdbMovieResult,
   TmdbOutcome,
+  TmdbPoster,
   TmdbTvResult,
   TmdbSeason,
-  TmdbSeasonImage,
   TmdbTvDetail,
 } from '../tmdbClient/tmdbClient';
 import {
@@ -740,7 +740,7 @@ export function createEnrichment({
     // then the show's.
     const choosing =
       current.scope === 'single' && current.seriesId === series.id;
-    let showImages: TmdbSeasonImage[] = [];
+    let showImages: TmdbPoster[] = [];
     if (choosing) {
       const asked = await client.seriesImages(apiKey, detail.id, signal);
       if (signal.aborted) return written;
@@ -760,7 +760,7 @@ export function createEnrichment({
       if (signal.aborted) return written;
       if (theirs.kind !== 'ok') return { kind: 'stop', stop: theirs.kind };
       // No default poster: the season's images, in any language, instead.
-      let images: TmdbSeasonImage[] = [];
+      let images: TmdbPoster[] = [];
       const noDefault =
         wantsSeasonPoster(season, fields) && !theirs.value.poster_path;
       if (choosing || noDefault) {
@@ -829,7 +829,7 @@ export function createEnrichment({
 
   /** One TMDB poster offered to a Season, by its path and its source. */
   function posterChoice(
-    image: TmdbSeasonImage,
+    image: TmdbPoster,
     source: 'season' | 'series'
   ): SeasonChoice['choices'][number] {
     return {

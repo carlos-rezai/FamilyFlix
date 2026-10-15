@@ -90,8 +90,11 @@ export interface TmdbSeason {
   episodes: TmdbSeasonEpisode[];
 }
 
-/** One of a season's posters off `/3/tv/{id}/season/{n}/images`. */
-export interface TmdbSeasonImage {
+/**
+ * One poster off an `/images` call — a season's,
+ * `/3/tv/{id}/season/{n}/images`, or a show's own, `/3/tv/{id}/images`.
+ */
+export interface TmdbPoster {
   file_path: string;
   vote_average: number;
 }
@@ -150,7 +153,7 @@ export interface TmdbClient {
     id: number,
     seasonNumber: number,
     signal?: AbortSignal
-  ): Promise<TmdbOutcome<TmdbSeasonImage[]>>;
+  ): Promise<TmdbOutcome<TmdbPoster[]>>;
   /**
    * `/3/tv/{id}/images`: a show's own posters, highest vote first — asked as
    * `seasonImages` asks, in English or no language, then with no filter.
@@ -159,7 +162,7 @@ export interface TmdbClient {
     key: string,
     id: number,
     signal?: AbortSignal
-  ): Promise<TmdbOutcome<TmdbSeasonImage[]>>;
+  ): Promise<TmdbOutcome<TmdbPoster[]>>;
   /**
    * An image's bytes off `image.tmdb.org`, as a stream. Each of the three
    * takes the caller's signal last: aborting it aborts the request in flight,
@@ -344,7 +347,7 @@ export function createTmdbClient(
     id: number,
     seasonNumber: number,
     signal?: AbortSignal
-  ): Promise<TmdbOutcome<TmdbSeasonImage[]>> {
+  ): Promise<TmdbOutcome<TmdbPoster[]>> {
     return posters(`/3/tv/${id}/season/${seasonNumber}/images`, key, signal);
   }
 
@@ -352,26 +355,30 @@ export function createTmdbClient(
     key: string,
     id: number,
     signal?: AbortSignal
-  ): Promise<TmdbOutcome<TmdbSeasonImage[]>> {
+  ): Promise<TmdbOutcome<TmdbPoster[]>> {
     return posters(`/3/tv/${id}/images`, key, signal);
   }
 
+  /**
+   * The posters an `/images` path answers, highest vote first: asked in
+   * English or no language, then with no filter when that answers none.
+   */
   async function posters(
     path: string,
     key: string,
     signal?: AbortSignal
-  ): Promise<TmdbOutcome<TmdbSeasonImage[]>> {
+  ): Promise<TmdbOutcome<TmdbPoster[]>> {
     const ask = async (
       params: Record<string, string>
-    ): Promise<TmdbOutcome<TmdbSeasonImage[]>> => {
-      const outcome = await json<{ posters?: TmdbSeasonImage[] }>(
+    ): Promise<TmdbOutcome<TmdbPoster[]>> => {
+      const outcome = await json<{ posters?: TmdbPoster[] }>(
         await get(path, key, params, signal)
       );
       if (outcome.kind !== 'ok') return outcome;
-      const posters = (outcome.value.posters ?? [])
+      const found = (outcome.value.posters ?? [])
         .map(({ file_path, vote_average }) => ({ file_path, vote_average }))
         .sort((a, b) => b.vote_average - a.vote_average);
-      return { kind: 'ok', value: posters };
+      return { kind: 'ok', value: found };
     };
     const english = await ask({ include_image_language: 'en,null' });
     if (english.kind !== 'ok' || english.value.length > 0) return english;

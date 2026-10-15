@@ -8,8 +8,8 @@ import type {
   TmdbMovieDetail,
   TmdbMovieResult,
   TmdbOutcome,
+  TmdbPoster,
   TmdbSeason,
-  TmdbSeasonImage,
   TmdbTvDetail,
   TmdbTvResult,
 } from '../../enrichment/tmdbClient/tmdbClient';
@@ -50,13 +50,13 @@ export interface TmdbScript {
    * show's id, then the season number. A season not listed answers none.
    */
   seasonImages?: Readonly<
-    Record<number, Readonly<Record<number, readonly TmdbSeasonImage[]>>>
+    Record<number, Readonly<Record<number, readonly TmdbPoster[]>>>
   >;
   /**
    * `seriesImages`' answers by show id, ordered by vote as the client answers
    * them. A show not listed answers none.
    */
-  seriesImages?: Readonly<Record<number, readonly TmdbSeasonImage[]>>;
+  seriesImages?: Readonly<Record<number, readonly TmdbPoster[]>>;
   /** What `reachable` answers; `true` unless the suite says otherwise. */
   reachable?: boolean;
   /** What `authenticate` answers; `accepted` unless the suite says otherwise. */

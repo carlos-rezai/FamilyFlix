@@ -1,5 +1,5 @@
 import type { EnrichField, SeasonSummary } from '@/types';
-import type { TmdbSeason, TmdbSeasonImage } from '../tmdbClient/tmdbClient';
+import type { TmdbPoster, TmdbSeason } from '../tmdbClient/tmdbClient';
 
 /** What one season is to be given: the **Season poster** to fetch. */
 export interface SeasonPlan {
@@ -18,7 +18,7 @@ export function planSeason(
   season: SeasonSummary,
   theirs: TmdbSeason,
   fields: readonly EnrichField[],
-  images: readonly TmdbSeasonImage[] = []
+  images: readonly TmdbPoster[] = []
 ): SeasonPlan {
   if (!wantsSeasonPoster(season, fields)) return { poster: null };
   return { poster: theirs.poster_path || images[0]?.file_path || null };
