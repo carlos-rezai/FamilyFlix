@@ -12,6 +12,13 @@ export interface DisplayPreferenceApi {
    * value put back on a refusal. Never rejects.
    */
   setUltrawideMargins: (on: boolean) => Promise<void>;
+  /**
+   * The household's _Fill in ratings from TMDB_: `null` until the same read
+   * lands — which every caller reads as off — the stored value after.
+   */
+  tmdbRatings: boolean | null;
+  /** Turn it on or off, on `setUltrawideMargins`' bargain. Never rejects. */
+  setTmdbRatings: (on: boolean) => Promise<void>;
 }
 
 /**
@@ -22,7 +29,7 @@ export const DisplayPreferenceContext =
   createContext<DisplayPreferenceApi | null>(null);
 
 /**
- * `{ ultrawideMargins, setUltrawideMargins }` off the app-level
+ * `{ ultrawideMargins, setUltrawideMargins, tmdbRatings, setTmdbRatings }` off the app-level
  * `DisplayPreferenceProvider`. The provider is mounted in `App`, so a consumer
  * outside one is a wiring mistake, and a silent `null` would hide it: it
  * throws, naming itself.

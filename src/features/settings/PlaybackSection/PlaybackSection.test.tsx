@@ -85,6 +85,7 @@ function answerWith(
   settings: Settings | null = {
     subtitleLanguage: 'English',
     ultrawideMargins: false,
+    tmdbRatings: true,
   }
 ) {
   const read = held();
@@ -317,7 +318,11 @@ describe('PlaybackSection — Preferred language, the pill', () => {
   });
 
   it('shows the fetched value once the settings land', async () => {
-    answerWith({ subtitleLanguage: 'Spanish', ultrawideMargins: false });
+    answerWith({
+      subtitleLanguage: 'Spanish',
+      ultrawideMargins: false,
+      tmdbRatings: true,
+    });
 
     renderSection();
 
@@ -326,7 +331,11 @@ describe('PlaybackSection — Preferred language, the pill', () => {
   });
 
   it('is named Preferred language, with no caption on screen', async () => {
-    answerWith({ subtitleLanguage: 'Spanish', ultrawideMargins: false });
+    answerWith({
+      subtitleLanguage: 'Spanish',
+      ultrawideMargins: false,
+      tmdbRatings: true,
+    });
 
     renderSection();
 
@@ -370,7 +379,11 @@ describe('PlaybackSection — Preferred language, the pill', () => {
   });
 
   it('marks the fetched value as the current option', async () => {
-    answerWith({ subtitleLanguage: 'French', ultrawideMargins: false });
+    answerWith({
+      subtitleLanguage: 'French',
+      ultrawideMargins: false,
+      tmdbRatings: true,
+    });
     renderSection();
     const pill = await pillLanded('French');
 

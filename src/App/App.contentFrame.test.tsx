@@ -51,7 +51,11 @@ let settingsRead: Settings | 'held';
 let landRead: (settings: Settings) => void = () => undefined;
 
 beforeEach(() => {
-  settingsRead = { subtitleLanguage: 'English', ultrawideMargins: true };
+  settingsRead = {
+    subtitleLanguage: 'English',
+    ultrawideMargins: true,
+    tmdbRatings: true,
+  };
   fetchMock =
     vi.fn<
       (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>
@@ -161,7 +165,11 @@ describe('App — the Content frame on a framed route', () => {
     expect(framesAround(title)).toEqual([]);
 
     await act(async () => {
-      landRead({ subtitleLanguage: 'English', ultrawideMargins: true });
+      landRead({
+        subtitleLanguage: 'English',
+        ultrawideMargins: true,
+        tmdbRatings: true,
+      });
     });
 
     await waitFor(() => expect(framesAround(title)).toHaveLength(1));
@@ -274,7 +282,11 @@ describe('App — the player outside the frame', () => {
 
 describe('App — the Toggle on /settings', () => {
   it('re-frames the page at once when pressed, with no navigation', async () => {
-    settingsRead = { subtitleLanguage: 'English', ultrawideMargins: false };
+    settingsRead = {
+      subtitleLanguage: 'English',
+      ultrawideMargins: false,
+      tmdbRatings: true,
+    };
     const user = userEvent.setup();
     renderApp('/settings');
     const toggle = await screen.findByRole('switch', {

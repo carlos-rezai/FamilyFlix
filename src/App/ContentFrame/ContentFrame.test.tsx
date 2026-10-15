@@ -25,7 +25,12 @@ function renderFramed(ultrawideMargins: boolean | null) {
   return render(
     <ThemeProvider theme={theme}>
       <DisplayPreferenceContext.Provider
-        value={{ ultrawideMargins, setUltrawideMargins: async () => undefined }}
+        value={{
+          ultrawideMargins,
+          setUltrawideMargins: async () => undefined,
+          tmdbRatings: null,
+          setTmdbRatings: async () => undefined,
+        }}
       >
         <MemoryRouter initialEntries={['/']}>
           <Routes>

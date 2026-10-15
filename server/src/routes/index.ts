@@ -1827,6 +1827,19 @@ export function createApiRouter(
     res.json({ value });
   });
 
+  // _Fill in ratings from TMDB_ — the third preference, the same
+  // Single-signal write and the same refusal of anything but a boolean.
+  router.post('/settings/tmdb-ratings', (req: Request, res: Response) => {
+    const { value } = (req.body ?? {}) as { value?: unknown };
+    if (typeof value !== 'boolean') {
+      res.status(400).json({ error: 'Body must be { value: boolean }' });
+      return;
+    }
+
+    storage.setTmdbRatings(value);
+    res.json({ value });
+  });
+
   // The **Library folders** list. `reachable` is the disk's answer, read
   // afresh on every list rather than stored, so a drive unplugged since the
   // add reads false on the next visit and true again once it is back.

@@ -52,6 +52,7 @@ const WRITE_ROUTE = '/api/settings/subtitle-language';
 const ENGLISH: Settings = {
   subtitleLanguage: 'English',
   ultrawideMargins: false,
+  tmdbRatings: true,
 };
 
 /** A request that answers only when the test says so. */
@@ -128,7 +129,11 @@ describe('useSettings — the read', () => {
 
     await act(async () => {
       read.settle(
-        okResponse({ subtitleLanguage: 'Spanish', ultrawideMargins: false })
+        okResponse({
+          subtitleLanguage: 'Spanish',
+          ultrawideMargins: false,
+          tmdbRatings: true,
+        })
       );
     });
 
@@ -139,12 +144,17 @@ describe('useSettings — the read', () => {
 
   it('keeps the subtitle language alone, not the rest of the settings', async () => {
     fetchMock.mockResolvedValue(
-      okResponse({ subtitleLanguage: 'Spanish', ultrawideMargins: true })
+      okResponse({
+        subtitleLanguage: 'Spanish',
+        ultrawideMargins: true,
+        tmdbRatings: true,
+      })
     );
 
     const { result } = await renderLanded({
       subtitleLanguage: 'Spanish',
       ultrawideMargins: true,
+      tmdbRatings: true,
     });
 
     expect(result.current).not.toHaveProperty('settings');
@@ -235,10 +245,12 @@ describe('useSettings — chooseSubtitleLanguage', () => {
     const write = settledReadHeldWrite({
       subtitleLanguage: 'French',
       ultrawideMargins: false,
+      tmdbRatings: true,
     });
     const { result } = await renderLanded({
       subtitleLanguage: 'French',
       ultrawideMargins: false,
+      tmdbRatings: true,
     });
 
     await act(async () => {

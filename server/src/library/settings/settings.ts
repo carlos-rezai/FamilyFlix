@@ -1,6 +1,7 @@
 import type { SqliteDatabase } from '../../db';
 import {
   DEFAULT_SUBTITLE_LANGUAGE,
+  DEFAULT_TMDB_RATINGS,
   DEFAULT_ULTRAWIDE_MARGINS,
   type Settings,
 } from '@/types';
@@ -9,6 +10,8 @@ import {
 const SUBTITLE_LANGUAGE_KEY = 'subtitle-language';
 /** Whether the household keeps the Content frame on — `'1'` / `'0'`. */
 const ULTRAWIDE_MARGINS_KEY = 'ultrawide-margins';
+/** Whether an unrated title draws its TMDB score — `'1'` / `'0'`. */
+const TMDB_RATINGS_KEY = 'tmdb-ratings';
 /** The maintainer's TMDB key — beside the preferences, never one of them. */
 const TMDB_KEY = 'tmdb-api-key';
 /** When a Sync last reached review — the library's, not a preference. */
@@ -23,6 +26,7 @@ export interface SettingsRepository {
   settings(): Settings;
   setSubtitleLanguage(language: string): void;
   setUltrawideMargins(on: boolean): void;
+  setTmdbRatings(on: boolean): void;
   tmdbKey(): string | null;
   setTmdbKey(key: string): void;
   enrichmentLastSyncedAt(): string | null;
@@ -50,6 +54,7 @@ export function createSettings(db: SqliteDatabase): SettingsRepository {
       subtitleLanguage:
         valueOf(SUBTITLE_LANGUAGE_KEY) ?? DEFAULT_SUBTITLE_LANGUAGE,
       ultrawideMargins: ultrawideMargins(),
+      tmdbRatings: tmdbRatings(),
     };
   }
 
@@ -60,6 +65,15 @@ export function createSettings(db: SqliteDatabase): SettingsRepository {
 
   function setUltrawideMargins(on: boolean): void {
     upsertValue.run(ULTRAWIDE_MARGINS_KEY, on ? '1' : '0');
+  }
+
+  function tmdbRatings(): boolean {
+    const stored = valueOf(TMDB_RATINGS_KEY);
+    return stored === null ? DEFAULT_TMDB_RATINGS : stored === '1';
+  }
+
+  function setTmdbRatings(on: boolean): void {
+    upsertValue.run(TMDB_RATINGS_KEY, on ? '1' : '0');
   }
 
   function setSubtitleLanguage(language: string): void {
@@ -86,6 +100,7 @@ export function createSettings(db: SqliteDatabase): SettingsRepository {
     settings,
     setSubtitleLanguage,
     setUltrawideMargins,
+    setTmdbRatings,
     tmdbKey,
     setTmdbKey,
     enrichmentLastSyncedAt,

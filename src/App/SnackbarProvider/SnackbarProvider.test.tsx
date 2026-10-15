@@ -734,6 +734,8 @@ describe('SnackbarProvider — Ultrawide margins', () => {
     return (
       <DisplayPreferenceContext.Provider
         value={{
+          tmdbRatings: null,
+          setTmdbRatings: async () => undefined,
           ultrawideMargins,
           setUltrawideMargins: async () => undefined,
         }}

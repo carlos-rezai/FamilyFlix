@@ -62,6 +62,7 @@ const CUES: Cue[] = [
 const DEFAULT_SETTINGS: Settings = {
   subtitleLanguage: 'English',
   ultrawideMargins: false,
+  tmdbRatings: true,
 };
 
 let fetchMock: ReturnType<
@@ -283,7 +284,11 @@ describe('useSubtitles — the Preferred subtitle language', () => {
   it('opens on the Spanish row when the household prefers Spanish', async () => {
     settingsAnswer = () =>
       Promise.resolve(
-        okResponse({ subtitleLanguage: 'Spanish', ultrawideMargins: false })
+        okResponse({
+          subtitleLanguage: 'Spanish',
+          ultrawideMargins: false,
+          tmdbRatings: true,
+        })
       );
     const { result } = renderSubtitles([ENGLISH, SPANISH]);
 
@@ -297,7 +302,11 @@ describe('useSubtitles — the Preferred subtitle language', () => {
     // cue list of the chosen row, not the first one.
     settingsAnswer = () =>
       Promise.resolve(
-        okResponse({ subtitleLanguage: 'Spanish', ultrawideMargins: false })
+        okResponse({
+          subtitleLanguage: 'Spanish',
+          ultrawideMargins: false,
+          tmdbRatings: true,
+        })
       );
     const { result } = renderSubtitles([ENGLISH, SPANISH], 2);
     await waitFor(() => {
@@ -316,7 +325,11 @@ describe('useSubtitles — the Preferred subtitle language', () => {
     // A preference never hides subtitles that exist.
     settingsAnswer = () =>
       Promise.resolve(
-        okResponse({ subtitleLanguage: 'Spanish', ultrawideMargins: false })
+        okResponse({
+          subtitleLanguage: 'Spanish',
+          ultrawideMargins: false,
+          tmdbRatings: true,
+        })
       );
     const { result } = renderSubtitles([SWEDISH, ENGLISH]);
     await settled();
@@ -329,7 +342,11 @@ describe('useSubtitles — the Preferred subtitle language', () => {
     // A track the importer tagged in another case still counts.
     settingsAnswer = () =>
       Promise.resolve(
-        okResponse({ subtitleLanguage: 'Spanish', ultrawideMargins: false })
+        okResponse({
+          subtitleLanguage: 'Spanish',
+          ultrawideMargins: false,
+          tmdbRatings: true,
+        })
       );
     const taggedLower: Subtitle = { ...SPANISH, language: 'spanish' };
     const { result } = renderSubtitles([ENGLISH, taggedLower]);
@@ -378,7 +395,11 @@ describe('useSubtitles — the Preferred subtitle language', () => {
   it('does not re-choose the track when the preference changes mid-film', async () => {
     settingsAnswer = () =>
       Promise.resolve(
-        okResponse({ subtitleLanguage: 'Spanish', ultrawideMargins: false })
+        okResponse({
+          subtitleLanguage: 'Spanish',
+          ultrawideMargins: false,
+          tmdbRatings: true,
+        })
       );
     const { result, rerender, unmount } = renderSubtitles(
       [ENGLISH, SWEDISH, SPANISH],
@@ -392,7 +413,11 @@ describe('useSubtitles — the Preferred subtitle language', () => {
     // pressed on and off — nothing about the film asks again.
     settingsAnswer = () =>
       Promise.resolve(
-        okResponse({ subtitleLanguage: 'Swedish', ultrawideMargins: false })
+        okResponse({
+          subtitleLanguage: 'Swedish',
+          ultrawideMargins: false,
+          tmdbRatings: true,
+        })
       );
     rerender({ at: 40 });
     act(() => result.current.toggleSubtitles());

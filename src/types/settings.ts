@@ -38,6 +38,9 @@ export const DEFAULT_SUBTITLE_LANGUAGE: SubtitleLanguage = 'English';
 /** **Ultrawide margins** until the household turns it on: off. */
 export const DEFAULT_ULTRAWIDE_MARGINS = false;
 
+/** _Fill in ratings from TMDB_ until the household turns it off: on. */
+export const DEFAULT_TMDB_RATINGS = true;
+
 /**
  * What `GET /api/settings` answers: every preference the household keeps, the
  * default already applied. `subtitleLanguage` is a string rather than a
@@ -48,6 +51,8 @@ export interface Settings {
   subtitleLanguage: string;
   /** Whether every screen but the player sits in the centred **Content frame**. */
   ultrawideMargins: boolean;
+  /** Whether an unrated title draws its TMDB score as its stars. */
+  tmdbRatings: boolean;
 }
 
 /**

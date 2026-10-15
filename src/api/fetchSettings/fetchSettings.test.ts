@@ -51,6 +51,7 @@ function onlyRequest() {
 const SETTINGS: Settings = {
   subtitleLanguage: 'Spanish',
   ultrawideMargins: false,
+  tmdbRatings: true,
 };
 
 describe('fetchSettings', () => {

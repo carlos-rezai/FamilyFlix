@@ -28,6 +28,7 @@ const REPORT: PlaybackCapabilities = {
 const SETTINGS: Settings = {
   subtitleLanguage: 'English',
   ultrawideMargins: false,
+  tmdbRatings: true,
 };
 
 /** The **Storage report** the Storage card reads on mount. */

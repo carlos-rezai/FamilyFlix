@@ -259,7 +259,11 @@ describe('GET /api/settings — not widened', () => {
     const response = await fetch(`${baseUrl}/api/settings`);
     const body = (await response.json()) as Record<string, unknown>;
 
-    expect(Object.keys(body)).toEqual(['subtitleLanguage', 'ultrawideMargins']);
+    expect(Object.keys(body)).toEqual([
+      'subtitleLanguage',
+      'ultrawideMargins',
+      'tmdbRatings',
+    ]);
     expect(JSON.stringify(body)).not.toContain(V3_KEY);
   });
 });

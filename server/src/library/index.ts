@@ -267,6 +267,11 @@ export interface LibraryStorage {
    */
   setUltrawideMargins(on: boolean): void;
   /**
+   * Store _Fill in ratings from TMDB_ — an upsert; `settings()` reads it back
+   * with the default, on, applied.
+   */
+  setTmdbRatings(on: boolean): void;
+  /**
    * The maintainer's TMDB key, `null` when none is stored — no default. Kept
    * in the same `settings` table but not a household preference, so
    * `settings()` never carries it.
@@ -460,6 +465,7 @@ export function createSqliteStorage(dbPath: string): LibraryStorage {
     settings: settingsRepository.settings,
     setSubtitleLanguage: settingsRepository.setSubtitleLanguage,
     setUltrawideMargins: settingsRepository.setUltrawideMargins,
+    setTmdbRatings: settingsRepository.setTmdbRatings,
     tmdbKey: settingsRepository.tmdbKey,
     setTmdbKey: settingsRepository.setTmdbKey,
     enrichmentLastSyncedAt: settingsRepository.enrichmentLastSyncedAt,
