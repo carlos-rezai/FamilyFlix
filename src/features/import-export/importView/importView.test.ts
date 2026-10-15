@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
-import { importView, reviewGroups } from './importView';
-import type { ImportProblem, ProblemKind } from '@/types';
+import { PROBLEM_KIND_LABELS, importView, reviewGroups } from './importView';
+import { PROBLEM_KINDS, type ImportProblem, type ProblemKind } from '@/types';
+import { kindFilter } from '@/utils';
 import { makeImportRun } from '@/test-support/makeImportRun/makeImportRun';
 
 /**
@@ -327,5 +328,27 @@ describe('reviewGroups — the filter', () => {
 
   it('draws nothing for a kind no Problem holds', () => {
     expect(reviewGroups(problems, 'ambiguous')).toEqual([]);
+  });
+});
+
+// 42 — Review at scale refactor (issue #366): the Kind filter graduated to
+// `utils/kindFilter`; the Import review keeps its own words and order.
+describe('the Import review’s Kind filter — its words and order', () => {
+  it('words each kind as the prototype does, in the glossary’s order', () => {
+    const problems = [...PROBLEM_KINDS].reverse().map((kind) => ({ kind }));
+
+    expect(
+      kindFilter(problems, PROBLEM_KINDS, PROBLEM_KIND_LABELS, 'all').options
+    ).toEqual([
+      { value: 'all', label: 'All 8' },
+      { value: 'no-folder', label: 'No folder 1' },
+      { value: 'ambiguous', label: 'Ambiguous 1' },
+      { value: 'no-video', label: 'No video 1' },
+      { value: 'no-row', label: 'Not in sheet 1' },
+      { value: 'failed', label: 'Failed 1' },
+      { value: 'unplaced', label: 'Unplaced 1' },
+      { value: 'missing-meta', label: 'Missing details 1' },
+      { value: 'differs', label: 'Differs 1' },
+    ]);
   });
 });

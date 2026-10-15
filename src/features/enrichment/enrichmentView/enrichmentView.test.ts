@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  DECISION_KINDS,
+  DECISION_KIND_LABELS,
   enrichmentEstimate,
   enrichmentView,
   finishLabel,
@@ -10,6 +12,7 @@ import {
   writtenSummary,
 } from './enrichmentView';
 import type { Decision, EnrichmentRun, EnrichmentSummary } from '@/types';
+import { kindFilter } from '@/utils';
 import { makeEnrichmentRun } from '@/test-support/makeEnrichmentRun/makeEnrichmentRun';
 
 /**
@@ -356,5 +359,22 @@ describe('finishLabel — review’s Finish', () => {
 
   it('is Done for a library Sync', () => {
     expect(finishLabel(null)).toBe('Done');
+  });
+});
+
+// 42 — Review at scale refactor (issue #366): the Kind filter graduated to
+// `utils/kindFilter`; the Sync review keeps its own words and order.
+describe('the Sync review’s Kind filter — its words and order', () => {
+  it('words each kind as the prototype does, in the glossary’s order', () => {
+    const decisions = [...DECISION_KINDS].reverse().map((kind) => ({ kind }));
+
+    expect(
+      kindFilter(decisions, DECISION_KINDS, DECISION_KIND_LABELS, 'all').options
+    ).toEqual([
+      { value: 'all', label: 'All 3' },
+      { value: 'ambiguous', label: 'Ambiguous 1' },
+      { value: 'missing', label: 'Missing 1' },
+      { value: 'conflict', label: 'Conflict 1' },
+    ]);
   });
 });

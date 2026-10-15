@@ -3,10 +3,12 @@ import { useState } from 'react';
 import type { ConflictChoices, DecisionKind, EnrichmentRun } from '@/types';
 import { PillTabs } from '@/components';
 import { Button } from '@/primitives';
+import { kindFilter } from '@/utils';
 import { DecisionRow } from '../DecisionRow/DecisionRow';
 import { SeasonChoices } from '../SeasonChoices/SeasonChoices';
 import {
-  decisionKindFilter,
+  DECISION_KINDS,
+  DECISION_KIND_LABELS,
   writtenSummary,
 } from '../enrichmentView/enrichmentView';
 import {
@@ -73,7 +75,12 @@ export function EnrichmentReview({
   onChooseSeasonPoster = NO_CHOICE,
 }: EnrichmentReviewProps) {
   const [chosen, setChosen] = useState<DecisionKind | 'all'>('all');
-  const filter = decisionKindFilter(run.decisions, chosen);
+  const filter = kindFilter(
+    run.decisions,
+    DECISION_KINDS,
+    DECISION_KIND_LABELS,
+    chosen
+  );
   const shown =
     filter.value === 'all'
       ? run.decisions

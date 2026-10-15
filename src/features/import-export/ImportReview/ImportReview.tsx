@@ -2,13 +2,15 @@ import { useState } from 'react';
 
 import { Accordion, PillTabs } from '@/components';
 import { Button } from '@/primitives';
-import type {
-  ImportProblem,
-  ImportRun,
-  ProblemKind,
-  SheetChoices,
+import {
+  PROBLEM_KINDS,
+  type ImportProblem,
+  type ImportRun,
+  type ProblemKind,
+  type SheetChoices,
 } from '@/types';
-import { kindFilter, reviewGroups } from '../importView/importView';
+import { kindFilter } from '@/utils';
+import { PROBLEM_KIND_LABELS, reviewGroups } from '../importView/importView';
 import { ProblemRow } from '../ProblemRow/ProblemRow';
 import { DOT_TONE } from '../ProblemRow/ProblemRow.styles';
 import { StatTile } from '../StatTile/StatTile';
@@ -97,7 +99,12 @@ export function ImportReview({
   onFinish,
 }: ImportReviewProps) {
   const [chosen, setChosen] = useState<ProblemKind | 'all'>('all');
-  const filter = kindFilter(run.problems, chosen);
+  const filter = kindFilter(
+    run.problems,
+    PROBLEM_KINDS,
+    PROBLEM_KIND_LABELS,
+    chosen
+  );
   const [open, setOpen] = useState<ReadonlySet<string>>(() => new Set());
   const toggle = (title: string) =>
     setOpen((was) => {
