@@ -32,7 +32,8 @@ export interface ProblemRowProps {
  * problem's id. A `missing-meta` problem is already in the library, so its
  * Resolve names the movie too — the Edit job under the banner, rather than
  * adding the film twice. An `unplaced` show opens the **Series Resolve**, the
- * form's series kind, naming the held series beside it when there is one.
+ * form's series kind, naming the held series beside it when there is one;
+ * so does a show's `failed` row once its series is held.
  */
 const resolveRoute = ({
   id,
@@ -40,7 +41,7 @@ const resolveRoute = ({
   movieId,
   seriesId,
 }: ImportProblem): string =>
-  kind === 'unplaced'
+  kind === 'unplaced' || (kind === 'failed' && seriesId !== undefined)
     ? movieFormPath({ kind: 'series', problem: id, series: seriesId })
     : movieFormPath({ movie: movieId, problem: id });
 

@@ -1,6 +1,11 @@
 import { fetchMovie } from '@/api/fetchMovie/fetchMovie';
 import { fetchSeriesDetail } from '@/api/fetchSeriesDetail/fetchSeriesDetail';
-import type { EpisodeFormRow, MovieFormFile, MovieFormValues } from '@/types';
+import type {
+  EpisodeFormRow,
+  ImportProblemDetail,
+  MovieFormFile,
+  MovieFormValues,
+} from '@/types';
 import { fetchProblem } from '../api/api';
 import type { FormJob } from '../formJob/formJob';
 import {
@@ -97,6 +102,13 @@ async function seriesEditRecord(series: string): Promise<FormRecord | null> {
 }
 
 /**
+ * Whether a problem's _Resolve_ is the **Series Resolve**: an `unplaced` show,
+ * or a show's one `failed` row once its series is held.
+ */
+const opensSeriesResolve = ({ kind, seriesId }: ImportProblemDetail): boolean =>
+  kind === 'unplaced' || (kind === 'failed' && seriesId !== undefined);
+
+/**
  * The **Import context**: the problem, and the held series a Series Resolve
  * joins, read together — a refusal of either is a problem not read. A problem
  * that is gone — `null`, the `404` — is a stale link, and the screen falls back
@@ -131,7 +143,7 @@ async function resolveRecord(
     alsoMatched: otherCandidates(detail),
   };
 
-  if (job.asksSeries && detail.kind === 'unplaced') {
+  if (job.asksSeries && opensSeriesResolve(detail)) {
     // The fields from the held series when the show joins one, else from the
     // sheet row; one row per found video under the guess.
     return {

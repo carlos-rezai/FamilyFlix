@@ -504,6 +504,10 @@ const episodeLabel = (title: string, { season, episode }: ShowEpisode) =>
 const unplacedReason = (n: number): string =>
   n === 1 ? '1 episode needs a number' : `${count(n)} episodes need numbers`;
 
+/** A show's one `failed` row's reason: the count and the first error. */
+const failedShowReason = (n: number, first: string): string =>
+  `${n === 1 ? '1 episode' : `${count(n)} episodes`} couldn't be copied: ${first}.`;
+
 /**
  * A **Show folder** as the matcher weighs it: a scan under the show's own
  * name and folder, holding its first episode — or its first **Unplaced**
@@ -1056,7 +1060,9 @@ export function createImporter({
    * copied, as it keeps the films. The series is written with its first
    * episode, from the row: title, year, genres, synopsis, rating and cast,
    * its _Director_ the creator; its _Status_ is not applied. An episode whose
-   * copy fails is filed as `failed` and the show goes on; a show that ends
+   * copy fails is remembered and the show goes on, and the show's failures are
+   * one `failed` Problem titled with it — the count and the first error, its
+   * detail the failed episodes, naming the series when one is held; a show that ends
    * with no episode leaves no folder behind, and one with none to import
    * reserves none. Each episode's subtitles are copied in beside its video;
    * a subtitle that begins with no episode's stem is a **Warning line**.
@@ -1096,6 +1102,8 @@ export function createImporter({
     }
     const folder = held?.folder ?? media.reserveFolder(row.title, row.year);
     let series: Series | null = held?.series ?? null;
+    // Every episode whose copy threw, filed as the show's one `failed` row.
+    const failures: { video: string; reason: string }[] = [];
 
     for (const episode of episodes) {
       const label = episodeLabel(row.title, episode);
@@ -1152,16 +1160,10 @@ export function createImporter({
         if (signal.aborted) {
           break;
         }
-        const reason = error instanceof Error ? error.message : String(error);
-        file(
-          current,
-          problemOf(
-            'failed',
-            label,
-            `Couldn't copy the video file: ${reason}.`
-          ),
-          { row, folder: asMatchable(show), candidates: [] }
-        );
+        failures.push({
+          video: episode.video,
+          reason: error instanceof Error ? error.message : String(error),
+        });
       }
       if (signal.aborted) {
         break;
@@ -1169,6 +1171,25 @@ export function createImporter({
       current.done += 1;
     }
 
+    if (failures.length > 0) {
+      file(
+        current,
+        problemOf(
+          'failed',
+          row.title,
+          failedShowReason(failures.length, failures[0].reason),
+          series === null ? undefined : { seriesId: series.id }
+        ),
+        {
+          row,
+          folder: {
+            ...asMatchable(show),
+            videos: inNameOrder(failures.map(({ video }) => video)),
+          },
+          candidates: [],
+        }
+      );
+    }
     if (series === null) {
       media.removeFolder(folder);
     }
