@@ -51,9 +51,13 @@ import {
   movieEnrichment,
   seriesEnrichment,
 } from '../plannedEnrichment/plannedEnrichment';
+import { searchLadder, type SearchRung } from '../searchLadder/searchLadder';
 import type {
   TmdbClient,
   TmdbMovieDetail,
+  TmdbMovieResult,
+  TmdbOutcome,
+  TmdbTvResult,
   TmdbSeason,
   TmdbTvDetail,
 } from '../tmdbClient/tmdbClient';
@@ -200,6 +204,17 @@ type ShowWritten =
     }
   | { kind: 'stop'; stop: Stop };
 
+/** What a search of each kind answers, one result each. */
+interface SearchResults {
+  movie: TmdbMovieResult;
+  tv: TmdbTvResult;
+}
+
+/** A climb's answer: the results and the rung that gave them, or a Stop. */
+type Climbed<T> =
+  | { kind: 'ok'; value: T[]; rung: SearchRung; later: boolean }
+  | { kind: Stop };
+
 const STOP_LINES: Readonly<Record<Stop, string>> = {
   refused: 'TMDB refused the key.',
   unreachable:
@@ -254,8 +269,48 @@ export function createEnrichment({
     }
   }
 
+  /**
+   * Climb the **Search ladder**: each rung asked in turn, stopping at the
+   * first with results. `unreachable` or `refused` on any rung stops the
+   * climb and is the outcome; a ladder nobody answered gives the last rung's
+   * empty list.
+   */
+  async function searchTitled<K extends keyof SearchResults>(
+    apiKey: string,
+    kind: K,
+    rungs: readonly SearchRung[],
+    signal?: AbortSignal
+  ): Promise<Climbed<SearchResults[K]>> {
+    let last: Climbed<SearchResults[K]> = {
+      kind: 'ok',
+      value: [],
+      rung: rungs[0],
+      later: false,
+    };
+    for (const [index, rung] of rungs.entries()) {
+      // Each kind's client call answers that kind's results.
+      const answer = (
+        kind === 'movie'
+          ? await client.searchMovie(apiKey, rung.query, rung.year, signal)
+          : await client.searchTv(apiKey, rung.query, rung.year, signal)
+      ) as TmdbOutcome<SearchResults[K][]>;
+      if (answer.kind !== 'ok') return { kind: answer.kind };
+      last = { kind: 'ok', value: answer.value, rung, later: index > 0 };
+      if (answer.value.length > 0) break;
+    }
+    return last;
+  }
+
+  /** `↳ found as “…”` when a rung past the first answered. */
+  function logFoundAs<T>(current: EnrichmentRun, climbed: Climbed<T>): void {
+    if (climbed.kind === 'ok' && climbed.later && climbed.value.length > 0) {
+      log(current, `↳ found as “${climbed.rung.query}”`, 'info');
+    }
+  }
+
   /** TMDB's detail for a movie: by its `tmdb_id`, else a Confident search. */
   async function lookUp(
+    current: EnrichmentRun,
     apiKey: string,
     movie: Movie,
     signal: AbortSignal
@@ -266,17 +321,19 @@ export function createEnrichment({
   > {
     let id = movie.tmdbId;
     if (id === null) {
-      const search = await client.searchMovie(
+      const search = await searchTitled(
         apiKey,
-        movie.title,
-        movie.year,
+        'movie',
+        searchLadder(movie.title, movie.year),
         signal
       );
       if (search.kind !== 'ok') {
         return { kind: 'stop', stop: search.kind };
       }
+      logFoundAs(current, search);
       const ours: TitledYear = { title: movie.title, year: movie.year };
-      if (!confident(ours, search.value.map(titledYear))) {
+      const asked: TitledYear = { title: ours.title, year: search.rung.year };
+      if (!confident(asked, search.value.map(titledYear))) {
         return {
           kind: 'unsettled',
           reason:
@@ -447,6 +504,7 @@ export function createEnrichment({
 
   /** TMDB's detail for a series: by its `tmdb_id`, else a Confident search. */
   async function lookUpSeries(
+    current: EnrichmentRun,
     apiKey: string,
     series: Series,
     signal: AbortSignal
@@ -457,17 +515,19 @@ export function createEnrichment({
   > {
     let id = series.tmdbId;
     if (id === null) {
-      const search = await client.searchTv(
+      const search = await searchTitled(
         apiKey,
-        series.title,
-        series.year,
+        'tv',
+        searchLadder(series.title, series.year),
         signal
       );
       if (search.kind !== 'ok') {
         return { kind: 'stop', stop: search.kind };
       }
+      logFoundAs(current, search);
       const ours: TitledYear = { title: series.title, year: series.year };
-      if (!confident(ours, search.value.map(tvTitledYear))) {
+      const asked: TitledYear = { title: ours.title, year: search.rung.year };
+      if (!confident(asked, search.value.map(tvTitledYear))) {
         return {
           kind: 'unsettled',
           reason:
@@ -687,7 +747,7 @@ export function createEnrichment({
   ): Promise<
     ShowWritten | { kind: 'unsettled'; reason: string; decision: Decision }
   > {
-    const found = await lookUpSeries(apiKey, series, signal);
+    const found = await lookUpSeries(current, apiKey, series, signal);
     if (found.kind !== 'found') return found;
     return writeShow(current, apiKey, series, found.detail, fields, signal);
   }
@@ -799,7 +859,7 @@ export function createEnrichment({
 
       const { movie } = title;
       current.currentItem = movie.title;
-      const found = await lookUp(apiKey, movie, signal);
+      const found = await lookUp(current, apiKey, movie, signal);
       // A Stop dropped the run: nothing more is written or logged.
       if (signal.aborted) return;
       if (found.kind === 'stop') {
@@ -1001,15 +1061,17 @@ export function createEnrichment({
     const { current, decision, title } = found;
     const record = recordOf(title);
     const ours: TitledYear = { title: record.title, year: record.year };
+    const typed = query.trim();
+    const rungs = searchLadder(typed, null);
     let face: DecisionFace;
     if (title.kind === 'series') {
-      const answer = await client.searchTv(apiKey, query, null);
+      const answer = await searchTitled(apiKey, 'tv', rungs);
       if (answer.kind !== 'ok') return { kind: answer.kind };
-      face = tvDecisionFace(ours, query, answer.value, noMatchFor(query));
+      face = tvDecisionFace(ours, typed, answer.value, noMatchFor(typed));
     } else {
-      const answer = await client.searchMovie(apiKey, query, null);
+      const answer = await searchTitled(apiKey, 'movie', rungs);
       if (answer.kind !== 'ok') return { kind: answer.kind };
-      face = decisionFace(ours, query, answer.value, noMatchFor(query));
+      face = decisionFace(ours, typed, answer.value, noMatchFor(typed));
     }
     const next: Decision = {
       id: decision.id,

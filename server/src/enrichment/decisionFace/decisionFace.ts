@@ -15,7 +15,8 @@ export const CANDIDATE_CAP = 3;
 export const CANDIDATE_POSTER_BASE = 'https://image.tmdb.org/t/p/w185';
 
 /** A `missing` Decision's reason when the title itself matched nothing. */
-export const NO_MATCH_REASON = 'Nothing on TMDB matched this title.';
+export const NO_MATCH_REASON =
+  'Nothing on TMDB matched this title, with or without its year.';
 
 /** A `missing` Decision's reason when a search typed in the review did. */
 export const noMatchFor = (query: string): string =>
