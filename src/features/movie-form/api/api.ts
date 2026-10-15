@@ -99,7 +99,7 @@ export function createMovie(values: MovieFormValues): Promise<Movie> {
 export async function createSeries(
   values: MovieFormValues,
   episodes: readonly EpisodeFormRow[],
-  seasonPosters: readonly SeasonPosterSlot[] = []
+  seasonPosters: readonly SeasonPosterSlot[]
 ): Promise<Series> {
   const response = await fetch(SERIES_ENDPOINT, {
     method: 'POST',
@@ -149,7 +149,7 @@ export async function updateSeries(
   id: string,
   values: MovieFormValues,
   episodes: readonly EpisodeFormRow[],
-  seasonPosters: readonly SeasonPosterSlot[] = []
+  seasonPosters: readonly SeasonPosterSlot[]
 ): Promise<Series> {
   const endpoint = `${SERIES_ENDPOINT}/${encodeURIComponent(id)}`;
   const response = await fetch(endpoint, {
@@ -266,7 +266,8 @@ export async function resolveSeriesProblem(
   const endpoint = `${problemEndpoint(id)}/resolve`;
   const response = await fetch(endpoint, {
     method: 'POST',
-    body: seriesFormData(values, episodes),
+    // A Series Resolve draws no Season posters, so it sends none.
+    body: seriesFormData(values, episodes, []),
   });
 
   if (response.status === 404) {

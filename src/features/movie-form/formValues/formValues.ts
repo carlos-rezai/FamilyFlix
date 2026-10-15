@@ -406,7 +406,7 @@ export function movieFormData(values: MovieFormValues): FormData {
 export function seriesFormData(
   values: MovieFormValues,
   episodes: readonly EpisodeFormRow[],
-  seasonPosters: readonly SeasonPosterSlot[] = []
+  seasonPosters: readonly SeasonPosterSlot[]
 ): FormData {
   const body = new FormData();
 

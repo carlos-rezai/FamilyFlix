@@ -51,11 +51,11 @@ export interface SeriesFormFilesProps {
    * One slot per **Season** the episode rows hold, in the order drawn — none
    * draws no list.
    */
-  seasonPosters?: readonly SeasonPosterSlot[];
+  seasonPosters: readonly SeasonPosterSlot[];
   /** Reports the artwork picked into a season's slot. */
-  onPickSeasonPoster?: (season: number, file: File) => void;
+  onPickSeasonPoster: (season: number, file: File) => void;
   /** Reports that a season's ✕ was pressed. */
-  onRemoveSeasonPoster?: (season: number) => void;
+  onRemoveSeasonPoster: (season: number) => void;
   /** The **Episode file rows**, in the order they are held. */
   episodes: readonly EpisodeFormRow[];
   /** Each row the **Save gate** refuses, by its key, with why. */
@@ -89,7 +89,7 @@ export function SeriesFormFiles({
   poster,
   onPickPoster,
   onRemovePoster,
-  seasonPosters = [],
+  seasonPosters,
   onPickSeasonPoster,
   onRemoveSeasonPoster,
   episodes,
@@ -128,8 +128,8 @@ export function SeriesFormFiles({
               filename={held?.filename}
               accept={POSTER_ACCEPT}
               icon={<ImageIcon size={16} />}
-              onPick={(file) => onPickSeasonPoster?.(season, file)}
-              onRemove={() => onRemoveSeasonPoster?.(season)}
+              onPick={(file) => onPickSeasonPoster(season, file)}
+              onRemove={() => onRemoveSeasonPoster(season)}
             />
           ))}
         </SeasonPosters>
