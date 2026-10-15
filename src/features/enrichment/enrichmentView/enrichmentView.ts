@@ -1,4 +1,5 @@
 import type {
+  DecisionKind,
   EnrichmentRun,
   EnrichmentSummary,
   EnrichScope,
@@ -134,8 +135,6 @@ export function singleScopeLabel(kind: TitleReference['kind']): string {
 export function finishLabel(title: TitleReference | null): string {
   return title === null ? 'Done' : `Back to the ${title.kind}`;
 }
-
-type DecisionKind = EnrichmentRun['decisions'][number]['kind'];
 
 /** The glossary's order of a Decision's kinds, each with its pill's word. */
 const DECISION_KINDS: readonly { kind: DecisionKind; label: string }[] = [

@@ -87,19 +87,23 @@ export interface LogLine {
 }
 
 /**
- * The kinds of **Problem**: the hard ones — the title is not in the library —
- * and the two soft kinds, `missing-meta` and `differs`, each about a title the
- * library holds and carrying its `movieId` or `seriesId`.
+ * The kinds of **Problem**, in the glossary's order: the hard ones — the title
+ * is not in the library — and the two soft kinds, `missing-meta` and
+ * `differs`, each about a title the library holds and carrying its `movieId`
+ * or `seriesId`.
  */
-export type ProblemKind =
-  | 'no-folder'
-  | 'ambiguous'
-  | 'no-video'
-  | 'no-row'
-  | 'failed'
-  | 'unplaced'
-  | 'missing-meta'
-  | 'differs';
+export const PROBLEM_KINDS = [
+  'no-folder',
+  'ambiguous',
+  'no-video',
+  'no-row',
+  'failed',
+  'unplaced',
+  'missing-meta',
+  'differs',
+] as const;
+
+export type ProblemKind = (typeof PROBLEM_KINDS)[number];
 
 /**
  * A **Candidate folder**: one folder an `ambiguous` match weighed, as the

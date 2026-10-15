@@ -1,4 +1,9 @@
-import type { ImportProblem, ImportRun, ProblemKind } from '@/types';
+import {
+  PROBLEM_KINDS,
+  type ImportProblem,
+  type ImportRun,
+  type ProblemKind,
+} from '@/types';
 import { formatElapsed } from '@/utils';
 
 /** What the **Running step** prints, worked out from a snapshot and the clock. */
@@ -69,18 +74,6 @@ export interface ReviewGroup {
   kinds: ProblemKind[];
 }
 
-/** The glossary's order of the kinds. */
-const KIND_ORDER: readonly ProblemKind[] = [
-  'no-folder',
-  'ambiguous',
-  'no-video',
-  'no-row',
-  'failed',
-  'unplaced',
-  'missing-meta',
-  'differs',
-];
-
 /** The soft kinds: what the library can live with. */
 const SOFT_KINDS: ReadonlySet<ProblemKind> = new Set([
   'missing-meta',
@@ -110,7 +103,7 @@ export function reviewGroups(
     return {
       title,
       problems: rows,
-      kinds: KIND_ORDER.filter((kind) => held.has(kind)),
+      kinds: PROBLEM_KINDS.filter((kind) => held.has(kind)),
     };
   });
   const isHard = (group: ReviewGroup) =>
@@ -151,7 +144,7 @@ export function kindFilter(
   problems: readonly ImportProblem[],
   chosen: ProblemKind | 'all'
 ): KindFilter {
-  const held = KIND_ORDER.filter((kind) =>
+  const held = PROBLEM_KINDS.filter((kind) =>
     problems.some((p) => p.kind === kind)
   );
   if (held.length < 2) return { options: [], value: 'all' };

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-import type { ConflictChoices, Decision, EnrichmentRun } from '@/types';
+import type { ConflictChoices, DecisionKind, EnrichmentRun } from '@/types';
 import { PillTabs } from '@/components';
 import { Button } from '@/primitives';
 import { DecisionRow } from '../DecisionRow/DecisionRow';
@@ -72,7 +72,7 @@ export function EnrichmentReview({
   onApply,
   onChooseSeasonPoster = NO_CHOICE,
 }: EnrichmentReviewProps) {
-  const [chosen, setChosen] = useState<Decision['kind'] | 'all'>('all');
+  const [chosen, setChosen] = useState<DecisionKind | 'all'>('all');
   const filter = decisionKindFilter(run.decisions, chosen);
   const shown =
     filter.value === 'all'

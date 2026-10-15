@@ -117,6 +117,9 @@ export type Decision = {
   | { kind: 'conflict'; fields: FieldConflict[] }
 );
 
+/** The kind of a **Decision**: `ambiguous`, `missing` or `conflict`. */
+export type DecisionKind = Decision['kind'];
+
 /** Where a Sync is: fetching, or waiting on review. */
 export type EnrichmentPhase = 'running' | 'review';
 
