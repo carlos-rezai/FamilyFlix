@@ -137,13 +137,15 @@ describe('enrichmentView — the ETA', () => {
  * prototype's `estimateLabel`, three faces: offline first, _Waiting for a
  * connection_; then with no key, _A key is needed before this can run_; and
  * otherwise `About {⌈n × 0.4⌉}s for N titles`, where N is the scope's count —
- * the titles without **Full details** for _Only what's missing_, every title
- * for _Everything_, one for _Just this movie_.
+ * the titles with a **Sync gap** for _Only what's missing_ (issue #356; once
+ * the titles without **Full details**), every title for _Everything_, one for
+ * _Just this movie_.
  */
 
 const READY: EnrichmentSummary = {
   total: 30,
   complete: 18,
+  gaps: 15,
   lastSyncedAt: null,
   keySet: true,
   online: true,
@@ -155,8 +157,8 @@ describe('enrichmentEstimate — ready to run', () => {
     expect(enrichmentEstimate(READY, 'all')).toBe('About 12s for 30 titles');
   });
 
-  it('estimates Only what’s missing over the titles without Full details', () => {
-    expect(enrichmentEstimate(READY, 'missing')).toBe('About 5s for 12 titles');
+  it('estimates Only what’s missing over the titles with a Sync gap', () => {
+    expect(enrichmentEstimate(READY, 'missing')).toBe('About 6s for 15 titles');
   });
 
   it('estimates Just this movie as one title, in the singular', () => {
@@ -185,9 +187,9 @@ describe('enrichmentEstimate — not ready', () => {
 });
 
 describe('scopeDescription — the library scope cards’ lines', () => {
-  it('counts the titles without Full details for Only what’s missing', () => {
+  it('counts the titles with a Sync gap for Only what’s missing — the titles the run will sync', () => {
     expect(scopeDescription(READY, 'missing')).toBe(
-      '12 titles have no synopsis or artwork'
+      '15 titles have no synopsis or artwork'
     );
   });
 
@@ -198,7 +200,7 @@ describe('scopeDescription — the library scope cards’ lines', () => {
   });
 
   it('reads an empty library as none of either', () => {
-    const empty = { ...READY, total: 0, complete: 0 };
+    const empty = { ...READY, total: 0, complete: 0, gaps: 0 };
 
     expect(scopeDescription(empty, 'missing')).toBe(
       '0 titles have no synopsis or artwork'

@@ -303,3 +303,147 @@ describe('library: setSeasonPoster — the Season poster', () => {
     expect(seasonPosterRead(storage, other.id, 1)).toBeNull();
   });
 });
+
+// Review at scale: "Only what's missing retries every gap" (issue #356).
+//
+// `seriesInScope('missing')` is every series with a **Sync gap**: not **Full
+// details**; or **Unmatched** (no `tmdb_id`); or an **Episode** on disk
+// without its title, its air date or its **Still**; or a **Season** on disk
+// without its **Season poster**. Season 0 is never read by a Sync, so its
+// episodes and its poster are no gap — or no series with a special could
+// ever leave the scope.
+
+/**
+ * A series a Sync has made complete: matched, synopsis and poster, two
+ * seasons each with a Season poster, every episode titled, dated and stilled
+ * — each overridable to open one gap.
+ */
+function completeShow(
+  gap: {
+    unmatched?: boolean;
+    untitled?: boolean;
+    undated?: boolean;
+    unstilled?: boolean;
+    noSeasonPoster?: boolean;
+    special?: boolean;
+  } = {}
+) {
+  const storage = freshStorage();
+  const series = storage.addSeries({
+    title: 'Harbor & Vine',
+    year: 2020,
+    synopsis: 'Has everything.',
+    posterPath: 'harbor-vine-2020/poster.jpg',
+  });
+  if (!gap.unmatched) {
+    storage.enrichSeries(series.id, { tmdbId: 72001 });
+  }
+  const onDisk = [
+    { season: 1, number: 1 },
+    { season: 1, number: 2 },
+    { season: 2, number: 1 },
+  ];
+  onDisk.forEach(({ season, number }, index) => {
+    const stem = `S0${season}E0${number}`;
+    const last = index === onDisk.length - 1;
+    const added = storage.addEpisode(series.id, {
+      season,
+      number,
+      videoPath: `harbor-vine-2020/season-0${season}/${stem}.mkv`,
+      title: last && gap.untitled ? undefined : `Episode ${stem}`,
+      airDate: last && gap.undated ? undefined : '2020-01-01',
+    });
+    if (!(last && gap.unstilled)) {
+      storage.enrichEpisode(added.id, {
+        stillPath: `harbor-vine-2020/season-0${season}/${stem}.still.jpg`,
+      });
+    }
+  });
+  storage.setSeasonPoster(series.id, 1, 'harbor-vine-2020/S01-poster.jpg');
+  if (!gap.noSeasonPoster) {
+    storage.setSeasonPoster(series.id, 2, 'harbor-vine-2020/S02-poster.jpg');
+  }
+  if (gap.special) {
+    storage.addEpisode(series.id, {
+      season: 0,
+      number: 1,
+      videoPath: 'harbor-vine-2020/season-00/S00E01.mkv',
+    });
+  }
+  return storage;
+}
+
+const missingTitles = (storage: ReturnType<typeof freshStorage>) =>
+  storage.seriesInScope('missing').map((series) => series.title);
+
+describe('library: seriesInScope — a series with a Sync gap', () => {
+  it('leaves out a matched, complete series', () => {
+    expect(missingTitles(completeShow())).toEqual([]);
+  });
+
+  it('answers an Unmatched series with Full details and every episode filled', () => {
+    expect(missingTitles(completeShow({ unmatched: true }))).toEqual([
+      'Harbor & Vine',
+    ]);
+  });
+
+  it('answers a matched series with an episode lacking its Still', () => {
+    expect(missingTitles(completeShow({ unstilled: true }))).toEqual([
+      'Harbor & Vine',
+    ]);
+  });
+
+  it('answers a matched series with an episode lacking its title', () => {
+    expect(missingTitles(completeShow({ untitled: true }))).toEqual([
+      'Harbor & Vine',
+    ]);
+  });
+
+  it('answers a matched series with an episode lacking its air date', () => {
+    expect(missingTitles(completeShow({ undated: true }))).toEqual([
+      'Harbor & Vine',
+    ]);
+  });
+
+  it('answers a matched series with a Season on disk lacking its Season poster', () => {
+    expect(missingTitles(completeShow({ noSeasonPoster: true }))).toEqual([
+      'Harbor & Vine',
+    ]);
+  });
+
+  it('reads a bare season-0 special as no gap', () => {
+    expect(missingTitles(completeShow({ special: true }))).toEqual([]);
+  });
+
+  it('answers a matched series with no episodes and Full details as no gap', () => {
+    const storage = freshStorage();
+    const series = storage.addSeries({
+      title: 'Empty Shelf',
+      synopsis: 'Has everything.',
+      posterPath: 'empty-shelf/poster.jpg',
+    });
+    storage.enrichSeries(series.id, { tmdbId: 72002 });
+
+    expect(missingTitles(storage)).toEqual([]);
+  });
+});
+
+describe('library: enrichmentCounts — a series’ Sync gap leaves Full details alone', () => {
+  it('counts a matched series with an episode lacking its Still as complete, and as a gap', () => {
+    const storage = completeShow({ unstilled: true });
+
+    expect(storage.enrichmentCounts()).toEqual({
+      total: 1,
+      complete: 1,
+      gaps: 1,
+    });
+  });
+
+  it('counts a matched, complete series as no gap', () => {
+    expect(completeShow().enrichmentCounts()).toEqual({
+      total: 1,
+      complete: 1,
+      gaps: 0,
+    });
+  });
+});

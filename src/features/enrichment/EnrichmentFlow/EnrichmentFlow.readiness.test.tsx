@@ -62,6 +62,7 @@ let fetchMock: ReturnType<typeof vi.fn<FetchFn>>;
 const READY: EnrichmentSummary = {
   total: 30,
   complete: 18,
+  gaps: 12,
   lastSyncedAt: null,
   keySet: true,
   online: true,

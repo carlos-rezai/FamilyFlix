@@ -67,6 +67,33 @@ describe('createEnrichment: summary — the counts', () => {
 
     expect(summary).toMatchObject({ total: 4, complete: 2 });
   });
+
+  // Review at scale (issue #356): `gaps`, the titles with a **Sync gap** —
+  // what _Only what's missing_ will sync — beside the Full details count,
+  // which is unchanged.
+  it('counts the titles with a Sync gap, an Unmatched one with Full details among them', async () => {
+    const { storage, enrichment } = world();
+    storage.addMovie(
+      newMovie({
+        title: 'Unmatched Complete',
+        synopsis: 'Has everything.',
+        posterPath: 'unmatched/poster.jpg',
+      })
+    );
+    const matched = storage.addMovie(
+      newMovie({
+        title: 'Matched Complete',
+        synopsis: 'Has everything.',
+        posterPath: 'matched/poster.jpg',
+      })
+    );
+    storage.enrichMovie(matched.id, { tmdbId: 550010 });
+    storage.addMovie(newMovie({ title: 'Bare' }));
+
+    const summary = await enrichment.summary();
+
+    expect(summary).toMatchObject({ total: 3, complete: 2, gaps: 2 });
+  });
 });
 
 describe('createEnrichment: summary — the key, the last sync, the root', () => {

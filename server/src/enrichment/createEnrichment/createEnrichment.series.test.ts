@@ -691,3 +691,95 @@ describe('createEnrichment: a single-title Sync for a series', () => {
     expect(outcome.kind).toBe('no-title');
   });
 });
+
+// Review at scale: "Only what's missing retries every gap" (issue #356).
+//
+// A matched series with a **Sync gap** — an episode without its Still, a
+// season on disk without its Season poster — is in _Only what's missing_
+// though it has **Full details**, and is re-read by its `tmdb_id`: its detail,
+// then one season request per season on disk. Never searched, never a
+// **Decision**. A matched, complete series is not in scope at all.
+
+/** Seasons 1 and 2 on disk, every episode titled and dated. */
+const FILLED_ON_DISK: OnDisk[] = [
+  { season: 1, number: 1, title: 'Low Tide', airDate: '2018-09-02' },
+  { season: 1, number: 2, title: 'Driftwood', airDate: '2018-09-09' },
+  { season: 2, number: 1, title: 'Undertow', airDate: '2019-10-06' },
+];
+
+const MATCHED_WITH_DETAILS = {
+  tmdbId: SHOW_ID,
+  synopsis: 'Our own words.',
+  posterPath: 'the-hollow-coast-2018/poster.jpg',
+};
+
+/** Every episode of the series given a Still, as a past Sync would have. */
+function stillEvery(storage: ReturnType<typeof freshStorage>, id: string) {
+  for (const each of storage.listEpisodes(id)) {
+    storage.enrichEpisode(each.id, {
+      stillPath: `${each.videoPath}.still.jpg`,
+    });
+  }
+}
+
+/** Every season on disk given a Season poster, as a past Sync would have. */
+function posterEverySeason(
+  storage: ReturnType<typeof freshStorage>,
+  id: string
+) {
+  for (const season of [1, 2]) {
+    storage.setSeasonPoster(
+      id,
+      season,
+      `the-hollow-coast-2018/S0${season}-poster.jpg`
+    );
+  }
+}
+
+describe('createEnrichment: Only what’s missing over a matched series with a Sync gap', () => {
+  it('syncs a series whose episodes lack their Stills, re-read by its id with no search', async () => {
+    const { enrichment, storage, client, addShow } = world();
+    const id = await addShow(MATCHED_WITH_DETAILS, FILLED_ON_DISK);
+    posterEverySeason(storage, id);
+
+    const outcome = await startSync(enrichment, 'missing');
+    const run = await reviewed(enrichment);
+
+    expect(outcome.kind === 'started' && outcome.run.total).toBe(1);
+    expect(client.searchTv).not.toHaveBeenCalled();
+    expect(client.tv.mock.calls.map(([, asked]) => asked)).toEqual([SHOW_ID]);
+    expect(seasonsAsked(client)).toEqual([1, 2]);
+    expect(run.decisions).toEqual([]);
+    expect(episodeOf(storage, id, 1, 1).stillPath).not.toBeNull();
+  });
+
+  it('syncs a series whose season lacks its Season poster, re-read by its id with no search', async () => {
+    const { enrichment, storage, client, addShow } = world();
+    const id = await addShow(MATCHED_WITH_DETAILS, FILLED_ON_DISK);
+    stillEvery(storage, id);
+    storage.setSeasonPoster(id, 1, 'the-hollow-coast-2018/S01-poster.jpg');
+
+    const outcome = await startSync(enrichment, 'missing');
+    const run = await reviewed(enrichment);
+
+    expect(outcome.kind === 'started' && outcome.run.total).toBe(1);
+    expect(client.searchTv).not.toHaveBeenCalled();
+    expect(client.tv.mock.calls.map(([, asked]) => asked)).toEqual([SHOW_ID]);
+    expect(seasonsAsked(client)).toEqual([1, 2]);
+    expect(run.decisions).toEqual([]);
+  });
+
+  it('leaves a matched, complete series out of the run', async () => {
+    const { enrichment, storage, client, addShow } = world();
+    const id = await addShow(MATCHED_WITH_DETAILS, FILLED_ON_DISK);
+    stillEvery(storage, id);
+    posterEverySeason(storage, id);
+
+    const outcome = await startSync(enrichment, 'missing');
+    await reviewed(enrichment);
+
+    expect(outcome.kind === 'started' && outcome.run.total).toBe(0);
+    expect(client.tv).not.toHaveBeenCalled();
+    expect(client.season).not.toHaveBeenCalled();
+  });
+});

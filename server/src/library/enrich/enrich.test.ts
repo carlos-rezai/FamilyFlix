@@ -16,6 +16,7 @@ import { describe, expect, it } from 'vitest';
 
 import { freshStorage } from '../../test-support/freshStorage/freshStorage';
 import { newMovie } from '../../test-support/newMovie/newMovie';
+import { syncGap } from './enrich';
 
 describe('library: enrichMovie — the columns it names', () => {
   it('writes every enrichment column and reads them back on the Movie', () => {
@@ -162,16 +163,20 @@ const titlesIn = (
     .map((movie) => movie.title)
     .sort();
 
-/** A library of four: one complete, one without a poster, one without a synopsis, one bare. */
+/**
+ * A library of four: one complete and matched, one without a poster, one
+ * without a synopsis, one bare.
+ */
 function fourFilms() {
   const storage = freshStorage();
-  storage.addMovie(
+  const complete = storage.addMovie(
     newMovie({
       title: 'Complete',
       synopsis: 'Has everything.',
       posterPath: 'complete/poster.jpg',
     })
   );
+  storage.enrichMovie(complete.id, { tmdbId: 550001 });
   storage.addMovie(
     newMovie({ title: 'No Poster', synopsis: 'Has only words.' })
   );
@@ -199,17 +204,76 @@ describe('library: moviesInScope — Only what’s missing', () => {
     expect(titlesIn(storage, 'missing')).not.toContain('Complete');
   });
 
-  it('answers nothing when every film has Full details', () => {
+  it('answers nothing when every film is matched and has Full details', () => {
     const storage = freshStorage();
-    storage.addMovie(
+    const { id } = storage.addMovie(
       newMovie({
         title: 'Complete',
         synopsis: 'Has everything.',
         posterPath: 'complete/poster.jpg',
       })
     );
+    storage.enrichMovie(id, { tmdbId: 550001 });
 
     expect(storage.moviesInScope('missing')).toEqual([]);
+  });
+});
+
+// Review at scale: "Only what's missing retries every gap" (issue #356).
+//
+// _Only what's missing_ is every title with a **Sync gap**: not **Full
+// details**, or **Unmatched** — no `tmdb_id`, never written by a Sync —
+// whatever details it holds. `syncGap(alias)` spells it once as SQL beside
+// `fullDetails`. Full details itself, and the Settings count over it, are
+// unchanged.
+
+describe('library: moviesInScope — an Unmatched film has a Sync gap', () => {
+  it('answers an Unmatched film with a synopsis and a poster', () => {
+    const storage = freshStorage();
+    storage.addMovie(
+      newMovie({
+        title: 'Unmatched',
+        synopsis: 'Our own words.',
+        posterPath: 'unmatched/poster.jpg',
+      })
+    );
+
+    expect(titlesIn(storage, 'missing')).toEqual(['Unmatched']);
+  });
+
+  it('leaves the film out once a Sync has matched it', () => {
+    const storage = freshStorage();
+    const { id } = storage.addMovie(
+      newMovie({
+        title: 'Matched',
+        synopsis: 'Our own words.',
+        posterPath: 'matched/poster.jpg',
+      })
+    );
+
+    storage.enrichMovie(id, { tmdbId: 550002 });
+
+    expect(titlesIn(storage, 'missing')).toEqual([]);
+  });
+
+  it('answers a matched film still without Full details', () => {
+    const storage = freshStorage();
+    const { id } = storage.addMovie(newMovie({ title: 'Matched Bare' }));
+
+    storage.enrichMovie(id, { tmdbId: 550003 });
+
+    expect(titlesIn(storage, 'missing')).toEqual(['Matched Bare']);
+  });
+});
+
+describe('syncGap — the SQL spelled once', () => {
+  it('reads a row under the alias the query names', () => {
+    expect(syncGap('m')).toContain('m.tmdb_id IS NULL');
+  });
+
+  it('reads a row with no alias when none is named', () => {
+    expect(syncGap()).toContain('tmdb_id IS NULL');
+    expect(syncGap()).not.toContain('.tmdb_id');
   });
 });
 
@@ -252,13 +316,21 @@ describe('library: enrichmentCounts — the summary’s counts', () => {
   it('answers zeros for an empty library', () => {
     const storage = freshStorage();
 
-    expect(storage.enrichmentCounts()).toEqual({ total: 0, complete: 0 });
+    expect(storage.enrichmentCounts()).toEqual({
+      total: 0,
+      complete: 0,
+      gaps: 0,
+    });
   });
 
   it('counts every film, and those with Full details', () => {
     const storage = fourFilms();
 
-    expect(storage.enrichmentCounts()).toEqual({ total: 4, complete: 1 });
+    expect(storage.enrichmentCounts()).toEqual({
+      total: 4,
+      complete: 1,
+      gaps: 3,
+    });
   });
 
   it('counts every series beside the films, and those with Full details', () => {
@@ -274,7 +346,11 @@ describe('library: enrichmentCounts — the summary’s counts', () => {
       posterPath: 'show-without-a-synopsis/poster.jpg',
     });
 
-    expect(storage.enrichmentCounts()).toEqual({ total: 7, complete: 2 });
+    expect(storage.enrichmentCounts()).toEqual({
+      total: 7,
+      complete: 2,
+      gaps: 6,
+    });
   });
 
   it('counts an empty synopsis as none', () => {
@@ -283,6 +359,62 @@ describe('library: enrichmentCounts — the summary’s counts', () => {
       newMovie({ title: 'Blank', synopsis: '', posterPath: 'blank/poster.jpg' })
     );
 
-    expect(storage.enrichmentCounts()).toEqual({ total: 1, complete: 0 });
+    expect(storage.enrichmentCounts()).toEqual({
+      total: 1,
+      complete: 0,
+      gaps: 1,
+    });
+  });
+});
+
+describe('library: enrichmentCounts — the Sync gap beside Full details', () => {
+  it('counts an Unmatched film with a synopsis and a poster as complete, as before', () => {
+    const storage = freshStorage();
+    storage.addMovie(
+      newMovie({
+        title: 'Unmatched',
+        synopsis: 'Our own words.',
+        posterPath: 'unmatched/poster.jpg',
+      })
+    );
+
+    expect(storage.enrichmentCounts()).toMatchObject({
+      total: 1,
+      complete: 1,
+    });
+  });
+
+  it('counts that film among the titles with a Sync gap', () => {
+    const storage = freshStorage();
+    storage.addMovie(
+      newMovie({
+        title: 'Unmatched',
+        synopsis: 'Our own words.',
+        posterPath: 'unmatched/poster.jpg',
+      })
+    );
+
+    expect(storage.enrichmentCounts().gaps).toBe(1);
+  });
+
+  it('counts exactly the titles Only what’s missing answers, films and series alike', () => {
+    const storage = fourFilms();
+    const show = storage.addSeries({
+      title: 'Matched Show',
+      synopsis: 'Has everything.',
+      posterPath: 'matched-show/poster.jpg',
+    });
+    storage.enrichSeries(show.id, { tmdbId: 71002 });
+    storage.addSeries({
+      title: 'Unmatched Show',
+      synopsis: 'Has everything.',
+      posterPath: 'unmatched-show/poster.jpg',
+    });
+
+    expect(storage.enrichmentCounts().gaps).toBe(
+      storage.moviesInScope('missing').length +
+        storage.seriesInScope('missing').length
+    );
+    expect(storage.enrichmentCounts().gaps).toBe(4);
   });
 });

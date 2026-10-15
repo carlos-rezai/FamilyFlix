@@ -26,6 +26,7 @@ import { comesBefore } from '@/test-support/comesBefore/comesBefore';
 const READY: EnrichmentSummary = {
   total: 30,
   complete: 18,
+  gaps: 15,
   lastSyncedAt: null,
   keySet: true,
   online: true,
@@ -158,12 +159,12 @@ describe('EnrichmentSetup — the scope cards', () => {
     );
   });
 
-  it('counts each scope’s titles off the summary', () => {
+  it('counts each scope’s titles off the summary — Only what’s missing its Sync gaps', () => {
     renderSetup();
 
     expect(
       within(scopeCard(/Only what.s missing/)).getByText(
-        '12 titles have no synopsis or artwork'
+        '15 titles have no synopsis or artwork'
       )
     ).toBeDefined();
     expect(
