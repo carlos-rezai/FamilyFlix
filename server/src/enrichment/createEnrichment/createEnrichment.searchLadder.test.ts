@@ -24,6 +24,7 @@ import {
   type EnrichmentRun,
   type EnrichScope,
 } from '@/types';
+import { searchQuery } from '../../import-export/titleKey/titleKey';
 import { createMedia } from '../../media/createMedia/createMedia';
 import { freshStorage } from '../../test-support/freshStorage/freshStorage';
 import { sandboxRoot } from '../../test-support/sandboxRoot/sandboxRoot';
@@ -286,5 +287,92 @@ describe('createEnrichment: the review’s search box', () => {
     expect(filmSearches(client)).toEqual([['Sundial 2004', null]]);
     const decision = decisionFor(enrichment.current(), 'Sundial');
     expect(decision).toMatchObject({ kind: 'ambiguous' });
+  });
+});
+
+// --- 42 — Review at scale (issue #355): a messy title is found ---------------
+//
+// The ladder's last two rungs: rung 3 the **Search query** without the year —
+// punctuation TMDB does not fold turned to spaces — and rung 4 the part before
+// a `:` or `-` subtitle, without the year. Several results on rung 4 are not
+// **Confident**, so they land as an `ambiguous` row with candidates.
+
+const DELICIOUS = "F'ck That's Delicious";
+const FORCE_AWAKENS = 'Star Wars: The Force Awakens';
+
+/** A TMDB that holds each messy title only under the spelling it answers to. */
+function holdsMessyTitles(): FakeTmdb {
+  return fakeTmdb({
+    searches: {
+      'Star Wars': [
+        tmdbMovieResult(11, 'Star Wars', 1977),
+        tmdbMovieResult(140607, 'Star Wars: The Force Awakens', 2015),
+        tmdbMovieResult(181808, 'Star Wars: The Last Jedi', 2017),
+      ],
+    },
+    tvSearches: {
+      [searchQuery(DELICIOUS)]: [
+        tmdbTvResult(66001, "F*ck, That's Delicious", 2016),
+      ],
+    },
+    shows: [tmdbTvDetail(66001, "F*ck, That's Delicious", 2016)],
+    seasons: { 66001: { 1: SEASON_ONE } },
+  });
+}
+
+describe('createEnrichment: the Search query on rung 3', () => {
+  it('finds F’ck That’s Delicious as TMDB’s F*ck, That’s Delicious', async () => {
+    const { enrichment, client, storage, addShow } = world(holdsMessyTitles());
+    const id = await addShow(DELICIOUS, 2016);
+
+    const run = await sync(enrichment);
+
+    expect(tvSearches(client)).toEqual([
+      [DELICIOUS, 2016],
+      [DELICIOUS, null],
+      [searchQuery(DELICIOUS), null],
+    ]);
+    expect(searchQuery(DELICIOUS)).not.toBe(DELICIOUS);
+    expect(run.decisions).toEqual([]);
+    expect(storage.getSeriesDetail(id)?.series.tmdbId).toBe(66001);
+    expect(run.log).toContainEqual({
+      text: `↳ found as “${searchQuery(DELICIOUS)}”`,
+      kind: 'info',
+    });
+  });
+});
+
+describe('createEnrichment: the subtitle dropped on rung 4', () => {
+  it('reaches Star Wars on the fourth rung', async () => {
+    const { enrichment, client, addFilm } = world(holdsMessyTitles());
+    await addFilm(FORCE_AWAKENS, 2015);
+
+    const run = await sync(enrichment);
+
+    expect(filmSearches(client)).toEqual([
+      [FORCE_AWAKENS, 2015],
+      [FORCE_AWAKENS, null],
+      ['Star Wars The Force Awakens', null],
+      ['Star Wars', null],
+    ]);
+    expect(run.log).toContainEqual({
+      text: '↳ found as “Star Wars”',
+      kind: 'info',
+    });
+  });
+
+  it('lands its several results as an ambiguous row with candidates', async () => {
+    const { enrichment, storage, addFilm } = world(holdsMessyTitles());
+    const id = await addFilm(FORCE_AWAKENS, 2015);
+
+    const run = await sync(enrichment);
+
+    const decision = decisionFor(run, FORCE_AWAKENS);
+    expect(decision.kind).toBe('ambiguous');
+    const candidates = decision.kind === 'ambiguous' ? decision.candidates : [];
+    expect(candidates.map((each) => each.tmdbId).sort()).toEqual(
+      [11, 140607, 181808].sort()
+    );
+    expect(storage.getMovie(id)?.tmdbId).toBeNull();
   });
 });

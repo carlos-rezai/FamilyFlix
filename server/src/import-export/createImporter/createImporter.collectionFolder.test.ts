@@ -302,3 +302,21 @@ describe('createImporter — a collection film’s Source file', () => {
     expect(run).toMatchObject({ total: 0, done: 0 });
   });
 });
+
+// --- 42 — Review at scale (issue #355): a messy title is found ---------------
+//
+// `titleGuess` drops **Release noise** too — whole words, and everything after
+// the first of them — so a Folder scan names a release folder for its title.
+
+describe('createImporter.scan — a release folder', () => {
+  it('adds Heat.1995.1080p.BluRay.x264-GRP as Heat', async () => {
+    const box = sandbox();
+    folderOf(box, 'Heat.1995.1080p.BluRay.x264-GRP', [
+      'Heat.1995.1080p.BluRay.x264-GRP.mp4',
+    ]);
+
+    await scanOnce(box);
+
+    expect(titles(box.storage).map((each) => each.title)).toEqual(['Heat']);
+  });
+});

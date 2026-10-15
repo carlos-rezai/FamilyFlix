@@ -10,7 +10,7 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { titleGuess, titleKey } from './titleKey';
+import { RELEASE_NOISE, searchQuery, titleGuess, titleKey } from './titleKey';
 
 describe('titleKey — the fixture’s own pair', () => {
   it('reads Die.Hard.1988.1080p as “Die Hard”', () => {
@@ -144,5 +144,86 @@ describe('titleGuess — the title a no-row folder name suggests', () => {
     ]) {
       expect(titleKey(titleGuess(name))).toBe(titleKey(name));
     }
+  });
+});
+
+// --- 42 — Review at scale: a messy title is found (issue #355) -----------------
+//
+// The **Search query**: a title as TMDB is asked it. `titleGuess`'s tail strip,
+// **Release noise** dropped — whole words, and everything after the first of
+// them — curly quotes and dashes folded to ASCII, `&` read as `and`, and every
+// other non-letter-or-digit a space. Not the **Title key**: the case and the
+// accents stay, because TMDB is the one comparing.
+
+describe('RELEASE_NOISE — the whole-word tags no title carries', () => {
+  it('lists the tags a release name lays down, lower-cased', () => {
+    expect([...RELEASE_NOISE]).toEqual(
+      expect.arrayContaining(['bluray', 'x264', 'remux'])
+    );
+  });
+});
+
+describe('searchQuery — a title as TMDB is asked it', () => {
+  it.each<[string, string, string]>([
+    [
+      'an apostrophe TMDB does not fold becomes a space',
+      "F'ck That's Delicious",
+      'F ck That s Delicious',
+    ],
+    [
+      'a colon becomes a space',
+      'Léon: The Professional',
+      'Léon The Professional',
+    ],
+    ['a hyphen becomes a space', 'Spider-Man', 'Spider Man'],
+    ['a title with nothing to fold stays as it is', 'Heat', 'Heat'],
+    ['a number that is part of the title stays', 'Se7en', 'Se7en'],
+    [
+      'the tail strip: a year and a quality tag',
+      'Die.Hard.1988.1080p',
+      'Die Hard',
+    ],
+    [
+      'a whole release name: noise and the group after it dropped',
+      'Heat.1995.1080p.BluRay.x264-GRP',
+      'Heat',
+    ],
+    ['BluRay and what follows', 'Heat 1995 BluRay GRP', 'Heat'],
+    ['x264 and what follows', 'Heat.1995.x264-GRP', 'Heat'],
+    ['WEB-DL and what follows', 'Heat.2160p.WEB-DL.x265-GRP', 'Heat'],
+    ['REMUX and what follows', 'Heat.1995.REMUX.GRP', 'Heat'],
+    ['noise in any case', 'Heat.1995.bluray', 'Heat'],
+    [
+      'noise only as a whole word: a word that contains a tag stays',
+      'Remuxed Dreams',
+      'Remuxed Dreams',
+    ],
+    [
+      'a curly apostrophe folds as the straight one does',
+      'Ocean’s Eleven',
+      'Ocean s Eleven',
+    ],
+    ['curly double quotes fold away', '“Heat”', 'Heat'],
+    ['an en dash folds as a hyphen does', 'Spider–Man', 'Spider Man'],
+    ['an em dash folds as a hyphen does', 'Spider—Man', 'Spider Man'],
+    ['& reads as and', 'Fast & Furious', 'Fast and Furious'],
+    ['the spacing collapses', '  Die   Hard  ', 'Die Hard'],
+  ])('%s', (_, title, query) => {
+    expect(searchQuery(title)).toBe(query);
+  });
+
+  it('folds a curly spelling and its ASCII twin to one query', () => {
+    expect(searchQuery('Ocean’s Eleven')).toBe(searchQuery("Ocean's Eleven"));
+    expect(searchQuery('Spider–Man')).toBe(searchQuery('Spider-Man'));
+  });
+});
+
+describe('titleGuess — Release noise dropped too', () => {
+  it.each([
+    ['BluRay, x264 and the group', 'Heat.1995.1080p.BluRay.x264-GRP'],
+    ['WEB-DL and the group', 'Heat.2160p.WEB-DL.x265-GRP'],
+    ['REMUX and the group', 'Heat.1995.REMUX.GRP'],
+  ])('names a release folder for its title — %s', (_, name) => {
+    expect(titleGuess(name)).toBe('Heat');
   });
 });
