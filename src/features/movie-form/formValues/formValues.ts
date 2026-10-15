@@ -15,6 +15,15 @@ import { readEpisodeTag } from '../readEpisodeTag/readEpisodeTag';
 import { readSeasonFolder } from '../readSeasonFolder/readSeasonFolder';
 
 /**
+ * A typed number as the number it is, or `null` for a blank or anything but
+ * digits — the form's one reading of a typed season or episode number. 0 is a
+ * number: a pilot, a season of specials.
+ */
+export function typedNumber(text: string): number | null {
+  return /^\d+$/.test(text) ? Number(text) : null;
+}
+
+/**
  * How a **Stored path** is separated, everywhere it is stored: the media domain
  * writes them with forward slashes whatever the machine's own separator is, so
  * a basename is what follows the last one.

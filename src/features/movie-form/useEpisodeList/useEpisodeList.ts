@@ -2,7 +2,11 @@ import { useCallback, useMemo, useRef, useState } from 'react';
 
 import type { EpisodeFormRow, MovieFormSubtitle } from '@/types';
 import { formatEpisodeTag } from '@/utils';
-import { pickedFile, pickedSubtitle } from '../formValues/formValues';
+import {
+  pickedFile,
+  pickedSubtitle,
+  typedNumber,
+} from '../formValues/formValues';
 import { readEpisodeTag } from '../readEpisodeTag/readEpisodeTag';
 
 /**
@@ -66,14 +70,6 @@ export interface EpisodeList {
   episodesComplete: boolean;
 }
 
-/**
- * A typed number as the number it is, or `null` for a blank. 0 is a number: a
- * pilot, a season of specials.
- */
-function counted(text: string): number | null {
-  return /^\d+$/.test(text) ? Number(text) : null;
-}
-
 /** The smallest number at least 1 that season 1 does not hold yet. */
 function nextFreeInSeasonOne(taken: Set<number>): number {
   let number = 1;
@@ -124,8 +120,8 @@ export function useEpisodeList(): EpisodeList {
       const added = tagged.map(({ row }) => row);
       const seasonOne = new Set<number>();
       for (const row of [...current, ...added]) {
-        const number = counted(row.number);
-        if (counted(row.season) === 1 && number !== null) {
+        const number = typedNumber(row.number);
+        if (typedNumber(row.season) === 1 && number !== null) {
           seasonOne.add(number);
         }
       }
@@ -226,8 +222,8 @@ export function useEpisodeList(): EpisodeList {
     const refused: Record<string, EpisodeRefusal> = {};
     const byPair = new Map<string, string[]>();
     for (const row of episodes) {
-      const season = counted(row.season);
-      const number = counted(row.number);
+      const season = typedNumber(row.season);
+      const number = typedNumber(row.number);
       if (season === null || number === null) {
         refused[row.key] = {
           season: season === null,

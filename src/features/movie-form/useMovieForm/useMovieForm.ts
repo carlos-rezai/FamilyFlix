@@ -22,6 +22,7 @@ import {
   useEpisodeList,
   type EpisodeRefusal,
 } from '../useEpisodeList/useEpisodeList';
+import { useSeasonPosters } from '../useSeasonPosters/useSeasonPosters';
 import {
   createMovie,
   createSeries,
@@ -315,7 +316,8 @@ export interface UseMovieFormResult {
  * and `MovieForm.seriesResolve` press the two series jobs. There is no member
  * of {@link UseMovieFormResult} those do not reach. The series half's list
  * rules — the order rows land in, their numbers and the gate they make — are
- * `useEpisodeList`'s own suite's, because that hook is a unit of its own.
+ * `useEpisodeList`'s own suite's, because that hook is a unit of its own, and
+ * its Season posters' slots are `useSeasonPosters`' for the same reason.
  *
  * The testable halves of the five jobs have left for units of their own:
  * `formJob`, which reads the URL into a job and its Landing, and
@@ -357,13 +359,14 @@ export function useMovieForm(): UseMovieFormResult {
   /** The film Resolve's found videos, for the **Found-file choice**. */
   const [foundVideos, setFoundVideos] = useState<MovieFormFile[]>([]);
 
-  /**
-   * What each season's poster slot holds, by season, and whether the series
-   * edit opened with a Season poster there; absent is empty and never held.
-   */
-  const [seasonPosterFiles, setSeasonPosterFiles] = useState<
-    Readonly<Record<number, Omit<SeasonPosterSlot, 'season'>>>
-  >({});
+  // The series' Season posters, one slot per season the rows hold. A Series
+  // Resolve's save has no Season poster to send, so it draws none.
+  const {
+    slots: seasonPosters,
+    pick: pickSeasonPoster,
+    remove: removeSeasonPoster,
+    hold: holdSeasonPosters,
+  } = useSeasonPosters(episodes, resolving === null);
 
   // The URL, read once: which of the five jobs this screen is doing.
   const search = searchParams.toString();
@@ -420,14 +423,7 @@ export function useMovieForm(): UseMovieFormResult {
         holdEpisodes(record.episodes.rows, record.episodes.taken);
       }
       setFoundVideos(record.foundVideos);
-      setSeasonPosterFiles(
-        Object.fromEntries(
-          Object.entries(record.seasonPosters).map(([season, poster]) => [
-            season,
-            { poster, held: true },
-          ])
-        )
-      );
+      holdSeasonPosters(record.seasonPosters);
       setEditing(record.editing);
       setEditingSeries(record.editingSeries);
       setResolving(record.resolving);
@@ -437,7 +433,7 @@ export function useMovieForm(): UseMovieFormResult {
     return () => {
       current = false;
     };
-  }, [job, holdEpisodes]);
+  }, [job, holdEpisodes, holdSeasonPosters]);
 
   const setTitle = useCallback((title: string) => {
     setValues((current) => ({ ...current, title }));
@@ -518,44 +514,6 @@ export function useMovieForm(): UseMovieFormResult {
   const removePoster = useCallback(() => {
     setValues((current) => ({ ...current, poster: null }));
   }, []);
-
-  const pickSeasonPoster = useCallback((season: number, file: File) => {
-    setSeasonPosterFiles((current) => ({
-      ...current,
-      [season]: {
-        poster: pickedFile(file),
-        held: current[season]?.held ?? false,
-      },
-    }));
-  }, []);
-
-  const removeSeasonPoster = useCallback((season: number) => {
-    setSeasonPosterFiles((current) => ({
-      ...current,
-      [season]: { poster: null, held: current[season]?.held ?? false },
-    }));
-  }, []);
-
-  // One slot per season the rows hold, in season order, appearing and going
-  // with the rows. A Series Resolve's save has no Season poster to send, so it
-  // draws none.
-  const seasonPosters = useMemo<SeasonPosterSlot[]>(() => {
-    if (resolving !== null) {
-      return [];
-    }
-    const seasons = new Set(
-      episodes
-        .filter((row) => /^\d+$/.test(row.season))
-        .map((row) => Number(row.season))
-    );
-    return [...seasons]
-      .sort((a, b) => a - b)
-      .map((season) => ({
-        season,
-        poster: seasonPosterFiles[season]?.poster ?? null,
-        held: seasonPosterFiles[season]?.held ?? false,
-      }));
-  }, [episodes, resolving, seasonPosterFiles]);
 
   // The rows are held by a key of the form's own, handed out here and never
   // reused. Two files can share a name, a name can be picked again after the
