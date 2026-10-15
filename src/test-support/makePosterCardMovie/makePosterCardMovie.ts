@@ -22,6 +22,7 @@ export function makePosterCardMovie(
     g1: '#1f2a3a',
     g2: '#3a6a8a',
     rating: 80,
+    ratingSource: 'household',
     watched: false,
     progress: 0,
     favorite: false,

@@ -30,7 +30,7 @@ describe('toGenreRow — HomeRow → GenreRowModel mapper', () => {
 
     const row = toGenreRow({ genre: 'Action', count: 2, movies });
 
-    expect(row.movies).toEqual(movies.map(view));
+    expect(row.movies).toEqual(movies.map((movie) => view(movie, true)));
   });
 
   it('maps an empty row to an empty row', () => {

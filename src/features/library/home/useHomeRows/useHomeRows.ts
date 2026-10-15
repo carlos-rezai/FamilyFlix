@@ -16,6 +16,8 @@ import { view } from '../../view/view';
 import { useBrowseLoad } from '../../useBrowseLoad/useBrowseLoad';
 import { useOptimisticSave } from '../../useOptimisticSave/useOptimisticSave';
 import { withFavorite, withShelved } from '../../withFavorite/withFavorite';
+import { underTmdbRatings } from '../../underTmdbRatings/underTmdbRatings';
+import { useTmdbRatings } from '../../useTmdbRatings/useTmdbRatings';
 
 /** The home payload as the three sections render it, mapped once as it lands. */
 interface HomeSections {
@@ -43,7 +45,7 @@ async function loadSections(query: LibraryQuery): Promise<HomeSections> {
     continueWatching: payload.continueWatching.map(continueView),
     // The shelf holds poster cards, so its movies take the same narrowing a
     // genre row's do — `view`, not a mapper of its own.
-    favorites: payload.favorites.map(view),
+    favorites: payload.favorites.map((movie) => view(movie, true)),
   };
 }
 
@@ -163,7 +165,24 @@ export function useHomeRows(): UseHomeRowsResult {
 
   // A failed or unfinished load has no sections; the screen shows its own copy
   // for that, never an empty grid pretending to be a loaded one.
-  const { rows, continueWatching, favorites } = data ?? NO_SECTIONS;
+  const loaded = data ?? NO_SECTIONS;
+  const { continueWatching } = loaded;
+
+  // The cards as the TMDB ratings preference draws them, so a flip in
+  // Settings redraws what is loaded without reading the home again.
+  const tmdbRatings = useTmdbRatings();
+  const rows = useMemo(
+    () =>
+      loaded.rows.map((row) => ({
+        ...row,
+        movies: underTmdbRatings(row.movies, tmdbRatings),
+      })),
+    [loaded.rows, tmdbRatings]
+  );
+  const favorites = useMemo(
+    () => underTmdbRatings(loaded.favorites, tmdbRatings),
+    [loaded.favorites, tmdbRatings]
+  );
 
   /**
    * Applies a favorite value everywhere the payload carries the movie, leaving

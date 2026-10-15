@@ -2,6 +2,7 @@ import type { Movie, PosterCardMovie } from '@/types';
 import {
   gradientFromId,
   imageUrl,
+  shownRating,
   toRatingPercent,
   toProgressPercent,
 } from '@/utils';
@@ -17,16 +18,21 @@ import {
  * An unrated movie stays unrated: `rating` comes through as `null` rather than
  * as a zero score, because those are different facts and the tile prints them
  * differently.
+ *
+ * The rating is the **Shown rating** under `tmdbRatings` — the household
+ * Rating, else TMDB's while the preference is on — with its `ratingSource`.
  */
-export function view(movie: Movie): PosterCardMovie {
+export function view(movie: Movie, tmdbRatings: boolean): PosterCardMovie {
   const { g1, g2 } = gradientFromId(movie.id);
+  const shown = shownRating(movie.rating, movie.tmdbScore, tmdbRatings);
   return {
     id: movie.id,
     title: movie.title,
     posterUrl: imageUrl(movie.posterPath),
     g1,
     g2,
-    rating: toRatingPercent(movie.rating),
+    rating: toRatingPercent(shown?.units ?? null),
+    ratingSource: shown?.source ?? null,
     watched: movie.watched,
     progress: toProgressPercent(
       movie.resumePositionSeconds,

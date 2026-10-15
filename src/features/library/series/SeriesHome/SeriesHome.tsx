@@ -20,6 +20,7 @@ import { useBrowseLoad } from '../../useBrowseLoad/useBrowseLoad';
 import { useOptimisticSave } from '../../useOptimisticSave/useOptimisticSave';
 import { episodeContinueView } from '../episodeContinueView/episodeContinueView';
 import { seriesCardView } from '../seriesCardView/seriesCardView';
+import { useTmdbRatings } from '../../useTmdbRatings/useTmdbRatings';
 import { Count, Heading } from './SeriesHome.styles';
 
 /** The Favorites shelf's cap — the movie home's 15, a carousel's slice. */
@@ -84,7 +85,14 @@ export function SeriesHome() {
 
   const toggleFavorite = useOptimisticSave(applyFavorite, saveSeriesFavorite);
 
-  const cards = useMemo(() => data?.series.map(seriesCardView) ?? [], [data]);
+  // Mapped per render under the TMDB ratings preference, so a flip in
+  // Settings redraws the loaded cards without reading the tab again.
+  const tmdbRatings = useTmdbRatings();
+  const cards = useMemo(
+    () =>
+      data?.series.map((series) => seriesCardView(series, tmdbRatings)) ?? [],
+    [data, tmdbRatings]
+  );
   const favoriteCards = useMemo(
     () => shelvedFavorites(cards).slice(0, FAVORITES_LIMIT),
     [cards]

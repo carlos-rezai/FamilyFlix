@@ -11,6 +11,7 @@ const POSTER_CARD_KEYS: Array<keyof PosterCardMovie> = [
   'g1',
   'g2',
   'rating',
+  'ratingSource',
   'watched',
   'progress',
   'favorite',

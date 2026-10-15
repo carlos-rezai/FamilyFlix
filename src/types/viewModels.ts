@@ -12,7 +12,9 @@
  * a ready image-route URL or `null`, and `g1`/`g2` are the placeholder gradient
  * stops used when there is no poster. `rating` is `null` when nobody has rated
  * the movie, which the tile shows as empty stars with no number — distinct from
- * a stored 0, which reads `0.0`.
+ * a stored 0, which reads `0.0`. `ratingSource` says whose rating it is — the
+ * household's, or TMDB's while _Fill in ratings from TMDB_ is on — and is
+ * `null` exactly when `rating` is.
  */
 export interface PosterCardMovie {
   id: string;
@@ -21,10 +23,14 @@ export interface PosterCardMovie {
   g1: string;
   g2: string;
   rating: number | null;
+  ratingSource: RatingSource | null;
   watched: boolean;
   progress: number;
   favorite: boolean;
 }
+
+/** Whose rating a **Shown rating** is: the family's own, or TMDB's. */
+export type RatingSource = 'household' | 'tmdb';
 
 /**
  * The view model a `ContinueCard` renders from — the wide resume tile on the

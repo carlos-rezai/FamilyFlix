@@ -15,6 +15,8 @@ import { useBrowseLoad } from '../../useBrowseLoad/useBrowseLoad';
 import { useOptimisticSave } from '../../useOptimisticSave/useOptimisticSave';
 import { view } from '../../view/view';
 import { withFavoriteInList } from '../../withFavorite/withFavorite';
+import { underTmdbRatings } from '../../underTmdbRatings/underTmdbRatings';
+import { useTmdbRatings } from '../../useTmdbRatings/useTmdbRatings';
 
 /** One genre as this screen renders it, mapped once as the payload lands. */
 interface GenreScreen {
@@ -35,7 +37,10 @@ async function loadGenre(
   query: GenreQuery
 ): Promise<GenreScreen> {
   const payload = await fetchGenrePayload(genre, query);
-  return { total: payload.total, movies: payload.movies.map(view) };
+  return {
+    total: payload.total,
+    movies: payload.movies.map((movie) => view(movie, true)),
+  };
 }
 
 /** Where the load is: never both loading and errored, never movies without `ready`. */
@@ -136,7 +141,15 @@ export function GenreMoviesProvider({ children }: GenreMoviesProviderProps) {
 
   // A failed or unfinished load has no grid; the screen shows its own copy for
   // that, never an empty grid pretending to be a loaded one.
-  const { total, movies } = data ?? NO_GENRE;
+  const { total, movies: loaded } = data ?? NO_GENRE;
+
+  // The cards as the TMDB ratings preference draws them, so a flip in
+  // Settings redraws the grid without reading the genre again.
+  const tmdbRatings = useTmdbRatings();
+  const movies = useMemo(
+    () => underTmdbRatings(loaded, tmdbRatings),
+    [loaded, tmdbRatings]
+  );
 
   /** Applies a favorite value to the loaded grid, leaving the total alone. */
   const applyFavorite = useCallback(

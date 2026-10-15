@@ -135,6 +135,7 @@ export type {
 } from './enrichment';
 export type {
   PosterCardMovie,
+  RatingSource,
   ContinueCardMovie,
   MovieDetailModel,
   SeriesPageModel,

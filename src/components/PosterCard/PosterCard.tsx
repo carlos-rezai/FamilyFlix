@@ -132,7 +132,13 @@ export function PosterCard({
       <MetaWrap>
         <TitleBelow>{movie.title}</TitleBelow>
         <StarRow>
-          <StarRating rating={movie.rating} size={13} showValue />
+          <StarRating
+            rating={movie.rating}
+            size={13}
+            showValue
+            muted={movie.ratingSource === 'tmdb'}
+            tag={movie.ratingSource === 'tmdb' ? 'TMDB' : undefined}
+          />
         </StarRow>
       </MetaWrap>
     </Root>

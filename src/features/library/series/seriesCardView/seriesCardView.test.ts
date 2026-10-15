@@ -38,14 +38,20 @@ function makeSeries(overrides: Partial<Series> = {}): Series {
 
 describe('seriesCardView', () => {
   it('carries the id and title through', () => {
-    const card = seriesCardView(makeSeries({ id: 's7', title: 'Lighthouse' }));
+    const card = seriesCardView(
+      makeSeries({ id: 's7', title: 'Lighthouse' }),
+      false
+    );
 
     expect(card.id).toBe('s7');
     expect(card.title).toBe('Lighthouse');
   });
 
   it('falls back to Gradient art off the series id when there is no poster', () => {
-    const card = seriesCardView(makeSeries({ id: 's9', posterPath: null }));
+    const card = seriesCardView(
+      makeSeries({ id: 's9', posterPath: null }),
+      false
+    );
 
     expect(card.posterUrl).toBeNull();
     const { g1, g2 } = gradientFromId('s9');
@@ -55,30 +61,39 @@ describe('seriesCardView', () => {
 
   it('points a held poster at the image route', () => {
     const card = seriesCardView(
-      makeSeries({ posterPath: 'harbor-vine-2021/poster.jpg' })
+      makeSeries({ posterPath: 'harbor-vine-2021/poster.jpg' }),
+      false
     );
 
     expect(card.posterUrl).toBe('/api/images/harbor-vine-2021/poster.jpg');
   });
 
   it('is watched when every episode is watched, and not otherwise', () => {
-    expect(seriesCardView(makeSeries({ watched: true })).watched).toBe(true);
-    expect(seriesCardView(makeSeries({ watched: false })).watched).toBe(false);
+    expect(seriesCardView(makeSeries({ watched: true }), false).watched).toBe(
+      true
+    );
+    expect(seriesCardView(makeSeries({ watched: false }), false).watched).toBe(
+      false
+    );
   });
 
   it('draws no progress — a series has no resume position of its own', () => {
-    expect(seriesCardView(makeSeries({ watched: false })).progress).toBe(0);
+    expect(seriesCardView(makeSeries({ watched: false }), false).progress).toBe(
+      0
+    );
   });
 
   it('scales the rating to a percent, and keeps an unrated series unrated', () => {
-    expect(seriesCardView(makeSeries({ rating: 8 })).rating).toBe(80);
-    expect(seriesCardView(makeSeries({ rating: null })).rating).toBeNull();
+    expect(seriesCardView(makeSeries({ rating: 8 }), false).rating).toBe(80);
+    expect(
+      seriesCardView(makeSeries({ rating: null }), false).rating
+    ).toBeNull();
   });
 
   it('carries the favorite flag as favorite', () => {
-    expect(seriesCardView(makeSeries({ isFavorite: true })).favorite).toBe(
-      true
-    );
+    expect(
+      seriesCardView(makeSeries({ isFavorite: true }), false).favorite
+    ).toBe(true);
   });
 });
 

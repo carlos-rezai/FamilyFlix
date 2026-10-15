@@ -1,6 +1,13 @@
 import { toStarLabel } from '@/utils';
 
-import { Root, StarWrap, StarBase, StarFill, Value } from './StarRating.styles';
+import {
+  Root,
+  StarWrap,
+  StarBase,
+  StarFill,
+  Value,
+  Tag,
+} from './StarRating.styles';
 
 export interface StarRatingProps {
   /** Fill amount as a 0–100 percent, or `null` when the movie is unrated. */
@@ -9,6 +16,10 @@ export interface StarRatingProps {
   size?: number;
   /** Append the numeric out-of-5 value (e.g. "4.0"). Ignored when unrated. */
   showValue?: boolean;
+  /** Draw the filled stars in a neutral ink rather than the accent. */
+  muted?: boolean;
+  /** A small word after the value — whose rating it is. Read as text. */
+  tag?: string;
 }
 
 const STARS = '★★★★★';
@@ -22,11 +33,17 @@ const STARS = '★★★★★';
  * absence drops the *number* and keeps the *stars*: the row is fixed furniture
  * in a fixed-height tile, and removing it would leave the cards in a carousel
  * row sitting at different heights.
+ *
+ * `muted` and `tag` draw a rating that is not the household's: the filled
+ * stars off the accent and a word after the value. The atom is handed the word
+ * and knows nothing about where the rating came from.
  */
 export function StarRating({
   rating,
   size = 14,
   showValue = false,
+  muted = false,
+  tag,
 }: StarRatingProps) {
   const clamped = rating === null ? 0 : Math.max(0, Math.min(100, rating));
   const value = toStarLabel(clamped);
@@ -35,10 +52,15 @@ export function StarRating({
     <Root>
       <StarWrap $size={size}>
         <StarBase>{STARS}</StarBase>
-        <StarFill $rating={clamped}>{STARS}</StarFill>
+        <StarFill $rating={clamped} $muted={muted}>
+          {STARS}
+        </StarFill>
       </StarWrap>
       {showValue && rating !== null ? (
         <Value $size={size}>{value}</Value>
+      ) : null}
+      {tag !== undefined && rating !== null ? (
+        <Tag $size={size}>{tag}</Tag>
       ) : null}
     </Root>
   );

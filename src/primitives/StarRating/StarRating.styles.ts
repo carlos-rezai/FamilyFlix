@@ -19,19 +19,30 @@ export const StarBase = styled.span`
   color: rgba(255, 255, 255, 0.22);
 `;
 
-export const StarFill = styled.span<{ $rating: number }>`
+export const StarFill = styled.span<{ $rating: number; $muted: boolean }>`
   position: absolute;
   left: 0;
   top: 0;
   height: 100%;
   width: ${({ $rating }) => $rating}%;
   overflow: hidden;
-  color: ${({ theme }) => theme.colors.accent};
+  color: ${({ theme, $muted }) =>
+    $muted ? theme.colors.textDim : theme.colors.accent};
   white-space: nowrap;
 `;
 
 export const Value = styled.span<{ $size: number }>`
   font-family: ${({ theme }) => theme.fonts.sans};
   font-size: ${({ $size }) => Math.round($size * 0.86)}px;
+  color: ${({ theme }) => theme.colors.textFaint};
+`;
+
+/** The small uppercase word after the value — whose rating it is. */
+export const Tag = styled.span<{ $size: number }>`
+  font-family: ${({ theme }) => theme.fonts.sans};
+  font-size: ${({ $size }) => Math.round($size * 0.7)}px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   color: ${({ theme }) => theme.colors.textFaint};
 `;

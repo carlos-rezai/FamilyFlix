@@ -11,6 +11,7 @@ function makeCard(overrides: Partial<PosterCardMovie> = {}): PosterCardMovie {
     g1: '#2b1d3a',
     g2: '#0f0b16',
     rating: 8,
+    ratingSource: 'household',
     watched: false,
     progress: 0,
     favorite: false,
