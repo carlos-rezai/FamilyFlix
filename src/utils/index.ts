@@ -33,7 +33,10 @@ export { seriesTabPath } from './seriesTabPath/seriesTabPath';
 export { seasonPath } from './seasonPath/seasonPath';
 export { episodePlayPath } from './episodePlayPath/episodePlayPath';
 export { enrichPath } from './enrichPath/enrichPath';
-export { movieFormPath } from './movieFormPath/movieFormPath';
+export {
+  movieFormPath,
+  opensSeriesResolve,
+} from './movieFormPath/movieFormPath';
 export { accentScale, type AccentScale } from './accentScale/accentScale';
 export { imageUrl } from './imageUrl/imageUrl';
 export { kindFilter, type KindFilter } from './kindFilter/kindFilter';

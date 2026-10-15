@@ -1,11 +1,7 @@
 import { fetchMovie } from '@/api/fetchMovie/fetchMovie';
 import { fetchSeriesDetail } from '@/api/fetchSeriesDetail/fetchSeriesDetail';
-import type {
-  EpisodeFormRow,
-  ImportProblemDetail,
-  MovieFormFile,
-  MovieFormValues,
-} from '@/types';
+import type { EpisodeFormRow, MovieFormFile, MovieFormValues } from '@/types';
+import { opensSeriesResolve } from '@/utils';
 import { fetchProblem } from '../api/api';
 import type { FormJob } from '../formJob/formJob';
 import {
@@ -105,13 +101,6 @@ async function seriesEditRecord(series: string): Promise<FormRecord | null> {
         seasonPosters: heldSeasonPosters(detail),
       };
 }
-
-/**
- * Whether a problem's _Resolve_ is the **Series Resolve**: an `unplaced` show,
- * or a show's one `failed` row once its series is held.
- */
-const opensSeriesResolve = ({ kind, seriesId }: ImportProblemDetail): boolean =>
-  kind === 'unplaced' || (kind === 'failed' && seriesId !== undefined);
 
 /**
  * The **Import context**: the problem, and the held series a Series Resolve

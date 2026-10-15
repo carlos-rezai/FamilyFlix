@@ -1,7 +1,7 @@
 import { FieldDiff, type FieldDiffSide } from '@/components';
 import { Button } from '@/primitives';
 import type { ImportProblem, SheetChoices, SheetField } from '@/types';
-import { movieFormPath } from '@/utils';
+import { movieFormPath, opensSeriesResolve } from '@/utils';
 import { FolderPicker } from '../FolderPicker/FolderPicker';
 import {
   Card,
@@ -35,15 +35,14 @@ export interface ProblemRowProps {
  * form's series kind, naming the held series beside it when there is one;
  * so does a show's `failed` row once its series is held.
  */
-const resolveRoute = ({
-  id,
-  kind,
-  movieId,
-  seriesId,
-}: ImportProblem): string =>
-  kind === 'unplaced' || (kind === 'failed' && seriesId !== undefined)
-    ? movieFormPath({ kind: 'series', problem: id, series: seriesId })
-    : movieFormPath({ movie: movieId, problem: id });
+const resolveRoute = (problem: ImportProblem): string =>
+  opensSeriesResolve(problem)
+    ? movieFormPath({
+        kind: 'series',
+        problem: problem.id,
+        series: problem.seriesId,
+      })
+    : movieFormPath({ movie: problem.movieId, problem: problem.id });
 
 /** The diff's `'theirs'` read back as the import's own `'sheet'`. */
 const sheetChoices = (

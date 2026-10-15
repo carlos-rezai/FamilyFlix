@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 
-import { movieFormPath } from './movieFormPath';
+import { movieFormPath, opensSeriesResolve } from './movieFormPath';
 
 /** The query the route carries, read back the way the form reads it. */
 function queryOf(path: string): URLSearchParams {
@@ -73,5 +73,34 @@ describe('movieFormPath — the Series Resolve', () => {
     expect(
       movieFormPath({ kind: 'series', problem: 'p1', series: 'harbor' })
     ).toBe('/add?kind=series&problem=p1&series=harbor');
+  });
+});
+
+// 42 — Review at scale refactor (issue #366): the rule for _does this Resolve
+// open the Series Resolve_, spelled once beside the route both readers build.
+describe('opensSeriesResolve', () => {
+  it('opens it for an unplaced show, held or not', () => {
+    expect(opensSeriesResolve({ kind: 'unplaced' })).toBe(true);
+    expect(opensSeriesResolve({ kind: 'unplaced', seriesId: 's1' })).toBe(true);
+  });
+
+  it('opens it for a failed row once its series is held', () => {
+    expect(opensSeriesResolve({ kind: 'failed', seriesId: 's1' })).toBe(true);
+  });
+
+  it('leaves a failed row with no held series to the movie form', () => {
+    expect(opensSeriesResolve({ kind: 'failed' })).toBe(false);
+  });
+
+  it.each([
+    'no-folder',
+    'ambiguous',
+    'no-video',
+    'no-row',
+    'missing-meta',
+    'differs',
+  ] as const)('leaves a %s row to the movie form, series or not', (kind) => {
+    expect(opensSeriesResolve({ kind })).toBe(false);
+    expect(opensSeriesResolve({ kind, seriesId: 's1' })).toBe(false);
   });
 });
