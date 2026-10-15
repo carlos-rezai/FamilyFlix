@@ -220,7 +220,7 @@ describe('createEnrichment: a missing Decision', () => {
         kind: 'missing',
         title: 'Sundial',
         query: 'Sundial',
-        reason: 'Nothing on TMDB matched this title.',
+        reason: 'Nothing on TMDB matched this title, with or without its year.',
       })
     );
   });

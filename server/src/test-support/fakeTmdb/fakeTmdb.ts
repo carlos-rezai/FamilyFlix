@@ -24,10 +24,22 @@ export const TMDB_KEY = '0123456789abcdef0123456789abcdef';
 export interface TmdbScript {
   /** `searchMovie`'s results, by the title it is sent. */
   searches?: Readonly<Record<string, readonly TmdbMovieResult[]>>;
+  /**
+   * `searchMovie`'s results for a title sent **with a year**, by title then
+   * year — as TMDB's year filter answers. A title listed here answers nothing
+   * for a year it does not list; sent with no year, it falls to `searches`.
+   */
+  datedSearches?: Readonly<
+    Record<string, Readonly<Record<number, readonly TmdbMovieResult[]>>>
+  >;
   /** `movie`'s details, found by id. */
   movies?: readonly TmdbMovieDetail[];
   /** `searchTv`'s results, by the title it is sent. */
   tvSearches?: Readonly<Record<string, readonly TmdbTvResult[]>>;
+  /** `searchTv`'s results for a title sent with a year: `datedSearches`' rule. */
+  datedTvSearches?: Readonly<
+    Record<string, Readonly<Record<number, readonly TmdbTvResult[]>>>
+  >;
   /** `tv`'s details, found by id. */
   shows?: readonly TmdbTvDetail[];
   /** `season`'s answers: a show's id, then the season number. */
@@ -77,6 +89,23 @@ export type FakeTmdb = { [M in keyof TmdbClient]: Mock<TmdbClient[M]> } & {
 /** The bytes the fake's image stream yields for a TMDB image path. */
 export const tmdbImageBytes = (path: string): string =>
   `image bytes of ${path}`;
+
+/**
+ * A dated table's answer for a title and year: `undefined` when the call had
+ * no year or the table does not list the title, so the undated table answers.
+ */
+function dated<T>(
+  table:
+    | Readonly<Record<string, Readonly<Record<number, readonly T[]>>>>
+    | undefined,
+  title: string,
+  year: number | null
+): readonly T[] | undefined {
+  if (year === null) return undefined;
+  const byYear = table?.[title];
+  if (byYear === undefined) return undefined;
+  return byYear[year] ?? [];
+}
 
 const ok = <T>(value: T): TmdbOutcome<T> => ({ kind: 'ok', value });
 const unreachable = { kind: 'unreachable' } as const;
@@ -148,7 +177,11 @@ export function fakeTmdb(script: TmdbScript = {}): FakeTmdb {
     }),
     searchMovie: vi.fn<TmdbClient['searchMovie']>((...args) =>
       answer('searchMovie', args, () =>
-        ok([...(script.searches?.[args[1]] ?? [])])
+        ok([
+          ...(dated(script.datedSearches, args[1], args[2]) ??
+            script.searches?.[args[1]] ??
+            []),
+        ])
       )
     ),
     movie: vi.fn<TmdbClient['movie']>((...args) =>
@@ -159,7 +192,11 @@ export function fakeTmdb(script: TmdbScript = {}): FakeTmdb {
     ),
     searchTv: vi.fn<TmdbClient['searchTv']>((...args) =>
       answer('searchTv', args, () =>
-        ok([...(script.tvSearches?.[args[1]] ?? [])])
+        ok([
+          ...(dated(script.datedTvSearches, args[1], args[2]) ??
+            script.tvSearches?.[args[1]] ??
+            []),
+        ])
       )
     ),
     tv: vi.fn<TmdbClient['tv']>((...args) =>

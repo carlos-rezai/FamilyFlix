@@ -16,6 +16,7 @@ import {
   tmdbMovieResult,
   tmdbSeason,
   tmdbTvDetail,
+  tmdbTvResult,
 } from './fakeTmdb';
 
 const RESULT = tmdbMovieResult(101, 'Harbor Lights', 1963);
@@ -79,6 +80,44 @@ describe('fakeTmdb: the tables', () => {
     });
     expect(await tmdb.season(TMDB_KEY, 71, 2)).toEqual({
       kind: 'unreachable',
+    });
+  });
+
+  it('answers a dated search by its year, the undated table without one', async () => {
+    const later = tmdbMovieResult(102, 'Harbor Lights', 1964);
+    const tmdb = fakeTmdb({
+      searches: { 'Harbor Lights': [later] },
+      datedSearches: { 'Harbor Lights': { 1963: [RESULT] } },
+    });
+
+    expect(await tmdb.searchMovie(TMDB_KEY, 'Harbor Lights', 1963)).toEqual({
+      kind: 'ok',
+      value: [RESULT],
+    });
+    expect(await tmdb.searchMovie(TMDB_KEY, 'Harbor Lights', 1970)).toEqual({
+      kind: 'ok',
+      value: [],
+    });
+    expect(await tmdb.searchMovie(TMDB_KEY, 'Harbor Lights', null)).toEqual({
+      kind: 'ok',
+      value: [later],
+    });
+  });
+
+  it('answers a dated TV search by its year, the undated table without one', async () => {
+    const result = tmdbTvResult(71, 'The Hollow Coast', 2018);
+    const tmdb = fakeTmdb({
+      tvSearches: { 'The Hollow Coast': [result] },
+      datedTvSearches: { 'The Hollow Coast': { 2017: [] } },
+    });
+
+    expect(await tmdb.searchTv(TMDB_KEY, 'The Hollow Coast', 2017)).toEqual({
+      kind: 'ok',
+      value: [],
+    });
+    expect(await tmdb.searchTv(TMDB_KEY, 'The Hollow Coast', null)).toEqual({
+      kind: 'ok',
+      value: [result],
     });
   });
 

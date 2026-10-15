@@ -214,7 +214,7 @@ describe('createEnrichment: a series’ missing Decision', () => {
 
     expect(decision).toMatchObject({
       kind: 'missing',
-      reason: 'Nothing on TMDB matched this title.',
+      reason: 'Nothing on TMDB matched this title, with or without its year.',
       query: 'Tidewater',
     });
   });

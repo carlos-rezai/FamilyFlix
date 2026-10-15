@@ -191,7 +191,7 @@ describe('decisionFace', () => {
   it('is missing for no results, with the title’s reason', () => {
     expect(decisionFace(OURS, 'The Quiet Coast', [], NO_MATCH_REASON)).toEqual({
       kind: 'missing',
-      reason: 'Nothing on TMDB matched this title.',
+      reason: 'Nothing on TMDB matched this title, with or without its year.',
       query: 'The Quiet Coast',
     });
   });
@@ -299,7 +299,7 @@ describe('tvDecisionFace: a series’ search as the Decision’s face', () => {
       tvDecisionFace(SHOW, 'The Hollow Coast', [], NO_MATCH_REASON)
     ).toEqual({
       kind: 'missing',
-      reason: 'Nothing on TMDB matched this title.',
+      reason: 'Nothing on TMDB matched this title, with or without its year.',
       query: 'The Hollow Coast',
     });
   });
