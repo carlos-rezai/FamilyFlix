@@ -3,6 +3,7 @@ import {
   formatClock,
   gradientFromId,
   imageUrl,
+  shownRating,
   toRatingPercent,
 } from '@/utils';
 
@@ -94,7 +95,21 @@ function toTopTag(movie: Movie, hasPoster: boolean): string | null {
  * the stars exist. And **artwork is not decorated**: the overlays follow
  * `PosterCard`'s rule and caption the deterministic gradient only.
  */
-export function detailView(movie: Movie): MovieDetailModel {
+/**
+ * The **TMDB rating** as a percent while _Fill in ratings from TMDB_ is on and
+ * a score is held, else `null` — asked of `shownRating` with no household
+ * Rating, so the rounding is the cards' own. It stays beside `ratingPercent`,
+ * never merged into it: the picker shows it only as a placeholder.
+ */
+function toTmdbPercent(movie: Movie, tmdbRatings: boolean): number | null {
+  const tmdb = shownRating(null, movie.tmdbScore, tmdbRatings);
+  return tmdb === null ? null : toRatingPercent(tmdb.units);
+}
+
+export function detailView(
+  movie: Movie,
+  tmdbRatings: boolean
+): MovieDetailModel {
   const { g1, g2 } = gradientFromId(movie.id);
   const hasPoster = movie.posterPath !== null;
   const hasDirector = movie.director !== null;
@@ -106,6 +121,7 @@ export function detailView(movie: Movie): MovieDetailModel {
     year: movie.year,
     runtimeLabel: toRuntimeLabel(movie.runtimeMinutes),
     ratingPercent: toRatingPercent(movie.rating),
+    tmdbPercent: toTmdbPercent(movie, tmdbRatings),
     isWatched: movie.watched,
     isFavorite: movie.isFavorite,
     playLabel: toPlayLabel(movie),

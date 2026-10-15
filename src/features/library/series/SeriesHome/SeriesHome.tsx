@@ -20,7 +20,7 @@ import { useBrowseLoad } from '../../useBrowseLoad/useBrowseLoad';
 import { useOptimisticSave } from '../../useOptimisticSave/useOptimisticSave';
 import { episodeContinueView } from '../episodeContinueView/episodeContinueView';
 import { seriesCardView } from '../seriesCardView/seriesCardView';
-import { useTmdbRatings } from '../../useTmdbRatings/useTmdbRatings';
+import { useTmdbRatings } from '@/hooks/useTmdbRatings/useTmdbRatings';
 import { Count, Heading } from './SeriesHome.styles';
 
 /** The Favorites shelf's cap — the movie home's 15, a carousel's slice. */

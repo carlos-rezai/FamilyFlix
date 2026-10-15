@@ -30,14 +30,15 @@ export const Star = styled.span<{ $size: number }>`
 `;
 
 /** How full one star is drawn: the clipped overlay, laid over the dim glyph. */
-export const StarFill = styled.span<{ $fill: number }>`
+export const StarFill = styled.span<{ $fill: number; $muted: boolean }>`
   position: absolute;
   left: 0;
   top: 0;
   height: 100%;
   width: ${({ $fill }) => $fill}%;
   overflow: hidden;
-  color: ${({ theme }) => theme.colors.accent};
+  color: ${({ $muted, theme }) =>
+    $muted ? theme.colors.textDim : theme.colors.accent};
   pointer-events: none;
 `;
 
@@ -64,4 +65,13 @@ export const Value = styled.span`
   font-size: 14px;
   color: ${({ theme }) => theme.colors.textDim};
   white-space: nowrap;
+`;
+
+/** The small uppercase word after a placeholder's value — whose rating it is. */
+export const Tag = styled.span`
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: ${({ theme }) => theme.colors.textFaint};
 `;

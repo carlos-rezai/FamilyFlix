@@ -16,6 +16,8 @@ export interface MetaLineProps {
   runtimeLabel: string | null;
   /** 0–100 percent the stars fill against; `null` when the movie is unrated. */
   ratingPercent: number | null;
+  /** TMDB's rating as a percent, the picker's placeholder; `null` for none. */
+  tmdbPercent: number | null;
   /** Closes the line with the Watched badge. */
   isWatched: boolean;
   /** The rating a click on the stars asks for, as a percent. */
@@ -24,6 +26,9 @@ export interface MetaLineProps {
 
 /** The picker's stars sit at 20px on this page — larger than a card's 13px. */
 const STAR_SIZE = 20;
+
+/** Whose rating the placeholder is. */
+const TMDB_TAG = 'TMDB';
 
 /** Drawn between two surviving **Meta segments**, never beside a missing one. */
 const META_SEPARATOR = '•';
@@ -49,6 +54,7 @@ function metaSegments({
   year,
   runtimeLabel,
   ratingPercent,
+  tmdbPercent,
   onRate,
 }: MetaLineProps): MetaSegment[] {
   const segments: MetaSegment[] = [];
@@ -68,6 +74,8 @@ function metaSegments({
       <RatingWrap>
         <RatingPicker
           value={ratingPercent}
+          placeholder={tmdbPercent}
+          placeholderTag={TMDB_TAG}
           size={STAR_SIZE}
           onChange={onRate}
         />

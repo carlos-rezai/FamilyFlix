@@ -23,6 +23,7 @@ function aMovie(over: Partial<MovieDetailModel> = {}): MovieDetailModel {
     year: 2019,
     runtimeLabel: '2h 8m',
     ratingPercent: 80,
+    tmdbPercent: null,
     isWatched: false,
     isFavorite: false,
     playLabel: 'Resume · 52:00',

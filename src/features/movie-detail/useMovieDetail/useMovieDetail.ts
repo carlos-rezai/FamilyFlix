@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
-import type { MovieDetailModel } from '@/types';
+import type { Movie, MovieDetailModel } from '@/types';
 import { fetchMovie } from '@/api/fetchMovie/fetchMovie';
 import { saveFavorite } from '@/api/saveFavorite/saveFavorite';
 import { saveWatched } from '@/api/saveWatched/saveWatched';
@@ -8,6 +8,7 @@ import { toRatingPercent, toRatingUnits } from '@/utils';
 import { saveRating } from '../api/api';
 import { detailView } from '../detailView/detailView';
 import { useOptimisticEdit } from '@/hooks/useOptimisticEdit/useOptimisticEdit';
+import { useTmdbRatings } from '@/hooks/useTmdbRatings/useTmdbRatings';
 
 /**
  * Where the load is. Four, not three: a movie that is gone and a movie that
@@ -102,6 +103,15 @@ export function useMovieDetail(id: string): UseMovieDetailResult {
   });
   const [attempt, setAttempt] = useState(0);
 
+  /**
+   * The household's _Fill in ratings from TMDB_, read through a ref by the
+   * load so a preference landing late re-maps the placeholder below rather
+   * than reloading the page; the record is kept for that re-map.
+   */
+  const tmdbRatings = useTmdbRatings();
+  const tmdbRatingsRef = useRef(tmdbRatings);
+  const recordRef = useRef<Movie | null>(null);
+
   useEffect(() => {
     let current = true;
     setState({ status: 'loading', movie: null });
@@ -111,10 +121,14 @@ export function useMovieDetail(id: string): UseMovieDetailResult {
         if (!current) {
           return;
         }
+        recordRef.current = movie;
         setState(
           movie === null
             ? { status: 'not-found', movie: null }
-            : { status: 'ready', movie: detailView(movie) }
+            : {
+                status: 'ready',
+                movie: detailView(movie, tmdbRatingsRef.current),
+              }
         );
       })
       .catch(() => {
@@ -148,6 +162,21 @@ export function useMovieDetail(id: string): UseMovieDetailResult {
     },
     []
   );
+
+  /** The preference changed under a loaded film: only the placeholder moves. */
+  useEffect(() => {
+    if (tmdbRatingsRef.current === tmdbRatings) {
+      return;
+    }
+    tmdbRatingsRef.current = tmdbRatings;
+    const record = recordRef.current;
+    if (record !== null) {
+      const { tmdbPercent } = detailView(record, tmdbRatings);
+      editMovie((current) =>
+        current.id === record.id ? { ...current, tmdbPercent } : current
+      );
+    }
+  }, [tmdbRatings, editMovie]);
 
   const movie = state.status === 'ready' ? state.movie : null;
 

@@ -74,6 +74,12 @@ export interface MovieDetailModel {
   runtimeLabel: string | null;
   /** 0–100 percent the stars fill against; `null` when the movie is unrated. */
   ratingPercent: number | null;
+  /**
+   * The **TMDB rating** as a percent, the picker's placeholder — `null` while
+   * _Fill in ratings from TMDB_ is off or no score is held. Never merged into
+   * `ratingPercent`.
+   */
+  tmdbPercent: number | null;
   isWatched: boolean;
   /**
    * The favorite flag — the same one the shelf's heart reads, so a movie

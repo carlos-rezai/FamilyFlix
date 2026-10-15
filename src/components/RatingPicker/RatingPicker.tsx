@@ -9,6 +9,7 @@ import {
   StarFill,
   Segment,
   Value,
+  Tag,
 } from './RatingPicker.styles';
 
 export interface RatingPickerProps {
@@ -16,6 +17,14 @@ export interface RatingPickerProps {
   value: number | null;
   /** Star glyph size in px — the strip's gap and hit areas scale off it. */
   size?: number;
+  /**
+   * A rating to show, muted, while `value` is `null` — TMDB's, on the movie
+   * page — as a percent. A placeholder and nothing more: a click always sets
+   * the household's own value, and it is never offered as a clear.
+   */
+  placeholder?: number | null;
+  /** The word after the placeholder's `x / 5` — whose rating it is. */
+  placeholderTag?: string;
   /** The rating a click asks for, as a percent, or `null` to clear it. */
   onChange: (percent: number | null) => void;
 }
@@ -120,10 +129,13 @@ function segmentLabel(percent: number): string {
 export function RatingPicker({
   value,
   size = DEFAULT_SIZE,
+  placeholder = null,
+  placeholderTag,
   onChange,
 }: RatingPickerProps) {
   const [preview, setPreview] = useState<number | null>(null);
-  const shown = preview ?? value;
+  const placeheld = value === null && preview === null ? placeholder : null;
+  const shown = preview ?? value ?? placeheld;
 
   /** Focus moving from one segment to another inside the strip is not leaving. */
   function handleBlur(event: FocusEvent<HTMLSpanElement>) {
@@ -144,7 +156,11 @@ export function RatingPicker({
         {STARS.map((nth) => (
           <Star key={nth} $size={size}>
             {STAR}
-            <StarFill $fill={fillOf(shown, nth)} aria-hidden="true">
+            <StarFill
+              $fill={fillOf(shown, nth)}
+              $muted={placeheld !== null}
+              aria-hidden="true"
+            >
               {STAR}
             </StarFill>
             {HALVES.map((half) => {
@@ -166,7 +182,19 @@ export function RatingPicker({
           </Star>
         ))}
       </Stars>
-      <Value>{valueLabel(value)}</Value>
+      {value === null && placeholder !== null ? (
+        <Value>
+          {valueLabel(placeholder)}
+          {placeholderTag === undefined ? null : (
+            <>
+              {' '}
+              <Tag>{placeholderTag}</Tag>
+            </>
+          )}
+        </Value>
+      ) : (
+        <Value>{valueLabel(value)}</Value>
+      )}
     </Root>
   );
 }

@@ -136,6 +136,7 @@ export function MovieDetail() {
             year={movie.year}
             runtimeLabel={movie.runtimeLabel}
             ratingPercent={movie.ratingPercent}
+            tmdbPercent={movie.tmdbPercent}
             isWatched={movie.isWatched}
             onRate={detail.rate}
           />

@@ -6,30 +6,38 @@ import { makeMovie } from '@/test-support/makeMovie/makeMovie';
 
 describe('detailView — Movie → MovieDetailModel mapper', () => {
   it('passes id and title straight through', () => {
-    const vm = detailView(makeMovie({ id: 'abc', title: 'Northwind' }));
+    const vm = detailView(makeMovie({ id: 'abc', title: 'Northwind' }), false);
 
     expect(vm.id).toBe('abc');
     expect(vm.title).toBe('Northwind');
   });
 
   it('carries the year through', () => {
-    expect(detailView(makeMovie({ year: 1994 })).year).toBe(1994);
+    expect(detailView(makeMovie({ year: 1994 }), false).year).toBe(1994);
   });
 
   it('drops the year segment entirely when the record has none', () => {
-    expect(detailView(makeMovie({ year: null })).year).toBeNull();
+    expect(detailView(makeMovie({ year: null }), false).year).toBeNull();
   });
 
   it('reports whether the movie is watched', () => {
-    expect(detailView(makeMovie({ watched: true })).isWatched).toBe(true);
-    expect(detailView(makeMovie({ watched: false })).isWatched).toBe(false);
+    expect(detailView(makeMovie({ watched: true }), false).isWatched).toBe(
+      true
+    );
+    expect(detailView(makeMovie({ watched: false }), false).isWatched).toBe(
+      false
+    );
   });
 
   it('reports whether the movie is a favorite', () => {
     // The heart has to arrive already filled for a movie favorited on the
     // shelf — the two screens are looking at one flag, not two.
-    expect(detailView(makeMovie({ isFavorite: true })).isFavorite).toBe(true);
-    expect(detailView(makeMovie({ isFavorite: false })).isFavorite).toBe(false);
+    expect(detailView(makeMovie({ isFavorite: true }), false).isFavorite).toBe(
+      true
+    );
+    expect(detailView(makeMovie({ isFavorite: false }), false).isFavorite).toBe(
+      false
+    );
   });
 
   it('lists the genre names in the order the record holds them', () => {
@@ -39,7 +47,8 @@ describe('detailView — Movie → MovieDetailModel mapper', () => {
           { id: 'g1', name: 'Drama' },
           { id: 'g2', name: 'Thriller' },
         ],
-      })
+      }),
+      false
     );
 
     expect(vm.genres).toEqual(['Drama', 'Thriller']);
@@ -53,27 +62,27 @@ describe('detailView — Movie → MovieDetailModel mapper', () => {
  */
 describe('detailView — the runtime label', () => {
   it('writes both units when both are non-zero', () => {
-    expect(detailView(makeMovie({ runtimeMinutes: 128 })).runtimeLabel).toBe(
-      '2h 8m'
-    );
+    expect(
+      detailView(makeMovie({ runtimeMinutes: 128 }), false).runtimeLabel
+    ).toBe('2h 8m');
   });
 
   it('writes minutes alone under an hour — never "0h 42m"', () => {
-    expect(detailView(makeMovie({ runtimeMinutes: 42 })).runtimeLabel).toBe(
-      '42m'
-    );
+    expect(
+      detailView(makeMovie({ runtimeMinutes: 42 }), false).runtimeLabel
+    ).toBe('42m');
   });
 
   it('writes hours alone on the hour — never "2h 0m"', () => {
-    expect(detailView(makeMovie({ runtimeMinutes: 120 })).runtimeLabel).toBe(
-      '2h'
-    );
+    expect(
+      detailView(makeMovie({ runtimeMinutes: 120 }), false).runtimeLabel
+    ).toBe('2h');
   });
 
   it('drops the segment entirely when the runtime is unknown', () => {
-    expect(detailView(makeMovie({ runtimeMinutes: null })).runtimeLabel).toBe(
-      null
-    );
+    expect(
+      detailView(makeMovie({ runtimeMinutes: null }), false).runtimeLabel
+    ).toBe(null);
   });
 });
 
@@ -89,15 +98,17 @@ describe('detailView — the runtime label', () => {
  */
 describe('detailView — the rating segment', () => {
   it('maps a stored rating to the percent the stars fill against', () => {
-    expect(detailView(makeMovie({ rating: 8 })).ratingPercent).toBe(80);
+    expect(detailView(makeMovie({ rating: 8 }), false).ratingPercent).toBe(80);
   });
 
   it('carries an unrated movie through as unrated, for the picker to label', () => {
-    expect(detailView(makeMovie({ rating: null })).ratingPercent).toBeNull();
+    expect(
+      detailView(makeMovie({ rating: null }), false).ratingPercent
+    ).toBeNull();
   });
 
   it('keeps a stored zero as a real rating, distinct from unrated', () => {
-    expect(detailView(makeMovie({ rating: 0 })).ratingPercent).toBe(0);
+    expect(detailView(makeMovie({ rating: 0 }), false).ratingPercent).toBe(0);
   });
 });
 
@@ -170,7 +181,8 @@ describe('detailView — the play label', () => {
         resumePositionSeconds: 0,
         watched: false,
         status: 'unwatched',
-      })
+      }),
+      false
     );
 
     expect(vm.playLabel).toBe('Play');
@@ -182,7 +194,8 @@ describe('detailView — the play label', () => {
         resumePositionSeconds: 3120,
         watched: false,
         status: 'in-progress',
-      })
+      }),
+      false
     );
 
     expect(vm.playLabel).toBe('Resume · 52:00');
@@ -194,7 +207,8 @@ describe('detailView — the play label', () => {
         resumePositionSeconds: 3725,
         watched: false,
         status: 'in-progress',
-      })
+      }),
+      false
     );
 
     expect(vm.playLabel).toBe('Resume · 1:02:05');
@@ -208,7 +222,8 @@ describe('detailView — the play label', () => {
         resumePositionSeconds: 0,
         watched: true,
         status: 'watched',
-      })
+      }),
+      false
     );
 
     expect(vm.playLabel).toBe('Play');
@@ -219,11 +234,13 @@ describe('detailView — the synopsis', () => {
   it('carries the synopsis through', () => {
     const synopsis = 'A lighthouse keeper takes in a runaway girl.';
 
-    expect(detailView(makeMovie({ synopsis })).synopsis).toBe(synopsis);
+    expect(detailView(makeMovie({ synopsis }), false).synopsis).toBe(synopsis);
   });
 
   it('reports no synopsis when the record has none', () => {
-    expect(detailView(makeMovie({ synopsis: null })).synopsis).toBeNull();
+    expect(
+      detailView(makeMovie({ synopsis: null }), false).synopsis
+    ).toBeNull();
   });
 });
 
@@ -238,7 +255,8 @@ describe('detailView — the credits row', () => {
       makeMovie({
         director: 'Michael Rowe',
         cast: ['Ana Vega', 'Tomas Bell', 'Ruth Kerr'],
-      })
+      }),
+      false
     );
 
     expect(vm.hasCredits).toBe(true);
@@ -248,7 +266,8 @@ describe('detailView — the credits row', () => {
 
   it('substitutes "—" for a missing director and keeps the cast beside it', () => {
     const vm = detailView(
-      makeMovie({ director: null, cast: ['Ana Vega', 'Tomas Bell'] })
+      makeMovie({ director: null, cast: ['Ana Vega', 'Tomas Bell'] }),
+      false
     );
 
     expect(vm.hasCredits).toBe(true);
@@ -257,14 +276,17 @@ describe('detailView — the credits row', () => {
   });
 
   it('substitutes "—" for an empty cast and keeps the director beside it', () => {
-    const vm = detailView(makeMovie({ director: 'Michael Rowe', cast: [] }));
+    const vm = detailView(
+      makeMovie({ director: 'Michael Rowe', cast: [] }),
+      false
+    );
 
     expect(vm.hasCredits).toBe(true);
     expect(vm.castText).toBe('—');
   });
 
   it('reports no credits row when both the director and the cast are missing', () => {
-    const vm = detailView(makeMovie({ director: null, cast: [] }));
+    const vm = detailView(makeMovie({ director: null, cast: [] }), false);
 
     expect(vm.hasCredits).toBe(false);
   });
@@ -272,19 +294,25 @@ describe('detailView — the credits row', () => {
 
 describe('detailView — artwork and the gradient fallback', () => {
   it('resolves a poster path through the image route', () => {
-    const vm = detailView(makeMovie({ posterPath: 'abc/poster.jpg' }));
+    const vm = detailView(makeMovie({ posterPath: 'abc/poster.jpg' }), false);
 
     expect(vm.posterUrl).toContain('/api/images/abc/poster.jpg');
   });
 
   it('resolves a backdrop path through the image route', () => {
-    const vm = detailView(makeMovie({ backdropPath: 'abc/backdrop.jpg' }));
+    const vm = detailView(
+      makeMovie({ backdropPath: 'abc/backdrop.jpg' }),
+      false
+    );
 
     expect(vm.backdropUrl).toContain('/api/images/abc/backdrop.jpg');
   });
 
   it('reports no artwork when the record carries neither path', () => {
-    const vm = detailView(makeMovie({ posterPath: null, backdropPath: null }));
+    const vm = detailView(
+      makeMovie({ posterPath: null, backdropPath: null }),
+      false
+    );
 
     expect(vm.posterUrl).toBeNull();
     expect(vm.backdropUrl).toBeNull();
@@ -296,7 +324,8 @@ describe('detailView — artwork and the gradient fallback', () => {
   // odd record but the ordinary shape of a film the maintainer just added.
   it('falls back to the gradient backdrop for a movie with a poster and no backdrop', () => {
     const vm = detailView(
-      makeMovie({ id: 'm1', posterPath: 'abc/poster.jpg', backdropPath: null })
+      makeMovie({ id: 'm1', posterPath: 'abc/poster.jpg', backdropPath: null }),
+      false
     );
 
     // Story 41. `Artwork` draws the gradient when it is handed no URL, which is
@@ -313,7 +342,7 @@ describe('detailView — artwork and the gradient fallback', () => {
   });
 
   it('always carries the deterministic gradient stops its id hashes to — the same ones its card draws', () => {
-    const vm = detailView(makeMovie({ id: 'm1' }));
+    const vm = detailView(makeMovie({ id: 'm1' }), false);
     const { g1, g2 } = gradientFromId('m1');
 
     expect(vm.g1).toBe(g1);
@@ -336,7 +365,8 @@ describe('detailView — the poster overlay tag', () => {
           { id: 'g1', name: 'Drama' },
           { id: 'g2', name: 'Thriller' },
         ],
-      })
+      }),
+      false
     );
 
     expect(vm.topTag).toBe('Drama · 1994');
@@ -348,7 +378,8 @@ describe('detailView — the poster overlay tag', () => {
         posterPath: null,
         year: null,
         genres: [{ id: 'g1', name: 'Drama' }],
-      })
+      }),
+      false
     );
 
     expect(vm.topTag).toBe('Drama');
@@ -356,7 +387,8 @@ describe('detailView — the poster overlay tag', () => {
 
   it('takes the separator with an untagged movie, leaving the year alone', () => {
     const vm = detailView(
-      makeMovie({ posterPath: null, year: 1994, genres: [] })
+      makeMovie({ posterPath: null, year: 1994, genres: [] }),
+      false
     );
 
     expect(vm.topTag).toBe('1994');
@@ -364,7 +396,8 @@ describe('detailView — the poster overlay tag', () => {
 
   it('composes no tag at all when the movie has neither a genre nor a year', () => {
     const vm = detailView(
-      makeMovie({ posterPath: null, year: null, genres: [] })
+      makeMovie({ posterPath: null, year: null, genres: [] }),
+      false
     );
 
     expect(vm.topTag).toBeNull();
@@ -376,7 +409,8 @@ describe('detailView — the poster overlay tag', () => {
         posterPath: 'abc/poster.jpg',
         year: 1994,
         genres: [{ id: 'g1', name: 'Drama' }],
-      })
+      }),
+      false
     );
 
     expect(vm.topTag).toBeNull();
@@ -392,7 +426,8 @@ describe('detailView — the poster overlay tag', () => {
 describe('detailView — hasPoster', () => {
   it('is true when a poster is set', () => {
     const vm = detailView(
-      makeMovie({ posterPath: 'abc/poster.jpg', backdropPath: null })
+      makeMovie({ posterPath: 'abc/poster.jpg', backdropPath: null }),
+      false
     );
 
     expect(vm.hasPoster).toBe(true);
@@ -405,7 +440,8 @@ describe('detailView — hasPoster', () => {
         backdropPath: 'abc/backdrop.jpg',
         year: 1994,
         genres: [{ id: 'g1', name: 'Drama' }],
-      })
+      }),
+      false
     );
 
     expect(vm.hasPoster).toBe(true);
@@ -419,7 +455,8 @@ describe('detailView — hasPoster', () => {
         backdropPath: 'abc/backdrop.jpg',
         year: 1994,
         genres: [{ id: 'g1', name: 'Drama' }],
-      })
+      }),
+      false
     );
 
     expect(vm.hasPoster).toBe(false);
@@ -427,7 +464,10 @@ describe('detailView — hasPoster', () => {
   });
 
   it('is false when the record carries neither path', () => {
-    const vm = detailView(makeMovie({ posterPath: null, backdropPath: null }));
+    const vm = detailView(
+      makeMovie({ posterPath: null, backdropPath: null }),
+      false
+    );
 
     expect(vm.hasPoster).toBe(false);
   });
