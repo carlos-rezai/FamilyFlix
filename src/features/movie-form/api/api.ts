@@ -142,20 +142,19 @@ export function updateMovie(
 /**
  * The **Series edit job**'s save, `PATCH /api/series/:id`: the add's body, a
  * held row naming its episode and a held file travelling as its path — a
- * held **Season poster** too, and one taken away (a season in `held` whose
- * slot is empty) as a bare `seasonPoster`.
+ * held **Season poster** too, and one taken away (a `held` slot now empty)
+ * as a bare `seasonPoster`.
  */
 export async function updateSeries(
   id: string,
   values: MovieFormValues,
   episodes: readonly EpisodeFormRow[],
-  seasonPosters: readonly SeasonPosterSlot[] = [],
-  held: ReadonlySet<number> = new Set()
+  seasonPosters: readonly SeasonPosterSlot[] = []
 ): Promise<Series> {
   const endpoint = `${SERIES_ENDPOINT}/${encodeURIComponent(id)}`;
   const response = await fetch(endpoint, {
     method: 'PATCH',
-    body: seriesFormData(values, episodes, seasonPosters, held),
+    body: seriesFormData(values, episodes, seasonPosters),
   });
 
   if (!response.ok) {

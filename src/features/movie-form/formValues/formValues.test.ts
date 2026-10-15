@@ -1,9 +1,19 @@
 import { describe, it, expect } from 'vitest';
 
-import type { Movie, MovieFormFile, MovieFormValues } from '@/types';
+import type {
+  Movie,
+  MovieFormFile,
+  MovieFormValues,
+  SeasonPosterSlot,
+} from '@/types';
 import { makeMovie } from '@/test-support/makeMovie/makeMovie';
 
-import { movieFormValues, movieFormData, pickedFile } from './formValues';
+import {
+  movieFormValues,
+  movieFormData,
+  pickedFile,
+  seriesFormData,
+} from './formValues';
 
 /**
  * The round trip that makes editing correct: a **Movie** in, a
@@ -517,5 +527,52 @@ describe('the round trip', () => {
     // The contrast that makes the absence above mean something: one slot
     // re-picked is one file part, and the film beside it still does not move.
     expect(fileParts(body)).toEqual([file]);
+  });
+});
+
+// 42 — Review at scale refactor (issue #366), Group 6: each **Season poster**
+// slot as `seriesFormData` sends it, after the episodes. A slot carries its
+// own `held`, which is what tells an emptied slot from one never filled.
+describe('seriesFormData — the Season posters', () => {
+  const SERIES = movieFormValues(STORED);
+  const HELD: MovieFormFile = {
+    kind: 'stored',
+    path: 'harbor-vine-2019/S02-poster.jpg',
+    filename: 'S02-poster.jpg',
+  };
+
+  const bodyOf = (...slots: SeasonPosterSlot[]) =>
+    seriesFormData(SERIES, [], slots);
+
+  it('sends a picked poster as its field, then its file', () => {
+    const file = someFile('spring.jpg');
+
+    const body = bodyOf({ season: 1, poster: pickedFile(file), held: false });
+
+    expect(sent(body, 'seasonPoster')).toEqual([JSON.stringify({ season: 1 })]);
+    expect(sent(body, 'seasonPosterFile')).toEqual([file]);
+  });
+
+  it('sends a held poster as its path, and no bytes', () => {
+    const body = bodyOf({ season: 2, poster: HELD, held: true });
+
+    expect(sent(body, 'seasonPoster')).toEqual([
+      JSON.stringify({ season: 2, path: 'harbor-vine-2019/S02-poster.jpg' }),
+    ]);
+    expect(sent(body, 'seasonPosterFile')).toEqual([]);
+  });
+
+  it('sends an emptied held poster as a bare field', () => {
+    const body = bodyOf({ season: 2, poster: null, held: true });
+
+    expect(sent(body, 'seasonPoster')).toEqual([JSON.stringify({ season: 2 })]);
+    expect(sent(body, 'seasonPosterFile')).toEqual([]);
+  });
+
+  it('sends nothing for an empty slot that never held a poster', () => {
+    const body = bodyOf({ season: 3, poster: null, held: false });
+
+    expect(sent(body, 'seasonPoster')).toEqual([]);
+    expect(sent(body, 'seasonPosterFile')).toEqual([]);
   });
 });

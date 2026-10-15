@@ -5,7 +5,7 @@ import { ThemeProvider } from 'styled-components';
 
 import { SeriesFormFiles } from './SeriesFormFiles';
 import { theme } from '@/styles/theme';
-import type { MovieFormFile } from '@/types';
+import type { MovieFormFile, SeasonPosterSlot } from '@/types';
 
 /**
  * 29 — Add a series, Phase 2 (issue #262): the series kind's Files card.
@@ -114,9 +114,7 @@ describe('SeriesFormFiles — the Season posters list', () => {
     filename: 'S01-poster.jpg',
   };
 
-  function renderSlots(
-    seasonPosters: { season: number; poster: MovieFormFile | null }[]
-  ) {
+  function renderSlots(seasonPosters: SeasonPosterSlot[]) {
     const onPickSeasonPoster = vi.fn<(season: number, file: File) => void>();
     const onRemoveSeasonPoster = vi.fn<(season: number) => void>();
 
@@ -150,9 +148,9 @@ describe('SeriesFormFiles — the Season posters list', () => {
 
   it('draws the caption over one slot per season, labelled S01, S02…, in the order given', () => {
     renderSlots([
-      { season: 1, poster: HELD_SEASON_ONE },
-      { season: 2, poster: null },
-      { season: 10, poster: null },
+      { season: 1, poster: HELD_SEASON_ONE, held: true },
+      { season: 2, poster: null, held: false },
+      { season: 10, poster: null, held: false },
     ]);
 
     expect(within(list()).getByText('Season posters')).toBeDefined();
@@ -164,8 +162,8 @@ describe('SeriesFormFiles — the Season posters list', () => {
 
   it('shows a held poster by its stored name, and an empty slot as its choose button', () => {
     renderSlots([
-      { season: 1, poster: HELD_SEASON_ONE },
-      { season: 3, poster: null },
+      { season: 1, poster: HELD_SEASON_ONE, held: true },
+      { season: 3, poster: null, held: false },
     ]);
 
     expect(within(list()).getByText('S01-poster.jpg')).toBeDefined();
@@ -182,6 +180,7 @@ describe('SeriesFormFiles — the Season posters list', () => {
       {
         season: 2,
         poster: { kind: 'picked', file: SEASON_ART, filename: 'spring.jpg' },
+        held: false,
       },
     ]);
 
@@ -190,8 +189,8 @@ describe('SeriesFormFiles — the Season posters list', () => {
 
   it('reports the season and the file picked into its slot', async () => {
     const { onPickSeasonPoster } = renderSlots([
-      { season: 1, poster: HELD_SEASON_ONE },
-      { season: 2, poster: null },
+      { season: 1, poster: HELD_SEASON_ONE, held: true },
+      { season: 2, poster: null, held: false },
     ]);
 
     await userEvent.upload(
@@ -207,7 +206,7 @@ describe('SeriesFormFiles — the Season posters list', () => {
 
   it('reports the season whose ✕ was pressed', () => {
     const { onRemoveSeasonPoster } = renderSlots([
-      { season: 1, poster: HELD_SEASON_ONE },
+      { season: 1, poster: HELD_SEASON_ONE, held: true },
     ]);
 
     fireEvent.click(

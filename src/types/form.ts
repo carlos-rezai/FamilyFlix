@@ -144,12 +144,15 @@ export interface EpisodeFormRow {
 
 /**
  * One slot of the series kind's _Season posters_ list: a **Season** the
- * episode rows hold, and what is in its poster slot — a held **Season
- * poster**, a picked file, or `null` while it is empty.
+ * episode rows hold, what is in its poster slot — a held **Season poster**, a
+ * picked file, or `null` while it is empty — and whether the series edit
+ * opened with a Season poster there, which is what tells a slot _emptied_
+ * from one _never filled_.
  */
 export interface SeasonPosterSlot {
   season: number;
   poster: MovieFormFile | null;
+  held: boolean;
 }
 
 /** The **Form kind**: what a plain add is adding. */

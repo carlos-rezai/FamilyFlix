@@ -400,14 +400,13 @@ export function movieFormData(values: MovieFormValues): FormData {
  *
  * Then each **Season poster** slot as a `seasonPoster` field: a held poster as
  * its `path`, a picked one followed by its `seasonPosterFile` part, and a held
- * one taken away — a season in `held` whose slot is empty — as neither. An
- * empty slot that never held one sends nothing.
+ * one taken away — a `held` slot now empty — as neither. An empty slot that
+ * never held one sends nothing.
  */
 export function seriesFormData(
   values: MovieFormValues,
   episodes: readonly EpisodeFormRow[],
-  seasonPosters: readonly SeasonPosterSlot[] = [],
-  held: ReadonlySet<number> = new Set()
+  seasonPosters: readonly SeasonPosterSlot[] = []
 ): FormData {
   const body = new FormData();
 
@@ -472,7 +471,7 @@ export function seriesFormData(
     }
   }
 
-  for (const { season, poster } of seasonPosters) {
+  for (const { season, poster, held } of seasonPosters) {
     if (poster?.kind === 'picked') {
       body.append('seasonPoster', JSON.stringify({ season }));
       body.append('seasonPosterFile', poster.file);
@@ -481,7 +480,7 @@ export function seriesFormData(
         'seasonPoster',
         JSON.stringify({ season, path: poster.path })
       );
-    } else if (held.has(season)) {
+    } else if (held) {
       body.append('seasonPoster', JSON.stringify({ season }));
     }
   }

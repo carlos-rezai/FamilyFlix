@@ -357,14 +357,13 @@ export function useMovieForm(): UseMovieFormResult {
   /** The film Resolve's found videos, for the **Found-file choice**. */
   const [foundVideos, setFoundVideos] = useState<MovieFormFile[]>([]);
 
-  /** What each season's poster slot holds, by season; absent is empty. */
+  /**
+   * What each season's poster slot holds, by season, and whether the series
+   * edit opened with a Season poster there; absent is empty and never held.
+   */
   const [seasonPosterFiles, setSeasonPosterFiles] = useState<
-    Readonly<Record<number, MovieFormFile | null>>
+    Readonly<Record<number, Omit<SeasonPosterSlot, 'season'>>>
   >({});
-  /** The seasons the series edit opened holding a Season poster. */
-  const [heldSeasons, setHeldSeasons] = useState<ReadonlySet<number>>(
-    () => new Set()
-  );
 
   // The URL, read once: which of the five jobs this screen is doing.
   const search = searchParams.toString();
@@ -421,8 +420,14 @@ export function useMovieForm(): UseMovieFormResult {
         holdEpisodes(record.episodes.rows, record.episodes.taken);
       }
       setFoundVideos(record.foundVideos);
-      setSeasonPosterFiles(record.seasonPosters);
-      setHeldSeasons(new Set(Object.keys(record.seasonPosters).map(Number)));
+      setSeasonPosterFiles(
+        Object.fromEntries(
+          Object.entries(record.seasonPosters).map(([season, poster]) => [
+            season,
+            { poster, held: true },
+          ])
+        )
+      );
       setEditing(record.editing);
       setEditingSeries(record.editingSeries);
       setResolving(record.resolving);
@@ -517,12 +522,18 @@ export function useMovieForm(): UseMovieFormResult {
   const pickSeasonPoster = useCallback((season: number, file: File) => {
     setSeasonPosterFiles((current) => ({
       ...current,
-      [season]: pickedFile(file),
+      [season]: {
+        poster: pickedFile(file),
+        held: current[season]?.held ?? false,
+      },
     }));
   }, []);
 
   const removeSeasonPoster = useCallback((season: number) => {
-    setSeasonPosterFiles((current) => ({ ...current, [season]: null }));
+    setSeasonPosterFiles((current) => ({
+      ...current,
+      [season]: { poster: null, held: current[season]?.held ?? false },
+    }));
   }, []);
 
   // One slot per season the rows hold, in season order, appearing and going
@@ -541,7 +552,8 @@ export function useMovieForm(): UseMovieFormResult {
       .sort((a, b) => a - b)
       .map((season) => ({
         season,
-        poster: seasonPosterFiles[season] ?? null,
+        poster: seasonPosterFiles[season]?.poster ?? null,
+        held: seasonPosterFiles[season]?.held ?? false,
       }));
   }, [episodes, resolving, seasonPosterFiles]);
 
@@ -670,8 +682,7 @@ export function useMovieForm(): UseMovieFormResult {
             standing.series,
             values,
             episodes,
-            seasonPosters,
-            heldSeasons
+            seasonPosters
           ).then(() => goBack());
         case 'edit':
           // A correction is only visible on the film's page — which is the
@@ -710,7 +721,6 @@ export function useMovieForm(): UseMovieFormResult {
     values,
     episodes,
     seasonPosters,
-    heldSeasons,
     navigate,
     goBack,
     editing,
