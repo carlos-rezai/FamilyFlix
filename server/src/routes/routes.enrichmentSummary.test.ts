@@ -101,6 +101,7 @@ describe('GET /api/enrichment — the summary', () => {
     expect(await readSummary(baseUrl)).toEqual({
       total: 0,
       complete: 0,
+      gaps: 0,
       lastSyncedAt: null,
       keySet: false,
       online: true,

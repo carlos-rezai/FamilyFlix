@@ -24,6 +24,7 @@ function summary(lastSyncedAt: string | null): EnrichmentSummary {
   return {
     total: 480,
     complete: 412,
+    gaps: 68,
     lastSyncedAt,
     keySet: true,
     online: true,

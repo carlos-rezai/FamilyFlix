@@ -56,6 +56,8 @@ export interface EnrichmentSummary {
   total: number;
   /** Titles holding both a synopsis and a poster. */
   complete: number;
+  /** Titles with a **Sync gap** — what _Only what's missing_ will sync. */
+  gaps: number;
   lastSyncedAt: string | null;
   keySet: boolean;
   online: boolean;

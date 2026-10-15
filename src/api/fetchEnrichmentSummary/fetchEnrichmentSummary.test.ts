@@ -38,6 +38,7 @@ afterEach(() => {
 const SUMMARY: EnrichmentSummary = {
   total: 30,
   complete: 18,
+  gaps: 12,
   lastSyncedAt: '2026-09-26T09:30:00.000Z',
   keySet: true,
   online: false,

@@ -81,6 +81,13 @@ export function assignmentsOf<K extends string>(
   return { assignments, params };
 }
 
+/** The summary's three counts over every Movie and Series. */
+export interface EnrichmentCounts {
+  total: number;
+  complete: number;
+  gaps: number;
+}
+
 export interface Enrich {
   /**
    * Write the columns `fields` names, and only those, in one transaction. A
@@ -91,15 +98,16 @@ export interface Enrich {
   enrichMovie(id: string, fields: MovieEnrichment): void;
   /**
    * The titles a library-wide Sync snapshots, with their current values:
-   * `missing` is every film without **Full details** (a synopsis and a
-   * poster), `all` every film.
+   * `missing` is every film with a **Sync gap** (`syncGap`), `all` every
+   * film.
    */
   moviesInScope(scope: Exclude<EnrichScope, 'single'>): Movie[];
   /**
    * Every **Movie** and **Series** in the library, and those of them with
-   * **Full details** — a synopsis and a poster both. Zeros when empty.
+   * **Full details** — a synopsis and a poster both — and those with a
+   * **Sync gap**, what _Only what's missing_ will sync. Zeros when empty.
    */
-  enrichmentCounts(): { total: number; complete: number };
+  enrichmentCounts(): EnrichmentCounts;
   /**
    * Record where a **Movie** or **Series** came from, both columns in one
    * call: the **Library folder** it was found under and its Source folder
@@ -158,6 +166,36 @@ export function fullDetails(missing: boolean, alias = ''): string {
   ).join(missing ? ' OR ' : ' AND ');
 }
 
+/** An episode column a Sync fills, each empty one a **Sync gap**. */
+const EPISODE_COLUMNS = ['title', 'air_date', 'still_path'] as const;
+
+/**
+ * The **Sync gap** as SQL over a `movies` or `series` row, under `alias` when
+ * the query names one: not **Full details**, or **Unmatched** (no `tmdb_id`).
+ * For a `series` row, also an **Episode** on disk without its title, air date
+ * or **Still**, or a **Season** on disk without its **Season poster** —
+ * season 0 never, since no Sync reads it.
+ */
+export function syncGap(
+  alias = '',
+  kind: 'movies' | 'series' = 'movies'
+): string {
+  const at = alias === '' ? '' : `${alias}.`;
+  const own = `${fullDetails(true, alias)} OR ${at}tmdb_id IS NULL`;
+  if (kind === 'movies') return own;
+  const seriesId = alias === '' ? 'series.id' : `${alias}.id`;
+  const emptyEpisode = EPISODE_COLUMNS.map(
+    (column) => `gap_e.${column} IS NULL OR gap_e.${column} = ''`
+  ).join(' OR ');
+  return `${own}
+    OR EXISTS (SELECT 1 FROM episodes gap_e
+      WHERE gap_e.series_id = ${seriesId} AND gap_e.season_number > 0
+        AND (${emptyEpisode}
+          OR NOT EXISTS (SELECT 1 FROM season_posters gap_p
+            WHERE gap_p.series_id = gap_e.series_id
+              AND gap_p.season_number = gap_e.season_number)))`;
+}
+
 /** A pool genre's id by name; a name the pool does not hold is refused. */
 export function poolGenreIds(db: SqliteDatabase): (name: string) => string {
   const selectGenreIdByName = db.prepare(
@@ -200,7 +238,7 @@ export function createEnrich(db: SqliteDatabase, reader: MovieReader): Enrich {
   });
 
   function moviesInScope(scope: Exclude<EnrichScope, 'single'>): Movie[] {
-    const where = scope === 'missing' ? `WHERE ${fullDetails(true, 'm')}` : '';
+    const where = scope === 'missing' ? `WHERE ${syncGap('m')}` : '';
     const rows = db
       .prepare(
         `SELECT m.* FROM movies m ${where} ORDER BY m.title COLLATE NOCASE, m.id`
@@ -213,15 +251,14 @@ export function createEnrich(db: SqliteDatabase, reader: MovieReader): Enrich {
     `SELECT
        (SELECT COUNT(*) FROM movies) + (SELECT COUNT(*) FROM series) AS total,
        (SELECT COUNT(*) FROM movies WHERE ${fullDetails(false)})
-         + (SELECT COUNT(*) FROM series WHERE ${fullDetails(false)}) AS complete`
+         + (SELECT COUNT(*) FROM series WHERE ${fullDetails(false)}) AS complete,
+       (SELECT COUNT(*) FROM movies WHERE ${syncGap()})
+         + (SELECT COUNT(*) FROM series WHERE ${syncGap('', 'series')}) AS gaps`
   );
 
-  function enrichmentCounts(): { total: number; complete: number } {
-    const { total, complete } = countTitles.get() as {
-      total: number;
-      complete: number;
-    };
-    return { total, complete };
+  function enrichmentCounts(): EnrichmentCounts {
+    const { total, complete, gaps } = countTitles.get() as EnrichmentCounts;
+    return { total, complete, gaps };
   }
 
   const updateMovieSource = db.prepare(

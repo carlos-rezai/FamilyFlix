@@ -159,13 +159,14 @@ const searchedTitles = (client: FakeTmdb) =>
   client.searchMovie.mock.calls.map(([, title]) => title).sort();
 
 describe('createEnrichment: Only what’s missing', () => {
-  it('covers the films with no synopsis or no poster, and no other', async () => {
-    const { enrichment, client, addFilm } = world();
+  it('covers the films with no synopsis or no poster, and no matched other', async () => {
+    const { enrichment, client, storage, addFilm } = world();
     await addFilm(LANTERN);
-    await addFilm(HARBOR, {
+    const matched = await addFilm(HARBOR, {
       synopsis: 'Our own words.',
       posterPath: 'harbor-lights-1963/poster.jpg',
     });
+    storage.enrichMovie(matched, { tmdbId: 550099 });
 
     const outcome = await startSync(enrichment, 'missing');
     await reviewed(enrichment);

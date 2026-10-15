@@ -1204,10 +1204,11 @@ export function createEnrichment({
 
   async function summary(): Promise<EnrichmentSummary> {
     const online = await client.reachable();
-    const { total, complete } = storage.enrichmentCounts();
+    const { total, complete, gaps } = storage.enrichmentCounts();
     return {
       total,
       complete,
+      gaps,
       lastSyncedAt: storage.enrichmentLastSyncedAt(),
       keySet: storage.tmdbKey() !== null,
       online,

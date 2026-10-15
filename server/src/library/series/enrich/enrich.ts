@@ -3,8 +3,8 @@ import type { EnrichScope, Series } from '@/types';
 import {
   asJson,
   assignmentsOf,
-  fullDetails,
   poolGenreIds,
+  syncGap,
   type Column,
 } from '../../enrich/enrich';
 import type { SeriesReader, SeriesRow } from '../read/read';
@@ -74,7 +74,8 @@ export interface SeriesEnrich {
   enrichEpisode(id: string, fields: EpisodeEnrichment): void;
   /**
    * The series a library-wide Sync snapshots, with their current values:
-   * `missing` is every series without **Full details**, `all` every series.
+   * `missing` is every series with a **Sync gap** (`syncGap`), `all` every
+   * series.
    */
   seriesInScope(scope: Exclude<EnrichScope, 'single'>): Series[];
   /**
@@ -128,7 +129,7 @@ export function createSeriesEnrich(
   }
 
   function seriesInScope(scope: Exclude<EnrichScope, 'single'>): Series[] {
-    const where = scope === 'missing' ? `WHERE ${fullDetails(true)}` : '';
+    const where = scope === 'missing' ? `WHERE ${syncGap('', 'series')}` : '';
     const rows = db
       .prepare(
         `SELECT * FROM series ${where} ORDER BY title COLLATE NOCASE, id`

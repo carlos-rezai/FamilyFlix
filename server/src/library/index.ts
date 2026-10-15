@@ -36,6 +36,7 @@ import {
 } from './folders/folders';
 import {
   createEnrich,
+  type EnrichmentCounts,
   type MovieEnrichment,
   type TitleSource,
 } from './enrich/enrich';
@@ -123,7 +124,7 @@ export interface LibraryStorage {
    * Every **Movie** and **Series**, and those with **Full details** — a
    * synopsis and a poster both. An empty library answers zeros.
    */
-  enrichmentCounts(): { total: number; complete: number };
+  enrichmentCounts(): EnrichmentCounts;
   /**
    * Delete a movie, cascading to its `movie_genres` and `subtitles` rows so no
    * orphans remain. A silent, idempotent no-op for an unknown id.
