@@ -56,7 +56,7 @@ export interface EpisodeUploads {
    * Each picked **Season poster** as it landed: the k-th entry belongs to the
    * k-th `seasonPoster` field, and is absent for a field no part followed.
    */
-  seasonPosters?: (string | undefined)[];
+  seasonPosters: (string | undefined)[];
   /**
    * The first part this route would not take — a file `fileKinds` refuses, a
    * stray part, or a part out of the contract's order — as its sentence. The
@@ -198,7 +198,7 @@ export function readSeasonPosters(
       };
     }
     seen.add(field.season);
-    const file = uploads.seasonPosters?.[index];
+    const file = uploads.seasonPosters[index];
     changes.push(
       file !== undefined
         ? { season: field.season, kind: 'picked', file }
@@ -282,8 +282,7 @@ export function collectEpisodeUploads(
       }
       seasonPosterArrived.add(index);
       uploads.folder ??= resolveFolder(before);
-      const landed = (uploads.seasonPosters ??= []);
-      landed[index] = await media.storeUpload(
+      uploads.seasonPosters[index] = await media.storeUpload(
         uploads.folder,
         nameSeasonPoster(field.season, extname(filename).toLowerCase()),
         part

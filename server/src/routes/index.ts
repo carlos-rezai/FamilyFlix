@@ -1009,7 +1009,7 @@ export function createApiRouter(
         }
         const written = [
           uploads.poster,
-          ...(uploads.seasonPosters ?? []),
+          ...uploads.seasonPosters,
           ...uploads.episodes.flatMap((upload) =>
             upload === undefined ? [] : [upload.video, ...upload.subtitles]
           ),

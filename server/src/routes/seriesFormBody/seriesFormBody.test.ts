@@ -48,6 +48,7 @@ function landed(count: number): EpisodeUploads {
       video: `harbor-and-vine/season-01/episode-${index + 1}.mkv`,
       subtitles: [],
     })),
+    seasonPosters: [],
   };
 }
 
@@ -178,6 +179,7 @@ describe('readSeriesFields — the record a body describes', () => {
           },
           { video: 'harbor-and-vine/season-01/second.mkv', subtitles: [] },
         ],
+        seasonPosters: [],
       },
       POOL
     );
