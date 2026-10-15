@@ -73,6 +73,7 @@ function renderReview(props: Partial<ImportReviewProps> = {}) {
           onApply={props.onApply ?? (() => undefined)}
           onPick={props.onPick ?? (() => undefined)}
           onImportAs={props.onImportAs ?? (() => undefined)}
+          onSkipMany={props.onSkipMany ?? (() => undefined)}
           finishLabel={props.finishLabel ?? FINISH}
           onFinish={props.onFinish ?? (() => undefined)}
         />
@@ -93,6 +94,7 @@ function renderReview(props: Partial<ImportReviewProps> = {}) {
               onApply={props.onApply ?? (() => undefined)}
               onPick={props.onPick ?? (() => undefined)}
               onImportAs={props.onImportAs ?? (() => undefined)}
+              onSkipMany={props.onSkipMany ?? (() => undefined)}
               finishLabel={props.finishLabel ?? FINISH}
               onFinish={props.onFinish ?? (() => undefined)}
             />
@@ -525,7 +527,7 @@ describe('ImportReview — Review groups', () => {
   };
 
   const groupToggle = () =>
-    screen.getByRole('button', { name: /The Night Ferry/ });
+    screen.getByRole('button', { name: /^The Night Ferry/ });
 
   /** The dots in a header: what is hidden from the reader and is not the chevron. */
   const marksIn = (header: HTMLElement): Element[] =>
@@ -812,6 +814,7 @@ describe('ImportReview — the Kind filter', () => {
             onApply={() => undefined}
             onPick={() => undefined}
             onImportAs={() => undefined}
+            onSkipMany={() => undefined}
             finishLabel={FINISH}
             onFinish={() => undefined}
           />
@@ -837,5 +840,223 @@ describe('ImportReview — the Kind filter', () => {
 
     const wrapper = (filter() as HTMLElement).parentElement as HTMLElement;
     expect(resolvedStyle(wrapper)['overflow-x']).toBe('auto');
+  });
+});
+
+/**
+ * 41 — Review at scale, Phase 6: "Skip all and Keep all mine in the Import
+ * review" (issue #360).
+ *
+ * The bulk **Dismiss**, from `feat.ImportFlow.dc.html` as amended: _Skip all_
+ * among a **Review group**'s Accordion actions, named `Skip all for <title>`;
+ * and, beside the **Kind filter** once a kind is chosen, _Skip all_ — or, for
+ * `differs`, _Keep all mine_ in its place, the row's own word for the same
+ * Dismiss. Each press is reported at once, no confirm, with the ids it
+ * dismisses in the run's order; the step removes nothing itself — the **Run
+ * hook** does, and the next `run` shows it.
+ */
+describe('ImportReview — bulk actions', () => {
+  const problem = (
+    id: string,
+    kind: ImportProblem['kind'],
+    title = `Title ${id}`
+  ): ImportProblem => ({
+    id,
+    kind,
+    title,
+    reason: `Reason ${id}.`,
+  });
+  const differs = (id: string, title: string): ImportProblem => ({
+    ...problem(id, 'differs', title),
+    movieId: `m-${id}`,
+    differences: [
+      { field: 'director', label: 'Director', mine: 'Mine', sheet: 'Sheet' },
+    ],
+  });
+
+  /**
+   * One group of three under _The Night Ferry_, a lone `no-row` title, and
+   * two `differs` titles — three kinds, so the filter is drawn.
+   */
+  const BULK: ImportProblem[] = [
+    problem('f1', 'no-folder', 'The Night Ferry'),
+    problem('l1', 'no-row', 'Ironwood (2018)'),
+    problem('f2', 'no-row', 'The Night Ferry'),
+    differs('d1', 'Die Hard'),
+    problem('f3', 'no-folder', 'The Night Ferry'),
+    differs('d2', 'Heat'),
+  ];
+
+  const filter = () =>
+    screen.getByRole('group', { name: 'Problem kinds' }) as HTMLElement;
+  const pill = (name: string) => within(filter()).getByRole('button', { name });
+  /** The Kind filter's row: the track's wrapper's parent, beside which the bulk buttons sit. */
+  const besideFilter = () =>
+    filter().parentElement?.parentElement as HTMLElement;
+  const groupSkipAll = () =>
+    screen.queryByRole('button', { name: 'Skip all for The Night Ferry' });
+
+  describe('Skip all on a Review group', () => {
+    it('draws Skip all for its title on a group’s header, closed, and on no bare row', () => {
+      renderReview({ run: inReview(BULK) });
+
+      expect(groupSkipAll()).not.toBeNull();
+      expect(
+        screen.queryByRole('button', { name: 'Skip all for Ironwood (2018)' })
+      ).toBeNull();
+      expect(
+        screen.queryByRole('button', { name: 'Skip all for Die Hard' })
+      ).toBeNull();
+    });
+
+    it('reports every row of that title, in the run’s order, at once — no confirm', () => {
+      const onSkipMany = vi.fn<ImportReviewProps['onSkipMany']>();
+      const onSkip = vi.fn();
+      renderReview({ run: inReview(BULK), onSkipMany, onSkip });
+
+      fireEvent.click(groupSkipAll() as HTMLElement);
+
+      expect(onSkipMany).toHaveBeenCalledTimes(1);
+      expect(onSkipMany).toHaveBeenCalledWith(['f1', 'f2', 'f3']);
+      expect(onSkip).not.toHaveBeenCalled();
+      expect(screen.queryByRole('dialog')).toBeNull();
+    });
+
+    it('leaves the group closed: the press is not the header’s toggle', () => {
+      renderReview({ run: inReview(BULK) });
+
+      fireEvent.click(groupSkipAll() as HTMLElement);
+
+      expect(
+        screen
+          .getByRole('button', { name: /^The Night Ferry/ })
+          .getAttribute('aria-expanded')
+      ).toBe('false');
+    });
+
+    it('removes nothing itself, and the group goes once the run no longer carries its rows', () => {
+      const { rerenderWith } = renderReview({ run: inReview(BULK) });
+
+      fireEvent.click(groupSkipAll() as HTMLElement);
+      expect(groupSkipAll()).not.toBeNull();
+
+      rerenderWith(inReview(BULK.filter((p) => p.title !== 'The Night Ferry')));
+
+      expect(groupSkipAll()).toBeNull();
+      expect(screen.queryByText('The Night Ferry')).toBeNull();
+      expect(screen.getByText('Ironwood (2018)')).toBeDefined();
+    });
+  });
+
+  describe('Skip all beside a chosen kind', () => {
+    it('draws no bulk button while All is chosen', () => {
+      renderReview({ run: inReview(BULK) });
+
+      expect(
+        within(besideFilter()).queryByRole('button', { name: 'Skip all' })
+      ).toBeNull();
+      expect(
+        within(besideFilter()).queryByRole('button', { name: 'Keep all mine' })
+      ).toBeNull();
+    });
+
+    it('draws Skip all beside the filter once a kind is chosen', () => {
+      renderReview({ run: inReview(BULK) });
+
+      fireEvent.click(pill('Not in sheet 2'));
+
+      expect(
+        within(besideFilter()).getByRole('button', { name: 'Skip all' })
+      ).toBeDefined();
+    });
+
+    it('reports every row of that kind, across titles and groups, in the run’s order — no confirm', () => {
+      const onSkipMany = vi.fn<ImportReviewProps['onSkipMany']>();
+      renderReview({ run: inReview(BULK), onSkipMany });
+
+      fireEvent.click(pill('Not in sheet 2'));
+      fireEvent.click(
+        within(besideFilter()).getByRole('button', { name: 'Skip all' })
+      );
+
+      expect(onSkipMany).toHaveBeenCalledTimes(1);
+      expect(onSkipMany).toHaveBeenCalledWith(['l1', 'f2']);
+      expect(screen.queryByRole('dialog')).toBeNull();
+    });
+
+    it('reports a kind whose rows are still grouped under one title', () => {
+      const onSkipMany = vi.fn<ImportReviewProps['onSkipMany']>();
+      renderReview({ run: inReview(BULK), onSkipMany });
+
+      fireEvent.click(pill('No folder 2'));
+      fireEvent.click(
+        within(besideFilter()).getByRole('button', { name: 'Skip all' })
+      );
+
+      expect(onSkipMany).toHaveBeenCalledWith(['f1', 'f3']);
+    });
+
+    it('removes nothing itself; the kind’s pill goes once the run drops its rows, and the filter falls back to All', () => {
+      const { rerenderWith } = renderReview({ run: inReview(BULK) });
+      fireEvent.click(pill('Not in sheet 2'));
+      fireEvent.click(
+        within(besideFilter()).getByRole('button', { name: 'Skip all' })
+      );
+      expect(screen.getByText('Reason l1.')).toBeDefined();
+
+      rerenderWith(inReview(BULK.filter((p) => p.kind !== 'no-row')));
+
+      expect(screen.queryByText('Reason l1.')).toBeNull();
+      expect(pill('All 4').getAttribute('aria-pressed')).toBe('true');
+      expect(
+        within(besideFilter()).queryByRole('button', { name: 'Skip all' })
+      ).toBeNull();
+    });
+  });
+
+  describe('Keep all mine beside differs', () => {
+    it('draws Keep all mine beside the filter with differs chosen, in Skip all’s place', () => {
+      renderReview({ run: inReview(BULK) });
+
+      fireEvent.click(pill('Differs 2'));
+
+      expect(
+        within(besideFilter()).getByRole('button', { name: 'Keep all mine' })
+      ).toBeDefined();
+      expect(
+        within(besideFilter()).queryByRole('button', { name: 'Skip all' })
+      ).toBeNull();
+    });
+
+    it('draws no Keep all mine beside the filter for any other kind', () => {
+      renderReview({ run: inReview(BULK) });
+
+      for (const name of ['No folder 2', 'Not in sheet 2']) {
+        fireEvent.click(pill(name));
+        expect(
+          within(besideFilter()).queryByRole('button', {
+            name: 'Keep all mine',
+          })
+        ).toBeNull();
+      }
+    });
+
+    it('reports every differs row, in the run’s order, as the same Dismiss — no confirm', () => {
+      const onSkipMany = vi.fn<ImportReviewProps['onSkipMany']>();
+      const onSkip = vi.fn();
+      const onApply = vi.fn();
+      renderReview({ run: inReview(BULK), onSkipMany, onSkip, onApply });
+
+      fireEvent.click(pill('Differs 2'));
+      fireEvent.click(
+        within(besideFilter()).getByRole('button', { name: 'Keep all mine' })
+      );
+
+      expect(onSkipMany).toHaveBeenCalledTimes(1);
+      expect(onSkipMany).toHaveBeenCalledWith(['d1', 'd2']);
+      expect(onSkip).not.toHaveBeenCalled();
+      expect(onApply).not.toHaveBeenCalled();
+      expect(screen.queryByRole('dialog')).toBeNull();
+    });
   });
 });
