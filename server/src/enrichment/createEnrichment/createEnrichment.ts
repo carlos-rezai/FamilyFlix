@@ -236,6 +236,22 @@ interface SearchResults {
   tv: TmdbTvResult;
 }
 
+/** One kind's search: a rung asked of the client, that kind's results back. */
+type Search<T> = (
+  client: TmdbClient,
+  apiKey: string,
+  rung: SearchRung,
+  signal?: AbortSignal
+) => Promise<TmdbOutcome<T[]>>;
+
+/** Each kind's client call, typed by {@link SearchResults}. */
+const SEARCHES: { [K in keyof SearchResults]: Search<SearchResults[K]> } = {
+  movie: (client, apiKey, rung, signal) =>
+    client.searchMovie(apiKey, rung.query, rung.year, signal),
+  tv: (client, apiKey, rung, signal) =>
+    client.searchTv(apiKey, rung.query, rung.year, signal),
+};
+
 /** A climb's answer: the results and the rung that gave them, or a Stop. */
 type Climbed<T> =
   | { kind: 'ok'; value: T[]; rung: SearchRung; later: boolean }
@@ -314,12 +330,7 @@ export function createEnrichment({
       later: false,
     };
     for (const [index, rung] of rungs.entries()) {
-      // Each kind's client call answers that kind's results.
-      const answer = (
-        kind === 'movie'
-          ? await client.searchMovie(apiKey, rung.query, rung.year, signal)
-          : await client.searchTv(apiKey, rung.query, rung.year, signal)
-      ) as TmdbOutcome<SearchResults[K][]>;
+      const answer = await SEARCHES[kind](client, apiKey, rung, signal);
       if (answer.kind !== 'ok') return { kind: answer.kind };
       last = { kind: 'ok', value: answer.value, rung, later: index > 0 };
       if (answer.value.length > 0) break;
