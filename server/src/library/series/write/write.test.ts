@@ -706,3 +706,124 @@ describe('series write: an episode’s Source file', () => {
     ).toEqual([null, null]);
   });
 });
+
+// --- 42 — Review at scale refactor (issue #366): the Season posters ---------
+//
+// The form's series add and edit carry **Season posters** beside the
+// episodes: each written in the save's own transaction, read back through
+// `getSeriesDetail`, and a replaced or removed one's old file answered for
+// cleanup only once the edit has committed.
+
+/** Each season's poster as the series page reads it, by season number. */
+const seasonPosters = (storage: ReturnType<typeof freshStorage>, id: string) =>
+  storage
+    .getSeriesDetail(id)
+    ?.seasons.map((season) => [season.number, season.posterPath]);
+
+describe('series write: Season posters', () => {
+  // Registered after the harness's own teardowns, so it runs first: the
+  // on-disk database is closed before its sandbox is removed.
+  afterEach(closeTracked);
+
+  it('records an add’s Season posters with the series', () => {
+    const storage = freshStorage();
+
+    const series = storage.addSeries(
+      { title: 'Harbor', year: 2019 },
+      [
+        { season: 1, number: 1, videoPath: 'harbor-2019/season-01/S01E01.mp4' },
+        { season: 2, number: 1, videoPath: 'harbor-2019/season-02/S02E01.mp4' },
+      ],
+      [{ season: 2, posterPath: 'harbor-2019/S02-poster.jpg' }]
+    );
+
+    expect(seasonPosters(storage, series.id)).toEqual([
+      [1, null],
+      [2, 'harbor-2019/S02-poster.jpg'],
+    ]);
+  });
+
+  it('records none when the add’s episodes are refused', () => {
+    const path = join(sandboxRoot('familyflix-series-posters-'), 'lib.db');
+    const storage = track(createSqliteStorage(path));
+
+    expect(() =>
+      storage.addSeries(
+        { title: 'Harbor' },
+        [
+          { season: 1, number: 1, videoPath: 'harbor/S01E01.mp4' },
+          { season: 1, number: 1, videoPath: 'harbor/S01E01-again.mp4' },
+        ],
+        [{ season: 1, posterPath: 'harbor/S01-poster.jpg' }]
+      )
+    ).toThrow();
+
+    const probe = track(openDatabase(path));
+    expect(countRows(probe, 'series')).toBe(0);
+    expect(countRows(probe, 'season_posters')).toBe(0);
+  });
+
+  it('sets one, removes one and keeps a season the edit leaves out', () => {
+    const storage = freshStorage();
+    const series = storage.addSeries(
+      { title: 'Harbor', year: 2019 },
+      [
+        { season: 1, number: 1, videoPath: 'harbor-2019/season-01/S01E01.mp4' },
+        { season: 2, number: 1, videoPath: 'harbor-2019/season-02/S02E01.mp4' },
+        { season: 3, number: 1, videoPath: 'harbor-2019/season-03/S03E01.mp4' },
+      ],
+      [
+        { season: 2, posterPath: 'harbor-2019/S02-poster.jpg' },
+        { season: 3, posterPath: 'harbor-2019/S03-poster.jpg' },
+      ]
+    );
+
+    storage.updateSeries(series.id, {
+      ...unchangedEdit(storage, series.id),
+      seasonPosters: [
+        { season: 1, posterPath: 'harbor-2019/S01-poster.jpg' },
+        { season: 2, posterPath: null },
+      ],
+    });
+
+    expect(seasonPosters(storage, series.id)).toEqual([
+      [1, 'harbor-2019/S01-poster.jpg'],
+      [2, null],
+      [3, 'harbor-2019/S03-poster.jpg'],
+    ]);
+  });
+
+  it('answers a replaced or removed poster’s old file to clean up, and not a kept one’s', () => {
+    const storage = freshStorage();
+    const series = storage.addSeries(
+      { title: 'Harbor', year: 2019 },
+      [
+        { season: 1, number: 1, videoPath: 'harbor-2019/season-01/S01E01.mp4' },
+        { season: 2, number: 1, videoPath: 'harbor-2019/season-02/S02E01.mp4' },
+        { season: 3, number: 1, videoPath: 'harbor-2019/season-03/S03E01.mp4' },
+      ],
+      [
+        { season: 1, posterPath: 'harbor-2019/S01-poster.jpg' },
+        { season: 2, posterPath: 'harbor-2019/S02-poster.jpg' },
+        { season: 3, posterPath: 'harbor-2019/S03-poster.jpg' },
+      ]
+    );
+
+    const outcome = storage.updateSeries(series.id, {
+      ...unchangedEdit(storage, series.id),
+      seasonPosters: [
+        { season: 1, posterPath: 'harbor-2019/S01-poster-2.jpg' },
+        { season: 2, posterPath: null },
+      ],
+    });
+
+    expect(outcome?.removedPaths).toEqual(
+      expect.arrayContaining([
+        'harbor-2019/S01-poster.jpg',
+        'harbor-2019/S02-poster.jpg',
+      ])
+    );
+    expect(outcome?.removedPaths).not.toContain('harbor-2019/S03-poster.jpg');
+    expect(outcome?.removedPaths).not.toContain('harbor-2019/S01-poster-2.jpg');
+  });
+});

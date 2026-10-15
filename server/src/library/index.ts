@@ -123,8 +123,9 @@ export interface LibraryStorage {
    */
   moviesInScope(scope: 'missing' | 'all'): Movie[];
   /**
-   * Every **Movie** and **Series**, and those with **Full details** — a
-   * synopsis and a poster both. An empty library answers zeros.
+   * Every **Movie** and **Series** in the library, and those of them with
+   * **Full details** — a synopsis and a poster both — and those with a
+   * **Sync gap**, what _Only what's missing_ will sync. Zeros when empty.
    */
   enrichmentCounts(): EnrichmentCounts;
   /**
