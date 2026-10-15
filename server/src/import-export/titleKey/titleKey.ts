@@ -69,6 +69,77 @@ export function titleKey(name: string): string {
 const SPACE_SEPARATORS = /[._]+/g;
 
 /**
+ * **Release noise**: the whole-word tags a release name lays down after the
+ * title and that no title carries — the source, the codec, the cut — written
+ * lower-case. Wherever the first of them stands, it and everything after it
+ * (the release group among them) is noise.
+ */
+export const RELEASE_NOISE: readonly string[] = [
+  'bluray',
+  'blu-ray',
+  'brrip',
+  'bdrip',
+  'bdremux',
+  'remux',
+  'web-dl',
+  'webdl',
+  'webrip',
+  'hdtv',
+  'hdrip',
+  'dvdrip',
+  'dvdscr',
+  'xvid',
+  'divx',
+  'x264',
+  'x265',
+  'h264',
+  'h265',
+  'hevc',
+  '10bit',
+];
+
+/** The first Release noise word, and everything after it. */
+const NOISE_EDGE = '[\\s\\u2010-\\u2015-]';
+const NOISE_TAIL = new RegExp(
+  `(?:^|${NOISE_EDGE})(?:${RELEASE_NOISE.map((each) =>
+    each.replace(/-/g, '\\-')
+  ).join('|')})(?=$|${NOISE_EDGE}).*$`,
+  'i'
+);
+
+/** A name with its first Release noise word and everything after it cut. */
+function dropReleaseNoise(name: string): string {
+  return name.replace(NOISE_TAIL, '');
+}
+
+/** The tail forms stripped from the end for as long as one is there. */
+function stripTails(name: string): string {
+  let rest = name;
+  for (let stripped = rest.replace(TAIL, ''); stripped !== rest; ) {
+    rest = stripped;
+    stripped = rest.replace(TAIL, '');
+  }
+  return rest;
+}
+
+/**
+ * The **Search query**: a title as TMDB is asked it. A dot or an underscore
+ * read as a space, Release noise dropped, the tail forms stripped, curly
+ * quotes and dashes folded to ASCII, `&` read as `and`, and every other
+ * character that is not a letter or a digit a space. Unlike the **Title key**
+ * the case and the accents stay: TMDB is the one comparing.
+ */
+export function searchQuery(title: string): string {
+  return stripTails(dropReleaseNoise(title.replace(SPACE_SEPARATORS, ' ')))
+    .replace(/[‘’‚‛′]/g, "'")
+    .replace(/[“”„‟″]/g, '"')
+    .replace(/[‐-―]/g, '-')
+    .replace(/&/g, ' and ')
+    .replace(/[^\p{L}\p{N}]+/gu, ' ')
+    .trim();
+}
+
+/**
  * The title a `no-row` **Source folder** name suggests: the name with the
  * **Title key**'s tail forms dropped — and only those. The key is for
  * comparing and folds everything away; the guess is for the form's title
@@ -78,7 +149,7 @@ const SPACE_SEPARATORS = /[._]+/g;
  * name share one key.
  */
 export function titleGuess(name: string): string {
-  let guess = name.replace(SPACE_SEPARATORS, ' ');
+  let guess = dropReleaseNoise(name.replace(SPACE_SEPARATORS, ' '));
 
   for (let stripped = guess.replace(TAIL, ''); stripped !== guess; ) {
     guess = stripped;
