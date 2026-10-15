@@ -206,6 +206,27 @@ export async function importGuessed(id: string): Promise<ImportProblem | null> {
   return null;
 }
 
+const BULK_DISMISS_ENDPOINT = '/api/import/current/problems/dismiss';
+
+/**
+ * The bulk **Dismiss** behind _Skip all_ and _Keep all mine_: the ids posted
+ * as JSON, and the **Current run** the route answers — the whole snapshot,
+ * every id it held taken off. Any status but a `200` rejects, and so does a
+ * request that could not be made.
+ */
+export async function dismissProblems(ids: string[]): Promise<ImportRun> {
+  const response = await fetch(BULK_DISMISS_ENDPOINT, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ids }),
+  });
+
+  if (response.status !== 200) {
+    throw new Error(`POST ${BULK_DISMISS_ENDPOINT} failed: ${response.status}`);
+  }
+  return (await response.json()) as ImportRun;
+}
+
 const EXPORT_ENDPOINT = '/api/export';
 
 /**

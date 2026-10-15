@@ -1,4 +1,5 @@
 import styled from 'styled-components';
+import { controlStates } from '@/styles/interactionStates/interactionStates';
 import { GOLD, type DotTone } from '../ProblemRow/ProblemRow.styles';
 
 /** The two tiles side by side, set the prototype's 28px over the list. */
@@ -83,4 +84,52 @@ export const FilterScroll = styled.div`
   min-width: 0;
   max-width: 100%;
   overflow-x: auto;
+`;
+
+/** The Bulk actions at the Kind filter row's end, pushed right, 4px apart. */
+export const BulkActions = styled.div`
+  flex: 1;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 4px;
+`;
+
+/** _Keep all mine_: the filled, bordered bulk button. */
+export const BulkButton = styled.button`
+  height: 34px;
+  padding: 0 14px;
+  background: ${({ theme }) => theme.colors.surface3};
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: 8px;
+  color: ${({ theme }) => theme.colors.text};
+  font-family: ${({ theme }) => theme.fonts.sans};
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  ${controlStates('scale(.97)')}
+
+  &:hover:not(:disabled) {
+    background: ${({ theme }) => theme.colors.border};
+  }
+`;
+
+/**
+ * _Skip all_: the faint text button — 34px beside the Kind filter, and 40px
+ * among a Review group's Accordion actions.
+ */
+export const SkipAllButton = styled.button<{ $tall?: boolean }>`
+  height: ${({ $tall }) => ($tall ? '40px' : '34px')};
+  padding: 0 14px;
+  background: transparent;
+  border: none;
+  color: ${({ theme }) => theme.colors.textFaint};
+  font-family: ${({ theme }) => theme.fonts.sans};
+  font-size: 14px;
+  cursor: pointer;
+  ${controlStates('scale(.97)')}
+
+  &:hover:not(:disabled) {
+    color: ${({ theme }) => theme.colors.textDim};
+  }
 `;

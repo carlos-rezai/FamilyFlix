@@ -17,11 +17,14 @@ import {
   AllDone,
   AllDoneHeading,
   AllDoneLine,
+  BulkActions,
+  BulkButton,
   FilterRow,
   FilterScroll,
   KindMark,
   List,
   ListHeading,
+  SkipAllButton,
   Tiles,
 } from './ImportReview.styles';
 
@@ -39,6 +42,12 @@ export interface ImportReviewProps {
   onPick: (id: string, folder: string) => void;
   /** _Import as_ was pressed on the `no-row` **Problem** with this id. */
   onImportAs: (id: string) => void;
+  /**
+   * A bulk **Dismiss** was pressed — _Skip all_ on a **Review group** or
+   * beside a chosen kind, or _Keep all mine_ beside `differs` — with every id
+   * it dismisses, in the run's order.
+   */
+  onSkipMany: (ids: string[]) => void;
   /** Finish's words: where it goes, which the flow knows and this step does not. */
   finishLabel: string;
   onFinish: () => void;
@@ -61,6 +70,11 @@ export interface ImportReviewProps {
  * one kind's rows through `reviewGroups`; the choice is screen state, never
  * in the URL, and falls back to _All_ once its kind empties.
  *
+ * A chosen kind draws its Bulk actions at the filter row's end — _Skip all_,
+ * or _Keep all mine_ in its place for `differs` — and each group carries
+ * _Skip all_ among its Accordion actions; every one reports its ids at once,
+ * no confirm.
+ *
  * The step draws the run it is handed and reports a press — _Skip_ and
  * _Apply choices_ name the problem's id — and never removes a row itself: the
  * **Run hook** does, and the next `run` shows it.
@@ -71,6 +85,7 @@ export function ImportReview({
   onApply,
   onPick,
   onImportAs,
+  onSkipMany,
   finishLabel,
   onFinish,
 }: ImportReviewProps) {
@@ -83,6 +98,13 @@ export function ImportReview({
       if (!next.delete(title)) next.add(title);
       return next;
     });
+
+  const kindIds =
+    filter.value === 'all'
+      ? []
+      : run.problems
+          .filter((problem) => problem.kind === filter.value)
+          .map((problem) => problem.id);
 
   const row = (problem: ImportProblem) => (
     <ProblemRow
@@ -135,6 +157,20 @@ export function ImportReview({
                   onChange={setChosen}
                 />
               </FilterScroll>
+              <BulkActions>
+                {filter.value === 'differs' ? (
+                  <BulkButton type="button" onClick={() => onSkipMany(kindIds)}>
+                    Keep all mine
+                  </BulkButton>
+                ) : filter.value !== 'all' ? (
+                  <SkipAllButton
+                    type="button"
+                    onClick={() => onSkipMany(kindIds)}
+                  >
+                    Skip all
+                  </SkipAllButton>
+                ) : null}
+              </BulkActions>
             </FilterRow>
           )}
           <List>
@@ -148,6 +184,18 @@ export function ImportReview({
                   count={group.problems.length}
                   expanded={open.has(group.title)}
                   onToggle={() => toggle(group.title)}
+                  actions={
+                    <SkipAllButton
+                      type="button"
+                      $tall
+                      aria-label={`Skip all for ${group.title}`}
+                      onClick={() =>
+                        onSkipMany(group.problems.map((problem) => problem.id))
+                      }
+                    >
+                      Skip all
+                    </SkipAllButton>
+                  }
                   marks={group.kinds.map((kind) => (
                     <KindMark
                       key={kind}

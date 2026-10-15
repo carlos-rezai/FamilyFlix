@@ -62,6 +62,7 @@ import {
   startEnrichmentBody,
 } from './enrichmentBody/enrichmentBody';
 import {
+  dismissIdsBody,
   importStartBody,
   pickFolderBody,
   sheetChoicesBody,
@@ -2460,6 +2461,31 @@ export function createApiRouter(
         return;
       }
       res.status(204).end();
+    }
+  );
+
+  // The bulk **Dismiss** — _Skip all_ on a **Review group** or beside a
+  // chosen kind, and _Keep all mine_ beside `differs`: the ids read by
+  // `importBody`, a refusal its sentence and the importer never asked; then
+  // each id the run holds taken off and an unknown one passed over, and the
+  // whole snapshot answered, so the screen redraws from the echo. `404` with
+  // no run.
+  router.post(
+    '/import/current/problems/dismiss',
+    (req: Request, res: Response) => {
+      const read = dismissIdsBody(req.body);
+      if (!read.ok) {
+        res.status(400).json({ error: read.error });
+        return;
+      }
+      if (importer.current() === null) {
+        res.status(404).json({ error: 'No import is running' });
+        return;
+      }
+      for (const id of read.value) {
+        importer.dismiss(id);
+      }
+      res.json(importer.current());
     }
   );
 

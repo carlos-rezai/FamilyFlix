@@ -10,6 +10,7 @@ import type {
 import {
   applySheetChoices,
   cancelImport,
+  dismissProblems,
   fetchCurrentImport,
   ImportBusyError,
   importGuessed,
@@ -55,6 +56,12 @@ export interface ImportRunState {
    * dismiss could not be made, and the row stays for another press.
    */
   skip: (id: string) => Promise<void>;
+  /**
+   * _Skip all_ and _Keep all mine_: dismiss every id at once, and hold the
+   * route's echo — the whole snapshot — as the run. Rejects when the dismiss
+   * could not be made; the run stays as it was.
+   */
+  skipMany: (ids: string[]) => Promise<void>;
   /**
    * _Apply choices_ on a `differs` **Problem**: post the choices, and take its
    * row off once the route has answered — on a `404` as on the `204`, as
@@ -164,6 +171,10 @@ export function useImportRun(): ImportRunState {
     [takeOff]
   );
 
+  const skipMany = useCallback(async (ids: string[]) => {
+    setRun(await dismissProblems(ids));
+  }, []);
+
   const apply = useCallback(
     async (id: string, choices: SheetChoices) => {
       await applySheetChoices(id, choices);
@@ -246,6 +257,7 @@ export function useImportRun(): ImportRunState {
     start,
     cancel,
     skip,
+    skipMany,
     apply,
     pick,
     importAsGuessed,

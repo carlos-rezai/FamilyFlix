@@ -70,8 +70,17 @@ const FINISH_TO_LIBRARY = 'Finish and go to library';
 
 export function ImportFlow() {
   const navigate = useNavigate();
-  const { run, attaching, start, cancel, skip, apply, pick, importAsGuessed } =
-    useImportRun();
+  const {
+    run,
+    attaching,
+    start,
+    cancel,
+    skip,
+    skipMany,
+    apply,
+    pick,
+    importAsGuessed,
+  } = useImportRun();
 
   // Leaving is a step, not a push at Settings: the hub's own Back then steps
   // onto the screen the gear was pressed from, rather than onto the duplicate
@@ -147,6 +156,16 @@ export function ImportFlow() {
     [skip]
   );
 
+  const onSkipMany = useCallback(
+    (ids: string[]) => {
+      void skipMany(ids).catch(() => {
+        // A bulk dismiss that did not land leaves every row where it is, and
+        // the button is still there to press again.
+      });
+    },
+    [skipMany]
+  );
+
   const onApply = useCallback(
     (id: string, choices: SheetChoices) => {
       void apply(id, choices).catch(() => {
@@ -205,6 +224,7 @@ export function ImportFlow() {
           onApply={onApply}
           onPick={onPick}
           onImportAs={onImportAs}
+          onSkipMany={onSkipMany}
           finishLabel={run.enrich ? FINISH_TO_SYNC : FINISH_TO_LIBRARY}
           onFinish={() => onFinish(run.enrich)}
         />
