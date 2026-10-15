@@ -11,6 +11,118 @@ Newest entry first.
 
 ---
 
+## 2026-10-15 — Review at scale — the refactor (issue 366)
+
+Twenty-five commits against `docs/refactor-plans/42-review-at-scale-refactor.md`,
+one per plan commit — the initiative's closing round. **9348 tests pass across
+560 files**, against 9270 across 557 at the end of the build (`d0d13c2`):
+three new suites (`idListBody`, `kindFilter`, `useSeasonPosters`) and the
+cases the plan named. One case retired with the client's cap (`SeasonChoices`'
+_draws at most ten choices_). `tsc -b --force` is clean. `eslint src server
+electron` reports one error and 99 warnings, none in a line this round wrote:
+the error is below.
+
+### What shipped
+
+Log 42's slices: the prototype amendment (353, `0ec51b8`), then one RED and
+one GREEN each — 354 to 365. A Sync climbs the **Search ladder** and comes
+back to every title with a **Sync gap**; a show's failed copies are one
+`failed` row; the Import review reads as **Review groups** on the `Accordion`,
+both reviews carry a **Kind filter** and **Bulk actions**; a single-series
+Sync's review offers a **Season choice** per season, and the series form
+takes a Season poster from a file.
+
+### What each group changed
+
+- **Group 1, the search** (`da57604`–`1d731b0`). `DASHES` beside
+  `RELEASE_NOISE` is the one spelling of the dash class, read by `NOISE_EDGE`
+  and `searchLadder`'s `SUBTITLE_MARK`; `searchQuery`'s three dead folds went
+  — the final _every non-letter-or-digit a space_ did their work. `titleGuess`
+  strips through `stripTails`. `searchTitled` reads its call off `SEARCHES`, a
+  table typed by `SearchResults`, so the domain's one cast is gone.
+  `TmdbSeasonImage` is `TmdbPoster`; the shared `posters` helper got its
+  docblock and stopped shadowing its own name.
+- **Group 2, the routes** (`3f32646`–`ef62609`). `DECISION_REFUSALS` has its
+  docblock back. `idListBody(body, sentence)` is the route layer's one reader
+  of an id list; `importBody`'s `dismissIdsBody` is `problemIdsBody` — it
+  reads _Import all as guessed_ too — and `decisionIdsBody` stays, each one
+  line over it. `seasonPosterBody` reads the Season choice's `path`, so
+  `chooseSeasonPoster(season, path: string)` no longer type-checks a body; a
+  missing or non-string path is refused in its own sentence, still a `400`.
+  `EpisodeUploads.seasonPosters` is required. `seasonPosterEdits(changes,
+stored)` is the one mapping both series routes write through, and
+  `seasonPosterNamer(heldPaths)` numbers a free `S02-poster.jpg` where the
+  PATCH handler did.
+- **Group 3, the library** (`28ec2eb`). The series write suite gained the
+  Season posters on add (recorded, and none when the add is refused), on edit
+  (set, removed, kept), and `removedPaths`. `enrichmentCounts()`' docblock in
+  `LibraryStorage` names `gaps`.
+- **Group 4, the client's shared rules** (`0769794`–`a727748`).
+  `PROBLEM_KINDS` is the `as const` list `ProblemKind` derives from;
+  `DecisionKind` is `Decision['kind']`, both in `src/types`. `kindFilter`
+  graduated to `src/utils/`, generic in the kind, each review handing it its
+  own order and words (`PROBLEM_KIND_LABELS`; `DECISION_KINDS` and
+  `DECISION_KIND_LABELS`). `opensSeriesResolve` sits beside `movieFormPath`,
+  read by `ProblemRow` and `loadFormRecord`. `KindMark` is `styled(Dot)` —
+  rendered as a span, since it sits inside the Accordion's toggle button —
+  and `GOLD` is private again. The plan expected kind-filter cases in the two
+  view suites to move; there were none, so the helper's suite was written
+  fresh and each view suite gained its one words-and-order case.
+- **Group 5, the Enrichment flow** (`bad35c9`–`3579b17`). The wire call is
+  `saveSeasonPoster`, and the alias import went; `onChooseSeasonPoster` is
+  required and `NO_CHOICE` retired; `SeasonChoices` draws what it is handed,
+  the server's `SEASON_CHOICE_CAP` the one cap. The four new wire calls have
+  their `api.test.ts` cases. `useEnrichmentRun.seasonPoster` mocks `fetch`,
+  not the call, so it needed no change.
+- **Group 6, the Movie form** (`5ce0f82`–`05c0cec`). `SeasonPosterSlot`
+  carries `held`, so no set travels beside the slots; the season poster
+  parameters and the Files card's props are required — the Series Resolve's
+  save passes `[]`, since it draws none. `useSeasonPosters(episodes, drawn)`
+  answers `{ slots, pick, remove, hold }`, and `typedNumber` in `formValues`
+  is the form's one reading of a typed number, `useEpisodeList`'s `counted`
+  retired.
+- **Group 7, the docs** (`b846dde`, this commit). CLAUDE.md, the README and
+  the glossary know the initiative shipped; step 25 is ✅; **Confident** and
+  **Search query** read as the code does.
+
+### Deliberately not changed
+
+Everything in the plan's Further Notes: `lookUp` and `lookUpSeries` still
+climb, log and judge side by side; `SeasonPostersLabel`'s `82px` stays the
+prototype's literal; `ImportFlow`'s `void skipMany(…).catch` and
+`EnrichmentFlow`'s `skipMany(…).catch` each keep their file's style. The log 42
+glossary section keeps its heading's _(new)_, as every section's heading does;
+only its rows lost theirs.
+
+### Follow-ups this refactor surfaced
+
+The plan's Out of Scope, each a change to what the maintainer sees or what
+the run does, so each goes through grill-me first. Not filed yet:
+
+- **_Only what's missing_'s line is no longer quite true.** Its N is the Sync
+  gap count, which includes Unmatched titles and episode gaps; the words are
+  the prototype's `scopeDefs`.
+- **A refused Season choice stays marked.** The card is `aria-pressed` before
+  the route answers, and a `503` leaves it so.
+- **A hyphenated first word hides rung 4.** `SUBTITLE_MARK` cuts at the first
+  dash, so `Spider-Man: No Way Home` cuts at `Spider` and drops the rung.
+- **A bulk _Import all as guessed_ that throws partway** answers `500`, and
+  the rows already imported wait for the next read.
+- **The two reviews' filter-row styles** (`FilterRow`, `FilterScroll`,
+  `BulkActions`) are written twice; no `mol.*` names a filter row yet.
+- **The bulk buttons' faces** differ between the two reviews, as the
+  prototype draws them.
+- **A lint error in a test.** `EnrichmentReview.test.tsx`'s _Skip all_ face
+  case renders `onClick={() => {}}` (`no-empty-function`), written by 362's
+  RED commit (`db6ff76`). Outside this plan, so left; a one-line fix.
+
+### The initiative
+
+**Review at scale + Season art is done**: the prototype revision (353), the
+twelve slices (354–365) and this round (366). Issue 352 is closed with it.
+
+---
+
 ## 2026-10-14 — Link or copy — the refactor (issue 348)
 
 Twenty-four commits against `docs/refactor-plans/41-link-or-copy-refactor.md`
