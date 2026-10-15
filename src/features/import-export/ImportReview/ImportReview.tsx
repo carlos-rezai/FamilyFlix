@@ -1,9 +1,14 @@
 import { useState } from 'react';
 
-import { Accordion } from '@/components';
+import { Accordion, PillTabs } from '@/components';
 import { Button } from '@/primitives';
-import type { ImportProblem, ImportRun, SheetChoices } from '@/types';
-import { reviewGroups } from '../importView/importView';
+import type {
+  ImportProblem,
+  ImportRun,
+  ProblemKind,
+  SheetChoices,
+} from '@/types';
+import { kindFilter, reviewGroups } from '../importView/importView';
 import { ProblemRow } from '../ProblemRow/ProblemRow';
 import { DOT_TONE } from '../ProblemRow/ProblemRow.styles';
 import { StatTile } from '../StatTile/StatTile';
@@ -12,6 +17,8 @@ import {
   AllDone,
   AllDoneHeading,
   AllDoneLine,
+  FilterRow,
+  FilterScroll,
   KindMark,
   List,
   ListHeading,
@@ -50,6 +57,10 @@ export interface ImportReviewProps {
  * the count — over the same rows. Which groups are open is this step's own
  * screen state, by title.
  *
+ * Over two kinds or more, the **Kind filter** sits above the list and lets
+ * one kind's rows through `reviewGroups`; the choice is screen state, never
+ * in the URL, and falls back to _All_ once its kind empties.
+ *
  * The step draws the run it is handed and reports a press — _Skip_ and
  * _Apply choices_ name the problem's id — and never removes a row itself: the
  * **Run hook** does, and the next `run` shows it.
@@ -63,6 +74,8 @@ export function ImportReview({
   finishLabel,
   onFinish,
 }: ImportReviewProps) {
+  const [chosen, setChosen] = useState<ProblemKind | 'all'>('all');
+  const filter = kindFilter(run.problems, chosen);
   const [open, setOpen] = useState<ReadonlySet<string>>(() => new Set());
   const toggle = (title: string) =>
     setOpen((was) => {
@@ -112,8 +125,20 @@ export function ImportReview({
       {run.problems.length > 0 ? (
         <>
           <ListHeading>Needs attention</ListHeading>
+          {filter.options.length > 0 && (
+            <FilterRow>
+              <FilterScroll>
+                <PillTabs
+                  label="Problem kinds"
+                  options={filter.options}
+                  value={filter.value}
+                  onChange={setChosen}
+                />
+              </FilterScroll>
+            </FilterRow>
+          )}
           <List>
-            {reviewGroups(run.problems, 'all').map((group) =>
+            {reviewGroups(run.problems, filter.value).map((group) =>
               group.problems.length === 1 ? (
                 row(group.problems[0])
               ) : (

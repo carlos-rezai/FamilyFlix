@@ -64,3 +64,23 @@ export const KindMark = styled.span<{ $tone: DotTone }>`
   background: ${({ $tone, theme }) =>
     $tone === 'gold' ? GOLD : theme.colors[$tone]};
 `;
+
+/**
+ * The **Kind filter**'s row: the track, and room at its end for the Bulk
+ * actions.
+ */
+export const FilterRow = styled.div`
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 14px;
+`;
+
+/** The track's wrapper: it scrolls sideways rather than let a pill wrap. */
+export const FilterScroll = styled.div`
+  display: flex;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+`;

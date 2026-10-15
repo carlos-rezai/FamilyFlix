@@ -134,3 +134,50 @@ export function singleScopeLabel(kind: TitleReference['kind']): string {
 export function finishLabel(title: TitleReference | null): string {
   return title === null ? 'Done' : `Back to the ${title.kind}`;
 }
+
+type DecisionKind = EnrichmentRun['decisions'][number]['kind'];
+
+/** The glossary's order of a Decision's kinds, each with its pill's word. */
+const DECISION_KINDS: readonly { kind: DecisionKind; label: string }[] = [
+  { kind: 'ambiguous', label: 'Ambiguous' },
+  { kind: 'missing', label: 'Missing' },
+  { kind: 'conflict', label: 'Conflict' },
+];
+
+/** The **Kind filter** over the Decisions, and the choice it actually holds. */
+export interface DecisionKindFilter {
+  /** _All N_, then each kind held with its count — empty under two kinds. */
+  options: { value: DecisionKind | 'all'; label: string }[];
+  /** The chosen kind while the list still holds it, else `'all'`. */
+  value: DecisionKind | 'all';
+}
+
+/**
+ * The Sync's **Kind filter**, the Import review's over the Decisions: _All N_,
+ * then each kind held with its count — none under two kinds — and a chosen
+ * kind the list no longer holds falling back to `'all'`.
+ */
+export function decisionKindFilter(
+  decisions: EnrichmentRun['decisions'],
+  chosen: DecisionKind | 'all'
+): DecisionKindFilter {
+  const held = DECISION_KINDS.map(({ kind, label }) => ({
+    kind,
+    label,
+    count: decisions.filter((d) => d.kind === kind).length,
+  })).filter(({ count }) => count > 0);
+  if (held.length < 2) return { options: [], value: 'all' };
+  return {
+    options: [
+      { value: 'all', label: `All ${decisions.length}` },
+      ...held.map(({ kind, label, count }) => ({
+        value: kind,
+        label: `${label} ${count}`,
+      })),
+    ],
+    value:
+      chosen !== 'all' && held.some(({ kind }) => kind === chosen)
+        ? chosen
+        : 'all',
+  };
+}

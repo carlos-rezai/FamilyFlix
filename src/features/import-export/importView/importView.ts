@@ -121,3 +121,48 @@ export function reviewGroups(
     ...groups.filter((group) => !isHard(group)),
   ];
 }
+
+/** Each kind's word on its **Kind filter** pill. */
+const KIND_LABEL: Record<ProblemKind, string> = {
+  'no-folder': 'No folder',
+  ambiguous: 'Ambiguous',
+  'no-video': 'No video',
+  'no-row': 'Not in sheet',
+  failed: 'Failed',
+  unplaced: 'Unplaced',
+  'missing-meta': 'Missing details',
+  differs: 'Differs',
+};
+
+/** The **Kind filter** over the Problems, and the choice it actually holds. */
+export interface KindFilter {
+  /** _All N_, then each kind held with its count — empty under two kinds. */
+  options: { value: ProblemKind | 'all'; label: string }[];
+  /** The chosen kind while the list still holds it, else `'all'`. */
+  value: ProblemKind | 'all';
+}
+
+/**
+ * The **Kind filter**: _All N_, then one pill per kind held, in the glossary's
+ * order, each with its count — none at all under two kinds. A chosen kind the
+ * list no longer holds falls back to `'all'`.
+ */
+export function kindFilter(
+  problems: readonly ImportProblem[],
+  chosen: ProblemKind | 'all'
+): KindFilter {
+  const held = KIND_ORDER.filter((kind) =>
+    problems.some((p) => p.kind === kind)
+  );
+  if (held.length < 2) return { options: [], value: 'all' };
+  return {
+    options: [
+      { value: 'all', label: `All ${problems.length}` },
+      ...held.map((kind) => ({
+        value: kind,
+        label: `${KIND_LABEL[kind]} ${problems.filter((p) => p.kind === kind).length}`,
+      })),
+    ],
+    value: chosen !== 'all' && held.includes(chosen) ? chosen : 'all',
+  };
+}

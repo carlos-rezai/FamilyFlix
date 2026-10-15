@@ -1,13 +1,21 @@
-import type { ConflictChoices, EnrichmentRun } from '@/types';
+import { useState } from 'react';
+
+import type { ConflictChoices, Decision, EnrichmentRun } from '@/types';
+import { PillTabs } from '@/components';
 import { Button } from '@/primitives';
 import { DecisionRow } from '../DecisionRow/DecisionRow';
-import { writtenSummary } from '../enrichmentView/enrichmentView';
+import {
+  decisionKindFilter,
+  writtenSummary,
+} from '../enrichmentView/enrichmentView';
 import {
   Actions,
   AllDone,
   Decisions,
   AllDoneHeading,
   AllDoneLine,
+  FilterRow,
+  FilterScroll,
   Stack,
   Tile,
   TileLabel,
@@ -31,6 +39,10 @@ export interface EnrichmentReviewProps {
  * The **Review step**: the two stat tiles, and — with nothing left to decide
  * — _All done_ over where it was saved, else one **Decision row** per
  * Decision; then Finish and _Sync again_.
+ *
+ * Over two kinds or more, the **Kind filter** sits above the rows and lets
+ * one kind through — filtered, never grouped; screen state, falling back to
+ * _All_ once its kind empties.
  */
 export function EnrichmentReview({
   run,
@@ -42,6 +54,13 @@ export function EnrichmentReview({
   onSearch,
   onApply,
 }: EnrichmentReviewProps) {
+  const [chosen, setChosen] = useState<Decision['kind'] | 'all'>('all');
+  const filter = decisionKindFilter(run.decisions, chosen);
+  const shown =
+    filter.value === 'all'
+      ? run.decisions
+      : run.decisions.filter((decision) => decision.kind === filter.value);
+
   return (
     <Stack>
       <Tiles>
@@ -62,7 +81,19 @@ export function EnrichmentReview({
         </AllDone>
       ) : (
         <Decisions>
-          {run.decisions.map((decision) => (
+          {filter.options.length > 0 && (
+            <FilterRow>
+              <FilterScroll>
+                <PillTabs
+                  label="Decision kinds"
+                  options={filter.options}
+                  value={filter.value}
+                  onChange={setChosen}
+                />
+              </FilterScroll>
+            </FilterRow>
+          )}
+          {shown.map((decision) => (
             // Keyed by its face too, so a search's answer draws afresh.
             <DecisionRow
               key={`${decision.id}:${decision.kind}:${decision.query}`}

@@ -34,6 +34,8 @@ export const Tab = styled.button<{ $active: boolean }>`
   font-family: ${({ theme }) => theme.fonts.sans};
   font-size: 15px;
   font-weight: ${({ $active }) => ($active ? 700 : 500)};
+  /* A long track scrolls sideways in its caller; a label never wraps. */
+  white-space: nowrap;
   cursor: pointer;
 
   ${controlStates('scale(.97)')}
