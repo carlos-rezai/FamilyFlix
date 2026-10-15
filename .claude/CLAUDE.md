@@ -135,15 +135,16 @@ familyflix/
 ├── server/
 │ └── src/
 │ ├── routes/ ← HTTP layer only: parse request, call a domain module, return response
-│ │ ├── enrichmentBody/ ← `startEnrichmentBody` and `conflictChoicesBody`: a Sync's start and _Apply choices_ read into typed values, each `400` a sentence — `movieFormBody`'s precedent
-│ │ ├── importBody/ ← `sheetChoicesBody` and `pickFolderBody`: _Apply choices_' body on a `differs` row and a **Folder picker** press's read into typed values, each `400` a sentence — `enrichmentBody`'s precedent
+│ │ ├── enrichmentBody/ ← `startEnrichmentBody`, `conflictChoicesBody`, `decisionIdsBody` and `seasonPosterBody`: a Sync's start, _Apply choices_, _Skip all_ and a **Season choice** read into typed values, each `400` a sentence — `movieFormBody`'s precedent
+│ │ ├── idListBody/ ← `idListBody(body, sentence)`: a bulk press's `ids`, a non-empty list of strings, else the caller's sentence — the route layer's one reader of an id list, `problemIdsBody` and `decisionIdsBody` each one line over it
+│ │ ├── importBody/ ← `sheetChoicesBody`, `pickFolderBody` and `problemIdsBody`: _Apply choices_' body on a `differs` row, a **Folder picker** press's and a **Bulk action**'s ids read into typed values, each `400` a sentence — `enrichmentBody`'s precedent
 │ │ ├── exportBody/ ← `POST /api/export`'s body read into a `StartExport` — a format, an absolute-or-not destination, a name read only as a string, the two Include booleans, in the dialog's order — each `400` a sentence
-│ │ ├── seriesFormBody/ ← the **Movie form**'s series body, `movieFormBody`'s split: `collectEpisodeUploads`, the part half — each `episodeVideo` and `episodeSubtitle` paired by order with its `episode` field and stored in its season's folder, a refused part drained and remembered — and `readSeriesFields`, the pure field half: each refusal a sentence in a load-bearing order, each episode answered with the paths its parts landed at
+│ │ ├── seriesFormBody/ ← the **Movie form**'s series body, `movieFormBody`'s split: `collectEpisodeUploads`, the part half — each `episodeVideo` and `episodeSubtitle` paired by order with its `episode` field and stored in its season's folder, a refused part drained and remembered — and `readSeriesFields`, the pure field half: each refusal a sentence in a load-bearing order, each episode answered with the paths its parts landed at; and the **Season poster** fields — `readSeasonPosterField` and `readSeasonPosters` (each `seasonPoster` field paired by order with its `seasonPosterFile` part: picked, kept or removed), `seasonPosterEdits` (those changes → the edits both series routes write) and `seasonPosterNamer` (a free `S02-poster.jpg` beside the held ones, numbered `-2`, `-3`…)
 │ │ ├── loopbackGuard/ ← the **Loopback guard**: mounted first, standalone included, `403` for a Host or Origin that is not a **Trusted host**; `bind(port)` once `listen` has resolved
 │ │ └── rendererRouter/ ← `mountRenderer`: the built renderer beside `/api` under `RENDERER_CSP` and `index.html` for any other GET, `/api` passed on before the policy is set; nothing mounted when `FAMILYFLIX_RENDERER_PATH` is unset
 │ ├── library/ ← movie CRUD, SQLite queries, watch-state + resume-position logic
 │ │ ├── settings/ ← the household's Settings: `settings()` with the default applied when the row is absent, `setSubtitleLanguage()` and `setUltrawideMargins()` as upserts over the two preference keys, `subtitle-language` and `ultrawide-margins`; and three keys beside the preferences, never among them — `tmdb-api-key` and `enrichment-last-synced-at` — every one read through one `valueOf(key)`
-│ │ ├── enrich/ ← a Sync's film writes: `enrichMovie` (the columns named, only those), `moviesInScope`, `enrichmentCounts` over both kinds, `setSourceFolder` (a title's Library folder and Source folder together), `titleSource` (both read back as one) and `sourcePath` (the two joined, for a review row's mono line) over one id space, and `titleAt` (the title recorded at a folder and Source folder); the **Full details** rule spelled once as `fullDetails`
+│ │ ├── enrich/ ← a Sync's film writes: `enrichMovie` (the columns named, only those), `moviesInScope`, `enrichmentCounts` over both kinds, `setSourceFolder` (a title's Library folder and Source folder together), `titleSource` (both read back as one) and `sourcePath` (the two joined, for a review row's mono line) over one id space, and `titleAt` (the title recorded at a folder and Source folder); the **Full details** rule spelled once as `fullDetails`, and the **Sync gap** — what _Only what's missing_ syncs — once as `syncGap`
 │ │ ├── folders/ ← the **Library folders**: the list in the order added with each folder's title count, an add, and a remove that keeps the titles, forgetting only where they came from — an outcome, `removed` / `not-found` / `in-use` with the count of titles a **Linked video** plays from there, the count and the delete in one transaction
 │ │ ├── parentFolder/ ← pure: a Stored path some directories up — the **Media folder** a row written without one is given; shipping adds name theirs
 │ │ │ └── folderOverlap/ ← pure: whether a path is, is inside or holds a listed folder — resolved, case-folded on Windows, by whole segments — and `clashSentence`, each clash's one sentence
@@ -167,7 +168,7 @@ familyflix/
 │ │ ├── exportRows/ ← pure: films and series → the two tables under the sixteen Export columns and the nine Episodes columns (every cell rule spelled once, the Metadata sheet's too), and the **File plan** — each title's folder named `Heat (1995)`, its art, each **Season poster** under `seasons/` as `S02` and, when chosen, its subtitles
 │ │ ├── exportSummary/ ← the **Export summary** out of the route: the counts off the Series tab's one read, the first readable Library folder else `<home>\Downloads`, today's name
 │ │ ├── writeExport/ ← the **Export** written: the destination checked (`relative`, `missing`, `read-only`), then the name (`exportNameRefusal`) — kinds the route words, each naming its field — the Export folder made exclusively under the name asked for and numbered when taken, the sheet named after it, the File plan copied through `Media.readStored` (an unreadable file skipped, its cell blanked), the sheet last; a break rolls the folder back and answers its reason
-│ │ ├── titleKey/ ← pure: the Title key matching compares, and titleGuess for a folder no row names
+│ │ ├── titleKey/ ← pure: the Title key matching compares, titleGuess for a folder no row names, and the **Search query** TMDB is asked — `searchQuery`, beside `RELEASE_NOISE` (the whole-word release tags, dropped with all after them) and `DASHES` (the one spelling of the dash class)
 │ │ ├── heldValues/ ← pure: a held Movie or Series → its values in the sheet's shape, a series' creator as `director` — `currentFields`' twin on the import's side
 │ │ ├── planSheetFields/ ← pure: a held title's values × its **Sheet row** → its **Sheet fills**, its **Sheet differences** spelled for display (a rating as `3½ ★`) and `proposed`, the sheet's side of each, normalised as a fill is — `planFields`' twin
 │ │ ├── plannedSheetFill/ ← pure: a Sheet fill → `movieSheetPatch` (the `updateMovie` patch) and `seriesSheetPatch` (the `enrichSeries` columns, `director` as `creator`), and `chosenSheetFill`, what _Apply choices_ writes — `plannedEnrichment`'s twin
@@ -194,10 +195,11 @@ familyflix/
 │ │ ├── parseSrt/ parseVtt/ parseAss/ parseSub/ ← pure, one format each
 │ │ └── parseSubtitle/ ← dispatch on extension; the last place a format is known
 │ ├── enrichment/ ← the fifth domain, the one network client: a Sync fills what the sheet left blank from TMDB — born by `playback/`'s rule, injected as `createApiRouter(…, enrichment)`
-│ │ ├── tmdbClient/ ← the injected seam: search, movie, TV, season, image and the reachability probe, each a value and never a throw, each under the caller's abort signal
+│ │ ├── tmdbClient/ ← the injected seam: search, movie, TV, season, the two `/images` calls — `seasonImages` and `seriesImages`, each a `TmdbPoster[]`, asked in English or no language, then unfiltered — image and the reachability probe, each a value and never a throw, each under the caller's abort signal
 │ │ ├── tmdbAuth/ ← pure: a key → a v4 bearer token or a v3 `api_key`, told apart by shape alone
 │ │ ├── tmdbGenres/ ← TMDB's vocabulary: its names onto the **Genre pool** (Science Fiction is Sci-Fi, a TV compound split), and `tmdbGenreName(id)`
 │ │ ├── matchScore/ ← pure: the **Match score** and the **Confident** rule
+│ │ ├── searchLadder/ ← pure: a title and its year → the **Search ladder**'s rungs, at most four, a repeat dropped — with its year, without, its **Search query**, the part before a subtitle; `createEnrichment`'s `searchTitled` climbs it off a typed table, one request per rung
 │ │ ├── fetchedFields/ ← pure: a TMDB movie or show → the ten fields; `releaseYear`, the one reading of a TMDB date
 │ │ ├── currentFields/ ← pure: a Movie or Series → its values now, in the fetched shape
 │ │ ├── planFields/ planEpisode/ planSeason/ ← pure: what to fill and which **Field conflicts** to raise; an episode's title, air date, runtime and whether a **Still** is wanted; whether a Season's **Season poster** is wanted
@@ -263,7 +265,8 @@ familyflix/
 │ │ ├── CornerMenu/ ← the ⋯ menu's furniture, graduated when both detail pages drew it: `Menu` in the fixed top-right slot on the Back button's inset, the translucent 44px ⋯ named _More options_, `MoreIcon` at 20; its `MenuItem`s the caller's children. Presentational — it knows no route and no dialog
 │ │ ├── DetailBackdrop/ ← the **Detail backdrop**, graduated when both detail pages drew it: the art sticky at the top of the page's scroller and a full viewport tall, under the **Backdrop veil** — a gradient over `accentSoft`; its `100vh` coupled to both pages' `Scroller`
 │ │ ├── SeasonCard/ ← `mol.SeasonCard` 1:1: the 2:3 **Card**, `S02` over its **Season poster**, else the gradient, the badge when complete, the bar when part-watched
-│ │ ├── PillTabs/ ← `mol.PillTabs` 1:1: the pill track of `aria-pressed` buttons in a labelled group, generic in its value so a press hands back the caller's own union; presentational — it knows no URL. The **Library tabs** and the **Kind tabs** are its callers
+│ │ ├── PillTabs/ ← `mol.PillTabs` 1:1: the pill track of `aria-pressed` buttons in a labelled group, generic in its value so a press hands back the caller's own union; presentational — it knows no URL. The **Library tabs**, the **Kind tabs** and both reviews' **Kind filter** are its callers
+│ │ ├── Accordion/ ← `mol.Accordion` 1:1: a header button — the chevron, the label, the caller's marks, the count pill — with the caller's actions beside it, over a body unmounted while closed; controlled, `aria-expanded` and `aria-controls`, a **Control**. The Import review's **Review groups** draw it
 │ │ ├── EpisodeFileRow/ ← `mol.EpisodeFileRow` 1:1: one **Episode file row** — the `S` and `E` number fields (digits, two and three), the title, the ✕, the filename in mono, and a children slot for its subtitles; a refusal drawn when given — the refused field's border and one `danger` line under the controls; presentational, the browser's focus ring kept
 │ │ ├── FieldDiff/ ← `mol.FieldDiff` 1:1: one _Yours \| {theirs}_ row per differing field, the theirs side until a press chooses otherwise, then _Apply choices_ and _Keep all mine_; generic in its key, so each caller — the Sync's `DecisionRow`, the import's `ProblemRow` — maps its own wire type on and off it. Graduated from `enrichment/` when Import review drew it too
 │ │ ├── EpisodeRow/ ← `mol.EpisodeRow` 1:1: the 16:9 thumbnail, `S02E04` and the title, the air date, the Resume label, the watched box that only marks; a **Card**, its box a **Control**
@@ -319,23 +322,25 @@ familyflix/
 │ │ │ └── api/ ← fetchPlayback, fetchSubtitleCues, saveResume, fetchEpisode — each addressed by a Playable
 │ │ ├── enrichment/ ← the Enrichment flow at `/enrich`: a Sync with TMDB in its three scopes, ImportFlow's sibling
 │ │ │ ├── EnrichmentFlow/ ← the organism: owns useEnrichmentRun and the summary, the Back rule, Start's three outcomes and the notices, renders one of the three steps
-│ │ │ ├── EnrichmentSetup/ EnrichmentProgress/ EnrichmentReview/ ← the three steps: the banners, scope cards, chips and _Where it is saved_; the determinate bar and the log; the two tiles over the Decision rows or _All done_
+│ │ │ ├── EnrichmentSetup/ EnrichmentProgress/ EnrichmentReview/ ← the three steps: the banners, scope cards, chips and _Where it is saved_; the determinate bar and the log; the two tiles, the Seasons section, the **Kind filter** with _Skip all_, then the Decision rows or _All done_
 │ │ │ ├── SetupBanner/ ScopeCard/ WriteTargetRow/ ← the setup's molecules: the offline and key banners by tone; the radio card, its dot on the left; a Write target's tile, lines and Toggle or _Required_
 │ │ │ ├── DecisionRow/ ← one Decision: the dot by kind, the title, reason and path, _Skip_, then one face
+│ │ │ ├── SeasonChoices/ ← a single-series review's **Seasons** section: one card per **Season choice** — the held tile, `S02` over its Season poster or the gradient, then each TMDB choice it is handed, the series' marked _Series poster_ — a press reporting `(season, path)`
 │ │ │ ├── CandidatePicker/ TitleSearch/ ← two of the three faces: the Candidate cards and the dashed _Search by title_; the 44px box — the third, _Yours \| TMDB_ per field, is `components/FieldDiff/`
 │ │ │ ├── useEnrichmentRun/ ← start, poll at 500 ms while running, cancel, and the review's writes, each settling one row; opened for a film, only that film's run re-attaches — another's in review is the **Waiting run**, and Start's `409` over another's rejects with `EnrichmentBusyError`
 │ │ │ ├── enrichmentView/ ← pure: the running card's words, the estimate, the scope cards' lines, _All done_'s _Saved to …_, and the **Let-go line**
-│ │ │ └── api/ ← startEnrichment, fetchCurrentEnrichment, cancelEnrichment, and the four Decision writes (one caller each)
+│ │ │ └── api/ ← startEnrichment, fetchCurrentEnrichment, cancelEnrichment, the four Decision writes, dismissDecisions and saveSeasonPoster (one caller each)
 │ │ ├── maintainer.styles.ts ← the furniture the Maintainer’s screens extend: the header row, heading and lede; the captioned field
 │ │ ├── movie-form/ ← Add a movie or a series, Edit a movie or a series: one form with five jobs, manual file pickers, the **Form kind** on the **Kind tabs**; and Resolve, the Import context over a film, an edit or an `unplaced` show
 │ │ │ ├── MovieForm/ ← the organism: the header row with the Kind tabs on a plain add, the fields both kinds share, the kind's words, and one of the two Files cards
-│ │ │ ├── MovieFormFiles/ SeriesFormFiles/ ← the two Files cards: the video, poster and subtitle list; and the poster over the **Episode file rows** and _＋ Add episode files_
+│ │ │ ├── MovieFormFiles/ SeriesFormFiles/ ← the two Files cards: the video, poster and subtitle list; and the poster, the _Season posters_ list — one slot per **Season** the rows hold — over the **Episode file rows** and _＋ Add episode files_
 │ │ │ ├── filesCard.styles.ts filesCard.ts ← what both Files cards share, flat as `maintainer.styles.ts` is: the card, its caption and the list section; the three `accept` lists, the caption and the poster slot's names
 │ │ │ ├── FoundFileChoice/ ← the **Found-file choice**: a film Resolve's videos as a radio group in the video slot's place, handed one Found file slot each, the picker kept under them
 │ │ │ ├── formJob/ ← pure: the URL → one of the five jobs (`add`, `edit`, `resolve`, `seriesEdit`), `?problem=` over `?movie=` over `?series=`; and `formLanding(job)`, each job's **Landing**
 │ │ │ ├── loadFormRecord/ ← a job's reads in one place — `fetchMovie`, `fetchSeriesDetail`, `fetchProblem` with the held series beside it — → what the form opens on, or `null` for a record that is gone; never rejecting
 │ │ │ ├── useMovieForm/ ← the state and the writes: the kind, the **Save gate** per kind, the title prefill, each job's save — a switch over the job — and where it lands
 │ │ │ ├── useEpisodeList/ ← the series' rows: a pick read off its tags, the edits, each row's subtitles, `refusals` — each refused row by its key, its field and its sentence (0 is a number: a pilot, a special) — and `episodesComplete`, the series half of the gate, closed exactly while a row is refused
+│ │ │ ├── useSeasonPosters/ ← the series' _Season posters_, `useEpisodeList`'s pattern: one `SeasonPosterSlot` per season the rows hold — read through `formValues`' `typedNumber`, the form's one reading of a typed number — `pick`, `remove`, and `hold`, the series edit's held posters, each `held`; none drawn in a Series Resolve
 │ │ │ ├── readEpisodeTag/ ← the client mirror of the server's `episodeTag`, `TAG_SHAPES` exported, held to it by a drift guard over one table — and `readSeasonFolder` to `groupShows`' `seasonOf` by the same guard
 │ │ │ ├── readSeasonFolder/ ← the client mirror of the server's **Season folder** rule — `Season 01`, `Season 1`, `S01`, else `null` — which seeds the **Numbering guess**
 │ │ │ ├── titleFromFilename/ ← pure: the **Title guess** off a picked video, ending at a year, a quality tag or a tag shape `readEpisodeTag` reads
@@ -343,7 +348,7 @@ familyflix/
 │ │ │ └── api/ ← createMovie, createSeries, updateMovie, updateSeries, fetchGenrePool, fetchProblem, resolveProblem, resolveSeriesProblem (one caller each)
 │ │ ├── import-export/ ← the bulk importer’s screen, the Library folders page, and the Export dialog
 │ │ │ ├── ImportFlow/ ← the organism: owns useImportRun, renders one of the three steps, its heading and lede worded by `run.source`
-│ │ │ ├── ImportSetup/ ImportProgress/ ImportReview/ ← the three steps: the sheet field over the listed Library folders; the stepper, bar and log; the tiles and the Needs attention list
+│ │ │ ├── ImportSetup/ ImportProgress/ ImportReview/ ← the three steps: the sheet field over the listed Library folders; the stepper, bar and log; the tiles, the **Kind filter** and its **Bulk actions**, and the Needs attention list as **Review groups** — a title's rows on one `Accordion`, a lone row bare
 │ │ │ ├── PhaseStepper/ StatTile/ ProblemRow/ ← the flow’s own molecules; ProblemRow's face slot under its head draws its kind's one-press settle — the Folder picker on `ambiguous`, _Import as_ on `no-row`, the _Yours \| Spreadsheet_ `FieldDiff` on `differs`
 │ │ │ ├── FolderPicker/ ← an `ambiguous` row's face, `CandidatePicker`'s shape with its own pixels: one card per **Candidate folder** — the glyph, its name, its path in mono, its video count — in a labelled group, reporting a press
 │ │ │ ├── useImportRun/ ← start, poll at 500 ms while running, cancel, skip, and the review's presses — apply, pick and importAsGuessed, a `200`'s redrawn row settled in place
@@ -359,7 +364,7 @@ familyflix/
 │ │ │ ├── ImportModeChoice/ ← the **Import mode**, `EnrichCheckCard`'s precedent: the _Files_ `FieldLabel` over _Link_ and _Copy_ in a radiogroup; the caller holds the mode, Link on every mount — Import setup's `ImportFlow` and the Library folders page
 │ │ │ ├── useExport/ ← csv, images on, subtitles off and idle on every open, the summary fetched fresh and its default destination and default name each never over an edit; the bridge read once; exportLibrary posts `startExport`, a refusal's sentence kept under the field it names. A close mid-request drops the redraw, not the folder
 │ │ │ ├── pathField.styles.ts ← the feature's path furniture, flat as `filesCard.styles.ts` is: `PathRow` and `Refusal`, drawn by the Library folders page's add row and the Export dialog's _Save to_
-│ │ │ └── api/ ← startImport, fetchCurrentImport, cancelImport, applySheetChoices, pickCandidateFolder, importGuessed, fetchExportSummary, startExport, fetchLibraryFolders, addLibraryFolder, removeLibraryFolder, startFolderScan (one caller each)
+│ │ │ └── api/ ← startImport, fetchCurrentImport, cancelImport, applySheetChoices, pickCandidateFolder, importGuessed, dismissProblems, importManyGuessed, fetchExportSummary, startExport, fetchLibraryFolders, addLibraryFolder, removeLibraryFolder, startFolderScan (one caller each)
 │ │ ├── settings/ ← the Maintainer’s hub: six Settings groups under one header
 │ │ │ ├── section.styles.ts ← the furniture every Settings group draws with: the Group heading, the Section card (with the 32px group gap under it), the divider, an item’s title and lede, and the row furniture — `Row`, `RowTitle`, `RowDesc` — the Playback and Display groups both draw
 │ │ │ ├── SettingsHeader/ ← Back, the heading, the lede — the Library group's ＋ Add a title row is the one door to the form
@@ -398,7 +403,7 @@ familyflix/
 │ │ ├── postValue.ts
 │ │ └── postValue.test.ts
 │ ├── hooks/ ← global shared hooks only: `useGoBack(fallback)` — the one **Back rule**, a **History step** with the screen's own **Landing** behind it (the library by default) — `useRestoredScroll`, and `useOptimisticEdit`, the one bargain a detail page's edit keeps, over whatever record the page holds; and `useEnrichmentSummary`, the summary Settings' sync row and the Enrichment setup both draw, `null` until it lands
-│ ├── types/ ← shared TypeScript interfaces (import.ts: `IMPORT_MODES`, ImportMode, ImportRun (its `mode`), ImportSource, ImportProblem (its `seriesId` when an `unplaced` show is already held), ImportProblemDetail (its `files.videos` always present, empty with no folder), ImportField; libraryFolders.ts: LibraryFolder, `FOLDER_CHANNELS` (`pick`, `pickOne`, `openMedia`), FolderBridge — both build targets, and `tsconfig.electron.json` too; export.ts: `EXPORT_FORMATS`, `EXPORT_COLUMNS`, `EXPORT_EPISODE_COLUMNS`, `EXPORT_NAME_PREFIX`, ExportSummary, StartExport, ExportResult; settings.ts: `SUBTITLE_LANGUAGES`, SubtitleLanguage, `DEFAULT_SUBTITLE_LANGUAGE`, `DEFAULT_ULTRAWIDE_MARGINS`, Settings (`subtitleLanguage`, `ultrawideMargins`), StorageReport; playback.ts: CodecKind, CodecSupport, CodecCapability, ComponentSource, PlaybackComponentInfo, PlaybackCapabilities — both build targets; series.ts: Series, Episode, SeasonSummary, SeriesDetail, EpisodeRead, NextEpisodeRef, EpisodeContinueEntry (its `series` carrying `posterPath`, for the Continue card's art), SeriesHomePayload, NewSeries, NewEpisode, Playable, StoredVideo — a row's `{ videoPath, videoFolderId }`, which `Movie` and `Episode` extend — both build targets; enrichment.ts: `ENRICH_FIELDS`, `ENRICH_FIELD_LABELS`, `ENRICH_SCOPES`, EnrichField, EnrichScope, EnrichmentSummary (its `libraryFolders` the reachable folders a Sync may write into), Candidate, Decision, FieldConflict, ConflictChoices, EnrichmentRun, StartEnrichment — both build targets; viewModels.ts carries the series’ SeriesPageModel, SeasonPageModel, SeasonCardSeason and EpisodeRowEpisode beside the movie’s; shell.ts: ServerMessage, ShellCommand — the **Shell handshake**, typed once and read by `server/src/shell/` and `electron/`, in `tsconfig.electron.json` too; form.ts: MovieFormValues, MovieFormFile, MovieFormSubtitle, EpisodeFormRow, FormKind — the Movie form's shapes; appVersion.d.ts: `__APP_VERSION__`, defined by Vite from package.json)
+│ ├── types/ ← shared TypeScript interfaces (import.ts: `IMPORT_MODES`, ImportMode, `PROBLEM_KINDS`, ProblemKind, ImportRun (its `mode`), ImportSource, ImportProblem (its `seriesId` when an `unplaced` show is already held), ImportProblemDetail (its `files.videos` always present, empty with no folder), ImportField; libraryFolders.ts: LibraryFolder, `FOLDER_CHANNELS` (`pick`, `pickOne`, `openMedia`), FolderBridge — both build targets, and `tsconfig.electron.json` too; export.ts: `EXPORT_FORMATS`, `EXPORT_COLUMNS`, `EXPORT_EPISODE_COLUMNS`, `EXPORT_NAME_PREFIX`, ExportSummary, StartExport, ExportResult; settings.ts: `SUBTITLE_LANGUAGES`, SubtitleLanguage, `DEFAULT_SUBTITLE_LANGUAGE`, `DEFAULT_ULTRAWIDE_MARGINS`, Settings (`subtitleLanguage`, `ultrawideMargins`), StorageReport; playback.ts: CodecKind, CodecSupport, CodecCapability, ComponentSource, PlaybackComponentInfo, PlaybackCapabilities — both build targets; series.ts: Series, Episode, SeasonSummary, SeriesDetail, EpisodeRead, NextEpisodeRef, EpisodeContinueEntry (its `series` carrying `posterPath`, for the Continue card's art), SeriesHomePayload, NewSeries, NewEpisode, Playable, StoredVideo — a row's `{ videoPath, videoFolderId }`, which `Movie` and `Episode` extend — both build targets; enrichment.ts: `ENRICH_FIELDS`, `ENRICH_FIELD_LABELS`, `ENRICH_SCOPES`, EnrichField, EnrichScope, EnrichmentSummary (its `libraryFolders` the reachable folders a Sync may write into), Candidate, Decision, DecisionKind, FieldConflict, ConflictChoices, EnrichmentRun (its `seasons` on a single-series run), SeasonChoice, SeasonPosterChoice, StartEnrichment — both build targets; viewModels.ts carries the series’ SeriesPageModel, SeasonPageModel, SeasonCardSeason and EpisodeRowEpisode beside the movie’s; shell.ts: ServerMessage, ShellCommand — the **Shell handshake**, typed once and read by `server/src/shell/` and `electron/`, in `tsconfig.electron.json` too; form.ts: MovieFormValues, MovieFormFile, MovieFormSubtitle, EpisodeFormRow, SeasonPosterSlot (its `held`), FormKind — the Movie form's shapes; appVersion.d.ts: `__APP_VERSION__`, defined by Vite from package.json)
 │ ├── utils/ ← pure helper functions (one folder per helper + its test)
 │ │ ├── index.ts ← barrel: re-exports every helper
 │ │ ├── formatBytes/ ← 1024-based, one decimal from KB up: `18.4 GB`
@@ -407,10 +412,12 @@ familyflix/
 │ │ ├── seriesTabPath/ ← the Series tab as a route, `/?tab=series`: the series page's and a series delete's **Landing**, and a series add's **Fresh home**
 │ │ ├── spellYearSpan/ ← a **Year range** spelled — `2022`, `2019–2023`, `2021–`, `null` with no year — the server's `spellYearSpan` mirrored, held to `yearSpan` by a round-trip guard: the series page and the series edit both read it
 │ │ ├── seriesPath/ seasonPath/ episodePlayPath/ ← the three series routes, `/series/<id>`, `/series/<id>/season/<n>`, `/episode/<id>/play`, the ids encoded
+│ │ ├── movieFormPath/ ← the **Movie form** as a route — `/add` and its four queries — and `opensSeriesResolve`, the rule both the Review step's _Resolve_ and the form's Import context read: `unplaced`, or `failed` with a held series
 │ │ ├── enrichPath/ ← the Enrichment flow as a route, `/enrich`, `?scope=all` or `?movie=<id>`, the id encoded: Settings' sync row, Import's _Finish_ and the ⋯ menu's _⟳ Fetch from TMDB_
 │ │ ├── formatElapsed/ ← a run's clock, `m:ss` rounded and never rolling into hours — not `formatClock`, which floors and grows an hour field for playback
 │ │ ├── formatEpisodeTag/ ← the client’s one spelling of the Episode tag: `S02E04`, `S02` or `E04`, two digits a side
 │ │ ├── imageUrl/ ← a **Stored path** → `/api/images/<path>`, `null` in and `null` out: the one spelling of the image route in `src/`, held there by a guard
+│ │ ├── kindFilter/ ← the **Kind filter** both reviews draw: _All N_, then each kind held, in the caller's order and words, with its count — none under two kinds — a chosen kind gone falling back to `'all'`
 │ │ └── gradientFromId/
 │ │ ├── gradientFromId.ts
 │ │ └── gradientFromId.test.ts
@@ -628,8 +635,12 @@ travels as the relative path it already has, and only a freshly picked
 file travels as bytes**, which is what makes a title-only edit carry no
 file part at all. A series is one atomic `POST /api/series` — its fields,
 its poster, then each episode as an `episode` field followed by its
-`episodeVideo` and `episodeSubtitle` parts — rolled back whole on any
-refusal, and landing on the Series tab.
+`episodeVideo` and `episodeSubtitle` parts, then each **Season poster** as a
+`seasonPoster` field (`{ season, path? }`) followed, for a picked file, by
+its `seasonPosterFile` part — rolled back whole on any refusal, and landing
+on the Series tab. `PATCH /api/series/:id` carries the same Season poster
+fields: a held one as its path, a picked one as bytes, and one with neither
+taken away.
 
 ## Bulk Import / Export
 
@@ -768,7 +779,12 @@ number on the page is a read the app can truthfully answer now:
   no **Import mode**, `409` while a **Current run** is scanning or importing
   — a run in review is let go, as _Finish_ would have. The sheet's start,
   `POST /api/import { sheetPath, enrich, mode }`, reads the same two fields
-  through the same `importStartBody`.
+  through the same `importStartBody`. The Import review's two **Bulk
+  actions**: `POST /api/import/current/problems/dismiss { ids }` — _Skip
+  all_ and _Keep all mine_ — and `POST …/problems/import-guessed { ids }` —
+  _Import all as guessed_, under the run's Import mode — each `200` with the
+  whole **Current run**, an id not held passed over, `400` for `ids` that
+  `problemIdsBody` refuses, `404` with no run.
 - `GET /api/storage` → `{ mediaPath, bytesUsed, movieCount }`, the
   **Storage report**: the path resolved to absolute at request time, the
   walk read afresh on every visit, the count off the database.
@@ -788,9 +804,16 @@ number on the page is a read the app can truthfully answer now:
   the **Current enrichment run** (`400` for a body `enrichmentBody` refuses
   or a film the library does not hold, `409` while one runs, `412` with no
   key); `GET /api/enrichment/current` polled every 500 ms, `404` for none;
-  `POST …/current/cancel` → `204` either way; and the review's four
+  `POST …/current/cancel` → `204` either way; the review's four
   **Decision** writes under `…/current/decisions/:id` — `search`, `pick`,
-  `apply` and the `DELETE` that is _Skip_.
+  `apply` and the `DELETE` that is _Skip_; _Skip all_,
+  `POST …/current/decisions/dismiss { ids }` → `200` with the whole run,
+  `400` and `404` as the import's; and the **Season choice**,
+  `POST …/current/seasons/:season/poster { path }` → `200` with that
+  season's `SeasonChoice`, its poster replaced — `400` for a body
+  `seasonPosterBody` refuses or a path the season does not offer, `404`
+  without a single-series run holding that season, `503` when TMDB was not
+  reached, the poster left as it was.
 
 Every read on the page is `null` until it lands and `null` still if it
 never does, and nothing is drawn while so — no skeleton, no error face.
@@ -1072,7 +1095,8 @@ this says what to build _next_. Steps 1–9 of the first chain are done,
 ending with **Software update** (v0.2.0), and so are steps 10–15: the
 second chain is done too, shipped as v0.3.0, and so are steps 16–21:
 the third chain is done, and so are step 22, **Season posters**, step
-23, **Import review**, and step 24, **Link or copy**. Steps 10–15 came out of
+23, **Import review**, step 24, **Link or copy**, and step 25, **Review
+at scale + Season art**. Steps 10–15 came out of
 installing FamilyFlix and using it: smallest and most self-contained first,
 the form before the folders that will feed it, export last because it
 mirrors what import holds.
@@ -1177,8 +1201,7 @@ issue #328):
 
 Steps 24–25 came out of importing five real series (3–8 seasons, 8–20
 episodes each): the copy was slow and doubled the disk, and the review ran to
-1,400+ rows. Step 24 is done (design log 41); step 25 is 🔜, its points
-still the input to grill-me, not decisions:
+1,400+ rows. Both are done (design logs 41 and 42):
 
 24. ✅ **Link or copy** — design log 41. Import setup and the Library
     folders page draw the **Import mode** (`ImportModeChoice`: **Link** /
@@ -1198,21 +1221,28 @@ still the input to grill-me, not decisions:
     copies — a file in a Library folder is added by **Scan folders**; an edit
     keeps a held linked video linked. Not this step: _Convert to linked_ and
     a **Relocate**.
-25. 🔜 **Review at scale + Season art** — log 13 Q16 holds the review to
-    what needs a human, and 1,400+ rows breaks it. Enrichment raises at most
-    one **Decision** per title and `unplaced` is one **Problem** per show, so
-    something is filing per episode or per folder — find the kind first and
-    stop filing it at the source. Then the list: **grouped by title** (one
-    row per show with a count, expanded on demand), **filter chips by
-    kind** with the soft kinds (`missing-meta`, `differs`) folded by default,
-    and **bulk actions** per group and per kind (_Skip all_, _Import all as
-    guessed_, _Keep all mine_). **Season art**: `planSeason` keeps only
-    TMDB's one default poster and only when none is held, so a season TMDB
-    has none for stays bare. A single-series Sync's review gains a
-    **Seasons** section — one card per season, its current poster beside
-    `/tv/{id}/season/{n}/images`' choices, one pick per season, episodes kept
-    out of it; the **Series edit job** takes a season poster from a file, the
-    offline route; and log 39's _no series-poster fallback_ is reopened.
+25. ✅ **Review at scale + Season art** — design log 42. **Search finds
+    what TMDB holds**: a look-up, a series' and the review's search box climb
+    the **Search ladder** (`enrichment/searchLadder/`) — the title with its
+    year, without it, its **Search query** (`titleKey`'s `searchQuery`, the
+    **Release noise** dropped, every non-letter-or-digit a space), the part
+    before a subtitle — stopping at the first rung that answers, at most four,
+    **Confident** read over the rung that answered. _Only what's missing_
+    syncs every title with a **Sync gap** (`syncGap`: not Full details,
+    **Unmatched**, or a series with an episode or a season missing its art or
+    details); Full details' count is unchanged. A show's failed copies are
+    one `failed` **Problem**, at most one per kind per source. **The review
+    at scale**: the Import review's rows sharing a title are one **Review
+    group** on the `Accordion`, hard kinds first; a **Kind filter** over both
+    reviews; three **Bulk actions** — _Skip all_, _Import all as guessed_,
+    _Keep all mine_ — each one route answering the whole run. **Season art**:
+    a single-series Sync's review draws a **Seasons** section, one **Season
+    choice** per season — its held poster beside up to ten TMDB posters, the
+    season's own then the series' — one press replacing its poster; and the
+    series form's _Season posters_ list takes one from a file, on add and
+    edit. Not this step: converting a title's kind, a **Rematch**, persisted
+    Decisions, an automatic series-poster fallback, Season page art, and
+    grouping the Sync's review.
 
 A 🧭 Roadmap item is not in this chain — it is after it, if ever.
 
@@ -1257,7 +1287,7 @@ A 🧭 Roadmap item is not in this chain — it is after it, if ever.
 - ✅ **Export name** — the Export folder's name as the **Folder name field** in the Export dialog: prefilled with today's dated name and never overwritten once edited, refused in one sentence under the field when no folder can be called that, never stripped, numbered when taken.
 - ✅ **Import review** — one import over the Library folders and a spreadsheet (CSV or Excel), its scan ending in a review of the adjustments to make, settled row by row as a TMDB Sync's review is: a held title's Sheet fills written during the run, its Sheet differences settled on a _Yours | Spreadsheet_ diff, the Folder picker on `ambiguous` and _Import as_ on `no-row` (step 23, design log 40).
 - ✅ **Link or copy** — every import offers Link (the default) or Copy: a linked title plays from its Library folder, with no second copy and no copy time; the mode kept per title, a linked file never deleted by the app, TMDB art still in managed storage (step 24).
-- 🔜 **Review at scale + Season art** — the review grouped by title, filtered by kind, with bulk actions, and fewer rows filed at the source; a single-series Sync's Seasons section picks each season's poster from TMDB's choices, and the series edit takes one from a file (step 25).
+- ✅ **Review at scale + Season art** — the review grouped by title, filtered by kind, with bulk actions, and fewer rows filed at the source; a single-series Sync's Seasons section picks each season's poster from TMDB's choices, and the series edit takes one from a file (step 25).
 - ✅ **Delete a movie** — the ⋯ menu’s Danger row, the Delete dialog, `DELETE /api/movies/:id`, then the Movie folder under best-effort cleanup.
 - ✅ **Bulk import** — a Sheet over the listed Library folders becomes Movies and Series during the run; the Review step lists only the Problems the run could not settle, each with Resolve (the Movie form in Import context) and Skip.
 - ✅ **Import progress console** — the Connect ✓ → Scan → Import stepper, the bar, the current item, elapsed and ETA, the Activity log, and Cancel; a server run polled every 500 ms, re-attachable.

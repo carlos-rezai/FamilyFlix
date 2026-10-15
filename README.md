@@ -374,7 +374,7 @@ Keep the description short enough to fit on one line — long descriptions get w
 | Season posters — TMDB art on each season card       | ✅ Done         |
 | Import review — folders + sheet, adjustments listed | ✅ Done         |
 | Link or copy — import without a second copy         | ✅ Done         |
-| Review at scale + Season art — grouped review       | 🔜 Planned      |
+| Review at scale + Season art — grouped review       | ✅ Done         |
 | Collections / playlists                             | 🧭 Roadmap      |
 | Auto-on subtitles                                   | 🧭 Roadmap      |
 | Backgroundable import                               | 🧭 Roadmap      |
@@ -451,8 +451,7 @@ Step 23 came after it, out of using the latest release (design log 40):
 
 Steps 24–25 came out of importing five real series (3–8 seasons, 8–20
 episodes each): the import was slow and doubled the disk space, and the review
-listed more than 1,400 rows. Each goes through grill-me and a prototype
-revision before it is built; step 24 is done (design log 41):
+listed more than 1,400 rows. Both are done (design logs 41 and 42):
 
 24. ✅ **Link or copy** — Import from spreadsheet and Scan folders offer
     **Link** or **Copy**, **Link by default** (design log 41). A linked title's
@@ -465,15 +464,18 @@ revision before it is built; step 24 is done (design log 41):
     while titles play from it. A linked title whose drive is unplugged says
     so in the player rather than failing. The Add form still copies: a file
     in a Library folder is added by Scan folders, which links it.
-25. 🔜 **Review at scale + Season art** — a review never runs to a thousand
-    rows: first, the run stops filing rows nobody needs to see; then the list
-    is grouped by title (one row per show with a count, opened on demand),
-    filtered by kind, the soft kinds folded away, with bulk actions per group
-    and per kind (_Skip all_, _Import all as guessed_, _Keep all mine_). A
-    single-series Sync shows a **Seasons** section — each season's current
-    poster beside TMDB's choices — so S1, S2 and S4 can be given art when
-    TMDB's default only covers S3, without wading through every episode. A
-    season poster can also be picked from a file in the series edit.
+25. ✅ **Review at scale + Season art** — a review never runs to a thousand
+    rows (design log 42). A show whose episodes couldn't be copied is one row,
+    not one per episode. The Import review groups a title's rows under one
+    header with a count, opened on demand; both reviews filter by kind; and
+    bulk actions settle many rows in one press (_Skip all_, _Import all as
+    guessed_, _Keep all mine_). A Sync finds more of what TMDB holds — it tries
+    the title without its year, cleaned of release tags and punctuation, and
+    before its subtitle — and _Only what's missing_ comes back to any title
+    still unmatched or missing episode or season art. A single-series Sync
+    shows a **Seasons** section — each season's current poster beside TMDB's
+    choices — so every season can be given art, and the series form takes a
+    season poster from a file too.
 
 A 🧭 Roadmap item is not in the chain — it comes after it, if ever.
 
