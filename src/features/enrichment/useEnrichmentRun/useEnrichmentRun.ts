@@ -9,12 +9,12 @@ import type {
 import {
   applyChoices,
   cancelEnrichment,
-  chooseSeasonPoster as postSeasonPoster,
   dismissDecision,
   dismissDecisions,
   EnrichmentBusyError,
   fetchCurrentEnrichment,
   pickCandidate,
+  saveSeasonPoster,
   searchDecision,
   startEnrichment,
 } from '../api/api';
@@ -219,7 +219,7 @@ export function useEnrichmentRun(
 
   const chooseSeasonPoster = useCallback(
     async (season: number, path: string) => {
-      const echo = await postSeasonPoster(season, path);
+      const echo = await saveSeasonPoster(season, path);
       setRun((held) =>
         held?.seasons === undefined
           ? held

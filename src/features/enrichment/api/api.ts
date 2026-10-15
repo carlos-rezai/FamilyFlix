@@ -169,7 +169,7 @@ export async function dismissDecisions(ids: string[]): Promise<EnrichmentRun> {
  * `season`'s, and the route's `200` echo — that season's choice — resolves.
  * Anything else rejects.
  */
-export async function chooseSeasonPoster(
+export async function saveSeasonPoster(
   season: number,
   path: string
 ): Promise<SeasonChoice> {
