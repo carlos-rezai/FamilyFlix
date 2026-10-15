@@ -18,6 +18,7 @@ function renderMetaLine(props: Partial<MetaLineProps> = {}) {
         ratingPercent={
           props.ratingPercent === undefined ? 80 : props.ratingPercent
         }
+        tmdbPercent={props.tmdbPercent ?? null}
         isWatched={props.isWatched ?? false}
         onRate={props.onRate ?? (() => undefined)}
       />
@@ -283,5 +284,39 @@ describe('MetaLine — the rating picker', () => {
     expect(
       picker.compareDocumentPosition(badge) & Node.DOCUMENT_POSITION_FOLLOWING
     ).toBeTruthy();
+  });
+});
+
+/**
+ * 26 — TMDB ratings (issue #371): the line hands `tmdbPercent` to the picker as
+ * its placeholder, tagged `TMDB`, so an unrated film reads TMDB's rating where
+ * `Not rated` was, and a `null` leaves the picker as it always was.
+ */
+describe('MetaLine — TMDB’s rating as the placeholder', () => {
+  /** Everything the rating segment reads beside its stars. */
+  const ratingLabel = () =>
+    screen.getByRole('group', { name: 'Your rating' }).parentElement
+      ?.textContent ?? '';
+
+  it('reads TMDB’s rating, tagged, on an unrated film', () => {
+    renderMetaLine({ ratingPercent: null, tmdbPercent: 70 });
+
+    expect(ratingLabel()).toContain('3.5 / 5');
+    expect(screen.getByText('TMDB')).toBeTruthy();
+    expect(screen.queryByText(/not rated/i)).toBeNull();
+  });
+
+  it('reads the household’s rating alone once one is set', () => {
+    renderMetaLine({ ratingPercent: 80, tmdbPercent: 70 });
+
+    expect(screen.getByText('4.0 / 5')).toBeTruthy();
+    expect(screen.queryByText('TMDB')).toBeNull();
+  });
+
+  it('reads Not rated with no TMDB rating to show', () => {
+    renderMetaLine({ ratingPercent: null, tmdbPercent: null });
+
+    expect(screen.getByText(/not rated/i)).toBeTruthy();
+    expect(screen.queryByText('TMDB')).toBeNull();
   });
 });

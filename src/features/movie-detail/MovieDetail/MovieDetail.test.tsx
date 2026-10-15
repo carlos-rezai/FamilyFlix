@@ -25,6 +25,10 @@ import {
   search,
 } from '@/test-support/LocationProbe/LocationProbe';
 import { makeMovie } from '@/test-support/makeMovie/makeMovie';
+import {
+  DisplayPreferenceContext,
+  type DisplayPreferenceApi,
+} from '@/App/useDisplayPreference/useDisplayPreference';
 import { paintedBackgrounds } from '@/test-support/paintedBackgrounds/paintedBackgrounds';
 import {
   noContentResponse,
@@ -1311,5 +1315,104 @@ describe('MovieDetail — the Detail backdrop', () => {
     );
     expect(arts).toHaveLength(1);
     expect(arts[0]?.closest('[aria-hidden="true"]')).toBeTruthy();
+  });
+});
+
+/**
+ * 26 — TMDB ratings (issue #371), end to end: the page reads the household's
+ * _Fill in ratings from TMDB_ and, while it is on, an unrated film's picker
+ * shows TMDB's rating as its placeholder. A click sets the household's Rating;
+ * clearing that Rating brings the placeholder back.
+ */
+describe('MovieDetail — TMDB’s rating as the picker’s placeholder', () => {
+  function renderWithPreference(tmdbRatings: boolean | null) {
+    const preference: DisplayPreferenceApi = {
+      ultrawideMargins: null,
+      setUltrawideMargins: () => Promise.resolve(),
+      tmdbRatings,
+      setTmdbRatings: () => Promise.resolve(),
+    };
+    return render(
+      <DisplayPreferenceContext.Provider value={preference}>
+        <MemoryRouter initialEntries={['/movie/m1']}>
+          <ThemeProvider theme={theme}>
+            <Routes>
+              <Route path="/movie/:id" element={<MovieDetail />} />
+            </Routes>
+          </ThemeProvider>
+        </MemoryRouter>
+      </DisplayPreferenceContext.Provider>
+    );
+  }
+
+  /** Everything the picker reads beside its stars. */
+  const ratingLabel = () =>
+    screen.getByRole('group', { name: 'Your rating' }).parentElement
+      ?.textContent ?? '';
+
+  it('reads TMDB’s rating, tagged, on an unrated film while on', async () => {
+    serveMovie({ rating: null, tmdbScore: 7.4 });
+
+    renderWithPreference(true);
+    await findTitle('Northwind');
+
+    expect(ratingLabel()).toContain('3.5 / 5');
+    expect(screen.getByText('TMDB')).toBeDefined();
+    expect(screen.queryByText(/not rated/i)).toBeNull();
+  });
+
+  it('reads Not rated while the preference is off', async () => {
+    serveMovie({ rating: null, tmdbScore: 7.4 });
+
+    renderWithPreference(false);
+    await findTitle('Northwind');
+
+    expect(screen.getByText(/not rated/i)).toBeDefined();
+    expect(screen.queryByText('TMDB')).toBeNull();
+  });
+
+  it('reads Not rated when no score is held', async () => {
+    serveMovie({ rating: null, tmdbScore: null });
+
+    renderWithPreference(true);
+    await findTitle('Northwind');
+
+    expect(screen.getByText(/not rated/i)).toBeDefined();
+    expect(screen.queryByText('TMDB')).toBeNull();
+  });
+
+  it('saves the placeholder’s own segment as the household’s Rating', async () => {
+    serveMovieAndSaves({ rating: null, tmdbScore: 7.4 });
+
+    renderWithPreference(true);
+    await findTitle('Northwind');
+    fireEvent.click(starSegment(7));
+
+    await waitFor(() =>
+      expect(writes()).toContainEqual({
+        url: '/api/movies/m1/rating',
+        body: { value: 7 },
+      })
+    );
+    expect(screen.queryByText('TMDB')).toBeNull();
+  });
+
+  it('brings the placeholder back when the Rating is cleared', async () => {
+    serveMovieAndSaves({ rating: 8, tmdbScore: 7.4 });
+
+    renderWithPreference(true);
+    await findTitle('Northwind');
+    expect(screen.queryByText('TMDB')).toBeNull();
+
+    fireEvent.click(starSegment(8));
+
+    expect(ratingLabel()).toContain('3.5 / 5');
+    expect(screen.getByText('TMDB')).toBeDefined();
+    await waitFor(() =>
+      expect(writes()).toContainEqual({
+        url: '/api/movies/m1/rating',
+        body: { value: null },
+      })
+    );
   });
 });

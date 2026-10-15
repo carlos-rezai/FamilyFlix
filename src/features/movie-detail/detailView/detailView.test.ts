@@ -102,6 +102,62 @@ describe('detailView — the rating segment', () => {
 });
 
 /**
+ * 26 — TMDB ratings (issue #371): the mapper takes the household's
+ * _Fill in ratings from TMDB_ and keeps the two ratings apart. `ratingPercent`
+ * is the household's alone — what the picker holds and a click replaces — and
+ * `tmdbPercent` is the **TMDB rating** (the score rounded to half-star units)
+ * while the preference is on and a score is held, else `null`. Never merged.
+ */
+describe('detailView — the TMDB rating beside the household’s', () => {
+  it('gives an unrated film TMDB’s rating as tmdbPercent while on', () => {
+    const vm = detailView(makeMovie({ rating: null, tmdbScore: 7.4 }), true);
+
+    expect(vm.ratingPercent).toBeNull();
+    expect(vm.tmdbPercent).toBe(70);
+  });
+
+  it('rounds a half unit up, as the sort does', () => {
+    const vm = detailView(makeMovie({ rating: null, tmdbScore: 7.5 }), true);
+
+    expect(vm.tmdbPercent).toBe(80);
+  });
+
+  it('never merges TMDB’s into the household’s rating', () => {
+    const vm = detailView(makeMovie({ rating: 4, tmdbScore: 7.4 }), true);
+
+    expect(vm.ratingPercent).toBe(40);
+    expect(vm.tmdbPercent).toBe(70);
+  });
+
+  it('keeps a stored zero as the household’s, beside TMDB’s', () => {
+    const vm = detailView(makeMovie({ rating: 0, tmdbScore: 7.4 }), true);
+
+    expect(vm.ratingPercent).toBe(0);
+    expect(vm.tmdbPercent).toBe(70);
+  });
+
+  it('answers null for tmdbPercent while the preference is off', () => {
+    const unrated = detailView(
+      makeMovie({ rating: null, tmdbScore: 7.4 }),
+      false
+    );
+    const rated = detailView(makeMovie({ rating: 8, tmdbScore: 7.4 }), false);
+
+    expect(unrated.ratingPercent).toBeNull();
+    expect(unrated.tmdbPercent).toBeNull();
+    expect(rated.ratingPercent).toBe(80);
+    expect(rated.tmdbPercent).toBeNull();
+  });
+
+  it('answers null for tmdbPercent when no score is held', () => {
+    const vm = detailView(makeMovie({ rating: null, tmdbScore: null }), true);
+
+    expect(vm.ratingPercent).toBeNull();
+    expect(vm.tmdbPercent).toBeNull();
+  });
+});
+
+/**
  * The primary button's text, decided here like every other display decision, so
  * the component never asks the record a question. A movie part-way in says
  * where it resumes: clicking Play should never surprise a parent about where it

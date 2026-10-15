@@ -21,6 +21,10 @@ import {
   search,
 } from '@/test-support/LocationProbe/LocationProbe';
 import { makeMovie } from '@/test-support/makeMovie/makeMovie';
+import {
+  DisplayPreferenceContext,
+  type DisplayPreferenceApi,
+} from '@/App/useDisplayPreference/useDisplayPreference';
 import { makeSeries } from '@/test-support/makeSeriesDetail/makeSeriesDetail';
 import { comesBefore } from '@/test-support/comesBefore/comesBefore';
 import {
@@ -4801,5 +4805,39 @@ describe('MovieForm — a series saved with its episodes', () => {
           .map((part) => JSON.parse(String(part)).subtitleLanguages)
       ).toEqual([['English', 'Portuguese'], []]);
     });
+  });
+});
+
+/**
+ * 26 — TMDB ratings (issue #371): the placeholder is the movie page's alone.
+ * _Your rating_ in the form is the household's field and nothing else, so an
+ * unrated film with a TMDB score still opens on `Not rated` there — with the
+ * preference on.
+ */
+describe('MovieForm — no TMDB placeholder on Your rating', () => {
+  it('opens an unrated film with a TMDB score on Not rated', async () => {
+    answerMovie = () =>
+      Promise.resolve(okResponse({ ...STORED, rating: null, tmdbScore: 7.4 }));
+    const preference: DisplayPreferenceApi = {
+      ultrawideMargins: null,
+      setUltrawideMargins: () => Promise.resolve(),
+      tmdbRatings: true,
+      setTmdbRatings: () => Promise.resolve(),
+    };
+
+    render(
+      <DisplayPreferenceContext.Provider value={preference}>
+        <MemoryRouter initialEntries={[`/add?movie=${STORED.id}`]}>
+          <ThemeProvider theme={theme}>
+            <MovieForm />
+          </ThemeProvider>
+        </MemoryRouter>
+      </DisplayPreferenceContext.Provider>
+    );
+    await act(async () => undefined);
+    await screen.findByDisplayValue(STORED.title);
+
+    expect(ratingLabel()).toContain('Not rated');
+    expect(ratingLabel()).not.toContain('TMDB');
   });
 });

@@ -13,6 +13,8 @@ function picker(props: Partial<RatingPickerProps> = {}) {
       <RatingPicker
         value={props.value === undefined ? 80 : props.value}
         size={props.size}
+        placeholder={props.placeholder}
+        placeholderTag={props.placeholderTag}
         onChange={props.onChange ?? (() => undefined)}
       />
     </ThemeProvider>
@@ -746,5 +748,145 @@ describe('RatingPicker — the strip as a group', () => {
 
     expect(group()).toBe(strip());
     expect(getComputedStyle(group()).gap).toBe('5px');
+  });
+});
+
+/**
+ * 26 — TMDB ratings (issue #371): while the household has not rated a film, the
+ * picker can be handed a **placeholder** — TMDB's rating, as a percent — and a
+ * `placeholderTag`. It draws muted stars at the placeholder and reads
+ * `x / 5 <tag>` where `Not rated` would be. It is a placeholder and nothing
+ * more: a click always sets the household's own value, the hover preview stays
+ * in the accent, and only a held `value` is ever offered as a clear.
+ */
+describe('RatingPicker — the placeholder', () => {
+  /** `colors.accent`, as the browser resolves it. */
+  const ACCENT = 'rgb(217, 122, 78)';
+
+  /** The ink one star's fill overlay is drawn in. */
+  const inkOf = (nth: number) =>
+    getComputedStyle(fillOverlay(nth) as Element).color;
+
+  /** Everything the label beside the stars reads. */
+  const label = () => group().parentElement?.textContent ?? '';
+
+  it('draws muted stars at the placeholder while the value is null', () => {
+    renderPicker({ value: null, placeholder: 70, placeholderTag: 'TMDB' });
+
+    expect(fillOf(3)).toBe('100%');
+    expect(fillOf(4)).toBe('50%');
+    expect(fillOf(5)).toBe('0%');
+    expect(inkOf(1)).not.toBe('');
+    expect(inkOf(1)).not.toBe(ACCENT);
+  });
+
+  it('reads the placeholder out of five with its tag, where Not rated was', () => {
+    renderPicker({ value: null, placeholder: 70, placeholderTag: 'TMDB' });
+
+    expect(label()).toContain('3.5 / 5');
+    expect(screen.getByText('TMDB')).toBeTruthy();
+    expect(screen.queryByText(/not rated/i)).toBeNull();
+  });
+
+  it('draws no placeholder face once a value is set', () => {
+    renderPicker({ value: 80, placeholder: 70, placeholderTag: 'TMDB' });
+
+    expect(fillOf(4)).toBe('100%');
+    expect(fillOf(5)).toBe('0%');
+    expect(inkOf(1)).toBe(ACCENT);
+    expect(screen.getByText('4.0 / 5')).toBeTruthy();
+    expect(screen.queryByText('TMDB')).toBeNull();
+  });
+
+  it('emits the placeholder’s value from its own segment, never null', () => {
+    // Adopting TMDB's rating is one click on the star it already shows — and
+    // that click sets it; there is nothing of the household's to clear.
+    const onChange = vi.fn();
+    renderPicker({
+      value: null,
+      placeholder: 70,
+      placeholderTag: 'TMDB',
+      onChange,
+    });
+
+    fireEvent.click(segment(7));
+
+    expect(asked(onChange)).toEqual([70]);
+  });
+
+  it('sets the household rating from any other segment too', () => {
+    const onChange = vi.fn();
+    renderPicker({
+      value: null,
+      placeholder: 70,
+      placeholderTag: 'TMDB',
+      onChange,
+    });
+
+    fireEvent.click(segment(9));
+    fireEvent.click(segment(2));
+
+    expect(asked(onChange)).toEqual([90, 20]);
+  });
+
+  it('names no segment Clear rating over a placeholder', () => {
+    renderPicker({ value: null, placeholder: 70, placeholderTag: 'TMDB' });
+
+    expect(screen.queryByRole('button', { name: 'Clear rating' })).toBeNull();
+    expect(named('Rate 3½ stars')).toBe(segment(7));
+  });
+
+  it('names Clear rating on the value’s segment alone when both are held', () => {
+    renderPicker({ value: 40, placeholder: 70, placeholderTag: 'TMDB' });
+
+    expect(
+      screen.getAllByRole('button', { name: 'Clear rating' })
+    ).toHaveLength(1);
+    expect(named('Clear rating')).toBe(segment(4));
+    expect(named('Rate 3½ stars')).toBe(segment(7));
+  });
+
+  it('previews a hover in the accent, not the muted ink', () => {
+    renderPicker({ value: null, placeholder: 70, placeholderTag: 'TMDB' });
+
+    fireEvent.mouseEnter(segment(9));
+
+    expect(fillOf(5)).toBe('50%');
+    expect(inkOf(5)).toBe(ACCENT);
+    expect(inkOf(1)).toBe(ACCENT);
+  });
+
+  it('gives the muted placeholder back when the pointer leaves', () => {
+    renderPicker({ value: null, placeholder: 70, placeholderTag: 'TMDB' });
+
+    fireEvent.mouseEnter(segment(9));
+    fireEvent.mouseLeave(strip());
+
+    expect(fillOf(4)).toBe('50%');
+    expect(fillOf(5)).toBe('0%');
+    expect(inkOf(1)).not.toBe(ACCENT);
+  });
+
+  it('brings the placeholder back when the value is cleared', () => {
+    const { rerender } = renderPicker({
+      value: 80,
+      placeholder: 70,
+      placeholderTag: 'TMDB',
+    });
+    expect(screen.queryByText('TMDB')).toBeNull();
+
+    rerender(picker({ value: null, placeholder: 70, placeholderTag: 'TMDB' }));
+
+    expect(label()).toContain('3.5 / 5');
+    expect(screen.getByText('TMDB')).toBeTruthy();
+    expect(fillOf(4)).toBe('50%');
+  });
+
+  it('reads Not rated over empty stars with a null placeholder', () => {
+    renderPicker({ value: null, placeholder: null, placeholderTag: 'TMDB' });
+
+    expect(screen.getByText(/not rated/i)).toBeTruthy();
+    expect(screen.queryByText('TMDB')).toBeNull();
+    expect(fillOf(1)).toBe('0%');
   });
 });
