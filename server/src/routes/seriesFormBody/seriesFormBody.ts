@@ -7,6 +7,7 @@ import {
   isSubtitleFilename,
   isVideoFilename,
 } from '../../media/fileKinds/fileKinds';
+import type { SeasonPosterEdit } from '../../library';
 import { yearSpan } from '../../library/series/yearSpan/yearSpan';
 import type { Refusal, ResolveFolder } from '../movieFormBody/movieFormBody';
 import { onlyField } from '../onlyField/onlyField';
@@ -208,6 +209,25 @@ export function readSeasonPosters(
     );
   }
   return { ok: true, changes };
+}
+
+/**
+ * A body's Season poster changes → the edits a series save writes: a picked
+ * file at the Stored path `stored` gives it, a removed one `null`, and a kept
+ * one nothing. A new series holds no Season poster, so a `remove` on an add
+ * takes away nothing — one mapping serves both routes.
+ */
+export function seasonPosterEdits(
+  changes: readonly SeasonPosterChange[],
+  stored: (path: string) => string
+): SeasonPosterEdit[] {
+  return changes.flatMap((change): SeasonPosterEdit[] =>
+    change.kind === 'picked'
+      ? [{ season: change.season, posterPath: stored(change.file) }]
+      : change.kind === 'remove'
+        ? [{ season: change.season, posterPath: null }]
+        : []
+  );
 }
 
 /** The name a picked Season poster is stored under: `S02-poster.jpg`. */

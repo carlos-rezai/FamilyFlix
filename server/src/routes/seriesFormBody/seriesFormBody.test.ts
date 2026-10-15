@@ -23,7 +23,10 @@ import { describe, expect, it } from 'vitest';
 
 import {
   readEpisodeField,
+  readSeasonPosterField,
+  readSeasonPosters,
   readSeriesFields,
+  seasonPosterEdits,
   type EpisodeUploads,
 } from './seriesFormBody';
 
@@ -471,3 +474,106 @@ function pairs(fields: Record<string, string[]>): [string, string][] {
     values.map((value): [string, string] => [name, value])
   );
 }
+
+// 42 — Review at scale refactor (issue #366), Group 2: the **Season poster**
+// half of a series body, read whole — each `seasonPoster` field, the files
+// that landed for them, and the edits both series routes write.
+
+/** The parts a body's Season posters landed as, by field. */
+function posters(...landed: (string | undefined)[]): EpisodeUploads {
+  return { folder: 'harbor-and-vine', episodes: [], seasonPosters: landed };
+}
+
+describe('readSeasonPosterField — one seasonPoster field', () => {
+  it('reads a season alone, and a season with its held path', () => {
+    expect(readSeasonPosterField('{"season":2}')).toEqual({ season: 2 });
+    expect(
+      readSeasonPosterField('{"season":0,"path":"harbor/S00-poster.jpg"}')
+    ).toEqual({ season: 0, path: 'harbor/S00-poster.jpg' });
+  });
+
+  it.each([
+    ['text that is not JSON', 'season 2'],
+    ['JSON that is not an object', '2'],
+    ['a null', 'null'],
+    ['no season', '{}'],
+    ['a season that is not a whole number', '{"season":1.5}'],
+    ['a negative season', '{"season":-1}'],
+    ['a season as text', '{"season":"2"}'],
+    ['an empty path', '{"season":2,"path":""}'],
+    ['a path that is not a string', '{"season":2,"path":7}'],
+  ])('reads %s as no field', (_, text) => {
+    expect(readSeasonPosterField(text)).toBeNull();
+  });
+});
+
+describe('readSeasonPosters — the fields paired with their files', () => {
+  it('reads a field with a file as picked, with a path as kept, and with neither as removed', () => {
+    const read = readSeasonPosters(
+      {
+        seasonPoster: [
+          '{"season":1}',
+          '{"season":2,"path":"harbor-and-vine/S02-poster.jpg"}',
+          '{"season":3}',
+        ],
+      },
+      posters('harbor-and-vine/S01-poster.jpg')
+    );
+
+    expect(read).toEqual({
+      ok: true,
+      changes: [
+        { season: 1, kind: 'picked', file: 'harbor-and-vine/S01-poster.jpg' },
+        { season: 2, kind: 'keep' },
+        { season: 3, kind: 'remove' },
+      ],
+    });
+  });
+
+  it('reads a body with no seasonPoster field as no change', () => {
+    expect(readSeasonPosters({}, posters())).toEqual({ ok: true, changes: [] });
+  });
+
+  it('refuses a field that is not the contract’s, quoting it', () => {
+    expect(readSeasonPosters({ seasonPoster: ['{}'] }, posters())).toEqual({
+      ok: false,
+      status: 400,
+      error: 'Invalid season poster field: "{}"',
+    });
+  });
+
+  it('refuses a season sent twice, naming it', () => {
+    expect(
+      readSeasonPosters(
+        { seasonPoster: ['{"season":2}', '{"season":2}'] },
+        posters()
+      )
+    ).toEqual({
+      ok: false,
+      status: 400,
+      error: 'Season poster sent twice: season 2',
+    });
+  });
+});
+
+describe('seasonPosterEdits — the changes a save writes', () => {
+  it('stores a picked file, takes a removed one away, and leaves a kept one out', () => {
+    expect(
+      seasonPosterEdits(
+        [
+          { season: 1, kind: 'picked', file: 'reserved/S01-poster.jpg' },
+          { season: 2, kind: 'keep' },
+          { season: 3, kind: 'remove' },
+        ],
+        (path) => path.replace('reserved/', 'harbor-and-vine/')
+      )
+    ).toEqual([
+      { season: 1, posterPath: 'harbor-and-vine/S01-poster.jpg' },
+      { season: 3, posterPath: null },
+    ]);
+  });
+
+  it('answers no edit for no change', () => {
+    expect(seasonPosterEdits([], (path) => path)).toEqual([]);
+  });
+});

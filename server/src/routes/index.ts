@@ -10,11 +10,7 @@ import type {
 } from '../enrichment/createEnrichment/createEnrichment';
 import express, { type Request, type Response, type Router } from 'express';
 
-import type {
-  LibraryStorage,
-  SeasonPosterEdit,
-  SeriesUpdate,
-} from '../library';
+import type { LibraryStorage, SeriesUpdate } from '../library';
 import { clashSentence } from '../library/folders/folderOverlap/folderOverlap';
 import { yearSpan } from '../library/series/yearSpan/yearSpan';
 import {
@@ -62,6 +58,7 @@ import {
   readSeasonPosters,
   readSeriesEditFields,
   readSeriesFields,
+  seasonPosterEdits,
   seasonPosterName,
 } from './seriesFormBody/seriesFormBody';
 import {
@@ -870,8 +867,6 @@ export function createApiRouter(
       res.status(read.status).json({ error: read.error });
       return;
     }
-    // A new series holds no Season poster yet: only a picked one means
-    // anything here.
     const seasonPosters = readSeasonPosters(fields, uploads);
     if (!seasonPosters.ok) {
       rollback();
@@ -929,11 +924,7 @@ export function createApiRouter(
             : { mediaFolder: basename(uploads.folder) }),
         },
         episodes,
-        seasonPosters.changes.flatMap((change) =>
-          change.kind === 'picked'
-            ? [{ season: change.season, posterPath: stored(change.file) }]
-            : []
-        )
+        seasonPosterEdits(seasonPosters.changes, stored)
       );
       res.status(201).json(series);
     } catch {
@@ -1094,14 +1085,10 @@ export function createApiRouter(
               subtitles: [...episode.heldTracks, ...episode.pickedTracks],
             };
           }),
-          // A held poster sent back as its path changes nothing.
-          seasonPosters: seasonPosters.changes.flatMap(
-            (change): SeasonPosterEdit[] =>
-              change.kind === 'picked'
-                ? [{ season: change.season, posterPath: change.file }]
-                : change.kind === 'remove'
-                  ? [{ season: change.season, posterPath: null }]
-                  : []
+          // The series' folder is never renamed: a Stored path is as landed.
+          seasonPosters: seasonPosterEdits(
+            seasonPosters.changes,
+            (path) => path
           ),
         });
       } catch {
