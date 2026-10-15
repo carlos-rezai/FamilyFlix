@@ -521,7 +521,6 @@ const START_REFUSALS: Record<
   'no-title': { status: 400, error: 'No such title' },
 };
 
-/** Why a review search or pick answered nothing, as a status. */
 /** How a refused **Season choice** reads on the wire. */
 const SEASON_POSTER_REFUSALS: Readonly<
   Record<
@@ -538,6 +537,7 @@ const SEASON_POSTER_REFUSALS: Readonly<
   failed: { status: 500, error: 'The poster could not be saved.' },
 };
 
+/** Why a review search or pick answered nothing, as a status. */
 const DECISION_REFUSALS: Record<
   'not-found' | 'refused' | 'unreachable',
   { status: number; error: string }
