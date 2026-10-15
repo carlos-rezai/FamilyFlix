@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ThemeProvider } from 'styled-components';
 
@@ -90,5 +90,130 @@ describe('SeriesFormFiles', () => {
     fireEvent.click(screen.getByRole('button', { name: /remove poster/i }));
 
     expect(onRemovePoster).toHaveBeenCalledTimes(1);
+  });
+});
+
+/**
+ * 42 — Review at scale, Slice 8 (issue #365): the _Season posters_ list.
+ *
+ * Under the series poster, a 13px faint caption over one File field per
+ * **Season** the episode rows hold, in the order the caller hands them —
+ * labelled `S01`, `S02`… A held poster shows its stored name, a picked one its
+ * file's, an empty slot the dashed _Choose poster for season 3_; ✕ reports the
+ * season. Drawn only once a row holds a season — the caller hands no slots
+ * before then.
+ */
+describe('SeriesFormFiles — the Season posters list', () => {
+  const SEASON_ART = new File(['image bytes'], 'spring.jpg', {
+    type: 'image/jpeg',
+  });
+
+  const HELD_SEASON_ONE: MovieFormFile = {
+    kind: 'stored',
+    path: 'harbor-vine-2019/S01-poster.jpg',
+    filename: 'S01-poster.jpg',
+  };
+
+  function renderSlots(
+    seasonPosters: { season: number; poster: MovieFormFile | null }[]
+  ) {
+    const onPickSeasonPoster = vi.fn<(season: number, file: File) => void>();
+    const onRemoveSeasonPoster = vi.fn<(season: number) => void>();
+
+    render(
+      <ThemeProvider theme={theme}>
+        <SeriesFormFiles
+          poster={null}
+          onPickPoster={vi.fn()}
+          onRemovePoster={vi.fn()}
+          seasonPosters={seasonPosters}
+          onPickSeasonPoster={onPickSeasonPoster}
+          onRemoveSeasonPoster={onRemoveSeasonPoster}
+          episodes={[]}
+          refusals={{}}
+          onAddEpisodeFiles={vi.fn()}
+          onSeasonChange={vi.fn()}
+          onNumberChange={vi.fn()}
+          onEpisodeTitleChange={vi.fn()}
+          onRemoveEpisode={vi.fn()}
+          onAddEpisodeSubtitle={vi.fn()}
+          onChangeEpisodeSubtitleLanguage={vi.fn()}
+          onRemoveEpisodeSubtitle={vi.fn()}
+        />
+      </ThemeProvider>
+    );
+
+    return { onPickSeasonPoster, onRemoveSeasonPoster };
+  }
+
+  const list = () => screen.getByRole('group', { name: 'Season posters' });
+
+  it('draws the caption over one slot per season, labelled S01, S02…, in the order given', () => {
+    renderSlots([
+      { season: 1, poster: HELD_SEASON_ONE },
+      { season: 2, poster: null },
+      { season: 10, poster: null },
+    ]);
+
+    expect(within(list()).getByText('Season posters')).toBeDefined();
+    const labels = within(list())
+      .getAllByText(/^S\d{2}$/)
+      .map((label) => label.textContent);
+    expect(labels).toEqual(['S01', 'S02', 'S10']);
+  });
+
+  it('shows a held poster by its stored name, and an empty slot as its choose button', () => {
+    renderSlots([
+      { season: 1, poster: HELD_SEASON_ONE },
+      { season: 3, poster: null },
+    ]);
+
+    expect(within(list()).getByText('S01-poster.jpg')).toBeDefined();
+    expect(
+      within(list()).getByLabelText(/choose poster for season 3/i)
+    ).toBeDefined();
+    expect(
+      within(list()).queryByLabelText(/choose poster for season 1/i)
+    ).toBeNull();
+  });
+
+  it('shows a picked poster by its file’s name', () => {
+    renderSlots([
+      {
+        season: 2,
+        poster: { kind: 'picked', file: SEASON_ART, filename: 'spring.jpg' },
+      },
+    ]);
+
+    expect(within(list()).getByText('spring.jpg')).toBeDefined();
+  });
+
+  it('reports the season and the file picked into its slot', async () => {
+    const { onPickSeasonPoster } = renderSlots([
+      { season: 1, poster: HELD_SEASON_ONE },
+      { season: 2, poster: null },
+    ]);
+
+    await userEvent.upload(
+      within(list()).getByLabelText(
+        /choose poster for season 2/i
+      ) as HTMLInputElement,
+      SEASON_ART,
+      { applyAccept: false }
+    );
+
+    expect(onPickSeasonPoster).toHaveBeenCalledWith(2, SEASON_ART);
+  });
+
+  it('reports the season whose ✕ was pressed', () => {
+    const { onRemoveSeasonPoster } = renderSlots([
+      { season: 1, poster: HELD_SEASON_ONE },
+    ]);
+
+    fireEvent.click(
+      within(list()).getByRole('button', { name: /^remove s01$/i })
+    );
+
+    expect(onRemoveSeasonPoster).toHaveBeenCalledWith(1);
   });
 });
