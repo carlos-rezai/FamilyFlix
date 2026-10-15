@@ -50,6 +50,8 @@ function renderReview(props: Partial<EnrichmentReviewProps> = {}) {
     onPick: vi.fn<(id: string, tmdbId: number) => void>(),
     onSearch: vi.fn<(id: string, query: string) => void>(),
     onApply: vi.fn<EnrichmentReviewProps['onApply']>(),
+    onChooseSeasonPoster:
+      vi.fn<EnrichmentReviewProps['onChooseSeasonPoster']>(),
   };
   render(
     <ThemeProvider theme={theme}>
@@ -253,6 +255,7 @@ describe('EnrichmentReview — the Kind filter', () => {
             onPick={() => undefined}
             onSearch={() => undefined}
             onApply={() => undefined}
+            onChooseSeasonPoster={() => undefined}
           />
           <LocationProbe />
         </ThemeProvider>
@@ -440,6 +443,7 @@ describe('EnrichmentReview — Skip all beside a chosen kind', () => {
           onPick={() => undefined}
           onSearch={() => undefined}
           onApply={() => undefined}
+          onChooseSeasonPoster={() => undefined}
           {...handlers}
         />
       </ThemeProvider>

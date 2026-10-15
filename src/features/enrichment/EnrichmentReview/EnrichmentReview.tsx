@@ -43,10 +43,8 @@ export interface EnrichmentReviewProps {
   onSearch: (id: string, query: string) => void;
   onApply: (id: string, choices: ConflictChoices) => void;
   /** A **Season choice** taken in the Seasons section. */
-  onChooseSeasonPoster?: (season: number, path: string) => void;
+  onChooseSeasonPoster: (season: number, path: string) => void;
 }
-
-const NO_CHOICE = () => undefined;
 
 /**
  * The **Review step**: the two stat tiles, and — with nothing left to decide
@@ -72,7 +70,7 @@ export function EnrichmentReview({
   onPick,
   onSearch,
   onApply,
-  onChooseSeasonPoster = NO_CHOICE,
+  onChooseSeasonPoster,
 }: EnrichmentReviewProps) {
   const [chosen, setChosen] = useState<DecisionKind | 'all'>('all');
   const filter = kindFilter(
