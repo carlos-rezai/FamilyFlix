@@ -142,3 +142,23 @@ export async function dismissDecision(id: string): Promise<void> {
     throw new Error(`DELETE ${url} failed: ${response.status}`);
   }
 }
+
+const BULK_DISMISS_ENDPOINT = '/api/enrichment/current/decisions/dismiss';
+
+/**
+ * _Skip all_: the ids posted as JSON, and the **Current enrichment run** the
+ * route answers — the whole snapshot, every id it held let go. Any status but
+ * a `200` rejects, and so does a request that could not be made.
+ */
+export async function dismissDecisions(ids: string[]): Promise<EnrichmentRun> {
+  const response = await fetch(BULK_DISMISS_ENDPOINT, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ids }),
+  });
+
+  if (response.status !== 200) {
+    throw new Error(`POST ${BULK_DISMISS_ENDPOINT} failed: ${response.status}`);
+  }
+  return (await response.json()) as EnrichmentRun;
+}

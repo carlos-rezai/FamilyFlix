@@ -83,3 +83,22 @@ export function conflictChoicesBody(body: unknown): BodyRead<ConflictChoices> {
   }
   return { ok: true, value: choices as ConflictChoices };
 }
+
+/**
+ * _Skip all_'s body → the ids of the **Decisions** to let go: `ids` a
+ * non-empty list of strings, refused in a sentence otherwise. Whether the run
+ * holds each is the domain's to say.
+ */
+export function decisionIdsBody(body: unknown): BodyRead<string[]> {
+  const { ids } = (typeof body === 'object' && body !== null ? body : {}) as {
+    ids?: unknown;
+  };
+  if (
+    !Array.isArray(ids) ||
+    ids.length === 0 ||
+    !ids.every((id): id is string => typeof id === 'string')
+  ) {
+    return { ok: false, error: 'Ids must be a list of decision ids.' };
+  }
+  return { ok: true, value: ids };
+}

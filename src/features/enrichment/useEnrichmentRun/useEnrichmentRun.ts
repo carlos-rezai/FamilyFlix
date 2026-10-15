@@ -10,6 +10,7 @@ import {
   applyChoices,
   cancelEnrichment,
   dismissDecision,
+  dismissDecisions,
   EnrichmentBusyError,
   fetchCurrentEnrichment,
   pickCandidate,
@@ -89,6 +90,12 @@ export interface EnrichmentRunState {
   apply: (id: string, choices: ConflictChoices) => Promise<void>;
   /** _Skip_: the row leaves the list. Rejects when the route refuses. */
   dismiss: (id: string) => Promise<void>;
+  /**
+   * _Skip all_: let every id go at once, and hold the route's echo — the
+   * whole snapshot — as the run. Rejects when the dismiss could not be made;
+   * the run stays as it was.
+   */
+  skipMany: (ids: string[]) => Promise<void>;
 }
 
 /**
@@ -199,6 +206,10 @@ export function useEnrichmentRun(
     setRun((held) => settled(held, id, { counted: false }));
   }, []);
 
+  const skipMany = useCallback(async (ids: string[]) => {
+    setRun(await dismissDecisions(ids));
+  }, []);
+
   const live = run !== null && run.phase === 'running';
   useEffect(() => {
     if (!live) {
@@ -224,5 +235,15 @@ export function useEnrichmentRun(
     };
   }, [live]);
 
-  return { run, waiting, start, cancel, search, pick, apply, dismiss };
+  return {
+    run,
+    waiting,
+    start,
+    cancel,
+    search,
+    pick,
+    apply,
+    dismiss,
+    skipMany,
+  };
 }

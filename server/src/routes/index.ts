@@ -59,6 +59,7 @@ import {
 } from './seriesFormBody/seriesFormBody';
 import {
   conflictChoicesBody,
+  decisionIdsBody,
   startEnrichmentBody,
 } from './enrichmentBody/enrichmentBody';
 import {
@@ -1978,6 +1979,30 @@ export function createApiRouter(
       }
       const refused = DECISION_REFUSALS[outcome.kind];
       res.status(refused.status).json({ error: refused.error });
+    }
+  );
+
+  // _Skip all_ beside a chosen kind: the ids read by `enrichmentBody`, a
+  // refusal its sentence and the domain never asked; then each id the run
+  // holds let go and an unknown one passed over, nothing written, and the
+  // whole snapshot answered so the review redraws from the echo. `404` with
+  // no run.
+  router.post(
+    '/enrichment/current/decisions/dismiss',
+    (req: Request, res: Response) => {
+      const read = decisionIdsBody(req.body);
+      if (!read.ok) {
+        res.status(400).json({ error: read.error });
+        return;
+      }
+      if (enrichment.current() === null) {
+        res.status(404).json({ error: 'No sync is running' });
+        return;
+      }
+      for (const id of read.value) {
+        enrichment.dismiss(id);
+      }
+      res.json(enrichment.current());
     }
   );
 

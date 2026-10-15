@@ -81,8 +81,17 @@ export function EnrichmentFlow() {
         ? moviePath(single.id)
         : seriesPath(single.id)
   );
-  const { run, waiting, start, cancel, search, pick, apply, dismiss } =
-    useEnrichmentRun(single);
+  const {
+    run,
+    waiting,
+    start,
+    cancel,
+    search,
+    pick,
+    apply,
+    dismiss,
+    skipMany,
+  } = useEnrichmentRun(single);
   const { summary, retry } = useEnrichmentSummary();
   const navigate = useNavigate();
   const { notify } = useSnackbar();
@@ -141,6 +150,16 @@ export function EnrichmentFlow() {
       });
     },
     [dismiss]
+  );
+
+  const onSkipMany = useCallback(
+    (ids: string[]) => {
+      skipMany(ids).catch(() => {
+        // A Skip all that did not land leaves every row where it is, and the
+        // button is still there to press again.
+      });
+    },
+    [skipMany]
   );
 
   const onPick = useCallback(
@@ -268,6 +287,7 @@ export function EnrichmentFlow() {
           onFinish={fromImport ? () => navigate('/') : goBack}
           onAgain={cancel}
           onSkip={onSkip}
+          onSkipMany={onSkipMany}
           onPick={onPick}
           onSearch={onSearch}
           onApply={onApply}

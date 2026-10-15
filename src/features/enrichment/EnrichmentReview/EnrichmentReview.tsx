@@ -14,6 +14,7 @@ import {
   Decisions,
   AllDoneHeading,
   AllDoneLine,
+  BulkActions,
   FilterRow,
   FilterScroll,
   Stack,
@@ -30,6 +31,11 @@ export interface EnrichmentReviewProps {
   onFinish: () => void;
   onAgain: () => void;
   onSkip: (id: string) => void;
+  /**
+   * _Skip all_ was pressed beside a chosen kind, with the id of every Decision
+   * of that kind, in the run's order.
+   */
+  onSkipMany: (ids: string[]) => void;
   onPick: (id: string, tmdbId: number) => void;
   onSearch: (id: string, query: string) => void;
   onApply: (id: string, choices: ConflictChoices) => void;
@@ -42,7 +48,9 @@ export interface EnrichmentReviewProps {
  *
  * Over two kinds or more, the **Kind filter** sits above the rows and lets
  * one kind through — filtered, never grouped; screen state, falling back to
- * _All_ once its kind empties.
+ * _All_ once its kind empties. A chosen kind draws _Skip all_ at the row's
+ * end, reporting the shown ids at once, no confirm; the step takes nothing
+ * off itself — the run hook does, and the next `run` shows it.
  */
 export function EnrichmentReview({
   run,
@@ -50,6 +58,7 @@ export function EnrichmentReview({
   onFinish,
   onAgain,
   onSkip,
+  onSkipMany,
   onPick,
   onSearch,
   onApply,
@@ -91,6 +100,18 @@ export function EnrichmentReview({
                   onChange={setChosen}
                 />
               </FilterScroll>
+              <BulkActions>
+                {filter.value !== 'all' && (
+                  <Button
+                    label="Skip all"
+                    variant="ghost"
+                    size="md"
+                    onClick={() =>
+                      onSkipMany(shown.map((decision) => decision.id))
+                    }
+                  />
+                )}
+              </BulkActions>
             </FilterRow>
           )}
           {shown.map((decision) => (

@@ -95,3 +95,10 @@ export const FilterScroll = styled.div`
   max-width: 100%;
   overflow-x: auto;
 `;
+
+/** The Bulk actions' slot at the Kind filter row's end, pushed right. */
+export const BulkActions = styled.div`
+  flex: 1;
+  display: flex;
+  justify-content: flex-end;
+`;
