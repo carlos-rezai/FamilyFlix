@@ -4,8 +4,10 @@ import {
   startImport,
   fetchCurrentImport,
   cancelImport,
+  dismissProblems,
   fetchExportSummary,
   importGuessed,
+  importManyGuessed,
   startExport,
   ImportBusyError,
 } from './api';
@@ -321,6 +323,70 @@ describe('importGuessed', () => {
     fetchMock.mockResolvedValue(serverErrorResponse());
 
     await expect(importGuessed('p2')).rejects.toThrow();
+  });
+});
+
+// 42 — Review at scale refactor (issue #366): the two bulk presses' calls,
+// _Skip all_ / _Keep all mine_ and _Import all as guessed_ — each the ids as
+// JSON, and the whole run the route echoes.
+
+describe('dismissProblems', () => {
+  it('POSTs the ids as JSON to the bulk dismiss route', async () => {
+    fetchMock.mockResolvedValue(okResponse(makeImportRun()));
+
+    await dismissProblems(['p1', 'p2']);
+
+    const request = onlyRequest();
+    expect(request.url).toBe('/api/import/current/problems/dismiss');
+    expect(request.method?.toUpperCase()).toBe('POST');
+    expect(request.headers?.['Content-Type']).toBe('application/json');
+    expect(JSON.parse(String(request.body))).toEqual({ ids: ['p1', 'p2'] });
+  });
+
+  it('answers the run the route echoes on a 200', async () => {
+    const run = makeImportRun({ phase: 'review' });
+    fetchMock.mockResolvedValue(okResponse(run));
+
+    await expect(dismissProblems(['p1'])).resolves.toEqual(run);
+  });
+
+  it.each([
+    ['a 404', notFoundResponse('No current run')],
+    ['a 500', serverErrorResponse()],
+  ])('rejects on %s', async (_, response) => {
+    fetchMock.mockResolvedValue(response);
+
+    await expect(dismissProblems(['p1'])).rejects.toThrow();
+  });
+});
+
+describe('importManyGuessed', () => {
+  it('POSTs the ids as JSON to the bulk import-as-guessed route', async () => {
+    fetchMock.mockResolvedValue(okResponse(makeImportRun()));
+
+    await importManyGuessed(['p1', 'p2']);
+
+    const request = onlyRequest();
+    expect(request.url).toBe('/api/import/current/problems/import-guessed');
+    expect(request.method?.toUpperCase()).toBe('POST');
+    expect(request.headers?.['Content-Type']).toBe('application/json');
+    expect(JSON.parse(String(request.body))).toEqual({ ids: ['p1', 'p2'] });
+  });
+
+  it('answers the run the route echoes on a 200', async () => {
+    const run = makeImportRun({ phase: 'review' });
+    fetchMock.mockResolvedValue(okResponse(run));
+
+    await expect(importManyGuessed(['p1'])).resolves.toEqual(run);
+  });
+
+  it.each([
+    ['a 404', notFoundResponse('No current run')],
+    ['a 500', serverErrorResponse()],
+  ])('rejects on %s', async (_, response) => {
+    fetchMock.mockResolvedValue(response);
+
+    await expect(importManyGuessed(['p1'])).rejects.toThrow();
   });
 });
 

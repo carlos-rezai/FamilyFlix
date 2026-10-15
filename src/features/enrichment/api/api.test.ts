@@ -4,13 +4,15 @@ import {
   applyChoices,
   cancelEnrichment,
   dismissDecision,
+  dismissDecisions,
   EnrichmentBusyError,
   fetchCurrentEnrichment,
   pickCandidate,
+  saveSeasonPoster,
   searchDecision,
   startEnrichment,
 } from './api';
-import type { Decision, StartEnrichment } from '@/types';
+import type { Decision, SeasonChoice, StartEnrichment } from '@/types';
 import { makeEnrichmentRun } from '@/test-support/makeEnrichmentRun/makeEnrichmentRun';
 import {
   conflictResponse,
@@ -205,5 +207,75 @@ describe('the Decision writes', () => {
     fetchMock.mockResolvedValue(notFoundResponse('No such decision'));
 
     await expect(call()).rejects.toThrow();
+  });
+});
+
+// 42 — Review at scale refactor (issue #366): _Skip all_'s call and the
+// **Season choice**'s — each its JSON body, and the route's `200` echo.
+
+describe('dismissDecisions', () => {
+  it('POSTs the ids as JSON to the bulk dismiss route', async () => {
+    fetchMock.mockResolvedValue(okResponse(makeEnrichmentRun()));
+
+    await dismissDecisions(['d1', 'd2']);
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(sent()).toEqual({
+      url: '/api/enrichment/current/decisions/dismiss',
+      method: 'POST',
+      body: { ids: ['d1', 'd2'] },
+    });
+  });
+
+  it('answers the run the route echoes on a 200', async () => {
+    const run = makeEnrichmentRun({ phase: 'review' });
+    fetchMock.mockResolvedValue(okResponse(run));
+
+    await expect(dismissDecisions(['d1'])).resolves.toEqual(run);
+  });
+
+  it.each([
+    ['a 404', notFoundResponse('No current run')],
+    ['a 500', serverErrorResponse()],
+  ])('rejects on %s', async (_, response) => {
+    fetchMock.mockResolvedValue(response);
+
+    await expect(dismissDecisions(['d1'])).rejects.toThrow();
+  });
+});
+
+describe('saveSeasonPoster', () => {
+  const CHOICE: SeasonChoice = {
+    season: 2,
+    posterUrl: '/api/images/the-hollow-coast-2018/S02-poster.jpg',
+    choices: [],
+  };
+
+  it('POSTs the path as JSON to the season’s poster route', async () => {
+    fetchMock.mockResolvedValue(okResponse(CHOICE));
+
+    await saveSeasonPoster(2, '/s02-a.jpg');
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(sent()).toEqual({
+      url: '/api/enrichment/current/seasons/2/poster',
+      method: 'POST',
+      body: { path: '/s02-a.jpg' },
+    });
+  });
+
+  it('answers the season’s choice the route echoes on a 200', async () => {
+    fetchMock.mockResolvedValue(okResponse(CHOICE));
+
+    await expect(saveSeasonPoster(2, '/s02-a.jpg')).resolves.toEqual(CHOICE);
+  });
+
+  it.each([
+    ['a 404', notFoundResponse('No sync holds that season.')],
+    ['a 500', serverErrorResponse()],
+  ])('rejects on %s', async (_, response) => {
+    fetchMock.mockResolvedValue(response);
+
+    await expect(saveSeasonPoster(2, '/s02-a.jpg')).rejects.toThrow();
   });
 });
