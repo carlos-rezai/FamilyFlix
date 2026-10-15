@@ -8,6 +8,7 @@ import type { ImportProblem } from '@/types';
 import { theme } from '@/styles/theme';
 import { makeImportRun } from '@/test-support/makeImportRun/makeImportRun';
 import { comesBefore } from '@/test-support/comesBefore/comesBefore';
+import { LocationProbe, url } from '@/test-support/LocationProbe/LocationProbe';
 import {
   normCss,
   resolvedStyle,
@@ -615,5 +616,226 @@ describe('ImportReview — Review groups', () => {
     expect(screen.queryByText('The Night Ferry')).toBeNull();
     expect(screen.queryByRole('region')).toBeNull();
     expect(screen.getByText("Folder isn't in the spreadsheet.")).toBeDefined();
+  });
+});
+
+/**
+ * 42 — Review at scale (issue #359): the **Kind filter**.
+ *
+ * `PillTabs` labelled _Problem kinds_ above the list: _All N_, then one pill
+ * per kind present with its count, in the glossary's order — drawn only with
+ * two kinds or more. A chosen kind shows only its rows, through
+ * `reviewGroups`' filter; a pill whose kind empties goes and the filter falls
+ * back to _All_. Screen state: the URL never moves.
+ */
+describe('ImportReview — the Kind filter', () => {
+  const problem = (
+    id: string,
+    kind: ImportProblem['kind'],
+    title = `Title ${id}`
+  ): ImportProblem => ({
+    id,
+    kind,
+    title,
+    reason: `Reason ${id}.`,
+  });
+
+  /** Every kind, in a scrambled order, with uneven counts. */
+  const EVERY_KIND: ImportProblem[] = [
+    problem('a', 'differs'),
+    problem('b', 'unplaced'),
+    problem('c', 'no-row'),
+    problem('d', 'no-folder'),
+    problem('e', 'missing-meta'),
+    problem('f', 'failed'),
+    problem('g', 'no-video'),
+    problem('h', 'ambiguous'),
+    problem('i', 'no-folder'),
+    problem('j', 'no-row'),
+    problem('k', 'no-row'),
+  ];
+
+  /** One no-folder, two no-row, one missing-meta — each its own title. */
+  const MIXED: ImportProblem[] = [
+    problem('1', 'no-row'),
+    problem('2', 'no-folder'),
+    problem('3', 'no-row'),
+    problem('4', 'missing-meta'),
+  ];
+
+  const filter = () => screen.queryByRole('group', { name: 'Problem kinds' });
+  const pills = () =>
+    within(filter() as HTMLElement)
+      .getAllByRole('button')
+      .map((pill) => pill.textContent);
+  const pill = (name: string) =>
+    within(filter() as HTMLElement).getByRole('button', { name });
+
+  it('draws the filter, named Problem kinds, when the list holds two kinds', () => {
+    renderReview({
+      run: inReview([problem('1', 'no-row'), problem('2', 'failed')]),
+    });
+
+    expect(filter()).not.toBeNull();
+  });
+
+  it('draws no filter when every row is of one kind', () => {
+    renderReview({
+      run: inReview([problem('1', 'no-row'), problem('2', 'no-row')]),
+    });
+
+    expect(filter()).toBeNull();
+    expect(screen.getByText('Reason 1.')).toBeDefined();
+    expect(screen.getByText('Reason 2.')).toBeDefined();
+  });
+
+  it('reads All N, then each kind present with its count, in the glossary’s order', () => {
+    renderReview({ run: inReview(EVERY_KIND) });
+
+    expect(pills()).toEqual([
+      'All 11',
+      'No folder 2',
+      'Ambiguous 1',
+      'No video 1',
+      'Not in sheet 3',
+      'Failed 1',
+      'Unplaced 1',
+      'Missing details 1',
+      'Differs 1',
+    ]);
+  });
+
+  it('draws a pill only for a kind the list holds', () => {
+    renderReview({ run: inReview(MIXED) });
+
+    expect(pills()).toEqual([
+      'All 4',
+      'No folder 1',
+      'Not in sheet 2',
+      'Missing details 1',
+    ]);
+  });
+
+  it('opens on All, pressed, with every row shown', () => {
+    renderReview({ run: inReview(MIXED) });
+
+    expect(pill('All 4').getAttribute('aria-pressed')).toBe('true');
+    for (const id of ['1', '2', '3', '4']) {
+      expect(screen.getByText(`Reason ${id}.`)).toBeDefined();
+    }
+  });
+
+  it('shows only the chosen kind’s rows once its pill is pressed', () => {
+    renderReview({ run: inReview(MIXED) });
+
+    fireEvent.click(pill('Not in sheet 2'));
+
+    expect(pill('Not in sheet 2').getAttribute('aria-pressed')).toBe('true');
+    expect(pill('All 4').getAttribute('aria-pressed')).toBe('false');
+    expect(screen.getByText('Reason 1.')).toBeDefined();
+    expect(screen.getByText('Reason 3.')).toBeDefined();
+    expect(screen.queryByText('Reason 2.')).toBeNull();
+    expect(screen.queryByText('Reason 4.')).toBeNull();
+  });
+
+  it('shows everything again once All is pressed', () => {
+    renderReview({ run: inReview(MIXED) });
+    fireEvent.click(pill('No folder 1'));
+
+    fireEvent.click(pill('All 4'));
+
+    expect(pill('All 4').getAttribute('aria-pressed')).toBe('true');
+    for (const id of ['1', '2', '3', '4']) {
+      expect(screen.getByText(`Reason ${id}.`)).toBeDefined();
+    }
+  });
+
+  it('filters through the Review groups: a group keeps only the chosen kind’s rows', () => {
+    const ferry: ImportProblem[] = [
+      problem('f1', 'no-folder', 'The Night Ferry'),
+      { ...problem('f2', 'missing-meta', 'The Night Ferry'), movieId: 'm4' },
+      problem('f3', 'no-folder', 'The Night Ferry'),
+    ];
+    renderReview({ run: inReview(ferry) });
+
+    fireEvent.click(pill('Missing details 1'));
+
+    // One row of the group is left, so it is drawn as its bare row.
+    expect(document.querySelector('[aria-expanded]')).toBeNull();
+    expect(screen.getByText('Reason f2.')).toBeDefined();
+    expect(screen.queryByText('Reason f1.')).toBeNull();
+    expect(screen.queryByText('Reason f3.')).toBeNull();
+  });
+
+  it('counts a kind down as its rows are settled', () => {
+    const { rerenderWith } = renderReview({ run: inReview(MIXED) });
+    fireEvent.click(pill('Not in sheet 2'));
+
+    rerenderWith(inReview(MIXED.filter((p) => p.id !== '1')));
+
+    expect(pill('Not in sheet 1').getAttribute('aria-pressed')).toBe('true');
+    expect(pills()[0]).toBe('All 3');
+    expect(screen.getByText('Reason 3.')).toBeDefined();
+    expect(screen.queryByText('Reason 2.')).toBeNull();
+  });
+
+  it('takes a kind’s pill away once its last row is settled, and falls back to All', () => {
+    const { rerenderWith } = renderReview({ run: inReview(MIXED) });
+    fireEvent.click(pill('Not in sheet 2'));
+
+    rerenderWith(inReview(MIXED.filter((p) => p.kind !== 'no-row')));
+
+    expect(pills()).toEqual(['All 2', 'No folder 1', 'Missing details 1']);
+    expect(pill('All 2').getAttribute('aria-pressed')).toBe('true');
+    expect(screen.getByText('Reason 2.')).toBeDefined();
+    expect(screen.getByText('Reason 4.')).toBeDefined();
+  });
+
+  it('takes the filter away once one kind is left', () => {
+    const { rerenderWith } = renderReview({ run: inReview(MIXED) });
+    fireEvent.click(pill('No folder 1'));
+
+    rerenderWith(inReview(MIXED.filter((p) => p.kind === 'no-row')));
+
+    expect(filter()).toBeNull();
+    expect(screen.getByText('Reason 1.')).toBeDefined();
+    expect(screen.getByText('Reason 3.')).toBeDefined();
+  });
+
+  it('keeps the choice out of the URL', () => {
+    render(
+      <MemoryRouter initialEntries={['/import']}>
+        <ThemeProvider theme={theme}>
+          <ImportReview
+            run={inReview(MIXED)}
+            onSkip={() => undefined}
+            onApply={() => undefined}
+            onPick={() => undefined}
+            onImportAs={() => undefined}
+            finishLabel={FINISH}
+            onFinish={() => undefined}
+          />
+          <LocationProbe />
+        </ThemeProvider>
+      </MemoryRouter>
+    );
+
+    fireEvent.click(pill('Not in sheet 2'));
+
+    expect(url()).toBe('/import');
+  });
+
+  it('shows All done and no filter for a review with no rows', () => {
+    renderReview({ run: inReview([]) });
+
+    expect(screen.getByText('✓ All done')).toBeDefined();
+    expect(filter()).toBeNull();
+  });
+
+  it('sets the track in a sideways-scrolling wrapper', () => {
+    renderReview({ run: inReview(EVERY_KIND) });
+
+    const wrapper = (filter() as HTMLElement).parentElement as HTMLElement;
+    expect(resolvedStyle(wrapper)['overflow-x']).toBe('auto');
   });
 });

@@ -169,3 +169,15 @@ describe('PillTabs — the pill track, as the library drew it', () => {
     );
   });
 });
+
+/**
+ * 42 — Review at scale (issue #359): the **Kind filter** can hold nine pills,
+ * so a tab never wraps its label; the caller scrolls the track sideways.
+ */
+describe('PillTabs — a long track', () => {
+  it('never wraps a tab’s label', () => {
+    renderTabs();
+
+    expect(resolvedStyle(tab('Movie'))['white-space']).toBe('nowrap');
+  });
+});

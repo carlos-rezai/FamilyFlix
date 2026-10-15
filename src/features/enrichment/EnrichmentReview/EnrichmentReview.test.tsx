@@ -1,9 +1,12 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { ThemeProvider } from 'styled-components';
+import { MemoryRouter } from 'react-router-dom';
 
 import { theme } from '@/styles/theme';
 import { makeEnrichmentRun } from '@/test-support/makeEnrichmentRun/makeEnrichmentRun';
+import { LocationProbe, url } from '@/test-support/LocationProbe/LocationProbe';
+import { resolvedStyle } from '@/test-support/resolvedStyle/resolvedStyle';
 import type { Decision, EnrichmentRun } from '@/types';
 import {
   EnrichmentReview,
@@ -184,5 +187,188 @@ describe('EnrichmentReview — no Review groups', () => {
     expect(screen.getAllByRole('button', { name: 'Skip' })).toHaveLength(2);
     expect(document.querySelector('[aria-expanded]')).toBeNull();
     expect(screen.queryByRole('region')).toBeNull();
+  });
+});
+
+/**
+ * 42 — Review at scale (issue #359): the **Kind filter**.
+ *
+ * The Import review's filter over the Sync's Decisions — `PillTabs` labelled
+ * _Decision kinds_: _All N_, then _Ambiguous_, _Missing_, _Conflict_ each with
+ * its count, only those present, drawn with two kinds or more. Filtered, never
+ * grouped. A pill whose kind empties goes and the filter falls back to _All_;
+ * the URL never moves.
+ */
+describe('EnrichmentReview — the Kind filter', () => {
+  const decision = (id: string, kind: Decision['kind']): Decision => {
+    const base = {
+      id,
+      title: `Title ${id}`,
+      reason: `Reason ${id}.`,
+      path: null,
+      query: `Title ${id}`,
+    };
+    if (kind === 'ambiguous') return { ...base, kind, candidates: [] };
+    if (kind === 'conflict')
+      return {
+        ...base,
+        kind,
+        fields: [{ field: 'year', label: 'Year', mine: '2019', tmdb: '2018' }],
+      };
+    return { ...base, kind };
+  };
+
+  const inReview = (decisions: Decision[]) =>
+    makeEnrichmentRun({ phase: 'review', enriched: 4, decisions });
+
+  /** Out of the glossary's order on purpose, with uneven counts. */
+  const MIXED: Decision[] = [
+    decision('1', 'conflict'),
+    decision('2', 'missing'),
+    decision('3', 'ambiguous'),
+    decision('4', 'conflict'),
+  ];
+
+  const filter = () => screen.queryByRole('group', { name: 'Decision kinds' });
+  const pills = () =>
+    within(filter() as HTMLElement)
+      .getAllByRole('button')
+      .map((pill) => pill.textContent);
+  const pill = (name: string) =>
+    within(filter() as HTMLElement).getByRole('button', { name });
+
+  function renderWith(run: EnrichmentRun) {
+    const view = (r: EnrichmentRun) => (
+      <MemoryRouter initialEntries={['/enrich']}>
+        <ThemeProvider theme={theme}>
+          <EnrichmentReview
+            run={r}
+            finishLabel="Done"
+            onFinish={() => undefined}
+            onAgain={() => undefined}
+            onSkip={() => undefined}
+            onPick={() => undefined}
+            onSearch={() => undefined}
+            onApply={() => undefined}
+          />
+          <LocationProbe />
+        </ThemeProvider>
+      </MemoryRouter>
+    );
+    const rendered = render(view(run));
+    return { rerenderWith: (r: EnrichmentRun) => rendered.rerender(view(r)) };
+  }
+
+  it('draws the filter, named Decision kinds, when the list holds two kinds', () => {
+    renderWith(inReview([decision('1', 'missing'), decision('2', 'conflict')]));
+
+    expect(filter()).not.toBeNull();
+  });
+
+  it('draws no filter when every Decision is of one kind', () => {
+    renderWith(inReview([decision('1', 'missing'), decision('2', 'missing')]));
+
+    expect(filter()).toBeNull();
+    expect(screen.getByText('Reason 1.')).toBeDefined();
+    expect(screen.getByText('Reason 2.')).toBeDefined();
+  });
+
+  it('reads All N, then each kind present with its count, in the glossary’s order', () => {
+    renderWith(inReview(MIXED));
+
+    expect(pills()).toEqual([
+      'All 4',
+      'Ambiguous 1',
+      'Missing 1',
+      'Conflict 2',
+    ]);
+  });
+
+  it('draws a pill only for a kind the list holds', () => {
+    renderWith(
+      inReview([decision('1', 'conflict'), decision('2', 'ambiguous')])
+    );
+
+    expect(pills()).toEqual(['All 2', 'Ambiguous 1', 'Conflict 1']);
+  });
+
+  it('opens on All, pressed, with every Decision shown', () => {
+    renderWith(inReview(MIXED));
+
+    expect(pill('All 4').getAttribute('aria-pressed')).toBe('true');
+    for (const id of ['1', '2', '3', '4']) {
+      expect(screen.getByText(`Reason ${id}.`)).toBeDefined();
+    }
+  });
+
+  it('shows only the chosen kind’s Decisions once its pill is pressed', () => {
+    renderWith(inReview(MIXED));
+
+    fireEvent.click(pill('Conflict 2'));
+
+    expect(pill('Conflict 2').getAttribute('aria-pressed')).toBe('true');
+    expect(pill('All 4').getAttribute('aria-pressed')).toBe('false');
+    expect(screen.getByText('Reason 1.')).toBeDefined();
+    expect(screen.getByText('Reason 4.')).toBeDefined();
+    expect(screen.queryByText('Reason 2.')).toBeNull();
+    expect(screen.queryByText('Reason 3.')).toBeNull();
+  });
+
+  it('shows everything again once All is pressed', () => {
+    renderWith(inReview(MIXED));
+    fireEvent.click(pill('Missing 1'));
+
+    fireEvent.click(pill('All 4'));
+
+    expect(pill('All 4').getAttribute('aria-pressed')).toBe('true');
+    for (const id of ['1', '2', '3', '4']) {
+      expect(screen.getByText(`Reason ${id}.`)).toBeDefined();
+    }
+  });
+
+  it('takes a kind’s pill away once its last Decision is settled, and falls back to All', () => {
+    const { rerenderWith } = renderWith(inReview(MIXED));
+    fireEvent.click(pill('Missing 1'));
+
+    rerenderWith(inReview(MIXED.filter((d) => d.kind !== 'missing')));
+
+    expect(pills()).toEqual(['All 3', 'Ambiguous 1', 'Conflict 2']);
+    expect(pill('All 3').getAttribute('aria-pressed')).toBe('true');
+    expect(screen.getByText('Reason 1.')).toBeDefined();
+    expect(screen.getByText('Reason 3.')).toBeDefined();
+    expect(screen.getByText('Reason 4.')).toBeDefined();
+  });
+
+  it('takes the filter away once one kind is left', () => {
+    const { rerenderWith } = renderWith(inReview(MIXED));
+    fireEvent.click(pill('Ambiguous 1'));
+
+    rerenderWith(inReview(MIXED.filter((d) => d.kind === 'conflict')));
+
+    expect(filter()).toBeNull();
+    expect(screen.getByText('Reason 1.')).toBeDefined();
+    expect(screen.getByText('Reason 4.')).toBeDefined();
+  });
+
+  it('keeps the choice out of the URL', () => {
+    renderWith(inReview(MIXED));
+
+    fireEvent.click(pill('Conflict 2'));
+
+    expect(url()).toBe('/enrich');
+  });
+
+  it('shows All done and no filter with nothing left to decide', () => {
+    renderWith(inReview([]));
+
+    expect(screen.getByText('All done')).toBeDefined();
+    expect(filter()).toBeNull();
+  });
+
+  it('sets the track in a sideways-scrolling wrapper', () => {
+    renderWith(inReview(MIXED));
+
+    const wrapper = (filter() as HTMLElement).parentElement as HTMLElement;
+    expect(resolvedStyle(wrapper)['overflow-x']).toBe('auto');
   });
 });
