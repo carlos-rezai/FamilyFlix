@@ -14,8 +14,8 @@ import { SeasonChoices } from './SeasonChoices';
  * The Group heading _Seasons_, then one card per **Season choice**: a group
  * labelled _Posters for S02_ holding the held tile — `S02` over the held
  * Season poster, else the gradient, captioned _Current poster_ or _No poster
- * yet_ — then up to ten `CandidatePicker`-style cards with no title, meta or
- * score, the series' marked _Series poster_, each an `aria-pressed` button
+ * yet_ — then the `CandidatePicker`-style cards it is handed, with no title,
+ * meta or score, the series' marked _Series poster_, each an `aria-pressed` button
  * named _Poster 2 for S02_ / _Series poster 5 for S02_. A press reports
  * `onChoose(season, path)`. `{ seasons, onChoose }`, nothing more.
  */
@@ -191,19 +191,6 @@ describe('SeasonChoices — the choices', () => {
       expect(button.textContent?.trim() ?? '').toMatch(/^(Series poster)?$/);
       expect(button.textContent ?? '').not.toMatch(/%|match/i);
     }
-  });
-
-  it('draws at most ten choices', () => {
-    const many: SeasonChoice = {
-      season: 3,
-      posterUrl: null,
-      choices: Array.from({ length: 12 }, (_, i) =>
-        choice(`/s03-${i + 1}.jpg`, i < 8 ? 'season' : 'series')
-      ),
-    };
-    renderChoices([many]);
-
-    expect(within(pickerFor('S03')).getAllByRole('button')).toHaveLength(10);
   });
 
   it('is an aria-pressed button, none pressed before a press', () => {

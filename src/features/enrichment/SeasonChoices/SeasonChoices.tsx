@@ -25,17 +25,15 @@ export interface SeasonChoicesProps {
   onChoose: (season: number, path: string) => void;
 }
 
-/** At most this many choices a season draws. */
-const CHOICE_CAP = 10;
-
 const HEADING_ID = 'enrichment-seasons-heading';
 
 /**
  * The **Seasons** section of a single-series review, from
  * `feat.EnrichmentFlow.dc.html`: the Group heading _Seasons_, then one card
  * per **Season choice** — the held tile, `S02` over its Season poster or the
- * gradient, then up to ten `CandidatePicker`-style cards with no title, meta
- * or score, the series' marked _Series poster_. A press reports
+ * gradient, then one `CandidatePicker`-style card per choice it is handed —
+ * the server caps them at `SEASON_CHOICE_CAP` — with no title, meta or score,
+ * the series' marked _Series poster_. A press reports
  * `onChoose(season, path)`; which choice was pressed is the section's own.
  */
 export function SeasonChoices({ seasons, onChoose }: SeasonChoicesProps) {
@@ -62,7 +60,7 @@ export function SeasonChoices({ seasons, onChoose }: SeasonChoicesProps) {
                   </HeldCaption>
                 </Held>
                 <Rule aria-hidden="true" />
-                {choices.slice(0, CHOICE_CAP).map((choice, i) => {
+                {choices.map((choice, i) => {
                   const series = choice.source === 'series';
                   const chosen = picked[season] === choice.path;
                   const art = gradientFromId(choice.path);
