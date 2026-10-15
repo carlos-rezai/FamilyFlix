@@ -154,3 +154,35 @@ describe('EnrichmentReview — Finish and Sync again', () => {
     expect(onAgain).toHaveBeenCalledTimes(1);
   });
 });
+
+/**
+ * 42 — Review at scale (issue #358): the Sync's review stays ungrouped. Only
+ * the Import review draws **Review groups**; a Sync raises at most one
+ * Decision per title, and its list stays a plain one even when two share one.
+ */
+describe('EnrichmentReview — no Review groups', () => {
+  it('draws two Decisions sharing a title as two plain rows, nothing to open', () => {
+    const twin: Decision = {
+      ...MISSING,
+      id: 'd2',
+      reason: 'A second look found nothing either.',
+    };
+    renderReview({
+      run: makeEnrichmentRun({
+        phase: 'review',
+        enriched: 3,
+        decisions: [MISSING, twin],
+      }),
+    });
+
+    expect(
+      screen.getByText('Nothing on TMDB matched this title.')
+    ).toBeDefined();
+    expect(
+      screen.getByText('A second look found nothing either.')
+    ).toBeDefined();
+    expect(screen.getAllByRole('button', { name: 'Skip' })).toHaveLength(2);
+    expect(document.querySelector('[aria-expanded]')).toBeNull();
+    expect(screen.queryByRole('region')).toBeNull();
+  });
+});

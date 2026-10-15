@@ -7,6 +7,11 @@ import { ImportReview, type ImportReviewProps } from './ImportReview';
 import type { ImportProblem } from '@/types';
 import { theme } from '@/styles/theme';
 import { makeImportRun } from '@/test-support/makeImportRun/makeImportRun';
+import { comesBefore } from '@/test-support/comesBefore/comesBefore';
+import {
+  normCss,
+  resolvedStyle,
+} from '@/test-support/resolvedStyle/resolvedStyle';
 
 /**
  * 13 — Bulk import, Phase 2: "the tracer bullet" (issue #125) and Phase 4:
@@ -475,5 +480,140 @@ describe('ImportReview — a no-row row', () => {
     expect(onSkip).not.toHaveBeenCalled();
     // The step removes nothing itself: the Run hook does.
     expect(screen.getByText('Ironwood.2018.1080p')).toBeDefined();
+  });
+});
+
+/**
+ * 42 — Review at scale (issue #358): the **Review groups**.
+ *
+ * The list draws `reviewGroups(run.problems, …)`: a title with one Problem is
+ * its bare row, exactly as before; two or more are one **Accordion** — the
+ * title, each kind's dot, the count — closed until opened, its rows the same
+ * Problem rows. Hard kinds' groups first, soft-only after. A group whose last
+ * row settles goes; one left with a single row is that bare row again.
+ */
+describe('ImportReview — Review groups', () => {
+  const FERRY: ImportProblem[] = [
+    {
+      id: 'f1',
+      kind: 'no-folder',
+      title: 'The Night Ferry',
+      reason: 'No folder found matching this spreadsheet row.',
+    },
+    {
+      id: 'f2',
+      kind: 'differs',
+      title: 'The Night Ferry',
+      reason:
+        'The spreadsheet has different values for fields you already filled in.',
+      movieId: 'm4',
+      differences: [],
+    },
+    {
+      id: 'f3',
+      kind: 'no-folder',
+      title: 'The Night Ferry',
+      reason: 'A second row with no folder.',
+    },
+  ];
+  const LONE: ImportProblem = {
+    id: 'l1',
+    kind: 'no-row',
+    title: 'Ironwood (2018)',
+    reason: "Folder isn't in the spreadsheet.",
+  };
+
+  const groupToggle = () =>
+    screen.getByRole('button', { name: /The Night Ferry/ });
+
+  /** The dots in a header: what is hidden from the reader and is not the chevron. */
+  const marksIn = (header: HTMLElement): Element[] =>
+    Array.from(header.querySelectorAll('[aria-hidden="true"]')).filter(
+      (el) => el.tagName.toLowerCase() !== 'svg' && el.closest('svg') === null
+    );
+
+  it('draws a title with one Problem as its bare row, with nothing to open', () => {
+    renderReview({ run: inReview([LONE]) });
+
+    expect(screen.getByText("Folder isn't in the spreadsheet.")).toBeDefined();
+    expect(document.querySelector('[aria-expanded]')).toBeNull();
+  });
+
+  it('draws a title with several Problems as one group, closed, its count on it', () => {
+    renderReview({ run: inReview([...FERRY, LONE]) });
+
+    expect(groupToggle().getAttribute('aria-expanded')).toBe('false');
+    expect(within(groupToggle()).getByText('3')).toBeDefined();
+    expect(
+      screen.queryByText('No folder found matching this spreadsheet row.')
+    ).toBeNull();
+    expect(screen.queryByText('A second row with no folder.')).toBeNull();
+    // The lone title beside it is still its bare row.
+    expect(screen.getByText("Folder isn't in the spreadsheet.")).toBeDefined();
+  });
+
+  it('puts each kind’s dot on the group’s header, once a kind, in its colour', () => {
+    renderReview({ run: inReview(FERRY) });
+
+    const marks = marksIn(groupToggle());
+    expect(marks).toHaveLength(2);
+    expect(resolvedStyle(marks[0]).background).toBe(
+      normCss(theme.colors.danger)
+    );
+    expect(resolvedStyle(marks[1]).background).toBe(normCss('#c9a86a'));
+  });
+
+  it('opens the group onto its rows, each the same Problem row', () => {
+    const onSkip = vi.fn();
+    renderReview({ run: inReview(FERRY), onSkip });
+
+    fireEvent.click(groupToggle());
+
+    expect(groupToggle().getAttribute('aria-expanded')).toBe('true');
+    const region = screen.getByRole('region', { name: 'The Night Ferry' });
+    expect(
+      within(region).getByText('No folder found matching this spreadsheet row.')
+    ).toBeDefined();
+    expect(
+      within(region).getByText('A second row with no folder.')
+    ).toBeDefined();
+    expect(
+      within(region).getByRole('button', { name: 'Apply choices' })
+    ).toBeDefined();
+
+    fireEvent.click(within(region).getAllByRole('button', { name: 'Skip' })[0]);
+    expect(onSkip).toHaveBeenCalledWith('f1');
+  });
+
+  it('draws a soft-only title after a hard one, whatever the run’s order', () => {
+    const soft: ImportProblem = { ...PROBLEMS[2] };
+    renderReview({ run: inReview([soft, LONE]) });
+
+    expect(
+      comesBefore(
+        screen.getByText("Folder isn't in the spreadsheet."),
+        screen.getByText(soft.reason)
+      )
+    ).toBe(true);
+  });
+
+  it('draws the group’s last row bare once the others are settled', () => {
+    const { rerenderWith } = renderReview({ run: inReview([...FERRY, LONE]) });
+
+    rerenderWith(inReview([FERRY[2], LONE]));
+
+    expect(document.querySelector('[aria-expanded]')).toBeNull();
+    expect(screen.getByText('A second row with no folder.')).toBeDefined();
+  });
+
+  it('takes the group away once its last row is settled', () => {
+    const { rerenderWith } = renderReview({ run: inReview([...FERRY, LONE]) });
+    fireEvent.click(groupToggle());
+
+    rerenderWith(inReview([LONE]));
+
+    expect(screen.queryByText('The Night Ferry')).toBeNull();
+    expect(screen.queryByRole('region')).toBeNull();
+    expect(screen.getByText("Folder isn't in the spreadsheet.")).toBeDefined();
   });
 });
