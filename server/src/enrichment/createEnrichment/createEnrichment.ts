@@ -44,7 +44,7 @@ import {
 } from '../currentFields/currentFields';
 import { planEpisode } from '../planEpisode/planEpisode';
 import { planFields } from '../planFields/planFields';
-import { planSeason } from '../planSeason/planSeason';
+import { planSeason, wantsSeasonPoster } from '../planSeason/planSeason';
 import {
   chosenEnrichment,
   chosenSeriesEnrichment,
@@ -59,6 +59,7 @@ import type {
   TmdbOutcome,
   TmdbTvResult,
   TmdbSeason,
+  TmdbSeasonImage,
   TmdbTvDetail,
 } from '../tmdbClient/tmdbClient';
 import {
@@ -709,7 +710,20 @@ export function createEnrichment({
       );
       if (signal.aborted) return written;
       if (theirs.kind !== 'ok') return { kind: 'stop', stop: theirs.kind };
-      const { poster } = planSeason(season, theirs.value, fields);
+      // No default poster: the season's images, in any language, instead.
+      let images: TmdbSeasonImage[] = [];
+      if (wantsSeasonPoster(season, fields) && !theirs.value.poster_path) {
+        const asked = await client.seasonImages(
+          apiKey,
+          detail.id,
+          season.number,
+          signal
+        );
+        if (signal.aborted) return written;
+        if (asked.kind !== 'ok') return { kind: 'stop', stop: asked.kind };
+        images = asked.value;
+      }
+      const { poster } = planSeason(season, theirs.value, fields, images);
       if (poster !== null) {
         const name = `${spellEpisodeTag(season.number)}-poster.jpg`;
         const stored = await storeImage(

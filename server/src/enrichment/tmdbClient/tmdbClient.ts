@@ -90,6 +90,12 @@ export interface TmdbSeason {
   episodes: TmdbSeasonEpisode[];
 }
 
+/** One of a season's posters off `/3/tv/{id}/season/{n}/images`. */
+export interface TmdbSeasonImage {
+  file_path: string;
+  vote_average: number;
+}
+
 /**
  * The injected seam of the `enrichment/` domain: what can be asked of TMDB.
  * Nothing else in the server is a network client.
@@ -134,6 +140,17 @@ export interface TmdbClient {
     seasonNumber: number,
     signal?: AbortSignal
   ): Promise<TmdbOutcome<TmdbSeason>>;
+  /**
+   * `/3/tv/{id}/season/{n}/images`: a season's posters, highest vote first —
+   * asked in English or no language, then again with no language filter when
+   * that answers none.
+   */
+  seasonImages(
+    key: string,
+    id: number,
+    seasonNumber: number,
+    signal?: AbortSignal
+  ): Promise<TmdbOutcome<TmdbSeasonImage[]>>;
   /**
    * An image's bytes off `image.tmdb.org`, as a stream. Each of the three
    * takes the caller's signal last: aborting it aborts the request in flight,
@@ -313,6 +330,30 @@ export function createTmdbClient(
     );
   }
 
+  async function seasonImages(
+    key: string,
+    id: number,
+    seasonNumber: number,
+    signal?: AbortSignal
+  ): Promise<TmdbOutcome<TmdbSeasonImage[]>> {
+    const path = `/3/tv/${id}/season/${seasonNumber}/images`;
+    const ask = async (
+      params: Record<string, string>
+    ): Promise<TmdbOutcome<TmdbSeasonImage[]>> => {
+      const outcome = await json<{ posters?: TmdbSeasonImage[] }>(
+        await get(path, key, params, signal)
+      );
+      if (outcome.kind !== 'ok') return outcome;
+      const posters = (outcome.value.posters ?? [])
+        .map(({ file_path, vote_average }) => ({ file_path, vote_average }))
+        .sort((a, b) => b.vote_average - a.vote_average);
+      return { kind: 'ok', value: posters };
+    };
+    const english = await ask({ include_image_language: 'en,null' });
+    if (english.kind !== 'ok' || english.value.length > 0) return english;
+    return ask({});
+  }
+
   async function image(
     path: string,
     signal?: AbortSignal
@@ -365,6 +406,7 @@ export function createTmdbClient(
     searchTv,
     tv,
     season,
+    seasonImages,
     image,
     reachable,
   };

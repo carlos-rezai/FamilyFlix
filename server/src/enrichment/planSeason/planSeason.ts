@@ -1,5 +1,5 @@
 import type { EnrichField, SeasonSummary } from '@/types';
-import type { TmdbSeason } from '../tmdbClient/tmdbClient';
+import type { TmdbSeason, TmdbSeasonImage } from '../tmdbClient/tmdbClient';
 
 /** What one season is to be given: the **Season poster** to fetch. */
 export interface SeasonPlan {
@@ -10,18 +10,24 @@ export interface SeasonPlan {
 /**
  * Pure: a **Season** on disk × TMDB's season of the same number × the chips →
  * the **Season poster** a **Sync** fetches. The Still's rule: only under
- * Poster, only when none is held, never replaced, never a **Decision**.
+ * Poster, only when none is held, never replaced, never a **Decision**. When
+ * TMDB has no default poster, the top of the season's `images` — ordered by
+ * vote, in any language — is the poster instead.
  */
 export function planSeason(
   season: SeasonSummary,
   theirs: TmdbSeason,
-  fields: readonly EnrichField[]
+  fields: readonly EnrichField[],
+  images: readonly TmdbSeasonImage[] = []
 ): SeasonPlan {
-  const poster =
-    fields.includes('poster') &&
-    season.posterPath === null &&
-    theirs.poster_path
-      ? theirs.poster_path
-      : null;
-  return { poster };
+  if (!wantsSeasonPoster(season, fields)) return { poster: null };
+  return { poster: theirs.poster_path || images[0]?.file_path || null };
+}
+
+/** Whether a Season's poster is wanted at all: under Poster, none held. */
+export function wantsSeasonPoster(
+  season: SeasonSummary,
+  fields: readonly EnrichField[]
+): boolean {
+  return fields.includes('poster') && season.posterPath === null;
 }

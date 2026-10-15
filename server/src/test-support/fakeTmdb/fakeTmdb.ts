@@ -9,6 +9,7 @@ import type {
   TmdbMovieResult,
   TmdbOutcome,
   TmdbSeason,
+  TmdbSeasonImage,
   TmdbTvDetail,
   TmdbTvResult,
 } from '../../enrichment/tmdbClient/tmdbClient';
@@ -44,6 +45,13 @@ export interface TmdbScript {
   shows?: readonly TmdbTvDetail[];
   /** `season`'s answers: a show's id, then the season number. */
   seasons?: Readonly<Record<number, Readonly<Record<number, TmdbSeason>>>>;
+  /**
+   * `seasonImages`' answers, ordered by vote as the client answers them: a
+   * show's id, then the season number. A season not listed answers none.
+   */
+  seasonImages?: Readonly<
+    Record<number, Readonly<Record<number, readonly TmdbSeasonImage[]>>>
+  >;
   /** What `reachable` answers; `true` unless the suite says otherwise. */
   reachable?: boolean;
   /** What `authenticate` answers; `accepted` unless the suite says otherwise. */
@@ -210,6 +218,11 @@ export function fakeTmdb(script: TmdbScript = {}): FakeTmdb {
         const found = script.seasons?.[args[1]]?.[args[2]];
         return found === undefined ? unreachable : ok(found);
       })
+    ),
+    seasonImages: vi.fn<TmdbClient['seasonImages']>((...args) =>
+      answer('seasonImages', args, () =>
+        ok([...(script.seasonImages?.[args[1]]?.[args[2]] ?? [])])
+      )
     ),
     image: vi.fn<TmdbClient['image']>((...args) =>
       answer('image', args, () =>
