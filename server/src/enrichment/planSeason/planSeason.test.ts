@@ -70,3 +70,26 @@ describe('planSeason', () => {
     ).toEqual({ poster: null });
   });
 });
+
+// 42 — Review at scale, Slice 7: "season posters in any language" (issue
+// #363). When TMDB's season answers no default poster, the run asks the
+// season's images — `seasonImages`, ordered by vote — and hands them to
+// `planSeason` as a fourth argument: the top one is the poster, under the same
+// rule — only under Poster, only when none is held, never replaced.
+describe('planSeason: the season’s images when there is no default', () => {
+  const NO_DEFAULT = tmdbSeason(2, [], { poster_path: null });
+  const IMAGES = [
+    { file_path: '/s02-fr.jpg', vote_average: 5.6 },
+    { file_path: '/s02-de.jpg', vote_average: 4.1 },
+  ];
+
+  it('answers the top image when TMDB has no default poster', () => {
+    expect(planSeason(NONE_HELD, NO_DEFAULT, ALL, IMAGES)).toEqual({
+      poster: '/s02-fr.jpg',
+    });
+  });
+
+  it('never replaces a held poster with an image', () => {
+    expect(planSeason(HELD, NO_DEFAULT, ALL, IMAGES)).toEqual({ poster: null });
+  });
+});

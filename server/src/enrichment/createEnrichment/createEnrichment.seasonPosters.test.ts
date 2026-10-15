@@ -462,3 +462,109 @@ describe('createEnrichment: what a season poster leaves alone', () => {
     ]);
   });
 });
+
+// 42 — Review at scale, Slice 7: "season posters in any language" (issue
+// #363). When TMDB's season answers `poster_path: null` — its English default
+// empty — the run asks `seasonImages(key, id, n, signal)` and stores the top
+// one as the Season poster, through the same `planSeason` rule: only under
+// Poster, never over a held one, never a Decision.
+describe('createEnrichment: a season with no English default gets one in any language', () => {
+  /** Season 1 with no default poster; season 2 keeps its own. */
+  const NO_DEFAULT_S01: Record<number, TmdbSeason> = {
+    ...SEASONS,
+    1: tmdbSeason(1, [episodeOf(1, '/s01e01.jpg'), episodeOf(2)], {
+      poster_path: null,
+    }),
+  };
+  const S01_IMAGES = [
+    { file_path: '/s01-fr.jpg', vote_average: 5.6 },
+    { file_path: '/s01-de.jpg', vote_average: 4.1 },
+  ];
+
+  function knowsTheImages(
+    images: { file_path: string; vote_average: number }[] = S01_IMAGES
+  ) {
+    return fakeTmdb({
+      tvSearches: { [TITLE]: [SHOW_RESULT] },
+      shows: [SHOW_DETAIL],
+      seasons: { [SHOW_ID]: NO_DEFAULT_S01 },
+      seasonImages: { [SHOW_ID]: { 1: images } },
+    });
+  }
+
+  const seasonImagesAsked = (client: FakeTmdb) =>
+    client.seasonImages.mock.calls.map(([key, id, n]) => [key, id, n]);
+
+  it('stores the top image as S01-poster.jpg and the series page reads it', async () => {
+    const { enrichment, storage, addShow, root } = world({
+      client: knowsTheImages(),
+    });
+    const { id, folder } = await addShow();
+
+    await startSync(enrichment);
+    const run = await reviewed(enrichment);
+
+    const stored = `${folder}/S01-poster.jpg`;
+    expect(seasonPosterRead(storage, id, 1)).toBe(stored);
+    expect(readFileSync(join(root, stored), 'utf8')).toBe(
+      tmdbImageBytes('/s01-fr.jpg')
+    );
+    expect(run.decisions).toEqual([]);
+  });
+
+  it('asks the images only for the season with no default poster', async () => {
+    const client = knowsTheImages();
+    const { enrichment, storage, addShow } = world({ client });
+    const { id, folder } = await addShow();
+
+    await startSync(enrichment);
+    await reviewed(enrichment);
+
+    expect(seasonImagesAsked(client)).toEqual([[KEY, SHOW_ID, 1]]);
+    expect(seasonPosterRead(storage, id, 2)).toBe(`${folder}/S02-poster.jpg`);
+  });
+
+  it('never replaces a held Season poster, nor asks its images', async () => {
+    const client = knowsTheImages();
+    const { enrichment, storage, addShow } = world({ client });
+    const { id } = await addShow();
+    storage.setSeasonPoster(id, 1, 'ours/S01-poster.png');
+
+    await startSync(enrichment, 'all');
+    const run = await reviewed(enrichment);
+
+    expect(seasonPosterRead(storage, id, 1)).toBe('ours/S01-poster.png');
+    expect(seasonImagesAsked(client)).toEqual([]);
+    expect(client.image.mock.calls.map(([path]) => path)).not.toContain(
+      '/s01-fr.jpg'
+    );
+    expect(run.decisions).toEqual([]);
+  });
+
+  it('asks no images with Poster off', async () => {
+    const client = knowsTheImages();
+    const { enrichment, storage, addShow } = world({ client });
+    const { id } = await addShow();
+
+    await startSync(enrichment, 'all', NO_POSTER);
+    await reviewed(enrichment);
+
+    expect(seasonImagesAsked(client)).toEqual([]);
+    expect(seasonPosterRead(storage, id, 1)).toBeNull();
+  });
+
+  it('leaves the gradient when the season has no images in any language', async () => {
+    const client = knowsTheImages([]);
+    const { enrichment, storage, addShow } = world({ client });
+    const { id } = await addShow();
+
+    await startSync(enrichment);
+    const run = await reviewed(enrichment);
+
+    expect(seasonImagesAsked(client)).toEqual([[KEY, SHOW_ID, 1]]);
+    expect(seasonPosterRead(storage, id, 1)).toBeNull();
+    expect(seasonPosterRead(storage, id, 2)).not.toBeNull();
+    expect(run.decisions).toEqual([]);
+    expect(run.enriched).toBe(1);
+  });
+});
