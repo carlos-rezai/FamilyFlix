@@ -26,6 +26,10 @@ import {
 } from '@/test-support/LocationProbe/LocationProbe';
 import { makeMovie } from '@/test-support/makeMovie/makeMovie';
 import {
+  DisplayPreferenceContext,
+  type DisplayPreferenceApi,
+} from '@/App/useDisplayPreference/useDisplayPreference';
+import {
   okResponse,
   serverErrorResponse,
 } from '@/test-support/fakeResponse/fakeResponse';
@@ -1331,5 +1335,119 @@ describe('HomeRows — a heart from a genre row reaches the shelf', () => {
       expect(screen.queryByRole('region', { name: 'Favorites' })).toBeNull()
     );
     expect(isFilled('Action')).toBe('false');
+  });
+});
+
+/**
+ * 26 — TMDB ratings (issue #370): on the Movies tab, an unrated, synced film
+ * draws TMDB's stars on every poster card — the genre rows and the Favorites
+ * shelf — while the preference is on, and a flip redraws the loaded cards.
+ * Off, or before the read lands, the cards draw as before. The Continue card
+ * draws no stars and is unchanged.
+ */
+describe('HomeRows — TMDB ratings on the cards', () => {
+  function preference(tmdbRatings: boolean | null): DisplayPreferenceApi {
+    return {
+      ultrawideMargins: null,
+      setUltrawideMargins: () => Promise.resolve(),
+      tmdbRatings,
+      setTmdbRatings: () => Promise.resolve(),
+    };
+  }
+
+  function tree(tmdbRatings: boolean | null) {
+    return (
+      <MemoryRouter initialEntries={['/']}>
+        <ThemeProvider theme={theme}>
+          <DisplayPreferenceContext.Provider value={preference(tmdbRatings)}>
+            <HomeRows />
+          </DisplayPreferenceContext.Provider>
+        </ThemeProvider>
+      </MemoryRouter>
+    );
+  }
+
+  const SYNCED = makeMovie({
+    id: 'a1',
+    title: 'Northwind',
+    rating: null,
+    tmdbScore: 7.4,
+  });
+
+  function serveSynced() {
+    respondWithRows(
+      [{ genre: 'Action', count: 1, movies: [SYNCED] }],
+      [],
+      [{ ...SYNCED, isFavorite: true }]
+    );
+  }
+
+  it('draws the TMDB tag on the genre row card and the Favorites card while on', async () => {
+    serveSynced();
+
+    render(tree(true));
+    await findGenreHeading('Action');
+
+    const action = screen.getByRole('region', { name: 'Action' });
+    const favorites = screen.getByRole('region', { name: 'Favorites' });
+    expect(within(action).getByText('TMDB')).toBeTruthy();
+    expect(within(action).getByText('3.5')).toBeTruthy();
+    expect(within(favorites).getByText('TMDB')).toBeTruthy();
+  });
+
+  it('draws every card as before while the preference is off', async () => {
+    serveSynced();
+
+    render(tree(false));
+    await findGenreHeading('Action');
+
+    expect(screen.queryByText('TMDB')).toBeNull();
+    expect(screen.queryByText('3.5')).toBeNull();
+  });
+
+  it('draws every card as before until the preference lands', async () => {
+    serveSynced();
+
+    render(tree(null));
+    await findGenreHeading('Action');
+
+    expect(screen.queryByText('TMDB')).toBeNull();
+    expect(screen.queryByText('3.5')).toBeNull();
+  });
+
+  it('redraws the loaded cards on a flip, without reading home again', async () => {
+    serveSynced();
+
+    const { rerender } = render(tree(false));
+    await findGenreHeading('Action');
+    const reads = fetchMock.mock.calls.length;
+
+    rerender(tree(true));
+
+    const action = screen.getByRole('region', { name: 'Action' });
+    expect(await within(action).findByText('TMDB')).toBeTruthy();
+    expect(fetchMock.mock.calls.length).toBe(reads);
+  });
+
+  it('leaves the Continue card unchanged while on', async () => {
+    const started = {
+      ...SYNCED,
+      runtimeMinutes: 100,
+      resumePositionSeconds: 1500,
+      status: 'in-progress' as const,
+    };
+    respondWithRows(
+      [{ genre: 'Action', count: 1, movies: [SYNCED] }],
+      [started]
+    );
+
+    render(tree(true));
+    await findGenreHeading('Action');
+
+    const continuing = screen.getByRole('region', {
+      name: 'Continue Watching',
+    });
+    expect(within(continuing).queryByText('TMDB')).toBeNull();
+    expect(within(continuing).queryByText('★★★★★')).toBeNull();
   });
 });

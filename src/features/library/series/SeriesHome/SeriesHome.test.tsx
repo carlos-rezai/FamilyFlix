@@ -21,6 +21,10 @@ import {
   pathname,
 } from '@/test-support/LocationProbe/LocationProbe';
 import { comesBefore } from '@/test-support/comesBefore/comesBefore';
+import {
+  DisplayPreferenceContext,
+  type DisplayPreferenceApi,
+} from '@/App/useDisplayPreference/useDisplayPreference';
 
 /**
  * 22 — Series (TV), Phase 1 (issue #190): the Series tab's body.
@@ -705,5 +709,95 @@ describe('SeriesHome — Favorites', () => {
 
     expect(screen.queryByRole('region', { name: 'Favorites' })).toBeNull();
     expect(await favoritesRegion()).toBeDefined();
+  });
+});
+
+/**
+ * 26 — TMDB ratings (issue #370): an unrated, synced series draws TMDB's
+ * stars on its card while _Fill in ratings from TMDB_ is on — read off the
+ * app-level display preference, so a flip in Settings redraws the loaded
+ * cards. Off, or before the read lands, every card draws as it did before.
+ */
+describe('SeriesHome — TMDB ratings on the cards', () => {
+  function preference(tmdbRatings: boolean | null): DisplayPreferenceApi {
+    return {
+      ultrawideMargins: null,
+      setUltrawideMargins: () => Promise.resolve(),
+      tmdbRatings,
+      setTmdbRatings: () => Promise.resolve(),
+    };
+  }
+
+  function tree(tmdbRatings: boolean | null) {
+    return (
+      <MemoryRouter initialEntries={['/?tab=series']}>
+        <ThemeProvider theme={theme}>
+          <DisplayPreferenceContext.Provider value={preference(tmdbRatings)}>
+            <SeriesHome />
+          </DisplayPreferenceContext.Provider>
+        </ThemeProvider>
+      </MemoryRouter>
+    );
+  }
+
+  function serveSynced() {
+    serve({
+      series: [
+        makeSeries({
+          id: 's1',
+          title: 'Harbor & Vine',
+          rating: null,
+          tmdbScore: 7.4,
+        }),
+      ],
+      episodeCount: 8,
+      continueWatching: [],
+    });
+  }
+
+  it('draws the TMDB stars and tag on an unrated, synced series while on', async () => {
+    serveSynced();
+
+    render(tree(true));
+    await heading();
+
+    expect(await screen.findByText('TMDB')).toBeTruthy();
+    expect(screen.getByText('3.5')).toBeTruthy();
+  });
+
+  it('draws the card as before while the preference is off', async () => {
+    serveSynced();
+
+    render(tree(false));
+    await heading();
+    await screen.findAllByText('Harbor & Vine');
+
+    expect(screen.queryByText('TMDB')).toBeNull();
+    expect(screen.queryByText('3.5')).toBeNull();
+  });
+
+  it('draws the card as before until the preference lands', async () => {
+    serveSynced();
+
+    render(tree(null));
+    await heading();
+    await screen.findAllByText('Harbor & Vine');
+
+    expect(screen.queryByText('TMDB')).toBeNull();
+    expect(screen.queryByText('3.5')).toBeNull();
+  });
+
+  it('redraws the loaded card on a flip, without reading the tab again', async () => {
+    serveSynced();
+
+    const { rerender } = render(tree(false));
+    await heading();
+    await screen.findAllByText('Harbor & Vine');
+    const reads = fetchMock.mock.calls.length;
+
+    rerender(tree(true));
+
+    expect(await screen.findByText('TMDB')).toBeTruthy();
+    expect(fetchMock.mock.calls.length).toBe(reads);
   });
 });

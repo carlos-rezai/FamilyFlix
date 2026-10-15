@@ -17,6 +17,7 @@ const movie: PosterCardMovie = {
   g1: '#1f2a3a',
   g2: '#3a6a8a',
   rating: 80,
+  ratingSource: 'household',
   watched: false,
   progress: 0,
   favorite: false,
@@ -244,6 +245,37 @@ describe('PosterCard — an unrated movie is not a zero-rated one', () => {
  * caption the card already drew. The Wordmark is decoration — hidden from the
  * accessibility tree — so the card is still named by its title alone.
  */
+/**
+ * 26 — TMDB ratings (issue #370): a card whose rating is TMDB's draws
+ * **TMDB-marked stars** — the `TMDB` tag after the value — and a household
+ * one does not. Unrated draws as it always has.
+ */
+describe('PosterCard — a TMDB-sourced rating', () => {
+  it('draws the TMDB tag after the value on a tmdb-sourced card', () => {
+    renderCard({ movie: { ...movie, rating: 70, ratingSource: 'tmdb' } });
+
+    expect(screen.getByText('3.5')).toBeTruthy();
+    expect(screen.getByText('TMDB')).toBeTruthy();
+  });
+
+  it('draws no TMDB tag on a household-sourced card', () => {
+    renderCard({ movie: { ...movie, rating: 70, ratingSource: 'household' } });
+
+    expect(screen.getByText('3.5')).toBeTruthy();
+    expect(screen.queryByText('TMDB')).toBeNull();
+  });
+
+  it('draws an unrated card as today: five stars, no number, no tag', () => {
+    const { container } = renderCard({
+      movie: { ...movie, rating: null, ratingSource: null },
+    });
+
+    expect(container.textContent).toContain('★★★★★');
+    expect(screen.queryByText('0.0')).toBeNull();
+    expect(screen.queryByText('TMDB')).toBeNull();
+  });
+});
+
 describe('PosterCard — the Default poster', () => {
   it('draws the Wordmark on a title with no poster', () => {
     renderCard({ movie: { ...movie, posterUrl: null } });

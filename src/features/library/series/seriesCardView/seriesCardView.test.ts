@@ -81,3 +81,53 @@ describe('seriesCardView', () => {
     );
   });
 });
+
+/**
+ * 26 — TMDB ratings (issue #370): a series card's rating is the **Shown
+ * rating** too, `view`'s rule — and the card is told its `ratingSource`.
+ */
+describe('seriesCardView — the Shown rating under the TMDB ratings preference', () => {
+  it('gives the household Rating and its source over a score, preference on', () => {
+    const vm = seriesCardView(makeSeries({ rating: 5, tmdbScore: 9 }), true);
+
+    expect(vm.rating).toBe(50);
+    expect(vm.ratingSource).toBe('household');
+  });
+
+  it('gives the household Rating and its source with the preference off', () => {
+    const vm = seriesCardView(makeSeries({ rating: 5, tmdbScore: 9 }), false);
+
+    expect(vm.rating).toBe(50);
+    expect(vm.ratingSource).toBe('household');
+  });
+
+  it('gives the TMDB rating for an unrated series with a score, preference on', () => {
+    const vm = seriesCardView(
+      makeSeries({ rating: null, tmdbScore: 8.5 }),
+      true
+    );
+
+    expect(vm.rating).toBe(90);
+    expect(vm.ratingSource).toBe('tmdb');
+  });
+
+  it('leaves an unrated series unrated with the preference off', () => {
+    const vm = seriesCardView(
+      makeSeries({ rating: null, tmdbScore: 8.5 }),
+      false
+    );
+
+    expect(vm.rating).toBeNull();
+    expect(vm.ratingSource).toBeNull();
+  });
+
+  it('leaves an unrated series with no score unrated, preference on', () => {
+    const vm = seriesCardView(
+      makeSeries({ rating: null, tmdbScore: null }),
+      true
+    );
+
+    expect(vm.rating).toBeNull();
+    expect(vm.ratingSource).toBeNull();
+  });
+});

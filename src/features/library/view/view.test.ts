@@ -64,3 +64,52 @@ describe('view — Movie → PosterCardMovie mapper', () => {
     expect(vm.favorite).toBe(true);
   });
 });
+
+/**
+ * 26 — TMDB ratings (issue #370): the card's rating is the **Shown rating** —
+ * the household Rating when one is stored, else the **TMDB rating** while the
+ * preference is on — and the card is told which, as its `ratingSource`.
+ */
+describe('view — the Shown rating under the TMDB ratings preference', () => {
+  it('gives the household Rating and its source over a score, preference on', () => {
+    const vm = view(makeMovie({ rating: 6, tmdbScore: 8.8 }), true);
+
+    expect(vm.rating).toBe(60);
+    expect(vm.ratingSource).toBe('household');
+  });
+
+  it('gives the household Rating and its source with the preference off', () => {
+    const vm = view(makeMovie({ rating: 6, tmdbScore: 8.8 }), false);
+
+    expect(vm.rating).toBe(60);
+    expect(vm.ratingSource).toBe('household');
+  });
+
+  it('gives a stored 0 as the household Rating, never TMDB', () => {
+    const vm = view(makeMovie({ rating: 0, tmdbScore: 8.8 }), true);
+
+    expect(vm.rating).toBe(0);
+    expect(vm.ratingSource).toBe('household');
+  });
+
+  it('gives the TMDB rating for an unrated movie with a score, preference on', () => {
+    const vm = view(makeMovie({ rating: null, tmdbScore: 7.4 }), true);
+
+    expect(vm.rating).toBe(70);
+    expect(vm.ratingSource).toBe('tmdb');
+  });
+
+  it('leaves an unrated movie unrated with the preference off', () => {
+    const vm = view(makeMovie({ rating: null, tmdbScore: 7.4 }), false);
+
+    expect(vm.rating).toBeNull();
+    expect(vm.ratingSource).toBeNull();
+  });
+
+  it('leaves an unrated movie with no score unrated, preference on', () => {
+    const vm = view(makeMovie({ rating: null, tmdbScore: null }), true);
+
+    expect(vm.rating).toBeNull();
+    expect(vm.ratingSource).toBeNull();
+  });
+});

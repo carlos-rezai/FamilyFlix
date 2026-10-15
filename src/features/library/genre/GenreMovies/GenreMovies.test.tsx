@@ -14,6 +14,10 @@ import { gradientFromId } from '@/utils';
 import type { GenrePayload, PosterCardMovie } from '@/types';
 import { makeMovie } from '@/test-support/makeMovie/makeMovie';
 import {
+  DisplayPreferenceContext,
+  type DisplayPreferenceApi,
+} from '@/App/useDisplayPreference/useDisplayPreference';
+import {
   okResponse,
   serverErrorResponse,
 } from '@/test-support/fakeResponse/fakeResponse';
@@ -667,5 +671,81 @@ describe('GenreMovies — the favorite flag', () => {
 
     // One movie, one save — not one per card.
     await waitFor(() => expect(favoriteRequests()).toHaveLength(1));
+  });
+});
+
+/**
+ * 26 — TMDB ratings (issue #370): the Genre page's cards — where "View all"
+ * and a search land — carry the **Shown rating** and its source, read off the
+ * app-level display preference, so a flip redraws them without a second read.
+ */
+describe('GenreMovies — TMDB ratings on the cards', () => {
+  const SYNCED: GenrePayload = {
+    genre: 'Action',
+    total: 1,
+    movies: [makeMovie({ id: 'a1', rating: null, tmdbScore: 7.4 })],
+  };
+
+  let tmdbRatings: boolean | null = null;
+
+  function preferenceAt(url: string) {
+    const Router = providerAt(url);
+    return function Wrapper({ children }: { children: ReactNode }) {
+      const value: DisplayPreferenceApi = {
+        ultrawideMargins: null,
+        setUltrawideMargins: () => Promise.resolve(),
+        tmdbRatings,
+        setTmdbRatings: () => Promise.resolve(),
+      };
+      return (
+        <DisplayPreferenceContext.Provider value={value}>
+          <Router>{children}</Router>
+        </DisplayPreferenceContext.Provider>
+      );
+    };
+  }
+
+  async function loadWith(on: boolean | null) {
+    tmdbRatings = on;
+    serve(SYNCED);
+    const view = renderHook(() => useGenreMovies(), {
+      wrapper: preferenceAt('/genre/Action'),
+    });
+    await waitFor(() => expect(view.result.current.status).toBe('ready'));
+    return view;
+  }
+
+  it('gives an unrated, synced film the TMDB rating while on', async () => {
+    const { result } = await loadWith(true);
+
+    expect(result.current.movies[0].rating).toBe(70);
+    expect(result.current.movies[0].ratingSource).toBe('tmdb');
+  });
+
+  it('leaves it unrated while off', async () => {
+    const { result } = await loadWith(false);
+
+    expect(result.current.movies[0].rating).toBeNull();
+    expect(result.current.movies[0].ratingSource).toBeNull();
+  });
+
+  it('leaves it unrated until the preference lands', async () => {
+    const { result } = await loadWith(null);
+
+    expect(result.current.movies[0].rating).toBeNull();
+    expect(result.current.movies[0].ratingSource).toBeNull();
+  });
+
+  it('redraws the loaded cards on a flip, without reading the genre again', async () => {
+    const { result, rerender } = await loadWith(false);
+    const reads = genreRequests().length;
+
+    tmdbRatings = true;
+    rerender();
+
+    await waitFor(() =>
+      expect(result.current.movies[0].ratingSource).toBe('tmdb')
+    );
+    expect(genreRequests()).toHaveLength(reads);
   });
 });
