@@ -48,8 +48,16 @@ afterEach(() => {
 const SETTINGS_ROUTE = '/api/settings';
 const WRITE_ROUTE = '/api/settings/ultrawide-margins';
 
-const OFF: Settings = { subtitleLanguage: 'English', ultrawideMargins: false };
-const ON: Settings = { subtitleLanguage: 'English', ultrawideMargins: true };
+const OFF: Settings = {
+  subtitleLanguage: 'English',
+  ultrawideMargins: false,
+  tmdbRatings: true,
+};
+const ON: Settings = {
+  subtitleLanguage: 'English',
+  ultrawideMargins: true,
+  tmdbRatings: true,
+};
 
 /** A request that answers only when the test says so. */
 function held() {
@@ -259,5 +267,198 @@ describe('DisplayPreferenceProvider — setUltrawideMargins', () => {
     });
 
     expect(result.current.ultrawideMargins).toBe(false);
+  });
+});
+
+/**
+ * 43 — TMDB ratings, Phase 1 (issue #369).
+ *
+ * The provider's one read now lands both display preferences, and the hook
+ * answers `tmdbRatings` and `setTmdbRatings` beside the margins pair.
+ * `setTmdbRatings` keeps `setUltrawideMargins`' bargain over its own route,
+ * `/api/settings/tmdb-ratings`: shown at once, posted, the echo kept, the
+ * previous value put back on refusal, never rejecting. `null` until the read
+ * lands — **Blank until it lands**, which every caller reads as off.
+ */
+
+const TMDB_ROUTE = '/api/settings/tmdb-ratings';
+
+const RATINGS_ON: Settings = {
+  subtitleLanguage: 'English',
+  ultrawideMargins: false,
+  tmdbRatings: true,
+};
+const RATINGS_OFF: Settings = {
+  subtitleLanguage: 'English',
+  ultrawideMargins: true,
+  tmdbRatings: false,
+};
+
+/** The values posted to the tmdb-ratings route so far. */
+function postedTmdbValues(): unknown[] {
+  return fetchMock.mock.calls
+    .filter(
+      ([input, init]) => String(input) === TMDB_ROUTE && init?.method === 'POST'
+    )
+    .map(
+      ([, init]) => (JSON.parse(String(init?.body)) as { value: unknown }).value
+    );
+}
+
+/** The hook under the provider, its read already landed as `read`. */
+async function renderRatingsLanded(read: Settings) {
+  const rendered = renderPreference();
+  await waitFor(() =>
+    expect(rendered.result.current.tmdbRatings).toBe(read.tmdbRatings)
+  );
+  return rendered;
+}
+
+describe('DisplayPreferenceProvider — tmdbRatings, the read', () => {
+  it('holds null for both preferences until the one read lands', () => {
+    const read = held();
+    fetchMock.mockImplementation(() => read.pending);
+
+    const { result } = renderPreference();
+
+    expect(result.current.tmdbRatings).toBeNull();
+    expect(result.current.ultrawideMargins).toBeNull();
+  });
+
+  it('lands both values from one read', async () => {
+    const read = held();
+    fetchMock.mockImplementation(() => read.pending);
+    const { result } = renderPreference();
+
+    await act(async () => {
+      read.settle(okResponse(RATINGS_OFF));
+    });
+
+    await waitFor(() => expect(result.current.tmdbRatings).toBe(false));
+    expect(result.current.ultrawideMargins).toBe(true);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('hands over true when that is what is stored', async () => {
+    fetchMock.mockResolvedValue(okResponse(RATINGS_ON));
+
+    const { result } = renderPreference();
+
+    await waitFor(() => expect(result.current.tmdbRatings).toBe(true));
+    expect(result.current.ultrawideMargins).toBe(false);
+  });
+
+  it('keeps null when the route refuses', async () => {
+    const read = held();
+    fetchMock.mockImplementation(() => read.pending);
+    const { result } = renderPreference();
+
+    await act(async () => {
+      read.settle(serverErrorResponse());
+    });
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(result.current.tmdbRatings).toBeNull();
+  });
+});
+
+describe('DisplayPreferenceProvider — setTmdbRatings', () => {
+  it('shows the new value at once, before the post has answered', async () => {
+    settledReadHeldWrite(RATINGS_ON);
+    const { result } = await renderRatingsLanded(RATINGS_ON);
+
+    act(() => {
+      void result.current.setTmdbRatings(false);
+    });
+
+    expect(result.current.tmdbRatings).toBe(false);
+  });
+
+  it('posts the value to the tmdb-ratings route, not the margins route', async () => {
+    settledReadHeldWrite(RATINGS_ON);
+    const { result } = await renderRatingsLanded(RATINGS_ON);
+
+    act(() => {
+      void result.current.setTmdbRatings(false);
+    });
+
+    await waitFor(() => expect(postedTmdbValues()).toEqual([false]));
+    expect(postedValues()).toEqual([]);
+  });
+
+  it('keeps the echo rather than what was sent — the route stored it', async () => {
+    const write = settledReadHeldWrite(RATINGS_ON);
+    const { result } = await renderRatingsLanded(RATINGS_ON);
+
+    await act(async () => {
+      const set = result.current.setTmdbRatings(false);
+      write.settle(okResponse({ value: true }));
+      await set;
+    });
+
+    expect(result.current.tmdbRatings).toBe(true);
+  });
+
+  it('keeps the value once the route echoes it', async () => {
+    const write = settledReadHeldWrite(RATINGS_OFF);
+    const { result } = await renderRatingsLanded(RATINGS_OFF);
+
+    await act(async () => {
+      const set = result.current.setTmdbRatings(true);
+      write.settle(okResponse({ value: true }));
+      await set;
+    });
+
+    expect(result.current.tmdbRatings).toBe(true);
+  });
+
+  it('leaves Ultrawide margins as it was', async () => {
+    const write = settledReadHeldWrite(RATINGS_OFF);
+    const { result } = await renderRatingsLanded(RATINGS_OFF);
+
+    await act(async () => {
+      const set = result.current.setTmdbRatings(true);
+      write.settle(okResponse({ value: true }));
+      await set;
+    });
+
+    expect(result.current.ultrawideMargins).toBe(true);
+  });
+
+  it('puts the previous value back when the route refuses, without rejecting', async () => {
+    const write = settledReadHeldWrite(RATINGS_ON);
+    const { result } = await renderRatingsLanded(RATINGS_ON);
+
+    let outcome: Promise<void> = Promise.resolve();
+    act(() => {
+      outcome = result.current.setTmdbRatings(false);
+    });
+    expect(result.current.tmdbRatings).toBe(false);
+
+    await act(async () => {
+      write.settle(serverErrorResponse());
+      await expect(outcome).resolves.toBeUndefined();
+    });
+
+    expect(result.current.tmdbRatings).toBe(true);
+  });
+
+  it('puts the previous value back when the request itself fails, without rejecting', async () => {
+    const write = settledReadHeldWrite(RATINGS_OFF);
+    const { result } = await renderRatingsLanded(RATINGS_OFF);
+
+    let outcome: Promise<void> = Promise.resolve();
+    act(() => {
+      outcome = result.current.setTmdbRatings(true);
+    });
+
+    await act(async () => {
+      write.refuse(new Error('offline'));
+      await expect(outcome).resolves.toBeUndefined();
+    });
+
+    expect(result.current.tmdbRatings).toBe(false);
   });
 });

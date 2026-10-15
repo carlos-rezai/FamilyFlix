@@ -375,6 +375,7 @@ describe('GET /api/settings', () => {
     expect(await readSettings(baseUrl)).toEqual({
       subtitleLanguage: DEFAULT_SUBTITLE_LANGUAGE,
       ultrawideMargins: false,
+      tmdbRatings: true,
     });
     expect(DEFAULT_SUBTITLE_LANGUAGE).toBe('English');
   });
@@ -386,6 +387,7 @@ describe('GET /api/settings', () => {
     expect(await readSettings(baseUrl)).toEqual({
       subtitleLanguage: 'French',
       ultrawideMargins: false,
+      tmdbRatings: true,
     });
   });
 });
@@ -410,6 +412,7 @@ describe('POST /api/settings/subtitle-language', () => {
     expect(await readSettings(baseUrl)).toEqual({
       subtitleLanguage: 'Spanish',
       ultrawideMargins: false,
+      tmdbRatings: true,
     });
   });
 
@@ -423,6 +426,7 @@ describe('POST /api/settings/subtitle-language', () => {
     expect(await readSettings(baseUrl)).toEqual({
       subtitleLanguage: 'German',
       ultrawideMargins: false,
+      tmdbRatings: true,
     });
   });
 
@@ -437,6 +441,7 @@ describe('POST /api/settings/subtitle-language', () => {
     expect(await readSettings(baseUrl)).toEqual({
       subtitleLanguage: 'Spanish',
       ultrawideMargins: false,
+      tmdbRatings: true,
     });
   });
 
@@ -450,6 +455,7 @@ describe('POST /api/settings/subtitle-language', () => {
     expect(await readSettings(baseUrl)).toEqual({
       subtitleLanguage: 'Japanese',
       ultrawideMargins: false,
+      tmdbRatings: true,
     });
   });
 
@@ -507,6 +513,7 @@ describe('GET /api/settings — ultrawideMargins', () => {
     expect(await readSettings(baseUrl)).toEqual({
       subtitleLanguage: DEFAULT_SUBTITLE_LANGUAGE,
       ultrawideMargins: true,
+      tmdbRatings: true,
     });
   });
 });
@@ -548,6 +555,7 @@ describe('POST /api/settings/ultrawide-margins', () => {
     expect(await readSettings(baseUrl)).toEqual({
       subtitleLanguage: 'French',
       ultrawideMargins: true,
+      tmdbRatings: true,
     });
   });
 
@@ -584,6 +592,134 @@ describe('POST /api/settings/ultrawide-margins', () => {
       expect(typeof payload.error).toBe('string');
       expect((payload.error as string).length).toBeGreaterThan(0);
       expect(storage.settings().ultrawideMargins).toBe(stored);
+    }
+  );
+});
+
+// 43 — TMDB ratings, Phase 1 (issue #369): the household's third preference
+// on the same pair. `GET /api/settings` carries `tmdbRatings`, the default —
+// on — applied when no row is stored; `POST /api/settings/tmdb-ratings
+// { value: boolean }` is a **Single-signal write** answering `200 { value }`,
+// and anything but a boolean is a `400` with a sentence that leaves the stored
+// value as it was. (A Factory reset putting the default back is the library suite's: this
+// harness's fixed slot cannot be emptied.)
+
+/** The write, with whatever body the test wants on the wire. */
+const postTmdbRatings = (baseUrl: string, body: unknown) =>
+  fetch(`${baseUrl}/api/settings/tmdb-ratings`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+
+/** The write with no body on the wire at all. */
+const postTmdbRatingsBare = (baseUrl: string) =>
+  fetch(`${baseUrl}/api/settings/tmdb-ratings`, { method: 'POST' });
+
+describe('GET /api/settings — tmdbRatings', () => {
+  it('answers true when no row is stored', async () => {
+    const { baseUrl } = freshApi();
+
+    expect(await readSettings(baseUrl)).toEqual({
+      subtitleLanguage: DEFAULT_SUBTITLE_LANGUAGE,
+      ultrawideMargins: false,
+      tmdbRatings: true,
+    });
+  });
+
+  it('answers the stored value when the row is there', async () => {
+    const { storage, baseUrl } = freshApi();
+    storage.setTmdbRatings(false);
+
+    expect((await readSettings(baseUrl)).tmdbRatings).toBe(false);
+  });
+});
+
+describe('POST /api/settings/tmdb-ratings', () => {
+  it.each([true, false])('echoes %s as JSON', async (value) => {
+    const { baseUrl } = freshApi();
+
+    const response = await postTmdbRatings(baseUrl, { value });
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get('content-type')).toContain('application/json');
+    expect(await response.json()).toEqual({ value });
+  });
+
+  it('shows false on the next GET', async () => {
+    const { baseUrl } = freshApi();
+
+    await postTmdbRatings(baseUrl, { value: false });
+
+    expect((await readSettings(baseUrl)).tmdbRatings).toBe(false);
+  });
+
+  it('shows true on the next GET after false', async () => {
+    const { baseUrl } = freshApi();
+    await postTmdbRatings(baseUrl, { value: false });
+
+    await postTmdbRatings(baseUrl, { value: true });
+
+    expect((await readSettings(baseUrl)).tmdbRatings).toBe(true);
+  });
+
+  it('persists — the repository answers what was written', async () => {
+    const { storage, baseUrl } = freshApi();
+
+    await postTmdbRatings(baseUrl, { value: false });
+
+    expect(storage.settings().tmdbRatings).toBe(false);
+  });
+
+  it('leaves the other two preferences as they were', async () => {
+    const { storage, baseUrl } = freshApi();
+    storage.setSubtitleLanguage('French');
+    storage.setUltrawideMargins(true);
+
+    await postTmdbRatings(baseUrl, { value: false });
+
+    expect(await readSettings(baseUrl)).toEqual({
+      subtitleLanguage: 'French',
+      ultrawideMargins: true,
+      tmdbRatings: false,
+    });
+  });
+
+  it('answers 400 with an error for a missing body, storing nothing', async () => {
+    const { storage, baseUrl } = freshApi();
+    storage.setTmdbRatings(false);
+
+    const response = await postTmdbRatingsBare(baseUrl);
+
+    expect(response.status).toBe(400);
+    const payload = (await response.json()) as { error: unknown };
+    expect(typeof payload.error).toBe('string');
+    expect((payload.error as string).length).toBeGreaterThan(0);
+    expect(storage.settings().tmdbRatings).toBe(false);
+  });
+
+  // Each seeded with the value a loose reading of the body would coerce it
+  // away from, so a write that slipped through cannot pass as "unchanged".
+  it.each([
+    ['a missing value', {}, false],
+    ['the string "true"', { value: 'true' }, false],
+    ['the string "false"', { value: 'false' }, true],
+    ['the number 1', { value: 1 }, false],
+    ['the number 0', { value: 0 }, true],
+    ['a null', { value: null }, false],
+  ])(
+    'answers 400 with an error for %s, storing nothing',
+    async (_, body, stored) => {
+      const { storage, baseUrl } = freshApi();
+      storage.setTmdbRatings(stored);
+
+      const response = await postTmdbRatings(baseUrl, body);
+
+      expect(response.status).toBe(400);
+      const payload = (await response.json()) as { error: unknown };
+      expect(typeof payload.error).toBe('string');
+      expect((payload.error as string).length).toBeGreaterThan(0);
+      expect(storage.settings().tmdbRatings).toBe(stored);
     }
   );
 });

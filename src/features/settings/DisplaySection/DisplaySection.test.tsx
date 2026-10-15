@@ -30,6 +30,7 @@ import * as playbackStyles from '../PlaybackSection/PlaybackSection.styles';
 
 const SETTINGS_ROUTE = '/api/settings';
 const WRITE_ROUTE = '/api/settings/ultrawide-margins';
+const TMDB_ROUTE = '/api/settings/tmdb-ratings';
 
 const LINE =
   'Keep everything in the middle of a very wide screen, so the rows fit without turning your head. Smaller screens look the same either way.';
@@ -44,7 +45,11 @@ let fetchMock: ReturnType<
 let settingsRead: Settings | 'held';
 
 beforeEach(() => {
-  settingsRead = { subtitleLanguage: 'English', ultrawideMargins: false };
+  settingsRead = {
+    subtitleLanguage: 'English',
+    ultrawideMargins: false,
+    tmdbRatings: true,
+  };
   fetchMock = vi
     .fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>()
     .mockImplementation((input, init) => {
@@ -56,6 +61,14 @@ beforeEach(() => {
       }
       if (url === WRITE_ROUTE && init?.method === 'POST') {
         const { value } = JSON.parse(String(init.body)) as { value: boolean };
+        return Promise.resolve(okResponse({ value }));
+      }
+      if (url === TMDB_ROUTE && init?.method === 'POST') {
+        const { value } = JSON.parse(String(init.body)) as { value: boolean };
+        // The server keeps what it was sent, so the next read answers it.
+        if (settingsRead !== 'held') {
+          settingsRead = { ...settingsRead, tmdbRatings: value };
+        }
         return Promise.resolve(okResponse({ value }));
       }
       return Promise.reject(new Error(`Unexpected request: ${url}`));
@@ -121,7 +134,11 @@ describe('DisplaySection — the Toggle', () => {
   });
 
   it('reads on when the stored value is on', async () => {
-    settingsRead = { subtitleLanguage: 'English', ultrawideMargins: true };
+    settingsRead = {
+      subtitleLanguage: 'English',
+      ultrawideMargins: true,
+      tmdbRatings: true,
+    };
     renderSection();
 
     expect((await toggle()).getAttribute('aria-checked')).toBe('true');
@@ -138,7 +155,11 @@ describe('DisplaySection — the Toggle', () => {
   });
 
   it('writes false when pressed from on', async () => {
-    settingsRead = { subtitleLanguage: 'English', ultrawideMargins: true };
+    settingsRead = {
+      subtitleLanguage: 'English',
+      ultrawideMargins: true,
+      tmdbRatings: true,
+    };
     const user = userEvent.setup();
     renderSection();
 
@@ -190,5 +211,128 @@ describe('the Setting row furniture — exported once, shared', () => {
     for (const name of FURNITURE) {
       expect(names).toContain(name);
     }
+  });
+});
+
+/**
+ * 43 — TMDB ratings, Phase 1 (issue #369).
+ *
+ * The Display card's second row, _Fill in ratings from TMDB_, on the same
+ * `Row` furniture and `Toggle` as _Ultrawide margins_ and under it: its title,
+ * its line, and the switch named for the title, reading and writing
+ * `tmdbRatings` through `useDisplayPreference`. Not drawn while `null` —
+ * **Blank until it lands**.
+ */
+const TMDB_TITLE = 'Fill in ratings from TMDB';
+const TMDB_LINE =
+  "When the family hasn't rated a title, show TMDB's score as its stars, marked TMDB. Your own ratings always come first.";
+
+/** The posts issued to the tmdb-ratings route so far. */
+function postedTmdbValues(): unknown[] {
+  return fetchMock.mock.calls
+    .filter(
+      ([input, init]) => String(input) === TMDB_ROUTE && init?.method === 'POST'
+    )
+    .map(
+      ([, init]) => (JSON.parse(String(init?.body)) as { value: unknown }).value
+    );
+}
+
+const tmdbToggle = () => screen.findByRole('switch', { name: TMDB_TITLE });
+
+describe('DisplaySection — Fill in ratings from TMDB, the copy', () => {
+  it('draws the second row’s title and line, verbatim, under Ultrawide margins', () => {
+    renderSection();
+
+    const first = screen.getByText('Ultrawide margins');
+    const title = screen.getByText(TMDB_TITLE);
+    const line = screen.getByText(TMDB_LINE);
+
+    expect(comesBefore(first, title)).toBe(true);
+    expect(comesBefore(title, line)).toBe(true);
+  });
+
+  it('draws the title on the same row furniture as Ultrawide margins', () => {
+    renderSection();
+
+    const first = screen.getByText('Ultrawide margins');
+    const title = screen.getByText(TMDB_TITLE);
+
+    expect(title.tagName).toBe(first.tagName);
+    expect(title.className).toBe(first.className);
+  });
+});
+
+describe('DisplaySection — Fill in ratings from TMDB, the Toggle', () => {
+  it('is not drawn while the value is null', () => {
+    settingsRead = 'held';
+    renderSection();
+
+    expect(screen.getByText(TMDB_TITLE)).toBeDefined();
+    expect(screen.queryByRole('switch', { name: TMDB_TITLE })).toBeNull();
+  });
+
+  it('is a switch named for the row, on when the stored value is on', async () => {
+    renderSection();
+
+    expect((await tmdbToggle()).getAttribute('aria-checked')).toBe('true');
+  });
+
+  it('reads off when the stored value is off', async () => {
+    settingsRead = {
+      subtitleLanguage: 'English',
+      ultrawideMargins: false,
+      tmdbRatings: false,
+    };
+    renderSection();
+
+    expect((await tmdbToggle()).getAttribute('aria-checked')).toBe('false');
+  });
+
+  it('writes false through the provider when pressed from on, and reflects it', async () => {
+    const user = userEvent.setup();
+    renderSection();
+
+    await user.click(await tmdbToggle());
+
+    expect((await tmdbToggle()).getAttribute('aria-checked')).toBe('false');
+    await waitFor(() => expect(postedTmdbValues()).toEqual([false]));
+    expect(postedValues()).toEqual([]);
+  });
+
+  it('writes true when pressed from off', async () => {
+    settingsRead = {
+      subtitleLanguage: 'English',
+      ultrawideMargins: false,
+      tmdbRatings: false,
+    };
+    const user = userEvent.setup();
+    renderSection();
+
+    await user.click(await tmdbToggle());
+
+    expect((await tmdbToggle()).getAttribute('aria-checked')).toBe('true');
+    await waitFor(() => expect(postedTmdbValues()).toEqual([true]));
+  });
+
+  it('leaves the Ultrawide margins switch as it was', async () => {
+    const user = userEvent.setup();
+    renderSection();
+
+    await user.click(await tmdbToggle());
+
+    expect((await toggle()).getAttribute('aria-checked')).toBe('false');
+  });
+
+  it('survives a reload — the next mount reads back what was written', async () => {
+    const user = userEvent.setup();
+    const first = renderSection();
+    await user.click(await tmdbToggle());
+    await waitFor(() => expect(postedTmdbValues()).toEqual([false]));
+    first.unmount();
+
+    renderSection();
+
+    expect((await tmdbToggle()).getAttribute('aria-checked')).toBe('false');
   });
 });

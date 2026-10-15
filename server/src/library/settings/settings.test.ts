@@ -26,6 +26,7 @@ import { createSettings } from './settings';
 import { shippingSourcesMatching } from '@/test-support/shippingSources/shippingSources';
 import {
   DEFAULT_SUBTITLE_LANGUAGE,
+  DEFAULT_TMDB_RATINGS,
   DEFAULT_ULTRAWIDE_MARGINS,
   type Settings,
 } from '@/types';
@@ -61,6 +62,7 @@ describe('library: settings() — the default applied', () => {
     expect(storage.settings()).toEqual({
       subtitleLanguage: 'English',
       ultrawideMargins: false,
+      tmdbRatings: true,
     });
   });
 
@@ -72,6 +74,7 @@ describe('library: settings() — the default applied', () => {
     expect(Object.keys(settings)).toEqual([
       'subtitleLanguage',
       'ultrawideMargins',
+      'tmdbRatings',
     ]);
   });
 
@@ -93,6 +96,7 @@ describe('library: setSubtitleLanguage — the upsert', () => {
     expect(storage.settings()).toEqual({
       subtitleLanguage: 'Spanish',
       ultrawideMargins: false,
+      tmdbRatings: true,
     });
   });
 
@@ -143,6 +147,7 @@ describe('library: setSubtitleLanguage — the upsert', () => {
     expect(second.settings()).toEqual({
       subtitleLanguage: 'Portuguese',
       ultrawideMargins: false,
+      tmdbRatings: true,
     });
   });
 });
@@ -187,6 +192,7 @@ describe('library: tmdbKey / setTmdbKey — the TMDB key', () => {
     expect(storage.settings()).toEqual({
       subtitleLanguage: 'French',
       ultrawideMargins: false,
+      tmdbRatings: true,
     });
   });
 
@@ -248,6 +254,7 @@ describe('library: enrichmentLastSyncedAt — when the library last synced', () 
     expect(storage.settings()).toEqual({
       subtitleLanguage: 'French',
       ultrawideMargins: false,
+      tmdbRatings: true,
     });
     expect(storage.tmdbKey()).toBe('kept-key');
   });
@@ -362,6 +369,7 @@ describe('library: ultrawideMargins / setUltrawideMargins — the frame preferen
     expect(storage.settings()).toEqual({
       subtitleLanguage: 'German',
       ultrawideMargins: true,
+      tmdbRatings: true,
     });
   });
 
@@ -374,5 +382,129 @@ describe('library: ultrawideMargins / setUltrawideMargins — the frame preferen
     const second = track(createSqliteStorage(path));
 
     expect(second.settings().ultrawideMargins).toBe(true);
+  });
+});
+
+// 43 — TMDB ratings, Phase 1 (issue #369): the household's third preference,
+// `tmdb-ratings` in the same `settings` table, stored as `'1'` / `'0'` and read
+// through the one `valueOf`. `settings()` answers it as `tmdbRatings` with the
+// default — on — applied when the row is absent, and does not write that
+// default down; `setTmdbRatings` is an upsert, `setUltrawideMargins`' twin.
+// Factory reset's erase takes the `settings` table, so the default returns.
+describe('library: tmdbRatings / setTmdbRatings — the TMDB ratings preference', () => {
+  /** A migrated in-memory handle and the repository over it. */
+  function repositoryOverRawDb() {
+    const db = track(openDatabase(':memory:'));
+    return { db, repository: createSettings(db) };
+  }
+
+  /** How many rows the settings table holds under `key`. */
+  function rowsUnder(db: SqliteDatabase, key: string): number {
+    return (
+      db
+        .prepare('SELECT COUNT(*) AS count FROM settings WHERE key = ?')
+        .get(key) as { count: number }
+    ).count;
+  }
+
+  it('answers true on a fresh database — the shared default', () => {
+    const storage = freshStorage();
+
+    expect(storage.settings().tmdbRatings).toBe(true);
+    expect(DEFAULT_TMDB_RATINGS).toBe(true);
+  });
+
+  it('does not write the default down when it is read', () => {
+    const { db, repository } = repositoryOverRawDb();
+
+    expect(repository.settings().tmdbRatings).toBe(true);
+    expect(repository.settings().tmdbRatings).toBe(true);
+
+    expect(rowsUnder(db, 'tmdb-ratings')).toBe(0);
+  });
+
+  it('stores false and reads it back', () => {
+    const storage = freshStorage();
+
+    storage.setTmdbRatings(false);
+
+    expect(storage.settings().tmdbRatings).toBe(false);
+  });
+
+  it('round-trips false then true', () => {
+    const storage = freshStorage();
+    storage.setTmdbRatings(false);
+
+    storage.setTmdbRatings(true);
+
+    expect(storage.settings().tmdbRatings).toBe(true);
+  });
+
+  it("stores the value under 'tmdb-ratings' as '1' / '0'", () => {
+    const { db, repository } = repositoryOverRawDb();
+    const stored = () =>
+      (
+        db
+          .prepare('SELECT value FROM settings WHERE key = ?')
+          .get('tmdb-ratings') as { value: string } | undefined
+      )?.value;
+
+    repository.setTmdbRatings(false);
+    expect(stored()).toBe('0');
+
+    repository.setTmdbRatings(true);
+    expect(stored()).toBe('1');
+  });
+
+  it('upserts a repeated write rather than failing on the key', () => {
+    const { db, repository } = repositoryOverRawDb();
+    repository.setTmdbRatings(false);
+
+    expect(() => repository.setTmdbRatings(false)).not.toThrow();
+    expect(repository.settings().tmdbRatings).toBe(false);
+    expect(rowsUnder(db, 'tmdb-ratings')).toBe(1);
+  });
+
+  it('leaves the other two preferences untouched', () => {
+    const storage = freshStorage();
+    storage.setSubtitleLanguage('French');
+    storage.setUltrawideMargins(true);
+
+    storage.setTmdbRatings(false);
+
+    expect(storage.settings()).toEqual({
+      subtitleLanguage: 'French',
+      ultrawideMargins: true,
+      tmdbRatings: false,
+    });
+  });
+
+  it('is untouched by an Ultrawide margins write', () => {
+    const storage = freshStorage();
+    storage.setTmdbRatings(false);
+
+    storage.setUltrawideMargins(true);
+
+    expect(storage.settings().tmdbRatings).toBe(false);
+  });
+
+  it('survives closing and reopening the database — it is in the backup', () => {
+    const path = tempDbPath();
+    const first = track(createSqliteStorage(path));
+    first.setTmdbRatings(false);
+    first.close();
+
+    const second = track(createSqliteStorage(path));
+
+    expect(second.settings().tmdbRatings).toBe(false);
+  });
+
+  it('returns to the default after a Factory reset', () => {
+    const storage = freshStorage();
+    storage.setTmdbRatings(false);
+
+    storage.reset();
+
+    expect(storage.settings().tmdbRatings).toBe(true);
   });
 });
