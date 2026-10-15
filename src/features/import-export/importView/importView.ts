@@ -1,4 +1,4 @@
-import type { ImportRun } from '@/types';
+import type { ImportProblem, ImportRun, ProblemKind } from '@/types';
 import { formatElapsed } from '@/utils';
 
 /** What the **Running step** prints, worked out from a snapshot and the clock. */
@@ -58,4 +58,66 @@ export function importView(run: ImportRun, now: Date): ImportView {
     elapsed: `Elapsed ${formatElapsed(elapsedSeconds)}`,
     eta: forecast === null ? null : `About ${formatElapsed(forecast)} left`,
   };
+}
+
+/** One **Review group**: the Problems sharing a title, and the kinds they hold. */
+export interface ReviewGroup {
+  title: string;
+  /** In the run's order. */
+  problems: ImportProblem[];
+  /** Each kind held, once, in the glossary's order — the header's dots. */
+  kinds: ProblemKind[];
+}
+
+/** The glossary's order of the kinds. */
+const KIND_ORDER: readonly ProblemKind[] = [
+  'no-folder',
+  'ambiguous',
+  'no-video',
+  'no-row',
+  'failed',
+  'unplaced',
+  'missing-meta',
+  'differs',
+];
+
+/** The soft kinds: what the library can live with. */
+const SOFT_KINDS: ReadonlySet<ProblemKind> = new Set([
+  'missing-meta',
+  'differs',
+]);
+
+/**
+ * The **Review groups**: the Problems the Kind filter lets through — every one
+ * under `'all'`, else that kind's alone — grouped by `title` exactly as
+ * spelled. Groups holding a hard kind first, at their first row's place in the
+ * run; groups of soft kinds only after them, in the same order.
+ */
+export function reviewGroups(
+  problems: readonly ImportProblem[],
+  filter: ProblemKind | 'all'
+): ReviewGroup[] {
+  const byTitle = new Map<string, ImportProblem[]>();
+  for (const problem of problems) {
+    if (filter !== 'all' && problem.kind !== filter) continue;
+    const rows = byTitle.get(problem.title);
+    if (rows) rows.push(problem);
+    else byTitle.set(problem.title, [problem]);
+  }
+
+  const groups = Array.from(byTitle, ([title, rows]): ReviewGroup => {
+    const held = new Set(rows.map((p) => p.kind));
+    return {
+      title,
+      problems: rows,
+      kinds: KIND_ORDER.filter((kind) => held.has(kind)),
+    };
+  });
+  const isHard = (group: ReviewGroup) =>
+    group.kinds.some((kind) => !SOFT_KINDS.has(kind));
+
+  return [
+    ...groups.filter(isHard),
+    ...groups.filter((group) => !isHard(group)),
+  ];
 }

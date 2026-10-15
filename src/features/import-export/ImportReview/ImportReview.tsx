@@ -1,12 +1,18 @@
+import { useState } from 'react';
+
+import { Accordion } from '@/components';
 import { Button } from '@/primitives';
-import type { ImportRun, SheetChoices } from '@/types';
+import type { ImportProblem, ImportRun, SheetChoices } from '@/types';
+import { reviewGroups } from '../importView/importView';
 import { ProblemRow } from '../ProblemRow/ProblemRow';
+import { DOT_TONE } from '../ProblemRow/ProblemRow.styles';
 import { StatTile } from '../StatTile/StatTile';
 import {
   Actions,
   AllDone,
   AllDoneHeading,
   AllDoneLine,
+  KindMark,
   List,
   ListHeading,
   Tiles,
@@ -39,6 +45,11 @@ export interface ImportReviewProps {
  * matched are already in the library — under the words the flow hands it,
  * which say where it goes.
  *
+ * The list draws the **Review groups**: a title with one Problem is its bare
+ * row; two or more are one closed **Accordion** — the title, each kind's dot,
+ * the count — over the same rows. Which groups are open is this step's own
+ * screen state, by title.
+ *
  * The step draws the run it is handed and reports a press — _Skip_ and
  * _Apply choices_ name the problem's id — and never removes a row itself: the
  * **Run hook** does, and the next `run` shows it.
@@ -52,6 +63,25 @@ export function ImportReview({
   finishLabel,
   onFinish,
 }: ImportReviewProps) {
+  const [open, setOpen] = useState<ReadonlySet<string>>(() => new Set());
+  const toggle = (title: string) =>
+    setOpen((was) => {
+      const next = new Set(was);
+      if (!next.delete(title)) next.add(title);
+      return next;
+    });
+
+  const row = (problem: ImportProblem) => (
+    <ProblemRow
+      key={problem.id}
+      problem={problem}
+      onSkip={() => onSkip(problem.id)}
+      onApply={(choices) => onApply(problem.id, choices)}
+      onPick={(folder) => onPick(problem.id, folder)}
+      onImportAs={() => onImportAs(problem.id)}
+    />
+  );
+
   return (
     <>
       <Tiles>
@@ -83,16 +113,28 @@ export function ImportReview({
         <>
           <ListHeading>Needs attention</ListHeading>
           <List>
-            {run.problems.map((problem) => (
-              <ProblemRow
-                key={problem.id}
-                problem={problem}
-                onSkip={() => onSkip(problem.id)}
-                onApply={(choices) => onApply(problem.id, choices)}
-                onPick={(folder) => onPick(problem.id, folder)}
-                onImportAs={() => onImportAs(problem.id)}
-              />
-            ))}
+            {reviewGroups(run.problems, 'all').map((group) =>
+              group.problems.length === 1 ? (
+                row(group.problems[0])
+              ) : (
+                <Accordion
+                  key={`group:${group.title}`}
+                  label={group.title}
+                  count={group.problems.length}
+                  expanded={open.has(group.title)}
+                  onToggle={() => toggle(group.title)}
+                  marks={group.kinds.map((kind) => (
+                    <KindMark
+                      key={kind}
+                      aria-hidden="true"
+                      $tone={DOT_TONE[kind]}
+                    />
+                  ))}
+                >
+                  {group.problems.map(row)}
+                </Accordion>
+              )
+            )}
           </List>
         </>
       ) : (

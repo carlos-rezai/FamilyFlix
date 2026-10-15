@@ -61,3 +61,4 @@ export {
   type FieldDiffRow,
   type FieldDiffSide,
 } from './FieldDiff/FieldDiff';
+export { Accordion, type AccordionProps } from './Accordion/Accordion';

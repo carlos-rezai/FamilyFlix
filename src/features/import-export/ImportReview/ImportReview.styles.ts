@@ -1,4 +1,5 @@
 import styled from 'styled-components';
+import { GOLD, type DotTone } from '../ProblemRow/ProblemRow.styles';
 
 /** The two tiles side by side, set the prototype's 28px over the list. */
 export const Tiles = styled.div`
@@ -52,4 +53,14 @@ export const AllDoneLine = styled.div`
 /** Finish's own row, set the prototype's 28px under the card. */
 export const Actions = styled.div`
   margin-top: 28px;
+`;
+
+/** A Review group's mark: its kind's 8px dot, in the Problem row's ink. */
+export const KindMark = styled.span<{ $tone: DotTone }>`
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 99px;
+  background: ${({ $tone, theme }) =>
+    $tone === 'gold' ? GOLD : theme.colors[$tone]};
 `;
