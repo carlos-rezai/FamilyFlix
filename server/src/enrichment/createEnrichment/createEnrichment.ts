@@ -175,7 +175,7 @@ export interface Enrichment {
    */
   chooseSeasonPoster(
     season: number,
-    path: unknown
+    path: string
   ): Promise<SeasonPosterOutcome>;
 }
 
@@ -841,7 +841,7 @@ export function createEnrichment({
 
   async function chooseSeasonPoster(
     season: number,
-    path: unknown
+    path: string
   ): Promise<SeasonPosterOutcome> {
     const current = run;
     const seriesId = current?.seriesId;
@@ -849,10 +849,7 @@ export function createEnrichment({
     if (current === null || seriesId === undefined || held === undefined) {
       return { kind: 'not-found' };
     }
-    if (
-      typeof path !== 'string' ||
-      !held.choices.some((choice) => choice.path === path)
-    ) {
+    if (!held.choices.some((choice) => choice.path === path)) {
       return { kind: 'not-offered' };
     }
     const folder = storage.mediaFolderOf('series', seriesId);

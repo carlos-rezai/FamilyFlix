@@ -67,6 +67,7 @@ import {
 import {
   conflictChoicesBody,
   decisionIdsBody,
+  seasonPosterBody,
   startEnrichmentBody,
 } from './enrichmentBody/enrichmentBody';
 import {
@@ -2094,7 +2095,8 @@ export function createApiRouter(
   );
 
   // A **Season choice** taken: `200` with that season's choice, its poster
-  // replaced; `400` for a path the season does not offer, `404` without a
+  // replaced; `400` for a body with no string `path`, read before the domain
+  // is asked, or a path the season does not offer; `404` without a
   // single-series run holding that season, `503` when TMDB was not reached —
   // the poster left as it was — and `500` when it could not be stored.
   router.post(
@@ -2103,8 +2105,15 @@ export function createApiRouter(
       const season = /^\d+$/.test(req.params.season)
         ? Number(req.params.season)
         : Number.NaN;
-      const { path } = (req.body ?? {}) as { path?: unknown };
-      const outcome = await enrichment.chooseSeasonPoster(season, path);
+      const read = seasonPosterBody(req.body);
+      if (!read.ok) {
+        res.status(400).json({ error: read.error });
+        return;
+      }
+      const outcome = await enrichment.chooseSeasonPoster(
+        season,
+        read.value.path
+      );
       if (outcome.kind === 'chosen') {
         res.json(outcome.choice);
         return;

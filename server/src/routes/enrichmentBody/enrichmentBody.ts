@@ -93,3 +93,18 @@ export function conflictChoicesBody(body: unknown): BodyRead<ConflictChoices> {
 export function decisionIdsBody(body: unknown): BodyRead<string[]> {
   return idListBody(body, 'Ids must be a list of decision ids.');
 }
+
+/**
+ * A **Season choice**'s body → the TMDB image path it takes: `path` a string,
+ * refused in a sentence otherwise. Whether the season offers it is the
+ * domain's to say.
+ */
+export function seasonPosterBody(body: unknown): BodyRead<{ path: string }> {
+  const { path } = (typeof body === 'object' && body !== null ? body : {}) as {
+    path?: unknown;
+  };
+  if (typeof path !== 'string') {
+    return { ok: false, error: 'Path must be the poster’s TMDB path.' };
+  }
+  return { ok: true, value: { path } };
+}

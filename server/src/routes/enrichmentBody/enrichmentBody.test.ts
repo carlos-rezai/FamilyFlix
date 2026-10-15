@@ -14,6 +14,7 @@ import { ENRICH_FIELDS, type StartEnrichment } from '@/types';
 import {
   conflictChoicesBody,
   decisionIdsBody,
+  seasonPosterBody,
   startEnrichmentBody,
 } from './enrichmentBody';
 
@@ -183,6 +184,31 @@ describe('decisionIdsBody', () => {
     ['a list holding a number', { ids: ['d1', 2] }],
   ])('refuses %s in a sentence', (_, body) => {
     const read = decisionIdsBody(body);
+
+    expect(read.ok).toBe(false);
+    if (read.ok) return;
+    expect(read.error).toMatch(/^[A-Z].*\.$/);
+  });
+});
+
+// 42 — Review at scale refactor (issue #366), Group 2: a **Season choice**'s
+// body is read here, so the domain is handed a string. Whether the season
+// offers the path is the domain's to say.
+describe('seasonPosterBody', () => {
+  it('reads the TMDB path', () => {
+    expect(seasonPosterBody({ path: '/s02-a.jpg' })).toEqual({
+      ok: true,
+      value: { path: '/s02-a.jpg' },
+    });
+  });
+
+  it.each([
+    ['no body', undefined],
+    ['no path', {}],
+    ['a null path', { path: null }],
+    ['a path that is not a string', { path: 7 }],
+  ])('refuses %s in a sentence', (_, body) => {
+    const read = seasonPosterBody(body);
 
     expect(read.ok).toBe(false);
     if (read.ok) return;
