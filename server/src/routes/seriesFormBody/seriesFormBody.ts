@@ -1,4 +1,4 @@
-import { extname } from 'node:path';
+import { basename, extname } from 'node:path';
 
 import type { Media } from '../../media/createMedia/createMedia';
 import { spellEpisodeTag } from '../../media/episodeTag/episodeTag';
@@ -233,6 +233,27 @@ export function seasonPosterEdits(
 /** The name a picked Season poster is stored under: `S02-poster.jpg`. */
 export const seasonPosterName = (season: number, extension: string): string =>
   `${spellEpisodeTag(season)}-poster${extension}`;
+
+/**
+ * The names a series edit stores a picked Season poster under, given the
+ * Stored paths of the posters it holds: {@link seasonPosterName}'s when no
+ * held poster has it, else that name numbered `-2`, `-3`… before the
+ * extension — so a picked poster never lands on a held one's name, and a
+ * rollback can never take the held file with it.
+ */
+export function seasonPosterNamer(
+  heldPaths: readonly string[]
+): (season: number, extension: string) => string {
+  const held = new Set(heldPaths.map((path) => basename(path)));
+  return (season, extension) => {
+    const name = seasonPosterName(season, extension);
+    let candidate = name;
+    for (let n = 2; held.has(candidate); n += 1) {
+      candidate = name.replace(/(\.[^.]*)?$/, `-${n}$1`);
+    }
+    return candidate;
+  };
+}
 
 /** A held track as an edit sends it: `{ path, language }`, both strings. */
 function isStoredTrack(track: unknown): track is NewSubtitle {

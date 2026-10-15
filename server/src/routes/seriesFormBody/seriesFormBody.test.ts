@@ -27,6 +27,7 @@ import {
   readSeasonPosters,
   readSeriesFields,
   seasonPosterEdits,
+  seasonPosterNamer,
   type EpisodeUploads,
 } from './seriesFormBody';
 
@@ -575,5 +576,35 @@ describe('seasonPosterEdits — the changes a save writes', () => {
 
   it('answers no edit for no change', () => {
     expect(seasonPosterEdits([], (path) => path)).toEqual([]);
+  });
+});
+
+describe('seasonPosterNamer — a free name beside the held posters', () => {
+  it('answers the season’s own name when no held poster has it', () => {
+    const name = seasonPosterNamer(['harbor-and-vine/S01-poster.jpg']);
+
+    expect(name(2, '.jpg')).toBe('S02-poster.jpg');
+  });
+
+  it('numbers a taken name before its extension', () => {
+    const name = seasonPosterNamer(['harbor-and-vine/S02-poster.jpg']);
+
+    expect(name(2, '.jpg')).toBe('S02-poster-2.jpg');
+  });
+
+  it('numbers past every taken name', () => {
+    const name = seasonPosterNamer([
+      'harbor-and-vine/S02-poster.jpg',
+      'harbor-and-vine/S02-poster-2.jpg',
+    ]);
+
+    expect(name(2, '.jpg')).toBe('S02-poster-3.jpg');
+  });
+
+  it('keeps the picked file’s extension', () => {
+    const name = seasonPosterNamer(['harbor-and-vine/S02-poster.png']);
+
+    expect(name(2, '.png')).toBe('S02-poster-2.png');
+    expect(name(2, '.webp')).toBe('S02-poster.webp');
   });
 });

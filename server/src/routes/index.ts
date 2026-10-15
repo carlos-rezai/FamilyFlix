@@ -59,7 +59,7 @@ import {
   readSeriesEditFields,
   readSeriesFields,
   seasonPosterEdits,
-  seasonPosterName,
+  seasonPosterNamer,
 } from './seriesFormBody/seriesFormBody';
 import {
   conflictChoicesBody,
@@ -967,29 +967,14 @@ export function createApiRouter(
         );
         return reserved;
       };
-      // A picked Season poster never lands on a held one's name, so a
-      // rollback can never take the held file with it.
-      const heldNames = new Set(
-        (storage.getSeriesDetail(existing.id)?.seasons ?? []).flatMap(
-          (season) =>
-            season.posterPath === null ? [] : [basename(season.posterPath)]
-        )
-      );
-      const freshSeasonPosterName = (
-        season: number,
-        extension: string
-      ): string => {
-        const name = seasonPosterName(season, extension);
-        let candidate = name;
-        for (let n = 2; heldNames.has(candidate); n += 1) {
-          candidate = name.replace(/(\.[^.]*)?$/, `-${n}$1`);
-        }
-        return candidate;
-      };
       const { onFile, uploads } = collectEpisodeUploads(
         media,
         seriesFolder,
-        freshSeasonPosterName
+        seasonPosterNamer(
+          (storage.getSeriesDetail(existing.id)?.seasons ?? []).flatMap(
+            (season) => (season.posterPath === null ? [] : [season.posterPath])
+          )
+        )
       );
 
       /** Take back the bytes this request wrote — and nothing beside them. */
