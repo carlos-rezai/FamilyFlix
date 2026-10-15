@@ -106,6 +106,29 @@ describe('fakeTmdb: the tables', () => {
     ]);
   });
 
+  // Issue #364: a show's own images, by show — ordered by vote as the client
+  // answers them; a show the table does not list answers none.
+  it('answers a show’s images from theirs, and none for a show not listed', async () => {
+    const images = [
+      { file_path: '/show-fr.jpg', vote_average: 5.6 },
+      { file_path: '/show-de.jpg', vote_average: 4.1 },
+    ];
+    const tmdb = fakeTmdb({ seriesImages: { 71: images } });
+
+    expect(await tmdb.seriesImages(TMDB_KEY, 71)).toEqual({
+      kind: 'ok',
+      value: images,
+    });
+    expect(await tmdb.seriesImages(TMDB_KEY, 72)).toEqual({
+      kind: 'ok',
+      value: [],
+    });
+    expect(tmdb.calls.map((call) => call.method)).toEqual([
+      'seriesImages',
+      'seriesImages',
+    ]);
+  });
+
   it('answers a dated search by its year, the undated table without one', async () => {
     const later = tmdbMovieResult(102, 'Harbor Lights', 1964);
     const tmdb = fakeTmdb({

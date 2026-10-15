@@ -432,3 +432,155 @@ describe('tmdbClient: seasonImages — a season’s posters in any language', ()
     await expect(pending).resolves.toEqual({ kind: 'unreachable' });
   });
 });
+
+// 42 — Review at scale, Slice 7: "choose a season's poster from TMDB" (issue
+// #364). `seriesImages(key, id, signal)` is `seasonImages`' twin over the show
+// itself: `/3/tv/{id}/images` with `include_image_language=en,null` first
+// and, when that answers no posters, again with no language filter. Each
+// poster's `file_path` and `vote_average`, highest vote first — a value,
+// never a throw.
+describe('tmdbClient: seriesImages — a show’s posters in any language', () => {
+  const poster = (
+    file_path: string,
+    vote_average: number,
+    lang: string | null
+  ) => ({
+    aspect_ratio: 0.667,
+    height: 3000,
+    width: 2000,
+    iso_639_1: lang,
+    file_path,
+    vote_average,
+    vote_count: 3,
+  });
+
+  function answeringInTurn(...bodies: unknown[]) {
+    let turn = 0;
+    return vi.fn<Fetch>(() =>
+      Promise.resolve(answer(200, bodies[Math.min(turn++, bodies.length - 1)]))
+    );
+  }
+
+  const urlOf = (fetchMock: ReturnType<typeof vi.fn<Fetch>>, call: number) => {
+    const [input] = fetchMock.mock.calls[call];
+    return new URL(input instanceof Request ? input.url : String(input));
+  };
+
+  it('asks /3/tv/{id}/images in English or no language first', async () => {
+    const fetchMock = answeringWith({
+      id: 71001,
+      backdrops: [],
+      posters: [poster('/show-en.jpg', 5.2, 'en')],
+    });
+
+    await createTmdbClient(fetchMock).seriesImages(V3_KEY, 71001);
+
+    const { url } = onlyRequest(fetchMock);
+    expect(url.origin).toBe('https://api.themoviedb.org');
+    expect(url.pathname).toBe('/3/tv/71001/images');
+    expect(url.searchParams.get('include_image_language')).toBe('en,null');
+    expect(url.searchParams.get('api_key')).toBe(V3_KEY);
+  });
+
+  it('answers the posters’ paths and votes, ordered by vote, highest first — never the backdrops', async () => {
+    const outcome = await createTmdbClient(
+      answeringWith({
+        id: 71001,
+        backdrops: [poster('/backdrop.jpg', 9.9, 'en')],
+        posters: [
+          poster('/show-low.jpg', 3.1, 'en'),
+          poster('/show-top.jpg', 5.8, null),
+          poster('/show-mid.jpg', 4.4, 'en'),
+        ],
+      })
+    ).seriesImages(V3_KEY, 71001);
+
+    expect(outcome).toEqual({
+      kind: 'ok',
+      value: [
+        { file_path: '/show-top.jpg', vote_average: 5.8 },
+        { file_path: '/show-mid.jpg', vote_average: 4.4 },
+        { file_path: '/show-low.jpg', vote_average: 3.1 },
+      ],
+    });
+  });
+
+  it('asks again with no language filter when English answers none', async () => {
+    const fetchMock = answeringInTurn(
+      { id: 71001, posters: [] },
+      {
+        id: 71001,
+        posters: [
+          poster('/show-de.jpg', 4.1, 'de'),
+          poster('/show-fr.jpg', 5.6, 'fr'),
+        ],
+      }
+    );
+
+    const outcome = await createTmdbClient(fetchMock).seriesImages(
+      V3_KEY,
+      71001
+    );
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    const retry = urlOf(fetchMock, 1);
+    expect(retry.pathname).toBe('/3/tv/71001/images');
+    expect(retry.searchParams.has('include_image_language')).toBe(false);
+    expect(retry.searchParams.has('language')).toBe(false);
+    expect(outcome).toEqual({
+      kind: 'ok',
+      value: [
+        { file_path: '/show-fr.jpg', vote_average: 5.6 },
+        { file_path: '/show-de.jpg', vote_average: 4.1 },
+      ],
+    });
+  });
+
+  it('answers an empty list when neither ask finds a poster', async () => {
+    const fetchMock = answeringWith({ id: 71001, posters: [] });
+
+    const outcome = await createTmdbClient(fetchMock).seriesImages(
+      V3_KEY,
+      71001
+    );
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(outcome).toEqual({ kind: 'ok', value: [] });
+  });
+
+  it('answers refused on a 401 and unreachable when the network fails, never throwing', async () => {
+    const refused = await createTmdbClient(
+      answeringWith({ status_code: 7 }, 401)
+    ).seriesImages(V3_KEY, 71001);
+    const unreachable = await createTmdbClient(failing()).seriesImages(
+      V3_KEY,
+      71001
+    );
+
+    expect(refused).toEqual({ kind: 'refused' });
+    expect(unreachable).toEqual({ kind: 'unreachable' });
+  });
+
+  it('aborts the request in flight when the caller’s signal aborts', async () => {
+    const fetchMock = vi.fn<Fetch>(
+      (_input, init) =>
+        new Promise<Response>((_resolve, reject) => {
+          init?.signal?.addEventListener('abort', () =>
+            reject(new DOMException('aborted', 'AbortError'))
+          );
+        })
+    );
+    const controller = new AbortController();
+
+    const pending = createTmdbClient(fetchMock).seriesImages(
+      V3_KEY,
+      71001,
+      controller.signal
+    );
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    controller.abort();
+
+    expect(fetchMock.mock.calls[0]?.[1]?.signal?.aborted).toBe(true);
+    await expect(pending).resolves.toEqual({ kind: 'unreachable' });
+  });
+});
