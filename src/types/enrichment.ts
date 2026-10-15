@@ -138,6 +138,31 @@ export interface EnrichmentRun {
   log: LogLine[];
   decisions: Decision[];
   written: { sheet: boolean; posters: boolean };
+  /**
+   * A single-series run's **Season choices**, one per Season on disk the Sync
+   * read, in season order; absent on any other run.
+   */
+  seasons?: SeasonChoice[];
+}
+
+/** One TMDB poster a Season may take: the season's own, or the series'. */
+export interface SeasonPosterChoice {
+  /** TMDB's `file_path` — what the route is posted. */
+  path: string;
+  /** The image on `image.tmdb.org`, for the card. */
+  url: string;
+  source: 'season' | 'series';
+}
+
+/**
+ * A **Season choice**: a Season's held **Season poster** through the image
+ * route (`null` with none) and at most ten TMDB posters it may take instead —
+ * the season's own first, then the series'.
+ */
+export interface SeasonChoice {
+  season: number;
+  posterUrl: string | null;
+  choices: SeasonPosterChoice[];
 }
 
 /**

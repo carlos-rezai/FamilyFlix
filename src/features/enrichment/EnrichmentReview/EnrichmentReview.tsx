@@ -4,6 +4,7 @@ import type { ConflictChoices, Decision, EnrichmentRun } from '@/types';
 import { PillTabs } from '@/components';
 import { Button } from '@/primitives';
 import { DecisionRow } from '../DecisionRow/DecisionRow';
+import { SeasonChoices } from '../SeasonChoices/SeasonChoices';
 import {
   decisionKindFilter,
   writtenSummary,
@@ -39,12 +40,19 @@ export interface EnrichmentReviewProps {
   onPick: (id: string, tmdbId: number) => void;
   onSearch: (id: string, query: string) => void;
   onApply: (id: string, choices: ConflictChoices) => void;
+  /** A **Season choice** taken in the Seasons section. */
+  onChooseSeasonPoster?: (season: number, path: string) => void;
 }
+
+const NO_CHOICE = () => undefined;
 
 /**
  * The **Review step**: the two stat tiles, and — with nothing left to decide
  * — _All done_ over where it was saved, else one **Decision row** per
  * Decision; then Finish and _Sync again_.
+ *
+ * A single-series run's **Season choices** are the Seasons section, under
+ * the tiles and above both _All done_ and the rows.
  *
  * Over two kinds or more, the **Kind filter** sits above the rows and lets
  * one kind through — filtered, never grouped; screen state, falling back to
@@ -62,6 +70,7 @@ export function EnrichmentReview({
   onPick,
   onSearch,
   onApply,
+  onChooseSeasonPoster = NO_CHOICE,
 }: EnrichmentReviewProps) {
   const [chosen, setChosen] = useState<Decision['kind'] | 'all'>('all');
   const filter = decisionKindFilter(run.decisions, chosen);
@@ -82,6 +91,10 @@ export function EnrichmentReview({
           <TileLabel>need your decision</TileLabel>
         </Tile>
       </Tiles>
+
+      {run.seasons === undefined ? null : (
+        <SeasonChoices seasons={run.seasons} onChoose={onChooseSeasonPoster} />
+      )}
 
       {run.decisions.length === 0 ? (
         <AllDone>

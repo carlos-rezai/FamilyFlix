@@ -2,6 +2,7 @@ import type {
   ConflictChoices,
   Decision,
   EnrichmentRun,
+  SeasonChoice,
   StartEnrichment,
 } from '@/types';
 
@@ -161,4 +162,26 @@ export async function dismissDecisions(ids: string[]): Promise<EnrichmentRun> {
     throw new Error(`POST ${BULK_DISMISS_ENDPOINT} failed: ${response.status}`);
   }
   return (await response.json()) as EnrichmentRun;
+}
+
+/**
+ * A **Season choice** taken: the TMDB poster at `path` becomes season
+ * `season`'s, and the route's `200` echo — that season's choice — resolves.
+ * Anything else rejects.
+ */
+export async function chooseSeasonPoster(
+  season: number,
+  path: string
+): Promise<SeasonChoice> {
+  const url = `${CURRENT_ENDPOINT}/seasons/${season}/poster`;
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ path }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`POST ${url} failed: ${response.status}`);
+  }
+  return (await response.json()) as SeasonChoice;
 }

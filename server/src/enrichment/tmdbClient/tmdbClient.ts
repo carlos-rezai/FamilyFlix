@@ -152,6 +152,15 @@ export interface TmdbClient {
     signal?: AbortSignal
   ): Promise<TmdbOutcome<TmdbSeasonImage[]>>;
   /**
+   * `/3/tv/{id}/images`: a show's own posters, highest vote first — asked as
+   * `seasonImages` asks, in English or no language, then with no filter.
+   */
+  seriesImages(
+    key: string,
+    id: number,
+    signal?: AbortSignal
+  ): Promise<TmdbOutcome<TmdbSeasonImage[]>>;
+  /**
    * An image's bytes off `image.tmdb.org`, as a stream. Each of the three
    * takes the caller's signal last: aborting it aborts the request in flight,
    * and the call still answers a value.
@@ -330,13 +339,28 @@ export function createTmdbClient(
     );
   }
 
-  async function seasonImages(
+  function seasonImages(
     key: string,
     id: number,
     seasonNumber: number,
     signal?: AbortSignal
   ): Promise<TmdbOutcome<TmdbSeasonImage[]>> {
-    const path = `/3/tv/${id}/season/${seasonNumber}/images`;
+    return posters(`/3/tv/${id}/season/${seasonNumber}/images`, key, signal);
+  }
+
+  function seriesImages(
+    key: string,
+    id: number,
+    signal?: AbortSignal
+  ): Promise<TmdbOutcome<TmdbSeasonImage[]>> {
+    return posters(`/3/tv/${id}/images`, key, signal);
+  }
+
+  async function posters(
+    path: string,
+    key: string,
+    signal?: AbortSignal
+  ): Promise<TmdbOutcome<TmdbSeasonImage[]>> {
     const ask = async (
       params: Record<string, string>
     ): Promise<TmdbOutcome<TmdbSeasonImage[]>> => {
@@ -407,6 +431,7 @@ export function createTmdbClient(
     tv,
     season,
     seasonImages,
+    seriesImages,
     image,
     reachable,
   };

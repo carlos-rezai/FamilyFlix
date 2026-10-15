@@ -52,6 +52,11 @@ export interface TmdbScript {
   seasonImages?: Readonly<
     Record<number, Readonly<Record<number, readonly TmdbSeasonImage[]>>>
   >;
+  /**
+   * `seriesImages`' answers by show id, ordered by vote as the client answers
+   * them. A show not listed answers none.
+   */
+  seriesImages?: Readonly<Record<number, readonly TmdbSeasonImage[]>>;
   /** What `reachable` answers; `true` unless the suite says otherwise. */
   reachable?: boolean;
   /** What `authenticate` answers; `accepted` unless the suite says otherwise. */
@@ -222,6 +227,11 @@ export function fakeTmdb(script: TmdbScript = {}): FakeTmdb {
     seasonImages: vi.fn<TmdbClient['seasonImages']>((...args) =>
       answer('seasonImages', args, () =>
         ok([...(script.seasonImages?.[args[1]]?.[args[2]] ?? [])])
+      )
+    ),
+    seriesImages: vi.fn<TmdbClient['seriesImages']>((...args) =>
+      answer('seriesImages', args, () =>
+        ok([...(script.seriesImages?.[args[1]] ?? [])])
       )
     ),
     image: vi.fn<TmdbClient['image']>((...args) =>

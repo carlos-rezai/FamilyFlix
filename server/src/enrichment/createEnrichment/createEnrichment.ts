@@ -12,10 +12,12 @@ import type {
   FieldConflict,
   LogKind,
   Movie,
+  SeasonChoice,
   Series,
   StartEnrichment,
   TitleReference,
 } from '@/types';
+import { imageUrl } from '@/utils/imageUrl/imageUrl';
 import type { LibraryStorage } from '../../library';
 import type { Media } from '../../media/createMedia/createMedia';
 import { spellEpisodeTag } from '../../media/episodeTag/episodeTag';
@@ -28,6 +30,7 @@ import {
   type FetchedTvFields,
 } from '../fetchedFields/fetchedFields';
 import {
+  CANDIDATE_POSTER_BASE,
   CONFLICT_REASON,
   decisionFace,
   type DecisionFace,
@@ -97,6 +100,14 @@ export type PickOutcome =
 /** What _Apply choices_ came to, as a value the route maps to a status. */
 export type ApplyOutcome = { kind: 'applied' } | { kind: 'not-found' };
 
+/** What choosing a Season's poster came to, as a value the route maps to a status. */
+export type SeasonPosterOutcome =
+  | { kind: 'chosen'; choice: SeasonChoice }
+  | { kind: 'not-offered' }
+  | { kind: 'not-found' }
+  | { kind: 'unreachable' }
+  | { kind: 'failed' };
+
 /** What starting a **Sync** came to, as a value the route maps to a status. */
 export type StartEnrichmentOutcome =
   | { kind: 'started'; run: EnrichmentRun }
@@ -155,6 +166,17 @@ export interface Enrichment {
   apply(id: string, choices: ConflictChoices): Promise<ApplyOutcome>;
   /** _Skip_: take the row off and write nothing; `false` when none is held. */
   dismiss(id: string): boolean;
+  /**
+   * A **Season choice** taken: the TMDB image at `path` — one of that
+   * season's choices — stored as the season's `S02-poster.jpg`, replacing the
+   * held one, and recorded as its **Season poster**. `not-found` without a
+   * single-series run holding that season; `not-offered` for a path it does
+   * not offer; `unreachable` when TMDB was not reached, nothing changed.
+   */
+  chooseSeasonPoster(
+    season: number,
+    path: unknown
+  ): Promise<SeasonPosterOutcome>;
 }
 
 export interface EnrichmentDeps {
@@ -189,6 +211,9 @@ async function reachableFolders(
   }
   return reached;
 }
+
+/** At most this many posters a **Season choice** offers. */
+const SEASON_CHOICE_CAP = 10;
 
 /** The last lines of the log a snapshot carries, the importer's cap. */
 const LOG_CAP = 80;
@@ -700,6 +725,19 @@ export function createEnrichment({
       fetched,
     };
 
+    // A single-series run offers each season a choice of posters: its own,
+    // then the show's.
+    const choosing =
+      current.scope === 'single' && current.seriesId === series.id;
+    let showImages: TmdbSeasonImage[] = [];
+    if (choosing) {
+      const asked = await client.seriesImages(apiKey, detail.id, signal);
+      if (signal.aborted) return written;
+      if (asked.kind !== 'ok') return { kind: 'stop', stop: asked.kind };
+      showImages = asked.value;
+    }
+    const offered = new Map<number, SeasonChoice['choices']>();
+
     for (const season of seasons.filter((each) => each.number > 0)) {
       if (signal.aborted) return written;
       const theirs = await client.season(
@@ -712,7 +750,9 @@ export function createEnrichment({
       if (theirs.kind !== 'ok') return { kind: 'stop', stop: theirs.kind };
       // No default poster: the season's images, in any language, instead.
       let images: TmdbSeasonImage[] = [];
-      if (wantsSeasonPoster(season, fields) && !theirs.value.poster_path) {
+      const noDefault =
+        wantsSeasonPoster(season, fields) && !theirs.value.poster_path;
+      if (choosing || noDefault) {
         const asked = await client.seasonImages(
           apiKey,
           detail.id,
@@ -723,7 +763,21 @@ export function createEnrichment({
         if (asked.kind !== 'ok') return { kind: 'stop', stop: asked.kind };
         images = asked.value;
       }
-      const { poster } = planSeason(season, theirs.value, fields, images);
+      if (choosing) {
+        offered.set(
+          season.number,
+          [
+            ...images.map((each) => posterChoice(each, 'season')),
+            ...showImages.map((each) => posterChoice(each, 'series')),
+          ].slice(0, SEASON_CHOICE_CAP)
+        );
+      }
+      const { poster } = planSeason(
+        season,
+        theirs.value,
+        fields,
+        noDefault ? images : []
+      );
       if (poster !== null) {
         const name = `${spellEpisodeTag(season.number)}-poster.jpg`;
         const stored = await storeImage(
@@ -748,7 +802,65 @@ export function createEnrichment({
         signal
       );
     }
+    if (choosing) {
+      // Read afresh, so each choice carries the poster the pass left held.
+      const held = storage.getSeriesDetail(series.id)?.seasons ?? [];
+      current.seasons = [...offered].map(([number, choices]) => ({
+        season: number,
+        posterUrl: imageUrl(
+          held.find((each) => each.number === number)?.posterPath ?? null
+        ),
+        choices,
+      }));
+    }
     return written;
+  }
+
+  /** One TMDB poster offered to a Season, by its path and its source. */
+  function posterChoice(
+    image: TmdbSeasonImage,
+    source: 'season' | 'series'
+  ): SeasonChoice['choices'][number] {
+    return {
+      path: image.file_path,
+      url: `${CANDIDATE_POSTER_BASE}${image.file_path}`,
+      source,
+    };
+  }
+
+  async function chooseSeasonPoster(
+    season: number,
+    path: unknown
+  ): Promise<SeasonPosterOutcome> {
+    const current = run;
+    const seriesId = current?.seriesId;
+    const held = current?.seasons?.find((each) => each.season === season);
+    if (current === null || seriesId === undefined || held === undefined) {
+      return { kind: 'not-found' };
+    }
+    if (
+      typeof path !== 'string' ||
+      !held.choices.some((choice) => choice.path === path)
+    ) {
+      return { kind: 'not-offered' };
+    }
+    const folder = storage.mediaFolderOf('series', seriesId);
+    if (folder === null) return { kind: 'not-found' };
+    const image = await client.image(path);
+    if (image.kind !== 'ok') return { kind: 'unreachable' };
+    let stored: string;
+    try {
+      stored = await media.storeNamed(
+        folder,
+        `${spellEpisodeTag(season)}-poster.jpg`,
+        image.value
+      );
+      storage.setSeasonPoster(seriesId, season, stored);
+    } catch {
+      return { kind: 'failed' };
+    }
+    held.posterUrl = imageUrl(stored);
+    return { kind: 'chosen', choice: structuredClone(held) };
   }
 
   /** One series through: looked up, then written as `writeShow` writes it. */
@@ -1243,5 +1355,6 @@ export function createEnrichment({
     pick,
     apply,
     dismiss,
+    chooseSeasonPoster,
   };
 }

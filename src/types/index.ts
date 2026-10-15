@@ -120,6 +120,8 @@ export type {
   Decision,
   EnrichmentPhase,
   EnrichmentRun,
+  SeasonChoice,
+  SeasonPosterChoice,
   StartEnrichment,
   TitleReference,
 } from './enrichment';

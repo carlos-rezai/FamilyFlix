@@ -9,6 +9,7 @@ import type {
 import {
   applyChoices,
   cancelEnrichment,
+  chooseSeasonPoster as postSeasonPoster,
   dismissDecision,
   dismissDecisions,
   EnrichmentBusyError,
@@ -96,6 +97,12 @@ export interface EnrichmentRunState {
    * the run stays as it was.
    */
   skipMany: (ids: string[]) => Promise<void>;
+  /**
+   * A **Season choice** taken: the route's echo held in place of that
+   * season, the rest of the run as it was. Rejects when the route refuses;
+   * the run stays as it was.
+   */
+  chooseSeasonPoster: (season: number, path: string) => Promise<void>;
 }
 
 /**
@@ -210,6 +217,23 @@ export function useEnrichmentRun(
     setRun(await dismissDecisions(ids));
   }, []);
 
+  const chooseSeasonPoster = useCallback(
+    async (season: number, path: string) => {
+      const echo = await postSeasonPoster(season, path);
+      setRun((held) =>
+        held?.seasons === undefined
+          ? held
+          : {
+              ...held,
+              seasons: held.seasons.map((each) =>
+                each.season === season ? echo : each
+              ),
+            }
+      );
+    },
+    []
+  );
+
   const live = run !== null && run.phase === 'running';
   useEffect(() => {
     if (!live) {
@@ -245,5 +269,6 @@ export function useEnrichmentRun(
     apply,
     dismiss,
     skipMany,
+    chooseSeasonPoster,
   };
 }

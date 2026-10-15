@@ -91,6 +91,7 @@ export function EnrichmentFlow() {
     apply,
     dismiss,
     skipMany,
+    chooseSeasonPoster,
   } = useEnrichmentRun(single);
   const { summary, retry } = useEnrichmentSummary();
   const navigate = useNavigate();
@@ -198,6 +199,15 @@ export function EnrichmentFlow() {
     [search, notify]
   );
 
+  const onChooseSeasonPoster = useCallback(
+    (season: number, path: string) => {
+      chooseSeasonPoster(season, path).catch(() => {
+        // A refused choice leaves the held poster drawn, to choose again.
+      });
+    },
+    [chooseSeasonPoster]
+  );
+
   const openSettings = useCallback(() => navigate('/settings'), [navigate]);
 
   const onStart = useCallback(() => {
@@ -291,6 +301,7 @@ export function EnrichmentFlow() {
           onPick={onPick}
           onSearch={onSearch}
           onApply={onApply}
+          onChooseSeasonPoster={onChooseSeasonPoster}
         />
       ) : (
         <EnrichmentProgress run={run} onStop={cancel} />

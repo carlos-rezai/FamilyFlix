@@ -15,6 +15,7 @@ export function offlineTmdb(): TmdbClient {
     tv: () => Promise.resolve(unreachable),
     season: () => Promise.resolve(unreachable),
     seasonImages: () => Promise.resolve(unreachable),
+    seriesImages: () => Promise.resolve(unreachable),
     image: () => Promise.resolve(unreachable),
     reachable: () => Promise.resolve(false),
   };

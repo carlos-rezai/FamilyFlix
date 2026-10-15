@@ -5,6 +5,7 @@ import { pipeline } from 'node:stream';
 import type {
   Enrichment,
   SaveKeyOutcome,
+  SeasonPosterOutcome,
   StartEnrichmentOutcome,
 } from '../enrichment/createEnrichment/createEnrichment';
 import express, { type Request, type Response, type Router } from 'express';
@@ -515,6 +516,22 @@ const START_REFUSALS: Record<
 };
 
 /** Why a review search or pick answered nothing, as a status. */
+/** How a refused **Season choice** reads on the wire. */
+const SEASON_POSTER_REFUSALS: Readonly<
+  Record<
+    Exclude<SeasonPosterOutcome['kind'], 'chosen'>,
+    { status: number; error: string }
+  >
+> = {
+  'not-offered': {
+    status: 400,
+    error: 'That poster is not one this season was offered.',
+  },
+  'not-found': { status: 404, error: 'No sync holds that season.' },
+  unreachable: { status: 503, error: 'Couldn’t reach TMDB.' },
+  failed: { status: 500, error: 'The poster could not be saved.' },
+};
+
 const DECISION_REFUSALS: Record<
   'not-found' | 'refused' | 'unreachable',
   { status: number; error: string }
@@ -2015,6 +2032,27 @@ export function createApiRouter(
         return;
       }
       res.status(204).end();
+    }
+  );
+
+  // A **Season choice** taken: `200` with that season's choice, its poster
+  // replaced; `400` for a path the season does not offer, `404` without a
+  // single-series run holding that season, `503` when TMDB was not reached —
+  // the poster left as it was — and `500` when it could not be stored.
+  router.post(
+    '/enrichment/current/seasons/:season/poster',
+    async (req: Request<{ season: string }>, res: Response) => {
+      const season = /^\d+$/.test(req.params.season)
+        ? Number(req.params.season)
+        : Number.NaN;
+      const { path } = (req.body ?? {}) as { path?: unknown };
+      const outcome = await enrichment.chooseSeasonPoster(season, path);
+      if (outcome.kind === 'chosen') {
+        res.json(outcome.choice);
+        return;
+      }
+      const refused = SEASON_POSTER_REFUSALS[outcome.kind];
+      res.status(refused.status).json({ error: refused.error });
     }
   );
 
