@@ -7,6 +7,8 @@ import {
   type StartEnrichment,
 } from '@/types';
 
+import { idListBody } from '../idListBody/idListBody';
+
 /** A body read into what the domain is handed, or the sentence a `400` says. */
 export type BodyRead<T> = { ok: true; value: T } | { ok: false; error: string };
 
@@ -85,20 +87,9 @@ export function conflictChoicesBody(body: unknown): BodyRead<ConflictChoices> {
 }
 
 /**
- * _Skip all_'s body → the ids of the **Decisions** to let go: `ids` a
- * non-empty list of strings, refused in a sentence otherwise. Whether the run
- * holds each is the domain's to say.
+ * _Skip all_'s body → the ids of the **Decisions** to let go, refused in a
+ * sentence otherwise.
  */
 export function decisionIdsBody(body: unknown): BodyRead<string[]> {
-  const { ids } = (typeof body === 'object' && body !== null ? body : {}) as {
-    ids?: unknown;
-  };
-  if (
-    !Array.isArray(ids) ||
-    ids.length === 0 ||
-    !ids.every((id): id is string => typeof id === 'string')
-  ) {
-    return { ok: false, error: 'Ids must be a list of decision ids.' };
-  }
-  return { ok: true, value: ids };
+  return idListBody(body, 'Ids must be a list of decision ids.');
 }

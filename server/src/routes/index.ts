@@ -70,9 +70,9 @@ import {
   startEnrichmentBody,
 } from './enrichmentBody/enrichmentBody';
 import {
-  dismissIdsBody,
   importStartBody,
   pickFolderBody,
+  problemIdsBody,
   sheetChoicesBody,
 } from './importBody/importBody';
 import {
@@ -2594,7 +2594,7 @@ export function createApiRouter(
   router.post(
     '/import/current/problems/dismiss',
     (req: Request, res: Response) => {
-      const read = dismissIdsBody(req.body);
+      const read = problemIdsBody(req.body);
       if (!read.ok) {
         res.status(400).json({ error: read.error });
         return;
@@ -2710,7 +2710,7 @@ export function createApiRouter(
   router.post(
     '/import/current/problems/import-guessed',
     async (req: Request, res: Response) => {
-      const read = dismissIdsBody(req.body);
+      const read = problemIdsBody(req.body);
       if (!read.ok) {
         res.status(400).json({ error: read.error });
         return;

@@ -6,6 +6,7 @@ import {
   type SheetField,
 } from '@/types';
 import type { BodyRead } from '../enrichmentBody/enrichmentBody';
+import { idListBody } from '../idListBody/idListBody';
 
 /**
  * _Apply choices_' body on a `differs` **Problem** → its **SheetChoices**:
@@ -83,20 +84,10 @@ export function importStartBody(
 }
 
 /**
- * A bulk **Dismiss**'s body — _Skip all_ and _Keep all mine_ — → the ids to
- * take off: `ids` a non-empty list of strings, refused in a sentence
- * otherwise. Whether the run holds each is the domain's to say.
+ * A bulk press's body on the Review step — _Skip all_, _Keep all mine_ and
+ * _Import all as guessed_ — → the **Problem** ids it names, refused in a
+ * sentence otherwise.
  */
-export function dismissIdsBody(body: unknown): BodyRead<string[]> {
-  const { ids } = (typeof body === 'object' && body !== null ? body : {}) as {
-    ids?: unknown;
-  };
-  if (
-    !Array.isArray(ids) ||
-    ids.length === 0 ||
-    !ids.every((id): id is string => typeof id === 'string')
-  ) {
-    return { ok: false, error: 'Ids must be a list of problem ids.' };
-  }
-  return { ok: true, value: ids };
+export function problemIdsBody(body: unknown): BodyRead<string[]> {
+  return idListBody(body, 'Ids must be a list of problem ids.');
 }

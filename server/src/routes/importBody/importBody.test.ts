@@ -15,6 +15,7 @@ import { IMPORT_MODES, SHEET_FIELDS } from '@/types';
 import {
   importStartBody,
   pickFolderBody,
+  problemIdsBody,
   sheetChoicesBody,
 } from './importBody';
 
@@ -198,5 +199,21 @@ describe('importStartBody: the Import mode', () => {
 
     expect(read.ok).toBe(false);
     expect(!read.ok && read.error).toMatch(SENTENCE);
+  });
+});
+
+// 42 — Review at scale refactor (issue #366): the bulk presses' body, one line
+// over `idListBody` — its refusals are that reader's suite; this is the
+// sentence the Review step's routes answer in.
+describe('problemIdsBody', () => {
+  it('reads a list of Problem ids, and refuses anything else in its sentence', () => {
+    expect(problemIdsBody({ ids: ['p2', 'p1'] })).toEqual({
+      ok: true,
+      value: ['p2', 'p1'],
+    });
+    expect(problemIdsBody({ ids: [] })).toEqual({
+      ok: false,
+      error: 'Ids must be a list of problem ids.',
+    });
   });
 });
