@@ -1,7 +1,7 @@
 # 43 — TMDB ratings
 
 > **Initiative:** `tmdb-ratings`
-> **Issue:** to be filed by `write-a-prd` (step 26)
+> **Issue:** #367 (step 26)
 > **PRD:** `docs/PRDs/43-tmdb-ratings.md` (to be written)
 > **Plan:** `docs/PRDs/43-tmdb-ratings-plan.md` (to be written)
 
