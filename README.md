@@ -375,6 +375,7 @@ Keep the description short enough to fit on one line — long descriptions get w
 | Import review — folders + sheet, adjustments listed | ✅ Done         |
 | Link or copy — import without a second copy         | ✅ Done         |
 | Review at scale + Season art — grouped review       | ✅ Done         |
+| TMDB ratings — fetched stars until the family rates | 🔜 Planned      |
 | Collections / playlists                             | 🧭 Roadmap      |
 | Auto-on subtitles                                   | 🧭 Roadmap      |
 | Backgroundable import                               | 🧭 Roadmap      |
@@ -476,6 +477,20 @@ listed more than 1,400 rows. Both are done (design logs 41 and 42):
     shows a **Seasons** section — each season's current poster beside TMDB's
     choices — so every season can be given art, and the series form takes a
     season poster from a file too.
+
+Step 26 came out of using step 25: a synced library still showed every title
+at 0/5 stars, because a Sync stores TMDB's score but never draws it. It is
+next, and goes through grill-me and a prototype revision before it is built:
+
+26. 🔜 **TMDB ratings** — a switch in Settings → Display, _Fill in ratings
+    from TMDB_, **on by default**. While it is on, a title the family hasn't
+    rated shows TMDB's score as stars (7.8/10 → 4★, to the nearest half), so a
+    synced library no longer reads 0/5 everywhere; setting the stars by hand
+    saves the family's own rating, which always wins and is never overwritten
+    by a Sync. Off shows the family's ratings alone, as today. Nothing is
+    copied between the two — the switch only changes what is drawn — and
+    TMDB's stars look different from the family's, so it's clear whose they
+    are.
 
 A 🧭 Roadmap item is not in the chain — it comes after it, if ever.
 

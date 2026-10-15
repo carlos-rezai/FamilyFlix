@@ -1244,6 +1244,24 @@ episodes each): the copy was slow and doubled the disk, and the review ran to
     Decisions, an automatic series-poster fallback, Season page art, and
     grouping the Sync's review.
 
+Step 26 came out of using step 25: a synced library still drew every title
+**Unrated** (0/5), because the **TMDB score** is stored and not drawn (log 23
+Q12). It is next; its grill-me, prototype revision and PRD come first:
+
+26. 🔜 **TMDB ratings** — a **Display group** row, _Fill in ratings from
+    TMDB_, a Toggle **on by default**, a household preference beside
+    **Ultrawide margins** (`settings` key, `GET /api/settings`, a
+    **Single-signal write**). While on, a title draws its **Rating** if the
+    family set one, else its TMDB score as stars (`vote_average` / 2, to the
+    nearest half star); off, the Rating alone, as today. The two stay two
+    columns — the switch changes what is drawn, never what is stored: the
+    **Rating picker** still writes the household Rating, which always wins and
+    no Sync touches (log 23's rule kept). To settle in the grill: how a
+    TMDB-drawn rating is told apart from the family's on every surface stars
+    appear, how a Rating is cleared back to TMDB's, whether _Highest rated_
+    and the rating filter read the drawn value, series alike, and that an
+    Export still writes the household Rating alone.
+
 A 🧭 Roadmap item is not in this chain — it is after it, if ever.
 
 ### Foundation
@@ -1309,6 +1327,7 @@ A 🧭 Roadmap item is not in this chain — it is after it, if ever.
 - ✅ **Ultrawide margins** — an optional left/right margin for ultra-wide monitors: the Display group's Toggle caps every screen but the player at 1920px, centred.
 
 - ✅ **Open the media folder** — _Open folder_ on the Storage card, over a no-argument `openMedia` bridge channel: main makes the managed media directory if it is missing and opens it in Explorer.
+- 🔜 **TMDB ratings** — the Display group's second row, _Fill in ratings from TMDB_, on by default: an unrated title draws its TMDB score as stars, marked as TMDB's; the family's own Rating, set by hand, always wins and is never overwritten (step 26).
 - ✅ **Factory reset** — the Storage card's last row: _Reset…_ opens the **Reset dialog**, what goes and what stays, and _Erase everything_ erases every title, watch history and setting, empties the managed media directory and takes back an uploaded component, then reloads onto an empty library. Refused in one sentence while an import or a Sync runs; Library folders on disk stay.
 
 ### System
