@@ -361,20 +361,27 @@ export function createPlayback(
     return mediaDuration(file);
   };
 
-  const playback: Playback = {
-    videoFile: ({ videoPath, videoFolderId }) => {
-      let file: string | null;
-      if (videoFolderId === null) {
-        file = mediaFilePath(mediaPath, videoPath);
-      } else {
-        const folder = libraryFolderPath(videoFolderId);
-        if (folder !== null && readableFolderSync(folder) !== 'readable') {
-          return { kind: 'unreachable' };
-        }
-        file = folder === null ? null : linkedVideoPath(folder, videoPath);
+  /**
+   * A row's video → its file: under the media root, or a **Linked video**
+   * under its Library folder, whose reach is read afresh on every call. Read
+   * by its member and by `frame`.
+   */
+  const videoFile: Playback['videoFile'] = ({ videoPath, videoFolderId }) => {
+    let file: string | null;
+    if (videoFolderId === null) {
+      file = mediaFilePath(mediaPath, videoPath);
+    } else {
+      const folder = libraryFolderPath(videoFolderId);
+      if (folder !== null && readableFolderSync(folder) !== 'readable') {
+        return { kind: 'unreachable' };
       }
-      return file === null ? { kind: 'missing' } : { kind: 'file', file };
-    },
+      file = folder === null ? null : linkedVideoPath(folder, videoPath);
+    }
+    return file === null ? { kind: 'missing' } : { kind: 'file', file };
+  };
+
+  return {
+    videoFile,
     read: (file) => {
       const { probe, decision } = decide(file);
       const durationSeconds = lengthOf(file, probe);
@@ -433,7 +440,7 @@ export function createPlayback(
         if (component === null) {
           return null;
         }
-        const found = playback.videoFile(video);
+        const found = videoFile(video);
         if (found.kind !== 'file') {
           return null;
         }
@@ -452,5 +459,4 @@ export function createPlayback(
       }
     },
   };
-  return playback;
 }
