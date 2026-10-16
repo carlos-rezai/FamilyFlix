@@ -741,7 +741,7 @@ rated draws TMDB's score as its stars, marked as TMDB's; the family's own
 | **TMDB rating** (new)       | The **TMDB score** read as a **Rating**: `round(tmdb_score)` half-star units, so `7.4` is 3½ ★. Never stored — derived where it is drawn, as `tmdbRating` in `src/utils/shownRating/`, and, as `shownRatingSql`, where it is sorted.                                                                                             | TMDB stars, community rating, score (for this)    |
 | **Shown rating** (new)      | What a surface draws for a title: its **Rating** when the family set one, else its **TMDB rating** while **TMDB ratings** is on, else **Unrated**. `shownRating` in `src/utils/`, `shownRatingSql` in `library/browse/`; _Highest rated_ and the **Minimum rating** read it.                                                     | effective rating, display rating, fallback rating |
 | **Rating source** (new)     | Whose a **Shown rating** is: `household` or `tmdb` (`RatingSource`). A `tmdb` one is drawn as **TMDB-marked stars**.                                                                                                                                                                                                             | origin, provider                                  |
-| **TMDB-marked stars** (new) | How a **TMDB rating** is drawn on every surface: the filled stars muted rather than in the accent, and the value followed by a small `TMDB` tag — `StarRating`'s `muted` and `tag`, answered for a **Rating source** by `tmdbMarks`, the **Rating picker**'s `placeholder` and `placeholderTag`; the word is `TMDB_TAG`.         | grey stars, TMDB badge                            |
+| **TMDB-marked stars** (new) | How a **TMDB rating** is drawn on every surface: the same accent stars as the family's, the value followed by a small `TMDB` tag — `StarRating`'s `tag`, answered for a **Rating source** by `tmdbMarks`, the **Rating picker**'s `placeholder` and `placeholderTag`; the word is `TMDB_TAG`.                                    | grey stars, muted stars, TMDB badge               |
 | **TMDB ratings** (new)      | The household's on/off preference (`settings.tmdb-ratings`, `Settings.tmdbRatings`, default **on**), the Display group's _Fill in ratings from TMDB_ row. Held by `DisplayPreferenceProvider` beside **Ultrawide margins**, `null` read as off; a **Single-signal write**, `POST /api/settings/tmdb-ratings { value: boolean }`. | TMDB fill, auto-rating, rating fallback           |
 
 ## Relationships
@@ -1535,7 +1535,7 @@ Hard` gets found and `Die Hard\extras` doesn't become a second film."
 > **Dev:** "The family never rated _Heat_, but the Sync stored a **TMDB
 > score** of 8.3. What does the card draw?"
 > **Maintainer:** "With **TMDB ratings** on, its **Shown rating** is the
-> **TMDB rating**, 4 ★ — **TMDB-marked stars**, muted with a `TMDB` tag, so
+> **TMDB rating**, 4 ★ — **TMDB-marked stars**, the same orange with a `TMDB` tag, so
 > nobody takes it for ours."
 > **Dev:** "And when Dad clicks 4½ on the movie page?"
 > **Maintainer:** "That's a **Rating**, the household's, and it wins from then

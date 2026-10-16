@@ -30,15 +30,14 @@ export const Star = styled.span<{ $size: number }>`
 `;
 
 /** How full one star is drawn: the clipped overlay, laid over the dim glyph. */
-export const StarFill = styled.span<{ $fill: number; $muted: boolean }>`
+export const StarFill = styled.span<{ $fill: number }>`
   position: absolute;
   left: 0;
   top: 0;
   height: 100%;
   width: ${({ $fill }) => $fill}%;
   overflow: hidden;
-  color: ${({ $muted, theme }) =>
-    $muted ? theme.colors.textDim : theme.colors.accent};
+  color: ${({ theme }) => theme.colors.accent};
   pointer-events: none;
 `;
 

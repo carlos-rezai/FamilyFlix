@@ -7,15 +7,15 @@ import { TMDB_TAG, tmdbMarks } from './tmdbMarks';
 
 describe('tmdbMarks', () => {
   it('mutes and tags a TMDB-drawn rating', () => {
-    expect(tmdbMarks('tmdb')).toEqual({ muted: true, tag: 'TMDB' });
+    expect(tmdbMarks('tmdb')).toEqual({ tag: 'TMDB' });
   });
 
   it('leaves the household’s Rating plain', () => {
-    expect(tmdbMarks('household')).toEqual({ muted: false, tag: undefined });
+    expect(tmdbMarks('household')).toEqual({ tag: undefined });
   });
 
   it('leaves unrated stars plain', () => {
-    expect(tmdbMarks(null)).toEqual({ muted: false, tag: undefined });
+    expect(tmdbMarks(null)).toEqual({ tag: undefined });
   });
 
   it('spells the tag TMDB', () => {

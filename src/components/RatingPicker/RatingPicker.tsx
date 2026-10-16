@@ -18,7 +18,7 @@ export interface RatingPickerProps {
   /** Star glyph size in px — the strip's gap and hit areas scale off it. */
   size?: number;
   /**
-   * A rating to show, muted, while `value` is `null` — TMDB's, on the movie
+   * A rating to show while `value` is `null` — TMDB's, on the movie
    * page — as a percent. A placeholder and nothing more: a click always sets
    * the household's own value, and it is never offered as a clear.
    */
@@ -121,7 +121,7 @@ function segmentLabel(percent: number): string {
  * as a group called "Your rating" rather than as loose furniture.
  *
  * A **placeholder** — TMDB's rating, on the movie page — is drawn while `value`
- * is `null` and nothing is previewed: the stars muted, the label `x / 5` with
+ * is `null` and nothing is previewed: the stars at it, the label `x / 5` with
  * its tag after it. It is never the value. A click on its own segment adopts it
  * as the household's rating, and no segment ever offers it as a clear.
  *
@@ -162,11 +162,7 @@ export function RatingPicker({
         {STARS.map((nth) => (
           <Star key={nth} $size={size}>
             {STAR}
-            <StarFill
-              $fill={fillOf(shown, nth)}
-              $muted={placeholderShown !== null}
-              aria-hidden="true"
-            >
+            <StarFill $fill={fillOf(shown, nth)} aria-hidden="true">
               {STAR}
             </StarFill>
             {HALVES.map((half) => {

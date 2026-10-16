@@ -754,10 +754,9 @@ describe('RatingPicker — the strip as a group', () => {
 /**
  * 26 — TMDB ratings (issue #371): while the household has not rated a film, the
  * picker can be handed a **placeholder** — TMDB's rating, as a percent — and a
- * `placeholderTag`. It draws muted stars at the placeholder and reads
+ * `placeholderTag`. It draws accent stars at the placeholder and reads
  * `x / 5 <tag>` where `Not rated` would be. It is a placeholder and nothing
- * more: a click always sets the household's own value, the hover preview stays
- * in the accent, and only a held `value` is ever offered as a clear.
+ * more: a click always sets the household's own value, and only a held `value` is ever offered as a clear.
  */
 describe('RatingPicker — the placeholder', () => {
   /** `colors.accent`, as the browser resolves it. */
@@ -770,14 +769,13 @@ describe('RatingPicker — the placeholder', () => {
   /** Everything the label beside the stars reads. */
   const label = () => group().parentElement?.textContent ?? '';
 
-  it('draws muted stars at the placeholder while the value is null', () => {
+  it('draws accent stars at the placeholder while the value is null', () => {
     renderPicker({ value: null, placeholder: 70, placeholderTag: 'TMDB' });
 
     expect(fillOf(3)).toBe('100%');
     expect(fillOf(4)).toBe('50%');
     expect(fillOf(5)).toBe('0%');
-    expect(inkOf(1)).not.toBe('');
-    expect(inkOf(1)).not.toBe(ACCENT);
+    expect(inkOf(1)).toBe(ACCENT);
   });
 
   it('reads the placeholder out of five with its tag, where Not rated was', () => {
@@ -846,7 +844,7 @@ describe('RatingPicker — the placeholder', () => {
     expect(named('Rate 3½ stars')).toBe(segment(7));
   });
 
-  it('previews a hover in the accent, not the muted ink', () => {
+  it('previews a hover in the accent', () => {
     renderPicker({ value: null, placeholder: 70, placeholderTag: 'TMDB' });
 
     fireEvent.mouseEnter(segment(9));
@@ -856,7 +854,7 @@ describe('RatingPicker — the placeholder', () => {
     expect(inkOf(1)).toBe(ACCENT);
   });
 
-  it('gives the muted placeholder back when the pointer leaves', () => {
+  it('gives the placeholder back when the pointer leaves', () => {
     renderPicker({ value: null, placeholder: 70, placeholderTag: 'TMDB' });
 
     fireEvent.mouseEnter(segment(9));
@@ -864,7 +862,7 @@ describe('RatingPicker — the placeholder', () => {
 
     expect(fillOf(4)).toBe('50%');
     expect(fillOf(5)).toBe('0%');
-    expect(inkOf(1)).not.toBe(ACCENT);
+    expect(inkOf(1)).toBe(ACCENT);
   });
 
   it('brings the placeholder back when the value is cleared', () => {

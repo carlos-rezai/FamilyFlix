@@ -52,11 +52,11 @@ describe('StarRating — unrated is not zero', () => {
 
 /**
  * 26 — TMDB ratings (issue #370): a TMDB-sourced rating is drawn as
- * **TMDB-marked stars** — the same row, its filled stars `muted` off the
- * accent, and a `tag` after the value. The atom stays domain-free: it is
+ * **TMDB-marked stars** — the same row in the same accent, and a `tag` after
+ * the value. The atom stays domain-free: it is
  * handed the word, it does not know what TMDB is.
  */
-describe('StarRating — muted and tag', () => {
+describe('StarRating — the tag', () => {
   /** `colors.accent`, as the browser resolves it. */
   const ACCENT = 'rgb(217, 122, 78)';
 
@@ -65,23 +65,21 @@ describe('StarRating — muted and tag', () => {
     return screen.getAllByText('★★★★★')[1];
   }
 
-  it('changes nothing with neither prop: the accent fill, nothing after the value', () => {
+  it('changes nothing without a tag: the accent fill, nothing after the value', () => {
     const { container } = renderStars({ rating: 80, showValue: true });
 
     expect(getComputedStyle(filledStars()).color).toBe(ACCENT);
     expect(container.textContent).toBe('★★★★★★★★★★4.0');
   });
 
-  it('moves the filled stars off the accent when muted', () => {
-    renderStars({ rating: 80, showValue: true, muted: true });
+  it('keeps the filled stars in the accent when tagged', () => {
+    renderStars({ rating: 80, showValue: true, tag: 'TMDB' });
 
-    const ink = getComputedStyle(filledStars()).color;
-    expect(ink).not.toBe('');
-    expect(ink).not.toBe(ACCENT);
+    expect(getComputedStyle(filledStars()).color).toBe(ACCENT);
   });
 
   it('draws the tag as readable text after the value', () => {
-    renderStars({ rating: 70, showValue: true, muted: true, tag: 'TMDB' });
+    renderStars({ rating: 70, showValue: true, tag: 'TMDB' });
 
     const value = screen.getByText('3.5');
     const tag = screen.getByText('TMDB');

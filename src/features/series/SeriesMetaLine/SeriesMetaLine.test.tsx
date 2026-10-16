@@ -68,8 +68,7 @@ describe('SeriesMetaLine', () => {
 
 /**
  * 26 — TMDB ratings (issue #372): a `tmdb`-sourced rating is drawn as
- * **TMDB-marked stars** — `StarRating`'s `muted` and the `TMDB` tag after the
- * value — and a household one as the family's own, unmarked.
+ * **TMDB-marked stars** — the `TMDB` tag after the value — and a household one as the family's own, unmarked.
  */
 describe('SeriesMetaLine — the rating’s source', () => {
   it('draws the TMDB tag after the value for a tmdb source, and none for a household one', () => {

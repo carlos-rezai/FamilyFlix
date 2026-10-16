@@ -12,7 +12,7 @@ export interface SeriesMetaLineProps {
   countLabel: string;
   /** 0–100 percent the read-only stars fill against; `null` when unrated. */
   ratingPercent: number | null;
-  /** Whose rating the stars draw: `tmdb` is muted and tagged, `null` unrated. */
+  /** Whose rating the stars draw: `tmdb` is tagged, `null` unrated. */
   ratingSource: RatingSource | null;
 }
 

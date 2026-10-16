@@ -16,8 +16,6 @@ export interface StarRatingProps {
   size?: number;
   /** Append the numeric out-of-5 value (e.g. "4.0"). Ignored when unrated. */
   showValue?: boolean;
-  /** Draw the filled stars in a neutral ink rather than the accent. */
-  muted?: boolean;
   /** A small word after the value — whose rating it is. Read as text. */
   tag?: string;
 }
@@ -34,15 +32,14 @@ const STARS = '★★★★★';
  * in a fixed-height tile, and removing it would leave the cards in a carousel
  * row sitting at different heights.
  *
- * `muted` and `tag` draw a rating that is not the household's: the filled
- * stars off the accent and a word after the value. The atom is handed the word
- * and knows nothing about where the rating came from.
+ * `tag` draws a rating that is not the household's: the same accent stars
+ * with a word after the value. The atom is handed the word and knows nothing
+ * about where the rating came from.
  */
 export function StarRating({
   rating,
   size = 14,
   showValue = false,
-  muted = false,
   tag,
 }: StarRatingProps) {
   const clamped = rating === null ? 0 : Math.max(0, Math.min(100, rating));
@@ -52,9 +49,7 @@ export function StarRating({
     <Root>
       <StarWrap $size={size}>
         <StarBase>{STARS}</StarBase>
-        <StarFill $rating={clamped} $muted={muted}>
-          {STARS}
-        </StarFill>
+        <StarFill $rating={clamped}>{STARS}</StarFill>
       </StarWrap>
       {showValue && rating !== null ? (
         <Value $size={size}>{value}</Value>

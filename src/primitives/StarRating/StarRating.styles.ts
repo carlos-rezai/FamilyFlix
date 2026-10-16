@@ -19,15 +19,14 @@ export const StarBase = styled.span`
   color: rgba(255, 255, 255, 0.22);
 `;
 
-export const StarFill = styled.span<{ $rating: number; $muted: boolean }>`
+export const StarFill = styled.span<{ $rating: number }>`
   position: absolute;
   left: 0;
   top: 0;
   height: 100%;
   width: ${({ $rating }) => $rating}%;
   overflow: hidden;
-  color: ${({ theme, $muted }) =>
-    $muted ? theme.colors.textDim : theme.colors.accent};
+  color: ${({ theme }) => theme.colors.accent};
   white-space: nowrap;
 `;
 
