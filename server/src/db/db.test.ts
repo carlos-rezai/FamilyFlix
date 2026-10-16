@@ -43,10 +43,10 @@ const EXPECTED_GENRES = [
   'Crime',
 ];
 
-// The version a fresh database migrates to — migration #12, the **Linked
-// video**'s `video_folder_id` (issue #342). Every "at the latest version"
-// assertion reads it, so the next migration moves one number rather than ten.
-const LATEST_VERSION = 12;
+// The version a fresh database migrates to — migration #13, a TMDB score of 0
+// read as no score (issue #374). Every "at the latest version" assertion reads
+// it, so the next migration moves one number rather than ten.
+const LATEST_VERSION = 13;
 
 // What migration #5 adds, by table: the three columns a Sync writes on a movie
 // and a series, and the episode's still. Additive, nullable, nothing seeded.
@@ -1635,12 +1635,6 @@ describe('db: migration #12 — the Linked video', () => {
     }
   });
 
-  it('lands a fresh database at version 12', () => {
-    const db = track(open(':memory:'));
-
-    expect(userVersion(db)).toBe(LATEST_VERSION);
-  });
-
   /** A library written at the latest version, then wound back to before #12. */
   function windBackToV11(path: string): void {
     const db = open(path);
@@ -1732,6 +1726,134 @@ describe('db: migration #12 — the Linked video', () => {
 
     expect(() => remove('folder-1')).toThrow(/FOREIGN KEY/);
     expect(() => remove('folder-2')).toThrow(/FOREIGN KEY/);
+  });
+});
+
+// Issue #374: a TMDB `vote_average` of 0 means nobody voted, yet past Syncs
+// stored it as a score of 0 — which the Shown rating reads as zero TMDB stars.
+// Migration #13 turns every stored 0 back into NULL, on films and on series,
+// and touches no other score.
+describe('db: migration #13 — a score of 0 is no score', () => {
+  it('lands a fresh database at version 13', () => {
+    const db = track(open(':memory:'));
+
+    expect(userVersion(db)).toBe(13);
+  });
+
+  /**
+   * A library written at the latest version, its scores set by hand as a past
+   * Sync stored them, then wound back to before #13. Nothing in the schema
+   * moved, so the wind-back is the version alone.
+   */
+  function writtenAtV12(
+    path: string,
+    scores: {
+      movies: Record<string, number | null>;
+      series: Record<string, number | null>;
+    }
+  ): void {
+    const db = open(path);
+    try {
+      for (const [table, byId] of Object.entries(scores)) {
+        for (const [id, score] of Object.entries(byId)) {
+          db.prepare(`UPDATE ${table} SET tmdb_score = ? WHERE id = ?`).run(
+            score,
+            id
+          );
+        }
+      }
+      db.pragma('user_version = 12');
+    } finally {
+      db.close();
+    }
+  }
+
+  it('turns a stored 0 into NULL on movies and series, every other score untouched', () => {
+    const path = tempDbPath();
+    const db = open(path);
+    const insertMovie = db.prepare(
+      'INSERT INTO movies (id, title, video_path, created_at, updated_at) VALUES (?, ?, ?, ?, ?)'
+    );
+    insertMovie.run('m-zero', 'Zero', 'zero/video.mp4', NOW, NOW);
+    insertMovie.run('m-scored', 'Scored', 'scored/video.mp4', NOW, NOW);
+    insertMovie.run('m-low', 'Low', 'low/video.mp4', NOW, NOW);
+    insertMovie.run('m-none', 'None', 'none/video.mp4', NOW, NOW);
+    insertSeries(db, 's-zero');
+    insertSeries(db, 's-scored');
+    insertSeries(db, 's-none');
+    db.close();
+    writtenAtV12(path, {
+      movies: { 'm-zero': 0, 'm-scored': 7.4, 'm-low': 0.1, 'm-none': null },
+      series: { 's-zero': 0, 's-scored': 8.1, 's-none': null },
+    });
+
+    const upgraded = track(open(path));
+
+    expect(userVersion(upgraded)).toBe(LATEST_VERSION);
+    expect(
+      upgraded.prepare('SELECT id, tmdb_score FROM movies ORDER BY id').all()
+    ).toEqual([
+      { id: 'm-low', tmdb_score: 0.1 },
+      { id: 'm-none', tmdb_score: null },
+      { id: 'm-scored', tmdb_score: 7.4 },
+      { id: 'm-zero', tmdb_score: null },
+    ]);
+    expect(
+      upgraded.prepare('SELECT id, tmdb_score FROM series ORDER BY id').all()
+    ).toEqual([
+      { id: 's-none', tmdb_score: null },
+      { id: 's-scored', tmdb_score: 8.1 },
+      { id: 's-zero', tmdb_score: null },
+    ]);
+  });
+
+  it('draws a title whose stored score was 0 as Unrated, sorted with the titles that have no score', () => {
+    const path = tempDbPath();
+    const before = trackStorage(createSqliteStorage(path));
+    before.setTmdbRatings(true);
+    const low = before.addMovie({
+      title: 'Low',
+      videoPath: 'low/video.mp4',
+      rating: 1,
+    });
+    const alpha = before.addMovie({
+      title: 'Alpha',
+      videoPath: 'alpha/video.mp4',
+    });
+    const zero = before.addMovie({
+      title: 'Zero',
+      videoPath: 'zero/video.mp4',
+    });
+    const lowShow = before.addSeries({ title: 'Low Show', rating: 1 }, [
+      { season: 1, number: 1, videoPath: 'low-show/S01E01.mp4' },
+    ]);
+    const alphaShow = before.addSeries({ title: 'Alpha Show' }, [
+      { season: 1, number: 1, videoPath: 'alpha-show/S01E01.mp4' },
+    ]);
+    const zeroShow = before.addSeries({ title: 'Zero Show' }, [
+      { season: 1, number: 1, videoPath: 'zero-show/S01E01.mp4' },
+    ]);
+    before.close();
+    writtenAtV12(path, {
+      movies: { [low.id]: null, [alpha.id]: null, [zero.id]: 0 },
+      series: { [lowShow.id]: null, [alphaShow.id]: null, [zeroShow.id]: 0 },
+    });
+
+    const after = trackStorage(createSqliteStorage(path));
+
+    // Unrated: no household Rating and no score, so nothing for the stars.
+    expect(after.getMovie(zero.id)?.rating).toBeNull();
+    expect(after.getMovie(zero.id)?.tmdbScore).toBeNull();
+    expect(after.getSeries(zeroShow.id)?.tmdbScore).toBeNull();
+
+    // Sorted as no score: below a household ½ ★, among the unrated by title —
+    // not above Alpha as a TMDB zero would sort.
+    expect(
+      after.listMovies({ sort: 'highest-rated' }).map((m) => m.title)
+    ).toEqual(['Low', 'Alpha', 'Zero']);
+    expect(
+      after.getSeriesHome({ sort: 'highest-rated' }).series.map((s) => s.title)
+    ).toEqual(['Low Show', 'Alpha Show', 'Zero Show']);
   });
 });
 

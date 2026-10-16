@@ -11,8 +11,8 @@
 
 import { describe, expect, it } from 'vitest';
 
-import type { TmdbMovieDetail } from '../tmdbClient/tmdbClient';
-import { fetchedFields, releaseYear } from './fetchedFields';
+import type { TmdbMovieDetail, TmdbTvDetail } from '../tmdbClient/tmdbClient';
+import { fetchedFields, fetchedTvFields, releaseYear } from './fetchedFields';
 
 /** A TMDB `/3/movie/{id}?append_to_response=credits` body, overridable. */
 function detail(overrides: Partial<TmdbMovieDetail> = {}): TmdbMovieDetail {
@@ -42,6 +42,25 @@ function detail(overrides: Partial<TmdbMovieDetail> = {}): TmdbMovieDetail {
         { name: 'Second Name', job: 'Director' },
       ],
     },
+    ...overrides,
+  };
+}
+
+/** A TMDB `/3/tv/{id}?append_to_response=credits` body, overridable. */
+function tvDetail(overrides: Partial<TmdbTvDetail> = {}): TmdbTvDetail {
+  return {
+    id: 71000,
+    name: 'Harbor & Vine',
+    original_name: 'Harbor & Vine',
+    overview: 'A port town and the family that runs it.',
+    first_air_date: '2019-03-02',
+    last_air_date: '2023-11-20',
+    genres: [{ id: 18, name: 'Drama' }],
+    vote_average: 8.1,
+    poster_path: '/harbor-poster.jpg',
+    backdrop_path: null,
+    created_by: [{ name: 'Mara Quill' }],
+    credits: { cast: [], crew: [] },
     ...overrides,
   };
 }
@@ -97,6 +116,21 @@ describe('fetchedFields: a TMDB movie → our columns', () => {
     expect(fetchedFields(detail({ vote_average: voteAverage })).tmdbScore).toBe(
       score
     );
+  });
+
+  // Issue #374: a `vote_average` of 0 is TMDB saying nobody has voted — no
+  // score, so no Sync stores a 0 that would draw as zero stars.
+  it('answers a null score for a vote_average of 0, and 7.4 still for 7.44', () => {
+    expect(fetchedFields(detail({ vote_average: 0 })).tmdbScore).toBeNull();
+    expect(fetchedFields(detail({ vote_average: 7.44 })).tmdbScore).toBe(7.4);
+  });
+
+  it('answers a null score for a show with a vote_average of 0', () => {
+    const show = fetchedTvFields(tvDetail({ vote_average: 0 }));
+    const scored = fetchedTvFields(tvDetail({ vote_average: 7.44 }));
+
+    expect(show.tmdbScore).toBeNull();
+    expect(scored.tmdbScore).toBe(7.4);
   });
 
   it('maps genres onto the pool — Science Fiction as Sci-Fi, the rest dropped', () => {
