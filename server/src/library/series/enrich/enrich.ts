@@ -32,6 +32,13 @@ export interface SeriesEnrichment {
 }
 
 /**
+ * Where an episode's **Still** came from — a Sync's TMDB still, a frame off
+ * its own video, or one picked in the series form. Server side only: the
+ * assembled `Episode` does not carry it.
+ */
+export type StillSource = 'tmdb' | 'frame' | 'picked';
+
+/**
  * What a **Sync** may write on an **Episode**: no `watched`, no resume
  * position, no `last_watched_at` — the household's own.
  */
@@ -39,6 +46,8 @@ export interface EpisodeEnrichment {
   title?: string;
   airDate?: string;
   stillPath?: string;
+  /** Written with `stillPath`, never alone. */
+  stillSource?: StillSource;
   runtimeMinutes?: number;
 }
 
@@ -64,6 +73,7 @@ const EPISODE_COLUMNS: ReadonlyArray<Column<keyof EpisodeEnrichment>> = [
   { key: 'title', column: 'title' },
   { key: 'airDate', column: 'air_date' },
   { key: 'stillPath', column: 'still_path' },
+  { key: 'stillSource', column: 'still_source' },
   { key: 'runtimeMinutes', column: 'runtime_minutes' },
 ];
 

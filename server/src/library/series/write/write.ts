@@ -127,11 +127,11 @@ export function createSeriesWrite(
     INSERT INTO episodes (
       id, series_id, season_number, episode_number, title, air_date,
       runtime_minutes, video_path, source_file, video_folder_id, still_path,
-      created_at, updated_at
+      still_source, created_at, updated_at
     ) VALUES (
       @id, @series_id, @season_number, @episode_number, @title, @air_date,
       @runtime_minutes, @video_path, @source_file, @video_folder_id, @still_path,
-      @created_at, @updated_at
+      @still_source, @created_at, @updated_at
     )
   `);
   const fillSeriesFolder = db.prepare(
@@ -191,6 +191,8 @@ export function createSeriesWrite(
         source_file: input.sourceFile ?? null,
         video_folder_id: input.videoFolderId ?? null,
         still_path: input.stillPath ?? null,
+        // A still the series form saves is one picked there.
+        still_source: input.stillPath == null ? null : 'picked',
         created_at: now,
         updated_at: now,
       });
@@ -296,7 +298,7 @@ export function createSeriesWrite(
     'UPDATE episodes SET runtime_minutes = ? WHERE id = ?'
   );
   const setEpisodeStill = db.prepare(
-    'UPDATE episodes SET still_path = ? WHERE id = ?'
+    'UPDATE episodes SET still_path = @still_path, still_source = @still_source WHERE id = @id'
   );
   const deleteEpisodeSubtitles = db.prepare(
     'DELETE FROM episode_subtitles WHERE episode_id = ?'
@@ -412,7 +414,12 @@ export function createSeriesWrite(
           setEpisodeRuntime.run(episode.runtimeMinutes, was.id);
         }
         if (episode.stillPath !== undefined) {
-          setEpisodeStill.run(episode.stillPath, was.id);
+          // A still set here is picked; one taken away clears its source.
+          setEpisodeStill.run({
+            id: was.id,
+            still_path: episode.stillPath,
+            still_source: episode.stillPath === null ? null : 'picked',
+          });
         }
         deleteEpisodeSubtitles.run(was.id);
         episode.subtitles?.forEach((track, position) => {

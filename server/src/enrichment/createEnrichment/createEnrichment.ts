@@ -688,6 +688,7 @@ export function createEnrichment({
               seasonNumber
             );
             enrichment.stillPath = stored;
+            enrichment.stillSource = 'tmdb';
             log(current, `↓ ${name}  →  ${stored}`, 'scan');
           } catch {
             // A still that cannot be stored leaves the gradient drawn.

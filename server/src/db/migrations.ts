@@ -375,4 +375,21 @@ export const migrations: readonly Migration[] = [
       `);
     },
   },
+  {
+    // The Still source: where an episode's still came from — `'tmdb'`,
+    // `'frame'` or `'picked'` — `NULL` exactly when `still_path` is. No frame
+    // exists before it, so a held still is backfilled by name: the series
+    // form's `-still.` is `'picked'`, any other `'tmdb'`.
+    version: 14,
+    up(db) {
+      db.exec(`
+        ALTER TABLE episodes ADD COLUMN still_source TEXT;
+        UPDATE episodes SET still_source = CASE
+          WHEN still_path LIKE '%-still.%' THEN 'picked'
+          ELSE 'tmdb'
+        END
+        WHERE still_path IS NOT NULL;
+      `);
+    },
+  },
 ];

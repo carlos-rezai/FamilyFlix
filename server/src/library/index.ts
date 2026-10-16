@@ -67,6 +67,7 @@ export type {
 export type {
   EpisodeEnrichment,
   SeriesEnrichment,
+  StillSource,
 } from './series/enrich/enrich';
 
 /**
