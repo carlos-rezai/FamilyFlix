@@ -5,9 +5,10 @@
 // The TMDB key's two routes, beside the Settings hub's: a real listener, a
 // real `fetch` from the test, real status codes and bodies, over a real
 // `:memory:` library. The fifth server domain, `enrichment/`, is injected into
-// the router as its sixth argument — `createEnrichment({ storage, client, playback })`
-// over a `createTmdbClient` whose own `fetch` is a fake, so nothing here goes
-// online and no route learns there is a TMDB.
+// the router as its sixth argument —
+// `createEnrichment({ storage, client, media, playback })` over a
+// `createTmdbClient` whose own `fetch` is a fake, so nothing here goes online
+// and no route learns there is a TMDB.
 //
 // - `POST /api/tmdb/key { key }` — the test and the save in one: `200 { key }`
 //   and stored only when TMDB accepts it; `400` for an empty key; `422` when
