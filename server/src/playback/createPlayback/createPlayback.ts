@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs';
+import { Readable } from 'node:stream';
 
 import type {
   Cue,
@@ -21,6 +22,7 @@ import type {
   PlaybackComponent,
   PlaybackProcess,
 } from '../ffmpegComponent/ffmpegComponent';
+import { FRAME_POINT, frameArgs } from '../frameArgs/frameArgs';
 import { mediaDuration } from '../mediaDuration/mediaDuration';
 import { readableFolderSync } from '../../media/readableFolder/readableFolder';
 import { linkedVideoPath } from '../linkedVideoPath/linkedVideoPath';
@@ -200,6 +202,67 @@ export interface Playback {
    * afresh — which is what lets the screen redraw from the echo alone.
    */
   removeComponent(): RemoveOutcome;
+
+  /**
+   * One picture out of a row's video, as a JPEG stream: the file through
+   * {@link videoFile}, its length through {@link duration}, and the component
+   * the slot holds at the call spawned over `frameArgs` at the **Frame
+   * point**. The bytes are collected before answering, so a stream handed
+   * back is a whole picture.
+   *
+   * `null` in every case with no picture — no component, a `missing` or
+   * `unreachable` video, no duration, an empty stdout, the **Frame budget**
+   * spent, the signal aborted — killing the process wherever one runs. It
+   * never rejects (`derivedRuntime`'s rule).
+   */
+  frame(video: StoredVideo, signal: AbortSignal): Promise<Readable | null>;
+}
+
+/**
+ * The **Frame budget**: how long one picture may take before its process is
+ * killed. Input seeking makes a grab a second or two; a stalled share or a
+ * damaged file is what this is for.
+ */
+const FRAME_BUDGET_MS = 20_000;
+
+/**
+ * A grab's stdout collected whole, or `null` for an empty one, an error, the
+ * budget spent or the signal aborted — the process killed on every `null`.
+ */
+function collectFrame(
+  conversion: PlaybackProcess,
+  signal: AbortSignal
+): Promise<Buffer | null> {
+  return new Promise((resolve) => {
+    const chunks: Buffer[] = [];
+    let settled = false;
+
+    const settle = (bytes: Buffer | null): void => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      clearTimeout(timer);
+      signal.removeEventListener('abort', onAbort);
+      if (bytes === null) {
+        conversion.kill();
+      }
+      resolve(bytes);
+    };
+    const onAbort = (): void => settle(null);
+    const timer = setTimeout(() => settle(null), FRAME_BUDGET_MS);
+
+    signal.addEventListener('abort', onAbort);
+    conversion.stdout.on('data', (chunk: Buffer | string) => {
+      chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+    });
+    conversion.stdout.on('error', () => settle(null));
+    conversion.stdout.on('close', () => settle(null));
+    conversion.stdout.on('end', () => {
+      const bytes = Buffer.concat(chunks);
+      settle(bytes.length > 0 ? bytes : null);
+    });
+  });
 }
 
 /**
@@ -273,7 +336,32 @@ export function createPlayback(
   const lengthOf = (file: string, probe: MediaProbe | null): number =>
     probe?.durationSeconds ?? mediaDuration(file) ?? 0;
 
-  return {
+  /**
+   * How long the film in a file runs, or `null`: `component`'s probe, guarded
+   * around the probe alone so a component that died mid-answer still leaves
+   * the header to be read, then the container's own `moov`/`mvhd`.
+   */
+  const durationOf = (
+    file: string,
+    component: PlaybackComponent | null
+  ): number | null => {
+    let probed: number | null = null;
+    try {
+      probed = component?.probe(file)?.durationSeconds ?? null;
+    } catch {
+      probed = null;
+    }
+
+    if (probed !== null && probed > 0) {
+      return probed;
+    }
+
+    // `mediaDuration` already answers `null` for a file that will not say,
+    // which is every container but this one and this one truncated.
+    return mediaDuration(file);
+  };
+
+  const playback: Playback = {
     videoFile: ({ videoPath, videoFolderId }) => {
       let file: string | null;
       if (videoFolderId === null) {
@@ -299,24 +387,7 @@ export function createPlayback(
         ? { path: 'cannot-play', durationSeconds: 0 }
         : { path: decision.path, durationSeconds };
     },
-    duration: (file) => {
-      // Guarded around the probe alone, so a component that died mid-answer
-      // still leaves the header below to be read.
-      let probed: number | null = null;
-      try {
-        probed = slot.current()?.probe(file)?.durationSeconds ?? null;
-      } catch {
-        probed = null;
-      }
-
-      if (probed !== null && probed > 0) {
-        return probed;
-      }
-
-      // `mediaDuration` already answers `null` for a file that will not say,
-      // which is every container but this one and this one truncated.
-      return mediaDuration(file);
-    },
+    duration: (file) => durationOf(file, slot.current()),
     stream: (file, offsetSeconds = 0) => {
       const { component, probe, decision } = decide(file, offsetSeconds);
 
@@ -355,5 +426,31 @@ export function createPlayback(
     }),
     receiveComponent: () => slot.receive(),
     removeComponent: () => slot.remove(),
+    frame: async (video, signal) => {
+      try {
+        // Read once, so the probe and the grab are the same component.
+        const component = slot.current();
+        if (component === null) {
+          return null;
+        }
+        const found = playback.videoFile(video);
+        if (found.kind !== 'file') {
+          return null;
+        }
+        const seconds = durationOf(found.file, component);
+        if (seconds === null || seconds <= 0 || signal.aborted) {
+          return null;
+        }
+
+        const conversion = component.spawn(
+          frameArgs(found.file, seconds * FRAME_POINT)
+        );
+        const bytes = await collectFrame(conversion, signal);
+        return bytes === null ? null : Readable.from([bytes]);
+      } catch {
+        return null;
+      }
+    },
   };
+  return playback;
 }
