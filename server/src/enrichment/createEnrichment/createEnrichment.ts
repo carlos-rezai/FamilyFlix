@@ -699,13 +699,7 @@ export function createEnrichment({
         const picture =
           still.kind === 'tmdb'
             ? await tmdbStill(still.path, signal)
-            : await playback.frame(
-                {
-                  videoPath: episode.videoPath,
-                  videoFolderId: episode.videoFolderId,
-                },
-                signal
-              );
+            : await playback.frame(episode, signal);
         if (signal.aborted) return;
         if (picture !== null) {
           const { suffix, mark } = STILL_KINDS[still.kind];
