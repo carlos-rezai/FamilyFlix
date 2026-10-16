@@ -11,6 +11,110 @@ Newest entry first.
 
 ---
 
+## 2026-10-16 — TMDB ratings — the refactor (issue 375)
+
+Sixteen commits against `docs/refactor-plans/43-tmdb-ratings-refactor.md`,
+one per plan commit, the initiative's closing round. **9501 tests pass across
+564 files**, against 9491 across 564 at the end of the build (`0820116`): one
+new suite (`tmdbMarks`), one retired (`underTmdbRatings`), and the cases the
+plan named. `tsc -b --force` is clean. `eslint src server electron` reports
+one error and 99 warnings, the same as before the round. Every file this
+round touched is lint-clean.
+
+### What shipped
+
+Log 43's slices: the prototype amendment (368, closed on approval), then one
+RED and one GREEN each, 369 to 374. The Display group's _Fill in ratings from
+TMDB_ is on by default. While it is on, an unrated title draws its **TMDB
+rating** as **TMDB-marked stars** on every card, on the series page and as the
+movie page's picker placeholder. _Highest rated_ and the **Minimum rating**
+read the **Shown rating**, series included. A stored TMDB score of `0` is no
+score (migration 13).
+
+### What each group changed
+
+- **Group 1, the safety net** (`0890dbc`). The movie page follows a flip
+  under a loaded film, and a preference that lands after the film, without a
+  second read. The series page follows a flip. All three passed against
+  `0820116` and still pass.
+- **Group 2, one spelling of each client rule** (`0fbabe6`–`287acef`).
+  `detailView` has its docblock back. `tmdbRating(score)` in
+  `utils/shownRating/` is the glossary's TMDB rating, read by `shownRating`
+  and by the movie page's placeholder, so nothing asks `shownRating` with a
+  `null` Rating it does not mean. `utils/tmdbMarks/` answers `StarRating`'s
+  `{ muted, tag }` for a Rating source, and `TMDB_TAG` is the one spelling of
+  the word; `PosterCard` and `SeriesMetaLine` spread it, `MetaLine` passes the
+  tag. `useTmdbRatings` moved into `App/` beside the context it reads, and its
+  docblock names every surface that draws stars.
+- **Group 3, the provider** (`8b2e3c8`). `useHeldFlag(save)` is the one
+  bargain both display preferences keep: shown at once, posted, the echo
+  kept, put back on refusal. The provider holds two of them, and one
+  `fetchSettings` lands both.
+- **Group 4, every screen holds its record** (`90ca82e`–`c935855`). This is
+  the round's one real move. The movie home and the Genre page hold the
+  payload's `Movie`s and map them per render under the preference, the Series
+  tab's shape; `toGenreRow(row, tmdbRatings)` hands it on to `view`, and no
+  `view(movie, true)` is left. `withFavorite/`'s three helpers keep their
+  names and rules and work on `Movie` and `HomeRow`. `underTmdbRatings`
+  retired. `useMovieDetail` holds the `Movie`, draws `detailView(record,
+tmdbRatings)` per render, and its three edits patch the record: the rating
+  in units from the door inward, the watched tick by the movie's watched rule.
+  The two refs and the re-map effect are gone. No screen or hook suite
+  changed.
+- **Group 5, the server** (`bda126d`–`d9862e0`). Both browses' order tables
+  have their docblocks back and are checked whole again: each `orderBy` fills
+  in `highest-rated` and types the result as the full `Record`.
+  `highestRatedSql(alias, tmdbRatings)` sits beside `shownRatingSql`, and both
+  browses read it. `createSeriesBrowse` has `createBrowse`'s `@param`, and its
+  local is `on`. The settings slice reads and writes its two flags through
+  one `flagOf(key, fallback)` and one `setFlag(key, on)`.
+- **Group 6, the component** (`7a2a505`). `RatingPicker`'s docblock describes
+  the placeholder, and `placeheld` is `placeholderShown`.
+- **Group 7, the docs** (`a4d5286`, this commit). CLAUDE.md, the README and
+  the glossary know the initiative shipped, and step 26 is ✅.
+
+### Deliberately not changed
+
+Everything in the plan's Out of Scope. The three mappers keep their own two
+lines over `shownRating`. The settings routes' boolean refusal is still
+written once per route. `useOptimisticEdit` is unchanged, since it was already
+generic over whatever a page holds. Like the series pages, the movie page now
+draws its model on every render rather than memoising it.
+
+A fourth initiative in a row displaced a docblock (import review's
+`ProblemRow`, link or copy's `writeEpisodes`, review at scale's
+`DECISION_REFUSALS`, and here `detailView` and `ORDER_BY`). Each time, a
+helper was inserted between a function and its docblock. A build agent adding
+a helper should put it above the docblock it would otherwise split.
+
+### Follow-ups this refactor surfaced
+
+None are filed yet:
+
+- **The prototype files from 368.** `prim.StarRating`, `mol.RatingPicker`,
+  `mol.PosterCard`, `page.SettingsPage`, `page.MoviePage`, `page.SeriesPage`
+  and `FamilyFlix.dc.html` in `docs/handoff/` still draw the pre-log-43
+  surface. The maintainer has to drop the amended files in. Until then, the
+  inks (`textDim` for the muted stars, `textFaint` for the tag) stand as the
+  PRD described them.
+- **The two `Tag` sizes.** `StarRating`'s tag is `0.7 ×` the star and
+  `RatingPicker`'s is a fixed 10px, so the movie page draws 14px against 10px.
+  The amended prototype should decide.
+- **One `{ value }` body reader** for the settings routes' seven boolean and
+  string refusals. That changes the route layer as a whole.
+- **One watched rule for films and episodes.** `useMovieDetail`'s
+  `withWatched` and `series/markEpisodes`' `marked` are the same rule over two
+  record types.
+- **The lint error in a test** from the last entry is still there
+  (`EnrichmentReview.test.tsx`, `no-empty-function`).
+
+### The initiative
+
+**TMDB ratings is done**: the prototype amendment (368), the six slices
+(369–374) and this round (375). Issue 367 is closed with it.
+
+---
+
 ## 2026-10-15 — Review at scale — the refactor (issue 366)
 
 Twenty-five commits against `docs/refactor-plans/42-review-at-scale-refactor.md`,
