@@ -44,6 +44,7 @@ import {
   createSeriesEnrich,
   type EpisodeEnrichment,
   type SeriesEnrichment,
+  type StillSource,
 } from './series/enrich/enrich';
 import { createSeriesReader } from './series/read/read';
 import { createSeriesBrowse } from './series/browse/browse';
@@ -113,6 +114,11 @@ export interface LibraryStorage {
    * `(seriesId, season)`, refusing a series the library does not hold.
    */
   setSeasonPoster(seriesId: string, season: number, posterPath: string): void;
+  /**
+   * Each episode's **Still source** by episode id for one series; an episode
+   * with no still is absent.
+   */
+  stillSourcesOf(seriesId: string): ReadonlyMap<string, StillSource>;
   /**
    * {@link moviesInScope} over the series: those without a synopsis or a
    * poster, or all of them.
@@ -442,6 +448,7 @@ export function createSqliteStorage(dbPath: string): LibraryStorage {
     enrichSeries: seriesEnrich.enrichSeries,
     enrichEpisode: seriesEnrich.enrichEpisode,
     setSeasonPoster: seriesEnrich.setSeasonPoster,
+    stillSourcesOf: seriesEnrich.stillSourcesOf,
     moviesInScope: enrich.moviesInScope,
     seriesInScope: seriesEnrich.seriesInScope,
     enrichmentCounts: enrich.enrichmentCounts,

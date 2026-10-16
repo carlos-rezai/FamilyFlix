@@ -67,6 +67,7 @@ async function freshApi(tmdbFetch: Fetch = answeringTmdb()) {
     storage,
     client: createTmdbClient(tmdbFetch),
     media: mediaDomain,
+    playback,
   });
 
   const app = express();

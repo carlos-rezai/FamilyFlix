@@ -42,6 +42,8 @@ import type {
   TmdbMovieResult,
 } from '../tmdbClient/tmdbClient';
 import { createEnrichment } from './createEnrichment';
+import { createPlayback } from '../../playback/createPlayback/createPlayback';
+import { fixedSlot } from '../../test-support/fixedSlot/fixedSlot';
 
 const ALL_FIELDS: EnrichField[] = [...ENRICH_FIELDS];
 
@@ -90,6 +92,11 @@ function world() {
     storage,
     client,
     media,
+    playback: createPlayback(
+      sandboxRoot('familyflix-no-frame-'),
+      fixedSlot(null),
+      () => null
+    ),
   });
 
   async function addFilm(title: string, year: number | null) {

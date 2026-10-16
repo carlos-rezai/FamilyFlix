@@ -18,8 +18,9 @@ import type {
   TitleReference,
 } from '@/types';
 import { imageUrl } from '@/utils/imageUrl/imageUrl';
-import type { LibraryStorage } from '../../library';
+import type { LibraryStorage, StillSource } from '../../library';
 import type { Media } from '../../media/createMedia/createMedia';
+import type { Playback } from '../../playback/createPlayback/createPlayback';
 import { spellEpisodeTag } from '../../media/episodeTag/episodeTag';
 import { readableFolder } from '../../media/readableFolder/readableFolder';
 import {
@@ -183,6 +184,8 @@ export interface EnrichmentDeps {
   storage: LibraryStorage;
   client: TmdbClient;
   media: Media;
+  /** What takes a **Frame still** off an episode's own video. */
+  playback: Playback;
   /** The two **Write targets**; the real ones unless a test hands its own. */
   writeBack?: WriteBack;
 }
@@ -267,6 +270,7 @@ export function createEnrichment({
   storage,
   client,
   media,
+  playback,
   writeBack = realWriteBack,
 }: EnrichmentDeps): Enrichment {
   let run: EnrichmentRun | null = null;
@@ -652,8 +656,9 @@ export function createEnrichment({
 
   /**
    * One season's episodes on disk against TMDB's, by episode number: title and
-   * air date when empty, always; the still under Poster; the runtime under
-   * Runtime. Never a Decision, never the watch state.
+   * air date when empty, always; the still under Poster — TMDB's, else a
+   * **Frame still** off the episode's own video; the runtime under Runtime.
+   * Never a Decision, never the watch state.
    */
   async function writeEpisodes(
     current: EnrichmentRun,
@@ -662,34 +667,52 @@ export function createEnrichment({
     episodes: readonly Episode[],
     season: TmdbSeason,
     fields: readonly EnrichField[],
+    stillSources: ReadonlyMap<string, StillSource>,
     signal: AbortSignal
   ): Promise<void> {
     for (const episode of episodes) {
       const theirs = season.episodes.find(
         (each) => each.episode_number === episode.number
       );
-      if (theirs === undefined) continue;
 
-      const { enrichment, still } = planEpisode(episode, theirs, fields);
-      if (still !== null) {
-        const image = await client.image(still, signal);
+      const { enrichment, still } = planEpisode(
+        episode,
+        theirs,
+        fields,
+        stillSources.get(episode.id) ?? null
+      );
+      if (still !== null && seriesFolder !== null) {
+        const stem = posix.basename(
+          episode.videoPath,
+          posix.extname(episode.videoPath)
+        );
+        const picture =
+          still.kind === 'tmdb'
+            ? await tmdbStill(still.path, signal)
+            : await playback.frame(
+                {
+                  videoPath: episode.videoPath,
+                  videoFolderId: episode.videoFolderId,
+                },
+                signal
+              );
         if (signal.aborted) return;
-        if (image.kind === 'ok' && seriesFolder !== null) {
-          const stem = posix.basename(
-            episode.videoPath,
-            posix.extname(episode.videoPath)
-          );
+        if (picture !== null) {
+          const name = `${stem}.${still.kind === 'tmdb' ? 'still' : 'frame'}.jpg`;
           try {
-            const name = `${stem}.still.jpg`;
             const stored = await media.storeNamed(
               seriesFolder,
               name,
-              image.value,
+              picture,
               seasonNumber
             );
             enrichment.stillPath = stored;
-            enrichment.stillSource = 'tmdb';
-            log(current, `↓ ${name}  →  ${stored}`, 'scan');
+            enrichment.stillSource = still.kind;
+            log(
+              current,
+              `${still.kind === 'tmdb' ? '↓' : '▣'} ${name}  →  ${stored}`,
+              'scan'
+            );
           } catch {
             // A still that cannot be stored leaves the gradient drawn.
           }
@@ -701,6 +724,15 @@ export function createEnrichment({
         storage.enrichEpisode(episode.id, enrichment);
       }
     }
+  }
+
+  /** TMDB's still as a stream, or `null` when the image did not come. */
+  async function tmdbStill(
+    path: string,
+    signal: AbortSignal
+  ): Promise<Readable | null> {
+    const image = await client.image(path, signal);
+    return image.kind === 'ok' ? image.value : null;
   }
 
   /**
@@ -722,6 +754,8 @@ export function createEnrichment({
     // The show's **Media folder**, read once for the whole pass: its images,
     // its Season posters and its Stills all go under it.
     const seriesFolder = storage.mediaFolderOf('series', series.id);
+    // Each episode's **Still source**, read once for the whole show.
+    const stillSources = storage.stillSourcesOf(series.id);
     const { conflicts, fetched } = await writeSeries(
       current,
       series,
@@ -811,6 +845,7 @@ export function createEnrichment({
         season.episodes,
         theirs.value,
         fields,
+        stillSources,
         signal
       );
     }

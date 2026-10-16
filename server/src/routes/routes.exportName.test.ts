@@ -95,7 +95,7 @@ function freshApi(): { baseUrl: string; dir: string; destination: string } {
       playback,
       media,
       createImporter({ storage, media, playback }),
-      createEnrichment({ storage, client: offlineTmdb(), media })
+      createEnrichment({ storage, client: offlineTmdb(), media, playback })
     )
   );
   const server = app.listen(0);

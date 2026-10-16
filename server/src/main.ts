@@ -77,6 +77,7 @@ async function start(): Promise<Started> {
     storage,
     client: createTmdbClient(fetch),
     media,
+    playback,
   });
 
   // The **Loopback guard**, in front of everything: only this machine, and

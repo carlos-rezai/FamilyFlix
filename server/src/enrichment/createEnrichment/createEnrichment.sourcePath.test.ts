@@ -43,6 +43,8 @@ import type {
   TmdbMovieResult,
 } from '../tmdbClient/tmdbClient';
 import { createEnrichment } from './createEnrichment';
+import { createPlayback } from '../../playback/createPlayback/createPlayback';
+import { fixedSlot } from '../../test-support/fixedSlot/fixedSlot';
 
 // Registered after the helpers' own hooks, so it runs first: Windows will not
 // remove a sandbox holding an open database file.
@@ -75,6 +77,11 @@ function world() {
     storage,
     client: fakeTmdb({ searches: SEARCHES, movies: DETAILS }),
     media,
+    playback: createPlayback(
+      sandboxRoot('familyflix-no-frame-'),
+      fixedSlot(null),
+      () => null
+    ),
   });
 
   /** A film in the library, its video really stored, and what else is given. */

@@ -94,6 +94,7 @@ async function freshApi() {
     storage,
     client: createTmdbClient(fakeTmdb()),
     media: mediaDomain,
+    playback,
   });
 
   for (const [title, year] of [

@@ -29,6 +29,8 @@ import {
 } from '../../test-support/freshStorage/freshStorage';
 import { sandboxRoot } from '../../test-support/sandboxRoot/sandboxRoot';
 import { createEnrichment } from './createEnrichment';
+import { createPlayback } from '../../playback/createPlayback/createPlayback';
+import { fixedSlot } from '../../test-support/fixedSlot/fixedSlot';
 
 // Close the databases before the sandbox holding them is swept: a file's own
 // `afterEach` runs before the helpers'.
@@ -82,7 +84,16 @@ describe('a Sync writes the Still source', () => {
         },
       },
     });
-    const enrichment = createEnrichment({ storage, client, media });
+    const enrichment = createEnrichment({
+      storage,
+      client,
+      media,
+      playback: createPlayback(
+        sandboxRoot('familyflix-no-frame-'),
+        fixedSlot(null),
+        () => null
+      ),
+    });
 
     const folder = media.reserveFolder(TITLE, 2018);
     const series = storage.addSeries({ title: TITLE, year: 2018 });

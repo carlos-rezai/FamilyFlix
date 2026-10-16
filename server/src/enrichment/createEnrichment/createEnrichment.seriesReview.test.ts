@@ -38,6 +38,8 @@ import {
   tmdbTvResult,
 } from '../../test-support/fakeTmdb/fakeTmdb';
 import { createEnrichment } from './createEnrichment';
+import { createPlayback } from '../../playback/createPlayback/createPlayback';
+import { fixedSlot } from '../../test-support/fixedSlot/fixedSlot';
 
 const ALL_FIELDS: EnrichField[] = [...ENRICH_FIELDS];
 
@@ -97,7 +99,16 @@ function world() {
       71001: { 1: SEASON_ONE },
     },
   });
-  const enrichment = createEnrichment({ storage, client, media });
+  const enrichment = createEnrichment({
+    storage,
+    client,
+    media,
+    playback: createPlayback(
+      sandboxRoot('familyflix-no-frame-'),
+      fixedSlot(null),
+      () => null
+    ),
+  });
 
   /** A show in the library, its one episode really on disk. */
   async function addShow(

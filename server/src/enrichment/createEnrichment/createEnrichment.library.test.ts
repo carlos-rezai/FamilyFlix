@@ -43,6 +43,8 @@ import type {
   TmdbMovieResult,
 } from '../tmdbClient/tmdbClient';
 import { createEnrichment } from './createEnrichment';
+import { createPlayback } from '../../playback/createPlayback/createPlayback';
+import { fixedSlot } from '../../test-support/fixedSlot/fixedSlot';
 
 const ALL_FIELDS: EnrichField[] = [...ENRICH_FIELDS];
 
@@ -117,6 +119,11 @@ function world(client: FakeTmdb = knowsBoth()) {
     storage,
     client,
     media,
+    playback: createPlayback(
+      sandboxRoot('familyflix-no-frame-'),
+      fixedSlot(null),
+      () => null
+    ),
   });
 
   /** A film in the library, its video really in its Movie folder. */

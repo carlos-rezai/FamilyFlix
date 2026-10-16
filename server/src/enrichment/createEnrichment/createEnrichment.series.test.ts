@@ -37,6 +37,8 @@ import {
 } from '../../test-support/fakeTmdb/fakeTmdb';
 import type { TmdbSeason } from '../tmdbClient/tmdbClient';
 import { createEnrichment } from './createEnrichment';
+import { createPlayback } from '../../playback/createPlayback/createPlayback';
+import { fixedSlot } from '../../test-support/fixedSlot/fixedSlot';
 
 const ALL_FIELDS: EnrichField[] = [...ENRICH_FIELDS];
 
@@ -178,6 +180,11 @@ function world(client: FakeTmdb = knowsTheShow()) {
     storage,
     client,
     media,
+    playback: createPlayback(
+      sandboxRoot('familyflix-no-frame-'),
+      fixedSlot(null),
+      () => null
+    ),
   });
 
   /**

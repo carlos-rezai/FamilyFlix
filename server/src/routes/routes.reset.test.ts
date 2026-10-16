@@ -159,6 +159,7 @@ async function filledApi({
     storage,
     client: tmdb,
     media: mediaDomain,
+    playback,
   });
 
   const folder = mediaDomain.reserveFolder('The Lantern Keeper', 2019);

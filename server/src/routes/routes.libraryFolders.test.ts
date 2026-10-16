@@ -70,7 +70,12 @@ function freshApi(): Api {
       playback,
       mediaDomain,
       createImporter({ storage, media: mediaDomain, playback }),
-      createEnrichment({ storage, client: offlineTmdb(), media: mediaDomain })
+      createEnrichment({
+        storage,
+        client: offlineTmdb(),
+        media: mediaDomain,
+        playback,
+      })
     )
   );
 

@@ -122,7 +122,7 @@ function freshApi(options: { breakReads?: boolean } = {}): {
       playback,
       media,
       createImporter({ storage, media, playback }),
-      createEnrichment({ storage, client: offlineTmdb(), media })
+      createEnrichment({ storage, client: offlineTmdb(), media, playback })
     )
   );
   const server = app.listen(0);

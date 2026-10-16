@@ -86,7 +86,12 @@ function freshApi() {
       playback,
       mediaDomain,
       importer,
-      createEnrichment({ storage, client: tmdb.client, media: mediaDomain })
+      createEnrichment({
+        storage,
+        client: tmdb.client,
+        media: mediaDomain,
+        playback,
+      })
     )
   );
 

@@ -93,6 +93,11 @@ export interface SeriesEnrich {
    * `(seriesId, season)`. Refuses a series the library does not hold.
    */
   setSeasonPoster(seriesId: string, season: number, posterPath: string): void;
+  /**
+   * Each episode's **Still source** by episode id, for one series — read once
+   * per show by a Sync's pass. An episode with no still is absent.
+   */
+  stillSourcesOf(seriesId: string): ReadonlyMap<string, StillSource>;
 }
 
 /**
@@ -163,10 +168,24 @@ export function createSeriesEnrich(
     upsertSeasonPoster.run(seriesId, season, posterPath);
   }
 
+  const selectStillSources = db.prepare(
+    `SELECT id, still_source FROM episodes
+     WHERE series_id = ? AND still_path IS NOT NULL AND still_source IS NOT NULL`
+  );
+
+  function stillSourcesOf(seriesId: string): ReadonlyMap<string, StillSource> {
+    const rows = selectStillSources.all(seriesId) as Array<{
+      id: string;
+      still_source: StillSource;
+    }>;
+    return new Map(rows.map((row) => [row.id, row.still_source]));
+  }
+
   return {
     enrichSeries,
     enrichEpisode,
     seriesInScope,
     setSeasonPoster,
+    stillSourcesOf,
   };
 }

@@ -40,6 +40,8 @@ import {
   type FakeTmdb,
 } from '../../test-support/fakeTmdb/fakeTmdb';
 import { createEnrichment } from './createEnrichment';
+import { createPlayback } from '../../playback/createPlayback/createPlayback';
+import { fixedSlot } from '../../test-support/fixedSlot/fixedSlot';
 
 const ALL_FIELDS: EnrichField[] = [...ENRICH_FIELDS];
 
@@ -97,7 +99,16 @@ function world(client: FakeTmdb = knowsTheLibrary()) {
   const storage = freshStorage();
   storage.setTmdbKey(KEY);
   const media = createMedia(sandboxRoot('familyflix-enrich-ladder-'));
-  const enrichment = createEnrichment({ storage, client, media });
+  const enrichment = createEnrichment({
+    storage,
+    client,
+    media,
+    playback: createPlayback(
+      sandboxRoot('familyflix-no-frame-'),
+      fixedSlot(null),
+      () => null
+    ),
+  });
 
   async function addFilm(title: string, year: number | null) {
     const folder = media.reserveFolder(title, year);

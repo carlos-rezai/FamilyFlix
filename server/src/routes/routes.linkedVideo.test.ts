@@ -134,7 +134,12 @@ function freshApi(component: PlaybackComponent | null = null): {
       playback,
       mediaDomain,
       createImporter({ storage, media: mediaDomain, playback }),
-      createEnrichment({ storage, client: offlineTmdb(), media: mediaDomain })
+      createEnrichment({
+        storage,
+        client: offlineTmdb(),
+        media: mediaDomain,
+        playback,
+      })
     )
   );
   const server = app.listen(0);

@@ -134,6 +134,7 @@ async function freshApi() {
     storage,
     client: createTmdbClient(fakeTmdb()),
     media: mediaDomain,
+    playback,
   });
 
   const folder = mediaDomain.reserveFolder('Harbor Lights', 1963);

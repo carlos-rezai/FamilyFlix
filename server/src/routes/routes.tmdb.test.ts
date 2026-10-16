@@ -5,7 +5,7 @@
 // The TMDB key's two routes, beside the Settings hub's: a real listener, a
 // real `fetch` from the test, real status codes and bodies, over a real
 // `:memory:` library. The fifth server domain, `enrichment/`, is injected into
-// the router as its sixth argument — `createEnrichment({ storage, client })`
+// the router as its sixth argument — `createEnrichment({ storage, client, playback })`
 // over a `createTmdbClient` whose own `fetch` is a fake, so nothing here goes
 // online and no route learns there is a TMDB.
 //
@@ -94,6 +94,7 @@ function freshApi(tmdb: Tmdb = 'accepts'): Api {
     storage,
     client: createTmdbClient(tmdbFetch),
     media: mediaDomain,
+    playback,
   });
 
   const app = express();

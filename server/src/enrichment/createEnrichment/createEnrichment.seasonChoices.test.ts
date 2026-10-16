@@ -32,6 +32,8 @@ import {
 } from '../../test-support/fakeTmdb/fakeTmdb';
 import type { TmdbSeason } from '../tmdbClient/tmdbClient';
 import { createEnrichment } from './createEnrichment';
+import { createPlayback } from '../../playback/createPlayback/createPlayback';
+import { fixedSlot } from '../../test-support/fixedSlot/fixedSlot';
 
 const ALL_FIELDS: EnrichField[] = [...ENRICH_FIELDS];
 const NO_POSTER: EnrichField[] = ALL_FIELDS.filter(
@@ -95,7 +97,16 @@ function world(client: FakeTmdb = knowsTheShow()) {
   const storage = freshStorage();
   storage.setTmdbKey(KEY);
   const media = createMedia(sandboxRoot('familyflix-enrich-season-choices-'));
-  const enrichment = createEnrichment({ storage, client, media });
+  const enrichment = createEnrichment({
+    storage,
+    client,
+    media,
+    playback: createPlayback(
+      sandboxRoot('familyflix-no-frame-'),
+      fixedSlot(null),
+      () => null
+    ),
+  });
 
   async function addShow(): Promise<{ id: string; folder: string }> {
     const reserved = media.reserveFolder(TITLE, 2018);

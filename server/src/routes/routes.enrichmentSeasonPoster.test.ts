@@ -108,7 +108,7 @@ async function freshApi(client: FakeTmdb = knowsTheShow()) {
   const root = sandboxRoot('familyflix-enrich-season-poster-api-');
   const media = createMedia(root);
   const playback = createPlayback(root, fixedSlot(null), () => null);
-  const enrichment = createEnrichment({ storage, client, media });
+  const enrichment = createEnrichment({ storage, client, media, playback });
 
   const reserved = media.reserveFolder(TITLE, 2018);
   const series = storage.addSeries({ title: TITLE, year: 2018 });

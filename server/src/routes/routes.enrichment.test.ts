@@ -140,6 +140,7 @@ async function freshApi() {
     storage,
     client: createTmdbClient(tmdbFetch),
     media: mediaDomain,
+    playback,
   });
 
   const folder = mediaDomain.reserveFolder('The Lantern Keeper', 2019);
