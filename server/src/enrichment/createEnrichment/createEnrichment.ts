@@ -681,6 +681,8 @@ export function createEnrichment({
         fields,
         stillSources.get(episode.id) ?? null
       );
+      // A held **Frame still** TMDB's still replaces: removed once it is written.
+      let replacedFrame: string | null = null;
       if (still !== null && seriesFolder !== null) {
         const stem = posix.basename(
           episode.videoPath,
@@ -706,6 +708,14 @@ export function createEnrichment({
               picture,
               seasonNumber
             );
+            if (
+              still.kind === 'tmdb' &&
+              stillSources.get(episode.id) === 'frame' &&
+              episode.stillPath !== null &&
+              episode.stillPath !== stored
+            ) {
+              replacedFrame = episode.stillPath;
+            }
             enrichment.stillPath = stored;
             enrichment.stillSource = still.kind;
             log(
@@ -723,6 +733,7 @@ export function createEnrichment({
       if (Object.keys(enrichment).length > 0) {
         storage.enrichEpisode(episode.id, enrichment);
       }
+      if (replacedFrame !== null) media.removeFile(replacedFrame);
     }
   }
 
