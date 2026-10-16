@@ -13,9 +13,10 @@
 // (20 s) spent, the signal aborted — killing the process wherever one runs.
 // It never rejects (`derivedRuntime`'s rule).
 //
-// The last block runs real ffmpeg over `test-support/fixtureVideo/`, and skips
-// on a machine with none on PATH.
+// The last block runs real ffmpeg — the Default component, else one on PATH —
+// over a multi-frame video it makes itself, and skips on a machine with none.
 
+import { execFileSync } from 'node:child_process';
 import { copyFileSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { PassThrough, type Readable } from 'node:stream';
@@ -27,7 +28,7 @@ import { fixedSlot } from '../../test-support/fixedSlot/fixedSlot';
 import { FIXTURE_VIDEO } from '../../test-support/fixtureVideo/fixtureVideo';
 import { sandboxRoot } from '../../test-support/sandboxRoot/sandboxRoot';
 import type { ComponentSlot } from '../componentSlot/componentSlot';
-import { ffmpegBinary } from '../ffmpegBinary/ffmpegBinary';
+import { EXE, ffmpegBinary } from '../ffmpegBinary/ffmpegBinary';
 import {
   ffmpegComponent,
   type PlaybackComponent,
@@ -393,23 +394,56 @@ describe('createPlayback.frame — never rejects', () => {
   });
 });
 
+// The Default component `electron:ffmpeg` extracts, when it is there: the
+// build the Installer ships, so the grab is proven against the binary the
+// household will run, not only whatever a developer has on PATH.
+const DEFAULT_COMPONENT = join(
+  __dirname,
+  '..',
+  '..',
+  '..',
+  '..',
+  'electron',
+  '.ffmpeg',
+  `ffmpeg${EXE}`
+);
+
 const realBinaries = ffmpegBinary({
+  FAMILYFLIX_FFMPEG_PATH: DEFAULT_COMPONENT,
   PATH: process.env.PATH ?? process.env.Path,
 });
 
 describe.skipIf(realBinaries === null)(
-  'createPlayback.frame — real ffmpeg on PATH',
+  'createPlayback.frame — real ffmpeg',
   () => {
-    it('answers a JPEG out of the fixture video', async () => {
+    // The fixture film is one frame held for ten seconds, so a seek a third of
+    // the way in finds nothing to decode. A real episode has a picture at
+    // every point: six seconds of test pattern, a keyframe every second, is
+    // made with the same binary the grab runs.
+    it('answers a JPEG a third of the way into a multi-frame video', async () => {
+      const binaries = realBinaries as NonNullable<typeof realBinaries>;
       const { media, video } = sandbox();
-      copyFileSync(FIXTURE_VIDEO, join(media, video.videoPath));
-      const component = ffmpegComponent(
-        realBinaries as NonNullable<typeof realBinaries>
-      );
+      execFileSync(binaries.ffmpeg, [
+        '-hide_banner',
+        '-loglevel',
+        'error',
+        '-y',
+        '-f',
+        'lavfi',
+        '-i',
+        'testsrc=duration=6:size=320x180:rate=24',
+        '-pix_fmt',
+        'yuv420p',
+        '-g',
+        '24',
+        '-f',
+        'matroska',
+        join(media, video.videoPath),
+      ]);
 
       const frame = await createPlayback(
         media,
-        fixedSlot(component),
+        fixedSlot(ffmpegComponent(binaries)),
         () => null
       ).frame(video, live());
 
