@@ -2,7 +2,7 @@
 
 > **Initiative:** `episode-stills`
 > **Issue:** #380 (build order step 27)
-> **PRD:** `docs/PRDs/44-episode-stills.md` (to be written)
+> **PRD:** `docs/PRDs/44-episode-stills.md` (#381)
 
 This log is the `grill-me` session for build order step 27, 🔜 **Episode
 stills**. It was held before the PRD was written, against the code as it stood
