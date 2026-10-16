@@ -1085,3 +1085,141 @@ describe('library: countMovies', () => {
     expect(storage.countMovies()).toBe(0);
   });
 });
+
+// --- the Shown rating (issue #373) ----------------------------------------------
+//
+// _Highest rated_ and the Minimum rating read the **Shown rating**: the household
+// Rating, else — while **TMDB ratings** is on — the TMDB score rounded to
+// half-star units. Every test names the preference it runs under.
+
+describe('library: listMovies over the Shown rating', () => {
+  type Storage = ReturnType<typeof freshStorage>;
+
+  /** A film with no household Rating and only a TMDB score. */
+  function addScored(storage: Storage, title: string, tmdbScore: number) {
+    const movie = storage.addMovie(newMovie({ title }));
+    storage.enrichMovie(movie.id, { tmdbScore });
+    return movie;
+  }
+
+  /** Three household Ratings and one TMDB-only film scoring 3½ ★. */
+  function seedShelf(storage: Storage): void {
+    storage.addMovie(newMovie({ title: 'Top', rating: 9 }));
+    storage.addMovie(newMovie({ title: 'Mid', rating: 6 }));
+    storage.addMovie(newMovie({ title: 'Low', rating: 2 }));
+    addScored(storage, 'Scored', 7.4);
+  }
+
+  const titles = (
+    storage: Storage,
+    query: Parameters<Storage['listMovies']>[0]
+  ) => storage.listMovies(query).map((m) => m.title);
+
+  it('orders a TMDB-only film among the Ratings while TMDB ratings is on, and last while off', () => {
+    const on = freshStorage();
+    on.setTmdbRatings(true);
+    seedShelf(on);
+    const off = freshStorage();
+    off.setTmdbRatings(false);
+    seedShelf(off);
+
+    expect(titles(on, { sort: 'highest-rated' })).toEqual([
+      'Top',
+      'Scored',
+      'Mid',
+      'Low',
+    ]);
+    expect(titles(off, { sort: 'highest-rated' })).toEqual([
+      'Top',
+      'Mid',
+      'Low',
+      'Scored',
+    ]);
+  });
+
+  it('keeps a film drawing 3½ TMDB stars under 3+ stars while on, and drops it while off', () => {
+    const on = freshStorage();
+    on.setTmdbRatings(true);
+    seedShelf(on);
+    const off = freshStorage();
+    off.setTmdbRatings(false);
+    seedShelf(off);
+
+    expect(titles(on, { sort: 'a-z', minRating: 6 })).toEqual([
+      'Mid',
+      'Scored',
+      'Top',
+    ]);
+    expect(titles(off, { sort: 'a-z', minRating: 6 })).toEqual(['Mid', 'Top']);
+  });
+
+  it('sorts a film with neither a Rating nor a score last, and filters it out, under either preference', () => {
+    const seed = (storage: Storage) => {
+      storage.addMovie(newMovie({ title: 'Aardvark' }));
+      storage.addMovie(newMovie({ title: 'Mid', rating: 6 }));
+      addScored(storage, 'Zebra', 7);
+    };
+    const on = freshStorage();
+    on.setTmdbRatings(true);
+    seed(on);
+    const off = freshStorage();
+    off.setTmdbRatings(false);
+    seed(off);
+
+    // On: below the TMDB-only film, which now draws stars.
+    expect(titles(on, { sort: 'highest-rated' })).toEqual([
+      'Zebra',
+      'Mid',
+      'Aardvark',
+    ]);
+    expect(titles(on, { sort: 'a-z', minRating: 1 })).toEqual(['Mid', 'Zebra']);
+    // Off: among the unrated, which the TMDB-only film has rejoined.
+    expect(titles(off, { sort: 'highest-rated' })).toEqual([
+      'Mid',
+      'Aardvark',
+      'Zebra',
+    ]);
+    expect(titles(off, { sort: 'a-z', minRating: 1 })).toEqual(['Mid']);
+  });
+
+  it('sorts a score of 6.5 with 3½ ★ while on', () => {
+    const storage = freshStorage();
+    storage.setTmdbRatings(true);
+    storage.addMovie(newMovie({ title: 'Eight', rating: 8 }));
+    storage.addMovie(newMovie({ title: 'Seven', rating: 7 }));
+    storage.addMovie(newMovie({ title: 'Six', rating: 6 }));
+    addScored(storage, 'Halfway', 6.5);
+
+    expect(titles(storage, { sort: 'highest-rated' })).toEqual([
+      'Eight',
+      'Halfway',
+      'Seven',
+      'Six',
+    ]);
+  });
+
+  it('reads a flip of TMDB ratings on the next request, without a restart', () => {
+    const storage = freshStorage();
+    storage.setTmdbRatings(true);
+    seedShelf(storage);
+    expect(titles(storage, { sort: 'highest-rated' })).toEqual([
+      'Top',
+      'Scored',
+      'Mid',
+      'Low',
+    ]);
+
+    storage.setTmdbRatings(false);
+
+    expect(titles(storage, { sort: 'highest-rated' })).toEqual([
+      'Top',
+      'Mid',
+      'Low',
+      'Scored',
+    ]);
+    expect(titles(storage, { sort: 'a-z', minRating: 6 })).toEqual([
+      'Mid',
+      'Top',
+    ]);
+  });
+});
