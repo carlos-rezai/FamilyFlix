@@ -27,11 +27,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { ENRICH_FIELDS, type EnrichField, type StoredVideo } from '@/types';
 import { createMedia, type Media } from '../../media/createMedia/createMedia';
-import {
-  createPlayback,
-  type Playback,
-} from '../../playback/createPlayback/createPlayback';
-import { fixedSlot } from '../../test-support/fixedSlot/fixedSlot';
+import type { Playback } from '../../playback/createPlayback/createPlayback';
 import { freshStorage } from '../../test-support/freshStorage/freshStorage';
 import { sandboxRoot } from '../../test-support/sandboxRoot/sandboxRoot';
 import {
@@ -44,6 +40,7 @@ import {
   type FakeTmdb,
 } from '../../test-support/fakeTmdb/fakeTmdb';
 import { createEnrichment } from './createEnrichment';
+import { framelessPlayback } from '../../test-support/framelessPlayback/framelessPlayback';
 
 const ALL_FIELDS: EnrichField[] = [...ENRICH_FIELDS];
 const SHOW_ID = 72001;
@@ -113,10 +110,7 @@ function world({
   const root = sandboxRoot('familyflix-frame-still-');
   const realMedia = createMedia(root);
   const frameMock = vi.fn<Frame>(frame);
-  const playback: Playback = {
-    ...createPlayback(root, fixedSlot(null), () => null),
-    frame: frameMock,
-  };
+  const playback = framelessPlayback(frameMock);
   const enrichment = createEnrichment({
     storage,
     client,

@@ -38,8 +38,7 @@ import {
   tmdbTvResult,
 } from '../../test-support/fakeTmdb/fakeTmdb';
 import { createEnrichment } from './createEnrichment';
-import { createPlayback } from '../../playback/createPlayback/createPlayback';
-import { fixedSlot } from '../../test-support/fixedSlot/fixedSlot';
+import { framelessPlayback } from '../../test-support/framelessPlayback/framelessPlayback';
 
 const ALL_FIELDS: EnrichField[] = [...ENRICH_FIELDS];
 
@@ -103,11 +102,7 @@ function world() {
     storage,
     client,
     media,
-    playback: createPlayback(
-      sandboxRoot('familyflix-no-frame-'),
-      fixedSlot(null),
-      () => null
-    ),
+    playback: framelessPlayback(),
   });
 
   /** A show in the library, its one episode really on disk. */

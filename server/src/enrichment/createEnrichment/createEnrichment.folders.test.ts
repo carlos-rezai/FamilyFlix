@@ -56,8 +56,7 @@ import {
   type WriteBack,
 } from '../writeBack/writeBack';
 import { createEnrichment } from './createEnrichment';
-import { createPlayback } from '../../playback/createPlayback/createPlayback';
-import { fixedSlot } from '../../test-support/fixedSlot/fixedSlot';
+import { framelessPlayback } from '../../test-support/framelessPlayback/framelessPlayback';
 
 // Registered after the helpers' own hooks, so it runs first: Windows will not
 // remove a sandbox holding an open database file.
@@ -152,11 +151,7 @@ function world({ readOnly }: { readOnly?: Home } = {}) {
     }),
     media,
     ...(readOnly === undefined ? {} : { writeBack: refusing(paths[readOnly]) }),
-    playback: createPlayback(
-      sandboxRoot('familyflix-no-frame-'),
-      fixedSlot(null),
-      () => null
-    ),
+    playback: framelessPlayback(),
   });
 
   /** A film in the library, its video really stored, its folders recorded. */

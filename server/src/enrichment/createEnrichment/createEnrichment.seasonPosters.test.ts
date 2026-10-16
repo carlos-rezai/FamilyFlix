@@ -41,8 +41,7 @@ import {
 } from '../../test-support/fakeTmdb/fakeTmdb';
 import type { TmdbSeason } from '../tmdbClient/tmdbClient';
 import { createEnrichment } from './createEnrichment';
-import { createPlayback } from '../../playback/createPlayback/createPlayback';
-import { fixedSlot } from '../../test-support/fixedSlot/fixedSlot';
+import { framelessPlayback } from '../../test-support/framelessPlayback/framelessPlayback';
 
 const ALL_FIELDS: EnrichField[] = [...ENRICH_FIELDS];
 const NO_POSTER: EnrichField[] = ALL_FIELDS.filter(
@@ -109,11 +108,7 @@ function world({
     storage,
     client,
     media: wrapMedia(realMedia),
-    playback: createPlayback(
-      sandboxRoot('familyflix-no-frame-'),
-      fixedSlot(null),
-      () => null
-    ),
+    playback: framelessPlayback(),
   });
 
   /** The show in the library, each video really in its season folder. */

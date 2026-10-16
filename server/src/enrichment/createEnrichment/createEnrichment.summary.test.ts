@@ -25,8 +25,7 @@ import { freshStorage } from '../../test-support/freshStorage/freshStorage';
 import { newMovie } from '../../test-support/newMovie/newMovie';
 import { sandboxRoot } from '../../test-support/sandboxRoot/sandboxRoot';
 import { createEnrichment } from './createEnrichment';
-import { createPlayback } from '../../playback/createPlayback/createPlayback';
-import { fixedSlot } from '../../test-support/fixedSlot/fixedSlot';
+import { framelessPlayback } from '../../test-support/framelessPlayback/framelessPlayback';
 
 function world({ reachable = true } = {}) {
   const storage = freshStorage();
@@ -35,11 +34,7 @@ function world({ reachable = true } = {}) {
     storage,
     client,
     media: createMedia(sandboxRoot('familyflix-enrich-summary-')),
-    playback: createPlayback(
-      sandboxRoot('familyflix-no-frame-'),
-      fixedSlot(null),
-      () => null
-    ),
+    playback: framelessPlayback(),
   });
   return { storage, client, enrichment };
 }

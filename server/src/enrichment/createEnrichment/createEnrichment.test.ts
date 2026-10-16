@@ -39,8 +39,7 @@ import type {
   TmdbMovieResult,
 } from '../tmdbClient/tmdbClient';
 import { createEnrichment } from './createEnrichment';
-import { createPlayback } from '../../playback/createPlayback/createPlayback';
-import { fixedSlot } from '../../test-support/fixedSlot/fixedSlot';
+import { framelessPlayback } from '../../test-support/framelessPlayback/framelessPlayback';
 
 /** The ten chips, every one on — the setup's default. */
 const ALL_FIELDS: EnrichField[] = [...ENRICH_FIELDS];
@@ -102,11 +101,7 @@ function world(
     storage,
     client,
     media,
-    playback: createPlayback(
-      sandboxRoot('familyflix-no-frame-'),
-      fixedSlot(null),
-      () => null
-    ),
+    playback: framelessPlayback(),
   });
 
   /** A movie in the library, its video really in its Movie folder. */
