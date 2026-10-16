@@ -47,9 +47,9 @@ function topCast(
     .map((member) => member.name);
 }
 
-/** `vote_average` to one decimal, `null` for none. */
+/** `vote_average` to one decimal, `null` for none — and a `0` is none. */
 function score(voteAverage: number | undefined): number | null {
-  return typeof voteAverage === 'number'
+  return typeof voteAverage === 'number' && voteAverage !== 0
     ? Math.round(voteAverage * 10) / 10
     : null;
 }

@@ -363,4 +363,16 @@ export const migrations: readonly Migration[] = [
       `);
     },
   },
+  {
+    // A score of 0 is no score: TMDB answers `vote_average: 0` for a title
+    // nobody has voted on, and past Syncs stored it. Each zero goes back to
+    // `NULL`, so the title draws Unrated and sorts as one with no score.
+    version: 13,
+    up(db) {
+      db.exec(`
+        UPDATE movies SET tmdb_score = NULL WHERE tmdb_score = 0;
+        UPDATE series SET tmdb_score = NULL WHERE tmdb_score = 0;
+      `);
+    },
+  },
 ];
