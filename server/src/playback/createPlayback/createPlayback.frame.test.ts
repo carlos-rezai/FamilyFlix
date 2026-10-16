@@ -1,0 +1,422 @@
+// @vitest-environment node
+//
+// 44 — Episode stills, Phase 2: "the grab" (issue #383).
+//
+// `Playback.frame(video, signal)` takes one picture out of a video: the file
+// through `videoFile`, its duration off the file (the probe, then the MP4's own
+// `mvhd`), and the component the **Component slot** holds at the call spawned
+// over `frameArgs(file, duration × FRAME_POINT)` through the existing `spawn`
+// seam. Its stdout is collected and answered as a stream.
+//
+// `null` in every case with no picture — no component, a `missing` or
+// `unreachable` video, no duration, an empty stdout, the **Frame budget**
+// (20 s) spent, the signal aborted — killing the process wherever one runs.
+// It never rejects (`derivedRuntime`'s rule).
+//
+// The last block runs real ffmpeg over `test-support/fixtureVideo/`, and skips
+// on a machine with none on PATH.
+
+import { copyFileSync, mkdirSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { PassThrough, type Readable } from 'node:stream';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+
+import type { StoredVideo } from '@/types';
+
+import { fixedSlot } from '../../test-support/fixedSlot/fixedSlot';
+import { FIXTURE_VIDEO } from '../../test-support/fixtureVideo/fixtureVideo';
+import { sandboxRoot } from '../../test-support/sandboxRoot/sandboxRoot';
+import type { ComponentSlot } from '../componentSlot/componentSlot';
+import { ffmpegBinary } from '../ffmpegBinary/ffmpegBinary';
+import {
+  ffmpegComponent,
+  type PlaybackComponent,
+  type PlaybackProcess,
+} from '../ffmpegComponent/ffmpegComponent';
+import { FRAME_POINT, frameArgs } from '../frameArgs/frameArgs';
+import type { MediaProbe } from '../probe/probe';
+
+import { createPlayback } from './createPlayback';
+
+/** What the scripted component's stdout does once spawned. */
+type Script =
+  | { kind: 'bytes'; bytes: Buffer }
+  | { kind: 'empty' }
+  | { kind: 'hang' }
+  | { kind: 'stdout-error' }
+  | { kind: 'spawn-throws' };
+
+/** A component that answers a fixed probe and plays a script on spawn. */
+interface ScriptedComponent extends PlaybackComponent {
+  spawned: string[][];
+  killed: number;
+}
+
+const MATROSKA: MediaProbe = {
+  container: 'matroska',
+  videoCodec: 'h264',
+  audioCodec: 'ac3',
+  durationSeconds: 4102.5,
+};
+
+const JPEG = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3, 0xff, 0xd9]);
+
+function scriptedComponent(
+  script: Script,
+  probe: MediaProbe | null = MATROSKA
+): ScriptedComponent {
+  const component: ScriptedComponent = {
+    spawned: [],
+    killed: 0,
+    hardwareEncoder: null,
+    decoders: () => null,
+    probe: () => probe,
+    spawn: (args: string[]): PlaybackProcess => {
+      component.spawned.push(args);
+      if (script.kind === 'spawn-throws') {
+        throw new Error('spawn ENOENT');
+      }
+      const stdout = new PassThrough();
+      if (script.kind === 'bytes') {
+        stdout.end(script.bytes);
+      } else if (script.kind === 'empty') {
+        stdout.end();
+      } else if (script.kind === 'stdout-error') {
+        setImmediate(() => stdout.destroy(new Error('EPIPE')));
+      }
+      return {
+        stdout,
+        kill: () => {
+          component.killed += 1;
+          stdout.destroy();
+        },
+      };
+    },
+  };
+  return component;
+}
+
+/** A slot whose live component the test replaces between two calls. */
+function changingSlot(): {
+  slot: ComponentSlot;
+  put(next: PlaybackComponent | null): void;
+} {
+  let live: PlaybackComponent | null = null;
+  const refuse = (): never => {
+    throw new Error('the changing slot neither receives nor removes');
+  };
+  return {
+    slot: {
+      current: () => live,
+      info: () =>
+        live === null
+          ? null
+          : { source: 'uploaded', bytes: 1000, files: ['ffmpeg', 'ffprobe'] },
+      receive: refuse,
+      remove: refuse,
+    },
+    put: (next) => {
+      live = next;
+    },
+  };
+}
+
+const FOLDER_ID = 'folder-1';
+
+/** A media root holding one managed episode, and the Library folder path. */
+function sandbox(contents: string | Buffer = 'episode bytes'): {
+  media: string;
+  folder: string;
+  file: string;
+  video: StoredVideo;
+} {
+  const root = sandboxRoot('familyflix-frame-');
+  const media = join(root, 'media');
+  const folder = join(root, 'Shows');
+  mkdirSync(join(media, 'mr-robot-2015', 'season-01'), { recursive: true });
+  mkdirSync(folder);
+  const file = join(media, 'mr-robot-2015', 'season-01', 'S01E01.mkv');
+  writeFileSync(file, contents);
+  return {
+    media,
+    folder,
+    file,
+    video: {
+      videoPath: 'mr-robot-2015/season-01/S01E01.mkv',
+      videoFolderId: null,
+    },
+  };
+}
+
+async function bytesOf(stream: Readable): Promise<Buffer> {
+  const chunks: Buffer[] = [];
+  for await (const chunk of stream) {
+    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk as string));
+  }
+  return Buffer.concat(chunks);
+}
+
+const live = (): AbortSignal => new AbortController().signal;
+
+afterEach(() => {
+  vi.useRealTimers();
+});
+
+describe('createPlayback.frame — a picture', () => {
+  it("answers the component's stdout as a stream", async () => {
+    const { media, video } = sandbox();
+    const component = scriptedComponent({ kind: 'bytes', bytes: JPEG });
+
+    const frame = await createPlayback(
+      media,
+      fixedSlot(component),
+      () => null
+    ).frame(video, live());
+
+    expect(frame).not.toBeNull();
+    expect(await bytesOf(frame as Readable)).toEqual(JPEG);
+  });
+
+  it('spawns frameArgs over the file at a third of its duration', async () => {
+    const { media, file, video } = sandbox();
+    const component = scriptedComponent({ kind: 'bytes', bytes: JPEG });
+
+    await createPlayback(media, fixedSlot(component), () => null).frame(
+      video,
+      live()
+    );
+
+    expect(component.spawned).toEqual([frameArgs(file, 4102.5 * FRAME_POINT)]);
+  });
+
+  it("reads the duration off the MP4's own header when the probe says nothing", async () => {
+    const { media, video } = sandbox();
+    copyFileSync(FIXTURE_VIDEO, join(media, video.videoPath));
+    const component = scriptedComponent({ kind: 'bytes', bytes: JPEG }, null);
+
+    const frame = await createPlayback(
+      media,
+      fixedSlot(component),
+      () => null
+    ).frame(video, live());
+
+    expect(frame).not.toBeNull();
+    expect(component.spawned).toHaveLength(1);
+    const args = component.spawned[0];
+    expect(Number(args[args.indexOf('-ss') + 1])).toBeCloseTo(10 / 3, 3);
+  });
+
+  it('uses the component the slot holds at the call, an uploaded one included', async () => {
+    const { media, video } = sandbox();
+    const { slot, put } = changingSlot();
+    const first = scriptedComponent({ kind: 'bytes', bytes: JPEG });
+    const uploaded = scriptedComponent({ kind: 'bytes', bytes: JPEG });
+    const playback = createPlayback(media, slot, () => null);
+
+    put(first);
+    await playback.frame(video, live());
+    put(uploaded);
+    await playback.frame(video, live());
+
+    expect(first.spawned).toHaveLength(1);
+    expect(uploaded.spawned).toHaveLength(1);
+  });
+});
+
+describe('createPlayback.frame — null before a process runs', () => {
+  it('answers null with no component', async () => {
+    const { media, file, video } = sandbox();
+    copyFileSync(FIXTURE_VIDEO, file);
+
+    expect(
+      await createPlayback(media, fixedSlot(null), () => null).frame(
+        video,
+        live()
+      )
+    ).toBeNull();
+  });
+
+  it('answers null for a missing video, spawning nothing', async () => {
+    const { media } = sandbox();
+    const component = scriptedComponent({ kind: 'bytes', bytes: JPEG });
+
+    expect(
+      await createPlayback(media, fixedSlot(component), () => null).frame(
+        { videoPath: 'gone/S09E09.mkv', videoFolderId: null },
+        live()
+      )
+    ).toBeNull();
+    expect(component.spawned).toEqual([]);
+  });
+
+  it('answers null for a linked video whose Library folder is unreachable, spawning nothing', async () => {
+    const { media, folder } = sandbox();
+    const component = scriptedComponent({ kind: 'bytes', bytes: JPEG });
+    const unplugged = join(folder, 'not-plugged-in');
+
+    expect(
+      await createPlayback(media, fixedSlot(component), (id) =>
+        id === FOLDER_ID ? unplugged : null
+      ).frame(
+        { videoPath: 'Show/S01E01.mkv', videoFolderId: FOLDER_ID },
+        live()
+      )
+    ).toBeNull();
+    expect(component.spawned).toEqual([]);
+  });
+
+  it('answers null with no duration, spawning nothing', async () => {
+    // Not an MP4, and a probe that says nothing: no Frame point.
+    const { media, video } = sandbox();
+    const component = scriptedComponent({ kind: 'bytes', bytes: JPEG }, null);
+
+    expect(
+      await createPlayback(media, fixedSlot(component), () => null).frame(
+        video,
+        live()
+      )
+    ).toBeNull();
+    expect(component.spawned).toEqual([]);
+  });
+});
+
+describe('createPlayback.frame — null once a process runs, killing it', () => {
+  it('answers null for an empty stdout, killing the process', async () => {
+    const { media, video } = sandbox();
+    const component = scriptedComponent({ kind: 'empty' });
+
+    expect(
+      await createPlayback(media, fixedSlot(component), () => null).frame(
+        video,
+        live()
+      )
+    ).toBeNull();
+    expect(component.killed).toBeGreaterThan(0);
+  });
+
+  it('answers null at the Frame budget (20 s), killing the process', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    const { media, video } = sandbox();
+    const component = scriptedComponent({ kind: 'hang' });
+
+    const answer = createPlayback(
+      media,
+      fixedSlot(component),
+      () => null
+    ).frame(video, live());
+    let settled = false;
+    void answer.then(() => {
+      settled = true;
+    });
+
+    await vi.advanceTimersByTimeAsync(19_000);
+    expect(settled).toBe(false);
+    expect(component.killed).toBe(0);
+
+    await vi.advanceTimersByTimeAsync(1_000);
+    expect(await answer).toBeNull();
+    expect(component.killed).toBeGreaterThan(0);
+  });
+
+  it('answers null on abort, killing the process', async () => {
+    const { media, video } = sandbox();
+    const component = scriptedComponent({ kind: 'hang' });
+    const controller = new AbortController();
+
+    const answer = createPlayback(
+      media,
+      fixedSlot(component),
+      () => null
+    ).frame(video, controller.signal);
+    await new Promise((resolve) => setImmediate(resolve));
+    controller.abort();
+
+    expect(await answer).toBeNull();
+    expect(component.killed).toBeGreaterThan(0);
+  });
+
+  it('answers null for a signal already aborted, leaving no process running', async () => {
+    const { media, video } = sandbox();
+    const component = scriptedComponent({ kind: 'hang' });
+    const controller = new AbortController();
+    controller.abort();
+
+    expect(
+      await createPlayback(media, fixedSlot(component), () => null).frame(
+        video,
+        controller.signal
+      )
+    ).toBeNull();
+    expect(component.killed).toBe(component.spawned.length);
+  });
+});
+
+describe('createPlayback.frame — never rejects', () => {
+  it('answers null when the spawn throws', async () => {
+    const { media, video } = sandbox();
+    const component = scriptedComponent({ kind: 'spawn-throws' });
+
+    await expect(
+      createPlayback(media, fixedSlot(component), () => null).frame(
+        video,
+        live()
+      )
+    ).resolves.toBeNull();
+  });
+
+  it('answers null when stdout errors, killing the process', async () => {
+    const { media, video } = sandbox();
+    const component = scriptedComponent({ kind: 'stdout-error' });
+
+    await expect(
+      createPlayback(media, fixedSlot(component), () => null).frame(
+        video,
+        live()
+      )
+    ).resolves.toBeNull();
+    expect(component.killed).toBeGreaterThan(0);
+  });
+
+  it('answers null when the probe throws and the file has no header to read', async () => {
+    const { media, video } = sandbox();
+    const component = scriptedComponent({ kind: 'bytes', bytes: JPEG });
+    component.probe = () => {
+      throw new Error('ffprobe died');
+    };
+
+    await expect(
+      createPlayback(media, fixedSlot(component), () => null).frame(
+        video,
+        live()
+      )
+    ).resolves.toBeNull();
+  });
+});
+
+const realBinaries = ffmpegBinary({
+  PATH: process.env.PATH ?? process.env.Path,
+});
+
+describe.skipIf(realBinaries === null)(
+  'createPlayback.frame — real ffmpeg on PATH',
+  () => {
+    it('answers a JPEG out of the fixture video', async () => {
+      const { media, video } = sandbox();
+      copyFileSync(FIXTURE_VIDEO, join(media, video.videoPath));
+      const component = ffmpegComponent(
+        realBinaries as NonNullable<typeof realBinaries>
+      );
+
+      const frame = await createPlayback(
+        media,
+        fixedSlot(component),
+        () => null
+      ).frame(video, live());
+
+      expect(frame).not.toBeNull();
+      const bytes = await bytesOf(frame as Readable);
+      expect(bytes.length).toBeGreaterThan(100);
+      expect([...bytes.subarray(0, 3)]).toEqual([0xff, 0xd8, 0xff]);
+    }, 30_000);
+  }
+);
