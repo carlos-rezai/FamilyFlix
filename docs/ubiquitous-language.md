@@ -744,8 +744,22 @@ rated draws TMDB's score as its stars, marked as TMDB's; the family's own
 | **TMDB-marked stars** (new) | How a **TMDB rating** is drawn on every surface: the same accent stars as the family's, the value followed by a small `TMDB` tag — `StarRating`'s `tag`, answered for a **Rating source** by `tmdbMarks`, the **Rating picker**'s `placeholder` and `placeholderTag`; the word is `TMDB_TAG`.                                    | grey stars, muted stars, TMDB badge               |
 | **TMDB ratings** (new)      | The household's on/off preference (`settings.tmdb-ratings`, `Settings.tmdbRatings`, default **on**), the Display group's _Fill in ratings from TMDB_ row. Held by `DisplayPreferenceProvider` beside **Ultrawide margins**, `null` read as off; a **Single-signal write**, `POST /api/settings/tmdb-ratings { value: boolean }`. | TMDB fill, auto-rating, rating fallback           |
 
+## Episode stills (new)
+
+Design log 44: step 27, initiative `episode-stills`. When TMDB has no **Still**
+for an **Episode**, a **Sync** takes one from the episode's own video. Planned (🔜).
+
+| Term                   | Definition                                                                                                                                                                                                                                                                                                                                                                               | Aliases to avoid                          |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------- |
+| **Frame still** (new)  | A **Still** a **Sync** takes from the **Episode**'s own video at the **Frame point**, when TMDB offers none for it. `Playback.frame` takes it through the **Playback component**'s `spawn`. It is stored as `<stem>.frame.jpg` in the Series folder's `season-NN/`. A **Linked video** is read, never written into. It is drawn and exported exactly like any other Still, with no mark. | thumbnail, screenshot, grab, bare "frame" |
+| **Frame point** (new)  | Where a **Frame still** is taken: a third of the video's own duration (`FRAME_POINT` in `playback/frameArgs/`), read off the file and never off `runtime_minutes`. With no duration, there is no Frame still.                                                                                                                                                                            | offset, timestamp                         |
+| **Frame budget** (new) | How long `Playback.frame` waits for a picture: 20 s. When it runs out, the process is killed and the answer is `null`.                                                                                                                                                                                                                                                                   | timeout (in prose)                        |
+| **Still source** (new) | Where an **Episode**'s **Still** came from: `tmdb`, `frame` or `picked` (`episodes.still_source`, migration 14), `NULL` exactly when there is no Still. Server side only. A Sync replaces a `frame` Still with TMDB's; it never replaces a `tmdb` or `picked` one.                                                                                                                       | origin, provider                          |
+| **Still plan** (new)   | What `planEpisode` answers for an Episode's art: `{ kind: 'tmdb', path }`, `{ kind: 'frame' }`, or `null`.                                                                                                                                                                                                                                                                               | still fill                                |
+
 ## Relationships
 
+- An **Episode** has at most one **Still**, and the Still has exactly one **Still source**. A Sync takes a **Frame still** only for an Episode with no Still that TMDB offers none for, and replaces it when TMDB later offers one.
 - A **Library folder** has zero-or-more titles (**Movies** and **Series**) recorded against it; a title has at most one Library folder, and none once its folder is removed or when it was added by hand.
 - A **Folder scan** walks every reachable **Library folder** in the order added and is one **Current run**; a spreadsheet import reads every listed Library folder too (log 40), and no typed root joins the list.
 - A **Sync** writes at most one **Metadata sheet** per **Library folder**, and a title's `poster.jpg` only into its own folder.
@@ -1546,6 +1560,16 @@ Hard` gets found and `Die Hard\extras` doesn't become a second film."
 > **Maintainer:** "Yes — sort and filter read the **Shown rating**, so a card
 > showing 4 ★ is in `4+ stars`. The Export still writes the **Rating** alone."
 
+> **Dev:** "TMDB lists _Harbor and Vine_'s season 2 but has no **Still** for
+> any of its episodes. What does the season page draw after a **Sync**?"
+> **Domain expert:** "Each episode gets a **Frame still**, taken at the **Frame
+> point**, a third of the way into its own file. Its **Still source** is
+> `frame`, and the **Sync gap** counts it as filled."
+> **Dev:** "And when TMDB adds stills next year?"
+> **Domain expert:** "The next Sync that reaches the show swaps each frame for
+> TMDB's Still and deletes the frame file. A Still Mom picked in the series
+> form is `picked`, and no Sync ever touches it."
+
 ## Flagged ambiguities
 
 - **"Episode row" vs "Episode file row" (new):** the **Episode row** is the
@@ -2317,6 +2341,8 @@ Hard` gets found and `Die Hard\extras` doesn't become a second film."
   layout's furniture _inside_ the frame, and the frame is the cap _around_
   every layout. Never say bare "frame" for either one. A video frame stays
   "frame" only in the player's own context (a **Still**, a keyframe).
+  Since log 44 a picture taken from an episode's video is a **Frame still**,
+  always in full, and its place in the file is the **Frame point**.
 - **"Margin" is the leftover, not a setting value (new):** **Ultrawide
   margins** has no margin width. The margins are whatever the window has
   left over beyond the **Content measure**. Don't call the measure "the
