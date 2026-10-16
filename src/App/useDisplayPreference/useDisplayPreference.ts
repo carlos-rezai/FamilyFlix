@@ -29,8 +29,8 @@ export const DisplayPreferenceContext =
   createContext<DisplayPreferenceApi | null>(null);
 
 /**
- * `{ ultrawideMargins, setUltrawideMargins, tmdbRatings, setTmdbRatings }` off the app-level
- * `DisplayPreferenceProvider`. The provider is mounted in `App`, so a consumer
+ * `{ ultrawideMargins, setUltrawideMargins, tmdbRatings, setTmdbRatings }` off
+ * the app-level `DisplayPreferenceProvider`. The provider is mounted in `App`, so a consumer
  * outside one is a wiring mistake, and a silent `null` would hide it: it
  * throws, naming itself.
  */
