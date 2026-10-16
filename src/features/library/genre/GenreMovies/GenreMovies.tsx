@@ -16,7 +16,7 @@ import { useOptimisticSave } from '../../useOptimisticSave/useOptimisticSave';
 import { view } from '../../view/view';
 import { withFavoriteInList } from '../../withFavorite/withFavorite';
 import { underTmdbRatings } from '../../underTmdbRatings/underTmdbRatings';
-import { useTmdbRatings } from '@/hooks/useTmdbRatings/useTmdbRatings';
+import { useTmdbRatings } from '@/App/useTmdbRatings/useTmdbRatings';
 
 /** One genre as this screen renders it, mapped once as the payload lands. */
 interface GenreScreen {

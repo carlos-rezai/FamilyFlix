@@ -8,7 +8,7 @@ import { toRatingPercent, toRatingUnits } from '@/utils';
 import { saveRating } from '../api/api';
 import { detailView } from '../detailView/detailView';
 import { useOptimisticEdit } from '@/hooks/useOptimisticEdit/useOptimisticEdit';
-import { useTmdbRatings } from '@/hooks/useTmdbRatings/useTmdbRatings';
+import { useTmdbRatings } from '@/App/useTmdbRatings/useTmdbRatings';
 
 /**
  * Where the load is. Four, not three: a movie that is gone and a movie that

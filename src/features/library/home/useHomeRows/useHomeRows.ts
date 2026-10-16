@@ -17,7 +17,7 @@ import { useBrowseLoad } from '../../useBrowseLoad/useBrowseLoad';
 import { useOptimisticSave } from '../../useOptimisticSave/useOptimisticSave';
 import { withFavorite, withShelved } from '../../withFavorite/withFavorite';
 import { underTmdbRatings } from '../../underTmdbRatings/underTmdbRatings';
-import { useTmdbRatings } from '@/hooks/useTmdbRatings/useTmdbRatings';
+import { useTmdbRatings } from '@/App/useTmdbRatings/useTmdbRatings';
 
 /** The home payload as the three sections render it, mapped once as it lands. */
 interface HomeSections {

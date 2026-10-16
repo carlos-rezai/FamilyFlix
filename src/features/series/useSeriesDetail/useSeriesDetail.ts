@@ -2,7 +2,7 @@ import { useCallback } from 'react';
 
 import type { Episode, SeriesPageModel } from '@/types';
 import { saveSeriesFavorite } from '@/api/saveSeriesFavorite/saveSeriesFavorite';
-import { useTmdbRatings } from '@/hooks/useTmdbRatings/useTmdbRatings';
+import { useTmdbRatings } from '@/App/useTmdbRatings/useTmdbRatings';
 import { useOptimisticEdit } from '@/hooks/useOptimisticEdit/useOptimisticEdit';
 import { saveSeriesWatched } from '../api/api';
 import { marked, patchEpisodes } from '../markEpisodes/markEpisodes';
