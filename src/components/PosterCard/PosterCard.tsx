@@ -9,6 +9,7 @@ import {
   HeartOutlineIcon,
 } from '@/primitives';
 import type { PosterCardMovie } from '@/types';
+import { tmdbMarks } from '@/utils';
 import {
   Root,
   Poster,
@@ -136,8 +137,7 @@ export function PosterCard({
             rating={movie.rating}
             size={13}
             showValue
-            muted={movie.ratingSource === 'tmdb'}
-            tag={movie.ratingSource === 'tmdb' ? 'TMDB' : undefined}
+            {...tmdbMarks(movie.ratingSource)}
           />
         </StarRow>
       </MetaWrap>

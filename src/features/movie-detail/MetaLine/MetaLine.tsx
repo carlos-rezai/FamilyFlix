@@ -1,6 +1,7 @@
 import { Fragment, type ReactNode } from 'react';
 
 import { RatingPicker } from '@/components';
+import { TMDB_TAG } from '@/utils';
 import {
   Root,
   MetaText,
@@ -26,9 +27,6 @@ export interface MetaLineProps {
 
 /** The picker's stars sit at 20px on this page — larger than a card's 13px. */
 const STAR_SIZE = 20;
-
-/** Whose rating the placeholder is. */
-const TMDB_TAG = 'TMDB';
 
 /** Drawn between two surviving **Meta segments**, never beside a missing one. */
 const META_SEPARATOR = '•';

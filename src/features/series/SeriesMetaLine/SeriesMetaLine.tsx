@@ -2,6 +2,7 @@ import { Fragment, type ReactNode } from 'react';
 
 import type { RatingSource } from '@/types';
 import { StarRating } from '@/primitives';
+import { tmdbMarks } from '@/utils';
 import { Root, MetaText, Separator } from './SeriesMetaLine.styles';
 
 export interface SeriesMetaLineProps {
@@ -21,9 +22,6 @@ const STAR_SIZE = 20;
 /** Drawn between two surviving **Meta segments**, never beside a missing one. */
 const META_SEPARATOR = '•';
 
-/** The mark after a TMDB-drawn value — **TMDB-marked stars**. */
-const TMDB_TAG = 'TMDB';
-
 /** One item on the line, keyed so the interleaved separators stay stable. */
 interface MetaSegment {
   key: string;
@@ -42,7 +40,6 @@ function metaSegments({
   ratingPercent,
   ratingSource,
 }: SeriesMetaLineProps): MetaSegment[] {
-  const isTmdb = ratingSource === 'tmdb';
   const segments: MetaSegment[] = [];
   if (yearLabel !== null) {
     segments.push({ key: 'year', node: <MetaText>{yearLabel}</MetaText> });
@@ -55,8 +52,7 @@ function metaSegments({
         rating={ratingPercent}
         size={STAR_SIZE}
         showValue
-        muted={isTmdb}
-        tag={isTmdb ? TMDB_TAG : undefined}
+        {...tmdbMarks(ratingSource)}
       />
     ),
   });

@@ -10,6 +10,7 @@ export {
   tmdbRating,
   type ShownRating,
 } from './shownRating/shownRating';
+export { tmdbMarks, TMDB_TAG, type TmdbMarks } from './tmdbMarks/tmdbMarks';
 export { toStarLabel } from './toStarLabel/toStarLabel';
 export {
   toProgressPercent,
