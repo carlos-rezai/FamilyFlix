@@ -1105,7 +1105,8 @@ ending with **Software update** (v0.2.0), and so are steps 10–15: the
 second chain is done too, shipped as v0.3.0, and so are steps 16–21:
 the third chain is done, and so are step 22, **Season posters**, step
 23, **Import review**, step 24, **Link or copy**, and step 25, **Review
-at scale + Season art**, and step 26, **TMDB ratings**. Steps 10–15 came out of
+at scale + Season art**, and step 26, **TMDB ratings**; step 27, **Episode
+stills**, is next. Steps 10–15 came out of
 installing FamilyFlix and using it: smallest and most self-contained first,
 the form before the folders that will feed it, export last because it
 mirrors what import holds.
@@ -1271,6 +1272,27 @@ Q12). It is done (design log 43):
     and the rating filter read the drawn value, series alike, and that an
     Export still writes the household Rating alone.
 
+Step 27 came out of using step 26: TMDB holds a **Still** for every episode of
+some shows and for none of others, so a season page can be half gradients.
+The series form has taken a Still from a file since issue #379. It is planned,
+and goes through grill-me before a PRD:
+
+27. 🔜 **Episode stills** — an **Episode** TMDB has no Still for takes one
+    from its own video: one frame at **a third of its runtime**, grabbed by
+    the **Playback component** (`ffmpeg -ss <t> -i <video> -frames:v 1`),
+    stored as a Stored path in its Series folder's `season-NN/` beside the
+    Sync's and the form's stills — a **Linked video** is read, never written
+    into. TMDB's Still is preferred whenever it has one; a Still picked in the
+    series form is never replaced; no component (`ffmpegBinary` absent)
+    leaves the gradient, never an error. To settle in the grill: when it runs
+    (a Sync's fallback after TMDB answers, at import, or an action of its
+    own) and its progress and cancel at a thousand episodes; whether a
+    Still's source is recorded (`tmdb` / `frame` / `picked`), so a later
+    Sync can replace a frame with TMDB's and the **Sync gap** still counts a
+    frame as missing TMDB art; a frame that lands black or on credits; the
+    runtime when none is stored (`probe`, `mediaDuration`); and whether an
+    Export carries a frame as it carries a Still.
+
 A 🧭 Roadmap item is not in this chain — it is after it, if ever.
 
 ### Foundation
@@ -1296,6 +1318,7 @@ A 🧭 Roadmap item is not in this chain — it is after it, if ever.
 - ✅ **Backdrop veil** — the movie and series pages' art over the whole viewport, staying put under an accent-tinted veil while the content scrolls over it.
 - ✅ **Single-title Sync** — the ⋯ menu's _Fetch from TMDB_ syncs that movie alone, re-attaching only to its own run; a library Sync left in review is let go by Start, never hijacked.
 - ✅ **Season posters** — each season card on the series page draws that season's own TMDB poster, fetched by the Sync that already reads every season, the gradient when there is none; an Export carries them under `seasons/`.
+- 🔜 **Episode stills** — an episode TMDB has no still for draws a frame from its own file, a third of the way in, taken with the bundled FFmpeg; TMDB's still preferred, a hand-picked one never replaced, the gradient with no FFmpeg (step 27).
 
 ### Playback
 
