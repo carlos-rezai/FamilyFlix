@@ -78,6 +78,17 @@ function toTopTag(movie: Movie, hasPoster: boolean): string | null {
 }
 
 /**
+ * The **TMDB rating** as a percent while _Fill in ratings from TMDB_ is on and
+ * a score is held, else `null` — asked of `shownRating` with no household
+ * Rating, so the rounding is the cards' own. It stays beside `ratingPercent`,
+ * never merged into it: the picker shows it only as a placeholder.
+ */
+function toTmdbPercent(movie: Movie, tmdbRatings: boolean): number | null {
+  const tmdb = shownRating(null, movie.tmdbScore, tmdbRatings);
+  return tmdb === null ? null : toRatingPercent(tmdb.units);
+}
+
+/**
  * Maps a canonical `Movie` record to the `MovieDetailModel` the movie detail
  * page renders — the detail-screen sibling of `view()` and `continueView()`.
  *
@@ -95,17 +106,6 @@ function toTopTag(movie: Movie, hasPoster: boolean): string | null {
  * the stars exist. And **artwork is not decorated**: the overlays follow
  * `PosterCard`'s rule and caption the deterministic gradient only.
  */
-/**
- * The **TMDB rating** as a percent while _Fill in ratings from TMDB_ is on and
- * a score is held, else `null` — asked of `shownRating` with no household
- * Rating, so the rounding is the cards' own. It stays beside `ratingPercent`,
- * never merged into it: the picker shows it only as a placeholder.
- */
-function toTmdbPercent(movie: Movie, tmdbRatings: boolean): number | null {
-  const tmdb = shownRating(null, movie.tmdbScore, tmdbRatings);
-  return tmdb === null ? null : toRatingPercent(tmdb.units);
-}
-
 export function detailView(
   movie: Movie,
   tmdbRatings: boolean
