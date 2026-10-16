@@ -456,7 +456,7 @@ describe('an Export of a show holding a frame', () => {
     const folder = join(destination, name);
     const rows = (file: string) =>
       readFileSync(join(folder, file), 'utf8')
-        .replace(/^FEFF/, '')
+        .replace(/^\s+/, '') // the BOM
         .split(/\r?\n/)
         .filter((line) => line !== '')
         .map((line) =>
