@@ -447,3 +447,62 @@ describe('library: enrichmentCounts — a series’ Sync gap leaves Full details
     });
   });
 });
+
+// 44 — Episode stills, Phase 3 (issue #384): the show pass reads each
+// episode's **Still source** once per show, by episode id.
+describe('library: stillSourcesOf — each episode’s Still source', () => {
+  it('answers each held still’s source by episode id', () => {
+    const { storage, seriesId, first, second } = showWithEpisodes();
+    storage.enrichEpisode(first.id, {
+      stillPath: 'the-hollow-coast-2018/season-01/S01E01.frame.jpg',
+      stillSource: 'frame',
+    });
+    storage.enrichEpisode(second.id, {
+      stillPath: 'the-hollow-coast-2018/season-01/S01E02.still.jpg',
+      stillSource: 'tmdb',
+    });
+
+    const sources = storage.stillSourcesOf(seriesId);
+
+    expect(sources.get(first.id)).toBe('frame');
+    expect(sources.get(second.id)).toBe('tmdb');
+    expect(sources.size).toBe(2);
+  });
+
+  it('answers a still picked in the series form as picked', () => {
+    const storage = freshStorage();
+    const series = storage.addSeries({ title: 'The Hollow Coast', year: 2018 });
+    const picked = storage.addEpisode(series.id, {
+      season: 1,
+      number: 1,
+      videoPath: 'the-hollow-coast-2018/season-01/S01E01.mkv',
+      stillPath: 'the-hollow-coast-2018/season-01/S01E01-still.jpg',
+    });
+
+    expect(storage.stillSourcesOf(series.id).get(picked.id)).toBe('picked');
+  });
+
+  it('answers none for an episode with no still', () => {
+    const { storage, seriesId, first, second } = showWithEpisodes();
+    storage.enrichEpisode(first.id, {
+      stillPath: 'the-hollow-coast-2018/season-01/S01E01.still.jpg',
+      stillSource: 'tmdb',
+    });
+
+    const sources = storage.stillSourcesOf(seriesId);
+
+    expect(sources.has(second.id)).toBe(false);
+    expect([...sources.keys()]).toEqual([first.id]);
+  });
+
+  it('answers only the series asked about', () => {
+    const { storage, first } = showWithEpisodes();
+    storage.enrichEpisode(first.id, {
+      stillPath: 'the-hollow-coast-2018/season-01/S01E01.still.jpg',
+      stillSource: 'tmdb',
+    });
+    const other = storage.addSeries({ title: 'Another Show', year: 2020 });
+
+    expect(storage.stillSourcesOf(other.id).size).toBe(0);
+  });
+});
