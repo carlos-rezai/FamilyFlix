@@ -30,6 +30,17 @@ export function shownRatingSql(alias: string, tmdbRatings: boolean): string {
 }
 
 /**
+ * _Highest rated_'s `ORDER BY` body over a table alias, beside the
+ * {@link shownRatingSql} it orders by: the unrated last, then the Shown rating
+ * highest first, then the title without case. The movie and series browses
+ * both read it.
+ */
+export function highestRatedSql(alias: string, tmdbRatings: boolean): string {
+  const shown = shownRatingSql(alias, tmdbRatings);
+  return `${shown} IS NULL, ${shown} DESC, ${alias}.title COLLATE NOCASE`;
+}
+
+/**
  * Each {@link ListSort} mapped to its `ORDER BY` body (over the `movies m`
  * alias). `null` year/rating/stamp sort last via the `IS NULL` leading key; the
  * `unwatched-first` rank groups unwatched (0) → in-progress (1) → watched (2),
@@ -58,11 +69,11 @@ const ORDER_BY: Record<Exclude<ListSort, 'highest-rated'>, string> = {
   'last-watched': `m.last_watched_at IS NULL, m.last_watched_at DESC, ${RECENTLY_ADDED}`,
 };
 
-/** {@link ORDER_BY} with `highest-rated` filled in over the Shown rating. */
-function orderBy(sort: ListSort, shownRating: string): string {
+/** {@link ORDER_BY} with `highest-rated` filled in under the preference. */
+function orderBy(sort: ListSort, tmdbRatings: boolean): string {
   const bodies: Record<ListSort, string> = {
     ...ORDER_BY,
-    'highest-rated': `${shownRating} IS NULL, ${shownRating} DESC, m.title COLLATE NOCASE`,
+    'highest-rated': highestRatedSql('m', tmdbRatings),
   };
   return bodies[sort];
 }
@@ -125,7 +136,7 @@ function buildListQuery(
 
   const whereClause = where.length > 0 ? `WHERE ${where.join(' AND ')}` : '';
   const limitClause = query.limit === undefined ? '' : ' LIMIT ?';
-  const sql = `SELECT m.* FROM movies m ${whereClause} ORDER BY ${orderBy(query.sort, shownRating)}${limitClause}`;
+  const sql = `SELECT m.* FROM movies m ${whereClause} ORDER BY ${orderBy(query.sort, tmdbRatings)}${limitClause}`;
   const params =
     query.limit === undefined ? whereParams : [...whereParams, query.limit];
 

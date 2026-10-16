@@ -9,7 +9,7 @@ import {
   type SeriesHomePayload,
 } from '@/types';
 import type { EpisodeRow, SeriesReader, SeriesRow } from '../read/read';
-import { shownRatingSql } from '../../browse/browse';
+import { highestRatedSql, shownRatingSql } from '../../browse/browse';
 
 /** The Series tab's Continue Watching row holds at most this many entries. */
 const CONTINUE_LIMIT = 15;
@@ -36,10 +36,9 @@ const SERIES_ORDER_BY: Record<Exclude<MovieSort, 'highest-rated'>, string> = {
 
 /** {@link SERIES_ORDER_BY} with `highest-rated` filled in under the preference. */
 function seriesOrderBy(sort: MovieSort, tmdbRatings: boolean): string {
-  const shown = shownRatingSql('s', tmdbRatings);
   const bodies: Record<MovieSort, string> = {
     ...SERIES_ORDER_BY,
-    'highest-rated': `${shown} IS NULL, ${shown} DESC, s.title COLLATE NOCASE`,
+    'highest-rated': highestRatedSql('s', tmdbRatings),
   };
   return bodies[sort];
 }
