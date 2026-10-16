@@ -90,6 +90,9 @@ export interface SeriesBrowse {
  * The Series tab's reads, created from the series reader the way the movie's
  * `createBrowse` is from the movie reader: the filters, the sort and the
  * Continue row's rules here, the assembly there.
+ *
+ * @param tmdbRatings the **TMDB ratings** preference, asked on every query so a
+ *   flip is read by the next request without a restart.
  */
 export function createSeriesBrowse(
   db: SqliteDatabase,
@@ -126,11 +129,11 @@ export function createSeriesBrowse(
 
   return {
     getSeriesHome: (query = { sort: DEFAULT_MOVIE_SORT }) => {
-      const tmdbRatingsOn = tmdbRatings();
-      const where = seriesWhere(query, tmdbRatingsOn);
+      const on = tmdbRatings();
+      const where = seriesWhere(query, on);
       const rows = db
         .prepare(
-          `SELECT s.* FROM series s ${where.sql} ORDER BY ${seriesOrderBy(query.sort, tmdbRatingsOn)}`
+          `SELECT s.* FROM series s ${where.sql} ORDER BY ${seriesOrderBy(query.sort, on)}`
         )
         .all(...where.params) as SeriesRow[];
       const { n } = db
