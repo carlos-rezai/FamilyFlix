@@ -48,32 +48,36 @@ export function createSettings(db: SqliteDatabase): SettingsRepository {
     return row?.value ?? null;
   }
 
+  /** The flag stored under `key` — `'1'` is on — or `fallback` when none is. */
+  function flagOf(key: string, fallback: boolean): boolean {
+    const stored = valueOf(key);
+    return stored === null ? fallback : stored === '1';
+  }
+
+  /** The flag under `key` written as `'1'` / `'0'`. */
+  function setFlag(key: string, on: boolean): void {
+    upsertValue.run(key, on ? '1' : '0');
+  }
+
   function settings(): Settings {
     // Reading applies the default; it does not write it down as if chosen.
     return {
       subtitleLanguage:
         valueOf(SUBTITLE_LANGUAGE_KEY) ?? DEFAULT_SUBTITLE_LANGUAGE,
-      ultrawideMargins: ultrawideMargins(),
-      tmdbRatings: tmdbRatings(),
+      ultrawideMargins: flagOf(
+        ULTRAWIDE_MARGINS_KEY,
+        DEFAULT_ULTRAWIDE_MARGINS
+      ),
+      tmdbRatings: flagOf(TMDB_RATINGS_KEY, DEFAULT_TMDB_RATINGS),
     };
   }
 
-  function ultrawideMargins(): boolean {
-    const stored = valueOf(ULTRAWIDE_MARGINS_KEY);
-    return stored === null ? DEFAULT_ULTRAWIDE_MARGINS : stored === '1';
-  }
-
   function setUltrawideMargins(on: boolean): void {
-    upsertValue.run(ULTRAWIDE_MARGINS_KEY, on ? '1' : '0');
-  }
-
-  function tmdbRatings(): boolean {
-    const stored = valueOf(TMDB_RATINGS_KEY);
-    return stored === null ? DEFAULT_TMDB_RATINGS : stored === '1';
+    setFlag(ULTRAWIDE_MARGINS_KEY, on);
   }
 
   function setTmdbRatings(on: boolean): void {
-    upsertValue.run(TMDB_RATINGS_KEY, on ? '1' : '0');
+    setFlag(TMDB_RATINGS_KEY, on);
   }
 
   function setSubtitleLanguage(language: string): void {
