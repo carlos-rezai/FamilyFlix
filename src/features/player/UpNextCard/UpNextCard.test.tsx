@@ -29,6 +29,7 @@ const NEXT: UpNextCardProps['next'] = {
   season: 3,
   number: 1,
   title: 'New Moorings',
+  stillPath: null,
 };
 
 function renderCard(props: Partial<UpNextCardProps> = {}) {
@@ -163,6 +164,26 @@ describe('UpNextCard — drawn as its prototype', () => {
     const drawn = getComputedStyle(thumbnail());
     expect(drawn.borderRadius).toBe('7px');
     expect(normCss(drawn.aspectRatio)).toBe('16/9');
+  });
+
+  it('draws the next episode’s still over its gradient, clipped to the thumbnail', () => {
+    renderCard({
+      next: { ...NEXT, stillPath: 'harbor-2019/season-03/S03E01-still.jpg' },
+    });
+
+    const frame = thumbnail();
+    expect(getComputedStyle(frame).overflow).toBe('hidden');
+    const art = frame.firstElementChild as HTMLElement | null;
+    expect(art).not.toBeNull();
+    expect(getComputedStyle(art as HTMLElement).backgroundImage).toContain(
+      '/api/images/harbor-2019/season-03/S03E01-still.jpg'
+    );
+  });
+
+  it('draws the gradient alone for an episode with no still', () => {
+    renderCard();
+
+    expect(thumbnail().childElementCount).toBe(0);
   });
 
   it('draws the label small, bold and uppercase', () => {

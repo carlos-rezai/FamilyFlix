@@ -255,6 +255,7 @@ describe('GET /api/episodes/:id', () => {
       season: 1,
       number: 2,
       title: 'Low Tide',
+      stillPath: null,
     });
   });
 

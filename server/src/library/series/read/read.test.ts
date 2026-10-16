@@ -363,7 +363,20 @@ describe('series read: getEpisodeRead', () => {
       season: 1,
       number: 2,
       title: 'Low Tide',
+      stillPath: null,
     });
+  });
+
+  it('answers the next episode’s still, the Up next card’s thumbnail', () => {
+    const storage = freshStorage();
+    const ids = seedWithGap(storage);
+    storage.enrichEpisode(ids.S01E02, {
+      stillPath: 'harbor-vine-2019/season-01/S01E02-still.jpg',
+    });
+
+    expect(storage.getEpisodeRead(ids.S01E01)?.next?.stillPath).toBe(
+      'harbor-vine-2019/season-01/S01E02-still.jpg'
+    );
   });
 
   it('answers the first episode of the next season after a season’s last', () => {
@@ -375,6 +388,7 @@ describe('series read: getEpisodeRead', () => {
       season: 2,
       number: 1,
       title: 'The Return',
+      stillPath: null,
     });
   });
 
@@ -419,6 +433,7 @@ describe('series read: getEpisodeRead', () => {
       season: 1,
       number: 2,
       title: null,
+      stillPath: null,
     });
   });
 

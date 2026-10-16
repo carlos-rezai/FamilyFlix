@@ -163,7 +163,7 @@ export function createSeriesReader(db: SqliteDatabase): SeriesReader {
     ORDER BY position
   `);
   const selectNextEpisode = db.prepare(`
-    SELECT id, season_number, episode_number, title FROM episodes
+    SELECT id, season_number, episode_number, title, still_path FROM episodes
     WHERE series_id = ?
       AND (season_number > ? OR (season_number = ? AND episode_number > ?))
     ORDER BY season_number, episode_number
@@ -258,7 +258,10 @@ export function createSeriesReader(db: SqliteDatabase): SeriesReader {
         row.season_number,
         row.episode_number
       ) as
-        | Pick<EpisodeRow, 'id' | 'season_number' | 'episode_number' | 'title'>
+        | Pick<
+            EpisodeRow,
+            'id' | 'season_number' | 'episode_number' | 'title' | 'still_path'
+          >
         | undefined;
       return {
         episode: assembleEpisode(row),
@@ -271,6 +274,7 @@ export function createSeriesReader(db: SqliteDatabase): SeriesReader {
                 season: next.season_number,
                 number: next.episode_number,
                 title: next.title,
+                stillPath: next.still_path,
               },
       };
     },

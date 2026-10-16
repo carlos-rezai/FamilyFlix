@@ -99,7 +99,13 @@ function makeRead(episode: Partial<Episode> = {}): EpisodeRead {
   return {
     episode: makeEpisode(episode),
     series: { id: 'harbor', title: 'Harbor & Vine' },
-    next: { id: 'e25', season: 2, number: 5, title: 'Low Tide' },
+    next: {
+      id: 'e25',
+      season: 2,
+      number: 5,
+      title: 'Low Tide',
+      stillPath: null,
+    },
   };
 }
 

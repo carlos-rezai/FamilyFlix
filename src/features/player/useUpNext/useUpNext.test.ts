@@ -10,7 +10,13 @@ import { useUpNext, type UpNextOptions } from './useUpNext';
 const S01E01: EpisodeRead = {
   episode: makeEpisode(1, 1),
   series: { id: 'harbor', title: 'Harbor & Vine' },
-  next: { id: 's1e2', season: 1, number: 2, title: 'Low Tide' },
+  next: {
+    id: 's1e2',
+    season: 1,
+    number: 2,
+    title: 'Low Tide',
+    stillPath: null,
+  },
 };
 
 /** S01E02, the last the show holds. */
@@ -124,7 +130,7 @@ describe('useUpNext — Play now and Cancel', () => {
     const next: EpisodeRead = {
       ...S01E01,
       episode: makeEpisode(1, 2),
-      next: { id: 's1e3', season: 1, number: 3, title: null },
+      next: { id: 's1e3', season: 1, number: 3, title: null, stillPath: null },
     };
     const { result, rerender } = renderUpNext({ position: DURATION - 10 });
     act(() => result.current.cancel());

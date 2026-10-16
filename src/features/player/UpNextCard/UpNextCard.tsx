@@ -1,5 +1,6 @@
+import { Artwork } from '@/primitives';
 import type { NextEpisodeRef } from '@/types';
-import { formatEpisodeTag, gradientFromId } from '@/utils';
+import { formatEpisodeTag, gradientFromId, imageUrl } from '@/utils';
 import {
   Actions,
   Body,
@@ -26,7 +27,8 @@ export interface UpNextCardProps {
  * `feat.PlayerControls.dc.html`.
  *
  * Presentational: it is told the next episode and the seconds left, and hands
- * the two presses back. When it is shown, and what a press does, are the
+ * the two presses back. The thumbnail is the next episode's **Still** over its
+ * gradient, `EpisodeRow`'s, and the gradient alone when it has none. When it is shown, and what a press does, are the
  * `Player`'s.
  */
 export function UpNextCard({
@@ -36,10 +38,13 @@ export function UpNextCard({
   onCancel,
 }: UpNextCardProps) {
   const { g1, g2 } = gradientFromId(next.id);
+  const stillUrl = imageUrl(next.stillPath);
 
   return (
     <Card>
-      <Thumb $g1={g1} $g2={g2} aria-hidden="true" />
+      <Thumb $g1={g1} $g2={g2} aria-hidden="true">
+        {stillUrl ? <Artwork url={stillUrl} g1={g1} g2={g2} /> : null}
+      </Thumb>
       <Body>
         <Label>{`Up next · in ${secondsLeft}s`}</Label>
         <Code>{formatEpisodeTag(next)}</Code>

@@ -23,8 +23,10 @@ export const Card = styled.div`
   animation: ffPop ${({ theme }) => theme.motion.durBase} ease;
 `;
 
-/** The next episode's 16:9 thumbnail, drawn from its id's own gradient. */
+/** The next episode's 16:9 thumbnail: its **Still** over its id's gradient. */
 export const Thumb = styled.div<{ $g1: string; $g2: string }>`
+  position: relative;
+  overflow: hidden;
   flex: 0 0 auto;
   width: 104px;
   aspect-ratio: 16 / 9;

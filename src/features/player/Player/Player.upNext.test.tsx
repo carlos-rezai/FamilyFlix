@@ -83,11 +83,11 @@ function read(
 const RUN: Record<string, EpisodeRead> = {
   e24: read(
     { id: 'e24' },
-    { id: 'e25', season: 2, number: 5, title: 'Low Tide' }
+    { id: 'e25', season: 2, number: 5, title: 'Low Tide', stillPath: null }
   ),
   e25: read(
     { id: 'e25', number: 5, title: 'Low Tide' },
-    { id: 'e26', season: 2, number: 6, title: 'Dry Dock' }
+    { id: 'e26', season: 2, number: 6, title: 'Dry Dock', stillPath: null }
   ),
   e26: read({ id: 'e26', number: 6, title: 'Dry Dock' }, null),
 };
@@ -96,9 +96,12 @@ const RUN: Record<string, EpisodeRead> = {
 const ACROSS: Record<string, EpisodeRead> = {
   e30: read(
     { id: 'e30', number: 10, title: 'Slack Water' },
-    { id: 'e31', season: 3, number: 1, title: 'New Moorings' }
+    { id: 'e31', season: 3, number: 1, title: 'New Moorings', stillPath: null }
   ),
-  e31: read({ id: 'e31', season: 3, number: 1, title: 'New Moorings' }, null),
+  e31: read(
+    { id: 'e31', season: 3, number: 1, title: 'New Moorings', stillPath: null },
+    null
+  ),
 };
 
 const FILM: Movie = {

@@ -142,6 +142,9 @@ export interface NextEpisodeRef {
   season: number;
   number: number;
   title: string | null;
+  /** Its **Still**, a **Stored path** — the Up next card's thumbnail; `null`
+   *  draws the gradient. */
+  stillPath: string | null;
 }
 
 /**
