@@ -30,6 +30,10 @@ import {
 } from '@/test-support/fakeResponse/fakeResponse';
 import { paintedBackgrounds } from '@/test-support/paintedBackgrounds/paintedBackgrounds';
 import { comesBefore } from '@/test-support/comesBefore/comesBefore';
+import {
+  DisplayPreferenceContext,
+  type DisplayPreferenceApi,
+} from '@/App/useDisplayPreference/useDisplayPreference';
 
 /**
  * 22 — Series (TV), Phase 2 (issue #191): the series page's organism.
@@ -805,5 +809,62 @@ describe('SeriesDetail — the ⋯ menu', () => {
     });
     expect(within(open).getByText(/its 22 episodes/)).toBeTruthy();
     expect(writes()).toEqual([]);
+  });
+});
+
+/**
+ * 26 — TMDB ratings (issue #372), end to end: the series page reads the
+ * household's _Fill in ratings from TMDB_ and draws the **Shown rating** in
+ * its read-only stars — TMDB's, tagged, for an unrated series while on; the
+ * family's own Rating, unmarked, whatever TMDB says. The page gains no
+ * picker: a series' Rating is still set in the series edit.
+ */
+describe('SeriesDetail — the Shown rating', () => {
+  function renderWithPreference(tmdbRatings: boolean | null) {
+    const preference: DisplayPreferenceApi = {
+      ultrawideMargins: null,
+      setUltrawideMargins: () => Promise.resolve(),
+      tmdbRatings,
+      setTmdbRatings: () => Promise.resolve(),
+    };
+    return render(
+      <DisplayPreferenceContext.Provider value={preference}>
+        <MemoryRouter initialEntries={['/series/harbor']}>
+          <ThemeProvider theme={theme}>
+            <Routes>
+              <Route path="/series/:id" element={<SeriesDetail />} />
+            </Routes>
+          </ThemeProvider>
+        </MemoryRouter>
+      </DisplayPreferenceContext.Provider>
+    );
+  }
+
+  it('draws TMDB’s rating, tagged, on an unrated series while on — and no picker', async () => {
+    serve(unstarted({ rating: null, tmdbScore: 7.4 }));
+
+    renderWithPreference(true);
+    await findTitle('Harbor & Vine');
+
+    expect(screen.getByText('3.5')).toBeDefined();
+    expect(screen.getByText('TMDB')).toBeDefined();
+    expect(screen.queryByRole('group', { name: 'Your rating' })).toBeNull();
+    expect(screen.queryByRole('button', { name: /clear rating/i })).toBeNull();
+  });
+
+  it('draws a rated series’ own Rating, unmarked, where an unrated one draws TMDB’s', async () => {
+    serve(unstarted({ rating: null, tmdbScore: 7.4 }));
+    const unrated = renderWithPreference(true);
+    await findTitle('Harbor & Vine');
+    expect(screen.getByText('TMDB')).toBeDefined();
+    unrated.unmount();
+
+    serve(unstarted({ rating: 8, tmdbScore: 3.1 }));
+    renderWithPreference(true);
+    await findTitle('Harbor & Vine');
+
+    expect(screen.getByText('4.0')).toBeDefined();
+    expect(screen.queryByText('1.5')).toBeNull();
+    expect(screen.queryByText('TMDB')).toBeNull();
   });
 });

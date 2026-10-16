@@ -18,6 +18,9 @@ function renderLine(props: Partial<SeriesMetaLineProps> = {}) {
         ratingPercent={
           props.ratingPercent === undefined ? 80 : props.ratingPercent
         }
+        ratingSource={
+          props.ratingSource === undefined ? 'household' : props.ratingSource
+        }
       />
     </ThemeProvider>
   );
@@ -60,5 +63,33 @@ describe('SeriesMetaLine', () => {
 
     expect(separators()).toHaveLength(2);
     expect(screen.queryByText('4.0')).toBeNull();
+  });
+});
+
+/**
+ * 26 — TMDB ratings (issue #372): a `tmdb`-sourced rating is drawn as
+ * **TMDB-marked stars** — `StarRating`'s `muted` and the `TMDB` tag after the
+ * value — and a household one as the family's own, unmarked.
+ */
+describe('SeriesMetaLine — the rating’s source', () => {
+  it('draws the TMDB tag after the value for a tmdb source, and none for a household one', () => {
+    const { unmount } = renderLine({ ratingPercent: 70, ratingSource: 'tmdb' });
+
+    expect(screen.getByText('3.5')).toBeDefined();
+    expect(screen.getByText('TMDB')).toBeDefined();
+    unmount();
+
+    renderLine({ ratingPercent: 80, ratingSource: 'household' });
+
+    expect(screen.getByText('4.0')).toBeDefined();
+    expect(screen.queryByText('TMDB')).toBeNull();
+  });
+
+  it('stays read-only for a tmdb source — no picker', () => {
+    renderLine({ ratingPercent: 70, ratingSource: 'tmdb' });
+
+    expect(screen.getByText('TMDB')).toBeDefined();
+    expect(screen.queryByRole('group', { name: 'Your rating' })).toBeNull();
+    expect(screen.queryAllByRole('button')).toHaveLength(0);
   });
 });
