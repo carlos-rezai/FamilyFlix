@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 
 import type { Episode, SeriesPageModel } from '@/types';
 import { saveSeriesFavorite } from '@/api/saveSeriesFavorite/saveSeriesFavorite';
+import { useTmdbRatings } from '@/hooks/useTmdbRatings/useTmdbRatings';
 import { useOptimisticEdit } from '@/hooks/useOptimisticEdit/useOptimisticEdit';
 import { saveSeriesWatched } from '../api/api';
 import { marked, patchEpisodes } from '../markEpisodes/markEpisodes';
@@ -48,6 +49,7 @@ const restoreEpisodes = (held: HeldSeries, snapshot: Episode[]): HeldSeries => {
  */
 export function useSeriesDetail(id: string): UseSeriesDetailResult {
   const read = useSeriesRead(id);
+  const tmdbRatings = useTmdbRatings();
   const { detail, retry, editSeries } = read;
 
   const edit = useOptimisticEdit(detail, editSeries);
@@ -87,6 +89,10 @@ export function useSeriesDetail(id: string): UseSeriesDetailResult {
 
   const handlers = { retry, toggleFavorite, toggleWatched };
   return read.status === 'ready'
-    ? { status: 'ready', series: seriesView(read.detail), ...handlers }
+    ? {
+        status: 'ready',
+        series: seriesView(read.detail, tmdbRatings),
+        ...handlers,
+      }
     : { status: read.status, series: null, ...handlers };
 }

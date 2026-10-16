@@ -192,6 +192,8 @@ export interface SeriesPageModel {
   episodeCount: number;
   /** 0–100 percent the read-only stars fill against; `null` when unrated. */
   ratingPercent: number | null;
+  /** Whose rating the stars draw — `null` when unrated. */
+  ratingSource: RatingSource | null;
   /** Genre names, in the order the record holds them. */
   genres: string[];
   /** `Resume S02E04` / `Play S01E01`, or a bare `Play` with no episodes. */

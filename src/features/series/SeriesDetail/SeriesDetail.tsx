@@ -142,6 +142,7 @@ export function SeriesDetail() {
               yearLabel={series.yearLabel}
               countLabel={series.countLabel}
               ratingPercent={series.ratingPercent}
+              ratingSource={series.ratingSource}
             />
 
             <Genres>

@@ -3,6 +3,7 @@ import {
   formatEpisodeTag,
   gradientFromId,
   imageUrl,
+  shownRating,
   spellYearSpan,
   toRatingPercent,
 } from '@/utils';
@@ -59,9 +60,13 @@ function toTopTag(
 /**
  * Maps a `SeriesDetail` to what the series page draws — `detailView`'s
  * precedent, so the hero is left with nothing to decide. Watched counts are
- * whole episodes: a part-watched one is not a watched one.
+ * whole episodes: a part-watched one is not a watched one. Its stars draw the
+ * **Shown rating** under `tmdbRatings`, the cards' rule.
  */
-export function seriesView(detail: SeriesDetail): SeriesPageModel {
+export function seriesView(
+  detail: SeriesDetail,
+  tmdbRatings: boolean
+): SeriesPageModel {
   const { series, seasons, next } = detail;
   const { g1, g2 } = gradientFromId(series.id);
   const episodes = seasons.flatMap((season) => season.episodes);
@@ -70,6 +75,7 @@ export function seriesView(detail: SeriesDetail): SeriesPageModel {
   const hasCast = series.cast.length > 0;
   const hasPoster = series.posterPath !== null;
   const yearLabel = spellYearSpan(series.year, series.endYear);
+  const shown = shownRating(series.rating, series.tmdbScore, tmdbRatings);
 
   return {
     id: series.id,
@@ -80,7 +86,8 @@ export function seriesView(detail: SeriesDetail): SeriesPageModel {
       'episode'
     )}`,
     episodeCount: episodes.length,
-    ratingPercent: toRatingPercent(series.rating),
+    ratingPercent: toRatingPercent(shown?.units ?? null),
+    ratingSource: shown?.source ?? null,
     genres: series.genres.map((genre) => genre.name),
     playLabel: toPlayLabel(next),
     playEpisodeId: next?.id ?? null,
