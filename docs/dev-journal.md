@@ -11,6 +11,84 @@ Newest entry first.
 
 ---
 
+## 2026-10-16 — Episode stills — the refactor (issue 386)
+
+Ten commits against `docs/refactor-plans/44-episode-stills-refactor.md`, one
+per plan commit, the initiative's closing round. **9591 tests pass across 572
+files**, against 9589 across 571 at the end of the build (`003e2ac`): one new
+suite (`framelessPlayback`, two cases). `tsc -b --force` is clean. `eslint
+src server electron` reports one error and 99 warnings, the same as before
+the round. Every folder this round touched is lint-clean.
+
+### What shipped
+
+Log 44's four slices, RED then GREEN each, 382 to 385. A **Sync** under the
+Poster chip gives an **Episode** TMDB has no **Still** for a **Frame still**:
+one picture at the **Frame point**, a third of its duration, grabbed by
+`Playback.frame` within the 20 s **Frame budget** and stored as
+`<stem>.frame.jpg`. Migration 14 records each Still's **Still source**. A
+later Sync replaces a frame with TMDB's Still and removes the frame, never
+grabs a second, and never touches a TMDB or picked Still. No component leaves
+the gradient. The client, the Sync gap and the Export did not change.
+
+### What each group changed
+
+- **Group 1, the Sync's still, one rule** (`f056ded`–`ec8bbb3`). This is the
+  round's one real move. `StillPlan`'s TMDB variant carries `replaces`, the
+  held Frame still's path or `null`, so `planEpisode` decides what a TMDB
+  Still replaces and `writeEpisodes` only acts on it. Its second reading of
+  the sources and the impossible `!== stored` check are gone. `STILL_KINDS`,
+  keyed by the exported `StillKind`, holds each kind's suffix and log mark,
+  `STOP_LINES`' shape. `writeEpisodes` hands `frame` the episode itself.
+  `planSeason`'s docblock states its own rule, modelled on the Still's rather
+  than borrowing it.
+- **Group 2, the playback domain** (`a6b57c1`). `videoFile` is a local beside
+  `decide`, `lengthOf` and `durationOf`. `createPlayback` returns its literal
+  again, with no `const playback` reading itself.
+- **Group 3, the tests** (`6306a02`, `69def36`). `test-support/framelessPlayback`
+  is `offlineTmdb`'s twin: sixteen `createEnrichment` suites hand it in place
+  of an inline composition, and the two frame suites hand it their scripted
+  `frame`. `routes.tmdb.test.ts`' header names `media` again. The
+  frame-upgrade suite strips the BOM as `/^﻿/`, `writeBack.test.ts`'
+  spelling.
+- **Group 4, the library** (`a4b61be`). `series/write`'s private
+  `pickedSource` is the one spelling of _a still the form saves is picked_.
+  `setEpisodeStill` is a template literal across lines.
+- **Group 5, the docs** (`5d7580c`, and this commit). CLAUDE.md, the README
+  and the glossary know the initiative shipped, and step 27 is ✅.
+
+### Deliberately not changed
+
+Everything in the plan's Out of Scope. `lengthOf` and `durationOf` stay two:
+`read` wants `0` from a probe it already holds, `duration` and `frame` want
+`null`. `FRAME_BUDGET_MS` stays beside `collectFrame` and `FRAME_POINT` in
+`frameArgs`. The two frame suites keep their own `world()`. The route suites
+keep handing their real `playback` on to `createEnrichment`.
+
+This round displaced no docblock, the first in five initiatives.
+
+A note for the next session: in Git Bash, a heredoc fed to `python -`
+dropped the backslash from `﻿` and `\s`. That is how 385's RED fix first
+wrote `/^FEFF/`. Edit regexes with the Edit tool, or check the bytes.
+
+### Follow-ups this refactor surfaced
+
+None are filed yet:
+
+- **One shared show fixture** for the `createEnrichment` suites. The frame
+  suites' `world()`, `knowsTheShow()` and readers are each written twice.
+- **The follow-ups from the TMDB ratings entry** are unchanged by this
+  initiative: the prototype files from 368, the two `Tag` sizes, one
+  `{ value }` body reader, one watched rule, and the lint error in
+  `EnrichmentReview.test.tsx`.
+
+### The initiative
+
+**Episode stills is done**: the four slices (382–385) and this round (386).
+Issue 380 is closed with it.
+
+---
+
 ## 2026-10-16 — TMDB ratings — the refactor (issue 375)
 
 Sixteen commits against `docs/refactor-plans/43-tmdb-ratings-refactor.md`,
