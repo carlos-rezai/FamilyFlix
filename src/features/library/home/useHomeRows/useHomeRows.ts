@@ -4,6 +4,7 @@ import { useSearchParams } from 'react-router-dom';
 import type {
   ContinueCardMovie,
   GenreRowModel,
+  HomePayload,
   LibraryQuery,
   PosterCardMovie,
 } from '@/types';
@@ -16,10 +17,9 @@ import { view } from '../../view/view';
 import { useBrowseLoad } from '../../useBrowseLoad/useBrowseLoad';
 import { useOptimisticSave } from '../../useOptimisticSave/useOptimisticSave';
 import { withFavorite, withShelved } from '../../withFavorite/withFavorite';
-import { underTmdbRatings } from '../../underTmdbRatings/underTmdbRatings';
 import { useTmdbRatings } from '@/App/useTmdbRatings/useTmdbRatings';
 
-/** The home payload as the three sections render it, mapped once as it lands. */
+/** The home's three sections as the screen renders them. */
 interface HomeSections {
   rows: GenreRowModel[];
   continueWatching: ContinueCardMovie[];
@@ -27,42 +27,43 @@ interface HomeSections {
 }
 
 /**
- * What the screen has before a load has succeeded. One frozen value rather than
- * a fresh `[]` per render, so a consumer memoised on these sections is not
+ * What the screen holds before a load has succeeded. One frozen value rather
+ * than a fresh `[]` per render, so a consumer memoised on these sections is not
  * re-rendered by a hook that has nothing new to tell it.
  */
-const NO_SECTIONS: HomeSections = {
+const NO_PAYLOAD: HomePayload = {
   rows: [],
   continueWatching: [],
   favorites: [],
 };
 
-/** All three sections, render-ready, from one aggregate response. */
-async function loadSections(query: LibraryQuery): Promise<HomeSections> {
-  const payload = await fetchHomePayload(query);
+/**
+ * The held payload drawn as the three sections, under _Fill in ratings from
+ * TMDB_. The shelf holds poster cards, so its movies take the same narrowing a
+ * genre row's do — `view`, not a mapper of its own.
+ */
+function toSections(payload: HomePayload, tmdbRatings: boolean): HomeSections {
   return {
-    rows: payload.rows.map(toGenreRow),
+    rows: payload.rows.map((row) => toGenreRow(row, tmdbRatings)),
     continueWatching: payload.continueWatching.map(continueView),
-    // The shelf holds poster cards, so its movies take the same narrowing a
-    // genre row's do — `view`, not a mapper of its own.
-    favorites: payload.favorites.map((movie) => view(movie, true)),
+    favorites: payload.favorites.map((movie) => view(movie, tmdbRatings)),
   };
 }
 
 /**
- * The sections with one movie's favorite value set everywhere they carry it —
- * every genre row it has a card in, and the shelf, which gains the card at its
- * front when the heart is new to it.
+ * The payload with one movie's favorite value set everywhere it carries it —
+ * every genre row it is in, and the shelf, which gains the movie at its front
+ * when the heart is new to it.
  */
 function withHeart(
-  sections: HomeSections,
+  payload: HomePayload,
   id: string,
   favorite: boolean
-): HomeSections {
+): HomePayload {
   return {
-    ...sections,
-    rows: withFavorite(sections.rows, id, favorite),
-    favorites: withShelved(sections.favorites, sections.rows, id, favorite),
+    ...payload,
+    rows: withFavorite(payload.rows, id, favorite),
+    favorites: withShelved(payload.favorites, payload.rows, id, favorite),
   };
 }
 
@@ -154,34 +155,25 @@ export function useHomeRows(): UseHomeRowsResult {
   // a heart pressed while a reload was out survives the reload landing.
   const { status, data, setData, retry } = useBrowseLoad(
     () =>
-      loadSections(query).then((sections) =>
+      fetchHomePayload(query).then((payload) =>
         [...pending.current].reduce(
           (held, [id, { favorite }]) => withHeart(held, id, favorite),
-          sections
+          payload
         )
       ),
     settled
   );
 
-  // A failed or unfinished load has no sections; the screen shows its own copy
+  // A failed or unfinished load has no payload; the screen shows its own copy
   // for that, never an empty grid pretending to be a loaded one.
-  const loaded = data ?? NO_SECTIONS;
-  const { continueWatching } = loaded;
+  const held = data ?? NO_PAYLOAD;
 
-  // The cards as the TMDB ratings preference draws them, so a flip in
+  // The held records drawn per render under the preference, so a flip in
   // Settings redraws what is loaded without reading the home again.
   const tmdbRatings = useTmdbRatings();
-  const rows = useMemo(
-    () =>
-      loaded.rows.map((row) => ({
-        ...row,
-        movies: underTmdbRatings(row.movies, tmdbRatings),
-      })),
-    [loaded.rows, tmdbRatings]
-  );
-  const favorites = useMemo(
-    () => underTmdbRatings(loaded.favorites, tmdbRatings),
-    [loaded.favorites, tmdbRatings]
+  const { rows, continueWatching, favorites } = useMemo(
+    () => toSections(held, tmdbRatings),
+    [held, tmdbRatings]
   );
 
   /**

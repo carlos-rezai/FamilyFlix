@@ -7,7 +7,7 @@ import {
 } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 
-import type { GenreQuery, PosterCardMovie } from '@/types';
+import type { GenrePayload, GenreQuery, PosterCardMovie } from '@/types';
 import { parseGenreQuery, toGenreQueryParams } from '@/utils';
 import { saveFavorite } from '@/api/saveFavorite/saveFavorite';
 import { fetchGenrePayload } from '../../api/api';
@@ -15,33 +15,17 @@ import { useBrowseLoad } from '../../useBrowseLoad/useBrowseLoad';
 import { useOptimisticSave } from '../../useOptimisticSave/useOptimisticSave';
 import { view } from '../../view/view';
 import { withFavoriteInList } from '../../withFavorite/withFavorite';
-import { underTmdbRatings } from '../../underTmdbRatings/underTmdbRatings';
 import { useTmdbRatings } from '@/App/useTmdbRatings/useTmdbRatings';
 
-/** One genre as this screen renders it, mapped once as the payload lands. */
-interface GenreScreen {
-  total: number;
-  movies: PosterCardMovie[];
-}
-
 /**
- * What the screen has before a load has succeeded. One frozen value rather than
- * a fresh `[]` per render, so the context value below does not change identity
- * on a render that has nothing new in it.
+ * What the screen holds before a load has succeeded. One frozen value rather
+ * than a fresh `[]` per render, so the context value below does not change
+ * identity on a render that has nothing new in it.
  */
-const NO_GENRE: GenreScreen = { total: 0, movies: [] };
-
-/** The grid and the total it is counted against, from one response. */
-async function loadGenre(
-  genre: string,
-  query: GenreQuery
-): Promise<GenreScreen> {
-  const payload = await fetchGenrePayload(genre, query);
-  return {
-    total: payload.total,
-    movies: payload.movies.map((movie) => view(movie, true)),
-  };
-}
+const NO_GENRE: Pick<GenrePayload, 'total' | 'movies'> = {
+  total: 0,
+  movies: [],
+};
 
 /** Where the load is: never both loading and errored, never movies without `ready`. */
 export type GenreMoviesStatus = 'loading' | 'ready' | 'error';
@@ -135,20 +119,20 @@ export function GenreMoviesProvider({ children }: GenreMoviesProviderProps) {
   const key = `${encodeURIComponent(genre)}?${settled}`;
 
   const { status, data, setData, retry } = useBrowseLoad(
-    () => loadGenre(genre, query),
+    () => fetchGenrePayload(genre, query),
     key
   );
 
   // A failed or unfinished load has no grid; the screen shows its own copy for
   // that, never an empty grid pretending to be a loaded one.
-  const { total, movies: loaded } = data ?? NO_GENRE;
+  const { total, movies: held } = data ?? NO_GENRE;
 
-  // The cards as the TMDB ratings preference draws them, so a flip in
+  // The held records drawn per render under the preference, so a flip in
   // Settings redraws the grid without reading the genre again.
   const tmdbRatings = useTmdbRatings();
-  const movies = useMemo(
-    () => underTmdbRatings(loaded, tmdbRatings),
-    [loaded, tmdbRatings]
+  const movies = useMemo<PosterCardMovie[]>(
+    () => held.map((movie) => view(movie, tmdbRatings)),
+    [held, tmdbRatings]
   );
 
   /** Applies a favorite value to the loaded grid, leaving the total alone. */

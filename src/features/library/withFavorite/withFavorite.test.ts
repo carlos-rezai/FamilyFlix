@@ -1,51 +1,36 @@
 import { describe, it, expect } from 'vitest';
 
 import { withFavorite, withFavoriteInList } from './withFavorite';
-import type { GenreRowModel, PosterCardMovie } from '@/types';
-
-function makeCard(overrides: Partial<PosterCardMovie> = {}): PosterCardMovie {
-  return {
-    id: 'm1',
-    title: 'Comet Season',
-    posterUrl: null,
-    g1: '#111111',
-    g2: '#222222',
-    rating: 80,
-    ratingSource: 'household',
-    watched: false,
-    progress: 0,
-    favorite: false,
-    ...overrides,
-  };
-}
+import type { HomeRow, Movie } from '@/types';
+import { makeMovie } from '@/test-support/makeMovie/makeMovie';
 
 /** The same movie tagged with two genres, plus a bystander in each row. */
-function rows(): GenreRowModel[] {
+function rows(): HomeRow[] {
   return [
     {
       genre: 'Action',
       count: 2,
       movies: [
-        makeCard({ id: 'x1', title: 'Ironclad' }),
-        makeCard({ id: 'a2', title: 'Northwind' }),
+        makeMovie({ id: 'x1', title: 'Ironclad' }),
+        makeMovie({ id: 'a2', title: 'Northwind' }),
       ],
     },
     {
       genre: 'Thriller',
       count: 2,
       movies: [
-        makeCard({ id: 't1', title: 'Quiet Harbor' }),
-        makeCard({ id: 'x1', title: 'Ironclad' }),
+        makeMovie({ id: 't1', title: 'Quiet Harbor' }),
+        makeMovie({ id: 'x1', title: 'Ironclad' }),
       ],
     },
   ];
 }
 
 /** Whether one movie reads as a favorite in one genre's row. */
-function favoriteIn(next: GenreRowModel[], genre: string, id: string) {
+function favoriteIn(next: HomeRow[], genre: string, id: string) {
   return next
     .find((row) => row.genre === genre)
-    ?.movies.find((movie) => movie.id === id)?.favorite;
+    ?.movies.find((movie) => movie.id === id)?.isFavorite;
 }
 
 describe('withFavorite', () => {
@@ -99,17 +84,17 @@ describe('withFavorite', () => {
  * A genre page's worth of cards — one flat list, no rows around it, with one
  * of them already a favorite so both directions have something to move.
  */
-function list(): PosterCardMovie[] {
+function list(): Movie[] {
   return [
-    makeCard({ id: 'a1', title: 'Northwind' }),
-    makeCard({ id: 'a2', title: 'Ironclad', favorite: true }),
-    makeCard({ id: 'a3', title: 'Quiet Harbor' }),
+    makeMovie({ id: 'a1', title: 'Northwind' }),
+    makeMovie({ id: 'a2', title: 'Ironclad', isFavorite: true }),
+    makeMovie({ id: 'a3', title: 'Quiet Harbor' }),
   ];
 }
 
 /** Whether one movie reads as a favorite in a flat list. */
-function favoriteOf(movies: PosterCardMovie[], id: string) {
-  return movies.find((movie) => movie.id === id)?.favorite;
+function favoriteOf(movies: Movie[], id: string) {
+  return movies.find((movie) => movie.id === id)?.isFavorite;
 }
 
 describe('withFavoriteInList', () => {
@@ -146,7 +131,7 @@ describe('withFavoriteInList', () => {
     expect(next[0]).toMatchObject({
       id: 'a1',
       title: 'Northwind',
-      rating: 80,
+      rating: 8,
       watched: false,
     });
   });
