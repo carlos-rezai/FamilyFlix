@@ -9,6 +9,7 @@ import type {
   Series,
 } from '@/types';
 import { parentFolder } from '../../parentFolder/parentFolder';
+import type { StillSource } from '../enrich/enrich';
 import type { SeriesReader } from '../read/read';
 
 export interface SeriesWrite {
@@ -101,6 +102,14 @@ export interface SeriesUpdate {
   removedPaths: string[];
 }
 
+/**
+ * A still's **Still source** when the series form saves it: one picked there,
+ * on an add or an edit; no still, no source — so one taken away clears it.
+ */
+const pickedSource = (
+  stillPath: string | null | undefined
+): StillSource | null => (stillPath == null ? null : 'picked');
+
 /** The series' writes — the movie's `addMovie` over the series tables. */
 export function createSeriesWrite(
   db: SqliteDatabase,
@@ -191,8 +200,7 @@ export function createSeriesWrite(
         source_file: input.sourceFile ?? null,
         video_folder_id: input.videoFolderId ?? null,
         still_path: input.stillPath ?? null,
-        // A still the series form saves is one picked there.
-        still_source: input.stillPath == null ? null : 'picked',
+        still_source: pickedSource(input.stillPath),
         created_at: now,
         updated_at: now,
       });
@@ -297,9 +305,11 @@ export function createSeriesWrite(
   const setEpisodeRuntime = db.prepare(
     'UPDATE episodes SET runtime_minutes = ? WHERE id = ?'
   );
-  const setEpisodeStill = db.prepare(
-    'UPDATE episodes SET still_path = @still_path, still_source = @still_source WHERE id = @id'
-  );
+  const setEpisodeStill = db.prepare(`
+    UPDATE episodes SET
+      still_path = @still_path, still_source = @still_source
+    WHERE id = @id
+  `);
   const deleteEpisodeSubtitles = db.prepare(
     'DELETE FROM episode_subtitles WHERE episode_id = ?'
   );
@@ -414,11 +424,10 @@ export function createSeriesWrite(
           setEpisodeRuntime.run(episode.runtimeMinutes, was.id);
         }
         if (episode.stillPath !== undefined) {
-          // A still set here is picked; one taken away clears its source.
           setEpisodeStill.run({
             id: was.id,
             still_path: episode.stillPath,
-            still_source: episode.stillPath === null ? null : 'picked',
+            still_source: pickedSource(episode.stillPath),
           });
         }
         deleteEpisodeSubtitles.run(was.id);
