@@ -9,10 +9,10 @@ export interface SeasonPlan {
 
 /**
  * Pure: a **Season** on disk × TMDB's season of the same number × the chips →
- * the **Season poster** a **Sync** fetches. The Still's rule: only under
- * Poster, only when none is held, never replaced, never a **Decision**. When
- * TMDB has no default poster, the top of the season's `images` — ordered by
- * vote, in any language — is the poster instead.
+ * the **Season poster** a **Sync** fetches: only under Poster, only when none
+ * is held, never replaced, never a **Decision** — modelled on the TMDB
+ * **Still**'s rule. When TMDB has no default poster, the top of the season's
+ * `images` — ordered by vote, in any language — is the poster instead.
  */
 export function planSeason(
   season: SeasonSummary,
